@@ -387,7 +387,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("privatization");
   };
   auto checkReduction = [&todo](auto op, LogicalResult &result) {
-    if (isa<omp::TeamsOp>(op) || isa<omp::TaskloopContextOp>(op))
+    if (isa<omp::TeamsOp>(op))
       if (!op.getReductionVars().empty() || op.getReductionByref() ||
           op.getReductionSyms())
         result = todo("reduction");
@@ -400,6 +400,22 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       for (bool isByRef : *byrefAttr)
         if (isByRef) {
           result = todo("task_reduction with byref modifier");
+          return;
+        }
+  };
+  auto checkReductionByref = [&todo](auto op, LogicalResult &result) {
+    if (auto byrefAttr = op.getReductionByref())
+      for (bool isByRef : *byrefAttr)
+        if (isByRef) {
+          result = todo("reduction with byref modifier");
+          return;
+        }
+  };
+  auto checkInReductionByref = [&todo](auto op, LogicalResult &result) {
+    if (auto byrefAttr = op.getInReductionByref())
+      for (bool isByRef : *byrefAttr)
+        if (isByRef) {
+          result = todo("in_reduction with byref modifier");
           return;
         }
   };
@@ -466,8 +482,9 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::TaskloopContextOp op) {
         checkAllocate(op, result);
-        checkInReduction(op, result);
+        checkInReductionByref(op, result);
         checkReduction(op, result);
+        checkReductionByref(op, result);
       })
       .Case([&](omp::WsloopOp op) {
         checkAllocate(op, result);
@@ -947,6 +964,43 @@ collectReductionDecls(T op,
         SymbolTable::lookupNearestSymbolFrom<omp::DeclareReductionOp>(
             op, symbolRef));
   }
+}
+
+/// Look up and validate the declare_reduction ops referenced by a
+/// reduction-like clause on the omp.taskloop.context translation path. Only
+/// the non-byref, single-init-arg, no-cleanup form is supported in this
+/// initial cut; richer shapes are rejected here with a diagnostic. \p syms
+/// is the clause's symbol list (e.g. `getReductionSyms()` or
+/// `getInReductionSyms()`), \p opName is the textual op name used in
+/// diagnostics, and \p clauseName distinguishes "reduction" from
+/// "in_reduction" in those diagnostics.
+static LogicalResult collectAndValidateTaskloopRedDecls(
+    Operation *contextOp, std::optional<ArrayAttr> syms, StringRef opName,
+    StringRef clauseName, SmallVectorImpl<omp::DeclareReductionOp> &out) {
+  if (!syms)
+    return success();
+  out.reserve(out.size() + syms->size());
+  for (auto sym : syms->getAsRange<SymbolRefAttr>()) {
+    auto decl = SymbolTable::lookupNearestSymbolFrom<omp::DeclareReductionOp>(
+        contextOp, sym);
+    if (!decl)
+      return contextOp->emitError()
+             << "failed to resolve " << clauseName
+             << " declare_reduction symbol " << sym.getRootReference() << " in "
+             << opName;
+    if (decl.getInitializerRegion().front().getNumArguments() != 1)
+      return contextOp->emitError()
+             << "not yet implemented: " << clauseName
+             << " with two-argument initializer in " << opName;
+    if (!decl.getCleanupRegion().empty())
+      return contextOp->emitError() << "not yet implemented: " << clauseName
+                                    << " with cleanup region in " << opName;
+    if (decl.getReductionRegion().empty())
+      return contextOp->emitError()
+             << clauseName << " declare_reduction is missing a combiner region";
+    out.push_back(decl);
+  }
+  return success();
 }
 
 /// Translates the blocks contained in the given region and appends them to at
@@ -3364,6 +3418,15 @@ computeTaskloopBounds(omp::LoopNestOp loopOp, llvm::IRBuilderBase &builder,
   return llvm::Error::success();
 }
 
+// Forward declaration: defined alongside the taskgroup task_reduction
+// lowering further down in this file. Shared between omp.taskgroup and
+// omp.taskloop.context translation.
+static llvm::Value *emitTaskReductionInitCall(
+    ArrayRef<omp::DeclareReductionOp> redDecls,
+    ArrayRef<llvm::Value *> origPtrs, StringRef helperNamePrefix,
+    llvm::IRBuilderBase &builder, llvm::OpenMPIRBuilder::InsertPointTy allocaIP,
+    LLVM::ModuleTranslation &moduleTranslation);
+
 // Converts an OpenMP taskloop construct into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
@@ -3451,8 +3514,67 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
           contextOp.getPrivateNeedsBarrier())))
     return llvm::failure();
 
-  // Set up inserttion point for call to createTaskloop()
+  // Resolve and validate reduction / in_reduction declarations up front.
+  // This is pure MLIR symbol-table work and does not emit IR, so do it
+  // before moving the builder to the taskloop start block. Richer
+  // declare_reduction shapes (byref) have been rejected already by
+  // checkImplementationStatus; the rest (two-argument initializer, cleanup
+  // region, missing combiner) are rejected by the helper.
+  SmallVector<omp::DeclareReductionOp> redDecls;
+  if (failed(collectAndValidateTaskloopRedDecls(
+          contextOp.getOperation(), contextOp.getReductionSyms(),
+          "omp.taskloop.context", "reduction", redDecls)))
+    return failure();
+  SmallVector<omp::DeclareReductionOp> inRedDecls;
+  if (failed(collectAndValidateTaskloopRedDecls(
+          contextOp.getOperation(), contextOp.getInReductionSyms(),
+          "omp.taskloop.context", "in_reduction", inRedDecls)))
+    return failure();
+
+  // The op verifier rejects nogroup + reduction, so no check is needed here.
+
+  SmallVector<llvm::Value *> redOrigPtrs;
+  redOrigPtrs.reserve(redDecls.size());
+  for (Value v : contextOp.getReductionVars())
+    redOrigPtrs.push_back(moduleTranslation.lookupValue(v));
+  SmallVector<llvm::Value *> inRedOrigPtrs;
+  inRedOrigPtrs.reserve(inRedDecls.size());
+  for (Value v : contextOp.getInReductionVars())
+    inRedOrigPtrs.push_back(moduleTranslation.lookupValue(v));
+
+  // Set up insertion point for emitting the implicit-taskgroup reduction
+  // setup (if any) and for the subsequent call to createTaskloop().
   builder.SetInsertPoint(taskloopStartBlock);
+
+  llvm::OpenMPIRBuilder &ompBuilderRef = *moduleTranslation.getOpenMPBuilder();
+  llvm::Module *module = moduleTranslation.getLLVMModule();
+
+  // If we have task_reduction items, we must emit our own implicit
+  // __kmpc_taskgroup so that the descriptor returned by __kmpc_taskred_init
+  // is associated with that taskgroup. We then force NoGroup=true so that
+  // OpenMPIRBuilder::createTaskloop does not emit a second taskgroup.
+  bool implicitTaskgroup = !redDecls.empty();
+  llvm::Value *redDesc = nullptr;
+  if (implicitTaskgroup) {
+    llvm::OpenMPIRBuilder::LocationDescription redLoc(builder);
+    uint32_t srcLocSize;
+    llvm::Constant *srcLocStr =
+        ompBuilderRef.getOrCreateSrcLocStr(redLoc, srcLocSize);
+    llvm::Value *ident = ompBuilderRef.getOrCreateIdent(srcLocStr, srcLocSize);
+    // Align OpenMPIRBuilder's internal IRBuilder with `builder` so the
+    // gtid call lands at our insertion point.
+    ompBuilderRef.updateToLocation(redLoc);
+    llvm::Value *outerGtid = ompBuilderRef.getOrCreateThreadID(ident);
+    llvm::FunctionCallee taskgroupFn = ompBuilderRef.getOrCreateRuntimeFunction(
+        *module, llvm::omp::OMPRTL___kmpc_taskgroup);
+    builder.CreateCall(taskgroupFn, {ident, outerGtid});
+
+    redDesc = emitTaskReductionInitCall(redDecls, redOrigPtrs,
+                                        "__omp_taskloop_taskred_", builder,
+                                        allocaIP, moduleTranslation);
+    if (!redDesc)
+      return failure();
+  }
 
   auto loopOp = cast<omp::LoopNestOp>(loopWrapperOp.getWrappedLoop());
   llvm::Value *lbVal = nullptr;
@@ -3526,6 +3648,69 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
       assert(llvmPrivateVar->getType() ==
              moduleTranslation.convertType(blockArg.getType()));
       moduleTranslation.mapValue(blockArg, llvmPrivateVar);
+    }
+
+    // Map reduction and in_reduction block arguments to the per-task private
+    // storage returned by __kmpc_task_reduction_get_th_data. This call must
+    // be emitted inside the to-be-outlined task body so that it returns the
+    // *executing* thread's gtid (not the encountering thread's). The
+    // taskgroup descriptor `redDesc` is computed in the outer scope and is
+    // auto-captured into the task shareds aggregate by CodeExtractor during
+    // OpenMPIRBuilder::finalize. For in_reduction the descriptor is NULL:
+    // the runtime walks up enclosing taskgroups to find the matching
+    // task_reduction registration for `origPtr`.
+    if (!redDecls.empty() || !inRedDecls.empty()) {
+      auto iface =
+          cast<omp::BlockArgOpenMPOpInterface>(contextOp.getOperation());
+      llvm::OpenMPIRBuilder &ompB = *moduleTranslation.getOpenMPBuilder();
+      llvm::Module *m = moduleTranslation.getLLVMModule();
+      llvm::LLVMContext &llvmCtx = m->getContext();
+      llvm::OpenMPIRBuilder::LocationDescription bodyLoc(builder);
+      uint32_t srcLocSize;
+      llvm::Constant *srcLocStr =
+          ompB.getOrCreateSrcLocStr(bodyLoc, srcLocSize);
+      llvm::Value *bodyIdent = ompB.getOrCreateIdent(srcLocStr, srcLocSize);
+      // Align OpenMPIRBuilder's internal IRBuilder with `builder` so the
+      // gtid call lands inside the to-be-outlined task body.
+      ompB.updateToLocation(bodyLoc);
+      llvm::Value *bodyGtid = ompB.getOrCreateThreadID(bodyIdent);
+      llvm::FunctionCallee getThData = ompB.getOrCreateRuntimeFunction(
+          *m, llvm::omp::OMPRTL___kmpc_task_reduction_get_th_data);
+      llvm::Type *ptrTy = llvm::PointerType::getUnqual(llvmCtx);
+
+      // Emit one __kmpc_task_reduction_get_th_data lookup for a reduction /
+      // in_reduction item and map its block argument to the per-task private
+      // storage the runtime returns. The runtime entry point takes (and
+      // returns) a generic, default-address-space `ptr`, so normalize a
+      // non-default-address-space original pointer to the generic address
+      // space before the call (mirroring the descriptor setup in
+      // emitTaskReductionInitCall), and cast the returned private pointer back
+      // to the block argument's address space when that differs.
+      auto remapReductionArg = [&](BlockArgument blockArg, llvm::Value *desc,
+                                   llvm::Value *origPtr,
+                                   const llvm::Twine &name) {
+        if (auto *origPtrTy =
+                llvm::dyn_cast<llvm::PointerType>(origPtr->getType());
+            origPtrTy && origPtrTy->getAddressSpace() != 0)
+          origPtr = builder.CreateAddrSpaceCast(origPtr, ptrTy);
+        llvm::Value *priv =
+            builder.CreateCall(getThData, {bodyGtid, desc, origPtr}, name);
+        if (auto *argPtrTy = llvm::dyn_cast<llvm::PointerType>(
+                moduleTranslation.convertType(blockArg.getType()));
+            argPtrTy && argPtrTy->getAddressSpace() != 0)
+          priv = builder.CreateAddrSpaceCast(priv, argPtrTy);
+        moduleTranslation.mapValue(blockArg, priv);
+      };
+
+      ArrayRef<BlockArgument> redBlockArgs = iface.getReductionBlockArgs();
+      for (auto [blockArg, origPtr] :
+           llvm::zip_equal(redBlockArgs, redOrigPtrs))
+        remapReductionArg(blockArg, redDesc, origPtr, "omp.taskred.priv");
+      ArrayRef<BlockArgument> inRedBlockArgs = iface.getInReductionBlockArgs();
+      llvm::Value *nullDesc = llvm::ConstantPointerNull::get(ptrTy);
+      for (auto [blockArg, origPtr] :
+           llvm::zip_equal(inRedBlockArgs, inRedOrigPtrs))
+        remapReductionArg(blockArg, nullDesc, origPtr, "omp.inred.priv");
     }
 
     // Lower the contents of the taskloop context region: this is the body of
@@ -3663,12 +3848,12 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
                            llvm::omp::Directive::OMPD_taskgroup);
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  bool effectiveNoGroup = contextOp.getNogroup() || implicitTaskgroup;
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTaskloop(
           ompLoc, allocaIP, deallocBlocks, bodyCB, loopInfo, lbVal, ubVal,
-          stepVal, contextOp.getUntied(), ifCond, grainsize,
-          contextOp.getNogroup(), sched,
-          moduleTranslation.lookupValue(contextOp.getFinal()),
+          stepVal, contextOp.getUntied(), ifCond, grainsize, effectiveNoGroup,
+          sched, moduleTranslation.lookupValue(contextOp.getFinal()),
           contextOp.getMergeable(),
           moduleTranslation.lookupValue(contextOp.getPriority()),
           loopOp.getCollapseNumLoops(), taskDupOrNull,
@@ -3680,6 +3865,24 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
   popCancelFinalizationCB(cancelTerminators, ompBuilder, afterIP.get());
 
   builder.restoreIP(*afterIP);
+
+  // Close the implicit taskgroup we opened for task_reduction. The end call
+  // must execute on the encountering thread, so use the outer-scope gtid.
+  if (implicitTaskgroup) {
+    llvm::OpenMPIRBuilder::LocationDescription endLoc(builder);
+    uint32_t srcLocSize;
+    llvm::Constant *srcLocStr =
+        ompBuilder.getOrCreateSrcLocStr(endLoc, srcLocSize);
+    llvm::Value *ident = ompBuilder.getOrCreateIdent(srcLocStr, srcLocSize);
+    // Align OpenMPIRBuilder's internal IRBuilder with `builder` so the
+    // gtid call lands at our insertion point.
+    ompBuilder.updateToLocation(endLoc);
+    llvm::Value *outerGtid = ompBuilder.getOrCreateThreadID(ident);
+    llvm::FunctionCallee endTgFn = ompBuilder.getOrCreateRuntimeFunction(
+        *moduleTranslation.getLLVMModule(),
+        llvm::omp::OMPRTL___kmpc_end_taskgroup);
+    builder.CreateCall(endTgFn, {ident, outerGtid});
+  }
   return success();
 }
 
@@ -3784,16 +3987,25 @@ emitTaskReductionCombFn(omp::DeclareReductionOp decl, StringRef baseName,
 }
 
 /// Emit the per-taskgroup task_reduction descriptor array and the
-/// `__kmpc_taskred_init` runtime call. Must be called with `builder` set to a
-/// point inside the taskgroup body (after `__kmpc_taskgroup`). The descriptor
-/// array itself is allocated at \p allocaIP.
+/// `__kmpc_taskred_init` runtime call. \p origPtrs holds the LLVM values for
+/// the original (shared) variables, one per declaration in \p redDecls.
+/// `builder` must be set to the point at which the descriptor stores and the
+/// init call should be emitted; the descriptor array itself is allocated at
+/// \p allocaIP. \p helperNamePrefix is used to disambiguate the generated
+/// init/combiner helper symbol names between taskgroup and taskloop callers.
 ///
-/// Only the non-byref form is handled here. Byref task_reduction has already
+/// Returns the `ptr` value produced by `__kmpc_taskred_init` (the taskgroup
+/// reduction handle), or null on failure.
+///
+/// Only the non-byref form is handled here. Byref reductions have already
 /// been rejected by `checkImplementationStatus`.
-static LogicalResult emitTaskgroupTaskReductionInit(
-    omp::TaskgroupOp tgOp, ArrayRef<omp::DeclareReductionOp> redDecls,
+static llvm::Value *emitTaskReductionInitCall(
+    ArrayRef<omp::DeclareReductionOp> redDecls,
+    ArrayRef<llvm::Value *> origPtrs, StringRef helperNamePrefix,
     llvm::IRBuilderBase &builder, llvm::OpenMPIRBuilder::InsertPointTy allocaIP,
     LLVM::ModuleTranslation &moduleTranslation) {
+  assert(redDecls.size() == origPtrs.size() &&
+         "expected one orig pointer per reduction decl");
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
   llvm::LLVMContext &ctx = llvmModule->getContext();
@@ -3825,12 +4037,11 @@ static LogicalResult emitTaskgroupTaskReductionInit(
         builder.CreateAlloca(arrTy, /*ArraySize=*/nullptr, ".taskred.input");
   }
 
-  // Fill each descriptor entry inside the taskgroup body.
+  // Fill each descriptor entry at the current builder insertion point.
   llvm::Value *zero = builder.getInt32(0);
   for (unsigned i = 0; i < n; ++i) {
     omp::DeclareReductionOp decl = redDecls[i];
-    llvm::Value *orig =
-        moduleTranslation.lookupValue(tgOp.getTaskReductionVars()[i]);
+    llvm::Value *orig = origPtrs[i];
     if (auto *origPtrTy = llvm::dyn_cast<llvm::PointerType>(orig->getType());
         origPtrTy && origPtrTy->getAddressSpace() != 0)
       orig = builder.CreateAddrSpaceCast(orig, ptrTy);
@@ -3838,13 +4049,13 @@ static LogicalResult emitTaskgroupTaskReductionInit(
     uint64_t size = dl.getTypeAllocSize(elemTy).getFixedValue();
 
     std::string baseName =
-        (llvm::Twine("__omp_taskred_") + decl.getSymName()).str();
+        (llvm::Twine(helperNamePrefix) + decl.getSymName()).str();
     llvm::Function *initFn =
         emitTaskReductionInitFn(decl, baseName, moduleTranslation);
     llvm::Function *combFn =
         emitTaskReductionCombFn(decl, baseName, moduleTranslation);
     if (!initFn || !combFn)
-      return failure();
+      return nullptr;
     llvm::Value *elemPtr = builder.CreateInBoundsGEP(
         arrTy, arrAlloca, {zero, builder.getInt32(i)}, ".taskred.elem");
     auto storeField = [&](unsigned fieldIdx, llvm::Value *val) {
@@ -3862,21 +4073,17 @@ static LogicalResult emitTaskgroupTaskReductionInit(
   }
 
   // Emit call: __kmpc_taskred_init(gtid, num, &arr).
-  uint32_t srcLocSize;
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  uint32_t srcLocSize;
   llvm::Constant *srcLocStr =
       ompBuilder->getOrCreateSrcLocStr(ompLoc, srcLocSize);
   llvm::Value *ident = ompBuilder->getOrCreateIdent(srcLocStr, srcLocSize);
+  ompBuilder->updateToLocation(ompLoc);
   llvm::Value *gtid = ompBuilder->getOrCreateThreadID(ident);
   llvm::FunctionCallee taskredInit = ompBuilder->getOrCreateRuntimeFunction(
       *llvmModule, llvm::omp::OMPRTL___kmpc_taskred_init);
-  // The handle returned by __kmpc_taskred_init is intentionally unused here.
-  // The runtime associates the descriptor array with the current taskgroup
-  // (kmp_taskgroup_t::reduce_data), and __kmpc_end_taskgroup consumes that
-  // taskgroup state to perform the reduction. Lowering for constructs that
-  // participate in this task_reduction is handled by downstream patches.
-  builder.CreateCall(taskredInit, {gtid, builder.getInt32(n), arrAlloca});
-  return success();
+  return builder.CreateCall(taskredInit, {gtid, builder.getInt32(n), arrAlloca},
+                            ".taskred.desc");
 }
 
 /// Converts an OpenMP taskgroup construct into LLVM IR using OpenMPIRBuilder.
@@ -3920,8 +4127,12 @@ convertOmpTaskgroupOp(omp::TaskgroupOp tgOp, llvm::IRBuilderBase &builder,
     builder.restoreIP(codegenIP);
 
     if (!redDecls.empty()) {
-      if (failed(emitTaskgroupTaskReductionInit(tgOp, redDecls, builder,
-                                                allocaIP, moduleTranslation)))
+      SmallVector<llvm::Value *> origPtrs;
+      origPtrs.reserve(redDecls.size());
+      for (Value v : tgOp.getTaskReductionVars())
+        origPtrs.push_back(moduleTranslation.lookupValue(v));
+      if (!emitTaskReductionInitCall(redDecls, origPtrs, "__omp_taskred_",
+                                     builder, allocaIP, moduleTranslation))
         return llvm::createStringError(
             llvm::inconvertibleErrorCode(),
             "failed to emit task_reduction initialization for omp.taskgroup");
