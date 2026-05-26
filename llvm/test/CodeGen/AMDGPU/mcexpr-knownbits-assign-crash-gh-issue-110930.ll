@@ -6,8 +6,8 @@
 ; use-after-free if the assignment operator invokes a DenseMap growth.
 
 ; CHECK-LABEL: I_Quit:
-; CHECK: .set .LI_Quit.num_vgpr, max(41, amdgpu.max_num_vgpr)
-; CHECK: .set .LI_Quit.num_agpr, max(0, amdgpu.max_num_agpr)
+; CHECK: .set .LI_Quit.num_vgpr, min(128, max(41, amdgpu.max_num_vgpr))
+; CHECK: .set .LI_Quit.num_agpr, min(0, max(0, amdgpu.max_num_agpr))
 ; CHECK: .set .LI_Quit.numbered_sgpr, max(56, amdgpu.max_num_sgpr)
 ; CHECK: .set .LI_Quit.private_seg_size, 16
 ; CHECK: .set .LI_Quit.uses_vcc, 1
@@ -78,8 +78,8 @@ define void @P_SetThingPosition() {
 }
 
 ; CHECK-LABEL: P_SetupPsprites:
-; CHECK: .set .LP_SetupPsprites.num_vgpr, max(41, amdgpu.max_num_vgpr)
-; CHECK: .set .LP_SetupPsprites.num_agpr, max(0, amdgpu.max_num_agpr)
+; CHECK: .set .LP_SetupPsprites.num_vgpr, min(128, max(41, amdgpu.max_num_vgpr))
+; CHECK: .set .LP_SetupPsprites.num_agpr, min(0, max(0, amdgpu.max_num_agpr))
 ; CHECK: .set .LP_SetupPsprites.numbered_sgpr, max(56, amdgpu.max_num_sgpr)
 ; CHECK: .set .LP_SetupPsprites.private_seg_size, 16
 ; CHECK: .set .LP_SetupPsprites.uses_vcc, 1
@@ -126,8 +126,8 @@ define void @P_SpawnPlayer() {
 }
 
 ; CHECK-LABEL: I_Error:
-; CHECK: .set .LI_Error.num_vgpr, max(41, amdgpu.max_num_vgpr)
-; CHECK: .set .LI_Error.num_agpr, max(0, amdgpu.max_num_agpr)
+; CHECK: .set .LI_Error.num_vgpr, min(128, max(41, amdgpu.max_num_vgpr))
+; CHECK: .set .LI_Error.num_agpr, min(0, max(0, amdgpu.max_num_agpr))
 ; CHECK: .set .LI_Error.numbered_sgpr, max(56, amdgpu.max_num_sgpr)
 ; CHECK: .set .LI_Error.private_seg_size, 16
 ; CHECK: .set .LI_Error.uses_vcc, 1

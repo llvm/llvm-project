@@ -239,7 +239,7 @@ define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
 ; Make sure there's no assert when a sgpr96 is used.
 ; GCN-LABEL: {{^}}count_use_sgpr96_external_call
 ; GCN: ; sgpr96 s[{{[0-9]+}}:{{[0-9]+}}]
-; GCN: .set .Lcount_use_sgpr96_external_call.num_vgpr, max(0, amdgpu.max_num_vgpr)
+; GCN: .set .Lcount_use_sgpr96_external_call.num_vgpr, min(64, max(0, amdgpu.max_num_vgpr))
 ; GCN: .set .Lcount_use_sgpr96_external_call.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
 ; CI: TotalNumSgprs: .Lcount_use_sgpr96_external_call.numbered_sgpr+4
 ; VI-BUG: TotalNumSgprs: 96
@@ -254,7 +254,7 @@ entry:
 ; Make sure there's no assert when a sgpr160 is used.
 ; GCN-LABEL: {{^}}count_use_sgpr160_external_call
 ; GCN: ; sgpr160 s[{{[0-9]+}}:{{[0-9]+}}]
-; GCN: .set .Lcount_use_sgpr160_external_call.num_vgpr, max(0, amdgpu.max_num_vgpr)
+; GCN: .set .Lcount_use_sgpr160_external_call.num_vgpr, min(64, max(0, amdgpu.max_num_vgpr))
 ; GCN: .set .Lcount_use_sgpr160_external_call.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
 ; CI: TotalNumSgprs: .Lcount_use_sgpr160_external_call.numbered_sgpr+4
 ; VI-BUG: TotalNumSgprs: 96
@@ -269,7 +269,7 @@ entry:
 ; Make sure there's no assert when a vgpr160 is used.
 ; GCN-LABEL: {{^}}count_use_vgpr160_external_call
 ; GCN: ; vgpr160 v[{{[0-9]+}}:{{[0-9]+}}]
-; GCN: .set .Lcount_use_vgpr160_external_call.num_vgpr, max(5, amdgpu.max_num_vgpr)
+; GCN: .set .Lcount_use_vgpr160_external_call.num_vgpr, min(64, max(5, amdgpu.max_num_vgpr))
 ; GCN: .set .Lcount_use_vgpr160_external_call.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
 ; CI: TotalNumSgprs: .Lcount_use_vgpr160_external_call.numbered_sgpr+4
 ; VI-BUG: TotalNumSgprs: 96
