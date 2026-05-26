@@ -8,7 +8,7 @@
   - '/\bclang-tidy/i'
 
 'clang:temporal-safety':
-  - '/LifetimeSafety/'
+  - '/LifetimeSafety/i'
 
 'libc++':
   - '/libc[+x]{2}(?!\-)/i'
