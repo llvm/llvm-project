@@ -26204,7 +26204,7 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
     if (Level > RecursionMaxDepth)
       continue;
 
-    // Can we propogate widths through a call instruction
+    // Can we propagate widths through a call instruction
     // We can for simple intrinsics
     auto IsCompatibleIntrinsic = [](const Instruction *I) -> bool {
       const auto *CI = dyn_cast<IntrinsicInst>(I);
