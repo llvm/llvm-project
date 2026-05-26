@@ -1278,9 +1278,6 @@ static void showBRDiagnostics(llvm::raw_svector_ostream &OS, StoreInfo SI) {
     SI.Origin->printPretty(OS);
 
   } else if (SI.StoreKind == StoreInfo::Initialization) {
-    // We don't need to check here, all these conditions were
-    // checked by StoreSiteFinder, when it figured out that it is
-    // initialization.
     if (const auto *VR = dyn_cast<VarRegion>(SI.Dest)) {
       const VarDecl *VD = VR->getDecl();
       if (!VD->getInit() && !VD->hasGlobalStorage()) {
