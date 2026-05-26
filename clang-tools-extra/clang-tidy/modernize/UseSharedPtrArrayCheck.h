@@ -13,17 +13,9 @@
 
 namespace clang::tidy::modernize {
 
-/// Transforms pre-C++17 \c shared_ptr<T> array workarounds into
-/// \c shared_ptr<T[]>.
-///
-/// Matches:
-///   std::shared_ptr<T>(new T[N], std::default_delete<T[]>())
-///   std::shared_ptr<T>(new T[N], [](T *p) { delete[] p; })
-///
-/// Transforms to:
-///   std::shared_ptr<T[]>(new T[N])
-///
-/// For the check to activate, the TU must be compiled in C++17 or later.
+/// For the user-facing documentation see:
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-shared-ptr-array.html
+
 class UseSharedPtrArrayCheck : public ClangTidyCheck {
 public:
   UseSharedPtrArrayCheck(StringRef Name, ClangTidyContext *Context)
@@ -41,4 +33,3 @@ private:
 } // namespace clang::tidy::modernize
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USESHAREDPTRARRAYCHECK_H
-

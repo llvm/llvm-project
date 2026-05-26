@@ -96,8 +96,8 @@ public:
     CheckFactories.registerCheck<UseRangesCheck>("modernize-use-ranges");
     CheckFactories.registerCheck<UseScopedLockCheck>(
         "modernize-use-scoped-lock");
-    CheckFactories.registerCheck<UseSharedPtrArrayCheck>(                                                                           
-        "modernize-use-shared-ptr-array");   
+    CheckFactories.registerCheck<UseSharedPtrArrayCheck>(
+        "modernize-use-shared-ptr-array");
     CheckFactories.registerCheck<UseStartsEndsWithCheck>(
         "modernize-use-starts-ends-with");
     CheckFactories.registerCheck<UseStdBitCheck>("modernize-use-std-bit");

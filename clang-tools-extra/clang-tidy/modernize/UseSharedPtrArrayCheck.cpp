@@ -50,7 +50,7 @@ void UseSharedPtrArrayCheck::registerMatchers(MatchFinder *Finder) {
 
 // Verifies that a callable body consists of exactly delete[] param; with only
 // one parameter. Used for both lambdas and free functions.
-static bool BodyIsArrayDeleteOfParam(const Stmt *Body,
+static bool bodyIsArrayDeleteOfParam(const Stmt *Body,
                                      const ParmVarDecl *Param) {
   const auto *Compound = dyn_cast_or_null<CompoundStmt>(Body);
   if (!Compound || Compound->size() != 1)
@@ -76,7 +76,7 @@ static bool BodyIsArrayDeleteOfParam(const Stmt *Body,
 
 // Manual parent walk rather than a matcher because implicit
 // wrappers obscure assignment contexts.
-static const VarDecl *FindParentVarDecl(ASTContext &Ctx, const Stmt *S) {
+static const VarDecl *findParentVarDecl(ASTContext &Ctx, const Stmt *S) {
   DynTypedNode Node = DynTypedNode::create(*S);
 
   for (;;) {
@@ -109,20 +109,20 @@ static const VarDecl *FindParentVarDecl(ASTContext &Ctx, const Stmt *S) {
 
 // Returns a StringRef into the SourceManager-owned buffer; stable for lifetime
 // of the ASTContext.
-static StringRef ExtractWrittenElementType(const TypeSourceInfo *TSI,
+static StringRef extractWrittenElementType(const TypeSourceInfo *TSI,
                                            SourceManager &SM,
                                            const LangOptions &LO) {
   if (!TSI)
     return {};
-  TypeLoc TL = TSI->getTypeLoc().getUnqualifiedLoc();
+  const TypeLoc TL = TSI->getTypeLoc().getUnqualifiedLoc();
   auto TSTL = TL.getAsAdjusted<TemplateSpecializationTypeLoc>();
   if (!TSTL || TSTL.getNumArgs() < 1)
     return {};
   const TypeSourceInfo *ArgTSI = TSTL.getArgLoc(0).getTypeSourceInfo();
   if (!ArgTSI)
     return {};
-  TypeLoc ArgTL = ArgTSI->getTypeLoc();
-  CharSourceRange R =
+  const TypeLoc ArgTL = ArgTSI->getTypeLoc();
+  const CharSourceRange R =
       CharSourceRange::getTokenRange(ArgTL.getBeginLoc(), ArgTL.getEndLoc());
   return Lexer::getSourceText(R, SM, LO);
 }
@@ -136,19 +136,19 @@ bool UseSharedPtrArrayCheck::lambdaBodyIsArrayDelete(
   if (!CallOp || CallOp->getNumParams() != 1)
     return false;
 
-  return BodyIsArrayDeleteOfParam(Lambda->getBody(), CallOp->getParamDecl(0));
+  return bodyIsArrayDeleteOfParam(Lambda->getBody(), CallOp->getParamDecl(0));
 }
 
 // Returns the QualType of the deleter's pointee, or null if the
 // deleter shape is not recognised.
-static QualType GetDeleterParamPointee(const Expr *DeleterArg) {
+static QualType getDeleterParamPointee(const Expr *DeleterArg) {
   const Expr *E = DeleterArg->IgnoreParenImpCasts();
 
   if (const auto *L = dyn_cast<LambdaExpr>(E)) {
     const CXXMethodDecl *CallOp = L->getCallOperator();
     if (!CallOp || CallOp->getNumParams() != 1)
       return {};
-    QualType P = CallOp->getParamDecl(0)->getType();
+    const QualType P = CallOp->getParamDecl(0)->getType();
     if (!P->isPointerType())
       return {};
     return P->getPointeeType();
@@ -158,7 +158,7 @@ static QualType GetDeleterParamPointee(const Expr *DeleterArg) {
     if (const auto *FD = dyn_cast<FunctionDecl>(DRE->getDecl())) {
       if (FD->getNumParams() != 1)
         return {};
-      QualType P = FD->getParamDecl(0)->getType();
+      const QualType P = FD->getParamDecl(0)->getType();
       if (!P->isPointerType())
         return {};
       return P->getPointeeType();
@@ -186,7 +186,7 @@ static QualType GetDeleterParamPointee(const Expr *DeleterArg) {
 // Locates the closing '>' of the shared_ptr<T> template-id, RAngleLoc is the
 // '>' to patch in the constructor expression. Locates separately the '>' of the
 // VarDecl's declared type when different (copy-init, pointer/ref declarator).
-static void ResolveRAngleLocs(const CXXConstructExpr *Ctor,
+static void resolveRAngleLocs(const CXXConstructExpr *Ctor,
                               const VarDecl *ParentVD, SourceManager &SM,
                               const LangOptions &LO, SourceLocation &RAngleLoc,
                               SourceLocation &VDRAngleLoc) {
@@ -286,7 +286,7 @@ static void ResolveRAngleLocs(const CXXConstructExpr *Ctor,
 
 // Manual parent walk rather than a matcher because implicit
 // wrappers obscure assignment contexts.
-static bool IsInsideAssignment(ASTContext &Ctx, const CXXConstructExpr *Ctor) {
+static bool isInsideAssignment(ASTContext &Ctx, const CXXConstructExpr *Ctor) {
   DynTypedNode Node = DynTypedNode::create(*Ctor);
   for (;;) {
     auto Parents = Ctx.getParents(Node);
@@ -318,7 +318,7 @@ static bool IsInsideAssignment(ASTContext &Ctx, const CXXConstructExpr *Ctor) {
 // FixIt 1: insert "[]" after the closing '>' of the shared_ptr<T> template-id.
 // ">>" tokens (merged with an enclosing template's '>') get a +1 offset to get
 // ">[]>" rather than "[]>>".
-static FixItHint MakeArrayInsertionFix(SourceLocation Loc, SourceManager &SM,
+static FixItHint makeArrayInsertionFix(SourceLocation Loc, SourceManager &SM,
                                        const LangOptions &LO) {
   Token AngleTok;
   if (!Lexer::getRawToken(Loc, AngleTok, SM, LO))
@@ -330,7 +330,7 @@ static FixItHint MakeArrayInsertionFix(SourceLocation Loc, SourceManager &SM,
 
 // FixIt 2: remove ", deleter" — from the end of arg 0 to the end of arg 1.
 static std::optional<FixItHint>
-BuildRemoveDeleterFix(const CXXConstructExpr *Ctor, SourceManager &SM,
+buildRemoveDeleterFix(const CXXConstructExpr *Ctor, SourceManager &SM,
                       const LangOptions &LO) {
   const Expr *Arg0 = Ctor->getArg(0);
   const Expr *Arg1 = Ctor->getArg(1);
@@ -380,7 +380,7 @@ void UseSharedPtrArrayCheck::check(const MatchFinder::MatchResult &Result) {
                        SharedElem))
     return;
 
-  QualType DelPointee = GetDeleterParamPointee(Ctor->getArg(1));
+  QualType DelPointee = getDeleterParamPointee(Ctor->getArg(1));
   if (DelPointee.isNull())
     return;
   if (!Ctx.hasSameType(DelPointee.getCanonicalType().getUnqualifiedType(),
@@ -395,7 +395,7 @@ void UseSharedPtrArrayCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Func =
           Result.Nodes.getNodeAs<FunctionDecl>("deleterFunction"))
     if (Func->getNumParams() != 1 || !Func->hasBody() ||
-        !BodyIsArrayDeleteOfParam(Func->getBody(), Func->getParamDecl(0)))
+        !bodyIsArrayDeleteOfParam(Func->getBody(), Func->getParamDecl(0)))
       return;
 
   if (Ctor->getArg(0)->getBeginLoc().isMacroID() ||
@@ -406,19 +406,19 @@ void UseSharedPtrArrayCheck::check(const MatchFinder::MatchResult &Result) {
   const LangOptions &LO = Ctx.getLangOpts();
 
   // CanonicalFallbackBuff anchors the StringRef only in the canonical fallback;
-  // ExtractWrittenElementType returns into SourceManager owned memory so needs
+  // extractWrittenElementType returns into SourceManager owned memory so needs
   // no buffer.
-  const VarDecl *ParentVD = FindParentVarDecl(Ctx, Ctor);
+  const VarDecl *ParentVD = findParentVarDecl(Ctx, Ctor);
   std::string CanonicalFallbackBuff;
   StringRef WrittenType = [&]() -> StringRef {
     if (ParentVD)
       if (StringRef S =
-              ExtractWrittenElementType(ParentVD->getTypeSourceInfo(), SM, LO);
+              extractWrittenElementType(ParentVD->getTypeSourceInfo(), SM, LO);
           !S.empty())
         return S;
     if (const auto *TOE = dyn_cast<CXXTemporaryObjectExpr>(Ctor))
       if (StringRef S =
-              ExtractWrittenElementType(TOE->getTypeSourceInfo(), SM, LO);
+              extractWrittenElementType(TOE->getTypeSourceInfo(), SM, LO);
           !S.empty())
         return S;
     CanonicalFallbackBuff = ElemTy.getAsString(Ctx.getPrintingPolicy());
@@ -445,22 +445,22 @@ void UseSharedPtrArrayCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Assignment targets may not have a rewritable written type at the
   // declaration site. Warn only.
-  if (IsInsideAssignment(Ctx, Ctor)) {
+  if (isInsideAssignment(Ctx, Ctor)) {
     warn();
     return;
   }
 
   SourceLocation RAngleLoc;
   SourceLocation VDRAngleLoc;
-  ResolveRAngleLocs(Ctor, ParentVD, SM, LO, RAngleLoc, VDRAngleLoc);
+  resolveRAngleLocs(Ctor, ParentVD, SM, LO, RAngleLoc, VDRAngleLoc);
 
   // FixIt 1: Insert [] into the rewritten shared_ptr type.
   FixItHint InsertArrayVarDecl;
   if (VDRAngleLoc.isValid() && !VDRAngleLoc.isMacroID())
-    InsertArrayVarDecl = MakeArrayInsertionFix(VDRAngleLoc, SM, LO);
+    InsertArrayVarDecl = makeArrayInsertionFix(VDRAngleLoc, SM, LO);
 
   // FixIt 2: Remove the explicit deleter argument.
-  auto RemoveDeleter = BuildRemoveDeleterFix(Ctor, SM, LO);
+  auto RemoveDeleter = buildRemoveDeleterFix(Ctor, SM, LO);
   if (!RemoveDeleter)
     return;
 
@@ -468,7 +468,7 @@ void UseSharedPtrArrayCheck::check(const MatchFinder::MatchResult &Result) {
   if (RAngleLoc.isInvalid() || RAngleLoc.isMacroID())
     return;
 
-  Diag << MakeArrayInsertionFix(RAngleLoc, SM, LO) << *RemoveDeleter
+  Diag << makeArrayInsertionFix(RAngleLoc, SM, LO) << *RemoveDeleter
        << InsertArrayVarDecl;
 }
 
