@@ -647,11 +647,7 @@ vector.body:
   br i1 %11, label %middle.block, label %vector.body
 
 middle.block:
-  %h2 = shufflevector <4 x i32> %10, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %sum2 = add <4 x i32> %10, %h2
-  %h3 = shufflevector <4 x i32> %sum2, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %sum3 = add <4 x i32> %sum2, %h3
-  %sum = extractelement <4 x i32> %sum3, i32 0
+  %sum = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %10)
   ret i32 %sum
 }
 
@@ -680,11 +676,7 @@ define dso_local i32 @sad_nonloop_4i8(ptr nocapture readonly %p, i64, ptr nocapt
   %isneg = icmp sgt <4 x i32> %sub, <i32 -1, i32 -1, i32 -1, i32 -1>
   %neg = sub nsw <4 x i32> zeroinitializer, %sub
   %abs = select <4 x i1> %isneg, <4 x i32> %sub, <4 x i32> %neg
-  %h2 = shufflevector <4 x i32> %abs, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %sum2 = add <4 x i32> %abs, %h2
-  %h3 = shufflevector <4 x i32> %sum2, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %sum3 = add <4 x i32> %sum2, %h3
-  %sum = extractelement <4 x i32> %sum3, i32 0
+  %sum = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %abs)
   ret i32 %sum
 }
 
@@ -712,13 +704,7 @@ define dso_local i32 @sad_nonloop_8i8(ptr nocapture readonly %p, i64, ptr nocapt
   %isneg = icmp sgt <8 x i32> %sub, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
   %neg = sub nsw <8 x i32> zeroinitializer, %sub
   %abs = select <8 x i1> %isneg, <8 x i32> %sub, <8 x i32> %neg
-  %h1 = shufflevector <8 x i32> %abs, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum1 = add <8 x i32> %abs, %h1
-  %h2 = shufflevector <8 x i32> %sum1, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum2 = add <8 x i32> %sum1, %h2
-  %h3 = shufflevector <8 x i32> %sum2, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum3 = add <8 x i32> %sum2, %h3
-  %sum = extractelement <8 x i32> %sum3, i32 0
+  %sum = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %abs)
   ret i32 %sum
 }
 

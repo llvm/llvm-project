@@ -107,14 +107,6 @@ macro(append_passthrough_options out type names)
             list(APPEND ${out} -C ${cache})
           endforeach()
         else()
-          # Type is important for cache variables.
-          # For example PATH variables will be made relative to CMAKE_BINARY_DIR
-          # at the point of set(CACHE) if the type isn't passed along.
-          get_property(type CACHE ${variable_name} PROPERTY TYPE)
-          if(NOT type STREQUAL "UNINITIALIZED")
-            string(APPEND new_name ":${type}")
-          endif()
-
           string(REPLACE ";" "|" new_value "${${variable_name}}")
           list(APPEND ${out} "-D${new_name}=${new_value}")
         endif()
@@ -631,6 +623,9 @@ if(build_runtimes)
   endif()
   if("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
     list(APPEND extra_args ENABLE_FORTRAN)
+    if (${LLVM_TOOL_FLANG_BUILD})
+      list(APPEND extra_deps "flang" "module_files")
+    endif()
   endif ()
 
   if(NOT LLVM_RUNTIME_TARGETS)

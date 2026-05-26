@@ -2,14 +2,14 @@
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:     -xcoff-traceback-table=false < %s | FileCheck --check-prefixes CHECK,CHECK32 %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff \
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff --code-model=small \
 ; RUN:     -xcoff-traceback-table=false < %s 2>&1 | FileCheck --check-prefixes CHECK,CHECK64  %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:     --xcoff-traceback-table=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefixes=SYM,SYM32 %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff \
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff --code-model=small \
 ; RUN:     --xcoff-traceback-table=false -filetype=obj -o %t64.o < %s
 ; RUN: llvm-readobj --syms %t64.o | FileCheck --check-prefixes=SYM,SYM64 %s
 
