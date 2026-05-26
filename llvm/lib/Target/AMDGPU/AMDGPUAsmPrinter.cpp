@@ -1145,7 +1145,10 @@ void AMDGPUAsmPrinter::emitDVgprSymbol(MachineFunction &MF) {
 
       if (NumBlocks > AMDGPU::IsaInfo::MaxDynamicVGPRBlocks) {
         OutContext.reportError(
-            {}, "too many DVGPR blocks for _dvgpr$ symbol for '" +
+            {}, "DVGPR block count " + Twine(NumBlocks) +
+                    " exceeds maximum of " +
+                    Twine(AMDGPU::IsaInfo::MaxDynamicVGPRBlocks) +
+                    " for __dvgpr$ symbol for '" +
                     Twine(CurrentFnSym->getName()) + "'");
         return;
       }
