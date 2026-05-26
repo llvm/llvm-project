@@ -23,8 +23,11 @@
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Value.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
 
 #include "llvm/Support/Debug.h"
@@ -246,17 +249,27 @@ std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
   return tripCount;
 }
 
+static FailureOr<int64_t> computeConstantBound(AffineMap map,
+                                               ValueRange operands,
+                                               presburger::BoundType type) {
+  ValueBoundsConstraintSet::Variable var(map, operands);
+  ValueBoundsOptions options;
+  options.closedUB = true;
+  options.allowIntegerType = true;
+  return ValueBoundsConstraintSet::computeConstantBound(type, var, nullptr,
+                                                        options);
+}
+
 static std::optional<uint64_t>
 getKnownTripCountBound(AffineMap map, SmallVectorImpl<Value> &operands,
                        presburger::BoundType type) {
   std::optional<uint64_t> tripCount;
   for (unsigned i = 0, e = map.getResults().size(); i < e; ++i) {
     AffineMap subMap = map.getSubMap(i);
-    ValueBoundsConstraintSet::Variable var(subMap, operands);
-    auto lbBound = ValueBoundsConstraintSet::computeConstantBound(
-        mlir::presburger::BoundType::LB, var);
-    auto ubBound = ValueBoundsConstraintSet::computeConstantBound(
-        mlir::presburger::BoundType::UB, var, nullptr);
+    FailureOr<int64_t> lbBound =
+        computeConstantBound(subMap, operands, presburger::BoundType::LB);
+    FailureOr<int64_t> ubBound =
+        computeConstantBound(subMap, operands, presburger::BoundType::UB);
     if (failed(lbBound) || failed(ubBound))
       return std::nullopt;
     if (type == presburger::BoundType::LB) {
@@ -278,8 +291,8 @@ getKnownTripCountBound(AffineMap map, SmallVectorImpl<Value> &operands,
   return tripCount;
 }
 
-std::optional<std::pair<int64_t, int64_t>>
-mlir::affine::getTripCount(AffineForOp forOp) {
+std::optional<std::pair<uint64_t, uint64_t>>
+mlir::affine::computeLoopTripCountConstantBounds(AffineForOp forOp) {
   SmallVector<Value, 4> operands;
   AffineMap map;
   getTripCountMapAndOperands(forOp, &map, &operands);
@@ -287,9 +300,9 @@ mlir::affine::getTripCount(AffineForOp forOp) {
   if (!map)
     return {};
 
-  std::optional<int64_t> minTrip =
+  std::optional<uint64_t> minTrip =
       getKnownTripCountBound(map, operands, presburger::BoundType::LB);
-  std::optional<int64_t> maxTrip =
+  std::optional<uint64_t> maxTrip =
       getKnownTripCountBound(map, operands, presburger::BoundType::UB);
   if (!minTrip || !maxTrip)
     return {};
@@ -311,7 +324,7 @@ uint64_t mlir::affine::getLargestDivisorOfTripCount(AffineForOp forOp) {
   // divisors.
   assert(map.getNumResults() >= 1 && "expected one or more results");
   std::optional<uint64_t> gcd;
-  for (auto resultExpr : map.getResults()) {
+  for (auto [idx, resultExpr] : llvm::enumerate(map.getResults())) {
     uint64_t thisGcd;
     if (auto constExpr = dyn_cast<AffineConstantExpr>(resultExpr)) {
       uint64_t tripCount = constExpr.getValue();
@@ -321,6 +334,16 @@ uint64_t mlir::affine::getLargestDivisorOfTripCount(AffineForOp forOp) {
       else
         // The greatest divisor is the trip count.
         thisGcd = tripCount;
+    } else if (FailureOr<int64_t> lbBound = computeConstantBound(
+                   map.getSubMap(idx), operands, presburger::BoundType::LB),
+               ubBound = computeConstantBound(map.getSubMap(idx), operands,
+                                              presburger::BoundType::UB);
+               !failed(lbBound) && !failed(ubBound)) {
+      if (*lbBound == *ubBound)
+        thisGcd =
+            (*lbBound == 0) ? std::numeric_limits<uint64_t>::max() : *lbBound;
+      else
+        thisGcd = 1;
     } else {
       // Trip count is not a known constant; return its largest known divisor.
       thisGcd = resultExpr.getLargestKnownDivisor();
