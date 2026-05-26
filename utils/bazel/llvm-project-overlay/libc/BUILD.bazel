@@ -2572,6 +2572,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_osutil_linux_syscall_wrappers_mmap",
+        ":__support_osutil_linux_syscall_wrappers_munmap",
         ":__support_osutil_syscall",
         ":__support_threads_callonce",
         ":hdr_fcntl_macros",
