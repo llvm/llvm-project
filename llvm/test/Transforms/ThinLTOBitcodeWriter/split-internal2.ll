@@ -8,6 +8,7 @@
 ; RUN: llvm-bcanalyzer -dump %t0 | FileCheck --check-prefix=BCA0 %s
 ; RUN: llvm-bcanalyzer -dump %t1 | FileCheck --check-prefix=BCA1 %s
 
+source_filename = "split-internal2.ll"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; ERROR: llvm-modextract: error: module index out of range; bitcode file contains 2 module(s)
@@ -36,5 +37,5 @@ define internal void @f2() {
 
 ; test that the GUID of f.<hash> is the same in the summaries of the 2 split
 ; modules
-; M0: = gv: (name: "f.13757e0fb71915e385efa4dc9d1e08fd", {{.*}} ; guid = 11298141672137883075
-; M1: = gv: (name: "f.13757e0fb71915e385efa4dc9d1e08fd") ; guid = 11298141672137883075
+; M0: = gv: (name: "f.13757e0fb71915e385efa4dc9d1e08fd", {{.*}} ; guid = 7412521599758238647
+; M1: = gv: (name: "f.13757e0fb71915e385efa4dc9d1e08fd") ; guid = 7412521599758238647
