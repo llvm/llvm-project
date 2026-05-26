@@ -178,7 +178,7 @@ class SROA {
   DomTreeUpdater *const DTU;
   AssumptionCache *const AC;
   const bool PreserveCFG;
-  const bool CanonicalizeStructToVector;
+  const bool StructToVector;
 
   /// Worklist of alloca instructions to simplify.
   ///
@@ -244,7 +244,7 @@ public:
        SROAOptions Options)
       : C(C), DTU(DTU), AC(AC),
         PreserveCFG(Options.CFG == SROAOptions::PreserveCFG),
-        CanonicalizeStructToVector(Options.CanonicalizeStructToVector) {}
+        StructToVector(Options.StructToVector) {}
 
   /// Main run method used by both the SROAPass and by the legacy pass.
   std::pair<bool /*Changed*/, bool /*CFGChanged*/> runSROA(Function &F);
@@ -5109,7 +5109,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 /// memcpyopt eliminates the tempory altogether.
 ///
 /// As such, we only apply this transformation after memcpyopt has run. We gate
-/// this transformation by the "CanonicalizeStructToVector" pass option.
+/// this transformation by the "StructToVector" pass option.
 static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
                                                       Partition &P,
                                                       const DataLayout &DL) {
@@ -5162,7 +5162,7 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
 ///     nullptr.
 static std::tuple<Type *, bool, VectorType *>
 selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
-                    LLVMContext &C, bool CanonicalizeStructToVector) {
+                    LLVMContext &C, bool StructToVector) {
   auto LogSelection = [&](StringRef Path, Type *SelectedTy,
                           VectorType *SelectedVecTy, bool SelectedIntWidening) {
     LLVM_DEBUG({
@@ -5255,7 +5255,7 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
 
     // Try homogeneous struct to vector canonicalization when requested. Running
     // this too early can hide memcpy chains from MemCpyOpt.
-    if (CanonicalizeStructToVector) {
+    if (StructToVector) {
       if (auto *STy = dyn_cast<StructType>(TypePartitionTy)) {
         if (auto *VTy = tryCanonicalizeStructToVector(STy, P, DL)) {
           LogSelection("struct-fallback-vecty", VTy, nullptr, false);
@@ -5304,7 +5304,7 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
   const DataLayout &DL = AI.getDataLayout();
   // Select the type for the new alloca that spans the partition.
   auto [PartitionTy, IsIntegerWideningViable, VecTy] =
-      selectPartitionType(P, DL, AI, *C, CanonicalizeStructToVector);
+      selectPartitionType(P, DL, AI, *C, StructToVector);
 
   // Check for the case where we're going to rewrite to a new alloca of the
   // exact same type as the original, and with the same access offsets. In that
@@ -6130,8 +6130,8 @@ void SROAPass::printPipeline(
   OS << '<'
      << (Options.CFG == SROAOptions::PreserveCFG ? "preserve-cfg"
                                                  : "modify-cfg");
-  if (Options.CanonicalizeStructToVector)
-    OS << ";canonicalize-struct-to-vector";
+  if (Options.StructToVector)
+    OS << ";struct-to-vector";
   OS << '>';
 }
 
@@ -6177,11 +6177,10 @@ public:
 
 char SROALegacyPass::ID = 0;
 
-FunctionPass *llvm::createSROAPass(bool PreserveCFG,
-                                   bool CanonicalizeStructToVector) {
+FunctionPass *llvm::createSROAPass(bool PreserveCFG, bool StructToVector) {
   return new SROALegacyPass(SROAOptions(PreserveCFG ? SROAOptions::PreserveCFG
                                                     : SROAOptions::ModifyCFG,
-                                        CanonicalizeStructToVector));
+                                        StructToVector));
 }
 
 INITIALIZE_PASS_BEGIN(SROALegacyPass, "sroa",

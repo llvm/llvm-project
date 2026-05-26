@@ -1451,12 +1451,12 @@ Expected<SROAOptions> parseSROAOptions(StringRef Params) {
                                        inconvertibleErrorCode());
       Result.CFG = SROAOptions::PreserveCFG;
       SawCFGOption = true;
-    } else if (ParamName == "canonicalize-struct-to-vector") {
-      Result.CanonicalizeStructToVector = true;
+    } else if (ParamName == "struct-to-vector") {
+      Result.StructToVector = true;
     } else {
       return make_error<StringError>(
           formatv("invalid SROA pass parameter '{}' (expected preserve-cfg, "
-                  "modify-cfg, or canonicalize-struct-to-vector)",
+                  "modify-cfg, or struct-to-vector)",
                   ParamName)
               .str(),
           inconvertibleErrorCode());

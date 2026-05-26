@@ -25,11 +25,10 @@ struct SROAOptions {
   enum CFGOption { ModifyCFG, PreserveCFG };
 
   CFGOption CFG;
-  bool CanonicalizeStructToVector;
+  bool StructToVector;
 
-  SROAOptions(CFGOption CFG = PreserveCFG,
-              bool CanonicalizeStructToVector = false)
-      : CFG(CFG), CanonicalizeStructToVector(CanonicalizeStructToVector) {}
+  SROAOptions(CFGOption CFG = PreserveCFG, bool StructToVector = false)
+      : CFG(CFG), StructToVector(StructToVector) {}
 };
 
 class SROAPass : public OptionalPassInfoMixin<SROAPass> {
@@ -38,7 +37,7 @@ class SROAPass : public OptionalPassInfoMixin<SROAPass> {
 public:
   /// If \p PreserveCFG is set, then the pass is not allowed to modify CFG
   /// in any way, even if it would update CFG analyses.
-  /// If \p CanonicalizeStructToVector is set, then the pass will try to convert
+  /// If \p StructToVector is set, then the pass will try to convert
   /// allocas of homogeneous structs into vector allocas.
   LLVM_ABI SROAPass(SROAOptions Options);
 
