@@ -209,6 +209,54 @@ public:
 } // namespace opts
 
 static void parseArgs(int argc, char *const *argv) {
+  struct BoolMapEntry {
+    StringRef Name;
+    unsigned ID;
+    bool &ValRef;
+  };
+
+  static const BoolMapEntry BoolMap[] = {
+      {"sparse", opts::OPT_sparse, OutputSparse},
+      {"compress-all-sections", opts::OPT_compress_all_sections,
+       CompressAllSections},
+      {"sample-merge-cold-context", opts::OPT_sample_merge_cold_context,
+       SampleMergeColdContext},
+      {"sample-trim-cold-context", opts::OPT_sample_trim_cold_context,
+       SampleTrimColdContext},
+      {"gen-partial-profile", opts::OPT_gen_partial_profile, GenPartialProfile},
+      {"split-layout", opts::OPT_split_layout, SplitLayout},
+      {"drop-profile-symbol-list", opts::OPT_drop_profile_symbol_list,
+       DropProfileSymbolList},
+      {"keep-vtable-symbols", opts::OPT_keep_vtable_symbols, KeepVTableSymbols},
+      {"write-prev-version", opts::OPT_write_prev_version, DoWritePrevVersion},
+      {"memprof-full-schema", opts::OPT_memprof_full_schema, MemProfFullSchema},
+      {"memprof-random-hotness", opts::OPT_memprof_random_hotness,
+       MemprofGenerateRandomHotness},
+      {"debuginfod", opts::OPT_debuginfod, DebugInfod},
+      {"dump-input-file-list", opts::OPT_dump_input_file_list,
+       DumpInputFileList},
+      {"use-md5", opts::OPT_use_md5, UseMD5},
+      {"counts", opts::OPT_counts, ShowCounts},
+      {"text", opts::OPT_text, TextFormat},
+      {"json", opts::OPT_json, JsonFormat},
+      {"ic-targets", opts::OPT_ic_targets, ShowIndirectCallTargets},
+      {"show-vtables", opts::OPT_show_vtables, ShowVTables},
+      {"memop-sizes", opts::OPT_memop_sizes, ShowMemOPSizes},
+      {"detailed-summary", opts::OPT_detailed_summary, ShowDetailedSummary},
+      {"hot-func-list", opts::OPT_hot_func_list, ShowHotFuncList},
+      {"all-functions", opts::OPT_all_functions, ShowAllFunctions},
+      {"showcs", opts::OPT_showcs, ShowCS},
+      {"list-below-cutoff", opts::OPT_list_below_cutoff, OnlyListBelow},
+      {"show-prof-sym-list", opts::OPT_show_prof_sym_list,
+       ShowProfileSymbolList},
+      {"show-sec-info-only", opts::OPT_show_sec_info_only, ShowSectionInfoOnly},
+      {"binary-ids", opts::OPT_binary_ids, ShowBinaryIds},
+      {"temporal-profile-traces", opts::OPT_temporal_profile_traces,
+       ShowTemporalProfTraces},
+      {"covered", opts::OPT_covered, ShowCovered},
+      {"profile-version", opts::OPT_profile_version, ShowProfileVersion},
+      {"cs", opts::OPT_cs, IsCS}};
+
   opts::ProfDataOptTable Tbl;
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver{A};
@@ -217,6 +265,13 @@ static void parseArgs(int argc, char *const *argv) {
         llvm::errs() << Msg << '\n';
         std::exit(1);
       });
+
+  // Populate standard matched flags
+  for (const auto &E : BoolMap) {
+    if (Args.hasArg(E.ID)) {
+      E.ValRef = true;
+    }
+  }
 
   // Delegate unrecognized support library options to the cl option registry!
   auto &CLOpts = cl::getRegisteredOptions();
@@ -239,109 +294,20 @@ static void parseArgs(int argc, char *const *argv) {
       OptVal = "true";
     }
 
-    static const SmallSet<StringRef, 32> ToolBoolOpts = {
-        "sparse",
-        "compress-all-sections",
-        "sample-merge-cold-context",
-        "sample-trim-cold-context",
-        "gen-partial-profile",
-        "split-layout",
-        "drop-profile-symbol-list",
-        "keep-vtable-symbols",
-        "write-prev-version",
-        "memprof-full-schema",
-        "memprof-random-hotness",
-        "debuginfod",
-        "dump-input-file-list",
-        "use-md5",
-        "counts",
-        "text",
-        "json",
-        "ic-targets",
-        "show-vtables",
-        "memop-sizes",
-        "detailed-summary",
-        "hot-func-list",
-        "all-functions",
-        "showcs",
-        "list-below-cutoff",
-        "show-prof-sym-list",
-        "show-sec-info-only",
-        "binary-ids",
-        "temporal-profile-traces",
-        "covered",
-        "profile-version",
-        "cs"};
+    // Find matching boolean option in the BoolMap
+    const BoolMapEntry *Entry = nullptr;
+    for (const auto &E : BoolMap) {
+      if (E.Name == OptName) {
+        Entry = &E;
+        break;
+      }
+    }
 
-    if (ToolBoolOpts.count(OptName)) {
-      bool BoolVal = StringSwitch<bool>(OptVal)
-                         .Cases({"true", "1"}, true)
-                         .Cases({"false", "0"}, false)
-                         .Default(false);
-      if (OptName == "sparse")
-        OutputSparse = BoolVal;
-      else if (OptName == "compress-all-sections")
-        CompressAllSections = BoolVal;
-      else if (OptName == "sample-merge-cold-context")
-        SampleMergeColdContext = BoolVal;
-      else if (OptName == "sample-trim-cold-context")
-        SampleTrimColdContext = BoolVal;
-      else if (OptName == "gen-partial-profile")
-        GenPartialProfile = BoolVal;
-      else if (OptName == "split-layout")
-        SplitLayout = BoolVal;
-      else if (OptName == "drop-profile-symbol-list")
-        DropProfileSymbolList = BoolVal;
-      else if (OptName == "keep-vtable-symbols")
-        KeepVTableSymbols = BoolVal;
-      else if (OptName == "write-prev-version")
-        DoWritePrevVersion = BoolVal;
-      else if (OptName == "memprof-full-schema")
-        MemProfFullSchema = BoolVal;
-      else if (OptName == "memprof-random-hotness")
-        MemprofGenerateRandomHotness = BoolVal;
-      else if (OptName == "debuginfod")
-        DebugInfod = BoolVal;
-      else if (OptName == "dump-input-file-list")
-        DumpInputFileList = BoolVal;
-      else if (OptName == "use-md5")
-        UseMD5 = BoolVal;
-      else if (OptName == "counts")
-        ShowCounts = BoolVal;
-      else if (OptName == "text")
-        TextFormat = BoolVal;
-      else if (OptName == "json")
-        JsonFormat = BoolVal;
-      else if (OptName == "ic-targets")
-        ShowIndirectCallTargets = BoolVal;
-      else if (OptName == "show-vtables")
-        ShowVTables = BoolVal;
-      else if (OptName == "memop-sizes")
-        ShowMemOPSizes = BoolVal;
-      else if (OptName == "detailed-summary")
-        ShowDetailedSummary = BoolVal;
-      else if (OptName == "hot-func-list")
-        ShowHotFuncList = BoolVal;
-      else if (OptName == "all-functions")
-        ShowAllFunctions = BoolVal;
-      else if (OptName == "showcs")
-        ShowCS = BoolVal;
-      else if (OptName == "list-below-cutoff")
-        OnlyListBelow = BoolVal;
-      else if (OptName == "show-prof-sym-list")
-        ShowProfileSymbolList = BoolVal;
-      else if (OptName == "show-sec-info-only")
-        ShowSectionInfoOnly = BoolVal;
-      else if (OptName == "binary-ids")
-        ShowBinaryIds = BoolVal;
-      else if (OptName == "temporal-profile-traces")
-        ShowTemporalProfTraces = BoolVal;
-      else if (OptName == "covered")
-        ShowCovered = BoolVal;
-      else if (OptName == "profile-version")
-        ShowProfileVersion = BoolVal;
-      else if (OptName == "cs")
-        IsCS = BoolVal;
+    if (Entry) {
+      Entry->ValRef = StringSwitch<bool>(OptVal)
+                          .Cases({"true", "1"}, true)
+                          .Cases({"false", "0"}, false)
+                          .Default(false);
       continue;
     }
 
