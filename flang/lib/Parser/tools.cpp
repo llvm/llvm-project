@@ -240,7 +240,7 @@ std::optional<Label> GetFinalLabel(const OpenMPConstruct &x) {
           }
         } else if constexpr ( //
             std::is_same_v<TypeS, OpenMPLoopConstruct> ||
-            std::is_same_v<TypeS, OpenMPSectionConstruct> ||
+            std::is_same_v<TypeS, OmpSectionDirective> ||
             std::is_base_of_v<OmpBlockConstruct, TypeS>) {
           return GetFinalLabel(std::get<Block>(s.t));
         } else {
