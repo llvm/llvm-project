@@ -2442,7 +2442,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return false;
 
   for (unsigned I = 0, N = TPL1.size(); I != N; ++I)
-    if (!Context.IsEquivalent(TPL1[I], TPL2[I]))
+    if (!IsStructurallyEquivalent(Context, TPL1[I], TPL2[I]))
       return false;
 
   TemplateName TN1 = FTD1->getFriendTemplateName();
@@ -2810,18 +2810,19 @@ bool StructuralEquivalenceContext::CheckCommonEquivalence(Decl *D1, Decl *D2) {
 
 bool StructuralEquivalenceContext::IsEquivalent(TemplateParameterList *TPL1,
                                                 TemplateParameterList *TPL2) {
+  assert(DeclsToCheck.empty());
+  assert(VisitedDecls.empty());
+
   if (TPL1 == TPL2)
     return true;
 
-  if (!TPL1 || !TPL2 || TPL1->size() != TPL2->size())
+  if (!TPL1 || !TPL2)
     return false;
 
-  for (unsigned I = 0, N = TPL1->size(); I != N; ++I) {
-    if (!IsEquivalent(TPL1->getParam(I), TPL2->getParam(I)))
-      return false;
-  }
+  if (!::IsStructurallyEquivalent(*this, TPL1, TPL2))
+    return false;
 
-  return IsEquivalent(TPL1->getRequiresClause(), TPL2->getRequiresClause());
+  return !Finish();
 }
 
 bool StructuralEquivalenceContext::CheckKindSpecificEquivalence(

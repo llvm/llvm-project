@@ -4531,12 +4531,8 @@ struct FriendCountAndPosition {
 
 static bool IsEquivalentFriend(ASTImporter &Importer, FriendDecl *FD1,
                                FriendDecl *FD2) {
-  if ((!FD1->getFriendType()) != (!FD2->getFriendType()))
+  if (FD1->getKind() != FD2->getKind())
     return false;
-
-  if (const TypeSourceInfo *TSI = FD1->getFriendType())
-    return Importer.IsStructurallyEquivalent(
-        TSI->getType(), FD2->getFriendType()->getType(), /*Complain=*/false);
 
   ASTImporter::NonEquivalentDeclSet NonEquivalentDecls;
   StructuralEquivalenceContext Ctx(
@@ -4545,36 +4541,6 @@ static bool IsEquivalentFriend(ASTImporter &Importer, FriendDecl *FD1,
       StructuralEquivalenceKind::Default,
       /*StrictTypeSpelling=*/false, /*Complain=*/false);
   return Ctx.IsEquivalent(FD1, FD2);
-}
-
-static bool IsEquivalentFriend(ASTImporter &Importer, FriendTemplateDecl *FTD1,
-                               FriendTemplateDecl *FTD2) {
-  ArrayRef<TemplateParameterList *> TPL1 =
-      FTD1->getFriendTypeTemplateParameterLists();
-  ArrayRef<TemplateParameterList *> TPL2 =
-      FTD2->getFriendTypeTemplateParameterLists();
-  if (TPL1.size() != TPL2.size())
-    return false;
-
-  ASTImporter::NonEquivalentDeclSet NonEquivalentDecls;
-  StructuralEquivalenceContext Ctx(
-      Importer.getToContext().getLangOpts(), FTD1->getASTContext(),
-      FTD2->getASTContext(), NonEquivalentDecls,
-      StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
-      /*Complain=*/false);
-
-  for (unsigned I = 0, N = TPL1.size(); I != N; ++I)
-    if (!Ctx.IsEquivalent(TPL1[I], TPL2[I]))
-      return false;
-
-  if ((!FTD1->getFriendType()) != (!FTD2->getFriendType()))
-    return false;
-
-  if (const TypeSourceInfo *TSI = FTD1->getFriendType())
-    return Importer.IsStructurallyEquivalent(
-        TSI->getType(), FTD2->getFriendType()->getType(), /*Complain=*/false);
-
-  return Ctx.IsEquivalent(FTD1, FTD2);
 }
 
 static FriendCountAndPosition getFriendCountAndPosition(ASTImporter &Importer,
@@ -4607,11 +4573,10 @@ ExpectedDecl ASTNodeImporter::VisitFriendDecl(FriendDecl *D) {
   // We try to maintain order and count of redundant friend declarations.
   const auto *RD = cast<CXXRecordDecl>(DC);
   SmallVector<FriendDecl *, 2> ImportedEquivalentFriends;
-  for (FriendDecl *ImportedFriend : RD->friends()) {
+  for (FriendDecl *ImportedFriend : RD->friends())
     if (ImportedFriend->getKind() == Decl::Friend &&
         IsEquivalentFriend(Importer, D, ImportedFriend))
       ImportedEquivalentFriends.push_back(ImportedFriend);
-  }
 
   FriendCountAndPosition CountAndPosition =
       getFriendCountAndPosition(Importer, D);
