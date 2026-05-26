@@ -70,6 +70,7 @@ namespace {
     void VisitEmptyDecl(EmptyDecl *D);
     void VisitFunctionDecl(FunctionDecl *D);
     void VisitFriendDecl(FriendDecl *D);
+    void VisitFriendTemplateDecl(FriendTemplateDecl *D);
     void VisitFieldDecl(FieldDecl *D);
     void VisitVarDecl(VarDecl *D);
     void VisitLabelDecl(LabelDecl *D);
@@ -905,6 +906,24 @@ void DeclPrinter::VisitFriendDecl(FriendDecl *D) {
 
   if (D->isPackExpansion())
     Out << "...";
+}
+
+void DeclPrinter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
+  for (TemplateParameterList *TPL : D->getFriendTypeTemplateParameterLists())
+    printTemplateParameters(TPL);
+
+  TemplateName TN = D->getFriendTemplateName();
+  if (TN.isNull()) {
+    VisitFriendDecl(D);
+  } else {
+    Out << "friend ";
+    TN.print(Out, Policy,
+             Policy.SuppressScope ? TemplateName::Qualified::None
+                                  : TemplateName::Qualified::AsWritten);
+
+    if (D->isPackExpansion())
+      Out << "...";
+  }
 }
 
 void DeclPrinter::VisitFieldDecl(FieldDecl *D) {
