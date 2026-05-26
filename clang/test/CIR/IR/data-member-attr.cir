@@ -16,3 +16,17 @@ module {
 
 // CHECK: cir.global external @gv = #cir.data_member<0>
 // CHECK: cir.global external @null_gv = #cir.data_member<null>
+
+// -----
+// Check that a non-zero member index parses and round-trips correctly.
+
+!u16i = !cir.int<u, 16>
+!u32i = !cir.int<u, 32>
+!rec2 = !cir.record<struct "T" {!u16i, !u32i}>
+
+module {
+  cir.global external @second_member = #cir.data_member<1>
+      : !cir.data_member<!u32i in !rec2>
+}
+
+// CHECK: cir.global external @second_member = #cir.data_member<1>
