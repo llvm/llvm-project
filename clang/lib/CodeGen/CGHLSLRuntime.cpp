@@ -1495,8 +1495,8 @@ bool CGHLSLRuntime::emitGlobalResourceArray(CodeGenFunction &CGF, const Expr *E,
 }
 
 // If the expression is a global resource array, create a temporary and
-// initialize all of its resources, and return it as an LValue. Returns nullopt if
-// no initialization has been performed and the handling should follow the
+// initialize all of its resources, and return it as an LValue. Returns nullopt
+// if no initialization has been performed and the handling should follow the
 // default path.
 std::optional<LValue> CGHLSLRuntime::emitGlobalResourceArrayAsLValue(
     CodeGenFunction &CGF, const VarDecl *ArrayDecl, SourceLocation Loc) {
