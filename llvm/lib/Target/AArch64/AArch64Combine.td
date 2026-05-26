@@ -60,8 +60,17 @@ def push_sub_through_sext : push_opcode_through_ext<G_SUB, G_SEXT>;
 def push_add_through_sext : push_opcode_through_ext<G_ADD, G_SEXT>;
 def push_mul_through_sext : push_opcode_through_ext<G_MUL, G_SEXT>;
 
+def simplify_uaddo_matchinfo : GIDefMatchData<"std::pair<Register, Register>">;
+def simplify_uaddo : GICombineRule<
+  (defs root:$root, simplify_uaddo_matchinfo:$matchinfo),
+  (match (G_UADDO $dst, $carry_out, $src1, $src2):$root,
+         [{ return matchSimplifyUADDO(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applySimplifyUADDO(*${root}, MRI, B, Observer, Helper,
+                               ${matchinfo}); }])>;
+
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
+                                      combine_shuffle_vector,
                                       icmp_redundant_trunc,
                                       fold_global_offset,
                                       ext_addv_to_udot_addv,
@@ -71,12 +80,14 @@ def AArch64PreLegalizerCombiner: GICombiner<
                                       push_mul_through_zext,
                                       push_sub_through_sext,
                                       push_add_through_sext,
-                                      push_mul_through_sext]> {
+                                      push_mul_through_sext,
+                                      simplify_uaddo]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
 def AArch64O0PreLegalizerCombiner: GICombiner<
-  "AArch64O0PreLegalizerCombinerImpl", [optnone_combines]> {
+  "AArch64O0PreLegalizerCombinerImpl", [optnone_combines,
+                                        combine_shuffle_vector]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -378,6 +389,7 @@ def AArch64PostLegalizerCombiner
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,
                         select_to_minmax, or_to_bsp, combine_concat_vector,
+                        combine_build_vector_of_bitcast,
                         commute_constant_to_rhs, extract_vec_elt_combines,
                         push_freeze_to_prevent_poison_from_propagating,
                         combine_mul_cmlt, combine_use_vector_truncate,

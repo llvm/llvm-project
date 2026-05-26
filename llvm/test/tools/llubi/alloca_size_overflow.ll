@@ -7,6 +7,6 @@ define void @main() {
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   %alloc_dyn = alloca i32, i64 -1, align 4 at @main
+; CHECK-NEXT: #0   %alloc_dyn = alloca i32, i64 -1, align 4 at @main <stdin>:5
 ; CHECK-NEXT: Immediate UB detected: Alloca with allocation size that overflows uint64_t. Size: -1
 ; CHECK-NEXT: error: Execution of function 'main' failed.

@@ -250,14 +250,12 @@ protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     Stream &ostrm = result.GetOutputStream();
 
-    Target *target = GetDebugger().GetSelectedTarget().get();
+    Target *target = GetTarget();
     PlatformSP platform_sp;
-    if (target) {
+    if (target)
       platform_sp = target->GetPlatform();
-    }
-    if (!platform_sp) {
+    if (!platform_sp)
       platform_sp = GetDebugger().GetPlatformList().GetSelectedPlatform();
-    }
     if (platform_sp) {
       platform_sp->GetStatus(ostrm);
       result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1071,11 +1069,9 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = GetDebugger().GetSelectedTarget().get();
-    PlatformSP platform_sp;
-    if (target) {
-      platform_sp = target->GetPlatform();
-    }
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
+    PlatformSP platform_sp = target->GetPlatform();
     if (!platform_sp) {
       platform_sp = GetDebugger().GetPlatformList().GetSelectedPlatform();
     }
@@ -1083,7 +1079,6 @@ protected:
     if (platform_sp) {
       Status error;
       const size_t argc = args.GetArgumentCount();
-      Target *target = m_exe_ctx.GetTargetPtr();
       Module *exe_module = target->GetExecutableModulePointer();
       if (exe_module) {
         m_options.launch_info.GetExecutableFile() = exe_module->GetFileSpec();
@@ -1119,7 +1114,7 @@ protected:
         Debugger &debugger = GetDebugger();
 
         if (argc == 0) {
-          // If no arguments were given to the command, use target.run-args.
+          // If no arguments were given to the command, use target->run-args.
           Args target_run_args;
           target->GetRunArguments(target_run_args);
           m_options.launch_info.GetArguments().AppendArguments(target_run_args);
@@ -1223,7 +1218,7 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = GetDebugger().GetSelectedTarget().get();
+    Target *target = GetTarget();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();
@@ -1470,7 +1465,7 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = GetDebugger().GetSelectedTarget().get();
+    Target *target = GetTarget();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();

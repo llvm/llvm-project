@@ -17,7 +17,7 @@
 // CHECK: #dbg_declare(ptr %p, ![[VAR_13:[0-9]+]], !DIExpression()
 // CHECK: getelementptr inbounds nuw %struct.A, ptr {{.*}}, i32 0, i32 1, !dbg ![[Y1_DEBUG_LOC:[0-9]+]]
 // CHECK: getelementptr inbounds nuw %struct.A, ptr {{.*}}, i32 0, i32 1, !dbg ![[Y2_DEBUG_LOC:[0-9]+]]
-// CHECK: load ptr, ptr %z2, {{.*}}!dbg ![[Z2_DEBUG_LOC:[0-9]+]]
+// CHECK: load i32, ptr %z2, {{.*}}!dbg ![[Z2_DEBUG_LOC:[0-9]+]]
 // CHECK: getelementptr inbounds [2 x i32], ptr {{.*}}, i{{64|32}} 0, i{{64|32}} 1, !dbg ![[A2_DEBUG_LOC:[0-9]+]]
 // CHECK: getelementptr inbounds nuw { i32, i32 }, ptr {{.*}}, i32 0, i32 1, !dbg ![[C2_DEBUG_LOC:[0-9]+]]
 // CHECK: extractelement <2 x i32> {{.*}}, i32 1, !dbg ![[V2_DEBUG_LOC:[0-9]+]]
