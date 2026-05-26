@@ -1462,8 +1462,8 @@ Constant *llvm::ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
   return ConstantFoldBinaryInstruction(Opcode, LHS, RHS);
 }
 
-static Constant *flushDenormalConstant(Type *Ty, const APFloat &APF,
-                                       DenormalMode::DenormalModeKind Mode) {
+static ConstantFP *flushDenormalConstant(Type *Ty, const APFloat &APF,
+                                         DenormalMode::DenormalModeKind Mode) {
   switch (Mode) {
   case DenormalMode::Dynamic:
     return nullptr;
@@ -1490,9 +1490,9 @@ static DenormalMode getInstrDenormalMode(const Instruction *CtxI, Type *Ty) {
       Ty->getScalarType()->getFltSemantics());
 }
 
-static Constant *flushDenormalConstantFP(ConstantFP *CFP,
-                                         const Instruction *Inst,
-                                         bool IsOutput) {
+static ConstantFP *flushDenormalConstantFP(ConstantFP *CFP,
+                                           const Instruction *Inst,
+                                           bool IsOutput) {
   const APFloat &APF = CFP->getValueAPF();
   if (!APF.isDenormal())
     return CFP;
@@ -1514,7 +1514,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
   VectorType *VecTy = dyn_cast<VectorType>(Ty);
   if (VecTy) {
     if (auto *Splat = dyn_cast_or_null<ConstantFP>(Operand->getSplatValue())) {
-      Constant *Folded = flushDenormalConstantFP(Splat, Inst, IsOutput);
+      ConstantFP *Folded = flushDenormalConstantFP(Splat, Inst, IsOutput);
       if (!Folded)
         return nullptr;
       return ConstantVector::getSplat(VecTy->getElementCount(), Folded);
@@ -1539,7 +1539,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
       if (!CFP)
         return nullptr;
 
-      Constant *Folded = flushDenormalConstantFP(CFP, Inst, IsOutput);
+      ConstantFP *Folded = flushDenormalConstantFP(CFP, Inst, IsOutput);
       if (!Folded)
         return nullptr;
       NewElts.push_back(Folded);
@@ -1556,7 +1556,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
         NewElts.push_back(ConstantFP::get(Ty, Elt));
       } else {
         DenormalMode Mode = getInstrDenormalMode(Inst, Ty);
-        Constant *Folded =
+        ConstantFP *Folded =
             flushDenormalConstant(Ty, Elt, IsOutput ? Mode.Output : Mode.Input);
         if (!Folded)
           return nullptr;
@@ -3713,9 +3713,14 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     } else if (auto *Op2C = dyn_cast<ConstantInt>(Operands[1])) {
       switch (IntrinsicID) {
       case Intrinsic::ldexp: {
+        // APFloat::scalbn takes the exponent as `int`. Clamp wider integer
+        // exponents into [INT_MIN, INT_MAX] so values still saturate the
+        // result to +/-inf or +/-0.
+        APInt Exp = Op2C->getValue();
+        Exp = Exp.getBitWidth() < 32 ? Exp.sext(32) : Exp.truncSSat(32);
         return ConstantFP::get(
             Ty->getContext(),
-            scalbn(Op1V, Op2C->getSExtValue(), APFloat::rmNearestTiesToEven));
+            scalbn(Op1V, Exp.getSExtValue(), APFloat::rmNearestTiesToEven));
       }
       case Intrinsic::is_fpclass: {
         FPClassTest Mask = static_cast<FPClassTest>(Op2C->getZExtValue());
@@ -4684,14 +4689,8 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
 } // end anonymous namespace
 
 Constant *llvm::ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
-                                            Constant *RHS, Type *Ty,
-                                            Instruction *FMFSource) {
-  auto *Call = dyn_cast_if_present<CallBase>(FMFSource);
-  // Ensure we check flags like StrictFP that might prevent this from getting
-  // folded before generating a result.
-  if (Call && !canConstantFoldCallTo(Call, Call->getCalledFunction()))
-    return nullptr;
-  return ConstantFoldIntrinsicCall2(ID, Ty, {LHS, RHS}, Call);
+                                            Constant *RHS, Type *Ty) {
+  return ConstantFoldIntrinsicCall2(ID, Ty, {LHS, RHS}, nullptr);
 }
 
 Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,

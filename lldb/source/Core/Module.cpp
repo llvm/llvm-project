@@ -14,6 +14,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
@@ -367,12 +368,10 @@ void Module::ForEachTypeSystem(
 }
 
 void Module::ParseAllDebugSymbols() {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  size_t num_comp_units = GetNumCompileUnits();
+  LockedPtr<SymbolFile> symbols = GetSymbolFileLocked();
+  size_t num_comp_units = symbols ? symbols->GetNumCompileUnits() : 0;
   if (num_comp_units == 0)
     return;
-
-  SymbolFile *symbols = GetSymbolFile();
 
   for (size_t cu_idx = 0; cu_idx < num_comp_units; cu_idx++) {
     SymbolContext sc;
@@ -410,8 +409,7 @@ void Module::DumpSymbolContext(Stream *s) {
 }
 
 size_t Module::GetNumCompileUnits() {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  if (SymbolFile *symbols = GetSymbolFile())
+  if (LockedPtr<SymbolFile> symbols = GetSymbolFileLocked())
     return symbols->GetNumCompileUnits();
   return 0;
 }
@@ -429,10 +427,9 @@ CompUnitSP Module::GetCompileUnitAtIndex(size_t index) {
 }
 
 bool Module::ResolveFileAddress(lldb::addr_t vm_addr, Address &so_addr) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  SectionList *section_list = GetSectionList();
+  LockedPtr<SectionList> section_list = GetSectionListLocked();
   if (section_list)
-    return so_addr.ResolveAddressUsingFileSections(vm_addr, section_list);
+    return so_addr.ResolveAddressUsingFileSections(vm_addr, section_list.get());
   return false;
 }
 
@@ -1233,6 +1230,24 @@ SectionList *Module::GetSectionList() {
   return m_sections_up.get();
 }
 
+LockedPtr<ObjectFile> Module::GetObjectFileLocked() {
+  return LockedPtr<ObjectFile>(m_mutex, GetObjectFile());
+}
+
+LockedPtr<SectionList> Module::GetSectionListLocked() {
+  return LockedPtr<SectionList>(m_mutex, GetSectionList());
+}
+
+LockedPtr<SymbolFile> Module::GetSymbolFileLocked(bool can_create,
+                                                  Stream *feedback_strm) {
+  return LockedPtr<SymbolFile>(m_mutex,
+                               GetSymbolFile(can_create, feedback_strm));
+}
+
+LockedPtr<Symtab> Module::GetSymtabLocked(bool can_create) {
+  return LockedPtr<Symtab>(m_mutex, GetSymtab(can_create));
+}
+
 void Module::SectionFileAddressesChanged() {
   ObjectFile *obj_file = GetObjectFile();
   if (obj_file)
@@ -1319,8 +1334,7 @@ void Module::FindSymbolsMatchingRegExAndType(
 }
 
 void Module::PreloadSymbols() {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  SymbolFile *sym_file = GetSymbolFile();
+  LockedPtr<SymbolFile> sym_file = GetSymbolFileLocked();
   if (!sym_file)
     return;
 
@@ -1549,6 +1563,7 @@ std::optional<std::string> Module::RemapSourceFile(llvm::StringRef path) {
 
 void Module::RegisterXcodeSDK(llvm::StringRef sdk_name,
                               llvm::StringRef sysroot) {
+  Progress progress("Looking for Xcode SDK", sdk_name.str());
   auto sdk_path_or_err =
       HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk_name.str()});
 

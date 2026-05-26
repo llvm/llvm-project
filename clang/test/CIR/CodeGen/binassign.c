@@ -39,7 +39,7 @@ void binary_assign(void) {
 // LLVM:         %[[I_PTR:.*]] = alloca i32
 // LLVM:         store i8 1, ptr %[[B_PTR]]
 // LLVM:         store i8 65, ptr %[[C_PTR]]
-// LLVM:         store float 0x40091EB860000000, ptr %[[F_PTR]]
+// LLVM:         store float 3.140000e+00, ptr %[[F_PTR]]
 // LLVM:         store i32 42, ptr %[[I_PTR]]
 // LLVM:         ret void
 
@@ -50,7 +50,7 @@ void binary_assign(void) {
 // OGCG:         %[[I_PTR:.*]] = alloca i32
 // OGCG:         store i8 1, ptr %[[B_PTR]]
 // OGCG:         store i8 65, ptr %[[C_PTR]]
-// OGCG:         store float 0x40091EB860000000, ptr %[[F_PTR]]
+// OGCG:         store float 3.140000e+00, ptr %[[F_PTR]]
 // OGCG:         store i32 42, ptr %[[I_PTR]]
 // OGCG:         ret void
 
