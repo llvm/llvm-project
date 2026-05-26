@@ -6690,8 +6690,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
                    LAI->getSymbolicStrides());
   RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
-  RUN_VPLAN_PASS(VPlanTransforms::addCanonicalIVRecipes, *VPlan0,
-                 getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()));
   // If we're vectorizing a loop with an uncountable exit, make sure that the
   // recipes are safe to handle.
   // TODO: Remove this once we can properly check the VPlan itself for both
@@ -6710,7 +6708,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
 
   RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0,
                  CM.foldTailByMasking());
-  RUN_VPLAN_PASS(VPlanTransforms::createLoopRegions, *VPlan0);
+  RUN_VPLAN_PASS(VPlanTransforms::createLoopRegions, *VPlan0,
+                 getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()));
   if (CM.foldTailByMasking())
     RUN_VPLAN_PASS(VPlanTransforms::foldTailByMasking, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::introduceMasksAndLinearize, *VPlan0);
