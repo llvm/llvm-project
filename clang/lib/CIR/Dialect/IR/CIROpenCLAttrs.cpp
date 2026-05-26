@@ -27,15 +27,9 @@ LogicalResult OpenCLKernelArgMetadataAttr::verify(
     function_ref<InFlightDiagnostic()> emitError, ArrayAttr addrSpaces,
     ArrayAttr accessQuals, ArrayAttr types, ArrayAttr baseTypes,
     ArrayAttr typeQuals, ArrayAttr argNames) {
-  auto isInt32Array = [](ArrayAttr attr) {
+  auto isLangAddressSpaceArray = [](ArrayAttr attr) {
     return llvm::all_of(attr, [](Attribute elem) {
-      auto intAttr = mlir::dyn_cast<IntegerAttr>(elem);
-      return intAttr && intAttr.getType().isInteger(32);
-    });
-  };
-  auto isNonNegativeIntArray = [](ArrayAttr attr) {
-    return llvm::all_of(attr, [](Attribute elem) {
-      return mlir::cast<IntegerAttr>(elem).getValue().isNonNegative();
+      return mlir::isa<cir::LangAddressSpaceAttr>(elem);
     });
   };
   auto isStrArray = [](ArrayAttr attr) {
@@ -43,10 +37,8 @@ LogicalResult OpenCLKernelArgMetadataAttr::verify(
         attr, [](Attribute elem) { return mlir::isa<StringAttr>(elem); });
   };
 
-  if (!isInt32Array(addrSpaces))
-    return emitError() << "addr_space must be an i32 integer array";
-  if (!isNonNegativeIntArray(addrSpaces))
-    return emitError() << "addr_space values must be non-negative";
+  if (!isLangAddressSpaceArray(addrSpaces))
+    return emitError() << "addr_space must be a language address space array";
   if (!isStrArray(accessQuals))
     return emitError() << "access_qual must be a string array";
   if (!isStrArray(types))

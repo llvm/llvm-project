@@ -1,11 +1,11 @@
 // RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 module {
-  cir.func @without_names() attributes {cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<addr_space = [1 : i32, 0 : i32], access_qual = ["none", "none"], type = ["uint*", "int"], base_type = ["uint*", "int"], type_qual = ["restrict", ""]>} {
+  cir.func @without_names() attributes {cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<addr_space = [#cir<lang_address_space(offload_global)>, #cir<lang_address_space(default)>], access_qual = ["none", "none"], type = ["uint*", "int"], base_type = ["uint*", "int"], type_qual = ["restrict", ""]>} {
     cir.return
   }
 
-  cir.func @with_names() attributes {cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<addr_space = [1 : i32, 0 : i32], access_qual = ["none", "none"], type = ["uint*", "int"], base_type = ["uint*", "int"], type_qual = ["restrict", ""], name = ["data", "count"]>} {
+  cir.func @with_names() attributes {cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<addr_space = [#cir<lang_address_space(offload_global)>, #cir<lang_address_space(default)>], access_qual = ["none", "none"], type = ["uint*", "int"], base_type = ["uint*", "int"], type_qual = ["restrict", ""], name = ["data", "count"]>} {
     cir.return
   }
 
@@ -16,7 +16,7 @@ module {
 
 // CHECK-LABEL: cir.func @without_names()
 // CHECK-SAME: cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata
-// CHECK-SAME: addr_space = [1 : i32, 0 : i32]
+// CHECK-SAME: addr_space = [#cir<lang_address_space(offload_global)>, #cir<lang_address_space(default)>]
 // CHECK-SAME: type = ["uint*", "int"]
 // CHECK-SAME: base_type = ["uint*", "int"]
 // CHECK-SAME: type_qual = ["restrict", ""]
@@ -24,7 +24,7 @@ module {
 
 // CHECK-LABEL: cir.func @with_names()
 // CHECK-SAME: cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata
-// CHECK-SAME: addr_space = [1 : i32, 0 : i32]
+// CHECK-SAME: addr_space = [#cir<lang_address_space(offload_global)>, #cir<lang_address_space(default)>]
 // CHECK-SAME: type = ["uint*", "int"]
 // CHECK-SAME: base_type = ["uint*", "int"]
 // CHECK-SAME: type_qual = ["restrict", ""]
