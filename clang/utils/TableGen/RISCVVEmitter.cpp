@@ -250,17 +250,19 @@ void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
     OS << "  TWiden = " << RVVI->getTWiden() << ";\n";
 
   OS << "  PolicyAttrs = " << RVVI->getPolicyAttrsBits() << ";\n";
-  unsigned IndexedLoadStorePtrIdx = getIndexedLoadStorePtrIdx(RVVI);
-  if (IndexedLoadStorePtrIdx != UnknownIndex) {
-    OS << "  {\n";
-    OS << "    auto PointeeType = E->getArg(" << IndexedLoadStorePtrIdx
-       << ")->getType()->getPointeeType();\n";
-    OS << "    SegInstSEW = "
-          "llvm::Log2_64(getContext().getTypeSize(PointeeType));\n";
-    OS << "  }\n";
-  } else {
-    OS << "  SegInstSEW = " << getSegInstLog2SEW(RVVI->getOverloadedName())
-       << ";\n";
+  if (RVVI->getManualCodegen().contains("SegInstSEW")) {
+    unsigned IndexedLoadStorePtrIdx = getIndexedLoadStorePtrIdx(RVVI);
+    if (IndexedLoadStorePtrIdx != UnknownIndex) {
+      OS << "  {\n";
+      OS << "    auto PointeeType = E->getArg(" << IndexedLoadStorePtrIdx
+         << ")->getType()->getPointeeType();\n";
+      OS << "    SegInstSEW = "
+            "llvm::Log2_64(getContext().getTypeSize(PointeeType));\n";
+      OS << "  }\n";
+    } else {
+      OS << "  SegInstSEW = " << getSegInstLog2SEW(RVVI->getOverloadedName())
+         << ";\n";
+    }
   }
 
   if (RVVI->hasManualCodegen()) {
