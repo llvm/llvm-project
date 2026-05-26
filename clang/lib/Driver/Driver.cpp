@@ -7137,8 +7137,13 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       break;
     }
     case llvm::Triple::AMDPAL:
-    case llvm::Triple::Mesa3D:
       TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args);
+      break;
+    case llvm::Triple::Mesa3D:
+      if (Target.isSPIRV())
+        TC = std::make_unique<toolchains::SPIRVToolChain>(*this, Target, Args);
+      else
+        TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args);
       break;
     case llvm::Triple::UEFI:
       TC = std::make_unique<toolchains::UEFI>(*this, Target, Args);

@@ -109,3 +109,15 @@
 // RUN:   | FileCheck -DVERSION=%llvm-version-major --check-prefix=VERSIONED %s %}
 
 // VERSIONED: {{.*}}spirv-as-[[VERSION]]
+
+//-----------------------------------------------------------------------------
+// Check warning
+// RUN: %clang -### --target=spirv32-unknown-mesa3d -x cl -c %s 2>&1 | FileCheck --check-prefix=MESA3D-SPIRV32 %s
+// RUN: %clang -### --target=spirv64-unknown-mesa3d -x cl -c %s 2>&1 | FileCheck --check-prefix=MESA3D-SPIRV64 %s
+// MESA3D-SPIRV32: "-cc1" "-triple" "spirv32-unknown-mesa3d"
+// MESA3D-SPIRV32-NOT: "-Werror=atomic-alignment"
+// MESA3D-SPIRV64: "-cc1" "-triple" "spirv64-unknown-mesa3d"
+// MESA3D-SPIRV64-NOT: "-Werror=atomic-alignment"
+
+// RUN: %clang -### --target=amdgcn-amd-mesa3d -x cl -c %s 2>&1 | FileCheck --check-prefix=AMDGCN-MESA3D %s
+// AMDGCN-MESA3D: "-Werror=atomic-alignment"
