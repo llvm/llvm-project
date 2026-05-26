@@ -698,8 +698,8 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
       if (!boxedShape) {
         // fir.rebox with a rank-reducing slice often has no shape operand.
         // Synthesize fir.shape from box_dims extents. Do not synthesize
-        // fir.shift: rebox descriptors already have (lb-1)*stride in base_addr
-        // and FIRToMemRef must not subtract lb again for rebox memrefs.
+        // fir.shift: the descriptor produced by fir.rebox have default
+        // lower bounds.
         if (!mlir::isa<fir::BaseBoxType>(boxedMemref.getType()))
           return mlir::failure();
         boxedShape = getShapeFromBoxDims(boxedMemref, origBoxRank, op.getLoc(),
