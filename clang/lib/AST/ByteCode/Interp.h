@@ -520,6 +520,11 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
     const T &RHSI = RHS.elem<T>(1);
     unsigned Bits = LHSR.bitWidth();
 
+    // We only handle actual numbers here.
+    if (!LHSR.isNumber() || !LHSI.isNumber() || !RHSR.isNumber() ||
+        !RHSI.isNumber())
+      return false;
+
     // real(Result) = (real(LHS) * real(RHS)) - (imag(LHS) * imag(RHS))
     T A;
     if constexpr (needsAlloc<T>())
