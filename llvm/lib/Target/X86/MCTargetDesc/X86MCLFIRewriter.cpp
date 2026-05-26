@@ -35,18 +35,17 @@ static bool isSyscall(const MCInst &Inst) {
   return Inst.getOpcode() == X86::SYSCALL;
 }
 
-// Find the index of the first memory operand with %fs segment override.
-// Returns -1 if not found.
+// Find the index of the memory operand if it has an %fs segment override.
+// Returns -1 if there is no memory operand or no %fs override.
 static int findFSMemOperand(const MCInst &Inst, const MCInstrInfo &InstInfo) {
   const MCInstrDesc &Desc = InstInfo.get(Inst.getOpcode());
-  for (unsigned I = 0, E = Desc.getNumOperands(); I < E; ++I) {
-    if (Desc.operands()[I].OperandType == MCOI::OPERAND_MEMORY) {
-      if (I + 4 < Inst.getNumOperands() && Inst.getOperand(I + 4).isReg() &&
-          Inst.getOperand(I + 4).getReg() == X86::FS)
-        return I;
-      I += 4;
-    }
-  }
+  int MemRefIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
+  if (MemRefIdx < 0)
+    return -1;
+  int MemIdx = MemRefIdx + X86II::getOperandBias(Desc);
+  const MCOperand &Seg = Inst.getOperand(MemIdx + X86::AddrSegmentReg);
+  if (Seg.isReg() && Seg.getReg() == X86::FS)
+    return MemIdx;
   return -1;
 }
 
@@ -55,7 +54,8 @@ static int findFSMemOperand(const MCInst &Inst, const MCInstrInfo &InstInfo) {
 // leaq .Ltmp(%rip), %r11
 // jmpq *(%r14)
 // .Ltmp:
-static void emitLFICall(MCStreamer &Out, const MCSubtargetInfo &STI) {
+void X86::X86MCLFIRewriter::rewriteSyscall(const MCInst &Inst, MCStreamer &Out,
+                                           const MCSubtargetInfo &STI) {
   MCSymbol *Symbol = Out.getContext().createTempSymbol();
 
   // leaq .Ltmp(%rip), %r11
@@ -81,11 +81,6 @@ static void emitLFICall(MCStreamer &Out, const MCSubtargetInfo &STI) {
   Out.emitInstruction(Jmp, STI);
 
   Out.emitLabel(Symbol);
-}
-
-void X86::X86MCLFIRewriter::rewriteSyscall(const MCInst &Inst, MCStreamer &Out,
-                                           const MCSubtargetInfo &STI) {
-  emitLFICall(Out, STI);
 }
 
 // Emit: movq TPOffset(%r15), %Reg
@@ -130,24 +125,24 @@ void X86::X86MCLFIRewriter::rewriteFSAccess(const MCInst &Inst, MCStreamer &Out,
   int MemIdx = findFSMemOperand(Inst, *InstInfo);
   assert(MemIdx >= 0);
 
-  MCRegister BaseReg = Inst.getOperand(MemIdx).getReg();
-  MCRegister IndexReg = Inst.getOperand(MemIdx + 2).getReg();
+  MCRegister BaseReg = Inst.getOperand(MemIdx + X86::AddrBaseReg).getReg();
+  MCRegister IndexReg = Inst.getOperand(MemIdx + X86::AddrIndexReg).getReg();
   bool HasBase = BaseReg != X86::NoRegister;
   bool HasIndex = IndexReg != X86::NoRegister;
-  bool HasDisp = !Inst.getOperand(MemIdx + 3).isImm() ||
-                 Inst.getOperand(MemIdx + 3).getImm() != 0;
+  bool HasDisp = !Inst.getOperand(MemIdx + X86::AddrDisp).isImm() ||
+                 Inst.getOperand(MemIdx + X86::AddrDisp).getImm() != 0;
 
   // %fs:0 -> TPOffset(%r15)
   if (!HasBase && !HasIndex && !HasDisp) {
     MCInst Modified(Inst);
-    Modified.getOperand(MemIdx).setReg(LFITPReg);
-    Modified.getOperand(MemIdx + 3).setImm(TPOffset);
-    Modified.getOperand(MemIdx + 4).setReg(X86::NoRegister);
+    Modified.getOperand(MemIdx + X86::AddrBaseReg).setReg(LFITPReg);
+    Modified.getOperand(MemIdx + X86::AddrDisp).setImm(TPOffset);
+    Modified.getOperand(MemIdx + X86::AddrSegmentReg).setReg(X86::NoRegister);
     return Out.emitInstruction(Modified, STI);
   }
 
   // Use the dest register as TP temporary when it is available and not used in
-  // the addressing mode, otherwise use %r11.
+  // the addressing mode, otherwise use %r11 (e.g., movq %fs:(%rax), %rax).
   MCRegister TPDest = LFIScratchReg;
   if (MemIdx > 0 && Inst.getOperand(0).isReg()) {
     const MCInstrDesc &Desc = InstInfo->get(Inst.getOpcode());
@@ -160,7 +155,13 @@ void X86::X86MCLFIRewriter::rewriteFSAccess(const MCInst &Inst, MCStreamer &Out,
 
   emitTPLoad(TPDest, Out, STI);
 
-  // Both slots occupied: fold base into TPDest via lea.
+  // Both slots occupied: fold base into TPDest via lea. For example:
+  //
+  // movq %fs:8(%rdi,%rsi,2), %rax
+  // ->
+  // movq 16(%r15), %rax
+  // leaq (%rax,%rdi), %rax
+  // movq 8(%rax,%rsi,2), %rax
   if (HasBase && HasIndex) {
     MCInst Lea;
     Lea.setOpcode(X86::LEA64r);
@@ -173,11 +174,18 @@ void X86::X86MCLFIRewriter::rewriteFSAccess(const MCInst &Inst, MCStreamer &Out,
     Out.emitInstruction(Lea, STI);
   }
 
+  // Emit the access with TPDest as the new base, and the original base
+  // (offset from %fs) as the new index. For example:
+  //
+  // movq %fs:(%rdi), %rax
+  // ->
+  // movq 16(%r15), %rax
+  // movq (%rax,%rdi), %rax
   MCInst Modified(Inst);
-  Modified.getOperand(MemIdx).setReg(TPDest);
+  Modified.getOperand(MemIdx + X86::AddrBaseReg).setReg(TPDest);
   if (HasBase && !HasIndex)
-    Modified.getOperand(MemIdx + 2).setReg(BaseReg);
-  Modified.getOperand(MemIdx + 4).setReg(X86::NoRegister);
+    Modified.getOperand(MemIdx + X86::AddrIndexReg).setReg(BaseReg);
+  Modified.getOperand(MemIdx + X86::AddrSegmentReg).setReg(X86::NoRegister);
   Out.emitInstruction(Modified, STI);
 }
 
