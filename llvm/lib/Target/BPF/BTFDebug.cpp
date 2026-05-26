@@ -17,6 +17,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -109,11 +110,32 @@ static bool sourceArgMatchesIRType(const DIType *SourceTy, Type *IRTy) {
 /// non-debug instruction (i.e. it still holds the caller-passed value), or
 /// (b) was most recently loaded from the stack via $r11 (a stack-passed
 /// argument beyond the first five register args).
+///
+/// There is another case where DBG_VALUE is not emitted due to
+/// AssignmentTrackingAnalysis which determines that a variable is
+/// always stack-homed, and describes the variable via MachineFunction's
+/// VariableDbgInfo (setVariableDbgInfo with a frame index). To recover the
+/// register for those arguments, we also track stores of un-redefined physical
+/// registers to stack frame objects during the entry-block walk (using
+/// MachineMemOperands to identify the target frame index), then match them
+/// against VariableDbgInfo entries after the scan.
 static SmallDenseMap<uint32_t, Register>
 collectNocallEntryArgRegs(const MachineFunction &MF) {
   SmallDenseMap<uint32_t, Register> EntryRegMap;
   const DISubprogram *SP = MF.getFunction().getSubprogram();
   SmallDenseSet<Register> DefinedRegs, StackLoadRegs;
+
+  // Build a reverse map from IR alloca to frame index so we can
+  // identify which frame object a store targets via its MachineMemOperand.
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  SmallDenseMap<const Value *, int> AllocaToFI;
+  for (int I = 0, N = MFI.getObjectIndexEnd(); I < N; ++I)
+    if (const AllocaInst *AI = MFI.getObjectAllocation(I))
+      AllocaToFI[AI] = I;
+
+  // Maps frame index → first physical register stored there before
+  // that register is redefined.
+  SmallDenseMap<int, Register> FrameIndexToReg;
 
   for (const MachineInstr &MI : MF.front()) {
     if (MI.isDebugValue()) {
@@ -137,6 +159,23 @@ collectNocallEntryArgRegs(const MachineFunction &MF) {
       continue;
     }
 
+    // Track stores of unredefined physical registers to stack frame
+    // objects.  Use MachineMemOperands to identify the target frame
+    // index rather than assuming a particular addressing mode.
+    if (MI.mayStore() && !MI.isCall() && MI.getOperand(0).isReg()) {
+      Register SrcReg = MI.getOperand(0).getReg();
+      if (SrcReg.isPhysical() && !DefinedRegs.contains(SrcReg)) {
+        for (const MachineMemOperand *MMO : MI.memoperands()) {
+          const Value *V = MMO->getValue();
+          if (!V)
+            continue;
+          auto It = AllocaToFI.find(V);
+          if (It != AllocaToFI.end())
+            FrameIndexToReg.try_emplace(It->second, SrcReg);
+        }
+      }
+    }
+
     for (const MachineOperand &MO : MI.operands())
       if (MO.isReg() && MO.isDef() && MO.getReg().isPhysical()) {
         DefinedRegs.insert(MO.getReg());
@@ -147,6 +186,23 @@ collectNocallEntryArgRegs(const MachineFunction &MF) {
     if (MI.getOpcode() == BPF::LDD && MI.getOperand(1).getReg() == BPF::R11)
       StackLoadRegs.insert(MI.getOperand(0).getReg());
   }
+
+  // Check VariableDbgInfo for args that AssignmentTrackingAnalysis described
+  // via setVariableDbgInfo (single-loc stack-homed variables) rather than
+  // DBG_VALUE instructions.
+  for (const auto &VI : MF.getVariableDbgInfo()) {
+    if (!VI.Var || !VI.Var->getArg() || !VI.inStackSlot())
+      continue;
+    if (VI.Var->getScope()->getSubprogram() != SP)
+      continue;
+    uint32_t Arg = VI.Var->getArg();
+    if (EntryRegMap.count(Arg))
+      continue;
+    auto It = FrameIndexToReg.find(VI.getStackSlot());
+    if (It != FrameIndexToReg.end())
+      EntryRegMap[Arg] = It->second;
+  }
+
   return EntryRegMap;
 }
 
