@@ -34,7 +34,7 @@ void useMultiArray(RWBuffer<float> LocalArg[2][2]) {
 // CHECK: arrayinit.end:
 // CHECK: ret void
 void case1() {
-  // local one-dimensional array initialialized with global array
+  // local one-dimensional array initialized with global array
   RWBuffer<float> LocalOne[2] = A;
 }
 
@@ -55,7 +55,7 @@ void case1() {
 // CHECK-NEXT: call void @hlsl::RWBuffer<float>::__createFromBinding({{.*}})(ptr {{.*}} [[ArrayPtr1]], i32 noundef 10, i32 noundef 1, i32 noundef 2, i32 noundef 1, ptr noundef [[BufA]])
 // CHECK: ret void
 void case2() {
-  // local one-dimensional array initialialized with assignment
+  // local one-dimensional array initialized with assignment
   RWBuffer<float> LocalTwo[2];
   LocalTwo = A;
 }
@@ -95,7 +95,7 @@ void case3() {
 // CHECK: arrayinit.end{{[0-9]+}}:
 // CHECK: ret void
 void case4() {
-  // local multi-dimensional array initialialized with global array
+  // local multi-dimensional array initialized with global array
   RWBuffer<float> LocalThree[2][2] = B;
 }
 
@@ -120,7 +120,7 @@ void case4() {
 // CHECK-NEXT: call void @hlsl::RWBuffer<float>::__createFromBinding({{.*}})(ptr {{.*}} [[ArrayPtr11]], i32 noundef 13, i32 noundef 0, i32 noundef 4, i32 noundef 3, ptr noundef [[BufB]])
 // CHECK: ret void
 void case5() {
-  // local multi-dimensional array initialialized with assignment
+  // local multi-dimensional array initialized with assignment
   RWBuffer<float> LocalFour[2][2];
   LocalFour = B;
 }
