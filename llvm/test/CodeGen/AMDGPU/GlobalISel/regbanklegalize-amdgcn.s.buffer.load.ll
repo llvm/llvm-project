@@ -639,7 +639,7 @@ define amdgpu_ps void @s_buffer_load_i96_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, 
   ret void
 }
 
-; Case 3e: <4 x i32> (128-bit), VGPR rsrc, SGPR offset
+; Case 3d: <4 x i32> (128-bit), VGPR rsrc, SGPR offset
 define amdgpu_ps void @s_buffer_load_v4i32_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, i32 inreg %soffset, ptr addrspace(1) inreg %out) {
 ; GFX10-LABEL: s_buffer_load_v4i32_vgpr_rsrc_sgpr_offset:
 ; GFX10:       ; %bb.0:
@@ -706,7 +706,7 @@ define amdgpu_ps void @s_buffer_load_v4i32_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc
   ret void
 }
 
-; Case 3f: <8 x i32> (256-bit), VGPR rsrc, SGPR offset → 2x MUBUF + waterfall
+; Case 3e: <8 x i32> (256-bit), VGPR rsrc, SGPR offset → 2x MUBUF + waterfall
 define amdgpu_ps void @s_buffer_load_v8i32_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, i32 inreg %soffset, ptr addrspace(1) inreg %out) {
 ; GFX10-LABEL: s_buffer_load_v8i32_vgpr_rsrc_sgpr_offset:
 ; GFX10:       ; %bb.0:

@@ -316,7 +316,7 @@ unsigned RegBankLegalizeHelper::setBufferOffsets(
   }
   auto [Base, Offset] = AMDGPU::getBaseWithConstantOffset(MRI, CombinedOffset);
   uint32_t SOffset, ImmOffset;
-  if ((int)Offset > 0 &&
+  if (static_cast<int32_t>(Offset) > 0 &&
       TII.splitMUBUFOffset(Offset, SOffset, ImmOffset, Alignment)) {
     if (Base.isValid() && MRI.getRegBank(Base) == VgprRB) {
       VOffsetReg = Base;
@@ -334,7 +334,7 @@ unsigned RegBankLegalizeHelper::setBufferOffsets(
   }
   // Handle the variable sgpr + vgpr case.
   MachineInstr *Add = getOpcodeDef(AMDGPU::G_ADD, CombinedOffset, MRI);
-  if (Add && (int)Offset >= 0) {
+  if (Add && static_cast<int32_t>(Offset) >= 0) {
     Register Src0 = getSrcRegIgnoringCopies(Add->getOperand(1).getReg(), MRI);
     Register Src1 = getSrcRegIgnoringCopies(Add->getOperand(2).getReg(), MRI);
     const RegisterBank *Src0Bank = MRI.getRegBank(Src0);
@@ -621,6 +621,98 @@ bool RegBankLegalizeHelper::lowerUnpackAExt(MachineInstr &MI) {
   B.buildBuildVectorTrunc(MI.getOperand(0).getReg(),
                           {ResLo.getReg(0), ResHi.getReg(0)});
   MI.eraseFromParent();
+  return true;
+}
+
+bool RegBankLegalizeHelper::lowerSBufToBuf(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  const RegisterBank *RSrcBank = MRI.getRegBank(MI.getOperand(1).getReg());
+  // FIXME: 96-bit case was widened during legalize. We need to narrow it
+  // back here but don't have an MMO.
+  unsigned LoadSize = Ty.getSizeInBits();
+  int NumLoads = 1;
+  if (LoadSize == 256 || LoadSize == 512) {
+    NumLoads = LoadSize / 128;
+    Ty = Ty.divide(NumLoads);
+  }
+  const Align Alignment = (*MI.memoperands_begin())->getAlign();
+  MachineFunction &MF = B.getMF();
+  Register SOffset;
+  Register VOffset;
+  int64_t ImmOffset = 0;
+  unsigned MMOOffset = setBufferOffsets(B, MI.getOperand(2).getReg(), VOffset,
+                                        SOffset, ImmOffset, Alignment);
+  // TODO: 96-bit loads were widened to 128-bit results. Shrink the
+  // result if we can, but we need to track an MMO for that.
+  const unsigned MemSize = divideCeil(Ty.getSizeInBits(), 8);
+  MachineMemOperand *BaseMMO =
+      MF.getMachineMemOperand(*MI.memoperands_begin(), 0, MemSize);
+  if (MMOOffset != 0)
+    BaseMMO = MF.getMachineMemOperand(BaseMMO, MMOOffset, MemSize);
+  // If only the offset is divergent, emit a MUBUF buffer load
+  // instead. We can assume that the buffer is unswizzled.
+  Register RSrc = MI.getOperand(1).getReg();
+  Register VIndex = B.buildConstant(S32, 0).getReg(0);
+  B.getMRI()->setRegBank(VIndex, *VgprRB);
+  SmallVector<Register, 4> LoadParts(NumLoads);
+  MachineBasicBlock::iterator MII = MI.getIterator();
+  MachineInstrSpan Span(MII, &B.getMBB());
+  unsigned Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD;
+  switch (MI.getOpcode()) {
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SBYTE:
+    Opc = G_AMDGPU_BUFFER_LOAD_SBYTE;
+    break;
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_UBYTE:
+    Opc = G_AMDGPU_BUFFER_LOAD_UBYTE;
+    break;
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SSHORT:
+    Opc = G_AMDGPU_BUFFER_LOAD_SSHORT;
+    break;
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_USHORT:
+    Opc = G_AMDGPU_BUFFER_LOAD_USHORT;
+    break;
+  default:
+    break;
+  }
+  for (int i = 0; i < NumLoads; ++i) {
+    if (NumLoads == 1) {
+      LoadParts[i] = Dst;
+    } else {
+      LoadParts[i] = MRI.createGenericVirtualRegister(Ty);
+      MRI.setRegBank(LoadParts[i], *VgprRB);
+    }
+    if (i != 0)
+      BaseMMO = MF.getMachineMemOperand(BaseMMO, 16, MemSize);
+    B.buildInstr(Opc)
+        .addDef(LoadParts[i])       // vdata
+        .addUse(RSrc)               // rsrc
+        .addUse(VIndex)             // vindex
+        .addUse(VOffset)            // voffset
+        .addUse(SOffset)            // soffset
+        .addImm(ImmOffset + 16 * i) // offset(imm)
+        .addImm(0)                  // cachepolicy, swizzled buffer(imm)
+        .addImm(0)                  // idxen(imm)
+        .addMemOperand(BaseMMO);
+  }
+  // TODO: If only the resource is a VGPR, it may be better to execute the
+  // scalar load in the waterfall loop if the resource is expected to
+  // frequently be dynamically uniform.
+  if (RSrcBank != SgprRB) {
+    // Remove the original instruction to avoid potentially confusing the
+    // waterfall loop logic.
+    B.setInstr(*Span.begin());
+    MI.eraseFromParent();
+    SmallSet<Register, 4> OpsToWaterfall;
+    OpsToWaterfall.insert(RSrc);
+    executeInWaterfallLoop(B, {OpsToWaterfall, Span.begin(), Span.end()});
+  }
+  if (NumLoads != 1) {
+    B.buildMergeLikeInstr(Dst, LoadParts);
+  }
+  // We removed the instruction earlier with a waterfall loop.
+  if (RSrcBank == SgprRB)
+    MI.eraseFromParent();
   return true;
 }
 
@@ -1329,106 +1421,8 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     MI.eraseFromParent();
     break;
   }
-  case S_BUF_to_BUF: {
-    Register Dst = MI.getOperand(0).getReg();
-    LLT Ty = MRI.getType(Dst);
-    const RegisterBank *RSrcBank = MRI.getRegBank(MI.getOperand(1).getReg());
-    // FIXME: 96-bit case was widened during legalize. We need to narrow it
-    // back here but don't have an MMO.
-    unsigned LoadSize = Ty.getSizeInBits();
-    int NumLoads = 1;
-    if (LoadSize == 256 || LoadSize == 512) {
-      NumLoads = LoadSize / 128;
-      Ty = Ty.divide(NumLoads);
-    }
-    // Use the alignment to ensure that the required offsets will fit into the
-    // immediate offsets.
-    const Align Alignment = NumLoads > 1 ? Align(16 * NumLoads) : Align(1);
-    MachineFunction &MF = B.getMF();
-    Register SOffset;
-    Register VOffset;
-    int64_t ImmOffset = 0;
-    unsigned MMOOffset = setBufferOffsets(B, MI.getOperand(2).getReg(), VOffset,
-                                          SOffset, ImmOffset, Alignment);
-    // TODO: 96-bit loads were widened to 128-bit results. Shrink the
-    // result if we can, but we need to track an MMO for that.
-    // const unsigned MemSize = (Ty.getSizeInBits() + 7) / 8;
-    const unsigned MemSize = divideCeil(Ty.getSizeInBits(), 8);
-    const DataLayout DL = MF.getDataLayout();
-    Type *IRTy = getTypeForLLT(Ty, MF.getFunction().getContext());
-    const Align MemAlign(DL.getABITypeAlign(IRTy));
-    MachineMemOperand *BaseMMO = MF.getMachineMemOperand(
-        MachinePointerInfo(),
-        MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
-            MachineMemOperand::MOInvariant,
-        MemSize, MemAlign);
-    if (MMOOffset != 0)
-      BaseMMO = MF.getMachineMemOperand(BaseMMO, MMOOffset, MemSize);
-    // If only the offset is divergent, emit a MUBUF buffer load
-    // instead. We can assume that the buffer is unswizzled.
-    Register RSrc = MI.getOperand(1).getReg();
-    Register VIndex = B.buildConstant(S32, 0).getReg(0);
-    B.getMRI()->setRegBank(VIndex, *VgprRB);
-    SmallVector<Register, 4> LoadParts(NumLoads);
-    MachineBasicBlock::iterator MII = MI.getIterator();
-    MachineInstrSpan Span(MII, &B.getMBB());
-    unsigned Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD;
-    switch (MI.getOpcode()) {
-    case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SBYTE:
-      Opc = G_AMDGPU_BUFFER_LOAD_SBYTE;
-      break;
-    case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_UBYTE:
-      Opc = G_AMDGPU_BUFFER_LOAD_UBYTE;
-      break;
-    case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SSHORT:
-      Opc = G_AMDGPU_BUFFER_LOAD_SSHORT;
-      break;
-    case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_USHORT:
-      Opc = G_AMDGPU_BUFFER_LOAD_USHORT;
-      break;
-    default:
-      break;
-    }
-    for (int i = 0; i < NumLoads; ++i) {
-      if (NumLoads == 1) {
-        LoadParts[i] = Dst;
-      } else {
-        LoadParts[i] = MRI.createGenericVirtualRegister(Ty);
-        MRI.setRegBank(LoadParts[i], *VgprRB);
-      }
-      if (i != 0)
-        BaseMMO = MF.getMachineMemOperand(BaseMMO, 16, MemSize);
-      B.buildInstr(Opc)
-          .addDef(LoadParts[i])       // vdata
-          .addUse(RSrc)               // rsrc
-          .addUse(VIndex)             // vindex
-          .addUse(VOffset)            // voffset
-          .addUse(SOffset)            // soffset
-          .addImm(ImmOffset + 16 * i) // offset(imm)
-          .addImm(0)                  // cachepolicy, swizzled buffer(imm)
-          .addImm(0)                  // idxen(imm)
-          .addMemOperand(BaseMMO);
-    }
-    // TODO: If only the resource is a VGPR, it may be better to execute the
-    // scalar load in the waterfall loop if the resource is expected to
-    // frequently be dynamically uniform.
-    if (RSrcBank != SgprRB) {
-      // Remove the original instruction to avoid potentially confusing the
-      // waterfall loop logic.
-      B.setInstr(*Span.begin());
-      MI.eraseFromParent();
-      SmallSet<Register, 4> OpsToWaterfall;
-      OpsToWaterfall.insert(RSrc);
-      executeInWaterfallLoop(B, {OpsToWaterfall, Span.begin(), Span.end()});
-    }
-    if (NumLoads != 1) {
-      B.buildMergeLikeInstr(Dst, LoadParts);
-    }
-    // We removed the instruction earlier with a waterfall loop.
-    if (RSrcBank == SgprRB)
-      MI.eraseFromParent();
-    break;
-  }
+  case S_BUF_to_BUF:
+    return lowerSBufToBuf(MI);
   case SplitLoad: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     unsigned Size = DstTy.getSizeInBits();
