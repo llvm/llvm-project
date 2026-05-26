@@ -1932,15 +1932,15 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
-static mlir::Type getConstArrayLeafType(mlir::Type ty) {
+static mlir::Type getConstArrayBaseElementType(mlir::Type ty) {
   while (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty))
     ty = arrTy.getElementType();
   return ty;
 }
 
-static bool isBulkLowerableConstArrayLeaf(mlir::Type leafTy) {
+static bool isBulkLowerableConstArrayBaseElement(mlir::Type baseElemTy) {
   return mlir::isa<cir::PointerType, cir::IntType, cir::BoolType,
-                   cir::FPTypeInterface>(leafTy);
+                   cir::FPTypeInterface>(baseElemTy);
 }
 
 mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
@@ -2494,11 +2494,11 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
       // region). Leaf type must match what lowerConstArrayAttr handles
       // (pointers, integers, bools, floats, and string literals with
       // trailing_zeros).
-      if (isBulkLowerableConstArrayLeaf(
-              getConstArrayLeafType(constArr.getType()))) {
-        mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
+      if (isBulkLowerableConstArrayBaseElement(
+              getConstArrayBaseElementType(constArr.getType()))) {
+        mlir::ModuleOp modOp = op->getParentOfType<mlir::ModuleOp>();
         if (std::optional<mlir::Attribute> bulkInit =
-                lowerConstArrayAttr(constArr, typeConverter, module)) {
+                lowerConstArrayAttr(constArr, typeConverter, modOp)) {
           mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
           rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
               op, llvmType, isConst, linkage, symbol, bulkInit.value(),
@@ -2539,13 +2539,13 @@ CIRToLLVMGlobalOpLowering::getComdatAttr(cir::GlobalOp &op,
   if (!op.getComdat())
     return mlir::SymbolRefAttr{};
 
-  mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
+  mlir::ModuleOp modOp = op->getParentOfType<mlir::ModuleOp>();
   mlir::OpBuilder::InsertionGuard guard(builder);
   StringRef comdatName("__llvm_comdat_globals");
   if (!comdatOp) {
-    builder.setInsertionPointToStart(module.getBody());
+    builder.setInsertionPointToStart(modOp.getBody());
     comdatOp =
-        mlir::LLVM::ComdatOp::create(builder, module.getLoc(), comdatName);
+        mlir::LLVM::ComdatOp::create(builder, modOp.getLoc(), comdatName);
   }
 
   if (auto comdatSelector = comdatOp.lookupSymbol<mlir::LLVM::ComdatSelectorOp>(

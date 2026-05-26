@@ -101,7 +101,8 @@ void convertToDenseElementsAttrImpl(
   for (auto eltAttr : arrayAttr) {
     if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(eltAttr)) {
       if constexpr (std::is_same_v<StorageTy, mlir::APInt>) {
-        values[currentIndex++] = mlir::APInt(1, (uint64_t)boolAttr.getValue());
+        values[currentIndex++] =
+          llvm::APInt(1, static_cast<uint64_t>(boolAttr.getValue()));
         continue;
       }
     }
@@ -256,6 +257,13 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
         constArr, dims, type, converter->convertType(type));
 
   if (mlir::isa<cir::PointerType>(type)) {
+    // Pointer arrays with trailing_zeros (null-sentinel tables) fall through
+    // to the insertvalue path for now.
+    // FIXME: extend this to cover trailing null pointers via explicit null
+    // elements so long sentinel-terminated pointer tables also benefit from
+    // the bulk path.
+    if (constArr.getTrailingZerosNum() > 0)
+      return std::nullopt;
     auto eltsArr = mlir::dyn_cast<mlir::ArrayAttr>(constArr.getElts());
     if (!eltsArr)
       return std::nullopt;

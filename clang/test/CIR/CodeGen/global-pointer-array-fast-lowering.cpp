@@ -1,3 +1,8 @@
+// Verify that const_array globals with leaf types handled by lowerConstArrayAttr
+// (pointers, integers, bools, floats, and string literals with trailing_zeros)
+// are lowered via a single llvm.mlir.global aggregate constant rather than a
+// chain of insertvalue operations.
+//
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
