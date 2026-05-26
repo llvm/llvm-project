@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include <cstdint>
 #include <memory>
@@ -40,11 +41,30 @@ public:
     uint64_t TypeHash;
     uint64_t TypeDIERelativeOffset;
   };
+  struct BucketLocAccumOffset {
+    uint64_t LoclistsOffset = 0;
+    uint64_t LegacyLocOffset = 0;
+    std::vector<uint64_t> LocListCUOrder;
+  };
+  struct BucketLocalWriter {
+    std::unique_ptr<DebugRangeListsSectionWriter> RngListsWriter;
+    std::unique_ptr<DebugRangesSectionWriter> LegacyRangesWriter;
+
+    /// Release whichever writer was initialized.
+    void clear() {
+      if (RngListsWriter)
+        RngListsWriter.reset();
+      if (LegacyRangesWriter)
+        LegacyRangesWriter.reset();
+    }
+  };
 
 private:
   BinaryContext &BC;
 
   std::mutex DWARFRewriterMutex;
+
+  std::unique_ptr<llvm::ThreadPoolInterface> DebugInfoThreadPool;
 
   /// Stores and serializes information that will be put into the
   /// .debug_ranges DWARF section.
@@ -86,6 +106,7 @@ private:
       AddressWritersByCU;
 
   std::mutex LocListDebugInfoPatchesMutex;
+  std::mutex DebugNamesUpdateMutex;
 
   std::unordered_map<DWARFUnit *, uint64_t> LineTablePatchMap;
   std::unordered_map<const DWARFUnit *, uint64_t> TypeUnitRelocMap;
@@ -100,6 +121,8 @@ private:
   /// Used to track last CU offset for GDB Index.
   uint32_t CUOffset{0};
 
+  llvm::ThreadPoolInterface &
+  getOrCreateDebugInfoThreadPool(unsigned ThreadCount);
   /// Update debug info for all DIEs in \p Unit.
   void updateUnitDebugInfo(DWARFUnit &Unit, DIEBuilder &DIEBldr,
                            DebugLocWriter &DebugLocWriter,
@@ -118,19 +141,30 @@ private:
   ///    attribute.
   void updateDWARFObjectAddressRanges(
       DWARFUnit &Unit, DIEBuilder &DIEBldr, DIE &Die,
-      uint64_t DebugRangesOffset,
+      uint64_t DebugRangesOffset, DebugAddrWriter &AddressWriter,
       std::optional<uint64_t> RangesBase = std::nullopt);
 
   std::unique_ptr<DebugBufferVector>
-  makeFinalLocListsSection(DWARFVersion Version);
-
+  makeFinalLocListsSection(DWARFVersion Version, ArrayRef<uint64_t> CUOrder);
+  void createRangeLocListAndAddressWriters();
   /// Finalize type sections in the main binary.
   CUOffsetMap finalizeTypeSections(DIEBuilder &DIEBlder, DIEStreamer &Streamer,
                                    GDBIndex &GDBIndexSection);
 
+  /// Finalize str section in the dwo
+  void finalizeSkeletonAndStrSection(
+      DIEBuilder &PartDIEBlder, DWARFUnit &CU,
+      const std::unordered_map<uint64_t, std::string> &DWOToNameMap);
+
+  /// Merge Bucket locs section and ranges section result
+  void mergePerBucketLocsAndRanges(
+      DIEBuilder &PartDIEBlder, BucketLocalWriter &LocalWriters,
+      const std::unordered_map<uint64_t, std::string> &DWOToNameMap,
+      BucketLocAccumOffset &Accum);
+
   /// Process and write out CUs that are passed in.
-  void finalizeCompileUnits(DIEBuilder &DIEBlder, DIEStreamer &Streamer,
-                            CUOffsetMap &CUMap,
+  void finalizeCompileUnits(DIEBuilder &DIEBlder, DIEBuilder &MainDIEBlder,
+                            DIEStreamer &Streamer, CUOffsetMap &CUMap,
                             const std::list<DWARFUnit *> &CUs,
                             DebugAddrWriter &FinalAddrWriter);
 
@@ -139,7 +173,19 @@ private:
                              DWARF5AcceleratorTable &DebugNamesTable,
                              DIEStreamer &Streamer, raw_svector_ostream &ObjOS,
                              CUOffsetMap &CUMap,
-                             DebugAddrWriter &FinalAddrWriter);
+                             DebugAddrWriter &FinalAddrWriter,
+                             std::vector<uint64_t> SortedCU);
+
+  /// Process CUs in main binary.
+  void processMainBinaryCU(DWARFUnit &Unit, DIEBuilder &DIEBlder,
+                           BucketLocalWriter &LocalWriter);
+
+  void processBucket(size_t Idx, std::vector<std::vector<DWARFUnit *>> &PartVec,
+                     std::vector<std::unique_ptr<DIEBuilder>> &BucketDIEBlders,
+                     std::vector<BucketLocalWriter> &LocalWriters,
+                     DWARF5AcceleratorTable &DebugNamesTable,
+                     std::unordered_map<uint64_t, std::string> &DWOToNameMap,
+                     GDBIndex &GDBIndexSection);
 
   /// Patches the binary for DWARF address ranges (e.g. in functions and lexical
   /// blocks) to be updated.
@@ -168,7 +214,7 @@ private:
   void convertToRangesPatchDebugInfo(
       DWARFUnit &Unit, DIEBuilder &DIEBldr, DIE &Die,
       uint64_t RangesSectionOffset, DIEValue &LowPCAttrInfo,
-      DIEValue &HighPCAttrInfo,
+      DIEValue &HighPCAttrInfo, DebugAddrWriter &AddressWriter,
       std::optional<uint64_t> RangesBase = std::nullopt);
 
 public:
