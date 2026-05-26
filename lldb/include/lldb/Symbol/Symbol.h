@@ -276,11 +276,11 @@ public:
   ///
   /// \param offset_ptr
   ///   A pointer that contains the offset from which the data will be decoded
-  ///   from that gets updated as data gets decoded.
+  ///   from.  The offset_ptr offset value will be updated as data is read.
   ///
   /// \param section_list
   ///   A section list that allows lldb_private::Address objects to be filled
-  ///   in. The address information for symbols are serilized as file addresses
+  ///   in. The address information for symbols are serialized as file addresses
   ///   and must be converted into Address objects with the right section and
   ///   offset.
   ///
