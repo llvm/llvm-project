@@ -542,6 +542,7 @@ multiclass RVVUnitStridedSegLoadTuple<string op> {
             IRName = op # nf,
             MaskedIRName = op # nf # "_mask",
             NF = nf,
+            HasSegInstSEW = true,
             ManualCodegen = [{
               return emitRVVUnitStridedSegLoadTupleBuiltin(
                   this, E, ReturnValue, ResultType, ID, Ops, PolicyAttrs,
@@ -572,6 +573,7 @@ multiclass RVVUnitStridedSegStoreTuple<string op> {
           IRName = op # nf,
           MaskedIRName = op # nf # "_mask",
           NF = nf,
+          HasSegInstSEW = true,
           HasMaskedOffOperand = false,
           ManualCodegen = [{
             return emitRVVUnitStridedSegStoreTupleBuiltin(
@@ -603,6 +605,7 @@ multiclass RVVUnitStridedSegLoadFFTuple<string op> {
             IRName = op # nf # "ff",
             MaskedIRName = op # nf # "ff_mask",
             NF = nf,
+            HasSegInstSEW = true,
             ManualCodegen = [{
       return emitRVVUnitStridedSegLoadFFTupleBuiltin(
           this, E, ReturnValue, ResultType, ID, Ops, PolicyAttrs, IsMasked,
@@ -633,6 +636,7 @@ multiclass RVVStridedSegLoadTuple<string op> {
             IRName = op # nf,
             MaskedIRName = op # nf # "_mask",
             NF = nf,
+            HasSegInstSEW = true,
             ManualCodegen = [{
       return emitRVVStridedSegLoadTupleBuiltin(
           this, E, ReturnValue, ResultType, ID, Ops, PolicyAttrs, IsMasked,
@@ -663,6 +667,7 @@ multiclass RVVStridedSegStoreTuple<string op> {
             IRName = op # nf,
             MaskedIRName = op # nf # "_mask",
             NF = nf,
+            HasSegInstSEW = true,
             HasMaskedOffOperand = false,
             MaskedPolicyScheme = NonePolicy,
             ManualCodegen = [{
@@ -690,6 +695,7 @@ multiclass RVVIndexedSegLoadTuple<string op> {
             IRName = op # nf,
             MaskedIRName = op # nf # "_mask",
             NF = nf,
+            HasSegInstSEW = true,
             ManualCodegen = [{
       return emitRVVIndexedSegLoadTupleBuiltin(
           this, E, ReturnValue, ResultType, ID, Ops, PolicyAttrs, IsMasked,
@@ -716,6 +722,7 @@ multiclass RVVIndexedSegStoreTuple<string op> {
             IRName = op # nf,
             MaskedIRName = op # nf # "_mask",
             NF = nf,
+            HasSegInstSEW = true,
             HasMaskedOffOperand = false,
             MaskedPolicyScheme = NonePolicy,
             ManualCodegen = [{
