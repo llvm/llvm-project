@@ -142,7 +142,8 @@ inferMaskOffsetLayoutForScatterIO(DistributeLayoutAttr payloadLayout,
 /// Infers the source layout attribute for an operand using result layout
 /// attribute
 DistributeLayoutAttr
-inferSourceLayoutFromResult(OpOperand &operand, DistributeLayoutAttr resLayout);
+inferSourceLayoutFromResultForNonAnchorOp(OpOperand &operand,
+                                          DistributeLayoutAttr resLayout);
 
 /// Sets up layout for Multi-Reduction operations by creating a SliceAttr for
 /// the result.
@@ -238,6 +239,12 @@ setupDpasMxLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
 /// the owning operation of the consumer operand is one of the special layout
 /// users and determine the expected layout accordingly.
 DistributeLayoutAttr getConsumerLayoutAt(OpOperand &operand);
+
+/// Returns true if `op` is safe and cheap to clone: it has no side effects,
+/// no regions, and all of its operands are themselves trivially
+/// rematerializable (e.g. `vector.step`, splat `arith.constant`, or
+/// `vector.create_mask` whose operands are constants).
+bool isTriviallyRematerializable(Operation *op);
 
 } // namespace xegpu
 

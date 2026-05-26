@@ -373,7 +373,8 @@ void FactsGenerator::VisitReturnStmt(const ReturnStmt *RS) {
   }
 }
 
-void FactsGenerator::handleAssignment(const Expr *LHSExpr,
+void FactsGenerator::handleAssignment(const Expr *TargetExpr,
+                                      const Expr *LHSExpr,
                                       const Expr *RHSExpr) {
   LHSExpr = LHSExpr->IgnoreParenImpCasts();
   OriginList *LHSList = nullptr;
@@ -434,6 +435,7 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
   // Kill the old loans of the destination origin and flow the new loans
   // from the source origin.
   flow(LHSList->peelOuterOrigin(), RHSList, /*Kill=*/true);
+  killAndFlowOrigin(*TargetExpr, *LHSExpr);
 }
 
 void FactsGenerator::handlePointerArithmetic(const BinaryOperator *BO) {
@@ -454,7 +456,7 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
     handlePointerArithmetic(BO);
   handleUse(BO->getRHS());
   if (BO->isAssignmentOp())
-    handleAssignment(BO->getLHS(), BO->getRHS());
+    handleAssignment(BO, BO->getLHS(), BO->getRHS());
   // TODO: Handle assignments involving dereference like `*p = q`.
 }
 
@@ -522,14 +524,14 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     QualType LHSTy = OCE->getArg(0)->getType();
     if (LHSTy->isPointerOrReferenceType() || isGslPointerType(LHSTy) ||
         isGslOwnerType(LHSTy)) {
-      handleAssignment(OCE->getArg(0), OCE->getArg(1));
+      handleAssignment(OCE, OCE->getArg(0), OCE->getArg(1));
       return;
     }
     // Standard library callable wrappers (e.g., std::function) can propagate
     // the stored lambda's origins.
     if (const auto *RD = LHSTy->getAsCXXRecordDecl();
         RD && isStdCallableWrapperType(RD)) {
-      handleAssignment(OCE->getArg(0), OCE->getArg(1));
+      handleAssignment(OCE, OCE->getArg(0), OCE->getArg(1));
       return;
     }
     // Other tracked types: only defaulted operator= propagates origins.
@@ -537,7 +539,7 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     if (const auto *MD =
             dyn_cast_or_null<CXXMethodDecl>(OCE->getDirectCallee());
         MD && MD->isDefaulted()) {
-      handleAssignment(OCE->getArg(0), OCE->getArg(1));
+      handleAssignment(OCE, OCE->getArg(0), OCE->getArg(1));
       return;
     }
   }
@@ -810,9 +812,11 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
 
   if (!isInvalidationMethod(*MD))
     return;
-  // Heuristics to turn-down false positives.
-  auto *DRE = dyn_cast<DeclRefExpr>(Args[0]);
-  if (!DRE || DRE->getDecl()->getType()->isReferenceType())
+
+  // Heuristics to turn-down false positives. Skip member field expressions for
+  // now. This is not a perfect filter and will still surface some false
+  // positives (e.g. `auto& r = s.v`).
+  if (!isa<DeclRefExpr>(Args[0]->IgnoreImpCasts()))
     return;
 
   OriginList *ThisList = getOriginsList(*Args[0]);
@@ -882,7 +886,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   handleImplicitObjectFieldUses(Call, FD);
   if (!CallList)
     return;
-  auto IsArgLifetimeBound = [FD](unsigned I) -> bool {
+  auto IsArgLifetimeBound = [FD, &Args](unsigned I) -> bool {
     const ParmVarDecl *PVD = nullptr;
     if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
         Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
@@ -890,7 +894,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         // For the 'this' argument, the attribute is on the method itself.
         return implicitObjectParamIsLifetimeBound(Method) ||
                shouldTrackImplicitObjectArg(
-                   Method, /*RunningUnderLifetimeSafety=*/true);
+                   *Args[0], Method, /*RunningUnderLifetimeSafety=*/true);
       if ((I - 1) < Method->getNumParams())
         // For explicit arguments, find the corresponding parameter
         // declaration.
@@ -905,13 +909,13 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     }
     return PVD ? PVD->hasAttr<clang::LifetimeBoundAttr>() : false;
   };
-  auto shouldTrackPointerImplicitObjectArg = [FD](unsigned I) -> bool {
+  auto shouldTrackPointerImplicitObjectArg = [FD, &Args](unsigned I) -> bool {
     const auto *Method = dyn_cast<CXXMethodDecl>(FD);
     if (!Method || !Method->isInstance())
       return false;
     return I == 0 &&
            isGslPointerType(Method->getFunctionObjectParameterType()) &&
-           shouldTrackImplicitObjectArg(Method,
+           shouldTrackImplicitObjectArg(*Args[0], Method,
                                         /*RunningUnderLifetimeSafety=*/true);
   };
   if (Args.empty())

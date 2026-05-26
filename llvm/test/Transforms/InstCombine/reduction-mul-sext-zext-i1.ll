@@ -95,8 +95,63 @@ define i64 @reduce_mul_zext_external_use(<8 x i1> %x) {
   ret i64 %res
 }
 
-declare i1 @llvm.vector.reduce.mul.v8i32(<8 x i1> %a)
-declare i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> %a)
-declare i64 @llvm.vector.reduce.mul.v8i64(<8 x i64> %a)
-declare i16 @llvm.vector.reduce.mul.v16i16(<16 x i16> %a)
-declare i8 @llvm.vector.reduce.mul.v128i8(<128 x i8> %a)
+; Can't fold to `zext(reduce.and)`, because, since our input has an odd number
+; of elements, a value of all `true` produces an output of -1, not 1.
+define i8 @reduce_mul_sext_odd_lanes(<3 x i1> %x) {
+; CHECK-LABEL: @reduce_mul_sext_odd_lanes(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <3 x i1> [[X:%.*]] to <3 x i8>
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.vector.reduce.mul.v3i8(<3 x i8> [[SEXT]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sext = sext <3 x i1> %x to <3 x i8>
+  %res = call i8 @llvm.vector.reduce.mul.v3i8(<3 x i8> %sext)
+  ret i8 %res
+}
+
+define i8 @reduce_mul_zext_odd_lanes(<3 x i1> %x) {
+; CHECK-LABEL: @reduce_mul_zext_odd_lanes(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <3 x i1> [[X:%.*]] to i3
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i3 [[TMP1]], -1
+; CHECK-NEXT:    [[RES:%.*]] = zext i1 [[TMP2]] to i8
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %zext = zext <3 x i1> %x to <3 x i8>
+  %res = call i8 @llvm.vector.reduce.mul.v3i8(<3 x i8> %zext)
+  ret i8 %res
+}
+
+define i32 @reduce_mul_sext_scalable_even(<vscale x 4 x i1> %x) {
+; CHECK-LABEL: @reduce_mul_sext_scalable_even(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.vector.reduce.and.nxv4i1(<vscale x 4 x i1> [[X:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %sext = sext <vscale x 4 x i1> %x to <vscale x 4 x i32>
+  %res = call i32 @llvm.vector.reduce.mul.nxv4i32(<vscale x 4 x i32> %sext)
+  ret i32 %res
+}
+
+; Can't fold to `zext(reduce.and)`, because we don't know if the input has an
+; odd or even number of elements, and this fold is only valid for an even
+; number.
+define i32 @reduce_mul_sext_scalable_unknown_parity(<vscale x 3 x i1> %x) {
+; CHECK-LABEL: @reduce_mul_sext_scalable_unknown_parity(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <vscale x 3 x i1> [[X:%.*]] to <vscale x 3 x i32>
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.vector.reduce.mul.nxv3i32(<vscale x 3 x i32> [[SEXT]])
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %sext = sext <vscale x 3 x i1> %x to <vscale x 3 x i32>
+  %res = call i32 @llvm.vector.reduce.mul.nxv3i32(<vscale x 3 x i32> %sext)
+  ret i32 %res
+}
+
+define i32 @reduce_mul_zext_scalable(<vscale x 3 x i1> %x) {
+; CHECK-LABEL: @reduce_mul_zext_scalable(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.vector.reduce.and.nxv3i1(<vscale x 3 x i1> [[X:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %zext = zext <vscale x 3 x i1> %x to <vscale x 3 x i32>
+  %res = call i32 @llvm.vector.reduce.mul.nxv3i32(<vscale x 3 x i32> %zext)
+  ret i32 %res
+}

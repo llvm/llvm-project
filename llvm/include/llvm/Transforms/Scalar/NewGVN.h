@@ -23,7 +23,7 @@ class Function;
 class NewGVNPass : public OptionalPassInfoMixin<NewGVNPass> {
 public:
   /// Run the pass over the function.
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
 };
 
 } // end namespace llvm

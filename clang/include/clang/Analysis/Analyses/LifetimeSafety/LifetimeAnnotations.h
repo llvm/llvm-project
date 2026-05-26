@@ -41,6 +41,16 @@ bool isNormalAssignmentOperator(const FunctionDecl *FD);
 /// has the lifetimebound attribute.
 bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD);
 
+/// Returns the lifetimebound attribute for the implicit this parameter, if it
+/// exists on the current type.
+const LifetimeBoundAttr *
+getDirectImplicitObjectLifetimeBoundAttr(const FunctionDecl *FD);
+
+/// Returns the lifetimebound attribute for the implicit this parameter, if it
+/// exists on any redeclaration.
+const LifetimeBoundAttr *
+getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD);
+
 /// Returns true if the implicit object parameter (this) should be considered
 /// lifetimebound, either due to an explicit lifetimebound attribute on the
 /// method or because it's a normal assignment operator.
@@ -52,7 +62,8 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 // container iterators (begin, end), data accessors (c_str, data, get),
 // element accessors (operator[], operator*, front, back, at), or propagating
 // operations (operator+, operator-, operator++, operator--).
-bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
+bool shouldTrackImplicitObjectArg(const Expr &ImplicitObjectArgument,
+                                  const CXXMethodDecl *Callee,
                                   bool RunningUnderLifetimeSafety);
 
 // Returns true if the first argument of a free function should be tracked for
@@ -71,6 +82,7 @@ bool shouldTrackSecondArgument(const FunctionDecl *FD);
 bool isGslPointerType(QualType QT);
 // Tells whether the type is annotated with [[gsl::Owner]].
 bool isGslOwnerType(QualType QT);
+bool isGslOwnerType(const CXXRecordDecl *RD);
 
 // Returns true if the given method is std::unique_ptr::release().
 // This is treated as a move in lifetime analysis to avoid false-positives

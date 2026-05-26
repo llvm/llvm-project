@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:     -data-sections -xcoff-traceback-table=false < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK,CHECK32 %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff -data-sections < %s | \
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff --code-model=small -data-sections < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK,CHECK64 %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:     -filetype=obj -data-sections -xcoff-traceback-table=false -o %t.o < %s
@@ -12,7 +12,7 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:     -xcoff-traceback-table=false < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK,CHECK32 %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff < %s | \
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff --code-model=small < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK,CHECK64 %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:     -xcoff-traceback-table=false -filetype=obj -o %t.o < %s
@@ -24,7 +24,7 @@
 ; RUN:     -xcoff-traceback-table=false < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK,CHECK32 %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff \
-; RUN:     -xcoff-traceback-table=false < %s | \
+; RUN:     -xcoff-traceback-table=false --code-model=small < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK,CHECK64 %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:     -xcoff-traceback-table=false -filetype=obj -o %t.o < %s

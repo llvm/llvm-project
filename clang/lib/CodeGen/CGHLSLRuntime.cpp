@@ -757,8 +757,16 @@ CGHLSLRuntime::emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                             llvm::PoisonValue::get(B.getInt32Ty())};
 
   llvm::Intrinsic::ID IntrinsicID = llvm::Intrinsic::dx_load_input;
-  llvm::Value *Value = B.CreateIntrinsic(/*ReturnType=*/Type, IntrinsicID, Args,
-                                         nullptr, VariableName);
+
+  SmallVector<OperandBundleDef, 1> OB;
+  if (auto *Token = getConvergenceToken(*B.GetInsertBlock())) {
+    llvm::Value *bundleArgs[] = {Token};
+    OB.emplace_back("convergencectrl", bundleArgs);
+  }
+
+  llvm::Function *IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
+      B.GetInsertBlock()->getModule(), IntrinsicID, {Type});
+  llvm::Value *Value = B.CreateCall(IntrFn, Args, OB, VariableName);
   return Value;
 }
 
@@ -776,7 +784,16 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
                             Source};
 
   llvm::Intrinsic::ID IntrinsicID = llvm::Intrinsic::dx_store_output;
-  B.CreateIntrinsic(/*ReturnType=*/CGM.VoidTy, IntrinsicID, Args, nullptr);
+
+  SmallVector<OperandBundleDef, 1> OB;
+  if (auto *Token = getConvergenceToken(*B.GetInsertBlock())) {
+    llvm::Value *bundleArgs[] = {Token};
+    OB.emplace_back("convergencectrl", bundleArgs);
+  }
+
+  llvm::Function *IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
+      B.GetInsertBlock()->getModule(), IntrinsicID, {Source->getType()});
+  B.CreateCall(IntrFn, Args, OB);
 }
 
 llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
@@ -1387,7 +1404,7 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
   // Create a temporary variable for the result, which is either going
   // to be a single resource instance or a local array of resources (we need to
   // return an LValue).
-  RawAddress TmpVar = CGF.CreateMemTemp(ResultTy);
+  RawAddress TmpVar = CGF.CreateMemTempWithoutCast(ResultTy);
   if (CGF.EmitLifetimeStart(TmpVar.getPointer()))
     CGF.pushFullExprCleanup<CodeGenFunction::CallLifetimeEnd>(
         NormalEHLifetimeMarker, TmpVar);
@@ -1489,19 +1506,14 @@ RawAddress CGHLSLRuntime::createBufferMatrixTempAddress(const LValue &LV,
          "expected cbuffer matrix");
 
   QualType MatQualTy = LV.getType();
-  llvm::Type *MemTy = CGF.ConvertTypeForMem(MatQualTy);
   llvm::Type *LayoutTy = HLSLBufferLayoutBuilder(CGF.CGM).layOutType(MatQualTy);
-
-  if (LayoutTy == MemTy)
-    return LV.getAddress();
-
   Address SrcAddr = LV.getAddress();
-  // NOTE: B\C CreateMemTemp flattens MatrixTypes which causes
-  // overlapping GEPs in emitBufferCopy. Use CreateTempAlloca with
-  // the non-padded layout.
-  CharUnits Align =
-      CharUnits::fromQuantity(CGF.CGM.getDataLayout().getABITypeAlign(MemTy));
-  RawAddress DestAlloca = CGF.CreateTempAlloca(MemTy, Align, "matrix.buf.copy");
+
+  if (LayoutTy == CGF.ConvertTypeForMem(MatQualTy))
+    return SrcAddr;
+
+  RawAddress DestAlloca =
+      CGF.CreateMemTempWithoutCast(MatQualTy, "matrix.buf.copy");
   emitBufferCopy(CGF, DestAlloca, SrcAddr, MatQualTy);
   return DestAlloca;
 }

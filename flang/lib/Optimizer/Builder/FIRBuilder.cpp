@@ -448,7 +448,7 @@ void fir::FirOpBuilder::genStackRestore(mlir::Location loc,
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::StringAttr linkage, mlir::Attribute value, bool isConst,
-    bool isTarget, cuf::DataAttributeAttr dataAttr) {
+    bool isTarget, cuf::DataAttributeAttr dataAttr, bool setDefaultAlignment) {
   if (auto global = getNamedGlobal(name))
     return global;
   auto module = getModule();
@@ -463,6 +463,9 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   }
   auto glob = fir::GlobalOp::create(*this, loc, name, isConst, isTarget, type,
                                     value, linkage, attrs);
+  // Set default alignment for array globals.
+  if (setDefaultAlignment && mlir::isa<fir::SequenceType>(type))
+    glob.setAlignment(fir::defaultArrayGlobalAlignment);
   restoreInsertionPoint(insertPt);
   if (symbolTable)
     symbolTable->insert(glob);
@@ -472,7 +475,8 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name, bool isConst,
     bool isTarget, std::function<void(FirOpBuilder &)> bodyBuilder,
-    mlir::StringAttr linkage, cuf::DataAttributeAttr dataAttr) {
+    mlir::StringAttr linkage, cuf::DataAttributeAttr dataAttr,
+    bool setDefaultAlignment) {
   if (auto global = getNamedGlobal(name))
     return global;
   auto module = getModule();
@@ -480,6 +484,9 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   setInsertionPoint(module.getBody(), module.getBody()->end());
   auto glob = fir::GlobalOp::create(*this, loc, name, isConst, isTarget, type,
                                     mlir::Attribute{}, linkage);
+  // Set default alignment for array globals.
+  if (setDefaultAlignment && mlir::isa<fir::SequenceType>(type))
+    glob.setAlignment(fir::defaultArrayGlobalAlignment);
   auto &region = glob.getRegion();
   region.push_back(new mlir::Block);
   auto &block = glob.getRegion().back();
@@ -1795,29 +1802,18 @@ mlir::Value fir::factory::genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder,
                                                mlir::Location loc,
                                                mlir::Value cPtr,
                                                mlir::Type ty) {
+  if (fir::isa_builtin_cdevptr_type(ty)) {
+    auto [cptrFieldIndex, cptrFieldTy] =
+        genCPtrOrCFunptrFieldIndex(builder, loc, ty);
+    auto cptrCoord = fir::CoordinateOp::create(
+        builder, loc, builder.getRefType(cptrFieldTy), cPtr, cptrFieldIndex);
+    return fir::factory::genCPtrOrCFunptrAddr(builder, loc, cptrCoord,
+                                              cptrFieldTy);
+  }
   auto [addrFieldIndex, addrFieldTy] =
       genCPtrOrCFunptrFieldIndex(builder, loc, ty);
   return fir::CoordinateOp::create(
       builder, loc, builder.getRefType(addrFieldTy), cPtr, addrFieldIndex);
-}
-
-mlir::Value fir::factory::genCDevPtrAddr(fir::FirOpBuilder &builder,
-                                         mlir::Location loc,
-                                         mlir::Value cDevPtr, mlir::Type ty) {
-  auto recTy = mlir::cast<fir::RecordType>(ty);
-  assert(recTy.getTypeList().size() == 1);
-  auto cptrFieldName = recTy.getTypeList()[0].first;
-  mlir::Type cptrFieldTy = recTy.getTypeList()[0].second;
-  auto fieldIndexType = fir::FieldType::get(ty.getContext());
-  mlir::Value cptrFieldIndex = fir::FieldIndexOp::create(
-      builder, loc, fieldIndexType, cptrFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  auto cptrCoord = fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(cptrFieldTy), cDevPtr, cptrFieldIndex);
-  auto [addrFieldIndex, addrFieldTy] =
-      genCPtrOrCFunptrFieldIndex(builder, loc, cptrFieldTy);
-  return fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(addrFieldTy), cptrCoord, addrFieldIndex);
 }
 
 mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
