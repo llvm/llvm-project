@@ -8,7 +8,7 @@ define void @test_assume_then_load(ptr %base, i64 %idx) {
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, ptr [[BASE]], i64 [[IDX_SHIFTED]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[GEP1]], i64 16) ]
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds float, ptr [[BASE]], i64 [[IDX_SHIFTED]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[GEP2]], align 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[GEP2]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %idx.shifted = shl i64 %idx, 2
@@ -27,7 +27,7 @@ define void @test_assume_addrspace_cast(ptr %base, i64 %idx) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[GEP1]], i64 16) ]
 ; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr [[BASE]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[CAST]], i64 [[IDX_SHIFTED]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr addrspace(1) [[GEP2]], align 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr addrspace(1) [[GEP2]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %idx.shifted = shl i64 %idx, 2
@@ -50,7 +50,7 @@ define void @test_multiple_assumes(ptr %base, i64 %idx1, i64 %idx2) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[GEP2]], i64 8) ]
 ; CHECK-NEXT:    [[IDX3_SHIFTED:%.*]] = shl i64 [[IDX1]], 2
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds float, ptr [[BASE]], i64 [[IDX3_SHIFTED]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[GEP3]], align 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[GEP3]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %idx1.shifted = shl i64 %idx1, 2
@@ -71,7 +71,7 @@ define void @test_base_align_then_variable_gep(ptr %base, i64 %idx) {
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load float, ptr [[BASE]], align 16
 ; CHECK-NEXT:    [[IDX_SHIFTED:%.*]] = shl i64 [[IDX]], 1
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds float, ptr [[BASE]], i64 [[IDX_SHIFTED]]
-; CHECK-NEXT:    [[LOAD2:%.*]] = load float, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[LOAD2:%.*]] = load float, ptr [[GEP]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %load1 = load float, ptr %base, align 16
