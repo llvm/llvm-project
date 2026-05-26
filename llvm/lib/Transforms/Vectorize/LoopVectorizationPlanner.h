@@ -72,6 +72,23 @@ class VPBuilder {
   VPBasicBlock *BB = nullptr;
   VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
 
+  /// Lightweight SCEV-to-VPlan expander. Converts SCEVConstant, SCEVUnknown,
+  /// SCEVVScale and SCEVMulExpr into VPInstructions. Other SCEV expressions are
+  /// unsupported.
+  class VPSCEVExpander {
+    VPBuilder &Builder;
+    VPlan &Plan;
+    DebugLoc DL;
+
+  public:
+    VPSCEVExpander(VPBuilder &Builder, VPlan &Plan, DebugLoc DL)
+        : Builder(Builder), Plan(Plan), DL(DL) {}
+
+    /// Expand \p S into recipes and live-ins using the builder. Returns nullptr
+    /// if \p S cannot be expanded yet.
+    VPValue *expand(const SCEV *S);
+  };
+
   /// Insert \p VPI in BB at InsertPt if BB is set.
   template <typename T> T *tryInsertInstruction(T *R) {
     if (BB)
@@ -85,6 +102,11 @@ class VPBuilder {
                                    const Twine &Name = "") {
     return tryInsertInstruction(
         new VPInstruction(Opcode, Operands, {}, MD, DL, Name));
+  }
+
+  VPlan &getPlan() const {
+    assert(getInsertBlock() && "Insert block must be set");
+    return *getInsertBlock()->getPlan();
   }
 
 public:
@@ -430,6 +452,12 @@ public:
         FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags(), DL));
   }
 
+  /// Expand \p Expr using VPSCEVExpander. Returns nullptr if \p S cannot be
+  /// expanded yet.
+  VPValue *expandSCEV(const SCEV *Expr, DebugLoc DL) {
+    return VPSCEVExpander(*this, getPlan(), DL).expand(Expr);
+  }
+
   VPExpandSCEVRecipe *createExpandSCEV(const SCEV *Expr) {
     return tryInsertInstruction(new VPExpandSCEVRecipe(Expr));
   }
@@ -670,7 +698,8 @@ public:
   bool useOrderedReductions(const RecurrenceDescriptor &RdxDesc) const;
 
   /// Returns true if the target machine supports masked loads or stores
-  /// for \p I's data type and alignment.
+  /// for \p I's data type and alignment. The caller must ensure the access is
+  /// consecutive or part of an interleave group.
   bool isLegalMaskedLoadOrStore(Instruction *I, ElementCount VF) const;
 
   /// Returns true if the target machine can represent \p V as a masked gather

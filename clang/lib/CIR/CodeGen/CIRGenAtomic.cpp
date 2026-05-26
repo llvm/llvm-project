@@ -225,10 +225,13 @@ RValue AtomicInfo::emitAtomicLoad(AggValueSlot resultSlot, SourceLocation loc,
 }
 
 Address AtomicInfo::createTempAlloca() const {
-  Address tempAlloca = cgf.createMemTemp(
-      (lvalue.isBitField() && valueSizeInBits > atomicSizeInBits) ? valueTy
-                                                                  : atomicTy,
-      getAtomicAlignment(), loc, "atomic-temp");
+  // Remove addrspace info from the atomic pointer element when making the
+  // alloca pointer element.
+  QualType tmpTy = (lvalue.isBitField() && valueSizeInBits > atomicSizeInBits)
+                       ? valueTy
+                       : atomicTy.getUnqualifiedType();
+  Address tempAlloca =
+      cgf.createMemTemp(tmpTy, getAtomicAlignment(), loc, "atomic-temp");
 
   // Cast to pointer to value type for bitfields.
   if (lvalue.isBitField()) {
@@ -360,7 +363,8 @@ void AtomicInfo::emitCopyIntoMemory(RValue rvalue) const {
   if (rvalue.isScalar()) {
     cgf.emitStoreOfScalar(rvalue.getValue(), tempLValue, /*isInit=*/true);
   } else {
-    cgf.cgm.errorNYI("copying complex into atomic lvalue");
+    cgf.emitStoreOfComplex(loc, rvalue.getComplexValue(), tempLValue,
+                           /*isInit=*/true);
   }
 }
 
@@ -520,6 +524,38 @@ static void emitAtomicCmpXchgFailureSet(CIRGenFunction &cgf, AtomicExpr *e,
       });
 }
 
+// A version of the emitAtomicCmpXchgFailureSet function that ALSO checks
+// whether it is 'weak' or not (by adding an 'if' around it, and calling
+// emitAtomicCmpXchgFailureSet 2x).
+static void emitAtomicCmpXchgFailureSetCheckWeak(
+    CIRGenFunction &cgf, AtomicExpr *e, Expr *isWeakExpr, Address dest,
+    Address ptr, Address val1, Address val2, Expr *failureOrderExpr,
+    uint64_t size, cir::MemOrder successOrder, cir::SyncScopeKind scope) {
+  mlir::Value isWeakVal = cgf.emitScalarExpr(isWeakExpr);
+  // The AST seems to be inserting a 'bool' cast (even in C mode) here, so we'll
+  // just emit it like a scalar.
+  assert(isWeakVal.getType() == cgf.getBuilder().getBoolTy());
+  mlir::Location atomicLoc = cgf.getLoc(e->getSourceRange());
+
+  // Unlike classic compiler, we use an 'if' here instead of a switch, simply to
+  // make this more readable/logical, plus we don't allow switch over a bool in
+  // CIR.
+  cir::IfOp::create(
+      cgf.getBuilder(), atomicLoc, isWeakVal, /*elseRegion=*/true,
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        emitAtomicCmpXchgFailureSet(cgf, e, /*isWeak=*/true, dest, ptr, val1,
+                                    val2, failureOrderExpr, size, successOrder,
+                                    scope);
+        cgf.getBuilder().createYield(atomicLoc);
+      },
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        emitAtomicCmpXchgFailureSet(cgf, e, /*isWeak=*/false, dest, ptr, val1,
+                                    val2, failureOrderExpr, size, successOrder,
+                                    scope);
+        cgf.getBuilder().createYield(atomicLoc);
+      });
+}
+
 static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
                          Address ptr, Address val1, Address val2,
                          Expr *isWeakExpr, Expr *failureOrderExpr, int64_t size,
@@ -557,9 +593,9 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
       emitAtomicCmpXchgFailureSet(cgf, expr, isWeak, dest, ptr, val1, val2,
                                   failureOrderExpr, size, order, scope);
     } else {
-      assert(!cir::MissingFeatures::atomicExpr());
-      cgf.cgm.errorNYI(expr->getSourceRange(),
-                       "emitAtomicOp: non-constant isWeak");
+      emitAtomicCmpXchgFailureSetCheckWeak(cgf, expr, isWeakExpr, dest, ptr,
+                                           val1, val2, failureOrderExpr, size,
+                                           order, scope);
     }
     return;
   }
