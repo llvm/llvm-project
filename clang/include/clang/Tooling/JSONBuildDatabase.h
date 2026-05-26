@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 //  The JSONBuildDatabase finds build databases supplied as a file
-//  'compile_commands.json'.
+//  'build_database.json'.
 //
 //===----------------------------------------------------------------------===//
 
@@ -35,26 +35,46 @@ namespace tooling {
 
 /// A JSON based build database.
 ///
-/// JSON compilation database files must contain a list of JSON objects which
-/// provide the command lines in the attributes 'directory', 'command',
-/// 'arguments' and 'file':
-/// [
-///   { "directory": "<working directory of the compile>",
-///     "command": "<compile command line>",
-///     "file": "<path to source file>"
-///   },
-///   { "directory": "<working directory of the compile>",
-///     "arguments": ["<raw>", "<command>" "<line>" "<parameters>"],
-///     "file": "<path to source file>"
-///   },
-///   ...
-/// ]
-/// Each object entry defines one compile action. The specified file is
-/// considered to be the main source file for the translation unit.
-///
-/// 'command' is a full command line that will be unescaped.
-///
-/// 'arguments' is a list of command line arguments that will not be unescaped.
+/// JSON build database files must contain a collection of JSON objects which
+/// provide the sets of translation units which capture the visiblity for producing
+/// and consuming dependency modules along with the compilation commands to build each TU.
+/// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p2977r2.html
+/// {
+///   "version": 1,
+///   "revision": 0,
+///   "sets": [
+///     {
+///       "family-name" : "<optional shared family name to semantically group sets>",
+///       "name" : "<unique name for each set>",
+///       "translation-units" : [
+///         {
+///           "arguments": [
+///             "/path/to/compiler",
+///             "...",
+///           ],
+///           "baseline-arguments" :
+///           [
+///             "...",
+///           ],
+///           "local-arguments" :
+///           [
+///             "...",
+///           ],
+///           "object": "<optional object file produced>",
+///           "private": false,
+///           "provides": {
+///             "<module name>": "<path to BMI>"
+///           },
+///           "requires" : ["<list of module names that are imported>"],
+///           "source": "<source file>",
+///           "work-directory": "<working directory of the compile>"
+///         },
+///         ...
+///       ],
+///       "visible-sets" : ["<list of sets that are visible from this set>"]
+///     }
+///   ]
+/// }
 ///
 /// JSON build databases can for example be generated in CMake projects
 /// by setting the flag -DCMAKE_EXPORT_BUILD_DATABASE.
