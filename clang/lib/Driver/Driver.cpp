@@ -3070,12 +3070,13 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
   // actually use it, so we warn about unused -x arguments.
   types::ID InputType = types::TY_Nothing;
   Arg *InputTypeArg = nullptr;
+  bool IsSYCL = Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false);
 
   // The last /TC or /TP option sets the input type to C or C++ globally.
   if (Arg *TCTP = Args.getLastArgNoClaim(options::OPT__SLASH_TC,
                                          options::OPT__SLASH_TP)) {
     InputTypeArg = TCTP;
-    InputType = TCTP->getOption().matches(options::OPT__SLASH_TC)
+    InputType = TCTP->getOption().matches(options::OPT__SLASH_TC) && !IsSYCL
                     ? types::TY_C
                     : types::TY_CXX;
 
@@ -3141,6 +3142,21 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
           // idea of what .s is.
           if (const char *Ext = strrchr(Value, '.'))
             Ty = TC.LookupTypeForExtension(Ext + 1);
+
+          // For SYCL, convert C-type sources to C++-type sources.
+          if (IsSYCL) {
+            types::ID OldTy = Ty;
+            switch (Ty) {
+            case types::TY_C:          Ty = types::TY_CXX;        break;
+            case types::TY_CHeader:    Ty = types::TY_CXXHeader;  break;
+            case types::TY_PP_C:       Ty = types::TY_PP_CXX;     break;
+            case types::TY_PP_CHeader: Ty = types::TY_PP_CXXHeader; break;
+            default: break;
+            }
+            if (OldTy != Ty)
+              Diag(clang::diag::warn_drv_fsycl_with_c_type)
+                  << getTypeName(OldTy) << getTypeName(Ty);
+          }
 
           if (Ty == types::TY_INVALID) {
             if (IsCLMode() && (Args.hasArgNoClaim(options::OPT_E) || CCGenDiagnostics))
@@ -3219,7 +3235,8 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
       if (DiagnoseInputExistence(Value, types::TY_C,
                                  /*TypoCorrect=*/false)) {
         Arg *InputArg = makeInputArg(Args, Opts, A->getValue());
-        Inputs.push_back(std::make_pair(types::TY_C, InputArg));
+        Inputs.push_back(
+            std::make_pair(IsSYCL ? types::TY_CXX : types::TY_C, InputArg));
       }
       A->claim();
     } else if (A->getOption().matches(options::OPT__SLASH_Tp)) {
@@ -3247,6 +3264,11 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
         Diag(clang::diag::err_drv_unknown_language) << A->getValue();
         InputType = types::TY_Object;
       }
+
+      // Emit an error if C compilation is forced in -fsycl mode.
+      if (IsSYCL && (InputType == types::TY_C || InputType == types::TY_PP_C ||
+                     InputType == types::TY_CHeader))
+        Diag(clang::diag::err_drv_fsycl_with_c_type) << A->getAsString(Args);
 
       // If the user has put -fmodule-header{,=} then we treat C++ headers as
       // header unit inputs.  So we 'promote' -xc++-header appropriately.
