@@ -57,7 +57,7 @@ enum ExpressionType {
   ET_BasicEnd
 };
 
-class Expression {
+class LLVM_ABI Expression {
 private:
   ExpressionType EType;
   unsigned Opcode;
@@ -133,7 +133,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Expression &E) {
   return OS;
 }
 
-class BasicExpression : public Expression {
+class LLVM_ABI BasicExpression : public Expression {
 private:
   using RecyclerType = ArrayRecycler<Value *>;
   using RecyclerCapacity = RecyclerType::Capacity;
@@ -298,7 +298,7 @@ public:
   void setMemoryLeader(const MemoryAccess *ML) { MemoryLeader = ML; }
 };
 
-class CallExpression final : public MemoryExpression {
+class LLVM_ABI CallExpression final : public MemoryExpression {
 private:
   CallInst *Call;
 
@@ -331,7 +331,7 @@ public:
   }
 };
 
-class LoadExpression final : public MemoryExpression {
+class LLVM_ABI LoadExpression final : public MemoryExpression {
 private:
   LoadInst *Load;
 
@@ -373,7 +373,7 @@ public:
   }
 };
 
-class StoreExpression final : public MemoryExpression {
+class LLVM_ABI StoreExpression final : public MemoryExpression {
 private:
   StoreInst *Store;
   Value *StoredValue;
@@ -414,7 +414,7 @@ public:
   }
 };
 
-class AggregateValueExpression final : public BasicExpression {
+class LLVM_ABI AggregateValueExpression final : public BasicExpression {
 private:
   unsigned MaxIntOperands;
   unsigned NumIntOperands = 0;
@@ -508,7 +508,7 @@ public:
   int_op_inserter &operator++(int) { return *this; }
 };
 
-class PHIExpression final : public BasicExpression {
+class LLVM_ABI PHIExpression final : public BasicExpression {
 private:
   BasicBlock *BB;
 
