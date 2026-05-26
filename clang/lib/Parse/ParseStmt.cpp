@@ -1289,8 +1289,7 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
   if (!getLangOpts().CPlusPlus) {
     if (InitStmt != nullptr && InitStmt->isUsable()) {
       // Handle the 2 clauses of declaration: (clause1; clause2).
-      if (!isa<DeclStmt>(InitStmt->get()) &&
-          !isa<AttributedStmt>(InitStmt->get()))
+      if (!isa<DeclStmt, AttributedStmt, NullStmt>(InitStmt->get()))
         // C2y only permits declaration in the first clause of an if condition.
         Diag(InitStmt->get()->getBeginLoc(),
              diag::err_c2y_first_condition_clause_is_not_declaration)
