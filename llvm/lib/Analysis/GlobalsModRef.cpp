@@ -213,14 +213,10 @@ void GlobalsAAResult::DeletionCallbackHandle::deleted() {
     if (GAR->NonAddressTakenGlobals.erase(GV)) {
       // This global might be an indirect global.  If so, remove it and
       // remove any AllocRelatedValues for it.
-      if (GAR->IndirectGlobals.erase(GV)) {
+      if (GAR->IndirectGlobals.erase(GV))
         // Remove any entries in AllocsForIndirectGlobals for this global.
-        for (auto I = GAR->AllocsForIndirectGlobals.begin(),
-                  E = GAR->AllocsForIndirectGlobals.end();
-             I != E; ++I)
-          if (I->second == GV)
-            GAR->AllocsForIndirectGlobals.erase(I);
-      }
+        GAR->AllocsForIndirectGlobals.remove_if(
+            [&GV](auto &T) { return T.second == GV; });
 
       // Scan the function info we have collected and remove this global
       // from all of them.
