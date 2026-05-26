@@ -1202,7 +1202,6 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       if (const SectionAttr *sa = d->getAttr<SectionAttr>())
         gv.setSectionAttr(builder.getStringAttr(sa->getName()));
     }
-    gv.setGlobalVisibility(getGlobalVisibilityAttrFromDecl(d).getValue());
 
     // Handle XCore specific ABI requirements.
     if (getTriple().getArch() == llvm::Triple::xcore)
@@ -2226,9 +2225,11 @@ mlir::Value CIRGenModule::emitDataMemberPointer(mlir::Location loc,
       builder, loc,
       builder.getDataMemberAttr(leafTy, fieldLayout.getCIRFieldNo(field)));
 
-  llvm::SmallVector<const CXXRecordDecl *, 4> chain;
-  if (!buildDataMemberBaseChain(pointerClass, fieldParent, chain))
-    llvm_unreachable("could not find base path to data member parent");
+  llvm::SmallVector<const CXXRecordDecl *> chain;
+  if (!buildDataMemberBaseChain(pointerClass, fieldParent, chain)) {
+    errorNYI(loc, "data member pointer through virtual or ambiguous base");
+    return mlir::Value();
+  }
 
   for (int i = static_cast<int>(chain.size()) - 2; i >= 0; --i) {
     const CXXRecordDecl *derived = chain[i];
@@ -2255,11 +2256,8 @@ CIRGenModule::getDataMemberAttrForField(const MemberPointerType *destMpt,
       mlir::cast<cir::DataMemberType>(convertType(QualType(destMpt, 0)));
   unsigned memberIndex =
       getTypes().getCIRGenRecordLayout(fieldParent).getCIRFieldNo(field);
-  if (fieldParent != destClass) {
-    errorNYI(field->getLocation(),
-             "constexpr data member attr requires field in dest class");
+  if (fieldParent != destClass)
     return {};
-  }
   return builder.getDataMemberAttr(destTy, memberIndex);
 }
 
@@ -2889,9 +2887,69 @@ static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
   return false;
 }
 
-void CIRGenModule::setGlobalVisibility(mlir::Operation *gv,
+void CIRGenModule::setGlobalVisibility(mlir::Operation *op,
                                        const NamedDecl *d) const {
-  assert(!cir::MissingFeatures::opGlobalVisibility());
+  auto gv = dyn_cast<cir::CIRGlobalValueInterface>(op);
+  if (!gv)
+    return;
+
+  // Internal definitions always have default visibility.
+  if (gv.hasLocalLinkage()) {
+    gv.setGlobalVisibility(cir::VisibilityKind::Default);
+    return;
+  }
+  if (!d)
+    return;
+
+  // Set visibility for definitions, and for declarations if requested globally
+  // or set explicitly.
+  LinkageInfo lv = d->getLinkageAndVisibility();
+
+  // OpenMP declare target variables must be visible to the host so they can
+  // be registered. We require protected visibility unless the variable has
+  // the DT_nohost modifier and does not need to be registered.
+  if (getASTContext().getLangOpts().OpenMP &&
+      getASTContext().getLangOpts().OpenMPIsTargetDevice && isa<VarDecl>(d) &&
+      d->hasAttr<OMPDeclareTargetDeclAttr>() &&
+      d->getAttr<OMPDeclareTargetDeclAttr>()->getDevType() !=
+          OMPDeclareTargetDeclAttr::DT_NoHost &&
+      lv.getVisibility() == HiddenVisibility) {
+    llvm_unreachable("setGlobalVisibility: OpenMP is NYI");
+    return;
+  }
+
+  // CUDA/HIP device kernels and global variables must be visible to the host
+  // so they can be registered / initialized. We require protected visibility
+  // unless the user explicitly requested hidden via an attribute.
+  if (getASTContext().getLangOpts().CUDAIsDevice &&
+      lv.getVisibility() == HiddenVisibility && !lv.isVisibilityExplicit() &&
+      !d->hasAttr<OMPDeclareTargetDeclAttr>()) {
+    bool needsProtected = false;
+    if (isa<FunctionDecl>(d)) {
+      needsProtected =
+          d->hasAttr<CUDAGlobalAttr>() || d->hasAttr<DeviceKernelAttr>();
+    } else if (const auto *vd = dyn_cast<VarDecl>(d)) {
+      needsProtected = vd->hasAttr<CUDADeviceAttr>() ||
+                       vd->hasAttr<CUDAConstantAttr>() ||
+                       vd->getType()->isCUDADeviceBuiltinSurfaceType() ||
+                       vd->getType()->isCUDADeviceBuiltinTextureType();
+    }
+    if (needsProtected) {
+      gv.setGlobalVisibility(cir::VisibilityKind::Protected);
+      return;
+    }
+  }
+
+  if (getASTContext().getLangOpts().HLSL && !d->isInExportDeclContext()) {
+    gv.setGlobalVisibility(cir::VisibilityKind::Hidden);
+    return;
+  }
+
+  assert(!cir::MissingFeatures::opGlobalDLLImportExport());
+
+  if (lv.isVisibilityExplicit() || getLangOpts().SetVisibilityForExternDecls ||
+      !gv.isDeclarationForLinker())
+    gv.setGlobalVisibility(getCIRVisibilityKind(lv.getVisibility()));
 }
 
 void CIRGenModule::setDSOLocal(cir::CIRGlobalValueInterface gv) const {

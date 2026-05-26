@@ -36,6 +36,7 @@ int M::*b2d_multi = &M::b;
 int B::*d2b = (int B::*)&M::b;
 // CIR-BEFORE: cir.global external @d2b = #cir.data_member<0> : !cir.data_member<!s32i in !rec_B>
 // CIR-AFTER: cir.global external @d2b = #cir.int<0> : !s64i
+// LLVM-DAG: @d2b = global i64 0
 // OGCG: @d2b = global i64 0
 
 struct Foo { int x; int y; };
@@ -44,6 +45,7 @@ struct Bar { float a; int b; };
 int Foo::*reint = reinterpret_cast<int Foo::*>(&Bar::b);
 // CIR-BEFORE: cir.global external @reint = #cir.data_member<1> : !cir.data_member<!s32i in !rec_Foo>
 // CIR-AFTER: cir.global external @reint = #cir.int<4> : !s64i
+// LLVM-DAG: @reint = global i64 4
 // OGCG: @reint = global i64 4
 
 int Derived::*b2d_null = (int Derived::*)(int Base::*)nullptr;

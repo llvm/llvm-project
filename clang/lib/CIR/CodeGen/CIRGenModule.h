@@ -431,6 +431,19 @@ public:
     llvm_unreachable("unknown visibility!");
   }
 
+  static cir::VisibilityKind getCIRVisibilityKind(Visibility v) {
+    switch (v) {
+    case DefaultVisibility:
+      return cir::VisibilityKind::Default;
+    case HiddenVisibility:
+      return cir::VisibilityKind::Hidden;
+    case ProtectedVisibility:
+      return cir::VisibilityKind::Protected;
+    }
+
+    llvm_unreachable("unknown visibility!");
+  }
+
   llvm::DenseMap<mlir::Attribute, cir::GlobalOp> constantStringMap;
   llvm::DenseMap<const UnnamedGlobalConstantDecl *, cir::GlobalOp>
       unnamedGlobalConstantDeclMap;

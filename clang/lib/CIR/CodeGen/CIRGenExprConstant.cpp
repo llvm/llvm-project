@@ -1926,11 +1926,6 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
 
     const auto *fieldDecl = cast<FieldDecl>(memberDecl);
     const auto *mpt = destType->castAs<MemberPointerType>();
-    const CXXRecordDecl *pointerClass = mpt->getMostRecentCXXRecordDecl();
-    const auto *fieldParent = cast<CXXRecordDecl>(fieldDecl->getParent());
-    if (fieldParent != pointerClass)
-      return {};
-
     return cgm.getDataMemberAttrForField(mpt, fieldDecl);
   }
   case APValue::LValue:

@@ -679,7 +679,7 @@ public:
         mlir::Location loc = cgf.getLoc(e->getSourceRange());
         mlir::Value numElts = cgf.getVLASize(vla).numElts;
         if (!e->isIncrementOp())
-          numElts = cgf.getBuilder().createNeg(numElts, /*nsw=*/true);
+          numElts = cgf.getBuilder().createNeg(numElts);
         assert(!cir::MissingFeatures::sanitizers());
         value = cgf.getBuilder().createPtrStride(loc, value, numElts);
       } else {

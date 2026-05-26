@@ -2416,14 +2416,13 @@ static const FieldDecl *getDataMemberFieldFromExpr(const Expr *e) {
   e = e->IgnoreParenImpCasts();
   if (const auto *declRef = dyn_cast<DeclRefExpr>(e))
     return dyn_cast<FieldDecl>(declRef->getDecl());
-  if (const auto *memberExpr = dyn_cast<MemberExpr>(e))
+  else if (const auto *memberExpr = dyn_cast<MemberExpr>(e))
     return dyn_cast<FieldDecl>(memberExpr->getMemberDecl());
-  if (const auto *unaryOp = dyn_cast<UnaryOperator>(e)) {
+  else if (const auto *castExpr = dyn_cast<CastExpr>(e))
+    return getDataMemberFieldFromExpr(castExpr->getSubExpr());
+  else if (const auto *unaryOp = dyn_cast<UnaryOperator>(e))
     if (unaryOp->getOpcode() == UO_AddrOf)
       return getDataMemberFieldFromExpr(unaryOp->getSubExpr());
-  }
-  if (const auto *castExpr = dyn_cast<CastExpr>(e))
-    return getDataMemberFieldFromExpr(castExpr->getSubExpr());
   return nullptr;
 }
 
@@ -2464,12 +2463,8 @@ CIRGenItaniumCXXABI::emitMemberPointerConversion(const CastExpr *e,
     return cgm.getDataMemberAttrForField(destMpt, field);
   }
 
-  if (const FieldDecl *field = getDataMemberFieldFromExpr(e->getSubExpr())) {
-    const auto *fieldParent = cast<CXXRecordDecl>(field->getParent());
-    if (fieldParent == destMpt->getMostRecentCXXRecordDecl())
-      return cgm.getDataMemberAttrForField(destMpt, field);
-    return {};
-  }
+  if (const FieldDecl *field = getDataMemberFieldFromExpr(e->getSubExpr()))
+    return cgm.getDataMemberAttrForField(destMpt, field);
 
   cgm.errorNYI(e->getBeginLoc(),
                "member-pointer cast without underlying field decl");
