@@ -2486,7 +2486,7 @@ const Init *TGParser::ParseOperationSubstr(Record *CurRec,
 
 /// Parse the !find operation. Return null on error.
 ///
-/// Substr ::= !find(string, string [, start-int]) => int
+/// Find ::= !find(string, string [, start-int]) => int
 const Init *TGParser::ParseOperationFind(Record *CurRec,
                                          const RecTy *ItemType) {
   TernOpInit::TernaryOp Code = TernOpInit::FIND;
