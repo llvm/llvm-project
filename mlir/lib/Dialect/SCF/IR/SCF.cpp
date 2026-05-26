@@ -289,15 +289,17 @@ ValueRange ExecuteRegionOp::getSuccessorInputs(RegionSuccessor successor) {
 void LoopOp::build(
     OpBuilder &builder, OperationState &result, TypeRange resultTypes,
     ValueRange initValues,
-    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
+    function_ref<void(OpBuilder &, Location, Value, ValueRange)> bodyBuilder) {
   result.addOperands(initValues);
   result.addTypes(resultTypes);
 
-  // Build the body region with a single entry block, one argument per init
-  // value. The caller-supplied `bodyBuilder` is responsible for terminating
-  // the block with either `scf.continue` or `scf.break`.
+  // Build the body region with a single entry block whose first argument is
+  // the loop's token, followed by one argument per init value. The
+  // caller-supplied `bodyBuilder` is responsible for terminating the block
+  // with either `scf.continue` or `scf.break`.
   Region *bodyRegion = result.addRegion();
   Block *bodyBlock = builder.createBlock(bodyRegion);
+  bodyBlock->addArgument(TokenType::get(builder.getContext()), result.location);
   SmallVector<Type> argTypes(initValues.getTypes());
   SmallVector<Location> argLocs(initValues.size(), result.location);
   bodyBlock->addArguments(argTypes, argLocs);
@@ -305,7 +307,8 @@ void LoopOp::build(
   if (bodyBuilder) {
     OpBuilder::InsertionGuard guard(builder);
     builder.setInsertionPointToStart(bodyBlock);
-    bodyBuilder(builder, result.location, bodyBlock->getArguments());
+    bodyBuilder(builder, result.location, bodyBlock->getArgument(0),
+                bodyBlock->getArguments().drop_front());
   }
 }
 
@@ -313,11 +316,14 @@ LogicalResult LoopOp::verifyRegions() {
   if (getRegion().empty())
     return emitOpError("region cannot be empty");
   Block &body = getRegion().front();
-  if (body.getNumArguments() != getNumOperands())
+  if (body.getNumArguments() != getNumOperands() + 1)
     return emitOpError(
         "mismatch in number of loop-carried values and defined values");
+  // The first entry block argument must be a token.
+  if (!isa<TokenType>(body.getArgument(0).getType()))
+    return emitOpError("first region argument must be a token");
   for (auto [index, regionArg, initOperand] :
-       llvm::enumerate(body.getArguments(), getOperands())) {
+       llvm::enumerate(body.getArguments().drop_front(), getOperands())) {
     if (regionArg.getType() != initOperand.getType())
       return emitOpError() << "type mismatch between " << index
                            << "th iter operand (" << initOperand.getType()
@@ -325,40 +331,50 @@ LogicalResult LoopOp::verifyRegions() {
                            << ")";
   }
 
-  // The loop body must end with an explicit `scf.break` or `scf.continue`.
+  // The loop body must end with `scf.break` or `scf.continue`.
   Operation *terminator = body.getTerminator();
-  if (auto breakOp = dyn_cast<BreakOp>(terminator)) {
-    if (breakOp.getNumOperands() != getNumResults())
-      return breakOp.emitOpError()
-             << "has " << breakOp.getNumOperands()
-             << " operands, but enclosing scf.loop returns " << getNumResults()
-             << " result(s)";
-    for (auto [index, operandType, resultType] :
-         llvm::enumerate(breakOp.getOperandTypes(), getResultTypes())) {
-      if (operandType != resultType)
-        return breakOp.emitOpError()
-               << "type mismatch between " << index << "th operand ("
-               << operandType << ") and " << index
-               << "th result of enclosing scf.loop (" << resultType << ")";
-    }
-  } else if (auto continueOp = dyn_cast<ContinueOp>(terminator)) {
-    if (continueOp.getNumOperands() != getNumRegionIterValues())
-      return continueOp.emitOpError()
-             << "has " << continueOp.getNumOperands()
-             << " operands, but enclosing scf.loop has "
-             << getNumRegionIterValues() << " iter_args";
-    for (auto [index, operandType, iterArgType] : llvm::enumerate(
-             continueOp.getOperandTypes(), body.getArgumentTypes())) {
-      if (operandType != iterArgType)
-        return continueOp.emitOpError()
-               << "type mismatch between " << index << "th operand ("
-               << operandType << ") and " << index
-               << "th iter_arg of enclosing scf.loop (" << iterArgType << ")";
-    }
-  } else {
+  if (!isa<BreakOp, ContinueOp>(terminator))
     return emitOpError("body must be terminated by 'scf.break' or "
                        "'scf.continue', got '")
            << terminator->getName() << "'";
+
+  // Verify the operand counts/types of every `scf.break`/`scf.continue` that
+  // targets this loop. Token users that are not `scf.break` / `scf.continue`
+  // are ignored here.
+  Value token = getRegionToken();
+  TypeRange resultTypes = getResultTypes();
+  auto iterArgTypes = ValueRange(getRegionIterValues()).getTypes();
+  for (Operation *user : token.getUsers()) {
+    if (auto breakOp = dyn_cast<BreakOp>(user)) {
+      if (breakOp.getOperands().size() - 1 != resultTypes.size())
+        return breakOp.emitOpError()
+               << "has " << (breakOp.getOperands().size() - 1)
+               << " value operand(s), but target scf.loop returns "
+               << resultTypes.size() << " result(s)";
+      for (auto [index, operandType, resultType] : llvm::enumerate(
+               breakOp.getOperands().drop_front().getTypes(), resultTypes)) {
+        if (operandType != resultType)
+          return breakOp.emitOpError()
+                 << "type mismatch between " << index << "th value operand ("
+                 << operandType << ") and " << index
+                 << "th result of target scf.loop (" << resultType << ")";
+      }
+    } else if (auto continueOp = dyn_cast<ContinueOp>(user)) {
+      if (continueOp.getOperands().size() - 1 != iterArgTypes.size())
+        return continueOp.emitOpError()
+               << "has " << (continueOp.getOperands().size() - 1)
+               << " value operand(s), but target scf.loop has "
+               << iterArgTypes.size() << " iter_arg(s)";
+      for (auto [index, operandType, iterArgType] :
+           llvm::enumerate(continueOp.getOperands().drop_front().getTypes(),
+                           iterArgTypes)) {
+        if (operandType != iterArgType)
+          return continueOp.emitOpError()
+                 << "type mismatch between " << index << "th value operand ("
+                 << operandType << ") and " << index
+                 << "th iter_arg of target scf.loop (" << iterArgType << ")";
+      }
+    }
   }
   return success();
 }
@@ -377,8 +393,10 @@ static void printFunctionalTypeList(OpAsmPrinter &p, TypeRange types) {
 
 void LoopOp::print(OpAsmPrinter &p) {
   p << " ";
+  // Print the token block argument first.
+  p.printRegionArgument(getRegionToken(), /*argAttrs=*/{}, /*omitType=*/true);
   if (!getInitValues().empty()) {
-    p << "iter_args(";
+    p << " iter_args(";
     llvm::interleaveComma(
         llvm::zip(getRegionIterValues(), getInitValues()), p, [&](auto it) {
           p.printRegionArgument(std::get<0>(it), /*argAttrs=*/{},
@@ -387,13 +405,12 @@ void LoopOp::print(OpAsmPrinter &p) {
         });
     p << ") : ";
     printFunctionalTypeList(p, getInitValues().getTypes());
-    p << " ";
   }
   if (!getResultTypes().empty()) {
-    p << "-> ";
+    p << " -> ";
     printFunctionalTypeList(p, getResultTypes());
-    p << " ";
   }
+  p << " ";
 
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
@@ -401,16 +418,20 @@ void LoopOp::print(OpAsmPrinter &p) {
 }
 
 ParseResult LoopOp::parse(OpAsmParser &parser, OperationState &result) {
+  // The first region argument is always the token.
+  OpAsmParser::Argument tokenArg;
+  if (parser.parseArgument(tokenArg))
+    return failure();
+  tokenArg.type = TokenType::get(result.getContext());
+
   SmallVector<OpAsmParser::Argument, 4> regionArgs;
+  regionArgs.push_back(tokenArg);
   SmallVector<OpAsmParser::UnresolvedOperand, 4> iterOperands;
   SmallVector<Type, 4> iterTypes;
 
-  if (failed(parser.parseOptionalKeyword("iter_args"))) {
-    // No iter_args, but may still have a result type list.
-    if (parser.parseOptionalArrowTypeList(result.types))
-      return failure();
-  } else {
-    if (parser.parseAssignmentList(regionArgs, iterOperands) ||
+  if (succeeded(parser.parseOptionalKeyword("iter_args"))) {
+    SmallVector<OpAsmParser::Argument, 4> iterArgs;
+    if (parser.parseAssignmentList(iterArgs, iterOperands) ||
         parser.parseColon())
       return failure();
     if (parser.parseOptionalLParen()) {
@@ -423,14 +444,15 @@ ParseResult LoopOp::parse(OpAsmParser &parser, OperationState &result) {
       if (parser.parseTypeList(iterTypes) || parser.parseRParen())
         return failure();
     }
-    if (regionArgs.size() != iterTypes.size())
+    if (iterArgs.size() != iterTypes.size())
       return parser.emitError(parser.getCurrentLocation(),
                               "found different number of iter_args and types");
-    if (parser.parseOptionalArrowTypeList(result.types))
-      return failure();
-    for (auto [regionArg, type] : llvm::zip_equal(regionArgs, iterTypes))
-      regionArg.type = type;
+    for (auto [iterArg, type] : llvm::zip_equal(iterArgs, iterTypes))
+      iterArg.type = type;
+    regionArgs.append(iterArgs.begin(), iterArgs.end());
   }
+  if (parser.parseOptionalArrowTypeList(result.types))
+    return failure();
 
   Region *body = result.addRegion();
   if (parser.parseRegion(*body, regionArgs))
@@ -442,6 +464,57 @@ ParseResult LoopOp::parse(OpAsmParser &parser, OperationState &result) {
                              result.operands))
     return failure();
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// BreakOp / ContinueOp
+//===----------------------------------------------------------------------===//
+
+/// Common verifier for `scf.break` / `scf.continue`: ensure the `token`
+/// operand is the token of an enclosing `scf.loop`, and that every operation
+/// on the path between this terminator and the target loop allows
+/// region-breaking terminators in its regions.
+static LogicalResult verifyRegionBreakingTerminator(Operation *op, Value token,
+                                                    StringRef opName) {
+  // The token must be the entry block token of some `scf.loop`. (The builtin
+  // token verifier already ensures the token is produced by a producer with
+  // `TokenProducerTrait`; here we additionally constrain that producer to be
+  // an `scf.loop`.)
+  auto blockArg = dyn_cast<BlockArgument>(token);
+  if (!blockArg)
+    return op->emitOpError()
+           << "expects the token operand to be the token of an enclosing "
+              "'scf.loop'";
+  Operation *targetLoop = blockArg.getOwner()->getParentOp();
+  if (!isa_and_nonnull<LoopOp>(targetLoop) ||
+      cast<LoopOp>(targetLoop).getRegionToken() != blockArg)
+    return op->emitOpError()
+           << "expects the token operand to be the token of an enclosing "
+              "'scf.loop'";
+
+  // Every op on the path from this terminator up to the target loop must
+  // be transparent to region-breaking terminators, i.e., it must implement
+  // the `PropagateControlFlowBreak` trait.
+  Operation *cursor = op->getParentOp();
+  while (cursor && cursor != targetLoop) {
+    if (!cursor->mightHaveTrait<OpTrait::PropagateControlFlowBreak>())
+      return op->emitOpError()
+             << "cannot " << opName << " through '" << cursor->getName()
+             << "': op does not implement the 'PropagateControlFlowBreak' "
+                "trait";
+    cursor = cursor->getParentOp();
+  }
+  if (cursor != targetLoop)
+    return op->emitOpError("target 'scf.loop' is not an ancestor");
+  return success();
+}
+
+LogicalResult BreakOp::verify() {
+  return verifyRegionBreakingTerminator(*this, getToken(), "break");
+}
+
+LogicalResult ContinueOp::verify() {
+  return verifyRegionBreakingTerminator(*this, getToken(), "continue");
 }
 
 //===----------------------------------------------------------------------===//
@@ -2099,18 +2172,45 @@ IfOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
                        SmallVectorImpl<Type> &inferredReturnTypes) {
   if (adaptor.getRegions().empty())
     return failure();
-  Region *r = &adaptor.getThenRegion();
-  if (r->empty())
-    return failure();
-  Block &b = r->front();
-  if (b.empty())
-    return failure();
-  auto yieldOp = llvm::dyn_cast<YieldOp>(b.back());
-  if (!yieldOp)
-    return failure();
-  TypeRange types = yieldOp.getOperandTypes();
-  llvm::append_range(inferredReturnTypes, types);
+  // Pick the first region whose fall-through terminator is `scf.yield` and
+  // use its operand types as the inferred result types. Regions ending with
+  // a region-breaking terminator (`scf.break` / `scf.continue`) transfer
+  // control out of this op and therefore do not contribute to the result
+  // types.
+  auto tryRegion = [&](Region &r) -> std::optional<TypeRange> {
+    if (r.empty())
+      return std::nullopt;
+    Block &b = r.front();
+    if (b.empty())
+      return std::nullopt;
+    if (auto yieldOp = llvm::dyn_cast<YieldOp>(b.back()))
+      return TypeRange(yieldOp.getOperandTypes());
+    return std::nullopt;
+  };
+  if (auto types = tryRegion(adaptor.getThenRegion())) {
+    llvm::append_range(inferredReturnTypes, *types);
+    return success();
+  }
+  if (auto types = tryRegion(adaptor.getElseRegion())) {
+    llvm::append_range(inferredReturnTypes, *types);
+    return success();
+  }
+  // Neither region falls through with `scf.yield`. The op produces no
+  // values in this case.
   return success();
+}
+
+/// Ensure that `region`, which belongs to an `scf.if`, terminates with an
+/// `scf.yield` if it does not already have a terminator.
+template <typename BuilderTy>
+static void ensureIfYieldTerminator(Region &region, BuilderTy &builder,
+                                    Location loc) {
+  ::mlir::impl::ensureRegionTerminator(
+      region, builder, loc, [](OpBuilder &b, Location l) -> Operation * {
+        OperationState state(l, YieldOp::getOperationName());
+        YieldOp::build(b, state);
+        return Operation::create(state);
+      });
 }
 
 void IfOp::build(OpBuilder &builder, OperationState &result,
@@ -2152,14 +2252,14 @@ void IfOp::build(OpBuilder &builder, OperationState &result,
   Region *thenRegion = result.addRegion();
   builder.createBlock(thenRegion);
   if (resultTypes.empty())
-    IfOp::ensureTerminator(*thenRegion, builder, result.location);
+    ensureIfYieldTerminator(*thenRegion, builder, result.location);
 
   // Build else region.
   Region *elseRegion = result.addRegion();
   if (withElseRegion) {
     builder.createBlock(elseRegion);
     if (resultTypes.empty())
-      IfOp::ensureTerminator(*elseRegion, builder, result.location);
+      ensureIfYieldTerminator(*elseRegion, builder, result.location);
   }
 }
 
@@ -2196,6 +2296,33 @@ void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
 LogicalResult IfOp::verify() {
   if (getNumResults() != 0 && getElseRegion().empty())
     return emitOpError("must have an else block if defining values");
+
+  // The terminator of each region must be either `scf.yield` (the regular
+  // case) or a region-breaking terminator (`scf.break` / `scf.continue`)
+  // that transfers control to an enclosing `scf.loop`. The validity of
+  // region-breaking terminators is checked by their own verifiers; here we
+  // only enforce that nothing else terminates an `scf.if` region.
+  auto verifyRegionTerminator = [&](Region &region,
+                                    StringRef name) -> LogicalResult {
+    if (region.empty())
+      return success();
+    Operation &terminator = region.front().back();
+    if (isa<YieldOp, BreakOp, ContinueOp>(terminator))
+      return success();
+    return emitOpError() << "expects '" << name
+                         << "' region to be terminated by 'scf.yield', "
+                            "'scf.break', or 'scf.continue', found '"
+                         << terminator.getName() << "'";
+  };
+  if (failed(verifyRegionTerminator(getThenRegion(), "then")))
+    return failure();
+  if (failed(verifyRegionTerminator(getElseRegion(), "else")))
+    return failure();
+
+  // Yield-operand count/type matching against the op's results is verified
+  // by the `RegionBranchOpInterface` verifier (which is aware of yield as a
+  // RegionBranchTerminatorOpInterface and skips region-breaking
+  // terminators).
   return success();
 }
 
@@ -2217,13 +2344,13 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse the 'then' region.
   if (parser.parseRegion(*thenRegion, /*arguments=*/{}, /*argTypes=*/{}))
     return failure();
-  IfOp::ensureTerminator(*thenRegion, parser.getBuilder(), result.location);
+  ensureIfYieldTerminator(*thenRegion, parser.getBuilder(), result.location);
 
   // If we find an 'else' keyword then parse the 'else' region.
   if (!parser.parseOptionalKeyword("else")) {
     if (parser.parseRegion(*elseRegion, /*arguments=*/{}, /*argTypes=*/{}))
       return failure();
-    IfOp::ensureTerminator(*elseRegion, parser.getBuilder(), result.location);
+    ensureIfYieldTerminator(*elseRegion, parser.getBuilder(), result.location);
   }
 
   // Parse the optional attribute list.
@@ -2233,18 +2360,28 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void IfOp::print(OpAsmPrinter &p) {
-  bool printBlockTerminators = false;
+  bool hasResults = !getResults().empty();
 
   p << " " << getCondition();
-  if (!getResults().empty()) {
+  if (hasResults)
     p << " -> (" << getResultTypes() << ")";
-    // Print yield explicitly if the op defines values.
-    printBlockTerminators = true;
-  }
+
+  // We must print the terminator whenever the op produces results, or when
+  // the terminator is not a plain `scf.yield` (so that region-breaking
+  // terminators round-trip).
+  auto needsExplicitTerminator = [&](Region &region) {
+    if (region.empty())
+      return false;
+    if (hasResults)
+      return true;
+    return !isa<YieldOp>(region.front().back());
+  };
+
   p << ' ';
   p.printRegion(getThenRegion(),
                 /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/printBlockTerminators);
+                /*printBlockTerminators=*/
+                needsExplicitTerminator(getThenRegion()));
 
   // Print the 'else' regions if it exists and has a block.
   auto &elseRegion = getElseRegion();
@@ -2252,7 +2389,8 @@ void IfOp::print(OpAsmPrinter &p) {
     p << " else ";
     p.printRegion(elseRegion,
                   /*printEntryBlockArgs=*/false,
-                  /*printBlockTerminators=*/printBlockTerminators);
+                  /*printBlockTerminators=*/
+                  needsExplicitTerminator(elseRegion));
   }
 
   p.printOptionalAttrDict((*this)->getAttrs());

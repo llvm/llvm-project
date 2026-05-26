@@ -444,62 +444,62 @@ func.func @switch(%arg0: index) -> i32 {
 
 // CHECK-LABEL: @loop_infinite
 func.func @loop_infinite() {
-  // CHECK: scf.loop {
-  scf.loop {
+  // CHECK: scf.loop %[[T:.*]] {
+  scf.loop %t {
     // CHECK-NEXT: "test.foo"
     "test.foo"() : () -> ()
-    // CHECK-NEXT: scf.continue
-    scf.continue
+    // CHECK-NEXT: scf.continue %[[T]] : token
+    scf.continue %t : token
   }
   return
 }
 
 // CHECK-LABEL: @loop_break_no_operands
 func.func @loop_break_no_operands() {
-  // CHECK: scf.loop {
-  scf.loop {
-    // CHECK-NEXT: scf.break
-    scf.break
+  // CHECK: scf.loop %[[T:.*]] {
+  scf.loop %t {
+    // CHECK-NEXT: scf.break %[[T]] : token
+    scf.break %t : token
   }
   return
 }
 
 // CHECK-LABEL: @loop_break_single
 func.func @loop_break_single(%v: i32) -> i32 {
-  // CHECK: %{{.*}} = scf.loop -> i32 {
-  %r = scf.loop -> i32 {
-    // CHECK-NEXT: scf.break %{{.*}} : i32
-    scf.break %v : i32
+  // CHECK: %{{.*}} = scf.loop %[[T:.*]] -> i32 {
+  %r = scf.loop %t -> i32 {
+    // CHECK-NEXT: scf.break %[[T]], %{{.*}} : token, i32
+    scf.break %t, %v : token, i32
   }
   return %r : i32
 }
 
 // CHECK-LABEL: @loop_break_multi
 func.func @loop_break_multi(%v: i32, %w: i64) -> (i32, i64) {
-  // CHECK: %{{.*}}:2 = scf.loop -> (i32, i64) {
-  %r:2 = scf.loop -> (i32, i64) {
-    // CHECK-NEXT: scf.break %{{.*}}, %{{.*}} : i32, i64
-    scf.break %v, %w : i32, i64
+  // CHECK: %{{.*}}:2 = scf.loop %[[T:.*]] -> (i32, i64) {
+  %r:2 = scf.loop %t -> (i32, i64) {
+    // CHECK-NEXT: scf.break %[[T]], %{{.*}}, %{{.*}} : token, i32, i64
+    scf.break %t, %v, %w : token, i32, i64
   }
   return %r#0, %r#1 : i32, i64
 }
 
 // CHECK-LABEL: @loop_iter_single
 func.func @loop_iter_single(%init: i32) {
-  // CHECK: scf.loop iter_args(%{{.*}} = %{{.*}}) : i32 {
-  scf.loop iter_args(%i = %init) : i32 {
-    // CHECK: scf.continue %{{.*}} : i32
-    scf.continue %i : i32
+  // CHECK: scf.loop %[[T:.*]] iter_args(%[[I:.*]] = %{{.*}}) : i32 {
+  scf.loop %t iter_args(%i = %init) : i32 {
+    // CHECK: scf.continue %[[T]], %[[I]] : token, i32
+    scf.continue %t, %i : token, i32
   }
   return
 }
 
 // CHECK-LABEL: @loop_iter_multi
 func.func @loop_iter_multi(%init0: i32, %init1: i64) {
-  // CHECK: scf.loop iter_args(%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) : (i32, i64) {
-  scf.loop iter_args(%i = %init0, %j = %init1) : (i32, i64) {
-    // CHECK: scf.continue %{{.*}}, %{{.*}} : i32, i64
-    scf.continue %i, %j : i32, i64
+  // CHECK: scf.loop %[[T:.*]] iter_args(%[[I:.*]] = %{{.*}}, %[[J:.*]] = %{{.*}}) : (i32, i64) {
+  scf.loop %t iter_args(%i = %init0, %j = %init1) : (i32, i64) {
+    // CHECK: scf.continue %[[T]], %[[I]], %[[J]] : token, i32, i64
+    scf.continue %t, %i, %j : token, i32, i64
   }
   return
 }
@@ -507,10 +507,106 @@ func.func @loop_iter_multi(%init0: i32, %init1: i64) {
 // Loop with iter_args of one type and a single result of another type.
 // CHECK-LABEL: @loop_iter_and_result
 func.func @loop_iter_and_result(%init: i32, %v: i64) -> i64 {
-  // CHECK: %{{.*}} = scf.loop iter_args(%{{.*}} = %{{.*}}) : i32 -> i64 {
-  %r = scf.loop iter_args(%i = %init) : i32 -> i64 {
-    // CHECK: scf.break %{{.*}} : i64
-    scf.break %v : i64
+  // CHECK: %{{.*}} = scf.loop %[[T:.*]] iter_args(%{{.*}} = %{{.*}}) : i32 -> i64 {
+  %r = scf.loop %t iter_args(%i = %init) : i32 -> i64 {
+    // CHECK: scf.break %[[T]], %{{.*}} : token, i64
+    scf.break %t, %v : token, i64
   }
   return %r : i64
+}
+
+// Early exit: the inner loop body terminates by breaking the outer loop. This
+// exercises the token-based region-breaking semantics. The outer loop's body
+// still needs its own terminator (here `scf.continue %t_outer`) after the
+// inner loop, even though it is unreachable in practice.
+// CHECK-LABEL: @loop_nested_early_break
+func.func @loop_nested_early_break(%v: i32) -> i32 {
+  // CHECK: %{{.*}} = scf.loop %[[T_OUT:.*]] -> i32 {
+  %r = scf.loop %t_outer -> i32 {
+    // CHECK:   scf.loop %{{.*}} {
+    scf.loop %t_inner {
+      // CHECK:     scf.break %[[T_OUT]], %{{.*}} : token, i32
+      scf.break %t_outer, %v : token, i32
+    }
+    // CHECK:   scf.continue %[[T_OUT]] : token
+    scf.continue %t_outer : token
+  }
+  return %r : i32
+}
+
+// Early continue from the inner loop, targeting the outer loop.
+// CHECK-LABEL: @loop_nested_early_continue
+func.func @loop_nested_early_continue(%init: i32) {
+  // CHECK: scf.loop %[[T_OUT:.*]] iter_args(%[[I:.*]] = %{{.*}}) : i32 {
+  scf.loop %t_outer iter_args(%i = %init) : i32 {
+    // CHECK:   scf.loop %{{.*}} {
+    scf.loop %t_inner {
+      // CHECK:     scf.continue %[[T_OUT]], %[[I]] : token, i32
+      scf.continue %t_outer, %i : token, i32
+    }
+    // CHECK:   scf.continue %[[T_OUT]], %[[I]] : token, i32
+    scf.continue %t_outer, %i : token, i32
+  }
+  return
+}
+
+// scf.if carries the `PropagateControlFlowBreak` trait, so scf.break /
+// scf.continue may appear as terminators inside its regions when they target
+// an enclosing scf.loop.
+
+// CHECK-LABEL: @if_break_in_then
+func.func @if_break_in_then(%cond: i1, %v: i32) -> i32 {
+  // CHECK: scf.loop %[[T:[A-Za-z0-9_]+]] -> i32 {
+  %r = scf.loop %t -> i32 {
+    // CHECK:   scf.if %{{.*}} {
+    // CHECK-NEXT: scf.break %[[T]], %{{.*}} : token, i32
+    // CHECK-NEXT: }
+    scf.if %cond {
+      scf.break %t, %v : token, i32
+    }
+    // CHECK: scf.continue %[[T]] : token
+    scf.continue %t : token
+  }
+  return %r : i32
+}
+
+// CHECK-LABEL: @if_continue_in_both_branches
+func.func @if_continue_in_both_branches(%cond: i1, %init: i32) {
+  // CHECK: scf.loop %[[T:[A-Za-z0-9_]+]] iter_args(%[[I:[A-Za-z0-9_]+]] = %{{.*}}) : i32 {
+  scf.loop %t iter_args(%i = %init) : i32 {
+    // CHECK:   scf.if %{{.*}} {
+    // CHECK-NEXT: scf.continue %[[T]], %[[I]] : token, i32
+    // CHECK-NEXT: } else {
+    // CHECK-NEXT: scf.continue %[[T]], %[[I]] : token, i32
+    // CHECK-NEXT: }
+    scf.if %cond {
+      scf.continue %t, %i : token, i32
+    } else {
+      scf.continue %t, %i : token, i32
+    }
+    // The scf.loop body needs a terminator; this one is unreachable in
+    // practice because both `scf.if` regions transfer control out.
+    scf.continue %t, %i : token, i32
+  }
+  return
+}
+
+// scf.if break/continue can also propagate through nested scf.if ops, since
+// scf.if carries the trait.
+// CHECK-LABEL: @nested_if_break
+func.func @nested_if_break(%c0: i1, %c1: i1, %v: i32) -> i32 {
+  // CHECK: scf.loop %[[T:[A-Za-z0-9_]+]] -> i32 {
+  %r = scf.loop %t -> i32 {
+    // CHECK: scf.if %{{.*}} {
+    scf.if %c0 {
+      // CHECK: scf.if %{{.*}} {
+      // CHECK-NEXT: scf.break %[[T]], %{{.*}} : token, i32
+      // CHECK-NEXT: }
+      scf.if %c1 {
+        scf.break %t, %v : token, i32
+      }
+    }
+    scf.continue %t : token
+  }
+  return %r : i32
 }

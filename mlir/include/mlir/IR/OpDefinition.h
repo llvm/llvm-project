@@ -790,6 +790,14 @@ template <typename ConcreteType>
 class TokenConsumerTrait : public TraitBase<ConcreteType, TokenConsumerTrait> {
 };
 
+/// This trait marks operations that are transparent to region-breaking
+/// terminators: a region-breaking terminator (i.e., a terminator that passes
+/// control to an enclosing operation) may appear as a terminator of any block
+/// within this op.
+template <typename ConcreteType>
+class PropagateControlFlowBreak
+    : public TraitBase<ConcreteType, PropagateControlFlowBreak> {};
+
 /// This class provides verification for ops that are known to have zero
 /// successors.
 template <typename ConcreteType>

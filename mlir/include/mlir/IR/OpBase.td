@@ -102,6 +102,8 @@ def Terminator : NativeOpTrait<"IsTerminator">;
 def TokenProducerTrait : NativeOpTrait<"TokenProducerTrait">;
 // Op consumes builtin token values.
 def TokenConsumerTrait : NativeOpTrait<"TokenConsumerTrait">;
+// Op is transparent to region-breaking terminators.
+def PropagateControlFlowBreak : NativeOpTrait<"PropagateControlFlowBreak">;
 // Op can be safely normalized in the presence of MemRefs with
 // non-identity maps.
 def MemRefsNormalizable : NativeOpTrait<"MemRefsNormalizable">;

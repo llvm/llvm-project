@@ -855,16 +855,21 @@ func.func @for_missing_induction_var(%arg0: index, %arg1: index) {
 
 // -----
 
-func.func @break_outside_loop(%v: i32) {
-  // expected-error@+1 {{'scf.break' op expects parent op 'scf.loop'}}
-  scf.break %v : i32
+// A token operand to scf.break must be the token of an enclosing scf.loop.
+// Here we exercise the SCF verifier path using a token produced by a
+// non-`scf.loop` token producer.
+func.func @break_outside_loop() {
+  %t = test.token.produce
+  // expected-error@+1 {{'scf.break' op expects the token operand to be the token of an enclosing 'scf.loop'}}
+  scf.break %t : token
 }
 
 // -----
 
 func.func @continue_outside_loop() {
-  // expected-error@+1 {{'scf.continue' op expects parent op 'scf.loop'}}
-  scf.continue
+  %t = test.token.produce
+  // expected-error@+1 {{'scf.continue' op expects the token operand to be the token of an enclosing 'scf.loop'}}
+  scf.continue %t : token
 }
 
 // -----
@@ -872,8 +877,30 @@ func.func @continue_outside_loop() {
 func.func @loop_bad_terminator() {
   // expected-error@+1 {{'scf.loop' op body must be terminated by 'scf.break' or 'scf.continue'}}
   "scf.loop"() ({
-  ^bb0:
+  ^bb0(%t: token):
     "test.foo"() : () -> ()
+    "test.terminator"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @loop_missing_token_arg() {
+  // expected-error@+1 {{'scf.loop' op mismatch in number of loop-carried values and defined values}}
+  "scf.loop"() ({
+  ^bb0:
+    "test.terminator"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @loop_first_arg_not_token() {
+  // expected-error@+1 {{'scf.loop' op first region argument must be a token}}
+  "scf.loop"() ({
+  ^bb0(%i: i32):
     "test.terminator"() : () -> ()
   }) : () -> ()
   return
@@ -884,8 +911,8 @@ func.func @loop_bad_terminator() {
 func.func @loop_init_arg_count_mismatch(%init: i32) {
   // expected-error@+1 {{'scf.loop' op mismatch in number of loop-carried values and defined values}}
   "scf.loop"(%init) ({
-  ^bb0:
-    scf.continue
+  ^bb0(%t: token):
+    scf.continue %t : token
   }) : (i32) -> ()
   return
 }
@@ -895,8 +922,8 @@ func.func @loop_init_arg_count_mismatch(%init: i32) {
 func.func @loop_init_arg_type_mismatch(%init: i32) {
   // expected-error@+1 {{'scf.loop' op type mismatch between 0th iter operand ('i32') and region argument ('i64')}}
   "scf.loop"(%init) ({
-  ^bb0(%i: i64):
-    scf.continue %i : i64
+  ^bb0(%t: token, %i: i64):
+    scf.continue %t, %i : token, i64
   }) : (i32) -> ()
   return
 }
@@ -904,9 +931,9 @@ func.func @loop_init_arg_type_mismatch(%init: i32) {
 // -----
 
 func.func @loop_break_count_mismatch(%v: i32) -> (i32, i32) {
-  // expected-error@+2 {{'scf.break' op has 1 operands, but enclosing scf.loop returns 2 result(s)}}
-  %r:2 = scf.loop -> (i32, i32) {
-    scf.break %v : i32
+  // expected-error@+2 {{'scf.break' op has 1 value operand(s), but target scf.loop returns 2 result(s)}}
+  %r:2 = scf.loop %t -> (i32, i32) {
+    scf.break %t, %v : token, i32
   }
   return %r#0, %r#1 : i32, i32
 }
@@ -914,9 +941,9 @@ func.func @loop_break_count_mismatch(%v: i32) -> (i32, i32) {
 // -----
 
 func.func @loop_break_type_mismatch(%v: i32) -> i64 {
-  // expected-error@+2 {{'scf.break' op type mismatch between 0th operand ('i32') and 0th result of enclosing scf.loop ('i64')}}
-  %r = scf.loop -> i64 {
-    scf.break %v : i32
+  // expected-error@+2 {{'scf.break' op type mismatch between 0th value operand ('i32') and 0th result of target scf.loop ('i64')}}
+  %r = scf.loop %t -> i64 {
+    scf.break %t, %v : token, i32
   }
   return %r : i64
 }
@@ -924,9 +951,9 @@ func.func @loop_break_type_mismatch(%v: i32) -> i64 {
 // -----
 
 func.func @loop_continue_count_mismatch(%init: i32) {
-  // expected-error@+2 {{'scf.continue' op has 0 operands, but enclosing scf.loop has 1 iter_args}}
-  scf.loop iter_args(%i = %init) : i32 {
-    scf.continue
+  // expected-error@+2 {{'scf.continue' op has 0 value operand(s), but target scf.loop has 1 iter_arg(s)}}
+  scf.loop %t iter_args(%i = %init) : i32 {
+    scf.continue %t : token
   }
   return
 }
@@ -934,9 +961,9 @@ func.func @loop_continue_count_mismatch(%init: i32) {
 // -----
 
 func.func @loop_continue_type_mismatch(%init: i32, %v: i64) {
-  // expected-error@+2 {{'scf.continue' op type mismatch between 0th operand ('i64') and 0th iter_arg of enclosing scf.loop ('i32')}}
-  scf.loop iter_args(%i = %init) : i32 {
-    scf.continue %v : i64
+  // expected-error@+2 {{'scf.continue' op type mismatch between 0th value operand ('i64') and 0th iter_arg of target scf.loop ('i32')}}
+  scf.loop %t iter_args(%i = %init) : i32 {
+    scf.continue %t, %v : token, i64
   }
   return
 }
@@ -946,10 +973,21 @@ func.func @loop_continue_type_mismatch(%init: i32, %v: i64) {
 func.func @loop_more_than_one_block(%v: i32) -> i32 {
   // expected-error@+1 {{'scf.loop' op expects region #0 to have 0 or 1 blocks}}
   %r = "scf.loop"() ({
-  ^bb0:
+  ^bb0(%t: token):
     "test.unreachable"() [^bb1] : () -> ()
-  ^bb1:
-    scf.break %v : i32
+  ^bb1(%t2: token):
+    scf.break %t2 : token
   }) : () -> i32
   return %r : i32
+}
+
+// -----
+
+// scf.if regions must terminate with scf.yield, scf.break, or scf.continue.
+func.func @if_invalid_terminator(%cond: i1) {
+  // expected-error@+1 {{'scf.if' op expects 'then' region to be terminated by 'scf.yield', 'scf.break', or 'scf.continue', found 'func.return'}}
+  "scf.if"(%cond) ({
+    func.return
+  }, {}) : (i1) -> ()
+  return
 }

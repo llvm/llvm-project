@@ -402,6 +402,18 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
                                           PatternRewriter &rewriter) const {
   auto loc = ifOp.getLoc();
 
+  // Only `scf.if` ops whose regions terminate with `scf.yield` are supported.
+  // Region-breaking terminators (`scf.break` / `scf.continue`) are not yet
+  // handled by this lowering.
+  auto isYieldTerminated = [](Region &region) {
+    return region.empty() || isa<scf::YieldOp>(region.front().back());
+  };
+  if (!isYieldTerminated(ifOp.getThenRegion()) ||
+      !isYieldTerminated(ifOp.getElseRegion()))
+    return rewriter.notifyMatchFailure(
+        ifOp, "lowering of 'scf.if' with a non-'scf.yield' terminator is "
+              "not implemented yet");
+
   // Start by splitting the block containing the 'scf.if' into two parts.
   // The part before will contain the condition, the part after will be the
   // continuation point.
