@@ -29,7 +29,6 @@ set(module_sources
   ieee_exceptions.f90
   ieee_features.f90
   iso_c_binding.f90
-  iso_fortran_env.f90
 
   __cuda_device.f90
   cooperative_groups.f90
@@ -265,12 +264,27 @@ if (TARGET FortranFloat128MathILib)
 endif ()
 
 
+# When a target depends on an object library, CMake seems to try to only build
+# the object files that the target actual needs. If we are only interested
+# in the module files, nothing get is built at all. To ensure that the module
+# files are built, insert a custom target that is opaque to CMake so it cannot
+# apply this optimization. Dependees on module files must depend on this
+# barrier instead. An actual COMMAND (that does nothing) seems to be necessary
+# on Windows to work.
+function (add_module_barrier barriername objlib)
+  add_custom_target(${barriername}
+    COMMAND ${CMAKE_COMMAND} -E true
+  )
+  add_dependencies(${barriername} ${objlib})
+endfunction ()
+
+
 # Build module files if requested.
-# The object files written by Flang for theses are unused. In the future parts
+# The object files written by Flang for these are unused. In the future parts
 # of flang-rt may itself be implemented in Fortran in which case these Fortran
 # sources need to be added to ${sources} to be included in
-# libflang_rt.runtime{.a/.so}. If they also provide an importable .mod, add them to
-# flang_module_target(... PUBLIC).
+# libflang_rt.runtime{.a/.so}. If they also provide an importable .mod, add them
+# to flang_module_target(... PUBLIC).
 if (FLANG_RT_FORTRAN_MODULES)
   # CMake ignores intrinsic USE dependencies
   # CMake has an option Fortran_BUILDING_INSTRINSIC_MODULES/Fortran_BUILDING_INTRINSIC_MODULES
@@ -282,17 +296,7 @@ if (FLANG_RT_FORTRAN_MODULES)
     ${intrinsics_sources}
   )
   flang_module_target(flang_rt.mod.intrinsics PUBLIC)
-
-  # This barrier exists to force all of the intrinsic modules of
-  # flang_rt.intrinsics.obj to be built before anything that depends on it.
-  # Without it, CMake/Ninja seem to think that the modules of
-  # flang_rt.intrinsics.obj can be built concurrently to those in
-  # flang_rt.runtime.
-  # An actual COMMAND seems to be necessary on Windows to have the same effect.
-  add_custom_target(flang_rt.mod.intrinsics.barrier
-    COMMAND ${CMAKE_COMMAND} -E true
-  )
-  add_dependencies(flang_rt.mod.intrinsics.barrier flang_rt.mod.intrinsics)
+  add_module_barrier(flang_rt.mod.intrinsics.barrier flang_rt.mod.intrinsics)
 
   # The modules themselves
   add_flangrt_library(flang_rt.mod OBJECT
@@ -300,11 +304,7 @@ if (FLANG_RT_FORTRAN_MODULES)
   )
   add_dependencies(flang_rt.mod flang_rt.mod.intrinsics.barrier)
   flang_module_target(flang_rt.mod PUBLIC)
-
-  add_custom_target(flang-rt-mod
-    COMMAND ${CMAKE_COMMAND} -E true
-  )
-  add_dependencies(flang-rt-mod flang_rt.mod)
+  add_module_barrier(flang-rt-mod flang_rt.mod)
 endif ()
 
 
