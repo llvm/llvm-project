@@ -1895,7 +1895,7 @@ let Extension = FunctionExtension<"cl_khr_kernel_clock __opencl_c_kernel_clock_s
 }
 
 //--------------------------------------------------------------------
-// Intel different sub-group extensions.
+// Intel extensions.
 def FuncExtIntelBfloat16Conversions : FunctionExtension<"cl_intel_bfloat16_conversions">;
 def FuncExtIntelSplitWorkGroupBarrier : FunctionExtension<"cl_intel_split_work_group_barrier">;
 def FuncExtIntelSubgroupBufferPrefetch : FunctionExtension<"cl_intel_subgroup_buffer_prefetch">;
