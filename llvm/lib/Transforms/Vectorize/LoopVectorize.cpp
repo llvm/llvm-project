@@ -2827,7 +2827,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     // TODO: It may be useful to do since it's still likely to be dynamically
     // uniform if the target can skip.
     reportVectorizationFailure(
-        LV_NAME, "Not inserting runtime ptr check for divergent target",
+        "Not inserting runtime ptr check for divergent target",
         "runtime pointer checks needed. Not enabled for divergent target",
         "CantVersionLoopWithDivergentTarget", ORE, TheLoop);
     return FixedScalableVFPair::getNone();
@@ -2843,7 +2843,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     LLVM_DEBUG(dbgs() << "LV: Found maximum trip count: " << MaxTC << '\n');
   if (TC.isScalar()) {
     reportVectorizationFailure(
-        LV_NAME, "Single iteration (non) loop",
+        "Single iteration (non) loop",
         "loop trip count is one, irrelevant for vectorization",
         "SingleIterationLoop", ORE, TheLoop);
     return FixedScalableVFPair::getNone();
@@ -2859,7 +2859,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       SE->isKnownPredicate(CmpInst::ICMP_EQ, BTC,
                            SE->getMinusOne(BTC->getType()))) {
     reportVectorizationFailure(
-        LV_NAME, "Trip count computation wrapped",
+        "Trip count computation wrapped",
         "backedge-taken count is -1, loop trip count wrapped to 0",
         "TripCountWrapped", ORE, TheLoop);
     return FixedScalableVFPair::getNone();
@@ -2975,7 +2975,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     }
 
     reportVectorizationFailure(
-        LV_NAME, "The trip count is below the minial threshold value.",
+        "The trip count is below the minial threshold value.",
         "loop trip count is too low, avoiding vectorization", "LowTripCount",
         ORE, TheLoop);
     return FixedScalableVFPair::getNone();
@@ -3020,14 +3020,13 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
   if (TC.isZero()) {
     reportVectorizationFailure(
-        LV_NAME,
         "unable to calculate the loop count due to complex control flow",
         "UnknownLoopCountComplexCFG", ORE, TheLoop);
     return FixedScalableVFPair::getNone();
   }
 
   reportVectorizationFailure(
-      LV_NAME, "Cannot optimize for size and vectorize at the same time.",
+      "Cannot optimize for size and vectorize at the same time.",
       "cannot optimize for size and vectorize at the same time. "
       "Enable vectorization of this loop with '#pragma clang loop "
       "vectorize(enable)' when compiling with -Os/-Oz",
@@ -3141,8 +3140,8 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
         OS << " call to " << Name;
       } else
         OS << " " << Instruction::getOpcodeName(Opcode);
-      reportVectorizationInfo(LV_NAME, OutString, "InvalidCost", ORE, OrigLoop,
-                              nullptr, R->getDebugLoc());
+      reportVectorizationInfo(OutString, "InvalidCost", ORE, OrigLoop, nullptr,
+                              R->getDebugLoc());
       Tail = Tail.drop_front(Subset.size());
       Subset = {};
     } else
@@ -5585,7 +5584,6 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   if (UserVF) {
     if (!ElementCount::isKnownLE(UserVF, MaxUserVF)) {
       reportVectorizationInfo(
-          LV_NAME,
           "UserVF ignored because it may be larger than the maximal safe VF",
           "InvalidUserVF", ORE, OrigLoop);
     } else {
@@ -5614,8 +5612,7 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
         }
       }
       VPlans.clear();
-      reportVectorizationInfo(LV_NAME,
-                              "UserVF ignored because of invalid costs.",
+      reportVectorizationInfo("UserVF ignored because of invalid costs.",
                               "InvalidCost", ORE, OrigLoop);
     }
   }
@@ -7225,7 +7222,6 @@ getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
 
   if (!EnableEpilogueVectorization) {
     reportVectorizationInfo(
-        LV_NAME,
         "Options conflict, epilogue vectorization is disallowed while "
         "epilogue tail-folding allowed!\n",
         "UnsupportedEpilogueTailFoldingPolicy", ORE, L);
@@ -7933,8 +7929,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   if (LVL.hasUncountableEarlyExit()) {
     if (!EnableEarlyExitVectorization) {
-      reportVectorizationFailure(LV_NAME,
-                                 "Auto-vectorization of loops with uncountable "
+      reportVectorizationFailure("Auto-vectorization of loops with uncountable "
                                  "early exit is not enabled",
                                  "UncountableEarlyExitLoopsDisabled", ORE, L);
       return false;
@@ -7957,8 +7952,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     BasicBlock *LoopLatch = L->getLoopLatch();
     if (IAI.requiresScalarEpilogue() ||
         any_of(LVL.getCountableExitingBlocks(), not_equal_to(LoopLatch))) {
-      reportVectorizationFailure(LV_NAME,
-                                 "Auto-vectorization of early exit loops "
+      reportVectorizationFailure("Auto-vectorization of early exit loops "
                                  "requiring a scalar epilogue is unsupported",
                                  "UncountableEarlyExitUnsupported", ORE, L);
       return false;
@@ -7997,7 +7991,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // allowed.
   if (F->hasFnAttribute(Attribute::NoImplicitFloat)) {
     reportVectorizationFailure(
-        LV_NAME, "Can't vectorize when the NoImplicitFloat attribute is used",
+        "Can't vectorize when the NoImplicitFloat attribute is used",
         "loop not vectorized due to NoImplicitFloat attribute",
         "NoImplicitFloat", ORE, L);
     Hints.emitRemarkWithHints();
@@ -8011,7 +8005,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (Hints.isPotentiallyUnsafe() &&
       TTI->isFPVectorizationPotentiallyUnsafe()) {
     reportVectorizationFailure(
-        LV_NAME, "Potentially unsafe FP op prevents vectorization",
+        "Potentially unsafe FP op prevents vectorization",
         "loop not vectorized due to unsafe FP support.", "UnsafeFP", ORE, L);
     Hints.emitRemarkWithHints();
     return false;
@@ -8053,7 +8047,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // TODO: Apply tail-folding on the vectorized epilogue loop.
     LLVM_DEBUG(dbgs() << "LV: epilogue tail-folding is not supported yet\n");
     reportVectorizationInfo(
-        LV_NAME,
         "The epilogue-tail-folding policy prefer-fold-tail is not supported "
         "yet, fall back to a normal epilogue",
         "UnsupportedEpilogueTailFoldingPolicy", ORE, L);
@@ -8240,7 +8233,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     });
   } else {
     // Report the vectorization decision.
-    reportVectorization(LV_NAME, ORE, L, VF.Width, IC);
+    reportVectorization(ORE, L, VF.Width, IC);
   }
   if (ORE->allowExtraAnalysis(LV_NAME))
     checkMixedPrecision(L, ORE);

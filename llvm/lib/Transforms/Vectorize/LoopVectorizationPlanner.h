@@ -65,36 +65,33 @@ namespace LoopVectorizationUtils {
 /// purposes along with the corresponding optimization remark \p RemarkName.
 /// If \p I is passed, it is an instruction that prevents vectorization.
 /// Otherwise, the loop \p TheLoop is used for the location of the remark.
-void reportVectorizationFailure(const char *PassName, const StringRef DebugMsg,
+void reportVectorizationFailure(const StringRef DebugMsg,
                                 const StringRef OREMsg, const StringRef ORETag,
                                 OptimizationRemarkEmitter *ORE,
                                 const Loop *TheLoop, Instruction *I = nullptr);
 
 /// Same as above, but the debug message and optimization remark are identical
-inline void reportVectorizationFailure(const char *PassName,
-                                       const StringRef DebugMsg,
+inline void reportVectorizationFailure(const StringRef DebugMsg,
                                        const StringRef ORETag,
                                        OptimizationRemarkEmitter *ORE,
                                        const Loop *TheLoop,
                                        Instruction *I = nullptr) {
-  reportVectorizationFailure(PassName, DebugMsg, DebugMsg, ORETag, ORE, TheLoop,
-                             I);
+  reportVectorizationFailure(DebugMsg, DebugMsg, ORETag, ORE, TheLoop, I);
 }
 
 /// Reports an informative message: print \p Msg for debugging purposes as well
 /// as an optimization remark. Uses either \p I as location of the remark, or
 /// otherwise \p TheLoop. If \p DL is passed, use it as debug location for the
 /// remark.
-void reportVectorizationInfo(const char *PassName, const StringRef Msg,
-                             const StringRef ORETag,
+void reportVectorizationInfo(const StringRef Msg, const StringRef ORETag,
                              OptimizationRemarkEmitter *ORE,
                              const Loop *TheLoop, Instruction *I = nullptr,
                              DebugLoc DL = {});
 
 /// Report successful vectorization of the loop. In case an outer loop is
 /// vectorized, prepend "outer" to the vectorization remark.
-void reportVectorization(const char *PassName, OptimizationRemarkEmitter *ORE,
-                         Loop *TheLoop, ElementCount VFWidth, unsigned IC);
+void reportVectorization(OptimizationRemarkEmitter *ORE, Loop *TheLoop,
+                         ElementCount VFWidth, unsigned IC);
 
 } // namespace LoopVectorizationUtils
 
