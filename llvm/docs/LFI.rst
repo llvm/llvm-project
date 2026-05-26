@@ -512,7 +512,9 @@ System instructions
 
 System calls are rewritten into a sequence that loads the return address into
 the scratch register and jumps to the runtime call handler. The runtime call
-handler table is stored at the address pointed to by ``r14``.
+handler table is stored at the address pointed to by ``r14``. The ``r11``
+register stores the return address (marked by the label ``.Ltmp`` in the
+block below).
 
 +-------------------+-------------------------------+
 |     Original      |           Rewritten           |
