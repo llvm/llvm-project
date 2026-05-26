@@ -13013,6 +13013,72 @@ SDValue DAGCombiner::foldSelectToUMin(SDValue LHS, SDValue RHS, SDValue True,
   return SDValue();
 }
 
+/// Fold:
+///   select_cc (select C, TV, FV), CmpC, TrueV, FalseV, seteq
+///     -> select C, TrueV, FalseV
+///   select_cc (select C, TV, FV), CmpC, TrueV, FalseV, setne
+///     -> select C, FalseV, TrueV
+/// and the same with CmpC on the LHS of the comparison. TV and FV must be
+/// distinct integer constants. Also used for select (setcc ...).
+static SDValue foldSelectOfSelectCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
+                                     SDValue TrueV, SDValue FalseV,
+                                     const SDLoc &DL, EVT VT, SelectionDAG &DAG,
+                                     SDNodeFlags Flags) {
+  if (CC != ISD::SETEQ && CC != ISD::SETNE)
+    return SDValue();
+
+  SDValue InnerSel;
+  SDValue CmpC;
+  if (LHS.getOpcode() == ISD::SELECT) {
+    InnerSel = LHS;
+    CmpC = RHS;
+  } else if (RHS.getOpcode() == ISD::SELECT) {
+    InnerSel = RHS;
+    CmpC = LHS;
+  } else
+    return SDValue();
+
+  SDValue Cond = InnerSel.getOperand(0);
+  SDValue InnerTV = InnerSel.getOperand(1);
+  SDValue InnerFV = InnerSel.getOperand(2);
+
+  auto *CTV = dyn_cast<ConstantSDNode>(InnerTV);
+  auto *CFV = dyn_cast<ConstantSDNode>(InnerFV);
+  auto *CCnst = dyn_cast<ConstantSDNode>(CmpC);
+  if (!CTV || !CFV || !CCnst)
+    return SDValue();
+
+  // If one of the constants is opaque, the SDNodes may differ while the values
+  // are the same. Check APInt to avoid miscompiles.
+  if (CTV->getAPIntValue() == CFV->getAPIntValue())
+    return SDValue();
+
+  APInt CmpVal = CCnst->getAPIntValue();
+  bool MatchesTV = CmpVal == CTV->getAPIntValue();
+  bool MatchesFV = CmpVal == CFV->getAPIntValue();
+  if (!MatchesTV && !MatchesFV)
+    return SDValue();
+
+  SDValue SelTrueV = TrueV;
+  SDValue SelFalseV = FalseV;
+  if (CC == ISD::SETEQ) {
+    if (MatchesFV)
+      std::swap(SelTrueV, SelFalseV);
+  } else {
+    if (MatchesTV)
+      std::swap(SelTrueV, SelFalseV);
+  }
+
+  return DAG.getSelect(DL, VT, Cond, SelTrueV, SelFalseV, Flags);
+}
+
+static SDValue foldSelectCCOfSelect(SDNode *N, SelectionDAG &DAG) {
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(4))->get();
+  return foldSelectOfSelectCmp(N->getOperand(0), N->getOperand(1), CC,
+                               N->getOperand(2), N->getOperand(3), SDLoc(N),
+                               N->getValueType(0), DAG, N->getFlags());
+}
+
 SDValue DAGCombiner::visitSELECT(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -13034,6 +13100,15 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
 
   if (SDValue V = foldSelectOfConstants(N))
     return V;
+
+  // select (setcc (select C, TV, FV), CmpC, cc), TrueV, FalseV
+  //   -> select C, TrueV, FalseV (or swapped FalseV/TrueV)
+  if (N0.getOpcode() == ISD::SETCC) {
+    ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
+    if (SDValue R = foldSelectOfSelectCmp(N0.getOperand(0), N0.getOperand(1),
+                                          CC, N1, N2, DL, VT, DAG, Flags))
+      return R;
+  }
 
   // If we can fold this based on the true/false value, do so.
   if (SimplifySelectOps(N, N1, N2))
@@ -14408,6 +14483,9 @@ SDValue DAGCombiner::visitSELECT_CC(SDNode *N) {
   // fold select_cc lhs, rhs, x, x, cc -> x
   if (N2 == N3)
     return N2;
+
+  if (SDValue R = foldSelectCCOfSelect(N, DAG))
+    return R;
 
   // select_cc bool, 0, x, y, seteq -> select bool, y, x
   if (CC == ISD::SETEQ && !LegalTypes && N0.getValueType() == MVT::i1 &&
