@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/macosx/HostInfoMacOSX.h"
-#include "lldb/Core/Progress.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
@@ -25,7 +24,6 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RWMutex.h"
@@ -435,12 +433,6 @@ FileSpec HostInfoMacOSX::GetCurrentCommandLineToolsDirectory() {
 static llvm::Expected<std::string>
 xcrun(const std::string &sdk, llvm::ArrayRef<llvm::StringRef> arguments,
       llvm::StringRef developer_dir = "") {
-  std::string details;
-  llvm::raw_string_ostream os(details);
-  os << "xcrun --sdk " << sdk << llvm::join(arguments, " ")
-     << " (DEVELOPER_DIR=" << developer_dir << ')';
-  Progress progress("Running xcrun", details);
-
   Args args;
   if (!developer_dir.empty()) {
     args.AppendArgument("/usr/bin/env");

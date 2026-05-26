@@ -20,6 +20,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Representation.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
@@ -98,11 +99,10 @@ static llvm::Expected<Info *> reduce(SmallVectorImpl<Info *> &Values) {
   if (Values.empty() || !Values[0])
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "no value to reduce");
-  OwnedPtr<Info> Merged = allocatePtr<T>(Values[0]->USR);
-  T *Tmp = static_cast<T *>(getPtr(Merged));
+  T *Merged = allocateTransient<T>(Values[0]->USR);
   for (auto &I : Values)
-    Tmp->merge(std::move(*static_cast<T *>(getPtr(I))));
-  return std::move(Merged);
+    Merged->merge(std::move(*static_cast<T *>(I)));
+  return Merged;
 }
 
 template <typename T>
@@ -165,7 +165,7 @@ void mergeUnkeyed<CommentInfo>(DocList<CommentInfo> &Target,
     CommentInfo *Ptr = Source.front().Ptr;
     Source.pop_front();
 
-    if (!llvm::any_of(Target,
+    if (llvm::none_of(Target,
                       [Ptr](const auto &E) { return *E.Ptr == *Ptr; })) {
       Target.push_back(
           *allocateListNodePersistent<CommentInfo>(*Ptr, PersistentArena));
@@ -173,8 +173,7 @@ void mergeUnkeyed<CommentInfo>(DocList<CommentInfo> &Target,
   }
 }
 
-llvm::Error mergeSingleInfo(doc::OwnedPtr<doc::Info> &Reduced,
-                            doc::OwnedPtr<doc::Info> &&NewInfo,
+llvm::Error mergeSingleInfo(doc::Info *&Reduced, doc::Info *NewInfo,
                             llvm::BumpPtrAllocator &Arena) {
   if (!Reduced) {
     switch (NewInfo->IT) {
@@ -214,36 +213,36 @@ llvm::Error mergeSingleInfo(doc::OwnedPtr<doc::Info> &Reduced,
 
   switch (Reduced->IT) {
   case InfoType::IT_namespace:
-    static_cast<NamespaceInfo *>(getPtr(Reduced))
-        ->merge(std::move(*static_cast<NamespaceInfo *>(getPtr(NewInfo))));
+    static_cast<NamespaceInfo *>(Reduced)->merge(
+        std::move(*static_cast<NamespaceInfo *>(NewInfo)));
     break;
   case InfoType::IT_record:
-    static_cast<RecordInfo *>(getPtr(Reduced))
-        ->merge(std::move(*static_cast<RecordInfo *>(getPtr(NewInfo))));
+    static_cast<RecordInfo *>(Reduced)->merge(
+        std::move(*static_cast<RecordInfo *>(NewInfo)));
     break;
   case InfoType::IT_enum:
-    static_cast<EnumInfo *>(getPtr(Reduced))
-        ->merge(std::move(*static_cast<EnumInfo *>(getPtr(NewInfo))));
+    static_cast<EnumInfo *>(Reduced)->merge(
+        std::move(*static_cast<EnumInfo *>(NewInfo)));
     break;
   case InfoType::IT_function:
-    static_cast<FunctionInfo *>(getPtr(Reduced))
-        ->merge(std::move(*static_cast<FunctionInfo *>(getPtr(NewInfo))));
+    static_cast<FunctionInfo *>(Reduced)->merge(
+        std::move(*static_cast<FunctionInfo *>(NewInfo)));
     break;
   case InfoType::IT_typedef:
-    static_cast<TypedefInfo *>(getPtr(Reduced))
-        ->merge(std::move(*static_cast<TypedefInfo *>(getPtr(NewInfo))));
+    static_cast<TypedefInfo *>(Reduced)->merge(
+        std::move(*static_cast<TypedefInfo *>(NewInfo)));
     break;
   case InfoType::IT_concept:
-    static_cast<ConceptInfo *>(getPtr(Reduced))
-        ->merge(std::move(*static_cast<ConceptInfo *>(getPtr(NewInfo))));
+    static_cast<ConceptInfo *>(Reduced)->merge(
+        std::move(*static_cast<ConceptInfo *>(NewInfo)));
     break;
   case InfoType::IT_variable:
-    static_cast<VarInfo *>(getPtr(Reduced))
-        ->merge(std::move(*static_cast<VarInfo *>(getPtr(NewInfo))));
+    static_cast<VarInfo *>(Reduced)->merge(
+        std::move(*static_cast<VarInfo *>(NewInfo)));
     break;
   case InfoType::IT_friend:
-    static_cast<FriendInfo *>(getPtr(Reduced))
-        ->merge(std::move(*static_cast<FriendInfo *>(getPtr(NewInfo))));
+    static_cast<FriendInfo *>(Reduced)->merge(
+        std::move(*static_cast<FriendInfo *>(NewInfo)));
     break;
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -308,8 +307,7 @@ bool CommentInfo::operator==(const CommentInfo &Other) const {
   if (FirstCI != SecondCI || Children.size() != Other.Children.size())
     return false;
 
-  return std::equal(Children.begin(), Children.end(), Other.Children.begin(),
-                    Other.Children.end());
+  return llvm::equal(Children, Other.Children);
 }
 
 bool CommentInfo::operator<(const CommentInfo &Other) const {
@@ -722,18 +720,16 @@ void Index::sort() {
     C.sort();
 }
 
-ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
-                                 StringRef ProjectName, bool PublicOnly,
-                                 StringRef OutDirectory, StringRef SourceRoot,
-                                 StringRef RepositoryUrl,
-                                 StringRef RepositoryLinePrefix, StringRef Base,
-                                 std::vector<std::string> UserStylesheets,
-                                 clang::DiagnosticsEngine &Diags,
-                                 OutputFormatTy Format, bool FTimeTrace)
+ClangDocContext::ClangDocContext(
+    tooling::ExecutionContext *ECtx, StringRef ProjectName, bool PublicOnly,
+    StringRef OutDirectory, StringRef SourceRoot, StringRef RepositoryUrl,
+    StringRef RepositoryLinePrefix, StringRef Base,
+    std::vector<std::string> UserStylesheets, clang::DiagnosticsEngine &Diags,
+    OutputFormatTy Format, bool FTimeTrace, bool Pretty)
     : ECtx(ECtx), ProjectName(ProjectName), OutDirectory(OutDirectory),
       SourceRoot(std::string(SourceRoot)), UserStylesheets(UserStylesheets),
       Base(Base), Diags(Diags), Format(Format), PublicOnly(PublicOnly),
-      FTimeTrace(FTimeTrace) {
+      FTimeTrace(FTimeTrace), Pretty(Pretty) {
   llvm::SmallString<128> SourceRootDir(SourceRoot);
   if (SourceRoot.empty())
     // If no SourceRoot was provided the current path is used as the default

@@ -34,7 +34,7 @@ objects: []
 functions:
   - name: kill
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: pid_t
@@ -47,7 +47,7 @@ functions:
       - type: int
   - name: sigaction
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
@@ -55,34 +55,34 @@ functions:
       - type: struct sigaction *__restrict
   - name: sigaddset
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: sigset_t *
       - type: int
   - name: sigaltstack
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: const stack_t *__restrict
       - type: stack_t *__restrict
   - name: sigdelset
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: sigset_t *
       - type: int
   - name: sigemptyset
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: sigset_t *
   - name: sigfillset
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: sigset_t *
@@ -100,7 +100,7 @@ functions:
       - type: void (*)(int)))(int
   - name: sigprocmask
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
