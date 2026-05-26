@@ -2124,7 +2124,12 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // function prototype.
     CallingConv::ID CallerCC = MF.getFunction().getCallingConv();
     isTailCall = (CallConv == CallerCC);
-    IsSibcall = IsMustTail;
+    // Treat musttail as a sibcall only when all arguments are in registers;
+    // otherwise full tail-call lowering must run to populate the outgoing
+    // stack slots.
+    if (isTailCall && IsMustTail)
+      IsSibcall = llvm::all_of(
+          ArgLocs, [](const CCValAssign &VA) { return VA.isRegLoc(); });
   } else if (isTailCall) {
     // Check if this tail call is a "sibling" call, which is loosely defined to
     // be a tail call that doesn't require heroics like moving the return
