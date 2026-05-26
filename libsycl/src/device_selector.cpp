@@ -10,6 +10,7 @@
 #include <sycl/__impl/device_selector.hpp>
 
 #include <detail/device_impl.hpp>
+#include <detail/program_manager.hpp>
 
 #include <algorithm>
 
@@ -25,7 +26,9 @@ static int getDevicePreference(const device &Device) {
   int Score = 0;
   const auto &DeviceImpl = detail::getSyclObjImpl(Device);
 
-  // TODO: increase score for devices with compatible program  images.
+  auto &ProgramManager = detail::ProgramAndKernelManager::getInstance();
+  if (ProgramManager.hasCompatibleImage(*DeviceImpl))
+    Score += 1000;
 
   if (DeviceImpl->getBackend() == backend::level_zero)
     Score += 50;
