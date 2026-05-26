@@ -351,14 +351,14 @@ BufferLikeType
 defaultFunctionArgTypeConverter(TensorLikeType type, Attribute memorySpace,
                                 func::FuncOp funcOp,
                                 const BufferizationOptions &options) {
-  if (auto tensorType = mlir::dyn_cast<TensorType>(type)) {
-    return cast<BufferLikeType>(
-        getMemRefTypeWithFullyDynamicLayout(tensorType, memorySpace));
-  }
-
-  // If not builtin, fallback to TensorLikeType::getBufferType()
-  auto bufferType =
-      type.getBufferType(options, [&]() { return funcOp->emitError(); });
+  auto bufferType = type.getBufferType(
+      options, [&]() { return funcOp->emitError(); },
+      [&](mlir::bufferization::TensorLikeType tensorLikeType)
+          -> mlir::FailureOr<mlir::bufferization::BufferLikeType> {
+        auto tensorType = cast<mlir::TensorType>(tensorLikeType);
+        return cast<BufferLikeType>(
+            getMemRefTypeWithFullyDynamicLayout(tensorType, memorySpace));
+      });
   assert(succeeded(bufferType) &&
          "a valid buffer is always expected at function boundary");
   return *bufferType;
@@ -370,12 +370,23 @@ defaultUnknownTypeConverter(TensorType tensorType, Attribute memorySpace,
   return getMemRefTypeWithFullyDynamicLayout(tensorType, memorySpace);
 }
 
+bool defaultHasUpstreamBufferizableEncoding(TensorType tensorType) {
+  if (isa<UnrankedTensorType>(tensorType)) {
+    // consider unranked tensor with no encoding bufferizable
+    return true;
+  }
+  const auto rankedTensorType = cast<RankedTensorType>(tensorType);
+  return rankedTensorType.getEncoding() == nullptr;
+}
+
 } // namespace
 
 // Default constructor for BufferizationOptions.
 BufferizationOptions::BufferizationOptions()
     : functionArgTypeConverterFn(defaultFunctionArgTypeConverter),
-      unknownTypeConverterFn(defaultUnknownTypeConverter) {}
+      unknownTypeConverterFn(defaultUnknownTypeConverter),
+      hasUpstreamBufferizableEncodingFn(
+          defaultHasUpstreamBufferizableEncoding) {}
 
 bool BufferizationOptions::isOpAllowed(Operation *op) const {
   // Special case: If function boundary bufferization is deactivated, do not
@@ -407,19 +418,23 @@ void BufferizationOptions::setFunctionBoundaryTypeConversion(
   functionArgTypeConverterFn = [=](TensorLikeType type, Attribute memorySpace,
                                    func::FuncOp funcOp,
                                    const BufferizationOptions &options) {
-    if (auto tensorType = mlir::dyn_cast<TensorType>(type)) {
-      if (layoutMapOption == LayoutMapOption::IdentityLayoutMap)
-        return cast<BufferLikeType>(
-            bufferization::getMemRefTypeWithStaticIdentityLayout(tensorType,
-                                                                 memorySpace));
-      return cast<BufferLikeType>(
-          bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType,
-                                                             memorySpace));
-    }
-
-    // If not builtin, fallback to TensorLikeType::getBufferType()
-    auto bufferType =
-        type.getBufferType(options, [&]() { return funcOp->emitError(); });
+    // allow generic bufferization to intercept the upstream behaviour
+    auto bufferType = type.getBufferType(
+        options, [&]() { return funcOp->emitError(); },
+        [&](mlir::bufferization::TensorLikeType tensorLikeType)
+            -> mlir::FailureOr<mlir::bufferization::BufferLikeType> {
+          if (auto tensorType = mlir::dyn_cast<TensorType>(type)) {
+            if (layoutMapOption == LayoutMapOption::IdentityLayoutMap)
+              return cast<BufferLikeType>(
+                  bufferization::getMemRefTypeWithStaticIdentityLayout(
+                      tensorType, memorySpace));
+            return cast<BufferLikeType>(
+                bufferization::getMemRefTypeWithFullyDynamicLayout(
+                    tensorType, memorySpace));
+          }
+          return funcOp->emitError(
+              "unknown tensor-like type in function argument type converter");
+        });
     assert(succeeded(bufferType) &&
            "a valid buffer is always expected at function boundary");
     return *bufferType;
@@ -739,9 +754,10 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options,
     return bufferizableOp.getBufferType(value, options, state, invocationStack);
 
   // Op is not bufferizable.
-  return cast<TensorLikeType>(value.getType()).getBufferType(options, [&]() {
-    return op->emitError();
-  });
+  return cast<TensorLikeType>(value.getType())
+      .getBufferType(
+          options, [&]() { return op->emitError(); },
+          /*localGetBufferType=*/nullptr);
 }
 
 bool bufferization::hasTensorSemantics(Operation *op) {

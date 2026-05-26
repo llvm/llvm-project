@@ -56,15 +56,14 @@ struct TestOneShotModuleBufferizePass
     bufferization::OneShotBufferizationOptions opt;
 
     opt.bufferizeFunctionBoundaries = true;
-    opt.functionArgTypeConverterFn =
-        [&](bufferization::TensorLikeType tensor, Attribute memSpace,
-            func::FuncOp, const bufferization::BufferizationOptions &) {
+    opt.unknownTypeConverterFn =
+        [&](TensorType tensor, Attribute memSpace,
+            const bufferization::BufferizationOptions &) {
           assert(isa<RankedTensorType>(tensor) && "tests only builtin tensors");
           auto tensorType = cast<RankedTensorType>(tensor);
           auto layout = getMemRefLayoutForTensorEncoding(tensorType);
-          return cast<bufferization::BufferLikeType>(
-              MemRefType::get(tensorType.getShape(),
-                              tensorType.getElementType(), layout, memSpace));
+          return MemRefType::get(tensorType.getShape(),
+                                 tensorType.getElementType(), layout, memSpace);
         };
 
     bufferization::BufferizationState bufferizationState;

@@ -229,25 +229,32 @@ AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
                              SmallVector<Value> &invocationStack) {
   assert(value == getResult() && "invalid value");
 
-  // Compute memory space of this allocation.
-  Attribute memorySpace;
-  if (getMemorySpace().has_value()) {
-    memorySpace = *getMemorySpace();
-  } else if (getCopy()) {
-    auto copyBufferType =
-        bufferization::detail::asMemRefType(bufferization::getBufferType(
-            getCopy(), options, state, invocationStack));
-    if (failed(copyBufferType))
-      return failure();
-    memorySpace = copyBufferType->getMemorySpace();
-  } else if (auto ms = options.defaultMemorySpaceFn(getType())) {
-    memorySpace = *ms;
-  } else {
-    return getOperation()->emitError("could not infer memory space");
-  }
+  const auto defaultGetBufferType =
+      [&](TensorLikeType tensorLikeType) -> FailureOr<BufferLikeType> {
+    auto tensorType = cast<TensorType>(tensorLikeType);
+    // Compute memory space of this allocation.
+    Attribute memorySpace;
+    if (getMemorySpace().has_value()) {
+      memorySpace = *getMemorySpace();
+    } else if (getCopy()) {
+      auto copyBufferType =
+          bufferization::detail::asMemRefType(bufferization::getBufferType(
+              getCopy(), options, state, invocationStack));
+      if (failed(copyBufferType))
+        return failure();
+      memorySpace = copyBufferType->getMemorySpace();
+    } else if (auto ms = options.defaultMemorySpaceFn(tensorType)) {
+      memorySpace = *ms;
+    } else {
+      return getOperation()->emitError("could not infer memory space");
+    }
 
-  return cast<BufferLikeType>(
-      getMemRefTypeWithStaticIdentityLayout(getType(), memorySpace));
+    return cast<BufferLikeType>(
+        getMemRefTypeWithStaticIdentityLayout(tensorType, memorySpace));
+  };
+
+  return cast<TensorLikeType>(getType()).getBufferType(
+      options, [&]() { return emitError(); }, defaultGetBufferType);
 }
 
 LogicalResult AllocTensorOp::verify() {

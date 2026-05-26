@@ -91,6 +91,15 @@ struct OneShotBufferizePass
             return rtt.getEncoding();
           return std::nullopt;
         };
+        opt.hasUpstreamBufferizableEncodingFn = [](TensorType t) {
+          if (isa<UnrankedTensorType>(t)) {
+            // consider unranked tensor with no encoding bufferizable
+            return true;
+          }
+          const auto rankedTensorType = cast<RankedTensorType>(t);
+          const auto encoding = rankedTensorType.getEncoding();
+          return !encoding || isa<IntegerAttr>(encoding);
+        };
       }
 
       opt.printConflicts = printConflicts;

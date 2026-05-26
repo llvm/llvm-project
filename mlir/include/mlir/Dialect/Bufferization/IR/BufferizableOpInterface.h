@@ -272,6 +272,9 @@ struct BufferizationOptions {
   // Produce a MemorySpace attribute from a tensor type
   using DefaultMemorySpaceFn =
       std::function<std::optional<Attribute>(TensorType t)>;
+  /// Returns whether the tensor type's encoding is bufferizable using upstream
+  /// bufferization.
+  using HasUpstreamBufferizableEncodingFn = std::function<bool(TensorType)>;
 
   BufferizationOptions();
 
@@ -363,6 +366,13 @@ struct BufferizationOptions {
   // failure to determine memory space for a tensor type).
   DefaultMemorySpaceFn defaultMemorySpaceFn =
       [](TensorType t) -> std::optional<Attribute> { return Attribute(); };
+
+  /// Specifies whether a given tensor type has upstream compatible encoding to
+  /// be successfully bufferized using default upstream semantics. If the
+  /// encoding is not compatible, the unknown type converter is expected to
+  /// bufferize the type. By default, only tensor types without encoding are
+  /// considered compatible.
+  HasUpstreamBufferizableEncodingFn hasUpstreamBufferizableEncodingFn = nullptr;
 
   /// If set to `true`, the analysis is skipped. A buffer is copied before every
   /// write. This flag cannot be used together with `testAnalysisOnly = true`.

@@ -1769,39 +1769,6 @@ TestMultiSlotAlloca::handleDestructuringComplete(
   return createNewMultiAllocaWithoutSlot(slot, builder, *this);
 }
 
-namespace {
-/// Returns test dialect's memref layout for test dialect's tensor encoding when
-/// applicable.
-MemRefLayoutAttrInterface
-getMemRefLayoutForTensorEncoding(RankedTensorType tensorType) {
-  if (auto encoding =
-          dyn_cast<test::TestTensorEncodingAttr>(tensorType.getEncoding())) {
-    return cast<MemRefLayoutAttrInterface>(test::TestMemRefLayoutAttr::get(
-        tensorType.getContext(), encoding.getDummy()));
-  }
-  return {};
-}
-
-/// Auxiliary bufferization function for test and builtin tensors.
-bufferization::BufferLikeType
-convertTensorToBuffer(mlir::Operation *op,
-                      const bufferization::BufferizationOptions &options,
-                      bufferization::TensorLikeType tensorLike) {
-  auto buffer =
-      *tensorLike.getBufferType(options, [&]() { return op->emitError(); });
-  if (auto memref = dyn_cast<MemRefType>(buffer)) {
-    // Note: For the sake of testing, we want to ensure that encoding -> layout
-    // bufferization happens. This is currently achieved manually.
-    auto layout =
-        getMemRefLayoutForTensorEncoding(cast<RankedTensorType>(tensorLike));
-    return cast<bufferization::BufferLikeType>(
-        MemRefType::get(memref.getShape(), memref.getElementType(), layout,
-                        memref.getMemorySpace()));
-  }
-  return buffer;
-}
-} // namespace
-
 ::mlir::LogicalResult test::TestDummyTensorOp::bufferize(
     ::mlir::RewriterBase &rewriter,
     const ::mlir::bufferization::BufferizationOptions &options,
@@ -1811,12 +1778,16 @@ convertTensorToBuffer(mlir::Operation *op,
   if (mlir::failed(buffer))
     return failure();
 
-  const auto outType = getOutput().getType();
+  // Note: mlir::bufferization::getBufferType() would internally call
+  // TestDummyTensorOp::getBufferType()
   const auto bufferizedOutType =
-      convertTensorToBuffer(getOperation(), options, outType);
+      mlir::bufferization::getBufferType(getOutput(), options, state);
+  if (mlir::failed(bufferizedOutType))
+    return failure();
+
   // replace op with memref analogy
   auto dummyMemrefOp = test::TestDummyMemrefOp::create(
-      rewriter, getLoc(), bufferizedOutType, *buffer);
+      rewriter, getLoc(), *bufferizedOutType, *buffer);
 
   mlir::bufferization::replaceOpWithBufferizedValues(rewriter, getOperation(),
                                                      dummyMemrefOp.getResult());
@@ -1826,15 +1797,15 @@ convertTensorToBuffer(mlir::Operation *op,
 
 mlir::FailureOr<mlir::bufferization::BufferLikeType>
 test::TestDummyTensorOp::getBufferType(
-    mlir::Value value, const mlir::bufferization::BufferizationOptions &,
+    mlir::Value value, const mlir::bufferization::BufferizationOptions &options,
     const mlir::bufferization::BufferizationState &,
     llvm::SmallVector<::mlir::Value> &) {
-  const auto type = dyn_cast<test::TestTensorType>(value.getType());
+  const auto type = dyn_cast<bufferization::TensorLikeType>(value.getType());
   if (type == nullptr)
     return failure();
 
-  return cast<mlir::bufferization::BufferLikeType>(test::TestMemrefType::get(
-      getContext(), type.getShape(), type.getElementType(), nullptr));
+  return type.getBufferType(
+      options, [&]() { return emitError(); }, /*localGetBufferType=*/nullptr);
 }
 
 ::mlir::LogicalResult test::TestCreateTensorOp::bufferize(
@@ -1867,7 +1838,8 @@ test::TestCreateTensorOp::getBufferType(
   if (type == nullptr)
     return failure();
 
-  return convertTensorToBuffer(getOperation(), options, type);
+  return type.getBufferType(
+      options, [&]() { return emitError(); }, /*localGetBufferType=*/nullptr);
 }
 
 // Define a custom builder for ManyRegionsOp declared in TestOps.td.

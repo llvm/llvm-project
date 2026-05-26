@@ -225,6 +225,15 @@ mlir::getBufferizationOptionsForSparsification(bool analysisOnly) {
                                       const BufferizationOptions &options) {
     return getMemRefTypeWithStaticIdentityLayout(tensorType, memorySpace);
   };
+  options.hasUpstreamBufferizableEncodingFn = [](TensorType tensorType) {
+    if (isa<UnrankedTensorType>(tensorType)) {
+      return true;
+    }
+    const auto rankedTensorType = cast<RankedTensorType>(tensorType);
+    const auto encoding = rankedTensorType.getEncoding();
+    return !encoding || isa<sparse_tensor::SparseTensorEncodingAttr>(encoding);
+  };
+
   if (analysisOnly) {
     options.testAnalysisOnly = true;
     options.printConflicts = true;

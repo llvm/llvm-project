@@ -41,8 +41,19 @@ struct BuiltinTensorExternalModel
                                     Tensor> {
   llvm::FailureOr<BufferLikeType> getBufferType(
       mlir::Type tensor, const BufferizationOptions &options,
-      llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+      llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+      llvm::function_ref<mlir::FailureOr<mlir::bufferization::BufferLikeType>(
+          mlir::bufferization::TensorLikeType)>
+          localGetBufferType) const {
     auto tensorType = cast<TensorType>(tensor);
+    if (localGetBufferType &&
+        options.hasUpstreamBufferizableEncodingFn(tensorType)) {
+      return localGetBufferType(cast<TensorLikeType>(tensorType));
+    }
+
+    // if there's a non-bufferizable encoding, let unknown type converter handle
+    // the bufferization. assume that there's a non-default behaviour associated
+    // with it.
     auto memSpace = options.defaultMemorySpaceFn(tensorType);
     if (!memSpace.has_value())
       return emitError() << "could not infer memory space";

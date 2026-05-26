@@ -563,14 +563,17 @@ TestTypeOpAsmTypeInterfaceType::getAlias(::llvm::raw_ostream &os) const {
 ::mlir::FailureOr<::mlir::bufferization::BufferLikeType>
 TestTensorType::getBufferType(
     const ::mlir::bufferization::BufferizationOptions &,
-    ::llvm::function_ref<::mlir::InFlightDiagnostic()>) {
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()>,
+    ::llvm::function_ref<
+        ::mlir::FailureOr<::mlir::bufferization::BufferLikeType>(
+            ::mlir::bufferization::TensorLikeType)>) const {
   return cast<bufferization::BufferLikeType>(
       TestMemrefType::get(getContext(), getShape(), getElementType(), nullptr));
 }
 
 ::mlir::LogicalResult TestTensorType::verifyCompatibleBufferType(
     ::mlir::bufferization::BufferLikeType bufferType,
-    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) {
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) const {
   if (auto testMemref = dyn_cast<TestMemrefType>(bufferType)) {
     const bool valid = getShape() == testMemref.getShape() &&
                        getElementType() == testMemref.getElementType();
