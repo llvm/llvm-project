@@ -888,7 +888,8 @@ def SampleBias : DXILOp<61, sampleBias> {
                    Int32Ty, Int32Ty, Int32Ty, FloatTy, FloatTy];
   let result = OverloadTy;
   let overloads =
-      [Overloads<DXIL1_0,
+      [Overloads<DXIL1_0, [ResRetHalfTy, ResRetFloatTy]>,
+       Overloads<DXIL1_7,
                  [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>];
   let stages = [Stages<DXIL1_0, [library, pixel]>,
                 Stages<DXIL1_6, [library, pixel, compute, amplification, mesh,
