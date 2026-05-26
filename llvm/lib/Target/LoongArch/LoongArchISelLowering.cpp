@@ -487,6 +487,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     for (MVT VT : {MVT::v4i64, MVT::v8i32, MVT::v16i16}) {
       setOperationAction(ISD::SIGN_EXTEND, VT, Legal);
       setOperationAction(ISD::ZERO_EXTEND, VT, Legal);
+      setOperationAction(ISD::ANY_EXTEND, VT, Custom);
     }
     for (MVT VT :
          {MVT::v2i64, MVT::v4i32, MVT::v4i64, MVT::v8i16, MVT::v8i32}) {
@@ -661,6 +662,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerSIGN_EXTEND_VECTOR_INREG(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return lowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::ANY_EXTEND:
+    return lowerANY_EXTEND(Op, DAG);
   }
   return SDValue();
 }
@@ -1008,6 +1011,15 @@ SDValue LoongArchTargetLowering::lowerSIGN_EXTEND_VECTOR_INREG(
   }
 
   return SDValue();
+}
+
+// ANY_EXTEND can be replaced by ZERO_EXTEND when LASX is enabled.
+SDValue LoongArchTargetLowering::lowerANY_EXTEND(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  if (!Subtarget.hasExtLASX() || !Subtarget.is64Bit())
+    return SDValue();
+  return DAG.getNode(ISD::ZERO_EXTEND, DL, Op.getValueType(), Op.getOperand(0));
 }
 
 // Lower vecreduce_add using vhaddw instructions.
