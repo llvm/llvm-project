@@ -1,8 +1,8 @@
 ! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
 
-! Test that bind(c) attributes(global) kernels with assumed-shape /
-! deferred-shape / assumed-rank array dummies are lowered to a raw base
-! address (!fir.ref<...>) instead of a CFI descriptor (!fir.box<...>).
+! Test that bind(c) attributes(global) kernels with assumed-shape or
+! assumed-rank array dummies are lowered to a raw base address
+! (!fir.ref<...>) instead of a CFI descriptor (!fir.box<...>).
 ! cudaLaunchKernel cannot deliver a CFI descriptor to the device, so the
 ! C-interop ABI of these arguments must be a plain pointer.
 

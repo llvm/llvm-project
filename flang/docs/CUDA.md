@@ -6,7 +6,7 @@
 
 -->
 
-# CUDA Fortran lowering notes
+# CUDA Fortran
 
 ```{contents}
 ---
@@ -14,20 +14,27 @@ local:
 ---
 ```
 
-List of CUDA Fortran lowering decisions in Flang that diverge from the
-Fortran 2018 standard, for cases the [CUDA Fortran Programming
-Guide](https://docs.nvidia.com/hpc-sdk/compilers/cuda-fortran-prog-guide/index.html)
-does not specify.
+Implementation notes for Flang's CUDA Fortran support.
 
-## `BIND(C) ATTRIBUTES(GLOBAL)` assumed-shape and assumed-rank dummies
+## Lowering decisions
+
+List of CUDA Fortran lowering decisions in Flang for cases where CUDA
+Fortran interoperability requires behavior that is not specified by the
+[CUDA Fortran Programming
+Guide](https://docs.nvidia.com/hpc-sdk/compilers/cuda-fortran-prog-guide/index.html)
+or by standard `BIND(C)` lowering alone.
+
+### `BIND(C) ATTRIBUTES(GLOBAL)` assumed-shape and assumed-rank dummies
 
 For a `BIND(C)` procedure with `ATTRIBUTES(GLOBAL)` or
 `ATTRIBUTES(GRID_GLOBAL)`, an assumed-shape (`dimension(:)`) or assumed-rank
 (`dimension(..)`) dummy is passed by base address (`!fir.ref<T>`) instead of by
 `CFI_cdesc_t *` (`!fir.box<T>`). `ALLOCATABLE` and `POINTER` dummies take an
-earlier descriptor-of-mutable path and are unaffected. To deliver a CFI
-descriptor to the kernel, drop `BIND(C)`: a plain `ATTRIBUTES(GLOBAL)` kernel
-keeps the descriptor-passing lowering.
+earlier descriptor-of-mutable path and are unaffected. A kernel declared
+without `BIND(C)` (i.e., a plain `ATTRIBUTES(GLOBAL)` or
+`ATTRIBUTES(GRID_GLOBAL)` Fortran kernel) uses the standard
+descriptor-passing lowering instead, which is the form to use when the
+kernel needs to access a CFI descriptor.
 
 ```fortran
 interface
