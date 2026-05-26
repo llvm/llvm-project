@@ -962,7 +962,6 @@ static void createSyntheticSymbols() {
     // For non-PIC code
     ctx.sym.stackPointer =
         createGlobalVariable(stack_pointer_name, !ctx.arg.libcallThreadContext);
-    ctx.sym.stackPointer->markLive();
   }
 
   if (ctx.arg.sharedMemory) {
