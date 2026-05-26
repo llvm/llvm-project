@@ -2685,32 +2685,10 @@ define <2 x i32> @test_pmulhrsu_w_commuted(<2 x i32> %a, <2 x i32> %b) {
 define <4 x i16> @test_pmul_h(<4 x i16> %a, <4 x i16> %b) {
 ; RV32-LABEL: test_pmul_h:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -32
-; RV32-NEXT:    .cfi_def_cfa_offset 32
-; RV32-NEXT:    sw a3, 20(sp)
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    sw a2, 16(sp)
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    lh a0, 22(sp)
-; RV32-NEXT:    lh a1, 14(sp)
-; RV32-NEXT:    mul a0, a1, a0
-; RV32-NEXT:    sh a0, 30(sp)
-; RV32-NEXT:    lh a0, 20(sp)
-; RV32-NEXT:    lh a1, 12(sp)
-; RV32-NEXT:    mul a0, a1, a0
-; RV32-NEXT:    sh a0, 28(sp)
-; RV32-NEXT:    lh a0, 18(sp)
-; RV32-NEXT:    lh a1, 10(sp)
-; RV32-NEXT:    mul a0, a1, a0
-; RV32-NEXT:    sh a0, 26(sp)
-; RV32-NEXT:    lh a0, 16(sp)
-; RV32-NEXT:    lh a1, 8(sp)
-; RV32-NEXT:    mul a0, a1, a0
-; RV32-NEXT:    sh a0, 24(sp)
-; RV32-NEXT:    lw a0, 24(sp)
-; RV32-NEXT:    lw a1, 28(sp)
-; RV32-NEXT:    addi sp, sp, 32
-; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    pwmul.h a4, a1, a3
+; RV32-NEXT:    pwmul.h a2, a0, a2
+; RV32-NEXT:    pncvt.h a1, a4
+; RV32-NEXT:    pncvt.h a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pmul_h:
@@ -2727,48 +2705,10 @@ define <4 x i16> @test_pmul_h(<4 x i16> %a, <4 x i16> %b) {
 define <8 x i8> @test_pmul_b(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-LABEL: test_pmul_b:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -32
-; RV32-NEXT:    .cfi_def_cfa_offset 32
-; RV32-NEXT:    sw a3, 20(sp)
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    sw a2, 16(sp)
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    lbu a0, 23(sp)
-; RV32-NEXT:    lbu a1, 15(sp)
-; RV32-NEXT:    mul a0, a1, a0
-; RV32-NEXT:    sb a0, 31(sp)
-; RV32-NEXT:    lbu a0, 22(sp)
-; RV32-NEXT:    lbu a1, 14(sp)
-; RV32-NEXT:    mul a0, a1, a0
-; RV32-NEXT:    sb a0, 30(sp)
-; RV32-NEXT:    lbu a0, 21(sp)
-; RV32-NEXT:    lbu a1, 13(sp)
-; RV32-NEXT:    mul a0, a1, a0
-; RV32-NEXT:    sb a0, 29(sp)
-; RV32-NEXT:    lbu a0, 20(sp)
-; RV32-NEXT:    lbu a1, 12(sp)
-; RV32-NEXT:    mul a0, a1, a0
-; RV32-NEXT:    sb a0, 28(sp)
-; RV32-NEXT:    lbu a0, 19(sp)
-; RV32-NEXT:    lbu a1, 11(sp)
-; RV32-NEXT:    mul a0, a1, a0
-; RV32-NEXT:    sb a0, 27(sp)
-; RV32-NEXT:    lbu a0, 18(sp)
-; RV32-NEXT:    lbu a1, 10(sp)
-; RV32-NEXT:    mul a0, a1, a0
-; RV32-NEXT:    sb a0, 26(sp)
-; RV32-NEXT:    lbu a0, 17(sp)
-; RV32-NEXT:    lbu a1, 9(sp)
-; RV32-NEXT:    mul a0, a1, a0
-; RV32-NEXT:    sb a0, 25(sp)
-; RV32-NEXT:    lbu a0, 16(sp)
-; RV32-NEXT:    lbu a1, 8(sp)
-; RV32-NEXT:    mul a0, a1, a0
-; RV32-NEXT:    sb a0, 24(sp)
-; RV32-NEXT:    lw a0, 24(sp)
-; RV32-NEXT:    lw a1, 28(sp)
-; RV32-NEXT:    addi sp, sp, 32
-; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    pwmul.b a4, a1, a3
+; RV32-NEXT:    pwmul.b a2, a0, a2
+; RV32-NEXT:    pncvt.b a1, a4
+; RV32-NEXT:    pncvt.b a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pmul_b:

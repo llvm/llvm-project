@@ -11,6 +11,6 @@ define void @main() {
 ; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
 ; CHECK-NEXT:   store i32 -1, ptr %alloc, align 4
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   %res = load i32, ptr %alloc, align 4, !range !0, !noundef !1 at @main
+; CHECK-NEXT: #0   %res = load i32, ptr %alloc, align 4, !range !0, !noundef !1 at @main <stdin>:7
 ; CHECK-NEXT: Immediate UB detected: The value poison violates !noundef metadata.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

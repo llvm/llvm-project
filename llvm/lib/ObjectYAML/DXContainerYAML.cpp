@@ -991,7 +991,7 @@ DXContainerYAML::fromDXContainer(object::DXContainer &Container) {
     }
     }
   }
-  return Obj;
+  return std::move(Obj);
 }
 
 } // namespace llvm

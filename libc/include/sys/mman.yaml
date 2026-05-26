@@ -93,7 +93,8 @@ functions:
       - type: size_t
       - type: int
   - name: munlock
-    standards: POSIX
+    standards:
+      - posix
     return_type: int
     arguments:
       - type: void *
