@@ -338,10 +338,11 @@ void Tracker::save() {
 #endif
 }
 
-void Tracker::revert() {
+void Tracker::revert(bool RevertAll) {
   assert(State == TrackerState::Record && "Forgot to save()!");
   State = TrackerState::Reverting;
-  const unsigned ToRevert = Changes.size() - Snapshots.back();
+  unsigned UntilChangeIdx = RevertAll ? 0 : Snapshots.back();
+  const unsigned ToRevert = Changes.size() - UntilChangeIdx;
   unsigned CntReverts = 0;
   for (auto &Change : reverse(Changes)) {
     // Stop reverting if we reach the index of the last snapshot.
@@ -350,7 +351,10 @@ void Tracker::revert() {
     Change->revert(*this);
   }
   Changes.erase(Changes.end() - ToRevert, Changes.end());
-  Snapshots.pop_back();
+  if (RevertAll)
+    Snapshots.clear();
+  else
+    Snapshots.pop_back();
 #if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
   SnapshotChecker.back().expectNoDiff();
   SnapshotChecker.pop_back();
@@ -358,8 +362,13 @@ void Tracker::revert() {
   State = Snapshots.empty() ? TrackerState::Disabled : TrackerState::Record;
 }
 
-void Tracker::accept() {
+void Tracker::accept(bool AcceptAll) {
   assert(State == TrackerState::Record && "Forgot to save()!");
+  if (!AcceptAll && Snapshots.size() > 1) {
+    // Just remove the last stacked checkpoint.
+    Snapshots.pop_back();
+    return;
+  }
   State = TrackerState::Disabled;
   for (auto &Change : Changes)
     Change->accept();

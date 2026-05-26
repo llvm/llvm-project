@@ -4,6 +4,7 @@
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <4 x float> @_Z2fnu11matrix_typeILm2ELm2EfE(
 // CHECK-SAME: <4 x float> noundef nofpclass(nan inf) [[M:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [2 x <2 x float>], align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca <4 x float>, align 4
 // CHECK-NEXT:    store <4 x float> [[M]], ptr [[M_ADDR]], align 4
@@ -33,6 +34,7 @@ float4 fn(float2x2 m) {
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z2fnDv4_i(
 // CHECK-SAME: <4 x i32> noundef [[V:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT:    [[M:%.*]] = alloca [2 x <2 x i32>], align 4
 // CHECK-NEXT:    store <4 x i32> [[V]], ptr [[V_ADDR]], align 4
@@ -62,6 +64,7 @@ int2x2 fn(int4 v) {
 // CHECK-LABEL: define hidden noundef <2 x i32> @_Z3fn1Dv2_i(
 // CHECK-SAME: <2 x i32> noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <2 x i32>, align 4
 // CHECK-NEXT:    store <2 x i32> [[V]], ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[V_ADDR]], align 4
@@ -79,6 +82,7 @@ int1x2 fn1(int2 v) {
 // CHECK-LABEL: define hidden noundef <3 x i1> @_Z3fn2Dv3_b(
 // CHECK-SAME: <3 x i1> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <3 x i32>, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = zext <3 x i1> [[B]] to <3 x i32>
 // CHECK-NEXT:    store <3 x i32> [[TMP0]], ptr [[B_ADDR]], align 4
@@ -103,6 +107,7 @@ bool3x1 fn2(bool3 b) {
 // CHECK-LABEL: define hidden noundef <3 x i32> @_Z3fn3u11matrix_typeILm1ELm3EbE(
 // CHECK-SAME: <3 x i1> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // COL-CHECK-NEXT:    [[B_ADDR:%.*]] = alloca [3 x <1 x i32>], align 4
 // ROW-CHECK-NEXT:    [[B_ADDR:%.*]] = alloca [1 x <3 x i32>], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = zext <3 x i1> [[B]] to <3 x i32>
