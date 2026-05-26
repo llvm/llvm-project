@@ -101,6 +101,20 @@ def TensorMapInterleaveKind : I32EnumAttr<"TensorMapInterleaveKind",
   let cppNamespace = "::mlir::nvgpu";
 }
 
+def SubBytesPackedCompact         : I32EnumAttrCase<"COMPACT", 0, "compact">;
+def SubBytesPackedU6UnpackU8E3M2  : I32EnumAttrCase<"U6_UNPACK_U8_E3M2", 1, "u6_unpack_u8_e3m2">;
+def SubBytesPackedU6UnpackU8E2M3  : I32EnumAttrCase<"U6_UNPACK_U8_E2M3", 2, "u6_unpack_u8_e2m3">;
+def SubBytesPackedKind : I32EnumAttr<"SubBytesPackedKind",
+    "Sub-bytes packed kind type",
+    [SubBytesPackedCompact, SubBytesPackedU6UnpackU8E3M2,   
+     SubBytesPackedU6UnpackU8E2M3]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::nvgpu";
+}
+def SubBytesPackedKindAttr : EnumAttr<NVGPU_Dialect, SubBytesPackedKind, "subbytes_packedkind"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
 def RcpApprox : I32EnumAttrCase<"APPROX", 0, "approx">;
 def RcpRN     : I32EnumAttrCase<"RN", 1, "rn">;
 def RcpRZ     : I32EnumAttrCase<"RZ", 2, "rz">;

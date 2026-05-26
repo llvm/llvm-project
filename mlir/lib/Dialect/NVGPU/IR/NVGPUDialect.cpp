@@ -700,6 +700,162 @@ LogicalResult RcpOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// NVGPU_CvtFPTruncOp
+//===----------------------------------------------------------------------===//
+
+static bool isShapedContainerType(Type t) {
+  return llvm::isa<VectorType, RankedTensorType, UnrankedTensorType>(t);
+}
+
+static LogicalResult verifyConversionShapes(Operation *op, Type inType,
+                                            Type outType) {
+  if (llvm::isa<UnrankedTensorType>(inType) ||
+      llvm::isa<UnrankedTensorType>(outType))
+    return op->emitOpError("unranked tensor types are not supported, got ")
+           << inType << " and " << outType;
+  bool srcIsShaped = isShapedContainerType(inType);
+  bool dstIsShaped = isShapedContainerType(outType);
+  if (srcIsShaped != dstIsShaped)
+    return op->emitOpError("input and output must both be scalars or both be "
+                           "vectors/tensors, got ")
+           << inType << " and " << outType;
+  if (srcIsShaped) {
+    auto srcShaped = llvm::cast<ShapedType>(inType);
+    auto dstShaped = llvm::cast<ShapedType>(outType);
+    if (srcShaped.getRank() == 0 || dstShaped.getRank() == 0)
+      return op->emitOpError("rank-0 shaped types are not supported, use "
+                             "scalar type instead");
+    if (srcShaped.getShape() != dstShaped.getShape())
+      return op->emitOpError("input and output shapes must match, got ")
+             << inType << " and " << outType;
+    if (llvm::isa<VectorType>(inType) != llvm::isa<VectorType>(outType))
+      return op->emitOpError("input and output must be the same container "
+                             "type (both vector or both tensor), got ")
+             << inType << " and " << outType;
+  }
+  return success();
+}
+
+LogicalResult FPTruncOp::verify() {
+  Type inType = getIn().getType();
+  Type outType = getType();
+  Type srcType = getElementTypeOrSelf(inType);
+  Type dstType = getElementTypeOrSelf(outType);
+  SubBytesPackedKind packedKind = getPackedKind();
+  int srcBitWidth = srcType.getIntOrFloatBitWidth();
+  int dstBitWidth = dstType.getIntOrFloatBitWidth();
+  auto rnd = getRnd();
+
+  if (auto result = verifyConversionShapes(getOperation(), inType, outType);
+      failed(result))
+    return result;
+
+  if (srcBitWidth <= dstBitWidth)
+    return emitOpError("result type ")
+           << dstType << " must be narrower than operand type " << srcType;
+
+  if (!(srcBitWidth == 64 || srcBitWidth == 32 || srcBitWidth == 16))
+    return emitOpError("input type must be 64/32/16 bitwidth, but got ")
+           << srcBitWidth;
+
+  if (dstBitWidth == 6)
+    return emitOpError("currently doesn't support fp6 compact result type");
+
+  if ((packedKind == SubBytesPackedKind::U6_UNPACK_U8_E3M2 ||
+       packedKind == SubBytesPackedKind::U6_UNPACK_U8_E2M3) &&
+      !dstType.isInteger(8))
+    return emitOpError("result type expects `i8` with `u6_unpack_u8` packed "
+                       "kind, but got ")
+           << dstType;
+
+  if (packedKind == SubBytesPackedKind::COMPACT &&
+      !llvm::isa<FloatType>(dstType))
+    return emitOpError("result type expects float type with `compact` packed "
+                       "kind, but got ")
+           << dstType;
+
+  if (llvm::isa<Float8E8M0FNUType>(dstType)) {
+    if (rnd != mlir::NVVM::FPRoundingMode::RZ &&
+        rnd != mlir::NVVM::FPRoundingMode::RP)
+      return emitOpError("expects RZ or RP rounding mode when result type is "
+                         "e8m0, but got ")
+             << getRndAttr();
+  } else if (rnd == mlir::NVVM::FPRoundingMode::RS) {
+    // TODO: Currently, we only support conversions which fit into a single i32
+    // register. Support f32->f8/f6/f4 conversions with RS rounding.
+    if (!(srcBitWidth == 32 && (dstBitWidth == 16)))
+      return emitOpError("RS (stochastic) rounding is only supported for "
+                         "f32->f16/bf16, got ")
+             << srcType << " -> " << dstType;
+    if (!getRandomBits())
+      return emitOpError("random_bits operand is required with RS rounding");
+  } else if (rnd != mlir::NVVM::FPRoundingMode::RN) {
+    return emitOpError("expects RN rounding mode, but got ") << getRndAttr();
+  }
+
+  if (getRandomBits() && rnd != mlir::NVVM::FPRoundingMode::RS)
+    return emitOpError("random_bits can only be used with RS rounding mode");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// NVGPU_CvtFPExtOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult FPExtOp::verify() {
+  Type inType = getIn().getType();
+  Type outType = getType();
+  Type srcType = getElementTypeOrSelf(inType);
+  Type dstType = getElementTypeOrSelf(outType);
+  SubBytesPackedKind packedKind = getPackedKind();
+  int srcBitWidth = srcType.getIntOrFloatBitWidth();
+  int dstBitWidth = dstType.getIntOrFloatBitWidth();
+  auto rnd = getRnd();
+
+  if (auto result = verifyConversionShapes(getOperation(), inType, outType);
+      failed(result))
+    return result;
+
+  if (srcBitWidth >= dstBitWidth)
+    return emitOpError("result type ")
+           << dstType << " must be wider than operand type " << srcType;
+
+  if (dstBitWidth != 16 && dstBitWidth != 32 && dstBitWidth != 64)
+    return emitOpError("result type must be 16, 32, or 64 bitwidth, but got ")
+           << dstBitWidth;
+
+  if (srcBitWidth == 6)
+    return emitOpError("currently doesn't support fp6 compact input type");
+
+  if ((packedKind == SubBytesPackedKind::U6_UNPACK_U8_E3M2 ||
+       packedKind == SubBytesPackedKind::U6_UNPACK_U8_E2M3) &&
+      !srcType.isInteger(8))
+    return emitOpError("input type expects `i8` with `u6_unpack_u8` packed "
+                       "kind, but got ")
+           << srcType;
+
+  if (packedKind == SubBytesPackedKind::COMPACT &&
+      !llvm::isa<FloatType>(srcType))
+    return emitOpError("input type expects float type with `compact` packed "
+                       "kind, but got ")
+           << srcType;
+
+  if (llvm::isa<Float8E8M0FNUType>(srcType) &&
+      !llvm::isa<BFloat16Type>(dstType) && !dstType.isF32())
+    return emitOpError("expects bf16 or f32 output type when input type is "
+                       "e8m0.");
+
+  if (rnd != mlir::NVVM::FPRoundingMode::RN)
+    return emitOpError("expects RN rounding mode, but got ") << getRndAttr();
+
+  if (getRelu() && llvm::isa<BFloat16Type>(dstType))
+    return emitOpError("relu is not supported for bf16 destination");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd dialect, type, and op definitions
 //===----------------------------------------------------------------------===//
 
