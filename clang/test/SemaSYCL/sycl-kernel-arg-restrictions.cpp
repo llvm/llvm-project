@@ -13,14 +13,84 @@ template<typename KNT, typename T>
 [[clang::sycl_kernel_entry_point(KNT)]]
 void kernel_single_task(T) {}
 
-struct S { // expected-note 3{{within field of type 'S' declared here}}
+// Check that reference captures of kernel that defined as lambda are diagnosed.
+namespace badref1 {
+void test() {
+  int p = 0;
+  double q = 0;
+  float s = 0;
+  kernel_single_task<class KN<1>>( // expected-note {{requested here}}
+      [ // expected-note2{{within field of type}}
+          // expected-error@+1 {{'int &' cannot be used as the type of a kernel parameter}}
+          &p, q,
+          // expected-error@+1 {{'float &' cannot be used as the type of a kernel parameter}}
+          &s] {
+        (void)q;
+        (void)p;
+        (void)s;
+      });
+}
+} // namespace badref1
+
+// Check reference kernel arguments witin structs or lambdas;
+namespace badref2 {
+struct S { // expected-note 2{{within field of type 'S' declared here}}
   int a;
-  int &b; //expected-error 3{{'int &' cannot be used as the type of a kernel parameter}}
+  int &b; //expected-error 2{{'int &' cannot be used as the type of a kernel parameter}}
+};
+
+void test() {
+  int p = 0;
+  auto L = [&]() { (void)p;}; // expected-error {{'int &' cannot be used as the type of a kernel parameter}}
+                               // expected-note@-1 {{within field of type}}
+  S Str {p, p};
+  kernel_single_task<class KN<2>>( // expected-note {{requested here}}
+      [=] { // expected-note 2{{within field of type}}
+        (void)L;
+        (void)Str; // no error because fail for L already
+      });
+
+  kernel_single_task<class KN<3>>( // expected-note {{requested here}}
+     [=] { // // expected-note {{within field of type}}
+       (void)Str;
+     });
+
+}
+} // namespace badref2
+
+// Check references within array kernel arguments.
+namespace badref3 {
+struct S { // expected-note {{within field of type 'S' declared here}}
+  int a;
+  int &b; //expected-error {{'int &' cannot be used as the type of a kernel parameter}}
 };
 
 void fooarr(int (&arr)[5]) {
 }
 
+void test(int AS) {
+  int p = 0;
+  S Str {p, p};
+  S arr[2] = {Str, Str};
+  kernel_single_task<class KN<4>>( // expected-note {{requested here}}
+      [=] { // expected-note {{within field of type}}
+        (void)arr;
+      });
+  int arr1[AS];
+  kernel_single_task<class KN<5>>( // expected-note {{requested here}}
+      [&] { // expected-note {{within field of type}}
+        (void)arr1; // expected-error {{'int (&)[AS]' cannot be used as the type of a kernel parameter}}
+      });
+  int arrayints[5] = {0};
+  kernel_single_task<class KN<7>>( // expected-note {{requested here}}
+      [&] { // expected-note {{within field of type}}
+        fooarr(arrayints); // expected-error {{'int (&)[5]' cannot be used as the type of a kernel parameter}}
+      });
+}
+} // namespace badref3
+
+// Check callable objects containing references.
+namespace badref4 {
 template <typename T> class Callable { // expected-note 2{{within field of type 'Callable<int &>' declared here}}
   T data; // expected-error 2{{'int &' cannot be used as the type of a kernel parameter}}
 public:
@@ -41,53 +111,12 @@ public:
   Derived2(int d, int &b) : Callable<int&>(b), a(d) {}
 };
 
-void refCases(int AS) {
+void test(int AS) {
   int p = 0;
-  double q = 0;
-  float s = 0;
-  kernel_single_task<class KN<1>>( // expected-note {{requested here}}
-      [ // expected-note2{{within field of type}}
-          // expected-error@+1 {{'int &' cannot be used as the type of a kernel parameter}}
-          &p, q,
-          // expected-error@+1 {{'float &' cannot be used as the type of a kernel parameter}}
-          &s] {
-        (void)q;
-        (void)p;
-        (void)s;
-      });
-
-   auto L = [&]() { (void)p;}; // expected-error {{'int &' cannot be used as the type of a kernel parameter}}
-                               // expected-note@-1 {{within field of type}}
-  S Str {p, p};
-  kernel_single_task<class KN<2>>( // expected-note {{requested here}}
-      [=] { // expected-note 2{{within field of type}}
-        (void)L;
-        (void)Str; // no error because fail for L already
-      });
-
-  kernel_single_task<class KN<3>>( // expected-note {{requested here}}
-     [=] { // // expected-note {{within field of type}}
-       (void)Str;
-     });
-
-  S arr[2] = {Str, Str};
-  kernel_single_task<class KN<4>>( // expected-note {{requested here}}
-      [=] { // expected-note {{within field of type}}
-        (void)arr;
-      });
-  int arr1[AS];
-  kernel_single_task<class KN<5>>( // expected-note {{requested here}}
-      [&] { // expected-note {{within field of type}}
-        (void)arr1; // expected-error {{'int (&)[AS]' cannot be used as the type of a kernel parameter}}
-      });
-  int arrayints[5] = {0};
-  kernel_single_task<class KN<7>>( // expected-note {{requested here}}
-      [&] { // expected-note {{within field of type}}
-        fooarr(arrayints); // expected-error {{'int (&)[5]' cannot be used as the type of a kernel parameter}}
-      });
   kernel_single_task<class KN<8>>(Callable<int&>{p}); // expected-note {{requested here}}
   kernel_single_task<class KN<9>>(Callable<int>{p});
   kernel_single_task<class KN<10>>(Derived1{p, p}); // expected-note {{requested here}}
   kernel_single_task<class KN<11>>(Derived2{p, p}); // expected-note {{requested here}}
 }
 
+} // namespace badref4
