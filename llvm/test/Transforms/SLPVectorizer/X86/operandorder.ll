@@ -350,15 +350,20 @@ define void @good_load_order() {
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i64 0, i64 [[TMP2]]
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[INDVARS_IV]], 4
+; CHECK-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i64 0, i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[ARRAYIDX31]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP9]], <4 x float> [[TMP12]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul <4 x float> [[TMP8]], [[TMP10]]
+; CHECK-NEXT:    store <4 x float> [[TMP11]], ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 5
 ; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i64 0, i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    [[TMP13]] = load float, ptr [[ARRAYIDX41]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load <5 x float>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <5 x float> [[TMP4]], <5 x float> poison, <5 x i32> <i32 poison, i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <5 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <5 x float> [[TMP5]], <5 x float> [[TMP6]], <5 x i32> <i32 5, i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul <5 x float> [[TMP4]], [[TMP7]]
-; CHECK-NEXT:    store <5 x float> [[TMP8]], ptr [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    [[MUL45:%.*]] = fmul float [[TMP13]], [[TMP7]]
+; CHECK-NEXT:    store float [[MUL45]], ptr [[ARRAYIDX31]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[TMP14]], 31995
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY3]], label [[FOR_END:%.*]]

@@ -27,11 +27,11 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<ssize_t> readlink(const char *path, char *buf,
                                       size_t bufsiz) {
-#ifdef SYS_readlink
-  ssize_t ret = syscall_impl<ssize_t>(SYS_readlink, path, buf, bufsiz);
-#elif defined(SYS_readlinkat)
+#ifdef SYS_readlinkat
   ssize_t ret =
       syscall_impl<ssize_t>(SYS_readlinkat, AT_FDCWD, path, buf, bufsiz);
+#elif defined(SYS_readlink)
+  ssize_t ret = syscall_impl<ssize_t>(SYS_readlink, path, buf, bufsiz);
 #else
 #error "readlink and readlinkat syscalls not available."
 #endif
