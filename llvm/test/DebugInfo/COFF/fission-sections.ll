@@ -64,6 +64,10 @@ source_filename = "test/DebugInfo/X86/fission-cu.ll"
 ; SINGLE:      Characteristics [
 ; SINGLE:        IMAGE_SCN_LNK_REMOVE
 ; SINGLE:      ]
+; SINGLE:      Name: .debug_str_offsets.dwo
+; SINGLE:      Characteristics [
+; SINGLE:        IMAGE_SCN_LNK_REMOVE
+; SINGLE:      ]
 ; SINGLE:      Name: .debug_info.dwo
 ; SINGLE:      Characteristics [
 ; SINGLE:        IMAGE_SCN_LNK_REMOVE
