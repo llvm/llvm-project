@@ -640,28 +640,29 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
   // And that the placement parameter num is 1,
   // that is to mostly limit to standard library placement new.
   if (NE->getNumPlacementArgs() == 1) {
-    if (const auto *Arg = NE->getOperatorNew()
-                              ->getParamDecl(1)
-                              ->getType()
-                              ->getAs<PointerType>();
-        Arg && Arg->isVoidPointerType()) {
-      // Use the placement argument before the implicit conversion to void*, so
-      // inner origins are still available.
-      const Expr *PlacementArg = NE->getPlacementArg(0);
-      if (const auto *ICE = dyn_cast<ImplicitCastExpr>(PlacementArg);
-          ICE && ICE->getCastKind() == CK_BitCast &&
-          PlacementArg->getType()->isVoidPointerType())
-        PlacementArg = ICE->getSubExpr();
-      OriginList *PlacementList = getOriginsList(*PlacementArg);
-      // FIXME: General placement arguments need separate handling to overwrite
-      // the right origins.
+    const FunctionDecl *OperatorNew = NE->getOperatorNew();
+    if (OperatorNew->getNumParams() > 1) {
+      if (const auto *Arg =
+              OperatorNew->getParamDecl(1)->getType()->getAs<PointerType>();
+          Arg && Arg->isVoidPointerType()) {
+        // Use the placement argument before the implicit conversion to void*,
+        // so inner origins are still available.
+        const Expr *PlacementArg = NE->getPlacementArg(0);
+        if (const auto *ICE = dyn_cast<ImplicitCastExpr>(PlacementArg);
+            ICE && ICE->getCastKind() == CK_BitCast &&
+            PlacementArg->getType()->isVoidPointerType())
+          PlacementArg = ICE->getSubExpr();
+        OriginList *PlacementList = getOriginsList(*PlacementArg);
+        // FIXME: General placement arguments need separate handling to
+        // overwrite the right origins.
 
-      // The pointer returned by placement new comes from the placement
-      // argument.
-      if (PlacementList)
-        CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-            NewList->getOuterOriginID(), PlacementList->getOuterOriginID(),
-            true));
+        // The pointer returned by placement new comes from the placement
+        // argument.
+        if (PlacementList)
+          CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+              NewList->getOuterOriginID(), PlacementList->getOuterOriginID(),
+              true));
+      }
     }
   } else {
     const Loan *L = createLoan(FactMgr, NE);
