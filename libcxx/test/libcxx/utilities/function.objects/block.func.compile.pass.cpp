@@ -8,7 +8,6 @@
 
 // std::function support for the "blocks" extension
 
-// REQUIRES: has-blocks-runtime
 // UNSUPPORTED: c++03
 
 // This test requires the Blocks runtime, which is (only?) available
