@@ -444,6 +444,8 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_multi_mem_read = eLazyBoolYes;
       else if (x == "jMultiBreakpoint+")
         m_supports_multi_breakpoint = eLazyBoolYes;
+      else if (x == "reportsOriginalInstructions+")
+        m_supports_reportingOriginalInsts = eLazyBoolYes;
       // Look for a list of compressions in the features list e.g.
       // qXfer:features:read+;PacketSize=20000;qEcho+;SupportedCompressions=zlib-
       // deflate,lzma
@@ -685,6 +687,13 @@ bool GDBRemoteCommunicationClient::GetMemoryTaggingSupported() {
     GetRemoteQSupported();
   }
   return m_supports_memory_tagging == eLazyBoolYes;
+}
+
+bool GDBRemoteCommunicationClient::GetReportsOriginalInstructions() const {
+  if (m_supports_reportingOriginalInsts == eLazyBoolCalculate) {
+    GetRemoteQSupported();
+  }
+  return m_supports_reportingOriginalInsts == eLazyBoolYes;
 }
 
 DataBufferSP GDBRemoteCommunicationClient::ReadMemoryTags(lldb::addr_t addr,

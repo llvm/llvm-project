@@ -3703,7 +3703,7 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
   std::stringstream reply;
   reply << "qXfer:features:read+;PacketSize=" << std::hex << max_packet_size
         << ";";
-  reply << "qEcho+;native-signals+;";
+  reply << "qEcho+;native-signals+;reportsOriginalInstructions+;";
 
   bool enable_compression = false;
   (void)enable_compression;

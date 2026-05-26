@@ -751,3 +751,27 @@ TEST_F(GDBRemoteCommunicationClientTest, MultiBreakpointdNotSupported) {
   ASSERT_FALSE(client.GetMultiBreakpointSupported());
   async_result.wait();
 }
+
+TEST_F(GDBRemoteCommunicationClientTest, ReportsOriginalInstructions) {
+  std::future<void> async_result =
+      std::async(std::launch::async, [&] { client.GetRemoteQSupported(); });
+
+  HandlePacket(
+      server, testing::StartsWith("qSupported:"),
+      "reportsOriginalInstructions+;qXfer:memory-map:read+;PacketSize=4000");
+
+  async_result.get();
+  EXPECT_TRUE(client.GetReportsOriginalInstructions());
+}
+
+TEST_F(GDBRemoteCommunicationClientTest,
+       ReportsOriginalInstructionsUnsupported) {
+  std::future<void> async_result =
+      std::async(std::launch::async, [&] { client.GetRemoteQSupported(); });
+
+  HandlePacket(server, testing::StartsWith("qSupported:"),
+               "qXfer:memory-map:read+;PacketSize=4000");
+
+  async_result.get();
+  EXPECT_FALSE(client.GetReportsOriginalInstructions());
+}
