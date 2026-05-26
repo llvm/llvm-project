@@ -292,3 +292,35 @@ class CommandInterpreterAPICase(TestBase):
             .GetStringValue(100),
             "version",
         )
+
+    def test_handle_command_with_execution_context_override(self):
+        """Test that HandleCommand with an override context works correctly and does not bypass non-dummy targets."""
+        self.build()
+        target, process, thread, _ = lldbutil.run_to_line_breakpoint(self, lldb.SBFileSpec("main.c"), self.line)
+        frame = thread.GetSelectedFrame()
+        self.assertTrue(frame.IsValid())
+        exe_ctx = lldb.SBExecutionContext(frame)
+
+        # With an dummy override target, the command should fail -- it should not use valid target selected in the debugger.
+        exe_ctx = lldb.SBExecutionContext(self.dbg.GetDummyTarget())
+        res = lldb.SBCommandReturnObject()
+        self.ci.HandleCommand("frame variable", exe_ctx, res)
+        self.assertFalse(res.Succeeded())
+        self.assertIn("invalid target", res.GetError())
+
+        # The same goes for a target which is not running.
+        exe = self.getBuildArtifact("a.out")
+        target2 = self.dbg.CreateTarget(exe)
+        self.assertTrue(target2.IsValid())
+        exe_ctx = lldb.SBExecutionContext(self.dbg.GetDummyTarget())
+        res = lldb.SBCommandReturnObject()
+        self.ci.HandleCommand("frame variable", exe_ctx, res)
+        self.assertFalse(res.Succeeded())
+        self.assertIn("invalid target", res.GetError())
+
+        # Now try vice-versa. The command should successfully use the target from the override context.
+        self.dbg.SetSelectedTarget(target)
+        exe_ctx = lldb.SBExecutionContext(frame)
+        res = lldb.SBCommandReturnObject()
+        self.ci.HandleCommand("frame variable", exe_ctx, res)
+        self.assertTrue(res.Succeeded(), "HandleCommand with override context succeeded")
