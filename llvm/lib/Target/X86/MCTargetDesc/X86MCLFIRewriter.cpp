@@ -76,7 +76,7 @@ void X86::X86MCLFIRewriter::rewriteSyscall(const MCInst &Inst, MCStreamer &Out,
   Jmp.addOperand(MCOperand::createReg(LFIBaseReg));
   Jmp.addOperand(MCOperand::createImm(1));
   Jmp.addOperand(MCOperand::createReg(X86::NoRegister));
-  Jmp.addOperand(MCOperand::createImm(0));
+  Jmp.addOperand(MCOperand::createImm(-8));
   Jmp.addOperand(MCOperand::createReg(X86::NoRegister));
   Out.emitInstruction(Jmp, STI);
 
