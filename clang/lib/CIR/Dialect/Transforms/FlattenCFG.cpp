@@ -372,8 +372,6 @@ public:
     mlir::Block *defaultDestination = exitBlock;
     mlir::ValueRange defaultOperands = exitBlock->getArguments();
 
-
-
     // Digest the case statements values and bodies.
     for (cir::CaseOp caseOp : cases) {
       mlir::Region &region = caseOp.getCaseRegion();
