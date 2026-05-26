@@ -1896,25 +1896,25 @@ let Extension = FunctionExtension<"cl_khr_kernel_clock __opencl_c_kernel_clock_s
 
 //--------------------------------------------------------------------
 // Intel different sub-group extensions.
-def FuncExtIntelSubgroups      : FunctionExtension<"cl_intel_subgroups">;
-def FuncExtIntelSubgroupsShort : FunctionExtension<"cl_intel_subgroups_short">;
-def FuncExtIntelSubgroupsChar  : FunctionExtension<"cl_intel_subgroups_char">;
-def FuncExtIntelSubgroupsLong  : FunctionExtension<"cl_intel_subgroups_long">;
-def FuncExtIntelSubgroupBufferPrefetch : FunctionExtension<"cl_intel_subgroup_buffer_prefetch">;
-def FuncExtIntelSubgroupLocalBlockIO : FunctionExtension<"cl_intel_subgroup_local_block_io">;
 def FuncExtIntelBfloat16Conversions : FunctionExtension<"cl_intel_bfloat16_conversions">;
 def FuncExtIntelSplitWorkGroupBarrier : FunctionExtension<"cl_intel_split_work_group_barrier">;
-def FuncExtIntelSubgroupsRWImages : FunctionExtension<"cl_intel_subgroups __opencl_c_read_write_images">;
-def FuncExtIntelSubgroupsShortRWImages : FunctionExtension<"cl_intel_subgroups_short __opencl_c_read_write_images">;
+def FuncExtIntelSubgroupBufferPrefetch : FunctionExtension<"cl_intel_subgroup_buffer_prefetch">;
+def FuncExtIntelSubgroupLocalBlockIO : FunctionExtension<"cl_intel_subgroup_local_block_io">;
+def FuncExtIntelSubgroups : FunctionExtension<"cl_intel_subgroups">;
+def FuncExtIntelSubgroupsChar : FunctionExtension<"cl_intel_subgroups_char">;
+def FuncExtIntelSubgroupsCharLocalBlockIO : FunctionExtension<"cl_intel_subgroups_char cl_intel_subgroup_local_block_io">;
+def FuncExtIntelSubgroupsCharPrefetch : FunctionExtension<"cl_intel_subgroups_char cl_intel_subgroup_buffer_prefetch">;
 def FuncExtIntelSubgroupsCharRWImages : FunctionExtension<"cl_intel_subgroups_char __opencl_c_read_write_images">;
+def FuncExtIntelSubgroupsLong : FunctionExtension<"cl_intel_subgroups_long">;
+def FuncExtIntelSubgroupsLongLocalBlockIO : FunctionExtension<"cl_intel_subgroups_long cl_intel_subgroup_local_block_io">;
+def FuncExtIntelSubgroupsLongPrefetch : FunctionExtension<"cl_intel_subgroups_long cl_intel_subgroup_buffer_prefetch">;
 def FuncExtIntelSubgroupsLongRWImages : FunctionExtension<"cl_intel_subgroups_long __opencl_c_read_write_images">;
 def FuncExtIntelSubgroupsPrefetch : FunctionExtension<"cl_intel_subgroups cl_intel_subgroup_buffer_prefetch">;
-def FuncExtIntelSubgroupsShortPrefetch : FunctionExtension<"cl_intel_subgroups_short cl_intel_subgroup_buffer_prefetch">;
-def FuncExtIntelSubgroupsCharPrefetch : FunctionExtension<"cl_intel_subgroups_char cl_intel_subgroup_buffer_prefetch">;
-def FuncExtIntelSubgroupsLongPrefetch : FunctionExtension<"cl_intel_subgroups_long cl_intel_subgroup_buffer_prefetch">;
+def FuncExtIntelSubgroupsRWImages : FunctionExtension<"cl_intel_subgroups __opencl_c_read_write_images">;
+def FuncExtIntelSubgroupsShort : FunctionExtension<"cl_intel_subgroups_short">;
 def FuncExtIntelSubgroupsShortLocalBlockIO : FunctionExtension<"cl_intel_subgroups_short cl_intel_subgroup_local_block_io">;
-def FuncExtIntelSubgroupsCharLocalBlockIO : FunctionExtension<"cl_intel_subgroups_char cl_intel_subgroup_local_block_io">;
-def FuncExtIntelSubgroupsLongLocalBlockIO : FunctionExtension<"cl_intel_subgroups_long cl_intel_subgroup_local_block_io">;
+def FuncExtIntelSubgroupsShortPrefetch : FunctionExtension<"cl_intel_subgroups_short cl_intel_subgroup_buffer_prefetch">;
+def FuncExtIntelSubgroupsShortRWImages : FunctionExtension<"cl_intel_subgroups_short __opencl_c_read_write_images">;
 
 // cl_intel_subgroups - shuffle functions
 // intel_sub_group_shuffle(T, uint) for float/int/uint vectors, half/double
