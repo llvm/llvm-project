@@ -1,17 +1,27 @@
 # RUN: yaml2obj %s -o %t.exe
 # RUN: llvm-objdump --unwind-info %t.exe | FileCheck %s
 
-## T1: V3 basic — prolog only (no epilog).
-##
-## .xdata hex breakdown:
-## Byte 0: 0x03  (Version=3, Flags=0)
-## Byte 1: 0x06  (SizeOfProlog=6)
-## Byte 2: 0x02  (PayloadWords=2 words -> 4 bytes payload)
-## Byte 3: 0x02  (NumberOfOps=2, NumberOfEpilogs=0)
-## +0: 06        Prolog IP offset[0]: +6
-## +1: 00        Prolog IP offset[1]: +0
-## +2: 38        WOD pool[0]: WOD_ALLOC_SMALL Size=(3+1)*8=32
-## +3: 3C        WOD pool[1]: WOD_PUSH RDI (reg=7: (7<<3)|4=0x3C)
+# T18: V3 with EHANDLER and odd PayloadWords.
+#
+# When PayloadWords is odd, the payload region occupies 4 + odd*2 bytes,
+# which is not a multiple of 4. The V3 spec locates the handler RVA at
+#   handler_offset = ALIGN_UP(sizeof(UNWIND_INFO_V3) + PayloadWords * 2, 4)
+# so the encoder emits 2 trailing zero padding bytes between the payload
+# and the handler. The decoder must therefore round up to the next 4-byte
+# boundary when looking for the handler.
+#
+# .xdata hex breakdown (PayloadWords=3, payload=6 bytes, padded to 8):
+# Byte 0: 0x0B  (Version=3, Flags=1 (UNW_FLAG_EHANDLER))
+# Byte 1: 0x07  (SizeOfProlog=7)
+# Byte 2: 0x03  (PayloadWords=3 words -> 6 bytes payload)
+# Byte 3: 0x02  (NumberOfOps=2, NumberOfEpilogs=0)
+# +0: 07        Prolog IP offset[0]: +7
+# +1: 00        Prolog IP offset[1]: +0
+# +2: 38        WOD pool[0]: WOD_ALLOC_SMALL Size=32
+# +3: 34        WOD pool[1]: WOD_PUSH RSI
+# +4: 00 00     Unused pool tail (only 2 WODs referenced by NumberOfOps=2)
+# +6: 00 00     Padding: handler_offset = ALIGN_UP(4+6, 4) = 12
+# Handler RVA at file offset 0xC: 00 10 00 00 = 0x1000
 
 # CHECK-LABEL:  Unwind info:
 # CHECK-EMPTY:
@@ -20,14 +30,15 @@
 # CHECK-NEXT:     End Address: 0x1010
 # CHECK-NEXT:     Unwind Info Address: 0x2000
 # CHECK-NEXT:       Version: 3
-# CHECK-NEXT:       Flags: 0x0
-# CHECK-NEXT:       Size of prolog: 0x6
-# CHECK-NEXT:       PayloadWords: 2
+# CHECK-NEXT:       Flags: 0x1 UNW_ExceptionHandler
+# CHECK-NEXT:       Size of prolog: 0x7
+# CHECK-NEXT:       PayloadWords: 3
 # CHECK-NEXT:       NumberOfOps: 2
 # CHECK-NEXT:       NumberOfEpilogs: 0
 # CHECK-NEXT:       Prolog [2 ops]:
-# CHECK-NEXT:         [0] IP +0x0006: WOD_ALLOC_SMALL Size=0x20
-# CHECK-NEXT:         [1] IP +0x0000: WOD_PUSH Reg=RDI
+# CHECK-NEXT:         [0] IP +0x0007: WOD_ALLOC_SMALL Size=0x20
+# CHECK-NEXT:         [1] IP +0x0000: WOD_PUSH Reg=RSI
+# CHECK-NEXT:       Handler: 0x1000
 
 --- !COFF
 OptionalHeader:
@@ -104,8 +115,8 @@ sections:
   - Name:            .xdata
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
     VirtualAddress:  8192
-    VirtualSize:     8
-    SectionData:     '030602020600383C'
+    VirtualSize:     16
+    SectionData:     '0B070302070038340000000000100000'
   - Name:            .pdata
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
     VirtualAddress:  12288

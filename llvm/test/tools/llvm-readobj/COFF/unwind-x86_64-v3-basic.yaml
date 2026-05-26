@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s -o %t.exe
 # RUN: llvm-readobj --unwind %t.exe | FileCheck %s
 
-## Test basic V3 unwind info with prolog only (no epilog).
+## T1: V3 basic — prolog only (no epilog).
 ##
 ## .xdata hex breakdown:
 ## Byte 0: 0x03  (Version=3, Flags=0)

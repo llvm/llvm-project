@@ -42,8 +42,6 @@ enum UnwindOpcodes {
   UOP_SaveXMM128,
   UOP_SaveXMM128Big,
   UOP_PushMachFrame,
-  // V3-only opcodes (not valid in V1/V2 .xdata):
-  UOP_Push2, // PUSH2 — two registers in one instruction
   // The following set of unwind opcodes is for ARM64.  They are documented at
   // https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling
   UOP_AllocMedium,
@@ -116,6 +114,10 @@ enum UnwindOpcodes {
   // A custom unspecified opcode, consisting of one or more bytes. This
   // allows producing opcodes in the implementation defined/reserved range.
   UOP_Custom,
+
+  // V3-only x86_64 opcodes. They are documented at
+  // https://learn.microsoft.com/en-us/cpp/build/x64-unwind-information-v3
+  UOP_Push2, // PUSH2 — two registers in one instruction
 };
 
 /// UnwindCode - This union describes a single operation in a function prolog,

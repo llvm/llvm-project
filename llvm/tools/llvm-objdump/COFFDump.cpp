@@ -792,6 +792,13 @@ static void printWin64EHUnwindInfoV3(ArrayRef<uint8_t> Data) {
                   Info.SizeOfProlog, Info.PrologIpOffsets[0]);
   }
 
+  // Per the V3 spec, Flags bit 4 (0x10) is reserved and must be zero. Warn
+  // (rather than error) so we stay forward-compatible if Microsoft later
+  // defines this bit.
+  if (Info.Flags & 0x10)
+    WithColor::warning(errs())
+        << "V3 unwind info has reserved Flags bit 4 set\n";
+
   // Prolog ops
   outs() << format("    Prolog [%u ops]:\n", Info.NumberOfOps);
   printWODSequence(Info.WODPool, 0, ArrayRef(Info.PrologIpOffsets),
@@ -810,10 +817,21 @@ static void printWin64EHUnwindInfoV3(ArrayRef<uint8_t> Data) {
                       : static_cast<uint32_t>(SignedOff);
     const char *Sign = SignedOff < 0 ? "-" : "+";
 
+    // Render Flags as "0xNN [name1 name2 ...]" so each set bit is visible.
+    std::string FlagsStr;
+    {
+      raw_string_ostream OSS(FlagsStr);
+      OSS << format("0x%02X", Epi.Flags);
+      if (Epi.Flags & EPILOG_PARENT_FRAGMENT_TRANSFER)
+        OSS << " EPILOG_PARENT_FRAGMENT_TRANSFER";
+      if (Epi.Flags & EPILOG_INFO_LARGE)
+        OSS << " EPILOG_INFO_LARGE";
+    }
+
     if (Epi.NumberOfOps == 0) {
       outs() << format(
-          "    Epilog [%u] (Flags=0x%02X, Offset=%s0x%X) [inherited]:\n", I,
-          Epi.Flags, Sign, AbsOff);
+          "    Epilog [%u] (Flags=%s, Offset=%s0x%X) [inherited]:\n", I,
+          FlagsStr.c_str(), Sign, AbsOff);
       if (I == 0) {
         WithColor::warning(errs())
             << "first epilog cannot inherit (NumberOfOps=0)\n";
@@ -828,9 +846,9 @@ static void printWin64EHUnwindInfoV3(ArrayRef<uint8_t> Data) {
       }
     } else {
       outs() << format(
-          "    Epilog [%u] (Flags=0x%02X, Offset=%s0x%X, IpOfLast=+0x%X) "
+          "    Epilog [%u] (Flags=%s, Offset=%s0x%X, IpOfLast=+0x%X) "
           "[%u ops, FirstOp=0x%X]:\n",
-          I, Epi.Flags, Sign, AbsOff,
+          I, FlagsStr.c_str(), Sign, AbsOff,
           static_cast<unsigned>(Epi.IpOffsetOfLastInstruction), Epi.NumberOfOps,
           Epi.FirstOp);
       printWODSequence(Info.WODPool, Epi.FirstOp, ArrayRef(Epi.IpOffsets),
@@ -846,6 +864,16 @@ static void printWin64EHUnwindInfoV3(ArrayRef<uint8_t> Data) {
     outs() << format("    WOD pool [%zu bytes]:\n", Info.WODPool.size());
     unsigned PoolOffset = 0;
     while (PoolOffset < Info.WODPool.size()) {
+      // PayloadWords counts 2-byte words, so the pool may have a single
+      // trailing zero padding byte to round up to a word boundary. A bare
+      // 0x00 byte is never a valid 1-byte WOD (WOD_ALLOC_SMALL requires the
+      // low nibble to be 8), so treat a final zero byte as padding rather
+      // than trying to decode it.
+      if (PoolOffset + 1 == Info.WODPool.size() &&
+          Info.WODPool[PoolOffset] == 0) {
+        outs() << format("      +0x%04X: (padding)\n", PoolOffset);
+        break;
+      }
       Expected<DecodedWOD> WOrErr = decodeWOD(Info.WODPool, PoolOffset);
       if (!WOrErr) {
         WithColor::warning(errs()) << toString(WOrErr.takeError()) << "\n";
@@ -930,7 +958,10 @@ static void printRuntimeFunction(const COFFObjectFile *Obj,
       return;
     }
     unsigned PayloadWords = RawBytes[2];
-    size_t MinSize = 4 + static_cast<size_t>(PayloadWords) * 2;
+    // When PayloadWords is odd there are 2 bytes of zero padding between
+    // the payload and the trailing handler/chain. Use the aligned size so the
+    // slice we hand the decoder reaches the handler/chain bytes.
+    size_t MinSize = alignTo(4 + static_cast<size_t>(PayloadWords) * 2, 4);
     // Include enough trailing bytes for the optional handler RVA (4 bytes)
     // or chained RUNTIME_FUNCTION (12 bytes) that may follow the payload.
     size_t ExtraBytes = 0;

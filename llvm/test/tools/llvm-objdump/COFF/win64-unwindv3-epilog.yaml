@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s -o %t.exe
 # RUN: llvm-objdump --unwind-info %t.exe | FileCheck %s
 
-## Test V3 unwind info with a single epilog that mirrors the prolog.
+## T2: V3 with a single epilog that mirrors the prolog.
 ##
 ## .xdata hex breakdown:
 ## Byte 0: 0x03  (Version=3, Flags=0)

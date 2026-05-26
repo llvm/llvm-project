@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s -o %t.exe
 # RUN: llvm-objdump --unwind-info %t.exe | FileCheck %s
 
-## Test V3 unwind info with UNW_FLAG_LARGE set.
+## T15: V3 with UNW_FLAG_LARGE set.
 ## SizeOfProlog is a 16-bit composite (low byte in the header, high byte in
 ## the UNWIND_INFO_LARGE_V3 extension which is part of the payload), and
 ## prolog IP offsets are 16-bit.

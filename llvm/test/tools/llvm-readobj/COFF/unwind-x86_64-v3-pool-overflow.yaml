@@ -32,7 +32,8 @@
 # CHECK-NEXT:         Prolog [1 ops]:
 # CHECK-NEXT:           [0] IP +0x0002: PUSH Reg=RDI
 # CHECK-NEXT:         Epilog [0] {
-# CHECK-NEXT:           Flags: 0x0
+# CHECK-NEXT:           Flags [ (0x0)
+# CHECK-NEXT:           ]
 # CHECK-NEXT:           EpilogOffset: +0xA
 # CHECK-NEXT:           NumberOfOps: 2
 # CHECK-NEXT:           FirstOp: 0x0

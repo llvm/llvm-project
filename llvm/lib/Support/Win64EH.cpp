@@ -13,6 +13,7 @@
 #include "llvm/Support/Win64EH.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 using namespace llvm::Win64EH;
@@ -80,6 +81,11 @@ Expected<DecodedWOD> Win64EH::decodeWOD(ArrayRef<uint8_t> Pool,
       W.Opcode = WOD_PUSH_CONSECUTIVE_2;
       W.ByteSize = 1;
       W.Register = (FirstByte >> 3) & 0x1F;
+      if (W.Register > 30)
+        return createStringError(
+            "WOD_PUSH_CONSECUTIVE_2 Register=%u out of range [0,30] at pool "
+            "offset %u",
+            W.Register, Offset);
       return W;
     }
     default:
@@ -349,7 +355,10 @@ Win64EH::decodeUnwindInfoV3(ArrayRef<uint8_t> Data) {
   else
     Info.WODPool = ArrayRef<uint8_t>();
 
-  Info.PayloadSize = PayloadEnd;
+  // When PayloadWords is odd, the encoder emits 2 trailing zero bytes inside
+  // the payload region as padding before the handler/chain. Report the
+  // aligned offset so consumers locate the next field correctly.
+  Info.PayloadSize = alignTo(PayloadEnd, 4);
 
   return Info;
 }

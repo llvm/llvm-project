@@ -19,7 +19,7 @@
 # CHECK-NEXT:         [0] IP +0x0007: WOD_ALLOC_SMALL Size=0x20
 # CHECK-NEXT:         [1] IP +0x0002: WOD_PUSH Reg=RSI
 # CHECK-NEXT:         [2] IP +0x0000: WOD_PUSH Reg=RDI
-# CHECK-NEXT:       Epilog [0] (Flags=0x01, Offset=+0x14, IpOfLast=+0x6) [3 ops, FirstOp=0x0]:
+# CHECK-NEXT:       Epilog [0] (Flags=0x01 EPILOG_PARENT_FRAGMENT_TRANSFER, Offset=+0x14, IpOfLast=+0x6) [3 ops, FirstOp=0x0]:
 # CHECK-NEXT:         [0] IP +0x0000: WOD_ALLOC_SMALL Size=0x20
 # CHECK-NEXT:         [1] IP +0x0004: WOD_PUSH Reg=RSI
 # CHECK-NEXT:         [2] IP +0x0005: WOD_PUSH Reg=RDI

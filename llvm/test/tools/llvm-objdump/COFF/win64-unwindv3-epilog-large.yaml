@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s -o %t.exe
 # RUN: llvm-objdump --unwind-info %t.exe | FileCheck %s
 
-## Test V3 unwind info with EPILOG_INFO_LARGE flag on an epilog.
+## T16: V3 with EPILOG_INFO_LARGE flag on an epilog.
 ## The epilog uses 16-bit IpOffsetOfLastInstruction and 16-bit IP offsets.
 ##
 ## .xdata hex breakdown:
@@ -33,7 +33,7 @@
 # CHECK-NEXT:       NumberOfEpilogs: 1
 # CHECK-NEXT:       Prolog [1 ops]:
 # CHECK-NEXT:         [0] IP +0x0004: WOD_ALLOC_SMALL Size=0x20
-# CHECK-NEXT:       Epilog [0] (Flags=0x02, Offset=+0x14, IpOfLast=+0x130) [1 ops, FirstOp=0x0]:
+# CHECK-NEXT:       Epilog [0] (Flags=0x02 EPILOG_INFO_LARGE, Offset=+0x14, IpOfLast=+0x130) [1 ops, FirstOp=0x0]:
 # CHECK-NEXT:         [0] IP +0x0000: WOD_ALLOC_SMALL Size=0x20
 
 --- !COFF

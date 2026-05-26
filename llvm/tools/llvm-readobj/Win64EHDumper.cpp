@@ -18,11 +18,19 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::Win64EH;
 
+// clang-format off
 const EnumEntry<unsigned> UnwindFlags[] = {
-    {"ExceptionHandler", UNW_ExceptionHandler},
-    {"TerminateHandler", UNW_TerminateHandler},
-    {"ChainInfo", UNW_ChainInfo},
-    {"Large", UNW_FlagLarge}};
+  { "ExceptionHandler", UNW_ExceptionHandler },
+  { "TerminateHandler", UNW_TerminateHandler },
+  { "ChainInfo"       , UNW_ChainInfo        },
+  { "Large"           , UNW_FlagLarge        }
+};
+
+const EnumEntry<unsigned> EpilogFlags[] = {
+  { "ParentFragmentTransfer", EPILOG_PARENT_FRAGMENT_TRANSFER },
+  { "Large"                 , EPILOG_INFO_LARGE               }
+};
+// clang-format on
 
 const EnumEntry<unsigned> UnwindOpInfo[] = {
   { "RAX",  0 },
@@ -526,6 +534,13 @@ void Dumper::printUnwindInfoV3(const Context &Ctx,
                   Info.SizeOfProlog, Info.PrologIpOffsets[0]);
   }
 
+  // Per the V3 spec, Flags bit 4 (0x10) is reserved and must be zero. Warn
+  // (rather than error) so we stay forward-compatible if Microsoft later
+  // defines this bit.
+  if (Info.Flags & 0x10)
+    WithColor::warning(errs())
+        << "V3 unwind info has reserved Flags bit 4 set\n";
+
   // Print prolog ops
   {
     SW.startLine() << format("Prolog [%u ops]:\n", Info.NumberOfOps);
@@ -540,7 +555,7 @@ void Dumper::printUnwindInfoV3(const Context &Ctx,
     const DecodedEpilogV3 &Epi = Info.Epilogs[I];
 
     DictScope ES(SW, formatv("Epilog [{0}]", I).str());
-    SW.printHex("Flags", Epi.Flags);
+    SW.printFlags("Flags", Epi.Flags, ArrayRef(EpilogFlags));
     // Format the signed EpilogOffset as hex with explicit sign so negative
     // tail-relative offsets remain readable (e.g. "-0x14" rather than
     // "0xFFFFFFEC").
@@ -585,6 +600,16 @@ void Dumper::printUnwindInfoV3(const Context &Ctx,
     ListScope WS(SW, formatv("WODPool [{0} bytes]", Info.WODPool.size()).str());
     unsigned PoolOffset = 0;
     while (PoolOffset < Info.WODPool.size()) {
+      // PayloadWords counts 2-byte words, so the pool may have a single
+      // trailing zero padding byte to round up to a word boundary. A bare
+      // 0x00 byte is never a valid 1-byte WOD (WOD_ALLOC_SMALL requires the
+      // low nibble to be 8), so treat a final zero byte as padding rather
+      // than trying to decode it.
+      if (PoolOffset + 1 == Info.WODPool.size() &&
+          Info.WODPool[PoolOffset] == 0) {
+        SW.startLine() << format("+0x%04X: (padding)\n", PoolOffset);
+        break;
+      }
       Expected<DecodedWOD> WOrErr = decodeWOD(Info.WODPool, PoolOffset);
       if (!WOrErr) {
         WithColor::warning(errs()) << toString(WOrErr.takeError()) << "\n";

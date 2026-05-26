@@ -45,7 +45,8 @@
 # CHECK-NEXT:           [1] IP +0x0002: PUSH Reg=RSI
 # CHECK-NEXT:           [2] IP +0x0000: PUSH Reg=RDI
 # CHECK-NEXT:         Epilog [0] {
-# CHECK-NEXT:           Flags: 0x0
+# CHECK-NEXT:           Flags [ (0x0)
+# CHECK-NEXT:           ]
 # CHECK-NEXT:           EpilogOffset: +0x14
 # CHECK-NEXT:           NumberOfOps: 3
 # CHECK-NEXT:           FirstOp: 0x0
@@ -55,13 +56,15 @@
 # CHECK-NEXT:           [2] IP +0x0005: PUSH Reg=RDI
 # CHECK-NEXT:         }
 # CHECK-NEXT:         Epilog [1] {
-# CHECK-NEXT:           Flags: 0x0
+# CHECK-NEXT:           Flags [ (0x0)
+# CHECK-NEXT:           ]
 # CHECK-NEXT:           EpilogOffset: +0x1E
 # CHECK-NEXT:           NumberOfOps: 0
 # CHECK-NEXT:           (inherits from previous epilog: FirstOp=0x0, IpOffsetOfLastInstruction=0x6, 3 ops)
 # CHECK-NEXT:         }
 # CHECK-NEXT:         Epilog [2] {
-# CHECK-NEXT:           Flags: 0x0
+# CHECK-NEXT:           Flags [ (0x0)
+# CHECK-NEXT:           ]
 # CHECK-NEXT:           EpilogOffset: +0x23
 # CHECK-NEXT:           NumberOfOps: 2
 # CHECK-NEXT:           FirstOp: 0x1

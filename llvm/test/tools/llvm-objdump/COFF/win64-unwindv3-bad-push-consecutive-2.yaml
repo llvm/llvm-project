@@ -1,17 +1,22 @@
 # RUN: yaml2obj %s -o %t.exe
-# RUN: llvm-objdump --unwind-info %t.exe | FileCheck %s
+# RUN: llvm-objdump --unwind-info %t.exe 2>%t.err | FileCheck %s
+# RUN: FileCheck %s --check-prefix=WARN < %t.err
 
-## T1: V3 basic — prolog only (no epilog).
+## T17: V3 malformed — WOD_PUSH_CONSECUTIVE_2 with Register=31.
+## Per the spec, Register must be in [0,30] because the instruction pushes
+## Register and Register+1; Register=31 would put Register+1 (R32) out of
+## bounds. The decoder must reject this.
 ##
 ## .xdata hex breakdown:
 ## Byte 0: 0x03  (Version=3, Flags=0)
-## Byte 1: 0x06  (SizeOfProlog=6)
+## Byte 1: 0x02  (SizeOfProlog=2)
 ## Byte 2: 0x02  (PayloadWords=2 words -> 4 bytes payload)
-## Byte 3: 0x02  (NumberOfOps=2, NumberOfEpilogs=0)
-## +0: 06        Prolog IP offset[0]: +6
-## +1: 00        Prolog IP offset[1]: +0
-## +2: 38        WOD pool[0]: WOD_ALLOC_SMALL Size=(3+1)*8=32
-## +3: 3C        WOD pool[1]: WOD_PUSH RDI (reg=7: (7<<3)|4=0x3C)
+## Byte 3: 0x01  (NumberOfOps=1, NumberOfEpilogs=0)
+## +0: 02        Prolog IP offset[0]: +2
+## +1: FF        WOD pool[0]: WOD_PUSH_CONSECUTIVE_2 Register=31 (INVALID)
+##                           ((31<<3) | 7) = 0xFF
+## +2: 00        Padding
+## +3: 00        Padding
 
 # CHECK-LABEL:  Unwind info:
 # CHECK-EMPTY:
@@ -21,13 +26,13 @@
 # CHECK-NEXT:     Unwind Info Address: 0x2000
 # CHECK-NEXT:       Version: 3
 # CHECK-NEXT:       Flags: 0x0
-# CHECK-NEXT:       Size of prolog: 0x6
+# CHECK-NEXT:       Size of prolog: 0x2
 # CHECK-NEXT:       PayloadWords: 2
-# CHECK-NEXT:       NumberOfOps: 2
+# CHECK-NEXT:       NumberOfOps: 1
 # CHECK-NEXT:       NumberOfEpilogs: 0
-# CHECK-NEXT:       Prolog [2 ops]:
-# CHECK-NEXT:         [0] IP +0x0006: WOD_ALLOC_SMALL Size=0x20
-# CHECK-NEXT:         [1] IP +0x0000: WOD_PUSH Reg=RDI
+# CHECK-NEXT:       Prolog [1 ops]:
+# CHECK-EMPTY:
+# WARN: warning: WOD_PUSH_CONSECUTIVE_2 Register=31 out of range [0,30] at pool offset 0
 
 --- !COFF
 OptionalHeader:
@@ -105,7 +110,7 @@ sections:
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
     VirtualAddress:  8192
     VirtualSize:     8
-    SectionData:     '030602020600383C'
+    SectionData:     '0302020102FF0000'
   - Name:            .pdata
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
     VirtualAddress:  12288
