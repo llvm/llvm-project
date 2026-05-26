@@ -499,9 +499,6 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = (d ? d->getNonClosureContext() : nullptr);
 
-  if (fd && (fd->UsesFPIntrin() || fd->hasAttr<StrictFPAttr>()))
-    cgm.errorNYI(loc, "STDC FENV_ACCESS");
-
   prologueCleanupDepth = ehStack.stable_begin();
 
   mlir::Block *entryBB = &fn.getBlocks().front();
@@ -780,8 +777,10 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
 
     // Emit the standard function prologue.
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
-    if (funcDecl->UsesFPIntrin() || funcDecl->hasAttr<StrictFPAttr>())
+    if (funcDecl->UsesFPIntrin() || funcDecl->hasAttr<StrictFPAttr>()) {
+      cgm.errorNYI(loc, "STDC FENV_ACCESS");
       return fn;
+    }
 
     // Save parameters for coroutine function.
     if (body && isa_and_nonnull<CoroutineBodyStmt>(body))
