@@ -35,14 +35,17 @@ struct Big P2(struct Big a, struct Big b) {
 // COMMON: musttail call {{.*}} @C2({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
 
 // P3: swap. Slot 0's dst is %a (positional), so the value of %b is copied
-// into %a; symmetrically for slot 1. Two-phase emit captures both sources
-// before either destination is overwritten.
+// into %a; symmetrically for slot 1. The scratch alloca catches the in-
+// place-write regression: v1 would emit memcpy(%a, %b); memcpy(%b, %a) and
+// both slots would end up with orig_b. v2 captures at least one source
+// into a scratch first; we assert the scratch is present.
 struct Big C3(struct Big x, struct Big y);
 struct Big P3(struct Big a, struct Big b) {
   __attribute__((musttail)) return C3(b, a);
 }
 // COMMON-LABEL: define {{.*}} @P3(
-// COMMON: musttail call {{.*}} @C3({{.*}}, ptr {{.*}}, ptr {{.*}})
+// COMMON: %musttail.copy{{[0-9]*}} = alloca {{.*}}struct.Big
+// COMMON: musttail call {{.*}} @C3({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
 
 // P5: caller mutates the parameter before the musttail. The mutation lands
 // at the incoming pointer the callee receives.
@@ -129,15 +132,31 @@ struct AlignedBig P12(struct AlignedBig a) {
 // COMMON-LABEL: define {{.*}} @P12(
 // COMMON: musttail call {{.*}} @C12({{.*}}, ptr {{.*}} %a)
 
+// P13: mixed source kinds within Indirect slots. Slot 0's source is a local;
+// slot 1's source is an incoming parameter. Both routes engage in the same
+// call: local-source case (would have dangled under v1's byval-temp path)
+// and forward case must coexist with two-phase ordering.
+struct Big C13(struct Big x, struct Big y);
+struct Big P13(struct Big a, struct Big b) {
+  struct Big local = {1, 2, 3, 4};
+  __attribute__((musttail)) return C13(local, a);
+}
+// COMMON-LABEL: define {{.*}} @P13(
+// COMMON-NOT: byval-temp
+// COMMON: %musttail.copy{{[0-9]*}} = alloca {{.*}}struct.Big
+// COMMON: musttail call {{.*}} @C13({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
+
 // P17: same arg to three slots (generalization of P7).
 struct Big C17(struct Big x, struct Big y, struct Big z);
 struct Big P17(struct Big a, struct Big b, struct Big c) {
   __attribute__((musttail)) return C17(a, a, a);
 }
 // COMMON-LABEL: define {{.*}} @P17(
-// At -O1 the optimizer may fold the per-slot reads, so only require that
-// each destination (%b, %c) gets a memcpy/memmove and that the musttail
-// call passes three distinct incoming pointers.
+// The scratch alloca catches the in-place-write regression: v1 would emit
+// memcpy(%b, %a); memcpy(%c, %a) directly and pass a v1 check too. The
+// scratch presence asserts the two-phase emit is in use; the per-dst
+// memcpy/memmove and call-arg list pin the rest.
+// COMMON: %musttail.copy{{[0-9]*}} = alloca {{.*}}struct.Big
 // COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{.*}} %b,
 // COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{.*}} %c,
 // COMMON: musttail call {{.*}} @C17({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b, ptr {{.*}} %c)

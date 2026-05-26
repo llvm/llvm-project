@@ -5154,8 +5154,7 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
           if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
             if (VD->hasLocalStorage() ||
                 (isa<ParmVarDecl>(VD) &&
-                 VD->getDeclContext() ==
-                     dyn_cast<DeclContext>(CurCodeDecl))) {
+                 VD->getDeclContext() == dyn_cast<DeclContext>(CurCodeDecl))) {
               LValue L = EmitLValue(DRE);
               assert(L.isSimple());
               args.addUncopiedAggregate(L, type);
@@ -5722,8 +5721,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             LValue SrcLV = MakeAddrLValue(SrcAddr, Ty);
             EmitAggregateCopy(ScratchLV, SrcLV, Ty,
                               AggValueSlot::DoesNotOverlap);
-            LValue DstLV =
-                MakeAddrLValue(Address(Dst, ElemTy, Align), Ty);
+            LValue DstLV = MakeAddrLValue(Address(Dst, ElemTy, Align), Ty);
             MustTailIndirectCopies.push_back({ScratchLV, DstLV, Ty});
           }
           llvm::Value *Val = Dst;

@@ -31,12 +31,15 @@ struct Big P2(struct Big a, struct Big b) {
 // COMMON-NOT: llvm.memcpy
 // COMMON: musttail call {{.*}} @_Z2C23BigS_({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
 
-// P3: swapped args.
+// P3: swap. Asserts the scratch alloca to catch the in-place-write
+// regression (see musttail-indirect-arg.c).
 struct Big C3(struct Big x, struct Big y);
 struct Big P3(struct Big a, struct Big b) {
   [[clang::musttail]] return C3(b, a);
 }
 // COMMON-LABEL: define {{.*}} @_Z2P33BigS_(
+// COMMON: %musttail.copy{{[0-9]*}} = alloca {{.*}}struct.Big
+// COMMON: musttail call {{.*}} @_Z2C33BigS_({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
 
 // P4: non-trivial copy constructor. The trivial-copy gate must NOT engage;
 // the user-defined copy ctor IS called. Dangling-stack bug in this corner
@@ -134,12 +137,24 @@ struct Big S::P16(struct Big a) {
 // COMMON-NOT: = alloca {{.*}}struct.Big
 // COMMON: musttail call {{.*}} @_ZN1S1fE3Big({{.*}}, ptr {{.*}}, ptr {{.*}} %a)
 
+// P13: mixed source kinds (local + incoming parameter).
+struct Big C13(struct Big x, struct Big y);
+struct Big P13(struct Big a, struct Big b) {
+  struct Big local = {1, 2, 3, 4};
+  [[clang::musttail]] return C13(local, a);
+}
+// COMMON-LABEL: define {{.*}} @_Z3P133BigS_(
+// COMMON-NOT: byval-temp
+// COMMON: %musttail.copy{{[0-9]*}} = alloca {{.*}}struct.Big
+// COMMON: musttail call {{.*}} @_Z3C133BigS_({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
+
 // P17: same arg to three slots (generalization of P7).
 struct Big C17(struct Big x, struct Big y, struct Big z);
 struct Big P17(struct Big a, struct Big b, struct Big c) {
   [[clang::musttail]] return C17(a, a, a);
 }
 // COMMON-LABEL: define {{.*}} @_Z3P173BigS_S_(
+// COMMON: %musttail.copy{{[0-9]*}} = alloca {{.*}}struct.Big
 // COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{.*}} %b,
 // COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{.*}} %c,
 // COMMON: musttail call {{.*}} @_Z3C173BigS_S_({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b, ptr {{.*}} %c)
