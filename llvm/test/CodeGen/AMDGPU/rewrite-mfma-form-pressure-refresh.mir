@@ -1,0 +1,112 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 \
+# RUN:     -amdgpu-disable-rewrite-mfma-form-sched-stage=false \
+# RUN:     -run-pass=machine-scheduler %s -o - | FileCheck %s
+#
+# Test: RewriteMFMAFormStage pressure refresh and shouldRevertScheduling.
+#
+# Fix 1 — DAG.Pressure refresh scope in rewrite() (GCNSchedStrategy.cpp):
+#   rewrite() calls LIS->reanalyze() which updates live intervals for the whole
+#   function. Previously only DAG.Pressure[RegionIdx] was refreshed; other
+#   regions retained stale pressure data, potentially causing wrong occupancy
+#   decisions in subsequent scheduling stages. The fix refreshes all regions.
+#
+# Fix 2 — RewriteMFMAFormStage::shouldRevertScheduling override:
+#   After rewriting MFMAs to AGPR form, AGPR count rises (expected). The base
+#   class mayCauseSpilling checks total RP and may incorrectly revert scheduling
+#   for a region that still has excess archVGPR. The override only reverts if
+#   archVGPR or AGPR pressure specifically worsened while remaining over the
+#   physical limit, preventing false reverts caused by the expected AGPR increase.
+#
+# Two scheduling regions (separated by SCHED_BARRIER), each with MFMA chains
+# and sufficient vreg_1024 pressure (> 256 arch VGPRs) to activate
+# RewriteMFMAFormStage. Both regions' MFMAs must appear in areg form, confirming:
+#   - rewrite() refreshes pressure for all regions, not just the current one (Fix 1)
+#   - scheduling is not falsely reverted due to AGPR pressure increase (Fix 2)
+#
+# CHECK-LABEL: name: test_pressure_refresh_multiregion
+# CHECK: bb.1.loop:
+# Region 1 (before SCHED_BARRIER): MFMAs rewritten to areg.
+# CHECK-DAG: :areg_128_align2 = V_MFMA_F32_16X16X32_F16_e64
+# Region 0 (after SCHED_BARRIER): MFMAs also rewritten to areg.
+# CHECK-DAG: SCHED_BARRIER 0
+# CHECK-DAG: :areg_128_align2 = V_MFMA_F32_16X16X32_F16_e64
+# No vgprcd MFMAs remain anywhere.
+# CHECK-NOT: V_MFMA_F32_16X16X32_F16_vgprcd_e64
+--- |
+  target datalayout = "e-m:e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
+  target triple = "amdgcn-amd-amdhsa"
+
+  declare <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half>, <8 x half>, <4 x float>, i32 immarg, i32 immarg, i32 immarg) #0
+
+  define amdgpu_kernel void @test_pressure_refresh_multiregion(ptr addrspace(1) %out, <8 x half> %a, <8 x half> %b, i32 %n) #1 {
+  entry:
+    br label %loop
+  loop:
+    br label %loop
+  epilogue:
+    ret void
+  }
+
+  attributes #0 = { convergent nocallback nocreateundeforpoison nofree nosync nounwind willreturn memory(none) "target-cpu"="gfx950" }
+  attributes #1 = { "amdgpu-flat-work-group-size"="64,64" "amdgpu-waves-per-eu"="1,1" "target-cpu"="gfx950" }
+...
+---
+name:            test_pressure_refresh_multiregion
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy:       1
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+
+    %0:vreg_128_align2 = IMPLICIT_DEF
+    %1:vreg_128_align2 = IMPLICIT_DEF
+    %2:av_128_align2 = IMPLICIT_DEF
+    %3:av_128_align2 = IMPLICIT_DEF
+    %4:vreg_128_align2 = IMPLICIT_DEF
+    %5:vreg_128_align2 = IMPLICIT_DEF
+    %6:vreg_128_align2 = IMPLICIT_DEF
+    %7:vreg_128_align2 = IMPLICIT_DEF
+    %8:vreg_128_align2 = IMPLICIT_DEF
+    %9:av_128_align2 = IMPLICIT_DEF
+    %10:av_128_align2 = IMPLICIT_DEF
+    ; 8 x vreg_1024 = 256 arch VGPRs live into loop: excess pressure in both regions.
+    %100:vreg_1024_align2 = IMPLICIT_DEF
+    %101:vreg_1024_align2 = IMPLICIT_DEF
+    %102:vreg_1024_align2 = IMPLICIT_DEF
+    %103:vreg_1024_align2 = IMPLICIT_DEF
+    %104:vreg_1024_align2 = IMPLICIT_DEF
+    %105:vreg_1024_align2 = IMPLICIT_DEF
+    %106:vreg_1024_align2 = IMPLICIT_DEF
+    %107:vreg_1024_align2 = IMPLICIT_DEF
+    %110:vreg_128_align2 = IMPLICIT_DEF
+    %111:vreg_128_align2 = IMPLICIT_DEF
+
+  bb.1.loop:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+
+    ; Region 1 (before SCHED_BARRIER): 4-level MFMA chain.
+    %0:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %2, %3, %0, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %2, %3, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %4:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %9, %10, %0, 0, 0, 0, implicit $mode, implicit $exec
+    %5:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %9, %10, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %6:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %2, %3, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %7:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %2, %3, %5, 0, 0, 0, implicit $mode, implicit $exec
+    %8:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %9, %10, %6, 0, 0, 0, implicit $mode, implicit $exec
+
+    KILL %100, %101, %102, %103, %104, %105, %106, %107
+    SCHED_BARRIER 0
+
+    ; Region 0 (after SCHED_BARRIER): separate 2-chain.
+    ; After rewrite() calls LIS->reanalyze(), Region 1's pressure must also be
+    ; refreshed (Fix 1). Without Fix 1, DAG.Pressure[Region 1] stays stale.
+    %120:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %2, %3, %110, 0, 0, 0, implicit $mode, implicit $exec
+    %121:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %2, %3, %111, 0, 0, 0, implicit $mode, implicit $exec
+
+    S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+    S_BRANCH %bb.2
+
+  bb.2.epilogue:
+    S_ENDPGM 0
+...

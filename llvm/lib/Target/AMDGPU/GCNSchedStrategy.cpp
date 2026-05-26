@@ -2136,6 +2136,36 @@ bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
   return Profit < ScheduleMetrics::ScaleFactor;
 }
 
+bool RewriteMFMAFormStage::shouldRevertScheduling(unsigned WavesAfter) {
+  if (PressureAfter == PressureBefore)
+    return false;
+
+  if (GCNSchedStage::shouldRevertScheduling(WavesAfter))
+    return true;
+
+  // Unlike other stages, RewriteMFMAFormStage targets archVGPR pressure
+  // specifically. mayCauseSpilling checks isRegionWithExcessRP() (total RP
+  // flag) which may not reflect archVGPR excess. Instead, revert only if
+  // scheduling made archVGPR pressure worse than before this region was
+  // scheduled, and archVGPR is still over the physical limit.
+  if (RegionsWithExcessArchVGPR[RegionIdx]) {
+    // RewriteMFMAFormStage converts archVGPR → AGPR form; both share the same
+    // physical register limit. Revert if scheduling worsened either dimension
+    // while it is still over the physical limit.
+    unsigned MaxArchVGPRs = ST.getAddressableNumArchVGPRs();
+    if (PressureAfter.getArchVGPRNum() > MaxArchVGPRs &&
+        PressureAfter.getArchVGPRNum() > PressureBefore.getArchVGPRNum())
+      return true;
+    if (PressureAfter.getAGPRNum() > MaxArchVGPRs &&
+        PressureAfter.getAGPRNum() > PressureBefore.getAGPRNum())
+      return true;
+  } else if (mayCauseSpilling(WavesAfter)) {
+    // Region had no excess archVGPR; fall back to normal spill check.
+    return true;
+  }
+  return false;
+}
+
 bool ClusteredLowOccStage::shouldRevertScheduling(unsigned WavesAfter) {
   if (PressureAfter == PressureBefore)
     return false;
@@ -2754,7 +2784,7 @@ bool RewriteMFMAFormStage::rewrite(
       // Since we know this use has only one reaching def, we can replace the
       // use reg.
       RU->setReg(NewUseReg);
-      // Track the copy source operand for r eplacement.
+      // Track the copy source operand for replacement.
       DstRegSet.insert(&VGPRCopy->getOperand(1));
     }
 
@@ -2847,10 +2877,10 @@ bool RewriteMFMAFormStage::rewrite(
   RegionPressureMap LiveInUpdater(&DAG, false);
   LiveInUpdater.buildLiveRegMap();
 
-  for (unsigned Region = 0; Region < DAG.Regions.size(); Region++)
+  for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
     DAG.LiveIns[Region] = LiveInUpdater.getLiveRegsForRegionIdx(Region);
-
-  DAG.Pressure[RegionIdx] = DAG.getRealRegPressure(RegionIdx);
+    DAG.Pressure[Region] = DAG.getRealRegPressure(Region);
+  }
 
   return true;
 }
