@@ -1288,7 +1288,9 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
 
   if (!getLangOpts().CPlusPlus) {
     if (InitStmt != nullptr && InitStmt->isUsable()) {
-      // Handle the 2 clauses of declaration: (clause1; clause2).
+      // Handle the 2 clauses of declaration: (clause1; clause2). We need to
+      // allow NullStmt because that’s what we end up with if we have an empty
+      // attribute-specifier-sequence, which is valid: if ([[]]; true).
       if (!isa<DeclStmt, AttributedStmt, NullStmt>(InitStmt->get()))
         // C2y only permits declaration in the first clause of an if condition.
         Diag(InitStmt->get()->getBeginLoc(),

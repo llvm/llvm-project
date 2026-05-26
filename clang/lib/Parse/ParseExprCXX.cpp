@@ -1909,11 +1909,15 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
       return ParseCondition(nullptr, Loc, CK, MissingOK);
     }
 
-    if (Tok.is(tok::semi) && ParsedAttrs) {
-      // Parse if ([[...]]; true).
-      WarnOnInit();
-      *InitStmt = Actions.ActOnAttributedStmt(
-          attrs, Actions.ActOnNullStmt(ConsumeToken()).get());
+    // Handle 'if (; true)' and 'if ([[...]]; true)'.
+    if (Tok.is(tok::semi)) {
+      StmtResult Null = Actions.ActOnNullStmt(ConsumeToken());
+      if (ParsedAttrs) {
+        WarnOnInit();
+        *InitStmt = Actions.ActOnAttributedStmt(attrs, Null.get());
+      } else
+        Diag(Null.get()->getBeginLoc(),
+             diag::err_c2y_first_condition_clause_is_not_declaration);
       return ParseCondition(nullptr, Loc, CK, MissingOK);
     }
   }
@@ -1927,12 +1931,6 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
     //   if (; true);
     if (InitStmt && Tok.is(tok::semi)) {
       WarnOnInit();
-      if (!getLangOpts().CPlusPlus && !InitStmt->get()) {
-        Diag(Tok.getLocation(),
-             diag::err_c2y_first_condition_clause_is_not_declaration);
-        Actions.ActOnNullStmt(ConsumeToken());
-        return ParseCondition(nullptr, Loc, CK, MissingOK);
-      }
       SourceLocation SemiLoc = Tok.getLocation();
       if (!Tok.hasLeadingEmptyMacro() && !SemiLoc.isMacroID()) {
         Diag(SemiLoc, diag::warn_empty_init_statement)
