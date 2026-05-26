@@ -642,7 +642,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::CONCAT_VECTORS, {MVT::v4i16, MVT::v8i8}, Legal);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, {MVT::v2i16, MVT::v4i8},
                          Legal);
-      setOperationAction(ISD::SELECT, {MVT::v4i16, MVT::v8i8}, Custom);
+      setOperationAction({ISD::SELECT, ISD::VSELECT}, {MVT::v4i16, MVT::v8i8},
+                         Custom);
+      setOperationAction(ISD::MUL, {MVT::v4i16, MVT::v8i8}, Custom);
       setOperationAction(ISD::SETCC, P64VecVTs, Legal);
       setCondCodeAction(
           {ISD::SETGE, ISD::SETUGT, ISD::SETUGE, ISD::SETULE, ISD::SETLE},
@@ -1948,7 +1950,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
-  if (Subtarget.useRVVForFixedLengthVectors())
+  if (Subtarget.useRVVForFixedLengthVectors() || Subtarget.hasStdExtP())
     setTargetDAGCombine(ISD::BITCAST);
 
   setMaxDivRemBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
@@ -9014,7 +9016,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   }
   case ISD::ADD:
   case ISD::SUB:
-  case ISD::MUL:
   case ISD::MULHS:
   case ISD::MULHU:
   case ISD::SDIV:
@@ -9023,13 +9024,38 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::UREM:
   case ISD::BSWAP:
   case ISD::CTPOP:
-  case ISD::VSELECT:
     return lowerToScalableOp(Op, DAG);
+  case ISD::VSELECT: {
+    EVT VT = Op.getValueType();
+    // Split 64-bit vector VSELECT on RV32 with P extension for v4i16 and v8i8
+    if (Subtarget.hasStdExtP() && !Subtarget.is64Bit() &&
+        (VT == MVT::v4i16 || VT == MVT::v8i8)) {
+      SDLoc DL(Op);
+      SDValue Mask = Op.getOperand(0);
+      SDValue TrueVal = Op.getOperand(1);
+      SDValue FalseVal = Op.getOperand(2);
+
+      // Split all three operands into two halves
+      auto [MaskLo, MaskHi] = DAG.SplitVector(Mask, DL);
+      auto [TrueLo, TrueHi] = DAG.SplitVector(TrueVal, DL);
+      auto [FalseLo, FalseHi] = DAG.SplitVector(FalseVal, DL);
+
+      // Perform VSELECT on each half
+      SDValue ResLo = DAG.getNode(ISD::VSELECT, DL, TrueLo.getValueType(),
+                                  MaskLo, TrueLo, FalseLo);
+      SDValue ResHi = DAG.getNode(ISD::VSELECT, DL, TrueHi.getValueType(),
+                                  MaskHi, TrueHi, FalseHi);
+
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ResLo, ResHi);
+    }
+    return lowerToScalableOp(Op, DAG);
+  }
   case ISD::AND:
   case ISD::OR:
-  case ISD::XOR: {
+  case ISD::XOR:
+  case ISD::MUL: {
     EVT VT = Op.getValueType();
-    // Split 64-bit vector AND/OR/XOR on RV32 with P extension
+    // Split 64-bit vector AND/OR/XOR/MUL on RV32 with P extension
     if (Subtarget.hasStdExtP() && !Subtarget.is64Bit() &&
         (VT == MVT::v4i16 || VT == MVT::v8i8)) {
       SDLoc DL(Op);
@@ -19497,6 +19523,24 @@ static SDValue performVP_REVERSECombine(SDNode *N, SelectionDAG &DAG,
   return Ret;
 }
 
+// Fold (i32 (bitcast (v4i8/v2i16 const_splat))) to a scalar i32 constant
+// on RV64.
+static SDValue performP_BITCASTCombine(SDNode *N, SelectionDAG &DAG,
+                                       const RISCVSubtarget &Subtarget) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  EVT SrcVT = N0.getValueType();
+  if (!Subtarget.is64Bit() || VT != MVT::i32 ||
+      (SrcVT != MVT::v4i8 && SrcVT != MVT::v2i16))
+    return SDValue();
+
+  APInt SplatVal;
+  if (!ISD::isConstantSplatVector(N0.getNode(), SplatVal))
+    return SDValue();
+  return DAG.getConstant(APInt::getSplat(VT.getSizeInBits(), SplatVal),
+                         SDLoc(N), VT);
+}
+
 static SDValue performVP_STORECombine(SDNode *N, SelectionDAG &DAG,
                                       const RISCVSubtarget &Subtarget) {
   // Fold:
@@ -22554,7 +22598,11 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::VP_STORE:
     return performVP_STORECombine(N, DAG, Subtarget);
   case ISD::BITCAST: {
-    assert(Subtarget.useRVVForFixedLengthVectors());
+    if (Subtarget.hasStdExtP())
+      if (SDValue V = performP_BITCASTCombine(N, DAG, Subtarget))
+        return V;
+    if (!Subtarget.useRVVForFixedLengthVectors())
+      return SDValue();
     SDValue N0 = N->getOperand(0);
     EVT VT = N->getValueType(0);
     EVT SrcVT = N0.getValueType();
