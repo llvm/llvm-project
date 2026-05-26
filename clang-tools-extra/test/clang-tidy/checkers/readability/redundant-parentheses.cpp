@@ -110,11 +110,15 @@ struct Val {
 struct Iter {
   Val operator*() const;
 };
+struct PtrIter {
+  Val *operator*() const;
+};
 
-void memberAccessOnParen(Stream &s, Iter it) {
+void memberAccessOnParen(Stream &s, Iter it, PtrIter pit) {
   // Overloaded operator calls as base: parens are syntactically required.
   (s << "x").str();
   auto v = (*it).x;
+  auto u = (*pit)->x;
 
   // Plain expressions: parens are redundant even as member-access base.
   const char *p = (s).str();
