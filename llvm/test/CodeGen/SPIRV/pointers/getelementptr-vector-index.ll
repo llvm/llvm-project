@@ -6,7 +6,9 @@
 ; CHECK-DAG: %[[#INT64:]] = OpTypeInt 64 0
 ; CHECK-DAG: %[[#CONST_0:]] = OpConstantNull %[[#INT64]]
 ; CHECK-LABEL: Begin function test_vector_gep_with_load
+; CHECK-NOT: OpBitcast
 ; CHECK: %[[#GEP:]] = OpPtrAccessChain %[[#PTR_INT32]] %[[#]] %[[#CONST_0]]
+; CHECK-NOT: OpBitcast
 ; CHECK: %[[#VAL:]] = OpLoad %[[#INT32]] %[[#GEP]]
 ; CHECK: OpStore %[[#]] %[[#VAL]]
 ; CHECK: OpFunctionEnd

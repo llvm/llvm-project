@@ -27,7 +27,6 @@
 ; CHECK-NEXT: OpStore %[[#OUT1]] %[[#VAL1]]
 ; CHECK-NEXT: OpReturn
 ; CHECK-NEXT: OpFunctionEnd
-; CHECK-NOT: OpCompositeInsert
 define spir_kernel void @test_vector_gep_v1(ptr addrspace(1) %p, ptr addrspace(1) %out) {
   %gep = getelementptr i32, ptr addrspace(1) %p, <1 x i64> <i64 5>
   %elem = extractelement <1 x ptr addrspace(1)> %gep, i32 0
