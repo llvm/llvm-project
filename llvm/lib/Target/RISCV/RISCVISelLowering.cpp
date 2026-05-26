@@ -5222,15 +5222,15 @@ static bool isLegalVTForZvzipOperand(MVT VT, const RISCVSubtarget &Subtarget,
 /// odd element. These can be the first element in a source or the element half
 /// way through the source.
 static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, int &EvenSrc,
-                                int &OddSrc, const RISCVSubtarget &Subtarget,
-                                const TargetLowering &TLI) {
+                                int &OddSrc, const RISCVSubtarget &Subtarget) {
   // We need to be able to widen elements to the next larger integer type or
   // use the zip2a/vzip instruction at e64.
   if (VT.getScalarSizeInBits() >= Subtarget.getELen()) {
     if (!Subtarget.hasVendorXRivosVizip() && !Subtarget.hasStdExtZvzip())
       return false;
     if (Subtarget.hasStdExtZvzip() &&
-        !isLegalVTForZvzipOperand(VT, Subtarget, TLI))
+        !isLegalVTForZvzipOperand(VT, Subtarget,
+                                  *Subtarget.getTargetLowering()))
       return false;
   }
 
@@ -6568,7 +6568,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   // Detect an interleave shuffle and lower to
   // (vmaccu.vx (vwaddu.vx lohalf(V1), lohalf(V2)), lohalf(V2), (2^eltbits - 1))
   int EvenSrc, OddSrc;
-  if (isInterleaveShuffle(Mask, VT, EvenSrc, OddSrc, Subtarget, *this) &&
+  if (isInterleaveShuffle(Mask, VT, EvenSrc, OddSrc, Subtarget) &&
       !(NumElts == 2 &&
         ShuffleVectorInst::isSingleSourceMask(Mask, Mask.size()))) {
     // Extract the halves of the vectors.
@@ -7002,7 +7002,7 @@ bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
   return ShuffleVectorInst::isReverseMask(M, NumElts) ||
          (::isMaskedSlidePair(M, SrcInfo) &&
           isElementRotate(SrcInfo, NumElts)) ||
-         isInterleaveShuffle(M, SVT, Dummy1, Dummy2, Subtarget, *this);
+         isInterleaveShuffle(M, SVT, Dummy1, Dummy2, Subtarget);
 }
 
 // Lower CTLZ_ZERO_POISON or CTTZ_ZERO_POISON by converting to FP and extracting
