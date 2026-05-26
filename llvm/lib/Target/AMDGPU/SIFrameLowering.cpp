@@ -409,8 +409,7 @@ class PrologEpilogSGPRSpillBuilder {
     if (NeedsFrameMoves) {
       const TargetRegisterClass *RC = TRI.getPhysRegBaseClass(DstReg);
       ArrayRef<int16_t> DstSplitParts = TRI.getRegSplitParts(RC, EltSize);
-      unsigned DstNumSubRegs = DstSplitParts.empty() ? 1 : DstSplitParts.size();
-      assert(NumSubRegs == DstNumSubRegs);
+      assert(NumSubRegs == (DstSplitParts.empty() ? 1 : DstSplitParts.size()));
       MCRegister CFISuperReg = getCFISuperReg();
       if (NumSubRegs == 1) {
         TFI->buildCFI(
