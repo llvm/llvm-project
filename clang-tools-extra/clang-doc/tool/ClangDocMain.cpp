@@ -113,7 +113,7 @@ Turn on time profiler. Generates clang-doc-tracing.json)"),
                                       llvm::cl::cat(ClangDocCategory));
 
 static llvm::cl::opt<bool>
-    Pretty("pretty", llvm::cl::desc("Serialize JSON with whitespace."),
+    Pretty("pretty-json", llvm::cl::desc("Serialize JSON with whitespace."),
            llvm::cl::cat(ClangDocCategory));
 
 static llvm::cl::opt<OutputFormatTy> FormatEnum(
