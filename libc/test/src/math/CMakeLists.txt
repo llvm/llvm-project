@@ -2327,6 +2327,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinh_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    sinh_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.math.sinh
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   sinhf_test
   NEED_MPFR
   SUITE
