@@ -284,10 +284,6 @@ class RVPWideningShift_ri<bits<3> f, string opcodestr, Operand ImmType>
   let Inst{11-8}  = rd{4-1};
   let Inst{7}     = 0b0;
   let Inst{6-0}   = OPC_OP_IMM_32.Value;
-
-  let hasSideEffects = 0;
-  let mayLoad = 0;
-  let mayStore = 0;
 }
 
 class RVPWideningShiftW_ri<bits<3> f, string opcodestr>
