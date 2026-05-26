@@ -9117,8 +9117,6 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
       DstNanEnc == fltNanEncoding::AllOnes)
     DstMaxMantAtMaxExp = DstMantMask - 1;
 
-  // FIXME: ConstantFP inputs may not fully fold through this expansion.
-
   // Source format parameters.
   EVT SrcVT = FloatVal.getValueType();
   const fltSemantics &SrcSem = SrcVT.getScalarType().getFltSemantics();
@@ -9152,7 +9150,7 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
   SDValue FPZero = DAG.getConstantFP(0.0, dl, SrcVT);
   SDValue FPInf = DAG.getConstantFP(APFloat::getInf(SrcSem), dl, SrcVT);
   SDValue AbsVal = DAG.getNode(ISD::FABS, dl, SrcVT, FloatVal);
-  SDValue IsNaN = DAG.getSetCC(dl, FPSetCCVT, FloatVal, FloatVal, ISD::SETUO);
+  SDValue IsNaN = DAG.getSetCC(dl, FPSetCCVT, FloatVal, FPZero, ISD::SETUO);
   SDValue IsInf = DAG.getSetCC(dl, FPSetCCVT, AbsVal, FPInf, ISD::SETOEQ);
   SDValue IsZero = DAG.getSetCC(dl, FPSetCCVT, FloatVal, FPZero, ISD::SETOEQ);
 
@@ -9161,10 +9159,7 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
   // those inputs are detected above and override the final result.
   EVT FrexpExpScalarVT =
       getValueType(DAG.getDataLayout(), Type::getInt32Ty(*DAG.getContext()));
-  EVT FrexpExpVT = SrcVT.isVector()
-                       ? EVT::getVectorVT(*DAG.getContext(), FrexpExpScalarVT,
-                                          SrcVT.getVectorElementCount())
-                       : FrexpExpScalarVT;
+  EVT FrexpExpVT = SrcVT.changeElementType(*DAG.getContext(), FrexpExpScalarVT);
   SDValue Frexp =
       DAG.getNode(ISD::FFREXP, dl, DAG.getVTList(SrcVT, FrexpExpVT), FloatVal);
   SDValue FrexpFrac = Frexp.getValue(0);
@@ -9228,11 +9223,10 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
     // Check bit at position Shift - 1 aka the round bit.
     SDValue RoundBit;
     if (Shift >= 1) {
-      RoundBit = DAG.getNode(
-          ISD::AND, dl, IntVT,
-          DAG.getNode(ISD::SRL, dl, IntVT, EffSrcMant,
-                      DAG.getShiftAmountConstant(Shift - 1, IntVT, dl)),
-          One);
+      SDValue RoundBitShift = DAG.getShiftAmountConstant(Shift - 1, IntVT, dl);
+      SDValue ShiftedMant =
+          DAG.getNode(ISD::SRL, dl, IntVT, EffSrcMant, RoundBitShift);
+      RoundBit = DAG.getNode(ISD::AND, dl, IntVT, ShiftedMant, One);
     } else {
       RoundBit = Zero;
     }
@@ -9298,15 +9292,11 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
     SDValue FullSrcMant =
         DAG.getNode(ISD::OR, dl, IntVT, EffSrcMant, ImplicitOne);
 
-    // Total right shift = (SrcMant - DstMant) + DenormShift
-    SDValue TotalShift;
-    if (SrcMant >= DstMant) {
-      TotalShift = DAG.getNode(ISD::ADD, dl, IntVT, DenormShift,
-                               DAG.getConstant(SrcMant - DstMant, dl, IntVT));
-    } else {
-      TotalShift = DAG.getNode(ISD::SUB, dl, IntVT, DenormShift,
-                               DAG.getConstant(DstMant - SrcMant, dl, IntVT));
-    }
+    // Total right shift = DenormShift + (SrcMant - DstMant).
+    int64_t MantDelta = static_cast<int64_t>(SrcMant) - DstMant;
+    SDValue TotalShift =
+        DAG.getNode(ISD::ADD, dl, IntVT, DenormShift,
+                    DAG.getSignedConstant(MantDelta, dl, IntVT));
 
     // Clamp total shift to avoid UB, then trancate denorm mantissa.
     SDValue MaxShift = DAG.getConstant(SrcBits - 1, dl, IntVT);
