@@ -22,6 +22,9 @@ function(_get_common_test_compile_options output_var c_test flags)
   # EXPECT_DEATH and ASSERT_DEATH might be quite slow.  LIBC_TEST_SKIP_DEATH_TESTS
   # will make those tests no-op to reduce the overall test time.
   if(LIBC_TEST_SKIP_DEATH_TESTS)
+    if(LIBC_CMAKE_VERBOSE_LOGGING)
+      message(STATUS "LIBC_TEST_SKIP_DEATH_TESTS is set.  EXPECT_DEATH/ASSERT_DEATH are no-op.")
+    endif()
     list(APPEND compile_options "-DLIBC_TEST_SKIP_DEATH_TESTS")
   endif()
 
