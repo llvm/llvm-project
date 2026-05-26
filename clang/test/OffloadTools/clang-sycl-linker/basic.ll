@@ -9,7 +9,7 @@
 ; Test the dry run of a simple case to link two input files.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc -o %t/spirv.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=SIMPLE-FO
-; SIMPLE-FO:      sycl-device-link: inputs: {{.*}}.bc, {{.*}}.bc  libfiles:  output: [[LLVMLINKOUT:.*]].bc
+; SIMPLE-FO:      link: inputs: {{.*}}.bc, {{.*}}.bc  libfiles:  output: [[LLVMLINKOUT:.*]].bc
 ; SIMPLE-FO-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}_0.spv
 ; SIMPLE-FO-NOT:  {{.+}}
 ;
@@ -23,7 +23,7 @@
 ; RUN: touch %t/libs/lib2.bc
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc --library-path=%t/libs --device-libs=lib1.bc,lib2.bc -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS
-; DEVLIBS:      sycl-device-link: inputs: {{.*}}.bc  libfiles: {{.*}}lib1.bc, {{.*}}lib2.bc  output: [[LLVMLINKOUT:.*]].bc
+; DEVLIBS:      link: inputs: {{.*}}.bc  libfiles: {{.*}}lib1.bc, {{.*}}lib2.bc  output: [[LLVMLINKOUT:.*]].bc
 ; DEVLIBS-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: a_0.spv
 ;
 ; Test a simple case with a random file (not bitcode) as input.
@@ -38,13 +38,13 @@
 ; DEVLIBSERR1: Number of device library files cannot be zero
 ; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc --library-path=%t/libs --device-libs=lib1.bc,lib2.bc,lib3.bc -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBSERR2
-; DEVLIBSERR2: '{{.*}}lib3.bc' SYCL device library file is not found
+; DEVLIBSERR2: '{{.*}}lib3.bc' device library file is not found
 ;
 ; Test AOT compilation for an Intel GPU.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none -arch=bmg_g21 %t/input1.bc %t/input2.bc -o %t/aot-gpu.out 2>&1 \
 ; RUN:     --ocloc-options="-a -b" \
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-GPU
-; AOT-INTEL-GPU:      sycl-device-link: inputs: {{.*}}.bc, {{.*}}.bc libfiles: output: [[LLVMLINKOUT:.*]].bc
+; AOT-INTEL-GPU:      link: inputs: {{.*}}.bc, {{.*}}.bc libfiles: output: [[LLVMLINKOUT:.*]].bc
 ; AOT-INTEL-GPU-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]]_0.spv
 ; AOT-INTEL-GPU-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-device bmg_g21 -a -b {{.*}}-output [[SPIRVTRANSLATIONOUT]]_0.out -file [[SPIRVTRANSLATIONOUT]]_0.spv
 ;
@@ -56,7 +56,7 @@
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none -arch=graniterapids %t/input1.bc %t/input2.bc -o %t/aot-cpu.out 2>&1 \
 ; RUN:     --opencl-aot-options="-a -b" \
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-CPU
-; AOT-INTEL-CPU:      sycl-device-link: inputs: {{.*}}.bc, {{.*}}.bc libfiles: output: [[LLVMLINKOUT:.*]].bc
+; AOT-INTEL-CPU:      link: inputs: {{.*}}.bc, {{.*}}.bc libfiles: output: [[LLVMLINKOUT:.*]].bc
 ; AOT-INTEL-CPU-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]]_0.spv
 ; AOT-INTEL-CPU-NEXT: "{{.*}}opencl-aot{{.*}}" {{.*}}--device=cpu -a -b {{.*}}-o [[SPIRVTRANSLATIONOUT]]_0.out [[SPIRVTRANSLATIONOUT]]_0.spv
 ;
