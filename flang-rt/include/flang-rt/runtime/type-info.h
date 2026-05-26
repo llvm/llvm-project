@@ -258,7 +258,7 @@ public:
     return noFinalizationNeeded_;
   }
   RT_API_ATTRS bool noDefinedAssignment() const { return noDefinedAssignment_; }
-
+  RT_API_ATTRS bool isVectorType() const { return isVectorType_; }
   RT_API_ATTRS std::size_t LenParameters() const {
     return lenParameterKind().Elements();
   }
@@ -341,6 +341,7 @@ private:
   bool noDestructionNeeded_{false};
   bool noFinalizationNeeded_{false};
   bool noDefinedAssignment_{false};
+  bool isVectorType_{false};
 };
 
 } // namespace Fortran::runtime::typeInfo

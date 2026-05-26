@@ -418,7 +418,8 @@ auto ComputeOffsetsHelper::GetSizeAndAlignment(
     auto dyType{evaluate::DynamicType::From(symbol)};
     const auto *derived{evaluate::GetDerivedTypeSpec(dyType)};
     int lenParams{derived ? CountLenParameters(*derived) : 0};
-    bool needAddendum{derived || (dyType && dyType->IsUnlimitedPolymorphic())};
+    bool needAddendum{(derived && !derived->IsVectorType()) ||
+        (dyType && dyType->IsUnlimitedPolymorphic())};
 
     // FIXME: Get descriptor size from targetCharacteristics instead
     // overapproximation

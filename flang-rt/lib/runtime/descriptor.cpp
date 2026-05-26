@@ -100,8 +100,11 @@ RT_API_ATTRS void Descriptor::Establish(const typeInfo::DerivedType &dt,
       GetDimension(j).SetByteStride(0);
     }
   }
-  SetHasAddendum();
-  new (Addendum()) DescriptorAddendum{&dt};
+  // Vector types don't need an addendum since they have no internal structure
+  if (!dt.isVectorType()) {
+    SetHasAddendum();
+    new (Addendum()) DescriptorAddendum{&dt};
+  }
   SetAllocIdx(allocatorIdx);
 }
 
@@ -110,8 +113,10 @@ RT_API_ATTRS void Descriptor::UncheckedScalarEstablish(
   auto elementBytes{static_cast<std::size_t>(dt.sizeInBytes())};
   ISO::EstablishDescriptor(
       &raw_, p, CFI_attribute_other, CFI_type_struct, elementBytes, 0, nullptr);
-  SetHasAddendum();
-  new (Addendum()) DescriptorAddendum{&dt};
+  if (!dt.isVectorType()) {
+    SetHasAddendum();
+    new (Addendum()) DescriptorAddendum{&dt};
+  }
 }
 
 RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(TypeCode t,
@@ -149,8 +154,9 @@ RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(int characterKind,
 RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(
     const typeInfo::DerivedType &dt, void *p, int rank,
     const SubscriptValue *extent, ISO::CFI_attribute_t attribute) {
+  bool needAddendum{!dt.isVectorType()};
   return Create(TypeCode{TypeCategory::Derived, 0}, dt.sizeInBytes(), p, rank,
-      extent, attribute, /*addendum=*/true, &dt);
+      extent, attribute, needAddendum, &dt);
 }
 
 RT_API_ATTRS std::size_t Descriptor::SizeInBytes() const {

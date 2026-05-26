@@ -669,6 +669,8 @@ const Symbol *RuntimeTableBuilder::DescribeType(
         IntExpr<1>(
             derivedTypeSpec && !MayHaveDefinedAssignment(*derivedTypeSpec)));
   }
+  AddValue(dtValues, derivedTypeSchema_, "isvectortype"s,
+      IntExpr<1>(derivedTypeSpec && derivedTypeSpec->IsVectorType()));
   dtObject.get<ObjectEntityDetails>().set_init(MaybeExpr{
       StructureExpr(Structure(derivedTypeSchema_, std::move(dtValues)))});
   return &dtObject;
