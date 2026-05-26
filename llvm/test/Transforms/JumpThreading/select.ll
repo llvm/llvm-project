@@ -286,7 +286,8 @@ define void @unfold1(double %x, double %y) nounwind !prof !1 {
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[X]], [[Y]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt double [[ADD]], 1.000000e+01
-; CHECK-NEXT:    br i1 [[CMP1]], label [[COND_END4]], label [[IF_THEN:%.*]], !prof [[PROF1:![0-9]+]]
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[CMP1]]
+; CHECK-NEXT:    br i1 [[COND_FR]], label [[COND_END4]], label [[IF_THEN:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       cond.end4:
 ; CHECK-NEXT:    [[COND5:%.*]] = phi double [ [[SUB]], [[ENTRY:%.*]] ], [ [[ADD]], [[COND_FALSE]] ]
 ; CHECK-NEXT:    [[CMP6:%.*]] = fcmp oeq double [[COND5]], 0.000000e+00
@@ -332,7 +333,8 @@ define void @unfold2(i32 %x, i32 %y) nounwind !prof !1 {
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[ADD]], 10
-; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[COND_END4:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[CMP1]]
+; CHECK-NEXT:    br i1 [[COND_FR]], label [[IF_THEN:%.*]], label [[COND_END4:%.*]], !prof [[PROF1]]
 ; CHECK:       cond.end4:
 ; CHECK-NEXT:    [[COND5:%.*]] = phi i32 [ [[ADD]], [[COND_FALSE]] ]
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp eq i32 [[COND5]], 0
@@ -556,7 +558,8 @@ define void @test_func(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp eq i32 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    br i1 [[CMP6]], label [[SW_BB:%.*]], label [[SW_BB7:%.*]]
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[CMP6]]
+; CHECK-NEXT:    br i1 [[COND_FR]], label [[SW_BB:%.*]], label [[SW_BB7:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[LOCAL_VAR_0:%.*]] = phi i32 [ [[TMP1]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    switch i32 [[LOCAL_VAR_0]], label [[SW_DEFAULT]] [
