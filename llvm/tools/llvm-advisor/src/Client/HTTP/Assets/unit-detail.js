@@ -201,7 +201,7 @@ const UnitDetailView = {
         .filter(r => r.capability.includes('remarks'))
         .flatMap(r => r.findings);
       if (!findings.length) {
-        return this.emptyTab('No optimization remarks', 'No missed, passed, or analysis remarks were reported for this unit.');
+        return this.emptyTab('No optimization remarks', 'No optimization remarks were reported for this unit.');
       }
       return h('div', { class: 'capability-stack' },
         UI.passTimeline(findings),

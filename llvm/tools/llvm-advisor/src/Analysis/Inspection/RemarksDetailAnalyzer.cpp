@@ -34,7 +34,7 @@ RemarksDetailAnalyzer::run(const CapabilityContext &Context) {
                   json::Object Item{
                       {"pass", R.PassName.str()},
                       {"name", R.RemarkName.str()},
-                      {"type", remarks::typeToStr(R.RemarkType)},
+                      {"type", remarkTypeKey(R.RemarkType).str()},
                       {"function", R.FunctionName.str()},
                       {"message", R.getArgsAsMsg()},
                   };

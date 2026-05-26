@@ -3257,7 +3257,7 @@ const UnitDetailView = {
         .filter(r => r.capability.includes('remarks'))
         .flatMap(r => r.findings);
       if (!findings.length) {
-        return this.emptyTab('No optimization remarks', 'No missed, passed, or analysis remarks were reported for this unit.');
+        return this.emptyTab('No optimization remarks', 'No optimization remarks were reported for this unit.');
       }
       return h('div', { class: 'capability-stack' },
         UI.passTimeline(findings),
@@ -4535,9 +4535,24 @@ const RemarksView = {
       const { columns, strings } = rel;
       const passes = strings.pass || [];
       const names = strings.name || [];
-      const types = [null, 'passed', 'missed', 'analysis', 'analysis-fp-commute', 'analysis-aliasing', 'failure'];
+      // Canonical type names — must match remarkTypeKey() in RemarksAnalysisUtils.cpp.
+      // Index matches remarks::Type enum: 0=unknown … 6=failure.
+      const REMARK_TYPES = [
+        'unknown', 'passed', 'missed', 'analysis',
+        'analysis-fp-commute', 'analysis-aliasing', 'failure',
+      ];
+      // Subset shown as individual columns in the table (skip unknown/failure
+      // unless they actually appear, to keep the table compact).
+      const TABLE_TYPE_COLS = [
+        { key: 'missed',             label: 'Missed',     color: 'var(--orange)' },
+        { key: 'passed',             label: 'Passed',     color: 'var(--green)'  },
+        { key: 'analysis',           label: 'Analysis',   color: 'var(--teal)'   },
+        { key: 'analysis-fp-commute',label: 'FP-Commute', color: 'var(--fg3)'    },
+        { key: 'analysis-aliasing',  label: 'Aliasing',   color: 'var(--fg3)'    },
+        { key: 'failure',            label: 'Failure',    color: 'var(--red)'    },
+      ];
 
-      // Count (pass, name) tuples
+      // Count (pass, name) tuples, tallying every type.
       const tuples = {};
       const passCols = columns.pass || [];
       const nameCols = columns.name || [];
@@ -4547,34 +4562,38 @@ const RemarksView = {
         const n = names[nameCols[i]] || '?';
         const key = `${p}\0${n}`;
         if (!tuples[key]) tuples[key] = { pass: p, name: n, by_type: {} };
-        const typeName = types[typeCols[i]] || 'unknown';
+        const typeName = REMARK_TYPES[typeCols[i]] || 'unknown';
         tuples[key].by_type[typeName] = (tuples[key].by_type[typeName] || 0) + 1;
         tuples[key].count = (tuples[key].count || 0) + 1;
       }
 
-      const sorted = Object.values(tuples).sort((a, b) => b.count - a.count).slice(0, 20);
-      if (sorted.length) {
+      // Hide columns that are all-zero across the top 20 rows.
+      const top = Object.values(tuples).sort((a, b) => b.count - a.count).slice(0, 20);
+      const visibleCols = TABLE_TYPE_COLS.filter(col =>
+        top.some(t => (t.by_type[col.key] || 0) > 0)
+      );
+
+      if (top.length) {
         const tableSection = h('div', { class: 'chart-section', style: { marginTop: '18px' } },
           h('h3', {}, `Top (Pass, Remark) Pairs — ${rel.count} total remarks`)
         );
-        const table = h('table', { class: 'top-units-table' },
-          h('thead', {}, h('tr', {},
-            h('th', {}, 'Pass'), h('th', {}, 'Remark'),
-            h('th', { style: { textAlign: 'right' } }, 'Count'),
-            h('th', { style: { textAlign: 'right' } }, 'Missed'),
-            h('th', { style: { textAlign: 'right' } }, 'Passed'),
-          ))
+        const thead = h('tr', {},
+          h('th', {}, 'Pass'), h('th', {}, 'Remark'),
+          h('th', { style: { textAlign: 'right' } }, 'Total'),
+          ...visibleCols.map(col => h('th', { style: { textAlign: 'right' } }, col.label))
         );
+        const table = h('table', { class: 'top-units-table' }, h('thead', {}, thead));
         const tbody = h('tbody', {});
-        sorted.forEach(t => {
+        top.forEach(t => {
           tbody.appendChild(h('tr', {},
             h('td', { class: 'mono', style: { fontSize: '11px' } }, t.pass),
             h('td', { style: { fontSize: '11px' } }, t.name),
             h('td', { class: 'num' }, formatNumber(t.count)),
-            h('td', { class: 'num', style: { color: (t.by_type.missed || 0) > 0 ? 'var(--orange)' : 'var(--fg3)' } },
-              t.by_type.missed ? formatNumber(t.by_type.missed) : '–'),
-            h('td', { class: 'num', style: { color: (t.by_type.passed || 0) > 0 ? 'var(--green)' : 'var(--fg3)' } },
-              t.by_type.passed ? formatNumber(t.by_type.passed) : '–'),
+            ...visibleCols.map(col => {
+              const v = t.by_type[col.key] || 0;
+              return h('td', { class: 'num', style: { color: v > 0 ? col.color : 'var(--fg3)' } },
+                v > 0 ? formatNumber(v) : '–');
+            })
           ));
         });
         table.appendChild(tbody);

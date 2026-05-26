@@ -15,6 +15,10 @@ namespace llvm::advisor {
 
 using RemarkVisitor = function_ref<Error(const remarks::Remark &)>;
 
+StringRef remarkTypeKey(remarks::Type T);
+
+ArrayRef<StringRef> allRemarkTypeKeys();
+
 /// Open a YAML remark file and invoke Visitor for each remark.
 Error foreachRemark(StringRef Path, RemarkVisitor Visitor);
 

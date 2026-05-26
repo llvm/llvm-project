@@ -13,6 +13,27 @@
 using namespace llvm;
 using namespace llvm::advisor;
 
+StringRef llvm::advisor::remarkTypeKey(remarks::Type T) {
+  switch (T) {
+  case remarks::Type::Unknown:          return "unknown";
+  case remarks::Type::Passed:           return "passed";
+  case remarks::Type::Missed:           return "missed";
+  case remarks::Type::Analysis:         return "analysis";
+  case remarks::Type::AnalysisFPCommute: return "analysis-fp-commute";
+  case remarks::Type::AnalysisAliasing: return "analysis-aliasing";
+  case remarks::Type::Failure:          return "failure";
+  }
+  return "unknown";
+}
+
+ArrayRef<StringRef> llvm::advisor::allRemarkTypeKeys() {
+  static constexpr StringRef Keys[] = {
+      "unknown", "passed", "missed", "analysis",
+      "analysis-fp-commute", "analysis-aliasing", "failure",
+  };
+  return Keys;
+}
+
 Error llvm::advisor::foreachRemark(StringRef Path, RemarkVisitor Visitor) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> MB = MemoryBuffer::getFile(Path);
   if (!MB)
