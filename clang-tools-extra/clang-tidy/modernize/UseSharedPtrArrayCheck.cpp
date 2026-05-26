@@ -174,7 +174,7 @@ static QualType getDeleterParamPointee(const Expr *DeleterArg) {
     const TemplateArgument &Arg = CTSD->getTemplateArgs()[0];
     if (Arg.getKind() != TemplateArgument::Type)
       return {};
-    QualType T = Arg.getAsType();
+    const QualType T = Arg.getAsType();
     if (!T->isArrayType())
       return {};
     return cast<ArrayType>(T.getTypePtr())->getElementType();
@@ -205,7 +205,7 @@ static void resolveRAngleLocs(const CXXConstructExpr *Ctor,
     // Pointer/reference declarators (e.g. shared_ptr<A> *sp = ...) wrap the
     // template-id in a way that prevents safely rewriting both the declared
     // type and constructor expression independently. Warn only.
-    TypeLoc TL = ParentVD->getTypeSourceInfo()->getTypeLoc();
+    const TypeLoc TL = ParentVD->getTypeSourceInfo()->getTypeLoc();
     if (!TL.getAs<PointerTypeLoc>().isNull() ||
         !TL.getAs<ReferenceTypeLoc>().isNull()) {
       RAngleLoc = {};
@@ -225,8 +225,8 @@ static void resolveRAngleLocs(const CXXConstructExpr *Ctor,
         CtorRAngleLoc = FindRAngleLoc(TOE->getTypeSourceInfo());
 
       if (CtorRAngleLoc.isInvalid()) {
-        SourceLocation CtorLoc = Ctor->getBeginLoc();
-        SourceLocation LParenLoc = Ctor->getParenOrBraceRange().getBegin();
+        const SourceLocation CtorLoc = Ctor->getBeginLoc();
+        const SourceLocation LParenLoc = Ctor->getParenOrBraceRange().getBegin();
 
         if (CtorLoc.isValid() && LParenLoc.isValid() && !CtorLoc.isMacroID() &&
             !LParenLoc.isMacroID()) {
@@ -250,7 +250,7 @@ static void resolveRAngleLocs(const CXXConstructExpr *Ctor,
             if (T.is(tok::greater) || T.is(tok::greatergreater))
               CtorRAngleLoc = T.getLocation();
 
-            SourceLocation Next =
+            const SourceLocation Next =
                 Lexer::getLocForEndOfToken(T.getLocation(), 0, SM, LO);
 
             // Guard against Lexer::getLocForEndOfToken returning the same
@@ -335,9 +335,9 @@ buildRemoveDeleterFix(const CXXConstructExpr *Ctor, SourceManager &SM,
   const Expr *Arg0 = Ctor->getArg(0);
   const Expr *Arg1 = Ctor->getArg(1);
 
-  SourceLocation Arg0End =
+  const SourceLocation Arg0End =
       Lexer::getLocForEndOfToken(Arg0->getEndLoc(), 0, SM, LO);
-  SourceLocation Arg1End =
+  const SourceLocation Arg1End =
       Lexer::getLocForEndOfToken(Arg1->getEndLoc(), 0, SM, LO);
 
   if (Arg0End.isInvalid() || Arg1End.isInvalid())
@@ -376,14 +376,14 @@ void UseSharedPtrArrayCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Unqualified canonical comparison: handles CV qualified arrays and typedefs.
   const QualType SharedElem = ElemTy.getCanonicalType().getUnqualifiedType();
-  if (!Ctx.hasSameType(AllocTy.getCanonicalType().getUnqualifiedType(),
+  if (!Ctx.ASTContext::hasSameType(AllocTy.getCanonicalType().getUnqualifiedType(),
                        SharedElem))
     return;
 
-  QualType DelPointee = getDeleterParamPointee(Ctor->getArg(1));
+  const QualType DelPointee = getDeleterParamPointee(Ctor->getArg(1));
   if (DelPointee.isNull())
     return;
-  if (!Ctx.hasSameType(DelPointee.getCanonicalType().getUnqualifiedType(),
+  if (!Ctx.ASTContext::hasSameType(DelPointee.getCanonicalType().getUnqualifiedType(),
                        SharedElem))
     return;
 
