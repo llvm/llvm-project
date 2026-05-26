@@ -29,7 +29,8 @@ const MCAsmInfo::AtSpecifier atSpecifiers[] = {
 };
 
 AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
-                                 const MCTargetOptions &Options) {
+                                 const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   CodePointerSize = (TT.isAMDGCN()) ? 8 : 4;
   StackGrowsUp = true;
   HasSingleParameterDotFile = false;

@@ -3,7 +3,7 @@
 ## instruction leading to invalid binaries.
 
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: wasm-ld --global-base=2147483648 --experimental-pic --unresolved-symbols=import-dynamic -no-gc-sections --shared-memory --no-entry -o %t.wasm %t.o
+# RUN: wasm-ld --global-base=2147483648 --unresolved-symbols=import-dynamic -no-gc-sections --shared-memory --no-entry -o %t.wasm %t.o
 # XUN: obj2yaml %t.wasm | FileCheck %s
 # RUN: llvm-objdump -d --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck %s --
 

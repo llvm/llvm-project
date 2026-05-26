@@ -481,6 +481,9 @@ void RNBRemote::CreatePacketTable() {
                      "jGetSharedCacheInfo", "Replies with JSON data about the "
                                             "location and uuid of the shared "
                                             "cache in the inferior process."));
+  t.push_back(Packet(
+      json_multi_breakpoint, &RNBRemote::HandlePacket_jMultiBreakpoint, NULL,
+      "jMultiBreakpoint", "Set/remove multiple breakpoints at once"));
   t.push_back(Packet(start_noack_mode, &RNBRemote::HandlePacket_QStartNoAckMode,
                      NULL, "QStartNoAckMode",
                      "Request that " DEBUGSERVER_PROGRAM_NAME
@@ -2908,11 +2911,12 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
         if (!DNBThreadGetRegisterValueByID(pid, tid, regset,
                                            g_reg_entries[reg].nub_info.reg,
                                            reg_value.get()))
-          continue;
-
-        debugserver_regnum_with_fixed_width_hex_register_value(
-            ostrm, pid, tid, &g_reg_entries[reg], reg_value.get(),
-            std::nullopt);
+          // base16(regnum):<no value>; means a register that cannot be fetched.
+          ostrm << RAWHEX8(g_reg_entries[reg].debugserver_regnum) << ":;";
+        else
+          debugserver_regnum_with_fixed_width_hex_register_value(
+              ostrm, pid, tid, &g_reg_entries[reg], reg_value.get(),
+              std::nullopt);
       }
     }
 
@@ -3306,6 +3310,73 @@ rnb_err_t RNBRemote::HandlePacket_MultiMemRead(const char *p) {
   return SendPacket(reply_stream.str());
 }
 
+rnb_err_t RNBRemote::HandlePacket_jMultiBreakpoint(const char *p) {
+  const std::string_view packet_name("jMultiBreakpoint:");
+  std::string_view packet(p);
+
+  if (!starts_with(packet, packet_name))
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid MultiBreakpoint packet prefix");
+
+  packet.remove_prefix(packet_name.size());
+
+  JSONParser parser(packet.cbegin());
+  JSONValue::SP parsed = parser.ParseJSONValue();
+  if (!parsed || parsed->GetKind() != JSONValue::Kind::Object)
+    return HandlePacket_ILLFORMED(
+        __FILE__, __LINE__, p,
+        "MultiBreakpoint did not contain a JSON dictionary");
+
+  auto *request_dict = static_cast<JSONObject *>(parsed.get());
+  JSONValue::SP request_array_sp =
+      request_dict->GetObject("breakpoint_requests");
+
+  if (!request_array_sp ||
+      request_array_sp->GetKind() != JSONValue::Kind::Array)
+    return HandlePacket_ILLFORMED(
+        __FILE__, __LINE__, p,
+        "MultiBreakpoint did not contain a valid 'breakpoint_requests' field");
+
+  auto *request_array = static_cast<JSONArray *>(request_array_sp.get());
+  std::vector<std::string> requests;
+  requests.reserve(request_array->GetNumElements());
+  for (JSONValue::SP value : request_array->Elements()) {
+    if (!value || value->GetKind() != JSONValue::Kind::String)
+      return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                    "MultiBreakpoint had a non-string entry");
+    auto *request_str = static_cast<JSONString *>(value.get());
+    requests.push_back(request_str->GetData());
+  }
+
+  auto reply_array = std::make_shared<JSONGenerator::Array>();
+  for (const std::string &request : requests) {
+    BreakpointResult result = ExecuteBreakpointRequest(request.c_str());
+    std::string reply_str;
+    switch (result.kind) {
+    case BreakpointResult::Kind::OK:
+      reply_str = "OK";
+      break;
+    case BreakpointResult::Kind::Error: {
+      char error_str[8];
+      snprintf(error_str, sizeof(error_str), "E%02x", result.error_code);
+      reply_str = error_str;
+      break;
+    }
+    case BreakpointResult::Kind::IllFormed:
+    case BreakpointResult::Kind::Unimplemented:
+      reply_str = "E03";
+      break;
+    }
+    reply_array->AddItem(std::make_shared<JSONGenerator::String>(reply_str));
+  }
+
+  JSONGenerator::Dictionary reply_dict;
+  reply_dict.AddItem("results", reply_array);
+  std::ostringstream reply_stream;
+  reply_dict.DumpBinaryEscaped(reply_stream);
+  return SendPacket(reply_stream.str());
+}
+
 // Read memory, sent it up as binary data.
 // Usage:  xADDR,LEN
 // ADDR and LEN are both base 16.
@@ -3660,6 +3731,7 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
     reply << "memory-tagging+;";
 
   reply << "MultiMemRead+;";
+  reply << "jMultiBreakpoint+;";
   return SendPacket(reply.str().c_str());
 }
 
@@ -5747,15 +5819,30 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
               new JSONGenerator::Dictionary());
 
           for (uint32_t reg = 0; reg < g_num_reg_entries; reg++) {
+            bool include_reg = false;
             // Expedite all registers in the first register set that aren't
-            // contained in other registers
+            // contained in other registers.
             if (g_reg_entries[reg].nub_info.set == 1 &&
-                g_reg_entries[reg].nub_info.value_regs == NULL) {
+                g_reg_entries[reg].nub_info.value_regs == NULL)
+              include_reg = true;
+            // Include the SME state register values, whether we can
+            // fetch the value or not.
+            if (strcmp("svcr", g_reg_entries[reg].nub_info.name) == 0 ||
+                strcmp("tpidr2", g_reg_entries[reg].nub_info.name) == 0 ||
+                strcmp("svl", g_reg_entries[reg].nub_info.name) == 0)
+              include_reg = true;
+
+            if (include_reg) {
               if (!DNBThreadGetRegisterValueByID(
                       pid, tid, g_reg_entries[reg].nub_info.set,
-                      g_reg_entries[reg].nub_info.reg, reg_value.get()))
+                      g_reg_entries[reg].nub_info.reg, reg_value.get())) {
+                // Indicate unavailable registers as having an empty value
+                // string.
+                std::ostringstream reg_num;
+                reg_num << std::dec << g_reg_entries[reg].debugserver_regnum;
+                registers_dict_sp->AddStringItem(reg_num.str(), "");
                 continue;
-
+              }
               std::ostringstream reg_num;
               reg_num << std::dec << g_reg_entries[reg].debugserver_regnum;
               // Encode native byte ordered bytes as hex ascii
@@ -5785,28 +5872,28 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
           }
           thread_dict_sp->AddItem("memory", memory_array_sp);
         }
-      }
 
-      std::vector<uint64_t> added_binaries;
-      JSONGenerator::ObjectSP detailed_binary_infos;
+        std::vector<uint64_t> added_binaries;
+        JSONGenerator::ObjectSP detailed_binary_infos;
 
-      // If we've stopped with a breakpoint exception on this
-      // thread, and we're stopped at the dyld notification
-      // function address, collect information about libraries
-      // that have been loaded, expedite that information in
-      // the stop packet.
-      if (tid_stop_info.details.exception.type == EXC_BREAKPOINT &&
-          DNBGetBinariesLoadedInfo(pid, tid, added_binaries,
-                                   detailed_binary_infos)) {
-        JSONGenerator::ArraySP load_addresses;
-        load_addresses = std::make_shared<JSONGenerator::Array>();
-        for (nub_addr_t addr : added_binaries)
-          load_addresses->AddIntegerItem(addr);
-        thread_dict_sp->AddItem("added-binaries", load_addresses);
+        // If we've stopped with a breakpoint exception on this
+        // thread, and we're stopped at the dyld notification
+        // function address, collect information about libraries
+        // that have been loaded, expedite that information in
+        // the stop packet.
+        if (tid_stop_info.details.exception.type == EXC_BREAKPOINT &&
+            DNBGetBinariesLoadedInfo(pid, tid, added_binaries,
+                                     detailed_binary_infos)) {
+          JSONGenerator::ArraySP load_addresses;
+          load_addresses = std::make_shared<JSONGenerator::Array>();
+          for (nub_addr_t addr : added_binaries)
+            load_addresses->AddIntegerItem(addr);
+          thread_dict_sp->AddItem("added-binaries", load_addresses);
 
-        if (detailed_binary_infos)
-          thread_dict_sp->AddItem("detailed-binaries-info",
-                                  detailed_binary_infos);
+          if (detailed_binary_infos)
+            thread_dict_sp->AddItem("detailed-binaries-info",
+                                    detailed_binary_infos);
+        }
       }
 
       threads_array_sp->AddItem(thread_dict_sp);

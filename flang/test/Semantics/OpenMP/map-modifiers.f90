@@ -1,4 +1,4 @@
-!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52 -Werror
+!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52 -Werror -Wno-experimental-option
 
 subroutine f10(x)
   integer :: x

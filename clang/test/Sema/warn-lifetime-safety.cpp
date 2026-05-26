@@ -133,6 +133,26 @@ void multiple_pointers() {
   (void)*r;     // expected-note {{later used here}}
 }
 
+void multiple_pointers_chained() {
+  MyObj *p;
+  {
+    MyObj s;
+    MyObj* obj1, *obj2;
+    p = obj1 = obj2 = &s; // expected-warning {{does not live long enough}}
+  }                       // expected-note {{destroyed here}}
+  (void)*p;               // expected-note {{later used here}}
+}
+
+void multiple_pointers_chained_safe() {
+  MyObj *p;
+  MyObj s;
+  {
+    MyObj* obj1, *obj2;
+    p = obj1 = obj2 = &s;
+  }
+  (void)*p;
+}
+
 void single_pointer_multiple_loans(bool cond) {
   MyObj *p;
   if (cond){
@@ -887,6 +907,15 @@ void lifetimebound_with_pointers() {
     ptr = GetPointer(obj); // expected-warning {{object whose reference is captured does not live long enough}}
   }                        // expected-note {{destroyed here}}
   (void)*ptr;              // expected-note {{later used here}}
+}
+
+void chained_assignment_lifetimebound_call() {
+  MyObj *p, *obj;
+  {
+    MyObj s;
+    p = Identity(obj = &s); // expected-warning {{does not live long enough}}
+  }                         // expected-note {{destroyed here}}
+  (void)*p;                 // expected-note {{later used here}}
 }
 
 void lifetimebound_no_error_safe_usage() {
@@ -2363,6 +2392,16 @@ void assignment_propagation() {
   use(b);          // expected-note {{later used here}}
 }
 
+void chained_defaulted_assignment_propagation() {
+  S b, c;
+  {
+    std::string str{"abc"};
+    S a = getS(str); // expected-warning {{object whose reference is captured does not live long enough}}
+    c = b = a;
+  }                  // expected-note {{destroyed here}}
+  use(c);            // expected-note {{later used here}}
+}
+
 S getSNoAnnotation(const std::string &s);
 
 void no_annotation() {
@@ -2860,17 +2899,6 @@ struct PointerFieldHolder {
 };
 
 // FIXME: https://github.com/llvm/llvm-project/issues/184344
-void placement_new_pointer_field_use_after_scope() {
-  PointerFieldHolder h;
-  PointerFieldHolder *p = &h;
-  {
-    MyObj obj;
-    p = new (&h) PointerFieldHolder{&obj};
-  }
-  (void)p->Ptr->id;
-}
-
-// FIXME: https://github.com/llvm/llvm-project/issues/184344
 void delete_through_pointer_field() {
   PointerFieldHolder h{new MyObj};
   delete h.Ptr;
@@ -2897,6 +2925,209 @@ void allocate_void_ptr() {
 }
 
 } // namespace new_allocation
+
+namespace placement_new {
+
+void placement_new_int_basic() {
+  int *p;
+  {
+    int storage;
+    p = new (&storage) int; // expected-warning {{object whose reference is captured does not live long enough}}
+  }                         // expected-note {{destroyed here}}
+  (void)*p;                 // expected-note {{later used here}}
+}
+
+void placement_new_view_from_dead_scope() {
+  View storage;
+  View *p = &storage;
+  {
+    MyObj obj;
+    p = new (&storage) View(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                               // expected-note {{destroyed here}}
+  p->use();                       // expected-note {{later used here}}
+}
+
+void placement_new_pointer_from_dead_object() {
+  MyObj *slot = nullptr;
+  MyObj **p = &slot;
+  {
+    MyObj obj;
+    p = new (&slot) MyObj *(&obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                                // expected-note {{destroyed here}}
+  (void)**p;                       // expected-note {{later used here}}
+}
+
+void placement_new_array_basic() {
+  int *p;
+  {
+    int storage[2];
+    p = new (&storage) int[2]; // expected-warning {{object whose reference is captured does not live long enough}}
+  }                            // expected-note {{destroyed here}}
+  (void)p[0];                  // expected-note {{later used here}}
+}
+
+void placement_new_array_braces() {
+  int *p;
+  {
+    int storage[2];
+    p = new (&storage) int[2]{}; // expected-warning {{object whose reference is captured does not live long enough}}
+  }                              // expected-note {{destroyed here}}
+  (void)p[0];                    // expected-note {{later used here}}
+}
+
+void placement_new_heap_then_delete_use_after_free() {
+  int *storage = new int(7); // expected-warning {{allocated object does not live long enough}}
+  int *p = new (storage) int(42);
+  delete storage;            // expected-note {{freed here}}
+  (void)*p;                  // expected-note {{later used here}}
+}
+
+int* foo(int* x [[clang::lifetimebound]], int* y [[clang::lifetimebound]]);
+
+void placement_new_delete_result_of_lifetimebound_call() {
+  int *x = new int(1); // expected-warning {{allocated object does not live long enough}}
+  int *y = new int(2); // expected-warning {{allocated object does not live long enough}}
+  int *slot = nullptr;
+  int **p = new (&slot) int *(foo(x, y));
+  delete foo(x, y);    // expected-note 2 {{freed here}}
+  (void)**p;           // expected-note 2 {{later used here}}
+}
+
+
+struct PointerFieldHolder {
+  MyObj *Ptr;
+};
+
+// FIXME: https://github.com/llvm/llvm-project/issues/184344
+void placement_new_pointer_field_use_after_scope() {
+  PointerFieldHolder h;
+  PointerFieldHolder *p = &h;
+  {
+    MyObj obj;
+    p = new (&h) PointerFieldHolder{&obj};
+  }
+  (void)p->Ptr->id;
+}
+} // namespace placement_new
+
+// FIXME: Currently this is not diagnosed because placement new does not overwrite the placement argument's origins.
+namespace placement_new_argument {
+struct PlacementNewInMethod {
+  View V;
+
+  void bad_store_after_placement_new() {
+    {
+      MyObj obj;
+      new (&V) View(obj);
+    }
+    V.use();
+  }
+};
+
+void placement_new_member_call_from_dead_scope() {
+  View *storage = new View;
+  {
+    MyObj obj;
+    new (storage) View(obj);
+  }
+  storage->use();
+}
+
+struct ViewPointerFieldHolder {
+  View *Ptr;
+};
+
+void placement_new_pointer_field_from_dead_scope() {
+  ViewPointerFieldHolder h{new View};
+  {
+    MyObj obj;
+    new (h.Ptr) View(obj);
+  }
+  h.Ptr->use();
+}
+
+void placement_new_array_subscript_from_dead_scope() {
+  View *slots[1] = {new View};
+  {
+    MyObj obj;
+    new (slots[0]) View(obj);
+  }
+  slots[0]->use();
+}
+
+void placement_new_pointer_reference_from_dead_scope() {
+  View *storage = new View;
+  View *&ref = storage;
+  {
+    MyObj obj;
+    new (ref) View(obj);
+  }
+  storage->use();
+}
+
+void placement_new_conditional_pointer_from_dead_scope(bool flag) {
+  View *x = new View;
+  View *y = new View;
+  {
+    MyObj obj;
+    new (flag ? x : y) View(obj);
+  }
+  x->use();
+  y->use();
+}
+
+View *identity(View *p [[clang::lifetimebound]]);
+
+void placement_new_function_pointer_from_dead_scope() {
+  View *storage = new View;
+  {
+    MyObj obj;
+    new (identity(storage)) View(obj);
+  }
+  storage->use();
+}
+
+struct ViewStorage {
+  View Storage;
+  View *get() [[clang::lifetimebound]];
+};
+
+void placement_new_member_function_pointer_from_dead_scope() {
+  ViewStorage storage;
+  {
+    MyObj obj;
+    new (storage.get()) View(obj);
+  }
+  storage.Storage.use();
+}
+
+void placement_new_addressof_from_dead_scope() {
+  View storage;
+  {
+    MyObj obj;
+    new (&storage) View(obj);
+  }
+  storage.use();
+}
+
+void placement_new_explicit_void_cast_from_dead_scope() {
+  View *storage = new View;
+  {
+    MyObj obj;
+    new ((void *)storage) View(obj);
+  }
+  storage->use();
+}
+
+void placement_new_direct_array_use_after_placement() {
+  char storage[sizeof(std::string)];
+  std::string* str1 = new (storage) std::string{"Old"};
+  auto p1 = str1->c_str();
+  new (storage) std::string{"New"};
+  (void)*p1;
+}
+
+} // namespace placement_new_argument
 
 namespace method_call_uses_field_origins {
 int GLOBAL_INT;
@@ -3009,6 +3240,15 @@ std::function<void()> copy_assign() {
   return f2; // expected-note {{returned here}}
 }
 
+std::function<void()> chained_copy_assign() {
+  int x;
+  std::function<void()> f = [&x]() { (void)x; }; // expected-warning {{address of stack memory is returned later}}
+  std::function<void()> f2 = []() {};
+  std::function<void()> f3 = []() {};
+  f3 = f2 = f;
+  return f3; // expected-note {{returned here}}
+}
+
 // FIXME: False negative. std::move's lifetimebound handling in
 // `handleFunctionCall` only flows the outermost origin, missing inner origins
 // that carry the lambda's loans.
@@ -3092,3 +3332,47 @@ void assign_non_capturing_to_function_ref(function_ref &r) {
 }
 
 } // namespace GH126600
+
+namespace GH188832 {
+inline namespace __1 {
+template <class T>
+struct __optional_storage_base {
+  T& operator*() &;
+  T* operator->();
+  T& value() &;
+};
+
+template <class T>
+struct [[gsl::Owner]] optional : __optional_storage_base<T> {
+  ~optional();
+};
+} // namespace __1
+
+const MyObj& return_optional_deref() {
+  optional<MyObj> opt;
+  return *opt; // expected-warning {{address of stack memory is returned later}} \
+               // expected-note {{returned here}}
+}
+
+const MyObj& return_optional_value() {
+  optional<MyObj> opt;
+  return opt.value(); // expected-warning {{address of stack memory is returned later}} \
+                      // expected-note {{returned here}}
+}
+
+const int* return_optional_arrow() {
+  optional<MyObj> opt;
+  return &opt->id; // expected-warning {{address of stack memory is returned later}} \
+                   // expected-note {{returned here}}
+}
+
+void deref_use_after_scope() {
+  const MyObj* p;
+  {
+    optional<MyObj> opt;
+    p = &*opt; // expected-warning {{object whose reference is captured does not live long enough}}
+  }            // expected-note {{destroyed here}}
+  (void)p->id; // expected-note {{later used here}}
+}
+
+} // namespace GH188832

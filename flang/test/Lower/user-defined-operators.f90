@@ -1,5 +1,5 @@
 ! Test use defined operators/assignment
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
 ! Test user defined assignment
 ! CHECK-LABEL: func @_QPuser_assignment(
@@ -17,10 +17,17 @@ subroutine user_assignment(a, i)
   end subroutine
  end interface
  type(t) :: a
-! CHECK: %[[V_0:[0-9]+]] = fir.alloca i32
-! CHECK: %[[V_1:[0-9]+]] = fir.load %arg1 : !fir.ref<i32>
-! CHECK: %[[V_2:[0-9]+]] = fir.no_reassoc %[[V_1:[0-9]+]] : i32
-! CHECK: fir.store %[[V_2]] to %[[V_0:[0-9]+]] : !fir.ref<i32>
-! CHECK: fir.call @_QPmy_assign(%arg0, %[[V_0]]) fastmath<contract> : (!fir.ref<!fir.type<_QFuser_assignmentTt{x:f32,i:i32}>>, !fir.ref<i32>) -> ()
+! CHECK: %[[A:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} {uniq_name = "_QFuser_assignmentEa"}
+! CHECK: %[[I:.*]]:2 = hlfir.declare %[[arg1]] {{.*}} {uniq_name = "_QFuser_assignmentEi"}
+! CHECK: hlfir.region_assign {
+! CHECK:   %[[V_1:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
+! CHECK:   hlfir.yield %[[V_1]] : i32
+! CHECK: } to {
+! CHECK:   hlfir.yield %[[A]]#0 : !fir.ref<!fir.type<_QFuser_assignmentTt{x:f32,i:i32}>>
+! CHECK: } user_defined_assign  (%[[VAL:.*]]: i32) to (%[[VAR:.*]]: !fir.ref<!fir.type<_QFuser_assignmentTt{x:f32,i:i32}>>) {
+! CHECK:   %[[ASSOC:.*]]:3 = hlfir.associate %[[VAL]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
+! CHECK:   fir.call @_QPmy_assign(%[[VAR]], %[[ASSOC]]#0) fastmath<contract> : (!fir.ref<!fir.type<_QFuser_assignmentTt{x:f32,i:i32}>>, !fir.ref<i32>) -> ()
+! CHECK:   hlfir.end_associate %[[ASSOC]]#1, %[[ASSOC]]#2 : !fir.ref<i32>, i1
+! CHECK: }
  a = i
 end subroutine

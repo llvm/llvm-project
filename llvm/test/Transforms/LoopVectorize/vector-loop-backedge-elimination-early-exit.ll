@@ -19,9 +19,9 @@ define i8 @test_early_exit_max_tc_less_than_16(ptr dereferenceable(16) %A) nosyn
 ; VF8UF1-NEXT:    [[P_SRC:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
 ; VF8UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[P_SRC]], align 1
 ; VF8UF1-NEXT:    [[TMP3:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
-; VF8UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; VF8UF1-NEXT:    [[TMP2:%.*]] = freeze <8 x i1> [[TMP3]]
 ; VF8UF1-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP2]])
+; VF8UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; VF8UF1-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
 ; VF8UF1-NEXT:    br i1 [[TMP4]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
 ; VF8UF1:       [[VECTOR_BODY_INTERIM]]:
@@ -115,9 +115,9 @@ define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr derefer
 ; VF8UF1-NEXT:    [[P_SRC:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
 ; VF8UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[P_SRC]], align 1
 ; VF8UF1-NEXT:    [[TMP3:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
-; VF8UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; VF8UF1-NEXT:    [[TMP2:%.*]] = freeze <8 x i1> [[TMP3]]
 ; VF8UF1-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP2]])
+; VF8UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; VF8UF1-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
 ; VF8UF1-NEXT:    br i1 [[TMP4]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
 ; VF8UF1:       [[VECTOR_BODY_INTERIM]]:
@@ -220,9 +220,9 @@ define i8 @test_early_exit_max_vector_tc_eq_16(ptr dereferenceable(17) %A) nosyn
 ; VF8UF1-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
 ; VF8UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP0]], align 1
 ; VF8UF1-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
-; VF8UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; VF8UF1-NEXT:    [[TMP5:%.*]] = freeze <8 x i1> [[TMP1]]
 ; VF8UF1-NEXT:    [[TMP2:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP5]])
+; VF8UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; VF8UF1-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
 ; VF8UF1-NEXT:    br i1 [[TMP2]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
 ; VF8UF1:       [[VECTOR_BODY_INTERIM]]:
@@ -354,9 +354,9 @@ define i1 @test_early_exit_max_tc_less_than_16_non_canonical_iv(ptr dereferencea
 ; VF8UF1-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[OFFSET_IDX]]
 ; VF8UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP0]], align 1
 ; VF8UF1-NEXT:    [[TMP3:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
-; VF8UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; VF8UF1-NEXT:    [[TMP4:%.*]] = freeze <8 x i1> [[TMP3]]
 ; VF8UF1-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP4]])
+; VF8UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; VF8UF1-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
 ; VF8UF1-NEXT:    [[VEC_IND_NEXT]] = add nsw <8 x i64> [[VEC_IND]], splat (i64 8)
 ; VF8UF1-NEXT:    br i1 [[TMP5]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]

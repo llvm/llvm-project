@@ -29,6 +29,19 @@
 #include <cstring>
 #include <limits.h>
 
+/// Shared headers from LLVM libc
+/// Make sure to add ${LLVM_SOURCE_DIR}/../libc to include directories.
+///
+/// Notes: So far it looks like APFloat does not check errnos or floating-point
+/// exceptions after calling the math functions, so we will configure LLVM libc
+/// math functions to skip setting errnos and floating-point exceptions
+/// explicitly.  We also put them in a separate namespace so that the symbols
+/// do not clash with other libc math builds just in case.
+#define LIBC_NAMESPACE __llvm_libc_apfloat
+#define LIBC_MATH (LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT)
+
+#include "shared/math.h"
+
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
   do {                                                                         \
     if (usesLayout<IEEEFloat>(getSemantics()))                                 \
@@ -2856,7 +2869,6 @@ IEEEFloat::roundSignificandWithExponent(const integerPart *decSigParts,
   unsigned pow5PartCount = powerOf5(pow5Parts, exp >= 0 ? exp : -exp);
 
   for (;; parts *= 2) {
-    opStatus sigStatus, powStatus;
     unsigned int excessPrecision, truncatedBits;
 
     calcSemantics.precision = parts * integerPartWidth - 1;
@@ -2867,10 +2879,10 @@ IEEEFloat::roundSignificandWithExponent(const integerPart *decSigParts,
     decSig.makeZero(sign);
     IEEEFloat pow5(calcSemantics);
 
-    sigStatus = decSig.convertFromUnsignedParts(decSigParts, sigPartCount,
-                                                rmNearestTiesToEven);
-    powStatus = pow5.convertFromUnsignedParts(pow5Parts, pow5PartCount,
-                                              rmNearestTiesToEven);
+    opStatus sigStatus = decSig.convertFromUnsignedParts(
+        decSigParts, sigPartCount, rmNearestTiesToEven);
+    opStatus powStatus = pow5.convertFromUnsignedParts(pow5Parts, pow5PartCount,
+                                                       rmNearestTiesToEven);
     /* Add exp, as 10^n = 5^n * 2^n.  */
     decSig.exponent += exp;
 
@@ -2917,7 +2929,8 @@ IEEEFloat::roundSignificandWithExponent(const integerPart *decSigParts,
       calcLostFraction = lostFractionThroughTruncation(decSig.significandParts(),
                                                        decSig.partCount(),
                                                        truncatedBits);
-      return normalize(rounding_mode, calcLostFraction);
+      return static_cast<opStatus>(normalize(rounding_mode, calcLostFraction) |
+                                   ((sigStatus | powStatus) & opInexact));
     }
   }
 }
@@ -3053,7 +3066,7 @@ bool IEEEFloat::convertFromStringSpecials(StringRef str) {
   if (str.size() < MIN_NAME_SIZE)
     return false;
 
-  if (str == "inf" || str == "INFINITY" || str == "+Inf") {
+  if (str == "inf" || str == "INFINITY" || str == "+Inf" || str == "+inf") {
     makeInf(false);
     return true;
   }
@@ -3703,7 +3716,8 @@ void IEEEFloat::initFromPPCDoubleDoubleLegacyAPInt(const APInt &api) {
   initFromDoubleAPInt(APInt(64, i1));
   [[maybe_unused]] opStatus fs = convert(APFloatBase::semPPCDoubleDoubleLegacy,
                                          rmNearestTiesToEven, &losesInfo);
-  assert(fs == opOK && !losesInfo);
+  // (convert may return opInvalidOp if i1 is an sNaN).
+  assert((fs == opOK || fs == opInvalidOp) && !losesInfo);
 
   // Unless we have a special case, add in second double.
   if (isFiniteNonZero()) {
@@ -4514,6 +4528,13 @@ APFloat::opStatus IEEEFloat::next(bool nextDown) {
     changeSign();
 
   return result;
+}
+
+APInt IEEEFloat::getNaNPayload() const {
+  assert(isNaN() && "Can only be called on NaN values");
+  // Number of bits in the payload, excluding the (maybe implied) integer bit.
+  unsigned Bits = semantics->precision - 1;
+  return APInt(Bits, ArrayRef(significandParts(), partCountForBits(Bits)));
 }
 
 APFloatBase::ExponentType IEEEFloat::exponentNaN() const {
@@ -5780,6 +5801,7 @@ DoubleAPFloat frexp(const DoubleAPFloat &Arg, int &Exp,
                        std::move(Second));
 }
 
+APInt DoubleAPFloat::getNaNPayload() const { return Floats[0].getNaNPayload(); }
 } // namespace detail
 
 APFloat::Storage::Storage(IEEEFloat F, const fltSemantics &Semantics) {
@@ -6069,6 +6091,24 @@ APFloat::Storage &APFloat::Storage::operator=(APFloat::Storage &&RHS) {
     new (this) Storage(std::move(RHS));
   }
   return *this;
+}
+
+// TODO: Support other rounding modes when LLVM libc math implement static
+// roundings.
+APFloat exp(const APFloat &X, RoundingMode rounding_mode) {
+  if (rounding_mode == APFloatBase::rmNearestTiesToEven) {
+    if (APFloat::SemanticsToEnum(X.getSemantics()) ==
+        APFloatBase::S_IEEEsingle) {
+      float result = LIBC_NAMESPACE::shared::expf(X.convertToFloat());
+      return APFloat(result);
+    }
+    if (APFloat::SemanticsToEnum(X.getSemantics()) ==
+        APFloatBase::S_IEEEdouble) {
+      double result = LIBC_NAMESPACE::shared::exp(X.convertToDouble());
+      return APFloat(result);
+    }
+  }
+  llvm_unreachable("Unexpected semantics");
 }
 
 } // namespace llvm

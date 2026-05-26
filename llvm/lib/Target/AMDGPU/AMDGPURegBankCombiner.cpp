@@ -287,7 +287,7 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToClamp(MachineInstr &MI,
   if (!matchMed<GFCstOrSplatGFCstMatch>(MI, MRI, OpcodeTriple, Val, K0, K1))
     return false;
 
-  if (!K0->Value.isExactlyValue(0.0) || !K1->Value.isExactlyValue(1.0))
+  if (!K0->Value.isPosZero() || !K1->Value.isExactlyValue(1.0))
     return false;
 
   // For IEEE=false perform combine only when it's safe to assume that there are
@@ -335,7 +335,7 @@ bool AMDGPURegBankCombinerImpl::matchFPMed3ToClamp(MachineInstr &MI,
   auto isOp3Zero = [&]() {
     MachineInstr *Op3 = getDefIgnoringCopies(MI.getOperand(3).getReg(), MRI);
     if (Op3->getOpcode() == TargetOpcode::G_FCONSTANT)
-      return Op3->getOperand(1).getFPImm()->isExactlyValue(0.0);
+      return Op3->getOperand(1).getFPImm()->isPosZero();
     return false;
   };
   // For IEEE=false perform combine only when it's safe to assume that there are
@@ -418,9 +418,15 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
       return false;
     }
 
+    // s32 Load_lo16 holds SextLoad i8, Load_hi16 is zero.
+    // fake16: and  (sextload i8 -> s32), 0xFFFF
+    // true16: zext (sextload i8 -> s16) -> s32
     if (mi_match(
             Load, MRI,
-            m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16))))) {
+            m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16)))) ||
+        mi_match(Load, MRI,
+                 m_GZExt(m_all_of(m_SpecificType(LLT::scalar(16)),
+                                  m_MInstr(SextLoad))))) {
       if (SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
         return false;
 
@@ -450,11 +456,18 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
       return false;
     }
 
+    // s32 Load_lo16 holds SextLoad i8, Load_hi16 is zero.
+    // fake16: and  (sextload i8 -> s32), 0xFFFF
+    // true16: zext (sextload i8 -> s16) -> s32
     if (mi_match(
             Load, MRI,
-            m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16))))) {
+            m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16)))) ||
+        mi_match(Load, MRI,
+                 m_GZExt(m_all_of(m_SpecificType(LLT::scalar(16)),
+                                  m_MInstr(SextLoad))))) {
       if (SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
         return false;
+
       const MachineMemOperand *MMO = *SextLoad->memoperands_begin();
       if (MMO->getSizeInBits().getValue() != 8)
         return false;
@@ -501,8 +514,8 @@ bool AMDGPURegBankCombinerImpl::isClampZeroToOne(MachineInstr *K0,
   if (isFCst(K0) && isFCst(K1)) {
     const ConstantFP *KO_FPImm = K0->getOperand(1).getFPImm();
     const ConstantFP *K1_FPImm = K1->getOperand(1).getFPImm();
-    return (KO_FPImm->isExactlyValue(0.0) && K1_FPImm->isExactlyValue(1.0)) ||
-           (KO_FPImm->isExactlyValue(1.0) && K1_FPImm->isExactlyValue(0.0));
+    return (KO_FPImm->isPosZero() && K1_FPImm->isExactlyValue(1.0)) ||
+           (KO_FPImm->isExactlyValue(1.0) && K1_FPImm->isPosZero());
   }
   return false;
 }

@@ -1054,9 +1054,10 @@ void Editline::DisplayCompletions(
     Editline &editline, llvm::ArrayRef<CompletionResult::Completion> results) {
   assert(!results.empty());
 
-  LockedStreamFile locked_stream = editline.m_output_stream_sp->Lock();
+  std::optional<LockedStreamFile> locked_stream =
+      editline.m_output_stream_sp->Lock();
 
-  fprintf(locked_stream.GetFile().GetStream(),
+  fprintf(locked_stream->GetFile().GetStream(),
           "\n" ANSI_CLEAR_BELOW "Available completions:\n");
 
   /// Account for the current line, the line showing "Available completions"
@@ -1075,14 +1076,20 @@ void Editline::DisplayCompletions(
   size_t cur_pos = 0;
   while (cur_pos < results.size()) {
     cur_pos += PrintCompletion(
-        locked_stream.GetFile().GetStream(), results.slice(cur_pos), max_len,
+        locked_stream->GetFile().GetStream(), results.slice(cur_pos), max_len,
         editline.GetTerminalWidth(),
         all ? std::nullopt : std::optional<size_t>(page_size));
 
     if (cur_pos >= results.size())
       break;
 
-    fprintf(locked_stream.GetFile().GetStream(), "More (Y/n/a): ");
+    fprintf(locked_stream->GetFile().GetStream(), "More (Y/n/a): ");
+
+    // Release the output lock across the blocking el_wgetc() so that
+    // Interrupt(), which may run on another thread, can acquire it to wake
+    // up the read.
+    locked_stream.reset();
+
     // The type for the output and the type for the parameter are different,
     // to allow interoperability with older versions of libedit. The container
     // for the reply must be as wide as what our implementation is using,
@@ -1091,14 +1098,17 @@ void Editline::DisplayCompletions(
     EditLineGetCharType reply = L'n';
     int got_char = el_wgetc(editline.m_editline,
                             reinterpret_cast<EditLineCharType *>(&reply));
+
+    locked_stream.emplace(editline.m_output_stream_sp->Lock());
+
     // Check for a ^C or other interruption.
     if (editline.m_editor_status == EditorStatus::Interrupted) {
       editline.m_editor_status = EditorStatus::Editing;
-      fprintf(locked_stream.GetFile().GetStream(), "^C\n");
+      fprintf(locked_stream->GetFile().GetStream(), "^C\n");
       break;
     }
 
-    fprintf(locked_stream.GetFile().GetStream(), "\n");
+    fprintf(locked_stream->GetFile().GetStream(), "\n");
     if (got_char == -1 || reply == 'n')
       break;
     if (reply == 'a')

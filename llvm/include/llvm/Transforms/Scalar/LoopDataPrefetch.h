@@ -20,12 +20,13 @@ namespace llvm {
 class Function;
 
 /// An optimization pass inserting data prefetches in loops.
-class LoopDataPrefetchPass : public PassInfoMixin<LoopDataPrefetchPass> {
+class LoopDataPrefetchPass
+    : public OptionalPassInfoMixin<LoopDataPrefetchPass> {
 public:
   LoopDataPrefetchPass() = default;
 
   /// Run the pass over the function.
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm

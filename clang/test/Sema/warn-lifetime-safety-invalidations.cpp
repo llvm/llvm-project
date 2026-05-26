@@ -236,13 +236,12 @@ void IteratorUsedAfterErase(std::vector<int> v) {
   }
 }
 
-// FIXME: Detect this. We currently skip invalidation through ref/pointers to containers.
-void IteratorUsedAfterPushBackParam(std::vector<int>& v) {
+void IteratorUsedAfterPushBackParam(std::vector<int>& v) { // expected-warning {{parameter is later invalidated}}
   auto it = std::begin(v);
   if (it != std::end(v) && *it == 3) {
-    v.push_back(4);
+    v.push_back(4); // expected-note {{invalidated here}}
   }
-  ++it;
+  ++it; // expected-note {{later used here}}
 }
 
 void IteratorUsedAfterPushBack(std::vector<int> v) {
@@ -252,7 +251,123 @@ void IteratorUsedAfterPushBack(std::vector<int> v) {
   }
   ++it;             // expected-note {{later used here}}
 }
+
+void IteratorUsedAfterPreIncrement() {
+  std::vector<int> v;
+  auto it = v.begin();      // expected-warning {{object whose reference is captured is later invalidated}}
+  auto next = ++it;
+  v.push_back(1);           // expected-note {{invalidated here}}
+  (void)*next;              // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterPostDecrement(std::vector<int> v) {
+  auto it = v.rbegin();     // expected-warning {{object whose reference is captured is later invalidated}}
+  auto prev = it--;
+  v.push_back(1);           // expected-note {{invalidated here}}
+  (void)*prev;              // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterAddition() {
+  std::vector<int> v;
+  auto it = v.cbegin();     // expected-warning {{object whose reference is captured is later invalidated}}
+  auto next = it + 5;
+  v.push_back(1);           // expected-note {{invalidated here}}
+  (void)*next;              // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterReverseSubtraction(std::vector<int> v) {
+  auto it = v.crbegin();    // expected-warning {{object whose reference is captured is later invalidated}}
+  auto prev = 5 - it;
+  v.push_back(1);           // expected-note {{invalidated here}}
+  (void)*prev;              // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterAddAdd(std::vector<int> v) {
+  auto it = v.cbegin();     // expected-warning {{object whose reference is captured is later invalidated}}
+  auto next = (it + 5) + 5;
+  v.push_back(1);           // expected-note {{invalidated here}}
+  (void)*next;              // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterMixedAddition() {
+  std::vector<int> v;
+  auto it = v.cbegin();         // expected-warning {{object whose reference is captured is later invalidated}}
+  auto next = 1 + it + 2 + 3;
+  v.push_back(1);               // expected-note {{invalidated here}}
+  (void)*next;                  // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterPreIncrementAddAssign(std::vector<int> v) {
+  auto it = v.begin();          // expected-warning {{object whose reference is captured is later invalidated}}
+  it = ++it + 1 + 2;
+  v.push_back(1);               // expected-note {{invalidated here}}
+  (void)*it;                    // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterBeginAddAssign() {
+  std::vector<int> v;
+  auto it = v.begin() + 1;      // expected-warning {{object whose reference is captured is later invalidated}}
+  v.push_back(1);               // expected-note {{invalidated here}}
+  (void)*it;                    // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterStdBeginAddAssign() {
+  std::vector<int> v;
+  std::vector<int>::iterator it;
+  it = std::begin(v) + 1;       // expected-warning {{object whose reference is captured is later invalidated}}
+  v.push_back(1);               // expected-note {{invalidated here}}
+  (void)*it;                    // expected-note {{later used here}}
+}
 }  // namespace SimpleInvalidIterators
+
+namespace InvalidatingThroughContainerAliases {
+void IteratorInvalidatedThroughLocalReferenceAlias() {
+  std::vector<int> vv;
+  std::vector<int> &v = vv;
+  auto it = vv.begin(); // expected-warning {{object whose reference is captured is later invalidated}}
+  v.push_back(42);      // expected-note {{invalidated here}}
+  (void)it;             // expected-note {{later used here}}
+}
+
+void IteratorInvalidatedThroughPointerParameter(std::vector<int> *v) { // expected-warning {{parameter is later invalidated}}
+  auto it = v->begin();
+  v->push_back(42); // expected-note {{invalidated here}}
+  (void)it;         // expected-note {{later used here}}
+}
+
+void ParenthesizedContainerInvalidatesIterator() {
+  // FIXME: Support invalidation through non-DRE lvalue expressions.
+  std::vector<int> v;
+  auto it = v.begin();
+  (v).push_back(42);
+  (void)it;
+}
+
+} // namespace InvalidatingThroughContainerAliases
+
+namespace ContainerObjectAliases {
+// FIXME: Distinguish owner-borrow from content-borrow.
+void PointerParameterObjectUseIsOk(std::vector<int> *v) { // expected-warning {{parameter is later invalidated}}
+  v->push_back(42); // expected-note {{invalidated here}}
+  (void)v;          // expected-note {{later used here}}
+}
+
+// FIXME: Distinguish owner-borrow from content-borrow.
+void LocalPointerAliasObjectUseIsOk() {
+  std::vector<int> vv;
+  std::vector<int> *v = &vv; // expected-warning {{object whose reference is captured is later invalidated}}
+  v->push_back(42);          // expected-note {{invalidated here}}
+  (void)*v;                  // expected-note {{later used here}}
+}
+
+// FIXME: Distinguish owner-borrow from content-borrow.
+void LocalReferenceAliasObjectUseIsOk() {
+  std::vector<int> vv;
+  std::vector<int> &v = vv; // expected-warning {{object whose reference is captured is later invalidated}}
+  v.push_back(42);          // expected-note {{invalidated here}}
+  (void)v;                  // expected-note {{later used here}}
+}
+} // namespace ContainerObjectAliases
 
 namespace ElementReferences {
 // Testing raw pointers and references to elements, not just iterators.
@@ -289,7 +404,7 @@ void SelfInvalidatingMap() {
   // insertion and following is unsafe for this container.
   mp[1] = "42";
   mp[2]     // expected-note {{invalidated here}}
-    = 
+    =
     mp[1];  // expected-warning {{object whose reference is captured is later invalidated}} expected-note {{later used here}}
 }
 
@@ -297,7 +412,7 @@ void InvalidateErase() {
   std::flat_map<int, std::string> mp;
   // None of these containers provide iterator stability. So following is unsafe:
   auto it = mp.find(3); // expected-warning {{object whose reference is captured is later invalidated}}
-  mp.erase(mp.find(4)); // expected-note {{invalidated here}} 
+  mp.erase(mp.find(4)); // expected-note {{invalidated here}}
   if (it != mp.end())   // expected-note {{later used here}}
     *it;
 }
@@ -340,17 +455,33 @@ void Invalidate1Use1IsInvalid() {
   s.strings1.push_back("1");
   *it;
 }
-void Invalidate1Use2IsOk() {
+void Invalidate2Use1IsOk() {
     S s;
     auto it = s.strings1.begin();
     s.strings2.push_back("1");
     *it;
-}void Invalidate1Use2ViaRefIsOk() {
+}
+void ConditionalContainerInvalidatesIterator(bool flag) {
+    // FIXME: Support invalidation through conditional lvalue expressions.
+    std::vector<int> v1, v2;
+    auto it = v1.begin();
+    (flag ? v1 : v2).push_back(42);
+    (void)it;
+}
+void ConditionalFieldInvalidatesIterator(bool flag) {
+    // FIXME: Support conditional invalidation through field expressions.
     S s;
-    auto it = s.strings2.begin();
-    auto& strings2 = s.strings2;
-    strings2.push_back("1");
+    auto it = s.strings1.begin();
+    (flag ? s.strings1 : s.strings2).push_back("1");
     *it;
+}
+// FIXME: Requires field-sensitive AccessPaths to fix.
+void Invalidate1Use2ViaRefIsOk() {
+    S s;
+    auto it = s.strings2.begin(); // expected-warning {{object whose reference is captured is later invalidated}}
+    auto& strings1 = s.strings1;
+    strings1.push_back("1");      // expected-note {{invalidated here}}
+    *it;                          // expected-note {{later used here}}
 }
 void Invalidate1UseSIsOk() {
   S s;
@@ -358,27 +489,169 @@ void Invalidate1UseSIsOk() {
   s.strings2.push_back("1");
   (void)*p;
 }
+// FIXME: Distinguish owner-borrow from content-borrow.
 void PointerToContainerIsOk() {
   std::vector<std::string> s;
-  std::vector<std::string>* p = &s;
-  p->push_back("1");
-  (void)*p;
+  std::vector<std::string>* p = &s; // expected-warning {{object whose reference is captured is later invalidated}}
+  p->push_back("1");                // expected-note {{invalidated here}}
+  (void)*p;                         // expected-note {{later used here}}
 }
 void IteratorFromPointerToContainerIsInvalidated() {
-  // FIXME: Detect this.
   std::vector<std::string> s;
-  std::vector<std::string>* p = &s;
+  std::vector<std::string>* p = &s; // expected-warning {{object whose reference is captured is later invalidated}}
   auto it = p->begin();
-  p->push_back("1");
-  *it;
+  p->push_back("1");                // expected-note {{invalidated here}}
+  *it;                              // expected-note {{later used here}}
 }
+// FIXME: Distinguish invalidating an element's contents from invalidating
+// iterators into the outer container.
 void ChangingRegionOwnedByContainerIsOk() {
   std::vector<std::string> subdirs;
-  for (std::string& path : subdirs)
-    path = std::string();
+  for (std::string& path : subdirs) // expected-warning {{object whose reference is captured is later invalidated}} expected-note {{later used here}}
+    path = std::string();           // expected-note {{invalidated here}}
 }
 
 } // namespace ContainersAsFields
+
+namespace InvalidatedField {
+std::string StableString;
+
+// FIXME: Distinguish owner-borrow from interior-borrow.
+struct SinkOwnerBorrow {
+  std::string *dest_; // expected-note {{this field dangles}}
+
+  SinkOwnerBorrow(std::string *dest, int n) : dest_(dest) { // expected-warning {{parameter which escapes to a field is later invalidated}}
+    if (n > 0)
+      dest->clear(); // expected-note {{invalidated here}}
+  }
+};
+
+struct SinkInteriorBorrow {
+  const char *dest_; // expected-note {{this field dangles}}
+
+  SinkInteriorBorrow(std::string *dest, int n) : dest_(dest->data()) { // expected-warning {{parameter which escapes to a field is later invalidated}}
+    if (n > 0)
+      dest->clear(); // expected-note {{invalidated here}}
+  }
+};
+
+struct S {
+  std::string_view FieldFromLocalVector; // expected-note {{this field dangles}}
+  std::string_view FieldFromByValueParamVector; // expected-note {{this field dangles}}
+  std::string_view FieldFromLocalString; // expected-note {{this field dangles}}
+  std::string_view FieldFromByValueParamString; // expected-note {{this field dangles}}
+  std::string_view FieldFromRefParamString; // expected-note {{this field dangles}}
+  int *FieldFromNew; // expected-note {{this field dangles}}
+  int *FieldFromPointerParam; // expected-note {{this field dangles}}
+  std::string_view FieldReassigned;
+
+  void InvalidatedFieldLocalVector() {
+    std::vector<std::string> strings;
+    FieldFromLocalVector = *strings.begin(); // expected-warning {{object whose reference escapes to a field is later invalidated}}
+    strings.push_back("1"); // expected-note {{invalidated here}}
+  }
+
+  void InvalidatedFieldByValueParamVector(std::vector<std::string> strings) {
+    FieldFromByValueParamVector = *strings.begin(); // expected-warning {{object whose reference escapes to a field is later invalidated}}
+    strings.push_back("1"); // expected-note {{invalidated here}}
+  }
+
+  void InvalidatedFieldLocalString() {
+    std::string s;
+    FieldFromLocalString = s; // expected-warning {{object whose reference escapes to a field is later invalidated}}
+    s.clear(); // expected-note {{invalidated here}}
+  }
+
+  void InvalidatedFieldByValueParamString(std::string s) {
+    FieldFromByValueParamString = s; // expected-warning {{object whose reference escapes to a field is later invalidated}}
+    s.clear(); // expected-note {{invalidated here}}
+  }
+
+  void InvalidatedFieldRefParamString(std::string &s) { // expected-warning {{parameter which escapes to a field is later invalidated}}
+    FieldFromRefParamString = s;
+    s.~basic_string(); // expected-note {{invalidated here}}
+  }
+
+  void InvalidatedFieldDelete() {
+    int *p = new int; // expected-warning {{object whose reference escapes to a field is later invalidated}}
+    FieldFromNew = p;
+    delete p; // expected-note {{freed here}}
+  }
+
+  void InvalidatedFieldDeleteParam(int *p) { // expected-warning {{parameter which escapes to a field is later invalidated}}
+    FieldFromPointerParam = p;
+    delete p; // expected-note {{freed here}}
+  }
+
+  void FieldReassignedBeforeInvalidation() {
+    std::vector<std::string> strings;
+    FieldReassigned = *strings.begin();
+    FieldReassigned = StableString;
+    strings.push_back("1");
+  }
+};
+} // namespace InvalidatedField
+
+namespace InvalidatedGlobal {
+std::string StableString;
+std::string_view GlobalFromLocalVector; // expected-note {{this global dangles}}
+std::string_view GlobalFromByValueParamString; // expected-note {{this global dangles}}
+std::string_view GlobalFromRefParamString; // expected-note {{this global dangles}}
+int *GlobalFromNew; // expected-note {{this global dangles}}
+int *GlobalFromPointerParam; // expected-note {{this global dangles}}
+std::string_view GlobalReassigned;
+
+struct S {
+  static std::string_view StaticMember; // expected-note {{this static storage dangles}}
+};
+
+void InvalidatedGlobalLocalVector() {
+  std::vector<std::string> strings;
+  GlobalFromLocalVector = *strings.begin(); // expected-warning {{object whose reference escapes to global or static storage is later invalidated}}
+  strings.push_back("1"); // expected-note {{invalidated here}}
+}
+
+void InvalidatedGlobalByValueParamString(std::string s) {
+  GlobalFromByValueParamString = s; // expected-warning {{object whose reference escapes to global or static storage is later invalidated}}
+  s.clear(); // expected-note {{invalidated here}}
+}
+
+void InvalidatedGlobalRefParamString(std::string &s) { // expected-warning {{parameter which escapes to global or static storage is later invalidated}}
+  GlobalFromRefParamString = s;
+  s.~basic_string(); // expected-note {{invalidated here}}
+}
+
+void InvalidatedGlobalDelete() {
+  int *p = new int; // expected-warning {{object whose reference escapes to global or static storage is later invalidated}}
+  GlobalFromNew = p;
+  delete p; // expected-note {{freed here}}
+}
+
+void InvalidatedGlobalDeleteParam(int *p) { // expected-warning {{parameter which escapes to global or static storage is later invalidated}}
+  GlobalFromPointerParam = p;
+  delete p; // expected-note {{freed here}}
+}
+
+void InvalidatedStaticLocalString() {
+  static std::string_view StaticFromLocalString; // expected-note {{this static storage dangles}}
+  std::string s;
+  StaticFromLocalString = s; // expected-warning {{object whose reference escapes to global or static storage is later invalidated}}
+  s.clear(); // expected-note {{invalidated here}}
+}
+
+void InvalidatedStaticMemberString() {
+  std::string s;
+  S::StaticMember = s; // expected-warning {{object whose reference escapes to global or static storage is later invalidated}}
+  s.clear(); // expected-note {{invalidated here}}
+}
+
+void GlobalReassignedBeforeInvalidation() {
+  std::vector<std::string> strings;
+  GlobalReassigned = *strings.begin();
+  GlobalReassigned = StableString;
+  strings.push_back("1");
+}
+} // namespace InvalidatedGlobal
 
 namespace AssociativeContainers {
 void SetInsertDoesNotInvalidate() {
@@ -539,3 +812,111 @@ void function_captured_ref_invalidated() {
 }
 
 } // namespace callable_wrappers
+
+// FIXME: does not report a double free
+namespace explicit_destructor {
+
+void explicit_destructor_invalidates_pointer() {
+  std::string s = "42";
+  const char *p = s.data(); // expected-warning {{object whose reference is captured is later invalidated}}
+  s.~basic_string();        // expected-note {{invalidated here}}
+  (void)*p;                 // expected-note {{later used here}}
+}
+
+void pointer_destructor_invalidates_pointer() {
+  char storage[sizeof(std::string)];
+  std::string *obj = new (storage) std::string("42"); // expected-warning {{object whose reference is captured is later invalidated}}
+  const char *p = obj->data();
+  obj->~basic_string();                               // expected-note {{invalidated here}}
+  (void)*p;                                           // expected-note {{later used here}}
+}
+
+void destroy_at_invalidates_pointer() {
+  char storage[sizeof(std::string)];
+  std::string *obj = new (storage) std::string("42"); // expected-warning {{object whose reference is captured is later invalidated}}
+  const char *p = obj->data();
+  std::destroy_at(obj);                               // expected-note {{invalidated here}}
+  (void)*p;                                           // expected-note {{later used here}}
+}
+
+void destroy_at_then_placement_new_rescues_pointer() {
+  char storage[sizeof(std::string)];
+  std::string *obj = new (storage) std::string("42");
+  const char *p = obj->data();
+  std::destroy_at(obj);
+  obj = new (storage) std::string("23");
+  p = obj->data();
+  (void)*p;
+}
+
+void destroy_at_invalidates_array_pointer() {
+  std::string arr[1] = {"42"};
+  std::string (&arr_ref)[1] = arr;
+  const char *p = arr[0].data(); // expected-warning {{object whose reference is captured is later invalidated}}
+  std::destroy_at(&arr_ref);     // expected-note {{invalidated here}}
+  (void)*p;                      // expected-note {{later used here}}
+}
+
+void reference_destructor_invalidates_pointer() {
+  std::string s = "42";
+  std::string &ref = s;       // expected-warning {{object whose reference is captured is later invalidated}}
+  const char *p = ref.data();
+  std::destroy_at(&ref);      // expected-note {{invalidated here}}
+  (void)*p;                   // expected-note {{later used here}}
+}
+
+void destroy_at_ternary_operator(bool flag) {
+  std::string* str1 = new std::string; // expected-warning {{object whose reference is captured is later invalidated}}
+  std::string* str2 = new std::string;
+  const char *p = str1->data();
+  std::destroy_at(flag ? str1 : str2); // expected-note {{invalidated here}}
+  (void)*p;                            // expected-note {{later used here}}
+}
+
+struct StringOwner {
+  std::string s, t;
+};
+
+// FIXME: False-positive
+void member_destructor_invalidates_pointer() {
+  StringOwner owner = {"42", "43"};
+  const char *p = owner.s.data(); // expected-warning {{object whose reference is captured is later invalidated}}
+  owner.t.~basic_string();        // expected-note {{invalidated here}}
+  (void)*p;                       // expected-note {{later used here}}
+}
+
+} // namespace explicit_destructor
+
+namespace unique_ptr_invalidation {
+
+void invalid_after_reset() {
+  std::unique_ptr<int> up(new int);
+  int *p = up.get(); // expected-warning {{object whose reference is captured is later invalidated}}
+  up.reset();        // expected-note {{invalidated here}}
+  (void)*p;          // expected-note {{later used here}}
+}
+
+void invalid_after_move_assign() {
+  std::unique_ptr<int> up(new int);
+  std::unique_ptr<int> other(new int);
+  int *p = up.get();     // expected-warning {{object whose reference is captured is later invalidated}}
+  up = std::move(other); // expected-note {{invalidated here}}
+  (void)*p;              // expected-note {{later used here}}
+}
+
+void invalid_after_null_assign() {
+  std::unique_ptr<int> up(new int);
+  int *p = up.get(); // expected-warning {{object whose reference is captured is later invalidated}}
+  up = nullptr;      // expected-note {{invalidated here}}
+  (void)*p;          // expected-note {{later used here}}
+}
+
+void invalid_after_ternary_reset(bool flag) {
+  std::unique_ptr<int> up(new int);
+  std::unique_ptr<int> other(new int);
+  int *p = flag ? up.get() : other.get(); // expected-warning {{object whose reference is captured is later invalidated}}
+  up.reset();                             // expected-note {{invalidated here}}
+  (void)*p;                               // expected-note {{later used here}}
+}
+
+} // namespace unique_ptr_invalidation

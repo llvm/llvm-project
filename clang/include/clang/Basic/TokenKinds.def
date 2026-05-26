@@ -681,6 +681,8 @@ KEYWORD(groupshared                 , KEYHLSL)
 KEYWORD(in                          , KEYHLSL)
 KEYWORD(inout                       , KEYHLSL)
 KEYWORD(out                         , KEYHLSL)
+KEYWORD(row_major                   , KEYHLSL)
+KEYWORD(column_major                , KEYHLSL)
 // HLSL Intangible Types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) KEYWORD(Name, KEYHLSL)
 #include "clang/Basic/HLSLIntangibleTypes.def"
@@ -689,6 +691,7 @@ KEYWORD(out                         , KEYHLSL)
 TYPE_TRAIT_2(__builtin_hlsl_is_scalarized_layout_compatible, IsScalarizedLayoutCompatible, KEYHLSL)
 TYPE_TRAIT_1(__builtin_hlsl_is_intangible, IsIntangibleType, KEYHLSL)
 TYPE_TRAIT_1(__builtin_hlsl_is_typed_resource_element_compatible, IsTypedResourceElementCompatible, KEYHLSL)
+TYPE_TRAIT_1(__builtin_hlsl_is_constant_buffer_element_compatible, IsConstantBufferElementCompatible, KEYHLSL)
 
 // OpenMP Type Traits
 UNARY_EXPR_OR_TYPE_TRAIT(__builtin_omp_required_simd_align, OpenMPRequiredSimdAlign, KEYALL)

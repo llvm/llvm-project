@@ -242,6 +242,11 @@ void DebugInfoFinder::processDbgRecord(const Module &M, const DbgRecord &DR) {
   processLocation(M, DR.getDebugLoc().get());
 }
 
+void DebugInfoFinder::processVariable(DIVariable *DV) {
+  if (auto *DLV = dyn_cast_or_null<DILocalVariable>(DV))
+    processVariable(DLV);
+}
+
 void DebugInfoFinder::processType(DIType *DT) {
   if (!addType(DT))
     return;
@@ -253,12 +258,55 @@ void DebugInfoFinder::processType(DIType *DT) {
   }
   if (auto *DCT = dyn_cast<DICompositeType>(DT)) {
     processType(DCT->getBaseType());
+    processType(DCT->getVTableHolder());
+    processType(DCT->getDiscriminator());
+    processType(DCT->getSpecification());
+    processVariable(DCT->getDataLocation());
+    processVariable(DCT->getAssociated());
+    processVariable(DCT->getAllocated());
     for (Metadata *D : DCT->getElements()) {
       if (auto *T = dyn_cast<DIType>(D))
         processType(T);
       else if (auto *SP = dyn_cast<DISubprogram>(D))
         processSubprogram(SP);
+      else if (auto *SR = dyn_cast_or_null<DISubrange>(D)) {
+        auto VisitBound = [&](DISubrange::BoundType Bound) {
+          if (auto *BV = dyn_cast_if_present<DIVariable *>(Bound))
+            processVariable(BV);
+        };
+        VisitBound(SR->getLowerBound());
+        VisitBound(SR->getCount());
+        VisitBound(SR->getUpperBound());
+        VisitBound(SR->getStride());
+      } else if (auto *GSR = dyn_cast_or_null<DIGenericSubrange>(D)) {
+        auto VisitBound = [&](DIGenericSubrange::BoundType Bound) {
+          if (auto *BV = dyn_cast_if_present<DIVariable *>(Bound))
+            processVariable(BV);
+        };
+        VisitBound(GSR->getLowerBound());
+        VisitBound(GSR->getCount());
+        VisitBound(GSR->getUpperBound());
+        VisitBound(GSR->getStride());
+      }
     }
+    return;
+  }
+  if (auto *ST = dyn_cast<DIStringType>(DT)) {
+    processVariable(ST->getStringLength());
+    return;
+  }
+  if (auto *SRT = dyn_cast<DISubrangeType>(DT)) {
+    processType(SRT->getBaseType());
+    auto VisitBound = [&](DISubrangeType::BoundType Bound) {
+      if (auto *V = dyn_cast_if_present<DIVariable *>(Bound))
+        processVariable(V);
+      else if (auto *T = dyn_cast_if_present<DIDerivedType *>(Bound))
+        processType(T);
+    };
+    VisitBound(SRT->getLowerBound());
+    VisitBound(SRT->getUpperBound());
+    VisitBound(SRT->getStride());
+    VisitBound(SRT->getBias());
     return;
   }
   if (auto *DDT = dyn_cast<DIDerivedType>(DT)) {
@@ -2121,7 +2169,8 @@ getAssignmentInfoImpl(const DataLayout &DL, const Value *StoreDest,
   if (OffsetInBytes == UINT64_MAX)
     return std::nullopt;
   if (const auto *Alloca = dyn_cast<AllocaInst>(Base))
-    return AssignmentInfo(DL, Alloca, OffsetInBytes * 8, SizeInBits);
+    if (!DL.getTypeSizeInBits(Alloca->getAllocatedType()).isScalable())
+      return AssignmentInfo(DL, Alloca, OffsetInBytes * 8, SizeInBits);
   return std::nullopt;
 }
 

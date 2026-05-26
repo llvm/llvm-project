@@ -108,6 +108,16 @@ simply make an explicit conversion.
 Options
 -------
 
+.. option:: CheckOverloadedFunctions
+
+  If `true`, the check will also consider overloaded functions for
+  ``string_view`` conversion suggestions. If `false`, overloaded
+  functions are skipped to avoid potential issues with ambiguous
+  conversions.
+
+  Default is `false`.
+
+
 .. option:: IgnoredFunctions
 
    A semicolon-separated list of the names of functions or methods to be
