@@ -2572,6 +2572,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_osutil_linux_syscall_wrappers_mmap",
+        ":__support_osutil_linux_syscall_wrappers_munmap",
         ":__support_osutil_syscall",
         ":__support_threads_callonce",
         ":hdr_fcntl_macros",
@@ -5313,6 +5314,16 @@ libc_support_library(
     deps = [
         ":__support_fputil_fp_bits",
         ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_isnanf16",
+    hdrs = ["src/__support/math/isnanf16.h"],
+    deps = [
+        ":__support_fputil_fp_bits",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
     ],
 )
 
@@ -9928,6 +9939,13 @@ libc_math_function(
     name = "isnanl",
     additional_deps = [
         ":__support_math_isnanl",
+    ],
+)
+
+libc_math_function(
+    name = "isnanf16",
+    additional_deps = [
+        ":__support_math_isnanf16",
     ],
 )
 
