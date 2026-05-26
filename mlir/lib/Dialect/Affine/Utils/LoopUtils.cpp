@@ -1106,10 +1106,7 @@ LogicalResult mlir::affine::loopUnrollByFactor(
     return success();
 
   // If the trip count is lower than the unroll factor, no unrolled body.
-  if ((mayBeConstantTripCount && tripEqual &&
-       *mayBeConstantTripCount < unrollFactor) ||
-      (mayBeConstantMaxTripCount &&
-       *mayBeConstantMaxTripCount < unrollFactor)) {
+  if (mayBeConstantTripCount && *mayBeConstantTripCount < unrollFactor) {
     if (cleanUpUnroll) {
       // Unroll the cleanup loop if cleanUpUnroll is specified.
       return loopUnrollFull(forOp);

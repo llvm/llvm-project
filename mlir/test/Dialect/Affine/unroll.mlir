@@ -13,6 +13,7 @@
 // UNROLL-FULL-DAG: [[$MAP5:#map[0-9]*]] = affine_map<(d0, d1) -> (d0 + 3)>
 // UNROLL-FULL-DAG: [[$MAP6:#map[0-9]*]] = affine_map<(d0)[s0] -> (d0 + s0 + 1)>
 // UNROLL-FULL-DAG: [[$MAP7:#map[0-9]*]] = affine_map<()[s0] -> (s0 + (((-s0 + 9) ceildiv 2) floordiv 4) * 8)>
+// UNROLL-FULL-DAG: [[$MAP8:#map[0-9]*]] = affine_map<()[s0, s1] -> (s0 + (((-s0 + s1) ceildiv 2) floordiv
 
 // SHORT-DAG: [[$MAP0:#map[0-9]*]] = affine_map<(d0) -> (d0 + 1)>
 
@@ -309,6 +310,29 @@ func.func @bound_partial_unroll_factor_4() {
   // UNROLL-FULL-NEXT:   %[[SUM_4:.*]] = arith.addi %[[ARG]], %[[C0]] : index
   // UNROLL-FULL-NEXT:   affine.yield %[[SUM_4]] : index
   // UNROLL-FULL-NEXT: }
+  return
+}
+
+// UNROLL-FULL-LABEL: func @bound_for_unroll_dynamic_lower_and_upper
+func.func @bound_for_unroll_dynamic_lower_and_upper() {
+  %c0 = arith.constant 0 :index
+  %lower_bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
+  %upper_bound = test.value_with_bounds { min = 6 : index, max = 7 : index}
+  affine.for %iv = %lower_bound to %upper_bound step 2 iter_args(%arg = %c0) -> index {
+      %sum = arith.addi %arg, %c0 : index
+      affine.yield %sum : index
+  }
+  // UNROLL-FULL-NEXT:   %[[C0:.*]] = arith.constant 0 : index
+  // UNROLL-FULL-NEXT:   %[[LB:.*]] = test.value_with_bounds {max = 1 : index, min = 0 : index}
+  // UNROLL-FULL-NEXT:   %[[UB:.*]] = test.value_with_bounds {max = 7 : index, min = 6 : index}
+  // UNROLL-FULL-NEXT:   %[[ADDI_0:.*]] = arith.addi %[[C0]], %[[C0]] : index
+  // UNROLL-FULL-NEXT:   %[[ADDI_1:.*]] = arith.addi %[[ADDI_0]], %[[C0]] : index
+  // UNROLL-FULL-NEXT:   %[[UNROLLED_INIT:.*]] = arith.addi %[[ADDI_1]], %[[C0]] : index
+  // UNROLL-FULL-NEXT:   %[[LOOP_RES:.*]] = affine.for %{{.*}} = [[$MAP8]]()
+  // UNROLL-FULL-SAME:     [%[[LB]], %[[UB]]] to %[[UB]] step 2 iter_args(%[[VAL:.*]] = %[[UNROLLED_INIT]]) -> (index) {
+  // UNROLL-FULL-NEXT:     %[[YIELD_VAL:.*]] = arith.addi %[[VAL]], %[[C0]] : index
+  // UNROLL-FULL-NEXT:     affine.yield %[[YIELD_VAL]] : index
+  // UNROLL-FULL-NEXT:   }
   return
 }
 
