@@ -945,8 +945,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
           (isa<VPReplicateRecipe>(&R) &&
            cast<VPReplicateRecipe>(&R)->isSingleScalar()) ||
           (isa<VPInstruction>(&R) &&
-           !cast<VPInstruction>(&R)->doesGeneratePerAllLanes() &&
-           cast<VPInstruction>(&R)->getOpcode() != VPInstruction::Unpack))
+           !cast<VPInstruction>(&R)->doesGeneratePerAllLanes()))
         continue;
 
       auto *DefR = cast<VPSingleDefRecipe>(&R);
