@@ -589,7 +589,7 @@ void CoreEngine::enqueueStmtNode(ExplodedNode *N,
   // Check if this node entered a callee.
   if (N->getLocation().getAs<CallEnter>()) {
     // Still use the index of the CallExpr. It's needed to create the callee
-    // StackFrameContext.
+    // StackFrame.
     WList->enqueue(N, Block, Idx);
     return;
   }
@@ -671,7 +671,7 @@ void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS
     // If we are in an inlined call, generate CallExitBegin node.
     if (LocCtx->getParent()) {
       // Use the callee location context.
-      CallExitBegin Loc(cast<StackFrameContext>(LocCtx), RS);
+      CallExitBegin Loc(cast<StackFrame>(LocCtx), RS);
       if (ExplodedNode *Succ = makeNode(Loc, Node->getState(), Node))
         WList->enqueue(Succ);
     } else {

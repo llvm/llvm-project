@@ -567,7 +567,9 @@ LoadInst *AtomicExpandImpl::convertAtomicLoadToIntegerType(LoadInst *LI) {
   NewLI->setAtomic(LI->getOrdering(), LI->getSyncScopeID());
   LLVM_DEBUG(dbgs() << "Replaced " << *LI << " with " << *NewLI << "\n");
 
-  Value *NewVal = Builder.CreateBitCast(NewLI, LI->getType());
+  Value *NewVal = LI->getType()->isPtrOrPtrVectorTy()
+                      ? Builder.CreateIntToPtr(NewLI, LI->getType())
+                      : Builder.CreateBitCast(NewLI, LI->getType());
   LI->replaceAllUsesWith(NewVal);
   LI->eraseFromParent();
   return NewLI;
@@ -671,12 +673,22 @@ bool AtomicExpandImpl::expandAtomicLoadToCmpXchg(LoadInst *LI) {
 
   Value *Addr = LI->getPointerOperand();
   Type *Ty = LI->getType();
-  Constant *DummyVal = Constant::getNullValue(Ty);
+
+  // cmpxchg supports only integer and pointer operands. If the load type is
+  // FP or vector, run the cmpxchg on the same-sized integer and bitcast the
+  // result back; mirrors createCmpXchgInstFun.
+  bool NeedBitcast = Ty->isFloatingPointTy() || Ty->isVectorTy();
+  Type *CmpXchgTy = Ty;
+  if (NeedBitcast)
+    CmpXchgTy = Builder.getIntNTy(Ty->getPrimitiveSizeInBits());
+  Constant *DummyVal = Constant::getNullValue(CmpXchgTy);
 
   Value *Pair = Builder.CreateAtomicCmpXchg(
       Addr, DummyVal, DummyVal, LI->getAlign(), Order,
       AtomicCmpXchgInst::getStrongestFailureOrdering(Order));
   Value *Loaded = Builder.CreateExtractValue(Pair, 0, "loaded");
+  if (NeedBitcast)
+    Loaded = Builder.CreateBitCast(Loaded, Ty);
 
   LI->replaceAllUsesWith(Loaded);
   LI->eraseFromParent();
@@ -2237,9 +2249,18 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     I->replaceAllUsesWith(V);
   } else if (HasResult) {
     Value *V;
-    if (UseSizedLibcall)
-      V = Builder.CreateBitOrPointerCast(Result, I->getType());
-    else {
+    if (UseSizedLibcall) {
+      // Add bitcasts from Result's scalar type to I's <n x ptr> vector type
+      auto *PtrTy = dyn_cast<PointerType>(I->getType()->getScalarType());
+      auto *VTy = dyn_cast<VectorType>(I->getType());
+      if (VTy && PtrTy && !Result->getType()->isVectorTy()) {
+        unsigned AS = PtrTy->getAddressSpace();
+        Value *BC = Builder.CreateBitCast(
+            Result, VTy->getWithNewType(DL.getIntPtrType(Ctx, AS)));
+        V = Builder.CreateIntToPtr(BC, I->getType());
+      } else
+        V = Builder.CreateBitOrPointerCast(Result, I->getType());
+    } else {
       V = Builder.CreateAlignedLoad(I->getType(), AllocaResult,
                                     AllocaAlignment);
       Builder.CreateLifetimeEnd(AllocaResult);

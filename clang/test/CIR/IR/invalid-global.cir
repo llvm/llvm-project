@@ -1,0 +1,42 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+cir.global external @target = #cir.int<42> : !s32i
+
+// expected-error @below {{global alias shall not have an initializer or constructor/destructor regions}}
+cir.global external @bad_alias_with_init alias(@target) = #cir.int<7> : !s32i
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+cir.global external @target = #cir.int<42> : !s32i
+
+// expected-error @below {{global alias shall not have an initializer or constructor/destructor regions}}
+cir.global external @bad_alias_with_ctor alias(@target) = ctor : !s32i {
+  cir.yield
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+cir.global external @target = #cir.int<42> : !s32i
+
+// expected-error @below {{global alias shall not have an initializer or constructor/destructor regions}}
+cir.global external @bad_alias_with_dtor alias(@target) = #cir.int<7> : !s32i dtor {
+  cir.yield
+}
+
+}

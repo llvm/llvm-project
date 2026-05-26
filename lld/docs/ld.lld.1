@@ -96,7 +96,8 @@ Write a Big Endian ELF File using BE8 format(AArch32 only)
 .It Fl -branch-to-branch
 Enable the branch-to-branch optimizations: a branch whose target is
 another branch instruction is rewritten to point to the latter branch
-target (AArch64 and X86_64 only). Enabled by default at
+target (AArch64 and X86_64 only), and CFI jump table entries are replaced
+with the function body where possible (X86_64 only). Enabled by default at
 .Fl O2 Ns .
 .It Fl -build-id Ns = Ns Ar value
 Generate a build ID note.
@@ -429,7 +430,7 @@ Disable string merging.
 .It Cm 1
 Enable string merging.
 .It Cm 2
-Enable string tail merging, branch-to-branch optimization and CFI jump table relaxation.
+Enable string tail merging and branch-to-branch optimization.
 .El
 .Pp
 .Fl O Ns Cm 1
@@ -553,8 +554,6 @@ Padding is inserted into output sections with names matching the following patte
 .Cm .rodata
 and
 .Cm .text* .
-.It Fl -relax-cfi-jump-tables
-Enable CFI jump table relaxation (x86_64 only).
 .It Fl --relax-gp
 Enable global pointer relaxation for RISC-V.
 .It Fl -relocatable , Fl r

@@ -41,6 +41,16 @@ bool isNormalAssignmentOperator(const FunctionDecl *FD);
 /// has the lifetimebound attribute.
 bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD);
 
+/// Returns the lifetimebound attribute for the implicit this parameter, if it
+/// exists on the current type.
+const LifetimeBoundAttr *
+getDirectImplicitObjectLifetimeBoundAttr(const FunctionDecl *FD);
+
+/// Returns the lifetimebound attribute for the implicit this parameter, if it
+/// exists on any redeclaration.
+const LifetimeBoundAttr *
+getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD);
+
 /// Returns true if the implicit object parameter (this) should be considered
 /// lifetimebound, either due to an explicit lifetimebound attribute on the
 /// method or because it's a normal assignment operator.
@@ -49,9 +59,11 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 // Returns true if the implicit object argument (this) of a method call should
 // be tracked for GSL lifetime analysis. This applies to STL methods that return
 // pointers or references that depend on the lifetime of the object, such as
-// container iterators (begin, end), data accessors (c_str, data, get), or
-// element accessors (operator[], operator*, front, back, at).
-bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
+// container iterators (begin, end), data accessors (c_str, data, get),
+// element accessors (operator[], operator*, front, back, at), or propagating
+// operations (operator+, operator-, operator++, operator--).
+bool shouldTrackImplicitObjectArg(const Expr &ImplicitObjectArgument,
+                                  const CXXMethodDecl *Callee,
                                   bool RunningUnderLifetimeSafety);
 
 // Returns true if the first argument of a free function should be tracked for
@@ -61,10 +73,16 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
 // std::any_cast.
 bool shouldTrackFirstArgument(const FunctionDecl *FD);
 
+// Returns true if the second argument of a free function should be tracked for
+// lifetime analysis. This applies to free operator functions that take a
+// GSL Pointer as their second argument.
+bool shouldTrackSecondArgument(const FunctionDecl *FD);
+
 // Tells whether the type is annotated with [[gsl::Pointer]].
 bool isGslPointerType(QualType QT);
 // Tells whether the type is annotated with [[gsl::Owner]].
 bool isGslOwnerType(QualType QT);
+bool isGslOwnerType(const CXXRecordDecl *RD);
 
 // Returns true if the given method is std::unique_ptr::release().
 // This is treated as a move in lifetime analysis to avoid false-positives

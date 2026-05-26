@@ -343,7 +343,7 @@ void X86_64::relaxCFIJumpTables() const {
           return nullptr;
         auto *sym = dyn_cast<Defined>(r.sym);
         if (!sym || sym->isPreemptible || sym->isGnuIFunc() ||
-            sym->value + r.addend != -4ull)
+            sym->value + r.addend != -4ull) // Usual addend for branch targets.
           return nullptr;
         auto *target = dyn_cast_or_null<InputSection>(sym->section);
         if (!target || sectionReplacements.count(target))
@@ -490,7 +490,7 @@ void X86_64::relaxCFIJumpTables() const {
       auto *isd = dyn_cast<InputSectionDescription>(cmd);
       if (!isd)
         continue;
-      SmallVector<InputSection *> newSections;
+      SmallVector<InputSection *, 0> newSections;
       for (auto *sec : isd->sections) {
         auto i = sectionReplacements.find(sec);
         if (i == sectionReplacements.end())
@@ -594,7 +594,7 @@ void X86_64::writeGotPltHeader(uint8_t *buf) const {
   // in the psABI and glibc before Aug 2021 used the entry to compute run-time
   // load address of the shared object (note that this is relevant for linking
   // ld.so, not any other program).
-  write64le(buf, ctx.mainPart->dynamic->getVA());
+  write64le(buf, ctx.in.dynamic->getVA());
 }
 
 void X86_64::writeGotPlt(uint8_t *buf, const Symbol &s) const {

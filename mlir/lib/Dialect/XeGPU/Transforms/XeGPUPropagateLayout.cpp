@@ -347,6 +347,14 @@ private:
                             ArrayRef<LayoutInfoLattice *> operands,
                             ArrayRef<const LayoutInfoLattice *> results);
 
+  void visitVectorInterleaveOp(vector::InterleaveOp interleave,
+                               ArrayRef<LayoutInfoLattice *> operands,
+                               ArrayRef<const LayoutInfoLattice *> results);
+
+  void visitVectorDeinterleaveOp(vector::DeinterleaveOp deinterleave,
+                                 ArrayRef<LayoutInfoLattice *> operands,
+                                 ArrayRef<const LayoutInfoLattice *> results);
+
   void visitPrefetchNdOp(xegpu::PrefetchNdOp prefetch,
                          ArrayRef<LayoutInfoLattice *> operands,
                          ArrayRef<const LayoutInfoLattice *> results);
@@ -452,6 +460,12 @@ LogicalResult LayoutInfoPropagation::visitOperation(
       })
       .Case([&](vector::BitCastOp bitcastOp) {
         visitVectorBitcastOp(bitcastOp, operands, results);
+      })
+      .Case([&](vector::InterleaveOp interleaveOp) {
+        visitVectorInterleaveOp(interleaveOp, operands, results);
+      })
+      .Case([&](vector::DeinterleaveOp deinterleaveOp) {
+        visitVectorDeinterleaveOp(deinterleaveOp, operands, results);
       })
       .Case([&](vector::MultiDimReductionOp reductionOp) {
         visitVectorMultiReductionOp(reductionOp, operands, results);
@@ -1064,10 +1078,12 @@ void LayoutInfoPropagation::visitTransposeOp(
   LayoutInfo resultLayout = results[0]->getValue();
   if (!resultLayout.isAssigned())
     return;
+
   auto consumerLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resultLayout.get());
   auto srcLayoutAttr = xegpu::inferTransposeSourceLayout(
       consumerLayoutAttr, transpose.getPermutation());
+
   // Propagate the new layout to the vector operand.
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
 }
@@ -1101,6 +1117,63 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
   // derive the source layout from the dominant layout and reduction dims
   auto srcLayoutAttr = xegpu::inferBitCastSourceLayout(
       requiredResLayoutAttr, outElemTyBitWidth, inElemTyBitWidth);
+
+  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
+}
+
+/// For vector::InterleaveOp, the result has double the innermost dimension size
+/// compared to each source operand. The layout is propagated from result to
+/// sources, adjusting for the 2x size increase.
+void LayoutInfoPropagation::visitVectorInterleaveOp(
+    vector::InterleaveOp interleave, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
+  // Need the layout of interleave result to propagate to the operands.
+  LayoutInfo resLayoutInfo = results[0]->getValue();
+  if (!resLayoutInfo.isAssigned())
+    return;
+
+  auto srcVecType = interleave.getSourceVectorType();
+  auto resVecType = interleave.getResultVectorType();
+
+  auto consumerLayoutAttr =
+      dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
+  const uArch *uArch = getUArch(xegpu::getChipStr(interleave).value_or(""));
+  if (!uArch)
+    return;
+
+  // Setup the result layout to ensure the source layout can be safely derived
+  auto requiredResLayoutAttr = setupInterleaveResultLayout(
+      layoutKind, srcVecType, resVecType, consumerLayoutAttr, uArch);
+
+  xegpu::setTemporaryLayout(interleave->getResult(0), requiredResLayoutAttr);
+
+  // Derive the source layout from the result layout (halve the innermost dim)
+  auto srcLayoutAttr =
+      xegpu::inferInterleaveSourceLayout(requiredResLayoutAttr);
+
+  // Both operands (lhs and rhs) get the same source layout
+  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
+  propagateIfChanged(operands[1], operands[1]->meet(LayoutInfo(srcLayoutAttr)));
+}
+
+/// For vector::DeinterleaveOp, the source has double the innermost dimension
+/// size compared to each result. The layout is propagated from results to
+/// source, adjusting for the 2x size decrease in results.
+void LayoutInfoPropagation::visitVectorDeinterleaveOp(
+    vector::DeinterleaveOp deinterleave, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
+  // Need the layout of deinterleave results to propagate to the operand.
+  // Use the first result's layout (both results should have the same layout)
+  LayoutInfo resLayoutInfo = results[0]->getValue();
+  if (!resLayoutInfo.isAssigned())
+    return;
+
+  auto consumerLayoutAttr =
+      dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
+
+  // Derive the source layout from the result layout (double the innermost dim)
+  // No setup function needed - just infer directly
+  auto srcLayoutAttr = xegpu::inferDeinterleaveSourceLayout(consumerLayoutAttr);
 
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
 }
@@ -1250,7 +1323,6 @@ void LayoutInfoPropagation::visitLoadMatrixOp(
   }
 }
 
-// Store matrix is a flavor of scattered store for 2D shapes.
 void LayoutInfoPropagation::visitStoreMatrixOp(
     xegpu::StoreMatrixOp storeMatrix, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
@@ -1445,6 +1517,11 @@ LogicalResult ResolveLayoutConflicts::run() {
     return WalkResult::advance();
   });
 
+  LLVM_DEBUG({
+    DBGS() << "IR after resolving layout conflicts:\n";
+    parentOp->dump();
+  });
+
   return r.wasInterrupted() ? failure() : success();
 }
 
@@ -1472,7 +1549,14 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
       consumerOp->emitWarning("Expected layout for non-1D vectors.");
     return success(); // uniform non-tensor-data vector does not require layout
   }
-  // Get the consumer expected layout at this operand.
+  // Region branch ops (e.g. scf.for) and their terminators (e.g. scf.yield)
+  // forward their operands to successor region inputs / parent op results;
+  // their consumer layout is resolved through that forwarding, not at this
+  // use point.
+  if (isa<RegionBranchOpInterface, RegionBranchTerminatorOpInterface>(
+          consumerOp))
+    return success();
+
   auto consumerLayout = xegpu::getConsumerLayoutAt(operand);
   if (!consumerLayout)
     return consumerOp->emitError(
@@ -1481,6 +1565,26 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
   // If layouts are same, no conflict exists, return success.
   if (consumerLayout.isEqualTo(producerLayout))
     return success();
+
+  // If the producer is trivially rematerializable (e.g. `vector.step`, splat
+  // `arith.constant`), clone it and stamp the consumer's expected layout on
+  // the clone instead of inserting a `xegpu.convert_layout`. The convert
+  // would otherwise lower to a cross-subgroup data movement through SLM at
+  // WG-to-SG distribution time, which is more expensive than
+  // recomputing a pure value generator.
+  if (auto *producerOp = vectorValue.getDefiningOp();
+      producerOp && producerOp->getNumResults() == 1 &&
+      isa<OpResult>(vectorValue) &&
+      xegpu::isTriviallyRematerializable(producerOp)) {
+    builder.setInsertionPointAfter(producerOp);
+    Operation *clone = builder.clone(*producerOp);
+    OpResult cloneResult = clone->getResult(0);
+    // Drop the inherited producer layout so the new layout takes effect
+    xegpu::removeLayoutAttr(cloneResult);
+    xegpu::setDistributeLayoutAttr(cloneResult, consumerLayout);
+    operand.set(cloneResult);
+    return success();
+  }
 
   // Insert a convert_layout op to resolve the conflict.
   builder.setInsertionPointAfterValue(vectorValue);
@@ -1611,8 +1715,6 @@ updateControlFlowOps(mlir::OpBuilder &builder,
       // We only need to operate on tensor descriptor or vector types.
       if (!isa<xegpu::TensorDescType, VectorType>(inputType))
         continue;
-      xegpu::DistributeLayoutAttr successorInputLayout =
-          getLayoutOfValue(successorInput);
       xegpu::DistributeLayoutAttr successorOperandLayout =
           getLayoutOfValue(successorOperand->get());
 
@@ -1621,15 +1723,6 @@ updateControlFlowOps(mlir::OpBuilder &builder,
         LLVM_DEBUG(DBGS() << "No layout assigned for forwarded operand in "
                              "branch terminator: "
                           << successorOperand->get() << "\n");
-        return failure();
-      }
-      // We expect the layouts to match.
-      if (successorInputLayout &&
-          successorInputLayout != successorOperandLayout) {
-        LLVM_DEBUG(DBGS() << "Conflicting layouts for region argument and "
-                             "operand forwarded as the argument: "
-                          << successorInputLayout << " vs "
-                          << successorOperandLayout << "\n");
         return failure();
       }
       // Get tensor descriptor type with the layout.

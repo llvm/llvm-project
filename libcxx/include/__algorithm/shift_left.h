@@ -55,7 +55,7 @@ __shift_left(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::templat
     }
   }
 
-  _Iter __result = std::__move<_AlgPolicy>(__m, __last, __first).second;
+  _Iter __result = std::__move<_AlgPolicy>(__m, __last, __first).__out_;
   return {std::move(__first), std::move(__result)};
 }
 
