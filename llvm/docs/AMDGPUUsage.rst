@@ -1990,11 +1990,12 @@ enabled this should map to ``scope:SCOPE_SE``.
    +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
 
 **Note:** Cache control bits for Store are not affected by WGP mode.
+
 '``llvm.amdgcn.waterfall``' Intrinsics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``llvm.amdgcn.waterfall`` :ref:`family of intrinsics<amdgpu-waterfall-intrinsics-table>`
-describe how to generate a waterfall loop around a region of code.
+describes how to generate a waterfall loop around a region of code.
 
 :Background:
 
@@ -2014,33 +2015,39 @@ practice.
 
 :Motivation:
 
-The ``llvm.amdgc.waterfall.*`` intrinsics provide a practical way for a
+The ``llvm.amdgcn.waterfall.*`` intrinsics provide a practical way for a
 frontend to combine several operations into a single waterfall loop with an
 efficient iteration strategy over multiple non-uniform operands.
 
-In particular, a frontend can specify a subset of non-uniform operands that
+In particular, a frontend can specify a set of values that
 is sufficient to use as the "index" to loop over, i.e., lanes that have the
-same values for the specified operands must have the same value for all
-other non-uniform operands that need to be uniform. It is hard for the
-backend to find a fitting subset of non-uniform operands, but it can be easy
+same index values must have the same values for all
+non-uniform operands that need to be uniform. It is hard for the
+backend to find a fitting index, but it can be easy
 for a frontend.
 
 :Implementation:
 
 A group of waterfall intrinsics that depend on the same token defines a
 single waterfall loop. The group identifies a region of code, the
-corresponding non-uniform operands that need to be uniform, and a subset of
-these operands that is sufficient to use as the "index" of the loop.
+non-uniform operands that need to be made uniform, and the operands
+to use as the "index" of the loop.
 
 A waterfall group must contain at least one
-``waterfall.begin``, at least one ``waterfall.readfirstlane``, and at least one
-of ``waterfall.end`` or ``waterfall.loop_end`` intrinsic.
+``waterfall.begin``, at least one of ``waterfall.readfirstlane``, and at least one
+of ``waterfall.end`` or ``waterfall.last.use`` intrinsic.
 A group can contain more than one of each of the waterfall intrinsics.
 The token on the final
 ``waterfall.begin`` must be used for other waterfall intrinsics in the same
 group. The waterfall loop will enclose all instructions from the earliest
-``waterfall.begin`` to the latest ``waterfall.end`` or ``waterfall.loop_end``
+``waterfall.begin`` to the latest ``waterfall.end`` or ``waterfall.last.use``
 intrinsic in the group.
+
+Each ``waterfall.begin`` specifies a value that is part of the index. Each
+``waterfall.readfirstlane`` specifies a non-uniform operand that needs to be
+uniform. The index can be disjoint from the non-uniform operands. For
+example, ``waterfall.begin`` can take an index while
+``waterfall.readfirstlane`` takes a descriptor derived from that index.
 
 Each waterfall group must be contained within a single basic block.
 A single basic block can contain more than one waterfall group.
@@ -2055,11 +2062,10 @@ If all operands are uniform, the compiler will not insert the waterfall loop.
   LLVM Intrinsic                                   Description
   ==============================================   =========================================================================
   ``llvm.amdgcn.waterfall.begin``                  Marks the beginning of a waterfall region of code.
-                                                   Specifies a non-uniform operand that needs to be uniform in the region
-                                                   and should be used as part of the index for the waterfall loop to iterate
-                                                   over.
+                                                   Specifies a value to be used as (part of) the index for the waterfall
+                                                   loop to iterate over.
 
-                                                   Multiple non-uniform operands of different types can be used together as
+                                                   Multiple values of different types can be combined as
                                                    an index by threading tokens through multiple ``waterfall.begin`` intrinsics::
 
                                                      %tok0 = llvm.amdgcn.waterfall.begin(i32 0, i32 %idx0)
@@ -2072,21 +2078,16 @@ If all operands are uniform, the compiler will not insert the waterfall loop.
 
                                                    The intrinsic returns a new token that must be threaded through the
                                                    corresponding ``waterfall.readfirstlane``, ``waterfall.end`` or
-                                                   ``waterfall.last.use**`` intrinsics.
+                                                   ``waterfall.last.use`` intrinsics.
 
-  ``llvm.amdgcn.waterfall.readfirstlane``          Reads the first active lane's value of the non-uniform operand and
-                                                   returns it for use within a waterfall region.
+  ``llvm.amdgcn.waterfall.readfirstlane``          Reads the first active lane's value of a given non-uniform operand and
+                                                   returns it as a uniform value for use within a waterfall region.
 
                                                    Takes a token from the final ``waterfall.begin`` in the waterfall
                                                    group and a non-uniform operand. Returns the uniform result.
 
-                                                   Every non-inform operand from ``waterfall.begin`` must have a
-                                                   corresponding ``waterfall.readfirstlane`` intrinsic in the group.
-                                                   Additional ``waterfall.readfirstlane`` intrinsics in the group can be used
-                                                   to specify non-uniform operands that are not part of the index,
-                                                   but need to be uniform in the waterfall loop, as long as they satisfy
-                                                   the correctness requirement (i.e., they have the same values in lanes
-                                                   where the index has the same values).
+                                                   The correctness requirement is that lanes with the same index values
+                                                   must have the same values for all ``waterfall.readfirstlane`` operands.
 
   ``llvm.amdgcn.waterfall.end``                    Marks the end of a waterfall region.
                                                    Takes the token from the final ``waterfall.begin`` in the group.
@@ -2095,12 +2096,12 @@ If all operands are uniform, the compiler will not insert the waterfall loop.
                                                    non-defining operation such as a store. Marks that the use of the value
                                                    constitutes the end of the waterfall region.
 
-  ``llvm.amdgcn.waterfall.last.use.vgpr``          Variant of ``waterfall.last_use`` for values that remain in a VGPR.
+  ``llvm.amdgcn.waterfall.last.use.vgpr``          Variant of ``waterfall.last.use`` for values that remain in a VGPR.
 
-  ``llvm.amdgcn.waterfall.loop.end``               Inserted later by the compiler to be used with ``waterfall.last_use*``
+  ``llvm.amdgcn.waterfall.loop.end``               Inserted later by the compiler to be used with ``waterfall.last.use``
                                                    to mark the loop-end point for special
                                                    handling such as SCC clobber tracking.
-                                                   This intrinsic should not be generated by a frontend.
+                                                   This intrinsic is not intended to be generated by a frontend.
 
 
   ==============================================   =========================================================================

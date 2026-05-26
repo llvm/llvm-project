@@ -2727,7 +2727,7 @@ def int_amdgcn_cs_chain:
 // have different values) the loop will execute wave-size times.
 // The waterfall.begin intrinsic returns a new token that must be threaded through the
 // corresponding waterfall.readfirstlane and waterfall.end or
-// waterfall.last_use intrinsics, forming a waterfall group of intrinsics that together
+// waterfall.last.use intrinsics, forming a waterfall group of intrinsics that together
 // define a waterfall region.
 // All intrinsics in a waterfall group must reside within the same basic block.
 // Where the intrinsic specifies "llvm_any_ty", the intrinsic will accept any of
@@ -2736,19 +2736,19 @@ def int_amdgcn_cs_chain:
 // v4f32, v8f32
 // TODO: extend the support to allow spanning multiple blocks
 def int_amdgcn_waterfall_begin :
-    Intrinsic<[llvm_i32_ty],  // Returns sgpr token
+    Intrinsic<[llvm_i32_ty],  // Returns token to be used by the rest of the waterfall loop
               [llvm_i32_ty,   // Previous begin token / null if first
-               llvm_any_ty],  // VGPR index for waterfall
+               llvm_any_ty],  // Non-uniform value for waterfall index
               [IntrConvergent]>;
 
-// Often the index from begin will be used as the readfirstlane value from
-// waterfall code - however, this isn't always the case. The readfirstlane style
-// intrinsic is required to be used, but often is a no-op if the index is the
-// used directly.
+// Often the index operand of begin is the same as the non-uniform operand
+// of readfirstlane, however, this isn't always the case.
+// The readfirstlane intrinsic is a no-op if the index is used directly
+// in the body of the waterfall loop.
 def int_amdgcn_waterfall_readfirstlane :
     Intrinsic<[llvm_any_ty],     // Returns any value
               [llvm_i32_ty,      // Token from final begin
-               llvm_any_ty],     // VGPR value to be used in readfirstlane
+               llvm_any_ty],     // Non-uniform value to be used in readfirstlane
               [IntrConvergent]>;
 
 // Effectively a no-op, but this intrinsic is used to indicate the end of the
@@ -2779,7 +2779,7 @@ def int_amdgcn_waterfall_last_use_vgpr :
                LLVMMatchType<0>], // Same as return value
               []>;
 
-// Special waterfall loop end intrinsic to be used with last_use
+// Special waterfall loop end intrinsic to be used with last.use
 // This is inserted late, before codegen, mainly to mark the loop end
 // for special handling such as scc clobbers.
 def int_amdgcn_waterfall_loop_end :
