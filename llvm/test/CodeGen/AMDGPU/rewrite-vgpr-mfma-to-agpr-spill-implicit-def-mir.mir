@@ -12,7 +12,7 @@
 # CHECK: some reachable load not jointly dominated by stores
 
 --- |
-  define amdgpu_kernel void @rewrite_vgpr_mfma_to_agpr_spill_implicit_def(i1 %0, <16 x float> %.sroa.366.2) #0 {
+  define amdgpu_kernel void @rewrite_vgpr_mfma_to_agpr_spill_implicit_def(i1 %arg, <16 x float> %.sroa.366.2) #0 {
     %kernarg.segment = call ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
     %.kernarg.offset.align.down66 = bitcast ptr addrspace(4) %kernarg.segment to ptr addrspace(4)
     %.sroa.366.2.kernarg.offset = getelementptr inbounds i8, ptr addrspace(4) %kernarg.segment, i64 64
