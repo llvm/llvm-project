@@ -170,7 +170,7 @@ struct Ctx {
     // Symbol whose value is the size of the TLS block.
     GlobalSymbol *tlsSize;
 
-    // __tls_size
+    // __tls_align
     // Symbol whose value is the alignment of the TLS block.
     GlobalSymbol *tlsAlign;
 
