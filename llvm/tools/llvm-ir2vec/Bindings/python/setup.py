@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 import glob
-import warnings
 from setuptools import setup
 from setuptools.dist import Distribution
 
