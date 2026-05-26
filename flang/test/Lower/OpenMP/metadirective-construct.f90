@@ -61,3 +61,22 @@ subroutine test_begin_construct_no_match()
     !$omp end metadirective
   !$omp end parallel
 end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_begin_construct_selected_parent()
+! CHECK:         omp.target
+! CHECK:           omp.parallel
+! CHECK:             omp.barrier
+! CHECK-NOT:         omp.taskyield
+! CHECK:             omp.terminator
+! CHECK:           omp.terminator
+! CHECK:         return
+subroutine test_begin_construct_selected_parent()
+  !$omp target
+    !$omp begin metadirective &
+    !$omp & when(implementation={vendor(llvm)}: parallel)
+      !$omp metadirective &
+      !$omp & when(construct={target, parallel}: barrier) &
+      !$omp & default(taskyield)
+    !$omp end metadirective
+  !$omp end target
+end subroutine

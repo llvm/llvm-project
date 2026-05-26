@@ -4643,25 +4643,6 @@ struct MetadirectiveCandidate {
 } // namespace
 
 static void appendConstructTraits(
-    llvm::omp::Directive dir,
-    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
-  // Record compound directives inside-out so callers can reverse the final
-  // sequence into the outermost-to-innermost order required by OMPContext.
-  if (llvm::omp::allSimdSet.test(dir))
-    constructTraits.push_back(llvm::omp::TraitProperty::construct_simd_simd);
-  if (llvm::omp::allDoSet.test(dir))
-    constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
-  if (llvm::omp::allParallelSet.test(dir))
-    constructTraits.push_back(
-        llvm::omp::TraitProperty::construct_parallel_parallel);
-  if (llvm::omp::allTeamsSet.test(dir))
-    constructTraits.push_back(llvm::omp::TraitProperty::construct_teams_teams);
-  if (llvm::omp::allTargetSet.test(dir))
-    constructTraits.push_back(
-        llvm::omp::TraitProperty::construct_target_target);
-}
-
-static void appendConstructTraits(
     mlir::Operation *op,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
   if (mlir::isa<mlir::omp::SimdOp>(op))
@@ -4685,20 +4666,14 @@ static void genMetadirective(lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
-  for (auto *parentEval = eval.parentConstruct; parentEval;
-       parentEval = parentEval->parentConstruct) {
-    const auto *ompConstruct = parentEval->getIf<parser::OpenMPConstruct>();
-    if (!ompConstruct)
-      continue;
-    llvm::omp::Directive dir =
-        parser::omp::GetOmpDirectiveName(*ompConstruct).v;
-    appendConstructTraits(dir, constructTraits);
-  }
-  if (constructTraits.empty()) {
-    for (mlir::Operation *op = builder.getInsertionBlock()->getParentOp(); op;
-         op = op->getParentOp())
-      appendConstructTraits(op, constructTraits);
-  }
+  // Collect enclosing OpenMP operations so variants chosen by an outer
+  // metadirective are part of this metadirective's context. For example, an
+  // inner metadirective inside `target` and an outer-selected `parallel` must
+  // be able to match construct={target, parallel}.
+  for (mlir::Operation *op = builder.getInsertionBlock()->getParentOp(); op;
+       op = op->getParentOp())
+    appendConstructTraits(op, constructTraits);
+
   std::reverse(constructTraits.begin(), constructTraits.end());
   TargetOMPContext ompCtx(builder.getModule(), constructTraits);
 
