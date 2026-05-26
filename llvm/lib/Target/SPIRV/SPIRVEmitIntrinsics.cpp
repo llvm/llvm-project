@@ -1646,16 +1646,12 @@ void SPIRVEmitIntrinsics::preprocessPoisons(IRBuilder<> &B) {
   if (!STI->canUseExtension(SPIRV::Extension::SPV_KHR_poison_freeze))
     return;
 
-  SmallVector<Instruction *, 16> Insts;
-  for (auto &I : instructions(CurrF))
-    Insts.push_back(&I);
-
-  for (Instruction *I : Insts) {
+  for (Instruction &I : instructions(CurrF)) {
     bool BPrepared = false;
-    auto *Phi = dyn_cast<PHINode>(I);
+    auto *Phi = dyn_cast<PHINode>(&I);
 
-    for (unsigned Idx = 0; Idx < I->getNumOperands(); ++Idx) {
-      Value *Op = I->getOperand(Idx);
+    for (unsigned Idx = 0; Idx < I.getNumOperands(); ++Idx) {
+      Value *Op = I.getOperand(Idx);
       auto *Poison = dyn_cast<PoisonValue>(Op);
       if (!Poison || Op->getType()->isMetadataTy())
         continue;
@@ -1664,7 +1660,7 @@ void SPIRVEmitIntrinsics::preprocessPoisons(IRBuilder<> &B) {
       Value *Replacement = nullptr;
       if (OpTy->isAggregateType()) {
         if (!BPrepared) {
-          setInsertPointSkippingPhis(B, I);
+          setInsertPointSkippingPhis(B, &I);
           BPrepared = true;
         }
         auto *Call =
@@ -1676,12 +1672,12 @@ void SPIRVEmitIntrinsics::preprocessPoisons(IRBuilder<> &B) {
         if (Phi)
           B.SetInsertPoint(Phi->getIncomingBlock(Idx)->getTerminator());
         else if (!BPrepared) {
-          setInsertPointSkippingPhis(B, I);
+          setInsertPointSkippingPhis(B, &I);
           BPrepared = true;
         }
         Replacement = B.CreateIntrinsic(Intrinsic::spv_poison, {OpTy}, {});
       }
-      I->setOperand(Idx, Replacement);
+      I.setOperand(Idx, Replacement);
     }
   }
 }
