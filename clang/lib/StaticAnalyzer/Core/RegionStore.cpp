@@ -2145,46 +2145,6 @@ SVal RegionStoreManager::getBindingForField(RegionBindingsConstRef B,
         }
   }
 
-  // In case of array of structs, the super-region is not directly a VarRegion,
-  // instead there is another layer of ElementRegion in between them, i.e.:
-  // FieldRegion(ElementRegion(VarRegion)).
-  if (const auto *ER = dyn_cast<ElementRegion>(superR)) {
-    if (const auto *VR = dyn_cast<VarRegion>(ER->getSuperRegion())) {
-      const VarDecl *VD = VR->getDecl();
-      QualType ArrayTy = VD->getType();
-      unsigned FieldIdx = FD->getFieldIndex();
-
-      if (ArrayTy.isConstQualified() || Ty.isConstQualified() ||
-          (B.isMainAnalysis() && VD->hasGlobalStorage())) {
-        if (const Expr *Init = VD->getAnyInitializer())
-          if (const auto *InitList = dyn_cast<InitListExpr>(Init))
-            if (const auto CI = ER->getIndex().getAs<nonloc::ConcreteInt>()) {
-              uint64_t ElemIdx = CI->getValue()->getZExtValue();
-
-              const InitListExpr *StructILE = nullptr;
-              if (ElemIdx < InitList->getNumInits()) {
-                StructILE = dyn_cast<InitListExpr>(InitList->getInit(ElemIdx));
-              } else if (!FD->hasInClassInitializer()) {
-                // This is zero initialization, because there is no explicit
-                // initializer for this index and there is no default member
-                // initializer in-class either.
-                return svalBuilder.makeZeroVal(Ty);
-              }
-              if (StructILE) {
-                if (FieldIdx < StructILE->getNumInits()) {
-                  if (const Expr *FieldInit = StructILE->getInit(FieldIdx))
-                    if (std::optional<SVal> V =
-                            svalBuilder.getConstantVal(FieldInit))
-                      return *V;
-                } else if (!FD->hasInClassInitializer()) {
-                  return svalBuilder.makeZeroVal(Ty);
-                }
-              }
-            }
-      }
-    }
-  }
-
   // Handle the case where we are accessing into a larger scalar object.
   // For example, this handles:
   //   struct header {
