@@ -32,18 +32,16 @@ void OpenFile::set_path(OwningPtr<char> &&path, std::size_t bytes) {
 }
 
 #ifndef _WIN32
-// Mirrors the lookup chain used by llvm::sys::path::system_temp_directory on
-// Unix: first the conventional environment variables, then P_tmpdir if the
-// platform defines one, then /tmp as the final fallback. The returned pointer
-// is owned by the environment or points to a string literal; the caller must
+// On POSIX targets the scratch directory comes from the standard TMPDIR
+// environment variable, then P_tmpdir if the platform defines one, then
+// /tmp as the final fallback. TMP and TEMP are intentionally not
+// consulted on POSIX; they are Windows conventions and GetTempPathA
+// already honors them on that platform. The returned pointer is owned
+// by the environment or points to a string literal; the caller must
 // copy before mutating.
 static const char *GetSystemTempDir() {
-  static const char *const envVars[]{"TMPDIR", "TMP", "TEMP", "TEMPDIR"};
-  for (const char *name : envVars) {
-    const char *value{std::getenv(name)};
-    if (value && *value) {
-      return value;
-    }
+  if (const char *value{std::getenv("TMPDIR")}; value && *value) {
+    return value;
   }
 #ifdef P_tmpdir
   if (P_tmpdir && *P_tmpdir) {

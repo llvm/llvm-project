@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Verifies that OPEN(STATUS='SCRATCH') honors the TMPDIR/TMP/TEMP/TEMPDIR
-// environment variables on POSIX, matching
-// llvm::sys::path::system_temp_directory.
+// Verifies that OPEN(STATUS='SCRATCH') honors TMPDIR on POSIX, and that
+// the Windows-only conventions TMP and TEMP are not consulted on POSIX.
 //
 //===----------------------------------------------------------------------===//
 
@@ -33,9 +32,11 @@ using namespace Fortran::runtime::io;
 
 namespace {
 
-// Saves the values of TMPDIR/TMP/TEMP/TEMPDIR on construction and restores
-// them on destruction so a test that mutates them does not leak state to
-// later tests in the same process.
+// Saves the values of the temp-related env vars on construction and
+// restores them on destruction so a test that mutates them does not
+// leak state to later tests in the same process. TMP/TEMP are managed
+// alongside TMPDIR even though they are not consulted on POSIX, so
+// that tests can deliberately set them to confirm they are ignored.
 class TempDirEnvGuard {
 public:
   TempDirEnvGuard() {
@@ -59,7 +60,7 @@ public:
   }
 
 private:
-  static constexpr const char *kVars[]{"TMPDIR", "TMP", "TEMP", "TEMPDIR"};
+  static constexpr const char *kVars[]{"TMPDIR", "TMP", "TEMP"};
   std::vector<std::pair<const char *, std::optional<std::string>>> saved_;
 };
 
@@ -104,28 +105,25 @@ TEST_F(ScratchTempDirTests, FallbackToTmp) {
          "temp env vars are set";
 }
 
-// TMP must be consulted when TMPDIR is unset. Set TMP to a non-existent
-// path and expect failure.
-TEST_F(ScratchTempDirTests, TmpConsulted) {
+// TMP and TEMP must be ignored on POSIX: setting them to non-existent
+// directories with TMPDIR unset must still let OPEN succeed via the
+// /tmp fallback.
+TEST_F(ScratchTempDirTests, TmpAndTempIgnoredOnPosix) {
   TempDirEnvGuard guard;
   ::setenv("TMP", "/this/path/does/not/exist/flang-rt-test", 1);
-  EXPECT_NE(OpenScratchUnit(), IostatOk)
-      << "OPEN(STATUS='SCRATCH') should fail when TMP points to a "
-         "non-existent directory and TMPDIR is unset";
+  ::setenv("TEMP", "/this/path/does/not/exist/flang-rt-test", 1);
+  EXPECT_EQ(OpenScratchUnit(), IostatOk)
+      << "TMP/TEMP must not be consulted on POSIX; OPEN should still "
+         "succeed via the /tmp fallback when TMPDIR is unset";
 }
 
-// An empty TMPDIR string must be skipped, so the next env var (TMP) wins.
-// Here TMP is a real directory, so OPEN should succeed.
+// An empty TMPDIR string must be skipped so OPEN falls through to the
+// /tmp fallback rather than failing.
 TEST_F(ScratchTempDirTests, EmptyTmpdirSkipped) {
   TempDirEnvGuard guard;
-  char tmpDir[]{"/tmp/flang-rt-scratch-test-XXXXXX"};
-  ASSERT_NE(::mkdtemp(tmpDir), nullptr)
-      << "mkdtemp failed: " << strerror(errno);
   ::setenv("TMPDIR", "", 1);
-  ::setenv("TMP", tmpDir, 1);
   EXPECT_EQ(OpenScratchUnit(), IostatOk)
-      << "Empty TMPDIR should be skipped in favor of TMP";
-  ::rmdir(tmpDir);
+      << "Empty TMPDIR must be treated as unset and fall through to /tmp";
 }
 
 // SCRATCH file should actually be created inside the user-specified temp
