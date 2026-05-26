@@ -9,8 +9,9 @@ on:
       - '.github/workflows/libc-overlay-tests.yml'
 
 jobs:
-  build:
+  native:
     if: github.repository_owner == 'llvm'
+    name: ${{ matrix.os }} - ${{ matrix.compiler.c_compiler }}
     timeout-minutes: 30
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container || null }}
@@ -116,6 +117,8 @@ jobs:
     container: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:a902fb53bdad5e4a4bb6c11b6584e717a7b3d6e886f1ea58e11f95e46226249c'
     strategy:
       matrix:
+        # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations.
+        fail-fast: false
         include:
           - c_compiler: clang-23
             cxx_compiler: clang++-23
