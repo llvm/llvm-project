@@ -20,11 +20,12 @@
 
 namespace llvm {
 
-struct LoopExtractorPass : public PassInfoMixin<LoopExtractorPass> {
+struct LoopExtractorPass : public OptionalPassInfoMixin<LoopExtractorPass> {
   LoopExtractorPass(unsigned NumLoops = ~0) : NumLoops(NumLoops) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
 private:
   unsigned NumLoops;

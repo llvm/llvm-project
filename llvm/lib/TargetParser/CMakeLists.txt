@@ -15,6 +15,7 @@ endif()
 
 add_llvm_component_library(LLVMTargetParser
   AArch64TargetParser.cpp
+  AMDGPUTargetParser.cpp
   ARMTargetParserCommon.cpp
   ARMTargetParser.cpp
   AVRTargetParser.cpp

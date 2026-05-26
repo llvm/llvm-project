@@ -12,7 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
@@ -109,6 +111,25 @@ protected:
 
     llvm_unreachable("Unexpected src type.");
     return SmallVector<Value>();
+  }
+
+  /// Helper to pack operands for DPAS-like operations with early return if
+  /// no unrolling is needed.
+  SmallVector<Value> packOperandForDpas(Value operand,
+                                        ArrayRef<int64_t> blockSize,
+                                        Location loc,
+                                        PatternRewriter &rewriter) const {
+    auto vecType = cast<VectorType>(operand.getType());
+    std::optional<SmallVector<int64_t>> grids =
+        computeShapeRatio(vecType.getShape(), blockSize);
+    assert(grids && "Expecting grids to be computed.");
+    auto numNewOps = computeProduct(*grids);
+    if (numNewOps == 1)
+      return SmallVector<Value>({operand});
+    VectorType newVecTy =
+        vecType.cloneWith(blockSize, vecType.getElementType());
+    SmallVector<Type> convertedTypes(numNewOps, newVecTy);
+    return pack(operand, convertedTypes, blockSize, loc, rewriter);
   }
 
 private:
@@ -318,15 +339,6 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
 
-    // expecting every operands is a 2D Vector
-    if (llvm::any_of(op->getOperandTypes(), [&](Type type) {
-          auto vecTy = dyn_cast<VectorType>(type);
-          return !vecTy || vecTy.getRank() != 2;
-        }))
-      return failure();
-
-    // A vector of 3 elements should be returned, representing M, K, N
-    // respectively.
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
     if (!targetShape || targetShape->size() != 3)
       return failure();
@@ -338,38 +350,16 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
     int64_t bBlockSize[2] = {K, N};
     int64_t cBlockSize[2] = {M, N};
 
-    auto packWrapper = [&](TypedValue<VectorType> val,
-                           ArrayRef<int64_t> blockSize) {
-      VectorType type = val.getType();
-      std::optional<SmallVector<int64_t>> grids =
-          computeShapeRatio(type.getShape(), blockSize);
-      assert(grids && "Expecting grids to be computed.");
-      auto numNewOps = computeProduct(*grids);
-      if (numNewOps == 1)
-        return SmallVector<Value>({val});
-      VectorType newVecTy = type.cloneWith(blockSize, type.getElementType());
-      SmallVector<Type> convertedTypes(numNewOps, newVecTy);
-      SmallVector<Value> values =
-          pack(val, convertedTypes, blockSize, loc, rewriter);
-      return values;
-    };
-
     auto a = op.getLhs();
     auto b = op.getRhs();
     auto c = op.getAcc();
 
-    auto aShape = a.getType().getShape();
-    auto bShape = b.getType().getShape();
-
-    SmallVector<Value> aVals, bVals, cVals;
-    aVals = packWrapper(a, aBlockSize);
-    bVals = packWrapper(b, bBlockSize);
-
+    SmallVector<Value> aVals = packOperandForDpas(a, aBlockSize, loc, rewriter);
+    SmallVector<Value> bVals = packOperandForDpas(b, bBlockSize, loc, rewriter);
+    SmallVector<Value> cVals;
     if (c)
-      cVals = packWrapper(c, cBlockSize);
+      cVals = packOperandForDpas(c, cBlockSize, loc, rewriter);
 
-    // Skip the operation if every operand has an invalid blocking size (empty)
-    // or if the original shape matches the blocking size (size == 1).
     auto ranges = c ? SmallVector<ValueRange>({aVals, bVals, cVals})
                     : SmallVector<ValueRange>({aVals, bVals});
     if (llvm::any_of(ranges, [](auto &v) { return v.size() == 0; }) ||
@@ -379,6 +369,8 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
     VectorType resultTy = op.getResult().getType();
     auto vecTy = VectorType::get(cBlockSize, resultTy.getElementType());
 
+    auto aShape = a.getType().getShape();
+    auto bShape = b.getType().getShape();
     int64_t mIters = aShape[0] / M;
     int64_t kIters = aShape[1] / K;
     int64_t nIters = bShape[1] / N;
@@ -388,7 +380,7 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
       for (int64_t j = 0; j < nIters; ++j) {
         Value tmpC;
         if (c)
-          tmpC = cVals[i * nIters + j]; // init with acc
+          tmpC = cVals[i * nIters + j];
 
         for (int64_t k = 0; k < kIters; ++k) {
           Value aVec = aVals[i * kIters + k];
@@ -402,6 +394,86 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
                                     xegpu::dropInstDataOnAttrs(op->getAttrs()));
         }
         newOps.push_back(tmpC);
+      }
+    }
+    Value castOp = unpack(newOps, resultTy, cBlockSize, loc, rewriter);
+    rewriter.replaceOp(op, castOp);
+    return success();
+  }
+};
+
+struct UnrollDpasMxOp : public UnrollPattern<xegpu::DpasMxOp> {
+  using UnrollPattern<xegpu::DpasMxOp>::UnrollPattern;
+  LogicalResult matchAndRewrite(xegpu::DpasMxOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
+    if (!targetShape || targetShape->size() != 4)
+      return failure();
+    auto M = (*targetShape)[0];
+    auto K = (*targetShape)[1];
+    auto N = (*targetShape)[2];
+    auto S = (*targetShape)[3];
+
+    int64_t aBlockSize[2] = {M, K};
+    int64_t bBlockSize[2] = {K, N};
+    int64_t cBlockSize[2] = {M, N};
+    int64_t aScaleBlockSize[2] = {M, S};
+    int64_t bScaleBlockSize[2] = {S, N};
+
+    auto a = op.getA();
+    auto b = op.getB();
+    auto c = op.getAcc();
+    auto ascale = dyn_cast<TypedValue<VectorType>>(op.getScaleA());
+    auto bscale = dyn_cast<TypedValue<VectorType>>(op.getScaleB());
+
+    SmallVector<Value> aVals = packOperandForDpas(a, aBlockSize, loc, rewriter);
+    SmallVector<Value> bVals = packOperandForDpas(b, bBlockSize, loc, rewriter);
+    SmallVector<Value> cVals;
+    if (c)
+      cVals = packOperandForDpas(c, cBlockSize, loc, rewriter);
+    SmallVector<Value> aScaleVals;
+    if (ascale)
+      aScaleVals = packOperandForDpas(ascale, aScaleBlockSize, loc, rewriter);
+    SmallVector<Value> bScaleVals;
+    if (bscale)
+      bScaleVals = packOperandForDpas(bscale, bScaleBlockSize, loc, rewriter);
+
+    VectorType resultTy = op.getResult().getType();
+    auto vecTy = VectorType::get(cBlockSize, resultTy.getElementType());
+
+    auto aShape = a.getType().getShape();
+    auto bShape = b.getType().getShape();
+    int64_t mIters = aShape[0] / M;
+    int64_t kIters = aShape[1] / K;
+    int64_t nIters = bShape[1] / N;
+
+    SmallVector<Value> newOps;
+    xegpu::DpasMxOp newDpasMxOp;
+    for (int64_t i = 0; i < mIters; ++i) {
+      for (int64_t j = 0; j < nIters; ++j) {
+        Value tmpC;
+        if (c)
+          tmpC = cVals[i * nIters + j];
+
+        for (int64_t k = 0; k < kIters; ++k) {
+          Value aVec = aVals[i * kIters + k];
+          Value bVec = bVals[k * nIters + j];
+          SmallVector<Value> operands({aVec, bVec});
+          if (tmpC)
+            operands.push_back(tmpC);
+          if (ascale)
+            operands.push_back(aScaleVals[i * kIters + k]);
+          if (bscale)
+            operands.push_back(bScaleVals[k * nIters + j]);
+
+          newDpasMxOp = xegpu::DpasMxOp::create(
+              rewriter, loc, vecTy, operands,
+              xegpu::dropInstDataOnAttrs(op->getAttrs()));
+          tmpC = newDpasMxOp.getResult();
+        }
+        newOps.push_back(newDpasMxOp);
       }
     }
     Value castOp = unpack(newOps, resultTy, cBlockSize, loc, rewriter);
@@ -734,12 +806,152 @@ struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
   }
 };
 
+/// Unrolls vector.multi_reduction by sequentially reducing tiles with
+/// elementwise arith operations first, then a single multi_reduction
+/// per non-reduced tile position. This avoids generating long chains of
+/// multi_reduction ops (as the upstream pattern does) and is more efficient.
+///
+/// Example:
+/// vector.multi_reduction <32x64xf16> to <32xf16> (tile_shape=32, 32)
+/// -- Upstream pattern generates:
+/// %tmp1 = vector.multi_reduction %tile0, %zero_acc <32x32xf16> to <32xf16>
+/// %res = vector.multi_reduction %tmp1, %tile1 <32x32xf16> to <32xf16>
+/// -- This pattern generates:
+/// %tmp1 = arith.reduction %tile0, %tile1 <32x32xf16> -> <32x32xf16> //
+/// elementwise %res = vector.multi_reduction %tmp1, %zero_acc <32x32xf16> to
+/// <32xf16>
+struct UnrollMultiReductionOp
+    : public UnrollPattern<vector::MultiDimReductionOp> {
+  UnrollMultiReductionOp(MLIRContext *context,
+                         const xegpu::UnrollOptions &options,
+                         PatternBenefit benefit = 2)
+      : UnrollPattern<vector::MultiDimReductionOp>(context, options, benefit) {}
+
+  LogicalResult matchAndRewrite(vector::MultiDimReductionOp reductionOp,
+                                PatternRewriter &rewriter) const override {
+    VectorType srcTy = reductionOp.getSourceVectorType();
+    ArrayRef<int64_t> srcShape = srcTy.getShape();
+    int64_t srcRank = srcTy.getRank();
+
+    Location loc = reductionOp.getLoc();
+    Value source = reductionOp.getSource();
+    Value acc = reductionOp.getAcc();
+    vector::CombiningKind kind = reductionOp.getKind();
+
+    // Result must be a vector (not scalar).
+    auto resultType = dyn_cast<VectorType>(reductionOp.getDestType());
+    if (!resultType)
+      return failure();
+
+    std::optional<SmallVector<int64_t>> targetShapeOpt =
+        getTargetShape(reductionOp);
+    if (!targetShapeOpt ||
+        static_cast<int64_t>(targetShapeOpt->size()) != srcRank)
+      return failure();
+
+    SmallVector<int64_t> targetShape = *targetShapeOpt;
+
+    // Check divisibility for all dimensions.
+    for (int64_t i = 0; i < srcRank; ++i) {
+      if (srcShape[i] % targetShape[i] != 0)
+        return failure();
+    }
+
+    SmallVector<bool> reductionMask = reductionOp.getReductionMask();
+    // Identify reduced and kept dimensions from the reduction mask.
+    SmallVector<int64_t> reducedDims, keptDims;
+    for (int64_t i = 0; i < srcRank; ++i) {
+      if (reductionMask[i])
+        reducedDims.push_back(i);
+      else
+        keptDims.push_back(i);
+    }
+
+    // Compute the number of tiles along each reduced dimension and their
+    // product
+    SmallVector<int64_t> numReducedTilesPerDim;
+    for (int64_t d : reducedDims)
+      numReducedTilesPerDim.push_back(srcShape[d] / targetShape[d]);
+
+    // Build kept shapes for iterating over non-reduced dimensions.
+    SmallVector<int64_t> keptShape, keptTileShape;
+    for (int64_t d : keptDims) {
+      keptShape.push_back(srcShape[d]);
+      keptTileShape.push_back(targetShape[d]);
+    }
+
+    // Initialize the result vector for assembly.
+    Value result = arith::ConstantOp::create(rewriter, loc, resultType,
+                                             rewriter.getZeroAttr(resultType));
+
+    // Iterate over all tile positions in the kept dimensions.
+    // Ex: [off0, off1, _ _ off4]
+    // blanks are offsets for the reduced dims, they will be
+    // generated in the inner loop below
+    for (SmallVector<int64_t> keptOffsets :
+         StaticTileOffsetRange(keptShape, keptTileShape)) {
+
+      // Reconstruct full-rank base offsets with 0 for reduced dims.
+      // Ex: [off0, off1, 0, 0, off4]
+      SmallVector<int64_t> baseOffsets(srcRank, 0);
+      for (auto [idx, dim] : llvm::enumerate(keptDims))
+        baseOffsets[dim] = keptOffsets[idx];
+
+      // Generate the full tile indices for the reduced dimensions.
+      // Ex: if reduceDimShapes = [32, 64] and
+      // reducedDimTargetShapes = [16, 16], then reducedTileCoords:
+      // [(0, 0), (0, 1), (0, 2), (0, 3),
+      //  (1, 0), (1, 1), (1, 2), (1, 3)]
+      auto reducedTileCoords = StaticTileOffsetRange(
+          numReducedTilesPerDim, SmallVector<int64_t>(reducedDims.size(), 1));
+
+      // Step 1: Fill "blanks" in the offsets for the reduced dimensions
+      // using 'reducedTileCoords' and extract according tiles.
+      // Ex: tiles = [source[off0, off1, off2_red, off3_red, off4], ...]
+      SmallVector<Value> tiles;
+      for (SmallVector<int64_t> reducedTileIdx : reducedTileCoords) {
+        SmallVector<int64_t> offsets(baseOffsets);
+        for (auto [idx, dim] : llvm::enumerate(reducedDims))
+          offsets[dim] = reducedTileIdx[idx] * targetShape[dim];
+        SmallVector<int64_t> strides(srcRank, 1);
+        Value tile = vector::ExtractStridedSliceOp::create(
+            rewriter, loc, source, offsets, targetShape, strides);
+        tiles.push_back(tile);
+      }
+
+      // Step 2: Sequentially reduce tiles using elementwise arith operations.
+      Value reduced = tiles[0];
+      for (size_t i = 1; i < tiles.size(); ++i)
+        reduced =
+            vector::makeArithReduction(rewriter, loc, kind, reduced, tiles[i]);
+
+      // Step 3: Perform a single multi_reduction with the accumulator slice.
+      SmallVector<int64_t> accStrides(keptTileShape.size(), 1);
+      Value accSlice = vector::ExtractStridedSliceOp::create(
+          rewriter, loc, acc, keptOffsets, keptTileShape, accStrides);
+
+      auto newReduction = vector::MultiDimReductionOp::create(
+          rewriter, loc, reduced, accSlice, reductionMask, kind);
+
+      // Step 4: Insert the reduced result into the output vector.
+      SmallVector<int64_t> dstStrides(keptTileShape.size(), 1);
+      result = vector::InsertStridedSliceOp::create(
+          rewriter, loc, newReduction, result, keptOffsets, dstStrides);
+    }
+
+    rewriter.replaceOp(reductionOp, result);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::xegpu::populateXeGPUUnrollPatterns(
     RewritePatternSet &patterns, const xegpu::UnrollOptions &options) {
-  patterns.add<UnrollCreateNdOp, UnrollPrefetchNdOp, UnrollLoadNdOp,
-               UnrollStoreNdOp, UnrollDpasOp, UnrollLoadMatrixOp,
-               UnrollStoreMatrixOp, UnrollLoadGatherOp, UnrollStoreScatterOp,
-               UnrollConvertLayoutOp>(patterns.getContext(), options);
+  patterns
+      .add<UnrollCreateNdOp, UnrollPrefetchNdOp, UnrollLoadNdOp,
+           UnrollStoreNdOp, UnrollDpasOp, UnrollDpasMxOp, UnrollLoadMatrixOp,
+           UnrollStoreMatrixOp, UnrollLoadGatherOp, UnrollStoreScatterOp,
+           UnrollConvertLayoutOp, UnrollMultiReductionOp>(patterns.getContext(),
+                                                          options);
 }

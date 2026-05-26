@@ -1,6 +1,6 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
-// RUN: ld.lld --relax-cfi-jump-tables %t.o -shared -o %t
+// RUN: ld.lld --branch-to-branch %t.o -shared -o %t
 // RUN: llvm-objdump -d --show-all-symbols %t | FileCheck %s
 // RUN: ld.lld -O2 %t.o -shared -o %t
 // RUN: llvm-objdump -d --show-all-symbols %t | FileCheck %s

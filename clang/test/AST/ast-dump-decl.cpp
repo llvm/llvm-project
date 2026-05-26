@@ -719,12 +719,12 @@ namespace testCanonicalTemplate {
 
   // CHECK:      VarTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-11]]:7, col:43> col:43 TestVarTemplate external-linkage{{$}}
   // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <col:16, col:25> col:25 referenced typename depth 0 index 0 T{{$}}
-  // CHECK-NEXT: |-VarDecl 0x{{.+}} <col:28, col:43> col:43 TestVarTemplate 'const T' static instantiated_from 0x{{.+}}{{$}}
+  // CHECK-NEXT: |-VarDecl 0x{{.+}} <col:28, col:43> col:43 TestVarTemplate 'const T' static{{$}}
   // CHECK-NEXT: |-VarTemplateSpecializationDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <line:[[@LINE-12]]:3, line:[[@LINE-11]]:34> col:14 referenced TestVarTemplate 'const int' implicit_instantiation cinit instantiated_from 0x{{.+}}{{$}}
   // CHECK-NEXT: | |-NestedNameSpecifier TypeSpec 'S'{{$}}
   // CHECK-NEXT: | |-TemplateArgument type 'int'{{$}}
   // CHECK-NEXT: | | `-BuiltinType 0x{{.+}} 'int'{{$}}
-  // CHECK-NEXT: | `-InitListExpr 0x{{.+}} <col:32, col:34> 'int'{{$}}
+  // CHECK-NEXT: | `-InitListExpr 0x{{.+}} <col:32, col:34> 'int' explicit{{$}}
   // CHECK-NEXT: `-VarTemplateSpecializationDecl 0x{{.+}} <line:[[@LINE-19]]:7, col:43> col:43 referenced TestVarTemplate 'const int' implicit_instantiation static instantiated_from 0x{{.+}}{{$}}
   // CHECK-NEXT:   `-TemplateArgument type 'int'{{$}}
 
@@ -734,9 +734,9 @@ namespace testCanonicalTemplate {
 
   // CHECK:      VarTemplateDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-24]]:3, line:[[@LINE-23]]:34> col:14 TestVarTemplate external-linkage{{$}}
   // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <line:[[@LINE-25]]:12, col:21> col:21 referenced typename depth 0 index 0 T{{$}}
-  // CHECK-NEXT: |-VarDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <line:[[@LINE-25]]:3, col:34> col:14 TestVarTemplate 'const T' cinit instantiated_from 0x{{.+}}{{$}}
+  // CHECK-NEXT: |-VarDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <line:[[@LINE-25]]:3, col:34> col:14 TestVarTemplate 'const T' cinit{{$}}
   // CHECK-NEXT: | |-NestedNameSpecifier TypeSpec 'S'{{$}}
-  // CHECK-NEXT: | `-InitListExpr 0x{{.+}} <col:32, col:34> 'void'{{$}}
+  // CHECK-NEXT: | `-InitListExpr 0x{{.+}} <col:32, col:34> 'void' explicit{{$}}
   // CHECK-NEXT: |-VarTemplateSpecialization 0x{{.+}} 'TestVarTemplate' 'const int'{{$}}
   // CHECK-NEXT: `-VarTemplateSpecialization 0x{{.+}} 'TestVarTemplate' 'const int'{{$}}
 
@@ -744,7 +744,7 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT: |-NestedNameSpecifier TypeSpec 'S'{{$}}
   // CHECK-NEXT: |-TemplateArgument type 'int'{{$}}
   // CHECK-NEXT: | `-BuiltinType 0x{{.+}} 'int'{{$}}
-  // CHECK-NEXT: `-InitListExpr 0x{{.+}} <col:32, col:34> 'int'{{$}}
+  // CHECK-NEXT: `-InitListExpr 0x{{.+}} <col:32, col:34> 'int' explicit{{$}}
 }
 
 template <class T>
@@ -945,15 +945,15 @@ namespace TestConstexprVariableTemplateWithInitializer {
   template<typename T> constexpr T foo{};
   // CHECK:      VarTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-1]]:3, col:40> col:36 foo external-linkage{{$}}
   // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 referenced typename depth 0 index 0 T{{$}}
-  // CHECK-NEXT: `-VarDecl 0x{{.+}} <col:24, col:40> col:36 foo 'const T' constexpr listinit instantiated_from 0x{{.+}}{{$}}
-  // CHECK-NEXT:  `-InitListExpr 0x{{.+}} <col:39, col:40> 'void'{{$}}
+  // CHECK-NEXT: `-VarDecl 0x{{.+}} <col:24, col:40> col:36 foo 'const T' constexpr listinit{{$}}
+  // CHECK-NEXT:  `-InitListExpr 0x{{.+}} <col:39, col:40> 'void' explicit{{$}}
 
   template<typename T> constexpr int val{42};
   // CHECK:      VarTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-1]]:3, col:44> col:38 val external-linkage{{$}}
   // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 typename depth 0 index 0 T{{$}}
-  // CHECK-NEXT: `-VarDecl 0x{{.+}} <col:24, col:44> col:38 val 'const int' constexpr listinit instantiated_from 0x{{.+}}{{$}}
+  // CHECK-NEXT: `-VarDecl 0x{{.+}} <col:24, col:44> col:38 val 'const int' constexpr listinit{{$}}
   // CHECK-NEXT:  |-value: Int 42{{$}}
-  // CHECK-NEXT:  `-InitListExpr 0x{{.+}} <col:41, col:44> 'int'{{$}}
+  // CHECK-NEXT:  `-InitListExpr 0x{{.+}} <col:41, col:44> 'int' explicit{{$}}
 
   template <typename _Tp>
   struct in_place_type_t {
@@ -964,13 +964,13 @@ namespace TestConstexprVariableTemplateWithInitializer {
   inline constexpr in_place_type_t<_Tp> in_place_type{};
   // CHECK:     -VarTemplateDecl 0x{{.+}} <line:[[@LINE-2]]:3, line:[[@LINE-1]]:55> col:41 in_place_type external-linkage{{$}}
   // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <line:[[@LINE-3]]:13, col:22> col:22 referenced typename depth 0 index 0 _Tp{{$}}
-  // CHECK-NEXT: `-VarDecl 0x{{.+}} <line:[[@LINE-3]]:3, col:55> col:41 in_place_type 'const in_place_type_t<_Tp>' inline constexpr listinit instantiated_from 0x{{.+}}{{$}}
-  // CHECK-NEXT:  `-InitListExpr 0x{{.+}} <col:54, col:55> 'void'{{$}}
+  // CHECK-NEXT: `-VarDecl 0x{{.+}} <line:[[@LINE-3]]:3, col:55> col:41 in_place_type 'const in_place_type_t<_Tp>' inline constexpr listinit{{$}}
+  // CHECK-NEXT:  `-InitListExpr 0x{{.+}} <col:54, col:55> 'void' explicit{{$}}
 
   template <typename T> constexpr T call_init(0);
   // CHECK:     -VarTemplateDecl 0x{{.+}} <line:[[@LINE-1]]:3, col:48> col:37 call_init external-linkage{{$}}
   // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <col:13, col:22> col:22 referenced typename depth 0 index 0 T{{$}}
-  // CHECK-NEXT: `-VarDecl 0x{{.+}} <col:25, col:48> col:37 call_init 'const T' constexpr callinit instantiated_from 0x{{.+}}{{$}}
+  // CHECK-NEXT: `-VarDecl 0x{{.+}} <col:25, col:48> col:37 call_init 'const T' constexpr callinit{{$}}
   // CHECK-NEXT:  `-ParenListExpr 0x{{.+}} <col:46, col:48> 'NULL TYPE'{{$}}
   // CHECK-NEXT:   `-IntegerLiteral 0x{{.+}} <col:47> 'int' 0{{$}}
 }
@@ -1005,3 +1005,11 @@ namespace TestGH155936 {
   // CHECK: CXXRecordDecl 0x{{.+}} <line:[[@LINE-8]]:7, col:19> col:14 struct Foo definition
   // CHECH: CXXRecordDecl 0x{{.+}} <col:9, col:16> col:16 implicit struct Foo
 } // namspace GH155936
+
+namespace TestGH198842 {
+  struct X {};
+  auto && [] = X{};
+  // CHECK-LABEL: Dumping TestGH198842:
+  // CHECK: DecompositionDecl 0x{{.+}} <line:{{.+}}:3, col:18> col:11 'X &&' cinit external-linkage
+  // CHECK: MaterializeTemporaryExpr 0x{{.+}} <col:16, col:18> 'X' xvalue extended by Decomposition 0x{{.+}} no_bindings 'X &&'
+} // namespace TestGH198842

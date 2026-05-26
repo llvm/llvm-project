@@ -23,19 +23,20 @@ class Function;
 
 enum class SROAOptions : bool { ModifyCFG, PreserveCFG };
 
-class SROAPass : public PassInfoMixin<SROAPass> {
+class SROAPass : public OptionalPassInfoMixin<SROAPass> {
   const SROAOptions PreserveCFG;
 
 public:
   /// If \p PreserveCFG is set, then the pass is not allowed to modify CFG
   /// in any way, even if it would update CFG analyses.
-  SROAPass(SROAOptions PreserveCFG);
+  LLVM_ABI SROAPass(SROAOptions PreserveCFG);
 
   /// Run the pass over the function.
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 } // end namespace llvm

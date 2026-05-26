@@ -54,6 +54,7 @@
 #include "llvm/Support/Compiler.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
@@ -75,7 +76,7 @@ class SymbolContextScope;
 using namespace lldb;
 using namespace lldb_private;
 
-static user_id_t g_value_obj_uid = 0;
+static std::atomic<user_id_t> g_value_obj_uid{0};
 
 // FIXME: this will return true for vector types whose elements
 // are floats. Audit all usages of this function and call
@@ -1209,11 +1210,17 @@ llvm::Expected<bool> ValueObject::GetValueAsBool() {
     auto value_or_err = GetValueAsAPSInt();
     if (value_or_err)
       return value_or_err->getBoolValue();
+    else
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), value_or_err.takeError(),
+                     "GetValueAsAPSInt failed: {0}");
   }
   if (HasFloatingRepresentation(val_type)) {
     auto value_or_err = GetValueAsAPFloat();
     if (value_or_err)
       return value_or_err->isNonZero();
+    else
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), value_or_err.takeError(),
+                     "GetValueAsAPFloat failed: {0}");
   }
   if (val_type.IsArrayType())
     return GetAddressOf().address != 0;
@@ -1294,14 +1301,14 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
     if (value_or_err)
       SetValueFromInteger(*value_or_err, error, can_update_var);
     else
-      error = Status::FromErrorString("error getting APSInt from new_val_sp");
+      error = Status::FromError(value_or_err.takeError());
   } else if (HasFloatingRepresentation(new_val_type)) {
     auto value_or_err = new_val_sp->GetValueAsAPFloat();
     if (value_or_err)
       SetValueFromInteger(value_or_err->bitcastToAPInt(), error,
                           can_update_var);
     else
-      error = Status::FromErrorString("error getting APFloat from new_val_sp");
+      error = Status::FromError(value_or_err.takeError());
   } else if (new_val_type.IsPointerType()) {
     bool success = true;
     uint64_t int_val = new_val_sp->GetValueAsUnsigned(0, &success);
@@ -1403,7 +1410,13 @@ bool ValueObject::DumpPrintableRepresentation(
         options.SetQuote('"');
         options.SetSourceSize(buffer_sp->GetByteSize());
         options.SetIsTruncated(read_string.second);
-        options.SetBinaryZeroIsTerminator(custom_format != eFormatVectorOfChar);
+        if (custom_format == eFormatVectorOfChar) {
+          options.SetZeroTermination(
+              formatters::StringPrinter::ZeroTermination::Ignore);
+        } else {
+          options.SetZeroTermination(
+              formatters::StringPrinter::ZeroTermination::ZeroTerminate);
+        }
         formatters::StringPrinter::ReadBufferAndDumpToStream<
             lldb_private::formatters::StringPrinter::StringElementType::ASCII>(
             options);
@@ -1864,7 +1877,7 @@ ValueObjectSP ValueObject::GetSyntheticArrayMember(size_t index,
       if (synthetic_child) {
         AddSyntheticChild(index_const_str, synthetic_child);
         synthetic_child_sp = synthetic_child->GetSP();
-        synthetic_child_sp->SetName(ConstString(index_str));
+        synthetic_child_sp->SetName(index_str);
         synthetic_child_sp->m_flags.m_is_array_item_for_pointer = true;
       }
     }
@@ -1900,7 +1913,7 @@ ValueObjectSP ValueObject::GetSyntheticBitFieldChild(uint32_t from, uint32_t to,
       if (synthetic_child) {
         AddSyntheticChild(index_const_str, synthetic_child);
         synthetic_child_sp = synthetic_child->GetSP();
-        synthetic_child_sp->SetName(ConstString(index_str));
+        synthetic_child_sp->SetName(index_str);
         synthetic_child_sp->m_flags.m_is_bitfield_for_scalar = true;
       }
     }
@@ -1941,6 +1954,7 @@ ValueObjectSP ValueObject::GetSyntheticChildAtOffset(
     synthetic_child_sp = synthetic_child->GetSP();
     synthetic_child_sp->SetName(name_const_str);
     synthetic_child_sp->m_flags.m_is_child_at_offset = true;
+    synthetic_child_sp->SetSyntheticChildrenGenerated(true);
   }
   return synthetic_child_sp;
 }
@@ -2910,7 +2924,7 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
             new lldb_private::DataBufferHeap(&addr, sizeof(lldb::addr_t)));
         m_addr_of_valobj_sp = ValueObjectConstResult::Create(
             exe_ctx.GetBestExecutionContextScope(),
-            compiler_type.GetPointerType(), ConstString(name.c_str()), buffer,
+            compiler_type.GetPointerType(), ConstString(name), buffer,
             endian::InlHostByteOrder(), exe_ctx.GetAddressByteSize(),
             LLDB_INVALID_ADDRESS, this->GetManager());
       }
@@ -2968,7 +2982,7 @@ ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
       std::move(error));
 }
 
-lldb::ValueObjectSP ValueObject::Clone(ConstString new_name) {
+lldb::ValueObjectSP ValueObject::Clone(llvm::StringRef new_name) {
   return ValueObjectCast::Create(*this, new_name, GetCompilerType());
 }
 
@@ -3326,7 +3340,8 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
     byte_size = temp.value();
 
   if (is_float) {
-    llvm::APSInt integer(byte_size * CHAR_BIT, !type.IsSigned());
+    llvm::APSInt integer(byte_size * CHAR_BIT,
+                         !type.IsEnumerationIntegerTypeSigned());
     bool is_exact;
     auto value_or_err = GetValueAsAPFloat();
     if (value_or_err) {
@@ -3338,15 +3353,15 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
       if (status & llvm::APFloatBase::opInvalidOp)
         return ValueObjectConstResult::Create(
             exe_ctx.GetBestExecutionContextScope(),
-            Status::FromErrorStringWithFormat(
-                "invalid type cast detected: %s",
-                llvm::toString(value_or_err.takeError()).c_str()));
+            Status::FromErrorString("invalid cast from float to integer"));
       return ValueObject::CreateValueObjectFromAPInt(exe_ctx, integer, type,
                                                      "result");
     } else
       return ValueObjectConstResult::Create(
           exe_ctx.GetBestExecutionContextScope(),
-          Status::FromErrorString("cannot get value as APFloat"));
+          Status::FromErrorStringWithFormatv(
+              "cannot get value as APFloat: {0}",
+              llvm::toString(value_or_err.takeError())));
   } else {
     // Get the value as APSInt and extend or truncate it to the requested size.
     auto value_or_err = GetValueAsAPSInt();
@@ -3549,7 +3564,7 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromExpression(
   target_sp->EvaluateExpression(expression, exe_ctx.GetFrameSP().get(),
                                 retval_sp, options);
   if (retval_sp && !name.empty())
-    retval_sp->SetName(ConstString(name));
+    retval_sp->SetName(name);
   return retval_sp;
 }
 
@@ -3576,7 +3591,7 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromAddress(
         if (do_deref)
           ptr_result_valobj_sp = ptr_result_valobj_sp->Dereference(err);
         if (ptr_result_valobj_sp && !name.empty())
-          ptr_result_valobj_sp->SetName(ConstString(name));
+          ptr_result_valobj_sp->SetName(name);
       }
       return ptr_result_valobj_sp;
     }
@@ -3593,7 +3608,7 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromData(
       LLDB_INVALID_ADDRESS, parent ? parent->GetManager() : nullptr);
   new_value_sp->SetAddressTypeOfChildren(eAddressTypeLoad);
   if (new_value_sp && !name.empty())
-    new_value_sp->SetName(ConstString(name));
+    new_value_sp->SetName(name);
   return new_value_sp;
 }
 

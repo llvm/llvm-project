@@ -374,9 +374,8 @@ public:
   /// it to the loop metadata via makePostTransformationMetadata. Any existing
   /// attributes whose key starts with one of \p RemovePrefixes are stripped
   /// first.
-  LLVM_ABI void
-  addStringLoopAttribute(StringRef Name,
-                         ArrayRef<StringRef> RemovePrefixes = {}) const;
+  void addStringLoopAttribute(StringRef Name,
+                              ArrayRef<StringRef> RemovePrefixes = {}) const;
 
   /// Add an integer metadata attribute to this loop's loop-ID node.
   ///
@@ -384,9 +383,8 @@ public:
   /// it to the loop metadata via makePostTransformationMetadata. Any existing
   /// attributes whose key starts with one of \p RemovePrefixes are stripped
   /// first.
-  LLVM_ABI void
-  addIntLoopAttribute(StringRef Name, unsigned Value,
-                      ArrayRef<StringRef> RemovePrefixes = {}) const;
+  void addIntLoopAttribute(StringRef Name, unsigned Value,
+                           ArrayRef<StringRef> RemovePrefixes = {}) const;
 
   void dump() const;
   void dumpVerbose() const;
@@ -597,19 +595,17 @@ public:
 };
 
 /// Printer pass for the \c LoopAnalysis results.
-class LoopPrinterPass : public PassInfoMixin<LoopPrinterPass> {
+class LoopPrinterPass : public RequiredPassInfoMixin<LoopPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit LoopPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for the \c LoopAnalysis results.
-struct LoopVerifierPass : public PassInfoMixin<LoopVerifierPass> {
+struct LoopVerifierPass : public RequiredPassInfoMixin<LoopVerifierPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// The legacy pass manager's analysis pass to compute loop information.

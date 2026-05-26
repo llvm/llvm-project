@@ -152,7 +152,7 @@ const char *ScriptedFrame::GetFunctionName() {
   std::optional<std::string> function_name = GetInterface()->GetFunctionName();
   if (!function_name)
     return StackFrame::GetFunctionName();
-  return ConstString(function_name->c_str()).AsCString(nullptr);
+  return ConstString(*function_name).AsCString(nullptr);
 }
 
 const char *ScriptedFrame::GetDisplayFunctionName() {
@@ -161,7 +161,7 @@ const char *ScriptedFrame::GetDisplayFunctionName() {
       GetInterface()->GetDisplayFunctionName();
   if (!function_name)
     return StackFrame::GetDisplayFunctionName();
-  return ConstString(function_name->c_str()).AsCString(nullptr);
+  return ConstString(*function_name).AsCString(nullptr);
 }
 
 bool ScriptedFrame::IsInlined() { return GetInterface()->IsInlined(); }

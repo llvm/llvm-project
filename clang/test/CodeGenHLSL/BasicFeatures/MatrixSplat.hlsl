@@ -4,6 +4,7 @@
 // CHECK-LABEL: define hidden void @_Z13ConstantSplatv(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> splat (i32 1), ptr [[M]], align 4
 // CHECK-NEXT:    ret void
@@ -15,6 +16,7 @@ void ConstantSplat() {
 // CHECK-LABEL: define hidden void @_Z18ConstantFloatSplatv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M:%.*]] = alloca [2 x <2 x float>], align 4
 // CHECK-NEXT:    store <4 x float> splat (float 3.250000e+00), ptr [[M]], align 4
 // CHECK-NEXT:    ret void
@@ -26,6 +28,7 @@ void ConstantFloatSplat() {
 // CHECK-LABEL: define hidden void @_Z21ConstantTrueBoolSplatv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M:%.*]] = alloca [3 x <3 x i32>], align 4
 // CHECK-NEXT:    store <9 x i32> splat (i32 1), ptr [[M]], align 4
 // CHECK-NEXT:    ret void
@@ -37,6 +40,7 @@ void ConstantTrueBoolSplat() {
 // CHECK-LABEL: define hidden void @_Z22ConstantFalseBoolSplatv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M:%.*]] = alloca [3 x <3 x i32>], align 4
 // CHECK-NEXT:    store <9 x i32> zeroinitializer, ptr [[M]], align 4
 // CHECK-NEXT:    ret void
@@ -48,6 +52,7 @@ void ConstantFalseBoolSplat() {
 // CHECK-LABEL: define hidden void @_Z12DynamicSplatf(
 // CHECK-SAME: float noundef nofpclass(nan inf) [[VALUE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    [[M:%.*]] = alloca [3 x <3 x float>], align 4
 // CHECK-NEXT:    store float [[VALUE]], ptr [[VALUE_ADDR]], align 4
@@ -64,6 +69,7 @@ void DynamicSplat(float Value) {
 // CHECK-LABEL: define hidden void @_Z16DynamicBoolSplatb(
 // CHECK-SAME: i1 noundef [[VALUE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[M:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[VALUE]] to i32
@@ -83,6 +89,7 @@ void DynamicBoolSplat(bool Value) {
 // CHECK-LABEL: define hidden void @_Z13CastThenSplatDv4_f(
 // CHECK-SAME: <4 x float> noundef nofpclass(nan inf) [[VALUE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca <4 x float>, align 4
 // CHECK-NEXT:    [[M:%.*]] = alloca [3 x <3 x float>], align 4
 // CHECK-NEXT:    store <4 x float> [[VALUE]], ptr [[VALUE_ADDR]], align 4
@@ -100,6 +107,7 @@ void CastThenSplat(float4 Value) {
 // CHECK-LABEL: define hidden void @_Z30ExplicitIntToBoolCastThenSplatDv3_i(
 // CHECK-SAME: <3 x i32> noundef [[VALUE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca <3 x i32>, align 4
 // CHECK-NEXT:    [[M:%.*]] = alloca [2 x <2 x i32>], align 4
 // CHECK-NEXT:    store <3 x i32> [[VALUE]], ptr [[VALUE_ADDR]], align 4
@@ -119,6 +127,7 @@ void ExplicitIntToBoolCastThenSplat(int3 Value) {
 // CHECK-LABEL: define hidden void @_Z32ExplicitFloatToBoolCastThenSplatDv2_f(
 // CHECK-SAME: <2 x float> noundef nofpclass(nan inf) [[VALUE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca <2 x float>, align 4
 // CHECK-NEXT:    [[M:%.*]] = alloca [3 x <2 x i32>], align 4
 // CHECK-NEXT:    store <2 x float> [[VALUE]], ptr [[VALUE_ADDR]], align 4
@@ -138,6 +147,7 @@ void ExplicitFloatToBoolCastThenSplat(float2 Value) {
 // CHECK-LABEL: define hidden void @_Z32ExplicitBoolToFloatCastThenSplatb(
 // CHECK-SAME: i1 noundef [[VALUE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[M:%.*]] = alloca [2 x <3 x float>], align 4
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[VALUE]] to i32
@@ -157,6 +167,7 @@ void ExplicitBoolToFloatCastThenSplat(bool Value) {
 // CHECK-LABEL: define hidden void @_Z32ImplicitFloatToBoolCastThenSplatf(
 // CHECK-SAME: float noundef nofpclass(nan inf) [[VALUE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    [[M:%.*]] = alloca [3 x <2 x i32>], align 4
 // CHECK-NEXT:    store float [[VALUE]], ptr [[VALUE_ADDR]], align 4
@@ -175,6 +186,7 @@ void ImplicitFloatToBoolCastThenSplat(float Value) {
 // CHECK-LABEL: define hidden void @_Z32ImplicitBoolToFloatCastThenSplatb(
 // CHECK-SAME: i1 noundef [[VALUE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[M:%.*]] = alloca [2 x <3 x float>], align 4
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[VALUE]] to i32

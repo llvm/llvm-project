@@ -143,7 +143,7 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (FlatOffsetBitWidth == 0)
     FlatOffsetBitWidth = 13;
 
-  LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(this);
+  LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(*this);
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   HasSMulHi = getGeneration() >= AMDGPUSubtarget::GFX9;
@@ -174,6 +174,10 @@ void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
     Ctx.diagnose(DiagnosticInfoUnsupported(
         F, "must specify exactly one of wavefrontsize32 and wavefrontsize64"));
   }
+  if (hasFeature(AMDGPU::FeatureXNACKAnyOnly) && TargetID.isXnackOnOrOff()) {
+    Ctx.diagnose(DiagnosticInfoUnsupported(
+        F, "target only supports xnack 'Any'; '+/-xnack' is not allowed"));
+  }
 }
 
 GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
@@ -189,8 +193,8 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0,
                   /*TransAl=*/Align(4)) {
   // clang-format on
-  MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(this);
-  EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(this);
+  MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(*this);
+  EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(*this);
 
   TSInfo = std::make_unique<AMDGPUSelectionDAGInfo>();
 
@@ -423,7 +427,7 @@ unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
 unsigned
 GCNSubtarget::getOccupancyWithNumVGPRs(unsigned NumVGPRs,
                                        unsigned DynamicVGPRBlockSize) const {
-  return AMDGPU::IsaInfo::getNumWavesPerEUWithNumVGPRs(this, NumVGPRs,
+  return AMDGPU::IsaInfo::getNumWavesPerEUWithNumVGPRs(*this, NumVGPRs,
                                                        DynamicVGPRBlockSize);
 }
 
