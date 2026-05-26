@@ -90,7 +90,7 @@ class ConstSubobjectVisitor
     : public SubobjectVisitorBase<llvm::make_const_ptr, Derived> {
 public:
   ConstSubobjectVisitor(ASTContext &Ctx)
-      : SubobjectVisitorBase<std::add_pointer, Derived>(Ctx) {}
+      : SubobjectVisitorBase<llvm::make_const_ptr, Derived>(Ctx) {}
 };
 
 } // end namespace clang
