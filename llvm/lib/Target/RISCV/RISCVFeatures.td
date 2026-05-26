@@ -1150,7 +1150,7 @@ def HasStdExtZbkbOrP
 
 // "Y" extension (CHERI support)
 
-def FeatureStdExtY : RISCVExperimentalExtension<0, 96, "'Base Y' (CHERI)">;
+def FeatureStdExtY : RISCVExperimentalExtension<0, 98, "'Base Y' (CHERI)">;
 def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
                  AssemblerPredicate<(all_of FeatureStdExtY), "'Base Y' (CHERI)">;
 
@@ -2093,4 +2093,3 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
 
 def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
                                          "Ventana Veyron-Series processors">;
-

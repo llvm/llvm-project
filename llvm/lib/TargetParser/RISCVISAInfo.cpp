@@ -795,6 +795,13 @@ Error RISCVISAInfo::checkDependency() {
   if (Exts.count("zclsd") != 0 && Exts.count("zcf") != 0)
     return getIncompatibleError("zclsd", "zcf");
 
+  if (Exts.count("y") != 0) {
+    // RVY and the P extension draft currently allocate the same encodings.
+    // Note: This is temporary, final frozen opcodes will not overlap.
+    if (Exts.count("p") != 0)
+      return getIncompatibleError("y", "p");
+  }
+
   if (HasZcmp && HasXqccmp)
     return getIncompatibleError("zcmp", "xqccmp");
 
