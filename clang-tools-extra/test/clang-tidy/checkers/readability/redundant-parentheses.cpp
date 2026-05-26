@@ -157,9 +157,9 @@ bool overloadedComparisonWarn(CmpIter it, CmpIter end) {
 }
 
 bool builtinComparisonNoWarn(int i, int j) {
-  bool a = (i == j); // no warning
-  bool b = (i != j); // no warning
-  return (i >= j);   // no warning
+  bool a = (i == j);
+  bool b = (i != j);
+  return (i >= j);
 }
 
 void memberExpr() {
