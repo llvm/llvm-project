@@ -24,4 +24,4 @@ declare target("amdgpu.stridemark", i32) @amdgcn_stridemark_type_param()
 
 ;--- amdgpu-stridemark-int-params.ll
 declare target("amdgpu.stridemark", 16, 32) @amdgcn_stridemark_int_params()
-; CHECK-AMDPU-STRIDEMARK-INTS: target extension type amdgpu.stridemark should have no type parameters and at most one integer parameter
+; CHECK-AMDGPU-STRIDEMARK-INTS: target extension type amdgpu.stridemark should have no type parameters and at most one integer parameter
