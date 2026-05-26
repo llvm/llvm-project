@@ -19458,6 +19458,7 @@ static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
   // splice.right(reverse(vp.load(ADDR, REVMASK, EVL)), poison, EVL)
   // -> vp.strided.load(ADDR, -1, MASK, EVL)
 
+  // Check if its first operand is a vp.load.  
   using namespace SDPatternMatch;
   SDValue Op, EVL;
   if (!sd_match(N,
@@ -19465,7 +19466,6 @@ static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
                              m_Value(EVL))))
     return SDValue();
 
-  // Check if its first operand is a vp.load.
   auto *VPLoad = cast<VPLoadSDNode>(Op);
 
   EVT LoadVT = VPLoad->getValueType(0);
