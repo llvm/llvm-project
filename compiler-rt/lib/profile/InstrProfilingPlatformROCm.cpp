@@ -452,6 +452,7 @@ extern "C" void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
       PROF_NOTE("Unregistering module %p (%d TUs)\n", MI->ModulePtr,
                 MI->NumTUs);
 
+    static int NextTUIndex = 0;
     for (int t = 0; t < MI->NumTUs; ++t) {
       OffloadDynamicTUInfo *TU = &MI->TUs[t];
       if (TU->Processed) {
@@ -459,8 +460,7 @@ extern "C" void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
           PROF_NOTE("Module %p TU %d already processed, skipping\n", Ptr, t);
         continue;
       }
-      /* Globally unique TU index for the output filename. */
-      int TUIndex = i * 1000 + t;
+      int TUIndex = __atomic_fetch_add(&NextTUIndex, 1, __ATOMIC_RELAXED);
       if (TU->DeviceVar) {
         int CurDev = 0;
         hipGetDevice(&CurDev);
