@@ -5532,6 +5532,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pclmulqdq256:
   case clang::X86::BI__builtin_ia32_pclmulqdq512:
     return interp__builtin_ia32_pclmulqdq(S, OpPC, Call);
+  case Builtin::BI__builtin_elementwise_clmul:
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::clmul);
 
   case Builtin::BI__builtin_elementwise_fma:
     return interp__builtin_elementwise_triop_fp(
@@ -6664,15 +6667,17 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, const Pointer &Src,
   assert(SrcDesc->ElemRecord == DestDesc->ElemRecord);
   const Record *R = DestDesc->ElemRecord;
   for (const Record::Field &F : R->fields()) {
+    Pointer FP = Src.atField(F.Offset);
+
+    if (!CheckMutable(S, OpPC, FP))
+      return false;
+
     if (R->isUnion()) {
       // For unions, only copy the active field. Zero all others.
-      const Pointer &SrcField = Src.atField(F.Offset);
-      if (SrcField.isActive()) {
+      if (FP.isActive()) {
         if (!copyField(F, /*Activate=*/true))
           return false;
       } else {
-        if (!CheckMutable(S, OpPC, Src.atField(F.Offset)))
-          return false;
         Pointer DestField = Dest.atField(F.Offset);
         zeroAll(DestField);
       }

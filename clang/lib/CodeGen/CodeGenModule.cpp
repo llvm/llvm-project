@@ -8699,6 +8699,10 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
          "Newly created module should not have deferred vtables");
   NewBuilder->DeferredVTables = std::move(DeferredVTables);
 
+  assert(NewBuilder->EmittedVTables.empty() &&
+         "Newly created module should not have defined vtables");
+  NewBuilder->EmittedVTables = std::move(EmittedVTables);
+
   assert(NewBuilder->MangledDeclNames.empty() &&
          "Newly created module should not have mangled decl names");
   assert(NewBuilder->Manglings.empty() &&

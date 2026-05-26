@@ -181,7 +181,7 @@ define amdgpu_kernel void @kernel_calls_extern() {
 define amdgpu_kernel void @kernel_calls_extern_marked_callsite() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_calls_extern_marked_callsite(
 ; CHECK-SAME: ) #[[ATTR3]] {
-; CHECK-NEXT:    call void @unknown() #[[ATTR30:[0-9]+]]
+; CHECK-NEXT:    call void @unknown() #[[ATTR36:[0-9]+]]
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
 ;
@@ -205,7 +205,7 @@ define amdgpu_kernel void @kernel_calls_indirect(ptr %indirect) {
 define amdgpu_kernel void @kernel_calls_indirect_marked_callsite(ptr %indirect) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_calls_indirect_marked_callsite(
 ; CHECK-SAME: ptr [[INDIRECT:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    call void [[INDIRECT]]() #[[ATTR30]]
+; CHECK-NEXT:    call void [[INDIRECT]]() #[[ATTR36]]
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
 ;
@@ -1017,8 +1017,96 @@ define amdgpu_kernel void @indirect_unknown(ptr %fptr) {
   ret void
 }
 
+; Sanitizer tests: amdgpu-agpr-alloc=0 must not be inferred for functions with
+; sanitizer attributes. Sanitizer runtime calls (e.g. __asan_malloc_impl) are
+; introduced after the Attributor runs and may use AGPRs.
+define amdgpu_kernel void @kernel_sanitize_address() sanitize_address {
+; CHECK: Function Attrs: sanitize_address
+; CHECK-LABEL: define amdgpu_kernel void @kernel_sanitize_address(
+; CHECK-SAME: ) #[[ATTR25:[0-9]+]] {
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void @use_most()
+  ret void
+}
+
+define amdgpu_kernel void @kernel_sanitize_memory() sanitize_memory {
+; CHECK: Function Attrs: sanitize_memory
+; CHECK-LABEL: define amdgpu_kernel void @kernel_sanitize_memory(
+; CHECK-SAME: ) #[[ATTR26:[0-9]+]] {
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void @use_most()
+  ret void
+}
+
+define amdgpu_kernel void @kernel_sanitize_thread() sanitize_thread {
+; CHECK: Function Attrs: sanitize_thread
+; CHECK-LABEL: define amdgpu_kernel void @kernel_sanitize_thread(
+; CHECK-SAME: ) #[[ATTR27:[0-9]+]] {
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void @use_most()
+  ret void
+}
+
+define amdgpu_kernel void @kernel_sanitize_hwaddress() sanitize_hwaddress {
+; CHECK: Function Attrs: sanitize_hwaddress
+; CHECK-LABEL: define amdgpu_kernel void @kernel_sanitize_hwaddress(
+; CHECK-SAME: ) #[[ATTR28:[0-9]+]] {
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void @use_most()
+  ret void
+}
+
+; A sanitized function with a user-defined amdgpu-agpr-alloc=0 (mimics an
+; annotation from e.g. inline asm constraints). The early return after
+; indicateOptimisticFixpoint() means the pre-existing attribute is trusted
+; and the sanitizer check is skipped.
+define amdgpu_kernel void @kernel_sanitize_address_preannotated() #2 {
+; CHECK: Function Attrs: sanitize_address
+; CHECK-LABEL: define amdgpu_kernel void @kernel_sanitize_address_preannotated(
+; CHECK-SAME: ) #[[ATTR29:[0-9]+]] {
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void @use_most()
+  ret void
+}
+
+; A non-sanitized kernel calling a sanitized callee. The callee's pessimistic
+; fixpoint propagates up, so the caller must not get amdgpu-agpr-alloc=0 either.
+define void @sanitized_callee() sanitize_address {
+; CHECK: Function Attrs: sanitize_address
+; CHECK-LABEL: define void @sanitized_callee(
+; CHECK-SAME: ) #[[ATTR25]] {
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void @use_most()
+  ret void
+}
+
+define amdgpu_kernel void @kernel_calls_sanitized_callee() {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_calls_sanitized_callee(
+; CHECK-SAME: ) #[[ATTR30:[0-9]+]] {
+; CHECK-NEXT:    call void @sanitized_callee()
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void @sanitized_callee()
+  call void @use_most()
+  ret void
+}
+
 attributes #0 = { "amdgpu-agpr-alloc"="0" }
 attributes #1 = { "amdgpu-waves-per-eu"="1,1" }
+attributes #2 = { sanitize_address "amdgpu-agpr-alloc"="0" }
 
 !0 = !{!"a55"}
 !1 = !{!"v55"}
@@ -1052,12 +1140,18 @@ attributes #1 = { "amdgpu-waves-per-eu"="1,1" }
 ; CHECK: attributes #[[ATTR22]] = { "amdgpu-agpr-alloc"="256" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="1,1" "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR23]] = { "amdgpu-agpr-alloc"="7" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR24]] = { "amdgpu-agpr-alloc"="3" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR25:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR26:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR27:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(read) "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR28:[0-9]+]] = { nounwind "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR29:[0-9]+]] = { nocallback nounwind "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR30]] = { "amdgpu-agpr-alloc"="0" }
+; CHECK: attributes #[[ATTR25]] = { sanitize_address "amdgpu-no-wwm" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR26]] = { sanitize_memory "amdgpu-no-wwm" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR27]] = { sanitize_thread "amdgpu-no-wwm" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR28]] = { sanitize_hwaddress "amdgpu-no-wwm" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR29]] = { sanitize_address "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR30]] = { "amdgpu-no-wwm" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR31:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR32:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR33:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(read) "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR34:[0-9]+]] = { nounwind "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR35:[0-9]+]] = { nocallback nounwind "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR36]] = { "amdgpu-agpr-alloc"="0" }
 ;.
 ; CHECK: [[META0]] = !{!"a55"}
 ; CHECK: [[META1]] = !{!"v55"}
