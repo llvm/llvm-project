@@ -223,5 +223,37 @@ void AmdgpuDeviceAllocator::RegisterSystemEventHandlers() {
 }
 
 uptr AmdgpuDeviceAllocator::GetPageSize() { return kPageSize_; }
+
+VmemGpuReserveTracker& VmemGpuReserveTracker::Get() {
+  static VmemGpuReserveTracker tracker;
+  return tracker;
+}
+
+void VmemGpuReserveTracker::OnReserve(uptr ptr, uptr size) {
+  SpinMutexLock l(&mu_);
+  VmemGpuReservation entry;
+  entry.ptr = ptr;
+  entry.size = size;
+  entry.freed = false;
+  reservations_.push_back(entry);
+}
+
+VmemGpuReserveTracker::FreeResult VmemGpuReserveTracker::OnFree(uptr ptr,
+                                                                uptr size) {
+  SpinMutexLock l(&mu_);
+  for (uptr i = 0; i < reservations_.size(); ++i) {
+    VmemGpuReservation& r = reservations_[i];
+    if (r.ptr != ptr)
+      continue;
+    if (r.size != size)
+      return kSizeMismatch;
+    if (r.freed)
+      return kDoubleFree;
+    r.freed = true;
+    return kFirstFree;
+  }
+  return kNotTracked;
+}
+
 }  // namespace __sanitizer
 #endif  // SANITIZER_AMDGPU

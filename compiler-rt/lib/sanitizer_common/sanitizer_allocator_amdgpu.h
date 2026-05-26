@@ -36,6 +36,40 @@ class AmdgpuDeviceAllocator {
   static void NotifyRuntimeShutdown();
 };
 
+// GPU-only hsa_amd_vmem_address_reserve_align (without
+// HSA_AMD_VMEM_ADDRESS_NO_REGISTER) returns KFD "address only" VA that is not
+// host-writable. Sanitizer runtimes that cannot place metadata in the reserved
+// range track such reservations here for double-free detection on free.
+class VmemGpuReserveTracker {
+ public:
+  enum FreeResult {
+    kNotTracked,
+    kFirstFree,
+    kSizeMismatch,
+    kDoubleFree,
+  };
+
+  static VmemGpuReserveTracker& Get();
+
+  void OnReserve(uptr ptr, uptr size);
+  FreeResult OnFree(uptr ptr, uptr size);
+
+ private:
+  struct VmemGpuReservation {
+    uptr ptr;
+    uptr size;
+    bool freed;
+  };
+
+  StaticSpinMutex mu_;
+  InternalMmapVector<VmemGpuReservation> reservations_;
+};
+
+// True when ROCr reserves host-accessible VA (e.g. HIP managed / SVM).
+inline bool AmdgpuVmemReserveUsesHostMapping(u64 flags) {
+  return (flags & HSA_AMD_VMEM_ADDRESS_NO_REGISTER) != 0;
+}
+
 struct AmdgpuAllocationInfo : public DeviceAllocationInfo {
   AmdgpuAllocationInfo() : DeviceAllocationInfo(DAT_AMDGPU) {
     status = HSA_STATUS_SUCCESS;
