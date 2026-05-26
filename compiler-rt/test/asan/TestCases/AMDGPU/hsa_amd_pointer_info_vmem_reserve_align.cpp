@@ -1,6 +1,3 @@
-// XFAIL: *
-//
-//
 // RUN: %clangxx_asan -O0 -isystem %rocm_include %s -o %t -L%rocm_lib -lhsa-runtime64 \
 // RUN:   -Wl,-rpath,%rocm_lib -Wl,-rpath,%compiler_rt_libdir
 // RUN: %run %t 2>&1 | FileCheck %s

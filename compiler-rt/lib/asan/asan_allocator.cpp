@@ -1650,6 +1650,15 @@ hsa_status_t asan_hsa_amd_vmem_address_reserve_align(
     return HSA_STATUS_ERROR_INVALID_ARGUMENT;
   }
 
+  if (!__sanitizer::AmdgpuVmemReserveUsesHostMapping(flags)) {
+    const hsa_status_t status = REAL(hsa_amd_vmem_address_reserve_align)(
+        ptr, size, address, alignment, flags);
+    if (status == HSA_STATUS_SUCCESS && ptr && *ptr)
+      __sanitizer::VmemGpuReserveTracker::Get().OnReserve(
+          reinterpret_cast<uptr>(*ptr), size);
+    return status;
+  }
+
   AmdgpuAllocationInfo aa_info;
   aa_info.alloc_func =
       reinterpret_cast<void*>(asan_hsa_amd_vmem_address_reserve_align);
@@ -1687,6 +1696,21 @@ hsa_status_t asan_hsa_amd_vmem_address_free(void* ptr, size_t size,
     }
     instance.Deallocate(ptr, 0, 0, stack, FROM_MALLOC);
     return HSA_STATUS_SUCCESS;
+  }
+
+  using VmemGpuReserveTracker = __sanitizer::VmemGpuReserveTracker;
+  switch (
+      VmemGpuReserveTracker::Get().OnFree(reinterpret_cast<uptr>(ptr), size)) {
+    case VmemGpuReserveTracker::kNotTracked:
+      break;
+    case VmemGpuReserveTracker::kFirstFree:
+      return REAL(hsa_amd_vmem_address_free)(ptr, size);
+    case VmemGpuReserveTracker::kSizeMismatch:
+      errno = errno_EINVAL;
+      return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+    case VmemGpuReserveTracker::kDoubleFree:
+      ReportDoubleFree(reinterpret_cast<uptr>(ptr), stack);
+      return HSA_STATUS_SUCCESS;
   }
   return REAL(hsa_amd_vmem_address_free)(ptr, size);
 }
