@@ -627,7 +627,8 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
     // not supported yet.
     Instruction *Term = BB->getTerminator();
     if (!isa<UncondBrInst, CondBrInst>(Term)) {
-      reportVectorizationFailure("Unsupported basic block terminator",
+      reportVectorizationFailure(
+          "Unsupported basic block terminator",
           "loop control flow is not understood by vectorizer",
           "CFGNotUnderstood", ORE, TheLoop);
       if (DoExtraAnalysis)
@@ -646,7 +647,8 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
     if (Br && !TheLoop->isLoopInvariant(Br->getCondition()) &&
         !LI->isLoopHeader(Br->getSuccessor(0)) &&
         !LI->isLoopHeader(Br->getSuccessor(1))) {
-      reportVectorizationFailure("Unsupported conditional branch",
+      reportVectorizationFailure(
+          "Unsupported conditional branch",
           "loop control flow is not understood by vectorizer",
           "CFGNotUnderstood", ORE, TheLoop);
       if (DoExtraAnalysis)
@@ -660,7 +662,8 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   // simple outer loops scenarios with uniform nested loops.
   if (!isUniformLoopNest(TheLoop /*loop nest*/,
                          TheLoop /*context outer loop*/)) {
-    reportVectorizationFailure("Outer loop contains divergent loops",
+    reportVectorizationFailure(
+        "Outer loop contains divergent loops",
         "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
         ORE, TheLoop);
     if (DoExtraAnalysis)
@@ -1618,7 +1621,8 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
   // We must have a loop in canonical form. Loops with indirectbr in them cannot
   // be canonicalized.
   if (!Lp->getLoopPreheader()) {
-    reportVectorizationFailure("Loop doesn't have a legal pre-header",
+    reportVectorizationFailure(
+        "Loop doesn't have a legal pre-header",
         "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
         ORE, TheLoop);
     if (DoExtraAnalysis)
@@ -1629,7 +1633,8 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
 
   // We must have a single backedge.
   if (Lp->getNumBackEdges() != 1) {
-    reportVectorizationFailure("The loop must have a single backedge",
+    reportVectorizationFailure(
+        "The loop must have a single backedge",
         "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
         ORE, TheLoop);
     if (DoExtraAnalysis)
@@ -2025,7 +2030,8 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
   if (PSE.getPredicate().getComplexity() > SCEVThreshold) {
     LLVM_DEBUG(dbgs() << "LV: Vectorization not profitable "
                          "due to SCEVThreshold");
-    reportVectorizationFailure("Too many SCEV checks needed",
+    reportVectorizationFailure(
+        "Too many SCEV checks needed",
         "Too many SCEV assumptions need to be made and checked at runtime",
         "TooManySCEVRunTimeChecks", ORE, TheLoop);
     if (DoExtraAnalysis)
