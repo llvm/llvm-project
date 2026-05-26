@@ -2154,16 +2154,25 @@ RegionStoreManager::getConstantValFromInitializer(const FieldRegion *R,
                  : std::nullopt;
 
     if (const auto *FR = dyn_cast<FieldRegion>(SR)) {
-      // FIXME: For unions, getFieldIndex() does not correspond to the
-      // InitListExpr index. Maybe we should check getInitializedFieldInUnion()
-      // and return nullopt if the accessed field is not the active member.
-      // Currently we may resolve the wrong value (but this is the pre-existing
-      // behavior).
-      unsigned Idx = FR->getDecl()->getFieldIndex();
-      if (Idx < ILE->getNumInits())
-        E = ILE->getInit(Idx);
-      else
-        return std::nullopt;
+      if (ILE->getType()->isUnionType()) {
+        // A union InitListExpr has one init for one member. We can only
+        // resolve if the accessed field matches the initialized member.
+        const FieldDecl *InitField = ILE->getInitializedFieldInUnion();
+        if (InitField && InitField == FR->getDecl()) {
+          if (ILE->getNumInits() > 0)
+            E = ILE->getInit(0);
+          else
+            return svalBuilder.makeZeroVal(LeafTy);
+        } else {
+          return std::nullopt;
+        }
+      } else {
+        unsigned Idx = FR->getDecl()->getFieldIndex();
+        if (Idx < ILE->getNumInits())
+          E = ILE->getInit(Idx);
+        else
+          return std::nullopt;
+      }
     } else if (const auto *ER = dyn_cast<ElementRegion>(SR)) {
       auto CI = ER->getIndex().getAs<nonloc::ConcreteInt>();
       if (!CI)

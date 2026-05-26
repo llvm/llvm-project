@@ -105,3 +105,79 @@ void test_array_filler_zero_init(void) {
   clang_analyzer_value(partial_arr[2].y); // expected-warning {{0}}
 }
 
+union IntOrChar {
+  int i;
+  char c;
+};
+
+const union IntOrChar u_int = {42};
+
+void test_union_active_member(void) {
+  clang_analyzer_value(u_int.i); // expected-warning {{42}}
+}
+
+void test_union_inactive_member(void) {
+  clang_analyzer_value(u_int.c); // expected-warning {{8s:{ [-128, 127] }}}
+}
+
+const union IntOrChar u_char = {.c = 'x'};
+
+void test_union_designated_active(void) {
+  clang_analyzer_value(u_char.c); // expected-warning {{120}}
+}
+
+void test_union_designated_inactive(void) {
+  clang_analyzer_value(u_char.i); // expected-warning {{32s:{ [-2147483648, 2147483647] }}}
+}
+
+struct HasUnion {
+  union IntOrChar u;
+  int after;
+};
+
+const struct HasUnion hu = {{99}, 7};
+
+void test_union_in_struct(void) {
+  clang_analyzer_value(hu.u.i); // expected-warning {{99}}
+  clang_analyzer_value(hu.u.c); // expected-warning {{8s:{ [-128, 127] }}}
+  clang_analyzer_value(hu.after); // expected-warning {{7}}
+}
+
+// Empty initializer zero-initializes the first member.
+const union IntOrChar u_empty = {};
+
+void test_union_empty_init(void) {
+  clang_analyzer_value(u_empty.i); // expected-warning {{0}}
+  clang_analyzer_value(u_empty.c); // expected-warning {{8s:{ [-128, 127] }}}
+}
+
+const union IntOrChar u_arr[2] = {{10}, {.c = 'y'}};
+
+void test_union_array(void) {
+  clang_analyzer_value(u_arr[0].i); // expected-warning {{10}}
+  clang_analyzer_value(u_arr[0].c); // expected-warning {{8s:{ [-128, 127] }}}
+  clang_analyzer_value(u_arr[1].c); // expected-warning {{121}}
+  clang_analyzer_value(u_arr[1].i); // expected-warning {{32s:{ [-2147483648, 2147483647] }}}
+}
+
+struct Tagged {
+  int tag;
+  union {
+    int ival;
+    char cval;
+  } payload;
+};
+
+const struct Tagged tagged_arr[2] = {
+  {1, {.ival = 100}},
+  {2, {.cval = 'Z'}},
+};
+
+void test_struct_union_array(void) {
+  clang_analyzer_value(tagged_arr[0].tag);          // expected-warning {{1}}
+  clang_analyzer_value(tagged_arr[0].payload.ival); // expected-warning {{100}}
+  clang_analyzer_value(tagged_arr[0].payload.cval); // expected-warning {{8s:{ [-128, 127] }}}
+  clang_analyzer_value(tagged_arr[1].tag);          // expected-warning {{2}}
+  clang_analyzer_value(tagged_arr[1].payload.cval); // expected-warning {{90}}
+  clang_analyzer_value(tagged_arr[1].payload.ival); // expected-warning {{32s:{ [-2147483648, 2147483647] }}}
+}
