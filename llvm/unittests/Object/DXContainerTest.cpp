@@ -9,6 +9,7 @@
 #include "llvm/Object/DXContainer.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/MC/DXContainerInfo.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
@@ -265,6 +266,90 @@ TEST(DXCFile, ParseILDBPart) {
   EXPECT_EQ(Header.Bitcode.MajorVersion, 1u);
   EXPECT_EQ(Header.Bitcode.MinorVersion, 5u);
   EXPECT_TRUE(memcmp(DXIL->second, "\x42\x43\xc0\xde", 4) == 0);
+}
+
+// This test verifies that ILDN part is correctly parsed.
+// This test is based on the binary output constructed from this yaml.
+// --- !dxcontainer
+// Header:
+//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+//                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+//   Version:
+//     Major:           1
+//     Minor:           0
+//   PartCount:       1
+// Parts:
+//   - Name:            ILDN
+//     Size:            12
+//     DebugName:
+//      Flags:           0
+//      NameLength:      7
+//      DebugName:       abc.pdb
+// ...
+TEST(DXCFile, ParseILDNPart) {
+  uint8_t Buffer[] = {
+      0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x38, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+      0x49, 0x4C, 0x44, 0x4E, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00,
+      0x61, 0x62, 0x63, 0x2E, 0x70, 0x64, 0x62, 0x00};
+  DXContainer C =
+      llvm::cantFail(DXContainer::create(getMemoryBuffer<116>(Buffer)));
+  EXPECT_EQ(C.getHeader().PartCount, 1u);
+  const std::optional<mcdxbc::DebugName> &ILDN = C.getDebugName();
+  EXPECT_TRUE(ILDN.has_value());
+  dxbc::DebugNameHeader Header = ILDN->Parameters;
+  EXPECT_EQ(Header.Flags, 0u);
+  EXPECT_EQ(Header.NameLength, 7u);
+  EXPECT_EQ(ILDN->Filename, "abc.pdb");
+}
+
+// This test verifies that VERS part is correctly parsed.
+// This test is based on the binary output constructed from this yaml.
+// --- !dxcontainer
+// Header:
+//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+//                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+//   Version:
+//     Major:           1
+//     Minor:           0
+//   PartCount:       1
+// Parts:
+//   - Name:            VERS
+//     Size:            40
+//     DebugName:
+//      Major:           1
+//      Minor:           10
+//      IsDebugBuild:    true
+//      IsValidated:     false
+//      CommitCount:     5267
+//      ContentSizeInBytes: 21
+//      CommitSha:       21f060b7
+//      CustomVersionString: 1.9.0.15267
+// ...
+TEST(DXCFile, ParseVERSPart) {
+  uint8_t Buffer[] = {
+      0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x54, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+      0x56, 0x45, 0x52, 0x53, 0x28, 0x00, 0x00, 0x00, 0x01, 0x00, 0x0A, 0x00,
+      0x01, 0x00, 0x00, 0x00, 0x93, 0x14, 0x00, 0x00, 0x15, 0x00, 0x00, 0x00,
+      0x32, 0x31, 0x66, 0x30, 0x36, 0x30, 0x62, 0x37, 0x00, 0x31, 0x2E, 0x39,
+      0x2E, 0x30, 0x2E, 0x31, 0x35, 0x32, 0x36, 0x37, 0x00, 0x00, 0x00, 0x00};
+  DXContainer C =
+      llvm::cantFail(DXContainer::create(getMemoryBuffer<84>(Buffer)));
+  EXPECT_EQ(C.getHeader().PartCount, 1u);
+  const std::optional<mcdxbc::CompilerVersion> &VERS =
+      C.getCompilerVersionInfo();
+  EXPECT_TRUE(VERS.has_value());
+  dxbc::CompilerVersionHeader Header = VERS->Parameters;
+  EXPECT_EQ(Header.Major, 1u);
+  EXPECT_EQ(Header.Minor, 10u);
+  EXPECT_EQ(Header.Flags, dxbc::CompilerVersionFlags::Debug);
+  EXPECT_EQ(Header.CommitCount, 5267u);
+  EXPECT_EQ(Header.ContentSizeInBytes, 21u);
+  EXPECT_EQ(VERS->CommitSha, "21f060b7");
+  EXPECT_EQ(VERS->CustomVersionString, "1.9.0.15267");
 }
 
 static Expected<DXContainer>

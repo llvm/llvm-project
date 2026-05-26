@@ -4903,6 +4903,7 @@ cc_binary(
     stamp = 0,
     deps = [
         ":Analysis",
+        ":AsmParser",
         ":Core",
         ":IRReader",
         ":Support",
@@ -6879,7 +6880,7 @@ cc_binary(
     srcs = glob(
         [
             "tools/llvm-ir2vec/**/*.cpp",
-            "tools/llvm-ir2vec/lib/*.h",
+            "tools/llvm-ir2vec/**/*.h",
         ],
         exclude = ["tools/llvm-ir2vec/Bindings/*.cpp"],
     ),
@@ -6932,6 +6933,7 @@ cc_binary(
         ":BinaryFormat",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
+        ":MC",
         ":Object",
         ":ObjectYAML",
         ":Support",

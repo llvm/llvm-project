@@ -895,19 +895,13 @@ private:
     // rather than the TypeLoc nested inside it.
     // We still traverse the TypeLoc, because it may contain other targeted
     // things like the T in ~Foo<T>().
-    // FIXME: Investigate if getNamedTypeInfo() can still return null for
-    // invalid cases, and drop these checks when it never returns null.
-    if (const auto *CDD = N.get<CXXDestructorDecl>()) {
-      if (auto *TypeInfo = CDD->getNameInfo().getNamedTypeInfo())
-        return TypeInfo->getTypeLoc().getBeginLoc();
-    }
+    if (const auto *CDD = N.get<CXXDestructorDecl>())
+      return CDD->getNameInfo().getNamedTypeInfo()->getTypeLoc().getBeginLoc();
     if (const auto *ME = N.get<MemberExpr>()) {
       auto NameInfo = ME->getMemberNameInfo();
       if (NameInfo.getName().getNameKind() ==
-          DeclarationName::CXXDestructorName) {
-        if (auto *TypeInfo = NameInfo.getNamedTypeInfo())
-          return TypeInfo->getTypeLoc().getBeginLoc();
-      }
+          DeclarationName::CXXDestructorName)
+        return NameInfo.getNamedTypeInfo()->getTypeLoc().getBeginLoc();
     }
 
     return SourceRange();

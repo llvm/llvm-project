@@ -174,10 +174,6 @@ public:
     return (ScalableForceKind)Scalable.Value == SK_AlwaysScalable;
   }
 
-  /// If hints are provided that force vectorization, use the AlwaysPrint
-  /// pass name to force the frontend to print the diagnostic.
-  const char *vectorizeAnalysisPassName() const;
-
   /// When enabling loop hints are provided we allow the vectorizer to change
   /// the order of operations that is given by the scalar loop. This is not
   /// enabled by default because can be unsafe or inefficient. For example,
@@ -384,6 +380,10 @@ public:
   /// Return true if the block BB needs to be predicated in order for the loop
   /// to be vectorized.
   bool blockNeedsPredication(const BasicBlock *BB) const;
+
+  /// Add unit stride predicates for memory accesses to PSE, if runtime checks
+  /// are allowed and an inner loop is vectorized.
+  void collectUnitStridePredicates() const;
 
   /// Check if this pointer is consecutive when vectorizing. This happens
   /// when the last index of the GEP is the induction variable, or that the
