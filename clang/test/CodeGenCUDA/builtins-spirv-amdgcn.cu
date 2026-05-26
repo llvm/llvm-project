@@ -14,10 +14,11 @@
 // CHECK-NEXT:    [[OUT:%.*]] = alloca ptr addrspace(4), align 8
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // CHECK-NEXT:    [[DISPATCH_PTR:%.*]] = alloca ptr addrspace(4), align 8
+// CHECK-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(4)
 // CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr [[OUT_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[DISPATCH_PTR_ASCAST:%.*]] = addrspacecast ptr [[DISPATCH_PTR]] to ptr addrspace(4)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr [[OUT]], align 8
-// CHECK-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr [[OUT]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr addrspace(4) [[OUT_ASCAST]], align 8
+// CHECK-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ASCAST]], align 8
 // CHECK-NEXT:    store ptr addrspace(4) [[OUT1]], ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = call addrspace(4) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // CHECK-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[DISPATCH_PTR_ASCAST]], align 8
@@ -32,10 +33,11 @@
 // AMDGCNSPIRV-NEXT:    [[OUT:%.*]] = alloca ptr addrspace(4), align 8
 // AMDGCNSPIRV-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // AMDGCNSPIRV-NEXT:    [[DISPATCH_PTR:%.*]] = alloca ptr addrspace(4), align 8
+// AMDGCNSPIRV-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr [[OUT_ADDR]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[DISPATCH_PTR_ASCAST:%.*]] = addrspacecast ptr [[DISPATCH_PTR]] to ptr addrspace(4)
-// AMDGCNSPIRV-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr [[OUT]], align 8
-// AMDGCNSPIRV-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr [[OUT]], align 8
+// AMDGCNSPIRV-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr addrspace(4) [[OUT_ASCAST]], align 8
+// AMDGCNSPIRV-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    store ptr addrspace(4) [[OUT1]], ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // AMDGCNSPIRV-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[DISPATCH_PTR_ASCAST]], align 8
@@ -55,10 +57,11 @@ __global__ void use_dispatch_ptr(int* out) {
 // CHECK-NEXT:    [[OUT:%.*]] = alloca ptr addrspace(4), align 8
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // CHECK-NEXT:    [[QUEUE_PTR:%.*]] = alloca ptr addrspace(4), align 8
+// CHECK-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(4)
 // CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr [[OUT_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[QUEUE_PTR_ASCAST:%.*]] = addrspacecast ptr [[QUEUE_PTR]] to ptr addrspace(4)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr [[OUT]], align 8
-// CHECK-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr [[OUT]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr addrspace(4) [[OUT_ASCAST]], align 8
+// CHECK-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ASCAST]], align 8
 // CHECK-NEXT:    store ptr addrspace(4) [[OUT1]], ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = call addrspace(4) ptr addrspace(4) @llvm.amdgcn.queue.ptr()
 // CHECK-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[QUEUE_PTR_ASCAST]], align 8
@@ -73,10 +76,11 @@ __global__ void use_dispatch_ptr(int* out) {
 // AMDGCNSPIRV-NEXT:    [[OUT:%.*]] = alloca ptr addrspace(4), align 8
 // AMDGCNSPIRV-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // AMDGCNSPIRV-NEXT:    [[QUEUE_PTR:%.*]] = alloca ptr addrspace(4), align 8
+// AMDGCNSPIRV-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr [[OUT_ADDR]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[QUEUE_PTR_ASCAST:%.*]] = addrspacecast ptr [[QUEUE_PTR]] to ptr addrspace(4)
-// AMDGCNSPIRV-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr [[OUT]], align 8
-// AMDGCNSPIRV-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr [[OUT]], align 8
+// AMDGCNSPIRV-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr addrspace(4) [[OUT_ASCAST]], align 8
+// AMDGCNSPIRV-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    store ptr addrspace(4) [[OUT1]], ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) ptr addrspace(4) @llvm.amdgcn.queue.ptr()
 // AMDGCNSPIRV-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[QUEUE_PTR_ASCAST]], align 8
@@ -96,10 +100,11 @@ __global__ void use_queue_ptr(int* out) {
 // CHECK-NEXT:    [[OUT:%.*]] = alloca ptr addrspace(4), align 8
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // CHECK-NEXT:    [[IMPLICITARG_PTR:%.*]] = alloca ptr addrspace(4), align 8
+// CHECK-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(4)
 // CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr [[OUT_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[IMPLICITARG_PTR_ASCAST:%.*]] = addrspacecast ptr [[IMPLICITARG_PTR]] to ptr addrspace(4)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr [[OUT]], align 8
-// CHECK-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr [[OUT]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr addrspace(4) [[OUT_ASCAST]], align 8
+// CHECK-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ASCAST]], align 8
 // CHECK-NEXT:    store ptr addrspace(4) [[OUT1]], ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = call addrspace(4) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 // CHECK-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[IMPLICITARG_PTR_ASCAST]], align 8
@@ -114,10 +119,11 @@ __global__ void use_queue_ptr(int* out) {
 // AMDGCNSPIRV-NEXT:    [[OUT:%.*]] = alloca ptr addrspace(4), align 8
 // AMDGCNSPIRV-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // AMDGCNSPIRV-NEXT:    [[IMPLICITARG_PTR:%.*]] = alloca ptr addrspace(4), align 8
+// AMDGCNSPIRV-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr [[OUT_ADDR]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[IMPLICITARG_PTR_ASCAST:%.*]] = addrspacecast ptr [[IMPLICITARG_PTR]] to ptr addrspace(4)
-// AMDGCNSPIRV-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr [[OUT]], align 8
-// AMDGCNSPIRV-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr [[OUT]], align 8
+// AMDGCNSPIRV-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr addrspace(4) [[OUT_ASCAST]], align 8
+// AMDGCNSPIRV-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    store ptr addrspace(4) [[OUT1]], ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 // AMDGCNSPIRV-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[IMPLICITARG_PTR_ASCAST]], align 8
@@ -198,11 +204,12 @@ __global__ void test_ds_fadd(float src) {
 // CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    [[SHARED_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // CHECK-NEXT:    [[X:%.*]] = alloca float, align 4
+// CHECK-NEXT:    [[SHARED_ASCAST:%.*]] = addrspacecast ptr [[SHARED]] to ptr addrspace(4)
 // CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast ptr [[SRC_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[SHARED_ADDR_ASCAST:%.*]] = addrspacecast ptr [[SHARED_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(4)
-// CHECK-NEXT:    store ptr addrspace(1) [[SHARED_COERCE:%.*]], ptr [[SHARED]], align 8
-// CHECK-NEXT:    [[SHARED1:%.*]] = load ptr addrspace(4), ptr [[SHARED]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[SHARED_COERCE:%.*]], ptr addrspace(4) [[SHARED_ASCAST]], align 8
+// CHECK-NEXT:    [[SHARED1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ASCAST]], align 8
 // CHECK-NEXT:    store float [[SRC:%.*]], ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    store ptr addrspace(4) [[SHARED1]], ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
@@ -218,11 +225,12 @@ __global__ void test_ds_fadd(float src) {
 // AMDGCNSPIRV-NEXT:    [[SRC_ADDR:%.*]] = alloca float, align 4
 // AMDGCNSPIRV-NEXT:    [[SHARED_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // AMDGCNSPIRV-NEXT:    [[X:%.*]] = alloca float, align 4
+// AMDGCNSPIRV-NEXT:    [[SHARED_ASCAST:%.*]] = addrspacecast ptr [[SHARED]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast ptr [[SRC_ADDR]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[SHARED_ADDR_ASCAST:%.*]] = addrspacecast ptr [[SHARED_ADDR]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(4)
-// AMDGCNSPIRV-NEXT:    store ptr addrspace(1) [[SHARED_COERCE:%.*]], ptr [[SHARED]], align 8
-// AMDGCNSPIRV-NEXT:    [[SHARED1:%.*]] = load ptr addrspace(4), ptr [[SHARED]], align 8
+// AMDGCNSPIRV-NEXT:    store ptr addrspace(1) [[SHARED_COERCE:%.*]], ptr addrspace(4) [[SHARED_ASCAST]], align 8
+// AMDGCNSPIRV-NEXT:    [[SHARED1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    store float [[SRC:%.*]], ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
 // AMDGCNSPIRV-NEXT:    store ptr addrspace(4) [[SHARED1]], ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
@@ -265,11 +273,12 @@ __global__ void endpgm() {
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(4)
 // CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr [[OUT_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr [[OUT]], align 8
-// CHECK-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr [[OUT]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr addrspace(4) [[OUT_ASCAST]], align 8
+// CHECK-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ASCAST]], align 8
 // CHECK-NEXT:    store ptr addrspace(4) [[OUT1]], ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i64 [[A:%.*]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i64 [[B:%.*]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 8
@@ -286,11 +295,12 @@ __global__ void endpgm() {
 // AMDGCNSPIRV-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // AMDGCNSPIRV-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // AMDGCNSPIRV-NEXT:    [[B_ADDR:%.*]] = alloca i64, align 8
+// AMDGCNSPIRV-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr [[OUT_ADDR]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr [[B_ADDR]] to ptr addrspace(4)
-// AMDGCNSPIRV-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr [[OUT]], align 8
-// AMDGCNSPIRV-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr [[OUT]], align 8
+// AMDGCNSPIRV-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr addrspace(4) [[OUT_ASCAST]], align 8
+// AMDGCNSPIRV-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    store ptr addrspace(4) [[OUT1]], ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    store i64 [[A:%.*]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    store i64 [[B:%.*]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 8
@@ -312,9 +322,10 @@ __global__ void test_uicmp_i64(unsigned long long *out, unsigned long long a, un
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT:%.*]] = alloca ptr addrspace(4), align 8
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// CHECK-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(4)
 // CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr [[OUT_ADDR]] to ptr addrspace(4)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr [[OUT]], align 8
-// CHECK-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr [[OUT]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr addrspace(4) [[OUT_ASCAST]], align 8
+// CHECK-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ASCAST]], align 8
 // CHECK-NEXT:    store ptr addrspace(4) [[OUT1]], ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata [[META5:![0-9]+]])
 // CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
@@ -330,9 +341,10 @@ __global__ void test_uicmp_i64(unsigned long long *out, unsigned long long a, un
 // AMDGCNSPIRV-NEXT:  entry:
 // AMDGCNSPIRV-NEXT:    [[OUT:%.*]] = alloca ptr addrspace(4), align 8
 // AMDGCNSPIRV-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// AMDGCNSPIRV-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr [[OUT_ADDR]] to ptr addrspace(4)
-// AMDGCNSPIRV-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr [[OUT]], align 8
-// AMDGCNSPIRV-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr [[OUT]], align 8
+// AMDGCNSPIRV-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr addrspace(4) [[OUT_ASCAST]], align 8
+// AMDGCNSPIRV-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    store ptr addrspace(4) [[OUT1]], ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata [[META7:![0-9]+]])
 // AMDGCNSPIRV-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
@@ -359,11 +371,12 @@ __device__ void func(float *x);
 // CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    [[SHARED_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // CHECK-NEXT:    [[X:%.*]] = alloca float, align 4
+// CHECK-NEXT:    [[SHARED_ASCAST:%.*]] = addrspacecast ptr [[SHARED]] to ptr addrspace(4)
 // CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast ptr [[SRC_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[SHARED_ADDR_ASCAST:%.*]] = addrspacecast ptr [[SHARED_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(4)
-// CHECK-NEXT:    store ptr addrspace(1) [[SHARED_COERCE:%.*]], ptr [[SHARED]], align 8
-// CHECK-NEXT:    [[SHARED1:%.*]] = load ptr addrspace(4), ptr [[SHARED]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[SHARED_COERCE:%.*]], ptr addrspace(4) [[SHARED_ASCAST]], align 8
+// CHECK-NEXT:    [[SHARED1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ASCAST]], align 8
 // CHECK-NEXT:    store float [[SRC:%.*]], ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    store ptr addrspace(4) [[SHARED1]], ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
@@ -381,11 +394,12 @@ __device__ void func(float *x);
 // AMDGCNSPIRV-NEXT:    [[SRC_ADDR:%.*]] = alloca float, align 4
 // AMDGCNSPIRV-NEXT:    [[SHARED_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // AMDGCNSPIRV-NEXT:    [[X:%.*]] = alloca float, align 4
+// AMDGCNSPIRV-NEXT:    [[SHARED_ASCAST:%.*]] = addrspacecast ptr [[SHARED]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast ptr [[SRC_ADDR]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[SHARED_ADDR_ASCAST:%.*]] = addrspacecast ptr [[SHARED_ADDR]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(4)
-// AMDGCNSPIRV-NEXT:    store ptr addrspace(1) [[SHARED_COERCE:%.*]], ptr [[SHARED]], align 8
-// AMDGCNSPIRV-NEXT:    [[SHARED1:%.*]] = load ptr addrspace(4), ptr [[SHARED]], align 8
+// AMDGCNSPIRV-NEXT:    store ptr addrspace(1) [[SHARED_COERCE:%.*]], ptr addrspace(4) [[SHARED_ASCAST]], align 8
+// AMDGCNSPIRV-NEXT:    [[SHARED1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    store float [[SRC:%.*]], ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
 // AMDGCNSPIRV-NEXT:    store ptr addrspace(4) [[SHARED1]], ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
@@ -407,10 +421,11 @@ __global__ void test_ds_fmin_func(float src, float *__restrict shared) {
 // CHECK-NEXT:    [[X:%.*]] = alloca ptr addrspace(4), align 8
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // CHECK-NEXT:    [[RET:%.*]] = alloca i8, align 1
+// CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(4)
 // CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr [[X_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[RET_ASCAST:%.*]] = addrspacecast ptr [[RET]] to ptr addrspace(4)
-// CHECK-NEXT:    store ptr addrspace(1) [[X_COERCE:%.*]], ptr [[X]], align 8
-// CHECK-NEXT:    [[X1:%.*]] = load ptr addrspace(4), ptr [[X]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[X_COERCE:%.*]], ptr addrspace(4) [[X_ASCAST]], align 8
+// CHECK-NEXT:    [[X1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[X_ASCAST]], align 8
 // CHECK-NEXT:    store ptr addrspace(4) [[X1]], ptr addrspace(4) [[X_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[X_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[TMP0]] to ptr
@@ -424,10 +439,11 @@ __global__ void test_ds_fmin_func(float src, float *__restrict shared) {
 // AMDGCNSPIRV-NEXT:    [[X:%.*]] = alloca ptr addrspace(4), align 8
 // AMDGCNSPIRV-NEXT:    [[X_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // AMDGCNSPIRV-NEXT:    [[RET:%.*]] = alloca i8, align 1
+// AMDGCNSPIRV-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr [[X_ADDR]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[RET_ASCAST:%.*]] = addrspacecast ptr [[RET]] to ptr addrspace(4)
-// AMDGCNSPIRV-NEXT:    store ptr addrspace(1) [[X_COERCE:%.*]], ptr [[X]], align 8
-// AMDGCNSPIRV-NEXT:    [[X1:%.*]] = load ptr addrspace(4), ptr [[X]], align 8
+// AMDGCNSPIRV-NEXT:    store ptr addrspace(1) [[X_COERCE:%.*]], ptr addrspace(4) [[X_ASCAST]], align 8
+// AMDGCNSPIRV-NEXT:    [[X1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[X_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    store ptr addrspace(4) [[X1]], ptr addrspace(4) [[X_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[X_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[TMP0]] to ptr
@@ -445,10 +461,11 @@ __global__ void test_is_shared(float *x){
 // CHECK-NEXT:    [[X:%.*]] = alloca ptr addrspace(4), align 8
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // CHECK-NEXT:    [[RET:%.*]] = alloca i8, align 1
+// CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(4)
 // CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr [[X_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    [[RET_ASCAST:%.*]] = addrspacecast ptr [[RET]] to ptr addrspace(4)
-// CHECK-NEXT:    store ptr addrspace(1) [[X_COERCE:%.*]], ptr [[X]], align 8
-// CHECK-NEXT:    [[X1:%.*]] = load ptr addrspace(4), ptr [[X]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[X_COERCE:%.*]], ptr addrspace(4) [[X_ASCAST]], align 8
+// CHECK-NEXT:    [[X1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[X_ASCAST]], align 8
 // CHECK-NEXT:    store ptr addrspace(4) [[X1]], ptr addrspace(4) [[X_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[X_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[TMP0]] to ptr
@@ -462,10 +479,11 @@ __global__ void test_is_shared(float *x){
 // AMDGCNSPIRV-NEXT:    [[X:%.*]] = alloca ptr addrspace(4), align 8
 // AMDGCNSPIRV-NEXT:    [[X_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // AMDGCNSPIRV-NEXT:    [[RET:%.*]] = alloca i8, align 1
+// AMDGCNSPIRV-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr [[X_ADDR]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[RET_ASCAST:%.*]] = addrspacecast ptr [[RET]] to ptr addrspace(4)
-// AMDGCNSPIRV-NEXT:    store ptr addrspace(1) [[X_COERCE:%.*]], ptr [[X]], align 8
-// AMDGCNSPIRV-NEXT:    [[X1:%.*]] = load ptr addrspace(4), ptr [[X]], align 8
+// AMDGCNSPIRV-NEXT:    store ptr addrspace(1) [[X_COERCE:%.*]], ptr addrspace(4) [[X_ASCAST]], align 8
+// AMDGCNSPIRV-NEXT:    [[X1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[X_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    store ptr addrspace(4) [[X1]], ptr addrspace(4) [[X_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[X_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[TMP0]] to ptr
