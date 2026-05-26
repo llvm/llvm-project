@@ -35,6 +35,7 @@ libclc_add_sources(${LIBCLC_OPENCL_TARGET}
   math/exp10.cl
   math/expm1.cl
   math/fdim.cl
+  math/fma.cl
   math/fmod.cl
   math/fract.cl
   math/frexp.cl
