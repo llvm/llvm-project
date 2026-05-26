@@ -1994,3 +1994,22 @@ template <> struct StorageTraits<int> {
 };
 View zbi(GetVmo(string("")));
 }
+
+
+namespace GH196375 {
+
+  template <typename En, En value>
+concept Small = (value <= 2);
+
+template <int value>
+consteval bool f()
+    requires(Small<int, value>
+             // && value == 1
+    )
+{
+    return true;
+}
+
+
+static_assert(f<4>());
+}

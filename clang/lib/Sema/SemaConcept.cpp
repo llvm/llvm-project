@@ -1022,13 +1022,13 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
   if (SubstitutedConceptId.isInvalid() || Trap.hasErrorOccurred())
     return ExprError();
 
-  if (Size != Satisfaction.Details.size()) {
+  //if (Size != Satisfaction.Details.size()) {
     Satisfaction.Details.insert(
         Satisfaction.Details.begin() + Size,
         UnsatisfiedConstraintRecord(
             SubstitutedConceptId.getAs<ConceptSpecializationExpr>()
                 ->getConceptReference()));
-  }
+  //}
   return SubstitutedConceptId;
 }
 
@@ -1037,6 +1037,58 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
     const MultiLevelTemplateArgumentList &MLTAL) {
 
   const ConceptReference *ConceptId = Constraint.getConceptId();
+
+  llvm::SaveAndRestore PushConceptDecl(
+      ParentConcept, cast<ConceptDecl>(ConceptId->getNamedConcept()));
+
+  unsigned Size = Satisfaction.Details.size();
+
+  auto EvaluateCSE = [&] {
+    UnsignedOrNone OuterPackSubstIndex = getOuterPackIndex(Constraint);
+    llvm::FoldingSetNodeID ID;
+    ID.AddPointer(Constraint.getConceptId());
+    ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
+    HashParameterMapping(S, MLTAL, ID, OuterPackSubstIndex)
+        .VisitConstraint(Constraint);
+
+    if (auto Iter = S.UnsubstitutedConstraintSatisfactionCache.find(ID);
+        Iter != S.UnsubstitutedConstraintSatisfactionCache.end()) {
+
+      auto &Cached = Iter->second.Satisfaction;
+      Satisfaction.ContainsErrors = Cached.ContainsErrors;
+      Satisfaction.IsSatisfied = Cached.IsSatisfied;
+      Satisfaction.Details.insert(Satisfaction.Details.begin() + Size,
+                                  Cached.Details.begin(), Cached.Details.end());
+      return Iter->second.SubstExpr;
+    }
+
+    ExprResult CE = EvaluateSlow(Constraint, MLTAL, Size);
+
+    if (CE.isInvalid())
+      return ExprError();
+    UnsubstitutedConstraintSatisfactionCacheResult Cache;
+    Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
+    Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
+    Cache.Satisfaction.Details.insert(Cache.Satisfaction.Details.end(),
+                                      Satisfaction.Details.begin() + Size,
+                                      Satisfaction.Details.end());
+    Cache.SubstExpr = CE;
+    S.UnsubstitutedConstraintSatisfactionCache.insert({ID, std::move(Cache)});
+    if (CE.isInvalid())
+      return ExprError();
+    return CE;
+  };
+
+  auto Res = EvaluateCSE();
+  LocalInstantiationScope Scope(S);
+  if (Res.isUsable()) {
+    if (const auto *CSE = Res.getAs<ConceptSpecializationExpr>()) {
+      Scope.InstantiatedLocal(ConceptId->getNamedConcept(),
+                              const_cast<ImplicitConceptSpecializationDecl *>(
+                                  CSE->getSpecializationDecl()));
+    }
+  }
+
   Sema::InstantiatingTemplate InstTemplate(
       S, ConceptId->getBeginLoc(),
       Sema::InstantiatingTemplate::ConstraintsCheck{},
@@ -1052,11 +1104,6 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   if (InstTemplate.isInvalid())
     return ExprError();
 
-  unsigned Size = Satisfaction.Details.size();
-
-  llvm::SaveAndRestore PushConceptDecl(
-      ParentConcept, cast<ConceptDecl>(ConceptId->getNamedConcept()));
-
   ExprResult E = Evaluate(Constraint.getNormalizedConstraint(), MLTAL);
 
   if (E.isInvalid()) {
@@ -1067,39 +1114,10 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   // ConceptIdConstraint is only relevant for diagnostics,
   // so if the normalized constraint is satisfied, we should not
   // substitute into the constraint.
-  if (Satisfaction.IsSatisfied)
+  if (Res.isInvalid())
     return E;
 
-  UnsignedOrNone OuterPackSubstIndex = getOuterPackIndex(Constraint);
-  llvm::FoldingSetNodeID ID;
-  ID.AddPointer(Constraint.getConceptId());
-  ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
-  HashParameterMapping(S, MLTAL, ID, OuterPackSubstIndex)
-      .VisitConstraint(Constraint);
-
-  if (auto Iter = S.UnsubstitutedConstraintSatisfactionCache.find(ID);
-      Iter != S.UnsubstitutedConstraintSatisfactionCache.end()) {
-
-    auto &Cached = Iter->second.Satisfaction;
-    Satisfaction.ContainsErrors = Cached.ContainsErrors;
-    Satisfaction.IsSatisfied = Cached.IsSatisfied;
-    Satisfaction.Details.insert(Satisfaction.Details.begin() + Size,
-                                Cached.Details.begin(), Cached.Details.end());
-    return Iter->second.SubstExpr;
-  }
-
-  ExprResult CE = EvaluateSlow(Constraint, MLTAL, Size);
-  if (CE.isInvalid())
-    return E;
-  UnsubstitutedConstraintSatisfactionCacheResult Cache;
-  Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
-  Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
-  Cache.Satisfaction.Details.insert(Cache.Satisfaction.Details.end(),
-                                    Satisfaction.Details.begin() + Size,
-                                    Satisfaction.Details.end());
-  Cache.SubstExpr = CE;
-  S.UnsubstitutedConstraintSatisfactionCache.insert({ID, std::move(Cache)});
-  return CE;
+  return Res;
 }
 
 ExprResult ConstraintSatisfactionChecker::Evaluate(
@@ -2326,6 +2344,11 @@ bool SubstituteParameterMappings::substitute(NormalizedConstraint &N) {
         return true;
       InnerArgs = std::move(CTAI.SugaredConverted);
     }
+
+    LocalInstantiationScope Scope(SemaRef);
+    Scope.InstantiatedLocal(CSE->getNamedConcept(),
+                            const_cast<ImplicitConceptSpecializationDecl *>(
+                                CSE->getSpecializationDecl()));
 
     MultiLevelTemplateArgumentList MLTAL = SemaRef.getTemplateInstantiationArgs(
         Concept, Concept->getLexicalDeclContext(),

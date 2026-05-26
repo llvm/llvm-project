@@ -4685,7 +4685,7 @@ LocalInstantiationScope::findInstantiationOf(const Decl *D) {
   // If we're performing a partial substitution during template argument
   // deduction, we may not have values for template parameters yet.
   if (isa<NonTypeTemplateParmDecl>(D) || isa<TemplateTypeParmDecl>(D) ||
-      isa<TemplateTemplateParmDecl>(D))
+      isa<TemplateTemplateParmDecl>(D) || isa<ConceptDecl>(D))
     return nullptr;
 
   // Local types referenced prior to definition may require instantiation.

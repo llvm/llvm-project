@@ -1127,24 +1127,25 @@ ConceptDecl *ConceptDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
 // ImplicitConceptSpecializationDecl Implementation
 //===----------------------------------------------------------------------===//
 ImplicitConceptSpecializationDecl::ImplicitConceptSpecializationDecl(
-    DeclContext *DC, SourceLocation SL,
+    DeclContext *DC, SourceLocation SL, const TemplateDecl *Template,
     ArrayRef<TemplateArgument> ConvertedArgs)
-    : Decl(ImplicitConceptSpecialization, DC, SL),
-      NumTemplateArgs(ConvertedArgs.size()) {
+    : NamedDecl(ImplicitConceptSpecialization, DC, SL, Template->getDeclName()),
+      Template(Template), NumTemplateArgs(ConvertedArgs.size()) {
   setTemplateArguments(ConvertedArgs);
 }
 
 ImplicitConceptSpecializationDecl::ImplicitConceptSpecializationDecl(
     EmptyShell Empty, unsigned NumTemplateArgs)
-    : Decl(ImplicitConceptSpecialization, Empty),
+    : NamedDecl(ImplicitConceptSpecialization, /*DC=*/nullptr, SourceLocation(),
+                DeclarationName()),
       NumTemplateArgs(NumTemplateArgs) {}
 
 ImplicitConceptSpecializationDecl *ImplicitConceptSpecializationDecl::Create(
     const ASTContext &C, DeclContext *DC, SourceLocation SL,
-    ArrayRef<TemplateArgument> ConvertedArgs) {
+    const TemplateDecl *Concept, ArrayRef<TemplateArgument> ConvertedArgs) {
   return new (C, DC,
               additionalSizeToAlloc<TemplateArgument>(ConvertedArgs.size()))
-      ImplicitConceptSpecializationDecl(DC, SL, ConvertedArgs);
+      ImplicitConceptSpecializationDecl(DC, SL, Concept, ConvertedArgs);
 }
 
 ImplicitConceptSpecializationDecl *
@@ -1720,6 +1721,12 @@ clang::getReplacedTemplateParameter(Decl *D, unsigned Index) {
         cast<FunctionDecl>(D)->getTemplateSpecializationInfo();
     return {Info->getTemplate()->getTemplateParameters()->getParam(Index),
             Info->TemplateArguments->asArray()[Index]};
+  }
+  case Decl::Kind::ImplicitConceptSpecialization: {
+    const auto *Spec = cast<ImplicitConceptSpecializationDecl>(D);
+    return {Spec->getSpecializedTemplate()->getTemplateParameters()->getParam(
+                Index),
+            Spec->getTemplateArguments()[Index]};
   }
   default:
     llvm_unreachable("Unhandled templated declaration kind");

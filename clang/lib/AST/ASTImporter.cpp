@@ -7052,12 +7052,17 @@ ExpectedDecl ASTNodeImporter::VisitImplicitConceptSpecializationDecl(
   if (Err)
     return std::move(Err);
 
+  const TemplateDecl *Concept;
+  if ((Err = importInto(Concept, D->getSpecializedTemplate())))
+    return std::move(Err);
+
   SmallVector<TemplateArgument, 2> ToArgs(D->getTemplateArguments().size());
   if (Error Err = ImportTemplateArguments(D->getTemplateArguments(), ToArgs))
     return std::move(Err);
 
   ImplicitConceptSpecializationDecl *To;
-  if (GetImportedOrCreateDecl(To, D, Importer.getToContext(), DC, ToSL, ToArgs))
+  if (GetImportedOrCreateDecl(To, D, Importer.getToContext(), DC, ToSL, Concept,
+                              ToArgs))
     return To;
   To->setLexicalDeclContext(LexicalDC);
   LexicalDC->addDeclInternal(To);

@@ -365,7 +365,7 @@ TemplateParameterListBuilder::constructConceptSpecializationExpr(
 
   ImplicitConceptSpecializationDecl *ImplicitCSEDecl =
       ImplicitConceptSpecializationDecl::Create(
-          Context, Builder.Record->getDeclContext(), Loc, {CSETA});
+          Context, Builder.Record->getDeclContext(), Loc, CD, {CSETA});
 
   // Constraint satisfaction is used to construct the
   // ConceptSpecailizationExpr, and represents the 2nd Template Argument,

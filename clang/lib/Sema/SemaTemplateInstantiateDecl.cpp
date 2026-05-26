@@ -6933,6 +6933,7 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     return D;
   if (isa<ParmVarDecl>(D) || isa<NonTypeTemplateParmDecl>(D) ||
       isa<TemplateTypeParmDecl>(D) || isa<TemplateTemplateParmDecl>(D) ||
+      isa<ConceptDecl>(D) ||
       (ParentDependsOnArgs && (ParentDC->isFunctionOrMethod() ||
                                isa<OMPDeclareReductionDecl>(ParentDC) ||
                                isa<OMPDeclareMapperDecl>(ParentDC))) ||
@@ -6963,7 +6964,7 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     // deduction, we may not have values for template parameters yet. They
     // just map to themselves.
     if (isa<NonTypeTemplateParmDecl>(D) || isa<TemplateTypeParmDecl>(D) ||
-        isa<TemplateTemplateParmDecl>(D))
+        isa<TemplateTemplateParmDecl>(D) || isa<ConceptDecl>(D))
       return D;
 
     if (D->isInvalidDecl())

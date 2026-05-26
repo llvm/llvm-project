@@ -3234,22 +3234,27 @@ public:
 // arguments, so we can later use this to reconstitute the template arguments
 // during constraint checking.
 class ImplicitConceptSpecializationDecl final
-    : public Decl,
+    : public NamedDecl,
       private llvm::TrailingObjects<ImplicitConceptSpecializationDecl,
                                     TemplateArgument> {
+  const TemplateDecl *Template;
   unsigned NumTemplateArgs;
 
   ImplicitConceptSpecializationDecl(DeclContext *DC, SourceLocation SL,
+                                    const TemplateDecl *Template,
                                     ArrayRef<TemplateArgument> ConvertedArgs);
   ImplicitConceptSpecializationDecl(EmptyShell Empty, unsigned NumTemplateArgs);
 
 public:
   static ImplicitConceptSpecializationDecl *
   Create(const ASTContext &C, DeclContext *DC, SourceLocation SL,
+         const TemplateDecl *Template,
          ArrayRef<TemplateArgument> ConvertedArgs);
   static ImplicitConceptSpecializationDecl *
   CreateDeserialized(const ASTContext &C, GlobalDeclID ID,
                      unsigned NumTemplateArgs);
+
+  const TemplateDecl *getSpecializedTemplate() const { return Template; }
 
   ArrayRef<TemplateArgument> getTemplateArguments() const {
     return getTrailingObjects(NumTemplateArgs);

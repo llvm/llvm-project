@@ -4911,7 +4911,7 @@ ExprResult Sema::CheckConceptTemplateId(
   // FIXME: Reland https://github.com/llvm/llvm-project/pull/101782 properly!
   auto *CSD = ImplicitConceptSpecializationDecl::Create(
       Context, NamedConcept->getDeclContext(), NamedConcept->getLocation(),
-      CTAI.SugaredConverted);
+      NamedConcept, CTAI.SugaredConverted);
   ConstraintSatisfaction Satisfaction;
   bool AreArgsDependent =
       TemplateSpecializationType::anyDependentTemplateArguments(

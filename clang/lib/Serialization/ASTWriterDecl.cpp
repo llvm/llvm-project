@@ -1870,8 +1870,11 @@ void ASTDeclWriter::VisitConceptDecl(ConceptDecl *D) {
 
 void ASTDeclWriter::VisitImplicitConceptSpecializationDecl(
     ImplicitConceptSpecializationDecl *D) {
+
   Record.push_back(D->getTemplateArguments().size());
-  VisitDecl(D);
+  VisitNamedDecl(D);
+  Record.AddDeclRef(D->getSpecializedTemplate());
+
   for (const TemplateArgument &Arg : D->getTemplateArguments())
     Record.AddTemplateArgument(Arg);
   Code = serialization::DECL_IMPLICIT_CONCEPT_SPECIALIZATION;
