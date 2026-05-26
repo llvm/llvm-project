@@ -2834,7 +2834,7 @@ const Init *TGParser::ParseOperationCond(Record *CurRec,
   return CondOpInit::get(Case, Val, Type)->Fold(CurRec);
 }
 
-/// Switch ::= !switch(key, [case : val,]* default-val) => val type
+/// Switch ::= !switch(key, [case : val,]+ default-val) => val type
 const Init *TGParser::ParseOperationSwitch(Record *CurRec,
                                            const RecTy *ItemType) {
   Lex.Lex(); // eat the operation 'switch'
@@ -2893,6 +2893,12 @@ const Init *TGParser::ParseOperationSwitch(Record *CurRec,
   }
   assert(KeyAndCases.size() == Vals.size() &&
          "inconsistent keys and values for !switch");
+
+  if (KeyAndCases.size() < 2) {
+    TokError(
+        "there should be at least 1 'case: value' in the !switch operator");
+    return nullptr;
+  }
 
   // Check value type consistency
   std::optional<const RecTy *> ValTypeOpt =

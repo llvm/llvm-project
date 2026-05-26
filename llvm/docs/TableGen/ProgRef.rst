@@ -2060,8 +2060,9 @@ and non-0 as true.
     This operator compares *key* to each *casei* in turn using ``!eq``.
     If *key* equals *casei*, the operator returns *vali*. If no case
     matches, the operator returns *default* --- the trailing argument
-    with no ``:`` is the default value, identified by position. The
-    default is mandatory.
+    with no ``:`` is the default value, identified by position. Both 
+    the trailing default and at least one *casei* : *vali* pair are 
+    mandatory.
 
     ``!switch`` is a compact form of ``!cond`` using ``!eq`` comparisons.
     The expression ``!switch(key, c1: v1, c2: v2, vd)`` is equivalent to
