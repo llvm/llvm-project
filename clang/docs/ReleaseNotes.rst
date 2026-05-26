@@ -410,6 +410,20 @@ Attribute Changes in Clang
       - Name: myUnsafeFunction
         UnsafeBufferUsage: true
 
+- When using ``-Wunsafe-buffer-usage`` without
+  ``-fsafe-buffer-usage-suggestions``, warnings are now emitted only
+  once per source file. Pre-compiled code (such as PCH or module
+  headers) is no longer repeatedly analyzed, as it is analyzed during
+  its initial compilation. (Traditionally included headers are still
+  analyzed within each translation unit that includes them).  This
+  behavior matches most of other ``-W`` diagnostics.
+
+  When ``-fsafe-buffer-usage-suggestions`` is enabled, the behavior
+  remains the same as before: pre-compiled code is deserialized and
+  analyzed alongside the translation unit that uses it, because fix-it
+  suggestion analysis requires full visibility of the translation
+  unit.
+
 - Added support for ``[[msvc::forceinline]]`` for functions and
   ``[[msvc::forceinline_calls]]`` for statements. Both are aliases to
   ``[[clang::always_inline]]`` with additional checks to ensure that they
