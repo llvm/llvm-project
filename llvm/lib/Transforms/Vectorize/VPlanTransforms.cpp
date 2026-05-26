@@ -5172,9 +5172,12 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
 void VPlanTransforms::attachAliasMaskToHeaderMask(VPlan &Plan) {
   VPSingleDefRecipe *HeaderMask = vputils::findHeaderMask(Plan);
   auto *HeaderMaskDef = HeaderMask->getDefiningRecipe();
+  Type *I1Ty = IntegerType::getInt1Ty(Plan.getContext());
 
   VPBuilder Builder(Plan.getVectorPreheader());
-  auto *AliasMask = Builder.createNaryOp(VPInstruction::IncomingAliasMask, {});
+  auto *AliasMask = Builder.createNaryOp(
+      VPInstruction::IncomingAliasMask, {}, nullptr, {}, {},
+      DebugLoc::getUnknown(), "incoming.alias.mask", I1Ty);
 
   if (HeaderMaskDef->isPhi())
     Builder = VPBuilder(&*HeaderMaskDef->getParent()->getFirstNonPhi());
@@ -5184,7 +5187,7 @@ void VPlanTransforms::attachAliasMaskToHeaderMask(VPlan &Plan) {
   // Update all existing users of the header mask to "HeaderMask & AliasMask".
   auto *ClampedHeaderMask = Builder.createAnd(HeaderMask, AliasMask);
   HeaderMask->replaceUsesWithIf(ClampedHeaderMask, [&](VPUser &U, unsigned) {
-    return dyn_cast<VPInstruction>(&U) != ClampedHeaderMask;
+    return &U != ClampedHeaderMask;
   });
 }
 
@@ -5199,7 +5202,7 @@ VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheckVPBB,
   assert(IncomingAliasMask && "Expected an alias mask!");
 
   VPValue *AliasMask = nullptr;
-  for (PointerDiffInfo Check : DiffChecks) {
+  for (const PointerDiffInfo &Check : DiffChecks) {
     VPValue *Src = vputils::getOrCreateVPValueForSCEVExpr(Plan, Check.SrcStart);
     VPValue *Sink =
         vputils::getOrCreateVPValueForSCEVExpr(Plan, Check.SinkStart);

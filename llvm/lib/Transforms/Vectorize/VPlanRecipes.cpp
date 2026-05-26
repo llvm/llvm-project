@@ -509,6 +509,7 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
   case VPInstruction::NumActiveLanes:
+  case VPInstruction::IncomingAliasMask:
   case Instruction::Load:
   case Instruction::Alloca:
     llvm_unreachable("type must be passed explicitly");

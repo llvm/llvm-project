@@ -632,7 +632,7 @@ VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
   if (VPValue *AliasMask = findIncomingAliasMask(Plan)) {
     assert(match(AliasMask->getSingleUser(),
                  m_c_BinaryAnd(m_VPValue(), m_Specific(AliasMask))) &&
-           "AliasMask must be only be used with the original header mask");
+           "AliasMask must only be used with the original header mask");
     return cast<VPSingleDefRecipe>(AliasMask->getSingleUser());
   }
 

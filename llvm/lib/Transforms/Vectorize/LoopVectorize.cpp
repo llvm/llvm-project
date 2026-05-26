@@ -1280,8 +1280,9 @@ public:
       for (Instruction &I : *BB) {
         if (!isa<LoadInst, StoreInst>(I)) {
           [[maybe_unused]] auto *Call = dyn_cast<CallInst>(&I);
-          assert((!I.mayReadOrWriteMemory() || Call && !HasPointerArgs(Call)) &&
-                 "Skipped unexpected memory access");
+          assert(
+              (!I.mayReadOrWriteMemory() || (Call && !HasPointerArgs(Call))) &&
+              "Skipped unexpected memory access");
           continue;
         }
 
@@ -1671,17 +1672,18 @@ class GeneratedRTChecks {
   TTI::TargetCostKind CostKind;
 
   /// True if the loop is alias-masked (which allows us to omit diff checks).
-  bool LoopUsesAliasMasking = false;
+  bool LoopUsesPartialAliasMasking = false;
 
 public:
   GeneratedRTChecks(PredicatedScalarEvolution &PSE, DominatorTree *DT,
                     LoopInfo *LI, TargetTransformInfo *TTI,
-                    TTI::TargetCostKind CostKind, bool LoopUsesAliasMasking)
+                    TTI::TargetCostKind CostKind,
+                    bool LoopUsesPartialAliasMasking)
       : DT(DT), LI(LI), TTI(TTI),
         SCEVExp(*PSE.getSE(), "scev.check", /*PreserveLCSSA=*/false),
         MemCheckExp(*PSE.getSE(), "scev.check", /*PreserveLCSSA=*/false),
         PSE(PSE), CostKind(CostKind),
-        LoopUsesAliasMasking(LoopUsesAliasMasking) {}
+        LoopUsesPartialAliasMasking(LoopUsesPartialAliasMasking) {}
 
   /// Generate runtime checks in SCEVCheckBlock and MemCheckBlock, so we can
   /// accurately estimate the cost of the runtime checks. The blocks are
@@ -1737,7 +1739,7 @@ public:
     // TODO: We need to estimate the cost of alias-masking in
     // GeneratedRTChecks::getCost(). We can't check the MemCheckBlock as the
     // alias-mask is generated later in VPlan.
-    if (RtPtrChecking.Need && !LoopUsesAliasMasking) {
+    if (RtPtrChecking.Need && !LoopUsesPartialAliasMasking) {
       auto *Pred = SCEVCheckBlock ? SCEVCheckBlock : Preheader;
       MemCheckBlock = SplitBlock(Pred, Pred->getTerminator(), DT, LI, nullptr,
                                  "vector.memcheck");
