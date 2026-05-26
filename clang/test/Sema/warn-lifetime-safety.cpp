@@ -3249,15 +3249,12 @@ std::function<void()> chained_copy_assign() {
   return f3; // expected-note {{returned here}}
 }
 
-// FIXME: False negative. std::move's lifetimebound handling in
-// `handleFunctionCall` only flows the outermost origin, missing inner origins
-// that carry the lambda's loans.
 std::function<void()> move_assign() {
   int x;
-  std::function<void()> f = [&x]() { (void)x; }; // Should warn.
+  std::function<void()> f = [&x]() { (void)x; }; // expected-warning {{stack memory associated with local variable 'x' is returned}}
   std::function<void()> f2 = []() {};
   f2 = std::move(f);
-  return f2;
+  return f2; // expected-note {{returned here}}
 }
 
 std::function<void()> reassign_safe_then_unsafe() {
@@ -3376,3 +3373,38 @@ void deref_use_after_scope() {
 }
 
 } // namespace GH188832
+
+namespace GH191954 {
+  int* return_moved_pointer() {
+    int x;
+    int* f = &x; // expected-warning {{stack memory associated with local variable 'x' is returned}}
+    int* a;
+    a = std::move(f);
+    return a; // expected-note {{returned here}}
+  }
+
+  int* return_moved_pointer2() {
+    int x;
+    int* f = &x;         // expected-warning {{stack memory associated with local variable 'x' is returned}}
+    return std::move(f); // expected-note {{returned here}}
+  }
+
+  View return_moved_view() {
+    MyObj o;
+    View v(o); // expected-warning {{stack memory associated with local variable 'o' is returned}}
+    View v2 = std::move(v);
+    return v2; // expected-note {{returned here}}
+  }
+
+  int* return_forwarded_pointer() {
+    int x;
+    int* f = &x;                  // expected-warning {{stack memory associated with local variable 'x' is returned}}
+    return std::forward<int*>(f); // expected-note {{returned here}}
+  }
+
+  int g;
+  int* return_moved_pointer_to_global() {
+    int* f = &g;
+    return std::move(f);
+  }
+} // namespace GH191954
