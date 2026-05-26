@@ -25,10 +25,11 @@ struct EntryExitInstrumenterPass
     : public RequiredPassInfoMixin<EntryExitInstrumenterPass> {
   EntryExitInstrumenterPass(bool PostInlining) : PostInlining(PostInlining) {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   bool PostInlining;
 };
