@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIREmitCTransforms
   Transforms.cpp
   FormExpressions.cpp
+  MLGOScalarizeFunctionResult.cpp
   TypeConversions.cpp
   WrapFuncInClass.cpp
   LowerNestedModuleToClass.cpp
@@ -13,9 +14,12 @@ add_mlir_dialect_library(MLIREmitCTransforms
   MLIREmitCTransformsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRArithDialect
+  MLIRFuncDialect
   MLIRIR
   MLIRPass
   MLIREmitCDialect
+  MLIRTensorDialect
   MLIRTransforms
   MLIREmitCCommonConversion
 )
