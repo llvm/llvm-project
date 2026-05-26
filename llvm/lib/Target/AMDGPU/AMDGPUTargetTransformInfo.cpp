@@ -357,6 +357,15 @@ unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
                                                        : 1;
 }
 
+bool GCNTTIImpl::preferSLPInstCountCheck() const {
+  // The integer inst-count heuristic causes regressions on gfx94x and gfx950
+  // because 2-element vector trees that pass the scalar/vector instruction
+  // count comparison still widen scalar moves (e.g. v_mov_b32 to v_mov_b64)
+  // after codegen, increasing register pressure and throughput cost without
+  // reducing the total instruction count.
+  return !ST->hasGFX940Insts() && !ST->hasGFX950Insts();
+}
+
 unsigned GCNTTIImpl::getLoadVectorFactor(unsigned VF, unsigned LoadSize,
                                          unsigned ChainSizeInBytes,
                                          VectorType *VecTy) const {
