@@ -1238,7 +1238,7 @@ getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
 
   if (GV.hasWeakLinkage() &&
       ST.canUseExtension(SPIRV::Extension::SPV_AMD_weak_linkage))
-    return SPIRV::LinkageType::Weak;
+    return SPIRV::LinkageType::WeakAMD;
 
   return SPIRV::LinkageType::Export;
 }

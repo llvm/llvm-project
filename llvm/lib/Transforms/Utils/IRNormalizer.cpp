@@ -30,6 +30,19 @@
 
 using namespace llvm;
 
+// Frozen mixer; basic-block names derived from these hashes appear in
+// the normalized IR text and must be deterministic across processes
+// for the normalizer's "compare normalized IR" workflow to work.
+static constexpr uint64_t hash_16_bytes(uint64_t low, uint64_t high) {
+  const uint64_t kMul = 0x9ddfea08eb382d69ULL;
+  uint64_t a = (low ^ high) * kMul;
+  a ^= (a >> 47);
+  uint64_t b = (high ^ a) * kMul;
+  b ^= (b >> 47);
+  b *= kMul;
+  return b;
+}
+
 namespace {
 /// IRNormalizer aims to transform LLVM IR into normal form.
 class IRNormalizer {
@@ -138,7 +151,7 @@ void IRNormalizer::nameBasicBlocks(Function &F) const {
     // Hash considering output instruction opcodes.
     for (auto &I : B)
       if (isOutput(&I))
-        Hash = hashing::detail::hash_16_bytes(Hash, I.getOpcode());
+        Hash = hash_16_bytes(Hash, I.getOpcode());
 
     if (Options.RenameAll || B.getName().empty()) {
       // Name basic block. Substring hash to make diffs more readable.
@@ -215,7 +228,7 @@ void IRNormalizer::nameAsInitialInstruction(Instruction *I) const {
   uint64_t Hash = MagicHashConstant;
 
   // Consider instruction's opcode in the hash.
-  Hash = hashing::detail::hash_16_bytes(Hash, I->getOpcode());
+  Hash = hash_16_bytes(Hash, I->getOpcode());
 
   SmallPtrSet<const Instruction *, 32> Visited;
   // Get output footprint for I.
@@ -223,7 +236,7 @@ void IRNormalizer::nameAsInitialInstruction(Instruction *I) const {
 
   // Consider output footprint in the hash.
   for (const int &Output : OutputFootprint)
-    Hash = hashing::detail::hash_16_bytes(Hash, Output);
+    Hash = hash_16_bytes(Hash, Output);
 
   // Base instruction name.
   SmallString<256> Name;
@@ -298,7 +311,7 @@ void IRNormalizer::nameAsRegularInstruction(Instruction *I) {
   uint64_t Hash = MagicHashConstant;
 
   // Consider instruction opcode in the hash.
-  Hash = hashing::detail::hash_16_bytes(Hash, I->getOpcode());
+  Hash = hash_16_bytes(Hash, I->getOpcode());
 
   // Operand opcodes for further sorting (commutative).
   SmallVector<int, 4> OperandsOpcodes;
@@ -312,7 +325,7 @@ void IRNormalizer::nameAsRegularInstruction(Instruction *I) {
 
   // Consider operand opcodes in the hash.
   for (const int Code : OperandsOpcodes)
-    Hash = hashing::detail::hash_16_bytes(Hash, Code);
+    Hash = hash_16_bytes(Hash, Code);
 
   // Base instruction name.
   SmallString<512> Name;

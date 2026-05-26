@@ -1206,7 +1206,7 @@ void test_builtin_elementwise_fma(float f32, double f64,
 
   // CHECK:      [[V2F16_0:%.+]] = load <2 x half>, ptr %v2f16.addr
   // CHECK-NEXT: [[V2F16_1:%.+]] = load <2 x half>, ptr %v2f16.addr
-  // CHECK-NEXT: call <2 x half> @llvm.fma.v2f16(<2 x half> [[V2F16_0]], <2 x half> [[V2F16_1]], <2 x half> splat (half 0xH4400))
+  // CHECK-NEXT: call <2 x half> @llvm.fma.v2f16(<2 x half> [[V2F16_0]], <2 x half> [[V2F16_1]], <2 x half> splat (half 4.000000e+00))
   half2 tmp2_v2f16 = __builtin_elementwise_fma(v2f16, v2f16, (half2)4.0);
 
 }
@@ -1295,6 +1295,39 @@ void test_builtin_elementwise_fshl(long long int i1, long long int i2,
   // CHECK-NEXT:               store <4 x i32> [[VU8]], ptr %tmp_vu_r
   u4 tmp_vu_l = __builtin_elementwise_fshl(vu1, vu2, vu3);
   u4 tmp_vu_r = __builtin_elementwise_fshr(vu1, vu2, vu3);
+}
+
+void test_builtin_elementwise_clmul(unsigned int ui1, unsigned int ui2,
+                                    unsigned short us1, unsigned short us2,
+                                    u4 vu1, u4 vu2,
+                                    unsigned _BitInt(31) bi1,
+                                    unsigned _BitInt(31) bi2) {
+  // CHECK:      [[UI1:%.+]] = load i32, ptr %ui1.addr, align 4
+  // CHECK-NEXT: [[UI2:%.+]] = load i32, ptr %ui2.addr, align 4
+  // CHECK-NEXT: [[UI3:%.+]] = call i32 @llvm.clmul.i32(i32 [[UI1]], i32 [[UI2]])
+  // CHECK-NEXT: store i32 [[UI3]], ptr %ui1.addr, align 4
+  ui1 = __builtin_elementwise_clmul(ui1, ui2);
+
+  // CHECK:      [[US1:%.+]] = load i16, ptr %us1.addr, align 2
+  // CHECK-NEXT: [[US2:%.+]] = load i16, ptr %us2.addr, align 2
+  // CHECK-NEXT: [[US3:%.+]] = call i16 @llvm.clmul.i16(i16 [[US1]], i16 [[US2]])
+  // CHECK-NEXT: store i16 [[US3]], ptr %us1.addr, align 2
+  us1 = __builtin_elementwise_clmul(us1, us2);
+
+  // CHECK:      [[VU1:%.+]] = load <4 x i32>, ptr %vu1.addr, align 16
+  // CHECK-NEXT: [[VU2:%.+]] = load <4 x i32>, ptr %vu2.addr, align 16
+  // CHECK-NEXT: [[VU3:%.+]] = call <4 x i32> @llvm.clmul.v4i32(<4 x i32> [[VU1]], <4 x i32> [[VU2]])
+  // CHECK-NEXT: store <4 x i32> [[VU3]], ptr %vu1.addr, align 16
+  vu1 = __builtin_elementwise_clmul(vu1, vu2);
+
+  // CHECK:      [[BI1:%.+]] = load i32, ptr %bi1.addr, align 4
+  // CHECK-NEXT: [[BI1TRUNC:%.+]] = trunc i32 [[BI1]] to i31
+  // CHECK-NEXT: [[BI2:%.+]] = load i32, ptr %bi2.addr, align 4
+  // CHECK-NEXT: [[BI2TRUNC:%.+]] = trunc i32 [[BI2]] to i31
+  // CHECK-NEXT: [[BIRES:%.+]] = call i31 @llvm.clmul.i31(i31 [[BI1TRUNC]], i31 [[BI2TRUNC]])
+  // CHECK-NEXT: [[BIRESZEXT:%.+]] = zext i31 [[BIRES]] to i32
+  // CHECK-NEXT: store i32 [[BIRESZEXT]], ptr %bi1.addr, align 4
+  bi1 = __builtin_elementwise_clmul(bi1, bi2);
 }
 
 void test_builtin_elementwise_clzg(si8 vs1, si8 vs2, u4 vu1,

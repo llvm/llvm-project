@@ -1187,6 +1187,7 @@ static const std::pair<const char *, const char *> genericAlias[]{
     {"unsigned", "uint"}, // Sun vs gfortran names
     {"xor", "ieor"},
     {"__builtin_ieee_selected_real_kind", "selected_real_kind"},
+    {IntrinsicProcTable::BuiltinIntName, "int"},
 };
 
 // The following table contains the intrinsic functions listed in
@@ -2867,6 +2868,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   if (elementalRank > 0) {
     attrs.set(characteristics::Procedure::Attr::Elemental);
   }
+  // TODO: Mark intrinsic procedures that are SIMPLE per F2023
   if (call.isSubroutineCall) {
     if (intrinsicClass == IntrinsicClass::pureSubroutine /* MOVE_ALLOC */ ||
         intrinsicClass == IntrinsicClass::elementalSubroutine /* MVBITS */) {

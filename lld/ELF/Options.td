@@ -422,10 +422,6 @@ defm relax: BB<"relax",
   "Enable target-specific relaxations if supported (default)",
   "Disable target-specific relaxations">;
 
-defm relax_cfi_jump_tables: BB<"relax-cfi-jump-tables",
-    "Enable CFI jump table relaxation (default at -O2)",
-    "Disable CFI jump table relaxation (default at -O0 and -O1)">;
-
 defm relax_gp: BB<"relax-gp",
   "Enable global pointer relaxation",
   "Disable global pointer relaxation (default)">;

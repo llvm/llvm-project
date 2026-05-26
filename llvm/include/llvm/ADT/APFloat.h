@@ -677,6 +677,8 @@ public:
 
   LLVM_ABI cmpResult compareAbsoluteValue(const IEEEFloat &) const;
 
+  APInt getNaNPayload() const;
+
 private:
   /// \name Simple Queries
   /// @{
@@ -922,6 +924,8 @@ public:
   LLVM_ABI bool isSmallestNormalized() const;
   LLVM_ABI bool isLargest() const;
   LLVM_ABI bool isInteger() const;
+
+  APInt getNaNPayload() const;
 
   LLVM_ABI void toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
                          unsigned FormatMaxPadding,
@@ -1554,6 +1558,14 @@ public:
     APFLOAT_DISPATCH_ON_SEMANTICS(isSmallestNormalized());
   }
 
+  /// If the value is a NaN value, return an integer containing the payload of
+  /// this value. This payload will include the quiet bit as part of the
+  /// returned integer.
+  APInt getNaNPayload() const {
+    assert(isNaN() && "Can only call this on a NaN value");
+    APFLOAT_DISPATCH_ON_SEMANTICS(getNaNPayload());
+  }
+
   /// Return the FPClassTest which will return true for the value.
   LLVM_ABI FPClassTest classify() const;
 
@@ -1747,6 +1759,10 @@ inline APFloat maximumnum(const APFloat &A, const APFloat &B) {
     return A.isNegative() ? B : A;
   return A < B ? B : A;
 }
+
+/// Implement IEEE 754-2019 exp functions
+LLVM_READONLY
+APFloat exp(const APFloat &X, RoundingMode RM = APFloat::rmNearestTiesToEven);
 
 inline raw_ostream &operator<<(raw_ostream &OS, const APFloat &V) {
   V.print(OS);

@@ -74,6 +74,7 @@ unsigned getVFScaleFactor(VPRecipeBase *R);
 
 /// Return true if we do not know how to (mechanically) hoist or sink \p R.
 /// When sinking, passing \p Sinking = true ensures that assumes aren't sunk.
+/// Returns true for recipes that access memory.
 bool cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking = false);
 
 /// Returns the VPValue representing the uncountable exit comparison used by
@@ -158,6 +159,10 @@ VPInstruction *findCanonicalIVIncrement(VPlan &Plan);
 /// Returns the GEP nowrap flags for \p Ptr, looking through pointer casts
 /// mirroring Value::stripPointerCasts.
 GEPNoWrapFlags getGEPFlagsForPtr(VPValue *Ptr);
+
+/// Returns true if \p V is used as part of the address of another load or
+/// store.
+bool isUsedByLoadStoreAddress(const VPValue *V);
 
 /// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
 /// inserted for predicated reductions or tail folding.
@@ -303,6 +308,17 @@ public:
     });
   }
 
+  /// Return an iterator range over \p Range with each block cast to \p
+  /// BlockTy. Unlike blocksOnly, all blocks in \p Range must be of type
+  /// \p BlockTy.
+  template <typename BlockTy, typename T> static auto blocksAs(T &&Range) {
+    // Create BaseTy with correct const-ness based on BlockTy.
+    using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
+                                      const VPBlockBase, VPBlockBase>;
+    return map_range(
+        Range, [](BaseTy *Block) -> BlockTy * { return cast<BlockTy>(Block); });
+  }
+
   /// Returns the blocks between \p FirstBB and \p LastBB, where FirstBB
   /// to LastBB forms a single-sucessor chain.
   static SmallVector<VPBasicBlock *>
@@ -328,6 +344,15 @@ public:
 
   /// Returns true if \p VPB is a loop latch, using isHeader().
   static bool isLatch(const VPBlockBase *VPB, const VPDominatorTree &VPDT);
+
+  /// Returns the header and latch of the outermost loop of \p Plan in plain
+  /// CFG form (before regions are formed).
+  static std::pair<VPBasicBlock *, VPBasicBlock *>
+  getPlainCFGHeaderAndLatch(const VPlan &Plan);
+
+  /// Returns the middle block of \p Plan in plain CFG form (before regions
+  /// are formed).
+  static VPBasicBlock *getPlainCFGMiddleBlock(const VPlan &Plan);
 };
 
 } // namespace llvm

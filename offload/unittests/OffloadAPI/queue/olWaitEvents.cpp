@@ -52,8 +52,8 @@ TEST_P(olWaitEventsTest, Success) {
       ASSERT_SUCCESS(olWaitEvents(Queues[I], &Events[I - 1], 1));
 
     ASSERT_SUCCESS(olLaunchKernel(Queues[I], Device, Kernel, &Args,
-                                  sizeof(Args), &LaunchArgs));
-    ASSERT_SUCCESS(olCreateEvent(Queues[I], &Events[I]));
+                                  sizeof(Args), &LaunchArgs, nullptr));
+    ASSERT_SUCCESS(olCreateEvent(Queues[I], OL_EVENT_FLAGS_NONE, &Events[I]));
   }
 
   ASSERT_SUCCESS(olSyncEvent(Events[NUM_KERNELS - 1]));
@@ -86,8 +86,8 @@ TEST_P(olWaitEventsTest, SuccessSingleQueue) {
       ASSERT_SUCCESS(olWaitEvents(Queue, &Events[I - 1], 1));
 
     ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
-                                  &LaunchArgs));
-    ASSERT_SUCCESS(olCreateEvent(Queue, &Events[I]));
+                                  &LaunchArgs, nullptr));
+    ASSERT_SUCCESS(olCreateEvent(Queue, OL_EVENT_FLAGS_NONE, &Events[I]));
   }
 
   ASSERT_SUCCESS(olSyncEvent(Events[NUM_KERNELS - 1]));
@@ -120,8 +120,8 @@ TEST_P(olWaitEventsTest, SuccessMultipleEvents) {
       ASSERT_SUCCESS(olWaitEvents(Queues[I], Events, I));
 
     ASSERT_SUCCESS(olLaunchKernel(Queues[I], Device, Kernel, &Args,
-                                  sizeof(Args), &LaunchArgs));
-    ASSERT_SUCCESS(olCreateEvent(Queues[I], &Events[I]));
+                                  sizeof(Args), &LaunchArgs, nullptr));
+    ASSERT_SUCCESS(olCreateEvent(Queues[I], OL_EVENT_FLAGS_NONE, &Events[I]));
   }
 
   ASSERT_SUCCESS(olSyncEvent(Events[NUM_KERNELS - 1]));

@@ -18,7 +18,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0,  debug-location !11
     ; CHECK-NEXT: DBG_VALUE [[COPY]](p0), $noreg, !9, !DIExpression(),  debug-location !11
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3FA99999A0000000,  debug-location !DILocation(line: 2, column: 1, scope: !5)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 5.000000e-02,  debug-location !DILocation(line: 2, column: 1, scope: !5)
     ; CHECK-NEXT: DBG_VALUE [[C]](s32), $noreg, !9, !DIExpression(),  debug-location !DILocation(line: 2, column: 1, scope: !5)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 524,  debug-location !DILocation(line: 3, column: 1, scope: !5)
     ; CHECK-NEXT: DBG_VALUE [[C1]](s64), $noreg, !9, !DIExpression(),  debug-location !DILocation(line: 3, column: 1, scope: !5)
