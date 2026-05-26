@@ -36,16 +36,13 @@ add_llvm_component_library(LLVMAsmPrinter
   CodeGen
   CodeGenTypes
   Core
+  DebugInfoCodeView
+  DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   MC
+  MCParser
   Remarks
   Support
   Target
   TargetParser
   )
-
-if(EJIT_BARE_METAL)
-  target_compile_definitions(LLVMAsmPrinter PRIVATE EJIT_BARE_METAL)
-else()
-  target_link_libraries(LLVMAsmPrinter PRIVATE
-    LLVMDebugInfoCodeView LLVMDebugInfoDWARF LLVMDebugInfoDWARFLowLevel LLVMMCParser)
-endif()

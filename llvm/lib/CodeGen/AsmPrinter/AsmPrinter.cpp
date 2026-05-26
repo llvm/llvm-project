@@ -11,15 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/AsmPrinter.h"
-#ifndef EJIT_BARE_METAL
 #include "CodeViewDebug.h"
 #include "DwarfDebug.h"
-#include "WinCFGuard.h"
-#include "WinException.h"
-#endif
 #include "DwarfException.h"
 #include "PseudoProbePrinter.h"
 #include "WasmException.h"
+#include "WinCFGuard.h"
+#include "WinException.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
@@ -445,9 +443,7 @@ void AsmPrinter::emitInitialRawDwarfLocDirective(const MachineFunction &MF) {
     DISubprogram *MFSP = MF.getFunction().getSubprogram();
     if (!MFSP)
       return;
-#ifndef EJIT_BARE_METAL
     (void)DD->emitInitialLocDirective(MF, /*CUID=*/0);
-#endif
   }
 }
 
@@ -567,7 +563,6 @@ bool AsmPrinter::doInitialization(Module &M) {
     OutStreamer->addBlankLine();
   }
 
-#ifndef EJIT_BARE_METAL
   if (MAI->doesSupportDebugInformation()) {
     bool EmitCodeView = M.getCodeViewFlag();
     // On Windows targets, emit minimal CodeView compiler info even when debug
@@ -586,7 +581,6 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   if (M.getNamedMetadata(PseudoProbeDescMetadataName))
     PP = std::make_unique<PseudoProbeHandler>(this);
-#endif
 
   switch (MAI->getExceptionHandlingType()) {
   case ExceptionHandling::None:
@@ -619,15 +613,12 @@ bool AsmPrinter::doInitialization(Module &M) {
   case ExceptionHandling::SjLj:
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ZOS:
-#ifndef EJIT_BARE_METAL
     ES = new DwarfCFIException(this);
-#endif
     break;
   case ExceptionHandling::ARM:
     ES = new ARMException(this);
     break;
   case ExceptionHandling::WinEH:
-#ifndef EJIT_BARE_METAL
     switch (MAI->getWinEHEncodingType()) {
     default: llvm_unreachable("unsupported unwinding information encoding");
     case WinEH::EncodingType::Invalid:
@@ -637,7 +628,6 @@ bool AsmPrinter::doInitialization(Module &M) {
       ES = new WinException(this);
       break;
     }
-#endif
     break;
   case ExceptionHandling::Wasm:
     ES = new WasmException(this);
@@ -649,11 +639,9 @@ bool AsmPrinter::doInitialization(Module &M) {
   if (ES)
     Handlers.push_back(std::unique_ptr<EHStreamer>(ES));
 
-#ifndef EJIT_BARE_METAL
   // Emit tables for any value of cfguard flag (i.e. cfguard=1 or cfguard=2).
   if (mdconst::extract_or_null<ConstantInt>(M.getModuleFlag("cfguard")))
     EHHandlers.push_back(std::make_unique<WinCFGuard>(this));
-#endif
 
   for (auto &Handler : Handlers)
     Handler->beginModule(&M);
