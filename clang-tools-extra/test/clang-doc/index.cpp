@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --format=html --output=%t --executor=standalone %s
+// RUN: clang-doc --format=html --pretty-json --output=%t --executor=standalone %s
 // RUN: FileCheck %s < %t/json/index.json -check-prefix=CHECK-JSON
 // RUN: FileCheck %s < %t/html/index.html -check-prefix=CHECK-HTML
 
