@@ -21,8 +21,7 @@ Implementation notes for Flang's CUDA Fortran support.
 List of CUDA Fortran lowering decisions in Flang for cases where CUDA
 Fortran interoperability requires behavior that is not specified by the
 [CUDA Fortran Programming
-Guide](https://docs.nvidia.com/hpc-sdk/compilers/cuda-fortran-prog-guide/index.html)
-or by standard `BIND(C)` lowering alone.
+Guide](https://docs.nvidia.com/hpc-sdk/compilers/cuda-fortran-prog-guide/index.html).
 
 ### `BIND(C) ATTRIBUTES(GLOBAL)` assumed-shape and assumed-rank dummies
 
@@ -56,3 +55,7 @@ for parameter `i`. A descriptor pointer in `args[0]` would be dereferenced as
 `elem_len`, dim info, ...) as element data, producing wrong results, and when
 the descriptor resides in host memory the device load additionally faults with
 an illegal-access error.
+
+This also aligns with the reference compiler behavior, where
+`BIND(C) ATTRIBUTES(GLOBAL)` array arguments are lowered to raw device
+pointers regardless of array shape.
