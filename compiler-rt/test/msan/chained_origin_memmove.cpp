@@ -44,15 +44,16 @@ int main(int argc, char *argv[]) {
 // CHECK: {{#0 .* in main .*chained_origin_memmove.cpp:}}[[@LINE-4]]
 
 // CHECK: Uninitialized value was stored to memory at
-// CHECK-FULL-STACK: {{#1 .* in fn_h.*chained_origin_memmove.cpp:}}[[@LINE-15]]
+// CHECK-FULL-STACK: {{#1 .* in memmove.*chained_origin_memmove.cpp:}}[[@LINE-16]]
+// CHECK-FULL-STACK: {{#2 .* in fn_h.*chained_origin_memmove.cpp:}}[[@LINE-16]]
 // CHECK-SHORT-STACK: {{#0 .* in __msan_memmove.*msan_interceptors.cpp:}}
 
 // CHECK: Uninitialized value was stored to memory at
-// CHECK-FULL-STACK: {{#0 .* in fn_g.*chained_origin_memmove.cpp:}}[[@LINE-27]]
-// CHECK-FULL-STACK: {{#1 .* in fn_f.*chained_origin_memmove.cpp:}}[[@LINE-24]]
-// CHECK-SHORT-STACK: {{#0 .* in fn_g.*chained_origin_memmove.cpp:}}[[@LINE-29]]
+// CHECK-FULL-STACK: {{#0 .* in fn_g.*chained_origin_memmove.cpp:}}[[@LINE-28]]
+// CHECK-FULL-STACK: {{#1 .* in fn_f.*chained_origin_memmove.cpp:}}[[@LINE-25]]
+// CHECK-SHORT-STACK: {{#0 .* in fn_g.*chained_origin_memmove.cpp:}}[[@LINE-30]]
 
 // CHECK-Z1: Uninitialized value was created by an allocation of 'z1' in the stack frame
 // CHECK-Z2: Uninitialized value was created by an allocation of 'z2' in the stack frame
-// CHECK-Z1: {{#0 .* in main.*chained_origin_memmove.cpp:}}[[@LINE-21]]
-// CHECK-Z2: {{#0 .* in main.*chained_origin_memmove.cpp:}}[[@LINE-21]]
+// CHECK-Z1: {{#0 .* in main.*chained_origin_memmove.cpp:}}[[@LINE-22]]
+// CHECK-Z2: {{#0 .* in main.*chained_origin_memmove.cpp:}}[[@LINE-22]]

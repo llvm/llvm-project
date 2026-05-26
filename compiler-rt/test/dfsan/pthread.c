@@ -42,10 +42,11 @@ int main(void) {
 
 // CHECK: Taint value 0x8 {{.*}} origin tracking ()
 // CHECK: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK: #0 {{.*}} in ThreadFn.dfsan {{.*}}pthread.c:[[@LINE-21]]
+// CHECK: #0 {{.*}} in memcpy {{.*}}CGBuiltin.cpp
+// CHECK: #1 {{.*}} in ThreadFn.dfsan {{.*}}pthread.c:[[@LINE-22]]
 
 // CHECK: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK: #0 {{.*}} in ThreadFn.dfsan {{.*}}pthread.c:[[@LINE-26]]
+// CHECK: #0 {{.*}} in ThreadFn.dfsan {{.*}}pthread.c:[[@LINE-27]]
 
 // CHECK: Origin value: {{.*}}, Taint value was created at
-// CHECK: #0 {{.*}} in main {{.*}}pthread.c:[[@LINE-20]]
+// CHECK: #0 {{.*}} in main {{.*}}pthread.c:[[@LINE-21]]

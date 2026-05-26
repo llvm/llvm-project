@@ -506,6 +506,11 @@ public:
   /// End an inlined function scope.
   void EmitInlineFunctionEnd(CGBuilderTy &Builder);
 
+  /// Create location for an inlined built-in function. The function is marked
+  /// as artificial in debug info to convey the built-in aspect.
+  llvm::DILocation *createBuiltinFunctionLocation(CGBuilderTy &Builder,
+                                                  GlobalDecl GD);
+
   /// Emit debug info for a function declaration.
   /// \p Fn is set only when a declaration for a debug call site gets created.
   void EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,

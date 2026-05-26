@@ -5185,6 +5185,14 @@ def gembed_source : Flag<["-"], "gembed-source">, Group<g_flags_Group>,
 def gno_embed_source : Flag<["-"], "gno-embed-source">, Group<g_flags_Group>,
     Flags<[NoXarchOption]>,
     HelpText<"Restore the default behavior of not embedding source text in DWARF debug sections">;
+defm inlined_builtins : BoolOption<"g", "inlined-builtins",
+  CodeGenOpts<"DebugInlinedBuiltins">,
+  DefaultTrue,
+  PosFlag<SetTrue, [], [], "Enable">,
+  NegFlag<SetFalse, [], [], "Disable">,
+  BothFlags<[], [ClangOption, CC1Option], " inlined compiler built-ins in debug info">>,
+  Group<g_flags_Group>,
+  DocBrief<[{Treats built-ins as calls to artificial inlined functions in debug info. This enables e.g. profiling tools to annotate time spent in user-called built-ins with the built-in function name.}]>;
 defm structor_decl_linkage_names
     : BoolGOption<"structor-decl-linkage-names",
                   CodeGenOpts<"DebugStructorDeclLinkageNames">, DefaultTrue,

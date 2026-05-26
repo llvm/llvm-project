@@ -68,6 +68,11 @@ DEBUGOPT(DebugColumnInfo, 1, 0, Compatible) ///< Whether or not to use column in
 /// Whether or not to include call site information in debug info.
 DEBUGOPT(DebugCallSiteInfo, 1, 1, Benign)
 
+/// Whether to represent built-ins as calls to artificial inlined functions in
+/// debug info. This enables e.g. profiling tools to annotate time spent in
+/// user-called built-ins with the built-in function name.
+DEBUGOPT(DebugInlinedBuiltins, 1, 1, Benign)
+
 DEBUGOPT(DebugTypeExtRefs, 1, 0, Compatible) ///< Whether or not debug info should contain
                                             ///< external references to a PCH or module.
 

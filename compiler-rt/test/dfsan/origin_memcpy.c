@@ -42,26 +42,28 @@ int main(int argc, char *argv[]) {
 
 // CHECK0: Taint value 0x8 {{.*}} origin tracking ()
 // CHECK0: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK0: #0 {{.*}} in fn_h.dfsan {{.*}}origin_memcpy.c:[[@LINE-16]]
-// CHECK0: #1 {{.*}} in main {{.*}}origin_memcpy.c:[[@LINE-8]]
+// CHECK0: #0 {{.*}} in memcpy {{.*}}origin_memcpy.c:[[@LINE-17]]
+// CHECK0: #1 {{.*}} in fn_h.dfsan {{.*}}origin_memcpy.c:[[@LINE-17]]
+// CHECK0: #2 {{.*}} in main {{.*}}origin_memcpy.c:[[@LINE-9]]
 
 // CHECK0: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK0: #0 {{.*}} in fn_g.dfsan {{.*}}origin_memcpy.c:[[@LINE-30]]
-// CHECK0: #1 {{.*}} in fn_f.dfsan {{.*}}origin_memcpy.c:[[@LINE-26]]
-// CHECK0: #2 {{.*}} in main {{.*}}origin_memcpy.c:[[@LINE-14]]
+// CHECK0: #0 {{.*}} in fn_g.dfsan {{.*}}origin_memcpy.c:[[@LINE-31]]
+// CHECK0: #1 {{.*}} in fn_f.dfsan {{.*}}origin_memcpy.c:[[@LINE-27]]
+// CHECK0: #2 {{.*}} in main {{.*}}origin_memcpy.c:[[@LINE-15]]
 
 // CHECK0: Origin value: {{.*}}, Taint value was created at
-// CHECK0: #0 {{.*}} in main {{.*}}origin_memcpy.c:[[@LINE-19]]
+// CHECK0: #0 {{.*}} in main {{.*}}origin_memcpy.c:[[@LINE-20]]
 
 // CHECK10: Taint value 0x10 {{.*}} origin tracking ()
 // CHECK10: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK10: #0 {{.*}} in fn_h.dfsan {{.*}}origin_memcpy.c:[[@LINE-29]]
-// CHECK10: #1 {{.*}} in main {{.*}}origin_memcpy.c:[[@LINE-21]]
+// CHECK10: #0 {{.*}} in memcpy {{.*}}origin_memcpy.c:[[@LINE-31]]
+// CHECK10: #1 {{.*}} in fn_h.dfsan {{.*}}origin_memcpy.c:[[@LINE-31]]
+// CHECK10: #2 {{.*}} in main {{.*}}origin_memcpy.c:[[@LINE-23]]
 
 // CHECK10: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK10: #0 {{.*}} in fn_g.dfsan {{.*}}origin_memcpy.c:[[@LINE-43]]
-// CHECK10: #1 {{.*}} in fn_f.dfsan {{.*}}origin_memcpy.c:[[@LINE-39]]
-// CHECK10: #2 {{.*}} in main {{.*}}origin_memcpy.c:[[@LINE-27]]
+// CHECK10: #0 {{.*}} in fn_g.dfsan {{.*}}origin_memcpy.c:[[@LINE-45]]
+// CHECK10: #1 {{.*}} in fn_f.dfsan {{.*}}origin_memcpy.c:[[@LINE-41]]
+// CHECK10: #2 {{.*}} in main {{.*}}origin_memcpy.c:[[@LINE-29]]
 
 // CHECK10: Origin value: {{.*}}, Taint value was created at
-// CHECK10: #0 {{.*}} in main {{.*}}origin_memcpy.c:[[@LINE-31]]
+// CHECK10: #0 {{.*}} in main {{.*}}origin_memcpy.c:[[@LINE-33]]

@@ -300,6 +300,9 @@
 // RUN: %clang -### -g -gno-call-site-info %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=NOCALLSITE %s
 //
+// RUN: %clang -### -g -gno-inlined-builtins %s 2>&1 \
+// RUN:        | FileCheck -check-prefix=NOINLINEDBUILTINS %s
+//
 // RUN: %clang -### -g -target x86_64-unknown-unknown %s 2>&1 \
 //             | FileCheck -check-prefix=CI %s
 //
@@ -430,6 +433,8 @@
 // NOCI-DAG: "-gno-column-info"
 //
 // NOCALLSITE: "-gno-call-site-info"
+//
+// NOINLINEDBUILTINS: "-gno-inlined-builtins"
 //
 // GEXTREFS: "-dwarf-ext-refs" "-fmodule-format=obj"
 // GEXTREFS: "-debug-info-kind={{standalone|constructor}}"

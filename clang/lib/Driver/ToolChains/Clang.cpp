@@ -4622,6 +4622,10 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                     options::OPT_gno_call_site_info, true))
     CmdArgs.push_back("-gno-call-site-info");
 
+  if (!Args.hasFlag(options::OPT_ginlined_builtins,
+                    options::OPT_gno_inlined_builtins, true))
+    CmdArgs.push_back("-gno-inlined-builtins");
+
   // FIXME: Move backend command line options to the module.
   if (Args.hasFlag(options::OPT_gmodules, options::OPT_gno_modules, false)) {
     // If -gline-tables-only or -gline-directives-only is the last option it

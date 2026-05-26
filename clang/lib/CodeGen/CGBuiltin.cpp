@@ -2669,11 +2669,88 @@ RValue CodeGenFunction::emitStdcFirstBit(const CallExpr *E, Intrinsic::ID IntID,
   return RValue::get(Result);
 }
 
+/// Determines whether we should treat a given built-in as a call to an
+/// artificial inlined function in debug info.
+static bool shouldUseBuiltinDebugLocation(unsigned BuiltinID) {
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_unpredictable:
+  case Builtin::BI__builtin_expect:
+  case Builtin::BI__builtin_expect_with_probability:
+  case Builtin::BI__builtin_assume_aligned:
+  case Builtin::BI__builtin_assume_dereferenceable:
+  case Builtin::BI__assume:
+  case Builtin::BI__builtin_assume:
+  case Builtin::BI__builtin_assume_separate_storage:
+  case Builtin::BI__builtin_allow_runtime_check:
+  case Builtin::BI__builtin_allow_sanitize_check:
+  case Builtin::BI__builtin_constant_p:
+  case Builtin::BI__builtin_prefetch:
+  case Builtin::BI__builtin___clear_cache:
+  case Builtin::BI__builtin_unreachable: {
+    // Exclude optimisation hint built-ins. These are a form of communicating
+    // additional constraints to the compiler.
+    return false;
+  }
+  case Builtin::BI__builtin_trap:
+  case Builtin::BI__builtin_verbose_trap:
+  case Builtin::BI__debugbreak:
+  case Builtin::BI__builtin_eh_return:
+  case Builtin::BI__builtin_unwind_init:
+  case Builtin::BI__exception_code:
+  case Builtin::BI_exception_code:
+  case Builtin::BI__exception_info:
+  case Builtin::BI_exception_info:
+  case Builtin::BI__abnormal_termination:
+  case Builtin::BI_abnormal_termination: {
+    // Exclude trap and exception built-ins. These may use their own debug
+    // location handling, so we avoid making debug changes so they may inspect
+    // the caller as-is without additional debug info layers.
+    return false;
+  }
+  case Builtin::BI__annotation:
+  case Builtin::BI__builtin_annotation: {
+    // Exclude annotation built-ins. These attach debug-time information.
+    return false;
+  }
+  case Builtin::BI__builtin_operator_new:
+  case Builtin::BI__builtin_operator_delete: {
+    // Exclude C++ operator built-ins. These are emitted as normal calls.
+    return false;
+  }
+  }
+
+  // Most generic (non-target-specific) built-ins are call-like, so we default
+  // to enabling this debug info treatment.
+  return true;
+
+  // See also further exclusions of library functions emitted as normal calls
+  // and target-specific built-ins towards the end of `EmitBuiltinExpr` which
+  // overrides the value returned here.
+}
+
+static llvm::DILocation *createBuiltinInlineAt(CodeGenFunction &CGF,
+                                               GlobalDecl GD) {
+  if (!CGF.getDebugInfo())
+    return nullptr;
+  auto &DI = *CGF.getDebugInfo();
+  return DI.createBuiltinFunctionLocation(CGF.Builder, GD);
+}
+
 RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
   assert(!getContext().BuiltinInfo.isImmediate(BuiltinID) &&
          "Should not codegen for consteval builtins");
+
+  // Treat built-in as call to artificial inlined function in debug info.
+  // This enables e.g. profiling tools to annotate time spent in user-called
+  // built-ins with the built-in function name.
+  // See `useBuiltinDebugLocation` for cases where this treatment is disabled.
+  auto DebugScope = CGM.getCodeGenOpts().DebugInlinedBuiltins &&
+                            shouldUseBuiltinDebugLocation(BuiltinID)
+                        ? std::make_optional<ApplyDebugLocation>(
+                              *this, createBuiltinInlineAt(*this, GD))
+                        : std::nullopt;
 
   const FunctionDecl *FD = GD.getDecl()->getAsFunction();
   // See if we can constant fold this builtin.  If so, don't emit it at all.
@@ -6672,6 +6749,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Str.getPointer());
   }
   }
+
+  // All cases beyond this point are excluded from the artificial inlined
+  // function in debug info treatment:
+  // - library functions handled below are emitted as normal calls, so an
+  //   inlined wrapper of the same function is redundant
+  // - target-specific built-ins are mainly assembly-like concepts, so they
+  //   should not be recorded in debug info as if they were calls
+  DebugScope = std::nullopt;
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
   // the call using the normal call path, but using the unmangled
