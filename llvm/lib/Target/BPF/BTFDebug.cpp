@@ -603,10 +603,10 @@ BTFTypeFuncProto::BTFTypeFuncProto(
     const DISubroutineType *STy, uint32_t VLen,
     const SmallDenseMap<uint32_t, StringRef> &FuncArgNames,
     bool UseFilteredParams, ArrayRef<uint32_t> AliveParamIndices,
-    bool ChangedToVoid)
+    bool VoidReturn)
     : STy(STy), FuncArgNames(FuncArgNames),
       AliveParamIndices(AliveParamIndices),
-      UseFilteredParams(UseFilteredParams), ChangedToVoid(ChangedToVoid) {
+      UseFilteredParams(UseFilteredParams), VoidReturn(VoidReturn) {
   Kind = BTF::BTF_KIND_FUNC_PROTO;
   BTFType.Info = (Kind << 24) | VLen;
 }
@@ -617,7 +617,7 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
   IsCompleted = true;
 
   DITypeArray Elements = STy->getTypeArray();
-  if (ChangedToVoid) {
+  if (VoidReturn) {
     BTFType.Type = 0;
   } else {
     auto RetType = tryRemoveAtomicType(Elements[0]);
@@ -847,7 +847,7 @@ void BTFDebug::visitBasicType(const DIBasicType *BTy, uint32_t &TypeId) {
 void BTFDebug::visitSubroutineType(
     const DISubroutineType *STy, bool ForSubprog,
     const SmallDenseMap<uint32_t, StringRef> &FuncArgNames, uint32_t &TypeId,
-    bool ChangedToVoid) {
+    bool VoidReturn) {
   DITypeArray Elements = STy->getTypeArray();
   uint32_t VLen = Elements.size() - 1;
   if (VLen > BTF::MAX_VLEN)
@@ -858,14 +858,14 @@ void BTFDebug::visitSubroutineType(
   // not be added to DIToIdMap as it should not be referenced by
   // any other types.
   auto TypeEntry = std::make_unique<BTFTypeFuncProto>(
-      STy, VLen, FuncArgNames, false, ArrayRef<uint32_t>(), ChangedToVoid);
+      STy, VLen, FuncArgNames, false, ArrayRef<uint32_t>(), VoidReturn);
   if (ForSubprog)
     TypeId = addType(std::move(TypeEntry)); // For subprogram
   else
     TypeId = addType(std::move(TypeEntry), STy); // For func ptr
 
   // Visit return type and func arg types.
-  if (!ChangedToVoid) {
+  if (!VoidReturn) {
     for (const auto Element : Elements)
       visitTypeEntry(Element);
   } else {
@@ -1581,7 +1581,7 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   uint8_t Scope = SP->isLocalToUnit() ? BTF::FUNC_STATIC : BTF::FUNC_GLOBAL;
   bool IsNocall = SP->getType()->getCC() == dwarf::DW_CC_nocall;
   bool UseFilteredParams = false;
-  bool ChangedToVoid = false;
+  bool VoidReturn = MF->getFunction().getReturnType()->isVoidTy();
 
   if (IsNocall) {
     // For DW_CC_nocall functions, try to build a FUNC_PROTO reflecting
@@ -1589,10 +1589,6 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
     // first 5 arguments map to the correct BPF registers (R1-R5).
     const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
     DITypeArray Elements = SP->getType()->getTypeArray();
-
-    // Check if DeadArgumentElimination changed the return type to void.
-    ChangedToVoid =
-        MF->getFunction().getReturnType()->isVoidTy() && Elements[0] != nullptr;
 
     SmallDenseMap<uint32_t, Register> EntryRegMap =
         collectNocallEntryArgRegs(*MF);
@@ -1610,14 +1606,14 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
       for (uint32_t I = 0; I < SortedAlive.size(); ++I)
         ArgIndexMap[SortedAlive[I]] = I;
 
-      if (!ChangedToVoid)
+      if (!VoidReturn)
         visitTypeEntry(Elements[0]);
       for (uint32_t ArgNo : SortedAlive)
         visitTypeEntry(Elements[ArgNo]);
 
       auto TypeEntry = std::make_unique<BTFTypeFuncProto>(
           SP->getType(), SortedAlive.size(), FuncArgNames, true, SortedAlive,
-          ChangedToVoid);
+          VoidReturn);
       ProtoTypeId = addType(std::move(TypeEntry));
       FuncTypeId = processDISubprogram(SP, ProtoTypeId, Scope, &ArgIndexMap);
     }
@@ -1627,7 +1623,7 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
     // Fall back to the full source prototype, still voiding the return
     // type if compiler removed it.
     visitSubroutineType(SP->getType(), true, FuncArgNames, ProtoTypeId,
-                        ChangedToVoid);
+                        VoidReturn);
     FuncTypeId = processDISubprogram(SP, ProtoTypeId, Scope);
   }
 

@@ -146,14 +146,14 @@ class BTFTypeFuncProto : public BTFTypeBase {
   SmallVector<uint32_t, 8> AliveParamIndices;
   bool UseFilteredParams = false;
   std::vector<struct BTF::BTFParam> Parameters;
-  bool ChangedToVoid = false;
+  bool VoidReturn = false;
 
 public:
   BTFTypeFuncProto(const DISubroutineType *STy, uint32_t NumParams,
                    const SmallDenseMap<uint32_t, StringRef> &FuncArgNames,
                    bool UseFilteredParams = false,
                    ArrayRef<uint32_t> AliveParamIndices = {},
-                   bool ChangedToVoid = false);
+                   bool VoidReturn = false);
   uint32_t getSize() override {
     return BTFTypeBase::getSize() + Parameters.size() * BTF::BTFParamSize;
   }
@@ -332,7 +332,7 @@ class BTFDebug : public DebugHandlerBase {
   void
   visitSubroutineType(const DISubroutineType *STy, bool ForSubprog,
                       const SmallDenseMap<uint32_t, StringRef> &FuncArgNames,
-                      uint32_t &TypeId, bool ChangedToVoid = false);
+                      uint32_t &TypeId, bool VoidReturn = false);
   void visitFwdDeclType(const DICompositeType *CTy, bool IsUnion,
                         uint32_t &TypeId);
   void visitCompositeType(const DICompositeType *CTy, uint32_t &TypeId);
