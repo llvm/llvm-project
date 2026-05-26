@@ -210,6 +210,7 @@ public:
 private:
   BugType BT{this, "Use-after-move", categories::CXXMoveSemantics};
 
+  // Modelling the 3 argument std::move calls
   const CallDescription StdMoveCall{CDM::SimpleFunc, {"std", "move"}, 3};
 
   // Check if the given form of potential misuse of a given object
@@ -236,6 +237,9 @@ private:
 } // end anonymous namespace
 
 REGISTER_MAP_WITH_PROGRAMSTATE(TrackedRegionMap, const MemRegion *, RegionState)
+
+// Custom map designed to track containers whose contents were moved by 3-arg
+// std::move
 REGISTER_MAP_WITH_PROGRAMSTATE(TrackedContentsMap, const MemRegion *, RegionState)
 
 // Define the inter-checker API.
@@ -539,9 +543,38 @@ bool MoveChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
 
   ObjectKind OK = classifyObject(State, Region, RD);
 
-  if (shouldBeTracked(OK)) {
+  const auto *BackInsCall = dyn_cast<CallExpr>(CE->getArg(2)->IgnoreImpCasts());
+  if (!BackInsCall)
+    return false;
+
+  const Expr *DestExpr = BackInsCall->getArg(0)->IgnoreImpCasts();
+  if (!DestExpr)
+    return false;
+
+  const auto *DestDRE = dyn_cast<DeclRefExpr>(DestExpr);
+  if (!DestDRE)
+    return false;
+
+  const auto *DestVD = dyn_cast<VarDecl>(DestDRE->getDecl());
+  if (!DestVD)
+    return false;
+
+  const MemRegion *DestRegion =
+      State->getLValue(DestVD, C.getLocationContext()).getAsRegion();
+  if (!DestRegion)
+    return false;
+
+  SValBuilder &SVB = State->getStateManager().getSValBuilder();
+  SVal ReturnVal = SVB.conjureSymbolVal(Call, C.blockCount());
+  State = State->BindExpr(CE, C.getLocationContext(), ReturnVal);
+
+  State = State->invalidateRegions({DestRegion}, Call.getCFGElementRef(),
+                                   C.blockCount(), C.getLocationContext(),
+                                   /*CausesPointerEscape=*/false);
+
+  if (shouldBeTracked(OK))
     State = State->set<TrackedContentsMap>(Region, RegionState::getMoved());
-  }
+
   C.addTransition(State);
   return true;
 }
