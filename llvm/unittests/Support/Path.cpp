@@ -2791,11 +2791,7 @@ TEST_F(FileSystemTest, makeLongFormPath) {
   if (!*Enabled)
     GTEST_SKIP() << "Short 8.3 form names not enabled in: " << TestDirectory;
 
-  bool PreferForwardSlash = []() {
-    SmallString<1> Path("/");
-    llvm::sys::path::native(Path);
-    return Path == "/";
-  }();
+  const bool PreferForwardSlash = path::native("/") == "/";
 
   // Setup: A test directory longer than 8 characters for which a distinct
   // short 8.3 form name will be created on Windows. Typically, 123456~1.

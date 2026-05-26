@@ -43,11 +43,7 @@ MATCHER(StringEquality, "Checks if two char* are equal as strings") {
 }
 
 #ifdef _WIN32
-bool preferForwardSlash() {
-  SmallString<1> Path("/");
-  llvm::sys::path::native(Path);
-  return Path == "/";
-}
+bool preferForwardSlash() { return llvm::sys::path::native("/") == "/"; }
 #endif
 
 class TempEnvVar {
