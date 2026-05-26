@@ -50,7 +50,6 @@ libclc_add_sources(${LIBCLC_OPENCL_TARGET}
   math/expm1.cl
   math/exp2.cl
   math/exp10.cl
-  math/fma.cl
   math/fmod.cl
   math/fract.cl
   math/frexp.cl
