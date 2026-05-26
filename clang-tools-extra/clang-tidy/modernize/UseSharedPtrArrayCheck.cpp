@@ -22,7 +22,6 @@ namespace clang::tidy::modernize {
 void UseSharedPtrArrayCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxConstructExpr(
-
           hasType(qualType(hasDeclaration(
               classTemplateSpecializationDecl(hasName("::std::shared_ptr"))))),
 
@@ -31,19 +30,18 @@ void UseSharedPtrArrayCheck::registerMatchers(MatchFinder *Finder) {
           hasArgument(
               0, ignoringParenImpCasts(cxxNewExpr(isArray()).bind("newExpr"))),
 
-          anyOf(hasArgument(
-                    1, ignoringImplicit(
-                           cxxConstructExpr(
-                               hasType(qualType(hasCanonicalType(hasDeclaration(
-                                   classTemplateSpecializationDecl(
-                                       hasName("::std::default_delete")))))))
-                               .bind("defaultDelete"))),
+          hasArgument(
+              1, ignoringImplicit(anyOf(
 
-                hasArgument(
-                    1, ignoringImplicit(lambdaExpr().bind("lambdaDeleter"))),
+                     cxxConstructExpr(
+                         hasType(qualType(hasCanonicalType(
+                             hasDeclaration(classTemplateSpecializationDecl(
+                                 hasName("::std::default_delete")))))))
+                         .bind("defaultDelete"),
 
-                hasArgument(1, ignoringImplicit(declRefExpr(to(
-                                   functionDecl().bind("deleterFunction")))))))
+                     lambdaExpr().bind("lambdaDeleter"),
+
+                     declRefExpr(to(functionDecl().bind("deleterFunction")))))))
           .bind("sharedPtrCtor"),
       this);
 }
@@ -226,7 +224,8 @@ static void resolveRAngleLocs(const CXXConstructExpr *Ctor,
 
       if (CtorRAngleLoc.isInvalid()) {
         const SourceLocation CtorLoc = Ctor->getBeginLoc();
-        const SourceLocation LParenLoc = Ctor->getParenOrBraceRange().getBegin();
+        const SourceLocation LParenLoc =
+            Ctor->getParenOrBraceRange().getBegin();
 
         if (CtorLoc.isValid() && LParenLoc.isValid() && !CtorLoc.isMacroID() &&
             !LParenLoc.isMacroID()) {
@@ -349,19 +348,18 @@ buildRemoveDeleterFix(const CXXConstructExpr *Ctor, SourceManager &SM,
 
 void UseSharedPtrArrayCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructExpr>("sharedPtrCtor");
-  if (!Ctor)
-    return;
-  const auto *NewExpr = Result.Nodes.getNodeAs<CXXNewExpr>("newExpr");
-  if (!NewExpr)
-    return;
+  assert(Ctor && "sharedPtrCtor must be bound");
 
-  const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(
+  const auto *NewExpr = Result.Nodes.getNodeAs<CXXNewExpr>("newExpr");
+  assert(NewExpr && "newExpr must be bound");
+
+  const auto *CTSD = cast<ClassTemplateSpecializationDecl>(
       Ctor->getType()->getAsCXXRecordDecl());
-  if (!CTSD || CTSD->getTemplateArgs().size() != 1)
-    return;
+  assert(CTSD->getTemplateArgs().size() == 1 && "shared_ptr must have exactly one template argument");
+
   const TemplateArgument &TyArg = CTSD->getTemplateArgs()[0];
-  if (TyArg.getKind() != TemplateArgument::Type)
-    return;
+  assert(TyArg.getKind() == TemplateArgument::Type && "shared_ptr template argument must be a type");
+
   QualType ElemTy = TyArg.getAsType();
   if (ElemTy->isArrayType() || ElemTy->isDependentType())
     return;
@@ -376,15 +374,15 @@ void UseSharedPtrArrayCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Unqualified canonical comparison: handles CV qualified arrays and typedefs.
   const QualType SharedElem = ElemTy.getCanonicalType().getUnqualifiedType();
-  if (!Ctx.ASTContext::hasSameType(AllocTy.getCanonicalType().getUnqualifiedType(),
-                       SharedElem))
+  if (!clang::ASTContext::hasSameType(
+          AllocTy.getCanonicalType().getUnqualifiedType(), SharedElem))
     return;
 
   const QualType DelPointee = getDeleterParamPointee(Ctor->getArg(1));
   if (DelPointee.isNull())
     return;
-  if (!Ctx.ASTContext::hasSameType(DelPointee.getCanonicalType().getUnqualifiedType(),
-                       SharedElem))
+  if (!clang::ASTContext::hasSameType(
+          DelPointee.getCanonicalType().getUnqualifiedType(), SharedElem))
     return;
 
   if (const auto *Lambda =
@@ -425,7 +423,7 @@ void UseSharedPtrArrayCheck::check(const MatchFinder::MatchResult &Result) {
     return CanonicalFallbackBuff;
   }();
 
-  auto Warn = [&]() -> DiagnosticBuilder {
+  auto warn = [&]() -> DiagnosticBuilder {
     return diag(Ctor->getBeginLoc(),
                 "use 'std::shared_ptr<%0[]>' instead of "
                 "'std::shared_ptr<%0>' with explicit array deleter")
