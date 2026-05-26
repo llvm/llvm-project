@@ -1728,6 +1728,13 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     if (vputils::isSingleScalar(A))
       return Def->replaceAllUsesWith(A);
 
+    // Replace extract-lane(0, canonical-WIDEN-INDUCTION) with the region's
+    // scalar canonical IV.
+    VPWidenIntOrFpInductionRecipe *WidenIV;
+    if (match(LaneToExtract, m_ZeroInt()) &&
+        match(A, m_CanonicalWidenIV(WidenIV)))
+      return Def->replaceAllUsesWith(WidenIV->getRegion()->getCanonicalIV());
+
     // Simplify extract-lane with single source to extract-element.
     Def->replaceAllUsesWith(Builder.createNaryOp(
         Instruction::ExtractElement, {A, LaneToExtract}, Def->getDebugLoc()));
@@ -4383,13 +4390,14 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
     DispatchBuilder.setInsertPoint(CurrentBB);
   }
 
-  // Replace the latch terminator with the new branching logic.
+  // Replace the latch terminator with the new branching logic. The original
+  // BranchOnCond's condition is used as the latch-exit condition; canonical IV
+  // recipes have not been introduced yet, so there is no BranchOnCount to
+  // derive the condition from.
   auto *LatchExitingBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
-  assert(LatchExitingBranch->getOpcode() == VPInstruction::BranchOnCount &&
+  assert(LatchExitingBranch->getOpcode() == VPInstruction::BranchOnCond &&
          "Unexpected terminator");
-  auto *IsLatchExitTaken =
-      Builder.createICmp(CmpInst::ICMP_EQ, LatchExitingBranch->getOperand(0),
-                         LatchExitingBranch->getOperand(1));
+  VPValue *IsLatchExitTaken = LatchExitingBranch->getOperand(0);
 
   DebugLoc LatchDL = LatchExitingBranch->getDebugLoc();
   LatchExitingBranch->eraseFromParent();
