@@ -1032,9 +1032,8 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
 
   DebugLoc DL = ExtractR->getDebugLoc();
   VPValue *FirstActiveLane = B.createFirstActiveLane(Mask, DL);
-  Type *FirstActiveLaneType = TypeInfo.inferScalarType(FirstActiveLane);
-  FirstActiveLane = B.createScalarZExtOrTrunc(FirstActiveLane, CanonicalIVType,
-                                              FirstActiveLaneType, DL);
+  FirstActiveLane = B.createScalarZExtOrTrunc(
+      FirstActiveLane, CanonicalIVType, FirstActiveLane->getScalarType(), DL);
   VPValue *EndValue = B.createAdd(CanonicalIV, FirstActiveLane, DL);
 
   // `getOptimizableIVOf()` always returns the pre-incremented IV, so if it
@@ -4093,7 +4092,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
 
         // Subtract 1 to get the last active lane.
         VPValue *One =
-            Plan.getConstantInt(TypeInfo.inferScalarType(FirstInactiveLane), 1);
+            Plan.getConstantInt(FirstInactiveLane->getScalarType(), 1);
         VPValue *LastLane =
             Builder.createSub(FirstInactiveLane, One,
                               LastActiveL->getDebugLoc(), "last.active.lane");

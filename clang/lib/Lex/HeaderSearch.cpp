@@ -907,13 +907,15 @@ void HeaderSearch::diagnoseHeaderShadowing(
       const auto &IncluderAndDir = Includers[i];
       SmallString<1024> TmpDir = IncluderAndDir.second.getName();
       llvm::sys::path::append(TmpDir, Filename);
-      if (auto File = getFileMgr().getOptionalFileRef(TmpDir, false, false)) {
+      if (auto File = getFileMgr().getFileRef(TmpDir, false, false)) {
         if (&File->getFileEntry() == *FE)
           continue;
         Diags.Report(IncludeLoc, diag::warn_header_shadowing)
             << Filename << (*FE).getDir().getName()
             << IncluderAndDir.second.getName();
         return;
+      } else {
+        llvm::errorToErrorCode(File.takeError());
       }
     }
   }
@@ -932,12 +934,14 @@ void HeaderSearch::diagnoseHeaderShadowing(
       continue;
     SmallString<1024> TmpPath = It->getName();
     llvm::sys::path::append(TmpPath, Filename);
-    if (auto File = getFileMgr().getOptionalFileRef(TmpPath, false, false)) {
+    if (auto File = getFileMgr().getFileRef(TmpPath, false, false)) {
       if (&File->getFileEntry() == *FE)
         continue;
       Diags.Report(IncludeLoc, diag::warn_header_shadowing)
           << Filename << (*FE).getDir().getName() << It->getName();
       return;
+    } else {
+      llvm::errorToErrorCode(File.takeError());
     }
   }
 }

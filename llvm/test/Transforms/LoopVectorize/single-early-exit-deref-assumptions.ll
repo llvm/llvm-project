@@ -1046,3 +1046,47 @@ exit:
 }
 
 declare i32 @__gxx_personality_v0(...)
+
+define i32 @early_exit_clamped_load_rejected(ptr %A, i32 %N, i32 %sentinel) {
+; CHECK-LABEL: define i32 @early_exit_clamped_load_rejected(
+; CHECK-SAME: ptr [[A:%.*]], i32 [[N:%.*]], i32 [[SENTINEL:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[CLAMPED:%.*]] = urem i32 [[IV]], 4
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[CLAMPED]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[GEP_A]], align 4
+; CHECK-NEXT:    [[MATCH:%.*]] = icmp eq i32 [[LV]], [[SENTINEL]]
+; CHECK-NEXT:    br i1 [[MATCH]], label %[[FOUND:.*]], label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[FOUND]]:
+; CHECK-NEXT:    ret i32 1
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
+  %clamped = urem i32 %iv, 4
+  %gep.A = getelementptr inbounds i32, ptr %A, i32 %clamped
+  %lv = load i32, ptr %gep.A, align 4
+  %match = icmp eq i32 %lv, %sentinel
+  br i1 %match, label %found, label %latch
+
+latch:
+  %iv.next = add nuw nsw i32 %iv, 1
+  %cond = icmp eq i32 %iv.next, %N
+  br i1 %cond, label %exit, label %loop
+
+found:
+  ret i32 1
+
+exit:
+  ret i32 0
+}
