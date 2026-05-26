@@ -5618,13 +5618,19 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
     return;
 
   Config.collectInLoopReductions();
+  // Cases that may be vectorized may be optimized by unit stride predicates.
+  // TODO: Currently unit stride predicates are added unconditionally, even if
+  // they are not used for the selected VF (e.g. when only interleaving).
+  if (MaxFactors.FixedVF.isVector() || MaxFactors.ScalableVF.isVector())
+    Legal->collectUnitStridePredicates();
+
+  auto VPlan1 = tryToBuildVPlan1();
+  if (!VPlan1)
+    return;
 
   if (!OrigLoop->isInnermost()) {
     // For outer loops, computeMaxVF returns a single non-scalar VF; build a
     // plan for that VF only.
-    auto VPlan1 = tryToBuildVPlan1();
-    if (!VPlan1)
-      return;
     ElementCount VF =
         MaxFactors.FixedVF ? MaxFactors.FixedVF : MaxFactors.ScalableVF;
     buildVPlans(*VPlan1, VF, VF);
@@ -5652,16 +5658,6 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
 
   if (CM.foldTailByMasking())
     Legal->prepareToFoldTailByMasking();
-
-  // Cases that may be vectorized may be optimized by unit stride predicates.
-  // TODO: Currently unit stride predicates are added unconditionally, even if
-  // they are not used for the selected VF (e.g. when only interleaving).
-  if (MaxFactors.FixedVF.isVector() || MaxFactors.ScalableVF.isVector())
-    Legal->collectUnitStridePredicates();
-
-  auto VPlan1 = tryToBuildVPlan1();
-  if (!VPlan1)
-    return;
 
   ElementCount MaxUserVF =
       UserVF.isScalable() ? MaxFactors.ScalableVF : MaxFactors.FixedVF;
