@@ -2842,8 +2842,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   if (TC != ElementCount::getFixed(MaxTC))
     LLVM_DEBUG(dbgs() << "LV: Found maximum trip count: " << MaxTC << '\n');
   if (TC.isScalar()) {
-    reportVectorizationFailure(
-        "Single iteration (non) loop",
+    reportVectorizationFailure("Single iteration (non) loop",
         "loop trip count is one, irrelevant for vectorization",
         "SingleIterationLoop", ORE, TheLoop);
     return FixedScalableVFPair::getNone();
@@ -7168,6 +7167,9 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
 // for minimum code-size, 2) tail-folding compiler options, 3) loop
 // hints forcing tail-folding, and 4) a TTI hook that analyses whether the loop
 // is suitable for tail-folding.
+// This function determines epilogue lowering for the main vector loop while
+// epilogue lowering for the tail-folded epilogue path will be handled
+// separately in getEpilogueTailLowering.
 static EpilogueLowering
 getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
                     bool OptForSize, TargetTransformInfo *TTI,
@@ -7213,8 +7215,7 @@ getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
 /// otherwise CM_EpilogueAllowed.
 static EpilogueLowering
 getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
-                        OptimizationRemarkEmitter *ORE,
-                        LoopVectorizeHints &Hints) {
+                        OptimizationRemarkEmitter *ORE) {
   // Epilogue TF is only enabled when explicitly requested via command line.
   if (!EpilogueTailFoldingPolicy.getNumOccurrences() ||
       EpilogueTailFoldingPolicy != TailFoldingPolicyTy::PreferFoldTail)
@@ -7978,8 +7979,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       LLVM_DEBUG(dbgs() << "\n");
       // Tail-folded loops are efficient even when the loop
       // iteration count is low. However, setting the epilogue policy to
-      // `CM_EpilogueNotAllowedLowTripLoop` prevents
-      // vectorizing loops with runtime checks. It's more effective to let
+      // `CM_EpilogueNotAllowedLowTripLoop` prevents vectorizing loops
+      // with runtime checks. It's more effective to let
       // `isOutsideLoopWorkProfitable` determine if vectorization is
       // beneficial for the loop.
       if (SEL != CM_EpilogueNotNeededFoldTail)
@@ -8006,7 +8007,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       TTI->isFPVectorizationPotentiallyUnsafe()) {
     reportVectorizationFailure(
         "Potentially unsafe FP op prevents vectorization",
-        "loop not vectorized due to unsafe FP support.", "UnsafeFP", ORE, L);
+        "loop not vectorized due to unsafe FP support.",
+        "UnsafeFP", ORE, L);
     Hints.emitRemarkWithHints();
     return false;
   }
@@ -8042,8 +8044,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                Hints, ORE);
 
   EpilogueLowering EpilogueTailLoweringStatus =
-      getEpilogueTailLowering(CM, L, ORE, Hints);
-  if (EpilogueTailLoweringStatus == CM_EpilogueNotNeededFoldTail) {
+      getEpilogueTailLowering(CM, L, ORE);
+  if (EpilogueTailLoweringStatus ==
+      EpilogueLowering::CM_EpilogueNotNeededFoldTail) {
     // TODO: Apply tail-folding on the vectorized epilogue loop.
     LLVM_DEBUG(dbgs() << "LV: epilogue tail-folding is not supported yet\n");
     reportVectorizationInfo(
