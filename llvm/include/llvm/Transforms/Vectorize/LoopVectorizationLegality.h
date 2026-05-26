@@ -346,6 +346,8 @@ public:
   /// reductions found in the loop.
   bool isInvariantStoreOfReduction(StoreInst *SI);
 
+  LoadInst *tryToFindDynamicBoundLoadCandidate(Loop *L, AAResults &AA);
+
   /// Returns True if given address is invariant and is used to store recurrent
   /// expression
   bool isInvariantAddressOfReduction(Value *V);
