@@ -130,7 +130,7 @@ bool CXXRecordDecl::forallBases(ForallBasesCallback BaseMatches) const {
   if (const CXXRecordDecl *Def = getDefinition())
     Record = Def;
   else if (!dataPtr())
-  return false;
+    return false;
   while (true) {
     for (const auto &I : Record->bases()) {
       const auto *Base = I.getType()->getAsCXXRecordDecl();
