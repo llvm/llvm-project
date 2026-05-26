@@ -830,8 +830,8 @@ public:
   const DeclarationNameLoc &getInfo() const { return LocInfo; }
   void setInfo(const DeclarationNameLoc &Info) { LocInfo = Info; }
 
-  /// getNamedTypeInfo - Returns the source type info associated to
-  /// the name. Assumes it is a constructor, destructor or conversion.
+  /// @return The type source info associated to the name if it is a
+  /// constructor, destructor or conversion function, `nullptr` otherwise.
   TypeSourceInfo *getNamedTypeInfo() const {
     if (Name.getNameKind() != DeclarationName::CXXConstructorName &&
         Name.getNameKind() != DeclarationName::CXXDestructorName &&
