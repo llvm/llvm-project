@@ -2714,7 +2714,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     Check(!Args[2].getAsInteger(10, FirstArgIdx),
           "modular-format attribute first arg index is not an integer", V);
     unsigned UpperBound = FT->getNumParams() + (FT->isVarArg() ? 1 : 0);
-    Check(FirstArgIdx > 0 && FirstArgIdx <= UpperBound,
+    Check(FirstArgIdx <= UpperBound,
           "modular-format attribute first arg index is out of bounds", V);
   }
 
@@ -5432,6 +5432,7 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
     for (unsigned I = 3; I < MD->getNumOperands(); I += 2) {
       ConstantInt *ProfileValue =
           mdconst::dyn_extract<ConstantInt>(MD->getOperand(I));
+      Check(ProfileValue, "VP !prof value operand is not a const int", MD);
       uint64_t ProfileValueInt = ProfileValue->getZExtValue();
       auto [ValueIt, Inserted] = ProfileValues.insert(ProfileValueInt);
       Check(Inserted, "VP !prof should not have duplicate profile values", MD);
@@ -7276,6 +7277,17 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     MDNode *MD = cast<MDNode>(Op->getMetadata());
     Check((MD->getNumOperands() == 1) && isa<MDString>(MD->getOperand(0)),
           "cooperative atomic intrinsics require that the last argument is a "
+          "metadata string",
+          &Call, Op);
+    break;
+  }
+  case Intrinsic::amdgcn_av_load_b128:
+  case Intrinsic::amdgcn_av_store_b128: {
+    // Last argument must be a MD string
+    auto *Op = cast<MetadataAsValue>(Call.getArgOperand(Call.arg_size() - 1));
+    auto *MD = dyn_cast<MDNode>(Op->getMetadata());
+    Check(MD && (MD->getNumOperands() == 1) && isa<MDString>(MD->getOperand(0)),
+          "the last argument to av load/store intrinsics must be a "
           "metadata string",
           &Call, Op);
     break;

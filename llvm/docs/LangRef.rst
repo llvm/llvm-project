@@ -14027,8 +14027,8 @@ Example:
 llvm treats calls to some functions with names and arguments that match
 the standard C99 library as being the C99 library functions, and may
 perform optimizations or generate code for them under that assumption.
-This is something we'd like to change in the future to provide better
-support for freestanding environments and non-C-based languages.
+This implies that undefined behavior in C standard library functions recognized
+by LLVM is also undefined behavior at the IR level.
 
 .. _i_va_arg:
 
@@ -16803,7 +16803,7 @@ Arguments:
 """"""""""
 
 The first argument is a pointer to the destination to fill, the second
-is the byte value with which to fill it, the third argument is a constant
+is the byte value with which to fill it, the third argument is an
 integer argument specifying the number of bytes to fill, and the fourth
 is a boolean indicating a volatile access.
 

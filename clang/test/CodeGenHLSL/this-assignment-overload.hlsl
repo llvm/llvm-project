@@ -27,6 +27,7 @@ void main() {
 // This test makes a probably safe assumption that HLSL 202x includes operator overloading for assignment operators.
 // CHECK:     define linkonce_odr hidden noundef i32 @_ZN4Pair8getFirstEv(ptr noundef nonnull align 1 dereferenceable(8) %this) #0 align 2 {
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: [[ThisPtrAdds:%.*]] = alloca ptr, align 4
 // CHECK-NEXT: [[Another:%.*]] = alloca %struct.Pair, align 1
 // CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.Pair, align 1
@@ -41,6 +42,7 @@ void main() {
 
 // CHECK:     define linkonce_odr hidden noundef i32 @_ZN4Pair9getSecondEv(ptr noundef nonnull align 1 dereferenceable(8) %this) #0 align 2 {
 // CHECK-NEXT:entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: [[ThisPtrAdds:%.*]] = alloca ptr, align 4
 // CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.Pair, align 1
 // CHECK-NEXT: store ptr %this, ptr [[ThisPtrAdds]], align 4

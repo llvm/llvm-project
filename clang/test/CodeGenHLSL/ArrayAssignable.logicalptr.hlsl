@@ -32,6 +32,7 @@ cbuffer CBArrays : register(b0) {
 // CHECK-DXIL-LABEL: define hidden void @_Z11arr_assign1v(
 // CHECK-DXIL-SAME: ) #[[ATTR2:[0-9]+]] {
 // CHECK-DXIL-NEXT:  [[ENTRY:.*:]]
+// CHECK-DXIL-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-DXIL-NEXT:    [[ARR:%.*]] = call elementtype([2 x i32]) ptr @llvm.structured.alloca.p0()
 // CHECK-DXIL-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 @__const._Z11arr_assign1v.Arr, i32 8, i1 false)
 // CHECK-DXIL-NEXT:    [[ARR2:%.*]] = call elementtype([2 x i32]) ptr @llvm.structured.alloca.p0()
@@ -59,6 +60,7 @@ void arr_assign1() {
 // CHECK-DXIL-LABEL: define hidden void @_Z11arr_assign2v(
 // CHECK-DXIL-SAME: ) #[[ATTR2]] {
 // CHECK-DXIL-NEXT:  [[ENTRY:.*:]]
+// CHECK-DXIL-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-DXIL-NEXT:    [[ARR:%.*]] = call elementtype([2 x i32]) ptr @llvm.structured.alloca.p0()
 // CHECK-DXIL-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 @__const._Z11arr_assign2v.Arr, i32 8, i1 false)
 // CHECK-DXIL-NEXT:    [[ARR2:%.*]] = call elementtype([2 x i32]) ptr @llvm.structured.alloca.p0()
@@ -93,6 +95,7 @@ void arr_assign2() {
 // CHECK-DXIL-LABEL: define hidden void @_Z11arr_assign3v(
 // CHECK-DXIL-SAME: ) #[[ATTR2]] {
 // CHECK-DXIL-NEXT:  [[ENTRY:.*:]]
+// CHECK-DXIL-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-DXIL-NEXT:    [[ARR2:%.*]] = call elementtype([2 x [2 x i32]]) ptr @llvm.structured.alloca.p0()
 // CHECK-DXIL-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR2]], ptr align 4 @__const._Z11arr_assign3v.Arr2, i32 16, i1 false)
 // CHECK-DXIL-NEXT:    [[ARR3:%.*]] = call elementtype([2 x [2 x i32]]) ptr @llvm.structured.alloca.p0()
@@ -120,6 +123,7 @@ void arr_assign3() {
 // CHECK-DXIL-LABEL: define hidden void @_Z11arr_assign4v(
 // CHECK-DXIL-SAME: ) #[[ATTR2]] {
 // CHECK-DXIL-NEXT:  [[ENTRY:.*:]]
+// CHECK-DXIL-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-DXIL-NEXT:    [[ARR:%.*]] = call elementtype([2 x i32]) ptr @llvm.structured.alloca.p0()
 // CHECK-DXIL-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 @__const._Z11arr_assign4v.Arr, i32 8, i1 false)
 // CHECK-DXIL-NEXT:    [[ARR2:%.*]] = call elementtype([2 x i32]) ptr @llvm.structured.alloca.p0()
@@ -151,6 +155,7 @@ void arr_assign4() {
 // CHECK-DXIL-LABEL: define hidden void @_Z11arr_assign5v(
 // CHECK-DXIL-SAME: ) #[[ATTR2]] {
 // CHECK-DXIL-NEXT:  [[ENTRY:.*:]]
+// CHECK-DXIL-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-DXIL-NEXT:    [[ARR:%.*]] = call elementtype([2 x i32]) ptr @llvm.structured.alloca.p0()
 // CHECK-DXIL-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 @__const._Z11arr_assign5v.Arr, i32 8, i1 false)
 // CHECK-DXIL-NEXT:    [[ARR2:%.*]] = call elementtype([2 x i32]) ptr @llvm.structured.alloca.p0()
@@ -189,6 +194,7 @@ void arr_assign5() {
 // CHECK-DXIL-LABEL: define hidden void @_Z11arr_assign6v(
 // CHECK-DXIL-SAME: ) #[[ATTR2]] {
 // CHECK-DXIL-NEXT:  [[ENTRY:.*:]]
+// CHECK-DXIL-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-DXIL-NEXT:    [[ARR:%.*]] = call elementtype([2 x [2 x i32]]) ptr @llvm.structured.alloca.p0()
 // CHECK-DXIL-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 @__const._Z11arr_assign6v.Arr, i32 16, i1 false)
 // CHECK-DXIL-NEXT:    [[ARR2:%.*]] = call elementtype([2 x [2 x i32]]) ptr @llvm.structured.alloca.p0()
@@ -222,6 +228,7 @@ void arr_assign6() {
 // CHECK-DXIL-LABEL: define hidden void @_Z11arr_assign7v(
 // CHECK-DXIL-SAME: ) #[[ATTR2]] {
 // CHECK-DXIL-NEXT:  [[ENTRY:.*:]]
+// CHECK-DXIL-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-DXIL-NEXT:    [[ARR:%.*]] = call elementtype([2 x [2 x i32]]) ptr @llvm.structured.alloca.p0()
 // CHECK-DXIL-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 @__const._Z11arr_assign7v.Arr, i32 16, i1 false)
 // CHECK-DXIL-NEXT:    [[ARR2:%.*]] = call elementtype([2 x [2 x i32]]) ptr @llvm.structured.alloca.p0()
@@ -258,6 +265,7 @@ void arr_assign7() {
 // CHECK-DXIL-LABEL: define hidden void @_Z11arr_assign8v(
 // CHECK-DXIL-SAME: ) #[[ATTR2]] {
 // CHECK-DXIL-NEXT:  [[ENTRY:.*:]]
+// CHECK-DXIL-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-DXIL-NEXT:    [[C:%.*]] = call elementtype([2 x float]) ptr @llvm.structured.alloca.p0()
 // CHECK-DXIL-NEXT:    [[TMP0:%.*]] = call ptr addrspace(2) (ptr addrspace(2), ...) @llvm.structured.gep.p2(ptr addrspace(2) elementtype(<{ [1 x <{ float, target("dx.Padding", 12) }>], float }>) @c1, i32 0, i32 0, i32 0)
 // CHECK-DXIL-NEXT:    [[TMP1:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x float]) [[C]], i32 0)
@@ -292,6 +300,7 @@ void arr_assign8() {
 // CHECK-DXIL-LABEL: define hidden void @_Z11arr_assign9v(
 // CHECK-DXIL-SAME: ) #[[ATTR2]] {
 // CHECK-DXIL-NEXT:  [[ENTRY:.*:]]
+// CHECK-DXIL-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-DXIL-NEXT:    [[C:%.*]] = call elementtype([2 x <4 x i32>]) ptr @llvm.structured.alloca.p0()
 // CHECK-DXIL-NEXT:    [[TMP0:%.*]] = call ptr addrspace(2) (ptr addrspace(2), ...) @llvm.structured.gep.p2(ptr addrspace(2) elementtype([2 x <4 x i32>]) @c2, i32 0)
 // CHECK-DXIL-NEXT:    [[TMP1:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x <4 x i32>]) [[C]], i32 0)
@@ -329,6 +338,7 @@ void arr_assign9() {
 // CHECK-DXIL-LABEL: define hidden void @_Z12arr_assign10v(
 // CHECK-DXIL-SAME: ) #[[ATTR2]] {
 // CHECK-DXIL-NEXT:  [[ENTRY:.*:]]
+// CHECK-DXIL-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-DXIL-NEXT:    [[C:%.*]] = call elementtype([2 x [2 x i32]]) ptr @llvm.structured.alloca.p0()
 // CHECK-DXIL-NEXT:    [[TMP0:%.*]] = call ptr addrspace(2) (ptr addrspace(2), ...) @llvm.structured.gep.p2(ptr addrspace(2) elementtype(<{ [1 x <{ <{ [1 x <{ i32, target("dx.Padding", 12) }>], i32 }>, target("dx.Padding", 12) }>], <{ [1 x <{ i32, target("dx.Padding", 12) }>], i32 }> }>) @c3, i32 0, i32 0, i32 0)
 // CHECK-DXIL-NEXT:    [[TMP1:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x [2 x i32]]) [[C]], i32 0)
@@ -387,6 +397,7 @@ void arr_assign10() {
 // CHECK-DXIL-LABEL: define hidden void @_Z12arr_assign11v(
 // CHECK-DXIL-SAME: ) #[[ATTR2]] {
 // CHECK-DXIL-NEXT:  [[ENTRY:.*:]]
+// CHECK-DXIL-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-DXIL-NEXT:    [[C:%.*]] = call elementtype([2 x [[STRUCT_S:%.*]]]) ptr @llvm.structured.alloca.p0()
 // CHECK-DXIL-NEXT:    [[TMP0:%.*]] = call ptr addrspace(2) (ptr addrspace(2), ...) @llvm.structured.gep.p2(ptr addrspace(2) elementtype(<{ [1 x <{ [[S:%.*]], target("dx.Padding", 8) }>], [[S]] }>) @c4, i32 0, i32 0, i32 0)
 // CHECK-DXIL-NEXT:    [[TMP1:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x [[STRUCT_S]]]) [[C]], i32 0)
