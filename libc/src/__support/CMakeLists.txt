@@ -145,6 +145,14 @@ add_header_library(
 )
 
 add_header_library(
+  alloc_checker
+  HDRS
+    alloc-checker.h
+  DEPENDS
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   ctype_utils
   HDRS
     ctype_utils.h
@@ -445,6 +453,7 @@ add_subdirectory(OSUtil)
 add_subdirectory(StringUtil)
 add_subdirectory(GPU)
 add_subdirectory(RPC)
+add_subdirectory(net)
 
 # Thread support is used by other "File". So, we add the "threads"
 # before "File".

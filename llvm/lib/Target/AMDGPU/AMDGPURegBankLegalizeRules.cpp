@@ -151,7 +151,7 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
   case UniB512:
     return MRI.getType(Reg).getSizeInBits() == 512 && MUI.isUniformAtDef(Reg);
   case UniBRC: {
-    if (!MUI.isUniformAtDef(Reg))
+    if (MUI.isDivergentAtDef(Reg))
       return false;
     // Check if there is SGPR register class of same size as the LLT.
     const SIRegisterInfo *TRI =
@@ -219,7 +219,7 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
   case DivB512:
     return MRI.getType(Reg).getSizeInBits() == 512 && MUI.isDivergentAtDef(Reg);
   case DivBRC: {
-    if (!MUI.isDivergentAtDef(Reg))
+    if (MUI.isUniformAtDef(Reg))
       return false;
     // Check if there is VGPR register class of same size as the LLT.
     const SIRegisterInfo *TRI =
@@ -1303,6 +1303,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS32, S64}, {{Sgpr32}, {Sgpr64}}})
       .Any({{DivS32, S64}, {{Vgpr32}, {Vgpr64}, SplitBitCount64To32}});
 
+  addRulesForGOpcs({G_CTPOP})
+      .Any({{UniS32, S32}, {{Sgpr32}, {Sgpr32}}})
+      .Any({{DivS32, S32}, {{Vgpr32}, {Vgpr32}}})
+      .Any({{UniS32, S64}, {{Sgpr32}, {Sgpr64}}})
+      .Any({{DivS32, S64}, {{Vgpr32}, {Vgpr64}, CtPop64To32}});
+
   addRulesForGOpcs({G_FENCE}).Any({{{}}, {{}, {}}});
 
   addRulesForGOpcs({G_READSTEADYCOUNTER, G_READCYCLECOUNTER}, Standard)
@@ -1431,7 +1437,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S16, {{Sgpr16}, {Sgpr16}}, hasPST)
       .Uni(S16, {{UniInVgprS16}, {Vgpr16}}, !hasPST);
 
-  addRulesForGOpcs({G_FPTOUI, G_FPTOSI})
+  addRulesForGOpcs({G_FPTOUI, G_FPTOSI, G_FPTOUI_SAT, G_FPTOSI_SAT})
       .Any({{UniS16, S16}, {{UniInVgprS16}, {Vgpr16}}})
       .Any({{DivS16, S16}, {{Vgpr16}, {Vgpr16}}})
       .Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}}, hasSALUFloat)
