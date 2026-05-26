@@ -547,11 +547,11 @@ Changes in existing checks
 
 - Improved :doc:`readability-redundant-parentheses
   <clang-tidy/checks/readability/redundant-parentheses>` check to fix a false
-  positive where parentheses around overloaded comparison operators (e.g.
-  ``iterator !=``, ``std::string >=``) were incorrectly flagged while
-  equivalent built-in operator expressions were not. Overloaded operators
-  written in operator form are now treated consistently with built-in binary
-  operators. Functor calls via ``operator()`` continue to be flagged.
+  positive where parentheses around an overloaded operator call used as the
+  base of a member access (e.g. ``(stream << item).str()``,
+  ``(*iter).field``) were incorrectly flagged as redundant. Such parentheses
+  are syntactically required; removing them would change the meaning of the
+  expression.
 
 - Improved :doc:`readability-redundant-preprocessor
   <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a
