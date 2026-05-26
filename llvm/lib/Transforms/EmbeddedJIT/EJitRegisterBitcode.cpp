@@ -290,8 +290,9 @@ static GlobalVariable *embedBitcode(Module &M, const std::string &Bitcode) {
   auto *Const = ConstantDataArray::get(Ctx, Bytes);
   auto *GV = new GlobalVariable(M, ArrTy, true, GlobalValue::InternalLinkage,
                                 Const, GV_EJIT_BITCODE);
-  GV->setSection(SECT_EJIT_BITCODE);
   GV->setAlignment(Align(1));
+  // Bitcode lives in default section (.rodata for const); no custom section
+  // needed — bare-metal environments may not support custom ELF sections.
   return GV;
 }
 
