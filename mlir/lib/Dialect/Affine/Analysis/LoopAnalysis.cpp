@@ -260,37 +260,6 @@ static FailureOr<int64_t> computeConstantBound(AffineMap map,
                                                         options);
 }
 
-static std::optional<uint64_t>
-getKnownTripCountBound(AffineMap map, SmallVectorImpl<Value> &operands,
-                       presburger::BoundType type) {
-  std::optional<uint64_t> tripCount;
-  for (unsigned i = 0, e = map.getResults().size(); i < e; ++i) {
-    AffineMap subMap = map.getSubMap(i);
-    FailureOr<int64_t> lbBound =
-        computeConstantBound(subMap, operands, presburger::BoundType::LB);
-    FailureOr<int64_t> ubBound =
-        computeConstantBound(subMap, operands, presburger::BoundType::UB);
-    if (failed(lbBound) || failed(ubBound))
-      return std::nullopt;
-    if (type == presburger::BoundType::LB) {
-      if (tripCount.has_value())
-        tripCount =
-            std::min(*tripCount, static_cast<uint64_t>(lbBound.value()));
-      else
-        tripCount = lbBound.value();
-    } else if (type == presburger::BoundType::UB) {
-      if (tripCount.has_value())
-        tripCount =
-            std::max(*tripCount, static_cast<uint64_t>(ubBound.value()));
-      else
-        tripCount = ubBound.value();
-    } else {
-      return std::nullopt;
-    }
-  }
-  return tripCount;
-}
-
 std::optional<std::pair<uint64_t, uint64_t>>
 mlir::affine::computeLoopTripCountConstantBounds(AffineForOp forOp) {
   SmallVector<Value, 4> operands;
@@ -299,12 +268,14 @@ mlir::affine::computeLoopTripCountConstantBounds(AffineForOp forOp) {
 
   if (!map)
     return {};
+  if (map.getNumResults() != 1)
+    return {};
 
-  std::optional<uint64_t> minTrip =
-      getKnownTripCountBound(map, operands, presburger::BoundType::LB);
-  std::optional<uint64_t> maxTrip =
-      getKnownTripCountBound(map, operands, presburger::BoundType::UB);
-  if (!minTrip || !maxTrip)
+  FailureOr<int64_t> minTrip =
+      computeConstantBound(map, operands, presburger::BoundType::LB);
+  FailureOr<int64_t> maxTrip =
+      computeConstantBound(map, operands, presburger::BoundType::UB);
+  if (failed(minTrip) || failed(maxTrip))
     return {};
   return std::make_pair(*minTrip, *maxTrip);
 }
