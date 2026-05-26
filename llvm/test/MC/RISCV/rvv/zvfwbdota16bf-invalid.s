@@ -14,5 +14,5 @@ vfwbdota.vv v8, v16, v12, 8
 vfwbdota.vv v8, v17, v12, 1
 
 # Invalid vs2 and ci
-# CHECK-ERROR: invalid operand for instruction{{$}}
+# CHECK-ERROR: :[[@LINE+1]]:17: error: invalid operand for instruction{{$}}
 vfwbdota.vv v8, v17, v12, 8
