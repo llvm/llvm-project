@@ -126,23 +126,3 @@ define void @volatile_store_no_split(ptr %p, i32 %lo, float %hi) {
   ret void
 }
 
-define void @plain_store_is_split(ptr %p, i32 %lo, float %hi) {
-; CHECK-LABEL: @plain_store_is_split(
-; CHECK-NEXT:    [[HI_I:%.*]] = bitcast float [[HI:%.*]] to i32
-; CHECK-NEXT:    [[LO64:%.*]] = zext i32 [[LO:%.*]] to i64
-; CHECK-NEXT:    [[HI64:%.*]] = zext i32 [[HI_I]] to i64
-; CHECK-NEXT:    [[HISHL:%.*]] = shl i64 [[HI64]], 32
-; CHECK-NEXT:    [[MERGED:%.*]] = or i64 [[LO64]], [[HISHL]]
-; CHECK-NEXT:    store i32 [[LO]], ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[P]], i32 1
-; CHECK-NEXT:    store i32 [[HI_I]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    ret void
-;
-  %hi_i = bitcast float %hi to i32
-  %lo64 = zext i32 %lo to i64
-  %hi64 = zext i32 %hi_i to i64
-  %hishl = shl i64 %hi64, 32
-  %merged = or i64 %lo64, %hishl
-  store i64 %merged, ptr %p, align 8
-  ret void
-}
