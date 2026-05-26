@@ -274,8 +274,7 @@ Expected<AsyncQueueTy *>
 L0DeviceTy::getOrCreateQueue(__tgt_async_info *AsyncInfo) {
   AsyncQueueTy *Queue = static_cast<AsyncQueueTy *>(AsyncInfo->Queue);
   if (!Queue) {
-    auto NewQueueOrErr =
-        QueueCache.getQueue();
+    auto NewQueueOrErr = QueueCache.getQueue();
     if (!NewQueueOrErr)
       return NewQueueOrErr.takeError();
     Queue = *NewQueueOrErr;
@@ -733,7 +732,7 @@ L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
   return CmdList;
 }
 
-//TODO: logic from this function should be moved to AsyncQueue
+// TODO: logic from this function should be moved to AsyncQueue
 Error L0DeviceTy::dataFence(__tgt_async_info *Async) {
   const bool Ordered =
       (getPlugin().getOptions().CommandMode == CommandModeTy::AsyncOrdered);

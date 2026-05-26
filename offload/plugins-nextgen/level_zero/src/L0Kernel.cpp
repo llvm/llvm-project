@@ -85,7 +85,6 @@ Error L0KernelTy::initImpl(GenericDeviceTy &GenericDevice,
   return Plugin::success();
 }
 
-
 Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
                                   uint32_t NumThreads[3],
                                   uint32_t NumBlocks[3]) const {

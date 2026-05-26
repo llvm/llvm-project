@@ -93,8 +93,8 @@ struct AsyncQueueTy {
   virtual Error launchKernelImpl(ze_kernel_handle_t Kernel,
                                  L0LaunchEnvTy &KEnv) = 0;
 
-  virtual Error memoryFillImpl(void *Ptr, const void *Pattern, size_t PatternSize,
-                              size_t Size) {
+  virtual Error memoryFillImpl(void *Ptr, const void *Pattern,
+                               size_t PatternSize, size_t Size) {
     return appendMemoryFill(Ptr, Pattern, PatternSize, Size);
   }
 
@@ -187,7 +187,7 @@ public:
   Error launchKernelImpl(ze_kernel_handle_t Kernel,
                          L0LaunchEnvTy &KEnv) override;
   Error memoryFillImpl(void *Ptr, const void *Pattern, size_t PatternSize,
-                              size_t Size) override;
+                       size_t Size) override;
 };
 
 class L0AsyncOrderedQueueTy : public L0AsyncQueueTy {

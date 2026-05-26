@@ -231,8 +231,8 @@ Error L0AsyncQueueTy::memoryFillImpl(void *Ptr, const void *Pattern,
   if (!EventOrErr)
     return EventOrErr.takeError();
   ze_event_handle_t SignalEvent = *EventOrErr;
-  if (auto Err = appendMemoryFill(Ptr, Pattern, PatternSize, Size, SignalEvent, 0,
-                             nullptr)) {
+  if (auto Err = appendMemoryFill(Ptr, Pattern, PatternSize, Size, SignalEvent,
+                                  0, nullptr)) {
     if (auto ReleaseErr = Device.releaseEvent(SignalEvent))
       return joinErrors(std::move(Err), std::move(ReleaseErr));
     return Err;

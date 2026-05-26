@@ -394,10 +394,11 @@ public:
   /// Enqueue fill command.
   Error enqueueMemFill(void *Ptr, const void *Pattern, size_t PatternSize,
                        size_t Size, __tgt_async_info *AsyncInfo);
-  Error enqueueMemFillAndSync(void *Ptr, const void *Pattern, size_t PatternSize,
-                       size_t Size) {
+  Error enqueueMemFillAndSync(void *Ptr, const void *Pattern,
+                              size_t PatternSize, size_t Size) {
     __tgt_async_info AsyncInfo;
-    if (auto Err = enqueueMemFill(Ptr, Pattern, PatternSize, Size, &AsyncInfo)) {
+    if (auto Err =
+            enqueueMemFill(Ptr, Pattern, PatternSize, Size, &AsyncInfo)) {
       releaseQueue((AsyncQueueTy *)AsyncInfo.Queue);
       return Err;
     }
