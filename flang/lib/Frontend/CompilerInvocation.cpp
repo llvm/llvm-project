@@ -360,6 +360,14 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                     clang::options::OPT_fno_integrated_as, true))
     opts.DisableIntegratedAS = 1;
 
+  opts.FunctionSections =
+      args.hasFlag(clang::options::OPT_ffunction_sections,
+                   clang::options::OPT_fno_function_sections,
+                   /*Default=*/false);
+  opts.DataSections = args.hasFlag(clang::options::OPT_fdata_sections,
+                                   clang::options::OPT_fno_data_sections,
+                                   /*Default=*/false);
+
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::options::OPT_mcode_object_version_EQ)) {
     llvm::StringRef s = a->getValue();
