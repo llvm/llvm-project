@@ -86,7 +86,7 @@ void DWARF5AcceleratorTable::preAllocateUnits(DWARFContext &DwCtx) {
     if (!DWOCU || !*DWOCU)
       continue;
 
-    // check dwo_types_section_units for DWARF4 type units in DWO.
+    // Iterate DWO info section units for type units (Foreign TU list).
     DWARFContext &DWOCtx = (*DWOCU)->getContext();
     for (const auto &TU : DWOCtx.dwo_units()) {
       if (!TU->isTypeUnit())
