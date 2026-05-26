@@ -12,6 +12,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -20,6 +21,19 @@
 
 using namespace llvm;
 using namespace llvm::dwarf;
+
+static bool isInlineAsmSourceLocMD(const MDNode *LocInfo) {
+  if (!LocInfo || LocInfo->getNumOperands() == 0)
+    return false;
+
+  const auto *Locs = dyn_cast_or_null<MDNode>(
+      LocInfo->getOperand(LocInfo->getNumOperands() - 1));
+  if (!Locs || Locs->getNumOperands() < 3 || Locs->getNumOperands() % 2 == 0)
+    return false;
+
+  const auto *Tag = dyn_cast_or_null<MDString>(Locs->getOperand(0));
+  return Tag && Tag->getString() == "inlineasm.dbg.line";
+}
 
 // Out of line virtual method.
 MachineModuleInfoImpl::~MachineModuleInfoImpl() = default;
@@ -176,10 +190,13 @@ static uint64_t getLocCookie(const SMDiagnostic &SMD, const SourceMgr &SrcMgr,
   uint64_t LocCookie = 0;
   if (LocInfo) {
     unsigned ErrorLine = SMD.getLineNo() - 1;
-    if (ErrorLine >= LocInfo->getNumOperands())
+    unsigned NumRawLocs = LocInfo->getNumOperands();
+    if (isInlineAsmSourceLocMD(LocInfo))
+      --NumRawLocs;
+    if (ErrorLine >= NumRawLocs)
       ErrorLine = 0;
 
-    if (LocInfo->getNumOperands() != 0)
+    if (NumRawLocs != 0)
       if (const ConstantInt *CI =
               mdconst::dyn_extract<ConstantInt>(LocInfo->getOperand(ErrorLine)))
         LocCookie = CI->getZExtValue();

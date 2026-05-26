@@ -2359,6 +2359,38 @@ const MDNode *MachineInstr::getLocCookieMD() const {
   return nullptr;
 }
 
+static bool isInlineAsmSourceLocMD(const MDNode *Locs) {
+  if (!Locs || Locs->getNumOperands() < 3 || Locs->getNumOperands() % 2 == 0)
+    return false;
+
+  const auto *Tag = dyn_cast_or_null<MDString>(Locs->getOperand(0));
+  if (!Tag || Tag->getString() != "inlineasm.dbg.line")
+    return false;
+
+  return true;
+}
+
+const MDNode *MachineInstr::getInlineAsmSourceLocMD() const {
+  for (unsigned I = getNumOperands(); I != 0; --I) {
+    if (!getOperand(I - 1).isMetadata())
+      continue;
+
+    const MDNode *LocMD = getOperand(I - 1).getMetadata();
+    if (isInlineAsmSourceLocMD(LocMD))
+      return LocMD;
+
+    if (!LocMD)
+      continue;
+    for (const MDOperand &Op : LocMD->operands()) {
+      const auto *Locs = dyn_cast_or_null<MDNode>(Op);
+      if (isInlineAsmSourceLocMD(Locs))
+        return Locs;
+    }
+  }
+
+  return nullptr;
+}
+
 void MachineInstr::emitInlineAsmError(const Twine &Msg) const {
   assert(isInlineAsm());
   const MDNode *LocMD = getLocCookieMD();

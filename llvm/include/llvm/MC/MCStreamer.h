@@ -31,6 +31,7 @@
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include <cassert>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -244,6 +245,10 @@ class LLVM_ABI MCStreamer {
   /// locations for diagnostics.
   const SMLoc *StartTokLocPtr = nullptr;
 
+  /// Callback used by inline asm parsing to give AsmPrinter a chance to emit
+  /// source location directives immediately before each parsed instruction.
+  std::function<void(SMLoc)> InlineAsmSourceLocCallback;
+
   /// The next unique ID to use when creating a WinCFI-related section (.pdata
   /// or .xdata). This ID ensures that we have a one-to-one mapping from
   /// code section to unwind info section, which MSVC's incremental linker
@@ -290,6 +295,8 @@ protected:
 
   virtual void emitRawTextImpl(StringRef String);
 
+  void emitInlineAsmSourceLoc(SMLoc Loc);
+
   /// Returns true if the .cv_loc directive is in the right section.
   bool checkCVLocSection(unsigned FuncId, unsigned FileNo, SMLoc Loc);
 
@@ -310,6 +317,10 @@ public:
   void setStartTokLocPtr(const SMLoc *Loc) { StartTokLocPtr = Loc; }
   SMLoc getStartTokLoc() const {
     return StartTokLocPtr ? *StartTokLocPtr : SMLoc();
+  }
+
+  void setInlineAsmSourceLocCallback(std::function<void(SMLoc)> Callback) {
+    InlineAsmSourceLocCallback = std::move(Callback);
   }
 
   void setLFIRewriter(std::unique_ptr<MCLFIRewriter> Rewriter);

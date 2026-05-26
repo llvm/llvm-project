@@ -585,6 +585,11 @@ public:
   /// the loc cookie from it.
   LLVM_ABI const MDNode *getLocCookieMD() const;
 
+  /// For inline asm, get the nested source line metadata in !srcloc, if
+  /// present. Operand 0 is a tag, and subsequent operands are line/column pairs
+  /// for inline asm source lines.
+  LLVM_ABI const MDNode *getInlineAsmSourceLocMD() const;
+
   /// Emit an error referring to the source location of this instruction. This
   /// should only be used for inline assembly that is somehow impossible to
   /// compile. Other errors should have been handled much earlier.
