@@ -2083,13 +2083,6 @@ CXXRecordDecl::setTemplateSpecializationKind(TemplateSpecializationKind TSK) {
 }
 
 const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
-  auto GetDefinitionOrSelf =
-      [](const CXXRecordDecl *D) -> const CXXRecordDecl * {
-    if (auto *Def = D->getDefinition())
-      return Def;
-    return D;
-  };
-
   // If it's a class template specialization, find the template or partial
   // specialization from which it was instantiated.
   if (auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(this)) {
@@ -2100,7 +2093,7 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
           break;
         CTD = NewCTD;
       }
-      return GetDefinitionOrSelf(CTD->getTemplatedDecl());
+      return CTD->getTemplatedDecl();
     }
     if (auto *CTPSD =
             dyn_cast_if_present<ClassTemplatePartialSpecializationDecl *>(
@@ -2110,7 +2103,7 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
           break;
         CTPSD = NewCTPSD;
       }
-      return GetDefinitionOrSelf(CTPSD);
+      return CTPSD;
     }
   }
 
@@ -2119,7 +2112,7 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
       const CXXRecordDecl *RD = this;
       while (auto *NewRD = RD->getInstantiatedFromMemberClass())
         RD = NewRD;
-      return GetDefinitionOrSelf(RD);
+      return RD;
     }
   }
 
