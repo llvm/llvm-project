@@ -253,8 +253,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 __vector_layout<_Tp, _Alloc>::__vector_layout(__ve
     : __begin_(std::__exchange(__other.__begin_, nullptr)),
       __size_(std::__exchange(__other.__size_, 0)),
       __capacity_(std::__exchange(__other.__capacity_, 0)),
-      __alloc_(std::move(__other.__alloc_)) {
-}
+      __alloc_(std::move(__other.__alloc_)) {}
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::__bound_type
@@ -334,8 +333,8 @@ __vector_layout<_Tp, _Alloc>::__relocate_with_pivot(_SplitBuffer& __buffer, poin
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
-typename __vector_layout<_Tp, _Alloc>::size_type __vector_layout<_Tp, _Alloc>::__size() const _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::size_type
+__vector_layout<_Tp, _Alloc>::__size() const _NOEXCEPT {
   return __size_;
 }
 
@@ -397,8 +396,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 __vector_layout<_Tp, _Alloc>::__vector_layout(__ve
     : __begin_(std::__exchange(__other.__begin_, nullptr)),
       __end_(std::__exchange(__other.__end_, nullptr)),
       __capacity_(std::__exchange(__other.__capacity_, nullptr)),
-      __alloc_(std::move(__other.__alloc_)) {
-}
+      __alloc_(std::move(__other.__alloc_)) {}
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::__bound_type
@@ -478,8 +476,8 @@ __vector_layout<_Tp, _Alloc>::__relocate_with_pivot(_SplitBuffer& __buffer, poin
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
-typename __vector_layout<_Tp, _Alloc>::size_type __vector_layout<_Tp, _Alloc>::__size() const _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::size_type
+__vector_layout<_Tp, _Alloc>::__size() const _NOEXCEPT {
   return static_cast<size_type>(__end_ - __begin_);
 }
 

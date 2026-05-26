@@ -87,9 +87,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class vector {
-  using __base_type _LIBCPP_NODEBUG     = __vector_layout<_Tp, _Allocator>;
-  using __bound_type _LIBCPP_NODEBUG    = typename __base_type::__bound_type;
-  using _SplitBuffer _LIBCPP_NODEBUG    = typename __base_type::_SplitBuffer;
+  using __base_type _LIBCPP_NODEBUG  = __vector_layout<_Tp, _Allocator>;
+  using __bound_type _LIBCPP_NODEBUG = typename __base_type::__bound_type;
+  using _SplitBuffer _LIBCPP_NODEBUG = typename __base_type::_SplitBuffer;
 
 public:
   //
@@ -701,7 +701,7 @@ private:
     // current implementation, there is no connection between a bounded iterator and its associated container, so we
     // don't have a way to update existing valid iterators when the container is resized and thus have to go with
     // a laxer approach.
-    return std::__make_bounded_iter(__p, __layout_.__begin_ptr(),__layout_.__capacity_ptr());
+    return std::__make_bounded_iter(__p, __layout_.__begin_ptr(), __layout_.__capacity_ptr());
 #else
     return iterator(__p);
 #endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
