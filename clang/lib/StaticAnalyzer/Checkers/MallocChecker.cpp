@@ -401,7 +401,8 @@ public:
   bool ShouldIncludeOwnershipAnnotatedFunctions = false;
 
   bool ShouldRegisterNoOwnershipChangeVisitor = false;
-
+  std::vector<std::string> SuppressLeakTypes;
+  
   // This checker family implements many bug types and frontends, and several
   // bug types are shared between multiple frontends, so most of the frontends
   // are declared with the helper class DynMemFrontend.
@@ -458,9 +459,6 @@ public:
                   const char *NL, const char *Sep) const override;
 
   StringRef getDebugTag() const override { return "MallocChecker"; }
-
-private:
-  std::vector<std::string> SuppressLeakTypes;
 
 private:
 #define CHECK_FN(NAME)                                                         \
@@ -3031,15 +3029,9 @@ void MallocChecker::HandleLeak(SymbolRef Sym, ExplodedNode *N,
   if (Family.Kind == AF_Alloca)
     return;
 
-  // --- BEGIN: Suppress leak reports for selected ownership types ---
-  if (Family.Kind == AF_Custom && Family.CustomName) {
-    StringRef Type = *Family.CustomName;
-
-    if (llvm::is_contained(this->SuppressLeakTypes, Type)) {
+  if (Family.Kind == AF_Custom && Family.CustomName && llvm::is_contained(SuppressLeakTypes, *Family.CustomName) {
       return;
-    }
   }
-  // --- END ---
 
   const Leak *Frontend = getRelevantFrontendAs<Leak>(Family);
   // Note that for leaks we don't add a sink when the relevant frontend is
@@ -4211,25 +4203,22 @@ void ento::registerInnerPointerCheckerAux(CheckerManager &Mgr) {
 
 void ento::registerDynamicMemoryModeling(CheckerManager &Mgr) {
   auto *Chk = Mgr.getChecker<MallocChecker>();
-  auto ChkName = Mgr.getCurrentCheckerName();
-
-  StringRef SuppressList =
-    Mgr.getAnalyzerOptions().getCheckerStringOption(
-        ChkName, "SuppressLeakReportsFor");
-
-  SmallVector<StringRef, 8> Split;
-  SuppressList.split(Split, ',', -1, false);
-
-  for (StringRef S : Split) {
-    S = S.trim();
-    if (S.empty())
-      continue;
-    Chk->SuppressLeakTypes.push_back(S.str());
-  }
 
   // FIXME: This is a "hidden" undocumented frontend but there are public
   // checker options which are attached to it.
   CheckerNameRef DMMName = Mgr.getCurrentCheckerName();
+  StringRef SuppressList =
+    Mgr.getAnalyzerOptions().getCheckerStringOption(
+        DMMName, "SuppressLeakReportsFor");
+
+  SmallVector<StringRef, 8> Split;
+  SuppressList.split(Split, ',');
+
+  for (StringRef S : Split) {
+    S = S.trim();
+    if (!S.empty())
+      Chk->SuppressLeakTypes.push_back(S.str());
+  }
   Chk->ShouldIncludeOwnershipAnnotatedFunctions =
       Mgr.getAnalyzerOptions().getCheckerBooleanOption(DMMName, "Optimistic");
   Chk->ShouldRegisterNoOwnershipChangeVisitor =

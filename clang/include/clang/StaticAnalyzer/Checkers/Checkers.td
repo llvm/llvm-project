@@ -515,7 +515,8 @@ def DynamicMemoryModeling: Checker<"DynamicMemoryModeling">,
                   Hide>,
     CmdLineOption<String,
                   "SuppressLeakReportsFor",
-                  "Comma-separated list of ownership types for which leak reports should be suppressed",
+                  "Comma-separated list of ownership types for which "
+                  "leak reports should be suppressed",
                   "",
                   InAlpha>
   ]>,
