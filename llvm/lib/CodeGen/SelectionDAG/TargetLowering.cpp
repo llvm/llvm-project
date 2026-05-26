@@ -9997,10 +9997,15 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
   // that matches ResultVT's size, then compare with 0.
   FPClassTest FPTestSign = Test & (~fcNan);
   FPClassTest FPTestNaN = Test & fcNan;
-  if ((FPTestSign == fcPositive || FPTestSign == fcNegative) &&
-      (FPTestNaN == fcNan || FPTestNaN == fcNone)) {
-    bool testNegative = FPTestSign == fcNegative;
-    bool testNaN = FPTestNaN == fcNan;
+  // FPTestSign must be exactly fcNegative or fcPositive; combined flags are
+  // not supported.
+  bool testNegative = FPTestSign == fcNegative;
+  bool testPositive = FPTestSign == fcPositive;
+  // FPTestNaN must be fcNan or fcNone; testing sNan or qNan individually is
+  // not supported.
+  bool testNaN = FPTestNaN == fcNan;
+  bool testNotNaN = FPTestNaN == fcNone;
+  if ((testPositive || testNegative) && (testNaN || testNotNaN)) {
     bool NeedFPTrunc = false;
 
     SDValue SignBitResult =
