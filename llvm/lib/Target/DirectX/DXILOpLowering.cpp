@@ -608,6 +608,18 @@ public:
     }
   }
 
+  /// Copy offsets into the argument list at the given index, unless
+  /// the offsets are known to be zero (i.e., a null constant).
+  static void extractNonZeroOffsets(IRBuilder<> &IRB,
+                                    MutableArrayRef<Value *> Args,
+                                    unsigned ArgIdx, Value *Offsets,
+                                    unsigned MaxElements) {
+    auto *COff = dyn_cast<Constant>(Offsets);
+    bool OffsetsAreZero = COff && COff->isNullValue();
+    if (!OffsetsAreZero)
+      extractElementsIntoArgs(IRB, Args, ArgIdx, Offsets, MaxElements);
+  }
+
   [[nodiscard]] bool lowerTextureLoad(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -630,8 +642,7 @@ public:
 
       // Copy coordinates and offsets into Args.
       extractElementsIntoArgs(IRB, Args, 2, Coords, 3);
-      if (auto *C = dyn_cast<Constant>(Offsets); !C || !C->isNullValue())
-        extractElementsIntoArgs(IRB, Args, 5, Offsets, 3);
+      extractNonZeroOffsets(IRB, Args, 5, Offsets, 3);
 
       Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
           OpCode::TextureLoad, Args, CI->getName(), NewRetTy);
@@ -671,11 +682,9 @@ public:
                                    UndefF, UndefF,  UndefI, UndefI,
                                    UndefI, Bias,    Clamp};
 
-      // Copy coordinates into Args[2..5].
+      // Copy coordinates and offsets into Args.
       extractElementsIntoArgs(IRB, Args, 2, Coords, 4);
-      // Copy offsets into Args[6..8] if non-zero.
-      if (auto *C = dyn_cast<Constant>(Offsets); !C || !C->isNullValue())
-        extractElementsIntoArgs(IRB, Args, 6, Offsets, 3);
+      extractNonZeroOffsets(IRB, Args, 6, Offsets, 3);
 
       Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
           OpCode::SampleBias, Args, CI->getName(), NewRetTy);
