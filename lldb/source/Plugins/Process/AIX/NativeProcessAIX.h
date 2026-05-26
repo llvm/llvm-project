@@ -158,8 +158,11 @@ public:
   /// }
 
   // Interface used by NativeRegisterContext-derived classes.
-  static Status PtraceWrapper(int req, lldb::pid_t pid, void *addr = nullptr,
-                              void *data = nullptr, size_t data_size = 0,
+  static Status PtraceWrapper(int req,
+                              lldb::pid_t id, /* pid or tid based on caller */
+                              void *addr = nullptr,
+                              void *data = nullptr,
+                              size_t data_size = 0,
                               long *result = nullptr);
 
   bool SupportHardwareSingleStepping() const;
@@ -167,6 +170,7 @@ public:
   /// Writes a siginfo_t structure corresponding to the given thread ID to the
   /// memory region pointed to by \p siginfo.
   int8_t GetSignalInfo(WaitStatus wstatus) const;
+  NativeThreadAIX* FindStoppedThread();
 
 protected:
   llvm::Expected<llvm::ArrayRef<uint8_t>>
@@ -179,6 +183,7 @@ private:
   /*MainLoop::SignalHandleUP m_sigchld_handle;*/
   ArchSpec m_arch;
   /*MainLoop& m_main_loop;*/
+  static lldb::pid_t process_pid; // For Access to PtraceWrapper
 
   LazyBool m_supports_mem_region = eLazyBoolCalculate;
   std::vector<std::pair<MemoryRegionInfo, FileSpec>> m_mem_region_cache;

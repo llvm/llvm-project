@@ -83,6 +83,7 @@ using namespace llvm;
 
 typedef std::function<bool(llvm::Expected<MemoryRegionInfo>)> AIXMapCallback;
 // Private bits we only need internally.
+lldb::pid_t NativeProcessAIX::process_pid; // For Access to PtraceWrapper
 
 static bool ProcessVmReadvSupported() {
   static bool is_supported;
@@ -260,6 +261,42 @@ static llvm::Error AddPtraceScopeNote(llvm::Error original_error) {
 }
 #endif
 
+static llvm::Expected<std::vector<::pid_t>> DiscoverThreads(::pid_t pid) {
+  Log *log = GetLog(POSIXLog::Process);
+
+  llvm::SmallString<128> proc_lwp_dir;
+  llvm::sys::path::append(proc_lwp_dir, "/proc/", std::to_string(pid), "/lwp/");
+  std::vector<::pid_t> tids;
+
+  std::error_code ec;
+  bool is_dir_result;
+  if (!llvm::sys::fs::is_directory(proc_lwp_dir, is_dir_result) && 
+      is_dir_result) {
+      for (llvm::sys::fs::directory_iterator it(proc_lwp_dir, ec), end;
+           it != end && !ec; it.increment(ec)) {
+          llvm::StringRef name = llvm::sys::path::filename(it->path());
+
+          if (name == "." || name == "..")
+              continue;
+
+          lldb::tid_t tid = 0;
+          if (!name.getAsInteger(10, tid)) {
+              LLDB_LOG(log, "Discovered tid {0}", tid);
+              tids.push_back(tid);
+              break; // only supported for single threaded processes right now
+          }
+      }
+  }
+
+  if (tids.empty()) {
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "No threads found for process %d", pid);
+  }
+
+  return tids;
+}
+
 NativeProcessAIX::Manager::Manager(MainLoop &mainloop)
     : NativeProcessProtocol::Manager(mainloop) {
   Status status;
@@ -312,10 +349,15 @@ NativeProcessAIX::Manager::Launch(ProcessLaunchInfo &launch_info,
  // Set the architecture to the exe architecture.
   LLDB_LOG(log, "pid = {0}, detected architecture {1}", pid, 
           Info.GetArchitecture().GetArchitectureName());
+  
+  auto tids_or = DiscoverThreads(pid);
+  if (!tids_or) 
+      return tids_or.takeError();
+  std::vector<::pid_t> tids = std::move(*tids_or);
 
   return std::unique_ptr<NativeProcessAIX>(new NativeProcessAIX(
       pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
-      Info.GetArchitecture(), *this, {pid}));
+      Info.GetArchitecture(), *this, tids));
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
@@ -412,7 +454,7 @@ void NativeProcessAIX::Manager::SigchldHandler() {
     if (!handled) {
       if (status.type == WaitStatus::Stop && status.status == SIGSTOP) {
         // Store the thread creation event for later collection.
-        m_unowned_threads.insert(pid);
+        m_unowned_threads.insert(pid /*needs tid?*/);
       } else {
         LLDB_LOG(log, "Ignoring waitpid event {0} for pid {1}", status, pid);
       }
@@ -457,6 +499,7 @@ NativeProcessAIX::NativeProcessAIX(::pid_t pid, int terminal_fd,
     Status status = EnsureFDFlags(m_terminal_fd, O_NONBLOCK);
     assert(status.Success());
   }
+  process_pid = pid;
 
   for (const auto &tid : tids) {
     NativeThreadAIX &thread = AddThread(tid, /*resume*/ false);
@@ -485,10 +528,42 @@ llvm::Expected<std::vector<::pid_t>> NativeProcessAIX::Attach(::pid_t pid) {
 
   LLDB_LOG(log, "adding pid = {0}", pid);
 
-  std::vector<::pid_t> tids;
-  tids.push_back(pid);
-  return std::move(tids);
+  return DiscoverThreads(pid);
 }
+
+NativeThreadAIX* NativeProcessAIX::FindStoppedThread() {
+     Log *log = GetLog(POSIXLog::Process);
+
+  for (const auto &thread_sp : m_threads) {
+    lldb::tid_t tid = thread_sp->GetID();
+
+    // Read lwpstatus for this thread
+    auto buffer_or = getProcFile(GetID(), tid, "lwpstatus");
+    if (!buffer_or) {
+      LLDB_LOG(log, "Failed to read lwpstatus for tid {0}", tid);
+      continue;
+    }
+
+    auto &buffer = *buffer_or;
+    if (buffer->getBufferSize() < sizeof(lwpstatus_t)) {
+      LLDB_LOG(log, "lwpstatus too small for tid {0}", tid);
+      continue;
+    }
+
+    const lwpstatus_t *lwpstatus =
+        reinterpret_cast<const lwpstatus_t *>(buffer->getBufferStart());
+
+    if (lwpstatus->pr_flags & PR_STOPPED) {
+      LLDB_LOG(log, "Found stopped thread: tid {0}, pr_why={1}, pr_what={2}",
+               tid, lwpstatus->pr_why, lwpstatus->pr_what);
+      return static_cast<NativeThreadAIX *>(thread_sp.get());
+    }
+  }
+
+  LLDB_LOG(log, "No stopped thread found among {0} threads", m_threads.size());
+  return nullptr;
+}
+
 
 bool NativeProcessAIX::TryHandleWaitStatus(lldb::pid_t pid,
                                              WaitStatus status) {
@@ -498,7 +573,7 @@ bool NativeProcessAIX::TryHandleWaitStatus(lldb::pid_t pid,
     SetExitStatus(status, true);
     return true;
   }
-  if (NativeThreadAIX *thread = GetThreadByID(pid)) {
+  if (NativeThreadAIX *thread = FindStoppedThread()) {
     MonitorCallback(*thread, status);
     return true;
   }
@@ -512,7 +587,8 @@ void NativeProcessAIX::MonitorCallback(NativeThreadAIX &thread,
 
   // Certain activities differ based on whether the pid is the tid of the main
   // thread.
-  const bool is_main_thread = (thread.GetID() == GetID());
+  // Below code does not apply as aix main thread tid != pid 
+  /*const bool is_main_thread = (thread.GetID() == GetID());
 
   // Handle when the thread exits.
   if (status.type == WaitStatus::Exit || status.type == WaitStatus::Signal) {
@@ -527,7 +603,7 @@ void NativeProcessAIX::MonitorCallback(NativeThreadAIX &thread,
 
     assert(!is_main_thread && "Main thread exits handled elsewhere");
     return;
-  }
+  }*/
 
   int8_t signo = GetSignalInfo(status);
 
@@ -627,7 +703,7 @@ void NativeProcessAIX::MonitorWatchpoint(NativeThreadAIX &thread,
 
   // We need to tell all other running threads before we notify the delegate
   // about this stop.
-  StopRunningThreads(thread.GetID());
+  StopRunningThreads(thread.GetID()); /*needs pid?*/
 }
 
 void NativeProcessAIX::MonitorSignal(const WaitStatus status,
@@ -1467,7 +1543,7 @@ Status NativeProcessAIX::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
     std::vector<long> data(n_long);
 
     Status error = NativeProcessAIX::PtraceWrapper(
-        PT_READ_BLOCK, GetCurrentThreadID(), reinterpret_cast<void *>(addr),
+        PT_READ_BLOCK, GetID(), reinterpret_cast<void *>(addr),
         nullptr, remainder, data.data());
 
     if (error.Fail())
@@ -1492,7 +1568,7 @@ Status NativeProcessAIX::WriteMemory(lldb::addr_t addr, const void *buf,
   LLDB_LOG(log, "addr = {0}, buf = {1}, size = {2}", addr, buf, size);
 
   error = NativeProcessAIX::PtraceWrapper(
-    PT_WRITE_BLOCK, GetCurrentThreadID(), (void *)addr, nullptr, (int)size, (long *)buf);
+    PT_WRITE_BLOCK, GetID(), (void *)addr, nullptr, (int)size, (long *)buf);
   if (error.Fail())
     return error;
 
@@ -1504,17 +1580,15 @@ int8_t NativeProcessAIX::GetSignalInfo(WaitStatus wstatus) const {
   return wstatus.status;
 }
 
-Status NativeProcessAIX::GetEventMessage(lldb::tid_t tid,
+Status NativeProcessAIX::GetEventMessage(lldb::tid_t pid,
                                            unsigned long *message) {
   //FIXME
-  return PtraceWrapper(PT_CLEAR/*PTRACE_GETEVENTMSG*/, tid, nullptr, message);
+  return PtraceWrapper(PT_CLEAR /*PTRACE_GETEVENTMSG*/, GetID(), nullptr, message);
 }
 
-Status NativeProcessAIX::Detach(lldb::tid_t tid) {
-  if (tid == LLDB_INVALID_THREAD_ID)
-    return Status();
+Status NativeProcessAIX::Detach(lldb::tid_t pid) {
 
-  return PtraceWrapper(PT_DETACH, tid);
+  return PtraceWrapper(PT_DETACH, GetID());
 }
 
 bool NativeProcessAIX::HasThreadNoLock(lldb::tid_t thread_id) {
@@ -1620,7 +1694,7 @@ Status NativeProcessAIX::GetFileLoadAddress(const llvm::StringRef &file_name,
 
   // FIXME: buffer size
   struct ld_xinfo info[64];
-  if (ptrace64(PT_LDXINFO, reg_ctx.GetThread().GetID(), (long long)&(info[0]), sizeof(info), nullptr) == 0) {
+  if (ptrace64(PT_LDXINFO, GetID(), (long long)&(info[0]), sizeof(info), nullptr) == 0) {
     load_addr = (unsigned long)info[0].ldinfo_textorg;
     return Status();
   }
@@ -1772,7 +1846,7 @@ static void SetSPRs(int req, lldb::tid_t tid, GPR_T *gpr) {
 
 // Wrapper for ptrace to catch errors and log calls. Note that ptrace sets
 // errno on error because -1 can be a valid result (i.e. for PTRACE_PEEK*)
-Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
+Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t id, void *addr,
                                          void *data, size_t data_size,
                                          long *result) {
   Status error;
@@ -1783,65 +1857,53 @@ Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
   PtraceDisplayBytes(req, data, data_size);
 
   errno = 0;
-
-  // for PTT_*
-  const char procdir[] = "/proc/";
-  const char lwpdir[] = "/lwp/";
-  std::string process_task_dir = procdir + std::to_string(pid) + lwpdir;
-  DIR *dirproc = opendir(process_task_dir.c_str());
-
-  lldb::tid_t tid = 0;
-  if (dirproc) {
-    struct dirent *direntry = nullptr;
-    while ((direntry = readdir(dirproc)) != nullptr) {
-      if (strcmp(direntry->d_name, ".") == 0 || strcmp(direntry->d_name, "..") == 0) {
-        continue;
-      }
-      tid = atoi(direntry->d_name);
-      break;
-    }
-    closedir(dirproc);
-  }
-
+  /* NOTE: id could be pid or tid, based on the caller */
   switch (req) {
     case PTT_READ_GPRS:
-      ptrace64(req, tid, (long long)data, 0, 0);
+      ptrace64(req, id, (long long)data, 0, 0);
       if(data_size == sizeof(GPR_PPC))
-        GetSPRs<GPR_PPC,ptsprs>(PTT_READ_SPRS, tid, static_cast<GPR_PPC *>(data));
+        GetSPRs<GPR_PPC,ptsprs>(PTT_READ_SPRS, id, static_cast<GPR_PPC *>(data));
       else if(data_size == sizeof(GPR_PPC64))
-        GetSPRs<GPR_PPC64,ptxsprs>(PTT_READ_SPRS, tid, static_cast<GPR_PPC64 *>(data));
+        GetSPRs<GPR_PPC64,ptxsprs>(PTT_READ_SPRS, id, static_cast<GPR_PPC64 *>(data));
       break;
 
     case PTT_WRITE_GPRS:
-      ptrace64(req, tid, (long long)data, 0, 0);
+      ptrace64(req, id , (long long)data, 0, 0);
       if(data_size == sizeof(GPR_PPC))
-        SetSPRs<GPR_PPC,ptsprs>(PTT_WRITE_SPRS, tid, static_cast<GPR_PPC *>(data));
+        SetSPRs<GPR_PPC,ptsprs>(PTT_WRITE_SPRS, id, static_cast<GPR_PPC *>(data));
       else if(data_size == sizeof(GPR_PPC64))
-        SetSPRs<GPR_PPC64,ptxsprs>(PTT_WRITE_SPRS, tid, static_cast<GPR_PPC64 *>(data));
+        SetSPRs<GPR_PPC64,ptxsprs>(PTT_WRITE_SPRS, id, static_cast<GPR_PPC64 *>(data));
       break;
 
     case PTT_READ_FPRS:
-      ptrace64(req, tid, (long long)data, 0, 0);
-      ptrace64(PT_READ_GPR, pid, FPSCR, 0, (int *)&(((FPR_PPC64 *)data)->fpscr));
+      /* Since this case needs both pid and tid, we will have to make use of 
+       * static pid storage: procss_pid */ 
+      ptrace64(req, id, (long long)data, 0, 0);
+      ptrace64(PT_READ_GPR, process_pid, FPSCR, 0, (int *)&(((FPR_PPC64 *)data)->fpscr));
       break;
 
     case PTT_WRITE_FPRS:
-      ptrace64(req, tid, (long long)data, 0, 0);
-      ptrace64(PT_WRITE_GPR, pid, FPSCR, 0, (int *)&(((FPR_PPC64 *)data)->fpscr));
+      ptrace64(req, id, (long long)data, 0, 0);
+      ptrace64(PT_WRITE_GPR, process_pid, FPSCR, 0, (int *)&(((FPR_PPC64 *)data)->fpscr));
       break;
 
     case PTT_READ_VEC:
     case PTT_READ_VSX:
-      ptrace64(req, tid, (long long)data, 0, 0);
+      ptrace64(req, id, (long long)data, 0, 0);
       break;
 
     case PT_READ_BLOCK:
     case PT_WRITE_BLOCK:
-      ptrace64(req, pid, (long long)addr, (int)data_size, reinterpret_cast<int *>(result));
+      ptrace64(req, id, (long long)addr, (int)data_size, reinterpret_cast<int *>(result));
       break;
 
     case PT_CONTINUE:
-      ptrace64(req, pid, 1, (int)(size_t)data, nullptr);
+      ptrace64(req, id, 1, (int)(size_t)data, nullptr);
+      break;
+
+    case PTT_CONTINUE:
+      /* Needs to be modified for multiple threads */
+      ptrace64(req, id, 1, (int)(size_t)data, nullptr);
       break;
 
     case PT_ATTACH: {
@@ -1855,7 +1917,7 @@ Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
       if(!pthread_sigmask( SIG_BLOCK, &signal_set,  NULL))
         LLDB_LOG(log,"NativeProcessAIX::pthread_sigmask(SIG_BLOCK) Failed");
       
-      ptrace64(req, pid, 0, 0, nullptr);
+      ptrace64(req, id, 0, 0, nullptr);
       
       //Unblocking the SIGCHLD after attach work. 
       if(!pthread_sigmask( SIG_UNBLOCK, &signal_set, NULL )) 
@@ -1864,21 +1926,21 @@ Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
     }
 
     case PT_QUERY:
-      ptrace64(req, pid, 0, (int)data_size, (int *)data);
+      ptrace64(req, id, 0, (int)data_size, (int *)data);
       break;
 
     case PT_WATCH:
-      ptrace64(req, pid, (long long)addr, (int)data_size, 0);
+      ptrace64(req, id, (long long)addr, (int)data_size, 0);
       break;
 
     case PT_DETACH:
     case PT_KILL:
     case PT_CLEAR:
-      ptrace64(req, pid, 0, 0, nullptr);
+      ptrace64(req, id, 0, 0, nullptr);
       break;
 
     default:
-      LLDB_LOG(log, "Not Supported ptrace({0}, {1}, {2}, {3}, {4})={5:x}", req, pid, addr, data,data_size, ret);
+      LLDB_LOG(log, "Not Supported ptrace({0}, {1}, {2}, {3}, {4})={5:x}", req, id, addr, data,data_size, ret);
       assert(false && "ptrace request not supported");
 
   }
@@ -1888,7 +1950,7 @@ Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
     ret = -1;
   }
 
-  LLDB_LOG(log, "ptrace({0}, {1}, {2}, {3}, {4})={5:x}", req, pid, addr, data,
+  LLDB_LOG(log, "ptrace({0}, {1}, {2}, {3}, {4})={5:x}", req, id, addr, data,
            data_size, ret);
 
   PtraceDisplayBytes(req, data, data_size);

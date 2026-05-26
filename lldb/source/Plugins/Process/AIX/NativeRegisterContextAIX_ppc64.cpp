@@ -481,7 +481,7 @@ Status NativeRegisterContextAIX_ppc64::ReadVMX() {
 Status NativeRegisterContextAIX_ppc64::WriteVMX() {
   //FIXME
   int regset = 0/*NT_PPC_VMX*/;
-  return NativeProcessAIX::PtraceWrapper(PT_CLEAR/*PTRACE_SETVRREGS*/, m_thread.GetID(),
+  return NativeProcessAIX::PtraceWrapper(PT_CLEAR/*PTRACE_SETVRREGS*/, m_thread.GetProcess().GetID(),
                                            &regset, &m_vmx_ppc64,
                                            sizeof(m_vmx_ppc64));
 }
@@ -495,7 +495,7 @@ Status NativeRegisterContextAIX_ppc64::ReadVSX() {
 Status NativeRegisterContextAIX_ppc64::WriteVSX() {
   //FIXME
   int regset = 0/*NT_PPC_VSX*/;
-  return NativeProcessAIX::PtraceWrapper(PT_CLEAR/*PTRACE_SETVSRREGS*/, m_thread.GetID(),
+  return NativeProcessAIX::PtraceWrapper(PT_CLEAR/*PTRACE_SETVSRREGS*/, m_thread.GetProcess().GetID(),
                                            &regset, &m_vsx_ppc64,
                                            sizeof(m_vsx_ppc64));
 }

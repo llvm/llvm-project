@@ -118,6 +118,7 @@ lldb::StateType NativeThreadAIX::GetState() { return m_state; }
 
 bool NativeThreadAIX::GetStopReason(ThreadStopInfo &stop_info,
                                       std::string &description) {
+
   Log *log = GetLog(LLDBLog::Thread);
 
   description.clear();
@@ -253,7 +254,7 @@ Status NativeThreadAIX::Resume(uint32_t signo) {
   if (signo != LLDB_INVALID_SIGNAL_NUMBER)
     data = signo;
 
-  return NativeProcessAIX::PtraceWrapper(PT_CONTINUE, GetID(), nullptr,
+  return NativeProcessAIX::PtraceWrapper(PTT_CONTINUE, GetID(), nullptr,
                                            reinterpret_cast<void *>(data));
 }
 
@@ -271,8 +272,8 @@ Status NativeThreadAIX::SingleStep(uint32_t signo) {
   // breakpoint on the next instruction has been setup in
   // NativeProcessAIX::Resume.
   return NativeProcessAIX::PtraceWrapper(
-      GetProcess().SupportHardwareSingleStepping() ? PT_STEP : PT_CONTINUE,
-      m_tid, nullptr, reinterpret_cast<void *>(data));
+      GetProcess().SupportHardwareSingleStepping() ? PTT_STEP : PTT_CONTINUE,
+      GetID(), nullptr, reinterpret_cast<void *>(data));
 }
 
 void NativeThreadAIX::SetStoppedBySignal(uint32_t signo,
