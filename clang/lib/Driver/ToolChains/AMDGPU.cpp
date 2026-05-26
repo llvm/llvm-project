@@ -907,10 +907,7 @@ AMDGPUToolChain::ParsedTargetIDType
 AMDGPUToolChain::getParsedTargetID(const llvm::opt::ArgList &DriverArgs) const {
   StringRef TargetID = DriverArgs.getLastArgValue(options::OPT_mcpu_EQ);
   if (TargetID.empty())
-    TargetID = DriverArgs.getLastArgValue(options::OPT_march_EQ);
-
-  if (TargetID.empty())
-    return {std::nullopt, std::nullopt, std::nullopt};
+    return {};
 
   llvm::StringMap<bool> FeatureMap;
   auto OptionalGpuArch = parseTargetID(getTriple(), TargetID, &FeatureMap);
