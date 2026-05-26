@@ -20,5 +20,5 @@ constexpr LONG_PTR b5 = (42 - FIELD_OFFSET(S, y)) +       // expected-error {{co
                 (8 + reinterpret_cast<LONG_PTR>(&ob));    // expected-note@-1 {{reinterpret_cast is not allowed in a constant expression}}
 constexpr LONG_PTR b6 = -reinterpret_cast<LONG_PTR>(&ob); // expected-error {{constexpr variable 'b6' must be initialized by a constant expression}}
 							  // expected-note@-1 {{reinterpret_cast is not allowed in a constant expression}}
-constexpr long b7[2] = { FIELD_OFFSET(S, y), (long)&ob }; // expected-error {{constexpr variable 'b7' must be initialized by a constant expression}}
-							  // expected-note@-1 {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+constexpr LONG_PTR b7[2] = { FIELD_OFFSET(S, y), (LONG_PTR)&ob }; // expected-error {{constexpr variable 'b7' must be initialized by a constant expression}}
+		  					          // expected-note@-1 {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
