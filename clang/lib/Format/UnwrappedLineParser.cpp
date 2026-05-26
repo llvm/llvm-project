@@ -1391,25 +1391,19 @@ bool UnwrappedLineParser::parseImportDecl() {
   if (FormatTok->isNoneOf(tok::identifier, tok::less, tok::string_literal))
     return false;
 
-  for (;; nextToken()) {
+  for (; FormatTok->isNoneOf(tok::semi, tok::eof); nextToken()) {
     // Handle import <foo/bar.h> as we would an include statement.
     if (FormatTok->is(tok::less)) {
-      for (nextToken(); FormatTok->isNoneOf(tok::semi, tok::eof); nextToken()) {
-        if (FormatTok->is(tok::greater)) {
-          nextToken();
-          break;
-        }
+      for (nextToken(); FormatTok->isNoneOf(tok::greater, tok::semi, tok::eof);
+           nextToken()) {
         // Mark tokens as implicit string literals, so that import <A/Foo> will
         // neither be broken nor have a space added.
         FormatTok->setFinalizedType(TT_ImplicitStringLiteral);
       }
     }
-    if (FormatTok->isOneOf(tok::semi, tok::eof)) {
-      nextToken();
-      break;
-    }
   }
 
+  nextToken();
   Line->IsModuleOrImportDecl = true;
   addUnwrappedLine();
   return true;
