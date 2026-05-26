@@ -789,6 +789,20 @@ int test_indirect_field(LARGE_INTEGER LargeInteger) {
 // CHECK-LABEL: define{{.*}} i32 @test_indirect_field(
 // CHECK: call i32 asm sideeffect inteldialect "mov eax, $1",
 
+// Test that 'offset' references to inline asm labels use the same prefix
+// as the label definition (InternalSymbolPrefix, e.g. 'L' on Darwin/COFF).
+void label_offset(void) {
+  __asm {
+    label_offset_target:
+    mov eax, offset label_offset_target
+  }
+  // CHECK-LABEL: define{{.*}} void @label_offset(
+  // CHECK: call void asm sideeffect inteldialect
+  // CHECK-SAME: {{.*}}__MSASMLABEL_.${:uid}__label_offset_target:
+  // CHECK-SAME: mov eax, offset {{.*}}__MSASMLABEL_.${:uid}__label_offset_target
+  // CHECK-SAME: "~{eax},~{dirflag},~{fpsr},~{flags}"()
+}
+
 // MS ASM containing labels must not be duplicated (PR23715).
 // CHECK: attributes [[ATTR1]] = {
 // CHECK-NOT: noduplicate

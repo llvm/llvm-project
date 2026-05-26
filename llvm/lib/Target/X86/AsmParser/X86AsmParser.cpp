@@ -2314,11 +2314,16 @@ bool X86AsmParser::ParseIntelInlineAsmIdentifier(
     assert(InternalName.size() && "We should have an internal name here.");
     // Push a rewrite for replacing the identifier name with the internal name,
     // unless we are parsing the operand of an offset operator
-    if (!IsParsingOffsetOperator)
+    if (!IsParsingOffsetOperator) {
       InstInfo->AsmRewrites->emplace_back(AOK_Label, Loc, Identifier.size(),
                                           InternalName);
-    else
-      Identifier = InternalName;
+    } else {
+      // Prepend InternalSymbolPrefix to match AOK_Label rewrite.
+      MCSymbol *Sym = getContext().getOrCreateSymbol(
+          getContext().getAsmInfo().getInternalSymbolPrefix() +
+          InternalName);
+      Identifier = Sym->getName();
+    }
   } else if (Info.isKind(InlineAsmIdentifierInfo::IK_EnumVal))
     return false;
   // Create the symbol reference.
