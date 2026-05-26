@@ -111,8 +111,7 @@ struct TestXeGPUUnrollingPatterns
     });
 
     options.setUnrolledTypesFn(
-        [&](ShapedType type, ArrayRef<int64_t> tileShape,
-            bool returnSingleType = false) -> SmallVector<Type> {
+        [&](ShapedType type, ArrayRef<int64_t> tileShape) -> SmallVector<Type> {
           Type elemTy = type.getElementType();
           Type newTy;
 
@@ -131,13 +130,14 @@ struct TestXeGPUUnrollingPatterns
 
             newTy = xegpu::TensorDescType::get(ctx, tileShape, elemTy, encoding,
                                                layout);
-
-          } else {
-            newTy = type.clone(tileShape, elemTy);
+            // compute the product of batch (higher) dimensions
+            ArrayRef<int64_t> shape = type.getShape();
+            int64_t batchCount =
+                shape.size() > 2 ? computeProduct(shape.drop_back(2)) : 1;
+            return SmallVector<Type>(batchCount, newTy);
           }
 
-          if (returnSingleType)
-            return SmallVector<Type>{newTy};
+          newTy = type.clone(tileShape, elemTy);
           std::optional<SmallVector<int64_t>> ratio =
               computeShapeRatio(type.getShape(), tileShape);
           assert(ratio && "Expecting the ratio to be valid.");

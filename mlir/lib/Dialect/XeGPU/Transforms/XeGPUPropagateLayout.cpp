@@ -266,26 +266,31 @@ struct LayoutInfoLattice : public Lattice<LayoutInfo> {
 /// Helper Function to get the default layout for uniform values like constants.
 /// For 1D vector, lane_layout is [subgroupSize] and lane_data is [1].
 /// For 2D vector, lane_layout is [1, subgroupSize] and lane_data is [1, 1].
+/// For ND vector (N>2), leading dims get unit lane_layout and lane_data.
 static LayoutInfo getDefaultSIMTLayoutInfo(mlir::MLIRContext *ctx,
                                            unsigned rank,
                                            const xegpu::uArch::uArch *uArch) {
-  assert((rank == 1 || rank == 2) && "Expected 1D or 2D vector.");
+  assert(rank >= 1 && "Expected at least 1D vector.");
   if (rank == 1) {
     return LayoutInfo(
         xegpu::LayoutAttr::get(ctx, {uArch->getSubgroupSize()}, {1}));
   }
-  return LayoutInfo(
-      xegpu::LayoutAttr::get(ctx, {1, uArch->getSubgroupSize()}, {1, 1}));
+  // For rank >= 2, lane_layout is [1, ..., 1, subgroupSize] and
+  // lane_data is [1, ..., 1, 1].
+  SmallVector<int32_t> laneLayout(rank, 1);
+  SmallVector<int32_t> laneData(rank, 1);
+  laneLayout[rank - 1] = uArch->getSubgroupSize();
+  return LayoutInfo(xegpu::LayoutAttr::get(ctx, laneLayout, laneData));
 }
 
 /// Helper to get the default layout for 2D block operations.
+/// For ND (N>2) types, leading dimensions get unit layout/data values.
 template <typename Ty>
 static LayoutInfo getSIMTLayoutInfoBlockIO(Ty ty,
                                            const xegpu::uArch::uArch *uArch,
                                            unsigned packingSize) {
-  // Expecting a 1D or 2D vector.
-  assert((ty.getRank() == 1 || ty.getRank() == 2) &&
-         "Expected 1D or 2D vector.");
+  // Expecting at least 1D.
+  assert(ty.getRank() >= 1 && "Expected at least 1D vector.");
   // Expecting int or float element type.
   assert(ty.getElementType().isIntOrFloat() &&
          "Expected int or float element type.");
@@ -295,8 +300,14 @@ static LayoutInfo getSIMTLayoutInfoBlockIO(Ty ty,
   // Packing factor is determined by the element type bitwidth.
   unsigned bitwidth = ty.getElementType().getIntOrFloatBitWidth();
   int packingFactor = bitwidth < packingSize ? packingSize / bitwidth : 1;
-  return LayoutInfo(xegpu::LayoutAttr::get(
-      ty.getContext(), {1, uArch->getSubgroupSize()}, {1, packingFactor}));
+  // For rank >= 2, distribute along the last dimension with leading units.
+  unsigned rank = ty.getRank();
+  SmallVector<int32_t> laneLayout(rank, 1);
+  SmallVector<int32_t> laneData(rank, 1);
+  laneLayout[rank - 1] = uArch->getSubgroupSize();
+  laneData[rank - 1] = packingFactor;
+  return LayoutInfo(xegpu::LayoutAttr::get(ty.getContext(), laneLayout,
+                                           laneData));
 }
 
 //===----------------------------------------------------------------------===//
@@ -983,7 +994,11 @@ void LayoutInfoPropagation::visitStoreNdOp(
       if (instHeight == -1)
         store.emitWarning(
             "No suitable instruction multiple found for the given shape.");
-      instData = {instHeight, instWidth};
+      // For rank > 2, prepend unit dims for batch dimensions.
+      for (int64_t d = 0; d < dataTy.getRank() - 2; ++d)
+        instData.push_back(1);
+      instData.push_back(instHeight);
+      instData.push_back(instWidth);
     }
 
     if (layoutKind == xegpu::LayoutKind::InstData)

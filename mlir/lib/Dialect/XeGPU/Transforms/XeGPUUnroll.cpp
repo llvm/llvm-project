@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -59,9 +60,8 @@ protected:
   }
 
   SmallVector<Type> getUnrolledTypes(ShapedType type,
-                                     ArrayRef<int64_t> tileShape,
-                                     bool returnSingleType = false) const {
-    return options.getUnrolledTypes(type, tileShape, returnSingleType);
+                                     ArrayRef<int64_t> tileShape) const {
+    return options.getUnrolledTypes(type, tileShape);
   }
 
   /// Emulate the the unpack behavior using insert_strided_slice for VectorType
@@ -195,16 +195,59 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
     if (!targetShape)
       return failure();
 
-    SmallVector<Value> newOps;
+    int64_t rank = tdescTy.getRank();
+    int64_t batchRank = rank - 2;
 
-    auto newTdescTy = getUnrolledTypes(tdescTy, *targetShape)[0];
-    auto newOp =
-        xegpu::CreateNdDescOp::create(rewriter, loc, newTdescTy, op.getSource(),
-                                      op.getMixedSizes(), op.getMixedStrides());
-    newOps.push_back(newOp);
+    // For rank <= 2 or non-memref source: existing single-tdesc behavior.
+    if (batchRank <= 0 || !isa<MemRefType>(op.getSourceType())) {
+      SmallVector<Value> newOps;
+      auto newTdescTy = getUnrolledTypes(tdescTy, *targetShape)[0];
+      auto newOp = xegpu::CreateNdDescOp::create(
+          rewriter, loc, newTdescTy, op.getSource(), op.getMixedSizes(),
+          op.getMixedStrides());
+      newOps.push_back(newOp);
+      Value castOp = unpack(newOps, tdescTy, *targetShape, loc, rewriter);
+      rewriter.replaceOp(op, castOp);
+      return success();
+    }
+
+    // For rank > 2 with memref source: create one tdesc per batch tile via
+    // memref.subview. Each subview slices the batch dimensions, so the
+    // resulting tdesc has the batch offset baked into its base pointer.
+    // The inner dimensions remain full-size for reuse across multiple
+    // load/store operations with different offsets.
+    ArrayRef<int64_t> shape = tdescTy.getShape();
+    SmallVector<int64_t> batchBlockSize(targetShape->begin(),
+                                        targetShape->begin() + batchRank);
+    batchBlockSize.append(shape.begin() + batchRank, shape.end());
+
+    auto newTdescTy =
+        cast<xegpu::TensorDescType>(getUnrolledTypes(tdescTy, *targetShape)[0]);
+
+    SmallVector<Value> newOps;
+    for (SmallVector<int64_t> batchOffsets :
+         StaticTileOffsetRange(shape, batchBlockSize)) {
+      SmallVector<OpFoldResult> svOffsets;
+      for (int64_t off : batchOffsets)
+        svOffsets.push_back(rewriter.getIndexAttr(off));
+
+      SmallVector<OpFoldResult> svSizes;
+      for (int64_t d : batchBlockSize)
+        svSizes.push_back(rewriter.getIndexAttr(d));
+
+      SmallVector<OpFoldResult> svStrides(rank, rewriter.getIndexAttr(1));
+
+      auto subview = memref::SubViewOp::create(rewriter, loc, op.getSource(),
+                                               svOffsets, svSizes, svStrides);
+
+      auto newOp = xegpu::CreateNdDescOp::create(
+          rewriter, loc, newTdescTy,
+          cast<TypedValue<MemRefType>>(subview.getResult()));
+      newOps.push_back(newOp);
+    }
+
     Value castOp = unpack(newOps, tdescTy, *targetShape, loc, rewriter);
     rewriter.replaceOp(op, castOp);
-
     return success();
   }
 };
@@ -224,22 +267,58 @@ struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
     if (layout)
       layout = layout.dropInstData();
 
-    SmallVector<Type> convertedTdescTypes =
-        getUnrolledTypes(tdescTy, *targetShape, /*returnSingleType*/ true);
+    int64_t rank = tdescTy.getRank();
+    int64_t batchRank = rank - 2;
 
-    SmallVector<Value> convertedTdesc = pack(
-        op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
+    if (batchRank <= 0) {
+      SmallVector<Type> convertedTdescTypes =
+          getUnrolledTypes(tdescTy, *targetShape);
+      SmallVector<Value> convertedTdesc = pack(
+          op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
 
-    auto createPrefetch = [&](SmallVector<OpFoldResult> offsets) -> Value {
-      xegpu::PrefetchNdOp::create(rewriter, loc, convertedTdesc[0], offsets,
-                                  op.getL1HintAttr(), op.getL2HintAttr(),
-                                  op.getL3HintAttr(), layout);
-      // return dummy Value to satisfy function's signature
-      return nullptr;
-    };
+      auto createPrefetch = [&](SmallVector<OpFoldResult> offsets) -> Value {
+        xegpu::PrefetchNdOp::create(rewriter, loc, convertedTdesc[0], offsets,
+                                    op.getL1HintAttr(), op.getL2HintAttr(),
+                                    op.getL3HintAttr(), layout);
+        return nullptr;
+      };
+      computeUnrolledOffsets(op.getMixedOffsets(), tdescTy, *targetShape,
+                             createPrefetch, loc, rewriter);
+    } else {
+      // Rank > 2: batch tdescs cover [batchTarget..., innerShape...].
+      // Each batch tdesc is reused for multiple inner prefetches via offsets.
+      ArrayRef<int64_t> shape = tdescTy.getShape();
+      SmallVector<int64_t> innerShape(shape.begin() + batchRank, shape.end());
+      SmallVector<int64_t> innerTarget(targetShape->begin() + batchRank,
+                                       targetShape->end());
 
-    computeUnrolledOffsets(op.getMixedOffsets(), tdescTy, *targetShape,
-                           createPrefetch, loc, rewriter);
+      SmallVector<Type> batchTdescTypes =
+          getUnrolledTypes(tdescTy, *targetShape);
+      SmallVector<Value> batchTdescs = pack(op.getTensorDesc(), batchTdescTypes,
+                                            *targetShape, loc, rewriter);
+
+      auto innerTdescTy = xegpu::TensorDescType::get(
+          tdescTy.getContext(), innerShape, tdescTy.getElementType(),
+          tdescTy.getEncoding(), /*layout=*/nullptr);
+
+      SmallVector<OpFoldResult> mixedOffsets = op.getMixedOffsets();
+      SmallVector<OpFoldResult> innerOffsets(mixedOffsets.begin() + batchRank,
+                                             mixedOffsets.end());
+
+      for (auto [idx, batchTdesc] : llvm::enumerate(batchTdescs)) {
+        auto createPrefetch = [&](SmallVector<OpFoldResult> offsets) -> Value {
+          SmallVector<OpFoldResult> fullOffsets(batchRank,
+                                                rewriter.getIndexAttr(0));
+          fullOffsets.append(offsets.begin(), offsets.end());
+          xegpu::PrefetchNdOp::create(rewriter, loc, batchTdesc, fullOffsets,
+                                      op.getL1HintAttr(), op.getL2HintAttr(),
+                                      op.getL3HintAttr(), layout);
+          return nullptr;
+        };
+        computeUnrolledOffsets(innerOffsets, innerTdescTy, innerTarget,
+                               createPrefetch, loc, rewriter);
+      }
+    }
 
     rewriter.eraseOp(op);
     return success();
@@ -266,24 +345,65 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
     Type elemTy = tdescTy.getElementType();
     VectorType newValueTy = valueTy.cloneWith(*targetShape, elemTy);
 
-    SmallVector<Type> convertedTdescTypes =
-        getUnrolledTypes(tdescTy, *targetShape, /*returnSingleType*/ true);
-
-    SmallVector<Value> convertedTdescs = pack(
-        op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
+    int64_t rank = tdescTy.getRank();
+    int64_t batchRank = rank - 2;
     SmallVector<Value> newOps;
 
-    auto createLoad = [&](SmallVector<OpFoldResult> offsets) {
-      return xegpu::LoadNdOp::create(
-          rewriter, loc, newValueTy, convertedTdescs[0], offsets,
-          op.getPackedAttr(), op.getTransposeAttr(), op.getL1HintAttr(),
-          op.getL2HintAttr(), op.getL3HintAttr(), layout);
-    };
-    newOps = computeUnrolledOffsets(op.getMixedOffsets(), tdescTy, *targetShape,
-                                    createLoad, loc, rewriter);
+    if (batchRank <= 0) {
+      // Rank <= 2: original behavior with single tdesc.
+      SmallVector<Type> convertedTdescTypes =
+          getUnrolledTypes(tdescTy, *targetShape);
+      SmallVector<Value> convertedTdescs = pack(
+          op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
+
+      auto createLoad = [&](SmallVector<OpFoldResult> offsets) {
+        return xegpu::LoadNdOp::create(
+            rewriter, loc, newValueTy, convertedTdescs[0], offsets,
+            op.getPackedAttr(), op.getTransposeAttr(), op.getL1HintAttr(),
+            op.getL2HintAttr(), op.getL3HintAttr(), layout);
+      };
+      newOps = computeUnrolledOffsets(op.getMixedOffsets(), tdescTy,
+                                      *targetShape, createLoad, loc, rewriter);
+    } else {
+      // Rank > 2: batch tdescs cover [batchTarget..., innerShape...].
+      // Each batch tdesc is reused for multiple inner loads via offsets.
+      ArrayRef<int64_t> shape = tdescTy.getShape();
+      SmallVector<int64_t> innerShape(shape.begin() + batchRank, shape.end());
+      SmallVector<int64_t> innerTarget(targetShape->begin() + batchRank,
+                                       targetShape->end());
+
+      SmallVector<Type> batchTdescTypes =
+          getUnrolledTypes(tdescTy, *targetShape);
+      SmallVector<Value> batchTdescs = pack(op.getTensorDesc(), batchTdescTypes,
+                                            *targetShape, loc, rewriter);
+
+      // For each batch tdesc, pack it down to a single targetShape-sized
+      // tdesc and iterate with inner offsets (reusing the same tdesc).
+      auto innerTdescTy = xegpu::TensorDescType::get(
+          tdescTy.getContext(), innerShape, elemTy, tdescTy.getEncoding(),
+          /*layout=*/nullptr);
+
+      SmallVector<OpFoldResult> mixedOffsets = op.getMixedOffsets();
+      SmallVector<OpFoldResult> innerOffsets(mixedOffsets.begin() + batchRank,
+                                             mixedOffsets.end());
+
+      for (auto [idx, batchTdesc] : llvm::enumerate(batchTdescs)) {
+        auto createLoad = [&](SmallVector<OpFoldResult> offsets) {
+          SmallVector<OpFoldResult> fullOffsets(batchRank,
+                                                rewriter.getIndexAttr(0));
+          fullOffsets.append(offsets.begin(), offsets.end());
+          return xegpu::LoadNdOp::create(
+              rewriter, loc, newValueTy, batchTdesc, fullOffsets,
+              op.getPackedAttr(), op.getTransposeAttr(), op.getL1HintAttr(),
+              op.getL2HintAttr(), op.getL3HintAttr(), layout);
+        };
+        auto batchLoads = computeUnrolledOffsets(
+            innerOffsets, innerTdescTy, innerTarget, createLoad, loc, rewriter);
+        newOps.append(batchLoads.begin(), batchLoads.end());
+      }
+    }
 
     Value castOp = unpack(newOps, op.getType(), *targetShape, loc, rewriter);
-
     rewriter.replaceOp(op, castOp);
     return success();
   }
@@ -307,26 +427,65 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
 
     SmallVector<Type> convertedValTypes =
         getUnrolledTypes(valueTy, *targetShape);
-    SmallVector<Type> convertedTdescTypes =
-        getUnrolledTypes(tdescTy, *targetShape, /*returnSingleType*/ true);
-
-    SmallVector<Value> convertedTdescs = pack(
-        op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
 
     SmallVector<Value> convertedValues =
         pack(op.getValue(), convertedValTypes, *targetShape, loc, rewriter);
 
+    int64_t rank = tdescTy.getRank();
+    int64_t batchRank = rank - 2;
     size_t valueIndex = 0;
-    auto createStore = [&](SmallVector<OpFoldResult> offsets) {
-      xegpu::StoreNdOp::create(rewriter, loc, convertedValues[valueIndex++],
-                               convertedTdescs[0], offsets, op.getL1HintAttr(),
-                               op.getL2HintAttr(), op.getL3HintAttr(), layout);
-      // return dummy Value to satisfy function's signature
-      return nullptr;
-    };
 
-    computeUnrolledOffsets(op.getMixedOffsets(), tdescTy, *targetShape,
-                           createStore, loc, rewriter);
+    if (batchRank <= 0) {
+      SmallVector<Type> convertedTdescTypes =
+          getUnrolledTypes(tdescTy, *targetShape);
+      SmallVector<Value> convertedTdescs = pack(
+          op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
+
+      auto createStore = [&](SmallVector<OpFoldResult> offsets) {
+        xegpu::StoreNdOp::create(rewriter, loc, convertedValues[valueIndex++],
+                                 convertedTdescs[0], offsets,
+                                 op.getL1HintAttr(), op.getL2HintAttr(),
+                                 op.getL3HintAttr(), layout);
+        return (Value) nullptr;
+      };
+      computeUnrolledOffsets(op.getMixedOffsets(), tdescTy, *targetShape,
+                             createStore, loc, rewriter);
+    } else {
+      // Rank > 2: batch tdescs cover [batchTarget..., innerShape...].
+      // Each batch tdesc is reused for multiple inner stores via offsets.
+      ArrayRef<int64_t> shape = tdescTy.getShape();
+      SmallVector<int64_t> innerShape(shape.begin() + batchRank, shape.end());
+      SmallVector<int64_t> innerTarget(targetShape->begin() + batchRank,
+                                       targetShape->end());
+
+      SmallVector<Type> batchTdescTypes =
+          getUnrolledTypes(tdescTy, *targetShape);
+      SmallVector<Value> batchTdescs = pack(op.getTensorDesc(), batchTdescTypes,
+                                            *targetShape, loc, rewriter);
+
+      auto innerTdescTy = xegpu::TensorDescType::get(
+          tdescTy.getContext(), innerShape, tdescTy.getElementType(),
+          tdescTy.getEncoding(), /*layout=*/nullptr);
+
+      SmallVector<OpFoldResult> mixedOffsets = op.getMixedOffsets();
+      SmallVector<OpFoldResult> innerOffsets(mixedOffsets.begin() + batchRank,
+                                             mixedOffsets.end());
+
+      for (auto [idx, batchTdesc] : llvm::enumerate(batchTdescs)) {
+        auto createStore = [&](SmallVector<OpFoldResult> offsets) {
+          SmallVector<OpFoldResult> fullOffsets(batchRank,
+                                                rewriter.getIndexAttr(0));
+          fullOffsets.append(offsets.begin(), offsets.end());
+          xegpu::StoreNdOp::create(rewriter, loc, convertedValues[valueIndex++],
+                                   batchTdesc, fullOffsets, op.getL1HintAttr(),
+                                   op.getL2HintAttr(), op.getL3HintAttr(),
+                                   layout);
+          return (Value) nullptr;
+        };
+        computeUnrolledOffsets(innerOffsets, innerTdescTy, innerTarget,
+                               createStore, loc, rewriter);
+      }
+    }
 
     rewriter.eraseOp(op);
     return success();
@@ -340,15 +499,26 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
     Location loc = op.getLoc();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
-    if (!targetShape || targetShape->size() != 3)
+    if (!targetShape || targetShape->size() < 3)
       return failure();
-    auto M = (*targetShape)[0];
-    auto K = (*targetShape)[1];
-    auto N = (*targetShape)[2];
 
-    int64_t aBlockSize[2] = {M, K};
-    int64_t bBlockSize[2] = {K, N};
-    int64_t cBlockSize[2] = {M, N};
+    // targetShape is [batch..., M, K, N]
+    int64_t tsRank = targetShape->size();
+    auto M = (*targetShape)[tsRank - 3];
+    auto K = (*targetShape)[tsRank - 2];
+    auto N = (*targetShape)[tsRank - 1];
+    ArrayRef<int64_t> batchDims(targetShape->data(), tsRank - 3);
+
+    // Build block sizes including batch dimensions.
+    SmallVector<int64_t> aBlockSize(batchDims);
+    aBlockSize.push_back(M);
+    aBlockSize.push_back(K);
+    SmallVector<int64_t> bBlockSize(batchDims);
+    bBlockSize.push_back(K);
+    bBlockSize.push_back(N);
+    SmallVector<int64_t> cBlockSize(batchDims);
+    cBlockSize.push_back(M);
+    cBlockSize.push_back(N);
 
     auto a = op.getLhs();
     auto b = op.getRhs();
@@ -371,29 +541,40 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
 
     auto aShape = a.getType().getShape();
     auto bShape = b.getType().getShape();
-    int64_t mIters = aShape[0] / M;
-    int64_t kIters = aShape[1] / K;
-    int64_t nIters = bShape[1] / N;
+
+    // Compute iteration counts. Batch dims only iterate over M and N (not
+    // K-reduction), so compute batch iterations from the C block size.
+    int64_t batchRank = batchDims.size();
+    int64_t mIters = aShape[batchRank] / M;
+    int64_t kIters = aShape[batchRank + 1] / K;
+    int64_t nIters = bShape[batchRank + 1] / N;
+
+    // Compute batch iterations (product of batch dim ratios).
+    int64_t batchIters = 1;
+    for (int64_t d = 0; d < batchRank; ++d)
+      batchIters *= aShape[d] / batchDims[d];
 
     SmallVector<Value> newOps;
-    for (int64_t i = 0; i < mIters; ++i) {
-      for (int64_t j = 0; j < nIters; ++j) {
-        Value tmpC;
-        if (c)
-          tmpC = cVals[i * nIters + j];
+    for (int64_t batch = 0; batch < batchIters; ++batch) {
+      for (int64_t i = 0; i < mIters; ++i) {
+        for (int64_t j = 0; j < nIters; ++j) {
+          Value tmpC;
+          if (c)
+            tmpC = cVals[batch * (mIters * nIters) + i * nIters + j];
 
-        for (int64_t k = 0; k < kIters; ++k) {
-          Value aVec = aVals[i * kIters + k];
-          Value bVec = bVals[k * nIters + j];
-          SmallVector<Value> operands({aVec, bVec});
-          if (tmpC)
-            operands.push_back(tmpC);
+          for (int64_t k = 0; k < kIters; ++k) {
+            Value aVec = aVals[batch * (mIters * kIters) + i * kIters + k];
+            Value bVec = bVals[batch * (kIters * nIters) + k * nIters + j];
+            SmallVector<Value> operands({aVec, bVec});
+            if (tmpC)
+              operands.push_back(tmpC);
 
-          tmpC =
-              xegpu::DpasOp::create(rewriter, loc, vecTy, operands,
-                                    xegpu::dropInstDataOnAttrs(op->getAttrs()));
+            tmpC = xegpu::DpasOp::create(
+                rewriter, loc, vecTy, operands,
+                xegpu::dropInstDataOnAttrs(op->getAttrs()));
+          }
+          newOps.push_back(tmpC);
         }
-        newOps.push_back(tmpC);
       }
     }
     Value castOp = unpack(newOps, resultTy, cBlockSize, loc, rewriter);
@@ -409,18 +590,32 @@ struct UnrollDpasMxOp : public UnrollPattern<xegpu::DpasMxOp> {
     Location loc = op.getLoc();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
-    if (!targetShape || targetShape->size() != 4)
+    if (!targetShape || targetShape->size() < 4)
       return failure();
-    auto M = (*targetShape)[0];
-    auto K = (*targetShape)[1];
-    auto N = (*targetShape)[2];
-    auto S = (*targetShape)[3];
 
-    int64_t aBlockSize[2] = {M, K};
-    int64_t bBlockSize[2] = {K, N};
-    int64_t cBlockSize[2] = {M, N};
-    int64_t aScaleBlockSize[2] = {M, S};
-    int64_t bScaleBlockSize[2] = {S, N};
+    // targetShape is [batch..., M, K, N, S]
+    int64_t tsRank = targetShape->size();
+    auto M = (*targetShape)[tsRank - 4];
+    auto K = (*targetShape)[tsRank - 3];
+    auto N = (*targetShape)[tsRank - 2];
+    auto S = (*targetShape)[tsRank - 1];
+    ArrayRef<int64_t> batchDims(targetShape->data(), tsRank - 4);
+
+    SmallVector<int64_t> aBlockSize(batchDims);
+    aBlockSize.push_back(M);
+    aBlockSize.push_back(K);
+    SmallVector<int64_t> bBlockSize(batchDims);
+    bBlockSize.push_back(K);
+    bBlockSize.push_back(N);
+    SmallVector<int64_t> cBlockSize(batchDims);
+    cBlockSize.push_back(M);
+    cBlockSize.push_back(N);
+    SmallVector<int64_t> aScaleBlockSize(batchDims);
+    aScaleBlockSize.push_back(M);
+    aScaleBlockSize.push_back(S);
+    SmallVector<int64_t> bScaleBlockSize(batchDims);
+    bScaleBlockSize.push_back(S);
+    bScaleBlockSize.push_back(N);
 
     auto a = op.getA();
     auto b = op.getB();
@@ -445,35 +640,44 @@ struct UnrollDpasMxOp : public UnrollPattern<xegpu::DpasMxOp> {
 
     auto aShape = a.getType().getShape();
     auto bShape = b.getType().getShape();
-    int64_t mIters = aShape[0] / M;
-    int64_t kIters = aShape[1] / K;
-    int64_t nIters = bShape[1] / N;
+    int64_t batchRank = batchDims.size();
+    int64_t mIters = aShape[batchRank] / M;
+    int64_t kIters = aShape[batchRank + 1] / K;
+    int64_t nIters = bShape[batchRank + 1] / N;
+
+    int64_t batchIters = 1;
+    for (int64_t d = 0; d < batchRank; ++d)
+      batchIters *= aShape[d] / batchDims[d];
 
     SmallVector<Value> newOps;
     xegpu::DpasMxOp newDpasMxOp;
-    for (int64_t i = 0; i < mIters; ++i) {
-      for (int64_t j = 0; j < nIters; ++j) {
-        Value tmpC;
-        if (c)
-          tmpC = cVals[i * nIters + j];
+    for (int64_t batch = 0; batch < batchIters; ++batch) {
+      for (int64_t i = 0; i < mIters; ++i) {
+        for (int64_t j = 0; j < nIters; ++j) {
+          Value tmpC;
+          if (c)
+            tmpC = cVals[batch * (mIters * nIters) + i * nIters + j];
 
-        for (int64_t k = 0; k < kIters; ++k) {
-          Value aVec = aVals[i * kIters + k];
-          Value bVec = bVals[k * nIters + j];
-          SmallVector<Value> operands({aVec, bVec});
-          if (tmpC)
-            operands.push_back(tmpC);
-          if (ascale)
-            operands.push_back(aScaleVals[i * kIters + k]);
-          if (bscale)
-            operands.push_back(bScaleVals[k * nIters + j]);
+          for (int64_t k = 0; k < kIters; ++k) {
+            Value aVec = aVals[batch * (mIters * kIters) + i * kIters + k];
+            Value bVec = bVals[batch * (kIters * nIters) + k * nIters + j];
+            SmallVector<Value> operands({aVec, bVec});
+            if (tmpC)
+              operands.push_back(tmpC);
+            if (ascale)
+              operands.push_back(
+                  aScaleVals[batch * (mIters * kIters) + i * kIters + k]);
+            if (bscale)
+              operands.push_back(
+                  bScaleVals[batch * (kIters * nIters) + k * nIters + j]);
 
-          newDpasMxOp = xegpu::DpasMxOp::create(
-              rewriter, loc, vecTy, operands,
-              xegpu::dropInstDataOnAttrs(op->getAttrs()));
-          tmpC = newDpasMxOp.getResult();
+            newDpasMxOp = xegpu::DpasMxOp::create(
+                rewriter, loc, vecTy, operands,
+                xegpu::dropInstDataOnAttrs(op->getAttrs()));
+            tmpC = newDpasMxOp.getResult();
+          }
+          newOps.push_back(newDpasMxOp);
         }
-        newOps.push_back(newDpasMxOp);
       }
     }
     Value castOp = unpack(newOps, resultTy, cBlockSize, loc, rewriter);
