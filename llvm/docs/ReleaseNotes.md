@@ -125,6 +125,14 @@ Makes programs 10x faster by doing Special New Thing.
   in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
   distributed ThinLTO. 
 
+* ``ConstantFP`` now supports vector types and is the canonical form returned by
+  ``ConstantVector::getSplat(C)`` when ``C`` is a scalar ``ConstantFP``.
+
+* ``DenseMap`` and ``DenseSet`` ``erase`` now invalidates all iterators and
+  references into the container, not just the iterator for the erased element.
+  Use the new ``remove_if`` member to erase matching elements in a single pass
+  instead of erasing while iterating.
+
 ### Changes to building LLVM
 
 ### Changes to TableGen
@@ -145,6 +153,11 @@ Makes programs 10x faster by doing Special New Thing.
   disabled by default to maintain compatibility with Binutils and LLVM older
   toolchains that do not define the `R_AARCH64_TLS_DTPREL64` static relocation
   type for TLS offsets.
+* A bug was fixed that caused LLVM IR inline assembly clobbers of the x29 and
+  x30 registers to be ignored when they were written using their xN names
+  instead of the ABI names FP and LR. Note that LLVM IR produced by Clang
+  always uses the ABI names, but other frontends may not.
+  ([#167783](https://github.com/llvm/llvm-project/pull/167783))
 
 ### Changes to the AMDGPU Backend
 
@@ -204,6 +217,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Adds experimental assembler support for the 'Zvvmm` (RISC-V Integer Matrix Multiply-Accumulate) extension.
 * Adds experimental assembler support for the 'Zvvfmm` (RISC-V Floating-Point Matrix Multiply-Accumulate) extension.
 * Adds support for 'Ziccid' (Instruction/Data Coherence and Consistency) extension.
+* Adds experimental assembler support for the `Xqccmt` (Qualcomm 16-bit Table Jump) vendor extension.
+* `-mcpu=sifive-870` has been renamed `-mcpu=sifive-p870-d`.
 
 ### Changes to the WebAssembly Backend
 
@@ -270,7 +285,10 @@ Makes programs 10x faster by doing Special New Thing.
 * Breakpoint commands now accept `.` to refer to the location(s) at which the current thread is stopped. For
   example, `breakpoint disable .` disables the just-hit breakpoint location. Another usage is to automate a
   command to run at the current location: `breakpoint command add -o 'p my_var' .`.
-* The `apropos` command now highlights matching keywords in its output when color is enabled.
+* The `apropos` command now:
+  * Highlights matching keywords in its output when color is enabled.
+  * Searches the components of settings paths. For example `apropos qemu-user` will now
+    show `platform.plugin.qemu-user` as one of the results.
 
 #### Deprecated APIs
 

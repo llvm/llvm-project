@@ -255,7 +255,7 @@ public:
         }
       }
       // Now we can erase the copy.
-      Copies.erase(I);
+      Copies.erase(Unit);
     }
   }
 

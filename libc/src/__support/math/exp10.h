@@ -83,8 +83,7 @@ LIBC_INLINE double exp10_poly_approx_d(double dx) {
 // > P = fpminimax((10^x - 1)/x, 5, [|DD...|], [-2^-14, 2^-14]);
 // Error bounds:
 //   | output - 10^(dx) | < 2^-101
-LIBC_INLINE LIBC_CONSTEXPR DoubleDouble
-exp10_poly_approx_dd(const DoubleDouble &dx) {
+LIBC_INLINE DoubleDouble exp10_poly_approx_dd(const DoubleDouble &dx) {
   // Taylor polynomial.
   constexpr DoubleDouble COEFFS[] = {
       {0, 0x1p0},
@@ -106,8 +105,8 @@ exp10_poly_approx_dd(const DoubleDouble &dx) {
 // Return exp(dx) ~ 1 + a0 * dx + a1 * dx^2 + ... + a6 * dx^7
 // For |dx| < 2^-14:
 //   | output - 10^dx | < 1.5 * 2^-124.
-LIBC_INLINE LIBC_CONSTEXPR Float128 exp10_poly_approx_f128(const Float128 &dx) {
-  LIBC_CONSTEXPR Float128 COEFFS_128[]{
+LIBC_INLINE Float128 exp10_poly_approx_f128(const Float128 &dx) {
+  constexpr Float128 COEFFS_128[]{
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
       {Sign::POS, -126, 0x935d8ddd'aaa8ac16'ea56d62b'82d30a2d_u128},
       {Sign::POS, -126, 0xa9a92639'e753443a'80a99ce7'5f4d5bdb_u128},
@@ -235,7 +234,7 @@ LIBC_INLINE double exp10_denorm(double x) {
 //  * x >= log10(2^1024)
 //  * x <= log10(2^-1022)
 //  * x is inf or nan
-LIBC_INLINE LIBC_CONSTEXPR double exp10_set_exceptional(double x) {
+LIBC_INLINE double exp10_set_exceptional(double x) {
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 
@@ -286,7 +285,7 @@ LIBC_INLINE LIBC_CONSTEXPR double exp10_set_exceptional(double x) {
 
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR double exp10(double x) {
+LIBC_INLINE double exp10(double x) {
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 
@@ -406,7 +405,7 @@ LIBC_INLINE LIBC_CONSTEXPR double exp10(double x) {
   double lo = fputil::multiply_add(p, mid_lo, exp_mid.lo);
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-  int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
+  int64_t exp_hi = static_cast<int64_t>(hi) * (1LL << FPBits::FRACTION_LEN);
   double r =
       cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(exp_mid.hi + lo));
   return r;
@@ -417,7 +416,7 @@ LIBC_INLINE LIBC_CONSTEXPR double exp10(double x) {
   if (LIBC_LIKELY(upper == lower)) {
     // To multiply by 2^hi, a fast way is to simply add hi to the exponent
     // field.
-    int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
+    int64_t exp_hi = static_cast<int64_t>(hi) * (1LL << FPBits::FRACTION_LEN);
     double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper));
     return r;
   }
@@ -484,7 +483,7 @@ LIBC_INLINE LIBC_CONSTEXPR double exp10(double x) {
   if (LIBC_LIKELY(upper_dd == lower_dd)) {
     // To multiply by 2^hi, a fast way is to simply add hi to the exponent
     // field.
-    int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
+    int64_t exp_hi = static_cast<int64_t>(hi) * (1LL << FPBits::FRACTION_LEN);
     double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper_dd));
     return r;
   }
