@@ -37,9 +37,9 @@ entry:
   ret void
 }
 
-define void @amdgcn_stridemark_offset_in_structured_gep(ptr addrspace(9) %src) {
+define void @amdgpu_stridemark_offset_in_structured_gep(ptr addrspace(9) %src) {
 entry:
 ; CHECK: Reached a non-composite type with more indices to process
-  %ptr = call ptr addrspace(9) (ptr addrspace(9), ...) @llvm.structured.gep.p9(ptr addrspace(9) elementtype([0 x target("amdgcn.stridemark")]) %src, i32 0, i32 0)
+  %ptr = call ptr addrspace(9) (ptr addrspace(9), ...) @llvm.structured.gep.p9(ptr addrspace(9) elementtype([0 x target("amdgpu.stridemark")]) %src, i32 0, i32 0)
   ret void
 }

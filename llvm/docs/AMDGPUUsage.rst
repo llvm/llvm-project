@@ -1327,7 +1327,7 @@ intrinsics. Reading from or writing to such pointers is undefined behavior.
 Strided Buffer Marker (``stridemark``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The strided buffer marker type ``target("amdgcn.stridemark")`` is a type used to
+The strided buffer marker type ``target("amdgpu.stridemark")`` is a type used to
 allow representing the mixed index/offset access provided by buffer instructions,
 which is used with ``ptr addrspace(9)`` - a pointer that carries both indices.
 
@@ -1337,9 +1337,9 @@ element type metadata. No value of this type can be created.
 The marker type has one optional parameter - an integer indicating the constant
 value of the stride of the buffer(s) being addressed if known. That integer, if
 given, must be non-negative (but can be 0, indicating the degenarate case where
-to stride is set but the index field should be used anyway).
+no stride is set but the index field should be used anyway).
 
-When creating a structured GEP, arrays of ``amdgcn.stridemark``s are used to
+When creating a structured GEP, arrays of ``amdgpu.stridemark``s are used to
 represent indexing into the *index* component of the structured/strided buffer,
 while a subsequent bare ``getelementptr`` - is used to manipulate the *offset*
 part.
@@ -1350,13 +1350,13 @@ Example usage:
 
       ;; A 2-D array of unknown length and stride.
       %q1 = call ptr addrspace(9) (ptr addrspace(9), ...)
-        (ptr addrspace(9) elementtype([0 x target("amdgcn.stridemark") ]) %p,
+        (ptr addrspace(9) elementtype([0 x target("amdgpu.stridemark") ]) %p,
         i32 %index)
-      %q = getelementptr i8, ptr addrspace(9) %q, i32 %offset
+      %q = getelementptr i8, ptr addrspace(9) %q1, i32 %offset
 
       ;; Known bounds on index and offset.
       %y1 = call ptr addrspace(9) (ptr addrspace(9), ...)
-        (ptr addrspace(9) elementtype([256 x target("amdgcn.stridemark", 16) ]) %p,
+        (ptr addrspace(9) elementtype([256 x target("amdgpu.stridemark", 16) ]) %p,
         i32 %index)
       %y = getelementptr ptr addrspace(9) %y1, i32 %offset
 
