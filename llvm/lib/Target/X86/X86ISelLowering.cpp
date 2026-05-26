@@ -18953,8 +18953,16 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, const X86Subtarget &Subtarget,
   // wider element types. We cap this to not form integers or floating point
   // elements wider than 64 bits. It does not seem beneficial to form i128
   // integers to handle flipping the low and high halves of AVX 256-bit vectors.
+
+  // When VBMI is available, byte permutes (vpermi2b) are faster than word
+  // permutes (vpermi2w). Don't widen byte shuffles in that case: 512-bit
+  // requires VBMI, 256/128-bit also require VLX.
+  bool HasVBMIBytePermute = VT.getScalarSizeInBits() == 8 &&
+                            Subtarget.hasVBMI() &&
+                            (VT.getSizeInBits() == 512 || Subtarget.hasVLX());
+
   SmallVector<int, 16> WidenedMask;
-  if (VT.getScalarSizeInBits() < 64 && !Is1BitVector &&
+  if (VT.getScalarSizeInBits() < 64 && !Is1BitVector && !HasVBMIBytePermute &&
       !canCombineAsMaskOperation(V1, Subtarget) &&
       !canCombineAsMaskOperation(V2, Subtarget) &&
       canWidenShuffleElements(OrigMask, Zeroable, V2IsZero, WidenedMask)) {
