@@ -27,11 +27,8 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
-#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstdint>
 #include <optional>
-#include <utility>
 
 #define DEBUG_TYPE "loop-utils"
 
@@ -1074,15 +1071,24 @@ LogicalResult mlir::affine::loopUnrollByFactor(
     bool cleanUpUnroll) {
   assert(unrollFactor > 0 && "unroll factor should be positive");
 
+  // Attempt to resolve the loop trip count as a literal constant first.
   std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   std::optional<uint64_t> mayBeConstantMaxTripCount = mayBeConstantTripCount;
+
+  // Optimistically assume the loop has a fixed/constant trip count.
   bool tripEqual = true;
   if (!mayBeConstantTripCount.has_value()) {
+    // Fall back to the polyhedral bounds infrastructure using
+    // `ValueBoundsConstraintSet`.
     std::optional<std::pair<uint64_t, uint64_t>> tripBound =
         computeLoopTripCountConstantBounds(forOp);
     if (tripBound.has_value()) {
+      // Treat the lower bound as the baseline trip count, if first == second,
+      // the bounds have collapsed into a constant.
       mayBeConstantTripCount = tripBound->first;
       if (tripBound->first != tripBound->second) {
+        // Guaranteed to evaluate to 'false' here, signaling a true dynamic
+        // interval [LB, UB].
         mayBeConstantMaxTripCount = tripBound->second;
         tripEqual = tripBound->first == tripBound->second;
       }

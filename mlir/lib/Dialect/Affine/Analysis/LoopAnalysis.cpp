@@ -12,30 +12,19 @@
 
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 
-#include "mlir/Analysis/Presburger/IntegerRelation.h"
-#include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/Analysis/NestedMatcher.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/IR/AffineMap.h"
-#include "mlir/IR/Value.h"
-#include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
 
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
-#include <cstdint>
 #include <numeric>
 #include <optional>
-#include <utility>
 
 #define DEBUG_TYPE "affine-loop-analysis"
 
@@ -260,6 +249,9 @@ static FailureOr<int64_t> computeConstantBound(AffineMap map,
                                                         options);
 }
 
+/// Computes the constant lower and upper bounds of the given affine loop's
+/// trip count using the Presburger-based `ValueBoundsConstraintSet`
+/// infrastructure.
 std::optional<std::pair<uint64_t, uint64_t>>
 mlir::affine::computeLoopTripCountConstantBounds(AffineForOp forOp) {
   SmallVector<Value, 4> operands;
@@ -268,6 +260,7 @@ mlir::affine::computeLoopTripCountConstantBounds(AffineForOp forOp) {
 
   if (!map)
     return {};
+  // Currently, we only support trip count maps with a single result expression.
   if (map.getNumResults() != 1)
     return {};
 
@@ -310,11 +303,17 @@ uint64_t mlir::affine::getLargestDivisorOfTripCount(AffineForOp forOp) {
                ubBound = computeConstantBound(map.getSubMap(idx), operands,
                                               presburger::BoundType::UB);
                !failed(lbBound) && !failed(ubBound)) {
-      if (*lbBound == *ubBound)
+      if (*lbBound == *ubBound) {
+        // If the sub-map yields a strict constant bound (LB == UB), this
+        // specific dimension's trip count is completely static.
         thisGcd =
             (*lbBound == 0) ? std::numeric_limits<uint64_t>::max() : *lbBound;
-      else
+      } else {
+        // By fundamental number theory, any two consecutive integers are
+        // coprime (gcd(n, n+1) = 1). Therefore, the overall alignment factor
+        // for this dynamic range strictly collapses to 1.
         thisGcd = 1;
+      }
     } else {
       // Trip count is not a known constant; return its largest known divisor.
       thisGcd = resultExpr.getLargestKnownDivisor();

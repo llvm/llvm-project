@@ -15,9 +15,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
-#include <cstdint>
 #include <optional>
-#include <utility>
 
 namespace mlir {
 class AffineExpr;
