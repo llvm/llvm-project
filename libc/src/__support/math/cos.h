@@ -30,7 +30,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE constexpr double cos(double x) {
+LIBC_INLINE double cos(double x) {
   using namespace range_reduction_double_internal;
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);

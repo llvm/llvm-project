@@ -610,14 +610,15 @@ static llvm::Error handleFileConversionToGSYM(StringRef Filename,
                                               const std::string &OutFile,
                                               OutputAggregator &Out) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
-      MemoryBuffer::getFileOrSTDIN(Filename);
+      MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
   error(Filename, BuffOrErr.getError());
   std::unique_ptr<MemoryBuffer> Buffer = std::move(BuffOrErr.get());
 
   std::unique_ptr<MemoryBuffer> SymtabBuffer;
   std::unique_ptr<Binary> SymtabBinary;
   if (!SymtabFilename.empty()) {
-    auto SymtabBufOrErr = MemoryBuffer::getFile(SymtabFilename);
+    auto SymtabBufOrErr =
+        MemoryBuffer::getFile(SymtabFilename, /*IsText=*/true);
     if (!SymtabBufOrErr)
       return createStringError(SymtabBufOrErr.getError(),
                                "failed to open symbol table file '%s'",
