@@ -295,6 +295,31 @@ struct AliasAnalysis {
   /// POINTER object or a raw fir::PointerType.
   static bool isPointerReference(mlir::Type ty);
 
+  /// Flow-sensitive escape check: return true if the address of the variable
+  /// declared by `declareOp` (a `fir.declare` / `hlfir.declare`) may have been
+  /// bound to a Fortran POINTER -- or otherwise published into opaque storage
+  /// reachable from a procedure call -- on any path that reaches `op`.
+  ///
+  /// The walk is intra-procedural and "best effort": uses textually after
+  /// `op`'s outermost ancestor in the same block are skipped (they cannot run
+  /// before `op`); any use elsewhere is treated as if it could run before
+  /// `op`. Recognised user ops:
+  ///   - aliasing views (`[hl]fir.declare`, `hlfir.designate`, `fir.array_coor`,
+  ///     `fir.coordinate_of`, plain-box `fir.embox`) propagate the walk to
+  ///     their results,
+  ///   - `fir.load`, `hlfir.assign`, and `fir.store` of a value at the address
+  ///     are benign,
+  ///   - explicit OpenACC / OpenMP data-clause ops are benign,
+  ///   - `fir.embox` into a `fir.box<fir.ptr<...>>` / `fir.box<fir.heap<...>>`
+  ///     (i.e. a pointer assignment per F2023 10.2.2 / 19.5.2), a store of the
+  ///     address as the stored value, or any other use (including a different
+  ///     `fir.call` taking the address by reference) is treated as a capture.
+  ///
+  /// Returns `true` conservatively when `declareOp` or `op` is null, when `op`
+  /// has no enclosing function, or when an unrecognised use is encountered.
+  static bool mayBeCapturedBefore(mlir::Operation *declareOp,
+                                  mlir::Operation *op);
+
 private:
   /// Return true, if `ty` is a reference type to an object of derived type
   /// that contains a component with POINTER attribute.

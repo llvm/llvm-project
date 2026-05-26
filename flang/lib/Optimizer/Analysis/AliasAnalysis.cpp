@@ -806,17 +806,14 @@ static bool isSavedLocal(const fir::AliasAnalysis::Source &src) {
   return false;
 }
 
-/// Return true if `declareOp`'s address may have been bound to a Fortran
-/// POINTER before `callOp`. Uses textually after the call in the same block
-/// are skipped; anything else is conservative.
-static bool mayBeCapturedByPointer(mlir::Operation *declareOp,
-                                   mlir::Operation *callOp) {
-  if (!declareOp || !callOp)
+bool AliasAnalysis::mayBeCapturedBefore(mlir::Operation *declareOp,
+                                       mlir::Operation *op) {
+  if (!declareOp || !op)
     return true;
-  auto funcOp = callOp->getParentOfType<mlir::FunctionOpInterface>();
+  auto funcOp = op->getParentOfType<mlir::FunctionOpInterface>();
   if (!funcOp)
     return true;
-  mlir::Operation *callAnchor = callOp;
+  mlir::Operation *callAnchor = op;
   while (callAnchor->getParentOp() && callAnchor->getParentOp() != funcOp)
     callAnchor = callAnchor->getParentOp();
 
@@ -830,7 +827,7 @@ static bool mayBeCapturedByPointer(mlir::Operation *declareOp,
     mlir::Value v = worklist.pop_back_val();
     for (mlir::OpOperand &use : v.getUses()) {
       mlir::Operation *userOp = use.getOwner();
-      if (userOp == callOp || userOp == callAnchor)
+      if (userOp == op || userOp == callAnchor)
         continue;
       if (userOp->getBlock() == callAnchor->getBlock() &&
           callAnchor->isBeforeInBlock(userOp))
@@ -928,7 +925,7 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
     return ModRefResult::getModAndRef();
   if (varSrc.isTarget()) {
     if (varSrc.kind != fir::AliasAnalysis::SourceKind::Allocate ||
-        mayBeCapturedByPointer(varSrc.origin.instantiationPoint, call))
+        mayBeCapturedBefore(varSrc.origin.instantiationPoint, call))
       return ModRefResult::getModAndRef();
   }
   // Host associated variables may be addressed indirectly via an internal
