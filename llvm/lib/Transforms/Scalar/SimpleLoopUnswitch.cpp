@@ -593,15 +593,13 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   }
 
   std::optional<int> LatchIdx = std::nullopt;
-  if (FullUnswitch && L.getUniqueLatchExitBlock() != nullptr) {
+  if (FullUnswitch && L.getUniqueLatchExitBlock() != nullptr)
     if (BI.getSuccessor(0) == L.getLoopLatch() &&
-        L.contains(BI.getSuccessor(1))) {
+        L.contains(BI.getSuccessor(1)))
       LatchIdx = 0;
-    } else if (BI.getSuccessor(1) == L.getLoopLatch() &&
-               L.contains(BI.getSuccessor(0))) {
+    else if (BI.getSuccessor(1) == L.getLoopLatch() &&
+             L.contains(BI.getSuccessor(0)))
       LatchIdx = 1;
-    }
-  }
 
   bool ModifiedBranch = false;
   if (LatchIdx &&
@@ -627,11 +625,10 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
         Value *V = PN.getIncomingValueForBlock(L.getLoopLatch());
         PN.addIncoming(V, BI.getParent());
       }
-      if (MSSAU) {
+      if (MSSAU)
         MSSAU->applyUpdates(Updates, DT);
-      } else {
+      else
         DT.applyUpdates(Updates);
-      }
 
       ModifiedBranch = true;
     }
