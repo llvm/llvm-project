@@ -69,11 +69,9 @@ end subroutine
 
 ! AARCH64-LABEL: func.func @_QPtest_begin_arch_unknown()
 ! AARCH64-NOT:     omp.parallel
-! AARCH64-NOT:     omp.task
 ! AARCH64:         return
 ! X86_64-LABEL: func.func @_QPtest_begin_arch_unknown()
 ! X86_64-NOT:     omp.parallel
-! X86_64-NOT:     omp.task
 ! X86_64:         return
 subroutine test_begin_arch_unknown()
   integer :: x
@@ -85,13 +83,17 @@ subroutine test_begin_arch_unknown()
 end subroutine
 
 ! AARCH64-LABEL: func.func @_QPtest_begin_arch_multi_when()
+! AARCH64-NOT:     omp.task
 ! AARCH64:         omp.parallel
 ! AARCH64:           omp.terminator
 ! AARCH64-NOT:     omp.task
+! AARCH64:         return
 ! X86_64-LABEL: func.func @_QPtest_begin_arch_multi_when()
 ! X86_64-NOT:     omp.parallel
 ! X86_64:         omp.task
 ! X86_64:           omp.terminator
+! X86_64-NOT:     omp.parallel
+! X86_64:         return
 subroutine test_begin_arch_multi_when()
   integer :: x
   x = 0
