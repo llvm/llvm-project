@@ -417,21 +417,29 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
       return DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
 
     // If the parts vector has fewer elements but is wider than the value
-    // vector, drop the padding bits before bitcasting to the value vector.
-    // Otherwise, if the parts vector has more elements than the value vector,
-    // extract the elements we want.
+    // vector, bitcast it to the value element type and extract the elements we
+    // want. Otherwise, if the parts vector has more elements than the value
+    // vector, extract the elements we want directly.
     if (PartEVT.getVectorElementCount() != ValueVT.getVectorElementCount()) {
-      if (!PartEVT.isScalableVector() && !ValueVT.isScalableVector() &&
-          PartEVT.getVectorElementCount().getKnownMinValue() <
+      if (PartEVT.getVectorElementCount().getKnownMinValue() <
               ValueVT.getVectorElementCount().getKnownMinValue() &&
+          PartEVT.getVectorElementCount().isScalable() ==
+              ValueVT.getVectorElementCount().isScalable() &&
           ValueVT.bitsLT(PartEVT)) {
-        EVT PartIntVT =
-            EVT::getIntegerVT(*DAG.getContext(), PartEVT.getFixedSizeInBits());
-        EVT ValueIntVT =
-            EVT::getIntegerVT(*DAG.getContext(), ValueVT.getFixedSizeInBits());
-        Val = DAG.getBitcast(PartIntVT, Val);
-        Val = DAG.getNode(ISD::TRUNCATE, DL, ValueIntVT, Val);
-        return DAG.getBitcast(ValueVT, Val);
+        const TypeSize PartSize = PartEVT.getSizeInBits();
+        const uint64_t ValueEltSize = ValueVT.getScalarSizeInBits();
+        assert(PartSize.isKnownMultipleOf(ValueEltSize) &&
+               "Cannot bitcast parts vector to value element type");
+
+        const ElementCount CastEltCount = ElementCount::get(
+            static_cast<unsigned>(PartSize.getKnownMinValue() / ValueEltSize),
+            PartSize.isScalable());
+        EVT CastVT =
+            EVT::getVectorVT(*DAG.getContext(), ValueVT.getVectorElementType(),
+                             CastEltCount);
+        Val = DAG.getBitcast(CastVT, Val);
+        return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ValueVT, Val,
+                           DAG.getVectorIdxConstant(0, DL));
       }
 
       assert((PartEVT.getVectorElementCount().getKnownMinValue() >

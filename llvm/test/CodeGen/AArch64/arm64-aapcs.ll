@@ -120,6 +120,16 @@ entry:
   ret <2 x double> %varg_stack;
 }
 
+; Check that a v3f32 argument can be passed by stack after the VPRs are
+; exhausted.
+define dso_local <3 x float> @test_v3f32_vreg_stack([8 x <2 x double>],
+                                                    <3 x float> %arg) {
+; CHECK-LABEL: test_v3f32_vreg_stack:
+; CHECK:       ldr q0, [sp]
+; CHECK-NEXT:  ret
+  ret <3 x float> %arg
+}
+
 ; Check that f16 can be passed and returned (ACLE 2.0 extension)
 define half @test_half(float, half %arg) {
 ; CHECK-LABEL: test_half:
