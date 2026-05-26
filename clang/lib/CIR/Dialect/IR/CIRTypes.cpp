@@ -391,7 +391,8 @@ RecordType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
           return dataLayout.getTypeSize(lhs) < dataLayout.getTypeSize(rhs);
         });
 
-    return dataLayout.getTypeSizeInBits(largestType);
+    return llvm::alignTo(dataLayout.getTypeSizeInBits(largestType),
+                         dataLayout.getTypeABIAlignment(*this));
   }
 
   auto recordSize = static_cast<uint64_t>(computeStructSize(dataLayout));
