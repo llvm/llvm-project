@@ -42,7 +42,7 @@ class Evaluator {
   /// without creating a new interned Constant.
   class MutableValue {
     PointerUnion<Constant *, MutableAggregate *> Val;
-    void clear();
+    LLVM_ABI void clear();
     bool makeMutable();
 
   public:
@@ -66,8 +66,8 @@ class Evaluator {
       return cast<MutableAggregate *>(Val)->toConstant();
     }
 
-    Constant *read(Type *Ty, APInt Offset, const DataLayout &DL) const;
-    bool write(Constant *V, APInt Offset, const DataLayout &DL);
+    LLVM_ABI Constant *read(Type *Ty, APInt Offset, const DataLayout &DL) const;
+    LLVM_ABI bool write(Constant *V, APInt Offset, const DataLayout &DL);
   };
 
   struct MutableAggregate {
@@ -75,7 +75,7 @@ class Evaluator {
     SmallVector<MutableValue> Elements;
 
     MutableAggregate(Type *Ty) : Ty(Ty) {}
-    Constant *toConstant() const;
+    LLVM_ABI Constant *toConstant() const;
   };
 
 public:
@@ -96,8 +96,8 @@ public:
   /// Evaluate a call to function F, returning true if successful, false if we
   /// can't evaluate it.  ActualArgs contains the formal arguments for the
   /// function.
-  bool EvaluateFunction(Function *F, Constant *&RetVal,
-                        const SmallVectorImpl<Constant*> &ActualArgs);
+  LLVM_ABI bool EvaluateFunction(Function *F, Constant *&RetVal,
+                                 const SmallVectorImpl<Constant *> &ActualArgs);
 
   DenseMap<GlobalVariable *, Constant *> getMutatedInitializers() const {
     DenseMap<GlobalVariable *, Constant *> Result;

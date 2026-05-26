@@ -442,7 +442,7 @@ Address CodeGen::EmitVAArgInstr(CodeGenFunction &CGF, Address VAListAddr,
     assert(!AI.getCoerceToType() &&
            "Unexpected CoerceToType seen in arginfo in generic VAArg emitter!");
 
-    Address Temp = CGF.CreateMemTemp(Ty, "varet");
+    Address Temp = CGF.CreateMemTempWithoutCast(Ty, "varet");
     Val = CGF.Builder.CreateVAArg(VAListAddr.emitRawPointer(CGF),
                                   CGF.ConvertTypeForMem(Ty));
     CGF.Builder.CreateStore(Val, Temp);
