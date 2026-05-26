@@ -622,6 +622,10 @@ public:
     /// Whether any diagnostic has been emitted. This is set regardless of
     /// whether @ref #Diag is set or not.
     bool DiagEmitted = false;
+    
+    /// Whether part of expression is an LValue.
+    /// Used when evaluating constant expression with Microsoft extensions.
+    bool HasLValue = false;
 
     /// Diag - If this is non-null, it will be filled in with a stack of notes
     /// indicating why evaluation failed (or why it failed to produce a constant
