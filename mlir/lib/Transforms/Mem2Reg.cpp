@@ -537,9 +537,7 @@ MemorySlotPromotionAnalyzer::computeInfo() {
   // Iterate over direct users of the slot pointer and all alias pointers in
   // `info.aliasMap`. This assumes `PromotableMemOpInterface` operations storing
   // to the slot use the slot pointer or its aliases directly. Dialects must
-  // implement `PromotableAliaserInterface` for views/aliasing, rather than
-  // manually walking operand definitions in `PromotableMemOpInterface` to find
-  // indirect slot usages.
+  // implement `PromotableAliaserInterface` for views/aliasing.
   DenseMap<Region *, SmallPtrSet<Block *, 16>> definingBlocks;
   auto collectStoringBlocks = [&](Value ptr, const MemorySlot &ptrSlot) {
     for (OpOperand &use : ptr.getUses()) {
