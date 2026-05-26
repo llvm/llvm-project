@@ -126,6 +126,11 @@ bool CXXRecordDecl::forallBases(ForallBasesCallback BaseMatches) const {
   SmallVector<const CXXRecordDecl*, 8> Queue;
 
   const CXXRecordDecl *Record = this;
+
+  if (const CXXRecordDecl *Def = getDefinition())
+    Record = Def;
+  else if (!dataPtr())
+  return false;
   while (true) {
     for (const auto &I : Record->bases()) {
       const auto *Base = I.getType()->getAsCXXRecordDecl();

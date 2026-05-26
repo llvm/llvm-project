@@ -642,8 +642,6 @@ bool Sema::CheckQualifiedMemberReference(Expr *BaseExpr,
       continue;
 
     CXXRecordDecl *MemberRecord = cast<CXXRecordDecl>(DC)->getCanonicalDecl();
-    if (!BaseRecord->hasDefinition() || !MemberRecord->hasDefinition())
-      return false;
     if (BaseRecord->getCanonicalDecl() == MemberRecord ||
         !BaseRecord->isProvablyNotDerivedFrom(MemberRecord))
       return false;
