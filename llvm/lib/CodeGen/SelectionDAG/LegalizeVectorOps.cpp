@@ -191,6 +191,8 @@ class VectorLegalizer {
   /// rounding of the result does not affect its value.
   void PromoteFloatVECREDUCE(SDNode *Node, SmallVectorImpl<SDValue> &Results,
                              bool NonArithmetic);
+  void PromoteFloatVECREDUCE_SEQ(SDNode *Node,
+                                 SmallVectorImpl<SDValue> &Results);
 
   void PromoteVECTOR_COMPRESS(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
@@ -722,6 +724,23 @@ void VectorLegalizer::PromoteFloatVECREDUCE(SDNode *Node,
   Results.push_back(Res);
 }
 
+void VectorLegalizer::PromoteFloatVECREDUCE_SEQ(
+    SDNode *Node, SmallVectorImpl<SDValue> &Results) {
+  MVT OrigVecVT = Node->getOperand(1).getSimpleValueType();
+  assert(OrigVecVT.isFloatingPoint() && "Expected floating point reduction!");
+  MVT VecVT = TLI.getTypeToPromoteTo(Node->getOpcode(), OrigVecVT);
+  MVT EltVT = VecVT.getVectorElementType();
+
+  SDLoc DL(Node);
+  SDValue EltOp = DAG.getNode(ISD::FP_EXTEND, DL, EltVT, Node->getOperand(0));
+  SDValue VecOp = DAG.getNode(ISD::FP_EXTEND, DL, VecVT, Node->getOperand(1));
+  SDValue Rdx =
+      DAG.getNode(Node->getOpcode(), DL, EltVT, EltOp, VecOp, Node->getFlags());
+  SDValue Res = DAG.getNode(ISD::FP_ROUND, DL, Node->getValueType(0), Rdx,
+                            DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+  Results.push_back(Res);
+}
+
 void VectorLegalizer::PromoteVECTOR_COMPRESS(
     SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   SDLoc DL(Node);
@@ -789,6 +808,9 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMINIMUM:
     PromoteFloatVECREDUCE(Node, Results, /*NonArithmetic=*/true);
+    return;
+  case ISD::VECREDUCE_SEQ_FADD:
+    PromoteFloatVECREDUCE_SEQ(Node, Results);
     return;
   case ISD::VECTOR_COMPRESS:
     PromoteVECTOR_COMPRESS(Node, Results);

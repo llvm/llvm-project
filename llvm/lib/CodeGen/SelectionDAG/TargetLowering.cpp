@@ -12659,13 +12659,25 @@ SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
 }
 
 SDValue TargetLowering::expandVecReduceSeq(SDNode *Node, SelectionDAG &DAG) const {
-  SDLoc dl(Node);
+  SDLoc DL(Node);
   SDValue AccOp = Node->getOperand(0);
   SDValue VecOp = Node->getOperand(1);
   SDNodeFlags Flags = Node->getFlags();
 
   EVT VT = VecOp.getValueType();
   EVT EltVT = VT.getVectorElementType();
+
+  if (VT.getVectorElementCount().isKnownMultipleOf(2)) {
+    auto [LoVecVT, HiVecVT] = DAG.GetSplitDestVTs(VT);
+    if (isOperationLegalOrCustomOrPromote(Node->getOpcode(), LoVecVT) &&
+        isOperationLegalOrCustomOrPromote(Node->getOpcode(), HiVecVT)) {
+      auto [LoVecOp, HiVecOp] = DAG.SplitVector(VecOp, DL, LoVecVT, HiVecVT);
+
+      unsigned Opcode = Node->getOpcode();
+      SDValue ReduceLo = DAG.getNode(Opcode, DL, EltVT, AccOp, LoVecOp, Flags);
+      return DAG.getNode(Opcode, DL, EltVT, ReduceLo, HiVecOp, Flags);
+    }
+  }
 
   if (VT.isScalableVector())
     report_fatal_error(
@@ -12680,7 +12692,7 @@ SDValue TargetLowering::expandVecReduceSeq(SDNode *Node, SelectionDAG &DAG) cons
 
   SDValue Res = AccOp;
   for (unsigned i = 0; i < NumElts; i++)
-    Res = DAG.getNode(BaseOpcode, dl, EltVT, Res, Ops[i], Flags);
+    Res = DAG.getNode(BaseOpcode, DL, EltVT, Res, Ops[i], Flags);
 
   return Res;
 }

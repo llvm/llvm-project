@@ -2134,6 +2134,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                     MVT::v2f32, MVT::v4f32, MVT::v2f64})
       setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
 
+    setOperationPromotedToType(ISD::VECREDUCE_SEQ_FADD, MVT::nxv2bf16,
+                               MVT::nxv2f32);
+    setOperationPromotedToType(ISD::VECREDUCE_SEQ_FADD, MVT::nxv4bf16,
+                               MVT::nxv4f32);
+    setOperationPromotedToType(ISD::VECREDUCE_SEQ_FADD, MVT::nxv8bf16,
+                               MVT::nxv8f32);
+
     // We can lower types that have <vscale x {2|4}> elements to compact.
     for (auto VT :
          {MVT::nxv4i32, MVT::nxv2i64, MVT::nxv2f32, MVT::nxv4f32, MVT::nxv2f64})
