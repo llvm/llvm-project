@@ -615,9 +615,8 @@ void applyPushAddSubExt(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
-bool tryToSimplifyUADDO(MachineInstr &MI, MachineIRBuilder &B,
-                        const CombinerHelper &Helper,
-                        GISelChangeObserver &Observer) {
+bool matchSimplifyUADDO(MachineInstr &MI, MachineRegisterInfo &MRI,
+                        std::pair<Register, Register> &MatchInfo) {
   // Try simplify G_UADDO with 8 or 16 bit operands to wide G_ADD and TBNZ if
   // result is only used in the no-overflow case. It is restricted to cases
   // where we know that the high-bits of the operands are 0. If there's an
@@ -645,8 +644,6 @@ bool tryToSimplifyUADDO(MachineInstr &MI, MachineIRBuilder &B,
   //   %bit = G_AND %add, 1 << scalar-size-in-bits(%op1)
   //   %cond = G_ICMP NE, %bit, 0
   //   G_BRCOND %cond, %error.bb
-
-  auto &MRI = *B.getMRI();
 
   MachineOperand *DefOp0 = MRI.getOneDef(MI.getOperand(2).getReg());
   MachineOperand *DefOp1 = MRI.getOneDef(MI.getOperand(3).getReg());
@@ -697,7 +694,21 @@ bool tryToSimplifyUADDO(MachineInstr &MI, MachineIRBuilder &B,
              }))
     return false;
 
-  // Remove G_ADDO.
+  MatchInfo = {Op0Wide, Op1Wide};
+  return true;
+}
+
+void applySimplifyUADDO(MachineInstr &MI, MachineRegisterInfo &MRI,
+                        MachineIRBuilder &B, GISelChangeObserver &Observer,
+                        const CombinerHelper &Helper,
+                        const std::pair<Register, Register> &MatchInfo) {
+  Register Op0Wide = MatchInfo.first;
+  Register Op1Wide = MatchInfo.second;
+  Register ResVal = MI.getOperand(0).getReg();
+  Register ResStatus = MI.getOperand(1).getReg();
+  unsigned OpTySize = MRI.getType(ResVal).getScalarSizeInBits();
+
+  // Remove G_UADDO.
   B.setInstrAndDebugLoc(*MI.getNextNode());
   MI.eraseFromParent();
 
@@ -726,8 +737,6 @@ bool tryToSimplifyUADDO(MachineInstr &MI, MachineIRBuilder &B,
       Helper.replaceRegWith(MRI, OldR, AddDst);
     }
   }
-
-  return true;
 }
 
 class AArch64PreLegalizerCombinerImpl : public Combiner {
@@ -782,8 +791,6 @@ bool AArch64PreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
 
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
-  case TargetOpcode::G_UADDO:
-    return tryToSimplifyUADDO(MI, B, Helper, Observer);
   case TargetOpcode::G_MEMCPY_INLINE:
     return Helper.tryEmitMemcpyInline(MI);
   case TargetOpcode::G_MEMCPY:
