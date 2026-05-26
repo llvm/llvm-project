@@ -514,7 +514,7 @@ block below).
 | .. code-block::   | .. code-block::               |
 |                   |                               |
 |    syscall        |    leaq .Ltmp(%rip), %r11     |
-|                   |    jmpq *(%r14)               |
+|                   |    jmpq *-8(%r14)             |
 |                   |    .Ltmp:                     |
 |                   |                               |
 +-------------------+-------------------------------+
