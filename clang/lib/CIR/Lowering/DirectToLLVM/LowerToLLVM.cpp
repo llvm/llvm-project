@@ -509,6 +509,9 @@ static llvm::StringRef getConstrainedRoundingMetadata(cir::FenvAttr fenv) {
 }
 
 static llvm::StringRef getConstrainedExceptMetadata(cir::FenvAttr fenv) {
+  std::optional<cir::FPExceptionMode> exceptMode = fenv.getExceptMode();
+  if (exceptMode && *exceptMode == cir::FPExceptionMode::Masked)
+    return "fpexcept.ignore";
   mlir::BoolAttr strictExcept = fenv.getStrictExcept();
   if (!strictExcept)
     return "fpexcept.ignore";
@@ -2559,6 +2562,7 @@ void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
         attr.getName() == func.getInlineKindAttrName() ||
         attr.getName() == func.getSideEffectAttrName() ||
         attr.getName() == CIRDialect::getNoReturnAttrName() ||
+        attr.getName() == CIRDialect::getStrictFPAttrName() ||
         attr.getName() == func.getAnnotationsAttrName() ||
         (filterArgAndResAttrs &&
          (attr.getName() == func.getArgAttrsAttrName() ||
@@ -2683,6 +2687,14 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
 
   if (op->hasAttr(CIRDialect::getNoReturnAttrName()))
     fn.setNoreturn(true);
+
+  // The LLVM dialect's LLVMFuncOp has no dedicated field for the `strictfp`
+  // function attribute, so route it through the `passthrough` array. The MLIR
+  // LLVM IR translator forwards `passthrough` entries to LLVM IR as function
+  // attributes.
+  if (op->hasAttr(CIRDialect::getStrictFPAttrName()))
+    fn.setPassthroughAttr(rewriter.getArrayAttr(
+        {rewriter.getStringAttr(CIRDialect::getStrictFPAttrName())}));
 
   if (std::optional<cir::InlineKind> inlineKind = op.getInlineKind()) {
     fn.setNoInline(*inlineKind == cir::InlineKind::NoInline);

@@ -54,7 +54,10 @@ module {
     %1 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<strict_except = false>}
     // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.ignore">
     // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
-    %2 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearest>}
+    %2 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<except_mode = masked, strict_except = false>}
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.ignore">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %3 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearest>}
     cir.return
   }
 
@@ -111,6 +114,16 @@ module {
     %4 = cir.fminimum %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
     // CHECK: llvm.intr.copysign(%{{.*}}, %{{.*}}) : (f64, f64) -> f64
     %5 = cir.copysign %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    cir.return
+  }
+
+  // CHECK-LABEL: llvm.func @ternary_fp_builtins
+  cir.func @ternary_fp_builtins(%a: !cir.double, %b: !cir.double,
+                                %c: !cir.double) {
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fma"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %0 = cir.fma %a, %b, %c : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.intr.fma(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, f64) -> f64
+    %1 = cir.fma %a, %b, %c : !cir.double
     cir.return
   }
 

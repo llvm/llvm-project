@@ -356,10 +356,9 @@ static RValue emitUnaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
   mlir::Value arg = cgf.emitScalarExpr(e.getArg(0));
 
   CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &e);
-  assert(!cir::MissingFeatures::fpConstraints());
 
-  auto call =
-      Operation::create(cgf.getBuilder(), arg.getLoc(), arg.getType(), arg);
+  auto call = Operation::create(cgf.getBuilder(), arg.getLoc(), arg.getType(),
+                                arg, cgf.getBuilder().getConstrainedFPAttr());
   return RValue::get(call->getResult(0));
 }
 
@@ -377,9 +376,10 @@ static RValue emitUnaryMaybeConstrainedFPToIntBuiltin(CIRGenFunction &cgf,
   mlir::Type resultType = cgf.convertType(e.getType());
   mlir::Value src = cgf.emitScalarExpr(e.getArg(0));
 
-  assert(!cir::MissingFeatures::fpConstraints());
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &e);
 
-  auto call = Op::create(cgf.getBuilder(), src.getLoc(), resultType, src);
+  auto call = Op::create(cgf.getBuilder(), src.getLoc(), resultType, src,
+                         cgf.getBuilder().getConstrainedFPAttr());
   return RValue::get(call->getResult(0));
 }
 
@@ -398,6 +398,8 @@ static RValue emitBinaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
 template <typename Op>
 static RValue emitTernaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
                                                    const CallExpr &e) {
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &e);
+
   mlir::Value arg0 = cgf.emitScalarExpr(e.getArg(0));
   mlir::Value arg1 = cgf.emitScalarExpr(e.getArg(1));
   mlir::Value arg2 = cgf.emitScalarExpr(e.getArg(2));
@@ -405,9 +407,8 @@ static RValue emitTernaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
   mlir::Location loc = cgf.getLoc(e.getExprLoc());
   mlir::Type ty = cgf.convertType(e.getType());
 
-  assert(!cir::MissingFeatures::fpConstraints());
-
-  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1, arg2);
+  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1, arg2,
+                         cgf.getBuilder().getConstrainedFPAttr());
   return RValue::get(call->getResult(0));
 }
 
@@ -417,12 +418,13 @@ static mlir::Value emitBinaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
   mlir::Value arg0 = cgf.emitScalarExpr(e.getArg(0));
   mlir::Value arg1 = cgf.emitScalarExpr(e.getArg(1));
 
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &e);
+
   mlir::Location loc = cgf.getLoc(e.getExprLoc());
   mlir::Type ty = cgf.convertType(e.getType());
 
-  assert(!cir::MissingFeatures::fpConstraints());
-
-  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1);
+  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1,
+                         cgf.getBuilder().getConstrainedFPAttr());
   return call->getResult(0);
 }
 
@@ -1587,7 +1589,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_isnan: {
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
     mlir::Value v = emitScalarExpr(e->getArg(0));
-    assert(!cir::MissingFeatures::fpConstraints());
     mlir::Location loc = getLoc(e->getBeginLoc());
     return RValue::get(builder.createBoolToInt(
         builder.createIsFPClass(loc, v, cir::FPClassTest::Nan),
@@ -1606,7 +1607,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_isinf: {
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
     mlir::Value v = emitScalarExpr(e->getArg(0));
-    assert(!cir::MissingFeatures::fpConstraints());
     mlir::Location loc = getLoc(e->getBeginLoc());
     return RValue::get(builder.createBoolToInt(
         builder.createIsFPClass(loc, v, cir::FPClassTest::Infinity),
@@ -1619,9 +1619,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIfinitel:
   case Builtin::BI__finitel:
   case Builtin::BI__builtin_isfinite: {
-    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
     mlir::Value v = emitScalarExpr(e->getArg(0));
-    assert(!cir::MissingFeatures::fpConstraints());
     mlir::Location loc = getLoc(e->getBeginLoc());
     return RValue::get(builder.createBoolToInt(
         builder.createIsFPClass(loc, v, cir::FPClassTest::Finite),
@@ -1629,7 +1627,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
 
   case Builtin::BI__builtin_isnormal: {
-    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
     mlir::Value v = emitScalarExpr(e->getArg(0));
     mlir::Location loc = getLoc(e->getBeginLoc());
     return RValue::get(builder.createBoolToInt(
@@ -1638,7 +1635,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
 
   case Builtin::BI__builtin_issubnormal: {
-    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
     mlir::Value v = emitScalarExpr(e->getArg(0));
     mlir::Location loc = getLoc(e->getBeginLoc());
     return RValue::get(builder.createBoolToInt(
@@ -1647,7 +1643,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
 
   case Builtin::BI__builtin_iszero: {
-    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
     mlir::Value v = emitScalarExpr(e->getArg(0));
     mlir::Location loc = getLoc(e->getBeginLoc());
     return RValue::get(builder.createBoolToInt(
@@ -1663,7 +1658,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value v = emitScalarExpr(e->getArg(0));
     uint64_t test = result.Val.getInt().getLimitedValue();
     mlir::Location loc = getLoc(e->getBeginLoc());
-    //
     return RValue::get(builder.createBoolToInt(
         builder.createIsFPClass(loc, v, cir::FPClassTest(test)),
         convertType(e->getType())));
