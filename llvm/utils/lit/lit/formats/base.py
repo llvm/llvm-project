@@ -5,7 +5,7 @@ import lit.Test
 import lit.util
 
 
-class TestFormat(object):
+class TestFormat:
     def getTestsForPath(self, testSuite, path_in_suite, litConfig, localConfig):
         """
         Given the path to a test in the test suite, generates the Lit tests associated
