@@ -8505,7 +8505,7 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, const SDLoc &dl,
 
   uint64_t Undefs = 0;
   uint64_t Immediate = 0;
-  APInt NonConstMask = APInt::getZero(VT.getVectorNumElements());
+  uint64_t NonConstMask = 0;
   SmallSet<SDValue, 16> NonConstElts;
   bool HasConstElts = false;
   for (unsigned idx = 0, e = Op.getNumOperands(); idx < e; ++idx) {
@@ -8518,7 +8518,7 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, const SDLoc &dl,
       Immediate |= (InC->getZExtValue() & 0x1) << idx;
       HasConstElts = true;
     } else {
-      NonConstMask.setBit(idx);
+      NonConstMask |= 1ULL << idx;
       NonConstElts.insert(In);
     }
   }
@@ -8535,7 +8535,7 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, const SDLoc &dl,
       Cond = DAG.getNode(ISD::AND, dl, MVT::i8, Cond,
                          DAG.getConstant(1, dl, MVT::i8));
 
-    uint64_t TrueImm = NonConstMask.getZExtValue() | Immediate;
+    uint64_t TrueImm = NonConstMask | Immediate;
     uint64_t FalseImm = Immediate;
 
     // Perform the select in the scalar domain so we can use cmov.
@@ -8570,7 +8570,7 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, const SDLoc &dl,
 
   // See if we can cheaply generate a vXi8 vector and convert to vXi1.
   MVT OpVT = Op.getOperand(0).getSimpleValueType();
-  if (OpVT == MVT::i8 && !!NonConstMask) {
+  if (OpVT == MVT::i8 && NonConstMask != 0) {
     // On pre-BWI targets, we must extend to vXi32 instead.
     MVT ByteVT = VT.changeVectorElementType(MVT::i8);
     MVT WideSVT = Subtarget.hasBWI() ? MVT::i8 : MVT::i32;
@@ -8615,7 +8615,7 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, const SDLoc &dl,
     DstVec = DAG.getUNDEF(VT);
 
   for (unsigned Idx = 0, E = Op.getNumOperands(); Idx != E; ++Idx)
-    if (NonConstMask[Idx])
+    if (NonConstMask & (1ULL << Idx))
       DstVec = DAG.getInsertVectorElt(dl, DstVec, Op.getOperand(Idx), Idx);
 
   return DstVec;
