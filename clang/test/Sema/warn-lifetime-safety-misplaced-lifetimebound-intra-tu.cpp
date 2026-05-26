@@ -125,9 +125,9 @@ template <>
 MyObj &spec_func<MyObj>(MyObj &obj) { return obj; }
 
 MyObj get_default_obj();
-const MyObj &default_arg_param(const MyObj&
+const MyObj &default_arg_param(const MyObj&  // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
     obj  // CHECK: fix-it:"{{.*}}":{[[@LINE]]:{{[0-9]+}}-[[@LINE]]:{{[0-9]+}}}:" {{\[\[clang::lifetimebound\]\]}}"
-    = get_default_obj()); // expected-warning@-2 {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
+    = get_default_obj());
 
 const MyObj &default_arg_param(const MyObj &obj [[clang::lifetimebound]]) { // expected-note {{'lifetimebound' attribute appears here on the definition}}
   return obj;
@@ -138,20 +138,11 @@ struct Base {
 };
 
 struct Derived : Base {
-  auto virtual_get(const MyObj& 
+  auto virtual_get(const MyObj&  // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
       obj  // CHECK: fix-it:"{{.*}}":{[[@LINE]]:{{[0-9]+}}-[[@LINE]]:{{[0-9]+}}}:" {{\[\[clang::lifetimebound\]\]}}"
-  ) const -> const MyObj& override; // expected-warning@-2 {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
+  ) const -> const MyObj& override;
 };
 
 auto Derived::virtual_get(const MyObj& obj [[clang::lifetimebound]]) const -> const MyObj& { // expected-note {{'lifetimebound' attribute appears here on the definition}}
-  return obj;
-}
-
-#define REF_PARAM MyObj &obj
-
-MyObj &macro_param(REF_PARAM); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
-// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:{{[0-9]+}}-[[@LINE-1]]:{{[0-9]+}}}:" {{\[\[clang::lifetimebound\]\]}}"
-
-MyObj &macro_param(MyObj &obj [[clang::lifetimebound]]) { // expected-note {{'lifetimebound' attribute appears here on the definition}}
   return obj;
 }

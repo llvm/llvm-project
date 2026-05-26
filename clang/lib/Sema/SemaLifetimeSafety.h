@@ -288,8 +288,15 @@ public:
 
     auto [InsertionPoint, FixItText] = getLifetimeBoundFixIt(FDecl);
 
-    S.Diag(InsertionPoint, DiagID)
-        << FixItHint::CreateInsertion(InsertionPoint, FixItText);
+    // Do not emit fix-its in macros or at invalid locations.
+    bool IsMacro =
+        FDecl->getBeginLoc().isMacroID() || InsertionPoint.isMacroID();
+
+    if (IsMacro || InsertionPoint.isInvalid())
+      S.Diag(FDecl->getLocation(), DiagID);
+    else
+      S.Diag(InsertionPoint, DiagID)
+          << FixItHint::CreateInsertion(InsertionPoint, FixItText);
 
     S.Diag(Attr->getLocation(), diag::note_lifetime_safety_lifetimebound_here)
         << Attr->getRange();
@@ -308,9 +315,16 @@ public:
 
     auto [InsertionPoint, FixItText] = getLifetimeBoundFixIt(PVDDecl);
 
-    S.Diag(PVDDecl->getBeginLoc(), DiagID)
-        << PVDDecl->getSourceRange()
-        << FixItHint::CreateInsertion(InsertionPoint, FixItText);
+    // Do not emit fix-its in macros or at invalid locations.
+    bool IsMacro =
+        PVDDecl->getBeginLoc().isMacroID() || InsertionPoint.isMacroID();
+
+    if (IsMacro || InsertionPoint.isInvalid())
+      S.Diag(PVDDecl->getBeginLoc(), DiagID) << PVDDecl->getSourceRange();
+    else
+      S.Diag(PVDDecl->getBeginLoc(), DiagID)
+          << PVDDecl->getSourceRange()
+          << FixItHint::CreateInsertion(InsertionPoint, FixItText);
 
     S.Diag(Attr->getLocation(), diag::note_lifetime_safety_lifetimebound_here)
         << Attr->getRange();
