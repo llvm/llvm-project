@@ -3399,11 +3399,11 @@ InstCombinerImpl::foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt) {
     }
   }
 
+  // {field to be replaced, field index}
+  SmallVector<std::pair<ZExtInst *, unsigned>, 4> FieldReplacements;
   // We commit the transformation only if all the field users can be replaced,
   // otherwise the primary de-interleaving construction, regardless of
   // llvm.vector.deinterleave2 or shufflevectors, will still be there.
-  SmallVector<ZExtInst *, 4> Field0Replacements;
-  SmallVector<ZExtInst *, 4> Field1Replacements;
   for (auto [Field, FieldIdx] : Fields) {
     for (User *FieldUsr : Field->users()) {
       auto *ZExt = dyn_cast<ZExtInst>(FieldUsr);
@@ -3412,10 +3412,7 @@ InstCombinerImpl::foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt) {
       // Only if it's doubling the element size.
       if (ZExt->getDestTy() != ZExt->getSrcTy()->getExtendedType())
         return nullptr;
-      if (FieldIdx)
-        Field1Replacements.push_back(ZExt);
-      else
-        Field0Replacements.push_back(ZExt);
+      FieldReplacements.push_back({ZExt, FieldIdx});
     }
   }
 
@@ -3431,33 +3428,13 @@ InstCombinerImpl::foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt) {
   Value *NewField0 = Builder.CreateAnd(Bitcast, Mask);
   Value *NewField1 = Builder.CreateLShr(Bitcast, InElementBitWidth);
 
-  Value *RootNewField = nullptr;
-  for (ZExtInst *I : Field0Replacements) {
-    // The root ZExt will be replaced by the InstCombiner upon
-    // returning from this function.
-    if (I == &RootZExt) {
-      assert(!RootNewField);
-      RootNewField = NewField0;
-      continue;
-    }
-    replaceInstUsesWith(*I, NewField0);
-    // Make sure non-root ZExt are in the worklist so that they
+  for (auto [I, Idx] : FieldReplacements) {
+    assert(Idx < 2 && "unsupported field index");
+    replaceInstUsesWith(*I, Idx ? NewField1 : NewField0);
+    // Make sure the old ZExt are in the worklist so that they
     // can be removed in the following iterations.
     addToWorklist(I);
   }
-  for (ZExtInst *I : Field1Replacements) {
-    if (I == &RootZExt) {
-      assert(!RootNewField);
-      RootNewField = NewField1;
-      continue;
-    }
-    replaceInstUsesWith(*I, NewField1);
-    addToWorklist(I);
-  }
 
-  assert(RootNewField && "cannot find replacement for the root zext");
-  auto *NewRootInst = cast<Instruction>(RootNewField);
-  // The InstCombiner expects a parent-less instruction.
-  NewRootInst->removeFromParent();
-  return NewRootInst;
+  return &RootZExt;
 }

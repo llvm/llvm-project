@@ -6,8 +6,8 @@ define <8 x i64> @zext_shufflevector(<16 x i32> %v) {
 ; CHECK-SAME: <16 x i32> [[V:%.*]]) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze <16 x i32> [[V]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i32> [[TMP2]] to <8 x i64>
-; CHECK-NEXT:    [[Z1:%.*]] = lshr <8 x i64> [[TMP1]], splat (i64 32)
 ; CHECK-NEXT:    [[Z0:%.*]] = and <8 x i64> [[TMP1]], splat (i64 4294967295)
+; CHECK-NEXT:    [[Z1:%.*]] = lshr <8 x i64> [[TMP1]], splat (i64 32)
 ; CHECK-NEXT:    [[R:%.*]] = mul nuw <8 x i64> [[Z0]], [[Z1]]
 ; CHECK-NEXT:    ret <8 x i64> [[R]]
 ;
@@ -37,8 +37,8 @@ define <vscale x 8 x i64> @zext_deinterleave(<vscale x 16 x i32> %v) {
 ; CHECK-SAME: <vscale x 16 x i32> [[V:%.*]]) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze <vscale x 16 x i32> [[V]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 16 x i32> [[TMP2]] to <vscale x 8 x i64>
-; CHECK-NEXT:    [[Z1:%.*]] = lshr <vscale x 8 x i64> [[TMP1]], splat (i64 32)
 ; CHECK-NEXT:    [[Z0:%.*]] = and <vscale x 8 x i64> [[TMP1]], splat (i64 4294967295)
+; CHECK-NEXT:    [[Z1:%.*]] = lshr <vscale x 8 x i64> [[TMP1]], splat (i64 32)
 ; CHECK-NEXT:    [[R:%.*]] = mul nuw <vscale x 8 x i64> [[Z0]], [[Z1]]
 ; CHECK-NEXT:    ret <vscale x 8 x i64> [[R]]
 ;
@@ -56,8 +56,8 @@ define <vscale x 8 x i64> @zext_deinterleave_multi_zext_per_field(<vscale x 16 x
 ; CHECK-SAME: <vscale x 16 x i32> [[V:%.*]]) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze <vscale x 16 x i32> [[V]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 16 x i32> [[TMP2]] to <vscale x 8 x i64>
-; CHECK-NEXT:    [[Z1:%.*]] = lshr <vscale x 8 x i64> [[TMP1]], splat (i64 32)
 ; CHECK-NEXT:    [[Z0:%.*]] = and <vscale x 8 x i64> [[TMP1]], splat (i64 4294967295)
+; CHECK-NEXT:    [[Z1:%.*]] = lshr <vscale x 8 x i64> [[TMP1]], splat (i64 32)
 ; CHECK-NEXT:    [[R:%.*]] = mul nuw <vscale x 8 x i64> [[Z0]], [[Z1]]
 ; CHECK-NEXT:    [[R2:%.*]] = mul <vscale x 8 x i64> [[R]], [[Z0]]
 ; CHECK-NEXT:    ret <vscale x 8 x i64> [[R2]]
