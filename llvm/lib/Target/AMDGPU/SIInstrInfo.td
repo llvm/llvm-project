@@ -3572,6 +3572,8 @@ def lo16_to_vgpr32 : OutPatFrag<(ops node:$op),
 def hi16_to_vgpr32 : OutPatFrag<(ops node:$op),
   (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $op, hi16)>;
 
+// Instructions eligible to be the first (X) instruction in Dual Issue VALU
+// (VOPD) encoding.
 def VOPDXTable : GenericTable {
   let FilterClass = "VOPDX";
   let CppTypeName = "VOPDXYInfo";
@@ -3580,6 +3582,8 @@ def VOPDXTable : GenericTable {
   let PrimaryKeyName = "canBeVOPDX";
 }
 
+// Instructions eligible to be the second (Y) instruction in Dual Issue VALU
+// (VOPD) encoding.
 def VOPDYTable : GenericTable {
   let FilterClass = "VOPDY";
   let CppTypeName = "VOPDXYInfo";
