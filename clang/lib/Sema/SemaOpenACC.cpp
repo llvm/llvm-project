@@ -649,12 +649,6 @@ ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
 
   if (auto *ArrTy = InnerTy->getAsArrayTypeUnsafe()) {
     if (!ArrTy->isConstantArrayType()) {
-      // Variable length arrays cannot be used in a reduction clause.
-      // To fix llvm/llvm-project#199162
-      if (CK == OpenACCClauseKind::Reduction) {
-        S.Diag(InnerLoc, clang::diag::err_acc_reduction_non_const_array);
-        return ExprError();
-      }
       // Non constant arrays decay to 'pointer', so warn and return that we're
       // successful.
       S.Diag(InnerLoc, clang::diag::warn_acc_var_referenced_non_const_array)

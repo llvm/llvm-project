@@ -13990,7 +13990,8 @@ def err_acc_reduction_type
             "value, or array of scalars, or composite of "
             "scalars}|%MemberNotScalar{not a scalar value}|%NotAgg{not an "
             "aggregate}|%NotComplete{not a complete type}|%NotClassStruct{not "
-            "a class or struct}}1">;
+            "a class or struct}|%{NotConstantArray{not an array with constant "
+            "length}}}1">;
 def note_acc_reduction_array
     : Note<"used as element type of "
            "%enum_select<OACCReductionArray>{%Section{sub-array"
@@ -14002,9 +14003,6 @@ def note_acc_reduction_type_summary
            "or a "
            "composite of scalars, or an array, sub-array, or element of scalar "
            "types">;
-def err_acc_reduction_non_const_array
-    : Error<"variable length array cannot be used in OpenACC 'reduction' "
-            "clause">;
 def err_acc_loop_not_for_loop
     : Error<"OpenACC '%0' construct can only be applied to a 'for' loop">;
 def note_acc_construct_here : Note<"'%0' construct is here">;
