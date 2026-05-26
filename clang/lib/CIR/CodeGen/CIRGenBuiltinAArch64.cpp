@@ -2622,7 +2622,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     ops[0] = builder.createBitcast(loc, ops[0], inputTy);
 
     intrName = "aarch64.neon.sqshrun";
-    return emitNeonCall(cgm, builder, {inputTy, shiftTy}, ops, intrName, ty, loc);
+    return emitNeonCall(cgm, builder, {inputTy, shiftTy}, ops, intrName, ty,
+                        loc);
   }
   case NEON::BI__builtin_neon_vqshrn_n_v: {
     mlir::Type inputTy;
@@ -2648,7 +2649,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     ops[0] = builder.createBitcast(loc, ops[0], inputTy);
 
     intrName = usgn ? "aarch64.neon.uqshrn" : "aarch64.neon.sqshrn";
-    return emitNeonCall(cgm, builder, {inputTy, shiftTy}, ops, intrName, ty, loc);
+    return emitNeonCall(cgm, builder, {inputTy, shiftTy}, ops, intrName, ty,
+                        loc);
   }
   case NEON::BI__builtin_neon_vqrshrun_n_v:
   case NEON::BI__builtin_neon_vrshrn_n_v:
