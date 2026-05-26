@@ -6,13 +6,13 @@
 
 ; Regression test from https://github.com/llvm/llvm-project/issues/196671
 
-; It is legal for a spill reload to not have a dominating spill store.
-; When the AGPR rewrite pass unspills such a slot into a vreg, it must insert
-; IMPLICIT_DEF so the vreg has defs on all paths.
+; It is legal for a spill reload to not be jointly dominated by the slot's
+; spill stores. The AGPR rewrite pass must not unspill such a slot into a
+; vreg, otherwise the compiler will crash.
 
 ; CHECK: Skipping ${{[a-zA-Z0-9_]+}}: some reachable load not jointly dominated by stores
 
-define amdgpu_kernel void @rewrite_vgpr_mfma_to_agpr_spill_implicit_def(i1 %arg, <16 x float> %.sroa.366.2) #0 {
+define amdgpu_kernel void @rewrite_vgpr_mfma_to_agpr_spill_joint_dom(i1 %arg, <16 x float> %.sroa.366.2) #0 {
 .lr.ph.i:
   br label %bb
 
