@@ -1153,4 +1153,15 @@ TEST(DenseMapCustomTest, RemoveIfValueDtor) {
   EXPECT_EQ(0u, CtorTester::getNumConstructed());
 }
 
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+TEST(DenseMapCustomTest, EraseInvalidatesIterators) {
+  DenseMap<int, int> M;
+  M.try_emplace(1, 10);
+  M.try_emplace(2, 20);
+  auto It = M.find(1);
+  M.erase(M.find(2));
+  EXPECT_DEATH((void)It->second, "invalid iterator access");
+}
+#endif
+
 } // namespace
