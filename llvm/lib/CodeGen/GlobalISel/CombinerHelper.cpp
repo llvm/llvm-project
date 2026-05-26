@@ -3708,8 +3708,8 @@ void CombinerHelper::applyCombineBuildUnmerge(MachineInstr &MI,
 // %dst(<4 x s16>) = G_TRUNC %Mid(<4 x s32>)
 //
 // Only matches sources made up of G_TRUNCs followed by G_IMPLICIT_DEFs
-bool CombinerHelper::matchUseVectorTruncate(MachineInstr &MI,
-                                            Register &MatchInfo) const {
+bool CombinerHelper::matchUseVectorTruncate(
+    MachineInstr &MI, std::pair<Register, LLT> &MatchInfo) const {
   auto BuildMI = cast<GBuildVector>(&MI);
   unsigned NumOperands = BuildMI->getNumSources();
   LLT DstTy = MRI.getType(BuildMI->getReg(0));
@@ -3758,8 +3758,8 @@ bool CombinerHelper::matchUseVectorTruncate(MachineInstr &MI,
   }
 
   // Check the size of unmerge source
-  MatchInfo = cast<GUnmerge>(UnmergeMI)->getSourceReg();
-  LLT UnmergeSrcTy = MRI.getType(MatchInfo);
+  MatchInfo.first = cast<GUnmerge>(UnmergeMI)->getSourceReg();
+  LLT UnmergeSrcTy = MRI.getType(MatchInfo.first);
   if (!DstTy.getElementCount().isKnownMultipleOf(UnmergeSrcTy.getNumElements()))
     return false;
 
@@ -3771,40 +3771,65 @@ bool CombinerHelper::matchUseVectorTruncate(MachineInstr &MI,
     return false;
 
   // Only generate legal instructions post-legalizer
-  if (!IsPreLegalize) {
-    LLT MidTy = DstTy.changeElementType(UnmergeSrcTy.getScalarType());
-
-    if (DstTy.getElementCount() != UnmergeSrcTy.getElementCount() &&
-        !isLegal({TargetOpcode::G_CONCAT_VECTORS, {MidTy, UnmergeSrcTy}}))
-      return false;
-
-    if (!isLegal({TargetOpcode::G_TRUNC, {DstTy, MidTy}}))
-      return false;
+  LLT MidTy = DstTy.changeElementType(UnmergeSrcTy.getScalarType());
+  if (IsPreLegalize) {
+    MatchInfo.second = MidTy;
+    return true;
   }
 
-  return true;
+  if ((DstTy.getElementCount() == UnmergeSrcTy.getElementCount() ||
+       isLegal({TargetOpcode::G_CONCAT_VECTORS, {MidTy, UnmergeSrcTy}})) &&
+      isLegal({TargetOpcode::G_TRUNC, {DstTy, MidTy}})) {
+    MatchInfo.second = MidTy;
+    return true;
+  }
+
+  // If the truncate is more than double the input size, see if we can
+  // generate two vector truncations.
+  if (DstTy.getScalarSizeInBits() * 2 < UnmergeSrcTy.getScalarSizeInBits()) {
+    LLT HalfTy =
+        UnmergeSrcTy.changeElementSize(UnmergeSrcTy.getScalarSizeInBits() / 2);
+    if (!isLegal({TargetOpcode::G_TRUNC, {HalfTy, UnmergeSrcTy}}))
+      return false;
+    LLT HalfLongTy = DstTy.changeElementType(HalfTy.getElementType());
+    if (!isLegal({TargetOpcode::G_TRUNC, {DstTy, HalfLongTy}}) ||
+        !isLegal({TargetOpcode::G_CONCAT_VECTORS, {HalfLongTy, HalfTy}}))
+      return false;
+
+    MatchInfo.second = HalfTy;
+    return true;
+  }
+  return false;
 }
 
-void CombinerHelper::applyUseVectorTruncate(MachineInstr &MI,
-                                            Register &MatchInfo) const {
+void CombinerHelper::applyUseVectorTruncate(
+    MachineInstr &MI, std::pair<Register, LLT> &MatchInfo) const {
   Register MidReg;
   auto BuildMI = cast<GBuildVector>(&MI);
   Register DstReg = BuildMI->getReg(0);
   LLT DstTy = MRI.getType(DstReg);
-  LLT UnmergeSrcTy = MRI.getType(MatchInfo);
+  LLT UnmergeSrcTy = MRI.getType(MatchInfo.first);
+  LLT MidTy = MatchInfo.second;
   unsigned DstTyNumElt = DstTy.getNumElements();
   unsigned UnmergeSrcTyNumElt = UnmergeSrcTy.getNumElements();
 
   // No need to pad vector if only G_TRUNC is needed
   if (DstTyNumElt / UnmergeSrcTyNumElt == 1) {
-    MidReg = MatchInfo;
+    MidReg = MatchInfo.first;
   } else {
-    Register UndefReg = Builder.buildUndef(UnmergeSrcTy).getReg(0);
-    SmallVector<Register> ConcatRegs = {MatchInfo};
-    for (unsigned I = 1; I < DstTyNumElt / UnmergeSrcTyNumElt; ++I)
+    Register Src = MatchInfo.first;
+    LLT ConcatTy = UnmergeSrcTy;
+    if (MidTy.getScalarSizeInBits() != UnmergeSrcTy.getScalarSizeInBits()) {
+      Src = Builder.buildTrunc(MidTy, Src).getReg(0);
+      ConcatTy = MidTy;
+    }
+
+    Register UndefReg = Builder.buildUndef(ConcatTy).getReg(0);
+    SmallVector<Register> ConcatRegs = {Src};
+    for (unsigned I = 1; I < DstTyNumElt / ConcatTy.getNumElements(); ++I)
       ConcatRegs.push_back(UndefReg);
 
-    auto MidTy = DstTy.changeElementType(UnmergeSrcTy.getScalarType());
+    MidTy = DstTy.changeElementType(ConcatTy.getScalarType());
     MidReg = Builder.buildConcatVectors(MidTy, ConcatRegs).getReg(0);
   }
 

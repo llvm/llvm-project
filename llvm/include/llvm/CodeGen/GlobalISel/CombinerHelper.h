@@ -680,8 +680,10 @@ public:
                                 MachineIRBuilder &B,
                                 Register &UnmergeSrc) const;
 
-  bool matchUseVectorTruncate(MachineInstr &MI, Register &MatchInfo) const;
-  void applyUseVectorTruncate(MachineInstr &MI, Register &MatchInfo) const;
+  bool matchUseVectorTruncate(MachineInstr &MI,
+                              std::pair<Register, LLT> &MatchInfo) const;
+  void applyUseVectorTruncate(MachineInstr &MI,
+                              std::pair<Register, LLT> &MatchInfo) const;
 
   /// \returns true if a G_ICMP instruction \p MI can be replaced with a true
   /// or false constant based off of KnownBits information.

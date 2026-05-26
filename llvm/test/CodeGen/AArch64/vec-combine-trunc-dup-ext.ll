@@ -13,12 +13,8 @@ define <4 x i32> @dup_trunc_sext_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %x,
 ; CHECK-GI-LABEL: dup_trunc_sext_v4i32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    cmgt v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    mov w8, v0.s[1]
-; CHECK-GI-NEXT:    mov w9, v0.s[2]
-; CHECK-GI-NEXT:    mov w10, v0.s[3]
-; CHECK-GI-NEXT:    mov v0.b[1], w8
-; CHECK-GI-NEXT:    mov v0.b[2], w9
-; CHECK-GI-NEXT:    mov v0.b[3], w10
+; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    dup v0.8b, v0.b[2]
 ; CHECK-GI-NEXT:    umov w8, v0.b[0]
 ; CHECK-GI-NEXT:    umov w9, v0.b[1]
@@ -79,12 +75,8 @@ define <4 x float> @dup_trunc_sext_v4f32(<4 x float> %a, <4 x float> %b, <4 x fl
 ; CHECK-GI-LABEL: dup_trunc_sext_v4f32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fcmge v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    mov w8, v0.s[1]
-; CHECK-GI-NEXT:    mov w9, v0.s[2]
-; CHECK-GI-NEXT:    mov w10, v0.s[3]
-; CHECK-GI-NEXT:    mov v0.b[1], w8
-; CHECK-GI-NEXT:    mov v0.b[2], w9
-; CHECK-GI-NEXT:    mov v0.b[3], w10
+; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    dup v0.8b, v0.b[3]
 ; CHECK-GI-NEXT:    umov w8, v0.b[0]
 ; CHECK-GI-NEXT:    umov w9, v0.b[1]
@@ -145,12 +137,8 @@ define <4 x i32> @dup_trunc_sext_v4i32_idx0(<4 x i32> %a, <4 x i32> %b, <4 x i32
 ; CHECK-GI-LABEL: dup_trunc_sext_v4i32_idx0:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    cmgt v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    mov w8, v0.s[1]
-; CHECK-GI-NEXT:    mov w9, v0.s[2]
-; CHECK-GI-NEXT:    mov w10, v0.s[3]
-; CHECK-GI-NEXT:    mov v0.b[1], w8
-; CHECK-GI-NEXT:    mov v0.b[2], w9
-; CHECK-GI-NEXT:    mov v0.b[3], w10
+; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    dup v0.8b, v0.b[0]
 ; CHECK-GI-NEXT:    umov w8, v0.b[0]
 ; CHECK-GI-NEXT:    umov w9, v0.b[1]

@@ -206,6 +206,7 @@ def indexed_load_store_matchdata : GIDefMatchData<"IndexedLoadStoreMatchInfo">;
 def instruction_steps_matchdata: GIDefMatchData<"InstructionStepsMatchInfo">;
 
 def register_matchinfo: GIDefMatchData<"Register">;
+def register_llt_matchinfo: GIDefMatchData<"std::pair<Register, LLT>">;
 def int64_matchinfo: GIDefMatchData<"int64_t">;
 def apint_matchinfo : GIDefMatchData<"APInt">;
 def constantfp_matchinfo : GIDefMatchData<"ConstantFP*">;
@@ -1877,7 +1878,7 @@ def insert_vector_elt_oob : GICombineRule<
 
 // Combine v8i8 (buildvector i8 (trunc(unmerge)), i8 (trunc), i8 (trunc), i8 (trunc), undef, undef, undef, undef)
 def combine_use_vector_truncate : GICombineRule<
-  (defs root:$root, register_matchinfo:$matchinfo),
+  (defs root:$root, register_llt_matchinfo:$matchinfo),
   (match (G_BUILD_VECTOR $dst, GIVariadic<>:$unused):$root,
          [{ return Helper.matchUseVectorTruncate(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyUseVectorTruncate(*${root}, ${matchinfo}); }])>;
