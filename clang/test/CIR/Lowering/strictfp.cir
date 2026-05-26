@@ -1,0 +1,28 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir --disable-cc-lowering | FileCheck %s -check-prefix=LLVM
+
+// Functions tagged with the `strictfp` CIR function attribute should be
+// lowered to `llvm.func` operations whose `passthrough` array contains
+// `"strictfp"`, and then translated to LLVM IR functions carrying the
+// `strictfp` attribute.
+
+module {
+  cir.func @strict_fn() attributes {strictfp} {
+    cir.return
+  }
+
+  cir.func @plain_fn() {
+    cir.return
+  }
+}
+
+// MLIR-LABEL: llvm.func @strict_fn()
+// MLIR-SAME:    passthrough = ["strictfp"]
+// MLIR-LABEL: llvm.func @plain_fn()
+// MLIR-NOT:     passthrough
+// MLIR-NOT:     strictfp
+
+// LLVM:       define void @strict_fn() #[[STRICT:[0-9]+]]
+// LLVM-LABEL: define void @plain_fn()
+// LLVM-NOT:     #[[STRICT]]
+// LLVM:       attributes #[[STRICT]] = {{.*}}strictfp

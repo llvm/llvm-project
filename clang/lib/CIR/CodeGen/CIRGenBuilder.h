@@ -31,8 +31,11 @@ namespace clang::CIRGen {
 class CIRGenBuilderTy : public cir::CIRBaseBuilderTy {
   const CIRGenTypeCache &typeCache;
   bool isFPConstrained = false;
-  llvm::fp::ExceptionBehavior defaultConstrainedExcept = llvm::fp::ebStrict;
-  llvm::RoundingMode defaultConstrainedRounding = llvm::RoundingMode::Dynamic;
+  LangOptions::FPExceptionModeKind defaultConstrainedExcept =
+      LangOptions::FPE_Ignore;
+  llvm::RoundingMode defaultConstrainedRounding =
+      llvm::RoundingMode::NearestTiesToEven;
+  bool defaultConstrainedStrictExcept = false;
 
   llvm::StringMap<unsigned> recordNames;
   llvm::StringMap<unsigned> globalsVersioning;
@@ -134,21 +137,17 @@ public:
   bool getIsFPConstrained() const { return isFPConstrained; }
 
   /// Set the exception handling to be used with constrained floating point
-  void setDefaultConstrainedExcept(llvm::fp::ExceptionBehavior newExcept) {
-    assert(llvm::convertExceptionBehaviorToStr(newExcept) &&
-           "Garbage strict exception behavior!");
+  void setDefaultConstrainedExcept(LangOptions::FPExceptionModeKind newExcept) {
     defaultConstrainedExcept = newExcept;
   }
 
   /// Get the exception handling used with constrained floating point
-  llvm::fp::ExceptionBehavior getDefaultConstrainedExcept() const {
+  LangOptions::FPExceptionModeKind getDefaultConstrainedExcept() const {
     return defaultConstrainedExcept;
   }
 
   /// Set the rounding mode handling to be used with constrained floating point
   void setDefaultConstrainedRounding(llvm::RoundingMode newRounding) {
-    assert(llvm::convertRoundingModeToStr(newRounding) &&
-           "Garbage strict rounding mode!");
     defaultConstrainedRounding = newRounding;
   }
 
@@ -156,6 +155,11 @@ public:
   llvm::RoundingMode getDefaultConstrainedRounding() const {
     return defaultConstrainedRounding;
   }
+
+  void initializeDefaultFenv(llvm::RoundingMode rm, LangOptions::FPExceptionModeKind eb) {
+    // TODO(cir): implement this
+  }
+
 
   cir::LongDoubleType getLongDoubleTy(const llvm::fltSemantics &format) const {
     if (&format == &llvm::APFloat::IEEEdouble())
