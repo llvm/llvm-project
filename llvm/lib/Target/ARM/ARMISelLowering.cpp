@@ -13073,10 +13073,10 @@ static SDValue PerformAddcSubcCombine(SDNode *N,
   if (Subtarget->isThumb1Only()) {
     SDValue RHS = N->getOperand(1);
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
-      int32_t imm = C->getSExtValue();
-      if (imm < 0 && imm > std::numeric_limits<int>::min()) {
+      APInt Imm = C->getAPIntValue();
+      if (Imm.isNegative() && !Imm.isMinSignedValue()) {
         SDLoc DL(N);
-        RHS = DAG.getConstant(-imm, DL, MVT::i32);
+        RHS = DAG.getConstant(-Imm, DL, MVT::i32);
         unsigned Opcode = (N->getOpcode() == ARMISD::ADDC) ? ARMISD::SUBC
                                                            : ARMISD::ADDC;
         return DAG.getNode(Opcode, DL, N->getVTList(), N->getOperand(0), RHS);
@@ -13094,14 +13094,14 @@ static SDValue PerformAddeSubeCombine(SDNode *N,
     SelectionDAG &DAG = DCI.DAG;
     SDValue RHS = N->getOperand(1);
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
-      int64_t imm = C->getSExtValue();
-      if (imm < 0) {
+      APInt Imm = C->getAPIntValue();
+      if (Imm.isNegative()) {
         SDLoc DL(N);
 
         // The with-carry-in form matches bitwise not instead of the negation.
         // Effectively, the inverse interpretation of the carry flag already
         // accounts for part of the negation.
-        RHS = DAG.getConstant(~imm, DL, MVT::i32);
+        RHS = DAG.getConstant(~Imm, DL, MVT::i32);
 
         unsigned Opcode = (N->getOpcode() == ARMISD::ADDE) ? ARMISD::SUBE
                                                            : ARMISD::ADDE;
