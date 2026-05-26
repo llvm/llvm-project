@@ -42,7 +42,7 @@ namespace {
     static bool prefer = []() {
       if (std::optional<std::string> Env =
               sys::Process::GetEnv("LLVM_WINDOWS_PREFER_FORWARD_SLASH"))
-        return StringRef(*Env) == "1";
+        return *Env == "1";
       return static_cast<bool>(LLVM_WINDOWS_PREFER_FORWARD_SLASH);
     }();
     return prefer;
