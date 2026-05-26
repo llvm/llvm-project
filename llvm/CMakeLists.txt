@@ -1384,6 +1384,7 @@ add_subdirectory(include)
 add_subdirectory(lib)
 
 if( LLVM_INCLUDE_UTILS )
+  add_subdirectory(utils/ExampleDaemon)
   add_subdirectory(utils/FileCheck)
   add_subdirectory(utils/PerfectShuffle)
   add_subdirectory(utils/count)
