@@ -350,7 +350,7 @@ struct OperationFormat {
     resultTypes.resize(op.getNumResults(), TypeResolution());
 
     hasImplicitTermTrait = llvm::any_of(op.getTraits(), [](const Trait &trait) {
-      return trait.getDef().isSubClassOf("SingleBlockImplicitTerminatorImpl");
+      return trait.getDef().isSubClassOf("ImplicitTerminator");
     });
 
     hasSingleBlockTrait = op.getTrait("::mlir::OpTrait::SingleBlock");
@@ -1960,7 +1960,8 @@ static const char *regionSingleBlockImplicitTerminatorPrinterCode = R"(
   {
     bool printTerminator = true;
     if (auto *term = {0}.empty() ? nullptr : {0}.begin()->getTerminator()) {{
-      printTerminator = !term->getAttrDictionary().empty() ||
+      printTerminator = !::mlir::isa<ImplicitTerminatorOpT>(*term) ||
+                        !term->getAttrDictionary().empty() ||
                         term->getNumOperands() != 0 ||
                         term->getNumResults() != 0;
     }

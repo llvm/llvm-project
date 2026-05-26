@@ -170,44 +170,6 @@ static ParseResult parseCIRKeyword(AsmParser &parser, RetTy &result) {
   return success();
 }
 
-// Check if a region's termination omission is valid and, if so, creates and
-// inserts the omitted terminator into the region.
-static LogicalResult ensureRegionTerm(OpAsmParser &parser, Region &region,
-                                      SMLoc errLoc) {
-  Location eLoc = parser.getEncodedSourceLoc(parser.getCurrentLocation());
-  OpBuilder builder(parser.getBuilder().getContext());
-
-  // Insert empty block in case the region is empty to ensure the terminator
-  // will be inserted
-  if (region.empty())
-    builder.createBlock(&region);
-
-  Block &block = region.back();
-  // Region is properly terminated: nothing to do.
-  if (!block.empty() && block.back().hasTrait<OpTrait::IsTerminator>())
-    return success();
-
-  // Check for invalid terminator omissions.
-  if (!region.hasOneBlock())
-    return parser.emitError(errLoc,
-                            "multi-block region must not omit terminator");
-
-  // Terminator was omitted correctly: recreate it.
-  builder.setInsertionPointToEnd(&block);
-  cir::YieldOp::create(builder, eLoc);
-  return success();
-}
-
-// True if the region's terminator should be omitted.
-static bool omitRegionTerm(mlir::Region &r) {
-  const auto singleNonEmptyBlock = r.hasOneBlock() && !r.back().empty();
-  const auto yieldsNothing = [&r]() {
-    auto y = dyn_cast<cir::YieldOp>(r.back().getTerminator());
-    return y && y.getArgs().empty();
-  };
-  return singleNonEmptyBlock && yieldsNothing();
-}
-
 //===----------------------------------------------------------------------===//
 // InlineKindAttr (FIXME: remove once FuncOp uses assembly format)
 //===----------------------------------------------------------------------===//
@@ -246,24 +208,6 @@ void printInlineKindAttr(OpAsmPrinter &p, cir::InlineKindAttr inlineKindAttr) {
 //===----------------------------------------------------------------------===//
 // CIR Custom Parsers/Printers
 //===----------------------------------------------------------------------===//
-
-static mlir::ParseResult parseOmittedTerminatorRegion(mlir::OpAsmParser &parser,
-                                                      mlir::Region &region) {
-  auto regionLoc = parser.getCurrentLocation();
-  if (parser.parseRegion(region))
-    return failure();
-  if (ensureRegionTerm(parser, region, regionLoc).failed())
-    return failure();
-  return success();
-}
-
-static void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
-                                         cir::ScopeOp &op,
-                                         mlir::Region &region) {
-  printer.printRegion(region,
-                      /*printEntryBlockArgs=*/false,
-                      /*printBlockTerminators=*/!omitRegionTerm(region));
-}
 
 mlir::OptionalParseResult
 parseGlobalAddressSpaceValue(mlir::AsmParser &p,
@@ -1353,62 +1297,6 @@ mlir::LogicalResult cir::ReturnOp::verify() {
 // IfOp
 //===----------------------------------------------------------------------===//
 
-ParseResult cir::IfOp::parse(OpAsmParser &parser, OperationState &result) {
-  // create the regions for 'then'.
-  result.regions.reserve(2);
-  Region *thenRegion = result.addRegion();
-  Region *elseRegion = result.addRegion();
-
-  mlir::Builder &builder = parser.getBuilder();
-  OpAsmParser::UnresolvedOperand cond;
-  Type boolType = cir::BoolType::get(builder.getContext());
-
-  if (parser.parseOperand(cond) ||
-      parser.resolveOperand(cond, boolType, result.operands))
-    return failure();
-
-  // Parse 'then' region.
-  mlir::SMLoc parseThenLoc = parser.getCurrentLocation();
-  if (parser.parseRegion(*thenRegion, /*arguments=*/{}, /*argTypes=*/{}))
-    return failure();
-
-  if (ensureRegionTerm(parser, *thenRegion, parseThenLoc).failed())
-    return failure();
-
-  // If we find an 'else' keyword, parse the 'else' region.
-  if (!parser.parseOptionalKeyword("else")) {
-    mlir::SMLoc parseElseLoc = parser.getCurrentLocation();
-    if (parser.parseRegion(*elseRegion, /*arguments=*/{}, /*argTypes=*/{}))
-      return failure();
-    if (ensureRegionTerm(parser, *elseRegion, parseElseLoc).failed())
-      return failure();
-  }
-
-  // Parse the optional attribute list.
-  if (parser.parseOptionalAttrDict(result.attributes))
-    return failure();
-  return success();
-}
-
-void cir::IfOp::print(OpAsmPrinter &p) {
-  p << " " << getCondition() << " ";
-  mlir::Region &thenRegion = this->getThenRegion();
-  p.printRegion(thenRegion,
-                /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/!omitRegionTerm(thenRegion));
-
-  // Print the 'else' regions if it exists and has a block.
-  mlir::Region &elseRegion = this->getElseRegion();
-  if (!elseRegion.empty()) {
-    p << " else ";
-    p.printRegion(elseRegion,
-                  /*printEntryBlockArgs=*/false,
-                  /*printBlockTerminators=*/!omitRegionTerm(elseRegion));
-  }
-
-  p.printOptionalAttrDict(getOperation()->getAttrs());
-}
-
 /// Default callback for IfOp builders.
 void cir::buildTerminatedBody(OpBuilder &builder, Location loc) {
   // add cir.yield to end of the block
@@ -2109,11 +1997,11 @@ static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
     if (!parser.parseOptionalKeyword("ctor")) {
       if (parser.parseColonType(opTy))
         return failure();
-      auto parseLoc = parser.getCurrentLocation();
       if (parser.parseRegion(ctorRegion, /*arguments=*/{}, /*argTypes=*/{}))
         return failure();
-      if (ensureRegionTerm(parser, ctorRegion, parseLoc).failed())
-        return failure();
+      cir::GlobalOp::ensureTerminator(
+          ctorRegion, parser.getBuilder(),
+          parser.getEncodedSourceLoc(parser.getCurrentLocation()));
     } else {
       // Parse constant with initializer, examples:
       //  cir.global @y = 3.400000e+00 : f32
@@ -2130,11 +2018,11 @@ static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
     // Parse destructor, example:
     //   dtor { ... }
     if (!parser.parseOptionalKeyword("dtor")) {
-      auto parseLoc = parser.getCurrentLocation();
       if (parser.parseRegion(dtorRegion, /*arguments=*/{}, /*argTypes=*/{}))
         return failure();
-      if (ensureRegionTerm(parser, dtorRegion, parseLoc).failed())
-        return failure();
+      cir::GlobalOp::ensureTerminator(
+          dtorRegion, parser.getBuilder(),
+          parser.getEncodedSourceLoc(parser.getCurrentLocation()));
     }
   }
 

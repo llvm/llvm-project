@@ -1,0 +1,57 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+// Omitted yield is auto-inserted and re-omitted on print.
+cir.func @if_omitted_yield(%arg0 : !cir.bool) {
+  cir.if %arg0 {
+  }
+  cir.return
+}
+// CHECK-LABEL: cir.func @if_omitted_yield
+// CHECK:         cir.if %{{.*}} {
+// CHECK-NEXT:    }
+
+// Non-yield terminator is preserved on roundtrip.
+cir.func @if_non_yield_terminator(%arg0 : !cir.bool) -> !s32i {
+  cir.if %arg0 {
+    %0 = cir.const #cir.int<42> : !s32i
+    cir.return %0 : !s32i
+  }
+  %1 = cir.const #cir.int<0> : !s32i
+  cir.return %1 : !s32i
+}
+// CHECK-LABEL: cir.func @if_non_yield_terminator
+// CHECK:         cir.if %{{.*}} {
+// CHECK:           cir.return %{{.*}} : !s32i
+// CHECK-NEXT:    }
+
+// Optional else region omitted.
+cir.func @if_no_else(%arg0 : !cir.bool) {
+  cir.if %arg0 {
+    cir.yield
+  }
+  cir.return
+}
+// CHECK-LABEL: cir.func @if_no_else
+// CHECK:         cir.if %{{.*}} {
+// CHECK-NEXT:    }
+// CHECK-NOT:     else
+
+// Both then and else present.
+cir.func @if_with_else(%arg0 : !cir.bool) {
+  cir.if %arg0 {
+    cir.yield
+  } else {
+    cir.yield
+  }
+  cir.return
+}
+// CHECK-LABEL: cir.func @if_with_else
+// CHECK:         cir.if %{{.*}} {
+// CHECK-NEXT:    } else {
+// CHECK-NEXT:    }
+
+}

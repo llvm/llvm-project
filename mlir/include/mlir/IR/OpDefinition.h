@@ -955,29 +955,75 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// SingleBlockImplicitTerminator
+// ImplicitDefaultTerminator / SingleBlockImplicitTerminator
 //===----------------------------------------------------------------------===//
 
-/// This class provides APIs and verifiers for ops with regions having a single
-/// block that must terminate with `TerminatorOpType`.
+namespace detail {
+/// Shared base for implicit-terminator traits. Provides `ensureTerminator`,
+/// `ImplicitTerminatorOpT`, and the terminator builder. Not a trait itself —
+/// mixed into trait Impl classes via multiple inheritance.
+template <typename TerminatorOpType>
+struct ImplicitTerminatorBase {
+  using ImplicitTerminatorOpT = TerminatorOpType;
+
+  /// Ensure that the given region has the terminator required by this trait.
+  /// If OpBuilder is provided, use it to build the terminator and notify the
+  /// OpBuilder listeners accordingly. If only a Builder is provided, locally
+  /// construct an OpBuilder with no listeners; this should only be used if no
+  /// OpBuilder is available at the call site, e.g., in the parser.
+  static void ensureTerminator(Region &region, Builder &builder, Location loc) {
+    ::mlir::impl::ensureRegionTerminator(region, builder, loc, buildTerminator);
+  }
+  static void ensureTerminator(Region &region, OpBuilder &builder,
+                               Location loc) {
+    ::mlir::impl::ensureRegionTerminator(region, builder, loc, buildTerminator);
+  }
+
+private:
+  static Operation *buildTerminator(OpBuilder &builder, Location loc) {
+    OperationState state(loc, TerminatorOpType::getOperationName());
+    TerminatorOpType::build(builder, state);
+    return Operation::create(state);
+  }
+};
+} // namespace detail
+
+/// Ops whose regions may end with any IsTerminator op. `TerminatorOpType` is
+/// inserted as the default when a region block has no terminator. Does not
+/// enforce SingleBlock — regions may have multiple blocks.
+template <typename TerminatorOpType>
+struct ImplicitDefaultTerminator {
+  template <typename ConcreteType>
+  class Impl
+      : public TraitBase<ConcreteType,
+                         ImplicitDefaultTerminator<TerminatorOpType>::Impl>,
+        public detail::ImplicitTerminatorBase<TerminatorOpType> {
+  public:
+    static LogicalResult verifyRegionTrait(Operation *op) {
+      for (unsigned i = 0, e = op->getNumRegions(); i < e; ++i) {
+        Region &region = op->getRegion(i);
+        if (region.empty())
+          continue;
+        if (region.front().back().hasTrait<OpTrait::IsTerminator>())
+          continue;
+        return op->emitOpError("expects region #")
+               << i << " to end with a terminator";
+      }
+      return success();
+    }
+  };
+};
+
+/// Ops with regions having a single block that must terminate with
+/// `TerminatorOpType`.
 template <typename TerminatorOpType>
 struct SingleBlockImplicitTerminator {
   template <typename ConcreteType>
-  class Impl : public TraitBase<ConcreteType, SingleBlockImplicitTerminator<
-                                                  TerminatorOpType>::Impl> {
-  private:
-    /// Builds a terminator operation without relying on OpBuilder APIs to avoid
-    /// cyclic header inclusion.
-    static Operation *buildTerminator(OpBuilder &builder, Location loc) {
-      OperationState state(loc, TerminatorOpType::getOperationName());
-      TerminatorOpType::build(builder, state);
-      return Operation::create(state);
-    }
-
+  class Impl
+      : public TraitBase<ConcreteType,
+                         SingleBlockImplicitTerminator<TerminatorOpType>::Impl>,
+        public detail::ImplicitTerminatorBase<TerminatorOpType> {
   public:
-    /// The type of the operation used as the implicit terminator type.
-    using ImplicitTerminatorOpT = TerminatorOpType;
-
     static LogicalResult verifyRegionTrait(Operation *op) {
       for (unsigned i = 0, e = op->getNumRegions(); i < e; ++i) {
         Region &region = op->getRegion(i);
@@ -999,22 +1045,6 @@ struct SingleBlockImplicitTerminator {
       }
 
       return success();
-    }
-
-    /// Ensure that the given region has the terminator required by this trait.
-    /// If OpBuilder is provided, use it to build the terminator and notify the
-    /// OpBuilder listeners accordingly. If only a Builder is provided, locally
-    /// construct an OpBuilder with no listeners; this should only be used if no
-    /// OpBuilder is available at the call site, e.g., in the parser.
-    static void ensureTerminator(Region &region, Builder &builder,
-                                 Location loc) {
-      ::mlir::impl::ensureRegionTerminator(region, builder, loc,
-                                           buildTerminator);
-    }
-    static void ensureTerminator(Region &region, OpBuilder &builder,
-                                 Location loc) {
-      ::mlir::impl::ensureRegionTerminator(region, builder, loc,
-                                           buildTerminator);
     }
   };
 };

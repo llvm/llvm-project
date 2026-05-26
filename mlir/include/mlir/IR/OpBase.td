@@ -122,9 +122,18 @@ def ElementwiseMappable : TraitList<[
 // Op's regions have a single block.
 def SingleBlock : NativeOpTrait<"SingleBlock">, StructuralOpTrait;
 
-class SingleBlockImplicitTerminatorImpl<string op>
-    : ParamNativeOpTrait<"SingleBlockImplicitTerminator", op, [SingleBlock]>,
-      StructuralOpTrait;
+/// Base inner trait providing ODS implicit-terminator printer/parser machinery.
+class ImplicitTerminator<string op>
+    : ParamNativeOpTrait<"ImplicitDefaultTerminator", op>, StructuralOpTrait;
+
+/// Any terminator accepted; T auto-inserted if absent. No SingleBlock.
+class ImplicitDefaultTerminator<string op>
+    : TraitList<[ImplicitTerminator<op>]>;
+
+class SingleBlockImplicitTerminatorImpl<string op> : ImplicitTerminator<op> {
+  let trait = "SingleBlockImplicitTerminator<"#op#">::Impl";
+  let dependentTraits = [SingleBlock];
+}
 
 // Op's regions have a single block with the specified terminator.
 class SingleBlockImplicitTerminator<string op>
