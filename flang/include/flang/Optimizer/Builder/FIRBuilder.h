@@ -16,6 +16,7 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 #define FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 
+#include "flang/Optimizer/Dialect/FIRBoxUtils.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -736,6 +737,8 @@ private:
 
 namespace fir::factory {
 
+using fir::genDimInfoFromBox;
+
 //===----------------------------------------------------------------------===//
 // ExtendedValue inquiry helpers
 //===----------------------------------------------------------------------===//
@@ -964,16 +967,6 @@ uint64_t getProgramAddressSpace(mlir::DataLayout *dataLayout);
 ///   %result1 = arith.select %p4, %c0, %e1 : index
 llvm::SmallVector<mlir::Value> updateRuntimeExtentsForEmptyArrays(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::ValueRange extents);
-
-/// Given \p box of type fir::BaseBoxType representing an array,
-/// the function generates code to fetch the lower bounds,
-/// the extents and the strides from the box. The values are returned via
-/// \p lbounds, \p extents and \p strides.
-void genDimInfoFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
-                       mlir::Value box,
-                       llvm::SmallVectorImpl<mlir::Value> *lbounds,
-                       llvm::SmallVectorImpl<mlir::Value> *extents,
-                       llvm::SmallVectorImpl<mlir::Value> *strides);
 
 /// Generate an LLVM dialect lifetime start marker at the current insertion
 /// point given an fir.alloca. Returns the value to be passed to the lifetime
