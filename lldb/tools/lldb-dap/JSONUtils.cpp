@@ -9,6 +9,7 @@
 #include "JSONUtils.h"
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
 #include "lldb/API/SBAddress.h"
@@ -456,13 +457,9 @@ static void FilterAndGetValueForKey(const lldb::SBStructuredData data,
   case lldb::eStructuredDataTypeBoolean:
     out.try_emplace(key_utf8, value.GetBooleanValue());
     break;
-  case lldb::eStructuredDataTypeString: {
-    // Get the string size before reading
-    const size_t str_length = value.GetStringValue(nullptr, 0);
-    std::string str(str_length + 1, 0);
-    value.GetStringValue(&str[0], str_length);
-    out.try_emplace(key_utf8, llvm::json::fixUTF8(str));
-  } break;
+  case lldb::eStructuredDataTypeString:
+    out.try_emplace(key_utf8, llvm::json::fixUTF8(GetStringValue(value)));
+    break;
   case lldb::eStructuredDataTypeDictionary: {
     lldb::SBStream contents;
     value.GetAsJSON(contents);

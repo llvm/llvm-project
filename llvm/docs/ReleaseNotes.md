@@ -128,6 +128,11 @@ Makes programs 10x faster by doing Special New Thing.
 * ``ConstantFP`` now supports vector types and is the canonical form returned by
   ``ConstantVector::getSplat(C)`` when ``C`` is a scalar ``ConstantFP``.
 
+* ``DenseMap`` and ``DenseSet`` ``erase`` now invalidates all iterators and
+  references into the container, not just the iterator for the erased element.
+  Use the new ``remove_if`` member to erase matching elements in a single pass
+  instead of erasing while iterating.
+
 ### Changes to building LLVM
 
 ### Changes to TableGen

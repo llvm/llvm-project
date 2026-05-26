@@ -1030,6 +1030,12 @@ Expected<TargetExtType *> TargetExtType::checkParams(TargetExtType *TTy) {
                              "should have no type parameters "
                              "and one integer parameter");
   }
+  if (TTy->Name == "amdgpu.stridemark" &&
+      (TTy->getNumTypeParameters() != 0 || TTy->getNumIntParameters() > 1)) {
+    return createStringError("target extension type amdgpu.stridemark "
+                             "should have no type parameters "
+                             "and at most one integer parameter");
+  }
 
   return TTy;
 }
@@ -1122,6 +1128,8 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     return TargetTypeInfo(FixedVectorType::get(Type::getInt32Ty(C), 4),
                           TargetExtType::CanBeGlobal);
   }
+  if (Name == "amdgpu.stridemark")
+    return TargetTypeInfo(Type::getVoidTy(C), TargetExtType::IsTokenLike);
 
   // Type used to test vector element target extension property.
   // Can be removed once a public target extension type uses CanBeVectorElement.

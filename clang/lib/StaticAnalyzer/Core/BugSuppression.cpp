@@ -246,7 +246,7 @@ preferTemplateDefinitionForTemplateSpecializations(const Decl *D) {
   // existing parent-chain walk find the suppression attribute.
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern())
-      return Pattern;
+      return Pattern->getDefinition();
   }
 
   const auto *SpecializationDecl = dyn_cast<ClassTemplateSpecializationDecl>(D);

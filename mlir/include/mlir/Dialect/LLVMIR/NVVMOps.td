@@ -6580,6 +6580,28 @@ def NVVM_SqrtApproxOp : NVVM_F32UnaryApproxOp<"sqrt.approx"> {
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM div op definitions
+//===----------------------------------------------------------------------===//
+
+def NVVM_DivFOp
+    : NVVM_SingleResultIntrinsicOp<"divf", [Pure, SameOperandsAndResultType]> {
+  let summary = "Divide one value by another";
+  let description = [{
+    Divides lhs by rhs, stores result in res (`res = lhs / rhs`).
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-div)
+  }];
+  let arguments = (ins AnyTypeOf<[F32, F64]>:$lhs, AnyTypeOf<[F32, F64]>:$rhs,
+      DefaultValuedAttr<FPArithRoundingMode, "FPRoundingMode::NONE">:$rnd,
+      DefaultValuedAttr<BoolAttr, "false">:$ftz,
+      DefaultValuedAttr<BoolAttr, "false">:$approx,
+      DefaultValuedAttr<BoolAttr, "false">:$full);
+  let results = (outs AnyTypeOf<[F32, F64]>:$res);
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($res)";
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM tensormap.replace Op
 //===----------------------------------------------------------------------===//
 

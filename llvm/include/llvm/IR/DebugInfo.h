@@ -126,6 +126,7 @@ private:
   void processCompileUnit(DICompileUnit *CU);
   void processScope(DIScope *Scope);
   void processType(DIType *DT);
+  void processVariable(DIVariable *DV);
   void processImportedEntity(const DIImportedEntity *Import);
   void processMacroNode(DIMacroNode *Macro, DIMacroFile *CurrentMacroFile);
   bool addCompileUnit(DICompileUnit *CU);

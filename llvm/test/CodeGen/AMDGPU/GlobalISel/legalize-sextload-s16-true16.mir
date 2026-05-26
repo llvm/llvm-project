@@ -13,9 +13,8 @@ body: |
     ; TRUE16-NEXT: {{  $}}
     ; TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; TRUE16-NEXT: [[COPY1:%[0-9]+]]:_(p5) = COPY $vgpr2
-    ; TRUE16-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY1]](p5) :: (load (s8), addrspace 5)
-    ; TRUE16-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[SEXTLOAD]](s32)
-    ; TRUE16-NEXT: G_STORE [[TRUNC]](s16), [[COPY]](p1) :: (store (s16), addrspace 1)
+    ; TRUE16-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s16) = G_SEXTLOAD [[COPY1]](p5) :: (load (s8), addrspace 5)
+    ; TRUE16-NEXT: G_STORE [[SEXTLOAD]](s16), [[COPY]](p1) :: (store (s16), addrspace 1)
     ;
     ; FAKE16-LABEL: name: test_sextload_global_s16_from_s8
     ; FAKE16: liveins: $vgpr0_vgpr1, $vgpr2
@@ -41,9 +40,8 @@ body: |
     ; TRUE16-NEXT: {{  $}}
     ; TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; TRUE16-NEXT: [[COPY1:%[0-9]+]]:_(p5) = COPY $vgpr1
-    ; TRUE16-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY1]](p5) :: (load (s8), addrspace 5)
-    ; TRUE16-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[SEXTLOAD]](s32)
-    ; TRUE16-NEXT: G_STORE [[TRUNC]](s16), [[COPY]](p3) :: (store (s16), addrspace 3)
+    ; TRUE16-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s16) = G_SEXTLOAD [[COPY1]](p5) :: (load (s8), addrspace 5)
+    ; TRUE16-NEXT: G_STORE [[SEXTLOAD]](s16), [[COPY]](p3) :: (store (s16), addrspace 3)
     ;
     ; FAKE16-LABEL: name: test_sextload_local_s16_from_s8
     ; FAKE16: liveins: $vgpr0, $vgpr1
@@ -69,9 +67,8 @@ body: |
     ; TRUE16-NEXT: {{  $}}
     ; TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
     ; TRUE16-NEXT: [[COPY1:%[0-9]+]]:_(p5) = COPY $vgpr1
-    ; TRUE16-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY1]](p5) :: (load (s8), addrspace 5)
-    ; TRUE16-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[SEXTLOAD]](s32)
-    ; TRUE16-NEXT: G_STORE [[TRUNC]](s16), [[COPY]](p5) :: (store (s16), addrspace 5)
+    ; TRUE16-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s16) = G_SEXTLOAD [[COPY1]](p5) :: (load (s8), addrspace 5)
+    ; TRUE16-NEXT: G_STORE [[SEXTLOAD]](s16), [[COPY]](p5) :: (store (s16), addrspace 5)
     ;
     ; FAKE16-LABEL: name: test_sextload_private_s16_from_s8
     ; FAKE16: liveins: $vgpr0, $vgpr1

@@ -23,7 +23,7 @@ namespace llvm::sandboxir {
 /// This is useful because even though the duplicates will most probably be
 /// optimized away by future passes, their added cost can make vectorization
 /// more conservative than it should be.
-class PackReuse final : public RegionPass {
+class LLVM_ABI PackReuse final : public RegionPass {
   bool Change = false;
 
 public:

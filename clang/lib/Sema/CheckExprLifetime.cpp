@@ -483,7 +483,7 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     else if (EnableGSLAnalysis) {
       if (auto *CME = dyn_cast<CXXMethodDecl>(Callee);
           CME && lifetimes::shouldTrackImplicitObjectArg(
-                     CME, /*RunningUnderLifetimeSafety=*/false))
+                     *ObjectArg, CME, /*RunningUnderLifetimeSafety=*/false))
         VisitGSLPointerArg(Callee, ObjectArg);
     }
   }

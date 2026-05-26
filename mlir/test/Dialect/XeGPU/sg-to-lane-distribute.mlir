@@ -1,5 +1,5 @@
 // RUN: mlir-opt --allow-unregistered-dialect --xevm-attach-target='module=xevm_* chip=pvc' \
-// RUN: --xegpu-sg-to-wi-distribute-experimental --split-input-file %s --canonicalize --cse | FileCheck %s
+// RUN: --xegpu-sg-to-lane-distribute --split-input-file %s --canonicalize --cse | FileCheck %s
 
 // CHECK-LABEL: gpu.func @gemm
 // CHECK-DAG  : %[[C0:.*]] = arith.constant 0 : index

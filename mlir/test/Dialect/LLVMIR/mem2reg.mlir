@@ -1180,3 +1180,17 @@ llvm.func @dead_direct_use(%arg0 : i1) {
   }
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: @indirect_blocking_use_in_different_region
+llvm.func @indirect_blocking_use_in_different_region(%arg0 : i1) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  %2 = llvm.addrspacecast %1 : !llvm.ptr to !llvm.ptr<5>
+  scf.if %arg0 {
+    %3 = llvm.addrspacecast %2 : !llvm.ptr<5> to !llvm.ptr
+  }
+  llvm.return
+}

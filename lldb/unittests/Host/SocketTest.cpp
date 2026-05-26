@@ -11,10 +11,15 @@
 #include "lldb/Host/Config.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Utility/UriParser.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <chrono>
+#if LLDB_ENABLE_POSIX
+#include <cerrno>
+#include <csignal>
+#endif
 #if __linux__
 #include <lldb/Host/linux/AbstractSocket.h>
 #endif
@@ -443,6 +448,34 @@ TEST_F(SocketTest, AbstractSocketFromBoundNativeSocket) {
                                           /*should_close=*/false);
   ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
   ASSERT_EQ(Socket::ProtocolUnixAbstract, sock->get()->GetSocketProtocol());
+}
+#endif
+
+#if LLDB_ENABLE_POSIX
+TEST_F(SocketTest, DontReceiveSIGPIPE) {
+  static volatile std::sig_atomic_t sigpipe_received;
+  sigpipe_received = 0;
+
+  struct sigaction new_action = {};
+  struct sigaction old_action = {};
+  new_action.sa_handler = [](int) { sigpipe_received = 1; };
+  sigemptyset(&new_action.sa_mask);
+  ASSERT_EQ(0, sigaction(SIGPIPE, &new_action, &old_action));
+  llvm::scope_exit restore_sigpipe(
+      [&] { sigaction(SIGPIPE, &old_action, nullptr); });
+
+  auto pair = Socket::CreatePair();
+  ASSERT_THAT_EXPECTED(pair, llvm::Succeeded());
+  Socket &reader = *pair->first;
+  Socket &writer = *pair->second;
+
+  ASSERT_THAT_ERROR(reader.Close().takeError(), llvm::Succeeded());
+
+  size_t num_bytes = 1;
+  Status err = writer.Write("x", num_bytes);
+  EXPECT_TRUE(err.Fail());
+  EXPECT_EQ(EPIPE, static_cast<int>(err.GetError()));
+  EXPECT_EQ(0, sigpipe_received);
 }
 #endif
 

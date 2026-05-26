@@ -1124,8 +1124,8 @@ Error MachOPlatform::MachOPlatformPlugin::processObjCImageInfo(
         return E;
 
     // __objc_imageinfo is valid. Delete the block.
-    for (auto *S : ObjCImageInfo->symbols())
-      G.removeDefinedSymbol(*S);
+    while (ObjCImageInfo->symbols_size() != 0)
+      G.removeDefinedSymbol(**ObjCImageInfo->symbols().begin());
     G.removeBlock(ObjCImageInfoBlock);
   } else {
     LLVM_DEBUG({

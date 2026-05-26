@@ -237,6 +237,16 @@ class SPIRVLegalizePointerCastImpl {
   Value *
   buildVectorFromLoadedElements(IRBuilder<> &B, FixedVectorType *TargetType,
                                 SmallVector<Value *, 4> &LoadedElements) {
+    // <1 x T> shares the SPIR-V type with T, so emitting OpCompositeInsert on
+    // a scalar would be invalid. Bridge with spv_bitcast instead.
+    if (TargetType->getNumElements() == 1) {
+      Value *Scalar = LoadedElements[0];
+      Value *NewVector = B.CreateIntrinsic(
+          Intrinsic::spv_bitcast, {TargetType, Scalar->getType()}, {Scalar});
+      buildAssignType(B, TargetType, NewVector);
+      return NewVector;
+    }
+
     // Build the vector from the loaded elements.
     Value *NewVector = PoisonValue::get(TargetType);
     buildAssignType(B, TargetType, NewVector);

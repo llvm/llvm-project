@@ -13,7 +13,7 @@
 
 namespace llvm {
 struct FixIrreduciblePass : OptionalPassInfoMixin<FixIrreduciblePass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 } // namespace llvm
 

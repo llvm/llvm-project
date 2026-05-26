@@ -154,17 +154,18 @@ func.func @bitcast_source_conflict() {
   return
 }
 
+// The accumulator `arith.constant` is trivially rematerializable, so the
+// conflict resolver clones it with the consumer's expected layout instead
+// of inserting an `xegpu.convert_layout`
 // CHECK-LABEL: func.func @multireduction_source_conflict
 // CHECK-DAG:     %[[V0:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [32, 16]>} : () -> vector<32x32xf16>
 // CHECK-DAG:     %[[CVT0:.*]] = xegpu.convert_layout %[[V0]]
 // CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [32, 16]>, target_layout = #xegpu.layout<inst_data = [16, 16]>}>
 // CHECK-SAME:      : vector<32x32xf16>
-// CHECK-DAG:     %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [32]>}
+// CHECK-DAG:     %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [16, 16]>, dims = [0]>}
 // CHECK-SAME:      dense<0.000000e+00> : vector<32xf16>
-// CHECK-DAG:     %[[CVT1:.*]] = xegpu.convert_layout %[[CST]]
-// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [32]>, target_layout = #xegpu.slice<#xegpu.layout<inst_data = [16, 16]>, dims = [0]>}>
-// CHECK-SAME:      : vector<32xf16>
-// CHECK:         %[[MR:.*]] = vector.multi_reduction <add>, %[[CVT0]], %[[CVT1]]
+// CHECK-NOT:     xegpu.convert_layout %{{.*}} : vector<32xf16>
+// CHECK:         %[[MR:.*]] = vector.multi_reduction <add>, %[[CVT0]], %[[CST]]
 // CHECK-SAME:      {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [16, 16]>, dims = [0]>}
 // CHECK-SAME:      [0] : vector<32x32xf16> to vector<32xf16>
 // CHECK:         return
@@ -276,6 +277,56 @@ func.func @convert_layout() {
       target_layout = #xegpu.layout<sg_layout=[4, 8], sg_data=[8, 16]>}>
      : vector<32x128xf32>
   return
+}
+
+// A `vector.step` reaches two consumers that need different slice layouts of
+// the anchor's sg_layout (one along dim 0, one along dim 1). The conflict is
+// trivially rematerializable, so the resolver clones the step with the second
+// layout instead of inserting an `xegpu.convert_layout` (which would lower to
+// a cross-subgroup SLM round-trip at WG-to-SG distribution time).
+// CHECK-LABEL: gpu.func @step_clone_via_anchor
+// CHECK-DAG:     vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0]>} : vector<32xindex>
+// CHECK-DAG:     vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>, dims = [1]>} : vector<32xindex>
+// CHECK-NOT:     xegpu.convert_layout {{.*}} : vector<32xindex>
+gpu.func @step_clone_via_anchor(%arg0: i64, %arg1: memref<32x32xf32>) kernel {
+  %mask = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>} dense<true> : vector<32x32xi1>
+  %cst32 = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>, dims = [1]>} dense<32> : vector<32xindex>
+  %step = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0]>} : vector<32xindex>
+  %col = arith.muli %step, %cst32 {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>, dims = [1]>} : vector<32xindex>
+  %col2d = vector.shape_cast %col {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>} : vector<32xindex> to vector<32x1xindex>
+  %colb = vector.broadcast %col2d {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>} : vector<32x1xindex> to vector<32x32xindex>
+  %rowb = vector.broadcast %step {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>} : vector<32xindex> to vector<32x32xindex>
+  %off = arith.addi %colb, %rowb {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>} : vector<32x32xindex>
+  %v = xegpu.load %arg0[%off], %mask <{layout = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>}>
+      : i64, vector<32x32xindex>, vector<32x32xi1> -> vector<32x32xf32>
+  %tdesc = xegpu.create_nd_tdesc %arg1 : memref<32x32xf32> -> !xegpu.tensor_desc<32x32xf32>
+  xegpu.store_nd %v, %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>}> : vector<32x32xf32>, !xegpu.tensor_desc<32x32xf32>
+  gpu.return
+}
+
+// Test that when a derived value (arith.muli) has a layout conflict on its
+// uses, and the derived value's producer chain is trivially rematerializable
+// (because step and constant stride are themselves trivially rematerializable),
+// the resolver clones the arith.muli instead of inserting an xegpu.convert_layout.
+// CHECK-LABEL: gpu.func @step_muli_clone_via_anchor
+// CHECK-DAG:     vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0]>} : vector<32xindex>
+// CHECK-DAG:     arith.muli {{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0]>} : vector<32xindex>
+// CHECK-DAG:     arith.muli {{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>, dims = [1]>} : vector<32xindex>
+// CHECK-NOT:     xegpu.convert_layout {{.*}} : vector<32xindex>
+gpu.func @step_muli_clone_via_anchor(%arg0: i64, %arg1: memref<32x32xf32>) kernel {
+  %mask = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>} dense<true> : vector<32x32xi1>
+  %cst32 = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0]>} dense<32> : vector<32xindex>
+  %step = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0]>} : vector<32xindex>
+  %scaled = arith.muli %step, %cst32 {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0]>} : vector<32xindex>
+  %col2d = vector.shape_cast %scaled {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>} : vector<32xindex> to vector<32x1xindex>
+  %colb = vector.broadcast %col2d {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>} : vector<32x1xindex> to vector<32x32xindex>
+  %rowb = vector.broadcast %scaled {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>} : vector<32xindex> to vector<32x32xindex>
+  %off = arith.addi %colb, %rowb {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>} : vector<32x32xindex>
+  %v = xegpu.load %arg0[%off], %mask <{layout = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>}>
+      : i64, vector<32x32xindex>, vector<32x32xi1> -> vector<32x32xf32>
+  %tdesc = xegpu.create_nd_tdesc %arg1 : memref<32x32xf32> -> !xegpu.tensor_desc<32x32xf32>
+  xegpu.store_nd %v, %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>}> : vector<32x32xf32>, !xegpu.tensor_desc<32x32xf32>
+  gpu.return
 }
 
 // CHECK-LABEL: func.func @extract_source_conflict_with_order

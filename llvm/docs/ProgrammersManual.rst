@@ -2422,13 +2422,14 @@ that are currently inserted in the map.  ``DenseMap`` is a great way to map
 pointers to pointers, or map other small types to each other.
 
 There are several aspects of ``DenseMap`` that you should be aware of, however.
-The iterators in a ``DenseMap`` are invalidated whenever an insertion occurs,
-unlike ``map``.  Also, because ``DenseMap`` allocates space for a large number of
-key/value pairs (it starts with 64 by default), it will waste a lot of space if
-your keys or values are large.  Finally, you must implement a partial
-specialization of ``DenseMapInfo`` for the key that you want, if it isn't already
-supported.  This is required to tell ``DenseMap`` about two special marker values
-(which can never be inserted into the map) that it needs internally.
+The iterators in a ``DenseMap`` are invalidated whenever an insertion or
+erasure occurs, unlike ``map``.  Also, because ``DenseMap`` allocates space for
+a large number of key/value pairs (it starts with 64 by default), it will waste
+a lot of space if your keys or values are large.  Finally, you must implement a
+partial specialization of ``DenseMapInfo`` for the key that you want, if it
+isn't already supported.  This is required to tell ``DenseMap`` about two
+special marker values (which can never be inserted into the map) that it needs
+internally.
 
 ``DenseMap``'s ``find_as()`` method supports lookup operations using an alternate key
 type.  This is useful in cases where the normal key type is expensive to

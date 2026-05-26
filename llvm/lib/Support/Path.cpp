@@ -38,13 +38,23 @@ namespace {
   using llvm::sys::path::is_separator;
   using llvm::sys::path::Style;
 
+  inline bool prefer_forward_slash() {
+    static bool prefer = []() {
+      if (std::optional<std::string> Env =
+              sys::Process::GetEnv("LLVM_WINDOWS_PREFER_FORWARD_SLASH"))
+        return *Env == "1";
+      return static_cast<bool>(LLVM_WINDOWS_PREFER_FORWARD_SLASH);
+    }();
+    return prefer;
+  }
+
   inline Style real_style(Style style) {
     if (style != Style::native)
       return style;
     if (is_style_posix(style))
       return Style::posix;
-    return LLVM_WINDOWS_PREFER_FORWARD_SLASH ? Style::windows_slash
-                                             : Style::windows_backslash;
+    return prefer_forward_slash() ? Style::windows_slash
+                                  : Style::windows_backslash;
   }
 
   inline const char *separators(Style style) {

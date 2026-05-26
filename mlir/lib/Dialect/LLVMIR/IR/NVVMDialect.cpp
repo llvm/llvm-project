@@ -3349,6 +3349,34 @@ LogicalResult NVVM::SqrtOp::verify() {
   return success();
 }
 
+LogicalResult NVVM::DivFOp::verify() {
+  bool isApprox = getApprox();
+  bool isFull = getFull();
+  bool isF64 = getRes().getType().isF64();
+  bool isFtz = getFtz();
+  NVVM::FPRoundingMode rndMode = getRnd();
+
+  if (isApprox && isFull)
+    return emitOpError("'approx' and 'full' are mutually exclusive");
+
+  if (isApprox || isFull) {
+    if (isF64)
+      return emitOpError("'approx' and 'full' forms are f32-only");
+    if (rndMode != NVVM::FPRoundingMode::NONE)
+      return emitOpError(
+          "'approx' and 'full' forms do not accept a rounding mode");
+    return success();
+  }
+
+  // Rounded form below.
+  if (rndMode == NVVM::FPRoundingMode::NONE)
+    return emitOpError("rounding mode cannot be None for the rounded divide");
+  if (isF64 && isFtz)
+    return emitOpError("FTZ is not supported for f64");
+
+  return success();
+}
+
 /// Packs the given `field` into the `result`.
 /// The `result` is 64-bits and each `field` can be 32-bits or narrower.
 static llvm::Value *
@@ -3591,6 +3619,53 @@ SqrtApproxOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
                                ? llvm::Intrinsic::nvvm_sqrt_approx_ftz_f
                                : llvm::Intrinsic::nvvm_sqrt_approx_f;
   return {id, {mt.lookupValue(thisOp.getSrc())}};
+}
+
+mlir::NVVM::IDArgPair
+DivFOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                              llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::DivFOp>(op);
+  bool isFtz = thisOp.getFtz();
+
+  llvm::Intrinsic::ID id;
+
+  if (thisOp.getApprox()) {
+    id = isFtz ? llvm::Intrinsic::nvvm_div_approx_ftz_f
+               : llvm::Intrinsic::nvvm_div_approx_f;
+  } else if (thisOp.getFull()) {
+    // Intrinsic Naming quirk: int_nvvm_div_full has no `_f` suffix (unlike
+    // approx).
+    id = isFtz ? llvm::Intrinsic::nvvm_div_full_ftz
+               : llvm::Intrinsic::nvvm_div_full;
+  } else {
+    // Rounded form — three 4-entry tables indexed by (rndMode - 1).
+    unsigned rndIndex = static_cast<unsigned>(thisOp.getRnd()) - 1;
+
+    static constexpr llvm::Intrinsic::ID f32IDs[] = {
+        llvm::Intrinsic::nvvm_div_rn_f,
+        llvm::Intrinsic::nvvm_div_rm_f,
+        llvm::Intrinsic::nvvm_div_rp_f,
+        llvm::Intrinsic::nvvm_div_rz_f,
+    };
+    static constexpr llvm::Intrinsic::ID f32FTZIDs[] = {
+        llvm::Intrinsic::nvvm_div_rn_ftz_f,
+        llvm::Intrinsic::nvvm_div_rm_ftz_f,
+        llvm::Intrinsic::nvvm_div_rp_ftz_f,
+        llvm::Intrinsic::nvvm_div_rz_ftz_f,
+    };
+    static constexpr llvm::Intrinsic::ID f64IDs[] = {
+        llvm::Intrinsic::nvvm_div_rn_d,
+        llvm::Intrinsic::nvvm_div_rm_d,
+        llvm::Intrinsic::nvvm_div_rp_d,
+        llvm::Intrinsic::nvvm_div_rz_d,
+    };
+    Type t = thisOp.getRes().getType();
+    id = t.isF32() ? (isFtz ? f32FTZIDs[rndIndex] : f32IDs[rndIndex])
+                   : f64IDs[rndIndex];
+  }
+
+  return {id,
+          {mt.lookupValue(thisOp.getLhs()), mt.lookupValue(thisOp.getRhs())}};
 }
 
 mlir::NVVM::IDArgPair

@@ -8,6 +8,7 @@
 
 #include "BPSectionOrderer.h"
 #include "InputSection.h"
+#include "OutputSegment.h"
 #include "Relocations.h"
 #include "Symbols.h"
 #include "lld/Common/BPSectionOrdererBase.inc"
@@ -122,6 +123,9 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
   DenseMap<CachedHashStringRef, std::set<unsigned>> rootSymbolToSectionIdxs;
   for (const auto *file : inputFiles) {
     for (auto *sec : file->sections) {
+      if (sec->name == section_names::ehFrame &&
+          sec->segname == segment_names::text)
+        continue;
       for (auto &subsec : sec->subsections) {
         auto *isec = subsec.isec;
         if (!isec || isec->data.empty() || !isec->data.data())
