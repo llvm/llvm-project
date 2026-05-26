@@ -25,6 +25,7 @@
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -122,6 +123,25 @@ static xegpu::DistributeLayoutAttr getLayoutFromUsePoints(Value result) {
     }
   }
   return layout;
+}
+
+// Returns true if `op` is safe and cheap to clone (no side effects, no
+// regions, and all operands are themselves trivially rematerializable, e.g.
+// block-arg-free pure value generators such as `vector.step`, splat
+// `arith.constant`, or `vector.create_mask` whose operands are constants).
+bool xegpu::isTriviallyRematerializable(Operation *op) {
+  if (!op || op->getNumRegions() != 0)
+    return false;
+  if (!isMemoryEffectFree(op))
+    return false;
+  for (Value v : op->getOperands()) {
+    Operation *defOp = v.getDefiningOp();
+    if (!defOp)
+      return false;
+    if (!isTriviallyRematerializable(defOp))
+      return false;
+  }
+  return true;
 }
 
 // For regular operations: First the result layouts are propagated from uses.
