@@ -25,6 +25,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Types.h"
@@ -2927,9 +2928,14 @@ LogicalResult NVVM::SetMaxRegisterOp::verify() {
 }
 
 LogicalResult NVVM::BarrierOp::verify() {
-  if (getNumberOfThreads() && !getBarrierId())
+  // Temporary: the reduction lowering path still hardcodes the `.aligned`
+  // intrinsic spelling. A follow-up PR will extend it along the aligned axis
+  // (and add the `.red.*.count` variants); until then, reject non-aligned
+  // reductions here so users cannot construct an op whose `aligned = false`
+  // would be silently dropped during lowering.
+  if (getReductionOp() && !getAligned())
     return emitOpError(
-        "barrier id is missing, it should be set between 0 to 15");
+        "non-aligned reduction is not supported yet; tracked as a follow-up");
 
   if (getBarrierId() && (getReductionOp() || getReductionPredicate()))
     return emitOpError("reduction are only available when id is 0");
@@ -2952,6 +2958,22 @@ LogicalResult BarrierOp::inferReturnTypes(
 
 bool BarrierOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
   return isCompatibleReturnTypesOptionalResult(l, r);
+}
+
+/// Folds `nvvm.barrier id = %c0` (constant zero) into the form with
+/// `barrierId` omitted.
+LogicalResult NVVM::BarrierOp::canonicalize(NVVM::BarrierOp op,
+                                            PatternRewriter &rewriter) {
+  Value id = op.getBarrierId();
+  if (!id)
+    return failure();
+
+  APInt value;
+  if (!matchPattern(id, m_ConstantInt(&value)) || !value.isZero())
+    return failure();
+
+  rewriter.modifyOpInPlace(op, [&]() { op.getBarrierIdMutable().clear(); });
+  return success();
 }
 
 LogicalResult NVVM::Tcgen05CpOp::verify() {
@@ -3481,6 +3503,18 @@ void SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 // getIntrinsicID/getIntrinsicIDAndArgs methods
 //===----------------------------------------------------------------------===//
 
+/// Returns the LLVM intrinsic ID for the `nvvm.barrier.cta.sync[.aligned]
+/// .{all,count}` variant matching `aligned` and whether a thread count is
+/// supplied.
+static llvm::Intrinsic::ID getBarrierSyncIntrinsic(bool aligned,
+                                                   bool hasCount) {
+  if (hasCount)
+    return aligned ? llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count
+                   : llvm::Intrinsic::nvvm_barrier_cta_sync_count;
+  return aligned ? llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all
+                 : llvm::Intrinsic::nvvm_barrier_cta_sync_all;
+}
+
 mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::BarrierOp>(op);
@@ -3490,7 +3524,7 @@ mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
   llvm::Intrinsic::ID id;
   llvm::SmallVector<llvm::Value *> args = {barrierId};
   if (thisOp.getNumberOfThreads()) {
-    id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count;
+    id = getBarrierSyncIntrinsic(thisOp.getAligned(), /*hasCount=*/true);
     args.push_back(mt.lookupValue(thisOp.getNumberOfThreads()));
   } else if (thisOp.getReductionOp()) {
     switch (*thisOp.getReductionOp()) {
@@ -3507,7 +3541,7 @@ mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
     args.push_back(builder.CreateICmpNE(
         mt.lookupValue(thisOp.getReductionPredicate()), builder.getInt32(0)));
   } else {
-    id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all;
+    id = getBarrierSyncIntrinsic(thisOp.getAligned(), /*hasCount=*/false);
   }
 
   return {id, std::move(args)};
@@ -6438,6 +6472,21 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
     return failure();
 
   return success();
+}
+
+/// Parses the `non_aligned` keyword marker for `nvvm.barrier`.
+static ParseResult parseAligned(OpAsmParser &parser, BoolAttr &aligned) {
+  bool isNonAligned = succeeded(parser.parseOptionalKeyword("non_aligned"));
+  aligned = parser.getBuilder().getBoolAttr(!isNonAligned);
+  return success();
+}
+
+/// Prints the `non_aligned` keyword marker for `nvvm.barrier` when the op is
+/// non-aligned. Nothing is printed for the default aligned case.
+static void printAligned(OpAsmPrinter &printer, Operation *op,
+                         BoolAttr aligned) {
+  if (!aligned.getValue())
+    printer << "non_aligned";
 }
 
 #define GET_OP_CLASSES

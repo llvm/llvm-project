@@ -25,6 +25,18 @@ llvm.func @llvm_nvvm_barrier(%barID : i32, %numberOfThreads : i32, %redOperand :
   // LLVM: %{{.*}} = call i32 @llvm.nvvm.barrier.cta.red.popc.aligned.all(i32 0, i1 %[[redOperandCmp3]])
   // CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<popc> %{{.*}} -> i32
   %2 = nvvm.barrier #nvvm.reduction<popc> %redOperand -> i32
+  // LLVM: call void @llvm.nvvm.barrier.cta.sync.all(i32 0)
+  // CHECK: nvvm.barrier non_aligned
+  nvvm.barrier non_aligned
+  // LLVM: call void @llvm.nvvm.barrier.cta.sync.all(i32 %[[barId]])
+  // CHECK: nvvm.barrier id = %{{.*}} non_aligned
+  nvvm.barrier id = %barID non_aligned
+  // LLVM: call void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 0, i32 %[[numThreads]])
+  // CHECK: nvvm.barrier number_of_threads = %{{.*}}
+  nvvm.barrier number_of_threads = %numberOfThreads
+  // LLVM: call void @llvm.nvvm.barrier.cta.sync.count(i32 %[[barId]], i32 %[[numThreads]])
+  // CHECK: nvvm.barrier id = %{{.*}} number_of_threads = %{{.*}} non_aligned
+  nvvm.barrier id = %barID number_of_threads = %numberOfThreads non_aligned
 
   llvm.return
 }
