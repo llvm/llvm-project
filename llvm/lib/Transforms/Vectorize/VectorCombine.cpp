@@ -4179,7 +4179,10 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   IntrinsicCostAttributes ICA(ReducedOp, ReduceVecTy, {ReduceVecTy});
   NewCost += TTI.getIntrinsicInstrCost(ICA, CostKind);
 
-  if (NewCost >= OrigCost)
+  LLVM_DEBUG(dbgs() << "Found reduction shuffle chain: " << I << "\n OldCost : "
+                    << OrigCost << " vs NewCost: " << NewCost << "\n");
+
+  if (VecOpEE->hasOneUse() ? (NewCost > OrigCost) : (NewCost >= OrigCost))
     return false;
 
   Value *ReduceInput = FinalVecV;

@@ -49,6 +49,9 @@ jobs:
 
       - name: Setup Variables
         id: vars
+        env:
+          LLVM_VERSION_MAJOR: ${{ steps.version.outputs.major }}
+          LLVM_VERSION_PATCH: ${{ steps.version.outputs.patch }}
         run: |
           # C++ ABI:
           # 18.1.0 we aren't doing ABI checks.
@@ -57,14 +60,14 @@ jobs:
           # 18.1.0 We want to check 17.0.x
           # 18.1.1 We want to check 18.1.0
           echo "BASELINE_VERSION_MINOR=1" >> "$GITHUB_OUTPUT"
-          if [ ${{ steps.version.outputs.patch }} -eq 0 ]; then
+          if [ $LLVM_VERSION_PATCH -eq 0 ]; then
             {
-              echo "BASELINE_VERSION_MAJOR=$(( ${{ steps.version.outputs.major }} - 1))"
+              echo "BASELINE_VERSION_MAJOR=$(( $LLVM_VERSION_MAJOR - 1))"
               echo "ABI_HEADERS=llvm-c"
             } >> "$GITHUB_OUTPUT"
           else
             {
-              echo "BASELINE_VERSION_MAJOR=${{ steps.version.outputs.major }}"
+              echo "BASELINE_VERSION_MAJOR=$LLVM_VERSION_MAJOR"
               echo "ABI_HEADERS=."
             } >> "$GITHUB_OUTPUT"
           fi
@@ -107,17 +110,21 @@ jobs:
           ninja -C build install-LLVM
           ninja -C build install-llvm-headers
       - name: Dump ABI
+        env:
+          REF: ${{ matrix.ref }}
+          ABI_HEADERS: ${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}
+          LLVM_VERSION_MAJOR: ${{ matrix.llvm_version_major }}
         run: |
-          if [ "${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}" = "llvm-c" ]; then
+          if [ "$ABI_HEADERS" = "llvm-c" ]; then
             nm ./install/lib/libLLVM.so | awk "/T _LLVM/ || /T LLVM/ { print $3 }" | sort -u | sed -e "s/^_//g" | cut -d ' ' -f 3 > llvm.symbols
             # Even though the -symbols-list option doesn't seem to filter out the symbols, I believe it speeds up processing, so I'm leaving it in.
             export EXTRA_ARGS="-symbols-list llvm.symbols"
           else
             touch llvm.symbols
           fi
-          abi-dumper $EXTRA_ARGS -lver ${{ matrix.ref }} -skip-cxx -public-headers ./install/include/${{ needs.abi-dump-setup.outputs.ABI_HEADERS }} -o ${{ matrix.ref }}.abi ./install/lib/libLLVM.so
+          abi-dumper $EXTRA_ARGS -lver $REF -skip-cxx -public-headers ./install/include/$ABI_HEADERS -o $$REF.abi ./install/lib/libLLVM.so
           # Remove symbol versioning from dumps, so we can compare across major versions.
-          sed -i 's/LLVM_${{ matrix.llvm_version_major }}/LLVM_NOVERSION/' ${{ matrix.ref }}.abi
+          sed -i "s/LLVM_$LLVM_VERSION_MAJOR/LLVM_NOVERSION/" $REF.abi
       - name: Upload ABI file
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -157,6 +164,8 @@ jobs:
           path: symbol-list
 
       - name: Compare ABI
+        env:
+          ABI_HEADERS: ${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}
         run: |
           if [ -s symbol-list/llvm.symbols ]; then
             # This option doesn't seem to work with the ABI dumper, so passing it here.
@@ -165,7 +174,7 @@ jobs:
           # FIXME: Reading of gzip'd abi files on the GitHub runners stop
           # working some time in March of 2021, likely due to a change in the
           # runner's environment.
-          abi-compliance-checker $EXTRA_ARGS -l libLLVM.so -old build-baseline/*.abi -new build-latest/*.abi || test "${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}" = "llvm-c"
+          abi-compliance-checker $EXTRA_ARGS -l libLLVM.so -old build-baseline/*.abi -new build-latest/*.abi || test "$ABI_HEADERS" = "llvm-c"
       - name: Upload ABI Comparison
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
