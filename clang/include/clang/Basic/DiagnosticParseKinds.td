@@ -169,9 +169,6 @@ def ext_c2y_generic_with_type_arg : Extension<
 def warn_c2y_compat_generic_with_type_arg : Warning<
   "passing a type argument as the first operand to '_Generic' is incompatible "
   "with C standards before C2y">, InGroup<CPre2yCompat>, DefaultIgnore;
-def warn_c2y_empty_declaration_statement : Warning<
-  "empty declaration statement of '%select{if|switch}0' has no effect">,
-  InGroup<C2y>;
 def warn_c2y_compat_init_statement : Warning<
   "%select{if|switch}0 initialization statements are incompatible with "
   "C standards before C2y">, DefaultIgnore, InGroup<CPre2yCompat>;

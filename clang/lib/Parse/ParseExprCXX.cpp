@@ -1881,7 +1881,7 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
   }
 
   ParsedAttributes attrs(AttrFactory);
-  bool ParsedAttrs = MaybeParseCXX11Attributes(attrs);
+  MaybeParseCXX11Attributes(attrs);
 
   const auto WarnOnInit = [this, &CK] {
     if (getLangOpts().CPlusPlus)
@@ -1897,7 +1897,7 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
   };
 
   if (!getLangOpts().CPlusPlus) {
-    if (isDeclarationStatement() && !isCXXSimpleDeclaration(false)) {
+    if (Tok.isOneOf(tok::kw_static_assert, tok::kw__Static_assert)) {
       WarnOnInit();
       DeclGroupPtrTy DG;
       SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
@@ -1909,19 +1909,11 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
       return ParseCondition(nullptr, Loc, CK, MissingOK);
     }
 
-    if (Tok.is(tok::semi) && ParsedAttrs) {
+    if (Tok.is(tok::semi)) {
       // Parse if ([[...]]; true).
       WarnOnInit();
-      if (attrs.empty()) {
-        SourceLocation SemiLoc = Tok.getLocation();
-        Diag(SemiLoc, diag::warn_c2y_empty_declaration_statement)
-            << (CK == Sema::ConditionKind::Switch)
-            << FixItHint::CreateRemoval(SemiLoc);
-        ConsumeToken();
-        InitStmt = nullptr;
-      } else
-        *InitStmt = Actions.ActOnAttributedStmt(
-            attrs, Actions.ActOnNullStmt(ConsumeToken()).get());
+      *InitStmt = Actions.ActOnAttributedStmt(
+          attrs, Actions.ActOnNullStmt(ConsumeToken()).get());
       return ParseCondition(nullptr, Loc, CK, MissingOK);
     }
   }
