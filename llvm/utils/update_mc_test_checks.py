@@ -100,12 +100,13 @@ def should_add_line_to_output(input_line, prefix_set, mc_mode):
     # special check line
     if mc_mode == "dasm" and ERROR_CHECK_RE.search(input_line):
         return False
+    elif input_line.strip() == COMMENT[mc_mode]:
+        return True
     else:
         return common.should_add_line_to_output(
             input_line,
             prefix_set,
             comment_marker=COMMENT[mc_mode],
-            skip_global_checks=True,
         )
 
 

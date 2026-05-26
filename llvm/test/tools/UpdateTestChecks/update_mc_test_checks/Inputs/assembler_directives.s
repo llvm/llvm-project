@@ -17,5 +17,10 @@ lw a0, 0(a1)
 /// Macro instantiations should get check lines
 load_reg a0, a1
 
+/// Check that old CHECK comments are stripped and non-CHECK comments are retained
+// CHECK: lw	a0, 0(a1)
+// CHECK-32-SAME: some old incorrect encoding comment here
+// CHECK-NEXT: sw	a0, 0(a1)
+
 /// We should not add check lines for instructions originating from .include files
 .include "include_file.inc"

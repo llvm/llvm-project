@@ -9,7 +9,7 @@ on:
 
 jobs:
   windows-msvc-shared:
-    name: libc-shared-test with MSVC (${{ matrix.arch }})
+    name: libc-shared-test with MSVC on ${{ matrix.arch }}
     if: github.repository_owner == 'llvm'
     timeout-minutes: 20
     strategy:
@@ -48,12 +48,12 @@ jobs:
         run: cmake --build build --target libc-shared-tests
 
   linux-cross-arch-shared:
-    name: libc-shared-tests on (${{ matrix.arch }})
+    name: libc-shared-tests on ${{ matrix.arch }}
     if: github.repository_owner == 'llvm'
     timeout-minutes: 20
     runs-on: ubuntu-24.04
     container:
-      image: 'ghcr.io/llvm/libc-ubuntu-24.04:70cbd7591abe'
+      image: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:a902fb53bdad5e4a4bb6c11b6584e717a7b3d6e886f1ea58e11f95e46226249c'
     strategy:
       fail-fast: false # If one arch fails, let the other finish
       matrix:
@@ -120,3 +120,48 @@ jobs:
           QEMU_LD_PREFIX: /usr/${{ matrix.target_triple }}
         run: |
           cmake --build build/gcc --target libc-shared-tests
+
+  linux-gcc-shared:
+    name: libc-shared-tests with ${{ matrix.name }}
+    if: github.repository_owner == 'llvm'
+    timeout-minutes: 20
+    runs-on: ubuntu-24.04
+    container:
+      image: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:a902fb53bdad5e4a4bb6c11b6584e717a7b3d6e886f1ea58e11f95e46226249c'
+    strategy:
+      fail-fast: false # If one arch fails, let the other finish
+      matrix:
+        include:
+          - name: gcc
+            c_compiler: gcc
+            cxx_compiler: g++
+          - name: gcc-7
+            c_compiler: /usr/local/gcc7/bin/gcc
+            cxx_compiler: /usr/local/gcc7/bin/g++
+          - name: gcc-8
+            c_compiler: /usr/local/gcc8/bin/gcc
+            cxx_compiler: /usr/local/gcc8/bin/g++
+          - name: gcc-9
+            c_compiler: gcc-9
+            cxx_compiler: g++-9
+          - name: gcc-11
+            c_compiler: gcc-11
+            cxx_compiler: g++-11
+
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -S runtimes -G Ninja \
+            -DLLVM_ENABLE_RUNTIMES=libc \
+            -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
+            -DCMAKE_CXX_COMPILER=${{ matrix.cxx_compiler }} \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build and Run
+        run: |
+          cmake --build build --target libc-shared-tests

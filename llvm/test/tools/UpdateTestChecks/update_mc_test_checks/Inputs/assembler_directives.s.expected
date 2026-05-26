@@ -22,5 +22,7 @@ load_reg a0, a1
 // CHECK: lw	a0, 0(a1)
 // CHECK-NEXT: sw	a0, 0(a1)
 
+/// Check that old CHECK comments are stripped and non-CHECK comments are retained
+
 /// We should not add check lines for instructions originating from .include files
 .include "include_file.inc"
