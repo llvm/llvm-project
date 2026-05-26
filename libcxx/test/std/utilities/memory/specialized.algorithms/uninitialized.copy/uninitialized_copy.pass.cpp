@@ -16,8 +16,8 @@
 #include <memory>
 #include <cassert>
 
+#include "algorithms.h"
 #include "copy_move_types.h"
-#include "../destroy.h"
 #include "test_macros.h"
 #include "../overload_compare_iterator.h"
 
@@ -61,7 +61,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
   for (int i = 0; i != n; ++i)
     assert(out[i].val == in[i].val);
 
-  backport::destroy(out, out + n);
+  util::destroy(out, out + n);
   alloc.deallocate(out, n);
 
   return true;
