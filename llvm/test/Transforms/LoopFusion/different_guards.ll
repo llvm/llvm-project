@@ -4,8 +4,6 @@
 
 ; Test reduced from the file diags_on_lat_aux_grid.F90 present in pop2,
 ; a program from spec 2017.
-; Loop fusion should not crash when flushing the DomTreeUpdater due to
-; missed edge removals when deleting basic blocks.
 
 define void @diags_on_lat_aux_grid(i1 %cond, i1 %cond1, i1 %0, i1 %1, ptr noalias %b1, ptr noalias %b2, i64 %N) {
 .critedge:
