@@ -2465,6 +2465,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  acosh_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    acosh_test.cpp
+  DEPENDS
+    libc.src.math.acosh
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   acoshf_test
   NEED_MPFR
   SUITE

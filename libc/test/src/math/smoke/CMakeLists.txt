@@ -4794,6 +4794,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  acosh_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    acosh_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.math.acosh
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   acoshf_test
   SUITE
     libc-math-smoke-tests

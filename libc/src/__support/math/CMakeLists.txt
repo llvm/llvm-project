@@ -97,6 +97,19 @@ add_header_library(
 )
 
 add_header_library(
+  acosh
+  HDRS
+    acosh.h
+  DEPENDS
+    .log
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   acospif
   HDRS
     acospif.h
