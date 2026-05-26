@@ -6,24 +6,8 @@ define void @shuffle_any_ext_8i16_to_8i32(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: shuffle_any_ext_8i16_to_8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 4
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 0
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 5
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 1
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 6
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 2
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 3
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a0, 0
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a0, 1
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a0, 2
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a0, 3
-; CHECK-NEXT:    xvpermi.q $xr2, $xr1, 2
-; CHECK-NEXT:    xvst $xr2, $a1, 0
+; CHECK-NEXT:    vext2xv.wu.hu $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
   %x = load <8 x i16>, ptr %ptr
   %y = shufflevector <8 x i16> %x, <8 x i16> poison, <16 x i32> <i32 0, i32 15, i32 1, i32 15, i32 2, i32 13, i32 3, i32 12, i32 4, i32 11, i32 5, i32 10, i32 6, i32 9, i32 7, i32 8>
@@ -36,40 +20,8 @@ define void @shuffle_any_ext_16i8_to_16i16(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: shuffle_any_ext_16i8_to_16i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 8
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 9
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 1
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 10
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 2
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 11
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 3
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 12
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 4
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 13
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 5
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 6
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 7
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 1
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 2
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 3
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 4
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 5
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 6
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 7
-; CHECK-NEXT:    xvpermi.q $xr2, $xr1, 2
-; CHECK-NEXT:    xvst $xr2, $a1, 0
+; CHECK-NEXT:    vext2xv.hu.bu $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
   %x = load <16 x i8>, ptr %ptr
   %y = shufflevector <16 x i8> %x, <16 x i8> poison, <32 x i32> <i32 0, i32 31, i32 1, i32 31, i32 2, i32 29, i32 3, i32 28, i32 4, i32 27, i32 5, i32 26, i32 6, i32 25, i32 7, i32 24, i32 8, i32 23, i32 9, i32 22, i32 10, i32 21, i32 11, i32 20, i32 12, i32 19, i32 13, i32 18, i32 14, i32 17, i32 15, i32 16>
@@ -79,34 +31,18 @@ define void @shuffle_any_ext_16i8_to_16i16(ptr %ptr, ptr %dst) nounwind {
 }
 
 define void @shuffle_any_ext_4i32_to_4i64(ptr %ptr, ptr %dst) nounwind {
-; LA32-LABEL: shuffle_any_ext_4i32_to_4i64:
-; LA32:       # %bb.0:
-; LA32-NEXT:    vld $vr0, $a0, 0
-; LA32-NEXT:    vextrins.w $vr1, $vr0, 2
-; LA32-NEXT:    vextrins.w $vr1, $vr0, 35
-; LA32-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
-; LA32-NEXT:    vextrins.w $vr0, $vr0, 33
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 2
-; LA32-NEXT:    xvst $xr0, $a1, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: shuffle_any_ext_4i32_to_4i64:
-; LA64:       # %bb.0:
-; LA64-NEXT:    vld $vr0, $a0, 0
-; LA64-NEXT:    vpickve2gr.w $a0, $vr0, 2
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a0, 0
-; LA64-NEXT:    vpickve2gr.w $a0, $vr0, 3
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a0, 1
-; LA64-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 0
-; LA64-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; LA64-NEXT:    vinsgr2vr.d $vr2, $a0, 1
-; LA64-NEXT:    xvpermi.q $xr2, $xr1, 2
-; LA64-NEXT:    xvst $xr2, $a1, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: shuffle_any_ext_4i32_to_4i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vext2xv.du.wu $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a1, 0
+; CHECK-NEXT:    ret
   %x = load <4 x i32>, ptr %ptr
   %y = shufflevector <4 x i32> %x, <4 x i32> poison, <8 x i32> <i32 0, i32 7, i32 1, i32 6, i32 2, i32 5, i32 3, i32 4>
   %r = bitcast <8 x i32> %y to <4 x i64>
   store <4 x i64> %r, ptr %dst
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; LA32: {{.*}}
+; LA64: {{.*}}
