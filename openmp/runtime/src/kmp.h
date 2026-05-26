@@ -2469,6 +2469,7 @@ extern kmp_uint64 __kmp_taskloop_min_tasks;
 /*!
  */
 typedef kmp_int32 (*kmp_routine_entry_t)(kmp_int32, void *);
+typedef void (*kmp_task_relocate_t)(struct kmp_task *, void *);
 
 typedef union kmp_cmplrdata {
   kmp_int32 priority; /**< priority specified by user for the task */
@@ -2690,6 +2691,7 @@ enum kmp_taskgraph_region_type {
 typedef struct kmp_taskgraph_node {
   kmp_task_t *task;
   bool taskloop_task;
+  kmp_task_relocate_t relocate;
   kmp_taskgraph_reduce_input_data_t *reduce_input;
   union {
     // Valid when KMP_TDG_RECORDING in parent taskgraph record.
@@ -2773,6 +2775,7 @@ typedef struct kmp_taskgraph_record {
   struct kmp_taskgraph_exec_descr *exec_descrs = nullptr;
   kmp_size_t num_exec_descrs = 0;
   kmp_lock_t replay_lock;
+  void *taskgraph_args = nullptr;
   // We need a taskgroup structure to keep track of recorded tasks.  This is
   // set to TRUE if the user requested "nogroup" on the taskgraph directive
   // (then we can avoid blocking at the end of the taskgraph region on replay,
@@ -4530,8 +4533,8 @@ KMP_EXPORT void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
                                  void *args);
 KMP_EXPORT kmp_uint32 __kmpc_taskgraph_task(
     ident_t *loc_ref, kmp_int32 gtid, kmp_task_t *new_task, kmp_int32 flags,
-    size_t sizeof_kmp_task_t, void *shareds, size_t sizeof_shareds,
-    kmp_int32 ndeps, kmp_depend_info_t *dep_list);
+    size_t sizeof_kmp_task_t, size_t sizeof_shareds, kmp_int32 ndeps,
+    kmp_depend_info_t *dep_list, kmp_task_relocate_t reloc);
 KMP_EXPORT kmp_uint32 __kmpc_taskgraph_taskloop(
     ident_t *loc_ref, kmp_int32 gtid, kmp_task_t *new_task, kmp_int32 flags,
     size_t sizeof_kmp_task_t, void *shareds, size_t sizeof_shareds,
