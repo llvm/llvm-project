@@ -736,6 +736,21 @@ struct __sanitizer_sigaction {
   uptr sa_flags;
   void (*sa_restorer)();
 };
+#  elif SANITIZER_UCLIBC
+// uClibc-ng's struct sigaction mirrors the Linux kernel layout
+// (sa_flags / sa_restorer before sa_mask) so that the sigaction()
+// syscall wrapper can pass the struct to rt_sigaction without
+// translation; see uClibc-ng's
+// libc/sysdeps/linux/common/bits/sigaction.h.
+struct __sanitizer_sigaction {
+  union {
+    __sanitizer_sigactionhandler_ptr sigaction;
+    __sanitizer_sighandler_ptr handler;
+  };
+  unsigned long sa_flags;
+  void (*sa_restorer)();
+  __sanitizer_sigset_t sa_mask;
+};
 #  else  // !SANITIZER_ANDROID
 struct __sanitizer_sigaction {
 #    if defined(__mips__) && !SANITIZER_FREEBSD && !SANITIZER_MUSL
