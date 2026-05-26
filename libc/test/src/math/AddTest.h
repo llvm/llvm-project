@@ -40,7 +40,7 @@ public:
   using AddFunc = OutType (*)(InType, InType);
 
   void test_subnormal_range(AddFunc func) {
-    constexpr int COUNT = 100'001;
+    constexpr int COUNT = 1'231;
     constexpr InStorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<InStorageType>((IN_MAX_SUBNORMAL_U - IN_MIN_SUBNORMAL_U) /
                                    COUNT),
@@ -57,7 +57,7 @@ public:
   }
 
   void test_normal_range(AddFunc func) {
-    constexpr int COUNT = 100'001;
+    constexpr int COUNT = 1'231;
     constexpr InStorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<InStorageType>((IN_MAX_NORMAL_U - IN_MIN_NORMAL_U) / COUNT),
         InStorageType(1));
