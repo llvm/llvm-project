@@ -10055,3 +10055,61 @@ different languages to coexist on the same call stack while each interpreting
 exceptions according to their own rules.
   }];
 }
+
+def AlignedDocs : Documentation {
+  let Category = DocCatDecl;
+  let Heading = "aligned";
+  let Content = [{
+The ``aligned`` attribute specifies a minimum alignment (in bytes) for a 
+variable, structure field, or type definition. The attribute takes an 
+optional non-negative integral constant expression. If the value is a 
+power of two, the compiler ensures the declaration is aligned to at least 
+that boundary; a value of zero has no effect on the alignment chosen at runtime.
+
+.. code-block:: c++
+
+  struct __attribute__((aligned(8))) S { 
+    short f[3]; 
+  };
+
+If the alignment factor is omitted, the compiler defaults to the largest(the most strict) 
+alignment supported by the target machine for any data type. 
+
+Applying this attribute to a structure or union, or to one of its members, changes the type's layout 
+properties. To ensure that array indexing and pointer arithmetic remain 
+consistent, the compiler automatically increases the structure's total size 
+(via tail padding) to a multiple of the alignment value. For example, a 
+struct with a natural size of 6 bytes marked directly (or indirectly via a member declaration) with ``aligned(8)`` will be 
+padded to 8 bytes.
+
+In C++, alignment requirements are inherited by derived classes. If a base 
+class has an alignment specified, the derived class will honor that 
+requirement to ensure the base subobject remains correctly aligned. 
+
+.. code-block:: c++
+
+  struct __attribute__((aligned(16))) Base {
+    int i;
+  };
+
+  struct Derived : Base {
+    int j;
+  };
+  // sizeof(Derived) will be 32, and alignof(Derived) will be 16.
+
+The attribute is additive and follows a "strictest-wins" rule: if multiple 
+alignment specifications are applied to the same declaration—whether 
+through a mix of ``alignas`` and ``aligned`` or multiple ``aligned`` 
+attributes—the largest alignment requirement is honored. While the 
+attribute cannot decrease alignment below a type's natural requirement 
+on its own, it can be used to increase the alignment of a type that has 
+been reduced via ``__attribute__((packed))``.
+
+Furthermore, the attribute is incompatible with entities that do not 
+possess a stable, addressable memory location. It cannot be applied to 
+bit-fields, function parameters, or variables declared with the 
+``register`` storage class. The effectiveness of the attribute may also be 
+limited by the target's object file format and linker, which often impose 
+a maximum supported alignment boundary.
+  }];
+}

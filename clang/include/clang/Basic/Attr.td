@@ -901,7 +901,7 @@ def Aligned : InheritableAttr {
                                           CustomKeyword<"_Alignas">]>,
                    Accessor<"isDeclspec",[Declspec<"align">]>];
   let comparisonFn = "areAlignedAttrsEqual";
-  let Documentation = [Undocumented];
+  let Documentation = [AlignedDocs];
 }
 
 def AlignValue : Attr {
