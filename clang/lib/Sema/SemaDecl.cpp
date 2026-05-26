@@ -4835,7 +4835,7 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   // scope ([dcl.meaning.general]/3.5), bypassing local shadows entirely, so
   // the extern always inherits internal linkage. No conflict arises.
   if (!getLangOpts().CPlusPlus && New->isLocalVarDecl() &&
-      New->hasExternalStorage() && Old->hasLinkage() && Previous.isShadowed() &&
+      New->hasExternalStorage() && Previous.isShadowed() &&
       Old->getFormalLinkage() == Linkage::Internal) {
     Diag(New->getLocation(), diag::err_internal_extern_mismatch)
         << New->getDeclName() << getLangOpts().C2y;
