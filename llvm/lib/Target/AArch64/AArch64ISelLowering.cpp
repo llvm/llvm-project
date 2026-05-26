@@ -1507,14 +1507,26 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(MLAOps, MVT::v2i32, MVT::v16i8, Custom);
       setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v16i8, Custom);
 
+      // v2i64/v16i8 SUMLA always reduces to v4i32 SUMLA via
+      // LowerPARTIAL_REDUCE_MLA, regardless of i8mm; v2i32/v16i8 SUMLA goes
+      // through the same widen-to-v4i32 path as the SMLA/UMLA cases above.
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v2i64,
+                                MVT::v16i8, Custom);
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v2i32,
+                                MVT::v16i8, Custom);
+
       if (Subtarget->hasMatMulInt8()) {
         setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v4i32,
                                   MVT::v16i8, Legal);
-        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v2i64,
-                                  MVT::v16i8, Custom);
-
         setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v2i32,
                                   MVT::v8i8, Legal);
+      } else {
+        // Native dotprod without i8mm: lower SUMLA to two UDOT products in
+        // LowerPARTIAL_REDUCE_MLA.
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v4i32,
+                                  MVT::v16i8, Custom);
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v2i32,
+                                  MVT::v8i8, Custom);
       }
     }
 
@@ -33114,14 +33126,12 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
   return Scatter;
 }
 
-/// If a PARTIAL_REDUCE_MLA node comes in with an accumulator-input type pairing
-/// of (nx)v2i64/(nx)v16i8, we cannot directly lower it to a (u|s)dot. We can
-/// however still make use of the dot product instruction by instead
-/// accumulating over two steps: (nx)v16i8 -> (nx)v4i32 -> (nx)v2i64.
-/// If available, make use of the (U|S)ADDW(B|T) instructions, otherwise
-/// the following pattern is emitted:
-/// add(add(Acc, ext(EXTRACT_SUBVECTOR(N, 0)), ext(EXTRACT_SUBVECTOR(N,
-/// NTy/2))))
+/// Lower a PARTIAL_REDUCE_MLA node. Three cases are handled:
+/// 1. (v2i32, v16i8): widen Acc to v4i32 and fold the high half with ADDP.
+/// 2. (nx)v2i64/(nx)v16i8: accumulate in two steps via v4i32, using
+///    (U|S)ADDW(B|T) when available, otherwise add(add(Acc, ext(lo), ext(hi))).
+/// 3. SUMLA on (v4i32, v16i8) or (v2i32, v8i8) without +i8mm: rewrite as two
+///    UDOTs using sext(s) = zext(s ^ 0x80) - 0x80.
 SDValue
 AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                SelectionDAG &DAG) const {
@@ -33143,6 +33153,27 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
         DAG.getNode(Op.getOpcode(), DL, MVT::v4i32, WideAcc, LHS, RHS);
     SDValue Reduced = DAG.getNode(AArch64ISD::ADDP, DL, MVT::v4i32, Wide, Wide);
     return DAG.getExtractSubvector(DL, MVT::v2i32, Reduced, 0);
+  }
+
+  // Lower PARTIAL_REDUCE_SUMLA on targets without +i8mm using udot via
+  //   sum(zext(RHS) * sext(LHS)) =
+  //       sum(zext(RHS) * zext(LHS ^ 0x80)) - sum(zext(RHS) * 0x80)
+  // using sext(s) = zext(s ^ 0x80) - 0x80. LHS=signed, RHS=unsigned.
+  // The (v2i64, v16i8) case is handled by the v4i32 reduction below, which
+  // recursively re-enters this path.
+  if (Op.getOpcode() == ISD::PARTIAL_REDUCE_SUMLA &&
+      ((ResultVT == MVT::v4i32 && OpVT == MVT::v16i8) ||
+       (ResultVT == MVT::v2i32 && OpVT == MVT::v8i8))) {
+    assert(!Subtarget->hasMatMulInt8() && Subtarget->hasDotProd() &&
+           "Custom SUMLA lowering only registered for plain dotprod targets");
+    SDValue SignFlipMask = DAG.getConstant(0x80, DL, OpVT);
+    SDValue BiasedLHS = DAG.getNode(ISD::XOR, DL, OpVT, LHS, SignFlipMask);
+    SDValue BiasedDot = DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, DL, ResultVT, Acc,
+                                    BiasedLHS, RHS);
+    SDValue BiasCorrection =
+        DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, DL, ResultVT,
+                    DAG.getConstant(0, DL, ResultVT), SignFlipMask, RHS);
+    return DAG.getNode(ISD::SUB, DL, ResultVT, BiasedDot, BiasCorrection);
   }
 
   bool ConvertToScalable =
