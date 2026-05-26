@@ -1292,6 +1292,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     // unnecessary to collect profiles for non-prevailing copies.
     MPM.addPass(NoinlineNonPrevailing());
     addPostPGOLoopRotation(MPM, Level);
+    MPM.addPass(AssignGUIDPass());
     MPM.addPass(PGOCtxProfLoweringPass());
   } else if (IsColdFuncOnlyInstrGen) {
     addPGOInstrPasses(MPM, Level, /* RunProfileGen */ true, /* IsCS */ false,
