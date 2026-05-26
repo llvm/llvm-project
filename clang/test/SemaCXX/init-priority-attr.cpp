@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -DSYSTEM -verify %s
+// RUN: %clang_cc1 -fsyntax-only -DNOERROR -Wno-error=init-priority-reserved -verify %s
 
 #if defined(SYSTEM)
 #5 "init-priority-attr.cpp" 3 // system header
@@ -26,15 +27,21 @@ extern Two koo[];
 
 Two foo __attribute__((init_priority(101))) ( 5, 6 );
 
+Two loo __attribute__((init_priority(65535))) ( 5, 6 );
+
 Two goo __attribute__((init_priority(2,3))) ( 5, 6 ); // expected-error {{'init_priority' attribute takes one argument}}
 
 Two coo[2]  __attribute__((init_priority(100)));
 #if !defined(SYSTEM)
-// expected-error@-2 {{'init_priority' 100 is reserved for internal use}}
-#endif
+#if !defined(NOERROR)
+  // expected-error@-3 {{requested 'init_priority' 100 is reserved for internal use}}
+#else  // defined(NOERROR)
+  // expected-warning@-5 {{requested 'init_priority' 100 is reserved for internal use}}
+#endif // !defined(NOERROR)
+#endif // !defined(SYSTEM)
+Two zoo[2]  __attribute__((init_priority(-1))); // expected-error {{'init_priority' attribute requires integer constant between 0 and 65535 inclusive}}
 
-Two boo[2]  __attribute__((init_priority(65536)));
-// expected-error@-1 {{'init_priority' attribute requires integer constant between 0 and 65535 inclusive}}
+Two boo[2]  __attribute__((init_priority(65536))); // expected-error {{'init_priority' attribute requires integer constant between 0 and 65535 inclusive}}
 
 Two koo[4]  __attribute__((init_priority(1.13))); // expected-error {{'init_priority' attribute requires an integer constant}}
 
