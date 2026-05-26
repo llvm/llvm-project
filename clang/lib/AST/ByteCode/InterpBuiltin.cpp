@@ -5532,6 +5532,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pclmulqdq256:
   case clang::X86::BI__builtin_ia32_pclmulqdq512:
     return interp__builtin_ia32_pclmulqdq(S, OpPC, Call);
+  case Builtin::BI__builtin_elementwise_clmul:
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::clmul);
 
   case Builtin::BI__builtin_elementwise_fma:
     return interp__builtin_elementwise_triop_fp(

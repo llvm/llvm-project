@@ -14636,15 +14636,7 @@ void Sema::DiagnoseCommaOperator(const Expr *LHS, SourceLocation Loc) {
   // The listed locations are the initialization and increment portions
   // of a for loop.  The additional checks are on the condition of
   // if statements, do/while loops, and for loops.
-  // Differences in scope flags for C89 mode requires the extra logic.
-  const unsigned ForIncrementFlags =
-      getLangOpts().C99 || getLangOpts().CPlusPlus
-          ? Scope::ControlScope | Scope::ContinueScope | Scope::BreakScope
-          : Scope::ContinueScope | Scope::BreakScope;
-  const unsigned ForInitFlags = Scope::ControlScope | Scope::DeclScope;
-  const unsigned ScopeFlags = getCurScope()->getFlags();
-  if ((ScopeFlags & ForIncrementFlags) == ForIncrementFlags ||
-      (ScopeFlags & ForInitFlags) == ForInitFlags)
+  if (getCurScope()->isControlScope())
     return;
 
   // If there are multiple comma operators used together, get the RHS of the
