@@ -20,6 +20,7 @@ char const *array[] {
     "my", "hands", "are", "typing", "words"
 };
 
+
 // CIR: cir.global "private" constant cir_private dso_local @"[[STR:.+]]" = #cir.const_array<"my" : !cir.array<!s8i x 2>, trailing_zeros> : !cir.array<!s8i x 3>
 // CIR: cir.global "private" constant cir_private dso_local @"[[STR1:.+]]" = #cir.const_array<"hands" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6>
 // CIR: cir.global "private" constant cir_private dso_local @"[[STR2:.+]]" = #cir.const_array<"are" : !cir.array<!s8i x 3>, trailing_zeros> : !cir.array<!s8i x 4>
@@ -40,6 +41,11 @@ char const *array[] {
 // OGCG: @[[STR3:.+]] = private unnamed_addr constant [7 x i8] c"typing\00"
 // OGCG: @[[STR4:.+]] = private unnamed_addr constant [6 x i8] c"words\00"
 // OGCG: @array = global [5 x ptr] [ptr @[[STR]], ptr @[[STR1]], ptr @[[STR2]], ptr @[[STR3]], ptr @[[STR4]]]
+
+wchar_t zeroPadding[20] = L"hi";
+// CIR: cir.global external @zeroPadding = #cir.const_array<[#cir.int<104> : !u32i, #cir.int<105> : !u32i], trailing_zeros> : !cir.array<!u32i x 20> 
+// LLVM: @zeroPadding = global [20 x i32] [i32 104, i32 105, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0]
+// OGCG: @zeroPadding = global [20 x i32] [i32 104, i32 105, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0]
 
 // CIR: cir.global "private" constant cir_private dso_local @[[STR5_GLOBAL:.*]] = #cir.const_array<"abcd" : !cir.array<!s8i x 4>, trailing_zeros> : !cir.array<!s8i x 5>
 

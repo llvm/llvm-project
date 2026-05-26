@@ -132,6 +132,14 @@ void foo8(RefCountable* obj) {
   }
 }
 
+void consumeRef(Ref<RefCountable>&);
+struct Consumer {
+  Consumer();
+  Consumer(Ref<RefCountable>&);
+  void mutate(Ref<RefCountable>&);
+};
+Consumer operator<<(Consumer, Ref<RefCountable>&);
+
 void foo9(RefCountable& o) {
   Ref<RefCountable> guardian(o);
   {
@@ -163,6 +171,40 @@ void foo9(RefCountable& o) {
     RefCountable *bar = guardian.ptr();
     // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
     guardian = o.trivial() ? o : *bar;
+    bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    {
+      Ref<RefCountable> oldGuardian = std::exchange(guardian, nullptr);
+    }
+    bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    consumeRef(guardian);
+    bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    Consumer consumer(guardian);
+    bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    Consumer consumer;
+    consumer.mutate(guardian);
+    bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    Consumer consumer;
+    consumer << guardian;
     bar->method();
   }
 }

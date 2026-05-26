@@ -4009,6 +4009,18 @@ public:
   ///                     the case the comparison is '=='.
   ///
   /// \return Insertion point after generated atomic capture IR.
+  /// Whether to emit special handling for IEEE 754 -0.0 == +0.0 in
+  /// atomic compare operations on floating-point types.
+  bool HandleFPNegZero = false;
+
+  /// Set whether atomic compare should handle -0.0/+0.0 equivalence.
+  /// Returns the previous value so callers can save and restore it.
+  bool setHandleFPNegZero(bool FPNegZero) {
+    bool Old = HandleFPNegZero;
+    HandleFPNegZero = FPNegZero;
+    return Old;
+  }
+
   LLVM_ABI InsertPointTy
   createAtomicCompare(const LocationDescription &Loc, AtomicOpValue &X,
                       AtomicOpValue &V, AtomicOpValue &R, Value *E, Value *D,

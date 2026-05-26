@@ -64,19 +64,17 @@ def replace_in_file(path: Path, triple: str, cpu: str, check_prefix: str):
     if cpu:
         content = content.replace(b"%cpu", cpu.encode())
     content = content.replace(b"%check_prefix", check_prefix.encode())
+    content = content.replace(b"%libclc_lib", b"")
     path.write_bytes(content)
 
 
-def revert_in_file(path: Path, triple: str, cpu: str, check_prefix: str):
-    # Only revert in the RUN line context, not in generated CHECK lines.
-    content = path.read_bytes()
-    content = content.replace(f"--target={triple}".encode(), b"--target=%target")
-    if cpu:
-        content = content.replace(f"-mcpu={cpu}".encode(), b"-mcpu=%cpu")
-    content = content.replace(
-        f"--check-prefix={check_prefix}".encode(), b"--check-prefix=%check_prefix"
-    )
-    path.write_bytes(content)
+def _run_line_indices(content: bytes) -> list:
+    RUN_MARKERS = (b"// RUN:", b"; RUN:")
+    return [
+        i
+        for i, l in enumerate(content.splitlines(keepends=True))
+        if any(l.lstrip().startswith(m) for m in RUN_MARKERS)
+    ]
 
 
 def file_requires_feature(path: Path, feature: str) -> bool:
@@ -95,6 +93,9 @@ def file_requires_feature(path: Path, feature: str) -> bool:
 
 
 def process_file(cl_file: Path, triple: str, cpu: str, check_prefix: str) -> bool:
+    original = cl_file.read_bytes()
+    orig_lines = original.splitlines(keepends=True)
+    saved_run = {i: orig_lines[i] for i in _run_line_indices(original)}
     replace_in_file(cl_file, triple, cpu, check_prefix)
     cmd = [
         sys.executable,
@@ -108,7 +109,11 @@ def process_file(cl_file: Path, triple: str, cpu: str, check_prefix: str) -> boo
     ok = result.returncode == 0
     if not ok:
         print(f"  FAILED: {result.stderr.strip()}", file=sys.stderr)
-    revert_in_file(cl_file, triple, cpu, check_prefix)
+    updated = cl_file.read_bytes()
+    updated_lines = updated.splitlines(keepends=True)
+    for i, line in saved_run.items():
+        updated_lines[i] = line
+    cl_file.write_bytes(b"".join(updated_lines))
     return ok
 
 

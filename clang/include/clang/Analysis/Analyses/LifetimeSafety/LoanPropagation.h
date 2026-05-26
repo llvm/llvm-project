@@ -38,6 +38,16 @@ public:
 
   LoanSet getLoans(OriginID OID, ProgramPoint P) const;
 
+  /// Builds the chain of origins through which a loan has propagated.
+  ///
+  /// Starting from StartPoint where StartOID currently holds TargetLoan,
+  /// this function traces backwards through OriginFlowFacts to identify the
+  /// sequence of origins through which the loan flowed, ending at the origin
+  /// where the loan was originally issued.
+  llvm::SmallVector<OriginID>
+  buildOriginFlowChain(const FactManager &FactMgr, ProgramPoint StartPoint,
+                       const OriginID StartOID, const LoanID TargetLoan) const;
+
 private:
   class Impl;
   std::unique_ptr<Impl> PImpl;

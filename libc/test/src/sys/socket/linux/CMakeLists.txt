@@ -39,11 +39,15 @@ add_libc_unittest(
   DEPENDS
     .socket_test_support
     libc.include.sys_socket
+    libc.hdr.netinet_in_macros
     libc.hdr.sys_socket_macros
+    libc.hdr.types.struct_sockaddr_in
     libc.hdr.types.struct_sockaddr_un
+    libc.src.arpa.inet.htonl
     libc.src.errno.errno
     libc.src.sys.socket.socket
     libc.src.sys.socket.bind
+    libc.src.sys.socket.getsockname
     libc.src.stdio.remove
     libc.src.unistd.close
     libc.src.__support.CPP.scope
@@ -201,6 +205,26 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  sendmmsg_test
+  SUITE
+    libc_sys_socket_unittests
+  SRCS
+    sendmmsg_test.cpp
+  DEPENDS
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.struct_mmsghdr
+    libc.src.errno.errno
+    libc.src.string.strlen
+    libc.src.sys.socket.socketpair
+    libc.src.sys.socket.sendmmsg
+    libc.src.sys.socket.recvmsg
+    libc.src.unistd.close
+    libc.src.__support.CPP.scope
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
   sendmsg_recvmsg_test
   SUITE
     libc_sys_socket_unittests
@@ -234,6 +258,7 @@ add_libc_unittest(
     libc.include.sys_socket
     libc.hdr.sys_socket_macros
     libc.hdr.types.ssize_t
+    libc.src.__support.CPP.scope
     libc.src.errno.errno
     libc.src.sys.socket.shutdown
     libc.src.sys.socket.socketpair

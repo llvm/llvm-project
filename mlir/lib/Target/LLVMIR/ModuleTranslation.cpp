@@ -618,9 +618,15 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     }
     return llvm::ConstantFP::get(llvmType, floatAttr.getValue());
   }
-  if (auto funcAttr = dyn_cast<FlatSymbolRefAttr>(attr))
-    return llvm::ConstantExpr::getBitCast(
-        moduleTranslation.lookupFunction(funcAttr.getValue()), llvmType);
+  if (auto symAttr = dyn_cast<FlatSymbolRefAttr>(attr)) {
+    StringRef name = symAttr.getValue();
+    if (llvm::Function *func = moduleTranslation.lookupFunction(name))
+      return llvm::ConstantExpr::getBitCast(func, llvmType);
+    if (llvm::GlobalValue *global = moduleTranslation.lookupGlobal(name))
+      return llvm::ConstantExpr::getBitCast(global, llvmType);
+    emitError(loc, "unknown symbol reference '") << name << "' in constant";
+    return nullptr;
+  }
   if (auto splatAttr = dyn_cast<SplatElementsAttr>(attr)) {
     llvm::Type *elementType;
     uint64_t numElements;
@@ -1197,16 +1203,16 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
     llvm::Type *type = convertType(op.getType());
     llvm::Constant *cst = nullptr;
-    if (op.getValueOrNull()) {
+    const bool deferValueAttrToPass2 = op.getValueOrNull() &&
+                                       !op.getInitializerBlock() &&
+                                       !isa<StringAttr>(op.getValueOrNull());
+    if (op.getValueOrNull() && !deferValueAttrToPass2) {
       // String attributes are treated separately because they cannot appear as
       // in-function constants and are thus not supported by getLLVMConstant.
       if (auto strAttr = dyn_cast_or_null<StringAttr>(op.getValueOrNull())) {
         cst = llvm::ConstantDataArray::getString(
             llvmModule->getContext(), strAttr.getValue(), /*AddNull=*/false);
         type = cst->getType();
-      } else if (!(cst = getLLVMConstant(type, op.getValueOrNull(), op.getLoc(),
-                                         *this))) {
-        return failure();
       }
     }
 
@@ -1216,10 +1222,14 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
     // external to have initializers. If MLIR does not provide an initializer,
     // default to undef.
     bool dropInitializer = shouldDropGlobalInitializer(linkage, cst);
-    if (!dropInitializer && !cst)
-      cst = llvm::UndefValue::get(type);
-    else if (dropInitializer && cst)
+    if (!deferValueAttrToPass2) {
+      if (!dropInitializer && !cst)
+        cst = llvm::UndefValue::get(type);
+      else if (dropInitializer && cst)
+        cst = nullptr;
+    } else {
       cst = nullptr;
+    }
 
     auto *var = new llvm::GlobalVariable(
         *llvmModule, type, op.getConstant(), linkage, cst, op.getSymName(),
@@ -1249,6 +1259,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
     var->setVisibility(convertVisibilityToLLVM(op.getVisibility_()));
 
     globalsMapping.try_emplace(op, var);
+    globalsByNameMapping.try_emplace(op.getSymName(), var);
 
     // Add debug information if present.
     if (op.getDbgExprs()) {
@@ -1304,6 +1315,28 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
     if (failed(convertedTargetSpecificAttrs))
       return failure();
     var->addAttributes(*convertedTargetSpecificAttrs);
+  }
+
+  // Value-attribute initializers may reference other globals by symbol name.
+  // Register every global above before materializing those constants.
+  for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
+    if (!op.getValueOrNull() || op.getInitializerBlock() ||
+        isa<StringAttr>(op.getValueOrNull()))
+      continue;
+
+    llvm::Type *type = convertType(op.getType());
+    llvm::Constant *cst =
+        getLLVMConstant(type, op.getValueOrNull(), op.getLoc(), *this);
+    if (!cst)
+      return failure();
+
+    auto linkage = convertLinkageToLLVM(op.getLinkage());
+    bool dropInitializer = shouldDropGlobalInitializer(linkage, cst);
+    auto *var = cast<llvm::GlobalVariable>(lookupGlobal(op));
+    if (dropInitializer)
+      var->setInitializer(nullptr);
+    else
+      var->setInitializer(cst);
   }
 
   // Create all llvm::GlobalAlias

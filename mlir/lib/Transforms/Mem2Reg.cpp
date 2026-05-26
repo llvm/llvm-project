@@ -421,8 +421,9 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
     for (OpOperand *blockingUse : newBlockingUses) {
       assert(llvm::is_contained(user->getResults(), blockingUse->get()));
 
+      Operation *useOwner = blockingUse->getOwner();
       SmallPtrSetImpl<OpOperand *> &newUserBlockingUseSet =
-          blockingUsesMap[blockingUse->getOwner()];
+          userToBlockingUses[useOwner->getParentRegion()][useOwner];
       newUserBlockingUseSet.insert(blockingUse);
     }
   }

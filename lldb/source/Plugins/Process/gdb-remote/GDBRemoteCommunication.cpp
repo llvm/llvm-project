@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GDBRemoteCommunication.h"
+#include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
@@ -30,6 +31,7 @@
 #include <climits>
 #include <cstring>
 #include <sys/stat.h>
+#include <thread>
 #include <variant>
 
 #if HAVE_LIBCOMPRESSION
@@ -136,6 +138,10 @@ GDBRemoteCommunication::SendNotificationPacketNoLock(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunication::SendRawPacketNoLock(llvm::StringRef packet,
                                             bool skip_ack) {
+  std::chrono::milliseconds delay = ProcessGDBRemote::GetPacketTestDelay();
+  if (delay.count() > 0)
+    std::this_thread::sleep_for(delay);
+
   if (IsConnected()) {
     Log *log = GetLog(GDBRLog::Packets);
     ConnectionStatus status = eConnectionStatusSuccess;

@@ -63,7 +63,7 @@ struct DirectiveNameScope {
     return x;
   }
 
-  static OmpDirectiveName GetOmpDirectiveName(const OpenMPSectionConstruct &x) {
+  static OmpDirectiveName GetOmpDirectiveName(const OmpSectionDirective &x) {
     if (auto &spec{std::get<std::optional<OmpDirectiveSpecification>>(x.t)}) {
       return spec->DirName();
     } else {

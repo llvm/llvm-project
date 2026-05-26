@@ -41,13 +41,13 @@ def yaml_to_classes(yaml_data, header_class, entry_points=None):
     header.merge_yaml_files = yaml_data.get("merge_yaml_files", [])
 
     for macro_data in yaml_data.get("macros", []):
-        header.add_macro(
-            Macro(
-                macro_data["macro_name"],
-                macro_data.get("macro_value"),
-                macro_data.get("macro_header"),
-            )
+        macro = Macro(
+            macro_data["macro_name"],
+            macro_data.get("macro_value"),
+            macro_data.get("macro_header"),
         )
+        macro.standards = macro_data.get("standards", [])
+        header.add_macro(macro)
 
     types = yaml_data.get("types", [])
     sorted_types = sorted(types, key=lambda x: x["type_name"])
@@ -65,12 +65,14 @@ def yaml_to_classes(yaml_data, header_class, entry_points=None):
                 f"macro_header '{type_guard}' was found in this file."
             )
 
-        header.add_type(Type(type_name, type_guard))
+        typ = Type(type_name, type_guard)
+        typ.standards = type_data.get("standards", [])
+        header.add_type(typ)
 
     for enum_data in yaml_data.get("enums", []):
-        header.add_enumeration(
-            Enumeration(enum_data["name"], enum_data.get("value", None))
-        )
+        enum = Enumeration(enum_data["name"], enum_data.get("value", None))
+        enum.standards = enum_data.get("standards", [])
+        header.add_enumeration(enum)
 
     functions = yaml_data.get("functions", [])
     if entry_points:
@@ -122,10 +124,9 @@ def yaml_to_classes(yaml_data, header_class, entry_points=None):
     objects = yaml_data.get("objects", [])
     sorted_objects = sorted(objects, key=lambda x: x["object_name"])
     for object_data in sorted_objects:
-        header.add_object(
-            Object(object_data["object_name"], object_data["object_type"])
-        )
-
+        obj = Object(object_data["object_name"], object_data["object_type"])
+        obj.standards = object_data.get("standards", [])
+        header.add_object(obj)
     return header
 
 

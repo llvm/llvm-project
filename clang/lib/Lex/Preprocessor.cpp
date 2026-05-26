@@ -1730,6 +1730,17 @@ void Preprocessor::createPreprocessingRecord() {
   addPPCallbacks(std::unique_ptr<PPCallbacks>(Record));
 }
 
+void Preprocessor::removePPCallbacks() {
+  auto IsPreserved = [&](PPCallbacks *C) {
+    return C == Record || C == DirTracer;
+  };
+  SmallVector<PPCallbacks *, 2> Released;
+  PPCallbacks::releaseIfPreserved(Callbacks, IsPreserved, Released);
+  Callbacks.reset();
+  for (auto *P : Released)
+    addPPCallbacks(std::unique_ptr<PPCallbacks>(P));
+}
+
 const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {
   if (auto It = CheckPoints.find(FID); It != CheckPoints.end()) {
     const SmallVector<const char *> &FileCheckPoints = It->second;

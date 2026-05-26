@@ -734,6 +734,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   const LLT MinScalarFPTy = ST.has16BitInsts() ? S16 : S32;
 
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
+
   // s1 for VCC branches, s32 for SCC branches.
   getActionDefinitionsBuilder(G_BRCOND).legalFor({S1, S32});
 
@@ -2248,6 +2250,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .legalFor(AllVectors)
       .scalarize(1)
       .lower();
+
+  getActionDefinitionsBuilder({G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS,
+                               G_INTRINSIC_CONVERGENT,
+                               G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS})
+      .alwaysLegal();
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
@@ -8505,6 +8512,27 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     B.buildStore(MI.getOperand(2), MI.getOperand(1), **MI.memoperands_begin());
     MI.eraseFromParent();
     return true;
+  case Intrinsic::amdgcn_av_load_b128:
+  case Intrinsic::amdgcn_av_store_b128: {
+    const GCNSubtarget &ST = B.getMF().getSubtarget<GCNSubtarget>();
+    if (!ST.hasFlatGlobalInsts()) {
+      const char *Name = IntrID == Intrinsic::amdgcn_av_load_b128
+                             ? "llvm.amdgcn.av.load.b128"
+                             : "llvm.amdgcn.av.store.b128";
+      Function &Fn = B.getMF().getFunction();
+      Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+          Fn, Twine(Name) + " not supported on subtarget", MI.getDebugLoc()));
+      return false;
+    }
+    assert(MI.hasOneMemOperand() && "Expected IRTranslator to set MemOp!");
+    if (IntrID == Intrinsic::amdgcn_av_load_b128)
+      B.buildLoad(MI.getOperand(0), MI.getOperand(2), **MI.memoperands_begin());
+    else
+      B.buildStore(MI.getOperand(2), MI.getOperand(1),
+                   **MI.memoperands_begin());
+    MI.eraseFromParent();
+    return true;
+  }
   case Intrinsic::amdgcn_flat_load_monitor_b32:
   case Intrinsic::amdgcn_flat_load_monitor_b64:
   case Intrinsic::amdgcn_flat_load_monitor_b128:

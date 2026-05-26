@@ -155,7 +155,7 @@ void initializeAArch64DAGToDAGISelLegacyPass(PassRegistry &);
 void initializeAArch64DeadRegisterDefinitionsLegacyPass(PassRegistry &);
 void initializeAArch64ExpandPseudoLegacyPass(PassRegistry &);
 void initializeAArch64LoadStoreOptLegacyPass(PassRegistry &);
-void initializeAArch64LowerHomogeneousPrologEpilogPass(PassRegistry &);
+void initializeAArch64LowerHomogeneousPrologEpilogLegacyPass(PassRegistry &);
 void initializeAArch64CodeLayoutOptPass(PassRegistry &);
 void initializeAArch64MIPeepholeOptLegacyPass(PassRegistry &);
 void initializeAArch64O0PreLegalizerCombinerLegacyPass(PassRegistry &);
@@ -315,6 +315,12 @@ class AArch64ConditionalComparesPass
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64LowerHomogeneousPrologEpilogPass
+    : public PassInfoMixin<AArch64LowerHomogeneousPrologEpilogPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

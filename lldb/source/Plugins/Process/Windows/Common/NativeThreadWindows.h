@@ -23,7 +23,7 @@ class NativeThreadWindows : public NativeThreadProtocol {
 public:
   NativeThreadWindows(NativeProcessWindows &process, const HostThread &thread);
 
-  ~NativeThreadWindows() {}
+  ~NativeThreadWindows() override = default;
 
   Status DoStop();
   Status DoResume(lldb::StateType resume_state);

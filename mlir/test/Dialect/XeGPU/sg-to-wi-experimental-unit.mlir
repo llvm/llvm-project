@@ -1,6 +1,7 @@
 
-// RUN: mlir-opt  --xevm-attach-target='module=xevm_* chip=pvc' --allow-unregistered-dialect \
+// RUN: mlir-opt  --xevm-attach-target='module=xevm_* chip=cri' --allow-unregistered-dialect \
 // RUN: --test-xegpu-sg-to-wi-distribute-experimental --split-input-file %s | FileCheck %s
+
 
 gpu.module @xevm_module {
 // CHECK-LABEL: gpu.func @create_nd_tdesc
@@ -895,12 +896,12 @@ gpu.func @convert_layout_removed_when_compatible() {
     target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}>
     : vector<16xf32>
   %3 = xegpu.convert_layout %2
-    <{input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>, 
-    target_layout = #xegpu.layout<lane_layout = [1], lane_data = [1]>}> 
+    <{input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>,
+    target_layout = #xegpu.layout<lane_layout = [1], lane_data = [1]>}>
     : vector<1xf32>
   %4 = xegpu.convert_layout %3
     <{input_layout = #xegpu.layout<lane_layout = [1], lane_data = [1]>,
-    target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [0, 1]>}> 
+    target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [0, 1]>}>
     : vector<1xf32>
   gpu.return
 }
@@ -1241,6 +1242,81 @@ gpu.func @vector_multi_reduction_1d_to_scalar() {
       input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16], lane_data = [1]>, dims = [0]>,
       target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16], lane_data = [1]>, dims = [0]>
     }> : f32
+  gpu.return
+}
+}
+
+// -----
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @vector_interleave
+// CHECK: %[[LHS:.*]] = arith.constant dense<2.000000e+00> : vector<1x1xf32>
+// CHECK: %[[RHS:.*]] = arith.constant dense<3.000000e+00> : vector<1x1xf32>
+// CHECK: %[[INTERLEAVED:.*]] = vector.interleave %[[LHS]], %[[RHS]] : vector<1x1xf32> -> vector<1x2xf32>
+gpu.func @vector_interleave() {
+  %0 = arith.constant dense<2.> : vector<8x2xf32>
+  %1 = arith.constant dense<3.> : vector<8x2xf32>
+  %2 = vector.interleave %0, %1 : vector<8x2xf32> -> vector<8x4xf32>
+
+  %cl1 = xegpu.convert_layout %2
+  <{
+    input_layout = #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 2]>,
+    target_layout = #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 2]>
+  }> : vector<8x4xf32>
+
+  gpu.return
+}
+}
+
+// -----
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @vector_deinterleave
+// CHECK: %[[SRC:.*]] = arith.constant dense<3.000000e+00> : vector<1x2xf32>
+// CHECK: %[[DEINTERLEAVED:.*]] = vector.deinterleave %[[SRC]] : vector<1x2xf32> -> vector<1x1xf32>
+gpu.func @vector_deinterleave() {
+  %src = arith.constant dense<3.> : vector<8x4xf32>
+  %even, %odd = vector.deinterleave %src : vector<8x4xf32> -> vector<8x2xf32>
+
+  %cl1 = xegpu.convert_layout %even
+  <{
+    input_layout = #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 1]>,
+    target_layout = #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 1]>
+  }> : vector<8x2xf32>
+
+  gpu.return
+}
+}
+
+// -----
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @xegpu_dpas_mx
+// CHECK-DAG: %[[CST:.*]] = arith.constant dense<3.000000e+00> : vector<8x1xf8E4M3FN>
+// CHECK-DAG: %[[CST_0:.*]] = arith.constant dense<3.000000e+00> : vector<16x1xf8E4M3FN>
+// CHECK-DAG: %[[CST_1:.*]] = arith.constant dense<1.000000e+00> : vector<1x2xf8E8M0FNU>
+// CHECK-DAG: %[[CST_2:.*]] = arith.constant dense<5.000000e-01> : vector<2x1xf8E8M0FNU>
+// CHECK-DAG: %[[SCALE_B:.*]] = vector.shape_cast %[[CST_2]] : vector<2x1xf8E8M0FNU> to vector<2xf8E8M0FNU>
+// CHECK-DAG: %[[SCALE_A:.*]] = vector.shape_cast %[[CST_1]] : vector<1x2xf8E8M0FNU> to vector<2xf8E8M0FNU>
+// CHECK-DAG: %[[B:.*]] = vector.shape_cast %[[CST_0]] : vector<16x1xf8E4M3FN> to vector<16xf8E4M3FN>
+// CHECK-DAG: %[[A:.*]] = vector.shape_cast %[[CST]] : vector<8x1xf8E4M3FN> to vector<8xf8E4M3FN>
+// CHECK: %[[RESULT:.*]] = xegpu.dpas_mx %[[A]], %[[B]] scale_a = %[[SCALE_A]] scale_b = %[[SCALE_B]] : (vector<8xf8E4M3FN>, vector<16xf8E4M3FN>, vector<2xf8E8M0FNU>, vector<2xf8E8M0FNU>) -> vector<8xf32>
+gpu.func @xegpu_dpas_mx(%arg0: !xegpu.mem_desc<8x8xf16>, %arg1: !xegpu.mem_desc<8x8xf16>) {
+  %A = arith.constant dense<3.> : vector<8x16xf8E4M3FN>
+  %B = arith.constant dense<3.> : vector<16x16xf8E4M3FN>
+  %scale_A = arith.constant dense<1.> : vector<8x2xf8E8M0FNU>
+  %scale_B = arith.constant dense<0.5> : vector<2x16xf8E8M0FNU>
+
+  %4 = xegpu.dpas_mx %A, %B scale_a = %scale_A scale_b = %scale_B
+  {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+    layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+    layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+    layout_a_scale = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>,
+    layout_b_scale = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+  : (vector<8x16xf8E4M3FN>, vector<16x16xf8E4M3FN>, vector<8x2xf8E8M0FNU>, vector<2x16xf8E8M0FNU>)  -> vector<8x16xf32>
+
+  %anchor = xegpu.convert_layout %4
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }> : vector<8x16xf32>
   gpu.return
 }
 }

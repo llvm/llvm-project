@@ -76,13 +76,13 @@ define void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr noalias no
 ; DISABLED_MASKED_STRIDED-LABEL: 'test2'
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx2, align 2
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %2, ptr %arrayidx7, align 2
-; DISABLED_MASKED_STRIDED:  Cost of 8 for VF 2: REPLICATE store ir<%0>, ir<%arrayidx2>
+; DISABLED_MASKED_STRIDED:  Cost of 3000000 for VF 2: REPLICATE store ir<%0>, ir<%arrayidx2>
 ; DISABLED_MASKED_STRIDED:  Cost of 3000000 for VF 2: REPLICATE store ir<%2>, ir<%arrayidx7>
-; DISABLED_MASKED_STRIDED:  Cost of 17 for VF 4: REPLICATE store ir<%0>, ir<%arrayidx2>
+; DISABLED_MASKED_STRIDED:  Cost of 3000000 for VF 4: REPLICATE store ir<%0>, ir<%arrayidx2>
 ; DISABLED_MASKED_STRIDED:  Cost of 3000000 for VF 4: REPLICATE store ir<%2>, ir<%arrayidx7>
-; DISABLED_MASKED_STRIDED:  Cost of 35 for VF 8: REPLICATE store ir<%0>, ir<%arrayidx2>
+; DISABLED_MASKED_STRIDED:  Cost of 3000000 for VF 8: REPLICATE store ir<%0>, ir<%arrayidx2>
 ; DISABLED_MASKED_STRIDED:  Cost of 3000000 for VF 8: REPLICATE store ir<%2>, ir<%arrayidx7>
-; DISABLED_MASKED_STRIDED:  Cost of 71 for VF 16: REPLICATE store ir<%0>, ir<%arrayidx2>
+; DISABLED_MASKED_STRIDED:  Cost of 3000000 for VF 16: REPLICATE store ir<%0>, ir<%arrayidx2>
 ; DISABLED_MASKED_STRIDED:  Cost of 3000000 for VF 16: REPLICATE store ir<%2>, ir<%arrayidx7>
 ;
 ; ENABLED_MASKED_STRIDED-LABEL: 'test2'

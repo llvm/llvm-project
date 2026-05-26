@@ -98,22 +98,22 @@ static bool lowerExecSyncGlobalVariables(
   // The 1st round: give module-absolute assignments
   int NumAbsolutes = 0;
   SmallVector<GlobalVariable *> OrderedGVs;
-  for (auto &K : LDSToKernelsThatNeedToAccessItIndirectly) {
+  LDSToKernelsThatNeedToAccessItIndirectly.remove_if([&](auto &K) {
     GlobalVariable *GV = K.first;
     if (!isNamedBarrier(*GV))
-      continue;
+      return false;
     // give a module-absolute assignment if it is indirectly accessed by
     // multiple kernels. This is not precise, but we don't want to duplicate
     // a function when it is called by multiple kernels.
-    if (LDSToKernelsThatNeedToAccessItIndirectly[GV].size() > 1) {
+    if (K.second.size() > 1) {
       OrderedGVs.push_back(GV);
     } else {
       // leave it to the 2nd round, which will give a kernel-relative
       // assignment if it is only indirectly accessed by one kernel
       LDSUsesInfo.direct_access[*K.second.begin()].insert(GV);
     }
-    LDSToKernelsThatNeedToAccessItIndirectly.erase(GV);
-  }
+    return true;
+  });
   OrderedGVs = sortByName(std::move(OrderedGVs));
   for (GlobalVariable *GV : OrderedGVs) {
     unsigned BarrierScope = AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
@@ -141,7 +141,7 @@ static bool lowerExecSyncGlobalVariables(
 
   DenseMap<Function *, uint32_t> Kernel2BarId;
   for (Function *F : OrderedKernels) {
-    for (GlobalVariable *GV : LDSUsesInfo.direct_access[F]) {
+    for (GlobalVariable *GV : llvm::to_vector(LDSUsesInfo.direct_access[F])) {
       if (!isNamedBarrier(*GV))
         continue;
 
@@ -171,10 +171,7 @@ static bool lowerExecSyncGlobalVariables(
   // Also erase those special LDS variables from indirect_access.
   for (auto &K : LDSUsesInfo.indirect_access) {
     assert(isKernel(*K.first));
-    for (GlobalVariable *GV : K.second) {
-      if (isNamedBarrier(*GV))
-        K.second.erase(GV);
-    }
+    K.second.remove_if([](GlobalVariable *GV) { return isNamedBarrier(*GV); });
   }
   return Changed;
 }

@@ -34,8 +34,10 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "CIRGenFunctionInfo.h"
 #include "TargetInfo.h"
@@ -312,6 +314,11 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
     theTargetCIRGenInfo = createAMDGPUTargetCIRGenInfo(genTypes);
     return *theTargetCIRGenInfo;
   }
+  case llvm::Triple::spirv:
+  case llvm::Triple::spirv32:
+  case llvm::Triple::spirv64:
+    theTargetCIRGenInfo = createSPIRVTargetCIRGenInfo(genTypes);
+    return *theTargetCIRGenInfo;
   }
 }
 
@@ -455,6 +462,26 @@ bool CIRGenModule::shouldEmitCUDAGlobalVar(const VarDecl *global) const {
          global->hasAttr<CUDASharedAttr>() ||
          global->getType()->isCUDADeviceBuiltinSurfaceType() ||
          global->getType()->isCUDADeviceBuiltinTextureType();
+}
+
+void CIRGenModule::printPostfixForExternalizedDecl(llvm::raw_ostream &os,
+                                                   const Decl *d) {
+  // ptxas does not allow '.' in symbol names. On the other hand, HIP prefers
+  // postfix beginning with '.' since the symbol name can be demangled.
+  if (langOpts.HIP)
+    os << (isa<VarDecl>(d) ? ".static." : ".intern.");
+  else
+    os << (isa<VarDecl>(d) ? "__static__" : "__intern__");
+
+  // If the CUID is not specified we try to generate a unique postfix.
+  if (getLangOpts().CUID.empty()) {
+    // TODO: Once we add 'PreprocessorOpts' into CIRGenModule this part can be
+    // brought in from OG.
+    errorNYI(d->getSourceRange(),
+             "printPostfixForExternalizedDecl: CUID is not specified");
+  } else {
+    os << getASTContext().getCUIDHash();
+  }
 }
 
 void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
@@ -779,7 +806,47 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
   const auto *tc = fd ? fd->getAttr<TargetClonesAttr>() : nullptr;
   bool addedAttr = false;
   if (td || tv || sd || tc) {
-    assert(!cir::MissingFeatures::opFuncMultiVersioning());
+    llvm::StringMap<bool> featureMap;
+    astContext.getFunctionFeatureMap(featureMap, gd);
+
+    // Now add the target-cpu and target-features to the function.
+    // While we populated the feature map above, we still need to
+    // get and parse the target/target_clones attribute so we can
+    // get the cpu for the function.
+    llvm::StringRef featureStr = td ? td->getFeaturesStr() : llvm::StringRef();
+    if (tc && (getTriple().isOSAIX() || getTriple().isX86()))
+      featureStr = tc->getFeatureStr(gd.getMultiVersionIndex());
+    if (!featureStr.empty()) {
+      clang::ParsedTargetAttr parsedAttr =
+          getTarget().parseTargetAttr(featureStr);
+      if (!parsedAttr.CPU.empty() &&
+          getTarget().isValidCPUName(parsedAttr.CPU)) {
+        targetCPU = parsedAttr.CPU;
+        tuneCPU = ""; // Clear the tune CPU.
+      }
+      if (!parsedAttr.Tune.empty() &&
+          getTarget().isValidCPUName(parsedAttr.Tune))
+        tuneCPU = parsedAttr.Tune;
+    }
+
+    if (sd) {
+      // Apply the given CPU name as the 'tune-cpu' so that the optimizer can
+      // favor this processor.
+      tuneCPU = sd->getCPUName(gd.getMultiVersionIndex())->getName();
+    }
+
+    // For AMDGPU, only emit delta features (features that differ from the
+    // target CPU's defaults). Other targets might want to follow a similar
+    // pattern.
+    if (getTarget().getTriple().isAMDGPU()) {
+      features = getFeatureDeltaFromDefault(*this, targetCPU, featureMap);
+    } else {
+      // Produce the canonical string for this set of features.
+      features.reserve(features.size() + featureMap.size());
+      for (const auto &entry : featureMap)
+        features.push_back((entry.getValue() ? "+" : "-") +
+                           entry.getKey().str());
+    }
   } else {
     // Just add the existing target cpu and target features to the function.
     if (setTargetFeatures && getTarget().getTriple().isAMDGPU()) {
@@ -1049,6 +1116,8 @@ void CIRGenModule::replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV) {
   // erased) operation, which would leave them detached from the module.
   if (lastGlobalOp == oldGV)
     lastGlobalOp = newGV;
+  if (getLangOpts().CUDA)
+    getCUDARuntime().handleGlobalReplace(oldGV, newGV);
   eraseGlobalSymbol(oldGV);
   oldGV.erase();
 }
@@ -1175,7 +1244,6 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       if (const SectionAttr *sa = d->getAttr<SectionAttr>())
         gv.setSectionAttr(builder.getStringAttr(sa->getName()));
     }
-    gv.setGlobalVisibility(getGlobalVisibilityAttrFromDecl(d).getValue());
 
     // Handle XCore specific ABI requirements.
     if (getTriple().getArch() == llvm::Triple::xcore)
@@ -1457,13 +1525,10 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                     cir::CUDAExternallyInitializedAttr::get(&getMLIRContext()));
       }
     } else {
-      // TODO(cir):
       // Adjust linkage of shadow variables in host compilation
-      // getCUDARuntime().internalizeDeviceSideVar(vd, linkage);
+      getCUDARuntime().internalizeDeviceSideVar(vd, linkage);
     }
-    // TODO(cir):
-    // Handle variable registration
-    // getCUDARuntime().handleVarRegistration(vd, gv);
+    getCUDARuntime().handleVarRegistration(vd, gv);
   }
 
   // Set initializer and finalize emission
@@ -1574,9 +1639,8 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *e) {
 
   uint64_t arraySize = arrayTy.getSize();
   unsigned literalSize = e->getLength();
-  assert(arraySize == literalSize + 1 &&
-         "wide string literal array size must be literal length plus null "
-         "terminator");
+  assert(arraySize > literalSize &&
+         "wide string literal array size must have room for null terminator?");
 
   // Check if the string is all null bytes before building the vector.
   // In most non-zero cases, this will break out on the first element.
@@ -1596,8 +1660,6 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *e) {
   elements.reserve(arraySize);
   for (unsigned i = 0; i < literalSize; ++i)
     elements.push_back(cir::IntAttr::get(arrayEltTy, e->getCodeUnit(i)));
-  // Add null terminator
-  elements.push_back(cir::IntAttr::get(arrayEltTy, 0));
 
   auto elementsAttr = mlir::ArrayAttr::get(&getMLIRContext(), elements);
   return builder.getConstArray(elementsAttr, arrayTy);
@@ -2143,9 +2205,11 @@ LangAS CIRGenModule::getLangTempAllocaAddressSpace() const {
   if (getLangOpts().CUDAIsDevice)
     return LangAS::Default;
 
-  if (getLangOpts().SYCLIsDevice ||
-      (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice))
-    errorNYI("SYCL or OpenMP temp address space");
+  if (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice)
+    assert(!cir::MissingFeatures::openMP());
+  if (getLangOpts().SYCLIsDevice)
+    errorNYI("SYCL temp address space");
+
   return LangAS::Default;
 }
 
@@ -2747,9 +2811,65 @@ static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
   return false;
 }
 
-void CIRGenModule::setGlobalVisibility(mlir::Operation *gv,
+void CIRGenModule::setGlobalVisibility(cir::CIRGlobalValueInterface gv,
                                        const NamedDecl *d) const {
-  assert(!cir::MissingFeatures::opGlobalVisibility());
+  // Internal definitions always have default visibility.
+  if (gv.hasLocalLinkage()) {
+    gv.setGlobalVisibility(cir::VisibilityKind::Default);
+    return;
+  }
+  if (!d)
+    return;
+
+  // Set visibility for definitions, and for declarations if requested globally
+  // or set explicitly.
+  LinkageInfo lv = d->getLinkageAndVisibility();
+
+  // OpenMP declare target variables must be visible to the host so they can
+  // be registered. We require protected visibility unless the variable has
+  // the DT_nohost modifier and does not need to be registered.
+  if (getASTContext().getLangOpts().OpenMP &&
+      getASTContext().getLangOpts().OpenMPIsTargetDevice && isa<VarDecl>(d) &&
+      d->hasAttr<OMPDeclareTargetDeclAttr>() &&
+      d->getAttr<OMPDeclareTargetDeclAttr>()->getDevType() !=
+          OMPDeclareTargetDeclAttr::DT_NoHost &&
+      lv.getVisibility() == HiddenVisibility) {
+    llvm_unreachable("setGlobalVisibility: OpenMP is NYI");
+    return;
+  }
+
+  // CUDA/HIP device kernels and global variables must be visible to the host
+  // so they can be registered / initialized. We require protected visibility
+  // unless the user explicitly requested hidden via an attribute.
+  if (getASTContext().getLangOpts().CUDAIsDevice &&
+      lv.getVisibility() == HiddenVisibility && !lv.isVisibilityExplicit() &&
+      !d->hasAttr<OMPDeclareTargetDeclAttr>()) {
+    bool needsProtected = false;
+    if (isa<FunctionDecl>(d)) {
+      needsProtected =
+          d->hasAttr<CUDAGlobalAttr>() || d->hasAttr<DeviceKernelAttr>();
+    } else if (const auto *vd = dyn_cast<VarDecl>(d)) {
+      needsProtected = vd->hasAttr<CUDADeviceAttr>() ||
+                       vd->hasAttr<CUDAConstantAttr>() ||
+                       vd->getType()->isCUDADeviceBuiltinSurfaceType() ||
+                       vd->getType()->isCUDADeviceBuiltinTextureType();
+    }
+    if (needsProtected) {
+      gv.setGlobalVisibility(cir::VisibilityKind::Protected);
+      return;
+    }
+  }
+
+  if (getASTContext().getLangOpts().HLSL && !d->isInExportDeclContext()) {
+    gv.setGlobalVisibility(cir::VisibilityKind::Hidden);
+    return;
+  }
+
+  assert(!cir::MissingFeatures::opGlobalDLLImportExport());
+
+  if (lv.isVisibilityExplicit() || getLangOpts().SetVisibilityForExternDecls ||
+      !gv.isDeclarationForLinker())
+    gv.setGlobalVisibility(getCIRVisibilityKind(lv.getVisibility()));
 }
 
 void CIRGenModule::setDSOLocal(cir::CIRGlobalValueInterface gv) const {
@@ -2769,7 +2889,7 @@ void CIRGenModule::setGVProperties(mlir::Operation *op,
 
 void CIRGenModule::setGVPropertiesAux(mlir::Operation *op,
                                       const NamedDecl *d) const {
-  setGlobalVisibility(op, d);
+  setGlobalVisibility(cast<cir::CIRGlobalValueInterface>(op), d);
   setDSOLocal(op);
   assert(!cir::MissingFeatures::opGlobalPartition());
 }
@@ -2872,15 +2992,6 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
 
   if (!isIncompleteFunction && func.isDeclaration())
     getTargetCIRGenInfo().setTargetAttributes(funcDecl, func, *this);
-
-  // TODO(cir): This needs a lot of work to better match CodeGen. That
-  // ultimately ends up in setGlobalVisibility, which already has the linkage of
-  // the LLVM GV (corresponding to our FuncOp) computed, so it doesn't have to
-  // recompute it here. This is a minimal fix for now.
-  if (!isLocalLinkage(getFunctionLinkage(globalDecl))) {
-    const Decl *decl = globalDecl.getDecl();
-    func.setGlobalVisibility(getGlobalVisibilityAttrFromDecl(decl).getValue());
-  }
 
   // If we plan on emitting this inline builtin, we can't treat it as a builtin.
   if (funcDecl->isInlineBuiltinDeclaration()) {
@@ -3420,6 +3531,9 @@ void CIRGenModule::release() {
 
     addCompilerUsedGlobal(gv);
   }
+
+  if (astContext.getLangOpts().CUDA && cudaRuntime)
+    getCUDARuntime().finalizeModule();
 
   emitLLVMUsed();
 

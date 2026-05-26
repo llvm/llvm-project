@@ -1040,11 +1040,11 @@ def X86fp_to_i64mem
 //===----------------------------------------------------------------------===//
 
 def fpimm0 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(+0.0);
+  return Imm.isPosZero();
 }]>;
 
 def fpimmneg0 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(-0.0);
+  return Imm.isNegZero();
 }]>;
 
 def fpimm1 : FPImmLeaf<fAny, [{

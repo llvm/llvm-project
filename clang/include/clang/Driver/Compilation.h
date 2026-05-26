@@ -126,6 +126,10 @@ class Compilation {
   /// Whether to keep temporary files regardless of -save-temps.
   bool ForceKeepTempFiles = false;
 
+  /// The bound architecture currently being built, if any. Set around
+  /// ConstructJob calls so addCommand can stamp it onto each new Command.
+  StringRef CurrentBoundArch;
+
 public:
   Compilation(const Driver &D, const ToolChain &DefaultToolChain,
               llvm::opt::InputArgList *Args,
@@ -211,7 +215,13 @@ public:
   JobList &getJobs() { return Jobs; }
   const JobList &getJobs() const { return Jobs; }
 
-  void addCommand(std::unique_ptr<Command> C) { Jobs.addJob(std::move(C)); }
+  void addCommand(std::unique_ptr<Command> Cmd) {
+    Cmd->setBoundArch(CurrentBoundArch);
+    Jobs.addJob(std::move(Cmd));
+  }
+
+  StringRef getCurrentBoundArch() const { return CurrentBoundArch; }
+  void setCurrentBoundArch(StringRef Arch) { CurrentBoundArch = Arch; }
 
   llvm::opt::ArgStringList &getTempFiles() { return TempFiles; }
   const llvm::opt::ArgStringList &getTempFiles() const { return TempFiles; }

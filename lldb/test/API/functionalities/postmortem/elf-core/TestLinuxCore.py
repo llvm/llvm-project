@@ -321,6 +321,9 @@ class LinuxCoreTestCase(TestBase):
 
         self.dbg.DeleteTarget(target)
 
+    @skipIf(
+        hostoslist=["windows"], bugnumber="github.com/llvm/llvm-project/issues/198471"
+    )
     def test_object_map(self):
         """Test that lldb can find the exe for an i386 linux core file using the object map."""
 

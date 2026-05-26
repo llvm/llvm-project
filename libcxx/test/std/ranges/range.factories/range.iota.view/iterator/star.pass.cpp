@@ -81,6 +81,12 @@ constexpr void testType() {
 constexpr bool test() {
   testType<SomeInt>();
   testType<NotNoexceptCopy>();
+#ifndef TEST_HAS_NO_INT128
+  testType<__int128_t>();
+  testType<__uint128_t>();
+#endif
+  testType<signed long long>();
+  testType<unsigned long long>();
   testType<signed long>();
   testType<unsigned long>();
   testType<int>();

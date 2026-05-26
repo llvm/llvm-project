@@ -91,11 +91,11 @@
 // RUN:   | FileCheck -check-prefixes=ERRSANCOV %s
 
 
+// NOTSUPPORTED-DAG: warning: ignoring 'leak' in '-fsanitize=leak' option as it is not currently supported for target 'amdgcn-amd-amdhsa'
 // INVALIDCOMBINATION1: warning: ignoring 'fuzzer' in '-fsanitize=address,fuzzer' option as it is not currently supported for target 'amdgcn-amd-amdhsa' [-Woption-ignored]
 // INVALIDCOMBINATION2: warning: ignoring 'fuzzer' in '-fsanitize=fuzzer,address' option as it is not currently supported for target 'amdgcn-amd-amdhsa' [-Woption-ignored]
 
 // FAIL-DAG: error: cannot find ROCm device library for ABI version 5; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
-// NOTSUPPORTED-DAG: warning: ignoring '-fsanitize=leak' option as it is not currently supported for target 'amdgcn-amd-amdhsa'
 
 // NOXNACK: warning: ignoring '-fsanitize=address' option for offload arch 'gfx908' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
 // XNACKNEG: warning: ignoring '-fsanitize=address' option for offload arch 'gfx908:xnack-' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
@@ -111,7 +111,7 @@
 // SAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "x86_64-unknown-linux-gnu".* "-fopenmp".* "-fsanitize=address".* "--offload-targets=amdgcn-amd-amdhsa".* "-x" "ir".*}}
 // SAN: {{"[^"]*clang-linker-wrapper[^"]*".* "--host-triple=x86_64-unknown-linux-gnu".* "--linker-path=[^"]*".* "--whole-archive" "[^"]*(libclang_rt.asan_static.a|libclang_rt.asan_static-x86_64.a)".* "--whole-archive" "[^"]*(libclang_rt.asan.a|libclang_rt.asan-x86_64.a)".*}}
 
-// UNSUPPORTEDERROR: error: '-fsanitize=leak' option is not currently supported for target 'amdgcn-amd-amdhsa'
+// UNSUPPORTEDERROR: error: 'leak' in '-fsanitize=leak' option is not currently supported for target 'amdgcn-amd-amdhsa'
 // XNACKERROR: error: '-fsanitize=address' option for offload arch 'gfx908:xnack-' is not currently supported there. Use it with an offload arch containing 'xnack+' instead
 // INVALIDCOMBINATIONERROR: error: 'fuzzer' in '-fsanitize=fuzzer,address' option is not currently supported for target 'amdgcn-amd-amdhsa'
 

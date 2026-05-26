@@ -1381,6 +1381,16 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     if (Subtarget.hasP10Vector()) {
       setOperationAction(ISD::SELECT_CC, MVT::f128, Custom);
     }
+
+    setOperationAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v16i32, Custom);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v4i32, MVT::v8i16,
+                              Legal);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v4i32, MVT::v8i16,
+                              Legal);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v4i32, MVT::v16i8,
+                              Legal);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v4i32, MVT::v16i8,
+                              Legal);
   }
 
   if (Subtarget.pairedVectorMemops()) {
@@ -11971,6 +11981,29 @@ SDValue PPCTargetLowering::LowerVP_STORE(SDValue Op, SelectionDAG &DAG) const {
   return VPS;
 }
 
+SDValue PPCTargetLowering::LowerPartialReduce(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDValue Acc = Op.getOperand(0);
+  SDValue Op1 = Op.getOperand(1);
+  SDValue Op2 = Op.getOperand(2);
+
+  assert(Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA &&
+         "Unexpected partial reduction");
+
+  if (Acc.getValueType() != MVT::v4i32)
+    return SDValue();
+  if (Op1.getValueType() != MVT::v16i32 || Op1.getOpcode() != ISD::SIGN_EXTEND)
+    return SDValue();
+  SDValue Op1Input = Op1.getOperand(0);
+  if (Op1Input.getValueType() != MVT::v16i8 || !llvm::isOneOrOneSplat(Op2))
+    return SDValue();
+
+  SDLoc dl(Op);
+  SDValue Ones = DAG.getConstant(1, dl, MVT::v16i8);
+  return DAG.getNode(ISD::PARTIAL_REDUCE_SUMLA, dl, MVT::v4i32, Acc, Op1Input,
+                     Ones);
+}
+
 SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -12863,6 +12896,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerVP_LOAD(Op, DAG);
   case ISD::VP_STORE:
     return LowerVP_STORE(Op, DAG);
+  case ISD::PARTIAL_REDUCE_UMLA:
+    return LowerPartialReduce(Op, DAG);
   }
 }
 
@@ -15792,17 +15827,27 @@ SDValue PPCTargetLowering::DAGCombineExtBoolTrunc(SDNode *N,
 }
 
 // The function check a i128 load can convert to 16i8 load for Vcmpequb.
-static bool canConvertToVcmpequb(SDValue &LHS, SDValue &RHS) {
+static bool canConvertToVcmpequb(SDValue &LHS, SDValue &RHS, bool IsPPC64) {
 
-  auto isValidForConvert = [](SDValue &Operand) {
+  auto isValidForConvert = [IsPPC64](SDValue &Operand) {
     if (!Operand.hasOneUse())
       return false;
 
     if (Operand.getValueType() != MVT::i128)
       return false;
 
-    if (Operand.getOpcode() == ISD::Constant)
+    if (Operand.getOpcode() == ISD::Constant) {
+      auto *C = cast<ConstantSDNode>(Operand);
+      const APInt &Val = C->getAPIntValue();
+      // On PPC64, comparing an i128 value loaded from memory against a
+      // constant smaller than 2^16 is usually better left to scalar lowering.
+      // In that case, the compare can be lowered using xori (since xori has a
+      // 16-bit immediate field), which is cheaper than materializing a vector
+      // constant and using vcmpequb.
+      if (IsPPC64 && Val.ult(1ULL << 16))
+        return false;
       return true;
+    }
 
     auto *LoadNode = dyn_cast<LoadSDNode>(Operand);
     if (!LoadNode)
@@ -15853,10 +15898,19 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
     assert(Operand.getOpcode() == ISD::LOAD && "Must be LoadSDNode here.");
 
     auto *LoadNode = cast<LoadSDNode>(Operand);
-    SDValue NewLoad =
-        DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
-                    LoadNode->getBasePtr(), LoadNode->getMemOperand());
-    DAG.ReplaceAllUsesOfValueWith(Operand.getValue(1), NewLoad.getValue(1));
+    // Create a new MachineMemOperand without range metadata.
+    // Range metadata is only valid for integer scalar types, not vectors.
+    // The original i128 load may have range metadata, but when we convert
+    // to v16i8, that metadata is no longer semantically valid.
+    MachineMemOperand *MMO = LoadNode->getMemOperand();
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachineMemOperand *NewMMO = MF.getMachineMemOperand(
+        MMO->getPointerInfo(), MMO->getFlags(), MMO->getSize(), MMO->getAlign(),
+        MMO->getAAInfo(), nullptr, MMO->getSyncScopeID(),
+        MMO->getSuccessOrdering(), MMO->getFailureOrdering());
+    SDValue NewLoad = DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
+                                  LoadNode->getBasePtr(), NewMMO);
+    DAG.ReplaceAllUsesOfValueWith(SDValue(LoadNode, 1), NewLoad.getValue(1));
     return NewLoad;
   };
 
@@ -16085,7 +16139,8 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N,
     //   This transformation replaces memcmp(a, b, 16) with two vector loads
     //   and one vector compare instruction.
 
-    if (Subtarget.hasAltivec() && canConvertToVcmpequb(LHS, RHS))
+    if (Subtarget.hasAltivec() &&
+        canConvertToVcmpequb(LHS, RHS, Subtarget.isPPC64()))
       return convertTwoLoadsAndCmpToVCMPEQUB(DCI.DAG, N, SDLoc(N));
   }
 

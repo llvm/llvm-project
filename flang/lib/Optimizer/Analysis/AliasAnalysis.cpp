@@ -976,8 +976,35 @@ ModRefResult AliasAnalysis::getModRef(mlir::Region &region,
   return result;
 }
 
+/// Walk through any pass-through block-arg<->operand links the analysis
+/// understands, replacing \p v with the corresponding operand at each step,
+/// and return the resulting value. A "pass-through block argument" is one
+/// that does not introduce a new value relative to its corresponding operand
+/// from the standpoint of memory addressing, so walking past it is safe for
+/// alias analysis.
+///
+/// Currently the only handled pass-through link is the
+/// operand<->block-argument mapping of an acc.compute_region.
+static mlir::Value walkBlockArgPassThroughs(mlir::Value v) {
+  while (v) {
+    mlir::Value operand = mlir::acc::getACCOperandForBlockArg(v);
+    if (!operand)
+      break;
+    v = operand;
+  }
+  return v;
+}
+
 AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                                                bool getLastInstantiationPoint) {
+  // If v is a pass-through block argument (see walkBlockArgPassThroughs),
+  // continue from the underlying operand so the tracking loop below has a
+  // defining op to chew on. Without this, a recursive query like the one in
+  // the fir.load (box) branch below would immediately return
+  // SourceKind::Unknown (no defining op and not a function dummy argument),
+  // which then forces SourceKind::Indirect for box loads from such block args
+  // and pessimizes alias analysis.
+  v = walkBlockArgPassThroughs(v);
   auto *defOp = v.getDefiningOp();
   SourceKind type{SourceKind::Unknown};
   mlir::Type ty;
@@ -1412,6 +1439,16 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
       return *regionBranchReturn;
     if (accSourceReturn)
       return *accSourceReturn;
+
+    if (!breakFromLoop && v) {
+      // If we have reached a pass-through block argument, walk past it so
+      // the next loop iteration sees the underlying defining op.
+      mlir::Value newV = walkBlockArgPassThroughs(v);
+      if (newV != v) {
+        v = newV;
+        defOp = v.getDefiningOp();
+      }
+    }
   }
   if (!defOp && type == SourceKind::Unknown) {
     // Check if the memory source is coming through a dummy argument.
@@ -1427,14 +1464,6 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
       // hlfir.eval_in_mem block operands is allocated by the operation.
       type = SourceKind::Allocate;
       ty = v.getType();
-    } else if (mlir::Operation *accOp =
-                   mlir::acc::getACCDataClauseOpForBlockArg(v)) {
-      return getSourceForACCMappedValue(
-          v, accOp,
-          [&](mlir::Value x) {
-            return getSource(x, getLastInstantiationPoint);
-          },
-          followingData, attributes);
     }
   }
 

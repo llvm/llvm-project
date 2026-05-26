@@ -403,7 +403,7 @@ int Socket::SetOption(NativeSocket sockfd, int level, int option_name,
                       sizeof(option_value));
 }
 
-size_t Socket::Send(const void *buf, const size_t num_bytes) {
+ssize_t Socket::Send(const void *buf, const size_t num_bytes) {
   return ::send(m_socket, static_cast<const char *>(buf), num_bytes, 0);
 }
 

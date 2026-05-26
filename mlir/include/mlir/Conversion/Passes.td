@@ -1411,6 +1411,25 @@ def TosaToSCFPass : Pass<"tosa-to-scf"> {
 }
 
 //===----------------------------------------------------------------------===//
+// TOSA to SPIR-V Graph/TOSA
+//===----------------------------------------------------------------------===//
+
+def TosaToSPIRVTosa : Pass<"tosa-to-spirv-tosa"> {
+  let summary = "Lower TOSA IR to SPIR-V Graph/TOSA operations";
+  let dependentDialects = [
+    "spirv::SPIRVDialect",
+  ];
+  let description = [{
+    Converts TOSA programs to the SPIR-V Graph/TOSA representation by
+    wrapping converted functions in `spirv.module` and `spirv.ARM.Graph`,
+    and rewriting TOSA tensor and shape types to the corresponding SPIR-V ARM
+    tensor types.
+  }];
+
+  let constructor = "tosa::createTosaToSPIRVTosa()";
+}
+
+//===----------------------------------------------------------------------===//
 // TosaToTensor
 //===----------------------------------------------------------------------===//
 

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-static-initialization-cycle %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s misc-static-initialization-cycle %t -- -- -fno-delayed-template-parsing -fexceptions
 
 namespace simple_cycle {
 struct S { static int A; };
@@ -119,6 +119,14 @@ int f1() {
 }
 int S::A = f1();
 }
+
+namespace catch_all_handler {
+void f() {
+  try {
+  } catch (...) {
+  }
+}
+} // catch_all_handler
 
 namespace recursive_calls {
 int f2();

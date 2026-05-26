@@ -6,7 +6,7 @@ define void @test_add_sdiv(ptr %arr1, ptr %arr2, i32 %a0, i32 %a1, i32 %a2, i32 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[ARR1:%.*]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 poison, i32 0>, i32 [[A2:%.*]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP5]], <i32 1, i32 1, i32 42, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[TMP5]], <i32 1, i32 1, i32 42, i32 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[A0:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[A1:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[A3:%.*]], i32 3
@@ -53,7 +53,7 @@ define void @test_add_udiv(ptr %arr1, ptr %arr2, i32 %a0, i32 %a1, i32 %a2, i32 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[ARR1:%.*]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 poison, i32 0>, i32 [[A2:%.*]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP5]], <i32 1, i32 1, i32 42, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[TMP5]], <i32 1, i32 1, i32 42, i32 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[A0:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[A1:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[A3:%.*]], i32 3

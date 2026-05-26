@@ -3003,7 +3003,10 @@ def fir_AddrOfOp : fir_OneResultOp<"address_of", [Pure]> {
   let assemblyFormat = "`(` $symbol `)` attr-dict `:` type($resTy)";
 }
 
-def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [Pure]> {
+def fir_VolatileCastOp
+    : fir_SimpleOneResultOp<
+          "volatile_cast", [Pure, ViewLikeOpInterface,
+                            fir_FortranObjectViewOpInterface]> {
   let summary = "cast between volatile and non-volatile types";
   let description = [{
     Cast between volatile and non-volatile types. The types must be otherwise
@@ -3017,6 +3020,14 @@ def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [Pure]> {
   }];
   let hasVerifier = 1;
   let hasFolder = 1;
+  let extraClassDeclaration = [{
+    // ViewLikeOpInterface methods:
+    mlir::Value getViewSource() { return getValue(); }
+
+    // FortranObjectViewOpInterface methods:
+    mlir::Value getViewSource(mlir::OpResult) { return getValue(); }
+    std::optional<std::int64_t> getViewOffset(mlir::OpResult) { return 0; }
+  }];
 }
 
 def fir_ConvertOp
@@ -3314,12 +3325,14 @@ def fir_UseStmtOp
   }];
 
   let arguments = (ins StrAttr:$module_name,
-      OptionalAttr<ArrayAttr>:$only_symbols, OptionalAttr<ArrayAttr>:$renames);
+      OptionalAttr<ArrayAttr>:$only_symbols, OptionalAttr<ArrayAttr>:$renames,
+      DefaultValuedAttr<BoolAttr, "false">:$hasOnlyWithRenames);
 
   let assemblyFormat = [{
     $module_name
     (`only_symbols` `[` $only_symbols^ `]`)?
     (`renames` `[` $renames^ `]`)?
+    (`hasOnlyWithRenames` $hasOnlyWithRenames^)?
     attr-dict
   }];
 
@@ -3331,7 +3344,10 @@ def fir_UseStmtOp
     bool hasRenames() { return getRenames().has_value(); }
 
     /// Returns true if this imports the entire module (no ONLY clause)
-    bool importsAll() { return !hasOnlyClause(); }
+    bool importsAll() { return !(hasOnlyClause() || getHasOnlyWithRenames()); }
+
+    /// Returns true if this USE statement has both ONLY clause and renames
+    bool hasOnlyWithRenames() { return getHasOnlyWithRenames(); }
   }];
 }
 

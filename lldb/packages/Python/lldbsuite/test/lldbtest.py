@@ -742,9 +742,7 @@ class Base(unittest.TestCase):
         remote_test_dir = configuration.lldb_platform_working_dir
         for c in components:
             remote_test_dir = lldbutil.join_remote_paths(remote_test_dir, c)
-            error = lldb.remote_platform.MakeDirectory(
-                remote_test_dir, 448
-            )  # 448 = 0o700
+            error = lldb.remote_platform.MakeDirectory(remote_test_dir, 0o700)
             if error.Fail():
                 raise Exception(
                     "making remote directory '%s': %s" % (remote_test_dir, error)
@@ -785,13 +783,28 @@ class Base(unittest.TestCase):
         """Create the test-specific working directory, optionally deleting any
         previous contents."""
         bdir = self.getBuildDir()
+        if sys.platform == "win32" and len(bdir) > 256:
+            import warnings
+
+            warnings.warn(
+                "Test build directory path exceeds 256 characters (Windows "
+                "MAX_PATH limit): {}".format(bdir)
+            )
         if os.path.isdir(bdir) and not self.SHARED_BUILD_TESTCASE:
             shutil.rmtree(bdir)
         lldbutil.mkdir_p(bdir)
 
     def getBuildArtifact(self, name="a.out"):
         """Return absolute path to an artifact in the test's build directory."""
-        return os.path.join(self.getBuildDir(), name)
+        artifact_path = os.path.join(self.getBuildDir(), name)
+        if sys.platform == "win32" and len(artifact_path) > 256:
+            import warnings
+
+            warnings.warn(
+                "Test artifact path exceeds 256 characters (Windows "
+                "MAX_PATH limit): {}".format(artifact_path)
+            )
+        return artifact_path
 
     def getSourcePath(self, name):
         """Return absolute path to a file in the test's source directory."""

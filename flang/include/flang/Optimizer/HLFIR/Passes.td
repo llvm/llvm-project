@@ -86,6 +86,12 @@ def InlineElementals : Pass<"inline-elementals"> {
 
 def InlineHLFIRAssign : Pass<"inline-hlfir-assign"> {
   let summary = "Inline hlfir.assign operations";
+  let options = [Option<
+      "onlyScalarRHS", "only-scalar-rhs", "bool", /*default=*/"false",
+      "Only inline assignments where RHS is a numeric or logical scalar "
+      "broadcast "
+      "to an array LHS. Used at O0 to avoid runtime calls in "
+      "device code without inlining all array assignments.">];
 }
 
 def InlineHLFIRCopyIn : Pass<"inline-hlfir-copy-in"> {

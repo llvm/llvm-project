@@ -487,12 +487,21 @@ static bool foldAnyOrAllBitsSet(Instruction &I) {
 }
 
 /// Helper function to replace an instruction with a popcount intrinsic.
-/// This creates the ctpop intrinsic and replaces all uses of the instruction.
+/// This creates the ctpop intrinsic with an optional truncation appended at the
+/// end, and replaces all uses of the instruction.
 static void replaceWithPopCount(Instruction &I, Value *Root) {
   LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
+  Type *RootTy = Root->getType();
+  Type *OrigTy = I.getType();
+
   IRBuilder<> Builder(&I);
-  I.replaceAllUsesWith(
-      Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
+  Value *NewVal = Builder.CreateIntrinsic(Intrinsic::ctpop, RootTy, {Root});
+  if (OrigTy != RootTy) {
+    assert(RootTy->getScalarSizeInBits() > OrigTy->getScalarSizeInBits() &&
+           "Only truncation is supported for now");
+    NewVal = Builder.CreateTrunc(NewVal, OrigTy);
+  }
+  I.replaceAllUsesWith(NewVal);
   ++NumPopCountRecognized;
 }
 
@@ -728,6 +737,20 @@ static bool tryToRecognizePopCount2n3(Instruction &I) {
     return false;
 
   unsigned Len = Ty->getScalarSizeInBits();
+  Value *Add1;
+  const APInt *MaskRes;
+  if (!match(&I, m_And(m_Value(Add1), m_APInt(MaskRes))))
+    return false;
+
+  // Since `(trunc (and x, C))` might be canonicalized into `(and (trunc x), C)`
+  // we might loose the opportunity to recognize `(trunc (popcount y))`. The
+  // following block tries to capture such truncation, update `Len`, and append
+  // the truncation at the end of the emitting popcount, if there is any.
+  Value *TruncSrc;
+  if (match(Add1, m_OneUse(m_Trunc(m_Value(TruncSrc))))) {
+    Add1 = TruncSrc;
+    Len = Add1->getType()->getScalarSizeInBits();
+  }
 
   if (Len > 64 || Len <= 8 || Len % 8 != 0)
     return false;
@@ -740,10 +763,6 @@ static bool tryToRecognizePopCount2n3(Instruction &I) {
   APInt Mask33 = APInt::getSplat(Len, APInt(8, 0x33));
   APInt Mask0F = APInt::getSplat(Len, APInt(8, 0x0F));
 
-  Value *Add1;
-  const APInt *MaskRes;
-  if (!match(&I, m_And(m_Value(Add1), m_APInt(MaskRes))))
-    return false;
   // Number of bits needed to represent Len.
   unsigned NumLenBits = Log2_32(Len) + 1;
   // The "mask" here really only needs to fulfill two conditions:

@@ -1079,6 +1079,9 @@ void PerfScriptReader::parseSample(TraceStream &TraceIt) {
 bool PerfScriptReader::extractMMapEventForBinary(ProfiledBinary *Binary,
                                                  StringRef Line,
                                                  MMapEvent &MMap) {
+  if (!Binary->isKernel() && !Line.contains(Binary->getName()) &&
+      !ShowMmapEvents)
+    return false;
   // Parse a MMap2 line like:
   //  PERF_RECORD_MMAP2 2113428/2113428: [0x7fd4efb57000(0x204000) @ 0
   //  08:04 19532229 3585508847]: r-xp /usr/lib64/libdl-2.17.so

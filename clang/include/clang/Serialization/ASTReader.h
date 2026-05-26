@@ -1966,12 +1966,6 @@ public:
   /// Update the state of Sema after loading some additional modules.
   void UpdateSema();
 
-  /// Add in-memory (virtual file) buffer.
-  void addInMemoryBuffer(StringRef &FileName,
-                         std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-    ModuleMgr.addInMemoryBuffer(FileName, std::move(Buffer));
-  }
-
   /// Finalizes the AST reader's state before writing an AST file to
   /// disk.
   ///

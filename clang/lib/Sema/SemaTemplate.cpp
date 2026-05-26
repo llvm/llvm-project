@@ -4932,7 +4932,7 @@ ExprResult Sema::CheckConceptTemplateId(
     LocalInstantiationScope Scope(*this);
 
     EnterExpressionEvaluationContext EECtx{
-        *this, ExpressionEvaluationContext::Unevaluated};
+        *this, ExpressionEvaluationContext::Unevaluated, CSD};
 
     Error = CheckConstraintSatisfaction(
         NamedConcept, AssociatedConstraint(Concept->getConstraintExpr()), MLTAL,
@@ -10791,6 +10791,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
 
     VarDecl *Prev = Previous.getAsSingle<VarDecl>();
     VarTemplateDecl *PrevTemplate = Previous.getAsSingle<VarTemplateDecl>();
+    const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
 
     if (!PrevTemplate) {
       if (!Prev || !Prev->isStaticDataMember()) {
@@ -10859,6 +10860,8 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
       // Ignore access control bits, we don't need them for redeclaration
       // checking.
       Prev = cast<VarDecl>(Res.get());
+      ArgsAsWritten =
+          ASTTemplateArgumentListInfo::Create(Context, TemplateArgs);
     }
 
     // C++0x [temp.explicit]p2:
@@ -10913,9 +10916,6 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
       return true;
     }
 
-    const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
-    if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(Prev))
-      ArgsAsWritten = VTSD->getTemplateArgsAsWritten();
     addExplicitInstantiationDecl(
         Context, CurContext, Prev, ExternLoc, TemplateLoc,
         D.getCXXScopeSpec().getWithLocInContext(Context), ArgsAsWritten,

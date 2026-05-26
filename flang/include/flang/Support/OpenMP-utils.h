@@ -9,57 +9,30 @@
 #ifndef FORTRAN_SUPPORT_OPENMP_UTILS_H_
 #define FORTRAN_SUPPORT_OPENMP_UTILS_H_
 
-#include "flang/Semantics/symbol.h"
-
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Value.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace Fortran::common::openmp {
 /// Structure holding the information needed to create and bind entry block
-/// arguments associated to a single clause.
-struct EntryBlockArgsEntry {
-  llvm::ArrayRef<const Fortran::semantics::Symbol *> syms;
-  llvm::ArrayRef<mlir::Value> vars;
-
-  bool isValid() const {
-    // This check allows specifying a smaller number of symbols than values
-    // because in some case cases a single symbol generates multiple block
-    // arguments.
-    return syms.size() <= vars.size();
-  }
-};
-
-/// Structure holding the information needed to create and bind entry block
 /// arguments associated to all clauses that can define them.
 struct EntryBlockArgs {
-  EntryBlockArgsEntry hasDeviceAddr;
+  llvm::ArrayRef<mlir::Value> hasDeviceAddrVars;
   llvm::ArrayRef<mlir::Value> hostEvalVars;
-  EntryBlockArgsEntry inReduction;
-  EntryBlockArgsEntry map;
-  EntryBlockArgsEntry priv;
-  EntryBlockArgsEntry reduction;
-  EntryBlockArgsEntry taskReduction;
-  EntryBlockArgsEntry useDeviceAddr;
-  EntryBlockArgsEntry useDevicePtr;
-
-  bool isValid() const {
-    return hasDeviceAddr.isValid() && inReduction.isValid() && map.isValid() &&
-        priv.isValid() && reduction.isValid() && taskReduction.isValid() &&
-        useDeviceAddr.isValid() && useDevicePtr.isValid();
-  }
-
-  auto getSyms() const {
-    return llvm::concat<const semantics::Symbol *const>(hasDeviceAddr.syms,
-        inReduction.syms, map.syms, priv.syms, reduction.syms,
-        taskReduction.syms, useDeviceAddr.syms, useDevicePtr.syms);
-  }
+  llvm::ArrayRef<mlir::Value> inReductionVars;
+  llvm::ArrayRef<mlir::Value> mapVars;
+  llvm::ArrayRef<mlir::Value> privVars;
+  llvm::ArrayRef<mlir::Value> reductionVars;
+  llvm::ArrayRef<mlir::Value> taskReductionVars;
+  llvm::ArrayRef<mlir::Value> useDeviceAddrVars;
+  llvm::ArrayRef<mlir::Value> useDevicePtrVars;
 
   auto getVars() const {
-    return llvm::concat<const mlir::Value>(hasDeviceAddr.vars, hostEvalVars,
-        inReduction.vars, map.vars, priv.vars, reduction.vars,
-        taskReduction.vars, useDeviceAddr.vars, useDevicePtr.vars);
+    return llvm::concat<const mlir::Value>(hasDeviceAddrVars, hostEvalVars,
+        inReductionVars, mapVars, privVars, reductionVars, taskReductionVars,
+        useDeviceAddrVars, useDevicePtrVars);
   }
 };
 

@@ -16,7 +16,7 @@
 
 #include "hdr/types/socklen_t.h"
 #include "hdr/types/struct_sockaddr.h"
-#include "src/__support/OSUtil/linux/syscall.h" // syscall_impl
+#include "src/__support/OSUtil/linux/syscall.h" // syscall_checked
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
@@ -27,10 +27,7 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> getsockname(int sockfd, struct sockaddr *addr,
                                      socklen_t *addrlen) {
-  int ret = syscall_impl<int>(SYS_getsockname, sockfd, addr, addrlen);
-  if (ret < 0)
-    return Error(-static_cast<int>(ret));
-  return ret;
+  return syscall_checked<int>(SYS_getsockname, sockfd, addr, addrlen);
 }
 
 } // namespace linux_syscalls

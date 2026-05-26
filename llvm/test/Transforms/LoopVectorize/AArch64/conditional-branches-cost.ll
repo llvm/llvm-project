@@ -542,8 +542,7 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 257, [[TMP3]]
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
-; DEFAULT-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP4]], 2
+; DEFAULT-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP2]], 2
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP11]], 2
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 257, [[TMP5]]
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 257, [[N_MOD_VF]]
@@ -1164,7 +1163,6 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 1
-; DEFAULT-NEXT:    [[TMP15:%.*]] = shl nuw i64 [[TMP1]], 4
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP3]]
 ; DEFAULT-NEXT:    [[TMP29:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP33:%.*]] = shl nuw i64 [[TMP29]], 1
@@ -1181,11 +1179,11 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; DEFAULT-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; DEFAULT-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
+; DEFAULT-NEXT:    [[TMP15:%.*]] = shl nuw i64 [[TMP1]], 4
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK5:%.*]] = icmp ult i64 [[TMP0]], [[TMP15]]
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK5]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; DEFAULT:       [[VECTOR_PH1]]:
-; DEFAULT-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP8]], 2
+; DEFAULT-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP1]], 2
 ; DEFAULT-NEXT:    [[TMP45:%.*]] = shl nuw i64 [[TMP9]], 2
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP45]]
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]

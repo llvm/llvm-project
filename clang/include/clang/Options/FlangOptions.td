@@ -190,6 +190,8 @@ defm ppc_native_vec_elem_order: BoolOptionWithoutMarshalling<"f", "ppc-native-ve
   PosFlag<SetTrue, [], [ClangOption], "Specifies PowerPC native vector element order (default)">,
   NegFlag<SetFalse, [], [ClangOption], "Specifies PowerPC non-native vector element order">>;
 defm unsigned : OptInFC1FFlag<"unsigned", "Enables UNSIGNED type">;
+defm acc_allow_default_none_scalars : OptInFC1FFlag<"acc-allow-default-none-scalars",
+  "Allow scalar variables in OpenACC default(none) regions without explicit data clauses (pre-OpenACC-3.2 behavior)">;
 
 def fno_automatic : Flag<["-"], "fno-automatic">, Group<f_Group>,
   HelpText<"Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE">;

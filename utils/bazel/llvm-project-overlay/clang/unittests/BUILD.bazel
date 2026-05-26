@@ -772,6 +772,7 @@ cc_test(
         allow_empty = False,
     ),
     deps = [
+        "//clang:ast",
         "//clang:frontend",
         "//clang:lex",
         "//llvm:Support",

@@ -215,9 +215,11 @@ static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
       !Fortran::semantics::IsProcedurePointer(ultimate))
     mlir::emitError(loc, "processing global declaration: symbol '")
         << toStringRef(sym.name()) << "' has unexpected details\n";
+  bool isBindC = sym.attrs().test(Fortran::semantics::Attr::BIND_C);
   fir::GlobalOp global = builder.createGlobal(
       loc, converter.genType(var), globalName, linkage, mlir::Attribute{},
-      isConstant(ultimate), var.isTarget(), dataAttr);
+      isConstant(ultimate), var.isTarget(), dataAttr,
+      /*setDefaultAlignment=*/!isBindC);
   attachAccDeclareAttribute(builder, global, sym);
   return global;
 }
@@ -503,6 +505,7 @@ fir::GlobalOp Fortran::lower::defineGlobal(
   const Fortran::semantics::Symbol &sym = var.getSymbol();
   mlir::Location loc = genLocation(converter, sym);
   bool isConst = isConstant(sym);
+  bool isBindC = sym.attrs().test(Fortran::semantics::Attr::BIND_C);
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   mlir::Type symTy = converter.genType(var);
 
@@ -524,7 +527,8 @@ fir::GlobalOp Fortran::lower::defineGlobal(
       if (oeDetails && oeDetails->init()) {
         global = Fortran::lower::tryCreatingDenseGlobal(
             builder, loc, symTy, globalName, linkage, isConst,
-            oeDetails->init().value(), dataAttr);
+            oeDetails->init().value(), dataAttr,
+            /*setDefaultAlignment=*/!isBindC);
         if (global) {
           global.setVisibility(mlir::SymbolTable::Visibility::Public);
           return global;
@@ -535,7 +539,8 @@ fir::GlobalOp Fortran::lower::defineGlobal(
   if (!global)
     global =
         builder.createGlobal(loc, symTy, globalName, linkage, mlir::Attribute{},
-                             isConst, var.isTarget(), dataAttr);
+                             isConst, var.isTarget(), dataAttr,
+                             /*setDefaultAlignment=*/!isBindC);
   if (Fortran::semantics::IsAllocatableOrPointer(sym) &&
       !Fortran::semantics::IsProcedure(sym)) {
     if (oeDetails && oeDetails->init()) {

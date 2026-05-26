@@ -15,6 +15,7 @@
 #include <__concepts/convertible_to.h>
 #include <__concepts/copyable.h>
 #include <__concepts/equality_comparable.h>
+#include <__concepts/primary_template.h>
 #include <__concepts/same_as.h>
 #include <__concepts/totally_ordered.h>
 #include <__config>
@@ -30,7 +31,6 @@
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_object.h>
-#include <__type_traits/is_primary_template.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_referenceable.h>
 #include <__type_traits/nat.h>
@@ -468,7 +468,7 @@ using __iterator_reference _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::re
 // This has to be in this file and not readable_traits.h to break the include cycle between the two.
 template <class _Ip>
 using iter_value_t =
-    typename conditional_t<__is_primary_template<iterator_traits<remove_cvref_t<_Ip> > >::value,
+    typename conditional_t<__primary_template<iterator_traits<remove_cvref_t<_Ip> > >,
                            indirectly_readable_traits<remove_cvref_t<_Ip> >,
                            iterator_traits<remove_cvref_t<_Ip> > >::value_type;
 

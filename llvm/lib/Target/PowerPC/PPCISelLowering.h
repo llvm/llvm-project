@@ -770,6 +770,8 @@ namespace llvm {
     SDValue LowerVP_LOAD(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVP_STORE(SDValue Op, SelectionDAG &DAG) const;
 
+    SDValue LowerPartialReduce(SDValue Op, SelectionDAG &DAG) const;
+
     SDValue LowerVectorLoad(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVectorStore(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerDMFVectorLoad(SDValue Op, SelectionDAG &DAG) const;

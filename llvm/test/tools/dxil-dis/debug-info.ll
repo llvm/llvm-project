@@ -32,7 +32,7 @@ attributes #0 = { norecurse nounwind readnone willreturn "hlsl.export" }
 
 ; CHECK:      !0 = distinct !DICompileUnit
 ; CHECK-NEXT: !1 = !DIFile(filename:
-; CHECK:      [[Fn:[!][0-9]+]] = distinct !DISubprogram(name: "fma",
+; CHECK:      [[Fn:[!][0-9]+]] = !DISubprogram(name: "fma",
 ; CHECK:      [[VarX]] = !DILocalVariable(tag:
 ; CHECK:      [[VarY]] = !DILocalVariable(tag:
 ; CHECK:      [[VarZ]] = !DILocalVariable(tag:

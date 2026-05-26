@@ -595,11 +595,11 @@ define i64 @mul_i64(i64 %a, i64 %b) {
 ; RV32IM-LABEL: mul_i64:
 ; RV32IM:       # %bb.0: # %entry
 ; RV32IM-NEXT:    mul a4, a0, a2
+; RV32IM-NEXT:    mulhu a5, a0, a2
+; RV32IM-NEXT:    mul a0, a0, a3
 ; RV32IM-NEXT:    mul a1, a1, a2
-; RV32IM-NEXT:    mul a3, a0, a3
-; RV32IM-NEXT:    mulhu a0, a0, a2
-; RV32IM-NEXT:    add a1, a1, a3
-; RV32IM-NEXT:    add a1, a1, a0
+; RV32IM-NEXT:    add a0, a5, a0
+; RV32IM-NEXT:    add a1, a0, a1
 ; RV32IM-NEXT:    mv a0, a4
 ; RV32IM-NEXT:    ret
 ;

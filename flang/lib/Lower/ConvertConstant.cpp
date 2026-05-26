@@ -101,12 +101,11 @@ namespace {
 /// It does not currently support nested structures.
 class DenseGlobalBuilder {
 public:
-  static fir::GlobalOp tryCreating(fir::FirOpBuilder &builder,
-                                   mlir::Location loc, mlir::Type symTy,
-                                   llvm::StringRef globalName,
-                                   mlir::StringAttr linkage, bool isConst,
-                                   const Fortran::lower::SomeExpr &initExpr,
-                                   cuf::DataAttributeAttr dataAttr) {
+  static fir::GlobalOp
+  tryCreating(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type symTy,
+              llvm::StringRef globalName, mlir::StringAttr linkage,
+              bool isConst, const Fortran::lower::SomeExpr &initExpr,
+              cuf::DataAttributeAttr dataAttr, bool setDefaultAlignment) {
     DenseGlobalBuilder globalBuilder;
     Fortran::common::visit(
         Fortran::common::visitors{
@@ -123,7 +122,8 @@ public:
         },
         initExpr.u);
     return globalBuilder.tryCreatingGlobal(builder, loc, symTy, globalName,
-                                           linkage, isConst, dataAttr);
+                                           linkage, isConst, dataAttr,
+                                           setDefaultAlignment);
   }
 
   template <Fortran::common::TypeCategory TC, int KIND>
@@ -132,11 +132,12 @@ public:
       llvm::StringRef globalName, mlir::StringAttr linkage, bool isConst,
       const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>>
           &constant,
-      cuf::DataAttributeAttr dataAttr) {
+      cuf::DataAttributeAttr dataAttr, bool setDefaultAlignment = true) {
     DenseGlobalBuilder globalBuilder;
     globalBuilder.tryConvertingToAttributes(builder, constant);
     return globalBuilder.tryCreatingGlobal(builder, loc, symTy, globalName,
-                                           linkage, isConst, dataAttr);
+                                           linkage, isConst, dataAttr,
+                                           setDefaultAlignment);
   }
 
 private:
@@ -201,7 +202,8 @@ private:
                                   mlir::Location loc, mlir::Type symTy,
                                   llvm::StringRef globalName,
                                   mlir::StringAttr linkage, bool isConst,
-                                  cuf::DataAttributeAttr dataAttr) const {
+                                  cuf::DataAttributeAttr dataAttr,
+                                  bool setDefaultAlignment) const {
     // Not a "trivial" intrinsic constant array, or empty array.
     if (!attributeElementType || attributes.empty())
       return {};
@@ -214,7 +216,8 @@ private:
         mlir::RankedTensorType::get(tensorShape, attributeElementType);
     auto init = mlir::DenseElementsAttr::get(tensorTy, attributes);
     return builder.createGlobal(loc, symTy, globalName, linkage, init, isConst,
-                                /*isTarget=*/false, dataAttr);
+                                /*isTarget=*/false, dataAttr,
+                                setDefaultAlignment);
   }
 
   llvm::SmallVector<mlir::Attribute> attributes;
@@ -225,9 +228,11 @@ private:
 fir::GlobalOp Fortran::lower::tryCreatingDenseGlobal(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type symTy,
     llvm::StringRef globalName, mlir::StringAttr linkage, bool isConst,
-    const Fortran::lower::SomeExpr &initExpr, cuf::DataAttributeAttr dataAttr) {
+    const Fortran::lower::SomeExpr &initExpr, cuf::DataAttributeAttr dataAttr,
+    bool setDefaultAlignment) {
   return DenseGlobalBuilder::tryCreating(builder, loc, symTy, globalName,
-                                         linkage, isConst, initExpr, dataAttr);
+                                         linkage, isConst, initExpr, dataAttr,
+                                         setDefaultAlignment);
 }
 
 //===----------------------------------------------------------------------===//

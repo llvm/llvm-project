@@ -14,7 +14,7 @@ end
 ! ALL:  %0 = fir.address_of(@_QQEnvironmentDefaults.list) : !fir.ref<tuple<i32, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>>
 ! ALL: fir.call @_FortranAProgramStart(%arg0, %arg1, %arg2, %0)
 
-! ALL: fir.global linkonce @_QQEnvironmentDefaults.items constant : !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>> {
+! ALL: fir.global linkonce @_QQEnvironmentDefaults.items {alignment = 64 : i64} constant : !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>> {
 ! ALL: %[[VAL_0:.*]] = fir.undefined !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>
 ! ALL: %[[VAL_1:.*]] = fir.address_of(@[[FC_STR:.*]]) : !fir.ref<!fir.char<1,13>>
 ! ALL: %[[VAL_3:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>

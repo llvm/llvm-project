@@ -60,9 +60,8 @@ public:
   mlir::Type indexType() const;
 
   // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
-  std::optional<llvm::LogicalResult>
-  convertRecordType(fir::RecordType derived,
-                    llvm::SmallVectorImpl<mlir::Type> &results, bool isPacked);
+  std::optional<mlir::Type> convertRecordType(fir::RecordType derived,
+                                              bool isPacked);
 
   // Is an extended descriptor needed given the element type of a fir.box type ?
   // Extended descriptors are required for derived types.
@@ -94,7 +93,7 @@ public:
   }
 
   // fir.array<c ... :any>  -->  llvm<"[...[c x any]]">
-  mlir::Type convertSequenceType(SequenceType seq) const;
+  std::optional<mlir::Type> convertSequenceType(SequenceType seq) const;
 
   // fir.tdesc<any>  -->  llvm<"i8*">
   // TODO: For now use a void*, however pointer identity is not sufficient for

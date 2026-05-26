@@ -40,6 +40,8 @@ class ExtendedValue;
 class MutableBoxValue;
 class BoxValue;
 
+/// Default alignment (in bytes) applied to array globals.
+constexpr unsigned defaultArrayGlobalAlignment = 64;
 /// Get the integer type with a pointer size.
 inline mlir::Type getIntPtrType(mlir::OpBuilder &builder) {
   // TODO: Delay the need of such type until codegen or find a way to use
@@ -333,13 +335,15 @@ public:
                              mlir::StringAttr linkage = {},
                              mlir::Attribute value = {}, bool isConst = false,
                              bool isTarget = false,
-                             cuf::DataAttributeAttr dataAttr = {});
+                             cuf::DataAttributeAttr dataAttr = {},
+                             bool setDefaultAlignment = true);
 
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
                              llvm::StringRef name, bool isConst, bool isTarget,
                              std::function<void(FirOpBuilder &)> bodyBuilder,
                              mlir::StringAttr linkage = {},
-                             cuf::DataAttributeAttr dataAttr = {});
+                             cuf::DataAttributeAttr dataAttr = {},
+                             bool setDefaultAlignment = true);
 
   /// Create a global constant (read-only) value.
   fir::GlobalOp createGlobalConstant(mlir::Location loc, mlir::Type type,

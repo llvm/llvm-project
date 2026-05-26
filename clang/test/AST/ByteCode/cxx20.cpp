@@ -1286,7 +1286,7 @@ namespace PointerCmp {
   };
   constexpr K2 k2{1,2, 3};
   static_assert((void*)(&k2.m.a + 1) != (void*)&k2.m.b);
- /// static_assert((void*)(&k2.m.a + 1) < (void*)&k2.m.b);  FIXME
+  static_assert((void*)(&k2.m.a + 1) < (void*)&k2.m.b);
   static_assert((void*)(&k2.m + 1) == (void*)&k2.c);
   static_assert((void*)(&k2 + 1) == (void*)(&k2.c + 1));
 

@@ -41,4 +41,4 @@ end function
 
 
 ! CHECK-DAG: fir.global @_QMm1Ex : f32
-! CHECK-DAG: fir.global @_QMm1Ey : !fir.array<100xi32>
+! CHECK-DAG: fir.global @_QMm1Ey {alignment = 64 : i64} : !fir.array<100xi32>

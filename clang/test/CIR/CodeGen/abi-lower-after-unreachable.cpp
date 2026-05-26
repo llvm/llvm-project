@@ -21,7 +21,7 @@ void untransformed_after_unreachable(Base2 &ref, PMFTy pmf) {
 //         CIR:    %[[PMF:.*]] = cir.alloca !{{.*}} ["pmf", init]
 //         CIR:    %[[DERIVED:.*]] = cir.alloca !rec_Derived
 //         CIR:    cir.load %{{.*}} : !cir.ptr<!cir.ptr<!rec_Base2>>, !cir.ptr<!rec_Base2>
-//    CIR-NEXT:    cir.call @__cxa_bad_cast() : () -> ()
+//    CIR-NEXT:    cir.call @__cxa_bad_cast() {noreturn} : () -> ()
 //    CIR-NEXT:    cir.unreachable
 //  CIR-BEFORE:    %[[PMF_LOAD:.*]] = cir.load{{.*}} %[[PMF]]
 //  CIR-BEFORE:    cir.get_method %[[PMF_LOAD]], %[[DERIVED]]

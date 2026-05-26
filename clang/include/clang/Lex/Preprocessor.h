@@ -1356,7 +1356,7 @@ public:
                                                 std::move(Callbacks));
     Callbacks = std::move(C);
   }
-  void removePPCallbacks() { Callbacks.reset(); }
+  void removePPCallbacks();
   /// \}
 
   /// Get the number of tokens processed so far.
@@ -2780,7 +2780,8 @@ private:
 
   /// Add a lexer to the top of the include stack and
   /// start lexing tokens from it instead of the current buffer.
-  void EnterSourceFileWithLexer(Lexer *TheLexer, ConstSearchDirIterator Dir);
+  void EnterSourceFileWithLexer(std::unique_ptr<Lexer> TheLexer,
+                                ConstSearchDirIterator Dir);
 
   /// Set the FileID for the preprocessor predefines.
   void setPredefinesFileID(FileID FID) {

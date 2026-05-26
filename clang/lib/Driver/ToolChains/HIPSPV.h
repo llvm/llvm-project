@@ -75,7 +75,9 @@ public:
   getDeviceLibs(const llvm::opt::ArgList &Args,
                 const Action::OffloadKind DeviceOffloadKind) const override;
 
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 
   VersionTuple
   computeMSVCVersion(const Driver *D,

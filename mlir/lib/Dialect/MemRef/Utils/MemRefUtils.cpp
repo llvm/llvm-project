@@ -24,6 +24,10 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type) {
   if (!type.hasStaticShape())
     return false;
 
+  int64_t rank = type.getRank();
+  if (rank == 0)
+    return true;
+
   SmallVector<int64_t> strides;
   int64_t offset;
   if (failed(type.getStridesAndOffset(strides, offset)))
@@ -32,7 +36,7 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type) {
   // MemRef is contiguous if outer dimensions are size-1 and inner
   // dimensions have unit strides.
   int64_t runningStride = 1;
-  int64_t curDim = strides.size() - 1;
+  int64_t curDim = rank - 1;
   // Finds all inner dimensions with unit strides.
   while (curDim >= 0 && strides[curDim] == runningStride) {
     runningStride *= type.getDimSize(curDim);
@@ -123,7 +127,8 @@ getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
     strides.back() = builder.getIndexAttr(1);
     AffineExpr s0, s1;
     bindSymbols(builder.getContext(), s0, s1);
-    for (int index = sizes.size() - 1; index > 0; --index) {
+    for (int64_t index = static_cast<int64_t>(sizes.size()) - 1; index > 0;
+         --index) {
       strides[index - 1] = affine::makeComposedFoldedAffineApply(
           builder, loc, s0 * s1,
           ArrayRef<OpFoldResult>{strides[index], sizes[index]});
@@ -185,7 +190,7 @@ computeSuffixProductIRBlockImpl(Location loc, OpBuilder &builder,
   AffineExpr s0, s1;
   bindSymbols(builder.getContext(), s0, s1);
 
-  for (int64_t r = strides.size() - 1; r > 0; --r) {
+  for (int64_t r = static_cast<int64_t>(strides.size()) - 1; r > 0; --r) {
     strides[r - 1] = affine::makeComposedFoldedAffineApply(
         builder, loc, s0 * s1, {strides[r], sizes[r]});
   }

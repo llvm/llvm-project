@@ -201,9 +201,9 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetTarget();
-
-    if (ProcessSP process_sp = target.GetProcessSP()) {
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
+    if (ProcessSP process_sp = target->GetProcessSP()) {
       if (process_sp->IsAlive()) {
         std::optional<uint32_t> num_supported_hardware_watchpoints =
             process_sp->GetWatchpointSlotCount();
@@ -215,10 +215,10 @@ protected:
       }
     }
 
-    const WatchpointList &watchpoints = target.GetWatchpointList();
+    const WatchpointList &watchpoints = target->GetWatchpointList();
 
     std::unique_lock<std::recursive_mutex> lock;
-    target.GetWatchpointList().GetListMutex(lock);
+    target->GetWatchpointList().GetListMutex(lock);
 
     size_t num_watchpoints = watchpoints.GetSize();
 
@@ -242,7 +242,7 @@ protected:
       // Particular watchpoints selected; enable them.
       std::vector<uint32_t> wp_ids;
       if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
-              target, command, wp_ids)) {
+              *target, command, wp_ids)) {
         result.AppendError("invalid watchpoints specification");
         return;
       }
@@ -286,14 +286,15 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetTarget();
-    if (!CheckTargetForWatchpointOperations(target, result))
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
+    if (!CheckTargetForWatchpointOperations(*target, result))
       return;
 
     std::unique_lock<std::recursive_mutex> lock;
-    target.GetWatchpointList().GetListMutex(lock);
+    target->GetWatchpointList().GetListMutex(lock);
 
-    const WatchpointList &watchpoints = target.GetWatchpointList();
+    const WatchpointList &watchpoints = target->GetWatchpointList();
 
     size_t num_watchpoints = watchpoints.GetSize();
 
@@ -304,7 +305,7 @@ protected:
 
     if (command.GetArgumentCount() == 0) {
       // No watchpoint selected; enable all currently set watchpoints.
-      target.EnableAllWatchpoints();
+      target->EnableAllWatchpoints();
       result.AppendMessageWithFormatv(
           "All watchpoints enabled. ({0} watchpoints)",
           (uint64_t)num_watchpoints);
@@ -313,7 +314,7 @@ protected:
       // Particular watchpoints selected; enable them.
       std::vector<uint32_t> wp_ids;
       if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
-              target, command, wp_ids)) {
+              *target, command, wp_ids)) {
         result.AppendError("invalid watchpoints specification");
         return;
       }
@@ -321,7 +322,7 @@ protected:
       int count = 0;
       const size_t size = wp_ids.size();
       for (size_t i = 0; i < size; ++i)
-        if (target.EnableWatchpointByID(wp_ids[i]))
+        if (target->EnableWatchpointByID(wp_ids[i]))
           ++count;
       result.AppendMessageWithFormatv("{0} watchpoints enabled.", count);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -355,14 +356,15 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetTarget();
-    if (!CheckTargetForWatchpointOperations(target, result))
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
+    if (!CheckTargetForWatchpointOperations(*target, result))
       return;
 
     std::unique_lock<std::recursive_mutex> lock;
-    target.GetWatchpointList().GetListMutex(lock);
+    target->GetWatchpointList().GetListMutex(lock);
 
-    const WatchpointList &watchpoints = target.GetWatchpointList();
+    const WatchpointList &watchpoints = target->GetWatchpointList();
     size_t num_watchpoints = watchpoints.GetSize();
 
     if (num_watchpoints == 0) {
@@ -372,7 +374,7 @@ protected:
 
     if (command.GetArgumentCount() == 0) {
       // No watchpoint selected; disable all currently set watchpoints.
-      if (target.DisableAllWatchpoints()) {
+      if (target->DisableAllWatchpoints()) {
         result.AppendMessageWithFormatv(
             "All watchpoints disabled. ({0} watchpoints)",
             (uint64_t)num_watchpoints);
@@ -384,7 +386,7 @@ protected:
       // Particular watchpoints selected; disable them.
       std::vector<uint32_t> wp_ids;
       if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
-              target, command, wp_ids)) {
+              *target, command, wp_ids)) {
         result.AppendError("invalid watchpoints specification");
         return;
       }
@@ -392,7 +394,7 @@ protected:
       int count = 0;
       const size_t size = wp_ids.size();
       for (size_t i = 0; i < size; ++i)
-        if (target.DisableWatchpointByID(wp_ids[i]))
+        if (target->DisableWatchpointByID(wp_ids[i]))
           ++count;
       result.AppendMessageWithFormatv("{0} watchpoints disabled.\n", count);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -464,14 +466,15 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetTarget();
-    if (!CheckTargetForWatchpointOperations(target, result))
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
+    if (!CheckTargetForWatchpointOperations(*target, result))
       return;
 
     std::unique_lock<std::recursive_mutex> lock;
-    target.GetWatchpointList().GetListMutex(lock);
+    target->GetWatchpointList().GetListMutex(lock);
 
-    const WatchpointList &watchpoints = target.GetWatchpointList();
+    const WatchpointList &watchpoints = target->GetWatchpointList();
 
     size_t num_watchpoints = watchpoints.GetSize();
 
@@ -487,7 +490,7 @@ protected:
               true)) {
         result.AppendMessage("Operation cancelled...");
       } else {
-        target.RemoveAllWatchpoints();
+        target->RemoveAllWatchpoints();
         result.AppendMessageWithFormatv(
             "All watchpoints removed. ({0} watchpoints)",
             (uint64_t)num_watchpoints);
@@ -498,7 +501,7 @@ protected:
 
     // Particular watchpoints selected; delete them.
     std::vector<uint32_t> wp_ids;
-    if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(target, command,
+    if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(*target, command,
                                                                wp_ids)) {
       result.AppendError("invalid watchpoints specification");
       return;
@@ -507,7 +510,7 @@ protected:
     int count = 0;
     const size_t size = wp_ids.size();
     for (size_t i = 0; i < size; ++i)
-      if (target.RemoveWatchpointByID(wp_ids[i]))
+      if (target->RemoveWatchpointByID(wp_ids[i]))
         ++count;
     result.AppendMessageWithFormatv("{0} watchpoints deleted.", count);
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -584,14 +587,15 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetTarget();
-    if (!CheckTargetForWatchpointOperations(target, result))
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
+    if (!CheckTargetForWatchpointOperations(*target, result))
       return;
 
     std::unique_lock<std::recursive_mutex> lock;
-    target.GetWatchpointList().GetListMutex(lock);
+    target->GetWatchpointList().GetListMutex(lock);
 
-    const WatchpointList &watchpoints = target.GetWatchpointList();
+    const WatchpointList &watchpoints = target->GetWatchpointList();
 
     size_t num_watchpoints = watchpoints.GetSize();
 
@@ -601,7 +605,7 @@ protected:
     }
 
     if (command.GetArgumentCount() == 0) {
-      target.IgnoreAllWatchpoints(m_options.m_ignore_count);
+      target->IgnoreAllWatchpoints(m_options.m_ignore_count);
       result.AppendMessageWithFormatv(
           "All watchpoints ignored. ({0} watchpoints)",
           (uint64_t)num_watchpoints);
@@ -610,7 +614,7 @@ protected:
       // Particular watchpoints selected; ignore them.
       std::vector<uint32_t> wp_ids;
       if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
-              target, command, wp_ids)) {
+              *target, command, wp_ids)) {
         result.AppendError("invalid watchpoints specification");
         return;
       }
@@ -618,7 +622,7 @@ protected:
       int count = 0;
       const size_t size = wp_ids.size();
       for (size_t i = 0; i < size; ++i)
-        if (target.IgnoreWatchpointByID(wp_ids[i], m_options.m_ignore_count))
+        if (target->IgnoreWatchpointByID(wp_ids[i], m_options.m_ignore_count))
           ++count;
       result.AppendMessageWithFormatv("{0} watchpoints ignored.", count);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -703,14 +707,15 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetTarget();
-    if (!CheckTargetForWatchpointOperations(target, result))
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
+    if (!CheckTargetForWatchpointOperations(*target, result))
       return;
 
     std::unique_lock<std::recursive_mutex> lock;
-    target.GetWatchpointList().GetListMutex(lock);
+    target->GetWatchpointList().GetListMutex(lock);
 
-    const WatchpointList &watchpoints = target.GetWatchpointList();
+    const WatchpointList &watchpoints = target->GetWatchpointList();
 
     size_t num_watchpoints = watchpoints.GetSize();
 
@@ -720,14 +725,14 @@ protected:
     }
 
     if (command.GetArgumentCount() == 0) {
-      WatchpointSP watch_sp = target.GetLastCreatedWatchpoint();
+      WatchpointSP watch_sp = target->GetLastCreatedWatchpoint();
       watch_sp->SetCondition(m_options.m_condition.c_str());
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       // Particular watchpoints selected; set condition on them.
       std::vector<uint32_t> wp_ids;
       if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
-              target, command, wp_ids)) {
+              *target, command, wp_ids)) {
         result.AppendError("invalid watchpoints specification");
         return;
       }
@@ -804,7 +809,8 @@ protected:
   }
 
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetTarget();
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
     StackFrame *frame = m_exe_ctx.GetFramePtr();
 
     // If no argument is present, issue an error message.  There's no way to
@@ -851,8 +857,8 @@ protected:
 
       Status error(Variable::GetValuesForVariableExpressionPath(
           command.GetArgumentAtIndex(0),
-          m_exe_ctx.GetBestExecutionContextScope(), GetVariableCallback,
-          &target, variable_list, valobj_list));
+          m_exe_ctx.GetBestExecutionContextScope(), GetVariableCallback, target,
+          variable_list, valobj_list));
 
       if (valobj_list.GetSize())
         valobj_sp = valobj_list.GetValueObjectAtIndex(0);
@@ -902,7 +908,7 @@ protected:
 
     error.Clear();
     WatchpointSP watch_sp =
-        target.CreateWatchpoint(addr, size, &compiler_type, watch_type, error);
+        target->CreateWatchpoint(addr, size, &compiler_type, watch_type, error);
     if (!watch_sp) {
       result.AppendErrorWithFormat(
           "Watchpoint creation failed (addr=0x%" PRIx64 ", size=%" PRIu64
@@ -989,7 +995,8 @@ protected:
     m_option_group.NotifyOptionParsingStarting(
         &exe_ctx); // This is a raw command, so notify the option group
 
-    Target &target = GetTarget();
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
     StackFrame *frame = m_exe_ctx.GetFramePtr();
 
     OptionsWithRaw args(raw_command);
@@ -1032,7 +1039,7 @@ protected:
       options.SetLanguage(m_option_watchpoint.language_type);
 
     ExpressionResults expr_result =
-        target.EvaluateExpression(expr, frame, valobj_sp, options);
+        target->EvaluateExpression(expr, frame, valobj_sp, options);
     if (expr_result != eExpressionCompleted) {
       result.AppendError("expression evaluation of address to watch failed");
       result.AppendErrorWithFormat("expression evaluated: \n%s", expr.data());
@@ -1052,7 +1059,7 @@ protected:
     if (m_option_watchpoint.watch_size.GetCurrentValue() != 0)
       size = m_option_watchpoint.watch_size.GetCurrentValue();
     else
-      size = target.GetArchitecture().GetAddressByteSize();
+      size = target->GetArchitecture().GetAddressByteSize();
 
     // Now it's time to create the watchpoint.
     uint32_t watch_type;
@@ -1094,7 +1101,7 @@ protected:
 
     Status error;
     WatchpointSP watch_sp =
-        target.CreateWatchpoint(addr, size, &compiler_type, watch_type, error);
+        target->CreateWatchpoint(addr, size, &compiler_type, watch_type, error);
     if (watch_sp) {
       watch_sp->SetWatchSpec(std::string(expr));
       Stream &output_stream = result.GetOutputStream();

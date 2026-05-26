@@ -1250,6 +1250,22 @@ int i = SVGPropertyOwnerRegistry<SVGCircleElement>::fastAnimatedPropertyLookup()
 
 }
 
+namespace GH173086 {
+
+template <typename, unsigned, typename> struct GeneralTensor {};
+template <typename T, unsigned Rank> using Tensor = GeneralTensor<T, Rank, int>;
+template <typename T, unsigned OtherRank, typename Alloc, typename... Dims>
+GeneralTensor(GeneralTensor<T, OtherRank, Alloc>, Dims... dims)
+    -> GeneralTensor<T, sizeof...(dims), Alloc>;
+template <typename... MultiIndex>
+Tensor<double, sizeof...(MultiIndex)> create_incremented_tensor() {
+  return Tensor<double, sizeof...(MultiIndex)>();
+}
+
+auto x = Tensor{create_incremented_tensor<>()};
+
+}
+
 namespace GH61824 {
 
 template<typename T, typename U = typename T::type> // #T_Type
@@ -1551,12 +1567,9 @@ template<generic_range_value<[]<
    >() {}> T>
 void x() {}
 
-// FIXME: Crashes because it produces a template type parameter with invalid depth
-#if 0
 void foo() {
   x<vector<int>>();
 }
-#endif
 }
 
 namespace GH162770 {

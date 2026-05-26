@@ -189,7 +189,10 @@ private:
   std::vector<DiagnosticDetail> m_diagnostics;
   std::optional<uint16_t> m_diagnostic_indent;
 
-  lldb::ReturnStatus m_status = lldb::eReturnStatusStarted;
+  /// The command's return status indicating success or failure. The default
+  /// value indicate no status has been set, which is enforced by an assert in
+  /// the CommandInterpreter.
+  lldb::ReturnStatus m_status = lldb::eReturnStatusInvalid;
 
   /// An optionally empty list of values produced by this command.
   ValueObjectList m_value_objects;

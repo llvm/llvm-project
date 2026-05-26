@@ -557,6 +557,18 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.ufromfpxbf16
 )
 
+if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  if(LLVM_LIBC_FULL_BUILD)
+    list(APPEND TARGET_LIBC_ENTRYPOINTS
+      # regex.h entrypoints
+      libc.src.regex.regcomp
+      libc.src.regex.regexec
+      libc.src.regex.regerror
+      libc.src.regex.regfree
+    )
+  endif()
+endif()
+
 set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}
   ${TARGET_LIBM_ENTRYPOINTS}

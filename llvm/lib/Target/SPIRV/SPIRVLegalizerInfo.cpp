@@ -312,9 +312,6 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalIf(all(typeInSet(0, allPtrs), typeInSet(1, allIntScalars)));
 
   getActionDefinitionsBuilder(G_ADDRSPACE_CAST)
-      .unsupportedIf(
-          LegalityPredicates::any(all(typeIs(0, p9), typeIsNot(1, p9)),
-                                  all(typeIsNot(0, p9), typeIs(1, p9))))
       .legalForCartesianProduct(allPtrs, allPtrs);
 
   // Should we be legalizing bad scalar sizes like s5 here instead

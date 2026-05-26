@@ -103,9 +103,15 @@ const unsigned struct_kernel_stat64_sz = 104;
 const unsigned struct_kernel_stat_sz = SANITIZER_ANDROID
                                            ? FIRST_32_SECOND_64(104, 128)
 #      if defined(_ABIN32) && _MIPS_SIM == _ABIN32
+#        if defined(_TIME_BITS) && _TIME_BITS == 64
+                                           : FIRST_32_SECOND_64(112, 216);
+#        else
                                            : FIRST_32_SECOND_64(176, 216);
+#        endif
 #      elif SANITIZER_MUSL
                                            : FIRST_32_SECOND_64(160, 208);
+#      elif defined(_TIME_BITS) && _TIME_BITS == 64
+                                           : FIRST_32_SECOND_64(112, 216);
 #      else
                                            : FIRST_32_SECOND_64(160, 216);
 #      endif

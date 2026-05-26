@@ -121,6 +121,8 @@ module @gemm attributes {gpu.container_module} {
     memref.dealloc %A : memref<8x32xf8E5M2>
     memref.dealloc %B : memref<32x16xf8E5M2>
     memref.dealloc %C : memref<8x16xf32>
+    memref.dealloc %scale_A : memref<8x1xf8E8M0FNU>
+    memref.dealloc %scale_B : memref<1x16xf8E8M0FNU>
     memref.dealloc %C_res : memref<8x16xf32>
     return
   }

@@ -42,10 +42,11 @@ jobs:
       - name: Update watchers
         working-directory: ./llvm/utils/git/
         env:
+          LABEL_NAME: ${{ github.event.label.name }}
           PR_SUBSCRIBER_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           python3 ./github-automation.py \
             --token "$PR_SUBSCRIBER_TOKEN" \
             pr-subscriber \
             --issue-number "${{ github.event.number }}" \
-            --label-name "${{ github.event.label.name }}"
+            --label-name "$LABEL_NAME"

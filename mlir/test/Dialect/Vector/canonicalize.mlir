@@ -4407,3 +4407,18 @@ func.func @no_fold_alltrue_mask_empty_body_scalar_result(
   %result = vector.mask %all_true, %passthru { vector.yield %val : i32 } : vector<1xi1> -> i32
   return %result : i32
 }
+
+// -----
+
+// The test checks the `InterleaveDeinterleaveFolder` pattern of `vector.interleave`
+// to correctly fold the following identity:
+//  interleave(deinterleave(x).even, deinterleave(x).odd) -> x
+
+// CHECK-LABEL: func @interleave_deinterleave_fold
+//  CHECK-SAME: (%[[ARG0:.*]]: vector<4xf32>)
+//       CHECK: return %[[ARG0]]
+func.func @interleave_deinterleave_fold(%arg0: vector<4xf32>) -> vector<4xf32> {
+  %even, %odd = vector.deinterleave %arg0 : vector<4xf32> -> vector<2xf32>
+  %result = vector.interleave %even, %odd : vector<2xf32> -> vector<4xf32>
+  return %result : vector<4xf32>
+}

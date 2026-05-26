@@ -1005,3 +1005,11 @@ namespace TestGH155936 {
   // CHECK: CXXRecordDecl 0x{{.+}} <line:[[@LINE-8]]:7, col:19> col:14 struct Foo definition
   // CHECH: CXXRecordDecl 0x{{.+}} <col:9, col:16> col:16 implicit struct Foo
 } // namspace GH155936
+
+namespace TestGH198842 {
+  struct X {};
+  auto && [] = X{};
+  // CHECK-LABEL: Dumping TestGH198842:
+  // CHECK: DecompositionDecl 0x{{.+}} <line:{{.+}}:3, col:18> col:11 'X &&' cinit external-linkage
+  // CHECK: MaterializeTemporaryExpr 0x{{.+}} <col:16, col:18> 'X' xvalue extended by Decomposition 0x{{.+}} no_bindings 'X &&'
+} // namespace TestGH198842

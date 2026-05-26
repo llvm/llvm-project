@@ -111,7 +111,7 @@ LIBC_INLINE double tan_eval(const DoubleDouble &u, DoubleDouble &result) {
 [[maybe_unused]] Float128 newton_raphson_div(const Float128 &a, Float128 b,
                                              double q) {
   Float128 q0(q);
-  constexpr Float128 TWO(2.0);
+  LIBC_BIT_CAST_CONSTEXPR_VAR Float128 TWO(2.0);
   b.sign = (b.sign == Sign::POS) ? Sign::NEG : Sign::POS;
   Float128 q1 =
       fputil::quick_mul(q0, fputil::quick_add(TWO, fputil::quick_mul(b, q0)));

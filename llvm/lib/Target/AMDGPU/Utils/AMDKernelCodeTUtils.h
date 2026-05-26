@@ -74,7 +74,7 @@ struct AMDGPUMCKernelCodeT {
   const MCExpr *workitem_vgpr_count = nullptr;
   const MCExpr *workitem_private_segment_byte_size = nullptr;
 
-  void initDefault(const MCSubtargetInfo *STI, MCContext &Ctx,
+  void initDefault(const MCSubtargetInfo &STI, MCContext &Ctx,
                    bool InitMCExpr = true);
   void validate(const MCSubtargetInfo *STI, MCContext &Ctx);
 

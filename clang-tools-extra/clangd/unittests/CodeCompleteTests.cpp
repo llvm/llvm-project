@@ -2539,6 +2539,45 @@ TEST(CompletionTest, CodeCompletionContext) {
   EXPECT_THAT(Results.Context, CodeCompletionContext::CCC_DotMemberAccess);
 }
 
+TEST(CompletionTest, OffsetOfDesignator) {
+  auto Results = completions(R"cpp(
+    struct S { int field; int other; void fieldFn(); };
+    int x = __builtin_offsetof(S, fiel^d);
+  )cpp");
+  EXPECT_THAT(
+      Results.Completions,
+      ElementsAre(AllOf(named("field"), kind(CompletionItemKind::Field))));
+  EXPECT_THAT(Results.Context, CodeCompletionContext::CCC_DotMemberAccess);
+
+  Results = completions(R"cpp(
+    struct Inner { int field; void fieldFn(); };
+    struct Outer { Inner inner; };
+    int x = __builtin_offsetof(Outer, inner.fiel^d);
+  )cpp");
+  EXPECT_THAT(
+      Results.Completions,
+      ElementsAre(AllOf(named("field"), kind(CompletionItemKind::Field))));
+
+  Results = completions(R"cpp(
+    struct Inner { int field; void fieldFn(); };
+    struct Outer { Inner inner[2]; };
+    int i;
+    int x = __builtin_offsetof(Outer, inner[i].fiel^d);
+  )cpp");
+  EXPECT_THAT(
+      Results.Completions,
+      ElementsAre(AllOf(named("field"), kind(CompletionItemKind::Field))));
+
+  Results = completions(R"cpp(
+    struct Base { int field; void fieldFn(); };
+    struct Derived : Base {};
+    int x = __builtin_offsetof(Derived, fiel^d);
+  )cpp");
+  EXPECT_THAT(
+      Results.Completions,
+      ElementsAre(AllOf(named("field"), kind(CompletionItemKind::Field))));
+}
+
 TEST(CompletionTest, FixItForArrowToDot) {
   MockFS FS;
   MockCompilationDatabase CDB;

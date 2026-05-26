@@ -50,7 +50,7 @@ class FunctionTypesTestCase(TestBase):
 
         self.expect(
             "expr string_not_empty",
-            substrs=["(int (*)(const char *)) $0 = ", "(a.out`"],
+            substrs=["(int (*)(const char *)) $0 = ", "a.out`"],
         )
 
         if self.platformIsDarwin():

@@ -19,7 +19,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 

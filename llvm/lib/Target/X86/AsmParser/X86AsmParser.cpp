@@ -453,6 +453,8 @@ private:
     short BracCount = 0;
     bool MemExpr = false;
     bool BracketUsed = false;
+    bool NegativeAdditiveTerm = false;
+    SMLoc NegativeAdditiveTermLoc;
     bool OffsetOperator = false;
     bool AttachToOperandIdx = false;
     bool IsPIC = false;
@@ -504,6 +506,9 @@ private:
     void setPIC() { IsPIC = true; }
 
     bool hadError() const { return State == IES_ERROR; }
+    SMLoc getErrorLoc(SMLoc DefaultLoc) const {
+      return NegativeAdditiveTerm ? NegativeAdditiveTermLoc : DefaultLoc;
+    }
     const InlineAsmIdentifierInfo &getIdentifierInfo() const { return Info; }
 
     bool regsUseUpError(StringRef &ErrMsg) {
@@ -693,6 +698,8 @@ private:
       case IES_OFFSET:
         State = IES_PLUS;
         IC.pushOperator(IC_PLUS);
+        NegativeAdditiveTerm = false;
+        NegativeAdditiveTermLoc = SMLoc();
         if (CurrState == IES_REGISTER && PrevState != IES_MULTIPLY) {
           // If we already have a BaseReg, then assume this is the IndexReg with
           // no explicit scale.
@@ -710,7 +717,7 @@ private:
       PrevState = CurrState;
       return false;
     }
-    bool onMinus(StringRef &ErrMsg) {
+    bool onMinus(SMLoc MinusLoc, StringRef &ErrMsg) {
       IntelExprState CurrState = State;
       switch (State) {
       default:
@@ -743,10 +750,12 @@ private:
         State = IES_MINUS;
         // push minus operator if it is not a negate operator
         if (CurrState == IES_REGISTER || CurrState == IES_RPAREN ||
-            CurrState == IES_INTEGER  || CurrState == IES_RBRAC  ||
-            CurrState == IES_OFFSET)
+            CurrState == IES_INTEGER || CurrState == IES_RBRAC ||
+            CurrState == IES_OFFSET) {
           IC.pushOperator(IC_MINUS);
-        else if (PrevState == IES_REGISTER && CurrState == IES_MULTIPLY) {
+          NegativeAdditiveTerm = true;
+          NegativeAdditiveTermLoc = MinusLoc;
+        } else if (PrevState == IES_REGISTER && CurrState == IES_MULTIPLY) {
           // We have negate operator for Scale: it's illegal
           ErrMsg = "Scale can't be negative";
           return true;
@@ -808,6 +817,7 @@ private:
         State = IES_ERROR;
         break;
       case IES_PLUS:
+      case IES_MINUS:
       case IES_LPAREN:
       case IES_LBRAC:
         State = IES_REGISTER;
@@ -819,6 +829,10 @@ private:
         if (PrevState == IES_INTEGER) {
           if (IndexReg)
             return regsUseUpError(ErrMsg);
+          if (NegativeAdditiveTerm) {
+            ErrMsg = "Scale can't be negative";
+            return true;
+          }
           State = IES_REGISTER;
           IndexReg = Reg;
           // Get the scale and replace the 'Scale * Register' with '0'.
@@ -901,6 +915,10 @@ private:
           // Index Register - Register * Scale
           if (IndexReg)
             return regsUseUpError(ErrMsg);
+          if (NegativeAdditiveTerm) {
+            ErrMsg = "Scale can't be negative";
+            return true;
+          }
           IndexReg = TmpReg;
           Scale = TmpInt;
           if (checkScale(Scale, ErrMsg))
@@ -1005,10 +1023,16 @@ private:
           } else {
             if (IndexReg)
               return regsUseUpError(ErrMsg);
+            if (NegativeAdditiveTerm) {
+              ErrMsg = "Scale can't be negative";
+              return true;
+            }
             IndexReg = TmpReg;
             Scale = 0;
           }
         }
+        NegativeAdditiveTerm = false;
+        NegativeAdditiveTermLoc = SMLoc();
         break;
       }
       PrevState = CurrState;
@@ -1070,6 +1094,10 @@ private:
           } else {
             if (IndexReg)
               return regsUseUpError(ErrMsg);
+            if (NegativeAdditiveTerm) {
+              ErrMsg = "Scale can't be negative";
+              return true;
+            }
             IndexReg = TmpReg;
             Scale = 0;
           }
@@ -1968,7 +1996,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         if (!Val->evaluateAsAbsolute(Res, getStreamer().getAssemblerPtr()))
           return Error(ValueLoc, "expected absolute value");
         if (SM.onInteger(Res, ErrMsg))
-          return Error(ValueLoc, ErrMsg);
+          return Error(SM.getErrorLoc(ValueLoc), ErrMsg);
         break;
       }
       [[fallthrough]];
@@ -2015,7 +2043,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       if (Tok.is(AsmToken::Identifier)) {
         if (!ParseRegister(Reg, IdentLoc, End, /*RestoreOnFailure=*/true)) {
           if (SM.onRegister(Reg, ErrMsg))
-            return Error(IdentLoc, ErrMsg);
+            return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
           break;
         }
         if (Parser.isParsingMasm()) {
@@ -2026,7 +2054,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           if (!Field.empty() &&
               !MatchRegisterByName(Reg, ID, IdentLoc, IDEndLoc)) {
             if (SM.onRegister(Reg, ErrMsg))
-              return Error(IdentLoc, ErrMsg);
+              return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
 
             AsmFieldInfo Info;
             SMLoc FieldStartLoc = SMLoc::getFromPointer(Field.data());
@@ -2035,7 +2063,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
             else if (SM.onPlus(ErrMsg))
               return Error(getTok().getLoc(), ErrMsg);
             else if (SM.onInteger(Info.Offset, ErrMsg))
-              return Error(IdentLoc, ErrMsg);
+              return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
             SM.setTypeInfo(Info.Type);
 
             End = consumeToken();
@@ -2074,7 +2102,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         if (unsigned OpKind = IdentifyIntelInlineAsmOperator(Identifier)) {
           if (int64_t Val = ParseIntelInlineAsmOperator(OpKind)) {
             if (SM.onInteger(Val, ErrMsg))
-              return Error(IdentLoc, ErrMsg);
+              return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
           } else {
             return true;
           }
@@ -2088,7 +2116,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           return true;
         else if (SM.onIdentifierExpr(Val, Identifier, Info, FieldInfo.Type,
                                      true, ErrMsg))
-          return Error(IdentLoc, ErrMsg);
+          return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
         break;
       }
       if (Parser.isParsingMasm()) {
@@ -2097,7 +2125,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           if (ParseMasmOperator(OpKind, Val))
             return true;
           if (SM.onInteger(Val, ErrMsg))
-            return Error(IdentLoc, ErrMsg);
+            return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
           break;
         }
         if (!getParser().lookUpType(Identifier, FieldInfo.Type)) {
@@ -2121,7 +2149,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
               EndDot = parseOptionalToken(AsmToken::Dot);
           }
           if (SM.onInteger(FieldInfo.Offset, ErrMsg))
-            return Error(IdentLoc, ErrMsg);
+            return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
           break;
         }
       }
@@ -2129,7 +2157,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         return Error(Tok.getLoc(), "Unexpected identifier!");
       } else if (SM.onIdentifierExpr(Val, Identifier, Info, FieldInfo.Type,
                                      false, ErrMsg)) {
-        return Error(IdentLoc, ErrMsg);
+        return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
       }
       break;
     }
@@ -2154,15 +2182,15 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           AsmTypeInfo Type;
           if (SM.onIdentifierExpr(Val, Identifier, Info, Type,
                                   isParsingMSInlineAsm(), ErrMsg))
-            return Error(Loc, ErrMsg);
+            return Error(SM.getErrorLoc(Loc), ErrMsg);
           End = consumeToken();
         } else {
           if (SM.onInteger(IntVal, ErrMsg))
-            return Error(Loc, ErrMsg);
+            return Error(SM.getErrorLoc(Loc), ErrMsg);
         }
       } else {
         if (SM.onInteger(IntVal, ErrMsg))
-          return Error(Loc, ErrMsg);
+          return Error(SM.getErrorLoc(Loc), ErrMsg);
       }
       break;
     }
@@ -2171,8 +2199,8 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         return Error(getTok().getLoc(), ErrMsg);
       break;
     case AsmToken::Minus:
-      if (SM.onMinus(ErrMsg))
-        return Error(getTok().getLoc(), ErrMsg);
+      if (SM.onMinus(getTok().getLoc(), ErrMsg))
+        return Error(SM.getErrorLoc(getTok().getLoc()), ErrMsg);
       break;
     case AsmToken::Tilde:   SM.onNot(); break;
     case AsmToken::Star:    SM.onStar(); break;
@@ -2192,13 +2220,13 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       break;
     case AsmToken::RBrac:
       if (SM.onRBrac(ErrMsg)) {
-        return Error(Tok.getLoc(), ErrMsg);
+        return Error(SM.getErrorLoc(Tok.getLoc()), ErrMsg);
       }
       break;
     case AsmToken::LParen:  SM.onLParen(); break;
     case AsmToken::RParen:
       if (SM.onRParen(ErrMsg)) {
-        return Error(Tok.getLoc(), ErrMsg);
+        return Error(SM.getErrorLoc(Tok.getLoc()), ErrMsg);
       }
       break;
     }

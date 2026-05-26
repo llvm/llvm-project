@@ -226,6 +226,228 @@ define amdgpu_ps void @v_fptosi_f64_to_i32(double %x, ptr addrspace(1) %out) {
   ret void
 }
 
+define amdgpu_ps void @s_fptoui_sat_f16_to_i16(half inreg %x, ptr addrspace(1) %out) {
+; PREGFX12-FAKE16-LABEL: s_fptoui_sat_f16_to_i16:
+; PREGFX12-FAKE16:  ; %bb.0:
+; PREGFX12-FAKE16:    v_cvt_u16_f16_e32 v2, s0
+;
+; TRUE16-LABEL: s_fptoui_sat_f16_to_i16:
+; TRUE16:  ; %bb.0:
+; TRUE16:    v_cvt_u16_f16_e32 v2.l, s0
+;
+; GFX12-LABEL: s_fptoui_sat_f16_to_i16:
+; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_u16_f16_e32 v2.l, s0
+  %result = call i16 @llvm.fptoui.sat.i16.f16(half %x)
+  store i16 %result, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_fptosi_sat_f16_to_i16(half inreg %x, ptr addrspace(1) %out) {
+; PREGFX12-FAKE16-LABEL: s_fptosi_sat_f16_to_i16:
+; PREGFX12-FAKE16:  ; %bb.0:
+; PREGFX12-FAKE16:    v_cvt_i16_f16_e32 v2, s0
+;
+; TRUE16-LABEL: s_fptosi_sat_f16_to_i16:
+; TRUE16:  ; %bb.0:
+; TRUE16:    v_cvt_i16_f16_e32 v2.l, s0
+;
+; GFX12-LABEL: s_fptosi_sat_f16_to_i16:
+; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_i16_f16_e32 v2.l, s0
+  %result = call i16 @llvm.fptosi.sat.i16.f16(half %x)
+  store i16 %result, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @v_fptoui_sat_f16_to_i16(half %x, ptr addrspace(1) %out) {
+; PREGFX12-FAKE16-LABEL: v_fptoui_sat_f16_to_i16:
+; PREGFX12-FAKE16:  ; %bb.0:
+; PREGFX12-FAKE16:    v_cvt_u16_f16_e32 v0, v0
+;
+; TRUE16-LABEL: v_fptoui_sat_f16_to_i16:
+; TRUE16:  ; %bb.0:
+; TRUE16:    v_cvt_u16_f16_e32 v0.l, v0.l
+;
+; GFX12-LABEL: v_fptoui_sat_f16_to_i16:
+; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_u16_f16_e32 v0.l, v0.l
+  %result = call i16 @llvm.fptoui.sat.i16.f16(half %x)
+  store i16 %result, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @v_fptosi_sat_f16_to_i16(half %x, ptr addrspace(1) %out) {
+; PREGFX12-FAKE16-LABEL: v_fptosi_sat_f16_to_i16:
+; PREGFX12-FAKE16:  ; %bb.0:
+; PREGFX12-FAKE16:    v_cvt_i16_f16_e32 v0, v0
+;
+; TRUE16-LABEL: v_fptosi_sat_f16_to_i16:
+; TRUE16:  ; %bb.0:
+; TRUE16:    v_cvt_i16_f16_e32 v0.l, v0.l
+;
+; GFX12-LABEL: v_fptosi_sat_f16_to_i16:
+; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_i16_f16_e32 v0.l, v0.l
+  %result = call i16 @llvm.fptosi.sat.i16.f16(half %x)
+  store i16 %result, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_fptoui_sat_f16_to_i32(half inreg %x, ptr addrspace(1) %out) {
+; PREGFX12-LABEL: s_fptoui_sat_f16_to_i32:
+; PREGFX12:  ; %bb.0:
+; PREGFX12:    v_cvt_f32_f16_e32 v2, s0
+; PREGFX12:    v_cvt_u32_f32_e32 v2, v2
+;
+; GFX12-LABEL: s_fptoui_sat_f16_to_i32:
+; GFX12:  ; %bb.0:
+; GFX12:    s_cvt_f32_f16 s0, s0
+; GFX12:    s_cvt_u32_f32 s0, s0
+; GFX12:    v_mov_b32_e32 v2, s0
+  %result = call i32 @llvm.fptoui.sat.i32.f16(half %x)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_fptosi_sat_f16_to_i32(half inreg %x, ptr addrspace(1) %out) {
+; PREGFX12-LABEL: s_fptosi_sat_f16_to_i32:
+; PREGFX12:  ; %bb.0:
+; PREGFX12:    v_cvt_f32_f16_e32 v2, s0
+; PREGFX12:    v_cvt_i32_f32_e32 v2, v2
+;
+; GFX12-LABEL: s_fptosi_sat_f16_to_i32:
+; GFX12:  ; %bb.0:
+; GFX12:    s_cvt_f32_f16 s0, s0
+; GFX12:    s_cvt_i32_f32 s0, s0
+; GFX12:    v_mov_b32_e32 v2, s0
+  %result = call i32 @llvm.fptosi.sat.i32.f16(half %x)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @v_fptoui_sat_f16_to_i32(half %x, ptr addrspace(1) %out) {
+; PREGFX12-FAKE16-LABEL: v_fptoui_sat_f16_to_i32:
+; PREGFX12-FAKE16:  ; %bb.0:
+; PREGFX12-FAKE16:    v_cvt_f32_f16_e32 v0, v0
+; PREGFX12-FAKE16:    v_cvt_u32_f32_e32 v0, v0
+;
+; TRUE16-LABEL: v_fptoui_sat_f16_to_i32:
+; TRUE16:  ; %bb.0:
+; TRUE16:    v_cvt_f32_f16_e32 v0, v0.l
+; TRUE16:    v_cvt_u32_f32_e32 v0, v0
+;
+; GFX12-LABEL: v_fptoui_sat_f16_to_i32:
+; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_f32_f16_e32 v0, v0.l
+; GFX12:    v_cvt_u32_f32_e32 v0, v0
+  %result = call i32 @llvm.fptoui.sat.i32.f16(half %x)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @v_fptosi_sat_f16_to_i32(half %x, ptr addrspace(1) %out) {
+; PREGFX12-FAKE16-LABEL: v_fptosi_sat_f16_to_i32:
+; PREGFX12-FAKE16:  ; %bb.0:
+; PREGFX12-FAKE16:    v_cvt_f32_f16_e32 v0, v0
+; PREGFX12-FAKE16:    v_cvt_i32_f32_e32 v0, v0
+;
+; TRUE16-LABEL: v_fptosi_sat_f16_to_i32:
+; TRUE16:  ; %bb.0:
+; TRUE16:    v_cvt_f32_f16_e32 v0, v0.l
+; TRUE16:    v_cvt_i32_f32_e32 v0, v0
+;
+; GFX12-LABEL: v_fptosi_sat_f16_to_i32:
+; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_f32_f16_e32 v0, v0.l
+; GFX12:    v_cvt_i32_f32_e32 v0, v0
+  %result = call i32 @llvm.fptosi.sat.i32.f16(half %x)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_fptoui_sat_f32_to_i32(float inreg %x, ptr addrspace(1) %out) {
+; PREGFX12-LABEL: s_fptoui_sat_f32_to_i32:
+; PREGFX12:  ; %bb.0:
+; PREGFX12:    v_cvt_u32_f32_e32 v2, s0
+;
+; GFX12-LABEL: s_fptoui_sat_f32_to_i32:
+; GFX12:  ; %bb.0:
+; GFX12:    s_cvt_u32_f32 s0, s0
+; GFX12:    v_mov_b32_e32 v2, s0
+  %result = call i32 @llvm.fptoui.sat.i32.f32(float %x)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_fptosi_sat_f32_to_i32(float inreg %x, ptr addrspace(1) %out) {
+; PREGFX12-LABEL: s_fptosi_sat_f32_to_i32:
+; PREGFX12:  ; %bb.0:
+; PREGFX12:    v_cvt_i32_f32_e32 v2, s0
+;
+; GFX12-LABEL: s_fptosi_sat_f32_to_i32:
+; GFX12:  ; %bb.0:
+; GFX12:    s_cvt_i32_f32 s0, s0
+; GFX12:    v_mov_b32_e32 v2, s0
+  %result = call i32 @llvm.fptosi.sat.i32.f32(float %x)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @v_fptoui_sat_f32_to_i32(float %x, ptr addrspace(1) %out) {
+; GCN-LABEL: v_fptoui_sat_f32_to_i32:
+; GCN:  ; %bb.0:
+; GCN:    v_cvt_u32_f32_e32 v0, v0
+  %result = call i32 @llvm.fptoui.sat.i32.f32(float %x)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @v_fptosi_sat_f32_to_i32(float %x, ptr addrspace(1) %out) {
+; GCN-LABEL: v_fptosi_sat_f32_to_i32:
+; GCN:  ; %bb.0:
+; GCN:    v_cvt_i32_f32_e32 v0, v0
+  %result = call i32 @llvm.fptosi.sat.i32.f32(float %x)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_fptoui_sat_f64_to_i32(double inreg %x, ptr addrspace(1) %out) {
+; GCN-LABEL: s_fptoui_sat_f64_to_i32:
+; GCN:  ; %bb.0:
+; GCN:    v_cvt_u32_f64_e32 v2, s[0:1]
+  %result = call i32 @llvm.fptoui.sat.i32.f64(double %x)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_fptosi_sat_f64_to_i32(double inreg %x, ptr addrspace(1) %out) {
+; GCN-LABEL: s_fptosi_sat_f64_to_i32:
+; GCN:  ; %bb.0:
+; GCN:    v_cvt_i32_f64_e32 v2, s[0:1]
+  %result = call i32 @llvm.fptosi.sat.i32.f64(double %x)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @v_fptoui_sat_f64_to_i32(double %x, ptr addrspace(1) %out) {
+; GCN-LABEL: v_fptoui_sat_f64_to_i32:
+; GCN:  ; %bb.0:
+; GCN:    v_cvt_u32_f64_e32 v0, v[0:1]
+  %result = call i32 @llvm.fptoui.sat.i32.f64(double %x)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @v_fptosi_sat_f64_to_i32(double %x, ptr addrspace(1) %out) {
+; GCN-LABEL: v_fptosi_sat_f64_to_i32:
+; GCN:  ; %bb.0:
+; GCN:    v_cvt_i32_f64_e32 v0, v[0:1]
+  %result = call i32 @llvm.fptosi.sat.i32.f64(double %x)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
 define amdgpu_ps void @s_uitofp_i16_to_f16(i16 inreg %x, ptr addrspace(1) %out) {
 ; PREGFX12-FAKE16-LABEL: s_uitofp_i16_to_f16:
 ; PREGFX12-FAKE16:  ; %bb.0:

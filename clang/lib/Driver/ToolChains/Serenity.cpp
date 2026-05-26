@@ -167,8 +167,11 @@ void tools::serenity::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                          Exec, CmdArgs, Inputs, Output));
 }
 
-SanitizerMask Serenity::getSupportedSanitizers() const {
-  return ToolChain::getSupportedSanitizers() | SanitizerKind::KernelAddress;
+SanitizerMask
+Serenity::getSupportedSanitizers(StringRef BoundArch,
+                                 Action::OffloadKind DeviceOffloadKind) const {
+  return ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind) |
+         SanitizerKind::KernelAddress;
 }
 
 Serenity::Serenity(const Driver &D, const llvm::Triple &Triple,

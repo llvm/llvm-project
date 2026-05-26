@@ -263,12 +263,12 @@ def SPIRV_GroupNonUniformBroadcastOp : SPIRV_Op<"GroupNonUniformBroadcast", [
 
   let arguments = (ins
     SPIRV_ScopeAttr:$execution_scope,
-    SPIRV_Type:$value,
+    SPIRV_ScalarOrVector:$value,
     SPIRV_Integer:$id
   );
 
   let results = (outs
-    SPIRV_Type:$result
+    SPIRV_ScalarOrVector:$result
   );
 
   let assemblyFormat = [{
@@ -318,11 +318,11 @@ def SPIRV_GroupNonUniformBroadcastFirstOp : SPIRV_Op<"GroupNonUniformBroadcastFi
 
   let arguments = (ins
     SPIRV_ScopeAttr:$execution_scope,
-    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$value
+    SPIRV_ScalarOrVector:$value
   );
 
   let results = (outs
-    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$result
+    SPIRV_ScalarOrVector:$result
   );
 
   let hasVerifier = 0;
@@ -1498,13 +1498,13 @@ def SPIRV_GroupNonUniformRotateKHROp : SPIRV_Op<"GroupNonUniformRotateKHR", [
 
   let arguments = (ins
     SPIRV_ScopeAttr:$execution_scope,
-    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$value,
+    SPIRV_ScalarOrVector:$value,
     SPIRV_SignlessOrUnsignedInt:$delta,
     Optional<SPIRV_SignlessOrUnsignedInt>:$cluster_size
   );
 
   let results = (outs
-    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$result
+    SPIRV_ScalarOrVector:$result
   );
 
   let assemblyFormat = [{
@@ -1670,7 +1670,7 @@ def SPIRV_GroupNonUniformAllEqualOp : SPIRV_Op<"GroupNonUniformAllEqual", [
 
   let arguments = (ins
     SPIRV_ScopeAttr:$execution_scope,
-    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$value
+    SPIRV_ScalarOrVector:$value
   );
 
   let results = (outs
@@ -1750,12 +1750,12 @@ def SPIRV_GroupNonUniformQuadSwapOp : SPIRV_Op<"GroupNonUniformQuadSwap", [
 
   let arguments = (ins
     SPIRV_ScopeAttr:$execution_scope,
-    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$value,
+    SPIRV_ScalarOrVector:$value,
     SPIRV_QuadSwapDirectionAttr:$direction
   );
 
   let results = (outs
-    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$result
+    SPIRV_ScalarOrVector:$result
   );
 
   let hasVerifier = 0;

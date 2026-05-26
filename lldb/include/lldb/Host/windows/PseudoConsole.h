@@ -128,12 +128,14 @@ public:
   void SetStopping(bool value) { m_stopping = value; };
 
 protected:
-  HANDLE m_conpty_handle = ((HANDLE)(long long)-1);
-  HANDLE m_conpty_output = ((HANDLE)(long long)-1);
-  HANDLE m_conpty_input = ((HANDLE)(long long)-1);
+  HANDLE m_conpty_handle = reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
+  HANDLE m_conpty_output = reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
+  HANDLE m_conpty_input = reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
   // Pipe mode: child-side handles passed to CreateProcessW, closed after launch
-  HANDLE m_pipe_child_stdin = ((HANDLE)(long long)-1);
-  HANDLE m_pipe_child_stdout = ((HANDLE)(long long)-1);
+  HANDLE m_pipe_child_stdin =
+      reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
+  HANDLE m_pipe_child_stdout =
+      reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
   Mode m_mode = Mode::None;
   std::mutex m_mutex{};
   std::condition_variable m_cv{};

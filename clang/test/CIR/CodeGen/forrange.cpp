@@ -131,3 +131,39 @@ void for_range3() {
 // CIR:        cir.yield
 // CIR:      }
 // CIR:    }
+
+struct HasDtor { ~HasDtor(); };
+
+void for_range4() {
+  C3 c;
+  for (Element &e : c) {
+    HasDtor hd;
+  }
+}
+
+// CIR: cir.func{{.*}} @_Z10for_range4v()
+// CIR:    cir.scope {
+// CIR:      %[[RANGE_ADDR:.*]] = cir.alloca !cir.ptr<!rec_C3>{{.*}} ["__range1", init, const]
+// CIR:      %[[BEGIN_ADDR:.*]] = cir.alloca !rec_Iterator, !cir.ptr<!rec_Iterator>{{.*}} ["__begin1", init]
+// CIR:      %[[END_ADDR:.*]] = cir.alloca !rec_Iterator, !cir.ptr<!rec_Iterator>{{.*}} ["__end1", init]
+// CIR:      %[[E_ADDR:.*]] = cir.alloca !cir.ptr<!rec_Element>{{.*}} ["e", init, const]
+// CIR:      %[[HD:.*]] = cir.alloca !rec_HasDtor, !cir.ptr<!rec_HasDtor>, ["hd"]
+// CIR:      cir.store{{.*}} %[[C_ADDR]], %[[RANGE_ADDR]]
+// CIR:      cir.for : cond {
+// CIR:        %[[ITER_NE:.*]] = cir.call @_ZNK8IteratorneERKS_(%[[BEGIN_ADDR]], %[[END_ADDR]])
+// CIR:        cir.condition(%[[ITER_NE]])
+// CIR:      } body {
+// CIR:        %[[E:.*]] = cir.call @_ZN8IteratordeEv(%[[BEGIN_ADDR]])
+// CIR:        cir.store{{.*}} %[[E]], %[[E_ADDR]]
+// CIR:        cir.cleanup.scope {
+// CIR:          cir.yield
+// CIR:        } cleanup normal {
+// CIR:          cir.call @_ZN7HasDtorD1Ev(%[[HD]]) nothrow 
+// CIR:          cir.yield
+// CIR:        }
+// CIR:        cir.yield
+// CIR:      } step {
+// CIR:        %[[ITER_NEXT:.*]] = cir.call @_ZN8IteratorppEv(%[[BEGIN_ADDR]])
+// CIR:        cir.yield
+// CIR:      }
+// CIR:    }

@@ -1877,7 +1877,7 @@ ValueObjectSP ValueObject::GetSyntheticArrayMember(size_t index,
       if (synthetic_child) {
         AddSyntheticChild(index_const_str, synthetic_child);
         synthetic_child_sp = synthetic_child->GetSP();
-        synthetic_child_sp->SetName(ConstString(index_str));
+        synthetic_child_sp->SetName(index_str);
         synthetic_child_sp->m_flags.m_is_array_item_for_pointer = true;
       }
     }
@@ -1913,7 +1913,7 @@ ValueObjectSP ValueObject::GetSyntheticBitFieldChild(uint32_t from, uint32_t to,
       if (synthetic_child) {
         AddSyntheticChild(index_const_str, synthetic_child);
         synthetic_child_sp = synthetic_child->GetSP();
-        synthetic_child_sp->SetName(ConstString(index_str));
+        synthetic_child_sp->SetName(index_str);
         synthetic_child_sp->m_flags.m_is_bitfield_for_scalar = true;
       }
     }
@@ -1954,6 +1954,7 @@ ValueObjectSP ValueObject::GetSyntheticChildAtOffset(
     synthetic_child_sp = synthetic_child->GetSP();
     synthetic_child_sp->SetName(name_const_str);
     synthetic_child_sp->m_flags.m_is_child_at_offset = true;
+    synthetic_child_sp->SetSyntheticChildrenGenerated(true);
   }
   return synthetic_child_sp;
 }
@@ -2923,7 +2924,7 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
             new lldb_private::DataBufferHeap(&addr, sizeof(lldb::addr_t)));
         m_addr_of_valobj_sp = ValueObjectConstResult::Create(
             exe_ctx.GetBestExecutionContextScope(),
-            compiler_type.GetPointerType(), ConstString(name.c_str()), buffer,
+            compiler_type.GetPointerType(), ConstString(name), buffer,
             endian::InlHostByteOrder(), exe_ctx.GetAddressByteSize(),
             LLDB_INVALID_ADDRESS, this->GetManager());
       }
@@ -2981,7 +2982,7 @@ ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
       std::move(error));
 }
 
-lldb::ValueObjectSP ValueObject::Clone(ConstString new_name) {
+lldb::ValueObjectSP ValueObject::Clone(llvm::StringRef new_name) {
   return ValueObjectCast::Create(*this, new_name, GetCompilerType());
 }
 
@@ -3563,7 +3564,7 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromExpression(
   target_sp->EvaluateExpression(expression, exe_ctx.GetFrameSP().get(),
                                 retval_sp, options);
   if (retval_sp && !name.empty())
-    retval_sp->SetName(ConstString(name));
+    retval_sp->SetName(name);
   return retval_sp;
 }
 
@@ -3590,7 +3591,7 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromAddress(
         if (do_deref)
           ptr_result_valobj_sp = ptr_result_valobj_sp->Dereference(err);
         if (ptr_result_valobj_sp && !name.empty())
-          ptr_result_valobj_sp->SetName(ConstString(name));
+          ptr_result_valobj_sp->SetName(name);
       }
       return ptr_result_valobj_sp;
     }
@@ -3607,7 +3608,7 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromData(
       LLDB_INVALID_ADDRESS, parent ? parent->GetManager() : nullptr);
   new_value_sp->SetAddressTypeOfChildren(eAddressTypeLoad);
   if (new_value_sp && !name.empty())
-    new_value_sp->SetName(ConstString(name));
+    new_value_sp->SetName(name);
   return new_value_sp;
 }
 

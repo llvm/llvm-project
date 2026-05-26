@@ -91,19 +91,20 @@ module @gemm attributes {gpu.container_module} {
 
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
+    %c2 = arith.constant 2 : index
     %c8 = arith.constant 8 : index
     %c16 = arith.constant 16 : index
     %c32 = arith.constant 32 : index
+    %c256 = arith.constant 256 : index
     %c1e2m1 = arith.constant 1.0 : f4E2M1FN
     %c1packed_e2m1 = arith.constant 0x22 : i8
     %c0f32 = arith.constant 0.0 : f32
     %c1f8E8M0FNU = arith.constant 1.0 : f8E8M0FNU
 
-    %A = memref.alloc() : memref<8x64xf4E2M1FN>
-    scf.for %i = %c0 to %c8 step %c1 {
-      scf.for %j = %c0 to %c32 step %c1 {
-        memref.store %c1e2m1, %A[%i, %j] : memref<8x64xf4E2M1FN>
-      }
+    %A_flatbytes = memref.alloc() : memref<256xi8>
+    %A = memref.view %A_flatbytes[%c0][] : memref<256xi8> to memref<8x64xf4E2M1FN>
+    scf.for %i = %c0 to %c256 step %c1 {
+      memref.store %c1packed_e2m1, %A_flatbytes[%i] : memref<256xi8>
     }
 
     %B = memref.alloc() : memref<32x16xi8>
@@ -122,12 +123,16 @@ module @gemm attributes {gpu.container_module} {
 
     %scale_A = memref.alloc() : memref<8x2xf8E8M0FNU>
     scf.for %i = %c0 to %c8 step %c1 {
-      memref.store %c1f8E8M0FNU, %scale_A[%i, %c0] : memref<8x2xf8E8M0FNU>
+      scf.for %j = %c0 to %c2 step %c1 {
+        memref.store %c1f8E8M0FNU, %scale_A[%i, %j] : memref<8x2xf8E8M0FNU>
+      }
     }
 
     %scale_B = memref.alloc() : memref<2x16xf8E8M0FNU>
-    scf.for %i = %c0 to %c16 step %c1 {
-      memref.store %c1f8E8M0FNU, %scale_B[%c0, %i] : memref<2x16xf8E8M0FNU>
+    scf.for %i = %c0 to %c2 step %c1 {
+      scf.for %j = %c0 to %c16 step %c1 {
+        memref.store %c1f8E8M0FNU, %scale_B[%i, %j] : memref<2x16xf8E8M0FNU>
+      }
     }
 
     %C_res = call @test(%A, %B, %C, %scale_A, %scale_B) : (memref<8x64xf4E2M1FN>, memref<32x16xi8>, memref<8x16xf32>, memref<8x2xf8E8M0FNU>, memref<2x16xf8E8M0FNU>) -> memref<8x16xf32>
@@ -136,9 +141,11 @@ module @gemm attributes {gpu.container_module} {
 
     // CHECK: Unranked Memref base@ = 0x{{[0-9a-f]+}}
     // CHECK-COUNT-8: [64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64]
-    memref.dealloc %A : memref<8x64xf4E2M1FN>
+    memref.dealloc %A_flatbytes : memref<256xi8>
     memref.dealloc %B : memref<32x16xi8>
     memref.dealloc %C : memref<8x16xf32>
+    memref.dealloc %scale_A : memref<8x2xf8E8M0FNU>
+    memref.dealloc %scale_B : memref<2x16xf8E8M0FNU>
     memref.dealloc %C_res : memref<8x16xf32>
     return
   }

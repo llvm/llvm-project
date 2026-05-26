@@ -2191,9 +2191,9 @@ public:
 
   void visitLShr(BinaryOperator &I) {
     visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
-      if (RHS.uge(cast<PossiblyExactOperator>(I).isExact()
-                      ? LHS.countr_zero() + 1
-                      : LHS.getBitWidth()))
+      if (RHS.uge(LHS.getBitWidth()) ||
+          (cast<PossiblyExactOperator>(I).isExact() &&
+           RHS.ugt(LHS.countr_zero())))
         return AnyValue::poison();
       return LHS.lshr(RHS);
     });
@@ -2201,9 +2201,9 @@ public:
 
   void visitAShr(BinaryOperator &I) {
     visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
-      if (RHS.uge(cast<PossiblyExactOperator>(I).isExact()
-                      ? LHS.countr_zero() + 1
-                      : LHS.getBitWidth()))
+      if (RHS.uge(LHS.getBitWidth()) ||
+          (cast<PossiblyExactOperator>(I).isExact() &&
+           RHS.ugt(LHS.countr_zero())))
         return AnyValue::poison();
       return LHS.ashr(RHS);
     });

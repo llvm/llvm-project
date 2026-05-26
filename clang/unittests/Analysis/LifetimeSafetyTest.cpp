@@ -21,6 +21,7 @@ namespace clang::lifetimes::internal {
 namespace {
 
 using namespace ast_matchers;
+using ::testing::Contains;
 using ::testing::Not;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAreArray;
@@ -202,6 +203,25 @@ public:
 
   llvm::ArrayRef<const Fact *> getBlockContaining(ProgramPoint P) {
     return Runner.getAnalysis().getFactManager().getBlockContaining(P);
+  }
+
+  llvm::SmallVector<OriginID>
+  buildOriginFlowChainInOneBlock(llvm::StringRef StartOriginVar,
+                                 llvm::StringRef EndLoanVar,
+                                 llvm::StringRef Annotation) {
+    std::optional<OriginID> StartOriginID = getOriginForDecl(StartOriginVar);
+    std::vector<LoanID> EndLoanIDs = getLoansForVar(EndLoanVar);
+
+    for (LoanID LID : EndLoanIDs) {
+      const llvm::SmallVector<OriginID> OriginFlowChain =
+          Runner.getAnalysis().getLoanPropagation().buildOriginFlowChain(
+              Runner.getAnalysis().getFactManager(),
+              getProgramPoint(Annotation), *StartOriginID, LID);
+      if (!OriginFlowChain.empty())
+        return OriginFlowChain;
+    }
+
+    return {};
   }
 
 private:
@@ -1950,6 +1970,109 @@ TEST_F(LifetimeAnalysisTest, LambdaInitCaptureViewByValue) {
     }
   )");
   EXPECT_THAT(Origin("lambda"), HasLoansTo({"obj"}, "after_lambda"));
+}
+
+// ========================================================================= //
+//                    Tests for buildOriginFlowChain
+// ========================================================================= //
+
+TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithErrorTargetLoan) {
+  SetupTest(R"(
+    void target() {
+      int tgt = 2;
+      int *a = &tgt;
+      int *s = a;
+      POINT(after_use);
+    }
+  )");
+
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(Helper->buildOriginFlowChainInOneBlock("s", "a", "after_use"),
+               "TargetLoan must be present in the StartOID at the StartPoint");
+#endif
+}
+
+TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithSelfAssignment) {
+  SetupTest(R"(
+    void target() {
+      int tgt = 2;
+      int *a = &tgt;
+      int *b = a;
+      a = b;
+      a = a;
+      int *s = a;
+      POINT(after_use);
+    }
+  )");
+
+  const llvm::SmallVector<OriginID> OriginFlowChain =
+      Helper->buildOriginFlowChainInOneBlock("s", "tgt", "after_use");
+
+  EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("a")));
+}
+
+TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithMultiAssignInSameStmt) {
+  SetupTest(R"(
+    void target() {
+      int tgt = 2;
+      int *a, *b, *c;
+      a = b = c = &tgt;
+      int *s = a;
+      POINT(after_use);
+    }
+  )");
+
+  const llvm::SmallVector<OriginID> OriginFlowChain =
+      Helper->buildOriginFlowChainInOneBlock("s", "tgt", "after_use");
+
+  EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("a")));
+}
+
+TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithOverwritingAssignments) {
+  SetupTest(R"(
+    void target() {
+      int tgt1 = 1, tgt2 = 2;
+      int *a = &tgt1;
+      int *b = a;
+      int *c = b;
+      b = &tgt2;
+      int *s = c;
+      POINT(after_use);
+    }
+  )");
+
+  const llvm::SmallVector<OriginID> OriginFlowChain =
+      Helper->buildOriginFlowChainInOneBlock("s", "tgt1", "after_use");
+
+  EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("a")));
+}
+
+TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithLifetimeBound) {
+  SetupTest(R"(
+    int* choose(int* a [[clang::lifetimebound]], int* b  [[clang::lifetimebound]]);
+    void target() {
+      int tgta = 1, tgtb = 2;
+      int *a = &tgta;
+      int *b = &tgtb;
+      int *result = choose(a, b);
+      result = choose(result , result);
+      int *s = result;
+      POINT(after_use);
+    }
+  )");
+
+  llvm::SmallVector<OriginID> ChainForTgtA =
+      Helper->buildOriginFlowChainInOneBlock("s", "tgta", "after_use");
+  llvm::SmallVector<OriginID> ChainForTgtB =
+      Helper->buildOriginFlowChainInOneBlock("s", "tgtb", "after_use");
+
+  EXPECT_THAT(ChainForTgtA, Contains(*Helper->getOriginForDecl("a")));
+  EXPECT_THAT(ChainForTgtA, Contains(*Helper->getOriginForDecl("result")));
+  EXPECT_THAT(ChainForTgtA, Not(Contains(*Helper->getOriginForDecl("b"))));
+
+  EXPECT_THAT(ChainForTgtB, Contains(*Helper->getOriginForDecl("b")));
+  EXPECT_THAT(ChainForTgtB, Contains(*Helper->getOriginForDecl("result")));
+  EXPECT_THAT(ChainForTgtB, Not(Contains(*Helper->getOriginForDecl("a"))));
 }
 } // anonymous namespace
 } // namespace clang::lifetimes::internal

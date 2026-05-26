@@ -153,6 +153,6 @@ subroutine test7(a, n)
   a = (/ (CHAR(i), i=1,n) /)
 end subroutine test7
 
-! CHECK: fir.global internal @_QQro.3xr4.0(dense<[1.000000e+00, 2.000000e+00, 3.000000e+00]> : tensor<3xf32>) constant : !fir.array<3xf32>
+! CHECK: fir.global internal @_QQro.3xr4.0(dense<[1.000000e+00, 2.000000e+00, 3.000000e+00]> : tensor<3xf32>) {alignment = 64 : i64} constant : !fir.array<3xf32>
 
-! CHECK: fir.global internal @_QQro.4xi4.1(dense<[6, 7, 42, 9]> : tensor<4xi32>) constant : !fir.array<4xi32>
+! CHECK: fir.global internal @_QQro.4xi4.1(dense<[6, 7, 42, 9]> : tensor<4xi32>) {alignment = 64 : i64} constant : !fir.array<4xi32>

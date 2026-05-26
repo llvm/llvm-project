@@ -156,7 +156,7 @@ lldb::thread_result_t DebuggerThread::DebuggerThreadAttachRoutine(
   LLDB_LOG(log, "preparing to attach to process '{0}' on background thread.",
            pid);
 
-  if (!DebugActiveProcess((DWORD)pid)) {
+  if (!DebugActiveProcess(static_cast<DWORD>(pid))) {
     Status error(::GetLastError(), eErrorTypeWin32);
     m_debug_delegate->OnDebuggerError(error, 0);
     return {};
@@ -483,6 +483,37 @@ DebuggerThread::HandleExitProcessEvent(const EXIT_PROCESS_DEBUG_INFO &info,
   return DBG_CONTINUE;
 }
 
+static std::optional<std::string>
+ConvertNtDevicePathToDosPath(llvm::ArrayRef<wchar_t> nt_path) {
+  std::array<wchar_t, 512> drive_strings;
+  drive_strings[0] = L'\0';
+  if (!::GetLogicalDriveStringsW(drive_strings.size(), drive_strings.data()))
+    return std::nullopt;
+
+  std::array<wchar_t, 3> drive = {L"_:"};
+  for (const wchar_t *it = drive_strings.data(); *it != L'\0';
+       it += wcslen(it) + 1) {
+    drive[0] = it[0];
+    std::array<wchar_t, MAX_PATH> device_name;
+    if (!::QueryDosDeviceW(drive.data(), device_name.data(),
+                           device_name.size()))
+      continue;
+    size_t device_name_len = wcslen(device_name.data());
+    if (device_name_len >= nt_path.size())
+      continue;
+    bool match =
+        _wcsnicmp(nt_path.data(), device_name.data(), device_name_len) == 0;
+    if (match && nt_path[device_name_len] == L'\\') {
+      std::wstring rebuilt_path(drive.data());
+      rebuilt_path.append(&nt_path[device_name_len]);
+      std::string path_utf8;
+      llvm::convertWideToUTF8(rebuilt_path, path_utf8);
+      return path_utf8;
+    }
+  }
+  return std::nullopt;
+}
+
 static std::optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
   // Check that file is not empty as we cannot map a file with zero length.
   DWORD dwFileSizeHi = 0;
@@ -491,7 +522,8 @@ static std::optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
     return std::nullopt;
 
   AutoHandle filemap(
-      ::CreateFileMappingW(hFile, nullptr, PAGE_READONLY, 0, 1, NULL), nullptr);
+      ::CreateFileMappingW(hFile, nullptr, PAGE_READONLY, 0, 1, nullptr),
+      nullptr);
   if (!filemap.IsValid())
     return std::nullopt;
 
@@ -506,48 +538,74 @@ static std::optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
                             mapped_filename.data(), mapped_filename.size()))
     return std::nullopt;
 
-  // A series of null-terminated strings, plus an additional null character
-  std::array<wchar_t, 512> drive_strings;
-  drive_strings[0] = L'\0';
-  if (!::GetLogicalDriveStringsW(drive_strings.size(), drive_strings.data()))
+  return ConvertNtDevicePathToDosPath(mapped_filename);
+}
+
+static std::optional<std::string> GetFileNameByLoadAddress(HANDLE hProcess,
+                                                           LPVOID base_addr) {
+  std::array<wchar_t, MAX_PATH + 1> module_filename;
+  DWORD len =
+      ::GetModuleFileNameExW(hProcess, reinterpret_cast<HMODULE>(base_addr),
+                             module_filename.data(), module_filename.size());
+  if (len > 0 && len < module_filename.size()) {
+    std::string path_utf8;
+    llvm::convertWideToUTF8(std::wstring(module_filename.data(), len),
+                            path_utf8);
+    return path_utf8;
+  }
+
+  // Fallback: ask the kernel for the file backing the mapping at this address.
+  std::array<wchar_t, MAX_PATH + 1> mapped_filename;
+  if (!::GetMappedFileNameW(hProcess, base_addr, mapped_filename.data(),
+                            mapped_filename.size()))
+    return std::nullopt;
+  return ConvertNtDevicePathToDosPath(mapped_filename);
+}
+
+// Resolve the LOAD_DLL_DEBUG_INFO::lpImageName field.
+static std::optional<std::string>
+GetFileNameFromImageNameField(HANDLE hProcess,
+                              const LOAD_DLL_DEBUG_INFO &info) {
+  if (info.lpImageName == nullptr)
     return std::nullopt;
 
-  std::array<wchar_t, 3> drive = {L"_:"};
-  for (const wchar_t *it = drive_strings.data(); *it != L'\0';
-       it += wcslen(it) + 1) {
-    // Copy the drive letter to the template string
-    drive[0] = it[0];
-    std::array<wchar_t, MAX_PATH> device_name;
-    if (::QueryDosDeviceW(drive.data(), device_name.data(),
-                          device_name.size())) {
-      size_t device_name_len = wcslen(device_name.data());
-      if (device_name_len < mapped_filename.size()) {
-        bool match = _wcsnicmp(mapped_filename.data(), device_name.data(),
-                               device_name_len) == 0;
-        if (match && mapped_filename[device_name_len] == L'\\') {
-          // Replace device path with its drive letter
-          std::wstring rebuilt_path(drive.data());
-          rebuilt_path.append(&mapped_filename[device_name_len]);
-          std::string path_utf8;
-          llvm::convertWideToUTF8(rebuilt_path, path_utf8);
-          return path_utf8;
-        }
-      }
-    }
+  LPVOID name_addr = nullptr;
+  SIZE_T bytes_read = 0;
+  if (!::ReadProcessMemory(hProcess, info.lpImageName, &name_addr,
+                           sizeof(name_addr), &bytes_read) ||
+      bytes_read != sizeof(name_addr) || name_addr == nullptr)
+    return std::nullopt;
+
+  if (info.fUnicode) {
+    std::array<wchar_t, MAX_PATH + 1> wbuf{};
+    if (!::ReadProcessMemory(hProcess, name_addr, wbuf.data(),
+                             wbuf.size() * sizeof(wchar_t), &bytes_read))
+      return std::nullopt;
+    if (wbuf[MAX_PATH] != L'\0')
+      return std::nullopt;
+    std::string path_utf8;
+    llvm::convertWideToUTF8(wbuf.data(), path_utf8);
+    if (path_utf8.empty())
+      return std::nullopt;
+    return path_utf8;
   }
-  return std::nullopt;
+
+  std::array<char, MAX_PATH + 1> abuf{};
+  if (!::ReadProcessMemory(hProcess, name_addr, abuf.data(), abuf.size(),
+                           &bytes_read))
+    return std::nullopt;
+  if (abuf[MAX_PATH] != '\0')
+    return std::nullopt;
+  std::string path(abuf.data());
+  if (path.empty())
+    return std::nullopt;
+  return path;
 }
 
 DWORD
 DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
                                    DWORD thread_id) {
   Log *log = GetLog(WindowsLog::Event);
-  if (info.hFile == nullptr) {
-    // Not sure what this is, so just ignore it.
-    LLDB_LOG(log, "Warning: Inferior {0} has a NULL file handle, returning...",
-             m_process.GetProcessId());
-    return DBG_CONTINUE;
-  }
 
   auto on_load_dll = [&](llvm::StringRef path) {
     FileSpec file_spec(path);
@@ -560,32 +618,43 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
     m_debug_delegate->OnLoadDll(module_spec, load_addr);
   };
 
-  std::vector<wchar_t> buffer(1);
-  DWORD required_size =
-      GetFinalPathNameByHandleW(info.hFile, &buffer[0], 0, VOLUME_NAME_DOS);
-  if (required_size > 0) {
-    buffer.resize(required_size + 1);
-    required_size = GetFinalPathNameByHandleW(info.hFile, &buffer[0],
-                                              required_size, VOLUME_NAME_DOS);
-    std::string path_str_utf8;
-    llvm::convertWideToUTF8(buffer.data(), path_str_utf8);
-    llvm::StringRef path_str = path_str_utf8;
-    const char *path = path_str.data();
-    if (path_str.starts_with("\\\\?\\"))
-      path += 4;
-
-    on_load_dll(path);
-  } else if (std::optional<std::string> path =
-                 GetFileNameFromHandleFallback(info.hFile)) {
-    on_load_dll(*path);
-  } else {
-    LLDB_LOG(
-        log,
-        "Inferior {0} - Error {1} occurred calling GetFinalPathNameByHandle",
-        m_process.GetProcessId(), ::GetLastError());
+  std::optional<std::string> resolved_path;
+  if (info.hFile != nullptr) {
+    std::vector<wchar_t> buffer(1);
+    DWORD required_size =
+        GetFinalPathNameByHandleW(info.hFile, &buffer[0], 0, VOLUME_NAME_DOS);
+    if (required_size > 0) {
+      buffer.resize(required_size + 1);
+      GetFinalPathNameByHandleW(info.hFile, &buffer[0], required_size,
+                                VOLUME_NAME_DOS);
+      std::string path_str_utf8;
+      llvm::convertWideToUTF8(buffer.data(), path_str_utf8);
+      llvm::StringRef path_str = path_str_utf8;
+      path_str.consume_front("\\\\?\\");
+      resolved_path = path_str.str();
+    } else {
+      resolved_path = GetFileNameFromHandleFallback(info.hFile);
+    }
   }
+
+  HANDLE hProcess = m_process.GetNativeProcess().GetSystemHandle();
+  if (!resolved_path)
+    resolved_path = GetFileNameFromImageNameField(hProcess, info);
+  if (!resolved_path)
+    resolved_path = GetFileNameByLoadAddress(hProcess, info.lpBaseOfDll);
+
+  if (resolved_path)
+    on_load_dll(*resolved_path);
+  else
+    LLDB_LOG(log,
+             "Inferior {0} - could not resolve path for LOAD_DLL_DEBUG_EVENT "
+             "(hFile={1}, base={2:x}, last error={3})",
+             m_process.GetProcessId(), info.hFile, info.lpBaseOfDll,
+             ::GetLastError());
+
   // Windows does not automatically close info.hFile, so we need to do it.
-  ::CloseHandle(info.hFile);
+  if (info.hFile != nullptr)
+    ::CloseHandle(info.hFile);
   return DBG_CONTINUE;
 }
 

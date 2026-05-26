@@ -218,9 +218,9 @@ int64_t RISCV::getImplicitAddend(const uint8_t *buf, RelType type) const {
 
 void RISCV::writeGotHeader(uint8_t *buf) const {
   if (ctx.arg.is64)
-    write64le(buf, ctx.mainPart->dynamic->getVA());
+    write64le(buf, ctx.in.dynamic->getVA());
   else
-    write32le(buf, ctx.mainPart->dynamic->getVA());
+    write32le(buf, ctx.in.dynamic->getVA());
 }
 
 void RISCV::writeGotPlt(uint8_t *buf, const Symbol &s) const {
@@ -1133,12 +1133,19 @@ bool RISCV::synthesizeAlignForInput(uint64_t &dot, InputSection *sec,
       }
     }
   } else if (sec->addralign >= 4) {
-    // If the alignment is >= 4 and the section does not start with an ALIGN
-    // relocation, synthesize one.
-    bool hasAlignRel = llvm::any_of(rels, [](const RelTy &rel) {
-      return rel.r_offset == 0 && rel.getType(false) == R_RISCV_ALIGN;
+    // If the alignment is > 4, synthesize an ALIGN unless an ALIGN relocation
+    // at offset 0 already guarantees `addralign`. Note: A weaker ALIGN at
+    // offset 0 from older assemblers do not suppress synthesis (e.g.
+    // `.p2align 2; .option norelax; nop; .p2align 3` does not suppress
+    // synthesized `.p2align 3`).
+    bool covered = llvm::any_of(rels, [&](const RelTy &rel) {
+      if (rel.r_offset != 0 || rel.getType(false) != R_RISCV_ALIGN)
+        return false;
+      if constexpr (RelTy::HasAddend)
+        return uint64_t(rel.r_addend) >= sec->addralign - 2;
+      return false;
     });
-    if (!hasAlignRel) {
+    if (!covered) {
       synthesizedAligns.emplace_back(dot - baseSec->getVA(),
                                      sec->addralign - 2);
       dot += sec->addralign - 2;

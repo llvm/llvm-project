@@ -153,7 +153,7 @@ const RegisterInfo *
 RegisterContextWindows_x86::GetRegisterInfoAtIndex(size_t reg) {
   if (reg < k_num_register_infos)
     return &g_register_infos[reg];
-  return NULL;
+  return nullptr;
 }
 
 size_t RegisterContextWindows_x86::GetRegisterSetCount() {

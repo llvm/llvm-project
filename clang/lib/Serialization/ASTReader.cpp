@@ -3499,7 +3499,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
       off_t StoredSize = 0;
       time_t StoredModTime = 0;
-      unsigned ImplicitModuleSuffixLength = 0;
+      unsigned FileNameKind = 0;
       ASTFileSignature StoredSignature;
       ModuleFileName ImportedFile;
       std::string StoredFile;
@@ -3523,7 +3523,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       if (!IsImportingStdCXXModule) {
         StoredSize = (off_t)Record[Idx++];
         StoredModTime = (time_t)Record[Idx++];
-        ImplicitModuleSuffixLength = (unsigned)Record[Idx++];
+        FileNameKind = (unsigned)Record[Idx++];
 
         StringRef SignatureBytes = Blob.substr(0, ASTFileSignature::size);
         StoredSignature = ASTFileSignature::create(SignatureBytes.begin(),
@@ -3532,12 +3532,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
         StoredFile = ReadPathBlob(BaseDirectoryAsWritten, Record, Idx, Blob);
         if (ImportedFile.empty()) {
-          ImportedFile = ImplicitModuleSuffixLength
-                             ? ModuleFileName::makeImplicit(
-                                   StoredFile, ImplicitModuleSuffixLength)
-                             : ModuleFileName::makeExplicit(StoredFile);
-          assert((ImportedKind == MK_ImplicitModule) ==
-                 (ImplicitModuleSuffixLength != 0));
+          ImportedFile = ModuleFileName::makeFromRaw(StoredFile, FileNameKind);
         } else if (!getDiags().isIgnored(
                        diag::warn_module_file_mapping_mismatch,
                        CurrentImportLoc)) {
@@ -4691,6 +4686,8 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
                  Kind == MK_ImplicitModule
              ? ModuleMgr.lookupByModuleName(Name)
              : ModuleMgr.lookupByFileName(ModuleFileName::makeExplicit(Name)));
+    if (!OM)
+      OM = ModuleMgr.lookupByFileName(ModuleFileName::makeInMemory(Name));
     if (!OM) {
       std::string Msg = "refers to unknown module, cannot find ";
       Msg.append(std::string(Name));
@@ -8737,14 +8734,16 @@ bool ASTReader::LoadExternalSpecializationsImpl(
     ArrayRef<TemplateArgument> TemplateArgs) {
   assert(D);
 
-  reader::LazySpecializationInfoLookupTable *LookupTable = nullptr;
-  if (auto It = SpecLookups.find(D); It != SpecLookups.end())
-    LookupTable = &It->getSecond();
-  if (!LookupTable)
+  auto It = SpecLookups.find(D);
+  if (It == SpecLookups.end())
     return false;
 
-  // NOTE: The getNameForDiagnostic usage in the lambda may mutate the
-  // `SpecLookups` object.
+  Deserializing LookupResults(this);
+  auto HashValue = StableHashForTemplateArguments(TemplateArgs);
+
+  llvm::SmallVector<serialization::reader::LazySpecializationInfo, 8> Infos =
+      It->second.Table.find(HashValue);
+
   llvm::TimeTraceScope TimeScope("Load External Specializations for ", [&] {
     std::string Name;
     llvm::raw_string_ostream OS(Name);
@@ -8753,13 +8752,6 @@ bool ASTReader::LoadExternalSpecializationsImpl(
                              /*Qualified=*/true);
     return Name;
   });
-
-  Deserializing LookupResults(this);
-  auto HashValue = StableHashForTemplateArguments(TemplateArgs);
-
-  // Get Decl may violate the iterator from SpecLookups
-  llvm::SmallVector<serialization::reader::LazySpecializationInfo, 8> Infos =
-      LookupTable->Table.find(HashValue);
 
   bool NewSpecsFound = false;
   for (auto &Info : Infos) {

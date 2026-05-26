@@ -64,6 +64,22 @@ func.func @group_broadcast_negative_locid_vec4(%value: f32, %localid: vector<4xi
 
 // -----
 
+func.func @group_broadcast_bf16(%value: bf16, %localid: i32 ) -> bf16 {
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit integer or 16/32/64-bit float or bool or vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'bf16'}}
+  %0 = spirv.GroupBroadcast <Workgroup> %value, %localid : bf16, i32
+  return %0: bf16
+}
+
+// -----
+
+func.func @group_broadcast_float8(%value: f8E4M3FN, %localid: i32 ) -> f8E4M3FN {
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit integer or 16/32/64-bit float or bool or vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'f8E4M3FN'}}
+  %0 = spirv.GroupBroadcast <Workgroup> %value, %localid : f8E4M3FN, i32
+  return %0: f8E4M3FN
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.KHR.SubgroupBallot
 //===----------------------------------------------------------------------===//

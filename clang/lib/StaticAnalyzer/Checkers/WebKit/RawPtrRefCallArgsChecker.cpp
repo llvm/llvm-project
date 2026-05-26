@@ -85,6 +85,11 @@ public:
         return true;
       }
 
+      bool VisitCXXConstructExpr(CXXConstructExpr *CE) override {
+        Checker->visitConstructExpr(CE, DeclWithIssue);
+        return true;
+      }
+
       bool VisitTypedefDecl(TypedefDecl *TD) override {
         if (Checker->RTC)
           Checker->RTC->visitTypedef(TD);
@@ -103,74 +108,72 @@ public:
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
 
-  void visitCallExpr(const CallExpr *CE, const Decl *D) const {
-    if (shouldSkipCall(CE))
-      return;
-
-    if (auto *F = CE->getDirectCallee()) {
+  template <typename CallOrConstrcut>
+  void visitCallOrConstructExpr(const CallOrConstrcut *CE,
+                                const FunctionDecl *F, const Decl *D) const {
+    if (F) {
       // Skip the first argument for overloaded member operators (e. g. lambda
       // or std::function call operator).
       unsigned ArgIdx =
           isa<CXXOperatorCallExpr>(CE) && isa_and_nonnull<CXXMethodDecl>(F);
 
-      if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(CE)) {
-        if (auto *MD = MemberCallExpr->getMethodDecl()) {
-          auto name = safeGetName(MD);
-          if (name == "ref" || name == "deref")
-            return;
-          if (name == "incrementCheckedPtrCount" ||
-              name == "decrementCheckedPtrCount")
-            return;
-        }
-        auto *E = MemberCallExpr->getImplicitObjectArgument();
-        QualType ArgType = MemberCallExpr->getObjectType().getCanonicalType();
+      if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(CE))
+        checkThisArg(MemberCallExpr, D);
+
+      if (ArgIdx) {
+        auto *Arg = CE->getArg(0);
+        QualType ArgType = Arg->getType().getCanonicalType();
         std::optional<bool> IsUnsafe = isUnsafeType(ArgType);
-        if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(E))
-          reportBugOnThis(E, D);
+        if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(Arg))
+          reportBugOnThis(Arg, D);
       }
 
       for (auto P = F->param_begin();
-           // FIXME: Also check variadic function parameters.
-           // FIXME: Also check default function arguments. Probably a different
-           // checker. In case there are default arguments the call can have
-           // fewer arguments than the callee has parameters.
            P < F->param_end() && ArgIdx < CE->getNumArgs(); ++P, ++ArgIdx) {
         // TODO: attributes.
         // if ((*P)->hasAttr<SafeRefCntblRawPtrAttr>())
         //  continue;
-
-        QualType ArgType = (*P)->getType();
-        // FIXME: more complex types (arrays, references to raw pointers, etc)
-        std::optional<bool> IsUncounted = isUnsafePtr(ArgType);
-        if (!IsUncounted || !(*IsUncounted))
-          continue;
-
-        const auto *Arg = CE->getArg(ArgIdx);
-
-        if (auto *defaultArg = dyn_cast<CXXDefaultArgExpr>(Arg))
-          Arg = defaultArg->getExpr();
-
-        if (isPtrOriginSafe(Arg))
-          continue;
-
-        reportBug(Arg, *P, D);
+        checkArg(CE->getArg(ArgIdx), (*P)->getType(), *P, D);
       }
       for (; ArgIdx < CE->getNumArgs(); ++ArgIdx) {
-        const auto *Arg = CE->getArg(ArgIdx);
-        auto ArgType = Arg->getType();
-        std::optional<bool> IsUncounted = isUnsafePtr(ArgType);
-        if (!IsUncounted || !(*IsUncounted))
-          continue;
-
-        if (auto *defaultArg = dyn_cast<CXXDefaultArgExpr>(Arg))
-          Arg = defaultArg->getExpr();
-
-        if (isPtrOriginSafe(Arg))
-          continue;
-
-        reportBug(Arg, nullptr, D);
+        auto *Arg = CE->getArg(ArgIdx);
+        checkArg(Arg, Arg->getType(), nullptr, D);
       }
     }
+  }
+
+  void visitCallExpr(const CallExpr *CE, const Decl *D) const {
+    auto *Callee = CE->getDirectCallee();
+    if (shouldSkipCall(CE, Callee))
+      return;
+
+    if (Callee)
+      visitCallOrConstructExpr(CE, Callee, D);
+    else if (auto *Decl = CE->getCalleeDecl()) {
+      if (auto *FnType = Decl->getFunctionType()) {
+        if (auto *ProtoType = dyn_cast<FunctionProtoType>(FnType)) {
+          if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(CE))
+            checkThisArg(MemberCallExpr, D);
+          unsigned ArgIdx = 0;
+          for (auto PT = ProtoType->param_type_begin();
+               PT < ProtoType->param_type_end() && ArgIdx < CE->getNumArgs();
+               ++PT, ++ArgIdx)
+            checkArg(CE->getArg(ArgIdx), *PT, nullptr, D);
+          for (; ArgIdx < CE->getNumArgs(); ++ArgIdx) {
+            auto *Arg = CE->getArg(ArgIdx);
+            checkArg(Arg, Arg->getType(), nullptr, D);
+          }
+        }
+      }
+    }
+  }
+
+  void visitConstructExpr(const CXXConstructExpr *CE, const Decl *D) const {
+    auto *Constructor = CE->getConstructor();
+    if (shouldSkipCall(CE, Constructor))
+      return;
+    if (Constructor)
+      visitCallOrConstructExpr(CE, Constructor, D);
   }
 
   void visitObjCMessageExpr(const ObjCMessageExpr *E, const Decl *D) const {
@@ -205,6 +208,43 @@ public:
     }
   }
 
+  void checkThisArg(const CXXMemberCallExpr *MemberCallExpr,
+                    const Decl *DeclWithIssue) const {
+    if (auto *MD = MemberCallExpr->getMethodDecl()) {
+      auto name = safeGetName(MD);
+      if (name == "ref" || name == "deref")
+        return;
+      if (name == "incrementCheckedPtrCount" ||
+          name == "decrementCheckedPtrCount")
+        return;
+    }
+    auto *ThisExpr = MemberCallExpr->getImplicitObjectArgument();
+    QualType ArgType = MemberCallExpr->getObjectType().getCanonicalType();
+    std::optional<bool> IsUnsafe = isUnsafeType(ArgType);
+    if (!IsUnsafe || !*IsUnsafe)
+      return;
+
+    if (isPtrOriginSafe(ThisExpr))
+      return;
+
+    reportBugOnThis(MemberCallExpr, DeclWithIssue);
+  }
+
+  void checkArg(const Expr *Arg, QualType ParamType, const ParmVarDecl *Param,
+                const Decl *DeclWithIssue) const {
+    std::optional<bool> IsUncounted = isUnsafePtr(ParamType);
+    if (!IsUncounted || !(*IsUncounted))
+      return;
+
+    if (auto *DefaultArg = dyn_cast<CXXDefaultArgExpr>(Arg))
+      Arg = DefaultArg->getExpr();
+
+    if (isPtrOriginSafe(Arg))
+      return;
+
+    reportBug(Arg, Param, DeclWithIssue);
+  }
+
   bool isPtrOriginSafe(const Expr *Arg) const {
     return tryToFindPtrOrigin(
         Arg, /*StopAtFirstRefCountedObj=*/true,
@@ -235,9 +275,9 @@ public:
         });
   }
 
-  bool shouldSkipCall(const CallExpr *CE) const {
-    const auto *Callee = CE->getDirectCallee();
-
+  template <typename CallOrConstruct>
+  bool shouldSkipCall(const CallOrConstruct *CE,
+                      const FunctionDecl *Callee) const {
     if (BR->getSourceManager().isInSystemHeader(CE->getExprLoc()))
       return true;
 

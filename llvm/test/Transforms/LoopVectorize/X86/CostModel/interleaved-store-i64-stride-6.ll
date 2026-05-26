@@ -117,42 +117,7 @@ define void @test() {
 ; AVX2:    store ir<%v5> to index 5
 ;
 ; AVX512-LABEL: 'test'
-; AVX512:  Cost of 17 for VF 2: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX512:    store ir<%v> to index 0
-; AVX512:    store ir<%v1> to index 1
-; AVX512:    store ir<%v2> to index 2
-; AVX512:    store ir<%v3> to index 3
-; AVX512:    store ir<%v4> to index 4
-; AVX512:    store ir<%v5> to index 5
-; AVX512:  Cost of 25 for VF 4: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX512:    store ir<%v> to index 0
-; AVX512:    store ir<%v1> to index 1
-; AVX512:    store ir<%v2> to index 2
-; AVX512:    store ir<%v3> to index 3
-; AVX512:    store ir<%v4> to index 4
-; AVX512:    store ir<%v5> to index 5
-; AVX512:  Cost of 51 for VF 8: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX512:    store ir<%v> to index 0
-; AVX512:    store ir<%v1> to index 1
-; AVX512:    store ir<%v2> to index 2
-; AVX512:    store ir<%v3> to index 3
-; AVX512:    store ir<%v4> to index 4
-; AVX512:    store ir<%v5> to index 5
-; AVX512:  Cost of 102 for VF 16: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX512:    store ir<%v> to index 0
-; AVX512:    store ir<%v1> to index 1
-; AVX512:    store ir<%v2> to index 2
-; AVX512:    store ir<%v3> to index 3
-; AVX512:    store ir<%v4> to index 4
-; AVX512:    store ir<%v5> to index 5
-; AVX512:  Cost of 204 for VF 32: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX512:    store ir<%v> to index 0
-; AVX512:    store ir<%v1> to index 1
-; AVX512:    store ir<%v2> to index 2
-; AVX512:    store ir<%v3> to index 3
-; AVX512:    store ir<%v4> to index 4
-; AVX512:    store ir<%v5> to index 5
-; AVX512:  Cost of 408 for VF 64: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
+; AVX512:  Cost of 27 for VF 2: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
 ; AVX512:    store ir<%v> to index 0
 ; AVX512:    store ir<%v1> to index 1
 ; AVX512:    store ir<%v2> to index 2

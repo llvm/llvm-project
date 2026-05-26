@@ -110,35 +110,30 @@ define void @test() {
 ; AVX512DQ:    store ir<%v2> to index 2
 ; AVX512DQ:    store ir<%v3> to index 3
 ; AVX512DQ:    store ir<%v4> to index 4
-; AVX512DQ:    ir<%v> = load from index 0
 ; AVX512DQ:  Cost of 46 for VF 4: INTERLEAVE-GROUP with factor 5 at <badref>, ir<%out0>
 ; AVX512DQ:    store ir<%v> to index 0
 ; AVX512DQ:    store ir<%v1> to index 1
 ; AVX512DQ:    store ir<%v2> to index 2
 ; AVX512DQ:    store ir<%v3> to index 3
 ; AVX512DQ:    store ir<%v4> to index 4
-; AVX512DQ:    ir<%v> = load from index 0
 ; AVX512DQ:  Cost of 87 for VF 8: INTERLEAVE-GROUP with factor 5 at <badref>, ir<%out0>
 ; AVX512DQ:    store ir<%v> to index 0
 ; AVX512DQ:    store ir<%v1> to index 1
 ; AVX512DQ:    store ir<%v2> to index 2
 ; AVX512DQ:    store ir<%v3> to index 3
 ; AVX512DQ:    store ir<%v4> to index 4
-; AVX512DQ:    ir<%v> = load from index 0
 ; AVX512DQ:  Cost of 166 for VF 16: INTERLEAVE-GROUP with factor 5 at <badref>, ir<%out0>
 ; AVX512DQ:    store ir<%v> to index 0
 ; AVX512DQ:    store ir<%v1> to index 1
 ; AVX512DQ:    store ir<%v2> to index 2
 ; AVX512DQ:    store ir<%v3> to index 3
 ; AVX512DQ:    store ir<%v4> to index 4
-; AVX512DQ:    ir<%v> = load from index 0
 ; AVX512DQ:  Cost of 336 for VF 32: INTERLEAVE-GROUP with factor 5 at <badref>, ir<%out0>
 ; AVX512DQ:    store ir<%v> to index 0
 ; AVX512DQ:    store ir<%v1> to index 1
 ; AVX512DQ:    store ir<%v2> to index 2
 ; AVX512DQ:    store ir<%v3> to index 3
 ; AVX512DQ:    store ir<%v4> to index 4
-; AVX512DQ:    ir<%v> = load from index 0
 ; AVX512DQ:  Cost of 675 for VF 64: INTERLEAVE-GROUP with factor 5 at <badref>, ir<%out0>
 ; AVX512DQ:    store ir<%v> to index 0
 ; AVX512DQ:    store ir<%v1> to index 1
@@ -153,35 +148,30 @@ define void @test() {
 ; AVX512BW:    store ir<%v2> to index 2
 ; AVX512BW:    store ir<%v3> to index 3
 ; AVX512BW:    store ir<%v4> to index 4
-; AVX512BW:    ir<%v> = load from index 0
 ; AVX512BW:  Cost of 31 for VF 4: INTERLEAVE-GROUP with factor 5 at <badref>, ir<%out0>
 ; AVX512BW:    store ir<%v> to index 0
 ; AVX512BW:    store ir<%v1> to index 1
 ; AVX512BW:    store ir<%v2> to index 2
 ; AVX512BW:    store ir<%v3> to index 3
 ; AVX512BW:    store ir<%v4> to index 4
-; AVX512BW:    ir<%v> = load from index 0
 ; AVX512BW:  Cost of 79 for VF 8: INTERLEAVE-GROUP with factor 5 at <badref>, ir<%out0>
 ; AVX512BW:    store ir<%v> to index 0
 ; AVX512BW:    store ir<%v1> to index 1
 ; AVX512BW:    store ir<%v2> to index 2
 ; AVX512BW:    store ir<%v3> to index 3
 ; AVX512BW:    store ir<%v4> to index 4
-; AVX512BW:    ir<%v> = load from index 0
 ; AVX512BW:  Cost of 158 for VF 16: INTERLEAVE-GROUP with factor 5 at <badref>, ir<%out0>
 ; AVX512BW:    store ir<%v> to index 0
 ; AVX512BW:    store ir<%v1> to index 1
 ; AVX512BW:    store ir<%v2> to index 2
 ; AVX512BW:    store ir<%v3> to index 3
 ; AVX512BW:    store ir<%v4> to index 4
-; AVX512BW:    ir<%v> = load from index 0
 ; AVX512BW:  Cost of 237 for VF 32: INTERLEAVE-GROUP with factor 5 at <badref>, ir<%out0>
 ; AVX512BW:    store ir<%v> to index 0
 ; AVX512BW:    store ir<%v1> to index 1
 ; AVX512BW:    store ir<%v2> to index 2
 ; AVX512BW:    store ir<%v3> to index 3
 ; AVX512BW:    store ir<%v4> to index 4
-; AVX512BW:    ir<%v> = load from index 0
 ; AVX512BW:  Cost of 395 for VF 64: INTERLEAVE-GROUP with factor 5 at <badref>, ir<%out0>
 ; AVX512BW:    store ir<%v> to index 0
 ; AVX512BW:    store ir<%v1> to index 1

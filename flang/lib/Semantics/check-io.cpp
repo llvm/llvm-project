@@ -925,6 +925,7 @@ void IoChecker::LeaveReadWrite() const {
       "an explicit format"); // C1221
   CheckForProhibitedSpecifier(IoSpecKind::Advance,
       flags_.test(Flag::InternalUnit), "UNIT=internal-file"); // C1221
+  CheckForProhibitedSpecifier(IoSpecKind::Advance, IoSpecKind::Rec); // C1221
   CheckForRequiredSpecifier(flags_.test(Flag::AsynchronousYes),
       "ASYNCHRONOUS='YES'", flags_.test(Flag::NumberUnit),
       "UNIT=number"); // C1224

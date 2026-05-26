@@ -3,7 +3,9 @@
 
 declare float @llvm.ldexp.f32.i32(float, i32)
 declare <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float>, <2 x i32>)
+declare double @llvm.ldexp.f64.i16(double, i16)
 declare float @llvm.ldexp.f32.i64(float, i64)
+declare double @llvm.ldexp.f64.i64(double, i64)
 
 ; select c, (ldexp val, e0), (ldexp val, e1) -> ldexp val, (select c, e0, e1)
 define float @select_ldexp_f32_sameval_differentexp(i1 %cond, float %val, i32 %exp0, i32 %exp1) {
@@ -1091,6 +1093,57 @@ define <2 x float> @ldexp_v2f32_mask_select_0_swap(<2 x i1> %cond, <2 x float> %
   %select = select <2 x i1> %cond, <2 x i32> zeroinitializer, <2 x i32> %y
   %ldexp = call nsz nnan <2 x float> @llvm.ldexp.f32.v2i32(<2 x float> %x, <2 x i32> %select)
   ret <2 x float> %ldexp
+}
+
+; Exponent constants that exceed `int` saturate to +/-inf / +/-0 rather than
+; silently narrowing.
+define double @ldexp_i64_exp_above_int_max() {
+; CHECK-LABEL: define double @ldexp_i64_exp_above_int_max() {
+; CHECK-NEXT:    ret double +inf
+;
+  %r = call double @llvm.ldexp.f64.i64(double 1.0, i64 4294967330)
+  ret double %r
+}
+
+define double @ldexp_i64_exp_below_int_min() {
+; CHECK-LABEL: define double @ldexp_i64_exp_below_int_min() {
+; CHECK-NEXT:    ret double 0.000000e+00
+;
+  %r = call double @llvm.ldexp.f64.i64(double 1.0, i64 -4294967330)
+  ret double %r
+}
+
+define double @ldexp_i64_neg_input_exp_above_int_max() {
+; CHECK-LABEL: define double @ldexp_i64_neg_input_exp_above_int_max() {
+; CHECK-NEXT:    ret double -inf
+;
+  %r = call double @llvm.ldexp.f64.i64(double -1.0, i64 4294967330)
+  ret double %r
+}
+
+define double @ldexp_i64_neg_input_exp_above_int64_max() {
+; CHECK-LABEL: define double @ldexp_i64_neg_input_exp_above_int64_max() {
+; CHECK-NEXT:    ret double -inf
+;
+  ; This constant is 2^65, i.e. it exceeds the range of i64.
+  %r = call double @llvm.ldexp.f64.i128(double -1.0, i128 36893488147419103232)
+  ret double %r
+}
+
+define double @ldexp_i16_exp_narrow_int() {
+; CHECK-LABEL: define double @ldexp_i16_exp_narrow_int() {
+; CHECK-NEXT:    ret double 4.096000e+03
+;
+  %r = call double @llvm.ldexp.f64.i16(double 1.0, i16 12)
+  ret double %r
+}
+
+define double @ldexp_i16_exp_narrow_int_negative() {
+; CHECK-LABEL: define double @ldexp_i16_exp_narrow_int_negative() {
+; CHECK-NEXT:    ret double 4.000000e+00
+;
+  %r = call double @llvm.ldexp.f64.i16(double 8.0, i16 -1)
+  ret double %r
 }
 
 attributes #0 = { strictfp }

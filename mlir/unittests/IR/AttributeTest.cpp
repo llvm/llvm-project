@@ -546,6 +546,20 @@ TEST(IntegerAttrTest, CorrectBitWidths) {
             (unsigned)IndexType::kInternalStorageBitWidth);
 }
 
+TEST(IntegerAttrTest, SignedOverflow) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  IntegerAttr attr8Neg = builder.getI8IntegerAttr(-1);
+  EXPECT_EQ(attr8Neg.getInt(), -1);
+
+  IntegerAttr attr16Neg = builder.getI16IntegerAttr(-1);
+  EXPECT_EQ(attr16Neg.getInt(), -1);
+
+  IntegerAttr attr32Neg = builder.getI32IntegerAttr(-1);
+  EXPECT_EQ(attr32Neg.getInt(), -1);
+}
+
 #ifndef NDEBUG
 TEST(IntegerAttrDeathTest, WrongBitWidthForIntegerType) {
   MLIRContext context;

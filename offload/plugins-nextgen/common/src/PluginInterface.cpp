@@ -1202,19 +1202,20 @@ Error GenericDeviceTy::printInfo() {
   return Plugin::success();
 }
 
-Error GenericDeviceTy::createEvent(void **EventPtrStorage) {
-  return createEventImpl(EventPtrStorage);
+Error GenericDeviceTy::createEvent(void **EventPtrStorage,
+                                   bool EnableProfiling) {
+  return createEventImpl(EventPtrStorage, EnableProfiling);
 }
 
-Error GenericDeviceTy::destroyEvent(void *EventPtr) {
-  return destroyEventImpl(EventPtr);
+Error GenericDeviceTy::destroyEvent(void *EventPtr, bool EnableProfiling) {
+  return destroyEventImpl(EventPtr, EnableProfiling);
 }
 
-Error GenericDeviceTy::recordEvent(void *EventPtr,
-                                   __tgt_async_info *AsyncInfo) {
+Error GenericDeviceTy::recordEvent(void *EventPtr, __tgt_async_info *AsyncInfo,
+                                   bool EnableProfiling) {
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
 
-  auto Err = recordEventImpl(EventPtr, AsyncInfoWrapper);
+  auto Err = recordEventImpl(EventPtr, AsyncInfoWrapper, EnableProfiling);
   AsyncInfoWrapper.finalize(Err);
   return Err;
 }

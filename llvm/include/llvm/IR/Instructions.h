@@ -1426,7 +1426,7 @@ public:
 /// to the constructor. It only operates on floating point values or packed
 /// vectors of floating point values. The operands must be identical types.
 /// Represents a floating point comparison operator.
-class FCmpInst: public CmpInst {
+class FCmpInst : public CmpInst, public FastMathFlagsStorage {
   void AssertOK() {
     assert(isFPPredicate() && "Invalid FCmp predicate value");
     assert(getOperand(0)->getType() == getOperand(1)->getType() &&
@@ -1463,7 +1463,9 @@ public:
            const Twine &NameStr = "", ///< Name of the instruction
            Instruction *FlagsSource = nullptr)
       : CmpInst(makeCmpResultType(LHS->getType()), Instruction::FCmp, Pred, LHS,
-                RHS, NameStr, nullptr, FlagsSource) {
+                RHS, NameStr) {
+    if (FlagsSource)
+      copyIRFlags(FlagsSource);
     AssertOK();
   }
 
@@ -1526,7 +1528,7 @@ public:
 /// field to indicate whether or not this is a tail call.  The rest of the bits
 /// hold the calling convention of the call.
 ///
-class CallInst : public CallBase {
+class CallInst : public CallBase, public FastMathFlagsStorage {
   CallInst(const CallInst &CI, AllocInfo AllocInfo);
 
   /// Construct a CallInst from a range of arguments
@@ -1705,7 +1707,7 @@ CallInst::CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
 
 /// This class represents the LLVM 'select' instruction.
 ///
-class SelectInst : public Instruction {
+class SelectInst : public Instruction, public FastMathFlagsStorage {
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{3};
 
   SelectInst(Value *C, Value *S1, Value *S2, const Twine &NameStr,
@@ -2656,7 +2658,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(InsertValueInst, Value)
 // node, that can not exist in nature, but can be synthesized in a computer
 // scientist's overactive imagination.
 //
-class PHINode : public Instruction {
+class PHINode : public Instruction, public FastMathFlagsStorage {
   constexpr static HungOffOperandsAllocMarker AllocMarker{};
 
   /// The number of operands actually allocated.  NumOperands is
@@ -4886,7 +4888,7 @@ public:
 //===----------------------------------------------------------------------===//
 
 /// This class represents a truncation of floating point types.
-class FPTruncInst : public CastInst {
+class FPTruncInst : public CastInst, public FastMathFlagsStorage {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
@@ -4917,7 +4919,7 @@ public:                 /// Constructor with insert-before-instruction semantics
 //===----------------------------------------------------------------------===//
 
 /// This class represents an extension of floating point types.
-class FPExtInst : public CastInst {
+class FPExtInst : public CastInst, public FastMathFlagsStorage {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;

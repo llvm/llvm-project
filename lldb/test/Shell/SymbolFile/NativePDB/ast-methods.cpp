@@ -18,6 +18,12 @@ struct Struct {
   int overloaded_method() {}
   int overloaded_method(char c) {}
   int overloaded_method(char c, int i, ...) {}
+
+  void const_method() const {}
+  void volatile_method() volatile {}
+  void const_volatile_method() const volatile {}
+
+  virtual void virtual_const_method() const {}
 };
 
 Struct s;
@@ -29,6 +35,10 @@ int main(int argc, char **argv) {
   s.overloaded_method();
   s.overloaded_method('a');
   s.overloaded_method('a', 1);
+  s.const_method();
+  s.volatile_method();
+  s.const_volatile_method();
+  s.virtual_const_method();
   return 0;
 }
 
@@ -40,9 +50,13 @@ int main(int argc, char **argv) {
 // AST: | |-CXXMethodDecl {{.*}} overloaded_method 'int (){{.*}}'
 // AST: | |-CXXMethodDecl {{.*}} overloaded_method 'int (char){{.*}}'
 // AST: | | `-ParmVarDecl {{.*}} 'char'
-// AST: | `-CXXMethodDecl {{.*}} overloaded_method 'int (char, int, ...)'
-// AST: |   |-ParmVarDecl {{.*}} 'char'
-// AST: |   `-ParmVarDecl {{.*}} 'int'
+// AST: | |-CXXMethodDecl {{.*}} overloaded_method 'int (char, int, ...)'
+// AST: | | |-ParmVarDecl {{.*}} 'char'
+// AST: | | `-ParmVarDecl {{.*}} 'int'
+// AST: | |-CXXMethodDecl {{.*}} const_method 'void () const'
+// AST: | |-CXXMethodDecl {{.*}} volatile_method 'void () volatile'
+// AST: | |-CXXMethodDecl {{.*}} const_volatile_method 'void () const volatile'
+// AST: | `-CXXMethodDecl {{.*}} virtual_const_method 'void () const' virtual
 
 // SYMBOL:      struct Struct {
 // SYMBOL-NEXT:     void simple_method();
@@ -51,6 +65,10 @@ int main(int argc, char **argv) {
 // SYMBOL-NEXT:     int overloaded_method();
 // SYMBOL-NEXT:     int overloaded_method(char);
 // SYMBOL-NEXT:     int overloaded_method(char, int, ...);
+// SYMBOL-NEXT:     void const_method() const; 
+// SYMBOL-NEXT:     void volatile_method() volatile; 
+// SYMBOL-NEXT:     void const_volatile_method() const volatile; 
+// SYMBOL-NEXT:     virtual void virtual_const_method() const; 
 // SYMBOL-NEXT: };
 // SYMBOL-NEXT: Struct s;
 // SYMBOL-NEXT: int main(int argc, char **argv);

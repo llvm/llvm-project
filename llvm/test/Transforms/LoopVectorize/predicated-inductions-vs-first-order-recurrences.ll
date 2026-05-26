@@ -303,7 +303,7 @@ define void @for_blocks_vectorization_optsize(ptr %dst, i64 %n) optsize {
 ; CHECK:       [[PRED_STORE_CONTINUE7]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], splat (i16 4)
-; CHECK-NEXT:    [[VEC_IND_NEXT8]] = add <4 x i64> [[VEC_IND1]], splat (i64 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT8]] = add nuw <4 x i64> [[VEC_IND1]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -371,7 +371,7 @@ define void @for_blocks_vectorization_optsize(ptr %dst, i64 %n) optsize {
 ; THRESHOLD:       [[PRED_STORE_CONTINUE7]]:
 ; THRESHOLD-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; THRESHOLD-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], splat (i16 4)
-; THRESHOLD-NEXT:    [[VEC_IND_NEXT8]] = add <4 x i64> [[VEC_IND1]], splat (i64 4)
+; THRESHOLD-NEXT:    [[VEC_IND_NEXT8]] = add nuw <4 x i64> [[VEC_IND1]], splat (i64 4)
 ; THRESHOLD-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; THRESHOLD-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; THRESHOLD:       [[MIDDLE_BLOCK]]:

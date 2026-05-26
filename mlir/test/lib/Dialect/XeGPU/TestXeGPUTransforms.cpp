@@ -94,6 +94,19 @@ struct TestXeGPUUnrollingPatterns
       if (isa<xegpu::DpasOp>(op))
         return SmallVector<int64_t>{8, 16, 16};
 
+      // For vector.multi_reduction, read tile shape from the layout attribute
+      // on the source operand (layout_operand_0).
+      if (isa<vector::MultiDimReductionOp>(op)) {
+        xegpu::DistributeLayoutAttr layout =
+            xegpu::getDistributeLayoutAttr(op->getOpOperand(0));
+        if (layout) {
+          auto instData = layout.getEffectiveInstDataAsInt();
+          if (!instData.empty())
+            return instData;
+        }
+        return std::nullopt;
+      }
+
       return std::nullopt;
     });
 

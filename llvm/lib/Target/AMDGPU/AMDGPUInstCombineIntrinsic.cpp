@@ -286,9 +286,10 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
         // Obtain the original image sample intrinsic's signature
         // and replace its return type with the half-vector for D16 folding
         SmallVector<Type *, 8> OverloadTys;
-        Intrinsic::isSignatureValid(II.getCalledFunction(), OverloadTys);
-        OverloadTys[0] = HalfVecTy;
+        if (!Intrinsic::isSignatureValid(II.getCalledFunction(), OverloadTys))
+          return std::nullopt;
 
+        OverloadTys[0] = HalfVecTy;
         Module *M = II.getModule();
         Function *HalfDecl = Intrinsic::getOrInsertDeclaration(
             M, ImageDimIntr->Intr, OverloadTys);

@@ -13,9 +13,7 @@ define i1 @fcmp_and_v2f64(<2 x double> %a) {
 ;
 ; AVX-LABEL: @fcmp_and_v2f64(
 ; AVX-NEXT:    [[TMP1:%.*]] = fcmp olt <2 x double> [[A:%.*]], <double 4.200000e+01, double -8.000000e+00>
-; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <2 x i1> [[TMP1]], <2 x i1> poison, <2 x i32> <i32 1, i32 poison>
-; AVX-NEXT:    [[TMP2:%.*]] = and <2 x i1> [[TMP1]], [[SHIFT]]
-; AVX-NEXT:    [[R:%.*]] = extractelement <2 x i1> [[TMP2]], i64 0
+; AVX-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> [[TMP1]])
 ; AVX-NEXT:    ret i1 [[R]]
 ;
   %e1 = extractelement <2 x double> %a, i32 0
@@ -117,9 +115,7 @@ define i1 @fcmp_and_v2f64_multiuse(<2 x double> %a) {
 ; AVX-NEXT:    [[E1:%.*]] = extractelement <2 x double> [[A:%.*]], i32 0
 ; AVX-NEXT:    call void @use(double [[E1]])
 ; AVX-NEXT:    [[TMP1:%.*]] = fcmp olt <2 x double> [[A]], <double 4.200000e+01, double -8.000000e+00>
-; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <2 x i1> [[TMP1]], <2 x i1> poison, <2 x i32> <i32 1, i32 poison>
-; AVX-NEXT:    [[TMP2:%.*]] = and <2 x i1> [[TMP1]], [[SHIFT]]
-; AVX-NEXT:    [[R:%.*]] = extractelement <2 x i1> [[TMP2]], i64 0
+; AVX-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> [[TMP1]])
 ; AVX-NEXT:    call void @use(i1 [[R]])
 ; AVX-NEXT:    ret i1 [[R]]
 ;

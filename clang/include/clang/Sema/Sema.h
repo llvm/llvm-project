@@ -11338,10 +11338,6 @@ private:
   /// issuing a diagnostic and returning false if not.
   bool checkMustTailAttr(const Stmt *St, const Attr &MTA);
 
-  /// Check if the given expression contains 'break' or 'continue'
-  /// statement that produces control flow different from GCC.
-  void CheckBreakContinueBinding(Expr *E);
-
   ///@}
 
   //

@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
@@ -70,7 +71,12 @@ struct CUFDeviceAddressOpConversion
       // For non-allocatable managed globals, CUFAddConstructor created a
       // companion pointer global (@sym.managed.ptr) that holds the unified
       // memory address. Load from it instead of calling CUFGetDeviceAddress.
+      // CompilerGeneratedNamesConversion may have already renamed the companion
+      // pointer (replacing dots with 'X'), so try both the original and the
+      // renamed form using the same utility.
       std::string ptrGlobalName = (symName + managedPtrSuffix).str();
+      if (!symTab.lookup<fir::GlobalOp>(ptrGlobalName))
+        ptrGlobalName = fir::NameUniquer::replaceSpecialSymbols(ptrGlobalName);
       if (auto ptrGlobal = symTab.lookup<fir::GlobalOp>(ptrGlobalName)) {
         auto ptrRef = fir::AddrOfOp::create(
             rewriter, loc, ptrGlobal.resultType(), ptrGlobal.getSymbol());

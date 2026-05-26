@@ -35,7 +35,7 @@ Status NativeThreadWindows::DoStop() {
   if (m_state != eStateStopped) {
     DWORD previous_suspend_count =
         ::SuspendThread(m_host_thread.GetNativeThread().GetSystemHandle());
-    if (previous_suspend_count == (DWORD)-1)
+    if (previous_suspend_count == static_cast<DWORD>(-1))
       return Status(::GetLastError(), eErrorTypeWin32);
 
     // Invalidate cached register values on every stop.
@@ -88,7 +88,7 @@ Status NativeThreadWindows::DoResume(lldb::StateType resume_state) {
       // explicitly compare with -1.
       previous_suspend_count = ::ResumeThread(thread_handle);
 
-      if (previous_suspend_count == (DWORD)-1)
+      if (previous_suspend_count == static_cast<DWORD>(-1))
         return Status(::GetLastError(), eErrorTypeWin32);
 
     } while (previous_suspend_count > 1);

@@ -303,6 +303,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # TODO: These functions are not compatible with 64-bit musl. They need to
     # be excluded if overlaying musl.
     libc.src.sys.socket.recvmsg
+    libc.src.sys.socket.sendmmsg
     libc.src.sys.socket.sendmsg
 
     # sys/stat.h entrypoints
@@ -354,6 +355,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.termios.tcsetattr
 
     # unistd.h entrypoints
+    libc.src.unistd.alarm
     libc.src.unistd.access
     libc.src.unistd.chdir
     libc.src.unistd.chown
@@ -783,6 +785,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.hypotf16
     libc.src.math.ilogbf16
     libc.src.math.iscanonicalf16
+    libc.src.math.isnanf16
     libc.src.math.issignalingf16
     libc.src.math.ldexpf16
     libc.src.math.llogbf16
@@ -1389,19 +1392,30 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.link.dl_iterate_phdr
 
     # wchar.h entrypoints
-    # libc.src.wchar.fgetwc
-    # libc.src.wchar.fgetws
-    # libc.src.wchar.fputwc
-    # libc.src.wchar.fputws
+    libc.src.wchar.fgetwc
+    libc.src.wchar.fgetws
+    libc.src.wchar.fputwc
+    libc.src.wchar.fputws
     libc.src.wchar.fwide
-    # libc.src.wchar.getwc
-    # libc.src.wchar.getwchar
-    # libc.src.wchar.putwc
-    # libc.src.wchar.putwchar
-    # libc.src.wchar.ungetwc
+    libc.src.wchar.getwc
+    libc.src.wchar.getwchar
+    libc.src.wchar.putwc
+    libc.src.wchar.putwchar
+    libc.src.wchar.ungetwc
   )
 endif()
 
+if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  if(LLVM_LIBC_FULL_BUILD)
+    list(APPEND TARGET_LIBC_ENTRYPOINTS
+      # regex.h entrypoints
+      libc.src.regex.regcomp
+      libc.src.regex.regexec
+      libc.src.regex.regerror
+      libc.src.regex.regfree
+    )
+  endif()
+endif()
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}

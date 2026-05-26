@@ -290,6 +290,13 @@ public:
   /// Replace \p MI with a build_vector.
   void applyCombineShuffleToBuildVector(MachineInstr &MI) const;
 
+  /// Combine G_BUILD_VECTOR(G_UNMERGE(G_BITCAST), Undef) to
+  /// G_BITCAST(G_BUILD_VECTOR(..))
+  bool matchCombineBuildVectorOfBitcast(MachineInstr &MI,
+                                        SmallVector<Register> &Ops) const;
+  void applyCombineBuildVectorOfBitcast(MachineInstr &MI,
+                                        SmallVector<Register> &Ops) const;
+
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
   /// Returns true if MI changed.
   ///
@@ -1072,6 +1079,9 @@ public:
   // (ctlz (xor x, (sra x, bitwidth-1))) -> (add (ctls x), 1) or
   // (ctlz (or (shl (xor x, (sra x, bitwidth-1)), 1), 1) -> (ctls x)
   bool matchCtls(MachineInstr &CtlzMI, BuildFnTy &MatchInfo) const;
+
+  bool matchAVG(MachineInstr &MI, MachineRegisterInfo &MRI, Register X,
+                Register Y, unsigned TargetOpc) const;
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.

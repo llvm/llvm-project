@@ -105,6 +105,7 @@ static_library("CodeGen") {
     "MacroPPCallbacks.cpp",
     "MicrosoftCXXABI.cpp",
     "ModuleBuilder.cpp",
+    "ModuleLinker.cpp",
     "ObjectFilePCHContainerWriter.cpp",
     "PatternInit.cpp",
     "QualTypeMapper.cpp",

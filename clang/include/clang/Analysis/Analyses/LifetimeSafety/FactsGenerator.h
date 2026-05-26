@@ -65,7 +65,14 @@ private:
 
   void flow(OriginList *Dst, OriginList *Src, bool Kill);
 
-  void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
+  /// Handles assignment for both BinaryOperator and CXXOperatorCallExpr.
+  ///
+  /// LHSExpr is the destination whose stored loans are replaced by RHSExpr's
+  /// loans. TargetExpr is the assignment expression itself; it receives
+  /// LHSExpr's origins so chained assignments like `a = b = c` can propagate
+  /// through the result of `b = c`.
+  void handleAssignment(const Expr *TargetExpr, const Expr *LHSExpr,
+                        const Expr *RHSExpr);
 
   void handlePointerArithmetic(const BinaryOperator *BO);
 

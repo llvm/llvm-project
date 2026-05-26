@@ -3469,7 +3469,19 @@ static LogicalResult verifyStructArrayConstant(LLVM::ConstantOp op,
   // from a symbol and cannot be represented in a DenseElementsAttr, but no MLIR
   // user needs this so far, and it seems better to avoid people misusing the
   // ArrayAttr for simple types.
-  auto structType = dyn_cast<LLVM::LLVMStructType>(arrayType.getElementType());
+  Type elementType = arrayType.getElementType();
+  if (isa<LLVM::LLVMPointerType>(elementType)) {
+    for (auto [idx, elementAttr] : llvm::enumerate(arrayAttr)) {
+      if (isa<FlatSymbolRefAttr, LLVM::ZeroAttr, LLVM::UndefAttr,
+              LLVM::PoisonAttr>(elementAttr))
+        continue;
+      return op.emitOpError()
+             << "pointer array element at index " << idx
+             << " must be a flat symbol reference, zero, undef, or poison";
+    }
+    return success();
+  }
+  auto structType = dyn_cast<LLVM::LLVMStructType>(elementType);
   if (!structType)
     return op.emitOpError() << "for array with an array attribute must have a "
                                "struct element type";

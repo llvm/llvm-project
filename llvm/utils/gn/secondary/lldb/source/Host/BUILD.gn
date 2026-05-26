@@ -68,6 +68,7 @@ static_library("Host") {
     sources += [
       "windows/ConnectionConPTYWindows.cpp",
       "windows/ConnectionGenericFileWindows.cpp",
+      "windows/FileWindows.cpp",
       "windows/FileSystem.cpp",
       "windows/Host.cpp",
       "windows/HostInfoWindows.cpp",
@@ -84,6 +85,7 @@ static_library("Host") {
   } else {
     sources += [
       "posix/DomainSocket.cpp",
+      "posix/FilePosix.cpp",
       "posix/FileSystemPosix.cpp",
       "posix/HostInfoPosix.cpp",
       "posix/HostProcessPosix.cpp",

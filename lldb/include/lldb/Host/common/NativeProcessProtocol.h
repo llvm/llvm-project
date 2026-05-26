@@ -45,6 +45,13 @@ struct SVR4LibraryInfo {
   lldb::addr_t next;
 };
 
+/// Generic loaded-library entry used by the non-SVR4 `qXfer:libraries:read`
+/// form of the GDB remote library-list protocol (PE on Windows).
+struct LoadedLibraryInfo {
+  std::string name;
+  lldb::addr_t base_addr;
+};
+
 // NativeProcessProtocol
 class NativeProcessProtocol {
 public:
@@ -145,6 +152,17 @@ public:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Not implemented");
   }
+
+  /// Return the currently loaded libraries of the target in the
+  /// `qXfer:libraries:read` form (generic name + base address pairs; used on
+  /// Windows, where the inferior is not SVR4 and the module list comes from
+  /// the PE loader).
+  virtual llvm::Expected<std::vector<LoadedLibraryInfo>> GetLoadedLibraries() {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Not implemented");
+  }
+
+  virtual bool HasPendingLibraryEvents() { return false; }
 
   virtual bool IsAlive() const;
 
@@ -268,8 +286,9 @@ public:
     memory_tagging = (1u << 6),
     savecore = (1u << 7),
     siginfo_read = (1u << 8),
+    libraries = (1u << 9),
 
-    LLVM_MARK_AS_BITMASK_ENUM(siginfo_read)
+    LLVM_MARK_AS_BITMASK_ENUM(libraries)
   };
 
   class Manager {

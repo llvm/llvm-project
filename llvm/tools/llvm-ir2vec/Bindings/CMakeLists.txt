@@ -42,7 +42,7 @@ set_target_properties(ir2vec PROPERTIES
 # (see mlir/cmake/modules/AddMLIRPython.cmake).
 target_compile_options(ir2vec PRIVATE -fexceptions -frtti)
 
-target_link_libraries(ir2vec PRIVATE LLVMEmbUtils)
+target_link_libraries(ir2vec PRIVATE LLVMIREmbUtils)
 target_include_directories(ir2vec PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 message(STATUS "Python bindings for llvm-ir2vec will be built with nanobind")

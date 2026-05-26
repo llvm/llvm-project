@@ -60,19 +60,15 @@ define void @test() {
 ; AVX512:    ir<%v0> = load from index 0
 ; AVX512:    ir<%v1> = load from index 1
 ; AVX512:    ir<%v2> = load from index 2
-; AVX512:  Cost of 6.5 for VF 8: INTERLEAVE-GROUP with factor 3 at %v0, ir<%in0>
+; AVX512:  Cost of 9.5 for VF 8: INTERLEAVE-GROUP with factor 3 at %v0, ir<%in0>
 ; AVX512:    ir<%v0> = load from index 0
 ; AVX512:    ir<%v1> = load from index 1
 ; AVX512:    ir<%v2> = load from index 2
-; AVX512:  Cost of 12 for VF 16: INTERLEAVE-GROUP with factor 3 at %v0, ir<%in0>
+; AVX512:  Cost of 18 for VF 16: INTERLEAVE-GROUP with factor 3 at %v0, ir<%in0>
 ; AVX512:    ir<%v0> = load from index 0
 ; AVX512:    ir<%v1> = load from index 1
 ; AVX512:    ir<%v2> = load from index 2
-; AVX512:  Cost of 51 for VF 32: INTERLEAVE-GROUP with factor 3 at %v0, ir<%in0>
-; AVX512:    ir<%v0> = load from index 0
-; AVX512:    ir<%v1> = load from index 1
-; AVX512:    ir<%v2> = load from index 2
-; AVX512:  Cost of 210 for VF 64: INTERLEAVE-GROUP with factor 3 at %v0, ir<%in0>
+; AVX512:  Cost of 81 for VF 32: INTERLEAVE-GROUP with factor 3 at %v0, ir<%in0>
 ; AVX512:    ir<%v0> = load from index 0
 ; AVX512:    ir<%v1> = load from index 1
 ; AVX512:    ir<%v2> = load from index 2

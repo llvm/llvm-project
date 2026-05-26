@@ -128,7 +128,7 @@ ValueObjectSP GenericOptionalFrontend::GetChildAtIndex(uint32_t _idx) {
   if (!holder_type)
     return ValueObjectSP();
 
-  return val_sp->Clone(ConstString("Value"));
+  return val_sp->Clone("Value");
 }
 
 SyntheticChildrenFrontEnd *

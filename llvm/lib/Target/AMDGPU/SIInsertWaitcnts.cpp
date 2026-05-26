@@ -40,7 +40,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/DebugCounter.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 
@@ -1559,14 +1559,8 @@ void WaitcntBrackets::simplifyVmVsrc(const AMDGPU::Waitcnt &CheckWait,
 }
 
 void WaitcntBrackets::purgeEmptyTrackingData() {
-  for (auto &[K, V] : make_early_inc_range(VMem)) {
-    if (V.empty())
-      VMem.erase(K);
-  }
-  for (auto &[K, V] : make_early_inc_range(SGPRs)) {
-    if (V.empty())
-      SGPRs.erase(K);
-  }
+  VMem.remove_if([](const auto &P) { return P.second.empty(); });
+  SGPRs.remove_if([](const auto &P) { return P.second.empty(); });
 }
 
 void WaitcntBrackets::determineWaitForScore(AMDGPU::InstCounterType T,
@@ -4007,7 +4001,7 @@ bool SIInsertWaitcnts::run() {
               ST.getOccupancyWithNumVGPRs(
                   TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass),
                   /*IsDynamicVGPR=*/false) <
-                  AMDGPU::IsaInfo::getMaxWavesPerEU(&ST))) {
+                  AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
     for (auto [MI, Flag] : EndPgmInsts) {
       if (Flag) {
         if (ST.requiresNopBeforeDeallocVGPRs()) {

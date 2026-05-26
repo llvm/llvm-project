@@ -20,17 +20,17 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> link(const char *oldpath, const char *newpath) {
-#ifdef SYS_link
-  int ret = syscall_impl<int>(SYS_link, oldpath, newpath);
-#elif defined(SYS_linkat)
+#ifdef SYS_linkat
   int ret =
       syscall_impl<int>(SYS_linkat, AT_FDCWD, oldpath, AT_FDCWD, newpath, 0);
+#elif defined(SYS_link)
+  int ret = syscall_impl<int>(SYS_link, oldpath, newpath);
 #else
 #error "link and linkat syscalls not available."
 #endif
   if (ret < 0)
     return Error(-static_cast<int>(ret));
-  return 0;
+  return ret;
 }
 
 } // namespace linux_syscalls

@@ -177,11 +177,17 @@ void ExecutorBase::dumpStackTrace() const {
   errs() << "Stacktrace:\n";
   const Frame *TheFrame = CurrentFrame;
   unsigned Index = 0;
+  const AsmParserContext *ParserContext = Ctx.getParserContext();
+  StringRef ModuleFileName = Ctx.getModule().getModuleIdentifier();
   while (TheFrame != nullptr) {
     if (TheFrame->BB) {
       Instruction &Inst = *TheFrame->PC;
       errs() << "#" << Index++ << " " << Inst << " at ";
       Inst.getFunction()->printAsOperand(errs(), /*PrintType=*/false);
+      if (ParserContext) {
+        if (auto Loc = ParserContext->getInstructionOrArgumentLocation(&Inst))
+          errs() << ' ' << ModuleFileName << ':' << Loc->Start.Line + 1;
+      }
       errs() << "\n";
     }
     TheFrame = TheFrame->LastFrame;

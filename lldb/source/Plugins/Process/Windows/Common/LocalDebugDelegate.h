@@ -18,7 +18,7 @@
 namespace lldb_private {
 
 class ProcessWindows;
-typedef std::shared_ptr<ProcessWindows> ProcessWindowsSP;
+using ProcessWindowsSP = std::shared_ptr<ProcessWindows>;
 
 // LocalDebugDelegate
 //

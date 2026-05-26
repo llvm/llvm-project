@@ -8375,6 +8375,34 @@ Value mlir::vector::selectPassthru(OpBuilder &builder, Value mask,
 // InterleaveOp
 //===----------------------------------------------------------------------===//
 
+namespace {
+
+/// This folder works on the following round-trip identity:
+///  interleave(deinterleave(x).even, deinterleave(x).odd) -> x
+struct InterleaveDeinterleaveFolder : public OpRewritePattern<InterleaveOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(InterleaveOp interleaveOp,
+                                PatternRewriter &rewriter) const override {
+    auto lhsDefOp = interleaveOp.getLhs().getDefiningOp<DeinterleaveOp>();
+    auto rhsDefOp = interleaveOp.getRhs().getDefiningOp<DeinterleaveOp>();
+    if (!lhsDefOp || !rhsDefOp || lhsDefOp != rhsDefOp)
+      return failure();
+    for (auto [idx, operand] : llvm::enumerate(interleaveOp.getOperands())) {
+      if (cast<OpResult>(operand).getResultNumber() != idx)
+        return failure();
+    }
+    rewriter.replaceOp(interleaveOp, lhsDefOp.getSource());
+    return success();
+  }
+};
+} // namespace
+
+void InterleaveOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<InterleaveDeinterleaveFolder>(context);
+}
+
 std::optional<SmallVector<int64_t, 4>> InterleaveOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
 }

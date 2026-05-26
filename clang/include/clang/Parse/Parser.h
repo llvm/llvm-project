@@ -5035,16 +5035,12 @@ private:
   /// present will be parsed and stored here, and a null result will be
   /// returned.
   ///
-  /// \param EnterForConditionScope If true, enter a continue/break scope at the
-  /// appropriate moment for a 'for' loop.
-  ///
   /// \returns The parsed condition.
   Sema::ConditionResult ParseCXXCondition(StmtResult *InitStmt,
                                           SourceLocation Loc,
                                           Sema::ConditionKind CK,
                                           bool MissingOK,
-                                          ForRangeInfo *FRI = nullptr,
-                                          bool EnterForConditionScope = false);
+                                          ForRangeInfo *FRI = nullptr);
   DeclGroupPtrTy ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
                                                       ParsedAttributes &Attrs);
 

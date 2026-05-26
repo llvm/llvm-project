@@ -17,7 +17,7 @@
 
 #include <time.h>
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
 // TODO: For now, on windows, let's always include the extension header.
 // We will need to decide how to export this header.

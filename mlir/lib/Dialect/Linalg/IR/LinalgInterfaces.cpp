@@ -279,9 +279,10 @@ bool linalg::isaElemwiseSingleUnaryOpInterface(linalg::GenericOp op,
   return true;
 }
 
-bool linalg::isaElemwiseSingleBinaryOpInterface(linalg::GenericOp op) {
-  if (!isaElemwiseSingleUnaryOrBinaryOpInterface(
-          op, 2, /*allowNonIdentityMaps=*/false))
+bool linalg::isaElemwiseSingleBinaryOpInterface(linalg::GenericOp op,
+                                                bool allowNonIdentityMaps) {
+  // All basic elemwise checks.
+  if (!isaElemwiseSingleUnaryOrBinaryOpInterface(op, 2, allowNonIdentityMaps))
     return false;
 
   // Check both inputs are used (elementwise).

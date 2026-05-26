@@ -24,7 +24,6 @@
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/LanguageRuntime.h"
-#include "lldb/Target/Policy.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/ScriptedThreadPlan.h"
@@ -48,6 +47,7 @@
 #include "lldb/Target/UnwindLLDB.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
@@ -1435,12 +1435,10 @@ ThreadPlanSP Thread::QueueThreadPlanForStepUntil(
 }
 
 lldb::ThreadPlanSP Thread::QueueThreadPlanForStepScripted(
-    bool abort_other_plans, const char *class_name,
-    StructuredData::ObjectSP extra_args_sp, bool stop_other_threads,
-    Status &status) {
+    bool abort_other_plans, const ScriptedMetadata &scripted_metadata,
+    bool stop_other_threads, Status &status) {
 
-  ThreadPlanSP thread_plan_sp(new ScriptedThreadPlan(
-      *this, class_name, StructuredDataImpl(extra_args_sp)));
+  ThreadPlanSP thread_plan_sp(new ScriptedThreadPlan(*this, scripted_metadata));
   thread_plan_sp->SetStopOthers(stop_other_threads);
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;

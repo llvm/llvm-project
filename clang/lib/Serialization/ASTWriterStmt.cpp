@@ -1340,7 +1340,6 @@ void ASTStmtWriter::VisitSourceLocExpr(SourceLocExpr *E) {
 void ASTStmtWriter::VisitEmbedExpr(EmbedExpr *E) {
   VisitExpr(E);
   Record.AddSourceLocation(E->getBeginLoc());
-  Record.AddSourceLocation(E->getEndLoc());
   Record.AddStmt(E->getDataStringLiteral());
   Record.writeUInt32(E->getStartingElementPos());
   Record.writeUInt32(E->getDataElementCount());

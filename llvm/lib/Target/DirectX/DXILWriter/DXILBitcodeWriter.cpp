@@ -1882,9 +1882,13 @@ void DXILBitcodeWriter::writeFunctionMetadataAttachment(const Function &F) {
   F.getAllMetadata(MDs);
   if (!MDs.empty()) {
     for (const auto &I : MDs) {
+      if (I.first == LLVMContext::MD_dbg)
+        continue;
       Record.push_back(I.first);
       Record.push_back(VE.getMetadataID(I.second));
     }
+  }
+  if (!Record.empty()) {
     Stream.EmitRecord(bitc::METADATA_ATTACHMENT, Record, 0);
     Record.clear();
   }

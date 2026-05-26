@@ -2125,11 +2125,9 @@ void CodeExtractor::insertReplacerCall(
   }
 
   if (FuncRetVal)
-    for (User *U : FuncRetVal->users()) {
-      Instruction *inst = cast<Instruction>(U);
-      if (inst->getParent()->getParent() == oldFunction)
-        inst->replaceUsesOfWith(FuncRetVal, ReplacerCall);
-    }
+    FuncRetVal->replaceUsesWithIf(ReplacerCall, [&](Use &U) {
+      return cast<Instruction>(U.getUser())->getFunction() == oldFunction;
+    });
 
   // Update the branch weights for the exit block.
   if (BFI && ExtractedFuncRetVals.size() > 1)

@@ -119,7 +119,7 @@ namespace llvm {
 
 // Command line option to specify the file to read samples from. This is
 // mainly used for debugging.
-static cl::opt<std::string> SampleProfileFile(
+cl::opt<std::string> SampleProfileFile(
     "sample-profile-file", cl::init(""), cl::value_desc("filename"),
     cl::desc("Profile file loaded by -sample-profile"), cl::Hidden);
 

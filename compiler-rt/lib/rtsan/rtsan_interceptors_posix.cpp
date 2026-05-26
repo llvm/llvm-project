@@ -611,7 +611,7 @@ INTERCEPTOR(ssize_t, preadv, int fd, const struct iovec *iov, int count,
 INTERCEPTOR(ssize_t, preadv64, int fd, const struct iovec *iov, int count,
             off_t offset) {
   __rtsan_notify_intercepted_call("preadv64");
-  return REAL(preadv)(fd, iov, count, offset);
+  return REAL(preadv64)(fd, iov, count, offset);
 }
 #define RTSAN_MAYBE_INTERCEPT_PREADV64 INTERCEPT_FUNCTION(preadv64)
 #else

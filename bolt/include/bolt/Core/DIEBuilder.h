@@ -61,7 +61,7 @@ public:
     bool IsConstructed = false;
     // A map of DIE offsets in original DWARF section to DIE ID.
     // Which is used to access DieInfoVector.
-    std::unordered_map<uint64_t, uint32_t> DIEIDMap;
+    DenseMap<uint64_t, uint32_t> DIEIDMap;
 
     // Some STL implementations don't have a noexcept move constructor for
     // unordered_map (e.g. https://github.com/microsoft/STL/issues/165 explains
@@ -105,9 +105,9 @@ private:
 
   struct State {
     /// A map of Units to Unit Index.
-    std::unordered_map<uint64_t, uint32_t> UnitIDMap;
+    DenseMap<uint64_t, uint32_t> UnitIDMap;
     /// A map of Type Units to Type DIEs.
-    std::unordered_map<DWARFUnit *, DIE *> TypeDIEMap;
+    DenseMap<DWARFUnit *, DIE *> TypeDIEMap;
     std::list<DWARFUnit *> DUList;
     std::vector<DWARFUnitInfo> CloneUnitCtxMap;
     std::vector<std::pair<DIEInfo *, AddrReferenceInfo>> AddrReferences;

@@ -67,41 +67,65 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
   }
 
   bool VisitCXXConstructExpr(CXXConstructExpr *CE) override {
-    if (auto *Ctor = CE->getConstructor()) {
-      if (Ctor->isMoveConstructor() && CE->getNumArgs() == 1) {
-        auto *Arg = CE->getArg(0)->IgnoreParenCasts();
-        if (auto *VarRef = dyn_cast<DeclRefExpr>(Arg)) {
-          if (VarRef->getDecl() == Guardian)
-            return false;
-        }
+    auto *Ctor = CE->getConstructor();
+    if (!Ctor)
+      return false;
+    unsigned ArgIndex = 0;
+    for (auto *Arg : CE->arguments()) {
+      ParmVarDecl *Parm = nullptr;
+      if (ArgIndex < Ctor->getNumParams())
+        Parm = Ctor->getParamDecl(ArgIndex);
+      if (mutatesGuardian(Arg, Parm))
+        return false;
+      ArgIndex++;
+    }
+    return true;
+  }
+
+  bool VisitCallExpr(CallExpr *CE) override {
+    auto *Callee = CE->getDirectCallee();
+    if (!Callee)
+      return false;
+    unsigned ArgIndex = 0;
+    unsigned ArgOffset = isa<CXXOperatorCallExpr>(CE);
+    for (auto *Arg : CE->arguments()) {
+      ParmVarDecl *Parm = nullptr;
+      if (ArgIndex >= ArgOffset) {
+        unsigned ParmIndex = ArgIndex - ArgOffset;
+        if (ParmIndex < Callee->getNumParams())
+          Parm = Callee->getParamDecl(ParmIndex);
       }
+      if (mutatesGuardian(Arg, Parm))
+        return false;
+      ArgIndex++;
     }
     return true;
   }
 
   bool VisitCXXMemberCallExpr(CXXMemberCallExpr *MCE) override {
-    auto MethodName = safeGetName(MCE->getMethodDecl());
-    if (MethodName == "swap" || MethodName == "leakRef" ||
-        MethodName == "releaseNonNull" || MethodName == "clear") {
-      auto *ThisArg = MCE->getImplicitObjectArgument()->IgnoreParenCasts();
-      if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
-        if (VarRef->getDecl() == Guardian)
-          return false;
-      }
+    auto *Method = MCE->getMethodDecl();
+    auto ObjType = MCE->getObjectType();
+    if (ObjType.isConstQualified())
+      return true;
+    auto *ThisArg = MCE->getImplicitObjectArgument()->IgnoreParenCasts();
+    if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
+      if (!isa<CXXConversionDecl>(Method) && VarRef->getDecl() == Guardian)
+        return false;
     }
     return true;
   }
 
-  bool VisitCXXOperatorCallExpr(CXXOperatorCallExpr *OCE) override {
-    if (OCE->isAssignmentOp()) {
-      assert(OCE->getNumArgs() == 2);
-      auto *ThisArg = OCE->getArg(0)->IgnoreParenCasts();
-      if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
-        if (VarRef->getDecl() == Guardian)
-          return false;
+private:
+  bool mutatesGuardian(const Expr *Arg, const ParmVarDecl *ParmDecl) {
+    Arg = Arg->IgnoreParenCasts();
+    if (auto *VarRef = dyn_cast<DeclRefExpr>(Arg)) {
+      if (VarRef->getDecl() == Guardian) {
+        auto ArgType = ParmDecl ? ParmDecl->getType() : Arg->getType();
+        if (!ArgType.isConstQualified())
+          return true;
       }
     }
-    return true;
+    return false;
   }
 };
 

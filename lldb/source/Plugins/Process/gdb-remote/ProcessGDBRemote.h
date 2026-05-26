@@ -67,6 +67,8 @@ public:
 
   static std::chrono::seconds GetPacketTimeout();
 
+  static std::chrono::milliseconds GetPacketTestDelay();
+
   ArchSpec GetSystemArchitecture() override;
 
   // Check if a given Process

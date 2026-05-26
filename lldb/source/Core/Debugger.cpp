@@ -1302,7 +1302,7 @@ Debugger::GetSelectedExecutionContext(bool adopt_dummy_target) {
 
 ExecutionContextRef
 Debugger::GetSelectedExecutionContextRef(bool adopt_dummy_target) {
-  if (TargetSP selected_target_sp = GetSelectedTarget())
+  if (TargetSP selected_target_sp = m_target_list.GetSelectedTarget())
     return ExecutionContextRef(selected_target_sp.get(),
                                /*adopt_selected=*/true);
 

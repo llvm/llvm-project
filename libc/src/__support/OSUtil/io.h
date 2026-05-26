@@ -1,9 +1,14 @@
-//===---------------- Implementation of IO utils ----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of IO utils.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_IO_H
@@ -21,6 +26,8 @@
 #include "fuchsia/io.h"
 #elif defined(_WIN32)
 #include "windows/io.h"
+#elif defined(__FreeBSD__)
+#include "freebsd/io.h"
 #elif defined(__ELF__)
 // TODO: Ideally we would have LIBC_TARGET_OS_IS_BAREMETAL.
 #include "baremetal/io.h"

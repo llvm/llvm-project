@@ -192,7 +192,7 @@ ObjCLanguage::GetMethodNameVariants(ConstString method_name) const {
 
   if (objc_method->IsClassMethod() || objc_method->IsInstanceMethod()) {
     if (!name_sans_category.empty())
-      variant_names.emplace_back(ConstString(name_sans_category.c_str()),
+      variant_names.emplace_back(ConstString(name_sans_category),
                                  lldb::eFunctionNameTypeFull);
   } else {
     StreamString strm;

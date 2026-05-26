@@ -293,6 +293,7 @@ enum LoweringMethodID {
   SplitTo32SExtInReg,
   Ext32To64,
   UniCstExt,
+  CtPop64To32,
   SplitLoad,
   WidenLoad,
   WidenMMOToS32,

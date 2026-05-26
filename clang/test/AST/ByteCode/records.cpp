@@ -2021,3 +2021,13 @@ namespace MutableInMemcpy {
                        // both-note {{read of mutable member 'gx' is not allowed in a constant expression}} \
                        // both-note {{in call}}
 }
+
+namespace StaticMemberRedecl {
+  class S {
+    public:
+    static const int m;
+  };
+  constexpr int getM() { return S::m; }
+  const int S::m = 10;
+  static_assert(getM() == 10, "");
+}

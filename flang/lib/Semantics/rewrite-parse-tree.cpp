@@ -223,8 +223,7 @@ void RewriteMutator::OpenMPSimdOnly(
               std::get<std::list<parser::OpenMPConstruct>>(ompCon->t);
           auto insertPos = std::next(it);
           for (auto &sectionCon : sections) {
-            auto &section =
-                std::get<parser::OpenMPSectionConstruct>(sectionCon.u);
+            auto &section = std::get<parser::OmpSectionDirective>(sectionCon.u);
             auto &innerBlock = std::get<parser::Block>(section.t);
             block.splice(insertPos, innerBlock);
           }

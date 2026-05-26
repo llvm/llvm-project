@@ -49,13 +49,13 @@ define amdgpu_ps i64 @s_mul_i64_i32(i32 inreg %a, i32 inreg %b) {
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_mov_b32_e32 v0, s1
 ; SI-NEXT:    v_mul_hi_u32 v0, s0, v0
-; SI-NEXT:    s_ashr_i32 s3, s0, 31
 ; SI-NEXT:    s_ashr_i32 s4, s1, 31
+; SI-NEXT:    s_ashr_i32 s3, s0, 31
 ; SI-NEXT:    s_mul_i32 s2, s0, s1
-; SI-NEXT:    s_mul_i32 s1, s3, s1
+; SI-NEXT:    v_readfirstlane_b32 s5, v0
 ; SI-NEXT:    s_mul_i32 s0, s0, s4
-; SI-NEXT:    v_readfirstlane_b32 s3, v0
-; SI-NEXT:    s_add_i32 s0, s1, s0
+; SI-NEXT:    s_mul_i32 s3, s3, s1
+; SI-NEXT:    s_add_i32 s0, s5, s0
 ; SI-NEXT:    s_add_i32 s1, s0, s3
 ; SI-NEXT:    s_mov_b32 s0, s2
 ; SI-NEXT:    ; return to shader part epilog
@@ -143,15 +143,14 @@ define i64 @v_mul_i64_i32(i32 %a, i32 %b) {
 ; SI-LABEL: v_mul_i64_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_ashrrev_i32_e32 v2, 31, v0
 ; SI-NEXT:    v_ashrrev_i32_e32 v3, 31, v1
-; SI-NEXT:    v_mul_lo_u32 v4, v2, v1
+; SI-NEXT:    v_ashrrev_i32_e32 v2, 31, v0
+; SI-NEXT:    v_mul_hi_u32 v4, v0, v1
 ; SI-NEXT:    v_mul_lo_u32 v3, v0, v3
-; SI-NEXT:    v_mul_lo_u32 v2, v0, v1
-; SI-NEXT:    v_mul_hi_u32 v0, v0, v1
-; SI-NEXT:    v_add_i32_e32 v1, vcc, v4, v3
-; SI-NEXT:    v_add_i32_e32 v1, vcc, v1, v0
-; SI-NEXT:    v_mov_b32_e32 v0, v2
+; SI-NEXT:    v_mul_lo_u32 v0, v0, v1
+; SI-NEXT:    v_mul_lo_u32 v1, v2, v1
+; SI-NEXT:    v_add_i32_e32 v2, vcc, v4, v3
+; SI-NEXT:    v_add_i32_e32 v1, vcc, v2, v1
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_mul_i64_i32:

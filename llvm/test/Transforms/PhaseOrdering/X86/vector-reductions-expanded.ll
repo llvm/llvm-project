@@ -137,12 +137,8 @@ for.end:
 define i32 @smin_v4i32(ptr %p) {
 ; CHECK-LABEL: @smin_v4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[TMP1]], <4 x i32> [[RDX_SHUF]])
-; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <4 x i32> [[RDX_MINMAX]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[RDX_MINMAX2:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[RDX_MINMAX]], <4 x i32> [[RDX_SHUF3]])
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[RDX_MINMAX2]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 4, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> [[TMP0]])
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
@@ -188,12 +184,8 @@ for.end:
 define i32 @umax_v4i32(ptr %p) {
 ; CHECK-LABEL: @umax_v4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[TMP1]], <4 x i32> [[RDX_SHUF]])
-; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <4 x i32> [[RDX_MINMAX]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[RDX_MINMAX2:%.*]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[RDX_MINMAX]], <4 x i32> [[RDX_SHUF3]])
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[RDX_MINMAX2]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 4, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[TMP0]])
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:

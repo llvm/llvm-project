@@ -8651,7 +8651,9 @@ is executed, followed by ``uint64_t`` value and execution count pairs.
 The value profiling kind is 0 for indirect call targets and 1 for memory
 operations. For indirect call targets, each profile value is a hash
 of the callee function name, and for memory operations each value is the
-byte length.
+byte length. It is illegal to have duplicate profile values (e.g., 
+duplicate function hashes for indirect calls or byte lengths for memory
+operations).
 
 Note that the value counts do not need to add up to the total count
 listed in the third operand (in practice only the top hottest values
@@ -14025,8 +14027,8 @@ Example:
 llvm treats calls to some functions with names and arguments that match
 the standard C99 library as being the C99 library functions, and may
 perform optimizations or generate code for them under that assumption.
-This is something we'd like to change in the future to provide better
-support for freestanding environments and non-C-based languages.
+This implies that undefined behavior in C standard library functions recognized
+by LLVM is also undefined behavior at the IR level.
 
 .. _i_va_arg:
 

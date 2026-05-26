@@ -29,6 +29,21 @@ struct DebugName {
   void write(raw_ostream &OS) const;
 };
 
+struct CompilerVersion {
+  dxbc::CompilerVersionHeader Parameters;
+  StringRef CommitSha;
+  StringRef CustomVersionString;
+
+  CompilerVersion();
+
+  void setCommitSha(StringRef CommitSha);
+  void setVersionString(StringRef VersionString);
+  void write(raw_ostream &OS) const;
+
+private:
+  void updateContentSize();
+};
+
 } // namespace mcdxbc
 } // namespace llvm
 

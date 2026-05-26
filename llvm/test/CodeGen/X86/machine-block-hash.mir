@@ -50,3 +50,10 @@ constants:
     value:           'float 1.000000e+00'
     alignment:       4
 ...
+---
+name:            func_empty
+body:             |
+  ; HASH-LABEL: Machine Block Hash Info for function: func_empty
+  ; HASH-NEXT:  BB#0: 0x0000000000000000
+  bb.0:
+...

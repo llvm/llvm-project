@@ -102,12 +102,12 @@ void foo() {
 // CHECK-DAG:DW_AT_decl_file [DW_FORM_data1] ("{{[\\/]}}tmp{{[\\/]}}odr-uniquing.cpp
 // CHECK-DAG:DW_AT_decl_line [DW_FORM_data1] (45)
 
-// CHECK:0x[[U_C_CLASS:[0-9a-f]*]]:{{.*}}DW_TAG_class_type
+// CHECK:0x[[U_C_MEMBER:[0-9a-f]*]]:{{.*}}DW_TAG_member
 // CHECK:DW_AT_name{{.*}}"C"
 // CHECK-DAG:DW_AT_decl_file [DW_FORM_data1] ("{{[\\/]}}tmp{{[\\/]}}odr-uniquing.cpp
 // CHECK-DAG:DW_AT_decl_line [DW_FORM_data1] (46)
 
-// CHECK:0x[[U_C_MEMBER:[0-9a-f]*]]:{{.*}}DW_TAG_member
+// CHECK:0x[[U_C_CLASS:[0-9a-f]*]]:{{.*}}DW_TAG_class_type
 // CHECK:DW_AT_name{{.*}}"C"
 // CHECK-DAG:DW_AT_decl_file [DW_FORM_data1] ("{{[\\/]}}tmp{{[\\/]}}odr-uniquing.cpp
 // CHECK-DAG:DW_AT_decl_line [DW_FORM_data1] (46)

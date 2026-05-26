@@ -710,6 +710,7 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
       CI->setCalledFunction(Intrinsic::getOrInsertDeclaration(
           CI->getModule(), Intrinsic::ldexp,
           {CI->getType(), CI->getArgOperand(1)->getType()}));
+      CI->setCallingConv(CallingConv::C);
       return true;
     }
     case AMDGPULibFunc::EI_POW:

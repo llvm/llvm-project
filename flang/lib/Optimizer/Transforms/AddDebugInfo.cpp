@@ -908,7 +908,7 @@ void AddDebugInfoPass::expandUseStmtForDebug(
                             /*decl=*/true);
 
   llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> importedModules;
-  if (useOp.hasOnlyClause())
+  if (useOp.hasOnlyClause() || useOp.getHasOnlyWithRenames())
     handleOnlyClause(useOp, spAttr, fileAttr, symbolTable, importedModules);
   else if (useOp.hasRenames())
     handleRenamesWithoutOnly(useOp, spAttr, modAttr, fileAttr, symbolTable,

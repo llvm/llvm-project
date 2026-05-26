@@ -1082,7 +1082,7 @@ bool SymbolContextSpecifier::SymbolContextMatches(const SymbolContext &sc) {
     // First check the current block, and if it is inlined, get the inlined
     // function name:
     bool was_inlined = false;
-    ConstString func_name(m_function_spec.c_str());
+    ConstString func_name(m_function_spec);
 
     if (sc.block != nullptr) {
       const InlineFunctionInfo *inline_info =

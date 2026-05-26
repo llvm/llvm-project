@@ -109,7 +109,9 @@ std::initializer_list<int> thread_local x = {1, 2, 3, 4};
 // AMDGCN: store ptr addrspacecast ({{[^@]+}} @_ZGR15globalInitList2_ {{[^)]+}}),
 // AMDGCN:       ptr addrspacecast ({{[^@]+}} @globalInitList2 {{[^)]+}}), align 8
 // AMDGCN: store i64 2, ptr getelementptr inbounds nuw (i8, ptr addrspacecast ({{[^@]+}} @globalInitList2 {{[^)]+}}), i64 8), align 8
+// AMDGCN-NEXT: {{.*}} = addrspacecast ptr addrspace(5) {{.*}} to ptr
 // CHECK: call void @_ZN10destroyme1D1Ev
+// AMDGCN-NEXT: {{.*}} = addrspacecast ptr addrspace(5) {{.*}} to ptr
 // CHECK-NEXT: call void @_ZN10destroyme1D1Ev
 // CHECK-NEXT: ret void
 std::initializer_list<witharg1> globalInitList2 = {
@@ -121,7 +123,6 @@ void fn1(int i) {
   // temporary array
   // X86: [[array:%[^ ]+]] = alloca [3 x i32]
   // AMDGCN: [[alloca:%[^ ]+]] = alloca [3 x i32], align 4, addrspace(5)
-  // AMDGCN: [[array:%[^ ]+]] ={{.*}} addrspacecast ptr addrspace(5) [[alloca]] to ptr
   // CHECK:      store i32 1, ptr
   // CHECK-NEXT: getelementptr
   // CHECK-NEXT: store
@@ -482,7 +483,7 @@ namespace B19773010 {
     // CHECK-LABEL: @_ZN9B197730102f1Ev
     testcase a{{"", ENUM_CONSTANT}};
     // X86: store ptr @.ref.tmp{{.*}}, ptr %{{.*}}, align 8
-    // AMDGCN: store ptr addrspacecast{{.*}} @.ref.tmp{{.*}}{{.*}}, ptr %{{.*}}, align 8
+    // AMDGCN: store ptr addrspacecast{{.*}} @.ref.tmp{{.*}}{{.*}}, ptr addrspace(5) %{{.*}}, align 8
   }
   void f2() {
     // CHECK-LABEL: @_ZN9B197730102f2Ev

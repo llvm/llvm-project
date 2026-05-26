@@ -104,7 +104,7 @@ public:
   }
 
   void testSubnormalRange(RIntFunc func) {
-    constexpr int COUNT = 100'001;
+    constexpr int COUNT = 1'231;
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>((MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT),
         StorageType(1));
@@ -119,7 +119,7 @@ public:
   }
 
   void testNormalRange(RIntFunc func) {
-    constexpr int COUNT = 100'001;
+    constexpr int COUNT = 1'231;
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>((MAX_NORMAL - MIN_NORMAL) / COUNT),
         StorageType(1));

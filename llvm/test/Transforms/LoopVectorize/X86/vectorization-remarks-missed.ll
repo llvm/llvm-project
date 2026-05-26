@@ -72,7 +72,7 @@
 ; YAML-NEXT:   - String:          'loop not vectorized: vectorization and interleaving are explicitly disabled, or the loop has already been vectorized
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !Analysis
-; YAML-NEXT: Pass:            ''
+; YAML-NEXT: Pass:            loop-vectorize
 ; YAML-NEXT: Name:            CantIdentifyArrayBounds
 ; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 19, Column: 5 }
 ; YAML-NEXT: Function:        _Z17test_array_boundsPiS_i

@@ -44,9 +44,10 @@ public:
   // Populates templates with CSS stylesheets, JS scripts paths.
   Error setupTemplateResources(const ClangDocContext &CDCtx, json::Value &V,
                                SmallString<128> RelativeRootPath);
-  llvm::Error generateDocumentation(
-      StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
-      const ClangDocContext &CDCtx, std::string DirName) override;
+  llvm::Error generateDocumentation(StringRef RootDir,
+                                    llvm::StringMap<doc::Info *> Infos,
+                                    const ClangDocContext &CDCtx,
+                                    std::string DirName) override;
 };
 
 Error HTMLGenerator::setupTemplateFiles(const ClangDocContext &CDCtx) {
@@ -182,9 +183,10 @@ Error HTMLGenerator::createResources(ClangDocContext &CDCtx) {
   return Error::success();
 }
 
-Error HTMLGenerator::generateDocumentation(
-    StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
-    const ClangDocContext &CDCtx, std::string DirName) {
+Error HTMLGenerator::generateDocumentation(StringRef RootDir,
+                                           llvm::StringMap<doc::Info *> Infos,
+                                           const ClangDocContext &CDCtx,
+                                           std::string DirName) {
   return MustacheGenerator::generateDocumentation(RootDir, std::move(Infos),
                                                   CDCtx, "html");
 }

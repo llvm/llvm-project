@@ -544,7 +544,9 @@ public:
 
   mlir::Value createPtrBitcast(mlir::Value src, mlir::Type newPointeeTy) {
     assert(mlir::isa<cir::PointerType>(src.getType()) && "expected ptr src");
-    return createBitcast(src, getPointerTo(newPointeeTy));
+    cir::PointerType srcPtrTy = mlir::cast<cir::PointerType>(src.getType());
+    return createBitcast(src,
+                         getPointerTo(newPointeeTy, srcPtrTy.getAddrSpace()));
   }
 
   mlir::Value createPtrIsNull(mlir::Value ptr) {
@@ -843,9 +845,12 @@ public:
     mlir::Type adjustedThisTy = getVoidPtrTy(objectPtrTy.getAddrSpace());
 
     llvm::SmallVector<mlir::Type> calleeFuncInputTypes{adjustedThisTy};
-    calleeFuncInputTypes.insert(calleeFuncInputTypes.end(),
-                                methodFuncInputTypes.begin(),
-                                methodFuncInputTypes.end());
+    // The member function type's first parameter is the implicit 'this'
+    // pointer.  The callee takes an adjusted void* receiver instead.
+    if (methodFuncInputTypes.size() > 1)
+      calleeFuncInputTypes.insert(calleeFuncInputTypes.end(),
+                                  methodFuncInputTypes.begin() + 1,
+                                  methodFuncInputTypes.end());
     cir::FuncType calleeFuncTy =
         methodFuncTy.clone(calleeFuncInputTypes, methodFuncTy.getReturnType());
     // TODO(cir): consider the address space of the callee.

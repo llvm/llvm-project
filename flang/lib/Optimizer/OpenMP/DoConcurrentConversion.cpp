@@ -418,7 +418,7 @@ private:
     mlir::Location loc = loop.getLoc();
     auto parallelOp = mlir::omp::ParallelOp::create(rewriter, loc, parallelOps);
     Fortran::common::openmp::EntryBlockArgs parallelArgs;
-    parallelArgs.priv.vars = parallelOps.privateVars;
+    parallelArgs.privVars = parallelOps.privateVars;
     Fortran::common::openmp::genEntryBlock(rewriter, parallelArgs,
                                            parallelOp.getRegion());
     rewriter.setInsertionPoint(mlir::omp::TerminatorOp::create(rewriter, loc));
@@ -506,8 +506,8 @@ private:
     wsloopOp.setComposite(isComposite);
 
     Fortran::common::openmp::EntryBlockArgs wsloopArgs;
-    wsloopArgs.priv.vars = wsloopClauseOps.privateVars;
-    wsloopArgs.reduction.vars = wsloopClauseOps.reductionVars;
+    wsloopArgs.privVars = wsloopClauseOps.privateVars;
+    wsloopArgs.reductionVars = wsloopClauseOps.reductionVars;
     Fortran::common::openmp::genEntryBlock(rewriter, wsloopArgs,
                                            wsloopOp.getRegion());
 
@@ -781,7 +781,7 @@ private:
     mlir::Location loc = loop.getLoc();
     auto teamsOp = mlir::omp::TeamsOp::create(rewriter, loc, teamsOps);
     Fortran::common::openmp::EntryBlockArgs teamsArgs;
-    teamsArgs.reduction.vars = teamsOps.reductionVars;
+    teamsArgs.reductionVars = teamsOps.reductionVars;
     Fortran::common::openmp::genEntryBlock(rewriter, teamsArgs,
                                            teamsOp.getRegion());
 

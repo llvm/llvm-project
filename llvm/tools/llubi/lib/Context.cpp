@@ -15,9 +15,9 @@
 
 namespace llvm::ubi {
 
-Context::Context(Module &M)
-    : Ctx(M.getContext()), M(M), DL(M.getDataLayout()),
-      TLIImpl(M.getTargetTriple()) {}
+Context::Context(Module &M, const AsmParserContext *ParserContext)
+    : Ctx(M.getContext()), M(M), ParserContext(ParserContext),
+      DL(M.getDataLayout()), TLIImpl(M.getTargetTriple()) {}
 
 Context::~Context() = default;
 

@@ -1385,6 +1385,23 @@ namespace ElementwisePopcount {
 #endif
 }
 
+namespace ElementwiseClmul {
+  static_assert(__builtin_elementwise_clmul(0U, 0U) == 0U);
+  static_assert(__builtin_elementwise_clmul(1U, 1U) == 1U);
+  static_assert(__builtin_elementwise_clmul(3U, 3U) == 5U);
+  static_assert(__builtin_elementwise_clmul(0xBU, 0xDU) == 0x7FU);
+  static_assert(__builtin_elementwise_clmul(0xFU, 0xFU) == 0x55U);
+#ifndef __AVR__
+  static_assert(__builtin_elementwise_clmul((unsigned _BitInt(31))3,
+                                            (unsigned _BitInt(31))3) ==
+                (unsigned _BitInt(31))5);
+#endif
+
+  static_assert(__builtin_reduce_add(__builtin_elementwise_clmul(
+                    (vector4uint){0U, 1U, 3U, 7U},
+                    (vector4uint){0U, 1U, 3U, 7U})) == 27U);
+}
+
 namespace BuiltinMemcpy {
   constexpr int simple() {
     int a = 12;
@@ -2047,4 +2064,11 @@ namespace WcslenInvalidArg {
                                                               // both-note {{cast that performs the conversions of a reinterpret_cast}}
   static_assert(__builtin_wcslen(L"x") == 1);
 
+}
+
+namespace SubCb {
+  constexpr unsigned char subcb(unsigned char lhs, unsigned char rhs, unsigned char carry) {
+    return __builtin_subcb(lhs, rhs, carry, &rhs);
+  }
+  static_assert(subcb(10, 15, 1) == 250);
 }

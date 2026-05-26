@@ -1772,7 +1772,9 @@ def EmitC_ClassOp
     ```
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name, UnitAttr:$final_specifier);
+  let arguments = (ins SymbolNameAttr:$sym_name, UnitAttr:$final_specifier,
+                   DefaultValuedAttr<EmitC_ClassTypeAttr,
+                                     "ClassType::class_">:$class_type);
 
   let regions = (region AnyRegion:$body);
 
@@ -1782,7 +1784,7 @@ def EmitC_ClassOp
   }];
 
   let assemblyFormat =
-      [{ (`final` $final_specifier^)? $sym_name attr-dict-with-keyword $body }];
+      [{ ($class_type^)? (`final` $final_specifier^)? $sym_name attr-dict-with-keyword $body }];
 }
 
 def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
