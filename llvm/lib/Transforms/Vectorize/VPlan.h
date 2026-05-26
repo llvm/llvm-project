@@ -3323,9 +3323,11 @@ public:
 
   ~VPReplicateRecipe() override = default;
 
-  VPReplicateRecipe *clone() override {
+  VPReplicateRecipe *clone() override { return cloneWithOperands(operands()); }
+
+  VPReplicateRecipe *cloneWithOperands(ArrayRef<VPValue *> NewOperands) {
     auto *Copy = new VPReplicateRecipe(
-        getUnderlyingInstr(), operands(), IsSingleScalar,
+        getUnderlyingInstr(), NewOperands, IsSingleScalar,
         isPredicated() ? getMask() : nullptr, *this, *this, getDebugLoc());
     Copy->transferFlags(*this);
     return Copy;
@@ -3555,8 +3557,8 @@ public:
   /// effects.
   bool mayHaveSideEffects() const;
 
-  /// Returns true if the result of this VPExpressionRecipe is a single-scalar.
-  bool isSingleScalar() const;
+  /// Returns true if this VPExpressionRecipe produces a single scalar.
+  bool isVectorToScalar() const;
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
