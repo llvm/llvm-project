@@ -31,7 +31,8 @@ inspect the definition of the token.
 Because tokens are SSA values, they cannot cross `IsolatedFromAbove` region
 boundaries. This is intentional: it allows passes to process isolated regions
 concurrently without racing on def-use chains. When a token-like dependency
-must cross such a boundary, use a symbol instead.
+must cross such a boundary, another mechanism must be used (e.g. a symbolic
+reference using an attribute).
 
 ## ODS Integration
 
