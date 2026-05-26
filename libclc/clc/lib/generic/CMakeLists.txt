@@ -163,6 +163,7 @@ libclc_add_sources(${LIBCLC_CLC_TARGET} FILES
   math/clc_sqrt.cl
   math/clc_sqrt_cr.cl
   math/clc_sqrt_fast.cl
+  math/clc_sw_fma.cl
   math/clc_tables.cl
   math/clc_tan.cl
   math/clc_tanh.cl

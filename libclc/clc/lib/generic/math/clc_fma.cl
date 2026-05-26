@@ -9,9 +9,24 @@
 #include "clc/internal/clc.h"
 #include "clc/math/clc_fma.h"
 #include "clc/math/math.h"
+#include "clc/internal/math/clc_sw_fma.h"
 
 #define __CLC_FUNCTION __clc_fma
 #define __CLC_IMPL_FUNCTION(x) __builtin_elementwise_fma
-#define __CLC_BODY "clc/shared/ternary_def.inc"
 
+#define __CLC_DOUBLE_ONLY
+#define __CLC_BODY "clc/shared/ternary_def.inc"
+#include "clc/math/gentype.inc"
+
+#define __CLC_HALF_ONLY
+#define __CLC_BODY "clc/shared/ternary_def.inc"
+#include "clc/math/gentype.inc"
+
+#ifdef __SPIRV__
+#undef __CLC_IMPL_FUNCTION
+#define __CLC_IMPL_FUNCTION(x) __clc_sw_fma
+#endif
+
+#define __CLC_FLOAT_ONLY
+#define __CLC_BODY "clc/shared/ternary_def.inc"
 #include "clc/math/gentype.inc"
