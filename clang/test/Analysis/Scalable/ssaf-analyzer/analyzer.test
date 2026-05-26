@@ -1,0 +1,141 @@
+// Tests for clang-ssaf-analyzer that require plugin support.
+
+// REQUIRES: plugins
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// ============================================================================
+// Error: unknown analysis name
+// ============================================================================
+
+// RUN: not %clang-ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/unknown.json -a NoSuchAnalysis 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=UNKNOWN
+// UNKNOWN: no analysis registered for 'AnalysisName(NoSuchAnalysis)'
+
+// ============================================================================
+// Error: valid analysis name but LUSummary lacks entity data for it
+// ============================================================================
+
+// RUN: not %clang-ssaf-analyzer-with-plugin %S/Inputs/lu-tags-only.json \
+// RUN:   -o %t/missing-data.json -a PairsAnalysisResult 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=MISSING-DATA
+// MISSING-DATA: no data for analysis 'AnalysisName(PairsAnalysisResult)' in LUSummary
+
+// ============================================================================
+// Success: run TagsAnalysisResult only (single analysis)
+// ============================================================================
+
+// RUN: %clang-ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/tags.json -a TagsAnalysisResult
+// RUN: diff %S/Outputs/tags.json %t/tags.json
+
+// ============================================================================
+// Success: run PairsAnalysisResult only (single analysis)
+// ============================================================================
+
+// RUN: %clang-ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/pairs.json -a PairsAnalysisResult
+// RUN: diff %S/Outputs/pairs.json %t/pairs.json
+
+// ============================================================================
+// Success: run two summary analyses
+// ============================================================================
+
+// RUN: %clang-ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/both.json -a TagsAnalysisResult -a PairsAnalysisResult
+// RUN: diff %S/Outputs/both.json %t/both.json
+
+// ============================================================================
+// Success: reversed order produces the same result (order-independent)
+// ============================================================================
+
+// RUN: %clang-ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/both-rev.json -a PairsAnalysisResult -a TagsAnalysisResult
+// RUN: diff %S/Outputs/both.json %t/both-rev.json
+
+// ============================================================================
+// Success: duplicate analysis name is deduplicated
+// ============================================================================
+
+// RUN: %clang-ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/tags-dup.json -a TagsAnalysisResult -a TagsAnalysisResult
+// RUN: diff %S/Outputs/tags.json %t/tags-dup.json
+
+// ============================================================================
+// Success: derived analysis pulls dependencies automatically
+// ============================================================================
+
+// RUN: %clang-ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/all.json -a TagsPairsAnalysisResult
+// RUN: diff %S/Outputs/all.json %t/all.json
+
+// ============================================================================
+// Success: derived + one explicit dep (redundant dep is deduplicated)
+// ============================================================================
+
+// RUN: %clang-ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/all-partial-dup.json -a TagsPairsAnalysisResult -a TagsAnalysisResult
+// RUN: diff %S/Outputs/all.json %t/all-partial-dup.json
+
+// ============================================================================
+// Success: derived + both explicit deps (all redundant, deduplicated)
+// ============================================================================
+
+// RUN: %clang-ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/all-full-dup.json \
+// RUN:   -a TagsPairsAnalysisResult -a TagsAnalysisResult -a PairsAnalysisResult
+// RUN: diff %S/Outputs/all.json %t/all-full-dup.json
+
+// ============================================================================
+// Success: run all example-plugin analyses explicitly
+// ============================================================================
+
+// RUN: %clang-ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/all-default.json \
+// RUN:   -a TagsAnalysisResult -a PairsAnalysisResult -a TagsPairsAnalysisResult
+// RUN: diff %S/Outputs/all.json %t/all-default.json
+
+// ============================================================================
+// Success: --analysis alias for -a
+// ============================================================================
+
+// RUN: %clang-ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/analysis-alias.json --analysis TagsAnalysisResult
+// RUN: diff %S/Outputs/tags.json %t/analysis-alias.json
+
+// ============================================================================
+// Success: -l alias for --load
+// ============================================================================
+
+// RUN: clang-ssaf-analyzer -l %llvmshlibdir/SSAFExamplePlugin%pluginext \
+// RUN:   %S/Inputs/lu.json -o %t/load-alias.json -a PairsAnalysisResult
+// RUN: diff %S/Outputs/pairs.json %t/load-alias.json
+
+// ============================================================================
+// Error: mix of valid and invalid analysis names (partial failure)
+// ============================================================================
+
+// RUN: not %clang-ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/mixed.json -a TagsAnalysisResult -a NoSuchAnalysis -a PairsAnalysisResult 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=MIXED
+// MIXED: no analysis registered for 'AnalysisName(NoSuchAnalysis)'
+
+// ============================================================================
+// Success: -o specified twice (last value wins)
+// ============================================================================
+
+// RUN: %clang-ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/ignored.json -o %t/last-wins.json -a TagsAnalysisResult
+// RUN: diff %S/Outputs/tags.json %t/last-wins.json
+
+// ============================================================================
+// Round-trip: analyze then read back with ssaf-format
+// ============================================================================
+
+// RUN: %clang-ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/roundtrip.json -a TagsPairsAnalysisResult
+// RUN: clang-ssaf-format --type wpa --load %llvmshlibdir/SSAFExamplePlugin%pluginext \
+// RUN:   %t/roundtrip.json -o %t/roundtrip-copy.json
+// RUN: diff %S/Outputs/all.json %t/roundtrip-copy.json

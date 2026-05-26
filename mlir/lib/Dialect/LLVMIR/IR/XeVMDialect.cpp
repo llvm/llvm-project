@@ -366,9 +366,6 @@ LogicalResult TruncfOp::verify() {
   if (isa<VectorType>(srcTy)) {
     VectorType srcVecTy = dyn_cast<VectorType>(srcTy);
     VectorType dstVecTy = dyn_cast<VectorType>(dstTy);
-    if (srcVecTy.getNumElements() != dstVecTy.getNumElements())
-      return emitOpError(
-          "src and dst vector types should have the same number of elements");
     if (srcVecTy.getElementTypeBitWidth() <= dstVecTy.getElementTypeBitWidth())
       return emitError(
           "dst element bitwidth should be less than src element bitwidth");

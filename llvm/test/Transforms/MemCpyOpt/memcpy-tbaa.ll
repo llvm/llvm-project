@@ -5,7 +5,7 @@ define void @test() local_unnamed_addr {
 ; CHECK-LABEL: define void @test() local_unnamed_addr {
 ; CHECK-NEXT:    [[TEST_ARRAY_B:%.*]] = alloca [31 x float], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[TEST_ARRAY_B]], i64 1
-; CHECK-NEXT:    store float 0x3E6AA51880000000, ptr [[TMP1]], align 4
+; CHECK-NEXT:    store float f0x335528C4, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[TEST_ARRAY_B]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    ret void

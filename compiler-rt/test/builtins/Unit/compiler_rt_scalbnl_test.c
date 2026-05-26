@@ -39,10 +39,14 @@ int test__compiler_rt_scalbnl(const char *mode, fp_t x, int y) {
 }
 
 fp_t cases[] = {
+// The scalbnl() function's behavior on the following values on z/OS
+// differs from the C++ standard specification.
+#  ifndef __MVS__
     -NAN,
     NAN,
     -INFINITY,
     INFINITY,
+#  endif
     -0.0,
     0.0,
     -1,

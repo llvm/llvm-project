@@ -63,6 +63,7 @@ llvm::Triple::ArchType darwin::getArchTypeForMachOArchName(StringRef Str) {
       .Cases({"arm", "armv4t", "armv5", "armv6", "armv6m"}, llvm::Triple::arm)
       .Cases({"armv7", "armv7em", "armv7k", "armv7m"}, llvm::Triple::arm)
       .Cases({"armv7s", "xscale"}, llvm::Triple::arm)
+      .Cases({"armv8m.base", "armv8m.main", "armv8.1m.main"}, llvm::Triple::arm)
       .Cases({"arm64", "arm64e"}, llvm::Triple::aarch64)
       .Case("arm64_32", llvm::Triple::aarch64_32)
       .Case("r600", llvm::Triple::r600)
@@ -88,7 +89,10 @@ void darwin::setTripleTypeForMachOArchName(llvm::Triple &T, StringRef Str,
   if ((T.getOS() != llvm::Triple::Firmware) &&
       (ArchKind == llvm::ARM::ArchKind::ARMV6M ||
        ArchKind == llvm::ARM::ArchKind::ARMV7M ||
-       ArchKind == llvm::ARM::ArchKind::ARMV7EM)) {
+       ArchKind == llvm::ARM::ArchKind::ARMV7EM ||
+       ArchKind == llvm::ARM::ArchKind::ARMV8MBaseline ||
+       ArchKind == llvm::ARM::ArchKind::ARMV8MMainline ||
+       ArchKind == llvm::ARM::ArchKind::ARMV8_1MMainline)) {
     // Don't reject these -version-min= if we have the appropriate triple.
     if (T.getOS() == llvm::Triple::IOS)
       for (Arg *A : Args.filtered(options::OPT_mios_version_min_EQ))
@@ -493,6 +497,30 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
       CmdArgs.push_back(
           Args.MakeArgString(Twine("--codegen-data-generate-path=") +
                              CodeGenDataGenArg->getValue()));
+  } else {
+    if (auto *CSPGOGenerateArg = getLastCSProfileGenerateArg(Args)) {
+      SmallString<128> Path(CSPGOGenerateArg->getNumValues() == 0
+                                ? ""
+                                : CSPGOGenerateArg->getValue());
+      llvm::sys::path::append(Path, "default_%m.profraw");
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-cs-profile-generate");
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back(Args.MakeArgString(Twine("-cs-profile-path=") + Path));
+    } else if (auto *ProfileUseArg = getLastProfileUseArg(Args)) {
+      SmallString<128> Path(
+          ProfileUseArg->getNumValues() == 0 ? "" : ProfileUseArg->getValue());
+      if (Path.empty() || llvm::sys::fs::is_directory(Path))
+        llvm::sys::path::append(Path, "default.profdata");
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back(Args.MakeArgString(Twine("-cs-profile-path=") + Path));
+    }
+  }
+
+  if (Arg *A = getLastProfileSampleUseArg(Args)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-sample-profile-file=") + A->getValue()));
   }
 }
 
@@ -1063,6 +1091,9 @@ static const char *ArmMachOArchName(StringRef Arch) {
       .Cases({"armv7k", "armv7-k"}, "armv7k")
       .Cases({"armv7m", "armv7-m"}, "armv7m")
       .Cases({"armv7s", "armv7-s"}, "armv7s")
+      .Cases({"armv8-m.base", "armv8m.base"}, "armv8m.base")
+      .Cases({"armv8-m.main", "armv8m.main"}, "armv8m.main")
+      .Cases({"armv8.1-m.main", "armv8m.main"}, "armv8.1m.main")
       .Default(nullptr);
 }
 
@@ -1189,7 +1220,7 @@ AppleMachO::~AppleMachO() {}
 MachO::~MachO() {}
 
 void Darwin::VerifyTripleForSDK(const llvm::opt::ArgList &Args,
-                                const llvm::Triple Triple) const {
+                                const llvm::Triple &Triple) const {
   if (SDKInfo) {
     if (!SDKInfo->supportsTriple(Triple))
       getDriver().Diag(diag::warn_incompatible_sysroot)
@@ -1222,8 +1253,9 @@ void Darwin::VerifyTripleForSDK(const llvm::opt::ArgList &Args,
 }
 
 std::string Darwin::ComputeEffectiveClangTriple(const ArgList &Args,
+                                                llvm::StringRef BoundArch,
                                                 types::ID InputType) const {
-  llvm::Triple Triple(ComputeLLVMTriple(Args, InputType));
+  llvm::Triple Triple(ComputeLLVMTriple(Args, BoundArch, InputType));
 
   // If the target isn't initialized (e.g., an unknown Darwin platform, return
   // the default triple). Note: we intentionally do NOT call
@@ -1646,7 +1678,7 @@ ToolChain::RuntimeLibType DarwinClang::GetRuntimeLibType(
           << Value << "darwin";
   }
 
-  return ToolChain::RLT_CompilerRT;
+  return ToolChain::GetRuntimeLibType(Args);
 }
 
 void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
@@ -2009,15 +2041,14 @@ struct DarwinPlatform {
   }
   static DarwinPlatform createFromSDKInfo(StringRef SDKRoot,
                                           const DarwinSDKInfo &SDKInfo) {
-    const DarwinSDKInfo::SDKPlatformInfo PlatformInfo =
-        SDKInfo.getCanonicalPlatformInfo();
-    const llvm::Triple::OSType OS = PlatformInfo.getOS();
+    const llvm::Triple &PlatformTriple = SDKInfo.getCanonicalPlatformTriple();
+    const llvm::Triple::OSType OS = PlatformTriple.getOS();
     VersionTuple Version = SDKInfo.getVersion();
     if (OS == llvm::Triple::MacOSX)
       Version = getVersionFromString(
           getSystemOrSDKMacOSVersion(Version.getAsString()));
     DarwinPlatform Result(InferredFromSDK, getPlatformFromOS(OS), Version);
-    Result.Environment = getEnvKindFromEnvType(PlatformInfo.getEnvironment());
+    Result.Environment = getEnvKindFromEnvType(PlatformTriple.getEnvironment());
     Result.InferSimulatorFromArch = false;
     Result.InferredSource = SDKRoot;
     return Result;
@@ -2050,15 +2081,10 @@ struct DarwinPlatform {
     llvm::Triple::OSType OS = getOSFromPlatform(Platform);
     llvm::Triple::EnvironmentType EnvironmentType =
         getEnvTypeFromEnvKind(Environment);
-    StringRef PlatformPrefix =
-        (Platform == DarwinPlatformKind::DriverKit) ? "/System/DriverKit" : "";
-    return DarwinSDKInfo("", OS, EnvironmentType, getOSVersion(),
+    return DarwinSDKInfo(OS, EnvironmentType, getOSVersion(),
                          getDisplayName(Platform, Environment, getOSVersion()),
                          /*MaximumDeploymentTarget=*/
-                         VersionTuple(getOSVersion().getMajor(), 0, 99),
-                         {DarwinSDKInfo::SDKPlatformInfo(
-                             llvm::Triple::Apple, OS, EnvironmentType,
-                             llvm::Triple::MachO, PlatformPrefix)});
+                         VersionTuple(getOSVersion().getMajor(), 0, 99));
   }
 
 private:
@@ -2437,7 +2463,8 @@ inferDeploymentTargetFromArch(DerivedArgList &Args, const Darwin &Toolchain,
   else if (MachOArchName == "armv7k" || MachOArchName == "arm64_32")
     OSTy = llvm::Triple::WatchOS;
   else if (MachOArchName != "armv6m" && MachOArchName != "armv7m" &&
-           MachOArchName != "armv7em")
+           MachOArchName != "armv7em" && MachOArchName != "armv8m.base" &&
+           MachOArchName != "armv8m.main" && MachOArchName != "armv8.1m.main")
     OSTy = llvm::Triple::MacOSX;
   if (OSTy == llvm::Triple::UnknownOS)
     return std::nullopt;
@@ -3267,6 +3294,12 @@ DerivedArgList *MachO::TranslateArgs(const DerivedArgList &Args,
       DAL->AddJoinedArg(nullptr, MArch, "armv7m");
     else if (Name == "armv7s")
       DAL->AddJoinedArg(nullptr, MArch, "armv7s");
+    else if (Name == "armv8-m.base" || Name == "armv8m.base")
+      DAL->AddJoinedArg(nullptr, MArch, "armv8m.base");
+    else if (Name == "armv8-m.main" || Name == "armv8m.main")
+      DAL->AddJoinedArg(nullptr, MArch, "armv8m.main");
+    else if (Name == "armv8.1-m.main" || Name == "armv8.1m.main")
+      DAL->AddJoinedArg(nullptr, MArch, "armv8.1m.main");
   }
 
   return DAL;
@@ -4007,10 +4040,13 @@ void Darwin::CheckObjCARC() const {
   getDriver().Diag(diag::err_arc_unsupported_on_toolchain);
 }
 
-SanitizerMask Darwin::getSupportedSanitizers() const {
+SanitizerMask
+Darwin::getSupportedSanitizers(StringRef BoundArch,
+                               Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64;
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;

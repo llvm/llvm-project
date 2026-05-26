@@ -12,7 +12,7 @@ define i32 @_Z9load_le32Ph(ptr nocapture readonly %data) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[DATA:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <4 x i32> [[TMP1]], <i32 0, i32 8, i32 16, i32 24>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw <4 x i32> [[TMP1]], <i32 0, i32 8, i32 16, i32 24>
 ; CHECK-NEXT:    [[OR11:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[OR11]]
 ;

@@ -75,8 +75,7 @@ define double @test(ptr nocapture noundef readonly %data, ptr nocapture noundef 
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; SVE:       vector.ph:
-; SVE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
+; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 1
 ; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP3]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; SVE-NEXT:    br label [[VECTOR_BODY:%.*]]

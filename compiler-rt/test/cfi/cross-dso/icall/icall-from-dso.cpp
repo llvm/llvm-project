@@ -18,7 +18,7 @@ void f() {
   // CHECK: =2=
   fprintf(stderr, "=2=\n");
   // CFI-DIAG: runtime error: control flow integrity check for type 'void (int)' failed during indirect function call
-  // CFI-DIAG-NEXT: ({{.*}}exe+0x{{[[:xdigit:]]+}}): note: g() defined here
+  // CFI-DIAG-NEXT: ({{.*}}exe+0x{{[[:xdigit:]]+}}): note: g() {{(\(.cfi_jt\) )?}}defined here
   ((void (*)(int))g)(42); // UB here
   // CHECK-DIAG: =3=
   // CHECK-NOT: =3=

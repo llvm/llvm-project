@@ -423,15 +423,13 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
 
   ASTContext &C = getContext();
 
-  FunctionArgList args;
-
-  ImplicitParamDecl AwaiterDecl(C, C.VoidPtrTy, ImplicitParamKind::Other);
-  ImplicitParamDecl FrameDecl(C, C.VoidPtrTy, ImplicitParamKind::Other);
+  auto *AwaiterDecl =
+      ImplicitParamDecl::Create(C, C.VoidPtrTy, ImplicitParamKind::Other);
+  auto *FrameDecl =
+      ImplicitParamDecl::Create(C, C.VoidPtrTy, ImplicitParamKind::Other);
   QualType ReturnTy = S.getSuspendExpr()->getType();
 
-  args.push_back(&AwaiterDecl);
-  args.push_back(&FrameDecl);
-
+  FunctionArgList args{AwaiterDecl, FrameDecl};
   const CGFunctionInfo &FI =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(ReturnTy, args);
 
@@ -452,12 +450,12 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
   StartFunction(GlobalDecl(), ReturnTy, Fn, FI, args);
 
   // FIXME: add TBAA metadata to the loads
-  llvm::Value *AwaiterPtr = Builder.CreateLoad(GetAddrOfLocalVar(&AwaiterDecl));
+  llvm::Value *AwaiterPtr = Builder.CreateLoad(GetAddrOfLocalVar(AwaiterDecl));
   auto AwaiterLValue =
-      MakeNaturalAlignAddrLValue(AwaiterPtr, AwaiterDecl.getType());
+      MakeNaturalAlignAddrLValue(AwaiterPtr, AwaiterDecl->getType());
 
   CurAwaitSuspendWrapper.FramePtr =
-      Builder.CreateLoad(GetAddrOfLocalVar(&FrameDecl));
+      Builder.CreateLoad(GetAddrOfLocalVar(FrameDecl));
 
   auto AwaiterBinder = CodeGenFunction::OpaqueValueMappingData::bind(
       *this, S.getOpaqueValue(), AwaiterLValue);

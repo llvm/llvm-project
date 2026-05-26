@@ -173,6 +173,12 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       return;
     }
 
+    case WebAssembly::SELECT_T:
+    case WebAssembly::SELECT_T_S:
+      // The trailing operands encode a vec of valtypes, not branch targets;
+      // skip the generic branch-annotation pass below.
+      return;
+
     case WebAssembly::END_LOOP:
     case WebAssembly::END_LOOP_S:
       if (ControlFlowStack.empty()) {
@@ -462,5 +468,20 @@ void WebAssemblyInstPrinter::printCatchList(const MCInst *MI, unsigned OpNo,
     O << ")";
     if (I < NumCatches - 1)
       O << " ";
+  }
+}
+
+void WebAssemblyInstPrinter::printTypeList(const MCInst *MI, unsigned OpNo,
+                                           const MCSubtargetInfo &STI,
+                                           raw_ostream &O) {
+  unsigned OpIdx = OpNo;
+  uint64_t NumTypes = uint64_t(MI->getOperand(OpIdx++).getImm());
+  uint64_t Remaining = MI->getNumOperands() - OpIdx;
+  if (NumTypes > Remaining)
+    NumTypes = Remaining;
+  for (uint64_t I = 0; I < NumTypes; I++) {
+    if (I != 0)
+      O << ' ';
+    O << WebAssembly::anyTypeToString(MI->getOperand(OpIdx++).getImm());
   }
 }

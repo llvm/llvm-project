@@ -4,7 +4,7 @@
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - \
 ! RUN: | FileCheck %s
 
-! RUN: %flang_fc1 -emit-hlfir -flang-experimental-hlfir -fopenmp %s -o - \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - \
 ! RUN: | FileCheck %s
 
 

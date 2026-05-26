@@ -1,7 +1,7 @@
 add_mlir_dialect_library(MLIRXeGPUTransforms
+  XeGPUArrayLengthOptimization.cpp
   XeGPUBlocking.cpp
-  XeGPUSgToWiDistributeExperimental.cpp
-  XeGPUSubgroupDistribute.cpp
+  XeGPUSgToLaneDistribute.cpp
   XeGPUUnroll.cpp
   XeGPUWgToSgDistribute.cpp
   XeGPUPropagateLayout.cpp
