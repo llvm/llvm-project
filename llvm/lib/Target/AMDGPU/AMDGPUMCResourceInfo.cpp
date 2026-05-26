@@ -68,7 +68,6 @@ void MCResourceInfo::assignMaxRegs(MCContext &OutContext) {
   MCSymbol *MaxVGPRSym = getMaxVGPRSymbol(OutContext);
   MCSymbol *MaxAGPRSym = getMaxAGPRSymbol(OutContext);
   MCSymbol *MaxSGPRSym = getMaxSGPRSymbol(OutContext);
-  MCSymbol *MaxNonChainVGPRSym = getMaxNonChainVGPRSymbol(OutContext);
   MCSymbol *MaxNamedBarrierSym = getMaxNamedBarrierSymbol(OutContext);
 
   auto assignMaxRegSym = [&OutContext](MCSymbol *Sym, int32_t RegCount) {
@@ -79,7 +78,6 @@ void MCResourceInfo::assignMaxRegs(MCContext &OutContext) {
   assignMaxRegSym(MaxVGPRSym, MaxVGPR);
   assignMaxRegSym(MaxAGPRSym, MaxAGPR);
   assignMaxRegSym(MaxSGPRSym, MaxSGPR);
-  assignMaxRegSym(MaxNonChainVGPRSym, MaxNonChainVGPR);
   assignMaxRegSym(MaxNamedBarrierSym, MaxNamedBarrier);
 }
 
@@ -101,10 +99,6 @@ MCSymbol *MCResourceInfo::getMaxAGPRSymbol(MCContext &OutContext) {
 
 MCSymbol *MCResourceInfo::getMaxSGPRSymbol(MCContext &OutContext) {
   return OutContext.getOrCreateSymbol("amdgpu.max_num_sgpr");
-}
-
-MCSymbol *MCResourceInfo::getMaxNonChainVGPRSymbol(MCContext &OutContext) {
-  return OutContext.getOrCreateSymbol("amdgpu.max_num_non_chain_vgpr");
 }
 
 MCSymbol *MCResourceInfo::getMaxNamedBarrierSymbol(MCContext &OutContext) {
@@ -260,7 +254,6 @@ void MCResourceInfo::gatherResourceInfo(
   MCSymbol *MaxVGPRSym = getMaxVGPRSymbol(OutContext);
   MCSymbol *MaxAGPRSym = getMaxAGPRSymbol(OutContext);
   MCSymbol *MaxSGPRSym = getMaxSGPRSymbol(OutContext);
-  MCSymbol *MaxNonChainVGPRSym = getMaxNonChainVGPRSymbol(OutContext);
   MCSymbol *MaxNamedBarrierSym = getMaxNamedBarrierSymbol(OutContext);
 
   CallingConv::ID CC = MF.getFunction().getCallingConv();
@@ -273,9 +266,6 @@ void MCResourceInfo::gatherResourceInfo(
       addMaxVGPRCandidate(FRI.NumVGPR);
     addMaxAGPRCandidate(FRI.NumAGPR);
     addMaxSGPRCandidate(FRI.NumExplicitSGPR);
-    if (IsDynamicVGPREnabled && !IsDVGPRChain) {
-      addMaxNonChainVGPRCandidate(FRI.NumVGPR);
-    }
     addMaxNamedBarrierCandidate(FRI.NumNamedBarrier);
   }
 

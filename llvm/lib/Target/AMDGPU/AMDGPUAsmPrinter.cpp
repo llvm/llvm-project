@@ -731,8 +731,7 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
   OutStreamer->switchSection(MaxGPRSection);
   getTargetStreamer()->EmitMCResourceMaximums(
       RI.getMaxVGPRSymbol(OutContext), RI.getMaxAGPRSymbol(OutContext),
-      RI.getMaxSGPRSymbol(OutContext), RI.getMaxNonChainVGPRSymbol(OutContext),
-      RI.getMaxNamedBarrierSymbol(OutContext));
+      RI.getMaxSGPRSymbol(OutContext), RI.getMaxNamedBarrierSymbol(OutContext));
   OutStreamer->popSection();
 
   // In the object-linking pipeline per-function resource MCExprs reference

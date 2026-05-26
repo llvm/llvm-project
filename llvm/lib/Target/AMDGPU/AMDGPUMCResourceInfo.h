@@ -44,7 +44,6 @@ private:
   int32_t MaxVGPR = 0;
   int32_t MaxAGPR = 0;
   int32_t MaxSGPR = 0;
-  int32_t MaxNonChainVGPR = 0;
   int32_t MaxNamedBarrier = 0;
 
   // Whether the MCResourceInfo has been finalized through finalize(MCContext
@@ -78,9 +77,6 @@ public:
   void addMaxSGPRCandidate(int32_t candidate) {
     MaxSGPR = std::max(MaxSGPR, candidate);
   }
-  void addMaxNonChainVGPRCandidate(int32_t candidate) {
-    MaxNonChainVGPR = std::max(MaxNonChainVGPR, candidate);
-  }
   void addMaxNamedBarrierCandidate(int32_t candidate) {
     MaxNamedBarrier = std::max(MaxNamedBarrier, candidate);
   }
@@ -99,7 +95,6 @@ public:
   MCSymbol *getMaxVGPRSymbol(MCContext &OutContext);
   MCSymbol *getMaxAGPRSymbol(MCContext &OutContext);
   MCSymbol *getMaxSGPRSymbol(MCContext &OutContext);
-  MCSymbol *getMaxNonChainVGPRSymbol(MCContext &OutContext);
   MCSymbol *getMaxNamedBarrierSymbol(MCContext &OutContext);
 
   /// AMDGPUResourceUsageAnalysis gathers resource usage on a per-function
