@@ -108,7 +108,7 @@ private:
         value = d->value;
     }
     return llvm::stable_hash_combine(kind, sectionIdx.value_or(0), value,
-                                     reloc.addend);
+                                     reloc.getAddend());
   }
 };
 } // namespace

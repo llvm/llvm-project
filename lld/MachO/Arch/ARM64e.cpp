@@ -1,4 +1,4 @@
-//===- ARM64.cpp ----------------------------------------------------------===//
+//===- ARM64e.cpp ---------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,8 +23,8 @@ using namespace lld::macho;
 
 namespace {
 
-struct ARM64 : ARM64Common {
-  ARM64();
+struct ARM64e : ARM64Common {
+  ARM64e();
   void writeStub(uint8_t *buf, const Symbol &, uint64_t) const override;
 
   void writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
@@ -40,7 +40,7 @@ struct ARM64 : ARM64Common {
 // absolute version of this relocation. The semantics of the absolute relocation
 // are weird -- it results in the value of the GOT slot being written, instead
 // of the address. Let's not support it unless we find a real-world use case.
-static constexpr std::array<RelocAttrs, 11> relocAttrsArray{{
+static constexpr std::array<RelocAttrs, 12> relocAttrsArray{{
 #define B(x) RelocAttrBits::x
     {"UNSIGNED",
      B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(BYTE4) | B(BYTE8)},
@@ -56,27 +56,52 @@ static constexpr std::array<RelocAttrs, 11> relocAttrsArray{{
     {"TLVP_LOAD_PAGEOFF12",
      B(ABSOLUTE) | B(EXTERN) | B(TLV) | B(LOAD) | B(BYTE4)},
     {"ADDEND", B(ADDEND)},
+    // ARM64e-specific: AUTHENTICATED_POINTER (64-bit absolute, external or
+    // local)
+    {"AUTHENTICATED_POINTER",
+     B(ABSOLUTE) | B(UNSIGNED) | B(EXTERN) | B(LOCAL) | B(BYTE8) | B(AUTH)},
 #undef B
 }};
 
+// ARM64e uses authenticated stubs with braa instruction.
+// These are 16 bytes (4 instructions) instead of the regular 12 bytes.
+// The stub computes the GOT address in x17 for use as authentication context.
 static constexpr uint32_t stubCode[] = {
-    0x90000010, // 00: adrp  x16, __la_symbol_ptr@page
-    0xf9400210, // 04: ldr   x16, [x16, __la_symbol_ptr@pageoff]
-    0xd61f0200, // 08: br    x16
+    0x90000011, // 00: adrp  x17, __auth_got@page
+    0x91000231, // 04: add   x17, x17, __auth_got@pageoff
+    0xf9400230, // 08: ldr   x16, [x17]
+    0xd71f0a11, // 0c: braa  x16, x17  ; authenticate with IA key, context=x17
 };
 
-void ARM64::writeStub(uint8_t *buf8, const Symbol &sym,
-                      uint64_t pointerVA) const {
-  ::writeStub(buf8, stubCode, sym, pointerVA);
+void ARM64e::writeStub(uint8_t *buf8, const Symbol &sym,
+                       uint64_t pointerVA) const {
+  auto *buf32 = reinterpret_cast<uint32_t *>(buf8);
+  constexpr size_t stubCodeSize = sizeof(stubCode);
+  SymbolDiagnostic d = {&sym, "stub"};
+  uint64_t stubAddr = in.stubs->addr + sym.stubsIndex * stubCodeSize;
+  uint64_t pcPageBits = pageBits(stubAddr);
+  uint64_t targetPageBits = pageBits(pointerVA);
+  int64_t pageDiff = static_cast<int64_t>(targetPageBits - pcPageBits);
+  // adrp x17, __auth_got@page
+  encodePage21(&buf32[0], d, stubCode[0], pageDiff);
+  // add x17, x17, __auth_got@pageoff
+  encodePageOff12(&buf32[1], d, stubCode[1], pointerVA);
+  // ldr x16, [x17]
+  buf32[2] = stubCode[2];
+  // braa x16, x17
+  buf32[3] = stubCode[3];
 }
 
+// ARM64e uses authenticated ObjC stubs with braa instruction.
+// Uses x17 as both the address register and authentication context,
+// matching the pattern used in ARM64e auth stubs.
 static constexpr uint32_t objcStubsFastCode[] = {
     0x90000001, // adrp  x1, __objc_selrefs@page
     0xf9400021, // ldr   x1, [x1, @selector("foo")@pageoff]
-    0x90000010, // adrp  x16, _got@page
-    0xf9400210, // ldr   x16, [x16, _objc_msgSend@pageoff]
-    0xd61f0200, // br    x16
-    0xd4200020, // brk   #0x1
+    0x90000011, // adrp  x17, __auth_got@page
+    0x91000231, // add   x17, x17, __auth_got@pageoff
+    0xf9400230, // ldr   x16, [x17]
+    0xd71f0a11, // braa  x16, x17  ; authenticate with IA key
     0xd4200020, // brk   #0x1
     0xd4200020, // brk   #0x1
 };
@@ -87,17 +112,19 @@ static constexpr uint32_t objcStubsSmallCode[] = {
     0x14000000, // b     _objc_msgSend
 };
 
-void ARM64::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
-                                 uint64_t &stubOffset, uint64_t selrefVA,
-                                 Symbol *objcMsgSend) const {
+void ARM64e::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
+                                  uint64_t &stubOffset, uint64_t selrefVA,
+                                  Symbol *objcMsgSend) const {
   uint64_t objcMsgSendAddr;
   uint64_t objcStubSize;
   uint64_t objcMsgSendIndex;
 
   if (config->objcStubsMode == ObjCStubsMode::fast) {
     objcStubSize = target->objcStubsFastSize;
-    objcMsgSendAddr = in.got->addr;
-    objcMsgSendIndex = objcMsgSend->gotIndex;
+    // ARM64e uses authgot for objc_msgSend.
+    assert(objcMsgSend->isInAuthGot());
+    objcMsgSendAddr = in.authgot->addr;
+    objcMsgSendIndex = objcMsgSend->authGotIndex;
     ::writeObjCMsgSendFastStub<LP64>(buf, objcStubsFastCode, sym, stubsAddr,
                                      stubOffset, selrefVA, objcMsgSendAddr,
                                      objcMsgSendIndex);
@@ -118,9 +145,12 @@ void ARM64::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
   stubOffset += objcStubSize;
 }
 
-ARM64::ARM64() : ARM64Common(LP64()) {
+ARM64e::ARM64e() : ARM64Common(LP64()) {
   cpuType = CPU_TYPE_ARM64;
-  cpuSubtype = CPU_SUBTYPE_ARM64_ALL;
+  // ARM64e-specific: Use ARM64E subtype with pointer authentication ABI version
+  // 0
+  cpuSubtype = CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(/*version*/ 0,
+                                                       /*kernel*/ false);
 
   stubSize = sizeof(stubCode);
   thunkSize = sizeof(arm64ThunkCode);
@@ -146,7 +176,7 @@ ARM64::ARM64() : ARM64Common(LP64()) {
   relocAttrs = {relocAttrsArray.data(), relocAttrsArray.size()};
 }
 
-TargetInfo *macho::createARM64TargetInfo() {
-  static ARM64 t;
+TargetInfo *macho::createARM64eTargetInfo() {
+  static ARM64e t;
   return &t;
 }

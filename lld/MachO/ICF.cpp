@@ -115,6 +115,16 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       return false;
     if (ra.offset != rb.offset)
       return false;
+    // For AUTH relocs, both must be AUTH with identical signing metadata.
+    if (ra.hasAuth != rb.hasAuth)
+      return false;
+    if (ra.hasAuth) {
+      const AuthInfo *aiA = ra.getAuthInfo();
+      const AuthInfo *aiB = rb.getAuthInfo();
+      if (aiA->diversity != aiB->diversity || aiA->key != aiB->key ||
+          aiA->addrDiv != aiB->addrDiv)
+        return false;
+    }
     if (isa<Symbol *>(ra.referent) != isa<Symbol *>(rb.referent))
       return false;
 
@@ -130,13 +140,13 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       // ICF runs before Undefineds are treated (and potentially converted into
       // DylibSymbols).
       if (isa<DylibSymbol>(sa) || isa<Undefined>(sa))
-        return sa == sb && ra.addend == rb.addend;
+        return sa == sb && ra.getAddend() == rb.getAddend();
       assert(isa<Defined>(sa));
       const auto *da = cast<Defined>(sa);
       const auto *db = cast<Defined>(sb);
       if (!da->isec() || !db->isec()) {
         assert(da->isAbsolute() && db->isAbsolute());
-        return da->value + ra.addend == db->value + rb.addend;
+        return da->value + ra.getAddend() == db->value + rb.getAddend();
       }
       isecA = da->isec();
       valueA = da->value;
@@ -164,7 +174,7 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
     assert(isecA->kind() == isecB->kind());
     // We will compare ConcatInputSection contents in equalsVariable.
     if (isa<ConcatInputSection>(isecA))
-      return ra.addend == rb.addend;
+      return ra.getAddend() == rb.getAddend();
     // Else we have two literal sections. References to them are equal iff their
     // offsets in the output section are equal.
     if (isa<Symbol *>(ra.referent))
@@ -172,10 +182,10 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       // don't do `getOffset(value + addend)` because value + addend may not be
       // a valid offset in the literal section.
       return isecA->getOffset(valueA) == isecB->getOffset(valueB) &&
-             ra.addend == rb.addend;
+             ra.getAddend() == rb.getAddend();
     assert(valueA == 0 && valueB == 0);
     // For section relocs, we compare the content at the section offset.
-    return isecA->getOffset(ra.addend) == isecB->getOffset(rb.addend);
+    return isecA->getOffset(ra.getAddend()) == isecB->getOffset(rb.getAddend());
   };
   if (!llvm::equal(ia->relocs, ib->relocs, f))
     return false;

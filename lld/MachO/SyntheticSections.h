@@ -14,6 +14,7 @@
 #include "InputSection.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
+#include "Relocations.h"
 #include "Target.h"
 #include "Writer.h"
 
@@ -115,7 +116,8 @@ public:
 // TLVPointerSection stores references to thread-local variables.
 class NonLazyPointerSectionBase : public SyntheticSection {
 public:
-  NonLazyPointerSectionBase(const char *segname, const char *name);
+  NonLazyPointerSectionBase(const char *segname, const char *name,
+                            bool isAuth = false);
   const llvm::SetVector<const Symbol *> &getEntries() const { return entries; }
   bool isNeeded() const override { return !entries.empty(); }
   uint64_t getSize() const override {
@@ -127,6 +129,8 @@ public:
     return addr + gotIndex * target->wordSize;
   }
 
+  const bool isAuth;
+
 private:
   llvm::SetVector<const Symbol *> entries;
 };
@@ -134,6 +138,11 @@ private:
 class GotSection final : public NonLazyPointerSectionBase {
 public:
   GotSection();
+};
+
+class AuthGotSection final : public NonLazyPointerSectionBase {
+public:
+  AuthGotSection();
 };
 
 class TlvPointerSection final : public NonLazyPointerSectionBase {
@@ -787,18 +796,23 @@ public:
     locations.emplace_back(isec, offset);
   }
   void addBinding(const Symbol *dysym, const InputSection *isec,
-                  uint64_t offset, int64_t addend = 0);
+                  uint64_t offset, int64_t addend = 0,
+                  bool forceOutline = false);
 
   void setHasNonWeakDefinition() { hasNonWeakDef = true; }
 
   // Returns an (ordinal, inline addend) tuple used by dyld_chained_ptr_64_bind.
-  std::pair<uint32_t, uint8_t> getBinding(const Symbol *sym,
-                                          int64_t addend) const;
+  std::pair<uint32_t, uint8_t> getBinding(const Symbol *sym, int64_t addend,
+                                          bool forceOutline = false) const;
 
   const std::vector<Location> &getLocations() const { return locations; }
 
   bool hasWeakBinding() const { return hasWeakBind; }
   bool hasNonWeakDefinition() const { return hasNonWeakDef; }
+
+  // Pointer format used by every fixup in this image. Set once at construction
+  // from arch + min-deployment; queried by per-fixup writers in the hot path.
+  const uint16_t pointerFormat;
 
 private:
   // Location::offset initially stores the offset within an InputSection, but
@@ -829,8 +843,10 @@ private:
   llvm::MachO::ChainedImportFormat importFormat;
 };
 
-void writeChainedRebase(uint8_t *buf, uint64_t targetVA);
-void writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend);
+void writeChainedRebase(uint8_t *buf, uint64_t targetVA, const AuthInfo *ai);
+void writeChainedFixup(uint8_t *buf, const Symbol *sym, const Relocation &r);
+void writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend,
+                       const AuthInfo *ai);
 
 struct InStruct {
   const uint8_t *bufferStart = nullptr;
@@ -847,6 +863,7 @@ struct InStruct {
   LazyBindingSection *lazyBinding = nullptr;
   ExportSection *exports = nullptr;
   GotSection *got = nullptr;
+  AuthGotSection *authgot = nullptr;
   TlvPointerSection *tlvPointers = nullptr;
   LazyPointerSection *lazyPointers = nullptr;
   StubsSection *stubs = nullptr;

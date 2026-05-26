@@ -201,6 +201,15 @@ static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
     return false;
   }
 
+  // Reject non-arm64e objects when linking for arm64e.
+  if (config->arch() == AK_arm64e && hdr->cputype == CPU_TYPE_ARM64 &&
+      (hdr->cpusubtype & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_ARM64E) {
+    warn(toString(file) +
+         " has architecture arm64 which is incompatible with "
+         "target architecture arm64e (arm64e requires pointer authentication)");
+    return false;
+  }
+
   return checkCompatibility(file);
 }
 
@@ -263,7 +272,7 @@ std::optional<MemoryBufferRef> macho::readFile(StringRef path) {
     // FIXME: LD64 has a more complex fallback logic here.
     // Consider implementing that as well?
     if (cpuType != static_cast<uint32_t>(target->cpuType) ||
-        cpuSubtype != target->cpuSubtype) {
+        cpuSubtype != (target->cpuSubtype & ~MachO::CPU_SUBTYPE_MASK)) {
       archs.emplace_back(getArchName(cpuType, cpuSubtype));
       continue;
     }
@@ -580,9 +589,27 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
     r.pcrel = relInfo.r_pcrel;
     r.length = relInfo.r_length;
     r.offset = relInfo.r_address;
+
+    // For ARM64e authenticated pointer relocations, extract the auth info
+    // from the in-object bitfields and store in the union's authData member.
+    if (target->hasAttr(relInfo.r_type, RelocAttrBits::AUTH)) {
+      const uint8_t *loc = buf + sec.offset + relInfo.r_address;
+      auto authPtr =
+          *reinterpret_cast<const arm64e_auth_embedded_pointer *>(loc);
+      if (authPtr.auth) {
+        r.hasAuth = true;
+        r.authData.addend =
+            isSubtrahend ? 0 : static_cast<int32_t>(totalAddend);
+        r.authData.info.diversity = authPtr.diversity;
+        r.authData.info.addrDiv = authPtr.addrDiv;
+        r.authData.info.key = static_cast<PtrAuthKey>(authPtr.key);
+      }
+    }
+
     if (relInfo.r_extern) {
       r.referent = symbols[relInfo.r_symbolnum];
-      r.addend = isSubtrahend ? 0 : totalAddend;
+      if (!r.hasAuth)
+        r.addend = isSubtrahend ? 0 : totalAddend;
     } else {
       assert(!isSubtrahend);
       const SectionHeader &referentSecHead =
@@ -604,7 +631,12 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
       }
       r.referent = findContainingSubsection(*sections[relInfo.r_symbolnum - 1],
                                             &referentOffset);
-      r.addend = referentOffset;
+      // For AUTH relocs the upper 32 bits of the addend slot hold AuthInfo;
+      // only write the int32_t addend half to avoid clobbering it.
+      if (r.hasAuth)
+        r.authData.addend = static_cast<int32_t>(referentOffset);
+      else
+        r.addend = referentOffset;
     }
 
     // Find the subsection that this relocation belongs to.
@@ -1167,7 +1199,7 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
         ++it;
         continue;
       }
-      uint64_t add = r.addend;
+      uint64_t add = r.getAddend();
       if (auto *sym = cast_or_null<Defined>(r.referent.dyn_cast<Symbol *>())) {
         // Check whether the symbol defined in this file is the prevailing one.
         // Skip if it is e.g. a weak def that didn't prevail.
@@ -1350,12 +1382,13 @@ targetSymFromCanonicalSubtractor(const InputSection *isec,
   if (!pcSym) {
     auto *targetIsec =
         cast<ConcatInputSection>(cast<InputSection *>(minuend.referent));
-    target = findSymbolAtOffset(targetIsec, minuend.addend);
+    target = findSymbolAtOffset(targetIsec, minuend.getAddend());
   }
   if (Invert)
     std::swap(pcSym, target);
   if (pcSym->isec() == isec) {
-    if (pcSym->value - (Invert ? -1 : 1) * minuend.addend != subtrahend.offset)
+    if (pcSym->value - (Invert ? -1 : 1) * minuend.getAddend() !=
+        subtrahend.offset)
       fatal("invalid FDE relocation in __eh_frame");
   } else {
     // Ensure the pcReloc points to a symbol within the current EH frame.
@@ -1367,7 +1400,7 @@ targetSymFromCanonicalSubtractor(const InputSection *isec,
     Relocation &pcReloc = Invert ? minuend : subtrahend;
     pcReloc.referent = isec->symbols[0];
     assert(isec->symbols[0]->value == 0);
-    minuend.addend = pcReloc.offset * (Invert ? 1LL : -1LL);
+    minuend.setAddend(pcReloc.offset * (Invert ? 1LL : -1LL));
   }
   return target;
 }

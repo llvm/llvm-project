@@ -160,6 +160,7 @@ public:
 
 TargetInfo *createX86_64TargetInfo();
 TargetInfo *createARM64TargetInfo();
+TargetInfo *createARM64eTargetInfo();
 TargetInfo *createARM64_32TargetInfo();
 
 struct LP64 {

@@ -976,6 +976,8 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
   case CPU_TYPE_X86_64:
     return createX86_64TargetInfo();
   case CPU_TYPE_ARM64:
+    if ((cpuSubtype & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_ARM64E)
+      return createARM64eTargetInfo();
     return createARM64TargetInfo();
   case CPU_TYPE_ARM64_32:
     return createARM64_32TargetInfo();
@@ -1268,8 +1270,14 @@ static bool dataConstDefault(const InputArgList &args) {
 
 static bool shouldEmitChainedFixups(const InputArgList &args) {
   const Arg *arg = args.getLastArg(OPT_fixup_chains, OPT_no_fixup_chains);
-  if (arg && arg->getOption().matches(OPT_no_fixup_chains))
+  if (arg && arg->getOption().matches(OPT_no_fixup_chains)) {
+    if (config->arch() == AK_arm64e) {
+      warn(
+          "-no_fixup_chains is incompatible with arm64e; using chained fixups");
+      return true;
+    }
     return false;
+  }
 
   bool requested = arg && arg->getOption().matches(OPT_fixup_chains);
   if (!config->isPic) {
@@ -1279,7 +1287,8 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
     return false;
   }
 
-  if (!is_contained({AK_x86_64, AK_x86_64h, AK_arm64}, config->arch())) {
+  if (!is_contained({AK_x86_64, AK_x86_64h, AK_arm64, AK_arm64e},
+                    config->arch())) {
     if (requested)
       error("-fixup_chains is only supported on x86_64 and arm64 targets");
 

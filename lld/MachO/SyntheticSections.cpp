@@ -101,6 +101,11 @@ static uint32_t cpuSubtype() {
       config->platformInfo.target.MinDeployment >= VersionTuple(10, 5))
     subtype |= CPU_SUBTYPE_LIB64;
 
+  // arm64e dylibs/bundles use ptrauth version 0.
+  if (config->arch() == AK_arm64e &&
+      (config->outputType == MH_DYLIB || config->outputType == MH_BUNDLE))
+    subtype = CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, false);
+
   return subtype;
 }
 
@@ -299,17 +304,18 @@ void RebaseSection::writeTo(uint8_t *buf) const {
 }
 
 NonLazyPointerSectionBase::NonLazyPointerSectionBase(const char *segname,
-                                                     const char *name)
-    : SyntheticSection(segname, name) {
+                                                     const char *name,
+                                                     bool isAuth)
+    : SyntheticSection(segname, name), isAuth(isAuth) {
   align = target->wordSize;
 }
 
 void macho::addNonLazyBindingEntries(const Symbol *sym,
                                      const InputSection *isec, uint64_t offset,
-                                     int64_t addend) {
+                                     int64_t addend, bool forceOutlineAuth) {
   if (config->emitChainedFixups) {
     if (needsBinding(sym))
-      in.chainedFixups->addBinding(sym, isec, offset, addend);
+      in.chainedFixups->addBinding(sym, isec, offset, addend, forceOutlineAuth);
     else if (isa<Defined>(sym))
       in.chainedFixups->addRebase(isec, offset);
     else
@@ -336,16 +342,104 @@ void macho::addNonLazyBindingEntries(const Symbol *sym,
 
 void NonLazyPointerSectionBase::addEntry(Symbol *sym) {
   if (entries.insert(sym)) {
-    assert(!sym->isInGot());
-    sym->gotIndex = entries.size() - 1;
-
-    addNonLazyBindingEntries(sym, isec, sym->gotIndex * target->wordSize);
+    // On arm64e, a symbol can be in both __got and __auth_got.
+    // Use the appropriate index field based on which section this is.
+    if (isAuth) {
+      assert(!sym->isInAuthGot());
+      sym->authGotIndex = entries.size() - 1;
+      addNonLazyBindingEntries(sym, isec, sym->authGotIndex * target->wordSize,
+                               0, isAuth);
+    } else {
+      assert(!sym->isInGot());
+      sym->gotIndex = entries.size() - 1;
+      addNonLazyBindingEntries(sym, isec, sym->gotIndex * target->wordSize, 0,
+                               isAuth);
+    }
   }
 }
 
-void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA) {
+// Pick the chained-fixup pointer format for this image. arm64e selects between
+// USERLAND24 (newer deployment targets) and the legacy ARM64E format; every
+// other arch uses DYLD_CHAINED_PTR_64.
+static uint16_t computePointerFormat() {
+  using namespace llvm::MachO;
+  if (config->arch() != AK_arm64e)
+    return DYLD_CHAINED_PTR_64;
+
+  const VersionTuple &minVersion = config->platformInfo.target.MinDeployment;
+  switch (config->platform()) {
+  case PLATFORM_MACOS:
+  case PLATFORM_MACCATALYST:
+    if (minVersion >= VersionTuple(12, 0))
+      return DYLD_CHAINED_PTR_ARM64E_USERLAND24;
+    break;
+  case PLATFORM_IOS:
+  case PLATFORM_IOSSIMULATOR:
+  case PLATFORM_TVOS:
+  case PLATFORM_TVOSSIMULATOR:
+    if (minVersion >= VersionTuple(15, 0))
+      return DYLD_CHAINED_PTR_ARM64E_USERLAND24;
+    break;
+  case PLATFORM_WATCHOS:
+  case PLATFORM_WATCHOSSIMULATOR:
+    if (minVersion >= VersionTuple(8, 0))
+      return DYLD_CHAINED_PTR_ARM64E_USERLAND24;
+    break;
+  default:
+    break;
+  }
+  return DYLD_CHAINED_PTR_ARM64E;
+}
+
+void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA,
+                               const AuthInfo *ai) {
   assert(config->emitChainedFixups);
   assert(target->wordSize == 8 && "Only 64-bit platforms are supported");
+  if (config->arch() == AK_arm64e) {
+    bool useUserland24 =
+        in.chainedFixups->pointerFormat == DYLD_CHAINED_PTR_ARM64E_USERLAND24;
+
+    if (!ai) {
+      auto *rebase = reinterpret_cast<dyld_chained_ptr_arm64e_rebase *>(buf);
+      uint64_t targetValue;
+      if (useUserland24) {
+        targetValue = targetVA - in.header->addr;
+      } else {
+        targetValue = targetVA;
+      }
+      rebase->target = targetValue & 0x7ff'ffff'ffff;
+      rebase->high8 = (targetValue >> 56);
+      // The target field is 43 bits and high8 covers bits 56-63; bits 43-55
+      // are not encodable. arm64e requires chained fixups (Driver.cpp rejects
+      // -no_fixup_chains for this arch), so report a hard error instead of a
+      // recommendation to disable them.
+      uint64_t encodedVA = static_cast<uint64_t>(rebase->target) |
+                           (static_cast<uint64_t>(rebase->high8) << 56);
+      if (encodedVA != targetValue)
+        error("rebase target 0x" + Twine::utohexstr(targetVA) +
+              " does not fit into arm64e chained-fixup target field");
+      rebase->next = 0;
+      rebase->bind = 0;
+      rebase->auth = 0;
+      return;
+    }
+    auto *rebase = reinterpret_cast<dyld_chained_ptr_arm64e_auth_rebase *>(buf);
+    uint64_t runtimeOffset = targetVA - in.header->addr;
+    if (runtimeOffset > 0xFFFF'FFFFULL)
+      error("rebase target 0x" + Twine::utohexstr(targetVA) +
+            " is more than 4 GiB away from image base 0x" +
+            Twine::utohexstr(in.header->addr) +
+            " and cannot be encoded in DYLD_CHAINED_PTR_ARM64E");
+
+    rebase->target = runtimeOffset;
+    rebase->diversity = ai->diversity;
+    rebase->addrDiv = ai->addrDiv;
+    rebase->key = static_cast<uint8_t>(ai->key);
+    rebase->next = 0;
+    rebase->bind = 0;
+    rebase->auth = 1;
+    return;
+  }
   auto *rebase = reinterpret_cast<dyld_chained_ptr_64_rebase *>(buf);
   rebase->target = targetVA & 0xf'ffff'ffff;
   rebase->high8 = (targetVA >> 56);
@@ -361,9 +455,66 @@ void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA) {
           " does not fit into chained fixup. Re-link with -no_fixup_chains");
 }
 
-static void writeChainedBind(uint8_t *buf, const Symbol *sym, int64_t addend) {
+static void writeChainedBind(uint8_t *buf, const Symbol *sym, int64_t addend,
+                             const AuthInfo *ai) {
   assert(config->emitChainedFixups);
   assert(target->wordSize == 8 && "Only 64-bit platforms are supported");
+  if (config->arch() == AK_arm64e) {
+    bool useUserland24 =
+        in.chainedFixups->pointerFormat == DYLD_CHAINED_PTR_ARM64E_USERLAND24;
+
+    if (!ai) {
+      if (useUserland24) {
+        auto *bind = reinterpret_cast<dyld_chained_ptr_arm64e_bind24 *>(buf);
+        auto [ordinal, inlineAddend] =
+            in.chainedFixups->getBinding(sym, addend);
+        bind->ordinal = ordinal;
+        bind->zero = 0;
+        bind->addend = inlineAddend;
+        bind->next = 0;
+        bind->bind = 1;
+        bind->auth = 0;
+      } else {
+        auto *bind = reinterpret_cast<dyld_chained_ptr_arm64e_bind *>(buf);
+        auto [ordinal, inlineAddend] =
+            in.chainedFixups->getBinding(sym, addend);
+        bind->ordinal = ordinal;
+        bind->zero = 0;
+        bind->addend = inlineAddend;
+        bind->next = 0;
+        bind->bind = 1;
+        bind->auth = 0;
+      }
+      return;
+    }
+
+    if (useUserland24) {
+      auto *bind = reinterpret_cast<dyld_chained_ptr_arm64e_auth_bind24 *>(buf);
+      auto [ordinal, _] =
+          in.chainedFixups->getBinding(sym, addend, /*forceOutline=*/true);
+      bind->ordinal = ordinal;
+      bind->zero = 0;
+      bind->diversity = ai->diversity;
+      bind->addrDiv = ai->addrDiv;
+      bind->key = static_cast<uint8_t>(ai->key);
+      bind->next = 0;
+      bind->bind = 1;
+      bind->auth = 1;
+    } else {
+      auto *bind = reinterpret_cast<dyld_chained_ptr_arm64e_auth_bind *>(buf);
+      auto [ordinal, _] =
+          in.chainedFixups->getBinding(sym, addend, /*forceOutline=*/true);
+      bind->ordinal = ordinal;
+      bind->zero = 0;
+      bind->diversity = ai->diversity;
+      bind->addrDiv = ai->addrDiv;
+      bind->key = static_cast<uint8_t>(ai->key);
+      bind->next = 0;
+      bind->bind = 1;
+      bind->auth = 1;
+    }
+    return;
+  }
   auto *bind = reinterpret_cast<dyld_chained_ptr_64_bind *>(buf);
   auto [ordinal, inlineAddend] = in.chainedFixups->getBinding(sym, addend);
   bind->ordinal = ordinal;
@@ -373,17 +524,33 @@ static void writeChainedBind(uint8_t *buf, const Symbol *sym, int64_t addend) {
   bind->bind = 1;
 }
 
-void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend) {
+void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym,
+                              const Relocation &r) {
+  int64_t addend = r.getAddend();
+  const AuthInfo *ai = r.getAuthInfo();
   if (needsBinding(sym))
-    writeChainedBind(buf, sym, addend);
+    writeChainedBind(buf, sym, addend, ai);
   else
-    writeChainedRebase(buf, sym->getVA() + addend);
+    writeChainedRebase(buf, sym->getVA() + addend, ai);
+}
+
+void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend,
+                              const AuthInfo *ai) {
+  if (needsBinding(sym))
+    writeChainedBind(buf, sym, addend, ai);
+  else
+    writeChainedRebase(buf, sym->getVA() + addend, ai);
 }
 
 void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
+  // Auth GOT entries use IA key, diversity=0, address-diversified.
+  static constexpr AuthInfo defaultAuthInfo = {/*diversity=*/0, PtrAuthKey::IA,
+                                               /*addrDiv=*/true};
   if (config->emitChainedFixups) {
-    for (const auto &[i, entry] : llvm::enumerate(entries))
-      writeChainedFixup(&buf[i * target->wordSize], entry, 0);
+    for (const auto &[i, entry] : llvm::enumerate(entries)) {
+      const AuthInfo *ai = isAuth ? &defaultAuthInfo : nullptr;
+      writeChainedFixup(&buf[i * target->wordSize], entry, 0, ai);
+    }
   } else {
     for (const auto &[i, entry] : llvm::enumerate(entries))
       if (auto *defined = dyn_cast<Defined>(entry))
@@ -393,6 +560,12 @@ void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
 
 GotSection::GotSection()
     : NonLazyPointerSectionBase(segment_names::data, section_names::got) {
+  flags = S_NON_LAZY_SYMBOL_POINTERS;
+}
+
+AuthGotSection::AuthGotSection()
+    : NonLazyPointerSectionBase(segment_names::data, section_names::authGot,
+                                /*isAuth=*/true) {
   flags = S_NON_LAZY_SYMBOL_POINTERS;
 }
 
@@ -702,7 +875,9 @@ void WeakBindingSection::writeTo(uint8_t *buf) const {
 }
 
 StubsSection::StubsSection()
-    : SyntheticSection(segment_names::text, section_names::stubs) {
+    : SyntheticSection(segment_names::text, config->arch() == AK_arm64e
+                                                ? section_names::authStubs
+                                                : section_names::stubs) {
   flags = S_SYMBOL_STUBS | S_ATTR_SOME_INSTRUCTIONS | S_ATTR_PURE_INSTRUCTIONS;
   // The stubs section comprises machine instructions, which are aligned to
   // 4 bytes on the archs we care about.
@@ -717,8 +892,16 @@ uint64_t StubsSection::getSize() const {
 void StubsSection::writeTo(uint8_t *buf) const {
   size_t off = 0;
   for (const Symbol *sym : entries) {
-    uint64_t pointerVA =
-        config->emitChainedFixups ? sym->getGotVA() : sym->getLazyPtrVA();
+    uint64_t pointerVA;
+    if (config->emitChainedFixups) {
+      // For arm64e, stubs use authgot instead of regular got.
+      if (config->arch() == AK_arm64e)
+        pointerVA = sym->getAuthGotVA();
+      else
+        pointerVA = sym->getGotVA();
+    } else {
+      pointerVA = sym->getLazyPtrVA();
+    }
     target->writeStub(buf + off, *sym, pointerVA);
     off += target->stubSize;
   }
@@ -758,10 +941,14 @@ void StubsSection::addEntry(Symbol *sym) {
   if (inserted) {
     sym->stubsIndex = entries.size() - 1;
 
-    if (config->emitChainedFixups)
-      in.got->addEntry(sym);
-    else
+    if (config->emitChainedFixups) {
+      if (config->arch() == AK_arm64e)
+        in.authgot->addEntry(sym);
+      else
+        in.got->addEntry(sym);
+    } else {
       addBindingsForStub(sym);
+    }
   }
 }
 
@@ -924,8 +1111,12 @@ void ObjCStubsSection::setUp() {
                          "lazy binding (normally in libobjc.dylib)");
   objcMsgSend->used = true;
   if (config->objcStubsMode == ObjCStubsMode::fast) {
-    in.got->addEntry(objcMsgSend);
-    assert(objcMsgSend->isInGot());
+    // For arm64e, use authgot since objc_msgSend requires authenticated calls.
+    if (config->arch() == AK_arm64e)
+      in.authgot->addEntry(objcMsgSend);
+    else
+      in.got->addEntry(objcMsgSend);
+    assert(objcMsgSend->isInGot() || objcMsgSend->isInAuthGot());
   } else {
     assert(config->objcStubsMode == ObjCStubsMode::small);
     // In line with ld64's behavior, when objc_msgSend is a direct symbol,
@@ -1477,23 +1668,25 @@ IndirectSymtabSection::IndirectSymtabSection()
                       section_names::indirectSymbolTable) {}
 
 uint32_t IndirectSymtabSection::getNumSymbols() const {
-  uint32_t size = in.got->getEntries().size() +
-                  in.tlvPointers->getEntries().size() +
-                  in.stubs->getEntries().size();
+  uint32_t size =
+      in.got->getEntries().size() + in.authgot->getEntries().size() +
+      in.tlvPointers->getEntries().size() + in.stubs->getEntries().size();
   if (!config->emitChainedFixups)
     size += in.stubs->getEntries().size();
   return size;
 }
 
 bool IndirectSymtabSection::isNeeded() const {
-  return in.got->isNeeded() || in.tlvPointers->isNeeded() ||
-         in.stubs->isNeeded();
+  return in.got->isNeeded() || in.authgot->isNeeded() ||
+         in.tlvPointers->isNeeded() || in.stubs->isNeeded();
 }
 
 void IndirectSymtabSection::finalizeContents() {
   uint32_t off = 0;
   in.got->reserved1 = off;
   off += in.got->getEntries().size();
+  in.authgot->reserved1 = off;
+  off += in.authgot->getEntries().size();
   in.tlvPointers->reserved1 = off;
   off += in.tlvPointers->getEntries().size();
   in.stubs->reserved1 = off;
@@ -1512,6 +1705,10 @@ static uint32_t indirectValue(const Symbol *sym) {
 void IndirectSymtabSection::writeTo(uint8_t *buf) const {
   uint32_t off = 0;
   for (const Symbol *sym : in.got->getEntries()) {
+    write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
+    ++off;
+  }
+  for (const Symbol *sym : in.authgot->getEntries()) {
     write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
     ++off;
   }
@@ -2040,7 +2237,7 @@ void InitOffsetsSection::setUp() {
       if (!attrs.hasAttr(RelocAttrBits::UNSIGNED))
         error(isec->getLocation(rel.offset) +
               ": unsupported relocation type: " + attrs.name);
-      if (rel.addend != 0)
+      if (rel.getAddend() != 0)
         error(isec->getLocation(rel.offset) +
               ": relocation addend is not representable in __init_offsets");
       if (isa<InputSection *>(rel.referent))
@@ -2345,7 +2542,8 @@ void macho::createSyntheticSymbols() {
 }
 
 ChainedFixupsSection::ChainedFixupsSection()
-    : LinkEditSection(segment_names::linkEdit, section_names::chainFixups) {}
+    : LinkEditSection(segment_names::linkEdit, section_names::chainFixups),
+      pointerFormat(computePointerFormat()) {}
 
 bool ChainedFixupsSection::isNeeded() const {
   assert(config->emitChainedFixups);
@@ -2357,9 +2555,10 @@ bool ChainedFixupsSection::isNeeded() const {
 
 void ChainedFixupsSection::addBinding(const Symbol *sym,
                                       const InputSection *isec, uint64_t offset,
-                                      int64_t addend) {
+                                      int64_t addend, bool forceOutline) {
   locations.emplace_back(isec, offset);
-  int64_t outlineAddend = (addend < 0 || addend > 0xFF) ? addend : 0;
+  int64_t outlineAddend =
+      (forceOutline || addend < 0 || addend > 0xFF) ? addend : 0;
   auto [it, inserted] = bindings.insert(
       {{sym, outlineAddend}, static_cast<uint32_t>(bindings.size())});
 
@@ -2374,8 +2573,10 @@ void ChainedFixupsSection::addBinding(const Symbol *sym,
 }
 
 std::pair<uint32_t, uint8_t>
-ChainedFixupsSection::getBinding(const Symbol *sym, int64_t addend) const {
-  int64_t outlineAddend = (addend < 0 || addend > 0xFF) ? addend : 0;
+ChainedFixupsSection::getBinding(const Symbol *sym, int64_t addend,
+                                 bool forceOutline) const {
+  int64_t outlineAddend =
+      (forceOutline || addend < 0 || addend > 0xFF) ? addend : 0;
   auto it = bindings.find({sym, outlineAddend});
   assert(it != bindings.end() && "binding not found in the imports table");
   if (outlineAddend == 0)
@@ -2425,7 +2626,7 @@ size_t ChainedFixupsSection::SegmentInfo::writeTo(uint8_t *buf) const {
   segInfo->size = getSize();
   segInfo->page_size = target->getPageSize();
   // FIXME: Use DYLD_CHAINED_PTR_64_OFFSET on newer OS versions.
-  segInfo->pointer_format = DYLD_CHAINED_PTR_64;
+  segInfo->pointer_format = in.chainedFixups->pointerFormat;
   segInfo->segment_offset = oseg->addr - in.header->addr;
   segInfo->max_valid_pointer = 0; // not used on 64-bit
   segInfo->page_count = pageStarts.back().first + 1;

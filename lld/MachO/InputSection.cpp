@@ -101,7 +101,14 @@ uint64_t macho::resolveSymbolOffsetVA(const Symbol *sym, uint8_t type,
     // There's no meaningful way to "interpose" an interior offset.
     symVA = (offset != 0) ? sym->getVA() : sym->resolveBranchVA();
   } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
-    symVA = sym->resolveGotVA();
+    // GOT_LOAD (no POINTER attr) should use regular __got when available,
+    // because the compiler applies paciza on the loaded value and needs
+    // a raw (non-auth) pointer. POINTER_TO_GOT (has POINTER attr) should
+    // use __auth_got (the default from getGotVA/resolveGotVA).
+    if (!relocAttrs.hasAttr(RelocAttrBits::POINTER) && sym->isInGot())
+      symVA = in.got->getVA(sym->gotIndex);
+    else
+      symVA = sym->resolveGotVA();
   } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
     symVA = sym->resolveTlvVA();
   } else {
@@ -236,11 +243,11 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       const Relocation &minuend = relocs[++i];
       uint64_t minuendVA;
       if (const Symbol *toSym = minuend.referent.dyn_cast<Symbol *>())
-        minuendVA = toSym->getVA() + minuend.addend;
+        minuendVA = toSym->getVA() + minuend.getAddend();
       else {
         auto *referentIsec = cast<InputSection *>(minuend.referent);
         assert(!::shouldOmitFromOutput(referentIsec));
-        minuendVA = referentIsec->getVA(minuend.addend);
+        minuendVA = referentIsec->getVA(minuend.getAddend());
       }
       referentVA = minuendVA - fromSym->getVA();
     } else if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
@@ -253,7 +260,7 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
         target->handleDtraceReloc(referentSym, r, loc);
         continue;
       }
-      referentVA = resolveSymbolOffsetVA(referentSym, r.type, r.addend);
+      referentVA = resolveSymbolOffsetVA(referentSym, r.type, r.getAddend());
 
       if (isThreadLocalVariables(getFlags()) && isa<Defined>(referentSym)) {
         // References from thread-local variable sections are treated as offsets
@@ -262,15 +269,15 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
         // contiguous).
         referentVA -= firstTLVDataSection->addr;
       } else if (needsFixup) {
-        writeChainedFixup(loc, referentSym, r.addend);
+        writeChainedFixup(loc, referentSym, r);
         continue;
       }
     } else if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
       assert(!::shouldOmitFromOutput(referentIsec));
-      referentVA = referentIsec->getVA(r.addend);
+      referentVA = referentIsec->getVA(r.getAddend());
 
       if (needsFixup) {
-        writeChainedRebase(loc, referentVA);
+        writeChainedRebase(loc, referentVA, r.getAuthInfo());
         continue;
       }
     }

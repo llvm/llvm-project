@@ -18,6 +18,36 @@
 
 namespace lld::macho {
 
+// Shared stub helper code — identical for ARM64 and ARM64e.
+inline constexpr uint32_t arm64StubHelperHeaderCode[] = {
+    0x90000011, // 00: adrp  x17, _dyld_private@page
+    0x91000231, // 04: add   x17, x17, _dyld_private@pageoff
+    0xa9bf47f0, // 08: stp   x16/x17, [sp, #-16]!
+    0x90000010, // 0c: adrp  x16, dyld_stub_binder@page
+    0xf9400210, // 10: ldr   x16, [x16, dyld_stub_binder@pageoff]
+    0xd61f0200, // 14: br    x16
+};
+
+inline constexpr uint32_t arm64StubHelperEntryCode[] = {
+    0x18000050, // 00: ldr  w16, l0
+    0x14000000, // 04: b    stubHelperHeader
+    0x00000000, // 08: l0: .long 0
+};
+
+// A thunk is the relaxed variation of stubCode. We don't need the
+// extra indirection through a lazy pointer because the target address
+// is known at link time.
+inline constexpr uint32_t arm64ThunkCode[] = {
+    0x90000010, // 00: adrp  x16, <thunk.ptr>@page
+    0x91000210, // 04: add   x16, [x16,<thunk.ptr>@pageoff]
+    0xd61f0200, // 08: br    x16
+};
+
+// Just a single direct branch to the target function.
+inline constexpr uint32_t arm64ICFSafeThunkCode[] = {
+    0x14000000, // 00: b    target
+};
+
 struct ARM64Common : TargetInfo {
   template <class LP> ARM64Common(LP lp) : TargetInfo(lp) {}
 
@@ -31,6 +61,16 @@ struct ARM64Common : TargetInfo {
 
   void handleDtraceReloc(const Symbol *sym, const Relocation &r,
                          uint8_t *loc) const override;
+
+  void writeStubHelperHeader(uint8_t *buf) const override;
+  void writeStubHelperEntry(uint8_t *buf, const Symbol &sym,
+                            uint64_t entryVA) const override;
+  void populateThunk(InputSection *thunk, Symbol *funcSym,
+                     int64_t addend) override;
+  void initICFSafeThunkBody(InputSection *thunk,
+                            Symbol *targetSym) const override;
+  Symbol *getThunkBranchTarget(InputSection *thunk) const override;
+  uint32_t getICFSafeThunkSize() const override;
 };
 
 inline uint64_t bitField(uint64_t value, int right, int width, int left) {

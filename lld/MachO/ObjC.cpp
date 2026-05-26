@@ -1140,7 +1140,7 @@ void ObjcCategoryMerger::createSymbolReference(
     const Relocation &relocTemplate) {
   Relocation r = relocTemplate;
   r.offset = offset;
-  r.addend = 0;
+  r.setAddend(0);
   r.referent = const_cast<Symbol *>(refTo);
   refFrom->isec()->relocs.push_back(r);
 }

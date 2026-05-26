@@ -217,6 +217,15 @@ void UnwindInfoSectionImpl::prepare() {
     }
 }
 
+// On arm64e, personality pointers go in the authenticated GOT;
+// on other architectures they go in the regular GOT.
+static void addPersonalityGotEntry(Symbol *s) {
+  if (config->arch() == AK_arm64e)
+    in.authgot->addEntry(s);
+  else
+    in.got->addEntry(s);
+}
+
 // Compact unwind relocations have different semantics, so we handle them in a
 // separate code path from regular relocations. First, we do not wish to add
 // rebase opcodes for __LD,__compact_unwind, because that section doesn't
@@ -280,7 +289,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
             personalityTable[{defined->isec(), defined->value}];
         if (personality == nullptr) {
           personality = defined;
-          in.got->addEntry(defined);
+          addPersonalityGotEntry(defined);
         } else if (personality != defined) {
           r.referent = personality;
         }
@@ -288,7 +297,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
       }
 
       assert(isa<DylibSymbol>(s));
-      in.got->addEntry(s);
+      addPersonalityGotEntry(s);
       continue;
     }
 
@@ -300,12 +309,12 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
       // in the GOT, use that to avoid creating a duplicate entry. All GOT
       // entries needed by non-unwind sections will have already been added
       // by this point.
-      Symbol *&s = personalityTable[{referentIsec, r.addend}];
+      int64_t addend = r.getAddend();
+      Symbol *&s = personalityTable[{referentIsec, addend}];
       if (s == nullptr) {
         Defined *const *gotEntry =
             llvm::find_if(referentIsec->symbols, [&](Defined const *d) {
-              return d->value == static_cast<uint64_t>(r.addend) &&
-                     d->isInGot();
+              return d->value == static_cast<uint64_t>(addend) && d->isInGot();
             });
         if (gotEntry != referentIsec->symbols.end()) {
           s = *gotEntry;
@@ -313,17 +322,17 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
           // This runs after dead stripping, so the noDeadStrip argument does
           // not matter.
           s = make<Defined>("<internal>", /*file=*/nullptr, referentIsec,
-                            r.addend, /*size=*/0, /*isWeakDef=*/false,
+                            addend, /*size=*/0, /*isWeakDef=*/false,
                             /*isExternal=*/false, /*isPrivateExtern=*/false,
                             /*includeInSymtab=*/true,
                             /*isReferencedDynamically=*/false,
                             /*noDeadStrip=*/false);
           s->used = true;
-          in.got->addEntry(s);
+          addPersonalityGotEntry(s);
         }
       }
       r.referent = s;
-      r.addend = 0;
+      r.setAddend(0);
     }
   }
 }
@@ -637,9 +646,13 @@ void UnwindInfoSectionImpl::writeTo(uint8_t *buf) const {
   for (const auto &encoding : commonEncodings)
     *i32p++ = encoding.first;
 
-  // Personalities
-  for (const Symbol *personality : personalities)
-    *i32p++ = personality->getGotVA() - in.header->addr;
+  // Personalities - for arm64e, use authgot instead of got
+  for (const Symbol *personality : personalities) {
+    uint64_t personalityVA = config->arch() == AK_arm64e
+                                 ? personality->getAuthGotVA()
+                                 : personality->getGotVA();
+    *i32p++ = personalityVA - in.header->addr;
+  }
 
   // FIXME: LD64 checks and warns aboutgaps or overlapse in cuEntries address
   // ranges. We should do the same too

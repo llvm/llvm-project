@@ -16,10 +16,58 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::macho;
 
+void ARM64Common::writeStubHelperHeader(uint8_t *buf) const {
+  ::writeStubHelperHeader<LP64>(buf, arm64StubHelperHeaderCode);
+}
+
+void ARM64Common::writeStubHelperEntry(uint8_t *buf, const Symbol &sym,
+                                       uint64_t entryVA) const {
+  ::writeStubHelperEntry(buf, arm64StubHelperEntryCode, sym, entryVA);
+}
+
+void ARM64Common::populateThunk(InputSection *thunk, Symbol *funcSym,
+                                int64_t addend) {
+  thunk->align = 4;
+  thunk->data = {reinterpret_cast<const uint8_t *>(arm64ThunkCode),
+                 sizeof(arm64ThunkCode)};
+  thunk->relocs.emplace_back(/*type=*/ARM64_RELOC_PAGEOFF12,
+                             /*pcrel=*/false, /*length=*/2,
+                             /*offset=*/4, /*addend=*/addend,
+                             /*referent=*/funcSym);
+  thunk->relocs.emplace_back(/*type=*/ARM64_RELOC_PAGE21,
+                             /*pcrel=*/true, /*length=*/2,
+                             /*offset=*/0, /*addend=*/addend,
+                             /*referent=*/funcSym);
+}
+
+void ARM64Common::initICFSafeThunkBody(InputSection *thunk,
+                                       Symbol *targetSym) const {
+  thunk->data = {reinterpret_cast<const uint8_t *>(arm64ICFSafeThunkCode),
+                 sizeof(arm64ICFSafeThunkCode)};
+  thunk->relocs.emplace_back(/*type=*/ARM64_RELOC_BRANCH26,
+                             /*pcrel=*/true, /*length=*/2,
+                             /*offset=*/0, /*addend=*/0,
+                             /*referent=*/targetSym);
+}
+
+Symbol *ARM64Common::getThunkBranchTarget(InputSection *thunk) const {
+  assert(thunk->relocs.size() == 1 &&
+         "expected a single reloc on ARM64 ICF thunk");
+  auto &reloc = thunk->relocs[0];
+  assert(isa<Symbol *>(reloc.referent) &&
+         "ARM64 thunk reloc is expected to point to a Symbol");
+  return cast<Symbol *>(reloc.referent);
+}
+
+uint32_t ARM64Common::getICFSafeThunkSize() const {
+  return sizeof(arm64ICFSafeThunkCode);
+}
+
 int64_t ARM64Common::getEmbeddedAddend(MemoryBufferRef mb, uint64_t offset,
                                        const relocation_info rel) const {
   if (rel.r_type != ARM64_RELOC_UNSIGNED &&
-      rel.r_type != ARM64_RELOC_SUBTRACTOR) {
+      rel.r_type != ARM64_RELOC_SUBTRACTOR &&
+      rel.r_type != ARM64_RELOC_AUTHENTICATED_POINTER) {
     // All other reloc types should use the ADDEND relocation to store their
     // addends.
     // TODO(gkm): extract embedded addend just so we can assert that it is 0
@@ -28,6 +76,12 @@ int64_t ARM64Common::getEmbeddedAddend(MemoryBufferRef mb, uint64_t offset,
 
   const auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   const uint8_t *loc = buf + offset + rel.r_address;
+
+  if (rel.r_type == ARM64_RELOC_AUTHENTICATED_POINTER) {
+    // Only the low 32 bits are the addend; upper bits hold ptrauth fields.
+    return llvm::SignExtend64<32>(read32le(loc));
+  }
+
   switch (rel.r_length) {
   case 2:
     return static_cast<int32_t>(read32le(loc));

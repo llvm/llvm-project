@@ -49,7 +49,19 @@ uint64_t Symbol::getStubVA() const { return in.stubs->getVA(stubsIndex); }
 uint64_t Symbol::getLazyPtrVA() const {
   return in.lazyPointers->getVA(stubsIndex);
 }
-uint64_t Symbol::getGotVA() const { return in.got->getVA(gotIndex); }
+uint64_t Symbol::getGotVA() const {
+  // On arm64e a symbol can land in both __got and __auth_got; prefer the
+  // signed slot (used by POINTER_TO_GOT for eh_frame personalities).
+  if (isInAuthGot())
+    return getAuthGotVA();
+  if (isInGot())
+    return in.got->getVA(gotIndex);
+  llvm_unreachable("symbol not in any GOT section");
+}
+uint64_t Symbol::getAuthGotVA() const {
+  assert(isInAuthGot());
+  return in.authgot->getVA(authGotIndex);
+}
 uint64_t Symbol::getTlvVA() const { return in.tlvPointers->getVA(gotIndex); }
 
 Defined::Defined(StringRef name, InputFile *file, InputSection *isec,
