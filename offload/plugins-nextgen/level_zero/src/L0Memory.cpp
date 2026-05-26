@@ -630,11 +630,11 @@ Error MemAllocatorTy::deallocLocked(void *Ptr) {
 }
 
 Error MemAllocatorTy::enqueueMemSet(void *Dst, int8_t Value, size_t Size) {
-  return Device->enqueueMemFill(Dst, &Value, sizeof(int8_t), Size);
+  return Device->enqueueMemFillAndSync(Dst, &Value, sizeof(int8_t), Size);
 }
 
 Error MemAllocatorTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size) {
-  return Device->enqueueMemCopy(Dst, Src, Size);
+  return Device->enqueueMemCopyAndSync(Dst, Src, Size);
 }
 
 Expected<void *> MemAllocatorTy::allocFromL0(size_t Size, size_t Align,

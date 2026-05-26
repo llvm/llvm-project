@@ -13,17 +13,16 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0KERNEL_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0KERNEL_H
 
-#include "AsyncQueue.h"
 #include "L0Defs.h"
 #include "L0Trace.h"
 #include "PluginInterface.h"
 
 namespace llvm::omp::target::plugin {
 
+// Forward declarations.
 class L0DeviceTy;
 class L0ProgramTy;
-
-/// Forward declaration.
+struct AsyncQueueTy;
 struct L0LaunchEnvTy;
 
 /// Kernel properties.
@@ -39,19 +38,16 @@ struct KernelPropertiesTy {
 };
 
 struct L0LaunchEnvTy {
-  bool IsAsync;
-  bool IsCooperative = false;
-  AsyncQueueTy *AsyncQueue;
   ze_group_count_t GroupCounts = {0, 0, 0};
   KernelPropertiesTy &KernelPR;
   bool HalfNumThreads = false;
   bool IsTeamsNDRange = false;
+  bool IsCooperative = false;
   std::unique_lock<std::mutex> Lock;
 
-  L0LaunchEnvTy(bool IsAsync, bool IsCooperative, AsyncQueueTy *AsyncQueue,
-                KernelPropertiesTy &KernelPR)
-      : IsAsync(IsAsync), IsCooperative(IsCooperative), AsyncQueue(AsyncQueue),
-        KernelPR(KernelPR), Lock(KernelPR.Mtx, std::defer_lock) {}
+  L0LaunchEnvTy(KernelPropertiesTy &KernelPR, bool IsCooperative = false)
+      : KernelPR(KernelPR), IsCooperative(IsCooperative),
+        Lock(KernelPR.Mtx, std::defer_lock) {}
 };
 
 class L0KernelTy : public GenericKernelTy {
