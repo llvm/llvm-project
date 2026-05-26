@@ -119,6 +119,11 @@ FIELD(HasInitMethod, 1, NO_MERGE)
 /// within anonymous unions or structs.
 FIELD(HasInClassInitializer, 1, NO_MERGE)
 
+/// True if any field with an in-class initializer has a type (or base
+/// element type) with a non-trivial destructor. Used for C++26 union
+/// destructor deletion check ([class.dtor]p7 bullet 2).
+FIELD(HasDMIWithNonTrivialDtor, 1, NO_MERGE)
+
 /// True if any field is of reference type, and does not have an
 /// in-class initializer.
 ///

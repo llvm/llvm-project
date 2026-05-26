@@ -81,9 +81,9 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       HasPrivateFields(false), HasProtectedFields(false),
       HasPublicFields(false), HasMutableFields(false), HasVariantMembers(false),
       HasOnlyCMembers(true), HasInitMethod(false), HasInClassInitializer(false),
-      HasUninitializedReferenceMember(false), HasUninitializedFields(false),
-      HasInheritedConstructor(false), HasInheritedDefaultConstructor(false),
-      HasInheritedAssignment(false),
+      HasDMIWithNonTrivialDtor(false), HasUninitializedReferenceMember(false),
+      HasUninitializedFields(false), HasInheritedConstructor(false),
+      HasInheritedDefaultConstructor(false), HasInheritedAssignment(false),
       NeedOverloadResolutionForCopyConstructor(false),
       NeedOverloadResolutionForMoveConstructor(false),
       NeedOverloadResolutionForCopyAssignment(false),
@@ -1177,10 +1177,31 @@ void CXXRecordDecl::addedMember(Decl *D) {
          Field->getType()->getAsCXXRecordDecl()->hasInClassInitializer())) {
       data().HasInClassInitializer = true;
 
+      // C++26 [class.dtor]p7 bullet 2: track whether any field with a
+      // default member initializer (DMI) has a type with a non-trivial
+      // destructor, for union destructor deletion.
+      if (Field->hasInClassInitializer()) {
+        QualType FT = getASTContext().getBaseElementType(Field->getType());
+        if (const auto *FR = FT->getAsCXXRecordDecl();
+            FR && FR->hasNonTrivialDestructor())
+          data().HasDMIWithNonTrivialDtor = true;
+      } else if (Field->isAnonymousStructOrUnion()) {
+        if (Field->getType()
+                ->getAsCXXRecordDecl()
+                ->data()
+                .HasDMIWithNonTrivialDtor)
+          data().HasDMIWithNonTrivialDtor = true;
+      }
+
       // C++11 [class]p5:
       //   A default constructor is trivial if [...] no non-static data member
       //   of its class has a brace-or-equal-initializer.
-      data().HasTrivialSpecialMembers &= ~SMF_DefaultConstructor;
+      // C++26 [class.default.ctor]p3:
+      //   A default constructor is trivial if [...] either X is a union or
+      //   no non-static data member of its class has a
+      //   brace-or-equal-initializer.
+      if (!(isUnion() && getASTContext().getLangOpts().CPlusPlus26))
+        data().HasTrivialSpecialMembers &= ~SMF_DefaultConstructor;
 
       // C++11 [dcl.init.aggr]p1:
       //   An aggregate is a [...] class with [...] no
@@ -1239,7 +1260,11 @@ void CXXRecordDecl::addedMember(Decl *D) {
           if (FieldRec->hasNonTrivialMoveAssignment())
             data().DefaultedMoveAssignmentIsDeleted = true;
           if (FieldRec->hasNonTrivialDestructor()) {
-            data().DefaultedDestructorIsDeleted = true;
+            // In C++26, the destructor of a union is not deleted merely
+            // because a variant member has a non-trivial destructor.
+            // Deletion is determined later by Sema (see C++26 [class.dtor]p7).
+            if (!Context.getLangOpts().CPlusPlus26)
+              data().DefaultedDestructorIsDeleted = true;
             // C++20 [dcl.constexpr]p5:
             //   The definition of a constexpr destructor whose function-body is
             //   not = delete shall additionally satisfy...
@@ -1267,7 +1292,13 @@ void CXXRecordDecl::addedMember(Decl *D) {
         //    -- for all the non-static data members of its class that are of
         //       class type (or array thereof), each such class has a trivial
         //       default constructor.
-        if (!FieldRec->hasTrivialDefaultConstructor())
+        // C++26 [class.default.ctor]p3:
+        //   A default constructor is trivial if [...] either X is a union
+        //   or for all the non-static data members of its class that are
+        //   of class type [...] each such class has a trivial default
+        //   constructor.
+        if (!FieldRec->hasTrivialDefaultConstructor() &&
+            !(isUnion() && Context.getLangOpts().CPlusPlus26))
           data().HasTrivialSpecialMembers &= ~SMF_DefaultConstructor;
 
         // C++0x [class.copy]p13:
@@ -1305,9 +1336,15 @@ void CXXRecordDecl::addedMember(Decl *D) {
         if (!FieldRec->hasTrivialMoveAssignment())
           data().HasTrivialSpecialMembers &= ~SMF_MoveAssignment;
 
-        if (!FieldRec->hasTrivialDestructor())
+        // C++26 [class.dtor]p8:
+        //   A destructor is trivial if [...] either X is a union or for
+        //   all the non-static data members of its class that are of class
+        //   type [...] each such class has a trivial destructor.
+        if (!FieldRec->hasTrivialDestructor() &&
+            !(isUnion() && Context.getLangOpts().CPlusPlus26))
           data().HasTrivialSpecialMembers &= ~SMF_Destructor;
-        if (!FieldRec->hasTrivialDestructorForCall())
+        if (!FieldRec->hasTrivialDestructorForCall() &&
+            !(isUnion() && Context.getLangOpts().CPlusPlus26))
           data().HasTrivialSpecialMembersForCall &= ~SMF_Destructor;
         if (!FieldRec->hasIrrelevantDestructor())
           data().HasIrrelevantDestructor = false;

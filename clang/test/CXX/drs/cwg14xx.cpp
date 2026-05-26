@@ -1,18 +1,18 @@
 // RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected
-// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-17,since-cxx11
-// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx14-17,cxx11-17,since-cxx11,since-cxx14
-// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx14-17,cxx11-17,since-cxx11,since-cxx14
-// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20
-// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20
-// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-17,since-cxx11,cxx11-23
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx14-17,cxx11-17,since-cxx11,since-cxx14,cxx11-23
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx14-17,cxx11-17,since-cxx11,since-cxx14,cxx11-23
+// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20,cxx11-23
+// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20,cxx11-23
+// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20,since-cxx26
 
 // RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected
-// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,cxx11-17,since-cxx11
-// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,cxx14-17,cxx11-17,since-cxx11,since-cxx14
-// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,cxx14-17,cxx11-17,since-cxx11,since-cxx14
-// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20
-// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20
-// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,cxx11-17,since-cxx11,cxx11-23
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,cxx14-17,cxx11-17,since-cxx11,since-cxx14,cxx11-23
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,cxx14-17,cxx11-17,since-cxx11,since-cxx14,cxx11-23
+// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20,cxx11-23
+// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20,cxx11-23
+// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20,since-cxx26
 
 namespace cwg1413 { // cwg1413: 12
   template<int> struct Check {
@@ -128,7 +128,7 @@ struct A {
 namespace cwg1460 { // cwg1460: 3.5
 #if __cplusplus >= 201103L
   namespace DRExample {
-    union A {
+    union A { // #cwg1460-DRExample-A
       union {};
       // since-cxx11-error@-1 {{declaration does not declare anything}}
       union {};
@@ -136,6 +136,8 @@ namespace cwg1460 { // cwg1460: 3.5
       constexpr A() {}
     };
     constexpr A a = A();
+    // since-cxx26-error@-1 {{attempt to use a deleted function}}
+    //   since-cxx26-note@#cwg1460-DRExample-A {{destructor of union 'A' is implicitly deleted because its default constructor is not trivial}}
 
     union B {
       union {};
@@ -277,7 +279,7 @@ namespace cwg1460 { // cwg1460: 3.5
     };
     static_assert(A().a == 1 && A().b == 2 && A().c == 3, "");
 
-    union B {
+    union B { // #cwg1460-Overriding-B
       int a, b = 2, c;
       constexpr B() : a(1) {}
       constexpr B(char) : b(4) {}
@@ -285,24 +287,42 @@ namespace cwg1460 { // cwg1460: 3.5
       constexpr B(const char*) {}
     };
     static_assert(B().a == 1, "");
+    // since-cxx26-error@-1 {{attempt to use a deleted function}}
+    //   since-cxx26-note@#cwg1460-Overriding-B {{destructor of union 'B' is implicitly deleted because its default constructor is not trivial}}
     static_assert(B().b == 2, "");
-    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   since-cxx11-note@-2 {{read of member 'b' of union with active member 'a' is not allowed in a constant expression}}
+    // cxx11-23-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   cxx11-23-note@-2 {{read of member 'b' of union with active member 'a' is not allowed in a constant expression}}
+    // since-cxx26-error@-3 {{attempt to use a deleted function}}
+    //   since-cxx26-note@#cwg1460-Overriding-B {{destructor of union 'B' is implicitly deleted because its default constructor is not trivial}}
     static_assert(B('x').a == 0, "");
-    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   since-cxx11-note@-2 {{read of member 'a' of union with active member 'b' is not allowed in a constant expression}}
+    // cxx11-23-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   cxx11-23-note@-2 {{read of member 'a' of union with active member 'b' is not allowed in a constant expression}}
+    // since-cxx26-error@-3 {{attempt to use a deleted function}}
+    //   since-cxx26-note@#cwg1460-Overriding-B {{destructor of union 'B' is implicitly deleted because its default constructor is not trivial}}
     static_assert(B('x').b == 4, "");
+    // since-cxx26-error@-1 {{attempt to use a deleted function}}
+    //   since-cxx26-note@#cwg1460-Overriding-B {{destructor of union 'B' is implicitly deleted because its default constructor is not trivial}}
     static_assert(B(123).b == 2, "");
-    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   since-cxx11-note@-2 {{read of member 'b' of union with active member 'c' is not allowed in a constant expression}}
+    // cxx11-23-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   cxx11-23-note@-2 {{read of member 'b' of union with active member 'c' is not allowed in a constant expression}}
+    // since-cxx26-error@-3 {{attempt to use a deleted function}}
+    //   since-cxx26-note@#cwg1460-Overriding-B {{destructor of union 'B' is implicitly deleted because its default constructor is not trivial}}
     static_assert(B(123).c == 3, "");
+    // since-cxx26-error@-1 {{attempt to use a deleted function}}
+    //   since-cxx26-note@#cwg1460-Overriding-B {{destructor of union 'B' is implicitly deleted because its default constructor is not trivial}}
     static_assert(B("").a == 1, "");
-    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   since-cxx11-note@-2 {{read of member 'a' of union with active member 'b' is not allowed in a constant expression}}
+    // cxx11-23-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   cxx11-23-note@-2 {{read of member 'a' of union with active member 'b' is not allowed in a constant expression}}
+    // since-cxx26-error@-3 {{attempt to use a deleted function}}
+    //   since-cxx26-note@#cwg1460-Overriding-B {{destructor of union 'B' is implicitly deleted because its default constructor is not trivial}}
     static_assert(B("").b == 2, "");
+    // since-cxx26-error@-1 {{attempt to use a deleted function}}
+    //   since-cxx26-note@#cwg1460-Overriding-B {{destructor of union 'B' is implicitly deleted because its default constructor is not trivial}}
     static_assert(B("").c == 3, "");
-    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   since-cxx11-note@-2 {{read of member 'c' of union with active member 'b' is not allowed in a constant expression}}
+    // cxx11-23-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   cxx11-23-note@-2 {{read of member 'c' of union with active member 'b' is not allowed in a constant expression}}
+    // since-cxx26-error@-3 {{attempt to use a deleted function}}
+    //   since-cxx26-note@#cwg1460-Overriding-B {{destructor of union 'B' is implicitly deleted because its default constructor is not trivial}}
 
     struct C {
       union { int a, b = 2, c; };
