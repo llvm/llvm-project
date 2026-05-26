@@ -205,8 +205,8 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .inttypes
-    .llvm-libc-types.in_addr
     .llvm-libc-types.in_addr_t
+    .llvm-libc-types.struct_in_addr
 )
 
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
@@ -216,8 +216,13 @@ add_header_macro(
   ../libc/include/netinet/in.yaml
   netinet/in.h
   DEPENDS
-    .llvm_libc_common_h
     .llvm-libc-macros.netinet_in_macros
+    .llvm-libc-types.in_addr_t
+    .llvm-libc-types.in_port_t
+    .llvm-libc-types.sa_family_t
+    .llvm-libc-types.struct_sockaddr_in
+    .llvm-libc-types.struct_in_addr
+    .llvm_libc_common_h
 )
 
 add_header_macro(
@@ -227,6 +232,15 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.assert_macros
+)
+
+add_header_macro(
+  byteswap
+  ../libc/include/byteswap.yaml
+  byteswap.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.byteswap_macros
 )
 
 add_header_macro(
@@ -300,6 +314,19 @@ add_header_macro(
 )
 
 add_header_macro(
+  regex
+  ../libc/include/regex.yaml
+  regex.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.regex_macros
+    .llvm-libc-types.regex_t
+    .llvm-libc-types.regmatch_t
+    .llvm-libc-types.regoff_t
+    .llvm-libc-types.size_t
+)
+
+add_header_macro(
   time
   ../libc/include/time.yaml
   time.h
@@ -331,6 +358,7 @@ add_header_macro(
     .llvm-libc-types.thrd_start_t
     .llvm-libc-types.tss_t
     .llvm-libc-types.tss_dtor_t
+    .llvm-libc-types.struct_timespec
 )
 
 add_header_macro(
@@ -460,6 +488,7 @@ add_header_macro(
     .llvm-libc-types.pthread_rwlockattr_t
     .llvm-libc-types.pthread_spinlock_t
     .llvm-libc-types.pthread_t
+    .llvm-libc-types.pthread_id_np_t
     .llvm-libc-types.struct_timespec
     .llvm_libc_common_h
 )

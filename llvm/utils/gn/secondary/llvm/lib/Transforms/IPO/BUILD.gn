@@ -50,6 +50,8 @@ static_library("IPO") {
     "Inliner.cpp",
     "Instrumentor.cpp",
     "InstrumentorConfigFile.cpp",
+    "InstrumentorStubPrinter.cpp",
+    "InstrumentorUtils.cpp",
     "Internalize.cpp",
     "LoopExtractor.cpp",
     "LowerTypeTests.cpp",

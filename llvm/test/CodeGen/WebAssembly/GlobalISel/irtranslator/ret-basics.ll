@@ -98,7 +98,7 @@ define half @test_ret_f16() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 0xH0000
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 0.000000e+00
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:i32(i32) = G_ANYEXT [[C]](f16)
   ; CHECK-NEXT:   RETURN [[ANYEXT]](i32), implicit-def $arguments
   ret half 0.0

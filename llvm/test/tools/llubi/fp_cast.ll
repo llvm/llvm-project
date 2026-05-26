@@ -32,7 +32,7 @@ define void @main() {
 ; CHECK-NEXT:   %fp2si = fptosi double -4.750000e+00 to i32 => i32 -4
 ; CHECK-NEXT:   %fp2ui = fptoui double 4.750000e+00 to i32 => i32 4
 ; CHECK-NEXT:   %oob_ui = fptoui float -1.000000e+00 to i32 => poison
-; CHECK-NEXT:   %nan_si = fptosi float 0x7FF8000000000000 to i32 => poison
+; CHECK-NEXT:   %nan_si = fptosi float +qnan to i32 => poison
 ; CHECK-NEXT:   %oob_si_half = sitofp i32 -100000 to half => half -Inf
 ; CHECK-NEXT:   %oob_ui_half = uitofp i32 100000 to half => half +Inf
 ; CHECK-NEXT:   ret void

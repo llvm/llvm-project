@@ -9,6 +9,7 @@ import os
 class TestDelayedBreakpoint(TestBase):
     def test(self):
         self.build()
+        self.runCmd("settings set target.process.use-delayed-breakpoints true")
         logfile = os.path.join(self.getBuildDir(), "log.txt")
         self.runCmd(f"log enable -f {logfile} gdb-remote packets")
 
@@ -38,10 +39,14 @@ class TestDelayedBreakpoint(TestBase):
         self.assertNotIn("send packet: $z", log_before_continue)
 
         log_after = log_text.split("AFTER_BPS", 1)[-1].split("AFTER_CONTINUE", 1)[0]
-        self.assertIn("send packet: $Z", log_after)
+        if "jMultiBreakpoint+" in lldbutil.get_qsupported_capabilities(self):
+            self.assertIn("send packet: $jMultiBreakpoint", log_after)
+        else:
+            self.assertIn("send packet: $Z", log_after)
 
     def test_eager_breakpoints(self):
         self.build()
+        self.runCmd("settings set target.process.use-delayed-breakpoints true")
         logfile = os.path.join(self.getBuildDir(), "log.txt")
         self.runCmd(f"log enable -f {logfile} gdb-remote packets")
 
@@ -52,7 +57,7 @@ class TestDelayedBreakpoint(TestBase):
         bp1 = target.BreakpointCreateByLocation("main.c", 1)
         self.runCmd("proc plugin packet send BEGIN_EAGER", check=False)
         # Create an address breakpoint to trigger eager breakpoints.
-        fake_address = 0x1234567
+        fake_address = 0x1234560
         target.BreakpointCreateByAddress(fake_address)
         self.runCmd("proc plugin packet send END_EAGER", check=False)
 
@@ -65,6 +70,9 @@ class TestDelayedBreakpoint(TestBase):
             .splitlines()
         )
         breakpoint_lines = [line for line in log if "send packet: $Z" in line]
+        breakpoint_lines += [
+            line for line in log if "send packet: $jMultiBreakpoint" in line
+        ]
         breakpoint_lines = "".join(breakpoint_lines)
 
         bp_addresses = [f"{loc.GetLoadAddress():x}" for loc in bp1.locations]

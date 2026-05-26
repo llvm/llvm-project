@@ -83,3 +83,34 @@ subroutine test_use_device_pinned_use_assoc()
   !$acc exit data delete(vkb)
   deallocate(vkb, c_d, v_d)
 end
+
+! When the generic offers only managed/unified specifics (no device or host
+! specific), a use_device actual must not match either: managed and unified
+! dummies require their actual to live in managed/unified memory, which a
+! use_device actual does not. The call should be rejected.
+module m4
+  interface overl_mu
+    module procedure overl_managed
+    module procedure overl_unified
+  end interface
+contains
+  subroutine overl_managed(x)
+    integer, managed :: x(:)
+  end subroutine
+  subroutine overl_unified(x)
+    integer, unified :: x(:)
+  end subroutine
+end module m4
+
+subroutine test_use_device_managed_unified_only()
+  use m4
+  integer, allocatable :: fx(:)
+  allocate(fx(100))
+  !$acc data copy(fx)
+  !$acc host_data use_device(fx)
+  !ERROR: No specific subroutine of generic 'overl_mu' matches the actual arguments
+  call overl_mu(fx)
+  !$acc end host_data
+  !$acc end data
+  deallocate(fx)
+end

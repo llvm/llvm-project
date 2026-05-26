@@ -23,7 +23,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-#if ((LIBC_MATH & LIBC_MATH_SKIP_ACCURATE_PASS) != 0)
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 #define LIBC_MATH_CBRT_SKIP_ACCURATE_PASS
 #endif
 
@@ -144,7 +144,7 @@ LIBC_INLINE constexpr double get_error(const DoubleDouble &x_3,
 // exceptional handling, similar to what was done in the CORE-MATH project:
 // https://gitlab.inria.fr/core-math/core-math/-/blob/master/src/binary64/cbrt/cbrt.c
 
-LIBC_INLINE constexpr double cbrt(double x) {
+LIBC_INLINE double cbrt(double x) {
   using DoubleDouble = fputil::DoubleDouble;
   using namespace cbrt_internal;
   using FPBits = fputil::FPBits<double>;

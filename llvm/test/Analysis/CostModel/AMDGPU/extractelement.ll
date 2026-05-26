@@ -171,9 +171,9 @@ define amdgpu_kernel void @extractelement_8(i32 %arg) {
 ; GCN-LABEL: 'extractelement_8'
 ; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_0 = extractelement <2 x i8> poison, i32 0
 ; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i8_0 = extractelement <3 x i8> poison, i32 0
-; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_0 = extractelement <4 x i8> poison, i32 0
+; GCN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4i8_0 = extractelement <4 x i8> poison, i32 0
 ; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i8_0 = extractelement <5 x i8> poison, i32 0
-; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_0 = extractelement <8 x i8> poison, i32 0
+; GCN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8i8_0 = extractelement <8 x i8> poison, i32 0
 ; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_1 = extractelement <2 x i8> poison, i32 1
 ; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i8_1 = extractelement <3 x i8> poison, i32 1
 ; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_1 = extractelement <4 x i8> poison, i32 1
@@ -186,17 +186,22 @@ define amdgpu_kernel void @extractelement_8(i32 %arg) {
 ; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_3 = extractelement <4 x i8> poison, i32 3
 ; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i8_3 = extractelement <5 x i8> poison, i32 3
 ; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_3 = extractelement <8 x i8> poison, i32 3
-; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_a = extractelement <2 x i8> poison, i32 %arg
-; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_a = extractelement <4 x i8> poison, i32 %arg
-; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_a = extractelement <8 x i8> poison, i32 %arg
+; GCN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_a = extractelement <2 x i8> poison, i32 %arg
+; GCN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8_a = extractelement <4 x i8> poison, i32 %arg
+; GCN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i8_a = extractelement <8 x i8> poison, i32 %arg
+; GCN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i8_0 = extractelement <16 x i8> poison, i32 0
+; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_1 = extractelement <16 x i8> poison, i32 1
+; GCN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i8_8 = extractelement <16 x i8> poison, i32 8
+; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_15 = extractelement <16 x i8> poison, i32 15
+; GCN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i8_a = extractelement <16 x i8> poison, i32 %arg
 ; GCN-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GCN-SIZE-LABEL: 'extractelement_8'
 ; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_0 = extractelement <2 x i8> poison, i32 0
 ; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i8_0 = extractelement <3 x i8> poison, i32 0
-; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_0 = extractelement <4 x i8> poison, i32 0
+; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4i8_0 = extractelement <4 x i8> poison, i32 0
 ; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i8_0 = extractelement <5 x i8> poison, i32 0
-; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_0 = extractelement <8 x i8> poison, i32 0
+; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8i8_0 = extractelement <8 x i8> poison, i32 0
 ; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_1 = extractelement <2 x i8> poison, i32 1
 ; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i8_1 = extractelement <3 x i8> poison, i32 1
 ; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_1 = extractelement <4 x i8> poison, i32 1
@@ -209,9 +214,14 @@ define amdgpu_kernel void @extractelement_8(i32 %arg) {
 ; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_3 = extractelement <4 x i8> poison, i32 3
 ; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i8_3 = extractelement <5 x i8> poison, i32 3
 ; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_3 = extractelement <8 x i8> poison, i32 3
-; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_a = extractelement <2 x i8> poison, i32 %arg
-; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_a = extractelement <4 x i8> poison, i32 %arg
-; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_a = extractelement <8 x i8> poison, i32 %arg
+; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_a = extractelement <2 x i8> poison, i32 %arg
+; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8_a = extractelement <4 x i8> poison, i32 %arg
+; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i8_a = extractelement <8 x i8> poison, i32 %arg
+; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i8_0 = extractelement <16 x i8> poison, i32 0
+; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_1 = extractelement <16 x i8> poison, i32 1
+; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i8_8 = extractelement <16 x i8> poison, i32 8
+; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_15 = extractelement <16 x i8> poison, i32 15
+; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i8_a = extractelement <16 x i8> poison, i32 %arg
 ; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %v2i8_0 = extractelement <2 x i8> poison, i32 0
@@ -238,6 +248,12 @@ define amdgpu_kernel void @extractelement_8(i32 %arg) {
   %v2i8_a = extractelement <2 x i8> poison, i32 %arg
   %v4i8_a = extractelement <4 x i8> poison, i32 %arg
   %v8i8_a = extractelement <8 x i8> poison, i32 %arg
+
+  %v16i8_0 = extractelement <16 x i8> poison, i32 0
+  %v16i8_1 = extractelement <16 x i8> poison, i32 1
+  %v16i8_8 = extractelement <16 x i8> poison, i32 8
+  %v16i8_15 = extractelement <16 x i8> poison, i32 15
+  %v16i8_a = extractelement <16 x i8> poison, i32 %arg
   ret void
 }
 
@@ -262,9 +278,9 @@ define amdgpu_kernel void @extractelement_16(i32 %arg) {
 ; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_3 = extractelement <4 x i16> poison, i32 3
 ; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i16_3 = extractelement <5 x i16> poison, i32 3
 ; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_3 = extractelement <8 x i16> poison, i32 3
-; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_a = extractelement <2 x i16> poison, i32 %arg
-; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_a = extractelement <4 x i16> poison, i32 %arg
-; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_a = extractelement <8 x i16> poison, i32 %arg
+; CI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i16_a = extractelement <2 x i16> poison, i32 %arg
+; CI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i16_a = extractelement <4 x i16> poison, i32 %arg
+; CI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i16_a = extractelement <8 x i16> poison, i32 %arg
 ; CI-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX89-LABEL: 'extractelement_16'
@@ -287,9 +303,9 @@ define amdgpu_kernel void @extractelement_16(i32 %arg) {
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_3 = extractelement <4 x i16> poison, i32 3
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i16_3 = extractelement <5 x i16> poison, i32 3
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_3 = extractelement <8 x i16> poison, i32 3
-; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_a = extractelement <2 x i16> poison, i32 %arg
-; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_a = extractelement <4 x i16> poison, i32 %arg
-; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_a = extractelement <8 x i16> poison, i32 %arg
+; GFX89-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i16_a = extractelement <2 x i16> poison, i32 %arg
+; GFX89-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i16_a = extractelement <4 x i16> poison, i32 %arg
+; GFX89-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i16_a = extractelement <8 x i16> poison, i32 %arg
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; CI-SIZE-LABEL: 'extractelement_16'
@@ -312,9 +328,9 @@ define amdgpu_kernel void @extractelement_16(i32 %arg) {
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_3 = extractelement <4 x i16> poison, i32 3
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i16_3 = extractelement <5 x i16> poison, i32 3
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_3 = extractelement <8 x i16> poison, i32 3
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_a = extractelement <2 x i16> poison, i32 %arg
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_a = extractelement <4 x i16> poison, i32 %arg
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_a = extractelement <8 x i16> poison, i32 %arg
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i16_a = extractelement <2 x i16> poison, i32 %arg
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i16_a = extractelement <4 x i16> poison, i32 %arg
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i16_a = extractelement <8 x i16> poison, i32 %arg
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; GFX89-SIZE-LABEL: 'extractelement_16'
@@ -337,9 +353,9 @@ define amdgpu_kernel void @extractelement_16(i32 %arg) {
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_3 = extractelement <4 x i16> poison, i32 3
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i16_3 = extractelement <5 x i16> poison, i32 3
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_3 = extractelement <8 x i16> poison, i32 3
-; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_a = extractelement <2 x i16> poison, i32 %arg
-; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_a = extractelement <4 x i16> poison, i32 %arg
-; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_a = extractelement <8 x i16> poison, i32 %arg
+; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i16_a = extractelement <2 x i16> poison, i32 %arg
+; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i16_a = extractelement <4 x i16> poison, i32 %arg
+; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i16_a = extractelement <8 x i16> poison, i32 %arg
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %v2i16_0 = extractelement <2 x i16> poison, i32 0

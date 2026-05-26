@@ -17,7 +17,7 @@ namespace math {
 
 LIBC_INLINE LIBC_CONSTEXPR double rint(double x) {
 #if defined(__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC) &&                       \
-    !defined(LIBC_HAS_CONSTANT_EVALUATION)
+    !defined(LIBC_USE_CONSTEXPR)
   return __builtin_rint(x);
 #else
   return fputil::round_using_current_rounding_mode(x);

@@ -11,6 +11,6 @@ define void @main() {
 ; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
 ; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr null, i128 18446744073709551617) ]
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   call void @llvm.assume(i1 true) [ "align"(ptr %alloc, i128 18446744073709551616) ] at @main
+; CHECK-NEXT: #0   call void @llvm.assume(i1 true) [ "align"(ptr %alloc, i128 18446744073709551616) ] at @main <stdin>:7
 ; CHECK-NEXT: Immediate UB detected: The pointer ptr 0x8 [alloc] violates align(18446744073709551616) assumption.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

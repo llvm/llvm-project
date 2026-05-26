@@ -3282,11 +3282,11 @@ void CommandInterpreter::FindCommandsForApropos(llvm::StringRef search_word,
                            m_alias_dict);
 }
 
-ExecutionContext CommandInterpreter::GetExecutionContext() const {
-  return !m_overriden_exe_contexts.empty()
-             ? m_overriden_exe_contexts.top()
-             : m_debugger.GetSelectedExecutionContext(
-                   /*adopt_dummy_target=*/true);
+ExecutionContext
+CommandInterpreter::GetExecutionContext(bool adopt_dummy_target) const {
+  return (m_overriden_exe_contexts.empty() || !adopt_dummy_target)
+             ? m_debugger.GetSelectedExecutionContext(adopt_dummy_target)
+             : m_overriden_exe_contexts.top();
 }
 
 void CommandInterpreter::OverrideExecutionContext(
