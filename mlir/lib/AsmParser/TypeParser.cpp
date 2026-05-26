@@ -19,7 +19,6 @@
 #include "mlir/IR/TensorEncoding.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Support/LLVM.h"
-#include "llvm/ADT/STLExtras.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -390,6 +389,11 @@ Type Parser::parseNonFunctionType() {
   }
 }
 
+/// Parse a tensor type.
+///
+///   tensor-type ::= `tensor` `<` dimension-list type `>`
+///   dimension-list ::= dimension-list-ranked | `*x`
+///
 Type Parser::parseTensorType() {
   consumeToken(Token::kw_tensor);
 
