@@ -97,7 +97,6 @@ jobs:
           GH_TOKEN: ${{ secrets.WWW_RELEASES_TOKEN }}
           INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
-        run: |
           mkdir -p www-releases/$INPUTS_RELEASE_VERSION
           mv ./docs-build/html-export/* www-releases/$INPUTS_RELEASE_VERSION
           cd www-releases
