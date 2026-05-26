@@ -30,6 +30,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/MacroBase.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
@@ -996,11 +997,15 @@ public:
   /// True if comments are already loaded from ExternalASTSource.
   mutable bool CommentsLoaded = false;
 
-  /// Mapping from declaration to directly attached comment.
+  /// Key used to look up the raw comment attached to a declaration or macro.
+  using RawCommentLookupKey =
+      llvm::PointerUnion<const Decl *, const MacroInfo *>;
+
+  /// Mapping from declaration or macro to directly attached comment.
   ///
   /// Raw comments are owned by Comments list.  This mapping is populated
   /// lazily.
-  mutable llvm::DenseMap<const Decl *, const RawComment *> DeclRawComments;
+  mutable llvm::DenseMap<RawCommentLookupKey, const RawComment *> RawComments;
 
   /// Mapping from canonical declaration to the first redeclaration in chain
   /// that has a comment attached.
@@ -1022,37 +1027,40 @@ public:
   /// redeclaration.
   mutable llvm::DenseMap<const Decl *, comments::FullComment *> ParsedComments;
 
-  /// Attaches \p Comment to \p OriginalD and to its redeclaration chain
-  /// and removes the redeclaration chain from the set of commentless chains.
+  /// Attaches \p Comment to \p Original (a declaration or macro), and to its
+  /// redeclaration chain when \p Original is a declaration. Removes the
+  /// redeclaration chain from the set of commentless chains.
   ///
-  /// Don't do anything if a comment has already been attached to \p OriginalD
+  /// Don't do anything if a comment has already been attached to \p Original
   /// or its redeclaration chain.
-  void cacheRawCommentForDecl(const Decl &OriginalD,
-                              const RawComment &Comment) const;
+  void cacheRawComment(RawCommentLookupKey Original,
+                       const RawComment &Comment) const;
 
-  /// \returns searches \p CommentsInFile for doc comment for \p D.
+  /// \returns searches \p CommentsInFile for doc comment for \p Key.
   ///
   /// \p RepresentativeLocForDecl is used as a location for searching doc
   /// comments. \p CommentsInFile is a mapping offset -> comment of files in the
   /// same file where \p RepresentativeLocForDecl is.
-  RawComment *getRawCommentForDeclNoCacheImpl(
-      const Decl *D, const SourceLocation RepresentativeLocForDecl,
+  RawComment *getRawCommentNoCacheImpl(
+      RawCommentLookupKey Key, const SourceLocation RepresentativeLoc,
       const std::map<unsigned, RawComment *> &CommentsInFile) const;
 
-  /// Return the documentation comment attached to a given declaration,
-  /// without looking into cache.
-  RawComment *getRawCommentForDeclNoCache(const Decl *D) const;
+  /// Return the documentation comment attached to a given declaration or
+  /// macro, without looking into cache.
+  RawComment *getRawCommentNoCache(RawCommentLookupKey Key) const;
 
 public:
   void addComment(const RawComment &RC);
 
-  /// Return the documentation comment attached to a given declaration.
-  /// Returns nullptr if no comment is attached.
+  /// Return the documentation comment attached to a given declaration or
+  /// macro.  Returns nullptr if no comment is attached.
   ///
   /// \param OriginalDecl if not nullptr, is set to declaration AST node that
   /// had the comment, if the comment we found comes from a redeclaration.
+  /// Macros have no redeclaration chain, so this is set to nullptr when
+  /// \p Key is a \c MacroInfo.
   const RawComment *
-  getRawCommentForAnyRedecl(const Decl *D,
+  getRawCommentForAnyRedecl(RawCommentLookupKey Key,
                             const Decl **OriginalDecl = nullptr) const;
 
   /// Searches existing comments for doc comments that should be attached to \p
@@ -1998,8 +2006,7 @@ public:
   QualType getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack);
 
   QualType
-  getTemplateTypeParmType(unsigned Depth, unsigned Index,
-                          bool ParameterPack,
+  getTemplateTypeParmType(int Depth, int Index, bool ParameterPack,
                           TemplateTypeParmDecl *ParmDecl = nullptr) const;
 
   QualType getCanonicalTemplateSpecializationType(

@@ -135,6 +135,9 @@ public:
   llvm::Expected<std::string>
   ResolveSDKPathFromDebugInfo(CompileUnit &unit) override;
 
+  /// Resolve an XcodeSDK to an on-disk path under a Progress event.
+  static llvm::Expected<FileSpec> ResolveXcodeSDK(XcodeSDK sdk);
+
   /// Helper function for \c LocateExecutableScriptingResources
   /// which gathers FileSpecs for executable scripts (currently
   /// just Python) from a .dSYM Python directory.

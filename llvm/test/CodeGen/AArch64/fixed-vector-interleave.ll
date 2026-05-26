@@ -460,15 +460,12 @@ define <6 x double> @interleave3_v6f64(<2 x double> %vec0, <2 x double> %vec1, <
 ; CHECK-NEXT:    st3 { v0.2d, v1.2d, v2.2d }, [x8]
 ; CHECK-NEXT:    ldp q0, q2, [sp]
 ; CHECK-NEXT:    ldr q4, [sp, #32]
-; CHECK-NEXT:    ext v5.16b, v4.16b, v4.16b, #8
+; CHECK-NEXT:    mov d5, v4.d[1]
 ; CHECK-NEXT:    // kill: def $d4 killed $d4 killed $q4
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v2.16b, v2.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
+; CHECK-NEXT:    mov d3, v2.d[1]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-NEXT:    // kill: def $d5 killed $d5 killed $q5
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
-; CHECK-NEXT:    // kill: def $d3 killed $d3 killed $q3
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %retval = call <6 x double> @llvm.vector.interleave3.v6f64(<2 x double> %vec0, <2 x double> %vec1, <2 x double> %vec2)

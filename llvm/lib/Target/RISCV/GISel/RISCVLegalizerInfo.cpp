@@ -176,6 +176,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customIf(typeIsLegalBoolVec(1, BoolVecTys, ST))
       .maxScalar(0, sXLen);
 
+  getActionDefinitionsBuilder(G_TRUNC).alwaysLegal();
+
   getActionDefinitionsBuilder(G_SEXT_INREG)
       .customFor({sXLen})
       .clampScalar(0, sXLen, sXLen)
@@ -432,6 +434,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_INTTOPTR)
       .legalFor({{p0, sXLen}})
       .clampScalar(1, sXLen, sXLen);
+
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
 
   getActionDefinitionsBuilder(G_BRCOND).legalFor({sXLen}).minScalar(0, sXLen);
 
@@ -751,6 +755,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalIf(all(typeIsLegalBoolVec(0, BoolVecTys, ST), InsertVectorEltPred,
                    typeIs(2, sXLen)));
 
+  getActionDefinitionsBuilder({G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS})
+      .alwaysLegal();
+
+  getActionDefinitionsBuilder(G_FENCE).alwaysLegal();
+
+  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).alwaysLegal();
+
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
@@ -948,7 +959,8 @@ bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
     uint64_t Log2 = Log2_64(Val);
     if (Log2 < 3) {
       auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-      MIB.buildLShr(Dst, VLENB, MIB.buildConstant(XLenTy, 3 - Log2));
+      MIB.buildLShr(Dst, VLENB, MIB.buildConstant(XLenTy, 3 - Log2),
+                    MachineInstr::IsExact);
     } else if (Log2 > 3) {
       auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
       MIB.buildShl(Dst, VLENB, MIB.buildConstant(XLenTy, Log2 - 3));
@@ -962,7 +974,8 @@ bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
     MIB.buildMul(Dst, VLENB, MIB.buildConstant(XLenTy, Val / 8));
   } else {
     auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-    auto VScale = MIB.buildLShr(XLenTy, VLENB, MIB.buildConstant(XLenTy, 3));
+    auto VScale = MIB.buildLShr(XLenTy, VLENB, MIB.buildConstant(XLenTy, 3),
+                                MachineInstr::IsExact);
     MIB.buildMul(Dst, VScale, MIB.buildConstant(XLenTy, Val));
   }
   MI.eraseFromParent();

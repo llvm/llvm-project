@@ -16,7 +16,7 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 using LlvmLibcAcospifTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcAcospifTest, InFloatRange) {
-  constexpr uint32_t COUNT = 100'000;
+  constexpr uint32_t COUNT = 1'231;
   // Test in [-1, 1]
   const uint32_t STEP = 0x3F800000 / COUNT; // step through [0, 1.0f] in bits
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {

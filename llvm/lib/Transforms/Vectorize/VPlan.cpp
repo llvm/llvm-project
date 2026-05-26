@@ -122,17 +122,22 @@ void VPRecipeBase::dump() const {
 #endif
 
 #if !defined(NDEBUG)
-bool VPRecipeValue::isDefinedBy(const VPDef *D) const { return Def == D; }
+bool VPRecipeValue::isDefinedBy(const VPDef *D) const {
+  return getDefiningRecipe() == D;
+}
 #endif
 
 VPRecipeBase *VPValue::getDefiningRecipe() {
-  auto *DefValue = dyn_cast<VPRecipeValue>(this);
-  return DefValue ? DefValue->Def : nullptr;
+  auto *RecipeValue = dyn_cast<VPRecipeValue>(this);
+  if (!RecipeValue)
+    return nullptr;
+  if (auto *MultiDef = dyn_cast<VPMultiDefValue>(RecipeValue))
+    return MultiDef->getDef();
+  return static_cast<VPSingleDefRecipe *>(RecipeValue);
 }
 
 const VPRecipeBase *VPValue::getDefiningRecipe() const {
-  auto *DefValue = dyn_cast<VPRecipeValue>(this);
-  return DefValue ? DefValue->Def : nullptr;
+  return const_cast<VPValue *>(this)->getDefiningRecipe();
 }
 
 Value *VPValue::getLiveInIRValue() const {
@@ -141,16 +146,44 @@ Value *VPValue::getLiveInIRValue() const {
 
 Type *VPIRValue::getType() const { return getUnderlyingValue()->getType(); }
 
-VPRecipeValue::VPRecipeValue(VPRecipeBase *Def, Value *UV)
-    : VPValue(VPVRecipeValueSC, UV), Def(Def) {
-  assert(Def && "VPRecipeValue requires a defining recipe");
-  Def->addDefinedValue(this);
+Type *VPValue::getScalarType() const {
+  switch (getVPValueID()) {
+  case VPVIRValueSC:
+    return cast<VPIRValue>(this)->getType();
+  case VPRegionValueSC:
+    return cast<VPRegionValue>(this)->getType();
+  case VPVSymbolicSC:
+    return cast<VPSymbolicValue>(this)->getType();
+  case VPVMultiDefValueSC:
+  case VPVSingleDefValueSC:
+    return cast<VPRecipeValue>(this)->getScalarType();
+  }
+  llvm_unreachable("Unhandled VPValue subclass");
 }
 
 VPRecipeValue::~VPRecipeValue() {
   assert(Users.empty() &&
          "trying to delete a VPRecipeValue with remaining users");
-  Def->removeDefinedValue(this);
+}
+
+VPSingleDefValue::VPSingleDefValue(VPSingleDefRecipe *Def, Value *UV, Type *Ty)
+    : VPRecipeValue(VPVSingleDefValueSC, UV, Ty) {
+  assert(Def && "VPSingleDefValue requires a defining recipe");
+  Def->addDefinedValue(this);
+}
+
+VPSingleDefValue::~VPSingleDefValue() {
+  getDefiningRecipe()->removeDefinedValue(this);
+}
+
+VPMultiDefValue::VPMultiDefValue(VPRecipeBase *Def, Value *UV, Type *Ty)
+    : VPRecipeValue(VPVMultiDefValueSC, UV, Ty), Def(Def) {
+  assert(Def && "VPMultiDefValue requires a defining recipe");
+  Def->addDefinedValue(this);
+}
+
+VPMultiDefValue::~VPMultiDefValue() {
+  getDefiningRecipe()->removeDefinedValue(this);
 }
 
 // Get the top-most entry block of \p Start. This is the entry block of the
@@ -492,8 +525,6 @@ VPIRBasicBlock *VPIRBasicBlock::clone() {
 }
 
 void VPBasicBlock::execute(VPTransformState *State) {
-  assert(!State->Lane &&
-         "replicate regions must be dissolved before ::execute");
   if (VPBlockUtils::isHeader(this, State->VPDT)) {
     // Create and register the new vector loop.
     Loop *PrevParentLoop = State->CurrentParentLoop;
@@ -862,7 +893,8 @@ VPInstruction *VPRegionBlock::getOrCreateCanonicalIVIncrement() {
                            CanIV->getDebugLoc(), "index.next");
 }
 
-VPlan::VPlan(Loop *L) {
+VPlan::VPlan(Loop *L, Type *IdxTy)
+    : VectorTripCount(IdxTy), VF(IdxTy), UF(IdxTy), VFxUF(IdxTy) {
   setEntry(createVPIRBasicBlock(L->getLoopPreheader()));
   ScalarHeader = createVPIRBasicBlock(L->getHeader());
 
@@ -873,25 +905,17 @@ VPlan::VPlan(Loop *L) {
 }
 
 VPlan::~VPlan() {
-  VPSymbolicValue DummyValue;
+  VPSymbolicValue DummyValue(nullptr);
 
-  for (auto *VPB : CreatedBlocks) {
-    if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB)) {
-      // Replace all operands of recipes and all VPValues defined in VPBB with
-      // DummyValue so the block can be deleted.
-      for (VPRecipeBase &R : *VPBB) {
-        for (auto *Def : R.definedValues())
-          Def->replaceAllUsesWith(&DummyValue);
+  // Redirect all recipe operands to DummyValue before deleting blocks.
+  for (VPBasicBlock *VPBB :
+       VPBlockUtils::blocksOnly<VPBasicBlock>(CreatedBlocks))
+    for (VPRecipeBase &R : *VPBB)
+      for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
+        R.setOperand(I, &DummyValue);
 
-        for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
-          R.setOperand(I, &DummyValue);
-      }
-    } else if (auto *CanIV = cast<VPRegionBlock>(VPB)->getCanonicalIV()) {
-      CanIV->replaceAllUsesWith(&DummyValue);
-    }
-
+  for (auto *VPB : CreatedBlocks)
     delete VPB;
-  }
   for (VPValue *VPV : getLiveIns())
     delete VPV;
   delete BackedgeTakenCount;
@@ -1236,7 +1260,8 @@ VPlan *VPlan::duplicate() {
     NewScalarHeader = createVPIRBasicBlock(ScalarHeaderIRBB);
   }
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
-  auto *NewPlan = new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader);
+  auto *NewPlan =
+      new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader, getIndexType());
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPIRValue *OldLiveIn : getLiveIns())
     Old2NewVPValues[OldLiveIn] = NewPlan->getOrAddLiveIn(OldLiveIn);
@@ -1258,7 +1283,8 @@ VPlan *VPlan::duplicate() {
          "All VPSymbolicValues must be handled below");
 
   if (BackedgeTakenCount)
-    NewPlan->BackedgeTakenCount = new VPSymbolicValue();
+    NewPlan->BackedgeTakenCount =
+        new VPSymbolicValue(BackedgeTakenCount->getType());
 
   // Map and propagate materialized state for symbolic values.
   for (auto [OldSV, NewSV] :

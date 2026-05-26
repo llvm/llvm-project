@@ -13,6 +13,7 @@ else()
 endif()
 
 set(added_archive_targets "")
+set(added_bitcode_targets "")
 foreach(archive IN ZIP_LISTS
         libc_archive_names libc_archive_targets libc_archive_entrypoint_lists)
   if(NOT ${archive_2})
@@ -69,13 +70,15 @@ foreach(file ${added_bitcode_targets})
   )
 endforeach()
 
-if(NOT LIBC_TARGET_OS_IS_BAREMETAL)
+set(startup_target "")
+if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_BAREMETAL)
   # For now we will disable libc-startup installation for baremetal. The
   # correct way to do it would be to make a hookable startup for baremetal
   # and install it as part of the libc installation.
   set(startup_target "libc-startup")
 endif()
 
+set(header_install_target "")
 if(LLVM_LIBC_FULL_BUILD)
   set(header_install_target install-libc-headers)
 endif()
