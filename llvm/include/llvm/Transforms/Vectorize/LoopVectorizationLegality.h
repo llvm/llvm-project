@@ -381,6 +381,10 @@ public:
   /// to be vectorized.
   bool blockNeedsPredication(const BasicBlock *BB) const;
 
+  /// Add unit stride predicates for memory accesses to PSE, if runtime checks
+  /// are allowed and an inner loop is vectorized.
+  void collectUnitStridePredicates() const;
+
   /// Check if this pointer is consecutive when vectorizing. This happens
   /// when the last index of the GEP is the induction variable, or that the
   /// pointer itself is an induction variable.
