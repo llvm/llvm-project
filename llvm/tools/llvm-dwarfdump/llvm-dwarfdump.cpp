@@ -343,11 +343,12 @@ static opt<std::string>
                      desc("File to use as the baseline for variable coverage "
                           "statistics (implies --show-variable-coverage)"),
                      value_desc("filename"), cat(DwarfDumpCategory));
-static opt<std::string> BitcodeFile(
-    "variable-coverage-bitcode-file",
-    desc("File containing bitcode used for calculating variable definedness in "
-         "coverage statistics (implies --show-variable-coverage)"),
-    value_desc("filename"), cat(DwarfDumpCategory));
+static opt<std::string>
+    BitcodeFile("variable-coverage-bitcode-file",
+                desc("File containing LLVM IR (bitcode or textual) used for "
+                     "calculating variable definedness in coverage statistics "
+                     "(implies --show-variable-coverage)"),
+                value_desc("filename"), cat(DwarfDumpCategory));
 static opt<bool> CombineInstances(
     "combine-inline-variable-instances",
     desc(
@@ -926,7 +927,7 @@ int main(int argc, char **argv) {
   if (DumpAll)
     DumpType = DIDT_All;
   if (DumpType == DIDT_Null && !ShowVariableCoverage &&
-      CoverageBaseline.empty()) {
+      CoverageBaseline.empty() && BitcodeFile.empty()) {
     if (Verbose || Verify)
       DumpType = DIDT_All;
     else

@@ -205,8 +205,9 @@ OPTIONS
 
 .. option:: --variable-coverage-bitcode-file
 
-            File containing bitcode used for calculating variable definedness
-            in coverage statistics (implies :option:`--show-variable-coverage`)
+            File containing LLVM IR (bitcode or textual) used for calculating
+            variable definedness in coverage statistics (implies
+            :option:`--show-variable-coverage`)
 
 .. option:: --combine-inline-variable-instances
 

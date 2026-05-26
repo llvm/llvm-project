@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Instructions.h"
@@ -27,12 +28,15 @@ using namespace llvm;
 using namespace llvm::dwarf;
 using namespace llvm::object;
 
-typedef std::pair<std::string, std::string> StringPair;
 /// Pair of file index and line number representing a source location.
 typedef std::pair<uint16_t, size_t> SourceLocation;
-typedef std::map<StringPair,
-                 std::optional<DenseSet<std::pair<StringRef, uint32_t>>>>
-    LineMap;
+/// Pair of subroutine name and variable name representing a local variable.
+typedef std::pair<std::string, std::string> BitcodeVarKey;
+/// Pair of file name and line number representing a source location.
+typedef std::pair<StringRef, uint32_t> BitcodeSourceLocation;
+/// Maps local variables found in the bitcode to a set of source locations.
+typedef std::map<BitcodeVarKey, std::optional<DenseSet<BitcodeSourceLocation>>>
+    BitcodeLineMap;
 
 /// Adds source locations to the line set that correspond to an address range.
 static void addLines(const DWARFDebugLine::LineTable *LineTable,
@@ -93,10 +97,12 @@ convertFileIndices(DenseSet<SourceLocation> Lines,
 /// Returns the set of source lines covered by a variable's debug information,
 /// computed by intersecting the variable's location ranges and the containing
 /// scope's address ranges.
-static DenseSet<SourceLocation> computeVariableCoverage(
-    DWARFDie VariableDIE, const DWARFDebugLine::LineTable *const LineTable,
-    DenseMap<uint16_t, uint16_t> &FileIndexMap,
-    StringMap<uint16_t> &FileNameMap, LineMap::value_type *DefinedLines) {
+static DenseSet<SourceLocation>
+computeVariableCoverage(DWARFDie VariableDIE,
+                        const DWARFDebugLine::LineTable *const LineTable,
+                        DenseMap<uint16_t, uint16_t> &FileIndexMap,
+                        StringMap<uint16_t> &FileNameMap,
+                        BitcodeLineMap::value_type *DefinedLines) {
   // The optionals below will be empty if no address ranges were found, and
   // present (but containing an empty set) if ranges were found but contained no
   // source locations, in order to distinguish the two cases.
@@ -150,7 +156,7 @@ static DenseSet<SourceLocation> computeVariableCoverage(
           IndexLines.insert({NameIt->second, L.second});
       }
       if (!Lines)
-        ResultLines = std::move(IndexLines);
+        assert("Source lines found in bitcode but not in DWARF");
       else
         set_intersect(ResultLines, IndexLines);
     }
@@ -226,108 +232,127 @@ static bool isInScope(MDNode *Scope, const DebugLoc &Loc) {
   return true;
 }
 
-static bool isLoop(BasicBlock *Origin, BasicBlock *BB,
-                   SmallPtrSet<BasicBlock *, 8> &Visited) {
-  for (auto *P : predecessors(BB)) {
-    if (P == Origin)
+/// Determines whether an instruction stores to a location. For the purposes of
+/// this analysis, we consider any call-like instruction with the location as an
+/// argument to be a store to it.
+static bool isStoreToLocation(const DataLayout &DL, Instruction &I,
+                              Value *Loc) {
+  std::optional<at::AssignmentInfo> Info;
+  if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
+    if (SI->getPointerOperand() == Loc)
       return true;
-    if (!Visited.count(P)) {
-      Visited.insert(P);
-      if (isLoop(Origin, P, Visited))
-        return true;
-    }
+    Info = at::getAssignmentInfo(DL, SI);
+  } else if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&I)) {
+    if (MI->getDest() == Loc)
+      return true;
+    Info = at::getAssignmentInfo(DL, MI);
+  } else if (CallBase *CI = dyn_cast<CallBase>(&I)) {
+    return CI->hasArgument(Loc);
   }
-  return false;
+  return Info && Info->Base == Loc;
 }
+
+typedef SmallDenseMap<BasicBlock *, Instruction *, 8> VarDefinitionMap;
 
 struct VarState {
   DbgVariableRecord &DVR;
-  DenseSet<std::pair<StringRef, uint32_t>> Lines;
-  SmallPtrSet<BasicBlock *, 8> LiveOut;
+  VarDefinitionMap Definitions;
 };
 
-/// Given an instruction that stores to a variable and its basic block,
-/// recursively searches its successor instructions/basic blocks and adds lines
-/// where the variable has a defined value to the variable's line set.
-static void getSuccessorLines(VarState &Var, BasicBlock *BB, Instruction *I) {
-  // Process the basic block if it contains the store instruction or the
-  // variable is defined in all of its predecessors, excluding any that are part
-  // of a loop that contains the current block.
-  bool ShouldProcess = I;
-  if (!ShouldProcess) {
-    ShouldProcess = true;
-    for (auto *P : predecessors(BB)) {
-      SmallPtrSet<BasicBlock *, 8> Visited;
-      if (!Var.LiveOut.count(P) && !isLoop(BB, P, Visited)) {
-        ShouldProcess = false;
-        break;
-      }
-    }
-  }
-  if (!ShouldProcess || Var.LiveOut.count(BB))
-    return;
-  Var.LiveOut.insert(BB);
-
-  // Add lines that are within the variable's scope, starting from the store
-  // instruction or the start of the block if this is a successor block.
-  auto *Next = I ? I : &BB->front();
+/// Adds source locations to the line set for instructions in a basic block,
+/// starting with a specific instruction.
+static void addModuleLines(Instruction *I, VarState &Var,
+                           DenseSet<std::pair<StringRef, uint32_t>> &Lines) {
   auto *VarScope = Var.DVR.getVariable()->getScope();
   do {
-    auto &Loc = Next->getDebugLoc();
+    auto &Loc = I->getDebugLoc();
     DIScope *Scope;
     if (Loc && isInScope(VarScope, Loc) && Loc.getLine() &&
         (Scope = dyn_cast_if_present<DIScope>(Loc.getScope()))) {
-      Var.Lines.insert({Scope->getFilename(), Loc.getLine()});
+      Lines.insert({Scope->getFilename(), Loc.getLine()});
     }
-  } while ((Next = Next->getNextNode()));
-  for (auto *S : successors(BB))
-    getSuccessorLines(Var, S, nullptr);
+  } while ((I = I->getNextNode()));
 }
 
 /// Computes the defined lines of all variables in an IR module.
-static LineMap processModule(Module *Mod) {
-  LineMap Result;
-
+static BitcodeLineMap processModule(Module *Mod) {
+  BitcodeLineMap Result;
+  std::vector<VarState> Vars;
   for (auto &F : Mod->functions()) {
-    std::vector<VarState> Vars;
+    Vars.clear();
     for (auto &BB : F) {
       for (auto &I : BB) {
         for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+          if (DVR.isKillLocation()) {
+            assert("Variable in bitcode has been optimized out");
+            continue;
+          }
           if (DVR.isDbgDeclare()) {
             // For #dbg_declare, don't treat the variable as live until we find
             // a store to it.
-            Vars.push_back({DVR, {}, {}});
+            Vars.push_back(VarState{DVR, VarDefinitionMap()});
           } else if (DVR.isDbgValue()) {
             // For #dbg_value, the variable is live immediately from this point.
+            if (DVR.getDebugLoc().getInlinedAt() != nullptr) {
+              assert("Variable in bitcode has been inlined");
+              continue;
+            }
             auto Var = find_if(Vars, [&](auto &Var) {
               return Var.DVR.getVariable() == DVR.getVariable();
             });
-            if (Var != Vars.end()) {
-              getSuccessorLines(*Var, &BB, &I);
-            } else {
-              Vars.push_back({DVR, {}, {}});
-              getSuccessorLines(Vars.back(), &BB, &I);
-            }
+            if (Var != Vars.end())
+              // If a basic block contains multiple stores to a variable, use
+              // the earliest one by allowing the insertion to silently fail if
+              // the basic block is already in the map.
+              Var->Definitions.insert({&BB, &I});
+            else
+              Vars.push_back(VarState{DVR, {{&BB, &I}}});
           }
         }
       }
     }
 
-    // Search for stores to any declared variables. For the purposes of this
-    // analysis, we consider any instruction that isn't a load and has the
-    // variable as an operand to potentially store to it.
     for (auto &BB : F)
       for (auto &I : BB)
-        if (I.getOpcode() != Instruction::Load)
-          for (auto *Value : I.operand_values())
-            for (auto &Var : Vars)
-              if (Value == Var.DVR.getValue())
-                // The variable is live from the instruction after the store.
-                getSuccessorLines(Var, &BB, I.getNextNode());
+        for (auto &Var : Vars)
+          if (isStoreToLocation(Mod->getDataLayout(), I, Var.DVR.getValue()))
+            // The variable is live from the instruction after the store. As
+            // above, the earliest store in this basic block will be used.
+            Var.Definitions.insert({&BB, I.getNextNode()});
 
     for (auto &Var : Vars) {
-      StringPair Key(F.getName(), Var.DVR.getVariable()->getName());
-      Result.emplace(Key, Var.Lines);
+      SmallPtrSet<BasicBlock *, 8> Visited;
+      DenseSet<std::pair<StringRef, uint32_t>> Lines;
+
+      // Visit all basic blocks that are reachable from the entry block without
+      // going through a block that stores to the variable.
+      SmallVector<BasicBlock *> BlocksToVisit{&F.getEntryBlock()};
+      while (!BlocksToVisit.empty()) {
+        BasicBlock *BB = BlocksToVisit.pop_back_val();
+        if (!Visited.insert(BB).second)
+          continue;
+
+        auto I = Var.Definitions.find(BB);
+        if (I != Var.Definitions.end()) {
+          // Block contains a definition: add all lines after it to the set
+          if (I->second != nullptr)
+            addModuleLines(I->second, Var, Lines);
+        } else {
+          // Block does not contain a definition: visit its successors
+          auto S = successors(BB);
+          BlocksToVisit.append(S.begin(), S.end());
+        }
+      }
+
+      // All unvisited basic blocks must only be reachable by going through a
+      // block that stores to the variable, so add lines to the set for all of
+      // their instructions.
+      for (auto &BB : F)
+        if (!Visited.count(&BB))
+          addModuleLines(&*BB.begin(), Var, Lines);
+
+      BitcodeVarKey Key(F.getName(), Var.DVR.getVariable()->getName());
+      Result.emplace(Key, Lines);
     }
   }
   return Result;
@@ -435,7 +460,7 @@ bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
                                      DWARFContext *BaselineCtx,
                                      StringRef BitcodeFile,
                                      bool CombineInstances, raw_ostream &OS) {
-  LineMap LM;
+  BitcodeLineMap LM;
   LLVMContext Context;
   if (!BitcodeFile.empty()) {
     SMDiagnostic Err;
