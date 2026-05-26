@@ -2508,20 +2508,14 @@ void Fortran::lower::mapSymbolAttributes(
       mlir::Type symType = converter.genType(sym);
       const bool isCptrByVal = Fortran::semantics::IsBuiltinCPtr(sym) &&
                                Fortran::lower::isCPtrArgByValueType(argType);
-      const bool isCdevptrByVal = fir::isa_builtin_cdevptr_type(symType) &&
-                                  Fortran::lower::isCPtrArgByValueType(argType);
-      if (isCptrByVal || isCdevptrByVal ||
-          !fir::conformsWithPassByRef(argType)) {
+      if (isCptrByVal || !fir::conformsWithPassByRef(argType)) {
         // Dummy argument passed in register. Place the value in memory at that
         // point since lowering expect symbols to be mapped to memory addresses.
         addr = fir::AllocaOp::create(builder, loc, symType);
-        if (isCptrByVal || isCdevptrByVal) {
+        if (isCptrByVal) {
           // Place the void* address into the pointer address component.
           mlir::Value addrComponent =
-              isCdevptrByVal
-                  ? fir::factory::genCDevPtrAddr(builder, loc, addr, symType)
-                  : fir::factory::genCPtrOrCFunptrAddr(builder, loc, addr,
-                                                       symType);
+              fir::factory::genCPtrOrCFunptrAddr(builder, loc, addr, symType);
           builder.createStoreWithConvert(loc, arg, addrComponent);
         } else {
           builder.createStoreWithConvert(loc, arg, addr);

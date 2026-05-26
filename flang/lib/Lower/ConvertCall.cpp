@@ -610,8 +610,7 @@ Fortran::lower::genCallOpAndResult(
       }
     } else {
       mlir::Type fromTy = fir::unwrapRefType(fst.getType());
-      if ((fir::isa_builtin_cptr_type(fromTy) ||
-           fir::isa_builtin_cdevptr_type(fromTy)) &&
+      if (fir::isa_builtin_cptr_type(fromTy) &&
           Fortran::lower::isCPtrArgByValueType(snd)) {
         cast = genRecordCPtrValueArg(builder, loc, fst, fromTy);
       } else if (fir::isa_derived(snd) && !fir::isa_derived(fst.getType())) {
@@ -1752,8 +1751,7 @@ void prepareUserCallArguments(
       hlfir::Entity value = hlfir::loadTrivialScalar(loc, builder, actual);
 
       mlir::Type eleTy = value.getFortranElementType();
-      if (fir::isa_builtin_cptr_type(eleTy) ||
-          fir::isa_builtin_cdevptr_type(eleTy)) {
+      if (fir::isa_builtin_cptr_type(eleTy)) {
         // Pass-by-value argument of type(C_PTR/C_FUNPTR/C_DEVPTR).
         // Load the __address component and pass it by value.
         if (value.isValue()) {
