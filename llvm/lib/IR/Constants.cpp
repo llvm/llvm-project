@@ -90,11 +90,10 @@ bool Constant::isNullValue() const {
   if (const ConstantByte *CB = dyn_cast<ConstantByte>(this))
     return CB->isZero();
 
-  // +0.0 is null.
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
     // ppc_fp128 determine isZero using high order double only
-    // Should check the bitwise value to make sure all bits are zero.
-    return CFP->isExactlyValue(+0.0);
+    // so check the bitwise value to make sure all bits are zero.
+    return CFP->getValue().bitcastToAPInt().isZero();
 
   // constant zero is zero for aggregates, cpnull is null for pointers, none for
   // tokens.
@@ -1130,91 +1129,70 @@ void ConstantByte::destroyConstantImpl() {
 //                                ConstantFP
 //===----------------------------------------------------------------------===//
 
-Constant *ConstantFP::get(Type *Ty, double V) {
+ConstantFP *ConstantFP::get(Type *Ty, double V) {
   LLVMContext &Context = Ty->getContext();
 
   APFloat FV(V);
   bool ignored;
   FV.convert(Ty->getScalarType()->getFltSemantics(),
              APFloat::rmNearestTiesToEven, &ignored);
-  Constant *C = get(Context, FV);
 
-  // For vectors, broadcast the value.
   if (VectorType *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), C);
+    return get(Context, VTy->getElementCount(), FV);
 
-  return C;
+  return get(Context, FV);
 }
 
-Constant *ConstantFP::get(Type *Ty, const APFloat &V) {
-  ConstantFP *C = get(Ty->getContext(), V);
-  assert(C->getType() == Ty->getScalarType() &&
+ConstantFP *ConstantFP::get(Type *Ty, const APFloat &V) {
+  LLVMContext &Context = Ty->getContext();
+  assert(Ty->getScalarType() ==
+             Type::getFloatingPointTy(Context, V.getSemantics()) &&
          "ConstantFP type doesn't match the type implied by its value!");
 
-  // For vectors, broadcast the value.
   if (auto *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), C);
+    return get(Context, VTy->getElementCount(), V);
 
-  return C;
+  return get(Ty->getContext(), V);
 }
 
-Constant *ConstantFP::get(Type *Ty, StringRef Str) {
+ConstantFP *ConstantFP::get(Type *Ty, StringRef Str) {
   LLVMContext &Context = Ty->getContext();
-
   APFloat FV(Ty->getScalarType()->getFltSemantics(), Str);
-  Constant *C = get(Context, FV);
 
-  // For vectors, broadcast the value.
   if (VectorType *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), C);
+    return get(Context, VTy->getElementCount(), FV);
 
-  return C;
+  return get(Context, FV);
 }
 
-Constant *ConstantFP::getNaN(Type *Ty, bool Negative, uint64_t Payload) {
+ConstantFP *ConstantFP::getInfinity(Type *Ty, bool Negative) {
+  const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
+  return get(Ty, APFloat::getInf(Semantics, Negative));
+}
+
+ConstantFP *ConstantFP::getNaN(Type *Ty, bool Negative, uint64_t Payload) {
   const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   APFloat NaN = APFloat::getNaN(Semantics, Negative, Payload);
-  Constant *C = get(Ty->getContext(), NaN);
-
-  if (VectorType *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), C);
-
-  return C;
+  return get(Ty, NaN);
 }
 
-Constant *ConstantFP::getQNaN(Type *Ty, bool Negative, APInt *Payload) {
+ConstantFP *ConstantFP::getQNaN(Type *Ty, bool Negative, APInt *Payload) {
   const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   APFloat NaN = APFloat::getQNaN(Semantics, Negative, Payload);
-  Constant *C = get(Ty->getContext(), NaN);
-
-  if (VectorType *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), C);
-
-  return C;
+  return get(Ty, NaN);
 }
 
-Constant *ConstantFP::getSNaN(Type *Ty, bool Negative, APInt *Payload) {
+ConstantFP *ConstantFP::getSNaN(Type *Ty, bool Negative, APInt *Payload) {
   const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   APFloat NaN = APFloat::getSNaN(Semantics, Negative, Payload);
-  Constant *C = get(Ty->getContext(), NaN);
-
-  if (VectorType *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), C);
-
-  return C;
+  return get(Ty, NaN);
 }
 
-Constant *ConstantFP::getZero(Type *Ty, bool Negative) {
+ConstantFP *ConstantFP::getZero(Type *Ty, bool Negative) {
   const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   APFloat NegZero = APFloat::getZero(Semantics, Negative);
-  Constant *C = get(Ty->getContext(), NegZero);
-
-  if (VectorType *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), C);
-
-  return C;
+  return get(Ty, NegZero);
 }
-
 
 // ConstantFP accessors.
 ConstantFP* ConstantFP::get(LLVMContext &Context, const APFloat& V) {
@@ -1248,16 +1226,6 @@ ConstantFP *ConstantFP::get(LLVMContext &Context, ElementCount EC,
   assert(Slot->getType() == VTy);
 #endif
   return Slot.get();
-}
-
-Constant *ConstantFP::getInfinity(Type *Ty, bool Negative) {
-  const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
-  Constant *C = get(Ty->getContext(), APFloat::getInf(Semantics, Negative));
-
-  if (VectorType *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), C);
-
-  return C;
 }
 
 ConstantFP::ConstantFP(Type *Ty, const APFloat &V)

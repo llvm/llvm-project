@@ -1806,6 +1806,12 @@ def ElementwiseCttz : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseClmul : Builtin {
+  let Spellings = ["__builtin_elementwise_clmul"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
 def ReduceMax : Builtin {
   let Spellings = ["__builtin_reduce_max"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
@@ -4598,61 +4604,6 @@ def BlockObjectDispose : LibBuiltin<"blocks.h"> {
   let Prototype = "void(void const*, int const)";
 }
 // FIXME: Also declare NSConcreteGlobalBlock and NSConcreteStackBlock.
-
-def FeClearExcept : LibBuiltin<"fenv.h"> {
-  let Spellings = ["feclearexcept"];
-  let Prototype = "int(int)";
-}
-
-def FeGetExceptFlag : LibBuiltin<"fenv.h"> {
-  let Spellings = ["fegetexceptflag"];
-  let Prototype = "int(fexcept_t*, int)";
-}
-
-def FeRaiseExcept : LibBuiltin<"fenv.h"> {
-  let Spellings = ["feraiseexcept"];
-  let Prototype = "int(int)";
-}
-
-def FeSetExceptFlag : LibBuiltin<"fenv.h"> {
-  let Spellings = ["fesetexceptflag"];
-  let Prototype = "int(fexcept_t const*, int)";
-}
-
-def FeTestExcept : LibBuiltin<"fenv.h"> {
-  let Spellings = ["fetestexcept"];
-  let Prototype = "int(int)";
-}
-
-def FeGetRound : LibBuiltin<"fenv.h"> {
-  let Spellings = ["fegetround"];
-  let Prototype = "int()";
-}
-
-def FeSetRound : LibBuiltin<"fenv.h"> {
-  let Spellings = ["fesetround"];
-  let Prototype = "int(int)";
-}
-
-def FeGetEnv : LibBuiltin<"fenv.h"> {
-  let Spellings = ["fegetenv"];
-  let Prototype = "int(fenv_t*)";
-}
-
-def FeHoldExcept : LibBuiltin<"fenv.h"> {
-  let Spellings = ["feholdexcept"];
-  let Prototype = "int(fenv_t*)";
-}
-
-def FeSetEnv : LibBuiltin<"fenv.h"> {
-  let Spellings = ["fesetenv"];
-  let Prototype = "int(fenv_t const*)";
-}
-
-def FeUpdateEnv : LibBuiltin<"fenv.h"> {
-  let Spellings = ["feupdateenv"];
-  let Prototype = "int(fenv_t const*)";
-}
 
 def __Addressof : LangBuiltin<"CXX_LANG"> {
   let Spellings = ["__addressof"];

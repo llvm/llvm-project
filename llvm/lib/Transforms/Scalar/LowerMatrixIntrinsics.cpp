@@ -902,9 +902,10 @@ public:
     // it conditionally instead.
     auto S = ShapeMap.find(&Old);
     if (S != ShapeMap.end()) {
+      ShapeInfo Shape = S->second;
       ShapeMap.erase(S);
       if (supportsShapeInfo(New))
-        ShapeMap.insert({New, S->second});
+        ShapeMap.insert({New, Shape});
     }
     Old.replaceAllUsesWith(New);
   }
