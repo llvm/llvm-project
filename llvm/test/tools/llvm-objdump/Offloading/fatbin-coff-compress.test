@@ -1,4 +1,4 @@
-## Test that --offloading with a compressed fatbin works correctly in a COFF object
+## Test that --offloading with a compressed fatbin works correctly in a COFF object.
 
 # REQUIRES: amdgpu-registered-target
 # REQUIRES: zstd
