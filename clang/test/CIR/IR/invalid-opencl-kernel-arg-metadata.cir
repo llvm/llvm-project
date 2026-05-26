@@ -1,8 +1,30 @@
 // RUN: cir-opt %s -verify-diagnostics -split-input-file
 
-// expected-error @below {{addr_space must be an integer array}}
+// expected-error @below {{addr_space must be an i32 integer array}}
 #attr = #cir.cl.kernel_arg_metadata<
   addr_space = ["none"],
+  access_qual = ["none"],
+  type = ["uint*"],
+  base_type = ["uint*"],
+  type_qual = [""]
+>
+
+// -----
+
+// expected-error @below {{addr_space must be an i32 integer array}}
+#attr = #cir.cl.kernel_arg_metadata<
+  addr_space = [0 : i64],
+  access_qual = ["none"],
+  type = ["uint*"],
+  base_type = ["uint*"],
+  type_qual = [""]
+>
+
+// -----
+
+// expected-error @below {{addr_space values must be non-negative}}
+#attr = #cir.cl.kernel_arg_metadata<
+  addr_space = [-1 : i32],
   access_qual = ["none"],
   type = ["uint*"],
   base_type = ["uint*"],
