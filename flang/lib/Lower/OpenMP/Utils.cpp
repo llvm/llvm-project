@@ -1248,7 +1248,7 @@ static void processUserConditionTrait(
     llvm::omp::VariantMatchInfo &vmi,
     const std::optional<parser::OmpTraitSelector::Properties> &props,
     semantics::SemanticsContext &semaCtx,
-    const parser::ScalarExpr *&dynamicCondExpr) {
+    const parser::ScalarExpr *&dynamicCondExpr, llvm::APInt *scorePtr) {
   if (!props)
     return;
 
@@ -1261,13 +1261,13 @@ static void processUserConditionTrait(
     if (auto constValue = evaluateUserCondition(semaCtx, *scalarExpr)) {
       vmi.addTrait(*constValue ? llvm::omp::TraitProperty::user_condition_true
                                : llvm::omp::TraitProperty::user_condition_false,
-                   "<condition>");
+                   "<condition>", scorePtr);
       continue;
     }
 
     dynamicCondExpr = scalarExpr;
     vmi.addTrait(llvm::omp::TraitProperty::user_condition_unknown,
-                 "<condition>");
+                 "<condition>", scorePtr);
   }
 }
 
@@ -1326,13 +1326,14 @@ void makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
       if (set == llvm::omp::TraitSet::target_device)
         TODO(loc, "target_device selector in METADIRECTIVE");
 
-      if (selector == llvm::omp::TraitSelector::user_condition) {
-        processUserConditionTrait(vmi, props, semaCtx, dynamicCondExpr);
-        continue;
-      }
-
       std::optional<llvm::APInt> score;
       llvm::APInt *scorePtr = getTraitScore(props, semaCtx, score);
+
+      if (selector == llvm::omp::TraitSelector::user_condition) {
+        processUserConditionTrait(vmi, props, semaCtx, dynamicCondExpr,
+                                  scorePtr);
+        continue;
+      }
 
       processTraitProperties(vmi, set, selector, props, scorePtr);
 

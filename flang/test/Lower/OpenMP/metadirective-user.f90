@@ -32,6 +32,21 @@ subroutine test_condition_false()
 #endif
 end subroutine
 
+! CHECK-LABEL: func.func @_QPtest_condition_score()
+! CHECK-NOT:     omp.taskyield
+! CHECK:         omp.taskwait
+! CHECK:         return
+subroutine test_condition_score()
+  !$omp metadirective &
+  !$omp & when(user={condition(.true.)}: taskyield) &
+  !$omp & when(user={condition(score(2): .true.)}: taskwait) &
+#ifdef OMP_52
+  !$omp & otherwise(nothing)
+#else
+  !$omp & default(nothing)
+#endif
+end subroutine
+
 ! CHECK-LABEL: func.func @_QPtest_begin_condition_true()
 ! CHECK:         omp.parallel
 ! CHECK:           omp.terminator
