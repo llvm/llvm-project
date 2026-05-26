@@ -1283,12 +1283,6 @@ static void showBRDiagnostics(llvm::raw_svector_ostream &OS, StoreInfo SI) {
     // initialization.
     if (const auto *VR = dyn_cast<VarRegion>(SI.Dest)) {
       const VarDecl *VD = VR->getDecl();
-
-      if (SI.Value.isUndef() && VD->getInit()) {
-        OS << (HasPrefix ? "initialized" : "Initializing")
-           << " to a garbage value";
-        return;
-      }
       if (!VD->getInit() && !VD->hasGlobalStorage()) {
         OS << (HasPrefix ? "declared" : "Declared")
            << " without an initial value";
