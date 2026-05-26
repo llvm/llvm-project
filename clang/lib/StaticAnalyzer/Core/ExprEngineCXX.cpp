@@ -1246,9 +1246,6 @@ void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
         break;
     }
 
-    // FIXME: If the analyzer needs to know about other attributes, insert
-    // handling for them here.
-
     if (State)
       EvalSet.insert(Engine.makePostStmtNode(A, State, N));
   }

@@ -286,7 +286,6 @@ void TransferFunctions::Visit(Stmt *S) {
       for (const auto *Attr : getSpecificAttrs<CXXAssumeAttr>(AS->getAttrs())) {
         AddLiveExpr(val.liveExprs, LV.ESetFact, Attr->getAssumption());
       }
-      // FIXME: Also handle other attributes that have relevant substatements.
       break;
     }
     case Stmt::PseudoObjectExprClass: {
