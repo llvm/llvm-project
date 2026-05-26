@@ -3,8 +3,8 @@
 ; Make sure dxil operation function calls for exp are generated for float and half.
 
 ; CHECK-LABEL: exp_float
-; CHECK: fmul float 0x3FF7154760000000, %{{.*}}
-; CHECK: call float @dx.op.unary.f32(i32 21, float %{{.*}}) #[[#ATTR:]]
+; CHECK: fmul float f0x3FB8AA3B, %{{.*}}
+; CHECK: call float @dx.op.unary.f32(i32 21, float %{{.*}})
 define noundef float @exp_float(float noundef %a) {
 entry:
   %a.addr = alloca float, align 4
@@ -15,8 +15,8 @@ entry:
 }
 
 ; CHECK-LABEL: exp_half
-; CHECK: fmul half 0xH3DC5, %{{.*}}
-; CHECK: call half @dx.op.unary.f16(i32 21, half %{{.*}}) #[[#ATTR]]
+; CHECK: fmul half 1.442380e+00, %{{.*}}
+; CHECK: call half @dx.op.unary.f16(i32 21, half %{{.*}})
 ; Function Attrs: noinline nounwind optnone
 define noundef half @exp_half(half noundef %a) {
 entry:
@@ -27,7 +27,9 @@ entry:
   ret half %elt.exp
 }
 
-; CHECK: attributes #[[#ATTR]] = {{{.*}} memory(none) {{.*}}}
+; CHECK-DAG: declare half @dx.op.unary.f16(i32, half) #[[#ATTR0:]]
+; CHECK-DAG: declare float @dx.op.unary.f32(i32, float) #[[#ATTR0]]
+; CHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
 
 declare half @llvm.exp.f16(half)
 declare float @llvm.exp.f32(float)

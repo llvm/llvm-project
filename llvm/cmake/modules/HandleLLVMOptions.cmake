@@ -429,14 +429,20 @@ if( LLVM_ENABLE_LLD )
 endif()
 
 if( LLVM_USE_LINKER )
+  check_cxx_source_compiles("int main() { return 0; }" _CAN_LINK_EXECUTABLE)
+  mark_as_advanced(_CAN_LINK_EXECUTABLE)
   append("-fuse-ld=${LLVM_USE_LINKER}"
     CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
-  check_cxx_source_compiles("int main() { return 0; }" CXX_SUPPORTS_CUSTOM_LINKER)
-  if ( NOT CXX_SUPPORTS_CUSTOM_LINKER )
-    message(FATAL_ERROR "Host compiler does not support '-fuse-ld=${LLVM_USE_LINKER}'. "
-                        "Please make sure that '${LLVM_USE_LINKER}' is installed and "
-                        "that your host compiler can compile a simple program when "
-                        "given the option '-fuse-ld=${LLVM_USE_LINKER}'.")
+  if(_CAN_LINK_EXECUTABLE)
+    check_cxx_source_compiles("int main() { return 0; }" CXX_SUPPORTS_CUSTOM_LINKER)
+    if ( NOT CXX_SUPPORTS_CUSTOM_LINKER )
+      message(FATAL_ERROR "Host compiler does not support '-fuse-ld=${LLVM_USE_LINKER}'. "
+                          "Please make sure that '${LLVM_USE_LINKER}' is installed and "
+                          "that your host compiler can compile a simple program when "
+                          "given the option '-fuse-ld=${LLVM_USE_LINKER}'.")
+    endif()
+  else()
+    message(STATUS "Skipping custom linker check: offload target cannot link executable")
   endif()
 endif()
 
@@ -564,14 +570,15 @@ if( MSVC_IDE )
 endif()
 
 # set stack reserved size to ~10MB
+set(_is_exe "$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>")
 if(MSVC)
   # CMake previously automatically set this value for MSVC builds, but the
   # behavior was changed in CMake 2.8.11 (Issue 12437) to use the MSVC default
   # value (1 MB) which is not enough for us in tasks such as parsing recursive
   # C++ templates in Clang.
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_CXX_LINKER_WRAPPER_FLAG}/STACK:10000000")
+  add_link_options("$<${_is_exe}:LINKER:/STACK:10000000>")
 elseif(MINGW OR CYGWIN)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--stack,16777216")
+  add_link_options("$<${_is_exe}:LINKER:--stack,16777216>")
 
   # Pass -mbig-obj to mingw gas to avoid COFF 2**16 section limit.
   if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -1159,7 +1166,7 @@ if (UNIX AND
 endif()
 
 # lld doesn't print colored diagnostics when invoked from Ninja
-if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja" AND NOT "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64")
+if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja" AND NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx64")
   include(CheckLinkerFlag)
   check_linker_flag(CXX "-Wl,--color-diagnostics" LINKER_SUPPORTS_COLOR_DIAGNOSTICS)
   append_if(LINKER_SUPPORTS_COLOR_DIAGNOSTICS "-Wl,--color-diagnostics"

@@ -118,6 +118,45 @@ spirv.func @sin(%arg0: f32, %arg1: vector<3xf16>) "None" {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.Pow
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @pow
+spirv.func @pow(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.pow(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  %0 = spirv.GL.Pow %arg0, %arg0 : f32
+  // CHECK: llvm.intr.pow(%{{.*}}, %{{.*}}) : (vector<3xf16>, vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.Pow %arg1, %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Fma
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @fma
+spirv.func @fma(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.fma(%{{.*}}, %{{.*}}, %{{.*}}) : (f32, f32, f32) -> f32
+  %0 = spirv.GL.Fma %arg0, %arg0, %arg0 : f32
+  // CHECK: llvm.intr.fma(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<3xf16>, vector<3xf16>, vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.Fma %arg1, %arg1, %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.SAbs
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @sabs
+spirv.func @sabs(%arg0: i16, %arg1: vector<3xi32>) "None" {
+  // CHECK: "llvm.intr.abs"(%{{.*}}) <{is_int_min_poison = false}> : (i16) -> i16
+  %0 = spirv.GL.SAbs %arg0 : i16
+  // CHECK: "llvm.intr.abs"(%{{.*}}) <{is_int_min_poison = false}> : (vector<3xi32>) -> vector<3xi32>
+  %1 = spirv.GL.SAbs %arg1 : vector<3xi32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.SMax
 //===----------------------------------------------------------------------===//
 
@@ -140,6 +179,32 @@ spirv.func @smin(%arg0: i16, %arg1: vector<3xi32>) "None" {
   %0 = spirv.GL.SMin %arg0, %arg0 : i16
   // CHECK: llvm.intr.smin(%{{.*}}, %{{.*}}) : (vector<3xi32>, vector<3xi32>) -> vector<3xi32>
   %1 = spirv.GL.SMin %arg1, %arg1 : vector<3xi32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.UMax
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @umax
+spirv.func @umax(%arg0: i16, %arg1: vector<3xi32>) "None" {
+  // CHECK: llvm.intr.umax(%{{.*}}, %{{.*}}) : (i16, i16) -> i16
+  %0 = spirv.GL.UMax %arg0, %arg0 : i16
+  // CHECK: llvm.intr.umax(%{{.*}}, %{{.*}}) : (vector<3xi32>, vector<3xi32>) -> vector<3xi32>
+  %1 = spirv.GL.UMax %arg1, %arg1 : vector<3xi32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.UMin
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @umin
+spirv.func @umin(%arg0: i16, %arg1: vector<3xi32>) "None" {
+  // CHECK: llvm.intr.umin(%{{.*}}, %{{.*}}) : (i16, i16) -> i16
+  %0 = spirv.GL.UMin %arg0, %arg0 : i16
+  // CHECK: llvm.intr.umin(%{{.*}}, %{{.*}}) : (vector<3xi32>, vector<3xi32>) -> vector<3xi32>
+  %1 = spirv.GL.UMin %arg1, %arg1 : vector<3xi32>
   spirv.Return
 }
 

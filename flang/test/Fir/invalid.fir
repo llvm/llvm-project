@@ -1491,3 +1491,68 @@ func.func @bad_declare_value(%arg0: !fir.ref<i32>) {
   fir.declare_value %arg0 {uniq_name = "test"} : !fir.ref<i32>
   return
 }
+
+// -----
+
+func.func @bitcast_pointer_input(%arg0: !fir.ref<i32>) -> i32 {
+  // expected-error@+1 {{'fir.bitcast' op input type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (!fir.ref<i32>) -> i32
+  return %0 : i32
+}
+
+// -----
+
+func.func @bitcast_pointer_output(%arg0: i32) -> !fir.ref<i32> {
+  // expected-error@+1 {{'fir.bitcast' op output type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (i32) -> !fir.ref<i32>
+  return %0 : !fir.ref<i32>
+}
+
+// -----
+
+func.func @bitcast_complex(%arg0: complex<f32>) -> i64 {
+  // expected-error@+1 {{'fir.bitcast' op input type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (complex<f32>) -> i64
+  return %0 : i64
+}
+
+// -----
+
+func.func @bitcast_char_not_singleton(%arg0: !fir.char<1,2>) -> i16 {
+  // expected-error@+1 {{'fir.bitcast' op input type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (!fir.char<1,2>) -> i16
+  return %0 : i16
+}
+
+// -----
+
+func.func @bitcast_box(%arg0: !fir.box<!fir.type<t{i:i32}>>) -> i64 {
+  // expected-error@+1 {{'fir.bitcast' op input type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (!fir.box<!fir.type<t{i:i32}>>) -> i64
+  return %0 : i64
+}
+
+// -----
+
+func.func @bitcast_size_mismatch(%arg0: i32) -> f64 {
+  // expected-error@+1 {{'fir.bitcast' op bit size mismatch: input has 32 bits but output has 64 bits}}
+  %0 = fir.bitcast %arg0 : (i32) -> f64
+  return %0 : f64
+}
+
+// -----
+
+func.func @logical_and_type_mismatch(%a: !fir.logical<4>, %b: !fir.logical<2>) {
+  // expected-note@-1 {{prior use here}}
+  // expected-error@+1 {{use of value '%b' expects different type than prior uses: '!fir.logical<4>' vs '!fir.logical<2>'}}
+  %0 = fir.logical_and %a, %b : !fir.logical<4>
+  return
+}
+
+// -----
+
+func.func @logical_or_float(%a: f32, %b: f32) {
+  // expected-error@+1 {{'fir.logical_or' op operand #0 must be fir.logical or signless integer, but got 'f32'}}
+  %0 = fir.logical_or %a, %b : f32
+  return
+}

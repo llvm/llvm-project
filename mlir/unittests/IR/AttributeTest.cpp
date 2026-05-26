@@ -191,28 +191,28 @@ TEST(DenseSplatTest, StringAttrSplat) {
 TEST(DenseComplexTest, ComplexFloatSplat) {
   MLIRContext context;
   ComplexType complexType = ComplexType::get(Float32Type::get(&context));
-  std::complex<float> value(10.0, 15.0);
+  mlir::Complex<float> value(10.0, 15.0);
   testSplat(complexType, value);
 }
 
 TEST(DenseComplexTest, ComplexIntSplat) {
   MLIRContext context;
   ComplexType complexType = ComplexType::get(IntegerType::get(&context, 64));
-  std::complex<int64_t> value(10, 15);
+  mlir::Complex<int64_t> value(10, 15);
   testSplat(complexType, value);
 }
 
 TEST(DenseComplexTest, ComplexAPFloatSplat) {
   MLIRContext context;
   ComplexType complexType = ComplexType::get(Float32Type::get(&context));
-  std::complex<APFloat> value(APFloat(10.0f), APFloat(15.0f));
+  mlir::Complex<APFloat> value(APFloat(10.0f), APFloat(15.0f));
   testSplat(complexType, value);
 }
 
 TEST(DenseComplexTest, ComplexAPIntSplat) {
   MLIRContext context;
   ComplexType complexType = ComplexType::get(IntegerType::get(&context, 64));
-  std::complex<APInt> value(APInt(64, 10), APInt(64, 15));
+  mlir::Complex<APInt> value(APInt(64, 10), APInt(64, 15));
   testSplat(complexType, value);
 }
 
@@ -522,5 +522,61 @@ TEST(CopyCountAttr, PrintStripped) {
   os << "]";
   EXPECT_EQ(str, "|#test.copy_count<hello>|[copy_count<hello>]");
 }
+
+//===----------------------------------------------------------------------===//
+// IntegerAttr
+//===----------------------------------------------------------------------===//
+
+TEST(IntegerAttrTest, CorrectBitWidths) {
+  MLIRContext context;
+
+  // Correct APInt width for i32.
+  IntegerType i32 = IntegerType::get(&context, 32);
+  IntegerAttr attr32 = IntegerAttr::get(i32, APInt(32, 42));
+  EXPECT_EQ(attr32.getType(), i32);
+  EXPECT_EQ(attr32.getValue().getBitWidth(), 32u);
+  EXPECT_EQ(attr32.getInt(), 42);
+
+  // Correct APInt width for index type.
+  IndexType indexTy = IndexType::get(&context);
+  IntegerAttr attrIdx =
+      IntegerAttr::get(indexTy, APInt(IndexType::kInternalStorageBitWidth, 5));
+  EXPECT_EQ(attrIdx.getType(), indexTy);
+  EXPECT_EQ(attrIdx.getValue().getBitWidth(),
+            (unsigned)IndexType::kInternalStorageBitWidth);
+}
+
+TEST(IntegerAttrTest, SignedOverflow) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  IntegerAttr attr8Neg = builder.getI8IntegerAttr(-1);
+  EXPECT_EQ(attr8Neg.getInt(), -1);
+
+  IntegerAttr attr16Neg = builder.getI16IntegerAttr(-1);
+  EXPECT_EQ(attr16Neg.getInt(), -1);
+
+  IntegerAttr attr32Neg = builder.getI32IntegerAttr(-1);
+  EXPECT_EQ(attr32Neg.getInt(), -1);
+}
+
+#ifndef NDEBUG
+TEST(IntegerAttrDeathTest, WrongBitWidthForIntegerType) {
+  MLIRContext context;
+  IntegerType i32 = IntegerType::get(&context, 32);
+  // APInt(8, 1) has bit width 8, but i32 requires 32.
+  EXPECT_DEATH(IntegerAttr::get(i32, APInt(8, 1)),
+               "APInt bit width must match integer type width");
+}
+
+TEST(IntegerAttrDeathTest, WrongBitWidthForIndexType) {
+  MLIRContext context;
+  IndexType indexTy = IndexType::get(&context);
+  // APInt(1, 1) has bit width 1, but index type requires 64.
+  EXPECT_DEATH(
+      IntegerAttr::get(indexTy, APInt(1, 1)),
+      "APInt bit width must match IndexType internal storage bit width");
+}
+#endif // NDEBUG
 
 } // namespace

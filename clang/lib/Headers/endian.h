@@ -25,7 +25,22 @@
 
 #define LITTLE_ENDIAN __ORDER_LITTLE_ENDIAN__
 #define BIG_ENDIAN __ORDER_BIG_ENDIAN__
+#define PDP_ENDIAN __ORDER_PDP_ENDIAN__
 #define BYTE_ORDER __BYTE_ORDER__
+
+// Define some compatibility macros if they are not defined.
+#ifndef __BYTE_ORDER
+#define __BYTE_ORDER BYTE_ORDER
+#endif
+#ifndef __LITTLE_ENDIAN
+#define __LITTLE_ENDIAN LITTLE_ENDIAN
+#endif
+#ifndef __BIG_ENDIAN
+#define __BIG_ENDIAN BIG_ENDIAN
+#endif
+#ifndef __PDP_ENDIAN
+#define __PDP_ENDIAN PDP_ENDIAN
+#endif
 
 #if BYTE_ORDER == LITTLE_ENDIAN
 
@@ -48,7 +63,7 @@
 #define le32toh(x) __CLANG_ENDIAN_CAST(static_cast, uint32_t, x)
 #define le64toh(x) __CLANG_ENDIAN_CAST(static_cast, uint64_t, x)
 
-#else
+#elif BYTE_ORDER == BIG_ENDIAN
 
 #define htobe16(x) __CLANG_ENDIAN_CAST(static_cast, uint16_t, x)
 #define htobe32(x) __CLANG_ENDIAN_CAST(static_cast, uint32_t, x)
@@ -69,6 +84,8 @@
 #define le64toh(x)                                                             \
   __builtin_bswap64(__CLANG_ENDIAN_CAST(static_cast, uint64_t, x))
 
+#else
+#error "Unsupported endianness"
 #endif
 #endif // __has_include_next
 #endif // __CLANG_ENDIAN_H

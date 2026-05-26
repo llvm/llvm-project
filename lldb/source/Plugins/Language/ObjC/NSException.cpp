@@ -10,6 +10,8 @@
 
 #include "Cocoa.h"
 
+#include "llvm/Support/ErrorExtras.h"
+
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -29,7 +31,7 @@ using namespace lldb_private::formatters;
 
 static bool ExtractFields(ValueObject &valobj, ValueObjectSP *name_sp,
                           ValueObjectSP *reason_sp, ValueObjectSP *userinfo_sp,
-                          ValueObjectSP *reserved_sp) {
+                          ValueObjectSP *reserved_sp, bool owned_by_valobj) {
   ProcessSP process_sp(valobj.GetProcessSP());
   if (!process_sp)
     return false;
@@ -75,23 +77,25 @@ static bool ExtractFields(ValueObject &valobj, ValueObjectSP *name_sp,
 
   CompilerType voidstar =
       scratch_ts_sp->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
+  ExecutionContextRef exe_ref = valobj.GetExecutionContextRef();
+  ByteOrder byte_order = process_sp->GetByteOrder();
 
-  if (name_sp)
-    *name_sp = ValueObject::CreateValueObjectFromData(
-        "name", name_isw.GetAsData(process_sp->GetByteOrder()),
-        valobj.GetExecutionContextRef(), voidstar);
-  if (reason_sp)
-    *reason_sp = ValueObject::CreateValueObjectFromData(
-        "reason", reason_isw.GetAsData(process_sp->GetByteOrder()),
-        valobj.GetExecutionContextRef(), voidstar);
-  if (userinfo_sp)
-    *userinfo_sp = ValueObject::CreateValueObjectFromData(
-        "userInfo", userinfo_isw.GetAsData(process_sp->GetByteOrder()),
-        valobj.GetExecutionContextRef(), voidstar);
-  if (reserved_sp)
-    *reserved_sp = ValueObject::CreateValueObjectFromData(
-        "reserved", reserved_isw.GetAsData(process_sp->GetByteOrder()),
-        valobj.GetExecutionContextRef(), voidstar);
+  auto set_sp = [&](llvm::StringRef name, InferiorSizedWord &data_source,
+                    ValueObjectSP *set_me_sp) {
+    if (!set_me_sp)
+      return;
+    if (owned_by_valobj)
+      *set_me_sp = valobj.CreateChildValueObjectFromData(
+          name, data_source.GetAsData(byte_order), exe_ref, voidstar);
+    else
+      *set_me_sp = valobj.CreateValueObjectFromData(
+          name, data_source.GetAsData(byte_order), exe_ref, voidstar);
+  };
+
+  set_sp("name", name_isw, name_sp);
+  set_sp("reason", reason_isw, reason_sp);
+  set_sp("userInfo", userinfo_isw, userinfo_sp);
+  set_sp("reserved", reserved_isw, reserved_sp);
 
   return true;
 }
@@ -99,7 +103,8 @@ static bool ExtractFields(ValueObject &valobj, ValueObjectSP *name_sp,
 bool lldb_private::formatters::NSException_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   lldb::ValueObjectSP reason_sp;
-  if (!ExtractFields(valobj, nullptr, &reason_sp, nullptr, nullptr))
+  if (!ExtractFields(valobj, nullptr, &reason_sp, nullptr, nullptr,
+                     /*owned_by_valobj=*/false))
     return false;
 
   if (!reason_sp) {
@@ -142,7 +147,8 @@ public:
     m_reserved_sp.reset();
 
     const auto ret = ExtractFields(m_backend, &m_name_sp, &m_reason_sp,
-                                   &m_userinfo_sp, &m_reserved_sp);
+                                   &m_userinfo_sp, &m_reserved_sp,
+                                   /*owned_by_valobj=*/true);
 
     return ret ? lldb::ChildCacheState::eReuse
                : lldb::ChildCacheState::eRefetch;
@@ -162,8 +168,7 @@ public:
     if (name == g_reason) return 1;
     if (name == g_userInfo) return 2;
     if (name == g_reserved) return 3;
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
 private:

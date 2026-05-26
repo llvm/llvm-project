@@ -1865,3 +1865,12 @@ X86_64TargetInfo::getTargetBuiltins() const {
        "__builtin_ia32_"},
   };
 }
+
+unsigned
+MicrosoftX86_64TargetInfo::getMinGlobalAlign(uint64_t TypeSize,
+                                             bool HasNonWeakDef) const {
+  unsigned Align =
+      WindowsX86_64TargetInfo::getMinGlobalAlign(TypeSize, HasNonWeakDef);
+
+  return std::max(Align, Microsoft64BitMinGlobalAlign(TypeSize));
+}

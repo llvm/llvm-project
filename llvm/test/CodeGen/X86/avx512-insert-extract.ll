@@ -234,35 +234,13 @@ define i64 @test12(<16 x i64>%a, <16 x i64>%b, i64 %a1, i64 %b1) nounwind {
 }
 
 define i16 @test13(i32 %a, i32 %b) nounwind {
-; KNL-LABEL: test13:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    cmpl %esi, %edi
-; KNL-NEXT:    setb %al
-; KNL-NEXT:    movw $-4, %cx
-; KNL-NEXT:    kmovw %ecx, %k0
-; KNL-NEXT:    kshiftrw $1, %k0, %k0
-; KNL-NEXT:    kshiftlw $1, %k0, %k0
-; KNL-NEXT:    andl $1, %eax
-; KNL-NEXT:    kmovw %eax, %k1
-; KNL-NEXT:    korw %k1, %k0, %k0
-; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    ## kill: def $ax killed $ax killed $eax
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: test13:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    cmpl %esi, %edi
-; SKX-NEXT:    setb %al
-; SKX-NEXT:    movw $-4, %cx
-; SKX-NEXT:    kmovd %ecx, %k0
-; SKX-NEXT:    kshiftrw $1, %k0, %k0
-; SKX-NEXT:    kshiftlw $1, %k0, %k0
-; SKX-NEXT:    andl $1, %eax
-; SKX-NEXT:    kmovw %eax, %k1
-; SKX-NEXT:    korw %k1, %k0, %k0
-; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    ## kill: def $ax killed $ax killed $eax
-; SKX-NEXT:    retq
+; CHECK-LABEL: test13:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    adcl $65532, %eax ## imm = 0xFFFC
+; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
   %cmp_res = icmp ult i32 %a, %b
   %maskv = insertelement <16 x i1> <i1 true, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i1 %cmp_res, i32 0
   %res = bitcast <16 x i1> %maskv to i16
@@ -1445,7 +1423,7 @@ define i8 @test_extractelement_variable_v64i8_indexi8(<64 x i8> %t1, i8 %index) 
 ; CHECK-NEXT:    addb %dil, %dil
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    andl $63, %eax
+; CHECK-NEXT:    andl $62, %eax
 ; CHECK-NEXT:    movzbl (%rsp,%rax), %eax
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
@@ -2157,30 +2135,28 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
 ; KNL-LABEL: test_concat_v2i1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; KNL-NEXT:    vcvtph2ps %xmm0, %xmm1
+; KNL-NEXT:    vpsrld $16, %xmm0, %xmm1
+; KNL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; KNL-NEXT:    vmovss {{.*#+}} xmm2 = [6.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; KNL-NEXT:    vucomiss %xmm2, %xmm1
 ; KNL-NEXT:    setb %al
-; KNL-NEXT:    andl $1, %eax
-; KNL-NEXT:    kmovw %eax, %k0
-; KNL-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; KNL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; KNL-NEXT:    vucomiss %xmm2, %xmm0
-; KNL-NEXT:    setb %al
-; KNL-NEXT:    kmovw %eax, %k1
-; KNL-NEXT:    kshiftlw $1, %k1, %k1
-; KNL-NEXT:    korw %k1, %k0, %k0
-; KNL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; KNL-NEXT:    vucomiss %xmm2, %xmm1
+; KNL-NEXT:    setb %cl
+; KNL-NEXT:    vmovd %ecx, %xmm2
+; KNL-NEXT:    vpinsrb $1, %eax, %xmm2, %xmm2
+; KNL-NEXT:    vpmovzxbq {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero
+; KNL-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; KNL-NEXT:    vucomiss %xmm3, %xmm1
 ; KNL-NEXT:    seta %al
-; KNL-NEXT:    andl $1, %eax
-; KNL-NEXT:    kmovw %eax, %k1
-; KNL-NEXT:    vucomiss %xmm2, %xmm0
-; KNL-NEXT:    seta %al
-; KNL-NEXT:    kmovw %eax, %k2
-; KNL-NEXT:    kshiftlw $1, %k2, %k2
-; KNL-NEXT:    korw %k2, %k1, %k1
-; KNL-NEXT:    kandw %k1, %k0, %k1
+; KNL-NEXT:    vucomiss %xmm3, %xmm0
+; KNL-NEXT:    seta %cl
+; KNL-NEXT:    vmovd %ecx, %xmm0
+; KNL-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
+; KNL-NEXT:    vpmovzxbq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
+; KNL-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [1,1]
+; KNL-NEXT:    vptestmq %zmm1, %zmm0, %k1
+; KNL-NEXT:    vptestmq %zmm1, %zmm2, %k1 {%k1}
 ; KNL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; KNL-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
 ; KNL-NEXT:    vpmovdw %zmm1, %ymm1

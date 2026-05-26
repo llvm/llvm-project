@@ -45,6 +45,8 @@ class RISCVTuneInfo {
 
   // The direction of PostRA scheduling.
   code PostRASchedDirection = TopDown;
+
+  bit IsJumpExpensive = false;
 }
 
 def RISCVTuneInfoTable : GenericTable {
@@ -58,7 +60,7 @@ def RISCVTuneInfoTable : GenericTable {
                 "MaxStoresPerMemcpyOptSize", "MaxStoresPerMemcpy",
                 "MaxStoresPerMemmoveOptSize", "MaxStoresPerMemmove",
                 "MaxLoadsPerMemcmpOptSize", "MaxLoadsPerMemcmp",
-                "PostRASchedDirection"];
+                "PostRASchedDirection", "IsJumpExpensive"];
 }
 
 def getRISCVTuneInfo : SearchIndex {
@@ -587,29 +589,29 @@ def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFiveP600Model,
                                        TuneVXRMPipelineFlush,
                                        TunePostRAScheduler]>;
 
-def SIFIVE_P870 : RISCVProcessorModel<"sifive-p870", SiFiveP800Model,
-                                      !listconcat(RVA23U64Features,
-                                      [FeatureStdExtZama16b,
-                                       FeatureStdExtZfh,
-                                       FeatureStdExtZifencei,
-                                       FeatureStdExtZkr,
-                                       FeatureStdExtZvfbfmin,
-                                       FeatureStdExtZvfbfwma,
-                                       FeatureStdExtZvfh,
-                                       FeatureStdExtZvknc,
-                                       FeatureStdExtZvkng,
-                                       FeatureStdExtZvksc,
-                                       FeatureStdExtZvksg,
-                                       FeatureStdExtZvl128b,
-                                       FeatureUnalignedScalarMem,
-                                       FeatureUnalignedVectorMem]),
-                                      [TuneNoDefaultUnroll,
-                                       TuneConditionalCompressedMoveFusion,
-                                       TuneLUIADDIFusion,
-                                       TuneAUIPCADDIFusion,
-                                       TuneNoSinkSplatOperands,
-                                       TuneVXRMPipelineFlush,
-                                       TunePostRAScheduler]>;
+def SIFIVE_P870_D : RISCVProcessorModel<"sifive-p870-d", SiFiveP800Model,
+                                       !listconcat(RVA23U64Features,
+                                       [FeatureStdExtZama16b,
+                                        FeatureStdExtZfh,
+                                        FeatureStdExtZifencei,
+                                        FeatureStdExtZkr,
+                                        FeatureStdExtZvfbfmin,
+                                        FeatureStdExtZvfbfwma,
+                                        FeatureStdExtZvfh,
+                                        FeatureStdExtZvknc,
+                                        FeatureStdExtZvkng,
+                                        FeatureStdExtZvksc,
+                                        FeatureStdExtZvksg,
+                                        FeatureStdExtZvl128b,
+                                        FeatureUnalignedScalarMem,
+                                        FeatureUnalignedVectorMem]),
+                                       [TuneNoDefaultUnroll,
+                                        TuneConditionalCompressedMoveFusion,
+                                        TuneLUIADDIFusion,
+                                        TuneAUIPCADDIFusion,
+                                        TuneNoSinkSplatOperands,
+                                        TuneVXRMPipelineFlush,
+                                        TunePostRAScheduler]>;
 
 def SYNTACORE_SCR1_BASE : RISCVProcessorModel<"syntacore-scr1-base",
                                               SyntacoreSCR1Model,
@@ -899,7 +901,8 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                         TuneOptimizedNF3SegmentLoadStore,
                                         TuneOptimizedNF4SegmentLoadStore,
                                         TuneEnableSelectOptimize,
-                                        TuneVXRMPipelineFlush]> {
+                                        TuneVXRMPipelineFlush,
+                                        TunePreferAscendingLoadStore]> {
   let MVendorID = 0x710;
   let MArchID = 0x8000000058000001;
   let MImpID = 0x1000000049772200;

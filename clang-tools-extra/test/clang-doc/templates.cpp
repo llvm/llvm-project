@@ -357,8 +357,8 @@ void function<bool, 0>(bool x) {}
 // JSON-NEXT:              "Param": "bool"
 // JSON-NEXT:            },
 // JSON-NEXT:            {
-// JSON-NEXT:              "End": true, 
-// JSON-NEXT:              "Param": "0"
+// JSON-NEXT:              "Param": "0",
+// JSON-NEXT:              "SpecParamEnd": true
 // JSON-NEXT:            }
 // JSON-NEXT:          ],
 // JSON-NEXT:          "SpecializationOf": "{{([0-9A-F]{40})}}",

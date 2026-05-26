@@ -35,8 +35,10 @@ def X86_Dialect : Dialect {
 //===----------------------------------------------------------------------===//
 
 // Operation that is part of the input dialect.
-class AVX512_Op<string mnemonic, list<Trait> traits = []> :
-  Op<X86_Dialect, "avx512." # mnemonic, traits> {}
+class AVX512_Op<string mnemonic, list<Trait> traits = []>
+    : Op<X86_Dialect, "avx512." # mnemonic, traits> {
+  let cppNamespace = X86_Dialect.cppNamespace # "::avx512";
+}
 
 //----------------------------------------------------------------------------//
 // MaskCompressOp
@@ -351,8 +353,10 @@ def CvtPackedF32ToBF16Op : AVX512_Op<"cvt.packed.f32_to_bf16", [Pure,
 //===----------------------------------------------------------------------===//
 
 // Operation that is part of the input dialect.
-class AVX10_Op<string mnemonic, list<Trait> traits = []> :
-  Op<X86_Dialect, "avx10." # mnemonic, traits> {}
+class AVX10_Op<string mnemonic, list<Trait> traits = []>
+    : Op<X86_Dialect, "avx10." # mnemonic, traits> {
+  let cppNamespace = X86_Dialect.cppNamespace # "::avx10";
+}
 
 //----------------------------------------------------------------------------//
 // AVX10 Int8 Dot
@@ -403,14 +407,18 @@ def AVX10DotInt8Op : AVX10_Op<"dot.i8", [Pure,
 //===----------------------------------------------------------------------===//
 
 // Operation that is part of the input dialect.
-class AVX_Op<string mnemonic, list<Trait> traits = []> :
-  Op<X86_Dialect, "avx." # mnemonic, traits> {}
+class AVX_Op<string mnemonic, list<Trait> traits = []>
+  : Op<X86_Dialect, "avx." # mnemonic, traits> {
+  let cppNamespace = X86_Dialect.cppNamespace # "::avx";
+}
 
 // Operation that may be part of the input dialect, but whose
 // form is somewhere between the user view of the operation
 // and the actual lower level intrinsic in LLVM IR.
-class AVX_LowOp<string mnemonic, list<Trait> traits = []> :
-  Op<X86_Dialect, "avx.intr." # mnemonic, traits> {}
+class AVX_LowOp<string mnemonic, list<Trait> traits = []>
+  : Op<X86_Dialect, "avx.intr." # mnemonic, traits> {
+  let cppNamespace = X86_Dialect.cppNamespace # "::avx";
+}
 
 //----------------------------------------------------------------------------//
 // AVX Rsqrt
@@ -686,7 +694,7 @@ class AMX_Type<string typeName, string typeMnemonic, list<Trait> traits = []>
   let mnemonic = "amx." # typeMnemonic;
 }
 
-def AMX_TileTypeElementType : AnyTypeOf<[F32, F16, BF16, I32, I8]> {
+def AMX_TileTypeElementType : AnyTypeOf<[F32, F16, BF16, I32, I8, F8E4M3FN, F8E5M2]> {
   let cppFunctionName = "isValidTileTypeElementType";
 }
 
@@ -735,15 +743,19 @@ class AMXTileOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsAMXTilePred, "tile",
                       "::mlir::x86::AMXTileType">;
 
-def AnyAMXTile : AMXTileOf<[F32, F16, BF16, I32, I8]>;
+def AnyAMXTile : AMXTileOf<[F32, F16, BF16, I32, I8, F8E4M3FN, F8E5M2]>;
 
 def AMXTileF32 : AMXTileOf<[F32]>;
 
-def AMXTileF16OrBF16 : AMXTileOf<[F16, BF16]>;
+def AMXTileF16OrBF16OrF8 : AMXTileOf<[F16, BF16, F8E4M3FN, F8E5M2]>;
 
 def AMXTileI32 : AMXTileOf<[I32]>;
 
 def AMXTileI8 : AMXTileOf<[I8]>;
+
+def AMXTileF8E4M3FN : AMXTileOf<[F8E4M3FN]>;
+
+def AMXTileF8E5M2 : AMXTileOf<[F8E5M2]>;
 
 //===----------------------------------------------------------------------===//
 // AMX Op definitions
@@ -953,10 +965,10 @@ def TileMulFOp : AMX_Op<"tile_mulf", [Pure,
   let description = [{
     Multiplies a "m x k" tile with a "k x n" tile and accumulates the results
     into a "m x n" destination tile. Supports "f32 <- bf16 x bf16" (with
-    pairs of "bf16").
+    pairs of "bf16") and "f32 <- f8E5M2/f8E4M3FN x f8E5M2/f8E4M3FN".
     
-    The operation is eventually lowered into the "tdpbf16ps" instruction with
-    the corresponding tile configuration.
+    The operation is eventually lowered into the "tdpbf16ps/tdpbf8ps/tdpbhf8ps/
+    tdphbf8ps/tdphf8ps" instruction with the corresponding tile configuration.
 
     Example:
 
@@ -965,8 +977,9 @@ def TileMulFOp : AMX_Op<"tile_mulf", [Pure,
         : !x86.amx.tile<16x32xbf16>, !x86.amx.tile<16x32xbf16>, !x86.amx.tile<16x16xf32>
     ```
   }];
-  let arguments = (ins AMXTileF16OrBF16:$lhs,
-                       AMXTileF16OrBF16:$rhs,
+
+  let arguments = (ins AMXTileF16OrBF16OrF8:$lhs,
+                       AMXTileF16OrBF16OrF8:$rhs,
                        AMXTileF32:$acc);
   let results = (outs AMXTileF32:$res);
   let extraClassDeclaration = [{
@@ -984,10 +997,24 @@ def TileMulFOp : AMX_Op<"tile_mulf", [Pure,
       std::string intr = "llvm.x86.tdp";
       auto elementType =
         getLhsTileType().getElementType();
-      intr += elementType.isF16() ? "fp16" : "bf16";
+      auto elementTypeRhs =
+        getRhsTileType().getElementType();
+
+      if (elementType.isF16()) {
+        intr += "fp16";
+      } else if (elementType.isBF16()) {
+        intr += "bf16";
+      } else if (elementType.isF8E4M3FN() || elementType.isF8E5M2()) {
+        intr += elementType.isF8E4M3FN() ? "b" : "h";
+        if (elementType != elementTypeRhs)
+          intr += elementTypeRhs.isF8E4M3FN() ? "b" : "h";
+        intr += "f8";
+      }
+
       intr += "ps.internal";
       return intr;
     }
+
     SmallVector<Value> getIntrinsicOperands(
         ::mlir::ArrayRef<Value> operands,
         const ::mlir::LLVMTypeConverter &typeConverter,

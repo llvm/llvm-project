@@ -98,7 +98,7 @@ NamedDecl *LookupNamed(Sema &S, llvm::StringRef Name,
   R.resolveKind();
 
   if (R.isSingleResult())
-    return dyn_cast<NamedDecl>(R.getFoundDecl());
+    return R.getFoundDecl();
 
   return nullptr;
 }

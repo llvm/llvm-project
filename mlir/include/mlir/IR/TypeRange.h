@@ -17,6 +17,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/Repeated.h"
 #include "llvm/ADT/Sequence.h"
 
 namespace mlir {
@@ -30,11 +31,13 @@ namespace mlir {
 /// a SmallVector/std::vector. This class should be used in places that are not
 /// suitable for a more derived type (e.g. ArrayRef) or a template range
 /// parameter.
-class TypeRange : public llvm::detail::indexed_accessor_range_base<
-                      TypeRange,
-                      llvm::PointerUnion<const Value *, const Type *,
-                                         OpOperand *, detail::OpResultImpl *>,
-                      Type, Type, Type> {
+class TypeRange
+    : public llvm::detail::indexed_accessor_range_base<
+          TypeRange,
+          llvm::PointerUnion<const Value *, const Type *, OpOperand *,
+                             detail::OpResultImpl *, const Repeated<Type> *,
+                             const Repeated<Value> *>,
+          Type, Type, Type> {
 public:
   using RangeBaseT::RangeBaseT;
   TypeRange(ArrayRef<Type> types = {});
@@ -51,6 +54,10 @@ public:
       : TypeRange(ArrayRef<Type>(std::forward<Arg>(arg))) {}
   TypeRange(std::initializer_list<Type> types LLVM_LIFETIME_BOUND)
       : TypeRange(ArrayRef<Type>(types)) {}
+  /// Constructs a range from a repeated type. The Repeated object must outlive
+  /// this range.
+  TypeRange(const Repeated<Type> &repeatedValue LLVM_LIFETIME_BOUND)
+      : RangeBaseT(&repeatedValue, repeatedValue.count) {}
 
 private:
   /// The owner of the range is either:
@@ -58,8 +65,13 @@ private:
   /// * A pointer to the first element of an array of types.
   /// * A pointer to the first element of an array of operands.
   /// * A pointer to the first element of an array of results.
-  using OwnerT = llvm::PointerUnion<const Value *, const Type *, OpOperand *,
-                                    detail::OpResultImpl *>;
+  /// * A pointer to a Repeated<Type> (single type repeated N times).
+  /// * A pointer to a Repeated<Value> (single value repeated N times,
+  ///   dereferenced via getType()).
+  using OwnerT =
+      llvm::PointerUnion<const Value *, const Type *, OpOperand *,
+                         detail::OpResultImpl *, const Repeated<Type> *,
+                         const Repeated<Value> *>;
 
   /// See `llvm::detail::indexed_accessor_range_base` for details.
   static OwnerT offset_base(OwnerT object, ptrdiff_t index);
