@@ -545,8 +545,9 @@ void DataAggregator::parsePerfTextData(BinaryContext &BC) {
   NamedRegionTimer T("parsePerfTextData", "Parsing perf-script events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
   if (!Filename.empty()) {
+    // Load only the file header
     ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
-        MemoryBuffer::getFileOrSTDIN(Filename);
+        MemoryBuffer::getFileSlice(Filename, 133, 0);
     if (std::error_code EC = MB.getError()) {
       errs() << "PERF2BOLT-ERROR: cannot open " << Filename << ": "
              << EC.message() << "\n";
