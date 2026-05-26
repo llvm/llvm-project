@@ -1644,6 +1644,23 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
       !cast<VPInstruction>(Def)->isMasked())
     return Def->replaceAllUsesWith(Def->getOperand(0));
 
+  // When removeBranchOnConst folds a constant-true guard condition, it removes
+  // the GuardBlock -> JoinBlock edge and collapses the diamond into a
+  // straight-line chain. JoinBlock then has a single predecessor (VecBlock),
+  // so the ConditionalMerge phi is redundant — replace it with its operand.
+  // The operand necessarily dominates JoinBlock because it was valid at its
+  // use site inside VecBlock before the collapse, and collapsing only
+  // strengthens dominance in the resulting straight-line chain.
+  if (auto *VPI = dyn_cast<VPInstruction>(Def)) {
+    if (VPI->getOpcode() == VPInstruction::ConditionalMerge) {
+      if (VPI->getParent()->getSinglePredecessor()) {
+        Def->replaceAllUsesWith(Def->getOperand(0));
+        Def->eraseFromParent();
+        return;
+      }
+    }
+  }
+
   // Look through ExtractLastLane.
   if (match(Def, m_ExtractLastLane(m_VPValue(A)))) {
     if (match(A, m_BuildVector())) {
@@ -2590,10 +2607,28 @@ static void licm(VPlan &Plan) {
       if (!SinkBB)
         SinkBB = cast<VPBasicBlock>(LoopRegion->getSingleSuccessor());
 
-      // TODO: This will need to be a check instead of a assert after
-      // conditional branches in vectorized loops are supported.
-      assert(VPDT.properlyDominates(VPBB, SinkBB) &&
-             "Defining block must dominate sink block");
+      // With guard diamonds, a recipe defined inside a conditionally-executed
+      // VecBlock may not dominate exit blocks of the loop region because of
+      // the skip path (GuardBlock -> JoinBlock). Skip sinking in this case;
+      // the recipe stays inside the loop where it is correctly guarded.
+      // (Replaces the previous assert to support conditional block guards.)
+      if (!VPDT.properlyDominates(VPBB, SinkBB))
+        continue;
+
+      // Verify all operands defined inside the loop region will still dominate
+      // the recipe at the sink target. A recipe in the JoinBlock of a guard
+      // diamond may reference values from the conditionally-executed VecBlock;
+      // those values don't dominate the exit and sinking would break dominance.
+      if (any_of(R.operands(), [&VPDT, SinkBB](VPValue *Op) {
+            auto *OpR = Op->getDefiningRecipe();
+            if (!OpR)
+              return false;
+            VPBasicBlock *OpBB = OpR->getParent();
+            return OpBB != SinkBB &&
+                   !VPDT.properlyDominates(OpBB, SinkBB);
+          }))
+        continue;
+
       // TODO: Clone the recipe if users are on multiple exit paths, instead of
       // just moving.
       Def->moveBefore(*SinkBB, SinkBB->getFirstNonPhi());
@@ -3931,6 +3966,217 @@ static void expandVPDerivedIV(VPDerivedIVRecipe *R, VPTypeAnalysis &TypeInfo) {
     return;
   }
   llvm_unreachable("Unhandled induction kind");
+}
+
+static cl::opt<bool> EnableConditionalBlockGuards(
+    "enable-loop-vectorization-with-conditions", cl::init(false), cl::Hidden,
+    cl::desc("Vectorize loop with branches"));
+
+static cl::opt<unsigned> ConditionalGuardThreshold(
+    "conditional-guard-threshold", cl::init(5), cl::Hidden,
+    cl::desc("The minimum instructions in a block required for guarding"));
+
+/// Return the original IR basic block corresponding to \p VPBB by scanning its
+/// recipes for one that has an underlying IR instruction, and returning that
+/// instruction's parent block. VPBasicBlock has no direct link to the original
+/// IR block, so this heuristic is the only way to recover that mapping.
+/// Returns \c nullptr if no recipe in \p VPBB has an underlying IR value.
+static BasicBlock *getOrigBBForVPBB(VPBasicBlock *VPBB) {
+  for (VPRecipeBase &R : *VPBB) {
+    auto *SD = dyn_cast<VPSingleDefRecipe>(&R);
+    if (!SD)
+      continue;
+    if (auto *UV = SD->getUnderlyingValue())
+      if (auto *I = dyn_cast<Instruction>(UV))
+        return I->getParent();
+  }
+  return nullptr;
+}
+
+/// Collect conditionally-executed VPlan blocks that are profitable to guard.
+/// Walks the loop region in reverse post-order and selects blocks that satisfy
+/// two criteria:
+///   1. The block does not dominate \p IRLatch in the original IR (meaning it
+///      is conditionally executed in the scalar loop).
+///   2. The block contains more recipes than \c ConditionalGuardThreshold
+///      (making the guard overhead worthwhile).
+static SmallVector<VPBasicBlock *>
+findGuardCandidates(VPBasicBlock *HeaderVPBB, BasicBlock *IRLatch,
+                    DominatorTree *DT) {
+  SmallVector<VPBasicBlock *> Candidates;
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      HeaderVPBB);
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    BasicBlock *IRBB = getOrigBBForVPBB(VPBB);
+    if (!IRBB)
+      continue;
+    if (DT->dominates(IRBB, IRLatch))
+      continue;
+    if (VPBB->size() <= ConditionalGuardThreshold)
+      continue;
+    Candidates.push_back(VPBB);
+  }
+  return Candidates;
+}
+
+/// Extract the mask VPValue from a recipe, handling all recipe types that
+/// carry masks (VPInstruction, VPWidenMemoryRecipe, VPReplicateRecipe,
+/// VPInterleaveBase). Returns nullptr if the recipe has no mask.
+static VPValue *getMaskFromRecipe(VPRecipeBase &R) {
+  if (auto *VPI = dyn_cast<VPInstruction>(&R))
+    return VPI->getMask();
+  if (auto *WMR = dyn_cast<VPWidenMemoryRecipe>(&R))
+    return WMR->getMask();
+  if (auto *Rep = dyn_cast<VPReplicateRecipe>(&R))
+    return Rep->isPredicated() ? Rep->getMask() : nullptr;
+  if (auto *ILR = dyn_cast<VPInterleaveBase>(&R))
+    return ILR->getMask();
+  return nullptr;
+}
+
+/// Find the active-lane mask for \p VecBlock by scanning its recipes, and
+/// split the block if the mask definition lives inside it (so the mask and
+/// any prefix recipes stay in the predecessor). Returns the (possibly new)
+/// guarded block, or \c nullptr if the candidate should be skipped. \p Mask
+/// is set to the discovered mask value on success.
+static VPBasicBlock *findBlockMaskAndSplit(VPBasicBlock *VecBlock,
+                                          VPValue *&Mask) {
+  Mask = nullptr;
+  for (VPRecipeBase &R : *VecBlock) {
+    if (VPValue *M = getMaskFromRecipe(R)) {
+      Mask = M;
+      break;
+    }
+  }
+  if (!Mask)
+    return nullptr;
+
+  if (auto *MaskDef = Mask->getDefiningRecipe()) {
+    if (MaskDef->getParent() == VecBlock) {
+      auto SplitPt = std::next(MaskDef->getIterator());
+      if (SplitPt == VecBlock->end())
+        return nullptr;
+      VecBlock = VecBlock->splitAt(SplitPt);
+    }
+  }
+
+  if (!VecBlock->getSinglePredecessor() || !VecBlock->getSingleSuccessor())
+    return nullptr;
+  return VecBlock;
+}
+
+/// Build the guard diamond around \p VecBlock. Creates a guard block (with
+/// AnyOf + BranchOnCond) and a join block, then rewires the CFG into:
+///   pred -> guard -> {VecBlock, join}, VecBlock -> join -> succ.
+/// Returns the {GuardBlock, JoinBlock} pair.
+static std::pair<VPBasicBlock *, VPBasicBlock *>
+buildGuardDiamondCFG(VPlan &Plan, VPBasicBlock *VecBlock, VPValue *Mask) {
+  VPBasicBlock *PredBlock =
+      cast<VPBasicBlock>(VecBlock->getSinglePredecessor());
+  VPBasicBlock *SuccBlock =
+      cast<VPBasicBlock>(VecBlock->getSingleSuccessor());
+
+  VPBasicBlock *GuardBlock =
+      Plan.createVPBasicBlock(VecBlock->getName() + ".cond.guard");
+  VPBasicBlock *JoinBlock =
+      Plan.createVPBasicBlock(VecBlock->getName() + ".cond.join");
+  GuardBlock->setParent(VecBlock->getParent());
+  JoinBlock->setParent(VecBlock->getParent());
+
+  VPBuilder GuardBuilder(GuardBlock);
+  VPValue *AnyActive =
+      GuardBuilder.createNaryOp(VPInstruction::AnyOf, {Mask});
+  GuardBuilder.createNaryOp(VPInstruction::BranchOnCond, {AnyActive});
+
+  VPBlockUtils::disconnectBlocks(PredBlock, VecBlock);
+  VPBlockUtils::disconnectBlocks(VecBlock, SuccBlock);
+  VPBlockUtils::connectBlocks(PredBlock, GuardBlock);
+  VPBlockUtils::insertTwoBlocksAfter(VecBlock, JoinBlock, GuardBlock);
+  VPBlockUtils::connectBlocks(VecBlock, JoinBlock);
+  VPBlockUtils::connectBlocks(JoinBlock, SuccBlock);
+
+  return {GuardBlock, JoinBlock};
+}
+
+/// For recipes in the guarded \p VecBlock whose values are used outside the
+/// guard diamond, create ConditionalMerge PHI nodes in \p JoinBlock. These
+/// merge the guarded value with poison on the skip path. All recipes stay
+/// inside \p VecBlock so that expensive operations (FP arithmetic, etc.)
+/// remain guarded and are skipped when no lanes are active.
+static void mergeGuardedValues(VPBasicBlock *VecBlock,
+                               VPBasicBlock *GuardBlock,
+                               VPBasicBlock *JoinBlock) {
+  VPBuilder JoinBuilder(JoinBlock, JoinBlock->begin());
+  for (VPRecipeBase &R : *VecBlock) {
+    for (VPValue *Def : R.definedValues()) {
+      bool HasExternalUse = false;
+      for (VPUser *U : Def->users()) {
+        auto *UserR = dyn_cast<VPRecipeBase>(U);
+        if (!UserR || UserR->getParent() != VecBlock) {
+          HasExternalUse = true;
+          break;
+        }
+      }
+      if (!HasExternalUse)
+        continue;
+
+      auto *Merge = JoinBuilder.createNaryOp(VPInstruction::ConditionalMerge,
+                                             {Def}, {}, {}, "cond.merge");
+      Def->replaceUsesWithIf(
+          Merge, [VecBlock, JoinBlock, GuardBlock](VPUser &U, unsigned) {
+            auto *UserR = dyn_cast<VPRecipeBase>(&U);
+            if (!UserR)
+              return false;
+            return UserR->getParent() != VecBlock &&
+                   UserR->getParent() != JoinBlock &&
+                   UserR->getParent() != GuardBlock;
+          });
+    }
+  }
+}
+
+void VPlanTransforms::introduceConditionalBlockGuards(VPlan &Plan, Loop *OrigLoop,
+                                           DominatorTree *DT,
+                                           const TargetTransformInfo *TTI) {
+  if (!EnableConditionalBlockGuards)
+    return;
+  if (TTI->enableScalableVectorization())
+    return;
+
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  if (!LoopRegion)
+    return;
+  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
+  VPBasicBlock *VPLatch = dyn_cast<VPBasicBlock>(LoopRegion->getExiting());
+  if (!VPLatch || !HeaderVPBB)
+    return;
+  BasicBlock *IRLatch = OrigLoop->getLoopLatch();
+  if (!IRLatch)
+    return;
+
+  auto Candidates = findGuardCandidates(HeaderVPBB, IRLatch, DT);
+  if (Candidates.empty())
+    return;
+
+  for (VPBasicBlock *VecBlock : Candidates) {
+    // Skip blocks with in-loop reduction recipes: their merge-point blend
+    // was folded by createInLoopReductionRecipes, so ConditionalMerge with
+    // poison would corrupt the reduction chain.
+    if (any_of(*VecBlock, [](VPRecipeBase &R) {
+          return isa<VPReductionRecipe, VPReductionEVLRecipe>(R);
+        }))
+      continue;
+
+    VPValue *Mask = nullptr;
+    VecBlock = findBlockMaskAndSplit(VecBlock, Mask);
+    if (!VecBlock)
+      continue;
+
+    auto [GuardBlock, JoinBlock] = buildGuardDiamondCFG(Plan, VecBlock, Mask);
+
+    mergeGuardedValues(VecBlock, GuardBlock, JoinBlock);
+
+  }
 }
 
 void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {

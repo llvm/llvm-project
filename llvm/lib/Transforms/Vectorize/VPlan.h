@@ -1291,6 +1291,12 @@ public:
     // operand as additional operands. AnyOf is poison-safe as all operands
     // will be frozen.
     AnyOf,
+    // Creates a PHI node at the merge point of an active-lane guard diamond.
+    // Merges the value produced by the guarded vector block (operand 0) with
+    // poison from the guard-skip path. The parent block must have exactly two
+    // CFG predecessors: predecessor 0 is the guard (skip) block and
+    // predecessor 1 is the guarded vector block.
+    ConditionalMerge,
     // Calculates the first active lane index of the vector predicate operands.
     // It produces the lane index across all unrolled iterations. Unrolling will
     // add all copies of its original operand as additional operands.

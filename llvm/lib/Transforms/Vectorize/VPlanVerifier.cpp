@@ -340,6 +340,9 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
           if (RecipeNumbering[UI] >= RecipeNumbering[&R])
             continue;
         } else {
+          if (auto *VPI = dyn_cast<VPInstruction>(UI))
+            if (VPI->getOpcode() == VPInstruction::ConditionalMerge)
+              continue;
           if (VPDT.dominates(VPBB, UI->getParent()))
             continue;
         }

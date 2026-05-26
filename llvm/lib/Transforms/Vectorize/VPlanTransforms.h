@@ -496,6 +496,15 @@ struct VPlanTransforms {
   /// \p Plan.
   static void introduceMasksAndLinearize(VPlan &Plan);
 
+  /// Introduce active-lane guards for conditionally-executed blocks that are
+  /// profitable to guard. Creates a diamond CFG
+  /// (guard -> {vec_block, join}, vec_block -> join) for each candidate block.
+  /// The guard checks whether any SIMD lane is active using AnyOf +
+  /// BranchOnCond; the join block contains ConditionalMerge phis.
+  static void introduceConditionalBlockGuards(VPlan &Plan, Loop *OrigLoop,
+                                              DominatorTree *DT,
+                                              const TargetTransformInfo *TTI);
+
   /// Replace a VPWidenCanonicalIVRecipe if it is present in \p Plan, with a
   /// VPWidenIntOrFpInductionRecipe, provided it would not cause additional
   /// spills for \p VF at unroll factor \p UF.

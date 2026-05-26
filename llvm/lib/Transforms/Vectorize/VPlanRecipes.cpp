@@ -526,6 +526,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::PHI:
   case Instruction::Switch:
   case VPInstruction::AnyOf:
+  case VPInstruction::ConditionalMerge:
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
   case VPInstruction::CanonicalIVIncrementForPart:
@@ -857,6 +858,31 @@ Value *VPInstruction::generate(VPTransformState &State) {
     for (VPValue *Op : drop_begin(operands()))
       Res = Builder.CreateOr(Res, Builder.CreateFreeze(State.get(Op)));
     return State.VF.isScalar() ? Res : Builder.CreateOrReduce(Res);
+  }
+  case VPInstruction::ConditionalMerge: {
+    const VPBasicBlock *JoinVPBB = getParent();
+    if (JoinVPBB->getNumPredecessors() < 2)
+      return State.get(getOperand(0));
+    BasicBlock *GuardBB =
+        State.CFG.VPBB2IRBB.at(JoinVPBB->getCFGPredecessor(0));
+    BasicBlock *VecBB =
+        State.CFG.VPBB2IRBB.at(JoinVPBB->getCFGPredecessor(1));
+    Value *InVal;
+    {
+      // State.get() may insert broadcast instructions (insertelement +
+      // shufflevector) when the operand is scalar and needs widening. These
+      // must land in VecBB so that the PHI can reference them as incoming
+      // values from that block. Temporarily redirect the builder there.
+      IRBuilderBase::InsertPointGuard IPG(Builder);
+      Builder.SetInsertPoint(VecBB->getTerminator());
+      InVal = State.get(getOperand(0));
+    }
+    BasicBlock *BB = Builder.GetInsertBlock();
+    PHINode *Phi = PHINode::Create(InVal->getType(), 2, Name);
+    Phi->insertBefore(BB->getFirstNonPHIIt());
+    Phi->addIncoming(InVal, VecBB);
+    Phi->addIncoming(PoisonValue::get(InVal->getType()), GuardBB);
+    return Phi;
   }
   case VPInstruction::ExtractLane: {
     assert(getNumOperands() != 2 && "ExtractLane from single source should be "
@@ -1202,6 +1228,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getArithmeticReductionCost(
         Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
   }
+  case VPInstruction::ConditionalMerge:
+    return 0;
   case VPInstruction::FirstActiveLane: {
     Type *Ty = Ctx.Types.inferScalarType(this);
     Type *ScalarTy = Ctx.Types.inferScalarType(getOperand(0));
@@ -1387,6 +1415,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case Instruction::Select:
   case Instruction::PHI:
   case VPInstruction::AnyOf:
+  case VPInstruction::ConditionalMerge:
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
@@ -1585,6 +1614,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::AnyOf:
     O << "any-of";
+    break;
+  case VPInstruction::ConditionalMerge:
+    O << "conditional-merge";
     break;
   case VPInstruction::FirstActiveLane:
     O << "first-active-lane";
