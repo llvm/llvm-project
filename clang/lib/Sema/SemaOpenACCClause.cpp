@@ -1917,10 +1917,8 @@ bool SemaOpenACC::CheckReductionVarType(Expr *VarExpr) {
       // Variable length arrays cannot be used in a reduction clause.
       // To fix llvm/llvm-project#199162
       return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
-                                  << CurType->getAsRecordDecl()
-                                  << diag::OACCReductionTy::NotConstantArray
-                                  );
-
+                                   << CurType->getAsRecordDecl()
+                                   << diag::OACCReductionTy::NotConstantArray);
     }
 
     CurType = AT->getElementType();
@@ -1931,7 +1929,6 @@ bool SemaOpenACC::CheckReductionVarType(Expr *VarExpr) {
            (Ty->isDependentType() ||
             (Ty->isScalarType() && !Ty->isPointerType()));
   };
-
 
   // If the type is already scalar, or is dependent, just give up.
   if (IsValidMemberOfComposite(CurType)) {
