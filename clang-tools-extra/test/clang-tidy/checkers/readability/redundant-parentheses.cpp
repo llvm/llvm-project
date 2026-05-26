@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-redundant-parentheses %t
+﻿// RUN: %check_clang_tidy %s readability-redundant-parentheses %t
 
 void parenExpr() {
   1 + 1;
@@ -130,6 +130,36 @@ void memberAccessOnParen(Stream &s, Iter it) {
   auto z = (foo2.fooBar()).z;
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant parentheses around expression [readability-redundant-parentheses]
   // CHECK-FIXES:    auto z = foo2.fooBar().z;
+}
+
+// Overloaded comparison operators (CXXOperatorCallExpr) match callExpr() and
+// are flagged when the parentheses are genuinely redundant. Built-in binary
+// operators (BinaryOperator) are not matched by callExpr() and are not
+// currently flagged; fixing that inconsistency is tracked separately.
+struct CmpIter {
+  bool operator!=(const CmpIter &) const;
+  bool operator==(const CmpIter &) const;
+  bool operator>=(const CmpIter &) const;
+};
+
+bool overloadedComparisonWarn(CmpIter it, CmpIter end) {
+  if ((it != end))
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    if (it != end)
+    return true;
+  if ((it == end))
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    if (it == end)
+    return false;
+  return (it >= end);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    return it >= end;
+}
+
+bool builtinComparisonNoWarn(int i, int j) {
+  bool a = (i == j); // no warning
+  bool b = (i != j); // no warning
+  return (i >= j);   // no warning
 }
 
 void memberExpr() {
