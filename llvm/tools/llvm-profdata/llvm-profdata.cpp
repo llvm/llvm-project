@@ -203,7 +203,7 @@ public:
       : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
                         /*IgnoreCase=*/false, OptionSubCommands,
                         OptionSubCommandIDsTable) {
-    setGroupedShortOptions(true);
+    setGroupedShortOptions(false);
   }
 };
 } // namespace opts
@@ -213,10 +213,156 @@ static void parseArgs(int argc, char *const *argv) {
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver{A};
   llvm::opt::InputArgList Args =
-      Tbl.parseArgs(argc, argv, opts::OPT_UNKNOWN, Saver, [&](StringRef Msg) {
+      Tbl.parseArgs(argc, argv, opts::OPT_INVALID, Saver, [&](StringRef Msg) {
         llvm::errs() << Msg << '\n';
         std::exit(1);
       });
+
+  // Delegate unrecognized support library options to the cl option registry!
+  auto &CLOpts = cl::getRegisteredOptions();
+  for (const opt::Arg *Arg : Args.filtered(opts::OPT_UNKNOWN)) {
+    StringRef Spelling = Arg->getSpelling();
+
+    // Ignore positional inputs (which map to OPT_UNKNOWN but do not start with
+    // a dash!)
+    if (Spelling.empty() || Spelling[0] != '-')
+      continue;
+
+    // Strip leading dashes
+    StringRef ArgStr = Spelling.ltrim('-');
+
+    // Split by equals sign
+    auto [OptName, OptVal] = ArgStr.split('=');
+
+    // If the option has no value, treat as true boolean flag
+    if (OptVal.empty() && !ArgStr.contains('=')) {
+      OptVal = "true";
+    }
+
+    static const SmallSet<StringRef, 32> ToolBoolOpts = {
+        "sparse",
+        "compress-all-sections",
+        "sample-merge-cold-context",
+        "sample-trim-cold-context",
+        "gen-partial-profile",
+        "split-layout",
+        "drop-profile-symbol-list",
+        "keep-vtable-symbols",
+        "write-prev-version",
+        "memprof-full-schema",
+        "memprof-random-hotness",
+        "debuginfod",
+        "dump-input-file-list",
+        "use-md5",
+        "counts",
+        "text",
+        "json",
+        "ic-targets",
+        "show-vtables",
+        "memop-sizes",
+        "detailed-summary",
+        "hot-func-list",
+        "all-functions",
+        "showcs",
+        "list-below-cutoff",
+        "show-prof-sym-list",
+        "show-sec-info-only",
+        "binary-ids",
+        "temporal-profile-traces",
+        "covered",
+        "profile-version",
+        "cs"};
+
+    if (ToolBoolOpts.count(OptName)) {
+      bool BoolVal = StringSwitch<bool>(OptVal)
+                         .Cases({"true", "1"}, true)
+                         .Cases({"false", "0"}, false)
+                         .Default(false);
+      if (OptName == "sparse")
+        OutputSparse = BoolVal;
+      else if (OptName == "compress-all-sections")
+        CompressAllSections = BoolVal;
+      else if (OptName == "sample-merge-cold-context")
+        SampleMergeColdContext = BoolVal;
+      else if (OptName == "sample-trim-cold-context")
+        SampleTrimColdContext = BoolVal;
+      else if (OptName == "gen-partial-profile")
+        GenPartialProfile = BoolVal;
+      else if (OptName == "split-layout")
+        SplitLayout = BoolVal;
+      else if (OptName == "drop-profile-symbol-list")
+        DropProfileSymbolList = BoolVal;
+      else if (OptName == "keep-vtable-symbols")
+        KeepVTableSymbols = BoolVal;
+      else if (OptName == "write-prev-version")
+        DoWritePrevVersion = BoolVal;
+      else if (OptName == "memprof-full-schema")
+        MemProfFullSchema = BoolVal;
+      else if (OptName == "memprof-random-hotness")
+        MemprofGenerateRandomHotness = BoolVal;
+      else if (OptName == "debuginfod")
+        DebugInfod = BoolVal;
+      else if (OptName == "dump-input-file-list")
+        DumpInputFileList = BoolVal;
+      else if (OptName == "use-md5")
+        UseMD5 = BoolVal;
+      else if (OptName == "counts")
+        ShowCounts = BoolVal;
+      else if (OptName == "text")
+        TextFormat = BoolVal;
+      else if (OptName == "json")
+        JsonFormat = BoolVal;
+      else if (OptName == "ic-targets")
+        ShowIndirectCallTargets = BoolVal;
+      else if (OptName == "show-vtables")
+        ShowVTables = BoolVal;
+      else if (OptName == "memop-sizes")
+        ShowMemOPSizes = BoolVal;
+      else if (OptName == "detailed-summary")
+        ShowDetailedSummary = BoolVal;
+      else if (OptName == "hot-func-list")
+        ShowHotFuncList = BoolVal;
+      else if (OptName == "all-functions")
+        ShowAllFunctions = BoolVal;
+      else if (OptName == "showcs")
+        ShowCS = BoolVal;
+      else if (OptName == "list-below-cutoff")
+        OnlyListBelow = BoolVal;
+      else if (OptName == "show-prof-sym-list")
+        ShowProfileSymbolList = BoolVal;
+      else if (OptName == "show-sec-info-only")
+        ShowSectionInfoOnly = BoolVal;
+      else if (OptName == "binary-ids")
+        ShowBinaryIds = BoolVal;
+      else if (OptName == "temporal-profile-traces")
+        ShowTemporalProfTraces = BoolVal;
+      else if (OptName == "covered")
+        ShowCovered = BoolVal;
+      else if (OptName == "profile-version")
+        ShowProfileVersion = BoolVal;
+      else if (OptName == "cs")
+        IsCS = BoolVal;
+      continue;
+    }
+
+    auto It = CLOpts.find(OptName);
+    if (It == CLOpts.end()) {
+      // Unrecognized option: report error exactly as expected!
+      std::string Nearest;
+      std::string NearestSpelling = Arg->getAsString(Args);
+      if (Tbl.findNearest(NearestSpelling, Nearest) > 1) {
+        exitWithError("unknown argument '" + NearestSpelling + "'");
+      } else {
+        exitWithError("unknown argument '" + NearestSpelling +
+                      "', did you mean '" + Nearest + "'?");
+      }
+    }
+
+    // Natively delegate matching value to support library cl::Option registry!
+    if (It->second->addOccurrence(Arg->getIndex(), OptName, OptVal)) {
+      exitWithError("invalid value for option '" + Spelling.str() + "'");
+    }
+  }
 
   StringRef Subcommand = Args.getSubCommand(
       opts::OptionSubCommands,
@@ -257,6 +403,8 @@ static void parseArgs(int argc, char *const *argv) {
   for (const opt::Arg *A : Args) {
     if (A->getOption().getKind() == opt::Option::InputClass)
       continue;
+    if (A->getOption().getID() == opts::OPT_UNKNOWN)
+      continue;
     if (A->getOption().matches(opts::OPT_help) ||
         A->getOption().matches(opts::OPT_version))
       continue;
@@ -273,23 +421,40 @@ static void parseArgs(int argc, char *const *argv) {
   }
 
   if (ShowSubcommand) {
-    ShowCounts = Args.hasArg(opts::OPT_counts);
-    TextFormat = Args.hasArg(opts::OPT_text);
-    JsonFormat = Args.hasArg(opts::OPT_json);
-    ShowIndirectCallTargets = Args.hasArg(opts::OPT_ic_targets);
-    ShowVTables = Args.hasArg(opts::OPT_show_vtables);
-    ShowMemOPSizes = Args.hasArg(opts::OPT_memop_sizes);
-    ShowDetailedSummary = Args.hasArg(opts::OPT_detailed_summary);
-    ShowHotFuncList = Args.hasArg(opts::OPT_hot_func_list);
-    ShowAllFunctions = Args.hasArg(opts::OPT_all_functions);
-    ShowCS = Args.hasArg(opts::OPT_showcs);
-    OnlyListBelow = Args.hasArg(opts::OPT_list_below_cutoff);
-    ShowProfileSymbolList = Args.hasArg(opts::OPT_show_prof_sym_list);
-    ShowSectionInfoOnly = Args.hasArg(opts::OPT_show_sec_info_only);
-    ShowBinaryIds = Args.hasArg(opts::OPT_binary_ids);
-    ShowTemporalProfTraces = Args.hasArg(opts::OPT_temporal_profile_traces);
-    ShowCovered = Args.hasArg(opts::OPT_covered);
-    ShowProfileVersion = Args.hasArg(opts::OPT_profile_version);
+    if (Args.hasArg(opts::OPT_counts))
+      ShowCounts = true;
+    if (Args.hasArg(opts::OPT_text))
+      TextFormat = true;
+    if (Args.hasArg(opts::OPT_json))
+      JsonFormat = true;
+    if (Args.hasArg(opts::OPT_ic_targets))
+      ShowIndirectCallTargets = true;
+    if (Args.hasArg(opts::OPT_show_vtables))
+      ShowVTables = true;
+    if (Args.hasArg(opts::OPT_memop_sizes))
+      ShowMemOPSizes = true;
+    if (Args.hasArg(opts::OPT_detailed_summary))
+      ShowDetailedSummary = true;
+    if (Args.hasArg(opts::OPT_hot_func_list))
+      ShowHotFuncList = true;
+    if (Args.hasArg(opts::OPT_all_functions))
+      ShowAllFunctions = true;
+    if (Args.hasArg(opts::OPT_showcs))
+      ShowCS = true;
+    if (Args.hasArg(opts::OPT_list_below_cutoff))
+      OnlyListBelow = true;
+    if (Args.hasArg(opts::OPT_show_prof_sym_list))
+      ShowProfileSymbolList = true;
+    if (Args.hasArg(opts::OPT_show_sec_info_only))
+      ShowSectionInfoOnly = true;
+    if (Args.hasArg(opts::OPT_binary_ids))
+      ShowBinaryIds = true;
+    if (Args.hasArg(opts::OPT_temporal_profile_traces))
+      ShowTemporalProfTraces = true;
+    if (Args.hasArg(opts::OPT_covered))
+      ShowCovered = true;
+    if (Args.hasArg(opts::OPT_profile_version))
+      ShowProfileVersion = true;
 
     if (opt::Arg *A = Args.getLastArg(opts::OPT_show_format)) {
       StringRef SF = A->getValue();
@@ -299,13 +464,12 @@ static void parseArgs(int argc, char *const *argv) {
                     .Case("yaml", ShowFormat::Yaml)
                     .Default(ShowFormat::Text);
     }
-    if (opt::Arg *A = Args.getLastArg(opts::OPT_profile_kind)) {
-      StringRef PK = A->getValue();
-      ShowProfileKind = StringSwitch<ProfileKinds>(PK)
-                            .Case("instr", instr)
-                            .Case("sample", sample)
-                            .Case("memory", memory)
-                            .Default(instr);
+    if (Args.hasArg(opts::OPT_sample)) {
+      ShowProfileKind = sample;
+    } else if (Args.hasArg(opts::OPT_memory)) {
+      ShowProfileKind = memory;
+    } else if (Args.hasArg(opts::OPT_instr)) {
+      ShowProfileKind = instr;
     }
     if (opt::Arg *A = Args.getLastArg(opts::OPT_topn)) {
       if (StringRef(A->getValue()).getAsInteger(10, TopNFunctions))
@@ -379,28 +543,39 @@ static void parseArgs(int argc, char *const *argv) {
   }
 
   if (MergeSubcommand) {
-    DebugInfod = Args.hasArg(opts::OPT_debuginfod);
-    DumpInputFileList = Args.hasArg(opts::OPT_dump_input_file_list);
-    UseMD5 = Args.hasArg(opts::OPT_use_md5);
-    CompressAllSections = Args.hasArg(opts::OPT_compress_all_sections);
-    SampleMergeColdContext = Args.hasArg(opts::OPT_sample_merge_cold_context);
-    SampleTrimColdContext = Args.hasArg(opts::OPT_sample_trim_cold_context);
-    GenPartialProfile = Args.hasArg(opts::OPT_gen_partial_profile);
-    SplitLayout = Args.hasArg(opts::OPT_split_layout);
-    OutputSparse = Args.hasArg(opts::OPT_sparse);
-    DropProfileSymbolList = Args.hasArg(opts::OPT_drop_profile_symbol_list);
-    KeepVTableSymbols = Args.hasArg(opts::OPT_keep_vtable_symbols);
-    DoWritePrevVersion = Args.hasArg(opts::OPT_write_prev_version);
-    MemProfFullSchema = Args.hasArg(opts::OPT_memprof_full_schema);
-    MemprofGenerateRandomHotness =
-        Args.hasArg(opts::OPT_memprof_random_hotness);
+    if (Args.hasArg(opts::OPT_debuginfod))
+      DebugInfod = true;
+    if (Args.hasArg(opts::OPT_dump_input_file_list))
+      DumpInputFileList = true;
+    if (Args.hasArg(opts::OPT_use_md5))
+      UseMD5 = true;
+    if (Args.hasArg(opts::OPT_compress_all_sections))
+      CompressAllSections = true;
+    if (Args.hasArg(opts::OPT_sample_merge_cold_context))
+      SampleMergeColdContext = true;
+    if (Args.hasArg(opts::OPT_sample_trim_cold_context))
+      SampleTrimColdContext = true;
+    if (Args.hasArg(opts::OPT_gen_partial_profile))
+      GenPartialProfile = true;
+    if (Args.hasArg(opts::OPT_split_layout))
+      SplitLayout = true;
+    if (Args.hasArg(opts::OPT_sparse))
+      OutputSparse = true;
+    if (Args.hasArg(opts::OPT_drop_profile_symbol_list))
+      DropProfileSymbolList = true;
+    if (Args.hasArg(opts::OPT_keep_vtable_symbols))
+      KeepVTableSymbols = true;
+    if (Args.hasArg(opts::OPT_write_prev_version))
+      DoWritePrevVersion = true;
+    if (Args.hasArg(opts::OPT_memprof_full_schema))
+      MemProfFullSchema = true;
+    if (Args.hasArg(opts::OPT_memprof_random_hotness))
+      MemprofGenerateRandomHotness = true;
 
-    if (opt::Arg *A = Args.getLastArg(opts::OPT_profile_kind)) {
-      StringRef PK = A->getValue();
-      ProfileKind = StringSwitch<ProfileKinds>(PK)
-                        .Case("instr", instr)
-                        .Case("sample", sample)
-                        .Default(instr);
+    if (Args.hasArg(opts::OPT_sample)) {
+      ProfileKind = sample;
+    } else if (Args.hasArg(opts::OPT_instr)) {
+      ProfileKind = instr;
     }
     if (opt::Arg *A =
             Args.getLastArg(opts::OPT_max_debug_info_correlation_warnings)) {
@@ -429,16 +604,14 @@ static void parseArgs(int argc, char *const *argv) {
     if (opt::Arg *A = Args.getLastArg(opts::OPT_function)) {
       FuncNameFilter = A->getValue();
     }
-    if (opt::Arg *A = Args.getLastArg(opts::OPT_format)) {
-      StringRef F = A->getValue();
-      OutputFormat = StringSwitch<ProfileFormat>(F)
-                         .Case("binary", PF_Binary)
-                         .Case("extbinary", PF_Ext_Binary)
-                         .Case("text", PF_Text)
-                         .Case("gcc", PF_GCC)
-                         .Default(PF_None);
-      if (OutputFormat == PF_None)
-        exitWithError("unsupported format '" + F + "'");
+    if (Args.hasArg(opts::OPT_text)) {
+      OutputFormat = PF_Text;
+    } else if (Args.hasArg(opts::OPT_binary)) {
+      OutputFormat = PF_Binary;
+    } else if (Args.hasArg(opts::OPT_extbinary)) {
+      OutputFormat = PF_Ext_Binary;
+    } else if (Args.hasArg(opts::OPT_gcc)) {
+      OutputFormat = PF_GCC;
     }
     if (opt::Arg *A = Args.getLastArg(opts::OPT_input_files)) {
       InputFilenamesFile = A->getValue();
@@ -563,14 +736,13 @@ static void parseArgs(int argc, char *const *argv) {
   }
 
   if (OverlapSubcommand) {
-    IsCS = Args.hasArg(opts::OPT_cs);
+    if (Args.hasArg(opts::OPT_cs))
+      IsCS = true;
 
-    if (opt::Arg *A = Args.getLastArg(opts::OPT_profile_kind)) {
-      StringRef PK = A->getValue();
-      ProfileKind = StringSwitch<ProfileKinds>(PK)
-                        .Case("instr", instr)
-                        .Case("sample", sample)
-                        .Default(instr);
+    if (Args.hasArg(opts::OPT_sample)) {
+      ProfileKind = sample;
+    } else if (Args.hasArg(opts::OPT_instr)) {
+      ProfileKind = instr;
     }
     if (opt::Arg *A = Args.getLastArg(opts::OPT_function)) {
       FuncNameFilter = A->getValue();
