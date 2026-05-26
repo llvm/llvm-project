@@ -59,6 +59,23 @@ using k2 = int[];
 
 unique_ptr<k2> dk2;
 
+// Defaulted special members in a class inheriting from unique_ptr<T[]> should
+// not produce a locationless diagnostic (https://github.com/llvm/llvm-project/issues/199692).
+template <typename T>
+struct wrapper : unique_ptr<T[]> {
+  wrapper() = default;
+  ~wrapper() = default;
+  wrapper(wrapper &&) = default;
+  wrapper &operator=(wrapper &&) = default;
+};
+// no diagnostic expected: the T[] above is inside compiler-synthesized code
+
+void testDefaultedSpecialMembers() {
+  wrapper<int> w1;
+  wrapper<int> w2(std::move(w1));
+  w1 = std::move(w2);
+}
+
 // Some header
 extern "C" {
 
