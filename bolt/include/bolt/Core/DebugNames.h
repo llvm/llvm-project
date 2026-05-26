@@ -103,8 +103,6 @@ private:
   DenseMap<uint64_t, uint32_t> TUHashToIndexMap;
   /// Track whether AcceleratorTable have been preallocated.
   bool Preallocated = false;
-  /// Map from DWO ID to preallocated CU index.
-  std::unordered_map<uint64_t, uint32_t> DWOIdToCUIndex;
   /// Represents a group of entries with identical name (and hence, hash value).
   struct HashData {
     uint64_t StrOffset;
@@ -138,7 +136,7 @@ private:
   uint32_t AugmentationStringSize = 0;
   dwarf::Form CUIndexForm = dwarf::DW_FORM_data4;
   dwarf::Form TUIndexForm = dwarf::DW_FORM_data4;
-  constexpr static uint32_t BADCUOFFSET = 0xBADBA;
+  constexpr static uint32_t BADCUOFFSET = 0xBADBAD;
 
   BucketList Buckets;
 
@@ -152,7 +150,7 @@ private:
   std::unique_ptr<raw_svector_ostream> AugStringtream;
   llvm::DenseMap<llvm::hash_code, uint64_t> StrCacheToOffsetMap;
   // Contains DWO ID to CUList Index.
-  llvm::DenseMap<uint64_t, uint32_t> CUOffsetsToPatch;
+  std::unordered_map<uint64_t, uint32_t> CUOffsetsToPatch;
   // Contains a map of Entry ID to Entry relative offset.
   llvm::DenseMap<uint64_t, uint32_t> EntryRelativeOffsets;
   llvm::DenseMap<uint64_t, std::pair<DWARFUnit *, const DIE *>> CrossCUDies;

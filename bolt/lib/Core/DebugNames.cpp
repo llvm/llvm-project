@@ -67,25 +67,27 @@ DWARF5AcceleratorTable::DWARF5AcceleratorTable(
 }
 
 void DWARF5AcceleratorTable::preAllocateUnits(DWARFContext &DwCtx) {
-  // Collect all DWO IDs in deterministic order (by CU offset in .debug_info).
-  // This is single-threaded, called before parallel process.
-  for (const auto &CU : DwCtx.compile_units()) {
-    if (std::optional<uint64_t> DWOId = CU->getDWOId()) {
-      uint32_t Idx = CUList.size();
-      CUList.push_back(BADCUOFFSET);
-      CUOffsetsToPatch[*DWOId] = Idx;
-      DWOIdToCUIndex[*DWOId] = Idx;
-    }
-  }
+  // Single pass: allocate CU slots and collect Foreign TU hashes
+  // in deterministic order (by CU offset in .debug_info).
   for (const auto &CU : DwCtx.compile_units()) {
     std::optional<uint64_t> DWOId = CU->getDWOId();
     if (!DWOId)
       continue;
+
+    const DWARFDie UnitDIE = CU->getUnitDIE();
+    if (!UnitDIE.find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}))
+      continue;
+
+    uint32_t Idx = CUList.size();
+    CUList.push_back(BADCUOFFSET);
+    CUOffsetsToPatch[*DWOId] = Idx;
+
     std::optional<DWARFUnit *> DWOCU = BC.getDWOCU(*DWOId);
     if (!DWOCU || !*DWOCU)
       continue;
-    DWARFContext &DWOCtx = (*DWOCU)->getContext();
+
     // check dwo_types_section_units for DWARF4 type units in DWO.
+    DWARFContext &DWOCtx = (*DWOCU)->getContext();
     for (const auto &TU : DWOCtx.dwo_units()) {
       if (!TU->isTypeUnit())
         continue;
@@ -293,8 +295,8 @@ uint32_t DWARF5AcceleratorTable::getUnitID(const DWARFUnit &Unit,
     return LocalTUList.size() - 1;
   }
   if (Preallocated && DWOID) {
-    auto Iter = DWOIdToCUIndex.find(*DWOID);
-    assert(Iter != DWOIdToCUIndex.end() && "DWO ID not preallocated");
+    auto Iter = CUOffsetsToPatch.find(*DWOID);
+    assert(Iter != CUOffsetsToPatch.end() && "DWO ID not preallocated");
     return Iter->second;
   }
   return CUList.size() - 1;
@@ -513,6 +515,20 @@ void DWARF5AcceleratorTable::computeBucketCount() {
     BucketCount = std::max<uint32_t>(UniqueHashCount, 1);
 }
 
+/// Returns a stable compile-unit sort key for a debug_names entry.
+static unsigned getCompileUnitKey(const BOLTDWARF5AccelTableData *Entry) {
+  if (Entry->getSecondUnitID())
+    return *Entry->getSecondUnitID();
+  if (!Entry->isTU())
+    return Entry->getUnitID();
+  return std::numeric_limits<unsigned>::max();
+}
+
+static unsigned getTypeUnitKey(const BOLTDWARF5AccelTableData *Entry) {
+  return Entry->isTU() ? Entry->getUnitID()
+                       : std::numeric_limits<unsigned>::max();
+}
+
 /// Bucket code as in: AccelTableBase::finalize()
 void DWARF5AcceleratorTable::finalize() {
   if (!NeedToCreate)
@@ -540,23 +556,10 @@ void DWARF5AcceleratorTable::finalize() {
                                       const BOLTDWARF5AccelTableData *RHS) {
         // Sort entries by (DieOffset, CompileUnitID, TypeUnitID) to ensure
         // deterministic output order across multi-threaded processing runs.
-        const auto GetCompileUnitKey =
-            [](const BOLTDWARF5AccelTableData *Entry) -> unsigned {
-          if (Entry->getSecondUnitID())
-            return *Entry->getSecondUnitID();
-          if (!Entry->isTU())
-            return Entry->getUnitID();
-          return std::numeric_limits<unsigned>::max();
-        };
-        const auto GetTypeUnitKey =
-            [](const BOLTDWARF5AccelTableData *Entry) -> unsigned {
-          return Entry->isTU() ? Entry->getUnitID()
-                               : std::numeric_limits<unsigned>::max();
-        };
-        return std::make_tuple(LHS->getDieOffset(), GetCompileUnitKey(LHS),
-                               GetTypeUnitKey(LHS)) <
-               std::make_tuple(RHS->getDieOffset(), GetCompileUnitKey(RHS),
-                               GetTypeUnitKey(RHS));
+        return std::make_tuple(LHS->getDieOffset(), getCompileUnitKey(LHS),
+                               getTypeUnitKey(LHS)) <
+               std::make_tuple(RHS->getDieOffset(), getCompileUnitKey(RHS),
+                               getTypeUnitKey(RHS));
       });
   }
 
