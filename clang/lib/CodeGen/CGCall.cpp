@@ -5139,26 +5139,30 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     return;
   }
 
-  // For musttail calls in C++, skip the agg.tmp copy when the source is a
-  // trivially-copyable parameter of the current function. The copy would
-  // live in our frame, which the tail call deallocates before the callee
-  // dereferences it. The companion fix in EmitCall (getForwardableIncoming
-  // MustTailArg) forwards the incoming Indirect Argument; for that to fire
-  // here we must hand it the original parameter LValue, not a fresh temp.
+  // Under musttail, hand a trivially-copyable record source's LValue to
+  // EmitCall rather than materializing an agg.tmp. EmitCall's Indirect path
+  // routes it via the matching incoming parameter, which survives the tail
+  // call. Limited to params and locals: globals and captures don't have the
+  // dangle issue and the existing path may be more efficient for them.
   if (HasAggregateEvalKind && MustTailCall && type->isRecordType() &&
       type.isTriviallyCopyableType(getContext())) {
     if (const auto *CCE = dyn_cast<CXXConstructExpr>(E)) {
       if (CCE->getConstructor()->isCopyOrMoveConstructor() &&
           CCE->getConstructor()->isTrivial() && CCE->getNumArgs() == 1) {
         const Expr *Source = CCE->getArg(0)->IgnoreParenImpCasts();
-        if (const auto *DRE = dyn_cast<DeclRefExpr>(Source))
-          if (const auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
-            if (PVD->getDeclContext() == dyn_cast<DeclContext>(CurCodeDecl)) {
+        if (const auto *DRE = dyn_cast<DeclRefExpr>(Source)) {
+          if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+            if (VD->hasLocalStorage() ||
+                (isa<ParmVarDecl>(VD) &&
+                 VD->getDeclContext() ==
+                     dyn_cast<DeclContext>(CurCodeDecl))) {
               LValue L = EmitLValue(DRE);
               assert(L.isSimple());
               args.addUncopiedAggregate(L, type);
               return;
             }
+          }
+        }
       }
     }
   }
@@ -5472,43 +5476,15 @@ static unsigned getMaxVectorWidth(const llvm::Type *Ty) {
   return MaxVectorWidth;
 }
 
-/// Returns the incoming llvm::Argument of the current function if this
-/// musttail call argument forwards an incoming Indirect parameter with a
-/// matching ABI shape; nullptr to fall through to the byval-temp path.
-/// Argument-side analog of a96c14eeb8fc (SRet musttail forwarding).
-static llvm::Argument *getForwardableIncomingMustTailArg(
-    CodeGenFunction &CGF, const CallArg &CallArgument,
-    const ABIArgInfo &CallSlotInfo,
-    llvm::SmallPtrSetImpl<llvm::Argument *> &AlreadyForwarded) {
-  Address SrcAddr = Address::invalid();
-  if (CallArgument.hasLValue())
-    SrcAddr = CallArgument.getKnownLValue().getAddress();
-  else if (CallArgument.getKnownRValue().isAggregate())
-    SrcAddr = CallArgument.getKnownRValue().getAggregateAddress();
-  else
-    return nullptr;
-  llvm::Value *SrcPtr = SrcAddr.emitRawPointer(CGF);
-
-  // Peek through one AddrSpaceCastInst (NVPTX / AMDGPU / SPIR wrap incoming
-  // Indirect params via EmitParmDecl). Do not unwrap loads: a load through
-  // a local alloca means the source is a local.
+/// Peel one AddrSpaceCastInst from \p SrcPtr. EmitParmDecl wraps incoming
+/// Indirect params via address-space cast on NVPTX/AMDGPU/SPIR, so peeling
+/// exposes the underlying llvm::Argument when the source IS a forwarded
+/// incoming parameter. Loads are NOT unwrapped: a load through a local
+/// alloca means the source is a local.
+static llvm::Value *peelAddrSpaceCast(llvm::Value *SrcPtr) {
   if (auto *ASC = llvm::dyn_cast<llvm::AddrSpaceCastInst>(SrcPtr))
-    SrcPtr = ASC->getOperand(0);
-
-  auto *IncomingArg = llvm::dyn_cast<llvm::Argument>(SrcPtr);
-  if (!IncomingArg || IncomingArg->getParent() != CGF.CurFn)
-    return nullptr;
-
-  // Verifier V7 requires matching ABI attributes across musttail.
-  if (IncomingArg->hasByValAttr() != CallSlotInfo.getIndirectByVal())
-    return nullptr;
-
-  // Do not forward the same noalias Argument to two slots in one call.
-  if (IncomingArg->hasNoAliasAttr() &&
-      !AlreadyForwarded.insert(IncomingArg).second)
-    return nullptr;
-
-  return IncomingArg;
+    return ASC->getOperand(0);
+  return SrcPtr;
 }
 
 RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
@@ -5634,9 +5610,16 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // markers that need to be ended right after the call.
   SmallVector<CallLifetimeEnd, 2> CallLifetimeEndAfterCall;
 
-  // Tracks incoming Arguments already forwarded by a musttail Indirect arg,
-  // for noalias deduplication in getForwardableIncomingMustTailArg.
-  llvm::SmallPtrSet<llvm::Argument *, 4> ForwardedMustTailArgs;
+  // Deferred Phase-2 writes for musttail Indirect args. Splitting reads
+  // (in the per-arg loop) from writes (after the loop) lets permutations
+  // like C(b, a) land correctly: all sources are captured into scratches
+  // before any incoming-param destination is overwritten.
+  struct MustTailIndirectCopy {
+    LValue Scratch;
+    LValue Dst;
+    QualType Ty;
+  };
+  llvm::SmallVector<MustTailIndirectCopy, 4> MustTailIndirectCopies;
 
   // Translate all of the arguments as necessary to match the IR lowering.
   assert(CallInfo.arg_size() == CallArgs.size() &&
@@ -5711,20 +5694,45 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     case ABIArgInfo::IndirectAliased: {
       assert(NumIRArgs == 1);
 
-      // For musttail, forward an incoming Indirect parameter directly. A
-      // local alloca would dangle after the tail call. Mirrors the SRet
-      // forwarding above (a96c14eeb8fc). Limited to Indirect (not
-      // IndirectAliased) so the byval-ness check in the helper does not
-      // assert on getIndirectByVal().
+      // Musttail Indirect: route via the matching incoming parameter.
+      // Prototype-match (Verifier V5/V6/V7) makes CurFn->arg_begin()+
+      // FirstIRArg a distinct destination for this slot that lives in the
+      // caller's caller's frame and survives the tail call. To handle
+      // permutations safely, the source value is captured into a scratch
+      // alloca here (Phase 1); the write to the incoming-param destination
+      // is deferred until after all sources have been read (Phase 2 below).
+      // IndirectAliased uses the existing fallback (different source-AS).
       if (IsMustTail && ArgInfo.isIndirect()) {
-        if (llvm::Argument *FwdArg = getForwardableIncomingMustTailArg(
-                *this, *I, ArgInfo, ForwardedMustTailArgs)) {
-          llvm::Value *Val = FwdArg;
+        llvm::Argument *IncomingArg = CurFn->arg_begin() + FirstIRArg;
+        llvm::Value *Dst = IncomingArg;
+        Address SrcAddr = Address::invalid();
+        if (I->hasLValue())
+          SrcAddr = I->getKnownLValue().getAddress();
+        else if (I->getKnownRValue().isAggregate())
+          SrcAddr = I->getKnownRValue().getAggregateAddress();
+        if (SrcAddr.isValid()) {
+          llvm::Value *Src = peelAddrSpaceCast(SrcAddr.emitRawPointer(*this));
+          if (Src != Dst) {
+            CharUnits Align = ArgInfo.getIndirectAlign();
+            QualType Ty = I->Ty;
+            llvm::Type *ElemTy = ConvertTypeForMem(Ty);
+            RawAddress Scratch =
+                CreateMemTempWithoutCast(Ty, Align, "musttail.copy");
+            LValue ScratchLV = MakeAddrLValue(Scratch, Ty);
+            LValue SrcLV = MakeAddrLValue(SrcAddr, Ty);
+            EmitAggregateCopy(ScratchLV, SrcLV, Ty,
+                              AggValueSlot::DoesNotOverlap);
+            LValue DstLV =
+                MakeAddrLValue(Address(Dst, ElemTy, Align), Ty);
+            MustTailIndirectCopies.push_back({ScratchLV, DstLV, Ty});
+          }
+          llvm::Value *Val = Dst;
           if (ArgHasMaybeUndefAttr)
             Val = Builder.CreateFreeze(Val);
           IRCallArgs[FirstIRArg] = Val;
           break;
         }
+        // No clean source address (rare): fall through to byval-temp.
       }
 
       if (I->isAggregate()) {
@@ -6052,6 +6060,13 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     }
     }
   }
+
+  // Phase 2 of the musttail Indirect-arg copy: flush each captured scratch
+  // into its incoming-param destination. Phase 1 has read every source, so
+  // permutations like C(b, a) land the right value in each slot.
+  for (const auto &Copy : MustTailIndirectCopies)
+    EmitAggregateCopy(Copy.Dst, Copy.Scratch, Copy.Ty,
+                      AggValueSlot::DoesNotOverlap);
 
   const CGCallee &ConcreteCallee = Callee.prepareConcreteCallee(*this);
   llvm::Value *CalleePtr = ConcreteCallee.getFunctionPointer();

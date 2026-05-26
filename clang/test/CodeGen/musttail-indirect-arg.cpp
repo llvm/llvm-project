@@ -1,56 +1,46 @@
-// Test that Clang forwards incoming Indirect parameters across musttail calls
-// for C++ struct-by-value arguments with trivially-copyable types. Companion to
-// musttail-indirect-arg.c (the C side of the same fix) and musttail-sret.cpp
-// (the SRet precedent in a96c14eeb8fc).
-//
-// C++ goes through a different EmitCallArg path than C: the call argument is a
-// CXXConstructExpr invoking the implicit copy constructor, which would
-// otherwise materialize an agg.tmp before EmitCall. For musttail with a
-// trivially-copyable parameter forwarded directly, the copy is elided so the
-// helper in EmitCall can forward the incoming llvm::Argument.
-
 // RUN: %clang_cc1 -triple=riscv64-linux-gnu %s -emit-llvm -O1 -o - | FileCheck %s --check-prefix=COMMON
 // RUN: %clang_cc1 -triple=aarch64-linux-gnu %s -emit-llvm -O1 -o - | FileCheck %s --check-prefix=COMMON
 // RUN: %clang_cc1 -triple=loongarch64-linux-gnu %s -emit-llvm -O1 -o - | FileCheck %s --check-prefix=COMMON
 // RUN: %clang_cc1 -triple=s390x-linux-gnu %s -emit-llvm -O1 -o - | FileCheck %s --check-prefix=COMMON
 
-// A trivially-copyable struct large enough to land on the indirect-arg path
-// on RV64, AArch64, LoongArch64, SystemZ.
+// C++ side of the musttail Indirect-arg fix. The call argument is typically
+// a CXXConstructExpr invoking the trivial copy constructor; EmitCallArg
+// detects the trivial-copy-from-DeclRefExpr case under musttail and hands
+// the source LValue to EmitCall so the general path engages. Non-trivial
+// copy or move constructors keep the existing agg.tmp path.
+
 struct Big {
   unsigned long long a, b, c, d;
 };
 
-// Plain forward: caller(B) musttails callee(B). No agg.tmp copy, no
-// byval-temp; the incoming parameter %a is forwarded directly.
+// P1: simple forward.
 struct Big C1(struct Big a);
 struct Big P1(struct Big a) {
   [[clang::musttail]] return C1(a);
 }
 // COMMON-LABEL: define {{.*}} @_Z2P13Big(
 // COMMON-NOT: = alloca {{.*}}struct.Big
-// COMMON: musttail call {{.*}} @_Z2C13Big({{.*}} %a)
+// COMMON: musttail call {{.*}} @_Z2C13Big({{.*}}, ptr {{.*}} %a)
 
-// Two args, same forwarding.
+// P2: two distinct args.
 struct Big C2(struct Big a, struct Big b);
 struct Big P2(struct Big a, struct Big b) {
   [[clang::musttail]] return C2(a, b);
 }
 // COMMON-LABEL: define {{.*}} @_Z2P23BigS_(
-// COMMON-NOT: = alloca {{.*}}struct.Big
-// COMMON: musttail call {{.*}} @_Z2C23BigS_({{.*}} %a, {{.*}} %b)
+// COMMON-NOT: llvm.memcpy
+// COMMON: musttail call {{.*}} @_Z2C23BigS_({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
 
-// Swapped args.
+// P3: swapped args.
 struct Big C3(struct Big x, struct Big y);
 struct Big P3(struct Big a, struct Big b) {
   [[clang::musttail]] return C3(b, a);
 }
 // COMMON-LABEL: define {{.*}} @_Z2P33BigS_(
-// COMMON-NOT: = alloca {{.*}}struct.Big
-// COMMON: musttail call {{.*}} @_Z2C33BigS_({{.*}} %b, {{.*}} %a)
 
-// Non-trivial copy constructor: the trivial-copy elision must NOT engage.
-// Existing path materializes the agg.tmp (the user-defined copy ctor has
-// observable behavior).
+// P4: non-trivial copy constructor. The trivial-copy gate must NOT engage;
+// the user-defined copy ctor IS called. Dangling-stack bug in this corner
+// remains (out of scope).
 struct NonTrivial {
   unsigned long long parts[4];
   NonTrivial(const NonTrivial &);
@@ -60,23 +50,18 @@ NonTrivial P4(NonTrivial a) {
   [[clang::musttail]] return C4(a);
 }
 // COMMON-LABEL: define {{.*}} @_Z2P410NonTrivial(
-// The user-defined copy ctor IS called (the agg.tmp pattern still happens):
 // COMMON: call {{.*}} @_ZN10NonTrivialC1ERKS_
 
-// Caller modifies the parameter before the musttail. The trivial-copy
-// elision still engages because the source LValue is still the parameter;
-// any mutation flowed through the incoming pointer is observed by the
-// forwarded call.
+// P5: modify-then-forward.
 struct Big C5(struct Big a);
 struct Big P5(struct Big a) {
   a.a += 1;
   [[clang::musttail]] return C5(a);
 }
 // COMMON-LABEL: define {{.*}} @_Z2P53Big(
-// COMMON-NOT: = alloca {{.*}}struct.Big
-// COMMON: musttail call {{.*}} @_Z2C53Big({{.*}} %a)
+// COMMON: musttail call {{.*}} @_Z2C53Big({{.*}}, ptr {{.*}} %a)
 
-// musttail behind a branch: trivial-copy elision must work across BBs.
+// P6: musttail behind a branch.
 struct Big C6(struct Big a, int cond);
 struct Big P6(struct Big a, int cond) {
   if (cond)
@@ -84,36 +69,77 @@ struct Big P6(struct Big a, int cond) {
   return a;
 }
 // COMMON-LABEL: define {{.*}} @_Z2P63Bigi(
-// COMMON-NOT: = alloca {{.*}}struct.Big
-// COMMON: musttail call {{.*}} @_Z2C63Bigi({{.*}} %a,
+// COMMON: musttail call {{.*}} @_Z2C63Bigi({{.*}}, ptr {{.*}} %a,
 
-// Same Argument forwarded to two slots: both engage. Incoming Indirect
-// params are not noalias under the Linux C++ ABI so the dedup in the
-// helper does not fire and both slots forward %a directly.
+// P7: same arg to two slots. Slot 0 forwards %a; slot 1 memcpys *%a into the
+// i=1 incoming pointer %b and forwards %b.
 struct Big C7(struct Big x, struct Big y);
 struct Big P7(struct Big a, struct Big b) {
   [[clang::musttail]] return C7(a, a);
 }
 // COMMON-LABEL: define {{.*}} @_Z2P73BigS_(
-// COMMON-NOT: = alloca {{.*}}struct.Big
-// COMMON: musttail call {{.*}} @_Z2C73BigS_({{.*}} %a, {{.*}} %a)
+// COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{.*}} %b, ptr {{.*}} %a,
+// COMMON: musttail call {{.*}} @_Z2C73BigS_({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
 
-// Negative: source is a local, not a parameter. The trivial-copy elision
-// must NOT engage; the byval-temp pattern remains.
+// P8: local source. Copied into the incoming %a, then %a forwarded.
 struct Big C8(struct Big a);
 struct Big P8(struct Big a) {
   struct Big local = {1, 2, 3, 4};
   [[clang::musttail]] return C8(local);
 }
 // COMMON-LABEL: define {{.*}} @_Z2P83Big(
-// COMMON: = alloca
-// COMMON: musttail call {{.*}} @_Z2C83Big(
+// COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{.*}} %a, ptr {{.*}}
+// COMMON: musttail call {{.*}} @_Z2C83Big({{.*}}, ptr {{.*}} %a)
 
-// Non-musttail tail call: trivial-copy elision must NOT engage; the regular
-// agg.tmp copy is still emitted.
+// P9: non-musttail tail call (existing path).
 struct Big C9(struct Big a);
 struct Big P9(struct Big a) {
   return C9(a);
 }
 // COMMON-LABEL: define {{.*}} @_Z2P93Big(
 // COMMON-NOT: musttail
+
+// P10: mixed direct + indirect.
+struct Big C10(int x1, struct Big s1, int x2, struct Big s2);
+struct Big P10(int x1, struct Big s1, int x2, struct Big s2) {
+  [[clang::musttail]] return C10(x1, s1, x2, s2);
+}
+// COMMON-LABEL: define {{.*}} @_Z3P10i3BigiS_(
+// COMMON-NOT: = alloca {{.*}}struct.Big
+// COMMON: musttail call {{.*}} @_Z3C10i3BigiS_({{.*}}, i32 {{.*}} %x1, ptr {{.*}} %s1, i32 {{.*}} %x2, ptr {{.*}} %s2)
+
+// P11: many args (stack spill on the target ABIs above).
+struct Big C11(struct Big s1, struct Big s2, struct Big s3, struct Big s4,
+               struct Big s5, struct Big s6, struct Big s7, struct Big s8,
+               struct Big s9, struct Big s10);
+struct Big P11(struct Big a1, struct Big a2, struct Big a3, struct Big a4,
+               struct Big a5, struct Big a6, struct Big a7, struct Big a8,
+               struct Big a9, struct Big a10) {
+  [[clang::musttail]] return C11(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10);
+}
+// COMMON-LABEL: define {{.*}} @_Z3P113BigS_S_S_S_S_S_S_S_S_(
+// COMMON-NOT: = alloca {{.*}}struct.Big
+// COMMON: musttail call {{.*}} @_Z3C113BigS_S_S_S_S_S_S_S_S_(
+
+// P16: member function. (P15 lambda case skipped: Sema currently rejects
+// musttail from a lambda's operator() to a non-member function, #119152.)
+struct S {
+  struct Big f(struct Big a);
+  struct Big P16(struct Big a);
+};
+struct Big S::P16(struct Big a) {
+  [[clang::musttail]] return f(a);
+}
+// COMMON-LABEL: define {{.*}} @_ZN1S3P16E3Big(
+// COMMON-NOT: = alloca {{.*}}struct.Big
+// COMMON: musttail call {{.*}} @_ZN1S1fE3Big({{.*}}, ptr {{.*}}, ptr {{.*}} %a)
+
+// P17: same arg to three slots (generalization of P7).
+struct Big C17(struct Big x, struct Big y, struct Big z);
+struct Big P17(struct Big a, struct Big b, struct Big c) {
+  [[clang::musttail]] return C17(a, a, a);
+}
+// COMMON-LABEL: define {{.*}} @_Z3P173BigS_S_(
+// COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{.*}} %b,
+// COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{.*}} %c,
+// COMMON: musttail call {{.*}} @_Z3C173BigS_S_({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b, ptr {{.*}} %c)
