@@ -94,9 +94,9 @@ static hipGetDeviceTy pHipGetDevice = nullptr;
 static hipSetDeviceTy pHipSetDevice = nullptr;
 static hipGetDevicePropertiesTy pHipGetDeviceProperties = nullptr;
 
-#define MAX_DEVICES 16
 static int NumDevices = 0;
-static char DeviceArchNames[MAX_DEVICES][256];
+/* 256 matches hipDeviceProp_t::gcnArchName, the source field width. */
+static char (*DeviceArchNames)[256] = nullptr;
 
 /* -------------------------------------------------------------------------- */
 /*  Device-to-host copies                                                     */
@@ -142,9 +142,12 @@ static void doEnsureHipLoaded(void) {
 
   if (pHipGetDeviceCount && pHipGetDeviceProperties) {
     int Count = 0;
-    if (pHipGetDeviceCount(&Count) == 0) {
-      if (Count > MAX_DEVICES)
-        Count = MAX_DEVICES;
+    if (pHipGetDeviceCount(&Count) == 0 && Count > 0) {
+      DeviceArchNames = (char(*)[256])calloc(Count, sizeof(*DeviceArchNames));
+      if (!DeviceArchNames) {
+        PROF_ERR("%s\n", "failed to allocate device arch name table");
+        return;
+      }
       HipDevicePropMinimal Prop;
       for (int i = 0; i < Count; ++i) {
         __builtin_memset(&Prop, 0, sizeof(Prop));
