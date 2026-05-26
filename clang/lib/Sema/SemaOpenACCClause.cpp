@@ -1912,7 +1912,8 @@ bool SemaOpenACC::CheckReductionVarType(Expr *VarExpr) {
     PartialDiagnostic PD = PDiag(diag::note_acc_reduction_array)
                            << diag::OACCReductionArray::ArrayTy << CurType;
     Notes.push_back({VarLoc, PD});
-
+    // Non-constant length arrays cannot be used in a reduction clause.
+    // To fix llvm/llvm-project#199162
     if (!AT->isConstantArrayType()) {
       return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
                                    << CurType
