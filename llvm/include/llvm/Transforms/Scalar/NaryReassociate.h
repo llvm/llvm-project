@@ -98,6 +98,11 @@ class TargetTransformInfo;
 class Type;
 class Value;
 
+template <typename T> class GenericSSAContext;
+using SSAContext = GenericSSAContext<Function>;
+template <typename T> class GenericUniformityInfo;
+using UniformityInfo = GenericUniformityInfo<SSAContext>;
+
 class NaryReassociatePass : public OptionalPassInfoMixin<NaryReassociatePass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
@@ -105,7 +110,7 @@ public:
   // Glue for old PM.
   bool runImpl(Function &F, AssumptionCache *AC_, DominatorTree *DT_,
                ScalarEvolution *SE_, TargetLibraryInfo *TLI_,
-               TargetTransformInfo *TTI_);
+               TargetTransformInfo *TTI_, UniformityInfo *UI_);
 
 private:
   // Runs only one iteration of the dominator-based algorithm. See the header
@@ -139,7 +144,7 @@ private:
 
   // A helper function for tryReassociateBinaryOp. LHS and RHS are explicitly
   // passed.
-  Instruction *tryReassociateBinaryOp(Value *LHS, Value *RHS,
+  Instruction *tryReassociateBinaryOp(const Use &LHSUse, const Use &RHSUse,
                                       BinaryOperator *I);
   // Rewrites I to (LHS op RHS) if LHS is computed already.
   Instruction *tryReassociatedBinaryOp(SCEVUse LHS, Value *RHS,
@@ -180,6 +185,7 @@ private:
   ScalarEvolution *SE;
   TargetLibraryInfo *TLI;
   TargetTransformInfo *TTI;
+  UniformityInfo *UI;
 
   // A lookup table quickly telling which instructions compute the given SCEV.
   // Note that there can be multiple instructions at different locations
