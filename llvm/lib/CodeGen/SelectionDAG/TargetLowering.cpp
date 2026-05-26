@@ -9716,6 +9716,9 @@ static std::optional<bool> isFCmpEqualZero(FPClassTest Test,
   return std::nullopt;
 }
 
+// Compare the bitcast of a float value with zero to get the Sign.
+// If the GPR cannot hold the bitcast of the float type, let's truncate
+// the float type to a narrow one.
 static SDValue getFloatSign(EVT ResultVT, bool &NeedFPTrunc, SDValue Op,
                             SelectionDAG &DAG, const SDLoc &DL,
                             const TargetLowering &TLI) {
@@ -10019,11 +10022,10 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
     if (NeedFPTrunc || DAG.isKnownNeverNaN(Op) ||
         (OperandVT.isVector() && isTypeLegal(OperandVT)) || testNegative ||
         !IsICmpImmLegal) {
-      if (testNegative)
-        return SignBitResult;
-      else
-        return DAG.getNode(ISD::XOR, DL, ResultVT, SignBitResult,
-                           ResultInversionMask);
+      if (!testNegative)
+        SignBitResult = DAG.getNode(ISD::XOR, DL, ResultVT, SignBitResult,
+                                    ResultInversionMask);
+      return SignBitResult;
     }
   }
 
