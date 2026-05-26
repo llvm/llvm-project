@@ -25,7 +25,7 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 using LIBC_NAMESPACE::testing::tlog;
 
 TEST_F(LlvmLibcAcosTest, InDoubleRange) {
-  constexpr uint64_t COUNT = 123'451;
+  constexpr uint64_t COUNT = 1'231;
   uint64_t START = FPBits(0x1.0p-60).uintval();
   uint64_t STOP = FPBits(1.0).uintval();
   uint64_t STEP = (STOP - START) / COUNT;

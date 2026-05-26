@@ -71,7 +71,7 @@ private:
   bool hasSameEEW(const MachineInstr &User, const MachineInstr &Src) const;
   bool isAllOnesMask(const MachineInstr *MaskDef) const;
   std::optional<unsigned> getConstant(const MachineOperand &VL) const;
-  bool ensureDominates(ArrayRef<const MachineOperand> Defs,
+  bool ensureDominates(ArrayRef<const MachineOperand *> Defs,
                        MachineInstr &Use) const;
   Register
   lookThruCopies(Register Reg, bool OneUseOnly = false,
@@ -364,7 +364,7 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
     // If True's passthru is undef see if we can change it to False
     if (TruePassthruReg.isValid() ||
         !MRI->hasOneUse(MI.getOperand(3).getReg()) ||
-        !ensureDominates(MI.getOperand(2), *True))
+        !ensureDominates(&MI.getOperand(2), *True))
       return false;
     True->getOperand(1).setReg(MI.getOperand(2).getReg());
     // If True is masked then its passthru needs to be in VRNoV0.
@@ -463,19 +463,19 @@ static bool dominates(MachineBasicBlock::const_iterator A,
   return &*I == A;
 }
 
-/// If a register in \p Uses doesn't dominate \p Src, try to move \p Src so it
-/// does. Returns false if doesn't dominate and we can't move. \p MO must be in
-/// the same basic block as \Src.
-bool RISCVVectorPeephole::ensureDominates(ArrayRef<const MachineOperand> Defs,
+/// If a register in \p Defs doesn't dominate \p Use, try to move Use so it
+/// does. Returns false if any def doesn't dominate and we can't move Use. Each
+/// def must be in the same block as Use.
+bool RISCVVectorPeephole::ensureDominates(ArrayRef<const MachineOperand *> Defs,
                                           MachineInstr &Use) const {
   MachineInstr *Dest = &Use;
 
-  for (const MachineOperand &MO : Defs) {
-    assert(MO.getParent()->getParent() == Use.getParent());
-    if (!MO.isReg() || !MO.getReg().isValid())
+  for (const MachineOperand *MO : Defs) {
+    assert(MO->getParent()->getParent() == Use.getParent());
+    if (!MO->isReg() || !MO->getReg().isValid())
       continue;
 
-    MachineInstr *Def = MRI->getVRegDef(MO.getReg());
+    MachineInstr *Def = MRI->getVRegDef(MO->getReg());
     if (Def->getParent() == Dest->getParent() && !dominates(Def, *Dest)) {
       if (!RISCVInstrInfo::isSafeToMove(*Dest, *Def->getNextNode()))
         return false;
@@ -578,7 +578,7 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
     return false;
 
   // If the new passthru doesn't dominate Src, try to move Src so it does.
-  if (!ensureDominates(Passthru, *Src))
+  if (!ensureDominates(&Passthru, *Src))
     return false;
 
   if (NeedsCommute) {
@@ -731,7 +731,7 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
 
   // Make sure Mask, False and MinVL dominate True and its copies, otherwise
   // move down True so it does.
-  if (!ensureDominates({MaskOp, FalseOp, MinVL}, True))
+  if (!ensureDominates({&MaskOp, &FalseOp, &MinVL}, True))
     return false;
 
   if (NeedsCommute) {

@@ -206,7 +206,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                  {{s32, s32}})
       .lower();
 
-  getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
+  getActionDefinitionsBuilder(G_BITREVERSE)
+      .customFor(ST.hasStdExtZbkb(), {s8})
+      .maxScalar(0, sXLen)
+      .lower();
 
   getActionDefinitionsBuilder(G_BITCAST).legalIf(
       all(LegalityPredicates::any(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
@@ -959,7 +962,8 @@ bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
     uint64_t Log2 = Log2_64(Val);
     if (Log2 < 3) {
       auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-      MIB.buildLShr(Dst, VLENB, MIB.buildConstant(XLenTy, 3 - Log2));
+      MIB.buildLShr(Dst, VLENB, MIB.buildConstant(XLenTy, 3 - Log2),
+                    MachineInstr::IsExact);
     } else if (Log2 > 3) {
       auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
       MIB.buildShl(Dst, VLENB, MIB.buildConstant(XLenTy, Log2 - 3));
@@ -973,7 +977,8 @@ bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
     MIB.buildMul(Dst, VLENB, MIB.buildConstant(XLenTy, Val / 8));
   } else {
     auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-    auto VScale = MIB.buildLShr(XLenTy, VLENB, MIB.buildConstant(XLenTy, 3));
+    auto VScale = MIB.buildLShr(XLenTy, VLENB, MIB.buildConstant(XLenTy, 3),
+                                MachineInstr::IsExact);
     MIB.buildMul(Dst, VScale, MIB.buildConstant(XLenTy, Val));
   }
   MI.eraseFromParent();
@@ -1385,6 +1390,29 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
   return true;
 }
 
+bool RISCVLegalizerInfo::legalizeBitreverse(MachineInstr &MI,
+                                            MachineIRBuilder &MIB) const {
+  assert(MI.getOpcode() == TargetOpcode::G_BITREVERSE && "Unexpected opcode");
+
+  if (!STI.hasStdExtZbkb())
+    return false;
+
+  MachineRegisterInfo &MRI = *MIB.getMRI();
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+
+  if (!MRI.getType(Dst).isScalar(8))
+    return false;
+
+  auto WideSrc = MIB.buildAnyExt(sXLen, Src);
+  auto Brev = MIB.buildInstr(RISCV::G_BREV8, {sXLen}, {WideSrc.getReg(0)});
+  MIB.buildTrunc(Dst, Brev.getReg(0));
+
+  MI.eraseFromParent();
+  return true;
+}
+
 static unsigned getRISCVWOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
@@ -1576,6 +1604,8 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return legalizeExtractSubvector(MI, MIRBuilder);
   case TargetOpcode::G_INSERT_SUBVECTOR:
     return legalizeInsertSubvector(MI, Helper, MIRBuilder);
+  case TargetOpcode::G_BITREVERSE:
+    return legalizeBitreverse(MI, MIRBuilder);
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
     return legalizeLoadStore(MI, Helper, MIRBuilder);
