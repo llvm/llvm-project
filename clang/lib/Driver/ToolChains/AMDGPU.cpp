@@ -1119,7 +1119,7 @@ static bool isXnackAvailable(const llvm::Triple &TT, llvm::StringRef TargetID) {
 SanitizerMask AMDGPUToolChain::getSupportedSanitizers(
     StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
   SanitizerMask SupportedMask =
-      SanitizerKind::Undefined | SanitizerKind::UndefinedGroup;
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
 
   // Address sanitizer is potentially supported, but depends on the exact target
   // arch xnack support.
