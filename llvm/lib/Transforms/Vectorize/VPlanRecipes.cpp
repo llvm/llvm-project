@@ -465,7 +465,7 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
                                                         Type *ExpectedTy) {
     if (!ExpectedTy || Operands.size() <= Idx)
       return;
-    Type *OpTy = getScalarTypeOrInfer(Operands[Idx]);
+    [[maybe_unused]] Type *OpTy = getScalarTypeOrInfer(Operands[Idx]);
     assert((!OpTy || OpTy == ExpectedTy) &&
            "different types inferred for different operands");
   };
