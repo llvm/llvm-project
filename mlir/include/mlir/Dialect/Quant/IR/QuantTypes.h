@@ -549,6 +549,30 @@ public:
   double getMax() const;
 };
 
+/*Syntax:
+
+    ```
+    quantile-type ::= `!quant.quantile` `<` type `:` type `,` `{` float-list `}`
+   `,` `<` int `,` int `>`? `>`
+    ```
+
+    A quantile type represents a quantile-based floating point encoding, where
+    discrete storage values are totally defined by the floating-point values
+   entries in a quantile lookup table of F8/F16/F32.
+
+    Optionally, explicit minimum and maximum storage values can be specified
+    after the LUT as `<min:max>`.
+
+    This type is used for weight compression schemes like NF4 (NormalizedFloat4)
+    and similar quantile-based formats.
+
+    Example:
+
+   MLIR:
+    !quant.quantile<ui4:f16, {-1.0,-0.696,0.0,0.079,1.0}>
+    !quant.quantile<ui4:f16, {-1.0,-0.696,0.0,0.079,1.0}, <-8,7>>
+*/
+
 class QuantileType
     : public Type::TypeBase<QuantileType, QuantizedType,
                             detail::QuantileTypeStorage,
