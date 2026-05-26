@@ -4682,17 +4682,14 @@ static void genMetadirective(lower::AbstractConverter &converter,
   // variant or the absence of an explicit otherwise/default clause.
   const parser::OmpDirectiveSpecification *fallback = nullptr;
 
+  // Extract the context-selector that controls whether a WHEN variant is
+  // applicable. Modifier validation requires exactly one selector per clause.
   auto getContextSelector = [](const parser::OmpClause::When &whenClause)
-      -> const parser::modifier::OmpContextSelector * {
+      -> const parser::modifier::OmpContextSelector & {
     const auto &modifiers = std::get<0>(whenClause.v.t);
-    if (!modifiers)
-      return nullptr;
-    for (const auto &mod : *modifiers) {
-      if (const auto *ctxSel =
-              std::get_if<parser::modifier::OmpContextSelector>(&mod.u))
-        return ctxSel;
-    }
-    return nullptr;
+    assert(modifiers && modifiers->size() == 1 &&
+           "WHEN clause should contain one context-selector");
+    return std::get<parser::modifier::OmpContextSelector>(modifiers->front().u);
   };
 
   // Extract the directive variant spec from a when clause.
@@ -4718,19 +4715,12 @@ static void genMetadirective(lower::AbstractConverter &converter,
   for (const auto &clause : clauseList.v) {
     if (const auto *whenClause =
             std::get_if<parser::OmpClause::When>(&clause.u)) {
-      const auto *ctxSel = getContextSelector(*whenClause);
+      const auto &ctxSel = getContextSelector(*whenClause);
       auto [spec, isExplicit] = getDirectiveVariant(*whenClause);
-
-      // Always match when there is no context selector.
-      if (!ctxSel) {
-        candidates.emplace_back(spec, llvm::omp::VariantMatchInfo(),
-                                isExplicit);
-        continue;
-      }
 
       llvm::omp::VariantMatchInfo vmi;
       const parser::ScalarExpr *dynCondExpr = nullptr;
-      makeVariantMatchInfo(vmi, *ctxSel, semaCtx,
+      makeVariantMatchInfo(vmi, ctxSel, semaCtx,
                            converter.genLocation(clause.source), dynCondExpr);
 
       if (dynCondExpr)
