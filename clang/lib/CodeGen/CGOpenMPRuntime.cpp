@@ -2241,6 +2241,169 @@ void CGOpenMPRuntime::emitTaskyieldCall(CodeGenFunction &CGF,
     Region->emitUntiedSwitch(CGF);
 }
 
+/// Emit a helper with the runtime relocation signature (kmp_task_relocate_t):
+///   void relocate(kmp_task_t *task, void *outer_captures);
+///
+/// On taskgraph replay the runtime invokes this helper to refresh the task's
+/// shared-pointer table. Each capture (a shared-by-ref variable or \c this)
+/// that the task body actually dereferences at execution time is
+/// re-projected from the freshly reconstructed outer record passed as
+/// \p outer_captures and stored back into \c task->shareds.
+///
+/// Captures that the body cannot observe a changed address for across
+/// replays are skipped here:
+///
+///   * captures of a variable that appears as a firstprivate list item
+///     -- the body sources the value from the per-task '.kmp_privates.t'
+///     snapshot rather than from the shareds slot, so the (potentially
+///     stale) original address in the shareds entry is harmless;
+///
+///   * captures of a variable with static (global / namespace-scope /
+///     static-local / static-data-member) storage duration -- the
+///     captured pointer is the variable's link-time-fixed address, which
+///     is identical at recording and on every replay, so no re-projection
+///     is meaningful.
+///
+/// The relocate helper is therefore only ever called upon to refresh
+/// shareds slots that the body genuinely depends on at execution time
+/// (shared-by-ref to a local variable, captured \c this on a heap or
+/// stack object, etc.).  When every capture falls in one of the
+/// skip-eligible categories the helper is emitted as a (still non-null)
+/// no-op: today's runtime only inspects null-vs-non-null, and a non-null
+/// no-op is the right signal that there is nothing the body actually
+/// needs the shareds table refreshed for.
+///
+/// Reduction captures of a local-stack variable still keep the existing
+/// null-relocate-and-abort behaviour: the taskred runtime state is keyed
+/// off the recording-time taskgroup hierarchy and is not currently usable
+/// on replay, so it is preferable to fail loudly (#302) than to silently
+/// misbehave.  Reduction captures of a static-storage variable do not run
+/// into this hazard at the relocate layer -- the captured pointer is
+/// stable -- and are no-op-skipped via the static-storage rule above;
+/// whether the reduction body itself then succeeds on replay is a
+/// separate concern.
+///
+/// Returns null only when at least one capture is genuinely shared (none
+/// of the skip-eligible categories apply) AND cannot be resolved in
+/// \p OuterCSI; in that case the caller passes a null relocation function
+/// to the runtime and the runtime fails fast at replay.
+static llvm::Function *
+emitTaskRelocationFunction(CodeGenModule &CGM, SourceLocation Loc,
+                           const CapturedStmt &CS,
+                           const CodeGenFunction::CGCapturedStmtInfo *OuterCSI,
+                           const OMPTaskDataTy &Data) {
+  ASTContext &C = CGM.getContext();
+
+  // Variables that don't need their shareds slot refreshed across replays
+  // because the body sources them from the per-task '.kmp_privates.t'
+  // snapshot.  Today this is the set of firstprivate list items (snapshot
+  // is taken at task allocation and reused unchanged by every replay).
+  llvm::SmallPtrSet<const VarDecl *, 8> NoRelocateFirstprivateVars;
+  for (const Expr *E : Data.FirstprivateVars) {
+    if (!E)
+      continue;
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts()))
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+        NoRelocateFirstprivateVars.insert(VD->getCanonicalDecl());
+  }
+
+  // A capture is "no-op-safe" with respect to taskgraph replay when
+  // refreshing its shareds slot is provably unnecessary - either because
+  // the body never reads from that slot (firstprivate) or because the
+  // captured pointer is a link-time-fixed address and is therefore
+  // identical at every replay (static storage duration).
+  auto IsNoOpRelocate = [&](const CapturedStmt::Capture &Cap) {
+    if (Cap.capturesThis() || !Cap.capturesVariable())
+      return false;
+    const VarDecl *VD = Cap.getCapturedVar();
+    if (VD->hasGlobalStorage())
+      return true;
+    return NoRelocateFirstprivateVars.contains(VD->getCanonicalDecl());
+  };
+
+  auto LookupOuterField =
+      [&](const CapturedStmt::Capture &Cap) -> const FieldDecl * {
+    if (!OuterCSI)
+      return nullptr;
+    return Cap.capturesThis() ? OuterCSI->getThisFieldDecl()
+                              : OuterCSI->lookup(Cap.getCapturedVar());
+  };
+
+  // Bail out before emitting any IR if a genuinely-shared capture cannot
+  // be resolved in the containing context.  No-op-safe captures (see the
+  // function-level comment) don't participate in this preflight; they
+  // simply cause the helper to skip their slot below.
+  if (llvm::any_of(CS.captures(), [&](const CapturedStmt::Capture &Cap) {
+        assert((Cap.capturesThis() || Cap.capturesVariable()) &&
+               "OpenMP task capture must be shared-by-ref or 'this'");
+        return !IsNoOpRelocate(Cap) && !LookupOuterField(Cap);
+      }))
+    return nullptr;
+
+  // void relocate(void *task, void *outer_captures)
+  auto *TaskArg =
+      ImplicitParamDecl::Create(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
+                                C.VoidPtrTy, ImplicitParamKind::Other);
+  auto *OuterArg =
+      ImplicitParamDecl::Create(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
+                                C.VoidPtrTy, ImplicitParamKind::Other);
+  FunctionArgList Args{TaskArg, OuterArg};
+  const CGFunctionInfo &FnInfo =
+      CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
+
+  std::string Name =
+      CGM.getOpenMPRuntime().getName({"omp", "taskgraph", "relocate", ""});
+  auto *Fn = llvm::Function::Create(CGM.getTypes().GetFunctionType(FnInfo),
+                                    llvm::GlobalValue::InternalLinkage, Name,
+                                    &CGM.getModule());
+  CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
+  Fn->setDoesNotRecurse();
+
+  CodeGenFunction CGF(CGM);
+  CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args, Loc, Loc);
+
+  CGBuilderTy &Bld = CGF.Builder;
+  CharUnits PtrAlign = CGF.getPointerAlign();
+
+  // Base of the reconstructed outer record for this replay.
+  llvm::Value *OuterRaw = Bld.CreateLoad(CGF.GetAddrOfLocalVar(OuterArg));
+
+  // kmp_task_t::shareds is the first field of the runtime task descriptor;
+  // load it to obtain the void* shared table that we will refresh in place.
+  // The table holds one void* per by-ref capture.
+  llvm::Value *TaskRaw = Bld.CreateLoad(CGF.GetAddrOfLocalVar(TaskArg));
+  llvm::Value *SharedRaw =
+      Bld.CreateLoad(Address(TaskRaw, CGF.VoidPtrTy, PtrAlign));
+  Address SharedTable(SharedRaw, CGF.VoidPtrTy, PtrAlign);
+
+  unsigned Index = 0;
+  for (const CapturedStmt::Capture &Cap : CS.captures()) {
+    // Always advance the slot index so that we stay aligned with the
+    // shareds-table layout established at task allocation.
+    unsigned ThisIndex = Index++;
+    if (IsNoOpRelocate(Cap))
+      continue;
+    // Project the capture's referent from the freshly reconstructed outer
+    // record. EmitLValueForField auto-loads the outer reference field, so
+    // the resulting pointer is the live referent address (not the slot).
+    const FieldDecl *OuterField = LookupOuterField(Cap);
+    assert(OuterField && "preflight should have rejected this capture");
+    QualType OuterTy =
+        C.getCanonicalTagType(cast<RecordDecl>(OuterField->getDeclContext()));
+    LValue OuterBase = CGF.MakeAddrLValue(
+        Address(OuterRaw, CGF.ConvertTypeForMem(OuterTy), PtrAlign), OuterTy);
+    llvm::Value *Mapped =
+        CGF.EmitLValueForField(OuterBase, OuterField).getPointer(CGF);
+    Mapped = Bld.CreatePointerBitCastOrAddrSpaceCast(Mapped, CGM.VoidPtrTy);
+    Bld.CreateStore(Mapped, Bld.CreateConstGEP(SharedTable, ThisIndex));
+  }
+
+  CGF.FinishFunction();
+  return Fn;
+}
+
 void CGOpenMPRuntime::emitTaskgraphCall(CodeGenFunction &CGF,
                                         SourceLocation Loc,
                                         const OMPExecutableDirective &D,
@@ -4800,22 +4963,27 @@ void CGOpenMPRuntime::emitTaskCall(
     TGTaskArgs[2] = Result.NewTask;
     TGTaskArgs[3] = TaskAllocArgs[0]; // TaskFlags
     TGTaskArgs[4] = TaskAllocArgs[1]; // KmpTaskTWithPrivatesTySize
-    TGTaskArgs[5] = Shareds.emitRawPointer(CGF);
-    TGTaskArgs[6] = TaskAllocArgs[2]; // SharedsSize
+    TGTaskArgs[5] = TaskAllocArgs[2]; // SharedsSize
     if (auto RecType = dyn_cast<RecordType>(SharedsTy)) {
       auto *RD = RecType->getAsRecordDecl();
       if (RD->fields().empty()) {
         // FIXME: The condition might not be precisely correct here.
-        TGTaskArgs[6] = CGF.Builder.getSize(0);
+        TGTaskArgs[5] = CGF.Builder.getSize(0);
       }
     }
     if (Data.Dependences.size() == 0) {
-      TGTaskArgs[7] = CGF.Builder.getInt32(0);
-      TGTaskArgs[8] = llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+      TGTaskArgs[6] = CGF.Builder.getInt32(0);
+      TGTaskArgs[7] = llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
     } else {
-      TGTaskArgs[7] = NumOfElements;
-      TGTaskArgs[8] = DependenciesArray.emitRawPointer(CGF);
+      TGTaskArgs[6] = NumOfElements;
+      TGTaskArgs[7] = DependenciesArray.emitRawPointer(CGF);
     }
+    const auto *CS = cast<CapturedStmt>(D.getAssociatedStmt());
+    llvm::Function *RelocFn =
+        emitTaskRelocationFunction(CGM, Loc, *CS, CGF.CapturedStmtInfo, Data);
+    TGTaskArgs[8] = RelocFn ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+                                  RelocFn, CGM.VoidPtrTy)
+                            : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
     CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                             CGM.getModule(), OMPRTL___kmpc_taskgraph_task),
                         TGTaskArgs);

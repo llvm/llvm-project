@@ -2352,10 +2352,11 @@ static void __kmp_exec_descr_link_instances(kmp_taskgraph_exec_descr_t *descrs,
 
 /// Reset, reparent and regroup the recorded task TASK and re-invoke it.
 
-static void __kmp_omp_tg_task(kmp_int32 gtid, kmp_task_t *task,
+static void __kmp_omp_tg_task(kmp_int32 gtid, kmp_taskgraph_node_t *node,
                               kmp_taskgroup_t *taskgroup,
                               kmp_taskdata_t *parent_taskdata,
                               bool serialize_immediate) {
+  kmp_task_t *task = node->task;
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
   taskdata->td_parent = parent_taskdata;
 
@@ -2377,6 +2378,18 @@ static void __kmp_omp_tg_task(kmp_int32 gtid, kmp_task_t *task,
   KMP_ATOMIC_INC(&parent_taskdata->td_incomplete_child_tasks);
   if (parent_taskdata->td_flags.tasktype == TASK_EXPLICIT)
     KMP_ATOMIC_INC(&parent_taskdata->td_allocated_child_tasks);
+
+  if (node->relocate) {
+    // Call the task's relocation function with the incoming args from the
+    // owning taskgraph.  This rewrites capture-by-reference variables to point
+    // to the correct location on the replayed taskgraph's stack (which may not
+    // be the same as the location from the initial recorded taskgraph).
+    node->relocate(task, taskdata->owning_taskgraph->taskgraph_args);
+  } else if (task->shareds != NULL) {
+    // A missing relocation callback is only fatal when there is a non-empty
+    // shareds payload that may contain by-reference captures needing remap.
+    KMP_FATAL(OmpTaskgraphBadCapture);
+  }
 
   __kmp_omp_task(gtid, task, false);
 }
@@ -2404,9 +2417,9 @@ static void __kmp_taskgraph_exec_descr_start(kmp_int32 gtid, kmp_info_t *thread,
     kmp_int32 nblocks = KMP_ATOMIC_DEC(&lowest_descr->nblocks);
     if (nblocks <= 0) {
       if (descr->region->type == TASKGRAPH_REGION_NODE) {
-        kmp_task_t *task = descr->region->task.node->task;
+        kmp_taskgraph_node_t *node = descr->region->task.node;
         kmp_taskdata_t *current_taskdata = thread->th.th_current_task;
-        __kmp_omp_tg_task(gtid, task, taskgroup, current_taskdata, false);
+        __kmp_omp_tg_task(gtid, node, taskgroup, current_taskdata, false);
       } else {
         // There's no task for a 'taskwait', so start successors immediately.
         kmp_taskgraph_exec_descr_t *walk = descr;
@@ -2447,9 +2460,9 @@ static void __kmp_taskgraph_exec_descr_start(kmp_int32 gtid, kmp_info_t *thread,
     kmp_taskgraph_exec_descr_t *item = head;
     do {
       assert(item->region->type == TASKGRAPH_REGION_NODE);
-      kmp_task_t *task = item->region->task.node->task;
+      kmp_taskgraph_node_t *node = item->region->task.node;
       kmp_taskdata_t *current_taskdata = thread->th.th_current_task;
-      __kmp_omp_tg_task(gtid, task, taskgroup, current_taskdata, true);
+      __kmp_omp_tg_task(gtid, node, taskgroup, current_taskdata, true);
       item = item->sibling;
     } while (item != head);
     break;
@@ -5023,6 +5036,7 @@ __kmp_taskgraph_node_alloc(kmp_taskgraph_record_t *rec, kmp_task_t *task,
 
   new_task->task = task;
   new_task->taskloop_task = false;
+  new_task->relocate = nullptr;
   new_task->reduce_input = nullptr;
   new_task->u.unresolved.ndeps = 0;
   new_task->u.unresolved.dep_list = nullptr;
@@ -5755,6 +5769,7 @@ static void __kmp_taskgraph_reset(kmp_taskgraph_record_t *rec, kmp_int32 gtid,
   rec->num_mutexes = 0;
   rec->exec_descrs = nullptr;
   rec->exec_descr_size = 0;
+  rec->taskgraph_args = nullptr;
   rec->next = nullptr;
 }
 
@@ -5852,10 +5867,6 @@ static kmp_task_t *__kmp_taskgraph_clone_task(kmp_info_t *thread,
   // FIXME: This should use a "taskdup" function like taskloops in cases where
   // private variables are not trivially copyable.  For now, do it by plain
   // bitwise copy.
-  // FIXME 2: It's intended that this copy be persistent, and can be
-  // re-executed on taskgraph replay.  Make sure that works (for shared
-  // variables) if stack addresses change (i.e. a task-generating function is
-  // called from different call stack depths).
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(orig);
   size_t shareds_offset = sizeof(kmp_taskdata_t) + sizeof_kmp_task_t;
   shareds_offset = __kmp_round_up_to_val(shareds_offset, sizeof(kmp_uint64));
@@ -5864,6 +5875,11 @@ static kmp_task_t *__kmp_taskgraph_clone_task(kmp_info_t *thread,
   KMP_MEMCPY(copy_td, taskdata, shareds_offset + sizeof_shareds);
   // Tasks cloned for a taskgraph always have this field set.
   copy_td->owning_taskgraph = taskgraph;
+  kmp_task_t *copy_task = KMP_TASKDATA_TO_TASK(copy_td);
+  if (orig->shareds) {
+    // New task's shared data has now moved.  Update the pointer.
+    copy_task->shareds = (void *)((char *)copy_td + shareds_offset);
+  }
   KMP_ATOMIC_ST_RLX(&copy_td->td_incomplete_child_tasks, 0);
   return KMP_TASKDATA_TO_TASK(copy_td);
 }
@@ -5972,6 +5988,9 @@ void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
     // taskgroup.
     KMP_ATOMIC_ST_REL(&taskgroup->taskgraph.recording, record);
   }
+  // Keep the current taskgraph invocation's outlined-entry args for
+  // replay-time relocation of by-reference captures.
+  record->taskgraph_args = args;
   __kmp_release_lock(&header->header_lock, gtid);
 
   kmp_taskgraph_status_t status = KMP_ATOMIC_LD_ACQ(&record->status);
@@ -6000,9 +6019,10 @@ void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
 
 kmp_uint32 __kmpc_taskgraph_task(ident_t *loc_ref, kmp_int32 gtid,
                                  kmp_task_t *new_task, kmp_int32 flags,
-                                 size_t sizeof_kmp_task_t, void *shareds,
+                                 size_t sizeof_kmp_task_t,
                                  size_t sizeof_shareds, kmp_int32 ndeps,
-                                 kmp_depend_info_t *dep_list) {
+                                 kmp_depend_info_t *dep_list,
+                                 kmp_task_relocate_t relocate) {
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskgroup_t *taskgroup = thread->th.th_current_task->td_taskgroup;
   kmp_taskgraph_record_t *rec = __kmp_taskgraph_or_parent_recording(taskgroup);
@@ -6038,6 +6058,7 @@ kmp_uint32 __kmpc_taskgraph_task(ident_t *loc_ref, kmp_int32 gtid,
           thread, ndeps * sizeof(kmp_depend_info_t));
       KMP_MEMCPY(node->u.unresolved.dep_list, dep_list,
                  ndeps * sizeof(kmp_depend_info_t));
+      node->relocate = relocate;
     } else if (status == KMP_TDG_READY) {
 #ifdef DEBUG_TASKGRAPH
       fprintf(stderr,
