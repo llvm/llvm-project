@@ -196,9 +196,15 @@ struct CIRRecordLowering final {
   void fillOutputFields();
 
   void appendPaddingBytes(CharUnits size) {
-    if (!size.isZero()) {
-      fieldTypes.push_back(getByteArrayType(size));
-      padded = true;
+    if (size.isZero())
+      return;
+    mlir::Type padTy = getByteArrayType(size);
+    padded = true;
+    if (recordDecl->isUnion()) {
+      assert(!unionPadding && "at most one union tail-padding type");
+      unionPadding = padTy;
+    } else {
+      fieldTypes.push_back(padTy);
     }
   }
 
@@ -212,6 +218,7 @@ struct CIRRecordLowering final {
   std::vector<MemberInfo> members;
   // Output fields, consumed by CIRGenTypes::computeRecordLayout
   llvm::SmallVector<mlir::Type, 16> fieldTypes;
+  mlir::Type unionPadding;
   llvm::DenseMap<const FieldDecl *, CIRGenBitFieldInfo> bitFields;
   llvm::DenseMap<const FieldDecl *, unsigned> fieldIdxMap;
   llvm::DenseMap<const CXXRecordDecl *, unsigned> nonVirtualBases;
@@ -705,7 +712,7 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
       std::string baseIdentifier = getRecordTypeName(rd, ".base");
       baseTy = builder.getCompleteNamedRecordType(
           baseLowering.fieldTypes, baseLowering.packed, baseLowering.padded,
-          baseIdentifier);
+          baseLowering.unionPadding, baseIdentifier);
       // TODO(cir): add something like addRecordTypeName
 
       // BaseTy and Ty must agree on their packedness for getCIRFieldNo to work
@@ -719,7 +726,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   // signifies that the type is no longer opaque and record layout is complete,
   // but we may need to recursively layout rd while laying D out as a base type.
   assert(!cir::MissingFeatures::astRecordDeclAttr());
-  ty->complete(lowering.fieldTypes, lowering.packed, lowering.padded);
+  ty->complete(lowering.fieldTypes, lowering.packed, lowering.padded,
+               lowering.unionPadding);
 
   // Queue ABI metadata for the module-level cir.record_layouts attribute.
   if (ty->getName()) {

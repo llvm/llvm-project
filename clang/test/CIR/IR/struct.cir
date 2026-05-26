@@ -5,43 +5,43 @@
 !s32i = !cir.int<s, 32>
 !u32i = !cir.int<u, 32>
 
-!rec_C = !cir.record<class "C" incomplete>
-!rec_S = !cir.record<struct "S" incomplete>
-!rec_U = !cir.record<union "U" incomplete>
+!rec_C = !cir.struct<class "C" incomplete>
+!rec_S = !cir.struct<"S" incomplete>
+!rec_U = !cir.union<"U" incomplete>
 
-// CHECK-DAG: !rec_C = !cir.record<class "C" incomplete>
-// CHECK-DAG: !rec_S = !cir.record<struct "S" incomplete>
-// CHECK-DAG: !rec_U = !cir.record<union "U" incomplete>
+// CHECK-DAG: !rec_C = !cir.struct<class "C" incomplete>
+// CHECK-DAG: !rec_S = !cir.struct<"S" incomplete>
+// CHECK-DAG: !rec_U = !cir.union<"U" incomplete>
 
-!rec_anon_struct = !cir.record<struct  packed {!s32i, !s32i, !cir.array<!s32i x 8>}>
-!rec_anon_struct1 = !cir.record<struct {!cir.array<!cir.ptr<!u8i> x 5>}>
-!rec_anon_struct2 = !cir.record<struct {!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
-!rec_S1 = !cir.record<struct "S1" {!s32i, !s32i}>
-!rec_Sc = !cir.record<struct "Sc" {!u8i, !u16i, !u32i}>
+!rec_anon_struct = !cir.struct< packed {!s32i, !s32i, !cir.array<!s32i x 8>}>
+!rec_anon_struct1 = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 5>}>
+!rec_anon_struct2 = !cir.struct<{!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
+!rec_S1 = !cir.struct<"S1" {!s32i, !s32i}>
+!rec_Sc = !cir.struct<"Sc" {!u8i, !u16i, !u32i}>
 
-// CHECK-DAG: !cir.record<struct {!cir.array<!cir.ptr<!u8i> x 5>}>
-// CHECK-DAG: !cir.record<struct {!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
-// CHECK-DAG: !rec_S1 = !cir.record<struct "S1" {!s32i, !s32i}>
-// CHECK-DAG: !rec_Sc = !cir.record<struct "Sc" {!u8i, !u16i, !u32i}>
+// CHECK-DAG: !cir.struct<{!cir.array<!cir.ptr<!u8i> x 5>}>
+// CHECK-DAG: !cir.struct<{!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
+// CHECK-DAG: !rec_S1 = !cir.struct<"S1" {!s32i, !s32i}>
+// CHECK-DAG: !rec_Sc = !cir.struct<"Sc" {!u8i, !u16i, !u32i}>
 
 // Packed and padded structs
-!rec_P1 = !cir.record<struct "P1" packed {!s32i, !s32i}>
-!rec_P2 = !cir.record<struct "P2" padded {!u8i, !u16i, !u32i}>
-!rec_P3 = !cir.record<struct "P3" packed padded {!u8i, !u16i, !u32i}>
+!rec_P1 = !cir.struct<"P1" packed {!s32i, !s32i}>
+!rec_P2 = !cir.struct<"P2" padded {!u8i, !u16i, !u32i}>
+!rec_P3 = !cir.struct<"P3" packed padded {!u8i, !u16i, !u32i}>
 
-// CHECK-DAG: !rec_P1 = !cir.record<struct "P1" packed {!s32i, !s32i}>
-// CHECK-DAG: !rec_P2 = !cir.record<struct "P2" padded {!u8i, !u16i, !u32i}>
-// CHECK-DAG: !rec_P3 = !cir.record<struct "P3" packed padded {!u8i, !u16i, !u32i}>
+// CHECK-DAG: !rec_P1 = !cir.struct<"P1" packed {!s32i, !s32i}>
+// CHECK-DAG: !rec_P2 = !cir.struct<"P2" padded {!u8i, !u16i, !u32i}>
+// CHECK-DAG: !rec_P3 = !cir.struct<"P3" packed padded {!u8i, !u16i, !u32i}>
 
 
 // Complete a previously incomplete record
-!rec_A = !cir.record<class "A" incomplete>
-!rec_Ac = !cir.record<class "A" {!u8i, !s32i}>
-// CHECK-DAG: !rec_A = !cir.record<class "A" {!u8i, !s32i}>
+!rec_A = !cir.struct<class "A" incomplete>
+!rec_Ac = !cir.struct<class "A" {!u8i, !s32i}>
+// CHECK-DAG: !rec_A = !cir.struct<class "A" {!u8i, !s32i}>
 
 // Test recursive struct parsing/printing.
-!rec_Node = !cir.record<struct "Node" {!cir.ptr<!cir.record<struct "Node">>}>
-// CHECK-DAG: !cir.record<struct "Node" {!cir.ptr<!cir.record<struct "Node">>}>
+!rec_Node = !cir.struct<"Node" {!cir.ptr<!cir.struct<"Node">>}>
+// CHECK-DAG: !cir.struct<"Node" {!cir.ptr<!cir.struct<"Node">>}>
 
 
 
@@ -68,8 +68,8 @@ module  {
   }
 
   cir.func @structs() {
-    %0 = cir.alloca !cir.ptr<!cir.record<struct "Sc" {!u8i, !u16i, !u32i}>>, !cir.ptr<!cir.ptr<!cir.record<struct "Sc" {!u8i, !u16i, !u32i}>>>, ["sc", init] {alignment = 8 : i64}
-    %1 = cir.alloca !cir.ptr<!cir.record<union "U" incomplete>>, !cir.ptr<!cir.ptr<!cir.record<union "U" incomplete>>>, ["u", init] {alignment = 8 : i64}
+    %0 = cir.alloca !cir.ptr<!cir.struct<"Sc" {!u8i, !u16i, !u32i}>>, !cir.ptr<!cir.ptr<!cir.struct<"Sc" {!u8i, !u16i, !u32i}>>>, ["sc", init] {alignment = 8 : i64}
+    %1 = cir.alloca !cir.ptr<!cir.union<"U" incomplete>>, !cir.ptr<!cir.ptr<!cir.union<"U" incomplete>>>, ["u", init] {alignment = 8 : i64}
     cir.return
   }
 

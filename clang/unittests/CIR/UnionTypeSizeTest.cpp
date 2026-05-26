@@ -32,7 +32,7 @@ protected:
 
 TEST_F(UnionTypeSizeTest, SizeInBitsNotBytes) {
   IntType i32 = IntType::get(&context, 32, true);
-  auto ty = RecordType::get(&context, getName("U"), RecordType::Union);
+  auto ty = UnionType::get(&context, getName("U"));
   ty.complete({i32}, /*packed=*/false, /*padded=*/false);
 
   OpBuilder builder(&context);
@@ -49,7 +49,7 @@ TEST_F(UnionTypeSizeTest, SizeInBitsNotBytes) {
 TEST_F(UnionTypeSizeTest, MultiMemberUnion) {
   IntType i32 = IntType::get(&context, 32, true);
   IntType i64 = IntType::get(&context, 64, true);
-  auto ty = RecordType::get(&context, getName("U2"), RecordType::Union);
+  auto ty = UnionType::get(&context, getName("U2"));
   ty.complete({i32, i64}, /*packed=*/false, /*padded=*/false);
 
   OpBuilder builder(&context);
@@ -64,7 +64,7 @@ TEST_F(UnionTypeSizeTest, MultiMemberUnion) {
 }
 
 TEST_F(UnionTypeSizeTest, EmptyUnion) {
-  auto ty = RecordType::get(&context, getName("Empty"), RecordType::Union);
+  auto ty = UnionType::get(&context, getName("Empty"));
   ty.complete({}, /*packed=*/false, /*padded=*/false);
 
   OpBuilder builder(&context);
