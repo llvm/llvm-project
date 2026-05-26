@@ -688,3 +688,4 @@ void negative_macro_full_expansion() {
 void negative_macro_deleter_only() {
   std::shared_ptr<A> sp(new A[10], ARR_DEL);
 }
+

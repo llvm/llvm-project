@@ -23,7 +23,9 @@ void UseSharedPtrArrayCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxConstructExpr(
           hasType(qualType(hasDeclaration(
-              classTemplateSpecializationDecl(hasName("::std::shared_ptr"))))),
+              classTemplateSpecializationDecl(
+                hasName("::std::shared_ptr"),
+                  templateArgumentCountIs(1))))),
 
           argumentCountIs(2),
 
@@ -42,6 +44,7 @@ void UseSharedPtrArrayCheck::registerMatchers(MatchFinder *Finder) {
                      lambdaExpr().bind("lambdaDeleter"),
 
                      declRefExpr(to(functionDecl().bind("deleterFunction")))))))
+                     
           .bind("sharedPtrCtor"),
       this);
 }
