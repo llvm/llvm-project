@@ -91,10 +91,9 @@ int trivial_assumption(int a) {
 
 int undefined_assumption() {
   // Theoretically the analyzer should report that the assumption expression of
-  // the [[assume]] attribute is an undefined value; currently it just aborts
-  // the symbolic execution on that path.
+  // the [[assume]] attribute has an undefined value; currently these
+  // attributes are ignored by the analyzer.
   int a;
   [[assume(a)]];
-  clang_analyzer_warnIfReached(); // no-warning
-  return a;
-}
+  return a; // expected-warning {{Undefined or garbage value returned to caller}}
+  }

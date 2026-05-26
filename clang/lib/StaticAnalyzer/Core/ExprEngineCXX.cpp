@@ -1234,14 +1234,12 @@ void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
     ProgramStateRef State = N->getState();
     for (const auto *Attr : getSpecificAttrs<CXXAssumeAttr>(A->getAttrs())) {
       SVal AssumedVal = State->getSVal(Attr->getAssumption(), LCtx);
+      // This code ignores assumptions that evaluate to UndefinedVal.
+      // Perhaps there should be a checker that reports this situation.
       if (auto ValidAssumedVal = AssumedVal.getAs<DefinedOrUnknownSVal>()) {
         State = State->assume(*ValidAssumedVal, true);
-      } else {
-        // The assumption expression has evaluated to UndefinedVal.
-        // Theoretically this should be reported by a checker, but currently we
-        // just discard the execution path.
-        State = nullptr;
       }
+
       if (!State)
         break;
     }
