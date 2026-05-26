@@ -1,4 +1,4 @@
-; RUN: opt -passes='sroa<struct-to-vector>' -S %s | FileCheck %s
+; RUN: opt -passes='sroa<aggregate-to-vector>' -S %s | FileCheck %s
 ; NOTE: Do not autogenerate. This test intentionally uses targeted CHECK
 ; patterns for clarity.
 

@@ -1381,7 +1381,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // memcpyopt's optimizations if done before. Look at the documentation for
     // `tryCanonicalizeStructToVector` in SROA.cpp to see why.
     FPM.addPass(SROAPass(SROAOptions(SROAOptions::PreserveCFG,
-                                     /*StructToVector=*/true)));
+                                     /*AggregateToVector=*/true)));
   }
 
   if (!isFullLTOPostLink(LTOPhase)) {
@@ -1482,7 +1482,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // memcpyopt's optimizations if done before. Look at the documentation for
     // `tryCanonicalizeStructToVector` in SROA.cpp to see why.
     FPM.addPass(SROAPass(SROAOptions(SROAOptions::PreserveCFG,
-                                     /*StructToVector=*/true)));
+                                     /*AggregateToVector=*/true)));
   }
 
   FPM.addPass(InferAlignmentPass());

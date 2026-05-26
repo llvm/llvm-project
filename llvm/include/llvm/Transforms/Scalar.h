@@ -45,7 +45,7 @@ LLVM_ABI FunctionPass *createDeadStoreEliminationPass();
 // SROA - Replace aggregates or pieces of aggregates with scalar SSA values.
 //
 LLVM_ABI FunctionPass *createSROAPass(bool PreserveCFG = true,
-                                      bool StructToVector = false);
+                                      bool AggregateToVector = false);
 
 //===----------------------------------------------------------------------===//
 //
