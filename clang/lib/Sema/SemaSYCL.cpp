@@ -706,8 +706,6 @@ public:
       visit(PVD->getType());
     }
     ObjectAccessPath.pop_back();
-    // We either visited everything or we stopped visiting due to invalid kernel
-    // argument type.
     assert(ObjectAccessPath.empty());
   }
 
@@ -740,7 +738,6 @@ public:
       emitObjectAccessPathNotes();
 
       IsValid = false;
-      ObjectAccessPath.pop_back();
       return false;
     }
     return true;

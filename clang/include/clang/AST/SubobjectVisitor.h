@@ -50,16 +50,14 @@ public:
   void traverseRecord(ptr_t<RecordDecl> RD) {
     if (ptr_t<CXXRecordDecl> CRD = dyn_cast<CXXRecordDecl>(RD)) {
       for (CXXBaseSpecifier& BS : CRD->bases()) {
-        if (!getDerived().visitBaseSpecifierPre(&BS))
-          continue;
-        getDerived().visit(BS.getType());
+        if (getDerived().visitBaseSpecifierPre(&BS))
+          getDerived().visit(BS.getType());
         getDerived().visitBaseSpecifierPost(&BS);
       }
     }
     for (ptr_t<FieldDecl> FD : RD->fields()) {
-      if (!getDerived().visitFieldDeclPre(FD))
-        continue;
-      getDerived().visit(FD->getType());
+      if (getDerived().visitFieldDeclPre(FD))
+        getDerived().visit(FD->getType());
       getDerived().visitFieldDeclPost(FD);
     }
   }
