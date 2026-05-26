@@ -958,7 +958,8 @@ bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
     uint64_t Log2 = Log2_64(Val);
     if (Log2 < 3) {
       auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {sXLen}, {});
-      MIB.buildLShr(Dst, VLENB, MIB.buildConstant(sXLen, 3 - Log2));
+      MIB.buildLShr(Dst, VLENB, MIB.buildConstant(XLenTy, 3 - Log2),
+                    MachineInstr::IsExact);
     } else if (Log2 > 3) {
       auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {sXLen}, {});
       MIB.buildShl(Dst, VLENB, MIB.buildConstant(sXLen, Log2 - 3));
@@ -972,7 +973,8 @@ bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
     MIB.buildMul(Dst, VLENB, MIB.buildConstant(sXLen, Val / 8));
   } else {
     auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {sXLen}, {});
-    auto VScale = MIB.buildLShr(sXLen, VLENB, MIB.buildConstant(sXLen, 3));
+    auto VScale = MIB.buildLShr(sXLen, VLENB, MIB.buildConstant(sXLen, 3),
+                                MachineInstr::IsExact);
     MIB.buildMul(Dst, VScale, MIB.buildConstant(sXLen, Val));
   }
   MI.eraseFromParent();
