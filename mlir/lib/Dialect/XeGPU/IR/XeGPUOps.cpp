@@ -344,9 +344,6 @@ LogicalResult LoadNdOp::verify() {
   auto tdescTy = getTensorDescType();
   auto valueTy = getType();
 
-  if (tdescTy.getRank() > 2)
-    return emitOpError("Expects a 1D or 2D TensorDesc.\n");
-
   if (!valueTy)
     return emitOpError("Invalid result, it should be a VectorType.\n");
 
@@ -465,9 +462,6 @@ void StoreNdOp::build(OpBuilder &builder, OperationState &state, Value value,
 LogicalResult StoreNdOp::verify() {
   auto dstTy = getTensorDescType(); // Tile
   auto valTy = getValueType();      // Vector
-
-  if (dstTy.getRank() > 2)
-    return emitOpError("Expects a 1D or 2D TensorDesc.\n");
 
   if (!valTy)
     return emitOpError("Expecting a VectorType result.\n");
