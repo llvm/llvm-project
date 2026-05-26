@@ -211,6 +211,7 @@ public:
   // This is effectively private given that only MLIRContext.cpp can see the
   // MLIRContextImpl type.
   MLIRContextImpl &getImpl() { return *impl; }
+  const MLIRContextImpl &getImpl() const { return *impl; }
 
   /// Returns the diagnostic engine for this context.
   DiagnosticEngine &getDiagEngine();
