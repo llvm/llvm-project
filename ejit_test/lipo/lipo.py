@@ -274,6 +274,38 @@ def doit_gc_merge(args):
     print(f"       output: {output}")
 
 
+# ── merge mode ──────────────────────────────────────────────────────────────
+
+def doit_merge(args):
+    """ld -r with merge.ld to produce a single compact .o (ejit.o)."""
+    build_dir = os.path.abspath(args.build_dir)
+    input_a = os.path.abspath(args.input)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    merge_ld = os.path.join(script_dir, "merge.ld")
+
+    if not os.path.exists(merge_ld):
+        print(f"ERROR: merge.ld not found at {merge_ld}")
+        sys.exit(1)
+
+    output = args.output or os.path.join(script_dir, "ejit.o")
+    LD = ld(build_dir)
+
+    print(f"[merge] ld -r -T merge.ld -> {output} ...", flush=True)
+    r = sp.run([
+        LD, "-r", "-o", output, "-T", merge_ld,
+        "--whole-archive", input_a,
+    ], capture_output=True, text=True)
+
+    if r.returncode != 0:
+        print("ERROR: ld -r failed")
+        print(r.stderr[:500])
+        sys.exit(1)
+
+    sz_mb = os.path.getsize(output) / (1024 * 1024)
+    print(f"       {sz_mb:.0f} MB")
+    print(f"       output: {output}")
+
+
 # ── main ────────────────────────────────────────────────────────────────────
 
 def main():
@@ -290,12 +322,19 @@ def main():
     g.add_argument("--build-dir", required=True, help="LLVM build directory")
     g.add_argument("--output", help="Output .a path")
 
+    m = sub.add_parser("merge", help="ld -r merge into single ejit.o")
+    m.add_argument("--input", required=True, help="Input .a from gc-merge step")
+    m.add_argument("--build-dir", required=True, help="LLVM build directory")
+    m.add_argument("--output", help="Output .o path (default: ejit.o alongside lipo.py)")
+
     args = p.parse_args()
 
     if args.mode == "extract":
         doit_extract(args)
     elif args.mode == "gc-merge":
         doit_gc_merge(args)
+    elif args.mode == "merge":
+        doit_merge(args)
 
 
 if __name__ == "__main__":

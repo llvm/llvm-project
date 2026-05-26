@@ -125,7 +125,7 @@ if [[ -n "${LIPO_FILE}" ]]; then
   # The lipo .a already bundles EJIT + all LLVM dependencies (see lipo.py).
   # If --lipo is passed without =FILE, auto-detect from build dir + arch.
   if [[ "${LIPO_FILE}" == "auto" ]]; then
-    LIPO_FILE="${SCRIPT_DIR}/lipo/libejit_lipo_${ARCH}_gc.a"
+    LIPO_FILE="${SCRIPT_DIR}/lipo/ejit.o"
   fi
   [[ -f "${LIPO_FILE}" ]] || { echo "ERROR: lipo file not found: ${LIPO_FILE}"; exit 1; }
   USE_LIPO=true
@@ -204,8 +204,12 @@ build_one() {
       -Os -Wl,--gc-sections -Wl,--strip-all \
       "${LIPO_ABS}" \
       ${LINK_LIBS} \
-      -Wl,-M \
-      "${obj}" -o "${bin}" > "${map_file}" 2>&1
+      "${obj}" -o "${bin}"
+    echo "${CXX}" -fuse-ld="${LD_LLD}" \
+      -Os -Wl,--gc-sections -Wl,--strip-all \
+      "${LIPO_ABS}" \
+      ${LINK_LIBS} \
+      "${obj}" -o "${bin}"
   else
     "${CXX}" -fuse-ld="${LD_LLD}" \
       -Os -Wl,--gc-sections -Wl,--strip-all \

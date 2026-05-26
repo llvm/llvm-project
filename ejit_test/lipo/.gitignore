@@ -1,3 +1,4 @@
 .lipo_work_*
 .lipo_gc_work*
 libejit_lipo_*
+ejit.o
