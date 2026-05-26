@@ -3288,6 +3288,7 @@ libc_header_library(
         "__support_math_iscanonicall",
         "__support_math_isnan",
         "__support_math_isnanf",
+        "__support_math_isnanf16",
         "__support_math_isnanl",
         "__support_math_issignaling",
         "__support_math_issignalingbf16",
