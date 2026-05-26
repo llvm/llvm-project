@@ -16,6 +16,30 @@ if(EJIT_BARE_METAL)
   add_definitions(-DEJIT_BARE_METAL)
 endif()
 
+option(EJIT_BARE_METAL_MUTEX
+  "Inject no-op <mutex>/<shared_mutex>/<condition_variable> headers \
+(for bare-metal toolchains that lack these C++ standard headers). \
+Enable this only when the toolchain does NOT provide <mutex>." OFF)
+if(EJIT_BARE_METAL_MUTEX)
+  set(BAREMETAL_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/BareMetal")
+  message(STATUS "EmbeddedJIT: injecting bare-metal mutex stubs from ${BAREMETAL_INCLUDE}")
+  # Inject into LLVM libraries that use std::mutex (OrcJIT, Support, JITLink, etc.)
+  # but NOT into clang (which uses std::thread and needs the real <mutex>).
+  # Targets are created before this CMakeLists.txt runs, so they exist.
+  foreach(_tgt LLVMOrcJIT LLVMJITLink LLVMSupport LLVMCodeGen LLVMCore
+              LLVMAnalysis LLVMTransformUtils LLVMInstCombine LLVMScalarOpts
+              LLVMipo LLVMObject LLVMMC LLVMMCParser LLVMTarget
+              LLVMSelectionDAG LLVMGlobalISel LLVMAsmPrinter LLVMPasses
+              LLVMExecutionEngine LLVMOrcShared LLVMRuntimeDyld LLVMOrcTargetProcess
+              # Target-specific libs (only exist when built for that arch)
+              LLVMX86CodeGen LLVMX86Desc LLVMX86Info
+              LLVMAArch64CodeGen LLVMAArch64Desc LLVMAArch64Info LLVMAArch64Utils)
+    if(TARGET ${_tgt})
+      target_include_directories(${_tgt} SYSTEM BEFORE PRIVATE ${BAREMETAL_INCLUDE})
+    endif()
+  endforeach()
+endif()
+
 # Build target component list from LLVM_TARGETS_TO_BUILD.
 # Each target needs CodeGen, Desc, and Info for native target initialization.
 # AsmPrinter init lives in CodeGen, so no separate AsmPrinter component needed.
@@ -131,3 +155,12 @@ add_custom_target(check-ejit-size
     -P "${CMAKE_CURRENT_SOURCE_DIR}/CheckSize.cmake"
   DEPENDS ejit_minimal
   )
+
+#===-- Bare-metal stub library ---------------------------------------------===#
+# libejit_baremetal.a — no-op stubs for POSIX functions that EJIT+LLVM
+# link against but never call at runtime on bare-metal (pthread, dl, mmap,
+# file I/O, signals, etc.).  See jit_design_doc/EJIT_BARE_METAL_STUBS.md.
+add_library(ejit_baremetal STATIC
+  BareMetal/ejit_baremetal_stubs.c)
+target_compile_options(ejit_baremetal PRIVATE -ffunction-sections -fdata-sections)
+target_include_directories(ejit_baremetal PUBLIC BareMetal)
