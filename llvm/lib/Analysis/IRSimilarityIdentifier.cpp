@@ -720,7 +720,12 @@ bool IRSimilarityCandidate::compareAssignmentMapping(
   if (!WasInserted && !ValueMappingIt->second.contains(InstValB))
     return false;
   else if (ValueMappingIt->second.size() != 1) {
-    for (unsigned OtherVal : ValueMappingIt->second) {
+    // Snapshot the set before iterating: when InstValA maps to itself the
+    // erase below removes InstValA from the very set being iterated, which
+    // invalidates the range iterator under backward-shift deletion.
+    SmallVector<unsigned> OtherVals(ValueMappingIt->second.begin(),
+                                    ValueMappingIt->second.end());
+    for (unsigned OtherVal : OtherVals) {
       if (OtherVal == InstValB)
         continue;
       auto OtherValIt = ValueNumberMappingA.find(OtherVal);

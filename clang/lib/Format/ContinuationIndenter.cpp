@@ -1528,8 +1528,26 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
       State.Stack.size() > 1) {
     if (Current.closesBlockOrBlockTypeList(Style))
       return State.Stack[State.Stack.size() - 2].NestedBlockIndent;
-    if (Current.MatchingParen && Current.MatchingParen->is(BK_BracedInit))
+    if (Current.MatchingParen && Current.MatchingParen->is(BK_BracedInit)) {
+      // The brace should line up with the start of the line in this case. The
+      // stack depth is checked to make sure that the brace is at the top
+      // level. It should contain the levels for the top, the assignment if
+      // there is an equal sign, and the braces.
+      //
+      // SomeStruct //
+      //     s = {
+      //         "xxxxxxxxxxxxx",
+      // };
+      if ((State.Stack.size() == 2 &&
+           Current.MatchingParen->getPreviousNonComment() &&
+           Current.MatchingParen->getPreviousNonComment()->is(
+               TT_StartOfName)) ||
+          (State.Stack.size() == 3 &&
+           State.Stack[1].Precedence == prec::Assignment)) {
+        return State.FirstIndent;
+      }
       return State.Stack[State.Stack.size() - 2].LastSpace;
+    }
     return State.FirstIndent;
   }
   // Indent a closing parenthesis at the previous level if followed by a semi,
@@ -1981,6 +1999,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     NewParenState.UnindentOperator = false;
     NewParenState.NoLineBreak =
         NewParenState.NoLineBreak || CurrentState.NoLineBreakInOperand;
+    NewParenState.Precedence = PrecedenceLevel;
 
     // Don't propagate AvoidBinPacking into subexpressions of arg/param lists.
     if (PrecedenceLevel > prec::Comma)

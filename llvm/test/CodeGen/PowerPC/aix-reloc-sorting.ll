@@ -3,11 +3,11 @@
 ; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff \
-; RUN:   -data-sections=false -function-sections=false -filetype=obj -o %t.o < %s
+; RUN:   -data-sections=false -function-sections=false --code-model=small -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff \
-; RUN:   -data-sections=true -function-sections=true -filetype=obj -o %t.o < %s
+; RUN:   -data-sections=true -function-sections=true --code-model=small -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck %s --check-prefix=SEC
 
 @a = global i32 1
