@@ -19420,7 +19420,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // shuffles, inserts, and extracts.
   // FIXME: remove this as soon as correct fractional model is landed for all
   // targets.
-  if (SLPInstCountCheck && VectorizableTree.front()->getVectorFactor() == 2 &&
+  if (SLPInstCountCheck && TTI->preferSLPInstCountCheck() &&
+      VectorizableTree.front()->getVectorFactor() == 2 &&
       SLPCostThreshold == 0 &&
       (!SLPReVec ||
        !isa<VectorType>(
