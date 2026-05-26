@@ -758,6 +758,10 @@ public:
   const MapVector<Instruction *, uint64_t> &getMinimalBitwidths() const {
     return MinBWs;
   }
+
+  /// Check early preconditions that, if not met, make vectorization infeasible
+  /// regardless of the chosen VF. \returns false if any precondition fails.
+  bool checkVectorizationPreconditions();
 };
 
 /// Planner drives the vectorization process after having passed
