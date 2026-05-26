@@ -1181,7 +1181,7 @@ void case24() {
 // CHECK-SAME: ptr noundef dead_on_return [[ED:%.*]], ptr noundef dead_on_return [[UD:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
-  // CHECK-NEXT:    [[ED_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[ED_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[UD_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[TI1:%.*]] = alloca [[STRUCT_TWOINTS:%.*]], align 1
 // CHECK-NEXT:    [[TI2:%.*]] = alloca [[STRUCT_TWOINTS]], align 1
@@ -1199,6 +1199,7 @@ void case25(EmptyDerived ED, UnnamedDerived UD) {
 // CHECK-LABEL: define hidden void @_Z6case267TwoInts(
 // CHECK-SAME: ptr noundef dead_on_return [[TI:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[TI_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[F:%.*]] = alloca <4 x float>, align 4
 // CHECK-NEXT:    [[F2:%.*]] = alloca <3 x float>, align 4

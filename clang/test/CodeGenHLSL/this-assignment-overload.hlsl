@@ -37,8 +37,8 @@ void main() {
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 [[Another]], i32 8, i1 false)
 // CHECK-NEXT: call void @_ZN4PairaSES_(ptr noundef nonnull align 1 dereferenceable(8) [[ThisPtr]], ptr noundef byval(%struct.Pair) align 1 [[Tmp]])
 // CHECK-NEXT: [[First:%.*]] = getelementptr inbounds nuw %struct.Pair, ptr [[ThisPtr]], i32 0, i32 0
-// CHECK-NEXT: %0 = load i32, ptr [[First]], align 1
-// CHECK-NEXT: ret i32 %0
+// CHECK-NEXT: %[[LOAD:.*]] = load i32, ptr [[First]], align 1
+// CHECK-NEXT: ret i32 %[[LOAD]]
 
 // CHECK:     define linkonce_odr hidden noundef i32 @_ZN4Pair9getSecondEv(ptr noundef nonnull align 1 dereferenceable(8) %this) #0 align 2 {
 // CHECK-NEXT:entry:
@@ -53,5 +53,5 @@ void main() {
 // CHECK-NEXT: store i32 123, ptr [[Second]], align 1
 // CHECK-NEXT: call void @_ZN4PairaSES_(ptr noundef nonnull align 1 dereferenceable(8) [[ThisPtr]], ptr noundef byval(%struct.Pair) align 1 [[Tmp]])
 // CHECK-NEXT: [[Second2:%.*]] = getelementptr inbounds nuw %struct.Pair, ptr [[ThisPtr]], i32 0, i32 1
-// CHECK-NEXT: %0 = load i32, ptr [[Second2]], align 1
-// CHECK-NEXT: ret i32 %0
+// CHECK-NEXT: %[[LOAD:.*]] = load i32, ptr [[Second2]], align 1
+// CHECK-NEXT: ret i32 %[[LOAD]]

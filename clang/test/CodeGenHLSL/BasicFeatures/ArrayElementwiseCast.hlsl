@@ -157,6 +157,7 @@ struct Derived : BFields {
 // flatten from a derived struct with bitfields
 // CHECK-LABEL: call8
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: [[DIndirectAddr:%.*]] = alloca ptr, align 4
 // CHECK-NEXT: [[A:%.*]] = alloca [4 x i32], align 4
 // CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.Derived, align 1

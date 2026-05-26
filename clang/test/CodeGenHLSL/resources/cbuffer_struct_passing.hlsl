@@ -2,7 +2,7 @@
 // RUN:     FileCheck %s -DCONST_ADDR_SPACE=2 -DPADDING_TYPE="dx.Padding"
 
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -emit-llvm -disable-llvm-passes -o - %s | \
-// RUN:     FileCheck %s -DCONST_ADDR_SPACE=12 -DPADDING_TYPE="spirv.Padding" --check-prefixes=CHECK,SPIRV
+// RUN:     FileCheck %s -DCONST_ADDR_SPACE=12 -DPADDING_TYPE="spirv.Padding"
 
 struct P {
   float3 a;
@@ -33,7 +33,7 @@ cbuffer CB {
 
 // CHECK-LABEL: case1
 // CHECK-NEXT: entry:
-// SPIRV-NEXT: call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT: call token @llvm.experimental.convergence.entry()
 //
   // Copy S field by field into local variable in default address space.
 //
@@ -57,7 +57,7 @@ void case1() {
 
 // CHECK-LABEL: case2
 // CHECK-NEXT: entry:
-// SPIRV-NEXT: call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT: call token @llvm.experimental.convergence.entry()
 //
 // Copy S field by field into a temporary variable in default address space.
 //
@@ -130,7 +130,7 @@ void case2() {
 
 // CHECK-LABEL: case3
 // CHECK-NEXT: entry:
-// SPIRV-NEXT: call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT: call token @llvm.experimental.convergence.entry()
 void case3() {
 
 // CHECK-NEXT: [[LocalT:%.*]] = alloca %struct.T, align 1
@@ -191,7 +191,7 @@ void case3() {
 
 // CHECK-LABEL: case4
 // CHECK-NEXT: entry:
-// SPIRV-NEXT: call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT: call token @llvm.experimental.convergence.entry()
 void case4() {
 
 // CHECK-NEXT: [[LocalP1:%.*]] = alloca %struct.P, align 1

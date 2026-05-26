@@ -153,6 +153,7 @@ struct Derived : BFields {
 // Derived Struct truncate to scalar
 // CHECK-LABEL: call9
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:  [[D_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT: [[D2:%.*]] = alloca double, align 8
 // CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.Derived, align 1
@@ -204,6 +205,7 @@ export void call10(int4 I) {
 // truncate derived struct
 // CHECK-LABEL: call11
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:  [[D_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT: [[B:%.*]] = alloca %struct.BFields, align 1
 // CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.Derived, align 1

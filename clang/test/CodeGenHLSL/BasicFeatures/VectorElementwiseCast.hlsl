@@ -95,6 +95,7 @@ struct Derived : BFields {
 // vector flat cast from derived struct with bitfield
 // CHECK-LABEL: call6
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: [[D_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT: [[A:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.Derived, align 1
@@ -221,6 +222,7 @@ struct BoolVecStruct {
 // vector flat cast from struct containing bool vector
 // CHECK-LABEL: call10
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:  %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:  [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca <2 x i32>, align 4
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %struct.BoolVecStruct, align 1
