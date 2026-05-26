@@ -493,6 +493,177 @@ static HTTPResult handleGetSummary(CoreClient &Client, StringRef SnapID) {
   return makeJSONSuccess(200, std::move(Summary));
 }
 
+
+namespace {
+
+class StringTable {
+public:
+  unsigned getOrAdd(StringRef S) {
+    auto [It, Inserted] = Index.try_emplace(S, Strings.size());
+    if (Inserted)
+      Strings.emplace_back(S.str());
+    return It->second;
+  }
+
+  json::Array toJSON() const {
+    json::Array Out;
+    Out.reserve(Strings.size());
+    for (const std::string &S : Strings)
+      Out.push_back(S);
+    return Out;
+  }
+
+private:
+  std::vector<std::string> Strings;
+  StringMap<unsigned> Index;
+};
+
+class RelationalMerger {
+public:
+
+  void absorb(const json::Object &Envelope) {
+    if (!Envelope.getBoolean("available").value_or(false))
+      return;
+    const json::Object *Strs = Envelope.getObject("strings");
+    const json::Object *Cols = Envelope.getObject("columns");
+    if (!Strs || !Cols)
+      return;
+
+    int64_t UnitIdx = static_cast<int64_t>(
+        Unit.getOrAdd(Envelope.getString("unit_id").value_or("")));
+
+    std::vector<int64_t> PassRemap = remapStrings(Strs, "pass", Pass);
+    std::vector<int64_t> NameRemap = remapStrings(Strs, "name", Name);
+    std::vector<int64_t> FuncRemap = remapStrings(Strs, "function", Function);
+    std::vector<int64_t> FileRemap = remapStrings(Strs, "file", File);
+
+    const json::Array *PassCol = Cols->getArray("pass");
+    const json::Array *NameCol = Cols->getArray("name");
+    const json::Array *TypeCol = Cols->getArray("type");
+    const json::Array *FuncCol = Cols->getArray("function");
+    const json::Array *FileCol = Cols->getArray("file");
+    const json::Array *LineCol = Cols->getArray("line");
+    const json::Array *ColumnCol = Cols->getArray("column");
+    const json::Array *HotnessCol = Cols->getArray("hotness");
+    if (!PassCol || !NameCol || !TypeCol || !FuncCol || !FileCol || !LineCol ||
+        !ColumnCol || !HotnessCol)
+      return;
+    size_t N = PassCol->size();
+    if (NameCol->size() != N || TypeCol->size() != N ||
+        FuncCol->size() != N || FileCol->size() != N || LineCol->size() != N ||
+        ColumnCol->size() != N || HotnessCol->size() != N)
+      return;
+
+    for (size_t I = 0; I < N; ++I) {
+      UnitColG.push_back(UnitIdx);
+      PassColG.push_back(translate(readInt(*PassCol, I), PassRemap));
+      NameColG.push_back(translate(readInt(*NameCol, I), NameRemap));
+      TypeColG.push_back(readInt(*TypeCol, I));
+      FuncColG.push_back(translate(readInt(*FuncCol, I), FuncRemap));
+      FileColG.push_back(translate(readInt(*FileCol, I), FileRemap));
+      LineColG.push_back(readInt(*LineCol, I));
+      ColumnColG.push_back(readInt(*ColumnCol, I));
+      HotnessColG.push_back(readInt(*HotnessCol, I));
+    }
+  }
+
+  json::Object render(StringRef SnapshotID) {
+    return json::Object{
+        {"snapshot_id", SnapshotID.str()},
+        {"schema_version", 1},
+        {"count", static_cast<int64_t>(UnitColG.size())},
+        {"strings", json::Object{
+                        {"unit", Unit.toJSON()},
+                        {"pass", Pass.toJSON()},
+                        {"name", Name.toJSON()},
+                        {"function", Function.toJSON()},
+                        {"file", File.toJSON()},
+                    }},
+        {"columns", json::Object{
+                        {"unit", toArray(UnitColG)},
+                        {"pass", toArray(PassColG)},
+                        {"name", toArray(NameColG)},
+                        {"type", toArray(TypeColG)},
+                        {"function", toArray(FuncColG)},
+                        {"file", toArray(FileColG)},
+                        {"line", toArray(LineColG)},
+                        {"column", toArray(ColumnColG)},
+                        {"hotness", toArray(HotnessColG)},
+                    }},
+    };
+  }
+
+private:
+
+  static std::vector<int64_t> remapStrings(const json::Object *Strs,
+                                           StringRef Field, StringTable &Dst) {
+    std::vector<int64_t> Map;
+    const json::Array *Arr = Strs->getArray(Field);
+    if (!Arr)
+      return Map;
+    Map.reserve(Arr->size());
+    for (const json::Value &V : *Arr) {
+      std::optional<StringRef> S = V.getAsString();
+      Map.push_back(S ? static_cast<int64_t>(Dst.getOrAdd(*S)) : -1);
+    }
+    return Map;
+  }
+
+  static int64_t readInt(const json::Array &A, size_t I) {
+    return A[I].getAsInteger().value_or(-1);
+  }
+
+
+  static int64_t translate(int64_t Local, ArrayRef<int64_t> Map) {
+    if (Local < 0 || Local >= static_cast<int64_t>(Map.size()))
+      return -1;
+    return Map[Local];
+  }
+
+  static json::Array toArray(ArrayRef<int64_t> Vs) {
+    json::Array Out;
+    Out.reserve(Vs.size());
+    for (int64_t V : Vs)
+      Out.push_back(V);
+    return Out;
+  }
+
+  StringTable Unit, Pass, Name, Function, File;
+  std::vector<int64_t> UnitColG, PassColG, NameColG, TypeColG, FuncColG,
+      FileColG, LineColG, ColumnColG, HotnessColG;
+};
+
+} // namespace
+
+static HTTPResult handleGetRemarksRelational(CoreClient &Client,
+                                             StringRef SnapID) {
+  SmallVector<std::string, 1> Caps{"llvm.remarks.relational"};
+  Expected<json::Array> Query = Client.querySnapshot(SnapID, Caps);
+  if (!Query)
+    return makeJSONError(400, Query.takeError());
+
+  RelationalMerger Merger;
+  for (const json::Value &UnitValue : *Query) {
+    const json::Object *UnitObj = UnitValue.getAsObject();
+    const json::Array *Results =
+        UnitObj ? UnitObj->getArray("results") : nullptr;
+    if (!Results)
+      continue;
+    for (const json::Value &ResultValue : *Results) {
+      const json::Object *ResultObj = ResultValue.getAsObject();
+      if (!ResultObj)
+        continue;
+      std::optional<StringRef> Capability = ResultObj->getString("capability");
+      if (!Capability || *Capability != "llvm.remarks.relational")
+        continue;
+      if (const json::Object *ValueObj = ResultObj->getObject("value"))
+        Merger.absorb(*ValueObj);
+    }
+  }
+
+  return makeJSONSuccess(200, Merger.render(SnapID));
+}
+
 static HTTPResult handleGetQueryUnit(CoreClient &Client, StringRef UnitID,
                                      StringRef Capabilities) {
   SmallVector<std::string, 16> Caps = parseCapabilityList(Capabilities);
@@ -742,6 +913,9 @@ Error llvm::advisor::HTTPServer::run() {
                    (Segs[4] == "representations" || Segs[4] == "findings" ||
                     Segs[4] == "mappings" || Segs[4] == "link-units"))
             Res = handleGetEntities(Client, ResolvedSnap, Segs[4]);
+          else if (Segs.size() == 6 && Segs[4] == "remarks" &&
+                   Segs[5] == "relational")
+            Res = handleGetRemarksRelational(Client, ResolvedSnap);
         } else if (Path == "/api/v1/jobs")
           Res = handleGetJobs(Client);
         else if (IsAPI && Segs.size() == 4 && Segs[2] == "jobs")
