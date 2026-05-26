@@ -7,30 +7,37 @@
 ;
 ; The above loop should be interchanged in terms of locality of reference.
 ;
-; FIXME: The above loop is not interchanged now because of the issue in the
-; instorder profitability check.
-;
 define void @profitable(ptr %A) {
 ; CHECK-LABEL: define void @profitable(
 ; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP_I_HEADER:.*]]
-; CHECK:       [[LOOP_I_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_INC:%.*]], %[[LOOP_I_LATCH:.*]] ]
+; CHECK-NEXT:  [[LOOP_J_PREHEADER:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP_J:.*]]
+; CHECK:       [[LOOP_I_HEADER_PREHEADER1:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_I_HEADER_PREHEADER:.*]]
+; CHECK:       [[LOOP_I_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], %[[LOOP_I_LATCH:.*]] ], [ 0, %[[LOOP_I_HEADER_PREHEADER1]] ]
+; CHECK-NEXT:    br label %[[LOOP_J_SPLIT1:.*]]
 ; CHECK:       [[LOOP_J]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[LOOP_I_HEADER]] ], [ [[J_INC:%.*]], %[[LOOP_J]] ]
+; CHECK-NEXT:    br label %[[LOOP_J1:.*]]
+; CHECK:       [[LOOP_J1]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP2:%.*]], %[[LOOP_J_SPLIT:.*]] ], [ 0, %[[LOOP_J]] ]
+; CHECK-NEXT:    br label %[[LOOP_I_HEADER_PREHEADER1]]
+; CHECK:       [[LOOP_J_SPLIT1]]:
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[J]], 100
 ; CHECK-NEXT:    [[OFFSET:%.*]] = add i64 [[I]], [[MUL]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[OFFSET]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[J_INC]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_INC]], 10
-; CHECK-NEXT:    br i1 [[EC_J]], label %[[LOOP_I_LATCH]], label %[[LOOP_J]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[J]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 10
+; CHECK-NEXT:    br label %[[LOOP_I_LATCH]]
+; CHECK:       [[LOOP_J_SPLIT]]:
+; CHECK-NEXT:    [[TMP2]] = add i64 [[J]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 10
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[EXIT:.*]], label %[[LOOP_J1]]
 ; CHECK:       [[LOOP_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 10
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[EXIT:.*]], label %[[LOOP_I_HEADER]]
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[LOOP_J_SPLIT]], label %[[LOOP_I_HEADER_PREHEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -66,31 +73,38 @@ exit:
 ;
 ; The above loop should be interchanged in terms of locality of reference.
 ;
-; FIXME: The above loop is not interchanged now because of the issue in the
-; instorder profitability check.
-;
 define void @profitable_neg_step(ptr %A) {
 ; CHECK-LABEL: define void @profitable_neg_step(
 ; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP_I_HEADER:.*]]
-; CHECK:       [[LOOP_I_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_INC:%.*]], %[[LOOP_I_LATCH:.*]] ]
+; CHECK-NEXT:  [[LOOP_J_PREHEADER:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP_J:.*]]
+; CHECK:       [[LOOP_I_HEADER_PREHEADER1:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_I_HEADER_PREHEADER:.*]]
+; CHECK:       [[LOOP_I_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], %[[LOOP_I_LATCH:.*]] ], [ 0, %[[LOOP_I_HEADER_PREHEADER1]] ]
+; CHECK-NEXT:    br label %[[LOOP_J_SPLIT1:.*]]
 ; CHECK:       [[LOOP_J]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[LOOP_I_HEADER]] ], [ [[J_INC:%.*]], %[[LOOP_J]] ]
+; CHECK-NEXT:    br label %[[LOOP_J1:.*]]
+; CHECK:       [[LOOP_J1]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP2:%.*]], %[[LOOP_J_SPLIT:.*]] ], [ 0, %[[LOOP_J]] ]
+; CHECK-NEXT:    br label %[[LOOP_I_HEADER_PREHEADER1]]
+; CHECK:       [[LOOP_J_SPLIT1]]:
 ; CHECK-NEXT:    [[J_REV:%.*]] = sub i64 9, [[J]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[J_REV]], 100
 ; CHECK-NEXT:    [[OFFSET:%.*]] = add i64 [[I]], [[MUL]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[OFFSET]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[J_INC]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_INC]], 10
-; CHECK-NEXT:    br i1 [[EC_J]], label %[[LOOP_I_LATCH]], label %[[LOOP_J]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[J]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 10
+; CHECK-NEXT:    br label %[[LOOP_I_LATCH]]
+; CHECK:       [[LOOP_J_SPLIT]]:
+; CHECK-NEXT:    [[TMP2]] = add i64 [[J]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 10
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[EXIT:.*]], label %[[LOOP_J1]]
 ; CHECK:       [[LOOP_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 10
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[EXIT:.*]], label %[[LOOP_I_HEADER]]
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[LOOP_J_SPLIT]], label %[[LOOP_I_HEADER_PREHEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -127,40 +141,27 @@ exit:
 ;
 ; The above loop should NOT be interchanged in terms of locality of reference.
 ;
-; FIXME: The above loop is interchanged now because of the issue in the
-; instorder profitability check.
-;
-define void @unprofitable(ptr %A) {
-; CHECK-LABEL: define void @unprofitable(
+define void @unprofitable0(ptr %A) {
+; CHECK-LABEL: define void @unprofitable0(
 ; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[LOOP_J_PREHEADER:.*]]
-; CHECK:       [[LOOP_I_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:    br label %[[LOOP_I_HEADER:.*]]
-; CHECK:       [[LOOP_I_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], %[[LOOP_I_LATCH:.*]] ], [ 0, %[[LOOP_I_HEADER_PREHEADER]] ]
+; CHECK-NEXT:  [[LOOP_I_HEADER_PREHEADER:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_I_HEADER1:.*]]
+; CHECK:       [[LOOP_I_HEADER1]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[LOOP_I_HEADER_PREHEADER]] ], [ [[I_INC:%.*]], %[[LOOP_I_LATCH:.*]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[I]], 100
-; CHECK-NEXT:    br label %[[LOOP_J_SPLIT1:.*]]
-; CHECK:       [[LOOP_J_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP_J:.*]]
 ; CHECK:       [[LOOP_J]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[LOOP_J_SPLIT:.*]] ], [ 0, %[[LOOP_J_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[LOOP_I_HEADER_PREHEADER]]
-; CHECK:       [[LOOP_J_SPLIT1]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[LOOP_I_HEADER1]] ], [ [[TMP0:%.*]], %[[LOOP_J]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [1 x i8], ptr [[A]], i64 [[J]], i64 [[MUL]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[J_INC:%.*]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_INC]], 10
-; CHECK-NEXT:    br label %[[LOOP_I_LATCH]]
-; CHECK:       [[LOOP_J_SPLIT]]:
 ; CHECK-NEXT:    [[TMP0]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 10
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[LOOP_J]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_I_LATCH]], label %[[LOOP_J]]
 ; CHECK:       [[LOOP_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 10
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[LOOP_J_SPLIT]], label %[[LOOP_I_HEADER]]
-; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[LOOP_J_SPLIT:.*]], label %[[LOOP_I_HEADER1]]
+; CHECK:       [[LOOP_J_SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -182,6 +183,80 @@ loop.j:
 loop.i.latch:
   %i.inc = add i64 %i, 1
   %ec.i = icmp eq i64 %i.inc, 10
+  br i1 %ec.i, label %exit, label %loop.i.header
+
+exit:
+  ret void
+}
+
+; for (i = 0; i < 42; i++)
+;   for (j = 0; j < 42; j++)
+;     A[100*i + j] = B[100*i + j] + C[i + 100*j] + C[i + 99*j] + C[i + 98*j];
+;
+; The above loop should NOT be interchanged in terms of locality of reference.
+;
+define void @unprofitable1(ptr noalias %A, ptr noalias %B, ptr noalias %C) {
+; CHECK-LABEL: define void @unprofitable1(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) {
+; CHECK-NEXT:  [[LOOP_J_PREHEADER:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_J:.*]]
+; CHECK:       [[LOOP_J]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[LOOP_J_PREHEADER]] ], [ [[I_INC:%.*]], %[[LOOP_I_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[LOOP_I_HEADER_PREHEADER:.*]]
+; CHECK:       [[LOOP_I_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[LOOP_J]] ], [ [[TMP0:%.*]], %[[LOOP_I_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds [100 x i8], ptr [[A]], i64 [[I]], i64 [[J]]
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds [100 x i8], ptr [[B]], i64 [[I]], i64 [[J]]
+; CHECK-NEXT:    [[GEP_C0:%.*]] = getelementptr inbounds [100 x i8], ptr [[C]], i64 [[J]], i64 [[I]]
+; CHECK-NEXT:    [[GEP_C1:%.*]] = getelementptr inbounds [99 x i8], ptr [[C]], i64 [[J]], i64 [[I]]
+; CHECK-NEXT:    [[GEP_C2:%.*]] = getelementptr inbounds [98 x i8], ptr [[C]], i64 [[J]], i64 [[I]]
+; CHECK-NEXT:    [[VAL_B:%.*]] = load i8, ptr [[GEP_B]], align 1
+; CHECK-NEXT:    [[VAL_C0:%.*]] = load i8, ptr [[GEP_C0]], align 1
+; CHECK-NEXT:    [[VAL_C1:%.*]] = load i8, ptr [[GEP_C1]], align 1
+; CHECK-NEXT:    [[VAL_C2:%.*]] = load i8, ptr [[GEP_C2]], align 1
+; CHECK-NEXT:    [[SUM_0:%.*]] = add i8 [[VAL_B]], [[VAL_C0]]
+; CHECK-NEXT:    [[SUM_1:%.*]] = add i8 [[SUM_0]], [[VAL_C1]]
+; CHECK-NEXT:    [[SUM_2:%.*]] = add i8 [[SUM_1]], [[VAL_C2]]
+; CHECK-NEXT:    store i8 [[SUM_2]], ptr [[GEP_A]], align 1
+; CHECK-NEXT:    [[TMP0]] = add i64 [[J]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 42
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_I_LATCH]], label %[[LOOP_I_HEADER_PREHEADER]]
+; CHECK:       [[LOOP_I_LATCH]]:
+; CHECK-NEXT:    [[I_INC]] = add i64 [[I]], 1
+; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 42
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[EXIT:.*]], label %[[LOOP_J]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.i.header
+
+loop.i.header:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %loop.i.latch ]
+  br label %loop.j
+
+loop.j:
+  %j = phi i64 [ 0, %loop.i.header ], [ %j.inc, %loop.j ]
+  %gep.A = getelementptr inbounds [100 x i8], ptr %A, i64 %i, i64 %j
+  %gep.B = getelementptr inbounds [100 x i8], ptr %B, i64 %i, i64 %j
+  %gep.C0 = getelementptr inbounds [100 x i8], ptr %C, i64 %j, i64 %i
+  %gep.C1 = getelementptr inbounds [99 x i8], ptr %C, i64 %j, i64 %i
+  %gep.C2 = getelementptr inbounds [98 x i8], ptr %C, i64 %j, i64 %i
+  %val.B = load i8, ptr %gep.B
+  %val.C0 = load i8, ptr %gep.C0
+  %val.C1 = load i8, ptr %gep.C1
+  %val.C2 = load i8, ptr %gep.C2
+  %sum.0 = add i8 %val.B, %val.C0
+  %sum.1 = add i8 %sum.0, %val.C1
+  %sum.2 = add i8 %sum.1, %val.C2
+  store i8 %sum.2, ptr %gep.A
+  %j.inc = add i64 %j, 1
+  %ec.j = icmp eq i64 %j.inc, 42
+  br i1 %ec.j, label %loop.i.latch, label %loop.j
+
+loop.i.latch:
+  %i.inc = add i64 %i, 1
+  %ec.i = icmp eq i64 %i.inc, 42
   br i1 %ec.i, label %exit, label %loop.i.header
 
 exit:

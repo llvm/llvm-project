@@ -294,7 +294,7 @@ func.func @transpose_load_elem_f32(%idx1 : index, %idx2 : index, %mem : memref<1
 // -----
 
 func.func @transpose_load_vector_size_f16(%idx1 : index, %idx2 : index, %mem : memref<128x32xf16, 3>) -> vector<2xf16> {
-  // expected-error@+1 {{'amdgpu.transpose_load' op Transferring type size mismatch: expected num of elements: 4}}
+  // expected-error@+1 {{'amdgpu.transpose_load' op Transferring type size mismatch: expected num of elements: 4 or 8}}
   %0 = amdgpu.transpose_load %mem[%idx1, %idx2] : memref<128x32xf16, 3> -> vector<2xf16>
   func.return %0 : vector<2xf16>
 }

@@ -1110,7 +1110,7 @@ def AMDGPU_DotOp :
   let summary = "MLIR wrapper for AMDGPU v_dot* intrinsics";
   let description = [{
     The `amdgpu.dot` op is an MLIR wrapper over the `v_dot*` family of intrinsics,
-    which compute `D = sum_i A[i] * B[i] + C`. 
+    which compute `D = sum_i A[i] * B[i] + C`.
 
     Variants (source, dest, signedness, chipset -> intrinsic).
 
@@ -1432,9 +1432,11 @@ def AMDGPU_TransposeLoadOp :
     AMDGPU_Op<"transpose_load", [SameVariadicOperandSize]>,
     Arguments<(ins Arg<AnyMemRef, "buffer to transpose load from", [MemRead]>:$src, Variadic<Index>:$srcIndices)>,
     Results<(outs AnyTypeOf<[AnyVectorOfNonZeroRank]>:$result)> {
-  let summary = "MLIR wrapper for CDNA Transpose Load instructions";
+  let summary = "MLIR wrapper for CDNA transpose Load instructions";
   let description = [{
-    The `amdgpu.transpose_load` op is a wrapper around the `ds_read_tr` instructions.
+    The `amdgpu.transpose_load` op is a wrapper around the `ds_read_tr` instructions
+    on gfx9 and the `ds_load_tr` family of instructions on gfx1250.
+
     The transpose load op represents a subgroup load from LDS memory,
     where the subgroup of threads collectively reads a matrix from the source
     memref, with each thread reading a vector of the matrix, and gets a transposed matrix
@@ -1442,8 +1444,9 @@ def AMDGPU_TransposeLoadOp :
     indices, and the thread's read result is a vector of the corresponding row of the transposed
     matrix.
 
-    This op is a direct wrapper around the ROCDL `ds_read_tr` family intrinsics. Please refer
-    to the CDNA4 ISA documentation for more details about its exact semantics.
+    This op is a direct wrapper around the ROCDL `ds_read_tr` family intrinsics on
+    gfx950 and the `ds_load_tr` family of instructions on gfx1250. Please refer
+    to the respective ISA documentation for more details about its exact semantics.
 
     Format example:
     ```
@@ -1456,7 +1459,8 @@ def AMDGPU_TransposeLoadOp :
       `$src`, matching the constraints of `memref.load`.
     * `$result`: target register this transpose load instruction will write to.
 
-    Note: Lowering is only supported on gfx950 and up.
+    Note: Lowering is only supported on gfx950 and gfx1250, with different
+    permitted load types.
   }];
   let assemblyFormat = [{
     $src `[` $srcIndices `]` attr-dict `:` type($src) `->` type($result)
