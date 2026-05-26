@@ -5074,7 +5074,8 @@ __kmp_taskloop_linear(ident_t *loc, int gtid, kmp_task_t *task, kmp_uint64 *lb,
                       void *task_dup
 #if OMP_TASKGRAPH_EXPERIMENTAL
                       ,
-                      kmp_taskgraph_record_t *taskgraph_rec = nullptr
+                      kmp_taskgraph_record_t *taskgraph_rec = nullptr,
+                      kmp_task_relocate_t relocate = nullptr
 #endif
 ) {
   KMP_COUNT_BLOCK(OMP_TASKLOOP);
@@ -5170,6 +5171,7 @@ __kmp_taskloop_linear(ident_t *loc, int gtid, kmp_task_t *task, kmp_uint64 *lb,
         taskgroup->taskgraph.reduce_input = nullptr;
       }
       node->taskloop_task = true;
+      node->relocate = relocate;
       next_taskdata->owning_taskgraph = taskgraph_rec;
       // FIXME: These dependency fields might be back-filled by the as-yet
       // unimplemented task_iteration subsidiary directive.  We'll need a way
@@ -5462,7 +5464,8 @@ static void __kmp_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
                            int modifier, void *task_dup
 #if OMP_TASKGRAPH_EXPERIMENTAL
                            ,
-                           kmp_taskgraph_record_t *taskgraph_rec = nullptr
+                           kmp_taskgraph_record_t *taskgraph_rec = nullptr,
+                           kmp_task_relocate_t relocate = nullptr
 #endif
 ) {
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
@@ -5596,7 +5599,7 @@ static void __kmp_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
 #if OMPT_SUPPORT
                           OMPT_GET_RETURN_ADDRESS(0),
 #endif
-                          task_dup, taskgraph_rec);
+                          task_dup, taskgraph_rec, relocate);
     // check if clause value next
     // Also require GOMP_taskloop to reduce to linear
     // (taskdata->td_flags.native)
@@ -6119,14 +6122,11 @@ void __kmpc_taskgraph_taskwait(ident_t *loc_ref, kmp_int32 gtid,
                               has_no_wait);
 }
 
-kmp_uint32 __kmpc_taskgraph_taskloop(ident_t *loc_ref, kmp_int32 gtid,
-                                     kmp_task_t *new_task, kmp_int32 flags,
-                                     size_t sizeof_kmp_task_t, void *shareds,
-                                     size_t sizeof_shareds, kmp_int32 if_val,
-                                     kmp_uint64 *lb, kmp_uint64 *ub,
-                                     kmp_int64 st, kmp_int32 nogroup,
-                                     kmp_int32 sched, kmp_uint64 grainsize,
-                                     kmp_int32 modifier, void *task_dup) {
+kmp_uint32 __kmpc_taskgraph_taskloop(
+    ident_t *loc_ref, kmp_int32 gtid, kmp_task_t *new_task, kmp_int32 flags,
+    kmp_int32 if_val, kmp_uint64 *lb, kmp_uint64 *ub, kmp_int64 st,
+    kmp_int32 nogroup, kmp_int32 sched, kmp_uint64 grainsize,
+    kmp_int32 modifier, void *task_dup, kmp_task_relocate_t relocate) {
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskgroup_t *taskgroup = thread->th.th_current_task->td_taskgroup;
   kmp_taskgraph_record_t *rec = __kmp_taskgraph_or_parent_recording(taskgroup);
@@ -6135,7 +6135,7 @@ kmp_uint32 __kmpc_taskgraph_taskloop(ident_t *loc_ref, kmp_int32 gtid,
     kmp_taskgraph_status_t status = KMP_ATOMIC_LD_ACQ(&rec->status);
     if (status == KMP_TDG_RECORDING)
       __kmp_taskloop(loc_ref, gtid, new_task, if_val, lb, ub, st, nogroup,
-                     sched, grainsize, modifier, task_dup, rec);
+                     sched, grainsize, modifier, task_dup, rec, relocate);
     else if (status == KMP_TDG_READY) {
 #ifdef DEBUG_TASKGRAPH
       fprintf(stderr, "non-taskgraph taskloop entry point for taskloop in "
