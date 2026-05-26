@@ -193,17 +193,13 @@ static Instruction *findLastInWaterfall(Instruction &Begin) {
   Instruction *FinalBegin = &Begin;
 
   // Drill through any begin intrinsics
-  do {
-    if (FinalBegin->hasOneUse()) {
-      User *U = *FinalBegin->user_begin();
-      IntrinsicInst *Intrin = dyn_cast<IntrinsicInst>(U);
-      if (Intrin &&
-          Intrin->getIntrinsicID() == Intrinsic::amdgcn_waterfall_begin) {
-        FinalBegin = Intrin;
-        continue;
-      }
-    }
-  } while (false);
+  while (FinalBegin->hasOneUse()) {
+    IntrinsicInst *Intrin = dyn_cast<IntrinsicInst>(*FinalBegin->user_begin());
+    if (!Intrin ||
+        Intrin->getIntrinsicID() != Intrinsic::amdgcn_waterfall_begin)
+      break;
+    FinalBegin = Intrin;
+  }
 
   Instruction *Last = FinalBegin;
 

@@ -422,7 +422,6 @@ define dllexport amdgpu_cs void @atomic_add_after_triple_begin(ptr addrspace(1) 
 ; GFX10-NEXT:    s_ashr_i32 s13, s0, 31
 ; GFX10-NEXT:    s_add_u32 s12, s1, s0
 ; GFX10-NEXT:    s_addc_u32 s13, s2, s13
-; GFX10-NEXT:    v_mov_b32_e32 v4, 1
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    buffer_atomic_add v0, v3, s[8:11], 0 idxen glc
 ; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
@@ -437,12 +436,23 @@ define dllexport amdgpu_cs void @atomic_add_after_triple_begin(ptr addrspace(1) 
 ; GFX10-NEXT:  ; %bb.2:
 ; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX10-NEXT:    s_mov_b64 s[4:5], exec
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_mbcnt_lo_u32_b32 v0, s4, 0
+; GFX10-NEXT:    v_mbcnt_hi_u32_b32 v0, s5, v0
+; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GFX10-NEXT:    s_and_saveexec_b64 s[6:7], vcc
+; GFX10-NEXT:    s_cbranch_execz .LBB4_4
+; GFX10-NEXT:  ; %bb.3:
 ; GFX10-NEXT:    s_ashr_i32 s0, s3, 31
-; GFX10-NEXT:    s_add_u32 s4, s1, s3
-; GFX10-NEXT:    s_addc_u32 s5, s2, s0
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX10-NEXT:    s_add_u32 s6, s1, s3
+; GFX10-NEXT:    s_addc_u32 s7, s2, s0
+; GFX10-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    buffer_atomic_add v4, v3, s[0:3], 0 idxen
+; GFX10-NEXT:    buffer_atomic_add v0, v3, s[0:3], 0 idxen
+; GFX10-NEXT:  .LBB4_4:
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: atomic_add_after_triple_begin:
@@ -472,7 +482,6 @@ define dllexport amdgpu_cs void @atomic_add_after_triple_begin(ptr addrspace(1) 
 ; GFX11-NEXT:    s_ashr_i32 s13, s0, 31
 ; GFX11-NEXT:    s_add_u32 s12, s1, s0
 ; GFX11-NEXT:    s_addc_u32 s13, s2, s13
-; GFX11-NEXT:    v_mov_b32_e32 v4, 1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    buffer_atomic_add_u32 v0, v3, s[8:11], 0 idxen glc
 ; GFX11-NEXT:    s_load_b128 s[8:11], s[12:13], 0x0
@@ -485,12 +494,25 @@ define dllexport amdgpu_cs void @atomic_add_after_triple_begin(ptr addrspace(1) 
 ; GFX11-NEXT:    s_cbranch_execnz .LBB4_1
 ; GFX11-NEXT:  ; %bb.2:
 ; GFX11-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX11-NEXT:    s_ashr_i32 s4, s3, 31
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_mov_b64 s[4:5], exec
+; GFX11-NEXT:    s_mov_b64 s[6:7], exec
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_mbcnt_lo_u32_b32 v0, s4, 0
+; GFX11-NEXT:    v_mbcnt_hi_u32_b32 v0, s5, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_cmpx_eq_u32_e32 0, v0
+; GFX11-NEXT:    s_cbranch_execz .LBB4_4
+; GFX11-NEXT:  ; %bb.3:
+; GFX11-NEXT:    s_ashr_i32 s6, s3, 31
 ; GFX11-NEXT:    s_add_u32 s0, s1, s3
-; GFX11-NEXT:    s_addc_u32 s1, s2, s4
+; GFX11-NEXT:    s_addc_u32 s1, s2, s6
+; GFX11-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX11-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    buffer_atomic_add_u32 v4, v3, s[0:3], 0 idxen
+; GFX11-NEXT:    buffer_atomic_add_u32 v0, v3, s[0:3], 0 idxen
+; GFX11-NEXT:  .LBB4_4:
 ; GFX11-NEXT:    s_endpgm
 bb:
   %getelementptr = getelementptr i8, ptr addrspace(1) %arg, i32 %arg1
