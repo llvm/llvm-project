@@ -53,7 +53,8 @@ static LogicalResult storeLoadPreconditions(PatternRewriter &rewriter,
                                             MemRefType memTy) {
   // Validate only vector as the basic vector store and load ops guarantee
   // XeGPU-compatible memref source.
-  unsigned vecRank = vecTy.getRank();
+  int64_t vecRank =
+      vecTy.getShape().drop_while([](int64_t d) { return d == 1; }).size();
   if (!(vecRank == 1 || vecRank == 2))
     return rewriter.notifyMatchFailure(op, "Expects 1D or 2D vector");
 
@@ -549,6 +550,29 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       return failure();
     auto readMemTy = cast<MemRefType>(readOp.getShapedType());
     VectorType loadedVecTy = readOp.getVectorType();
+    std::function<Operation *(Operation *)> castResult = [](Operation *op) {
+      return op;
+    };
+    // Strip leading unit dims up to rank-2
+    if (loadedVecTy.getRank() > 2) {
+      auto shape = loadedVecTy.getShape().drop_back(2);
+      size_t numLeading = 0;
+      while (numLeading < shape.size() && shape[numLeading] == 1)
+        ++numLeading;
+      if (numLeading > 0) {
+        loadedVecTy =
+            VectorType::get(loadedVecTy.getShape().drop_front(numLeading),
+                            loadedVecTy.getElementType());
+        castResult = [&rewriter, &loc, numLeading](Operation *op) {
+          auto result = op->getResult(0);
+          auto ty = cast<VectorType>(result.getType());
+          SmallVector<int64_t> shape(numLeading, 1);
+          shape.append(ty.getShape().begin(), ty.getShape().end());
+          ty = VectorType::get(shape, ty.getElementType());
+          return vector::ShapeCastOp::create(rewriter, loc, ty, result);
+        };
+      }
+    }
     bool isOutOfBounds = readOp.hasOutOfBoundsDim();
     // Check if the memref has address space 3 (shared local memory)
     bool isSharedMemory = xegpu::XeGPUDialect::isSharedMemory(readMemTy);
@@ -582,7 +606,7 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
           rewriter, loc, loadedVecTy, createMemDescOp.getResult(), indices,
           /*layout=*/nullptr);
 
-      rewriter.replaceOp(readOp, loadMatrixOp.getResult());
+      rewriter.replaceOp(readOp, castResult(loadMatrixOp.getOperation()));
       return success();
     }
 
@@ -591,7 +615,7 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     // Lower to scattered load Op if the target HW doesn't have 2d block load
     // support and the load is not from shared memory.
     if ((chip != "pvc" && chip != "bmg" && chip != "cri") ||
-        readOp.getVectorType().getRank() > 2) {
+        loadedVecTy.getRank() > 2) {
 
       // TODO: add support for OutOfBound access
       if (isOutOfBounds)
@@ -669,7 +693,7 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       loadedOp = vector::TransposeOp::create(rewriter, loc,
                                              loadedOp->getResult(0), perm);
     }
-    rewriter.replaceOp(readOp, loadedOp);
+    rewriter.replaceOp(readOp, castResult(loadedOp));
 
     return success();
   }
@@ -691,6 +715,20 @@ struct TransferWriteLowering
     // Check if the memref has address space 3 (shared local memory)
     bool isSharedMemory = xegpu::XeGPUDialect::isSharedMemory(writeMemTy);
 
+    // Strip leading unit dims up to rank-2.
+    Value writeVec = writeOp.getVector();
+    if (vecTy.getRank() > 2) {
+      auto shape = vecTy.getShape().drop_back(2);
+      size_t numLeading = 0;
+      while (numLeading < shape.size() && shape[numLeading] == 1)
+        ++numLeading;
+      if (numLeading > 0) {
+        vecTy = VectorType::get(vecTy.getShape().drop_front(numLeading),
+                                vecTy.getElementType());
+        writeVec = vector::ShapeCastOp::create(rewriter, loc, vecTy, writeVec);
+      }
+    }
+
     // For shared local memory (address space 3), use create_mem_desc +
     // store_matrix
     if (isSharedMemory) {
@@ -711,7 +749,7 @@ struct TransferWriteLowering
       SmallVector<OpFoldResult> indices =
           getAsOpFoldResult(writeOp.getIndices());
 
-      xegpu::StoreMatrixOp::create(rewriter, loc, writeOp.getVector(),
+      xegpu::StoreMatrixOp::create(rewriter, loc, writeVec,
                                    createMemDescOp.getResult(), indices,
                                    /*layout=*/nullptr);
 
@@ -724,7 +762,7 @@ struct TransferWriteLowering
     // Lower to scattered store Op if the target HW doesn't have 2d block
     // store support and the memref is not SLM.
     if ((chip != "pvc" && chip != "bmg" && chip != "cri") ||
-        writeOp.getVectorType().getRank() > 2) {
+        vecTy.getRank() > 2) {
 
       // TODO: add support for OutOfBound access
       if (writeOp.hasOutOfBoundsDim())
@@ -752,11 +790,11 @@ struct TransferWriteLowering
     xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
         rewriter, loc, descType, dyn_cast<TypedValue<MemRefType>>(src));
 
-    auto storeOp = xegpu::StoreNdOp::create(rewriter, loc, writeOp.getVector(),
-                                            ndDesc, indices,
-                                            /*l1_hint=*/hint,
-                                            /*l2_hint=*/hint, /*l3_hint=*/hint,
-                                            /*layout=*/nullptr);
+    auto storeOp =
+        xegpu::StoreNdOp::create(rewriter, loc, writeVec, ndDesc, indices,
+                                 /*l1_hint=*/hint,
+                                 /*l2_hint=*/hint, /*l3_hint=*/hint,
+                                 /*layout=*/nullptr);
     rewriter.replaceOp(writeOp, storeOp);
 
     return success();
