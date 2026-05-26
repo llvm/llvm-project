@@ -2788,16 +2788,8 @@ void JumpThreadingPass::unfoldSelectInstr(BasicBlock *Pred, BasicBlock *BB,
   // Move the unconditional branch to NewBB.
   PredTerm->removeFromParent();
   PredTerm->insertInto(NewBB, NewBB->end());
-  // A select with an undef or poison condition does not immediately cause UB,
-  // but branching on undef or poison does. Freeze the condition if needed
-  // before using it as a branch input.
-  Value *Cond = SI->getCondition();
-  if (!isGuaranteedNotToBeUndefOrPoison(Cond, nullptr, SI)) {
-    Cond = new FreezeInst(Cond, "cond.fr", SI->getIterator());
-    cast<FreezeInst>(Cond)->setDebugLoc(DebugLoc::getTemporary());
-  }
   // Create a conditional branch and update PHI nodes.
-  auto *BI = CondBrInst::Create(Cond, NewBB, BB, Pred);
+  auto *BI = CondBrInst::Create(SI->getCondition(), NewBB, BB, Pred);
   BI->applyMergedLocation(PredTerm->getDebugLoc(), SI->getDebugLoc());
   BI->copyMetadata(*SI, {LLVMContext::MD_prof});
   SIUse->setIncomingValue(Idx, SI->getFalseValue());
