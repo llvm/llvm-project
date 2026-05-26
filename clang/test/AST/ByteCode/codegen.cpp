@@ -27,7 +27,7 @@ S s;
 // CHECK: @sp = constant ptr getelementptr (i8, ptr @s, i64 16), align 8
 float &sp = s.c[3];
 
-// CHECK: @PR9558 = global float 0.000000e+0
+// CHECK: @PR9558 = global float 0.000000e+00
 float PR9558 = reinterpret_cast<const float&>("asd");
 // CHECK: @i = constant ptr @PR9558
 int &i = reinterpret_cast<int&>(PR9558);

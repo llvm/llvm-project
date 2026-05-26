@@ -330,6 +330,7 @@ public:
     if (!TheBucket)
       return false; // not in map.
 
+    incrementEpoch();
     TheBucket->getSecond().~ValueT();
     TheBucket->getFirst() = KeyInfoT::getTombstoneKey();
     decrementNumEntries();
@@ -338,10 +339,38 @@ public:
   }
   void erase(iterator I) {
     BucketT *TheBucket = &*I;
+    incrementEpoch();
     TheBucket->getSecond().~ValueT();
     TheBucket->getFirst() = KeyInfoT::getTombstoneKey();
     decrementNumEntries();
     incrementNumTombstones();
+  }
+
+  /// Remove entries that match the given predicate. \p Pred is invoked
+  /// with a reference to each live bucket and must not access the map being
+  /// modified. This is the safe replacement for erase-while-iterating.
+  ///
+  /// Returns whether anything was removed. If so, all iterators and references
+  /// into the map are invalidated.
+  template <typename Predicate> bool remove_if(Predicate Pred) {
+    const KeyT EmptyKey = KeyInfoT::getEmptyKey();
+    const KeyT TombstoneKey = KeyInfoT::getTombstoneKey();
+    bool Removed = false;
+    for (BucketT &B : buckets()) {
+      if (KeyInfoT::isEqual(B.getFirst(), EmptyKey) ||
+          KeyInfoT::isEqual(B.getFirst(), TombstoneKey))
+        continue;
+      if (Pred(B)) {
+        B.getSecond().~ValueT();
+        B.getFirst() = TombstoneKey;
+        decrementNumEntries();
+        incrementNumTombstones();
+        Removed = true;
+      }
+    }
+    if (Removed)
+      incrementEpoch();
+    return Removed;
   }
 
   ValueT &operator[](const KeyT &Key) {
@@ -1033,13 +1062,6 @@ private:
     // Note that this cast does not violate aliasing rules as we assert that
     // the memory's dynamic type is the small, inline bucket buffer, and the
     // 'storage' is a POD containing a char buffer.
-#if defined(__clang__) &&                                                      \
-    (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_HWADDRESS__))
-    // Unless it's a sanitizer with container overflow detection. In this case
-    // some items in buckets can be partially poisoned, triggering sanitizer
-    // report on load.
-    __asm__ volatile("" ::: "memory");
-#endif
     return reinterpret_cast<const BucketT *>(&storage);
   }
 
@@ -1051,10 +1073,6 @@ private:
   const LargeRep *getLargeRep() const {
     assert(!Small);
     // Note, same rule about aliasing as with getInlineBuckets.
-#if defined(__clang__) &&                                                      \
-    (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_HWADDRESS__))
-    __asm__ volatile("" ::: "memory");
-#endif
     return reinterpret_cast<const LargeRep *>(&storage);
   }
 

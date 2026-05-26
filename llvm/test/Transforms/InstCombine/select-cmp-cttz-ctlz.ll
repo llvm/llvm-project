@@ -3,7 +3,7 @@
 
 ; This test is to verify that the instruction combiner is able to fold
 ; a cttz/ctlz followed by a icmp + select into a single cttz/ctlz with
-; the 'is_zero_undef' flag cleared.
+; the 'is_zero_poison' flag cleared.
 
 define i16 @test1(i16 %x) {
 ; CHECK-LABEL: @test1(

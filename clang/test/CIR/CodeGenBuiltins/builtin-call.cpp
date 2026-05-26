@@ -14,14 +14,14 @@ constexpr extern int cx_var = __builtin_is_constant_evaluated();
 constexpr extern float cx_var_single = __builtin_huge_valf();
 
 // CIR: cir.global {{.*}} @cx_var_single = #cir.fp<0x7F800000> : !cir.float
-// LLVM: @cx_var_single = {{.*}} float 0x7FF0000000000000
-// OGCG: @cx_var_single = {{.*}} float 0x7FF0000000000000
+// LLVM: @cx_var_single = {{.*}} float +inf
+// OGCG: @cx_var_single = {{.*}} float +inf
 
 constexpr extern long double cx_var_ld = __builtin_huge_vall();
 
 // CIR: cir.global {{.*}} @cx_var_ld = #cir.fp<0x7FFF8000000000000000> : !cir.long_double<!cir.f80>
-// LLVM: @cx_var_ld = {{.*}} x86_fp80 0xK7FFF8000000000000000
-// OGCG: @cx_var_ld = {{.*}} x86_fp80 0xK7FFF8000000000000000
+// LLVM: @cx_var_ld = {{.*}} x86_fp80 +inf
+// OGCG: @cx_var_ld = {{.*}} x86_fp80 +inf
 
 bool is_constant_evaluated() {
   return __builtin_is_constant_evaluated();
@@ -51,13 +51,13 @@ long double constant_fp_builtin_ld() {
 
 // LLVM: define {{.*}}x86_fp80 @_Z22constant_fp_builtin_ldv()
 // LLVM: %[[MEM:.+]] = alloca x86_fp80
-// LLVM: store x86_fp80 0xK3FFBCCCCCCCCCCCCCCCD, ptr %[[MEM]]
+// LLVM: store x86_fp80 1.000000e-01, ptr %[[MEM]]
 // LLVM: %[[RETVAL:.+]] = load x86_fp80, ptr %[[MEM]]
 // LLVM: ret x86_fp80 %[[RETVAL]]
 // LLVM: }
 
 // OGCG: define {{.*}}x86_fp80 @_Z22constant_fp_builtin_ldv()
-// OGCG: ret x86_fp80 0xK3FFBCCCCCCCCCCCCCCCD
+// OGCG: ret x86_fp80 1.000000e-01
 // OGCG: }
 
 float constant_fp_builtin_single() {
@@ -69,13 +69,13 @@ float constant_fp_builtin_single() {
 
 // LLVM: define {{.*}}float @_Z26constant_fp_builtin_singlev()
 // LLVM: %[[MEM:.+]] = alloca float
-// LLVM: store float 0x3FB99999A0000000, ptr %[[MEM]]
+// LLVM: store float 1.000000e-01, ptr %[[MEM]]
 // LLVM: %[[RETVAL:.+]] = load float, ptr %[[MEM]]
 // LLVM: ret float %[[RETVAL]]
 // LLVM: }
 
 // OGCG: define {{.*}}float @_Z26constant_fp_builtin_singlev()
-// OGCG: ret float 0x3FB99999A0000000
+// OGCG: ret float 1.000000e-01
 // OGCG: }
 
 void library_builtins() {
@@ -117,7 +117,7 @@ void *assume_aligned(void *ptr) {
 }
 
 // CIR: @_Z14assume_alignedPv
-// CIR:   %{{.+}} = cir.assume_aligned %{{.+}} alignment 16 : !cir.ptr<!void>
+// CIR:   cir.assume %{{.+}} align(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i) : !cir.bool
 // CIR: }
 
 // LLVM: @_Z14assume_alignedPv
@@ -133,7 +133,7 @@ void *assume_aligned_misalignment(void *ptr, unsigned misalignment) {
 }
 
 // CIR: @_Z27assume_aligned_misalignmentPvj
-// CIR:   %{{.+}} = cir.assume_aligned %{{.+}} alignment 16[offset %{{.+}} : !u64i] : !cir.ptr<!void>
+// CIR:   cir.assume %{{.+}} align(%{{.+}}, %{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i, !u64i) : !cir.bool
 // CIR: }
 
 // LLVM: @_Z27assume_aligned_misalignmentPvj
@@ -149,7 +149,7 @@ void assume_separate_storage(void *p1, void *p2) {
 }
 
 // CIR: cir.func{{.*}} @_Z23assume_separate_storagePvS_
-// CIR:   cir.assume_separate_storage %{{.+}}, %{{.+}} : !cir.ptr<!void>
+// CIR:   cir.assume %{{.+}} separate_storage(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !cir.ptr<!void>) : !cir.bool
 // CIR: }
 
 // LLVM: define {{.*}}void @_Z23assume_separate_storagePvS_
@@ -158,6 +158,54 @@ void assume_separate_storage(void *p1, void *p2) {
 
 // OGCG: define {{.*}}void @_Z23assume_separate_storagePvS_
 // OGCG:   call void @llvm.assume(i1 true) [ "separate_storage"(ptr %{{.+}}, ptr %{{.+}}) ]
+// OGCG: }
+
+void assume_dereferenceable(void *p, unsigned long n) {
+  __builtin_assume_dereferenceable(p, n);
+}
+
+// CIR: cir.func{{.*}} @_Z22assume_dereferenceablePvm
+// CIR:   cir.assume %{{.+}} dereferenceable(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i) : !cir.bool
+// CIR: }
+
+// LLVM: define {{.*}}void @_Z22assume_dereferenceablePvm
+// LLVM:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 %{{.+}}) ]
+// LLVM: }
+
+// OGCG: define {{.*}}void @_Z22assume_dereferenceablePvm
+// OGCG:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 %{{.+}}) ]
+// OGCG: }
+
+void assume_dereferenceable_const(void *p) {
+  __builtin_assume_dereferenceable(p, 16);
+}
+
+// CIR: cir.func{{.*}} @_Z28assume_dereferenceable_constPv
+// CIR:   cir.assume %{{.+}} dereferenceable(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i) : !cir.bool
+// CIR: }
+
+// LLVM: define {{.*}}void @_Z28assume_dereferenceable_constPv
+// LLVM:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 16) ]
+// LLVM: }
+
+// OGCG: define {{.*}}void @_Z28assume_dereferenceable_constPv
+// OGCG:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 16) ]
+// OGCG: }
+
+void assume_dereferenceable_narrow_size(void *p, unsigned n) {
+  __builtin_assume_dereferenceable(p, n);
+}
+
+// CIR: cir.func{{.*}} @_Z34assume_dereferenceable_narrow_sizePvj
+// CIR:   cir.assume %{{.+}} dereferenceable(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i) : !cir.bool
+// CIR: }
+
+// LLVM: define {{.*}}void @_Z34assume_dereferenceable_narrow_sizePvj
+// LLVM:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 %{{.+}}) ]
+// LLVM: }
+
+// OGCG: define {{.*}}void @_Z34assume_dereferenceable_narrow_sizePvj
+// OGCG:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 %{{.+}}) ]
 // OGCG: }
 
 void expect(int x, int y) {

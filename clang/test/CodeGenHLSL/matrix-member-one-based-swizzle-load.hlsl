@@ -6,6 +6,7 @@
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z17ReturnOnesSwizzleu11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -19,6 +20,7 @@ int4 ReturnOnesSwizzle(int4x4 A) {
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z18ReturnOnesSwizzle2u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -32,6 +34,7 @@ int4 ReturnOnesSwizzle2(int4x4 A) {
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z17ReturnTwosSwizzleu11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -45,6 +48,7 @@ int4 ReturnTwosSwizzle(int4x4 A) {
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z18ReturnTwosSwizzle2u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -58,6 +62,7 @@ int4 ReturnTwosSwizzle2(int4x4 A) {
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z19ReturnThreesSwizzleu11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -71,6 +76,7 @@ int4 ReturnThreesSwizzle(int4x4 A) {
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z20ReturnThreesSwizzle2u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -84,6 +90,7 @@ int4 ReturnThreesSwizzle2(int4x4 A) {
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z18ReturnFoursSwizzleu11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -97,6 +104,7 @@ int4 ReturnFoursSwizzle(int4x4 A) {
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z19ReturnFoursSwizzle2u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
