@@ -942,7 +942,9 @@ bool Linux::IsMathErrnoDefault() const {
   return Generic_ELF::IsMathErrnoDefault();
 }
 
-SanitizerMask Linux::getSupportedSanitizers() const {
+SanitizerMask
+Linux::getSupportedSanitizers(StringRef BoundArch,
+                              Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   const bool IsMIPS = getTriple().isMIPS32();
@@ -960,7 +962,8 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   const bool IsSystemZ = getTriple().getArch() == llvm::Triple::systemz;
   const bool IsHexagon = getTriple().getArch() == llvm::Triple::hexagon;
   const bool IsAndroid = getTriple().isAndroid();
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;

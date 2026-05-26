@@ -72,6 +72,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
     return !cast<VPWidenCallRecipe>(this)
                 ->getCalledScalarFunction()
                 ->onlyReadsMemory();
+  case VPWidenMemIntrinsicSC:
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
   case VPActiveLaneMaskPHISC:
@@ -124,6 +125,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
     return !cast<VPWidenCallRecipe>(this)
                 ->getCalledScalarFunction()
                 ->onlyWritesMemory();
+  case VPWidenMemIntrinsicSC:
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayReadFromMemory();
   case VPBranchOnMaskSC:
@@ -183,6 +185,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     Function *Fn = cast<VPWidenCallRecipe>(this)->getCalledScalarFunction();
     return mayWriteToMemory() || !Fn->doesNotThrow() || !Fn->willReturn();
   }
+  case VPWidenMemIntrinsicSC:
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayHaveSideEffects();
   case VPBlendSC:
@@ -1935,7 +1938,7 @@ void VPWidenCallRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
+CallInst *VPWidenIntrinsicRecipe::createVectorCall(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
 
   SmallVector<Type *, 2> TysForDecl;
@@ -1983,6 +1986,11 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   applyFlags(*V);
   applyMetadata(*V);
 
+  return V;
+}
+
+void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
+  CallInst *V = createVectorCall(State);
   if (!V->getType()->isVoidTy())
     State.set(this, V);
 }
@@ -2070,6 +2078,30 @@ void VPWidenIntrinsicRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << ")";
 }
 #endif
+
+void VPWidenMemIntrinsicRecipe::execute(VPTransformState &State) {
+  CallInst *MemI = createVectorCall(State);
+  MemI->addParamAttr(
+      0, Attribute::getWithAlignment(MemI->getContext(), Alignment));
+  State.set(this, MemI);
+}
+
+InstructionCost VPWidenMemIntrinsicRecipe::computeMemIntrinsicCost(
+    Intrinsic::ID IID, Type *Ty, bool IsMasked, Align Alignment,
+    VPCostContext &Ctx) {
+  return Ctx.TTI.getMemIntrinsicInstrCost(
+      MemIntrinsicCostAttributes(IID, Ty, /*Ptr=*/nullptr, IsMasked, Alignment),
+      Ctx.CostKind);
+}
+
+InstructionCost
+VPWidenMemIntrinsicRecipe::computeCost(ElementCount VF,
+                                       VPCostContext &Ctx) const {
+  Type *Ty = toVectorTy(getScalarType(), VF);
+  return computeMemIntrinsicCost(getVectorIntrinsicID(), Ty,
+                                 !match(getOperand(2), m_True()), Alignment,
+                                 Ctx);
+}
 
 void VPHistogramRecipe::execute(VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
@@ -2834,11 +2866,18 @@ void VPVectorEndPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPVectorPointerRecipe::execute(VPTransformState &State) {
+  assert(getVFxPart() &&
+         "Expected prior simplification of recipe without VFxPart");
+
   auto &Builder = State.Builder;
-  assert(getOffset() &&
-         "Expected prior simplification of recipe without offset");
   Value *Ptr = State.get(getOperand(0), VPLane(0));
-  Value *Offset = State.get(getOffset(), true);
+  Value *Offset = State.get(getVFxPart(), true);
+  // TODO: Expand to VPInstruction to support constant folding.
+  if (!match(getStride(), m_One())) {
+    Value *Stride = Builder.CreateZExtOrTrunc(State.get(getStride(), true),
+                                              Offset->getType());
+    Offset = Builder.CreateMul(Offset, Stride);
+  }
   Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, Offset, "",
                                        getGEPNoWrapFlags());
   State.set(this, ResultPtr, /*IsScalar*/ true);
@@ -3137,8 +3176,16 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
                                           Ctx.CostKind);
 
   case ExpressionTypes::ExtNegatedMulAccReduction:
-    assert(Opcode == Instruction::Add && "Unexpected opcode");
-    Opcode = Instruction::Sub;
+    switch (Opcode) {
+    case Instruction::Add:
+      Opcode = Instruction::Sub;
+      break;
+    case Instruction::FAdd:
+      Opcode = Instruction::FSub;
+      break;
+    default:
+      llvm_unreachable("Unsupported opcode for ExtNegatedMulAccReduction");
+    }
     [[fallthrough]];
   case ExpressionTypes::ExtMulAccReduction: {
     auto *RedR = cast<VPReductionRecipe>(ExpressionRecipes.back());
@@ -3157,6 +3204,7 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
           RedTy->isFloatingPointTy() ? std::optional{RedR->getFastMathFlags()}
                                      : std::nullopt);
     }
+    assert(Opcode != Instruction::FSub && "Only integer types are supported");
     return Ctx.TTI.getMulAccReductionCost(
         cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
             Instruction::ZExt,
@@ -3180,9 +3228,7 @@ bool VPExpressionRecipe::mayHaveSideEffects() const {
   return false;
 }
 
-bool VPExpressionRecipe::isSingleScalar() const {
-  // Cannot use vputils::isSingleScalar(), because all external operands
-  // of the expression will be live-ins while bundled.
+bool VPExpressionRecipe::isVectorToScalar() const {
   auto *RR = dyn_cast<VPReductionRecipe>(ExpressionRecipes.back());
   return RR && !RR->isPartialReduction();
 }
@@ -3328,9 +3374,9 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
          "VPReplicateRecipes must be unrolled before ::execute");
   auto *Instr = getUnderlyingInstr();
   Instruction *Cloned = Instr->clone();
-  if (!Instr->getType()->isVoidTy()) {
+  Type *ResultTy = State.TypeAnalysis.inferScalarType(this);
+  if (!ResultTy->isVoidTy()) {
     Cloned->setName(Instr->getName() + ".cloned");
-    Type *ResultTy = State.TypeAnalysis.inferScalarType(this);
     // The operands of the replicate recipe may have been narrowed, resulting in
     // a narrower result type. Update the type of the cloned instruction to the
     // correct type.
@@ -3374,13 +3420,14 @@ static const SCEV *getAddressAccessSCEV(const VPValue *Ptr,
   return vputils::isAddressSCEVForCost(Addr, *PSE.getSE(), L) ? Addr : nullptr;
 }
 
-/// Return true if \p R is a predicated load/store with a loop-invariant address
+/// Return true if \p R is a predicated store with a loop-invariant address
 /// only masked by the header mask.
 static bool isPredicatedUniformMemOpAfterTailFolding(const VPReplicateRecipe &R,
                                                      const SCEV *PtrSCEV,
                                                      VPCostContext &Ctx) {
   const VPRegionBlock *ParentRegion = R.getRegion();
-  if (!ParentRegion || !ParentRegion->isReplicator() || !PtrSCEV ||
+  if (R.getOpcode() != Instruction::Store || !ParentRegion ||
+      !ParentRegion->isReplicator() || !PtrSCEV ||
       !Ctx.PSE.getSE()->isLoopInvariant(PtrSCEV, Ctx.L))
     return false;
   auto *BOM =
@@ -3497,20 +3544,14 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo,
         UsedByLoadStoreAddress ? UI : nullptr);
 
-    // Check if this is a predicated load/store with a loop-invariant address
-    // only masked by the header mask. If so, return the uniform mem op cost.
+    // Check if this is a predicated store with a loop-invariant address only
+    // masked by the header mask. If so, return the uniform mem op cost.
     if (isPredicatedUniformMemOpAfterTailFolding(*this, PtrSCEV, Ctx)) {
       InstructionCost UniformCost =
           ScalarMemOpCost +
           Ctx.TTI.getAddressComputationCost(ScalarPtrTy, /*SE=*/nullptr,
                                             /*Ptr=*/nullptr, Ctx.CostKind);
       auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
-      if (IsLoad) {
-        return UniformCost +
-               Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast,
-                                      VectorTy, VectorTy, {}, Ctx.CostKind);
-      }
-
       VPValue *StoredVal = getOperand(0);
       if (!StoredVal->isDefinedOutsideLoopRegions())
         UniformCost += Ctx.TTI.getIndexedVectorInstrCostFromEnd(
@@ -3636,7 +3677,8 @@ void VPReplicateRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                     VPSlotTracker &SlotTracker) const {
   O << Indent << (IsSingleScalar ? "CLONE " : "REPLICATE ");
 
-  if (!getUnderlyingInstr()->getType()->isVoidTy()) {
+  VPTypeAnalysis TypeInfo(*getParent()->getPlan());
+  if (!TypeInfo.inferScalarType(this)->isVoidTy()) {
     printAsOperand(O, SlotTracker);
     O << " = ";
   }
@@ -4444,7 +4486,8 @@ void VPWidenCanonicalIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                            VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT ";
   printAsOperand(O, SlotTracker);
-  O << " = WIDEN-CANONICAL-INDUCTION ";
+  O << " = WIDEN-CANONICAL-INDUCTION";
+  printFlags(O);
   printOperands(O, SlotTracker);
 }
 #endif
