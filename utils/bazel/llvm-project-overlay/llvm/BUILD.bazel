@@ -1304,6 +1304,7 @@ cc_library(
         "lib/Object/*.h",
     ]),
     hdrs = glob([
+        "include/llvm/Object/*.def",
         "include/llvm/Object/*.h",
     ]) + [
         "include/llvm-c/Object.h",
