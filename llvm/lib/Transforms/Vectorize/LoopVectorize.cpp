@@ -5751,12 +5751,23 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   if (!MaxFactors) // Cases that should not to be vectorized nor interleaved.
     return;
 
+  Config.collectInLoopReductions();
+  // Cases that may be vectorized may be optimized by unit stride predicates.
+  // TODO: Currently unit stride predicates are added unconditionally, even if
+  // they are not used for the selected VF (e.g. when only interleaving).
+  if (MaxFactors.FixedVF.isVector() || MaxFactors.ScalableVF.isVector())
+    Legal->collectUnitStridePredicates();
+
+  auto VPlan1 = tryToBuildVPlan1();
+  if (!VPlan1)
+    return;
+
   if (!OrigLoop->isInnermost()) {
     // For outer loops, computeMaxVF returns a single non-scalar VF; build a
-    // plan for only that VF.
+    // plan for that VF only.
     ElementCount VF =
         MaxFactors.FixedVF ? MaxFactors.FixedVF : MaxFactors.ScalableVF;
-    buildVPlans(VF, VF);
+    buildVPlans(*VPlan1, VF, VF);
     LLVM_DEBUG(printPlans(dbgs()));
     return;
   }
@@ -5782,12 +5793,6 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   if (CM.foldTailByMasking())
     Legal->prepareToFoldTailByMasking();
 
-  // Cases that may be vectorized may be optimized by unit stride predicates.
-  // TODO: Currently unit stride predicates are added unconditionally, even if
-  // they are not used for the selected VF (e.g. when only interleaving).
-  if (MaxFactors.FixedVF.isVector() || MaxFactors.ScalableVF.isVector())
-    Legal->collectUnitStridePredicates();
-
   ElementCount MaxUserVF =
       UserVF.isScalable() ? MaxFactors.ScalableVF : MaxFactors.FixedVF;
   if (UserVF) {
@@ -5800,16 +5805,15 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
              "VF needs to be a power of two");
       // Collect the instructions (and their associated costs) that will be more
       // profitable to scalarize.
-      Config.collectInLoopReductions();
       CM.collectNonVectorizedAndSetWideningDecisions(UserVF);
       ElementCount EpilogueUserVF =
           ElementCount::getFixed(EpilogueVectorizationForceVF);
       if (EpilogueUserVF.isVector() &&
           ElementCount::isKnownLT(EpilogueUserVF, UserVF)) {
         CM.collectNonVectorizedAndSetWideningDecisions(EpilogueUserVF);
-        buildVPlans(EpilogueUserVF, EpilogueUserVF);
+        buildVPlans(*VPlan1, EpilogueUserVF, EpilogueUserVF);
       }
-      buildVPlans(UserVF, UserVF);
+      buildVPlans(*VPlan1, UserVF, UserVF);
       if (!VPlans.empty() && VPlans.back()->getSingleVF() == UserVF) {
         // For scalar VF, skip VPlan cost check as VPlan cost is designed for
         // vector VFs only.
@@ -5835,14 +5839,13 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
        ElementCount::isKnownLE(VF, MaxFactors.ScalableVF); VF *= 2)
     VFCandidates.push_back(VF);
 
-  Config.collectInLoopReductions();
   for (const auto &VF : VFCandidates) {
     // Collect Uniform and Scalar instructions after vectorization with VF.
     CM.collectNonVectorizedAndSetWideningDecisions(VF);
   }
 
-  buildVPlans(ElementCount::getFixed(1), MaxFactors.FixedVF);
-  buildVPlans(ElementCount::getScalable(1), MaxFactors.ScalableVF);
+  buildVPlans(*VPlan1, ElementCount::getFixed(1), MaxFactors.FixedVF);
+  buildVPlans(*VPlan1, ElementCount::getScalable(1), MaxFactors.ScalableVF);
 
   LLVM_DEBUG(printPlans(dbgs()));
 }
@@ -6785,11 +6788,7 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
 // optimizations.
 static void printOptimizedVPlan(VPlan &) {}
 
-void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
-                                           ElementCount MaxVF) {
-  if (ElementCount::isKnownGT(MinVF, MaxVF))
-    return;
-
+VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   bool IsInnerLoop = OrigLoop->isInnermost();
 
   // Set up loop versioning for inner loops with memory runtime checks.
@@ -6820,8 +6819,9 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
                       *OrigLoop, Legal->getInductionVars(),
                       Legal->getReductionVars(),
                       Legal->getFixedOrderRecurrences(),
-                      Config.getInLoopReductions(), Hints.allowReordering()))
-    return;
+                      Config.getInLoopReductions(), Hints.allowReordering())) {
+    return nullptr;
+  }
 
   if (const LoopAccessInfo *LAI = Legal->getLAI())
     RUN_VPLAN_PASS(VPlanTransforms::replaceSymbolicStrides, *VPlan0, PSE,
@@ -6840,7 +6840,7 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
                                     : VectorizeSCEVCheckThreshold;
   if (!RUN_VPLAN_PASS(VPlanTransforms::finalizeSCEVPredicates, *VPlan0, PSE,
                       OptForSize, SCEVCheckThreshold, ORE, OrigLoop))
-    return;
+    return nullptr;
 
   // If we're vectorizing a loop with an uncountable exit, make sure that the
   // recipes are safe to handle.
@@ -6854,8 +6854,9 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
                   : UncountableExitStyle::ReadOnly;
 
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleEarlyExits, *VPlan0, EEStyle,
-                      OrigLoop, PSE, *DT, Legal->getAssumptionCache()))
-    return;
+                      OrigLoop, PSE, *DT, Legal->getAssumptionCache())) {
+    return nullptr;
+  }
 
   RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0,
                  CM.foldTailByMasking());
@@ -6865,11 +6866,19 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
     RUN_VPLAN_PASS(VPlanTransforms::foldTailByMasking, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::introduceMasksAndLinearize, *VPlan0);
 
+  return VPlan0;
+}
+
+void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
+                                           ElementCount MaxVF) {
+  if (ElementCount::isKnownGT(MinVF, MaxVF))
+    return;
+
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
     auto Plan =
-        tryToBuildVPlan(std::unique_ptr<VPlan>(VPlan0->duplicate()), SubRange);
+        tryToBuildVPlan(std::unique_ptr<VPlan>(VPlan1.duplicate()), SubRange);
     VF = SubRange.End;
 
     if (!Plan)

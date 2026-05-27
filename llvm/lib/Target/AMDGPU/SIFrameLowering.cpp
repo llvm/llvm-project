@@ -409,8 +409,7 @@ class PrologEpilogSGPRSpillBuilder {
     if (NeedsFrameMoves) {
       const TargetRegisterClass *RC = TRI.getPhysRegBaseClass(DstReg);
       ArrayRef<int16_t> DstSplitParts = TRI.getRegSplitParts(RC, EltSize);
-      unsigned DstNumSubRegs = DstSplitParts.empty() ? 1 : DstSplitParts.size();
-      assert(NumSubRegs == DstNumSubRegs);
+      assert(NumSubRegs == (DstSplitParts.empty() ? 1 : DstSplitParts.size()));
       MCRegister CFISuperReg = getCFISuperReg();
       if (NumSubRegs == 1) {
         TFI->buildCFI(
@@ -448,7 +447,7 @@ class PrologEpilogSGPRSpillBuilder {
 
     for (unsigned I = 0, DwordOff = 0; I < NumSubRegs; ++I) {
       MCRegister SubReg = NumSubRegs == 1
-                              ? MCRegister(SuperReg)
+                              ? SuperReg.asMCReg()
                               : TRI.getSubReg(SuperReg, SplitParts[I]);
 
       buildEpilogRestore(ST, TRI, *FuncInfo, LiveUnits, MF, MBB, MI, DL,
@@ -469,7 +468,7 @@ class PrologEpilogSGPRSpillBuilder {
 
     for (unsigned I = 0; I < NumSubRegs; ++I) {
       MCRegister SubReg = NumSubRegs == 1
-                              ? MCRegister(SuperReg)
+                              ? SuperReg.asMCReg()
                               : TRI.getSubReg(SuperReg, SplitParts[I]);
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::SI_RESTORE_S32_FROM_VGPR), SubReg)
           .addReg(Spill[I].VGPR)
