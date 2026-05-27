@@ -456,8 +456,7 @@ public:
   bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
                      Position Pos) const {
-    bool Changed = false;
-    Changed |= insertWriteback(MI, Scope, AddrSpace, Pos);
+    bool Changed = insertWriteback(MI, Scope, AddrSpace, Pos);
     Changed |= insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
                           IsCrossAddrSpaceOrdering, Pos,
                           AtomicOrdering::Release, /*AtomicsOnly=*/false);
