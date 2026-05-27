@@ -1242,8 +1242,7 @@ void ProfiledBinary::loadSymbolsFromPseudoProbe() {
           InlineTreeNode = static_cast<MCDecodedPseudoProbeInlineTree *>(
               InlineTreeNode->Parent);
 
-        auto TopLevelProbes = InlineTreeNode->getProbes();
-        assert(llvm::any_of(TopLevelProbes,
+        assert(llvm::any_of(InlineTreeNode->getProbes(),
                             [Start = StartAddr, End = EndAddr](const auto &P) {
                               return P.getAddress() >= Start &&
                                      P.getAddress() < End;
