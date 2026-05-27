@@ -458,8 +458,8 @@ public:
   /// Inserts writeback (unless \p IsAVNone) followed by an unconditional wait.
   bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
-                     Position Pos) const {
-    bool Changed = insertWriteback(MI, Scope, AddrSpace, Pos);
+                     Position Pos, bool IsAVNone) const {
+    bool Changed = !IsAVNone && insertWriteback(MI, Scope, AddrSpace, Pos);
     Changed |= insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
                           IsCrossAddrSpaceOrdering, Pos,
                           AtomicOrdering::Release, /*AtomicsOnly=*/false);
@@ -735,11 +735,29 @@ getSynchronizeAddrSpaceMD(const MachineInstr &MI) {
   return Result;
 }
 
+static void diagnoseUnknownAVMetadata(const MachineInstr &MI,
+                                      StringRef Suffix) {
+  const MachineFunction *MF = MI.getMF();
+  const Function &Fn = MF->getFunction();
+  SmallString<128> Str;
+  raw_svector_ostream OS(Str);
+  OS << "unknown amdgcn-av metadata '" << Suffix << '\'';
+  Fn.getContext().diagnose(
+      DiagnosticInfoUnsupported(Fn, Str.str(), MI.getDebugLoc(), DS_Warning));
+}
+
 static bool hasAVNoneMMRA(const MachineInstr &MI) {
   auto MMRA = MMRAMetadata(MI.getMMRAMetadata());
   if (!MMRA)
     return false;
-  return MMRA.hasTag("amdgcn-av", "none");
+  for (const auto &[Prefix, Suffix] : MMRA) {
+    if (Prefix != "amdgcn-av")
+      continue;
+    if (Suffix == "none")
+      return true;
+    diagnoseUnknownAVMetadata(MI, Suffix);
+  }
+  return false;
 }
 
 } // end anonymous namespace
