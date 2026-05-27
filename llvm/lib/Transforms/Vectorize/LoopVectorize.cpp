@@ -5648,6 +5648,12 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   if (CM.foldTailByMasking())
     Legal->prepareToFoldTailByMasking();
 
+  // Cases that may be vectorized may be optimized by unit stride predicates.
+  // TODO: Currently unit stride predicates are added unconditionally, even if
+  // they are not used for the selected VF (e.g. when only interleaving).
+  if (MaxFactors.FixedVF.isVector() || MaxFactors.ScalableVF.isVector())
+    Legal->collectUnitStridePredicates();
+
   ElementCount MaxUserVF =
       UserVF.isScalable() ? MaxFactors.ScalableVF : MaxFactors.FixedVF;
   if (UserVF) {
@@ -6680,8 +6686,6 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
                    LAI->getSymbolicStrides());
   RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
-  RUN_VPLAN_PASS(VPlanTransforms::addCanonicalIVRecipes, *VPlan0,
-                 getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()));
   // If we're vectorizing a loop with an uncountable exit, make sure that the
   // recipes are safe to handle.
   // TODO: Remove this once we can properly check the VPlan itself for both
@@ -6699,7 +6703,8 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
 
   RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0,
                  CM.foldTailByMasking());
-  RUN_VPLAN_PASS(VPlanTransforms::createLoopRegions, *VPlan0);
+  RUN_VPLAN_PASS(VPlanTransforms::createLoopRegions, *VPlan0,
+                 getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()));
   if (CM.foldTailByMasking())
     RUN_VPLAN_PASS(VPlanTransforms::foldTailByMasking, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::introduceMasksAndLinearize, *VPlan0);
@@ -7081,34 +7086,40 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       NewPhiR->insertBefore(PhiR);
       VPValue *NewExiting = Builder.createOr(NewPhiR, Cmp);
 
-      // The exiting value may flow through a VPBlendRecipe and/or a wrapping
-      // VPInstruction::Select before reaching OrigExitingVPV. Clone each level
-      // of the chain with the i1 substitutions propagated through.
+      // The exiting value may flow through a chain of VPBlendRecipes and
+      // select recipes (VPInstruction, VPWidenRecipe or VPReplicateRecipe with
+      // Select opcode) before reaching OrigExitingVPV. Clone each chain link
+      // in topological order so each clone refers to the already-rewritten i1
+      // operands via Substitutions.
       DenseMap<VPValue *, VPValue *> Substitutions = {{AnyOfSelect, NewExiting},
                                                       {PhiR, NewPhiR}};
-      auto CloneWithSubstitutions = [&](VPSingleDefRecipe *Old) {
-        SmallVector<VPValue *> NewOps;
-        for (VPValue *Op : Old->operands())
-          NewOps.push_back(Substitutions.lookup_or(Op, Op));
-        VPSingleDefRecipe *New;
-        if (auto *B = dyn_cast<VPBlendRecipe>(Old))
-          New = B->cloneWithOperands(NewOps);
-        else
-          New = cast<VPInstruction>(Old)->cloneWithOperands(NewOps);
-        New->insertBefore(Old);
-        NewExiting = New;
-        Substitutions[Old] = New;
-      };
+      std::function<void(VPSingleDefRecipe *)> CloneChain =
+          [&](VPSingleDefRecipe *Old) {
+            if (Substitutions.contains(Old))
+              return;
+            SmallVector<VPValue *> NewOps;
+            for (VPValue *Op : Old->operands()) {
+              if (isa<VPBlendRecipe>(Op) ||
+                  match(Op, m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
+                CloneChain(cast<VPSingleDefRecipe>(Op));
+              NewOps.push_back(Substitutions.lookup_or(Op, Op));
+            }
+            VPSingleDefRecipe *New;
+            if (auto *B = dyn_cast<VPBlendRecipe>(Old))
+              New = B->cloneWithOperands(NewOps);
+            else if (auto *W = dyn_cast<VPWidenRecipe>(Old))
+              New = W->cloneWithOperands(NewOps);
+            else if (auto *Rep = dyn_cast<VPReplicateRecipe>(Old))
+              New = Rep->cloneWithOperands(NewOps);
+            else
+              New = cast<VPInstruction>(Old)->cloneWithOperands(NewOps);
+            New->insertBefore(Old);
+            Substitutions[Old] = New;
+          };
 
-      // If there's an outer Select wrapping a Blend, clone the inner Blend
-      // first so the outer Select clone can refer to it.
       if (OrigExitingVPV != AnyOfSelect) {
-        VPValue *Inner;
-        if (match(OrigExitingVPV,
-                  m_Select(m_VPValue(), m_VPValue(Inner), m_VPValue())))
-          if (auto *InnerBlend = dyn_cast<VPBlendRecipe>(Inner))
-            CloneWithSubstitutions(InnerBlend);
-        CloneWithSubstitutions(cast<VPSingleDefRecipe>(OrigExitingVPV));
+        CloneChain(cast<VPSingleDefRecipe>(OrigExitingVPV));
+        NewExiting = Substitutions.lookup(OrigExitingVPV);
       }
       NewPhiR->setOperand(1, NewExiting);
       PhiR->replaceAllUsesWith(

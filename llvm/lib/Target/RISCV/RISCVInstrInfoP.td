@@ -1845,6 +1845,12 @@ class PatGprSplatGpr<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT,
     : Pat<(VecVT (OpNode GPR:$rs1, (splat_vector (ScalarVT GPR:$rs2)))),
           (Inst GPR:$rs1, GPR:$rs2)>;
 
+// Similar to PatGprShiftMask, but without the mask. Shift amount is a scalar.
+class PatGprShift<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT,
+                  ValueType ScalarVT = XLenVT>
+    : Pat<(VecVT (OpNode (VecVT GPR:$rs1), (ScalarVT GPR:$rs2))),
+          (Inst GPR:$rs1, GPR:$rs2)>;
+
 // Pattern classes for GPRPair operations
 class PatGprPairGprPair<SDPatternOperator OpNode, RVInst Inst, ValueType vt>
     : Pat<(vt (OpNode (vt GPRPair:$rs1), (vt GPRPair:$rs2))),
@@ -1863,6 +1869,13 @@ class PatGprPairShiftMask<SDPatternOperator OpNode, RVInst Inst,
 class PatGprPairSplatGpr<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT,
                          ValueType ScalarVT = XLenVT>
     : Pat<(VecVT (OpNode GPRPair:$rs1, (splat_vector (ScalarVT GPR:$rs2)))),
+          (Inst GPRPair:$rs1, GPR:$rs2)>;
+
+// Similar to PatGprPairShiftMask, but without the mask. Shift amount is a
+// scalar.
+class PatGprPairShift<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT,
+                      ValueType ScalarVT = XLenVT>
+    : Pat<(VecVT (OpNode (VecVT GPRPair:$rs1), (ScalarVT GPR:$rs2))),
           (Inst GPRPair:$rs1, GPR:$rs2)>;
 
 def riscv_absw : RVSDNode<"ABSW", SDT_RISCVIntUnaryOpW>;
@@ -1934,7 +1947,7 @@ def SDT_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisVec<0>,
 def riscv_pshl : RVSDNode<"PSHL", SDT_RISCVPackedShift>;
 def riscv_psrl : RVSDNode<"PSRL", SDT_RISCVPackedShift>;
 def riscv_psra : RVSDNode<"PSRA", SDT_RISCVPackedShift>;
-def riscv_psslai : RVSDNode<"PSSLAI", SDT_RISCVPackedShift>;
+def riscv_pssha : RVSDNode<"PSSHA", SDT_RISCVPackedShift>;
 
 // The immediate for these is the number of trailing ones in the max value.
 def riscv_sati : RVSDNode<"SATI", SDTIntBinOp>;
@@ -2096,7 +2109,8 @@ let Predicates = [HasStdExtP] in {
   def : PatGprImm<riscv_psra, PSRAI_H, uimm4, XLenVecI16VT>;
 
   // 16-bit signed saturation shift left patterns
-  def : PatGprImm<riscv_psslai, PSSLAI_H, timm, XLenVecI16VT>;
+  def : PatGprImm<riscv_pssha, PSSLAI_H, uimm4, XLenVecI16VT>;
+  def : PatGprShift<riscv_pssha, PSSHA_HS, XLenVecI16VT>;
 
   // 8-bit logical shift left/right
   def : PatGprShiftMask<riscv_pshl, PSLL_BS, shiftMask8, XLenVecI8VT>;
@@ -2313,10 +2327,12 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def : PatGprPairImm<riscv_psra, PSRAI_DW, uimm5, v2i32>;
 
   // 16-bit signed saturation shift left patterns
-  def : PatGprPairImm<riscv_psslai, PSSLAI_DH, timm, v4i16>;
+  def : PatGprPairImm<riscv_pssha, PSSLAI_DH, uimm4, v4i16>;
+  def : PatGprPairShift<riscv_pssha, PSSHA_DHS, v4i16>;
 
   // 32-bit signed saturation shift left patterns
-  def : PatGprPairImm<riscv_psslai, PSSLAI_DW, timm, v2i32>;
+  def : PatGprPairImm<riscv_pssha, PSSLAI_DW, uimm5, v2i32>;
+  def : PatGprPairShift<riscv_pssha, PSSHA_DWS, v2i32>;
 
   // 8-bit logical shift left/right
   def : PatGprPairShiftMask<riscv_pshl, PSLL_DBS, shiftMask8, v8i8>;
@@ -2470,7 +2486,8 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def : PatGprImm<riscv_psra, PSRAI_W, uimm5, v2i32>;
 
   // 32-bit signed saturation shift left patterns
-  def : PatGprImm<riscv_psslai, PSSLAI_W, timm, v2i32>;
+  def : PatGprImm<riscv_pssha, PSSLAI_W, uimm5, v2i32>;
+  def : PatGprShift<riscv_pssha, PSSHA_WS, v2i32>;
 
   // 32-bit logical shift left/right
   def : PatGprShiftMask<riscv_pshl, PSLL_WS, shiftMask32, v2i32>;

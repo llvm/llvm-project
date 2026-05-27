@@ -258,6 +258,20 @@ bool VPlanVerifier::verifyRecipeTypes(const VPRecipeBase &R) const {
   case VPRecipeBase::VPFirstOrderRecurrencePHISC:
     return CheckOperandTypes() &&
            CheckScalarType(getScalarTypeOrInfer(R.getOperand(0)));
+  case VPRecipeBase::VPInstructionSC: {
+    auto *VPI = cast<VPInstruction>(&R);
+    if (isa<VPInstructionWithType>(VPI) ||
+        is_contained(ArrayRef<unsigned>{Instruction::ExtractValue,
+                                        VPInstruction::FirstActiveLane,
+                                        VPInstruction::LastActiveLane,
+                                        Instruction::Load, Instruction::Alloca,
+                                        Instruction::Call},
+                     VPI->getOpcode()))
+      return true;
+    SmallVector<VPValue *, 4> Ops(VPI->operandsWithoutMask());
+    return CheckScalarType(
+        computeScalarTypeForInstruction(VPI->getOpcode(), Ops));
+  }
   default:
     return true;
   }

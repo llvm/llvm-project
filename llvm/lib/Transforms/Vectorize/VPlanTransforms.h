@@ -131,10 +131,6 @@ struct VPlanTransforms {
   buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
               PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr);
 
-  /// Add a canonical IV and its increment, using \p InductionTy and \p DL to \p
-  /// Plan
-  static void addCanonicalIVRecipes(VPlan &Plan, DebugLoc DL);
-
   /// Replace VPPhi recipes in \p Plan's header with corresponding
   /// VPHeaderPHIRecipe subclasses for inductions, reductions, and
   /// fixed-order recurrences. This processes all header phis and creates
@@ -168,7 +164,7 @@ struct VPlanTransforms {
   LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan, bool TailFolded);
 
   // Create a check in \p CheckBlock to see if the vector loop should be
-  // executed.
+  // executed. May create VPExpandSCEV recipes in the plan's entry block.
   static void addMinimumIterationCheck(
       VPlan &Plan, ElementCount VF, unsigned UF,
       ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
@@ -191,8 +187,10 @@ struct VPlanTransforms {
       unsigned EpilogueLoopStep, ScalarEvolution &SE);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
-  /// flat CFG into a hierarchical CFG.
-  LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan);
+  /// flat CFG into a hierarchical CFG. For the outermost loop, also create the
+  /// canonical IV's increment and adjust the latch terminator: replace
+  /// BranchOnCond with BranchOnCount, using \p DL for the canonical IV.
+  LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan, DebugLoc DL);
 
   /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
   /// VPValue and connect the block to \p Plan, using the VPValue as branch

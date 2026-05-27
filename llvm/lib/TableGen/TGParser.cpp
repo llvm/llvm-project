@@ -2490,7 +2490,7 @@ const Init *TGParser::ParseOperationSubstr(Record *CurRec,
 
 /// Parse the !find operation. Return null on error.
 ///
-/// Substr ::= !find(string, string [, start-int]) => int
+/// Find ::= !find(string, string [, start-int]) => int
 const Init *TGParser::ParseOperationFind(Record *CurRec,
                                          const RecTy *ItemType) {
   TernOpInit::TernaryOp Code = TernOpInit::FIND;
@@ -2776,6 +2776,9 @@ TGParser::resolveInitTypes(ArrayRef<const Init *> Inits, const Twine &ErrCtx) {
   return Type;
 }
 
+/// Parse the !cond operation. Return null on error.
+///
+/// Cond ::= !cond([cond: val,]+) => val type
 const Init *TGParser::ParseOperationCond(Record *CurRec,
                                          const RecTy *ItemType) {
   Lex.Lex(); // eat the operation 'cond'
