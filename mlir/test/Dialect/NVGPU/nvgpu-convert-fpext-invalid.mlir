@@ -18,30 +18,6 @@ func.func @fpext_dst_bitwidth(%in : vector<16xf4E2M1FN>) {
 
 // -----
 
-func.func @fpext_fp6_compact(%in : vector<16xf6E2M3FN>) {
-  // expected-error @+1 {{'nvgpu.convert.fpext' op currently doesn't support fp6 compact input type}}
-  %out = nvgpu.convert.fpext %in : vector<16xf6E2M3FN> to vector<16xf16>
-  return
-}
-
-// -----
-
-func.func @fpext_u6_packed_not_i8(%in : vector<16xf8E4M3FN>) {
-  // expected-error @+1 {{'nvgpu.convert.fpext' op input type expects `i8` with `u6_unpack_u8` packed kind, but got 'f8E4M3FN'}}
-  %out = nvgpu.convert.fpext %in {packed_kind = #nvgpu.subbytes_packedkind<u6_unpack_u8_e3m2>} : vector<16xf8E4M3FN> to vector<16xf16>
-  return
-}
-
-// -----
-
-func.func @fpext_compact_not_float(%in : vector<16xi8>) {
-  // expected-error @+1 {{'nvgpu.convert.fpext' op input type expects float type with `compact` packed kind, but got 'i8'}}
-  %out = nvgpu.convert.fpext %in : vector<16xi8> to vector<16xf16>
-  return
-}
-
-// -----
-
 func.func @fpext_e8m0_to_f16(%in : vector<16xf8E8M0FNU>) {
   // expected-error @+1 {{'nvgpu.convert.fpext' op expects bf16 or f32 output type when input type is e8m0.}}
   %out = nvgpu.convert.fpext %in : vector<16xf8E8M0FNU> to vector<16xf16>

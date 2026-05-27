@@ -675,11 +675,6 @@ def NVGPU_RcpOp : NVGPU_Op<"rcp", [Pure,
 // NVGPU Conversion Ops
 //===----------------------------------------------------------------------===//
 
-def Int8OrFloatLike : TypeConstraint<
-    Or<[FloatLike.predicate,
-        I8.predicate,
-        ValueSemanticsContainerOf<[I8]>.predicate]>,
-    "scalar, vector, or tensor of i8 or floats">;
 def AnyI32Like : TypeOrValueSemanticsContainer<I32, "scalar i32 or vector of i32">;
 
 def NVGPU_FPTruncOp : NVGPU_Op<"convert.fptrunc",
@@ -690,30 +685,26 @@ def NVGPU_FPTruncOp : NVGPU_Op<"convert.fptrunc",
     Destination must be strictly narrower than source.
 
     Supported paths: f32->f16, f32->bf16, f32->f8, f32->f6, f32->f4,
-    f16->f8, f16->f4, bf16->f8, bf16->f4.
+    f16->f8, f16->f6, f16->f4, bf16->f8, bf16->f6, bf16->f4.
 
     The `random_bits` operand enables stochastic rounding (RS mode)
     for f32->f16/bf16 conversions. When provided, `rnd` must be RS.
 
-    For f6 types (f6E3M2FN/f6E2M3FN), result is i8 with 2-bit MSB
-    padding; use `packed_kind` to specify the f6 variant. `compact` is not
-    a supported `packed_kind` for f6 types.
-
     Example:
     ```mlir
     %r = nvgpu.cvt_fptrunc %in : vector<8xf32> to vector<8xf8E4M3FN>
+    %r = nvgpu.cvt_fptrunc %in : vector<8xf32> to vector<8xf6E2M3FN>
     %r = nvgpu.cvt_fptrunc %in : f32 to f16
     %r = nvgpu.cvt_fptrunc %in : vector<2x4xf16> to vector<2x4xf8E5M2>
     ```
   }];
   let arguments = (ins FloatLike:$in,
                        DefaultValuedAttr<FPRoundingModeAttr, "NVVM::FPRoundingMode::RN">:$rnd,
-                       DefaultValuedAttr<SubBytesPackedKindAttr, "SubBytesPackedKind::COMPACT">:$packed_kind,
                        DefaultValuedAttr<SaturationModeAttr, "NVVM::SaturationMode::SATFINITE">:$sat,
                        DefaultValuedAttr<BoolAttr, "false">:$relu,
                        Optional<I32>:$random_bits
                        );
-  let results = (outs Int8OrFloatLike:$out);
+  let results = (outs FloatLike:$out);
   let assemblyFormat = "$in (`,` $random_bits^)? attr-dict `:` type($in) `to` type($out)";
   let hasVerifier = 1;
 }
@@ -729,18 +720,16 @@ def NVGPU_FPExtOp : NVGPU_Op<"convert.fpext", [Pure]> {
     intermediate, then LLVM FPExt). e8m0->bf16 and e8m0->f32 supported
     (f32 goes through bf16 intermediate).
 
-    For f6 types, input is i8 with `packed_kind` specifying the f6 variant.
-
     Example:
     ```mlir
     %r = nvgpu.cvt_fpext %in : vector<8xf8E4M3FN> to vector<8xf16>
+    %r = nvgpu.cvt_fpext %in : vector<8xf6E3M2FN> to vector<8xf16>
     %r = nvgpu.cvt_fpext %in : vector<4xf8E5M2> to vector<4xf32>
     %r = nvgpu.cvt_fpext %in : f8E4M3FN to f32
     ```
   }];
-  let arguments = (ins Int8OrFloatLike:$in,
+  let arguments = (ins FloatLike:$in,
                        DefaultValuedAttr<FPRoundingModeAttr, "NVVM::FPRoundingMode::RN">:$rnd,
-                       DefaultValuedAttr<SubBytesPackedKindAttr, "SubBytesPackedKind::COMPACT">:$packed_kind,
                        DefaultValuedAttr<BoolAttr, "false">:$relu);
   let results = (outs FloatLike:$out);
   let assemblyFormat = "$in attr-dict `:` type($in) `to` type($out)";
