@@ -111,6 +111,7 @@ jobs:
         --target check-libc
 
   qemu-riscv64:
+    if: github.repository_owner == 'llvm'
     name: qemu - riscv64 - ${{ matrix.c_compiler }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
