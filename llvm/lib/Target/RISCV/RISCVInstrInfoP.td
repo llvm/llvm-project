@@ -196,7 +196,7 @@ class RVPNarrowingBase<bits<3> f, bit r, bits<4> funct4, dag outs, dag ins,
 }
 
 // Common base for pair ops (non-widening nor narrowing)
-class RVPPairBase<bits<4> f, bit direction, dag outs, dag ins,
+class RVPPairBase<bits<4> f, bit bit15, dag outs, dag ins,
                   string opcodestr, string argstr, bit DefVXSAT>
   : RVInst<outs, ins, opcodestr, argstr, [], InstFormatOther> {
   bits<5> rs1;
@@ -204,7 +204,7 @@ class RVPPairBase<bits<4> f, bit direction, dag outs, dag ins,
 
   let Inst{30-27} = f;
   let Inst{19-16} = rs1{4-1};
-  let Inst{15}    = direction;
+  let Inst{15}    = bit15;
   let Inst{14-12} = 0b110;
   let Inst{11-8}  = rd{4-1};
   let Inst{7}     = 0b0;
@@ -214,9 +214,9 @@ class RVPPairBase<bits<4> f, bit direction, dag outs, dag ins,
 }
 
 // Common base for pair binary ops
-class RVPPairBinaryBase_rr<bits<4> f, bits<2> w, bit pack, bit direction,
+class RVPPairBinaryBase_rr<bits<4> f, bits<2> w, bit bit20, bit bit15,
                            string opcodestr, bit DefVXSAT = 0>
-    : RVPPairBase<f, direction, (outs GPRPairRV32:$rd),
+    : RVPPairBase<f, bit15, (outs GPRPairRV32:$rd),
                   (ins GPRPairRV32:$rs1, GPRPairRV32:$rs2), opcodestr,
                   "$rd, $rs1, $rs2", DefVXSAT> {
   bits<5> rs2;
@@ -224,7 +224,7 @@ class RVPPairBinaryBase_rr<bits<4> f, bits<2> w, bit pack, bit direction,
   let Inst{31}    = 0b1;
   let Inst{26-25} = w;
   let Inst{24-21} = rs2{4-1};
-  let Inst{20}    = pack;
+  let Inst{20}    = bit20;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -348,6 +348,7 @@ class RVPNarrowingShiftB_ri<bits<3> f, string opcodestr, bit DefVXSAT = 0>
   let Inst{23-20} = shamt;
 }
 
+// direction is bit 15 and is usually 0 for left shifts and 1 for right shifts.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPPairShift_ri<bits<3> f, bit direction, string opcodestr,
                       Operand ImmType, bit DefVXSAT = 0>
@@ -400,6 +401,7 @@ class RVPWideningShift_rr<bits<3> f, bits<2> w, string opcodestr>
     : RVPWideningBase<{f, 0b1}, w, 0b0, (outs GPRPairRV32:$rd),
                       (ins GPR:$rs1, GPR:$rs2), opcodestr>;
 
+// direction is bit 15 and is usually 0 for left shifts and 1 for right shifts.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPPairShift_rr<bits<3> f, bits<2> w, bit direction, string opcodestr,
                       bit DefVXSAT = 0>
