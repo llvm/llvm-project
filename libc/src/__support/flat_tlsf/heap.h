@@ -84,7 +84,7 @@ class Heap {
     LIBC_ASSERT(*bin_ptr != nullptr);
   }
 
-  LIBC_INLINE void deregister_gap(Byte *base, size_t size) {
+  LIBC_INLINE void deregister_gap(Byte *base, [[maybe_unused]] size_t size) {
     LIBC_ASSERT(
         gap_list[cpp::min(Binning::size_to_bin(size),
                           static_cast<uint32_t>(Binning::BIN_COUNT - 1))] !=

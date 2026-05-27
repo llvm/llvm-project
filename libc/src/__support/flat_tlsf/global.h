@@ -89,8 +89,8 @@ public:
 private:
   LIBC_INLINE void init() {
     LIBC_ASSERT(heap.get_gap_list() == nullptr && "duplicate initialization");
-    Byte *res = heap.claim(reinterpret_cast<Byte *>(begin),
-                           static_cast<size_t>(end - begin));
+    [[maybe_unused]] Byte *res = heap.claim(reinterpret_cast<Byte *>(begin),
+                                            static_cast<size_t>(end - begin));
     LIBC_ASSERT(res != nullptr && "Failed to claim memory for heap");
   }
 
