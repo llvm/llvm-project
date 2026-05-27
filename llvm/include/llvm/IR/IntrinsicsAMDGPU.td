@@ -2736,9 +2736,9 @@ def int_amdgcn_cs_chain:
 // v4f32, v8f32
 // TODO: extend the support to allow spanning multiple blocks
 def int_amdgcn_waterfall_begin :
-    Intrinsic<[llvm_i32_ty],  // Returns token to be used by the rest of the waterfall loop
-              [llvm_i32_ty,   // Previous begin token / null if first
-               llvm_any_ty],  // Non-uniform value for waterfall index
+    Intrinsic<[llvm_token_ty],  // Returns token to be used by the rest of the waterfall loop
+              [llvm_token_ty,   // Previous begin token / poison if first
+               llvm_any_ty],    // Non-uniform value for waterfall index
               [IntrConvergent]>;
 
 // Often the index operand of begin is the same as the non-uniform operand
@@ -2747,7 +2747,7 @@ def int_amdgcn_waterfall_begin :
 // in the body of the waterfall loop.
 def int_amdgcn_waterfall_readfirstlane :
     Intrinsic<[llvm_any_ty],     // Returns any value
-              [llvm_i32_ty,      // Token from final begin
+              [llvm_token_ty,    // Token from final begin
                llvm_any_ty],     // Non-uniform value to be used in readfirstlane
               [IntrConvergent]>;
 
@@ -2757,7 +2757,7 @@ def int_amdgcn_waterfall_readfirstlane :
 // intrinsic is reached,
 def int_amdgcn_waterfall_end :
     Intrinsic<[llvm_any_ty],      // Returns any value
-              [llvm_i32_ty,       // Token from final begin
+              [llvm_token_ty,     // Token from final begin
                LLVMMatchType<0>], // Same as return value
               [IntrConvergent]>;
 
@@ -2768,14 +2768,14 @@ def int_amdgcn_waterfall_end :
 // store.
 def int_amdgcn_waterfall_last_use :
     Intrinsic<[llvm_any_ty],      // Returns any value
-              [llvm_i32_ty,       // Token from begin
+              [llvm_token_ty,     // Token from begin
                LLVMMatchType<0>], // Same as return value
               [IntrConvergent]>;
 
 // Special variant where the last-use uses a VGPR that needs to be uniform.
 def int_amdgcn_waterfall_last_use_vgpr :
     Intrinsic<[llvm_any_ty],      // Returns any value
-              [llvm_i32_ty,       // Token from begin
+              [llvm_token_ty,     // Token from begin
                LLVMMatchType<0>], // Same as return value
               []>;
 
@@ -2784,7 +2784,7 @@ def int_amdgcn_waterfall_last_use_vgpr :
 // for special handling such as scc clobbers.
 def int_amdgcn_waterfall_loop_end :
     Intrinsic<[],
-              [llvm_i32_ty],      // Token from begin
+              [llvm_token_ty],    // Token from begin
               [IntrConvergent]>;
 
 // Run a function with all the lanes enabled. Only direct calls are allowed. The

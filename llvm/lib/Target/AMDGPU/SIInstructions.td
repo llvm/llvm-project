@@ -1396,28 +1396,39 @@ def : GCNPat <
 >;
 
 // Waterfall pseudo ops - these are effectively specialized control flow pseudo
-// instructions
-// They are tagged as defining SCC since the loop that gets inserted will usually clobber it
+// instructions.
+// They are tagged as defining SCC since the loop that gets inserted
+// will usually clobber it.
+// Selection is done in custom C++ because TableGen pattern matching fails for intrinsics
+// with token. TableGen type inference requires intrinsics and instruction types to be consistent,
+// but llvm_token_ty maps to MVT::token that cannot appear in any register class type list.
+// TODO: better definition for WaterfallTokenType. Tokens are eliminated
+// by AMDGPUInsertWaterfall pass, so WaterfallTokenType can use a dedicated "untyped"
+// zero-size non-allocatable type, but that would involve more changes in selection.
+def WaterfallTokenType : RegisterOperand<SReg_32>;
+
 let UseNamedOperandTable = 1, Defs = [SCC] in {
 
 class SI_WATERFALL_BEGIN<RegisterClass idx_rc> : SPseudoInstSI <
-  (outs SReg_32:$tok_ret),
-  (ins SReg_32:$tok, idx_rc:$idx)>;
+  (outs WaterfallTokenType:$tok_ret),
+  (ins WaterfallTokenType:$tok, idx_rc:$idx)>;
 
 class SI_WATERFALL_READFIRSTLANE<RegisterClass dst_rc, RegisterClass src_rc> : SPseudoInstSI <
   (outs dst_rc:$dst),
-  (ins SReg_32:$tok, src_rc:$src)>;
+  (ins WaterfallTokenType:$tok, src_rc:$src)>;
 
 class SI_WATERFALL_END<RegisterClass rc> : SPseudoInstSI <
   (outs rc:$dst),
-  (ins SReg_32:$tok, rc:$src)>;
+  (ins WaterfallTokenType:$tok, rc:$src)>;
 
 class SI_WATERFALL_LAST_USE<RegisterClass rc> : SPseudoInstSI <
   (outs rc:$dst),
-  (ins SReg_32:$tok, rc:$src)>;
+  (ins WaterfallTokenType:$tok, rc:$src)>;
 
 } // End UseNamedOperandTable = 1
 
+// TODO: Do we still need the size variants (_V1, _V2, etc.) when selection
+// is in custom code?
 def SI_WATERFALL_BEGIN_V1 : SI_WATERFALL_BEGIN<VGPR_32>;
 def SI_WATERFALL_BEGIN_V2 : SI_WATERFALL_BEGIN<VReg_64>;
 def SI_WATERFALL_BEGIN_V4 : SI_WATERFALL_BEGIN<VReg_128>;
@@ -1446,7 +1457,7 @@ let Defs = [SCC],
     UseNamedOperandTable = 1 in
 def SI_WATERFALL_LOOP_END : SPseudoInstSI <
   (outs),
-  (ins SReg_32:$tok)
+  (ins WaterfallTokenType:$tok)
 >;
 
 //===----------------------------------------------------------------------===//
@@ -2757,59 +2768,6 @@ def : GCNPat <
   (V_CVT_U32_F32_e32
     (V_MUL_F32_e32 (i32 CONST.FP_4294966784),
                    (V_RCP_IFLAG_F32_e32 (V_CVT_F32_U32_e32 $src0))))
->;
-
-multiclass SI_WATERFALL_Pattern<ValueType dvt, ValueType svt, string VecSize> {
-  def : GCNPat<(dvt(int_amdgcn_waterfall_readfirstlane i32:$tok, svt:$src)),
-               (!cast<Instruction>("SI_WATERFALL_READFIRSTLANE_"#VecSize)
-                       i32:$tok,
-                   svt:$src)>;
-}
-
-multiclass SI_WATERFALL_S_Pattern<list<ValueType> vts, string VecSize> {
-  foreach vt = vts in {
-    def : GCNPat<(i32(int_amdgcn_waterfall_begin i32:$tok, vt:$idx)),
-                 (!cast<Instruction>("SI_WATERFALL_BEGIN_"#VecSize) i32:$tok,
-                     vt:$idx)>;
-
-    def : GCNPat<(vt(int_amdgcn_waterfall_readfirstlane i32:$tok, vt:$src)),
-                 (!cast<Instruction>("SI_WATERFALL_READFIRSTLANE_"#VecSize)
-                         i32:$tok,
-                     vt:$src)>;
-
-    def : GCNPat<(vt(int_amdgcn_waterfall_end i32:$tok, vt:$src)),
-                 (!cast<Instruction>("SI_WATERFALL_END_"#VecSize) i32:$tok,
-                     vt:$src)>;
-
-    def : GCNPat<(vt(int_amdgcn_waterfall_last_use i32:$tok, vt:$src)),
-                 (!cast<Instruction>("SI_WATERFALL_LAST_USE_"#VecSize) i32:$tok,
-                     vt:$src)>;
-
-    def : GCNPat<(vt(int_amdgcn_waterfall_last_use_vgpr i32:$tok, vt:$src)),
-                 (!cast<Instruction>("SI_WATERFALL_LAST_USE_"#VecSize#"_V")
-                         i32:$tok,
-                     vt:$src)>;
-  }
-}
-
-defm : SI_WATERFALL_S_Pattern<Reg16Types.types, "V1">;
-defm : SI_WATERFALL_S_Pattern<Reg32Types.types, "V1">;
-defm : SI_WATERFALL_S_Pattern<Reg64Types.types, "V2">;
-defm : SI_WATERFALL_S_Pattern<Reg128Types.types, "V4">;
-defm : SI_WATERFALL_S_Pattern<Reg256Types.types, "V8">;
-
-defm : SI_WATERFALL_Pattern <i16, f16, "V1">;
-defm : SI_WATERFALL_Pattern <v2i16, v2f16, "V1">;
-defm : SI_WATERFALL_Pattern <v4i16, v4f16, "V2">;
-
-defm : SI_WATERFALL_Pattern <i32, f32, "V1">;
-defm : SI_WATERFALL_Pattern <v2i32, v2f32, "V2">;
-defm : SI_WATERFALL_Pattern <v4i32, v4f32, "V4">;
-defm : SI_WATERFALL_Pattern <v8i32, v8f32, "V8">;
-
-def : GCNPat<
-    (int_amdgcn_waterfall_loop_end i32:$tok),
-    (SI_WATERFALL_LOOP_END i32:$tok)
 >;
 
 //===----------------------------------------------------------------------===//

@@ -341,7 +341,14 @@ private:
 
     bool tokIsStart(const MachineOperand *MO) const {
       MachineInstr *defInstr = getDefInstr(MO);
-      if (defInstr && defInstr->getOpcode() == AMDGPU::S_MOV_B32) {
+      if (!defInstr)
+        return false;
+      if (defInstr->getOpcode() == AMDGPU::IMPLICIT_DEF)
+        return true;
+      if (defInstr->isCopy())
+        return tokIsStart(&defInstr->getOperand(1));
+      // S_MOV_B32 0 for backwards compatibility with hand-written MIR.
+      if (defInstr->getOpcode() == AMDGPU::S_MOV_B32) {
         auto CopySrcOp = TII->getNamedOperand(*defInstr, AMDGPU::OpName::src0);
         if (CopySrcOp && CopySrcOp->isImm()) {
           if (CopySrcOp->getImm() == 0)

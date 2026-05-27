@@ -302,6 +302,8 @@ private:
   void SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID);
   void SelectTensorLoadStore(SDNode *N, unsigned IntrID);
   void SelectDS_GWS(SDNode *N, unsigned IntrID);
+  void SelectWaterfallIntrinsic(SDNode *N, unsigned IntrID);
+  void SelectWaterfallIntrinsicLoopEnd(SDNode *N);
   void SelectInterpP1F16(SDNode *N);
   void SelectINTRINSIC_W_CHAIN(SDNode *N);
   void SelectINTRINSIC_WO_CHAIN(SDNode *N);

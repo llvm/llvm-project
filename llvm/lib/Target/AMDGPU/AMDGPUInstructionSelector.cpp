@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
+#include "AMDGPUWaterfallHelper.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIMachineFunctionInfo.h"
@@ -2520,6 +2521,14 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectSGetBarrierState(I, IntrinsicID);
   case Intrinsic::amdgcn_s_barrier_signal_isfirst:
     return selectSBarrierSignalIsfirst(I, IntrinsicID);
+  case Intrinsic::amdgcn_waterfall_begin:
+  case Intrinsic::amdgcn_waterfall_readfirstlane:
+  case Intrinsic::amdgcn_waterfall_end:
+  case Intrinsic::amdgcn_waterfall_last_use:
+  case Intrinsic::amdgcn_waterfall_last_use_vgpr:
+    return selectWaterfallIntrinsic(I, IntrinsicID);
+  case Intrinsic::amdgcn_waterfall_loop_end:
+    return selectWaterfallIntrinsicLoopEnd(I);
   }
   return selectImpl(I, *CoverageInfo);
 }
@@ -4436,6 +4445,48 @@ bool AMDGPUInstructionSelector::selectStackRestore(MachineInstr &MI) const {
     .addReg(WaveAddr);
 
   MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPUInstructionSelector::selectWaterfallIntrinsic(
+    MachineInstr &I, Intrinsic::ID IntrID) const {
+  // op0=result, op1=intrinsicID, op2=token_input, op3=value
+  MachineBasicBlock *MBB = I.getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+  Register DstReg = I.getOperand(0).getReg();
+  Register TokReg = I.getOperand(2).getReg();
+  Register ValReg = I.getOperand(3).getReg();
+
+  unsigned SizeBits;
+  if (IntrID == Intrinsic::amdgcn_waterfall_begin)
+    SizeBits = MRI->getType(ValReg).getSizeInBits();
+  else
+    SizeBits = MRI->getType(DstReg).getSizeInBits();
+
+  unsigned SizeDwords = SizeBits / 32;
+  unsigned Opc = AMDGPU::getWaterfallPseudoOpcode(IntrID, SizeDwords);
+  if (!Opc)
+    return false;
+
+  MachineInstrBuilder MIB =
+      BuildMI(*MBB, &I, DL, TII.get(Opc), DstReg).addReg(TokReg).addReg(ValReg);
+  I.eraseFromParent();
+  constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+  return true;
+}
+
+bool AMDGPUInstructionSelector::selectWaterfallIntrinsicLoopEnd(
+    MachineInstr &I) const {
+  // op0=intrinsicID, op1=token
+  MachineBasicBlock *MBB = I.getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+  Register TokReg = I.getOperand(1).getReg();
+
+  MachineInstrBuilder MIB =
+      BuildMI(*MBB, &I, DL, TII.get(AMDGPU::SI_WATERFALL_LOOP_END))
+          .addReg(TokReg);
+  I.eraseFromParent();
+  constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
   return true;
 }
 

@@ -29,12 +29,12 @@ loop.body:
   br i1 %cmp, label %loop.body, label %loop.exit, !llvm.loop !1
 
 loop.exit:
-  %wf_token = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 0, i32 %index)
-  %s_idx = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(i32 %wf_token, i32 %index)
+  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %index)
+  %s_idx = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %wf_token, i32 %index)
   %ptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %loop.ptr, i32 %s_idx
   %rsrc = load <8 x i32>, <8 x i32> addrspace(4)* %ptr, align 32
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %r1 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 %wf_token, <4 x float> %r)
+  %r1 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(token %wf_token, <4 x float> %r)
 
   ret <4 x float> %r1
 }
