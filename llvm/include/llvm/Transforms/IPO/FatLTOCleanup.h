@@ -27,7 +27,7 @@ class ModuleSummaryIndex;
 class FatLtoCleanup : public RequiredPassInfoMixin<FatLtoCleanup> {
 public:
   FatLtoCleanup() = default;
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

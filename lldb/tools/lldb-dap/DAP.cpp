@@ -95,14 +95,7 @@ static std::string GetStringFromStructuredData(lldb::SBStructuredData &data,
   if (!keyValue)
     return std::string();
 
-  const size_t length = keyValue.GetStringValue(nullptr, 0);
-
-  if (length == 0)
-    return std::string();
-
-  std::string str(length + 1, 0);
-  keyValue.GetStringValue(&str[0], length + 1);
-  return str;
+  return GetStringValue(keyValue);
 }
 
 static uint64_t GetUintFromStructuredData(lldb::SBStructuredData &data,
