@@ -345,6 +345,9 @@ LogicalResult emitc::CallOpaqueOp::verify() {
   if (getCallee().empty())
     return emitOpError("callee must not be empty");
 
+  if (getIsMemberCall() && getNumOperands() == 0)
+    return emitOpError("member call requires at least one operand (receiver)");
+
   if (std::optional<ArrayAttr> argsAttr = getArgs()) {
     for (Attribute arg : *argsAttr) {
       auto intAttr = llvm::dyn_cast<IntegerAttr>(arg);

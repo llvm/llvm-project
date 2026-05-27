@@ -324,6 +324,19 @@ def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", [CExpressionInterface]> {
     - integer value of index type refers to an operand;
     - attribute which will get lowered to constant value in call;
 
+    If `is_member_call` is true, the operation represents a member call. The
+    first operand is treated as the receiver and emitted before the member
+    access operator (`.` or `->`).
+
+    The `args` attribute can be used to override the default operand order and
+    to mix operands with attributes. If `args` is present, it specifies the
+    arguments passed to the call in parentheses.
+
+    If `args` is not present:
+    - If `is_member_call` is true, the first operand is the receiver, and the
+      remaining operands are passed as arguments.
+    - If `is_member_call` is false, all operands are passed as arguments.
+
     Example:
 
     ```mlir
@@ -332,12 +345,19 @@ def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", [CExpressionInterface]> {
 
     // Generic form of the same operation.
     %0 = "emitc.call_opaque"() {callee = "foo"} : () -> i32
+
+    // Member call
+    %1 = emitc.call_opaque "method" (%arg0, %arg1) {is_member_call = true} : (!emitc.opaque<"MyClass">, i32) -> i32
+
+    // Member call with args attribute
+    %2 = emitc.call_opaque "method" (%arg0, %arg1) {is_member_call = true, args = [1 : index]} : (!emitc.opaque<"MyClass">, i32) -> i32
     ```
   }];
   let arguments = (ins
     Arg<StrAttr, "the C++ function to call">:$callee,
     Arg<OptionalAttr<ArrayAttr>, "the order of operands and further attributes">:$args,
     Arg<OptionalAttr<ArrayAttr>, "template arguments">:$template_args,
+    DefaultValuedAttr<BoolAttr, "false">:$is_member_call,
     Variadic<EmitCType>:$operands
   );
   let results = (outs Variadic<EmitCType>);
@@ -349,7 +369,7 @@ def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", [CExpressionInterface]> {
       CArg<"::mlir::ArrayAttr", "{}">:$args,
       CArg<"::mlir::ArrayAttr", "{}">:$template_args), [{
         build($_builder, $_state, resultTypes, callee, args, template_args,
-            operands);
+            false, operands);
       }]
     >
   ];
