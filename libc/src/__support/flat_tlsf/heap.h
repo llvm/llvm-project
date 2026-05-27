@@ -167,24 +167,23 @@ public:
     size_t required_chunk_size = chunk::required_chunk_size(required_size);
     Byte *base = nullptr;
     Byte *chunk_end = nullptr;
+    do {
+      size_t bin = Binning::size_to_bin_ceil(
+          cpp::max(required_chunk_size, required_align));
 
-    size_t bin = Binning::size_to_bin_ceil(
-        cpp::max(required_chunk_size, required_align));
-
-    if (bin >= Binning::BIN_COUNT - 1) {
-      if (available.read_bit(Binning::BIN_COUNT - 1)) {
-        if (auto result =
-                full_search_bin(Binning::BIN_COUNT - 1, required_chunk_size,
-                                required_align - 1)) {
-          base = result->base;
-          chunk_end = result->end;
-          goto success;
+      if (bin >= Binning::BIN_COUNT - 1) {
+        if (available.read_bit(Binning::BIN_COUNT - 1)) {
+          if (auto result =
+                  full_search_bin(Binning::BIN_COUNT - 1, required_chunk_size,
+                                  required_align - 1)) {
+            base = result->base;
+            chunk_end = result->end;
+            break;
+          }
         }
+        return nullptr;
       }
-      return nullptr;
-    }
 
-    {
       size_t bit = available.bit_scan_after(static_cast<uint32_t>(bin));
       if (bit >= Binning::BIN_COUNT) {
         if (available.read_bit(static_cast<uint32_t>(bin - 1))) {
@@ -193,7 +192,7 @@ public:
                                   required_chunk_size, required_align - 1)) {
             base = result->base;
             chunk_end = result->end;
-            goto success;
+            break;
           }
         }
         return nullptr;
@@ -209,9 +208,10 @@ public:
         deregister_gap(base, size);
         tag::clear_above_free(chunk::end_to_tag(base));
         chunk_end = base + size;
-        goto success;
+        break;
       } else {
         size_t align_mask = required_align - 1;
+        bool success = false;
         while (true) {
           for (Node *node = gap_list[bit]; node != nullptr; node = node->next) {
             size_t size =
@@ -228,9 +228,12 @@ public:
               }
               base = aligned_base;
               chunk_end = end;
-              goto success;
+              success = true;
+              break;
             }
           }
+          if (success)
+            break;
 
           if (bit + 1 < Binning::BIN_COUNT ||
               BitField::BITS > Binning::BIN_COUNT) {
@@ -256,16 +259,16 @@ public:
 
               base = aligned_base;
               chunk_end = end;
-              goto success;
+              success = true;
+              break;
             }
           }
-
+          if (success)
+            break;
           return nullptr;
         }
       }
-    }
-
-  success:
+    } while (0);
     LIBC_ASSERT(chunk::align_down(base) == base);
 
     Byte *end = base + required_chunk_size;
