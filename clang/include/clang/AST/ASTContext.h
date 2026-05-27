@@ -949,6 +949,9 @@ public:
   QualType getIntTypeForBitwidth(unsigned DestWidth,
                                  unsigned Signed) const;
 
+  QualType getLeastIntTypeForBitwidth(unsigned DestWidth,
+                                      unsigned Signed) const;
+
   /// getRealTypeForBitwidth -
   /// sets floating point QualTy according to specified bitwidth.
   /// Returns empty type if there is no appropriate target types.
