@@ -2017,6 +2017,11 @@ bool VectorCombine::scalarizeLoad(Instruction &I) {
   if (LI->isVolatile() || !DL->typeSizeEqualsStoreSize(VecTy->getScalarType()))
     return false;
 
+  // Cowardly refuse to handle atomics.  We could handle unordered atomics if
+  // we wanted, but this transformation is illegal on other atomic orderings.
+  if (LI->isAtomic())
+    return false;
+
   bool AllExtracts = true;
   bool AllBitcasts = true;
   Instruction *LastCheckedInst = LI;
