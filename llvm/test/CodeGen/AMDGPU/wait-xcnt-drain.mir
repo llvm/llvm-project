@@ -54,7 +54,7 @@ body: |
     ; GCN-LABEL: name: drain_call
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: S_WAIT_LOADCNT_DSCNT 0
+    ; GCN-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GCN-NEXT: S_WAIT_KMCNT 0
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: $sgpr30_sgpr31 = SI_CALL killed $sgpr0_sgpr1, 0, csr_amdgpu
