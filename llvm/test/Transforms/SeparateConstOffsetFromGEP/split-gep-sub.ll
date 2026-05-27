@@ -78,7 +78,7 @@ for.end:
 
 @g = global [10 x i32] zeroinitializer
 
-define void @hoist_out_of_bounds_const(i64 %lim, i64 %step) {
+define ptr @hoist_out_of_bounds_const(i64 %lim, i64 %step) {
 ; CHECK-LABEL: @hoist_out_of_bounds_const(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -88,12 +88,11 @@ define void @hoist_out_of_bounds_const(i64 %lim, i64 %step) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[ADDEND]], 2
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr @g, i64 800
 ; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 [[TMP0]]
-; CHECK-NEXT:    store volatile i32 0, ptr [[UGLYGEP2]], align 4
 ; CHECK-NEXT:    [[NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[NEXT]], [[LIM:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    ret ptr [[UGLYGEP2]]
 ;
 entry:
   br label %loop
@@ -103,13 +102,12 @@ loop:
   %addend = mul i64 %iv, %step
   %off = add i64 %addend, 200
   %gep = getelementptr i32, ptr @g, i64 %off
-  store volatile i32 0, ptr %gep, align 4
   %next = add i64 %iv, 1
   %cmp = icmp slt i64 %next, %lim
   br i1 %cmp, label %loop, label %exit
 
 exit:
-  ret void
+  ret ptr %gep
 }
 
 declare i32 @foo()
