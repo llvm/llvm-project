@@ -1309,6 +1309,9 @@ cc_library(
         "include/llvm-c/Object.h",
     ],
     copts = llvm_copts,
+    textual_hdrs = glob([
+        "include/llvm/Object/*.def",
+    ]),
     deps = [
         ":BinaryFormat",
         ":BitReader",
