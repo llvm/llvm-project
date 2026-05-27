@@ -61,10 +61,13 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   int64_t DwarfVersion = 0;
 
   // DI types partitioned from DebugInfoFinder.types() in beginModule()
-  // (basics, pointers, subroutine types NSDI v1 may emit).
+  // (basics, pointers, vectors, subroutine types NSDI v1 may emit).
   SmallVector<const DIBasicType *> BasicTypes;
   SmallVector<const DIDerivedType *> PointerTypes;
   SmallVector<const DISubroutineType *> SubroutineTypes;
+  // DICompositeType nodes with DW_TAG_array_type and DINode::FlagVector,
+  // partitioned from DebugInfoFinder.types() in beginModule().
+  SmallVector<const DICompositeType *> VectorTypes;
 
   // Filled in emitNonSemanticGlobalDebugInfo(): DI types to their result
   // registers.

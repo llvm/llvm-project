@@ -27,21 +27,28 @@ using namespace llvm;
 
 namespace {
 
-/// Partition \p Ty into \p BasicTypes, \p PointerTypes, and \p SubroutineTypes
-/// for NSDI emission. Used when iterating DebugInfoFinder.types(); each DI
-/// node is seen once, so no recursion into pointer bases. Other composites and
-/// non-pointer derived kinds are ignored because they are not yet supported.
-/// Only types that are supported (later used) are partitioned.
+/// Partition \p Ty into \p BasicTypes, \p PointerTypes, \p SubroutineTypes,
+/// and \p VectorTypes for NSDI emission. Used when iterating
+/// DebugInfoFinder.types(); each DI node is seen once, so no recursion into
+/// pointer bases. Other composites and non-pointer derived kinds are ignored
+/// because they are not yet supported. Only types that are supported (later
+/// used) are partitioned.
 static void
 partitionTypes(const DIType *Ty, SmallVector<const DIBasicType *> &BasicTypes,
                SmallVector<const DIDerivedType *> &PointerTypes,
-               SmallVector<const DISubroutineType *> &SubroutineTypes) {
+               SmallVector<const DISubroutineType *> &SubroutineTypes,
+               SmallVector<const DICompositeType *> &VectorTypes) {
   if (const auto *BT = dyn_cast<DIBasicType>(Ty)) {
     BasicTypes.push_back(BT);
     return;
   }
   if (const auto *ST = dyn_cast<DISubroutineType>(Ty)) {
     SubroutineTypes.push_back(ST);
+    return;
+  }
+  if (const auto *CT = dyn_cast<DICompositeType>(Ty)) {
+    if (CT->getTag() == dwarf::DW_TAG_array_type && CT->isVector())
+      VectorTypes.push_back(CT);
     return;
   }
   const auto *DT = dyn_cast<DIDerivedType>(Ty);
@@ -173,6 +180,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   BasicTypes.clear();
   PointerTypes.clear();
   SubroutineTypes.clear();
+  VectorTypes.clear();
   DebugTypeRegs.clear();
   OpStringContentCache.clear();
   I32ConstantCache.clear();
@@ -218,7 +226,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   DebugInfoFinder Finder;
   Finder.processModule(*M);
   llvm::for_each(Finder.types(), [&](DIType *Ty) {
-    partitionTypes(Ty, BasicTypes, PointerTypes, SubroutineTypes);
+    partitionTypes(Ty, BasicTypes, PointerTypes, SubroutineTypes, VectorTypes);
   });
 }
 
@@ -585,6 +593,35 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
         SPIRV::NonSemanticExtInst::DebugTypeBasic, VoidTypeReg, ExtInstSetReg,
         {NameReg, SizeReg, EncodingReg, I32ZeroReg}, MAI);
     DebugTypeRegs[BT] = BTReg;
+  }
+
+  // Emit DebugTypeVector for each collected vector type. Skip entries that
+  // would produce a module rejected by spirv-val: Base Type must resolve to
+  // a DebugTypeBasic, the subrange count must be a constant, and the Vulkan
+  // flavor of NSDI requires Component Count in [1, 4].
+  for (const DICompositeType *VT : VectorTypes) {
+    const auto *BaseTy = dyn_cast_or_null<DIBasicType>(VT->getBaseType());
+    if (!BaseTy)
+      continue;
+    auto BTIt = DebugTypeRegs.find(BaseTy);
+    if (BTIt == DebugTypeRegs.end())
+      continue;
+
+    DINodeArray Elements = VT->getElements();
+    if (Elements.size() != 1)
+      continue;
+    const auto *SR = cast<DISubrange>(Elements[0]);
+    const auto *CI = dyn_cast_if_present<ConstantInt *>(SR->getCount());
+    if (!CI)
+      continue;
+    uint64_t Count = CI->getZExtValue();
+    if (Count == 0 || Count > 4)
+      continue;
+
+    MCRegister CountReg =
+        emitOpConstantI32(static_cast<uint32_t>(Count), I32TypeReg, MAI);
+    emitExtInst(SPIRV::NonSemanticExtInst::DebugTypeVector, VoidTypeReg,
+                ExtInstSetReg, {BTIt->second, CountReg}, MAI);
   }
 
   // Emit DebugTypePointer for each referenced pointer type.
