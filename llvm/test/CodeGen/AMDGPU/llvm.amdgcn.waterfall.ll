@@ -346,7 +346,7 @@ define amdgpu_ps void @test_waterfall_readlane(i32 addrspace(1)* inreg %out, <2 
   %args = load <2 x i32>, <2 x i32> addrspace(1)* %gep.in
   %value = extractelement <2 x i32> %args, i32 0
   %lane = extractelement <2 x i32> %args, i32 1
-  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %lane)
+  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %lane)
   %readlane = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %wf_token, i32 %lane)
   %readlane1 = call i32 @llvm.amdgcn.readlane(i32 %value, i32 %readlane)
   %readlane2 = call i32 @llvm.amdgcn.waterfall.end.i32(token %wf_token, i32 %readlane1)
@@ -766,7 +766,7 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img(<8 x i32> addrspace
 ; GFX12-GISEL-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
-  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %index)
+  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %index)
   %s_idx = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %wf_token, i32 %index)
   %ptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %in, i32 %s_idx
   %rsrc = load <8 x i32>, <8 x i32> addrspace(4) * %ptr, align 32
@@ -1341,7 +1341,7 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img_single_read(<8 x i3
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %ptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %in, i32 %index
   %rsrc = load <8 x i32>, <8 x i32> addrspace(4) * %ptr, align 32
-  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %index)
+  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %index)
   %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(token %wf_token, <8 x i32> %rsrc)
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %s_rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   %r1 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(token %wf_token, <4 x float> %r)
@@ -1775,7 +1775,7 @@ define amdgpu_ps void @test_multiple_groups(i32 addrspace(1)* inreg %out1, i32 a
 ; GFX12-GISEL-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX12-GISEL-NEXT:    global_store_b32 v0, v3, s[2:3]
 ; GFX12-GISEL-NEXT:    s_endpgm
-  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %idx1)
+  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %idx1)
   %readlane1 = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %wf_token, i32 %idx1)
   %readlane1.1 = call i32 @llvm.amdgcn.readlane(i32 %val, i32 %readlane1)
   %readlane1.2 = call i32 @llvm.amdgcn.waterfall.end.i32(token %wf_token, i32 %readlane1.1)
@@ -1783,7 +1783,7 @@ define amdgpu_ps void @test_multiple_groups(i32 addrspace(1)* inreg %out1, i32 a
   ; being stored generated incrementally in the loop itself
   store i32 %readlane1.2, i32 addrspace(1)* %out1, align 4
 
-  %wf_token2 = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %idx2)
+  %wf_token2 = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %idx2)
   %readlane2 = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %wf_token2, i32 %idx2)
   %readlane2.1 = call i32 @llvm.amdgcn.readlane(i32 %val, i32 %readlane2)
   %readlane2.2 = call i32 @llvm.amdgcn.waterfall.end.i32(token %wf_token2, i32 %readlane2.1)
@@ -2252,7 +2252,7 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img_multi_rl(<8 x i32> 
 ; GFX12-GISEL-NEXT:    s_and_b64 exec, exec, s[4:5]
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
-  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %index)
+  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %index)
   %s_idx = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %wf_token, i32 %index)
   %s_idx2 = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %wf_token, i32 %val)
   %ptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %in, i32 %s_idx
@@ -2745,7 +2745,7 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uni_img_2_idx(<8 x i32> addrspa
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %t_idx = insertelement <2 x i32> %dummy, i32 %index1, i32 0
   %combined_idx = insertelement <2 x i32> %t_idx, i32 %index2, i32 1
-  %wf_token = call token @llvm.amdgcn.waterfall.begin.v2i32(token none, <2 x i32> %combined_idx)
+  %wf_token = call token @llvm.amdgcn.waterfall.begin.v2i32(token poison, <2 x i32> %combined_idx)
   %s_c_idx = call <2 x i32> @llvm.amdgcn.waterfall.readfirstlane.v2i32.v2i32(token %wf_token, <2 x i32> %combined_idx)
   %s_idx1 = extractelement <2 x i32> %s_c_idx, i32 0
   %s_idx2 = extractelement <2 x i32> %s_c_idx, i32 1
@@ -3207,7 +3207,7 @@ define amdgpu_ps void @test_waterfall_non_uniform_img_single_store(<8 x i32> add
 ; GFX12-GISEL-NEXT:    s_endpgm
   %ptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %in, i32 %index
   %rsrc = load <8 x i32>, <8 x i32> addrspace(4) * %ptr, align 32
-  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %index)
+  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %index)
   %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(token %wf_token, <8 x i32> %rsrc)
   %s_rsrc_use = call <8 x i32> @llvm.amdgcn.waterfall.last.use.v8i32(token %wf_token, <8 x i32> %s_rsrc)
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %data, i32 15, i32 %s, <8 x i32> %s_rsrc_use, i32 0, i32 0)
@@ -3244,7 +3244,7 @@ define amdgpu_ps void @test_remove_waterfall_last_use(<8 x i32> addrspace(4)* in
 ; GFX12-NEXT:    image_store v[2:5], v1, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX12-NEXT:    s_endpgm
   %rsrc = load <8 x i32>, <8 x i32> addrspace(4) * %in, align 32
-  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %index)
+  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %index)
   %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(token %wf_token, <8 x i32> %rsrc)
   %s_rsrc_use = call <8 x i32> @llvm.amdgcn.waterfall.last.use.v8i32(token %wf_token, <8 x i32> %s_rsrc)
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %data, i32 15, i32 %s, <8 x i32> %s_rsrc_use, i32 0, i32 0)
@@ -3401,7 +3401,7 @@ define amdgpu_ps <4 x float> @test_remove_waterfall_multi_rl(<8 x i32> addrspace
 ; GFX12-GISEL-NEXT:    image_sample v[0:3], v1, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
-  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %index)
+  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %index)
   %s_idx = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %wf_token, i32 %val1)
   %s_idx2 = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %wf_token, i32 %val2)
   %ptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %in, i32 %s_idx
@@ -3837,7 +3837,7 @@ define amdgpu_ps <4 x float> @test_keep_waterfall_multi_rl(<8 x i32> addrspace(4
 ; GFX12-GISEL-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
-  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %index)
+  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %index)
   %s_idx = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %wf_token, i32 %index)
   %s_idx2 = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %wf_token, i32 %val)
   %ptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %in, i32 %s_idx
@@ -4218,7 +4218,7 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GFX12-GISEL-NEXT:    s_mov_b64 exec, 0
 ; GFX12-GISEL-NEXT:    export mrt0, off, off, off, off done
 ; GFX12-GISEL-NEXT:    s_endpgm
-  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %index)
+  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %index)
   %s_idx = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %wf_token, i32 %index)
   %s_idx2 = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %wf_token, i32 %val)
   %ptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %in, i32 %s_idx
@@ -4983,7 +4983,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin(<8 x i32> addrspace(4)*
   %sptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %s_in, i32 %s_idx2
   %rsrc = load <8 x i32>, <8 x i32> addrspace(4)* %rptr, align 16
   %srsrc = load <4 x i32>, <4 x i32> addrspace(4)* %sptr, align 16
-  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %idx1)
+  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %idx1)
   %tok1 = call token @llvm.amdgcn.waterfall.begin.i32(token %tok, i32 %idx2)
   %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(token %tok1, <8 x i32> %rsrc)
   %s_srsrc = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(token %tok1, <4 x i32> %srsrc)
@@ -5817,7 +5817,7 @@ define amdgpu_ps <4 x float> @test_waterfall_full_idx_multi_begin(<8 x i32> addr
   %sptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %s_in, i32 %s_idx2
   %rsrc = load <8 x i32>, <8 x i32> addrspace(4)* %rptr, align 16
   %srsrc = load <4 x i32>, <4 x i32> addrspace(4)* %sptr, align 16
-  %tok = call token @llvm.amdgcn.waterfall.begin.v8i32(token none, <8 x i32> %rsrc)
+  %tok = call token @llvm.amdgcn.waterfall.begin.v8i32(token poison, <8 x i32> %rsrc)
   %tok1 = call token @llvm.amdgcn.waterfall.begin.v4i32(token %tok, <4 x i32> %srsrc)
   %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(token %tok1, <8 x i32> %rsrc)
   %s_srsrc = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(token %tok1, <4 x i32> %srsrc)
@@ -6383,7 +6383,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_1(<8 x i32>
   %sptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %s_in, i32 %s_idx2
   %rsrc = load <8 x i32>, <8 x i32> addrspace(4)* %rptr, align 16
   %srsrc = load <4 x i32>, <4 x i32> addrspace(4)* %sptr, align 16
-  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %idx1)
+  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %idx1)
   %tok1 = call token @llvm.amdgcn.waterfall.begin.i32(token %tok, i32 %idx2)
   %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(token %tok1, <8 x i32> %rsrc)
   %s_srsrc = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(token %tok1, <4 x i32> %srsrc)
@@ -7027,7 +7027,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_2(<8 x i32>
   %sptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %s_in, i32 %s_idx2
   %rsrc = load <8 x i32>, <8 x i32> addrspace(4)* %rptr, align 16
   %srsrc = load <4 x i32>, <4 x i32> addrspace(4)* %sptr, align 16
-  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %idx1)
+  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %idx1)
   %tok1 = call token @llvm.amdgcn.waterfall.begin.i32(token %tok, i32 %idx2)
   %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(token %tok1, <8 x i32> %rsrc)
   %s_srsrc = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(token %tok1, <4 x i32> %srsrc)
@@ -7753,7 +7753,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_3(<8 x i32>
   %sptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %s_in, i32 %s_idx2
   %rsrc = load <8 x i32>, <8 x i32> addrspace(4)* %rptr, align 16
   %srsrc = load <4 x i32>, <4 x i32> addrspace(4)* %sptr, align 16
-  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %idx1)
+  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %idx1)
   %tok1 = call token @llvm.amdgcn.waterfall.begin.i32(token %tok, i32 %idx2)
   %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(token %tok1, <8 x i32> %rsrc)
   %s_srsrc = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(token %tok1, <4 x i32> %srsrc)
@@ -8479,7 +8479,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_4(<8 x i32>
   %sptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %s_in, i32 %s_idx2
   %rsrc = load <8 x i32>, <8 x i32> addrspace(4)* %rptr, align 16
   %srsrc = load <4 x i32>, <4 x i32> addrspace(4)* %sptr, align 16
-  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %idx1)
+  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %idx1)
   %tok1 = call token @llvm.amdgcn.waterfall.begin.i32(token %tok, i32 %idx2)
   %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(token %tok1, <8 x i32> %rsrc)
   %s_srsrc = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(token %tok1, <4 x i32> %srsrc)
@@ -9473,14 +9473,14 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_begin_uniform_i
   %sptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %s_in, i32 %s_idx2
   %rsrc = load <8 x i32>, <8 x i32> addrspace(4)* %rptr, align 16
   %srsrc = load <4 x i32>, <4 x i32> addrspace(4)* %sptr, align 16
-  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %idx1)
+  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %idx1)
   %tok1 = call token @llvm.amdgcn.waterfall.begin.i32(token %tok, i32 %idx2)
   %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(token %tok1, <8 x i32> %rsrc)
   %s_srsrc = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(token %tok1, <4 x i32> %srsrc)
   %r = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 0.000000e+00, float 0.000000e+00, <8 x i32> %s_rsrc, <4 x i32> %s_srsrc, i1 false, i32 0, i32 0)
   %r1 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(token %tok1, <4 x float> %r)
 
-  %tok2 = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %idx3)
+  %tok2 = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %idx3)
   %tok3 = call token @llvm.amdgcn.waterfall.begin.i32(token %tok2, i32 %idx4)
   %s_rsrc1 = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(token %tok3, <8 x i32> %rsrc)
   %s_srsrc1 = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(token %tok3, <4 x i32> %srsrc)
@@ -9737,7 +9737,7 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %fptr)
+  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %fptr)
   %s_fptr = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %tok, i32 %fptr)
   %ext = zext i32 %s_fptr to i64
   %f = inttoptr i64 %ext to i32(i32)*
@@ -9944,7 +9944,7 @@ define amdgpu_cs void @ds_write_8(i8 %value, i32 %index) #1 {
 ; GFX12-GISEL-NEXT:    s_endpgm
 .entry:
   %gep = getelementptr [16384 x i32], ptr addrspace(3) @Lds, i32 0, i32 %index
-  %0 = call token @llvm.amdgcn.waterfall.begin.p3(token none, ptr addrspace(3) %gep)
+  %0 = call token @llvm.amdgcn.waterfall.begin.p3(token poison, ptr addrspace(3) %gep)
   %1 = call ptr addrspace(3) @llvm.amdgcn.waterfall.last.use.vgpr.p3(token %0, ptr addrspace(3) %gep)
   store i8 %value, ptr addrspace(3) %1, align 1
   ret void
@@ -10722,7 +10722,7 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_end_1loop(
   %sptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %s_in, i32 %s_idx2
   %rsrc = load <8 x i32>, <8 x i32> addrspace(4)* %rptr, align 16
   %srsrc = load <4 x i32>, <4 x i32> addrspace(4)* %sptr, align 16
-  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %idx1)
+  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %idx1)
   %tok1 = call token @llvm.amdgcn.waterfall.begin.i32(token %tok, i32 %idx2)
   %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(token %tok1, <8 x i32> %rsrc)
   %s_srsrc = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(token %tok1, <4 x i32> %srsrc)
@@ -11327,7 +11327,7 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_end_1loop_rsrc_
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
        <8 x i32> addrspace(4)* inreg %in, <4 x i32> addrspace(4)* inreg %s_in,
        i32 %idx1, i32 %idx2, i32 %s_idx, i32 %s_idx2, { <4 x float>, <4 x float> } %dummy) #1 {
-  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %idx1)
+  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %idx1)
   %tok1 = call token @llvm.amdgcn.waterfall.begin.i32(token %tok, i32 %idx2)
   %widx0 = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %tok1, i32 %s_idx)
   %widx1 = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %tok1, i32 %s_idx2)
@@ -11763,7 +11763,7 @@ define amdgpu_ps {<4 x float>,float} @test_waterfall_multi_end_struct(
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
               i32 %idx, <4 x i32> %s_idx, i32 %v_inp, { <4 x float>, float } %dummy) #1 {
-  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %idx)
+  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %idx)
   %widx0 = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(token %tok, <4 x i32> %s_idx)
   %val = call { <4 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v4f32i32s(<4 x i32> %widx0, i32 %v_inp, i32 0, i32 0, i32 0)
   %payl = extractvalue { <4 x float>, i32 } %val, 0
@@ -12059,7 +12059,7 @@ define amdgpu_ps {<4 x float>,float} @test_waterfall_multi_end_struct_uniform(
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
               i32 inreg %idx, <4 x i32> %s_idx, i32 %v_inp, { <4 x float>, float } %dummy) #1 {
-  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %idx)
+  %tok = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %idx)
   %widx0 = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(token %tok, <4 x i32> %s_idx)
   %val = call { <4 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v4f32i32s(<4 x i32> %widx0, i32 %v_inp, i32 0, i32 0, i32 0)
   %payl = extractvalue { <4 x float>, i32 } %val, 0
@@ -12574,7 +12574,7 @@ define amdgpu_cs_chain void @wf_scc_check(i32 %arg, %struct.wobble %arg1, float 
 bb:
   %call = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> zeroinitializer, i32 0, i32 0)
   %icmp = icmp eq i32 %call, 0
-  %call3 = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %arg)
+  %call3 = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %arg)
   %call4 = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %call3, i32 %arg)
   %call5 = call <8 x i32> @llvm.amdgcn.waterfall.last.use.v8i32(token %call3, <8 x i32> zeroinitializer)
   call void @llvm.amdgcn.image.store.2d.f32.i32.v8i32(float 0.000000e+00, i32 0, i32 0, i32 0, <8 x i32> %call5, i32 0, i32 0)

@@ -29,7 +29,7 @@ loop.body:
   br i1 %cmp, label %loop.body, label %loop.exit, !llvm.loop !1
 
 loop.exit:
-  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %index)
+  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %index)
   %s_idx = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %wf_token, i32 %index)
   %ptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %loop.ptr, i32 %s_idx
   %rsrc = load <8 x i32>, <8 x i32> addrspace(4)* %ptr, align 32

@@ -5,7 +5,7 @@
 ; CHECK:     DIVERGENT:   %args = load <2 x i32>, ptr addrspace(1) %gep.in, align 8
 ; CHECK:     DIVERGENT:   %value = extractelement <2 x i32> %args, i32 0
 ; CHECK:     DIVERGENT:   %lane = extractelement <2 x i32> %args, i32 1
-; CHECK-NOT: DIVERGENT:   %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %lane)
+; CHECK-NOT: DIVERGENT:   %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %lane)
 ; CHECK-NOT: DIVERGENT:   %readlane = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %wf_token, i32 %lane)
 ; CHECK-NOT: DIVERGENT:   %readlane1 = call i32 @llvm.amdgcn.readlane(i32 %value, i32 %readlane)
 ; CHECK:     DIVERGENT:   %readlane2 = call i32 @llvm.amdgcn.waterfall.end.i32(token %wf_token, i32 %readlane1)
@@ -15,7 +15,7 @@ define amdgpu_ps void @test_waterfall_readlane(i32 addrspace(1)* inreg %out, <2 
   %args = load <2 x i32>, <2 x i32> addrspace(1)* %gep.in
   %value = extractelement <2 x i32> %args, i32 0
   %lane = extractelement <2 x i32> %args, i32 1
-  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %lane)
+  %wf_token = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %lane)
   %readlane = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %wf_token, i32 %lane)
   %readlane1 = call i32 @llvm.amdgcn.readlane(i32 %value, i32 %readlane)
   %readlane2 = call i32 @llvm.amdgcn.waterfall.end.i32(token %wf_token, i32 %readlane1)

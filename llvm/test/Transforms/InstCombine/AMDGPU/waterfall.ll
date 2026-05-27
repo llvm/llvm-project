@@ -3,7 +3,7 @@
 
 define amdgpu_ps <4 x float> @test_waterfall_same_index2(<8 x i32> addrspace(4)* inreg %in, i32 %index, float %s, <4 x i32> inreg %samp) {
 ; CHECK-LABEL: @test_waterfall_same_index2(
-; CHECK-NEXT:    [[WF_TOKEN1:%.*]] = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 [[INDEX:%.*]])
+; CHECK-NEXT:    [[WF_TOKEN1:%.*]] = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 [[INDEX:%.*]])
 ; CHECK-NEXT:    [[S_IDX:%.*]] = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token [[WF_TOKEN1]], i32 [[INDEX]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[S_IDX]] to i64
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [32 x i8], ptr addrspace(4) [[IN:%.*]], i64 [[TMP1]]
@@ -12,7 +12,7 @@ define amdgpu_ps <4 x float> @test_waterfall_same_index2(<8 x i32> addrspace(4)*
 ; CHECK-NEXT:    [[R1:%.*]] = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(token [[WF_TOKEN1]], <4 x float> [[R]])
 ; CHECK-NEXT:    ret <4 x float> [[R1]]
 ;
-  %wf_token1 = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %index)
+  %wf_token1 = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %index)
   %wf_token2 = call token @llvm.amdgcn.waterfall.begin.i32(token %wf_token1, i32 %index)
   %s_idx = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %wf_token2, i32 %index)
   %ptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %in, i32 %s_idx
@@ -24,7 +24,7 @@ define amdgpu_ps <4 x float> @test_waterfall_same_index2(<8 x i32> addrspace(4)*
 
 define amdgpu_ps <4 x float> @test_waterfall_same_index3(<8 x i32> addrspace(4)* inreg %in, i32 %index, float %s, <4 x i32> inreg %samp) {
 ; CHECK-LABEL: @test_waterfall_same_index3(
-; CHECK-NEXT:    [[WF_TOKEN1:%.*]] = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 [[INDEX:%.*]])
+; CHECK-NEXT:    [[WF_TOKEN1:%.*]] = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 [[INDEX:%.*]])
 ; CHECK-NEXT:    [[S_IDX:%.*]] = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token [[WF_TOKEN1]], i32 [[INDEX]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[S_IDX]] to i64
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [32 x i8], ptr addrspace(4) [[IN:%.*]], i64 [[TMP1]]
@@ -33,7 +33,7 @@ define amdgpu_ps <4 x float> @test_waterfall_same_index3(<8 x i32> addrspace(4)*
 ; CHECK-NEXT:    [[R1:%.*]] = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(token [[WF_TOKEN1]], <4 x float> [[R]])
 ; CHECK-NEXT:    ret <4 x float> [[R1]]
 ;
-  %wf_token1 = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %index)
+  %wf_token1 = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %index)
   %wf_token2 = call token @llvm.amdgcn.waterfall.begin.i32(token %wf_token1, i32 %index)
   %wf_token3 = call token @llvm.amdgcn.waterfall.begin.i32(token %wf_token2, i32 %index)
   %s_idx = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %wf_token3, i32 %index)
@@ -46,7 +46,7 @@ define amdgpu_ps <4 x float> @test_waterfall_same_index3(<8 x i32> addrspace(4)*
 
 define amdgpu_ps <4 x float> @test_waterfall_same_index_aba(<8 x i32> addrspace(4)* inreg %in, i32 %index1, i32 %index2, float %s, <4 x i32> inreg %samp) {
 ; CHECK-LABEL: @test_waterfall_same_index_aba(
-; CHECK-NEXT:    [[WF_TOKEN1:%.*]] = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 [[INDEX1:%.*]])
+; CHECK-NEXT:    [[WF_TOKEN1:%.*]] = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 [[INDEX1:%.*]])
 ; CHECK-NEXT:    [[WF_TOKEN2:%.*]] = call token @llvm.amdgcn.waterfall.begin.i32(token [[WF_TOKEN1]], i32 [[INDEX2:%.*]])
 ; CHECK-NEXT:    [[S_IDX:%.*]] = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token [[WF_TOKEN2]], i32 [[INDEX2]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[S_IDX]] to i64
@@ -56,7 +56,7 @@ define amdgpu_ps <4 x float> @test_waterfall_same_index_aba(<8 x i32> addrspace(
 ; CHECK-NEXT:    [[R1:%.*]] = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(token [[WF_TOKEN2]], <4 x float> [[R]])
 ; CHECK-NEXT:    ret <4 x float> [[R1]]
 ;
-  %wf_token1 = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %index1)
+  %wf_token1 = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %index1)
   %wf_token2 = call token @llvm.amdgcn.waterfall.begin.i32(token %wf_token1, i32 %index2)
   %wf_token3 = call token @llvm.amdgcn.waterfall.begin.i32(token %wf_token2, i32 %index1)
   %s_idx = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %wf_token3, i32 %index2)
