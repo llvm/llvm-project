@@ -27,6 +27,9 @@
 
 #include "Plugins/Process/Utility/InstructionUtils.h"
 
+//  Define a low/reserved address range for AIX
+#define  LOWADDR         0x10000000ULL
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -789,6 +792,16 @@ bool EmulateInstructionPPC64::EmulateB(uint32_t opcode) {
   if (AA) {
     // Absolute addressing: NIA = sign_extend(LI || 0b00)
     next_pc = static_cast<uint64_t>(target_addr);
+
+    // if the absolute target address is a low memory address
+    // (< 0x10000000, typically millicode)
+    // skip the branch and continue to the next instruction instead.
+    if (next_pc < LOWADDR) {
+      LLDB_LOG(log,
+               "EmulateB: Detected bla to low memory address {0:x}, "
+               "skipping to next instruction", next_pc);
+      next_pc = pc_value + 4;
+    }
   } else {
     // Relative addressing: NIA = CIA + sign_extend(LI || 0b00)
     next_pc = pc_value + target_addr;
