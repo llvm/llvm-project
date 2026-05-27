@@ -1807,6 +1807,9 @@ static std::optional<FPTruncTableEntry> lookupTruncConvOp(Type srcElemType,
 
 /// Extract a single element from a vector.
 static Value extractElement(ImplicitLocOpBuilder &b, Value srcVec, int idx) {
+  auto vecTy = cast<VectorType>(srcVec.getType());
+  assert(idx >= 0 && idx < vecTy.getNumElements() &&
+         "extractElement: index out of bounds");
   IntegerType i64Ty = b.getI64Type();
   return b.create<LLVM::ExtractElementOp>(
       srcVec, b.create<LLVM::ConstantOp>(i64Ty, b.getI64IntegerAttr(idx)));
