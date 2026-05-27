@@ -549,7 +549,7 @@ template <>
 inline void
 ScopedPrinter::printHex<support::ulittle16_t>(StringRef Label,
                                               support::ulittle16_t Value) {
-  startLine() << Label << ": " << hex(Value) << "\n";
+  printHexImpl(Label, hex(static_cast<uint16_t>(Value)));
 }
 
 struct DelimitedScope {
