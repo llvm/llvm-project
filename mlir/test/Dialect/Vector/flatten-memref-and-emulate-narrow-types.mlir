@@ -45,7 +45,8 @@ func.func @vector_maskedstore_2d_i4(%arg0: index, %value: vector<8xi4>) {
 
 func.func @vector_store_2d_i4(%arg0: index, %value: vector<8xi4>) {
     %0 = memref.alloc() : memref<4x8xi4>
-    vector.store %value, %0[%arg0, %arg0] : memref<4x8xi4>, vector<8xi4>
+    %c0 = arith.constant 0 : index
+    vector.store %value, %0[%arg0, %c0] : memref<4x8xi4>, vector<8xi4>
     return
 }
 //  CHECK-LABEL: func @vector_store_2d_i4(

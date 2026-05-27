@@ -635,17 +635,6 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
       return success();
     }
 
-    // Do the trailing dim for source and destination match? If yes, and if the
-    // access indices are not all constant, then assume the last index is 0
-    // (byte-aligned). Note: for constant indices, the intraDataOffset computed
-    // below will give the exact value, so the trailingDimsMatch shortcut is
-    // not used in that case.
-    // FIXME: For dynamic indices where trailingDimsMatch, the assumption that
-    // the last index is 0 (byte-aligned) may be incorrect. See issue #131528.
-    auto trailingDim = op.getBase().getType().getShape().back();
-    bool trailingDimsMatch =
-        ShapedType::isDynamic(trailingDim) || trailingDim == origElements;
-
     auto stridedMetadata =
         memref::ExtractStridedMetadataOp::create(rewriter, loc, op.getBase());
 
@@ -659,17 +648,12 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
             stridedMetadata.getConstifiedMixedStrides(),
             getAsOpFoldResult(adaptor.getIndices()));
 
-    // Prefer the exact intraDataOffset when it can be folded (e.g. all-constant
-    // indices). Fall back to 0 only when the trailing dimension exactly matches
-    // the vector size (trailingDimsMatch), because in that case a dynamic last
-    // index implies byte-alignment (the caller is responsible for passing a
-    // valid, aligned index). If neither condition holds, bail out.
+    // Use the exact intraDataOffset when it can be folded. Dynamic values are
+    // rejected in this path because a dynamic offset is not necessarily aligned
+    // to a container element boundary. Callers that can guarantee alignment
+    // should use assumeAligned.
     std::optional<int64_t> foldedNumFrontPadElems =
         getConstantIntValue(linearizedInfo.intraDataOffset);
-    if (!foldedNumFrontPadElems) {
-      if (isDivisibleInSize && trailingDimsMatch)
-        foldedNumFrontPadElems = 0;
-    }
 
     if (!foldedNumFrontPadElems) {
       return rewriter.notifyMatchFailure(
