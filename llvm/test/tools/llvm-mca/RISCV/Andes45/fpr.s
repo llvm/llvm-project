@@ -134,4 +134,4 @@ fcvt.s.w ft0, a0
 # CHECK-NEXT: 10.    1     0.0    0.0    0.0       fclass.s	a0, fa0
 # CHECK-NEXT: 11.    1     0.0    0.0    0.0       feq.s	a0, fa0, fa1
 # CHECK-NEXT: 12.    1     0.0    0.0    0.0       fcvt.s.w	ft0, a0
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        13    0.0    0.0    0.0       <total>
