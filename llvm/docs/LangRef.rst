@@ -6584,6 +6584,24 @@ more-accurate debug info for profiling results.
                         enums: !2, retainedTypes: !3, globals: !4, imports: !5,
                         macros: !6, dwoId: 0x0abcd)
 
+The optional ``dialect:`` field encodes the source-language *dialect* of the
+compile unit as an enum. It corresponds to the ``DW_AT_LLVM_language_dialect``
+attribute emitted on ``DW_TAG_compile_unit`` and is intended for language
+dialects that represent different execution models. When specified, the field
+must name one of the known dialects, either symbolically or with the matching
+numeric value; see :ref:`llvm_language_dialect` for the list of supported
+values.
+
+Omitting the ``dialect:`` field is the only way to express "no dialect" in
+textual IR.
+
+.. code-block:: text
+
+    !0 = !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang",
+                        isOptimized: false, runtimeVersion: 0,
+                        emissionKind: FullDebug,
+                        dialect: DW_LLVM_LANG_DIALECT_simt)
+
 Compile unit descriptors provide the root scope for objects declared in a
 specific compilation unit. File descriptors are defined using this scope.  These
 descriptors are collected by a named metadata node ``!llvm.dbg.cu``. They keep

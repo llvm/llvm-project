@@ -55,8 +55,8 @@ define void @test_stack_realign(<8 x i32> %val, i32 %idx) #0 {
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
-; GCN-NEXT:    v_readlane_b32 s31, v42, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v42, 0
+; GCN-NEXT:    v_readlane_b32 s31, v42, 1
 ; GCN-NEXT:    s_mov_b32 s32, s34
 ; GCN-NEXT:    v_readlane_b32 s4, v42, 2
 ; GCN-NEXT:    v_readlane_b32 s34, v42, 3

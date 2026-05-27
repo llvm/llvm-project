@@ -224,6 +224,9 @@ if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
   set(sources ${gpu_sources})
 elseif(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
   set(sources ${supported_sources})
+  list(REMOVE_ITEM sources
+       io-api.cpp io-error.cpp io-stmt.cpp descriptor-io.cpp namelist.cpp)
+  list(APPEND sources io-stmt-minimal.cpp)
 else ()
   set(sources ${supported_sources} ${host_sources} ${f128_sources})
 endif ()
@@ -237,7 +240,7 @@ if (NOT WIN32)
     ADDITIONAL_HEADERS ${public_headers} ${private_headers}
   )
 
-  enable_cuda_compilation(flang_rt.runtime "${supported_sources}")
+  enable_cuda_compilation(flang_rt.runtime "${sources}")
 
   # Select a default runtime, which is used for unit and regression tests.
   if (TARGET flang_rt.runtime.default)
