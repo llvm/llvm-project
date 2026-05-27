@@ -47,7 +47,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_f2lz)
 
   // Shift the mantissa to the top of the word, and put on the leading 1 bit.
   mov     r3, r0, lsl #8
-  orrne   r3, r3, #1 << 31
+  orrne   r3, r3, #(1 << 31)
 
   // If the value was negative, branch out of line to handle that.
   bmi     LOCAL_LABEL(negative)

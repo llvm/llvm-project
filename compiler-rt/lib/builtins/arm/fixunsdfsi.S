@@ -66,7 +66,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_d2uiz)
   blt     LOCAL_LABEL(uncommon)
 
   // Construct a word containing the top 32 bits of the mantissa.
-  orr     r2, xh, #1 << 20      // put on the leading 1
+  orr     r2, xh, #(1 << 20)    // put on the leading 1
   lsls    r2, r2, #11           // shift mantissa part of xh up to top of word
   orr     r2, r2, xl, lsr #21   // the top 11 mantissa bits from xl
 
@@ -118,7 +118,7 @@ LOCAL_LABEL(positive_invalid):
   // Here we have a positive value causing an invalid operation exception. If
   // it's a NaN, we return zero; otherwise we return UINT_MAX.
   lsls    r2, xh, #1              // shift exponent of x to top of word
-  cmn     r2, #1 << 21            // set HI if xh proves it's a NaN by itself
+  cmn     r2, #(1 << 21)          // set HI if xh proves it's a NaN by itself
   cmpeq   xl, #0                  // now HI is set if it's a NaN
   bhi     LOCAL_LABEL(return_zero)
   mov     r0, #0xFFFFFFFF

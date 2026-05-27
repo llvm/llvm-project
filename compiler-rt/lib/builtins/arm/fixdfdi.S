@@ -56,7 +56,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_d2lz)
   // imagine that their leading mantissa bit was set.)
   lsl     r3, xh, #11           // shift top word left to discard sign+exponent
   orr     r3, r3, xl, lsr #21   // combine with bits from bottom word
-  orr     r3, r3, #1<<31        // set the leading bit
+  orr     r3, r3, #(1 << 31)    // set the leading bit
   lsl     r12, xl, #11          // shift bottom word left
 
   // Branch out of line for negative cases, using the N flag set by the ASRS at
@@ -189,7 +189,7 @@ LOCAL_LABEL(invalid):
   // Check for NaNs and branch out of line.
   cmp     xl, #1                  // set C if any bit of xl is nonzero
   adc     r2, xh, xh              // shift that bit into xh, discarding sign
-  cmn     r2, #1 << 21            // then greater than 0xFFE00000 means NaN
+  cmn     r2, #(1 << 21)          // then greater than 0xFFE00000 means NaN
   bhi     LOCAL_LABEL(nan)
 
   // The remaining case is a too-large exponent. Return either INT_MAX or
