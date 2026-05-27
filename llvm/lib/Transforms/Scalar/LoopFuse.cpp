@@ -1146,6 +1146,8 @@ private:
         NumDA++;
         return true;
       }
+      LLVM_DEBUG(
+          dbgs() << "Not safe to fuse due to a scalar flow dependency\n");
       return false;
     }
 
