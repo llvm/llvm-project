@@ -5411,8 +5411,8 @@ Action *Driver::ConstructPhaseAction(
         offloadDeviceOnly() &&
         !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
 
-    auto &DefaultToolChain = C.getDefaultToolChain();
-    auto DefaultToolChainTriple = DefaultToolChain.getTriple();
+    const ToolChain &DefaultToolChain = C.getDefaultToolChain();
+    const llvm::Triple &DefaultToolChainTriple = DefaultToolChain.getTriple();
     // For regular C/C++ to AMD SPIRV emit bitcode to avoid spirv-link
     // dependency, SPIRVAMDToolChain's linker takes care of the generation of
     // the final SPIRV. The only exception is -S without -emit-llvm to output
