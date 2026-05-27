@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the common bits of scheduling models for P400, P500, P600,
-// and P800 series cores.
+// This file contains the common bits of scheduling models for the P400, P500,
+// and the P600 series cores.
 //
 //===----------------------------------------------------------------------===//
 
