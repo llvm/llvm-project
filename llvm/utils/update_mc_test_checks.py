@@ -79,17 +79,24 @@ def invoke_tool(
     if verbose:
         print("Command: ", cmd)
 
-    out = subprocess.run(
-        cmd,
-        shell=True,
-        input=full_input.encode(),
-        check=check_rc,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-    ).stdout
+    try:
+        completed = subprocess.run(
+            cmd,
+            shell=True,
+            input=full_input.encode(),
+            check=check_rc,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except subprocess.CalledProcessError as e:
+        sys.stderr.write(f"Error running command: {cmd}\n")
+        sys.stderr.write(f"Exit code: {e.returncode}\n")
+        if e.stderr:
+            sys.stderr.write(f"Stderr:\n{e.stderr.decode(errors='replace')}\n")
+        raise e
 
     # Fix line endings to unix CR style.
-    return out.decode().replace("\r\n", "\n")
+    return completed.stdout.decode().replace("\r\n", "\n")
 
 
 def isRunLine(l):
