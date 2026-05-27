@@ -346,6 +346,35 @@ gpu.func @simt_store_nd_2(%src: memref<24x32xf16>) {
   gpu.return
 }
 
+// CHECK-LABEL: gpu.func @load_nd_3d
+gpu.func @load_nd_3d(%src: memref<4x8x16xf16>) {
+  // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<4x8x16xf16> -> !xegpu.tensor_desc<4x8x16xf16>
+  %1 = xegpu.create_nd_tdesc %src : memref<4x8x16xf16> -> !xegpu.tensor_desc<4x8x16xf16>
+  // CHECK: %{{.*}} = xegpu.load_nd %[[R0]][0, 0, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<4x8x16xf16> -> vector<4x8x16xf16>
+  %2 = xegpu.load_nd %1[0, 0, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<4x8x16xf16> -> vector<4x8x16xf16>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @store_nd_3d
+gpu.func @store_nd_3d(%dst: memref<4x8x16xf16>) {
+  // CHECK: %[[C:.*]] = arith.constant dense<1.000000e+00> : vector<4x8x16xf16>
+  %val = arith.constant dense<1.0> : vector<4x8x16xf16>
+  // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<4x8x16xf16> -> !xegpu.tensor_desc<4x8x16xf16>
+  %1 = xegpu.create_nd_tdesc %dst : memref<4x8x16xf16> -> !xegpu.tensor_desc<4x8x16xf16>
+  // CHECK: xegpu.store_nd %[[C]], %[[R0]][0, 0, 0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}> : vector<4x8x16xf16>, !xegpu.tensor_desc<4x8x16xf16>
+  xegpu.store_nd %val, %1[0, 0, 0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}> : vector<4x8x16xf16>, !xegpu.tensor_desc<4x8x16xf16>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @prefetch_nd_3d
+gpu.func @prefetch_nd_3d(%src: memref<4x8x16xf16>) {
+  // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<4x8x16xf16> -> !xegpu.tensor_desc<4x8x16xf16>
+  %1 = xegpu.create_nd_tdesc %src : memref<4x8x16xf16> -> !xegpu.tensor_desc<4x8x16xf16>
+  // CHECK: xegpu.prefetch_nd %[[R0]][0, 0, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<4x8x16xf16>
+  xegpu.prefetch_nd %1[0, 0, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<4x8x16xf16>
+  gpu.return
+}
+
 // CHECK: gpu.func @simt_load_4(%[[arg0:.*]]: memref<256xf16>, %[[arg1:.*]]: vector<1xindex>, %[[arg2:.*]]: vector<1xi1>) {
 gpu.func @simt_load_4(%arg0: memref<256xf16>, %arg1: vector<1xindex>, %arg2: vector<1xi1>) {
   // CHECK: %0 = xegpu.load %[[arg0]][%[[arg1]]], %[[arg2]] <{chunk_size = 8 : i64}> : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
