@@ -138,6 +138,7 @@ add to a function created in the previous chapter (``InitializeModule()``):
       // Open a new context and module.
       TheContext = std::make_unique<LLVMContext>();
       TheModule = std::make_unique<Module>("KaleidoscopeJIT", *TheContext);
+      TheModule->setDataLayout(TheJIT->getDataLayout());
 
       // Create a new builder for the module.
       Builder = std::make_unique<IRBuilder<>>(*TheContext);
@@ -153,6 +154,9 @@ add to a function created in the previous chapter (``InitializeModule()``):
                                                         /*DebugLogging*/ true);
       TheSI->registerCallbacks(*ThePIC, TheMAM.get());
       ...
+
+Besides the initialization we have a `TheModule->setDataLayout(TheJIT->getDataLayout());` 
+in the code. We will discuss about it later in this chapter.
 
 After initializing the global module ``TheModule`` and the FunctionPassManager,
 we need to initialize other parts of the framework. The four AnalysisManagers
