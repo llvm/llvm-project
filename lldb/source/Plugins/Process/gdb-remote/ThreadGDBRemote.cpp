@@ -339,6 +339,13 @@ bool ThreadGDBRemote::PrivateSetRegisterValue(uint32_t reg, uint64_t regval) {
   return gdb_reg_ctx->PrivateSetRegisterValue(reg, regval);
 }
 
+void ThreadGDBRemote::PrivateSetRegisterUnavailable(uint32_t reg) {
+  GDBRemoteRegisterContext *gdb_reg_ctx =
+      static_cast<GDBRemoteRegisterContext *>(GetRegisterContext().get());
+  assert(gdb_reg_ctx);
+  gdb_reg_ctx->SetRegisterIsUnavailable(reg);
+}
+
 bool ThreadGDBRemote::CalculateStopInfo() {
   ProcessSP process_sp(GetProcess());
   if (process_sp)

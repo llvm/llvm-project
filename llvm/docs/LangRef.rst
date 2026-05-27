@@ -16803,7 +16803,7 @@ Arguments:
 """"""""""
 
 The first argument is a pointer to the destination to fill, the second
-is the byte value with which to fill it, the third argument is a constant
+is the byte value with which to fill it, the third argument is an
 integer argument specifying the number of bytes to fill, and the fourth
 is a boolean indicating a volatile access.
 
