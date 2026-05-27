@@ -11,15 +11,15 @@ body: |
     ; CHECK-ZCMP-LABEL: name: no_mismerge_mvsa_with_zdinx
     ; CHECK-ZCMP: liveins: $x10, $x11, $x12
     ; CHECK-ZCMP-NEXT: {{  $}}
-    ; CHECK-ZCMP-NEXT: $x9, $x18 = CM_MVSA01 implicit $x10, implicit $x11
-    ; CHECK-ZCMP-NEXT: $x19 = ADDI $x11, 0
+    ; CHECK-ZCMP-NEXT: $x18 = ADDI $x12, 0
+    ; CHECK-ZCMP-NEXT: $x9, $x19 = CM_MVSA01 implicit $x10, implicit $x11
     ; CHECK-ZCMP-NEXT: PseudoRET
     ;
     ; CHECK-XQCCMP-LABEL: name: no_mismerge_mvsa_with_zdinx
     ; CHECK-XQCCMP: liveins: $x10, $x11, $x12
     ; CHECK-XQCCMP-NEXT: {{  $}}
-    ; CHECK-XQCCMP-NEXT: $x9, $x18 = QC_CM_MVSA01 implicit $x10, implicit $x11
-    ; CHECK-XQCCMP-NEXT: $x19 = ADDI $x11, 0
+    ; CHECK-XQCCMP-NEXT: $x18 = ADDI $x12, 0
+    ; CHECK-XQCCMP-NEXT: $x9, $x19 = QC_CM_MVSA01 implicit $x10, implicit $x11
     ; CHECK-XQCCMP-NEXT: PseudoRET
     $x18 = ADDI $x12, 0
     $x9 = ADDI $x10, 0
