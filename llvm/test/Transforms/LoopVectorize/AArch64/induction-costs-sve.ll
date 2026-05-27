@@ -611,7 +611,7 @@ define void @exit_cond_zext_iv(ptr %dst, i64 %N) {
 ; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE5]]
 ; PRED:       [[PRED_STORE_CONTINUE5]]:
 ; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
-; PRED-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IV]], splat (i64 2)
+; PRED-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i64> [[VEC_IV]], splat (i64 2)
 ; PRED-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; PRED-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:

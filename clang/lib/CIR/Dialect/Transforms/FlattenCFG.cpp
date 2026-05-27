@@ -301,14 +301,15 @@ public:
       if (hasNestedOpsToFlatten(region))
         return mlir::failure();
 
-    llvm::SmallVector<CaseOp> cases;
-    op.collectCases(cases);
-
     // Empty switch statement: just erase it.
-    if (cases.empty()) {
+    if (op.getBody().hasOneBlock() &&
+        op.getBody().front().without_terminator().empty()) {
       rewriter.eraseOp(op);
       return mlir::success();
     }
+
+    llvm::SmallVector<CaseOp> cases;
+    op.collectCases(cases);
 
     // Create exit block from the next node of cir.switch op.
     mlir::Block *exitBlock = rewriter.splitBlock(
@@ -321,6 +322,18 @@ public:
     //    case. b. Inline the case region after the case op.
     // 3. Replace the empty cir.switch.op with the new cir.switchflat op by the
     //    recorded block and conditions.
+
+    // First we have to handle the rewrite of all of the 'break' ops to make
+    // sure they now go to the right place, including the ones in the pre-case
+    // blcoks.
+    walkRegionSkipping<cir::LoopOpInterface, cir::SwitchOp>(
+        op.getBody(), [&](mlir::Operation *op) {
+          if (!isa<cir::BreakOp>(op))
+            return mlir::WalkResult::advance();
+
+          lowerTerminator(op, exitBlock, rewriter);
+          return mlir::WalkResult::skip();
+        });
 
     // inline everything from switch body between the switch op and the exit
     // block.
@@ -388,16 +401,6 @@ public:
         }
         break;
       }
-
-      // Handle break statements.
-      walkRegionSkipping<cir::LoopOpInterface, cir::SwitchOp>(
-          region, [&](mlir::Operation *op) {
-            if (!isa<cir::BreakOp>(op))
-              return mlir::WalkResult::advance();
-
-            lowerTerminator(op, exitBlock, rewriter);
-            return mlir::WalkResult::skip();
-          });
 
       // Track fallthrough in cases.
       for (mlir::Block &blk : region.getBlocks()) {

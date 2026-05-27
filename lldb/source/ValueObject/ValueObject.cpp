@@ -1954,6 +1954,7 @@ ValueObjectSP ValueObject::GetSyntheticChildAtOffset(
     synthetic_child_sp = synthetic_child->GetSP();
     synthetic_child_sp->SetName(name_const_str);
     synthetic_child_sp->m_flags.m_is_child_at_offset = true;
+    synthetic_child_sp->SetSyntheticChildrenGenerated(true);
   }
   return synthetic_child_sp;
 }

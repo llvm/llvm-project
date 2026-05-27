@@ -761,6 +761,8 @@ define amdgpu_kernel void @round_v8f32(ptr addrspace(1) %out, <8 x float> %in) #
 ; R600-NEXT:     ADD T0.X, T3.W, PV.W,
 ; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; R600-NEXT:     ADD_INT * T2.X, PS, literal.x,
+; R600-NEXT:    4(5.605194e-45), 0(0.000000e+00)
   %result = call <8 x float> @llvm.round.v8f32(<8 x float> %in) #1
   store <8 x float> %result, ptr addrspace(1) %out
   ret void
@@ -838,7 +840,7 @@ define amdgpu_kernel void @round_f16(ptr addrspace(1) %out, i32 %x.arg) #0 {
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, -1
 ; GFX11-TRUE16-NEXT:    v_cmp_ge_f16_e64 s3, |v0.h|, 0.5
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v2.l, 0, 0x3c00, s3
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v2.l, 0, 1.0, s3
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-TRUE16-NEXT:    v_bfi_b32 v1, 0x7fff, v2, v1
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1006,8 +1008,8 @@ define amdgpu_kernel void @round_v2f16(ptr addrspace(1) %out, i32 %in.arg) #0 {
 ; GFX11-TRUE16-NEXT:    v_cmp_ge_f16_e64 s7, |v1.h|, 0.5
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, -1
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v2.l, 0, 0x3c00, s6
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v3.l, 0, 0x3c00, s7
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v2.l, 0, 1.0, s6
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v3.l, 0, 1.0, s7
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_bfi_b32 v1, 0x7fff, v2, v1
 ; GFX11-TRUE16-NEXT:    v_bfi_b32 v2, 0x7fff, v3, v4
