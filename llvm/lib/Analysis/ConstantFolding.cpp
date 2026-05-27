@@ -2845,7 +2845,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
           return ConstantFP::getInfinity(Ty, true);
         if (U.isNegative())
           return ConstantFP::getNaN(Ty);
-        if (U.isExactlyValue(1.0))
+        if (U.isOne())
           return ConstantFP::getZero(Ty);
         return ConstantFoldFP(log, APF, Ty);
       case Intrinsic::log2:
@@ -2853,7 +2853,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
           return ConstantFP::getInfinity(Ty, true);
         if (U.isNegative())
           return ConstantFP::getNaN(Ty);
-        if (U.isExactlyValue(1.0))
+        if (U.isOne())
           return ConstantFP::getZero(Ty);
         // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log2, APF, Ty);
@@ -2862,7 +2862,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
           return ConstantFP::getInfinity(Ty, true);
         if (U.isNegative())
           return ConstantFP::getNaN(Ty);
-        if (U.isExactlyValue(1.0))
+        if (U.isOne())
           return ConstantFP::getZero(Ty);
         // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log10, APF, Ty);

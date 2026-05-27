@@ -11682,7 +11682,7 @@ SDValue SelectionDAG::simplifyFPBinop(unsigned Opcode, SDValue X, SDValue Y,
   // X * 1.0 --> X
   // X / 1.0 --> X
   if (Opcode == ISD::FMUL || Opcode == ISD::FDIV)
-    if (YC->getValueAPF().isExactlyValue(1.0))
+    if (YC->getValueAPF().isOne())
       return X;
 
   // X * 0.0 --> 0.0
@@ -13699,9 +13699,9 @@ bool SelectionDAG::isIdentityElement(unsigned Opcode, SDNodeFlags Flags,
       return OperandNo == 1 && ConstFP->isZero() &&
              (Flags.hasNoSignedZeros() || !ConstFP->isNegative());
     case ISD::FMUL:
-      return ConstFP->isExactlyValue(1.0);
+      return ConstFP->isOne();
     case ISD::FDIV:
-      return OperandNo == 1 && ConstFP->isExactlyValue(1.0);
+      return OperandNo == 1 && ConstFP->isOne();
     case ISD::FMINNUM:
     case ISD::FMAXNUM: {
       // Neutral element for fminnum is NaN, Inf or FLT_MAX, depending on FMF.
@@ -13856,7 +13856,7 @@ bool llvm::isOneOrOneSplat(SDValue N, bool AllowUndefs) {
 
 bool llvm::isOneOrOneSplatFP(SDValue N, bool AllowUndefs) {
   ConstantFPSDNode *C = isConstOrConstSplatFP(N, AllowUndefs);
-  return C && C->isExactlyValue(1.0);
+  return C && C->isOne();
 }
 
 bool llvm::isAllOnesOrAllOnesSplat(SDValue N, bool AllowUndefs) {
