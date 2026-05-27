@@ -247,8 +247,8 @@ define hidden void @_ZL3barv() #0 !dbg !1644 {
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    .loc 0 32 1 ; lane-info.cpp:32:1
-; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
+; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    v_readlane_b32 s4, v40, 2
 ; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -267,7 +267,7 @@ entry:
 ; Function Attrs: convergent nounwind
 declare void @_ZL13sleep_foreverv() #0
 
-attributes #0 = { "frame-pointer"="all" }
+attributes #0 = { "frame-pointer"="all" nounwind }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!1638, !1639, !1640, !1641}

@@ -2005,8 +2005,8 @@ define hidden void @func_call_clobber() #0 {
 ; GFX900-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
 ; GFX900-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX900-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX900-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX900-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX900-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX900-NEXT:    s_mov_b32 s32, s33
 ; GFX900-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX900-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -2278,8 +2278,8 @@ define hidden void @func_call_clobber() #0 {
 ; GFX90A-V2A-DIS-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
 ; GFX90A-V2A-DIS-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX90A-V2A-DIS-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX90A-V2A-DIS-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX90A-V2A-DIS-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX90A-V2A-DIS-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s32, s33
 ; GFX90A-V2A-DIS-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX90A-V2A-DIS-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -2551,8 +2551,8 @@ define hidden void @func_call_clobber() #0 {
 ; GFX90A-V2A-EN-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
 ; GFX90A-V2A-EN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX90A-V2A-EN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX90A-V2A-EN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX90A-V2A-EN-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX90A-V2A-EN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX90A-V2A-EN-NEXT:    s_mov_b32 s32, s33
 ; GFX90A-V2A-EN-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX90A-V2A-EN-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -2793,8 +2793,8 @@ define hidden void @func_call_clobber() #0 {
 ; WAVE32-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
 ; WAVE32-NEXT:    v_writelane_b32 v40, s31, 1
 ; WAVE32-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; WAVE32-NEXT:    v_readlane_b32 s31, v40, 1
 ; WAVE32-NEXT:    v_readlane_b32 s30, v40, 0
+; WAVE32-NEXT:    v_readlane_b32 s31, v40, 1
 ; WAVE32-NEXT:    s_mov_b32 s32, s33
 ; WAVE32-NEXT:    v_readlane_b32 s4, v40, 2
 ; WAVE32-NEXT:    s_or_saveexec_b32 s5, -1

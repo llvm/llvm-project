@@ -34,8 +34,8 @@ define void @if_call(i32 %flag) #0 {
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:  .LBB1_2: ; %end
 ; GCN-NEXT:    s_or_b64 exec, exec, s[16:17]
-; GCN-NEXT:    v_readlane_b32 s31, v1, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v1, 0
+; GCN-NEXT:    v_readlane_b32 s31, v1, 1
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], s33 ; 4-byte Folded Reload
