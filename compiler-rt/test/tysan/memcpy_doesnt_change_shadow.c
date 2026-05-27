@@ -18,8 +18,8 @@ int main() {
 
   *(float *)&i = 3.0f;
   *(int *)&f = 2;
-  // CHECK: WRITE of size 4 at 0x{{.*}} with type int accesses an existing object of type float
   // CHECK: WRITE of size 4 at 0x{{.*}} with type float accesses an existing object of type int
+  // CHECK: WRITE of size 4 at 0x{{.*}} with type int accesses an existing object of type float
 
   return 0;
 }
