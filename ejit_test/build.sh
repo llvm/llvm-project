@@ -18,6 +18,7 @@ SELECTED=()
 DO_RUN=false
 ANALYZE_DEPS=false
 LIPO_FILE=""
+NO_STRIP=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -27,6 +28,7 @@ while [[ $# -gt 0 ]]; do
     --arch)        ARCH="$2"; shift ;;
     --lipo=*)      LIPO_FILE="${1#--lipo=}" ;;
     --lipo)        LIPO_FILE="auto" ;;
+    --no-strip)    NO_STRIP=true ;;
     *)             SELECTED+=("$1") ;;
   esac
   shift
@@ -137,6 +139,8 @@ else
   OTHER_LIBS=$(echo "${MIN_LIBS}" | sed '/^$/d' | tr '\n' ' ')
 fi
 LINK_LIBS="-lz -lpthread -ldl"
+STRIP_FLAG="-Wl,--strip-all"
+if ${NO_STRIP}; then STRIP_FLAG=""; fi
 
 OUTDIR="${SCRIPT_DIR}/out"
 mkdir -p "${OUTDIR}"
@@ -201,18 +205,13 @@ build_one() {
   echo "  Linking ${name} (${ARCH}) ..."
   if ${USE_LIPO}; then
     "${CXX}" -fuse-ld="${LD_LLD}" \
-      -Os -Wl,--gc-sections -Wl,--strip-all \
-      "${LIPO_ABS}" \
-      ${LINK_LIBS} \
-      "${obj}" -o "${bin}"
-    echo "${CXX}" -fuse-ld="${LD_LLD}" \
-      -Os -Wl,--gc-sections -Wl,--strip-all \
+      -Os -Wl,--gc-sections ${STRIP_FLAG} \
       "${LIPO_ABS}" \
       ${LINK_LIBS} \
       "${obj}" -o "${bin}"
   else
     "${CXX}" -fuse-ld="${LD_LLD}" \
-      -Os -Wl,--gc-sections -Wl,--strip-all \
+      -Os -Wl,--gc-sections ${STRIP_FLAG} \
       -Wl,--whole-archive "${EJIT_RUNTIME}" -Wl,--no-whole-archive \
       ${OTHER_LIBS} \
       ${LINK_LIBS} \
