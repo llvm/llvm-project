@@ -1721,11 +1721,11 @@ void XeGPUSgToLaneDistributePass::runOnOperation() {
     };
     typeConverter.addSourceMaterialization(materializeCast);
     typeConverter.addTargetMaterialization(materializeCast);
-    xegpu::populateXeGPUSgToLaneDistributeTypeConversions(typeConverter);
+    xegpu::populateXeGPUSgToLaneDistributeTypeConversions(typeConverter, root);
     scf::populateSCFStructuralTypeConversionsAndLegality(typeConverter,
                                                          patterns, target);
     xegpu::populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
-        typeConverter, patterns, target);
+        typeConverter, patterns, target, root);
     target.addLegalOp<UnrealizedConversionCastOp>();
     (void)applyPartialConversion(root, target, std::move(patterns));
   }
@@ -1735,13 +1735,10 @@ void XeGPUSgToLaneDistributePass::runOnOperation() {
 }
 
 void xegpu::populateXeGPUSgToLaneDistributeTypeConversions(
-    TypeConverter &typeConverter) {
-  // Any type other than TensorDescType and VectorType are legal as is.
-  typeConverter.addConversion([](Type type) -> std::optional<Type> {
-    if (!isa<TensorDescType, VectorType>(type))
-      return type;
-    return std::nullopt;
-  });
+    TypeConverter &typeConverter, Operation *topLevelOp) {
+  // Pass through any type by default; more specific conversions registered
+  // below override this for TensorDescType and (distributing) VectorType.
+  typeConverter.addConversion([](Type type) -> Type { return type; });
   // For TensorDescType, drop the layout attribute if any.
   typeConverter.addConversion([](TensorDescType type) -> Type {
     if (type.getLayoutAttr()) {
@@ -1749,29 +1746,28 @@ void xegpu::populateXeGPUSgToLaneDistributeTypeConversions(
     }
     return type;
   });
-  // For VectorType, check if there is a distribute layout attribute on the
-  // value. If so, convert to the distributed vector type based on the layout.
-  typeConverter.addConversion([](Value v) -> std::optional<Type> {
-    auto type = v.getType();
-    // If value is not vector type, nothing to do.
-    if (!isa<VectorType>(type))
-      return std::nullopt;
-    auto layout = xegpu::getDistributeLayoutAttr(v);
-    if (!layout || !layout.isForSubgroup())
-      return type;
-    // Vector type is distributed based on lane layout.
-    auto newTyOrFailure =
-        getDistVecTypeBasedOnLaneLayout(layout, cast<VectorType>(type));
-    if (failed(newTyOrFailure))
-      return type;
-    return *newTyOrFailure;
-  });
+  // For VectorType, distribute based on the lane layout (1:1 shape-changing
+  // conversion). Uses xegpu::addVectorTypeConversion with a pre-computed
+  // map for scf.while block args (see precomputeWhileBlockArgTypes for the
+  // detached-block rationale).
+  auto getSubShapeAndCount = [](VectorType vecTy,
+                                xegpu::DistributeLayoutAttr layout)
+      -> std::pair<SmallVector<int64_t>, int> {
+    auto distTyOrFailure = getDistVecTypeBasedOnLaneLayout(layout, vecTy);
+    if (failed(distTyOrFailure))
+      return {{}, 0};
+    return {SmallVector<int64_t>(distTyOrFailure->getShape()), 1};
+  };
+  auto whileArgTypes =
+      xegpu::precomputeWhileBlockArgTypes(topLevelOp, getSubShapeAndCount);
+  xegpu::addVectorTypeConversion(typeConverter, getSubShapeAndCount,
+                                 std::move(whileArgTypes));
 }
 
 void xegpu::populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
-    ConversionTarget &target) {
-  populateXeGPUSgToLaneDistributeTypeConversions(typeConverter);
+    ConversionTarget &target, Operation *topLevelOp) {
+  populateXeGPUSgToLaneDistributeTypeConversions(typeConverter, topLevelOp);
   // CreateNdDescOp is legal only if its result type has no layout attribute.
   target.addDynamicallyLegalOp<xegpu::CreateNdDescOp>(
       [&](xegpu::CreateNdDescOp op) { return !op.getType().getLayoutAttr(); });

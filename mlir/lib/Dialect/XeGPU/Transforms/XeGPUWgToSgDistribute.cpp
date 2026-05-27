@@ -1501,15 +1501,19 @@ void populateXeGPUWgToSgDistributeTypeConversions(TypeConverter &converter,
         return success();
       });
 
-  // Context-aware 1:N conversion for VectorType based on sg_layout/sg_data.
-  xegpu::addVectorTypeConversion(
-      converter, topLevelOp,
-      [](VectorType vecTy, xegpu::DistributeLayoutAttr layout)
-          -> std::pair<SmallVector<int64_t>, int> {
-        if (!layout.isForWorkgroup())
-          return {{}, 0};
-        return getSgShapeAndCount(vecTy.getShape(), layout);
-      });
+  // Context-aware VectorType conversion based on sg_layout/sg_data
+  // (1:1 shape-changing or 1:N).
+  auto getSubShapeAndCount = [](VectorType vecTy,
+                                xegpu::DistributeLayoutAttr layout)
+      -> std::pair<SmallVector<int64_t>, int> {
+    if (!layout.isForWorkgroup())
+      return {{}, 0};
+    return getSgShapeAndCount(vecTy.getShape(), layout);
+  };
+  auto whileArgTypes =
+      xegpu::precomputeWhileBlockArgTypes(topLevelOp, getSubShapeAndCount);
+  xegpu::addVectorTypeConversion(converter, getSubShapeAndCount,
+                                 std::move(whileArgTypes));
 }
 
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {

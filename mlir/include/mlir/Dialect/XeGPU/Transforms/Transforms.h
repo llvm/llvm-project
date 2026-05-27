@@ -81,14 +81,14 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns);
 /// Define only the type conversions needed for XeGPU subgroup to lane
 /// distribution.
 void populateXeGPUSgToLaneDistributeTypeConversions(
-    TypeConverter &typeConverter);
+    TypeConverter &typeConverter, Operation *topLevelOp);
 /// Defines type conversions and legality for XeGPU subgroup to lane
 /// distribution and appends the required conversion patterns into `patterns`.
 /// Appends patterns for XeGPU subgroup to lane distribution into
 /// `patterns`.
 void populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
-    ConversionTarget &target);
+    ConversionTarget &target, Operation *topLevelOp);
 
 /// Collect a set of patterns to unroll xegpu operations to a smaller shapes.
 /// Users can control whether an operation to be unrolled or not, as well as

@@ -852,22 +852,22 @@ bool xegpu::matchSplitDimExpansion(
 // Context-aware type conversion utilities
 //===----------------------------------------------------------------------===//
 
-void xegpu::addVectorTypeConversion(
-    TypeConverter &converter, Operation *topLevelOp,
-    SubShapeAndCountFn getSubShapeAndCount) {
-  // Pre-compute 1:N type mappings for scf.while block arguments.
-  //
-  // Block-arg layouts ARE available in the IR (layout recovery propagates
-  // them onto region block args). The reason we cannot rely on the regular
-  // `getDistributeLayoutAttr(v)` lookup during scf.while conversion is
-  // structural, not informational: `scf::WhileOpConversion` detaches the
-  // before/after blocks from their parent region before invoking
-  // `convertSignatureBlock`. At that point, looking up a BlockArgument's
-  // layout walks `v.getParentBlock()->getParent()`, which trips an LLVM
-  // ilist assertion on detached blocks. The pre-compute is purely a
-  // detached-block workaround; for scf.for / scf.if (whose blocks stay
-  // attached during conversion) the direct lookup works fine.
-  auto whileArgTypeMap = std::make_shared<DenseMap<Value, SmallVector<Type>>>();
+// Pre-computes block argument type mappings for scf.while ops.
+//
+// Block-arg layouts ARE available in the IR (layout recovery propagates
+// them onto region block args). The reason we cannot rely on the regular
+// `getDistributeLayoutAttr(v)` lookup during scf.while conversion is
+// structural, not informational: `scf::WhileOpConversion` detaches the
+// before/after blocks from their parent region before invoking
+// `convertSignatureBlock`. At that point, looking up a BlockArgument's
+// layout walks `v.getParentBlock()->getParent()`, which trips an LLVM
+// ilist assertion on detached blocks. The pre-compute is purely a
+// detached-block workaround; for scf.for / scf.if (whose blocks stay
+// attached during conversion) the direct lookup works fine.
+DenseMap<Value, SmallVector<Type>>
+xegpu::precomputeWhileBlockArgTypes(Operation *topLevelOp,
+                                    SubShapeAndCountFn getSubShapeAndCount) {
+  DenseMap<Value, SmallVector<Type>> whileArgTypes;
   auto recordBlockArgTypes = [&](Value init, BlockArgument arg) {
     auto vecTy = dyn_cast<VectorType>(init.getType());
     if (!vecTy)
@@ -880,7 +880,7 @@ void xegpu::addVectorTypeConversion(
       return;
     auto newTy = VectorType::get(subShape, vecTy.getElementType());
     SmallVector<Type> types(count, newTy);
-    (*whileArgTypeMap)[arg] = std::move(types);
+    whileArgTypes[arg] = std::move(types);
   };
   topLevelOp->walk([&](scf::WhileOp whileOp) {
     // "before" region block arguments correspond to the `inits` operands.
@@ -895,10 +895,17 @@ void xegpu::addVectorTypeConversion(
          llvm::zip(condOp.getArgs(), whileOp.getAfterArguments()))
       recordBlockArgTypes(condArg, arg);
   });
+  return whileArgTypes;
+}
 
-  // Context-aware 1:N conversion for VectorType. For scf.while block
-  // arguments, uses the pre-computed map. For all other Values, retrieves
-  // the layout directly via getDistributeLayoutAttr.
+void xegpu::addVectorTypeConversion(
+    TypeConverter &converter, SubShapeAndCountFn getSubShapeAndCount,
+    DenseMap<Value, SmallVector<Type>> whileArgTypes) {
+  // Context-aware VectorType conversion (1:1 shape-changing or 1:N). For
+  // scf.while block arguments, uses the pre-computed map. For all other
+  // Values, retrieves the layout directly via getDistributeLayoutAttr.
+  auto whileArgTypeMap = std::make_shared<DenseMap<Value, SmallVector<Type>>>(
+      std::move(whileArgTypes));
   converter.addConversion(
       [whileArgTypeMap, getSubShapeAndCount](
           Value v,

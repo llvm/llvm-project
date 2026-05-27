@@ -418,15 +418,17 @@ void XeGPUBlockingPass::runOnOperation() {
           return success();
         });
 
-    // Context-aware 1:N conversion for VectorType based on inst_data.
-    xegpu::addVectorTypeConversion(
-        converter, op,
-        [&](VectorType vecTy, xegpu::DistributeLayoutAttr layout)
-            -> std::pair<SmallVector<int64_t>, int> {
-          if (layout.isForWorkgroup())
-            return {SmallVector<int64_t>(vecTy.getShape()), 1};
-          return getTileShapeAndCount(vecTy.getShape(), layout);
-        });
+    // Context-aware VectorType conversion based on inst_data (1:1
+    // shape-changing or 1:N).
+    auto getSubShapeAndCount = [&](VectorType vecTy,
+                                   xegpu::DistributeLayoutAttr layout)
+        -> std::pair<SmallVector<int64_t>, int> {
+      return getTileShapeAndCount(vecTy.getShape(), layout);
+    };
+    auto whileArgTypes =
+        xegpu::precomputeWhileBlockArgTypes(op, getSubShapeAndCount);
+    xegpu::addVectorTypeConversion(converter, getSubShapeAndCount,
+                                   std::move(whileArgTypes));
     // Source (N:1) and target (1:1) materializations using
     // UnrealizedConversionCastOp.
     auto materializeCast = [](OpBuilder &builder, Type type, ValueRange inputs,

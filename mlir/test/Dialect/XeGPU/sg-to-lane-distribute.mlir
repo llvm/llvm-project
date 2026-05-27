@@ -536,3 +536,41 @@ gpu.module @xevm_module {
     gpu.return
   }
 }
+
+// -----
+// CHECK-LABEL: gpu.func @scf_while_lane_distribute
+// CHECK:         scf.while {{.*}} : (vector<16x1xf32>, i32) -> (vector<16x1xf32>, i32)
+// CHECK:           scf.condition{{.*}} : vector<16x1xf32>, i32
+// CHECK:         (%{{.*}}: vector<16x1xf32>, %{{.*}}: i32)
+// CHECK:           scf.yield %{{.*}}, %{{.*}} : vector<16x1xf32>, i32
+gpu.module @xevm_module {
+  gpu.func @scf_while_lane_distribute(%arg0: memref<16x16xf32>, %arg1: memref<16x16xf32>) {
+    %c0 = arith.constant 0 : index
+    %c0_i32 = arith.constant 0 : i32
+    %c10_i32 = arith.constant 10 : i32
+    %c1_i32 = arith.constant 1 : i32
+    %td0 = xegpu.create_nd_tdesc %arg0 : memref<16x16xf32> -> !xegpu.tensor_desc<16x16xf32>
+    %ld0 = xegpu.load_nd %td0[%c0, %c0]
+      {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+      : !xegpu.tensor_desc<16x16xf32> -> vector<16x16xf32>
+    %td1 = xegpu.create_nd_tdesc %arg1 : memref<16x16xf32> -> !xegpu.tensor_desc<16x16xf32>
+    %r:2 = scf.while (%arg2 = %ld0, %arg3 = %c0_i32) : (vector<16x16xf32>, i32) -> (vector<16x16xf32>, i32) {
+      %cond = arith.cmpi slt, %arg3, %c10_i32 : i32
+      scf.condition(%cond) %arg2, %arg3 : vector<16x16xf32>, i32
+    } do {
+    ^bb0(%arg2: vector<16x16xf32>, %arg3: i32):
+      xegpu.store_nd %arg2, %td1[%c0, %c0]
+        {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+        : vector<16x16xf32>, !xegpu.tensor_desc<16x16xf32>
+      %next = arith.addi %arg3, %c1_i32 : i32
+      %ld_next = xegpu.load_nd %td0[%c0, %c0]
+        {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+        : !xegpu.tensor_desc<16x16xf32> -> vector<16x16xf32>
+      scf.yield %ld_next, %next : vector<16x16xf32>, i32
+    }
+    xegpu.store_nd %r#0, %td1[%c0, %c0]
+      {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+      : vector<16x16xf32>, !xegpu.tensor_desc<16x16xf32>
+    gpu.return
+  }
+}
