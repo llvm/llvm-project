@@ -3,7 +3,7 @@
     {
       "id": "llvm.remarks.summary",
       "name": "Optimization remarks summary",
-      "version": "1",
+      "version": "2",
       "runner": "builtin.remarks_summary",
       "summary": "remarks summary requires an optimization remarks artifact",
       "readiness": "L1",
@@ -45,7 +45,7 @@
     {
       "id": "llvm.remarks.detail",
       "name": "Optimization remarks detail",
-      "version": "1",
+      "version": "2",
       "runner": "builtin.remarks_detail",
       "summary": "remarks detail requires an optimization remarks artifact",
       "readiness": "L1",
