@@ -1188,15 +1188,18 @@ static void processTraitProperties(
     llvm::omp::VariantMatchInfo &vmi, llvm::omp::TraitSet set,
     llvm::omp::TraitSelector selector,
     const std::optional<parser::OmpTraitSelector::Properties> &props,
-    llvm::APInt *scorePtr) {
+    llvm::APInt *scorePtr, mlir::Location loc) {
   if (!props)
     return;
 
   for (const auto &prop :
        std::get<std::list<parser::OmpTraitProperty>>(props->t)) {
     const auto *name = std::get_if<parser::OmpTraitPropertyName>(&prop.u);
+    // Clause properties and extension properties (e.g. `simdlen(8)` in
+    // `construct={simd(simdlen(8))}`) and `foo(bar)` in
+    // `implementation={my_trait(foo(bar))}` are not matched yet.
     if (!name)
-      continue;
+      TODO(loc, "clause or extension trait matching in METADIRECTIVE");
 
     llvm::omp::TraitProperty propKind =
         llvm::omp::getOpenMPContextTraitPropertyKind(set, selector, name->v);
@@ -1335,7 +1338,7 @@ void makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
         continue;
       }
 
-      processTraitProperties(vmi, set, selector, props, scorePtr);
+      processTraitProperties(vmi, set, selector, props, scorePtr, loc);
 
       if (props || set != llvm::omp::TraitSet::construct)
         continue;

@@ -4658,6 +4658,7 @@ static void appendConstructTraits(
     constructTraits.push_back(
         llvm::omp::TraitProperty::construct_target_target);
 }
+
 static void genMetadirective(lower::AbstractConverter &converter,
                              lower::SymMap &symTable,
                              semantics::SemanticsContext &semaCtx,
