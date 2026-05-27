@@ -32,6 +32,7 @@
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
 #include "clang/Analysis/Analyses/Consumed.h"
+#include "clang/Analysis/Analyses/FlowNullability.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Analysis/Analyses/ReachableCode.h"
 #include "clang/Analysis/Analyses/ThreadSafety.h"
@@ -51,8 +52,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -2735,6 +2738,11 @@ public:
   // It is important to analyze blocks within functions because it's a very
   // common pattern to capture completion handler parameters by blocks.
   CalledOnceInterProceduralData CalledOnceData;
+
+  // Functions proven to always return non-null. Accumulated across
+  // per-function analyses so that later callers within the same TU
+  // can narrow the returned pointer.
+  llvm::DenseSet<const FunctionDecl *> AllReturnsNonnullFuncs;
 };
 
 template <typename... Ts>
@@ -2959,8 +2967,238 @@ static bool shouldSuggestUnsafeBufferUsageSuggestions(const Sema &S) {
                                              .ShowSafeBufferUsageSuggestions;
 }
 
+namespace {
+class FlowNullabilityReporter : public FlowNullabilityHandler {
+  Sema &S;
+  // Shared cross-function set of functions proven to always return
+  // non-null. Owned by InterProceduralData, persists across calls.
+  llvm::DenseSet<const FunctionDecl *> &AllReturnsNonnullFuncs;
+  // When true, skip writing to AllReturnsNonnullFuncs (used for recursive
+  // SCCs where we can't reliably infer all-returns-nonnull without a
+  // fixpoint, but still want to read existing results and emit warnings).
+  bool SuppressInference = false;
+
+public:
+  FlowNullabilityReporter(Sema &S,
+                          llvm::DenseSet<const FunctionDecl *> &NonnullFuncs,
+                          bool SuppressInference = false)
+      : S(S), AllReturnsNonnullFuncs(NonnullFuncs),
+        SuppressInference(SuppressInference) {}
+
+  void handleNullableDereference(const Expr *DerefExpr,
+                                 QualType PtrType) override {
+    S.Diag(DerefExpr->getExprLoc(), diag::warn_flow_nullable_dereference)
+        << PtrType;
+    S.Diag(DerefExpr->getExprLoc(), diag::note_nullable_dereference_fix);
+  }
+
+  void handleNullableArithmetic(const Expr *ArithExpr,
+                                QualType PtrType) override {
+    S.Diag(ArithExpr->getExprLoc(), diag::warn_flow_nullable_arithmetic)
+        << PtrType;
+    S.Diag(ArithExpr->getExprLoc(), diag::note_nullable_arithmetic_fix);
+  }
+
+  void handleNullableReturn(const Expr *ReturnExpr, QualType ExprType,
+                            QualType ReturnType) override {
+    S.Diag(ReturnExpr->getExprLoc(), diag::warn_flow_nullable_return);
+    S.Diag(ReturnExpr->getExprLoc(), diag::note_nullable_return_fix);
+  }
+
+  void handleNullableAssignment(const Expr *AssignExpr,
+                                const VarDecl *LHSVar) override {
+    S.Diag(AssignExpr->getExprLoc(), diag::warn_flow_nullable_assignment)
+        << LHSVar;
+    S.Diag(AssignExpr->getExprLoc(), diag::note_nullable_assignment_fix);
+  }
+
+  void handleNullableMemberAssignment(const Expr *AssignExpr,
+                                      const FieldDecl *Member) override {
+    S.Diag(AssignExpr->getExprLoc(), diag::warn_flow_nullable_member_assignment)
+        << Member;
+    S.Diag(AssignExpr->getExprLoc(), diag::note_nullable_member_assignment_fix);
+  }
+
+  void handleNullableArgument(const Expr *ArgExpr,
+                              const ParmVarDecl *Param) override {
+    S.Diag(ArgExpr->getExprLoc(), diag::warn_flow_nullable_argument) << Param;
+    S.Diag(ArgExpr->getExprLoc(), diag::note_nullable_argument_fix);
+  }
+
+  /// Format a declaration's source location as "file:line:col" for evidence
+  /// remarks. The column lets downstream tools pinpoint exact insertion
+  /// positions when multiple declarations share the same line.
+  std::string getDeclLocStr(const Decl *D) {
+    SourceManager &SM = S.getSourceManager();
+    PresumedLoc PLoc = SM.getPresumedLoc(D->getLocation());
+    if (PLoc.isValid())
+      return std::string(PLoc.getFilename()) + ":" +
+             std::to_string(PLoc.getLine()) + ":" +
+             std::to_string(PLoc.getColumn());
+    return "<unknown>";
+  }
+
+  /// Get a printable name for a DeclContext (class name, namespace, or
+  /// "global scope"). Avoids passing a DeclContext* directly to S.Diag()
+  /// which crashes for TranslationUnitDecl.
+  std::string getParentName(const DeclContext *DC) {
+    if (!DC)
+      return "global scope";
+    if (const auto *ND = dyn_cast<NamedDecl>(DC)) {
+      std::string Name = ND->getQualifiedNameAsString();
+      if (!Name.empty())
+        return Name;
+    }
+    if (isa<TranslationUnitDecl>(DC))
+      return "global scope";
+    return "anonymous scope";
+  }
+
+  void handleMemberAssignEvidence(const Expr *AssignExpr,
+                                  const FieldDecl *Member,
+                                  bool IsNonnull) override {
+    unsigned DiagID = IsNonnull
+                          ? diag::remark_nullsafe_member_evidence_nonnull
+                          : diag::remark_nullsafe_member_evidence_nullable;
+    S.Diag(AssignExpr->getExprLoc(), DiagID)
+        << Member->getName() << getParentName(Member->getParent())
+        << getDeclLocStr(Member);
+  }
+
+  void handleReturnEvidence(const Expr *RetExpr, const FunctionDecl *Func,
+                            bool IsNonnull) override {
+    unsigned DiagID = IsNonnull
+                          ? diag::remark_nullsafe_return_evidence_nonnull
+                          : diag::remark_nullsafe_return_evidence_nullable;
+    S.Diag(RetExpr->getExprLoc(), DiagID)
+        << Func->getNameAsString() << getParentName(Func->getParent())
+        << getDeclLocStr(Func);
+  }
+
+  void handleParameterEvidence(const Expr *ArgExpr, const ParmVarDecl *Param,
+                               const FunctionDecl *Func,
+                               bool IsNonnull) override {
+    unsigned DiagID = IsNonnull ? diag::remark_nullsafe_param_evidence_nonnull
+                                : diag::remark_nullsafe_param_evidence_nullable;
+    S.Diag(ArgExpr->getExprLoc(), DiagID)
+        << Param->getName() << Func->getNameAsString() << getDeclLocStr(Param);
+  }
+
+  void handleAllReturnsNonnull(const FunctionDecl *Func) override {
+    if (SuppressInference)
+      return;
+    AllReturnsNonnullFuncs.insert(Func->getCanonicalDecl());
+    S.Diag(Func->getLocation(), diag::remark_nullsafe_all_returns_nonnull)
+        << Func->getNameAsString();
+  }
+
+  bool isKnownAllReturnsNonnull(const FunctionDecl *Func) const override {
+    if (!Func)
+      return false;
+    return AllReturnsNonnullFuncs.contains(Func->getCanonicalDecl());
+  }
+};
+
+/// Check whether a Decl should be analyzed for flow-sensitive nullability.
+/// Handles FunctionDecl, ObjCMethodDecl, and BlockDecl (ObjC/C blocks).
+static const Decl *getAnalyzableDecl(const Decl *D, Sema &S,
+                                     NullabilityKind Default) {
+  if (!D)
+    return nullptr;
+
+  // Get the definition — we need a body to analyze.
+  const Decl *Def = nullptr;
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    Def = FD->getDefinition();
+  } else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
+    if (MD->hasBody())
+      Def = MD;
+  } else if (const auto *BD = dyn_cast<BlockDecl>(D)) {
+    // Blocks always have a body if they appear in the call graph.
+    Def = BD;
+  }
+  if (!Def || Def->isInvalidDecl())
+    return nullptr;
+
+  // Skip dependent contexts (uninstantiated templates).
+  if (Def->getDeclContext()->isDependentContext())
+    return nullptr;
+
+  // Skip system headers.
+  DiagnosticsEngine &Diags = S.getDiagnostics();
+  if (Diags.getSuppressSystemWarnings() &&
+      S.SourceMgr.isInSystemHeader(Def->getLocation()))
+    return nullptr;
+
+  // Opt-in: only analyze if -fnullability-default is set, or the function
+  // has explicit nullability annotations.
+  if (Default == NullabilityKind::Unspecified) {
+    if (const auto *FD = dyn_cast<FunctionDecl>(Def)) {
+      if (!S.functionHasNullabilityAnnotations(FD))
+        return nullptr;
+    }
+    // ObjC methods and blocks in nullability-audited regions get annotations
+    // baked in during parsing, so checking their types suffices.
+  }
+  return Def;
+}
+
+/// Run flow-sensitive nullability analysis over the entire TU using SCC-based
+/// call-graph ordering (callees before callers). This ensures that
+/// all-returns-nonnull inference is order-independent — a callee defined after
+/// its caller still gets analyzed first.
+///
+/// Uses scc_iterator (Tarjan's algorithm) instead of plain post_order so we
+/// can detect mutually recursive SCCs and skip all-returns-nonnull inference
+/// for them (conservative but correct).
+static void FlowNullabilityTUAnalysis(
+    Sema &S, TranslationUnitDecl *TU,
+    llvm::DenseSet<const FunctionDecl *> &AllReturnsNonnullFuncs) {
+  llvm::TimeTraceScope TimeProfile("FlowNullabilityTUAnalysis");
+  CallGraph CG;
+  CG.addToCallGraph(TU);
+
+  FlowNullabilityReporter Reporter(S, AllReturnsNonnullFuncs);
+  NullabilityKind Default = S.getLangOpts().getNullabilityDefault();
+  bool StrictMode = (Default != NullabilityKind::Unspecified);
+
+  // scc_iterator visits SCCs in reverse topological order: if SCC A calls
+  // into SCC B, B is visited first. Within each SCC, we analyze all
+  // functions (warnings are still correct), but skip nonnull-return
+  // inference for non-trivial SCCs (mutual recursion).
+  for (auto SCCI = llvm::scc_begin(&CG); !SCCI.isAtEnd(); ++SCCI) {
+    const auto &SCC = *SCCI;
+    bool IsRecursive = SCCI.hasCycle();
+
+    for (auto *Node : SCC) {
+      const Decl *Def = getAnalyzableDecl(Node->getDecl(), S, Default);
+      if (!Def)
+        continue;
+
+      AnalysisDeclContext AC(nullptr, Def);
+      AC.getCFGBuildOptions().setAllAlwaysAdd();
+      if (!AC.getCFG())
+        continue;
+
+      if (IsRecursive) {
+        // For recursive SCCs: run the analysis (warnings are still valid)
+        // but suppress all-returns-nonnull inference. The reporter still
+        // reads from AllReturnsNonnullFuncs so non-recursive callees that
+        // were already proven nonnull are still used for narrowing.
+        FlowNullabilityReporter SCCReporter(S, AllReturnsNonnullFuncs,
+                                            /*SuppressInference=*/true);
+        runFlowNullabilityAnalysis(AC, SCCReporter, StrictMode, Default);
+      } else {
+        runFlowNullabilityAnalysis(AC, Reporter, StrictMode, Default);
+      }
+    }
+  }
+}
+
+} // anonymous namespace
+
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(
-     TranslationUnitDecl *TU) {
+    TranslationUnitDecl *TU) {
   if (!TU)
     return; // This is unexpected, give up quietly.
 
@@ -3002,6 +3240,20 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   if (S.getLangOpts().CPlusPlus &&
       S.getLangOpts().EnableLifetimeSafetyTUAnalysis)
     LifetimeSafetyTUAnalysis(S, TU, LSStats);
+
+  // Flow-sensitive nullability: analyze the whole TU in call-graph order
+  // so that all-returns-nonnull inference works regardless of source order.
+  // Check all nullsafe warning groups — any one being enabled is enough.
+  if (S.getLangOpts().FlowSensitiveNullability &&
+      (!Diags.isIgnored(diag::warn_flow_nullable_dereference,
+                        SourceLocation()) ||
+       !Diags.isIgnored(diag::warn_flow_nullable_arithmetic,
+                        SourceLocation()) ||
+       !Diags.isIgnored(diag::warn_flow_nullable_return, SourceLocation()) ||
+       !Diags.isIgnored(diag::warn_flow_nullable_assignment,
+                        SourceLocation()) ||
+       !Diags.isIgnored(diag::warn_flow_nullable_argument, SourceLocation())))
+    FlowNullabilityTUAnalysis(S, TU, IPData->AllReturnsNonnullFuncs);
 }
 
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(
@@ -3061,17 +3313,17 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // appropriately.  This is essentially a layering violation.
   if (P.enableCheckUnreachable || P.enableThreadSafetyAnalysis ||
       P.enableConsumedAnalysis || EnableLifetimeSafetyAnalysis) {
-    // Unreachable code analysis and thread safety require a linearized CFG.
+    // These analyses require a linearized CFG with all statements visible.
     AC.getCFGBuildOptions().setAllAlwaysAdd();
   } else {
     AC.getCFGBuildOptions()
-      .setAlwaysAdd(Stmt::BinaryOperatorClass)
-      .setAlwaysAdd(Stmt::CompoundAssignOperatorClass)
-      .setAlwaysAdd(Stmt::BlockExprClass)
-      .setAlwaysAdd(Stmt::CStyleCastExprClass)
-      .setAlwaysAdd(Stmt::DeclRefExprClass)
-      .setAlwaysAdd(Stmt::ImplicitCastExprClass)
-      .setAlwaysAdd(Stmt::UnaryOperatorClass);
+        .setAlwaysAdd(Stmt::BinaryOperatorClass)
+        .setAlwaysAdd(Stmt::CompoundAssignOperatorClass)
+        .setAlwaysAdd(Stmt::BlockExprClass)
+        .setAlwaysAdd(Stmt::CStyleCastExprClass)
+        .setAlwaysAdd(Stmt::DeclRefExprClass)
+        .setAlwaysAdd(Stmt::ImplicitCastExprClass)
+        .setAlwaysAdd(Stmt::UnaryOperatorClass);
   }
   if (EnableLifetimeSafetyAnalysis)
     AC.getCFGBuildOptions().AddLifetime = true;
@@ -3128,6 +3380,10 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
                                           &S.ThreadSafetyDeclCache);
     Reporter.emitDiagnostics();
   }
+
+  // Flow-sensitive nullability now runs as a TU-level analysis in
+  // call-graph order (see FlowNullabilityTUAnalysis). This ensures
+  // all-returns-nonnull inference works regardless of source order.
 
   // Check for violations of consumed properties.
   if (P.enableConsumedAnalysis) {

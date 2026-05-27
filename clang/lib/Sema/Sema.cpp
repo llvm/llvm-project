@@ -685,7 +685,8 @@ void Sema::PrintStats() const {
 
 void Sema::diagnoseNullableToNonnullConversion(QualType DstType,
                                                QualType SrcType,
-                                               SourceLocation Loc) {
+                                               SourceLocation Loc,
+                                               Expr *SrcExpr) {
   NullabilityKindOrNone ExprNullability = SrcType->getNullability();
   if (!ExprNullability || (*ExprNullability != NullabilityKind::Nullable &&
                            *ExprNullability != NullabilityKind::NullableResult))
@@ -695,7 +696,44 @@ void Sema::diagnoseNullableToNonnullConversion(QualType DstType,
   if (!TypeNullability || *TypeNullability != NullabilityKind::NonNull)
     return;
 
+  // When flow-sensitive nullability is enabled, the flow analysis provides
+  // strictly better coverage: it respects null checks (suppresses after
+  // narrowing), handles dynamic nullability (reset/move/reassignment), and
+  // works correctly under -fnullability-default=nullable. The type-based
+  // warning would only add false positives (e.g., after if (p) return p;
+  // where p's declared type is still _Nullable but the flow proves nonnull).
+  if (getLangOpts().FlowSensitiveNullability)
+    return;
+
   Diag(Loc, diag::warn_nullability_lost) << SrcType << DstType;
+}
+
+bool Sema::functionHasNullabilityAnnotations(const FunctionDecl *FD) const {
+  if (!FD || FD->isInvalidDecl())
+    return false;
+
+  // Check return type
+  QualType ReturnType = FD->getReturnType();
+  if (!ReturnType.isNull() && !ReturnType->isDependentType()) {
+    if (ReturnType->getNullability())
+      return true;
+  }
+
+  // Check parameters — during early function processing, parameters might
+  // not be fully set up, so guard with param_empty().
+  if (!FD->param_empty()) {
+    for (const ParmVarDecl *Param : FD->parameters()) {
+      if (!Param)
+        continue;
+      QualType ParamType = Param->getType();
+      if (!ParamType.isNull() && !ParamType->isDependentType()) {
+        if (ParamType->getNullability())
+          return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 // Generate diagnostics when adding or removing effects in a type conversion.
@@ -787,7 +825,9 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
          "can't cast prvalue to glvalue");
 #endif
 
-  diagnoseNullableToNonnullConversion(Ty, E->getType(), E->getBeginLoc());
+  // Pass the source expression so flow-sensitive analysis can suppress the
+  // warning when the expression is provably non-null despite its declared type.
+  diagnoseNullableToNonnullConversion(Ty, E->getType(), E->getBeginLoc(), E);
   diagnoseZeroToNullptrConversion(Kind, E);
   if (Context.hasAnyFunctionEffects() && !isCast(CCK) &&
       Kind != CK_NullToPointer && Kind != CK_NullToMemberPointer)

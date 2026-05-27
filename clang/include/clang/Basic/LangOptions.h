@@ -20,6 +20,7 @@
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Sanitizers.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/FloatingPointMode.h"
@@ -77,6 +78,7 @@ public:
   using Visibility = clang::Visibility;
   using RoundingMode = llvm::RoundingMode;
   using CFBranchLabelSchemeKind = clang::CFBranchLabelSchemeKind;
+  using NullabilityKind = clang::NullabilityKind;
 
   /// For ASTs produced with different option value, signifies their level of
   /// compatibility.

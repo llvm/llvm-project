@@ -385,6 +385,28 @@ Sema::ActOnParamDefaultArgument(Decl *param, SourceLocation EqualLoc,
   if (DefaultArgChecker.Visit(DefaultArg))
     return ActOnParamDefaultArgumentError(param, EqualLoc, DefaultArg);
 
+  // Warn when a _Nonnull parameter has a nullable default argument.
+  if (getLangOpts().FlowSensitiveNullability &&
+      Param->getType()->isPointerType()) {
+    auto ParamNullability = Param->getType()->getNullability();
+    if (ParamNullability && *ParamNullability == NullabilityKind::NonNull) {
+      Expr *Arg = DefaultArg->IgnoreParenImpCasts();
+      bool IsNullable = Arg->isNullPointerConstant(
+          Context, Expr::NPC_ValueDependentIsNotNull);
+      if (!IsNullable) {
+        if (const auto *CE = dyn_cast<CallExpr>(Arg->IgnoreParenCasts())) {
+          auto RetNullability = CE->getType()->getNullability();
+          IsNullable =
+              RetNullability && *RetNullability == NullabilityKind::Nullable;
+        }
+      }
+      if (IsNullable) {
+        Diag(Arg->getExprLoc(), diag::warn_flow_nullable_default_arg) << Param;
+        Diag(Arg->getExprLoc(), diag::note_nullable_default_arg_fix);
+      }
+    }
+  }
+
   SetParamDefaultArgument(Param, DefaultArg, EqualLoc);
 }
 
@@ -4262,6 +4284,29 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
   }
 
   FD->setInClassInitializer(InitExpr.get());
+
+  // Warn when a _Nonnull field is initialized with null.
+  if (getLangOpts().FlowSensitiveNullability &&
+      FD->getType()->isPointerType()) {
+    auto Nullability = FD->getType()->getNullability();
+    if (Nullability && *Nullability == NullabilityKind::NonNull) {
+      Expr *Init = InitExpr.get()->IgnoreParenImpCasts();
+      if (Init->isNullPointerConstant(Context,
+                                      Expr::NPC_ValueDependentIsNotNull)) {
+        Diag(Init->getExprLoc(), diag::warn_flow_nullable_field_init) << FD;
+        Diag(Init->getExprLoc(), diag::note_nullable_field_init_fix);
+      } else {
+        const Expr *Unwrapped = Init->IgnoreParenCasts();
+        if (const auto *CE = dyn_cast<CallExpr>(Unwrapped)) {
+          auto RetNullability = CE->getType()->getNullability();
+          if (RetNullability && *RetNullability == NullabilityKind::Nullable) {
+            Diag(Init->getExprLoc(), diag::warn_flow_nullable_field_init) << FD;
+            Diag(Init->getExprLoc(), diag::note_nullable_field_init_fix);
+          }
+        }
+      }
+    }
+  }
 }
 
 /// Find the direct and/or virtual base specifiers that

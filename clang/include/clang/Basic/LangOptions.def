@@ -141,6 +141,10 @@ LANGOPT(PointerAuthObjcClassROPointers, 1, 0, Benign, "class_ro_t pointer authen
 
 LANGOPT(PointerAuthBlockDescriptorPointers, 1, 0, NotCompatible, "enable signed block descriptors")
 
+// Nullability options
+ENUM_LANGOPT(NullabilityDefault, NullabilityKind, 2, NullabilityKind::Unspecified, NotCompatible, "default nullability for unannotated pointers")
+LANGOPT(FlowSensitiveNullability, 1, 0, NotCompatible, "enable flow-sensitive nullability analysis")
+
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, NotCompatible, "'[[]]' attributes extension for all language standard modes")
 LANGOPT(ExperimentalLateParseAttributes, 1, 0, NotCompatible, "experimental late parsing of attributes")
 
