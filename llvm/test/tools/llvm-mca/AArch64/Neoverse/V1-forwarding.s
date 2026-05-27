@@ -267,7 +267,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     6.5    0.0    0.0       madd	x0, x1, x2, x0
 # CHECK-NEXT: 2.     2     7.5    0.0    0.0       madd	x0, x1, x2, x0
 # CHECK-NEXT: 3.     2     9.5    0.0    0.0       madd	x0, x0, x0, x0
-# CHECK-NEXT:        2     7.0    0.1    0.0       <total>
+# CHECK-NEXT:        8     7.0    0.1    0.0       <total>
 
 # CHECK:      [1] Code Region - smaddl
 
@@ -305,7 +305,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     6.5    0.0    0.0       smaddl	x0, w1, w2, x0
 # CHECK-NEXT: 2.     2     7.5    0.0    0.0       smaddl	x0, w1, w2, x0
 # CHECK-NEXT: 3.     2     9.5    0.0    0.0       smaddl	x0, w0, w0, x0
-# CHECK-NEXT:        2     7.0    0.1    0.0       <total>
+# CHECK-NEXT:        8     7.0    0.1    0.0       <total>
 
 # CHECK:      [2] Code Region - fmadd
 
@@ -349,7 +349,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 3.     2     16.0   0.0    0.0       fmadd	d0, d1, d2, d0
 # CHECK-NEXT: 4.     2     18.0   0.0    0.0       fmadd	d0, d1, d2, d0
 # CHECK-NEXT: 5.     2     22.0   0.0    0.0       fmadd	d0, d0, d1, d2
-# CHECK-NEXT:        2     15.3   0.1    0.0       <total>
+# CHECK-NEXT:        12    15.3   0.1    0.0       <total>
 
 # CHECK:      [3] Code Region - saba
 
@@ -387,7 +387,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     11.5   0.0    0.0       saba	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT: 2.     2     12.5   0.0    0.0       saba	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT: 3.     2     16.5   0.0    0.0       saba	v0.4s, v0.4s, v1.4s
-# CHECK-NEXT:        2     12.0   0.1    0.0       <total>
+# CHECK-NEXT:        8     12.0   0.1    0.0       <total>
 
 # CHECK:      [4] Code Region - sadalp
 
@@ -425,7 +425,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     11.5   0.0    0.0       sadalp	v0.2d, v1.4s
 # CHECK-NEXT: 2.     2     12.5   0.0    0.0       sadalp	v0.2d, v1.4s
 # CHECK-NEXT: 3.     2     16.5   0.0    0.0       sadalp	v0.2d, v0.4s
-# CHECK-NEXT:        2     12.0   0.1    0.0       <total>
+# CHECK-NEXT:        8     12.0   0.1    0.0       <total>
 
 # CHECK:      [5] Code Region - sdot
 
@@ -463,7 +463,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     10.5   0.0    0.0       sdot	v0.4s, v1.16b, v2.16b
 # CHECK-NEXT: 2.     2     11.5   0.0    0.0       sdot	v0.4s, v1.16b, v2.16b
 # CHECK-NEXT: 3.     2     14.5   0.0    0.0       sdot	v0.4s, v0.16b, v1.16b
-# CHECK-NEXT:        2     10.8   0.1    0.0       <total>
+# CHECK-NEXT:        8     10.8   0.1    0.0       <total>
 
 # CHECK:      [6] Code Region - smmla
 
@@ -501,7 +501,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     10.5   0.0    0.0       smmla	v0.4s, v1.16b, v2.16b
 # CHECK-NEXT: 2.     2     11.5   0.0    0.0       smmla	v0.4s, v1.16b, v2.16b
 # CHECK-NEXT: 3.     2     14.5   0.0    0.0       smmla	v0.4s, v0.16b, v1.16b
-# CHECK-NEXT:        2     10.8   0.1    0.0       <total>
+# CHECK-NEXT:        8     10.8   0.1    0.0       <total>
 
 # CHECK:      [7] Code Region - mla
 
@@ -539,7 +539,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     11.5   0.0    0.0       mla	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT: 2.     2     12.5   0.0    0.0       mla	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT: 3.     2     16.5   0.0    0.0       mla	v0.4s, v0.4s, v1.4s
-# CHECK-NEXT:        2     12.0   0.1    0.0       <total>
+# CHECK-NEXT:        8     12.0   0.1    0.0       <total>
 
 # CHECK:      [8] Code Region - smlal2
 
@@ -577,7 +577,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     11.5   0.0    0.0       smlal2	v0.4s, v1.8h, v2.8h
 # CHECK-NEXT: 2.     2     12.5   0.0    0.0       smlal2	v0.4s, v1.8h, v2.8h
 # CHECK-NEXT: 3.     2     16.5   0.0    0.0       smlal2	v0.4s, v0.8h, v1.8h
-# CHECK-NEXT:        2     12.0   0.1    0.0       <total>
+# CHECK-NEXT:        8     12.0   0.1    0.0       <total>
 
 # CHECK:      [9] Code Region - ssra
 
@@ -615,7 +615,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     11.5   0.0    0.0       ssra	v0.2d, v1.2d, #1
 # CHECK-NEXT: 2.     2     12.5   0.0    0.0       ssra	v0.2d, v1.2d, #1
 # CHECK-NEXT: 3.     2     16.5   0.0    0.0       ssra	v0.2d, v0.2d, #1
-# CHECK-NEXT:        2     12.0   0.1    0.0       <total>
+# CHECK-NEXT:        8     12.0   0.1    0.0       <total>
 
 # CHECK:      [10] Code Region - fcmla
 
@@ -653,7 +653,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     10.5   0.0    0.0       fcmla	v0.2d, v1.2d, v2.2d, #90
 # CHECK-NEXT: 2.     2     12.5   0.0    0.0       fcmla	v0.2d, v1.2d, v2.2d, #90
 # CHECK-NEXT: 3.     2     16.5   0.0    0.0       fcmla	v0.2d, v0.2d, v1.2d, #90
-# CHECK-NEXT:        2     11.8   0.1    0.0       <total>
+# CHECK-NEXT:        8     11.8   0.1    0.0       <total>
 
 # CHECK:      [11] Code Region - fmla
 
@@ -697,7 +697,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 3.     2     16.0   0.0    0.0       fmla	v0.2d, v1.2d, v2.2d
 # CHECK-NEXT: 4.     2     18.0   0.0    0.0       fmla	v0.2d, v1.2d, v2.2d
 # CHECK-NEXT: 5.     2     22.0   0.0    0.0       fmla	v0.2d, v0.2d, v1.2d
-# CHECK-NEXT:        2     15.0   0.1    0.0       <total>
+# CHECK-NEXT:        12    15.0   0.1    0.0       <total>
 
 # CHECK:      [12] Code Region - fmlal
 
@@ -741,7 +741,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 3.     2     21.5   0.0    0.0       fmlal	v0.4s, v1.4h, v2.4h
 # CHECK-NEXT: 4.     2     23.5   0.0    0.0       fmlal	v0.4s, v1.4h, v2.4h
 # CHECK-NEXT: 5.     2     28.5   0.0    0.0       fmlal	v0.4s, v0.4h, v1.4h
-# CHECK-NEXT:        2     20.0   0.1    0.0       <total>
+# CHECK-NEXT:        12    20.0   0.1    0.0       <total>
 
 # CHECK:      [13] Code Region - bfdot
 
@@ -779,7 +779,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     10.5   0.0    0.0       bfdot	v0.4s, v1.8h, v2.8h
 # CHECK-NEXT: 2.     2     12.5   0.0    0.0       bfdot	v0.4s, v1.8h, v2.8h
 # CHECK-NEXT: 3.     2     16.5   0.0    0.0       bfdot	v0.4s, v0.8h, v1.8h
-# CHECK-NEXT:        2     11.8   0.1    0.0       <total>
+# CHECK-NEXT:        8     11.8   0.1    0.0       <total>
 
 # CHECK:      [14] Code Region - bfmmla
 
@@ -817,7 +817,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     12.0   0.0    0.0       bfmmla	v0.4s, v1.8h, v2.8h
 # CHECK-NEXT: 2.     2     15.0   0.0    0.0       bfmmla	v0.4s, v1.8h, v2.8h
 # CHECK-NEXT: 3.     2     20.0   0.0    0.0       bfmmla	v0.4s, v0.8h, v1.8h
-# CHECK-NEXT:        2     14.0   0.1    0.0       <total>
+# CHECK-NEXT:        8     14.0   0.1    0.0       <total>
 
 # CHECK:      [15] Code Region - bfmlalb
 
@@ -855,7 +855,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     10.5   0.0    0.0       bfmlalb	v0.4s, v1.8h, v2.8h
 # CHECK-NEXT: 2.     2     12.5   0.0    0.0       bfmlalb	v0.4s, v1.8h, v2.8h
 # CHECK-NEXT: 3.     2     16.5   0.0    0.0       bfmlalb	v0.4s, v0.8h, v1.8h
-# CHECK-NEXT:        2     11.8   0.1    0.0       <total>
+# CHECK-NEXT:        8     11.8   0.1    0.0       <total>
 
 # CHECK:      [16] Code Region - crc32
 
@@ -914,7 +914,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 8.     2     16.5   0.0    0.0       crc32ch	w0, w0, w16
 # CHECK-NEXT: 9.     2     17.5   0.0    0.0       crc32cw	w0, w0, w23
 # CHECK-NEXT: 10.    2     18.5   0.0    0.0       crc32cx	w0, w0, x5
-# CHECK-NEXT:        2     13.7   0.0    0.0       <total>
+# CHECK-NEXT:        22    13.7   0.0    0.0       <total>
 
 # CHECK:      [17] Code Region - Z sdot.s
 
@@ -952,7 +952,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     12.0   0.0    0.0       sdot	z0.s, z1.b, z2.b
 # CHECK-NEXT: 2.     2     12.5   0.0    0.0       sdot	z0.s, z1.b, z2.b
 # CHECK-NEXT: 3.     2     15.5   0.0    0.0       sdot	z0.s, z0.b, z1.b
-# CHECK-NEXT:        2     11.8   0.1    0.0       <total>
+# CHECK-NEXT:        8     11.8   0.1    0.0       <total>
 
 # CHECK:      [18] Code Region - Z sudot
 
@@ -990,7 +990,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     12.0   0.0    0.0       sdot	z0.s, z1.b, z2.b[1]
 # CHECK-NEXT: 2.     2     12.5   0.0    0.0       sdot	z0.s, z1.b, z2.b[1]
 # CHECK-NEXT: 3.     2     15.5   0.0    0.0       sdot	z0.s, z0.b, z1.b[1]
-# CHECK-NEXT:        2     11.8   0.1    0.0       <total>
+# CHECK-NEXT:        8     11.8   0.1    0.0       <total>
 
 # CHECK:      [19] Code Region - Z sdot.d
 
@@ -1028,7 +1028,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     13.0   0.0    0.0       sdot	z0.d, z1.h, z2.h
 # CHECK-NEXT: 2.     2     13.5   0.0    0.0       sdot	z0.d, z1.h, z2.h
 # CHECK-NEXT: 3.     2     17.5   0.0    0.0       sdot	z0.d, z0.h, z1.h
-# CHECK-NEXT:        2     13.0   0.1    0.0       <total>
+# CHECK-NEXT:        8     13.0   0.1    0.0       <total>
 
 # CHECK:      [20] Code Region - Z smmla
 
@@ -1066,7 +1066,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     12.0   0.0    0.0       smmla	z0.s, z1.b, z2.b
 # CHECK-NEXT: 2.     2     12.5   0.0    0.0       smmla	z0.s, z1.b, z2.b
 # CHECK-NEXT: 3.     2     15.5   0.0    0.0       smmla	z0.s, z0.b, z1.b
-# CHECK-NEXT:        2     11.8   0.1    0.0       <total>
+# CHECK-NEXT:        8     11.8   0.1    0.0       <total>
 
 # CHECK:      [21] Code Region - Z mla.d
 
@@ -1104,7 +1104,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     14.0   0.0    0.0       mla	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: 2.     2     16.0   0.0    0.0       mla	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: 3.     2     21.0   0.0    0.0       mla	z0.d, p0/m, z0.d, z1.d
-# CHECK-NEXT:        2     15.0   0.1    0.0       <total>
+# CHECK-NEXT:        8     15.0   0.1    0.0       <total>
 
 # CHECK:      [22] Code Region - Z mad.d
 
@@ -1142,7 +1142,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     14.0   0.0    0.0       mad	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: 2.     2     16.0   0.0    0.0       mad	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: 3.     2     21.0   0.0    0.0       mad	z0.d, p0/m, z0.d, z1.d
-# CHECK-NEXT:        2     15.0   0.1    0.0       <total>
+# CHECK-NEXT:        8     15.0   0.1    0.0       <total>
 
 # CHECK:      [23] Code Region - Z msb.d
 
@@ -1180,7 +1180,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     14.0   0.0    0.0       msb	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: 2.     2     16.0   0.0    0.0       msb	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: 3.     2     21.0   0.0    0.0       msb	z0.d, p0/m, z0.d, z1.d
-# CHECK-NEXT:        2     15.0   0.1    0.0       <total>
+# CHECK-NEXT:        8     15.0   0.1    0.0       <total>
 
 # CHECK:      [24] Code Region - Z fcmla ZPmZZ
 
@@ -1218,7 +1218,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     11.5   0.0    0.0       fcmla	z0.d, p0/m, z1.d, z2.d, #90
 # CHECK-NEXT: 2.     2     13.5   0.0    0.0       fcmla	z0.d, p0/m, z1.d, z2.d, #90
 # CHECK-NEXT: 3.     2     18.5   0.0    0.0       fcmla	z0.d, p0/m, z0.d, z1.d, #90
-# CHECK-NEXT:        2     13.0   0.1    0.0       <total>
+# CHECK-NEXT:        8     13.0   0.1    0.0       <total>
 
 # CHECK:      [25] Code Region - Z fcmla ZZZI
 
@@ -1256,7 +1256,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     11.5   0.0    0.0       fcmla	z0.s, z1.s, z2.s[1], #90
 # CHECK-NEXT: 2.     2     13.5   0.0    0.0       fcmla	z0.s, z1.s, z2.s[1], #90
 # CHECK-NEXT: 3.     2     18.5   0.0    0.0       fcmla	z0.s, z0.s, z1.s[1], #90
-# CHECK-NEXT:        2     13.0   0.1    0.0       <total>
+# CHECK-NEXT:        8     13.0   0.1    0.0       <total>
 
 # CHECK:      [26] Code Region - Z fmla ZPmZZ
 
@@ -1294,7 +1294,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     10.5   0.0    0.0       fmla	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: 2.     2     12.5   0.0    0.0       fmla	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: 3.     2     16.5   0.0    0.0       fmla	z0.d, p0/m, z0.d, z1.d
-# CHECK-NEXT:        2     11.8   0.1    0.0       <total>
+# CHECK-NEXT:        8     11.8   0.1    0.0       <total>
 
 # CHECK:      [27] Code Region - Z fmla ZZZI
 
@@ -1332,7 +1332,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     10.5   0.0    0.0       fmla	z0.d, z1.d, z2.d[1]
 # CHECK-NEXT: 2.     2     12.5   0.0    0.0       fmla	z0.d, z1.d, z2.d[1]
 # CHECK-NEXT: 3.     2     16.5   0.0    0.0       fmla	z0.d, z0.d, z1.d[1]
-# CHECK-NEXT:        2     11.8   0.1    0.0       <total>
+# CHECK-NEXT:        8     11.8   0.1    0.0       <total>
 
 # CHECK:      [28] Code Region - Z bfdot
 
@@ -1370,7 +1370,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     10.5   0.0    0.0       bfdot	z0.s, z1.h, z2.h
 # CHECK-NEXT: 2.     2     12.5   0.0    0.0       bfdot	z0.s, z1.h, z2.h
 # CHECK-NEXT: 3.     2     16.5   0.0    0.0       bfdot	z0.s, z0.h, z1.h
-# CHECK-NEXT:        2     11.8   0.1    0.0       <total>
+# CHECK-NEXT:        8     11.8   0.1    0.0       <total>
 
 # CHECK:      [29] Code Region - Z bfmmla
 
@@ -1408,7 +1408,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     12.0   0.0    0.0       bfmmla	z0.s, z1.h, z2.h
 # CHECK-NEXT: 2.     2     15.0   0.0    0.0       bfmmla	z0.s, z1.h, z2.h
 # CHECK-NEXT: 3.     2     20.0   0.0    0.0       bfmmla	z0.s, z0.h, z1.h
-# CHECK-NEXT:        2     14.0   0.1    0.0       <total>
+# CHECK-NEXT:        8     14.0   0.1    0.0       <total>
 
 # CHECK:      [30] Code Region - bfmlalb
 
@@ -1446,4 +1446,4 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 1.     2     11.5   0.0    0.0       bfmlalb	z0.s, z1.h, z2.h
 # CHECK-NEXT: 2.     2     13.5   0.0    0.0       bfmlalb	z0.s, z1.h, z2.h
 # CHECK-NEXT: 3.     2     18.5   0.0    0.0       bfmlalb	z0.s, z0.h, z1.h
-# CHECK-NEXT:        2     13.0   0.1    0.0       <total>
+# CHECK-NEXT:        8     13.0   0.1    0.0       <total>

@@ -131,10 +131,6 @@ struct VPlanTransforms {
   buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
               PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr);
 
-  /// Add a canonical IV and its increment, using \p InductionTy and \p DL to \p
-  /// Plan
-  static void addCanonicalIVRecipes(VPlan &Plan, DebugLoc DL);
-
   /// Replace VPPhi recipes in \p Plan's header with corresponding
   /// VPHeaderPHIRecipe subclasses for inductions, reductions, and
   /// fixed-order recurrences. This processes all header phis and creates
@@ -191,12 +187,17 @@ struct VPlanTransforms {
       unsigned EpilogueLoopStep, ScalarEvolution &SE);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
-  /// flat CFG into a hierarchical CFG.
-  LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan);
+  /// flat CFG into a hierarchical CFG. For the outermost loop, also create the
+  /// canonical IV's increment and adjust the latch terminator: replace
+  /// BranchOnCond with BranchOnCount, using \p DL for the canonical IV.
+  LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan, DebugLoc DL);
 
   /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
   /// VPValue and connect the block to \p Plan, using the VPValue as branch
   /// condition.
+  static void attachVPCheckBlock(VPlan &Plan, VPValue *Cond,
+                                 VPBasicBlock *CheckBlock,
+                                 bool AddBranchWeights);
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
 
@@ -436,6 +437,21 @@ struct VPlanTransforms {
   /// VPInstructions.
   static void materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
                                  ElementCount VF);
+
+  /// Attaches the alias-mask to the existing header-mask.
+  static void attachAliasMaskToHeaderMask(VPlan &Plan);
+
+  /// Materializes within the \p AliasCheckVPBB block. Updates the header mask
+  /// of the loop to use the alias mask. Returns the clamped VF.
+  static VPValue *materializeAliasMask(VPlan &Plan,
+                                       VPBasicBlock *AliasCheckVPBB,
+                                       ArrayRef<PointerDiffInfo> DiffChecks);
+
+  /// Materializes the alias mask within a check block before the loop. The
+  /// vector loop will only be entered if the clamped VF from the alias mask
+  /// is not scalar.
+  static void materializeAliasMaskCheckBlock(
+      VPlan &Plan, ArrayRef<PointerDiffInfo> DiffChecks, bool HasBranchWeights);
 
   /// Expand VPExpandSCEVRecipes in \p Plan's entry block. Each
   /// VPExpandSCEVRecipe is replaced with a live-in wrapping the expanded IR

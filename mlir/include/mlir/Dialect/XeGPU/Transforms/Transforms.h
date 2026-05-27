@@ -65,21 +65,18 @@ struct UnrollOptions {
 void populateXeGPUPeepHoleOptimizerPatterns(RewritePatternSet &patterns);
 /// Appends patterns for array length optimization into `patterns`.
 void populateXeGPUArrayLengthOptimizationPatterns(RewritePatternSet &patterns);
-/// Appends patterns for XeGPU SIMT distribution into `patterns`.
-void populateXeGPUSubgroupDistributePatterns(RewritePatternSet &patterns);
-/// Appends patterns for moving function body into gpu.warp_execute_on_lane0 op.
-void populateXeGPUMoveFuncBodyToWarpOpPatterns(RewritePatternSet &patterns);
 /// Appends patterns for XeGPU workgroup to subgroup distribution into
 /// `patterns`.
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns);
-/// Define only the type conversions needed for XeGPU subgroup to workitem
+/// Define only the type conversions needed for XeGPU subgroup to lane
 /// distribution.
-void populateXeGPUSgToWiDistributeTypeConversions(TypeConverter &typeConverter);
-/// Defines type conversions and legality for XeGPU subgroup to workitem
+void populateXeGPUSgToLaneDistributeTypeConversions(
+    TypeConverter &typeConverter);
+/// Defines type conversions and legality for XeGPU subgroup to lane
 /// distribution and appends the required conversion patterns into `patterns`.
-/// Appends patterns for XeGPU subgroup to workitem distribution into
+/// Appends patterns for XeGPU subgroup to lane distribution into
 /// `patterns`.
-void populateXeGPUSgToWiDistributeTypeConversionAndLegality(
+void populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target);
 

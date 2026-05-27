@@ -17,7 +17,7 @@ def by_suite_and_test_path(test):
     return (test.suite.name, id(test.suite), test.path_in_suite)
 
 
-class Report(object):
+class Report:
     def __init__(self, output_file):
         self.output_file = output_file
         # Set by the option parser later.
