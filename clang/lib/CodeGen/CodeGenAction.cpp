@@ -122,8 +122,10 @@ BackendConsumer::BackendConsumer(CompilerInstance &CI, BackendAction Action,
       Gen(CreateLLVMCodeGen(CI, InFile, C, CoverageInfo)),
       LinkModules(std::move(LinkModules)), CurLinkModule(CurLinkModule) {
   TimerIsEnabled = CodeGenOpts.TimePasses;
-  llvm::TimePassesIsEnabled = CodeGenOpts.TimePasses;
-  llvm::TimePassesPerRun = CodeGenOpts.TimePassesPerRun;
+  if (CodeGenOpts.TimePasses) {
+    llvm::TimePassesIsEnabled = true;
+    llvm::TimePassesPerRun = CodeGenOpts.TimePassesPerRun;
+  }
   if (CodeGenOpts.TimePasses)
     LLVMIRGeneration.init("irgen", "LLVM IR generation", CI.getTimerGroup());
 }
