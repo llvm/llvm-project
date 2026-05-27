@@ -412,7 +412,9 @@ struct VOPDInfo {
   uint32_t Opcode;
   uint16_t OpX;
   uint16_t OpY;
-  uint16_t Subtarget;
+  uint32_t VOPDX;
+  uint32_t VOPDY;
+  uint16_t SubTgt;
   bool VOPD3;
 };
 
@@ -655,30 +657,13 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
 }
 
 CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
+  int Opc32 = getVOPe32(Opc);
+  if (Opc32 != -1)
+    Opc = Opc32;
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(Opc) : 0;
   Opc = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : Opc;
-  const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
-  if (Info) {
-    // Check that Opc can be used as VOPDY for this encoding. V_MOV_B32 as a
-    // VOPDX is just a placeholder here, it is supported on all encodings.
-    // TODO: This can be optimized by creating tables of supported VOPDY
-    // opcodes per encoding.
-    unsigned VOPDMov = AMDGPU::getVOPDOpcode(AMDGPU::V_MOV_B32_e32, VOPD3);
-    bool CanBeVOPDX;
-    if (VOPD3) {
-      CanBeVOPDX = getVOPDFull(AMDGPU::getVOPDOpcode(Opc, VOPD3), VOPDMov,
-                               EncodingFamily, VOPD3) != -1;
-    } else {
-      // The list of VOPDX opcodes is currently the same in all encoding
-      // families, so we do not need a family-specific check.
-      CanBeVOPDX = Info->CanBeVOPDX;
-    }
-    bool CanBeVOPDY = getVOPDFull(VOPDMov, AMDGPU::getVOPDOpcode(Opc, VOPD3),
-                                  EncodingFamily, VOPD3) != -1;
-    return {CanBeVOPDX, CanBeVOPDY};
-  }
-
-  return {false, false};
+  return {!!getCanBeVOPDXInfo(Opc, EncodingFamily, VOPD3),
+          !!getCanBeVOPDYInfo(Opc, EncodingFamily, VOPD3)};
 }
 
 unsigned getVOPDOpcode(unsigned Opc, bool VOPD3) {

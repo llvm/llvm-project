@@ -3556,7 +3556,7 @@ def getVOPDBaseFromComponent : SearchIndex {
 def VOPDPairs : GenericTable {
   let FilterClass = "VOPD_Base";
   let CppTypeName = "VOPDInfo";
-  let Fields = ["Opcode", "OpX", "OpY", "SubTgt", "VOPD3"];
+  let Fields = ["Opcode", "OpX", "OpY", "VOPDX", "VOPDY", "SubTgt", "VOPD3"];
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getVOPDOpcodeHelper";
 }
@@ -3564,6 +3564,16 @@ def VOPDPairs : GenericTable {
 def getVOPDInfoFromComponentOpcodes : SearchIndex {
   let Table = VOPDPairs;
   let Key = ["OpX", "OpY", "SubTgt", "VOPD3"];
+}
+
+def getCanBeVOPDXInfo : SearchIndex {
+  let Table = VOPDPairs;
+  let Key = ["VOPDX", "SubTgt", "VOPD3"];
+}
+
+def getCanBeVOPDYInfo : SearchIndex {
+  let Table = VOPDPairs;
+  let Key = ["VOPDY", "SubTgt", "VOPD3"];
 }
 
 def lo16_to_vgpr32 : OutPatFrag<(ops node:$op),

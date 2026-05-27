@@ -115,6 +115,8 @@ class VOPD_Base<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
   bits<6> OpX = XasVC.VOPDOp;
   bits<6> OpY = YasVC.VOPDOp;
   bits<4> SubTgt = Gen.Subtarget;
+  VOP_Pseudo VOPDX = VDX;
+  VOP_Pseudo VOPDY = VDY;
 
   let VALU = 1;
 
