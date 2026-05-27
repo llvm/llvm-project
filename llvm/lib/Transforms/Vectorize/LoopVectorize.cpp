@@ -8172,18 +8172,53 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, Loop *L,
 // Returns true if it is profitable to emit a runtime-check-dominated versioned
 // loop with the bound load speculatively hoisted.
 //
-// The check uses a conservative heuristic that can be progressively refined:
-//
-//   RTC count threshold: if LAA already requires more runtime pointer checks
-//   than VectorizeMemoryCheckThreshold the additional ivbound checks would
-//   push compile-time and runtime overhead too high.
-// Profile-guided or block-frequency-based heuristics can be added here later.
-static bool isSpeculativeBoundVersioningProfitable(const LoopAccessInfo &LAI) {
+// Uses the LV cost model to estimate the cost of the runtime checks that
+// versioning would add, and applies the MinTC2 heuristic from
+// isOutsideLoopWorkProfitable to reject cases where the expected trip count
+// is too small to amortize the check overhead.
+static bool isSpeculativeBoundVersioningProfitable(
+    const LoopAccessInfo &LAI, Loop *L, PredicatedScalarEvolution &PSE,
+    DominatorTree *DT, LoopInfo *LI, TargetTransformInfo *TTI,
+    OptimizationRemarkEmitter *ORE) {
+  // Hard cap: too many existing checks means too much overhead.
   if (LAI.getNumRuntimePointerChecks() > VectorizeMemoryCheckThreshold) {
     LLVM_DEBUG(dbgs() << "LV: Skipping speculative bound versioning: too many "
                          "existing runtime checks ("
                       << LAI.getNumRuntimePointerChecks() << ")\n");
     return false;
+  }
+
+  // Estimate the actual cost of the runtime checks using GeneratedRTChecks,
+  // mirroring what processLoop does on the versioned clone but evaluated on
+  // the original loop before any IR changes.  Use scalar VF=1 / IC=1 since
+  // we are only interested in the check overhead, not the vector body cost.
+  GeneratedRTChecks Checks(PSE, DT, LI, TTI, TTI::TCK_RecipThroughput);
+  Checks.create(L, LAI, LAI.getPSE().getPredicate(), ElementCount::getFixed(1),
+                /*IC=*/1, *ORE);
+  InstructionCost RtC = Checks.getCost();
+  if (!RtC.isValid()) {
+    LLVM_DEBUG(dbgs() << "LV: Skipping speculative bound versioning: "
+                         "runtime check cost is invalid/too high\n");
+    return false;
+  }
+
+  // MinTC2 heuristic (mirrors isOutsideLoopWorkProfitable):
+  //   require  RtC * 10 / ScalarCostProxy  <  TC
+  // We use VectorizeMemoryCheckThreshold as a conservative scalar-cost proxy
+  // since the full LoopVectorizationCostModel has not been built yet.
+  // For the target loops (uncountable bound load), getSmallBestKnownTC
+  // typically returns nothing, making this a no-op in the common case.
+  // It correctly rejects loops whose trip count is statically known to be
+  // too small to amortize the check overhead.
+  if (auto ExpectedTC = getSmallBestKnownTC(PSE, L)) {
+    uint64_t MinTC2 =
+        divideCeil(RtC.getValue() * 10, VectorizeMemoryCheckThreshold);
+    if (ExpectedTC->isFixed() && ExpectedTC->getFixedValue() < MinTC2) {
+      LLVM_DEBUG(dbgs() << "LV: Skipping speculative bound versioning: "
+                           "expected TC ("
+                        << *ExpectedTC << ") < MinTC (" << MinTC2 << ")\n");
+      return false;
+    }
   }
 
   return true;
@@ -8266,7 +8301,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         if (LoadInst *BoundLoad =
                 LVL.tryToFindDynamicBoundLoadCandidate(L, *AA)) {
           const LoopAccessInfo &PreLAI = LAIs->getInfo(*L);
-          if (isSpeculativeBoundVersioningProfitable(PreLAI))
+          if (isSpeculativeBoundVersioningProfitable(PreLAI, L, PSE, DT, LI,
+                                                     TTI, ORE))
             if (Loop *Cand = versionLoopForInvariantBoundLoad(
                     L, BoundLoad, *DT, *LI, *AA, PSE, AC)) {
               SE->forgetLoop(L);
