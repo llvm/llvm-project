@@ -16,11 +16,12 @@ class TestThreadName(TestBase):
         self.build()
         source = lldb.SBFileSpec("main.c")
 
-        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+        _, process, thread, breakpoint = lldbutil.run_to_source_breakpoint(
             self, "// break here", source
         )
         self.assertEqual(
-            bkpt.GetNumLocations(), 2,
+            breakpoint.GetNumLocations(),
+            2,
             "expected breakpoints at both '// break here' markers",
         )
 
