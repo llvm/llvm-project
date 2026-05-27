@@ -196,9 +196,10 @@ public:
                               const VPIRFlags &Flags = {},
                               const VPIRMetadata &MD = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
-                              const Twine &Name = "") {
+                              const Twine &Name = "",
+                              Type *ResultTy = nullptr) {
     VPInstruction *NewVPInst = tryInsertInstruction(
-        new VPInstruction(Opcode, Operands, Flags, MD, DL, Name));
+        new VPInstruction(Opcode, Operands, Flags, MD, DL, Name, ResultTy));
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }
@@ -225,15 +226,23 @@ public:
   VPInstruction *createFirstActiveLane(ArrayRef<VPValue *> Masks,
                                        DebugLoc DL = DebugLoc::getUnknown(),
                                        const Twine &Name = "") {
+    // Assume that the maximum possible number of elements in a vector fits
+    // within the index type for the default address space.
+    VPlan &Plan = getPlan();
+    Type *IndexTy = Plan.getDataLayout().getIndexType(Plan.getContext(), 0);
     return tryInsertInstruction(new VPInstruction(
-        VPInstruction::FirstActiveLane, Masks, {}, {}, DL, Name));
+        VPInstruction::FirstActiveLane, Masks, {}, {}, DL, Name, IndexTy));
   }
 
   VPInstruction *createLastActiveLane(ArrayRef<VPValue *> Masks,
                                       DebugLoc DL = DebugLoc::getUnknown(),
                                       const Twine &Name = "") {
-    return tryInsertInstruction(new VPInstruction(VPInstruction::LastActiveLane,
-                                                  Masks, {}, {}, DL, Name));
+    // Assume that the maximum possible number of elements in a vector fits
+    // within the index type for the default address space.
+    VPlan &Plan = getPlan();
+    Type *IndexTy = Plan.getDataLayout().getIndexType(Plan.getContext(), 0);
+    return tryInsertInstruction(new VPInstruction(
+        VPInstruction::LastActiveLane, Masks, {}, {}, DL, Name, IndexTy));
   }
 
   VPInstruction *createOverflowingOp(
@@ -358,8 +367,10 @@ public:
 
   VPPhi *createScalarPhi(ArrayRef<VPValue *> IncomingValues,
                          DebugLoc DL = DebugLoc::getUnknown(),
-                         const Twine &Name = "", const VPIRFlags &Flags = {}) {
-    return tryInsertInstruction(new VPPhi(IncomingValues, Flags, DL, Name));
+                         const Twine &Name = "", const VPIRFlags &Flags = {},
+                         Type *ResultTy = nullptr) {
+    return tryInsertInstruction(
+        new VPPhi(IncomingValues, Flags, DL, Name, ResultTy));
   }
 
   VPWidenPHIRecipe *createWidenPhi(ArrayRef<VPValue *> IncomingValues,
@@ -434,6 +445,11 @@ public:
             ? Instruction::Trunc
             : Instruction::SExt;
     return createScalarCast(CastOp, Op, ResultTy, DL);
+  }
+
+  VPValue *createScalarFreeze(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+    return tryInsertInstruction(
+        new VPInstruction(Instruction::Freeze, Op, {}, {}, DL));
   }
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
@@ -924,6 +940,11 @@ public:
       bool DisableRuntimeUnroll);
 
 private:
+  /// Build an initial VPlan, with HCFG wrapping the original scalar loop and
+  /// scalar transformations applied. Returns null if an initial VPlan cannot
+  /// be built.
+  VPlanPtr tryToBuildVPlan1();
+
   /// Build a VPlan using VPRecipes according to the information gathered by
   /// Legal and VPlan-based analysis. For outer loops, performs basic recipe
   /// conversion only. For inner loops, \p Range's largest included VF is
@@ -935,9 +956,9 @@ private:
   VPlanPtr tryToBuildVPlan(VPlanPtr InitialPlan, VFRange &Range);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
-  /// according to the information gathered by Legal when it checked if it is
-  /// legal to vectorize the loop.
-  void buildVPlans(ElementCount MinVF, ElementCount MaxVF);
+  /// based on \p VPlan1 and according to the information gathered by Legal
+  /// when it checked if it is legal to vectorize the loop.
+  void buildVPlans(VPlan &VPlan1, ElementCount MinVF, ElementCount MaxVF);
 
   /// Add ComputeReductionResult recipes to the middle block to compute the
   /// final reduction results. Add Select recipes to the latch block when

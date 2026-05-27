@@ -13,7 +13,7 @@
 
 namespace llvm {
 struct InstructionNamerPass : OptionalPassInfoMixin<InstructionNamerPass> {
-  PreservedAnalyses run(Function &, FunctionAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Function &, FunctionAnalysisManager &);
 };
 } // namespace llvm
 
