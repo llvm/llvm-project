@@ -7828,8 +7828,9 @@ different value.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``!mem.cache_hint`` metadata may be attached to any instruction that reads
-or writes memory, except non-intrinsic calls. We do not allow cache hints
-on function calls because their memory behavior depends on attributes that may change independently, and may therefore invalidate the IR.
+or writes memory, except non-intrinsic calls. Cache hints are not
+permitted on function calls because their memory behavior
+depends on attributes, which may change independently.
 
 The ``!mem.cache_hint`` metadata provides target-specific cache control hints for the
 memory operation. This metadata is purely a performance hint: dropping or ignoring it
@@ -7838,7 +7839,7 @@ must not change the observable behavior of the program (particularly, cache hint
 The ``!mem.cache_hint`` node must contain an even number of entries, alternating between
 ``i32`` operand numbers and metadata hint nodes.
 
-Operand numbers refer to the pointer operand that carries the cache hint specified by the following hint node.
+Each operand number identifies the pointer operand to which the following hint node applies.
 For non-call instructions, the operand number is the IR operand index.
 For intrinsic calls, the operand number is the call argument index.
 Operand numbers must be unique within
