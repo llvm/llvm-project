@@ -63,10 +63,12 @@ public:
   void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
                            const Expr *MovedExpr,
                            SourceLocation FreeLoc) override {
-    S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_use_after_scope_moved
-                     : diag::warn_lifetime_safety_use_after_scope)
-        << IssueExpr->getSourceRange();
+    unsigned DiagID = MovedExpr
+                          ? diag::warn_lifetime_safety_use_after_scope_moved
+                          : diag::warn_lifetime_safety_use_after_scope;
+
+    S.Diag(IssueExpr->getExprLoc(), DiagID)
+        << getDiagSubjectDescription(IssueExpr) << IssueExpr->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
