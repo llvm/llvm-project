@@ -3105,6 +3105,7 @@ cc_library(
         ":__support_macros_properties_compiler",
         ":__support_macros_properties_cpu_features",
         ":__support_macros_properties_types",
+        ":__support_math_extras",
         ":__support_number_pair",
         ":__support_range_reduction",
         ":__support_range_reduction_double",
@@ -12915,11 +12916,9 @@ libc_function(
     hdrs = ["src/inttypes/strtoimax.h"],
     deps = [
         ":__support_common",
-        ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_str_to_integer",
-        ":errno",
         ":hdr_stdint_proxy",
+        ":str_to_util",
     ],
 )
 
@@ -12929,11 +12928,9 @@ libc_function(
     hdrs = ["src/inttypes/strtoumax.h"],
     deps = [
         ":__support_common",
-        ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_str_to_integer",
-        ":errno",
         ":hdr_stdint_proxy",
+        ":str_to_util",
     ],
 )
 
@@ -13096,10 +13093,8 @@ libc_function(
     hdrs = ["src/stdlib/atoi.h"],
     deps = [
         ":__support_common",
-        ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_str_to_integer",
-        ":errno",
+        ":str_to_util",
     ],
 )
 
@@ -13109,10 +13104,8 @@ libc_function(
     hdrs = ["src/stdlib/atol.h"],
     deps = [
         ":__support_common",
-        ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_str_to_integer",
-        ":errno",
+        ":str_to_util",
     ],
 )
 
@@ -13122,10 +13115,8 @@ libc_function(
     hdrs = ["src/stdlib/atoll.h"],
     deps = [
         ":__support_common",
-        ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_str_to_integer",
-        ":errno",
+        ":str_to_util",
     ],
 )
 
@@ -13235,6 +13226,16 @@ libc_function(
 )
 
 libc_support_library(
+    name = "str_to_util",
+    hdrs = ["src/stdlib/str_to_util.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_str_to_integer",
+    ],
+)
+
+libc_support_library(
     name = "str_from_util",
     hdrs = ["src/stdlib/str_from_util.h"],
     deps = [
@@ -13296,10 +13297,8 @@ libc_function(
     hdrs = ["src/stdlib/strtol.h"],
     deps = [
         ":__support_common",
-        ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_str_to_integer",
-        ":errno",
+        ":str_to_util",
     ],
 )
 
@@ -13309,10 +13308,8 @@ libc_function(
     hdrs = ["src/stdlib/strtoll.h"],
     deps = [
         ":__support_common",
-        ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_str_to_integer",
-        ":errno",
+        ":str_to_util",
     ],
 )
 
@@ -13322,10 +13319,8 @@ libc_function(
     hdrs = ["src/stdlib/strtoul.h"],
     deps = [
         ":__support_common",
-        ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_str_to_integer",
-        ":errno",
+        ":str_to_util",
     ],
 )
 
@@ -13335,10 +13330,8 @@ libc_function(
     hdrs = ["src/stdlib/strtoull.h"],
     deps = [
         ":__support_common",
-        ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_str_to_integer",
-        ":errno",
+        ":str_to_util",
     ],
 )
 
