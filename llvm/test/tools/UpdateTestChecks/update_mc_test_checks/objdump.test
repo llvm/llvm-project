@@ -1,0 +1,7 @@
+# REQUIRES: riscv-registered-target
+## Check that llvm-objdump output can be updated and checked
+
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: cp -f %S/Inputs/objdump.s %t/objdump.s
+# RUN: %update_mc_test_checks --use-same-for-encoding %t/objdump.s
+# RUN: diff -u %S/Inputs/objdump.s.expected %t/objdump.s
