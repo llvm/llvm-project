@@ -26,8 +26,10 @@ set(CROSS_PROJECT_TEST_DEPS
   llvm-config
   llvm-dis
   llvm-dwarfdump
+  llvm-mc
   llvm-modextract
   llvm-objdump
+  llvm-symbolizer
   not
   obj2yaml
   split-file

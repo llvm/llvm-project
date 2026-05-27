@@ -96,7 +96,8 @@ llvm_config.use_clang(required=("clang" in config.llvm_enabled_projects))
 
 if not hasattr(config, "lld_src_dir"):
     config.lld_src_dir = ""
-llvm_config.use_lld(required=("lld" in config.llvm_enabled_projects))
+if llvm_config.use_lld(required=("lld" in config.llvm_enabled_projects)):
+    config.available_features.add("lld")
 
 if "compiler-rt" in config.llvm_enabled_projects:
     config.available_features.add("compiler-rt")
