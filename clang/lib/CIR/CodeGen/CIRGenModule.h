@@ -440,7 +440,6 @@ public:
     case ProtectedVisibility:
       return cir::VisibilityKind::Protected;
     }
-
     llvm_unreachable("unknown visibility!");
   }
 
@@ -615,7 +614,8 @@ public:
   mlir::Type convertType(clang::QualType type);
 
   /// Set the visibility for the given global.
-  void setGlobalVisibility(mlir::Operation *op, const NamedDecl *d) const;
+  void setGlobalVisibility(cir::CIRGlobalValueInterface gv,
+                           const NamedDecl *d) const;
   void setDSOLocal(mlir::Operation *op) const;
   void setDSOLocal(cir::CIRGlobalValueInterface gv) const;
 
