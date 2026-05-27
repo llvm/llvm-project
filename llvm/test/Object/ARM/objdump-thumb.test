@@ -1,4 +1,0 @@
-RUN: llvm-objdump -d --macho --triple=thumbv7-apple-ios \
-RUN: %p/../Inputs/macho-text.thumb | FileCheck %s
-
-CHECK: 0:	00 bf                                        	nop

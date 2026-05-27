@@ -1,2 +1,0 @@
-## Test export command with too many arguments.
-# RUN: export FOO=1 BAR=2

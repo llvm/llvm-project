@@ -1,6 +1,0 @@
-# RUN: llvm-mc --disassemble %s -triple powerpc64-unknown-unknown -mcpu=pwr7 | FileCheck %s
-
-# CHECK: tlbld 4
-0x7c 0x00 0x27 0xa4
-# CHECK: tlbli 4
-0x7c 0x00 0x27 0xe4

@@ -1,1 +1,0 @@
-void operator delete(void*);

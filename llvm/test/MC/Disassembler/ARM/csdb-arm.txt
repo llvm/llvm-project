@@ -1,4 +1,0 @@
-# RUN: llvm-mc < %s -triple armv8a-none-eabi -disassemble | FileCheck %s
-
-[0x14,0xf0,0x20,0xe3]
-# CHECK: csdb

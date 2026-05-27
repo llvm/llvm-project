@@ -1,4 +1,0 @@
-; Check that tool does not crash when there is no any data
-; in file after -check-prefix=PREFIX option.
-
-; RUN: not FileCheck -input-file %s %s -check-prefix=A

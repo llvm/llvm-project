@@ -1,6 +1,0 @@
-; RUN: llvm-ml %s -m64 -filetype=s /Fo - | FileCheck %s
-; RUN: llvm-ml /Ta %s -m64 -filetype=s /Fo - | FileCheck %s
-
-.code
-foo:
-; CHECK: foo:

@@ -1,5 +1,0 @@
-static_library("FileCheck") {
-  output_name = "LLVMFileCheck"
-  deps = [ "//llvm/lib/Support" ]
-  sources = [ "FileCheck.cpp" ]
-}

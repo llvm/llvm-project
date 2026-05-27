@@ -1,6 +1,0 @@
-REQUIRES: zlib
-
-RUN: llvm-symbolizer --obj=%p/Inputs/dwarfdump-test-zlib.elf-x86-64 0x4005e9 | FileCheck %s
-
-CHECK: main
-CHECK-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test-zlib.cc:16

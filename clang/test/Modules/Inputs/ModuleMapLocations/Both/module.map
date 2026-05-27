@@ -1,3 +1,0 @@
-module both {
-  header "b.h"
-}

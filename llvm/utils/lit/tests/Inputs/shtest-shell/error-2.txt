@@ -1,3 +1,0 @@
-# Check error on a unsupported redirect.
-#
-# RUN: echo "hello" 3>&1

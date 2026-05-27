@@ -1,3 +1,0 @@
-module C {
-  header "Inputs/modular_maps/c.h"
-}

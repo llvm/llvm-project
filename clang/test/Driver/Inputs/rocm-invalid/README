@@ -1,4 +1,0 @@
-This directory is for testing invalid ROCm installations.
-
-It is invalid for -fgpu-sanitize since the required Asan
-runtime library (asanrtl.bc) is missing.

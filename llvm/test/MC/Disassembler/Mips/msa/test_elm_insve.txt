@@ -1,6 +1,0 @@
-# RUN: llvm-mc --disassemble %s -triple=mips-unknown-linux -mcpu=mips32r2 -mattr=+msa | FileCheck %s
-
-0x79 0x43 0x4e 0x59 # CHECK:        insve.b $w25[3], $w9[0]
-0x79 0x62 0x16 0x19 # CHECK:        insve.h $w24[2], $w2[0]
-0x79 0x72 0x68 0x19 # CHECK:        insve.w $w0[2], $w13[0]
-0x79 0x78 0x90 0xd9 # CHECK:        insve.d $w3[0], $w18[0]

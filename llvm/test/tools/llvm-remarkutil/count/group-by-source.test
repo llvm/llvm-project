@@ -1,6 +1,0 @@
-RUN: llvm-remarkutil count --parser=yaml --group-by=source %p/Inputs/remark-group-by.yaml | FileCheck %s
-
-; CHECK-LABEL: Source,Count
-; CHECK: path/to/anno.c,4
-; CHECK: path/to/anno2.c,1
-; CHECK: path/to/anno3.c,1

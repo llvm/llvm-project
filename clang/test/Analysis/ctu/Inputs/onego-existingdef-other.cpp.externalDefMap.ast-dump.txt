@@ -1,2 +1,0 @@
-9:c:@F@bar# onego-existingdef-other.cpp.ast
-11:c:@F@other# onego-existingdef-other.cpp.ast

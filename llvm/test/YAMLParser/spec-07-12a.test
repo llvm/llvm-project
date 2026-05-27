@@ -1,5 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
-# Implicit document. Root
-# collection (mapping) node.
-foo : bar

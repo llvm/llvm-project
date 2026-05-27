@@ -1,3 +1,0 @@
-﻿# RUN: yaml-bench -canonical %s
-
---- UTF-8

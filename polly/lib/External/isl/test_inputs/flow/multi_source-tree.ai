@@ -1,8 +1,0 @@
-sink: "{ S[] -> a[] }"
-must_source: "{ T[] -> a[]; U[] -> a[] }"
-schedule:
-  domain: "{ U[]; S[]; T[] }"
-  child:
-    sequence:
-    - filter: "{ T[]; U[] }"
-    - filter: "{ S[] }"

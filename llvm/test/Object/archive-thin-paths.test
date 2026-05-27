@@ -1,9 +1,0 @@
-REQUIRES: system-windows
-
-RUN: rm -rf %t && mkdir -p %t && cd %t
-RUN: mkdir -p archive-thin-paths.dir
-RUN: echo foo > archive-thin-paths.dir/foo.o
-
-RUN: rm -f archive-thin-paths.a
-RUN: llvm-ar rcsT archive-thin-paths.a archive-thin-paths.dir\foo.o
-RUN: grep archive-thin-paths.dir/foo.o archive-thin-paths.a

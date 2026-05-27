@@ -1,5 +1,0 @@
-RUN: llvm-objdump --version | FileCheck %s
-RUN: llvm-objdump -v | FileCheck %s
-
-CHECK: LLVM version
-CHECK: Registered Targets:

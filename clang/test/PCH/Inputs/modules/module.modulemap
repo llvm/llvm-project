@@ -1,3 +1,0 @@
-module Foo {
-  header "Foo.h"
-}

@@ -1,3 +1,0 @@
-# CHECK: ValueError: '%}' is missing for %else substitution
-#
-# RUN: %if feature %{ echo %} %else %{ fail

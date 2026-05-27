@@ -1,3 +1,0 @@
-#ifdef __OBJC__
-  #import <NC/NULog.h>
-#endif

@@ -1,5 +1,0 @@
-framework module FromImportedSubModule {
-  module Sub {
-    header "Header.h"
-  }
-}

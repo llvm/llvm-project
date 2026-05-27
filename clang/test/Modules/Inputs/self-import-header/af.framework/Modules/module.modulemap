@@ -1,4 +1,0 @@
-framework module af {
-  header "a1.h"
-  header "a2.h"
-}

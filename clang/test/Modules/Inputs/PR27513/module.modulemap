@@ -1,7 +1,0 @@
-module "c.h" {header "c.h" export *}
-module "b2.h" { header "b2.h" export *}
-module "b.h" {header "b.h" export *}
-module "b111.h" { header "b111.h" export *}
-module "b11.h" { header "b11.h" export *}
-module "b1111.h" { header "b1111.h" export *}
-module "b1112.h" { header "b1112.h" export *}

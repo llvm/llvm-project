@@ -1,4 +1,0 @@
-copy("llvm-locstats") {
-  sources = [ "llvm-locstats.py" ]
-  outputs = [ "$root_out_dir/bin/{{source_name_part}}" ]
-}

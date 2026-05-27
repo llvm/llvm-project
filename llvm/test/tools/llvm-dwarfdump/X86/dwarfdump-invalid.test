@@ -1,8 +1,0 @@
-; Verify that llvm-dwarfdump doesn't crash on broken input files.
-
-RUN: not llvm-dwarfdump %p/Inputs/invalid.elf 2>&1 | FileCheck %s --check-prefix=INVALID-ELF1
-RUN: not llvm-dwarfdump %p/Inputs/invalid.elf.2 2>&1 | FileCheck %s --check-prefix=INVALID-ELF2
-RUN: not llvm-dwarfdump %p/Inputs/invalid.elf.3 2>&1 | FileCheck %s --check-prefix=INVALID-ELF3
-INVALID-ELF1: section header table goes past the end of the file
-INVALID-ELF2: Invalid ELF data
-INVALID-ELF3: Invalid ELF class

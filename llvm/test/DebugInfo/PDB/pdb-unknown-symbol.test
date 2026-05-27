@@ -1,6 +1,0 @@
-; RUN: llvm-pdbutil yaml2pdb -pdb=%t.pdb %p/Inputs/unknown-symbol.yaml
-; RUN: llvm-pdbutil pdb2yaml -minimal -module-syms -no-file-headers %t.pdb | FileCheck %s
-
-CHECK: - Kind:            S_RESERVED1
-CHECK:   UnknownSym:
-CHECK:     Data:          123456789ABCDEF0

@@ -1,5 +1,0 @@
-header: sys/un.h
-standards:
-  - posix
-types:
-  - type_name: struct_sockaddr_un

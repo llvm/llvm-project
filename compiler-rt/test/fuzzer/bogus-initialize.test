@@ -1,4 +1,0 @@
-RUN: %cpp_compiler %S/BogusInitializeTest.cpp -o %t-BogusInitializeTest
-
-RUN: not %run %t-BogusInitializeTest 2>&1 | FileCheck %s --check-prefix=BOGUS_INITIALIZE
-BOGUS_INITIALIZE: argv[0] has been modified in LLVMFuzzerInitialize

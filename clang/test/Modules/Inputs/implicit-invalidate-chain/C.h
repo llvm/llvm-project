@@ -1,2 +1,0 @@
-// C
-#include "D.h"

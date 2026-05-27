@@ -1,6 +1,0 @@
-# PREAGR: B #main# #static symb backslash\# 1 0
-# PREAGR: B #static symb backslash\# #symb whitespace# 1 0
-# PREAGR: B #main# #symb whitespace# 1 0
-# PREAGR: B #main# #symb backslash\# 1 0
-# PREAGR: B #main# #symb backslash\# 1 0
-# PREAGR: B #symb backslash\# #symb whitespace# 2 0

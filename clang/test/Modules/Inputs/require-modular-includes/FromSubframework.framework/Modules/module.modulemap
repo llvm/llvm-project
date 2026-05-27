@@ -1,7 +1,0 @@
-framework module FromSubframework {
-  umbrella header "FromSubframework.h"
-
-  framework module Subframework {
-    umbrella header "Subframework.h"
-  }
-}

@@ -1,8 +1,0 @@
-# REQUIRES: zstd
-## llvm-symbolizer supports zstd compressed debug sections.
-
-# RUN: llvm-objcopy --compress-debug-sections=zstd %S/Inputs/dwarfdump-test.elf-x86-64 %t
-# RUN: llvm-symbolizer --obj=%t 0x40113f | FileCheck %s
-
-# CHECK:      main
-# CHECK-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test.cc:16

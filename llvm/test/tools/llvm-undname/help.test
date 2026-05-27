@@ -1,6 +1,0 @@
-# RUN: llvm-undname --help | FileCheck %s --check-prefix HELP --implicit-check-not='{{[Oo]}}ptions:'
-
-# HELP: OVERVIEW: llvm-undname
-# HELP: USAGE
-# HELP: Color Options
-# HELP: Generic Options

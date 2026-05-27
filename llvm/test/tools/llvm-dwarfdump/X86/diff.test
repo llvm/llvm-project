@@ -1,6 +1,0 @@
-RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
-RUN:   | llvm-dwarfdump -diff - | FileCheck %s
-CHECK: {{^DW_TAG_compile_unit}}
-CHECK: DW_AT_stmt_list	()
-CHECK: DW_AT_low_pc	()
-CHECK: DW_AT_high_pc	()

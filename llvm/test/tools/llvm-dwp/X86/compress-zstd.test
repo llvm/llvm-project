@@ -1,9 +1,0 @@
-# REQUIRES: zstd
-## llvm-dwp supports zstd compressed debug sections.
-
-# RUN: llvm-objcopy --compress-debug-sections=zstd %p/../Inputs/simple/notypes/a.dwo %t.o
-# RUN: llvm-dwp %t.o -o %t.dwp
-
-# CHECK: .debug_info.dwo contents:
-# CHECK: DW_TAG_compile_unit
-# CHECK:   DW_AT_name {{.*}} "a.cpp"

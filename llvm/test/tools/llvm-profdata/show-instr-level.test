@@ -1,7 +1,0 @@
-RUN: llvm-profdata merge -o %t_clang.profdata %p/Inputs/clang_profile.proftext
-RUN: llvm-profdata show %t_clang.profdata | FileCheck %s -check-prefix=FE
-FE: Instrumentation level: Front-end
-
-RUN: llvm-profdata merge -o %t_ir.profdata %p/Inputs/IR_profile.proftext
-RUN: llvm-profdata show %t_ir.profdata | FileCheck %s -check-prefix=IR
-IR: Instrumentation level: IR

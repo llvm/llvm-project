@@ -1,3 +1,0 @@
-# RUN: llvm-mc --disassemble %s -triple=mips64-unknown-linux -mcpu=mips64r2 -mattr=+msa | FileCheck %s
-
-0x78 0xb8 0xfc 0xd9 # CHECK:        copy_s.d        $19, $w31[0]

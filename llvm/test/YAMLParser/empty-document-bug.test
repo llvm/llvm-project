@@ -1,2 +1,0 @@
-# RUN: yaml-bench -canonical %s
-

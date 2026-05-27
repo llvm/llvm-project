@@ -1,5 +1,0 @@
-RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj --split-dwarf-file=debug_info_v4.dwo -dwarf-version=4 %p/../Inputs/overflow/debug_info_v4.s -o debug_info_v4.o
-RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj --split-dwarf-file=main_v4.dwo -dwarf-version=4 %p/../Inputs/overflow/main_v4.s -o main_v4.o
-RUN: llvm-dwp debug_info_v4.dwo main_v4.dwo -continue-on-cu-index-overflow -o overflow_v4.dwp 2>&1 | FileCheck %s
-RUN: llvm-dwp overflow_v4.dwp -o overflow_warned_v4.dwp
-CHECK: warning: {{.*}} Section Contribution Offset overflow 4G. Previous Offset {{.*}}, After overflow offset {{.*}}.

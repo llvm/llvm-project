@@ -1,3 +1,0 @@
-# Check error on a shell parsing failure.
-#
-# RUN: echo "missing quote

@@ -1,9 +1,0 @@
-# RUN: rm -rf %t && mkdir -p %t
-# RUN: echo "print('Rene Magritte')" >> %t/foo.py
-
-# RUN: %lldb --script-language python -o 'command script import %t/foo.py' 2>&1 | FileCheck %s
-# RUN: %lldb --script-language python -o 'command script import -s %t/foo.py' 2>&1 | FileCheck %s --check-prefix SILENT
-# RUN: %lldb --script-language python -o 'command script import --silent %t/foo.py' 2>&1 | FileCheck %s --check-prefix SILENT
-
-CHECK: Rene Magritte
-SILENT-NOT: Rene Magritte

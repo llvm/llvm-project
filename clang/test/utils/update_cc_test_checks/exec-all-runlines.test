@@ -1,8 +1,0 @@
-## Test that non-clang/non-filechecked runlines execute
-
-# RUN: cp %S/Inputs/exec-all-runlines.c %t-generated.c && %update_cc_test_checks %t-generated.c
-# RUN: diff -u %S/Inputs/exec-all-runlines.c.expected %t-generated.c
-
-## Check that re-running update_cc_test_checks doesn't change the output
-# RUN: %update_cc_test_checks %t-generated.c
-# RUN: diff -u %S/Inputs/exec-all-runlines.c.expected %t-generated.c

@@ -1,5 +1,0 @@
-// RUN: llvm-profdata show --covered %S/Inputs/function-entry-coverage.profdata | FileCheck %s
-
-// CHECK: main
-// CHECK: foo
-// CHECK: bar

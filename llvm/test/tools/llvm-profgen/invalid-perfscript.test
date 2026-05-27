@@ -1,9 +1,0 @@
-; RUN: llvm-profgen --perfscript=%s --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t 2>%t1
-; RUN: FileCheck %s --input-file %t1
-
-	          4005dc
-	          400634
-	          400684
-	    7f68c5788793
-
-; XFAIL: *

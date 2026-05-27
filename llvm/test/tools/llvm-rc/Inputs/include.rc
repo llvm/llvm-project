@@ -1,2 +1,0 @@
-// Found because bitmap.bmp is in same directory
-foo BITMAP "bitmap.bmp"

@@ -1,7 +1,0 @@
-executable("llvm-bcanalyzer") {
-  deps = [
-    "//llvm/lib/Bitcode/Reader",
-    "//llvm/lib/Support",
-  ]
-  sources = [ "llvm-bcanalyzer.cpp" ]
-}

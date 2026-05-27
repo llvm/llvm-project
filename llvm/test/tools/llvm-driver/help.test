@@ -1,3 +1,0 @@
-# REQUIRES: llvm-driver
-# RUN: %llvm --help | FileCheck %s
-# CHECK: USAGE: llvm [subcommand]

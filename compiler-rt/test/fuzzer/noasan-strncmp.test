@@ -1,9 +1,0 @@
-UNSUPPORTED: darwin, target={{.*(freebsd|windows).*}}, target=aarch64{{.*}}
-
-RUN: %cpp_compiler -fno-sanitize=address %S/StrncmpTest.cpp -o %t-NoAsanStrncmpTest
-RUN: not %run %t-NoAsanStrncmpTest -seed=2 -runs=10000000   2>&1 | FileCheck %s
-
-RUN: %cpp_compiler -fno-sanitize=address -fno-builtin-calloc %S/CustomAllocator.cpp %S/StrncmpTest.cpp -o %t-NoAsanCustomAllocatorStrncmpTest
-RUN: not %run %t-NoAsanCustomAllocatorStrncmpTest -seed=2 -runs=10000000   2>&1 | FileCheck %s
-
-CHECK: BINGO

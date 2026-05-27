@@ -1,9 +1,0 @@
-# RUN: llvm-mc < %s --triple x86_64-apple-darwin -filetype=obj | llvm-objdump --macho --section __FOO,__bar --full-leading-addr --print-imm-hex --no-show-raw-insn - | FileCheck %s
-
-.section __FOO, __bar
-_foo:
-	nop
-
-# CHECK: Contents of (__FOO,__bar) section
-# CHECK: _foo:
-# CHECK: 0000000000000000	nop

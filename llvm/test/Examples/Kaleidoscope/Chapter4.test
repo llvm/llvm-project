@@ -1,9 +1,0 @@
-# RUN: Kaleidoscope-Ch4 < %s 2>&1 | FileCheck %s
-# REQUIRES: default_triple
-
-# Test basic definition, binding, and execution.
-def foo(x) x + 1;
-def bar(x) foo(2 * x);
-bar(2);
-# CHECK: Evaluated to 5.000000
-

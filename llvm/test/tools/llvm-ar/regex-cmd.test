@@ -1,7 +1,0 @@
-RUN: yaml2obj %S/Inputs/elf.yaml -o %t.o
-
-RUN: rm -f %t.ar
-RUN: llvm-ar crs %t.ar %t.*
-RUN: llvm-ar tv %t.ar | FileCheck %s
-
-CHECK: regex-cmd.test{{.*}}.o

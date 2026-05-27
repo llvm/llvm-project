@@ -1,4 +1,0 @@
-Make sure that passing --arch armv7s only shows the armv7s slice and not the armv7 slice.
-
-RUN: llvm-dwarfdump -arch armv7s %S/../dsymutil/Inputs/fat-test.arm.dylib | FileCheck %s
-CHECK-NOT: (armv7)

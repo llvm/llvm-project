@@ -1,5 +1,0 @@
-// Test clang-ssaf-analyzer version
-
-// RUN: clang-ssaf-analyzer --version | FileCheck %s
-
-// CHECK: clang-ssaf-analyzer 0.1

@@ -1,6 +1,0 @@
-RUN: llvm-profdata merge --sample --text -output=%t.proftext %S/Inputs/cs-sample.proftext
-RUN: diff -b %t.proftext %S/Inputs/cs-sample.proftext
-RUN: llvm-profdata merge --sample --extbinary %p/Inputs/cs-sample.proftext -o %t.prof && llvm-profdata merge --sample --text %t.prof -o %t1.proftext
-RUN: diff -b %t1.proftext %S/Inputs/cs-sample.proftext
-RUN: llvm-profdata show --sample -show-sec-info-only %t.prof | FileCheck %s
-CHECK: FunctionMetadata {{.*}} Flags: {attr}

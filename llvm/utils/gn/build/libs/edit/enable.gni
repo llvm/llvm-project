@@ -1,3 +1,0 @@
-declare_args() {
-  llvm_enable_libedit = host_os == "mac"
-}

@@ -1,3 +1,0 @@
-framework module FromNonModularSubframework {
-  header "FromNonModularSubframework.h"
-}

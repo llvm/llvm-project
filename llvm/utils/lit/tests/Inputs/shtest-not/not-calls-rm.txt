@@ -1,2 +1,0 @@
-# RUN: not rm %t
-# RUN: not --crash rm foobar

@@ -1,9 +1,0 @@
-RUN: apinotes-test %S/Inputs/Frameworks/SimpleKit.framework/Headers/SimpleKit.apinotes > %t.result
-RUN: not diff -u %S/Inputs/Frameworks/SimpleKit.framework/Headers/SimpleKit.apinotes %t.result | \
-RUN:   tail -n +4 | \
-RUN:   FileCheck %s --implicit-check-not="{{^\+}}" --implicit-check-not="{{^\-}}"
-
-We expect only the document markers to be emitted
-
-CHECK: +---
-CHECK: +...

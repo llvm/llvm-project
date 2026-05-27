@@ -1,5 +1,0 @@
-functions:
-  readv:
-    in-latest-posix: ""
-  writev:
-    in-latest-posix: ""

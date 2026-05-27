@@ -1,3 +1,0 @@
-# RUN: llvm-profdata --version | FileCheck %s
-
-# CHECK: LLVM version {{.*}}

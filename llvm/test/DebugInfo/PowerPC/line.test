@@ -1,7 +1,0 @@
-; RUN: llc -mtriple=powerpc-unknown-linux -O0 -filetype=asm < %S/../Inputs/line.ll | FileCheck %S/../Inputs/line.ll
-
-; This is more complex than it looked. It's mixed up somewhere in SelectionDAG
-; (legalized as br_cc, losing the separation between the comparison and the
-; branch, then further lowered to cmplwi + brcc but without the fidelity that
-; those two instructions are on separate lines)
-; XFAIL: *

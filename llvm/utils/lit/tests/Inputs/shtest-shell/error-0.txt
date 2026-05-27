@@ -1,3 +1,0 @@
-# Check error on an internal shell error (unable to find command).
-#
-# RUN: not-a-real-command

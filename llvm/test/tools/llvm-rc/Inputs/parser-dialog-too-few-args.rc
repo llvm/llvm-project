@@ -1,3 +1,0 @@
-1 DIALOG 1, 2, 3, 4 {
-  LTEXT "Too short", 1, 2, 3
-}

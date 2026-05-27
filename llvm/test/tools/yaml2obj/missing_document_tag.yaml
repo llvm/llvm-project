@@ -1,9 +1,0 @@
-# RUN: not yaml2obj %s 2>&1 | FileCheck %s
-
----
-DummyData:
-  foo:           0
-...
-
-# CHECK: YAML:4:1: error: YAML Object File missing document type tag!
-# CHECK: error: failed to parse YAML input

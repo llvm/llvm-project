@@ -1,8 +1,0 @@
-
-#ifndef CMD_MACRO
-#error CMD_MACRO undefined
-#endif 
-
-int foo(void) {
-  return x;
-}

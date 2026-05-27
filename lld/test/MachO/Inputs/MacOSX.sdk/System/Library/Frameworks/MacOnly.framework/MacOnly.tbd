@@ -1,9 +1,0 @@
---- !tapi-tbd
-tbd-version:      4
-targets:          [ x86_64-macos ]
-uuids:
-  - target: x86_64-macos
-    value:  00000000-0000-0000-0000-000000000000
-install-name:     'MacOnly.dylib'
-current-version:  0001.001.1
-...

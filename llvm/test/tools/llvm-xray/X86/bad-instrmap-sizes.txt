@@ -1,3 +1,0 @@
-; RUN: not llvm-xray extract %S/Inputs/elf64-badentrysizes.bin 2>&1 | FileCheck %s
-; CHECK: llvm-xray: Cannot extract instrumentation map from '{{.*}}elf64-badentrysizes.bin'.
-; CHECK-NEXT: Instrumentation map entries not evenly divisible by size of an XRay sled entry.

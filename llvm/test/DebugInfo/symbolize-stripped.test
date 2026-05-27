@@ -1,4 +1,0 @@
-RUN: llvm-symbolizer 0x1f1 --obj %p/Inputs/shared-object-stripped.elf-i386 \
-RUN:   | FileCheck %s
-
-CHECK: global_func

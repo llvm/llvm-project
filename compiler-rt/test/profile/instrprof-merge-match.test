@@ -1,7 +1,0 @@
-// RUN: mkdir -p %t.d
-// RUN: %clang_profgen  -o %t.d/libt.so -fPIC -shared %S/Inputs/instrprof-merge-match-lib.c
-// RUN: %clang_profgen  -o %t -L %t.d -rpath %t.d  %S/Inputs/instrprof-merge-match.c -lt
-// RUN: %run %t
-
-rpath isn't supported on Windows.
-UNSUPPORTED: target={{.*windows.*}}

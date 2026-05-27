@@ -1,7 +1,0 @@
-## Test that CHECK lines are generated for explicit template instantiatons
-
-# RUN: cp %S/Inputs/explicit-template-instantiation.cpp %t.cpp && %update_cc_test_checks %t.cpp
-# RUN: diff -u %S/Inputs/explicit-template-instantiation.cpp.expected %t.cpp
-## Check that re-running update_cc_test_checks doesn't change the output
-# RUN: %update_cc_test_checks %t.cpp
-# RUN: diff -u %S/Inputs/explicit-template-instantiation.cpp.expected %t.cpp

@@ -1,1 +1,0 @@
-RUN: llc -O0 -mtriple=ppc32-- -asm-verbose < %S/../Inputs/DbgValueOtherTargets.ll | FileCheck %S/../Inputs/DbgValueOtherTargets.ll

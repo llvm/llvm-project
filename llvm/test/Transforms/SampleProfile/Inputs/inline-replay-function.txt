@@ -1,1 +1,0 @@
-remark: calls.cc:10:0: '_Z3sumii' inlined into 'main' to match profiling context with (cost=45, threshold=337) at callsite main:3:0.1;

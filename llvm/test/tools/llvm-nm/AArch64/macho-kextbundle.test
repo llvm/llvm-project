@@ -1,4 +1,0 @@
-RUN: llvm-nm %p/Inputs/kextbundle.macho-aarch64 | FileCheck %s
-
-CHECK: 0000000000004014 s _bar.stub
-CHECK: 0000000000004000 T _foo

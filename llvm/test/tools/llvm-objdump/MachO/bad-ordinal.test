@@ -1,4 +1,0 @@
-# RUN: not llvm-objdump --macho --lazy-bind %p/Inputs/bad-ordinal.macho-x86_64 \
-# RUN: 2>&1 | FileCheck %s 
-
-# CHECK: bad-ordinal.macho-x86_64': truncated or malformed object (for BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB bad library ordinal: 2 (max 1) for opcode at: 0x2)

@@ -1,1 +1,0 @@
-#define assert(x) a

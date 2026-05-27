@@ -1,4 +1,0 @@
-UNSUPPORTED: target={{.*freebsd.*}}
-RUN: %cpp_compiler %S/CallerCalleeTest.cpp -o %t-CallerCalleeTest
-CHECK: BINGO
-RUN: not %run %t-CallerCalleeTest          -use_value_profile=1 -cross_over=0 -seed=1 -runs=10000000 2>&1 | FileCheck %s

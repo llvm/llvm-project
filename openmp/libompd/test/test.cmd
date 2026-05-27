@@ -1,3 +1,0 @@
-ompd init
-continue
-quit

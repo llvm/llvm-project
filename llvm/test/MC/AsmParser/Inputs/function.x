@@ -1,3 +1,0 @@
-
-FUNCTION = 1
-

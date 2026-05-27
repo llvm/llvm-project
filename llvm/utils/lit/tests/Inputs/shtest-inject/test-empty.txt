@@ -1,3 +1,0 @@
-
-# This test voluntarily has no RUN lines or anything else. The RUN lines are
-# injected by the test format.

@@ -1,5 +1,0 @@
-# RUN: %clang_host -g %S/Inputs/main.c -o %t
-# RUN: %lldb -b -o 'target stop-hook add --name test --shlib test -o "expression 95000 + 126"' -o 'file %t' -o 'b main' -o 'r' 2>&1 | FileCheck %s
-# CHECK: Stop hook #1 added
-# CHECK-NOT: (lldb) expression 95000 + 126
-# CHECK-NOT: (int) $0 = 95126

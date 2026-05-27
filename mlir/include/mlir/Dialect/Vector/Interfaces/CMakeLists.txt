@@ -1,2 +1,0 @@
-add_mlir_interface(MaskableOpInterface)
-add_mlir_interface(MaskingOpInterface)

@@ -1,9 +1,0 @@
-# RUN: %lldb -b -s %s | FileCheck %s
-
-# In terminal sessions LLDB hides input from subsequent lines so it's not visible in the output we check below.
-expression
-2+
-3
-
-# CHECK: (lldb) expression
-# CHECK: (int) {{.*}} = 5

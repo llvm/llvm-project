@@ -1,7 +1,0 @@
-# RUN: llvm-bcanalyzer --help | FileCheck %s --check-prefix HELP --implicit-check-not='{{[Oo]}}ptions:'
-
-# HELP: OVERVIEW: llvm-bcanalyzer file analyzer
-# HELP: USAGE
-# HELP: BC Analyzer Options
-# HELP: Color Options
-# HELP: Generic Options

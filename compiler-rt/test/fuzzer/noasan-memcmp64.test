@@ -1,6 +1,0 @@
-UNSUPPORTED: darwin, target={{.*(freebsd|windows).*}}
-
-RUN: %cpp_compiler -fno-sanitize=address %S/Memcmp64BytesTest.cpp -o %t-NoAsanMemcmp64BytesTest
-RUN: not %run %t-NoAsanMemcmp64BytesTest -seed=1 -runs=1000000   2>&1 | FileCheck %s
-
-CHECK: BINGO

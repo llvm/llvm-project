@@ -1,1 +1,0 @@
-void func(int K) {}

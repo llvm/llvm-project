@@ -1,6 +1,0 @@
-Checks: [
-  "-*",
-  "modernize-use-auto",
-  "modernize-use-emplace",
-  "modernize-use-nullptr",
-]

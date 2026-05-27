@@ -1,9 +1,0 @@
-# RUN: llvm-mc < %s -triple thumbv8a-none-eabi -mattr=+ras -disassemble | FileCheck %s --check-prefix=RAS
-# RUN: llvm-mc < %s -triple thumbv8a-none-eabi -mattr=-ras -disassemble | FileCheck %s --check-prefix=NO-RAS
-# RUN: llvm-mc < %s -triple=thumbv8.1m.main-none-eabi -disassemble | FileCheck %s --check-prefix=RAS
-# RUN: not llvm-mc < %s -triple=thumbv8m-none-eabi -disassemble 2>&1 | FileCheck %s --check-prefix=FAIL
-
-[0xaf,0xf3,0x10,0x80]
-# RAS: esb
-# NO-RAS: hint.w #16
-# FAIL: invalid instruction encoding

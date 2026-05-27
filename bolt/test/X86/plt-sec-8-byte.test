@@ -1,6 +1,0 @@
-## Check correctness of processing .plt.sec with 8-byte entries.
-# RUN: yaml2obj %p/Inputs/plt-sec-8-byte.yaml &> %t.exe
-# RUN: llvm-bolt %t.exe --print-cfg --print-only=main -o %t.out | FileCheck %s
-
-CHECK:  callq printf@PLT
-CHECK:  callq exit@PLT

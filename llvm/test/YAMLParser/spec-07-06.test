@@ -1,7 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
-%TAG !      !foo
-%TAG !yaml! tag:yaml.org,2002:
----
-- !bar "baz"
-- !yaml!str "string"

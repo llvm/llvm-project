@@ -1,5 +1,0 @@
-# Test that we can find a stack overflow
-REQUIRES: linux
-RUN: %cpp_compiler %S/DeepRecursionTest.cpp -o %t
-RUN: not %run %t -seed=1 -runs=100000000 2>&1 | FileCheck %s
-CHECK: ERROR: libFuzzer: deadly signal

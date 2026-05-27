@@ -1,2 +1,0 @@
-./configure --without-cuda
-make

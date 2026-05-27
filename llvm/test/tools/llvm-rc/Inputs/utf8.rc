@@ -1,6 +1,0 @@
-STRINGTABLE {
-  // One can't pass UTF-8 sequences via multiple escaped chars - in narrow
-  // strings in UTF-8 mode, only ASCII chars can be entered via escapes.
-  1 "åäö © \x61"
-  2 L"åäö © \xe5\xe4\366 \251"
-}

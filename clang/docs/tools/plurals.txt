@@ -1,3 +1,0 @@
-Strings
-IncludeCategories
-RawStringFormats

@@ -1,7 +1,0 @@
-include(FindSphinx)
-if (SPHINX_FOUND AND LLVM_ENABLE_SPHINX)
-  include(AddSphinxTarget)
-  if (${SPHINX_OUTPUT_HTML})
-    add_sphinx_target(html libunwind)
-  endif()
-endif()

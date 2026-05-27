@@ -1,8 +1,0 @@
-# RUN: llvm-mca --help-hidden | FileCheck %s --check-prefix=HIDDEN
-# RUN: llvm-mca --help | FileCheck %s --check-prefix=HELP
-
-# HIDDEN: Machine scheduling model options:
-# HIDDEN:   --sched-model-reservation-station-scale-factor=<number>
-
-# HELP-NOT: Machine scheduling model options:
-# HELP-NOT: sched-model-reservation-station-scale-factor

@@ -1,1 +1,0 @@
-module foo { header "Inputs/merge-target-features/foo.h" export * }

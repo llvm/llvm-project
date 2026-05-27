@@ -1,3 +1,0 @@
-# REQUIRES: llvm-driver
-# RUN: %llvm cxxfilt --help | FileCheck %s 
-# CHECK: USAGE: cxxfilt

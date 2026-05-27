@@ -1,5 +1,0 @@
-module DepBuiltin {
-header "h1.h"
-  export *
-}
-

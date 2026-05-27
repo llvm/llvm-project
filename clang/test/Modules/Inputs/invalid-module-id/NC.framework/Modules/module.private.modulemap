@@ -1,5 +1,0 @@
-explicit module NC.Private
-{
-	header "NULog.h"
-	header "NUAssert.h"
-}

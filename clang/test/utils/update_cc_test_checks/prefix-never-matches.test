@@ -1,3 +1,0 @@
-# RUN: cp -f %S/Inputs/prefix-never-matches.cpp %t.cpp
-# RUN: %update_cc_test_checks %t.cpp
-# RUN: diff -u %t.cpp %S/Inputs/prefix-never-matches.cpp.expected

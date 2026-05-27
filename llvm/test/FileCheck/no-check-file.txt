@@ -1,3 +1,0 @@
-; RUN: %ProtectFileCheckOutput not FileCheck 2>&1 | FileCheck %s
-
-CHECK: <check-file> not specified

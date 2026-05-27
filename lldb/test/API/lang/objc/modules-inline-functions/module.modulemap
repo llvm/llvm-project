@@ -1,4 +1,0 @@
-module myModule {
-  header "myModule.h"
-  export *
-}

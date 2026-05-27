@@ -1,2 +1,0 @@
-sink: { S[] -> a[] }
-schedule_map: { S[] -> [] }

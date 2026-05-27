@@ -1,6 +1,0 @@
-RUN: not llvm-objdump -t %p/missing-file 2>&1 | FileCheck %s --check-prefix=NO_SUCH_FILE
-# Don't check the OS-dependent message "No such file or directory".
-NO_SUCH_FILE: '{{.*}}missing-file':
-
-RUN: not llvm-objdump -t %s 2>&1 | FileCheck %s --check-prefix=UNKNOWN_FILE_TYPE
-UNKNOWN_FILE_TYPE: '{{.*}}invalid-input.test': The file was not recognized as a valid object file

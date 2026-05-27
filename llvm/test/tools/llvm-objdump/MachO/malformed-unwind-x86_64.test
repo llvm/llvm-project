@@ -1,5 +1,0 @@
-# RUN: llvm-objdump --unwind-info %p/Inputs/malformed-unwind.macho-x86_64 | FileCheck %s
-
-# CHECK: Contents of __unwind_info section:
-# [...]
-# CHECK:     Skipping 2nd level page with unknown kind 4

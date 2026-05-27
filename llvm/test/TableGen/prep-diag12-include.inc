@@ -1,2 +1,0 @@
-#ifdef ENABLED
-#else

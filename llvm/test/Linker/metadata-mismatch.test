@@ -1,3 +1,0 @@
-; RUN: llvm-link %p/Inputs/metadata-mismatch-a.ll %p/Inputs/metadata-mismatch-b.ll -S 2>&1 | FileCheck %s
-
-; CHECK: warning: linking module flags 'Dwarf Version': IDs have conflicting values ('i32 5' from {{.*}}/metadata-mismatch-b.ll with 'i32 4' from llvm-link)

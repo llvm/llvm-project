@@ -1,7 +1,0 @@
-[
-{
-  "directory": "DIR",
-  "command": "clang -E DIR/modules-fmodule-name-no-module-built.m -IInputs -D INCLUDE_HEADER2 -MD -MF DIR/modules_cdb.d -fmodules -fcxx-modules -fmodules-cache-path=DIR/module-cache -fimplicit-modules -fmodule-name=header3 -fimplicit-module-maps",
-  "file": "DIR/modules-fmodule-name-no-module-built.m"
-}
-]

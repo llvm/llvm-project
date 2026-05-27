@@ -1,2 +1,0 @@
-RUN: not llvm-remarkutil 2>&1 | FileCheck %s
-CHECK: error: Please specify a subcommand. (See -help for options)

@@ -1,3 +1,0 @@
-# Check error on a unsupported mkdir (only does not support -m option).
-#
-# RUN: mkdir -p -m 777 temp

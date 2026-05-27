@@ -1,6 +1,0 @@
-UNSUPPORTED: expensive_checks
-
-RUN: %cpp_compiler %S/LargeTest.cpp -o %t-LargeTest
-RUN: %run %t-LargeTest -runs=10000
-
-CHECK: pages of counters where protected; libFuzzer's SEGV handler must be installed

@@ -1,7 +1,0 @@
-# RUN: yaml2obj %s | not llvm-readobj --symbols - 2>&1 | FileCheck %s
-
---- !WASM
-FileHeader:
-  Version:         0x0000000c
-
-# CHECK: error: '<stdin>': invalid version number: 12

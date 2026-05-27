@@ -1,1 +1,0 @@
-void simple(int *p);

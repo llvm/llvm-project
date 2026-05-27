@@ -1,7 +1,0 @@
-# RUN: llvm-split --help | FileCheck %s --check-prefix HELP --implicit-check-not='{{[Oo]}}ptions:'
-
-# HELP: OVERVIEW: LLVM module splitter
-# HELP: USAGE
-# HELP: Color Options
-# HELP: Generic Options
-# HELP: Split Options

@@ -1,2 +1,0 @@
-module "DataInputHandler.h" { header "DataInputHandler.h" export * }
-module "Types.h" { header "Types.h" export *}

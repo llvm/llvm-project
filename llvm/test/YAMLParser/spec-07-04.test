@@ -1,7 +1,0 @@
-# RUN: yaml-bench -canonical %s | FileCheck %s
-
-%TAG !yaml! tag:yaml.org,2002:
----
-!yaml!str "foo"
-
-#CHECK: !!str "foo"

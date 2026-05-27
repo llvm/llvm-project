@@ -1,4 +1,0 @@
-RUN: llvm-symbolizer --obj=%p/Inputs/dwarfdump-test.elf-x86-64.debuglink 0x40113f | FileCheck %s
-
-CHECK:       main
-CHECK-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test.cc:16

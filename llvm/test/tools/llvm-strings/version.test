@@ -1,4 +1,0 @@
-## Show that --version works for llvm-strings.
-
-RUN: llvm-strings --version | FileCheck %s
-CHECK: version

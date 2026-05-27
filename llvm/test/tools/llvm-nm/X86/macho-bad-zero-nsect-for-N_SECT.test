@@ -1,8 +1,0 @@
-RUN: llvm-nm %p/Inputs/macho-bad-zero-nsect-for-N_SECT | FileCheck -check-prefix DEFAULT %s
-DEFAULT: 0000000000000000 S dyld_stub_binder
-
-RUN: llvm-nm -m %p/Inputs/macho-bad-zero-nsect-for-N_SECT | FileCheck -check-prefix MACHO %s
-MACHO: 0000000000000000 (?,?) private external dyld_stub_binder
-
-RUN: llvm-nm -x %p/Inputs/macho-bad-zero-nsect-for-N_SECT | FileCheck -check-prefix HEX %s
-HEX: 0000000000000000 1f 00 0000 00000024 dyld_stub_binder

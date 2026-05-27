@@ -1,6 +1,0 @@
-# RUN: llvm-mc < %s -triple armv8a-none-eabi -mattr=+ras -disassemble | FileCheck %s --check-prefix=RAS
-# RUN: llvm-mc < %s -triple armv8a-none-eabi -mattr=-ras -disassemble | FileCheck %s --check-prefix=NO-RAS
-
-[0x10,0xf0,0x20,0xe3]
-# RAS: esb
-# NO-RAS: hint #16

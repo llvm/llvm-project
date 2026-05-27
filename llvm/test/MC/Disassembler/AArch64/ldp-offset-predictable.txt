@@ -1,8 +1,0 @@
-# RUN: llvm-mc -triple=aarch64 -disassemble < %s 2>&1 | FileCheck %s
-# RUN: llvm-mc -triple=arm64 -disassemble < %s 2>&1 | FileCheck %s
-
-# Stores are OK.
-0xe0 0x83 0x00 0xa9
-# CHECK-NOT: potentially undefined instruction encoding
-# CHECK: stp x0, x0, [sp, #8]
-

@@ -1,7 +1,0 @@
-RUN: llvm-dis %p/Inputs/inalloca-upgrade.bc -o - | FileCheck %s
-
-Make sure we upgrade old-style IntAttribute inalloca records to a
-fully typed version correctly.
-
-CHECK: call void @bar(ptr inalloca({ ptr, i8 }) %ptr)
-CHECK: invoke void @bar(ptr inalloca({ ptr, i8 }) %ptr)

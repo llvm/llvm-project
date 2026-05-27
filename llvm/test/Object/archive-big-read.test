@@ -1,5 +1,0 @@
-## Test reading an AIX big archive member list.
-# RUN: env TZ=GMT llvm-ar tv %p/Inputs/aix-big-archive.a | FileCheck %s --strict-whitespace --implicit-check-not={{.}}
-
-# CHECK:       rw-r--r-- 550591/1000499      7 Jan  5 17:33 2022 oddlen
-# CHECK-NEXT:  rw-r--r-- 550591/1000499     19 Jan  5 17:33 2022 evenlen

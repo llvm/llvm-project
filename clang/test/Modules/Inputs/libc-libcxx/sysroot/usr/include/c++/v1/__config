@@ -1,6 +1,0 @@
-#ifndef _LIBCPP_CONFIG
-#define _LIBCPP_CONFIG
-
-#define __LIBCXX_CONFIG
-
-#endif

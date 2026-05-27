@@ -1,3 +1,0 @@
-RUN: not llvm-symbolizer --build-id=not_a_hex_string 0x1234 2>&1 | FileCheck %s
-
-CHECK: --build-id=: expected a build ID, but got 'not_a_hex_string'

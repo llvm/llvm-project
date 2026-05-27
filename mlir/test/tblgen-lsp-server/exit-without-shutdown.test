@@ -1,4 +1,0 @@
-// RUN: not tblgen-lsp-server -lit-test < %s
-{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"tablegen","capabilities":{},"trace":"off"}}
-// -----
-{"jsonrpc":"2.0","method":"exit"}

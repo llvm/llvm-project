@@ -1,3 +1,0 @@
-breakpoint set -n c
-command script import -r conditional_break.py
-breakpoint command add 1 -F "conditional_break.stop_if_called_from_a"

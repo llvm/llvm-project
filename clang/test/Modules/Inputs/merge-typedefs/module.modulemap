@@ -1,9 +1,0 @@
-module A {
-  module A1 { header "a1.h" export * }
-  module A2 { header "a2.h" export * }
-}
-
-module B {
-  module B1 { header "b1.h" export * }
-  module B2 { header "b2.h" export * }
-}

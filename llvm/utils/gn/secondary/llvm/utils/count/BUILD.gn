@@ -1,3 +1,0 @@
-executable("count") {
-  sources = [ "count.c" ]
-}

@@ -1,6 +1,0 @@
-# RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck -check-prefix=ATT %s
-# RUN: llvm-mc --disassemble %s -triple=x86_64 -x86-asm-syntax=intel --output-asm-variant=1 | FileCheck -check-prefix=INTEL %s
-
-# ATT:   tdpfp16ps %tmm5, %tmm4, %tmm3
-# INTEL: tdpfp16ps tmm3, tmm4, tmm5
-0xc4,0xe2,0x53,0x5c,0xdc

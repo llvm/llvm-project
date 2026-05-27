@@ -1,4 +1,0 @@
-module "a0" { header "a0.h" export * }
-module "a1" { header "a1.h" export * }
-module "a2" { header "a2.h" export * }
-module "b" { header "b.h" export * }

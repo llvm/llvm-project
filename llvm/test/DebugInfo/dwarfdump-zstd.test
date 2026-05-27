@@ -1,8 +1,0 @@
-; REQUIRES: zstd
-;; llvm-dwarfdump supports zstd compressed debug sections.
-
-; RUN: llvm-objcopy --compress-debug-sections=zstd %S/Inputs/dwarfdump-test.elf-x86-64 %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
-
-; CHECK: .debug_info contents
-; CHECK:   DW_AT_name ("dwarfdump-test.cc")

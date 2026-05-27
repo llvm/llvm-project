@@ -1,3 +1,0 @@
-image dump line-table a.c
-breakpoint set -f a.c -l 1
-breakpoint set -f /tmp/b.c -l 1

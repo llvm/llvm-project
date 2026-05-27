@@ -1,1 +1,0 @@
-# RUN: echo %rec5

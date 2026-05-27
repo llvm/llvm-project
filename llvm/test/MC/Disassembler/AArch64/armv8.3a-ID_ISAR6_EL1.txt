@@ -1,4 +1,0 @@
-# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.3a --disassemble < %s | FileCheck %s
-
-# CHECK: mrs x0, ID_ISAR6_EL1
-0xe0,0x02,0x38,0xd5

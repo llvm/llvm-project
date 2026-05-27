@@ -1,8 +1,0 @@
-REQUIRES: x86-registered-target && host-byteorder-little-endian
-RUN: sancov -skip-dead-files=0 -not-covered-functions %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s
-RUN: sancov -not-covered-functions %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.1.sancov | FileCheck --check-prefix=CHECK1 --allow-empty %s
-
-CHECK: Inputs{{[/\\]}}foo.cpp:5 foo()
-CHECK-NOT: {{.*__sanitizer.*}}
-CHECK1-NOT: {{.+}}
-

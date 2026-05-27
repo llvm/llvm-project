@@ -1,9 +1,0 @@
-RUN: llvm-objdump --macho -h %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s --strict-whitespace --match-full-lines
-
-      CHECK:{{^$}}
- CHECK-NEXT:Sections:
- CHECK-NEXT:Idx Name             Size     VMA              Type
- CHECK-NEXT:  0 __text           0000003b 0000000000000000 TEXT
- CHECK-NEXT:  1 __cstring        0000000d 000000000000003b DATA
- CHECK-NEXT:  2 __compact_unwind 00000020 0000000000000048 DATA
- CHECK-NEXT:  3 __eh_frame       00000040 0000000000000068 DATA

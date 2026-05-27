@@ -1,6 +1,0 @@
-// This test checks that we don't try to use symbols outside of section when
-// generating symbol hashes
-
-RUN: yaml2obj %p/Inputs/symbol-hashes.yaml -o %t.exe
-RUN: llvm-bolt %t.exe -force-data-relocations -o %t.exe.bolt
-

@@ -1,2 +1,0 @@
-# RUN: not llvm-objdump -h %p/Inputs/corrupt-section.wasm 2>&1 | FileCheck %s
-# CHECK: '{{.*}}corrupt-section.wasm': section too large

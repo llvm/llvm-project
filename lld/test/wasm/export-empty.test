@@ -1,4 +1,0 @@
-RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/start.s -o %t.o
-RUN: not wasm-ld --export "" %t.o -o %t.wasm 2>&1 | FileCheck --match-full-lines %s
-
-CHECK: wasm-ld: error: symbol exported via --export not found: 

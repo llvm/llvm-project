@@ -1,4 +1,0 @@
-RUN: llvm-nm --help | FileCheck %s
-Check that the output of llvm-nm --help contains the literal text @FILE; this
-indicates to libtool that llvm-nm does support response files.
-CHECK: @FILE

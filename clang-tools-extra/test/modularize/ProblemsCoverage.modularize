@@ -1,5 +1,0 @@
-# RUN: not modularize %S/Inputs/CoverageProblems/module.modulemap 2>&1 | FileCheck %s
-
-# CHECK: warning: {{.*}}{{[/\\]}}Inputs/CoverageProblems/module.modulemap does not account for file: {{.*}}{{[/\\]}}Inputs/CoverageProblems/Level3A.h
-# CHECK-NEXT: warning: {{.*}}{{[/\\]}}Inputs/CoverageProblems/module.modulemap does not account for file: {{.*}}{{[/\\]}}Inputs/CoverageProblems/Level3B
-# CHECK-NEXT: warning: {{.*}}{{[/\\]}}Inputs/CoverageProblems/module.modulemap does not account for file: {{.*}}{{[/\\]}}Inputs/CoverageProblems/Sub/Level3B.h

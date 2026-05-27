@@ -1,5 +1,0 @@
-RUN: llvm-symbolizer --no-demangle --obj=%p/Inputs/llvm-symbolizer-local-mem-func-gcc.elf-x86-64 0x61a | FileCheck %s
-
-CHECK-NOT:  local_mem_func
-CHECK:      _ZZ2f1vEN3foo14local_mem_funcEv
-CHECK-NEXT: {{.*}}local-mem-func.cpp:3:0

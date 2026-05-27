@@ -1,7 +1,0 @@
-{
-  "mappings" :
-    {
-     "RemappedHeader.h" : "TestFramework/RemappedHeader.h",
-     "TestFramework/BeforeRemapping.h" : "TestFramework/AfterRemapping.h"
-    }
-}

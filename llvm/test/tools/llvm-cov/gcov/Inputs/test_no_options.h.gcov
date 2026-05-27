@@ -1,9 +1,0 @@
-        -:    0:Source:test.h
-        -:    0:Graph:test.gcno
-        -:    0:Data:test.gcda
-        -:    0:Runs:1
-        -:    0:Programs:1
-        -:    1:#include <stdint.h>
-        1:    2:struct A {
-        -:    3:  virtual void B();
-        -:    4:};

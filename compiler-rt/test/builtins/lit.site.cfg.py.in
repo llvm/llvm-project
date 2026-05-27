@@ -1,7 +1,0 @@
-@LIT_SITE_CFG_IN_HEADER@
-
-# Load common config for all compiler-rt lit tests.
-lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
-
-# Load tool-specific config that would do the real work.
-lit_config.load_config(config, "@BUILTINS_LIT_SOURCE_DIR@/lit.cfg.py")

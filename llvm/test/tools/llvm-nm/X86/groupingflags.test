@@ -1,5 +1,0 @@
-# RUN: llvm-nm -gjp %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
-
-# CHECK: _main
-# CHECK: _main.eh
-# CHECK: _printf

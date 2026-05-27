@@ -1,4 +1,0 @@
-UNSUPPORTED: target=arm{{.*}}
-RUN: %cpp_compiler %S/AcquireCrashStateTest.cpp -o %t
-RUN: %run %t 2>&1 | FileCheck %s
-CHECK-NOT: fuzz target exited

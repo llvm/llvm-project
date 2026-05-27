@@ -1,3 +1,0 @@
-; For now just verify that this doesn't cause an error.  Later we pdbdump can
-; do type lookup, we can verify that the name matches what we expect.
-; RUN: llvm-pdbutil yaml2pdb -pdb=%t.pdb %p/Inputs/longname-truncation.yaml

@@ -1,3 +1,0 @@
-# RUN: not %lldb -b -o "process plugin" 2>&1 | FileCheck %s
-
-# CHECK: error: no process plugin commands are currently registered

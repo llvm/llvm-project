@@ -1,3 +1,0 @@
-namespace NS {
-  struct X {};
-}

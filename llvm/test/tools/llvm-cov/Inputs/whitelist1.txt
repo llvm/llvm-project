@@ -1,4 +1,0 @@
-# Comment
-
-whitelist_fun:*func1*
-whitelist_fun:*func2*

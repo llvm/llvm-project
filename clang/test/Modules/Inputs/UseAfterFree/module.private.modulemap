@@ -1,3 +1,0 @@
-module UseAfterFreePrivate {
-  header "UseAfterFreePrivate.h"
-}

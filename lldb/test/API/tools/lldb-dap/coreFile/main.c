@@ -1,1 +1,0 @@
-/* Fake source file for core dump source mapping test */

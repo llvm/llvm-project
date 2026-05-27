@@ -1,4 +1,0 @@
-; RUN: not llvm-xray extract no-such-file 2>&1 | FileCheck -DMSG=%errc_ENOENT %s
-
-; CHECK: llvm-xray: Cannot extract instrumentation map from 'no-such-file'.
-; CHECK-NEXT: [[MSG]]

@@ -1,1 +1,0 @@
-module c_library_indirect { header "c-header-indirect.h" }

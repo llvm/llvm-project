@@ -1,7 +1,0 @@
-# Check if llvm-ar correctly archives bitcode files for AIX.
-# RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-as %S/Inputs/aix-foo.ll -o %t/aix-foo.bc
-# RUN: llvm-ar qc %t/aix-foo.a %t/aix-foo.bc
-# RUN: FileCheck %s --input-file=%t/aix-foo.a
-
-# CHECK:  bigaf

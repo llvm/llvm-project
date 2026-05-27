@@ -1,8 +1,0 @@
-RUN: export LSAN_OPTIONS=detect_leaks=0
-RUN: not llvm-profdata merge %p/Inputs/fe-basic.proftext %p/Inputs/ir-basic.proftext -o /dev/null 2>&1 | FileCheck %s
-CHECK: ir-basic.proftext: Merge IR generated profile with Clang generated profile.
-
-// We get a slightly different error message when using multiple threads because
-// we do not know which files have incompatible kinds.
-RUN: not llvm-profdata merge %p/Inputs/fe-basic.proftext %p/Inputs/ir-basic.proftext --num-threads=2 -o /dev/null 2>&1 | FileCheck %s --check-prefix=THREADS
-THREADS: unsupported instrumentation profile format version

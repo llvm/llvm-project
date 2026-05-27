@@ -1,4 +1,0 @@
-declare_args() {
-  # Whether to enable threading.
-  llvm_enable_threads = true
-}

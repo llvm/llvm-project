@@ -1,8 +1,0 @@
----
-- { id: 1, address: 0x000000000041CA40, function: 0x000000000041CA40, kind: function-enter, always-instrument: true }
-- { id: 1, address: 0x000000000041CA50, function: 0x000000000041CA40, kind: tail-exit, always-instrument: true }
-- { id: 2, address: 0x000000000041CA70, function: 0x000000000041CA70, kind: function-enter, always-instrument: true }
-- { id: 2, address: 0x000000000041CA7C, function: 0x000000000041CA70, kind: tail-exit, always-instrument: true }
-- { id: 3, address: 0x000000000041CAA0, function: 0x000000000041CAA0, kind: function-enter, always-instrument: true }
-- { id: 3, address: 0x000000000041CAB4, function: 0x000000000041CAA0, kind: function-exit, always-instrument: true }
-...

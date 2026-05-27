@@ -1,6 +1,0 @@
-; RUN: llvm-windres --version | FileCheck %s
-
-; Check that the printed version string contains the words "GNU windres",
-; which some build systems look for.
-
-; CHECK: GNU windres

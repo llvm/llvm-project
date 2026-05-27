@@ -1,8 +1,0 @@
-Name: SomeOtherKit
-Classes:
-  - Name: A
-    Methods:
-      - Selector:        "methodA"
-        MethodKind:      Instance
-        Availability:    none
-        AvailabilityMsg: "anything but this"

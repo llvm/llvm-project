@@ -1,2 +1,0 @@
-remark: calls.cc:4: '_Z3subii' will not be inlined into '_Z3sumii' with (cost=Never) at callsite _Z3sumii:1;
-remark: calls.cc:10: '_Z3sumii' inlined into 'main' with (cost=45, threshold=337) at callsite main:3;

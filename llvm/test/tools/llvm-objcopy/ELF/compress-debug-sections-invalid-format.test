@@ -1,6 +1,0 @@
-# RUN: yaml2obj %p/Inputs/compress-debug-sections.yaml -o %t.o
-# RUN: not llvm-objcopy --compress-debug-sections=zlib-fake %t.o 2>&1 | FileCheck %s
-# RUN: not llvm-objcopy --compress-debug-sections=zlib-gnu %t.o 2>&1 | FileCheck %s --check-prefix=GNU
-
-# CHECK: invalid or unsupported --compress-debug-sections format: zlib-fake
-# GNU:   invalid or unsupported --compress-debug-sections format: zlib-gnu

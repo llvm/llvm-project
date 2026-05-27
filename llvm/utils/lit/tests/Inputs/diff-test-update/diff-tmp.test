@@ -1,3 +1,0 @@
-# RUN: cp %S/1.in %t.txt
-# RUN: cp %S/2.in %S/diff-t-out.txt
-# RUN: diff %t.txt %S/diff-t-out.txt

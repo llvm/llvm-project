@@ -1,3 +1,0 @@
-# Check error on an internal shell error (missing operand)
-#
-# RUN: diff -u

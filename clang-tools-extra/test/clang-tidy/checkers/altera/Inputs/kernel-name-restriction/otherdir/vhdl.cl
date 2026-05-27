@@ -1,1 +1,0 @@
-const int OTHERDIRVHDLINT = 3;

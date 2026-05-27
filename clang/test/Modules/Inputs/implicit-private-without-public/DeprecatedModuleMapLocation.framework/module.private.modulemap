@@ -1,4 +1,0 @@
-framework module DeprecatedModuleMapLocation_Private {
-  header "A.h"
-  export *
-}

@@ -1,4 +1,0 @@
-module X {
-  header "Category_B.h"
-  export *
-}

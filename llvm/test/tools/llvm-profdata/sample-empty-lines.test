@@ -1,8 +1,0 @@
-Test llvm-profdata merge can handle empty line with spaces in text format sample profile.
-
-RUN: llvm-profdata merge --sample --text %p/Inputs/sample-empty-lines.proftext | FileCheck %s
-CHECK: main:10:1
-CHECK-NEXT: 2: 3
-CHECK-NEXT: 3: inline1:5
-CHECK-NEXT: 4: 1
-

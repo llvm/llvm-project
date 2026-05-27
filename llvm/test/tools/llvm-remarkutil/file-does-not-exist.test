@@ -1,3 +1,0 @@
-RUN: not llvm-remarkutil bitstream2yaml %p/Inputs/i-do-not-exist -o - 2>&1 | FileCheck %s
-RUN: not llvm-remarkutil yaml2bitstream %p/Inputs/i-do-not-exist -o - 2>&1 | FileCheck %s
-CHECK: error: Cannot open file

@@ -1,6 +1,0 @@
-RUN: %cpp_compiler %S/StrncmpOOBTest.cpp -o %t-StrncmpOOBTest
-
-RUN: %env_asan_opts=strict_string_checks=1 not %run %t-StrncmpOOBTest -seed=1 -runs=1000000 2>&1 | FileCheck %s --check-prefix=STRNCMP
-STRNCMP: AddressSanitizer: heap-buffer-overflow
-STRNCMP-NOT: __sanitizer_weak_hook_strncmp
-STRNCMP: in LLVMFuzzerTestOneInput

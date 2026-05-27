@@ -1,4 +1,0 @@
-; RUN: not llvm-xray extract %S/Inputs/elf64-noinstr-map.bin 2>&1 | FileCheck %s
-
-; CHECK: llvm-xray: Cannot extract instrumentation map from '{{.*}}elf64-noinstr-map.bin'.
-; CHECK-NEXT: Failed to find XRay instrumentation map.

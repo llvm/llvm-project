@@ -1,6 +1,0 @@
-; RUN: echo save > %t.mri
-; RUN: echo create %t.a >> %t.mri
-; RUN: echo end >> %t.mri
-
-; RUN: not llvm-ar -M  < %t.mri 2>&1 | FileCheck %s
-; CHECK: error: script line 2: file already saved

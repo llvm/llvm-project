@@ -1,5 +1,0 @@
-RUN: llvm-remarkutil annotation-count --parser=yaml --annotation-type=remark %p/Inputs/made-up-fake-remarks.yaml | FileCheck %s
-RUN: llvm-remarkutil yaml2bitstream %p/Inputs/made-up-fake-remarks.yaml | llvm-remarkutil annotation-count --parser=bitstream --annotation-type=remark | FileCheck %s
-
-; CHECK-LABEL: Function,Count
-; CHECK-EMPTY:

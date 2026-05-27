@@ -1,8 +1,0 @@
-Ensure that we can read COFF objects with a string table size of 0 (instead
-of 4) for empty string tables.
-
-RUN: llvm-readobj --symbols %p/Inputs/zero-string-table.obj.coff-i386 | FileCheck %s
-
-CHECK: Symbols [
-CHECK:   Symbol {
-CHECK:     Name: $R000000

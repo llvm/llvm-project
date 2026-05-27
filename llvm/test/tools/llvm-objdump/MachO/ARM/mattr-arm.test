@@ -1,5 +1,0 @@
-@ RUN: llvm-mc < %s -triple armv8-apple-darwin10 -mattr=+fp-armv8 -filetype=obj -o - | llvm-objdump -d -m --mattr=+fp-armv8 - | FileCheck %s
-
-vcvtt.f64.f16 d3, s1
-
-@ CHECK: e0 3b b2 ee vcvtt.f64.f16 d3, s1

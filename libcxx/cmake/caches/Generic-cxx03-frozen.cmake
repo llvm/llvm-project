@@ -1,2 +1,0 @@
-set(LIBCXX_TEST_PARAMS "std=c++03;test_frozen_cxx03_headers=True" CACHE STRING "")
-set(LIBCXXABI_TEST_PARAMS "${LIBCXX_TEST_PARAMS}" CACHE STRING "")

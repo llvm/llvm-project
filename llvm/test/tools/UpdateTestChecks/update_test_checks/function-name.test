@@ -1,7 +1,0 @@
-# REQUIRES: x86-registered-target
-## Basic test checking that update_test_checks.py works correctly
-# RUN: cp -f %S/Inputs/function_name.ll %t.ll && %update_test_checks %t.ll
-# RUN: diff -u %t.ll %S/Inputs/function_name.ll.expected
-## Check that running the script again does not change the result:
-# RUN: %update_test_checks %t.ll
-# RUN: diff -u %t.ll %S/Inputs/function_name.ll.expected

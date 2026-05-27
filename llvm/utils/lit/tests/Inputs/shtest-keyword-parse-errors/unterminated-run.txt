@@ -1,3 +1,0 @@
-# RUN: echo \
-
-Program code.

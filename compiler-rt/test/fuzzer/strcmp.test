@@ -1,4 +1,0 @@
-UNSUPPORTED: target={{.*freebsd.*}}
-RUN: %cpp_compiler %S/StrcmpTest.cpp -o %t-StrcmpTest
-RUN: not %run %t-StrcmpTest               -seed=1 -runs=2000000   2>&1 | FileCheck %s
-CHECK: BINGO

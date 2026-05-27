@@ -1,2 +1,0 @@
-REQUIRES: asdf
-RUN: not echo "unsupported test output"

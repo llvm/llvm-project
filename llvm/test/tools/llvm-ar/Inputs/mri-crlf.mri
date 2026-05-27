@@ -1,4 +1,0 @@
-; this file intentionally has crlf line endings
-create crlf.a
-addmod foo.txt
-end

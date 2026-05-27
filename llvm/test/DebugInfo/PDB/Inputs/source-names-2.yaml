@@ -1,8 +1,0 @@
----
-DbiStream:
-  Modules:
-    - Module:          'C:\src\test.obj'
-      ObjFile:         'C:\src\test.obj'
-      SourceFiles:
-        - 'C:\src\test.cc'
-...

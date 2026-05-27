@@ -1,7 +1,0 @@
-# RUN: not yaml-bench -canonical %s 2>&1 | FileCheck %s
-#
-# We don't currently look at the content of literal tags.
-# CHECK: error: Unknown tag handle
-
-- !<!> foo
-- !<$:?> bar

@@ -1,3 +1,0 @@
-# RUN: not llvm-mc -M invalid /dev/null 2>&1 | FileCheck %s
-
-# CHECK: error: invalid InstPrinter option 'invalid'

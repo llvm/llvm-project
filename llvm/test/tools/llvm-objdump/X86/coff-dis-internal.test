@@ -1,3 +1,0 @@
-RUN: llvm-objdump -d %p/Inputs/internal.exe.coff-x86_64 | FileCheck %s
-
-CHECK: callq {{.*}} <foo>

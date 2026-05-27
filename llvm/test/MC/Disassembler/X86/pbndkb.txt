@@ -1,6 +1,0 @@
-# RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s
-# RUN: llvm-mc --disassemble %s -triple=x86_64 --output-asm-variant=1 | FileCheck %s
-
-# CHECK: pbndkb
-0x0f,0x01,0xc7
-

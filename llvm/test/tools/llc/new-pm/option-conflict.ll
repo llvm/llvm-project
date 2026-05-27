@@ -1,3 +1,0 @@
-; RUN: not llc -mtriple=x86_64-pc-linux-gnu -passes=foo -start-before=gc-lowering -stop-after=gc-lowering -filetype=null %s 2>&1 | FileCheck  %s
-
-; CHECK: error: --passes cannot be used with start-before and stop-after.

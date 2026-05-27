@@ -1,3 +1,0 @@
-RUN: not llvm-symbolizer --build-id=abc --obj=bad 0x1234 2>&1 | FileCheck %s
-
-CHECK: error: cannot specify both --build-id and --obj

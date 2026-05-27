@@ -1,7 +1,0 @@
-set(LLVM_TARGET_DEFINITIONS IndexEnums.td)
-mlir_tablegen(IndexEnums.h.inc -gen-enum-decls)
-mlir_tablegen(IndexEnums.cpp.inc -gen-enum-defs)
-mlir_tablegen(IndexAttrs.h.inc -gen-attrdef-decls -attrdefs-dialect=index)
-mlir_tablegen(IndexAttrs.cpp.inc -gen-attrdef-defs -attrdefs-dialect=index)
-add_mlir_dialect(IndexOps index)
-add_mlir_doc(IndexOps IndexOps Dialects/ -gen-dialect-doc)

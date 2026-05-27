@@ -1,5 +1,0 @@
-
-framework module OtherKit {
-  header "OtherKit.h"
-  export *
-}

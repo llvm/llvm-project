@@ -1,2 +1,0 @@
-# XFAIL: this-does-not-exist
-# RUN: true

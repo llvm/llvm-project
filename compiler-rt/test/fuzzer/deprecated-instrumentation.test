@@ -1,4 +1,0 @@
-CHECK: -fsanitize-coverage=trace-pc is no longer supported by libFuzzer
-RUN: %cpp_compiler %S/SimpleTest.cpp -c -o %t-SimpleTest.o -fsanitize-coverage=trace-pc
-RUN: %cpp_compiler %t-SimpleTest.o -o %t-SimpleTest
-RUN: not %run %t-SimpleTest 2>&1 | FileCheck %s

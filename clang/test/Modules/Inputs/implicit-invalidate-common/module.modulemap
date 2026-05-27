@@ -1,3 +1,0 @@
-module A { header "A.h" }
-module B { header "B.h" }
-module Common { header "Common.h" }

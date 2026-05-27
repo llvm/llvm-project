@@ -1,1 +1,0 @@
-perl -S scan-build %*

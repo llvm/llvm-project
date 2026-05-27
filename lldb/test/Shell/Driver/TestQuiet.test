@@ -1,7 +1,0 @@
-RUN: %lldb -b -Q -o "expr 40 + 2" | FileCheck %s
-RUN: %lldb -b -Q -O "expr 40 + 2" | FileCheck %s
-
-CHECK-NOT: expr
-CHECK-NOT: lldb
-CHECK-NOT: source
-CHECK: 42

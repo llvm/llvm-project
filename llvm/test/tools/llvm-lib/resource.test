@@ -1,3 +1,0 @@
-RUN: llvm-lib /out:%t %S/Inputs/resource.res
-RUN: llvm-ar t %t | FileCheck %s
-CHECK: resource.res

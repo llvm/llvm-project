@@ -1,4 +1,0 @@
-module mod {
-    header "mod.h"
-    export *
-}

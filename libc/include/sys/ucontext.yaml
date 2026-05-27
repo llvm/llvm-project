@@ -1,4 +1,0 @@
-header: sys/ucontext.h
-header_template: ucontext.h.def
-standards:
-  - gnu

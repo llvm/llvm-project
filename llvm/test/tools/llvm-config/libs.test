@@ -1,5 +1,0 @@
-RUN: llvm-config --ignore-libllvm --libs core support 2>&1 | FileCheck %s
-CHECK: LLVMCore
-CHECK: LLVMSupport
-CHECK-NOT: error
-CHECK-NOT: warning

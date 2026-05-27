@@ -1,6 +1,0 @@
-module M {
-  module A { header "a.h" export * }
-  module B { header "b.h" export * }
-  module X { header "x.h" header "missing.h" export * }
-  module All { header "all.h" export * }
-}

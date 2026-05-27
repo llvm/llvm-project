@@ -1,7 +1,0 @@
-# RUN: llvm-mc --disassemble %s -mcpu=pwr10 -triple \
-# RUN:   powerpc64-unknown-linux-gnu < %s 2>&1 | FileCheck %s
-
-# Regsiter for DSUBQ cannot be greater than 30.
-# CHECK-NOT: dsubq 0, 6, 31
-# CHECK: warning: invalid instruction encoding
-0xfc 0x06 0xfc 0x04

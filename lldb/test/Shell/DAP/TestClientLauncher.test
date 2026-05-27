@@ -1,2 +1,0 @@
-# RUN: lldb-dap --client vscode-url -- /path/to/foo | FileCheck %s
-# CHECK: vscode://llvm-vs-code-extensions.lldb-dap/start?program=%2Fpath%2Fto%2Ffoo

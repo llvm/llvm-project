@@ -1,5 +1,0 @@
-# RUN: llvm-nm -g %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
-# RUN: llvm-nm -g -g %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
-
-# CHECK-NOT: EH_frame0
-# CHECK: _main

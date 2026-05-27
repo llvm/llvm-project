@@ -1,7 +1,0 @@
-## Show that --print-file-name works when the input is standard input.
-
-RUN: echo abcd | llvm-strings -f - | FileCheck %s
-RUN: echo abcd | llvm-strings -f | FileCheck %s
-RUN: echo abcd | llvm-strings --print-file-name - | FileCheck %s
-RUN: echo abcd | llvm-strings --print-file-name | FileCheck %s
-CHECK: {standard input}: abcd

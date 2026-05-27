@@ -1,5 +1,0 @@
-# REQUIRES: !system-aix
-## Test that the -X option is not supported on non-AIX OS. 
-
-# RUN: not llvm-ar -q -X32 %t.a xcoff32.o  2>&1 | FileCheck %s
-# CHECK: error: -X32 option not supported on non AIX OS

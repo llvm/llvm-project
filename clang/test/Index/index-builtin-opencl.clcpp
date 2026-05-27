@@ -1,7 +1,0 @@
-void testImage(read_only image1d_t);
-// CHECK: USR: c:@F@testImage#@BT@ro_image1d#
-
-void testExt(intel_sub_group_avc_mce_payload_t) {}
-// CHECK: USR: c:@F@testExt#@BT@intel_sub_group_avc_mce_payload_t#
-
-// RUN: c-index-test -index-file %s --target=spir | FileCheck %s

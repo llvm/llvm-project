@@ -1,2 +1,0 @@
-Checks: '-readability-identifier-naming,-llvm-header-guard'
-InheritParentConfig: true

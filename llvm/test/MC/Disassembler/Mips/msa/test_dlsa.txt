@@ -1,6 +1,0 @@
-# RUN: llvm-mc --disassemble %s -triple=mips64-unknown-linux -mcpu=mips64r2 -mattr=+msa | FileCheck %s
-
-0x01 0x2a 0x40 0x15 # CHECK: dlsa        $8, $9, $10, 1
-0x01 0x2a 0x40 0x55 # CHECK: dlsa        $8, $9, $10, 2
-0x01 0x2a 0x40 0x95 # CHECK: dlsa        $8, $9, $10, 3
-0x01 0x2a 0x40 0xd5 # CHECK: dlsa        $8, $9, $10, 4

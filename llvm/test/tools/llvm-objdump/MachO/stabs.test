@@ -1,3 +1,0 @@
-# RUN: llvm-objdump --syms %p/Inputs/macho-stabs-x86_64
-# RUN: llvm-objdump -D %p/Inputs/macho-stabs-x86_64
-# REQUIRES: x86-registered-target

@@ -1,6 +1,0 @@
-// RUN: FileCheck -check-prefix=ONE -check-prefix=TWO -input-file %s %s
-
-foo
-bar
-; ONE-LABEL: {{f}}oo
-; TWO-NEXT: {{b}}ar

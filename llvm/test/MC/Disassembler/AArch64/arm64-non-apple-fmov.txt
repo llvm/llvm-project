@@ -1,7 +1,0 @@
-# RUN: llvm-mc -triple arm64 -mattr=neon -disassemble < %s | FileCheck %s
-
-0x00 0x00 0xae 0x9e
-0x00 0x00 0xaf 0x9e
-
-# CHECK: fmov x0, v0.d[1]
-# CHECK: fmov v0.d[1], x0

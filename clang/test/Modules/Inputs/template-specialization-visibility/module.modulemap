@@ -1,7 +1,0 @@
-module tsv {
-  module a { header "a.h" }
-  module b { header "b.h" }
-  module c { header "c.h" }
-  module d { header "d.h" }
-  module e { header "e.h" }
-}

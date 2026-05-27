@@ -1,8 +1,0 @@
-b stack_unwinding01.cpp:12
-run
-thread backtrace
-c
-thread backtrace
-c
-thread backtrace
-quit

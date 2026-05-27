@@ -1,7 +1,0 @@
-# RUN: llvm-pdbutil yaml2pdb -pdb=%t %p/Inputs/objfilename.yaml
-# RUN: llvm-pdbutil pdb2yaml -modules %t | FileCheck %s
-
-CHECK: DbiStream:
-CHECK: Modules:
-CHECK-NEXT: - Module:{{ *}}'C:\src\test.obj'
-CHECK-NEXT: ObjFile:{{ *}}'C:\src\test.obj'

@@ -1,6 +1,0 @@
-UNSUPPORTED: ios
-FIXME: Make libFuzzer handle exits without ASan properly on Windows.
-UNSUPPORTED: target={{.*windows.*}}
-CHECK: BINGO
-RUN: %cpp_compiler -fno-sanitize=address %S/SimpleHashTest.cpp -o %t-SimpleHashTest
-RUN: not %run %t-SimpleHashTest -seed=1 -use_cmp=0 -use_value_profile=1 -runs=100000000 -max_len=64 2>&1 | FileCheck %s

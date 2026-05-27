@@ -1,3 +1,0 @@
-module x { umbrella "x" exclude header "x/bad.h" module * {} }
-module y { umbrella "y" module * {} }
-module bad { header "x/bad.h" }

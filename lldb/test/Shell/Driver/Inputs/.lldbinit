@@ -1,2 +1,0 @@
-settings set -f frame-format "bogus"
-command script import syntax_error.py

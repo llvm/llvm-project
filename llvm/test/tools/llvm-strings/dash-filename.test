@@ -1,6 +1,0 @@
-## Show that -- stops option scanning.
-
-RUN: rm -rf %t && mkdir %t && cd %t
-RUN: echo abcd > -a
-RUN: llvm-strings -f -- -a | FileCheck %s
-CHECK: -a: abcd

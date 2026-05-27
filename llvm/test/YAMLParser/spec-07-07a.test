@@ -1,4 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
-# Private application:
-!foo "bar"

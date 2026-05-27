@@ -1,2 +1,0 @@
-; RUN: llvm-profdata merge -sample -text %S/Inputs/sample-remap.proftext -r %S/Inputs/sample-remap.remap -o %t.output
-; RUN: diff -b %S/Inputs/sample-remap.expected %t.output

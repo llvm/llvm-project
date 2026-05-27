@@ -1,5 +1,0 @@
-import("//clang/utils/TableGen/clang_tablegen.gni")
-
-clang_tablegen("Checkers") {
-  args = [ "-gen-clang-sa-checkers" ]
-}

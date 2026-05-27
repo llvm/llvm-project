@@ -1,7 +1,0 @@
-module A {
-  header "Inputs/modular_maps/common.h"
-  header "Inputs/modular_maps/a.h"
-}
-
-extern module B "Inputs/modular_maps-moduleb-cwd.map"
-

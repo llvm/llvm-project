@@ -1,2 +1,0 @@
-remark: merged.cpp:14:21.1: '_Z5funcBi' inlined into 'main' to match profiling context with (cost=0, threshold=337) at callsite main:3:21.1
-remark: merged.cpp:13:10.1: '_Z5funcAi' inlined into 'main' to match profiling context with (cost=0, threshold=337) at callsite main:2:10.1

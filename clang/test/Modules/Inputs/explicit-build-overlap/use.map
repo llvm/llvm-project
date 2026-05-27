@@ -1,3 +1,0 @@
-module "use" {
-  use a
-}

@@ -1,2 +1,0 @@
-module ya { header "a.h" export * }
-module yb { header "b.h" export * }

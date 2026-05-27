@@ -1,7 +1,0 @@
-# Tests -features_dir=F
-# REQUIRES: linux
-RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest
-RUN: rm -rf %t-C %t-F
-RUN: mkdir %t-C %t-F
-RUN: not %run %t-SimpleTest %t-C -features_dir=%t-F
-RUN: for c in %t-C/*; do f=%t-F/$(basename $c); echo looking for $f; [ -a $f ]; done

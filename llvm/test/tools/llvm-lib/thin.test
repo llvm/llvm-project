@@ -1,9 +1,0 @@
-RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o %t %S/Inputs/a.s
-
-RUN: llvm-lib  -out:%t.a %t
-RUN: FileCheck --check-prefix=FAT %s < %t.a
-FAT: !<arch>
-
-RUN: llvm-lib  -out:%t.thin.a -llvmlibthin %t
-RUN: FileCheck --check-prefix=THIN %s < %t.thin.a
-THIN: !<thin>

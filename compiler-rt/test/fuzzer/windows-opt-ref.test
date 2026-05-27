@@ -1,9 +1,0 @@
-REQUIRES: windows
-// Verify that the linker eliminating unreferenced functions (/OPT:REF) does not
-// strip sancov module constructor.
-RUN: %cpp_compiler %S/SimpleCmpTest.cpp -o %t-SimpleCmpTest -Wl,-OPT:REF
-
-RUN: not %run %t-SimpleCmpTest -seed=1 -runs=100000000 2>&1 | FileCheck %s
-
-CHECK-NOT: ERROR: no interesting inputs were found. Is the code instrumented for coverage? Exiting.
-CHECK: BINGO

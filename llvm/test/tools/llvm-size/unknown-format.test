@@ -1,4 +1,0 @@
-## Show that the an error is emitted if an unknown value is passed to --format.
-
-# RUN: not llvm-size --format=unknown 2>&1 | FileCheck %s
-# CHECK: {{.*}}llvm-size{{.*}}: error: --format value should be one of: 'berkeley', 'darwin', 'sysv'

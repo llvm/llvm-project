@@ -1,4 +1,0 @@
-declare_args() {
-  # Whether to include code that links against zstd.
-  llvm_enable_zstd = false
-}

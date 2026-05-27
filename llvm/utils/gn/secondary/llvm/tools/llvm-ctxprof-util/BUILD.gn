@@ -1,9 +1,0 @@
-executable("llvm-ctxprof-util") {
-  deps = [
-    "//llvm/lib/IR",
-    "//llvm/lib/Object",
-    "//llvm/lib/ProfileData",
-    "//llvm/lib/Support",
-  ]
-  sources = [ "llvm-ctxprof-util.cpp" ]
-}

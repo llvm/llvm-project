@@ -1,2 +1,0 @@
-module ModHeader { header "mod_header.h" }
-module ModTU     { header "mod_tu.h"     }

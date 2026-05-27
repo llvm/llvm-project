@@ -1,9 +1,0 @@
-# Comment directives with blank contents are fine.
-
-RUN: echo 'foo'        >  %t.in
-RUN: echo 'COM:'       >  %t.chk
-RUN: echo 'CHECK: foo' >> %t.chk
-RUN: echo ' COM: '     >> %t.chk
-RUN: %ProtectFileCheckOutput FileCheck -dump-input=never -vv %t.chk < %t.in 2>&1 | FileCheck %s
-
-CHECK: .chk:2:8: remark: CHECK: expected string found in input

@@ -1,5 +1,0 @@
-# REQUIRES: x86-registered-target
-## Check that we insert regexes for MCInst/MCReg operands instead of hardcoding the numbers
-
-# RUN: cp -f %S/Inputs/asm-show-inst.ll %t.ll && %update_llc_test_checks %t.ll
-# RUN: diff -u %S/Inputs/asm-show-inst.ll.expected %t.ll

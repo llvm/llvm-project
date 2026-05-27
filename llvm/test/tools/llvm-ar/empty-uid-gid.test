@@ -1,3 +1,0 @@
-RUN: env TZ=GMT llvm-ar tv %S/Inputs/msvc-import.lib | FileCheck %s
-
-CHECK: --------- 0/0      0 Jan 1 {{[0-9:.]+}} 1970 library.dll

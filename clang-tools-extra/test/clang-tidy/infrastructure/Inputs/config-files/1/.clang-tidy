@@ -1,3 +1,0 @@
-Checks: 'from-child1'
-HeaderFilterRegex: 'child1'
-ExcludeHeaderFilterRegex: 'exc-child1'

@@ -1,7 +1,0 @@
-if(NOT TARGET libc.src.__support.OSUtil.osutil)
-  return()
-endif()
-
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-endif()

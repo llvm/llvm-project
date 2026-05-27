@@ -1,9 +1,0 @@
-cd and copy the DWO into the same directory so that it can be found by the
-symbolizer.
-RUN: rm -rf %t && mkdir -p %t
-RUN: cd %t
-RUN: cp %p/Inputs/split-dwarf-empty.dwo %t
-RUN: llvm-symbolizer --inlining --obj=%p/Inputs/split-dwarf-empty.o 0xdeadbeef | FileCheck %s
-
-CHECK: ??
-CHECK: ??:0:0

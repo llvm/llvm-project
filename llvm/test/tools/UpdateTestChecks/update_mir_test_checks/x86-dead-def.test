@@ -1,5 +1,0 @@
-# REQUIRES: x86-registered-target
-## Check that update_mir_test_checks replaces vregs in dead definitions
-
-# RUN: cp -f %S/Inputs/x86-dead-def.mir %t.mir && %update_mir_test_checks %t.mir
-# RUN: diff -u %S/Inputs/x86-dead-def.mir.expected %t.mir

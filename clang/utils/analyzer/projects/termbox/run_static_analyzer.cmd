@@ -1,2 +1,0 @@
-./waf configure
-./waf

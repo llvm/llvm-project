@@ -1,5 +1,0 @@
-RUN: llvm-nm -f sysv %p/Inputs/hello.obj.elf-x86_64 | FileCheck %s --strict-whitespace
-
-CHECK: Name                  Value           Class        Type         Size             Line  Section
-CHECK: main                |0000000000000000|   T  |              FUNC|0000000000000015|     |.text
-CHECK: puts                |                |   U  |            NOTYPE|                |     |*UND*

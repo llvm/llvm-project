@@ -1,2 +1,0 @@
-
-// XFAIL: my-xfail-feature-1

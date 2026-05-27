@@ -1,7 +1,0 @@
-## Test that useage message is shown when no input file is given
-## And that we return non-zero.
-
-# RUN: not llvm-ranlib 2>&1 | FileCheck %s
-
-# CHECK: error: an archive name must be specified
-# CHECK: USAGE: llvm-ranlib

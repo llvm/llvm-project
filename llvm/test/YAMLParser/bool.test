@@ -1,6 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
-- yes
-- NO
-- True
-- on

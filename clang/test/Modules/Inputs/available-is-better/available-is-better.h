@@ -1,2 +1,0 @@
-#pragma once
-int available;

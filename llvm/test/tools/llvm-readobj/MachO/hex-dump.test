@@ -1,8 +1,0 @@
-## Test that --hex-dump/-x can be used to display the contents
-## of the indicated section as hexadecimal bytes.
-
-# RUN: llvm-readobj -x 1 %p/Inputs/trivial.obj.macho-x86-64 | FileCheck %s
-# RUN: llvm-readobj --hex-dump 1 %p/Inputs/trivial.obj.macho-x86-64 | FileCheck %s
-
-# CHECK: 0x00000000 50488d3d 00000000 e8000000 00e80000 PH.=............
-# CHECK: 0x00000010 000031c0 5ac3                       ..1.Z.

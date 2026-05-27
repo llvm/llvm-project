@@ -1,6 +1,0 @@
-# RUN: llvm-mc -triple=i386 --mdis %s | FileCheck %s
-
-# CHECK: je	<imm:60>
-0x0f 0x84 0x3c 0x00 0x00 0x00
-# CHECK: jecxz	<imm:-127>
-0xe3 0x81

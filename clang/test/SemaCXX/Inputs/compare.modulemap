@@ -1,6 +1,0 @@
-module compare {
-  explicit module cmp {
-    header "std-compare.h"
-  }
-  explicit module other {}
-}

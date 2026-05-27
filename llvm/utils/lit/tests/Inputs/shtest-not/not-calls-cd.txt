@@ -1,3 +1,0 @@
-# Internal cd always succeeds.
-# RUN: not not cd foobar
-# RUN: not --crash cd foobar

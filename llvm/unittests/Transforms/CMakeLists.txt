@@ -1,6 +1,0 @@
-add_subdirectory(Coroutines)
-add_subdirectory(Instrumentation)
-add_subdirectory(IPO)
-add_subdirectory(Scalar)
-add_subdirectory(Utils)
-add_subdirectory(Vectorize)

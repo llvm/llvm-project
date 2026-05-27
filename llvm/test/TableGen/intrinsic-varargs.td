@@ -1,8 +1,0 @@
-// RUN: llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s
-// XFAIL: vg_leak
-
-include "llvm/IR/Intrinsics.td"
-
-// CHECK-LABEL: IIT_LongEncodingTable
-// CHECK: /* 0 */ 0, 26, 0,
-def int_foo : Intrinsic<[], [llvm_vararg_ty]>;

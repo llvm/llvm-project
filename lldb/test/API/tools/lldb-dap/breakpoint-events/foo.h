@@ -1,2 +1,0 @@
-
-int foo(int);

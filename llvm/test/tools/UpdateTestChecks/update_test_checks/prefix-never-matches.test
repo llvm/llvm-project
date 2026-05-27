@@ -1,3 +1,0 @@
-# RUN: cp -f %S/Inputs/prefix-never-matches.ll %t.ll
-# RUN: %update_test_checks %t.ll
-# RUN: diff -u %t.ll %S/Inputs/prefix-never-matches.ll.expected

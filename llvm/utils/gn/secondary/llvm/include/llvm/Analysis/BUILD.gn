@@ -1,5 +1,0 @@
-import("//llvm/utils/TableGen/tablegen.gni")
-
-tablegen("TargetLibraryInfo") {
-  args = [ "-gen-target-library-info" ]
-}

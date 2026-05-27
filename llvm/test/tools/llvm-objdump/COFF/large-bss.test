@@ -1,3 +1,0 @@
-RUN: llvm-objdump -s %p/Inputs/large-bss.obj.coff-i386 | FileCheck %s
-
-: CHECK: <skipping contents of bss section at [0000, 010f)>

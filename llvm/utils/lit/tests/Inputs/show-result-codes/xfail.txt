@@ -1,2 +1,0 @@
-XFAIL: *
-RUN: false

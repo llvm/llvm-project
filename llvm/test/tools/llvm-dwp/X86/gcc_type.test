@@ -1,8 +1,0 @@
-RUN: llvm-dwp %p/../Inputs/gcc_type/a.dwo -o - | llvm-dwarfdump -v - | FileCheck %s
-RUN: not llvm-dwp %p/../Inputs/gcc_type/a.dwo %p/../Inputs/gcc_type/a.dwo -o %t 2>&1 | FileCheck --check-prefix=DUP %s
-
-CHECK: Type Unit
-CHECK: Type Unit
-
-// Check that llvm-dwp can parse DW_FORM_string for CU name
-DUP: duplicate DWO ID ({{.*}}) in 'a.cpp' and 'a.cpp'

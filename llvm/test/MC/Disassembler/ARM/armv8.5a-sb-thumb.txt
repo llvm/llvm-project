@@ -1,9 +1,0 @@
-# RUN: llvm-mc -triple=thumbv8 -mattr=+sb -disassemble < %s      | FileCheck %s
-# RUN: llvm-mc -triple=thumbv8 -mattr=+v8.5a    -disassemble < %s      | FileCheck %s
-# RUN: llvm-mc -triple=thumbv8 -mattr=-sb -disassemble < %s 2>&1 | FileCheck %s --check-prefix=NOSB
-
-0xbf 0xf3 0x70 0x8f
-
-# CHECK: sb
-# NOSB: invalid instruction encoding
-# NOSB-NEXT: 0xbf 0xf3 0x70 0x8f

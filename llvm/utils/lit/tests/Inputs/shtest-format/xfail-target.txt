@@ -1,2 +1,0 @@
-RUN: false
-XFAIL: target=x86_64{{.*}}

@@ -1,3 +1,0 @@
-RUN: llvm-objdump --macho --private-header %p/Inputs/malformed-macho.bin %p/Inputs/empty.macho-armv7 2>&1 | FileCheck %s --check-prefix=MALFORMED
-MALFORMED: is not an object file
-MALFORMED-NEXT: Mach header

@@ -1,4 +1,0 @@
-RUN: llc -O0 -mtriple=aarch64-apple-ios %p/Inputs/cold-func.ll -filetype=obj -o %t.aarch64.o
-RUN: llvm-nm -m %t.aarch64.o | FileCheck %s
-
-CHECK: [cold func] _cold_func

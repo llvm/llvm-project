@@ -1,6 +1,0 @@
-script foobar = 40 + 7
-script print(foobar)
-script d = lldb.SBDebugger.Create()
-script d:HandleCommand("script foobar = 40 + 2")
-script print(foobar)
-script d:HandleCommand("script print(foobar)")

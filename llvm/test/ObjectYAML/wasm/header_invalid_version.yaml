@@ -1,6 +1,0 @@
-# RUN: yaml2obj %s | not obj2yaml 2>&1 | FileCheck %s
---- !WASM
-FileHeader:
-  Version:         0x00000002
-...
-# CHECK: Error reading file: <stdin>: invalid version number: 2

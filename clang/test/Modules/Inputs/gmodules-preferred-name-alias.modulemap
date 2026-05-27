@@ -1,4 +1,0 @@
-module PreferredNameModule {
-  header "gmodules-preferred-name-alias.h"
-  export *
-}

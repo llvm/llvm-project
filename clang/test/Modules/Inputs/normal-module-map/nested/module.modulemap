@@ -1,4 +1,0 @@
-module libNested {
-  header "nested1.h"
-  header "nested2.h"
-}

@@ -1,3 +1,0 @@
-# CHECK: ValueError: '%{' is missing for %if substitution
-#
-# RUN: %if feature echo "test-1"

@@ -1,4 +1,0 @@
-set_property(DIRECTORY PROPERTY LLDB_PLUGIN_KIND SystemRuntime)
-set_property(DIRECTORY PROPERTY LLDB_TOLERATED_PLUGIN_DEPENDENCIES TypeSystem)
-
-add_subdirectory(MacOSX)

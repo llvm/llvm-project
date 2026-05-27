@@ -1,4 +1,0 @@
-sink: { S[] -> a[] }
-must_source: { T[] -> a[] }
-may_source: { U[] -> a[] }
-schedule_map: { T[] -> [0]; U[] -> [0]; S[] -> [1] }

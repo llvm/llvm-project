@@ -1,3 +1,0 @@
-image dump line-table a.c
-breakpoint set -f a.c -l 1
-breakpoint set -f foo/b.c -l 1

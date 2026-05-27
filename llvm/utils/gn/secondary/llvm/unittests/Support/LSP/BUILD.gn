@@ -1,9 +1,0 @@
-import("//third-party/unittest/unittest.gni")
-
-unittest("LSPTests") {
-  deps = [ "//llvm/lib/Support/LSP" ]
-  sources = [
-    "Protocol.cpp",
-    "Transport.cpp",
-  ]
-}

@@ -1,7 +1,0 @@
-module A {
-  header "common.h"
-  header "a.h"
-}
-
-extern module B "moduleb.map"
-

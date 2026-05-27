@@ -1,4 +1,0 @@
-# RUN: echo abcd > %t.txt
-
-## -B is ignored.
-# RUN: llvm-objcopy -I binary -B xyz %t.txt %t.o

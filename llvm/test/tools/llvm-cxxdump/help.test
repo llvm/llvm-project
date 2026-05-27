@@ -1,6 +1,0 @@
-# RUN: llvm-cxxdump --help | FileCheck %s --check-prefix HELP --implicit-check-not='{{[Oo]}}ptions:'
-
-# HELP: OVERVIEW: LLVM C++ ABI Data Dumper
-# HELP: USAGE
-# HELP: Color Options
-# HELP: Generic Options

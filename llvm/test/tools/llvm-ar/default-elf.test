@@ -1,9 +1,0 @@
-RUN: yaml2obj %S/Inputs/elf.yaml -o %t.o
-
-RUN: rm -f %t.ar
-RUN: llvm-ar crs %t.ar %t.o
-RUN: not grep -q __.SYMDEF %t.ar
-
-Ensure that we generate a GNU style archive for ELF by default.  The GNU linker
-expects that it will be in GNU format.
-

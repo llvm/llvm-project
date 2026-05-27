@@ -1,7 +1,0 @@
-.vscode/**
-.vscode-test/**
-.gitignore
-vsc-extension-quickstart.md
-syntaxes/ll.tmLanguage.yaml
-**/*.ts
-**/tsconfig.json

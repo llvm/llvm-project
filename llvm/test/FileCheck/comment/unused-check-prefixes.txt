@@ -1,8 +1,0 @@
-# Comment directives do not suppress diagnostics for unused check prefixes.
-
-RUN: echo 'foo'       >  %t.in
-RUN: echo 'COM: foo'  >  %t.chk
-RUN: echo 'RUN: echo' >> %t.chk
-RUN: %ProtectFileCheckOutput not FileCheck %t.chk < %t.in 2>&1 | FileCheck %s
-
-CHECK: error: no check strings found with prefix 'CHECK:'

@@ -1,3 +1,0 @@
-add_subdirectory(PrintFlangFunctionNames)
-add_subdirectory(FlangOmpReport)
-add_subdirectory(FeatureList)

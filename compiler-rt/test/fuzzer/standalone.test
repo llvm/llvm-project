@@ -1,8 +1,0 @@
-RUN: %no_fuzzer_c_compiler %libfuzzer_src/standalone/StandaloneFuzzTargetMain.c -c -o %t_1.o
-RUN: %no_fuzzer_cpp_compiler %S/InitializeTest.cpp -c -o %t_2.o
-
-RUN: %no_fuzzer_cpp_compiler %t_1.o %t_2.o -o %t-StandaloneInitializeTest
-RUN: %run %t-StandaloneInitializeTest %S/hi.txt %S/dict1.txt 2>&1 | FileCheck %s
-CHECK: StandaloneFuzzTargetMain: running 2 inputs
-CHECK: Done:    {{.*}}hi.txt: (3 bytes)
-CHECK: Done:    {{.*}}dict1.txt: (61 bytes)

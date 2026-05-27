@@ -1,3 +1,0 @@
-// RUN: llvm-objdump -d --macho --no-show-raw-insn --full-leading-addr --print-imm-hex %p/Inputs/stub-nosyms.macho-x86_64 | FileCheck %s
-
-CHECK: 0000000000000001	callq	0x7 ## symbol stub for: _foo

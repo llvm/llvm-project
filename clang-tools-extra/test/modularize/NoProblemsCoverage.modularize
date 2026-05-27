@@ -1,1 +1,0 @@
-# RUN: modularize -I Includes1 -I Includes2 %S/Inputs/CoverageNoProblems/module.modulemap

@@ -1,4 +1,0 @@
-# RUN: obj2yaml %S/Inputs/test-2.o | yaml2obj -o %t.o
-# RUN: llvm-pdbutil dump --types %t.o | FileCheck %s -check-prefix=ALL
-
-# ALL: {{.*}} guid = {39B59910-0D01-4889-B930-43E2FFC14694}

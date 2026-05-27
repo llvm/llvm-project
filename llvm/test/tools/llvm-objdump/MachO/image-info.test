@@ -1,7 +1,0 @@
-# RUN: llvm-mc < %s --triple x86_64-darwin -filetype=obj | llvm-objdump --macho --objc-meta-data - | FileCheck %s
-
-.section	__DATA,__objc_imageinfo,regular,no_dead_strip
-.long	0
-.long	96
-
-# CHECK: OBJC_IMAGE_IS_SIMULATED OBJC_IMAGE_HAS_CATEGORY_CLASS_PROPERTIES

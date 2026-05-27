@@ -1,4 +1,0 @@
-# RUN: llvm-mc --disassemble %s -triple=x86_64-apple-darwin9 2>&1 | grep "invalid instruction encoding"
-
-// This corresponds to a gather, but doesn't use a SIB byte.
-0xc4,0xe2,0xe9,0x92,0x08

@@ -1,8 +1,0 @@
-; AppleClang-700 uses a debug info version that isn't recognized by llvm.org
-; compilers. However, it does produce valid bitcode which should parse without
-; crashing the metadata loader.
-
-RUN: llvm-dis < %S/Inputs/apple-clang-700-O3-g-1.bc 2>&1 \
-RUN:   | FileCheck %s -check-prefix INVALID-VERSION
-
-INVALID-VERSION: warning: ignoring debug info with an invalid version (700000003)

@@ -1,2 +1,0 @@
-# RUN: %{cmds-with-newlines}
-# CHECK: abc

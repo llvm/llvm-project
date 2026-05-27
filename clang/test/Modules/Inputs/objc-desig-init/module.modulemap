@@ -1,9 +1,0 @@
-module Base {
-  header "Base.h"
-  export *
-}
-
-module A {
-  header "A.h"
-  export *
-}

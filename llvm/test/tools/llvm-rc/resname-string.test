@@ -1,5 +1,0 @@
-; RUN: llvm-rc -no-preprocess /FO %t.res -- %p/Inputs/resname-string.rc
-; RUN: llvm-readobj %t.res | FileCheck %s
-
-; CHECK: Resource name (string): STRINGNAME
-; CHECK: Resource name (string): NAME-WITH-DASHES/AND/SLASHES

@@ -1,2 +1,0 @@
-allowlist_fun:*func3*
-allowlist_fun:*func4*

@@ -1,2 +1,0 @@
-script
-print(lldb.target, lldb.debugger:GetSelectedTarget())

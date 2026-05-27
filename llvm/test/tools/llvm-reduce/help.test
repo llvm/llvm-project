@@ -1,7 +1,0 @@
-# RUN: llvm-reduce --help | FileCheck %s --check-prefix HELP --implicit-check-not='{{[Oo]}}ptions:'
-
-# HELP: OVERVIEW: LLVM automatic testcase reducer.
-# HELP: USAGE
-# HELP: Color Options
-# HELP: Generic Options
-# HELP: llvm-reduce options

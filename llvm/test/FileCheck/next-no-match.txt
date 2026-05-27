@@ -1,9 +1,0 @@
-// RUN: not FileCheck -input-file %s %s
-
-foo
-bar
-; CHECK: foo
-baz
-; CHECK-NEXT: baz
-
-

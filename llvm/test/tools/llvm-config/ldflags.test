@@ -1,5 +1,0 @@
-RUN: llvm-config --ldflags 2>&1 | FileCheck %s
-CHECK: -L
-CHECK: {{[/\\]}}lib
-CHECK-NOT: error
-CHECK-NOT: warning

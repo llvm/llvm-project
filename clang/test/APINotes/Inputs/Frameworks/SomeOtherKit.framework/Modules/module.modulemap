@@ -1,5 +1,0 @@
-framework module SomeOtherKit {
-  umbrella header "SomeOtherKit.h"
-  export *
-  module * { export * }
-}

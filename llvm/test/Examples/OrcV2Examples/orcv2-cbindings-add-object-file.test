@@ -1,3 +1,0 @@
-# RUN: OrcV2CBindingsAddObjectFile 2>&1 | FileCheck %s
-
-# CHECK: 1 + 2 = 3

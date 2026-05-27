@@ -1,7 +1,0 @@
-# RUN: llc -run-pass none -o - %s | FileCheck %s
-# This test ensures that the MIR parser accepts files without the LLVM IR.
-
----
-# CHECK: name: foo
-name: foo
-...

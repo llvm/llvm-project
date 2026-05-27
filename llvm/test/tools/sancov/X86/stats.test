@@ -1,9 +1,0 @@
-REQUIRES: x86-registered-target && host-byteorder-little-endian
-RUN: sancov -print-coverage-stats %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s
-
-CHECK: all-edges: 8
-CHECK: cov-edges: 5
-CHECK: all-functions: 2
-CHECK: cov-functions: 2
-
-

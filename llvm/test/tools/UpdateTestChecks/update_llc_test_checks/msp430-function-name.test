@@ -1,5 +1,0 @@
-# REQUIRES: msp430-registered-target
-## Check that functions names with '$' are processed correctly
-
-# RUN: cp -f %S/Inputs/msp430_function_name.ll %t.ll && %update_llc_test_checks %t.ll
-# RUN: diff -u %S/Inputs/msp430_function_name.ll.expected %t.ll

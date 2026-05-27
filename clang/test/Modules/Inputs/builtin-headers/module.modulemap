@@ -1,3 +1,0 @@
-module ModuleWithBuiltinHeader [system] {
-    header "float.h"
-}

@@ -1,7 +1,0 @@
-RUN: llvm-remarkutil instruction-count --use-debug-loc --parser=yaml %p/Inputs/instruction-count.yaml | FileCheck --check-prefix=INSTRUCTIONCOUNT %s
-RUN: llvm-remarkutil yaml2bitstream %p/Inputs/instruction-count.yaml | llvm-remarkutil instruction-count --use-debug-loc --parser=bitstream | FileCheck %s --check-prefix=INSTRUCTIONCOUNT
-RUN: llvm-remarkutil annotation-count --use-debug-loc --parser=yaml --annotation-type=remark %p/Inputs/annotation-count.yaml | FileCheck --check-prefix=ANNOTATIONCOUNT %s
-RUN: llvm-remarkutil yaml2bitstream %p/Inputs/instruction-count.yaml | llvm-remarkutil annotation-count --use-debug-loc --parser=bitstream --annotation-type=remark | FileCheck %s --check-prefix=ANNOTATIONCOUNT
-
-; ANNOTATIONCOUNT-LABEL: Source,Function,Count
-; INSTRUCTIONCOUNT-LABEL: Source,Function,InstructionCount

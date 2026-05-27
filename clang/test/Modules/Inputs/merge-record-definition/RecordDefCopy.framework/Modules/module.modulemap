@@ -1,4 +1,0 @@
-framework module RecordDefCopy {
-  header "RecordDefCopy.h"
-  export *
-}

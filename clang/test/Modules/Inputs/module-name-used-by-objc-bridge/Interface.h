@@ -1,2 +1,0 @@
-@interface Interface
-@end

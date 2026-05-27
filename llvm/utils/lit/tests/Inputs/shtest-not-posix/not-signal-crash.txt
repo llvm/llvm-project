@@ -1,3 +1,0 @@
-# Check that the builtin not passes when we fail with a signal with --crash
-
-# RUN: not --crash %{python} fail-signal.py

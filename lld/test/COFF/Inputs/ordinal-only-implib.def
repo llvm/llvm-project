@@ -1,3 +1,0 @@
-LIBRARY test.dll
-EXPORTS
-ByOrdinalFunction @ 1 NONAME
