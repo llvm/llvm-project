@@ -833,30 +833,20 @@ uint16x2_t test_pxor_u16x2(uint16x2_t a, uint16x2_t b) {
   return __riscv_pxor_u16x2(a, b);
 }
 
-// TODO: On RV64, vector `NOT` on a 32-bit packed type emits `li`+`xor`
-// instead of the `not` alias.
 // CHECK-LABEL: test_pnot_i8x4:
-// RV32:        not{{[[:space:]]}}
-// RV64:        li
-// RV64-NEXT:   xor{{[[:space:]]}}
+// CHECK:       not{{[[:space:]]}}
 int8x4_t test_pnot_i8x4(int8x4_t a) { return __riscv_pnot_i8x4(a); }
 
 // CHECK-LABEL: test_pnot_u8x4:
-// RV32:        not{{[[:space:]]}}
-// RV64:        li
-// RV64-NEXT:   xor{{[[:space:]]}}
+// CHECK:       not{{[[:space:]]}}
 uint8x4_t test_pnot_u8x4(uint8x4_t a) { return __riscv_pnot_u8x4(a); }
 
 // CHECK-LABEL: test_pnot_i16x2:
-// RV32:        not{{[[:space:]]}}
-// RV64:        li
-// RV64-NEXT:   xor{{[[:space:]]}}
+// CHECK:       not{{[[:space:]]}}
 int16x2_t test_pnot_i16x2(int16x2_t a) { return __riscv_pnot_i16x2(a); }
 
 // CHECK-LABEL: test_pnot_u16x2:
-// RV32:        not{{[[:space:]]}}
-// RV64:        li
-// RV64-NEXT:   xor{{[[:space:]]}}
+// CHECK:       not{{[[:space:]]}}
 uint16x2_t test_pnot_u16x2(uint16x2_t a) { return __riscv_pnot_u16x2(a); }
 
 // CHECK-LABEL: test_pand_i8x8:
