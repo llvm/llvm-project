@@ -1,4 +1,4 @@
-from __future__ import absolute_import, annotations
+from __future__ import annotations
 
 import os
 import pathlib
@@ -77,7 +77,7 @@ def buildPdbgCommand(msg, cmd):
     return res
 
 
-class TimeoutHelper(object):
+class TimeoutHelper:
     """
     Object used to helper manage enforcing a timeout in
     _executeShCmd(). It is passed through recursive calls
@@ -703,7 +703,7 @@ def executeScriptInternal(
     shenv.env["LIT_CURRENT_TESTCASE"] = test.getFullName()
 
     exitCode, timeoutInfo = executeShCmd(
-        cmd, shenv, results, timeout=litConfig.maxIndividualTestTime
+        cmd, shenv, results, timeout=test.config.maxIndividualTestTime
     )
 
     out = err = ""
@@ -747,7 +747,7 @@ def executeScriptInternal(
 
         # If nothing interesting happened, move on.
         if (
-            litConfig.maxIndividualTestTime == 0
+            test.config.maxIndividualTestTime == 0
             and result.exitCode == 0
             and not result.stdout.strip()
             and not result.stderr.strip()
@@ -776,7 +776,7 @@ def executeScriptInternal(
             else:
                 codeStr = str(result.exitCode)
             out += "# error: command failed with exit status: %s\n" % (codeStr,)
-        if litConfig.maxIndividualTestTime > 0 and result.timeoutReached:
+        if test.config.maxIndividualTestTime > 0 and result.timeoutReached:
             out += "# error: command reached timeout: %s\n" % (
                 str(result.timeoutReached),
             )
@@ -900,7 +900,7 @@ def executeScript(
             command,
             cwd=cwd,
             env=env,
-            timeout=litConfig.maxIndividualTestTime,
+            timeout=test.config.maxIndividualTestTime,
         )
         return (out, err, exitCode, None, None)
     except lit.util.ExecuteCommandTimeoutException as e:
@@ -1070,7 +1070,7 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
 def _caching_re_compile(r):
     return re.compile(r)
 
-class ExpandableScriptDirective(object):
+class ExpandableScriptDirective:
     """
     Common interface for lit directives for which any lit substitutions must be
     expanded to produce the shell script.  It includes directives (e.g., 'RUN:')
@@ -1434,7 +1434,7 @@ def applySubstitutions(script, substitutions, conditions={}, recursion_limit=Non
     return output
 
 
-class ParserKind(object):
+class ParserKind:
     """
     An enumeration representing the style of an integrated test keyword or
     command.
@@ -1492,7 +1492,7 @@ class ParserKind(object):
         }[value]
 
 
-class IntegratedTestKeywordParser(object):
+class IntegratedTestKeywordParser:
     """A parser for LLVM/Clang style integrated test scripts.
 
     keyword: The keyword to parse for. It must end in either '.' or ':'.

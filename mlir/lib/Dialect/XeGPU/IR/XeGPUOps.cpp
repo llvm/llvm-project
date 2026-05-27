@@ -126,9 +126,6 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
       return success();
   }
 
-  if (mdescTy.getRank() < 2)
-    return emitError() << "mem_desc must be 2D or greater.";
-
   ArrayRef<int64_t> dataShape = dataTy.getShape();
   ArrayRef<int64_t> mdescShape = mdescTy.getShape();
 
@@ -163,23 +160,16 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
                     SmallVector<int64_t>(dataShape.begin(), dataShape.end())))
     return emitError() << "Value shape is not distributable with the layout";
 
-  if (dataShape.size() == 2) {
+  if (dataShape.size() == mdescShape.size()) {
     if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
                      [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
       return emitError() << "data shape must not exceed mem_desc shape.";
-  } else {
-    // if the subgroup_block_io attribute is set,  mdescTy must have block
-    // attribute
-    if (subgroup_block_io && !blockShape.size())
-      return emitError() << "mem_desc must have block attribute when "
-                            "subgroup_block_io is set.";
-    // if the subgroup_block_io attribute is set, the memdesc should be row
-    // major
-    if (subgroup_block_io && mdescTy.isColMajor())
-      return emitError() << "mem_desc should be row major when "
-                            "subgroup_block_io is set.";
   }
-
+  // if the subgroup_block_io attribute is set, mdescTy must have block
+  // attribute
+  if (subgroup_block_io && !blockShape.size())
+    return emitError() << "mem_desc must have block attribute when "
+                          "subgroup_block_io is set.";
   return success();
 }
 
@@ -921,7 +911,7 @@ LogicalResult DpasMxOp::verify() {
   if (getScaleA()) {
     auto scaleAVecType = dyn_cast<VectorType>(getScaleAType());
     // Only validate if scale is a vector (scalars are always valid)
-    if (scaleAVecType) {
+    if (scaleAVecType && scaleAVecType.getRank() > 1) {
       auto scaleAShape = scaleAVecType.getShape();
 
       if (scaleAVecType.getRank() != 2)
@@ -944,7 +934,7 @@ LogicalResult DpasMxOp::verify() {
   if (getScaleB()) {
     auto scaleBVecType = dyn_cast<VectorType>(getScaleBType());
     // Only validate if scale is a vector (scalars are always valid)
-    if (scaleBVecType) {
+    if (scaleBVecType && scaleBVecType.getRank() > 1) {
       auto scaleBShape = scaleBVecType.getShape();
 
       if (scaleBVecType.getRank() != 2)
@@ -969,7 +959,8 @@ LogicalResult DpasMxOp::verify() {
     auto scaleAVecType = dyn_cast<VectorType>(getScaleAType());
     auto scaleBVecType = dyn_cast<VectorType>(getScaleBType());
 
-    if (scaleAVecType && scaleBVecType) {
+    if (scaleAVecType && scaleBVecType && scaleAVecType.getRank() > 1 &&
+        scaleBVecType.getRank() > 1) {
       auto scaleAShape = scaleAVecType.getShape();
       auto scaleBShape = scaleBVecType.getShape();
 

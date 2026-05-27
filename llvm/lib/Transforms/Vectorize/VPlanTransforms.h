@@ -94,8 +94,7 @@ struct VPlanTransforms {
   /// The created loop is wrapped in an initial skeleton to facilitate
   /// vectorization, consisting of a vector pre-header, an exit block for the
   /// main vector loop (middle.block) and a new block as preheader of the scalar
-  /// loop (scalar.ph). See below for an illustration. It also adds a canonical
-  /// IV and its increment, using \p InductionTy and \p IVDL, and creates a
+  /// loop (scalar.ph). See below for an illustration. It also creates a
   /// VPValue expression for the original trip count.
   ///
   ///    [ ] <-- Plan's entry VPIRBasicBlock, wrapping the original loop's
@@ -129,7 +128,7 @@ struct VPlanTransforms {
   ///     \  v
   ///      >[ ]     <-- original loop exit block(s), wrapped in VPIRBasicBlocks.
   LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan>
-  buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy, DebugLoc IVDL,
+  buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
               PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr);
 
   /// Replace VPPhi recipes in \p Plan's header with corresponding
@@ -164,15 +163,13 @@ struct VPlanTransforms {
   /// be added to the middle block.
   LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan, bool TailFolded);
 
-  // Create a check to \p Plan to see if the vector loop should be executed.
-  // If \p CheckBlock is non-null, the compare and branch are placed there;
-  // ExpandSCEV recipes are always placed in Entry.
+  // Create a check in \p CheckBlock to see if the vector loop should be
+  // executed. May create VPExpandSCEV recipes in the plan's entry block.
   static void addMinimumIterationCheck(
       VPlan &Plan, ElementCount VF, unsigned UF,
       ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
       bool TailFolded, Loop *OrigLoop, const uint32_t *MinItersBypassWeights,
-      DebugLoc DL, PredicatedScalarEvolution &PSE,
-      VPBasicBlock *CheckBlock = nullptr);
+      DebugLoc DL, PredicatedScalarEvolution &PSE, VPBasicBlock *CheckBlock);
 
   /// Add a new check block before the vector preheader to \p Plan to check if
   /// the main vector loop should be executed (TC >= VF * UF).
@@ -190,12 +187,17 @@ struct VPlanTransforms {
       unsigned EpilogueLoopStep, ScalarEvolution &SE);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
-  /// flat CFG into a hierarchical CFG.
-  LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan);
+  /// flat CFG into a hierarchical CFG. For the outermost loop, also create the
+  /// canonical IV's increment and adjust the latch terminator: replace
+  /// BranchOnCond with BranchOnCount, using \p DL for the canonical IV.
+  LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan, DebugLoc DL);
 
   /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
   /// VPValue and connect the block to \p Plan, using the VPValue as branch
   /// condition.
+  static void attachVPCheckBlock(VPlan &Plan, VPValue *Cond,
+                                 VPBasicBlock *CheckBlock,
+                                 bool AddBranchWeights);
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
 
@@ -320,6 +322,13 @@ struct VPlanTransforms {
           &InterleaveGroups,
       const bool &EpilogueAllowed);
 
+  /// Transform widen memory recipes into strided access recipes when legal
+  /// and profitable. Clamps \p Range to maintain consistency with widen
+  /// decisions of \p Plan, and uses \p Ctx to evaluate the cost.
+  static void convertToStridedAccesses(VPlan &Plan,
+                                       PredicatedScalarEvolution &PSE, Loop &L,
+                                       VPCostContext &Ctx, VFRange &Range);
+
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
 
@@ -429,6 +438,21 @@ struct VPlanTransforms {
   static void materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
                                  ElementCount VF);
 
+  /// Attaches the alias-mask to the existing header-mask.
+  static void attachAliasMaskToHeaderMask(VPlan &Plan);
+
+  /// Materializes within the \p AliasCheckVPBB block. Updates the header mask
+  /// of the loop to use the alias mask. Returns the clamped VF.
+  static VPValue *materializeAliasMask(VPlan &Plan,
+                                       VPBasicBlock *AliasCheckVPBB,
+                                       ArrayRef<PointerDiffInfo> DiffChecks);
+
+  /// Materializes the alias mask within a check block before the loop. The
+  /// vector loop will only be entered if the clamped VF from the alias mask
+  /// is not scalar.
+  static void materializeAliasMaskCheckBlock(
+      VPlan &Plan, ArrayRef<PointerDiffInfo> DiffChecks, bool HasBranchWeights);
+
   /// Expand VPExpandSCEVRecipes in \p Plan's entry block. Each
   /// VPExpandSCEVRecipe is replaced with a live-in wrapping the expanded IR
   /// value. A mapping from SCEV expressions to their expanded IR value is
@@ -532,6 +556,12 @@ struct VPlanTransforms {
   /// made by the legacy CM. Only transforms "usesFirstLaneOnly` def-use chains
   /// enabled by prior widening of consecutive memory operations for now.
   static void makeScalarizationDecisions(VPlan &Plan, VFRange &Range);
+
+  /// Convert call VPInstructions in \p Plan into widened call, vector
+  /// intrinsic or replicate recipes based on a cost comparison via \p CostCtx.
+  static void makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
+                                        VPRecipeBuilder &RecipeBuilder,
+                                        VPCostContext &CostCtx);
 };
 
 } // namespace llvm

@@ -42,13 +42,15 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
              << "first" << FirstArgType << Arg0->getSourceRange();
     TheCall->setArg(0, FirstArg.get());
 
-    ExprResult SecArg = SemaRef.DefaultLvalueConversion(Arg1);
+    InitializedEntity Entity = InitializedEntity::InitializeParameter(
+        Context, Context.getIntTypeForBitwidth(64, /*Signed=*/false),
+        /*Consumed=*/false);
+    ExprResult SecArg =
+        SemaRef.PerformCopyInitialization(Entity,
+                                          /*EqualLoc=*/SourceLocation(), Arg1);
     if (SecArg.isInvalid())
       return true;
-    QualType SecArgType = SecArg.get()->getType();
-    if (!SecArgType->isIntegerType())
-      return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_integer)
-             << "second" << SecArgType << Arg1->getSourceRange();
+    TheCall->setArg(1, SecArg.get());
 
     // Derive the return type from the pointer argument.
     TheCall->setType(FirstArgType);
@@ -89,12 +91,18 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
     if (!FirstArgType->isAnyPointerType())
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_pointer)
              << "first" << FirstArgType << Arg0->getSourceRange();
+    TheCall->setArg(0, FirstArg.get());
 
-    QualType SecArgType = Arg1->getType();
-    if (!SecArgType->isIntegerType())
-      return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_integer)
-             << "second" << SecArgType << Arg1->getSourceRange();
-    TheCall->setType(Context.IntTy);
+    InitializedEntity Entity = InitializedEntity::InitializeParameter(
+        Context, Context.getIntTypeForBitwidth(64, /*Signed=*/false),
+        /*Consumed=*/false);
+    ExprResult SecArg =
+        SemaRef.PerformCopyInitialization(Entity,
+                                          /*EqualLoc=*/SourceLocation(), Arg1);
+    if (SecArg.isInvalid())
+      return true;
+    TheCall->setArg(1, SecArg.get());
+
     return false;
   }
 
@@ -176,7 +184,6 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
 
     TheCall->setArg(0, ArgExprA.get());
     TheCall->setArg(1, ArgExprB.get());
-    TheCall->setType(Context.LongLongTy);
     return false;
   }
   assert(false && "Unhandled ARM MTE intrinsic");

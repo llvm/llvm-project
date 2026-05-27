@@ -379,6 +379,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::ROTL:
   case ISD::ROTR:
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
   case ISD::ABDS:
   case ISD::ABDU:
   case ISD::AVGCEILS:
@@ -656,9 +657,12 @@ void VectorLegalizer::PromoteSETCC(SDNode *Node,
     Operands[4] = Node->getOperand(4); // evl
   }
 
-  SDValue Res = DAG.getNode(Node->getOpcode(), DL, Node->getSimpleValueType(0),
-                            Operands, Node->getFlags());
-
+  EVT ResVT =
+      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), NewVecVT);
+  SDValue Res =
+      DAG.getNode(Node->getOpcode(), DL, ResVT, Operands, Node->getFlags());
+  if (ResVT != Node->getValueType(0))
+    Res = DAG.getBoolExtOrTrunc(Res, DL, Node->getValueType(0), NewVecVT);
   Results.push_back(Res);
 }
 
@@ -1105,6 +1109,7 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     ExpandSETCC(Node, Results);
     return;
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
     if (SDValue Expanded = TLI.expandABS(Node, DAG)) {
       Results.push_back(Expanded);
       return;

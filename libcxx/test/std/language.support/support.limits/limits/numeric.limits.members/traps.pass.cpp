@@ -10,8 +10,6 @@
 
 // traps
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <limits>
 
 #include "test_macros.h"

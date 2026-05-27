@@ -71,6 +71,12 @@ jobs:
       attestation-name: ${{ steps.vars.outputs.attestation-name }}
 
     steps:
+    - name: Validate Release Version
+      if: inputs.release-version != ''
+      uses: ./.github/workflows/validate-release-version
+      with:
+        release-version: ${{ inputs.release-version }}
+
     - name: Checkout LLVM
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
@@ -78,8 +84,9 @@ jobs:
 
     - name: Check Permissions
       if: github.event_name != 'pull_request'
-      uses: ./.github/workflows/require-release-manager
+      uses: ./.github/workflows/require-team-membership
       with:
+        team-slug: llvm-release-managers
         LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
         LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
 
@@ -93,6 +100,7 @@ jobs:
       id: vars
       env:
         LLVM_VERSION_FROM_SOURCE: ${{ steps.version-from-source.outputs.full-no-suffix }}
+        INPUTS_RUNS_ON: ${{ inputs.runs-on }}
       shell: bash
       # In order for the test-release.sh script to run correctly, the LLVM
       # source needs to be at the following location relative to the build dir:
@@ -158,14 +166,14 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
         fi
 
-        case "${{ inputs.runs-on }}" in
+        case "$INPUTS_RUNS_ON" in
           ubuntu-22.04* | windows-2022)
-            build_runs_on="depot-${{ inputs.runs-on }}-16"
+            build_runs_on="depot-$INPUTS_RUNS_ON-16"
             test_runs_on=$build_runs_on
             ;;
           windows-11-arm)
             if [ "$GITHUB_EVENT_NAME" = "pull_request" ] || [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
-              build_runs_on="${{ inputs.runs-on }}"
+              build_runs_on="$INPUTS_RUNS_ON"
             else
               build_runs_on="windows-11-arm-16core"
             fi
@@ -173,14 +181,14 @@ jobs:
             ;;
           macos-14)
             if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-              build_runs_on="${{ inputs.runs-on }}"
+              build_runs_on="$INPUTS_RUNS_ON"
             else
               build_runs_on="depot-macos-14"
             fi
-            test_runs_on="${{ inputs.runs-on }}"
+            test_runs_on="$INPUTS_RUNS_ON"
             ;;
           *)
-            test_runs_on="${{ inputs.runs-on }}"
+            test_runs_on="$INPUTS_RUNS_ON"
             build_runs_on=$test_runs_on
             ;;
         esac
@@ -253,21 +261,27 @@ jobs:
     - name: Configure Linux/MacOS
       id: build
       if: runner.os != 'Windows'
+      env:
+        BUILD_PREFIX: ${{ steps.setup-stage.outputs.build-prefix }}
+        TARGET_CMAKE_FLAGS: ${{ needs.prepare.outputs.target-cmake-flags }}
       shell: bash
       run: |
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
-        cmake -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
-            ${{ needs.prepare.outputs.target-cmake-flags }} \
+        cmake -G Ninja -S llvm -B "$BUILD_PREFIX/build" \
+            $TARGET_CMAKE_FLAGS \
             -C clang/cmake/caches/Release.cmake
 
     - name: Build Linux/MacOS
       if: runner.os != 'Windows'
       shell: bash
+      env:
+        BUILD_PREFIX: ${{ steps.setup-stage.outputs.build-prefix }}
+        RELEASE_BINARY_FILENAME: ${{ needs.prepare.outputs.release-binary-filename }}
       run: |
-        ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
-        release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
-        mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
+        ninja -v -C "$BUILD_PREFIX/build" stage2-package
+        release_dir=`find "$BUILD_PREFIX/build" -iname 'stage2-bins'`
+        mv "$release_dir/$RELEASE_BINARY_FILENAME" .
 
     - name: Build Windows
       id: build-windows
@@ -316,8 +330,10 @@ jobs:
       # These almost always fail so don't let them fail the build and prevent the uploads.
       if : runner.os != 'Windows'
       continue-on-error: true
+      env:
+        BUILD_PREFIX: ${{ steps.setup-stage.outputs.build-prefix }}
       run: |
-        ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all
+        ninja -C "$BUILD_PREFIX/build" stage2-check-all
 
   upload-release-binaries:
     name: "Upload Release Binaries"

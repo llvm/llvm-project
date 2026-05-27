@@ -115,6 +115,7 @@ add_clang_library(clangCodeGen
   MacroPPCallbacks.cpp
   MicrosoftCXXABI.cpp
   ModuleBuilder.cpp
+  ModuleLinker.cpp
   ObjectFilePCHContainerWriter.cpp
   PatternInit.cpp
   QualTypeMapper.cpp

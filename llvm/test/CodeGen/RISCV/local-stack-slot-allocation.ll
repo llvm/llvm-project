@@ -153,9 +153,8 @@ define void @frame_pointer() "frame-pointer"="all" {
 ; RV64I-NEXT:    addi s0, sp, 2032
 ; RV64I-NEXT:    .cfi_def_cfa s0, 0
 ; RV64I-NEXT:    addi sp, sp, -496
-; RV64I-NEXT:    addi a0, sp, 556
-; RV64I-NEXT:    lbu a1, 0(a0)
-; RV64I-NEXT:    sb a1, 0(a0)
+; RV64I-NEXT:    lbu a0, 556(sp)
+; RV64I-NEXT:    sb a0, 556(sp)
 ; RV64I-NEXT:    addi sp, sp, 496
 ; RV64I-NEXT:    .cfi_def_cfa sp, 2032
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload

@@ -15,32 +15,32 @@
 
 
 // TRAP-LABEL: define hidden void @f(
-// TRAP-SAME: ) #[[ATTR0:[0-9]+]] !type [[META6:![0-9]+]] !type [[META7:![0-9]+]] {
+// TRAP-SAME: ) #[[ATTR0:[0-9]+]] !type [[META6:![0-9]+]] !type [[META7:![0-9]+]]
 // TRAP-NEXT:  [[ENTRY:.*:]]
 // TRAP-NEXT:    ret void
 //
 // ABORT-LABEL: define hidden void @f(
-// ABORT-SAME: ) #[[ATTR0:[0-9]+]] !type [[META6:![0-9]+]] !type [[META7:![0-9]+]] {
+// ABORT-SAME: ) #[[ATTR0:[0-9]+]] !type [[META6:![0-9]+]] !type [[META7:![0-9]+]]
 // ABORT-NEXT:  [[ENTRY:.*:]]
 // ABORT-NEXT:    ret void
 //
 // RECOVER-LABEL: define hidden void @f(
-// RECOVER-SAME: ) #[[ATTR0:[0-9]+]] !type [[META6:![0-9]+]] !type [[META7:![0-9]+]] {
+// RECOVER-SAME: ) #[[ATTR0:[0-9]+]] !type [[META6:![0-9]+]] !type [[META7:![0-9]+]]
 // RECOVER-NEXT:  [[ENTRY:.*:]]
 // RECOVER-NEXT:    ret void
 //
 // ABORT_MIN-LABEL: define hidden void @f(
-// ABORT_MIN-SAME: ) #[[ATTR0:[0-9]+]] !type [[META6:![0-9]+]] !type [[META7:![0-9]+]] {
+// ABORT_MIN-SAME: ) #[[ATTR0:[0-9]+]] !type [[META6:![0-9]+]] !type [[META7:![0-9]+]]
 // ABORT_MIN-NEXT:  [[ENTRY:.*:]]
 // ABORT_MIN-NEXT:    ret void
 //
 // RECOVER_MIN-LABEL: define hidden void @f(
-// RECOVER_MIN-SAME: ) #[[ATTR0:[0-9]+]] !type [[META6:![0-9]+]] !type [[META7:![0-9]+]] {
+// RECOVER_MIN-SAME: ) #[[ATTR0:[0-9]+]] !type [[META6:![0-9]+]] !type [[META7:![0-9]+]]
 // RECOVER_MIN-NEXT:  [[ENTRY:.*:]]
 // RECOVER_MIN-NEXT:    ret void
 //
 // PRESERVE_MIN-LABEL: define hidden void @f(
-// PRESERVE_MIN-SAME: ) #[[ATTR0:[0-9]+]] !type [[META6:![0-9]+]] !type [[META7:![0-9]+]] {
+// PRESERVE_MIN-SAME: ) #[[ATTR0:[0-9]+]] !type [[META6:![0-9]+]] !type [[META7:![0-9]+]]
 // PRESERVE_MIN-NEXT:  [[ENTRY:.*:]]
 // PRESERVE_MIN-NEXT:    ret void
 //
@@ -50,7 +50,7 @@ void f() {
 void xf();
 
 // TRAP-LABEL: define hidden void @g(
-// TRAP-SAME: i32 noundef [[B:%.*]]) #[[ATTR0]] !type [[META8:![0-9]+]] !type [[META9:![0-9]+]] {
+// TRAP-SAME: i32 noundef [[B:%.*]]) #[[ATTR0]] !type [[META8:![0-9]+]] !type [[META9:![0-9]+]]
 // TRAP-NEXT:  [[ENTRY:.*:]]
 // TRAP-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
 // TRAP-NEXT:    [[FP:%.*]] = alloca ptr, align 8
@@ -71,7 +71,7 @@ void xf();
 // TRAP-NEXT:    ret void
 //
 // ABORT-LABEL: define hidden void @g(
-// ABORT-SAME: i32 noundef [[B:%.*]]) #[[ATTR0]] !type [[META8:![0-9]+]] !type [[META9:![0-9]+]] {
+// ABORT-SAME: i32 noundef [[B:%.*]]) #[[ATTR0]] !type [[META8:![0-9]+]] !type [[META9:![0-9]+]]
 // ABORT-NEXT:  [[ENTRY:.*:]]
 // ABORT-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
 // ABORT-NEXT:    [[FP:%.*]] = alloca ptr, align 8
@@ -93,7 +93,7 @@ void xf();
 // ABORT-NEXT:    ret void
 //
 // RECOVER-LABEL: define hidden void @g(
-// RECOVER-SAME: i32 noundef [[B:%.*]]) #[[ATTR0]] !type [[META8:![0-9]+]] !type [[META9:![0-9]+]] {
+// RECOVER-SAME: i32 noundef [[B:%.*]]) #[[ATTR0]] !type [[META8:![0-9]+]] !type [[META9:![0-9]+]]
 // RECOVER-NEXT:  [[ENTRY:.*:]]
 // RECOVER-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
 // RECOVER-NEXT:    [[FP:%.*]] = alloca ptr, align 8
@@ -115,7 +115,7 @@ void xf();
 // RECOVER-NEXT:    ret void
 //
 // ABORT_MIN-LABEL: define hidden void @g(
-// ABORT_MIN-SAME: i32 noundef [[B:%.*]]) #[[ATTR0]] !type [[META8:![0-9]+]] !type [[META9:![0-9]+]] {
+// ABORT_MIN-SAME: i32 noundef [[B:%.*]]) #[[ATTR0]] !type [[META8:![0-9]+]] !type [[META9:![0-9]+]]
 // ABORT_MIN-NEXT:  [[ENTRY:.*:]]
 // ABORT_MIN-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
 // ABORT_MIN-NEXT:    [[FP:%.*]] = alloca ptr, align 8
@@ -136,7 +136,7 @@ void xf();
 // ABORT_MIN-NEXT:    ret void
 //
 // RECOVER_MIN-LABEL: define hidden void @g(
-// RECOVER_MIN-SAME: i32 noundef [[B:%.*]]) #[[ATTR0]] !type [[META8:![0-9]+]] !type [[META9:![0-9]+]] {
+// RECOVER_MIN-SAME: i32 noundef [[B:%.*]]) #[[ATTR0]] !type [[META8:![0-9]+]] !type [[META9:![0-9]+]]
 // RECOVER_MIN-NEXT:  [[ENTRY:.*:]]
 // RECOVER_MIN-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
 // RECOVER_MIN-NEXT:    [[FP:%.*]] = alloca ptr, align 8
@@ -157,7 +157,7 @@ void xf();
 // RECOVER_MIN-NEXT:    ret void
 //
 // PRESERVE_MIN-LABEL: define hidden void @g(
-// PRESERVE_MIN-SAME: i32 noundef [[B:%.*]]) #[[ATTR0]] !type [[META8:![0-9]+]] !type [[META9:![0-9]+]] {
+// PRESERVE_MIN-SAME: i32 noundef [[B:%.*]]) #[[ATTR0]] !type [[META8:![0-9]+]] !type [[META9:![0-9]+]]
 // PRESERVE_MIN-NEXT:  [[ENTRY:.*:]]
 // PRESERVE_MIN-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
 // PRESERVE_MIN-NEXT:    [[FP:%.*]] = alloca ptr, align 8
