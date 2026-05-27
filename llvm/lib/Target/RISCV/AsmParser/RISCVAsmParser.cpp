@@ -782,7 +782,7 @@ public:
     });
   }
 
-  bool isUImm7Srliy() const {
+  bool isUImm7EqXLen() const {
     return isUImmPred(
         [this](int64_t Imm) { return isRV64Expr() ? Imm == 64 : Imm == 32; });
   }
@@ -1772,7 +1772,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                            "[1, 255], a multiple of 8 in the range [256, 504], "
                            "or a multiple of 16 in the range [512, 4096]");
   }
-  case Match_InvalidUImm7Srliy: {
+  case Match_InvalidUImm7EqXLen: {
     const SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(ErrorLoc, "immediate must be an integer equal to XLEN (" +
                                Twine(isRV64() ? "64" : "32") + ")");

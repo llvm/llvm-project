@@ -345,9 +345,9 @@ static DecodeStatus decodeUImmLog2XLenOperand(MCInst &Inst, uint32_t Imm,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeUImm7SrliyOperand(MCInst &Inst, uint32_t Imm,
-                                            int64_t Address,
-                                            const MCDisassembler *Decoder) {
+static DecodeStatus decodeUImm7EqXLenOperand(MCInst &Inst, uint32_t Imm,
+                                             int64_t Address,
+                                             const MCDisassembler *Decoder) {
   assert(isUInt<7>(Imm) && "Invalid immediate");
 
   uint32_t ExpectedValue =

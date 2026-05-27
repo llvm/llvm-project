@@ -24,28 +24,27 @@ def YBNDSWImmOperand : AsmOperandClass {
   let DiagnosticType = "InvalidYBNDSWImm";
 }
 
-def ybndsw_imm : Operand<XLenVT>, ImmLeaf<XLenVT, [{
+def ybndsw_imm : RISCVOp<XLenVT>, ImmLeaf<XLenVT, [{
   return llvm::RISCV::isValidYBNDSWImm(Imm);
 }]> {
   let EncoderMethod = "getYBNDSWImmOpValue";
   let ParserMatchClass = YBNDSWImmOperand;
   let DecoderMethod = "DecodeYBNDSWImm";
-  let MIOperandInfo = (ops i32imm);
-  let OperandType = "OPERAND_IMMEDIATE";
+  let OperandType = "OPERAND_UIMM9_YBNDSWI";
 }
 
-def uimm7_srliy : RISCVUImmOp<7>, ImmLeaf<XLenVT, [{
+def uimm7_eq_xlen : RISCVUImmOp<7>, ImmLeaf<XLenVT, [{
   return Imm == Subtarget->getXLen();
 }]> {
-  let ParserMatchClass = UImmAsmOperand<7, "Srliy">;
-  let DecoderMethod = "decodeUImm7SrliyOperand";
+  let ParserMatchClass = UImmAsmOperand<7, "EqXLen">;
+  let DecoderMethod = "decodeUImm7EqXLenOperand";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
     return Imm == Subtarget->getXLen()
   }];
-  let OperandType = "OPERAND_UIMM7_XLEN";
+  let OperandType = "OPERAND_UIMM7_EQ_XLEN";
 }
 
 //===----------------------------------------------------------------------===//
@@ -98,7 +97,7 @@ class RVY_bndswi<string opcodestr>
 }
 class RVY_srli<string opcodestr>
     : RVInstIBase<0b101, OPC_RVY_A, (outs GPR:$rd),
-                  (ins YGPR:$rs1, uimm7_srliy:$shamt), opcodestr,
+                  (ins YGPR:$rs1, uimm7_eq_xlen:$shamt), opcodestr,
                   "$rd, $rs1, $shamt"> {
   bits<7> shamt;
 
