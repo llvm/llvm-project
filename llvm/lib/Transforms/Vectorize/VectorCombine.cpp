@@ -949,6 +949,11 @@ bool VectorCombine::foldBitOpOfCastops(Instruction &I) {
   if (auto *NewBinOp = dyn_cast<BinaryOperator>(NewOp))
     NewBinOp->copyIRFlags(BinOp);
 
+  // disjoint flag can't be preserved through a bitcast
+  if (CastOpcode == Instruction::BitCast)
+    if (auto *Disjoint = dyn_cast<PossiblyDisjointInst>(NewOp))
+      Disjoint->setIsDisjoint(false);
+
   Worklist.pushValue(NewOp);
 
   // Create the cast operation directly to ensure we get a new instruction
@@ -1051,6 +1056,11 @@ bool VectorCombine::foldBitOpOfCastConstant(Instruction &I) {
                                      LHSSrc, InvC, I.getName() + ".inner");
   if (auto *NewBinOp = dyn_cast<BinaryOperator>(NewOp))
     NewBinOp->copyIRFlags(&I);
+
+  // disjoint flag can't be preserved through a bitcast
+  if (CastOpcode == Instruction::BitCast)
+    if (auto *Disjoint = dyn_cast<PossiblyDisjointInst>(NewOp))
+      Disjoint->setIsDisjoint(false);
 
   Worklist.pushValue(NewOp);
 
