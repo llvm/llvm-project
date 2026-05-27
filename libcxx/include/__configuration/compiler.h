@@ -33,12 +33,12 @@
 // Warn if a compiler version is used that is not supported anymore
 // LLVM RELEASE Update the minimum compiler versions
 #  if defined(_LIBCPP_CLANG_VER)
-#    if _LIBCPP_CLANG_VER < 2001
-#      warning "Libc++ only supports Clang 20 and later"
+#    if _LIBCPP_CLANG_VER < 2101
+#      warning "Libc++ only supports Clang 21 and later"
 #    endif
 #  elif defined(_LIBCPP_APPLE_CLANG_VER)
-#    if _LIBCPP_APPLE_CLANG_VER < 1700
-#      warning "Libc++ only supports AppleClang 26 and later"
+#    if _LIBCPP_APPLE_CLANG_VER < 2100
+#      warning "Libc++ only supports AppleClang 26.4 and later"
 #    endif
 #  elif defined(_LIBCPP_GCC_VER)
 #    if _LIBCPP_GCC_VER < 1500

@@ -166,9 +166,9 @@ int test6(void) {
 }
 
 // CIR: cir.func {{.*}} @test6() -> !s32i
-// CIR:   %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+// CIR:   %[[TWO:.*]] = cir.const #cir.int<2> : !s64i
 // CIR:   %[[ARR:.*]] = cir.get_global @arr : !cir.ptr<!cir.array<!s32i x 3>>
-// CIR:   %[[ELE_PTR:.*]] = cir.get_element %[[ARR]][%[[TWO]] : !s32i] : !cir.ptr<!cir.array<!s32i x 3>> -> !cir.ptr<!s32i>
+// CIR:   %[[ELE_PTR:.*]] = cir.get_element %[[ARR]][%[[TWO]] : !s64i] : !cir.ptr<!cir.array<!s32i x 3>> -> !cir.ptr<!s32i>
 // CIR:   %[[ELE:.*]] = cir.load{{.*}} %[[ELE_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR:   %[[IS_CONSTANT:.*]] = cir.is_constant %[[ELE]] : !s32i -> !cir.bool
 
@@ -177,7 +177,7 @@ int test6(void) {
 // LLVM:   %[[TMP2:.*]] = call i1 @llvm.is.constant.i32(i32 %[[TMP1]])
 
 // OGCG: define {{.*}} i32 @test6()
-// OGCG:   %[[TMP1:.*]] = load i32, ptr getelementptr inbounds ([3 x i32], ptr @arr, i64 0, i64 2)
+// OGCG:   %[[TMP1:.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 8)
 // OGCG:   %[[TMP2:.*]] = call i1 @llvm.is.constant.i32(i32 %[[TMP1]])
 
 const int c_arr[] = { 1, 2, 3 };

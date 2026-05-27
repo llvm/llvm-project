@@ -90,10 +90,10 @@ struct VectorizerParams {
 ///
 class MemoryDepChecker {
 public:
-  typedef PointerIntPair<Value *, 1, bool> MemAccessInfo;
-  typedef SmallVector<MemAccessInfo, 8> MemAccessInfoList;
+  using MemAccessInfo =
+      PointerIntPair<Value * /* AccessPtr */, 1, bool /* IsWrite */>;
   /// Set of potential dependent memory accesses.
-  typedef EquivalenceClasses<MemAccessInfo> DepCandidates;
+  using DepCandidates = EquivalenceClasses<MemAccessInfo>;
 
   /// Type to keep track of the status of the dependence check. The order of
   /// the elements is important and has to be from most permissive to least
@@ -121,6 +121,11 @@ public:
       // the loop, like A[B[i]]. We cannot determine direction or distance in
       // those cases, and also are unable to generate any runtime checks.
       IndirectUnsafe,
+      // Both accesses to the same loop-invariant address and at least one is a
+      // write. Vectorization is unsafe because different vector lanes would
+      // read/write the same memory location, and the ordering of accesses
+      // across lanes matters.
+      InvariantUnsafe,
 
       // Lexically forward.
       //
@@ -203,7 +208,7 @@ public:
   ///
   /// Only checks sets with elements in \p CheckDeps.
   LLVM_ABI bool areDepsSafe(const DepCandidates &AccessSets,
-                            const MemAccessInfoList &CheckDeps);
+                            ArrayRef<MemAccessInfo> CheckDeps);
 
   /// No memory dependence was encountered that would inhibit
   /// vectorization.
@@ -286,7 +291,7 @@ public:
 
   const Loop *getInnermostLoop() const { return InnermostLoop; }
 
-  DenseMap<std::pair<const SCEV *, Type *>,
+  DenseMap<std::pair<const SCEV *, const SCEV *>,
            std::pair<const SCEV *, const SCEV *>> &
   getPointerBounds() {
     return PointerBounds;
@@ -370,7 +375,7 @@ private:
 
   /// Mapping of SCEV expressions to their expanded pointer bounds (pair of
   /// start and end pointer expressions).
-  DenseMap<std::pair<const SCEV *, Type *>,
+  DenseMap<std::pair<const SCEV *, const SCEV *>,
            std::pair<const SCEV *, const SCEV *>>
       PointerBounds;
 
@@ -482,9 +487,8 @@ struct RuntimeCheckingPtrGroup {
 };
 
 /// A memcheck which made up of a pair of grouped pointers.
-typedef std::pair<const RuntimeCheckingPtrGroup *,
-                  const RuntimeCheckingPtrGroup *>
-    RuntimePointerCheck;
+using RuntimePointerCheck =
+    std::pair<const RuntimeCheckingPtrGroup *, const RuntimeCheckingPtrGroup *>;
 
 struct PointerDiffInfo {
   const SCEV *SrcStart;
@@ -562,8 +566,7 @@ public:
 
   /// Generate the checks and store it.  This also performs the grouping
   /// of pointers to reduce the number of memchecks necessary.
-  LLVM_ABI void generateChecks(MemoryDepChecker::DepCandidates &DepCands,
-                               bool UseDependencies);
+  LLVM_ABI void generateChecks(MemoryDepChecker::DepCandidates &DepCands);
 
   /// Returns the checks that generateChecks created. They can be used to ensure
   /// no read/write accesses overlap across all loop iterations.
@@ -630,10 +633,8 @@ public:
 private:
   /// Groups pointers such that a single memcheck is required
   /// between two different groups. This will clear the CheckingGroups vector
-  /// and re-compute it. We will only group dependecies if \p UseDependencies
-  /// is true, otherwise we will create a separate group for each pointer.
-  void groupChecks(MemoryDepChecker::DepCandidates &DepCands,
-                   bool UseDependencies);
+  /// and re-compute it.
+  void groupChecks(MemoryDepChecker::DepCandidates &DepCands);
 
   /// Generate the checks and return them.
   SmallVector<RuntimePointerCheck, 4> generateChecks();
@@ -946,7 +947,14 @@ LLVM_ABI bool isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
 LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *BTC,
     const SCEV *MaxBTC, ScalarEvolution *SE,
-    DenseMap<std::pair<const SCEV *, Type *>,
+    DenseMap<std::pair<const SCEV *, const SCEV *>,
+             std::pair<const SCEV *, const SCEV *>> *PointerBounds,
+    DominatorTree *DT, AssumptionCache *AC,
+    std::optional<ScalarEvolution::LoopGuards> &LoopGuards);
+LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
+    const Loop *Lp, const SCEV *PtrExpr, const SCEV *EltSizeSCEV,
+    const SCEV *BTC, const SCEV *MaxBTC, ScalarEvolution *SE,
+    DenseMap<std::pair<const SCEV *, const SCEV *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
     DominatorTree *DT, AssumptionCache *AC,
     std::optional<ScalarEvolution::LoopGuards> &LoopGuards);
@@ -991,7 +999,7 @@ class LoopAccessAnalysis
   LLVM_ABI static AnalysisKey Key;
 
 public:
-  typedef LoopAccessInfoManager Result;
+  using Result = LoopAccessInfoManager;
 
   LLVM_ABI Result run(Function &F, FunctionAnalysisManager &AM);
 };

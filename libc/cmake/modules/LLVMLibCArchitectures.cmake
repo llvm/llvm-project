@@ -59,10 +59,14 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
 
   set(${arch_var} ${target_arch} PARENT_SCOPE)
   list(GET triple_comps ${system_index} target_sys)
+  list(GET triple_comps 2 target_os)
 
   # Correcting OS name for Apple's systems.
   if(target_sys STREQUAL "apple")
     list(GET triple_comps 2 target_sys)
+  endif()
+  if(target_os MATCHES "^freebsd")
+    set(target_sys ${target_os})
   endif()
   # Strip version from `darwin###`
   if(target_sys MATCHES "^darwin")
@@ -78,7 +82,7 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
   set(${sys_var} ${target_sys} PARENT_SCOPE)
 endfunction(get_arch_and_system_from_triple)
 
-execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version -v
+execute_process(COMMAND ${CMAKE_CXX_COMPILER} -c -v
                 RESULT_VARIABLE libc_compiler_info_result
                 OUTPUT_VARIABLE libc_compiler_info
                 ERROR_VARIABLE libc_compiler_info)
@@ -98,21 +102,22 @@ string(SUBSTRING ${libc_compiler_target_info} 8 -1 libc_compiler_triple)
 # One should not set LLVM_RUNTIMES_TARGET and LIBC_TARGET_TRIPLE
 if(LLVM_RUNTIMES_TARGET AND LIBC_TARGET_TRIPLE)
   message(FATAL_ERROR
-          "libc build: Specify only LLVM_RUNTIMES_TARGET if you are doing a "
+          "libc build: Specify only LLVM_DEFAULT_TARGET_TRIPLE if you are doing a "
           "runtimes/bootstrap build. If you are doing a standalone build, "
           "specify only LIBC_TARGET_TRIPLE.")
 endif()
 
 set(explicit_target_triple)
 if(LLVM_RUNTIMES_TARGET)
-  set(explicit_target_triple ${LLVM_RUNTIMES_TARGET})
+  # LLVM_RUNTIMES_TARGET may contain multilib flags, use the clean triple.
+  set(explicit_target_triple ${LLVM_DEFAULT_TARGET_TRIPLE})
 elseif(LIBC_TARGET_TRIPLE)
   set(explicit_target_triple ${LIBC_TARGET_TRIPLE})
 endif()
 
 # The libc's target architecture and OS are set to match the compiler's default
 # target triple above. However, one can explicitly set LIBC_TARGET_TRIPLE or
-# LLVM_RUNTIMES_TARGET (for runtimes/bootstrap build). If one of them is set,
+# LLVM_DEFAULT_TARGET_TRIPLE (for runtimes/bootstrap build). If one of them is set,
 # then we will use that target triple to deduce libc's target OS and
 # architecture.
 if(explicit_target_triple)
@@ -124,7 +129,7 @@ if(explicit_target_triple)
   set(LIBC_TARGET_ARCHITECTURE ${libc_arch})
   set(LIBC_TARGET_OS ${libc_sys})
   # If the compiler target triple is not the same as the triple specified by
-  # LIBC_TARGET_TRIPLE or LLVM_RUNTIMES_TARGET, we will add a --target option
+  # LIBC_TARGET_TRIPLE or LLVM_DEFAULT_TARGET_TRIPLE, we will add a --target option
   # if the compiler is clang. If the compiler is GCC we just error out as there
   # is no equivalent of an option like --target.
   if(NOT libc_compiler_triple STREQUAL explicit_target_triple)
@@ -183,6 +188,8 @@ elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "nvptx")
   set(LIBC_TARGET_ARCHITECTURE_IS_NVPTX TRUE)
 elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "spirv")
   set(LIBC_TARGET_ARCHITECTURE_IS_SPIRV TRUE)
+elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "power")
+  set(LIBC_TARGET_ARCHITECTURE_IS_POWERPC TRUE)
 else()
   message(FATAL_ERROR
           "Unsupported libc target architecture ${LIBC_TARGET_ARCHITECTURE}")
@@ -206,6 +213,9 @@ elseif(LIBC_TARGET_OS STREQUAL "darwin")
   set(LIBC_TARGET_OS_IS_DARWIN TRUE)
 elseif(LIBC_TARGET_OS STREQUAL "windows")
   set(LIBC_TARGET_OS_IS_WINDOWS TRUE)
+elseif(LIBC_TARGET_OS MATCHES "^freebsd.*")
+  set(LIBC_TARGET_OS_IS_FREEBSD TRUE)
+  set(LIBC_TARGET_OS "freebsd")
 elseif(LIBC_TARGET_OS STREQUAL "gpu")
   set(LIBC_TARGET_OS_IS_GPU TRUE)
 elseif(LIBC_TARGET_OS STREQUAL "uefi")
@@ -216,7 +226,7 @@ else()
 endif()
 
 # If the compiler target triple is not the same as the triple specified by
-# LIBC_TARGET_TRIPLE or LLVM_RUNTIMES_TARGET, we will add a --target option
+# LIBC_TARGET_TRIPLE or LLVM_DEFAULT_TARGET_TRIPLE, we will add a --target option
 # if the compiler is clang. If the compiler is GCC we just error out as there
 # is no equivalent of an option like --target.
 if(explicit_target_triple AND

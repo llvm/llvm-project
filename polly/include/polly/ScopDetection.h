@@ -61,8 +61,8 @@ using llvm::AnalysisInfoMixin;
 using llvm::AnalysisKey;
 using llvm::AnalysisUsage;
 using llvm::BatchAAResults;
-using llvm::BranchInst;
 using llvm::CallInst;
+using llvm::CondBrInst;
 using llvm::DenseMap;
 using llvm::DominatorTree;
 using llvm::Function;
@@ -71,9 +71,10 @@ using llvm::IntrinsicInst;
 using llvm::LoopInfo;
 using llvm::Module;
 using llvm::OptimizationRemarkEmitter;
-using llvm::PassInfoMixin;
+using llvm::OptionalPassInfoMixin;
 using llvm::PreservedAnalyses;
 using llvm::RegionInfo;
+using llvm::RequiredPassInfoMixin;
 using llvm::ScalarEvolution;
 using llvm::SCEVUnknown;
 using llvm::SetVector;
@@ -428,7 +429,7 @@ private:
   /// @param Condition    The branch condition.
   /// @param IsLoopBranch Flag to indicate the branch is a loop exit/latch.
   /// @param Context      The context of scop detection.
-  bool isValidBranch(BasicBlock &BB, BranchInst *BI, Value *Condition,
+  bool isValidBranch(BasicBlock &BB, CondBrInst *BI, Value *Condition,
                      bool IsLoopBranch, DetectionContext &Context);
 
   /// Check if the SCEV @p S is affine in the current @p Context.
@@ -626,7 +627,8 @@ struct ScopAnalysis : AnalysisInfoMixin<ScopAnalysis> {
   Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 
-struct ScopAnalysisPrinterPass final : PassInfoMixin<ScopAnalysisPrinterPass> {
+struct ScopAnalysisPrinterPass final
+    : RequiredPassInfoMixin<ScopAnalysisPrinterPass> {
   ScopAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);

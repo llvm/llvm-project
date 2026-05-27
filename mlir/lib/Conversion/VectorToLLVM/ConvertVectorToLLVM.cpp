@@ -290,6 +290,7 @@ public:
     MemRefType memRefType = dyn_cast<MemRefType>(gather.getBaseType());
     assert(memRefType && "The base should be bufferized");
 
+    // TODO: Add support for strided MemRef.
     if (failed(isMemRefTypeSupported(memRefType, *this->getTypeConverter())))
       return rewriter.notifyMatchFailure(gather, "memref type not supported");
 
@@ -348,6 +349,7 @@ public:
     auto memRefType = dyn_cast<MemRefType>(scatter.getBaseType());
     assert(memRefType && "The base should be bufferized");
 
+    // TODO: Add support for strided MemRef.
     if (failed(isMemRefTypeSupported(memRefType, *this->getTypeConverter())))
       return rewriter.notifyMatchFailure(scatter, "memref type not supported");
 
@@ -1279,6 +1281,11 @@ public:
 
     Value result = sourceAggregate;
     if (isNestedAggregate) {
+      if (!llvm::all_of(positionOf1DVectorWithinAggregate,
+                        llvm::IsaPred<Attribute>)) {
+        // llvm.insertvalue does not support dynamic dimensions.
+        return failure();
+      }
       result = LLVM::InsertValueOp::create(
           rewriter, loc, adaptor.getDest(), sourceAggregate,
           getAsIntegers(positionOf1DVectorWithinAggregate));
@@ -1503,8 +1510,20 @@ public:
         rewriter, loc,
         LLVM::getVectorType(idxType, dstType.getShape()[0],
                             /*isScalable=*/true));
-    auto bound = getValueOrCreateCastToIndexLike(rewriter, loc, idxType,
-                                                 adaptor.getOperands()[0]);
+    Value maskBound = adaptor.getOperands()[0];
+    // When using 32-bit indices, cap the bound at INT32_MAX in index type
+    // before casting. For scalable vectors the runtime size (vscale * dim) is
+    // unknown at compile time, so we can't clamp to `dim` as in the fixed-size
+    // path. Clamping to INT32_MAX is safe because any realistic scalable vector
+    // size fits well below this limit, so a bound >= vscale*dim still produces
+    // an all-true mask after the comparison.
+    if (force32BitVectorIndices) {
+      Value maxBound =
+          arith::ConstantIndexOp::create(rewriter, loc, (1LL << 31) - 1);
+      maskBound = arith::MinSIOp::create(rewriter, loc, maskBound, maxBound);
+    }
+    auto bound =
+        getValueOrCreateCastToIndexLike(rewriter, loc, idxType, maskBound);
     Value bounds = BroadcastOp::create(rewriter, loc, indices.getType(), bound);
     Value comp = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
                                        indices, bounds);
@@ -2226,6 +2245,9 @@ void mlir::populateVectorToLLVMConversionPatterns(
 
 namespace {
 struct VectorToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
+  VectorToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();

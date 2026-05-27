@@ -20,6 +20,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Locked.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/Utility/XcodeSDK.h"
@@ -510,9 +511,6 @@ public:
   ///     \b true if it is, \b false otherwise.
   bool IsLoadedInTarget(Target *target);
 
-  bool LoadScriptingResourceInTarget(Target *target, Status &error,
-                                     Stream &feedback_stream);
-
   /// Get the number of compile units for this module.
   ///
   /// \return
@@ -540,6 +538,11 @@ public:
   ///     remains valid as long as the object is around.
   virtual ObjectFile *GetObjectFile();
 
+  /// Like GetObjectFile, but the returned handle holds the Module mutex for
+  /// its lifetime, serializing concurrent access to the ObjectFile against
+  /// other callers using the locked accessors.
+  LockedPtr<ObjectFile> GetObjectFileLocked();
+
   /// Get the unified section list for the module. This is the section list
   /// created by the module's object file and any debug info and symbol files
   /// created by the symbol vendor.
@@ -550,6 +553,10 @@ public:
   /// \return
   ///     Unified module section list.
   virtual SectionList *GetSectionList();
+
+  /// Like GetSectionList, but the returned handle holds the Module mutex for
+  /// its lifetime.
+  LockedPtr<SectionList> GetSectionListLocked();
 
   /// Notify the module that the file addresses for the Sections have been
   /// updated.
@@ -601,11 +608,20 @@ public:
   virtual SymbolFile *GetSymbolFile(bool can_create = true,
                                     Stream *feedback_strm = nullptr);
 
+  /// Like GetSymbolFile, but the returned handle holds the Module mutex for
+  /// its lifetime.
+  LockedPtr<SymbolFile> GetSymbolFileLocked(bool can_create = true,
+                                            Stream *feedback_strm = nullptr);
+
   /// Get the module's symbol table
   ///
   /// If the symbol table has already been loaded, this function returns it.
   /// Otherwise, it will only be loaded when can_create is true.
   Symtab *GetSymtab(bool can_create = true);
+
+  /// Like GetSymtab, but the returned handle holds the Module mutex for its
+  /// lifetime.
+  LockedPtr<Symtab> GetSymtabLocked(bool can_create = true);
 
   /// Get a reference to the UUID value contained in this object.
   ///
@@ -846,7 +862,7 @@ public:
   ///     /b true if \a orig_spec was successfully located and
   ///     \a new_spec is filled in with an existing file spec,
   ///     \b false otherwise.
-  bool FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec) const;
+  bool FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec);
 
   /// Remaps a source file given \a path into \a new_path.
   ///
@@ -860,8 +876,13 @@ public:
   /// \return
   ///     The newly remapped filespec that is may or may not exist if
   ///     \a path was successfully located.
-  std::optional<std::string> RemapSourceFile(llvm::StringRef path) const;
+  std::optional<std::string> RemapSourceFile(llvm::StringRef path);
   bool RemapSourceFile(const char *, std::string &) const = delete;
+
+  /// Register a directory to be searched for \c compilation-prefix-map.json
+  /// on the first call to RemapSourceFile or FindSourceFile. Duplicate
+  /// directories are silently ignored.
+  void AddPrefixMapSearchDir(FileSpec dir);
 
   /// Update the ArchSpec to a more specific variant.
   bool MergeArchitecture(const ArchSpec &arch_spec);
@@ -1068,6 +1089,15 @@ protected:
   /// module that doesn't match where the sources currently are.
   PathMappingList m_source_mappings =
       ModuleList::GetGlobalModuleListProperties().GetSymlinkMappings();
+
+  /// Directories registered via AddPrefixMapSearchDir, searched lazily on the
+  /// first call to RemapSourceFile or FindSourceFile. Cleared after searching.
+  llvm::DenseSet<ConstString> m_prefix_map_search_dirs;
+
+  /// Search each registered directory upward for compilation-prefix-map.json
+  /// and apply any found mappings to m_source_mappings. Called at most once.
+  /// Must be called with m_mutex held.
+  void LoadPrefixMapsIfNeeded();
 
   lldb::SectionListUP m_sections_up; ///< Unified section list for module that
                                      /// is used by the ObjectFile and

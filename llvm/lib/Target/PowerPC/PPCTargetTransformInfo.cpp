@@ -386,10 +386,9 @@ bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
     Instruction *TI = BB->getTerminator();
     if (!TI) continue;
 
-    if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
+    if (CondBrInst *BI = dyn_cast<CondBrInst>(TI)) {
       uint64_t TrueWeight = 0, FalseWeight = 0;
-      if (!BI->isConditional() ||
-          !extractBranchWeights(*BI, TrueWeight, FalseWeight))
+      if (!extractBranchWeights(*BI, TrueWeight, FalseWeight))
         continue;
 
       // If the exit path is more frequent than the loop path,
@@ -780,7 +779,6 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             TTI::TargetCostKind CostKind,
                                             TTI::OperandValueInfo OpInfo,
                                             const Instruction *I) const {
-
   InstructionCost CostFactor = vectorCostAdjustmentFactor(Opcode, Src, nullptr);
   if (!CostFactor.isValid())
     return InstructionCost::getMax();
@@ -957,7 +955,7 @@ bool PPCTTIImpl::areTypesABICompatible(const Function *Caller,
   });
 }
 
-bool PPCTTIImpl::canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
+bool PPCTTIImpl::canSaveCmp(Loop *L, CondBrInst **BI, ScalarEvolution *SE,
                             LoopInfo *LI, DominatorTree *DT,
                             AssumptionCache *AC,
                             TargetLibraryInfo *LibInfo) const {

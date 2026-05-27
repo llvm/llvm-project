@@ -28,7 +28,7 @@ using namespace ento;
 namespace {
 enum class ObjectState : bool { CtorCalled, DtorCalled };
 } // end namespace
-  // FIXME: Ascending over StackFrameContext maybe another method.
+  // FIXME: Ascending over StackFrame maybe another method.
 
 namespace llvm {
 template <> struct FoldingSetTrait<ObjectState> {
@@ -116,6 +116,11 @@ void VirtualCallChecker::checkPreCall(const CallEvent &Call,
   // Member calls are always represented by a call-expression.
   const auto *CE = cast<CallExpr>(Call.getOriginExpr());
   if (!isVirtualCall(CE))
+    return;
+
+  // Don't warn about virtual calls in system headers (e.g. libraries included
+  // via -isystem), as the user has no control over such code.
+  if (C.getSourceManager().isInSystemHeader(CE->getBeginLoc()))
     return;
 
   const MemRegion *Reg = MC->getCXXThisVal().getAsRegion();

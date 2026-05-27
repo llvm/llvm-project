@@ -60,12 +60,12 @@ unsigned llvmLaunchKernel(const void *func, dim3 gridDim, dim3 blockDim,
                           void *args, size_t sharedMem, void *stream) {
   KernelArgsTy Args = {};
   Args.DynCGroupMem = sharedMem;
-  Args.NumTeams[0] = gridDim.x;
-  Args.NumTeams[1] = gridDim.y;
-  Args.NumTeams[2] = gridDim.z;
-  Args.ThreadLimit[0] = blockDim.x;
-  Args.ThreadLimit[1] = blockDim.y;
-  Args.ThreadLimit[2] = blockDim.z;
+  Args.UserNumBlocks[0] = gridDim.x;
+  Args.UserNumBlocks[1] = gridDim.y;
+  Args.UserNumBlocks[2] = gridDim.z;
+  Args.UserThreadLimit[0] = blockDim.x;
+  Args.UserThreadLimit[1] = blockDim.y;
+  Args.UserThreadLimit[2] = blockDim.z;
   Args.ArgPtrs = reinterpret_cast<void **>(args);
   Args.Flags.IsCUDA = true;
   return __tgt_target_kernel(nullptr, 0, gridDim.x, blockDim.x, func, &Args);

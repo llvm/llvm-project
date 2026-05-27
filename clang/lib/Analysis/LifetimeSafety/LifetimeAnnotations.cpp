@@ -13,6 +13,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/StringSet.h"
 
 namespace clang::lifetimes {
@@ -71,37 +72,52 @@ getLifetimeBoundAttrFromFunctionType(const TypeSourceInfo &TSI) {
   return nullptr;
 }
 
-bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
+const LifetimeBoundAttr *
+getDirectImplicitObjectLifetimeBoundAttr(const FunctionDecl *FD) {
+  if (const TypeSourceInfo *TSI = FD->getTypeSourceInfo())
+    if (const auto *Attr = getLifetimeBoundAttrFromFunctionType(*TSI))
+      return Attr;
+  return nullptr;
+}
+
+const LifetimeBoundAttr *
+getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   // Attribute merging doesn't work well with attributes on function types (like
   // 'this' param). We need to check all redeclarations.
-  auto CheckRedecls = [](const FunctionDecl *F) {
-    return llvm::any_of(F->redecls(), [](const FunctionDecl *Redecl) {
-      const TypeSourceInfo *TSI = Redecl->getTypeSourceInfo();
-      return TSI && getLifetimeBoundAttrFromFunctionType(*TSI);
-    });
+  auto CheckRedecls = [](const FunctionDecl *F) -> const LifetimeBoundAttr * {
+    for (const FunctionDecl *Redecl : F->redecls())
+      if (const auto *Attr = getDirectImplicitObjectLifetimeBoundAttr(Redecl))
+        return Attr;
+    return nullptr;
   };
 
-  if (CheckRedecls(FD))
-    return true;
-  if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern();
-      Pattern && CheckRedecls(Pattern))
+  if (const auto *Attr = CheckRedecls(FD))
+    return Attr;
+  if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern())
+    return CheckRedecls(Pattern);
+  return nullptr;
+}
+
+bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
+  if (getImplicitObjectParamLifetimeBoundAttr(FD))
     return true;
   return isNormalAssignmentOperator(FD);
 }
 
 bool isInStlNamespace(const Decl *D) {
-  const DeclContext *DC = D->getDeclContext();
-  if (!DC)
-    return false;
-  if (const auto *ND = dyn_cast<NamespaceDecl>(DC))
-    if (const IdentifierInfo *II = ND->getIdentifier()) {
-      StringRef Name = II->getName();
-      if (Name.size() >= 2 && Name.front() == '_' &&
-          (Name[1] == '_' || isUppercase(Name[1])))
-        return true;
-    }
-  return DC->isStdNamespace();
+  for (const DeclContext *DC = D->getDeclContext(); DC; DC = DC->getParent()) {
+    if (DC->isStdNamespace())
+      return true;
+    if (const auto *ND = dyn_cast<NamespaceDecl>(DC))
+      if (const IdentifierInfo *II = ND->getIdentifier()) {
+        StringRef Name = II->getName();
+        if (Name.size() >= 2 && Name.front() == '_' &&
+            (Name[1] == '_' || isUppercase(Name[1])))
+          return true;
+      }
+  }
+  return false;
 }
 
 bool isPointerLikeType(QualType QT) {
@@ -112,16 +128,22 @@ static bool isReferenceOrPointerLikeType(QualType QT) {
   return QT->isReferenceType() || isPointerLikeType(QT);
 }
 
-bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
+bool shouldTrackImplicitObjectArg(const Expr &ImplicitObjectArgument,
+                                  const CXXMethodDecl *Callee,
                                   bool RunningUnderLifetimeSafety) {
   if (!Callee)
     return false;
+  // Check both the declaring class and the call-site object: a gsl::Owner
+  // may inherit its accessors from a non-Owner base (e.g. libc++ optional).
+  const bool IsGslOwnerImplicitObject =
+      isGslOwnerType(Callee->getFunctionObjectParameterType()) ||
+      (RunningUnderLifetimeSafety &&
+       isGslOwnerType(ImplicitObjectArgument.getBestDynamicClassType()));
   if (auto *Conv = dyn_cast<CXXConversionDecl>(Callee))
-    if (isGslPointerType(Conv->getConversionType()) &&
-        Callee->getParent()->hasAttr<OwnerAttr>())
+    if (isGslPointerType(Conv->getConversionType()) && IsGslOwnerImplicitObject)
       return true;
   if (!isGslPointerType(Callee->getFunctionObjectParameterType()) &&
-      !isGslOwnerType(Callee->getFunctionObjectParameterType()))
+      !IsGslOwnerImplicitObject)
     return false;
 
   // Begin and end iterators.
@@ -139,9 +161,19 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
   if (RunningUnderLifetimeSafety &&
       isGslPointerType(Callee->getFunctionObjectParameterType()) &&
       isReferenceOrPointerLikeType(Callee->getReturnType())) {
-    if (Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Star ||
-        Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Arrow)
+    // Propagate origins through GSL pointer arithmetic and dereference
+    // operators.
+    switch (Callee->getOverloadedOperator()) {
+    case OO_Arrow:
+    case OO_Star:
+    case OO_Plus:
+    case OO_Minus:
+    case OO_PlusPlus:
+    case OO_MinusMinus:
       return true;
+    default:
+      break;
+    }
     if (Callee->getIdentifier() &&
         (IteratorMembers.contains(Callee->getName()) ||
          InnerPointerGetters.contains(Callee->getName())))
@@ -153,7 +185,12 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
 
   if (isPointerLikeType(Callee->getReturnType())) {
     if (!Callee->getIdentifier())
-      return false;
+      // e.g., std::optional<T>::operator->() returns T*.
+      return RunningUnderLifetimeSafety
+                 ? IsGslOwnerImplicitObject &&
+                       Callee->getOverloadedOperator() ==
+                           OverloadedOperatorKind::OO_Arrow
+                 : false;
     return IteratorMembers.contains(Callee->getName()) ||
            InnerPointerGetters.contains(Callee->getName()) ||
            ContainerFindFns.contains(Callee->getName());
@@ -161,7 +198,7 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
   if (Callee->getReturnType()->isReferenceType()) {
     if (!Callee->getIdentifier()) {
       auto OO = Callee->getOverloadedOperator();
-      if (!Callee->getParent()->hasAttr<OwnerAttr>())
+      if (!IsGslOwnerImplicitObject)
         return false;
       return OO == OverloadedOperatorKind::OO_Subscript ||
              OO == OverloadedOperatorKind::OO_Star;
@@ -225,8 +262,23 @@ bool shouldTrackFirstArgument(const FunctionDecl *FD) {
   return false;
 }
 
-template <typename T> static bool isRecordWithAttr(QualType Type) {
-  auto *RD = Type->getAsCXXRecordDecl();
+bool shouldTrackSecondArgument(const FunctionDecl *FD) {
+  if (FD->getNumParams() < 2)
+    return false;
+  const auto *RD = FD->getParamDecl(1)->getType()->getAsCXXRecordDecl();
+  if (!RD)
+    return false;
+  // For free-standing `+`/`-` operators annotated with `gsl::Pointer`, track
+  // the second parameter when its type matches the return type.
+  return RD->hasAttr<PointerAttr>() &&
+         (FD->getOverloadedOperator() == OO_Plus ||
+          FD->getOverloadedOperator() == OO_Minus) &&
+         ASTContext::hasSameUnqualifiedType(FD->getParamDecl(1)->getType(),
+                                            FD->getReturnType()) &&
+         !isa<CXXMethodDecl>(FD);
+}
+
+template <typename T> static bool isRecordWithAttr(const CXXRecordDecl *RD) {
   if (!RD)
     return false;
   // Generally, if a primary template class declaration is annotated with an
@@ -252,14 +304,27 @@ template <typename T> static bool isRecordWithAttr(QualType Type) {
   return Result;
 }
 
+template <typename T> static bool isRecordWithAttr(QualType Type) {
+  return isRecordWithAttr<T>(Type->getAsCXXRecordDecl());
+}
+
 bool isGslPointerType(QualType QT) { return isRecordWithAttr<PointerAttr>(QT); }
 bool isGslOwnerType(QualType QT) { return isRecordWithAttr<OwnerAttr>(QT); }
+bool isGslOwnerType(const CXXRecordDecl *RD) {
+  return isRecordWithAttr<OwnerAttr>(RD);
+}
 
 static StringRef getName(const CXXRecordDecl &RD) {
   if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(&RD))
     return CTSD->getSpecializedTemplate()->getName();
   if (RD.getIdentifier())
     return RD.getName();
+  return "";
+}
+
+static StringRef getName(const FunctionDecl &FD) {
+  if (FD.getIdentifier())
+    return FD.getName();
   return "";
 }
 
@@ -272,28 +337,92 @@ bool isUniquePtrRelease(const CXXMethodDecl &MD) {
          MD.getNumParams() == 0 && isStdUniquePtr(*MD.getParent());
 }
 
-bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
+bool isInvalidationMethod(const CXXMethodDecl &MD) {
   const CXXRecordDecl *RD = MD.getParent();
   if (!isInStlNamespace(RD))
     return false;
 
-  StringRef ContainerName = getName(*RD);
-  static const llvm::StringSet<> Containers = {
-      // Sequence
-      "vector", "basic_string", "deque",
-      // Adaptors
-      // FIXME: Add queue and stack and check for underlying container (e.g. no
-      // invalidation for std::list).
-      "priority_queue",
-      // Associative
-      "set", "multiset", "map", "multimap",
-      // Unordered Associative
-      "unordered_set", "unordered_multiset", "unordered_map",
-      "unordered_multimap",
-      // C++23 Flat
-      "flat_map", "flat_set", "flat_multimap", "flat_multiset"};
+  // `pop_back` is excluded: it only invalidates references to the removed
+  // element, not to other elements.
+  static const llvm::StringSet<> Vector = {// Insertion
+                                           "insert", "emplace", "emplace_back",
+                                           "push_back", "insert_range",
+                                           "append_range",
+                                           // Removal
+                                           "erase", "clear",
+                                           // Memory management
+                                           "reserve", "resize", "shrink_to_fit",
+                                           // Assignment
+                                           "assign", "assign_range"};
 
-  if (!Containers.contains(ContainerName))
+  // `pop_*` methods are excluded: they only invalidate references to the
+  // removed element, not to other elements.
+  static const llvm::StringSet<> Deque = {// Insertion
+                                          "insert", "emplace", "insert_range",
+                                          // Removal
+                                          "erase", "clear",
+                                          // Memory management
+                                          "resize", "shrink_to_fit",
+                                          // Assignment
+                                          "assign", "assign_range"};
+
+  static const llvm::StringSet<> String = {
+      // Insertion
+      "insert", "push_back", "append", "replace", "replace_with_range",
+      "insert_range", "append_range",
+      // Removal
+      "pop_back", "erase", "clear",
+      // Memory management
+      "reserve", "resize", "resize_and_overwrite", "shrink_to_fit",
+      // Assignment
+      "swap", "assign", "assign_range"};
+
+  // FIXME: Add queue and stack and check for underlying container
+  // (e.g. no invalidation for std::list).
+  static const llvm::StringSet<> PriorityQueue = {// Insertion
+                                                  "push", "emplace",
+                                                  "push_range",
+                                                  // Removal
+                                                  "pop"};
+
+  // `erase` and `extract` are excluded: they only affect the removed element,
+  // not to other elements.
+  static const llvm::StringSet<> NodeBased = {// Removal
+                                              "clear"};
+
+  // For `flat_*` container adaptors, `try_emplace` and `insert_or_assign`
+  // only exist on `flat_map`. Listing them here is harmless since the methods
+  // won't be found on other types.
+  static const llvm::StringSet<> Flat = {// Insertion
+                                         "insert", "emplace", "emplace_hint",
+                                         "try_emplace", "insert_or_assign",
+                                         "insert_range", "merge",
+                                         // Removal
+                                         "extract", "erase", "clear",
+                                         // Assignment
+                                         "replace"};
+
+  static const llvm::StringSet<> UniquePtr = {// Reallocation
+                                              "reset"};
+
+  const StringRef RecordName = getName(*RD);
+  // TODO: Consider caching this lookup by CXXMethodDecl pointer if this
+  // StringSwitch becomes a performance bottleneck.
+  const llvm::StringSet<> *InvalidatingMethods =
+      llvm::StringSwitch<const llvm::StringSet<> *>(RecordName)
+          .Case("vector", &Vector)
+          .Case("basic_string", &String)
+          .Case("deque", &Deque)
+          .Case("priority_queue", &PriorityQueue)
+          .Cases({"set", "multiset", "map", "multimap", "unordered_set",
+                  "unordered_multiset", "unordered_map", "unordered_multimap"},
+                 &NodeBased)
+          .Cases({"flat_map", "flat_set", "flat_multimap", "flat_multiset"},
+                 &Flat)
+          .Case("unique_ptr", &UniquePtr)
+          .Default(nullptr);
+
+  if (!InvalidatingMethods)
     return false;
 
   // Handle Operators via OverloadedOperatorKind
@@ -303,13 +432,10 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
     case OO_Equal:     // operator= : Always invalidates (Assignment)
     case OO_PlusEqual: // operator+= : Append (String/Vector)
       return true;
-    case OO_Subscript: // operator[] : Invalidation only for Maps
-                       // (Insert-or-access)
-    {
-      static const llvm::StringSet<> MapContainers = {"map", "unordered_map",
-                                                      "flat_map"};
-      return MapContainers.contains(ContainerName);
-    }
+    case OO_Subscript: // operator[] : Invalidation only for
+                       // `flat_map` (Insert-or-access).
+                       // `map` and `unordered_map` are excluded.
+      return RecordName == "flat_map";
     default:
       return false;
     }
@@ -318,41 +444,20 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
   if (!MD.getIdentifier())
     return false;
 
-  StringRef MethodName = MD.getName();
-
-  // Special handling for 'erase':
-  // It invalidates the whole container (effectively) for contiguous/flat
-  // storage, but is safe for other iterators in node-based containers.
-  if (MethodName == "erase") {
-    static const llvm::StringSet<> NodeBasedContainers = {"map",
-                                                          "set",
-                                                          "multimap",
-                                                          "multiset",
-                                                          "unordered_map",
-                                                          "unordered_set",
-                                                          "unordered_multimap",
-                                                          "unordered_multiset"};
-
-    // 'erase' invalidates for non node-based containers (vector, deque, string,
-    // flat_map).
-    return !NodeBasedContainers.contains(ContainerName);
-  }
-
-  static const llvm::StringSet<> InvalidatingMembers = {
-      // Basic Insertion/Emplacement
-      "push_front", "push_back", "emplace_front", "emplace_back", "insert",
-      "emplace", "push",
-      // Basic Removal/Clearing
-      "pop_front", "pop_back", "pop", "clear",
-      // Memory Management
-      "reserve", "resize", "shrink_to_fit",
-      // Assignment (Named)
-      "assign", "swap",
-      // String Specifics
-      "append", "replace",
-      // Modern C++ (C++17/23)
-      "extract", "try_emplace", "insert_range", "append_range", "assign_range"};
-
-  return InvalidatingMembers.contains(MethodName);
+  return InvalidatingMethods->contains(MD.getName());
 }
+
+bool destructsFirstArg(const FunctionDecl &FD) {
+  if (isa<CXXDestructorDecl>(FD))
+    return true;
+  return isInStlNamespace(&FD) && getName(FD) == "destroy_at";
+}
+
+bool isStdCallableWrapperType(const CXXRecordDecl *RD) {
+  if (!RD || !isInStlNamespace(RD))
+    return false;
+  StringRef Name = getName(*RD);
+  return Name == "function" || Name == "move_only_function";
+}
+
 } // namespace clang::lifetimes

@@ -21,33 +21,27 @@ void test1() {
 }
 
 // CIR: cir.func {{.*}} @_Z5test1v()
+// CIR:   %[[REF_TMP0:.+]] = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["ref.tmp0"]
+// CIR:   %[[TMP:.+]]      = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["tmp"]
 // CIR:   cir.scope {
-// CIR:     %[[REF_TMP0:.+]] = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["ref.tmp0"]
-// CIR:     %[[TMP:.+]]      = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["tmp"]
-// CIR:     cir.scope {
-// CIR:       %[[A:.+]] = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["a", init]
-// CIR:       cir.call @_ZN1AC2Ev(%[[A]]) : (!cir.ptr<!rec_A> {{.*}}) -> ()
-// CIR:       cir.call @_ZN1AC2ERS_(%[[REF_TMP0]], %[[A]]) : (!cir.ptr<!rec_A> {{.*}}, !cir.ptr<!rec_A> {{.*}}) -> ()
-// CIR:     }
-// CIR:     cir.call @_ZN1A3FooEv(%[[REF_TMP0]]) : (!cir.ptr<!rec_A> {{.*}}) -> ()
+// CIR:     %[[A:.+]] = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["a", init]
+// CIR:     cir.call @_ZN1AC2Ev(%[[A]]) : (!cir.ptr<!rec_A> {{.*}}) -> ()
+// CIR:     cir.call @_ZN1AC2ERS_(%[[REF_TMP0]], %[[A]]) : (!cir.ptr<!rec_A> {{.*}}, !cir.ptr<!rec_A> {{.*}}) -> ()
 // CIR:   }
+// CIR:   cir.call @_ZN1A3FooEv(%[[REF_TMP0]]) : (!cir.ptr<!rec_A> {{.*}}) -> ()
 // CIR:   cir.return
 
 // LLVM: define dso_local void @_Z5test1v()
-// LLVM:   %[[VAR1:.+]] = alloca %class.A, i64 1
-// LLVM:   %[[VAR2:.+]] = alloca %class.A, i64 1
-// LLVM:   %[[VAR3:.+]] = alloca %class.A, i64 1
+// LLVM:   %[[A:.+]] = alloca %class.A, i64 1
+// LLVM:   %[[REF_TMP:.+]] = alloca %class.A, i64 1
+// LLVM:   %[[TMP:.+]] = alloca %class.A, i64 1
 // LLVM:   br label %[[LBL4:.+]]
 // LLVM: [[LBL4]]:
+// LLVM:     call void @_ZN1AC2Ev(ptr {{.*}} %[[A]])
+// LLVM:     call void @_ZN1AC2ERS_(ptr {{.*}} %[[REF_TMP]], ptr {{.*}} %[[A]])
 // LLVM:     br label %[[LBL5:.+]]
 // LLVM: [[LBL5]]:
-// LLVM:     call void @_ZN1AC2Ev(ptr {{.*}} %[[VAR3]])
-// LLVM:     call void @_ZN1AC2ERS_(ptr {{.*}} %[[VAR1]], ptr {{.*}} %[[VAR3]])
-// LLVM:     br label %[[LBL6:.+]]
-// LLVM: [[LBL6]]:
-// LLVM:     call void @_ZN1A3FooEv(ptr {{.*}} %[[VAR1]])
-// LLVM:     br label %[[LBL7:.+]]
-// LLVM: [[LBL7]]:
+// LLVM:     call void @_ZN1A3FooEv(ptr {{.*}} %[[REF_TMP]])
 // LLVM:     ret void
 
 // OGCG: define dso_local void @_Z5test1v()
@@ -70,7 +64,12 @@ void cleanup() {
 // CIR: cir.func {{.*}} @_Z7cleanupv()
 // CIR:   cir.scope {
 // CIR:     %[[WD:.+]] = cir.alloca !rec_with_dtor, !cir.ptr<!rec_with_dtor>, ["wd"]
-// CIR:     cir.call @_ZN9with_dtorD1Ev(%[[WD]]) nothrow : (!cir.ptr<!rec_with_dtor> {{.*}}) -> ()
+// CIR:     cir.cleanup.scope {
+// CIR:       cir.yield
+// CIR:     } cleanup normal {
+// CIR:       cir.call @_ZN9with_dtorD1Ev(%[[WD]]) nothrow : (!cir.ptr<!rec_with_dtor> {{.*}}) -> ()
+// CIR:       cir.yield
+// CIR:     }
 // CIR:   }
 // CIR:   cir.return
 

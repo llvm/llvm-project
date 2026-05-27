@@ -196,7 +196,8 @@ public:
 
   // Copy the cells in the intersection of
   // the rows between `fromRows` and `toRows` and
-  // the columns between `fromColumns` and `toColumns`, both inclusive.
+  // the columns between `fromColumns` and `toColumns`, inclusive on the left
+  // but exclusive on the right (same as canonical C++ ranges).
   Matrix<T> getSubMatrix(unsigned fromRow, unsigned toRow, unsigned fromColumn,
                          unsigned toColumn) const;
 
@@ -233,6 +234,9 @@ public:
   /// The left shift operation (i.e. dstPos < srcPos) works in a similar way.
   void moveColumns(unsigned srcPos, unsigned num, unsigned dstPos);
 
+  /// Returns the matrix right-multiplied with `other`.
+  Matrix<T> postMultiply(const Matrix<T> &other) const;
+
 protected:
   /// The current number of rows, columns, and reserved columns. The underlying
   /// data vector is viewed as an nRows x nReservedColumns matrix, of which the
@@ -251,6 +255,7 @@ extern template class Matrix<Fraction>;
 // An inherited class for integer matrices, with no new data attributes.
 // This is only used for the matrix-related methods which apply only
 // to integers (hermite normal form computation and row normalisation).
+class FracMatrix;
 class IntMatrix : public Matrix<DynamicAPInt> {
 public:
   IntMatrix(unsigned rows, unsigned columns, unsigned reservedRows = 0,
@@ -274,6 +279,15 @@ public:
   ///    pivot.
   std::pair<IntMatrix, IntMatrix> computeHermiteNormalForm() const;
 
+  /// Given the current matrix M, returns the matrices U, D, V such that
+  /// UMV = D, where D is called the Smith Normal Form (SNF).
+  /// The matrices have the following properties:
+  ///   - U, V are unimodular. In other words, det(U), det(V) are 1 or -1;
+  ///     their inverses also contain integer entries.
+  ///   - D is diagonal.
+  ///   - For all i, the diagonal element D_{i, i} divides D_{i + 1, i + 1}.
+  std::tuple<IntMatrix, IntMatrix, IntMatrix> computeSmithNormalForm() const;
+
   /// Divide the first `nCols` of the specified row by their GCD.
   /// Returns the GCD of the first `nCols` of the specified row.
   DynamicAPInt normalizeRow(unsigned row, unsigned nCols);
@@ -289,6 +303,9 @@ public:
   // M x M' = M'  M = det(M) x I.
   // Assert-fails if the matrix is not square.
   DynamicAPInt determinant(IntMatrix *inverse = nullptr) const;
+
+  // Converts the matrix into a FracMatrix as-is.
+  FracMatrix asFracMatrix() const;
 };
 
 // An inherited class for rational matrices, with no new data attributes.
@@ -327,6 +344,10 @@ public:
   // Multiply each row of the matrix by the LCM of the denominators, thereby
   // converting it to an integer matrix.
   IntMatrix normalizeRows() const;
+
+  // Converts the matrix to an IntMatrix as-is. If any value in the matrix
+  // is not an integer, the function triggers an assertion failure.
+  IntMatrix asIntMatrix() const;
 };
 
 } // namespace presburger

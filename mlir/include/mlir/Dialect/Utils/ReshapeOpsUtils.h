@@ -90,9 +90,14 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
   if (reshapeOp.getSrcType() == reshapeOp.getType())
     return reshapeOp.getSrc();
 
-  // Reshape of a constant can be replaced with a new constant.
-  if (auto elements = dyn_cast_or_null<DenseElementsAttr>(operands.front()))
-    return elements.reshape(cast<ShapedType>(reshapeOp.getResult().getType()));
+  // Reshape of a constant can be replaced with a new constant, but only when
+  // the result type has a static shape. DenseElementsAttr::reshape requires
+  // a static shape to preserve the element count invariant.
+  if (auto elements = dyn_cast_or_null<DenseElementsAttr>(operands.front())) {
+    auto resultType = cast<ShapedType>(reshapeOp.getResult().getType());
+    if (resultType.hasStaticShape())
+      return elements.reshape(resultType);
+  }
 
   // Fold if the producer reshape source has the same shape with at most 1
   // dynamic dimension.

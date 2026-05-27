@@ -121,8 +121,8 @@ Serializer::processSpecConstantCompositeOp(spirv::SpecConstantCompositeOp op) {
     operands.push_back(constituentID);
   }
 
-  encodeInstructionInto(typesGlobalValues,
-                        spirv::Opcode::OpSpecConstantComposite, operands);
+  encodeInstructionWithContinuationInto(
+      typesGlobalValues, spirv::Opcode::OpSpecConstantComposite, operands);
   specConstIDMap[op.getSymName()] = resultID;
 
   return processName(resultID, op.getSymName());
@@ -880,6 +880,34 @@ Serializer::processOp<spirv::ExecutionModeOp>(spirv::ExecutionModeOp op) {
     }
   }
   encodeInstructionInto(executionModes, spirv::Opcode::OpExecutionMode,
+                        operands);
+  return success();
+}
+
+template <>
+LogicalResult
+Serializer::processOp<spirv::ExecutionModeIdOp>(spirv::ExecutionModeIdOp op) {
+  SmallVector<uint32_t, 4> operands;
+  // Add the function <id>.
+  uint32_t funcID = getFunctionID(op.getFn());
+  if (!funcID)
+    return op.emitError("missing <id> for function ")
+           << op.getFn()
+           << "; function needs to be serialized before ExecutionModeIdOp is "
+              "serialized";
+
+  operands.push_back(funcID);
+  operands.push_back(static_cast<uint32_t>(op.getExecutionMode()));
+
+  for (Attribute refVal : op.getValues().getValue()) {
+    uint32_t id = getSpecConstID(cast<FlatSymbolRefAttr>(refVal).getValue());
+    if (!id)
+      return op.emitError("unknown <id> for specialization constant ")
+             << cast<FlatSymbolRefAttr>(refVal).getValue();
+
+    operands.push_back(id);
+  }
+  encodeInstructionInto(executionModes, spirv::Opcode::OpExecutionModeId,
                         operands);
   return success();
 }

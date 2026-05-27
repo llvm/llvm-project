@@ -45,7 +45,10 @@ void GpuModuleToBinaryPass::runOnOperation() {
           .Cases({"fatbinary", "fatbin"}, CompilationTarget::Fatbin)
           .Default(std::nullopt);
   if (!targetFormat) {
-    getOperation()->emitError() << "Invalid format specified.";
+    getOperation()->emitError()
+        << "Invalid format specified: '" << compilationTarget
+        << "' (expected one of: offloading, llvm, assembly, isa, binary, bin, "
+           "fatbinary, fatbin)";
     return signalPassFailure();
   }
 

@@ -30,14 +30,14 @@ def adapt_cmake(module_path: str, check_name_camel: str) -> bool:
     with open(filename, "r", encoding="utf8") as f:
         lines = f.readlines()
 
-    cpp_file = check_name_camel + ".cpp"
+    cpp_file = f"{check_name_camel}.cpp"
 
     # Figure out whether this check already exists.
     for line in lines:
         if line.strip() == cpp_file:
             return False
 
-    print("Updating %s..." % filename)
+    print(f"Updating {filename}...")
     with open(filename, "w", encoding="utf8", newline="\n") as f:
         cpp_found = False
         file_added = False
@@ -46,7 +46,7 @@ def adapt_cmake(module_path: str, check_name_camel: str) -> bool:
             if (not file_added) and (cpp_line or cpp_found):
                 cpp_found = True
                 if (line.strip() > cpp_file) or (not cpp_line):
-                    f.write("  " + cpp_file + "\n")
+                    f.write(f"  {cpp_file}\n")
                     file_added = True
             f.write(line)
 
@@ -77,15 +77,12 @@ def write_header(
         )
     else:
         override_supported = ""
-    filename = os.path.join(module_path, check_name_camel) + ".h"
-    print("Creating %s..." % filename)
+    filename = f"{os.path.join(module_path, check_name_camel)}.h"
+    print(f"Creating {filename}...")
     with open(filename, "w", encoding="utf8", newline="\n") as f:
         header_guard = (
-            "LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_"
-            + module.upper()
-            + "_"
-            + check_name_camel.upper()
-            + "_H"
+            f"LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_{module.upper()}_"
+            f"{check_name_camel.upper()}_H"
         )
         f.write(
             """\
@@ -136,8 +133,8 @@ public:
 def write_implementation(
     module_path: str, module: str, namespace: str, check_name_camel: str
 ) -> None:
-    filename = os.path.join(module_path, check_name_camel) + ".cpp"
-    print("Creating %s..." % filename)
+    filename = f"{os.path.join(module_path, check_name_camel)}.cpp"
+    print(f"Creating {filename}...")
     with open(filename, "w", encoding="utf8", newline="\n") as f:
         f.write(
             """\
@@ -182,7 +179,7 @@ void %(check_name)s::check(const MatchFinder::MatchResult &Result) {
 def get_module_filename(module_path: str, module: str) -> str:
     modulecpp = list(
         filter(
-            lambda p: p.lower() == module.lower() + "tidymodule.cpp",
+            lambda p: p.lower() == f"{module.lower()}tidymodule.cpp",
             os.listdir(module_path),
         )
     )[0]
@@ -197,18 +194,15 @@ def adapt_module(
     with open(filename, "r", encoding="utf8") as f:
         lines = f.readlines()
 
-    print("Updating %s..." % filename)
+    print(f"Updating {filename}...")
     with open(filename, "w", encoding="utf8", newline="\n") as f:
         header_added = False
         header_found = False
         check_added = False
-        check_fq_name = module + "-" + check_name
+        check_fq_name = f"{module}-{check_name}"
         check_decl = (
-            "    CheckFactories.registerCheck<"
-            + check_name_camel
-            + '>(\n        "'
-            + check_fq_name
-            + '");\n'
+            f"    CheckFactories.registerCheck<{check_name_camel}>(\n"
+            f'        "{check_fq_name}");\n'
         )
 
         lines_iter = iter(lines)
@@ -220,10 +214,10 @@ def adapt_module(
                         header_found = True
                         if match.group(1) > check_name_camel:
                             header_added = True
-                            f.write('#include "' + check_name_camel + '.h"\n')
+                            f.write(f'#include "{check_name_camel}.h"\n')
                     elif header_found:
                         header_added = True
-                        f.write('#include "' + check_name_camel + '.h"\n')
+                        f.write(f'#include "{check_name_camel}.h"\n')
 
                 if not check_added:
                     if line.strip() == "}":
@@ -263,7 +257,7 @@ def add_release_notes(
             description, width=80, initial_indent="  ", subsequent_indent="  "
         )
     )
-    check_name_dashes = module + "-" + check_name
+    check_name_dashes = f"{module}-{check_name}"
     filename = os.path.normpath(
         os.path.join(module_path, "../../docs/ReleaseNotes.rst")
     )
@@ -274,7 +268,7 @@ def add_release_notes(
     nextSectionMatcher = re.compile("New check aliases")
     checkMatcher = re.compile("- New :doc:`(.*)")
 
-    print("Updating %s..." % filename)
+    print(f"Updating {filename}...")
     with open(filename, "w", encoding="utf8", newline="\n") as f:
         note_added = False
         header_found = False
@@ -302,13 +296,12 @@ def add_release_notes(
                 if header_found and add_note_here:
                     if not line.startswith("^^^^"):
                         f.write(
-                            """- New :doc:`%s
-  <clang-tidy/checks/%s/%s>` check.
+                            f"""- New :doc:`{check_name_dashes}
+  <clang-tidy/checks/{module}/{check_name}>` check.
 
-%s
+{wrapped_desc}
 
 """
-                            % (check_name_dashes, module, check_name, wrapped_desc)
                         )
                         note_added = True
 
@@ -324,7 +317,7 @@ def write_test(
     test_standard: Optional[str],
 ) -> None:
     test_standard = f"-std={test_standard}-or-later " if test_standard else ""
-    check_name_dashes = module + "-" + check_name
+    check_name_dashes = f"{module}-{check_name}"
     filename = os.path.normpath(
         os.path.join(
             module_path,
@@ -334,10 +327,10 @@ def write_test(
             "clang-tidy",
             "checkers",
             module,
-            check_name + "." + test_extension,
+            f"{check_name}.{test_extension}",
         )
     )
-    print("Creating %s..." % filename)
+    print(f"Creating {filename}...")
     with open(filename, "w", encoding="utf8", newline="\n") as f:
         f.write(
             """\
@@ -402,8 +395,8 @@ def update_checks_list(clang_tidy_path: str) -> None:
             return ""
         with open(module_file, "r") as f:
             code = f.read()
-            full_check_name = module_name + "-" + check_name
-            if (name_pos := code.find('"' + full_check_name + '"')) == -1:
+            full_check_name = f"{module_name}-{check_name}"
+            if (name_pos := code.find(f'"{full_check_name}"')) == -1:
                 return ""
             if (stmt_end_pos := code.find(";", name_pos)) == -1:
                 return ""
@@ -423,24 +416,24 @@ def update_checks_list(clang_tidy_path: str) -> None:
                     )
                 else:
                     class_path = os.path.join(clang_tidy_path, module_name)
-                return get_actual_filename(class_path, class_name + ".cpp")
+                return get_actual_filename(class_path, f"{class_name}.cpp")
 
         return ""
 
     # Examine code looking for a c'tor definition to get the base class name.
     def get_base_class(code: str, check_file: str) -> str:
         check_class_name = os.path.splitext(os.path.basename(check_file))[0]
-        ctor_pattern = check_class_name + r"\([^:]*\)\s*:\s*([A-Z][A-Za-z0-9]*Check)\("
-        matches = re.search(r"\s+" + check_class_name + "::" + ctor_pattern, code)
+        ctor_pattern = rf"{check_class_name}\([^:]*\)\s*:\s*([A-Z][A-Za-z0-9]*Check)\("
+        matches = re.search(rf"\s+{check_class_name}::{ctor_pattern}", code)
 
         # The constructor might be inline in the header.
         if not matches:
-            header_file = os.path.splitext(check_file)[0] + ".h"
+            header_file = f"{os.path.splitext(check_file)[0]}.h"
             if not os.path.isfile(header_file):
                 return ""
             with open(header_file, encoding="utf8") as f:
                 code = f.read()
-            matches = re.search(" " + ctor_pattern, code)
+            matches = re.search(rf" {ctor_pattern}", code)
 
         if matches and matches[1] != "ClangTidyCheck":
             return matches[1]
@@ -465,13 +458,13 @@ def update_checks_list(clang_tidy_path: str) -> None:
 
         check_file = get_actual_filename(
             os.path.join(clang_tidy_path, dirname),
-            get_camel_check_name(check_name) + ".cpp",
+            f"{get_camel_check_name(check_name)}.cpp",
         )
         if not os.path.isfile(check_file):
             # Some older checks don't end with 'Check.cpp'
             check_file = get_actual_filename(
                 os.path.join(clang_tidy_path, dirname),
-                get_camel_name(check_name) + ".cpp",
+                f"{get_camel_name(check_name)}.cpp",
             )
             if not os.path.isfile(check_file):
                 # Some checks aren't in a file based on the check name.
@@ -485,7 +478,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
                 return ' "Yes"'
 
         if base_class := get_base_class(code, check_file):
-            base_file = os.path.join(clang_tidy_path, dirname, base_class + ".cpp")
+            base_file = os.path.join(clang_tidy_path, dirname, f"{base_class}.cpp")
             if os.path.isfile(base_file):
                 with open(base_file, encoding="utf8") as f:
                     code = f.read()
@@ -494,8 +487,39 @@ def update_checks_list(clang_tidy_path: str) -> None:
 
         return ""
 
-    def process_doc(doc_file: Tuple[str, str]) -> Tuple[str, Optional[Match[str]]]:
-        check_name = doc_file[0] + "-" + doc_file[1].replace(".rst", "")
+    def detect_alias_target(check_name: str, content: str) -> Optional[str]:
+        """Return the :doc: target for non-redirect alias pages.
+
+        This recognizes pages that keep their own documentation content, but
+        whose paragraph explicitly states that the current check is an
+        alias of another check.
+        """
+        paragraphs = [
+            re.sub(r"\s+", " ", paragraph.strip())
+            for paragraph in re.split(r"\n\s*\n", content)
+            if paragraph.strip()
+        ]
+
+        self_alias = re.compile(
+            r"^This check is an alias(?: of check| for)\b",
+            re.IGNORECASE,
+        )
+        named_alias = re.compile(
+            rf"^The\s+`?{re.escape(check_name)}(?:\s+check)?`?"
+            rf"(?:\s+check)?\s+is\s+an\s+alias,?\s+please\s+see\b",
+            re.IGNORECASE,
+        )
+
+        for paragraph in paragraphs:
+            if self_alias.search(paragraph) or named_alias.search(paragraph):
+                if match := re.search(r":doc:`[^`<]+?<([^>]+)>`", paragraph):
+                    return match.group(1)
+                if match := re.search(r"`[^`<]+?<(.+?)\.html(?:#[^>]+)?>`_", paragraph):
+                    return match.group(1)
+        return None
+
+    def process_doc(doc_file: Tuple[str, str]) -> Tuple[str, Optional[str]]:
+        check_name = f"{doc_file[0]}-{doc_file[1].replace('.rst', '')}"
 
         with open(os.path.join(docs_dir, *doc_file), "r", encoding="utf8") as doc:
             content = doc.read()
@@ -504,76 +528,64 @@ def update_checks_list(clang_tidy_path: str) -> None:
                 # Orphan page, don't list it.
                 return "", None
 
-            match = re.search(r".*:http-equiv=refresh: \d+;URL=(.*).html(.*)", content)
-            # Is it a redirect?
-            return check_name, match
+            return check_name, detect_alias_target(check_name, content)
 
     def format_link(doc_file: Tuple[str, str]) -> str:
         check_name, match = process_doc(doc_file)
         if not match and check_name and not check_name.startswith("clang-analyzer-"):
-            return "   :doc:`%(check_name)s <%(module)s/%(check)s>`,%(autofix)s\n" % {
-                "check_name": check_name,
-                "module": doc_file[0],
-                "check": doc_file[1].replace(".rst", ""),
-                "autofix": has_auto_fix(check_name),
-            }
+            return (
+                f"   :doc:`{check_name} <{doc_file[0]}/{doc_file[1].replace('.rst', '')}>`,"
+                f"{has_auto_fix(check_name)}\n"
+            )
         else:
             return ""
 
     def format_link_alias(doc_file: Tuple[str, str]) -> str:
         check_name, match = process_doc(doc_file)
-        if (match or (check_name.startswith("clang-analyzer-"))) and check_name:
-            module = doc_file[0]
-            check_file = doc_file[1].replace(".rst", "")
-            if (
-                not match
-                or match.group(1) == "https://clang.llvm.org/docs/analyzer/checkers"
-            ):
-                title = "Clang Static Analyzer " + check_file
-                # Preserve the anchor in checkers.html from group 2.
-                target = "" if not match else match.group(1) + ".html" + match.group(2)
-                autofix = ""
-                ref_begin = ""
-                ref_end = "_"
-            else:
-                redirect_parts = re.search(r"^\.\./([^/]*)/([^/]*)$", match.group(1))
-                assert redirect_parts
-                title = redirect_parts[1] + "-" + redirect_parts[2]
-                target = redirect_parts[1] + "/" + redirect_parts[2]
-                autofix = has_auto_fix(title)
-                ref_begin = ":doc:"
-                ref_end = ""
+        is_clang_analyzer = check_name.startswith("clang-analyzer-")
+        if not check_name or (not match and not is_clang_analyzer):
+            return ""
 
-            if target:
-                # The checker is just a redirect.
-                return (
-                    "   :doc:`%(check_name)s <%(module)s/%(check_file)s>`, %(ref_begin)s`%(title)s <%(target)s>`%(ref_end)s,%(autofix)s\n"
-                    % {
-                        "check_name": check_name,
-                        "module": module,
-                        "check_file": check_file,
-                        "target": target,
-                        "title": title,
-                        "autofix": autofix,
-                        "ref_begin": ref_begin,
-                        "ref_end": ref_end,
-                    }
-                )
-            else:
-                # The checker is just a alias without redirect.
-                return (
-                    "   :doc:`%(check_name)s <%(module)s/%(check_file)s>`, %(title)s,%(autofix)s\n"
-                    % {
-                        "check_name": check_name,
-                        "module": module,
-                        "check_file": check_file,
-                        "title": title,
-                        "autofix": autofix,
-                    }
-                )
-        return ""
+        module = doc_file[0]
+        check_file = doc_file[1].replace(".rst", "")
+        if is_clang_analyzer:
+            title = f"Clang Static Analyzer {check_file}"
+            # Clang Static Analyzer aliases still need the external redirect
+            # target so list.rst can link to the upstream analyzer docs.
+            with open(os.path.join(docs_dir, *doc_file), "r", encoding="utf8") as doc:
+                content = doc.read()
+            redirect = re.search(
+                r".*:http-equiv=refresh: \d+;URL=(.*).html(.*)", content
+            )
+            # Preserve the anchor in checkers.html from group 2.
+            target = (
+                "" if not redirect else f"{redirect.group(1)}.html{redirect.group(2)}"
+            )
+            autofix = ""
+            ref_begin = ""
+            ref_end = "_"
+        else:
+            # Match neighbour or current-directory doc targets.
+            redirect_parts = re.search(r"^(?:\.\./([^/]+)/)?([^/]+)$", match)
+            assert redirect_parts
+            redirect_module = redirect_parts[1] or module
+            title = f"{redirect_module}-{redirect_parts[2]}"
+            target = f"{redirect_module}/{redirect_parts[2]}"
+            autofix = has_auto_fix(title)
+            ref_begin = ":doc:"
+            ref_end = ""
 
-    print("Updating %s..." % filename)
+        if target:
+            # The checker is just a redirect.
+            return (
+                f"   :doc:`{check_name} <{module}/{check_file}>`, "
+                f"{ref_begin}`{title} <{target}>`{ref_end},{autofix}\n"
+            )
+
+        # The checker is just a alias without redirect.
+        return f"   :doc:`{check_name} <{module}/{check_file}>`, {title},{autofix}\n"
+
+    print(f"Updating {filename}...")
     with open(filename, "w", encoding="utf8", newline="\n") as f:
         for line in lines:
             f.write(line)
@@ -591,13 +603,13 @@ def update_checks_list(clang_tidy_path: str) -> None:
 
 # Adds a documentation for the check.
 def write_docs(module_path: str, module: str, check_name: str) -> None:
-    check_name_dashes = module + "-" + check_name
+    check_name_dashes = f"{module}-{check_name}"
     filename = os.path.normpath(
         os.path.join(
-            module_path, "../../docs/clang-tidy/checks/", module, check_name + ".rst"
+            module_path, "../../docs/clang-tidy/checks/", module, f"{check_name}.rst"
         )
     )
-    print("Creating %s..." % filename)
+    print(f"Creating {filename}...")
     with open(filename, "w", encoding="utf8", newline="\n") as f:
         f.write(
             """.. title:: clang-tidy - %(check_name_dashes)s
@@ -619,7 +631,7 @@ def get_camel_name(check_name: str) -> str:
 
 
 def get_camel_check_name(check_name: str) -> str:
-    return get_camel_name(check_name) + "Check"
+    return f"{get_camel_name(check_name)}Check"
 
 
 def main() -> None:
@@ -699,8 +711,7 @@ def main() -> None:
     check_name_camel = get_camel_check_name(check_name)
     if check_name.startswith(module):
         print(
-            'Check name "%s" must not start with the module "%s". Exiting.'
-            % (check_name, module)
+            f'Check name "{check_name}" must not start with the module "{module}". Exiting.'
         )
         return
     clang_tidy_path = os.path.dirname(sys.argv[0])
@@ -711,7 +722,7 @@ def main() -> None:
 
     # Map module names to namespace names that don't conflict with widely used top-level namespaces.
     if module == "llvm":
-        namespace = module + "_check"
+        namespace = f"{module}_check"
     else:
         namespace = module
 

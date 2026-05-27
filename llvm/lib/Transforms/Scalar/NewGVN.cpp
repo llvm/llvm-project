@@ -309,7 +309,7 @@ public:
   // Leader functions
   Value *getLeader() const { return RepLeader.first; }
   void setLeader(std::pair<Value *, unsigned int> Leader) {
-    RepLeader = Leader;
+    RepLeader = std::move(Leader);
   }
   const std::pair<Value *, unsigned int> &getNextLeader() const {
     return NextLeader;
@@ -318,10 +318,10 @@ public:
   bool addPossibleLeader(std::pair<Value *, unsigned int> LeaderPair) {
     if (LeaderPair.second < RepLeader.second) {
       NextLeader = RepLeader;
-      RepLeader = LeaderPair;
+      RepLeader = std::move(LeaderPair);
       return true;
     } else if (LeaderPair.second < NextLeader.second) {
-      NextLeader = LeaderPair;
+      NextLeader = std::move(LeaderPair);
     }
     return false;
   }
@@ -1213,7 +1213,7 @@ NewGVN::ExprResult NewGVN::createExpression(Instruction *I) const {
       assert(E->getOperand(1)->getType() == I->getOperand(1)->getType() &&
              E->getOperand(2)->getType() == I->getOperand(2)->getType());
       Value *V = simplifySelectInst(E->getOperand(0), E->getOperand(1),
-                                    E->getOperand(2), Q);
+                                    E->getOperand(2), FastMathFlags(), Q);
       if (auto Simplified = checkExprResults(E, I, V))
         return Simplified;
     }

@@ -295,48 +295,76 @@ private:
   ASSERT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \
                           LIBC_NAMESPACE::testing::TestCond::NE>(expected))
 
+#ifdef LIBC_MATH_HAS_NO_ERRNO
+
 #define EXPECT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
-    if ((LIBC_MATH & LIBC_MATH_NO_ERRNO) == 0)                                 \
-      if (math_errhandling & MATH_ERRNO) {                                     \
-        int actual = libc_errno;                                               \
-        libc_errno = 0;                                                        \
-        EXPECT_EQ(actual, expected);                                           \
-      }                                                                        \
   } while (0)
 
 #define ASSERT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
-    if ((LIBC_MATH & LIBC_MATH_NO_ERRNO) == 0)                                 \
-      if (math_errhandling & MATH_ERRNO) {                                     \
-        int actual = libc_errno;                                               \
-        libc_errno = 0;                                                        \
-        ASSERT_EQ(actual, expected);                                           \
-      }                                                                        \
   } while (0)
+
+#else
+
+#define EXPECT_MATH_ERRNO(expected)                                            \
+  do {                                                                         \
+    if (math_errhandling & MATH_ERRNO) {                                       \
+      int actual = libc_errno;                                                 \
+      libc_errno = 0;                                                          \
+      EXPECT_EQ(actual, expected);                                             \
+    }                                                                          \
+  } while (0)
+
+#define ASSERT_MATH_ERRNO(expected)                                            \
+  do {                                                                         \
+    if (math_errhandling & MATH_ERRNO) {                                       \
+      int actual = libc_errno;                                                 \
+      libc_errno = 0;                                                          \
+      ASSERT_EQ(actual, expected);                                             \
+    }                                                                          \
+  } while (0)
+
+#endif // LIBC_MATH_HAS_NO_ERRNO
+
+#ifdef LIBC_MATH_HAS_NO_EXCEPT
 
 #define EXPECT_FP_EXCEPTION(expected)                                          \
   do {                                                                         \
-    if ((LIBC_MATH & LIBC_MATH_NO_EXCEPT) == 0)                                \
-      if (math_errhandling & MATH_ERREXCEPT) {                                 \
-        EXPECT_EQ(                                                             \
-            LIBC_NAMESPACE::fputil::test_except(                               \
-                static_cast<int>(FE_ALL_EXCEPT)) &                             \
-                ((expected) ? (expected) : static_cast<int>(FE_ALL_EXCEPT)),   \
-            (expected));                                                       \
-      }                                                                        \
   } while (0)
 
 #define ASSERT_FP_EXCEPTION(expected)                                          \
   do {                                                                         \
-    if ((LIBC_MATH & LIBC_MATH_NO_EXCEPT) == 0)                                \
-      if (math_errhandling & MATH_ERREXCEPT) {                                 \
-        ASSERT_EQ(                                                             \
-            LIBC_NAMESPACE::fputil::test_except(                               \
-                static_cast<int>(FE_ALL_EXCEPT)) &                             \
-                ((expected) ? (expected) : static_cast<int>(FE_ALL_EXCEPT)),   \
-            (expected));                                                       \
-      }                                                                        \
+  } while (0)
+
+#define EXPECT_FP_EQ_WITH_EXCEPTION(expected_val, actual_val, expected_except) \
+  EXPECT_FP_EQ(expected_val, actual_val)
+
+#define EXPECT_FP_IS_NAN_WITH_EXCEPTION(actual_val, expected_except)           \
+  EXPECT_FP_IS_NAN(actual_val)
+
+#else // !LIBC_MATH_HAS_NO_EXCEPT
+
+#define EXPECT_FP_EXCEPTION(expected)                                          \
+  do {                                                                         \
+    if (math_errhandling & MATH_ERREXCEPT) {                                   \
+      EXPECT_EQ(                                                               \
+          LIBC_NAMESPACE::fputil::test_except(                                 \
+              static_cast<int>(FE_ALL_EXCEPT)) &                               \
+              ((expected) ? (expected) : static_cast<int>(FE_ALL_EXCEPT)),     \
+          (expected));                                                         \
+    }                                                                          \
+  } while (0)
+
+#define ASSERT_FP_EXCEPTION(expected)                                          \
+  do {                                                                         \
+    if (math_errhandling & MATH_ERREXCEPT) {                                   \
+      ASSERT_EQ(                                                               \
+          LIBC_NAMESPACE::fputil::test_except(                                 \
+              static_cast<int>(FE_ALL_EXCEPT)) &                               \
+              ((expected) ? (expected) : static_cast<int>(FE_ALL_EXCEPT)),     \
+          (expected));                                                         \
+    }                                                                          \
   } while (0)
 
 #define EXPECT_FP_EQ_WITH_EXCEPTION(expected_val, actual_val, expected_except) \
@@ -352,6 +380,8 @@ private:
     EXPECT_FP_IS_NAN(actual_val);                                              \
     EXPECT_FP_EXCEPTION(expected_except);                                      \
   } while (0)
+
+#endif // LIBC_MATH_HAS_NO_EXCEPT
 
 #define EXPECT_FP_EQ_ROUNDING_MODE(expected, actual, rounding_mode)            \
   do {                                                                         \

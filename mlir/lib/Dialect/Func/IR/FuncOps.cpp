@@ -284,23 +284,36 @@ FuncOp FuncOp::clone() {
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult ReturnOp::verify() {
-  auto function = cast<FuncOp>((*this)->getParentOp());
+LogicalResult FuncOp::verifyRegions() {
+  // External declarations have no body to check.
+  if (isDeclaration())
+    return success();
+  // Hoist the result types once; they are the same for every return site.
+  auto resultTypes = getFunctionType().getResults();
+  for (Block &block : getBody()) {
+    if (block.empty())
+      continue;
+    // Check func.return or other return-like terminators ops (e.g.
+    // llvm.return, test.return).
+    auto returnOp = dyn_cast<RegionBranchTerminatorOpInterface>(&block.back());
+    if (!returnOp)
+      continue;
+    auto operands =
+        returnOp.getMutableSuccessorOperands(RegionSuccessor::parent());
+    if (operands.size() != resultTypes.size())
+      return returnOp->emitOpError("has ")
+             << operands.size() << " operands, but enclosing function (@"
+             << getName() << ") returns " << resultTypes.size();
 
-  // The operand number and types must match the function signature.
-  const auto &results = function.getFunctionType().getResults();
-  if (getNumOperands() != results.size())
-    return emitOpError("has ")
-           << getNumOperands() << " operands, but enclosing function (@"
-           << function.getName() << ") returns " << results.size();
-
-  for (unsigned i = 0, e = results.size(); i != e; ++i)
-    if (getOperand(i).getType() != results[i])
-      return emitError() << "type of return operand " << i << " ("
-                         << getOperand(i).getType()
-                         << ") doesn't match function result type ("
-                         << results[i] << ")"
-                         << " in function @" << function.getName();
+    for (auto [i, opType] : llvm::enumerate(llvm::zip(operands, resultTypes))) {
+      auto [operand, resTy] = opType;
+      if (operand.get().getType() != resTy)
+        return returnOp->emitError() << "type of return operand " << i << " ("
+                                     << operand.get().getType()
+                                     << ") doesn't match function result type ("
+                                     << resTy << ") in function @" << getName();
+    }
+  }
 
   return success();
 }

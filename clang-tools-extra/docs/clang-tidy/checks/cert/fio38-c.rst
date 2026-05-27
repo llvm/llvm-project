@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-fio38-c
-.. meta::
-   :http-equiv=refresh: 5;URL=../misc/non-copyable-objects.html
 
 cert-fio38-c
 ============

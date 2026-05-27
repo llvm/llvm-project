@@ -70,6 +70,10 @@ bool opHasUnsupportedFloatingPointTypes(Operation *op,
 /// as LLVM aggregate types (LLVMArrayType, LLVMStructType) by recursively
 /// extracting elements.
 ///
+/// When a non-aggregate's bitwidth is not evenly divisible by the bitwidth of
+/// `dstType` width, the source value will be zero-extended to the next
+/// (multiple of) that bitwidth before decomposition.
+///
 /// When `permitVariablySizedScalars` is true, leaf types that have no fixed
 /// bit width (e.g., `!llvm.ptr`) are passed through as-is (1 element in
 /// result). When false (default), encountering such a type returns failure.
@@ -78,8 +82,9 @@ LogicalResult decomposeValue(OpBuilder &builder, Location loc, Value src,
                              bool permitVariablySizedScalars = false);
 
 /// Composes a set of `src` values into a single value of type `dstType` through
-/// series of bitcasts and vector ops. Inversely to `decomposeValue`, this
-/// function is used to combine multiple values into a single value.
+/// series of bitcasts and vector ops, and aggregate builders. This is the
+/// inverse of `decomposeValue` and expects the values in `src` to have the
+/// order and padding bits that that function would produce.
 Value composeValue(OpBuilder &builder, Location loc, ValueRange src,
                    Type dstType);
 

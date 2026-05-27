@@ -59,7 +59,6 @@ public:
   }
 
 private:
-  bool tryToReduceVL(MachineInstr &MI) const;
   bool convertToVLMAX(MachineInstr &MI) const;
   bool convertToWholeRegister(MachineInstr &MI) const;
   bool convertToUnmasked(MachineInstr &MI) const;
@@ -72,7 +71,8 @@ private:
   bool hasSameEEW(const MachineInstr &User, const MachineInstr &Src) const;
   bool isAllOnesMask(const MachineInstr *MaskDef) const;
   std::optional<unsigned> getConstant(const MachineOperand &VL) const;
-  bool ensureDominates(const MachineOperand &Use, MachineInstr &Src) const;
+  bool ensureDominates(ArrayRef<const MachineOperand *> Defs,
+                       MachineInstr &Use) const;
   Register
   lookThruCopies(Register Reg, bool OneUseOnly = false,
                  SmallVectorImpl<MachineInstr *> *Copies = nullptr) const;
@@ -96,106 +96,6 @@ bool RISCVVectorPeephole::hasSameEEW(const MachineInstr &User,
   unsigned SrcLog2EEW = RISCV::getDestLog2EEW(
       TII->get(RISCV::getRVVMCOpcode(Src.getOpcode())), SrcLog2SEW);
   return SrcLog2EEW == UserLog2SEW;
-}
-
-// Attempt to reduce the VL of an instruction whose sole use is feeding a
-// instruction with a narrower VL.  This currently works backwards from the
-// user instruction (which might have a smaller VL).
-bool RISCVVectorPeephole::tryToReduceVL(MachineInstr &MI) const {
-  // Note that the goal here is a bit multifaceted.
-  // 1) For store's reducing the VL of the value being stored may help to
-  //    reduce VL toggles.  This is somewhat of an artifact of the fact we
-  //    promote arithmetic instructions but VL predicate stores.
-  // 2) For vmv.v.v reducing VL eagerly on the source instruction allows us
-  //    to share code with the foldVMV_V_V transform below.
-  //
-  // Note that to the best of our knowledge, reducing VL is generally not
-  // a significant win on real hardware unless we can also reduce LMUL which
-  // this code doesn't try to do.
-  //
-  // TODO: We can handle a bunch more instructions here, and probably
-  // recurse backwards through operands too.
-  SmallVector<unsigned, 2> SrcIndices = {0};
-  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
-  default:
-    return false;
-  case RISCV::VSE8_V:
-  case RISCV::VSE16_V:
-  case RISCV::VSE32_V:
-  case RISCV::VSE64_V:
-    break;
-  case RISCV::VMV_V_V:
-    SrcIndices[0] = 2;
-    break;
-  case RISCV::VMERGE_VVM:
-    SrcIndices.assign({2, 3});
-    break;
-  case RISCV::VREDSUM_VS:
-  case RISCV::VREDMAXU_VS:
-  case RISCV::VREDMAX_VS:
-  case RISCV::VREDMINU_VS:
-  case RISCV::VREDMIN_VS:
-  case RISCV::VREDAND_VS:
-  case RISCV::VREDOR_VS:
-  case RISCV::VREDXOR_VS:
-  case RISCV::VWREDSUM_VS:
-  case RISCV::VWREDSUMU_VS:
-  case RISCV::VFREDUSUM_VS:
-  case RISCV::VFREDOSUM_VS:
-  case RISCV::VFREDMAX_VS:
-  case RISCV::VFREDMIN_VS:
-  case RISCV::VFWREDUSUM_VS:
-  case RISCV::VFWREDOSUM_VS:
-    SrcIndices[0] = 2;
-    break;
-  }
-
-  MachineOperand &VL = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
-  if (VL.isImm() && VL.getImm() == RISCV::VLMaxSentinel)
-    return false;
-
-  bool Changed = false;
-  for (unsigned SrcIdx : SrcIndices) {
-    Register SrcReg = MI.getOperand(SrcIdx).getReg();
-    // Note: one *use*, not one *user*.
-    if (!MRI->hasOneUse(SrcReg))
-      continue;
-
-    MachineInstr *Src = MRI->getVRegDef(SrcReg);
-    if (!Src || Src->hasUnmodeledSideEffects() ||
-        Src->getParent() != MI.getParent() || Src->getNumDefs() != 1 ||
-        !RISCVII::hasVLOp(Src->getDesc().TSFlags) ||
-        !RISCVII::hasSEWOp(Src->getDesc().TSFlags))
-      continue;
-
-    // Src's dest needs to have the same EEW as MI's input.
-    if (!hasSameEEW(MI, *Src))
-      continue;
-
-    bool ElementsDependOnVL = RISCVII::elementsDependOnVL(
-        TII->get(RISCV::getRVVMCOpcode(Src->getOpcode())).TSFlags);
-    if (ElementsDependOnVL || Src->mayRaiseFPException())
-      continue;
-
-    MachineOperand &SrcVL =
-        Src->getOperand(RISCVII::getVLOpNum(Src->getDesc()));
-    if (VL.isIdenticalTo(SrcVL) || !RISCV::isVLKnownLE(VL, SrcVL))
-      continue;
-
-    if (!ensureDominates(VL, *Src))
-      continue;
-
-    if (VL.isImm())
-      SrcVL.ChangeToImmediate(VL.getImm());
-    else if (VL.isReg())
-      SrcVL.ChangeToRegister(VL.getReg(), false);
-
-    Changed = true;
-  }
-
-  // TODO: For instructions with a passthru, we could clear the passthru
-  // and tail policy since we've just proven the tail is not demanded.
-  return Changed;
 }
 
 /// Check if an operand is an immediate or a materialized ADDI $x0, imm.
@@ -440,26 +340,43 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
 
   // Masked off lanes past TrueVL will come from False, and converting to vmv
   // will lose these lanes unless MIVL <= TrueVL.
-  // TODO: We could relax this for False == Passthru and True policy == TU
+  // We can relax this when False == Passthru and True's tail policy is TU,
+  // because True's tail lanes will preserve its passthru (= False = Passthru).
   const MachineOperand &MIVL = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
   const MachineOperand &TrueVL =
       True->getOperand(RISCVII::getVLOpNum(True->getDesc()));
-  if (!RISCV::isVLKnownLE(MIVL, TrueVL))
-    return false;
+  Register FalseReg = MI.getOperand(2).getReg();
+  if (!RISCV::isVLKnownLE(MIVL, TrueVL)) {
+    Register PassthruReg = MI.getOperand(1).getReg();
+    if (FalseReg.isValid() && FalseReg != PassthruReg)
+      return false;
+    if (!RISCVII::hasVecPolicyOp(True->getDesc().TSFlags))
+      return false;
+    uint64_t TruePolicy =
+        True->getOperand(RISCVII::getVecPolicyOpNum(True->getDesc())).getImm();
+    if (TruePolicy & RISCVVType::TAIL_AGNOSTIC)
+      return false;
+  }
 
   // True's passthru needs to be equivalent to False
   Register TruePassthruReg = True->getOperand(1).getReg();
-  Register FalseReg = MI.getOperand(2).getReg();
   if (TruePassthruReg != FalseReg) {
     // If True's passthru is undef see if we can change it to False
     if (TruePassthruReg.isValid() ||
         !MRI->hasOneUse(MI.getOperand(3).getReg()) ||
-        !ensureDominates(MI.getOperand(2), *True))
+        !ensureDominates(&MI.getOperand(2), *True))
       return false;
     True->getOperand(1).setReg(MI.getOperand(2).getReg());
     // If True is masked then its passthru needs to be in VRNoV0.
     MRI->constrainRegClass(True->getOperand(1).getReg(),
                            TII->getRegClass(True->getDesc(), 1));
+  }
+
+  // If True is mask agnostic, we need to make it mask undisturbed.
+  if (RISCVII::hasVecPolicyOp(True->getDesc().TSFlags)) {
+    MachineOperand &PolicyOp =
+        True->getOperand(RISCVII::getVecPolicyOpNum(True->getDesc()));
+    PolicyOp.setImm(PolicyOp.getImm() & ~RISCVVType::MASK_AGNOSTIC);
   }
 
   MI.setDesc(TII->get(NewOpc));
@@ -530,34 +447,6 @@ bool RISCVVectorPeephole::convertToUnmasked(MachineInstr &MI) const {
   return true;
 }
 
-/// Check if it's safe to move From down to To, checking that no physical
-/// registers are clobbered.
-static bool isSafeToMove(const MachineInstr &From, const MachineInstr &To) {
-  assert(From.getParent() == To.getParent());
-  SmallVector<Register> PhysUses, PhysDefs;
-  for (const MachineOperand &MO : From.all_uses())
-    if (MO.getReg().isPhysical())
-      PhysUses.push_back(MO.getReg());
-  for (const MachineOperand &MO : From.all_defs())
-    if (MO.getReg().isPhysical())
-      PhysDefs.push_back(MO.getReg());
-  bool SawStore = false;
-  for (auto II = std::next(From.getIterator()); II != To.getIterator(); II++) {
-    for (Register PhysReg : PhysUses)
-      if (II->definesRegister(PhysReg, nullptr))
-        return false;
-    for (Register PhysReg : PhysDefs)
-      if (II->definesRegister(PhysReg, nullptr) ||
-          II->readsRegister(PhysReg, nullptr))
-        return false;
-    if (II->mayStore()) {
-      SawStore = true;
-      break;
-    }
-  }
-  return From.isSafeToMove(SawStore);
-}
-
 /// Given A and B are in the same MBB, returns true if A comes before B.
 static bool dominates(MachineBasicBlock::const_iterator A,
                       MachineBasicBlock::const_iterator B) {
@@ -574,21 +463,28 @@ static bool dominates(MachineBasicBlock::const_iterator A,
   return &*I == A;
 }
 
-/// If the register in \p MO doesn't dominate \p Src, try to move \p Src so it
-/// does. Returns false if doesn't dominate and we can't move. \p MO must be in
-/// the same basic block as \Src.
-bool RISCVVectorPeephole::ensureDominates(const MachineOperand &MO,
-                                          MachineInstr &Src) const {
-  assert(MO.getParent()->getParent() == Src.getParent());
-  if (!MO.isReg() || !MO.getReg().isValid())
-    return true;
+/// If a register in \p Defs doesn't dominate \p Use, try to move Use so it
+/// does. Returns false if any def doesn't dominate and we can't move Use. Each
+/// def must be in the same block as Use.
+bool RISCVVectorPeephole::ensureDominates(ArrayRef<const MachineOperand *> Defs,
+                                          MachineInstr &Use) const {
+  MachineInstr *Dest = &Use;
 
-  MachineInstr *Def = MRI->getVRegDef(MO.getReg());
-  if (Def->getParent() == Src.getParent() && !dominates(Def, Src)) {
-    if (!isSafeToMove(Src, *Def->getNextNode()))
-      return false;
-    Src.moveBefore(Def->getNextNode());
+  for (const MachineOperand *MO : Defs) {
+    assert(MO->getParent()->getParent() == Use.getParent());
+    if (!MO->isReg() || !MO->getReg().isValid())
+      continue;
+
+    MachineInstr *Def = MRI->getVRegDef(MO->getReg());
+    if (Def->getParent() == Dest->getParent() && !dominates(Def, *Dest)) {
+      if (!RISCVInstrInfo::isSafeToMove(*Dest, *Def->getNextNode()))
+        return false;
+      Dest = Def->getNextNode();
+    }
   }
+
+  if (Dest != &Use)
+    Use.moveBefore(Dest);
 
   return true;
 }
@@ -631,7 +527,7 @@ bool RISCVVectorPeephole::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
 ///
 /// %x = PseudoVADD_V_V_M1 %passthru, %a, %b, %vl1, sew, policy
 /// %y = PseudoVMV_V_V_M1 %passthru, %x, %vl2, sew, policy
-///    (where %vl1 <= %vl2, see related tryToReduceVL)
+///    (where %vl1 <= %vl2)
 ///
 /// ->
 ///
@@ -674,7 +570,7 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
     NeedsCommute = {OpIdx1, OpIdx2};
   }
 
-  // Src VL will have already been reduced if legal (see tryToReduceVL),
+  // Src VL will have already been reduced if legal by RISCVVLOptimizer,
   // so we don't need to handle a smaller source VL here.  However, the
   // user's VL may be larger
   MachineOperand &SrcVL = Src->getOperand(RISCVII::getVLOpNum(Src->getDesc()));
@@ -682,7 +578,7 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
     return false;
 
   // If the new passthru doesn't dominate Src, try to move Src so it does.
-  if (!ensureDominates(Passthru, *Src))
+  if (!ensureDominates(&Passthru, *Src))
     return false;
 
   if (NeedsCommute) {
@@ -833,15 +729,9 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
   assert(RISCVII::hasVecPolicyOp(True.getDesc().TSFlags) &&
          "Foldable unmasked pseudo should have a policy op already");
 
-  // Make sure both mask and false dominate True and its copies, otherwise move
-  // down True so it does. VL will always dominate since if it's a register they
-  // need to be the same.
-  const MachineOperand *DomOp = &MaskOp;
-  MachineInstr *False = MRI->getUniqueVRegDef(FalseReg);
-  if (False && False->getParent() == Mask->getParent() &&
-      dominates(Mask, False))
-    DomOp = &FalseOp;
-  if (!ensureDominates(*DomOp, True))
+  // Make sure Mask, False and MinVL dominate True and its copies, otherwise
+  // move down True so it does.
+  if (!ensureDominates({&MaskOp, &FalseOp, &MinVL}, True))
     return false;
 
   if (NeedsCommute) {
@@ -908,7 +798,6 @@ bool RISCVVectorPeephole::runOnMachineFunction(MachineFunction &MF) {
 
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
       Changed |= convertToVLMAX(MI);
-      Changed |= tryToReduceVL(MI);
       Changed |= convertToUnmasked(MI);
       Changed |= convertToWholeRegister(MI);
       Changed |= convertAllOnesVMergeToVMv(MI);

@@ -33,6 +33,7 @@ enum OperandType : unsigned {
   OPERAND_UIMM2_LSB0,
   OPERAND_UIMM3,
   OPERAND_UIMM4,
+  OPERAND_UIMM4_PLUS1,
   OPERAND_UIMM5,
   OPERAND_UIMM5_NONZERO,
   OPERAND_UIMM5_GT3,
@@ -41,6 +42,7 @@ enum OperandType : unsigned {
   OPERAND_UIMM5_LSB0,
   OPERAND_UIMM5_SLIST,
   OPERAND_UIMM6,
+  OPERAND_UIMM6_PLUS1,
   OPERAND_UIMM6_LSB0,
   OPERAND_UIMM7,
   OPERAND_UIMM7_LSB00,
@@ -71,7 +73,7 @@ enum OperandType : unsigned {
   OPERAND_SIMM5_PLUS1,
   OPERAND_SIMM6,
   OPERAND_SIMM6_NONZERO,
-  OPERAND_SIMM8_UNSIGNED,
+  OPERAND_SIMM8,
   OPERAND_SIMM10,
   OPERAND_SIMM10_LSB0000_NONZERO,
   OPERAND_SIMM10_UNSIGNED,
@@ -127,6 +129,13 @@ enum OperandType : unsigned {
   // instructions to represent a value that be passed as AVL to either vsetvli
   // or vsetivli.
   OPERAND_AVL,
+
+  // Operand is either a register or imm, this is used by short forward branch
+  // (SFB) pseudos to enable SFB with branches on reg-reg and reg-imm compares.
+  OPERAND_SFB_RHS,
+
+  // Operand is a branch opcode, this too is used by SFB pseudos.
+  OPERAND_BCC_OPCODE,
 
   OPERAND_VMASK,
 };
@@ -658,10 +667,17 @@ enum ABI {
   ABI_ILP32F,
   ABI_ILP32D,
   ABI_ILP32E,
+  ABI_IL32PC64,
+  ABI_IL32PC64F,
+  ABI_IL32PC64D,
+  ABI_IL32PC64E,
   ABI_LP64,
   ABI_LP64F,
   ABI_LP64D,
   ABI_LP64E,
+  ABI_L64PC128,
+  ABI_L64PC128F,
+  ABI_L64PC128D,
   ABI_Unknown
 };
 

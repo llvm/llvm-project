@@ -5,7 +5,7 @@
 
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize \
 ; RUN: -force-tail-folding-style=none \
-; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
+; RUN: -tail-folding-policy=must-fold-tail \
 ; RUN: -force-target-supports-scalable-vectors -scalable-vectorization=on \
 ; RUN: -disable-output < %s 2>&1 | FileCheck --check-prefixes=NO-VP %s
 

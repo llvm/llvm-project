@@ -24,14 +24,14 @@ gpu.module @test_module {
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %tIdZ = gpu.thread_id z
 
-    // CHECK: rocdl.workgroup.dim.x : i32
-    // CHECK: = llvm.sext %{{.*}} : i32 to i64
+    // CHECK-DAG: %[[BD_C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+    // CHECK-DAG: %[[BD_C1:.*]] = llvm.mlir.constant(1 : i32) : i32
+    // CHECK-DAG: %[[BD_C2:.*]] = llvm.mlir.constant(2 : i32) : i32
+    // CHECK-DAG: llvm.call @__ockl_get_local_size(%[[BD_C0]]) : (i32) -> (i64 {llvm.range = #llvm.constant_range<i64, 1, 1025>})
     %bDimX = gpu.block_dim x
-    // CHECK: rocdl.workgroup.dim.y : i32
-    // CHECK: = llvm.sext %{{.*}} : i32 to i64
+    // CHECK-DAG: llvm.call @__ockl_get_local_size(%[[BD_C1]]) : (i32) -> (i64 {llvm.range = #llvm.constant_range<i64, 1, 1025>})
     %bDimY = gpu.block_dim y
-    // CHECK: rocdl.workgroup.dim.z : i32
-    // CHECK: = llvm.sext %{{.*}} : i32 to i64
+    // CHECK-DAG: llvm.call @__ockl_get_local_size(%[[BD_C2]]) : (i32) -> (i64 {llvm.range = #llvm.constant_range<i64, 1, 1025>})
     %bDimZ = gpu.block_dim z
 
     // CHECK: rocdl.workgroup.id.x : i32
@@ -44,14 +44,14 @@ gpu.module @test_module {
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %bIdZ = gpu.block_id z
 
-    // CHECK: rocdl.grid.dim.x : i32
-    // CHECK: = llvm.sext %{{.*}} : i32 to i64
+    // CHECK-DAG: %[[GD_C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+    // CHECK-DAG: %[[GD_C1:.*]] = llvm.mlir.constant(1 : i32) : i32
+    // CHECK-DAG: %[[GD_C2:.*]] = llvm.mlir.constant(2 : i32) : i32
+    // CHECK-DAG: llvm.call @__ockl_get_num_groups(%[[GD_C0]]) : (i32) -> i64
     %gDimX = gpu.grid_dim x
-    // CHECK: rocdl.grid.dim.y : i32
-    // CHECK: = llvm.sext %{{.*}} : i32 to i64
+    // CHECK-DAG: llvm.call @__ockl_get_num_groups(%[[GD_C1]]) : (i32) -> i64
     %gDimY = gpu.grid_dim y
-    // CHECK: rocdl.grid.dim.z : i32
-    // CHECK: = llvm.sext %{{.*}} : i32 to i64
+    // CHECK-DAG: llvm.call @__ockl_get_num_groups(%[[GD_C2]]) : (i32) -> i64
     %gDimZ = gpu.grid_dim z
 
     // CHECK: = rocdl.mbcnt.lo %{{.*}}, %{{.*}} {res_attrs = [{llvm.noundef, llvm.range = #llvm.constant_range<i32, 0, 32>}]} : (i32, i32) -> i32
@@ -100,13 +100,33 @@ gpu.module @test_module {
     // CHECK: rocdl.workgroup.id.z range <i32, 0, 28> : i32
     %bIdZ = gpu.block_id z
 
+    // CHECK: llvm.mlir.constant(8 : i64) : i64
+    %bDimX = gpu.block_dim x
+    // CHECK: llvm.mlir.constant(12 : i64) : i64
+    %bDimY = gpu.block_dim y
+    // CHECK: llvm.mlir.constant(16 : i64) : i64
+    %bDimZ = gpu.block_dim z
+
+    // CHECK: llvm.mlir.constant(20 : i64) : i64
+    %gDimX = gpu.grid_dim x
+    // CHECK: llvm.mlir.constant(24 : i64) : i64
+    %gDimY = gpu.grid_dim y
+    // CHECK: llvm.mlir.constant(28 : i64) : i64
+    %gDimZ = gpu.grid_dim z
+
     // "Usage" to make the ID calls not die
     %0 = arith.addi %tIdX, %tIdY : index
     %1 = arith.addi %0, %tIdZ : index
     %2 = arith.addi %1, %bIdX : index
     %3 = arith.addi %2, %bIdY : index
     %4 = arith.addi %3, %bIdZ : index
-    %5 = arith.index_cast %4 : index to i32
+    %r0 = arith.addi %4, %bDimX : index
+    %r1 = arith.addi %r0, %bDimY : index
+    %r2 = arith.addi %r1, %bDimZ : index
+    %r3 = arith.addi %r2, %gDimX : index
+    %r4 = arith.addi %r3, %gDimY : index
+    %r5 = arith.addi %r4, %gDimZ : index
+    %5 = arith.index_cast %r5 : index to i32
     memref.store %5, %place[] : memref<i32>
     gpu.return
   }
@@ -796,7 +816,8 @@ gpu.module @test_module {
   func.func @gpu_dim_int_max_upper_bound()
       -> (index) {
 
-    // CHECK32: rocdl.workgroup.dim.x range <i32, 1, 2147483647> : i32
+    // CHECK32: llvm.call @__ockl_get_local_size(%{{.*}}) : (i32) -> (i64 {llvm.range = #llvm.constant_range<i64, 1, 2147483648>})
+    // CHECK32: llvm.trunc %{{.*}} : i64 to i32
     %bDimX = gpu.block_dim x upper_bound 2147483647
     func.return %bDimX : index
   }
@@ -919,5 +940,63 @@ func.func @broadcast_memref(%arg0 : memref<?xi32>) -> memref<?xi32> {
   // CHECK: llvm.return %[[S4]]
   %0 = gpu.subgroup_broadcast %arg0, first_active_lane : memref<?xi32>
   func.return %0 : memref<?xi32>
+}
+
+// CHECK-LABEL: func @broadcast_i48
+//  CHECK-SAME:   (%[[ARG:.*]]: i48)
+func.func @broadcast_i48(%arg0 : i48) -> i48 {
+//       CHECK:   %[[ZEXT:.*]] = llvm.zext %[[ARG]] : i48 to i64
+//       CHECK:   %[[BITCAST:.*]] = llvm.bitcast %[[ZEXT]] : i64 to vector<2xi32>
+//       CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+//       CHECK:   %[[ELEM0:.*]] = llvm.extractelement %[[BITCAST]][%[[C0]] : i32] : vector<2xi32>
+//       CHECK:   %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
+//       CHECK:   %[[ELEM1:.*]] = llvm.extractelement %[[BITCAST]][%[[C1]] : i32] : vector<2xi32>
+//       CHECK:   %[[RFL0:.*]] = rocdl.readfirstlane %[[ELEM0]] : i32
+//       CHECK:   %[[RFL1:.*]] = rocdl.readfirstlane %[[ELEM1]] : i32
+//       CHECK:   %[[POISON:.*]] = llvm.mlir.poison : vector<2xi32>
+//       CHECK:   %[[C0_2:.*]] = llvm.mlir.constant(0 : i32) : i32
+//       CHECK:   %[[INS0:.*]] = llvm.insertelement %[[RFL0]], %[[POISON]][%[[C0_2]] : i32] : vector<2xi32>
+//       CHECK:   %[[C1_2:.*]] = llvm.mlir.constant(1 : i32) : i32
+//       CHECK:   %[[INS1:.*]] = llvm.insertelement %[[RFL1]], %[[INS0]][%[[C1_2]] : i32] : vector<2xi32>
+//       CHECK:   %[[CAST64:.*]] = llvm.bitcast %[[INS1]] : vector<2xi32> to i64
+//       CHECK:   %[[TRUNC:.*]] = llvm.trunc %[[CAST64]] : i64 to i48
+//       CHECK:   return %[[TRUNC]] : i48
+  %0 = gpu.subgroup_broadcast %arg0, first_active_lane : i48
+  func.return %0 : i48
+}
+
+// CHECK-LABEL: func @broadcast_3xi16
+//  CHECK-SAME:   (%[[ARG:.*]]: vector<3xi16>)
+func.func @broadcast_3xi16(%arg0 : vector<3xi16>) -> vector<3xi16> {
+//       CHECK:   %[[BC1:.*]] = llvm.bitcast %[[ARG]] : vector<3xi16> to i48
+//       CHECK:   %[[ZEXT:.*]] = llvm.zext %[[BC1]] : i48 to i64
+//       CHECK:   %[[BC2:.*]] = llvm.bitcast %[[ZEXT]] : i64 to vector<2xi32>
+//       CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+//       CHECK:   %[[ELEM0:.*]] = llvm.extractelement %[[BC2]][%[[C0]] : i32] : vector<2xi32>
+//       CHECK:   %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
+//       CHECK:   %[[ELEM1:.*]] = llvm.extractelement %[[BC2]][%[[C1]] : i32] : vector<2xi32>
+//       CHECK:   %[[RFL0:.*]] = rocdl.readfirstlane %[[ELEM0]] : i32
+//       CHECK:   %[[RFL1:.*]] = rocdl.readfirstlane %[[ELEM1]] : i32
+//       CHECK:   %[[POISON:.*]] = llvm.mlir.poison : vector<2xi32>
+//       CHECK:   %[[C0_2:.*]] = llvm.mlir.constant(0 : i32) : i32
+//       CHECK:   %[[INS0:.*]] = llvm.insertelement %[[RFL0]], %[[POISON]][%[[C0_2]] : i32] : vector<2xi32>
+//       CHECK:   %[[C1_2:.*]] = llvm.mlir.constant(1 : i32) : i32
+//       CHECK:   %[[INS1:.*]] = llvm.insertelement %[[RFL1]], %[[INS0]][%[[C1_2]] : i32] : vector<2xi32>
+//       CHECK:   %[[CAST64:.*]] = llvm.bitcast %[[INS1]] : vector<2xi32> to i64
+//       CHECK:   %[[TRUNC:.*]] = llvm.trunc %[[CAST64]] : i64 to i48
+//       CHECK:   %[[BCOUT:.*]] = llvm.bitcast %[[TRUNC]] : i48 to vector<3xi16>
+//       CHECK:   return %[[BCOUT]] : vector<3xi16>
+  %0 = gpu.subgroup_broadcast %arg0, first_active_lane : vector<3xi16>
+  func.return %0 : vector<3xi16>
+}
+
+// CHECK-LABEL: func @ballot
+//  CHECK-SAME: (%[[PRED:.*]]: i1)
+func.func @ballot(%pred: i1) -> (i32, i64) {
+  // CHECK: rocdl.ballot %[[PRED]] : i32
+  %0 = gpu.ballot %pred : i32
+  // CHECK: rocdl.ballot %[[PRED]] : i64
+  %1 = gpu.ballot %pred : i64
+  func.return %0, %1 : i32, i64
 }
 }

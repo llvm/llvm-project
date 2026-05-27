@@ -60,6 +60,8 @@
 //      element type which is four times as wide as the element type of 'v'
 //   o: computes a vector type identical to what 'v' computes except for the
 //      element type which is eight times as wide as the element type of 'v'
+//   d: computes a vector type identical to what 'v' computes except for the
+//      LMUL which is twice as large as the LMUL of 'v'
 //   m: computes a vector type identical to what 'v' computes except for the
 //      element type which is bool
 //   0: void type, ignores "t"
@@ -246,6 +248,10 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
 
   // Set to true if the builtin is associated with tuple types.
   bit IsTuple = false;
+
+  // Set to true if the builtin has a SegInstSEW parameter. This is typically
+  // used for segment load/store instructions.
+  bit HasSegInstSEW = false;
 
   // Set to true if the builtin has a parameter that models floating-point
   // rounding mode control

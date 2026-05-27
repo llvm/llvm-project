@@ -27,7 +27,6 @@ class Lowerer : public coro::LowererBase {
   void lowerResumeOrDestroy(CallBase &CB, CoroSubFnInst::ResumeKind);
   void lowerCoroPromise(CoroPromiseInst *Intrin);
   void lowerCoroDone(IntrinsicInst *II);
-  void hidePromiseAlloca(CoroIdInst *CoroId, CoroBeginInst *CoroBegin);
 
 public:
   Lowerer(Module &M)
@@ -84,8 +83,6 @@ void Lowerer::lowerCoroDone(IntrinsicInst *II) {
   Value *Operand = II->getArgOperand(0);
 
   // ResumeFnAddr is the first pointer sized element of the coroutine frame.
-  static_assert(coro::Shape::SwitchFieldIndex::Resume == 0,
-                "resume function not at offset zero");
   auto *FrameTy = Int8Ptr;
 
   Builder.SetInsertPoint(II);
@@ -94,34 +91,6 @@ void Lowerer::lowerCoroDone(IntrinsicInst *II) {
 
   II->replaceAllUsesWith(Cond);
   II->eraseFromParent();
-}
-
-// Later middle-end passes will assume promise alloca dead after coroutine
-// suspend, leading to misoptimizations. We hide promise alloca using
-// coro.promise and will lower it back to alloca at CoroSplit.
-void Lowerer::hidePromiseAlloca(CoroIdInst *CoroId, CoroBeginInst *CoroBegin) {
-  auto *PA = CoroId->getPromise();
-  if (!PA || !CoroBegin)
-    return;
-  Builder.SetInsertPoint(*CoroBegin->getInsertionPointAfterDef());
-
-  auto *Alignment = Builder.getInt32(PA->getAlign().value());
-  auto *FromPromise = Builder.getInt1(false);
-  SmallVector<Value *, 3> Arg{CoroBegin, Alignment, FromPromise};
-  auto *PI = Builder.CreateIntrinsic(
-      Builder.getPtrTy(), Intrinsic::coro_promise, Arg, {}, "promise.addr");
-  PI->setCannotDuplicate();
-  // Remove lifetime markers, as these are only allowed on allocas.
-  for (User *U : make_early_inc_range(PA->users())) {
-    auto *I = cast<Instruction>(U);
-    if (I->isLifetimeStartOrEnd())
-      I->eraseFromParent();
-  }
-  PA->replaceUsesWithIf(PI, [CoroId](Use &U) {
-    bool IsBitcast = U == U.getUser()->stripPointerCasts();
-    bool IsCoroId = U.getUser() == CoroId;
-    return !IsBitcast && !IsCoroId;
-  });
 }
 
 // Prior to CoroSplit, calls to coro.begin needs to be marked as NoDuplicate,
@@ -209,8 +178,6 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
     // we allow specifying none and fixing it up here.
     for (CoroFreeInst *CF : CoroFrees)
       CF->setArgOperand(0, CoroId);
-
-    hidePromiseAlloca(CoroId, CoroBegin);
   }
 
   // Coroutine suspention could potentially lead to any argument modified

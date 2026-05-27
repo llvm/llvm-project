@@ -222,10 +222,6 @@ static uint32_t getLit32Encoding(uint32_t Val, const MCSubtargetInfo &STI) {
   return 255;
 }
 
-static uint32_t getLit16IntEncoding(uint32_t Val, const MCSubtargetInfo &STI) {
-  return getLit32Encoding(Val, STI);
-}
-
 static uint32_t getLit64Encoding(const MCInstrDesc &Desc, uint64_t Val,
                                  const MCSubtargetInfo &STI, bool IsFP) {
   uint32_t IntImm = getIntInlineImmEncoding(static_cast<int64_t>(Val));
@@ -286,7 +282,8 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
           OpInfo.OperandType == AMDGPU::OPERAND_KIMM64)
         return Imm;
       if (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-          AMDGPU::getOperandSize(OpInfo) == 8)
+          AMDGPU::getOperandSize(OpInfo) == 8 &&
+          AMDGPU::getExprKind(MO.getExpr()) != AMDGPUMCExpr::AGVK_Lit)
         return 254;
       return 255;
     }
@@ -326,7 +323,7 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
 
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
-    return getLit16IntEncoding(static_cast<uint32_t>(Imm), STI);
+    return getLit16Encoding(static_cast<uint32_t>(Imm), STI);
 
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:

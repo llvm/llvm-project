@@ -197,8 +197,7 @@ static const VariableArrayType *FindVA(QualType Ty) {
 
 static const Expr *LookThroughExpr(const Expr *E) {
   while (E) {
-    if (const Expr *Ex = dyn_cast<Expr>(E))
-      E = Ex->IgnoreParens();
+    E = E->IgnoreParens();
     if (const FullExpr *FE = dyn_cast<FullExpr>(E)) {
       E = FE->getSubExpr();
       continue;
@@ -245,6 +244,12 @@ void TransferFunctions::Visit(Stmt *S) {
   }
 
   // Mark all children expressions live.
+  // The "normal" case will be handled by iterating over 'S->children()' but
+  // before that we need this big 'switch' to handle the statement kinds where
+  // 'S->children()' isn't the exactly equal to the set of child expressions
+  // that we want to keep alive. (In some cases we need to skip some of the
+  // children, in other cases there are unusual child expressions that do not
+  // appear in 'S->children()'.)
 
   switch (S->getStmtClass()) {
     default:
@@ -356,9 +361,7 @@ void TransferFunctions::Visit(Stmt *S) {
     }
   }
 
-  // HACK + FIXME: What is this? One could only guess that this is an attempt to
-  // fish for live values, for example, arguments from a call expression.
-  // Maybe we could take inspiration from UninitializedVariable analysis?
+  // Mark all child expressions live -- "normal" case.
   for (Stmt *Child : S->children()) {
     if (const auto *E = dyn_cast_or_null<Expr>(Child))
       AddLiveExpr(val.liveExprs, LV.ESetFact, E);

@@ -410,12 +410,14 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
     }
     case Intrinsic::experimental_memset_pattern: {
       auto *Memset = cast<MemSetPatternInst>(Inst);
-      const TargetLibraryInfo &TLI = LookupTLI(*Memset->getFunction());
+      Function *ParentFunc = Memset->getFunction();
+      const TargetLibraryInfo &TLI = LookupTLI(*ParentFunc);
       Constant *PatternValue = getMemSetPattern16Value(Memset, TLI);
       if (!PatternValue) {
         // If it isn't possible to emit a memset_pattern16 libcall, expand to
         // a loop instead.
-        expandMemSetPatternAsLoop(Memset);
+        const TargetTransformInfo &TTI = LookupTTI(*ParentFunc);
+        expandMemSetPatternAsLoop(Memset, TTI);
         Changed = true;
         Memset->eraseFromParent();
         break;
@@ -480,6 +482,52 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
   return Changed;
 }
 
+static GlobalValue *getDeactivationSymbol(CallInst *Call) {
+  if (auto Bundle = Call->getOperandBundle(LLVMContext::OB_deactivation_symbol))
+    return cast<GlobalValue>(Bundle->Inputs[0]);
+  return nullptr;
+}
+
+static bool expandPtrauthForEmuPAC(Function &Intr) {
+  Module &M = *Intr.getParent();
+  if (Triple(M.getTargetTriple()).isArm64e())
+    return false;
+
+  Type *Int64Ty = Type::getInt64Ty(M.getContext());
+
+  assert(Intr.getIntrinsicID() == Intrinsic::ptrauth_sign ||
+         Intr.getIntrinsicID() == Intrinsic::ptrauth_auth);
+  auto *EmuFnTy = FunctionType::get(Int64Ty, {Int64Ty, Int64Ty}, false);
+  FunctionCallee EmuIntr = M.getOrInsertFunction(
+      Intr.getIntrinsicID() == Intrinsic::ptrauth_auth ? "__emupac_autda"
+                                                       : "__emupac_pacda",
+      EmuFnTy);
+
+  for (User *U : llvm::make_early_inc_range(Intr.users())) {
+    auto *Call = cast<CallInst>(U);
+    // We only support the DA key for now.
+    if (auto *Key = dyn_cast<ConstantInt>(Call->getArgOperand(1));
+        !Key || Key->getZExtValue() != /*AArch64PACKey::DA*/ 2)
+      continue;
+
+    Function *F = Call->getParent()->getParent();
+    Attribute FSAttr = F->getFnAttribute("target-features");
+    if (FSAttr.isValid() && FSAttr.getValueAsString().contains("+pauth"))
+      continue;
+
+    std::vector<OperandBundleDef> DSBundle;
+    if (auto *DS = getDeactivationSymbol(Call))
+      DSBundle.push_back(OperandBundleDef("deactivation-symbol", DS));
+
+    IRBuilder<> B(Call);
+    auto *EmuCall = B.CreateCall(
+        EmuIntr, {Call->getArgOperand(0), Call->getArgOperand(2)}, DSBundle);
+    Call->replaceAllUsesWith(EmuCall);
+    Call->eraseFromParent();
+  }
+  return true;
+}
+
 static bool expandProtectedFieldPtr(Function &Intr) {
   Module &M = *Intr.getParent();
 
@@ -489,89 +537,19 @@ static bool expandProtectedFieldPtr(Function &Intr) {
   Type *Int64Ty = Type::getInt64Ty(M.getContext());
   PointerType *PtrTy = PointerType::get(M.getContext(), 0);
 
-  Function *SignIntr =
-      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::ptrauth_sign, {});
-  Function *AuthIntr =
-      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::ptrauth_auth, {});
-
-  auto *EmuFnTy = FunctionType::get(Int64Ty, {Int64Ty, Int64Ty}, false);
-
-  auto CreateSign = [&](IRBuilder<> &B, Value *Val, Value *Disc,
-                        OperandBundleDef DSBundle) {
-    Function *F = B.GetInsertBlock()->getParent();
-    Attribute FSAttr = F->getFnAttribute("target-features");
-    if (FSAttr.isValid() && FSAttr.getValueAsString().contains("+pauth"))
-      return B.CreateCall(
-          SignIntr, {Val, B.getInt32(/*AArch64PACKey::DA*/ 2), Disc}, DSBundle);
-    FunctionCallee EmuSignIntr =
-        M.getOrInsertFunction("__emupac_pacda", EmuFnTy);
-    return B.CreateCall(EmuSignIntr, {Val, Disc}, DSBundle);
-  };
-
-  auto CreateAuth = [&](IRBuilder<> &B, Value *Val, Value *Disc,
-                        OperandBundleDef DSBundle) {
-    Function *F = B.GetInsertBlock()->getParent();
-    Attribute FSAttr = F->getFnAttribute("target-features");
-    if (FSAttr.isValid() && FSAttr.getValueAsString().contains("+pauth"))
-      return B.CreateCall(
-          AuthIntr, {Val, B.getInt32(/*AArch64PACKey::DA*/ 2), Disc}, DSBundle);
-    FunctionCallee EmuAuthIntr =
-        M.getOrInsertFunction("__emupac_autda", EmuFnTy);
-    return B.CreateCall(EmuAuthIntr, {Val, Disc}, DSBundle);
-  };
-
-  auto GetDeactivationSymbol = [&](CallInst *Call) -> GlobalValue * {
-    if (auto Bundle =
-            Call->getOperandBundle(LLVMContext::OB_deactivation_symbol))
-      return cast<GlobalValue>(Bundle->Inputs[0]);
-    return nullptr;
-  };
-
   for (User *U : llvm::make_early_inc_range(Intr.users())) {
     auto *Call = cast<CallInst>(U);
 
     auto *Pointer = Call->getArgOperand(0);
-    auto *Disc = Call->getArgOperand(1);
     bool UseHWEncoding =
         cast<ConstantInt>(Call->getArgOperand(2))->getZExtValue();
     if (!UseHWEncoding)
       reportFatalUsageError("software encoding currently unsupported");
 
-    auto *DS = GetDeactivationSymbol(Call);
+    auto *DS = getDeactivationSymbol(Call);
     OperandBundleDef DSBundle("deactivation-symbol", DS);
 
     for (Use &U : llvm::make_early_inc_range(Call->uses())) {
-      // Insert code to encode each pointer stored to the pointer returned by
-      // the intrinsic.
-      if (auto *SI = dyn_cast<StoreInst>(U.getUser())) {
-        if (U.getOperandNo() == 1 &&
-            isa<PointerType>(SI->getValueOperand()->getType())) {
-          IRBuilder<> B(SI);
-          auto *SIValInt =
-              B.CreatePtrToInt(SI->getValueOperand(), B.getInt64Ty());
-          Value *Sign = CreateSign(B, SIValInt, Disc, DSBundle);
-          SI->setOperand(0, B.CreateIntToPtr(Sign, B.getPtrTy()));
-          SI->setOperand(1, Pointer);
-          continue;
-        }
-      }
-
-      // Insert code to decode each pointer loaded from the pointer returned by
-      // the intrinsic. This is the inverse of the encode operation implemented
-      // above.
-      if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
-        if (isa<PointerType>(LI->getType())) {
-          IRBuilder<> B(LI);
-          auto *NewLI = cast<LoadInst>(LI->clone());
-          NewLI->setOperand(0, Pointer);
-          B.Insert(NewLI);
-          auto *LIInt = B.CreatePtrToInt(NewLI, B.getInt64Ty());
-          Value *Auth = CreateAuth(B, LIInt, Disc, DSBundle);
-          LI->replaceAllUsesWith(B.CreateIntToPtr(Auth, B.getPtrTy()));
-          LI->eraseFromParent();
-          continue;
-        }
-      }
       // Comparisons against null cannot be used to recover the original
       // pointer so we replace them with comparisons against the original
       // pointer.
@@ -590,8 +568,12 @@ static bool expandProtectedFieldPtr(Function &Intr) {
         }
       }
 
-      // We couldn't rewrite away this use of the intrinsic. Replace it with the
-      // pointer operand, and arrange to define a deactivation symbol.
+      // If we are here, this means that we couldn't rewrite away this use of
+      // the intrinsic. Any load or store uses were removed by InstCombine, and
+      // in general, we can't rewrite away non-load/store uses of
+      // llvm.protected.field.ptr because doing so could expose the encoded
+      // pointer value to the program. Replace it with the pointer operand, and
+      // arrange to define a deactivation symbol.
       U.set(Pointer);
       if (DS)
         DSsToDeactivate.insert(DS);
@@ -622,11 +604,11 @@ static bool expandCondLoop(Function &Intr) {
   for (User *U : llvm::make_early_inc_range(Intr.users())) {
     auto *Call = cast<CallInst>(U);
 
-    auto *Br = cast<BranchInst>(
+    auto *Br = cast<UncondBrInst>(
         SplitBlockAndInsertIfThen(Call->getArgOperand(0), Call, false,
                                   getExplicitlyUnknownBranchWeightsIfProfiled(
                                       *Call->getFunction(), DEBUG_TYPE)));
-    Br->setSuccessor(0, Br->getParent());
+    Br->setSuccessor(Br->getParent());
     Call->eraseFromParent();
   }
   return true;
@@ -639,8 +621,8 @@ static bool expandLoopTrap(Function &Intr) {
         std::all_of(Call->getParent()->begin(), BasicBlock::iterator(Call),
                     [](Instruction &I) { return !I.mayHaveSideEffects(); })) {
       for (auto *BB : predecessors(Call->getParent())) {
-        auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
-        if (!BI || BI->isUnconditional())
+        auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
+        if (!BI)
           continue;
         IRBuilder<> B(BI);
         Value *Cond;
@@ -800,9 +782,21 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::objc_sync_exit:
       Changed |= lowerObjCCall(F, RTLIB::impl_objc_sync_exit);
       break;
+    case Intrinsic::acos:
+    case Intrinsic::asin:
+    case Intrinsic::atan:
+    case Intrinsic::cos:
+    case Intrinsic::cosh:
     case Intrinsic::exp:
     case Intrinsic::exp2:
+    case Intrinsic::exp10:
     case Intrinsic::log:
+    case Intrinsic::log2:
+    case Intrinsic::log10:
+    case Intrinsic::sin:
+    case Intrinsic::sinh:
+    case Intrinsic::tan:
+    case Intrinsic::tanh:
       Changed |= forEachCall(F, [&](CallInst *CI) {
         Type *Ty = CI->getArgOperand(0)->getType();
         if (!TM || !isa<ScalableVectorType>(Ty))
@@ -814,6 +808,10 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
           return false;
         return lowerUnaryVectorIntrinsicAsLoop(M, CI);
       });
+      break;
+    case Intrinsic::ptrauth_sign:
+    case Intrinsic::ptrauth_auth:
+      Changed |= expandPtrauthForEmuPAC(F);
       break;
     case Intrinsic::protected_field_ptr:
       Changed |= expandProtectedFieldPtr(F);

@@ -20,7 +20,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -110,10 +110,10 @@ void AMDGPUInstPrinter::printOffset(const MCInst *MI, unsigned OpNo,
   if (Imm != 0) {
     O << " offset:";
 
-    // GFX12 uses a 24-bit signed offset for VBUFFER.
+    // GFX12+ uses a 24-bit signed offset for VBUFFER.
     const MCInstrDesc &Desc = MII.get(MI->getOpcode());
     bool IsVBuffer = Desc.TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF);
-    if (AMDGPU::isGFX12(STI) && IsVBuffer)
+    if (IsVBuffer && AMDGPU::isGFX12Plus(STI))
       O << formatDec(SignExtend32<24>(Imm));
     else
       printU16ImmDecOperand(MI, OpNo, O);
@@ -130,7 +130,7 @@ void AMDGPUInstPrinter::printFlatOffset(const MCInst *MI, unsigned OpNo,
     const MCInstrDesc &Desc = MII.get(MI->getOpcode());
     bool AllowNegative = (Desc.TSFlags & (SIInstrFlags::FlatGlobal |
                                           SIInstrFlags::FlatScratch)) ||
-                         AMDGPU::isGFX12(STI);
+                         STI.hasFeature(AMDGPU::FeatureFlatSignedOffset);
 
     if (AllowNegative) // Signed offset
       O << formatDec(SignExtend32(Imm, AMDGPU::getNumFlatOffsetBits(STI)));
@@ -512,21 +512,6 @@ void AMDGPUInstPrinter::printAVLdSt32Align2RegOp(const MCInst *MI,
   printRegOperand(Reg, O, MRI);
 }
 
-void AMDGPUInstPrinter::printImmediateInt16(uint32_t Imm,
-                                            const MCSubtargetInfo &STI,
-                                            raw_ostream &O) {
-  int32_t SImm = static_cast<int32_t>(Imm);
-  if (isInlinableIntLiteral(SImm)) {
-    O << SImm;
-    return;
-  }
-
-  if (printImmediateFloat32(Imm, STI, O))
-    return;
-
-  O << formatHex(static_cast<uint64_t>(Imm & 0xffff));
-}
-
 static bool printImmediateFP16(uint32_t Imm, const MCSubtargetInfo &STI,
                                raw_ostream &O) {
   if (Imm == 0x3C00)
@@ -551,6 +536,21 @@ static bool printImmediateFP16(uint32_t Imm, const MCSubtargetInfo &STI,
     return false;
 
   return true;
+}
+
+void AMDGPUInstPrinter::printImmediateInt16(uint32_t Imm,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &O) {
+  int32_t SImm = static_cast<int32_t>(Imm);
+  if (isInlinableIntLiteral(SImm)) {
+    O << SImm;
+    return;
+  }
+
+  if (printImmediateFP16(Imm, STI, O))
+    return;
+
+  O << formatHex(static_cast<uint64_t>(Imm & 0xffff));
 }
 
 static bool printImmediateBFloat16(uint32_t Imm, const MCSubtargetInfo &STI,

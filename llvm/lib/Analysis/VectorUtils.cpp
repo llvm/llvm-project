@@ -122,21 +122,18 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::llrint:
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
+  case Intrinsic::clmul:
     return true;
   default:
     return false;
   }
 }
 
-bool llvm::isTriviallyScalarizable(Intrinsic::ID ID,
-                                   const TargetTransformInfo *TTI) {
+bool llvm::isTriviallyScalarizable(Intrinsic::ID ID) {
   if (isTriviallyVectorizable(ID))
     return true;
 
-  if (TTI && Intrinsic::isTargetIntrinsic(ID))
-    return TTI->isTargetIntrinsicTriviallyScalarizable(ID);
-
-  return false;
+  return Intrinsic::isTriviallyScalarizable(ID);
 }
 
 /// Identifies if the vector form of the intrinsic has a scalar operand.
@@ -170,6 +167,10 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
     return (ScalarOpdIdx == 2);
   case Intrinsic::experimental_vp_splice:
     return ScalarOpdIdx == 2 || ScalarOpdIdx == 4;
+  case Intrinsic::experimental_vp_strided_load:
+    return ScalarOpdIdx == 0 || ScalarOpdIdx == 1;
+  case Intrinsic::loop_dependence_war_mask:
+    return true;
   default:
     return false;
   }
@@ -197,6 +198,7 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
   case Intrinsic::vector_extract:
+  case Intrinsic::loop_dependence_war_mask:
     return OpdIdx == -1 || OpdIdx == 0;
   case Intrinsic::modf:
   case Intrinsic::sincos:
@@ -207,6 +209,8 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::powi:
   case Intrinsic::ldexp:
     return OpdIdx == -1 || OpdIdx == 1;
+  case Intrinsic::experimental_vp_strided_load:
+    return OpdIdx == -1 || OpdIdx == 0 || OpdIdx == 1;
   default:
     return OpdIdx == -1;
   }
