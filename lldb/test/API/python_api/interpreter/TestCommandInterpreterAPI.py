@@ -296,7 +296,9 @@ class CommandInterpreterAPICase(TestBase):
     def test_handle_command_with_execution_context_override(self):
         """Test that HandleCommand with an override context works correctly and does not bypass non-dummy targets."""
         self.build()
-        target, process, thread, _ = lldbutil.run_to_line_breakpoint(self, lldb.SBFileSpec("main.c"), self.line)
+        target, process, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.c"), self.line
+        )
         frame = thread.GetSelectedFrame()
         self.assertTrue(frame.IsValid())
         exe_ctx = lldb.SBExecutionContext(frame)
@@ -323,4 +325,6 @@ class CommandInterpreterAPICase(TestBase):
         exe_ctx = lldb.SBExecutionContext(frame)
         res = lldb.SBCommandReturnObject()
         self.ci.HandleCommand("frame variable", exe_ctx, res)
-        self.assertTrue(res.Succeeded(), "HandleCommand with override context succeeded")
+        self.assertTrue(
+            res.Succeeded(), "HandleCommand with override context succeeded"
+        )
