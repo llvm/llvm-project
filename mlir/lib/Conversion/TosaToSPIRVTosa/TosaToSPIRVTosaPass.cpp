@@ -139,6 +139,7 @@ struct TosaToSPIRVTosa final : impl::TosaToSPIRVTosaBase<TosaToSPIRVTosa> {
 
     populateTosaToSPIRVTosaConversionPatterns(typeConverter, patterns,
                                               targetAttr);
+    populateTosaToSPIRVTosaOpsConversionPatterns(typeConverter, patterns);
 
     FrozenRewritePatternSet frozenPatterns(std::move(patterns));
 
