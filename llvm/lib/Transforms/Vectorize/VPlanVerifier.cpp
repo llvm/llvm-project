@@ -184,7 +184,7 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
     VPValue *HeaderMask;
 
     // Look through any `and`s with a loop_dependence_war_mask, which is always
-    // a prefix mask.
+    // a prefix mask. TODO: Verify the full loop.dependence.mask chain.
     if (match(Op,
               m_c_BinaryAnd(
                   m_VPValue(HeaderMask),
