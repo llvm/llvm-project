@@ -195,8 +195,10 @@ multiclass SICommonWriteRes {
   def : HWWriteRes<Write2PassMAI,  [HWXDL], 2>;
   let ReleaseAtCycles = [4] in
   def : HWWriteRes<Write4PassMAI,  [HWXDL], 4>;
-  let ReleaseAtCycles = [8] in
-  def : HWWriteRes<Write8PassMAI,  [HWXDL], 8>;
+  // 8-pass XDL MFMA blocks HWVALU for the first two passes; VALU may
+  // co-execute with MFMA starting at pass 3.
+  let ReleaseAtCycles = [2, 8] in
+  def : HWWriteRes<Write8PassMAI,  [HWVALU, HWXDL], 8>;
   let ReleaseAtCycles = [16] in
   def : HWWriteRes<Write16PassMAI, [HWXDL], 16>;
 

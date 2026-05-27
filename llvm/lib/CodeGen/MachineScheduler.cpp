@@ -3013,7 +3013,10 @@ void SchedBoundary::bumpNode(SUnit *SU) {
              PI = SchedModel->getWriteProcResBegin(SC),
              PE = SchedModel->getWriteProcResEnd(SC); PI != PE; ++PI) {
         unsigned PIdx = PI->ProcResourceIdx;
-        if (SchedModel->getResourceBufferSize(PIdx) == 0) {
+        // Track unbuffered resources, and buffered resources held for multiple
+        // cycles.
+        if (SchedModel->getResourceBufferSize(PIdx) == 0 ||
+            PI->ReleaseAtCycle > PI->AcquireAtCycle) {
 
           if (SchedModel && SchedModel->enableIntervals()) {
             unsigned ReservedUntil, InstanceIdx;
