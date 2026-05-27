@@ -7828,9 +7828,12 @@ different value.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``!mem.cache_hint`` metadata may be attached to any instruction that reads
-or writes memory. It provides target-specific cache control hints for the
-memory operation. This metadata is a performance hint: dropping or ignoring it
-must not change the observable behavior of the program.
+or writes memory, except non-intrinsic calls. We do not allow cache hints
+on function calls because their memory behavior depends on attributes that may change independently, and may therefore invalidate the IR.
+
+The ``!mem.cache_hint`` metadata provides target-specific cache control hints for the
+memory operation. This metadata is purely a performance hint: dropping or ignoring it
+must not change the observable behavior of the program (particularly, cache hints do not affect memory model semantics).
 
 The ``!mem.cache_hint`` node must contain an even number of entries, alternating between
 ``i32`` operand numbers and metadata hint nodes.
