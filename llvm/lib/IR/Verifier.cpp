@@ -1617,6 +1617,9 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
   CheckDI((N.getEmissionKind() <= DICompileUnit::LastEmissionKind),
           "invalid emission kind", &N);
 
+  CheckDI(N.getSourceLanguage().getDialect() <= dwarf::DW_LLVM_LANG_DIALECT_max,
+          "invalid language dialect", &N);
+
   if (auto *Array = N.getRawEnumTypes()) {
     CheckDI(isa<MDTuple>(Array), "invalid enum list", &N, Array);
     for (Metadata *Op : N.getEnumTypes()->operands()) {
@@ -2714,7 +2717,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     Check(!Args[2].getAsInteger(10, FirstArgIdx),
           "modular-format attribute first arg index is not an integer", V);
     unsigned UpperBound = FT->getNumParams() + (FT->isVarArg() ? 1 : 0);
-    Check(FirstArgIdx > 0 && FirstArgIdx <= UpperBound,
+    Check(FirstArgIdx <= UpperBound,
           "modular-format attribute first arg index is out of bounds", V);
   }
 

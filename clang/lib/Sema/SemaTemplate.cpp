@@ -4932,7 +4932,7 @@ ExprResult Sema::CheckConceptTemplateId(
     LocalInstantiationScope Scope(*this);
 
     EnterExpressionEvaluationContext EECtx{
-        *this, ExpressionEvaluationContext::Unevaluated};
+        *this, ExpressionEvaluationContext::Unevaluated, CSD};
 
     Error = CheckConstraintSatisfaction(
         NamedConcept, AssociatedConstraint(Concept->getConstraintExpr()), MLTAL,

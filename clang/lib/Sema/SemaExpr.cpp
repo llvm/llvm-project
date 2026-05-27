@@ -18479,6 +18479,11 @@ static void RemoveNestedImmediateInvocation(
       // Lambdas have already been processed inside their eval contexts.
       return E;
     }
+
+    // We do not have enough information to transform opaque expressions and
+    // assume they do not contain immediate subexpressions.
+    ExprResult TransformOpaqueValueExpr(OpaqueValueExpr *E) { return E; }
+
     bool AlwaysRebuild() { return false; }
     bool ReplacingOriginal() { return true; }
     bool AllowSkippingCXXConstructExpr() {

@@ -99,6 +99,16 @@ public:
 
   bool erase(const ValueT &V) { return TheMap.erase(V); }
 
+  /// Remove all elements for which \p Pred returns true.  This is the safe
+  /// replacement for erase-while-iterating; see DenseMap::remove_if.  The
+  /// predicate must not access the set being modified.  Returns whether
+  /// anything was removed; if so, all iterators are invalidated.
+  template <typename Predicate> bool remove_if(Predicate Pred) {
+    return TheMap.remove_if([&](const typename MapTy::value_type &KV) {
+      return Pred(KV.getFirst());
+    });
+  }
+
   void swap(DenseSetImpl &RHS) { TheMap.swap(RHS.TheMap); }
 
 private:
