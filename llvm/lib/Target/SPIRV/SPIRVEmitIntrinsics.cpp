@@ -2254,10 +2254,16 @@ Instruction *SPIRVEmitIntrinsics::visitInsertValueInst(InsertValueInst &I) {
 }
 
 Instruction *SPIRVEmitIntrinsics::visitExtractValueInst(ExtractValueInst &I) {
-  if (I.getAggregateOperand()->getType()->isAggregateType())
-    return &I;
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
+  if (I.getAggregateOperand()->getType()->isAggregateType()) {
+    // Mutate an aggregate-returning spv_extractv producer to i32 so
+    // IRTranslator does not see a multi-register value.
+    CallBase *CB = dyn_cast<CallBase>(I.getAggregateOperand());
+    if (!CB || CB->getIntrinsicID() != Intrinsic::spv_extractv)
+      return &I;
+    CB->mutateType(B.getInt32Ty());
+  }
   SmallVector<Value *> Args(I.operands());
   for (auto &Op : I.indices())
     Args.push_back(B.getInt32(Op));
