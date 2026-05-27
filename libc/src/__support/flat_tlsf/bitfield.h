@@ -16,6 +16,7 @@
 
 #include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/array.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/flat_tlsf/bit_utils.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
@@ -24,7 +25,8 @@ namespace LIBC_NAMESPACE_DECL {
 namespace flat_tlsf {
 
 struct alignas(16) BitField {
-  static constexpr size_t BITS_PER_ELEMENT = 8 * sizeof(size_t);
+  static constexpr size_t BITS_PER_ELEMENT =
+      cpp::numeric_limits<size_t>::digits;
   static constexpr size_t NUMBER_OF_ELEMENTS = 3;
   static constexpr size_t BITS = BITS_PER_ELEMENT * NUMBER_OF_ELEMENTS;
 
