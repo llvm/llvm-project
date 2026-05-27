@@ -1,6 +1,6 @@
 // RUN: cir-opt %s -verify-diagnostics -split-input-file
 
-// expected-error @below {{addr_space must be a language address space array}}
+// expected-error @below {{failed to verify 'addr_space': language address space array attribute}}
 #attr = #cir.cl.kernel_arg_metadata<
   addr_space = ["none"],
   access_qual = ["none"],
@@ -11,7 +11,7 @@
 
 // -----
 
-// expected-error @below {{access_qual must be a string array}}
+// expected-error @below {{failed to verify 'access_qual': string array attribute}}
 #attr = #cir.cl.kernel_arg_metadata<
   addr_space = [#cir<lang_address_space(default)>],
   access_qual = [42 : i32],
@@ -22,7 +22,7 @@
 
 // -----
 
-// expected-error @below {{type must be a string array}}
+// expected-error @below {{failed to verify 'type': string array attribute}}
 #attr = #cir.cl.kernel_arg_metadata<
   addr_space = [#cir<lang_address_space(default)>],
   access_qual = ["none"],
@@ -33,7 +33,7 @@
 
 // -----
 
-// expected-error @below {{base_type must be a string array}}
+// expected-error @below {{failed to verify 'base_type': string array attribute}}
 #attr = #cir.cl.kernel_arg_metadata<
   addr_space = [#cir<lang_address_space(default)>],
   access_qual = ["none"],
@@ -44,7 +44,7 @@
 
 // -----
 
-// expected-error @below {{type_qual must be a string array}}
+// expected-error @below {{failed to verify 'type_qual': string array attribute}}
 #attr = #cir.cl.kernel_arg_metadata<
   addr_space = [#cir<lang_address_space(default)>],
   access_qual = ["none"],
@@ -55,7 +55,7 @@
 
 // -----
 
-// expected-error @below {{name must be a string array}}
+// expected-error @below {{failed to verify 'name': string array attribute or null}}
 #attr = #cir.cl.kernel_arg_metadata<
   addr_space = [#cir<lang_address_space(default)>],
   access_qual = ["none"],

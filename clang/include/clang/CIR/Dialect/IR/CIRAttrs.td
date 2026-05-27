@@ -996,6 +996,10 @@ def CIR_LangAddressSpaceAttr : CIR_EnumAttr<CIR_LangAddressSpace,
   }];
 }
 
+def CIR_LangAddressSpaceArrayAttr
+    : CIR_TypedArrayAttrBase<CIR_LangAddressSpaceAttr,
+                             "language address space array attribute">;
+
 //===----------------------------------------------------------------------===//
 // TargetAddressSpaceAttr
 //===----------------------------------------------------------------------===//
@@ -1684,8 +1688,8 @@ def CIR_AnnotationAttr : CIR_Attr<"Annotation", "annotation"> {
 }
 
 def CIR_AnnotationArrayAttr
-    : TypedArrayAttrBase<CIR_AnnotationAttr,
-                         "array of cir.annotation attributes">;
+    : CIR_TypedArrayAttrBase<CIR_AnnotationAttr,
+                             "array of cir.annotation attributes">;
 
 include "clang/CIR/Dialect/IR/CIROpenCLAttrs.td"
 include "clang/CIR/Dialect/IR/CIRCUDAAttrs.td"

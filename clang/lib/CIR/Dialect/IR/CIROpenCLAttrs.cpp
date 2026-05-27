@@ -27,29 +27,6 @@ LogicalResult OpenCLKernelArgMetadataAttr::verify(
     function_ref<InFlightDiagnostic()> emitError, ArrayAttr addrSpaces,
     ArrayAttr accessQuals, ArrayAttr types, ArrayAttr baseTypes,
     ArrayAttr typeQuals, ArrayAttr argNames) {
-  auto isLangAddressSpaceArray = [](ArrayAttr attr) {
-    return llvm::all_of(attr, [](Attribute elem) {
-      return mlir::isa<cir::LangAddressSpaceAttr>(elem);
-    });
-  };
-  auto isStrArray = [](ArrayAttr attr) {
-    return llvm::all_of(
-        attr, [](Attribute elem) { return mlir::isa<StringAttr>(elem); });
-  };
-
-  if (!isLangAddressSpaceArray(addrSpaces))
-    return emitError() << "addr_space must be a language address space array";
-  if (!isStrArray(accessQuals))
-    return emitError() << "access_qual must be a string array";
-  if (!isStrArray(types))
-    return emitError() << "type must be a string array";
-  if (!isStrArray(baseTypes))
-    return emitError() << "base_type must be a string array";
-  if (!isStrArray(typeQuals))
-    return emitError() << "type_qual must be a string array";
-  if (argNames && !isStrArray(argNames))
-    return emitError() << "name must be a string array";
-
   if (!llvm::all_of(ArrayRef<ArrayAttr>{addrSpaces, accessQuals, types,
                                         baseTypes, typeQuals, argNames},
                     [&](ArrayAttr attr) {

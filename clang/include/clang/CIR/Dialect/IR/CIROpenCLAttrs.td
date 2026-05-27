@@ -30,12 +30,12 @@ def CIR_OpenCLKernelArgMetadataAttr
   }];
 
   let parameters = (ins
-    "::mlir::ArrayAttr":$addr_space,
-    "::mlir::ArrayAttr":$access_qual,
-    "::mlir::ArrayAttr":$type,
-    "::mlir::ArrayAttr":$base_type,
-    "::mlir::ArrayAttr":$type_qual,
-    OptionalParameter<"::mlir::ArrayAttr">:$name
+    CIR_LangAddressSpaceArrayAttr:$addr_space,
+    CIR_StringArrayAttr:$access_qual,
+    CIR_StringArrayAttr:$type,
+    CIR_StringArrayAttr:$base_type,
+    CIR_StringArrayAttr:$type_qual,
+    CIR_StringArrayAttrOrNull:$name
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
