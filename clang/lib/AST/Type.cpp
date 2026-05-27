@@ -5950,3 +5950,62 @@ StringRef PredefinedSugarType::getName(Kind KD) {
   }
   llvm_unreachable("unexpected kind");
 }
+
+bool Type::isImplicitLifetimeType() const {
+  // [basic.types.general] p9
+  // Scalar types, implicit-lifetime class types ([class.prop]), array types,
+  // and cv-qualified versions of these types are collectively called
+  // implicit-lifetime types.
+  QualType UnqualT = getCanonicalTypeUnqualified();
+
+  if (UnqualT->isScalarType())
+    return true;
+
+  // Arrays are implicit Lifetime types.
+  if (UnqualT->isArrayType() || UnqualT->isVectorType() ||
+      UnqualT->isExtVectorType())
+    return true;
+
+  const CXXRecordDecl *RD = UnqualT->getAsCXXRecordDecl();
+  if (!RD)
+    return false;
+
+  // [class.prop] p9
+  // A class S is an implicit-lifetime class if
+  //   - it is an aggregate whose destructor is not user-provided or
+  //   - it has atleast one trivial eligible constructor and a trivial,
+  //   non-deleted destructor.
+
+  const CXXDestructorDecl *Dtor = RD->getDestructor();
+  if (UnqualT->isAggregateType() && (!Dtor || !Dtor->isUserProvided()))
+    return true;
+
+  // Type must have a trivial, non-deleted destructor
+  bool HasTrivialNonDeletedDtr =
+      RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted());
+  if (!HasTrivialNonDeletedDtr)
+    return false;
+
+  for (CXXConstructorDecl *Ctor : RD->ctors()) {
+    if (Ctor->isIneligibleOrNotSelected() || Ctor->isDeleted())
+      continue;
+
+    if (Ctor->isTrivial())
+      return true;
+  }
+
+  if (RD->needsImplicitDefaultConstructor() &&
+      RD->hasTrivialDefaultConstructor() &&
+      !RD->hasNonTrivialDefaultConstructor())
+    return true;
+
+  if (RD->needsImplicitCopyConstructor() && RD->hasTrivialCopyConstructor() &&
+      !RD->defaultedCopyConstructorIsDeleted())
+    return true;
+
+  if (RD->needsImplicitMoveConstructor() && RD->hasTrivialMoveConstructor() &&
+      !RD->defaultedMoveConstructorIsDeleted())
+    return true;
+
+  return false;
+}

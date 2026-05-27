@@ -3304,6 +3304,46 @@ implemented directly in terms of :ref:`extended vector support
 <langext-vectors>` instead of builtins, in order to reduce the number of
 builtins that we need to implement.
 
+
+``__builtin_start_lifetime_as``
+-------------------------------
+
+``__builtin_start_lifetime_as`` is used to implicitly create objects in existing memory and alter its dynamic type without invoking a constructor.
+
+**Syntax:**
+
+.. code-block:: c++
+
+  T* __builtin_start_lifetime_as(T* ptr);
+  T* __builtin_start_lifetime_as(T* ptr, bool strict);
+
+**Example of Use:**
+
+.. code-block:: c++
+
+  struct Trivial { int x; int y; };
+
+  void process_data(char* buffer) {
+    // Implicitly create a Trivial object in the raw byte buffer
+    auto mem = __builtin_start_lifetime_as((Trivial*)buffer);
+
+    // Also used to implement 'std::start_lifetime_as_array'
+    auto arr = __builtin_start_lifetime_as((Trivial(*))[5])buffer);
+    /* mem and arr are now valid */
+  }
+
+**Description:**
+
+``__builtin_start_lifetime_as`` is meant to be used as the underlying compiler primitive for the C++23 memory hydration functions ``std::start_lifetime_as`` and ``std::start_lifetime_as_array`` (P2590R2). It returns a valid pointer to the newly created object(s) of type ``T`` at the provided memory address.
+
+This builtin shares the same code generation behavior as ``__builtin_launder``.
+
+The target type ``T`` must a complete type. Variable Length Arrays (VLAs) are strictly forbidden. Furthermore, this builtin will be rejected if evaluated in a ``constexpr`` context as dynamically altering object lifetimes is not permitted during compile-time evaluation.
+
+By default (or when the optional ``strict`` flag evaluates to ``true``), the compiler enforces C++23 standard compliance by requiring ``T`` to be an implicit-lifetime time. If ``strict`` evaluates to ``false``, the compiler bypasses this constraint.
+
+Query for this feature with ``__has_builtin(__builtin_start_lifetime_as)``.
+
 ``__builtin_alloca``
 --------------------
 

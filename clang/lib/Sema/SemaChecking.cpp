@@ -41,6 +41,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -3130,7 +3131,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     return BuiltinIsWithinLifetime(*this, TheCall);
   case Builtin::BI__builtin_trivially_relocate:
     return BuiltinTriviallyRelocate(*this, TheCall);
-
+  case Builtin::BI__builtin_start_lifetime_as:
+    if (BuiltinStartLifetimeAs(TheCall))
+      return ExprError();
+    break;
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_add_1:
   case Builtin::BI__sync_fetch_and_add_2:
@@ -17291,4 +17295,75 @@ void Sema::CheckTCBEnforcement(const SourceLocation CallExprLoc,
           << Callee << CallerTCB;
     }
   }
+}
+
+bool Sema::BuiltinStartLifetimeAs(CallExpr *Call) {
+  // Argument count: 1 (Strict) or 2 (Pointer, StrictnessFlag)
+  if (checkArgCountRange(Call, 1, 2))
+    return true;
+
+  Expr *PtrArg = Call->getArg(0);
+  QualType PtrType = PtrArg->getType();
+
+  const PointerType *PT = PtrType->getAs<PointerType>();
+  if (!PT) {
+    Diag(PtrArg->getExprLoc(), diag::err_builtin_start_lifetime_as_invalid_arg)
+        << PtrArg->getSourceRange();
+    return true;
+  }
+
+  QualType PointeeType = PT->getPointeeType();
+
+  // Variable Length Arrays are "complete types" in clang, but they lack a
+  // static size. GCC doesn't support variable-sized arrays in
+  // `std::start_lifetime_as`.
+  if (PointeeType->isVariableArrayType()) {
+    // We cannot use `err_vla_unsupported` because of some FormatDiagnostic
+    // issue
+    Diag(PtrArg->getExprLoc(), diag::err_builtin_start_lifetime_as_vla)
+        << PtrArg->getSourceRange();
+    return true;
+  }
+
+  if (Call->isTypeDependent() || Call->isValueDependent())
+    return false;
+
+  // Reject void and function pointers immediately.
+  if (PointeeType->isVoidType() || PointeeType->isFunctionType()) {
+    Diag(PtrArg->getExprLoc(), diag::err_start_lifetime_as_not_implicit)
+        << PointeeType << PtrArg->getSourceRange();
+    return true;
+  }
+
+  // Ensure the type is fully defined
+  if (RequireCompleteType(PtrArg->getExprLoc(), PointeeType,
+                          diag::err_incomplete_type))
+    return true;
+
+  bool IsStrict = true;
+  if (Call->getNumArgs() == 2) {
+    Expr *StrictArg = Call->getArg(1);
+
+    std::optional<llvm::APSInt> OptStrict =
+        StrictArg->getIntegerConstantExpr(Context);
+
+    if (!OptStrict) {
+      Diag(StrictArg->getExprLoc(), diag::err_expr_not_ice)
+          << 0 << StrictArg->getSourceRange();
+      return true;
+    }
+
+    IsStrict = OptStrict->getBoolValue();
+  }
+
+  // Note: If the user called `start_lifetime_as_array<int>`, the PointeeType is
+  // simply `int` so no need to unwrap the array.
+  if (IsStrict && !PointeeType->isImplicitLifetimeType()) {
+    Diag(PtrArg->getExprLoc(), diag::err_start_lifetime_as_not_implicit)
+        << PointeeType << PtrArg->getSourceRange();
+    return true;
+  }
+
+  Call->setType(PtrType);
+  return false;
 }

@@ -2477,6 +2477,9 @@ public:
   /// or QualType::getSingleStepDesugaredType(const ASTContext&).
   QualType getLocallyUnqualifiedSingleStepDesugaredType() const;
 
+  /// Determine whether this type is an implicit-lifetime type.
+  bool isImplicitLifetimeType() const;
+
   /// As an extension, we classify types as one of "sized" or "sizeless";
   /// every type is one or the other.  Standard types are all sized;
   /// sizeless types are purely an extension.

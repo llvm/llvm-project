@@ -14260,4 +14260,13 @@ def err_cuda_device_kernel_launch_not_supported
 def err_cuda_device_kernel_launch_require_rdc
     : Error<"kernel launch from __device__ or __global__ function requires "
             "relocatable device code (i.e. requires -fgpu-rdc)">;
+def err_start_lifetime_as_not_implicit : Error<
+  "type %0 is not an implicit-lifetime type; cannot start lifetime">;
+def err_builtin_start_lifetime_as_invalid_arg : Error<
+  "non-pointer argument to '__builtin_start_lifetime_as' is not allowed">;
+def note_constexpr_start_lifetime : Note<
+  "implicitly creating objects and dynamically altering lifetimes is not "
+  "supported during constant evalutaion">;
+def err_builtin_start_lifetime_as_vla : Error<
+  "variable length arrays are not supported in '__builtin_start_lifetime_as'">;
 } // end of sema component.

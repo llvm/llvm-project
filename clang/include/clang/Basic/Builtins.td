@@ -5816,3 +5816,9 @@ def CountedByRef : Builtin {
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "int(...)";
 }
+
+def StartLifetimeAs : Builtin {
+  let Spellings = ["__builtin_start_lifetime_as"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void *(...)";
+}

@@ -26,6 +26,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/IR/InlineAsm.h"
@@ -5150,6 +5151,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     return RValue::get(nullptr);
   }
+  case Builtin::BI__builtin_start_lifetime_as:
   case Builtin::BI__builtin_launder: {
     const Expr *Arg = E->getArg(0);
     QualType ArgTy = Arg->getType()->getPointeeType();

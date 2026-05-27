@@ -1071,48 +1071,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     DiagnoseAtomicInCXXTypeTrait(Self, TInfo,
                                  tok::kw___builtin_is_implicit_lifetime);
 
-    // [basic.types.general] p9
-    // Scalar types, implicit-lifetime class types ([class.prop]),
-    // array types, and cv-qualified versions of these types
-    // are collectively called implicit-lifetime types.
-    QualType UnqualT = T->getCanonicalTypeUnqualified();
-    if (UnqualT->isScalarType())
-      return true;
-    if (UnqualT->isArrayType() || UnqualT->isVectorType())
-      return true;
-    const CXXRecordDecl *RD = UnqualT->getAsCXXRecordDecl();
-    if (!RD)
-      return false;
-
-    // [class.prop] p9
-    // A class S is an implicit-lifetime class if
-    //   - it is an aggregate whose destructor is not user-provided or
-    //   - it has at least one trivial eligible constructor and a trivial,
-    //     non-deleted destructor.
-    const CXXDestructorDecl *Dtor = RD->getDestructor();
-    if (UnqualT->isAggregateType() && (!Dtor || !Dtor->isUserProvided()))
-      return true;
-    bool HasTrivialNonDeletedDtr =
-        RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted());
-    if (!HasTrivialNonDeletedDtr)
-      return false;
-    for (CXXConstructorDecl *Ctr : RD->ctors()) {
-      if (Ctr->isIneligibleOrNotSelected() || Ctr->isDeleted())
-        continue;
-      if (Ctr->isTrivial())
-        return true;
-    }
-    if (RD->needsImplicitDefaultConstructor() &&
-        RD->hasTrivialDefaultConstructor() &&
-        !RD->hasNonTrivialDefaultConstructor())
-      return true;
-    if (RD->needsImplicitCopyConstructor() && RD->hasTrivialCopyConstructor() &&
-        !RD->defaultedCopyConstructorIsDeleted())
-      return true;
-    if (RD->needsImplicitMoveConstructor() && RD->hasTrivialMoveConstructor() &&
-        !RD->defaultedMoveConstructorIsDeleted())
-      return true;
-    return false;
+    return T->isImplicitLifetimeType();
   }
   case UTT_IsIntangibleType:
     assert(Self.getLangOpts().HLSL && "intangible types are HLSL-only feature");

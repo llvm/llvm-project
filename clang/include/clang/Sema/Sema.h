@@ -2893,6 +2893,12 @@ public:
   bool BuiltinConstantArgShiftedByteOrXXFF(CallExpr *TheCall, unsigned ArgNum,
                                            unsigned ArgBits);
 
+  /// BuiltinStartLifetimeAs - Ensures the argument is a valid pointer to a
+  /// complete type. In strict mode (default), it also enforces C++23
+  /// implicit-lifetime constraints. Returns true on error, false on success or
+  /// if type-dependent.
+  bool BuiltinStartLifetimeAs(CallExpr *TheCall);
+
   /// Checks that a call expression's argument count is at least the desired
   /// number. This is useful when doing custom type-checking on a variadic
   /// function. Returns true on error.
