@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple spir-unknown-unknown -cl-std=CL3.0 -fdeclare-opencl-builtins -verify -fsyntax-only %s
-// expected-no-diagnostics
 
 // Keep this test header-free so it exercises OpenCLBuiltins.td instead of
 // declarations from opencl-c.h.
@@ -61,4 +60,25 @@ void test_block_write_ul(__global ulong *out, write_only image2d_t image,
   intel_sub_group_block_write_ul4(image, coord, value4);
   intel_sub_group_block_write_ul8(rw, coord, value8);
   intel_sub_group_block_write_ul16(rw, coord, value16);
+}
+
+void test_block_read_ul_invalid(const __global ulong *in, ulong v) {
+  intel_sub_group_block_read_ul(); // expected-error{{no matching function for call to 'intel_sub_group_block_read_ul'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_read_ul(in, in); // expected-error{{no matching function for call to 'intel_sub_group_block_read_ul'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_read_ul(v); // expected-error{{no matching function for call to 'intel_sub_group_block_read_ul'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+}
+
+void test_block_write_ul_invalid(__global ulong *out, read_only image2d_t roimg,
+                                 int2 coord, ulong value) {
+  intel_sub_group_block_write_ul(); // expected-error{{no matching function for call to 'intel_sub_group_block_write_ul'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_write_ul(out); // expected-error{{no matching function for call to 'intel_sub_group_block_write_ul'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_write_ul(out, value, value); // expected-error{{no matching function for call to 'intel_sub_group_block_write_ul'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_write_ul(roimg, coord, value); // expected-error{{no matching function for call to 'intel_sub_group_block_write_ul'}}
+  // expected-note@-1 0+{{candidate function not viable}}
 }
