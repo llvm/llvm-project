@@ -43,3 +43,24 @@ movq %rax, %fs:8(%rdi,%rsi,2)
 // CHECK:      movq 16(%r15), %r11
 // CHECK-NEXT: leaq (%r11,%rdi), %r11
 // CHECK-NEXT: movq %rax, 8(%r11,%rsi,2)
+
+movq %fs:foo, %rax
+// CHECK:      movq 16(%r15), %rax
+// CHECK-NEXT: movq foo(%rax), %rax
+
+movq %fs:foo@TPOFF, %rax
+// CHECK:      movq 16(%r15), %rax
+// CHECK-NEXT: movq foo@TPOFF(%rax), %rax
+
+movq %fs:foo(%rdi), %rax
+// CHECK:      movq 16(%r15), %rax
+// CHECK-NEXT: movq foo(%rax,%rdi), %rax
+
+movq %fs:foo@TPOFF(%rdi,%rsi,2), %rax
+// CHECK:      movq 16(%r15), %rax
+// CHECK-NEXT: leaq (%rax,%rdi), %rax
+// CHECK-NEXT: movq foo@TPOFF(%rax,%rsi,2), %rax
+
+movq %rcx, %fs:foo
+// CHECK:      movq 16(%r15), %r11
+// CHECK-NEXT: movq %rcx, foo(%r11)
