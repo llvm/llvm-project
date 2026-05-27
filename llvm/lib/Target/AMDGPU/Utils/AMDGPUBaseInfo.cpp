@@ -405,7 +405,6 @@ struct VOPDComponentInfo {
   uint16_t BaseVOP;
   uint16_t VOPDOp;
   bool CanBeVOPDX;
-  bool CanBeVOPD3X;
 };
 
 struct VOPDInfo {
@@ -676,7 +675,7 @@ CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
     return {canBeVOPDX(Info->VOPDOp, EncodingFamily, true) != nullptr,
             canBeVOPDY(Info->VOPDOp, EncodingFamily, true) != nullptr};
   }
-  // VOPDX eligibility is encoding-family-independent for non-VOPD3.
+  // VOPDX eligibility is encoding-family-independent for non-VOPD3, so re-use information in Info.
   return {Info->CanBeVOPDX,
           canBeVOPDY(Info->VOPDOp, EncodingFamily, false) != nullptr};
 }

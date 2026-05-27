@@ -3543,7 +3543,7 @@ def FP4FP8DstByteSelTable : GenericTable {
 def VOPDComponentTable : GenericTable {
   let FilterClass = "VOPD_Component";
   let CppTypeName = "VOPDComponentInfo";
-  let Fields = ["BaseVOP", "VOPDOp", "CanBeVOPDX", "CanBeVOPD3X"];
+  let Fields = ["BaseVOP", "VOPDOp", "CanBeVOPDX"];
   let PrimaryKey = ["BaseVOP"];
   let PrimaryKeyName = "getVOPDComponentHelper";
 }
@@ -3573,7 +3573,8 @@ def hi16_to_vgpr32 : OutPatFrag<(ops node:$op),
   (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $op, hi16)>;
 
 // Instructions eligible to be the first (X) instruction in Dual Issue VALU
-// (VOPD) encoding.
+// (VOPD) encoding. This only includes VOPD3 opcodes that are subtarget dependent.
+// Non-VOPD3 opcodes should be checked with CanBeVOPDX from VOPDComponentTable.
 def VOPDXTable : GenericTable {
   let FilterClass = "VOPDX";
   let CppTypeName = "VOPDXYInfo";
