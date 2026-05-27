@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/windows/LazyImport.h"
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -28,9 +29,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-
-using GetThreadDescriptionFunctionPtr =
-    HRESULT(WINAPI *)(HANDLE hThread, PWSTR *ppszThreadDescription);
 
 TargetThreadWindows::TargetThreadWindows(ProcessWindows &process,
                                          const HostThread &thread)
@@ -177,17 +175,12 @@ Status TargetThreadWindows::DoResume() {
 
 const char *TargetThreadWindows::GetName() {
   Log *log = GetLog(LLDBLog::Thread);
-  static GetThreadDescriptionFunctionPtr GetThreadDescription = []() {
-    HMODULE hModule = ::LoadLibraryW(L"Kernel32.dll");
-    return hModule
-               ? reinterpret_cast<GetThreadDescriptionFunctionPtr>(
-                     (void *)::GetProcAddress(hModule, "GetThreadDescription"))
-               : nullptr;
-  }();
-  LLDB_LOGF(log, "GetProcAddress: %p",
-            reinterpret_cast<void *>(GetThreadDescription));
-  if (!GetThreadDescription)
+  static LazyImport<HRESULT(WINAPI *)(HANDLE, PWSTR *)> kGetThreadDescription{
+      L"Kernel32.dll", "GetThreadDescription"};
+  if (!kGetThreadDescription)
     return m_name.c_str();
+  auto GetThreadDescription = *kGetThreadDescription;
+
   PWSTR pszThreadName;
   if (SUCCEEDED(GetThreadDescription(
           m_host_thread.GetNativeThread().GetSystemHandle(), &pszThreadName))) {

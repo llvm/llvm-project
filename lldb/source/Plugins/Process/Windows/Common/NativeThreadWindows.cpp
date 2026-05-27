@@ -11,6 +11,7 @@
 
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
+#include "lldb/Host/windows/LazyImport.h"
 #include "lldb/Host/windows/windows.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -18,6 +19,7 @@
 #include "lldb/Utility/State.h"
 
 #include "lldb/lldb-forward.h"
+#include <llvm/Support/ConvertUTF.h>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -99,8 +101,25 @@ Status NativeThreadWindows::DoResume(lldb::StateType resume_state) {
 }
 
 std::string NativeThreadWindows::GetName() {
-  // Windows threads only have a name when the inferior calls
-  // SetThreadDescription explicitly.
+  Log *log = GetLog(LLDBLog::Thread);
+  static LazyImport<HRESULT(WINAPI *)(HANDLE, PWSTR *)> kGetThreadDescription{
+      L"Kernel32.dll", "GetThreadDescription"};
+  if (!kGetThreadDescription)
+    return m_name;
+  auto GetThreadDescription = *kGetThreadDescription;
+
+  PWSTR pszThreadName;
+  if (SUCCEEDED(GetThreadDescription(
+          m_host_thread.GetNativeThread().GetSystemHandle(), &pszThreadName))) {
+    LLDB_LOGF(log, "GetThreadDescription: %ls", pszThreadName);
+    m_name.clear();
+    llvm::convertUTF16ToUTF8String(
+        llvm::ArrayRef(reinterpret_cast<char *>(pszThreadName),
+                       wcslen(pszThreadName) * sizeof(wchar_t)),
+        m_name);
+    ::LocalFree(pszThreadName);
+  }
+
   return m_name;
 }
 
