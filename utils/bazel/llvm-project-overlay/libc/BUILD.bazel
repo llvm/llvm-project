@@ -387,7 +387,6 @@ libc_support_library(
     ],
 )
 
-
 libc_support_library(
     name = "llvm_libc_macros_sys_socket_macros",
     hdrs = [
@@ -571,7 +570,6 @@ libc_support_library(
     name = "hdr_link_macros",
     hdrs = ["hdr/link_macros.h"],
 )
-
 
 ############################ Type Proxy Header Files ###########################
 
@@ -2885,7 +2883,6 @@ libc_support_library(
         ":hdr_errno_macros",
     ],
 )
-
 
 libc_support_library(
     name = "__support_threads_mutex",
