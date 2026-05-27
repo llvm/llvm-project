@@ -21029,53 +21029,8 @@ static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue performFpToSIntToFPCombineNEON(SelectionDAG &DAG, SDLoc DL,
-                                              EVT VT, unsigned int IntBits,
-                                              SDValue FPSrc) {
-  unsigned FrintOpc;
-
-  if (IntBits == 32)
-    FrintOpc = Intrinsic::aarch64_neon_frint32z;
-  else if (IntBits == 64)
-    FrintOpc = Intrinsic::aarch64_neon_frint64z;
-  else
-    return SDValue();
-
-  if (VT != MVT::v2f32 && VT != MVT::v4f32 && VT != MVT::v2f64)
-    return SDValue();
-
-  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT,
-                     DAG.getTargetConstant(FrintOpc, DL, MVT::i64), FPSrc);
-}
-
-static SDValue performFpToSIntToFPCombineSVE(SelectionDAG &DAG, SDLoc DL,
-                                             EVT VT, unsigned int IntBits,
-                                             SDValue FPSrc, SDNodeFlags Flags) {
-  unsigned FrintOpc;
-
-  if (IntBits == 64)
-    FrintOpc = AArch64ISD::FTRUNC64_MERGE_PASSTHRU;
-  else if (IntBits == 32)
-    FrintOpc = AArch64ISD::FTRUNC32_MERGE_PASSTHRU;
-  else
-    return SDValue();
-
-  EVT ContainerVT =
-      VT.isFixedLengthVector() ? getContainerForFixedLengthVector(DAG, VT) : VT;
-
-  SDValue Pg = getPredicateForVector(DAG, DL, VT);
-  SDValue Val = VT.isFixedLengthVector()
-                    ? convertToScalableVector(DAG, ContainerVT, FPSrc)
-                    : FPSrc;
-
-  SDValue Res = DAG.getNode(FrintOpc, DL, ContainerVT, Pg, Val,
-                            DAG.getPOISON(ContainerVT), Flags);
-
-  return VT.isFixedLengthVector() ? convertFromScalableVector(DAG, VT, Res)
-                                  : Res;
-}
-
-// Combine (sint_to_fp (fp_to_sint (x) )) to FRINT*Z instructions
+// Combine (sint_to_fp (fp_to_sint (x) )) to FRINTZ instructions,
+// provided that signed zeros can be ignored.
 static SDValue performFpToSIntToFPCombine(SDNode *N, SelectionDAG &DAG,
                                           const AArch64Subtarget *Subtarget,
                                           const AArch64TargetLowering &TLI) {
@@ -21097,25 +21052,35 @@ static SDValue performFpToSIntToFPCombine(SDNode *N, SelectionDAG &DAG,
   if (FPSrc.getValueType() != VT)
     return SDValue();
 
+  if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+      !DAG.canIgnoreSignBitOfZero(Op))
+    return SDValue();
+
   unsigned IntBits = Src.getValueType().getVectorElementType().getSizeInBits();
 
-  if (VT.isFixedLengthVector() && Subtarget->isNeonAvailable() &&
-      Subtarget->hasFRInt3264()) {
-    if (SDValue Res =
-            performFpToSIntToFPCombineNEON(DAG, DL, VT, IntBits, FPSrc))
-      return Res;
-  }
+  if (!Subtarget->isSVEorStreamingSVEAvailable() ||
+      !(Subtarget->hasSVE2p2() || Subtarget->hasSME2p2()))
+    return SDValue();
 
-  if (Subtarget->isSVEorStreamingSVEAvailable() &&
-      (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2())) {
-    if ((VT.isScalableVector() && TLI.isTypeLegal(VT)) ||
-        (VT.isFixedLengthVector() &&
-         TLI.useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable())))
-      return performFpToSIntToFPCombineSVE(DAG, DL, VT, IntBits, FPSrc,
-                                           Op->getFlags());
-  }
+  if (!(VT.isScalableVector() && TLI.isTypeLegal(VT)) ||
+      !(VT.isFixedLengthVector() &&
+        TLI.useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable())))
+    return SDValue();
 
-  return SDValue();
+  EVT ContainerVT =
+      VT.isFixedLengthVector() ? getContainerForFixedLengthVector(DAG, VT) : VT;
+
+  SDValue Pg = getPredicateForVector(DAG, DL, VT);
+  SDValue Val = VT.isFixedLengthVector()
+                    ? convertToScalableVector(DAG, ContainerVT, FPSrc)
+                    : FPSrc;
+
+  SDValue Res =
+      DAG.getNode(AArch64ISD::FTRUNC_MERGE_PASSTHRU, DL, ContainerVT, Pg, Val,
+                  DAG.getPOISON(ContainerVT), Op->getFlags());
+
+  return VT.isFixedLengthVector() ? convertFromScalableVector(DAG, VT, Res)
+                                  : Res;
 }
 
 // Given a tree of and/or(csel(0, 1, cc0), csel(0, 1, cc1)), we may be able to
