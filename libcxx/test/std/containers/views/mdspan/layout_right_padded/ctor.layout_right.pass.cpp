@@ -11,7 +11,8 @@
 // <mdspan>
 
 // template<class OtherExtents>
-// constexpr mapping(const layout_right::mapping<OtherExtents>& other);
+//   constexpr explicit(!is_convertible_v<OtherExtents, extents_type>)
+//     mapping(const layout_right::mapping<OtherExtents>&);
 
 #include <cassert>
 #include <cstddef>
@@ -24,7 +25,7 @@ constexpr void assert_same_mapping(const Dst& dst, const Src& src) {
 
   if constexpr (Dst::extents_type::rank() > 0) {
     for (typename Dst::rank_type r = 0; r < Dst::extents_type::rank(); ++r)
-      assert(dst.stride(r) == static_cast<typename Dst::index_type>(src.stride(r)));
+      assert(dst.stride(r) == static_cast<Dst::index_type>(src.stride(r)));
   }
 }
 
@@ -47,26 +48,17 @@ constexpr bool test() {
   constexpr size_t D = std::dynamic_extent;
 
   {
-    using Src = std::layout_right::mapping<std::extents<size_t>>;
-    using Dst = std::layout_right_padded<4>::mapping<std::extents<size_t>>;
+    using Src = std::layout_right::mapping<std::extents<size_t, 4, 8>>;
+    using Dst = std::layout_right_padded<4>::mapping<std::extents<size_t, 4, 8>>;
     Src source;
     test_conversion<true, Dst>(source);
   }
 
   {
-    using Src = std::layout_right::mapping<std::extents<size_t, 3>>;
-    using Dst = std::layout_right_padded<4>::mapping<std::extents<size_t, D>>;
-    Src source;
-    test_conversion<true, Dst>(source);
-  }
-
-  {
-    using Src        = std::layout_right::mapping<std::extents<size_t, 4, 8>>;
-    using DstStatic  = std::layout_right_padded<4>::mapping<std::extents<size_t, 4, 8>>;
-    using DstDynamic = std::layout_right_padded<D>::mapping<std::extents<size_t, D, 8>>;
-    Src source;
-    test_conversion<true, DstStatic>(source);
-    test_conversion<true, DstDynamic>(source);
+    using Src = std::layout_right::mapping<std::extents<size_t, D, 8>>;
+    using Dst = std::layout_right_padded<4>::mapping<std::extents<size_t, 4, 8>>;
+    Src source(std::extents<size_t, D, 8>(4));
+    test_conversion<false, Dst>(source);
   }
 
   return true;
