@@ -1921,6 +1921,34 @@ def _expandLateSubstitutionsExternal(commandLine):
         commandLine = "%s && test -e %s" % (commandLine, filePath)
     return commandLine
 
+
+def _applyFnSelection(script, fn_names):
+    """Prepend llvm-extract to each command so the pipeline receives reduced IR."""
+    if not fn_names:
+        return script
+    func_args = " ".join("--func=" + n for n in fn_names)
+    extract = "llvm-extract " + func_args + " %s -o -"
+    for directive in script:
+        if not isinstance(directive, CommandDirective):
+            continue
+        cmd = directive.command
+        pipe_idx = cmd.find("|")
+        first, rest = (cmd[:pipe_idx], cmd[pipe_idx:]) if pipe_idx != -1 else (cmd, "")
+        if "%s" not in first:
+            continue
+        # Preserve %dbg(...) marker at the start of the command
+        dbg = re.match(r"(%dbg\([^)]*\))\s*", first)
+        prefix = dbg.group(1) + " " if dbg else ""
+        if dbg:
+            first = first[dbg.end():]
+        # Strip '< %s' stdin redirect so the tool reads from the pipe instead
+        first = re.sub(r"<\s*%s(?=\s|$)", "", first)
+        # Strip '%s' positional arg (only when whitespace-delimited)
+        first = re.sub(r"(?<!\S)%s(?=\s|$)", "", first)
+        directive.command = prefix + extract + " | " + first.strip() + " " + rest
+    return script
+
+
 def executeShTest(
     test, litConfig, useExternalSh, extra_substitutions=[], preamble_commands=[]
 ):
@@ -1937,6 +1965,8 @@ def executeShTest(
 
     if litConfig.noExecute:
         return lit.Test.Result(Test.PASS)
+
+    script = _applyFnSelection(script, litConfig.fnSelection)
 
     tmpDir, tmpBase = getTempPaths(test)
     substitutions = list(extra_substitutions)

@@ -481,6 +481,16 @@ def parse_args():
         default=os.environ.get("LIT_RUN_SHARD"),
     )
 
+    selection_group.add_argument(
+        "--fn",
+        dest="fnSelection",
+        metavar="NAMES",
+        type=_comma_list,
+        default=None,
+        help="Pipe IR output through llvm-extract to keep only the named "
+        "functions (comma-separated) and their dependencies",
+    )
+
     debug_group = parser.add_argument_group("Debug and Experimental Options")
     debug_group.add_argument(
         "--debug", help="Enable debugging (for 'lit' development)", action="store_true"
@@ -585,6 +595,13 @@ def _case_insensitive_regex(arg):
 
 def _semicolon_list(arg):
     return arg.split(";")
+
+
+def _comma_list(arg):
+    names = [n.strip() for n in arg.split(",") if n.strip()]
+    if not names:
+        raise _error("empty function name list")
+    return names
 
 
 def _error(desc, *args):
