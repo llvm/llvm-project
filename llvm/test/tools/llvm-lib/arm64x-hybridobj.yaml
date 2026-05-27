@@ -1,0 +1,49 @@
+# RUN: yaml2obj -DMACHINE=IMAGE_FILE_MACHINE_ARM64 %s -o %t-aarch64.o
+# RUN: yaml2obj -DMACHINE=IMAGE_FILE_MACHINE_ARM64EC %s -o %t-arm64ec.o
+# RUN: llvm-objcopy --add-section=.obj.arm64ec=%t-arm64ec.o --set-section-flags=.obj.arm64ec=debug %t-aarch64.o %t.o
+# RUN: llvm-lib -machine:arm64x -out:%t.lib %t.o
+# RUN: llvm-nm --print-armap %t.lib | FileCheck %s
+
+# CHECK:      Archive map
+# CHECK-NEXT: sym in {{.*}}arm64x-hybridobj.yaml.tmp.o
+# CHECK-EMPTY:
+# CHECK-NEXT: Archive EC map
+# CHECK-NEXT: sym in {{.*}}obj.arm64ec/arm64x-hybridobj.yaml.tmp.o
+# CHECK-EMPTY:
+# CHECK-EMPTY:
+# CHECK-NEXT: {{.*}}arm64x-hybridobj.yaml.tmp.o:
+# CHECK-NEXT: 00000000 D sym
+# CHECK-EMPTY:
+# CHECK-NEXT: {{.*}}obj.arm64ec/arm64x-hybridobj.yaml.tmp.o:
+# CHECK-NEXT: 00000000 D sym
+
+--- !COFF
+header:
+  Machine:         [[MACHINE]]
+  Characteristics: [  ]
+sections:
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    Alignment:       4
+    SectionData:     '00000000'
+    SizeOfRawData:   4
+symbols:
+  - Name:            .data
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          2
+  - Name:            sym
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...
