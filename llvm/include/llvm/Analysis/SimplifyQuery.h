@@ -126,11 +126,12 @@ struct SimplifyQuery {
   /// Otherwise always return false.
   LLVM_ABI bool isUndefValue(Value *V) const;
 
-  bool expectsSignalingNaNs() const {
-    if (CxtI)
-      if (const BasicBlock *BB = CxtI->getParent())
-        if (const Function *F = BB->getParent())
-          return F->hasFnAttribute(Attribute::SignalingNans);
+  bool doesNotExpectSignalingNaNs() const {
+    if (CxtI) {
+      assert(CxtI->getParent() && "isolated instruction");
+      const Function *F = CxtI->getFunction();
+      return !F->hasFnAttribute(Attribute::SignalingNans);
+    }
     return false;
   }
 

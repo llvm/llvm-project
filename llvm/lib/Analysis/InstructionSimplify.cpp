@@ -95,7 +95,7 @@ static Constant *getFalse(Type *Ty) { return ConstantInt::getFalse(Ty); }
 static Constant *getTrue(Type *Ty) { return ConstantInt::getTrue(Ty); }
 
 inline bool canIgnoreSNaN(const SimplifyQuery &Q, FastMathFlags FMF) {
-  return !Q.expectsSignalingNaNs() || FMF.noNaNs();
+  return Q.doesNotExpectSignalingNaNs() || FMF.noNaNs();
 }
 
 /// isSameCompare - Is V equivalent to the comparison "LHS Pred RHS"?

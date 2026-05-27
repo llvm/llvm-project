@@ -824,11 +824,13 @@ define void @atomic_max_umin_char(ptr %addr) #0 {
 define void @atomic_fadd_zero(ptr %addr) #0 {
 ; X64-LABEL: atomic_fadd_zero:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB21_1: # %atomicrmw.start
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
+; X64-NEXT:    movd %xmm0, %eax
 ; X64-NEXT:    lock cmpxchgl %eax, (%rdi)
+; X64-NEXT:    movd %eax, %xmm0
 ; X64-NEXT:    jne .LBB21_1
 ; X64-NEXT:  # %bb.2: # %atomicrmw.end
 ; X64-NEXT:    retq
@@ -889,11 +891,13 @@ define void @atomic_fadd_zero(ptr %addr) #0 {
 define void @atomic_fsub_zero(ptr %addr) #0 {
 ; X64-LABEL: atomic_fsub_zero:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB22_1: # %atomicrmw.start
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
+; X64-NEXT:    movd %xmm0, %eax
 ; X64-NEXT:    lock cmpxchgl %eax, (%rdi)
+; X64-NEXT:    movd %eax, %xmm0
 ; X64-NEXT:    jne .LBB22_1
 ; X64-NEXT:  # %bb.2: # %atomicrmw.end
 ; X64-NEXT:    retq
