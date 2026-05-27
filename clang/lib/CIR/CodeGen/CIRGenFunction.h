@@ -1628,19 +1628,19 @@ public:
   /// Emit a simple LLVM intrinsic that takes N scalar arguments and whose
   /// return type matches the type of the first argument. The intrinsic name is
   /// used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be baked
-  /// into \p Name by the caller.
-  template <uint32_t N>
+  /// into \p intrinName by the caller.
+  template <unsigned N>
   [[maybe_unused]] RValue
-  emitBuiltinWithOneOverloadedType(const CallExpr *E, llvm::StringRef Name) {
+  emitBuiltinWithOneOverloadedType(const CallExpr *e,
+                                   llvm::StringRef intrinName) {
     static_assert(N, "expect non-empty argument");
-    mlir::Type cirTy = convertType(E->getArg(0)->getType());
+    mlir::Type cirTy = convertType(e->getArg(0)->getType());
     SmallVector<mlir::Value, N> args;
-    for (uint32_t i = 0; i < N; ++i) {
-      args.push_back(emitScalarExpr(E->getArg(i)));
-    }
+    for (unsigned i = 0; i < N; ++i)
+      args.push_back(emitScalarExpr(e->getArg(i)));
     const auto call = cir::LLVMIntrinsicCallOp::create(
-        builder, getLoc(E->getExprLoc()), builder.getStringAttr(Name), cirTy,
-        args);
+        builder, getLoc(e->getExprLoc()), builder.getStringAttr(intrinName),
+        cirTy, args);
     return RValue::get(call->getResult(0));
   }
 
