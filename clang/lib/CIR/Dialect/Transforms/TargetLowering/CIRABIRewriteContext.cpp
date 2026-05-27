@@ -39,14 +39,6 @@ bool needsRewrite(const FunctionClassification &fc) {
   return false;
 }
 
-SmallVector<unsigned> ignoredArgIndices(const FunctionClassification &fc) {
-  SmallVector<unsigned> v;
-  for (auto [idx, ac] : llvm::enumerate(fc.argInfos))
-    if (ac.kind == ArgKind::Ignore)
-      v.push_back(idx);
-  return v;
-}
-
 /// Build the new argument-type list for a function whose ABI classification
 /// is \p fc.  This currently handles only Direct (no coercion) and Ignore;
 /// other kinds emit an error.  Classifications that add arguments (e.g.
@@ -138,43 +130,31 @@ Value createIgnoredValue(OpBuilder &builder, Location loc, Type ty) {
 /// Build an updated arg_attrs ArrayAttr that drops Ignore'd args and adds
 /// llvm.signext / llvm.zeroext on Extend args.  Preserves any existing arg
 /// attributes on retained arg slots.
-ArrayAttr updateArgAttrs(MLIRContext *ctx, unsigned numNewArgs,
-                         ArrayAttr existingArgAttrs,
+ArrayAttr updateArgAttrs(MLIRContext *ctx, ArrayAttr existingArgAttrs,
                          const FunctionClassification &fc) {
-  SmallVector<Attribute> newArgAttrs(numNewArgs, DictionaryAttr::get(ctx));
-
-  // Step 1: copy existing arg attrs over to their new positions, skipping
-  // Ignore'd args.
-  if (existingArgAttrs) {
-    unsigned newIdx = 0;
-    for (unsigned oldIdx = 0; oldIdx < existingArgAttrs.size(); ++oldIdx) {
-      if (oldIdx < fc.argInfos.size() &&
-          fc.argInfos[oldIdx].kind == ArgKind::Ignore)
-        continue;
-      if (newIdx < numNewArgs)
-        newArgAttrs[newIdx] = existingArgAttrs[oldIdx];
-      ++newIdx;
-    }
-  }
-
-  // Step 2: layer llvm.signext / llvm.zeroext onto each Extend arg.  The new
-  // arg index for Extend at original index `oldIdx` is `oldIdx` minus the
-  // number of Ignore'd args that came before it.
-  unsigned newIdx = 0;
+  SmallVector<Attribute> newArgAttrs;
+  newArgAttrs.reserve(fc.argInfos.size());
   for (auto [oldIdx, ac] : llvm::enumerate(fc.argInfos)) {
     if (ac.kind == ArgKind::Ignore)
       continue;
-    if (ac.kind == ArgKind::Extend && newIdx < numNewArgs) {
-      auto existing = cast<DictionaryAttr>(newArgAttrs[newIdx]);
-      SmallVector<NamedAttribute> attrs(existing.begin(), existing.end());
+    DictionaryAttr existing = DictionaryAttr::get(ctx);
+    if (existingArgAttrs && oldIdx < existingArgAttrs.size())
+      existing = cast<DictionaryAttr>(existingArgAttrs[oldIdx]);
+    if (ac.kind == ArgKind::Extend) {
       StringRef attrName = ac.signExtend ? "llvm.signext" : "llvm.zeroext";
-      attrs.push_back(
-          NamedAttribute(StringAttr::get(ctx, attrName), UnitAttr::get(ctx)));
-      newArgAttrs[newIdx] = DictionaryAttr::get(ctx, attrs);
+      NamedAttribute extAttr(StringAttr::get(ctx, attrName),
+                             UnitAttr::get(ctx));
+      if (existing.empty()) {
+        newArgAttrs.push_back(DictionaryAttr::get(ctx, {extAttr}));
+      } else {
+        SmallVector<NamedAttribute> attrs(existing.begin(), existing.end());
+        attrs.push_back(extAttr);
+        newArgAttrs.push_back(DictionaryAttr::get(ctx, attrs));
+      }
+    } else {
+      newArgAttrs.push_back(existing);
     }
-    ++newIdx;
   }
-
   return ArrayAttr::get(ctx, newArgAttrs);
 }
 
@@ -201,12 +181,11 @@ ArrayAttr updateResAttrs(MLIRContext *ctx, ArrayAttr existingResAttrs,
 LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
     FunctionOpInterface funcOpInterface, const FunctionClassification &fc,
     OpBuilder &builder) {
-  // The pass driver (CallConvLoweringPass) only ever hands us cir.func ops,
-  // and the body of this routine is end-to-end CIR (it creates cir.constant,
-  // cir.return, etc.).  Cast once at the top so the rest of the function
-  // reads in CIR's own vocabulary, and so we can dispatch to the
-  // CIRGlobalValueInterface for isDefinition() (FunctionOpInterface alone
-  // does not inherit from CIRGlobalValueInterface).
+  // The pass driver (CallConvLoweringPass) only ever hands us cir.func ops.
+  // Cast once at the top so the rest of the function reads in CIR's own
+  // vocabulary, and so we can dispatch to the CIRGlobalValueInterface for
+  // isDefinition() (FunctionOpInterface alone does not inherit from
+  // CIRGlobalValueInterface).
   cir::FuncOp funcOp = cast<cir::FuncOp>(funcOpInterface);
 
   if (!needsRewrite(fc))
@@ -244,10 +223,13 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
       // body still references it, replace those uses with a poison
       // constant.  Ignore classifications mean the value is empty / not
       // passed at the ABI level, so any remaining uses are vacuous;
-      // poison says exactly that.
-      SmallVector<unsigned> ignored = ignoredArgIndices(fc);
-      for (unsigned blockIdx : llvm::reverse(ignored)) {
-        if (blockIdx >= entry.getNumArguments())
+      // poison says exactly that.  Iterate in reverse so that earlier
+      // indices stay stable as later ones are erased.
+      for (int blockIdx = static_cast<int>(fc.argInfos.size()) - 1;
+           blockIdx >= 0; --blockIdx) {
+        if (fc.argInfos[blockIdx].kind != ArgKind::Ignore)
+          continue;
+        if (static_cast<unsigned>(blockIdx) >= entry.getNumArguments())
           continue;
         BlockArgument arg = entry.getArgument(blockIdx);
         if (!arg.use_empty()) {
@@ -284,16 +266,15 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
   Type newFnTy = funcOp.cloneTypeWith(newArgTypes, newResultTypes);
   funcOp.setFunctionTypeAttr(TypeAttr::get(newFnTy));
 
-  // Rebuild arg_attrs: drop entries for Ignore'd args, layer
-  // llvm.signext / llvm.zeroext onto Extend args, preserve everything else.
+  // Rebuild arg_attrs when any arg is Ignore (dropped from the output array)
+  // or Extend (needs llvm.signext / llvm.zeroext layered on).
   bool needsArgAttrUpdate =
       llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
         return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend;
       });
   if (needsArgAttrUpdate) {
     auto existing = funcOp->getAttrOfType<ArrayAttr>("arg_attrs");
-    funcOp->setAttr("arg_attrs",
-                    updateArgAttrs(ctx, newArgTypes.size(), existing, fc));
+    funcOp->setAttr("arg_attrs", updateArgAttrs(ctx, existing, fc));
   }
 
   // Rebuild res_attrs: layer llvm.signext / llvm.zeroext onto an Extend
@@ -378,17 +359,15 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
       newCall->setAttr(attr.getName(), attr.getValue());
 
   // Layer llvm.signext / llvm.zeroext onto the new call's arg_attrs and
-  // res_attrs for Extend args/return.
-  bool needsArgAttrUpdate = false;
-  for (const ArgClassification &ac : fc.argInfos)
-    if (ac.kind == ArgKind::Extend || ac.kind == ArgKind::Ignore) {
-      needsArgAttrUpdate = true;
-      break;
-    }
+  // res_attrs for Extend args/return.  Ignore args also require a rebuild
+  // because their slots are dropped from the output array.
+  bool needsArgAttrUpdate =
+      llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
+        return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend;
+      });
   if (needsArgAttrUpdate) {
     auto existing = call->getAttrOfType<ArrayAttr>("arg_attrs");
-    newCall->setAttr("arg_attrs",
-                     updateArgAttrs(ctx, newArgs.size(), existing, fc));
+    newCall->setAttr("arg_attrs", updateArgAttrs(ctx, existing, fc));
   }
   if (fc.returnInfo.kind == ArgKind::Extend) {
     auto existing = call->getAttrOfType<ArrayAttr>("res_attrs");
