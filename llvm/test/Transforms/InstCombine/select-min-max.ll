@@ -364,3 +364,84 @@ define i8 @sel_umin_non_constant(i8 %x, i8 %y) {
   %sel = select i1 %cmp, i8 %umin, i8 %y
   ret i8 %sel
 }
+
+define i8 @redundant_overflow_select_umin(i8 %x) {
+; CHECK-LABEL: @redundant_overflow_select_umin(
+; CHECK-NEXT:    [[U:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 64)
+; CHECK-NEXT:    [[SUM:%.*]] = add nsw i8 [[U]], [[X]]
+; CHECK-NEXT:    [[CLAMP:%.*]] = call i8 @llvm.umin.i8(i8 [[SUM]], i8 100)
+; CHECK-NEXT:    ret i8 [[CLAMP]]
+;
+  %u = call i8 @llvm.umax.i8(i8 %x, i8 64)
+  %sum = add nsw i8 %u, %x
+  %ov = icmp ult i8 %sum, %x
+  %clamp = call i8 @llvm.umin.i8(i8 %sum, i8 100)
+  %r = select i1 %ov, i8 100, i8 %clamp
+  ret i8 %r
+}
+
+define i8 @redundant_overflow_select_umin_swapped_add(i8 %x) {
+; CHECK-LABEL: @redundant_overflow_select_umin_swapped_add(
+; CHECK-NEXT:    [[U:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 64)
+; CHECK-NEXT:    [[SUM:%.*]] = add nsw i8 [[X]], [[U]]
+; CHECK-NEXT:    [[CLAMP:%.*]] = call i8 @llvm.umin.i8(i8 [[SUM]], i8 100)
+; CHECK-NEXT:    ret i8 [[CLAMP]]
+;
+  %u = call i8 @llvm.umax.i8(i8 %x, i8 64)
+  %sum = add nsw i8 %x, %u
+  %ov = icmp ult i8 %sum, %x
+  %clamp = call i8 @llvm.umin.i8(i8 %sum, i8 100)
+  %r = select i1 %ov, i8 100, i8 %clamp
+  ret i8 %r
+}
+
+define i8 @redundant_overflow_select_umin_no_nsw(i8 %x) {
+; CHECK-LABEL: @redundant_overflow_select_umin_no_nsw(
+; CHECK-NEXT:    [[U:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 64)
+; CHECK-NEXT:    [[SUM:%.*]] = add i8 [[U]], [[X]]
+; CHECK-NEXT:    [[OV:%.*]] = icmp ult i8 [[SUM]], [[X]]
+; CHECK-NEXT:    [[CLAMP:%.*]] = call i8 @llvm.umin.i8(i8 [[SUM]], i8 100)
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[OV]], i8 100, i8 [[CLAMP]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %u = call i8 @llvm.umax.i8(i8 %x, i8 64)
+  %sum = add i8 %u, %x
+  %ov = icmp ult i8 %sum, %x
+  %clamp = call i8 @llvm.umin.i8(i8 %sum, i8 100)
+  %r = select i1 %ov, i8 100, i8 %clamp
+  ret i8 %r
+}
+
+define i8 @redundant_overflow_select_umin_k_too_large(i8 %x) {
+; CHECK-LABEL: @redundant_overflow_select_umin_k_too_large(
+; CHECK-NEXT:    [[U:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 64)
+; CHECK-NEXT:    [[SUM:%.*]] = add nsw i8 [[U]], [[X]]
+; CHECK-NEXT:    [[OV:%.*]] = icmp ult i8 [[SUM]], [[X]]
+; CHECK-NEXT:    [[CLAMP:%.*]] = call i8 @llvm.umin.i8(i8 [[SUM]], i8 -56)
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[OV]], i8 -56, i8 [[CLAMP]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %u = call i8 @llvm.umax.i8(i8 %x, i8 64)
+  %sum = add nsw i8 %u, %x
+  %ov = icmp ult i8 %sum, %x
+  %clamp = call i8 @llvm.umin.i8(i8 %sum, i8 200)
+  %r = select i1 %ov, i8 200, i8 %clamp
+  ret i8 %r
+}
+
+define i8 @redundant_overflow_select_umin_c_too_large(i8 %x) {
+; CHECK-LABEL: @redundant_overflow_select_umin_c_too_large(
+; CHECK-NEXT:    [[U:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 -56)
+; CHECK-NEXT:    [[SUM:%.*]] = add nsw i8 [[U]], [[X]]
+; CHECK-NEXT:    [[OV:%.*]] = icmp ult i8 [[SUM]], [[X]]
+; CHECK-NEXT:    [[CLAMP:%.*]] = call i8 @llvm.umin.i8(i8 [[SUM]], i8 100)
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[OV]], i8 100, i8 [[CLAMP]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %u = call i8 @llvm.umax.i8(i8 %x, i8 200)
+  %sum = add nsw i8 %u, %x
+  %ov = icmp ult i8 %sum, %x
+  %clamp = call i8 @llvm.umin.i8(i8 %sum, i8 100)
+  %r = select i1 %ov, i8 100, i8 %clamp
+  ret i8 %r
+}

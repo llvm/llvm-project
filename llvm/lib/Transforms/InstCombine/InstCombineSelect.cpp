@@ -1419,6 +1419,45 @@ static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
   return nullptr;
 }
 
+static Value *foldRedundantUMinOverflowSelect(ICmpInst *Cmp, Value *TVal,
+                                              Value *FVal,
+                                              const SimplifyQuery &SQ) {
+  Value *Sum = Cmp->getOperand(0);
+  Value *X = Cmp->getOperand(1);
+
+  // Match overflow check from unsigned addition: icmp ult %sum, %x
+  if (Cmp->getPredicate() != ICmpInst::ICMP_ULT)
+    return nullptr;
+
+  // TrueVal must be K (the clamp bound). Match FalseVal: umin(sum, K)
+  Value *K = TVal;
+  if (!match(FVal,
+             m_c_Intrinsic<Intrinsic::umin>(m_Specific(Sum), m_Specific(K))))
+    return nullptr;
+
+  // Ensure Sum is an add with NSW before extracting operands.
+  auto *SumInst = dyn_cast<BinaryOperator>(Sum);
+  if (!SumInst || !SumInst->hasNoSignedWrap() ||
+      SumInst->getOpcode() != Instruction::Add)
+    return nullptr;
+
+  // Match the guarded sum commutatively and capture U
+  Value *U;
+  if (!match(Sum, m_c_Add(m_Value(U), m_Specific(X))))
+    return nullptr;
+
+  // Match growth source: %u = umax(x, C)
+  Value *C;
+  if (!match(U, m_c_Intrinsic<Intrinsic::umax>(m_Specific(X), m_Value(C))))
+    return nullptr;
+
+  // Require C <=u signbit and K <=u signbit
+  if (!isKnownNonNegative(C, SQ) || !isKnownNonNegative(K, SQ))
+    return nullptr;
+
+  return FVal;
+}
+
 /// Try to match patterns with select and subtract as absolute difference.
 static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
                           InstCombiner::BuilderTy &Builder) {
@@ -2464,6 +2503,10 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = canonicalizeSaturatedAdd(ICI, TrueVal, FalseVal, Builder))
+    return replaceInstUsesWith(SI, V);
+
+  SimplifyQuery SQ = getSimplifyQuery().getWithInstruction(&SI);
+  if (Value *V = foldRedundantUMinOverflowSelect(ICI, TrueVal, FalseVal, SQ))
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldAbsDiff(ICI, TrueVal, FalseVal, Builder))
