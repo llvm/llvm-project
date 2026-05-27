@@ -985,7 +985,7 @@ class RegionInfoPrinterPass
 public:
   LLVM_ABI explicit RegionInfoPrinterPass(raw_ostream &OS);
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Verifier pass for the \c RegionInfo.

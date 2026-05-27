@@ -126,8 +126,9 @@ public:
   void dump() const;
 };
 
-extern template class DominanceFrontierBase<BasicBlock, false>;
-extern template class DominanceFrontierBase<BasicBlock, true>;
+extern template class LLVM_TEMPLATE_ABI
+    DominanceFrontierBase<BasicBlock, false>;
+extern template class LLVM_TEMPLATE_ABI DominanceFrontierBase<BasicBlock, true>;
 
 /// Analysis pass which computes a \c DominanceFrontier.
 class DominanceFrontierAnalysis
