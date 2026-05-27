@@ -83,7 +83,7 @@ public:
   /// \returns true if \p MD is a well-formed MMRA tag.
   LLVM_ABI static bool isTagMD(const Metadata *MD);
 
-  /// Appends the given tags to the !mmra metadata on \p I,
+  /// Appends \p Tags to the !mmra metadata on \p I,
   /// merging with any existing MMRA metadata.
   LLVM_ABI static void appendTags(Instruction &I, ArrayRef<TagT> Tags);
 
