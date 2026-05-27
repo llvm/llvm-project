@@ -33,6 +33,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -151,6 +152,7 @@ private:
   bool foldSignBitReductionCmp(Instruction &I);
   bool foldICmpEqZeroVectorReduce(Instruction &I);
   bool foldEquivalentReductionCmp(Instruction &I);
+  bool foldReduceAddCmpZero(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
   bool foldInterleaveIntrinsics(Instruction &I);
   bool foldDeinterleaveIntrinsics(Instruction &I);
@@ -3996,6 +3998,8 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
 
   InstWorklist.push(VecOpEE);
 
+  bool IsPartialReduction = false;
+
   while (!InstWorklist.empty()) {
     Value *CI = InstWorklist.front();
     InstWorklist.pop();
@@ -4126,12 +4130,23 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
 
       ShouldBeCallOrBinInst ^= 1;
     } else {
+      // Check if this is a partial reduction - the chain ended because
+      // the source vector is not a recognized op/shuffle.
+      // Reject non-power-of-2 vectors because parity-based masks cause
+      // lane duplication in the reduction tree, making the partial result
+      // not a simple subvector reduction.
+      if (ShouldBeCallOrBinInst && VisitedCnt >= 1 && CI == PrevVecV[0] &&
+          isPowerOf2_64(VecSize)) {
+        IsPartialReduction = true;
+        break;
+      }
       return false;
     }
   }
 
-  // Pattern should end with a shuffle op.
-  if (ShouldBeCallOrBinInst)
+  // Full reduction pattern should end with a shuffle op.
+  // Partial reduction ends when the source vector is reached.
+  if (ShouldBeCallOrBinInst && !IsPartialReduction)
     return false;
 
   assert(VecSize != -1 && "Expected Match for Vector Size");
@@ -4148,14 +4163,35 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   if (!ReducedOp)
     return false;
 
-  IntrinsicCostAttributes ICA(ReducedOp, FinalVecVTy, {FinalVecV});
-  InstructionCost NewCost = TTI.getIntrinsicInstrCost(ICA, CostKind);
+  InstructionCost NewCost = 0;
+  FixedVectorType *ReduceVecTy = FinalVecVTy;
+  SmallVector<int> ExtractMask;
 
-  if (NewCost >= OrigCost)
+  if (IsPartialReduction) {
+    unsigned SubVecSize = ShuffleMaskHalf;
+    ReduceVecTy = FixedVectorType::get(FVT->getElementType(), SubVecSize);
+    ExtractMask.resize(SubVecSize);
+    std::iota(ExtractMask.begin(), ExtractMask.end(), 0);
+    NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
+                                  ReduceVecTy, FinalVecVTy, ExtractMask,
+                                  CostKind, 0, ReduceVecTy);
+  }
+
+  IntrinsicCostAttributes ICA(ReducedOp, ReduceVecTy, {ReduceVecTy});
+  NewCost += TTI.getIntrinsicInstrCost(ICA, CostKind);
+
+  LLVM_DEBUG(dbgs() << "Found reduction shuffle chain: " << I << "\n OldCost : "
+                    << OrigCost << " vs NewCost: " << NewCost << "\n");
+
+  if (VecOpEE->hasOneUse() ? (NewCost > OrigCost) : (NewCost >= OrigCost))
     return false;
 
-  auto *ReducedResult =
-      Builder.CreateIntrinsic(ReducedOp, {FinalVecV->getType()}, {FinalVecV});
+  Value *ReduceInput = FinalVecV;
+  if (IsPartialReduction)
+    ReduceInput = Builder.CreateShuffleVector(FinalVecV, ExtractMask);
+
+  auto *ReducedResult = Builder.CreateIntrinsic(
+      ReducedOp, {ReduceInput->getType()}, {ReduceInput});
   replaceValue(I, *ReducedResult);
 
   return true;
@@ -4863,6 +4899,123 @@ bool VectorCombine::foldEquivalentReductionCmp(Instruction &I) {
   Value *NewCmp =
       Builder.CreateICmp(Pred, NewReduce, ConstantInt::get(ScalarTy, *CmpVal));
 
+  replaceValue(I, *NewCmp);
+  return true;
+}
+
+/// Used by foldReduceAddCmpZero to check if we can prove that a value is
+/// non-positive.
+/// KnownBits cannot see sext <? x i1> as non-positive: each top bit equals a
+/// single unknown input bit, which a per-bit lattice cannot track. The fold's
+/// target shape is popcount-style sums of <N x i1> valid/invalid masks (e.g.
+/// ray-intersection hits) tested for any-hit.
+/// Previous attempts to approximate the known bits of such expressions were
+/// using a fully recursive value tracking approach to infer a constant range
+/// but ultimately turned to be too expensive in compile time.
+static bool isKnownNonPositive(const Value *V, const SimplifyQuery &SQ,
+                               unsigned Depth = 0) {
+  constexpr unsigned MaxLocalDepth = 2;
+  if (Depth > MaxLocalDepth)
+    return false;
+
+  auto NumSignBits = [&](const Value *X) {
+    return ComputeNumSignBits(X, SQ.DL, SQ.AC, SQ.CxtI, SQ.DT);
+  };
+  if (NumSignBits(V) == V->getType()->getScalarSizeInBits())
+    return true;
+
+  Value *A, *B;
+  if (match(V, m_Add(m_Value(A), m_Value(B))))
+    return NumSignBits(A) >= 2 && NumSignBits(B) >= 2 &&
+           isKnownNonPositive(A, SQ, Depth + 1) &&
+           isKnownNonPositive(B, SQ, Depth + 1);
+
+  return computeKnownBits(V, SQ).isNonPositive();
+}
+
+/// Fold (icmp pred (reduce.add X), 0) to (icmp pred' (reduce.or X), 0) when X
+/// has lanes known to all be non-negative or all non-positive, so that
+/// sum == 0 iff every lane is 0. Falls back to reduce.umax if reduce.or is
+/// more expensive on the target.
+bool VectorCombine::foldReduceAddCmpZero(Instruction &I) {
+  CmpPredicate Pred;
+  Value *Vec;
+  if (!match(&I, m_ICmp(Pred,
+                        m_OneUse(m_Intrinsic<Intrinsic::vector_reduce_add>(
+                            m_Value(Vec))),
+                        m_Zero())))
+    return false;
+
+  auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+  if (!VecTy || VecTy->getNumElements() < 2)
+    return false;
+
+  SimplifyQuery Q = SQ.getWithInstruction(&I);
+  bool IsNonNegative = isKnownNonNegative(Vec, Q);
+  bool IsNonPositive = !IsNonNegative && isKnownNonPositive(Vec, Q);
+  if (!IsNonNegative && !IsNonPositive)
+    return false;
+
+  // Summing NumElts lanes can consume up to log2(NumElts) sign bits. Require
+  // strictly more headroom than that so the sum cannot wrap to zero.
+  unsigned NumElts = VecTy->getNumElements();
+  unsigned NumSignBits = ComputeNumSignBits(Vec, *DL, SQ.AC, &I, &DT);
+  if (Log2_32(NumElts) >= NumSignBits)
+    return false;
+
+  ICmpInst::Predicate NewPred;
+  switch (Pred) {
+  case ICmpInst::ICMP_EQ:
+  case ICmpInst::ICMP_ULE:
+  case ICmpInst::ICMP_SLE:
+  case ICmpInst::ICMP_SGE:
+    NewPred = ICmpInst::ICMP_EQ;
+    break;
+  case ICmpInst::ICMP_NE:
+  case ICmpInst::ICMP_UGT:
+  case ICmpInst::ICMP_SGT:
+  case ICmpInst::ICMP_SLT:
+    NewPred = ICmpInst::ICMP_NE;
+    break;
+  default:
+    return false;
+  }
+
+  // SGT and SLE on a non-positive tree, and SLT and SGE on a non-negative
+  // tree, are tautologies (always true or always false). Leave those to
+  // InstCombine rather than mapping them here. Remaining signed inequalities
+  // also need one extra sign bit so the sum cannot flip sign.
+  if (!IsNonNegative &&
+      (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLE))
+    return false;
+  if (!IsNonPositive &&
+      (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGE))
+    return false;
+  if ((Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLE ||
+       Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGE) &&
+      Log2_32(NumElts) >= NumSignBits - 1)
+    return false;
+
+  InstructionCost OrigCost = TTI.getArithmeticReductionCost(
+      Instruction::Add, VecTy, std::nullopt, CostKind);
+  InstructionCost OrCost = TTI.getArithmeticReductionCost(
+      Instruction::Or, VecTy, std::nullopt, CostKind);
+  InstructionCost UmaxCost = TTI.getMinMaxReductionCost(
+      Intrinsic::umax, VecTy, FastMathFlags(), CostKind);
+  if (!OrCost.isValid() && !UmaxCost.isValid())
+    return false;
+  bool UseOr = OrCost.isValid() && (!UmaxCost.isValid() || OrCost <= UmaxCost);
+  InstructionCost AltCost = UseOr ? OrCost : UmaxCost;
+  if (AltCost > OrigCost)
+    return false;
+
+  Builder.SetInsertPoint(&I);
+  Value *NewReduce = UseOr ? Builder.CreateOrReduce(Vec)
+                           : Builder.CreateIntrinsic(
+                                 Intrinsic::vector_reduce_umax, {VecTy}, {Vec});
+  Worklist.pushValue(NewReduce);
+  Value *NewCmp = Builder.CreateICmp(
+      NewPred, NewReduce, ConstantInt::getNullValue(VecTy->getScalarType()));
   replaceValue(I, *NewCmp);
   return true;
 }
@@ -6043,6 +6196,8 @@ bool VectorCombine::run() {
         if (foldICmpEqZeroVectorReduce(I))
           return true;
         if (foldEquivalentReductionCmp(I))
+          return true;
+        if (foldReduceAddCmpZero(I))
           return true;
         [[fallthrough]];
       case Instruction::FCmp:

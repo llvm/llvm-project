@@ -41,7 +41,13 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_noescape_escapes,
       diag::warn_lifetime_safety_lifetimebound_violation,
       diag::warn_lifetime_safety_cross_tu_misplaced_lifetimebound,
-      diag::warn_lifetime_safety_intra_tu_misplaced_lifetimebound};
+      diag::warn_lifetime_safety_intra_tu_misplaced_lifetimebound,
+      diag::warn_lifetime_safety_invalidated_field,
+      diag::warn_lifetime_safety_invalidated_global,
+      diag::warn_lifetime_safety_cross_tu_param_suggestion,
+      diag::warn_lifetime_safety_intra_tu_param_suggestion,
+      diag::warn_lifetime_safety_cross_tu_this_suggestion,
+      diag::warn_lifetime_safety_intra_tu_this_suggestion};
   for (unsigned DiagID : DiagIDs)
     if (!Diags.isIgnored(DiagID, D->getBeginLoc()))
       return true;

@@ -94,6 +94,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sendmmsg
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sendmmsg
+)
+
+add_entrypoint_object(
   sendmsg
   ALIAS
   DEPENDS

@@ -31,6 +31,8 @@ struct [[gsl::Pointer()]] View {
 
 View definition_before_header(View a); // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
 
+View redeclared_before_header_include(View a); // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
+
 View return_view_directly(View a); // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
 
 View conditional_return_view(
@@ -46,8 +48,8 @@ inline View inline_header_return_view(View a) {  // expected-warning {{parameter
   return a;                                      // expected-note {{param returned here}}
 }
 
-View redeclared_in_header(View a);
-inline View redeclared_in_header(View a) {  // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+View redeclared_in_header(View a);          // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+inline View redeclared_in_header(View a) {
   return a;                                 // expected-note {{param returned here}}
 }
 
@@ -65,13 +67,46 @@ struct ReturnThisPointer {
 
 #endif // TEST_HEADER_H
 
+//--- test_redecls_header.h
+
+View earliest_decl_in_header(View a); // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
+View earliest_decl_in_header(View a);
+
+View multi_redecl_one_file(View a); // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
+View multi_redecl_one_file(View a);
+View multi_redecl_one_file(View a);
+
+View source_and_header(View a); // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
+
+//--- test_redecls_header_1.h
+
+View in_two_headers(View a); // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
+
+//--- test_redecls_header_2.h
+
+View in_two_headers(View a); // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
+
 //--- test_source.cpp
 
+struct View;
+View redeclared_before_header_include(View a); // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+View source_and_header(View a); // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+
 #include "test_header.h"
+#include "test_redecls_header.h"
+#include "test_redecls_header_1.h"
+#include "test_redecls_header_2.h"
 #include "Inputs/lifetime-analysis.h"
+
+View earliest_decl_in_source(View a); // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+View earliest_decl_in_source(View a);
 
 View definition_before_header(View a) {
   return a;                               // expected-note {{param returned here}}
+}
+
+View redeclared_before_header_include(View a) {
+  return a;                               // expected-note 2 {{param returned here}}
 }
 
 View return_view_directly(View a) {
@@ -101,6 +136,26 @@ View return_unnamed_view(View a) {
 
 MyObj& return_unnamed_ref(MyObj& a, bool c) {
   return a;                               // expected-note {{param returned here}}
+}
+
+View earliest_decl_in_header(View a) {
+  return a;                               // expected-note {{param returned here}}
+}
+
+View earliest_decl_in_source(View a) {
+  return a;                               // expected-note {{param returned here}}
+}
+
+View multi_redecl_one_file(View a) {
+  return a;                               // expected-note {{param returned here}}
+}
+
+View in_two_headers(View a) {
+  return a;                               // expected-note 2 {{param returned here}}
+}
+
+View source_and_header(View a) {
+  return a;                               // expected-note 2 {{param returned here}}
 }
 
 MyObj& return_reference(MyObj& a, // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
@@ -177,8 +232,8 @@ View reassigned_to_another_parameter(
   return a;       // expected-note {{param returned here}} 
 }
 
-View intra_tu_func_redecl(View a);
-View intra_tu_func_redecl(View a) {   // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
+View intra_tu_func_redecl(View a);    // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
+View intra_tu_func_redecl(View a) {
   return a;                           // expected-note {{param returned here}} 
 }
 }
@@ -282,25 +337,25 @@ MyObj* return_pointer_by_func(MyObj* a) {         // expected-warning {{paramete
 } // namespace correct_order_inference
 
 namespace incorrect_order_inference_view {
-View return_view_callee(View a);
+View return_view_callee(View a);      // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
 
 View return_view_caller(View a) {     // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
   return return_view_callee(a);       // expected-note {{param returned here}}
 }
 
-View return_view_callee(View a) {     // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
+View return_view_callee(View a) {
   return a;                           // expected-note {{param returned here}}
 }   
 } // namespace incorrect_order_inference_view
 
 namespace incorrect_order_inference_object {
-MyObj* return_object_callee(MyObj* a);
+MyObj* return_object_callee(MyObj* a);       // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
 
 MyObj* return_object_caller(MyObj* a) {      // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
   return return_object_callee(a);            // expected-note {{param returned here}}
 }
 
-MyObj* return_object_callee(MyObj* a) {      // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
+MyObj* return_object_callee(MyObj* a) {
   return a;                                  // expected-note {{param returned here}}
 }   
 } // namespace incorrect_order_inference_object
@@ -322,13 +377,13 @@ View inference_top_level_return_stack_view() {
 } // namespace simple_annotation_inference
 
 namespace inference_in_order_with_redecls {
-View inference_callee_return_identity(View a);
-View inference_callee_return_identity(View a) {   // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
+View inference_callee_return_identity(View a);    // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
+View inference_callee_return_identity(View a) {
   return a;                                       // expected-note {{param returned here}}
 }
 
-View inference_caller_forwards_callee(View a);
-View inference_caller_forwards_callee(View a) {   // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
+View inference_caller_forwards_callee(View a);    // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
+View inference_caller_forwards_callee(View a) {
   return inference_callee_return_identity(a);     // expected-note {{param returned here}}
 }
   

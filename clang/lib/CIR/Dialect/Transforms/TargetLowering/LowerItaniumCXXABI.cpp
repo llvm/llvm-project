@@ -684,10 +684,11 @@ mlir::Value LowerItaniumCXXABI::lowerMethodToBoolCast(
 
 static void buildBadCastCall(mlir::OpBuilder &builder, mlir::Location loc,
                              mlir::FlatSymbolRefAttr badCastFuncRef) {
-  cir::CallOp::create(builder, loc, badCastFuncRef, /*resType=*/cir::VoidType(),
-                      /*operands=*/mlir::ValueRange{});
-  // TODO(cir): Set the 'noreturn' attribute on the function.
-  assert(!cir::MissingFeatures::opFuncNoReturn());
+  auto callOp = cir::CallOp::create(builder, loc, badCastFuncRef,
+                                    /*resType=*/cir::VoidType(),
+                                    /*operands=*/mlir::ValueRange{});
+  callOp->setAttr(cir::CIRDialect::getNoReturnAttrName(),
+                  builder.getUnitAttr());
 
   cir::UnreachableOp::create(builder, loc);
   builder.clearInsertionPoint();

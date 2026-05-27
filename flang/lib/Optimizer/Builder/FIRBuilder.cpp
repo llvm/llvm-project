@@ -1802,29 +1802,18 @@ mlir::Value fir::factory::genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder,
                                                mlir::Location loc,
                                                mlir::Value cPtr,
                                                mlir::Type ty) {
+  if (fir::isa_builtin_cdevptr_type(ty)) {
+    auto [cptrFieldIndex, cptrFieldTy] =
+        genCPtrOrCFunptrFieldIndex(builder, loc, ty);
+    auto cptrCoord = fir::CoordinateOp::create(
+        builder, loc, builder.getRefType(cptrFieldTy), cPtr, cptrFieldIndex);
+    return fir::factory::genCPtrOrCFunptrAddr(builder, loc, cptrCoord,
+                                              cptrFieldTy);
+  }
   auto [addrFieldIndex, addrFieldTy] =
       genCPtrOrCFunptrFieldIndex(builder, loc, ty);
   return fir::CoordinateOp::create(
       builder, loc, builder.getRefType(addrFieldTy), cPtr, addrFieldIndex);
-}
-
-mlir::Value fir::factory::genCDevPtrAddr(fir::FirOpBuilder &builder,
-                                         mlir::Location loc,
-                                         mlir::Value cDevPtr, mlir::Type ty) {
-  auto recTy = mlir::cast<fir::RecordType>(ty);
-  assert(recTy.getTypeList().size() == 1);
-  auto cptrFieldName = recTy.getTypeList()[0].first;
-  mlir::Type cptrFieldTy = recTy.getTypeList()[0].second;
-  auto fieldIndexType = fir::FieldType::get(ty.getContext());
-  mlir::Value cptrFieldIndex = fir::FieldIndexOp::create(
-      builder, loc, fieldIndexType, cptrFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  auto cptrCoord = fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(cptrFieldTy), cDevPtr, cptrFieldIndex);
-  auto [addrFieldIndex, addrFieldTy] =
-      genCPtrOrCFunptrFieldIndex(builder, loc, cptrFieldTy);
-  return fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(addrFieldTy), cptrCoord, addrFieldIndex);
 }
 
 mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
