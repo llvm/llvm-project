@@ -5,12 +5,22 @@
 ; entry points when SPV_KHR_poison_freeze is enabled and poison present in the
 ; module.
 
-; CHECK-DAG: OpCapability PoisonFreezeKHR
-; CHECK-DAG: OpExtension "SPV_KHR_poison_freeze"
-; CHECK:     OpEntryPoint Kernel %[[#ENTRY:]] "kernel_with_poison"
-; CHECK-DAG: OpExecutionMode %[[#ENTRY]] ArithmeticPoisonKHR
+; CHECK-DAG:     OpCapability PoisonFreezeKHR
+; CHECK-DAG:     OpExtension "SPV_KHR_poison_freeze"
+; CHECK-COUNT-2: OpExecutionMode %[[#]] ArithmeticPoisonKHR
+; CHECK-NOT:     OpExecutionMode %[[#]] ArithmeticPoisonKHR
 
-define spir_kernel void @kernel_with_poison(ptr %dst) {
+define void @poison_helper(ptr %dst) {
   store i32 poison, ptr %dst
+  ret void
+}
+
+define spir_kernel void @entry_a(ptr %dst) {
+  call void @poison_helper(ptr %dst)
+  ret void
+}
+
+define spir_kernel void @entry_b(ptr %dst) {
+  store i32 0, ptr %dst
   ret void
 }
