@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 //
 // This file describes the RISC-V instructions from the standard 'Base Y'
-//  instruction set.
+// instruction set.
 //
-//  This version is still experimental as the 'Y' extension hasn't been
-//  ratified yet.
+// This version is still experimental as the 'Y' extension hasn't been
+// ratified yet.
 //
 //===----------------------------------------------------------------------===//
 
