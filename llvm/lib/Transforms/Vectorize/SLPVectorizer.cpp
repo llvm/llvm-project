@@ -5347,9 +5347,14 @@ private:
 
   public:
     ScheduleBundle() : ScheduleEntity(Kind::ScheduleBundle) {}
+    ScheduleBundle(bool IsValid, bool NoInternalAlias)
+        : ScheduleEntity(Kind::ScheduleBundle), IsValid(IsValid),
+          NoInternalAlias(NoInternalAlias) {}
     static bool classof(const ScheduleEntity *Entity) {
       return Entity->getKind() == Kind::ScheduleBundle;
     }
+
+    bool NoInternalAlias = false;
 
     /// Verify basic self consistency properties
     void verify() const {
@@ -5367,6 +5372,14 @@ private:
                  "unexpected scheduled state");
         }
       }
+    }
+
+    /// Check to see if an instruction is present in this bundle
+    bool findInst(Instruction *I) {
+      return std::find_if(Bundle.begin(), Bundle.end(),
+                          [&](ScheduleEntity *SE) {
+                            return SE->getInst() == I;
+                          }) != Bundle.end();
     }
 
     /// Returns the number of unscheduled dependencies in the bundle.
@@ -6259,8 +6272,11 @@ private:
     /// \param VL The list of scalar instructions.
     /// \param S The state of the instructions.
     /// \param EI The edge in the SLP graph or the user node/operand number.
+    /// \param NoInternalAlias Ignore any schedule issues due to aliasing within
+    /// the bundle.
     ScheduleBundle &buildBundle(ArrayRef<Value *> VL,
-                                const InstructionsState &S, const EdgeInfo &EI);
+                                const InstructionsState &S, const EdgeInfo &EI,
+                                bool NoInternalAlias);
 
     /// Checks if a bundle of instructions can be scheduled, i.e. has no
     /// cyclic dependencies. This is only a dry-run, no instructions are
@@ -6269,7 +6285,8 @@ private:
     /// std::nullopt if \p VL is allowed to be scheduled.
     std::optional<ScheduleBundle *>
     tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
-                      const InstructionsState &S, const EdgeInfo &EI);
+                      const InstructionsState &S, const EdgeInfo &EI,
+                      bool NoInternalAlias);
 
     /// Allocates schedule data chunk.
     ScheduleData *allocateScheduleDataChunks();
@@ -11035,6 +11052,8 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       PointerOps.push_back(SI->getPointerOperand());
     }
 
+    Align CommonAlignment = computeCommonAlignment<StoreInst>(VL);
+
     // Check the order of pointer operands.
     if (llvm::sortPtrAccesses(PointerOps, ScalarTy, *DL, *SE, CurrentOrder)) {
       Value *Ptr0;
@@ -11046,7 +11065,6 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
         Ptr0 = PointerOps[CurrentOrder.front()];
         PtrN = PointerOps[CurrentOrder.back()];
       }
-      Align CommonAlignment = computeCommonAlignment<StoreInst>(VL);
       std::optional<int64_t> Dist =
           getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, *DL, *SE);
       // Check that the sorted pointer operands are consecutive.
@@ -11056,6 +11074,17 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
           analyzeConstantStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
                                          CurrentOrder, *Dist, Ptr0, SPtrInfo))
         return TreeEntry::StridedVectorize;
+    }
+    if (analyzeRtStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
+                                 CurrentOrder, SPtrInfo, /*isLoad=*/false)) {
+      if (isIdentityOrder(CurrentOrder)) {
+        CurrentOrder.clear();
+      } else if (isReverseOrder(CurrentOrder)) {
+        SPtrInfo.StrideSCEV = SE->getNegativeSCEV(SPtrInfo.StrideSCEV);
+        CurrentOrder.clear();
+      }
+
+      return TreeEntry::StridedVectorize;
     }
 
     LLVM_DEBUG(dbgs() << "SLP: Non-consecutive store.\n");
@@ -12946,9 +12975,11 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
 
   BlockScheduling &BS = *BSRef;
 
+  bool NoInternalAlias =
+      isa<StoreInst>(VL0) && State == TreeEntry::StridedVectorize;
   SetVector<Value *> UniqueValues(llvm::from_range, VL);
-  std::optional<ScheduleBundle *> BundlePtr =
-      BS.tryScheduleBundle(UniqueValues.getArrayRef(), this, S, UserTreeIdx);
+  std::optional<ScheduleBundle *> BundlePtr = BS.tryScheduleBundle(
+      UniqueValues.getArrayRef(), this, S, UserTreeIdx, NoInternalAlias);
 #ifdef EXPENSIVE_CHECKS
   // Make sure we didn't break any internal invariants
   BS.verify();
@@ -23621,7 +23652,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         assert(StridedStoreTy && "Missing StridedPointerInfo for tree entry.");
         unsigned StridedStoreEC = getNumElements(StridedStoreTy);
         Value *Stride = SPtrInfo.StrideVal;
-        assert(Stride && "Missing StridedPointerInfo for tree entry.");
+        if (!Stride) {
+          const SCEV *StrideSCEV = SPtrInfo.StrideSCEV;
+          assert(StrideSCEV && "Neither StrideVal nor StrideSCEV were set.");
+          SCEVExpander Expander(*SE, "strided-load-vec");
+          Stride = Expander.expandCodeFor(StrideSCEV, StrideSCEV->getType(),
+                                          &*Builder.GetInsertPoint());
+        }
         Value *StrideVal =
             Builder.CreateIntCast(Stride, StrideTy, /*isSigned=*/true);
         // vp_strided_store::stride is defined in bytes
@@ -25009,9 +25046,10 @@ void BoUpSLP::optimizeGatherSequence() {
 }
 
 BoUpSLP::ScheduleBundle &BoUpSLP::BlockScheduling::buildBundle(
-    ArrayRef<Value *> VL, const InstructionsState &S, const EdgeInfo &EI) {
-  auto &BundlePtr =
-      ScheduledBundlesList.emplace_back(std::make_unique<ScheduleBundle>());
+    ArrayRef<Value *> VL, const InstructionsState &S, const EdgeInfo &EI,
+    bool NoInternalAlias) {
+  auto &BundlePtr = ScheduledBundlesList.emplace_back(
+      std::make_unique<ScheduleBundle>(/*IsValid*/ true, NoInternalAlias));
   for (Value *V : VL) {
     if (S.isNonSchedulable(V))
       continue;
@@ -25041,7 +25079,8 @@ BoUpSLP::ScheduleBundle &BoUpSLP::BlockScheduling::buildBundle(
 std::optional<BoUpSLP::ScheduleBundle *>
 BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                                             const InstructionsState &S,
-                                            const EdgeInfo &EI) {
+                                            const EdgeInfo &EI,
+                                            bool NoInternalAlias) {
   // No need to schedule PHIs, insertelement, extractelement and extractvalue
   // instructions.
   if (isa<PHINode>(S.getMainOp()) ||
@@ -25409,7 +25448,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     ReSchedule = true;
   }
 
-  ScheduleBundle &Bundle = buildBundle(VL, S, EI);
+  ScheduleBundle &Bundle = buildBundle(VL, S, EI, NoInternalAlias);
   TryScheduleBundleImpl(ReSchedule, Bundle);
   if (!Bundle.isReady()) {
     for (ScheduleEntity *BD : Bundle.getBundle()) {
@@ -25874,15 +25913,18 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
            (IsNonSimpleSrc || NumAliased >= AliasedCheckLimit ||
             SLP->isAliased(SrcLoc, SrcInst, DepDest->getInst())))) {
 
-        // We increment the counter only if the locations are aliased
-        // (instead of counting all alias checks). This gives a better
-        // balance between reduced runtime and accurate dependencies.
-        NumAliased++;
+        if (!Bundle.NoInternalAlias || !Bundle.findInst(DepDest->getInst())) {
 
-        DepDest->addMemoryDependency(BundleMember);
-        BundleMember->incDependencies();
-        if (!DepDest->isScheduled())
-          BundleMember->incrementUnscheduledDeps(1);
+          // We increment the counter only if the locations are aliased
+          // (instead of counting all alias checks). This gives a better
+          // balance between reduced runtime and accurate dependencies.
+          NumAliased++;
+
+          DepDest->addMemoryDependency(BundleMember);
+          BundleMember->incDependencies();
+          if (!DepDest->isScheduled())
+            BundleMember->incrementUnscheduledDeps(1);
+        }
         if (!DepDest->hasValidDependencies() ||
             (InsertInReadyList && DepDest->isReady()))
           WorkList.push_back(DepDest);
@@ -27265,8 +27307,21 @@ public:
                              SmallVector<unsigned> &RangeSizesByIdx,
                              unsigned Stride)
       : Operands(Ops), RangeSizesStorage(RangeSizes),
-        RangeSizesByIdx(RangeSizesByIdx), Stride(Stride) {}
+        RangeSizesByIdx(RangeSizesByIdx), Stride(Stride), RTStride(nullptr) {}
 
+  explicit StoreChainContext(ArrayRef<Value *> Ops,
+                             ArrayRef<SizePair> RangeSizes,
+                             SmallVector<unsigned> &RangeSizesByIdx,
+                             const SCEV *RTStride)
+      : Operands(Ops), RangeSizesStorage(RangeSizes),
+        RangeSizesByIdx(RangeSizesByIdx), Stride(0), RTStride(RTStride) {}
+
+  /// Compare two Contexts prioritize small constant strides
+  bool operator<(const StoreChainContext &Other) const {
+    if (RTStride || Other.RTStride)
+      return !RTStride;
+    return Stride < Other.Stride;
+  }
   /// Set up initial values using the already set Operands
   bool initializeContext(
       BoUpSLP &R, const DataLayout &DL, const TargetTransformInfo &TTI,
@@ -27276,8 +27331,6 @@ public:
   std::optional<unsigned> getCurrentVF() const;
   /// Return the maximum VF for the context
   unsigned getMaxVF() const { return MaxVF; }
-  /// Return the stride of the context
-  unsigned getStride() const { return Stride; }
   /// Attempt to vectorize Operands for the given VF
   /// Returns false if no more attempts should be made for the context
   bool vectorizeOneVF(const TargetTransformInfo &TTI, unsigned VF,
@@ -27387,6 +27440,8 @@ private:
   bool RepeatChanged = false;
   /// For constant strided stores, what is the stride amount
   const unsigned Stride = 0;
+  /// For runtime strided stores
+  const SCEV *RTStride = nullptr;
   /// Store information about failed vectorization attempts due to scheduling
   SmallDenseMap<Value *, SizePair> NonSchedulable;
 };
@@ -27460,7 +27515,7 @@ bool StoreChainContext::initializeContext(
       Store->getPointerAddressSpace()));
   MinVF /= getNumElements(StoreTy);
   MinVF = std::max<unsigned>(2, MinVF);
-  if (Stride > 1)
+  if (Stride > 1 || RTStride)
     MinVF = std::max<unsigned>(MinVF, MinProfitableStridedStores);
 
   if (MaxVF < MinVF) {
@@ -27675,7 +27730,7 @@ bool StoreChainContext::vectorizeOneVF(
         markRangeVectorized(SliceStartIdx, VF, FirstUnvecStore, MaxSliceEnd);
         SliceStartIdx += VF;
         ++NumStoreChains;
-        if (Stride > 1)
+        if (Stride > 1 || RTStride)
           ++NumStridedStoreChains;
         NumVectorizedStores += VF;
         continue;
@@ -27904,7 +27959,7 @@ bool SLPVectorizerPass::vectorizeStores(
     llvm::stable_sort(AllContexts,
                       [](const std::unique_ptr<StoreChainContext> &A,
                          const std::unique_ptr<StoreChainContext> &B) {
-                        return A && (!B || A->getStride() < B->getStride());
+                        return A && (!B || *A < *B);
                       });
 
     for (unsigned LimitVF = GlobalMaxVF; LimitVF > 0;
@@ -28009,6 +28064,46 @@ bool SLPVectorizerPass::vectorizeStores(
   // Final vectorization attempt.
   for (RelatedStoreInsts &StoreSeq : SortedStores)
     ExtendContexts(StoreSeq.getStores());
+
+  if (EnableStridedStores) {
+    // Stores is already reversed, reverse again so that we generate
+    // chains in program order in order for scheduling to occur
+    const unsigned NumStores = Stores.size();
+    unsigned Idx = NumStores - 1;
+    while (Idx > 0) {
+      StoreInst *StartSI = Stores[Idx];
+      StoreInst *NextSI = Stores[Idx - 1];
+      Type *StoreTy = StartSI->getValueOperand()->getType();
+      if (NextSI->getValueOperand()->getType() != StoreTy) {
+        --Idx;
+        continue;
+      }
+      const SCEV *StartSCEV = SE->getSCEV(StartSI->getPointerOperand());
+      const SCEV *NextSCEV = SE->getSCEV(NextSI->getPointerOperand());
+      const SCEV *Stride = SE->getMinusSCEV(NextSCEV, StartSCEV);
+      if (isa<SCEVCouldNotCompute, SCEVConstant, SCEVVScale>(Stride)) {
+        --Idx;
+        continue;
+      }
+      SmallVector<Value *> Ops{StartSI, NextSI};
+      SmallVector<StoreChainContext::SizePair> RS{{Idx, 1}, {Idx - 1, 1}};
+      --Idx;
+      while (Idx > 0) {
+        NextSI = Stores[Idx - 1];
+        if (NextSI->getValueOperand()->getType() != StoreTy)
+          break;
+        NextSCEV = SE->getAddExpr(NextSCEV, Stride);
+        if (NextSCEV != SE->getSCEV(NextSI->getPointerOperand()))
+          break;
+        --Idx;
+        Ops.push_back(NextSI);
+        RS.emplace_back(Idx, 1);
+      }
+      if (Ops.size() >= MinProfitableStridedStores)
+        AllContexts.emplace_back(std::make_unique<StoreChainContext>(
+            Ops, RS, RangeSizesByIdx, Stride));
+    }
+  }
 
   ActuallyVectorizeContexts();
   return Changed;
