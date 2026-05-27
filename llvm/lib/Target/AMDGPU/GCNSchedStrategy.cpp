@@ -2253,7 +2253,7 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
 static bool isReachingDefAGPRForm(MachineInstr *RD,
                                   const DenseSet<Register> &CandSrc2Regs,
                                   const SIInstrInfo &TII) {
-  if (TII.isMAI(*RD))
+  if (TII.isMFMA(*RD))
     return true;
   if (RD->getOpcode() == AMDGPU::AV_MOV_B32_IMM_PSEUDO ||
       RD->getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO)
@@ -2264,14 +2264,14 @@ static bool isReachingDefAGPRForm(MachineInstr *RD,
 }
 
 bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
-  if (!static_cast<const SIInstrInfo *>(DAG.TII)->isMAI(*MI))
+  if (!static_cast<const SIInstrInfo *>(DAG.TII)->isMFMA(*MI))
     return false;
   if (AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode()) == -1)
     return false;
   // Reject candidates whose users force an unavoidable bridge copy.
   Register DstReg = MI->getOperand(0).getReg();
   for (const MachineOperand &Use : DAG.MRI.use_nodbg_operands(DstReg)) {
-    if (!TII->isMAI(*Use.getParent()) && !Use.getParent()->isCopy())
+    if (!TII->isMFMA(*Use.getParent()) && !Use.getParent()->isCopy())
       return false;
   }
   return true;
@@ -2331,7 +2331,7 @@ bool RewriteMFMAFormStage::initHeuristics(
       for (MachineOperand *RUOp : DstReachingUses) {
         MachineInstr *UserMI = RUOp->getParent();
         // Group members read the AGPR result directly.
-        if (TII->isMAI(*UserMI) && RewriteSet.contains(UserMI))
+        if (TII->isMFMA(*UserMI) && RewriteSet.contains(UserMI))
           continue;
 
         // For any user of the result of the MFMA which is not an MFMA, we
@@ -2339,7 +2339,7 @@ bool RewriteMFMAFormStage::initHeuristics(
         // per user block.
         CopyForUse[UserMI->getParent()].insert(RUOp->getReg());
 
-        if (TII->isMAI(*UserMI))
+        if (TII->isMFMA(*UserMI))
           continue;
 
         SmallVector<SlotIndex, 8> DstUsesReachingDefs;
@@ -2347,7 +2347,7 @@ bool RewriteMFMAFormStage::initHeuristics(
 
         for (SlotIndex RDIndex : DstUsesReachingDefs) {
           MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
-          if (TII->isMAI(*RD))
+          if (TII->isMFMA(*RD))
             continue;
 
           // For any definition of the user of the MFMA which is not an MFMA,
@@ -2473,7 +2473,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
   // may require VGPR.  Additionally, if we bail out and don't perform the
   // rewrite then these need to be restored anyway.
   for (auto &[MI, OriginalOpcode] : RewriteCands) {
-    assert(TII->isMAI(*MI));
+    assert(TII->isMFMA(*MI));
     const TargetRegisterClass *ADefRC =
         DAG.MRI.getRegClass(MI->getOperand(0).getReg());
     const TargetRegisterClass *VDefRC = SRI->getEquivalentVGPRClass(ADefRC);
@@ -2665,7 +2665,7 @@ bool RewriteMFMAFormStage::rewrite(
     for (MachineOperand *RUOp : DstReachingUses) {
       MachineInstr *UserMI = RUOp->getParent();
       // Group members read the AGPR result directly.
-      if (TII->isMAI(*UserMI) && RewriteCandsSet.contains(UserMI))
+      if (TII->isMFMA(*UserMI) && RewriteCandsSet.contains(UserMI))
         continue;
 
       // If there is a non mai reaching use, then we need a copy.
@@ -2673,7 +2673,7 @@ bool RewriteMFMAFormStage::rewrite(
         DstReachingUseCopies.push_back(RUOp);
 
       // Non-rewritten MAI: its defs aren't being reclassified.
-      if (TII->isMAI(*UserMI))
+      if (TII->isMFMA(*UserMI))
         continue;
 
       SmallVector<SlotIndex, 8> DstUsesReachingDefs;
@@ -2681,7 +2681,7 @@ bool RewriteMFMAFormStage::rewrite(
 
       for (SlotIndex RDIndex : DstUsesReachingDefs) {
         MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
-        if (TII->isMAI(*RD))
+        if (TII->isMFMA(*RD))
           continue;
 
         // If there is a non mai reaching def of this reaching use, then we will
