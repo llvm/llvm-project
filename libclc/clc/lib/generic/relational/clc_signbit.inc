@@ -12,27 +12,12 @@
 #define __CLC_RETTYPE __CLC_S_GENTYPE
 #endif
 
-#if __CLC_FPSIZE == 32
-#define __CLC_SIGNBIT_MASK SIGNBIT_SP32
-#elif __CLC_FPSIZE == 64
-#define __CLC_SIGNBIT_MASK SIGNBIT_DP64
-#elif __CLC_FPSIZE == 16
-#define __CLC_SIGNBIT_MASK SIGNBIT_FP16
-#else
-#error "Invalid FP size"
-#endif
-
 _CLC_OVERLOAD _CLC_DEF __CLC_RETTYPE __clc_signbit(__CLC_GENTYPE x) {
 #if __CLC_VECSIZE_OR_1 == 1
-  return (__CLC_INTN)((__CLC_AS_S_GENTYPE(x) &
-                       (__CLC_S_GENTYPE)__CLC_SIGNBIT_MASK) != 0);
+  return (__CLC_INTN)(__CLC_AS_U_GENTYPE(x) >> (__CLC_FPSIZE - 1));
 #else
-  return (__CLC_AS_S_GENTYPE(x) & (__CLC_S_GENTYPE)__CLC_SIGNBIT_MASK) !=
-                 (__CLC_S_GENTYPE)0
-             ? (__CLC_S_GENTYPE)-1
-             : (__CLC_S_GENTYPE)0;
+  return __CLC_AS_S_GENTYPE(x) >> (__CLC_FPSIZE - 1);
 #endif
 }
 
 #undef __CLC_RETTYPE
-#undef __CLC_SIGNBIT_MASK

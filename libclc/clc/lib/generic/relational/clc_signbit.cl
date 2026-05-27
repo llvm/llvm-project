@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/math/math.h"
 #include "clc/relational/clc_signbit.h"
 
 #define __CLC_BODY "clc_signbit.inc"
