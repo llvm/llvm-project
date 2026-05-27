@@ -2,6 +2,8 @@
 ; RUN:   | FileCheck --check-prefix=X64 %s
 ; RUN: llc %s -mtriple=i686-linux-gnu -o - -verify-machineinstrs \
 ; RUN:   | FileCheck --check-prefix=X86 %s
+; RUN: llc %s -mtriple=i686-linux-gnu -mcpu=pentium_pro -o - -verify-machineinstrs \
+; RUN:   | FileCheck --check-prefix=PPRO %s
 
 define void @test1() #0 {
 entry:
@@ -21,6 +23,13 @@ entry:
 ; X86: .Ltmp0:
 ; X86: calll __fentry__
 ; X86: retl
+; PPRO-LABEL: test1:
+; PPRO: .section __mcount_loc,"a",@progbits
+; PPRO: .long .Ltmp0
+; PPRO: .text
+; PPRO: .Ltmp0:
+; PPRO: calll __fentry__
+; PPRO: retl
 }
 
 define void @test2() #1 {
@@ -45,6 +54,14 @@ entry:
 ; X86: nop
 ; X86-NOT: calll __fentry__
 ; X86: retl
+; PPRO-LABEL: test2:
+; PPRO: .section __mcount_loc,"a",@progbits
+; PPRO: .long .Ltmp1
+; PPRO: .text
+; PPRO: .Ltmp1:
+; PPRO: nopl 8(%eax,%eax)
+; PPRO-NOT: calll __fentry__
+; PPRO: retl
 }
 
 attributes #0 = { "fentry-call"="true" "mrecord-mcount" }
