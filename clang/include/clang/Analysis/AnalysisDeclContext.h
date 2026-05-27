@@ -391,7 +391,7 @@ public:
   /// Obtain the beginning context of the analysis.
   ///
   /// \returns The top level stack frame for \p D.
-  const StackFrame *getStackFrame(const Decl *D) {
+  const StackFrame *getTopStackFrame(const Decl *D) {
     return SFMgr.getStackFrame(getContext(D), nullptr, nullptr, nullptr,
                                nullptr, 0, 0);
   }
