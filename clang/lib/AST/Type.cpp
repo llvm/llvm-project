@@ -3327,6 +3327,87 @@ bool Type::isStdByteType() const {
   return false;
 }
 
+bool Type::isStdClassTemplateSpecialization(const ASTContext &Ctx,
+                                            StringRef ClassName,
+                                            QualType *TypeArg,
+                                            ClassTemplateDecl **CachedDecl,
+                                            const Decl **MalformedDecl) const {
+  QualType SugaredType(this, 0);
+  auto ReportMatchingNameAsMalformed = [&](NamedDecl *D) {
+    if (!MalformedDecl)
+      return;
+    if (!D)
+      D = SugaredType->getAsTagDecl();
+    if (!D || !D->isInStdNamespace())
+      return;
+    IdentifierInfo *II = D->getDeclName().getAsIdentifierInfo();
+    if (II && II->isStr(ClassName))
+      *MalformedDecl = D;
+  };
+
+  ClassTemplateDecl *Template = nullptr;
+  ArrayRef<TemplateArgument> Arguments;
+  if (const TemplateSpecializationType *TST =
+          SugaredType->getAsNonAliasTemplateSpecializationType()) {
+    Template = dyn_cast_or_null<ClassTemplateDecl>(
+        TST->getTemplateName().getAsTemplateDecl());
+    Arguments = TST->template_arguments();
+  } else if (const auto *TT = SugaredType->getAs<TagType>()) {
+    Template = TT->getTemplateDecl();
+    Arguments = TT->getTemplateArgs(Ctx);
+  }
+
+  if (!Template) {
+    ReportMatchingNameAsMalformed(SugaredType->getAsTagDecl());
+    return false;
+  }
+
+  ClassTemplateDecl *Cached = CachedDecl ? *CachedDecl : nullptr;
+  if (!Cached) {
+    CXXRecordDecl *TemplateClass = Template->getTemplatedDecl();
+    IdentifierInfo *II = TemplateClass->getIdentifier();
+    if (!II || !II->isStr(ClassName) || !TemplateClass->isInStdNamespace())
+      return false;
+
+    TemplateParameterList *Params = Template->getTemplateParameters();
+    if (Params->getMinRequiredArguments() != 1 ||
+        !isa<TemplateTypeParmDecl>(Params->getParam(0)) ||
+        Params->getParam(0)->isTemplateParameterPack()) {
+      if (MalformedDecl)
+        *MalformedDecl = TemplateClass;
+      return false;
+    }
+
+    Cached = Template;
+    if (CachedDecl)
+      *CachedDecl = Template;
+  }
+
+  if (Template->getCanonicalDecl() != Cached->getCanonicalDecl())
+    return false;
+
+  if (TypeArg) {
+    if (Arguments.empty() || Arguments[0].getKind() != TemplateArgument::Type)
+      return false;
+
+    QualType ArgType = Arguments[0].getAsType();
+    if (Ctx.getLangOpts().ObjCAutoRefCount && ArgType->isObjCLifetimeType() &&
+        !ArgType.getObjCLifetime()) {
+      Qualifiers Qs;
+      Qs.setObjCLifetime(Qualifiers::OCL_Strong);
+      ArgType = Ctx.getQualifiedType(ArgType, Qs);
+    }
+    *TypeArg = ArgType;
+  }
+
+  return true;
+}
+
+bool Type::isStdInitializerListType(const ASTContext &Ctx,
+                                    QualType *Element) const {
+  return isStdClassTemplateSpecialization(Ctx, "initializer_list", Element);
+}
+
 bool Type::isSpecifierType() const {
   // Note that this intentionally does not use the canonical type.
   switch (getTypeClass()) {

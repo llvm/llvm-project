@@ -2819,6 +2819,118 @@ bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
   return Shorter == Longer.take_front(Shorter.size());
 }
 
+/// Whether Ptr designates an object that is the backing array of a
+/// std::initializer_list.
+static bool isInitializerListBackingArray(const Pointer &Ptr) {
+  if (Ptr.isZero() || !Ptr.isBlockPointer() || Ptr.block()->isDynamic())
+    return false;
+
+  const auto *MTE =
+      dyn_cast_or_null<MaterializeTemporaryExpr>(Ptr.getDeclDesc()->asExpr());
+  return MTE && MTE->isBackingArrayForInitializerList();
+}
+
+namespace {
+/// Pairs an enclosing-array Pointer with the element-relative location of
+/// the original pointer within it.
+struct ArraySubobjectInfo {
+  Pointer Array;
+  ArraySubobjectLocation Loc;
+};
+} // namespace
+
+/// Returns the enclosing array and element-relative location if Ptr
+/// designates an element of an initializer_list backing array,
+/// one-past-the-end of it, or a subobject of an element. Returns
+/// std::nullopt otherwise.
+static std::optional<ArraySubobjectInfo>
+getArraySubobjectLocation(const ASTContext &Ctx, const Pointer &Ptr) {
+  if (Ptr.isZero() || !Ptr.isBlockPointer())
+    return std::nullopt;
+
+  Pointer Array = Ptr.getDeclPtr();
+  if (!isInitializerListBackingArray(Array))
+    return std::nullopt;
+
+  const auto *ArrayType =
+      Ctx.getAsConstantArrayType(Array.getFieldDesc()->getType());
+  if (!ArrayType)
+    return std::nullopt;
+
+  APValue PtrValue = Ptr.toAPValue(Ctx);
+  if (!PtrValue.isLValue() || !PtrValue.hasLValuePath())
+    return std::nullopt;
+
+  ArrayRef<APValue::LValuePathEntry> Path = PtrValue.getLValuePath();
+  if (Path.empty())
+    return std::nullopt;
+
+  uint64_t Index = Path.front().getAsArrayIndex();
+  bool IsValidOnePastEnd = Path.size() == 1;
+  std::optional<ArraySubobjectLocation> Loc = getArraySubobjectLocationImpl(
+      Ctx, ArrayType, Index, PtrValue.getLValueOffset(), IsValidOnePastEnd);
+  if (!Loc)
+    return std::nullopt;
+  return ArraySubobjectInfo{std::move(Array), *Loc};
+}
+
+/// Returns true if \p LHS and \p RHS both designate elements of
+/// std::initializer_list backing arrays whose values agree on the overlapping
+/// region. Such backing arrays may be merged by the implementation, so
+/// comparing their addresses produces an unspecified result and is rejected
+/// as a constant expression.
+bool arePotentiallyOverlappingInitListBackingArrays(InterpState &S,
+                                                    const Pointer &LHS,
+                                                    const Pointer &RHS) {
+  const ASTContext &Ctx = S.getASTContext();
+  std::optional<ArraySubobjectInfo> LHSInfo =
+      getArraySubobjectLocation(Ctx, LHS);
+  std::optional<ArraySubobjectInfo> RHSInfo =
+      getArraySubobjectLocation(Ctx, RHS);
+  if (!LHSInfo || !RHSInfo)
+    return false;
+
+  if (LHSInfo->Loc.OffsetInElement != RHSInfo->Loc.OffsetInElement)
+    return false;
+
+  const auto *LHSArrayType =
+      Ctx.getAsConstantArrayType(LHSInfo->Array.getFieldDesc()->getType());
+  const auto *RHSArrayType =
+      Ctx.getAsConstantArrayType(RHSInfo->Array.getFieldDesc()->getType());
+  if (!LHSArrayType || !RHSArrayType ||
+      !Ctx.hasSameType(LHSArrayType->getElementType(),
+                       RHSArrayType->getElementType()))
+    return false;
+
+  QualType ElementType = LHSArrayType->getElementType();
+  int64_t LHSSize = LHSInfo->Array.getNumElems();
+  int64_t RHSSize = RHSInfo->Array.getNumElems();
+  int64_t LHSOffset = LHSInfo->Loc.Index;
+  int64_t RHSOffset = RHSInfo->Loc.Index;
+  int64_t OverlapBegin = std::max(-LHSOffset, -RHSOffset);
+  int64_t OverlapEnd = std::min(LHSSize - LHSOffset, RHSSize - RHSOffset);
+  if (OverlapBegin >= OverlapEnd)
+    return false;
+
+  for (int64_t I = OverlapBegin; I != OverlapEnd; ++I) {
+    Pointer LHSElt = LHSInfo->Array.atIndex(I + LHSOffset).narrow();
+    Pointer RHSElt = RHSInfo->Array.atIndex(I + RHSOffset).narrow();
+    std::optional<APValue> LHSEltValue =
+        LHSElt.toRValue(S.getContext(), ElementType);
+    std::optional<APValue> RHSEltValue =
+        RHSElt.toRValue(S.getContext(), ElementType);
+    // Missing element data: be conservative and assume the backing arrays
+    // may share storage.
+    if (!LHSEltValue || !RHSEltValue)
+      return true;
+
+    if (!AreAPValuesPotentiallyMergeable(*LHSEltValue, *RHSEltValue, Ctx))
+      return false;
+  }
+
+  return true;
+}
+
 static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr,
                                 PrimType T) {
   if (T == PT_IntAPS) {

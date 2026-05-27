@@ -4930,7 +4930,22 @@ public:
                            LifetimeExtendedTemporaryDecl *MTD = nullptr);
 
   MaterializeTemporaryExpr(EmptyShell Empty)
-      : Expr(MaterializeTemporaryExprClass, Empty) {}
+      : Expr(MaterializeTemporaryExprClass, Empty) {
+    MaterializeTemporaryExprBits.IsBackingArrayForInitializerList = false;
+  }
+
+  /// Whether this materialized temporary is the backing array of a
+  /// std::initializer_list.
+  ///
+  /// This used by [intro.object]/9 "potentially non-unique object" handling.
+  bool isBackingArrayForInitializerList() const {
+    return MaterializeTemporaryExprBits.IsBackingArrayForInitializerList;
+  }
+
+  /// This bitfield will set by SK_StdInitializerList step in Sema.
+  void setBackingArrayForInitializerList(bool V = true) {
+    MaterializeTemporaryExprBits.IsBackingArrayForInitializerList = V;
+  }
 
   /// Retrieve the temporary-generating subexpression whose value will
   /// be materialized into a glvalue.

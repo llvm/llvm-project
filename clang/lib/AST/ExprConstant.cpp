@@ -56,6 +56,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -2020,17 +2021,18 @@ struct LValueBaseString {
   int CharWidth;
 };
 
-// Gets the lvalue base of LVal as a string.
-static bool GetLValueBaseAsString(const EvalInfo &Info, const LValue &LVal,
+// Gets the lvalue base as a string.
+static bool GetLValueBaseAsString(const ASTContext &Ctx,
+                                  APValue::LValueBase Base,
                                   LValueBaseString &AsString) {
-  const auto *BaseExpr = LVal.Base.dyn_cast<const Expr *>();
+  const auto *BaseExpr = Base.dyn_cast<const Expr *>();
   if (!BaseExpr)
     return false;
 
   // For ObjCEncodeExpr, we need to compute and store the string.
   if (const auto *EE = dyn_cast<ObjCEncodeExpr>(BaseExpr)) {
-    Info.Ctx.getObjCEncodingForType(EE->getEncodedType(),
-                                    AsString.ObjCEncodeStorage);
+    Ctx.getObjCEncodingForType(EE->getEncodedType(),
+                               AsString.ObjCEncodeStorage);
     AsString.Bytes = AsString.ObjCEncodeStorage;
     AsString.CharWidth = 1;
     return true;
@@ -2049,6 +2051,11 @@ static bool GetLValueBaseAsString(const EvalInfo &Info, const LValue &LVal,
   return true;
 }
 
+static bool GetLValueBaseAsString(const EvalInfo &Info, const LValue &LVal,
+                                  LValueBaseString &AsString) {
+  return GetLValueBaseAsString(Info.Ctx, LVal.Base, AsString);
+}
+
 // Determine whether two string literals potentially overlap. This will be the
 // case if they agree on the values of all the bytes on the overlapping region
 // between them.
@@ -2063,31 +2070,31 @@ static bool GetLValueBaseAsString(const EvalInfo &Info, const LValue &LVal,
 // addresses onwards.
 //
 // See open core issue CWG2765 which is discussing the desired rule here.
-static bool ArePotentiallyOverlappingStringLiterals(const EvalInfo &Info,
-                                                    const LValue &LHS,
-                                                    const LValue &RHS) {
-  LValueBaseString LHSString, RHSString;
-  if (!GetLValueBaseAsString(Info, LHS, LHSString) ||
-      !GetLValueBaseAsString(Info, RHS, RHSString))
-    return false;
+static bool ArePotentiallyOverlappingStringLiterals(
+    const LValueBaseString &LHSString, CharUnits LHSOffset,
+    const LValueBaseString &RHSString, CharUnits RHSOffset) {
+  assert(LHSString.Bytes.data() && RHSString.Bytes.data() &&
+         "passing a string with no underlying storage");
 
   // This is the byte offset to the location of the first character of LHS
   // within RHS. We don't need to look at the characters of one string that
   // would appear before the start of the other string if they were merged.
-  CharUnits Offset = RHS.Offset - LHS.Offset;
+  StringRef LHSBytes = LHSString.Bytes;
+  StringRef RHSBytes = RHSString.Bytes;
+  CharUnits Offset = RHSOffset - LHSOffset;
   if (Offset.isNegative()) {
-    if (LHSString.Bytes.size() < (size_t)-Offset.getQuantity())
+    if (LHSBytes.size() < (size_t)-Offset.getQuantity())
       return false;
-    LHSString.Bytes = LHSString.Bytes.drop_front(-Offset.getQuantity());
+    LHSBytes = LHSBytes.drop_front(-Offset.getQuantity());
   } else {
-    if (RHSString.Bytes.size() < (size_t)Offset.getQuantity())
+    if (RHSBytes.size() < (size_t)Offset.getQuantity())
       return false;
-    RHSString.Bytes = RHSString.Bytes.drop_front(Offset.getQuantity());
+    RHSBytes = RHSBytes.drop_front(Offset.getQuantity());
   }
 
-  bool LHSIsLonger = LHSString.Bytes.size() > RHSString.Bytes.size();
-  StringRef Longer = LHSIsLonger ? LHSString.Bytes : RHSString.Bytes;
-  StringRef Shorter = LHSIsLonger ? RHSString.Bytes : LHSString.Bytes;
+  bool LHSIsLonger = LHSBytes.size() > RHSBytes.size();
+  StringRef Longer = LHSIsLonger ? LHSBytes : RHSBytes;
+  StringRef Shorter = LHSIsLonger ? RHSBytes : LHSBytes;
   int ShorterCharWidth = (LHSIsLonger ? RHSString : LHSString).CharWidth;
 
   // The null terminator isn't included in the string data, so check for it
@@ -2103,6 +2110,32 @@ static bool ArePotentiallyOverlappingStringLiterals(const EvalInfo &Info,
   // Otherwise, they're potentially overlapping if and only if the overlapping
   // region is the same.
   return Shorter == Longer.take_front(Shorter.size());
+}
+
+static bool ArePotentiallyOverlappingStringLiterals(const EvalInfo &Info,
+                                                    const LValue &LHS,
+                                                    const LValue &RHS) {
+  LValueBaseString LHSString, RHSString;
+  if (!GetLValueBaseAsString(Info, LHS, LHSString) ||
+      !GetLValueBaseAsString(Info, RHS, RHSString))
+    return false;
+
+  return ArePotentiallyOverlappingStringLiterals(LHSString, LHS.Offset,
+                                                 RHSString, RHS.Offset);
+}
+
+/// APValue overload of the string-literal overlap predicate. Returns nullopt
+/// if either operand is not a string-literal (or ObjC encoding) LValue.
+static std::optional<bool> ArePotentiallyOverlappingStringLiterals(
+    const ASTContext &Ctx, const APValue &LHS, const APValue &RHS) {
+  if (!LHS.isLValue() || !RHS.isLValue())
+    return std::nullopt;
+  LValueBaseString LHSString, RHSString;
+  if (!GetLValueBaseAsString(Ctx, LHS.getLValueBase(), LHSString) ||
+      !GetLValueBaseAsString(Ctx, RHS.getLValueBase(), RHSString))
+    return std::nullopt;
+  return ArePotentiallyOverlappingStringLiterals(
+      LHSString, LHS.getLValueOffset(), RHSString, RHS.getLValueOffset());
 }
 
 static bool IsWeakLValue(const LValue &Value) {
@@ -4854,6 +4887,259 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     return CompleteObject();
 
   return CompleteObject(LVal.getLValueBase(), BaseVal, BaseType);
+}
+
+static const APValue *GetArrayInitializedElt(const APValue &Array,
+                                             uint64_t Index) {
+  if (!Array.isArray() || Index >= Array.getArraySize())
+    return nullptr;
+  if (Index < Array.getArrayInitializedElts())
+    return &Array.getArrayInitializedElt(Index);
+  return Array.hasArrayFiller() ? &Array.getArrayFiller() : nullptr;
+}
+
+/// True if the LValue base names a weak entity (whose link-time identity
+/// may be merged with another).
+static bool isWeakLValueBase(const APValue &V) {
+  if (!V.isLValue())
+    return false;
+  if (const auto *VD = V.getLValueBase().dyn_cast<const ValueDecl *>())
+    return VD->isWeak();
+  return false;
+}
+
+/// True if the member-pointer target decl is weak.
+static bool isWeakMemberPointer(const APValue &V) {
+  if (!V.isMemberPointer())
+    return false;
+  const ValueDecl *D = V.getMemberPointerDecl();
+  return D && D->isWeak();
+}
+
+/// AreAPValuesPotentiallyMergeableSlow - The slow path for
+/// AreAPValuesPotentiallyMergeable. Will be invoked when the two values'
+/// APValue::Profile already differs. Returns true if the disagreement is one
+/// the runtime can collapse (overlapping string literals, weak decls that might
+/// resolve to the same target), recursing into aggregate kinds so that
+/// aggregates containing such leaves are still reported as mergeable.
+static bool AreAPValuesPotentiallyMergeableSlow(const APValue &LHS,
+                                                const APValue &RHS,
+                                                const ASTContext &Ctx) {
+  if (!LHS.hasValue() || !RHS.hasValue())
+    return true;
+  if (LHS.getKind() != RHS.getKind())
+    return false;
+
+  switch (LHS.getKind()) {
+  case APValue::LValue: {
+    // Distinct string-literal LValues whose content could be merged.
+    if (auto Overlap = ArePotentiallyOverlappingStringLiterals(Ctx, LHS, RHS))
+      return *Overlap;
+    // Either side names a weak entity -> link-time may resolve to one.
+    return isWeakLValueBase(LHS) || isWeakLValueBase(RHS);
+  }
+
+  case APValue::MemberPointer:
+    return isWeakMemberPointer(LHS) || isWeakMemberPointer(RHS);
+
+  case APValue::Struct: {
+    if (LHS.getStructNumBases() != RHS.getStructNumBases() ||
+        LHS.getStructNumFields() != RHS.getStructNumFields())
+      return false;
+    for (unsigned I = 0, N = LHS.getStructNumBases(); I != N; ++I)
+      if (!AreAPValuesPotentiallyMergeable(LHS.getStructBase(I),
+                                           RHS.getStructBase(I), Ctx))
+        return false;
+    for (unsigned I = 0, N = LHS.getStructNumFields(); I != N; ++I)
+      if (!AreAPValuesPotentiallyMergeable(LHS.getStructField(I),
+                                           RHS.getStructField(I), Ctx))
+        return false;
+    return true;
+  }
+
+  case APValue::Union: {
+    if (LHS.getUnionField() != RHS.getUnionField())
+      return false;
+    if (!LHS.getUnionField())
+      return true;
+    return AreAPValuesPotentiallyMergeable(LHS.getUnionValue(),
+                                           RHS.getUnionValue(), Ctx);
+  }
+
+  case APValue::Array: {
+    if (LHS.getArraySize() != RHS.getArraySize())
+      return false;
+    for (unsigned I = 0, N = LHS.getArraySize(); I != N; ++I) {
+      const APValue *LE = GetArrayInitializedElt(LHS, I);
+      const APValue *RE = GetArrayInitializedElt(RHS, I);
+      // Missing element data: be conservative.
+      if (!LE || !RE)
+        return true;
+      if (!AreAPValuesPotentiallyMergeable(*LE, *RE, Ctx))
+        return false;
+    }
+    return true;
+  }
+
+  case APValue::Vector: {
+    if (LHS.getVectorLength() != RHS.getVectorLength())
+      return false;
+    for (unsigned I = 0, N = LHS.getVectorLength(); I != N; ++I)
+      if (!AreAPValuesPotentiallyMergeable(LHS.getVectorElt(I),
+                                           RHS.getVectorElt(I), Ctx))
+        return false;
+    return true;
+  }
+
+  case APValue::Matrix: {
+    if (LHS.getMatrixNumRows() != RHS.getMatrixNumRows() ||
+        LHS.getMatrixNumColumns() != RHS.getMatrixNumColumns())
+      return false;
+    for (unsigned I = 0, N = LHS.getMatrixNumElements(); I != N; ++I)
+      if (!AreAPValuesPotentiallyMergeable(LHS.getMatrixElt(I),
+                                           RHS.getMatrixElt(I), Ctx))
+        return false;
+    return true;
+  }
+
+  // For every scalar kind (Int, Float, FixedPoint, ComplexInt, ComplexFloat,
+  // AddrLabelDiff, None, Indeterminate), Profile already captures the full
+  // observable content. If Profile disagreed, the values are observably
+  // distinct.
+  default:
+    return false;
+  }
+}
+
+bool AreAPValuesPotentiallyMergeable(const APValue &LHS, const APValue &RHS,
+                                     const ASTContext &Ctx) {
+  // Fast path: bitwise-identical APValues -> definitely mergeable.
+  llvm::FoldingSetNodeID LHSID, RHSID;
+  LHS.Profile(LHSID);
+  RHS.Profile(RHSID);
+  if (LHSID == RHSID)
+    return true;
+
+  return AreAPValuesPotentiallyMergeableSlow(LHS, RHS, Ctx);
+}
+
+std::optional<ArraySubobjectLocation> getArraySubobjectLocationImpl(
+    const ASTContext &Ctx, const ConstantArrayType *ArrayType, uint64_t Index,
+    CharUnits LValueOffset, bool IsValidOnePastEnd) {
+  uint64_t ArraySize = ArrayType->getZExtSize();
+  if (Index > ArraySize)
+    return std::nullopt;
+
+  if (Index == ArraySize) {
+    if (!IsValidOnePastEnd)
+      return std::nullopt;
+    return ArraySubobjectLocation{Index, CharUnits::Zero()};
+  }
+
+  if (LValueOffset.isNegative())
+    return std::nullopt;
+
+  uint64_t ElementSize =
+      Ctx.getTypeSizeInChars(ArrayType->getElementType()).getQuantity();
+  if (ElementSize && Index > std::numeric_limits<uint64_t>::max() / ElementSize)
+    return std::nullopt;
+
+  uint64_t ElementOffset = ElementSize * Index;
+  uint64_t LValueOffsetQ = LValueOffset.getQuantity();
+  if (LValueOffsetQ < ElementOffset)
+    return std::nullopt;
+
+  uint64_t OffsetInElement = LValueOffsetQ - ElementOffset;
+  if (OffsetInElement > ElementSize)
+    return std::nullopt;
+
+  return ArraySubobjectLocation{Index,
+                                CharUnits::fromQuantity(OffsetInElement)};
+}
+
+/// Returns the array element and element-relative location that LV
+/// designates, or std::nullopt if LV is not an element, one-past-the-end
+/// position, or subobject of an element of its base array.
+static std::optional<ArraySubobjectLocation>
+getArraySubobjectLocation(const ASTContext &Ctx, const LValue &LV) {
+  if (LV.Designator.Invalid || LV.Designator.Entries.empty())
+    return std::nullopt;
+
+  const auto *ArrayType = Ctx.getAsConstantArrayType(getType(LV.Base));
+  if (!ArrayType)
+    return std::nullopt;
+
+  uint64_t Index = LV.Designator.Entries.front().getAsArrayIndex();
+  bool IsValidOnePastEnd =
+      LV.Designator.Entries.size() == 1 && LV.Designator.isOnePastTheEnd();
+  return getArraySubobjectLocationImpl(Ctx, ArrayType, Index, LV.Offset,
+                                       IsValidOnePastEnd);
+}
+
+static const APValue *GetCompleteObjectValue(EvalInfo &Info, const Expr *E,
+                                             const LValue &LV) {
+  CompleteObject Obj =
+      findCompleteObject(Info, E, AK_Read, LV, getType(LV.Base));
+  return Obj ? Obj.Value : nullptr;
+}
+
+static bool isInitializerListBackingArray(const LValue &LV) {
+  const auto *BaseExpr = LV.Base.dyn_cast<const Expr *>();
+  const auto *MTE = dyn_cast_or_null<MaterializeTemporaryExpr>(BaseExpr);
+  return MTE && MTE->isBackingArrayForInitializerList();
+}
+
+static bool ArePotentiallyOverlappingInitListBackingArrays(EvalInfo &Info,
+                                                           const Expr *E,
+                                                           const LValue &LHS,
+                                                           const LValue &RHS) {
+  if (!isInitializerListBackingArray(LHS) ||
+      !isInitializerListBackingArray(RHS))
+    return false;
+
+  std::optional<ArraySubobjectLocation> LHSLoc =
+      getArraySubobjectLocation(Info.Ctx, LHS);
+  std::optional<ArraySubobjectLocation> RHSLoc =
+      getArraySubobjectLocation(Info.Ctx, RHS);
+  if (!LHSLoc || !RHSLoc)
+    return false;
+
+  if (LHSLoc->OffsetInElement != RHSLoc->OffsetInElement)
+    return false;
+
+  const auto *LHSArrayType = Info.Ctx.getAsConstantArrayType(getType(LHS.Base));
+  const auto *RHSArrayType = Info.Ctx.getAsConstantArrayType(getType(RHS.Base));
+  if (!LHSArrayType || !RHSArrayType ||
+      !Info.Ctx.hasSameType(LHSArrayType->getElementType(),
+                            RHSArrayType->getElementType()))
+    return false;
+
+  const APValue *LHSArray = GetCompleteObjectValue(Info, E, LHS);
+  const APValue *RHSArray = GetCompleteObjectValue(Info, E, RHS);
+  if (!LHSArray || !RHSArray || !LHSArray->isArray() || !RHSArray->isArray())
+    return false;
+
+  int64_t LHSSize = LHSArray->getArraySize();
+  int64_t RHSSize = RHSArray->getArraySize();
+  int64_t LHSOffset = LHSLoc->Index;
+  int64_t RHSOffset = RHSLoc->Index;
+  int64_t OverlapBegin = std::max(-LHSOffset, -RHSOffset);
+  int64_t OverlapEnd = std::min(LHSSize - LHSOffset, RHSSize - RHSOffset);
+  if (OverlapBegin >= OverlapEnd)
+    return false;
+
+  for (int64_t I = OverlapBegin; I != OverlapEnd; ++I) {
+    const APValue *LHSElt = GetArrayInitializedElt(*LHSArray, I + LHSOffset);
+    const APValue *RHSElt = GetArrayInitializedElt(*RHSArray, I + RHSOffset);
+    // Missing element data: be conservative and assume the arrays may share
+    // storage.
+    if (!LHSElt || !RHSElt)
+      return true;
+    if (!AreAPValuesPotentiallyMergeable(*LHSElt, *RHSElt, Info.Ctx))
+      return false;
+  }
+
+  return true;
 }
 
 /// Perform an lvalue-to-rvalue conversion on the given glvalue. This
@@ -18877,9 +19163,12 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
       // This makes the comparison result unspecified, so it's not a constant
       // expression.
       //
-      // TODO: Do we need to handle the initializer list case here?
       if (ArePotentiallyOverlappingStringLiterals(Info, LHSValue, RHSValue))
         return DiagComparison(diag::note_constexpr_literal_comparison);
+      if (ArePotentiallyOverlappingInitListBackingArrays(Info, E, LHSValue,
+                                                         RHSValue))
+        return DiagComparison(
+            diag::note_constexpr_non_unique_object_comparison);
       if (IsOpaqueConstantCall(LHSValue) || IsOpaqueConstantCall(RHSValue))
         return DiagComparison(diag::note_constexpr_opaque_call_comparison,
                               !IsOpaqueConstantCall(LHSValue));

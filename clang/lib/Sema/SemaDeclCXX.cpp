@@ -12327,96 +12327,6 @@ NamespaceDecl *Sema::getOrCreateStdNamespace() {
   return getStdNamespace();
 }
 
-static bool isStdClassTemplate(Sema &S, QualType SugaredType, QualType *TypeArg,
-                               const char *ClassName,
-                               ClassTemplateDecl **CachedDecl,
-                               const Decl **MalformedDecl) {
-  // We're looking for implicit instantiations of
-  // template <typename U> class std::{ClassName}.
-
-  if (!S.StdNamespace) // If we haven't seen namespace std yet, this can't be
-                       // it.
-    return false;
-
-  auto ReportMatchingNameAsMalformed = [&](NamedDecl *D) {
-    if (!MalformedDecl)
-      return;
-    if (!D)
-      D = SugaredType->getAsTagDecl();
-    if (!D || !D->isInStdNamespace())
-      return;
-    IdentifierInfo *II = D->getDeclName().getAsIdentifierInfo();
-    if (II && II == &S.PP.getIdentifierTable().get(ClassName))
-      *MalformedDecl = D;
-  };
-
-  ClassTemplateDecl *Template = nullptr;
-  ArrayRef<TemplateArgument> Arguments;
-  if (const TemplateSpecializationType *TST =
-          SugaredType->getAsNonAliasTemplateSpecializationType()) {
-    Template = dyn_cast_or_null<ClassTemplateDecl>(
-        TST->getTemplateName().getAsTemplateDecl());
-    Arguments = TST->template_arguments();
-  } else if (const auto *TT = SugaredType->getAs<TagType>()) {
-    Template = TT->getTemplateDecl();
-    Arguments = TT->getTemplateArgs(S.Context);
-  }
-
-  if (!Template) {
-    ReportMatchingNameAsMalformed(SugaredType->getAsTagDecl());
-    return false;
-  }
-
-  if (!*CachedDecl) {
-    // Haven't recognized std::{ClassName} yet, maybe this is it.
-    // FIXME: It seems we should just reuse LookupStdClassTemplate but the
-    // semantics of this are slightly different, most notably the existing
-    // "lookup" semantics explicitly diagnose an invalid definition as an
-    // error.
-    CXXRecordDecl *TemplateClass = Template->getTemplatedDecl();
-    if (TemplateClass->getIdentifier() !=
-            &S.PP.getIdentifierTable().get(ClassName) ||
-        !S.getStdNamespace()->InEnclosingNamespaceSetOf(
-            TemplateClass->getNonTransparentDeclContext()))
-      return false;
-    // This is a template called std::{ClassName}, but is it the right
-    // template?
-    TemplateParameterList *Params = Template->getTemplateParameters();
-    if (Params->getMinRequiredArguments() != 1 ||
-        !isa<TemplateTypeParmDecl>(Params->getParam(0)) ||
-        Params->getParam(0)->isTemplateParameterPack()) {
-      if (MalformedDecl)
-        *MalformedDecl = TemplateClass;
-      return false;
-    }
-
-    // It's the right template.
-    *CachedDecl = Template;
-  }
-
-  if (Template->getCanonicalDecl() != (*CachedDecl)->getCanonicalDecl())
-    return false;
-
-  // This is an instance of std::{ClassName}. Find the argument type.
-  if (TypeArg) {
-    QualType ArgType = Arguments[0].getAsType();
-    // FIXME: Since TST only has as-written arguments, we have to perform the
-    // only kind of conversion applicable to type arguments; in Objective-C ARC:
-    // - If an explicitly-specified template argument type is a lifetime type
-    //   with no lifetime qualifier, the __strong lifetime qualifier is
-    //   inferred.
-    if (S.getLangOpts().ObjCAutoRefCount && ArgType->isObjCLifetimeType() &&
-        !ArgType.getObjCLifetime()) {
-      Qualifiers Qs;
-      Qs.setObjCLifetime(Qualifiers::OCL_Strong);
-      ArgType = S.Context.getQualifiedType(ArgType, Qs);
-    }
-    *TypeArg = ArgType;
-  }
-
-  return true;
-}
-
 bool Sema::isStdInitializerList(QualType Ty, QualType *Element) {
   assert(getLangOpts().CPlusPlus &&
          "Looking for std::initializer_list outside of C++.");
@@ -12424,8 +12334,10 @@ bool Sema::isStdInitializerList(QualType Ty, QualType *Element) {
   // We're looking for implicit instantiations of
   // template <typename E> class std::initializer_list.
 
-  return isStdClassTemplate(*this, Ty, Element, "initializer_list",
-                            &StdInitializerList, /*MalformedDecl=*/nullptr);
+  return !Ty.isNull() &&
+         Ty->isStdClassTemplateSpecialization(Context, "initializer_list",
+                                              Element, &StdInitializerList,
+                                              /*MalformedDecl=*/nullptr);
 }
 
 bool Sema::isStdTypeIdentity(QualType Ty, QualType *Element,
@@ -12436,8 +12348,9 @@ bool Sema::isStdTypeIdentity(QualType Ty, QualType *Element,
   // We're looking for implicit instantiations of
   // template <typename T> struct std::type_identity.
 
-  return isStdClassTemplate(*this, Ty, Element, "type_identity",
-                            &StdTypeIdentity, MalformedDecl);
+  return !Ty.isNull() &&
+         Ty->isStdClassTemplateSpecialization(Context, "type_identity", Element,
+                                              &StdTypeIdentity, MalformedDecl);
 }
 
 static ClassTemplateDecl *LookupStdClassTemplate(Sema &S, SourceLocation Loc,

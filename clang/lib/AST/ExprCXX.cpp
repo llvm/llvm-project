@@ -1825,6 +1825,7 @@ MaterializeTemporaryExpr::MaterializeTemporaryExpr(
     LifetimeExtendedTemporaryDecl *MTD)
     : Expr(MaterializeTemporaryExprClass, T,
            BoundToLvalueReference ? VK_LValue : VK_XValue, OK_Ordinary) {
+  MaterializeTemporaryExprBits.IsBackingArrayForInitializerList = false;
   if (MTD) {
     State = MTD;
     MTD->ExprWithTemporary = Temporary;
