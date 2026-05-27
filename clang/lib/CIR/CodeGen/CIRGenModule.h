@@ -431,6 +431,18 @@ public:
     llvm_unreachable("unknown visibility!");
   }
 
+  static cir::VisibilityKind getCIRVisibilityKind(Visibility v) {
+    switch (v) {
+    case DefaultVisibility:
+      return cir::VisibilityKind::Default;
+    case HiddenVisibility:
+      return cir::VisibilityKind::Hidden;
+    case ProtectedVisibility:
+      return cir::VisibilityKind::Protected;
+    }
+    llvm_unreachable("unknown visibility!");
+  }
+
   llvm::DenseMap<mlir::Attribute, cir::GlobalOp> constantStringMap;
   llvm::DenseMap<const UnnamedGlobalConstantDecl *, cir::GlobalOp>
       unnamedGlobalConstantDeclMap;
@@ -602,7 +614,8 @@ public:
   mlir::Type convertType(clang::QualType type);
 
   /// Set the visibility for the given global.
-  void setGlobalVisibility(mlir::Operation *op, const NamedDecl *d) const;
+  void setGlobalVisibility(cir::CIRGlobalValueInterface gv,
+                           const NamedDecl *d) const;
   void setDSOLocal(mlir::Operation *op) const;
   void setDSOLocal(cir::CIRGlobalValueInterface gv) const;
 
