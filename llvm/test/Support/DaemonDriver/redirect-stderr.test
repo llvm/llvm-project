@@ -1,0 +1,35 @@
+# This test verifies the "redirect_stdout_to_stderr" command does as it says,
+# and that stderr is properly reset for the next command.
+RUN: split-file %s %t
+RUN: ExampleDaemon < %t/daemon-commands --daemon --daemon-status-pipe=path:%t/status > %t/stdout 2> %t/stderr
+RUN: FileCheck < %t/stdout %s --check-prefix=CHECK-STDOUT --strict-whitespace
+RUN: FileCheck < %t/stderr %s --check-prefix=CHECK-STDERR --strict-whitespace
+RUN: FileCheck < %t/status %s --check-prefix=CHECK-STATUS --strict-whitespace
+END.
+CHECK-STATUS: ready
+
+# 1nd command.
+CHECK-STATUS-NEXT: returned 4
+CHECK-STDOUT: aBcDeFgH
+
+# 2nd command.
+CHECK-STATUS-NEXT: returned 4
+CHECK-STDOUT-SAME: aaaa
+CHECK-STDERR: AAAA
+
+;--- daemon-commands
+arg 13
+ExampleDaemon
+input_string 8
+aBcDeFgH
+redirect_stderr_to_stdout
+run
+
+; Checking that stderr is correctly reset.
+arg 13
+ExampleDaemon
+input_string 8
+aaaaAAAA
+run
+exit
+

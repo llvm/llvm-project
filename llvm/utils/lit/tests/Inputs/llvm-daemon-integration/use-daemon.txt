@@ -1,0 +1,25 @@
+NB: ExampleDaemon reads input on stdin and outputs uppercase letters and
+everything else to stdin. Its return code is the number of characters
+encountered.
+
+# Testing that we can invoke the daemon.
+RUN: %invoke-ExampleDaemon
+
+# Testing that we can invoke the daemon more times.
+RUN: %invoke-ExampleDaemon
+RUN: %invoke-ExampleDaemon
+
+# Testing that stdin and stdout work as expected.
+RUN: echo "abcABC" | not %invoke-ExampleDaemon | grep -x "abc"
+
+# Testing that redirecting stderr to stdout works as expected.
+RUN: echo "aBcDeFgH" | not %invoke-ExampleDaemon 2>&1 | grep -x "aBcDeFgH"
+
+# Testing that redirecting stderr and stdout to separate files works as expected.
+RUN: echo "aBcDeFgH" | not %invoke-ExampleDaemon >%t.stdout 2>%t.stderr
+RUN: grep -x "aceg" %t.stdout
+RUN: grep -x "BDFH" %t.stderr
+
+# Testing that the daemon is restarted after it exits.
+RUN: %invoke-ExampleDaemon --exit-process
+RUN: %invoke-ExampleDaemon
