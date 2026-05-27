@@ -60,8 +60,12 @@ String buildTypeStaging = 'STAGING' // groovylint-disable-line UnusedVariable
 String buildType = (isPrBranch ? buildTypePresub : buildTypeRelease)
 
 if (!isPrBranch && !isAmdBranch) {
-    // Treat it as 'presub'.
-    buildType = buildTypePresub
+    if (actualTarget == upstreamBranch && actualHead == upstreamBranch) {
+        buildType = buildTypeStaging
+    } else {
+        // Treat it as 'presub'.
+        buildType = buildTypePresub
+    }
 }
 
 Boolean postsub = (

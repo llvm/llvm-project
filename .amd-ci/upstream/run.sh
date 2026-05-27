@@ -13,8 +13,6 @@ mod_cmd=". ${ess_dir}/build_essentials/linux/aocc_env.sh"
 echo "${mod_cmd}"
 ${mod_cmd}
 
-export AOCC_LLVM_FLANG_PKG_NAME="true"
-
 # Parse the LLVM version from the in-tree cmake module.
 get_llvm_version() {
   local _ver_file=llvm-project/cmake/Modules/LLVMVersion.cmake
