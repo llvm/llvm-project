@@ -20,7 +20,6 @@ public:
 
 void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
                                         CheckerContext &C) const {
-  // create the initial state I will work with
   ProgramStateRef State = C.getState();
 
   const auto *MethodDecl = dyn_cast_if_present<CXXMethodDecl>(Call.getDecl());
@@ -43,12 +42,12 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
   if (!RetValRegion)
     return;
 
-  SVal ThisVal = Call.getArgSVal(LBParamIdx);
-  const MemRegion *ThisValRegion = ThisVal.getAsRegion();
-  if (!ThisValRegion)
+  SVal ArgVal = Call.getArgSVal(LBParamIdx);
+  const MemRegion *ArgValRegion = ArgVal.getAsRegion();
+  if (!ArgValRegion)
     return;
 
-  State = State->set<LifetimeBoundMap>(RetValRegion, ThisValRegion);
+  State = State->set<LifetimeBoundMap>(RetValRegion, ArgValRegion);
   C.addTransition(State);
 }
 
