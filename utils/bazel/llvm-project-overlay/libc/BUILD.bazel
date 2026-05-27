@@ -380,6 +380,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_macros_time_macros",
+    hdrs = [
+        "include/llvm-libc-macros/linux/time-macros.h",
+        "include/llvm-libc-macros/time-macros.h",
+    ],
+)
+
+libc_support_library(
     name = "llvm_libc_macros_sys_socket_macros",
     hdrs = [
         "include/llvm-libc-macros/linux/sys-socket-macros.h",
@@ -549,6 +557,18 @@ libc_support_library(
 libc_support_library(
     name = "hdr_sys_auxv_macros",
     hdrs = ["hdr/sys_auxv_macros.h"],
+)
+
+libc_support_library(
+    name = "hdr_elf_proxy",
+    hdrs = ["staging/hdr/elf_proxy.h"],
+    includes = ["staging"],
+    deps = [":hdr_elf_proxy_h"],
+)
+
+libc_support_library(
+    name = "hdr_link_macros",
+    hdrs = ["hdr/link_macros.h"],
 )
 
 ############################ Type Proxy Header Files ###########################
@@ -2605,6 +2625,7 @@ libc_support_library(
 
 libc_support_library(
     name = "__support_osutil_vdso",
+    srcs = ["src/__support/OSUtil/linux/vdso.cpp"],
     hdrs = [
         "src/__support/OSUtil/linux/vdso.h",
         "src/__support/OSUtil/linux/vdso_sym.h",
@@ -2626,7 +2647,12 @@ libc_support_library(
         ":__support_cpp_string_view",
         ":__support_macros_attributes",
         ":__support_macros_properties_architectures",
+        ":__support_osutil_linux_auxv",
         ":__support_threads_callonce",
+        ":__support_threads_linux_futex_word_type",
+        ":hdr_elf_proxy",
+        ":hdr_link_macros",
+        ":hdr_sys_auxv_macros",
         ":types_clock_t",
         ":types_clockid_t",
         ":types_struct_timespec",
@@ -2836,6 +2862,29 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_threads_raw_rwlock",
+    hdrs = ["src/__support/threads/raw_rwlock.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_cpp_atomic",
+        ":__support_cpp_limits",
+        ":__support_cpp_optional",
+        ":__support_libc_assert",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_threads_raw_mutex",
+        ":__support_threads_sleep",
+        ":__support_time",
+        ":hdr_errno_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_threads_mutex",
     hdrs = ["src/__support/threads/mutex.h"],
     deps = [
@@ -2896,6 +2945,7 @@ libc_support_library(
 
 libc_support_library(
     name = "__support_time_clock_gettime",
+    srcs = ["src/__support/time/linux/clock_gettime.cpp"],
     hdrs = ["src/__support/time/clock_gettime.h"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
@@ -2904,6 +2954,8 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
         ":__support_osutil_vdso",
         ":types_clockid_t",
         ":types_struct_timespec",
