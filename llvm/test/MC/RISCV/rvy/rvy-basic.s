@@ -142,6 +142,13 @@ ybndswi a0, a0, 528
 // CHECK-ASM-NEXT: #  <MCOperand Reg:X10_Y>
 // CHECK-ASM-NEXT: #  <MCOperand Reg:X10_Y>
 // CHECK-ASM-NEXT: #  <MCOperand Imm:528>>
+ybndswi a0, a0, 2048
+// CHECK-ASM: ybndswi	a0, a0, 2048
+// CHECK-ASM-SAME: # encoding: [0x7b,0x55,0x05,0xf8]
+// CHECK-ASM-NEXT: # <MCInst #[[#MCINST10:]] YBNDSWI{{$}}
+// CHECK-ASM-NEXT: #  <MCOperand Reg:X10_Y>
+// CHECK-ASM-NEXT: #  <MCOperand Reg:X10_Y>
+// CHECK-ASM-NEXT: #  <MCOperand Imm:2048>>
 ybndswi a0, a0, 4080
 // CHECK-ASM: ybndswi	a0, a0, 4080
 // CHECK-ASM-SAME: # encoding: [0x7b,0x55,0xf5,0xff]

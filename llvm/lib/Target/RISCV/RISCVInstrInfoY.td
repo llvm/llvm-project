@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file describes the RISC-V instructions from the standard 'Base Y'
-// Packed SIMD instruction set extension.
+//  instruction set.
 //
 //  This version is still experimental as the 'Y' extension hasn't been
 //  ratified yet.
