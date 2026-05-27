@@ -4690,15 +4690,17 @@ private:
 };
 
 struct MetadirectiveCandidate {
-  MetadirectiveCandidate(const parser::OmpDirectiveSpecification *spec,
-                         llvm::omp::VariantMatchInfo vmi, bool isExplicit,
-                         const parser::ScalarExpr *condExpr = nullptr)
-      : spec(spec), vmi(vmi), isExplicit(isExplicit), condExpr(condExpr) {}
+  MetadirectiveCandidate(
+      const parser::OmpDirectiveSpecification *spec,
+      llvm::omp::VariantMatchInfo vmi, bool isExplicit,
+      std::optional<DynamicUserCondition> dynamicCond = std::nullopt)
+      : spec(spec), vmi(vmi), isExplicit(isExplicit), dynamicCond(dynamicCond) {
+  }
 
   const parser::OmpDirectiveSpecification *spec = nullptr;
   llvm::omp::VariantMatchInfo vmi;
   bool isExplicit = false;
-  const parser::ScalarExpr *condExpr = nullptr;
+  std::optional<DynamicUserCondition> dynamicCond;
 };
 } // namespace
 
@@ -4778,18 +4780,18 @@ static void genMetadirective(lower::AbstractConverter &converter,
       auto [spec, isExplicit] = getDirectiveVariant(*whenClause);
 
       llvm::omp::VariantMatchInfo vmi;
-      const parser::ScalarExpr *dynCondExpr = nullptr;
-      makeVariantMatchInfo(vmi, ctxSel, semaCtx,
-                           converter.genLocation(clause.source), dynCondExpr);
+      std::optional<DynamicUserCondition> dynamicCond = makeVariantMatchInfo(
+          vmi, ctxSel, semaCtx, converter.genLocation(clause.source));
 
-      // Check if this variant has a dynamic user condition.
-      if (dynCondExpr) {
+      // Ignore a runtime condition while testing static eligibility. If this
+      // variant is selected, the condition becomes a fir.if guard below.
+      if (dynamicCond) {
         llvm::omp::VariantMatchInfo dynamicVMI = vmi;
         dynamicVMI.RequiredTraits.reset(
             unsigned(llvm::omp::TraitProperty::user_condition_unknown));
         if (!llvm::omp::isVariantApplicableInContext(dynamicVMI, ompCtx))
           continue;
-        candidates.emplace_back(spec, dynamicVMI, isExplicit, dynCondExpr);
+        candidates.emplace_back(spec, dynamicVMI, isExplicit, dynamicCond);
         continue;
       }
 
@@ -4882,7 +4884,6 @@ static void genMetadirective(lower::AbstractConverter &converter,
   for (unsigned idx = 0, end = candidates.size(); idx < end; ++idx)
     remainingCandidates.push_back(idx);
 
-  mlir::Location loc = converter.genLocation(clauseList.source);
   lower::StatementContext stmtCtx;
 
   // All candidates are statically applicable here; only the user condition may
@@ -4913,21 +4914,25 @@ static void genMetadirective(lower::AbstractConverter &converter,
     }
 
     const MetadirectiveCandidate &candidate = candidates[*selected];
-    if (!candidate.condExpr) {
+    if (!candidate.dynamicCond) {
       genVariant(candidate.spec);
       return;
     }
 
-    const auto *condExpr = semantics::GetExpr(semaCtx, *candidate.condExpr);
+    mlir::Location condLoc =
+        converter.genLocation(candidate.dynamicCond->source);
+    const auto *condExpr =
+        semantics::GetExpr(semaCtx, *candidate.dynamicCond->expr);
     assert(condExpr && "missing expression for user condition");
     mlir::Value condVal =
-        fir::getBase(converter.genExprValue(*condExpr, stmtCtx, &loc));
+        fir::getBase(converter.genExprValue(*condExpr, stmtCtx, &condLoc));
 
     if (condVal.getType() != builder.getI1Type())
-      condVal = builder.createConvert(loc, builder.getI1Type(), condVal);
+      condVal = builder.createConvert(condLoc, builder.getI1Type(), condVal);
 
-    auto ifOp =
-        fir::IfOp::create(builder, loc, condVal, /*withElseRegion=*/true);
+    stmtCtx.finalizeAndReset();
+    auto ifOp = fir::IfOp::create(builder, condLoc, condVal,
+                                  /*withElseRegion=*/true);
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     genVariant(candidate.spec);
 

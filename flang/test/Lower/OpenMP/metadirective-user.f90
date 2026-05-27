@@ -162,6 +162,36 @@ subroutine test_dynamic_variant_clause(select, task_cond)
   !$omp end metadirective
 end subroutine
 
+! A dynamic condition expression can create statement temporaries. Their
+! cleanup must be emitted before entering the fir.if that selects a variant.
+! CHECK-LABEL: func.func @_QPtest_dynamic_condition_cleanup_before_branch()
+! CHECK:         %[[STR:.*]] = fir.address_of
+! CHECK:         %[[ASSOC:.*]]:3 = hlfir.associate
+! CHECK:         %[[CALL:.*]] = fir.call @_QPgetbool(
+! CHECK:         %[[COND:.*]] = fir.convert %[[CALL]] : (!fir.logical<4>) -> i1
+! CHECK:         hlfir.end_associate %[[ASSOC]]#1, %[[ASSOC]]#2
+! CHECK-NEXT:    fir.if %[[COND]] {
+! CHECK:           omp.barrier
+! CHECK:         } else {
+! CHECK:           omp.taskwait
+! CHECK:         }
+! CHECK:         return
+subroutine test_dynamic_condition_cleanup_before_branch()
+  interface
+    function getbool(s) result(r)
+      character(*), intent(in) :: s
+      logical :: r
+    end function
+  end interface
+  !$omp metadirective &
+  !$omp & when(user={condition(getbool("hello"))}: barrier) &
+#ifdef OMP_52
+  !$omp & otherwise(taskwait)
+#else
+  !$omp & default(taskwait)
+#endif
+end subroutine
+
 ! Both when clauses pass vendor(llvm) statically. The first has a dynamic
 ! condition so becomes a runtime branch; the second is fully static and
 ! becomes the fallback.
