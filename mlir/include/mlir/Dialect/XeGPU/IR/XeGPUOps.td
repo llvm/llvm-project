@@ -915,10 +915,7 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
 
   let description = [{DPAS performs matrix multiplication on matrix A of `mxk`
     size, B of `kxn` size, and accumulate on matrix C of `mxn` to the same size
-    matrix. The dimensions are microarchitecture-specific: for Xe2 and Xe3,
-    `n=16` and `k=8 * 32/bit_width_of_elem_type`, while `m` can be 1 to 8.
-    For example, for fp16 data type on Xe2/Xe3, typical matrices are
-    `A: vector<8x16xf16>`, `B: vector<16x16xf16>`, and `C/D: vector<8x16xf32>`.
+    matrix.
 
     The operands can be 2D, 3D, or 4D vectors. When the vectors have more than 2
     dimensions, the leading dimensions are treated as **batch dimensions** that
@@ -932,8 +929,7 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
       (2x4=8 independent 8x16 matrix multiplications)
 
     The last 2 dimensions are always the core matrix multiplication dimensions
-    (M, K for lhs; K, N for rhs; M, N for result). Note that rhs (B) can have
-    one extra trailing dimension for VNNI packing (e.g., `vector<4x8x16x2xf16>`).
+    (M, K for lhs; K, N for rhs; M, N for result).
 
     In lane level code, each lane from a subgroup holds a data fragment for A, B, C and the result,
     which are represented as 1D vectors. Please refer to [OpenCL Intel extentions]
