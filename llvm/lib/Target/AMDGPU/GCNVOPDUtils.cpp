@@ -182,6 +182,10 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
   AMDGPU::CanBeVOPD SecondCanBeVOPD =
       AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, IsVOPD3);
 
+  if (!(FirstCanBeVOPD.X && SecondCanBeVOPD.Y) &&
+      !(FirstCanBeVOPD.Y && SecondCanBeVOPD.X))
+    return std::nullopt;
+
   // If SecondMI depends on FirstMI they cannot execute at the same time.
   if (TII.hasRAWDependency(FirstMI, SecondMI))
     return std::nullopt;
