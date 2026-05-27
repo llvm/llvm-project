@@ -113,6 +113,7 @@ def main():
                 return 2
             header.merge(merge_from_header)
 
+        header.validate()
         assert header.name, f"`header: name.h` line is required in {yaml_file}"
         return header
 

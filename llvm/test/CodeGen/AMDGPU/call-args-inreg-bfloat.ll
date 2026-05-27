@@ -126,3 +126,4 @@ define void @test_call_external_void_func_v2bf16_inreg(<2 x bfloat> inreg %arg) 
   ret void
 }
 
+attributes #0 = { nounwind }
