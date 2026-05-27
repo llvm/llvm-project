@@ -677,8 +677,49 @@ bool AMDGPUInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
   LLT SrcTy = MRI->getType(MI.getOperand(1).getReg());
 
   const unsigned SrcSize = SrcTy.getSizeInBits();
-  if (SrcSize < 32)
+  if (SrcSize < 32) {
+    // Handle sgpr32 <- G_MERGE_VALUES sgpr16, sgpr16
+    if (SrcSize == 16 && DstTy.getSizeInBits() == 32 &&
+        MI.getNumOperands() == 3) {
+      Register Lo = MI.getOperand(1).getReg();
+      Register Hi = MI.getOperand(2).getReg();
+
+      const RegisterBank *DstBank = RBI.getRegBank(DstReg, *MRI, TRI);
+      const RegisterBank *LoBank = RBI.getRegBank(Lo, *MRI, TRI);
+      const RegisterBank *HiBank = RBI.getRegBank(Hi, *MRI, TRI);
+
+      if (DstBank->getID() == AMDGPU::SGPRRegBankID &&
+          LoBank->getID() == AMDGPU::SGPRRegBankID &&
+          HiBank->getID() == AMDGPU::SGPRRegBankID) {
+        const DebugLoc &DL = MI.getDebugLoc();
+
+        // Mask and shift: dst = (lo & 0xFFFF) | (hi << 16)
+        Register MaskedLo =
+            MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+        BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_AND_B32), MaskedLo)
+            .addReg(Lo)
+            .addImm(0xFFFF);
+
+        Register ShiftedHi =
+            MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+        BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_LSHL_B32), ShiftedHi)
+            .addReg(Hi)
+            .addImm(16);
+
+        BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_OR_B32), DstReg)
+            .addReg(MaskedLo)
+            .addReg(ShiftedHi);
+
+        if (!RBI.constrainGenericRegister(DstReg, AMDGPU::SReg_32RegClass,
+                                          *MRI))
+          return false;
+
+        MI.eraseFromParent();
+        return true;
+      }
+    }
     return selectImpl(MI, *CoverageInfo);
+  }
 
   const DebugLoc &DL = MI.getDebugLoc();
   const RegisterBank *DstBank = RBI.getRegBank(DstReg, *MRI, TRI);
