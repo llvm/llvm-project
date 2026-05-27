@@ -2355,6 +2355,27 @@ standard C++ library that demangles mangled names.
 Language Extensions and File Format Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+.. _llvm_language_dialect:
+
+LLVM Language Dialect
+"""""""""""""""""""""
+
+LLVM emits an optional ``DW_AT_LLVM_language_dialect`` attribute on
+``DW_TAG_compile_unit`` to identify an execution-model dialect of the
+source-level language declared by ``DW_AT_language`` /
+``DW_AT_LLVM_source_language_name``.
+
+The attribute value is encoded as an unsigned integer from the
+``DW_LLVM_LANG_DIALECT_*`` enumeration:
+
+* ``DW_LLVM_LANG_DIALECT_simt`` (``0x01``) -- single-instruction,
+  multiple-thread execution model.
+* ``DW_LLVM_LANG_DIALECT_tile`` (``0x02``) -- tile-based execution model.
+
+To express "no dialect specified", the ``dialect:`` field on
+:ref:`DICompileUnit <DICompileUnit>` is simply omitted; no
+``DW_AT_LLVM_language_dialect`` attribute is emitted in that case.
+
 Objective-C Extensions
 """"""""""""""""""""""
 

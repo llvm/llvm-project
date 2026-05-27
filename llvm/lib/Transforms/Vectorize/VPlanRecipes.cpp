@@ -536,6 +536,17 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
   return Op0Ty;
 }
 
+Type *VPReplicateRecipe::computeScalarType(const Instruction *I,
+                                           ArrayRef<VPValue *> Operands) {
+  unsigned Opcode = I->getOpcode();
+  if (Instruction::isCast(Opcode) ||
+      is_contained(ArrayRef<unsigned>({Instruction::ExtractValue,
+                                       Instruction::Load, Instruction::Alloca}),
+                   Opcode))
+    return I->getType();
+  return computeScalarTypeForInstruction(Opcode, Operands);
+}
+
 VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                              const VPIRFlags &Flags, const VPIRMetadata &MD,
                              DebugLoc DL, const Twine &Name, Type *ResultTy)
@@ -3483,7 +3494,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
          "VPReplicateRecipes must be unrolled before ::execute");
   auto *Instr = getUnderlyingInstr();
   Instruction *Cloned = Instr->clone();
-  Type *ResultTy = State.TypeAnalysis.inferScalarType(this);
+  Type *ResultTy = getScalarType();
   if (!ResultTy->isVoidTy()) {
     Cloned->setName(Instr->getName() + ".cloned");
     // The operands of the replicate recipe may have been narrowed, resulting in
