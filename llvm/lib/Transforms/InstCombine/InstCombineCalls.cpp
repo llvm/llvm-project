@@ -1233,14 +1233,11 @@ static bool ldexpSaturatingAddIsSafe(Type *FpTy, Type *ExpTy) {
   if (!APFloat::semanticsHasInf(FltSem))
     return false;
 
-  // scalbn takes int, but proving that i32 bounds already force
-  // overflow/underflow is sufficient for wider exponent types.
+  // Cap ExpBits at 32 because scalbn takes an int.  This is sufficient for any
+  // reasonable fp type (for example, `double` only has 11 exponent bits).
   unsigned ExpBits = std::min(ExpTy->getScalarSizeInBits(), 32u);
-  int SignedMax =
-      static_cast<int>(APInt::getSignedMaxValue(ExpBits).getSExtValue());
-  int SignedMin =
-      static_cast<int>(APInt::getSignedMinValue(ExpBits).getSExtValue());
-
+  int SignedMax = static_cast<int>(maxIntN(ExpBits));
+  int SignedMin = static_cast<int>(minIntN(ExpBits));
   APFloat ScaledUp = scalbn(APFloat::getSmallest(FltSem), SignedMax,
                             APFloat::rmNearestTiesToEven);
   APFloat ScaledDown = scalbn(APFloat::getLargest(FltSem), SignedMin,
