@@ -586,6 +586,9 @@ Improvements to Clang's diagnostics
 
 - Clang now emits error when attribute is missing closing ``]]`` followed by ``;;``. (#GH187223)
 
+- Clang now rejects inline asm constraints and clobbers that contain an
+  embedded null character, instead of silently truncating them. (#GH173900)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
