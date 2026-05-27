@@ -677,6 +677,57 @@ html.dark{
   .impact-grid{grid-template-columns:1fr}
 }
 
+/* Triage Grid — virtualised, filterable per-remark table.
+   Lives inside a .chart-section so the outer card chrome is inherited. */
+.triage-grid{padding:16px 18px}
+.triage-header-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.triage-header-row h3{margin:0;font-size:13px}
+.triage-counter{font-family:var(--mono);font-size:11px;color:var(--fg2)}
+.triage-reset{margin-left:auto;background:transparent;border:1px solid var(--border);border-radius:var(--r);padding:4px 10px;font-size:11px;color:var(--fg2);cursor:pointer}
+.triage-reset:hover{border-color:var(--accent);color:var(--accent)}
+
+.triage-filter-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px}
+.triage-input{flex:1;min-width:120px;padding:5px 8px;font-size:11px;font-family:var(--mono);background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--fg)}
+.triage-input:focus{outline:none;border-color:var(--accent)}
+.triage-input::placeholder{color:var(--fg3)}
+
+.triage-chips{display:flex;gap:4px;flex-wrap:wrap}
+.triage-chip{font-size:10px;font-family:var(--mono);padding:4px 8px;border-radius:99px;border:1px solid var(--border);background:var(--bg);color:var(--fg2);cursor:pointer;transition:background var(--fast),color var(--fast),border-color var(--fast)}
+.triage-chip:hover{border-color:var(--accent);color:var(--fg)}
+.triage-chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+.triage-thead{display:flex;align-items:center;border:1px solid var(--border);border-bottom:0;background:var(--bg2);font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--fg3);user-select:none;min-width:max-content;border-radius:var(--r) var(--r) 0 0}
+.triage-th{padding:8px 10px;flex-shrink:0;display:flex;align-items:center;gap:4px}
+.triage-th.right{justify-content:flex-end}
+.triage-th.sortable{cursor:pointer}
+.triage-th.sortable:hover{color:var(--fg)}
+.triage-th.sorted{color:var(--accent)}
+.triage-sort-indicator{font-size:8px;line-height:1}
+
+/* Virtualised body: a fixed-height viewport scrolling over a tall spacer
+   that holds the row pool absolutely-positioned at row * rowHeight. */
+.triage-viewport{position:relative;overflow-y:auto;overflow-x:auto;border:1px solid var(--border);border-radius:0 0 var(--r) var(--r);background:var(--bg)}
+.triage-spacer{position:relative;min-width:max-content}
+.triage-row{position:absolute;left:0;display:flex;align-items:center;border-bottom:1px solid var(--bg2);will-change:top;min-width:max-content}
+.triage-row:hover{background:var(--bg2)}
+.triage-td{padding:0 10px;flex-shrink:0;font-size:11px;line-height:1;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block}
+.triage-td.mono{font-family:var(--mono)}
+.triage-td.right{text-align:right}
+.triage-td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.triage-td-missing{color:var(--fg3)}
+
+/* Type pills — color-coded by remarks::Type. */
+.triage-type{font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:4px}
+.triage-type-passed{color:var(--green);background:rgba(90,200,138,.08)}
+.triage-type-missed{color:var(--orange);background:rgba(255,179,71,.10)}
+.triage-type-analysis{color:var(--teal);background:rgba(123,224,214,.10)}
+.triage-type-analysis-fp-commute{color:var(--blue);background:rgba(127,179,232,.10)}
+.triage-type-analysis-aliasing{color:var(--blue);background:rgba(127,179,232,.10)}
+.triage-type-failure{color:var(--red);background:rgba(255,107,110,.10)}
+.triage-type-unknown{color:var(--fg3);background:var(--bg2)}
+
+.triage-empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:var(--fg3);font-size:12px;pointer-events:none}
+
   </style>
 </head>
 <body>
@@ -4600,7 +4651,355 @@ const RemarksView = {
         tableSection.appendChild(h('div', { class: 'top-units-wrap' }, table));
         container.appendChild(tableSection);
       }
+
+      // Full triage grid: virtualised, filterable, sortable view of every
+      // remark in the relational payload. Lives below the summary tables.
+      container.appendChild(this._renderTriageGrid(rel));
     }
+  },
+
+  // Triage Grid — Phase 1B of the proposal, against the C++ relational
+  // endpoint. Renders one row per remark via DOM virtualisation: a fixed pool
+  // of ~32 row elements floats over an absolute-positioned spacer so that
+  // arbitrarily large payloads stay smooth. Filters and sorts operate on the
+  // integer columns first; strings are dereferenced only for display.
+  _renderTriageGrid(rel) {
+    const { columns, strings } = rel;
+    const total = rel.count || 0;
+
+    // Canonical lowercase type keys; index = remarks::Type enum value.
+    const TYPE_NAMES = [
+      'unknown', 'passed', 'missed', 'analysis',
+      'analysis-fp-commute', 'analysis-aliasing', 'failure',
+    ];
+    const TYPE_LABELS = {
+      'unknown': 'Unknown',
+      'passed': 'Passed',
+      'missed': 'Missed',
+      'analysis': 'Analysis',
+      'analysis-fp-commute': 'FP-Commute',
+      'analysis-aliasing': 'Aliasing',
+      'failure': 'Failure',
+    };
+
+    // Column descriptors. `key` maps to a getter that resolves the integer
+    // column to a displayable value (string for text cells, number for
+    // numeric cells, null for missing).
+    const COLS = [
+      { id: 'unit',     label: 'Unit',     width: 90,  sortable: true,  align: 'left',  mono: true,  text: true,
+        get: (i) => columns.unit ? (strings.unit?.[columns.unit[i]] || null) : null,
+        idx: (i) => columns.unit ? columns.unit[i] : -1 },
+      { id: 'pass',     label: 'Pass',     width: 160, sortable: true,  align: 'left',  mono: true,  text: true,
+        get: (i) => strings.pass[columns.pass[i]] || '?',
+        idx: (i) => columns.pass[i] },
+      { id: 'name',     label: 'Remark',   width: 200, sortable: true,  align: 'left',  mono: false, text: true,
+        get: (i) => strings.name[columns.name[i]] || '?',
+        idx: (i) => columns.name[i] },
+      { id: 'type',     label: 'Type',     width: 100, sortable: true,  align: 'left',  mono: false, text: true,
+        get: (i) => TYPE_NAMES[columns.type[i]] || 'unknown',
+        idx: (i) => columns.type[i] },
+      { id: 'function', label: 'Function', width: 200, sortable: true,  align: 'left',  mono: true,  text: true,
+        get: (i) => columns.function[i] < 0 ? null : (strings.function[columns.function[i]] || '?'),
+        idx: (i) => columns.function[i] },
+      { id: 'source',   label: 'Source',   width: 220, sortable: false, align: 'left',  mono: true,  text: true,
+        get: (i) => {
+          const fi = columns.file[i];
+          if (fi < 0) return null;
+          const file = (strings.file[fi] || '?').split('/').pop() || strings.file[fi];
+          return `${file}:${columns.line[i]}:${columns.column[i]}`;
+        } },
+      { id: 'hotness',  label: 'Hot',      width: 80,  sortable: true,  align: 'right', mono: true,  num: true,
+        get: (i) => columns.hotness[i] < 0 ? null : columns.hotness[i],
+        idx: (i) => columns.hotness[i] },
+    ];
+
+    // Mutable state -------------------------------------------------------
+    let filtered = new Int32Array(total);
+    for (let i = 0; i < total; i++) filtered[i] = i;
+    let filteredLen = total;
+    const filters = { pass: '', name: '', func: '', source: '', types: new Set() };
+    let sortColId = null;
+    let sortDir = 1; // 1 = ascending, -1 = descending
+
+    // DOM -----------------------------------------------------------------
+    const wrap = h('div', { class: 'chart-section triage-grid', style: { marginTop: '18px' } });
+
+    const counter = h('span', { class: 'triage-counter' }, `${formatNumber(total)} remarks`);
+    const resetBtn = h('button', { class: 'triage-reset', onClick: () => resetAll() }, 'Reset');
+    wrap.appendChild(h('div', { class: 'triage-header-row' },
+      h('h3', { style: { margin: '0' } }, 'All Remarks'),
+      counter,
+      resetBtn,
+    ));
+
+    // Filter bar. Text inputs filter on a case-insensitive substring of the
+    // matching string column; type chips toggle a set of allowed type enum
+    // values; hotness slider filters on minimum hotness.
+    const filterBar = h('div', { class: 'triage-filter-bar' });
+    const textFields = [
+      { key: 'pass',   placeholder: 'pass…' },
+      { key: 'name',   placeholder: 'remark name…' },
+      { key: 'func',   placeholder: 'function…' },
+      { key: 'source', placeholder: 'source file…' },
+    ];
+    textFields.forEach(f => {
+      const inp = h('input', {
+        class: 'triage-input',
+        type: 'search',
+        placeholder: f.placeholder,
+        onInput: (e) => { filters[f.key] = e.target.value.toLowerCase(); refilter(); },
+      });
+      filterBar.appendChild(inp);
+    });
+
+    // Type chips — clickable on/off filters for each remarks::Type value.
+    const typeChipBox = h('div', { class: 'triage-chips' });
+    TYPE_NAMES.forEach((name, enumVal) => {
+      if (name === 'unknown') return; // hide unless they actually appear
+      const chip = h('button', {
+        class: `triage-chip triage-chip-${name}`,
+        title: `Toggle ${TYPE_LABELS[name]}`,
+        onClick: () => {
+          if (filters.types.has(enumVal)) {
+            filters.types.delete(enumVal);
+            chip.classList.remove('on');
+          } else {
+            filters.types.add(enumVal);
+            chip.classList.add('on');
+          }
+          refilter();
+        },
+      }, TYPE_LABELS[name]);
+      typeChipBox.appendChild(chip);
+    });
+    filterBar.appendChild(typeChipBox);
+    wrap.appendChild(filterBar);
+
+    // Header row (sortable columns).
+    const tHead = h('div', { class: 'triage-thead' });
+    const thEls = {};
+    COLS.forEach(col => {
+      const th = h('div', {
+        class: `triage-th${col.align === 'right' ? ' right' : ''}${col.sortable ? ' sortable' : ''}`,
+        style: { width: col.width + 'px' },
+        onClick: col.sortable ? () => onSort(col.id) : null,
+      },
+        h('span', { class: 'triage-th-label' }, col.label),
+        col.sortable ? h('span', { class: 'triage-sort-indicator' }, '') : null,
+      );
+      thEls[col.id] = th;
+      tHead.appendChild(th);
+    });
+    wrap.appendChild(tHead);
+
+    // Virtualised viewport.
+    const ROW_H = 26;
+    const VIEWPORT_ROWS = 22;
+    const POOL_SIZE = VIEWPORT_ROWS + 4; // a couple extra for smoother scroll
+
+    const viewport = h('div', {
+      class: 'triage-viewport',
+      style: { height: `${VIEWPORT_ROWS * ROW_H}px` },
+    });
+    const spacer = h('div', { class: 'triage-spacer' });
+    spacer.style.height = `${total * ROW_H}px`;
+    viewport.appendChild(spacer);
+
+    // Pre-allocate the row pool once. Each row is an absolutely-positioned
+    // flex container with one span per column. Scroll only mutates each
+    // span's textContent and the row's top position.
+    const pool = [];
+    for (let p = 0; p < POOL_SIZE; p++) {
+      const row = h('div', { class: 'triage-row' });
+      row.style.height = `${ROW_H}px`;
+      const cells = COLS.map(col => h('span', {
+        class: `triage-td${col.mono ? ' mono' : ''}${col.align === 'right' ? ' right' : ''}${col.num ? ' num' : ''}`,
+        style: { width: col.width + 'px' },
+      }, ''));
+      cells.forEach(c => row.appendChild(c));
+      spacer.appendChild(row);
+      pool.push({ row, cells });
+    }
+    wrap.appendChild(viewport);
+
+    // Empty-state element shown when filteredLen === 0.
+    const emptyEl = h('div', { class: 'triage-empty' },
+      'No remarks match the current filters.'
+    );
+    viewport.appendChild(emptyEl);
+
+    // -----------------------------------------------------------------------
+    // Render the visible window. Called on scroll, filter, sort.
+    // -----------------------------------------------------------------------
+    const renderVisible = () => {
+      const len = filteredLen;
+      emptyEl.style.display = len === 0 ? 'flex' : 'none';
+      const scrollTop = viewport.scrollTop;
+      const first = Math.max(0, Math.floor(scrollTop / ROW_H));
+      for (let p = 0; p < pool.length; p++) {
+        const visibleIdx = first + p;
+        const { row, cells } = pool[p];
+        if (visibleIdx >= len) {
+          row.style.display = 'none';
+          continue;
+        }
+        const r = filtered[visibleIdx];
+        row.style.display = '';
+        row.style.top = `${visibleIdx * ROW_H}px`;
+        for (let c = 0; c < COLS.length; c++) {
+          const col = COLS[c];
+          const cell = cells[c];
+          const val = col.get(r);
+          if (val === null || val === undefined) {
+            cell.textContent = '–';
+            cell.classList.add('triage-td-missing');
+          } else {
+            cell.classList.remove('triage-td-missing');
+            if (col.id === 'unit') {
+              cell.textContent = String(val).slice(0, 10);
+              cell.title = val;
+            } else if (col.id === 'type') {
+              cell.textContent = TYPE_LABELS[val] || val;
+              cell.className = `triage-td triage-type triage-type-${val}`;
+            } else if (col.num) {
+              cell.textContent = formatNumber(val);
+            } else {
+              cell.textContent = val;
+              if (col.id === 'source' || col.id === 'function' || col.id === 'name') {
+                cell.title = val;
+              }
+            }
+          }
+        }
+      }
+    };
+
+    // -----------------------------------------------------------------------
+    // Rebuild the filtered index array. O(N), runs on every filter change.
+    // -----------------------------------------------------------------------
+    const refilter = () => {
+      const out = new Int32Array(total);
+      let n = 0;
+      const fPass = filters.pass;
+      const fName = filters.name;
+      const fFunc = filters.func;
+      const fSource = filters.source;
+      const fTypes = filters.types;
+      const useTypes = fTypes.size > 0;
+
+      for (let i = 0; i < total; i++) {
+        if (useTypes && !fTypes.has(columns.type[i])) continue;
+        if (fPass) {
+          const s = (strings.pass[columns.pass[i]] || '').toLowerCase();
+          if (!s.includes(fPass)) continue;
+        }
+        if (fName) {
+          const s = (strings.name[columns.name[i]] || '').toLowerCase();
+          if (!s.includes(fName)) continue;
+        }
+        if (fFunc) {
+          const fi = columns.function[i];
+          if (fi < 0) continue;
+          const s = (strings.function[fi] || '').toLowerCase();
+          if (!s.includes(fFunc)) continue;
+        }
+        if (fSource) {
+          const fi = columns.file[i];
+          if (fi < 0) continue;
+          const s = (strings.file[fi] || '').toLowerCase();
+          if (!s.includes(fSource)) continue;
+        }
+        out[n++] = i;
+      }
+      filtered = out;
+      filteredLen = n;
+      spacer.style.height = `${n * ROW_H}px`;
+      viewport.scrollTop = 0;
+      counter.textContent = n === total
+        ? `${formatNumber(total)} remarks`
+        : `${formatNumber(n)} of ${formatNumber(total)} remarks`;
+      if (sortColId) applySort();
+      renderVisible();
+    };
+
+    // -----------------------------------------------------------------------
+    // Sort the filtered index array in place, then re-render.
+    // -----------------------------------------------------------------------
+    const applySort = () => {
+      const col = COLS.find(c => c.id === sortColId);
+      if (!col) return;
+      const dir = sortDir;
+      const view = Array.from(filtered.subarray(0, filteredLen));
+      if (col.idx) {
+        // Numeric / index sort, fast path. -1 sentinels sort last regardless
+        // of direction so missing values don't crowd the top.
+        view.sort((a, b) => {
+          const va = col.idx(a);
+          const vb = col.idx(b);
+          if (va < 0 && vb < 0) return 0;
+          if (va < 0) return 1;
+          if (vb < 0) return -1;
+          return (va - vb) * dir;
+        });
+      } else {
+        // Lexicographic fallback for text-only columns without an .idx.
+        view.sort((a, b) => {
+          const va = (col.get(a) || '').toString();
+          const vb = (col.get(b) || '').toString();
+          return va.localeCompare(vb) * dir;
+        });
+      }
+      for (let i = 0; i < filteredLen; i++) filtered[i] = view[i];
+    };
+
+    const onSort = (colId) => {
+      if (sortColId === colId) {
+        sortDir = -sortDir;
+      } else {
+        sortColId = colId;
+        sortDir = 1;
+      }
+      applySort();
+      // Update sort indicators in the header.
+      COLS.forEach(c => {
+        const th = thEls[c.id];
+        const ind = th.querySelector('.triage-sort-indicator');
+        if (!ind) return;
+        if (c.id === sortColId) {
+          ind.textContent = sortDir === 1 ? '▲' : '▼';
+          th.classList.add('sorted');
+        } else {
+          ind.textContent = '';
+          th.classList.remove('sorted');
+        }
+      });
+      viewport.scrollTop = 0;
+      renderVisible();
+    };
+
+    const resetAll = () => {
+      filters.pass = filters.name = filters.func = filters.source = '';
+      filters.types.clear();
+      // Reset DOM
+      filterBar.querySelectorAll('input.triage-input').forEach(i => { i.value = ''; });
+      filterBar.querySelectorAll('.triage-chip.on').forEach(c => c.classList.remove('on'));
+      sortColId = null;
+      sortDir = 1;
+      COLS.forEach(c => {
+        const th = thEls[c.id];
+        th.classList.remove('sorted');
+        const ind = th.querySelector('.triage-sort-indicator');
+        if (ind) ind.textContent = '';
+      });
+      refilter();
+    };
+
+    viewport.addEventListener('scroll', renderVisible, { passive: true });
+
+    // Initial render — defer until the viewport is laid out in the document.
+    requestAnimationFrame(renderVisible);
+
+    return wrap;
   },
 };
 
