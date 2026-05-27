@@ -14,16 +14,13 @@
 #ifndef LLVM_TARGET_RISCV_SIFIVE_RISCVSCHEDSIFIVE8_TD
 #define LLVM_TARGET_RISCV_SIFIVE_RISCVSCHEDSIFIVE8_TD
 
-multiclass SiFive8ProcResources<int num_iex, int num_fex, int num_vex = 1,
-                                bit shared_ldst_pipes = false,
-                                bit dedicated_ld_pipe = false,
-                                int num_branch_only_iex = 0> {
+multiclass SiFive8ProcResources<int num_iex, int num_fex, int num_vex = 1> {
   // Integer pipes
   foreach i = !range(num_iex) in
   def IEXQ#i  : ProcResource<1>;
 
   if !gt(num_iex, 1) then
-    def IntArith  : ProcResGroup<!foreach(i, !range(!sub(num_iex, num_branch_only_iex)),
+    def IntArith  : ProcResGroup<!foreach(i, !range(num_iex),
                                           !cast<ProcResource>(NAME#"IEXQ"#i))>;
   def Div         : ProcResource<1>;
 
@@ -37,15 +34,8 @@ multiclass SiFive8ProcResources<int num_iex, int num_fex, int num_vex = 1,
   def FloatDiv    : ProcResource<1>;
 
   // Load/Store units
-  if shared_ldst_pipes then {
-    def LDST        : ProcResource<2>;
-  } else {
-    def Load        : ProcResource<1>;
-    def Store       : ProcResource<1>;
-  }
-
-  if dedicated_ld_pipe then
-  def LD          : ProcResource<1>;
+  def Load        : ProcResource<1>;
+  def Store       : ProcResource<1>;
 
   // Vector pipes
   foreach i = !range(num_vex) in
@@ -535,7 +525,7 @@ multiclass SiFive8VecBaseWriteRes<SiFive8IntProcResources IntProcRes,
 //===----------------------------------------------------------------------===//
 // Bypass and advance
 
-multiclass SiFive8BaseReadAdvances<bit CascadingFMA = false> {
+multiclass SiFive8BaseReadAdvances {
   def : ReadAdvance<ReadJmp, 0>;
   def : ReadAdvance<ReadJalr, 0>;
   def : ReadAdvance<ReadCSR, 0>;
@@ -568,15 +558,9 @@ multiclass SiFive8BaseReadAdvances<bit CascadingFMA = false> {
   def : ReadAdvance<ReadFAdd64, 0>;
   def : ReadAdvance<ReadFMul16, 0>;
   def : ReadAdvance<ReadFMA16, 0>;
-  if CascadingFMA then {
-    def : ReadAdvance<ReadFMA16Addend, 2, [WriteFMA16]>;
-    def : ReadAdvance<ReadFMA32Addend, 2, [WriteFMA32]>;
-    def : ReadAdvance<ReadFMA64Addend, 2, [WriteFMA64]>;
-  } else {
-    def : ReadAdvance<ReadFMA16Addend, 0>;
-    def : ReadAdvance<ReadFMA32Addend, 0>;
-    def : ReadAdvance<ReadFMA64Addend, 0>;
-  }
+  def : ReadAdvance<ReadFMA16Addend, 0>;
+  def : ReadAdvance<ReadFMA32Addend, 0>;
+  def : ReadAdvance<ReadFMA64Addend, 0>;
   def : ReadAdvance<ReadFMul32, 0>;
   def : ReadAdvance<ReadFMA32, 0>;
   def : ReadAdvance<ReadFMul64, 0>;
