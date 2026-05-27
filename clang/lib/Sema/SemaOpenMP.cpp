@@ -6910,8 +6910,10 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     }
     if (!ImpInfo.Firstprivates.empty()) {
       if (OMPClause *Implicit = ActOnOpenMPFirstprivateClause(
-              ImpInfo.Firstprivates.getArrayRef(), SourceLocation(),
-              SourceLocation(), SourceLocation())) {
+              ImpInfo.Firstprivates.getArrayRef(), OMPC_FIRSTPRIVATE_unknown,
+              /*FPKindLoc=*/SourceLocation(), /*ColonLoc=*/SourceLocation(),
+              /*StartLoc=*/SourceLocation(), /*LParenLoc=*/SourceLocation(),
+              /*EndLoc=*/SourceLocation())) {
         ClausesWithImplicit.push_back(Implicit);
         ErrorFound = cast<OMPFirstprivateClause>(Implicit)->varlist_size() !=
                      ImpInfo.Firstprivates.size();
@@ -20937,7 +20939,11 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
     Res = ActOnOpenMPPrivateClause(VarList, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_firstprivate:
-    Res = ActOnOpenMPFirstprivateClause(VarList, StartLoc, LParenLoc, EndLoc);
+    assert(0 <= ExtraModifier && ExtraModifier <= OMPC_FIRSTPRIVATE_unknown &&
+           "Unexpected firstprivate modifier.");
+    Res = ActOnOpenMPFirstprivateClause(
+        VarList, static_cast<OpenMPFirstprivateModifier>(ExtraModifier),
+        ExtraModifierLoc, ColonLoc, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_lastprivate:
     assert(0 <= ExtraModifier && ExtraModifier <= OMPC_LASTPRIVATE_unknown &&
@@ -21347,10 +21353,33 @@ OMPClause *SemaOpenMP::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
                                   Vars, PrivateCopies);
 }
 
-OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
-                                                     SourceLocation StartLoc,
-                                                     SourceLocation LParenLoc,
-                                                     SourceLocation EndLoc) {
+OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(
+    ArrayRef<Expr *> VarList, OpenMPFirstprivateModifier FPKind,
+    SourceLocation FPKindLoc, SourceLocation ColonLoc, SourceLocation StartLoc,
+    SourceLocation LParenLoc, SourceLocation EndLoc) {
+  if (FPKind == OMPC_FIRSTPRIVATE_unknown && FPKindLoc.isValid()) {
+    assert(ColonLoc.isValid() && "Colon location must be valid.");
+    Diag(FPKindLoc, diag::err_omp_unexpected_clause_value)
+        << getListOfPossibleValues(OMPC_firstprivate, /*First=*/0,
+                                   /*Last=*/OMPC_FIRSTPRIVATE_unknown)
+        << getOpenMPClauseNameForDiag(OMPC_firstprivate);
+    return nullptr;
+  }
+
+  // OpenMP 6.0 [7.2]: the 'saved' modifier has effect only on a clause
+  // that appears on a replayable construct.  Per [14.6] the directives
+  // that admit a 'replayable' clause and that also admit 'firstprivate'
+  // are 'task', 'taskloop', and 'target' (the other replayable-eligible
+  // directives -- 'target_enter_data' etc. -- do not admit
+  // 'firstprivate' at all).  Reject 'saved' on any other directive, as
+  // it can never become a replayable construct.
+  OpenMPDirectiveKind CurDir = DSAStack->getCurrentDirective();
+  if (FPKind == OMPC_FIRSTPRIVATE_saved && !isOpenMPTaskingDirective(CurDir) &&
+      !isOpenMPTargetExecutionDirective(CurDir)) {
+    Diag(FPKindLoc, diag::err_omp_firstprivate_saved_wrong_directive);
+    return nullptr;
+  }
+
   SmallVector<Expr *, 8> Vars;
   SmallVector<Expr *, 8> PrivateCopies;
   SmallVector<Expr *, 8> Inits;
@@ -21672,6 +21701,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
 
   return OMPFirstprivateClause::Create(
       getASTContext(), StartLoc, LParenLoc, EndLoc, Vars, PrivateCopies, Inits,
+      FPKind, FPKindLoc, ColonLoc,
       buildPreInits(getASTContext(), ExprCaptures));
 }
 
