@@ -59,6 +59,7 @@ getSgShapeAndCount(ArrayRef<int64_t> shape,
     return std::make_pair(sgShape, count);
   auto sgData = layout.getEffectiveSgDataAsInt();
   count = computeProduct(distributedShape.value()) / computeProduct(sgData);
+  assert(count >= 1 && "count must be at least 1");
   return std::make_pair(sgData, count);
 }
 
@@ -1507,7 +1508,7 @@ void populateXeGPUWgToSgDistributeTypeConversions(TypeConverter &converter,
       [](VectorType vecTy, xegpu::DistributeLayoutAttr layout)
           -> std::pair<SmallVector<int64_t>, int> {
         if (!layout.isForWorkgroup())
-          return {{}, 0};
+          return {SmallVector<int64_t>(vecTy.getShape()), 1};
         return getSgShapeAndCount(vecTy.getShape(), layout);
       });
 }
@@ -1555,7 +1556,15 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   RewritePatternSet patterns(ctx);
   ConversionTarget target(*ctx);
   TypeConverter converter;
-  xegpu::addSCFStructuralMaterializations(converter);
+  // Source (N:1) and target (1:1) materializations using
+  // UnrealizedConversionCastOp.
+  auto materializeCast = [](OpBuilder &builder, Type type, ValueRange inputs,
+                            Location loc) -> Value {
+    return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
+        .getResult(0);
+  };
+  converter.addSourceMaterialization(materializeCast);
+  converter.addTargetMaterialization(materializeCast);
   xegpu::populateXeGPUWgToSgDistributeTypeConversions(converter,
                                                       getOperation());
 

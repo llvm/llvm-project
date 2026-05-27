@@ -852,27 +852,21 @@ bool xegpu::matchSplitDimExpansion(
 // Context-aware type conversion utilities
 //===----------------------------------------------------------------------===//
 
-void xegpu::addSCFStructuralMaterializations(TypeConverter &converter) {
-  auto materializeCast = [](OpBuilder &builder, Type type, ValueRange inputs,
-                            Location loc) -> Value {
-    return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
-        .getResult(0);
-  };
-  // Source materialization: N:1 (N converted values -> 1 original value).
-  converter.addSourceMaterialization(materializeCast);
-  // Target materialization: 1:1 (single value type conversion).
-  converter.addTargetMaterialization(materializeCast);
-}
-
 void xegpu::addContextAwareVectorTypeConversion(
     TypeConverter &converter, Operation *topLevelOp,
     SubShapeAndCountFn getSubShapeAndCount) {
-  // Pre-compute 1:N type mappings for scf.while block arguments only.
-  // During scf.while structural conversion, blocks are detached from their
-  // parent region before convertBlockSignature is called. Block::getParent()
-  // crashes on detached blocks (LLVM ilist assertion), so we cannot look up
-  // layout attributes at that point. Other SCF ops (scf.for, scf.if) keep
-  // blocks attached during conversion.
+  // Pre-compute 1:N type mappings for scf.while block arguments.
+  //
+  // Block-arg layouts ARE available in the IR (layout recovery propagates
+  // them onto region block args). The reason we cannot rely on the regular
+  // `getDistributeLayoutAttr(v)` lookup during scf.while conversion is
+  // structural, not informational: `scf::WhileOpConversion` detaches the
+  // before/after blocks from their parent region before invoking
+  // `convertSignatureBlock`. At that point, looking up a BlockArgument's
+  // layout walks `v.getParentBlock()->getParent()`, which trips an LLVM
+  // ilist assertion on detached blocks. The pre-compute is purely a
+  // detached-block workaround; for scf.for / scf.if (whose blocks stay
+  // attached during conversion) the direct lookup works fine.
   auto whileArgTypeMap = std::make_shared<DenseMap<Value, SmallVector<Type>>>();
   auto recordBlockArgTypes = [&](Value init, BlockArgument arg) {
     auto vecTy = dyn_cast<VectorType>(init.getType());
@@ -882,7 +876,8 @@ void xegpu::addContextAwareVectorTypeConversion(
     if (!layout)
       return;
     auto [subShape, count] = getSubShapeAndCount(vecTy, layout);
-    if (count <= 0)
+    assert(count >= 1 && "getSubShapeAndCount must return count >= 1");
+    if (count <= 1)
       return;
     auto newTy = VectorType::get(subShape, vecTy.getElementType());
     SmallVector<Type> types(count, newTy);
@@ -929,7 +924,8 @@ void xegpu::addContextAwareVectorTypeConversion(
 
         auto vecType = cast<VectorType>(v.getType());
         auto [subShape, count] = getSubShapeAndCount(vecType, layout);
-        if (count <= 0)
+        assert(count >= 1 && "getSubShapeAndCount must return count >= 1");
+        if (count <= 1)
           return std::nullopt;
 
         auto newTy = VectorType::get(subShape, vecType.getElementType());

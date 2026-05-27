@@ -1712,7 +1712,15 @@ void XeGPUSgToLaneDistributePass::runOnOperation() {
     ConversionTarget target(getContext());
     TypeConverter typeConverter;
     RewritePatternSet patterns(&getContext());
-    xegpu::addSCFStructuralMaterializations(typeConverter);
+    // Source (N:1) and target (1:1) materializations using
+    // UnrealizedConversionCastOp.
+    auto materializeCast = [](OpBuilder &builder, Type type, ValueRange inputs,
+                              Location loc) -> Value {
+      return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
+          .getResult(0);
+    };
+    typeConverter.addSourceMaterialization(materializeCast);
+    typeConverter.addTargetMaterialization(materializeCast);
     xegpu::populateXeGPUSgToLaneDistributeTypeConversions(typeConverter);
     scf::populateSCFStructuralTypeConversionsAndLegality(typeConverter,
                                                          patterns, target);

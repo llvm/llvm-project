@@ -380,6 +380,7 @@ void XeGPUBlockingPass::runOnOperation() {
       tileShape = layout.getEffectiveInstDataAsInt();
       count = computeProduct(shape) / computeProduct(tileShape);
     }
+    assert(count >= 1 && "count must be at least 1");
     return std::make_pair(tileShape, count);
   };
 
@@ -423,17 +424,18 @@ void XeGPUBlockingPass::runOnOperation() {
         [&](VectorType vecTy, xegpu::DistributeLayoutAttr layout)
             -> std::pair<SmallVector<int64_t>, int> {
           if (layout.isForWorkgroup())
-            return {{}, 0};
-          auto instData = layout.getEffectiveInstDataAsInt();
-          if (instData.empty())
-            return {{}, 0};
-          int count =
-              computeProduct(vecTy.getShape()) / computeProduct(instData);
-          if (count <= 1)
-            return {{}, 0};
-          return {SmallVector<int64_t>(instData), count};
+            return {SmallVector<int64_t>(vecTy.getShape()), 1};
+          return getTileShapeAndCount(vecTy.getShape(), layout);
         });
-    xegpu::addSCFStructuralMaterializations(converter);
+    // Source (N:1) and target (1:1) materializations using
+    // UnrealizedConversionCastOp.
+    auto materializeCast = [](OpBuilder &builder, Type type, ValueRange inputs,
+                              Location loc) -> Value {
+      return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
+          .getResult(0);
+    };
+    converter.addSourceMaterialization(materializeCast);
+    converter.addTargetMaterialization(materializeCast);
     // Blocking runs SCF conversion separately (not combined with XeGPU
     // patterns), so it also needs a 1:N target materialization.
     converter.addTargetMaterialization(

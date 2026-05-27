@@ -229,13 +229,10 @@ bool matchSplitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
 
 /// Callback type for computing sub-shape and count for 1:N VectorType
 /// conversion. Given a VectorType and its DistributeLayoutAttr, returns
-/// (subShape, count). A count <= 0 means no conversion is needed.
+/// (subShape, count). The returned count is always >= 1; callers treat
+/// count == 1 as "no split needed".
 using SubShapeAndCountFn = std::function<std::pair<SmallVector<int64_t>, int>(
     VectorType, DistributeLayoutAttr)>;
-
-/// Adds source (N:1) and target (1:1) materializations using
-/// UnrealizedConversionCastOp to the given TypeConverter.
-void addSCFStructuralMaterializations(TypeConverter &converter);
 
 /// Pre-computes block argument type mappings for SCF loop ops and adds a
 /// context-aware 1:N VectorType conversion to the TypeConverter.
