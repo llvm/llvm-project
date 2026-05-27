@@ -318,8 +318,7 @@ const Stmt *ExplodedNode::getStmtForDiagnostics() const {
   const StackFrame *SF = getStackFrame();
   if (SF->getAnalysisDeclContext()->isBodyAutosynthesized()) {
     // It must be a stack frame because we only autosynthesize functions.
-    return cast<StackFrame>(findTopAutosynthesizedParentStackFrame(SF))
-        ->getCallSite();
+    return findTopAutosynthesizedParentStackFrame(SF)->getCallSite();
   }
   // Otherwise, see if the node's program point directly points to a statement.
   // FIXME: Refactor into a ProgramPoint method?

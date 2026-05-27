@@ -709,7 +709,7 @@ printObjectsUnderConstructionJson(raw_ostream &Out, ProgramStateRef State,
   }
 
   if (HasItem)
-    Indent(Out, --Space, IsDot) << ']'; // End of "stack_frame".
+    Indent(Out, --Space, IsDot) << ']'; // End of "location_context".
   else {
     Out << "null ";
   }
@@ -771,7 +771,7 @@ static void printIndicesOfElementsToConstructJson(
   }
 
   if (HasItem)
-    Indent(Out, --Space, IsDot) << ']'; // End of "stack_frame".
+    Indent(Out, --Space, IsDot) << ']'; // End of "location_context".
   else {
     Out << "null ";
   }
@@ -1151,11 +1151,10 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
                                 "Error evaluating initializer");
 
   // We don't clean up dead bindings here.
-  const auto *stackFrame = cast<StackFrame>(Pred->getStackFrame());
-  const auto *decl = cast<CXXConstructorDecl>(stackFrame->getDecl());
+  const auto *decl = cast<CXXConstructorDecl>(SF->getDecl());
 
   ProgramStateRef State = Pred->getState();
-  SVal thisVal = State->getSVal(svalBuilder.getCXXThis(decl, stackFrame));
+  SVal thisVal = State->getSVal(svalBuilder.getCXXThis(decl, SF));
 
   ExplodedNodeSet Tmp;
   SVal FieldLoc;
@@ -1188,20 +1187,19 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
         while ((ASE = dyn_cast<ArraySubscriptExpr>(Init)))
           Init = ASE->getBase()->IgnoreImplicit();
 
-        InitVal = State->getSVal(Init, stackFrame);
+        InitVal = State->getSVal(Init, SF);
 
         // If we fail to get the value for some reason, use a symbolic value.
         if (InitVal.isUnknownOrUndef()) {
           SValBuilder &SVB = getSValBuilder();
-          InitVal =
-              SVB.conjureSymbolVal(getCFGElementRef(), stackFrame,
-                                   Field->getType(), getNumVisitedCurrent());
+          InitVal = SVB.conjureSymbolVal(
+              getCFGElementRef(), SF, Field->getType(), getNumVisitedCurrent());
         }
       } else {
-        InitVal = State->getSVal(BMI->getInit(), stackFrame);
+        InitVal = State->getSVal(BMI->getInit(), SF);
       }
 
-      PostInitializer PP(BMI, FieldLoc.getAsRegion(), stackFrame);
+      PostInitializer PP(BMI, FieldLoc.getAsRegion(), SF);
       evalBind(Tmp, Init, Pred, FieldLoc, InitVal, /*isInit=*/true, &PP);
     }
   } else if (BMI->isBaseInitializer() && isa<InitListExpr>(Init)) {
@@ -1210,7 +1208,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
     // initialize the base region. Hence, we need to make the bind for it.
     SVal BaseLoc = getStoreManager().evalDerivedToBase(
         thisVal, QualType(BMI->getBaseClass(), 0), BMI->isBaseVirtual());
-    SVal InitVal = State->getSVal(Init, stackFrame);
+    SVal InitVal = State->getSVal(Init, SF);
     evalBind(Tmp, Init, Pred, BaseLoc, InitVal, /*isInit=*/true);
   } else {
     assert(BMI->isBaseInitializer() || BMI->isDelegatingInitializer());
@@ -1220,7 +1218,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
 
   // Construct PostInitializer nodes whether the state changed or not,
   // so that the diagnostics don't get confused.
-  PostInitializer PP(BMI, FieldLoc.getAsRegion(), stackFrame);
+  PostInitializer PP(BMI, FieldLoc.getAsRegion(), SF);
 
   ExplodedNodeSet Dst;
   for (ExplodedNode *Pred : Tmp)
