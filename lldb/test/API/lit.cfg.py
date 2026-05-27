@@ -199,7 +199,7 @@ if lldb_use_simulator:
 # lit complains if the value is set but it is not supported.
 supported, errormsg = lit_config.maxIndividualTestTimeIsSupported
 if supported:
-    config.maxIndividualTestTime = 600
+    lit_config.maxIndividualTestTime = 600
 else:
     lit_config.warning("Could not set a default per-test timeout. " + errormsg)
 
