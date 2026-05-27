@@ -196,7 +196,7 @@ class RVPNarrowingBase<bits<3> f, bit r, bits<4> funct4, dag outs, dag ins,
 }
 
 // Common base for pair ops (non-widening nor narrowing)
-class RVPPairBase<bits<4> f, bit direction, dag outs, dag ins,
+class RVPPairBase<bits<4> f, bit bit15, dag outs, dag ins,
                   string opcodestr, string argstr, bit DefVXSAT>
   : RVInst<outs, ins, opcodestr, argstr, [], InstFormatOther> {
   bits<5> rs1;
@@ -204,7 +204,7 @@ class RVPPairBase<bits<4> f, bit direction, dag outs, dag ins,
 
   let Inst{30-27} = f;
   let Inst{19-16} = rs1{4-1};
-  let Inst{15}    = direction;
+  let Inst{15}    = bit15;
   let Inst{14-12} = 0b110;
   let Inst{11-8}  = rd{4-1};
   let Inst{7}     = 0b0;
@@ -214,9 +214,9 @@ class RVPPairBase<bits<4> f, bit direction, dag outs, dag ins,
 }
 
 // Common base for pair binary ops
-class RVPPairBinaryBase_rr<bits<4> f, bits<2> w, bit pack, bit direction,
+class RVPPairBinaryBase_rr<bits<4> f, bits<2> w, bit bit20, bit bit15,
                            string opcodestr, bit DefVXSAT = 0>
-    : RVPPairBase<f, direction, (outs GPRPairRV32:$rd),
+    : RVPPairBase<f, bit15, (outs GPRPairRV32:$rd),
                   (ins GPRPairRV32:$rs1, GPRPairRV32:$rs2), opcodestr,
                   "$rd, $rs1, $rs2", DefVXSAT> {
   bits<5> rs2;
@@ -224,7 +224,7 @@ class RVPPairBinaryBase_rr<bits<4> f, bits<2> w, bit pack, bit direction,
   let Inst{31}    = 0b1;
   let Inst{26-25} = w;
   let Inst{24-21} = rs2{4-1};
-  let Inst{20}    = pack;
+  let Inst{20}    = bit20;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -348,35 +348,36 @@ class RVPNarrowingShiftB_ri<bits<3> f, string opcodestr, bit DefVXSAT = 0>
   let Inst{23-20} = shamt;
 }
 
+// direction is bit 15 and is usually 0 for left shifts and 1 for right shifts.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVPPairShift_ri<bits<3> f, string opcodestr, Operand ImmType,
-                      bit direction, bit DefVXSAT = 0>
+class RVPPairShift_ri<bits<3> f, bit direction, string opcodestr,
+                      Operand ImmType, bit DefVXSAT = 0>
     : RVPPairBase<{f, 0b0}, direction, (outs GPRPairRV32:$rd),
                   (ins GPRPairRV32:$rs1, ImmType:$shamt), opcodestr,
                   "$rd, $rs1, $shamt", DefVXSAT> {
   let Inst{31}    = 0b0;
 }
 
-class RVPPairShiftW_ri<bits<3> f, string opcodestr, bit direction = 0b0,
+class RVPPairShiftW_ri<bits<3> f, bit direction, string opcodestr,
                        bit DefVXSAT = 0>
-    : RVPPairShift_ri<f, opcodestr, uimm5, direction, DefVXSAT> {
+    : RVPPairShift_ri<f, direction, opcodestr, uimm5, DefVXSAT> {
   bits<5> shamt;
 
   let Inst{26-25} = 0b01;
   let Inst{24-20} = shamt;
 }
 
-class RVPPairShiftH_ri<bits<3> f, string opcodestr, bit direction = 0b0,
+class RVPPairShiftH_ri<bits<3> f, bit direction, string opcodestr,
                        bit DefVXSAT = 0>
-    : RVPPairShift_ri<f, opcodestr, uimm4, direction, DefVXSAT> {
+    : RVPPairShift_ri<f, direction, opcodestr, uimm4, DefVXSAT> {
   bits<4> shamt;
 
   let Inst{26-24} = 0b001;
   let Inst{23-20} = shamt;
 }
 
-class RVPPairShiftB_ri<bits<3> f, string opcodestr, bit direction = 0b0>
-    : RVPPairShift_ri<f, opcodestr, uimm3, direction> {
+class RVPPairShiftB_ri<bits<3> f, bit direction, string opcodestr>
+    : RVPPairShift_ri<f, direction, opcodestr, uimm3> {
   bits<3> shamt;
 
   let Inst{26-23} = 0b0001;
@@ -400,9 +401,10 @@ class RVPWideningShift_rr<bits<3> f, bits<2> w, string opcodestr>
     : RVPWideningBase<{f, 0b1}, w, 0b0, (outs GPRPairRV32:$rd),
                       (ins GPR:$rs1, GPR:$rs2), opcodestr>;
 
+// direction is bit 15 and is usually 0 for left shifts and 1 for right shifts.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVPPairShift_rr<bits<3> f, bits<2> w, string opcodestr,
-                      bit direction = 0b0, bit DefVXSAT = 0>
+class RVPPairShift_rr<bits<3> f, bits<2> w, bit direction, string opcodestr,
+                      bit DefVXSAT = 0>
     : RVPPairBase<{f, 0b1}, direction, (outs GPRPairRV32:$rd),
                   (ins GPRPairRV32:$rs1, GPR:$rs2), opcodestr,
                   "$rd, $rs1, $rs2", DefVXSAT> {
@@ -1417,12 +1419,12 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PNCLIPR_HS   : RVPNarrowingShift_rr<0b111, 0b01, "pnclipr.hs", DefVXSAT=1>;
   def NCLIPR       : RVPNarrowingShift_rr<0b111, 0b11, "nclipr", DefVXSAT=1>;
 
-  def PSLLI_DB     : RVPPairShiftB_ri<0b000, "pslli.db">;
-  def PSLLI_DH     : RVPPairShiftH_ri<0b000, "pslli.dh">;
-  def PSLLI_DW     : RVPPairShiftW_ri<0b000, "pslli.dw">;
+  def PSLLI_DB     : RVPPairShiftB_ri<0b000, 0b0, "pslli.db">;
+  def PSLLI_DH     : RVPPairShiftH_ri<0b000, 0b0, "pslli.dh">;
+  def PSLLI_DW     : RVPPairShiftW_ri<0b000, 0b0, "pslli.dw">;
 
-  def PSSLAI_DH    : RVPPairShiftH_ri<0b101, "psslai.dh", DefVXSAT=1>;
-  def PSSLAI_DW    : RVPPairShiftW_ri<0b101, "psslai.dw", DefVXSAT=1>;
+  def PSSLAI_DH    : RVPPairShiftH_ri<0b101, 0b0, "psslai.dh", DefVXSAT=1>;
+  def PSSLAI_DW    : RVPPairShiftW_ri<0b101, 0b0, "psslai.dw", DefVXSAT=1>;
 
   def PSEXT_DH_B   : RVPPairUnary_r<0b00, 0b00100, "psext.dh.b">;
   def PSEXT_DW_B   : RVPPairUnary_r<0b01, 0b00100, "psext.dw.b">;
@@ -1432,50 +1434,50 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PSABS_DH     : RVPPairUnary_r<0b00, 0b00111, "psabs.dh", DefVXSAT=1>;
   def PSABS_DB     : RVPPairUnary_r<0b10, 0b00111, "psabs.db", DefVXSAT=1>;
 
-  def PSLL_DHS     : RVPPairShift_rr<0b000, 0b00, "psll.dhs">;
-  def PSLL_DWS     : RVPPairShift_rr<0b000, 0b01, "psll.dws">;
-  def PSLL_DBS     : RVPPairShift_rr<0b000, 0b10, "psll.dbs">;
+  def PSLL_DHS     : RVPPairShift_rr<0b000, 0b00, 0b0, "psll.dhs">;
+  def PSLL_DWS     : RVPPairShift_rr<0b000, 0b01, 0b0, "psll.dws">;
+  def PSLL_DBS     : RVPPairShift_rr<0b000, 0b10, 0b0, "psll.dbs">;
 
-  def PADD_DHS     : RVPPairShift_rr<0b001, 0b00, "padd.dhs">;
-  def PADD_DWS     : RVPPairShift_rr<0b001, 0b01, "padd.dws">;
-  def PADD_DBS     : RVPPairShift_rr<0b001, 0b10, "padd.dbs">;
+  def PADD_DHS     : RVPPairShift_rr<0b001, 0b00, 0b0, "padd.dhs">;
+  def PADD_DWS     : RVPPairShift_rr<0b001, 0b01, 0b0, "padd.dws">;
+  def PADD_DBS     : RVPPairShift_rr<0b001, 0b10, 0b0, "padd.dbs">;
 
-  def PSSHL_DHS    : RVPPairShift_rr<0b010, 0b00, "psshl.dhs", DefVXSAT=1>;
-  def PSSHL_DWS    : RVPPairShift_rr<0b010, 0b01, "psshl.dws", DefVXSAT=1>;
+  def PSSHL_DHS    : RVPPairShift_rr<0b010, 0b00, 0b0, "psshl.dhs", DefVXSAT=1>;
+  def PSSHL_DWS    : RVPPairShift_rr<0b010, 0b01, 0b0, "psshl.dws", DefVXSAT=1>;
 
-  def PSSHLR_DHS   : RVPPairShift_rr<0b011, 0b00, "psshlr.dhs", DefVXSAT=1>;
-  def PSSHLR_DWS   : RVPPairShift_rr<0b011, 0b01, "psshlr.dws", DefVXSAT=1>;
+  def PSSHLR_DHS   : RVPPairShift_rr<0b011, 0b00, 0b0, "psshlr.dhs", DefVXSAT=1>;
+  def PSSHLR_DWS   : RVPPairShift_rr<0b011, 0b01, 0b0, "psshlr.dws", DefVXSAT=1>;
 
-  def PSSHA_DHS    : RVPPairShift_rr<0b110, 0b00, "pssha.dhs", DefVXSAT=1>;
-  def PSSHA_DWS    : RVPPairShift_rr<0b110, 0b01, "pssha.dws", DefVXSAT=1>;
+  def PSSHA_DHS    : RVPPairShift_rr<0b110, 0b00, 0b0, "pssha.dhs", DefVXSAT=1>;
+  def PSSHA_DWS    : RVPPairShift_rr<0b110, 0b01, 0b0, "pssha.dws", DefVXSAT=1>;
 
-  def PSSHAR_DHS   : RVPPairShift_rr<0b111, 0b00, "psshar.dhs", DefVXSAT=1>;
-  def PSSHAR_DWS   : RVPPairShift_rr<0b111, 0b01, "psshar.dws", DefVXSAT=1>;
+  def PSSHAR_DHS   : RVPPairShift_rr<0b111, 0b00, 0b0, "psshar.dhs", DefVXSAT=1>;
+  def PSSHAR_DWS   : RVPPairShift_rr<0b111, 0b01, 0b0, "psshar.dws", DefVXSAT=1>;
 
-  def PSRLI_DB     : RVPPairShiftB_ri<0b000, "psrli.db",  0b1>;
-  def PSRLI_DH     : RVPPairShiftH_ri<0b000, "psrli.dh",  0b1>;
-  def PSRLI_DW     : RVPPairShiftW_ri<0b000, "psrli.dw",  0b1>;
+  def PSRLI_DB     : RVPPairShiftB_ri<0b000, 0b1, "psrli.db">;
+  def PSRLI_DH     : RVPPairShiftH_ri<0b000, 0b1, "psrli.dh">;
+  def PSRLI_DW     : RVPPairShiftW_ri<0b000, 0b1, "psrli.dw">;
 
-  def PUSATI_DH    : RVPPairShiftH_ri<0b010, "pusati.dh", 0b1, DefVXSAT=1>;
-  def PUSATI_DW    : RVPPairShiftW_ri<0b010, "pusati.dw", 0b1, DefVXSAT=1>;
+  def PUSATI_DH    : RVPPairShiftH_ri<0b010, 0b1, "pusati.dh", DefVXSAT=1>;
+  def PUSATI_DW    : RVPPairShiftW_ri<0b010, 0b1, "pusati.dw", DefVXSAT=1>;
 
-  def PSRAI_DB     : RVPPairShiftB_ri<0b100, "psrai.db",  0b1>;
-  def PSRAI_DH     : RVPPairShiftH_ri<0b100, "psrai.dh",  0b1>;
-  def PSRAI_DW     : RVPPairShiftW_ri<0b100, "psrai.dw",  0b1>;
+  def PSRAI_DB     : RVPPairShiftB_ri<0b100, 0b1, "psrai.db">;
+  def PSRAI_DH     : RVPPairShiftH_ri<0b100, 0b1, "psrai.dh">;
+  def PSRAI_DW     : RVPPairShiftW_ri<0b100, 0b1, "psrai.dw">;
 
-  def PSRARI_DH    : RVPPairShiftH_ri<0b101, "psrari.dh", 0b1>;
-  def PSRARI_DW    : RVPPairShiftW_ri<0b101, "psrari.dw", 0b1>;
+  def PSRARI_DH    : RVPPairShiftH_ri<0b101, 0b1, "psrari.dh">;
+  def PSRARI_DW    : RVPPairShiftW_ri<0b101, 0b1, "psrari.dw">;
 
-  def PSATI_DH     : RVPPairShiftH_ri<0b110, "psati.dh",  0b1, DefVXSAT=1>;
-  def PSATI_DW     : RVPPairShiftW_ri<0b110, "psati.dw",  0b1, DefVXSAT=1>;
+  def PSATI_DH     : RVPPairShiftH_ri<0b110, 0b1, "psati.dh", DefVXSAT=1>;
+  def PSATI_DW     : RVPPairShiftW_ri<0b110, 0b1, "psati.dw", DefVXSAT=1>;
 
-  def PSRL_DHS     : RVPPairShift_rr<0b000, 0b00, "psrl.dhs", 0b1>;
-  def PSRL_DWS     : RVPPairShift_rr<0b000, 0b01, "psrl.dws", 0b1>;
-  def PSRL_DBS     : RVPPairShift_rr<0b000, 0b10, "psrl.dbs", 0b1>;
+  def PSRL_DHS     : RVPPairShift_rr<0b000, 0b00, 0b1, "psrl.dhs">;
+  def PSRL_DWS     : RVPPairShift_rr<0b000, 0b01, 0b1, "psrl.dws">;
+  def PSRL_DBS     : RVPPairShift_rr<0b000, 0b10, 0b1, "psrl.dbs">;
 
-  def PSRA_DHS     : RVPPairShift_rr<0b100, 0b00, "psra.dhs", 0b1>;
-  def PSRA_DWS     : RVPPairShift_rr<0b100, 0b01, "psra.dws", 0b1>;
-  def PSRA_DBS     : RVPPairShift_rr<0b100, 0b10, "psra.dbs", 0b1>;
+  def PSRA_DHS     : RVPPairShift_rr<0b100, 0b00, 0b1, "psra.dhs">;
+  def PSRA_DWS     : RVPPairShift_rr<0b100, 0b01, 0b1, "psra.dws">;
+  def PSRA_DBS     : RVPPairShift_rr<0b100, 0b10, 0b1, "psra.dbs">;
 
   def PADD_DH      : RVPPairBinary_rr<0b0000, 0b00, "padd.dh", Commutable=1>;
   def PADD_DW      : RVPPairBinary_rr<0b0000, 0b01, "padd.dw", Commutable=1>;
