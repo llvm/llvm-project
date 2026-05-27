@@ -783,6 +783,21 @@ __kmp_taskgraph_exec_descr_finish(kmp_int32 gtid, kmp_info_t *thread,
 // template<ompt>: effectively ompt_enabled.enabled!=0
 // the version with ompt=false is inlined, allowing to optimize away all ompt
 // code in this case
+#if OMP_TASKGRAPH_EXPERIMENTAL
+// Run TASK's destructors thunk.  A task that may be recorded into a taskgraph
+// has a thunk that takes which of its initial values to destroy, WHICH (see
+// kmp_taskgraph_destructors_t).
+static void __kmp_task_run_destructors(kmp_int32 gtid, kmp_task_t *task,
+                                       kmp_int32 which) {
+  kmp_routine_entry_t destr_thunk = task->data1.destructors;
+  KMP_ASSERT(destr_thunk);
+  if (KMP_TASK_TO_TASKDATA(task)->td_flags.taskgraph_destructors)
+    ((kmp_taskgraph_destructors_t)destr_thunk)(gtid, task, which);
+  else
+    destr_thunk(gtid, task);
+}
+#endif
+
 template <bool ompt>
 static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
                               kmp_taskdata_t *resumed_task) {
@@ -851,12 +866,23 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
      placed here, since at this point other tasks might have been released
      hence overlapping the destructor invocations with some other work in the
      released tasks.  The OpenMP spec is not specific on when the destructors
-     are invoked, so we should be free to choose. */
+     are invoked, so we should be free to choose.
+
+     A task of a taskgraph record is run once per replay from the same
+     descriptor, which holds the initial values of its firstprivates; its body
+     destroys the copies it made of them.  The initial values are destroyed
+     when the replay ends or the record is freed, depending on where they come
+     from (see kmp_taskgraph_destructors_t). */
+#if OMP_TASKGRAPH_EXPERIMENTAL
+  if (UNLIKELY(taskdata->td_flags.destructors_thunk) && !is_taskgraph)
+    __kmp_task_run_destructors(gtid, task, KMP_TASKGRAPH_DESTROY_ALL);
+#else
   if (UNLIKELY(taskdata->td_flags.destructors_thunk)) {
     kmp_routine_entry_t destr_thunk = task->data1.destructors;
     KMP_ASSERT(destr_thunk);
     destr_thunk(gtid, task);
   }
+#endif
 
   KMP_DEBUG_ASSERT(taskdata->td_flags.complete == 0);
   KMP_DEBUG_ASSERT(taskdata->td_flags.started == 1);
@@ -2619,10 +2645,11 @@ __kmp_build_exec_descrs(kmp_info_t *thread, kmp_taskgraph_region_t *region,
 
 /// Reset, reparent and regroup the recorded task TASK and re-invoke it.
 
-static void __kmp_omp_tg_task(kmp_int32 gtid, kmp_task_t *task,
+static void __kmp_omp_tg_task(kmp_int32 gtid, kmp_taskgraph_node_t *node,
                               kmp_taskgroup_t *taskgroup,
                               kmp_taskdata_t *parent_taskdata,
                               bool serialize_immediate) {
+  kmp_task_t *task = node->task;
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
   taskdata->td_parent = parent_taskdata;
 
@@ -2656,6 +2683,8 @@ static void __kmp_omp_tg_task(kmp_int32 gtid, kmp_task_t *task,
   if (parent_taskdata->td_flags.tasktype == TASK_EXPLICIT)
     KMP_ATOMIC_INC(&parent_taskdata->td_allocated_child_tasks);
 
+  // The task's captures were relocated when the replay started
+  // (__kmp_taskgraph_relocate_nodes).
   __kmp_omp_task(gtid, task, false);
 }
 
@@ -2680,7 +2709,7 @@ static void __kmp_taskgraph_exec_descr_start(kmp_int32 gtid, kmp_info_t *thread,
     kmp_taskdata_t *current_taskdata = thread->th.th_current_task;
     if (descr->region->mutexset)
       __kmp_taskgraph_acquire_locks(gtid, descr->region->owner, descr->region);
-    __kmp_omp_tg_task(gtid, node->task, taskgroup, current_taskdata, false);
+    __kmp_omp_tg_task(gtid, node, taskgroup, current_taskdata, false);
     break;
   }
   case TASKGRAPH_REGION_PARALLEL:
@@ -3428,6 +3457,60 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
 }
 
 #if OMP_TASKGRAPH_EXPERIMENTAL
+/// Relocate the recorded tasks of TASKGRAPH against this replay's
+/// taskgraph_args.
+///
+/// All of it happens here, before the replay releases any task, and none of
+/// it as a task is dispatched.  A replay re-encounters every recorded
+/// construct up front (OpenMP 6.0 [14.3]), so a firstprivate takes the value
+/// its variable has when the replay starts, and a list item's base pointer is
+/// re-read at the same point.  Doing it at dispatch would instead observe
+/// whatever the task's predecessors in the graph had written by then.
+///
+/// FIXME: That is too early for a construct after a 'taskwait' with a 'depend'
+/// clause, which a replay should only encounter once the tasks the 'taskwait'
+/// waits for have completed.
+static void __kmp_taskgraph_relocate_nodes(kmp_taskgraph_record_t *taskgraph) {
+  void *taskgraph_args = taskgraph->taskgraph_args;
+  for (kmp_int32 i = 0; i < taskgraph->num_tasks; i++) {
+    kmp_taskgraph_node_t *node = &taskgraph->record_map[i];
+    if (!node->task)
+      continue;
+    if (node->relocate) {
+      // Rewrites capture-by-reference variables to point at the replaying
+      // frame, which need not be the one the graph was recorded from, and
+      // reads the initial values of the task's firstprivates from it.
+      node->relocate(node->task, taskgraph_args);
+    } else if (node->task->shareds != NULL) {
+      // A missing relocation callback is only fatal when there is a non-empty
+      // shareds payload that may contain by-reference captures needing remap.
+      KMP_FATAL(OmpTaskgraphBadCapture);
+    }
+  }
+}
+
+/// Destroy WHICH of the initial values of the firstprivates of TASK, a task of
+/// a taskgraph record (see kmp_taskgraph_destructors_t), if any need it.
+static void __kmp_taskgraph_destroy_initial(kmp_int32 gtid, kmp_task_t *task,
+                                            kmp_int32 which) {
+  kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
+  if (!taskdata->td_flags.destructors_thunk)
+    return;
+  // Only a task that may be recorded can be, and its thunk takes WHICH.
+  KMP_DEBUG_ASSERT(taskdata->td_flags.taskgraph_destructors);
+  __kmp_task_run_destructors(gtid, task, which);
+}
+
+/// End a replay of TASKGRAPH, once everything it started has completed.  The
+/// initial values each recorded task's relocation helper read for the replay
+/// are destroyed, whether or not the task ran.
+static void __kmp_taskgraph_end_replay(kmp_int32 gtid,
+                                       kmp_taskgraph_record_t *taskgraph) {
+  for (kmp_int32 i = 0; i < taskgraph->num_tasks; i++)
+    if (kmp_task_t *task = taskgraph->record_map[i].task)
+      __kmp_taskgraph_destroy_initial(gtid, task, KMP_TASKGRAPH_DESTROY_REPLAY);
+}
+
 static void __kmp_replay_taskgraph(kmp_int32 gtid,
                                    kmp_taskdata_t *current_taskdata,
                                    kmp_taskgraph_record_t *taskgraph,
@@ -5283,6 +5366,7 @@ __kmp_taskgraph_node_alloc(kmp_taskgraph_record_t *rec, kmp_task_t *task,
   new_task->task = task;
   new_task->taskloop_task = false;
   new_task->undeferred = false;
+  new_task->relocate = nullptr;
   new_task->reduce_input = nullptr;
   new_task->ndeps = 0;
   new_task->dep_list = nullptr;
@@ -5320,7 +5404,8 @@ __kmp_taskloop_linear(ident_t *loc, int gtid, kmp_task_t *task, kmp_uint64 *lb,
                       void *task_dup
 #if OMP_TASKGRAPH_EXPERIMENTAL
                       ,
-                      kmp_taskgraph_record_t *taskgraph_rec = nullptr
+                      kmp_taskgraph_record_t *taskgraph_rec = nullptr,
+                      kmp_task_relocate_t relocate = nullptr
 #endif
 ) {
   KMP_COUNT_BLOCK(OMP_TASKLOOP);
@@ -5416,7 +5501,13 @@ __kmp_taskloop_linear(ident_t *loc, int gtid, kmp_task_t *task, kmp_uint64 *lb,
         taskgroup->taskgraph.reduce_input = nullptr;
       }
       node->taskloop_task = true;
+      node->relocate = relocate;
+      // The recording runs a taskloop of its own, so this task never runs
+      // until a replay.  It keeps the initial values of its firstprivates that
+      // task_dup constructed, but those a replay reads afresh.
       next_taskdata->owning_taskgraph = taskgraph_rec;
+      __kmp_taskgraph_destroy_initial(gtid, next_task,
+                                      KMP_TASKGRAPH_DESTROY_REPLAY);
       // FIXME: These dependency fields might be back-filled by the as-yet
       // unimplemented task_iteration subsidiary directive.  We'll need a way
       // to locate the correct task given the value of the iteration variable,
@@ -5705,7 +5796,8 @@ static void __kmp_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
                            int modifier, void *task_dup
 #if OMP_TASKGRAPH_EXPERIMENTAL
                            ,
-                           kmp_taskgraph_record_t *taskgraph_rec = nullptr
+                           kmp_taskgraph_record_t *taskgraph_rec = nullptr,
+                           kmp_task_relocate_t relocate = nullptr
 #endif
 ) {
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
@@ -5839,7 +5931,7 @@ static void __kmp_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
 #if OMPT_SUPPORT
                           OMPT_GET_RETURN_ADDRESS(0),
 #endif
-                          task_dup, taskgraph_rec);
+                          task_dup, taskgraph_rec, relocate);
     // check if clause value next
     // Also require GOMP_taskloop to reduce to linear
     // (taskdata->td_flags.native)
@@ -6022,6 +6114,7 @@ static void __kmp_taskgraph_reset(kmp_taskgraph_record_t *rec, kmp_int32 gtid,
   rec->node_mutexes = nullptr;
   rec->exec_descrs = nullptr;
   rec->num_exec_descrs = 0;
+  rec->taskgraph_args = nullptr;
   rec->next = nullptr;
 }
 
@@ -6103,7 +6196,12 @@ static void __kmp_taskgraph_free(kmp_int32 gtid, kmp_taskgraph_record_t *rec,
     // recorded by __kmpc_taskgraph_taskwait).
     if (rec->record_map[task].task == nullptr)
       continue;
-    kmp_taskdata *taskdata = KMP_TASK_TO_TASKDATA(rec->record_map[task].task);
+    kmp_task_t *taskptr = rec->record_map[task].task;
+    kmp_taskdata *taskdata = KMP_TASK_TO_TASKDATA(taskptr);
+    // The task holds the saved data environment: the initial values of its
+    // firstprivates that every replay starts from.
+    __kmp_taskgraph_destroy_initial(gtid, taskptr,
+                                    KMP_TASKGRAPH_DESTROY_RECORD);
     // Setting this here keeps an assertion in __kmp_free_task happy: the
     // clone may never have been replayed, in which case 'complete' will be
     // zero here, as initialized.
@@ -6150,19 +6248,19 @@ static kmp_taskgraph_header_t *__kmp_taskgraph_header_alloc(kmp_int32 gtid) {
 }
 
 // Clone a (new) task that has had its private variables and shared variables
-// initialised already.
-static kmp_task_t *__kmp_taskgraph_clone_task(kmp_info_t *thread,
-                                              kmp_taskgraph_record_t *taskgraph,
-                                              kmp_task_t *orig,
-                                              size_t sizeof_kmp_task_t,
-                                              size_t sizeof_shareds) {
-  // FIXME: This should use a "taskdup" function like taskloops in cases where
-  // private variables are not trivially copyable.  For now, do it by plain
-  // bitwise copy.
-  // FIXME 2: It's intended that this copy be persistent, and can be
-  // re-executed on taskgraph replay.  Make sure that works (for shared
-  // variables) if stack addresses change (i.e. a task-generating function is
-  // called from different call stack depths).
+// initialised already, to be the task a replay runs.
+//
+// The clone holds the initial values of the task's firstprivates, which a
+// replay's body constructs its own copies from.  Those of the saved data
+// environment live as long as the record: the memcpy below copies the ones
+// that are trivially copyable, and TASK_DUP, non-null when there are others,
+// copy-constructs those in place.  The other initial values are left as the
+// memcpy's bytes, which hold no object: the task's relocation helper constructs
+// them when a replay starts, and they are destroyed when it ends.  The
+// descriptor's other private storage holds no objects between replays.
+static kmp_task_t *__kmp_taskgraph_clone_task(
+    kmp_info_t *thread, kmp_taskgraph_record_t *taskgraph, kmp_task_t *orig,
+    size_t sizeof_kmp_task_t, size_t sizeof_shareds, void *task_dup) {
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(orig);
   size_t shareds_offset = sizeof(kmp_taskdata_t) + sizeof_kmp_task_t;
   shareds_offset = __kmp_round_up_to_val(shareds_offset, sizeof(kmp_uint64));
@@ -6176,6 +6274,8 @@ static kmp_task_t *__kmp_taskgraph_clone_task(kmp_info_t *thread,
     // New task's shared data has now moved.  Update the pointer.
     copy_task->shareds = (void *)((char *)copy_td + shareds_offset);
   }
+  if (task_dup)
+    ((p_task_dup_t)task_dup)(copy_task, orig, /*lastpriv=*/0);
   KMP_ATOMIC_ST_RLX(&copy_td->td_incomplete_child_tasks, 0);
   return KMP_TASKDATA_TO_TASK(copy_td);
 }
@@ -6330,8 +6430,15 @@ void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
       fprintf(stderr, "Replay taskgraph %p from task %p\n", record,
               KMP_TASKDATA_TO_TASK(current_taskdata));
     __kmp_acquire_lock(&record->map_lock, gtid);
+    // Args must be captured under the above lock, else we can hit a race
+    // condition here.  This is used to relocate host addresses in the
+    // taskgraph's initiating context, i.e. thread/stack frame., which may be
+    // different from the addresses seen at record time.
+    record->taskgraph_args = args;
+    __kmp_taskgraph_relocate_nodes(record);
     __kmp_replay_taskgraph(gtid, current_taskdata, record, graph_id, taskgroup);
     __kmpc_end_taskgroup(loc_ref, gtid);
+    __kmp_taskgraph_end_replay(gtid, record);
     __kmp_release_lock(&record->map_lock, gtid);
     // Decrement usage count and expire our record if it was 'graph_reset' by
     // some thread during this replay.
@@ -6381,8 +6488,10 @@ kmp_uint32 __kmpc_taskgraph_task(ident_t *loc_ref, kmp_int32 gtid,
         KMP_FATAL(OmpTaskgraphDetachableTask, src_loc);
         __kmp_str_free(&src_loc);
       }
+      // The record keeps the saved data environment; a replay reads the rest
+      // of the initial values afresh, so the clone does not construct them.
       kmp_task_t *cloned_task = __kmp_taskgraph_clone_task(
-          thread, rec, new_task, sizeof_kmp_task_t, sizeof_shareds);
+          thread, rec, new_task, sizeof_kmp_task_t, sizeof_shareds, task_dup);
       kmp_taskgraph_node_t *node = __kmp_taskgraph_node_alloc(rec, cloned_task);
       if (taskgroup->taskgraph.reduce_input) {
         node->reduce_input = taskgroup->taskgraph.reduce_input;
@@ -6408,6 +6517,7 @@ kmp_uint32 __kmpc_taskgraph_task(ident_t *loc_ref, kmp_int32 gtid,
       node->dep_list = (kmp_depend_info_t *)__kmp_thread_malloc(
           thread, ndeps * sizeof(kmp_depend_info_t));
       KMP_MEMCPY(node->dep_list, dep_list, ndeps * sizeof(kmp_depend_info_t));
+      node->relocate = relocate;
     } else if (status == KMP_TDG_READY) {
 #ifdef DEBUG_TASKGRAPH
       fprintf(stderr,
@@ -6481,7 +6591,7 @@ kmp_uint32 __kmpc_taskgraph_taskloop(
     kmp_taskgraph_status_t status = KMP_ATOMIC_LD_ACQ(&rec->status);
     if (status == KMP_TDG_RECORDING)
       __kmp_taskloop(loc_ref, gtid, new_task, if_val, lb, ub, st, nogroup,
-                     sched, grainsize, modifier, task_dup, rec);
+                     sched, grainsize, modifier, task_dup, rec, relocate);
     else if (status == KMP_TDG_READY) {
 #ifdef DEBUG_TASKGRAPH
       fprintf(stderr, "non-taskgraph taskloop entry point for taskloop in "

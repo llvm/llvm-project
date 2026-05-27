@@ -5537,6 +5537,9 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
         Data.FirstprivateVars.push_back(*IRef);
         Data.FirstprivateCopies.push_back(IInit);
         Data.FirstprivateInits.push_back(*IElemInitRef);
+        if (C->getKind() == OMPC_FIRSTPRIVATE_saved)
+          Data.SavedFirstprivates.insert(
+              cast<ValueDecl>(OrigDecl->getCanonicalDecl()));
       }
       ++IRef;
       ++IElemInitRef;

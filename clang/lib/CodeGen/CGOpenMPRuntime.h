@@ -96,6 +96,10 @@ struct OMPTaskDataTy final {
   SmallVector<const Expr *, 4> FirstprivateVars;
   SmallVector<const Expr *, 4> FirstprivateCopies;
   SmallVector<const Expr *, 4> FirstprivateInits;
+  /// The firstprivate list items whose clause carried the `saved` modifier,
+  /// which a taskgraph replay initialises from the value recorded with the
+  /// task rather than from the variable as it stands.
+  llvm::SmallPtrSet<const ValueDecl *, 4> SavedFirstprivates;
   SmallVector<const Expr *, 4> LastprivateVars;
   SmallVector<const Expr *, 4> LastprivateCopies;
   SmallVector<const Expr *, 4> ReductionVars;
@@ -236,6 +240,21 @@ public:
 
 class CGOpenMPRuntime {
 public:
+  /// One field of a task's privates record: the list item it is a copy of, the
+  /// copy's declaration (whose initializer constructs it) and, for a
+  /// firstprivate, the element the initializer reads.  A private local of an
+  /// untied task has only Original.  When the body constructs its own copies
+  /// (OMPTaskDataTy::BodyConstructsPrivates), a firstprivate has two fields:
+  /// its initial value, and the body's copy, which is the WorkingCopy.
+  struct TaskPrivateFieldTy {
+    const Expr *OriginalRef = nullptr;
+    const VarDecl *Original = nullptr;
+    const VarDecl *PrivateCopy = nullptr;
+    const VarDecl *PrivateElemInit = nullptr;
+    const FieldDecl *Field = nullptr;
+    bool WorkingCopy = false;
+  };
+
   /// Allows to disable automatic handling of functions used in target regions
   /// as those marked as `omp declare target`.
   class DisableAutoDeclareTargetRAII {
@@ -563,6 +582,11 @@ protected:
     LValue TDBase;
     const RecordDecl *KmpTaskTQTyRD = nullptr;
     llvm::Value *TaskDupFn = nullptr;
+    /// The task descriptor with its privates, and every field of its privates
+    /// record, so that a taskgraph replay can re-read the initial values of
+    /// the task's firstprivates (see emitTaskRelocationFunction).
+    const RecordDecl *KmpTaskTWithPrivatesQTyRD = nullptr;
+    SmallVector<TaskPrivateFieldTy, 4> PrivateFields;
   };
   /// Emit task region for the task directive. The task region is emitted in
   /// several steps:

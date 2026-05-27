@@ -2288,6 +2288,349 @@ void CGOpenMPRuntime::emitTaskyieldCall(CodeGenFunction &CGF,
     Region->emitUntiedSwitch(CGF);
 }
 
+namespace {
+/// Where a taskgraph replay takes the initial value of one of a recorded task's
+/// firstprivates from.  A replay re-encounters every recorded construct
+/// (OpenMP 6.0 [14.3]), so a replayed task's firstprivate is initialized from
+/// its original list item [7.5.4] as that is when the replay starts.  The
+/// recorded task holds the initial values, which its body copies (see
+/// OMPTaskDataTy::BodyConstructsPrivates).
+enum class ReplayInitKind {
+  /// Not a firstprivate's initial value: the body constructs it.
+  None,
+  /// A 'saved' list item [7.2].  It lives as long as the record.
+  Saved,
+  /// A firstprivate whose variable is in the taskgraph construct's enclosing
+  /// data environment.
+  Outer,
+  /// A variable with static storage duration.
+  Global,
+  /// A firstprivate of a non-static data member.
+  Member,
+};
+
+struct ReplayInitTy {
+  const CGOpenMPRuntime::TaskPrivateFieldTy *Field;
+  ReplayInitKind Kind;
+  /// For Outer, the field of the taskgraph's record that captures the variable.
+  const FieldDecl *OuterField = nullptr;
+};
+} // namespace
+
+/// The lvalue of the structured binding \p BD in the decomposed variable at
+/// \p DecompAddr, emitted with the decomposed variable temporarily mapped
+/// there, as emitPrivatesInit does.
+static LValue emitBindingAt(CodeGenFunction &CGF, const BindingDecl *BD,
+                            Address DecompAddr) {
+  const auto *DD = cast<VarDecl>(BD->getDecomposedDecl());
+  auto It = CGF.findLocalDecl(DD);
+  bool WasMapped = It != CGF.localDeclMapEnd();
+  Address Saved = WasMapped ? It->second : Address::invalid();
+  if (WasMapped)
+    It->second = DecompAddr;
+  else
+    CGF.insertLocalDecl(DD, DecompAddr);
+  LValue Result = CGF.EmitLValue(BD->getBinding());
+  if (WasMapped)
+    CGF.findLocalDecl(DD)->second = Saved;
+  else
+    CGF.eraseLocalDecl(DD);
+  return Result;
+}
+
+/// Whether \p VD is the variable Sema makes for a non-static data member named
+/// in a clause in a member function -- `firstprivate(m)` -- whose list item is
+/// really `this->m`.  Its initializer is the member access.
+static bool isThisMemberCapture(const VarDecl *VD) {
+  if (!isa<OMPCapturedExprDecl>(VD) || !VD->getInit())
+    return false;
+  const Expr *E = VD->getInit()->IgnoreParenImpCasts();
+  while (const auto *ME = dyn_cast<MemberExpr>(E))
+    E = ME->getBase()->IgnoreParenImpCasts();
+  return isa<CXXThisExpr>(E);
+}
+
+/// Decide how a replay updates the field of a task's privates record that is
+/// the copy of \p Original, named in its clause by \p OriginalRef, described
+/// by \p ElemInit and \p WorkingCopy (see PrivateHelpersTy).  \p OuterCSI is
+/// the taskgraph construct's captured-statement info, which says what its
+/// enclosing data environment holds; for ReplayInitKind::Outer, the field of
+/// the taskgraph's record that captures the variable is returned in
+/// \p OuterField.
+static ReplayInitKind
+classifyReplayInit(const Expr *OriginalRef, const VarDecl *Original,
+                   const VarDecl *ElemInit, bool WorkingCopy,
+                   const OMPTaskDataTy &Data,
+                   const CodeGenFunction::CGCapturedStmtInfo *OuterCSI,
+                   const FieldDecl **OuterField = nullptr) {
+  if (!ElemInit || WorkingCopy)
+    return ReplayInitKind::None; // Not a firstprivate's initial value.
+  // `saved` is per list item, which may be one binding of a structured
+  // binding declaration rather than Original, the variable it decomposes.
+  const ValueDecl *ClauseDecl =
+      OriginalRef ? cast<DeclRefExpr>(OriginalRef)->getDecl() : Original;
+  if (Data.SavedFirstprivates.contains(
+          cast<ValueDecl>(ClauseDecl->getCanonicalDecl())))
+    return ReplayInitKind::Saved;
+  if (Original->hasGlobalStorage())
+    return ReplayInitKind::Global;
+  if (isThisMemberCapture(Original) && OuterCSI && OuterCSI->getThisFieldDecl())
+    return ReplayInitKind::Member;
+  if (const FieldDecl *Outer =
+          OuterCSI ? OuterCSI->lookup(Original) : nullptr) {
+    if (OuterField)
+      *OuterField = Outer;
+    return ReplayInitKind::Outer;
+  }
+  return ReplayInitKind::Saved;
+}
+
+/// Decide how a replay updates each field in \p Fields (see
+/// classifyReplayInit).
+static SmallVector<ReplayInitTy, 4>
+classifyReplayInits(const OMPTaskDataTy &Data,
+                    const CodeGenFunction::CGCapturedStmtInfo *OuterCSI,
+                    ArrayRef<CGOpenMPRuntime::TaskPrivateFieldTy> Fields) {
+  SmallVector<ReplayInitTy, 4> Inits;
+  for (const auto &F : Fields) {
+    ReplayInitTy Init{&F, ReplayInitKind::None};
+    Init.Kind =
+        classifyReplayInit(F.OriginalRef, F.Original, F.PrivateElemInit,
+                           F.WorkingCopy, Data, OuterCSI, &Init.OuterField);
+    Inits.push_back(Init);
+  }
+  return Inits;
+}
+
+/// The record of type \p RD at the address in local variable \p Arg.
+static LValue loadRecordArg(CodeGenFunction &CGF, const ImplicitParamDecl *Arg,
+                            const RecordDecl *RD) {
+  llvm::Value *Raw = CGF.Builder.CreateLoad(CGF.GetAddrOfLocalVar(Arg));
+  return CGF.MakeNaturalAlignRawAddrLValue(
+      Raw, CGF.getContext().getCanonicalTagType(RD));
+}
+
+/// Emit a helper with the runtime relocation signature (kmp_task_relocate_t):
+/// void relocate(kmp_task_t *task, void *outer_captures);
+///
+/// At the start of every replay the runtime invokes this helper to make the
+/// recorded task descriptor simulate what a task this replay's encounter of the
+/// construct would have generated.  It does two things.
+///
+///   * It refreshes the task's shared-pointer table.  Each capture (a
+///   shared-by-ref variable or \c this) that the task body actually
+///   dereferences at execution time is re-projected from the freshly
+///   reconstructed outer record passed as \p outer_captures and stored back
+///   into \c task->shareds. Captures that the body cannot observe a changed
+///   address for across replays are skipped here.
+///
+///   * It copy-constructs the initial value of each firstprivate whose variable
+///   is in the taskgraph construct's enclosing data environment from the
+///   variable (see ReplayInitKind).  Saved firstprivates are skipped.
+///
+/// When there is nothing to do, the helper is still emitted, as a non-null
+/// no-op: the runtime only inspects null-vs-non-null, and null means that the
+/// task cannot be relocated (e.g. it refers to shareds which cannot be found in
+/// OuterCSI).
+static llvm::Function *emitTaskRelocationFunction(
+    CodeGenModule &CGM, SourceLocation Loc, const CapturedStmt &CS,
+    const CodeGenFunction::CGCapturedStmtInfo *OuterCSI,
+    const OMPTaskDataTy &Data, const RecordDecl *TaskWithPrivatesRD,
+    ArrayRef<ReplayInitTy> Inits) {
+  ASTContext &C = CGM.getContext();
+
+  // Variables that don't need their shareds slot refreshed across replays
+  // because the body sources them from the per-task '.kmp_privates.t'
+  // copy: the firstprivate list items.
+  llvm::SmallPtrSet<const VarDecl *, 8> NoRelocateFirstprivateVars;
+  for (const Expr *E : Data.FirstprivateVars) {
+    if (!E)
+      continue;
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts()))
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+        NoRelocateFirstprivateVars.insert(VD->getCanonicalDecl());
+  }
+
+  // A capture is "no-op-safe" with respect to taskgraph replay when
+  // refreshing its shareds slot is provably unnecessary - either because
+  // the body never reads from that slot (firstprivate) or because the
+  // captured pointer is a link-time-fixed address and is therefore
+  // identical at every replay (static storage duration).
+  auto IsNoOpRelocate = [&](const CapturedStmt::Capture &Cap) {
+    if (Cap.capturesThis() || !Cap.capturesVariable())
+      return false;
+    const VarDecl *VD = Cap.getCapturedVar();
+    if (VD->hasGlobalStorage())
+      return true;
+    return NoRelocateFirstprivateVars.contains(VD->getCanonicalDecl());
+  };
+
+  auto LookupOuterField =
+      [&](const CapturedStmt::Capture &Cap) -> const FieldDecl * {
+    if (!OuterCSI)
+      return nullptr;
+    return Cap.capturesThis() ? OuterCSI->getThisFieldDecl()
+                              : OuterCSI->lookup(Cap.getCapturedVar());
+  };
+
+  // Bail out before emitting any IR if a genuinely-shared capture cannot be
+  // resolved in the containing context.  No-op-safe captures don't participate
+  // in this check; they simply cause the helper to skip their slot below.
+  if (llvm::any_of(CS.captures(), [&](const CapturedStmt::Capture &Cap) {
+        assert((Cap.capturesThis() || Cap.capturesVariable()) &&
+               "OpenMP task capture must be shared-by-ref or 'this'");
+        return !IsNoOpRelocate(Cap) && !LookupOuterField(Cap);
+      }))
+    return nullptr;
+
+  // void relocate(void *task, void *outer_captures)
+  auto *TaskArg =
+      ImplicitParamDecl::Create(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
+                                C.VoidPtrTy, ImplicitParamKind::Other);
+  auto *OuterArg =
+      ImplicitParamDecl::Create(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
+                                C.VoidPtrTy, ImplicitParamKind::Other);
+  FunctionArgList Args{TaskArg, OuterArg};
+  const CGFunctionInfo &FnInfo =
+      CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
+
+  std::string Name =
+      CGM.getOpenMPRuntime().getName({"omp", "taskgraph", "relocate", ""});
+  auto *Fn = llvm::Function::Create(CGM.getTypes().GetFunctionType(FnInfo),
+                                    llvm::GlobalValue::InternalLinkage, Name,
+                                    &CGM.getModule());
+  CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
+  Fn->setDoesNotRecurse();
+
+  CodeGenFunction CGF(CGM);
+  CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args, Loc, Loc);
+
+  CGBuilderTy &Bld = CGF.Builder;
+  CharUnits PtrAlign = CGF.getPointerAlign();
+
+  // Base of the reconstructed outer record for this replay.
+  llvm::Value *OuterRaw = Bld.CreateLoad(CGF.GetAddrOfLocalVar(OuterArg));
+  auto OuterBaseFor = [&](const FieldDecl *Field) {
+    QualType OuterTy =
+        C.getCanonicalTagType(cast<RecordDecl>(Field->getDeclContext()));
+    return CGF.MakeAddrLValue(
+        Address(OuterRaw, CGF.ConvertTypeForMem(OuterTy), PtrAlign), OuterTy);
+  };
+  // The replay's `this`.  The record holds the pointer itself, not a
+  // reference to it.
+  auto LoadOuterThis = [&]() {
+    const FieldDecl *ThisField = OuterCSI->getThisFieldDecl();
+    return CGF.EmitLoadOfScalar(
+        CGF.EmitLValueForField(OuterBaseFor(ThisField), ThisField), Loc);
+  };
+
+  // kmp_task_t::shareds is the first field of the runtime task descriptor;
+  // load it to obtain the void* shared table that we will refresh in place.
+  // The table holds one void* per by-ref capture.
+  llvm::Value *TaskRaw = Bld.CreateLoad(CGF.GetAddrOfLocalVar(TaskArg));
+  llvm::Value *SharedRaw =
+      Bld.CreateLoad(Address(TaskRaw, CGF.VoidPtrTy, PtrAlign));
+  Address SharedTable(SharedRaw, CGF.VoidPtrTy, PtrAlign);
+
+  unsigned Index = 0;
+  for (const CapturedStmt::Capture &Cap : CS.captures()) {
+    // Always advance the slot index so that we stay aligned with the
+    // shareds-table layout established at task allocation.
+    unsigned ThisIndex = Index++;
+    if (IsNoOpRelocate(Cap))
+      continue;
+    // Project the capture's referent from the freshly reconstructed outer
+    // record. EmitLValueForField auto-loads the outer reference field, so
+    // the resulting pointer is the live referent address (not the slot).
+    // `this` is held by value, so it is the slot's contents.
+    const FieldDecl *OuterField = LookupOuterField(Cap);
+    assert(OuterField && "capture should already have been rejected");
+    llvm::Value *Mapped =
+        Cap.capturesThis()
+            ? LoadOuterThis()
+            : CGF.EmitLValueForField(OuterBaseFor(OuterField), OuterField)
+                  .getPointer(CGF);
+    Mapped = Bld.CreatePointerBitCastOrAddrSpaceCast(Mapped, CGM.VoidPtrTy);
+    Bld.CreateStore(Mapped, Bld.CreateConstGEP(SharedTable, ThisIndex));
+  }
+
+  if (llvm::any_of(Inits, [](const ReplayInitTy &I) {
+        return I.Kind != ReplayInitKind::None &&
+               I.Kind != ReplayInitKind::Saved;
+      })) {
+    auto PrivatesFI = std::next(TaskWithPrivatesRD->field_begin());
+    LValue PrivatesBase = CGF.EmitLValueForField(
+        loadRecordArg(CGF, TaskArg, TaskWithPrivatesRD), *PrivatesFI);
+    CodeGenFunction::CGCapturedStmtInfo CapturesInfo(CS);
+    for (const ReplayInitTy &I : Inits) {
+      const auto &F = *I.Field;
+      LValue Src;
+      switch (I.Kind) {
+      case ReplayInitKind::None:
+      case ReplayInitKind::Saved:
+        continue;
+      case ReplayInitKind::Outer:
+        Src = CGF.EmitLValueForField(OuterBaseFor(I.OuterField), I.OuterField);
+        break;
+      case ReplayInitKind::Member: {
+        // Evaluate the member access the clause named against the replay's
+        // `this`.
+        const CXXRecordDecl *ThisRD =
+            OuterCSI->getThisFieldDecl()->getType()->getPointeeCXXRecordDecl();
+        CodeGenFunction::CXXThisOverrideScope ThisScope(
+            CGF, LoadOuterThis(), CGM.getClassPointerAlignment(ThisRD));
+        Src = CGF.EmitLValue(F.Original->getInit());
+        break;
+      }
+      case ReplayInitKind::Global: {
+        DeclRefExpr DRE(C, const_cast<VarDecl *>(F.Original),
+                        /*RefersToEnclosingVariableOrCapture=*/false,
+                        F.Original->getType().getNonReferenceType(), VK_LValue,
+                        Loc);
+        Src = CGF.EmitLValue(&DRE);
+        break;
+      }
+      }
+      // A structured binding's initial value is its subobject of the
+      // decomposed variable Src names.
+      if (const auto *DRE = dyn_cast_or_null<DeclRefExpr>(F.OriginalRef))
+        if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl()))
+          Src = emitBindingAt(CGF, BD, Src.getAddress());
+      LValue Dst = CGF.EmitLValueForField(PrivatesBase, F.Field);
+      if (const Expr *Init = F.PrivateCopy->getAnyInitializer())
+        CGF.EmitOMPPrivateCopyInit(Init, F.PrivateCopy, F.PrivateElemInit, Dst,
+                                   Src, &CapturesInfo);
+      else
+        // An array binding's copy has no initializer; its bytes are copied.
+        CGF.EmitAggregateAssign(Dst, Src, Dst.getType());
+    }
+  }
+
+  CGF.FinishFunction();
+  return Fn;
+}
+
+/// Emit the helper a recorded task needs to be replayed, its relocation
+/// function, and return it as an argument of __kmpc_taskgraph_task or
+/// __kmpc_taskgraph_taskloop: null when there is none.
+static llvm::Value *emitTaskReplayHelper(
+    CodeGenFunction &CGF, SourceLocation Loc, const OMPExecutableDirective &D,
+    const OMPTaskDataTy &Data, const RecordDecl *TaskWithPrivatesRD,
+    ArrayRef<CGOpenMPRuntime::TaskPrivateFieldTy> PrivateFields) {
+  assert(Data.BodyConstructsPrivates &&
+         "a recorded task's body must construct its own private copies");
+  const auto *CS = cast<CapturedStmt>(D.getAssociatedStmt());
+  SmallVector<ReplayInitTy, 4> Inits =
+      classifyReplayInits(Data, CGF.CapturedStmtInfo, PrivateFields);
+  llvm::Function *Fn = emitTaskRelocationFunction(
+      CGF.CGM, Loc, *CS, CGF.CapturedStmtInfo, Data, TaskWithPrivatesRD, Inits);
+  if (!Fn)
+    return llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+  return CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(Fn, CGF.CGM.VoidPtrTy);
+}
+
 void CGOpenMPRuntime::emitTaskgraphCall(CodeGenFunction &CGF,
                                         SourceLocation Loc,
                                         const OMPExecutableDirective &D,
@@ -3463,10 +3806,29 @@ emitProxyTaskFunction(CodeGenModule &CGM, SourceLocation Loc,
   return TaskEntry;
 }
 
+/// Emit the destructors thunk of a task, which destroys the task's private
+/// copies that are constructed with its descriptor (see isDescriptorCopy):
+/// \code
+/// kmp_int32 .omp_task_destructor.(kmp_int32 gtid, kmp_task_t *task);
+/// \endcode
+/// A task that may be recorded into a taskgraph holds the initial values of its
+/// firstprivates in its descriptor, and the record keeps them for different
+/// lengths of time depending on where a replay takes them from (see
+/// ReplayInitKind).  So its thunk takes a third argument, which of them to
+/// destroy, and the task carries a flag saying so:
+/// \code
+/// kmp_int32 .omp_task_destructor.(kmp_int32 gtid, kmp_task_t *task,
+///                                 kmp_int32 which);
+/// \endcode
+/// where \c which is 0 for all of them (a task that runs outside a record), 1
+/// for those a replay reads afresh (when a replay ends, or a taskloop's task is
+/// recorded) and 2 for the saved data environment (when the record is
+/// freed).  \p OuterCSI is the taskgraph construct's captured-statement info.
 static llvm::Value *emitDestructorsFunction(
     CodeGenModule &CGM, SourceLocation Loc, QualType KmpInt32Ty,
     QualType KmpTaskTWithPrivatesPtrQTy, QualType KmpTaskTWithPrivatesQTy,
-    const OMPTaskDataTy &Data, ArrayRef<PrivateDataTy> Privates) {
+    const OMPTaskDataTy &Data, ArrayRef<PrivateDataTy> Privates,
+    const CodeGenFunction::CGCapturedStmtInfo *OuterCSI) {
   ASTContext &C = CGM.getContext();
   auto *GtidArg =
       ImplicitParamDecl::Create(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
@@ -3475,6 +3837,13 @@ static llvm::Value *emitDestructorsFunction(
       C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
       KmpTaskTWithPrivatesPtrQTy.withRestrict(), ImplicitParamKind::Other);
   FunctionArgList Args{GtidArg, TaskTypeArg};
+  ImplicitParamDecl *WhichArg = nullptr;
+  if (Data.BodyConstructsPrivates) {
+    WhichArg = ImplicitParamDecl::Create(C, /*DC=*/nullptr, Loc,
+                                         /*Id=*/nullptr, KmpInt32Ty,
+                                         ImplicitParamKind::Other);
+    Args.push_back(WhichArg);
+  }
   const auto &DestructorFnInfo =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(KmpInt32Ty, Args);
   llvm::FunctionType *DestructorFnTy =
@@ -3500,18 +3869,57 @@ static llvm::Value *emitDestructorsFunction(
       KmpTaskTWithPrivatesQTy->castAsRecordDecl();
   auto FI = std::next(KmpTaskTWithPrivatesQTyRD->field_begin());
   Base = CGF.EmitLValueForField(Base, *FI);
-  auto PI = Privates.begin();
-  for (const auto *Field : FI->getType()->castAsRecordDecl()->fields()) {
-    const PrivateHelpersTy &P = (PI++)->second;
-    // The body destroys the copies it constructs.
-    if (Data.BodyConstructsPrivates && !isDescriptorCopy(P, Data))
-      continue;
-    if (QualType::DestructionKind DtorKind =
-            Field->getType().isDestructedType()) {
-      LValue FieldLValue = CGF.EmitLValueForField(Base, Field);
-      CGF.pushDestroy(DtorKind, FieldLValue.getAddress(), Field->getType());
+  if (!WhichArg) {
+    for (const auto *Field : FI->getType()->castAsRecordDecl()->fields()) {
+      if (QualType::DestructionKind DtorKind =
+              Field->getType().isDestructedType()) {
+        LValue FieldLValue = CGF.EmitLValueForField(Base, Field);
+        CGF.pushDestroy(DtorKind, FieldLValue.getAddress(), Field->getType());
+      }
     }
+    CGF.FinishFunction();
+    return DestructorFn;
   }
+
+  // The values of \c which, as in kmp.h.
+  enum { DestroyAll = 0, DestroyReplay = 1, DestroyRecord = 2 };
+  llvm::BasicBlock *AllBB = CGF.createBasicBlock("omp.destroy.all");
+  llvm::BasicBlock *ReplayBB = CGF.createBasicBlock("omp.destroy.replay");
+  llvm::BasicBlock *RecordBB = CGF.createBasicBlock("omp.destroy.record");
+  llvm::BasicBlock *DoneBB = CGF.createBasicBlock("omp.destroy.done");
+  llvm::SwitchInst *WhichSwitch = CGF.Builder.CreateSwitch(
+      CGF.EmitLoadOfScalar(CGF.GetAddrOfLocalVar(WhichArg), /*Volatile=*/false,
+                           KmpInt32Ty, Loc),
+      DoneBB, 3);
+  WhichSwitch->addCase(CGF.Builder.getInt32(DestroyAll), AllBB);
+  WhichSwitch->addCase(CGF.Builder.getInt32(DestroyReplay), ReplayBB);
+  WhichSwitch->addCase(CGF.Builder.getInt32(DestroyRecord), RecordBB);
+  // Destroy the initial values \p Wanted says to.
+  auto EmitDestroys = [&](llvm::BasicBlock *BB,
+                          llvm::function_ref<bool(ReplayInitKind)> Wanted) {
+    CGF.EmitBlock(BB);
+    auto PI = Privates.begin();
+    for (const auto *Field : FI->getType()->castAsRecordDecl()->fields()) {
+      const PrivateHelpersTy &P = (PI++)->second;
+      if (!isDescriptorCopy(P, Data))
+        continue;
+      QualType::DestructionKind DtorKind = Field->getType().isDestructedType();
+      if (!DtorKind || !Wanted(classifyReplayInit(
+                           P.OriginalRef, P.Original, P.PrivateElemInit,
+                           P.WorkingCopy, Data, OuterCSI)))
+        continue;
+      CGF.emitDestroy(CGF.EmitLValueForField(Base, Field).getAddress(),
+                      Field->getType(), CGF.getDestroyer(DtorKind),
+                      /*useEHCleanupForArray=*/false);
+    }
+    CGF.EmitBranch(DoneBB);
+  };
+  EmitDestroys(AllBB, [](ReplayInitKind) { return true; });
+  EmitDestroys(ReplayBB,
+               [](ReplayInitKind K) { return K != ReplayInitKind::Saved; });
+  EmitDestroys(RecordBB,
+               [](ReplayInitKind K) { return K == ReplayInitKind::Saved; });
+  CGF.EmitBlock(DoneBB, /*IsFinished=*/true);
   CGF.FinishFunction();
   return DestructorFn;
 }
@@ -3964,6 +4372,99 @@ emitTaskDupFunction(CodeGenModule &CGM, SourceLocation Loc,
   return TaskDup;
 }
 
+/// Whether the copy libomp keeps of a recorded task needs \p P
+/// copy-constructed from the task the recording runs: a firstprivate's initial
+/// value that belongs to the saved data environment (ReplayInitKind::Saved),
+/// whose initialization is not trivial.  The task's relocation helper
+/// constructs the other initial values afresh for every replay, so the copy
+/// needs nothing of them but storage.  \p OuterCSI is the taskgraph
+/// construct's captured-statement info.
+static bool
+isClonedInitialValue(CodeGenFunction &CGF, const PrivateHelpersTy &P,
+                     const OMPTaskDataTy &Data,
+                     const CodeGenFunction::CGCapturedStmtInfo *OuterCSI) {
+  if (!isDescriptorCopy(P, Data) ||
+      classifyReplayInit(P.OriginalRef, P.Original, P.PrivateElemInit,
+                         P.WorkingCopy, Data,
+                         OuterCSI) != ReplayInitKind::Saved)
+    return false;
+  const Expr *Init = P.PrivateCopy->getAnyInitializer();
+  return isa_and_nonnull<CXXConstructExpr>(Init) &&
+         !CGF.isTrivialInitializer(Init);
+}
+
+/// Emit the function that completes the copy libomp keeps of a task the
+/// recording runs:
+/// \code
+/// void .omp_taskgraph_clone.(kmp_task_t *task_dst, const kmp_task_t *task_src,
+///                            int);
+/// \endcode
+/// libomp copies the descriptor bitwise, which leaves a broken copy of an
+/// initial value whose type is not trivially copyable, so this copy-constructs
+/// those of the saved data environment from the source (see
+/// isClonedInitialValue).  The rest are left as bytes, which the relocation
+/// helper constructs over when a replay starts.
+///
+/// See also emitTaskDupFunction (used for taskloop tasks).
+static llvm::Value *emitTaskCloneFunction(
+    CodeGenModule &CGM, SourceLocation Loc, const OMPExecutableDirective &D,
+    QualType KmpTaskTWithPrivatesPtrQTy,
+    const RecordDecl *KmpTaskTWithPrivatesQTyRD, const OMPTaskDataTy &Data,
+    ArrayRef<PrivateDataTy> Privates,
+    const CodeGenFunction::CGCapturedStmtInfo *OuterCSI) {
+  ASTContext &C = CGM.getContext();
+  auto *DstArg = ImplicitParamDecl::Create(
+      C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, KmpTaskTWithPrivatesPtrQTy,
+      ImplicitParamKind::Other);
+  auto *SrcArg = ImplicitParamDecl::Create(
+      C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, KmpTaskTWithPrivatesPtrQTy,
+      ImplicitParamKind::Other);
+  auto *LastprivArg =
+      ImplicitParamDecl::Create(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, C.IntTy,
+                                ImplicitParamKind::Other);
+  FunctionArgList Args{DstArg, SrcArg, LastprivArg};
+  const auto &FnInfo =
+      CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
+  std::string Name =
+      CGM.getOpenMPRuntime().getName({"omp_taskgraph_clone", ""});
+  auto *Fn = llvm::Function::Create(CGM.getTypes().GetFunctionType(FnInfo),
+                                    llvm::GlobalValue::InternalLinkage, Name,
+                                    &CGM.getModule());
+  CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
+  Fn->setDoesNotRecurse();
+  CodeGenFunction CGF(CGM);
+  CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args, Loc, Loc);
+
+  auto PrivatesFI = std::next(KmpTaskTWithPrivatesQTyRD->field_begin());
+  auto PrivatesOf = [&](const ImplicitParamDecl *Arg) {
+    return CGF.EmitLValueForField(
+        CGF.EmitLoadOfPointerLValue(
+            CGF.GetAddrOfLocalVar(Arg),
+            KmpTaskTWithPrivatesPtrQTy->castAs<PointerType>()),
+        *PrivatesFI);
+  };
+  LValue DstBase = PrivatesOf(DstArg);
+  LValue SrcBase = PrivatesOf(SrcArg);
+  CodeGenFunction::CGCapturedStmtInfo CapturesInfo(
+      *D.getCapturedStmt(OMPD_task));
+  auto FI = PrivatesFI->getType()->castAsRecordDecl()->field_begin();
+  for (const PrivateDataTy &Pair : Privates) {
+    const FieldDecl *Field = *FI++;
+    if (!isClonedInitialValue(CGF, Pair.second, Data, OuterCSI))
+      continue;
+    const VarDecl *VD = Pair.second.PrivateCopy;
+    const Expr *Init = VD->getAnyInitializer();
+    CGF.EmitOMPPrivateCopyInit(Init, VD, Pair.second.PrivateElemInit,
+                               CGF.EmitLValueForField(DstBase, Field),
+                               CGF.EmitLValueForField(SrcBase, Field),
+                               &CapturesInfo);
+  }
+  CGF.FinishFunction();
+  return Fn;
+}
+
 /// Checks if destructor function is required to be generated.
 /// \return true if cleanups are required, false otherwise.
 static bool checkDestructorsRequired(ArrayRef<PrivateDataTy> Privates,
@@ -4238,6 +4739,7 @@ CGOpenMPRuntime::TaskResultTy CGOpenMPRuntime::emitTaskInit(
     DetachableFlag = 0x40,
     FreeAgentFlag = 0x80,
     TransparentFlag = 0x100,
+    TaskgraphDestructorsFlag = 0x200,
   };
   unsigned Flags = Data.Tied ? TiedFlag : 0;
   bool NeedsCleanup = false;
@@ -4245,6 +4747,10 @@ CGOpenMPRuntime::TaskResultTy CGOpenMPRuntime::emitTaskInit(
     NeedsCleanup = checkDestructorsRequired(Privates, Data);
     if (NeedsCleanup)
       Flags = Flags | DestructorsFlag;
+    // The thunk of a task that may be recorded takes which of its initial
+    // values to destroy (see emitDestructorsFunction).
+    if (NeedsCleanup && Data.BodyConstructsPrivates)
+      Flags = Flags | TaskgraphDestructorsFlag;
   }
   if (const auto *Clause = D.getSingleClause<OMPThreadsetClause>()) {
     OpenMPThreadsetKind Kind = Clause->getThreadsetKind();
@@ -4478,7 +4984,20 @@ CGOpenMPRuntime::TaskResultTy CGOpenMPRuntime::emitTaskInit(
   }
   // Emit initial values for private copies (if any).
   TaskResultTy Result;
+  Result.KmpTaskTWithPrivatesQTyRD = KmpTaskTWithPrivatesQTyRD;
   if (!Privates.empty()) {
+    // The privates record has one field per entry of Privates, in order.
+    const auto *PrivatesRD = std::next(KmpTaskTWithPrivatesQTyRD->field_begin())
+                                 ->getType()
+                                 ->castAsRecordDecl();
+    auto PrivateField = PrivatesRD->field_begin();
+    for (const PrivateDataTy &Pair : Privates) {
+      Result.PrivateFields.push_back(
+          {Pair.second.OriginalRef, Pair.second.Original,
+           Pair.second.PrivateCopy, Pair.second.PrivateElemInit, *PrivateField,
+           Pair.second.WorkingCopy});
+      ++PrivateField;
+    }
     emitPrivatesInit(CGF, D, KmpTaskSharedsPtr, Base, KmpTaskTWithPrivatesQTyRD,
                      SharedsTy, SharedsPtrTy, Data, Privates,
                      /*ForDup=*/false);
@@ -4489,6 +5008,17 @@ CGOpenMPRuntime::TaskResultTy CGOpenMPRuntime::emitTaskInit(
           CGM, Loc, D, KmpTaskTWithPrivatesPtrQTy, KmpTaskTWithPrivatesQTyRD,
           KmpTaskTQTyRD, SharedsTy, SharedsPtrTy, Data, Privates,
           /*WithLastIter=*/!Data.LastprivateVars.empty());
+    } else if (ForTaskgraph && Data.BodyConstructsPrivates &&
+               llvm::any_of(Privates, [&](const PrivateDataTy &Pair) {
+                 return isClonedInitialValue(CGF, Pair.second, Data,
+                                             CGF.CapturedStmtInfo);
+               })) {
+      // A recorded task is kept as a copy of the task the recording runs, and
+      // the saved initial values in it have to be constructed, not copied
+      // bitwise.
+      Result.TaskDupFn = emitTaskCloneFunction(
+          CGM, Loc, D, KmpTaskTWithPrivatesPtrQTy, KmpTaskTWithPrivatesQTyRD,
+          Data, Privates, CGF.CapturedStmtInfo);
     }
   }
   // Fields of union "kmp_cmplrdata_t" for destructors and priority.
@@ -4500,7 +5030,7 @@ CGOpenMPRuntime::TaskResultTy CGOpenMPRuntime::emitTaskInit(
   if (NeedsCleanup) {
     llvm::Value *DestructorFn = emitDestructorsFunction(
         CGM, Loc, KmpInt32Ty, KmpTaskTWithPrivatesPtrQTy,
-        KmpTaskTWithPrivatesQTy, Data, Privates);
+        KmpTaskTWithPrivatesQTy, Data, Privates, CGF.CapturedStmtInfo);
     LValue Data1LV = CGF.EmitLValueForField(TDBase, *FI);
     LValue DestructorsLV = CGF.EmitLValueForField(
         Data1LV, *std::next(KmpCmplrdataUD->field_begin(), Destructors));
@@ -5066,9 +5596,13 @@ void CGOpenMPRuntime::emitTaskCall(
       TGTaskArgs[6] = NumOfElements;
       TGTaskArgs[7] = DependenciesArray.emitRawPointer(CGF);
     }
-    // The task's relocation and clone helpers: none yet.
-    TGTaskArgs[8] = llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
-    TGTaskArgs[9] = llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+    TGTaskArgs[8] = emitTaskReplayHelper(CGF, Loc, D, Data,
+                                         Result.KmpTaskTWithPrivatesQTyRD,
+                                         Result.PrivateFields);
+    TGTaskArgs[9] = Result.TaskDupFn
+                        ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+                              Result.TaskDupFn, CGF.VoidPtrTy)
+                        : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
     CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                             CGM.getModule(), OMPRTL___kmpc_taskgraph_task),
                         TGTaskArgs);
@@ -5295,8 +5829,9 @@ void CGOpenMPRuntime::emitTaskLoopCall(
                              ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
                                    TaskInitResult.TaskDupFn, CGF.VoidPtrTy)
                              : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
-    // The task's relocation helper: none yet.
-    TGTaskLoopArgs[13] = llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+    TGTaskLoopArgs[13] = emitTaskReplayHelper(
+        CGF, Loc, D, Data, TaskInitResult.KmpTaskTWithPrivatesQTyRD,
+        TaskInitResult.PrivateFields);
     CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                             CGM.getModule(), OMPRTL___kmpc_taskgraph_taskloop),
                         TGTaskLoopArgs);

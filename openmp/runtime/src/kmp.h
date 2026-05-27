@@ -2476,6 +2476,18 @@ typedef kmp_int32 (*kmp_routine_entry_t)(kmp_int32, void *);
 // are in the taskgraph's enclosing data environment.  The task's body
 // constructs its private copies from its initial values.
 typedef void (*kmp_task_relocate_t)(struct kmp_task *, void *);
+// The destructors thunk of a task whose td_flags.taskgraph_destructors is set,
+// a task that may be recorded into a taskgraph.  Its third argument says which
+// of the task's initial values to destroy: all of them, for a task that runs
+// outside a record; those a replay reads afresh, when a replay ends or a
+// taskloop's task is recorded; or the saved data environment, when the record
+// is freed.
+typedef kmp_int32 (*kmp_taskgraph_destructors_t)(kmp_int32, void *, kmp_int32);
+enum {
+  KMP_TASKGRAPH_DESTROY_ALL = 0,
+  KMP_TASKGRAPH_DESTROY_REPLAY = 1,
+  KMP_TASKGRAPH_DESTROY_RECORD = 2
+};
 
 typedef union kmp_cmplrdata {
   kmp_int32 priority; /**< priority specified by user for the task */
@@ -2704,6 +2716,7 @@ typedef struct kmp_taskgraph_node {
   // encountering task until they complete -- e.g. a taskwait without 'nowait'.
   // Everything recorded after one is ordered after it.
   bool undeferred;
+  kmp_task_relocate_t relocate;
   kmp_taskgraph_reduce_input_data_t *reduce_input;
   kmp_depend_info_t *dep_list;
   kmp_int32 ndeps;
@@ -2791,6 +2804,7 @@ typedef struct kmp_taskgraph_record {
   kmp_int32 num_mutexes = 0;
   struct kmp_taskgraph_exec_descr *exec_descrs = nullptr;
   kmp_size_t num_exec_descrs = 0;
+  void *taskgraph_args = nullptr;
   // We need a taskgroup structure to keep track of recorded tasks.  This is
   // set to TRUE if the user requested "nogroup" on the taskgraph directive
   // (then we can avoid blocking at the end of the taskgraph region on replay,
@@ -2869,7 +2883,8 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned tasking_ser : 1;
   unsigned task_serial : 1;
   unsigned tasktype : 1;
-  unsigned reserved : 7;
+  unsigned reserved : 6;
+  unsigned taskgraph_destructors : 1;
   unsigned transparent : 1;
   unsigned free_agent_eligible : 1;
   unsigned detachable : 1;
@@ -2895,7 +2910,11 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned free_agent_eligible : 1; /* set if task can be executed by a
                                        free-agent thread */
   unsigned transparent : 1; /* transparent task support (compiler uses this) */
-  unsigned reserved : 7; /* reserved for compiler use */
+  unsigned taskgraph_destructors : 1; /* the destructors thunk takes a third
+                                         argument, which of the task's initial
+                                         values to destroy (a task that may be
+                                         recorded into a taskgraph) */
+  unsigned reserved : 6; /* reserved for compiler use */
 
   /* Library flags */ /* Total library flags must be 16 bits */
   unsigned tasktype : 1; /* task is either explicit(1) or implicit (0) */

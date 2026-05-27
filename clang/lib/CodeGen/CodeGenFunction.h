@@ -1907,6 +1907,29 @@ public:
     Address OldCXXDefaultInitExprThis;
   };
 
+  /// Within this scope, the value of 'this' is overridden to be \p This.  A
+  /// helper emitted outside the member function an expression comes from uses
+  /// it to evaluate the expression against an object it has found itself.
+  class CXXThisOverrideScope {
+  public:
+    CXXThisOverrideScope(CodeGenFunction &CGF, llvm::Value *This,
+                         CharUnits Alignment)
+        : CGF(CGF), OldCXXThisValue(CGF.CXXThisValue),
+          OldCXXThisAlignment(CGF.CXXThisAlignment) {
+      CGF.CXXThisValue = This;
+      CGF.CXXThisAlignment = Alignment;
+    }
+    ~CXXThisOverrideScope() {
+      CGF.CXXThisValue = OldCXXThisValue;
+      CGF.CXXThisAlignment = OldCXXThisAlignment;
+    }
+
+  private:
+    CodeGenFunction &CGF;
+    llvm::Value *OldCXXThisValue;
+    CharUnits OldCXXThisAlignment;
+  };
+
   /// The scope of a CXXDefaultInitExpr. Within this scope, the value of 'this'
   /// is overridden to be the object under construction.
   class CXXDefaultInitExprScope {

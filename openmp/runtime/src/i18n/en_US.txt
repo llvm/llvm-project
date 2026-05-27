@@ -493,6 +493,7 @@ SetNumTeamsInParOrTeamsRegion "%1$s() called inside a parallel or teams region; 
 SetTeamsThreadLimitInParOrTeamsRegion "%1$s() called inside a parallel or teams region; call ignored."
 MalformedDeviceEnvVar        "%1$s: malformed device-scope environment variable name; expected `_ALL`, `_DEV`, or `_DEV_<n>` with a non-negative integer device id; ignored."
 DeviceEnvVarOnGlobalScope    "%1$s: device-scope environment variable suffix (`_ALL`/`_DEV`/`_DEV_<n>`) is not allowed on this base name (global-scope ICV); ignored."
+OmpTaskgraphBadCapture       "Cannot locate captured shared variable reference for taskgraph replay"
 OmpTaskgraphConcurrentRecord "%1$s: multiple threads attempting to re-record taskgraph concurrently for graph_id %2$d"
 OmpTaskgraphDetachableTask   "%1$s: a detachable task cannot be recorded for taskgraph replay"
 

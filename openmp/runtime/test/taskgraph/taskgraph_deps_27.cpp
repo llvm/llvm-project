@@ -36,7 +36,9 @@ int main()
               res += arr[j];
             }
           }
-          #pragma omp taskloop reduction(+: res2) num_tasks(10)
+          // A replay takes firstprivate values when it starts, before the
+          // first taskloop has combined 'res', so the result is read shared.
+          #pragma omp taskloop reduction(+: res2) num_tasks(10) shared(res)
           {
             for (int j = 0; j < 10; j++) {
               res2 += res * arr2[j];
