@@ -3003,7 +3003,7 @@ libc_header_library(
 
 # This target is only used by APFloat.cpp in the Support library.
 cc_library(
-    name = "apfloat_shared_math_headers",
+    name = "shared_math_headers_for_apfloat",
     srcs = glob([
         "src/__support/math/*.h",
     ]),
