@@ -5481,12 +5481,10 @@ void Driver::BuildJobs(Compilation &C) const {
       // With -fmodules-driver, Standard library modules should not count toward
       // the number of outputs, since they are implicitly added to the input
       // list.
-      if (isa<PrecompileJobAction>(A) && !A->getInputs().empty()) {
-        const Action *FirstAction = A->getInputs().front();
-        if (FirstAction->getType() == types::TY_CXXStdModule ||
-            FirstAction->getType() == types::TY_PP_CXXStdModule)
-          continue;
-      }
+      if (isa<PrecompileJobAction>(A) && !A->getInputs().empty() &&
+          (A->getInputs().front()->getType() == types::TY_CXXStdModule ||
+           A->getInputs().front()->getType() == types::TY_PP_CXXStdModule))
+        continue;
 
       if (A->getType() != types::TY_Nothing &&
           !(A->getKind() == Action::IfsMergeJobClass ||
@@ -6506,8 +6504,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
   };
 
   // Standard library output in -fmodules-driver?
-  if (C.getArgs().hasArg(options::OPT_fmodules_driver) &&
-      isa<PrecompileJobAction>(JA) && !JA.getInputs().empty() &&
+  if (isa<PrecompileJobAction>(JA) && !JA.getInputs().empty() &&
       (JA.getInputs().front()->getType() == types::TY_CXXStdModule ||
        JA.getInputs().front()->getType() == types::TY_PP_CXXStdModule)) {
     StringRef Filename = llvm::sys::path::filename(BaseInput);
