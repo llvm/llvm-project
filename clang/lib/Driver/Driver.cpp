@@ -5478,8 +5478,9 @@ void Driver::BuildJobs(Compilation &C) const {
           A->getKind() == clang::driver::Action::BinaryTranslatorJobClass)
         continue;
 
-      // With -fmodules-driver, the Standard library modules should not count
-      // towards the number of outputs either.
+      // With -fmodules-driver, Standard library modules should not count toward
+      // the number of outputs, since they are implicitly added to the input
+      // list.
       if (isa<PrecompileJobAction>(A) && !A->getInputs().empty()) {
         const Action *FirstAction = A->getInputs().front();
         if (FirstAction->getType() == types::TY_CXXStdModule ||
