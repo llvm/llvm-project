@@ -291,8 +291,8 @@ namespace {
 //  - VariadicOMPInteropInfoArgument
 #define USE_DEFAULT_EQUALITY                                                   \
   (std::is_same_v<T, StringRef> || std::is_same_v<T, VersionTuple> ||          \
-   std::is_same_v<T, IdentifierInfo *> || std::is_same_v<T, ParamIdx> ||       \
-   std::is_same_v<T, char *> || std::is_enum_v<T> || std::is_integral_v<T>)
+   std::is_same_v<T, IdentifierInfo *> || std::is_same_v<T, char *> ||         \
+   std::is_enum_v<T> || std::is_integral_v<T>)
 
 template <class T>
 typename std::enable_if_t<!USE_DEFAULT_EQUALITY, bool>
@@ -304,6 +304,19 @@ template <class T>
 typename std::enable_if_t<USE_DEFAULT_EQUALITY, bool>
 equalAttrArgs(T A1, T A2, StructuralEquivalenceContext &Context) {
   return A1 == A2;
+}
+
+// ParamIdx has an explicit specialization because it can be invalid (when
+// representing an optional parameter that was not specified).  Two invalid
+// ParamIdx values compare equal; an invalid value is not equal to any valid
+// one.  ParamIdx::operator== asserts both sides are valid, so we must guard
+// against the invalid case here before delegating to operator==.
+template <>
+bool equalAttrArgs<ParamIdx>(ParamIdx P1, ParamIdx P2,
+                             StructuralEquivalenceContext &) {
+  if (!P1.isValid() || !P2.isValid())
+    return P1.isValid() == P2.isValid();
+  return P1 == P2;
 }
 
 template <class T>
