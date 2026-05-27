@@ -394,3 +394,77 @@ func.func private @_FortranAAllocatableSetBounds(!fir.ref<!fir.box<none>>, i32, 
 // CHECK-NOT: acc.copyin
 // CHECK: acc.deviceptr
 // CHECK-NOT: acc.copyout
+
+// -----
+
+// Test argument mapped with deviceptr but used not via data mapping.
+func.func @test_fir_declare_deviceptr_arg_in_parallel(%arg0: !fir.ref<!fir.array<10xf64>>) {
+  %c10 = arith.constant 10 : index
+  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
+  %arr_decl = fir.declare %arg0(%shape) {acc.declare = #acc.declare<dataClause = acc_deviceptr>, uniq_name = "_QFtestEa"} : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf64>>
+  %arr_box = fir.embox %arr_decl(%shape) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf64>>
+  %devptr = acc.deviceptr var(%arr_box : !fir.box<!fir.array<10xf64>>) -> !fir.box<!fir.array<10xf64>> {name = "a"}
+  %token = acc.declare_enter dataOperands(%devptr : !fir.box<!fir.array<10xf64>>)
+  acc.parallel {
+    %addr = fir.box_addr %arr_box : (!fir.box<!fir.array<10xf64>>) -> !fir.ref<!fir.array<10xf64>>
+    %elem = fir.array_coor %arr_decl(%shape) %c10 : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>, index) -> !fir.ref<f64>
+    acc.yield
+  }
+  acc.declare_exit token(%token) dataOperands(%devptr : !fir.box<!fir.array<10xf64>>)
+  return
+}
+
+// CHECK-LABEL: func.func @test_fir_declare_deviceptr_arg_in_parallel
+// CHECK: %[[DECL:.*]] = fir.declare %{{.*}}{{.*}}{acc.declare = #acc.declare<dataClause = acc_deviceptr>{{.*}}
+// CHECK: %[[BOX:.*]] = fir.embox %[[DECL]]
+// CHECK: %[[DEVPTR:.*]] = acc.deviceptr var(%[[BOX]] : !fir.box<!fir.array<10xf64>>) -> !fir.box<!fir.array<10xf64>> {name = "a"}
+// CHECK: %[[TOKEN:.*]] = acc.declare_enter dataOperands(%[[DEVPTR]] : !fir.box<!fir.array<10xf64>>)
+// CHECK: %[[IMPLICIT_BOX:.*]] = acc.deviceptr var(%[[BOX]] : !fir.box<!fir.array<10xf64>>) -> !fir.box<!fir.array<10xf64>> {implicit = true, name = "a"}
+// CHECK: %[[IMPLICIT_REF:.*]] = acc.deviceptr varPtr(%[[DECL]] : !fir.ref<!fir.array<10xf64>>) -> !fir.ref<!fir.array<10xf64>> {implicit = true, name = "a"}
+// CHECK: acc.parallel dataOperands(%[[IMPLICIT_BOX]], %[[IMPLICIT_REF]] : !fir.box<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>) {
+// CHECK: fir.box_addr %[[IMPLICIT_BOX]] : (!fir.box<!fir.array<10xf64>>) -> !fir.ref<!fir.array<10xf64>>
+// CHECK: fir.array_coor %[[IMPLICIT_REF]]
+// CHECK: acc.declare_exit token(%[[TOKEN]]) dataOperands(%[[DEVPTR]] : !fir.box<!fir.array<10xf64>>)
+
+// -----
+
+// Test that acc.serial inside acc.data deviceptr generates implicit deviceptr
+// (not copyin) when the deviceptr clause variable is derived from the ref used
+// by the serial construct (here, via fir.embox wrapping the declared ref).
+// This pattern arises when a subroutine containing:
+//   !$acc data deviceptr(b)    ← deviceptr operates on embox(b) (a box type)
+//     !$acc serial
+//       ... uses b ...         ← serial uses b directly (a ref type)
+//     !$acc end serial
+//   !$acc end data
+// is inlined into the caller. After inlining, the deviceptr's box and the
+// serial's ref are different SSA values with different types, so alias
+// analysis returns NoAlias. The pass must recognize that the deviceptr's
+// variable is derived from the ref and generate an implicit deviceptr clause
+// instead of falling back to copyin/copyout.
+func.func @test_serial_inside_data_deviceptr_embox() {
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %arr = fir.alloca !fir.array<10xf32> {bindc_name = "b"}
+  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
+  %arr_decl = fir.declare %arr(%shape) {uniq_name = "b"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  %box = fir.embox %arr_decl(%shape) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf32>>
+  %devptr = acc.deviceptr var(%box : !fir.box<!fir.array<10xf32>>) -> !fir.box<!fir.array<10xf32>> {name = "b(1:10)"}
+  acc.data dataOperands(%devptr : !fir.box<!fir.array<10xf32>>) {
+    acc.serial {
+      %elem = fir.array_coor %arr_decl(%shape) %c1 : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+      %val = fir.load %elem : !fir.ref<f32>
+      acc.yield
+    }
+    acc.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @test_serial_inside_data_deviceptr_embox
+// CHECK: acc.deviceptr var({{.*}} : !fir.box<!fir.array<10xf32>>) -> !fir.box<!fir.array<10xf32>> {name = "b(1:10)"}
+// CHECK: acc.data
+// CHECK: acc.deviceptr varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {implicit = true, name = "b"}
+// CHECK: acc.serial dataOperands({{.*}} : !fir.ref<!fir.array<10xf32>>)
+// CHECK-NOT: acc.copyin
+// CHECK-NOT: acc.copyout

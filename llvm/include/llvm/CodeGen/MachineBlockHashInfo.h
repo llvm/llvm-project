@@ -118,14 +118,13 @@ public:
 
 /// Printer pass for the \c MachineBlockHashInfoAnalysis results.
 class MachineBlockHashInfoPrinterPass
-    : public PassInfoMixin<MachineBlockHashInfoPrinterPass> {
+    : public RequiredPassInfoMixin<MachineBlockHashInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit MachineBlockHashInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 /// Legacy MachineFunctionPass for MachineBlockHashInfo.

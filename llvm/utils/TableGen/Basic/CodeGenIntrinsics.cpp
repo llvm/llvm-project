@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
@@ -307,6 +308,8 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
   }
 
   unsigned NumRet = R->getValueAsListInit("RetTypes")->size();
+  unsigned NumParam = R->getValueAsListInit("ParamTypes")->size();
+
   if (NumRet > MaxNumReturn)
     PrintFatalError(DefLoc, "intrinsics can only return upto " +
                                 Twine(MaxNumReturn) + " values, '" + DefName +
@@ -318,20 +321,46 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
                                 " should be of subclass of TypeInfoGen!");
 
   isOverloaded = TypeInfo->getValueAsBit("isOverloaded");
-  const ListInit *TypeList = TypeInfo->getValueAsListInit("Types");
+  std::vector<const Record *> AllTypes =
+      TypeInfo->getValueAsListOfDefs("AllTypes");
+
+  // Validate overload index values in dependent types.
+  if (isOverloaded) {
+    const ListInit *OverloadedTypes =
+        TypeInfo->getValueAsListInit("OverloadTypes");
+    unsigned NumOverloadedTypes = OverloadedTypes->size();
+    for (const auto &[Idx, Ty] : enumerate(AllTypes)) {
+      if (!Ty->isSubClassOf("LLVMDependentType"))
+        continue;
+      unsigned OverloadIndex = Ty->getValueAsInt("OverloadIndex");
+      if (OverloadIndex >= NumOverloadedTypes)
+        PrintFatalError(
+            Ty, formatv("for intrinsic {} overload index {} is invalid, "
+                        "intrinsic only has {} overloaded types",
+                        DefName, OverloadIndex, NumOverloadedTypes));
+      const Record *OTy = OverloadedTypes->getElementAsRecord(OverloadIndex);
+      if (!OTy->isSubClassOf("LLVMAnyType"))
+        PrintFatalError(Ty, formatv("for intrinsic {} overload index {} is "
+                                    "invalid, dependent types must reference "
+                                    "an overload index of an \'llvm_any\' type",
+                                    DefName, OverloadIndex));
+
+      // Replace the dependent type with the overloaded type it references.
+      AllTypes[Idx] = OTy;
+    }
+  }
+
+  ArrayRef<const Record *> AllTypesRef = AllTypes;
 
   // Types field is a concatenation of Return types followed by Param types.
-  unsigned Idx = 0;
-  for (; Idx < NumRet; ++Idx) {
-    const Record *RetTy = TypeList->getElementAsRecord(Idx);
+  for (const Record *RetTy : AllTypesRef.take_front(NumRet)) {
     if (RetTy->getName() == "llvm_vararg_ty")
       PrintFatalError(DefLoc, "cannot use llvm_vararg_ty as a return type");
     IS.RetTys.push_back(RetTy);
   }
 
-  for (unsigned E = TypeList->size(); Idx < E; ++Idx) {
-    const Record *ParamTy = TypeList->getElementAsRecord(Idx);
-    if (Idx != E - 1 && ParamTy->getName() == "llvm_vararg_ty")
+  for (const auto &[Idx, ParamTy] : enumerate(AllTypesRef.drop_front(NumRet))) {
+    if (Idx != NumParam - 1 && ParamTy->getName() == "llvm_vararg_ty")
       PrintFatalError(DefLoc,
                       "llvm_vararg_ty can only be the last parameter type");
     IS.ParamTys.push_back(ParamTy);

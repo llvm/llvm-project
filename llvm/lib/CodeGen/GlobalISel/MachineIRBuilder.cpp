@@ -502,6 +502,20 @@ MachineInstrBuilder MachineIRBuilder::buildStore(const SrcOp &Val,
   return MIB;
 }
 
+MachineInstrBuilder MachineIRBuilder::buildStoreInstr(unsigned Opcode,
+                                                      const SrcOp &Val,
+                                                      const SrcOp &Addr,
+                                                      MachineMemOperand &MMO) {
+  assert(Val.getLLTTy(*getMRI()).isValid() && "invalid operand type");
+  assert(Addr.getLLTTy(*getMRI()).isPointer() && "invalid operand type");
+
+  auto MIB = buildInstr(Opcode);
+  Val.addSrcToMIB(MIB);
+  Addr.addSrcToMIB(MIB);
+  MIB.addMemOperand(&MMO);
+  return MIB;
+}
+
 MachineInstrBuilder
 MachineIRBuilder::buildStore(const SrcOp &Val, const SrcOp &Addr,
                              MachinePointerInfo PtrInfo, Align Alignment,

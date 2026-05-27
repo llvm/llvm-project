@@ -736,7 +736,7 @@ static const DeclTypeSpec *CloneDerivedTypeForUseDeviceImpl(
   if (path.size() == 1) {
     if (Symbol * comp{newScope.FindComponent(path[0])}) {
       if (auto *details{comp->detailsIf<ObjectEntityDetails>()}) {
-        details->set_cudaDataAttr(common::CUDADataAttr::Device);
+        details->set_cudaDataAttr(common::CUDADataAttr::UseDevice);
       }
     }
   }

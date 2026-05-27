@@ -697,7 +697,7 @@ define void @test_atomicrmw(ptr %p) {
 }
 
 define void @test_volatile(ptr %x) {
-; FNATTRS: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
+; FNATTRS: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; FNATTRS-LABEL: define void @test_volatile
 ; FNATTRS-SAME: (ptr [[X:%.*]]) #[[ATTR14:[0-9]+]] {
 ; FNATTRS-NEXT:  entry:
@@ -705,7 +705,7 @@ define void @test_volatile(ptr %x) {
 ; FNATTRS-NEXT:    store volatile i32 0, ptr [[GEP]], align 4
 ; FNATTRS-NEXT:    ret void
 ;
-; ATTRIBUTOR: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite)
+; ATTRIBUTOR: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 ; ATTRIBUTOR-LABEL: define void @test_volatile
 ; ATTRIBUTOR-SAME: (ptr nofree [[X:%.*]]) #[[ATTR12:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:  entry:

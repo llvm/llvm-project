@@ -556,16 +556,33 @@ GlobalISelEmitter::getEquivNode(const Record &Equiv,
       N.getIntrinsicInfo(CGP)->isConvergent)
     return &Target.getInstruction(Equiv.getValueAsDef("IfConvergent"));
 
+  bool IsAnyExtLoad = false;
+  bool IsTruncStore = false;
   for (const TreePredicateCall &Call : N.getPredicateCalls()) {
     const TreePredicateFn &Predicate = Call.Fn;
+    IsAnyExtLoad |= Predicate.isAnyExtLoad();
+    IsTruncStore |= Predicate.isTruncStore();
     if (!Equiv.isValueUnset("IfSignExtend") &&
         (Predicate.isLoad() || Predicate.isAtomic()) &&
         Predicate.isSignExtLoad())
       return &Target.getInstruction(Equiv.getValueAsDef("IfSignExtend"));
+
     if (!Equiv.isValueUnset("IfZeroExtend") &&
         (Predicate.isLoad() || Predicate.isAtomic()) &&
         Predicate.isZeroExtLoad())
       return &Target.getInstruction(Equiv.getValueAsDef("IfZeroExtend"));
+
+    if (!Equiv.isValueUnset("IfFPExtend") &&
+        (Predicate.isLoad() || Predicate.isAtomic()) && IsAnyExtLoad &&
+        Predicate.getMemoryVT() != nullptr &&
+        getValueType(Predicate.getMemoryVT()).isFloatingPoint())
+      return &Target.getInstruction(Equiv.getValueAsDef("IfFPExtend"));
+
+    if (!Equiv.isValueUnset("IfFPTrunc") &&
+        (Predicate.isStore() || Predicate.isAtomic()) && IsTruncStore &&
+        Predicate.getMemoryVT() != nullptr &&
+        getValueType(Predicate.getMemoryVT()).isFloatingPoint())
+      return &Target.getInstruction(Equiv.getValueAsDef("IfFPTrunc"));
   }
 
   return &Target.getInstruction(Equiv.getValueAsDef("I"));
@@ -1919,6 +1936,9 @@ Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
 
       const auto SrcRCDstRCPair =
           SuperClass->getMatchingSubClassWithSubRegs(CGRegs, SubIdx);
+      if (!SrcRCDstRCPair)
+        return failedImport("REG_SEQUENCE subreg index is incompatible "
+                            "with inferred reg class");
 
       M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, I,
                                                        *SrcRCDstRCPair->second);
@@ -2289,44 +2309,13 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
 MatchTable
 GlobalISelEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules,
                                    bool Optimize, bool WithCoverage) {
-  std::vector<Matcher *> InputRules;
-  for (Matcher &Rule : Rules)
-    InputRules.push_back(&Rule);
-
-  if (!Optimize)
+  if (!Optimize) {
+    SmallVector<Matcher *> InputRules(make_pointer_range(Rules));
     return MatchTable::buildTable(InputRules, WithCoverage);
-
-  unsigned CurrentOrdering = 0;
-  StringMap<unsigned> OpcodeOrder;
-  for (RuleMatcher &Rule : Rules) {
-    const StringRef Opcode = Rule.getOpcode();
-    assert(!Opcode.empty() && "Didn't expect an undefined opcode");
-    if (OpcodeOrder.try_emplace(Opcode, CurrentOrdering).second)
-      ++CurrentOrdering;
   }
 
-  llvm::stable_sort(
-      InputRules, [&OpcodeOrder](const Matcher *A, const Matcher *B) {
-        auto *L = static_cast<const RuleMatcher *>(A);
-        auto *R = static_cast<const RuleMatcher *>(B);
-        return std::tuple(OpcodeOrder[L->getOpcode()],
-                          L->insnmatchers_front().getNumOperandMatchers()) <
-               std::tuple(OpcodeOrder[R->getOpcode()],
-                          R->insnmatchers_front().getNumOperandMatchers());
-      });
-
-  for (Matcher *Rule : InputRules)
-    Rule->optimize();
-
   std::vector<std::unique_ptr<Matcher>> MatcherStorage;
-  std::vector<Matcher *> OptRules =
-      optimizeRules<GroupMatcher>(InputRules, MatcherStorage);
-
-  for (Matcher *Rule : OptRules)
-    Rule->optimize();
-
-  OptRules = optimizeRules<SwitchMatcher>(OptRules, MatcherStorage);
-
+  std::vector<Matcher *> OptRules = optimizeRuleset(Rules, MatcherStorage);
   return MatchTable::buildTable(OptRules, WithCoverage);
 }
 

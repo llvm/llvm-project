@@ -1675,6 +1675,22 @@ NamedDecl *Sema::ActOnTemplateTemplateParameter(
 
   bool IsParameterPack = EllipsisLoc.isValid();
 
+  SourceLocation Loc = NameLoc.isInvalid() ? TmpLoc : NameLoc;
+  if (Params->size() == 0) {
+    Diag(Loc, diag::err_template_template_parm_no_parms)
+        << SourceRange(Params->getLAngleLoc(), Params->getRAngleLoc());
+
+    // Recover as if there was a type template parameter pack.
+    SmallVector<NamedDecl *, 4> ParamDecls;
+    ParamDecls.push_back(TemplateTypeParmDecl::Create(
+        Context, Context.getTranslationUnitDecl(), Loc, SourceLocation(),
+        Depth + 1, 0, /*Id=*/nullptr,
+        /*Typename=*/false, /*ParameterPack=*/true));
+    Params = TemplateParameterList::Create(
+        Context, Params->getTemplateLoc(), Params->getLAngleLoc(), ParamDecls,
+        Params->getRAngleLoc(), Params->getRequiresClause());
+  }
+
   bool Invalid = false;
   if (CheckTemplateParameterList(
           Params,
@@ -1684,9 +1700,8 @@ NamedDecl *Sema::ActOnTemplateTemplateParameter(
 
   // Construct the parameter object.
   TemplateTemplateParmDecl *Param = TemplateTemplateParmDecl::Create(
-      Context, Context.getTranslationUnitDecl(),
-      NameLoc.isInvalid() ? TmpLoc : NameLoc, Depth, Position, IsParameterPack,
-      Name, Kind, Typename, Params);
+      Context, Context.getTranslationUnitDecl(), Loc, Depth, Position,
+      IsParameterPack, Name, Kind, Typename, Params);
   Param->setAccess(AS_public);
 
   if (Param->isParameterPack())
@@ -1700,12 +1715,6 @@ NamedDecl *Sema::ActOnTemplateTemplateParameter(
 
     S->AddDecl(Param);
     IdResolver.AddDecl(Param);
-  }
-
-  if (Params->size() == 0) {
-    Diag(Param->getLocation(), diag::err_template_template_parm_no_parms)
-    << SourceRange(Params->getLAngleLoc(), Params->getRAngleLoc());
-    Invalid = true;
   }
 
   if (Invalid)
@@ -8100,7 +8109,8 @@ static Expr *BuildExpressionFromIntegralTemplateArgumentValue(
 static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(
     Sema &S, QualType T, const APValue &Val, SourceLocation Loc) {
   auto MakeInitList = [&](ArrayRef<Expr *> Elts) -> Expr * {
-    auto *ILE = new (S.Context) InitListExpr(S.Context, Loc, Elts, Loc);
+    auto *ILE = new (S.Context)
+        InitListExpr(S.Context, Loc, Elts, Loc, /*isExplicit=*/false);
     ILE->setType(T);
     return ILE;
   };
@@ -10781,6 +10791,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
 
     VarDecl *Prev = Previous.getAsSingle<VarDecl>();
     VarTemplateDecl *PrevTemplate = Previous.getAsSingle<VarTemplateDecl>();
+    const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
 
     if (!PrevTemplate) {
       if (!Prev || !Prev->isStaticDataMember()) {
@@ -10849,6 +10860,8 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
       // Ignore access control bits, we don't need them for redeclaration
       // checking.
       Prev = cast<VarDecl>(Res.get());
+      ArgsAsWritten =
+          ASTTemplateArgumentListInfo::Create(Context, TemplateArgs);
     }
 
     // C++0x [temp.explicit]p2:
@@ -10903,9 +10916,6 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
       return true;
     }
 
-    const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
-    if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(Prev))
-      ArgsAsWritten = VTSD->getTemplateArgsAsWritten();
     addExplicitInstantiationDecl(
         Context, CurContext, Prev, ExternLoc, TemplateLoc,
         D.getCXXScopeSpec().getWithLocInContext(Context), ArgsAsWritten,
@@ -11129,8 +11139,18 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     // Let the ASTConsumer know that this function has been explicitly
     // instantiated now, and its linkage might have changed.
     Consumer.HandleTopLevelDecl(DeclGroupRef(Specialization));
-  } else if (TSK == TSK_ExplicitInstantiationDefinition)
+  } else if (TSK == TSK_ExplicitInstantiationDefinition) {
+    // C++2c [expr.prim.lambda.closure]/19 A member of a closure type shall not
+    // be explicitly instantiated.
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(Specialization->getParent());
+        RD && RD->isLambda()) {
+      Diag(D.getBeginLoc(), diag::err_lambda_explicit_temp_spec)
+          << /*instantiation*/ 1;
+      Diag(RD->getLocation(), diag::note_defined_here) << RD;
+      return (Decl *)nullptr;
+    }
     InstantiateFunctionDefinition(D.getIdentifierLoc(), Specialization);
+  }
 
   // C++0x [temp.explicit]p2:
   //   If the explicit instantiation is for a member function, a member class

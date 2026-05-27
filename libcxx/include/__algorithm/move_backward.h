@@ -12,6 +12,7 @@
 #include <__algorithm/copy_backward.h>
 #include <__algorithm/copy_move_common.h>
 #include <__algorithm/for_each_segment.h>
+#include <__algorithm/in_out_result.h>
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/min.h>
 #include <__config>
@@ -34,13 +35,13 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _BidirectionalIterator1, class _Sentinel, class _BidirectionalIterator2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_BidirectionalIterator1, _BidirectionalIterator2>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __in_out_result<_BidirectionalIterator1, _BidirectionalIterator2>
 __move_backward(_BidirectionalIterator1 __first, _Sentinel __last, _BidirectionalIterator2 __result);
 
 template <class _AlgPolicy>
 struct __move_backward_impl {
   template <class _InIter, class _Sent, class _OutIter>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __in_out_result<_InIter, _OutIter>
   operator()(_InIter __first, _Sent __last, _OutIter __result) const {
     auto __last_iter          = _IterOps<_AlgPolicy>::next(__first, __last);
     auto __original_last_iter = __last_iter;
@@ -49,17 +50,17 @@ struct __move_backward_impl {
       *--__result = _IterOps<_AlgPolicy>::__iter_move(--__last_iter);
     }
 
-    return std::make_pair(std::move(__original_last_iter), std::move(__result));
+    return {std::move(__original_last_iter), std::move(__result)};
   }
 
   template <class _InIter, class _OutIter, __enable_if_t<__is_segmented_iterator_v<_InIter>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __in_out_result<_InIter, _OutIter>
   operator()(_InIter __first, _InIter __last, _OutIter __result) const {
     using __local_iterator = typename __segmented_iterator_traits<_InIter>::__local_iterator;
     std::__for_each_segment_backward(__first, __last, [&__result](__local_iterator __lfirst, __local_iterator __llast) {
-      __result = std::__move_backward<_AlgPolicy>(std::move(__lfirst), std::move(__llast), std::move(__result)).second;
+      __result = std::__move_backward<_AlgPolicy>(std::move(__lfirst), std::move(__llast), std::move(__result)).__out_;
     });
-    return std::make_pair(__last, std::move(__result));
+    return {__last, std::move(__result)};
   }
 
   template <class _InIter,
@@ -67,7 +68,7 @@ struct __move_backward_impl {
             __enable_if_t<__has_random_access_iterator_category<_InIter>::value &&
                               !__is_segmented_iterator_v<_InIter> && __is_segmented_iterator_v<_OutIter>,
                           int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __in_out_result<_InIter, _OutIter>
   operator()(_InIter __first, _InIter __last, _OutIter __result) const {
     using _Traits = __segmented_iterator_traits<_OutIter>;
     using _DiffT =
@@ -75,7 +76,7 @@ struct __move_backward_impl {
 
     // When the range contains no elements, __result might not be a valid iterator
     if (__first == __last)
-      return std::make_pair(__first, __result);
+      return {__first, __result};
 
     auto __orig_last = __last;
 
@@ -84,18 +85,19 @@ struct __move_backward_impl {
     while (true) {
       auto __local_first = _Traits::__begin(__segment_iterator);
       auto __size        = std::min<_DiffT>(__local_last - __local_first, __last - __first);
-      auto __iter        = std::__move_backward<_AlgPolicy>(__last - __size, __last, __local_last).second;
+      auto __iter        = std::__move_backward<_AlgPolicy>(__last - __size, __last, __local_last).__out_;
       __last -= __size;
 
       if (__first == __last)
-        return std::make_pair(std::move(__orig_last), _Traits::__compose(__segment_iterator, std::move(__iter)));
+        return {std::move(__orig_last), _Traits::__compose(__segment_iterator, std::move(__iter))};
 
       __local_last = _Traits::__end(--__segment_iterator);
     }
   }
 
   template <class _Cp, bool _IsConst>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<__bit_iterator<_Cp, _IsConst>, __bit_iterator<_Cp, false> >
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 __in_out_result<__bit_iterator<_Cp, _IsConst>, __bit_iterator<_Cp, false> >
   operator()(__bit_iterator<_Cp, _IsConst> __first,
              __bit_iterator<_Cp, _IsConst> __last,
              __bit_iterator<_Cp, false> __result) {
@@ -104,14 +106,14 @@ struct __move_backward_impl {
 
   // At this point, the iterators have been unwrapped so any `contiguous_iterator` has been unwrapped to a pointer.
   template <class _In, class _Out, __enable_if_t<__can_lower_move_assignment_to_memmove<_In, _Out>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_In*, _Out*>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __in_out_result<_In*, _Out*>
   operator()(_In* __first, _In* __last, _Out* __result) const {
     return std::__copy_backward_trivial_impl(__first, __last, __result);
   }
 };
 
 template <class _AlgPolicy, class _BidirectionalIterator1, class _Sentinel, class _BidirectionalIterator2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_BidirectionalIterator1, _BidirectionalIterator2>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __in_out_result<_BidirectionalIterator1, _BidirectionalIterator2>
 __move_backward(_BidirectionalIterator1 __first, _Sentinel __last, _BidirectionalIterator2 __result) {
   static_assert(std::is_copy_constructible<_BidirectionalIterator1>::value &&
                     std::is_copy_constructible<_BidirectionalIterator1>::value,
@@ -124,7 +126,7 @@ __move_backward(_BidirectionalIterator1 __first, _Sentinel __last, _Bidirectiona
 template <class _BidirectionalIterator1, class _BidirectionalIterator2>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _BidirectionalIterator2
 move_backward(_BidirectionalIterator1 __first, _BidirectionalIterator1 __last, _BidirectionalIterator2 __result) {
-  return std::__move_backward<_ClassicAlgPolicy>(std::move(__first), std::move(__last), std::move(__result)).second;
+  return std::__move_backward<_ClassicAlgPolicy>(std::move(__first), std::move(__last), std::move(__result)).__out_;
 }
 
 _LIBCPP_END_NAMESPACE_STD

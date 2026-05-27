@@ -414,7 +414,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
     // nesting check
     HasInvalidWorksharingNesting(beginName, llvm::omp::nestedWorkshareErrSet);
   }
-  SetLoopInfo(x);
 
   for (auto &construct : std::get<parser::Block>(x.t)) {
     if (const auto *doConstruct{parser::omp::GetDoConstruct(construct)}) {
@@ -422,7 +421,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
       CheckNoBranching(doBlock, beginName.v, beginName.source);
     }
   }
-  CheckIterationVariableType(x);
+  CheckIterationVariables(x);
   CheckNestedConstruct(x);
   CheckAssociatedLoopConstraints(x);
   HasInvalidDistributeNesting(x);
@@ -443,30 +442,103 @@ const parser::Name OmpStructureChecker::GetLoopIndex(
   return std::get<Bounds>(x->GetLoopControl()->u).Name().thing;
 }
 
-void OmpStructureChecker::SetLoopInfo(const parser::OpenMPLoopConstruct &x) {
-  if (const auto *loop{x.GetNestedLoop()}) {
-    if (loop->IsDoNormal()) {
-      const parser::Name &itrVal{GetLoopIndex(loop)};
-      SetLoopIv(itrVal.symbol);
+void OmpStructureChecker::CheckIterationVariables(
+    const parser::OpenMPLoopConstruct &x) {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  auto doLoops{CollectAffectedDoLoops(x, version, &context_)};
+  if (!doLoops) {
+    return;
+  }
+  const parser::OmpDirectiveSpecification &spec{x.BeginDir()};
+  llvm::omp::Directive dirId{spec.DirId()};
+
+  // Collect symbols from DSA clauses on the construct. These symbols
+  // are the "host" versions of symbols inside the construct. The flags
+  // of interest are on the associated symbols.
+  struct ClauseAppearance {
+    llvm::omp::Clause clauseId;
+    parser::CharBlock source;
+  };
+  std::multimap<const Symbol *, ClauseAppearance> dsa;
+  for (const parser::OmpClause &clause : spec.Clauses().v) {
+    llvm::omp::Clause clauseId{clause.Id()};
+    if (llvm::omp::isDataSharingAttributeClause(clauseId, version)) {
+      for (const parser::OmpObject &object :
+          parser::omp::GetOmpObjectList(clause)->v) {
+        if (const Symbol *symbol{GetObjectSymbol(object)}) {
+          auto maybeSource{parser::omp::GetObjectSource(object)};
+          assert(maybeSource && "Expecting object source");
+          dsa.insert(
+              std::make_pair(symbol, ClauseAppearance{clauseId, *maybeSource}));
+        }
+      }
     }
   }
-}
 
-void OmpStructureChecker::CheckIterationVariableType(
-    const parser::OpenMPLoopConstruct &x) {
-  auto &body{std::get<parser::Block>(x.t)};
-  for (auto &construct : LoopRange(body, LoopRange::Step::Into)) {
-    // 'construct' can also be OpenMPLoopConstruct
-    if (auto *loop{parser::Unwrap<parser::DoConstruct>(construct)}) {
-      if (loop->IsDoNormal()) {
-        if (const parser::Name &iv{GetLoopIndex(loop)}; iv.symbol) {
-          const auto *type{iv.symbol->GetType()};
-          if (!type->IsNumeric(TypeCategory::Integer)) {
-            context_.Say(iv.source,
-                "The DO loop iteration variable must be of integer type"_err_en_US,
-                iv.ToString());
-          }
+  auto [depth, _]{GetAffectedNestDepthWithReason(spec, version)};
+  bool isLinearAllowed{false};
+  if (!depth || depth.value == 1) {
+    auto leafs{llvm::omp::getLeafConstructsOrSelf(dirId)};
+    isLinearAllowed = leafs.back() == llvm::omp::Directive::OMPD_simd;
+  }
+
+  std::vector<parser::Name> ivs;
+  for (const parser::DoConstruct *loop : *doLoops) {
+    // Skip DO CONCURRENT, since their iteration variables are local.
+    if (loop->IsDoConcurrent()) {
+      continue;
+    }
+    for (auto &control : GetLoopControls(*loop)) {
+      if (control.iv.symbol) {
+        ivs.push_back(control.iv);
+      }
+    }
+  }
+
+  for (const parser::Name &iv : ivs) {
+    const auto *type{iv.symbol->GetType()};
+    if (!type->IsNumeric(TypeCategory::Integer)) {
+      context_.Say(iv.source,
+          "The DO loop iteration variable must be of integer type"_err_en_US,
+          iv.ToString());
+    }
+    if (iv.symbol->GetUltimate().test(Symbol::Flag::OmpThreadprivate)) {
+      context_.Say(iv.source,
+          "Loop iteration variable of an affected loop cannot be THREADPRIVATE"_err_en_US,
+          iv.ToString());
+    }
+    // Get the symbol from the variable that was listed in a DSA clause.
+    const Symbol *host{iv.symbol};
+    while (host && !dsa.count(host)) {
+      host = GetHostSymbol(*host);
+    }
+    if (!host) {
+      continue;
+    }
+    // Check conflict between a predetermined DSA and explicit DSA.
+    assert(iv.symbol->test(Symbol::Flag::OmpPreDetermined) &&
+        "Expecting affected iteration variable to have predetermined DSA");
+    if (iv.symbol->test(Symbol::Flag::OmpExplicit)) {
+      auto range{dsa.equal_range(host)};
+      for (auto found{range.first}; found != range.second; ++found) {
+        llvm::omp::Clause id{found->second.clauseId};
+        if (!llvm::omp::isAllowedClauseForDirective(dirId, id, version)) {
+          continue;
         }
+        if (id == llvm::omp::Clause::OMPC_private ||
+            id == llvm::omp::Clause::OMPC_lastprivate) {
+          continue;
+        }
+        if (id == llvm::omp::Clause::OMPC_linear && isLinearAllowed) {
+          continue;
+        }
+        context_
+            .Say(found->second.source,
+                "Loop iteration variable with a predetermined data sharing attribute cannot appear in a %s clause"_err_en_US,
+                parser::omp::GetUpperName(id, version))
+            .Attach(iv.source,
+                "'%s' is an iteration variable of an affected loop"_because_en_US,
+                iv.ToString());
       }
     }
   }

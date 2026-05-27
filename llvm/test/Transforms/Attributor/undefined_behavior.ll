@@ -21,7 +21,7 @@ define void @load_wholly_unreachable() {
 }
 
 define void @load_wholly_unreachable_volatile() {
-; CHECK: Function Attrs: nofree norecurse nounwind memory(none)
+; CHECK: Function Attrs: nofree norecurse nosync nounwind memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@load_wholly_unreachable_volatile
 ; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[A:%.*]] = load volatile i32, ptr null, align 4
@@ -111,7 +111,7 @@ define void @store_wholly_unreachable() {
 }
 
 define void @store_wholly_unreachable_volatile() {
-; CHECK: Function Attrs: nofree norecurse nounwind memory(none)
+; CHECK: Function Attrs: nofree norecurse nosync nounwind memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@store_wholly_unreachable_volatile
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:    store volatile i32 5, ptr null, align 4
@@ -1063,7 +1063,7 @@ define noundef i32 @assumed_undef_is_ok_caller(i1 %c) {
 
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nounwind memory(none) }
+; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind memory(none) }
 ; TUNIT: attributes #[[ATTR2]] = { mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR3]] = { mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR4]] = { mustprogress nofree norecurse nounwind willreturn memory(none) }
@@ -1073,7 +1073,7 @@ define noundef i32 @assumed_undef_is_ok_caller(i1 %c) {
 ; TUNIT: attributes #[[ATTR8]] = { nofree nosync nounwind willreturn memory(write) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nounwind memory(none) }
+; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR3]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR4]] = { mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(write) }

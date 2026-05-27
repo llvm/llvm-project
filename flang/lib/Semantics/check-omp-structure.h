@@ -70,19 +70,21 @@ public:
   OmpStructureChecker(SemanticsContext &context);
 
   void Enter(const parser::ProgramUnit &);
-  bool Enter(const parser::MainProgram &);
+  void Enter(const parser::MainProgram &);
   void Leave(const parser::MainProgram &);
-  bool Enter(const parser::BlockData &);
+  void Enter(const parser::BlockData &);
   void Leave(const parser::BlockData &);
-  bool Enter(const parser::Module &);
+  void Enter(const parser::Module &);
   void Leave(const parser::Module &);
-  bool Enter(const parser::Submodule &);
+  void Enter(const parser::Submodule &);
   void Leave(const parser::Submodule &);
-  bool Enter(const parser::SubroutineStmt &);
-  bool Enter(const parser::EndSubroutineStmt &);
-  bool Enter(const parser::FunctionStmt &);
-  bool Enter(const parser::EndFunctionStmt &);
-  bool Enter(const parser::BlockConstruct &);
+  void Enter(const parser::SubroutineStmt &);
+  void Enter(const parser::EndSubroutineStmt &);
+  void Enter(const parser::FunctionStmt &);
+  void Enter(const parser::EndFunctionStmt &);
+  void Enter(const parser::MpSubprogramStmt &);
+  void Enter(const parser::EndMpSubprogramStmt &);
+  void Enter(const parser::BlockConstruct &);
   void Leave(const parser::BlockConstruct &);
   void Enter(const parser::InternalSubprogram &);
   void Enter(const parser::ModuleSubprogram &);
@@ -105,10 +107,10 @@ public:
   void Enter(const parser::OpenMPLoopConstruct &);
   void Leave(const parser::OpenMPLoopConstruct &);
 
-  void Enter(const parser::OpenMPAssumeConstruct &);
-  void Leave(const parser::OpenMPAssumeConstruct &);
-  void Enter(const parser::OpenMPDeclarativeAssumes &);
-  void Leave(const parser::OpenMPDeclarativeAssumes &);
+  void Enter(const parser::OmpAssumeDirective &);
+  void Leave(const parser::OmpAssumeDirective &);
+  void Enter(const parser::OmpAssumesDirective &);
+  void Leave(const parser::OmpAssumesDirective &);
   void Enter(const parser::OpenMPInteropConstruct &);
   void Leave(const parser::OpenMPInteropConstruct &);
   void Enter(const parser::OmpBlockConstruct &);
@@ -145,12 +147,12 @@ public:
   void Leave(const parser::OmpNothingDirective &);
   void Enter(const parser::OpenMPAllocatorsConstruct &);
   void Leave(const parser::OpenMPAllocatorsConstruct &);
-  void Enter(const parser::OpenMPRequiresConstruct &);
-  void Leave(const parser::OpenMPRequiresConstruct &);
-  void Enter(const parser::OpenMPGroupprivate &);
-  void Leave(const parser::OpenMPGroupprivate &);
-  void Enter(const parser::OpenMPThreadprivate &);
-  void Leave(const parser::OpenMPThreadprivate &);
+  void Enter(const parser::OmpRequiresDirective &);
+  void Leave(const parser::OmpRequiresDirective &);
+  void Enter(const parser::OmpGroupprivateDirective &);
+  void Leave(const parser::OmpGroupprivateDirective &);
+  void Enter(const parser::OmpThreadprivateDirective &);
+  void Leave(const parser::OmpThreadprivateDirective &);
 
   void Enter(const parser::OpenMPSimpleStandaloneConstruct &);
   void Leave(const parser::OpenMPSimpleStandaloneConstruct &);
@@ -250,8 +252,7 @@ private:
       const omp::LoopSequence &nest);
   void CheckNestedConstruct(const parser::OpenMPLoopConstruct &x);
   const parser::Name GetLoopIndex(const parser::DoConstruct *x);
-  void SetLoopInfo(const parser::OpenMPLoopConstruct &x);
-  void CheckIterationVariableType(const parser::OpenMPLoopConstruct &x);
+  void CheckIterationVariables(const parser::OpenMPLoopConstruct &x);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
@@ -351,8 +352,6 @@ private:
       SymbolSourceMap &, const llvm::omp::Clause);
   void CheckPrivateSymbolsInOuterCxt(
       SymbolSourceMap &, DirectivesClauseTriple &, const llvm::omp::Clause);
-  void CheckIsLoopIvPartOfClause(
-      llvm::omp::Clause clause, const parser::OmpObjectList &ompObjectList);
   bool CheckTargetBlockOnlyTeams(const parser::Block &);
   void CheckWorkshareBlockStmts(const parser::Block &, parser::CharBlock);
   void CheckWorkdistributeBlockStmts(const parser::Block &, parser::CharBlock);

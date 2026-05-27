@@ -64,7 +64,7 @@ static const Expr *ignoreTransparentExprs(const Expr *E) {
 }
 
 EnvironmentEntry::EnvironmentEntry(const Expr *E, const LocationContext *L)
-    : std::pair<const Expr *, const StackFrameContext *>(
+    : std::pair<const Expr *, const StackFrame *>(
           ignoreTransparentExprs(E), L ? L->getStackFrame() : nullptr) {}
 
 SVal Environment::lookupExpr(const EnvironmentEntry &E) const {

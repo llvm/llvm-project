@@ -44,7 +44,7 @@ define void @loop_f128(ptr nocapture %ptr, i64 %N) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds fp128, ptr [[PTR:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load fp128, ptr [[ARRAYIDX]], align 16
-; CHECK-NEXT:    [[ADD:%.*]] = fsub fp128 [[TMP0]], 0xL00000000000000008000000000000000
+; CHECK-NEXT:    [[ADD:%.*]] = fsub fp128 [[TMP0]], -0.000000e+00
 ; CHECK-NEXT:    store fp128 [[ADD]], ptr [[ARRAYIDX]], align 16
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]

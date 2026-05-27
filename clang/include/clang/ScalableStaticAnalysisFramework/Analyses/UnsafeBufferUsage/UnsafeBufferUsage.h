@@ -26,7 +26,7 @@ class UnsafeBufferUsageEntitySummary final : public EntitySummary {
   getUnsafeBuffers(const UnsafeBufferUsageEntitySummary &);
 
   explicit UnsafeBufferUsageEntitySummary(EntityPointerLevelSet UnsafeBuffers)
-      : EntitySummary(), UnsafeBuffers(std::move(UnsafeBuffers)) {}
+      : UnsafeBuffers(std::move(UnsafeBuffers)) {}
 
 public:
   static constexpr llvm::StringLiteral Name = "UnsafeBufferUsage";

@@ -41,8 +41,8 @@ bool isTUSummaryExtractorRegistered(llvm::StringRef SummaryName);
 /// This might return null if the construction of the desired TUSummaryExtractor
 /// failed.
 /// It's a fatal error if there is no extractor registered with the name.
-std::unique_ptr<ASTConsumer> makeTUSummaryExtractor(llvm::StringRef SummaryName,
-                                                    TUSummaryBuilder &Builder);
+std::unique_ptr<TUSummaryExtractor>
+makeTUSummaryExtractor(llvm::StringRef SummaryName, TUSummaryBuilder &Builder);
 
 /// Print the list of available TUSummaryExtractors.
 void printAvailableTUSummaryExtractors(llvm::raw_ostream &OS);

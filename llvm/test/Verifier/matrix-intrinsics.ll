@@ -62,9 +62,9 @@ define void @column.major_store(ptr %m, ptr %n, i64 %arg) {
 
 define <4 x float> @transpose_mixed_types(<4 x float> %fvec, <4 x i32> %ivec, i32 %arg) {
 ;
-; CHECK-NEXT: Intrinsic has incorrect argument type!
+; CHECK-NEXT: intrinsic has incorrect argument type!
 ; CHECK-NEXT: ptr @llvm.matrix.transpose.v4f32.v4i32
-; CHECK-NEXT: Intrinsic has incorrect argument type!
+; CHECK-NEXT: intrinsic has incorrect argument type!
 ; CHECK-NEXT: ptr @llvm.matrix.transpose.v4i32.v4f32
 ;
   %result.0 = call <4 x float> @llvm.matrix.transpose.v4f32.v4i32(<4 x i32> %ivec, i32 0, i32 0)

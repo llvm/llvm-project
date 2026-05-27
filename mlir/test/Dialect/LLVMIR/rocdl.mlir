@@ -111,6 +111,12 @@ func.func @rocdl.barrier() {
   llvm.return
 }
 
+func.func @rocdl.wave_barrier() {
+  // CHECK: rocdl.wave.barrier
+  rocdl.wave.barrier
+  llvm.return
+}
+
 func.func @rocdl.sched_barrier() {
   // CHECK: rocdl.sched.barrier
   rocdl.sched.barrier 0
@@ -1325,6 +1331,26 @@ llvm.func @rocdl.permlane32.swap(%src : i32) -> !llvm.struct<(i32, i32)> {
   // CHECK: rocdl.permlane32.swap %{{.*}} %{{.*}}
   %res = rocdl.permlane32.swap %src, %src, 0, -1  : (i32, i32) -> !llvm.struct<(i32, i32)>
   llvm.return %res : !llvm.struct<(i32, i32)>
+}
+
+// -----
+
+llvm.func @rocdl.permlane16.var(%src : i32) -> i32 {
+  %sel = llvm.mlir.constant(-1 : i32) : i32
+  // CHECK-LABEL: rocdl.permlane16.var
+  // CHECK: rocdl.permlane16.var %{{.*}}, %{{.*}}, %{{.*}}, false, true : (i32, i32, i32) -> i32
+  %ret = rocdl.permlane16.var %src, %src, %sel, false, true : (i32, i32, i32) -> i32
+  llvm.return %ret : i32
+}
+
+// -----
+
+llvm.func @rocdl.permlanex16.var(%src : i32) -> i32 {
+  %sel = llvm.mlir.constant(-1 : i32) : i32
+  // CHECK-LABEL: rocdl.permlanex16.var
+  // CHECK: rocdl.permlanex16.var %{{.*}}, %{{.*}}, %{{.*}}, false, true : (i32, i32, i32) -> i32
+  %ret = rocdl.permlanex16.var %src, %src, %sel, false, true : (i32, i32, i32) -> i32
+  llvm.return %ret : i32
 }
 
 // -----

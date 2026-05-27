@@ -122,6 +122,19 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
         Res = CallInst::Create(Fn->getFunctionType(), Fn);
         break;
       }
+      case Intrinsic::umin:
+      case Intrinsic::umax:
+      case Intrinsic::smin:
+      case Intrinsic::smax: {
+        Value *Op0 = EvaluateInDifferentTypeImpl(II->getArgOperand(0), Ty,
+                                                 isSigned, IC, Processed);
+        Value *Op1 = EvaluateInDifferentTypeImpl(II->getArgOperand(1), Ty,
+                                                 isSigned, IC, Processed);
+        Function *Fn = Intrinsic::getOrInsertDeclaration(
+            I->getModule(), II->getIntrinsicID(), {Ty});
+        Res = CallInst::Create(Fn->getFunctionType(), Fn, {Op0, Op1});
+        break;
+      }
       }
     }
     break;
@@ -607,6 +620,29 @@ bool TypeEvaluationHelper::canEvaluateTruncatedPred(Value *V, Type *Ty,
     return canEvaluateTruncatedImpl(I->getOperand(0), Ty, IC, CxtI) &&
            canEvaluateTruncatedImpl(I->getOperand(1), Ty, IC, CxtI);
 
+  case Instruction::Call: {
+    auto *MM = dyn_cast<MinMaxIntrinsic>(I);
+    if (!MM)
+      return false;
+    // The min/max can be performed in the narrow type when each operand has
+    // zero high bits (for umin/umax) or enough sign bits (for smin/smax).
+    Value *Op0 = MM->getLHS();
+    Value *Op1 = MM->getRHS();
+    uint32_t BitWidth = Ty->getScalarSizeInBits();
+    if (MM->isSigned()) {
+      if (IC.ComputeMaxSignificantBits(Op0, CxtI) > BitWidth ||
+          IC.ComputeMaxSignificantBits(Op1, CxtI) > BitWidth)
+        break;
+    } else {
+      APInt Mask =
+          APInt::getBitsSetFrom(OrigTy->getScalarSizeInBits(), BitWidth);
+      if (!IC.MaskedValueIsZero(Op0, Mask, CxtI) ||
+          !IC.MaskedValueIsZero(Op1, Mask, CxtI))
+        break;
+    }
+    return canEvaluateTruncatedImpl(Op0, Ty, IC, CxtI) &&
+           canEvaluateTruncatedImpl(Op1, Ty, IC, CxtI);
+  }
   default:
     // TODO: Can handle more cases here.
     break;
@@ -1201,8 +1237,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     return I;
 
   // trunc (ctlz_i32(zext(A), B) --> add(ctlz_i16(A, B), C)
-  if (match(Src, m_OneUse(m_Intrinsic<Intrinsic::ctlz>(m_ZExt(m_Value(A)),
-                                                       m_Value(B))))) {
+  if (match(Src, m_OneUse(m_Ctlz(m_ZExt(m_Value(A)), m_Value(B))))) {
     unsigned AWidth = A->getType()->getScalarSizeInBits();
     if (AWidth == DestWidth && AWidth > Log2_32(SrcWidth)) {
       Value *WidthDiff = ConstantInt::get(A->getType(), SrcWidth - AWidth);

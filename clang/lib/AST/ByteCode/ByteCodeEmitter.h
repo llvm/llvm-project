@@ -46,6 +46,7 @@ protected:
   /// Methods implemented by the compiler.
   virtual bool visitFunc(const FunctionDecl *E) = 0;
   virtual bool visitExpr(const Expr *E, bool DestroyToplevelScope) = 0;
+  virtual bool visitLValueExpr(const Expr *E, bool DestroyToplevelScope) = 0;
   virtual bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
                                   bool ConstantContext) = 0;
   virtual bool visit(const Expr *E) = 0;

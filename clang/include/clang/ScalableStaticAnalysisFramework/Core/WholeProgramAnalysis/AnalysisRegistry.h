@@ -41,6 +41,8 @@
 #include <string>
 #include <vector>
 
+LLVM_DECLARE_REGISTRY(llvm::Registry<clang::ssaf::AnalysisBase>)
+
 namespace clang::ssaf {
 
 /// Unified registry for SummaryAnalysis and DerivedAnalysis implementations.

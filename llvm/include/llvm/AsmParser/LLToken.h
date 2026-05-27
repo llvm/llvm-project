@@ -91,6 +91,7 @@ enum Kind {
   kw_unwind,
   kw_datalayout,
   kw_volatile,
+  kw_elementwise,
   kw_atomic,
   kw_unordered,
   kw_monotonic,
@@ -512,6 +513,7 @@ enum Kind {
   DwarfVirtuality,     // DW_VIRTUALITY_foo
   DwarfLang,           // DW_LANG_foo
   DwarfSourceLangName, // DW_LNAME_foo
+  DwarfLangDialect,    // DW_LLVM_LANG_DIALECT_foo
   DwarfCC,             // DW_CC_foo
   EmissionKind,        // lineTablesOnly
   NameTableKind,       // GNU
