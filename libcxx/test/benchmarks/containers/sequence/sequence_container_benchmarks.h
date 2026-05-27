@@ -447,6 +447,28 @@ void sequence_container_benchmarks(std::string container) {
           state.ResumeTiming();
         }
       });
+
+    for (auto gen : generators)
+      bench("prepend_range(input-iter) (full container)" + tostr(gen), [gen](auto& state) {
+        auto const size = state.range(0);
+        std::vector<ValueType> in;
+        std::generate_n(std::back_inserter(in), size, gen);
+        DoNotOptimizeData(in);
+
+        Container c(in.begin(), in.end());
+        DoNotOptimizeData(c);
+        for (auto _ : state) {
+          using Iter = cpp20_input_iterator<ValueType*>;
+          auto first = Iter(in.data());
+          auto last  = sentinel_wrapper<Iter>(Iter(in.data() + in.size()));
+          c.prepend_range(std::ranges::subrange(std::move(first), std::move(last)));
+          DoNotOptimizeData(c);
+
+          state.PauseTiming();
+          c.erase(c.begin(), std::next(c.begin(), size));
+          state.ResumeTiming();
+        }
+      });
   }
 
   /////////////////////////

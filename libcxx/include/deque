@@ -194,6 +194,7 @@ template <class T, class Allocator, class Predicate>
 #  include <__algorithm/ranges_copy_n.h>
 #  include <__algorithm/remove.h>
 #  include <__algorithm/remove_if.h>
+#  include <__algorithm/reverse.h>
 #  include <__assert>
 #  include <__config>
 #  include <__debug_utils/sanitizers.h>
@@ -224,6 +225,7 @@ template <class T, class Allocator, class Predicate>
 #  include <__type_traits/conditional.h>
 #  include <__type_traits/container_traits.h>
 #  include <__type_traits/enable_if.h>
+#  include <__type_traits/integral_constant.h>
 #  include <__type_traits/is_allocator.h>
 #  include <__type_traits/is_convertible.h>
 #  include <__type_traits/is_nothrow_assignable.h>
@@ -871,6 +873,8 @@ public:
       return __insert_with_size(__position, ranges::begin(__range), __n);
 
     } else {
+      if (__position == cbegin())
+        return __prepend_with_sentinel(ranges::begin(__range), ranges::end(__range));
       return __insert_with_sentinel(__position, ranges::begin(__range), ranges::end(__range));
     }
   }
@@ -1230,6 +1234,15 @@ private:
 
   template <class _Iterator, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI iterator __insert_with_sentinel(const_iterator __p, _Iterator __f, _Sentinel __l);
+
+#  ifndef _LIBCPP_CXX03_LANG
+  template <class _Iterator, class _Sentinel>
+  _LIBCPP_HIDE_FROM_ABI iterator __prepend_with_sentinel(_Iterator __f, _Sentinel __l);
+  template <class _Iterator, class _Sentinel>
+  _LIBCPP_HIDE_FROM_ABI iterator __prepend_with_sentinel(_Iterator __f, _Sentinel __l, true_type);
+  template <class _Iterator, class _Sentinel>
+  _LIBCPP_HIDE_FROM_ABI iterator __prepend_with_sentinel(_Iterator __f, _Sentinel __l, false_type);
+#  endif
 
   template <class _Iterator>
   _LIBCPP_HIDE_FROM_ABI iterator __insert_with_size(const_iterator __p, _Iterator __f, size_type __n);
@@ -1784,6 +1797,11 @@ template <class _Tp, class _Allocator>
 template <class _InputIter, __enable_if_t<__has_exactly_input_iterator_category<_InputIter>::value, int> >
 typename deque<_Tp, _Allocator>::iterator
 deque<_Tp, _Allocator>::insert(const_iterator __p, _InputIter __f, _InputIter __l) {
+#  ifndef _LIBCPP_CXX03_LANG
+  if (__p == cbegin())
+    return __prepend_with_sentinel(__f, __l);
+#  endif
+
   return __insert_with_sentinel(__p, __f, __l);
 }
 
@@ -1796,6 +1814,45 @@ deque<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __p, _Iterator __f
   typedef typename __split_buffer<value_type, allocator_type>::iterator __bi;
   return insert(__p, move_iterator<__bi>(__buf.begin()), move_iterator<__bi>(__buf.end()));
 }
+
+#  ifndef _LIBCPP_CXX03_LANG
+template <class _Tp, class _Allocator>
+template <class _Iterator, class _Sentinel>
+_LIBCPP_HIDE_FROM_ABI typename deque<_Tp, _Allocator>::iterator
+deque<_Tp, _Allocator>::__prepend_with_sentinel(_Iterator __f, _Sentinel __l) {
+  return __prepend_with_sentinel(
+      std::move(__f), std::move(__l), integral_constant<bool, __is_swappable_v<value_type> >());
+}
+
+template <class _Tp, class _Allocator>
+template <class _Iterator, class _Sentinel>
+_LIBCPP_HIDE_FROM_ABI typename deque<_Tp, _Allocator>::iterator
+deque<_Tp, _Allocator>::__prepend_with_sentinel(_Iterator __f, _Sentinel __l, true_type) {
+  size_type __inserted = 0;
+  auto __guard         = std::__make_exception_guard([&] {
+    while (__inserted > 0) {
+      pop_front();
+      --__inserted;
+    }
+  });
+
+  for (; __f != __l; ++__f) {
+    emplace_front(*__f);
+    ++__inserted;
+  }
+  std::reverse(begin(), begin() + __inserted);
+
+  __guard.__complete();
+  return begin();
+}
+
+template <class _Tp, class _Allocator>
+template <class _Iterator, class _Sentinel>
+_LIBCPP_HIDE_FROM_ABI typename deque<_Tp, _Allocator>::iterator
+deque<_Tp, _Allocator>::__prepend_with_sentinel(_Iterator __f, _Sentinel __l, false_type) {
+  return __insert_with_sentinel(cbegin(), std::move(__f), std::move(__l));
+}
+#  endif
 
 template <class _Tp, class _Allocator>
 template <class _ForwardIterator, __enable_if_t<__has_exactly_forward_iterator_category<_ForwardIterator>::value, int> >
