@@ -9322,6 +9322,7 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
     llvm_unreachable("Unsupported calling convention");
   case CallingConv::C:
   case CallingConv::Fast:
+  case CallingConv::Tail:
   case CallingConv::PreserveNone:
   case CallingConv::PreserveMost:
     break;
