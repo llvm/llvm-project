@@ -528,7 +528,7 @@ body: |
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr62
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr63
     ; W32-NEXT: $vgpr44 = SI_SPILL_S32_TO_VGPR $sgpr48, 0, $vgpr44
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr48, $vgpr191, 0, 32
+    ; W32-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr48, $vgpr44, 0, 32
     ; W32-NEXT: S_NOP 0, implicit-def $vgpr40, implicit-def $vgpr41, implicit-def $vgpr43, implicit-def $sgpr22, implicit-def $sgpr48, implicit-def $m0, implicit-def $exec
     ; W32-NEXT: S_NOP 0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, implicit $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, implicit $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40
     ; W32-NEXT: $sgpr48 = SI_RESTORE_S32_FROM_VGPR $vgpr44, 0
@@ -568,7 +568,7 @@ body: |
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr62
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr63
     ; W64-NEXT: $vgpr44 = SI_SPILL_S32_TO_VGPR $sgpr48, 0, $vgpr44
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr48, $vgpr191, 0, 32
+    ; W64-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr48, $vgpr44, 0, 32
     ; W64-NEXT: S_NOP 0, implicit-def $vgpr40, implicit-def $vgpr41, implicit-def $vgpr43, implicit-def $sgpr22, implicit-def $sgpr48, implicit-def $m0, implicit-def $exec
     ; W64-NEXT: S_NOP 0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, implicit $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, implicit $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40
     ; W64-NEXT: $sgpr48 = SI_RESTORE_S32_FROM_VGPR $vgpr44, 0
