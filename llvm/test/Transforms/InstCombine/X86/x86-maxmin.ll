@@ -125,7 +125,7 @@ define <32 x half> @test_avx512fp16_max_ph(<32 x i16> %x, <32 x i16> %y) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp <32 x i16> [[X]] to <32 x half>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <32 x i16> [[Y]], splat (i16 -1)
-; CHECK-NEXT:    [[SEL:%.*]] = select <32 x i1> [[CMP]], <32 x half> splat (half 0xH3C00), <32 x half> splat (half 0xHBC00)
+; CHECK-NEXT:    [[SEL:%.*]] = select <32 x i1> [[CMP]], <32 x half> splat (half 1.000000e+00), <32 x half> splat (half -1.000000e+00)
 ; CHECK-NEXT:    [[MAX:%.*]] = call <32 x half> @llvm.maxnum.v32f16(<32 x half> [[CVT]], <32 x half> [[SEL]])
 ; CHECK-NEXT:    ret <32 x half> [[MAX]]
 ;
@@ -143,7 +143,7 @@ define <32 x half> @test_avx512fp16_min_ph(<32 x i16> %x, <32 x i16> %y) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp <32 x i16> [[X]] to <32 x half>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <32 x i16> [[Y]], splat (i16 -1)
-; CHECK-NEXT:    [[SEL:%.*]] = select <32 x i1> [[CMP]], <32 x half> splat (half 0xH3C00), <32 x half> splat (half 0xHBC00)
+; CHECK-NEXT:    [[SEL:%.*]] = select <32 x i1> [[CMP]], <32 x half> splat (half 1.000000e+00), <32 x half> splat (half -1.000000e+00)
 ; CHECK-NEXT:    [[MAX:%.*]] = call <32 x half> @llvm.minnum.v32f16(<32 x half> [[CVT]], <32 x half> [[SEL]])
 ; CHECK-NEXT:    ret <32 x half> [[MAX]]
 ;

@@ -62,4 +62,4 @@ fdiv.s f1, f2, f3
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     0.0    0.0    0.0       div	a0, a1, a2
 # CHECK-NEXT: 1.     1     0.0    0.0    0.0       fdiv.s	ft1, ft2, ft3
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        2     0.0    0.0    0.0       <total>

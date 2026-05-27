@@ -62,18 +62,18 @@ public:
   // TODO: verify analysis?
 };
 
-class CycleInfoPrinterPass : public PassInfoMixin<CycleInfoPrinterPass> {
+class CycleInfoPrinterPass
+    : public RequiredPassInfoMixin<CycleInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit CycleInfoPrinterPass(raw_ostream &OS);
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
-struct CycleInfoVerifierPass : public PassInfoMixin<CycleInfoVerifierPass> {
+struct CycleInfoVerifierPass
+    : public RequiredPassInfoMixin<CycleInfoVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

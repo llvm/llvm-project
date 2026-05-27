@@ -479,7 +479,11 @@ ParsedType Sema::getDestructorTypeForDecltype(const DeclSpec &DS,
     return nullptr;
   }
 
-  return ParsedType::make(T);
+  TypeLocBuilder TLB;
+  DecltypeTypeLoc DecltypeTL = TLB.push<DecltypeTypeLoc>(T);
+  DecltypeTL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
+  DecltypeTL.setRParenLoc(DS.getTypeofParensRange().getEnd());
+  return CreateParsedType(T, TLB.getTypeSourceInfo(Context, T));
 }
 
 bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
@@ -1485,11 +1489,6 @@ void Sema::MarkThisReferenced(CXXThisExpr *This) {
 }
 
 bool Sema::isThisOutsideMemberFunctionBody(QualType BaseType) {
-  // If we're outside the body of a member function, then we'll have a specified
-  // type for 'this'.
-  if (CXXThisTypeOverride.isNull())
-    return false;
-
   // Determine whether we're looking into a class that's currently being
   // defined.
   CXXRecordDecl *Class = BaseType->getAsCXXRecordDecl();
@@ -1674,7 +1673,15 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
     // CXXTemporaryObjectExpr. It's also weird that the functional cast
     // is sometimes handled by initialization and sometimes not.
     QualType ResultType = Result.get()->getType();
-    SourceRange Locs = ListInitialization
+    // In HLSL, vector/matrix constructors have their arguments wrapped into an
+    // InitListExpr during initialization sequencing. Mark the resulting
+    // CXXFunctionalCastExpr as list-initialization so that during template
+    // re-instantiation, TreeTransform correctly passes the InitListExpr back
+    // through BuildCXXTypeConstructExpr with ListInitialization=true as opposed
+    // to false.
+    bool IsListInit = ListInitialization ||
+                      (getLangOpts().HLSL && isa<InitListExpr>(Result.get()));
+    SourceRange Locs = IsListInit
                            ? SourceRange()
                            : SourceRange(LParenOrBraceLoc, RParenOrBraceLoc);
     Result = CXXFunctionalCastExpr::Create(
@@ -2206,9 +2213,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
           << /*array*/ 2
           << (*ArraySize ? (*ArraySize)->getSourceRange() : TypeRange));
 
-    InitializedEntity Entity =
-        InitializedEntity::InitializeNew(StartLoc, AllocType,
-                                         /*VariableLengthArrayNew=*/false);
+    InitializedEntity Entity = InitializedEntity::InitializeNew(
+        StartLoc, AllocType, InitializedEntity::NewArrayKind::KnownLength);
     AllocType = DeduceTemplateSpecializationFromInitializer(
         AllocTypeInfo, Entity, Kind, Exprs);
     if (AllocType.isNull())
@@ -2592,7 +2598,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
     bool VariableLengthArrayNew = ArraySize && *ArraySize && !KnownArraySize;
     InitializedEntity Entity = InitializedEntity::InitializeNew(
-        StartLoc, InitType, VariableLengthArrayNew);
+        StartLoc, InitType,
+        VariableLengthArrayNew ? InitializedEntity::NewArrayKind::UnknownLength
+                               : InitializedEntity::NewArrayKind::KnownLength);
     InitializationSequence InitSeq(*this, Entity, Kind, Exprs);
     ExprResult FullInit = InitSeq.Perform(*this, Entity, Kind, Exprs);
     if (FullInit.isInvalid())
@@ -7991,6 +7999,8 @@ Sema::BuildExprRequirement(
     assert(TC && "Type Constraint cannot be null here");
     auto *IDC = TC->getImmediatelyDeclaredConstraint();
     assert(IDC && "ImmediatelyDeclaredConstraint can't be null here.");
+
+    SFINAETrap Trap(*this);
     ExprResult Constraint = SubstExpr(IDC, MLTAL);
     bool HasError = Constraint.isInvalid();
     if (!HasError) {
@@ -8000,6 +8010,8 @@ Sema::BuildExprRequirement(
         HasError = true;
     }
     if (HasError) {
+      // FIXME: Capture diagnostics from the SFINAE trap and store them in the
+      // requirement.
       return new (Context) concepts::ExprRequirement(
           createSubstDiagAt(IDC->getExprLoc(),
                             [&](llvm::raw_ostream &OS) {

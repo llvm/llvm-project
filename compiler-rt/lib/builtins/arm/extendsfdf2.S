@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../assembly.h"
-#include "endian.h"
+#include "crt_endian.h"
 
   .syntax unified
   .text
@@ -70,8 +70,9 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_f2d)
   // have only one IT instruction on the fast path, and it's _here_, where this
   // comment is, so that it comes immediately after the above 16-bit EORS and
   // can be executed in the same cycle by Cortex-M3.
-  lslne   xl, r0, #29           // xl now has the bottom 3 input mantissa bits
-  addne   xh, r12, #(0x3ff - 0x7f) << 20 // rebias exponent in xh
+  lslne   xl, r0, #29                      // xl now has the bottom 3
+                                           // input mantissa bits
+  addne   xh, r12, #((0x3ff - 0x7f) << 20) // rebias exponent in xh
 
   // Finally, check whether the test word in r3 has its top 7 exponent bits
   // zero. If not, we can return the fast-path answer.
@@ -108,7 +109,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_f2d)
   // 0xFF (infinity or NaN). We know it was one of the two, or we would have
   // taken the early return from the fast path. So it's enough to test any
   // single bit of the exponent in r12.
-  tst     r12, #1<<27           // bit 27 is topmost bit of the 8-bit exponent
+  tst     r12, #(1 << 27)       // bit 27 is topmost bit of the 8-bit exponent
   bne     LOCAL_LABEL(inf_or_nan)
 
   // If we didn't take that branch, we have a denormal or zero. Zeroes are
@@ -161,7 +162,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_f2d)
   // to calculate (0x388 - r2). That's particularly convenient, because 0x388
   // fits in an AArch32 immediate field!
   and     r3, r12, #0x80000000  // get the sign bit from the top of r12
-  add     r3, r3, #0x388 << 20  // add the exponent bias as calculated above
+  add     r3, r3, #(0x388 << 20) // add the exponent bias as calculated above
   sub     r3, r3, r2, lsl #20   // subtract the CLZ output
 
   // Finally, distribute the normalized mantissa across the two output words,

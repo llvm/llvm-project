@@ -25,7 +25,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @dllimport_d = external dllimport global [3 x i32]
 ; CHECK: @switch.table.f = private unnamed_addr constant [7 x i32] [i32 55, i32 123, i32 0, i32 -1, i32 27, i32 62, i32 1], align 4
 ; CHECK: @switch.table.char = private unnamed_addr constant [9 x i8] c"7{\00\FF\1B>\01!T", align 1
-; CHECK: @switch.table.h = private unnamed_addr constant [4 x float] [float 0x40091EB860000000, float 0x3FF3BE76C0000000, float 0x4012449BA0000000, float 0x4001AE1480000000], align 4
+; CHECK: @switch.table.h = private unnamed_addr constant [4 x float] [float 3.140000e+00, float 1.234000e+00, float 4.567000e+00, float 2.210000e+00], align 4
 ; CHECK: @switch.table.foostring = private unnamed_addr constant [4 x ptr] [ptr @.str, ptr @.str1, ptr @.str2, ptr @.str3], align 8
 ; CHECK: @switch.table.earlyreturncrash = private unnamed_addr constant [4 x i32] [i32 42, i32 9, i32 88, i32 5], align 4
 ; CHECK: @switch.table.earlyreturncrash.1 = private unnamed_addr constant [4 x i32] [i32 3, i32 4, i32 1, i32 5], align 4
@@ -145,7 +145,7 @@ define void @h(i32 %x) {
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw.epilog:
 ; CHECK-NEXT:    [[A_0:%.*]] = phi i8 [ [[SWITCH_MASKED]], [[SWITCH_LOOKUP]] ], [ 7, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[B_0:%.*]] = phi float [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ 0x4023FAE140000000, [[ENTRY]] ]
+; CHECK-NEXT:    [[B_0:%.*]] = phi float [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ f0x411FD70A, [[ENTRY]] ]
 ; CHECK-NEXT:    call void @dummy(i8 signext [[A_0]], float [[B_0]])
 ; CHECK-NEXT:    ret void
 ;

@@ -121,21 +121,13 @@ bool SuspendCrossingInfo::computeBlockData(
       B.Consumes |= P.Consumes;
       B.Kills |= P.Kills;
 
-      // If block P is a suspend block, it should propagate kills into block
-      // B for every block P consumes.
-      if (P.Suspend)
+      if (P.AlwaysKill)
         B.Kills |= P.Consumes;
     }
 
-    if (B.Suspend) {
-      // If block B is a suspend block, it should kill all of the blocks it
-      // consumes.
+    if (B.AlwaysKill) {
       B.Kills |= B.Consumes;
-    } else if (B.End) {
-      // If block B is an end block, it should not propagate kills as the
-      // blocks following coro.end() are reached during initial invocation
-      // of the coroutine while all the data are still available on the
-      // stack or in the registers.
+    } else if (B.NeverKill) {
       B.Kills.reset();
     } else {
       // This is reached when B block it not Suspend nor coro.end and it
@@ -177,7 +169,7 @@ SuspendCrossingInfo::SuspendCrossingInfo(
     assert(CE->getParent()->getFirstInsertionPt() == CE->getIterator() &&
            CE->getParent()->size() <= 2 && "CoroEnd must be in its own BB");
 
-    getBlockData(CE->getParent()).End = true;
+    getBlockData(CE->getParent()).NeverKill = true;
   }
 
   // Mark all suspend blocks and indicate that they kill everything they
@@ -187,7 +179,7 @@ SuspendCrossingInfo::SuspendCrossingInfo(
   auto markSuspendBlock = [&](IntrinsicInst *BarrierInst) {
     BasicBlock *SuspendBlock = BarrierInst->getParent();
     auto &B = getBlockData(SuspendBlock);
-    B.Suspend = true;
+    B.AlwaysKill = true;
     B.Kills |= B.Consumes;
   };
   for (auto *CSI : CoroSuspends) {

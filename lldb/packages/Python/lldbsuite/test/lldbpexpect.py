@@ -16,6 +16,10 @@ class PExpectTest(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     PROMPT = "(lldb) "
 
+    # Override this value in a subclass to make the test fail faster and make
+    # debugging less tedious.
+    TIMEOUT = 60
+
     def expect_prompt(self):
         self.child.expect_exact(self.PROMPT)
 
@@ -23,7 +27,6 @@ class PExpectTest(TestBase):
         self,
         executable=None,
         extra_args=None,
-        timeout=60,
         dimensions=None,
         run_under=None,
         post_spawn=None,
@@ -55,6 +58,8 @@ class PExpectTest(TestBase):
         env = dict(os.environ)
         env["TERM"] = "vt100"
         env["HOME"] = self.getBuildDir()
+
+        timeout = self.TIMEOUT
 
         import pexpect
 

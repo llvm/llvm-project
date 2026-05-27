@@ -17,11 +17,11 @@
 
 ; RUN: opt -mtriple=aarch64 -mcpu=neoverse-n2 \
 ; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize --disable-output < %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=VSCALEFORTUNING1
+; RUN:     | FileCheck %s --check-prefixes=VSCALEFORTUNING1-PREFER-FIXED
 
 ; RUN: opt -mtriple=aarch64 -mcpu=neoverse-v2 \
 ; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize --disable-output < %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=NEOVERSEV2
+; RUN:     | FileCheck %s --check-prefixes=VSCALEFORTUNING1-PREFER-FIXED
 
 ; VSCALEFORTUNING1: Cost for VF vscale x 2: 11 (Estimated cost per lane: 5.
 ; VSCALEFORTUNING1: Cost for VF vscale x 4: 11 (Estimated cost per lane: 2.
@@ -31,13 +31,13 @@
 ; VSCALEFORTUNING2: Cost for VF vscale x 4: 11 (Estimated cost per lane: 1.
 ; VSCALEFORTUNING2: LV: Selecting VF: vscale x 16
 
-; NEOVERSEV2: Cost for VF vscale x 2: 11 (Estimated cost per lane: 5.
-; NEOVERSEV2: Cost for VF vscale x 4: 11 (Estimated cost per lane: 2.
-; NEOVERSEV2: LV: Selecting VF: 16
+; VSCALEFORTUNING1-PREFER-FIXED: Cost for VF vscale x 2: 11 (Estimated cost per lane: 5.
+; VSCALEFORTUNING1-PREFER-FIXED: Cost for VF vscale x 4: 11 (Estimated cost per lane: 2.
+; VSCALEFORTUNING1-PREFER-FIXED: LV: Selecting VF: 16
 
 ; VSCALEFORTUNING1: <vscale x 16 x i8>
 ; VSCALEFORTUNING2: <vscale x 16 x i8>
-; NEOVERSEV2: <16 x i8>
+; VSCALEFORTUNING1-PREFER-FIXED: <16 x i8>
 define void @test0(ptr %a, ptr %b, ptr %c) #0 {
 entry:
   br label %loop

@@ -208,25 +208,27 @@ def test_08_avail_ge62 : HLSLBuiltin<"availfunc", "__builtin_availfunc"> {
 // ALIAS-NOT: availfunc
 
 //===----------------------------------------------------------------------===//
-// Explicit availability (< SM6.2) with 16-bit integer types: the ifdef guard
-// and _HLSL_AVAILABILITY(shadermodel, 6.2) are used for int16_t regardless of
-// the intrinsic's stated availability, because 16-bit types require SM6.2.
-// Note: half (IsConditionally16Bit) cannot be used here — the emitter asserts
-// because neither _HLSL_AVAILABILITY nor _HLSL_16BIT_AVAILABILITY can correctly
-// express availability for half when the intrinsic's SM < 6.2.
-// Exercises: Availability < SM6.2 with Is16Bit types.
+// Explicit availability (< SM6.2) with 16-bit types: int16_t gets the ifdef
+// guard and _HLSL_AVAILABILITY(shadermodel, 6.2) regardless of the intrinsic's
+// stated availability, because 16-bit types require SM6.2. Half gets a 3-arg
+// _HLSL_16BIT_AVAILABILITY so that 16-bit half uses SM6.2 availability while
+// the non-16-bit float fallback uses the intrinsic's original availability.
+// Exercises: Availability < SM6.2 with Is16Bit and IsConditionally16Bit types.
 //===----------------------------------------------------------------------===//
 
 def test_08b_avail_lt62 : HLSLBuiltin<"availlt62", "__builtin_availlt62"> {
   let Args = [Varying];
   let ReturnType = Varying;
   let VaryingScalar = 1;
-  let VaryingTypes = [Int16Ty, IntTy];
+  let VaryingTypes = [HalfTy, Int16Ty, IntTy];
   let Availability = SM6_1;
 }
 
 // ALIAS-LABEL: // availlt62 overloads
-// ALIAS-NEXT: #ifdef __HLSL_ENABLE_16_BIT
+// ALIAS-NEXT: _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2, 6.1)
+// ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_availlt62)
+// ALIAS-NEXT: half availlt62(half);
+// ALIAS: #ifdef __HLSL_ENABLE_16_BIT
 // ALIAS-NEXT: _HLSL_AVAILABILITY(shadermodel, 6.2)
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_availlt62)
 // ALIAS-NEXT: int16_t availlt62(int16_t);

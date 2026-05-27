@@ -88,6 +88,11 @@ static bool WantsPthread(const llvm::Triple &Triple, const ArgList &Args) {
   return WantsPthread;
 }
 
+static bool WantsLibcallThreadContext(const llvm::Triple &Triple,
+                                      const ArgList &Args) {
+  return Triple.getOS() == llvm::Triple::WASIp3;
+}
+
 void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                 const InputInfo &Output,
                                 const InputInfoList &Inputs,
@@ -168,6 +173,9 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString("-shared"));
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
+
+  if (WantsLibcallThreadContext(ToolChain.getTriple(), Args))
+    CmdArgs.push_back("--libcall-thread-context");
 
   if (WantsPthread(ToolChain.getTriple(), Args))
     CmdArgs.push_back("--shared-memory");
@@ -560,8 +568,10 @@ void WebAssembly::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
   }
 }
 
-SanitizerMask WebAssembly::getSupportedSanitizers() const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+SanitizerMask WebAssembly::getSupportedSanitizers(
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   if (getTriple().isOSEmscripten()) {
     Res |= SanitizerKind::Vptr | SanitizerKind::Leak;
   }

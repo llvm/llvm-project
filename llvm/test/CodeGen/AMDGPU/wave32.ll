@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -amdgpu-early-ifcvt=1 -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefixes=GCN,GFX1064 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefixes=GCN,GFX1032,GFX10DEFWAVE %s
 
-define amdgpu_kernel void @test_vopc_i32(ptr addrspace(1) %arg) {
+define amdgpu_kernel void @test_vopc_i32(ptr addrspace(1) %arg) #1 {
 ; GFX1032-LABEL: test_vopc_i32:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -38,7 +38,7 @@ define amdgpu_kernel void @test_vopc_i32(ptr addrspace(1) %arg) {
   ret void
 }
 
-define amdgpu_kernel void @test_vopc_f32(ptr addrspace(1) %arg) {
+define amdgpu_kernel void @test_vopc_f32(ptr addrspace(1) %arg) #1 {
 ; GFX1032-LABEL: test_vopc_f32:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -71,7 +71,7 @@ define amdgpu_kernel void @test_vopc_f32(ptr addrspace(1) %arg) {
   ret void
 }
 
-define amdgpu_ps void @test_vopc_vcmp(float %x) {
+define amdgpu_ps void @test_vopc_vcmp(float %x) #1 {
 ; GFX1032-LABEL: test_vopc_vcmp:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    v_cmp_nle_f32_e32 vcc_lo, 0, v0
@@ -98,7 +98,7 @@ define amdgpu_ps void @test_vopc_vcmp(float %x) {
   ret void
 }
 
-define amdgpu_kernel void @test_vopc_2xf16(ptr addrspace(1) %arg) {
+define amdgpu_kernel void @test_vopc_2xf16(ptr addrspace(1) %arg) #1 {
 ; GFX1032-LABEL: test_vopc_2xf16:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -197,7 +197,7 @@ define amdgpu_kernel void @test_vcmp_vcnd_f16(ptr addrspace(1) %out, half %x) #0
   ret void
 }
 
-define amdgpu_kernel void @test_vop3_cmp_f32_sop_and(ptr addrspace(1) %arg) {
+define amdgpu_kernel void @test_vop3_cmp_f32_sop_and(ptr addrspace(1) %arg) #1 {
 ; GFX1032-LABEL: test_vop3_cmp_f32_sop_and:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
@@ -236,7 +236,7 @@ define amdgpu_kernel void @test_vop3_cmp_f32_sop_and(ptr addrspace(1) %arg) {
   ret void
 }
 
-define amdgpu_kernel void @test_vop3_cmp_i32_sop_xor(ptr addrspace(1) %arg) {
+define amdgpu_kernel void @test_vop3_cmp_i32_sop_xor(ptr addrspace(1) %arg) #1 {
 ; GFX1032-LABEL: test_vop3_cmp_i32_sop_xor:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
@@ -275,7 +275,7 @@ define amdgpu_kernel void @test_vop3_cmp_i32_sop_xor(ptr addrspace(1) %arg) {
   ret void
 }
 
-define amdgpu_kernel void @test_vop3_cmp_u32_sop_or(ptr addrspace(1) %arg) {
+define amdgpu_kernel void @test_vop3_cmp_u32_sop_or(ptr addrspace(1) %arg) #1 {
 ; GFX1032-LABEL: test_vop3_cmp_u32_sop_or:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
@@ -871,7 +871,7 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:    s_add_i32 s3, s1, 1
 ; GFX1032-NEXT:    s_cmp_ge_u32 s2, s0
 ; GFX1032-NEXT:    s_cselect_b32 s4, s3, s1
-; GFX1032-NEXT:  .LBB15_3:
+; GFX1032-NEXT:  .LBB15_3: ; %bb.split
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1032-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1032-NEXT:    v_mov_b32_e32 v1, s5
@@ -1022,7 +1022,7 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1064-NEXT:    s_add_i32 s3, s1, 1
 ; GFX1064-NEXT:    s_cmp_ge_u32 s2, s0
 ; GFX1064-NEXT:    s_cselect_b32 s4, s3, s1
-; GFX1064-NEXT:  .LBB15_3:
+; GFX1064-NEXT:  .LBB15_3: ; %bb.split
 ; GFX1064-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1064-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1064-NEXT:    v_mov_b32_e32 v1, s5
@@ -1408,7 +1408,7 @@ define amdgpu_kernel void @test_br_cc_f16(
 ; GFX1064-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) {
+    ptr addrspace(1) %b) #1 {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -1692,8 +1692,8 @@ define amdgpu_kernel void @test_set_inactive_64(ptr addrspace(1) %out, i64 %in) 
 ; GFX1032-NEXT:    v_cndmask_b32_e64 v1, 0, s3, s4
 ; GFX1032-NEXT:    v_cndmask_b32_e64 v0, 0, s2, s4
 ; GFX1032-NEXT:    s_mov_b32 exec_lo, s4
-; GFX1032-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1032-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1032-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1032-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX1032-NEXT:    global_store_dwordx2 v4, v[2:3], s[0:1]
 ; GFX1032-NEXT:    s_endpgm
@@ -1706,8 +1706,8 @@ define amdgpu_kernel void @test_set_inactive_64(ptr addrspace(1) %out, i64 %in) 
 ; GFX1064-NEXT:    v_cndmask_b32_e64 v1, 0, s3, s[4:5]
 ; GFX1064-NEXT:    v_cndmask_b32_e64 v0, 0, s2, s[4:5]
 ; GFX1064-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX1064-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1064-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1064-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1064-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX1064-NEXT:    global_store_dwordx2 v4, v[2:3], s[0:1]
 ; GFX1064-NEXT:    s_endpgm
@@ -1864,7 +1864,7 @@ break:
   ret <4 x float> %c.iv
 }
 
-define amdgpu_ps float @test_wwm1(i32 inreg %idx0, i32 inreg %idx1, float %src0, float %src1) {
+define amdgpu_ps float @test_wwm1(i32 inreg %idx0, i32 inreg %idx1, float %src0, float %src1) #1 {
 ; GFX1032-LABEL: test_wwm1:
 ; GFX1032:       ; %bb.0: ; %main_body
 ; GFX1032-NEXT:    s_or_saveexec_b32 s0, -1
@@ -1890,7 +1890,7 @@ main_body:
   ret float %out.0
 }
 
-define amdgpu_ps float @test_wwm2(i32 inreg %idx) {
+define amdgpu_ps float @test_wwm2(i32 inreg %idx) #1 {
 ; GFX1032-LABEL: test_wwm2:
 ; GFX1032:       ; %bb.0: ; %main_body
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
@@ -1951,7 +1951,7 @@ endif:
   ret float %out.2
 }
 
-define amdgpu_ps float @test_strict_wwm1(i32 inreg %idx0, i32 inreg %idx1, float %src0, float %src1) {
+define amdgpu_ps float @test_strict_wwm1(i32 inreg %idx0, i32 inreg %idx1, float %src0, float %src1) #1 {
 ; GFX1032-LABEL: test_strict_wwm1:
 ; GFX1032:       ; %bb.0: ; %main_body
 ; GFX1032-NEXT:    s_or_saveexec_b32 s0, -1
@@ -1977,7 +1977,7 @@ main_body:
   ret float %out.0
 }
 
-define amdgpu_ps float @test_strict_wwm2(i32 inreg %idx) {
+define amdgpu_ps float @test_strict_wwm2(i32 inreg %idx) #1 {
 ; GFX1032-LABEL: test_strict_wwm2:
 ; GFX1032:       ; %bb.0: ; %main_body
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
@@ -2118,7 +2118,7 @@ main_body:
   ret float %out.2
 }
 
-define amdgpu_kernel void @test_intr_fcmp_i64(ptr addrspace(1) %out, float %src, float %a) {
+define amdgpu_kernel void @test_intr_fcmp_i64(ptr addrspace(1) %out, float %src, float %a) #1 {
 ; GFX1032-LABEL: test_intr_fcmp_i64:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
@@ -2145,7 +2145,7 @@ define amdgpu_kernel void @test_intr_fcmp_i64(ptr addrspace(1) %out, float %src,
   ret void
 }
 
-define amdgpu_kernel void @test_intr_icmp_i64(ptr addrspace(1) %out, i32 %src) {
+define amdgpu_kernel void @test_intr_icmp_i64(ptr addrspace(1) %out, i32 %src) #1 {
 ; GFX1032-LABEL: test_intr_icmp_i64:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_clause 0x1
@@ -2175,7 +2175,7 @@ define amdgpu_kernel void @test_intr_icmp_i64(ptr addrspace(1) %out, i32 %src) {
   ret void
 }
 
-define amdgpu_kernel void @test_intr_fcmp_i32(ptr addrspace(1) %out, float %src, float %a) {
+define amdgpu_kernel void @test_intr_fcmp_i32(ptr addrspace(1) %out, float %src, float %a) #1 {
 ; GFX1032-LABEL: test_intr_fcmp_i32:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
@@ -2201,7 +2201,7 @@ define amdgpu_kernel void @test_intr_fcmp_i32(ptr addrspace(1) %out, float %src,
   ret void
 }
 
-define amdgpu_kernel void @test_intr_icmp_i32(ptr addrspace(1) %out, i32 %src) {
+define amdgpu_kernel void @test_intr_icmp_i32(ptr addrspace(1) %out, i32 %src) #1 {
 ; GFX1032-LABEL: test_intr_icmp_i32:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_clause 0x1
@@ -2230,7 +2230,7 @@ define amdgpu_kernel void @test_intr_icmp_i32(ptr addrspace(1) %out, i32 %src) {
   ret void
 }
 
-define amdgpu_ps void @test_wqm_vote(float %a) {
+define amdgpu_ps void @test_wqm_vote(float %a) #1 {
 ; GFX1032-LABEL: test_wqm_vote:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    v_cmp_neq_f32_e32 vcc_lo, 0, v0
@@ -2451,14 +2451,14 @@ main_body:
   ret float %s.10
 }
 
-define amdgpu_kernel void @icmp64(i32 %n, i32 %s) {
+define amdgpu_kernel void @icmp64(i32 %n, i32 %s) #1 {
 ; GFX1032-LABEL: icmp64:
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    s_load_dword s0, s[4:5], 0x28
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-NEXT:    v_cvt_f32_u32_e32 v1, s0
 ; GFX1032-NEXT:    s_sub_i32 s1, 0, s0
-; GFX1032-NEXT:    v_rcp_iflag_f32_e32 v1, v1
+; GFX1032-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX1032-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
 ; GFX1032-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX1032-NEXT:    v_mul_lo_u32 v2, s1, v1
@@ -2492,7 +2492,7 @@ define amdgpu_kernel void @icmp64(i32 %n, i32 %s) {
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064-NEXT:    v_cvt_f32_u32_e32 v1, s0
 ; GFX1064-NEXT:    s_sub_i32 s1, 0, s0
-; GFX1064-NEXT:    v_rcp_iflag_f32_e32 v1, v1
+; GFX1064-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX1064-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
 ; GFX1064-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX1064-NEXT:    v_mul_lo_u32 v2, s1, v1
@@ -2546,7 +2546,7 @@ if.end2:                                          ; preds = %if.end
   ret void
 }
 
-define amdgpu_kernel void @fcmp64(float %n, float %s) {
+define amdgpu_kernel void @fcmp64(float %n, float %s) #1 {
 ; GFX1032-LABEL: fcmp64:
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    s_load_dword s0, s[4:5], 0x28
@@ -2758,14 +2758,14 @@ if.end2:                                          ; preds = %if.end
   ret void
 }
 
-define amdgpu_kernel void @icmp32(i32 %n, i32 %s) {
+define amdgpu_kernel void @icmp32(i32 %n, i32 %s) #1 {
 ; GFX1032-LABEL: icmp32:
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    s_load_dword s0, s[4:5], 0x28
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-NEXT:    v_cvt_f32_u32_e32 v1, s0
 ; GFX1032-NEXT:    s_sub_i32 s1, 0, s0
-; GFX1032-NEXT:    v_rcp_iflag_f32_e32 v1, v1
+; GFX1032-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX1032-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
 ; GFX1032-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX1032-NEXT:    v_mul_lo_u32 v2, s1, v1
@@ -2799,7 +2799,7 @@ define amdgpu_kernel void @icmp32(i32 %n, i32 %s) {
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064-NEXT:    v_cvt_f32_u32_e32 v1, s0
 ; GFX1064-NEXT:    s_sub_i32 s1, 0, s0
-; GFX1064-NEXT:    v_rcp_iflag_f32_e32 v1, v1
+; GFX1064-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX1064-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
 ; GFX1064-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX1064-NEXT:    v_mul_lo_u32 v2, s1, v1
@@ -2852,7 +2852,7 @@ if.end2:                                          ; preds = %if.end
   ret void
 }
 
-define amdgpu_kernel void @fcmp32(float %n, float %s) {
+define amdgpu_kernel void @fcmp32(float %n, float %s) #1 {
 ; GFX1032-LABEL: fcmp32:
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    s_load_dword s0, s[4:5], 0x28
@@ -3167,8 +3167,8 @@ declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) 
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind readnone optnone noinline }
-attributes #3 = { "target-features"="+wavefrontsize32" }
-attributes #4 = { "target-features"="+wavefrontsize64" }
+attributes #3 = { nounwind "target-features"="+wavefrontsize32" }
+attributes #4 = { nounwind "target-features"="+wavefrontsize64" }
 attributes #5 = { inaccessiblememonly nounwind }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GFX10DEFWAVE: {{.*}}

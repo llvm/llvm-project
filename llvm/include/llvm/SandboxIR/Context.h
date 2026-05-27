@@ -71,6 +71,7 @@ protected:
   friend class Type;              // For LLVMCtx.
   friend class PointerType;       // For LLVMCtx.
   friend class IntegerType;       // For LLVMCtx.
+  friend class ByteType;          // For LLVMCtx.
   friend class StructType;        // For LLVMCtx.
   friend class Region;            // For LLVMCtx.
   friend class IRSnapshotChecker; // To snapshot LLVMModuleToModuleMap.
@@ -240,7 +241,7 @@ protected:
 
 public:
   LLVM_ABI Context(LLVMContext &LLVMCtx);
-  LLVM_ABI ~Context();
+  LLVM_ABI virtual ~Context();
   /// Clears function-level state.
   LLVM_ABI void clear();
 

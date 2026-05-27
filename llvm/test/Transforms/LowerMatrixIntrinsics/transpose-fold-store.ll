@@ -27,11 +27,11 @@ define void @redundant_transpose_of_shuffle_2(<4 x float> %m, ptr %dst) {
 ; CHECK-NEXT:    [[SPLIT2:%.*]] = shufflevector <4 x float> [[SHUFFLE]], <4 x float> poison, <1 x i32> <i32 2>
 ; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <4 x float> [[SHUFFLE]], <4 x float> poison, <1 x i32> <i32 3>
 ; CHECK-NEXT:    store <1 x float> [[SPLIT]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[DST]], i64 1
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 1
 ; CHECK-NEXT:    store <1 x float> [[SPLIT1]], ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr float, ptr [[DST]], i64 2
+; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 2
 ; CHECK-NEXT:    store <1 x float> [[SPLIT2]], ptr [[VEC_GEP4]], align 4
-; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr float, ptr [[DST]], i64 3
+; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 3
 ; CHECK-NEXT:    store <1 x float> [[SPLIT3]], ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    ret void
 ;

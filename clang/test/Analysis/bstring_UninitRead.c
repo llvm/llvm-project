@@ -43,6 +43,32 @@ void memcpy_array_partially_init_error(char *dst) {
   (void)buf;
 }
 
+void memcpy_offset_uninit(char *dst) {
+  char buf[10];
+  buf[0] = 'a';
+  // buf[5] is never written.
+  memcpy(dst, &buf[5], 3); // expected-warning{{The first element of the 2nd argument is undefined}}
+                           // expected-note@-1{{Other elements might also be undefined}}
+}
+
+void memcpy_offset_uninit_boundary(char *dst) {
+  char buf[10];
+  buf[5] = 'a';
+  // buf[6] and buf[7] are never written.
+  memcpy(dst, &buf[5], 3); // expected-warning{{The last accessed element (at index 2) in the 2nd argument is undefined}}
+                           // expected-note@-1{{Other elements might also be undefined}}
+}
+
+// Reduced false positive: memcpy from an offset into a partially initialized
+// buffer should not warn if the accessed range is initialized.
+void memcpy_offset_no_false_positive(char *dst) {
+  char buf[10];
+  buf[5] = 'a';
+  buf[6] = 'b';
+  buf[7] = 'c';
+  memcpy(dst, &buf[5], 3); // no-warning
+}
+
 // The interesting case here is that the portion we're copying is initialized,
 // but not the whole matrix. We need to be careful to extract buf[1], and not
 // buf when trying to peel region layers off from the source argument.
@@ -50,11 +76,7 @@ void memcpy_array_from_matrix(char *dst) {
   char buf[2][2];
   buf[1][0] = 'i';
   buf[1][1] = 'j';
-  // FIXME: This is a FP -- we mistakenly retrieve the first element of buf,
-  // instead of the first element of buf[1]. getLValueElement simply peels off
-  // another ElementRegion layer, when in this case it really shouldn't.
-  memcpy(dst, buf[1], 2); // expected-warning{{The first element of the 2nd argument is undefined}}
-                          // expected-note@-1{{Other elements might also be undefined}}
+  memcpy(dst, buf[1], 2); // no-warning
   (void)buf;
 }
 

@@ -11,36 +11,36 @@ RUN: cp %p/../Inputs/basic2.macho.x86_64.o %t/Inputs
 RUN: cp %p/../Inputs/basic3.macho.x86_64.o %t/Inputs
 
 # Verify all the files are present.
-RUN: dsymutil -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
+RUN: dsymutil --linker classic -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
 
 # Make sure we don't crash with an empty TMPDIR.
-RUN: env TMPDIR="" dsymutil -o -f -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1
+RUN: env TMPDIR="" dsymutil --linker classic -o -f -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1
 
 # Make sure we don't leave around a temporary directory.
-RUN: env TMPDIR="%t/tempdir" dsymutil -o - -f %t/Inputs/basic.macho.x86_64
+RUN: env TMPDIR="%t/tempdir" dsymutil --linker classic -o - -f %t/Inputs/basic.macho.x86_64
 RUN: not ls %t/tempdir/dsymutil-*
 
 # Create a reproducer.
 RUN: rm -rf %t.repro
-RUN: env DSYMUTIL_REPRODUCER_PATH=%t.repro dsymutil -gen-reproducer -f -o %t.generate -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1 | FileCheck %s --check-prefixes=REPRODUCER
+RUN: env DSYMUTIL_REPRODUCER_PATH=%t.repro dsymutil --linker classic -gen-reproducer -f -o %t.generate -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1 | FileCheck %s --check-prefixes=REPRODUCER
 RUN: llvm-dwarfdump -a %t.generate | FileCheck %s
 
 RUN: rm -rf %t.diags
-RUN: env LLVM_DIAGNOSTIC_DIR=%t.diags dsymutil -gen-reproducer -f -o %t.generate -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1 | FileCheck %s --check-prefixes=REPRODUCER
+RUN: env LLVM_DIAGNOSTIC_DIR=%t.diags dsymutil --linker classic -gen-reproducer -f -o %t.generate -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1 | FileCheck %s --check-prefixes=REPRODUCER
 RUN: ls %t.diags | grep 'dsymutil-' | count 1
 
 # Remove the input files and verify that was successful.
 RUN: rm -rf %t
-RUN: not dsymutil -f -o %t.error -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1 | FileCheck %s --check-prefix=ERROR
+RUN: not dsymutil --linker classic -f -o %t.error -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1 | FileCheck %s --check-prefix=ERROR
 
 RUN: not dsymutil --linker parallel -f -o %t.error -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1 | FileCheck %s --check-prefix=ERROR
 
 # Use the reproducer.
-RUN: dsymutil -use-reproducer %t.repro -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
+RUN: dsymutil --linker classic -use-reproducer %t.repro -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
 RUN: dsymutil --linker parallel -use-reproducer %t.repro -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
 
 # Using a reproducer takes precedence.
-RUN: dsymutil -gen-reproducer -use-reproducer %t.repro -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
+RUN: dsymutil --linker classic -gen-reproducer -use-reproducer %t.repro -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
 
 RUN: dsymutil --linker parallel -gen-reproducer -use-reproducer %t.repro -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
 

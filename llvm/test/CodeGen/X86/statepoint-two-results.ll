@@ -8,6 +8,7 @@ define void @quux() gc "statepoint-example" {
 ; CHECK:       # %bb.0: # %bb1
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    # implicit-def: $rdi
 ; CHECK-NEXT:    movl $4, %esi
 ; CHECK-NEXT:    callq wombat@PLT
 ; CHECK-NEXT:  .Ltmp0:

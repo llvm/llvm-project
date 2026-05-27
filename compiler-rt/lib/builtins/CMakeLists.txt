@@ -534,6 +534,8 @@ set(thumb1_base_SOURCES
   ${GENERIC_SOURCES}
 )
 set_special_properties(arm/adddf3.S SUPERSEDES subdf3.c PROVIDES subdf3)
+set_special_properties(arm/cmpdf2.S SUPERSEDES comparedf2.c PROVIDES comparedf2)
+set_special_properties(arm/cmpsf2.S SUPERSEDES arm/comparesf2.S PROVIDES comparesf2)
 
 if(COMPILER_RT_ARM_OPTIMIZED_FP)
   set(thumb1_base_SOURCES
@@ -935,6 +937,8 @@ set(riscv64_SOURCES
 set(sparc_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 set(sparcv9_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 
+set(spirv64_SOURCES ${GENERIC_SOURCES})
+
 set(s390x_SOURCES
   ${GENERIC_SOURCES}
   ${GENERIC_TF_SOURCES}
@@ -1003,7 +1007,7 @@ else ()
   endif()
 
   # Directly targeting the GPU requires a few extra flags.
-  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
+  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx|spirv64")
     append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto BUILTIN_CFLAGS)
@@ -1026,7 +1030,7 @@ else ()
   elseif(COMPILER_RT_BAREMETAL_BUILD)
     foreach (arch ${BUILTIN_SUPPORTED_ARCH})
       if("${arch}" MATCHES "arm64|aarch64")
-        list(APPEND BUILTIN_DEFS ENABLE_BAREMETAL_AARCH64_FMV)
+        list(APPEND BUILTIN_DEFS TARGET_BAREMETAL_AARCH64)
       endif()
     endforeach ()
   endif()
@@ -1145,10 +1149,10 @@ if(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
     endif()
   endforeach()
   # FIXME: On AIX, we have to archive built shared libraries into a static
-  # archive, i.e., libatomic.a. Once cmake adds support of such usage for AIX,
+  # archive, i.e., libcompiler_rt.a. Once cmake adds support of such usage for AIX,
   # this ad-hoc part can be removed.
   if(OS_NAME MATCHES "AIX")
-    archive_aix_libatomic(clang_rt.atomic libatomic
+    archive_aix_libatomic(clang_rt.atomic libcompiler_rt
                           ARCHS ${BUILTIN_SUPPORTED_ARCH}
                           PARENT_TARGET builtins-standalone-atomic)
   endif()

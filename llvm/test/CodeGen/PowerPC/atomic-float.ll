@@ -8,15 +8,17 @@ define float @test_add(ptr %ptr, float %incr) {
 ; CHECK-64-LABEL: test_add:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    sync
-; CHECK-64-NEXT:    lfs 0, 0(3)
+; CHECK-64-NEXT:    lwz 4, 0(3)
+; CHECK-64-NEXT:    stw 4, -4(1)
+; CHECK-64-NEXT:    lfs 0, -4(1)
 ; CHECK-64-NEXT:  .LBB0_1: # %atomicrmw.start
 ; CHECK-64-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-64-NEXT:    # Child Loop BB0_2 Depth 2
 ; CHECK-64-NEXT:    fadds 2, 0, 1
-; CHECK-64-NEXT:    stfs 2, -4(1)
-; CHECK-64-NEXT:    stfs 0, -8(1)
-; CHECK-64-NEXT:    lwz 5, -4(1)
-; CHECK-64-NEXT:    lwz 6, -8(1)
+; CHECK-64-NEXT:    stfs 2, -8(1)
+; CHECK-64-NEXT:    stfs 0, -12(1)
+; CHECK-64-NEXT:    lwz 5, -8(1)
+; CHECK-64-NEXT:    lwz 6, -12(1)
 ; CHECK-64-NEXT:  .LBB0_2: # %cmpxchg.start
 ; CHECK-64-NEXT:    # Parent Loop BB0_1 Depth=1
 ; CHECK-64-NEXT:    # => This Inner Loop Header: Depth=2
@@ -30,8 +32,8 @@ define float @test_add(ptr %ptr, float %incr) {
 ; CHECK-64-NEXT:    bne- 0, .LBB0_2
 ; CHECK-64-NEXT:  .LBB0_4: # %cmpxchg.end
 ; CHECK-64-NEXT:    #
-; CHECK-64-NEXT:    stw 4, -12(1)
-; CHECK-64-NEXT:    lfs 0, -12(1)
+; CHECK-64-NEXT:    stw 4, -16(1)
+; CHECK-64-NEXT:    lfs 0, -16(1)
 ; CHECK-64-NEXT:    bc 4, 20, .LBB0_1
 ; CHECK-64-NEXT:    b .LBB0_6
 ; CHECK-64-NEXT:  .LBB0_5: # %cmpxchg.nostore
@@ -48,15 +50,17 @@ define float @test_add(ptr %ptr, float %incr) {
 ; CHECK-32-NEXT:    stwu 1, -32(1)
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-32-NEXT:    sync
-; CHECK-32-NEXT:    lfs 0, 0(3)
+; CHECK-32-NEXT:    lwz 4, 0(3)
+; CHECK-32-NEXT:    stw 4, 28(1)
+; CHECK-32-NEXT:    lfs 0, 28(1)
 ; CHECK-32-NEXT:  .LBB0_1: # %atomicrmw.start
 ; CHECK-32-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-32-NEXT:    # Child Loop BB0_2 Depth 2
 ; CHECK-32-NEXT:    fadds 2, 0, 1
-; CHECK-32-NEXT:    stfs 2, 28(1)
-; CHECK-32-NEXT:    stfs 0, 24(1)
-; CHECK-32-NEXT:    lwz 5, 28(1)
-; CHECK-32-NEXT:    lwz 6, 24(1)
+; CHECK-32-NEXT:    stfs 2, 24(1)
+; CHECK-32-NEXT:    stfs 0, 20(1)
+; CHECK-32-NEXT:    lwz 5, 24(1)
+; CHECK-32-NEXT:    lwz 6, 20(1)
 ; CHECK-32-NEXT:  .LBB0_2: # %cmpxchg.start
 ; CHECK-32-NEXT:    # Parent Loop BB0_1 Depth=1
 ; CHECK-32-NEXT:    # => This Inner Loop Header: Depth=2
@@ -70,8 +74,8 @@ define float @test_add(ptr %ptr, float %incr) {
 ; CHECK-32-NEXT:    bne- 0, .LBB0_2
 ; CHECK-32-NEXT:  .LBB0_4: # %cmpxchg.end
 ; CHECK-32-NEXT:    #
-; CHECK-32-NEXT:    stw 4, 20(1)
-; CHECK-32-NEXT:    lfs 0, 20(1)
+; CHECK-32-NEXT:    stw 4, 16(1)
+; CHECK-32-NEXT:    lfs 0, 16(1)
 ; CHECK-32-NEXT:    bc 4, 20, .LBB0_1
 ; CHECK-32-NEXT:    b .LBB0_6
 ; CHECK-32-NEXT:  .LBB0_5: # %cmpxchg.nostore

@@ -117,6 +117,11 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
   if (ignoreTKR.test(common::IgnoreTKR::Device)) {
     return true;
   }
+  // A use_device(...) actual is compatible only with a Device dummy or a
+  // host dummy (no CUDA attribute); other attributes (Managed, Unified,
+  // Pinned, ...) require the actual to live in that specific kind of memory.
+  if (y && *y == CUDADataAttr::UseDevice)
+    return !x || *x == CUDADataAttr::Device;
   if (!y && isHostDeviceProcedure) {
     return true;
   }
@@ -132,8 +137,8 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
       y.value_or(CUDADataAttr::Device) == CUDADataAttr::Device) {
     return true;
   } else if (ignoreTKR.test(IgnoreTKR::Managed) &&
-      x.value_or(CUDADataAttr::Managed) == CUDADataAttr::Managed &&
-      y.value_or(CUDADataAttr::Managed) == CUDADataAttr::Managed) {
+      (!x || *x == CUDADataAttr::Managed || *x == CUDADataAttr::Unified) &&
+      (!y || *y == CUDADataAttr::Managed || *y == CUDADataAttr::Unified)) {
     return true;
   } else if (allowUnifiedMatchingRule) {
     if (!x) { // Dummy argument has no attribute -> host
@@ -143,11 +148,19 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
       }
     } else {
       if (*x == CUDADataAttr::Device) {
-        if ((y &&
-                (*y == CUDADataAttr::Managed || *y == CUDADataAttr::Unified ||
-                    *y == CUDADataAttr::Shared ||
-                    *y == CUDADataAttr::Constant)) ||
-            (!y && (isCudaUnified || isCudaManaged))) {
+        if (y &&
+            (*y == CUDADataAttr::Managed || *y == CUDADataAttr::Unified ||
+                *y == CUDADataAttr::Shared || *y == CUDADataAttr::Constant)) {
+          return true;
+        }
+        // A device dummy carrying !dir$ ignore_tkr(m) opts out of the
+        // -gpu=mem:{unified,managed} relaxation that would otherwise let
+        // an unattributed host actual bind to it. The (m) letter is used
+        // by host modules to mark device-typed dummies as overload
+        // discriminators that should only accept actuals with an explicit
+        // device/managed/unified attribute.
+        if (!y && (isCudaUnified || isCudaManaged) &&
+            !ignoreTKR.test(IgnoreTKR::Managed)) {
           return true;
         }
       } else if (*x == CUDADataAttr::Managed) {

@@ -654,6 +654,7 @@ void transform::FuseOp::build(OpBuilder &builder, OperationState &result,
         /*target=*/target,
         /*tile_sizes=*/dynamicTileSizes,
         /*tile_interchange=*/dynamicTileInterchange,
+        /*packed_tile_sizes=*/Value(),
         /*static_tile_sizes=*/staticTileSizesAttr,
         /*static_tile_interchange=*/staticTileInterchangeAttr,
         /*apply_cleanup=*/applyCleanup,
@@ -666,10 +667,12 @@ template <typename Range>
 static LogicalResult applyTilingToAll(
     RewriterBase &rewriter, Operation *transformOp, Range &&payloadOps,
     unsigned numLoops, transform::TransformResults &transformResults,
+    bool packedResults,
     function_ref<FailureOr<scf::SCFTileAndFuseResult>(TilingInterface)>
         applyFn) {
   SmallVector<Operation *> tiledLinalgOps;
   SmallVector<SmallVector<Operation *>> loopOps(numLoops);
+  size_t numTargets = llvm::range_size(payloadOps);
 
   for (Operation *target : payloadOps) {
     auto tilingInterfaceOp = dyn_cast<TilingInterface>(target);
@@ -704,8 +707,22 @@ static LogicalResult applyTilingToAll(
   }
 
   transformResults.set(transformOp->getOpResult(0), tiledLinalgOps);
-  for (unsigned int i = 0; i < numLoops; ++i)
-    transformResults.set(transformOp->getOpResult(i + 1), loopOps[i]);
+  if (packedResults) {
+    // In case of packed results, all created loops are assigned to a single
+    // handle. Loops are returned in order of targets such as:
+    //   %loops_handle = {
+    //     target0:loop0, ..., target0:loopN,
+    //     target1:loop0, ..., target1:loopN,
+    //     ... }
+    SmallVector<Operation *> flattenedLoopOps;
+    for (unsigned int idx = 0; idx < numTargets; ++idx)
+      for (unsigned int i = 0; i < numLoops; ++i)
+        flattenedLoopOps.push_back(loopOps[i][idx]);
+    transformResults.set(transformOp->getOpResult(1), flattenedLoopOps);
+  } else {
+    for (unsigned int i = 0; i < numLoops; ++i)
+      transformResults.set(transformOp->getOpResult(i + 1), loopOps[i]);
+  }
 
   return success();
 }
@@ -716,9 +733,13 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
                          mlir::transform::TransformState &state) {
   auto transformOp = cast<TransformOpInterface>(getOperation());
 
-  SmallVector<int64_t> tileSizes;
-  DiagnosedSilenceableFailure status = reifyMixedParamAndHandleResults(
-      state, transformOp, getMixedTileSizes(), tileSizes);
+  SmallVector<OpFoldResult> mixedTileSizes;
+  DiagnosedSilenceableFailure status =
+      getPackedTileSizes()
+          ? unpackSingleIndexResultPayloadOperations(
+                state, transformOp, mixedTileSizes, getPackedTileSizes())
+          : unpackSingleIndexResultPayloadOperations(
+                state, transformOp, mixedTileSizes, getMixedTileSizes());
   if (!status.succeeded())
     return status;
   SmallVector<int64_t> tileInterchange;
@@ -733,9 +754,7 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
   tilingOptions.setLoopType(useForall
                                 ? scf::SCFTilingOptions::LoopType::ForallOp
                                 : scf::SCFTilingOptions::LoopType::ForOp);
-  SmallVector<OpFoldResult> tileSizesOfr =
-      getAsIndexOpFoldResult(rewriter.getContext(), tileSizes);
-  tilingOptions = tilingOptions.setTileSizes(tileSizesOfr);
+  tilingOptions = tilingOptions.setTileSizes(mixedTileSizes);
   scf::SCFTileAndFuseOptions tileAndFuseOptions;
   tileAndFuseOptions.tilingOptions = tilingOptions;
 
@@ -748,11 +767,20 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
     tileAndFuseOptions.cleanupPatterns = std::move(patterns);
   }
 
-  size_t numLoops =
-      useForall ? 1 : tileSizes.size() - llvm::count(tileSizes, 0);
+  size_t numLoops;
+  if (useForall) {
+    numLoops = 1;
+  } else {
+    numLoops = llvm::count_if(mixedTileSizes, [](OpFoldResult ofr) {
+      auto attr = dyn_cast<Attribute>(ofr);
+      if (!attr)
+        return true;
+      return cast<IntegerAttr>(attr).getInt() != 0;
+    });
+  }
   LogicalResult result = applyTilingToAll(
       rewriter, getOperation(), state.getPayloadOps(getTarget()), numLoops,
-      transformResults,
+      transformResults, /*packedResults=*/getPackedTileSizes() != nullptr,
       [&](TilingInterface tilingInterfaceOp)
           -> FailureOr<scf::SCFTileAndFuseResult> {
         return tileConsumerAndFuseProducersUsingSCF(rewriter, tilingInterfaceOp,
@@ -763,6 +791,11 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
 }
 
 LogicalResult transform::FuseOp::verify() {
+  bool hasPackedTiles = getPackedTileSizes() != nullptr;
+  if (!getMixedTileSizes().empty() && hasPackedTiles)
+    return emitOpError(
+        "tile_sizes and packed_tile_sizes are mutually exclusive");
+
   auto iterspace_rank = getStaticTileSizes().size();
   ArrayRef<int64_t> permutation = getStaticTileInterchange();
   if (permutation.size() > iterspace_rank)
@@ -782,8 +815,9 @@ LogicalResult transform::FuseOp::verify() {
   }
 
   ArrayRef<int64_t> sizes = getStaticTileSizes();
-  size_t numExpectedLoops =
-      getUseForall() ? 1 : sizes.size() - llvm::count(sizes, 0);
+  size_t numExpectedLoops = getUseForall() || hasPackedTiles
+                                ? 1
+                                : sizes.size() - llvm::count(sizes, 0);
   if (numExpectedLoops != getNumResults() - 1)
     return emitOpError() << "expects " << numExpectedLoops << " loop results";
 
@@ -803,6 +837,7 @@ void transform::FuseOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   consumesHandle(getTargetMutable(), effects);
   onlyReadsHandle(getTileSizesMutable(), effects);
+  onlyReadsHandle(getPackedTileSizesMutable(), effects);
   onlyReadsHandle(getTileInterchangeMutable(), effects);
   producesHandle(getOperation()->getOpResults(), effects);
   modifiesPayload(effects);
@@ -3890,7 +3925,9 @@ DiagnosedSilenceableFailure transform::tileToForallOpImpl(
 
   tilingResult = *maybeTilingResult;
 
-  if (mixedNumThreads.empty()) {
+  // Rank-0 ops produce no loops; skip normalization when there is nothing
+  // to normalize.
+  if (mixedNumThreads.empty() && !tilingResult.loops.empty()) {
     auto generatedForallOp = cast<scf::ForallOp>(tilingResult.loops.front());
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPoint(generatedForallOp);
@@ -3938,7 +3975,8 @@ DiagnosedSilenceableFailure transform::TileUsingForallOp::apply(
         getMapping(), tilingResult);
     if (!diag.succeeded())
       return diag;
-    tileOps.push_back(tilingResult.loops.front());
+    if (!tilingResult.loops.empty())
+      tileOps.push_back(tilingResult.loops.front());
     tiledOps.append(tilingResult.tiledOps);
   }
 

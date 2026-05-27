@@ -692,17 +692,41 @@ public:
   LogicalResult
   convertOperation(Operation *op, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) const final {
+    // All NVVM ops are instruction-level and require an active insertion point.
+    // A null insert block means the op is misplaced (e.g., at module scope),
+    // which would otherwise cause a null dereference in createIntrinsicCall.
+    if (!builder.GetInsertBlock())
+      return op->emitOpError(
+          "cannot be translated to LLVM IR without an active insertion "
+          "point; make sure the op is inside a function");
     Operation &opInst = *op;
 #include "mlir/Dialect/LLVMIR/NVVMConversions.inc"
 
     return failure();
   }
 
-  /// Attaches module-level metadata for functions marked as kernels.
+  /// Attaches module-level metadata for functions marked as kernels
+  /// and managed annotations for global variables.
   LogicalResult
   amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
                  NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final {
+    if (auto globalOp = dyn_cast<LLVM::GlobalOp>(op)) {
+      if (attribute.getName() == NVVM::NVVMDialect::getManagedAttrName()) {
+        auto *gv = cast<llvm::GlobalVariable>(
+            moduleTranslation.lookupGlobal(globalOp));
+        llvm::Module *m = gv->getParent();
+        llvm::LLVMContext &ctx = m->getContext();
+        llvm::NamedMDNode *md = m->getOrInsertNamedMetadata("nvvm.annotations");
+        md->addOperand(llvm::MDNode::get(
+            ctx, {llvm::ConstantAsMetadata::get(gv),
+                  llvm::MDString::get(ctx, "managed"),
+                  llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                      llvm::Type::getInt32Ty(ctx), 1))}));
+      }
+      return success();
+    }
+
     auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
     if (!func)
       return failure();

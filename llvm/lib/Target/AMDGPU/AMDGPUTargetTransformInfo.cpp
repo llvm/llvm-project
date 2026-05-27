@@ -29,7 +29,6 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <optional>
 
 using namespace llvm;
@@ -128,7 +127,10 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
   // We want to run unroll even for the loops which have been vectorized.
   UP.UnrollVectorizedLoop = true;
 
-  // TODO: Do we want runtime unrolling?
+  // Enable runtime unrolling for loops whose trip count is not known at
+  // compile time.  Use a reduced PartialThreshold to limit code-size growth.
+  UP.Runtime = true;
+  UP.PartialThreshold = UP.Threshold / 4;
 
   // Maximum alloca size than can fit registers. Reserve 16 registers.
   const unsigned MaxAlloca = (256 - 16) * 4;
@@ -271,11 +273,6 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
     if (L->isInnermost() && BB->size() < UnrollMaxBlockToAnalyze)
       UP.MaxIterationsCountToAnalyze = 32;
   }
-  // If a user provided an explicit unroll pragma (with or without count),
-  // override expensive trip count checks
-  UnrollPragmaInfo PInfo(L);
-  if (PInfo.PragmaEnableUnroll || PInfo.PragmaCount > 0)
-    UP.AllowExpensiveTripCount = true;
 }
 
 void AMDGPUTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
@@ -358,6 +355,15 @@ unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
          : (ElemWidth == 16 && ST->has16BitInsts())    ? 2
          : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
                                                        : 1;
+}
+
+bool GCNTTIImpl::preferSLPInstCountCheck() const {
+  // The integer inst-count heuristic causes regressions on gfx94x and gfx950
+  // because 2-element vector trees that pass the scalar/vector instruction
+  // count comparison still widen scalar moves (e.g. v_mov_b32 to v_mov_b64)
+  // after codegen, increasing register pressure and throughput cost without
+  // reducing the total instruction count.
+  return !ST->hasGFX940Insts() && !ST->hasGFX950Insts();
 }
 
 unsigned GCNTTIImpl::getLoadVectorFactor(unsigned VF, unsigned LoadSize,
@@ -641,7 +647,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       // TODO: This is more complicated, unsafe flags etc.
       if ((SLT == MVT::f32 && !HasFP32Denormals) ||
           (SLT == MVT::f16 && ST->has16BitInsts())) {
-        return LT.first * getQuarterRateInstrCost(CostKind) * NElts;
+        return LT.first * getTransInstrCost(CostKind) * NElts;
       }
     }
 
@@ -651,8 +657,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       // f32 fmul
       // v_cvt_f16_f32
       // f16 div_fixup
-      int Cost =
-          4 * getFullRateInstrCost() + 2 * getQuarterRateInstrCost(CostKind);
+      int Cost = 4 * getFullRateInstrCost() + 2 * getTransInstrCost(CostKind);
       return LT.first * Cost * NElts;
     }
 
@@ -660,14 +665,14 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       // Fast unsafe fdiv lowering:
       // f32 rcp
       // f32 fmul
-      int Cost = getQuarterRateInstrCost(CostKind) + getFullRateInstrCost();
+      int Cost = getTransInstrCost(CostKind) + getFullRateInstrCost();
       return LT.first * Cost * NElts;
     }
 
     if (SLT == MVT::f32 || SLT == MVT::f16) {
       // 4 more v_cvt_* insts without f16 insts support
       int Cost = (SLT == MVT::f16 ? 14 : 10) * getFullRateInstrCost() +
-                 1 * getQuarterRateInstrCost(CostKind);
+                 1 * getTransInstrCost(CostKind);
 
       if (!HasFP32Denormals) {
         // FP mode switches.
@@ -764,8 +769,8 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
     if (SLT == MVT::f32) {
       unsigned NumFullRateOps = 0;
-      // v_exp_f32 (quarter rate).
-      unsigned NumQuarterRateOps = 1;
+      // v_exp_f32 (transcendental).
+      unsigned NumTransOps = 1;
 
       if (!ICA.getFlags().approxFunc() && IID != Intrinsic::exp2) {
         // Non-AFN exp/exp10: range reduction + v_exp_f32 + ldexp +
@@ -779,16 +784,86 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         } else if (IID == Intrinsic::exp10) {
           // lowerFEXP10Unsafe: 3 fmul + 2 v_exp_f32 (double-exp2).
           NumFullRateOps = 3;
-          NumQuarterRateOps = 2;
+          NumTransOps = 2;
         }
         // Denorm scaling adds setcc + select + fadd + select + fmul.
         if (HasFP32Denormals)
           NumFullRateOps += 5;
       }
 
+      InstructionCost Cost = NumFullRateOps * getFullRateInstrCost() +
+                             NumTransOps * getTransInstrCost(CostKind);
+      return LT.first * NElts * Cost;
+    }
+
+    break;
+  }
+  case Intrinsic::log:
+  case Intrinsic::log2:
+  case Intrinsic::log10: {
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(RetTy);
+    MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
+    unsigned NElts =
+        LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
+
+    if (SLT == MVT::f32) {
+      unsigned NumFullRateOps = 0;
+
+      if (IID == Intrinsic::log2) {
+        // LowerFLOG2: just v_log_f32.
+      } else if (ICA.getFlags().approxFunc()) {
+        // LowerFLOGUnsafe: v_log_f32 + fmul (base conversion).
+        NumFullRateOps = 1;
+      } else {
+        // LowerFLOGCommon non-AFN: v_log_f32 + extended-precision
+        // multiply + finite check.
+        NumFullRateOps = ST->hasFastFMAF32() ? 8 : 11;
+      }
+
+      if (HasFP32Denormals)
+        NumFullRateOps += 5;
+
       InstructionCost Cost =
-          NumFullRateOps * getFullRateInstrCost() +
-          NumQuarterRateOps * getQuarterRateInstrCost(CostKind);
+          NumFullRateOps * getFullRateInstrCost() + getTransInstrCost(CostKind);
+      return LT.first * NElts * Cost;
+    }
+
+    break;
+  }
+  case Intrinsic::sin:
+  case Intrinsic::cos: {
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(RetTy);
+    MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
+    unsigned NElts =
+        LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
+
+    if (SLT == MVT::f32) {
+      // LowerTrig: fmul(1/2pi) + v_sin/v_cos.
+      unsigned NumFullRateOps = ST->hasTrigReducedRange() ? 2 : 1;
+
+      InstructionCost Cost =
+          NumFullRateOps * getFullRateInstrCost() + getTransInstrCost(CostKind);
+      return LT.first * NElts * Cost;
+    }
+
+    break;
+  }
+  case Intrinsic::sqrt: {
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(RetTy);
+    MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
+    unsigned NElts =
+        LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
+
+    if (SLT == MVT::f32) {
+      unsigned NumFullRateOps = 0;
+
+      if (!ICA.getFlags().approxFunc()) {
+        // lowerFSQRTF32 non-AFN: v_sqrt_f32 + refinement + scale fixup.
+        NumFullRateOps = HasFP32Denormals ? 17 : 16;
+      }
+
+      InstructionCost Cost =
+          NumFullRateOps * getFullRateInstrCost() + getTransInstrCost(CostKind);
       return LT.first * NElts * Cost;
     }
 
@@ -946,9 +1021,24 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
   case Instruction::InsertElement: {
     unsigned EltSize
       = DL.getTypeSizeInBits(cast<VectorType>(ValTy)->getElementType());
+    // Dynamic indexing isn't free and is best avoided.
+    if (Index == ~0u)
+      return 2;
     if (EltSize < 32) {
       if (EltSize == 16 && Index == 0 && ST->has16BitInsts())
         return 0;
+      // Some i8 inserts and extracts are free so we want to reduce the
+      // cost to avoid scalarization. We limit the zero cost cases to avoid
+      // adversely impacting all i8 vectorizing.
+      if (EltSize == 8) {
+        unsigned NumElts = cast<FixedVectorType>(ValTy)->getNumElements();
+        if (NumElts >= 4 && isPowerOf2_32(NumElts)) {
+          // Extracts at indices aligned to 32-bit boundaries (0, 4, 8, 12 for
+          // v16i8) are free as they access the low byte of each VGPR. Other
+          // indices require bit manipulation (shifts/byte selects) and cost 1.
+          return Index % 4 == 0 ? 0 : 1;
+        }
+      }
       return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,
                                        VIC);
     }
@@ -956,9 +1046,7 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
     // Extracts are just reads of a subregister, so are free. Inserts are
     // considered free because we don't want to have any cost for scalarizing
     // operations, and we don't have to copy into a different register class.
-
-    // Dynamic indexing isn't free and is best avoided.
-    return Index == ~0u ? 2 : 0;
+    return 0;
   }
   default:
     return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,
@@ -1639,6 +1727,10 @@ void GCNTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   CommonTTI.getPeelingPreferences(L, SE, PP);
 }
 
+int GCNTTIImpl::getTransInstrCost(TTI::TargetCostKind CostKind) const {
+  return getQuarterRateInstrCost(CostKind);
+}
+
 int GCNTTIImpl::get64BitInstrCost(TTI::TargetCostKind CostKind) const {
   return ST->hasFullRate64Ops()
              ? getFullRateInstrCost()
@@ -1709,6 +1801,7 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             const Instruction *I) const {
   if (VectorType *VecTy = dyn_cast<VectorType>(Src)) {
     if ((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
+        CostKind != TTI::TCK_Latency &&
         VecTy->getElementType()->isIntegerTy(8)) {
       return divideCeil(DL.getTypeSizeInBits(VecTy) - 1,
                         getLoadStoreVecRegBitWidth(AddressSpace));
@@ -1728,24 +1821,23 @@ unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
   return BaseT::getNumberOfParts(Tp);
 }
 
-InstructionUniformity
-GCNTTIImpl::getInstructionUniformity(const Value *V) const {
+ValueUniformity GCNTTIImpl::getValueUniformity(const Value *V) const {
   if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {
     switch (Intrinsic->getIntrinsicID()) {
     case Intrinsic::amdgcn_wave_shuffle:
-      return InstructionUniformity::Custom;
+      return ValueUniformity::Custom;
     default:
       break;
     }
   }
 
   if (isAlwaysUniform(V))
-    return InstructionUniformity::AlwaysUniform;
+    return ValueUniformity::AlwaysUniform;
 
   if (isSourceOfDivergence(V))
-    return InstructionUniformity::NeverUniform;
+    return ValueUniformity::NeverUniform;
 
-  return InstructionUniformity::Default;
+  return ValueUniformity::Default;
 }
 
 InstructionCost GCNTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,

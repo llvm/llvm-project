@@ -194,8 +194,8 @@ const Init *TGVarScope::getVar(RecordKeeper &Records,
   case SK_ForeachLoop: {
     // The variable is a loop iterator?
     if (CurLoop->IterVar) {
-      const auto *IterVar = dyn_cast<VarInit>(CurLoop->IterVar);
-      if (IterVar && IterVar->getNameInit() == Name)
+      const VarInit *IterVar = CurLoop->IterVar;
+      if (IterVar->getNameInit() == Name)
         return IterVar;
     }
     break;
@@ -860,6 +860,11 @@ TGParser::ParseSubMultiClassReference(MultiClass *CurMC) {
   if (ParseTemplateArgValueList(Result.TemplateArgs, ArgLocs, &CurMC->Rec,
                                 &Result.MC->Rec)) {
     Result.MC = nullptr; // Error parsing value list.
+    return Result;
+  }
+
+  if (CheckTemplateArgValues(Result.TemplateArgs, ArgLocs, &Result.MC->Rec)) {
+    Result.MC = nullptr; // Error checking value list.
     return Result;
   }
 
@@ -1936,8 +1941,9 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
   }
 
   case tgtok::XForEach:
-  case tgtok::XFilter: {
-    return ParseOperationForEachFilter(CurRec, ItemType);
+  case tgtok::XFilter:
+  case tgtok::XSort: {
+    return ParseOperationListComprehension(CurRec, ItemType);
   }
 
   case tgtok::XRange: {
@@ -2480,7 +2486,7 @@ const Init *TGParser::ParseOperationSubstr(Record *CurRec,
 
 /// Parse the !find operation. Return null on error.
 ///
-/// Substr ::= !find(string, string [, start-int]) => int
+/// Find ::= !find(string, string [, start-int]) => int
 const Init *TGParser::ParseOperationFind(Record *CurRec,
                                          const RecTy *ItemType) {
   TernOpInit::TernaryOp Code = TernOpInit::FIND;
@@ -2566,12 +2572,13 @@ const Init *TGParser::ParseOperationFind(Record *CurRec,
   return (TernOpInit::get(Code, LHS, MHS, RHS, Type))->Fold(CurRec);
 }
 
-/// Parse the !foreach and !filter operations. Return null on error.
+/// Parse the !foreach, !filter, and !sort operations. Return null on error.
 ///
 /// ForEach ::= !foreach(ID, list-or-dag, expr) => list<expr type>
-/// Filter  ::= !foreach(ID, list, predicate) ==> list<list type>
-const Init *TGParser::ParseOperationForEachFilter(Record *CurRec,
-                                                  const RecTy *ItemType) {
+/// Filter  ::= !filter(ID, list, predicate) ==> list<list type>
+/// Sort    ::= !sort(ID, list, key-expr) ==> list<list type>
+const Init *TGParser::ParseOperationListComprehension(Record *CurRec,
+                                                      const RecTy *ItemType) {
   SMLoc OpLoc = Lex.getLoc();
   tgtok::TokKind Operation = Lex.getCode();
   Lex.Lex(); // eat the operation
@@ -2623,9 +2630,19 @@ const Init *TGParser::ParseOperationForEachFilter(Record *CurRec,
     InEltType = InListTy->getElementType();
     if (ItemType) {
       if (const auto *OutListTy = dyn_cast<ListRecTy>(ItemType)) {
-        ExprEltType = (Operation == tgtok::XForEach)
-                          ? OutListTy->getElementType()
-                          : IntRecTy::get(Records);
+        switch (Operation) {
+        case tgtok::XForEach:
+          ExprEltType = OutListTy->getElementType();
+          break;
+        case tgtok::XFilter:
+          ExprEltType = IntRecTy::get(Records);
+          break;
+        case tgtok::XSort:
+          ExprEltType = nullptr;
+          break;
+        default:
+          llvm_unreachable("unexpected token");
+        }
       } else {
         Error(OpLoc, "expected value of type '" +
                          Twine(ItemType->getAsString()) +
@@ -2634,9 +2651,17 @@ const Init *TGParser::ParseOperationForEachFilter(Record *CurRec,
       }
     }
   } else if (const auto *InDagTy = dyn_cast<DagRecTy>(MHSt->getType())) {
-    if (Operation == tgtok::XFilter) {
+    switch (Operation) {
+    case tgtok::XFilter:
       TokError("!filter must have a list argument");
       return nullptr;
+    case tgtok::XSort:
+      TokError("!sort must have a list argument");
+      return nullptr;
+    case tgtok::XForEach:
+      break;
+    default:
+      llvm_unreachable("unexpected token");
     }
     InEltType = InDagTy;
     if (ItemType && !isa<DagRecTy>(ItemType)) {
@@ -2646,11 +2671,19 @@ const Init *TGParser::ParseOperationForEachFilter(Record *CurRec,
     }
     IsDAG = true;
   } else {
-    if (Operation == tgtok::XForEach)
+    switch (Operation) {
+    case tgtok::XForEach:
       TokError("!foreach must have a list or dag argument");
-    else
+      return nullptr;
+    case tgtok::XFilter:
       TokError("!filter must have a list argument");
-    return nullptr;
+      return nullptr;
+    case tgtok::XSort:
+      TokError("!sort must have a list argument");
+      return nullptr;
+    default:
+      llvm_unreachable("unexpected token");
+    }
   }
 
   // We need to create a temporary record to provide a scope for the
@@ -2675,24 +2708,39 @@ const Init *TGParser::ParseOperationForEachFilter(Record *CurRec,
     return nullptr;
   }
 
-  const RecTy *OutType = InEltType;
-  if (Operation == tgtok::XForEach && !IsDAG) {
-    const auto *RHSt = dyn_cast<TypedInit>(RHS);
-    if (!RHSt) {
-      TokError("could not get type of !foreach result expression");
-      return nullptr;
+  const RecTy *OutType;
+  TernOpInit::TernaryOp Opc;
+  switch (Operation) {
+  case tgtok::XForEach:
+    Opc = TernOpInit::FOREACH;
+    if (IsDAG) {
+      OutType = InEltType;
+    } else {
+      const auto *RHSt = dyn_cast<TypedInit>(RHS);
+      if (!RHSt) {
+        TokError("could not get type of !foreach result expression");
+        return nullptr;
+      }
+      OutType = RHSt->getType()->getListTy();
     }
-    OutType = RHSt->getType()->getListTy();
-  } else if (Operation == tgtok::XFilter) {
+    break;
+  case tgtok::XFilter:
+    Opc = TernOpInit::FILTER;
     OutType = InEltType->getListTy();
+    break;
+  case tgtok::XSort:
+    Opc = TernOpInit::SORT;
+    OutType = InEltType->getListTy();
+    break;
+  default:
+    llvm_unreachable("unexpected token");
   }
-
-  return (TernOpInit::get((Operation == tgtok::XForEach) ? TernOpInit::FOREACH
-                                                         : TernOpInit::FILTER,
-                          LHS, MHS, RHS, OutType))
-      ->Fold(CurRec);
+  return (TernOpInit::get(Opc, LHS, MHS, RHS, OutType))->Fold(CurRec);
 }
 
+/// Parse the !cond operation. Return null on error.
+///
+/// Cond ::= !cond([cond: val,]+) => val type
 const Init *TGParser::ParseOperationCond(Record *CurRec,
                                          const RecTy *ItemType) {
   Lex.Lex(); // eat the operation 'cond'

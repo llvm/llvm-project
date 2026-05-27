@@ -2,6 +2,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.arpa_inet
     libc.include.assert
     libc.include.complex
+    libc.include.cpio
     libc.include.ctype
     libc.include.dirent
     libc.include.dlfcn
@@ -38,6 +39,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_epoll
     libc.include.sys_ioctl
     libc.include.sys_mman
+    libc.include.sys_personality
     libc.include.sys_prctl
     libc.include.sys_queue
     libc.include.sys_random
@@ -52,6 +54,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_un
     libc.include.sys_utsname
     libc.include.sys_wait
+    libc.include.syscall
     libc.include.sysexits
     libc.include.termios
     libc.include.threads
@@ -61,3 +64,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.wchar
     libc.include.wctype
 )
+
+if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  list(APPEND TARGET_PUBLIC_HEADERS libc.include.regex)
+endif()

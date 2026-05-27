@@ -58,6 +58,15 @@ class ProfileSummaryInfo;
 class TargetLibraryInfo;
 class User;
 
+/// Enum to specify how shift operations should be evaluated in
+/// canEvaluateShifted.
+/// Lossy: Allows lossy transformations
+/// Signed: Requires lossless transformation, using ashr to restore for shl,
+///         or represents ashr handling for right shifts
+/// Unsigned: Requires lossless transformation, using lshr to restore for shl,
+///           or represents lshr handling for right shifts
+enum class ShiftSemantics { Lossy, Signed, Unsigned };
+
 class LLVM_LIBRARY_VISIBILITY InstCombinerImpl final
     : public InstCombiner,
       public InstVisitor<InstCombinerImpl, Instruction *> {
@@ -148,7 +157,7 @@ public:
   Instruction *visitIntToPtr(IntToPtrInst &CI);
   Instruction *visitBitCast(BitCastInst &CI);
   Instruction *visitAddrSpaceCast(AddrSpaceCastInst &CI);
-  Instruction *foldItoFPtoI(CastInst &FI);
+  template <typename FPToIntTy> Instruction *foldItoFPtoI(FPToIntTy &FI);
   Instruction *visitSelectInst(SelectInst &SI);
   Instruction *foldShuffledIntrinsicOperands(IntrinsicInst *II);
   Value *foldReversedIntrinsicOperands(IntrinsicInst *II);
@@ -432,6 +441,11 @@ private:
                               bool InvertFalseVal = false);
   Value *getSelectCondition(Value *A, Value *B, bool ABIsTheSame);
 
+  bool canEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
+                          ShiftSemantics Semantics, Instruction *CxtI);
+  Value *getShiftedValue(Value *V, unsigned NumBits, bool IsLeftShift,
+                         ShiftSemantics Semantics);
+
   Instruction *foldLShrOverflowBit(BinaryOperator &I);
   Instruction *foldExtractOfOverflowIntrinsic(ExtractValueInst &EV);
   Instruction *foldIntrinsicWithOverflowCommon(IntrinsicInst *II);
@@ -544,6 +558,12 @@ public:
   /// (Binop (cast C), (select C, T, F))
   ///    -> (select C, C0, C1)
   Instruction *foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I);
+  /// Fold both forms of the div_ceil idiom:
+  ///   (add (udiv X, Y), (zext (icmp ne (urem X, Y), 0)))
+  ///     -> (udiv (add nuw X, Y-1), Y)
+  ///   (add (zext (udiv X, Y)), (zext (icmp ne (urem X, Y), 0)))
+  ///     -> (zext (udiv (add nuw X, Y-1), Y))
+  Instruction *foldDivCeil(BinaryOperator &I);
 
   /// This tries to simplify binary operations by factorizing out common terms
   /// (e. g. "(A*B)+(A*C)" -> "A*(B+C)").
@@ -707,6 +727,7 @@ public:
   Instruction *foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
                                     Constant *RHSC);
   Instruction *foldICmpAddOpConst(Value *X, const APInt &C, CmpPredicate Pred);
+  Instruction *foldCmpSelectOfConstants(CmpInst &I);
   Instruction *foldICmpWithCastOp(ICmpInst &ICmp);
   Instruction *foldICmpWithZextOrSext(ICmpInst &ICmp);
 

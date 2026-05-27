@@ -39,12 +39,6 @@ LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
 
 LogicalResult resolveLayoutConflicts(Operation *target);
 
-/// [to-be-deprecated] Set the DistributeLayoutAttr for each OpOperand and
-/// OpResult of of the given operation. If the operation contains regions, it is
-/// also applied recursively to the contained operations operation.
-/// TODO: To be replaced by recoverTemporaryLayouts()
-void recoverTemporaryLayoutsDeprecated(Operation *op);
-
 /// Attach layout attributes to all vector-type operands of operations within
 /// the given operation's nested region. Reports an error if any vector operand
 /// lacks a layout attribute.
@@ -60,6 +54,11 @@ void removeLayoutAttr(const T &operandOrResult);
 /// given operation if they exist. If the operation contains regions, it is also
 /// applied recursively to the contained operations
 void removeLayoutAttrs(Operation *op);
+
+/// Removes the temporary layout attributes for each OpOperand and OpResult of
+/// the given operation. Recursive for contained operations if the given
+/// operation contains regions.
+void removeTemporaryLayoutAttrs(Operation *op);
 
 /// Updates the NamedAttribute sequence by dropping sg-layout and
 /// sg-data information from any DistributeLayoutAttr found.
@@ -82,6 +81,10 @@ DistributeLayoutAttr
 inferMultiReductionSourceLayout(DistributeLayoutAttr resLayout,
                                 SmallVector<int64_t> reduceDims);
 
+/// Infers the source layout attribute for a reduction operation given the
+/// result layout attribute and reduced dims.
+DistributeLayoutAttr inferReductionSourceLayout(DistributeLayoutAttr resLayout);
+
 /// Infers the source layout attribute for a transpose operation given the
 /// result layout attribute and permutation.
 DistributeLayoutAttr inferTransposeSourceLayout(DistributeLayoutAttr resLayout,
@@ -93,6 +96,16 @@ DistributeLayoutAttr inferTransposeSourceLayout(DistributeLayoutAttr resLayout,
 DistributeLayoutAttr inferBitCastSourceLayout(DistributeLayoutAttr resLayout,
                                               int resElemTyBitWidth,
                                               int srcElemTyBitWidth);
+
+/// Infers the source layout attribute for an interleave operation given the
+/// result layout attribute. Interleave doubles the innermost dimension size.
+DistributeLayoutAttr
+inferInterleaveSourceLayout(DistributeLayoutAttr resLayout);
+
+/// Infers the source layout attribute for a deinterleave operation given the
+/// result layout attribute. Deinterleave halves the innermost dimension size.
+DistributeLayoutAttr
+inferDeinterleaveSourceLayout(DistributeLayoutAttr resLayout);
 
 /// Infers the source layout attribute for a shape cast operation given the
 /// result layout attribute, result shape, and source shape.
@@ -108,8 +121,32 @@ inferInsertStridedSliceSourceLayout(DistributeLayoutAttr resLayout,
                                     ArrayRef<int64_t> resShape,
                                     ArrayRef<int64_t> srcShape);
 
-/// Sets up layout for reduction operations by creating a SliceAttr for the
-/// result.
+/// Infers the source layout attribute for an insert operation.
+/// using same logic as inferInsertStridedSliceSourceLayout
+DistributeLayoutAttr inferInsertSourceLayout(DistributeLayoutAttr resLayout,
+                                             ArrayRef<int64_t> resShape,
+                                             ArrayRef<int64_t> srcShape);
+
+/// Infers the source layout attribute for an extract operation. Adds
+/// leading dimensions to the source layout to match the source shape size.
+DistributeLayoutAttr inferExtractSourceLayout(DistributeLayoutAttr resLayout,
+                                              ArrayRef<int64_t> resShape,
+                                              ArrayRef<int64_t> srcShape);
+
+/// Infers the layout attribute for mask and offset operand for Chunked load
+/// and store, given the anchor layout attribute for the value being load/store.
+DistributeLayoutAttr
+inferMaskOffsetLayoutForScatterIO(DistributeLayoutAttr payloadLayout,
+                                  int chunkSize);
+
+/// Infers the source layout attribute for an operand using result layout
+/// attribute
+DistributeLayoutAttr
+inferSourceLayoutFromResultForNonAnchorOp(OpOperand &operand,
+                                          DistributeLayoutAttr resLayout);
+
+/// Sets up layout for Multi-Reduction operations by creating a SliceAttr for
+/// the result.
 ///
 /// This function first attempts to construct a source layout that, when
 /// sliced along reduction dimensions, produces a result layout compatible
@@ -120,7 +157,13 @@ SliceAttr setupMultiReductionResultLayout(LayoutKind layoutKind,
                                           VectorType srcVectorTy,
                                           DistributeLayoutAttr consumerLayout,
                                           SmallVector<int64_t> reductionDims,
-                                          const uArch::uArch *uArch);
+                                          int numSg, const uArch::uArch *uArch);
+
+/// Sets up layout for Reduction operations by creating a SliceAttr for the
+/// result.
+SliceAttr setupReductionResultLayout(LayoutKind layoutKind,
+                                     VectorType srcVectorTy,
+                                     const uArch::uArch *uArch);
 
 /// Setup the result layout attribute for a bitcast operation based on element
 /// type bitwidths. This ensures the source layout can always be derived from
@@ -132,6 +175,14 @@ SliceAttr setupMultiReductionResultLayout(LayoutKind layoutKind,
 /// the invariant that the source layout can be recovered by adjusting the
 /// result layout based on bitwidth ratio of input vs output.
 DistributeLayoutAttr setupBitCastResultLayout(
+    LayoutKind layoutKind, VectorType srcVectorTy, VectorType resVectorTy,
+    DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
+
+/// Sets up the result layout for an interleave operation to ensure the source
+/// layout can be safely derived. Interleave doubles the innermost dimension,
+/// so the result layout must ensure that laneData is at least 2 (or a multiple
+/// of 2), and instData must be divisible by innermostDimLaneLayout * 2.
+DistributeLayoutAttr setupInterleaveResultLayout(
     LayoutKind layoutKind, VectorType srcVectorTy, VectorType resVectorTy,
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
@@ -170,13 +221,30 @@ DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
 std::optional<std::tuple<DistributeLayoutAttr, DistributeLayoutAttr,
                          DistributeLayoutAttr>>
 setupDpasLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
-                VectorType cdTy, DistributeLayoutAttr consumerLayout,
-                const uArch::uArch *uArch, int numSg);
+                VectorType cdTy, DistributeLayoutAttr consumerLayout, int numSg,
+                const uArch::uArch *uArch);
+
+/// Sets up the anchor layouts for dpas_mx operands (A, B, C/D, A_scale, and
+/// B_scale). The numSg and consumerLayout (optional) are only used by sg layout
+/// creation. A_scale and B_scale are optional.
+std::optional<
+    std::tuple<DistributeLayoutAttr, DistributeLayoutAttr, DistributeLayoutAttr,
+               DistributeLayoutAttr, DistributeLayoutAttr>>
+setupDpasMxLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
+                  VectorType cdTy, VectorType aScaleTy, VectorType bScaleTy,
+                  DistributeLayoutAttr consumerLayout, int numSg,
+                  const uArch::uArch *uArch);
 
 /// Gets the expected layout for a given consumer operand. This will check if
 /// the owning operation of the consumer operand is one of the special layout
 /// users and determine the expected layout accordingly.
-xegpu::DistributeLayoutAttr getConsumerLayoutAt(OpOperand &operand);
+DistributeLayoutAttr getConsumerLayoutAt(OpOperand &operand);
+
+/// Returns true if `op` is safe and cheap to clone: it has no side effects,
+/// no regions, and all of its operands are themselves trivially
+/// rematerializable (e.g. `vector.step`, splat `arith.constant`, or
+/// `vector.create_mask` whose operands are constants).
+bool isTriviallyRematerializable(Operation *op);
 
 } // namespace xegpu
 

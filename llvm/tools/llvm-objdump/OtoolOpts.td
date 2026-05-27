@@ -4,6 +4,7 @@ def help : Flag<["--"], "help">, HelpText<"print help">;
 def help_hidden : Flag<["--"], "help-hidden">,
   HelpText<"print help for hidden flags">;
 
+def a : Flag<["-"], "a">, HelpText<"print archive header">;
 def arch : Separate<["-"], "arch">,
   HelpText<"select slice of universal Mach-O file">;
 def C : Flag<["-"], "C">, HelpText<"print linker optimization hints">;
@@ -42,10 +43,11 @@ def chained_fixups : Flag<["-"], "chained_fixups">,
 def dyld_info : Flag<["-"], "dyld_info">,
   HelpText<"print bind and rebase information">;
 
+def m : Flag<["-"], "m">,
+  HelpText<"don't use archive(member) syntax">;
+
 // Not (yet?) implemented:
-// def a : Flag<["-"], "a">, HelpText<"print archive header">;
 // -c print argument strings of a core file
-// -m don't use archive(member) syntax
 // -dyld_opcodes
 // -addr_slide=arg
 // -function_offsets

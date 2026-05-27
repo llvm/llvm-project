@@ -3075,8 +3075,8 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
         bool ExplicitlyDereferenceableOnly;
         if (isWritableObject(Obj, ExplicitlyDereferenceableOnly) &&
             capturesNothing(
-                PointerMayBeCaptured(Obj, /*ReturnCaptures=*/false,
-                                     CaptureComponents::Provenance)) &&
+                PointerMayBeCaptured(Obj, CaptureComponents::Provenance)
+                    .WithoutRet) &&
             (!ExplicitlyDereferenceableOnly ||
              isDereferenceablePointer(StorePtr, StoreTy,
                                       LI->getDataLayout()))) {
@@ -3348,7 +3348,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
     SpeculatedStore->applyMergedLocation(BI->getDebugLoc(),
                                          SpeculatedStore->getDebugLoc());
     // The value stored is still conditional, but the store itself is now
-    // unconditonally executed, so we must be sure that any linked dbg.assign
+    // unconditionally executed, so we must be sure that any linked dbg.assign
     // intrinsics are tracking the new stored value (the result of the
     // select). If we don't, and the store were to be removed by another pass
     // (e.g. DSE), then we'd eventually end up emitting a location describing
@@ -4457,7 +4457,19 @@ static bool mergeConditionalStoreToAddress(
 
   QB.SetInsertPoint(T);
   StoreInst *SI = cast<StoreInst>(QB.CreateStore(QPHI, Address));
-  SI->setAAMetadata(PStore->getAAMetadata().merge(QStore->getAAMetadata()));
+  combineMetadataForCSE(QStore, PStore, true);
+  SI->copyMetadata(*QStore);
+  // Update any dbg.assign intrinsics to track the merged value (QPHI) instead
+  // of the original constant values, likely making these identical.
+  for (auto *DbgAssign : at::getDVRAssignmentMarkers(SI)) {
+    if (llvm::is_contained(DbgAssign->location_ops(),
+                           PStore->getValueOperand()))
+      DbgAssign->replaceVariableLocationOp(PStore->getValueOperand(), QPHI);
+    if (llvm::is_contained(DbgAssign->location_ops(),
+                           QStore->getValueOperand()))
+      DbgAssign->replaceVariableLocationOp(QStore->getValueOperand(), QPHI);
+  }
+
   // Choose the minimum alignment. If we could prove both stores execute, we
   // could use biggest one.  In this case, though, we only know that one of the
   // stores executes.  And we don't know it's safe to take the alignment from a
@@ -4816,7 +4828,7 @@ static bool SimplifyCondBranchToCondBranch(CondBrInst *PBI, CondBrInst *BI,
       if (auto *SI = dyn_cast<SelectInst>(Cond)) {
         assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
         // The select is predicated on PBICond
-        assert(dyn_cast<SelectInst>(SI)->getCondition() == PBICond);
+        assert(SI->getCondition() == PBICond);
         // The corresponding probabilities are what was referred to above as
         // PredCommon and PredOther.
         setFittedBranchWeights(*SI, {PredCommon, PredOther},
@@ -5887,7 +5899,8 @@ findContiguousCases(Value *Condition, SmallVectorImpl<ConstantInt *> &Cases,
         /*OtherCases=*/&OtherCases,
     };
   }
-  ConstantRange CR = computeConstantRange(Condition, /*ForSigned=*/false);
+  ConstantRange CR = computeConstantRange(Condition, /*ForSigned=*/false,
+                                          SimplifyQuery(Dest->getDataLayout()));
   // If this is a wrapping contiguous range, that is, [Min, OtherMin] +
   // [OtherMax, Max] (also [OtherMax, OtherMin]), [OtherMin+1, OtherMax-1] is a
   // contiguous range for the other destination. N.B. If CR is not a full range,
@@ -7367,8 +7380,8 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
       // Grow the table to cover all possible index values to avoid the range
       // check. It will use the default result to fill in the table hole later,
       // so make sure it exist.
-      ConstantRange CR =
-          computeConstantRange(TableIndex, /* ForSigned */ false);
+      ConstantRange CR = computeConstantRange(TableIndex, /*ForSigned=*/false,
+                                              SimplifyQuery(DL));
       // Grow the table shouldn't have any size impact by checking
       // wouldFitInRegister.
       // TODO: Consider growing the table also when it doesn't fit in a register

@@ -4,7 +4,6 @@
 // RUN: env LIBOMPTARGET_DEBUG=1 %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic -check-prefix=DEBUG
 // REQUIRES: libomptarget-debug
-// XFAIL: intelgpu
 
 // Since the allocation of the pointee happens on the "target" construct (1),
 // the "to" transfer requested as part of the mapper (2) should also happen.

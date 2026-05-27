@@ -50,15 +50,22 @@ jobs:
       export-args: ${{ steps.inputs.outputs.export-args }}
     runs-on: ubuntu-24.04
     steps:
+      - name: Validate Input
+        if: inputs.release-version != ''
+        uses: ./.github/workflows/validate-release-version
+        with:
+          release-version: ${{ inputs.release-version }}
       - id: inputs
+        env:
+          REF: ${{ (inputs.release-version && format('llvmorg-{0}', inputs.release-version)) || github.sha }}
+          INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
-          ref=${{ (inputs.release-version && format('llvmorg-{0}', inputs.release-version)) || github.sha }}
-          if [ -n "${{ inputs.release-version }}" ]; then
-            export_args="-release ${{ inputs.release-version }} -final"
+          if [ -n "$INPUTS_RELEASE_VERSION" ]; then
+            export_args="-release $INPUTS_RELEASE_VERSION -final"
           else
             export_args="-git-ref ${{ github.sha }}"
           fi
-          echo "ref=$ref" >> $GITHUB_OUTPUT
+          echo "ref=$REF" >> $GITHUB_OUTPUT
           echo "export-args=$export_args" >> $GITHUB_OUTPUT
 
   release-sources:
@@ -72,7 +79,7 @@ jobs:
       - inputs
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           ref: ${{ needs.inputs.outputs.ref }}
@@ -82,8 +89,10 @@ jobs:
           pip install --require-hashes -r ./llvm/utils/git/requirements.txt
 
       - name: Create Tarballs
+        env:
+          EXPORT_ARGS: ${{ needs.inputs.outputs.export-args }}
         run: |
-          ./llvm/utils/release/export.sh ${{ needs.inputs.outputs.export-args }}
+          ./llvm/utils/release/export.sh $EXPORT_ARGS
 
       - name: Generate sha256 digest for sources
         id: digest
@@ -92,7 +101,7 @@ jobs:
     
       - name: Release Sources Artifact
         id: artifact-upload
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ needs.inputs.outputs.ref }}-sources
           path: |
@@ -110,7 +119,7 @@ jobs:
       attestations: write
     steps:
       - name: Checkout Release Scripts
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           sparse-checkout: |

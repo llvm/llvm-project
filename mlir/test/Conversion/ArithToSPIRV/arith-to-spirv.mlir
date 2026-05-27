@@ -99,6 +99,33 @@ func.func @int32_vector_addui_extended(%lhs: vector<4xi32>, %rhs: vector<4xi32>)
   return %sum, %overflow : vector<4xi32>, vector<4xi1>
 }
 
+// Check integer subtract-with-borrow conversions.
+// CHECK-LABEL: @int32_scalar_subui_extended
+// CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
+func.func @int32_scalar_subui_extended(%lhs: i32, %rhs: i32) -> (i32, i1) {
+  // CHECK-NEXT: %[[ISB:.+]] = spirv.ISubBorrow %[[LHS]], %[[RHS]] : !spirv.struct<(i32, i32)>
+  // CHECK-DAG:  %[[DIFF:.+]] = spirv.CompositeExtract %[[ISB]][0 : i32] : !spirv.struct<(i32, i32)>
+  // CHECK-DAG:  %[[B0:.+]]   = spirv.CompositeExtract %[[ISB]][1 : i32] : !spirv.struct<(i32, i32)>
+  // CHECK-DAG:  %[[ONE:.+]]  = spirv.Constant 1 : i32
+  // CHECK-NEXT: %[[B1:.+]]   = spirv.IEqual %[[B0]], %[[ONE]] : i32
+  // CHECK-NEXT: return %[[DIFF]], %[[B1]] : i32, i1
+  %diff, %borrow = arith.subui_extended %lhs, %rhs: i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @int32_vector_subui_extended
+// CHECK-SAME: (%[[LHS:.+]]: vector<4xi32>, %[[RHS:.+]]: vector<4xi32>)
+func.func @int32_vector_subui_extended(%lhs: vector<4xi32>, %rhs: vector<4xi32>) -> (vector<4xi32>, vector<4xi1>) {
+  // CHECK-NEXT: %[[ISB:.+]] = spirv.ISubBorrow %[[LHS]], %[[RHS]] : !spirv.struct<(vector<4xi32>, vector<4xi32>)>
+  // CHECK-DAG:  %[[DIFF:.+]] = spirv.CompositeExtract %[[ISB]][0 : i32] : !spirv.struct<(vector<4xi32>, vector<4xi32>)>
+  // CHECK-DAG:  %[[B0:.+]]   = spirv.CompositeExtract %[[ISB]][1 : i32] : !spirv.struct<(vector<4xi32>, vector<4xi32>)>
+  // CHECK-DAG:  %[[ONE:.+]]  = spirv.Constant dense<1> : vector<4xi32>
+  // CHECK-NEXT: %[[B1:.+]]   = spirv.IEqual %[[B0]], %[[ONE]] : vector<4xi32>
+  // CHECK-NEXT: return %[[DIFF]], %[[B1]] : vector<4xi32>, vector<4xi1>
+  %diff, %borrow = arith.subui_extended %lhs, %rhs: vector<4xi32>, vector<4xi1>
+  return %diff, %borrow : vector<4xi32>, vector<4xi1>
+}
+
 // Check extended signed integer multiplication conversions.
 // CHECK-LABEL: @int32_scalar_mulsi_extended
 // CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
@@ -272,6 +299,28 @@ func.func @logical_vector(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
   return
 }
 
+// CHECK-LABEL: @bool_arith_scalar
+func.func @bool_arith_scalar(%arg0 : i1, %arg1 : i1) {
+  // CHECK: spirv.LogicalNotEqual
+  %0 = arith.addi %arg0, %arg1 : i1
+  // CHECK: spirv.LogicalNotEqual
+  %1 = arith.subi %arg0, %arg1 : i1
+  // CHECK: spirv.LogicalAnd
+  %2 = arith.muli %arg0, %arg1 : i1
+  return
+}
+
+// CHECK-LABEL: @bool_arith_vector
+func.func @bool_arith_vector(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
+  // CHECK: spirv.LogicalNotEqual
+  %0 = arith.addi %arg0, %arg1 : vector<4xi1>
+  // CHECK: spirv.LogicalNotEqual
+  %1 = arith.subi %arg0, %arg1 : vector<4xi1>
+  // CHECK: spirv.LogicalAnd
+  %2 = arith.muli %arg0, %arg1 : vector<4xi1>
+  return
+}
+
 // CHECK-LABEL: @shift_scalar
 func.func @shift_scalar(%arg0 : i32, %arg1 : i32) {
   // CHECK: spirv.ShiftLeftLogical
@@ -291,6 +340,63 @@ func.func @shift_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
   %1 = arith.shrsi %arg0, %arg1 : vector<4xi32>
   // CHECK: spirv.ShiftRightLogical
   %2 = arith.shrui %arg0, %arg1 : vector<4xi32>
+  return
+}
+
+} // end module
+
+// -----
+
+// Test i1 lowerings for shift, div, rem, and min/max ops.
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: @bool_shift_div_rem_scalar
+func.func @bool_shift_div_rem_scalar(%arg0 : i1, %arg1 : i1) {
+  // shli(a,b) = a & ~b
+  // CHECK: %[[NOTB:.+]] = spirv.LogicalNot %arg1
+  // CHECK: spirv.LogicalAnd %arg0, %[[NOTB]]
+  %0 = arith.shli %arg0, %arg1 : i1
+  // shrui(a,b) = a & ~b
+  // CHECK: %[[NOTB:.+]] = spirv.LogicalNot %arg1
+  // CHECK: spirv.LogicalAnd %arg0, %[[NOTB]]
+  %1 = arith.shrui %arg0, %arg1 : i1
+  // shrsi(a,b) = a  (arithmetic right shift of i1 is identity)
+  // CHECK-NOT: spirv.ShiftRightArithmetic
+  %2 = arith.shrsi %arg0, %arg1 : i1
+  // divui(a,b) = a & b  (only valid for b=1, same as muli)
+  // CHECK: spirv.LogicalAnd %arg0, %arg1
+  %3 = arith.divui %arg0, %arg1 : i1
+  // divsi(a,b) = a & b  (only non-UB/non-overflow case: 0/-1 = 0)
+  // CHECK: spirv.LogicalAnd %arg0, %arg1
+  %4 = arith.divsi %arg0, %arg1 : i1
+  // remui(a,b) = a & ~b  (a % 1 = 0 for valid b=1)
+  // CHECK: %[[NOTB:.+]] = spirv.LogicalNot %arg1
+  // CHECK: spirv.LogicalAnd %arg0, %[[NOTB]]
+  %5 = arith.remui %arg0, %arg1 : i1
+  // remsi(a,b) = a & ~b
+  // CHECK: %[[NOTB:.+]] = spirv.LogicalNot %arg1
+  // CHECK: spirv.LogicalAnd %arg0, %[[NOTB]]
+  %6 = arith.remsi %arg0, %arg1 : i1
+  return
+}
+
+// CHECK-LABEL: @bool_minmax_scalar
+func.func @bool_minmax_scalar(%arg0 : i1, %arg1 : i1) {
+  // maxui(a,b) = a | b  (unsigned max of two booleans is OR)
+  // CHECK: spirv.LogicalOr %arg0, %arg1
+  %0 = arith.maxui %arg0, %arg1 : i1
+  // maxsi(a,b) = a & b  (signed max: max(-1,0)=0, so max(true,false)=false → AND)
+  // CHECK: spirv.LogicalAnd %arg0, %arg1
+  %1 = arith.maxsi %arg0, %arg1 : i1
+  // minui(a,b) = a & b  (unsigned min of two booleans is AND)
+  // CHECK: spirv.LogicalAnd %arg0, %arg1
+  %2 = arith.minui %arg0, %arg1 : i1
+  // minsi(a,b) = a | b  (signed min: min(-1,0)=-1, so min(true,false)=true → OR)
+  // CHECK: spirv.LogicalOr %arg0, %arg1
+  %3 = arith.minsi %arg0, %arg1 : i1
   return
 }
 

@@ -452,10 +452,14 @@ private:
   SmallVector<std::unique_ptr<IRChangeBase>> Changes;
   /// The current state of the tracker.
   TrackerState State = TrackerState::Disabled;
+  /// Nested snapshots require us to track the index of each snapshot in the
+  /// `Changes` vector.
+  SmallVector<unsigned, 8> Snapshots;
   Context &Ctx;
 
 #ifndef NDEBUG
-  IRSnapshotChecker SnapshotChecker;
+  /// One checker per nested snapshot.
+  SmallVector<IRSnapshotChecker> SnapshotChecker;
 #endif
 
 public:
@@ -465,14 +469,7 @@ public:
   bool InMiddleOfCreatingChange = false;
 #endif // NDEBUG
 
-  explicit Tracker(Context &Ctx)
-      : Ctx(Ctx)
-#ifndef NDEBUG
-        ,
-        SnapshotChecker(Ctx)
-#endif
-  {
-  }
+  explicit Tracker(Context &Ctx) : Ctx(Ctx) {}
 
   LLVM_ABI ~Tracker();
   Context &getContext() const { return Ctx; }
@@ -513,6 +510,8 @@ public:
   LLVM_ABI void accept();
   /// Stops tracking and reverts to saved state.
   LLVM_ABI void revert();
+  /// \returns the number of nested (outstanding) checkpoints.
+  unsigned nestingDepth() const { return Snapshots.size(); }
 
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;

@@ -16,6 +16,7 @@ static_library("Host") {
   ]
   public_deps = [ "//llvm/utils/gn/build/libs/xml" ]
   sources = [
+    "common/ConPTYUtils.cpp",
     "common/DiagnosticsRendering.cpp",
     "common/File.cpp",
     "common/FileAction.cpp",
@@ -67,6 +68,7 @@ static_library("Host") {
     sources += [
       "windows/ConnectionConPTYWindows.cpp",
       "windows/ConnectionGenericFileWindows.cpp",
+      "windows/FileWindows.cpp",
       "windows/FileSystem.cpp",
       "windows/Host.cpp",
       "windows/HostInfoWindows.cpp",
@@ -78,10 +80,12 @@ static_library("Host") {
       "windows/ProcessLauncherWindows.cpp",
       "windows/ProcessRunLock.cpp",
       "windows/PseudoConsole.cpp",
+      "windows/WindowsFileAction.cpp",
     ]
   } else {
     sources += [
       "posix/DomainSocket.cpp",
+      "posix/FilePosix.cpp",
       "posix/FileSystemPosix.cpp",
       "posix/HostInfoPosix.cpp",
       "posix/HostProcessPosix.cpp",
