@@ -81,6 +81,7 @@ void mlir::getForwardSlice(Operation *op, SetVector<Operation *> *forwardSlice,
     // want it in the results.
     forwardSlice->remove(op);
   }
+  assert(visited.size() == 1 && "visited set should only contain op");
 
   // Reverse to get back the actual topological order.
   // std::reverse does not work out of the box on SetVector and I want an
@@ -97,6 +98,7 @@ void mlir::getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
     getForwardSliceImpl(user, visited, forwardSlice, options.filter);
     visited.erase(user);
   }
+  assert(visited.empty() && "visited set should be empty");
 
   // Reverse to get back the actual topological order.
   // std::reverse does not work out of the box on SetVector and I want an
@@ -184,6 +186,7 @@ LogicalResult mlir::getBackwardSlice(Operation *op,
   visited.insert(op);
   LogicalResult result =
       getBackwardSliceImpl(op, visited, backwardSlice, options);
+  assert(visited.size() == 1 && "visited set should only contain op");
 
   if (!options.inclusive) {
     // Don't insert the top level operation, we just queried on it and don't
