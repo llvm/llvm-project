@@ -843,5 +843,5 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 
 declare void @foo()
 
-attributes #0 = { "amdgpu-num-vgpr"="42" "amdgpu-num-sgpr"="40"}
+attributes #0 = { nounwind "amdgpu-num-vgpr"="42" "amdgpu-num-sgpr"="40"}
 

@@ -142,7 +142,6 @@ public:
   // first and not copied to the output.
   bool wasCoalesced = false;
   bool live = !config->deadStrip;
-  bool hasCallSites = false;
   // This variable has two usages. Initially, it represents the input order.
   // After assignAddresses is called, it represents the offset from the
   // beginning of the output section this section was assigned to.
