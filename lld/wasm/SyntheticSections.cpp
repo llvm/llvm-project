@@ -52,6 +52,16 @@ public:
   raw_string_ostream os{body};
 };
 
+void writeGetTLSBase(const Ctx &ctx, raw_ostream &os) {
+  if (ctx.arg.libcallThreadContext) {
+    writeU8(os, WASM_OPCODE_CALL, "call");
+    writeUleb128(os, ctx.sym.getTLSBase->getFunctionIndex(), "function index");
+  } else {
+    writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_SET");
+    writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "__tls_base");
+  }
+}
+
 } // namespace
 
 bool DylinkSection::isNeeded() const {
@@ -474,11 +484,12 @@ void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
 
     if (auto *d = dyn_cast<DefinedData>(sym)) {
       // Get __memory_base
-      writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       if (sym->isTLS())
-        writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "__tls_base");
-      else
+        writeGetTLSBase(ctx, os);
+      else {
+        writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
         writeUleb128(os, ctx.sym.memoryBase->getGlobalIndex(), "__memory_base");
+      }
 
       // Add the virtual address of the data symbol
       writePtrConst(os, d->getVA(), is64, "offset");
@@ -519,7 +530,7 @@ void GlobalSection::writeBody() {
       // the correct runtime value during `__wasm_apply_global_relocs`.
       if (!ctx.arg.extendedConst && ctx.isPic && !sym->isTLS())
         mutable_ = true;
-      // With multi-theadeding any TLS globals must be mutable since they get
+      // With multi-threading any TLS globals must be mutable since they get
       // set during `__wasm_apply_global_tls_relocs`
       if (ctx.arg.sharedMemory && sym->isTLS())
         mutable_ = true;

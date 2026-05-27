@@ -1323,7 +1323,6 @@ void LayoutInfoPropagation::visitLoadMatrixOp(
   }
 }
 
-// Store matrix is a flavor of scattered store for 2D shapes.
 void LayoutInfoPropagation::visitStoreMatrixOp(
     xegpu::StoreMatrixOp storeMatrix, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
@@ -1566,6 +1565,26 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
   // If layouts are same, no conflict exists, return success.
   if (consumerLayout.isEqualTo(producerLayout))
     return success();
+
+  // If the producer is trivially rematerializable (e.g. `vector.step`, splat
+  // `arith.constant`), clone it and stamp the consumer's expected layout on
+  // the clone instead of inserting a `xegpu.convert_layout`. The convert
+  // would otherwise lower to a cross-subgroup data movement through SLM at
+  // WG-to-SG distribution time, which is more expensive than
+  // recomputing a pure value generator.
+  if (auto *producerOp = vectorValue.getDefiningOp();
+      producerOp && producerOp->getNumResults() == 1 &&
+      isa<OpResult>(vectorValue) &&
+      xegpu::isTriviallyRematerializable(producerOp)) {
+    builder.setInsertionPointAfter(producerOp);
+    Operation *clone = builder.clone(*producerOp);
+    OpResult cloneResult = clone->getResult(0);
+    // Drop the inherited producer layout so the new layout takes effect
+    xegpu::removeLayoutAttr(cloneResult);
+    xegpu::setDistributeLayoutAttr(cloneResult, consumerLayout);
+    operand.set(cloneResult);
+    return success();
+  }
 
   // Insert a convert_layout op to resolve the conflict.
   builder.setInsertionPointAfterValue(vectorValue);
