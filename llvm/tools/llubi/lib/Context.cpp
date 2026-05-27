@@ -121,7 +121,7 @@ APInt Context::getTag(uint32_t BitWidth, MemoryObject *Obj) {
   // FIXME: This doesn't work when the address space is too small.
   while (true) {
     APInt Tag = generateRandomAPInt(BitWidth);
-    if (Tag.isZero() || !CapturedMemoryObjects.try_emplace(Tag, Obj).second)
+    if (Tag.isZero() || !TaggedMemoryObjects.try_emplace(Tag, Obj).second)
       continue;
     Obj->setTag(Tag);
     return Tag;
@@ -184,7 +184,7 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
                          Mask;
     RawBits[I / 64] |= static_cast<APInt::WordType>(ActualBits) << (I % 64);
     if (IsTagValid) {
-      if ((LogicalByte.TagMask & LogicalByte.ConcreteMask) == Mask) {
+      if ((LogicalByte.TagMask & LogicalByte.ConcreteMask & Mask) == Mask) {
         uint8_t ActualTagBits = LogicalByte.TagValue & Mask;
         RawTagBits[I / 64] |= static_cast<APInt::WordType>(ActualTagBits)
                               << (I % 64);
@@ -214,9 +214,8 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
   assert(Ty->isPointerTy() && "Expect a pointer type");
   // Try to recover provenance from the tag.
   if (IsTagValid) {
-    // TODO: decode metadata bits from the tag.
     APInt Tag(NumBitsToExtract, RawTagBits);
-    return Pointer(CapturedMemoryObjects.lookup(Tag), Bits);
+    return Pointer(TaggedMemoryObjects.lookup(Tag), Bits);
   }
   return Pointer(Bits);
 }

@@ -113,9 +113,8 @@ class MemoryObject : public RefCountedBase<MemoryObject> {
   // type, in bits. It may produce false negatives in some corner cases. But in
   // real practice the false negative rate should be negligible.
   // A zero tag is invalid.
-  // TODO: allow encoding metadata bits (e.g., captured pointer components) into
-  // the tag. The injection should affect all the bits in the tag rather than
-  // just some low bits for better robustness.
+  // TODO: we need a tag->provenance mapping instead of assigning a tag to each
+  // memory object.
   // TODO: we need a special tag encoding for wildcard provenance, which is
   // introduced by inttoptr.
   APInt Tag;
@@ -238,11 +237,10 @@ class Context {
   // with stack coloring.
   uint64_t AllocationBase = 8;
   // All live memory objects.
-  // FIXME: global objects and stack objects should not be tracked in this map.
   DenseMap<uint64_t, IntrusiveRefCntPtr<MemoryObject>> MemoryObjects;
   // Mapping from tags to memory objects. Tags are lazily generated when a
-  // pointer is captured.
-  DenseMap<APInt, IntrusiveRefCntPtr<MemoryObject>> CapturedMemoryObjects;
+  // pointer is captured by memory.
+  DenseMap<APInt, IntrusiveRefCntPtr<MemoryObject>> TaggedMemoryObjects;
   // TODO: Maintains a global list of 'exposed' provenances. This is used to
   // convert an address back to a pointer with a previously exposed provenance.
 
