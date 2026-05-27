@@ -116,7 +116,7 @@ define amdgpu_gs <2 x half> @v_fptrunc_round_constant_to_v2f16_towardzero(float 
 ; GFX11-SDAG-LABEL: v_fptrunc_round_constant_to_v2f16_towardzero:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    v_cvt_pk_rtz_f16_f32_e64 v0, v0, s0
-; GFX11-SDAG-NEXT:    v_mov_b16_e32 v0.h, 0x3c00
+; GFX11-SDAG-NEXT:    v_mov_b16_e32 v0.h, 1.0
 ; GFX11-SDAG-NEXT:    ; return to shader part epilog
 ; GISEL-LABEL: v_fptrunc_round_constant_to_v2f16_towardzero:
 ; GISEL:       ; %bb.0:
