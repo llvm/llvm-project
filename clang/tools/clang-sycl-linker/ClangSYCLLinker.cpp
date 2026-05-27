@@ -786,8 +786,10 @@ int main(int argc, char **argv) {
     return EXIT_SUCCESS;
   }
 
-  if (Args.hasArg(OPT_version))
+  if (Args.hasArg(OPT_version)) {
     printVersion(outs());
+    return EXIT_SUCCESS;
+  }
 
   Verbose = Args.hasArg(OPT_verbose);
   DryRun = Args.hasArg(OPT_dry_run);
@@ -811,6 +813,9 @@ int main(int argc, char **argv) {
   auto FilesOrErr = getInput(Args);
   if (!FilesOrErr)
     reportError(FilesOrErr.takeError());
+
+  if (FilesOrErr->empty())
+    reportError(createStringError("No input files provided"));
 
   // Run SYCL linking process on the generated inputs.
   if (Error Err = runSYCLLink(*FilesOrErr, Args))
