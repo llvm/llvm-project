@@ -1202,7 +1202,10 @@ int __llvm_profile_write_file(void) {
   if (rc)
     PROF_ERR("Failed to write file \"%s\": %s\n", Filename, strerror(errno));
 
-  __llvm_profile_hip_collect_device_data();
+  /* No-op when no HIP shadow variables or dynamic modules are registered,
+   * or when the HIP runtime is not loaded. Warning on failure is handled
+   * inside the callee so non-HIP programs do not see spurious noise. */
+  (void)__llvm_profile_hip_collect_device_data();
 
   // Restore SIGKILL.
   if (PDeathSig == 1)

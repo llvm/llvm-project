@@ -839,6 +839,8 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
   }
   unlockDynamicModules();
 
+  if (Ret != 0)
+    PROF_WARN("%s\n", "failed to collect device profile data");
   return Ret;
 }
 
