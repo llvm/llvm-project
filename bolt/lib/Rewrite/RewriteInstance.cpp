@@ -1367,6 +1367,7 @@ void RewriteInstance::discoverFileObjects() {
 
   // Now that all the functions were created - adjust their boundaries.
   adjustFunctionBoundaries(MarkerSymbols);
+  splitUnmarkedTailFunctions(MarkerSymbols);
 
   // Annotate functions with code/data markers in AArch64
   for (auto &[Address, Type] : MarkerSymbols) {
@@ -2067,6 +2068,125 @@ void RewriteInstance::disassemblePLT() {
   }
 }
 
+namespace {
+
+/// True when the predecessor body ends at its FDE boundary, so trailing bytes
+/// are outside both symtab size and unwind info:
+///   (1) __BOLT_FDE_FUNC* (FDE with no symtab entry), or
+///   (2) a normal symbol whose size equals its FDE address range.
+bool isCFIBoundedTailPredecessor(const BinaryFunction &BF,
+                                 const CFIReaderWriter &CFI) {
+  if (BF.getOneName().starts_with("__BOLT_FDE_FUNC"))
+    return true;
+  auto FDEI = CFI.getFDEs().find(BF.getAddress());
+  if (FDEI == CFI.getFDEs().end())
+    return false;
+  return FDEI->second->getAddressRange() == BF.getSize();
+}
+
+bool hasDataMarkerAt(DenseMap<uint64_t, MarkerSymType> &MarkerSyms,
+                     uint64_t Address) {
+  auto It = MarkerSyms.find(Address);
+  return It != MarkerSyms.end() && It->second == MarkerSymType::DATA;
+}
+
+/// Disassemble a prefix of [TailStart, TailStart + TrailingExtent) and return
+/// its length. Any remaining bytes in the range must be zero padding.
+/// Returns 0 if the region is not valid unmarked code.
+static uint64_t measureAArch64UnmarkedTail(BinaryContext &BC,
+                                             const BinaryFunction &Pred,
+                                             DenseMap<uint64_t, MarkerSymType>
+                                                 &MarkerSyms,
+                                             uint64_t TailStart,
+                                             uint64_t TrailingExtent) {
+  // Pred was registered from an executable section during symbol/FDE discovery.
+  BinarySection &Section = *Pred.getOriginSection();
+
+  // adjustFunctionBoundaries() set Pred->MaxSize so [Pred, Pred+MaxSize) fits
+  // in the section and stops at the next symbol/function.
+  if (!Section.containsRange(TailStart, TrailingExtent))
+    return 0;
+
+  StringRef Contents = Section.getContents();
+  const uint64_t SectionOffset = TailStart - Section.getAddress();
+  const uint8_t *Bytes =
+      reinterpret_cast<const uint8_t *>(Contents.data()) + SectionOffset;
+
+  uint64_t CodeLen = 0;
+  while (CodeLen < TrailingExtent) {
+    if (hasDataMarkerAt(MarkerSyms, TailStart + CodeLen))
+      return 0;
+    if (Pred.isInConstantIsland(TailStart + CodeLen))
+      return 0;
+
+    MCInst Inst;
+    uint64_t Size = 0;
+    ArrayRef<uint8_t> Slice(Bytes + CodeLen, TrailingExtent - CodeLen);
+    if (!BC.SymbolicDisAsm->getInstruction(Inst, Size, Slice, TailStart + CodeLen,
+                                           nulls()) ||
+        !Size)
+      break;
+    CodeLen += Size;
+  }
+
+  if (!CodeLen)
+    return 0;
+
+  for (uint64_t I = CodeLen; I < TrailingExtent; ++I) {
+    if (Bytes[I] != 0)
+      return 0;
+  }
+
+  return CodeLen;
+}
+
+} // namespace
+
+void RewriteInstance::splitUnmarkedTailFunctions(
+    DenseMap<uint64_t, MarkerSymType> &MarkerSyms) {
+  if (!BC->isAArch64())
+    return;
+
+  std::vector<BinaryFunction *> Worklist;
+  for (BinaryFunction &BF : llvm::make_second_range(BC->getBinaryFunctions())) {
+    if (BF.isPseudo() || BF.isFragment())
+      continue;
+    if (BF.getMaxSize() == BF.getSize())
+      continue;
+    if (!isCFIBoundedTailPredecessor(BF, *CFIRdWrt))
+      continue;
+    Worklist.push_back(&BF);
+  }
+
+  for (BinaryFunction *Pred : Worklist) {
+    const uint64_t TailStart = Pred->getAddress() + Pred->getSize();
+    const uint64_t TrailingExtent = Pred->getMaxSize() - Pred->getSize();
+
+    if (BC->getBinaryFunctionAtAddress(TailStart))
+      continue;
+
+    const uint64_t CodeLen = measureAArch64UnmarkedTail(
+        *BC, *Pred, MarkerSyms, TailStart, TrailingExtent);
+    if (!CodeLen)
+      continue;
+
+    BinarySection &Section = *Pred->getOriginSection();
+
+    Pred->setMaxSize(Pred->getSize());
+
+    std::string TailName =
+        "__BOLT_UNMARKED_TAILat" + Twine::utohexstr(TailStart).str();
+    if (opts::Verbosity >= 1)
+      BC->outs() << "BOLT-INFO: creating unmarked tail function " << TailName
+                 << " after " << *Pred << '\n';
+
+    // Inherit [TailStart, TailStart + TrailingExtent) from Pred's old extent.
+    BinaryFunction *TailBF = BC->createBinaryFunction(
+        TailName, Section, TailStart, CodeLen, CodeLen);
+    TailBF->setMaxSize(TrailingExtent);
+  }
+}
+
 void RewriteInstance::adjustFunctionBoundaries(
     DenseMap<uint64_t, MarkerSymType> &MarkerSyms) {
   for (auto BFI = BC->getBinaryFunctions().begin(),
@@ -2110,6 +2230,13 @@ void RewriteInstance::adjustFunctionBoundaries(
       if (It == MarkerSyms.end() || It->second != MarkerSymType::DATA) {
         // This is potentially another entry point into the function.
         uint64_t EntryOffset = NextSymRefI->first - Function.getAddress();
+        // At the FDE/symbol end, unmarked tail code may follow; split will
+        // promote it to __BOLT_UNMARKED_TAIL instead of a secondary entry.
+        if (BC->isAArch64() && EntryOffset == Function.getSize() &&
+            isCFIBoundedTailPredecessor(Function, *CFIRdWrt)) {
+          ++NextSymRefI;
+          continue;
+        }
         LLVM_DEBUG(dbgs() << "BOLT-DEBUG: adding entry point to function "
                           << Function << " at offset 0x"
                           << Twine::utohexstr(EntryOffset) << '\n');

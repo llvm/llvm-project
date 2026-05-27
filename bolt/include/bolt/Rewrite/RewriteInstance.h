@@ -270,6 +270,12 @@ private:
   /// symbol table has been processed.
   void adjustFunctionBoundaries(DenseMap<uint64_t, MarkerSymType> &MarkerSyms);
 
+  /// Promote unmarked executable regions after CFI-bounded functions into
+  /// separate BinaryFunction objects (__BOLT_FDE_FUNC* or named symbols
+  /// whose FDE range matches their size).
+  void splitUnmarkedTailFunctions(
+      DenseMap<uint64_t, MarkerSymType> &MarkerSyms);
+
   /// Make .eh_frame section relocatable.
   void relocateEHFrameSection();
 

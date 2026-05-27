@@ -1034,8 +1034,7 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   return BranchType;
 }
 
-MCSymbol *BinaryFunction::getOrCreateLocalLabel(uint64_t Address,
-                                                bool IsEntryPoint) {
+MCSymbol *BinaryFunction::getOrCreateLocalLabel(uint64_t Address) {
   const uint64_t Offset = Address - getAddress();
 
   auto LI = Labels.find(Offset);
@@ -1050,7 +1049,7 @@ MCSymbol *BinaryFunction::getOrCreateLocalLabel(uint64_t Address,
     }
   }
 
-  if (Offset == getSize() && !IsEntryPoint)
+  if (Offset == getSize())
     return getFunctionEndLabel();
 
   MCSymbol *Label = BC.Ctx->createNamedTempSymbol();
@@ -3825,7 +3824,7 @@ MCSymbol *BinaryFunction::addEntryPointAtOffset(uint64_t Offset) {
   const uint64_t EntryPointAddress = getAddress() + Offset;
   assert(!isInConstantIsland(EntryPointAddress) &&
          "cannot add entry point that points to constant data");
-  MCSymbol *LocalSymbol = getOrCreateLocalLabel(EntryPointAddress, true);
+  MCSymbol *LocalSymbol = getOrCreateLocalLabel(EntryPointAddress);
 
   MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(LocalSymbol);
   if (EntrySymbol)
