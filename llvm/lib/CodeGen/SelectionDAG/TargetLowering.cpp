@@ -9724,37 +9724,25 @@ static SDValue getFloatSign(EVT ResultVT, bool &NeedFPTrunc, SDValue Op,
                             const TargetLowering &TLI) {
   EVT OperandVT = Op.getValueType();
   EVT IntVT = OperandVT.changeTypeToInteger();
+  unsigned EltBitsize = OperandVT.getScalarSizeInBits();
   SDValue OpAsInt = DAG.getBitcast(IntVT, Op);
   SDValue SignBitResult = DAG.getSetCC(
       DL, ResultVT, OpAsInt, DAG.getConstant(0, DL, IntVT), ISD::SETLT);
-
   NeedFPTrunc = false;
-  EVT TruncFloatVT = OperandVT;
-  EVT TruncIntVT = IntVT;
-  do {
-    unsigned TruncFloatEltBitsize = TruncFloatVT.getScalarSizeInBits();
-    unsigned TruncIntEltBitsize = TruncIntVT.getScalarSizeInBits();
-    if (TLI.isTypeLegal(TruncIntVT) && TLI.isTypeLegal(TruncFloatVT) &&
-        TruncFloatEltBitsize == TruncIntEltBitsize) {
-      if (TruncFloatVT != OperandVT)
-        NeedFPTrunc = true;
-      break;
-    }
-    EVT TruncFloatEltVT = TruncFloatVT.getScalarType();
-    EVT TruncIntEltVT0 =
-        EVT::getIntegerVT(*DAG.getContext(), TruncFloatEltBitsize);
-    unsigned TruncIntEltVT0SizeInBits = TruncIntEltVT0.getScalarSizeInBits();
-    EVT TruncIntEltVT =
-        TLI.getTypeToTransformTo(*DAG.getContext(), TruncIntEltVT0);
-    unsigned TruncIntEltVTSizeInBits = TruncIntEltVT.getScalarSizeInBits();
-    TruncFloatEltVT =
-        EVT::getFloatingPointVT(TruncIntEltVT.getScalarSizeInBits());
-    if (TruncIntEltVTSizeInBits >= TruncIntEltVT0SizeInBits)
-      break;
-    TruncFloatVT =
-        TruncFloatVT.changeElementType(*DAG.getContext(), TruncFloatEltVT);
-    TruncIntVT = TruncIntVT.changeElementType(*DAG.getContext(), TruncIntEltVT);
-  } while (true);
+
+  EVT TruncIntVT = TLI.getTypeToTransformTo(*DAG.getContext(), IntVT);
+  EVT TruncFloatEltVT =
+      EVT::getFloatingPointVT(TruncIntVT.getScalarSizeInBits());
+  EVT TruncFloatVT =
+      OperandVT.changeElementType(*DAG.getContext(), TruncFloatEltVT);
+  unsigned TruncFloatEltBitsize = TruncFloatVT.getScalarSizeInBits();
+  unsigned TruncIntEltBitsize = TruncIntVT.getScalarSizeInBits();
+  if (TLI.isTypeLegal(TruncIntVT) && TLI.isTypeLegal(TruncFloatVT) &&
+      TruncFloatEltBitsize == TruncIntEltBitsize &&
+      TruncFloatEltBitsize < EltBitsize) {
+    if (TruncFloatVT != OperandVT)
+      NeedFPTrunc = true;
+  }
 
   if (NeedFPTrunc &&
       TLI.isOperationLegalOrCustom(ISD::FP_ROUND, TruncFloatVT)) {
