@@ -248,6 +248,7 @@ class PRGreeter:
     # NOTE: Please keep this in sync with .github/new-prs-labeler.yml
     SPECIFIC_CONTRIBUTOR_GUIDE_LIST = {
         "The [InstCombine Contributor Guide](https://llvm.org/docs/InstCombineContributorGuide.html) lays out a series of rules that contributions to InstCombine (and other middle-end components) should follow.": [
+            # llvm:instcombine + llvm:vectorcombine + ValueTracking/ConstantFold code
             "llvm/include/llvm/Analysis/ConstantFolding.h",
             "llvm/include/llvm/Analysis/InstructionSimplify.h",
             "llvm/include/llvm/IR/ConstantFold.h",
