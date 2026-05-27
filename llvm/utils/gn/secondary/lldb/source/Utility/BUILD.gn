@@ -34,6 +34,7 @@ static_library("Utility") {
     "Listener.cpp",
     "Log.cpp",
     "NameMatches.cpp",
+    "Policy.cpp",
     "ProcessInfo.cpp",
     "RealpathPrefixes.cpp",
     "RegisterValue.cpp",

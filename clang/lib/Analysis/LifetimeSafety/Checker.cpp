@@ -300,7 +300,7 @@ public:
         } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
           // Return stack address.
           SemaHelper->reportUseAfterReturn(
-              IssueExpr, RetEscape->getReturnExpr(), MovedExpr, ExpiryLoc);
+              IssueExpr, RetEscape->getReturnExpr(), MovedExpr);
         else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
           // Dangling field.
           SemaHelper->reportDanglingField(
@@ -316,103 +316,86 @@ public:
     }
   }
 
-  std::pair<const FunctionDecl *, WarningScope>
-  getCanonicalFunctionDeclForAttr(const FunctionDecl *FDef) {
+  // Returns declarations that should be annotated with lifetime attributes
+  // in order to annotate FDef: the canonical declaration and the earliest
+  // redeclarations in each other file. This defines the placement policy for
+  // lifetime annotations. Each target is paired with its corresponding warning
+  // scope.
+  llvm::SmallVector<std::pair<const FunctionDecl *, WarningScope>, 2>
+  getTargetDeclsForAttr(const FunctionDecl *FDef) {
     if (!FDef)
-      return {nullptr, WarningScope::IntraTU};
+      return {};
 
     assert(FDef->isThisDeclarationADefinition() &&
            "Expected FunctionDecl to be a definition");
 
     const auto &SM = FDef->getASTContext().getSourceManager();
-    const FileID DefFile =
-        SM.getFileID(SM.getExpansionLoc(FDef->getLocation()));
+
+    auto GetFile = [&SM](const FunctionDecl *FD) {
+      return SM.getFileID(SM.getExpansionLoc(FD->getLocation()));
+    };
+
+    const FileID DefFile = GetFile(FDef);
     const FunctionDecl *CanonicalDecl = FDef->getCanonicalDecl();
-    WarningScope Scope = WarningScope::IntraTU;
+    llvm::SmallVector<std::pair<const FunctionDecl *, WarningScope>, 2> Targets{
+        {CanonicalDecl, GetFile(CanonicalDecl) == DefFile
+                            ? WarningScope::IntraTU
+                            : WarningScope::CrossTU}};
 
-    Scope = SM.getFileID(SM.getExpansionLoc(CanonicalDecl->getLocation())) !=
-                    DefFile
-                ? WarningScope::CrossTU
-                : WarningScope::IntraTU;
+    // Find the earliest redeclaration in each file other than the definition
+    // file.
+    auto AddCrossTUDecl = [&](const FunctionDecl *FD) {
+      FileID File = GetFile(FD);
+      if (File == DefFile)
+        return;
+      for (auto [SeenFD, _] : Targets)
+        if (GetFile(SeenFD) == File)
+          return;
+      Targets.push_back({FD, WarningScope::CrossTU});
+    };
 
-    return {CanonicalDecl, Scope};
+    // We iterate in reverse order (from most recent to oldest) to find
+    // the first declaration in each file.
+
+    // Store in temporary variable to manually extend lifetime
+    auto redecls = llvm::to_vector(FDef->redecls());
+
+    for (const FunctionDecl *Redecl : llvm::reverse(redecls))
+      AddCrossTUDecl(Redecl);
+
+    return Targets;
   }
 
-  std::pair<const CXXMethodDecl *, WarningScope>
-  getCanonicalDeclForAttr(const CXXMethodDecl *MDef) {
-    auto [CanonicalFDecl, Scope] = getCanonicalFunctionDeclForAttr(MDef);
-    return {cast_or_null<CXXMethodDecl>(CanonicalFDecl), Scope};
-  }
-
-  std::pair<const ParmVarDecl *, WarningScope>
-  getCanonicalDeclForAttr(const FunctionDecl *FDef, const ParmVarDecl *PVDDef) {
-    auto [CanonicalFDecl, Scope] = getCanonicalFunctionDeclForAttr(FDef);
-    if (!CanonicalFDecl)
-      return {nullptr, Scope};
-    return {CanonicalFDecl->getParamDecl(PVDDef->getFunctionScopeIndex()),
-            Scope};
-  }
-
-  /// Returns the declaration of a function that is visible across translation
-  /// units, if such a declaration exists and is different from the definition.
-  static const FunctionDecl *getCrossTUDecl(const FunctionDecl &FD,
-                                            SourceManager &SM) {
-    if (!FD.isExternallyVisible())
-      return nullptr;
-    const FileID DefinitionFile = SM.getFileID(FD.getLocation());
-    for (const FunctionDecl *Redecl : FD.redecls())
-      if (SM.getFileID(Redecl->getLocation()) != DefinitionFile)
-        return Redecl;
-
-    return nullptr;
-  }
-
-  static const FunctionDecl *getCrossTUDecl(const ParmVarDecl &PVD,
-                                            SourceManager &SM) {
-    if (const auto *FD = dyn_cast<FunctionDecl>(PVD.getDeclContext()))
-      return getCrossTUDecl(*FD, SM);
-    return nullptr;
-  }
-
-  static void suggestWithScopeForParmVar(LifetimeSafetySemaHelper *SemaHelper,
-                                         const ParmVarDecl *PVD,
-                                         SourceManager &SM,
-                                         EscapingTarget EscapeTarget) {
+  void suggestWithScopeForParmVar(const ParmVarDecl *PVD,
+                                  EscapingTarget EscapeTarget) {
     if (llvm::isa<const VarDecl *>(EscapeTarget))
       return;
 
-    if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*PVD, SM))
-      SemaHelper->suggestLifetimeboundToParmVar(
-          WarningScope::CrossTU,
-          CrossTUDecl->getParamDecl(PVD->getFunctionScopeIndex()),
-          EscapeTarget);
-    else
-      SemaHelper->suggestLifetimeboundToParmVar(WarningScope::IntraTU, PVD,
+    for (auto [Decl, Scope] : getTargetDeclsForAttr(cast<FunctionDecl>(FD))) {
+      const auto *ParmToAnnotate =
+          Decl->getParamDecl(PVD->getFunctionScopeIndex());
+      SemaHelper->suggestLifetimeboundToParmVar(Scope, ParmToAnnotate,
                                                 EscapeTarget);
+    }
   }
 
-  static void
-  suggestWithScopeForImplicitThis(LifetimeSafetySemaHelper *SemaHelper,
-                                  const CXXMethodDecl *MD, SourceManager &SM,
-                                  const Expr *EscapeExpr) {
-    if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*MD, SM))
+  void suggestWithScopeForImplicitThis(const CXXMethodDecl *MD,
+                                       const Expr *EscapeExpr) {
+    for (auto [Decl, Scope] : getTargetDeclsForAttr(MD)) {
       SemaHelper->suggestLifetimeboundToImplicitThis(
-          WarningScope::CrossTU, cast<CXXMethodDecl>(CrossTUDecl), EscapeExpr);
-    else
-      SemaHelper->suggestLifetimeboundToImplicitThis(WarningScope::IntraTU, MD,
-                                                     EscapeExpr);
+          Scope, cast<CXXMethodDecl>(Decl), EscapeExpr);
+    }
   }
 
   void suggestAnnotations() {
     if (!SemaHelper)
       return;
-    SourceManager &SM = AST.getSourceManager();
     for (auto [Target, EscapeTarget] : AnnotationWarningsMap) {
       if (const auto *PVD = Target.dyn_cast<const ParmVarDecl *>())
-        suggestWithScopeForParmVar(SemaHelper, PVD, SM, EscapeTarget);
+        suggestWithScopeForParmVar(PVD, EscapeTarget);
       else if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>()) {
         if (const auto *EscapeExpr = EscapeTarget.dyn_cast<const Expr *>())
-          suggestWithScopeForImplicitThis(SemaHelper, MD, SM, EscapeExpr);
+          suggestWithScopeForImplicitThis(MD, EscapeExpr);
         else
           llvm_unreachable("Implicit this can only escape via Expr (return)");
       }
@@ -458,13 +441,17 @@ public:
     const FunctionDecl *FDef = dyn_cast<FunctionDecl>(FD);
     if (!FDef)
       return;
+
+    auto TargetDecls = getTargetDeclsForAttr(FDef);
     // Check if implicit 'this' has lifetimebound on definition but not on
     // declaration.
     if (const auto *MDef = dyn_cast<CXXMethodDecl>(FDef);
         MDef && getDirectImplicitObjectLifetimeBoundAttr(MDef))
-      if (auto [MDecl, Scope] = getCanonicalDeclForAttr(MDef);
-          MDecl && !getDirectImplicitObjectLifetimeBoundAttr(MDecl))
-        SemaHelper->reportMisplacedLifetimebound(Scope, MDef, MDecl);
+      for (auto [Decl, Scope] : TargetDecls) {
+        const auto *MDecl = cast<CXXMethodDecl>(Decl);
+        if (!getDirectImplicitObjectLifetimeBoundAttr(MDecl))
+          SemaHelper->reportMisplacedLifetimebound(Scope, MDef, MDecl);
+      }
 
     // Check each parameter for explicit lifetimebound on definition but not on
     // declaration.
@@ -472,9 +459,11 @@ public:
       const auto *Attr = PDef->getAttr<LifetimeBoundAttr>();
       if (!Attr || Attr->isImplicit())
         continue;
-      if (auto [PDecl, Scope] = getCanonicalDeclForAttr(FDef, PDef);
-          PDecl && !PDecl->hasAttr<LifetimeBoundAttr>())
-        SemaHelper->reportMisplacedLifetimebound(Scope, PDef, PDecl);
+      for (auto [Decl, Scope] : TargetDecls) {
+        const auto *PDecl = Decl->getParamDecl(PDef->getFunctionScopeIndex());
+        if (!PDecl->hasAttr<LifetimeBoundAttr>())
+          SemaHelper->reportMisplacedLifetimebound(Scope, PDef, PDecl);
+      }
     }
   }
 

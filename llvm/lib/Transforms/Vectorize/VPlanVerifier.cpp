@@ -237,16 +237,42 @@ bool VPlanVerifier::verifyRecipeTypes(const VPRecipeBase &R) const {
     return false;
   };
 
+  if (auto *WII = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
+    return CheckScalarType(WII->getTruncInst()
+                               ? WII->getTruncInst()->getType()
+                               : WII->getStartValue()->getScalarType());
+
   switch (R.getVPRecipeID()) {
   case VPRecipeBase::VPVectorPointerSC:
   case VPRecipeBase::VPVectorEndPointerSC:
   case VPRecipeBase::VPWidenGEPSC:
   case VPRecipeBase::VPScalarIVStepsSC:
+  case VPRecipeBase::VPWidenPointerInductionSC:
+  case VPRecipeBase::VPDerivedIVSC:
     return CheckScalarType(getScalarTypeOrInfer(R.getOperand(0)));
   case VPRecipeBase::VPWidenPHISC:
   case VPRecipeBase::VPPredInstPHISC:
+  case VPRecipeBase::VPReductionPHISC:
+  case VPRecipeBase::VPActiveLaneMaskPHISC:
+  case VPRecipeBase::VPCurrentIterationPHISC:
+  case VPRecipeBase::VPFirstOrderRecurrencePHISC:
     return CheckOperandTypes() &&
            CheckScalarType(getScalarTypeOrInfer(R.getOperand(0)));
+  case VPRecipeBase::VPInstructionSC: {
+    auto *VPI = cast<VPInstruction>(&R);
+    if (isa<VPInstructionWithType>(VPI) ||
+        is_contained(
+            ArrayRef<unsigned>{
+                Instruction::ExtractValue, VPInstruction::FirstActiveLane,
+                VPInstruction::LastActiveLane, VPInstruction::NumActiveLanes,
+                VPInstruction::IncomingAliasMask, Instruction::Load,
+                Instruction::Alloca, Instruction::Call},
+            VPI->getOpcode()))
+      return true;
+    SmallVector<VPValue *, 4> Ops(VPI->operandsWithoutMask());
+    return CheckScalarType(
+        computeScalarTypeForInstruction(VPI->getOpcode(), Ops));
+  }
   default:
     return true;
   }
