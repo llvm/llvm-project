@@ -2,7 +2,7 @@
 
 REQUIRES: system-linux, perf
 
-RUN: %clang %S/Inputs/perf_test.c -fuse-ld=lld -pie -Wl,--script=%S/Inputs/perf_test.lds -o %t
+RUN: %clang %S/Inputs/perf_test.c -fuse-ld=lld -pie -Wl,--script=%S/Inputs/perf_test.lds,--build-id -o %t
 RUN: perf record -Fmax -e cycles:u -o %t2 -- %t
 RUN: perf2bolt %t -p=%t2 -o %t3 -ba -ignore-build-id --show-density \
 RUN:   --heatmap %t.hm 2>&1 | FileCheck %s
@@ -20,3 +20,14 @@ RUN:   --heatmap %t.hm2 2>&1 | FileCheck %s
 RUN: FileCheck %s --input-file %t.hm2-section-hotness.csv --check-prefix=CHECK-HM
 
 CHECK-HM: .text
+
+# Check perf2bolt can correctly process multiple perf.data inputs
+RUN: perf record -Fmax -e cycles:u -o %t.perf.data1 -- %t
+RUN: perf record -Fmax -e cycles:u -o %t.perf.data2 -- %t
+RUN: perf record -Fmax -e cycles:u -o %t.perf.data3 -- %t
+RUN: perf2bolt %t -p=%t.perf.data1 -p=%t.perf.data2 -p=%t.perf.data3 -o %t7 -ba | FileCheck %s --check-prefix=CHECK-MUTI-PERF
+
+CHECK-MUTI-PERF: Starting data aggregation job for 3 perf data files
+CHECK-MUTI-PERF: matched build-id and file name
+CHECK-MUTI-PERF-NOT: PERF2BOLT-ERROR
+CHECK-MUTI-PERF-NOT: !! WARNING !! This high mismatch ratio indicates the input binary is probably not the same binary used during profiling collection.

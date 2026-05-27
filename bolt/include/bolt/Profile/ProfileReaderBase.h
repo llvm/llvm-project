@@ -78,6 +78,9 @@ public:
   /// good source of profile data may contain discrepancies. Nevertheless, the
   /// rest of the profile is correct.
   virtual bool isTrustedSource() const = 0;
+
+  ///  Return true if this is an instance of DataAggregator.
+  virtual bool isDataAggregator() const { return false; }
 };
 
 } // namespace bolt

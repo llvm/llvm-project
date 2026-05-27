@@ -117,12 +117,15 @@ void perf2boltMode(int argc, char **argv) {
     errs() << ToolName << ": unknown -data option.\n";
     exit(1);
   }
-  if (!sys::fs::exists(opts::PerfData))
-    report_error(opts::PerfData, errc::no_such_file_or_directory);
-  if (!DataAggregator::checkPerfDataMagic(opts::PerfData)) {
-    errs() << ToolName << ": '" << opts::PerfData
-           << "': expected valid perf.data file.\n";
-    exit(1);
+  for (const auto &PerfFile : opts::PerfData) {
+    if (!sys::fs::exists(PerfFile))
+      report_error(PerfFile, errc::no_such_file_or_directory);
+
+    if (!DataAggregator::checkPerfDataMagic(PerfFile)) {
+      errs() << ToolName << ": '" << PerfFile
+             << "': expected valid perf.data file.\n";
+      exit(1);
+    }
   }
   if (opts::OutputFilename.empty()) {
     errs() << ToolName << ": expected -o=<output file> option.\n";
@@ -252,8 +255,10 @@ int main(int argc, char **argv) {
                     "-aggregate-only or perf2bolt.\n!!! Proceed on your own "
                     "risk. !!!\n";
         }
-        if (Error E = RI.setProfile(opts::PerfData))
-          report_error(opts::PerfData, std::move(E));
+        for (const auto &PerfFile : opts::PerfData) {
+          if (Error E = RI.setProfile(PerfFile))
+            report_error(PerfFile, std::move(E));
+        }
       }
       if (!opts::InputDataFilename.empty()) {
         if (Error E = RI.setProfile(opts::InputDataFilename))
@@ -262,6 +267,13 @@ int main(int argc, char **argv) {
       if (opts::AggregateOnly && opts::PerfData.empty()) {
         errs() << ToolName << ": missing required -perfdata option.\n";
         exit(1);
+      }
+      if (auto *PR = RI.getProfileReader()) {
+        if (PR->isDataAggregator()) {
+          auto *DA = static_cast<DataAggregator *>(
+              const_cast<ProfileReaderBase *>(PR));
+          DA->start();
+        }
       }
 
       if (Error E = RI.run())
