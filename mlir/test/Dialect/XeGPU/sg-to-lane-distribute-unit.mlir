@@ -1,6 +1,6 @@
 
 // RUN: mlir-opt  --xevm-attach-target='module=xevm_* chip=cri' --allow-unregistered-dialect \
-// RUN: --test-xegpu-sg-to-wi-distribute-experimental --split-input-file %s | FileCheck %s
+// RUN: --test-xegpu-sg-to-lane-distribute --split-input-file %s | FileCheck %s
 
 
 gpu.module @xevm_module {
