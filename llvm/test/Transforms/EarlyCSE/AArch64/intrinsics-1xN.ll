@@ -156,6 +156,24 @@ entry:
   ret void
 }
 
+; Check that ld1x3 is optimized away by EarlyCSE.
+define <16 x i8> @test_cse_for_st1x3_ld1x3(ptr %p, <16 x i8> %A, <16 x i8> %B) {
+; CHECK-LABEL: define <16 x i8> @test_cse_for_st1x3_ld1x3(
+; CHECK-SAME: ptr [[P:%.*]], <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> } poison, <16 x i8> [[A]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> } [[TMP0]], <16 x i8> [[A]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> } [[TMP1]], <16 x i8> [[B]], 2
+; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x3.v16i8.p0(<16 x i8> [[A]], <16 x i8> [[A]], <16 x i8> [[B]], ptr [[P]])
+; CHECK-NEXT:    ret <16 x i8> [[A]]
+;
+entry:
+  call void @llvm.aarch64.neon.st1x3.v16i8.p0(<16 x i8> %A, <16 x i8> %A, <16 x i8> %B, ptr %p)
+  %ld = call { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld1x3.v16i8.p0(ptr %p)
+  %ext = extractvalue { <16 x i8>, <16 x i8>, <16 x i8> } %ld, 0
+  ret <16 x i8> %ext
+}
+
 ; Check that ld1x4 is optimized away by EarlyCSE.
 define <16 x i8> @test_cse_for_st1x4_ld1x4(ptr %p, <16 x i8> %A, <16 x i8> %B) {
 ; CHECK-LABEL: define <16 x i8> @test_cse_for_st1x4_ld1x4(
