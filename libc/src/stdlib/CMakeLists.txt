@@ -147,8 +147,8 @@ add_header_library(
     str_to_util.h
   DEPENDS
     libc.src.__support.common
-    libc.src.__support.libc_errno
     libc.src.__support.str_to_integer
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
