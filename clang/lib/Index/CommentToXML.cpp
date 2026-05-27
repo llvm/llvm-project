@@ -893,6 +893,10 @@ void CommentASTToXMLConverter::visitFullComment(const FullComment *C) {
       RootEndTag = "</Enum>";
       Result << "<Enum";
       break;
+    case DeclInfo::ConceptKind:
+      RootEndTag = "</Concept";
+      Result << "<Concept";
+      break;
     }
 
     {

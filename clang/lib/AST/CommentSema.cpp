@@ -317,12 +317,7 @@ void Sema::actOnTParamCommandParamNameArg(TParamCommandComment *Command,
     return;
   }
 
-  const TemplateParameterList *TemplateParameters;
-  if (const auto *Concept =
-          dyn_cast_or_null<ConceptDecl>(ThisDeclInfo->CommentDecl))
-    TemplateParameters = Concept->getTemplateParameters();
-  else
-    TemplateParameters = ThisDeclInfo->TemplateParameters;
+  const TemplateParameterList *TemplateParameters = ThisDeclInfo->TemplateParameters;
 
   SmallVector<unsigned, 2> Position;
   if (resolveTParamReference(Arg, TemplateParameters, &Position)) {
@@ -862,8 +857,7 @@ bool Sema::isTemplateOrSpecialization() {
     return false;
   if (!ThisDeclInfo->IsFilled)
     inspectThisDecl();
-  return ThisDeclInfo->getTemplateKind() != DeclInfo::NotTemplate ||
-         isa<ConceptDecl>(ThisDeclInfo->CommentDecl);
+  return ThisDeclInfo->getTemplateKind() != DeclInfo::NotTemplate;
 }
 
 bool Sema::isExplicitFunctionTemplateInstantiation() {
