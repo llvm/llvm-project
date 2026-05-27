@@ -3135,6 +3135,9 @@ def note_private_extern : Note<
   "use __attribute__((visibility(\"hidden\"))) attribute instead">;
 
 // C23 constexpr
+def warn_c23_compat_constexpr : Warning<
+  "'constexpr' specifier is incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 def err_c23_constexpr_not_variable : Error<
   "'constexpr' can only be used in variable declarations">;
 def err_c23_constexpr_invalid_type : Error<

@@ -586,6 +586,8 @@ Improvements to Clang's diagnostics
 
 - Clang now emits error when attribute is missing closing ``]]`` followed by ``;;``. (#GH187223)
 
+- No longer warn about C++98 compatibility when using ``constexpr`` in C23.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
