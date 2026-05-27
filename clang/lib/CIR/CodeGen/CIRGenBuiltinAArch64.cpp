@@ -761,7 +761,20 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vcvtq_s64_v:
   case NEON::BI__builtin_neon_vcvtq_u64_v:
   case NEON::BI__builtin_neon_vcvtq_s16_f16:
-  case NEON::BI__builtin_neon_vcvtq_u16_f16:
+  case NEON::BI__builtin_neon_vcvtq_u16_f16: {
+    auto ty = getFloatNeonType(cgf, neonType);
+    // Undo the bitcast inserted by intrinsics that expand to this builtin
+    // (e.g. vcvt_u32_f32).
+    // TODO: While the bitcasts eventually cancel each other out, we should
+    // avoid them altogether.
+    ops[0] =
+        cgf.getBuilder().createCast(loc, cir::CastKind::bitcast, ops[0], ty);
+    assert(!cir::MissingFeatures::emitConstrainedFPCall());
+    // AArch64: use fptosi.sat/fptoui.sat unless under strict FP.
+    llvm::StringRef llvmIntrName = usgn ? "fptoui.sat" : "fptosi.sat";
+    return emitNeonCall(cgf.getCIRGenModule(), cgf.getBuilder(),
+                        /*argTypes=*/{ty}, ops, llvmIntrName, vTy, loc);
+  }
   case NEON::BI__builtin_neon_vcvta_s16_f16:
   case NEON::BI__builtin_neon_vcvta_s32_v:
   case NEON::BI__builtin_neon_vcvta_s64_v:
