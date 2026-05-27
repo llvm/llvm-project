@@ -51,7 +51,7 @@ public:
 
   void traverseRecord(ptr_t<RecordDecl> RD) {
     if (ptr_t<CXXRecordDecl> CRD = dyn_cast<CXXRecordDecl>(RD)) {
-      for (non_ptr_t<CXXBaseSpecifier&> BS : CRD->bases()) {
+      for (non_ptr_t<CXXBaseSpecifier &> BS : CRD->bases()) {
         if (getDerived().visitBaseSpecifierPre(&BS))
           getDerived().visit(BS.getType());
         getDerived().visitBaseSpecifierPost(&BS);
