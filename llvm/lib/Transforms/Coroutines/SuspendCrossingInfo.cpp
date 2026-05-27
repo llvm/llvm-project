@@ -97,8 +97,12 @@ bool SuspendCrossingInfo::computeBlockData(
     auto BBNo = Mapping.blockToIndex(BB);
     auto &B = Block[BBNo];
 
+    // Verify BlockData on initialize
     // We don't need to count the predecessors when initialization.
-    if constexpr (!Initialize)
+    if constexpr (Initialize)
+      assert(!(B.AlwaysKill && B.NeverKill) &&
+             "AlwaysKill and NeverKill cannot both be true");
+    else {
       // If all the predecessors of the current Block don't change,
       // the BlockData for the current block must not change too.
       if (all_of(predecessors(B), [this](BasicBlock *BB) {
@@ -107,6 +111,7 @@ bool SuspendCrossingInfo::computeBlockData(
         B.Changed = false;
         continue;
       }
+    }
 
     // Saved Consumes and Kills bitsets so that it is easy to see
     // if anything changed after propagation.
