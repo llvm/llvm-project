@@ -3494,6 +3494,26 @@ diagnostic verifier will pass. However, if the expected error does not appear
 or appears in a different location than expected, or if additional diagnostics
 appear, the diagnostic verifier will fail and emit information as to why.
 
+To avoid accidentally missing behavior changes, never comment out code or use ``#if 0`` to disable tests.
+If a test case causes a crash currently, use the ``-D`` option and the ``#ifdef`` preprocessing directive to enable tests, and ``not --crash`` to verify the crash.
+
+.. code-block:: c++
+
+  // RUN: %clang_cc1 -verify %s
+  // RUN: not --crash %clang_cc1 -DCRASH1 -verify %s
+  // RUN: not --crash %clang_cc1 -DCRASH2 -verify %s
+
+  // test cases that do not cause a crash
+
+  #ifdef CRASH1
+  // a test case that causes a crash
+  #endif
+
+  #ifdef CRASH2
+  // another test case that causes a crash
+  #endif
+
+
 Directive Syntax
 ~~~~~~~~~~~~~~~~
 Syntax description of the directives is the following:
