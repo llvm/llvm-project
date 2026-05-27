@@ -77,6 +77,7 @@ static bool printInsts(const MCDisassembler &DisAsm, const ByteArrayTy &Bytes,
       [[fallthrough]];
 
     case MCDisassembler::Success:
+      Inst.setLoc(SMLoc::getFromPointer(Bytes.second[Index]));
       Streamer.emitInstruction(Inst, STI);
       break;
     }

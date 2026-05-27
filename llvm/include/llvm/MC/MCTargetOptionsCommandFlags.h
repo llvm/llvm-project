@@ -45,6 +45,7 @@ LLVM_ABI bool getEmitCompactUnwindNonCanonical();
 LLVM_ABI bool getEmitSFrameUnwind();
 
 LLVM_ABI bool getShowMCInst();
+LLVM_ABI bool getShowMCInstSourceLoc();
 
 LLVM_ABI bool getFatalWarnings();
 
