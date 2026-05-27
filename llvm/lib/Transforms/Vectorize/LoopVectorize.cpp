@@ -2499,9 +2499,11 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
     LoopVectorizationCostModel::InstWidening WidenKind =
         getWideningDecision(I, VF);
     assert(WidenKind != CM_Unknown);
-    // According to the legacy cost model, a masked access is never considered
-    // profitable for scalarization when gather/scatter is available, even if
-    // the chosen widening is CM_Scalarize.
+    // TODO: This should just be "return WidenKind == CM_Scalarize;"
+    // This represents an inconsistency in the (legacy) cost model for
+    // predicated instructions: we might have chosen CM_Scalarize because it's
+    // thought to have lower costs, but isScalarForPredication ignores that and
+    // might consider that no scalarization will happen.
     return WidenKind == CM_Scalarize && !Config.isLegalGatherOrScatter(I, VF);
   }
   case Instruction::UDiv:
