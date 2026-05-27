@@ -2172,7 +2172,7 @@ bool MarkDestroyed(InterpState &S, CodePtr OpPC) {
 
 bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
                           std::optional<uint64_t> ArraySize) {
-  Pointer &Ptr = S.Stk.peek<Pointer>();
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
 
   auto directBaseIsUnion = [](const Pointer &Ptr) -> bool {
     if (Ptr.isArrayElement())
@@ -2252,12 +2252,8 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
     // that case here by using the base of the Pointer.
     QualType AllocElementType =
         ASTCtx.getAsArrayType(AllocType)->getElementType();
-    if (ASTCtx.hasSimilarType(AllocElementType, StorageType)) {
-      // FIXME: This isn't quite right: it jumps too many levels with
-      // multi-dimensional arrays.
-      Ptr = Ptr.getBase();
-      StorageType = Ptr.getType();
-    }
+    if (ASTCtx.hasSimilarType(AllocElementType, StorageType))
+      StorageType = Ptr.getArray().getType();
   }
 
   if (!ASTCtx.hasSimilarType(AllocType, StorageType)) {
