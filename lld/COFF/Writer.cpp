@@ -1078,17 +1078,15 @@ void Writer::removeDuplicatePdataChunks() {
   };
   struct PdataKeyInfo {
     static PdataKey getEmptyKey() { return {nullptr, 0, nullptr, 0}; }
-    static PdataKey getTombstoneKey() {
-      return {nullptr, ~0u, nullptr, ~0u};
-    }
+    static PdataKey getTombstoneKey() { return {nullptr, ~0u, nullptr, ~0u}; }
     static unsigned getHashValue(const PdataKey &k) {
       return llvm::hash_combine(k.beginChunk, k.beginValue, k.endChunk,
                                 k.endValue);
     }
     static bool isEqual(const PdataKey &lhs, const PdataKey &rhs) {
       return lhs.beginChunk == rhs.beginChunk &&
-             lhs.beginValue == rhs.beginValue &&
-             lhs.endChunk == rhs.endChunk && lhs.endValue == rhs.endValue;
+             lhs.beginValue == rhs.beginValue && lhs.endChunk == rhs.endChunk &&
+             lhs.endValue == rhs.endValue;
     }
   };
 
@@ -1111,8 +1109,8 @@ void Writer::removeDuplicatePdataChunks() {
       continue;
 
     // Resolve the BeginAddress (reloc 0) and EndAddress (reloc 1) targets.
-    auto resolve = [&](const coff_relocation &rel)
-        -> std::pair<Chunk *, uint32_t> {
+    auto resolve =
+        [&](const coff_relocation &rel) -> std::pair<Chunk *, uint32_t> {
       Symbol *sym = sc->file->getSymbol(rel.SymbolTableIndex);
       if (auto *d = dyn_cast<DefinedRegular>(sym))
         return {d->getChunk(), d->getValue()};
@@ -1132,8 +1130,7 @@ void Writer::removeDuplicatePdataChunks() {
 
     PdataKey key{beginChunk, beginVal, endChunk, endVal};
     if (!seen.insert(key).second) {
-      Log(ctx) << "Removed duplicate .pdata entry in "
-               << sc->getSectionName();
+      Log(ctx) << "Removed duplicate .pdata entry in " << sc->getSectionName();
       sc->live = false;
     }
   }
