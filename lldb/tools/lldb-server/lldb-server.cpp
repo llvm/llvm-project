@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
   case 'g': {
 #if defined(__APPLE__)
     fprintf(stderr, "gdbserver mode is not supported on Apple platforms. "
-                    "Use debugserver instead.");
+                    "Use debugserver instead.\n");
     return EXIT_FAILURE;
 #else
     llgs::Initialize();
