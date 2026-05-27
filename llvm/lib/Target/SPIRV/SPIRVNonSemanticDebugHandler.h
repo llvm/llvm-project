@@ -166,6 +166,11 @@ private:
   /// Map a DWARF source language code to a NonSemantic.Shader.DebugInfo.100
   /// source language code.
   static unsigned toNSDISrcLang(unsigned DwarfSrcLang);
+
+  /// Insert Ty into the appropriate type-collection set, recursing into any
+  /// referenced types. Called from beginModule() for every DIType reached
+  /// through a DbgVariableRecord. Idempotent on SetVector duplicates.
+  void collectType(const DIType *Ty);
 };
 
 } // namespace llvm

@@ -87,26 +87,32 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
     }
   }
 
-  // Collect basic and pointer types referenced by debug variable records.
+  // Collect types referenced by debug variable records.
   for (const auto &F : *M) {
     for (const auto &BB : F) {
       for (const auto &I : BB) {
         for (const DbgVariableRecord &DVR :
              filterDbgVars(I.getDbgRecordRange())) {
-          const DIType *Ty = DVR.getVariable()->getType();
-          if (const auto *BT = dyn_cast<DIBasicType>(Ty)) {
-            BasicTypes.insert(BT);
-          } else if (const auto *DT = dyn_cast<DIDerivedType>(Ty)) {
-            if (DT->getTag() == dwarf::DW_TAG_pointer_type) {
-              PointerTypes.insert(DT);
-              if (const auto *BT =
-                      dyn_cast_or_null<DIBasicType>(DT->getBaseType()))
-                BasicTypes.insert(BT);
-            }
-          }
+          collectType(DVR.getVariable()->getType());
         }
       }
     }
+  }
+}
+
+void SPIRVNonSemanticDebugHandler::collectType(const DIType *Ty) {
+  if (!Ty)
+    return;
+  if (const auto *BT = dyn_cast<DIBasicType>(Ty)) {
+    BasicTypes.insert(BT);
+    return;
+  }
+  if (const auto *DT = dyn_cast<DIDerivedType>(Ty)) {
+    if (DT->getTag() == dwarf::DW_TAG_pointer_type) {
+      PointerTypes.insert(DT);
+      collectType(DT->getBaseType());
+    }
+    return;
   }
 }
 
