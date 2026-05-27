@@ -9,7 +9,7 @@ define ptr @source() {
   ret ptr @g
 }
 
-; M0: @g.84f59439b469192440047efc8de357fb = external hidden constant [1 x ptr]{{$}}
+; M0: @g.84f59439b469192440047efc8de357fb = external hidden constant [1 x ptr]
 ; M1: @g.84f59439b469192440047efc8de357fb = hidden constant [1 x ptr] [ptr @ok.84f59439b469192440047efc8de357fb]
 @g = internal constant [1 x ptr] [
   ptr @ok

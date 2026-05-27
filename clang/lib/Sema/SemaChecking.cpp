@@ -2650,12 +2650,19 @@ static ExprResult BuiltinMaskedStore(Sema &S, CallExpr *TheCall) {
         S.Diag(ValArg->getExprLoc(), diag::err_vec_masked_load_store_ptr)
         << 2 << "vector");
 
-  QualType PointeeTy = PtrTy->getPointeeType();
   const VectorType *MaskVecTy = MaskTy->getAs<VectorType>();
-  QualType MemoryTy = S.Context.getExtVectorType(PointeeTy.getUnqualifiedType(),
-                                                 MaskVecTy->getNumElements());
-  if (!S.Context.hasSameType(ValTy.getUnqualifiedType(),
-                             MemoryTy.getUnqualifiedType()))
+  const VectorType *ValVecTy = ValTy->getAs<VectorType>();
+
+  if (MaskVecTy->getNumElements() != ValVecTy->getNumElements()) {
+    return ExprError(
+        S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
+        << S.getASTContext().BuiltinInfo.getQuotedName(
+               TheCall->getBuiltinCallee())
+        << MaskTy << ValTy);
+  }
+
+  if (!S.Context.hasSameType(ValVecTy->getElementType().getUnqualifiedType(),
+                             PtrTy->getPointeeType().getUnqualifiedType()))
     return ExprError(S.Diag(TheCall->getBeginLoc(),
                             diag::err_vec_builtin_incompatible_vector)
                      << TheCall->getDirectCallee() << /*isMorethantwoArgs*/ 2
@@ -2685,7 +2692,7 @@ static ExprResult BuiltinMaskedGather(Sema &S, CallExpr *TheCall) {
 
   QualType IdxTy = IdxArg->getType();
   const VectorType *IdxVecTy = IdxTy->getAs<VectorType>();
-  if (!IdxTy->isExtVectorType() || !IdxVecTy->getElementType()->isIntegerType())
+  if (!IdxTy->isVectorType() || !IdxVecTy->getElementType()->isIntegerType())
     return S.Diag(MaskArg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
            << 1 << /* vector of */ 4 << /* integer */ 1 << /* no fp */ 0
            << IdxTy;
@@ -2736,7 +2743,7 @@ static ExprResult BuiltinMaskedScatter(Sema &S, CallExpr *TheCall) {
 
   QualType IdxTy = IdxArg->getType();
   const VectorType *IdxVecTy = IdxTy->getAs<VectorType>();
-  if (!IdxTy->isExtVectorType() || !IdxVecTy->getElementType()->isIntegerType())
+  if (!IdxTy->isVectorType() || !IdxVecTy->getElementType()->isIntegerType())
     return S.Diag(MaskArg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
            << 2 << /* vector of */ 4 << /* integer */ 1 << /* no fp */ 0
            << IdxTy;
@@ -2744,7 +2751,6 @@ static ExprResult BuiltinMaskedScatter(Sema &S, CallExpr *TheCall) {
   QualType ValTy = ValArg->getType();
   QualType MaskTy = MaskArg->getType();
   QualType PtrTy = PtrArg->getType();
-  QualType PointeeTy = PtrTy->getPointeeType();
 
   const VectorType *MaskVecTy = MaskTy->castAs<VectorType>();
   const VectorType *ValVecTy = ValTy->castAs<VectorType>();
@@ -2761,9 +2767,8 @@ static ExprResult BuiltinMaskedScatter(Sema &S, CallExpr *TheCall) {
                TheCall->getBuiltinCallee())
         << MaskTy << ValTy);
 
-  QualType ArgTy = S.Context.getExtVectorType(PointeeTy.getUnqualifiedType(),
-                                              MaskVecTy->getNumElements());
-  if (!S.Context.hasSameType(ValTy.getUnqualifiedType(), ArgTy))
+  if (!S.Context.hasSameType(ValVecTy->getElementType().getUnqualifiedType(),
+                             PtrTy->getPointeeType().getUnqualifiedType()))
     return ExprError(S.Diag(TheCall->getBeginLoc(),
                             diag::err_vec_builtin_incompatible_vector)
                      << TheCall->getDirectCallee() << /*isMoreThanTwoArgs*/ 2
@@ -3615,6 +3620,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   // types only.
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat:
+  case Builtin::BI__builtin_elementwise_clmul:
     if (BuiltinElementwiseMath(TheCall,
                                EltwiseBuiltinArgTyRestriction::IntegerTy))
       return ExprError();

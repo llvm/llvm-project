@@ -447,6 +447,11 @@ Changes in existing checks
   lambda coroutines using C++23 deducing ``this`` (explicit object parameter)
   are not flagged.
 
+- Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
+  <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>`
+  check by adding the `IgnoreMacros` option. When enabled, non-const global
+  variables defined in macros are ignored.
+
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
   member pointers are correctly flagged as uninitialized.
