@@ -1,0 +1,5 @@
+# REQUIRES: riscv-registered-target
+## Check that --use-same-for-encoding splits the instruction and encoding checks using CHECK-SAME
+
+# RUN: cp -f %S/Inputs/riscv_same_encoding.s %t.s && %update_mc_test_checks --use-same-for-encoding %t.s
+# RUN: diff -u %S/Inputs/riscv_same_encoding.s.expected %t.s

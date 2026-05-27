@@ -110,7 +110,7 @@ def should_add_line_to_output(input_line, prefix_set, mc_mode):
         )
 
 
-def getStdCheckLines(prefix: str, output: str, mc_mode) -> list[str]:
+def getStdCheckLines(prefix: str, output: str, mc_mode, use_same_for_encoding=False) -> list[str]:
     o = []
     for i, line in enumerate(output.splitlines()):
         maybe_next = "-NEXT" if i > 0 else ""
@@ -118,7 +118,18 @@ def getStdCheckLines(prefix: str, output: str, mc_mode) -> list[str]:
         # ensure we matched the full instruction name and not just a prefix.
         if line.startswith("# <MCInst "):
             line += "{{$}}"
-        o.append(f"{COMMENT[mc_mode]} {prefix}{maybe_next}: {line}")
+            o.append(f"{COMMENT[mc_mode]} {prefix}{maybe_next}: {line}")
+        elif use_same_for_encoding:
+            m = re.search(r"(.*?)(\s*(?:#|//|;)\s*encoding:.*)", line)
+            if m:
+                instr = m.group(1)
+                encoding = m.group(2).lstrip()
+                o.append(f"{COMMENT[mc_mode]} {prefix}{maybe_next}: {instr}")
+                o.append(f"{COMMENT[mc_mode]} {prefix}-SAME: {encoding}")
+            else:
+                o.append(f"{COMMENT[mc_mode]} {prefix}{maybe_next}: {line}")
+        else:
+            o.append(f"{COMMENT[mc_mode]} {prefix}{maybe_next}: {line}")
     return o
 
 
@@ -449,7 +460,7 @@ def update_test(ti: common.TestInfo):
                 line_offset = len(check_lines) + 1
                 checks = getErrCheckLines(prefix, o, mc_mode, line_offset)
             else:
-                checks = getStdCheckLines(prefix, o, mc_mode)
+                checks = getStdCheckLines(prefix, o, mc_mode, use_same_for_encoding=ti.args.use_same_for_encoding)
                 checks = common.generalize_check_lines(
                     checks, ginfo, vars_seen[prefix], global_vars_seen[prefix]
                 )
@@ -563,6 +574,12 @@ def main():
         default=False,
         help="sort testline in alphabetic order (keep run-lines on top), this option could be dangerous as it"
         "could change the order of lines that are not expected",
+    )
+    parser.add_argument(
+        "--use-same-for-encoding",
+        action="store_true",
+        default=False,
+        help="Use CHECK-SAME to match the instruction encoding on a separate check line",
     )
     parser.add_argument("tests", nargs="+")
     initial_args = common.parse_commandline_args(parser)
