@@ -27,11 +27,10 @@ struct S {
   );
   
   const MyObj &both(const MyObj &  // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
-      // CHECK: fix-it:"{{.*}}":{[[@LINE+4]]:{{[0-9]+}}-[[@LINE+4]]:{{[0-9]+}}}:" {{\[\[clang::lifetimebound\]\]}}"
-      obj,
-      // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:{{[0-9]+}}-[[@LINE-1]]:{{[0-9]+}}}:" {{\[\[clang::lifetimebound\]\]}}"
+      obj,  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE]]:{{[0-9]+}}-[[@LINE]]:{{[0-9]+}}}:" {{\[\[clang::lifetimebound\]\]}}"
       bool
   );  // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
+      // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:{{[0-9]+}}-[[@LINE-1]]:{{[0-9]+}}}:" {{\[\[clang::lifetimebound\]\]}}"
 };
 
 const MyObj &S::implicit_this_only() [[clang::lifetimebound]] { // expected-note {{'lifetimebound' attribute appears here on the definition}}
@@ -53,11 +52,10 @@ template <class T>
 struct MixedSpecializations {
   T data;
   T &both(T &  // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
-      // CHECK: fix-it:"{{.*}}":{[[@LINE+4]]:{{[0-9]+}}-[[@LINE+4]]:{{[0-9]+}}}:" {{\[\[clang::lifetimebound\]\]}}"
-      arg,
-      // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:{{[0-9]+}}-[[@LINE-1]]:{{[0-9]+}}}:" {{\[\[clang::lifetimebound\]\]}}"
+      arg,  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE]]:{{[0-9]+}}-[[@LINE]]:{{[0-9]+}}}:" {{\[\[clang::lifetimebound\]\]}}"
       bool
   );  // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
+      // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:{{[0-9]+}}-[[@LINE-1]]:{{[0-9]+}}}:" {{\[\[clang::lifetimebound\]\]}}"
 };
 
 template <>

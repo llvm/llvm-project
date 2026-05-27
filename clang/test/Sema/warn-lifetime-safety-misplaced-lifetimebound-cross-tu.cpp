@@ -18,7 +18,8 @@ struct HeaderS {
   HeaderObj data;
   HeaderObj &header_this(
   );  // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers in other translation units; add it to the declaration instead}}
-      // CHECK: fix-it:"{{.*}}cross.h":{[[#]]:{{[0-9]+}}-[[#]]:{{[0-9]+}}}:" {{\[\[}}clang::lifetimebound{{\]\]}}"
+      // CHECK: cross.h:[[#WARN_LINE:]]:{{[0-9]+}}: warning: 'lifetimebound' attribute on this definition is not visible
+      // CHECK: fix-it:"{{.*}}cross.h":{[[#WARN_LINE]]:{{[0-9]+}}-[[#WARN_LINE]]:{{[0-9]+}}}:" {{\[\[}}clang::lifetimebound{{\]\]}}"
 };
 
 //--- cross.cpp
