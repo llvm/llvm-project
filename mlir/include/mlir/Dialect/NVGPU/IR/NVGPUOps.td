@@ -684,8 +684,10 @@ def NVGPU_FPTruncOp : NVGPU_Op<"convert.fptrunc",
     Truncate a floating-point value to a smaller floating-point type.
     Destination must be strictly narrower than source.
 
-    Supported paths: f32->f16, f32->bf16, f32->f8, f32->f6, f32->f4,
-    f16->f8, f16->f6, f16->f4, bf16->f8, bf16->f6, bf16->f4.
+    Supported paths:
+      f32 -> f16, bf16, f8, f6, f4
+      f16 -> f8, f6, f4
+      bf16 -> f8, f6, f4
 
     The `random_bits` operand enables stochastic rounding (RS mode)
     for f32->f16/bf16 conversions. When provided, `rnd` must be RS.
@@ -715,10 +717,15 @@ def NVGPU_FPExtOp : NVGPU_Op<"convert.fpext", [Pure]> {
     Extend a floating-point value to a wider floating-point type.
     Destination must be strictly wider than source.
 
-    Supported paths: f8->f16, f8->bf16, f6->f16, f4->f16, f16->f32,
-    bf16->f32. Narrow->f32 uses two-step lowering (NVVM op to f16/bf16
-    intermediate, then LLVM FPExt). e8m0->bf16 and e8m0->f32 supported
-    (f32 goes through bf16 intermediate).
+    Supported paths:
+      f8 -> f16, bf16
+      f6 -> f16
+      f4 -> f16
+      f16 -> f32
+      bf16 -> f32
+    Narrow->f32 uses two-step lowering (NVVM op to f16/bf16 intermediate,
+    then LLVM FPExt). e8m0->bf16 and e8m0->f32 supported (f32 goes through
+    bf16 intermediate).
 
     Example:
     ```mlir
