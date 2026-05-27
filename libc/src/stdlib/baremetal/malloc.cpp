@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/malloc.h"
-#include "src/__support/freelist_heap.h"
+#include "src/__support/heap.h"
 #include "src/__support/macros/config.h"
 
 #include <stddef.h>
@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, malloc, (size_t size)) {
-  return freelist_heap->allocate(size);
+  return global_heap->allocate(size);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

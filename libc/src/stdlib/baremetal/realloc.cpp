@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/realloc.h"
-#include "src/__support/freelist_heap.h"
+#include "src/__support/heap.h"
 #include "src/__support/macros/config.h"
 
 #include <stddef.h>
@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, realloc, (void *ptr, size_t size)) {
-  return freelist_heap->realloc(ptr, size);
+  return global_heap->realloc(ptr, size);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

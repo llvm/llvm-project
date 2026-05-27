@@ -1,0 +1,97 @@
+add_custom_target(libc-flat-tlsf-tests)
+
+add_libc_test(
+  bitfield_test
+  SUITE
+    libc-flat-tlsf-tests
+  SRCS
+    bitfield_test.cpp
+  DEPENDS
+    libc.src.__support.flat_tlsf.bitfield
+    libc.src.__support.flat_tlsf.bit_utils
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.algorithm
+)
+
+add_libc_test(
+  binning_test
+  SUITE
+    libc-flat-tlsf-tests
+  SRCS
+    binning_test.cpp
+  DEPENDS
+    libc.src.__support.flat_tlsf.binning
+    libc.src.__support.flat_tlsf.common
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.optional
+)
+
+add_libc_test(
+  tag_test
+  SUITE
+    libc-flat-tlsf-tests
+  SRCS
+    tag_test.cpp
+  DEPENDS
+    libc.src.__support.flat_tlsf.tag
+    libc.src.__support.flat_tlsf.common
+)
+
+add_libc_test(
+  node_test
+  SUITE
+    libc-flat-tlsf-tests
+  SRCS
+    node_test.cpp
+  DEPENDS
+    libc.src.__support.flat_tlsf.node
+)
+
+add_libc_test(
+  chunk_test
+  SUITE
+    libc-flat-tlsf-tests
+  SRCS
+    chunk_test.cpp
+  DEPENDS
+    libc.src.__support.flat_tlsf.chunk
+    libc.src.__support.flat_tlsf.common
+    libc.src.__support.flat_tlsf.node
+)
+
+add_libc_test(
+  heap_test
+  SUITE
+    libc-flat-tlsf-tests
+  SRCS
+    heap_test.cpp
+  DEPENDS
+    libc.src.__support.flat_tlsf.heap
+    libc.src.__support.flat_tlsf.common
+    libc.src.__support.flat_tlsf.node
+    libc.src.__support.flat_tlsf.binning
+    libc.src.__support.flat_tlsf.chunk
+    libc.src.__support.flat_tlsf.tag
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.algorithm
+    libc.src.string.memory_utils.inline_memset
+)
+
+if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
+  add_libc_test(
+    global_test
+    SUITE
+      libc-flat-tlsf-tests
+    SRCS
+      global_test.cpp
+    DEPENDS
+      libc.src.__support.flat_tlsf.global
+      libc.src.__support.flat_tlsf.common
+      libc.src.__support.CPP.span
+      libc.src.__support.CPP.new
+      libc.src.string.memory_utils.inline_memcpy
+      libc.src.string.memory_utils.inline_memset
+  )
+endif()

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/calloc.h"
-#include "src/__support/freelist_heap.h"
+#include "src/__support/heap.h"
 #include "src/__support/macros/config.h"
 
 #include <stddef.h>
@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, calloc, (size_t num, size_t size)) {
-  return freelist_heap->calloc(num, size);
+  return global_heap->calloc(num, size);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

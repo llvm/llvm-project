@@ -11,7 +11,7 @@ add_entrypoint_object(
   HDRS
     ../malloc.h
   DEPENDS
-    libc.src.__support.freelist_heap
+    libc.src.__support.heap
 )
 
 add_entrypoint_object(
@@ -21,7 +21,7 @@ add_entrypoint_object(
   HDRS
     ../free.h
   DEPENDS
-    libc.src.__support.freelist_heap
+    libc.src.__support.heap
 )
 
 add_entrypoint_object(
@@ -31,7 +31,7 @@ add_entrypoint_object(
   HDRS
     ../calloc.h
   DEPENDS
-    libc.src.__support.freelist_heap
+    libc.src.__support.heap
 )
 
 add_entrypoint_object(
@@ -41,7 +41,7 @@ add_entrypoint_object(
   HDRS
     ../realloc.h
   DEPENDS
-    libc.src.__support.freelist_heap
+    libc.src.__support.heap
 )
 
 add_entrypoint_object(
@@ -51,5 +51,5 @@ add_entrypoint_object(
   HDRS
     ../aligned_alloc.h
   DEPENDS
-    libc.src.__support.freelist_heap
+    libc.src.__support.heap
 )

@@ -82,6 +82,23 @@ add_object_library(
     libc.src.string.memory_utils.inline_memset
 )
 
+if(LIBC_CONF_HEAP_TYPE STREQUAL "LIBC_HEAP_TYPE_FLAT_TLSF")
+  set(heap_impl_dependency libc.src.__support.flat_tlsf.global)
+else()
+  set(heap_impl_dependency .freelist_heap)
+endif()
+
+add_object_library(
+  heap
+  HDRS
+    heap.h
+  SRCS
+    heap.cpp
+  DEPENDS
+    ${heap_impl_dependency}
+    libc.src.__support.macros.config
+)
+
 add_header_library(
   blockstore
   HDRS
@@ -464,6 +481,7 @@ add_subdirectory(File)
 add_subdirectory(HashTable)
 
 add_subdirectory(fixed_point)
+add_subdirectory(flat_tlsf)
 
 add_subdirectory(time)
 

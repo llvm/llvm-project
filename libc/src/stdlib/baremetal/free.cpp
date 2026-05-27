@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/free.h"
-#include "src/__support/freelist_heap.h"
+#include "src/__support/heap.h"
 #include "src/__support/macros/config.h"
 
 #include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(void, free, (void *ptr)) { return freelist_heap->free(ptr); }
+LLVM_LIBC_FUNCTION(void, free, (void *ptr)) { return global_heap->free(ptr); }
 
 } // namespace LIBC_NAMESPACE_DECL

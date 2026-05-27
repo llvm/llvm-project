@@ -196,5 +196,11 @@
       "value": false,
       "doc": "Use the system assert macro for LIBC_ASSERT."
     }
+  },
+  "heap": {
+    "LIBC_CONF_HEAP_TYPE": {
+      "value": "LIBC_HEAP_TYPE_FREELIST",
+      "doc": "Selects the implementation for the global heap: 'LIBC_HEAP_TYPE_FREELIST' or 'LIBC_HEAP_TYPE_FLAT_TLSF'."
+    }
   }
 }

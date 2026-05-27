@@ -1,0 +1,117 @@
+add_header_library(
+  common
+  HDRS
+    common.h
+  DEPENDS
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  bit_utils
+  HDRS
+    bit_utils.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.limits
+    .common
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.math_extras
+)
+
+add_header_library(
+  bitfield
+  HDRS
+    bitfield.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.array
+    .bit_utils
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  binning
+  HDRS
+    binning.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    .common
+    .bitfield
+    .bit_utils
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  tag
+  HDRS
+    tag.h
+  DEPENDS
+    .common
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  node
+  HDRS
+    node.h
+  DEPENDS
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  chunk
+  HDRS
+    chunk.h
+  DEPENDS
+    .common
+    .node
+    .bit_utils
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.string.memory_utils.inline_memcpy
+)
+
+add_header_library(
+  heap
+  HDRS
+    heap.h
+  DEPENDS
+    .common
+    .node
+    .bit_utils
+    .bitfield
+    .binning
+    .chunk
+    .tag
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.algorithm
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.__support.libc_assert
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_object_library(
+  global
+  HDRS
+    global.h
+  SRCS
+    global.cpp
+  DEPENDS
+    .common
+    .heap
+    libc.src.__support.CPP.cstddef
+    libc.src.__support.CPP.span
+    libc.src.__support.math_extras
+    libc.src.string.memory_utils.inline_memset
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
