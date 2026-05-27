@@ -54,7 +54,6 @@ enum OperandType : unsigned {
   OPERAND_UIMM8_GE32,
   OPERAND_UIMM9_LSB000,
   OPERAND_UIMM9,
-  OPERAND_UIMM9_YBNDSWI,
   OPERAND_UIMM10,
   OPERAND_UIMM10_LSB00_NONZERO,
   OPERAND_UIMM11,
@@ -893,7 +892,7 @@ struct NDSVLNPseudo {
 
 inline bool isValidYBNDSWImm(int64_t Imm) {
   return (Imm >= 1 && Imm <= 255) ||
-         (Imm >= 256 && Imm <= 508 && (Imm % 8) == 0) ||
+         (Imm >= 256 && Imm <= 504 && (Imm % 8) == 0) ||
          (Imm >= 512 && Imm <= 4096 && (Imm % 16) == 0);
 }
 } // namespace RISCV

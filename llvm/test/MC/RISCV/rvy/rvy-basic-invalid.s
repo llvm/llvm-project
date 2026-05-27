@@ -22,16 +22,16 @@ srliy a0, a1, 64
 srliy a0, a1, 32
 // CHECK-64: :[[#@LINE-1]]:15: error: immediate must be an integer equal to XLEN (64)
 ybndswi a0, a0, 0
-// CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [1, 255], a multiple of 8 in the range [256, 508], or a multiple of 16 in the range [512, 4096]
+// CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [1, 255], a multiple of 8 in the range [256, 504], or a multiple of 16 in the range [512, 4096]
 ybndswi a0, a0, 257
-// CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [1, 255], a multiple of 8 in the range [256, 508], or a multiple of 16 in the range [512, 4096]
+// CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [1, 255], a multiple of 8 in the range [256, 504], or a multiple of 16 in the range [512, 4096]
 ybndswi a0, a0, 259
-// CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [1, 255], a multiple of 8 in the range [256, 508], or a multiple of 16 in the range [512, 4096]
+// CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [1, 255], a multiple of 8 in the range [256, 504], or a multiple of 16 in the range [512, 4096]
 ybndswi a0, a0, 508
-// CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [1, 255], a multiple of 8 in the range [256, 508], or a multiple of 16 in the range [512, 4096]
+// CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [1, 255], a multiple of 8 in the range [256, 504], or a multiple of 16 in the range [512, 4096]
 ybndswi a0, a0, 520
-// CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [1, 255], a multiple of 8 in the range [256, 508], or a multiple of 16 in the range [512, 4096]
+// CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [1, 255], a multiple of 8 in the range [256, 504], or a multiple of 16 in the range [512, 4096]
 ybndswi a0, a0, 8192
-// CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [1, 255], a multiple of 8 in the range [256, 508], or a multiple of 16 in the range [512, 4096]
+// CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [1, 255], a multiple of 8 in the range [256, 504], or a multiple of 16 in the range [512, 4096]
 ybndswi a0, a0, 4112
-// CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [1, 255], a multiple of 8 in the range [256, 508], or a multiple of 16 in the range [512, 4096]
+// CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [1, 255], a multiple of 8 in the range [256, 504], or a multiple of 16 in the range [512, 4096]

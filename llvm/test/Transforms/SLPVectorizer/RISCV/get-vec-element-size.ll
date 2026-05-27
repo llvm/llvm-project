@@ -4,17 +4,12 @@
 define void @test_fmuladd(ptr %dest, ptr %p) {
 ; DEFAULT-LABEL: @test_fmuladd(
 ; DEFAULT-NEXT:  e:
-; DEFAULT-NEXT:    [[INCL4:%.*]] = getelementptr inbounds i16, ptr [[P:%.*]], i64 4
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P]], align 4
-; DEFAULT-NEXT:    [[TMP1:%.*]] = uitofp <4 x i16> [[TMP0]] to <4 x double>
-; DEFAULT-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[INCL4]], align 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = uitofp <4 x i16> [[TMP2]] to <4 x double>
-; DEFAULT-NEXT:    [[TMP4:%.*]] = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> [[TMP1]], <4 x double> [[TMP1]], <4 x double> [[TMP1]])
-; DEFAULT-NEXT:    [[TMP5:%.*]] = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> [[TMP3]], <4 x double> [[TMP3]], <4 x double> [[TMP3]])
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[P:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP1:%.*]] = uitofp <8 x i16> [[TMP0]] to <8 x double>
+; DEFAULT-NEXT:    [[TMP2:%.*]] = call <8 x double> @llvm.fmuladd.v8f64(<8 x double> [[TMP1]], <8 x double> [[TMP1]], <8 x double> [[TMP1]])
 ; DEFAULT-NEXT:    br label [[R:%.*]]
 ; DEFAULT:       r:
-; DEFAULT-NEXT:    [[TMP6:%.*]] = phi <4 x double> [ [[TMP4]], [[E:%.*]] ]
-; DEFAULT-NEXT:    [[TMP7:%.*]] = phi <4 x double> [ [[TMP5]], [[E]] ]
+; DEFAULT-NEXT:    [[TMP3:%.*]] = phi <8 x double> [ [[TMP2]], [[E:%.*]] ]
 ; DEFAULT-NEXT:    ret void
 ;
 e:
@@ -69,17 +64,12 @@ declare double @llvm.fabs.f64(double)
 define void @test_fabs(ptr %dest, ptr %p) {
 ; DEFAULT-LABEL: @test_fabs(
 ; DEFAULT-NEXT:  e:
-; DEFAULT-NEXT:    [[P4:%.*]] = getelementptr inbounds i16, ptr [[P:%.*]], i64 4
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P]], align 4
-; DEFAULT-NEXT:    [[V0:%.*]] = uitofp <4 x i16> [[TMP0]] to <4 x double>
-; DEFAULT-NEXT:    [[TMP3:%.*]] = load <4 x i16>, ptr [[P4]], align 2
-; DEFAULT-NEXT:    [[V1:%.*]] = uitofp <4 x i16> [[TMP3]] to <4 x double>
-; DEFAULT-NEXT:    [[TMP4:%.*]] = call <4 x double> @llvm.fabs.v4f64(<4 x double> [[V0]])
-; DEFAULT-NEXT:    [[R1:%.*]] = call <4 x double> @llvm.fabs.v4f64(<4 x double> [[V1]])
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[P:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP1:%.*]] = uitofp <8 x i16> [[TMP0]] to <8 x double>
+; DEFAULT-NEXT:    [[TMP2:%.*]] = call <8 x double> @llvm.fabs.v8f64(<8 x double> [[TMP1]])
 ; DEFAULT-NEXT:    br label [[R:%.*]]
 ; DEFAULT:       r:
-; DEFAULT-NEXT:    [[TMP6:%.*]] = phi <4 x double> [ [[TMP4]], [[E:%.*]] ]
-; DEFAULT-NEXT:    [[TMP7:%.*]] = phi <4 x double> [ [[R1]], [[E]] ]
+; DEFAULT-NEXT:    [[TMP3:%.*]] = phi <8 x double> [ [[TMP2]], [[E:%.*]] ]
 ; DEFAULT-NEXT:    ret void
 ;
 e:
@@ -135,17 +125,12 @@ declare i32 @llvm.abs.i32(i32, i1 immarg)
 define void @test_abs(ptr %dest, ptr %p) {
 ; DEFAULT-LABEL: @test_abs(
 ; DEFAULT-NEXT:  e:
-; DEFAULT-NEXT:    [[P4:%.*]] = getelementptr inbounds i16, ptr [[P:%.*]], i64 4
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P]], align 4
-; DEFAULT-NEXT:    [[TMP1:%.*]] = zext <4 x i16> [[TMP0]] to <4 x i64>
-; DEFAULT-NEXT:    [[TMP4:%.*]] = load <4 x i16>, ptr [[P4]], align 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP4]] to <4 x i64>
-; DEFAULT-NEXT:    [[TMP8:%.*]] = call <4 x i64> @llvm.abs.v4i64(<4 x i64> [[TMP1]], i1 false)
-; DEFAULT-NEXT:    [[TMP5:%.*]] = call <4 x i64> @llvm.abs.v4i64(<4 x i64> [[TMP3]], i1 false)
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[P:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP1:%.*]] = zext <8 x i16> [[TMP0]] to <8 x i64>
+; DEFAULT-NEXT:    [[TMP2:%.*]] = call <8 x i64> @llvm.abs.v8i64(<8 x i64> [[TMP1]], i1 false)
 ; DEFAULT-NEXT:    br label [[R:%.*]]
 ; DEFAULT:       r:
-; DEFAULT-NEXT:    [[TMP6:%.*]] = phi <4 x i64> [ [[TMP8]], [[E:%.*]] ]
-; DEFAULT-NEXT:    [[TMP7:%.*]] = phi <4 x i64> [ [[TMP5]], [[E]] ]
+; DEFAULT-NEXT:    [[TMP3:%.*]] = phi <8 x i64> [ [[TMP2]], [[E:%.*]] ]
 ; DEFAULT-NEXT:    ret void
 ;
 e:
@@ -201,17 +186,12 @@ declare double @llvm.fma.f64(double, double, double)
 define void @test_fma(ptr %dest, ptr %p) {
 ; DEFAULT-LABEL: @test_fma(
 ; DEFAULT-NEXT:  e:
-; DEFAULT-NEXT:    [[P4:%.*]] = getelementptr inbounds i16, ptr [[P:%.*]], i64 4
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P]], align 4
-; DEFAULT-NEXT:    [[V0:%.*]] = uitofp <4 x i16> [[TMP0]] to <4 x double>
-; DEFAULT-NEXT:    [[TMP3:%.*]] = load <4 x i16>, ptr [[P4]], align 2
-; DEFAULT-NEXT:    [[V1:%.*]] = uitofp <4 x i16> [[TMP3]] to <4 x double>
-; DEFAULT-NEXT:    [[TMP4:%.*]] = call <4 x double> @llvm.fma.v4f64(<4 x double> [[V0]], <4 x double> [[V0]], <4 x double> [[V0]])
-; DEFAULT-NEXT:    [[R1:%.*]] = call <4 x double> @llvm.fma.v4f64(<4 x double> [[V1]], <4 x double> [[V1]], <4 x double> [[V1]])
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[P:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP1:%.*]] = uitofp <8 x i16> [[TMP0]] to <8 x double>
+; DEFAULT-NEXT:    [[TMP2:%.*]] = call <8 x double> @llvm.fma.v8f64(<8 x double> [[TMP1]], <8 x double> [[TMP1]], <8 x double> [[TMP1]])
 ; DEFAULT-NEXT:    br label [[R:%.*]]
 ; DEFAULT:       r:
-; DEFAULT-NEXT:    [[TMP6:%.*]] = phi <4 x double> [ [[TMP4]], [[E:%.*]] ]
-; DEFAULT-NEXT:    [[TMP7:%.*]] = phi <4 x double> [ [[R1]], [[E]] ]
+; DEFAULT-NEXT:    [[TMP3:%.*]] = phi <8 x double> [ [[TMP2]], [[E:%.*]] ]
 ; DEFAULT-NEXT:    ret void
 ;
 e:

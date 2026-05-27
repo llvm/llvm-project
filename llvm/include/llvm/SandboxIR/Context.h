@@ -249,9 +249,9 @@ public:
   /// Convenience function for `getTracker().save()`
   void save() { IRTracker.save(); }
   /// Convenience function for `getTracker().revert()`
-  void revert(bool RevertAll = false) { IRTracker.revert(RevertAll); }
+  void revert() { IRTracker.revert(); }
   /// Convenience function for `getTracker().accept()`
-  void accept(bool AcceptAll = false) { IRTracker.accept(AcceptAll); }
+  void accept() { IRTracker.accept(); }
 
   LLVM_ABI sandboxir::Value *getValue(llvm::Value *V) const;
   const sandboxir::Value *getValue(const llvm::Value *V) const {
