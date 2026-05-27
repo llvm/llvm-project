@@ -21056,8 +21056,6 @@ static SDValue performFpToSIntToFPCombine(SDNode *N, SelectionDAG &DAG,
       !DAG.canIgnoreSignBitOfZero(Op))
     return SDValue();
 
-  unsigned IntBits = Src.getValueType().getVectorElementType().getSizeInBits();
-
   if (!Subtarget->isSVEorStreamingSVEAvailable() ||
       !(Subtarget->hasSVE2p2() || Subtarget->hasSME2p2()))
     return SDValue();
