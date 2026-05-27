@@ -345,32 +345,32 @@ class RVPNarrowingShiftB_ri<bits<3> f, string opcodestr>
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVPPairShift_ri<bits<3> f, string opcodestr, Operand ImmType, 
-                      bit direction>
+class RVPPairShift_ri<bits<3> f, bit direction, string opcodestr,
+                      Operand ImmType>
     : RVPPairBase<{f, 0b0}, direction, (outs GPRPairRV32:$rd),
                   (ins GPRPairRV32:$rs1, ImmType:$shamt), opcodestr,
                   "$rd, $rs1, $shamt"> {
   let Inst{31}    = 0b0;
 }
 
-class RVPPairShiftW_ri<bits<3> f, string opcodestr, bit direction = 0b0>
-    : RVPPairShift_ri<f, opcodestr, uimm5, direction> {
+class RVPPairShiftW_ri<bits<3> f, bit direction, string opcodestr>
+    : RVPPairShift_ri<f, direction, opcodestr, uimm5> {
   bits<5> shamt;
 
   let Inst{26-25} = 0b01;
   let Inst{24-20} = shamt;
 }
 
-class RVPPairShiftH_ri<bits<3> f, string opcodestr, bit direction = 0b0>
-    : RVPPairShift_ri<f, opcodestr, uimm4, direction> {
+class RVPPairShiftH_ri<bits<3> f, bit direction, string opcodestr>
+    : RVPPairShift_ri<f, direction, opcodestr, uimm4> {
   bits<4> shamt;
 
   let Inst{26-24} = 0b001;
   let Inst{23-20} = shamt;
 }
 
-class RVPPairShiftB_ri<bits<3> f, string opcodestr, bit direction = 0b0>
-    : RVPPairShift_ri<f, opcodestr, uimm3, direction> {
+class RVPPairShiftB_ri<bits<3> f, bit direction, string opcodestr>
+    : RVPPairShift_ri<f, direction, opcodestr, uimm3> {
   bits<3> shamt;
 
   let Inst{26-23} = 0b0001;
@@ -394,8 +394,7 @@ class RVPWideningShift_rr<bits<3> f, bits<2> w, string opcodestr>
                       (ins GPR:$rs1, GPR:$rs2), opcodestr>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVPPairShift_rr<bits<3> f, bits<2> w, string opcodestr,
-                      bit direction = 0b0>
+class RVPPairShift_rr<bits<3> f, bits<2> w, bit direction, string opcodestr>
     : RVPPairBase<{f, 0b1}, direction, (outs GPRPairRV32:$rd),
                   (ins GPRPairRV32:$rs1, GPR:$rs2), opcodestr,
                   "$rd, $rs1, $rs2"> {
@@ -1477,13 +1476,13 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def NCLIPR       : RVPNarrowingShift_rr<0b111, 0b11, "nclipr">;
   } // Defs = [VXSAT]
 
-  def PSLLI_DB     : RVPPairShiftB_ri<0b000, "pslli.db">;
-  def PSLLI_DH     : RVPPairShiftH_ri<0b000, "pslli.dh">;
-  def PSLLI_DW     : RVPPairShiftW_ri<0b000, "pslli.dw">;
+  def PSLLI_DB     : RVPPairShiftB_ri<0b000, 0b0, "pslli.db">;
+  def PSLLI_DH     : RVPPairShiftH_ri<0b000, 0b0, "pslli.dh">;
+  def PSLLI_DW     : RVPPairShiftW_ri<0b000, 0b0, "pslli.dw">;
 
   let Defs = [VXSAT] in {
-  def PSSLAI_DH    : RVPPairShiftH_ri<0b101, "psslai.dh">;
-  def PSSLAI_DW    : RVPPairShiftW_ri<0b101, "psslai.dw">;
+  def PSSLAI_DH    : RVPPairShiftH_ri<0b101, 0b0, "psslai.dh">;
+  def PSSLAI_DW    : RVPPairShiftW_ri<0b101, 0b0, "psslai.dw">;
   } // Defs = [VXSAT]
 
   def PSEXT_DH_B   : RVPPairUnary_r<0b00, 0b00100, "psext.dh.b">;
@@ -1496,62 +1495,62 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PSABS_DB     : RVPPairUnary_r<0b10, 0b00111, "psabs.db">;
   } // Defs = [VXSAT]
 
-  def PSLL_DHS     : RVPPairShift_rr<0b000, 0b00, "psll.dhs">;
-  def PSLL_DWS     : RVPPairShift_rr<0b000, 0b01, "psll.dws">;
-  def PSLL_DBS     : RVPPairShift_rr<0b000, 0b10, "psll.dbs">;
+  def PSLL_DHS     : RVPPairShift_rr<0b000, 0b00, 0b0, "psll.dhs">;
+  def PSLL_DWS     : RVPPairShift_rr<0b000, 0b01, 0b0, "psll.dws">;
+  def PSLL_DBS     : RVPPairShift_rr<0b000, 0b10, 0b0, "psll.dbs">;
 
-  def PADD_DHS     : RVPPairShift_rr<0b001, 0b00, "padd.dhs">;
-  def PADD_DWS     : RVPPairShift_rr<0b001, 0b01, "padd.dws">;
-  def PADD_DBS     : RVPPairShift_rr<0b001, 0b10, "padd.dbs">;
+  def PADD_DHS     : RVPPairShift_rr<0b001, 0b00, 0b0, "padd.dhs">;
+  def PADD_DWS     : RVPPairShift_rr<0b001, 0b01, 0b0, "padd.dws">;
+  def PADD_DBS     : RVPPairShift_rr<0b001, 0b10, 0b0, "padd.dbs">;
 
   let Defs = [VXSAT] in {
-  def PSSHL_DHS    : RVPPairShift_rr<0b010, 0b00, "psshl.dhs">;
-  def PSSHL_DWS    : RVPPairShift_rr<0b010, 0b01, "psshl.dws">;
+  def PSSHL_DHS    : RVPPairShift_rr<0b010, 0b00, 0b0, "psshl.dhs">;
+  def PSSHL_DWS    : RVPPairShift_rr<0b010, 0b01, 0b0, "psshl.dws">;
   } // Defs = [VXSAT]
 
   let Defs = [VXSAT] in {
-  def PSSHLR_DHS   : RVPPairShift_rr<0b011, 0b00, "psshlr.dhs">;
-  def PSSHLR_DWS   : RVPPairShift_rr<0b011, 0b01, "psshlr.dws">;
+  def PSSHLR_DHS   : RVPPairShift_rr<0b011, 0b00, 0b0, "psshlr.dhs">;
+  def PSSHLR_DWS   : RVPPairShift_rr<0b011, 0b01, 0b0, "psshlr.dws">;
   } // Defs = [VXSAT]
 
   let Defs = [VXSAT] in {
-  def PSSHA_DHS    : RVPPairShift_rr<0b110, 0b00, "pssha.dhs">;
-  def PSSHA_DWS    : RVPPairShift_rr<0b110, 0b01, "pssha.dws">;
+  def PSSHA_DHS    : RVPPairShift_rr<0b110, 0b00, 0b0, "pssha.dhs">;
+  def PSSHA_DWS    : RVPPairShift_rr<0b110, 0b01, 0b0, "pssha.dws">;
   } // Defs = [VXSAT]
 
   let Defs = [VXSAT] in {
-  def PSSHAR_DHS   : RVPPairShift_rr<0b111, 0b00, "psshar.dhs">;
-  def PSSHAR_DWS   : RVPPairShift_rr<0b111, 0b01, "psshar.dws">;
+  def PSSHAR_DHS   : RVPPairShift_rr<0b111, 0b00, 0b0, "psshar.dhs">;
+  def PSSHAR_DWS   : RVPPairShift_rr<0b111, 0b01, 0b0, "psshar.dws">;
   } // Defs = [VXSAT]
 
-  def PSRLI_DB     : RVPPairShiftB_ri<0b000, "psrli.db",  0b1>;
-  def PSRLI_DH     : RVPPairShiftH_ri<0b000, "psrli.dh",  0b1>;
-  def PSRLI_DW     : RVPPairShiftW_ri<0b000, "psrli.dw",  0b1>;
+  def PSRLI_DB     : RVPPairShiftB_ri<0b000, 0b1, "psrli.db">;
+  def PSRLI_DH     : RVPPairShiftH_ri<0b000, 0b1, "psrli.dh">;
+  def PSRLI_DW     : RVPPairShiftW_ri<0b000, 0b1, "psrli.dw">;
 
   let Defs = [VXSAT] in {
-  def PUSATI_DH    : RVPPairShiftH_ri<0b010, "pusati.dh", 0b1>;
-  def PUSATI_DW    : RVPPairShiftW_ri<0b010, "pusati.dw", 0b1>;
+  def PUSATI_DH    : RVPPairShiftH_ri<0b010, 0b1, "pusati.dh">;
+  def PUSATI_DW    : RVPPairShiftW_ri<0b010, 0b1, "pusati.dw">;
   } // Defs = [VXSAT]
 
-  def PSRAI_DB     : RVPPairShiftB_ri<0b100, "psrai.db",  0b1>;
-  def PSRAI_DH     : RVPPairShiftH_ri<0b100, "psrai.dh",  0b1>;
-  def PSRAI_DW     : RVPPairShiftW_ri<0b100, "psrai.dw",  0b1>;
+  def PSRAI_DB     : RVPPairShiftB_ri<0b100, 0b1, "psrai.db">;
+  def PSRAI_DH     : RVPPairShiftH_ri<0b100, 0b1, "psrai.dh">;
+  def PSRAI_DW     : RVPPairShiftW_ri<0b100, 0b1, "psrai.dw">;
 
-  def PSRARI_DH    : RVPPairShiftH_ri<0b101, "psrari.dh", 0b1>;
-  def PSRARI_DW    : RVPPairShiftW_ri<0b101, "psrari.dw", 0b1>;
+  def PSRARI_DH    : RVPPairShiftH_ri<0b101, 0b1, "psrari.dh">;
+  def PSRARI_DW    : RVPPairShiftW_ri<0b101, 0b1, "psrari.dw">;
 
   let Defs = [VXSAT] in {
-  def PSATI_DH     : RVPPairShiftH_ri<0b110, "psati.dh",  0b1>;
-  def PSATI_DW     : RVPPairShiftW_ri<0b110, "psati.dw",  0b1>;
+  def PSATI_DH     : RVPPairShiftH_ri<0b110, 0b1, "psati.dh">;
+  def PSATI_DW     : RVPPairShiftW_ri<0b110, 0b1, "psati.dw">;
   } // Defs = [VXSAT]
 
-  def PSRL_DHS     : RVPPairShift_rr<0b000, 0b00, "psrl.dhs", 0b1>;
-  def PSRL_DWS     : RVPPairShift_rr<0b000, 0b01, "psrl.dws", 0b1>;
-  def PSRL_DBS     : RVPPairShift_rr<0b000, 0b10, "psrl.dbs", 0b1>;
+  def PSRL_DHS     : RVPPairShift_rr<0b000, 0b00, 0b1, "psrl.dhs">;
+  def PSRL_DWS     : RVPPairShift_rr<0b000, 0b01, 0b1, "psrl.dws">;
+  def PSRL_DBS     : RVPPairShift_rr<0b000, 0b10, 0b1, "psrl.dbs">;
 
-  def PSRA_DHS     : RVPPairShift_rr<0b100, 0b00, "psra.dhs", 0b1>;
-  def PSRA_DWS     : RVPPairShift_rr<0b100, 0b01, "psra.dws", 0b1>;
-  def PSRA_DBS     : RVPPairShift_rr<0b100, 0b10, "psra.dbs", 0b1>;
+  def PSRA_DHS     : RVPPairShift_rr<0b100, 0b00, 0b1, "psra.dhs">;
+  def PSRA_DWS     : RVPPairShift_rr<0b100, 0b01, 0b1, "psra.dws">;
+  def PSRA_DBS     : RVPPairShift_rr<0b100, 0b10, 0b1, "psra.dbs">;
 
   def PADD_DH      : RVPPairBinary_rr<0b0000, 0b00, "padd.dh", Commutable=1>;
   def PADD_DW      : RVPPairBinary_rr<0b0000, 0b01, "padd.dw", Commutable=1>;
