@@ -542,6 +542,18 @@ void MappingTraits<DXContainerYAML::DebugName>::mapping(
   IO.mapRequired("DebugName", DebugName.Filename);
 }
 
+void MappingTraits<DXContainerYAML::CompilerVersion>::mapping(
+    IO &IO, DXContainerYAML::CompilerVersion &CompilerVersion) {
+  IO.mapOptional("Major", CompilerVersion.Major);
+  IO.mapOptional("Minor", CompilerVersion.Minor);
+  IO.mapOptional("IsDebugBuild", CompilerVersion.IsDebugBuild);
+  IO.mapOptional("IsValidated", CompilerVersion.IsValidated);
+  IO.mapOptional("CommitCount", CompilerVersion.CommitCount);
+  IO.mapOptional("ContentSizeInBytes", CompilerVersion.ContentSizeInBytes);
+  IO.mapOptional("CommitSha", CompilerVersion.CommitSha);
+  IO.mapOptional("CustomVersionString", CompilerVersion.CustomVersionString);
+}
+
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
                                                    DXContainerYAML::Part &P) {
   IO.mapRequired("Name", P.Name);
@@ -553,6 +565,7 @@ void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
   IO.mapOptional("Signature", P.Signature);
   IO.mapOptional("RootSignature", P.RootSignature);
   IO.mapOptional("DebugName", P.DebugName);
+  IO.mapOptional("CompilerVersion", P.CompilerVersion);
 }
 
 void MappingTraits<DXContainerYAML::Object>::mapping(
@@ -950,7 +963,7 @@ DXContainerYAML::fromDXContainer(object::DXContainer &Container) {
       break;
     case dxbc::PartType::Unknown:
       break;
-    case dxbc::PartType::RTS0:
+    case dxbc::PartType::RTS0: {
       std::optional<object::DirectX::RootSignature> RS =
           Container.getRootSignature();
       if (RS.has_value()) {
@@ -962,8 +975,23 @@ DXContainerYAML::fromDXContainer(object::DXContainer &Container) {
       }
       break;
     }
+    case dxbc::PartType::VERS: {
+      std::optional<mcdxbc::CompilerVersion> Version =
+          Container.getCompilerVersionInfo();
+      assert(Version && "Since we are iterating and found a VERS part, this "
+                        "should never not have a value");
+      NewPart.CompilerVersion.emplace(DXContainerYAML::CompilerVersion{
+          Version->Parameters.Major, Version->Parameters.Minor,
+          !!(Version->Parameters.Flags & dxbc::CompilerVersionFlags::Debug),
+          !!(Version->Parameters.Flags & dxbc::CompilerVersionFlags::Internal),
+          Version->Parameters.CommitCount,
+          Version->Parameters.ContentSizeInBytes, Version->CommitSha.str(),
+          Version->CustomVersionString.str()});
+      break;
+    }
+    }
   }
-  return Obj;
+  return std::move(Obj);
 }
 
 } // namespace llvm

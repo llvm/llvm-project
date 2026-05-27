@@ -814,6 +814,11 @@ On macOS with debugserver, we expedite the frame pointer backchain for a thread
 the previous FP and PC), and follow the backchain. Most backtraces on macOS and
 iOS now don't require us to read any memory.
 
+An expedited register may have an empty string as its value (`"21":""`)
+which indicates that the register cannot be read at this current
+stop point, and lldb should not try to read the register value with
+a separate `p` read-register request, it will not succeed.
+
 **Priority To Implement:** Low
 
 This is a performance optimization, which speeds up debugging by avoiding
@@ -2174,14 +2179,26 @@ following forms:
   followed by a series of key/value pairs:
     * If key is a hex number, it is a register number and value is
       the hex value of the register in debuggee endian byte order.
+      An empty value indicates that the register cannot be fetched
+      at this stop point; lldb will not succeed if it sends a separate
+      read-register packet.
     * If key == "thread", then the value is the big endian hex
       thread-id of the stopped thread.
     * If key == "core", then value is a hex number of the core on
       which the stop was detected.
     * If key == "watch" or key == "rwatch" or key == "awatch", then
       value is the data address in big endian hex
-    * If key == "library", then value is ignore and "qXfer:libraries:read"
-      packets should be used to detect any newly loaded shared libraries
+    * If key == "library", then value is ignored and `qXfer:libraries:read`
+      packets should be used to detect any newly loaded shared libraries.
+      The server emits this whenever one or more shared libraries have been
+      loaded or unloaded since the last stop. On Linux/SVR4 systems
+      lldb-server does not emit `library:`, since the dynamic loader is
+      observable via a breakpoint on `_dl_debug_state`. Instead, the BP hit
+      serves as the notification (and clients use `qXfer:libraries-svr4:read`).
+      On Windows, where the kernel raises `LOAD_DLL_DEBUG_EVENT` /
+      `UNLOAD_DLL_DEBUG_EVENT` directly, lldb-server tracks pending events via
+      `NativeProcessProtocol::HasPendingLibraryEvents()` and emits `library:1;`
+      in the next stop reply.
 
 * `WAA` - `W` means the process exited and `AA` is the exit status.
 

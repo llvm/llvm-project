@@ -29,7 +29,6 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 endif ()
 
 add_subdirectory(ADT)
-add_subdirectory(ABI)
 add_subdirectory(Analysis)
 add_subdirectory(AsmParser)
 add_subdirectory(BinaryFormat)

@@ -5029,8 +5029,9 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                                 TTI::OperandValueInfo OpInfo,
                                                 const Instruction *I) const {
   EVT VT = TLI->getValueType(DL, Ty, true);
-  // Type legalization can't handle structs
-  if (VT == MVT::Other)
+  // Type legalization can't handle structs, and load latency isn't handled here
+  if (VT == MVT::Other ||
+      (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency))
     return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace,
                                   CostKind);
 
@@ -5667,6 +5668,7 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
 
   switch (RdxDesc.getRecurrenceKind()) {
   case RecurKind::Sub:
+  case RecurKind::FSub:
   case RecurKind::AddChainWithSubs:
   case RecurKind::FAddChainWithSubs:
   case RecurKind::Add:
@@ -6057,7 +6059,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
             NEONPred);
   };
 
-  bool IsSub = (Opcode == Instruction::Sub) || (Opcode == Instruction::FSub);
+  bool IsSub = Opcode == Instruction::Sub || Opcode == Instruction::FSub;
   InstructionCost Cost = InputLT.first * TTI::TCC_Basic;
   // Integer partial sub-reductions that don't map to a specific instruction,
   // carry an extra cost for implementing a double negation:
@@ -6116,17 +6118,28 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     MVT InVT = InputLT.second.getScalarType();
 
     // SVE2 [us]ml[as]lb/t and NEON [us]ml[as]l(2)
-    if (IsSupported(ST->hasSVE2(), true) &&
+    if (IsSupported(ST->hasSVE2() || ST->hasSME(), true) &&
         llvm::is_contained({MVT::i8, MVT::i16, MVT::i32}, InVT.SimpleTy))
       return Cost * 2;
 
-    // SVE2 fmlalb/t and NEON fmlal(2)
+    // SVE2 fml[as]lb/t and NEON fml[as]l(2)
     if (IsSupported(ST->hasSVE2(), ST->hasFP16FML()) && InVT == MVT::f16)
       return Cost * 2;
 
+    // SME2/SVE2p1 bfmlslb/t
+    if (IsSupported(ST->hasSVE2p1() || ST->hasSME2(), false) &&
+        InVT == MVT::bf16 && IsSub)
+      return Cost * 2;
+
+    // FP partial sub-reductions that don't map to a specific instruction,
+    // carry an extra cost for implementing an extra negation:
+    //      partial_reduce_fmls  acc, lhs, rhs
+    // <=>  partial_reduce_fmla  acc, lhs, -rhs
+    InstructionCost FNegCost = IsSub ? InputLT.first * TTI::TCC_Basic : 0;
+
     // SVE and NEON bfmlalb/t
     if (IsSupported(ST->hasBF16(), ST->hasBF16()) && InVT == MVT::bf16)
-      return Cost * 2;
+      return Cost * 2 + FNegCost;
   }
 
   return BaseT::getPartialReductionCost(Opcode, InputTypeA, InputTypeB,

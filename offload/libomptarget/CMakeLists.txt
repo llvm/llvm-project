@@ -4,9 +4,7 @@ if(NOT TARGET "omp")
   message(FATAL_ERROR "Error: omp target dependency of libomptarget not found. Please ensure 'openmp' is on LLVM_ENABLE_RUNTIMES list.")
 endif()
 
-add_llvm_library(omptarget
-  SHARED
-
+add_library(omptarget SHARED
   device.cpp
   interface.cpp
   omptarget.cpp
@@ -21,23 +19,14 @@ add_llvm_library(omptarget
   OpenMP/OMPT/Callback.cpp
 
   KernelLanguage/API.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${LIBOMPTARGET_INCLUDE_DIR}
-  ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
-
-  LINK_COMPONENTS
-  FrontendOpenMP
-  Support
-  Object
-
-  LINK_LIBS
-  PUBLIC
-  omp
-
-  NO_INSTALL_RPATH
-  BUILDTREE_ONLY
 )
+
+if(LLVM_LINK_LLVM_DYLIB)
+  set(llvm_libs LLVM)
+else()
+  llvm_map_components_to_libnames(llvm_libs FrontendOpenMP Support Object)
+endif()
+target_link_libraries(omptarget PRIVATE omp ${llvm_libs})
 target_include_directories(omptarget PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
 )

@@ -61,12 +61,14 @@ TEST_P(olGetEventElapsedTimeTest, Success) {
   ol_event_handle_t StartEvent = nullptr;
   ol_event_handle_t EndEvent = nullptr;
 
-  ASSERT_SUCCESS(olCreateEvent(Queue, &StartEvent));
+  ASSERT_SUCCESS(
+      olCreateEvent(Queue, OL_EVENT_FLAGS_ENABLE_PROFILING, &StartEvent));
   ASSERT_NE(StartEvent, nullptr);
 
   launchFoo();
 
-  ASSERT_SUCCESS(olCreateEvent(Queue, &EndEvent));
+  ASSERT_SUCCESS(
+      olCreateEvent(Queue, OL_EVENT_FLAGS_ENABLE_PROFILING, &EndEvent));
   ASSERT_NE(EndEvent, nullptr);
 
   ASSERT_SUCCESS(olSyncEvent(EndEvent));
@@ -84,12 +86,14 @@ TEST_P(olGetEventElapsedTimeTest, SuccessMultipleCalls) {
   ol_event_handle_t StartEvent = nullptr;
   ol_event_handle_t EndEvent = nullptr;
 
-  ASSERT_SUCCESS(olCreateEvent(Queue, &StartEvent));
+  ASSERT_SUCCESS(
+      olCreateEvent(Queue, OL_EVENT_FLAGS_ENABLE_PROFILING, &StartEvent));
   ASSERT_NE(StartEvent, nullptr);
 
   launchFoo();
 
-  ASSERT_SUCCESS(olCreateEvent(Queue, &EndEvent));
+  ASSERT_SUCCESS(
+      olCreateEvent(Queue, OL_EVENT_FLAGS_ENABLE_PROFILING, &EndEvent));
   ASSERT_NE(EndEvent, nullptr);
 
   ASSERT_SUCCESS(olSyncEvent(EndEvent));
@@ -109,7 +113,8 @@ TEST_P(olGetEventElapsedTimeTest, SuccessMultipleCalls) {
 
 TEST_P(olGetEventElapsedTimeTest, InvalidNullStartEvent) {
   ol_event_handle_t EndEvent = nullptr;
-  ASSERT_SUCCESS(olCreateEvent(Queue, &EndEvent));
+  ASSERT_SUCCESS(
+      olCreateEvent(Queue, OL_EVENT_FLAGS_ENABLE_PROFILING, &EndEvent));
 
   float ElapsedTime = 0.0f;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
@@ -120,7 +125,8 @@ TEST_P(olGetEventElapsedTimeTest, InvalidNullStartEvent) {
 
 TEST_P(olGetEventElapsedTimeTest, InvalidNullEndEvent) {
   ol_event_handle_t StartEvent = nullptr;
-  ASSERT_SUCCESS(olCreateEvent(Queue, &StartEvent));
+  ASSERT_SUCCESS(
+      olCreateEvent(Queue, OL_EVENT_FLAGS_ENABLE_PROFILING, &StartEvent));
 
   float ElapsedTime = 0.0f;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
@@ -133,11 +139,31 @@ TEST_P(olGetEventElapsedTimeTest, InvalidNullElapsedTime) {
   ol_event_handle_t StartEvent = nullptr;
   ol_event_handle_t EndEvent = nullptr;
 
-  ASSERT_SUCCESS(olCreateEvent(Queue, &StartEvent));
-  ASSERT_SUCCESS(olCreateEvent(Queue, &EndEvent));
+  ASSERT_SUCCESS(
+      olCreateEvent(Queue, OL_EVENT_FLAGS_ENABLE_PROFILING, &StartEvent));
+  ASSERT_SUCCESS(
+      olCreateEvent(Queue, OL_EVENT_FLAGS_ENABLE_PROFILING, &EndEvent));
 
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
                olGetEventElapsedTime(StartEvent, EndEvent, nullptr));
+
+  ASSERT_SUCCESS(olDestroyEvent(StartEvent));
+  ASSERT_SUCCESS(olDestroyEvent(EndEvent));
+}
+
+TEST_P(olGetEventElapsedTimeTest, InvalidNonProfilingEvent) {
+  ol_event_handle_t StartEvent = nullptr;
+  ol_event_handle_t EndEvent = nullptr;
+
+  ASSERT_SUCCESS(olCreateEvent(Queue, OL_EVENT_FLAGS_NONE, &StartEvent));
+  launchFoo();
+  ASSERT_SUCCESS(olCreateEvent(Queue, OL_EVENT_FLAGS_NONE, &EndEvent));
+
+  ASSERT_SUCCESS(olSyncEvent(EndEvent));
+
+  float ElapsedTime = 0.0f;
+  ASSERT_ERROR(OL_ERRC_INVALID_ARGUMENT,
+               olGetEventElapsedTime(StartEvent, EndEvent, &ElapsedTime));
 
   ASSERT_SUCCESS(olDestroyEvent(StartEvent));
   ASSERT_SUCCESS(olDestroyEvent(EndEvent));

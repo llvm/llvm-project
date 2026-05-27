@@ -91,6 +91,30 @@ macro(set_enable_per_target_runtime_dir)
   endif()
 endmacro()
 
+macro(append_passthrough_options out type names)
+  get_cmake_property(variable_names VARIABLES)
+
+  # Support multiple names for layering (e.g. multilibs).
+  foreach(name IN ITEMS ${names})
+    foreach(variable_name ${variable_names})
+      string(FIND "${variable_name}" "${type}_${name}_" found)
+
+      if(found EQUAL 0)
+        string(REPLACE "${type}_${name}_" "" new_name ${variable_name})
+
+        if(new_name STREQUAL CACHE_FILES)
+          foreach(cache IN LISTS ${variable_name})
+            list(APPEND ${out} -C ${cache})
+          endforeach()
+        else()
+          string(REPLACE ";" "|" new_value "${${variable_name}}")
+          list(APPEND ${out} "-D${new_name}=${new_value}")
+        endif()
+      endif()
+    endforeach()
+  endforeach()
+endmacro()
+
 function(builtin_default_target compiler_rt_path)
   cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
 
@@ -122,21 +146,7 @@ function(builtin_register_target compiler_rt_path name)
   cmake_parse_arguments(ARG "" "" "DEPENDS;CMAKE_ARGS;EXTRA_ARGS" ${ARGN})
 
   set(${name}_extra_args ${ARG_CMAKE_ARGS})
-  get_cmake_property(variable_names VARIABLES)
-  foreach(variable_name ${variable_names})
-    string(FIND "${variable_name}" "BUILTINS_${name}" out)
-    if("${out}" EQUAL 0)
-      string(REPLACE "BUILTINS_${name}_" "" new_name ${variable_name})
-      if(new_name STREQUAL CACHE_FILES)
-        foreach(cache IN LISTS ${variable_name})
-          list(APPEND ${name}_extra_args -C ${cache})
-        endforeach()
-      else()
-        string(REPLACE ";" "|" new_value "${${variable_name}}")
-        list(APPEND ${name}_extra_args "-D${new_name}=${new_value}")
-      endif()
-    endif()
-  endforeach()
+  append_passthrough_options(${name}_extra_args BUILTINS ${name})
 
   llvm_ExternalProject_Add(builtins-${name}
                            ${compiler_rt_path}/lib/builtins
@@ -404,32 +414,7 @@ function(runtime_register_target name)
   string(REPLACE ";" "|" LLVM_ENABLE_RUNTIMES_PASSTHROUGH "${LLVM_ENABLE_RUNTIMES}")
   list(APPEND ${name}_extra_args -DLLVM_ENABLE_RUNTIMES=${LLVM_ENABLE_RUNTIMES_PASSTHROUGH})
   list(APPEND ${name}_extra_args -DLLVM_USE_LINKER=${LLVM_USE_LINKER})
-
-  get_cmake_property(variable_names VARIABLES)
-  foreach(extra_name IN ITEMS ${ARG_BASE_NAME} ${name})
-    foreach(variable_name ${variable_names})
-      string(FIND "${variable_name}" "RUNTIMES_${extra_name}_" out)
-      if("${out}" EQUAL 0)
-        string(REPLACE "RUNTIMES_${extra_name}_" "" new_name ${variable_name})
-        if(new_name STREQUAL CACHE_FILES)
-          foreach(cache IN LISTS ${variable_name})
-            list(APPEND ${name}_extra_args -C ${cache})
-          endforeach()
-        else()
-          string(REPLACE ";" "|" new_value "${${variable_name}}")
-          list(APPEND ${name}_extra_args "-D${new_name}=${new_value}")
-        endif()
-      endif()
-    endforeach()
-    foreach(variable_name ${${name}_extra_args})
-      string(FIND "${variable_name}" "-DRUNTIMES_${extra_name}_" out)
-      if("${out}" EQUAL 0)
-        string(REPLACE "-DRUNTIMES_${extra_name}_" "" new_name ${variable_name})
-        string(REPLACE ";" "|" new_value "${new_name}")
-        list(APPEND ${name}_extra_args "-D${new_value}")
-      endif()
-    endforeach()
-  endforeach()
+  append_passthrough_options(${name}_extra_args RUNTIMES "${ARG_BASE_NAME};${name}")
 
   set_enable_per_target_runtime_dir()
 
@@ -638,6 +623,9 @@ if(build_runtimes)
   endif()
   if("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
     list(APPEND extra_args ENABLE_FORTRAN)
+    if (${LLVM_TOOL_FLANG_BUILD})
+      list(APPEND extra_deps "flang" "module_files")
+    endif()
   endif ()
 
   if(NOT LLVM_RUNTIME_TARGETS)
@@ -719,7 +707,6 @@ if(build_runtimes)
         runtime_register_target(${name}+${multilib}
           DEPENDS runtimes-${name}
           CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name}
-                     -DLLVM_RUNTIMES_PREFIX=${name}/
                      -DLLVM_RUNTIMES_LIBDIR_SUBDIR=${multilib}
                      ${extra_cmake_args}
           BASE_NAME ${name}
@@ -822,7 +809,7 @@ ${_flag_values}\
 endif()
 
 if(LIBOMP_ENABLE_ARM64X)
-  # TODO: This only needs to depend on openmp-arm64ec-pc-windows-msvc, but the 
+  # TODO: This only needs to depend on openmp-arm64ec-pc-windows-msvc, but the
   # openmp targets set up for cross build runtimes don't currently work correctly.
   add_dependencies(runtimes-configure runtimes-arm64ec-pc-windows-msvc-build)
 endif()

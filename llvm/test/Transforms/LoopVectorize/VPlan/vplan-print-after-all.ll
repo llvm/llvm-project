@@ -5,9 +5,9 @@
 
 ; CHECK: VPlan for loop in 'foo' after printAfterInitialConstruction
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createHeaderPhiRecipes
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::replaceSymbolicStrides
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::simplifyRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::removeDeadRecipes
-; CHECK: VPlan for loop in 'foo' after VPlanTransforms::addCanonicalIVRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::finalizeSCEVPredicates
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::handleEarlyExits
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::addMiddleCheck
@@ -28,7 +28,7 @@
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createPartialReductions
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::convertToAbstractRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createInterleaveGroups
-; CHECK: VPlan for loop in 'foo' after VPlanTransforms::replaceSymbolicStrides
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::convertToStridedAccesses
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::dropPoisonGeneratingRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::hoistPredicatedLoads
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::sinkPredicatedStores
