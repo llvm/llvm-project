@@ -17,7 +17,7 @@ entry:
   ; CHECK: %[[#s_var:]] = OpFunctionParameter %[[#ptr_struct]]
   ; CHECK: %[[#out_var:]] = OpFunctionParameter %[[#ptr_float]]
 
-  %1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.Simple) %s, i32 1)
+  %1 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype(%struct.Simple) %s, <1 x i32> <i32 3>, i32 1)
   ; CHECK: %[[#ptr_field:]] = OpInBoundsAccessChain %[[#ptr_float]] %[[#s_var]] %[[#idx_1]]
 
   %2 = load float, ptr %1, align 4
@@ -30,7 +30,7 @@ entry:
 }
 
 declare token @llvm.experimental.convergence.entry() #1
-declare ptr @llvm.structured.gep.p0(ptr, ...) #3
+declare ptr @llvm.structured.gep.p0.v1i32(ptr, <1 x i32>, ...) #3
 
 attributes #1 = { convergent nocallback nofree nosync nounwind willreturn memory(none) }
 attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

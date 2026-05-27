@@ -10,7 +10,7 @@ entry:
 
 define void @structured_gep(ptr %src, i32 %index) {
 entry:
-  %ptr = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([0 x %S]) %src, i32 %index, i32 1)
+  %ptr = call ptr (ptr, <2 x i32>, ...) @llvm.structured.gep.p0.v2i32(ptr elementtype([0 x %S]) %src, <2 x i32> <i32 4, i32 3>, i32 %index, i32 1)
   ret void
 }
 

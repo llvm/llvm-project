@@ -25,6 +25,6 @@ void foo() {
 // CHECK-DXIL: define linkonce_odr hidden noundef i32 @_ZN1O3getEv(ptr noundef nonnull align 1 dereferenceable(4) %this)
 // CHECK-SPIR: define linkonce_odr hidden spir_func noundef i32 @_ZN1O3getEv(ptr noundef nonnull align 1 dereferenceable(4) %this)
 
-// CHECK: %[[#A:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.O) %this1, {{i32|i64}} 0)
+// CHECK: %[[#A:]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype(%struct.O) %this1, <1 x i32> splat (i32 3), {{i32|i64}} 0)
 // CHECK: %[[#B:]] = load i32, ptr %[[#A]], align 1
 // CHECK:            ret i32 %[[#B]]

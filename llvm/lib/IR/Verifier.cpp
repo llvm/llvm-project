@@ -107,6 +107,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Statepoint.h"
+#include "llvm/IR/StructuredGEPFlags.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -7093,19 +7094,60 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
   case Intrinsic::structured_gep: {
     // Parser should refuse those 2 cases.
-    assert(Call.arg_size() >= 1);
+    assert(Call.arg_size() >= 2);
     assert(Call.getOperand(0)->getType()->isPointerTy());
 
     Check(Call.paramHasAttr(0, Attribute::ElementType),
           "Intrinsic first parameter is missing an ElementType attribute",
           &Call);
 
+    Value *FlagsOp = Call.getOperand(1);
+    auto *FlagsTy = dyn_cast<FixedVectorType>(FlagsOp->getType());
+    bool FlagsElementTypeValid =
+        FlagsTy && FlagsTy->getElementType()->isIntegerTy(32);
+    Check(FlagsElementTypeValid,
+          "Flags operand type must be a fixed vector of i32", &Call);
+    unsigned NumIndices = Call.arg_size() - 2;
+    unsigned ExpectedFlags = NumIndices == 0 ? 1 : NumIndices;
+    bool FlagsElementCountValid =
+        FlagsTy && FlagsTy->getNumElements() == ExpectedFlags;
+    Check(FlagsElementCountValid,
+          "Flags operand must have one element per index", &Call);
+    auto *FlagsC = dyn_cast<Constant>(FlagsOp);
+    Check(FlagsC, "Flags operand must be a constant", &Call);
+
+    SmallVector<StructuredGEPFlags> FlagValues;
+    if (FlagsElementTypeValid && FlagsElementCountValid && FlagsC) {
+      FlagValues.reserve(ExpectedFlags);
+      for (unsigned I = 0; I < ExpectedFlags; ++I) {
+        auto *FlagValue =
+            dyn_cast_or_null<ConstantInt>(FlagsC->getAggregateElement(I));
+        Check(FlagValue, "Flags operand elements must be integer constants",
+              &Call);
+        if (!FlagValue)
+          continue;
+        FlagValues.push_back(
+            StructuredGEPFlags::fromRaw(FlagValue->getZExtValue()));
+      }
+
+      if (NumIndices == 0 && FlagValues.size() == 1)
+        Check(FlagValues[0] == StructuredGEPFlags::none(),
+              "Flags operand must be zero when there are no indices", &Call);
+    }
+
+    auto GetFlags = [&](unsigned Index) {
+      if (Index >= FlagValues.size())
+        return StructuredGEPFlags::none();
+      return FlagValues[Index];
+    };
+
     Type *T = Call.getParamAttr(0, Attribute::ElementType).getValueAsType();
-    for (unsigned I = 1; I < Call.arg_size(); ++I) {
+    for (unsigned I = 2; I < Call.arg_size(); ++I) {
       Value *Index = Call.getOperand(I);
       ConstantInt *CI = dyn_cast<ConstantInt>(Index);
       Check(Index->getType()->isIntegerTy(),
             "Index operand type must be an integer", &Call);
+      StructuredGEPFlags IndexFlags = GetFlags(I - 2);
 
       if (ArrayType *AT = dyn_cast<ArrayType>(T)) {
         T = AT->getElementType();
@@ -7113,6 +7155,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         Check(CI, "Indexing into a struct requires a constant int", &Call);
         Check(CI->getZExtValue() < ST->getNumElements(),
               "Indexing in a struct should be inbounds", &Call);
+        Check(IndexFlags.isInBounds() && IndexFlags.isNNeg(),
+              "Indexing into a struct requires inbounds and nneg flags", &Call);
         T = ST->getElementType(CI->getZExtValue());
       } else if (VectorType *VT = dyn_cast<VectorType>(T)) {
         T = VT->getElementType();

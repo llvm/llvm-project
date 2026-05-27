@@ -23,6 +23,7 @@
 #ifndef LLVM_IR_INTRINSICINST_H
 #define LLVM_IR_INTRINSICINST_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -31,6 +32,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/StructuredGEPFlags.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -1830,20 +1832,50 @@ public:
   }
 
   static unsigned getPointerOperandIndex() { return 0; }
+  static unsigned getFlagsOperandIndex() { return 1; }
+  static unsigned getFirstIndexOperandIndex() { return 2; }
 
   Value *getPointerOperand() const {
     return getOperand(getPointerOperandIndex());
+  }
+
+  Constant *getFlagsOperand() const {
+    return cast<Constant>(getOperand(getFlagsOperandIndex()));
   }
 
   Type *getBaseType() const {
     return getParamAttr(0, Attribute::ElementType).getValueAsType();
   }
 
-  unsigned getNumIndices() const { return arg_size() - 1; }
+  unsigned getNumIndices() const {
+    return arg_size() - getFirstIndexOperandIndex();
+  }
 
   Value *getIndexOperand(size_t Index) const {
     assert(Index < getNumIndices());
-    return getOperand(Index + 1);
+    return getOperand(Index + getFirstIndexOperandIndex());
+  }
+
+  StructuredGEPFlags getIndexFlags(size_t Index) const {
+    assert(Index < getNumIndices());
+    Constant *Flags = getFlagsOperand();
+    auto *FlagValue = cast<ConstantInt>(Flags->getAggregateElement(Index));
+    return StructuredGEPFlags::fromRaw(FlagValue->getZExtValue());
+  }
+
+  bool isIndexInBounds(size_t Index) const {
+    return getIndexFlags(Index).isInBounds();
+  }
+
+  bool isIndexNNeg(size_t Index) const { return getIndexFlags(Index).isNNeg(); }
+
+  bool isIndexUnsigned(size_t Index) const {
+    return getIndexFlags(Index).isUnsignedIndex();
+  }
+
+  bool isInBounds() const {
+    return all_of(seq<unsigned>(0, getNumIndices()),
+                  [this](unsigned Index) { return isIndexInBounds(Index); });
   }
 
   Type *getResultElementType() const {

@@ -1917,7 +1917,7 @@ Instruction *SPIRVEmitIntrinsics::visitIntrinsicInst(IntrinsicInst &I) {
   B.SetInsertPoint(&I);
   SmallVector<Type *, 2> Types = {I.getType(), I.getOperand(0)->getType()};
   SmallVector<Value *, 4> Args;
-  Args.push_back(/* inBounds= */ B.getInt1(true));
+  Args.push_back(/* inBounds= */ B.getInt1(SGEP->isInBounds()));
   Args.push_back(I.getOperand(0));
   Args.push_back(/* zero index */ B.getInt32(0));
   for (unsigned J = 0; J < SGEP->getNumIndices(); ++J)

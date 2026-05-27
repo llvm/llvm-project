@@ -21,19 +21,19 @@ const uint b;
 
 void foo() {
 
-// CHECK-DXIL: %[[#PTR:]] = call ptr addrspace(2) (ptr addrspace(2), ...) @llvm.structured.gep.p2(ptr addrspace(2) elementtype(%S) @_ZL1s, i32 1)
+// CHECK-DXIL: %[[#PTR:]] = call ptr addrspace(2) (ptr addrspace(2), <1 x i32>, ...) @llvm.structured.gep.p2.v1i32(ptr addrspace(2) elementtype(%S) @_ZL1s, <1 x i32> splat (i32 3), i32 1)
 // CHECK-DXIL: %[[#]] = load i32, ptr addrspace(2) %[[#PTR]], align 4
 
-// CHECK-SPIR: %[[#PTR:]] = call ptr addrspace(12) (ptr addrspace(12), ...) @llvm.structured.gep.p12(ptr addrspace(12) elementtype(%S) @_ZL1s, i32 1)
+// CHECK-SPIR: %[[#PTR:]] = call ptr addrspace(12) (ptr addrspace(12), <1 x i32>, ...) @llvm.structured.gep.p12.v1i32(ptr addrspace(12) elementtype(%S) @_ZL1s, <1 x i32> splat (i32 3), i32 1)
 // CHECK-SPIR: %[[#]] = load i32, ptr addrspace(12) %[[#PTR]], align 4
   uint tmp = s.b;
 }
 
 void bar() {
-// CHECK-DXIL: %cbufferidx = call ptr addrspace(2) (ptr addrspace(2), ...) @llvm.structured.gep.p2(ptr addrspace(2) elementtype([4 x <{ i32, target("dx.Padding", 12) }>]) @_ZL1a, i32 2, i32 0)
+// CHECK-DXIL: %cbufferidx = call ptr addrspace(2) (ptr addrspace(2), <2 x i32>, ...) @llvm.structured.gep.p2.v2i32(ptr addrspace(2) elementtype([4 x <{ i32, target("dx.Padding", 12) }>]) @_ZL1a, <2 x i32> splat (i32 3), i32 2, i32 0)
 // CHECK-DXIL: %[[#]] = load i32, ptr addrspace(2) %cbufferidx, align 16
 
-// CHECK-SPIR: %cbufferidx = call ptr addrspace(12) (ptr addrspace(12), ...) @llvm.structured.gep.p12(ptr addrspace(12) elementtype([4 x <{ i32, target("spirv.Padding", 12) }>]) @_ZL1a, i64 2, i32 0)
+// CHECK-SPIR: %cbufferidx = call ptr addrspace(12) (ptr addrspace(12), <2 x i32>, ...) @llvm.structured.gep.p12.v2i32(ptr addrspace(12) elementtype([4 x <{ i32, target("spirv.Padding", 12) }>]) @_ZL1a, <2 x i32> splat (i32 3), i64 2, i32 0)
 // CHECK-SPIR: %[[#]] = load i32, ptr addrspace(12) %cbufferidx, align 16
   uint tmp = a[2];
 }

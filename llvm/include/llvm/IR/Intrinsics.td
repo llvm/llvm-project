@@ -1059,7 +1059,8 @@ def int_callbr_landingpad : Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
 
 def int_structured_gep
     : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                            [LLVMMatchType<0>, llvm_vararg_ty],
+                            [LLVMMatchType<0>, llvm_anyvector_ty,
+                             llvm_vararg_ty],
                             [IntrNoMem, IntrSpeculatable]>;
 
 def int_structured_alloca : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [],

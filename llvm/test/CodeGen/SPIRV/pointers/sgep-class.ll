@@ -19,11 +19,11 @@ entry:
   ; CHECK: %[[#d_var:]] = OpFunctionParameter %[[#ptr_Derived]]
 
   ; Access Base part
-  %1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%class.Derived) %d, i32 0)
+  %1 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype(%class.Derived) %d, <1 x i32> <i32 3>, i32 0)
   ; CHECK: %[[#ptr_base:]] = OpInBoundsAccessChain %[[#ptr_Base]] %[[#d_var]] %[[#idx_0]]
 
   ; Access field in Base
-  %2 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%class.Base) %1, i32 0)
+  %2 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype(%class.Base) %1, <1 x i32> <i32 3>, i32 0)
   ; CHECK: %[[#ptr_field:]] = OpInBoundsAccessChain %[[#ptr_int]] %[[#ptr_base]] %[[#idx_0]]
 
   store i32 42, ptr %2, align 4
@@ -33,7 +33,7 @@ entry:
 }
 
 declare token @llvm.experimental.convergence.entry() #1
-declare ptr @llvm.structured.gep.p0(ptr, ...) #3
+declare ptr @llvm.structured.gep.p0.v1i32(ptr, <1 x i32>, ...) #3
 
 attributes #1 = { convergent nocallback nofree nosync nounwind willreturn memory(none) }
 attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

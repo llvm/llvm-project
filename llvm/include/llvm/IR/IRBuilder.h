@@ -35,6 +35,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/StructuredGEPFlags.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
@@ -2005,13 +2006,27 @@ public:
 
   CallInst *CreateStructuredGEP(Type *BaseType, Value *PtrBase,
                                 ArrayRef<Value *> Indices,
+                                ArrayRef<StructuredGEPFlags> Flags,
                                 const Twine &Name = "") {
+    assert(Flags.size() == Indices.size() &&
+           "expected one flag value per structured GEP index");
+    Type *Int32Ty = getInt32Ty();
+    SmallVector<Constant *> FlagValues;
+    FlagValues.reserve(Flags.empty() ? 1 : Flags.size());
+    for (StructuredGEPFlags Flag : Flags)
+      FlagValues.push_back(ConstantInt::get(Int32Ty, Flag.getRaw()));
+    if (FlagValues.empty())
+      FlagValues.push_back(ConstantInt::get(Int32Ty, 0));
+    Value *FlagsVec = ConstantVector::get(FlagValues);
+
     SmallVector<Value *> Args;
     Args.push_back(PtrBase);
+    Args.push_back(FlagsVec);
     llvm::append_range(Args, Indices);
 
-    CallInst *Output = CreateIntrinsic(Intrinsic::structured_gep,
-                                       {PtrBase->getType()}, Args, {}, Name);
+    CallInst *Output = CreateIntrinsic(
+        Intrinsic::structured_gep, {PtrBase->getType(), FlagsVec->getType()},
+        Args, {}, Name);
     Output->addParamAttr(
         0, Attribute::get(getContext(), Attribute::ElementType, BaseType));
     return Output;

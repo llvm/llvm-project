@@ -3,6 +3,8 @@
 ; RUN: verify-uselistorder %s
 
 %0 = type opaque;
+%struct.S = type { i32, i32 }
+%struct.RuntimeArray = type { [0 x i32] }
 
 declare i8 @llvm.ctlz.i8(i8)
 declare i16 @llvm.ctlz.i16(i16)
@@ -228,6 +230,23 @@ define void @test.vector.splice(<4 x i32> %a, <4 x i32> %b) {
   ret void
 }
 
+define void @test.structured.gep(ptr %ptr, i32 %index) {
+; CHECK-LABEL: @test.structured.gep(
+; CHECK: call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype(i32) %ptr, <1 x i32> zeroinitializer)
+  %no_index = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(i32) %ptr)
+; CHECK: call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype([4 x i32]) %ptr, <1 x i32> splat (i32 5), i32 %index)
+  %array = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([4 x i32]) %ptr, i32 %index)
+; CHECK: %array_with_md = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype([4 x i32]) %ptr, <1 x i32> splat (i32 5), i32 %index), !annotation ![[SGEP_MD:[0-9]+]]
+  %array_with_md = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([4 x i32]) %ptr, i32 %index), !annotation !0
+; CHECK: call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype([0 x i32]) %ptr, <1 x i32> splat (i32 4), i32 %index)
+  %runtime_array = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([0 x i32]) %ptr, i32 %index)
+; CHECK: call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype(%struct.S) %ptr, <1 x i32> splat (i32 7), i32 1)
+  %struct = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S) %ptr, i32 1)
+; CHECK: call ptr (ptr, <2 x i32>, ...) @llvm.structured.gep.p0.v2i32(ptr elementtype(%struct.RuntimeArray) %ptr, <2 x i32> <i32 7, i32 4>, i32 0, i32 %index)
+  %struct_runtime_array = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.RuntimeArray) %ptr, i32 0, i32 %index)
+  ret void
+}
+
 define i32 @ctlz(i32 %A) {
 ; CHECK: %for.body.i = call i32 @llvm.ctlz.i32(i32 %A, i1 false)
   %for.body.i = call i32 @llvm.ctlz.i32.p0(i32 %A)
@@ -266,3 +285,6 @@ define <8 x double> @preserve_fmf_on_x86_intrin(<8 x double> %x0, <8 x double> %
 
 ; CHECK: declare void @llvm.lifetime.start.p0(ptr captures(none))
 ; CHECK: declare void @llvm.lifetime.end.p0(ptr captures(none))
+; CHECK: ![[SGEP_MD]] = !{!"structured.gep.metadata"}
+
+!0 = !{!"structured.gep.metadata"}
