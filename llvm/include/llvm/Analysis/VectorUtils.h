@@ -477,21 +477,6 @@ LLVM_ABI llvm::SmallVector<int, 16> createUnaryMask(ArrayRef<int> Mask,
 LLVM_ABI Value *concatenateVectors(IRBuilderBase &Builder,
                                    ArrayRef<Value *> Vecs);
 
-/// Given a mask vector of i1, Return true if all of the elements of this
-/// predicate mask are known to be false or undef.  That is, return true if all
-/// lanes can be assumed inactive.
-LLVM_ABI bool maskIsAllZeroOrUndef(Value *Mask);
-
-/// Given a mask vector of i1, Return true if all of the elements of this
-/// predicate mask are known to be true or undef.  That is, return true if all
-/// lanes can be assumed active.
-LLVM_ABI bool maskIsAllOneOrUndef(Value *Mask);
-
-/// Given a mask vector of i1, Return true if any of the elements of this
-/// predicate mask are known to be true or undef.  That is, return true if at
-/// least one lane can be assumed active.
-LLVM_ABI bool maskContainsAllOneOrUndef(Value *Mask);
-
 /// Given a mask vector of the form <Y x i1>, return an APInt (of bitwidth Y)
 /// for each lane which may be active.
 LLVM_ABI APInt possiblyDemandedEltsInMask(Value *Mask);
