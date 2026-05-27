@@ -30,20 +30,50 @@ SUBSTITUTIONS = [
 ]
 
 
+def argparse_callback(args):
+    if args.llvm_objdump_binary is None and args.llvm_mc_binary:
+        mc_dir = os.path.dirname(args.llvm_mc_binary)
+        if mc_dir:
+            args.llvm_objdump_binary = os.path.join(mc_dir, "llvm-objdump")
+
+
 class Error(Exception):
     def __init__(self, test_info, line_no, msg):
         super().__init__(f"{test_info.path}:{line_no}: {msg}")
 
 
-def invoke_tool(exe, check_rc, cmd_args, full_input, verbose=False, sourcepath=None):
+def invoke_tool(
+    exe,
+    check_rc,
+    cmd_args,
+    full_input,
+    verbose=False,
+    sourcepath=None,
+    objdump_binary=None,
+):
     substitutions = (
         common.getSubstitutions(sourcepath)
         + SUBSTITUTIONS
         + [(t, exe) for t in mc_LIKE_TOOLS]
     )
+    if objdump_binary:
+        substitutions.append(("llvm-objdump", objdump_binary))
     args = [
         common.applySubstitutions(cmd, substitutions) for cmd in cmd_args.split("|")
     ]
+    is_objdump = any("llvm-objdump" in cmd for cmd in args)
+    if is_objdump:
+        new_args = []
+        for idx, cmd in enumerate(args):
+            c = cmd.strip()
+            if idx == 0:
+                if " -g " not in f" {c} ":
+                    c += " -g"
+            elif "llvm-objdump" in c:
+                if " -l " not in f" {c} ":
+                    c += " -l"
+            new_args.append(c)
+        args = new_args
 
     cmd = exe + " " + " | ".join(args)
     if verbose:
@@ -110,24 +140,84 @@ def should_add_line_to_output(input_line, prefix_set, mc_mode):
         )
 
 
-def getStdCheckLines(prefix: str, output: str, mc_mode, use_same_for_encoding=False) -> list[str]:
+def getStdCheckLine(
+    prefix: str,
+    line: str,
+    mc_mode,
+    use_same_for_encoding=False,
+    is_next=False,
+) -> str:
+    if line.startswith("# <MCInst "):
+        line += "{{$}}"
+        maybe_next = "-NEXT" if is_next else ""
+        return f"{COMMENT[mc_mode]} {prefix}{maybe_next}: {line}"
+    elif use_same_for_encoding and "encoding:" in line:
+        return f"{COMMENT[mc_mode]} {prefix}-SAME: {line}"
+    else:
+        maybe_next = "-NEXT" if is_next else ""
+        return f"{COMMENT[mc_mode]} {prefix}{maybe_next}: {line}"
+
+
+def select_prefixes_for_line(p_outputs, prefix_active_runs):
+    def norm_ws(s):
+        if s is None:
+            return None
+        return re.sub(r"\s+", " ", s).strip()
+
+    p_dict = {}
+    for p, run_id_outputs in p_outputs.items():
+        run_ids = [run_id for run_id, o in run_id_outputs]
+        outputs = [o for run_id, o in run_id_outputs]
+        if all(norm_ws(o) == norm_ws(outputs[0]) for o in outputs):
+            p_dict[p] = outputs[0], run_ids
+        else:
+            p_dict[p] = None, []
+
+    used_run_ids = set()
+    selected_prefixes = set()
+    get_num_runs = lambda item: len(item[1][1])
+    p_dict_sorted = sorted(p_dict.items(), key=get_num_runs, reverse=True)
+    for prefix, (o, run_ids) in p_dict_sorted:
+        if not run_ids:
+            continue
+        # The prefix MUST be active in exactly the same runs as run_ids!
+        if set(run_ids) != prefix_active_runs[prefix]:
+            continue
+        # Check redundancy
+        is_redundant = False
+        for p_sel in selected_prefixes:
+            o_sel, run_ids_sel = p_dict[p_sel]
+            if norm_ws(o_sel) == norm_ws(o) and set(run_ids).issubset(set(run_ids_sel)):
+                is_redundant = True
+                break
+        if is_redundant:
+            continue
+
+        if used_run_ids.isdisjoint(run_ids):
+            selected_prefixes.add(prefix)
+        used_run_ids.update(run_ids)
+    return selected_prefixes, p_dict
+
+
+def getStdCheckLines(
+    prefix: str,
+    output: str,
+    mc_mode,
+    use_same_for_encoding=False,
+    skip_first_line=False,
+) -> list[str]:
     o = []
     for i, line in enumerate(output.splitlines()):
         maybe_next = "-NEXT" if i > 0 else ""
+        if i == 0 and skip_first_line:
+            continue
         # Add an extra end-of-line check for --show-inst MCInst lines to
         # ensure we matched the full instruction name and not just a prefix.
         if line.startswith("# <MCInst "):
             line += "{{$}}"
             o.append(f"{COMMENT[mc_mode]} {prefix}{maybe_next}: {line}")
-        elif use_same_for_encoding:
-            m = re.search(r"(.*?)(\s*(?:#|//|;)\s*encoding:.*)", line)
-            if m:
-                instr = m.group(1)
-                encoding = m.group(2).lstrip()
-                o.append(f"{COMMENT[mc_mode]} {prefix}{maybe_next}: {instr}")
-                o.append(f"{COMMENT[mc_mode]} {prefix}-SAME: {encoding}")
-            else:
-                o.append(f"{COMMENT[mc_mode]} {prefix}{maybe_next}: {line}")
+        elif use_same_for_encoding and "encoding:" in line:
+            o.append(f"{COMMENT[mc_mode]} {prefix}-SAME: {line}")
         else:
             o.append(f"{COMMENT[mc_mode]} {prefix}{maybe_next}: {line}")
     return o
@@ -218,7 +308,9 @@ def update_test(ti: common.TestInfo):
         commands = [cmd.strip() for cmd in l.split("|")]
         assert len(commands) >= 2
         mc_cmd = " | ".join(commands[:-1])
-        if "-filetype=obj" in mc_cmd or re.search(r"-filetype\s+obj", mc_cmd):
+        if (
+            "-filetype=obj" in mc_cmd or re.search(r"-filetype\s+obj", mc_cmd)
+        ) and "llvm-objdump" not in mc_cmd:
             common.warn("Skipping object-emitting RUN line: " + l)
             continue
         filecheck_cmd = commands[-1]
@@ -314,7 +406,7 @@ def update_test(ti: common.TestInfo):
 
         full_input = "\n".join(ti.input_lines)
 
-        if "--show-source-loc" not in mc_args:
+        if "llvm-objdump" not in mc_args and "--show-source-loc" not in mc_args:
             mc_args += " --show-source-loc"
 
         full_out = invoke_tool(
@@ -324,17 +416,29 @@ def update_test(ti: common.TestInfo):
             full_input,
             verbose=ti.args.verbose,
             sourcepath=ti.path,
+            objdump_binary=ti.args.llvm_objdump_binary,
         )
         line_outputs = collections.defaultdict(list)
         pending_lines = []
         ignore_count = 0
         discard_pending = False
+        current_line_num = None
+        warned_unknown = False
         for line in full_out.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            if OUTPUT_SKIPPED_RE.search(line):
+                continue
             if ignore_count > 0:
                 ignore_count -= 1
                 continue
             m_loc = re.search(
                 r"(?:#|//|;)\s*<(SourceLoc|MacroLoc|IncludeLoc):\s*([^:]+):(\d+):\d+>",
+                line,
+            )
+            m_objdump_loc = re.search(
+                r";\s*.*?[/<]stdin>:(\d+)",
                 line,
             )
             if m_loc:
@@ -351,6 +455,14 @@ def update_test(ti: common.TestInfo):
                     line_outputs[line_num].extend(pending_lines)
                     pending_lines = []
                 continue
+            elif m_objdump_loc:
+                line_num = int(m_objdump_loc.group(1))
+                if current_line_num is not None and pending_lines:
+                    line_outputs[current_line_num].extend(pending_lines)
+                current_line_num = line_num
+                pending_lines = []
+                discard_pending = False
+                continue
 
             m_err = re.match(r"<stdin>:(\d+):\d+: (?:warning|error):", line)
             if m_err:
@@ -361,7 +473,41 @@ def update_test(ti: common.TestInfo):
             else:
                 if discard_pending:
                     discard_pending = False
-                pending_lines.append(line)
+                # If this is a disassembled instruction in llvm-objdump, clean it!
+                m_inst = re.match(
+                    r"^\s*[0-9a-f]+:\s*(?:(?:[0-9a-f]{2}\s+){1,8}|[0-9a-f]{8,16})\s+(.*)",
+                    line,
+                )
+                if m_inst:
+                    inst_str = m_inst.group(1).strip()
+                    if "<unknown>" in inst_str and not warned_unknown:
+                        common.warn(
+                            "llvm-objdump returned '<unknown>' for instruction disassembly. "
+                            "You may need to specify the correct path using --llvm-objdump-binary."
+                        )
+                        warned_unknown = True
+                    # Normalize hex immediates 0x... to decimal to match llvm-mc output format
+                    inst_str = re.sub(
+                        r"\b0x([0-9a-fA-F]+)\b",
+                        lambda m: str(int(m.group(1), 16)),
+                        inst_str,
+                    )
+                    pending_lines.append(inst_str)
+                elif "llvm-objdump" not in mc_args:
+                    if ti.args.use_same_for_encoding:
+                        m = re.search(r"(.*?)(\s*(?:#|//|;)\s*encoding:.*)", line)
+                        if m:
+                            instr = m.group(1).rstrip()
+                            encoding = m.group(2).strip()
+                            pending_lines.append(instr)
+                            pending_lines.append(encoding)
+                        else:
+                            pending_lines.append(line)
+                    else:
+                        pending_lines.append(line)
+
+        if current_line_num is not None and pending_lines:
+            line_outputs[current_line_num].extend(pending_lines)
 
         all_runs_line_outputs.append(line_outputs)
         raw_prefixes.append(prefixes)
@@ -382,9 +528,14 @@ def update_test(ti: common.TestInfo):
         run_outputs = []
         for line_num in all_line_nums:
             out_lines = line_outputs.get(line_num, [])
-            run_outputs.append("\n".join(out_lines))
+            run_outputs.append(out_lines)
         raw_output.append(run_outputs)
         common.debug("Collect raw tool lines:", str(len(raw_output[-1])))
+
+    prefix_active_runs = collections.defaultdict(set)
+    for run_id, prefixes in enumerate(raw_prefixes):
+        for p in prefixes:
+            prefix_active_runs[p].add(run_id)
 
     generated_prefixes = {}
     sort_keys = {}
@@ -396,76 +547,73 @@ def update_test(ti: common.TestInfo):
     num_tests = len(all_line_nums)
     for test_id, line_num in enumerate(all_line_nums):
         input_line = line_num
-        # a {prefix : output, [runid] } dict
-        # insert output to a prefix-key dict, and do a max sorting
-        # to select the most-used prefix which share the same output string
-        p_dict = {}
-        for run_id in range(len(run_list)):
-            out = raw_output[run_id][test_id]
+        max_lines = max(
+            len(raw_output[run_id][test_id]) for run_id in range(len(run_list))
+        )
 
-            if hasErr(out):
-                o = getErrString(out)
-            else:
-                o = getOutputString(out)
-
-            for p in raw_prefixes[run_id]:
-                if p not in p_dict:
-                    p_dict[p] = o, [run_id]
-                    continue
-
-                if p_dict[p] == (None, []):
-                    continue
-
-                prev_o, run_ids = p_dict[p]
-                if o == prev_o:
-                    run_ids.append(run_id)
-                    p_dict[p] = o, run_ids
-                else:
-                    # conflict, discard
-                    p_dict[p] = None, []
-
-        # prefix is selected and generated with most shared output lines
-        # each run_id can only be used once
-        used_run_ids = set()
-        selected_prefixes = set()
-        get_num_runs = lambda item: len(item[1][1])
-        p_dict_sorted = sorted(p_dict.items(), key=get_num_runs, reverse=True)
-        for prefix, (o, run_ids) in p_dict_sorted:
-            if run_ids and used_run_ids.isdisjoint(run_ids):
-                selected_prefixes.add(prefix)
-
-            used_run_ids.update(run_ids)
-
-        # Use smallest outputs across RUN lines as sorting keys for
-        # disassembler tests. Sort by instruction codes if no RUN line
-        # produced a disassembled instruction.
+        # Sort key for disassembler tests
         if mc_mode == "dasm":
-            instr_outs = [
-                o
-                for prefix, (o, run_ids) in p_dict_sorted
-                if o is not None and "encoding:" in o
-            ]
+            instr_outs = []
+            for run_id in range(len(run_list)):
+                lines = raw_output[run_id][test_id]
+                if lines:
+                    out = lines[0]
+                    if hasErr(out):
+                        o = getErrString(out)
+                    else:
+                        o = getOutputString(out)
+                    if "encoding:" in o:
+                        instr_outs.append(o)
             sort_keys[input_line] = min(instr_outs) if instr_outs else input_line
             sort_keys[ti.input_lines[input_line - 1]] = sort_keys[input_line]
 
-        # Generate check lines in alphabetical order.
         check_lines = []
-        vars_seen = {prefix: dict() for prefix in selected_prefixes}
-        global_vars_seen = {prefix: dict() for prefix in selected_prefixes}
-        for prefix in sorted(selected_prefixes):
-            o, run_ids = p_dict[prefix]
-            used_prefixes.add(prefix)
+        prefix_seen_on_this_test_line = set()
+        vars_seen = {prefix: dict() for p in run_list for prefix in p[0]}
+        global_vars_seen = {prefix: dict() for p in run_list for prefix in p[0]}
 
-            if hasErr(o):
-                line_offset = len(check_lines) + 1
-                checks = getErrCheckLines(prefix, o, mc_mode, line_offset)
-            else:
-                checks = getStdCheckLines(prefix, o, mc_mode, use_same_for_encoding=ti.args.use_same_for_encoding)
-                checks = common.generalize_check_lines(
-                    checks, ginfo, vars_seen[prefix], global_vars_seen[prefix]
-                )
+        for line_idx in range(max_lines):
+            p_outputs = collections.defaultdict(list)
+            for run_id in range(len(run_list)):
+                lines = raw_output[run_id][test_id]
+                if line_idx < len(lines):
+                    out = lines[line_idx]
+                    if hasErr(out):
+                        o = getErrString(out)
+                    else:
+                        o = getOutputString(out)
+                    for p in raw_prefixes[run_id]:
+                        p_outputs[p].append((run_id, o))
 
-            check_lines.extend(checks)
+            selected_prefixes, p_dict = select_prefixes_for_line(
+                p_outputs, prefix_active_runs
+            )
+
+            for prefix in sorted(selected_prefixes):
+                o, run_ids = p_dict[prefix]
+                used_prefixes.add(prefix)
+
+                if hasErr(o):
+                    line_offset = len(check_lines) + 1
+                    checks = getErrCheckLines(prefix, o, mc_mode, line_offset)
+                else:
+                    is_next = prefix in prefix_seen_on_this_test_line
+                    prefix_seen_on_this_test_line.add(prefix)
+                    checks = [
+                        getStdCheckLine(
+                            prefix,
+                            o,
+                            mc_mode,
+                            use_same_for_encoding=ti.args.use_same_for_encoding,
+                            is_next=is_next,
+                        )
+                    ]
+
+                    checks = common.generalize_check_lines(
+                        checks, ginfo, vars_seen[prefix], global_vars_seen[prefix]
+                    )
+
+                check_lines.extend(checks)
 
         generated_prefixes[input_line] = "\n".join(check_lines)
 
@@ -553,6 +701,11 @@ def main():
         help='The "mc" binary to use to generate the test case',
     )
     parser.add_argument(
+        "--llvm-objdump-binary",
+        default=None,
+        help='The "llvm-objdump" binary to use to generate the test case',
+    )
+    parser.add_argument(
         "--tool",
         default=None,
         help="Treat the given tool name as an mc-like tool for which check lines should be generated",
@@ -583,12 +736,16 @@ def main():
     )
     parser.add_argument("tests", nargs="+")
     initial_args = common.parse_commandline_args(parser)
+    argparse_callback(initial_args)
 
     script_name = os.path.basename(__file__)
 
     returncode = 0
     for ti in common.itertests(
-        initial_args.tests, parser, script_name="utils/" + script_name
+        initial_args.tests,
+        parser,
+        script_name="utils/" + script_name,
+        argparse_callback=argparse_callback,
     ):
         try:
             update_test(ti)
