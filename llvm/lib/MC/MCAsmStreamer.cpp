@@ -2637,8 +2637,8 @@ void MCAsmStreamer::emitInstruction(const MCInst &Inst,
       auto PrintLoc = [&](StringRef Type, SMLoc L, unsigned Buf) {
         StringRef Filename = SM->getMemoryBuffer(Buf)->getBufferIdentifier();
         std::pair<unsigned, unsigned> LineCol = SM->getLineAndColumn(L, Buf);
-        OS << MAI->getCommentString() << " <" << Type << ": " << Filename
-           << ":" << LineCol.first << ":" << LineCol.second << ">\n";
+        OS << MAI->getCommentString() << " <" << Type << ": " << Filename << ":"
+           << LineCol.first << ":" << LineCol.second << ">\n";
       };
 
       // Unwind the macro expansion and inclusion stacks.
@@ -2655,8 +2655,8 @@ void MCAsmStreamer::emitInstruction(const MCInst &Inst,
             PrintLoc("IncludeLoc", Loc, BufID);
           }
         }
-        // Move up to the parent context (the macro call site or the include site)
-        // for the next iteration of the stack unwinding.
+        // Move up to the parent context (the macro call site or the include
+        // site) for the next iteration of the stack unwinding.
         Loc = ParentLoc;
         BufID = Loc.isValid() ? SM->FindBufferContainingLoc(Loc) : 0;
       }

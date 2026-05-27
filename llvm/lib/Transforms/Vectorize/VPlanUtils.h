@@ -170,9 +170,14 @@ VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 
 /// Collect the header mask with the pattern:
 /// (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
+/// Note: If alias masking is enabled this will find:
+/// (AND, HeaderMask, AliasMask)
 /// TODO: Introduce explicit recipe for header-mask instead of searching
 /// the header-mask pattern manually.
 VPSingleDefRecipe *findHeaderMask(VPlan &Plan);
+
+/// Finds the incoming alias-mask within the vector preheader.
+VPValue *findIncomingAliasMask(const VPlan &Plan);
 
 } // namespace vputils
 
