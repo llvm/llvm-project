@@ -3004,17 +3004,17 @@ libc_header_library(
 # This target is only used by APFloat.cpp in the Support library.
 cc_library(
     name = "apfloat_shared_math_headers",
+    srcs = glob([
+        "src/__support/math/*.h",
+    ]),
     hdrs = [
         "shared/libc_common.h",
         "shared/math.h",
     ] + glob([
         "shared/math/*.h",
     ]),
-    srcs = glob([
-        "src/__support/math/*.h",
-    ]),
-    includes = ["."],
     copts = libc_common_copts(),
+    includes = ["."],
     deps = [
         ":__support_big_int",
         ":__support_common",
