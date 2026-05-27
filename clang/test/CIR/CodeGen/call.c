@@ -90,7 +90,7 @@ void f9(void) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @f9(){{.*}} {
-// CIR:         %[[SLOT:.+]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["agg.tmp0"] {alignment = 4 : i64}
+// CIR:         %[[SLOT:.+]] = cir.alloca "agg.tmp0" align(4) !rec_S -> !cir.ptr<!rec_S>
 // CIR-NEXT:    %[[RET:.+]] = cir.call @f3() : () -> !rec_S
 // CIR-NEXT:    cir.store align(4) %[[RET]], %[[SLOT]] : !rec_S, !cir.ptr<!rec_S>
 // CIR-NEXT:    %[[ARG:.+]] = cir.load align(4) %[[SLOT]] : !cir.ptr<!rec_S>, !rec_S

@@ -133,7 +133,7 @@ void use() {
   // CIR-LABEL: cir.func{{.*}}use
 
   WithCtor &local = ExternRef;
-  // CIR-NEXT: %[[LOCAL:.*]] = cir.alloca !cir.ptr<!rec_WithCtor>, !cir.ptr<!cir.ptr<!rec_WithCtor>>, ["local", init, const]
+  // CIR-NEXT: %[[LOCAL:.*]] = cir.alloca "local" {{.*}} init const !cir.ptr<!rec_WithCtor> -> !cir.ptr<!cir.ptr<!rec_WithCtor>>
   // CIR-NEXT: %[[EXT_REF:.*]] = cir.get_global @ExternRef : !cir.ptr<!cir.ptr<!rec_WithCtor>>
   // CIR-NEXT: %[[EXT_REF_LOAD:.*]] = cir.load %[[EXT_REF]] : !cir.ptr<!cir.ptr<!rec_WithCtor>>, !cir.ptr<!rec_WithCtor>
   // CIR-NEXT: cir.store{{.*}}%[[EXT_REF_LOAD]], %[[LOCAL]]

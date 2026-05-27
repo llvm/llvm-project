@@ -24,9 +24,9 @@ void init_vec_using_initalizer_list() {
   Vector vec = {0, 1, 2};
 }
 
-// CIR: %[[VEC_ADDR:.*]] = cir.alloca !rec_Vector, !cir.ptr<!rec_Vector>, ["vec", init]
-// CIR: %[[AGG_ADDR:.*]] = cir.alloca !rec_std3A3Ainitializer_list3Cint3E, !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E>, ["agg.tmp0"]
-// CIR: %[[INIT_LIST_ADDR:.*]] = cir.alloca !cir.array<!s32i x 3>, !cir.ptr<!cir.array<!s32i x 3>>, ["ref.tmp0"]
+// CIR: %[[VEC_ADDR:.*]] = cir.alloca "vec" {{.*}} init !rec_Vector -> !cir.ptr<!rec_Vector>
+// CIR: %[[AGG_ADDR:.*]] = cir.alloca "agg.tmp0" {{.*}} !rec_std3A3Ainitializer_list3Cint3E -> !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E>
+// CIR: %[[INIT_LIST_ADDR:.*]] = cir.alloca "ref.tmp0" {{.*}} !cir.array<!s32i x 3> -> !cir.ptr<!cir.array<!s32i x 3>>
 // CIR: %[[INIT_LIST_PTR:.*]] = cir.cast array_to_ptrdecay %[[INIT_LIST_ADDR]] : !cir.ptr<!cir.array<!s32i x 3>> -> !cir.ptr<!s32i>
 // CIR: %[[CONST_S32_0:.*]] = cir.const #cir.int<0> : !s32i
 // CIR: cir.store {{.*}} %[[CONST_S32_0]], %[[INIT_LIST_PTR]] : !s32i, !cir.ptr<!s32i>

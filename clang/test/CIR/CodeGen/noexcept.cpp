@@ -15,9 +15,9 @@ void no_except() {
   bool c = noexcept(function_no_except());
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["a", init]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b", init]
-// CIR: %[[C_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["c", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init !cir.bool -> !cir.ptr<!cir.bool>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init !cir.bool -> !cir.ptr<!cir.bool>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init !cir.bool -> !cir.ptr<!cir.bool>
 // CIR: %[[CONST_TRUE:.*]] = cir.const #true
 // CIR: cir.store {{.*}} %[[CONST_TRUE]], %[[A_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR: %[[CONST_FALSE:.*]] = cir.const #false

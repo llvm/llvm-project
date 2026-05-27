@@ -27,7 +27,7 @@ extern constexpr Item items[] = {
 };
 
 // CIR-LABEL: cir.func {{.*}}@_ZTv0_n24_N1CD1Ev
-// CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>, ["this", init]
+// CIR: %[[THIS:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<!rec_C> -> !cir.ptr<!cir.ptr<!rec_C>>
 // CIR: %[[THIS_LOAD:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
 // CIR: %[[THIS_CAST:.*]] = cir.cast bitcast %[[THIS_LOAD]] : !cir.ptr<!rec_C> -> !cir.ptr<!u8i>
 // CIR: %[[VTBL_PTR:.*]] = cir.vtable.get_vptr %[[THIS_CAST]] : !cir.ptr<!u8i> -> !cir.ptr<!cir.vptr>
@@ -51,7 +51,7 @@ extern constexpr Item items[] = {
 // LLVM: call void @_ZN1CD1Ev(ptr {{.*}}%[[APPLY_OFFSET]])
 //
 // CIR-LABEL: cir.func {{.*}}@_ZTv0_n24_N1CD0Ev
-// CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>, ["this", init]
+// CIR: %[[THIS:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<!rec_C> -> !cir.ptr<!cir.ptr<!rec_C>>
 // CIR: %[[THIS_LOAD:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
 // CIR: %[[THIS_CAST:.*]] = cir.cast bitcast %[[THIS_LOAD]] : !cir.ptr<!rec_C> -> !cir.ptr<!u8i>
 // CIR: %[[VTBL_PTR:.*]] = cir.vtable.get_vptr %[[THIS_CAST]] : !cir.ptr<!u8i> -> !cir.ptr<!cir.vptr>

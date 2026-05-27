@@ -15,7 +15,7 @@ typedef union vec3 {
 // In C mode, this does do zero padding.
 vec3 ret_vec3() {
   // CIR-LABEL: ret_vec3
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca !rec_vec3, !cir.ptr<!rec_vec3>, ["__retval"]
+  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} !rec_vec3 -> !cir.ptr<!rec_vec3>
   // CIR: %[[GET_ANON:.*]] = cir.get_member %[[RET_ALLOCA]][0] {name = ""}
   // CIR: %[[GET_X:.*]] = cir.get_member %[[GET_ANON]][0] {name = "x"}
   // CIR: %[[FIVE:.*]] = cir.const #cir.fp<5.{{.*}}> : !cir.double
@@ -53,7 +53,7 @@ struct outer ret_outer() {
   return o;
 
   // CIR-LABEL: ret_outer
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca !rec_outer, !cir.ptr<!rec_outer>, ["__retval", init]
+  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} init !rec_outer -> !cir.ptr<!rec_outer>
   // CIR: %[[BITCAST:.*]] = cir.cast bitcast %0 : !cir.ptr<!rec_outer> -> !cir.ptr<!{{.*}}>
   // CIR: %[[RECORD:.*]] = cir.const #cir.const_record<{#cir.zero : !{{.*}}, #cir.int<1> : !s32i, #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 4>}> 
   // CIR: cir.store {{.*}}%[[RECORD]], %[[BITCAST]] 

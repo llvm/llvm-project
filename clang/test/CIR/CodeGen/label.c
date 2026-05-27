@@ -179,7 +179,7 @@ void foo() {
 
 // CIR: cir.func {{.*}} @foo
 // CIR:   cir.scope {
-// CIR:     %0 = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["agg.tmp0"]
+// CIR:     %0 = cir.alloca "agg.tmp0" {{.*}} !rec_S -> !cir.ptr<!rec_S>
 // CIR:      cir.br ^bb1
 // CIR:    ^bb1:
 // CIR:     cir.label "label"

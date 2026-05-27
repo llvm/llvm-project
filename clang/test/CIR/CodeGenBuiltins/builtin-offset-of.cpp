@@ -19,10 +19,10 @@ void offset_of_builtin() {
   unsigned long d = __builtin_offsetof(Struct, d);
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["a", init]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["b", init]
-// CIR: %[[C_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["c", init]
-// CIR: %[[D_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["d", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init !u64i -> !cir.ptr<!u64i>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init !u64i -> !cir.ptr<!u64i>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init !u64i -> !cir.ptr<!u64i>
+// CIR: %[[D_ADDR:.*]] = cir.alloca "d" {{.*}} init !u64i -> !cir.ptr<!u64i>
 // CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !u64i
 // CIR: cir.store {{.*}} %[[CONST_0]], %[[A_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !u64i
@@ -61,10 +61,10 @@ void offset_of_builtin_from_array_element() {
   unsigned long d = __builtin_offsetof(StructWithArray, array[3][3].d);
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["a", init]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["b", init]
-// CIR: %[[C_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["c", init]
-// CIR: %[[D_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["d", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init !u64i -> !cir.ptr<!u64i>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init !u64i -> !cir.ptr<!u64i>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init !u64i -> !cir.ptr<!u64i>
+// CIR: %[[D_ADDR:.*]] = cir.alloca "d" {{.*}} init !u64i -> !cir.ptr<!u64i>
 // CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !u64i
 // CIR: cir.store {{.*}} %[[CONST_0]], %[[A_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR: %[[CONST_124:.*]] = cir.const #cir.int<124> : !u64i

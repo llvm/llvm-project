@@ -171,8 +171,8 @@ auto bitcast(int Foo::*x) {
 // CIR-BEFORE:   %{{.*}} = cir.cast bitcast %[[X]] : !cir.data_member<!s32i in !rec_Foo> -> !cir.data_member<!s32i in !rec_Bar>
 
 // CIR-AFTER: cir.func {{.*}} @_Z7bitcastM3Fooi(%[[ARG0:.*]]: !s64i
-// CIR-AFTER:   %[[X_ADDR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["x", init] {alignment = 8 : i64}
-// CIR-AFTER:   %[[RET_ADDR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["__retval"] {alignment = 8 : i64}
+// CIR-AFTER:   %[[X_ADDR:.*]] = cir.alloca "x" align(8) init !s64i -> !cir.ptr<!s64i>
+// CIR-AFTER:   %[[RET_ADDR:.*]] = cir.alloca "__retval" align(8) !s64i -> !cir.ptr<!s64i>
 // CIR-AFTER:   cir.store %[[ARG0]], %[[X_ADDR]]
 // CIR-AFTER:   %[[X:.*]] = cir.load{{.*}} %[[X_ADDR]]
 // CIR-AFTER:   cir.store %[[X]], %[[RET_ADDR]]

@@ -62,10 +62,10 @@ Trivial t_init{1,2.2, &Other::x};
 extern "C" void local() {
   // CIR-LABEL: @local(
   // LLVM-LABEL: @local(
-  // CIR: cir.alloca !rec_WithMemPtr, !cir.ptr<!rec_WithMemPtr>, ["localMpt"] {alignment = 8 : i64}
-  // CIR: cir.alloca !rec_Trivial, !cir.ptr<!rec_Trivial>, ["localT"] {alignment = 8 : i64}
-  // CIR: %[[MPT_INIT:.*]] = cir.alloca !rec_WithMemPtr, !cir.ptr<!rec_WithMemPtr>, ["localMpt_init", init] {alignment = 8 : i64}
-  // CIR: %[[T_INIT:.*]] = cir.alloca !rec_Trivial, !cir.ptr<!rec_Trivial>, ["localT_init", init] {alignment = 8 : i64}
+  // CIR: cir.alloca "localMpt" align(8) !rec_WithMemPtr -> !cir.ptr<!rec_WithMemPtr>
+  // CIR: cir.alloca "localT" align(8) !rec_Trivial -> !cir.ptr<!rec_Trivial>
+  // CIR: %[[MPT_INIT:.*]] = cir.alloca "localMpt_init" align(8) init !rec_WithMemPtr -> !cir.ptr<!rec_WithMemPtr>
+  // CIR: %[[T_INIT:.*]] = cir.alloca "localT_init" align(8) init !rec_Trivial -> !cir.ptr<!rec_Trivial>
 
   // LLVM: alloca %struct.WithMemPtr
   // LLVM: alloca %struct.Trivial

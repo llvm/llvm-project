@@ -10,8 +10,8 @@ void gnu_null_expr() {
   int *b = __null;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["a", init]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init !s64i -> !cir.ptr<!s64i>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init !cir.ptr<!s32i> -> !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s64i
 // CIR: cir.store {{.*}} %[[CONST_0]], %[[A_ADDR]] : !s64i, !cir.ptr<!s64i>
 // CIR: %[[CONST_NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>

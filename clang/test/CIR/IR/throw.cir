@@ -15,9 +15,9 @@ cir.func @throw_with_no_return() {
 // CHECK: }
 
 cir.func @throw_with_no_return_2(%arg0: !s32i, %arg1: !s32i) -> !s32i {
-  %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
-  %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init] {alignment = 4 : i64}
-  %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+  %0 = cir.alloca "a" align(4) init !s32i -> !cir.ptr<!s32i>
+  %1 = cir.alloca "b" align(4) init !s32i -> !cir.ptr<!s32i>
+  %2 = cir.alloca "__retval" align(4) !s32i -> !cir.ptr<!s32i>
   cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
   cir.store %arg1, %1 : !s32i, !cir.ptr<!s32i>
   cir.scope {
@@ -38,9 +38,9 @@ cir.func @throw_with_no_return_2(%arg0: !s32i, %arg1: !s32i) -> !s32i {
 }
 
 // CHECK: cir.func @throw_with_no_return_2(%[[ARG_0:.*]]: !s32i, %[[ARG_1:.*]]: !s32i) -> !s32i {
-// CHECK:  %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
-// CHECK:  %[[B_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
-// CHECK:  %[[RES_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CHECK:  %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init !s32i -> !cir.ptr<!s32i>
+// CHECK:  %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init !s32i -> !cir.ptr<!s32i>
+// CHECK:  %[[RES_ADDR:.*]] = cir.alloca "__retval" {{.*}} !s32i -> !cir.ptr<!s32i>
 // CHECK:  cir.store %[[ARG_0]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CHECK:  cir.store %[[ARG_1]], %[[B_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CHECK:  cir.scope {

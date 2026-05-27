@@ -2,7 +2,7 @@
 
 void acc_init(int cond) {
   // CHECK: cir.func{{.*}} @acc_init(%[[ARG:.*]]: !s32i{{.*}}) {{.*}}{
-  // CHECK-NEXT: %[[COND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond", init]
+  // CHECK-NEXT: %[[COND:.*]] = cir.alloca "cond" {{.*}} init !s32i -> !cir.ptr<!s32i>
   // CHECK-NEXT: cir.store %[[ARG]], %[[COND]] : !s32i, !cir.ptr<!s32i>
 #pragma acc init
 // CHECK-NEXT: acc.init loc(#{{[a-zA-Z0-9]+}}){{$}}

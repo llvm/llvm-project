@@ -261,9 +261,9 @@ int if_init() {
 }
 
 // CIR: cir.func{{.*}} @_Z7if_initv() -> (!s32i{{.*}})
-// CIR: %[[RETVAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>
+// CIR: %[[RETVAL:.*]] = cir.alloca {{.*}} !s32i -> !cir.ptr<!s32i>
 // CIR: cir.scope {
-// CIR:   %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>,
+// CIR:   %[[X:.*]] = cir.alloca {{.*}} !s32i -> !cir.ptr<!s32i>
 // CIR:   %[[CONST42:.*]] = cir.const #cir.int<42> : !s32i
 // CIR:   cir.store{{.*}} %[[CONST42]], %[[X]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[X_VAL:.*]] = cir.load{{.*}} %[[X]] : !cir.ptr<!s32i>, !s32i

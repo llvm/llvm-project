@@ -12,10 +12,10 @@ int test_agg_cond(int a0, struct s6 a1, struct s6 a2) {
 }
 
 // CIR: cir.func {{.*}} @test_agg_cond
-// CIR:  %[[A0:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a0"
-// CIR:  %[[A1:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["a1"
-// CIR:  %[[A2:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["a2"
-// CIR:  %[[TMP:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["ref.tmp0"]
+// CIR:  %[[A0:.*]] = cir.alloca "a0" {{.*}} !s32i -> !cir.ptr<!s32i>
+// CIR:  %[[A1:.*]] = cir.alloca "a1" {{.*}} !rec_s6 -> !cir.ptr<!rec_s6>
+// CIR:  %[[A2:.*]] = cir.alloca "a2" {{.*}} !rec_s6 -> !cir.ptr<!rec_s6>
+// CIR:  %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} !rec_s6 -> !cir.ptr<!rec_s6>
 // CIR:  %[[LOAD_A0:.*]] = cir.load{{.*}} %[[A0]] : !cir.ptr<!s32i>, !s32i
 // CIR:  %[[COND:.*]] = cir.cast int_to_bool %[[LOAD_A0]] : !s32i -> !cir.bool
 // CIR:  cir.if %[[COND]] {
@@ -60,16 +60,16 @@ int test_stmt_expr(int flag, struct s6 a1, struct s6 a2) {
 }
 
 // CIR: cir.func {{.*}} @test_stmt_expr
-// CIR:  %[[FLAG:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["flag"
-// CIR:  %[[A1:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["a1"
-// CIR:  %[[A2:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["a2"
-// CIR:  %[[TMP:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["ref.tmp0"]
+// CIR:  %[[FLAG:.*]] = cir.alloca "flag" {{.*}} !s32i -> !cir.ptr<!s32i>
+// CIR:  %[[A1:.*]] = cir.alloca "a1" {{.*}} !rec_s6 -> !cir.ptr<!rec_s6>
+// CIR:  %[[A2:.*]] = cir.alloca "a2" {{.*}} !rec_s6 -> !cir.ptr<!rec_s6>
+// CIR:  %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} !rec_s6 -> !cir.ptr<!rec_s6>
 // CIR:  %[[LOAD_FLAG:.*]] = cir.load{{.*}} %[[FLAG]] : !cir.ptr<!s32i>, !s32i
 // CIR:  %[[COND:.*]] = cir.cast int_to_bool %[[LOAD_FLAG]] : !s32i -> !cir.bool
 // CIR:  cir.if %[[COND]] {
-// CIR:    %[[STMT_TMP:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["tmp"]
+// CIR:    %[[STMT_TMP:.*]] = cir.alloca "tmp" {{.*}} !rec_s6 -> !cir.ptr<!rec_s6>
 // CIR:    cir.scope {
-// CIR:      %[[T:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["t", init]
+// CIR:      %[[T:.*]] = cir.alloca "t" {{.*}} init !rec_s6 -> !cir.ptr<!rec_s6>
 // CIR:      cir.copy %[[A1]] to %[[T]] : !cir.ptr<!rec_s6>
 // CIR:      cir.call @foo() : () -> ()
 // CIR:      cir.copy %[[T]] to %[[TMP]] : !cir.ptr<!rec_s6>

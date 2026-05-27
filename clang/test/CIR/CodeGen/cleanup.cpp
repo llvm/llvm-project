@@ -14,7 +14,7 @@ void test_cleanup() {
 }
 
 // CHECK: cir.func{{.*}} @_Z12test_cleanupv()
-// CHECK:   %[[S_ADDR:.*]] = cir.alloca !rec_Struk, !cir.ptr<!rec_Struk>, ["s"]
+// CHECK:   %[[S_ADDR:.*]] = cir.alloca "s" {{.*}} !rec_Struk -> !cir.ptr<!rec_Struk>
 // CHECK:   cir.call @_ZN5StrukD1Ev(%[[S_ADDR]]) nothrow : (!cir.ptr<!rec_Struk> {{.*}}) -> ()
 // CHECK:   cir.return
 
@@ -30,10 +30,10 @@ void test_cleanup_ifelse(bool b) {
 // CHECK:   cir.scope {
 // CHECK:     %[[B:.*]] = cir.load{{.*}} %0 : !cir.ptr<!cir.bool>
 // CHECK:     cir.if %[[B]] {
-// CHECK:       %[[S:.*]] = cir.alloca !rec_Struk, !cir.ptr<!rec_Struk>, ["s"]
+// CHECK:       %[[S:.*]] = cir.alloca "s" {{.*}} !rec_Struk -> !cir.ptr<!rec_Struk>
 // CHECK:       cir.call @_ZN5StrukD1Ev(%[[S]]) nothrow : (!cir.ptr<!rec_Struk> {{.*}}) -> ()
 // CHECK:     } else {
-// CHECK:       %[[S_TOO:.*]] = cir.alloca !rec_Struk, !cir.ptr<!rec_Struk>, ["s"]
+// CHECK:       %[[S_TOO:.*]] = cir.alloca "s" {{.*}} !rec_Struk -> !cir.ptr<!rec_Struk>
 // CHECK:       cir.call @_ZN5StrukD1Ev(%[[S_TOO]]) nothrow : (!cir.ptr<!rec_Struk> {{.*}}) -> ()
 // CHECK:     }
 // CHECK:   }
@@ -50,7 +50,7 @@ void test_cleanup_for() {
 // CHECK:     cir.for : cond {
 // CHECK:     } body {
 // CHECK:       cir.scope {
-// CHECK:         %[[S:.*]] = cir.alloca !rec_Struk, !cir.ptr<!rec_Struk>, ["s"]
+// CHECK:         %[[S:.*]] = cir.alloca "s" {{.*}} !rec_Struk -> !cir.ptr<!rec_Struk>
 // CHECK:         cir.call @_ZN5StrukD1Ev(%[[S]]) nothrow : (!cir.ptr<!rec_Struk> {{.*}}) -> ()
 // CHECK:       }
 // CHECK:       cir.yield
@@ -70,11 +70,11 @@ void test_cleanup_nested() {
 }
 
 // CHECK: cir.func{{.*}} @_Z19test_cleanup_nestedv()
-// CHECK:   %[[OUTER:.*]] = cir.alloca !rec_Struk, !cir.ptr<!rec_Struk>, ["outer"]
+// CHECK:   %[[OUTER:.*]] = cir.alloca "outer" {{.*}} !rec_Struk -> !cir.ptr<!rec_Struk>
 // CHECK:   cir.scope {
-// CHECK:     %[[MIDDLE:.*]] = cir.alloca !rec_Struk, !cir.ptr<!rec_Struk>, ["middle"]
+// CHECK:     %[[MIDDLE:.*]] = cir.alloca "middle" {{.*}} !rec_Struk -> !cir.ptr<!rec_Struk>
 // CHECK:     cir.scope {
-// CHECK:       %[[INNER:.*]] = cir.alloca !rec_Struk, !cir.ptr<!rec_Struk>, ["inner"]
+// CHECK:       %[[INNER:.*]] = cir.alloca "inner" {{.*}} !rec_Struk -> !cir.ptr<!rec_Struk>
 // CHECK:       cir.call @_ZN5StrukD1Ev(%[[INNER]]) nothrow : (!cir.ptr<!rec_Struk> {{.*}}) -> ()
 // CHECK:     }
 // CHECK:     cir.call @_ZN5StrukD1Ev(%[[MIDDLE]]) nothrow : (!cir.ptr<!rec_Struk> {{.*}}) -> ()
@@ -89,7 +89,7 @@ void test_expr_with_cleanup() {
 }
 
 // CHECK: cir.func{{.*}} @_Z22test_expr_with_cleanupv()
-// CHECK:   %[[S:.*]] = cir.alloca !rec_Struk, !cir.ptr<!rec_Struk>
+// CHECK:   %[[S:.*]] = cir.alloca {{.*}} !rec_Struk -> !cir.ptr<!rec_Struk>
 // CHECK:   cir.call @_Z7use_refRK5Struk(%[[S]])
 // CHECK:   cir.call @_ZN5StrukD1Ev(%[[S]]) nothrow : (!cir.ptr<!rec_Struk> {{.*}}) -> ()
 // CHECK:   cir.return
@@ -104,9 +104,9 @@ void complex_expr_with_cleanup() {
 }
 
 // CHECK: cir.func{{.*}} @_Z25complex_expr_with_cleanupv()
-// CHECK:   %[[RESULT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["result", init]
-// CHECK:   %[[CONTAINER_ADDR:.*]] = cir.alloca !rec_ComplexContainer, !cir.ptr<!rec_ComplexContainer>, ["ref.tmp0"]
-// CHECK:   %[[ARG_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["coerce"]
+// CHECK:   %[[RESULT:.*]] = cir.alloca "result" {{.*}} init !cir.complex<!s32i> -> !cir.ptr<!cir.complex<!s32i>>
+// CHECK:   %[[CONTAINER_ADDR:.*]] = cir.alloca "ref.tmp0" {{.*}} !rec_ComplexContainer -> !cir.ptr<!rec_ComplexContainer>
+// CHECK:   %[[ARG_ADDR:.*]] = cir.alloca "coerce" {{.*}} !cir.complex<!s32i> -> !cir.ptr<!cir.complex<!s32i>>
 // CHECK:   %[[CONST_10:.*]] = cir.const #cir.int<10> : !s32i
 // CHECK:   %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
 // CHECK:   %[[ARG_COMPLEX:.*]] = cir.complex.create %[[CONST_10]], %[[CONST_0]] : !s32i -> !cir.complex<!s32i>
@@ -128,10 +128,10 @@ void complex_expr_with_cleanup_inside_cleanupscope() {
 }
 
 // CHECK: cir.func{{.*}} @_Z45complex_expr_with_cleanup_inside_cleanupscopev()
-// CHECK:   %[[RESULT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["result", init]
-// CHECK:   %[[CONTAINER_ADDR:.*]] = cir.alloca !rec_ComplexContainerWithDtor, !cir.ptr<!rec_ComplexContainerWithDtor>, ["ref.tmp0"]
-// CHECK:   %[[ARG_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["coerce"]
-// CHECK:   %[[TEMP_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["tmp.exprcleanup"]
+// CHECK:   %[[RESULT:.*]] = cir.alloca "result" {{.*}} init !cir.complex<!s32i> -> !cir.ptr<!cir.complex<!s32i>>
+// CHECK:   %[[CONTAINER_ADDR:.*]] = cir.alloca "ref.tmp0" {{.*}} !rec_ComplexContainerWithDtor -> !cir.ptr<!rec_ComplexContainerWithDtor>
+// CHECK:   %[[ARG_ADDR:.*]] = cir.alloca "coerce" {{.*}} !cir.complex<!s32i> -> !cir.ptr<!cir.complex<!s32i>>
+// CHECK:   %[[TEMP_ADDR:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} !cir.complex<!s32i> -> !cir.ptr<!cir.complex<!s32i>>
 // CHECK:   %[[CONST_10:.*]] = cir.const #cir.int<10> : !s32i
 // CHECK:   %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
 // CHECK:   %[[ARG_COMPLEX:.*]] = cir.complex.create %[[CONST_10]], %[[CONST_0]] : !s32i -> !cir.complex<!s32i>
@@ -155,8 +155,8 @@ void test_cleanup_with_automatic_storage_duration() {
 }
 
 // CHECK: cir.func{{.*}} @_Z44test_cleanup_with_automatic_storage_durationv()
-// CHECK:   %[[REF_TMP:.*]] = cir.alloca !rec_Struk, !cir.ptr<!rec_Struk>, ["ref.tmp0"]
-// CHECK:   %[[REF:.*]] = cir.alloca !cir.ptr<!rec_Struk>, !cir.ptr<!cir.ptr<!rec_Struk>>, ["ref", init, const]
+// CHECK:   %[[REF_TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} !rec_Struk -> !cir.ptr<!rec_Struk>
+// CHECK:   %[[REF:.*]] = cir.alloca "ref" {{.*}} init const !cir.ptr<!rec_Struk> -> !cir.ptr<!cir.ptr<!rec_Struk>>
 // CHECK:   cir.cleanup.scope {
 // CHECK:     cir.store{{.*}} %[[REF_TMP]], %[[REF]]
 // CHECK:     cir.yield

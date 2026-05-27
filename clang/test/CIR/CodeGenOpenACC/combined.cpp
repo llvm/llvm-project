@@ -2,8 +2,8 @@
 
 extern "C" void acc_combined(int N, int cond) {
   // CHECK: cir.func{{.*}} @acc_combined(%[[ARG_N:.*]]: !s32i {{.*}}, %[[ARG_COND:.*]]: !s32i {{.*}}) {{.*}}{
-  // CHECK-NEXT: %[[ALLOCA_N:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["N", init]
-  // CHECK-NEXT: %[[COND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond", init]
+  // CHECK-NEXT: %[[ALLOCA_N:.*]] = cir.alloca "N" {{.*}} init !s32i -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COND:.*]] = cir.alloca "cond" {{.*}} init !s32i -> !cir.ptr<!s32i>
   // CHECK-NEXT: cir.store %[[ARG_N]], %[[ALLOCA_N]] : !s32i, !cir.ptr<!s32i>
   // CHECK-NEXT: cir.store %[[ARG_COND]], %[[COND]] : !s32i, !cir.ptr<!s32i>
 
@@ -1013,8 +1013,8 @@ extern "C" void acc_combined(int N, int cond) {
 }
 extern "C" void acc_combined_data_clauses(int *arg1, int *arg2) {
   // CHECK: cir.func{{.*}} @acc_combined_data_clauses(%[[ARG1_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}, %[[ARG2_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}) {{.*}}{
-  // CHECK-NEXT: %[[ARG1:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg1", init]
-  // CHECK-NEXT: %[[ARG2:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg2", init]
+  // CHECK-NEXT: %[[ARG1:.*]] = cir.alloca "arg1" {{.*}} init !cir.ptr<!s32i> -> !cir.ptr<!cir.ptr<!s32i>>
+  // CHECK-NEXT: %[[ARG2:.*]] = cir.alloca "arg2" {{.*}} init !cir.ptr<!s32i> -> !cir.ptr<!cir.ptr<!s32i>>
   // CHECK-NEXT: cir.store %[[ARG1_PARAM]], %[[ARG1]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
   // CHECK-NEXT: cir.store %[[ARG2_PARAM]], %[[ARG2]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 

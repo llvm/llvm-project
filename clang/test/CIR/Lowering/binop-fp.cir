@@ -3,12 +3,12 @@
 
 module {
   cir.func @foo() {
-    %0 = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["c"] {alignment = 4 : i64}
-    %1 = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["d"] {alignment = 4 : i64}
-    %2 = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["y", init] {alignment = 4 : i64}
-    %3 = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["e"] {alignment = 8 : i64}
-    %4 = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["f"] {alignment = 8 : i64}
-    %5 = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["g", init] {alignment = 8 : i64}
+    %0 = cir.alloca "c" align(4) !cir.float -> !cir.ptr<!cir.float>
+    %1 = cir.alloca "d" align(4) !cir.float -> !cir.ptr<!cir.float>
+    %2 = cir.alloca "y" align(4) init !cir.float -> !cir.ptr<!cir.float>
+    %3 = cir.alloca "e" align(8) !cir.double -> !cir.ptr<!cir.double>
+    %4 = cir.alloca "f" align(8) !cir.double -> !cir.ptr<!cir.double>
+    %5 = cir.alloca "g" align(8) init !cir.double -> !cir.ptr<!cir.double>
     %6 = cir.load %0 : !cir.ptr<!cir.float>, !cir.float
     %7 = cir.load %1 : !cir.ptr<!cir.float>, !cir.float
     %8 = cir.fmul %6, %7 : !cir.float

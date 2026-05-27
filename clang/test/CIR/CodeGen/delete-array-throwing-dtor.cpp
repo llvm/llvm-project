@@ -58,7 +58,7 @@ void test_delete_array_throwing_dtor(ThrowingDtor *ptr) {
 // CIR:       %[[END:.*]] = cir.ptr_stride %[[PTR]], %[[NUM_ELEM]]
 // CIR:       %[[NOT_EMPTY:.*]] = cir.cmp ne %[[END]], %[[PTR]]
 // CIR:       cir.if %[[NOT_EMPTY]] {
-// CIR:         %[[ARR_IDX:.*]] = cir.alloca {{.*}} ["__array_idx"]
+// CIR:         %[[ARR_IDX:.*]] = cir.alloca "__array_idx" {{.*}}
 // CIR:         cir.store %[[END]], %[[ARR_IDX]]
 //
 // CIR:         cir.cleanup.scope {

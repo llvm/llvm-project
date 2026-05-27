@@ -19,7 +19,7 @@ void test_self_initialize() {
 }
 
 // CIR: cir.func{{.*}} @test_self_initialize()
-//   %[[S:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s", init]
+//   %[[S:.*]] = cir.alloca "s" {{.*}} init !rec_S -> !cir.ptr<!rec_S>
 //   cir.copy %[[S]] to %[[S]] : !cir.ptr<!rec_S>
 
 // LLVM: define{{.*}} void @test_self_initialize()

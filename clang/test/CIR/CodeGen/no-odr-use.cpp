@@ -88,7 +88,7 @@ int f(int i) {
 
 // With CIR, f1() is emitted after the lambda.
 // CIR-LABEL: cir.func {{.*}} @_Z1fi(
-// CIR:         %[[A_ADDR:.*]] = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["a", init, const]
+// CIR:         %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init const !rec_A -> !cir.ptr<!rec_A>
 // CIR:         %[[A_INIT:.*]] = cir.get_global @[[F_A]] : !cir.ptr<!rec_A>
 // CIR:         cir.copy %[[A_INIT]] to %[[A_ADDR]]
 // CIR:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i

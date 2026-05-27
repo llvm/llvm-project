@@ -10,7 +10,7 @@ void template_foo() {
   int a = N + 5;
 }
 
-// CIR: %[[INIT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CIR: %[[INIT:.*]] = cir.alloca "a" {{.*}} init !s32i -> !cir.ptr<!s32i>
 // CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: %[[CONST_2:.*]] = cir.const #cir.int<5> : !s32i
 // CIR: %[[ADD:.*]] = cir.add nsw %[[CONST_1]], %[[CONST_2]] : !s32i

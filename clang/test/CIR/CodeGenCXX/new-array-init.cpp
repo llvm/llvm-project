@@ -16,7 +16,7 @@
 // CIR-LABEL: cir.func{{.*}} @_Z2fni(
 // CHECK-LABEL: define{{.*}} void @_Z2fni
 void fn(int n) {
-  // CIR: %[[N_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init]
+  // CIR: %[[N_ALLOCA:.*]] = cir.alloca "n" {{.*}} init !s32i -> !cir.ptr<!s32i>
   // CIR: %[[N_LOAD:.*]] = cir.load {{.*}} %[[N_ALLOCA]] : !cir.ptr<!s32i>
   // CIR: %[[N_U64_CAST:.*]] = cir.cast integral %[[N_LOAD]] : !s32i -> !u64i
   // CIR: %[[THREE:.*]] = cir.const #cir.int<3> : !u64i
@@ -71,7 +71,7 @@ void fn(int n) {
 // CIR-LABEL: cir.func {{.*}}@_Z8fn_pareni(
 // LLVM-LABEL: define{{.*}} void @_Z8fn_pareni
 void fn_paren(int n) {
-  // CIR: %[[N_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init]
+  // CIR: %[[N_ALLOCA:.*]] = cir.alloca "n" {{.*}} init !s32i -> !cir.ptr<!s32i>
   // CIR: %[[N_LOAD:.*]] = cir.load {{.*}} %[[N_ALLOCA]] : !cir.ptr<!s32i>
   // CIR: %[[N_U64_CAST:.*]] = cir.cast integral %[[N_LOAD]] : !s32i -> !u64i
   // CIR: %[[THREE:.*]] = cir.const #cir.int<3> : !u64i
@@ -280,7 +280,7 @@ void const_sufficient_paren() {
 // CIR-LABEL: cir.func {{.*}}@_Z15string_nonconsti(
 // LLVM-LABEL: define{{.*}} void @_Z15string_nonconsti
 void string_nonconst(int n) {
-  // CIR: %[[N_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init] {alignment = 4 : i64}
+  // CIR: %[[N_ALLOCA:.*]] = cir.alloca "n" align(4) init !s32i -> !cir.ptr<!s32i>
   // CIR: %[[N_LOAD:.*]] = cir.load {{.*}} %[[N_ALLOCA]] : !cir.ptr<!s32i>, !s32i
   // CIR: %[[N_CAST:.*]] = cir.cast integral %[[N_LOAD]] : !s32i -> !u64i
   // CIR: %[[FOUR:.*]] = cir.const #cir.int<4> : !u64i
@@ -316,7 +316,7 @@ void string_nonconst(int n) {
 // CIR-LABEL: cir.func no_inline dso_local @_Z21string_nonconst_pareni(
 // LLVM-LABEL: define{{.*}} void @_Z21string_nonconst_pareni
 void string_nonconst_paren(int n) {
-  // CIR: %[[N_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init] {alignment = 4 : i64}
+  // CIR: %[[N_ALLOCA:.*]] = cir.alloca "n" align(4) init !s32i -> !cir.ptr<!s32i>
   // CIR: %[[N_LOAD:.*]] = cir.load {{.*}} %[[N_ALLOCA]] : !cir.ptr<!s32i>, !s32i
   // CIR: %[[N_CAST:.*]] = cir.cast integral %[[N_LOAD]] : !s32i -> !u64i
   // CIR: %[[FOUR:.*]] = cir.const #cir.int<4> : !u64i
@@ -352,7 +352,7 @@ void string_nonconst_paren(int n) {
 // CIR-LABEL: cir.func {{.*}}@_Z33string_nonconst_paren_extra_pareni(
 // LLVM-LABEL: define{{.*}} void @_Z33string_nonconst_paren_extra_pareni
 void string_nonconst_paren_extra_paren(int n) {
-  // CIR: %[[N_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init] {alignment = 4 : i64}
+  // CIR: %[[N_ALLOCA:.*]] = cir.alloca "n" align(4) init !s32i -> !cir.ptr<!s32i>
   // CIR: %[[N_LOAD:.*]] = cir.load {{.*}} %[[N_ALLOCA]] : !cir.ptr<!s32i>, !s32i
   // CIR: %[[N_CAST:.*]] = cir.cast integral %[[N_LOAD]] : !s32i -> !u64i
   // CIR: %[[FOUR:.*]] = cir.const #cir.int<4> : !u64i
@@ -508,7 +508,7 @@ void aggr_exact() {
 // CIR-LABEL: cir.func {{.*}}@_Z15aggr_sufficienti(
 // LLVM-LABEL: define{{.*}} void @_Z15aggr_sufficienti
 void aggr_sufficient(int n) {
-  // CIR: %[[ARG:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init] {alignment = 4 : i64}
+  // CIR: %[[ARG:.*]] = cir.alloca "n" align(4) init !s32i -> !cir.ptr<!s32i>
   // CIR: %[[GET_N:.*]] = cir.load {{.*}}%[[ARG:.*]] : !cir.ptr<!s32i>, !s32i
   // CIR: %[[N_CAST:.*]] = cir.cast integral %[[GET_N]] : !s32i -> !u64i
   // CIR: %[[TWO:.*]] = cir.const #cir.int<2> : !u64i

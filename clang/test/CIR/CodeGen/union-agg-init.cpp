@@ -13,7 +13,7 @@ typedef union vec3 {
 // In C++ mode, this doesn't do zero padding.
 extern "C" vec3 ret_vec3() {
   // CIR-LABEL: ret_vec3
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca !rec_vec3, !cir.ptr<!rec_vec3>, ["__retval"]
+  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} !rec_vec3 -> !cir.ptr<!rec_vec3>
   // CIR: %[[GET_ANON:.*]] = cir.get_member %[[RET_ALLOCA]][0] {name = ""}
   // CIR: %[[GET_X:.*]] = cir.get_member %[[GET_ANON]][0] {name = "x"}
   // CIR: %[[FIVE:.*]] = cir.const #cir.fp<5.{{.*}}> : !cir.double
@@ -43,7 +43,7 @@ typedef union Trivial {
 
 extern "C" Trivial ret_trivial() { return {}; }
   // CIR-LABEL: ret_trivial
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca !rec_Trivial, !cir.ptr<!rec_Trivial>, ["__retval"]
+  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} !rec_Trivial -> !cir.ptr<!rec_Trivial>
   // CIR: %[[GET_A:.*]] = cir.get_member %[[RET_ALLOCA]][0] {name = "a"}
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0>
   // CIR: cir.store{{.*}} %[[ZERO]], %[[GET_A]]

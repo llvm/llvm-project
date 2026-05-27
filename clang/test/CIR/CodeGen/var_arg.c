@@ -18,9 +18,9 @@ int varargs(int count, ...) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @varargs(
-// CIR:   %[[RET_ADDR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR:   %[[VAAREA:.+]] = cir.alloca !cir.array<!rec___va_list_tag x 1>, !cir.ptr<!cir.array<!rec___va_list_tag x 1>>, ["args"]
-// CIR:   %[[RES_ADDR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["res", init]
+// CIR:   %[[RET_ADDR:.+]] = cir.alloca "__retval" {{.*}} !s32i -> !cir.ptr<!s32i>
+// CIR:   %[[VAAREA:.+]] = cir.alloca "args" {{.*}} !cir.array<!rec___va_list_tag x 1> -> !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+// CIR:   %[[RES_ADDR:.+]] = cir.alloca "res" {{.*}} init !s32i -> !cir.ptr<!s32i>
 // CIR:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   cir.va_start %[[VA_PTR0]] : !cir.ptr<!rec___va_list_tag>
 // CIR:   %[[VA_PTR1:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
@@ -91,9 +91,9 @@ int stdarg_start(int count, ...) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @stdarg_start(
-// CIR:   %[[RET_ADDR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR:   %[[VAAREA:.+]] = cir.alloca !cir.array<!rec___va_list_tag x 1>, !cir.ptr<!cir.array<!rec___va_list_tag x 1>>, ["args"]
-// CIR:   %[[RES_ADDR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["res", init]
+// CIR:   %[[RET_ADDR:.+]] = cir.alloca "__retval" {{.*}} !s32i -> !cir.ptr<!s32i>
+// CIR:   %[[VAAREA:.+]] = cir.alloca "args" {{.*}} !cir.array<!rec___va_list_tag x 1> -> !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+// CIR:   %[[RES_ADDR:.+]] = cir.alloca "res" {{.*}} init !s32i -> !cir.ptr<!s32i>
 // CIR:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   cir.va_start %[[VA_PTR0]] : !cir.ptr<!rec___va_list_tag>
 // CIR:   %[[VA_PTR1:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
@@ -189,9 +189,9 @@ int varargs_new(char *fmt, ...) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @varargs_new(
-// CIR:   %[[RET_ADDR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR:   %[[VAAREA:.+]] = cir.alloca !cir.array<!rec___va_list_tag x 1>, !cir.ptr<!cir.array<!rec___va_list_tag x 1>>, ["args"]
-// CIR:   %[[RES_ADDR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["res", init]
+// CIR:   %[[RET_ADDR:.+]] = cir.alloca "__retval" {{.*}} !s32i -> !cir.ptr<!s32i>
+// CIR:   %[[VAAREA:.+]] = cir.alloca "args" {{.*}} !cir.array<!rec___va_list_tag x 1> -> !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+// CIR:   %[[RES_ADDR:.+]] = cir.alloca "res" {{.*}} init !s32i -> !cir.ptr<!s32i>
 // CIR:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   cir.va_start %[[VA_PTR0]] : !cir.ptr<!rec___va_list_tag>
 // CIR:   %[[VA_PTR1:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>

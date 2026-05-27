@@ -11,8 +11,8 @@ const int& test_cond_throw_false(bool flag) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z21test_cond_throw_falseb(
-// CIR: %[[FLAG:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["flag", init]
-// CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init, const]
+// CIR: %[[FLAG:.*]] = cir.alloca "flag" {{.*}} init !cir.bool -> !cir.ptr<!cir.bool>
+// CIR: %[[A:.*]] = cir.alloca "a" {{.*}} init const !s32i -> !cir.ptr<!s32i>
 // CIR: %[[TEN:.*]] = cir.const #cir.int<10> : !s32i
 // CIR: cir.store{{.*}} %[[TEN]], %[[A]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[FLAG_VAL:.*]] = cir.load{{.*}} %[[FLAG]] : !cir.ptr<!cir.bool>, !cir.bool
@@ -74,8 +74,8 @@ const int& test_cond_throw_true(bool flag) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z20test_cond_throw_trueb(
-// CIR: %[[FLAG:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["flag", init]
-// CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init, const]
+// CIR: %[[FLAG:.*]] = cir.alloca "flag" {{.*}} init !cir.bool -> !cir.ptr<!cir.bool>
+// CIR: %[[A:.*]] = cir.alloca "a" {{.*}} init const !s32i -> !cir.ptr<!s32i>
 // CIR: %[[TEN:.*]] = cir.const #cir.int<10> : !s32i
 // CIR: cir.store{{.*}} %[[TEN]], %[[A]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[FLAG_VAL:.*]] = cir.load{{.*}} %[[FLAG]] : !cir.ptr<!cir.bool>, !cir.bool
@@ -138,7 +138,7 @@ const int& test_cond_const_true_throw_false() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z32test_cond_const_true_throw_falsev(
-// CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init, const]
+// CIR: %[[A:.*]] = cir.alloca "a" {{.*}} init const !s32i -> !cir.ptr<!s32i>
 // CIR: %[[TWENTY:.*]] = cir.const #cir.int<20> : !s32i
 // CIR: cir.store{{.*}} %[[TWENTY]], %[[A]] : !s32i, !cir.ptr<!s32i>
 // CIR-NOT: cir.ternary
@@ -170,7 +170,7 @@ const int& test_cond_const_false_throw_true() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z32test_cond_const_false_throw_truev(
-// CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init, const]
+// CIR: %[[A:.*]] = cir.alloca "a" {{.*}} init const !s32i -> !cir.ptr<!s32i>
 // CIR: %[[THIRTY:.*]] = cir.const #cir.int<30> : !s32i
 // CIR: cir.store{{.*}} %[[THIRTY]], %[[A]] : !s32i, !cir.ptr<!s32i>
 // CIR-NOT: cir.ternary
@@ -201,8 +201,8 @@ const int &test_cond_const_true_throw_true() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z31test_cond_const_true_throw_truev(
-// CIR:  %[[RET_ADDR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["__retval"]
-// CIR:  %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init, const]
+// CIR:  %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} !cir.ptr<!s32i> -> !cir.ptr<!cir.ptr<!s32i>>
+// CIR:  %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init const !s32i -> !cir.ptr<!s32i>
 // CIR:  %[[CONST_30:.*]] = cir.const #cir.int<30> : !s32i
 // CIR:  cir.store{{.*}} %[[CONST_30]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:  %[[EXCEPTION:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
@@ -245,9 +245,9 @@ int test_agg_cond_throw_false(bool flag, struct s6 a1, struct s6 a2) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z25test_agg_cond_throw_falseb2s6S_(
-// CIR: %[[FLAG:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["flag", init]
-// CIR: %[[A1:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["a1", init]
-// CIR: %[[A2:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["a2", init]
+// CIR: %[[FLAG:.*]] = cir.alloca "flag" {{.*}} init !cir.bool -> !cir.ptr<!cir.bool>
+// CIR: %[[A1:.*]] = cir.alloca "a1" {{.*}} init !rec_s6 -> !cir.ptr<!rec_s6>
+// CIR: %[[A2:.*]] = cir.alloca "a2" {{.*}} init !rec_s6 -> !cir.ptr<!rec_s6>
 // CIR: %[[FLAG_VAL:.*]] = cir.load{{.*}} %[[FLAG]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR: %[[COND_RES:.*]] = cir.ternary(%[[FLAG_VAL]], true {
 // CIR:   cir.yield %[[A1]] : !cir.ptr<!rec_s6>
@@ -310,9 +310,9 @@ int test_agg_cond_throw_true(bool flag, struct s6 a1, struct s6 a2) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z24test_agg_cond_throw_trueb2s6S_(
-// CIR: %[[FLAG:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["flag", init]
-// CIR: %[[A1:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["a1", init]
-// CIR: %[[A2:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["a2", init]
+// CIR: %[[FLAG:.*]] = cir.alloca "flag" {{.*}} init !cir.bool -> !cir.ptr<!cir.bool>
+// CIR: %[[A1:.*]] = cir.alloca "a1" {{.*}} init !rec_s6 -> !cir.ptr<!rec_s6>
+// CIR: %[[A2:.*]] = cir.alloca "a2" {{.*}} init !rec_s6 -> !cir.ptr<!rec_s6>
 // CIR: %[[FLAG_VAL:.*]] = cir.load{{.*}} %[[FLAG]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR: %[[COND_RES:.*]] = cir.ternary(%[[FLAG_VAL]], true {
 // CIR:   %[[EXC:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
@@ -375,8 +375,8 @@ const int test_agg_cond_const_true_throw_false(struct s6 a1, struct s6 a2) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z36test_agg_cond_const_true_throw_false2s6S_(
-// CIR: %[[A1:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["a1", init]
-// CIR: %[[A2:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["a2", init]
+// CIR: %[[A1:.*]] = cir.alloca "a1" {{.*}} init !rec_s6 -> !cir.ptr<!rec_s6>
+// CIR: %[[A2:.*]] = cir.alloca "a2" {{.*}} init !rec_s6 -> !cir.ptr<!rec_s6>
 // CIR-NOT: cir.ternary
 // CIR-NOT: cir.throw
 // CIR: %[[F0:.*]] = cir.get_member %[[A1]][0] {name = "f0"} : !cir.ptr<!rec_s6> -> !cir.ptr<!s32i>
@@ -411,8 +411,8 @@ const int test_agg_cond_const_true_throw_true(struct s6 a1, struct s6 a2) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z35test_agg_cond_const_true_throw_true2s6S_(
-// CIR: %[[A1:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["a1", init]
-// CIR: %[[A2:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["a2", init]
+// CIR: %[[A1:.*]] = cir.alloca "a1" {{.*}} init !rec_s6 -> !cir.ptr<!rec_s6>
+// CIR: %[[A2:.*]] = cir.alloca "a2" {{.*}} init !rec_s6 -> !cir.ptr<!rec_s6>
 // CIR: %[[EXC:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
 // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR: cir.store{{.*}} %[[ZERO]], %[[EXC]] : !s32i, !cir.ptr<!s32i>
@@ -451,8 +451,8 @@ const int test_agg_cond_const_false_throw_false(struct s6 a1, struct s6 a2) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z37test_agg_cond_const_false_throw_false2s6S_(
-// CIR: %[[A1:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["a1", init]
-// CIR: %[[A2:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["a2", init]
+// CIR: %[[A1:.*]] = cir.alloca "a1" {{.*}} init !rec_s6 -> !cir.ptr<!rec_s6>
+// CIR: %[[A2:.*]] = cir.alloca "a2" {{.*}} init !rec_s6 -> !cir.ptr<!rec_s6>
 // CIR: %[[EXC:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
 // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR: cir.store{{.*}} %[[ZERO]], %[[EXC]] : !s32i, !cir.ptr<!s32i>
@@ -491,8 +491,8 @@ const int test_agg_cond_const_false_throw_true(struct s6 a1, struct s6 a2) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z36test_agg_cond_const_false_throw_true2s6S_(
-// CIR: %[[A1:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["a1", init]
-// CIR: %[[A2:.*]] = cir.alloca !rec_s6, !cir.ptr<!rec_s6>, ["a2", init]
+// CIR: %[[A1:.*]] = cir.alloca "a1" {{.*}} init !rec_s6 -> !cir.ptr<!rec_s6>
+// CIR: %[[A2:.*]] = cir.alloca "a2" {{.*}} init !rec_s6 -> !cir.ptr<!rec_s6>
 // CIR-NOT: cir.ternary
 // CIR-NOT: cir.throw
 // CIR: %[[F0:.*]] = cir.get_member %[[A1]][0] {name = "f0"} : !cir.ptr<!rec_s6> -> !cir.ptr<!s32i>

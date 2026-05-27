@@ -261,13 +261,13 @@ struct Struct {
 
   void MemFunc1(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *ArgHSEPtr) {
     // CHECK: cir.func {{.*}}MemFunc1{{.*}}(%{{.*}}: !cir.ptr<!rec_Struct>{{.*}}, %[[ARG_HSE:.*]]: !rec_HasSideEffects{{.*}}, %[[ARG_INT:.*]]: !s32i {{.*}}, %[[ARG_HSE_PTR:.*]]: !cir.ptr<!rec_HasSideEffects>{{.*}})
-    // CHECK-NEXT: cir.alloca{{.*}}["this"
-    // CHECK-NEXT: %[[ARG_HSE_ALLOCA:.*]] = cir.alloca !rec_HasSideEffects{{.*}}["ArgHSE"
-    // CHECK-NEXT: %[[ARG_INT_ALLOCA:.*]] = cir.alloca !s32i{{.*}}["ArgInt
-    // CHECK-NEXT: %[[ARG_HSE_PTR_ALLOCA:.*]] = cir.alloca !cir.ptr<!rec_HasSideEffects>{{.*}}["ArgHSEPtr"
-    // CHECK-NEXT: %[[LOC_HSE_ALLOCA:.*]] = cir.alloca !rec_HasSideEffects{{.*}}["LocalHSE
-    // CHECK-NEXT: %[[LOC_HSE_ARR_ALLOCA:.*]] = cir.alloca !cir.array<!rec_HasSideEffects x 5>{{.*}}["LocalHSEArr
-    // CHECK-NEXT: %[[LOC_INT_ALLOCA:.*]] = cir.alloca !s32i{{.*}}["LocalInt
+    // CHECK-NEXT: cir.alloca{{.*}}"this"
+    // CHECK-NEXT: %[[ARG_HSE_ALLOCA:.*]] = cir.alloca "ArgHSE" {{.*}} !rec_HasSideEffects
+    // CHECK-NEXT: %[[ARG_INT_ALLOCA:.*]] = cir.alloca "ArgInt" {{.*}} !s32i
+    // CHECK-NEXT: %[[ARG_HSE_PTR_ALLOCA:.*]] = cir.alloca "ArgHSEPtr" {{.*}} !cir.ptr<!rec_HasSideEffects>
+    // CHECK-NEXT: %[[LOC_HSE_ALLOCA:.*]] = cir.alloca "LocalHSE" {{.*}} !rec_HasSideEffects
+    // CHECK-NEXT: %[[LOC_HSE_ARR_ALLOCA:.*]] = cir.alloca "LocalHSEArr" {{.*}} !cir.array<!rec_HasSideEffects x 5>
+    // CHECK-NEXT: %[[LOC_INT_ALLOCA:.*]] = cir.alloca "LocalInt" {{.*}} !s32i
     // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.store
@@ -325,13 +325,13 @@ void use() {
 
 void Struct::MemFunc2(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *ArgHSEPtr) {
     // CHECK: cir.func {{.*}}MemFunc2{{.*}}(%{{.*}}: !cir.ptr<!rec_Struct>{{.*}}, %[[ARG_HSE:.*]]: !rec_HasSideEffects{{.*}}, %[[ARG_INT:.*]]: !s32i {{.*}}, %[[ARG_HSE_PTR:.*]]: !cir.ptr<!rec_HasSideEffects>{{.*}})
-    // CHECK-NEXT: cir.alloca{{.*}}["this"
-    // CHECK-NEXT: %[[ARG_HSE_ALLOCA:.*]] = cir.alloca !rec_HasSideEffects{{.*}}["ArgHSE"
-    // CHECK-NEXT: %[[ARG_INT_ALLOCA:.*]] = cir.alloca !s32i{{.*}}["ArgInt
-    // CHECK-NEXT: %[[ARG_HSE_PTR_ALLOCA:.*]] = cir.alloca !cir.ptr<!rec_HasSideEffects>{{.*}}["ArgHSEPtr"
-    // CHECK-NEXT: %[[LOC_HSE_ALLOCA:.*]] = cir.alloca !rec_HasSideEffects{{.*}}["LocalHSE
-    // CHECK-NEXT: %[[LOC_HSE_ARR_ALLOCA:.*]] = cir.alloca !cir.array<!rec_HasSideEffects x 5>{{.*}}["LocalHSEArr
-    // CHECK-NEXT: %[[LOC_INT_ALLOCA:.*]] = cir.alloca !s32i{{.*}}["LocalInt
+    // CHECK-NEXT: cir.alloca{{.*}}"this"
+    // CHECK-NEXT: %[[ARG_HSE_ALLOCA:.*]] = cir.alloca "ArgHSE" {{.*}} !rec_HasSideEffects
+    // CHECK-NEXT: %[[ARG_INT_ALLOCA:.*]] = cir.alloca "ArgInt" {{.*}} !s32i
+    // CHECK-NEXT: %[[ARG_HSE_PTR_ALLOCA:.*]] = cir.alloca "ArgHSEPtr" {{.*}} !cir.ptr<!rec_HasSideEffects>
+    // CHECK-NEXT: %[[LOC_HSE_ALLOCA:.*]] = cir.alloca "LocalHSE" {{.*}} !rec_HasSideEffects
+    // CHECK-NEXT: %[[LOC_HSE_ARR_ALLOCA:.*]] = cir.alloca "LocalHSEArr" {{.*}} !cir.array<!rec_HasSideEffects x 5>
+    // CHECK-NEXT: %[[LOC_INT_ALLOCA:.*]] = cir.alloca "LocalInt" {{.*}} !s32i
     // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.store
@@ -396,12 +396,12 @@ extern "C" void do_thing();
 
 extern "C" void NormalFunc(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *ArgHSEPtr) {
     // CHECK: cir.func {{.*}}NormalFunc(%[[ARG_HSE:.*]]: !rec_HasSideEffects{{.*}}, %[[ARG_INT:.*]]: !s32i {{.*}}, %[[ARG_HSE_PTR:.*]]: !cir.ptr<!rec_HasSideEffects>{{.*}})
-    // CHECK-NEXT: %[[ARG_HSE_ALLOCA:.*]] = cir.alloca !rec_HasSideEffects{{.*}}["ArgHSE"
-    // CHECK-NEXT: %[[ARG_INT_ALLOCA:.*]] = cir.alloca !s32i{{.*}}["ArgInt
-    // CHECK-NEXT: %[[ARG_HSE_PTR_ALLOCA:.*]] = cir.alloca !cir.ptr<!rec_HasSideEffects>{{.*}}["ArgHSEPtr"
-    // CHECK-NEXT: %[[LOC_HSE_ALLOCA:.*]] = cir.alloca !rec_HasSideEffects{{.*}}["LocalHSE
-    // CHECK-NEXT: %[[LOC_HSE_ARR_ALLOCA:.*]] = cir.alloca !cir.array<!rec_HasSideEffects x 5>{{.*}}["LocalHSEArr
-    // CHECK-NEXT: %[[LOC_INT_ALLOCA:.*]] = cir.alloca !s32i{{.*}}["LocalInt
+// CHECK-NEXT: %[[ARG_HSE_ALLOCA:.*]] = cir.alloca "ArgHSE" {{.*}} !rec_HasSideEffects
+    // CHECK-NEXT: %[[ARG_INT_ALLOCA:.*]] = cir.alloca "ArgInt" {{.*}} !s32i
+    // CHECK-NEXT: %[[ARG_HSE_PTR_ALLOCA:.*]] = cir.alloca "ArgHSEPtr" {{.*}} !cir.ptr<!rec_HasSideEffects>
+    // CHECK-NEXT: %[[LOC_HSE_ALLOCA:.*]] = cir.alloca "LocalHSE" {{.*}} !rec_HasSideEffects
+    // CHECK-NEXT: %[[LOC_HSE_ARR_ALLOCA:.*]] = cir.alloca "LocalHSEArr" {{.*}} !cir.array<!rec_HasSideEffects x 5>
+    // CHECK-NEXT: %[[LOC_INT_ALLOCA:.*]] = cir.alloca "LocalInt" {{.*}} !s32i
     // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.store

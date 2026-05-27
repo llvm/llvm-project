@@ -95,7 +95,7 @@ int load_field(S* s) {
 }
 
 // CIR: cir.func {{.*@load_field}}
-// CIR:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["s", init]
+// CIR:   [[TMP0:%.*]] = cir.alloca "s" {{.*}} init !cir.ptr<!rec_S> -> !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:   [[TMP1:%.*]] = cir.load{{.*}} [[TMP0]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
 // CIR:   [[TMP2:%.*]] = cir.get_member [[TMP1]][0] {name = "c"} : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
 // CIR:   [[TMP3:%.*]] = cir.get_bitfield align(4) (#bfi_c, [[TMP2]] : !cir.ptr<!u64i>) -> !s32i
@@ -123,7 +123,7 @@ unsigned int load_field_unsigned(A* s) {
 }
 
 //CIR: cir.func {{.*}} @load_field_unsigned
-//CIR:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>, ["s", init] {alignment = 8 : i64}
+//CIR:   [[TMP0:%.*]] = cir.alloca "s" align(8) init !cir.ptr<!rec_A> -> !cir.ptr<!cir.ptr<!rec_A>>
 //CIR:   [[TMP1:%.*]] = cir.load align(8) [[TMP0]] : !cir.ptr<!cir.ptr<!rec_A>>, !cir.ptr<!rec_A>
 //CIR:   [[TMP2:%.*]] = cir.get_member [[TMP1]][3] {name = "more_bits"} : !cir.ptr<!rec_A> -> !cir.ptr<!u16i>
 //CIR:   [[TMP3:%.*]] = cir.get_bitfield align(1) (#bfi_more_bits, [[TMP2]] : !cir.ptr<!u16i>) -> !u32i
@@ -151,7 +151,7 @@ void store_field() {
   s.e = 3;
 }
 // CIR: cir.func {{.*@store_field}}
-// CIR:   [[TMP0:%.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>
+// CIR:   [[TMP0:%.*]] = cir.alloca {{.*}} !rec_S -> !cir.ptr<!rec_S>
 // CIR:   [[TMP1:%.*]] = cir.const #cir.int<3> : !s32i
 // CIR:   [[TMP2:%.*]] = cir.get_member [[TMP0]][1] {name = "e"} : !cir.ptr<!rec_S> -> !cir.ptr<!u16i>
 // CIR:   cir.set_bitfield align(4) (#bfi_e, [[TMP2]] : !cir.ptr<!u16i>, [[TMP1]] : !s32i)
@@ -178,7 +178,7 @@ void store_bitfield_to_bitfield() {
 }
 
 // CIR: cir.func {{.*@store_bitfield_to_bitfield}}
-// CIR:   [[TMP0:%.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s"] {alignment = 4 : i64}
+// CIR:   [[TMP0:%.*]] = cir.alloca "s" align(4) !rec_S -> !cir.ptr<!rec_S>
 // CIR:   [[TMP1:%.*]] = cir.get_member [[TMP0]][0] {name = "c"} : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
 // CIR:   [[TMP2:%.*]] = cir.get_bitfield align(4) (#bfi_c, [[TMP1]] : !cir.ptr<!u64i>) -> !s32i
 // CIR:   [[TMP3:%.*]] = cir.get_member [[TMP0]][0] {name = "a"} : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
@@ -229,7 +229,7 @@ void get_volatile(V* v) {
 }
 
 // CIR: cir.func {{.*}} @get_volatile
-// CIR:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!rec_V>, !cir.ptr<!cir.ptr<!rec_V>>, ["v", init] {alignment = 8 : i64}
+// CIR:   [[TMP0:%.*]] = cir.alloca "v" align(8) init !cir.ptr<!rec_V> -> !cir.ptr<!cir.ptr<!rec_V>>
 // CIR:   [[TMP1:%.*]] = cir.const #cir.int<3> : !s32i
 // CIR:   [[TMP2:%.*]] = cir.load align(8) [[TMP0]] : !cir.ptr<!cir.ptr<!rec_V>>, !cir.ptr<!rec_V>
 // CIR:   [[TMP3:%.*]] = cir.get_member [[TMP2]][0] {name = "b"} : !cir.ptr<!rec_V> -> !cir.ptr<!u64i>
@@ -256,7 +256,7 @@ void set_volatile(V* v) {
   v->b = 3;
 }
 //CIR: cir.func {{.*}} @set_volatile
-//CIR:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!rec_V>, !cir.ptr<!cir.ptr<!rec_V>>, ["v", init] {alignment = 8 : i64}
+//CIR:   [[TMP0:%.*]] = cir.alloca "v" align(8) init !cir.ptr<!rec_V> -> !cir.ptr<!cir.ptr<!rec_V>>
 //CIR:   [[TMP1:%.*]] = cir.const #cir.int<3> : !s32i
 //CIR:   [[TMP2:%.*]] = cir.load align(8) [[TMP0]] : !cir.ptr<!cir.ptr<!rec_V>>, !cir.ptr<!rec_V>
 //CIR:   [[TMP3:%.*]] = cir.get_member [[TMP2]][0] {name = "b"} : !cir.ptr<!rec_V> -> !cir.ptr<!u64i>
@@ -284,7 +284,7 @@ void unOp(S* s) {
 }
 
 // CIR: cir.func {{.*@unOp}}
-// CIR:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["s", init] {alignment = 8 : i64}
+// CIR:   [[TMP0:%.*]] = cir.alloca "s" align(8) init !cir.ptr<!rec_S> -> !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:   [[TMP1:%.*]] = cir.load align(8) [[TMP0]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
 // CIR:   [[TMP2:%.*]] = cir.get_member [[TMP1]][0] {name = "d"} : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
 // CIR:   [[TMP3:%.*]] = cir.get_bitfield align(4) (#bfi_d, [[TMP2]] : !cir.ptr<!u64i>) -> !s32i

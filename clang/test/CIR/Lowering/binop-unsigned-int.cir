@@ -4,9 +4,9 @@
 
 module {
   cir.func @foo() {
-    %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init] {alignment = 4 : i64}
-    %1 = cir.alloca !u32i, !cir.ptr<!u32i>, ["b", init] {alignment = 4 : i64}
-    %2 = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init] {alignment = 4 : i64}
+    %0 = cir.alloca "a" align(4) init !u32i -> !cir.ptr<!u32i>
+    %1 = cir.alloca "b" align(4) init !u32i -> !cir.ptr<!u32i>
+    %2 = cir.alloca "x" align(4) init !u32i -> !cir.ptr<!u32i>
     %3 = cir.const #cir.int<2> : !u32i    cir.store %3, %0 : !u32i, !cir.ptr<!u32i>
     %4 = cir.const #cir.int<1> : !u32i    cir.store %4, %1 : !u32i, !cir.ptr<!u32i>
     %5 = cir.load %0 : !cir.ptr<!u32i>, !u32i

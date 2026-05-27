@@ -24,7 +24,7 @@ struct foo test0(int expr) {
 }
 
 // CIR: cir.func {{.*}} @test0(%[[ARG0:.*]]: !s32i {{.*}}) -> !rec_foo
-// CIR:   %[[EXPR_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["expr", init]
+// CIR:   %[[EXPR_ADDR:.*]] = cir.alloca "expr" {{.*}} init !s32i -> !cir.ptr<!s32i>
 // CIR:   cir.store %[[ARG0]], %[[EXPR_ADDR]]
 // CIR:   %[[EXPR:.*]] = cir.load{{.*}} %[[EXPR_ADDR]]
 // CIR:   %[[IS_CONSTANT:.*]] = cir.is_constant %[[EXPR]] : !s32i -> !cir.bool
@@ -48,7 +48,7 @@ int test1(void) {
 }
 
 // CIR: cir.func {{.*}} @test1() -> !s32i
-// CIR:   %[[TMP1:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR:   %[[TMP1:.*]] = cir.alloca "__retval" {{.*}} !s32i -> !cir.ptr<!s32i>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:   cir.store %[[ZERO]], %[[TMP1]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[TMP2:.*]] = cir.load %[[TMP1]] : !cir.ptr<!s32i>, !s32i
@@ -72,7 +72,7 @@ int test2(void) {
 }
 
 // CIR: cir.func {{.*}} @test2() -> !s32i
-// CIR:   %[[TMP1:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR:   %[[TMP1:.*]] = cir.alloca "__retval" {{.*}} !s32i -> !cir.ptr<!s32i>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:   cir.store %[[ZERO]], %[[TMP1]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[TMP2:.*]] = cir.load %[[TMP1]] : !cir.ptr<!s32i>, !s32i
@@ -94,7 +94,7 @@ int test3(void) {
 }
 
 // CIR: cir.func {{.*}} @test3() -> !s32i
-// CIR:   %[[TMP1:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR:   %[[TMP1:.*]] = cir.alloca "__retval" {{.*}} !s32i -> !cir.ptr<!s32i>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:   cir.store %[[ZERO]], %[[TMP1]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[TMP2:.*]] = cir.load %[[TMP1]] : !cir.ptr<!s32i>, !s32i
@@ -118,7 +118,7 @@ int test4(void) {
 }
 
 // CIR: cir.func {{.*}} @test4() -> !s32i
-// CIR:   %[[TMP1:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR:   %[[TMP1:.*]] = cir.alloca "__retval" {{.*}} !s32i -> !cir.ptr<!s32i>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:   cir.store %[[ZERO]], %[[TMP1]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[TMP2:.*]] = cir.load %[[TMP1]] : !cir.ptr<!s32i>, !s32i
@@ -142,7 +142,7 @@ int test5(void) {
 }
 
 // CIR: cir.func {{.*}} @test5() -> !s32i
-// CIR:   %[[TMP1:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR:   %[[TMP1:.*]] = cir.alloca "__retval" {{.*}} !s32i -> !cir.ptr<!s32i>
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR:   cir.store %[[ONE]], %[[TMP1]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[TMP2:.*]] = cir.load %[[TMP1]] : !cir.ptr<!s32i>, !s32i
@@ -187,7 +187,7 @@ int test7(void) {
 }
 
 // CIR: cir.func {{.*}} @test7() -> !s32i
-// CIR:   %[[TMP1:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR:   %[[TMP1:.*]] = cir.alloca "__retval" {{.*}} !s32i -> !cir.ptr<!s32i>
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR:   cir.store %[[ONE]], %[[TMP1]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[TMP2:.*]] = cir.load %[[TMP1]] : !cir.ptr<!s32i>, !s32i
@@ -207,7 +207,7 @@ int test8(void) {
 }
 
 // CIR: cir.func {{.*}} @test8() -> !s32i
-// CIR:   %[[TMP1:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR:   %[[TMP1:.*]] = cir.alloca "__retval" {{.*}} !s32i -> !cir.ptr<!s32i>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:   cir.store %[[ZERO]], %[[TMP1]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[TMP2:.*]] = cir.load %[[TMP1]] : !cir.ptr<!s32i>, !s32i
@@ -229,7 +229,7 @@ int test9(void) {
 }
 
 // CIR: cir.func {{.*}} @test9() -> !s32i
-// CIR:   %[[TMP1:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR:   %[[TMP1:.*]] = cir.alloca "__retval" {{.*}} !s32i -> !cir.ptr<!s32i>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:   cir.store %[[ZERO]], %[[TMP1]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[TMP2:.*]] = cir.load %[[TMP1]] : !cir.ptr<!s32i>, !s32i
@@ -249,7 +249,7 @@ int test10(void) {
 }
 
 // CIR: cir.func {{.*}} @test10() -> !s32i
-// CIR:   %[[TMP1:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR:   %[[TMP1:.*]] = cir.alloca "__retval" {{.*}} !s32i -> !cir.ptr<!s32i>
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR:   cir.store %[[ONE]], %[[TMP1]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[TMP2:.*]] = cir.load %[[TMP1]] : !cir.ptr<!s32i>, !s32i

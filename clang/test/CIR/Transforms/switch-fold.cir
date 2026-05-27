@@ -5,7 +5,7 @@
 
 module {
     cir.func @foldCascade(%arg0: !s32i) {
-    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+    %0 = cir.alloca "a" align(4) init !s32i -> !cir.ptr<!s32i>
     cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
     cir.scope {
       %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
@@ -37,7 +37,7 @@ module {
   //CHECK-NEXT:   }
 
     cir.func @foldCascade2(%arg0: !s32i) {
-    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+    %0 = cir.alloca "a" align(4) init !s32i -> !cir.ptr<!s32i>
     cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
     cir.scope {
       %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
@@ -76,10 +76,10 @@ module {
   //CHECK:     cir.yield
   //CHECK:   }
   cir.func @foldCascade3(%arg0: !s32i ) {
-    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+    %0 = cir.alloca "a" align(4) init !s32i -> !cir.ptr<!s32i>
     cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
     cir.scope {
-      %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x"] {alignment = 4 : i64}
+      %1 = cir.alloca "x" align(4) !s32i -> !cir.ptr<!s32i>
       %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
       cir.switch (%2 : !s32i) {
         cir.case(equal, [#cir.int<0> : !s32i]) {
@@ -113,7 +113,7 @@ module {
   //CHECK:    cir.yield
   //CHECK:   }
   cir.func @foldCascadeWithDefault(%arg0: !s32i ) {
-    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+    %0 = cir.alloca "a" align(4) init !s32i -> !cir.ptr<!s32i>
     cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
     cir.scope {
       %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
@@ -158,7 +158,7 @@ module {
   //CHECK:      cir.yield
   //CHECK:   }
   cir.func @foldAllCascade(%arg0: !s32i ) {
-    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+    %0 = cir.alloca "a" align(4) init !s32i -> !cir.ptr<!s32i>
     cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
     cir.scope {
       %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i

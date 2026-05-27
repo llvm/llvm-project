@@ -8,7 +8,7 @@
 
 module {
   cir.func @test_unary_unsigned() {
-    %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a"] {alignment = 4 : i64}
+    %0 = cir.alloca "a" align(4) !u32i -> !cir.ptr<!u32i>
     %1 = cir.load %0 : !cir.ptr<!u32i>, !u32i
     %2 = cir.minus %1 : !u32i
     %3 = cir.not %1 : !u32i
@@ -17,7 +17,7 @@ module {
     cir.return
   }
 // CHECK: cir.func{{.*}} @test_unary_unsigned() {
-// CHECK:   %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a"] {alignment = 4 : i64}
+// CHECK:   %0 = cir.alloca "a" align(4) !u32i -> !cir.ptr<!u32i>
 // CHECK:   %1 = cir.load %0 : !cir.ptr<!u32i>, !u32i
 // CHECK:   %2 = cir.minus %1 : !u32i
 // CHECK:   %3 = cir.not %1 : !u32i
@@ -27,7 +27,7 @@ module {
 // CHECK: }
 
   cir.func @test_unary_signed() {
-    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"] {alignment = 4 : i64}
+    %0 = cir.alloca "a" align(4) !s32i -> !cir.ptr<!s32i>
     %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
     %2 = cir.minus nsw %1 : !s32i
     %3 = cir.not %1 : !s32i
@@ -36,7 +36,7 @@ module {
     cir.return
   }
 // CHECK: cir.func{{.*}} @test_unary_signed() {
-// CHECK:   %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"] {alignment = 4 : i64}
+// CHECK:   %0 = cir.alloca "a" align(4) !s32i -> !cir.ptr<!s32i>
 // CHECK:   %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
 // CHECK:   %2 = cir.minus nsw %1 : !s32i
 // CHECK:   %3 = cir.not %1 : !s32i

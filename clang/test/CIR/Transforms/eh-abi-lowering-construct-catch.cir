@@ -56,7 +56,7 @@ cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS1E(
 }
 
 cir.func @test_basic_construct_catch() {
-  %0 = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+  %0 = cir.alloca "e" align(1) !rec_E -> !cir.ptr<!rec_E>
   cir.try_call @_Z8mayThrowv() ^bb1, ^bb2 : () -> ()
 ^bb1:
   cir.br ^bb7
@@ -131,7 +131,7 @@ cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS1E_shared(
 }
 
 cir.func @test_shared_thunk_caller_a() {
-  %0 = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+  %0 = cir.alloca "e" align(1) !rec_E -> !cir.ptr<!rec_E>
   cir.try_call @_Z8mayThrowv() ^bb1, ^bb2 : () -> ()
 ^bb1:
   cir.br ^bb7
@@ -158,7 +158,7 @@ cir.func @test_shared_thunk_caller_a() {
 }
 
 cir.func @test_shared_thunk_caller_b() {
-  %0 = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+  %0 = cir.alloca "e" align(1) !rec_E -> !cir.ptr<!rec_E>
   cir.try_call @_Z8mayThrowv() ^bb1, ^bb2 : () -> ()
 ^bb1:
   cir.br ^bb7

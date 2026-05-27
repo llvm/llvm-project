@@ -13,8 +13,8 @@ A *a() {
 }
 
 // CIR: cir.func {{.*}} @_Z1av() -> !cir.ptr<!rec_A>{{.*}} {
-// CIR:   %[[RETVAL:.*]] = cir.alloca !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>, ["__retval"]
-// CIR:   %[[NEW_RESULT:.*]] = cir.alloca !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>, ["__new_result"]
+// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} !cir.ptr<!rec_A> -> !cir.ptr<!cir.ptr<!rec_A>>
+// CIR:   %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} !cir.ptr<!rec_A> -> !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:   %[[ALLOC_SIZE:.*]] = cir.const #cir.int<8> : !u64i
 // CIR:   %[[PTR:.*]] = cir.call @_Znwm(%[[ALLOC_SIZE]]) {{{.*}}builtin}
 // CIR:   cir.cleanup.scope {
@@ -88,8 +88,8 @@ A *b() {
 }
 
 // CIR: cir.func {{.*}} @_Z1bv() -> !cir.ptr<!rec_A>{{.*}} {
-// CIR:   %[[RETVAL:.*]] = cir.alloca !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>, ["__retval"]
-// CIR:   %[[NEW_RESULT:.*]] = cir.alloca !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>, ["__new_result"]
+// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} !cir.ptr<!rec_A> -> !cir.ptr<!cir.ptr<!rec_A>>
+// CIR:   %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} !cir.ptr<!rec_A> -> !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:   %[[ALLOC_SIZE:.*]] = cir.const #cir.int<8> : !u64i
 // CIR:   %[[PTR:.*]] = cir.call @_Znwm(%[[ALLOC_SIZE]]) {{{.*}}builtin}
 // CIR:   cir.cleanup.scope {
@@ -178,8 +178,8 @@ B *c() {
 }
 
 // CIR: cir.func {{.*}} @_Z1cv() -> !cir.ptr<!rec_B>{{.*}} {
-// CIR:   %[[RETVAL:.*]] = cir.alloca !cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!rec_B>>, ["__retval"]
-// CIR:   %[[NEW_RESULT:.*]] = cir.alloca !cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!rec_B>>, ["__new_result"]
+// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} !cir.ptr<!rec_B> -> !cir.ptr<!cir.ptr<!rec_B>>
+// CIR:   %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} !cir.ptr<!rec_B> -> !cir.ptr<!cir.ptr<!rec_B>>
 // CIR:   %[[ALLOC_SIZE:.*]] = cir.const #cir.int<4> : !u64i
 // CIR:   %[[PTR:.*]] = cir.call @_ZN1BnwEm(%[[ALLOC_SIZE]]) : (!u64i) -> !cir.ptr<!void>
 // CIR:   cir.cleanup.scope {
@@ -257,13 +257,13 @@ C *test_new_delete_conditional(bool cond) {
 }
 
 // CIR-LABEL: @_Z27test_new_delete_conditionalb
-// CIR:   %[[CLEANUP_COND:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
+// CIR:   %[[CLEANUP_COND:.*]] = cir.alloca "cleanup.cond" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
 // CIR:   %[[FALSE:.*]] = cir.const #false
 // CIR:   cir.store %[[FALSE]], %[[CLEANUP_COND]]
 // CIR:   %[[TERN_RESULT:.*]] = cir.ternary
-// CIR:     %[[PTR_SAVE:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["cond-cleanup.save"]
-// CIR:     %[[SIZE_SAVE:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["cond-cleanup.save"]
-// CIR:     %[[NEW_RESULT:.*]] = cir.alloca !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>, ["__new_result"]
+// CIR:     %[[PTR_SAVE:.*]] = cir.alloca "cond-cleanup.save" {{.*}} !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!void>>
+// CIR:     %[[SIZE_SAVE:.*]] = cir.alloca "cond-cleanup.save" {{.*}} !u64i -> !cir.ptr<!u64i>
+// CIR:     %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} !cir.ptr<!rec_C> -> !cir.ptr<!cir.ptr<!rec_C>>
 // CIR:     %[[ALLOC_SIZE:.*]] = cir.const #cir.int<1> : !u64i
 // CIR:     %[[NEW_PTR:.*]] = cir.call @_Znwm(%[[ALLOC_SIZE]])
 // CIR:     cir.store {{.*}}%[[NEW_PTR]], %[[PTR_SAVE]]
@@ -336,12 +336,12 @@ C *test_new_delete_conditional_with_placement(bool cond, int tag) {
 }
 
 // CIR-LABEL: @_Z42test_new_delete_conditional_with_placementbi
-// CIR:   %[[CLEANUP_COND:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
+// CIR:   %[[CLEANUP_COND:.*]] = cir.alloca "cleanup.cond" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
 // CIR:   %[[TERN_RESULT:.*]] = cir.ternary
-// CIR:     %[[PTR_SAVE:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["cond-cleanup.save"]
-// CIR:     %[[SIZE_SAVE:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["cond-cleanup.save"]
-// CIR:     %[[TAG_SAVE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond-cleanup.save"]
-// CIR:     %[[NEW_RESULT:.*]] = cir.alloca !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>, ["__new_result"]
+// CIR:     %[[PTR_SAVE:.*]] = cir.alloca "cond-cleanup.save" {{.*}} !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!void>>
+// CIR:     %[[SIZE_SAVE:.*]] = cir.alloca "cond-cleanup.save" {{.*}} !u64i -> !cir.ptr<!u64i>
+// CIR:     %[[TAG_SAVE:.*]] = cir.alloca "cond-cleanup.save" {{.*}} !s32i -> !cir.ptr<!s32i>
+// CIR:     %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} !cir.ptr<!rec_C> -> !cir.ptr<!cir.ptr<!rec_C>>
 // CIR:     %[[ONE:.*]] = cir.const #cir.int<1> : !u64i
 // CIR:     %[[TAG_VAL:.*]] = cir.load{{.*}}
 // CIR:     %[[NEW_PTR:.*]] = cir.call @_Znwmi(%[[ONE]], %[[TAG_VAL]])
@@ -423,13 +423,13 @@ D *test_new_delete_conditional_with_size(bool cond) {
 }
 
 // CIR-LABEL: @_Z37test_new_delete_conditional_with_sizeb
-// CIR:   %[[CLEANUP_COND:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
+// CIR:   %[[CLEANUP_COND:.*]] = cir.alloca "cleanup.cond" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
 // CIR:   %[[FALSE:.*]] = cir.const #false
 // CIR:   cir.store %[[FALSE]], %[[CLEANUP_COND]]
 // CIR:   cir.ternary
-// CIR:     %[[PTR_SAVE:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["cond-cleanup.save"]
-// CIR:     %[[SIZE_SAVE:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["cond-cleanup.save"]
-// CIR:     %[[NEW_RESULT:.*]] = cir.alloca !cir.ptr<!rec_D>, !cir.ptr<!cir.ptr<!rec_D>>, ["__new_result"]
+// CIR:     %[[PTR_SAVE:.*]] = cir.alloca "cond-cleanup.save" {{.*}} !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!void>>
+// CIR:     %[[SIZE_SAVE:.*]] = cir.alloca "cond-cleanup.save" {{.*}} !u64i -> !cir.ptr<!u64i>
+// CIR:     %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} !cir.ptr<!rec_D> -> !cir.ptr<!cir.ptr<!rec_D>>
 // CIR:     %[[ALLOC_SIZE:.*]] = cir.const #cir.int<1> : !u64i
 // CIR:     %[[NEW_PTR:.*]] = cir.call @_Znwm(%[[ALLOC_SIZE]])
 // CIR:     cir.store {{.*}}%[[NEW_PTR]], %[[PTR_SAVE]]
@@ -498,13 +498,13 @@ D *test_new_delete_conditional_array(bool cond, int n) {
 }
 
 // CIR-LABEL: @_Z33test_new_delete_conditional_arraybi
-// CIR:   %[[CLEANUP_COND:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
+// CIR:   %[[CLEANUP_COND:.*]] = cir.alloca "cleanup.cond" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
 // CIR:   %[[FALSE:.*]] = cir.const #false
 // CIR:   cir.store %[[FALSE]], %[[CLEANUP_COND]]
 // CIR:   cir.ternary
-// CIR:     %[[PTR_SAVE:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["cond-cleanup.save"]
-// CIR:     %[[SIZE_SAVE:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["cond-cleanup.save"]
-// CIR:     %[[NEW_RESULT:.*]] = cir.alloca !cir.ptr<!rec_D>, !cir.ptr<!cir.ptr<!rec_D>>, ["__new_result"]
+// CIR:     %[[PTR_SAVE:.*]] = cir.alloca "cond-cleanup.save" {{.*}} !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!void>>
+// CIR:     %[[SIZE_SAVE:.*]] = cir.alloca "cond-cleanup.save" {{.*}} !u64i -> !cir.ptr<!u64i>
+// CIR:     %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} !cir.ptr<!rec_D> -> !cir.ptr<!cir.ptr<!rec_D>>
 // CIR:     %[[N:.*]] = cir.load {{.*}} : !cir.ptr<!s32i>, !s32i
 // CIR:     %[[N_EXT:.*]] = cir.cast integral %[[N]] : !s32i -> !s64i
 // CIR:     %result, %overflow = cir.add.overflow %{{.*}}, %{{.*}} : !u64i -> !u64i

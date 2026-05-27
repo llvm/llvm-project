@@ -15,7 +15,7 @@ void cxx_paren_list_init_expr() { CompleteS a(1, 'a'); }
 // CIR-DAG: cir.global "private" constant cir_private @[[PAREN_A:.*]] = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<97> : !s8i}> : !rec_CompleteS
 // LLVM-DAG: @[[PAREN_A:.*]] = private constant %struct.CompleteS { i32 1, i8 97 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init !rec_CompleteS -> !cir.ptr<!rec_CompleteS>
 // CIR: %[[CONST:.*]] = cir.get_global @[[PAREN_A]] : !cir.ptr<!rec_CompleteS>
 // CIR: cir.copy %[[CONST]] to %[[A_ADDR]]
 
@@ -40,7 +40,7 @@ void test_init_list_with_dtor() {
 }
 
 // CIR: cir.func {{.*}} @_Z24test_init_list_with_dtorv
-// CIR:   %[[O:.*]] = cir.alloca !rec_Outer, !cir.ptr<!rec_Outer>, ["o", init]
+// CIR:   %[[O:.*]] = cir.alloca "o" {{.*}} init !rec_Outer -> !cir.ptr<!rec_Outer>
 // CIR:   %[[H:.*]] = cir.get_member %[[O]][0] {name = "h"} : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_HasDtor>
 // CIR:   %[[VAL:.*]] = cir.get_member %[[H]][0] {name = "val"} : !cir.ptr<!rec_HasDtor> -> !cir.ptr<!s32i>
 // CIR:   %[[CONST:.*]] = cir.const #cir.int<1>

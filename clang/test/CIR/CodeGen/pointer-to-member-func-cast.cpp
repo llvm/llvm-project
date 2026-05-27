@@ -135,8 +135,8 @@ DerivedMemFunc base_to_derived_zero_offset(Base1MemFunc ptr) {
 // CIR-BEFORE:   %{{.*}} = cir.derived_method %[[PTR]][0] : !cir.method<!cir.func<(!cir.ptr<!rec_Base1>, !s32i)> in !rec_Base1> -> !cir.method<!cir.func<(!cir.ptr<!rec_Derived>, !s32i)> in !rec_Derived>
 
 // CIR-AFTER: cir.func {{.*}} @_Z27base_to_derived_zero_offsetM5Base1FviE
-// CIR-AFTER:   %[[PTR:.*]] = cir.alloca !rec_anon_struct, !cir.ptr<!rec_anon_struct>, ["ptr", init]
-// CIR-AFTER:   %[[RET:.*]] = cir.alloca !rec_anon_struct, !cir.ptr<!rec_anon_struct>, ["__retval"]
+// CIR-AFTER:   %[[PTR:.*]] = cir.alloca "ptr" {{.*}} init !rec_anon_struct -> !cir.ptr<!rec_anon_struct>
+// CIR-AFTER:   %[[RET:.*]] = cir.alloca "__retval" {{.*}} !rec_anon_struct -> !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   cir.store %{{.*}}, %[[PTR]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[TMP:.*]] = cir.load{{.*}} %[[PTR]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:   cir.store %[[TMP]], %[[RET]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
@@ -202,8 +202,8 @@ Base1MemFunc derived_to_base_zero_offset(DerivedMemFunc ptr) {
 // CIR-BEFORE:   %{{.*}} = cir.base_method %[[PTR]][0] : !cir.method<!cir.func<(!cir.ptr<!rec_Derived>, !s32i)> in !rec_Derived> -> !cir.method<!cir.func<(!cir.ptr<!rec_Base1>, !s32i)> in !rec_Base1>
 
 // CIR-AFTER: cir.func {{.*}} @_Z27derived_to_base_zero_offsetM7DerivedFviE
-// CIR-AFTER:   %[[PTR:.*]] = cir.alloca !rec_anon_struct, !cir.ptr<!rec_anon_struct>, ["ptr", init]
-// CIR-AFTER:   %[[RET:.*]] = cir.alloca !rec_anon_struct, !cir.ptr<!rec_anon_struct>, ["__retval"]
+// CIR-AFTER:   %[[PTR:.*]] = cir.alloca "ptr" {{.*}} init !rec_anon_struct -> !cir.ptr<!rec_anon_struct>
+// CIR-AFTER:   %[[RET:.*]] = cir.alloca "__retval" {{.*}} !rec_anon_struct -> !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   cir.store %{{.*}}, %[[PTR]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[TMP:.*]] = cir.load{{.*}} %[[PTR]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:   cir.store %[[TMP]], %[[RET]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>

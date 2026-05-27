@@ -8,7 +8,7 @@ void test_const_cast(const S &s) {
   const_cast<S&>(s).do_thing();
 }
 // CIR: cir.func {{.*}}@_Z15test_const_castRK1S(%[[ARG:.*]]: !cir.ptr<!rec_S>{{.*}}) {{.*}}{
-// CIR-NEXT:   %[[ARG_ALLOCA:.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["s", init, const]
+// CIR-NEXT:   %[[ARG_ALLOCA:.*]] = cir.alloca "s" {{.*}} init const !cir.ptr<!rec_S> -> !cir.ptr<!cir.ptr<!rec_S>>
 // CIR-NEXT:   cir.store %[[ARG]], %[[ARG_ALLOCA]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
 // CIR-NEXT:   %[[ARG_LOAD:.*]] = cir.load %[[ARG_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
 // CIR-NEXT:   cir.call @_ZN1S8do_thingEv(%[[ARG_LOAD]]) 
@@ -26,7 +26,7 @@ void test_reinterpet_cast(void *&data) {
   call_with_ri_cast(reinterpret_cast<int*&>(data));
 }
 // CIR: cir.func {{.*}}@_Z20test_reinterpet_castRPv(%[[ARG:.*]]: !cir.ptr<!cir.ptr<!void>>{{.*}}) {{.*}}{
-// CIR-NEXT:   %[[ARG_ALLOCA:.*]] = cir.alloca !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!cir.ptr<!cir.ptr<!void>>>, ["data", init, const]
+// CIR-NEXT:   %[[ARG_ALLOCA:.*]] = cir.alloca "data" {{.*}} init const !cir.ptr<!cir.ptr<!void>> -> !cir.ptr<!cir.ptr<!cir.ptr<!void>>>
 // CIR-NEXT:   cir.store %[[ARG]], %[[ARG_ALLOCA]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!cir.ptr<!cir.ptr<!void>>>
 // CIR-NEXT:   %[[ARG_LOAD:.*]] = cir.load %[[ARG_ALLOCA]] : !cir.ptr<!cir.ptr<!cir.ptr<!void>>>, !cir.ptr<!cir.ptr<!void>>
 // CIR-NEXT:   %[[RI_CAST:.*]] = cir.cast bitcast %[[ARG_LOAD]] : !cir.ptr<!cir.ptr<!void>> -> !cir.ptr<!cir.ptr<!rec_S>>

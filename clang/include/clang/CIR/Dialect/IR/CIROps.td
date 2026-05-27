@@ -653,9 +653,13 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
   }];
 
   let assemblyFormat = [{
-    $allocaType `,` qualified(type($addr)) `,`
+    $name
+    `align` `(` $alignment `)`
+    oilist( `init`              $init
+          | `const`             $constant
+          | `cleanup_dest_slot` $cleanup_dest_slot)
     ($dynAllocSize^ `:` type($dynAllocSize) `,`)?
-    `[` custom<AllocaFlags>($name, $init, $constant, $cleanup_dest_slot) `]`
+    $allocaType `->` qualified(type($addr))
     ($annotations^)? attr-dict
   }];
 

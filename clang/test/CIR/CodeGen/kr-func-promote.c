@@ -6,7 +6,7 @@
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
 // CIR: cir.func {{.*}}@foo(%arg0: !s32i
-// CIR:   %0 = cir.alloca !s16i, !cir.ptr<!s16i>, ["x", init]
+// CIR:   %0 = cir.alloca "x" {{.*}} init !s16i -> !cir.ptr<!s16i>
 // CIR:   %1 = cir.cast integral %arg0 : !s32i -> !s16i
 // CIR:   cir.store %1, %0 : !s16i, !cir.ptr<!s16i>
 // expected-warning@+1 {{a function definition without a prototype is deprecated}}
@@ -24,7 +24,7 @@ void foo(x) short x; {}
 // OGCG:   store i16 %[[X]], ptr %[[X_PTR]], align 2
 
 // CIR: cir.func{{.*}}no_proto dso_local @bar(%arg0: !cir.double
-// CIR:   %0 = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f", init]
+// CIR:   %0 = cir.alloca "f" {{.*}} init !cir.float -> !cir.ptr<!cir.float>
 // CIR:   %1 = cir.cast floating %arg0 : !cir.double -> !cir.float
 // CIR:   cir.store %1, %0 : !cir.float, !cir.ptr<!cir.float>
 // expected-warning@+1 {{a function definition without a prototype is deprecated}}

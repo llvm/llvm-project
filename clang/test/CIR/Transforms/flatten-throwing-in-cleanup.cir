@@ -8,7 +8,7 @@
 // Test that a throwing call in an EH cleanup region is replaced with
 // cir.try_call that unwinds to a terminate block.
 cir.func @test_throwing_dtor_in_eh_cleanup() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -55,7 +55,7 @@ cir.func @test_throwing_dtor_in_eh_cleanup() {
 // On the EH cleanup path, the call is replaced with try_call → terminate.
 // On the normal cleanup path, the call remains a regular cir.call.
 cir.func @test_throwing_dtor_in_all_cleanup() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -95,7 +95,7 @@ cir.func @test_throwing_dtor_in_all_cleanup() {
 
 // Test throwing call in EH cleanup within a try operation.
 cir.func @test_throwing_dtor_in_eh_cleanup_in_try() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.try {
     cir.cleanup.scope {
@@ -130,8 +130,8 @@ cir.func @test_throwing_dtor_in_eh_cleanup_in_try() {
 
 // Test multiple throwing calls in the cleanup region.
 cir.func @test_multiple_throwing_calls_in_cleanup() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
-  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  %0 = cir.alloca "c1" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "c2" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {

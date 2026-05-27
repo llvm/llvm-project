@@ -26,7 +26,7 @@ HasDtor::HasDtor(int) {}
 void force_default_ctor() { HasDtor x; }
 
 // CIR: cir.func {{.*}} @_ZN7HasDtorC1Ev(%[[ARG0:.*]]: !cir.ptr<!rec_HasDtor>
-// CIR:   %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<!rec_HasDtor>, !cir.ptr<!cir.ptr<!rec_HasDtor>>, ["this", init]
+// CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<!rec_HasDtor> -> !cir.ptr<!cir.ptr<!rec_HasDtor>>
 // CIR:   cir.store %[[ARG0]], %[[THIS_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_HasDtor>>, !cir.ptr<!rec_HasDtor>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i

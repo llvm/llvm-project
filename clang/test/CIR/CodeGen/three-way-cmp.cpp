@@ -106,13 +106,13 @@ struct HasMember {
 
 void use_pseudo_ordering(HasMember m1, HasMember m2) {
   // BOTH: cir.func {{.*}}@_ZNK9HasMemberssERKS_(%{{.*}}: !cir.ptr<!rec_HasMember>{{.*}}, %{{.*}}: !cir.ptr<!rec_HasMember>{{.*}}) -> !rec_std3A3A__13A3Astrong_ordering
-  // BOTH: %[[LHS_ALLOCA:.*]] = cir.alloca !cir.ptr<!rec_HasMember>, !cir.ptr<!cir.ptr<!rec_HasMember>>, ["this", init]
-  // BOTH: %[[RHS_ALLOCA:.*]] = cir.alloca !cir.ptr<!rec_HasMember>, !cir.ptr<!cir.ptr<!rec_HasMember>>, ["", init, const]
-  // BOTH: %[[RET_ALLOCA:.*]] = cir.alloca !rec_std3A3A__13A3Astrong_ordering, !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>, ["__retval"]
+  // BOTH: %[[LHS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<!rec_HasMember> -> !cir.ptr<!cir.ptr<!rec_HasMember>>
+  // BOTH: %[[RHS_ALLOCA:.*]] = cir.alloca "" {{.*}} init const !cir.ptr<!rec_HasMember> -> !cir.ptr<!cir.ptr<!rec_HasMember>>
+  // BOTH: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} !rec_std3A3A__13A3Astrong_ordering -> !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
   // BOTH: %[[LHS_LOAD:.*]] = cir.load deref %[[LHS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_HasMember>>, !cir.ptr<!rec_HasMember>
   // BOTH: cir.scope {
-  // BOTH:   %[[CMP_RES:.*]] = cir.alloca !rec_std3A3A__13A3Astrong_ordering, !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>, ["cmp", init]
-  // BOTH:   %[[CMP_TEMP:.*]] = cir.alloca !rec_std3A3A__13A3Astrong_ordering, !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>, ["agg.tmp0"]
+  // BOTH:   %[[CMP_RES:.*]] = cir.alloca "cmp" {{.*}} init !rec_std3A3A__13A3Astrong_ordering -> !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
+  // BOTH:   %[[CMP_TEMP:.*]] = cir.alloca "agg.tmp0" {{.*}} !rec_std3A3A__13A3Astrong_ordering -> !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
   // BOTH:   %[[LHS_MEMBER:.*]] = cir.cast bitcast %[[LHS_LOAD]] : !cir.ptr<!rec_HasMember> -> !cir.ptr<!rec_Member>
   // BOTH:   %[[RHS_LOAD:.*]] = cir.load %[[RHS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_HasMember>>, !cir.ptr<!rec_HasMember>
   // BOTH:   %[[RHS_MEMBER:.*]] = cir.cast bitcast %[[RHS_LOAD]] : !cir.ptr<!rec_HasMember> -> !cir.ptr<!rec_Member>
@@ -148,9 +148,9 @@ void use_pseudo_ordering(HasMember m1, HasMember m2) {
   // BOTH: cir.return %[[RET_LOAD]] : !rec_std3A3A__13A3Astrong_ordering
 
   // BOTH: cir.func {{.*}} @_Z19use_pseudo_ordering9HasMemberS_(%[[M1:.*]]: !rec_HasMember{{.*}}, %[[M2:.*]]: !rec_HasMember{{.*}})
-  // BOTH: %[[M1_ALLOCA:.*]] = cir.alloca !rec_HasMember, !cir.ptr<!rec_HasMember>, ["m1", init]
-  // BOTH: %[[M2_ALLOCA:.*]] = cir.alloca !rec_HasMember, !cir.ptr<!rec_HasMember>, ["m2", init] {alignment = 1 : i64}
-  // BOTH: %[[G_ALLOCA:.*]] = cir.alloca !rec_std3A3A__13A3Astrong_ordering, !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>, ["g", init]
+  // BOTH: %[[M1_ALLOCA:.*]] = cir.alloca "m1" {{.*}} init !rec_HasMember -> !cir.ptr<!rec_HasMember>
+  // BOTH: %[[M2_ALLOCA:.*]] = cir.alloca "m2" align(1) init !rec_HasMember -> !cir.ptr<!rec_HasMember>
+  // BOTH: %[[G_ALLOCA:.*]] = cir.alloca "g" {{.*}} init !rec_std3A3A__13A3Astrong_ordering -> !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
   // BOTH: %[[CALL_RES:.*]] = cir.call @_ZNK9HasMemberssERKS_(%[[M1_ALLOCA]], %[[M2_ALLOCA]]) : (!cir.ptr<!rec_HasMember> {{.*}}, !cir.ptr<!rec_HasMember> {{.*}}) -> !rec_std3A3A__13A3Astrong_ordering
   // BOTH: cir.store {{.*}}%[[CALL_RES]], %[[G_ALLOCA]] : !rec_std3A3A__13A3Astrong_ordering, !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
   std::strong_ordering g = (m1 <=> m2);

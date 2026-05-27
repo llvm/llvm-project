@@ -10,8 +10,8 @@ void complex_to_atomic_complex() {
   _Atomic _Complex int b = a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} !cir.complex<!s32i> -> !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init !cir.complex<!s32i> -> !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: cir.store {{.*}} %[[TMP_A]], %[[B_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 

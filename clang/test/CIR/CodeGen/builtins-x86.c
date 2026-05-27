@@ -213,8 +213,8 @@ v4i test_convertvector(v4f a) {
 void foo();
 void test_conditional_bzero(void) {
 // CIR-LABEL: test_conditional_bzero
-// CIR: %[[ARR:.*]] = cir.alloca !cir.array<!s8i x 20>
-// CIR: %[[SIZE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["len", init]
+// CIR: %[[ARR:.*]] = cir.alloca {{.*}} !cir.array<!s8i x 20>
+// CIR: %[[SIZE:.*]] = cir.alloca "len" {{.*}} init !s32i -> !cir.ptr<!s32i>
 // CIR: %[[ARR_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!s8i x 20>> -> !cir.ptr<!s8i>
 // CIR: %[[ARR_TO_VOID_PTR:.*]] = cir.cast bitcast %[[ARR_DECAY]] : !cir.ptr<!s8i> -> !cir.ptr<!void>
 // CIR: %[[SIZE_LOAD:.*]] = cir.load {{.*}}%[[SIZE]] : !cir.ptr<!s32i>, !s32i

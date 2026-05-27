@@ -34,8 +34,8 @@ void emit_simple_parallel() {
 void parallel_with_operations() {
   // CHECK: cir.func{{.*}}@parallel_with_operations
   int a, b;
-  // CHECK-NEXT: cir.alloca{{.*}}["a"]
-  // CHECK-NEXT: cir.alloca{{.*}}["b"]
+  // CHECK-NEXT: cir.alloca "a" {{.*}}
+  // CHECK-NEXT: cir.alloca "b" {{.*}}
   // TODO(OMP): At the moment this results in 3 NYI diagnostics, 1 each for the
   // clauses + 1 for the CapturedStmt. When those are implemented, the check
   // lines will need updating.

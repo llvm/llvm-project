@@ -22,7 +22,7 @@ struct HasDtor {
 
 // CHECK: acc.firstprivate.recipe @firstprivatization__ZTSi : !cir.ptr<!s32i> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!s32i> {{.*}}):
-// CHECK-NEXT: cir.alloca !s32i, !cir.ptr<!s32i>, ["openacc.firstprivate.init"]
+// CHECK-NEXT: cir.alloca "openacc.firstprivate.init" {{.*}} !s32i -> !cir.ptr<!s32i>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!s32i> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!s32i> {{.*}}):
@@ -33,7 +33,7 @@ struct HasDtor {
 //
 // CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__ZTSf : !cir.ptr<!cir.float> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.float> {{.*}}):
-// CHECK-NEXT: cir.alloca !cir.float, !cir.ptr<!cir.float>, ["openacc.firstprivate.init"]
+// CHECK-NEXT: cir.alloca "openacc.firstprivate.init" {{.*}} !cir.float -> !cir.ptr<!cir.float>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.float> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.float> {{.*}}):
@@ -44,7 +44,7 @@ struct HasDtor {
 //
 // CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__ZTS15NoCopyConstruct : !cir.ptr<!rec_NoCopyConstruct> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_NoCopyConstruct> {{.*}}):
-// CHECK-NEXT: cir.alloca !rec_NoCopyConstruct, !cir.ptr<!rec_NoCopyConstruct>, ["openacc.firstprivate.init"]
+// CHECK-NEXT: cir.alloca "openacc.firstprivate.init" {{.*}} !rec_NoCopyConstruct -> !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!rec_NoCopyConstruct> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!rec_NoCopyConstruct> {{.*}}):
@@ -54,7 +54,7 @@ struct HasDtor {
 //
 // CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__ZTS13CopyConstruct : !cir.ptr<!rec_CopyConstruct> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_CopyConstruct> {{.*}}):
-// CHECK-NEXT: cir.alloca !rec_CopyConstruct, !cir.ptr<!rec_CopyConstruct>, ["openacc.firstprivate.init"]
+// CHECK-NEXT: cir.alloca "openacc.firstprivate.init" {{.*}} !rec_CopyConstruct -> !cir.ptr<!rec_CopyConstruct>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!rec_CopyConstruct> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!rec_CopyConstruct> {{.*}}):
@@ -64,7 +64,7 @@ struct HasDtor {
 //
 // CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__ZTS14NonDefaultCtor : !cir.ptr<!rec_NonDefaultCtor> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}):
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_NonDefaultCtor, !cir.ptr<!rec_NonDefaultCtor>, ["openacc.firstprivate.init"]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.firstprivate.init" {{.*}} !rec_NonDefaultCtor -> !cir.ptr<!rec_NonDefaultCtor>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}):
@@ -74,7 +74,7 @@ struct HasDtor {
 //
 // CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__ZTS7HasDtor : !cir.ptr<!rec_HasDtor> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}):
-// CHECK-NEXT: cir.alloca !rec_HasDtor, !cir.ptr<!rec_HasDtor>, ["openacc.firstprivate.init"]
+// CHECK-NEXT: cir.alloca "openacc.firstprivate.init" {{.*}} !rec_HasDtor -> !cir.ptr<!rec_HasDtor>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}):
@@ -88,7 +88,7 @@ struct HasDtor {
 //
 // CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__Bcnt1__ZTSA5_i : !cir.ptr<!cir.array<!s32i x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
-// CHECK-NEXT: cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.firstprivate.init"]
+// CHECK-NEXT: cir.alloca "openacc.firstprivate.init" {{.*}} !cir.array<!s32i x 5> -> !cir.ptr<!cir.array<!s32i x 5>>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
@@ -97,7 +97,7 @@ struct HasDtor {
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) !u64i -> !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -124,7 +124,7 @@ struct HasDtor {
 //
 // CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__Bcnt1__ZTSA5_f : !cir.ptr<!cir.array<!cir.float x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
-// CHECK-NEXT: cir.alloca !cir.array<!cir.float x 5>, !cir.ptr<!cir.array<!cir.float x 5>>, ["openacc.firstprivate.init"]
+// CHECK-NEXT: cir.alloca "openacc.firstprivate.init" {{.*}} !cir.array<!cir.float x 5> -> !cir.ptr<!cir.array<!cir.float x 5>>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
@@ -133,7 +133,7 @@ struct HasDtor {
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) !u64i -> !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -160,7 +160,7 @@ struct HasDtor {
 //
 // CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__Bcnt1__ZTSA5_15NoCopyConstruct : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
-// CHECK-NEXT: cir.alloca !cir.array<!rec_NoCopyConstruct x 5>, !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>, ["openacc.firstprivate.init"]
+// CHECK-NEXT: cir.alloca "openacc.firstprivate.init" {{.*}} !cir.array<!rec_NoCopyConstruct x 5> -> !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
@@ -169,7 +169,7 @@ struct HasDtor {
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) !u64i -> !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -195,7 +195,7 @@ struct HasDtor {
 //
 // CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__Bcnt1__ZTSA5_13CopyConstruct : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
-// CHECK-NEXT: cir.alloca !cir.array<!rec_CopyConstruct x 5>, !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>, ["openacc.firstprivate.init"]
+// CHECK-NEXT: cir.alloca "openacc.firstprivate.init" {{.*}} !cir.array<!rec_CopyConstruct x 5> -> !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
@@ -204,7 +204,7 @@ struct HasDtor {
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) !u64i -> !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -230,7 +230,7 @@ struct HasDtor {
 //
 // CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__Bcnt1__ZTSA5_14NonDefaultCtor : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
-// CHECK-NEXT: cir.alloca !cir.array<!rec_NonDefaultCtor x 5>, !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>, ["openacc.firstprivate.init"]
+// CHECK-NEXT: cir.alloca "openacc.firstprivate.init" {{.*}} !cir.array<!rec_NonDefaultCtor x 5> -> !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
@@ -239,7 +239,7 @@ struct HasDtor {
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) !u64i -> !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -265,7 +265,7 @@ struct HasDtor {
 //
 // CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__Bcnt1__ZTSA5_7HasDtor : !cir.ptr<!cir.array<!rec_HasDtor x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasDtor x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
-// CHECK-NEXT: cir.alloca !cir.array<!rec_HasDtor x 5>, !cir.ptr<!cir.array<!rec_HasDtor x 5>>, ["openacc.firstprivate.init"]
+// CHECK-NEXT: cir.alloca "openacc.firstprivate.init" {{.*}} !cir.array<!rec_HasDtor x 5> -> !cir.ptr<!cir.array<!rec_HasDtor x 5>>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!rec_HasDtor x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_HasDtor x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
@@ -274,7 +274,7 @@ struct HasDtor {
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) !u64i -> !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -303,7 +303,7 @@ struct HasDtor {
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) !u64i -> !cir.ptr<!u64i>
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !u64i
 // CHECK-NEXT: %[[LAST_SUB_ONE:.*]] = cir.sub %[[UB_CAST]], %[[ONE]] : !u64i
 // CHECK-NEXT: cir.store %[[LAST_SUB_ONE]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
@@ -332,29 +332,29 @@ extern "C" void acc_compute() {
   // CHECK: cir.func{{.*}} @acc_compute()
 
   int someInt;
-  // CHECK-NEXT: %[[SOMEINT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["someInt"]
+  // CHECK-NEXT: %[[SOMEINT:.*]] = cir.alloca "someInt" {{.*}} !s32i -> !cir.ptr<!s32i>
   float someFloat;
-  // CHECK-NEXT: %[[SOMEFLOAT:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["someFloat"]
+  // CHECK-NEXT: %[[SOMEFLOAT:.*]] = cir.alloca "someFloat" {{.*}} !cir.float -> !cir.ptr<!cir.float>
   NoCopyConstruct noCopy;
-  // CHECK-NEXT: %[[NOCOPY:.*]] = cir.alloca !rec_NoCopyConstruct, !cir.ptr<!rec_NoCopyConstruct>, ["noCopy"]
+  // CHECK-NEXT: %[[NOCOPY:.*]] = cir.alloca "noCopy" {{.*}} !rec_NoCopyConstruct -> !cir.ptr<!rec_NoCopyConstruct>
   CopyConstruct hasCopy;
-  // CHECK-NEXT: %[[HASCOPY:.*]] = cir.alloca !rec_CopyConstruct, !cir.ptr<!rec_CopyConstruct>, ["hasCopy"]
+  // CHECK-NEXT: %[[HASCOPY:.*]] = cir.alloca "hasCopy" {{.*}} !rec_CopyConstruct -> !cir.ptr<!rec_CopyConstruct>
   NonDefaultCtor notDefCtor;
-  // CHECK-NEXT: %[[NOTDEFCTOR:.*]] = cir.alloca !rec_NonDefaultCtor, !cir.ptr<!rec_NonDefaultCtor>, ["notDefCtor", init]
+  // CHECK-NEXT: %[[NOTDEFCTOR:.*]] = cir.alloca "notDefCtor" {{.*}} init !rec_NonDefaultCtor -> !cir.ptr<!rec_NonDefaultCtor>
   HasDtor dtor;
-  // CHECK-NEXT: %[[DTOR:.*]] = cir.alloca !rec_HasDtor, !cir.ptr<!rec_HasDtor>, ["dtor"]
+  // CHECK-NEXT: %[[DTOR:.*]] = cir.alloca "dtor" {{.*}} !rec_HasDtor -> !cir.ptr<!rec_HasDtor>
   int someIntArr[5];
-  // CHECK-NEXT: %[[INTARR:.*]] = cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["someIntArr"]
+  // CHECK-NEXT: %[[INTARR:.*]] = cir.alloca "someIntArr" {{.*}} !cir.array<!s32i x 5> -> !cir.ptr<!cir.array<!s32i x 5>>
   float someFloatArr[5];
-  // CHECK-NEXT: %[[FLOATARR:.*]] = cir.alloca !cir.array<!cir.float x 5>, !cir.ptr<!cir.array<!cir.float x 5>>, ["someFloatArr"]
+  // CHECK-NEXT: %[[FLOATARR:.*]] = cir.alloca "someFloatArr" {{.*}} !cir.array<!cir.float x 5> -> !cir.ptr<!cir.array<!cir.float x 5>>
   NoCopyConstruct noCopyArr[5];
-  // CHECK-NEXT: %[[NOCOPYARR:.*]] = cir.alloca !cir.array<!rec_NoCopyConstruct x 5>, !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>, ["noCopyArr"]
+  // CHECK-NEXT: %[[NOCOPYARR:.*]] = cir.alloca "noCopyArr" {{.*}} !cir.array<!rec_NoCopyConstruct x 5> -> !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>
   CopyConstruct hasCopyArr[5];
-  // CHECK-NEXT: %[[HASCOPYARR:.*]] = cir.alloca !cir.array<!rec_CopyConstruct x 5>, !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>, ["hasCopyArr"]
+  // CHECK-NEXT: %[[HASCOPYARR:.*]] = cir.alloca "hasCopyArr" {{.*}} !cir.array<!rec_CopyConstruct x 5> -> !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>
   NonDefaultCtor notDefCtorArr[5];
-  // CHECK-NEXT: %[[NOTDEFCTORARR:.*]] = cir.alloca !cir.array<!rec_NonDefaultCtor x 5>, !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>, ["notDefCtorArr", init]
+  // CHECK-NEXT: %[[NOTDEFCTORARR:.*]] = cir.alloca "notDefCtorArr" {{.*}} init !cir.array<!rec_NonDefaultCtor x 5> -> !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>
   HasDtor dtorArr[5];
-  // CHECK-NEXT: %[[DTORARR:.*]] = cir.alloca !cir.array<!rec_HasDtor x 5>, !cir.ptr<!cir.array<!rec_HasDtor x 5>>, ["dtorArr"]
+  // CHECK-NEXT: %[[DTORARR:.*]] = cir.alloca "dtorArr" {{.*}} !cir.array<!rec_HasDtor x 5> -> !cir.ptr<!cir.array<!rec_HasDtor x 5>>
   // CHECK-NEXT: cir.call @_ZN14NonDefaultCtorC1Ev(%[[NOTDEFCTOR]]) : (!cir.ptr<!rec_NonDefaultCtor>{{.*}}) -> ()
 
 #pragma acc parallel firstprivate(someInt)

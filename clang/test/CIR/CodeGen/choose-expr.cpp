@@ -9,7 +9,7 @@ void choose_expr() {
   int a = __builtin_choose_expr(1, 2, 3);
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init !s32i -> !cir.ptr<!s32i>
 // CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
 // CIR: cir.store {{.*}} %[[CONST_2]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
 
@@ -25,9 +25,9 @@ void choose_expr_non_constant() {
   int c = __builtin_choose_expr(1, a, b);
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b"]
-// CIR: %[[C_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["c", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} !s32i -> !cir.ptr<!s32i>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} !s32i -> !cir.ptr<!s32i>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init !s32i -> !cir.ptr<!s32i>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.store {{.*}} %[[TMP_A]], %[[C_ADDR]] : !s32i, !cir.ptr<!s32i>
 

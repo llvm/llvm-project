@@ -18,9 +18,9 @@ void calling_consteval_methods() {
   a.consteval_ret_void();
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !rec_StructWithConstEval, !cir.ptr<!rec_StructWithConstEval>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
-// CIR: %[[C_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} !rec_StructWithConstEval -> !cir.ptr<!rec_StructWithConstEval>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init !s32i -> !cir.ptr<!s32i>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init !cir.complex<!s32i> -> !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: cir.store {{.*}} %[[CONST_1]], %[[B_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[CONST_COMPLEX:.*]] = cir.const #cir.const_complex<#cir.int<1> : !s32i, #cir.int<2> : !s32i> : !cir.complex<!s32i>

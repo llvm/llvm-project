@@ -12,7 +12,7 @@ void foo() {
 }
 
 // CIR: cir.func {{.*}} @_Z3foov()
-// CIR:   %[[TMP0:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp0"]
+// CIR:   %[[TMP0:.*]] = cir.alloca "ref.tmp0" {{.*}} !s32i -> !cir.ptr<!s32i>
 // CIR:   %[[TMP1:.*]] = cir.const #cir.int<42>
 // CIR:   cir.store{{.*}} %[[TMP1]], %[[TMP0]]
 // CIR:   cir.call @_Z3barRKi(%[[TMP0]])
@@ -37,7 +37,7 @@ void test_ctor_defaultarg() {
 }
 
 // CIR: cir.func {{.*}} @_Z20test_ctor_defaultargv()
-// CIR:   %[[S:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s", init]
+// CIR:   %[[S:.*]] = cir.alloca "s" {{.*}} init !rec_S -> !cir.ptr<!rec_S>
 // CIR:   %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
 // CIR:   cir.call @_ZN1SC1Ei(%[[S]], %[[TWO]]) : (!cir.ptr<!rec_S> {{.*}}, !s32i {{.*}}) -> ()
 

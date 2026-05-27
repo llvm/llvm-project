@@ -304,49 +304,6 @@ void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
   odsState.addTypes(addr);
 }
 
-static ParseResult parseAllocaFlags(mlir::OpAsmParser &parser,
-                                    mlir::StringAttr &name,
-                                    mlir::UnitAttr &init,
-                                    mlir::UnitAttr &constant,
-                                    mlir::UnitAttr &cleanupDestSlot) {
-
-  std::string nameStr;
-  if (parser.parseString(&nameStr))
-    return failure();
-  name = parser.getBuilder().getStringAttr(nameStr);
-
-  if (failed(parser.parseOptionalComma()))
-    return success();
-
-  auto &builder = parser.getBuilder();
-  return parser.parseCommaSeparatedList([&]() -> ParseResult {
-    if (succeeded(parser.parseOptionalKeyword("init")))
-      init = builder.getUnitAttr();
-    else if (succeeded(parser.parseOptionalKeyword("const")))
-      constant = builder.getUnitAttr();
-    else if (succeeded(parser.parseOptionalKeyword("cleanup_dest_slot")))
-      cleanupDestSlot = builder.getUnitAttr();
-    else
-      return parser.emitError(
-          parser.getCurrentLocation(),
-          "expected 'init', 'const' or 'cleanup_dest_slot'");
-    return success();
-  });
-}
-
-static void printAllocaFlags(mlir::OpAsmPrinter &p, cir::AllocaOp op,
-                             mlir::StringAttr name, mlir::UnitAttr init,
-                             mlir::UnitAttr constant,
-                             mlir::UnitAttr cleanupDestSlot) {
-  p << '"' << name.getValue() << '"';
-  if (init)
-    p << ", init";
-  if (constant)
-    p << ", const";
-  if (cleanupDestSlot)
-    p << ", cleanup_dest_slot";
-}
-
 //===----------------------------------------------------------------------===//
 // ArrayCtor & ArrayDtor
 //===----------------------------------------------------------------------===//

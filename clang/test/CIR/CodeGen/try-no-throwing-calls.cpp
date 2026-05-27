@@ -24,7 +24,7 @@ int test() {
 // Verify the try body (call + store) is preserved, not discarded.
 
 // CIR: cir.func {{.*}} @_Z4testv
-// CIR:   %[[RESULT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["result", init]
+// CIR:   %[[RESULT:.*]] = cir.alloca "result" {{.*}} init !s32i -> !cir.ptr<!s32i>
 // CIR:   %[[CALL:.*]] = cir.call @_Z11nonThrowingv()
 // CIR:   cir.store {{.*}}%[[CALL]], %[[RESULT]]
 

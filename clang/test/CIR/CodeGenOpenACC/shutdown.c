@@ -2,7 +2,7 @@
 
 void acc_shutdown(int cond) {
   // CHECK: cir.func{{.*}} @acc_shutdown(%[[ARG:.*]]: !s32i{{.*}}) {{.*}}{
-  // CHECK-NEXT: %[[COND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond", init]
+  // CHECK-NEXT: %[[COND:.*]] = cir.alloca "cond" {{.*}} init !s32i -> !cir.ptr<!s32i>
   // CHECK-NEXT: cir.store %[[ARG]], %[[COND]] : !s32i, !cir.ptr<!s32i>
 #pragma acc shutdown
 // CHECK-NEXT: acc.shutdown loc(#{{[a-zA-Z0-9]+}}){{$}}

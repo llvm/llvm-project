@@ -158,7 +158,7 @@ __global__ void fn() {
 }
 
 // CIR-DEVICE: cir.func {{.*}}@_Z2fnv() {{.*}} {
-// CIR-DEVICE:   %[[ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
+// CIR-DEVICE:   %[[ALLOCA:.*]] = cir.alloca "i" {{.*}} init !s32i -> !cir.ptr<!s32i>
 // CIR-DEVICE:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR-DEVICE:   cir.store {{.*}}%[[ZERO]], %[[ALLOCA]] : !s32i, !cir.ptr<!s32i>
 // CIR-DEVICE:   %[[J:.*]] = cir.get_global @_ZZ2fnvE1j : !cir.ptr<!s32i>

@@ -14,7 +14,7 @@ module {
   cir.func @redundant_br() {
     cir.br ^bb1
   ^bb1:  // pred: ^bb0
-    %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init] {alignment = 4 : i64}
+    %0 = cir.alloca "a" align(4) init !u32i -> !cir.ptr<!u32i>
     %1 = cir.const #cir.int<4> : !u32i
     cir.store %1, %0 : !u32i, !cir.ptr<!u32i>
     cir.br ^bb2
@@ -22,7 +22,7 @@ module {
     cir.return
   }
   // CHECK:      cir.func{{.*}} @redundant_br() {
-  // CHECK-NEXT:   %[[A:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init] {alignment = 4 : i64}
+  // CHECK-NEXT:   %[[A:.*]] = cir.alloca "a" align(4) init !u32i -> !cir.ptr<!u32i>
   // CHECK-NEXT:   %[[FOUR:.*]] = cir.const #cir.int<4> : !u32i
   // CHECK-NEXT:   cir.store %[[FOUR]], %[[A]] : !u32i, !cir.ptr<!u32i>
   // CHECK-NEXT:   cir.return

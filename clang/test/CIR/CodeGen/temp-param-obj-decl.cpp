@@ -26,7 +26,7 @@ const auto *ptr = get_ptr<HasMem{3}>();
 template<HasMem m>
 int get_x() { return m.x; }
 // CIR-LABEL: cir.func {{.*}}@_Z5get_xIXtl6HasMemLi1EEEEiv()
-// CIR: %[[RET_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} !s32i -> !cir.ptr<!s32i>
 // Note: This is emitted as an 'ignored' expression, but we cannot omit it,
 // since it might be used in an example like below.
 // CIR: %[[GET_GLOB:.*]] = cir.get_global @_ZTAXtl6HasMemLi1EEE : !cir.ptr<!rec_HasMem>
@@ -43,7 +43,7 @@ int get_x() { return m.x; }
 template<HasMem m>
 HasMem get_m() { return m; }
 // CIR-LABEL: cir.func {{.*}}@_Z5get_mIXtl6HasMemLi2EEEES0_v()
-// CIR: %[[RET_ALLOCA:.*]] = cir.alloca !rec_HasMem, !cir.ptr<!rec_HasMem>, ["__retval"] {alignment = 4 : i64}
+// CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" align(4) !rec_HasMem -> !cir.ptr<!rec_HasMem>
 // CIR: %[[GET_GLOB:.*]] = cir.get_global @_ZTAXtl6HasMemLi2EEE : !cir.ptr<!rec_HasMem>
 // CIR: cir.copy %[[GET_GLOB]] to %[[RET_ALLOCA]] : !cir.ptr<!rec_HasMem>
 // 

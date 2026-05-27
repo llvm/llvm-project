@@ -12,7 +12,7 @@ void array() {
 
   [=]() { return first;}();
   // CIR-LABEL: cir.func {{.*}}@_ZZ5arrayvENK3$_0clEv
-  // CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<![[LAMBDA_TY:.*]]>, !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, ["this", init]
+  // CIR: %[[THIS:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<![[LAMBDA_TY:.*]]> -> !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>
   // CIR: %[[LOAD_THIS:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, !cir.ptr<![[LAMBDA_TY]]>
   // CIR: %[[FIRST_MEM:.*]] = cir.get_member %[[LOAD_THIS]][0] {name = "first"} : !cir.ptr<![[LAMBDA_TY]]> -> !cir.ptr<!cir.float>
   // CIR: %[[GET_FIRST:.*]] = cir.load {{.*}}%[[FIRST_MEM]] : !cir.ptr<!cir.float>, !cir.float
@@ -25,7 +25,7 @@ void array() {
 
   [&]() { return second;}();
   // CIR-LABEL: cir.func {{.*}}@_ZZ5arrayvENK3$_1clEv
-  // CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<![[LAMBDA_TY:.*]]>, !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, ["this", init]
+  // CIR: %[[THIS:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<![[LAMBDA_TY:.*]]> -> !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>
   // CIR: %[[LOAD_THIS:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, !cir.ptr<![[LAMBDA_TY]]>
   // CIR: %[[SECOND_MEM:.*]] = cir.get_member %[[LOAD_THIS]][0] {name = "second"} : !cir.ptr<![[LAMBDA_TY]]> -> !cir.ptr<!cir.ptr<!cir.float>>
   // CIR: %[[GET_SECOND:.*]] = cir.load {{.*}}%[[SECOND_MEM]] : !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.float>
@@ -40,7 +40,7 @@ void array() {
 
   [third]() { return third;}();
   // CIR-LABEL: cir.func {{.*}}@_ZZ5arrayvENK3$_2clEv
-  // CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<![[LAMBDA_TY:.*]]>, !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, ["this", init]
+  // CIR: %[[THIS:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<![[LAMBDA_TY:.*]]> -> !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>
   // CIR: %[[LOAD_THIS:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, !cir.ptr<![[LAMBDA_TY]]>
   // CIR: %[[THIRD_MEM:.*]] = cir.get_member %[[LOAD_THIS]][0] {name = "third"} : !cir.ptr<![[LAMBDA_TY]]> -> !cir.ptr<!cir.float>
   // CIR: %[[GET_THIRD:.*]] = cir.load {{.*}}%[[THIRD_MEM]] : !cir.ptr<!cir.float>, !cir.float
@@ -53,7 +53,7 @@ void array() {
 
   [&fourth]() { return fourth;}();
   // CIR-LABEL: cir.func {{.*}}@_ZZ5arrayvENK3$_3clEv
-  // CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<![[LAMBDA_TY:.*]]>, !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, ["this", init]
+  // CIR: %[[THIS:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<![[LAMBDA_TY:.*]]> -> !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>
   // CIR: %[[LOAD_THIS:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, !cir.ptr<![[LAMBDA_TY]]>
   // CIR: %[[FOURTH_MEM:.*]] = cir.get_member %[[LOAD_THIS]][0] {name = "fourth"} : !cir.ptr<![[LAMBDA_TY]]> -> !cir.ptr<!cir.ptr<!cir.float>>
   // CIR: %[[GET_FOURTH:.*]] = cir.load {{.*}}%[[FOURTH_MEM]] : !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.float>
@@ -76,7 +76,7 @@ void Struct() {
 
   [=]() { return first;}();
   // CIR-LABEL: cir.func {{.*}}@_ZZ6StructvENK3$_0clEv
-  // CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<![[LAMBDA_TY:.*]]>, !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, ["this", init]
+  // CIR: %[[THIS:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<![[LAMBDA_TY:.*]]> -> !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>
   // CIR: %[[LOAD_THIS:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, !cir.ptr<![[LAMBDA_TY]]>
   // CIR: %[[FIRST_MEM:.*]] = cir.get_member %[[LOAD_THIS]][0] {name = "first"} : !cir.ptr<![[LAMBDA_TY]]> -> !cir.ptr<!s32i>
   // CIR: %[[LOAD_FIRST:.*]] = cir.load {{.*}}%[[FIRST_MEM]] : !cir.ptr<!s32i>, !s32i
@@ -88,7 +88,7 @@ void Struct() {
   // LLVM:   %[[GET_FIRST:.*]] = load i32, ptr %[[FIRST_MEM]]
   [&]() { return second;}();
   // CIR-LABEL: cir.func {{.*}}@_ZZ6StructvENK3$_1clEv
-  // CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<![[LAMBDA_TY:.*]]>, !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, ["this", init]
+  // CIR: %[[THIS:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<![[LAMBDA_TY:.*]]> -> !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>
   // CIR: %[[LOAD_THIS:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, !cir.ptr<![[LAMBDA_TY]]>
   // CIR: %[[SECOND_MEM:.*]] = cir.get_member %[[LOAD_THIS]][0] {name = "second"} : !cir.ptr<![[LAMBDA_TY]]> -> !cir.ptr<!cir.ptr<!s32i>>
   // CIR: %[[GET_SECOND:.*]] = cir.load {{.*}}%[[SECOND_MEM]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
@@ -102,7 +102,7 @@ void Struct() {
   // LLVM:   %[[DEREF:.*]] = load i32, ptr %[[GET_SECOND]]
   [third]() { return third;}();
   // CIR-LABEL: cir.func {{.*}}@_ZZ6StructvENK3$_2clEv
-  // CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<![[LAMBDA_TY:.*]]>, !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, ["this", init]
+  // CIR: %[[THIS:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<![[LAMBDA_TY:.*]]> -> !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>
   // CIR: %[[LOAD_THIS:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, !cir.ptr<![[LAMBDA_TY]]>
   // CIR: %[[THIRD_MEM:.*]] = cir.get_member %[[LOAD_THIS]][0] {name = "third"} : !cir.ptr<![[LAMBDA_TY]]> -> !cir.ptr<!s32i>
   // CIR: %[[LOAD_THIRD:.*]] = cir.load {{.*}}%[[THIRD_MEM]] : !cir.ptr<!s32i>, !s32i
@@ -114,7 +114,7 @@ void Struct() {
   // LLVM:   %[[GET_THIRD:.*]] = load i32, ptr %[[THIRD_MEM]]
   [&fourth]() { return fourth;}();
   // CIR-LABEL: cir.func {{.*}}@_ZZ6StructvENK3$_3clEv
-  // CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<![[LAMBDA_TY:.*]]>, !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, ["this", init]
+  // CIR: %[[THIS:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<![[LAMBDA_TY:.*]]> -> !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>
   // CIR: %[[LOAD_THIS:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, !cir.ptr<![[LAMBDA_TY]]>
   // CIR: %[[FOURTH_MEM:.*]] = cir.get_member %[[LOAD_THIS]][0] {name = "fourth"} : !cir.ptr<![[LAMBDA_TY]]> -> !cir.ptr<!cir.ptr<!s32i>>
   // CIR: %[[GET_FOURTH:.*]] = cir.load {{.*}}%[[FOURTH_MEM]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
@@ -135,7 +135,7 @@ void StructNested() {
   auto outer = [&]() {
   [=]() { return first;}();
   // CIR-LABEL: cir.func {{.*}}@_ZZZ12StructNestedvENK3$_0clEvENKUlvE_clEv(
-  // CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<![[LAMBDA_TY:.*]]>, !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, ["this", init]
+  // CIR: %[[THIS:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<![[LAMBDA_TY:.*]]> -> !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>
   // CIR: %[[LOAD_THIS:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, !cir.ptr<![[LAMBDA_TY]]>
   // CIR: %[[FIRST_MEM:.*]] = cir.get_member %[[LOAD_THIS]][0] {name = "first"} : !cir.ptr<![[LAMBDA_TY]]> -> !cir.ptr<!s32i>
   // CIR: %[[LOAD_FIRST:.*]] = cir.load {{.*}}%[[FIRST_MEM]] : !cir.ptr<!s32i>, !s32i
@@ -147,7 +147,7 @@ void StructNested() {
   // LLVM:   %[[GET_FIRST:.*]] = load i32, ptr %[[FIRST_MEM]]
   [&]() { return second;}();
   // CIR-LABEL: cir.func {{.*}}@_ZZZ12StructNestedvENK3$_0clEvENKUlvE0_clEv(
-  // CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<![[LAMBDA_TY:.*]]>, !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, ["this", init]
+  // CIR: %[[THIS:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<![[LAMBDA_TY:.*]]> -> !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>
   // CIR: %[[LOAD_THIS:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, !cir.ptr<![[LAMBDA_TY]]>
   // CIR: %[[SECOND_MEM:.*]] = cir.get_member %[[LOAD_THIS]][0] {name = "second"} : !cir.ptr<![[LAMBDA_TY]]> -> !cir.ptr<!cir.ptr<!s32i>>
   // CIR: %[[GET_SECOND:.*]] = cir.load {{.*}}%[[SECOND_MEM]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
@@ -161,7 +161,7 @@ void StructNested() {
   // LLVM:   %[[DEREF:.*]] = load i32, ptr %[[GET_SECOND]]
   [third]() { return third;}();
   // CIR-LABEL: cir.func {{.*}}@_ZZZ12StructNestedvENK3$_0clEvENKUlvE1_clEv(
-  // CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<![[LAMBDA_TY:.*]]>, !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, ["this", init]
+  // CIR: %[[THIS:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<![[LAMBDA_TY:.*]]> -> !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>
   // CIR: %[[LOAD_THIS:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, !cir.ptr<![[LAMBDA_TY]]>
   // CIR: %[[THIRD_MEM:.*]] = cir.get_member %[[LOAD_THIS]][0] {name = "third"} : !cir.ptr<![[LAMBDA_TY]]> -> !cir.ptr<!s32i>
   // CIR: %[[LOAD_THIRD:.*]] = cir.load {{.*}}%[[THIRD_MEM]] : !cir.ptr<!s32i>, !s32i
@@ -173,7 +173,7 @@ void StructNested() {
   // LLVM:   %[[GET_THIRD:.*]] = load i32, ptr %[[THIRD_MEM]]
   [&fourth]() { return fourth;}();
   // CIR-LABEL: cir.func {{.*}}@_ZZZ12StructNestedvENK3$_0clEvENKUlvE2_clEv(
-  // CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<![[LAMBDA_TY:.*]]>, !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, ["this", init]
+  // CIR: %[[THIS:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<![[LAMBDA_TY:.*]]> -> !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>
   // CIR: %[[LOAD_THIS:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<![[LAMBDA_TY]]>>, !cir.ptr<![[LAMBDA_TY]]>
   // CIR: %[[FOURTH_MEM:.*]] = cir.get_member %[[LOAD_THIS]][0] {name = "fourth"} : !cir.ptr<![[LAMBDA_TY]]> -> !cir.ptr<!cir.ptr<!s32i>>
   // CIR: %[[GET_FOURTH:.*]] = cir.load {{.*}}%[[FOURTH_MEM]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>

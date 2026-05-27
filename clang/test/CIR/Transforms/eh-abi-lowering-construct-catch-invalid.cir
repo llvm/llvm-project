@@ -32,7 +32,7 @@ cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS1E_ok(
 
 // Only non_trivial_copy is currently supported on Itanium.
 cir.func @bad_kind() {
-  %0 = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+  %0 = cir.alloca "e" align(1) !rec_E -> !cir.ptr<!rec_E>
   cir.try_call @_Z8mayThrowv() ^bb1, ^bb2 : () -> ()
 ^bb1:
   cir.br ^bb6
@@ -85,7 +85,7 @@ cir.func private @__clang_cir_catch_copy__ZTS1E_decl(
     attributes {cir.eh.catch_copy_thunk}
 
 cir.func @copy_fn_no_body() {
-  %0 = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+  %0 = cir.alloca "e" align(1) !rec_E -> !cir.ptr<!rec_E>
   cir.try_call @_Z8mayThrowv() ^bb1, ^bb2 : () -> ()
 ^bb1:
   cir.br ^bb6
@@ -146,7 +146,7 @@ cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS1E_multi(
 }
 
 cir.func @multi_block_thunk() {
-  %0 = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+  %0 = cir.alloca "e" align(1) !rec_E -> !cir.ptr<!rec_E>
   cir.try_call @_Z8mayThrowv() ^bb1, ^bb2 : () -> ()
 ^bb1:
   cir.br ^bb6
