@@ -1259,7 +1259,7 @@ already has a thread selected (see the `Hg` packet from the standard
 GDB remote protocol documentation) yet the remote GDB server actually
 has another thread selected.
 
-## qAttachOrWaitSupported
+## qVAttachOrWaitSupported
 
 This is a binary "is it supported" query. Return OK if you support
 `vAttachOrWait`.
@@ -1312,7 +1312,7 @@ some key value pairs. The key value pairs in the command are:
   be listed for all users, not just the user that the
   platform is running as
 * `triple` - `string` -
-  An ASCII triple string (`x86_64`, `x86_64-apple-macosx`, `armv7-apple-ios`)
+  An hex encoded triple string (hex encodings of `x86_64`, `x86_64-apple-macosx`, `armv7-apple-ios`)
 * `args` - `string` -
   A string value containing the process arguments separated by the character `-`,
   where each argument is hex-encoded. It includes `argv[0]`.
@@ -1396,9 +1396,10 @@ read packet: $cputype:16777223;cpusubtype:3;ostype:darwin;vendor:apple;endian:li
 ```
 
 Key value pairs are one of:
+* `arch`: a string for the architecture, not needed if "triple" is specified
 * `cputype`: is a number that is the mach-o CPU type that is being debugged (base 10)
 * `cpusubtype`: is a number that is the mach-o CPU subtype type that is being debugged (base 10)
-* `triple`: a string for the target triple (x86_64-apple-macosx) that can be used to specify arch + vendor + os in one entry
+* `triple`: a hex encoded string for the target triple (x86_64-apple-macosx) that can be used to specify arch + vendor + os in one entry
 * `vendor`: a string for the vendor (apple), not needed if "triple" is specified
 * `ostype`: a string for the OS being debugged (macosx, linux, freebsd, ios, watchos), not needed if "triple" is specified
 * `endian`: is one of "little", "big", or "pdp"
@@ -1702,7 +1703,7 @@ The key value pairs in the response are:
 * `euid` - `integer` - A string value containing the decimal effective user ID
 * `egid` - `integer` - A string value containing the decimal effective group ID
 * `name` - `ascii-hex` - An ASCII hex string that contains the name of the process
-* `triple` - `string` - A target triple (`x86_64-apple-macosx`, `armv7-apple-ios`)
+* `triple` - `string` - A hex encoded target triple (hex encodings of `x86_64-apple-macosx`, `armv7-apple-ios`)
 
 Sample packet/response:
 ```
