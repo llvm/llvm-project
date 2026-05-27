@@ -569,7 +569,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
     const Function &F = *FI;
     // Only operands of OpEntryPoint instructions are allowed to be
     // <Entry Point> operands of OpExecutionMode
-    if (F.isDeclaration() || !isEntryPoint(F))
+    if (F.isDeclarationForLinker() || !isEntryPoint(F))
       continue;
     MCRegister FReg = MAI->getGlobalObjReg(&F);
     assert(FReg.isValid());

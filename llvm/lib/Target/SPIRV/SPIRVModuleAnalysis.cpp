@@ -666,7 +666,7 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
 void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
   InstrTraces IS;
   for (const Function &F : M) {
-    if (F.isDeclaration())
+    if (F.isDeclarationForLinker())
       continue;
     MachineFunction *MF = MMI->getMachineFunction(F);
     assert(MF);
@@ -725,7 +725,7 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
 // numbered.
 void SPIRVModuleAnalysis::numberRegistersGlobally(const Module &M) {
   for (const Function &F : M) {
-    if (F.isDeclaration())
+    if (F.isDeclarationForLinker())
       continue;
     MachineFunction *MF = MMI->getMachineFunction(F);
     assert(MF);
