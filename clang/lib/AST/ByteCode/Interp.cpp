@@ -251,7 +251,8 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
 
     assert(NumArgs >= Func->getNumWrittenParams());
     NumVarArgs = NumArgs - (Func->getNumWrittenParams() +
-                            isa<CXXOperatorCallExpr>(CallSite));
+                            (isa<CXXOperatorCallExpr>(CallSite) &&
+                             Func->hasImplicitThisParam()));
     for (unsigned I = 0; I != NumVarArgs; ++I) {
       const Expr *A = Args[NumArgs - 1 - I];
       popArg(S, A);
