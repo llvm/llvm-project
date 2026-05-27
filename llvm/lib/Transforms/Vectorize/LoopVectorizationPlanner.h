@@ -74,19 +74,18 @@ class VPBuilder {
 
   /// Lightweight SCEV-to-VPlan expander. Converts SCEVConstant, SCEVUnknown,
   /// SCEVVScale and SCEVMulExpr into VPInstructions. Other SCEV expressions are
-  /// unsupported.
+  /// not yet supported.
   class VPSCEVExpander {
     VPBuilder &Builder;
-    VPlan &Plan;
     DebugLoc DL;
 
   public:
-    VPSCEVExpander(VPBuilder &Builder, VPlan &Plan, DebugLoc DL)
-        : Builder(Builder), Plan(Plan), DL(DL) {}
+    VPSCEVExpander(VPBuilder &Builder, DebugLoc DL)
+        : Builder(Builder), DL(DL) {}
 
-    /// Expand \p S into recipes and live-ins using the builder. Returns nullptr
-    /// if \p S cannot be expanded yet.
-    VPValue *expand(const SCEV *S);
+    /// Try to expand \p S into recipes and live-ins using the builder. Returns
+    /// nullptr if \p S cannot be expanded yet.
+    VPValue *tryToExpand(const SCEV *S);
   };
 
   /// Insert \p VPI in BB at InsertPt if BB is set.
@@ -197,9 +196,10 @@ public:
                               const VPIRFlags &Flags = {},
                               const VPIRMetadata &MD = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
-                              const Twine &Name = "") {
+                              const Twine &Name = "",
+                              Type *ResultTy = nullptr) {
     VPInstruction *NewVPInst = tryInsertInstruction(
-        new VPInstruction(Opcode, Operands, Flags, MD, DL, Name));
+        new VPInstruction(Opcode, Operands, Flags, MD, DL, Name, ResultTy));
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }
@@ -226,15 +226,23 @@ public:
   VPInstruction *createFirstActiveLane(ArrayRef<VPValue *> Masks,
                                        DebugLoc DL = DebugLoc::getUnknown(),
                                        const Twine &Name = "") {
+    // Assume that the maximum possible number of elements in a vector fits
+    // within the index type for the default address space.
+    VPlan &Plan = getPlan();
+    Type *IndexTy = Plan.getDataLayout().getIndexType(Plan.getContext(), 0);
     return tryInsertInstruction(new VPInstruction(
-        VPInstruction::FirstActiveLane, Masks, {}, {}, DL, Name));
+        VPInstruction::FirstActiveLane, Masks, {}, {}, DL, Name, IndexTy));
   }
 
   VPInstruction *createLastActiveLane(ArrayRef<VPValue *> Masks,
                                       DebugLoc DL = DebugLoc::getUnknown(),
                                       const Twine &Name = "") {
-    return tryInsertInstruction(new VPInstruction(VPInstruction::LastActiveLane,
-                                                  Masks, {}, {}, DL, Name));
+    // Assume that the maximum possible number of elements in a vector fits
+    // within the index type for the default address space.
+    VPlan &Plan = getPlan();
+    Type *IndexTy = Plan.getDataLayout().getIndexType(Plan.getContext(), 0);
+    return tryInsertInstruction(new VPInstruction(
+        VPInstruction::LastActiveLane, Masks, {}, {}, DL, Name, IndexTy));
   }
 
   VPInstruction *createOverflowingOp(
@@ -359,8 +367,10 @@ public:
 
   VPPhi *createScalarPhi(ArrayRef<VPValue *> IncomingValues,
                          DebugLoc DL = DebugLoc::getUnknown(),
-                         const Twine &Name = "", const VPIRFlags &Flags = {}) {
-    return tryInsertInstruction(new VPPhi(IncomingValues, Flags, DL, Name));
+                         const Twine &Name = "", const VPIRFlags &Flags = {},
+                         Type *ResultTy = nullptr) {
+    return tryInsertInstruction(
+        new VPPhi(IncomingValues, Flags, DL, Name, ResultTy));
   }
 
   VPWidenPHIRecipe *createWidenPhi(ArrayRef<VPValue *> IncomingValues,
@@ -437,6 +447,11 @@ public:
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
+  VPValue *createScalarFreeze(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+    return tryInsertInstruction(
+        new VPInstruction(Instruction::Freeze, Op, {}, {}, DL));
+  }
+
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
                                      Type *ResultTy) {
     return tryInsertInstruction(new VPWidenCastRecipe(
@@ -452,10 +467,10 @@ public:
         FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags(), DL));
   }
 
-  /// Expand \p Expr using VPSCEVExpander. Returns nullptr if \p S cannot be
-  /// expanded yet.
+  /// Try to expand \p Expr using VPSCEVExpander. Returns nullptr if \p Expr
+  /// cannot be expanded yet.
   VPValue *expandSCEV(const SCEV *Expr, DebugLoc DL) {
-    return VPSCEVExpander(*this, getPlan(), DL).expand(Expr);
+    return VPSCEVExpander(*this, DL).tryToExpand(Expr);
   }
 
   VPExpandSCEVRecipe *createExpandSCEV(const SCEV *Expr) {
