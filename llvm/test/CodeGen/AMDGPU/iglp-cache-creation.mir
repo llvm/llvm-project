@@ -1,0 +1,92 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -run-pass=machine-scheduler -o - %s | FileCheck %s
+
+# Test that the PreRA machine-scheduler creates IGLP caches from DAG analysis
+# and serializes them in the MIR output. The input has no pre-populated cache;
+# the cache should be created during scheduling and appear in the output.
+
+# CHECK: name: iglp_cache_creation_small_gemm
+# CHECK: mfmaSmallGemmSingleWaveCaches:
+# CHECK-NEXT: - mbb:             0
+# CHECK-NEXT:   iglpOptOrdinal:  0
+# CHECK-NEXT:   dswCount:        2
+# CHECK-NEXT:   dswWithPermCount: 0
+# CHECK-NEXT:   dswWithSharedVMEMCount: 0
+
+# CHECK: name: iglp_cache_creation_exp_interleave
+# CHECK: mfmaExpInterleaveCaches:
+# CHECK-NEXT: - mbb:             0
+# CHECK-NEXT:   iglpOptOrdinal:  0
+# CHECK-NEXT:   transPipeCount:  1
+# CHECK-NEXT:   mfmaPipeCount:   1
+# CHECK-NEXT:   addPipeCount:    0
+# CHECK-NEXT:   mfmaEnablement:  2
+# CHECK-NEXT:   expRequirement:  2
+# CHECK-NEXT:   mfmaChains:      1
+# CHECK-NEXT:   hasCvt:          false
+# CHECK-NEXT:   hasChainBetweenCvt: true
+# CHECK-NEXT:   analysisResult:  true
+
+# Test that a failed analysis (no V_PACK/V_PERM instructions) is cached with
+# analysisResult: false. This ensures PostRA finds the cached failure and does
+# not attempt to re-analyze the DAG.
+# CHECK: name: iglp_cache_creation_exp_interleave_failed
+# CHECK: mfmaExpInterleaveCaches:
+# CHECK-NEXT: - mbb:             0
+# CHECK-NEXT:   iglpOptOrdinal:  0
+# CHECK-NEXT:   transPipeCount:  0
+# CHECK-NEXT:   mfmaPipeCount:   0
+# CHECK-NEXT:   addPipeCount:    0
+# CHECK-NEXT:   mfmaEnablement:  0
+# CHECK-NEXT:   expRequirement:  0
+# CHECK-NEXT:   mfmaChains:      0
+# CHECK-NEXT:   hasCvt:          false
+# CHECK-NEXT:   hasChainBetweenCvt: false
+# CHECK-NEXT:   analysisResult:  false
+
+--- |
+  define amdgpu_kernel void @iglp_cache_creation_small_gemm() { ret void }
+  define amdgpu_kernel void @iglp_cache_creation_exp_interleave() { ret void }
+  define amdgpu_kernel void @iglp_cache_creation_exp_interleave_failed() { ret void }
+...
+---
+name:            iglp_cache_creation_small_gemm
+tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vreg_128_align2 = IMPLICIT_DEF
+    IGLP_OPT 1
+    DS_WRITE_B128_gfx9 %0:vgpr_32, %2:vreg_128_align2, 0, 0, implicit $exec
+    DS_WRITE_B128_gfx9 %1:vgpr_32, %2:vreg_128_align2, 256, 0, implicit $exec
+    S_ENDPGM 0
+...
+---
+name:            iglp_cache_creation_exp_interleave
+tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vreg_64_align2 = IMPLICIT_DEF
+    IGLP_OPT 2
+    %2:vgpr_32 = nofpexcept V_EXP_F32_e32 %0:vgpr_32, implicit $mode, implicit $exec
+    undef %3.sub1:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %2:vgpr_32, 0, %2:vgpr_32, 0, 0, implicit $mode, implicit $exec
+    %3.sub0:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %2:vgpr_32, 0, %2:vgpr_32, 0, 0, implicit $mode, implicit $exec
+    early-clobber %4:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_vgprcd_e64 %3:vreg_64_align2, %1:vreg_64_align2, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
+---
+name:            iglp_cache_creation_exp_interleave_failed
+tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    IGLP_OPT 2
+    S_NOP 0
+    S_ENDPGM 0
+...

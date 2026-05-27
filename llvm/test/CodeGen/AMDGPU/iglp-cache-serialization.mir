@@ -1,0 +1,67 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -run-pass=none -o - %s | FileCheck -check-prefix=ROUNDTRIP %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -run-pass=postmisched -o - %s | FileCheck -check-prefix=POSTRA %s
+
+# Test that IGLP cache data serializes/deserializes through MIR and is
+# available for PostRA scheduling.
+
+# Verify round-trip of the serialized cache fields.
+# ROUNDTRIP: mfmaSmallGemmSingleWaveCaches:
+# ROUNDTRIP-NEXT: - mbb:             0
+# ROUNDTRIP-NEXT:   iglpOptOrdinal:  0
+# ROUNDTRIP-NEXT:   dswCount:        42
+# ROUNDTRIP-NEXT:   dswWithPermCount: 43
+# ROUNDTRIP-NEXT:   dswWithSharedVMEMCount: 44
+# ROUNDTRIP: mfmaExpInterleaveCaches:
+# ROUNDTRIP-NEXT: - mbb:             1
+# ROUNDTRIP-NEXT:   iglpOptOrdinal:  0
+# ROUNDTRIP-NEXT:   transPipeCount:  42
+# ROUNDTRIP-NEXT:   mfmaPipeCount:   43
+# ROUNDTRIP-NEXT:   addPipeCount:    44
+# ROUNDTRIP-NEXT:   mfmaEnablement:  45
+# ROUNDTRIP-NEXT:   expRequirement:  46
+# ROUNDTRIP-NEXT:   mfmaChains:      47
+# ROUNDTRIP-NEXT:   hasCvt:          true
+# ROUNDTRIP-NEXT:   hasChainBetweenCvt: false
+# ROUNDTRIP-NEXT:   analysisResult:  true
+
+# Verify PostRA scheduling doesn't crash and passes through the IGLP_OPTs.
+# POSTRA: IGLP_OPT 1
+# POSTRA: IGLP_OPT 2
+--- |
+  define amdgpu_kernel void @iglp_cache_test() { ret void }
+...
+---
+name:            iglp_cache_test
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+machineFunctionInfo:
+  mfmaExpInterleaveCaches:
+    - mbb:             1
+      iglpOptOrdinal:  0
+      transPipeCount:  42
+      mfmaPipeCount:   43
+      addPipeCount:    44
+      mfmaEnablement:  45
+      expRequirement:  46
+      mfmaChains:      47
+      hasCvt:          true
+      hasChainBetweenCvt: false
+      analysisResult:  true
+  mfmaSmallGemmSingleWaveCaches:
+    - mbb:             0
+      iglpOptOrdinal:  0
+      dswCount:        42
+      dswWithPermCount: 43
+      dswWithSharedVMEMCount: 44
+body:             |
+  bb.0:
+    IGLP_OPT 1
+    S_BRANCH %bb.1
+
+  bb.1:
+    IGLP_OPT 2
+    S_ENDPGM 0
+
+...

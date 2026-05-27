@@ -267,6 +267,24 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   friend class ILPInitialScheduleStage;
   friend class RegionPressureMap;
 
+public:
+  struct MFMAExpInterleavePointerCache {
+    /// MFMA instructions in the interleave pipeline that have no MFMA
+    /// predecessors, i.e. the roots of independent MFMA chains.
+    SmallVector<const MachineInstr *, 4> MFMAChainSeedInstrs;
+    /// The first DS_READ that feeds into an MFMA chain seed.
+    const MachineInstr *FirstPipeDSRInstr = nullptr;
+  };
+
+private:
+  /// Pass-local cache of pointer-based IGLP analysis data, keyed by the
+  /// IGLP_OPT MachineInstr. This is safe because the DAG object lives for
+  /// the duration of the pre-RA scheduling pass and the MachineInstrs are
+  /// stable within that lifetime. Unlike SIMachineFunctionInfo caches, this
+  /// is never serialized.
+  DenseMap<const MachineInstr *, MFMAExpInterleavePointerCache>
+      MFMAExpInterleavePtrCaches;
+
   const GCNSubtarget &ST;
 
   SIMachineFunctionInfo &MFI;
@@ -332,6 +350,19 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
 public:
   GCNScheduleDAGMILive(MachineSchedContext *C,
                        std::unique_ptr<MachineSchedStrategy> S);
+
+  const MFMAExpInterleavePointerCache *
+  getMFMAExpInterleavePointerCache(const MachineInstr *MI) const {
+    auto It = MFMAExpInterleavePtrCaches.find(MI);
+    return It == MFMAExpInterleavePtrCaches.end() ? nullptr : &It->second;
+  }
+
+  const MFMAExpInterleavePointerCache *
+  setMFMAExpInterleavePointerCache(const MachineInstr *MI,
+                                   MFMAExpInterleavePointerCache &&Cache) {
+    return &MFMAExpInterleavePtrCaches.emplace_or_assign(MI, std::move(Cache))
+                .first->getSecond();
+  }
 
   void schedule() override;
 
