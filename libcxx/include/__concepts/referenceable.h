@@ -16,19 +16,15 @@
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER >= 20
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Tp, class = void>
-inline const bool __is_referenceable_v = false;
-
 template <class _Tp>
-inline const bool __is_referenceable_v<_Tp, __void_t<_Tp&> > = true;
-
-#if _LIBCPP_STD_VER >= 20
-template <class _Tp>
-concept __referenceable = __is_referenceable_v<_Tp>;
-#endif
+concept __referenceable = requires { typename __void_t<_Tp&>; };
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif
 
 #endif // _LIBCPP___TYPE_TRAITS_IS_REFERENCEABLE_H
