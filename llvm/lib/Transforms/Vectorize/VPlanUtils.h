@@ -10,7 +10,6 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
-#include "VPlanPatternMatch.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -77,6 +76,32 @@ unsigned getVFScaleFactor(VPRecipeBase *R);
 /// Returns true for recipes that access memory.
 bool cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking = false);
 
+/// Return the intrinsic ID underlying a call.
+template <typename Ty>
+std::optional<Intrinsic::ID> getIntrinsicID(const Ty *R) {
+  if (const auto *Intr = dyn_cast<VPWidenIntrinsicRecipe>(R))
+    return Intr->getVectorIntrinsicID();
+  if (const auto *Call = dyn_cast<VPWidenCallRecipe>(R))
+    return Call->getCalledScalarFunction()->getIntrinsicID();
+
+  auto GetCalleeIntrinsic =
+      [&](VPValue *CalleeOp) -> std::optional<Intrinsic::ID> {
+    if (!isa<VPIRValue>(CalleeOp))
+      return {};
+    auto *F = cast<Function>(CalleeOp->getLiveInIRValue());
+    return F->getIntrinsicID();
+  };
+  if (const auto *Rep = dyn_cast<VPReplicateRecipe>(R))
+    if (Rep->getOpcode() == Instruction::Call)
+      // The mask is always the last operand if predicated.
+      return GetCalleeIntrinsic(
+          Rep->getOperand(Rep->getNumOperands() - 1 - Rep->isPredicated()));
+  if (const auto *VPI = dyn_cast<VPInstruction>(R))
+    if (VPI->getOpcode() == Instruction::Call)
+      return GetCalleeIntrinsic(VPI->getOperand(VPI->getNumOperands() - 1));
+  return {};
+}
+
 /// Returns the VPValue representing the uncountable exit comparison used by
 /// AnyOf if the recipes it depends on can be traced back to live-ins and
 /// the addresses (in GEP/PtrAdd form) of any (non-masked) load used in
@@ -129,27 +154,6 @@ inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
     }
   }
   return nullptr;
-}
-
-/// If \p V is used by a recipe matching pattern \p P, return it. Otherwise
-/// return nullptr;
-template <typename MatchT>
-static VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
-  using namespace llvm::VPlanPatternMatch;
-  auto It = find_if(V->users(), match_fn(P));
-  return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
-}
-
-/// If \p V is used by a VPInstruction with \p Opcode, return it. Otherwise
-/// return nullptr.
-template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
-  using namespace llvm::VPlanPatternMatch;
-  return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
-}
-
-template <typename RecipeTy> static RecipeTy *findUserOf(VPValue *V) {
-  using namespace llvm::VPlanPatternMatch;
-  return cast_or_null<RecipeTy>(findUserOf(V, m_Isa<RecipeTy>()));
 }
 
 /// Find the canonical IV increment of \p Plan's vector loop region. Returns
