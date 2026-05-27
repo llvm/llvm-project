@@ -376,19 +376,20 @@ public:
                   if (MaybeGuardian->isLocalVarDecl() &&
                       (isSafePtr(MaybeGuardianArgCXXRecord) ||
                        isRefcountedStringsHack(MaybeGuardian)) &&
-                      isGuardedScopeEmbeddedInGuardianScope(
-                          V, MaybeGuardian))
+                      isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian))
                     return true;
                 }
               }
 
               if (isa<ParmVarDecl>(MaybeGuardian)) {
                 if (auto *FD = dyn_cast<FunctionDecl>(DeclWithIssue)) {
-                  if (GuardianVisitor{MaybeGuardian}.TraverseStmt(FD->getBody()))
+                  if (GuardianVisitor{MaybeGuardian}.TraverseStmt(
+                          FD->getBody()))
                     return true;
                 }
                 if (auto *MD = dyn_cast<ObjCMethodDecl>(DeclWithIssue)) {
-                  if (GuardianVisitor{MaybeGuardian}.TraverseStmt(MD->getBody()))
+                  if (GuardianVisitor{MaybeGuardian}.TraverseStmt(
+                          MD->getBody()))
                     return true;
                 }
               }
