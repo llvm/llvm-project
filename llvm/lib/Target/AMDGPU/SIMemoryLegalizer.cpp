@@ -2101,6 +2101,9 @@ bool SIGfx12CacheControl::insertWriteback(MachineBasicBlock::iterator &MI,
   case SIAtomicScope::WAVEFRONT:
   case SIAtomicScope::SINGLETHREAD:
     break;
+  case SIAtomicScope::NONE:
+    llvm_unreachable("Unsupported synchronization scope");
+    break;
   }
 
   if (NeedsWB) {
