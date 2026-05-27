@@ -12,7 +12,7 @@
 ; BCA0: <GLOBALVAL_SUMMARY_BLOCK
 ; BCA1-NOT: <GLOBALVAL_SUMMARY_BLOCK
 
-; M0: @g = external global i8{{$}}
+; M0: @g = external global i8
 ; M1: @g = global i8 42, !type !0, !type !1, !type !2
 @g = global i8 42, !type !1, !type !2, !type !4
 

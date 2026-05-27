@@ -1,4 +1,4 @@
-//===- XeGPUSgToWiDistributeExperimental.cpp - XeGPU SG to WI Pass --------===//
+//===- XeGPUSgToLaneDistribute.cpp - XeGPU SG to Lane Pass ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,14 +33,14 @@
 
 namespace mlir {
 namespace xegpu {
-#define GEN_PASS_DEF_XEGPUSGTOWIDISTRIBUTEEXPERIMENTAL
+#define GEN_PASS_DEF_XEGPUSGTOLANEDISTRIBUTE
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h.inc"
 } // namespace xegpu
 } // namespace mlir
 
 using namespace mlir;
 
-#define DEBUG_TYPE "xegpu-sg-to-wi-distribute-experimental"
+#define DEBUG_TYPE "xegpu-sg-to-lane-distribute"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 namespace {
@@ -84,7 +84,7 @@ static bool isValidSubgroupMultiReductionOp(vector::MultiDimReductionOp op) {
   return op.getReductionDims().size() == 1;
 }
 
-/// A vector::MultiDimReductionOp is doing lane-local reduction if each workitem
+/// A vector::MultiDimReductionOp is doing lane-local reduction if each lane
 /// is doing its own local reduction. In this case the result layout ensures
 /// that result vector is distributed to lanes, i.e. the result vector type is
 /// different from the distributed result vector type.
@@ -112,9 +112,10 @@ static SmallVector<int64_t> getDistributedDims(VectorType originalType,
   return distributedDims;
 }
 
-/// Distributes a subgroup-level CreateNdDesc op to workitem-level CreateNdDesc
+/// Distributes a subgroup-level CreateNdDesc op to lane-level CreateNdDesc
 /// op. This simply drops the layout attribute from the tensor descriptor type.
-struct SgToWiCreateNdDesc : public OpConversionPattern<xegpu::CreateNdDescOp> {
+struct SgToLaneCreateNdDesc
+    : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern<xegpu::CreateNdDescOp>::OpConversionPattern;
 
   LogicalResult
@@ -133,10 +134,10 @@ struct SgToWiCreateNdDesc : public OpConversionPattern<xegpu::CreateNdDescOp> {
   }
 };
 
-/// Distributes a subgroup-level LoadNd op to workitem-level LoadNd op. Output
-/// of workitem-level LoadNd op is 1D. ShapeCast is added to restore the
+/// Distributes a subgroup-level LoadNd op to lane-level LoadNd op. Output
+/// of lane-level LoadNd op is 1D. ShapeCast is added to restore the
 /// original rank.
-struct SgToWiLoadNd : public OpConversionPattern<xegpu::LoadNdOp> {
+struct SgToLaneLoadNd : public OpConversionPattern<xegpu::LoadNdOp> {
   using OpConversionPattern<xegpu::LoadNdOp>::OpConversionPattern;
 
   LogicalResult
@@ -157,19 +158,18 @@ struct SgToWiLoadNd : public OpConversionPattern<xegpu::LoadNdOp> {
           op, "xegpu::LoadNdOp require target attribute attached to "
               "determine transpose "
               "requirement");
-    auto supportedWiResultTyOrFailure =
+    auto supportedLaneResultTyOrFailure =
         xegpu::getDistributedVectorType(op.getTensorDescType());
-    auto expectedWiResultTyOrFailure =
+    auto expectedLaneResultTyOrFailure =
         xegpu::getDistVecTypeBasedOnLaneLayout(layout, op.getType());
-    if (failed(supportedWiResultTyOrFailure))
+    if (failed(supportedLaneResultTyOrFailure))
       return rewriter.notifyMatchFailure(
-          op, "unable to compute the workitem vector type for LoadNdOp");
-    if (failed(expectedWiResultTyOrFailure))
+          op, "unable to compute the lane vector type for LoadNdOp");
+    if (failed(expectedLaneResultTyOrFailure))
       return rewriter.notifyMatchFailure(
-          op,
-          "unable to compute expected workitem vector type from lane layout");
+          op, "unable to compute expected lane vector type from lane layout");
     auto newOp = xegpu::LoadNdOp::create(
-        rewriter, op.getLoc(), supportedWiResultTyOrFailure.value(),
+        rewriter, op.getLoc(), supportedLaneResultTyOrFailure.value(),
         adaptor.getTensorDesc(), op.getMixedOffsets(), op.getPackedAttr(),
         op.getTransposeAttr(), op.getL1HintAttr(), op.getL2HintAttr(),
         op.getL3HintAttr(), /**layout**/ nullptr);
@@ -179,15 +179,15 @@ struct SgToWiLoadNd : public OpConversionPattern<xegpu::LoadNdOp> {
     if (xegpu::requireTranspose(cast<xegpu::LayoutAttr>(layout), uArch))
       newOp.setTranspose(DenseI64ArrayAttr::get(rewriter.getContext(), {1, 0}));
     rewriter.replaceOp(op, castValueTo(rewriter, newOp.getResult(),
-                                       expectedWiResultTyOrFailure.value()));
+                                       expectedLaneResultTyOrFailure.value()));
     return success();
   }
 };
 
-/// Distributes a subgroup-level StoreNd op to workitem-level StoreNd op. Stored
-/// value in workitem-level StoreNd op is 1D. ShapeCast is added to cast the
+/// Distributes a subgroup-level StoreNd op to lane-level StoreNd op. Stored
+/// value in lane-level StoreNd op is 1D. ShapeCast is added to cast the
 /// incoming value to 1D.
-struct SgToWiStoreNd : public OpConversionPattern<xegpu::StoreNdOp> {
+struct SgToLaneStoreNd : public OpConversionPattern<xegpu::StoreNdOp> {
   using OpConversionPattern<xegpu::StoreNdOp>::OpConversionPattern;
 
   LogicalResult
@@ -206,18 +206,18 @@ struct SgToWiStoreNd : public OpConversionPattern<xegpu::StoreNdOp> {
     if (valueLayout != layout)
       return rewriter.notifyMatchFailure(
           op, "conflicting layout attributes on value and anchor");
-    auto supportedWiValueTyOrFailure =
+    auto supportedLaneValueTyOrFailure =
         xegpu::getDistributedVectorType(op.getTensorDescType());
-    if (failed(supportedWiValueTyOrFailure))
+    if (failed(supportedLaneValueTyOrFailure))
       return rewriter.notifyMatchFailure(
           op,
-          "unable to compute wi vector type for StoreNdOp value from tensor "
+          "unable to compute lane vector type for StoreNdOp value from tensor "
           "descriptor");
 
     xegpu::StoreNdOp::create(
         rewriter, op.getLoc(),
         castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptor.getValue()),
-                    supportedWiValueTyOrFailure.value()),
+                    supportedLaneValueTyOrFailure.value()),
         adaptor.getTensorDesc(), op.getMixedOffsets(), op.getL1HintAttr(),
         op.getL2HintAttr(), op.getL3HintAttr(), /**layout**/ nullptr);
     rewriter.eraseOp(op);
@@ -225,10 +225,10 @@ struct SgToWiStoreNd : public OpConversionPattern<xegpu::StoreNdOp> {
   }
 };
 
-/// Distributes a subgroup-level Dpas op to workitem-level Dpas op. All inpputs
-/// and output of workitem-level Dpas op are 1D. Necessary casts are added to
+/// Distributes a subgroup-level Dpas op to lane-level Dpas op. All inpputs
+/// and output of lane-level Dpas op are 1D. Necessary casts are added to
 /// convert the inputs and output to/from 1D.
-struct SgToWiDpas : public OpConversionPattern<xegpu::DpasOp> {
+struct SgToLaneDpas : public OpConversionPattern<xegpu::DpasOp> {
   using OpConversionPattern<xegpu::DpasOp>::OpConversionPattern;
 
   LogicalResult
@@ -240,22 +240,22 @@ struct SgToWiDpas : public OpConversionPattern<xegpu::DpasOp> {
     auto layoutCd = cast<xegpu::LayoutAttr>(op.getLayoutCdAttr());
     if (!layoutA || !layoutB || !layoutCd)
       return failure();
-    auto wiResultTyOrFailure =
+    auto laneResultTyOrFailure =
         xegpu::getDistributedVectorType(op.getType(), layoutCd);
-    auto wiATypeOrFailure =
+    auto laneATypeOrFailure =
         xegpu::getDistributedVectorType(op.getLhs().getType(), layoutA);
-    auto wiBTypeOrFailure =
+    auto laneBTypeOrFailure =
         xegpu::getDistributedVectorType(op.getRhs().getType(), layoutB);
-    auto expectedWiResultTyOrFailure =
+    auto expectedLaneResultTyOrFailure =
         xegpu::getDistVecTypeBasedOnLaneLayout(layoutCd, op.getType());
-    if (failed(wiResultTyOrFailure) || failed(wiATypeOrFailure) ||
-        failed(wiBTypeOrFailure))
+    if (failed(laneResultTyOrFailure) || failed(laneATypeOrFailure) ||
+        failed(laneBTypeOrFailure))
       return rewriter.notifyMatchFailure(
-          op, "failed to calculate supported workitem vector types for DpasOp "
+          op, "failed to calculate supported lane vector types for DpasOp "
               "from layouts");
-    if (failed(expectedWiResultTyOrFailure))
+    if (failed(expectedLaneResultTyOrFailure))
       return rewriter.notifyMatchFailure(
-          op, "unable to compute expected workitem vector type for DpasOp from "
+          op, "unable to compute expected lane vector type for DpasOp from "
               "lane layout");
 
     // Validate bit widths match uArch packed format requirements
@@ -266,13 +266,13 @@ struct SgToWiDpas : public OpConversionPattern<xegpu::DpasOp> {
               uArch->getInstruction(
                   xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc));
       if (uArchInstruction) {
-        auto wiAType = wiATypeOrFailure.value();
-        auto wiBType = wiBTypeOrFailure.value();
+        auto laneAType = laneATypeOrFailure.value();
+        auto laneBType = laneBTypeOrFailure.value();
         // Calculate total packed bit width = element bit width * vector size
         unsigned aPackedBitWidth =
-            wiAType.getElementTypeBitWidth() * wiAType.getNumElements();
+            laneAType.getElementTypeBitWidth() * laneAType.getNumElements();
         unsigned bPackedBitWidth =
-            wiBType.getElementTypeBitWidth() * wiBType.getNumElements();
+            laneBType.getElementTypeBitWidth() * laneBType.getNumElements();
         unsigned expectedABitSize = uArchInstruction->getPackedFormatBitSizeA();
         unsigned expectedBBitSize = uArchInstruction->getPackedFormatBitSizeB();
 
@@ -290,26 +290,26 @@ struct SgToWiDpas : public OpConversionPattern<xegpu::DpasOp> {
     }
 
     auto newOp = xegpu::DpasOp::create(
-        rewriter, op->getLoc(), wiResultTyOrFailure.value(),
+        rewriter, op->getLoc(), laneResultTyOrFailure.value(),
         castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptor.getLhs()),
-                    wiATypeOrFailure.value()),
+                    laneATypeOrFailure.value()),
         castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptor.getRhs()),
-                    wiBTypeOrFailure.value()),
+                    laneBTypeOrFailure.value()),
         castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptor.getAcc()),
-                    wiResultTyOrFailure.value()),
+                    laneResultTyOrFailure.value()),
         /** layoutA**/ nullptr,
         /** layoutB**/ nullptr, /** layoutCd**/ nullptr);
     // Explicitly set the new types to enable correct type materializations.
     rewriter.replaceOp(op, castValueTo(rewriter, newOp.getResult(),
-                                       expectedWiResultTyOrFailure.value()));
+                                       expectedLaneResultTyOrFailure.value()));
     return success();
   }
 };
 
-/// Distributes elementwise ops to workitem-level elementwise ops. This
+/// Distributes elementwise ops to lane-level elementwise ops. This
 /// currently handles elementwise ops with single result only.
-struct SgToWiElementWise : public ConversionPattern {
-  SgToWiElementWise(TypeConverter &typeConverter, MLIRContext *ctx)
+struct SgToLaneElementWise : public ConversionPattern {
+  SgToLaneElementWise(TypeConverter &typeConverter, MLIRContext *ctx)
       : ConversionPattern(MatchAnyOpTypeTag(), /*benefit=*/1, ctx) {}
 
   LogicalResult
@@ -330,14 +330,14 @@ struct SgToWiElementWise : public ConversionPattern {
       return rewriter.notifyMatchFailure(
           op, "operation result does not have subgroup distribute layout");
 
-    auto wiShapeOrFailure =
+    auto laneShapeOrFailure =
         xegpu::getDistVecTypeBasedOnLaneLayout(layout, resultType);
 
-    if (failed(wiShapeOrFailure))
+    if (failed(laneShapeOrFailure))
       return rewriter.notifyMatchFailure(
-          op, "unable to compute workitem vector type from the layout");
+          op, "unable to compute lane vector type from the layout");
 
-    VectorType newResultType = wiShapeOrFailure.value();
+    VectorType newResultType = laneShapeOrFailure.value();
     OperationState state(op->getLoc(), op->getName());
     state.addOperands(operands);
     state.addTypes(newResultType);
@@ -353,9 +353,9 @@ struct SgToWiElementWise : public ConversionPattern {
   }
 };
 
-/// Distributes a subgroup-level arith ConstantOp to workitem-level arith
+/// Distributes a subgroup-level arith ConstantOp to lane-level arith
 /// ConstantOp.
-struct SgToWiArithConstant : public OpConversionPattern<arith::ConstantOp> {
+struct SgToLaneArithConstant : public OpConversionPattern<arith::ConstantOp> {
   using OpConversionPattern<arith::ConstantOp>::OpConversionPattern;
 
   LogicalResult
@@ -377,14 +377,14 @@ struct SgToWiArithConstant : public OpConversionPattern<arith::ConstantOp> {
       return rewriter.notifyMatchFailure(
           op, "operation result does not have subgroup distribute layout");
 
-    auto wiShapeOrFailure =
+    auto laneShapeOrFailure =
         xegpu::getDistVecTypeBasedOnLaneLayout(layout, resultType);
 
-    if (failed(wiShapeOrFailure))
+    if (failed(laneShapeOrFailure))
       return rewriter.notifyMatchFailure(
-          op, "unable to compute workitem vector type from the layout");
+          op, "unable to compute lane vector type from the layout");
 
-    VectorType newResultType = wiShapeOrFailure.value();
+    VectorType newResultType = laneShapeOrFailure.value();
     auto sclarValue = dense.getSplatValue<Attribute>();
     auto newDenseAttr = DenseElementsAttr::get(newResultType, sclarValue);
 
@@ -395,8 +395,8 @@ struct SgToWiArithConstant : public OpConversionPattern<arith::ConstantOp> {
   }
 };
 
-/// Distributes a subgroup-level PrefetchNd op to workitem-level PrefetchNd op.
-struct SgToWiPrefetchNd : public OpConversionPattern<xegpu::PrefetchNdOp> {
+/// Distributes a subgroup-level PrefetchNd op to lane-level PrefetchNd op.
+struct SgToLanePrefetchNd : public OpConversionPattern<xegpu::PrefetchNdOp> {
   using OpConversionPattern<xegpu::PrefetchNdOp>::OpConversionPattern;
 
   LogicalResult
@@ -416,7 +416,7 @@ struct SgToWiPrefetchNd : public OpConversionPattern<xegpu::PrefetchNdOp> {
   }
 };
 
-/// Distributes a subgroup-level LoadGather (xegpu.load) op to workitem-level.
+/// Distributes a subgroup-level LoadGather (xegpu.load) op to lane-level.
 ///
 /// Example 1 (1D, no chunk size):
 ///   layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
@@ -449,7 +449,7 @@ struct SgToWiPrefetchNd : public OpConversionPattern<xegpu::PrefetchNdOp> {
 ///   %offset = producer_op : vector<1x1x1xindex>
 ///   %0 = xegpu.load %src[%offset], %mask : memref<256xf16>,
 ///     vector<1xindex>, vector<1xi1> -> vector<1xf16>
-struct SgToWiLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
+struct SgToLaneLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
   using OpConversionPattern<xegpu::LoadGatherOp>::OpConversionPattern;
 
   LogicalResult
@@ -478,8 +478,7 @@ struct SgToWiLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
         xegpu::getDistVecTypeBasedOnLaneLayout(layout, origResultTy);
     if (failed(distResultTyOrFailure))
       return rewriter.notifyMatchFailure(
-          op,
-          "unable to compute expected workitem vector type from lane layout");
+          op, "unable to compute expected lane vector type from lane layout");
 
     VectorType distResultTy = distResultTyOrFailure.value();
     VectorType distResultTy1D = VectorType::get({distResultTy.getNumElements()},
@@ -516,10 +515,11 @@ struct SgToWiLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
 };
 
 /// This pattern distributes a subgroup-level vector.reduction op to
-/// workitem-level. This require shuffling the data across the workitems (using
-/// gpu::ShuffleOp) and reducing in stages until all workitems have the final
+/// lane-level. This require shuffling the data across the lanes (using
+/// gpu::ShuffleOp) and reducing in stages until all lanes have the final
 /// result.
-struct SgToWiVectorReduction : public OpConversionPattern<vector::ReductionOp> {
+struct SgToLaneVectorReduction
+    : public OpConversionPattern<vector::ReductionOp> {
   using OpConversionPattern<vector::ReductionOp>::OpConversionPattern;
 
   LogicalResult
@@ -561,10 +561,10 @@ struct SgToWiVectorReduction : public OpConversionPattern<vector::ReductionOp> {
           op, "Reduction distribution currently only supports floats and "
               "integer types.");
 
-    // Get the distributed vector (per work-item portion).
+    // Get the distributed vector (per lane portion).
     Value laneValVec = adaptor.getVector();
 
-    // Distribute and reduce across work-items in the subgroup.
+    // Distribute and reduce across lanes in the subgroup.
     Value fullReduce = xegpu::subgroupReduction(
         op.getLoc(), rewriter, laneValVec, op.getKind(), sgSize);
 
@@ -579,10 +579,10 @@ struct SgToWiVectorReduction : public OpConversionPattern<vector::ReductionOp> {
 };
 
 /// This pattern distributes a subgroup-level vector.multi_reduction op to
-/// workitem-level only if the reduction is lane-local. This means that
+/// lane-level only if the reduction is lane-local. This means that
 /// reduction dimension is not distributed to lanes and each lane does its own
 /// local reduction.
-struct SgToWiMultiDimReduction
+struct SgToLaneMultiDimReduction
     : public OpConversionPattern<vector::MultiDimReductionOp> {
   using OpConversionPattern<vector::MultiDimReductionOp>::OpConversionPattern;
 
@@ -643,7 +643,7 @@ struct SgToWiMultiDimReduction
 };
 
 /// Helper to compute distributed coordinates for matrix ops.
-/// When not using subgroup_block_io, each workitem computes its own
+/// When not using subgroup_block_io, each lane computes its own
 /// coordinates based on the layout and lane ID.
 static SmallVector<Value> computeDistributedCoordsForMatrixOp(
     ConversionPatternRewriter &rewriter, Location loc,
@@ -663,8 +663,8 @@ static SmallVector<Value> computeDistributedCoordsForMatrixOp(
   return llvm::map_to_vector(ofrVec, llvm::CastTo<Value>);
 }
 
-/// This pattern distributes a subgroup-level LoadMatrix op to workitem-level.
-struct SgToWiLoadMatrix : public OpConversionPattern<xegpu::LoadMatrixOp> {
+/// This pattern distributes a subgroup-level LoadMatrix op to lane-level.
+struct SgToLaneLoadMatrix : public OpConversionPattern<xegpu::LoadMatrixOp> {
   using OpConversionPattern<xegpu::LoadMatrixOp>::OpConversionPattern;
 
   LogicalResult
@@ -717,8 +717,9 @@ struct SgToWiLoadMatrix : public OpConversionPattern<xegpu::LoadMatrixOp> {
   }
 };
 
-/// Distributes a subgroup-level vector.transpose op to workitem-level.
-struct SgToWiVectorTranspose : public OpConversionPattern<vector::TransposeOp> {
+/// Distributes a subgroup-level vector.transpose op to lane-level.
+struct SgToLaneVectorTranspose
+    : public OpConversionPattern<vector::TransposeOp> {
   using OpConversionPattern<vector::TransposeOp>::OpConversionPattern;
 
   LogicalResult
@@ -753,9 +754,9 @@ struct SgToWiVectorTranspose : public OpConversionPattern<vector::TransposeOp> {
   }
 };
 
-/// Distributes a subgroup-level vector.bitcast op to workitem-level.
+/// Distributes a subgroup-level vector.bitcast op to lane-level.
 /// Bitcast only impacts the innermost dimension of the source/result vectors.
-struct SgToWiVectorBitcast : public OpConversionPattern<vector::BitCastOp> {
+struct SgToLaneVectorBitcast : public OpConversionPattern<vector::BitCastOp> {
   using OpConversionPattern<vector::BitCastOp>::OpConversionPattern;
 
   LogicalResult
@@ -781,8 +782,8 @@ struct SgToWiVectorBitcast : public OpConversionPattern<vector::BitCastOp> {
 };
 
 /// Distributes a subgroup-level vector.create_mask or vector.constant_mask op
-/// to workitem-level. Uses `computeDistributedCoords()` to obtain the
-/// coordinates each workitem owns, then compares each coordinate against the
+/// to lane-level. Uses `computeDistributedCoords()` to obtain the
+/// coordinates each lane owns, then compares each coordinate against the
 /// original mask bounds using `arith.cmpi slt`. The per-element boolean
 /// results are assembled into the distributed mask vector.
 ///
@@ -806,7 +807,7 @@ struct SgToWiVectorBitcast : public OpConversionPattern<vector::BitCastOp> {
 template <typename OpType,
           typename = std::enable_if_t<llvm::is_one_of<
               OpType, vector::CreateMaskOp, vector::ConstantMaskOp>::value>>
-struct SgToWiCreateMask : public OpConversionPattern<OpType> {
+struct SgToLaneCreateMask : public OpConversionPattern<OpType> {
   using OpConversionPattern<OpType>::OpConversionPattern;
 
   LogicalResult
@@ -823,7 +824,7 @@ struct SgToWiCreateMask : public OpConversionPattern<OpType> {
         getDistVecTypeBasedOnLaneLayout(layout, origType);
     if (failed(distTypeOrFailure))
       return rewriter.notifyMatchFailure(
-          op, "unable to compute workitem vector type from the layout");
+          op, "unable to compute lane vector type from the layout");
 
     VectorType distType = distTypeOrFailure.value();
     Location loc = op.getLoc();
@@ -884,8 +885,8 @@ struct SgToWiCreateMask : public OpConversionPattern<OpType> {
   }
 };
 
-/// This pattern distributes a subgroup-level StoreMatrix op to workitem-level.
-struct SgToWiStoreMatrix : public OpConversionPattern<xegpu::StoreMatrixOp> {
+/// This pattern distributes a subgroup-level StoreMatrix op to lane-level.
+struct SgToLaneStoreMatrix : public OpConversionPattern<xegpu::StoreMatrixOp> {
   using OpConversionPattern<xegpu::StoreMatrixOp>::OpConversionPattern;
 
   LogicalResult
@@ -941,7 +942,7 @@ struct SgToWiStoreMatrix : public OpConversionPattern<xegpu::StoreMatrixOp> {
 };
 
 /// Distributes a subgroup-level StoreScatter (xegpu.store) op to
-/// workitem-level.
+/// lane-level.
 ///
 /// Example 1 (1D, no chunk size):
 ///   layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
@@ -974,7 +975,8 @@ struct SgToWiStoreMatrix : public OpConversionPattern<xegpu::StoreMatrixOp> {
 ///   %offset = producer_op : vector<1x1x1xindex>
 ///   xegpu.store %payload, %src[%offset], %mask : vector<1xf16>,
 ///     memref<256xf16>, vector<1xindex>, vector<1xi1>
-struct SgToWiStoreScatter : public OpConversionPattern<xegpu::StoreScatterOp> {
+struct SgToLaneStoreScatter
+    : public OpConversionPattern<xegpu::StoreScatterOp> {
   using OpConversionPattern<xegpu::StoreScatterOp>::OpConversionPattern;
 
   LogicalResult
@@ -1002,8 +1004,7 @@ struct SgToWiStoreScatter : public OpConversionPattern<xegpu::StoreScatterOp> {
         xegpu::getDistVecTypeBasedOnLaneLayout(layout, origValueTy);
     if (failed(distValueTyOrFailure))
       return rewriter.notifyMatchFailure(
-          op,
-          "unable to compute expected workitem vector type from lane layout");
+          op, "unable to compute expected lane vector type from lane layout");
 
     VectorType distValueTy = distValueTyOrFailure.value();
     VectorType distValueTy1D = VectorType::get({distValueTy.getNumElements()},
@@ -1039,11 +1040,11 @@ struct SgToWiStoreScatter : public OpConversionPattern<xegpu::StoreScatterOp> {
   }
 };
 
-/// Distribute a vector::StepOp to workitem-level.
+/// Distribute a vector::StepOp to lane-level.
 /// The layout must have exactly 1 effective lane dimension.
 /// We completely resolve the vector::StepOp by computing the lane_data-sized
 /// subranges.
-struct SgToWiVectorStep : public OpConversionPattern<vector::StepOp> {
+struct SgToLaneVectorStep : public OpConversionPattern<vector::StepOp> {
   using OpConversionPattern<vector::StepOp>::OpConversionPattern;
 
   LogicalResult
@@ -1057,12 +1058,12 @@ struct SgToWiVectorStep : public OpConversionPattern<vector::StepOp> {
 
     auto loc = op.getLoc();
     auto stepResultVecTy = op.getResult().getType();
-    auto wiShapeOrFailure =
+    auto laneShapeOrFailure =
         xegpu::getDistVecTypeBasedOnLaneLayout(resultLayout, stepResultVecTy);
-    if (failed(wiShapeOrFailure))
+    if (failed(laneShapeOrFailure))
       return rewriter.notifyMatchFailure(
-          op, "unable to compute workitem vector type from the layout");
-    VectorType newVecTy = wiShapeOrFailure.value();
+          op, "unable to compute lane vector type from the layout");
+    VectorType newVecTy = laneShapeOrFailure.value();
 
     Value laneId = gpu::LaneIdOp::create(rewriter, loc, rewriter.getIndexType(),
                                          /*upperBound=*/mlir::IntegerAttr());
@@ -1103,9 +1104,9 @@ struct SgToWiVectorStep : public OpConversionPattern<vector::StepOp> {
   }
 };
 
-/// Distributes a subgroup-level vector.extract op to workitem-level. Only
+/// Distributes a subgroup-level vector.extract op to lane-level. Only
 /// handles sub-vector extraction (result is VectorType, not scalar).
-struct SgToWiVectorExtract : public OpConversionPattern<vector::ExtractOp> {
+struct SgToLaneVectorExtract : public OpConversionPattern<vector::ExtractOp> {
   using OpConversionPattern<vector::ExtractOp>::OpConversionPattern;
 
   LogicalResult
@@ -1137,8 +1138,9 @@ struct SgToWiVectorExtract : public OpConversionPattern<vector::ExtractOp> {
   }
 };
 
-/// This pattern distributes a subgroup-level ShapeCast op to workitem-level.
-struct SgToWiVectorShapeCast : public OpConversionPattern<vector::ShapeCastOp> {
+/// This pattern distributes a subgroup-level ShapeCast op to lane-level.
+struct SgToLaneVectorShapeCast
+    : public OpConversionPattern<vector::ShapeCastOp> {
   using OpConversionPattern<vector::ShapeCastOp>::OpConversionPattern;
 
   LogicalResult
@@ -1165,9 +1167,9 @@ struct SgToWiVectorShapeCast : public OpConversionPattern<vector::ShapeCastOp> {
 };
 
 /// Distributes a subgroup-level vector.extract_strided_slice op to
-/// workitem-level. If the result is distributed, the offsets and sizes are
+/// lane-level. If the result is distributed, the offsets and sizes are
 /// adjusted to match the distributed types.
-struct SgToWiVectorExtractStridedSlice
+struct SgToLaneVectorExtractStridedSlice
     : public OpConversionPattern<vector::ExtractStridedSliceOp> {
   using OpConversionPattern<vector::ExtractStridedSliceOp>::OpConversionPattern;
 
@@ -1257,7 +1259,7 @@ struct SgToWiVectorExtractStridedSlice
 };
 
 /// This pattern distributes a subgroup-level `vector.broadcast` op to
-/// workitem-level. The pattern supports three cases:
+/// lane-level. The pattern supports three cases:
 ///
 /// 1) Broadcast a low-rank vector to high-rank vector: The low-rank input
 ///    vector must have a slice layout of the result. If the distributed source
@@ -1313,7 +1315,7 @@ struct SgToWiVectorExtractStridedSlice
 ///   %0 = "some_op"() : f16
 ///   %1 = vector.broadcast %0 : f16 to vector<16x1xf16>
 /// ```
-struct SgToWiBroadcast : public OpConversionPattern<vector::BroadcastOp> {
+struct SgToLaneBroadcast : public OpConversionPattern<vector::BroadcastOp> {
   using OpConversionPattern<vector::BroadcastOp>::OpConversionPattern;
 
   LogicalResult
@@ -1376,9 +1378,9 @@ struct SgToWiBroadcast : public OpConversionPattern<vector::BroadcastOp> {
 };
 
 /// Distributes a subgroup-level vector.insert_strided_slice op to
-/// workitem-level. If the dest is distributed, the offsets are adjusted to
+/// lane-level. If the dest is distributed, the offsets are adjusted to
 /// match the distributed types.
-struct SgToWiVectorInsertStridedSlice
+struct SgToLaneVectorInsertStridedSlice
     : public OpConversionPattern<vector::InsertStridedSliceOp> {
   using OpConversionPattern<vector::InsertStridedSliceOp>::OpConversionPattern;
 
@@ -1470,9 +1472,9 @@ struct SgToWiVectorInsertStridedSlice
   }
 };
 
-/// Distributes a subgroup-level vector.insert op to workitem-level. Only
+/// Distributes a subgroup-level vector.insert op to lane-level. Only
 /// handles sub-vector insertion (value to store is VectorType, not scalar).
-struct SgToWiVectorInsert : public OpConversionPattern<vector::InsertOp> {
+struct SgToLaneVectorInsert : public OpConversionPattern<vector::InsertOp> {
   using OpConversionPattern<vector::InsertOp>::OpConversionPattern;
 
   LogicalResult
@@ -1506,7 +1508,7 @@ struct SgToWiVectorInsert : public OpConversionPattern<vector::InsertOp> {
 };
 
 /// Folds a subgroup-level ConvertLayout op with compatible lane layouts.
-struct SgToWiConvertLayout
+struct SgToLaneConvertLayout
     : public OpConversionPattern<xegpu::ConvertLayoutOp> {
   using OpConversionPattern<xegpu::ConvertLayoutOp>::OpConversionPattern;
 
@@ -1536,7 +1538,7 @@ struct SgToWiConvertLayout
 };
 
 // Trivially distribute `vector.interleave`
-struct SgToWiVectorInterleave
+struct SgToLaneVectorInterleave
     : public OpConversionPattern<vector::InterleaveOp> {
   using OpConversionPattern<vector::InterleaveOp>::OpConversionPattern;
 
@@ -1552,7 +1554,7 @@ struct SgToWiVectorInterleave
 };
 
 // Trivially distribute `vector.deinterleave`
-struct SgToWiVectorDeinterleave
+struct SgToLaneVectorDeinterleave
     : public OpConversionPattern<vector::DeinterleaveOp> {
   using OpConversionPattern<vector::DeinterleaveOp>::OpConversionPattern;
 
@@ -1567,7 +1569,7 @@ struct SgToWiVectorDeinterleave
   }
 };
 
-struct SgToWiDpasMx : public OpConversionPattern<xegpu::DpasMxOp> {
+struct SgToLaneDpasMx : public OpConversionPattern<xegpu::DpasMxOp> {
   using OpConversionPattern<xegpu::DpasMxOp>::OpConversionPattern;
 
   LogicalResult
@@ -1682,15 +1684,15 @@ struct SgToWiDpasMx : public OpConversionPattern<xegpu::DpasMxOp> {
   }
 };
 
-struct XeGPUSgToWiDistributeExperimentalPass
-    : public xegpu::impl::XeGPUSgToWiDistributeExperimentalBase<
-          XeGPUSgToWiDistributeExperimentalPass> {
+struct XeGPUSgToLaneDistributePass
+    : public xegpu::impl::XeGPUSgToLaneDistributeBase<
+          XeGPUSgToLaneDistributePass> {
   void runOnOperation() override;
 };
 
 } // namespace
 
-void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
+void XeGPUSgToLaneDistributePass::runOnOperation() {
 
   // Recover temporary operand layouts for usage in patterns.
   Operation *root = getOperation();
@@ -1719,17 +1721,17 @@ void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
     RewritePatternSet patterns(&getContext());
     typeConverter.addSourceMaterialization(materializeCast);
     typeConverter.addTargetMaterialization(materializeCast);
-    xegpu::populateXeGPUSgToWiDistributeTypeConversions(typeConverter);
+    xegpu::populateXeGPUSgToLaneDistributeTypeConversions(typeConverter);
     scf::populateSCFStructuralTypeConversionsAndLegality(typeConverter,
                                                          patterns, target);
-    xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
+    xegpu::populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
         typeConverter, patterns, target);
     target.addLegalOp<UnrealizedConversionCastOp>();
     (void)applyPartialConversion(root, target, std::move(patterns));
   }
   // Structural type conversion can generate some redundant
   // UnrealizedConversionCastOps to materialize the SG type from type converted
-  // WI type. These are redundant at this point and can be eliminated by
+  // lane type. These are redundant at this point and can be eliminated by
   // inserting shape casts instead.
   // Example:
   // %1 = UnrealizedConversionCastOp %0 : vector<16x1xf32> to vector<16x16xf32>
@@ -1790,7 +1792,7 @@ void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
   xegpu::removeTemporaryLayoutAttrs(getOperation());
 }
 
-void xegpu::populateXeGPUSgToWiDistributeTypeConversions(
+void xegpu::populateXeGPUSgToLaneDistributeTypeConversions(
     TypeConverter &typeConverter) {
   // Any type other than TensorDescType and VectorType are legal as is.
   typeConverter.addConversion([](Type type) -> std::optional<Type> {
@@ -1824,10 +1826,10 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversions(
   });
 }
 
-void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
+void xegpu::populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target) {
-  populateXeGPUSgToWiDistributeTypeConversions(typeConverter);
+  populateXeGPUSgToLaneDistributeTypeConversions(typeConverter);
   // CreateNdDescOp is legal only if its result type has no layout attribute.
   target.addDynamicallyLegalOp<xegpu::CreateNdDescOp>(
       [&](xegpu::CreateNdDescOp op) { return !op.getType().getLayoutAttr(); });
@@ -1914,16 +1916,17 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
         return !xegpu::getTemporaryLayout(op->getOpResult(0));
       });
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
-  patterns.add<SgToWiCreateNdDesc, SgToWiLoadNd, SgToWiStoreNd, SgToWiDpas,
-               SgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd,
-               SgToWiLoadGather, SgToWiStoreScatter, SgToWiVectorReduction,
-               SgToWiMultiDimReduction, SgToWiVectorExtract, SgToWiVectorInsert,
-               SgToWiVectorExtractStridedSlice, SgToWiVectorInsertStridedSlice,
-               SgToWiLoadMatrix, SgToWiStoreMatrix, SgToWiConvertLayout,
-               SgToWiVectorTranspose, SgToWiVectorBitcast, SgToWiVectorStep,
-               SgToWiVectorShapeCast, SgToWiBroadcast,
-               SgToWiCreateMask<vector::CreateMaskOp>,
-               SgToWiCreateMask<vector::ConstantMaskOp>,
-               SgToWiVectorDeinterleave, SgToWiVectorInterleave, SgToWiDpasMx>(
-      typeConverter, patterns.getContext());
+  patterns.add<
+      SgToLaneCreateNdDesc, SgToLaneLoadNd, SgToLaneStoreNd, SgToLaneDpas,
+      SgToLaneElementWise, SgToLaneArithConstant, SgToLanePrefetchNd,
+      SgToLaneLoadGather, SgToLaneStoreScatter, SgToLaneVectorReduction,
+      SgToLaneMultiDimReduction, SgToLaneVectorExtract, SgToLaneVectorInsert,
+      SgToLaneVectorExtractStridedSlice, SgToLaneVectorInsertStridedSlice,
+      SgToLaneLoadMatrix, SgToLaneStoreMatrix, SgToLaneConvertLayout,
+      SgToLaneVectorTranspose, SgToLaneVectorBitcast, SgToLaneVectorStep,
+      SgToLaneVectorShapeCast, SgToLaneBroadcast,
+      SgToLaneCreateMask<vector::CreateMaskOp>,
+      SgToLaneCreateMask<vector::ConstantMaskOp>, SgToLaneVectorDeinterleave,
+      SgToLaneVectorInterleave, SgToLaneDpasMx>(typeConverter,
+                                                patterns.getContext());
 }
