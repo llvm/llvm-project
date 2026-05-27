@@ -100,12 +100,12 @@ class Value;
 
 class NaryReassociatePass : public OptionalPassInfoMixin<NaryReassociatePass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   // Glue for old PM.
-  bool runImpl(Function &F, AssumptionCache *AC_, DominatorTree *DT_,
-               ScalarEvolution *SE_, TargetLibraryInfo *TLI_,
-               TargetTransformInfo *TTI_);
+  LLVM_ABI bool runImpl(Function &F, AssumptionCache *AC_, DominatorTree *DT_,
+                        ScalarEvolution *SE_, TargetLibraryInfo *TLI_,
+                        TargetTransformInfo *TTI_);
 
 private:
   // Runs only one iteration of the dominator-based algorithm. See the header
