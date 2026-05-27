@@ -259,7 +259,7 @@ std::string SourceMgr::getFormattedLocationNoOffset(SMLoc Loc,
 /// Given a line and column number in a mapped buffer, turn it into an SMLoc.
 /// This will return a null SMLoc if the line/column location is invalid.
 SMLoc SourceMgr::FindLocForLineAndColumn(unsigned BufferID, unsigned LineNo,
-                                         unsigned ColNo) {
+                                         unsigned ColNo) const {
   auto &SB = getBufferInfo(BufferID);
   const char *Ptr = SB.getPointerForLineNumber(LineNo);
   if (!Ptr)

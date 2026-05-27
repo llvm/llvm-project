@@ -263,7 +263,7 @@ public:
   /// Given a line and column number in a mapped buffer, turn it into an SMLoc.
   /// This will return a null SMLoc if the line/column location is invalid.
   LLVM_ABI SMLoc FindLocForLineAndColumn(unsigned BufferID, unsigned LineNo,
-                                         unsigned ColNo);
+                                         unsigned ColNo) const;
 
   /// Emit a message about the specified location with the specified string.
   ///

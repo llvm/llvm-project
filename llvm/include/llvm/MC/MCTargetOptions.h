@@ -52,6 +52,7 @@ public:
   bool FDPIC : 1;
   bool ShowMCEncoding : 1;
   bool ShowMCInst : 1;
+  bool ShowMCInstSourceLoc : 1;
   bool AsmVerbose : 1;
 
   /// Preserve Comments in Assembly.
