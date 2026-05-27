@@ -863,7 +863,7 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   // non-extractable bits, i.e., those that must remain in the xor (the other
   // bits have already compounded the GEP offset).
   if (BO->getOpcode() == Instruction::Xor) {
-    // The non-disjoints bits are cached in NonDisjointXorBitsConstant, which is
+    // The non-disjoint bits are cached in NonDisjointXorConstantBits, which is
     // always up-to-date.
     assert(NonDisjointXorConstantBits &&
            "XOR in UserChain without recorded non-disjoint bits");
@@ -923,7 +923,7 @@ APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
 
   // Compute the disjoint bits, i.e., those bits of the constant operand that
   // are known-zero in the base. These disjoint bits will contribute to the
-  // final GEP offset. If the are no disjoint bits, there isn't any offset to
+  // final GEP offset. If there are no disjoint bits, there isn't any offset to
   // extract from the xor.
   const APInt DisjointBits = ConstantValue & BaseKnownBits.Zero;
   if (DisjointBits.isZero())
