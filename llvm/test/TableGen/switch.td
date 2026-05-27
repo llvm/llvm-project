@@ -13,13 +13,13 @@ def rec_d : Rec<40>;
 
 // Used inside a class (resolution is deferred until template-arg substitution)
 class Labeled<int N> {
-  string label = !switch(N, 1: "one", 2: "two", 3: "three", "many2");
+  string label = !switch(N, 1: "one", 2: "two", 3: "three", "many");
 }
 // CHECK-LABEL: def labeled_3
 // CHECK:   label = "three";
 def labeled_3 : Labeled<3>;
 // CHECK-LABEL: def labeled_99
-// CHECK:   label = "many2";
+// CHECK:   label = "many";
 def labeled_99 : Labeled<99>;
 
 // Non-empty case list, no match - fallback to default
