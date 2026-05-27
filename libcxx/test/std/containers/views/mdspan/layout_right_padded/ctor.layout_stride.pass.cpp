@@ -11,7 +11,8 @@
 // <mdspan>
 
 // template<class OtherExtents>
-// constexpr mapping(const layout_stride::mapping<OtherExtents>& other);
+//   constexpr explicit(see below)
+//     mapping(const layout_stride::mapping<OtherExtents>&);
 
 #include <array>
 #include <cassert>
@@ -25,7 +26,7 @@ constexpr void assert_same_mapping(const Dst& dst, const Src& src) {
 
   if constexpr (Dst::extents_type::rank() > 0) {
     for (typename Dst::rank_type r = 0; r < Dst::extents_type::rank(); ++r)
-      assert(dst.stride(r) == static_cast<typename Dst::index_type>(src.stride(r)));
+      assert(dst.stride(r) == static_cast<Dst::index_type>(src.stride(r)));
   }
 }
 
