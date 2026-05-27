@@ -11,6 +11,7 @@
 #include "CppGenUtilities.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Class.h"
+#include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/EnumInfo.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
@@ -251,9 +252,9 @@ static std::string mapParamTypeToCAPI(const AttrOrTypeOrBuilderParam *param, boo
       return "MlirStringRef";
   }
   auto cppType = param->getCppType();
-  if (cppType == "Type" || cppType == "::mlir::Type")
+  if (cppType == "Type" || cppType == "::mlir::Type" || cppType == "mlir::Type")
     return "MlirType";
-  if (cppType == "Attribute" || cppType.ends_with("Attr")) {
+  if (cppType == "Attribute" || cppType == "::mlir::Attribute" || cppType.ends_with("Attr")) {
     if (return_type && cppType == "::mlir::StringAttr") {
       // For some reason these map to MlirIdentifier when wrapped instead of MlirAttribute
       return "MlirIdentifier";
@@ -261,10 +262,14 @@ static std::string mapParamTypeToCAPI(const AttrOrTypeOrBuilderParam *param, boo
       return "MlirAttribute";
     }
   }
-  if (cppType == "::llvm::StringRef") {
+  if (cppType == "::llvm::StringRef" || cppType == "::mlir::StringRef") {
     return "MlirStringRef";
   }
   if (cppType.starts_with("::")) {
+    auto debug = llvm::StringRef(cppNamespaceToPrefix(cppType));
+    if (debug.starts_with("mlirStringRef")) {
+      llvm::PrintFatalNote(formatv(" from {0}", cppType));
+    }
     return cppNamespaceToPrefix(cppType);
   }
   return cppType.str();
@@ -317,7 +322,8 @@ static llvm::StringRef getDefCppType(const EnumInfo &def) {
 }
 
 
-static void emitGettorDeclOrDef(const AttrOrTypeDef &def, ArrayRef<AttrOrTypeOrBuilderParam> params,
+static void emitGettorDeclOrDef(const AttrOrTypeDef &def, 
+                                ArrayRef<AttrOrTypeOrBuilderParam> params, bool hasInferredContextParameter,
                                 raw_ostream &os, bool isAttrGenerator, bool isDeclGenerator, unsigned altIndex) {
   // Output *Get function signature
   os << "MLIR_CAPI_EXPORTED ";
@@ -345,36 +351,54 @@ static void emitGettorDeclOrDef(const AttrOrTypeDef &def, ArrayRef<AttrOrTypeOrB
   } else {
     // Output *get function definition
     os << ") {\n";
-    os << "\treturn wrap(";
-    os << getDefCppType(def) << "::get(unwrap(context)";
-    if (params.size() > 0) {
-      os << ", ";
-    } 
-    for (auto [i, param] : llvm::enumerate(params)) {
-      // If this is an enum, just use C++ static cast
-      if (param.isEnumParam()) {
-        os << "(" << formatv("/* Line {0} */", __LINE__) << param.getCppType() << ")" << param.getName();
-      } else {
-        if (param.getCppType().contains(':')) {
-          // std::string debug_str;
-          // if (const llvm::DefInit *defInit = dyn_cast<llvm::DefInit>(param.getDef())) {
-          //   defInit;
-          //   debug_str = formatv("/* def = {0} */", (void *)param.getDef()).str();
-          // } else {
-          //   debug_str = formatv("/* not a def {0} */", (void *)param.getDef()).str();
-          // }
-          os << /* debug_str << */ "llvm::cast<" << param.getCppType() << ">";
+    /* if (body.has_value()) {
+      os << body.value() << "\n";
+    } else { */
+      os << "\treturn ";
+      // Don't wrap enums, they are scalar types
+      // if (!def.getDef()->isSubClassOf("EnumAttr")) {
+        os << "wrap(";
+      // }
+      os << getDefCppType(def) << "::get(";
+      if (!hasInferredContextParameter) {
+        os << "unwrap(context)";
+        if (params.size() > 0) {
+          os << ", ";
         } 
-        // Is this a wrapped type? If so unwrap it, otherwised don't
-        if (StringRef(param.getCAPIType()).starts_with("Mlir")) {
-          os << "(unwrap(" << param.getName() << "))";
-        } else {
-          os << "(" << param.getName() << ")";
-        }
       }
-      os << (i < params.size() - 1 ? ", " : "");
-    }
-    os << "));\n";
+      for (auto [i, param] : llvm::enumerate(params)) {
+        // If this is an enum, just use C++ static cast
+        if (param.isEnumParam()) {
+          os << "(" << formatv("/* Line {0} */", __LINE__) << param.getCppType() << ")" << param.getName();
+        } else {
+          if (param.getCppType().contains(':')) {
+            // std::string debug_str;
+            // if (const llvm::DefInit *defInit = dyn_cast<llvm::DefInit>(param.getDef())) {
+            //   defInit;
+            //   debug_str = formatv("/* def = {0} */", (void *)param.getDef()).str();
+            // } else {
+            //   debug_str = formatv("/* not a def {0} */", (void *)param.getDef()).str();
+            // }
+            os << /* debug_str << */ "llvm::cast<" << param.getCppType() << ">(";
+          } 
+          // Is this a wrapped type? If so unwrap it, otherwised don't
+          if (StringRef(param.getCAPIType()).starts_with("Mlir")) {
+            os << "(unwrap(" << param.getName() << "))";
+          } else {
+            os << "(" << param.getName() << ")";
+          }
+          if (param.getCppType().contains(':')) {
+            os << ")"; // close the cast
+          }
+        }
+        os << (i < params.size() - 1 ? ", " : "");
+      }
+      // if (!def.getDef()->isSubClassOf("EnumAttr")) {
+        // Close the wrap
+        os << ")";
+      // }
+      os << ");\n";
+    // }
     os << "}\n";
   }
 }
@@ -384,8 +408,10 @@ static void emitAccessorDeclsOrDefs(const AttrOrTypeDef &def,
                               raw_ostream &os, bool isAttrGenerator, bool isDeclGenerator) {
 
   for (AttrOrTypeParameter param : params) {
-    if (isUnsupportedParam(param))
+    if (isUnsupportedParam(param)) {
+      os << "// Skipping accessor for unsupported parameter " << param.getName() << "\n";
       continue;
+    }
     std::string paramName = param.getName().str();
     os << "MLIR_CAPI_EXPORTED ";
     const AttrOrTypeOrBuilderParam aotob_param = AttrOrTypeOrBuilderParam(param);
@@ -441,10 +467,6 @@ static void emitTypeIDDeclOrDef(const EnumInfo &enumInfo, raw_ostream &os, bool 
      }
 }
 
-static void emitTypeIDDecl(const AttrOrTypeDef &def, raw_ostream &os) {
-  emitTypeIDDeclOrDef(def, os, EMIT_DECLS);
-}
-
 static void emitIsADeclOrDef(const AttrOrTypeDef &def, raw_ostream &os,
                               bool isAttrGenerator, bool isDeclGenerator) {
   os << "MLIR_CAPI_EXPORTED bool mlir"; // JEG: Perhaps this one is correct?
@@ -481,10 +503,6 @@ static void emitIsADeclOrDef(const EnumInfo &enumInfo, raw_ostream &os,
     os << "\treturn llvm::isa<" << getDefCppType(enumInfo) << ">(unwrap(attr));\n";
     os << "}\n";
   }
-}
-
-static void emitIsADecl(const AttrOrTypeDef &def, raw_ostream &os, bool isAttrGenerator) {
-  emitIsADeclOrDef(def, os, isAttrGenerator, EMIT_DECLS);
 }
 
 static bool emitEnumDecls(ArrayRef<const Record *> records, raw_ostream &os) {
@@ -576,15 +594,38 @@ bool CAPIDefGenerator::emitDeclsOrDefs(StringRef selectedDialect, bool isDeclGen
 
     ArrayRef<AttrOrTypeParameter> params = def.getParameters();
     emitAttrTypeHeader(name, os);
-    if (!def.skipDefaultBuilders() && !llvm::any_of(params, isUnsupportedParam))
-      emitGettorDeclOrDef(def, getGettorParams(params), os, isAttrGenerator, isDeclGenerator, 0);
+    bool has_unsupported_params = llvm::any_of(params, isUnsupportedParam);
+    if (!def.skipDefaultBuilders() && !has_unsupported_params) {
+      emitGettorDeclOrDef(def, getGettorParams(params), false, os, isAttrGenerator, isDeclGenerator, 0);
+    } else if (has_unsupported_params) {
+      os << formatv("// Skipping gettor {0} for {1}, it has an unsupported parameter type \n", 
+                    0, name);
+    }
+      
     unsigned altNum = 1;
     for (const AttrOrTypeBuilder &builder : def.getBuilders()) {
-      emitGettorDeclOrDef(def, getGettorParams(builder.getParameters()), os, isAttrGenerator, isDeclGenerator, altNum);
+      // If the builder doesn't have a body
+      // if (!builder.getBody().has_value()) {
+        os << "// " << getDefCppType(def).str() << " Alt " << altNum << "\n";
+        emitGettorDeclOrDef(def, getGettorParams(builder.getParameters()), builder.hasInferredContextParameter(),
+                            os, isAttrGenerator, isDeclGenerator, altNum);
+      /* } else {
+        os << "// Has Body " << getDefCppType(def).str() << " Alt " << altNum << "\n";        
+        // Do substitutions into body
+        FmtContext fmtctx;
+        fmtctx.addSubst("_get", getDefCppType(def).str() + "::get");
+        if (!builder.hasInferredContextParameter()) {
+          fmtctx.addSubst("_ctxt", "unwrap(context)");
+        }
+        std::string body_str = tgfmt(builder.getBody().value(), &fmtctx);
+        std::optional<StringRef> body_str_ref = body_str;
+        emitGettorDeclOrDef(def, getGettorParams(builder.getParameters()), body_str_ref,
+                            os, isAttrGenerator, isDeclGenerator, altNum);
+      } */
       altNum++;
     }
-    emitTypeIDDecl(def, os);
-    emitIsADecl(def, os, isAttrGenerator);
+    emitTypeIDDeclOrDef(def, os, isDeclGenerator);
+    emitIsADeclOrDef(def, os, isAttrGenerator, isDeclGenerator);
     if (def.genAccessors() && !params.empty())
       emitAccessorDeclsOrDefs(def, params, os, isAttrGenerator, isDeclGenerator);
   }
