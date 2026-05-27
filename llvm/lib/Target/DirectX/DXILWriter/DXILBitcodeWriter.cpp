@@ -1311,7 +1311,9 @@ void DXILBitcodeWriter::writeModuleInfo() {
   }
 
   // Emit the function proto information.
-  for (const Function &F : M) {
+  for (const Function &OrigF : M) {
+    const Function &F = VE.getDXILFunction(OrigF);
+
     // FUNCTION:  [type, callingconv, isproto, linkage, paramattrs, alignment,
     //             section, visibility, gc, unnamed_addr, prologuedata,
     //             dllstorageclass, comdat, prefixdata, personalityfn]
@@ -1894,7 +1896,9 @@ void DXILBitcodeWriter::writeFunctionMetadataAttachment(const Function &F) {
   }
 
   for (const BasicBlock &BB : F)
-    for (const Instruction &I : BB) {
+    for (const Instruction &OrigI : BB) {
+      const Instruction &I = VE.getDXILInstruction(OrigI);
+
       MDs.clear();
       I.getAllMetadataOtherThanDebugLoc(MDs);
 
@@ -2606,7 +2610,8 @@ void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
   SmallVector<const ValueName *, 16> SortedTable;
 
   for (auto &VI : VST) {
-    SortedTable.push_back(VI.second->getValueName());
+    const Value &V = VE.getDXILValue(*VI.second);
+    SortedTable.push_back(V.getValueName());
   }
   // The keys are unique, so there shouldn't be stability issues.
   llvm::sort(SortedTable, [](const ValueName *A, const ValueName *B) {
@@ -2689,18 +2694,20 @@ void DXILBitcodeWriter::writeFunction(const Function &F) {
 
   // Finally, emit all the instructions, in order.
   for (Function::const_iterator BB = F.begin(), E = F.end(); BB != E; ++BB)
-    for (BasicBlock::const_iterator I = BB->begin(), E = BB->end(); I != E;
-         ++I) {
-      writeInstruction(*I, InstID, Vals);
+    for (BasicBlock::const_iterator It = BB->begin(), E = BB->end(); It != E;
+         ++It) {
+      const Instruction &I = VE.getDXILInstruction(*It);
 
-      if (!I->getType()->isVoidTy())
+      writeInstruction(I, InstID, Vals);
+
+      if (!I.getType()->isVoidTy())
         ++InstID;
 
       // If the instruction has metadata, write a metadata attachment later.
-      NeedsMetadataAttachment |= I->hasMetadataOtherThanDebugLoc();
+      NeedsMetadataAttachment |= I.hasMetadataOtherThanDebugLoc();
 
       // If the instruction has a debug location, emit it.
-      DILocation *DL = I->getDebugLoc();
+      DILocation *DL = I.getDebugLoc();
       if (!DL)
         continue;
 
