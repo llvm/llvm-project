@@ -876,8 +876,7 @@ void xegpu::addContextAwareVectorTypeConversion(
     if (!layout)
       return;
     auto [subShape, count] = getSubShapeAndCount(vecTy, layout);
-    assert(count >= 1 && "getSubShapeAndCount must return count >= 1");
-    if (count <= 1)
+    if (count <= 0)
       return;
     auto newTy = VectorType::get(subShape, vecTy.getElementType());
     SmallVector<Type> types(count, newTy);
@@ -924,8 +923,7 @@ void xegpu::addContextAwareVectorTypeConversion(
 
         auto vecType = cast<VectorType>(v.getType());
         auto [subShape, count] = getSubShapeAndCount(vecType, layout);
-        assert(count >= 1 && "getSubShapeAndCount must return count >= 1");
-        if (count <= 1)
+        if (count <= 0)
           return std::nullopt;
 
         auto newTy = VectorType::get(subShape, vecType.getElementType());

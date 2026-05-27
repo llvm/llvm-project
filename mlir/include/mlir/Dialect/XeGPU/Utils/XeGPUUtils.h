@@ -229,8 +229,9 @@ bool matchSplitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
 
 /// Callback type for computing sub-shape and count for 1:N VectorType
 /// conversion. Given a VectorType and its DistributeLayoutAttr, returns
-/// (subShape, count). The returned count is always >= 1; callers treat
-/// count == 1 as "no split needed".
+/// (subShape, count). A count <= 0 signals "no conversion needed"; a
+/// count >= 1 produces `count` copies of `subShape` (count == 1 is a
+/// 1:1 shape-changing conversion).
 using SubShapeAndCountFn = std::function<std::pair<SmallVector<int64_t>, int>(
     VectorType, DistributeLayoutAttr)>;
 

@@ -59,7 +59,6 @@ getSgShapeAndCount(ArrayRef<int64_t> shape,
     return std::make_pair(sgShape, count);
   auto sgData = layout.getEffectiveSgDataAsInt();
   count = computeProduct(distributedShape.value()) / computeProduct(sgData);
-  assert(count >= 1 && "count must be at least 1");
   return std::make_pair(sgData, count);
 }
 
@@ -1508,7 +1507,7 @@ void populateXeGPUWgToSgDistributeTypeConversions(TypeConverter &converter,
       [](VectorType vecTy, xegpu::DistributeLayoutAttr layout)
           -> std::pair<SmallVector<int64_t>, int> {
         if (!layout.isForWorkgroup())
-          return {SmallVector<int64_t>(vecTy.getShape()), 1};
+          return {{}, 0};
         return getSgShapeAndCount(vecTy.getShape(), layout);
       });
 }
