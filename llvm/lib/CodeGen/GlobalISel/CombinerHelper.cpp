@@ -579,15 +579,6 @@ void CombinerHelper::applyCombineShuffleConcat(
   MI.eraseFromParent();
 }
 
-bool CombinerHelper::tryCombineShuffleVector(MachineInstr &MI) const {
-  SmallVector<Register, 4> Ops;
-  if (matchCombineShuffleVector(MI, Ops)) {
-    applyCombineShuffleVector(MI, Ops);
-    return true;
-  }
-  return false;
-}
-
 bool CombinerHelper::matchCombineShuffleVector(
     MachineInstr &MI, SmallVectorImpl<Register> &Ops) const {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR &&
@@ -8802,4 +8793,17 @@ bool CombinerHelper::matchCtls(MachineInstr &CtlzMI,
   };
 
   return true;
+}
+
+// Fold shr ( add ( ext X, ext Y ), 1 ) -> avgfloor ( x, y )
+// Fold shr ( add ( ext X, ext Y, 1 ), 1 ) -> avgceil ( x, y )
+bool CombinerHelper::matchAVG(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              Register X, Register Y,
+                              unsigned TargetOpc) const {
+  assert((MI.getOpcode() == TargetOpcode::G_LSHR ||
+          MI.getOpcode() == TargetOpcode::G_ASHR) &&
+         "Expected G_LSHR/G_ASHR");
+
+  LLT XTy = MRI.getType(X);
+  return XTy == MRI.getType(Y) && isLegal({TargetOpc, {XTy}});
 }

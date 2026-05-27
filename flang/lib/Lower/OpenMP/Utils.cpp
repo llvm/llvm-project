@@ -568,16 +568,16 @@ void insertChildMapInfoIntoParent(
     lower::StatementContext &stmtCtx,
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) {
+    llvm::SmallVectorImpl<Object> &mapObjects) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   for (auto indices : parentMemberIndices) {
     auto *parentIter =
-        llvm::find_if(mapSyms, [&indices](const semantics::Symbol *v) {
-          return v == indices.first.sym();
+        llvm::find_if(mapObjects, [&indices](const Object &object) {
+          return object.sym() == indices.first.sym();
         });
-    if (parentIter != mapSyms.end()) {
+    if (parentIter != mapObjects.end()) {
       auto mapOp = llvm::cast<mlir::omp::MapInfoOp>(
-          mapOperands[std::distance(mapSyms.begin(), parentIter)]
+          mapOperands[std::distance(mapObjects.begin(), parentIter)]
               .getDefiningOp());
 
       // Once explicit members are attached to a parent map, do not also invoke
@@ -640,7 +640,7 @@ void insertChildMapInfoIntoParent(
           /*partialMap=*/true);
 
       mapOperands.push_back(mapOp);
-      mapSyms.push_back(indices.first.sym());
+      mapObjects.push_back(indices.first);
     }
   }
 }

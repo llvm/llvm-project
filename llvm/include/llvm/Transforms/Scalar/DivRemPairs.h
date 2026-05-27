@@ -22,7 +22,7 @@ namespace llvm {
 /// improvements and better codegen.
 struct DivRemPairsPass : public OptionalPassInfoMixin<DivRemPairsPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 };
 }
 #endif // LLVM_TRANSFORMS_SCALAR_DIVREMPAIRS_H

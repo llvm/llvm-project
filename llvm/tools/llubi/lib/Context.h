@@ -12,6 +12,7 @@
 #include "Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/AsmParser/AsmParserContext.h"
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Module.h"
 #include <map>
@@ -197,6 +198,7 @@ class Context {
   // Module
   LLVMContext &Ctx;
   Module &M;
+  const AsmParserContext *ParserContext;
   const DataLayout &DL;
   const TargetLibraryInfoImpl TLIImpl;
 
@@ -250,7 +252,7 @@ class Context {
   // TODO: errno
 
 public:
-  explicit Context(Module &M);
+  explicit Context(Module &M, const AsmParserContext *ParserContext);
   Context(const Context &) = delete;
   Context(Context &&) = delete;
   Context &operator=(const Context &) = delete;
@@ -279,6 +281,8 @@ public:
   void reseed(uint32_t Seed) { Rng.seed(Seed); }
 
   LLVMContext &getContext() const { return Ctx; }
+  Module &getModule() const { return M; }
+  const AsmParserContext *getParserContext() const { return ParserContext; }
   const DataLayout &getDataLayout() const { return DL; }
   const Triple &getTargetTriple() const { return M.getTargetTriple(); }
   const TargetLibraryInfoImpl &getTLIImpl() const { return TLIImpl; }
