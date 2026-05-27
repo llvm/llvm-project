@@ -12,6 +12,8 @@
 # leaving the main target list empty (target list outputs "No targets.").
 # If the bug is fixed, it successfully creates "target #0: <none>".
 
+# REQUIRES: python
+
 # RUN: %lldb -s %s 2>&1 | FileCheck %s
 
 script lldb.debugger.GetCommandInterpreter().HandleCommand("process attach -p 99999", lldb.SBCommandReturnObject())

@@ -6,6 +6,15 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX12 %s
 ; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX12 %s
 
+; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=1 -global-isel-abort=0 -mtriple=amdgcn -mcpu=gfx900 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=1 -global-isel-abort=0 -mtriple=amdgcn -mcpu=gfx1010 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx950 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=1 -global-isel-abort=0 -mtriple=amdgcn -mcpu=gfx950 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
+
+; ERR: error: <unknown>:0:0: in function v_fma float (float, float, float): intrinsic not supported on subtarget
+
 define float @v_fma(float %a, float %b, float %c)  {
 ; GFX10-LABEL: v_fma:
 ; GFX10:       ; %bb.0:

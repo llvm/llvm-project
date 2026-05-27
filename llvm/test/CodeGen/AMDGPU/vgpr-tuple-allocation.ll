@@ -5,7 +5,7 @@
 
 declare void @extern_func() #2
 
-define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, float %bias, float %zcompare, float %s, float %t, float %clamp) {
+define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, float %bias, float %zcompare, float %s, float %t, float %clamp) #3 {
 ; The vgpr tuple8 operand in image_gather4_c_b_cl instruction needs not be
 ; preserved across the call and should get 8 scratch registers.
 ; GFX9-LABEL: non_preserved_vgpr_tuple8:
@@ -52,8 +52,8 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 ; GFX9-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
-; GFX9-NEXT:    v_readlane_b32 s31, v44, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v44, 0
+; GFX9-NEXT:    v_readlane_b32 s31, v44, 1
 ; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v44, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -109,8 +109,8 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 ; GFX10-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:4
 ; GFX10-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:8
 ; GFX10-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:12
-; GFX10-NEXT:    v_readlane_b32 s31, v44, 1
 ; GFX10-NEXT:    v_readlane_b32 s30, v44, 0
+; GFX10-NEXT:    v_readlane_b32 s31, v44, 1
 ; GFX10-NEXT:    s_mov_b32 s32, s33
 ; GFX10-NEXT:    v_readlane_b32 s4, v44, 2
 ; GFX10-NEXT:    s_or_saveexec_b32 s5, -1
@@ -163,8 +163,8 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 ; GFX11-NEXT:    scratch_load_b32 v42, off, s33 offset:4
 ; GFX11-NEXT:    scratch_load_b32 v41, off, s33 offset:8
 ; GFX11-NEXT:    scratch_load_b32 v40, off, s33 offset:12
-; GFX11-NEXT:    v_readlane_b32 s31, v44, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v44, 0
+; GFX11-NEXT:    v_readlane_b32 s31, v44, 1
 ; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v44, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -193,7 +193,7 @@ main_body:
   ret <4 x float> %v
 }
 
-define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, float %bias, float %zcompare, float %s, float %t, float %clamp) {
+define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, float %bias, float %zcompare, float %s, float %t, float %clamp) #3 {
 ; The vgpr tuple8 operand in image_gather4_c_b_cl instruction needs to be preserved
 ; across the call and should get allcoated to 8 CSRs.
 ; Only the lower 5 sub-registers of the tuple are preserved.
@@ -236,8 +236,8 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX9-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:16 ; 4-byte Folded Reload
-; GFX9-NEXT:    v_readlane_b32 s31, v45, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v45, 0
+; GFX9-NEXT:    v_readlane_b32 s31, v45, 1
 ; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v45, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -286,8 +286,8 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX10-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:8
 ; GFX10-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:12
 ; GFX10-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:16
-; GFX10-NEXT:    v_readlane_b32 s31, v45, 1
 ; GFX10-NEXT:    v_readlane_b32 s30, v45, 0
+; GFX10-NEXT:    v_readlane_b32 s31, v45, 1
 ; GFX10-NEXT:    s_mov_b32 s32, s33
 ; GFX10-NEXT:    v_readlane_b32 s4, v45, 2
 ; GFX10-NEXT:    s_or_saveexec_b32 s5, -1
@@ -335,8 +335,8 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX11-NEXT:    scratch_load_b32 v42, off, s33 offset:8
 ; GFX11-NEXT:    scratch_load_b32 v41, off, s33 offset:12
 ; GFX11-NEXT:    scratch_load_b32 v40, off, s33 offset:16
-; GFX11-NEXT:    v_readlane_b32 s31, v45, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v45, 0
+; GFX11-NEXT:    v_readlane_b32 s31, v45, 1
 ; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v45, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -365,3 +365,4 @@ declare <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.2d.v4f32.f32.f32(i32 immar
 attributes #0 = { nounwind writeonly }
 attributes #1 = { nounwind readonly }
 attributes #2 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+attributes #3 = { nounwind }

@@ -440,7 +440,6 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
                                                      const CallExpr *E) {
   constexpr const char *Tag = "amdgpu-synchronize-as";
 
-  LLVMContext &Ctx = Inst->getContext();
   SmallVector<MMRAMetadata::TagT, 3> MMRAs;
   for (unsigned K = 2; K < E->getNumArgs(); ++K) {
     llvm::Value *V = EmitScalarExpr(E->getArg(K));
@@ -454,9 +453,7 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
               "expected an address space name as a string literal");
   }
 
-  llvm::sort(MMRAs);
-  MMRAs.erase(llvm::unique(MMRAs), MMRAs.end());
-  Inst->setMetadata(LLVMContext::MD_mmra, MMRAMetadata::getMD(Ctx, MMRAs));
+  MMRAMetadata::appendTags(*Inst, MMRAs);
 }
 
 static Value *GetAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {

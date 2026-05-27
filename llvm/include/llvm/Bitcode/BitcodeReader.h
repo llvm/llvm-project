@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -165,7 +166,8 @@ struct ParserCallbacks {
     /// into CombinedIndex.
     LLVM_ABI Error
     readSummary(ModuleSummaryIndex &CombinedIndex, StringRef ModulePath,
-                std::function<bool(GlobalValue::GUID)> IsPrevailing = nullptr);
+                std::function<bool(StringRef)> IsPrevailing = nullptr,
+                std::function<void(ValueInfo)> OnValueInfo = nullptr);
   };
 
   struct BitcodeFileContents {

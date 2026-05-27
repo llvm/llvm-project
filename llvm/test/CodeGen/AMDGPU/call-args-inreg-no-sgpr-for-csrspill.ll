@@ -43,8 +43,8 @@ define void @test_call_external_void_func_a15i32_inreg([15 x i32] inreg %arg0) #
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s42
 ; CHECK-NEXT:    v_writelane_b32 v1, s31, 1
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[40:41]
-; CHECK-NEXT:    v_readlane_b32 s31, v1, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v1, 0
+; CHECK-NEXT:    v_readlane_b32 s31, v1, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -76,8 +76,8 @@ define void @test_call_external_void_func_a16i32_inreg([16 x i32] inreg %arg0) #
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s43
 ; CHECK-NEXT:    v_writelane_b32 v2, s31, 1
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[40:41]
-; CHECK-NEXT:    v_readlane_b32 s31, v2, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v2, 0
+; CHECK-NEXT:    v_readlane_b32 s31, v2, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -109,8 +109,8 @@ define void @test_call_external_void_func_a15i32_inreg_i32_inreg([15 x i32] inre
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s43
 ; CHECK-NEXT:    v_writelane_b32 v2, s31, 1
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[40:41]
-; CHECK-NEXT:    v_readlane_b32 s31, v2, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v2, 0
+; CHECK-NEXT:    v_readlane_b32 s31, v2, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -121,3 +121,5 @@ define void @test_call_external_void_func_a15i32_inreg_i32_inreg([15 x i32] inre
   call void @external_void_func_a15i32_inreg_i32_inreg([15 x i32] inreg %arg0, i32 inreg %arg1)
   ret void
 }
+
+attributes #0 = { nounwind }

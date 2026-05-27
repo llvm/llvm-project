@@ -7287,8 +7287,18 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
     if (match(ShAmtArg, m_APInt(ShAmtC))) {
       // If there's effectively no shift, return the 1st arg or 2nd arg.
       APInt BitWidth = APInt(ShAmtC->getBitWidth(), ShAmtC->getBitWidth());
-      if (ShAmtC->urem(BitWidth).isZero())
+      const APInt ShAmt = ShAmtC->urem(BitWidth);
+      if (ShAmt.isZero())
         return Args[IID == Intrinsic::fshl ? 0 : 1];
+
+      // fshl (lshr X, C1), (shl X, C2), C1 -> X when C1 + C2 == BW
+      // fshr (lshr X, C1), (shl X, C2), C2 -> X when C1 + C2 == BW
+      const APInt *C1, *C2;
+      Value *X;
+      if (match(Op0, m_LShr(m_Value(X), m_APInt(C1))) &&
+          match(Op1, m_Shl(m_Specific(X), m_APInt(C2))) &&
+          *C1 + *C2 == BitWidth && ShAmt == *(IID == Intrinsic::fshl ? C1 : C2))
+        return X;
     }
 
     // Rotating zero by anything is zero.

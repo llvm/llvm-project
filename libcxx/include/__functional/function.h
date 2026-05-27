@@ -529,8 +529,12 @@ public:
 
 #  if _LIBCPP_HAS_BLOCKS_RUNTIME
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
 extern "C" void* _Block_copy(const void*);
 extern "C" void _Block_release(const void*);
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Rp1, class... _ArgTypes1, class _Rp, class... _ArgTypes>
 class __func<_Rp1 (^)(_ArgTypes1...), _Rp(_ArgTypes...)> : public __base<_Rp(_ArgTypes...)> {

@@ -2,7 +2,7 @@ import os
 import sys
 
 
-class TestingConfig(object):
+class TestingConfig:
     """
     TestingConfig - Information on the tests inside a suite.
     """

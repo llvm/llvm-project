@@ -633,19 +633,22 @@ func.func @test21_box_addr_rank_reducing(%arg0: !fir.ref<!fir.array<16x6xf32>>, 
 }
 
 // Rank-reducing slice via fir.rebox with no shift: 3D source box -> 2D box.
-// The rank-reducing branch currently requires the rebox to carry an explicit
-// shift (so the new array_coor on the source box gets a valid shape operand
-// of source rank). Without a shift we leave the IR unchanged.
-// CHECK-LABEL:   func.func @test22_rebox_rank_reducing(
-// CHECK-SAME:                      %[[VAL_0:.*]]: !fir.box<!fir.array<?x?x?xf32>>,
-// CHECK-SAME:                      %[[VAL_1:.*]]: index) -> !fir.ref<f32> {
-// CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_3:.*]] = arith.constant 100 : index
-// CHECK:           %[[VAL_4:.*]] = fir.undefined index
-// CHECK:           %[[VAL_5:.*]] = fir.slice %[[VAL_2]], %[[VAL_3]], %[[VAL_2]], %[[VAL_1]], %[[VAL_4]], %[[VAL_4]], %[[VAL_2]], %[[VAL_3]], %[[VAL_2]] : (index, index, index, index, index, index, index, index, index) -> !fir.slice<3>
-// CHECK:           %[[VAL_6:.*]] = fir.rebox %[[VAL_0]] {{\[}}%[[VAL_5]]] : (!fir.box<!fir.array<?x?x?xf32>>, !fir.slice<3>) -> !fir.box<!fir.array<?x?xf32>>
-// CHECK:           %[[VAL_7:.*]] = fir.array_coor %[[VAL_6]] %[[VAL_2]], %[[VAL_2]] : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
-// CHECK:           return %[[VAL_7]] : !fir.ref<f32>
+// array_coor on the sliced box is folded to a full-rank array_coor on the
+// source box; fir.shape is synthesized from fir.box_dims when rebox has no
+// shape operand (fir.shift is not used: rebox base_addr is pre-adjusted).
+// CHECK-LABEL:   func.func @test22_rebox_rank_reducing({{.*}}) -> !fir.ref<f32> {
+// CHECK:           %[[T22_C2:.*]] = arith.constant 2 : index
+// CHECK:           %[[T22_C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[T22_C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[T22_C100:.*]] = arith.constant 100 : index
+// CHECK:           %[[T22_U:.*]] = fir.undefined index
+// CHECK:           %[[T22_SL:.*]] = fir.slice %[[T22_C1]], %[[T22_C100]], %[[T22_C1]], %{{.*}}, %[[T22_U]], %[[T22_U]], %[[T22_C1]], %[[T22_C100]], %[[T22_C1]] : (index, index, index, index, index, index, index, index, index) -> !fir.slice<3>
+// CHECK:           %[[T22_BD0:.*]]:3 = fir.box_dims %{{.*}}, %[[T22_C0]]
+// CHECK:           %[[T22_BD1:.*]]:3 = fir.box_dims %{{.*}}, %[[T22_C1]]
+// CHECK:           %[[T22_BD2:.*]]:3 = fir.box_dims %{{.*}}, %[[T22_C2]]
+// CHECK:           %[[T22_SH:.*]] = fir.shape %[[T22_BD0]]#1, %[[T22_BD1]]#1, %[[T22_BD2]]#1 : (index, index, index) -> !fir.shape<3>
+// CHECK:           %[[T22_AC:.*]] = fir.array_coor %{{.*}}(%[[T22_SH]]) {{\[}}%[[T22_SL]]] %[[T22_C1]], %{{.*}}, %[[T22_C1]] : (!fir.box<!fir.array<?x?x?xf32>>, !fir.shape<3>, !fir.slice<3>, index, index, index) -> !fir.ref<f32>
+// CHECK:           return %[[T22_AC]] : !fir.ref<f32>
 // CHECK:         }
 func.func @test22_rebox_rank_reducing(%arg0: !fir.box<!fir.array<?x?x?xf32>>, %j: index) -> !fir.ref<f32> {
   %c1 = arith.constant 1 : index
@@ -847,5 +850,31 @@ func.func @test29_merged_box_addr_no_fold(%arg0: !fir.ref<!fir.array<4x3xf32>>) 
   %b = fir.embox %arg0(%sh) [%sl] : (!fir.ref<!fir.array<4x3xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<2x2xf32>>
   %ba = fir.box_addr %b : (!fir.box<!fir.array<2x2xf32>>) -> !fir.ref<!fir.array<4x3xf32>>
   %ac = fir.array_coor %ba(%sh) %c1, %c1 : (!fir.ref<!fir.array<4x3xf32>>, !fir.shape<2>, index, index) -> !fir.ref<f32>
+  return %ac : !fir.ref<f32>
+}
+
+// Rank-reducing 2D->1D slice via fir.rebox: array_coor uses the sliced 1D box
+// directly; fold to 2-index array_coor on the 2D source.
+// CHECK-LABEL:   func.func @test30_rebox_rank_reducing_2d({{.*}}) -> !fir.ref<f32> {
+// CHECK:           %[[T29_C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[T29_C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[T29_C2:.*]] = arith.constant 2 : index
+// CHECK:           %[[T29_U:.*]] = fir.undefined index
+// CHECK:           %[[T29_SL:.*]] = fir.slice %{{.*}}, %{{.*}}, %[[T29_C1]], %[[T29_C2]], %[[T29_U]], %[[T29_U]] : (index, index, index, index, index, index) -> !fir.slice<2>
+// CHECK:           %[[T29_BD0:.*]]:3 = fir.box_dims %{{.*}}, %[[T29_C0]]
+// CHECK:           %[[T29_BD1:.*]]:3 = fir.box_dims %{{.*}}, %[[T29_C1]]
+// CHECK:           %[[T29_SH:.*]] = fir.shape %[[T29_BD0]]#1, %[[T29_BD1]]#1 : (index, index) -> !fir.shape<2>
+// CHECK:           %[[T29_AC:.*]] = fir.array_coor %{{.*}}(%[[T29_SH]]) {{\[}}%[[T29_SL]]] %{{.*}}, %[[T29_C2]] : (!fir.box<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.slice<2>, index, index) -> !fir.ref<f32>
+// CHECK:           return %[[T29_AC]] : !fir.ref<f32>
+// CHECK:         }
+func.func @test30_rebox_rank_reducing_2d(
+    %arg0: !fir.box<!fir.array<?x?xf32>>, %si: index, %ei: index,
+    %row: index) -> !fir.ref<f32> {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %u = fir.undefined index
+  %s = fir.slice %si, %ei, %c1, %c2, %u, %u : (index, index, index, index, index, index) -> !fir.slice<2>
+  %b = fir.rebox %arg0 [%s] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
+  %ac = fir.array_coor %b %row : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
   return %ac : !fir.ref<f32>
 }

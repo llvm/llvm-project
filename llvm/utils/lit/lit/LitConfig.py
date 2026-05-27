@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 import inspect
 import os
 import enum
@@ -12,7 +11,7 @@ import lit.util
 from lit.DiffUpdater import diff_test_updater
 
 # LitConfig must be a new style class for properties to work
-class LitConfig(object):
+class LitConfig:
     """LitConfig - Configuration data for a 'lit' test runner instance, shared
     across all tests.
 

@@ -471,10 +471,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName) static_assert(true, "")
 #  endif
 
-#  if defined(__OBJC__) && defined(_LIBCPP_APPLE_CLANG_VER)
-#    define _LIBCPP_WORKAROUND_OBJCXX_COMPILER_INTRINSICS
-#  endif
-
 #  define _PSTL_PRAGMA(x) _Pragma(#x)
 
 // Enable SIMD for compilers that support OpenMP 4.0

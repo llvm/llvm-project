@@ -83,25 +83,20 @@ void FileManager::setStatCache(std::unique_ptr<FileSystemStatCache> statCache) {
 
 void FileManager::clearStatCache() { StatCache.reset(); }
 
-/// Retrieve the directory that the given file name resides in.
-/// Filename can point to either a real file or a virtual file.
-static llvm::Expected<DirectoryEntryRef>
-getDirectoryFromFile(FileManager &FileMgr, StringRef Filename,
-                     bool CacheFailure) {
+llvm::ErrorOr<DirectoryEntryRef>
+FileManager::getDirectoryFromFile(StringRef Filename, bool CacheFailure) {
   if (Filename.empty())
-    return llvm::createFileError(
-        Filename, make_error_code(std::errc::no_such_file_or_directory));
+    return make_error_code(std::errc::no_such_file_or_directory);
 
   if (llvm::sys::path::is_separator(Filename[Filename.size() - 1]))
-    return llvm::createFileError(Filename,
-                                 make_error_code(std::errc::is_a_directory));
+    return make_error_code(std::errc::is_a_directory);
 
   StringRef DirName = llvm::sys::path::parent_path(Filename);
   // Use the current directory if file has no path component.
   if (DirName.empty())
     DirName = ".";
 
-  return FileMgr.getDirectoryRef(DirName, CacheFailure);
+  return getDirectoryRefImpl(DirName, CacheFailure);
 }
 
 DirectoryEntry *&FileManager::getRealDirEntry(const llvm::vfs::Status &Status) {
@@ -164,8 +159,8 @@ void FileManager::addAncestorsAsVirtualDirs(StringRef Path) {
   addAncestorsAsVirtualDirs(OriginalDirName);
 }
 
-llvm::Expected<DirectoryEntryRef>
-FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
+llvm::ErrorOr<DirectoryEntryRef>
+FileManager::getDirectoryRefImpl(StringRef DirName, bool CacheFailure) {
   std::optional<std::string> DirNameStr;
   normalizeCacheKey(DirName, DirNameStr);
 
@@ -178,8 +173,7 @@ FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
   if (!SeenDirInsertResult.second) {
     if (SeenDirInsertResult.first->second)
       return DirectoryEntryRef(*SeenDirInsertResult.first);
-    return llvm::createFileError(DirName,
-                                 SeenDirInsertResult.first->second.getError());
+    return SeenDirInsertResult.first->second.getError();
   }
 
   // We've not seen this before. Fill it in.
@@ -201,7 +195,7 @@ FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
       NamedDirEnt.second = statError;
     else
       SeenDirEntries.erase(DirName);
-    return llvm::createFileError(DirName, statError);
+    return statError;
   }
 
   // It exists.
@@ -211,10 +205,10 @@ FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
   return DirectoryEntryRef(NamedDirEnt);
 }
 
-llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
-                                                     bool openFile,
-                                                     bool CacheFailure,
-                                                     bool IsText) {
+llvm::ErrorOr<FileEntryRef> FileManager::getFileRefImpl(StringRef Filename,
+                                                        bool openFile,
+                                                        bool CacheFailure,
+                                                        bool IsText) {
   ++NumFileLookups;
 
   // See if there is already an entry in the map.
@@ -222,8 +216,7 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
       SeenFileEntries.insert({Filename, std::errc::no_such_file_or_directory});
   if (!SeenFileInsertResult.second) {
     if (!SeenFileInsertResult.first->second)
-      return llvm::createFileError(
-          Filename, SeenFileInsertResult.first->second.getError());
+      return SeenFileInsertResult.first->second.getError();
     return FileEntryRef(*SeenFileInsertResult.first);
   }
 
@@ -241,15 +234,15 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
   // subdirectory.  This will let us avoid having to waste time on known-to-fail
   // searches when we go to find sys/bar.h, because all the search directories
   // without a 'sys' subdir will get a cached failure result.
-  auto DirInfoOrErr = getDirectoryFromFile(*this, Filename, CacheFailure);
+  auto DirInfoOrErr = getDirectoryFromFile(Filename, CacheFailure);
   if (!DirInfoOrErr) { // Directory doesn't exist, file can't exist.
-    std::error_code Err = errorToErrorCode(DirInfoOrErr.takeError());
+    std::error_code Err = DirInfoOrErr.getError();
     if (CacheFailure)
       NamedFileEnt->second = Err;
     else
       SeenFileEntries.erase(Filename);
 
-    return llvm::createFileError(Filename, Err);
+    return Err;
   }
   DirectoryEntryRef DirInfo = *DirInfoOrErr;
 
@@ -268,7 +261,7 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
     else
       SeenFileEntries.erase(Filename);
 
-    return llvm::createFileError(Filename, statError);
+    return statError;
   }
 
   assert((openFile || !F) && "undesired open file");
@@ -413,8 +406,8 @@ FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,
   // from a source location preprocessor directive with an empty filename as
   // an example, so we need to pretend it has a name to ensure a valid directory
   // entry can be returned.
-  auto DirInfo = expectedToOptional(getDirectoryFromFile(
-      *this, Filename.empty() ? "." : Filename, /*CacheFailure=*/true));
+  auto DirInfo = getDirectoryFromFile(Filename.empty() ? "." : Filename,
+                                      /*CacheFailure=*/true);
   assert(DirInfo &&
          "The directory of a virtual file should already be in the cache.");
 

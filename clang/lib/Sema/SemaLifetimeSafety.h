@@ -20,6 +20,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/Sema.h"
+#include <string>
 
 namespace clang::lifetimes {
 
@@ -75,12 +76,14 @@ public:
   }
 
   void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
-                            const Expr *MovedExpr,
-                            SourceLocation ExpiryLoc) override {
-    S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_return_stack_addr_moved
-                     : diag::warn_lifetime_safety_return_stack_addr)
-        << IssueExpr->getSourceRange();
+                            const Expr *MovedExpr) override {
+    unsigned DiagID = MovedExpr
+                          ? diag::warn_lifetime_safety_return_stack_addr_moved
+                          : diag::warn_lifetime_safety_return_stack_addr;
+
+    S.Diag(IssueExpr->getExprLoc(), DiagID)
+        << getDiagSubjectDescription(IssueExpr) << IssueExpr->getSourceRange();
+
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
@@ -396,6 +399,26 @@ public:
   }
 
 private:
+  std::string getDiagSubjectDescription(const ValueDecl *VD) {
+    std::string Res;
+    llvm::raw_string_ostream OS(Res);
+    OS << (isa<ParmVarDecl>(VD) ? "parameter" : "local variable");
+    OS << " '";
+    VD->getNameForDiagnostic(OS, S.getPrintingPolicy(), /*Qualified=*/false);
+    OS << "'";
+    return Res;
+  }
+
+  std::string getDiagSubjectDescription(const Expr *E) {
+    if (isa<MaterializeTemporaryExpr>(E))
+      return "local temporary object";
+
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+      return getDiagSubjectDescription(DRE->getDecl());
+    // TODO: Handle other expression types.
+    return "";
+  }
+
   Sema &S;
 };
 

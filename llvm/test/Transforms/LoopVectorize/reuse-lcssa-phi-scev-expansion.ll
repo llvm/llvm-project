@@ -205,10 +205,15 @@ define void @expand_diff_scev_unknown(ptr %dst, i1 %invar.c, i32 %step) mustprog
 ; CHECK-NEXT:    br i1 [[INVAR_C]], label %[[LOOP_2_PREHEADER:.*]], label %[[LOOP_1]]
 ; CHECK:       [[LOOP_2_PREHEADER]]:
 ; CHECK-NEXT:    [[IV_1_LCSSA:%.*]] = phi i32 [ [[IV_1]], %[[LOOP_1]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 2, [[STEP]]
+; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[IV_1_LCSSA]], [[TMP0]]
+; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP12]], i32 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[INDVAR]], -1
+; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP3]], -1
+; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[SMAX1]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[IV_1_LCSSA]], [[STEP]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP1]], i32 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[STEP]], -2
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[INDVAR]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[SMAX]], [[TMP4]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP5]], i32 1)
@@ -217,11 +222,6 @@ define void @expand_diff_scev_unknown(ptr %dst, i1 %invar.c, i32 %step) mustprog
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[STEP]], i32 1)
 ; CHECK-NEXT:    [[TMP8:%.*]] = udiv i32 [[TMP7]], [[UMAX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[TMP6]], [[TMP8]]
-; CHECK-NEXT:    [[TMP16:%.*]] = sub i32 2, [[STEP]]
-; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[IV_1_LCSSA]], [[TMP16]]
-; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP12]], i32 0)
-; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP3]], -1
-; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[SMAX1]], [[TMP14]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP15]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:

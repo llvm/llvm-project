@@ -5554,6 +5554,9 @@ Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
   switch (Inst->getIntrinsicID()) {
   default:
     return nullptr;
+  case Intrinsic::aarch64_neon_st1x2:
+  case Intrinsic::aarch64_neon_st1x3:
+  case Intrinsic::aarch64_neon_st1x4:
   case Intrinsic::aarch64_neon_st2:
   case Intrinsic::aarch64_neon_st3:
   case Intrinsic::aarch64_neon_st4: {
@@ -5576,6 +5579,9 @@ Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
     }
     return Res;
   }
+  case Intrinsic::aarch64_neon_ld1x2:
+  case Intrinsic::aarch64_neon_ld1x3:
+  case Intrinsic::aarch64_neon_ld1x4:
   case Intrinsic::aarch64_neon_ld2:
   case Intrinsic::aarch64_neon_ld3:
   case Intrinsic::aarch64_neon_ld4:
@@ -5590,6 +5596,9 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   switch (Inst->getIntrinsicID()) {
   default:
     break;
+  case Intrinsic::aarch64_neon_ld1x2:
+  case Intrinsic::aarch64_neon_ld1x3:
+  case Intrinsic::aarch64_neon_ld1x4:
   case Intrinsic::aarch64_neon_ld2:
   case Intrinsic::aarch64_neon_ld3:
   case Intrinsic::aarch64_neon_ld4:
@@ -5597,6 +5606,9 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
     Info.WriteMem = false;
     Info.PtrVal = Inst->getArgOperand(0);
     break;
+  case Intrinsic::aarch64_neon_st1x2:
+  case Intrinsic::aarch64_neon_st1x3:
+  case Intrinsic::aarch64_neon_st1x4:
   case Intrinsic::aarch64_neon_st2:
   case Intrinsic::aarch64_neon_st3:
   case Intrinsic::aarch64_neon_st4:
@@ -5606,20 +5618,33 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
     break;
   }
 
+  // Use the ID of neon load as the "matching id".
   switch (Inst->getIntrinsicID()) {
   default:
     return false;
+  case Intrinsic::aarch64_neon_ld1x2:
+  case Intrinsic::aarch64_neon_st1x2:
+    Info.MatchingId = Intrinsic::aarch64_neon_ld1x2;
+    break;
+  case Intrinsic::aarch64_neon_ld1x3:
+  case Intrinsic::aarch64_neon_st1x3:
+    Info.MatchingId = Intrinsic::aarch64_neon_ld1x3;
+    break;
+  case Intrinsic::aarch64_neon_ld1x4:
+  case Intrinsic::aarch64_neon_st1x4:
+    Info.MatchingId = Intrinsic::aarch64_neon_ld1x4;
+    break;
   case Intrinsic::aarch64_neon_ld2:
   case Intrinsic::aarch64_neon_st2:
-    Info.MatchingId = VECTOR_LDST_TWO_ELEMENTS;
+    Info.MatchingId = Intrinsic::aarch64_neon_ld2;
     break;
   case Intrinsic::aarch64_neon_ld3:
   case Intrinsic::aarch64_neon_st3:
-    Info.MatchingId = VECTOR_LDST_THREE_ELEMENTS;
+    Info.MatchingId = Intrinsic::aarch64_neon_ld3;
     break;
   case Intrinsic::aarch64_neon_ld4:
   case Intrinsic::aarch64_neon_st4:
-    Info.MatchingId = VECTOR_LDST_FOUR_ELEMENTS;
+    Info.MatchingId = Intrinsic::aarch64_neon_ld4;
     break;
   }
   return true;

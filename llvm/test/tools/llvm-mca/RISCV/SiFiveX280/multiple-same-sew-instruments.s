@@ -88,4 +88,4 @@ vdivu.vv v8, v8, v12
 # CHECK-NEXT: 5.     1     0.0    0.0    0.0       vsetvli	zero, a0, e32, m1, tu, mu
 # CHECK-NEXT: 6.     1     0.0    0.0    0.0       vdiv.vv	v8, v8, v12
 # CHECK-NEXT: 7.     1     0.0    0.0    0.0       vdivu.vv	v8, v8, v12
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        8     0.0    0.0    0.0       <total>

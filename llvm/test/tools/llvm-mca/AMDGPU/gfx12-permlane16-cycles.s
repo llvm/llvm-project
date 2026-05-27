@@ -107,4 +107,4 @@ v_maximum3_f32 v17, v70, v255 /*v767*/, v1 /*v769*/
 # CHECK-NEXT: 8.     1     0.0    0.0    0.0       v_maximum3_f32 v16, v16, v219, v221
 # CHECK-NEXT: 9.     1     0.0    0.0    0.0       s_set_vgpr_msb 0x2838
 # CHECK-NEXT: 10.    1     0.0    0.0    0.0       v_maximum3_f32 v17, v70, v255, v1
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        11    0.0    0.0    0.0       <total>

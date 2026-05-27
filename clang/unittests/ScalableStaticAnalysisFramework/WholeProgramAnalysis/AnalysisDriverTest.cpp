@@ -180,10 +180,6 @@ public:
   }
 };
 
-// These static registrations are safe without SSAFBuiltinTestForceLinker.h
-// because this translation unit is compiled directly into the test binary -
-// the linker cannot dead-strip it, so all static initializers are guaranteed
-// to run.
 static AnalysisRegistry::Add<Analysis1> RegAnalysis1("Analysis for Analysis1");
 
 class Analysis2 final

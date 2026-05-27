@@ -2911,11 +2911,12 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
         if (!DNBThreadGetRegisterValueByID(pid, tid, regset,
                                            g_reg_entries[reg].nub_info.reg,
                                            reg_value.get()))
-          continue;
-
-        debugserver_regnum_with_fixed_width_hex_register_value(
-            ostrm, pid, tid, &g_reg_entries[reg], reg_value.get(),
-            std::nullopt);
+          // base16(regnum):<no value>; means a register that cannot be fetched.
+          ostrm << RAWHEX8(g_reg_entries[reg].debugserver_regnum) << ":;";
+        else
+          debugserver_regnum_with_fixed_width_hex_register_value(
+              ostrm, pid, tid, &g_reg_entries[reg], reg_value.get(),
+              std::nullopt);
       }
     }
 
@@ -5818,15 +5819,30 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
               new JSONGenerator::Dictionary());
 
           for (uint32_t reg = 0; reg < g_num_reg_entries; reg++) {
+            bool include_reg = false;
             // Expedite all registers in the first register set that aren't
-            // contained in other registers
+            // contained in other registers.
             if (g_reg_entries[reg].nub_info.set == 1 &&
-                g_reg_entries[reg].nub_info.value_regs == NULL) {
+                g_reg_entries[reg].nub_info.value_regs == NULL)
+              include_reg = true;
+            // Include the SME state register values, whether we can
+            // fetch the value or not.
+            if (strcmp("svcr", g_reg_entries[reg].nub_info.name) == 0 ||
+                strcmp("tpidr2", g_reg_entries[reg].nub_info.name) == 0 ||
+                strcmp("svl", g_reg_entries[reg].nub_info.name) == 0)
+              include_reg = true;
+
+            if (include_reg) {
               if (!DNBThreadGetRegisterValueByID(
                       pid, tid, g_reg_entries[reg].nub_info.set,
-                      g_reg_entries[reg].nub_info.reg, reg_value.get()))
+                      g_reg_entries[reg].nub_info.reg, reg_value.get())) {
+                // Indicate unavailable registers as having an empty value
+                // string.
+                std::ostringstream reg_num;
+                reg_num << std::dec << g_reg_entries[reg].debugserver_regnum;
+                registers_dict_sp->AddStringItem(reg_num.str(), "");
                 continue;
-
+              }
               std::ostringstream reg_num;
               reg_num << std::dec << g_reg_entries[reg].debugserver_regnum;
               // Encode native byte ordered bytes as hex ascii

@@ -41,6 +41,7 @@ C c : register(t10);
 //
 // CHECK: define internal void @__cxx_global_var_init()
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: call void @hlsl::RWBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
 // CHECK-SAME: (ptr {{.*}}(%"class.hlsl::RWBuffer") align 4 @a.Buf, i32 noundef 0, i32 noundef 0, i32 noundef 1, i32 noundef 0, ptr noundef @[[aBufStr]])
 // CHECK-NEXT: ret void
@@ -49,6 +50,7 @@ C c : register(t10);
 //
 // CHECK: define internal void @__cxx_global_var_init.3()
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: call void @hlsl::StructuredBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
 // CHECK-SAME: (ptr dead_on_unwind writable sret(%"class.hlsl::StructuredBuffer") align 4 @c.BufOne, i32 noundef 16, i32 noundef 0, i32 noundef 1, i32 noundef 0, ptr noundef @[[cBufOne]])
 // CHECK-NEXT: ret void

@@ -9,7 +9,7 @@
     ret void
   }
 
-  attributes #0 = { "frame-pointer"="all"}
+  attributes #0 = { "frame-pointer"="all" nounwind }
 ...
 ---
 name: kernel_vgpr32_spill

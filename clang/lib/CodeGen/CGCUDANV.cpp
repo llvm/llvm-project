@@ -25,6 +25,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -975,7 +976,10 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     // Generate a unique module ID.
     SmallString<64> ModuleID;
     llvm::raw_svector_ostream OS(ModuleID);
-    OS << ModuleIDPrefix << llvm::format("%" PRIx64, FatbinWrapper->getGUID());
+    OS << ModuleIDPrefix
+       << llvm::format("%" PRIx64,
+                       llvm::GlobalValue::getGUIDAssumingExternalLinkage(
+                           FatbinWrapper->getName()));
     llvm::Constant *ModuleIDConstant = makeConstantArray(
         std::string(ModuleID), "", ModuleIDSectionName, 32, /*AddNull=*/true);
 

@@ -79,6 +79,7 @@ extern bool TracebackTable;
 extern bool SymbolTable;
 extern std::string TripleName;
 extern bool UnwindInfo;
+extern bool UnwindShowWODPool;
 
 extern StringSet<> FoundSectionSet;
 

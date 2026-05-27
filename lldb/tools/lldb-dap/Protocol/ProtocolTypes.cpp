@@ -745,7 +745,7 @@ llvm::json::Value toJSON(const StepInTarget &SIT) {
     target.insert({"column", SIT.column});
   if (SIT.endLine != LLDB_INVALID_LINE_NUMBER)
     target.insert({"endLine", SIT.endLine});
-  if (SIT.endLine != LLDB_INVALID_COLUMN_NUMBER)
+  if (SIT.endColumn != LLDB_INVALID_COLUMN_NUMBER)
     target.insert({"endColumn", SIT.endColumn});
 
   return target;

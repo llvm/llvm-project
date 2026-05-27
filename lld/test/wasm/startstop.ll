@@ -34,12 +34,12 @@ entry:
 ; CHECK-NEXT:           Value:           65536
 ; CHECK-NEXT:         Content:         03000000040000002A0000002B000000
 
-;       ASM: 00000070 <get_start>:
+;       ASM: 00000069 <get_start>:
 ; ASM-EMPTY:
-;  ASM-NEXT:        72:     i32.const 65536
-;  ASM-NEXT:        78:     end
+;  ASM-NEXT:        6b:     i32.const 65536
+;  ASM-NEXT:        71:     end
 
-;       ASM: 00000079 <get_end>:
+;       ASM: 00000072 <get_end>:
 ; ASM-EMPTY:
-;  ASM-NEXT:        7b:     i32.const 65552
-;  ASM-NEXT:       81:     end
+;  ASM-NEXT:        74:     i32.const 65552
+;  ASM-NEXT:        7a:     end

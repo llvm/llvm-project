@@ -123,6 +123,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_tail_call__");
   if (HasWideArithmetic)
     Builder.defineMacro("__wasm_wide_arithmetic__");
+  if (HasLibcallThreadContext)
+    Builder.defineMacro("__wasm_libcall_thread_context__");
   // Note that not all wasm features appear here.   For example,
   // HasCompatctImports
 

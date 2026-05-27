@@ -30,6 +30,7 @@
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
+#include "flang/Lower/Support/PrivateReductionUtils.h"
 #include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
@@ -4251,18 +4252,24 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
   return genCombinerCB;
 }
 
-// Checks that the reduction type is either a trivial type or a derived type of
-// trivial types.
+// Checks that the reduction type is either a trivial type, a fixed-length
+// character type, or a derived type composed of such types.
 static bool isSimpleReductionType(mlir::Type reductionType) {
   if (fir::isa_trivial(reductionType))
     return true;
+  // Fixed-length CHARACTER is not trivial but can be zero-initialized.
+  // Reject dynamic-length CHARACTER (len == unknownLen()).
+  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(reductionType))
+    return charTy.getLen() != fir::CharacterType::unknownLen();
   if (auto recordTy = mlir::dyn_cast<fir::RecordType>(reductionType)) {
     for (auto [_, fieldType] : recordTy.getTypeList()) {
-      if (!fir::isa_trivial(fieldType))
+      if (!isSimpleReductionType(fieldType))
         return false;
     }
+    return true;
   }
-  return true;
+  // Reject array and descriptor-based types.
+  return false;
 }
 
 // Getting the type from a symbol compared to a DeclSpec is simpler since we do
@@ -4285,8 +4292,8 @@ getReductionType(lower::AbstractConverter &converter,
 
   if (!isSimpleReductionType(reductionType))
     TODO(converter.getCurrentLocation(),
-         "declare reduction currently only supports trival types or derived "
-         "types containing trivial types");
+         "declare reduction currently only supports trivial types, "
+         "fixed-length CHARACTER, or derived types containing them");
   return reductionType;
 }
 
@@ -4399,22 +4406,16 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     ReductionProcessor::GenCombinerCBTy genCombinerCB =
         processReductionCombiner(converter, symTable, semaCtx, combiner,
                                  parserInst);
-    ReductionProcessor::GenInitValueCBTy genInitValueCB;
-    ClauseProcessor cp(converter, semaCtx, clauses);
     const parser::OmpStylizedInstance *parserInitInst = nullptr;
     if (initExpr) {
       assert(parserInitInstIt != initExpr->v.end() &&
              "Mismatched initializer instance count");
       parserInitInst = &*parserInitInstIt++;
     }
-    cp.processInitializer(symTable, genInitValueCB, parserInitInst);
-    mlir::Type redType =
-        isByRef
-            ? static_cast<mlir::Type>(fir::ReferenceType::get(reductionType))
-            : reductionType;
 
-    // Get the omp_out symbol from the combiner for finalization checks
-    // in populateByRefInitAndCleanupRegions.
+    // Get the omp_out symbol from the combiner. Used for finalization checks
+    // in populateByRefInitAndCleanupRegions and for generating default
+    // initialization via genScalarDefaultInitializerValue.
     const semantics::Symbol *reductionSym = nullptr;
     const auto &declList =
         std::get<std::list<parser::OmpStylizedDeclaration>>(parserInst.t);
@@ -4425,6 +4426,57 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         break;
       }
     }
+
+    ReductionProcessor::GenInitValueCBTy genInitValueCB;
+    ClauseProcessor cp(converter, semaCtx, clauses);
+    if (!cp.processInitializer(symTable, genInitValueCB, parserInitInst)) {
+      // No initializer clause provided. Per OpenMP, initialize as
+      // default-initialized using the shared inline init helper.
+      const semantics::DerivedTypeSpec *derivedTypeSpec = nullptr;
+      if (const semantics::DeclTypeSpec *declTypeSpec = typeSpec.declTypeSpec)
+        derivedTypeSpec = declTypeSpec->AsDerived();
+
+      mlir::Type unwrappedType = fir::unwrapRefType(reductionType);
+      if (fir::isa_trivial(unwrappedType)) {
+        // Trivial types return the zero value directly (by-value init).
+        genInitValueCB = [](fir::FirOpBuilder &builder, mlir::Location loc,
+                            mlir::Type type, mlir::Value,
+                            mlir::Value) -> mlir::Value {
+          mlir::Type ty = fir::unwrapRefType(type);
+          if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
+            ty = seqTy.getEleTy();
+          else if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty)) {
+            auto eleTy = fir::unwrapRefType(boxTy.getEleTy());
+            if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(eleTy))
+              ty = seqTy.getEleTy();
+            else
+              ty = eleTy;
+          }
+          return fir::ZeroOp::create(builder, loc, ty);
+        };
+      } else if (mlir::isa<fir::CharacterType>(unwrappedType) ||
+                 fir::isa_derived(unwrappedType)) {
+        // CHARACTER and derived types use by-ref init via the shared helper.
+        genInitValueCB = [&converter, derivedTypeSpec, reductionSym](
+                             fir::FirOpBuilder &builder, mlir::Location loc,
+                             mlir::Type type, mlir::Value,
+                             mlir::Value) -> mlir::Value {
+          mlir::Block *initBlock = builder.getInsertionBlock();
+          mlir::Value privVar = initBlock->getArgument(1);
+          lower::genInlineTypeDefaultInit(converter, builder, loc, type,
+                                          privVar, derivedTypeSpec,
+                                          reductionSym);
+          return mlir::Value{};
+        };
+      } else {
+        llvm_unreachable(
+            "unhandled type in declare reduction without initializer");
+      }
+    }
+    mlir::Type redType =
+        isByRef
+            ? static_cast<mlir::Type>(fir::ReferenceType::get(reductionType))
+            : reductionType;
 
     ReductionProcessor::createDeclareReductionHelper<
         mlir::omp::DeclareReductionOp>(

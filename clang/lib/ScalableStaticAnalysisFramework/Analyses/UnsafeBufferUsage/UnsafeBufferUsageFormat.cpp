@@ -80,5 +80,7 @@ static llvm::Registry<JSONFormat::FormatInfo>::Add<
         UnsafeBufferUsageEntitySummary::Name,
         "JSON Format info for UnsafeBufferUsageEntitySummary");
 
+namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int UnsafeBufferUsageSSAFJSONFormatAnchorSource = 0;
+volatile int UnsafeBufferUsageJSONFormatAnchorSource = 0;
+} // namespace clang::ssaf

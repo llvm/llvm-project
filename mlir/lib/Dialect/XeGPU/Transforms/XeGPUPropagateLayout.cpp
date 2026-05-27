@@ -1803,7 +1803,8 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
     return success();
   }
   // Helper to convert LayoutInfo to xegpu::LayoutAttr.
-  auto getXeGPULayoutForValue = [&](Value val) -> xegpu::DistributeLayoutAttr {
+  auto getLayoutFromPropagation =
+      [&](Value val) -> xegpu::DistributeLayoutAttr {
     LayoutInfo layout = analysis.getLayoutInfo(val);
     if (auto opResult = dyn_cast<OpResult>(val)) {
       Operation *defOp = opResult.getDefiningOp();
@@ -1834,14 +1835,18 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
       TypeSwitch<Operation *>(&op)
           .Case([&](mlir::RegionBranchTerminatorOpInterface branchTermOp) {
             r = updateControlFlowOps(builder, branchTermOp,
-                                     getXeGPULayoutForValue);
+                                     getLayoutFromPropagation);
+          })
+          .Case([&](mlir::RegionBranchOpInterface branchOp) {
+            r = xegpu::propagateRegionArgsToInits(branchOp,
+                                                  getLayoutFromPropagation);
           })
           .Case([&](mlir::FunctionOpInterface funcOp) {
             r = updateFunctionOpInterface(builder, funcOp,
-                                          getXeGPULayoutForValue);
+                                          getLayoutFromPropagation);
           })
           .Default([&](Operation *op) {
-            r = updateOp(builder, op, getXeGPULayoutForValue);
+            r = updateOp(builder, op, getLayoutFromPropagation);
           });
       if (failed(r)) {
         op.emitError("Failed to update operation with the layout.");

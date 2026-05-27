@@ -2111,6 +2111,27 @@ HexagonTargetLowering::LowerHvxBitcast(SDValue Op, SelectionDAG &DAG) const {
   if (isHvxBoolTy(ValTy) && ResTy.isScalarInteger()) {
     unsigned HwLen = Subtarget.getVectorLength();
     MVT WordTy = MVT::getVectorVT(MVT::i32, HwLen/4);
+
+    // When the predicate is shorter than the predicate register, each boolean
+    // is represented by multiple consecutive bits in the input register.
+    // Condense the bits so each boolean is represented by one bit. This only
+    // handles 2x and 4x compaction ratios.
+    unsigned PredLen = ValTy.getVectorNumElements();
+    if (PredLen < HwLen) {
+      MVT ByteTy = MVT::getVectorVT(MVT::i8, HwLen);
+      Val = DAG.getNode(HexagonISD::Q2V, dl, ByteTy, Val);
+      if (HwLen > PredLen * 2) {
+        assert(HwLen == PredLen * 4);
+        PredLen *= 2;
+        Val = getInstr(Hexagon::V6_vdealh, dl, ByteTy, Val, DAG);
+      }
+      if (HwLen > PredLen) {
+        assert(HwLen == PredLen * 2);
+        Val = getInstr(Hexagon::V6_vdealb, dl, ByteTy, Val, DAG);
+      }
+      Val = DAG.getNode(HexagonISD::V2Q, dl, ValTy, Val);
+    }
+
     SDValue VQ = compressHvxPred(Val, dl, WordTy, DAG);
     unsigned BitWidth = ResTy.getSizeInBits();
 

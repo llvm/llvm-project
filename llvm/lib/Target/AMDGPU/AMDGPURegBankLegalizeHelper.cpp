@@ -76,6 +76,11 @@ bool RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
   if (!lower(MI, *Mapping, WFI))
     return false;
 
+  if (!WFI.SgprWaterfallOperandRegs.empty()) {
+    if (!executeInWaterfallLoop(B, WFI))
+      return false;
+  }
+
   return true;
 }
 
@@ -107,6 +112,7 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   Register InitSaveExecReg = MRI.createVirtualRegister(WaveRC);
 
   // Don't bother using generic instructions/registers for the exec mask.
+  B.setInstr(*WFI.Start);
   B.buildInstr(TargetOpcode::IMPLICIT_DEF).addDef(InitSaveExecReg);
 
   Register SavedExec = MRI.createVirtualRegister(WaveRC);
@@ -1445,10 +1451,6 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerAbsToS32(MI);
   }
 
-  if (!WFI.SgprWaterfallOperandRegs.empty()) {
-    if (!executeInWaterfallLoop(B, WFI))
-      return false;
-  }
   return true;
 }
 
@@ -2046,7 +2048,6 @@ bool RegBankLegalizeHelper::applyMappingSrc(
           ++End;
         ++End;
 
-        B.setInsertPt(*MI.getParent(), Start);
         WFI.Start = Start;
         WFI.End = End;
       }

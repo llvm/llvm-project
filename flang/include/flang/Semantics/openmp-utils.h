@@ -86,8 +86,10 @@ SourcedActionStmt GetActionStmt(const parser::Block &block);
 std::string ThisVersion(unsigned version);
 std::string TryVersion(unsigned version);
 
-const Symbol *GetObjectSymbol(const parser::OmpObject &object);
-const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument);
+const Symbol *GetObjectSymbol(
+    const parser::OmpObject &object, bool ultimate = false);
+const Symbol *GetArgumentSymbol(
+    const parser::OmpArgument &argument, bool ultimate = false);
 
 bool IsCommonBlock(const Symbol &sym);
 bool IsExtendedListItem(const Symbol &sym);

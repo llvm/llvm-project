@@ -1,4 +1,4 @@
-from __future__ import absolute_import, annotations
+from __future__ import annotations
 
 import os
 import pathlib
@@ -77,7 +77,7 @@ def buildPdbgCommand(msg, cmd):
     return res
 
 
-class TimeoutHelper(object):
+class TimeoutHelper:
     """
     Object used to helper manage enforcing a timeout in
     _executeShCmd(). It is passed through recursive calls
@@ -1070,7 +1070,7 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
 def _caching_re_compile(r):
     return re.compile(r)
 
-class ExpandableScriptDirective(object):
+class ExpandableScriptDirective:
     """
     Common interface for lit directives for which any lit substitutions must be
     expanded to produce the shell script.  It includes directives (e.g., 'RUN:')
@@ -1434,7 +1434,7 @@ def applySubstitutions(script, substitutions, conditions={}, recursion_limit=Non
     return output
 
 
-class ParserKind(object):
+class ParserKind:
     """
     An enumeration representing the style of an integrated test keyword or
     command.
@@ -1492,7 +1492,7 @@ class ParserKind(object):
         }[value]
 
 
-class IntegratedTestKeywordParser(object):
+class IntegratedTestKeywordParser:
     """A parser for LLVM/Clang style integrated test scripts.
 
     keyword: The keyword to parse for. It must end in either '.' or ':'.

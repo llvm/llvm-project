@@ -6856,8 +6856,8 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     return false;
   bool IsUnion = R->isUnion();
 
-  // Union copy and move ctors are special.
-  if (IsUnion && Ctor->isCopyOrMoveConstructor()) {
+  // Default union copy and move ctors are special.
+  if (IsUnion && Ctor->isCopyOrMoveConstructor() && Ctor->isDefaulted()) {
     LocOverrideScope<Emitter> LOS(this, SourceInfo{});
 
     // No special case for NumFields == 0 here, so the Memcpy op

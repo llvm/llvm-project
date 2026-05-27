@@ -9,7 +9,7 @@
 declare hidden void @external_void_func_v16i32_v16i32_v4i32(<16 x i32>, <16 x i32>, <4 x i32>) #0
 declare hidden void @external_void_func_byval(ptr addrspace(5) byval([16 x i32])) #0
 
-define amdgpu_kernel void @kernel_caller_stack() {
+define amdgpu_kernel void @kernel_caller_stack() #2 {
 ; MUBUF-LABEL: kernel_caller_stack:
 ; MUBUF:       ; %bb.0:
 ; MUBUF-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
@@ -57,7 +57,7 @@ define amdgpu_kernel void @kernel_caller_stack() {
   ret void
 }
 
-define amdgpu_kernel void @kernel_caller_byval() {
+define amdgpu_kernel void @kernel_caller_byval() #2 {
 ; MUBUF-LABEL: kernel_caller_byval:
 ; MUBUF:       ; %bb.0:
 ; MUBUF-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
@@ -213,7 +213,7 @@ define amdgpu_kernel void @kernel_caller_byval() {
   ret void
 }
 
-define void @func_caller_stack() {
+define void @func_caller_stack() #2 {
 ; MUBUF-LABEL: func_caller_stack:
 ; MUBUF:       ; %bb.0:
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -238,8 +238,8 @@ define void @func_caller_stack() {
 ; MUBUF-NEXT:    v_writelane_b32 v40, s31, 1
 ; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:16
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; MUBUF-NEXT:    v_readlane_b32 s31, v40, 1
 ; MUBUF-NEXT:    v_readlane_b32 s30, v40, 0
+; MUBUF-NEXT:    v_readlane_b32 s31, v40, 1
 ; MUBUF-NEXT:    s_mov_b32 s32, s33
 ; MUBUF-NEXT:    v_readlane_b32 s4, v40, 2
 ; MUBUF-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -277,8 +277,8 @@ define void @func_caller_stack() {
 ; FLATSCR-NEXT:    s_addc_u32 s1, s1, external_void_func_v16i32_v16i32_v4i32@rel32@hi+12
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s31, 1
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; FLATSCR-NEXT:    v_readlane_b32 s31, v40, 1
 ; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 0
+; FLATSCR-NEXT:    v_readlane_b32 s31, v40, 1
 ; FLATSCR-NEXT:    s_mov_b32 s32, s33
 ; FLATSCR-NEXT:    v_readlane_b32 s0, v40, 2
 ; FLATSCR-NEXT:    s_or_saveexec_b64 s[2:3], -1
@@ -291,7 +291,7 @@ define void @func_caller_stack() {
   ret void
 }
 
-define void @func_caller_byval(ptr addrspace(5) %argptr) {
+define void @func_caller_byval(ptr addrspace(5) %argptr) #2 {
 ; MUBUF-LABEL: func_caller_byval:
 ; MUBUF:       ; %bb.0:
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -363,8 +363,8 @@ define void @func_caller_byval(ptr addrspace(5) %argptr) {
 ; MUBUF-NEXT:    s_waitcnt vmcnt(1)
 ; MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:60
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; MUBUF-NEXT:    v_readlane_b32 s31, v40, 1
 ; MUBUF-NEXT:    v_readlane_b32 s30, v40, 0
+; MUBUF-NEXT:    v_readlane_b32 s31, v40, 1
 ; MUBUF-NEXT:    s_mov_b32 s32, s33
 ; MUBUF-NEXT:    v_readlane_b32 s4, v40, 2
 ; MUBUF-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -414,8 +414,8 @@ define void @func_caller_byval(ptr addrspace(5) %argptr) {
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s32 offset:56
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; FLATSCR-NEXT:    v_readlane_b32 s31, v40, 1
 ; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 0
+; FLATSCR-NEXT:    v_readlane_b32 s31, v40, 1
 ; FLATSCR-NEXT:    s_mov_b32 s32, s33
 ; FLATSCR-NEXT:    v_readlane_b32 s0, v40, 2
 ; FLATSCR-NEXT:    s_or_saveexec_b64 s[2:3], -1
@@ -432,3 +432,4 @@ declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture writeonly, i8, i32, 
 
 attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 attributes #1 = { argmemonly nofree nounwind willreturn writeonly }
+attributes #2 = { nounwind }

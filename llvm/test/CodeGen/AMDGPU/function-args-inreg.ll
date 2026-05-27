@@ -1977,7 +1977,7 @@ define void @too_many_args_use_workitem_id_x_inreg(
   i32 inreg %arg0, i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3, i32 inreg %arg4, i32 inreg %arg5, i32 inreg %arg6, i32 inreg %arg7,
   i32 inreg %arg8, i32 inreg %arg9, i32 inreg %arg10, i32 inreg %arg11, i32 inreg %arg12, i32 inreg %arg13, i32 inreg %arg14, i32 inreg %arg15,
   i32 inreg %arg16, i32 inreg %arg17, i32 inreg %arg18, i32 inreg %arg19, i32 inreg %arg20, i32 inreg %arg21, i32 inreg %arg22, i32 inreg %arg23,
-  i32 inreg %arg24, i32 inreg %arg25, i32 inreg %arg26, i32 inreg %arg27, i32 inreg %arg28, i32 inreg %arg29, i32 inreg %arg30, i32 inreg %arg31) {
+  i32 inreg %arg24, i32 inreg %arg25, i32 inreg %arg26, i32 inreg %arg27, i32 inreg %arg28, i32 inreg %arg29, i32 inreg %arg30, i32 inreg %arg31) #0 {
   ;%val = call i32 @llvm.amdgcn.workitem.id.x()
   ;store volatile i32 %val, ptr addrspace(1) poison
 
@@ -2065,8 +2065,8 @@ define void @caller_void_func_i32_v2float_inreg(i32 inreg %arg0, <2 x float> inr
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[20:21]
-; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -2095,8 +2095,8 @@ define void @caller_void_func_i32_v2float_inreg(i32 inreg %arg0, <2 x float> inr
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v40, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -2280,7 +2280,7 @@ define void @void_func_v16bf16_inreg(<16 x bfloat> inreg %arg0) #0 {
   ret void
 }
 
-define void @void_func_2_i32_inreg(i32 inreg %arg0, i32 inreg %arg1, ptr addrspace(1) %ptr) {
+define void @void_func_2_i32_inreg(i32 inreg %arg0, i32 inreg %arg1, ptr addrspace(1) %ptr) #0 {
 ; GFX9-LABEL: void_func_2_i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2306,7 +2306,7 @@ define void @void_func_2_i32_inreg(i32 inreg %arg0, i32 inreg %arg1, ptr addrspa
   ret void
 }
 
-define void @void_func_2_i64_inreg(i64 inreg %arg0, i64 inreg %arg1, ptr addrspace(1) %ptr) {
+define void @void_func_2_i64_inreg(i64 inreg %arg0, i64 inreg %arg1, ptr addrspace(1) %ptr) #0 {
 ; GFX9-LABEL: void_func_2_i64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2335,7 +2335,7 @@ define void @void_func_2_i64_inreg(i64 inreg %arg0, i64 inreg %arg1, ptr addrspa
   ret void
 }
 
-define void @void_func_i64_inreg_i32_inreg_i64_inreg(i64 inreg %arg0, i32 inreg %arg1, i64 inreg %arg2, ptr addrspace(1) %ptr) {
+define void @void_func_i64_inreg_i32_inreg_i64_inreg(i64 inreg %arg0, i32 inreg %arg1, i64 inreg %arg2, ptr addrspace(1) %ptr) #0 {
 ; GFX9-LABEL: void_func_i64_inreg_i32_inreg_i64_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2371,7 +2371,7 @@ define void @void_func_i64_inreg_i32_inreg_i64_inreg(i64 inreg %arg0, i32 inreg 
   ret void
 }
 
-define void @void_func_5_i32_inreg(i32 inreg %arg0, i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3, i32 inreg %arg4, ptr addrspace(1) %ptr) {
+define void @void_func_5_i32_inreg(i32 inreg %arg0, i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3, i32 inreg %arg4, ptr addrspace(1) %ptr) #0 {
 ; GFX9-LABEL: void_func_5_i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2417,7 +2417,7 @@ define void @void_func_5_i32_inreg(i32 inreg %arg0, i32 inreg %arg1, i32 inreg %
   ret void
 }
 
-define void @void_func_a5i32_inreg([5 x i32] inreg %arg0, ptr addrspace(1) %ptr) {
+define void @void_func_a5i32_inreg([5 x i32] inreg %arg0, ptr addrspace(1) %ptr) #0 {
 ; GFX9-LABEL: void_func_a5i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2448,7 +2448,7 @@ define void @void_func_a5i32_inreg([5 x i32] inreg %arg0, ptr addrspace(1) %ptr)
 ; Force all implicit inputs to be required
 declare void @extern()
 
-define void @void_func_a13i32_inreg([13  x i32] inreg %arg0, ptr addrspace(1) %ptr) {
+define void @void_func_a13i32_inreg([13  x i32] inreg %arg0, ptr addrspace(1) %ptr) #0 {
 ; GFX9-LABEL: void_func_a13i32_inreg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2484,8 +2484,8 @@ define void @void_func_a13i32_inreg([13  x i32] inreg %arg0, ptr addrspace(1) %p
 ; GFX9-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -2526,8 +2526,8 @@ define void @void_func_a13i32_inreg([13  x i32] inreg %arg0, ptr addrspace(1) %p
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v40, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -2541,28 +2541,28 @@ define void @void_func_a13i32_inreg([13  x i32] inreg %arg0, ptr addrspace(1) %p
   ret void
 }
 
-; define void @void_func_a14i32_inreg([14 x i32] inreg %arg0, ptr addrspace(1) %ptr) {
+; define void @void_func_a14i32_inreg([14 x i32] inreg %arg0, ptr addrspace(1) %ptr) #0 {
 ;   store [14 x i32] %arg0, ptr addrspace(1) %ptr
 ;   call void @extern()
 ;   ret void
 ; }
 
 ; FIXME:
-; define void @void_func_a15i32_inreg([15 x i32] inreg %arg0, ptr addrspace(1) %ptr) {
+; define void @void_func_a15i32_inreg([15 x i32] inreg %arg0, ptr addrspace(1) %ptr) #0 {
 ;   store [15 x i32] %arg0, ptr addrspace(1) %ptr
 ;   call void @extern()
 ;   ret void
 ; }
 
 ; FIXME:
-; define void @void_func_a16i32_inreg([16 x i32] inreg %arg0, ptr addrspace(1) %ptr) {
+; define void @void_func_a16i32_inreg([16 x i32] inreg %arg0, ptr addrspace(1) %ptr) #0 {
 ;   store [16 x i32] %arg0, ptr addrspace(1) %ptr
 ;   call void @extern()
 ;   ret void
 ; }
 
 ; FIXME: Should still fail
-define void @void_func_a16i32_inreg__noimplicit([16 x i32] inreg %arg0, ptr addrspace(1) %ptr) {
+define void @void_func_a16i32_inreg__noimplicit([16 x i32] inreg %arg0, ptr addrspace(1) %ptr) #0 {
 ; GFX9-LABEL: void_func_a16i32_inreg__noimplicit:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2617,10 +2617,3 @@ define void @void_func_a16i32_inreg__noimplicit([16 x i32] inreg %arg0, ptr addr
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind noinline }
-
-
-
-
-
-
-

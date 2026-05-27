@@ -337,7 +337,7 @@ xchgq %r15, %rax
 # CHECK-NEXT: 11.    10    0.0    0.0    0.0       movl	%r13d, %r14d
 # CHECK-NEXT: 12.    10    0.0    0.0    0.0       movl	%r14d, %r15d
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       movl	%r15d, %eax
-# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
+# CHECK-NEXT:        140   0.0    0.0    0.0       <total>
 
 # CHECK:      [1] Code Region
 
@@ -605,7 +605,7 @@ xchgq %r15, %rax
 # CHECK-NEXT: 11.    10    0.0    0.0    0.0       movq	%r13, %r14
 # CHECK-NEXT: 12.    10    0.0    0.0    0.0       movq	%r14, %r15
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       movq	%r15, %rax
-# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
+# CHECK-NEXT:        140   0.0    0.0    0.0       <total>
 
 # CHECK:      [2] Code Region
 
@@ -873,7 +873,7 @@ xchgq %r15, %rax
 # CHECK-NEXT: 11.    10    0.0    0.0    0.0       xchgl	%r13d, %r14d
 # CHECK-NEXT: 12.    10    0.0    0.0    0.0       xchgl	%r14d, %r15d
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       xchgl	%r15d, %eax
-# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
+# CHECK-NEXT:        140   0.0    0.0    0.0       <total>
 
 # CHECK:      [3] Code Region
 
@@ -1141,4 +1141,4 @@ xchgq %r15, %rax
 # CHECK-NEXT: 11.    10    0.0    0.0    0.0       xchgq	%r13, %r14
 # CHECK-NEXT: 12.    10    0.0    0.0    0.0       xchgq	%r14, %r15
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       xchgq	%r15, %rax
-# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
+# CHECK-NEXT:        140   0.0    0.0    0.0       <total>

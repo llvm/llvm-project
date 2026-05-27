@@ -14,6 +14,8 @@
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 
 namespace mlir {
 
@@ -38,6 +40,18 @@ LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
                                bool printOnly = false);
 
 LogicalResult resolveLayoutConflicts(Operation *target);
+
+/// Callable returning the propagated layout for a given Value, used by the
+/// layout-propagation helpers below.
+using GetLayoutFnTy = llvm::function_ref<DistributeLayoutAttr(Value)>;
+
+/// Propagate layouts from a region branch op's region entry block arguments
+/// back to its init operands. The block argument's layout is obtained via
+/// `getLayoutOfValue`; the matching layout is then recorded on each init
+/// operand that flows into that block argument (e.g. scf.for's iter_args
+/// inits), and on tensor descriptor block argument types.
+LogicalResult propagateRegionArgsToInits(RegionBranchOpInterface regionOp,
+                                         GetLayoutFnTy getLayoutOfValue);
 
 /// Attach layout attributes to all vector-type operands of operations within
 /// the given operation's nested region. Reports an error if any vector operand

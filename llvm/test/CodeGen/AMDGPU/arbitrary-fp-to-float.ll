@@ -1259,7 +1259,7 @@ define bfloat @from_f8e5m2_bf16(i8 %x) {
 ; CHECK-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v2
 ; CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v0
 ; CHECK-NEXT:    v_or_b32_e32 v4, v4, v5
-; CHECK-NEXT:    v_add_u16_e32 v4, 0x3800, v4
+; CHECK-NEXT:    v_add_u16_e32 v4, 0.5, v4
 ; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
 ; CHECK-NEXT:    v_cndmask_b32_e64 v3, v4, v3, s[4:5]
 ; CHECK-NEXT:    v_or_b32_e32 v4, v0, v2
@@ -1303,7 +1303,7 @@ define bfloat @from_f8e4m3fn_bf16(i8 %x) {
 ; CHECK-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v2
 ; CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v0
 ; CHECK-NEXT:    v_or_b32_e32 v4, v4, v5
-; CHECK-NEXT:    v_add_u16_e32 v4, 0x3c00, v4
+; CHECK-NEXT:    v_add_u16_e32 v4, 1.0, v4
 ; CHECK-NEXT:    s_and_b64 vcc, s[4:5], vcc
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, v4, v3, vcc
 ; CHECK-NEXT:    v_or_b32_e32 v4, v0, v2
@@ -1344,7 +1344,7 @@ define <2 x bfloat> @from_f8e5m2_v2bf16(<2 x i8> %x) {
 ; CHECK-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v3
 ; CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v0
 ; CHECK-NEXT:    v_or_b32_e32 v5, v5, v6
-; CHECK-NEXT:    v_add_u16_e32 v5, 0x3800, v5
+; CHECK-NEXT:    v_add_u16_e32 v5, 0.5, v5
 ; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
 ; CHECK-NEXT:    v_cndmask_b32_e64 v4, v5, v4, s[4:5]
 ; CHECK-NEXT:    v_or_b32_e32 v5, v0, v3
@@ -1379,7 +1379,7 @@ define <2 x bfloat> @from_f8e5m2_v2bf16(<2 x i8> %x) {
 ; CHECK-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v4
 ; CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v1
 ; CHECK-NEXT:    v_or_b32_e32 v6, v6, v7
-; CHECK-NEXT:    v_add_u16_e32 v6, 0x3800, v6
+; CHECK-NEXT:    v_add_u16_e32 v6, 0.5, v6
 ; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
 ; CHECK-NEXT:    v_cndmask_b32_e64 v5, v6, v5, s[4:5]
 ; CHECK-NEXT:    v_or_b32_e32 v6, v1, v4

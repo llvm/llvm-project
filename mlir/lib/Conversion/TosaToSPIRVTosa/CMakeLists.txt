@@ -1,5 +1,6 @@
 add_mlir_conversion_library(MLIRTosaToSPIRVTosa
   TosaToSPIRVTosa.cpp
+  TosaToSPIRVTosaOps.cpp
   TosaToSPIRVTosaPass.cpp
 
   ADDITIONAL_HEADER_DIRS

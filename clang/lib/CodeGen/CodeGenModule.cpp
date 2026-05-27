@@ -48,6 +48,7 @@
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ABI/IRTypeMapper.h"
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
@@ -548,13 +549,10 @@ CodeGenModule::CodeGenModule(ASTContext &C,
   // Generate the module name hash here if needed.
   if (CodeGenOpts.UniqueInternalLinkageNames &&
       !getModule().getSourceFileName().empty()) {
-    std::string Path = getModule().getSourceFileName();
+    SmallString<256> Path(getModule().getSourceFileName());
     // Check if a path substitution is needed from the MacroPrefixMap.
-    for (const auto &Entry : LangOpts.MacroPrefixMap)
-      if (Path.rfind(Entry.first, 0) != std::string::npos) {
-        Path = Entry.second + Path.substr(Entry.first.size());
-        break;
-      }
+    clang::Preprocessor::processPathForFileMacro(Path, LangOpts,
+                                                 Context.getTargetInfo());
     ModuleNameHash = llvm::getUniqueInternalLinkagePostfix(Path);
   }
 
@@ -4225,6 +4223,10 @@ bool CodeGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
     // compilation.
     if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelEntryPointAttr>())
       return false;
+    // Wait for Sema's end-of-TU classification to decide between real body
+    // and trap body (see Sema::emitDeferredDiags).
+    if (LangOpts.CUDAIsDevice && FD->isImplicitHDExplicitInstantiation())
+      return false;
   }
   if (const auto *VD = dyn_cast<VarDecl>(Global)) {
     if (Context.getInlineVariableDefinitionKind(VD) ==
@@ -6893,7 +6895,8 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
 
   maybeSetTrivialComdat(*D, *Fn);
 
-  CodeGenFunction(*this).GenerateCode(GD, Fn, FI);
+  if (!tryEmitCUDADeviceInvalidFunctionBody(GD, Fn))
+    CodeGenFunction(*this).GenerateCode(GD, Fn, FI);
 
   setNonAliasAttributes(GD, Fn);
 

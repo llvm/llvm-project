@@ -121,7 +121,7 @@ jobs:
       uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
       with:
         max-size: 1G
-        key: libc_fullbuild_v2_${{ matrix.c_compiler }}
+        key: libc_fullbuild_v3_${{ matrix.target }}_${{ matrix.build_type }}_${{ matrix.c_compiler }}
         variant: sccache
 
     - name: Set reusable strings

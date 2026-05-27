@@ -67,8 +67,7 @@ public:
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
-                                    const Expr *MovedExpr,
-                                    SourceLocation ExpiryLoc) {}
+                                    const Expr *MovedExpr) {}
 
   virtual void reportDanglingField(const Expr *IssueExpr,
                                    const FieldDecl *Field,

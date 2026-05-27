@@ -9,24 +9,25 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX11-W64 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12-W64 %s
 
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx801 < %s | FileCheck -check-prefixes=GFX8-W32-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9-W32-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX11-W32-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12-W32-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx801 < %s | FileCheck -check-prefixes=GFX8-W32-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9-W32-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX11-W32-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12-W32-GISEL %s
 
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx801 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX8-W64-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX9-W64-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX11-W64-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12-W64-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx801 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX8-W64-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX9-W64-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX11-W64-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12-W64-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -amdgpu-enable-uniform-intrinsic-combine=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12-W64-GISEL-NO-WIC %s
 
 ; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx600 -filetype=null %s 2>&1 | FileCheck -check-prefixes=GFX6-SDAG-ERR %s
-; RUN: not llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx600 -filetype=null %s 2>&1 | FileCheck -check-prefixes=GFX6-GISEL-ERR %s
+; RUN: not llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx600 -filetype=null %s 2>&1 | FileCheck -check-prefixes=GFX6-GISEL-ERR %s
 
 ; GFX6-SDAG-ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.ds.bpermute
 ; GFX6-GISEL-ERR: LLVM ERROR: cannot select: %10:vgpr_32(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.wave.shuffle), %0:vgpr(s32), %1:vgpr(s32) (in function: test_wave_shuffle_float)
 
 ; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=null %s 2>&1 | FileCheck -check-prefixes=GFX7-SDAG-ERR %s
-; RUN: not llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=null %s 2>&1 | FileCheck -check-prefixes=GFX7-GISEL-ERR %s
+; RUN: not llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=null %s 2>&1 | FileCheck -check-prefixes=GFX7-GISEL-ERR %s
 
 ; GFX7-SDAG-ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.ds.bpermute
 ; GFX7-GISEL-ERR: LLVM ERROR: cannot select: %10:vgpr_32(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.wave.shuffle), %0:vgpr(s32), %1:vgpr(s32) (in function: test_wave_shuffle_float)
@@ -221,6 +222,305 @@ define float @test_wave_shuffle_float(float %val, i32 %idx) {
 ; GFX12-W64-GISEL-NEXT:    ds_bpermute_b32 v0, v1, v0
 ; GFX12-W64-GISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX12-W64-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-W64-GISEL-NO-WIC-LABEL: test_wave_shuffle_float:
+; GFX12-W64-GISEL-NO-WIC:       ; %bb.0: ; %entry
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_expcnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_samplecnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_kmcnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX12-W64-GISEL-NO-WIC-NEXT:    ds_bpermute_b32 v0, v1, v0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_dscnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %0 = tail call float @llvm.amdgcn.wave.shuffle(float %val, i32 %idx)
+  ret float %0
+}
+
+define float @test_wave_shuffle_vs(float %val, i32 inreg %idx) {
+; GFX8-W32-LABEL: test_wave_shuffle_vs:
+; GFX8-W32:       ; %bb.0: ; %entry
+; GFX8-W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-W32-NEXT:    v_readlane_b32 s4, v0, s16
+; GFX8-W32-NEXT:    v_mov_b32_e32 v0, s4
+; GFX8-W32-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-W32-LABEL: test_wave_shuffle_vs:
+; GFX9-W32:       ; %bb.0: ; %entry
+; GFX9-W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-W32-NEXT:    v_readlane_b32 s4, v0, s16
+; GFX9-W32-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-W32-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-W32-LABEL: test_wave_shuffle_vs:
+; GFX11-W32:       ; %bb.0: ; %entry
+; GFX11-W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-W32-NEXT:    v_readlane_b32 s0, v0, s0
+; GFX11-W32-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-W32-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-W32-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-W32-LABEL: test_wave_shuffle_vs:
+; GFX12-W32:       ; %bb.0: ; %entry
+; GFX12-W32-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-W32-NEXT:    s_wait_expcnt 0x0
+; GFX12-W32-NEXT:    s_wait_samplecnt 0x0
+; GFX12-W32-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-W32-NEXT:    s_wait_kmcnt 0x0
+; GFX12-W32-NEXT:    v_readlane_b32 s0, v0, s0
+; GFX12-W32-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-W32-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-W32-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-W32-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-W64-LABEL: test_wave_shuffle_vs:
+; GFX8-W64:       ; %bb.0: ; %entry
+; GFX8-W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-W64-NEXT:    v_readlane_b32 s4, v0, s16
+; GFX8-W64-NEXT:    v_mov_b32_e32 v0, s4
+; GFX8-W64-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-W64-LABEL: test_wave_shuffle_vs:
+; GFX9-W64:       ; %bb.0: ; %entry
+; GFX9-W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-W64-NEXT:    v_readlane_b32 s4, v0, s16
+; GFX9-W64-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-W64-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-W64-LABEL: test_wave_shuffle_vs:
+; GFX11-W64:       ; %bb.0: ; %entry
+; GFX11-W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-W64-NEXT:    v_readlane_b32 s0, v0, s0
+; GFX11-W64-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-W64-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-W64-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-W64-LABEL: test_wave_shuffle_vs:
+; GFX12-W64:       ; %bb.0: ; %entry
+; GFX12-W64-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-W64-NEXT:    s_wait_expcnt 0x0
+; GFX12-W64-NEXT:    s_wait_samplecnt 0x0
+; GFX12-W64-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-W64-NEXT:    s_wait_kmcnt 0x0
+; GFX12-W64-NEXT:    v_readlane_b32 s0, v0, s0
+; GFX12-W64-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-W64-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-W64-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-W64-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-W32-GISEL-LABEL: test_wave_shuffle_vs:
+; GFX8-W32-GISEL:       ; %bb.0: ; %entry
+; GFX8-W32-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-W32-GISEL-NEXT:    v_readlane_b32 s4, v0, s16
+; GFX8-W32-GISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX8-W32-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-W32-GISEL-LABEL: test_wave_shuffle_vs:
+; GFX9-W32-GISEL:       ; %bb.0: ; %entry
+; GFX9-W32-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-W32-GISEL-NEXT:    v_readlane_b32 s4, v0, s16
+; GFX9-W32-GISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-W32-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-W32-GISEL-LABEL: test_wave_shuffle_vs:
+; GFX11-W32-GISEL:       ; %bb.0: ; %entry
+; GFX11-W32-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-W32-GISEL-NEXT:    v_readlane_b32 s0, v0, s0
+; GFX11-W32-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-W32-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-W32-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-W32-GISEL-LABEL: test_wave_shuffle_vs:
+; GFX12-W32-GISEL:       ; %bb.0: ; %entry
+; GFX12-W32-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-W32-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-W32-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-W32-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-W32-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-W32-GISEL-NEXT:    v_readlane_b32 s0, v0, s0
+; GFX12-W32-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-W32-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-W32-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-W32-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-W64-GISEL-LABEL: test_wave_shuffle_vs:
+; GFX8-W64-GISEL:       ; %bb.0: ; %entry
+; GFX8-W64-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-W64-GISEL-NEXT:    v_readlane_b32 s4, v0, s16
+; GFX8-W64-GISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX8-W64-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-W64-GISEL-LABEL: test_wave_shuffle_vs:
+; GFX9-W64-GISEL:       ; %bb.0: ; %entry
+; GFX9-W64-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-W64-GISEL-NEXT:    v_readlane_b32 s4, v0, s16
+; GFX9-W64-GISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-W64-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-W64-GISEL-LABEL: test_wave_shuffle_vs:
+; GFX11-W64-GISEL:       ; %bb.0: ; %entry
+; GFX11-W64-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-W64-GISEL-NEXT:    v_readlane_b32 s0, v0, s0
+; GFX11-W64-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-W64-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-W64-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-W64-GISEL-LABEL: test_wave_shuffle_vs:
+; GFX12-W64-GISEL:       ; %bb.0: ; %entry
+; GFX12-W64-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-W64-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-W64-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-W64-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-W64-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-W64-GISEL-NEXT:    v_readlane_b32 s0, v0, s0
+; GFX12-W64-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-W64-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-W64-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-W64-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-W64-GISEL-NO-WIC-LABEL: test_wave_shuffle_vs:
+; GFX12-W64-GISEL-NO-WIC:       ; %bb.0: ; %entry
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_expcnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_samplecnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_kmcnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    v_lshlrev_b32_e64 v1, 2, s0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    ds_bpermute_b32 v0, v1, v0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_dscnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %0 = tail call float @llvm.amdgcn.wave.shuffle(float %val, i32 %idx)
+  ret float %0
+}
+
+define float @test_wave_shuffle_ss(float inreg %val, i32 inreg %idx) {
+; GFX8-W32-LABEL: test_wave_shuffle_ss:
+; GFX8-W32:       ; %bb.0: ; %entry
+; GFX8-W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-W32-NEXT:    v_mov_b32_e32 v0, s16
+; GFX8-W32-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-W32-LABEL: test_wave_shuffle_ss:
+; GFX9-W32:       ; %bb.0: ; %entry
+; GFX9-W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-W32-NEXT:    v_mov_b32_e32 v0, s16
+; GFX9-W32-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-W32-LABEL: test_wave_shuffle_ss:
+; GFX11-W32:       ; %bb.0: ; %entry
+; GFX11-W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-W32-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-W32-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-W32-LABEL: test_wave_shuffle_ss:
+; GFX12-W32:       ; %bb.0: ; %entry
+; GFX12-W32-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-W32-NEXT:    s_wait_expcnt 0x0
+; GFX12-W32-NEXT:    s_wait_samplecnt 0x0
+; GFX12-W32-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-W32-NEXT:    s_wait_kmcnt 0x0
+; GFX12-W32-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-W32-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-W64-LABEL: test_wave_shuffle_ss:
+; GFX8-W64:       ; %bb.0: ; %entry
+; GFX8-W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-W64-NEXT:    v_mov_b32_e32 v0, s16
+; GFX8-W64-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-W64-LABEL: test_wave_shuffle_ss:
+; GFX9-W64:       ; %bb.0: ; %entry
+; GFX9-W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-W64-NEXT:    v_mov_b32_e32 v0, s16
+; GFX9-W64-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-W64-LABEL: test_wave_shuffle_ss:
+; GFX11-W64:       ; %bb.0: ; %entry
+; GFX11-W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-W64-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-W64-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-W64-LABEL: test_wave_shuffle_ss:
+; GFX12-W64:       ; %bb.0: ; %entry
+; GFX12-W64-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-W64-NEXT:    s_wait_expcnt 0x0
+; GFX12-W64-NEXT:    s_wait_samplecnt 0x0
+; GFX12-W64-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-W64-NEXT:    s_wait_kmcnt 0x0
+; GFX12-W64-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-W64-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-W32-GISEL-LABEL: test_wave_shuffle_ss:
+; GFX8-W32-GISEL:       ; %bb.0: ; %entry
+; GFX8-W32-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-W32-GISEL-NEXT:    v_mov_b32_e32 v0, s16
+; GFX8-W32-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-W32-GISEL-LABEL: test_wave_shuffle_ss:
+; GFX9-W32-GISEL:       ; %bb.0: ; %entry
+; GFX9-W32-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-W32-GISEL-NEXT:    v_mov_b32_e32 v0, s16
+; GFX9-W32-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-W32-GISEL-LABEL: test_wave_shuffle_ss:
+; GFX11-W32-GISEL:       ; %bb.0: ; %entry
+; GFX11-W32-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-W32-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-W32-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-W32-GISEL-LABEL: test_wave_shuffle_ss:
+; GFX12-W32-GISEL:       ; %bb.0: ; %entry
+; GFX12-W32-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-W32-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-W32-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-W32-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-W32-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-W32-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-W32-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-W64-GISEL-LABEL: test_wave_shuffle_ss:
+; GFX8-W64-GISEL:       ; %bb.0: ; %entry
+; GFX8-W64-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-W64-GISEL-NEXT:    v_mov_b32_e32 v0, s16
+; GFX8-W64-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-W64-GISEL-LABEL: test_wave_shuffle_ss:
+; GFX9-W64-GISEL:       ; %bb.0: ; %entry
+; GFX9-W64-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-W64-GISEL-NEXT:    v_mov_b32_e32 v0, s16
+; GFX9-W64-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-W64-GISEL-LABEL: test_wave_shuffle_ss:
+; GFX11-W64-GISEL:       ; %bb.0: ; %entry
+; GFX11-W64-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-W64-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-W64-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-W64-GISEL-LABEL: test_wave_shuffle_ss:
+; GFX12-W64-GISEL:       ; %bb.0: ; %entry
+; GFX12-W64-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-W64-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-W64-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-W64-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-W64-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-W64-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-W64-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-W64-GISEL-NO-WIC-LABEL: test_wave_shuffle_ss:
+; GFX12-W64-GISEL-NO-WIC:       ; %bb.0: ; %entry
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_expcnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_samplecnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_kmcnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    v_lshlrev_b32_e64 v1, 2, s1
+; GFX12-W64-GISEL-NO-WIC-NEXT:    ds_bpermute_b32 v0, v1, v0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_dscnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call float @llvm.amdgcn.wave.shuffle(float %val, i32 %idx)
   ret float %0

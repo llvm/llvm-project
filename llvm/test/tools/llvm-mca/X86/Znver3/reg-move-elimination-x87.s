@@ -201,4 +201,4 @@ fxch %st(0)
 # CHECK-NEXT: 6.     10    38.3   38.3   0.0       fxch	%st(6)
 # CHECK-NEXT: 7.     10    39.5   39.5   0.0       fxch	%st(7)
 # CHECK-NEXT: 8.     10    40.7   40.7   0.0       fxch	%st(0)
-# CHECK-NEXT:        10    37.0   37.0   0.0       <total>
+# CHECK-NEXT:        90    37.0   37.0   0.0       <total>

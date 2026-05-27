@@ -3,9 +3,9 @@
 # RUN: llvm-symbolizer --basenames --output-style=GNU -e %t.o 0 1 2 3 4 5 6 7 8 9 10 11 12 13 16 | FileCheck %s
 
 # This is the same test but on a linked wasm file, using file offsets rather than section offsets.
-# The code section starts at 0x41, so these are equivalent to above (except 3, see below for why).
+# The code section starts at 0x37, so these are equivalent to above (except 3, see below for why).
 # RUN: wasm-ld %t.o -o %t.wasm --no-entry --export=foo --export=bar
-# RUN: llvm-symbolizer --basenames --output-style=GNU -e %t.wasm 3 0x42 0x43 0x44 0x45 0x46 0x47 0x48 0x49 0x4a 0x4b 0x4c 0x4d 0x4e 0x51 | FileCheck %s
+# RUN: llvm-symbolizer --basenames --output-style=GNU -e %t.wasm 3 0x38 0x39 0x3a 0x3b 0x3c 0x3d 0x3e 0x3f 0x40 0x41 0x42 0x43 0x44 0x47 | FileCheck %s
 
 .globl foo
 foo:

@@ -24,34 +24,34 @@ define void @wobble() #0 {
 ; CHECK-NEXT:    v_mov_b32_e32 v40, v31
 ; CHECK-NEXT:    v_mov_b32_e32 v41, 0
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
-; CHECK-NEXT:    v_writelane_b32 v43, s30, 0
-; CHECK-NEXT:    v_writelane_b32 v43, s31, 1
-; CHECK-NEXT:    v_writelane_b32 v43, s34, 2
-; CHECK-NEXT:    v_writelane_b32 v43, s35, 3
+; CHECK-NEXT:    v_writelane_b32 v43, s34, 0
+; CHECK-NEXT:    v_writelane_b32 v43, s35, 1
 ; CHECK-NEXT:    s_mov_b64 s[34:35], s[10:11]
-; CHECK-NEXT:    v_writelane_b32 v43, s36, 4
-; CHECK-NEXT:    v_writelane_b32 v43, s37, 5
+; CHECK-NEXT:    v_writelane_b32 v43, s36, 2
+; CHECK-NEXT:    v_writelane_b32 v43, s37, 3
 ; CHECK-NEXT:    s_mov_b64 s[36:37], s[8:9]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], src_private_base
 ; CHECK-NEXT:    v_mov_b32_e32 v42, s9
-; CHECK-NEXT:    v_writelane_b32 v43, s38, 6
-; CHECK-NEXT:    v_writelane_b32 v43, s39, 7
+; CHECK-NEXT:    v_writelane_b32 v43, s38, 4
+; CHECK-NEXT:    v_writelane_b32 v43, s39, 5
 ; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
-; CHECK-NEXT:    v_writelane_b32 v43, s48, 8
-; CHECK-NEXT:    v_writelane_b32 v43, s49, 9
+; CHECK-NEXT:    v_writelane_b32 v43, s48, 6
+; CHECK-NEXT:    v_writelane_b32 v43, s49, 7
 ; CHECK-NEXT:    s_mov_b64 s[48:49], s[4:5]
 ; CHECK-NEXT:    s_lshr_b32 s5, s33, 5
 ; CHECK-NEXT:    s_mov_b32 s4, 0
-; CHECK-NEXT:    v_writelane_b32 v43, s50, 10
+; CHECK-NEXT:    v_writelane_b32 v43, s50, 8
 ; CHECK-NEXT:    s_mov_b32 s50, s15
-; CHECK-NEXT:    v_writelane_b32 v43, s51, 11
+; CHECK-NEXT:    v_writelane_b32 v43, s51, 9
 ; CHECK-NEXT:    s_mov_b32 s51, s14
-; CHECK-NEXT:    v_writelane_b32 v43, s52, 12
+; CHECK-NEXT:    v_writelane_b32 v43, s52, 10
 ; CHECK-NEXT:    s_mov_b32 s52, s13
-; CHECK-NEXT:    v_writelane_b32 v43, s53, 13
+; CHECK-NEXT:    v_writelane_b32 v43, s53, 11
 ; CHECK-NEXT:    s_mov_b32 s53, s12
-; CHECK-NEXT:    v_writelane_b32 v43, s54, 14
+; CHECK-NEXT:    v_writelane_b32 v43, s54, 12
 ; CHECK-NEXT:    s_add_i32 s54, s5, 16
+; CHECK-NEXT:    v_writelane_b32 v43, s30, 13
+; CHECK-NEXT:    v_writelane_b32 v43, s31, 14
 ; CHECK-NEXT:    s_inst_prefetch 0x1
 ; CHECK-NEXT:    .p2align 6
 ; CHECK-NEXT:  .LBB0_1: ; %bb1
@@ -91,21 +91,21 @@ define void @wobble() #0 {
 ; CHECK-NEXT:    buffer_load_dword v42, off, s[0:3], s33
 ; CHECK-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4
 ; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:8
-; CHECK-NEXT:    v_readlane_b32 s54, v43, 14
-; CHECK-NEXT:    v_readlane_b32 s53, v43, 13
-; CHECK-NEXT:    v_readlane_b32 s52, v43, 12
-; CHECK-NEXT:    v_readlane_b32 s51, v43, 11
-; CHECK-NEXT:    v_readlane_b32 s50, v43, 10
-; CHECK-NEXT:    v_readlane_b32 s49, v43, 9
-; CHECK-NEXT:    v_readlane_b32 s48, v43, 8
-; CHECK-NEXT:    v_readlane_b32 s39, v43, 7
-; CHECK-NEXT:    v_readlane_b32 s38, v43, 6
-; CHECK-NEXT:    v_readlane_b32 s37, v43, 5
-; CHECK-NEXT:    v_readlane_b32 s36, v43, 4
-; CHECK-NEXT:    v_readlane_b32 s35, v43, 3
-; CHECK-NEXT:    v_readlane_b32 s34, v43, 2
-; CHECK-NEXT:    v_readlane_b32 s31, v43, 1
-; CHECK-NEXT:    v_readlane_b32 s30, v43, 0
+; CHECK-NEXT:    v_readlane_b32 s30, v43, 13
+; CHECK-NEXT:    v_readlane_b32 s31, v43, 14
+; CHECK-NEXT:    v_readlane_b32 s54, v43, 12
+; CHECK-NEXT:    v_readlane_b32 s53, v43, 11
+; CHECK-NEXT:    v_readlane_b32 s52, v43, 10
+; CHECK-NEXT:    v_readlane_b32 s51, v43, 9
+; CHECK-NEXT:    v_readlane_b32 s50, v43, 8
+; CHECK-NEXT:    v_readlane_b32 s49, v43, 7
+; CHECK-NEXT:    v_readlane_b32 s48, v43, 6
+; CHECK-NEXT:    v_readlane_b32 s39, v43, 5
+; CHECK-NEXT:    v_readlane_b32 s38, v43, 4
+; CHECK-NEXT:    v_readlane_b32 s37, v43, 3
+; CHECK-NEXT:    v_readlane_b32 s36, v43, 2
+; CHECK-NEXT:    v_readlane_b32 s35, v43, 1
+; CHECK-NEXT:    v_readlane_b32 s34, v43, 0
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    v_readlane_b32 s4, v43, 15
 ; CHECK-NEXT:    s_or_saveexec_b32 s5, -1

@@ -231,6 +231,10 @@ def unwind_info : Flag<["--"], "unwind-info">,
 def : Flag<["-"], "u">, Alias<unwind_info>,
   HelpText<"Alias for --unwind-info">;
 
+def unwind_show_wod_pool : Flag<["--"], "unwind-show-wod-pool">,
+  HelpText<"Also display the raw Windows x64 unwind V3 WOD pool with byte offsets "
+           "(requires --unwind-info)">;
+
 def wide : Flag<["--"], "wide">,
   HelpText<"Ignored for compatibility with GNU objdump">;
 def : Flag<["-"], "w">, Alias<wide>;

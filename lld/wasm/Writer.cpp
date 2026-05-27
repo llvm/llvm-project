@@ -123,6 +123,15 @@ private:
   llvm::SmallDenseMap<StringRef, OutputSegment *> segmentMap;
 };
 
+void writeSetTLSBase(const Ctx &ctx, raw_ostream &os) {
+  if (ctx.arg.libcallThreadContext) {
+    writeU8(os, WASM_OPCODE_CALL, "call");
+    writeUleb128(os, ctx.sym.setTLSBase->getFunctionIndex(), "function index");
+  } else {
+    writeU8(os, WASM_OPCODE_GLOBAL_SET, "GLOBAL_SET");
+    writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "__tls_base");
+  }
+}
 } // anonymous namespace
 
 void Writer::calculateCustomSections() {
@@ -635,6 +644,16 @@ void Writer::populateTargetFeatures() {
       return segment->live && segment->isTLS();
     };
     tlsUsed = tlsUsed || llvm::any_of(file->segments, isTLS);
+
+    // Ensure that we're not mixing incompatible thread context models
+    if (ctx.arg.libcallThreadContext &&
+        llvm::any_of(file->getSymbols(), [](const auto &sym) {
+          return sym && sym->getName() == "__stack_pointer" &&
+                 sym->kind() == Symbol::UndefinedGlobalKind &&
+                 sym->importModule && sym->importModule == "env";
+        }))
+      error(fileName + ": object file uses globals for thread context, "
+                       "but --libcall-thread-context was specified");
   }
 
   if (inferFeatures)
@@ -1356,9 +1375,9 @@ void Writer::createInitMemoryFunction() {
                   "i32.add");
         }
 
-        // When we initialize the TLS segment we also set the `__tls_base`
-        // global.  This allows the runtime to use this static copy of the
-        // TLS data for the first/main thread.
+        // When we initialize the TLS segment we also set the TLS base.
+        // This allows the runtime to use this static copy of the TLS data
+        // for the first/main thread.
         if (ctx.arg.sharedMemory && s->isTLS()) {
           if (ctx.isPic) {
             // Cache the result of the addionion in local 0
@@ -1367,8 +1386,7 @@ void Writer::createInitMemoryFunction() {
           } else {
             writePtrConst(os, s->startVA, is64, "destination address");
           }
-          writeU8(os, WASM_OPCODE_GLOBAL_SET, "GLOBAL_SET");
-          writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "__tls_base");
+          writeSetTLSBase(ctx, os);
           if (ctx.isPic) {
             writeU8(os, WASM_OPCODE_LOCAL_GET, "local.tee");
             writeUleb128(os, 1, "local 1");
@@ -1641,8 +1659,7 @@ void Writer::createInitTLSFunction() {
       writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
       writeUleb128(os, 0, "local index");
 
-      writeU8(os, WASM_OPCODE_GLOBAL_SET, "global.set");
-      writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "global index");
+      writeSetTLSBase(ctx, os);
 
       // FIXME(wvo): this local needs to be I64 in wasm64, or we need an extend
       // op.

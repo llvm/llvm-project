@@ -123,6 +123,7 @@ static std::vector<std::string> StringDump;
 static bool StringTable;
 static bool Symbols;
 static bool UnwindInfo;
+bool UnwindShowWODPool;
 static cl::boolOrDefault SectionMapping;
 static SmallVector<SortSymbolKeyTy> SortKeys;
 
@@ -253,6 +254,7 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::StringTable = Args.hasArg(OPT_string_table);
   opts::Symbols = Args.hasArg(OPT_symbols);
   opts::UnwindInfo = Args.hasArg(OPT_unwind);
+  opts::UnwindShowWODPool = Args.hasArg(OPT_unwind_show_wod_pool);
 
   // ELF specific options.
   opts::DynamicTable = Args.hasArg(OPT_dynamic_table);

@@ -648,4 +648,4 @@ stp      x0, x1, [x2], #16
 # CHECK-NEXT: 115.   1     0.0    0.0    0.0       stp	x0, x1, [x2, #16]!
 # CHECK-NEXT: 116.   1     0.0    0.0    0.0       add	x2, x3, #1
 # CHECK-NEXT: 117.   1     0.0    0.0    0.0       stp	x0, x1, [x2], #16
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        118   0.0    0.0    0.0       <total>

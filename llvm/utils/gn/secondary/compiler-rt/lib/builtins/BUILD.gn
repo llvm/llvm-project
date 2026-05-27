@@ -118,5 +118,7 @@ source_set("_unused") {
     "arm/udivsi3.S",
     "arm/unorddf2.S",
     "arm/unordsf2.S",
+    "arm/extendsfdf2.S",
+    "arm/truncdfsf2.S",
   ]
 }

@@ -68,6 +68,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasExtendedConst = false;
   bool HasFP16 = false;
   bool HasGC = false;
+  bool HasLibcallThreadContext = false;
   bool HasMultiMemory = false;
   bool HasMultivalue = false;
   bool HasMutableGlobals = false;
@@ -110,6 +111,8 @@ public:
       PtrDiffType = SignedLong;
       IntPtrType = SignedLong;
     }
+    if (T.getOS() == llvm::Triple::WASIp3)
+      HasLibcallThreadContext = true;
   }
 
   StringRef getABI() const override;

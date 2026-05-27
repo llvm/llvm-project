@@ -74,6 +74,12 @@ static Register getWaveAddress(const MachineInstr *Def) {
              : Register();
 }
 
+static void diagnoseUnsupportedIntrinsic(const MachineInstr &I) {
+  const Function &F = I.getMF()->getFunction();
+  F.getContext().diagnose(DiagnosticInfoUnsupported(
+      F, "intrinsic not supported on subtarget", I.getDebugLoc(), DS_Error));
+}
+
 bool AMDGPUInstructionSelector::isVCC(Register Reg,
                                       const MachineRegisterInfo &MRI) const {
   // The verifier is oblivious to s1 being a valid value for wavesize registers.
@@ -1235,6 +1241,19 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     return selectPermlaneSwapIntrin(I, IntrinsicID);
   case Intrinsic::amdgcn_wave_shuffle:
     return selectWaveShuffleIntrin(I);
+  case Intrinsic::amdgcn_fma_legacy:
+    if (!STI.hasFmaLegacy32Insts()) {
+      diagnoseUnsupportedIntrinsic(I);
+      return false;
+    }
+    return selectImpl(I, *CoverageInfo);
+  case Intrinsic::amdgcn_sudot4:
+  case Intrinsic::amdgcn_sudot8:
+    if (!STI.hasDot8Insts()) {
+      diagnoseUnsupportedIntrinsic(I);
+      return false;
+    }
+    return selectImpl(I, *CoverageInfo);
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -2415,10 +2434,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     break;
   case Intrinsic::amdgcn_exp_compr:
     if (!STI.hasCompressedExport()) {
-      Function &F = I.getMF()->getFunction();
-      F.getContext().diagnose(
-          DiagnosticInfoUnsupported(F, "intrinsic not supported on subtarget",
-                                    I.getDebugLoc(), DS_Error));
+      diagnoseUnsupportedIntrinsic(I);
       return false;
     }
     break;
@@ -2448,10 +2464,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectNamedBarrierInit(I, IntrinsicID);
   case Intrinsic::amdgcn_s_wakeup_barrier: {
     if (!STI.hasSWakeupBarrier()) {
-      Function &F = I.getMF()->getFunction();
-      F.getContext().diagnose(
-          DiagnosticInfoUnsupported(F, "intrinsic not supported on subtarget",
-                                    I.getDebugLoc(), DS_Error));
+      diagnoseUnsupportedIntrinsic(I);
       return false;
     }
     return selectNamedBarrierInst(I, IntrinsicID);
