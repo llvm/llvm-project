@@ -50,6 +50,7 @@ MCOPT(EmitDwarfUnwindType, EmitDwarfUnwind)
 MCOPT(bool, EmitCompactUnwindNonCanonical)
 MCOPT(bool, EmitSFrameUnwind)
 MCOPT(bool, ShowMCInst)
+MCOPT(bool, ShowMCInstSourceLoc)
 MCOPT(bool, FatalWarnings)
 MCOPT(bool, NoWarn)
 MCOPT(bool, NoDeprecatedWarn)
@@ -123,6 +124,11 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
       "asm-show-inst",
       cl::desc("Emit internal instruction representation to assembly file"));
   MCBINDOPT(ShowMCInst);
+
+  static cl::opt<bool> ShowMCInstSourceLoc(
+      "asm-show-source-loc",
+      cl::desc("Emit source locations of instructions to assembly file"));
+  MCBINDOPT(ShowMCInstSourceLoc);
 
   static cl::opt<bool> FatalWarnings("fatal-warnings",
                                      cl::desc("Treat warnings as errors"));
@@ -203,6 +209,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.Dwarf64 = getDwarf64();
   Options.DwarfVersion = getDwarfVersion();
   Options.ShowMCInst = getShowMCInst();
+  Options.ShowMCInstSourceLoc = getShowMCInstSourceLoc();
   Options.ABIName = getABIName();
   Options.MCFatalWarnings = getFatalWarnings();
   Options.MCNoWarn = getNoWarn();
