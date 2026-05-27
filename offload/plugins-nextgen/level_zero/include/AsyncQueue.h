@@ -76,8 +76,8 @@ struct AsyncQueueTy {
     return launchKernelImpl(Kernel, KEnv);
   }
 
-  virtual Error initImpl() { return Plugin::success(); };
-  virtual Error deinitImpl() { return Plugin::success(); };
+  virtual Error initImpl() { return Plugin::success(); }
+  virtual Error deinitImpl() { return Plugin::success(); }
   virtual void resetImpl() {}
 
   virtual Error synchronizeImpl() = 0;
@@ -85,7 +85,7 @@ struct AsyncQueueTy {
   virtual Error memoryCopyImpl(void *Dst, const void *Src, size_t Size) = 0;
   virtual Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
                                  int64_t Size) {
-    return memoryCopyImpl(HstPtr, TgtPtr, Size);
+    return memoryCopy(HstPtr, TgtPtr, Size);
   }
   virtual Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size) {
     return memoryCopy(TgtPtr, HstPtr, Size);
