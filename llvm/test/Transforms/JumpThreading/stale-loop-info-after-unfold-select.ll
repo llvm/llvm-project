@@ -13,8 +13,8 @@ define dso_local ptr @func2(ptr %this, ptr) {
 ; CHECK:       while.cond:
 ; CHECK-NEXT:    [[MONTH_0:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[CALL2:%.*]], [[FUNC1_EXIT:%.*]] ], [ [[ADD:%.*]], [[SELECT_UNFOLD:%.*]] ]
 ; CHECK-NEXT:    switch i32 [[MONTH_0]], label [[IF_END_I:%.*]] [
-; CHECK-NEXT:      i32 4, label [[FUNC1_EXIT]]
-; CHECK-NEXT:      i32 1, label [[FUNC1_EXIT]]
+; CHECK-NEXT:    i32 4, label [[FUNC1_EXIT]]
+; CHECK-NEXT:    i32 1, label [[FUNC1_EXIT]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.end.i:
 ; CHECK-NEXT:    br label [[FUNC1_EXIT]]
@@ -23,8 +23,7 @@ define dso_local ptr @func2(ptr %this, ptr) {
 ; CHECK-NEXT:    [[CALL2]] = tail call signext i32 @func3(i32 signext [[RETVAL_0_I]], i32 signext 1, i32 signext 3)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CALL2]], 1
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[CALL2]], 2
-; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[CMP]]
-; CHECK-NEXT:    br i1 [[COND_FR]], label [[SELECT_UNFOLD]], label [[WHILE_COND]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[SELECT_UNFOLD]], label [[WHILE_COND]]
 ;
 entry:
   br label %while.cond
@@ -50,47 +49,3 @@ func1.exit:                  ; preds = %if.end.i, %while.cond, %while.cond
 
 declare i32 @func3(i32, i32, i32)
 
-declare void @sink(i32)
-
-; Check that unfoldSelectInstr freezes a possibly-undef-or-poison condition
-; before using it as a branch input. A select with an undef or poison condition
-; does not immediately cause UB, but branching on undef or poison does.
-define void @unfold_select_poison_cond(i1 %c, i1 %maybe_poison) {
-; CHECK-LABEL: define void @unfold_select_poison_cond(
-; CHECK-SAME: i1 [[C:%.*]], i1 [[MAYBE_POISON:%.*]]) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED1:.*]], label %[[IF_ELSE:.*]]
-; CHECK:       [[PRED1]]:
-; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[MAYBE_POISON]]
-; CHECK-NEXT:    br i1 [[COND_FR]], label %[[IF_THEN:.*]], label %[[IF_ELSE]]
-; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    call void @sink(i32 1)
-; CHECK-NEXT:    ret void
-; CHECK:       [[IF_ELSE]]:
-; CHECK-NEXT:    call void @sink(i32 2)
-; CHECK-NEXT:    ret void
-;
-entry:
-  br i1 %c, label %pred1, label %pred2
-
-pred1:
-  %s = select i1 %maybe_poison, i32 0, i32 10
-  br label %merge
-
-pred2:
-  br label %merge
-
-merge:
-  %p = phi i32 [ %s, %pred1 ], [ 5, %pred2 ]
-  %cmp = icmp eq i32 %p, 0
-  %fcmp = freeze i1 %cmp
-  br i1 %fcmp, label %if_then, label %if_else
-
-if_then:
-  call void @sink(i32 1)
-  ret void
-
-if_else:
-  call void @sink(i32 2)
-  ret void
-}

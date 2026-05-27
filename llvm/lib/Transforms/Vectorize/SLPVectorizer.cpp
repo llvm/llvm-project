@@ -19420,7 +19420,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // shuffles, inserts, and extracts.
   // FIXME: remove this as soon as correct fractional model is landed for all
   // targets.
-  if (SLPInstCountCheck && VectorizableTree.front()->getVectorFactor() == 2 &&
+  if (SLPInstCountCheck && TTI->preferSLPInstCountCheck() &&
+      VectorizableTree.front()->getVectorFactor() == 2 &&
       SLPCostThreshold == 0 &&
       (!SLPReVec ||
        !isa<VectorType>(
@@ -26203,6 +26204,22 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
     if (Level > RecursionMaxDepth)
       continue;
 
+    // Can we propagate widths through a call instruction
+    // We can for simple intrinsics
+    auto IsCompatibleIntrinsic = [](const Instruction *I) -> bool {
+      const auto *CI = dyn_cast<IntrinsicInst>(I);
+      if (!CI)
+        return false;
+      switch (CI->getIntrinsicID()) {
+      case Intrinsic::abs:
+      case Intrinsic::fabs:
+      case Intrinsic::fma:
+      case Intrinsic::fmuladd:
+        return true;
+      default:
+        return false;
+      }
+    };
     // If the current instruction is a load, update MaxWidth to reflect the
     // width of the loaded value.
     if (isa<LoadInst, ExtractElementInst, ExtractValueInst>(I))
@@ -26213,7 +26230,8 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
     // instruction we haven't yet visited and from the same basic block as the
     // user or the use is a PHI node, we add it to the worklist.
     else if (isa<PHINode, CastInst, GetElementPtrInst, CmpInst, SelectInst,
-                 BinaryOperator, UnaryOperator>(I)) {
+                 BinaryOperator, UnaryOperator>(I) ||
+             IsCompatibleIntrinsic(I)) {
       for (Use &U : I->operands()) {
         if (auto *J = dyn_cast<Instruction>(U.get()))
           if (Visited.insert(J).second &&
@@ -31049,7 +31067,8 @@ bool SLPVectorizerPass::tryToVectorize(
     return HorRdx.tryToReduce(R, *DL, &TTI, *TLI, AC, *DT) != nullptr;
   };
   if (Candidates.size() == 1)
-    return TryToReduce(I, {Op0, Op1}) || tryToVectorizeList({Op0, Op1}, R);
+    return TryToReduce(I, {Op0, Op1}) ||
+           (!AllowFMACandidates && tryToVectorizeList({Op0, Op1}, R));
 
   // We have multiple options. Try to pick the single best.
   std::optional<int> BestCandidate = R.findBestRootPair(Candidates).first;
@@ -31058,9 +31077,10 @@ bool SLPVectorizerPass::tryToVectorize(
   return (*BestCandidate == 0 &&
           TryToReduce(I, {Candidates[*BestCandidate].first,
                           Candidates[*BestCandidate].second})) ||
-         tryToVectorizeList({Candidates[*BestCandidate].first,
-                             Candidates[*BestCandidate].second},
-                            R);
+         (!AllowFMACandidates &&
+          tryToVectorizeList({Candidates[*BestCandidate].first,
+                              Candidates[*BestCandidate].second},
+                             R));
 }
 
 bool SLPVectorizerPass::vectorizeRootInstruction(

@@ -710,27 +710,35 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   strides.reserve(rank);
 
   SmallVector<Value> &shapeVec = sliceInfo.shapeVec;
+  const bool firMemrefIsBox = mlir::isa<fir::BaseBoxType>(firMemref.getType());
+  const bool firMemrefIsEmbox =
+      firMemref.getDefiningOp<fir::EmboxOp>() != nullptr;
   // Pick how to derive sizes/strides for the reinterpret_cast view:
   //
-  //   shapeVec path: use the collected fir.shape extents and synthesize
-  //     row-major strides. Valid when those extents describe the underlying
-  //     memref's layout -- shape from a defining embox, a shape_shift that
-  //     carries lower bounds, or no slicing at all.
+  //   shapeVec path: synthesize row-major strides from fir.shape extents.
+  //     Valid when the converted MemRef describes a contiguous storage block:
+  //     either the array_coor base is a raw ref/heap/ptr (no descriptor at
+  //     all), or it is a fir.box produced by fir.embox -- getFIRConvert
+  //     rewinds to embox.getMemref()/box_addr(embox) in that case, so the
+  //     reinterpret_cast operates on the underlying contiguous ref. This
+  //     matches CodeGen XArrayCoorOp's non-boxed branch.
   //
   //   box_dims path: query the descriptor at runtime. Required when:
   //     (a) the slice is projected (physical layout is owned by the box);
   //     (b) we have no shape information at all; or
-  //     (c) the array_coor itself carries fir.shape + fir.slice on a
-  //         descriptor-backed memref with no shift -- those extents describe
-  //         the post-slice view, not the source, so they cannot be used to
-  //         compute strides (e.g. rebox sourced array_coor).
-  const bool descriptorOwnsLayout =
-      sliceInfo.hasProjectedSlice || shapeVec.empty() ||
-      (isDescriptor && sliceInfo.shiftVec.empty() && arrayCoorOp.getShape() &&
-       arrayCoorOp.getSlice());
+  //     (c) the array_coor base is a fir.box that is NOT a fir.embox result.
+  //         getFIRConvert materializes fir.box_addr(box) -- an opaque pointer
+  //         with no layout in its type -- so strides must come from the
+  //         descriptor. This matches CodeGen XArrayCoorOp's boxed branch
+  //         (getStrideFromBox); shape/shape_shift on array_coor is
+  //         informational only (lower bounds for index translation).
+  const bool descriptorOwnsLayout = sliceInfo.hasProjectedSlice ||
+                                    shapeVec.empty() ||
+                                    (firMemrefIsBox && !firMemrefIsEmbox);
   if (descriptorOwnsLayout) {
-    // Projected slices carry their physical layout in the descriptor. Rebuild
-    // the MemRef view from box metadata instead of from slice triplets.
+    // Rebuild the MemRef view from descriptor metadata instead of from slice
+    // triplets. Reached only when firMemref is a fir.box value (case b/c), or
+    // for projected slices (case a) where the source remains the box.
     auto boxElementSize =
         fir::BoxEleSizeOp::create(rewriter, loc, indexTy, firMemref);
 
@@ -739,6 +747,12 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
       auto boxDims = fir::BoxDimsOp::create(rewriter, loc, indexTy, indexTy,
                                             indexTy, firMemref, dim);
 
+      // TODO: when an explicit fir.shape/fir.shape_shift is available
+      // (shapeVec non-empty), prefer its extents over the descriptor's
+      // box_dims extent result. For boxed array_coor the shape extents must
+      // agree with the descriptor's runtime extents, so either source is
+      // correct; using the shape would let constant extents reach the
+      // reinterpret_cast and improve downstream analysis.
       Value extent = boxDims->getResult(1);
       sizes.push_back(castTypeToIndexType(extent, rewriter));
 
