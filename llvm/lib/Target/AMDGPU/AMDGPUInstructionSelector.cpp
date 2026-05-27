@@ -2523,11 +2523,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_waterfall_begin:
   case Intrinsic::amdgcn_waterfall_readfirstlane:
   case Intrinsic::amdgcn_waterfall_end:
-  case Intrinsic::amdgcn_waterfall_last_use:
-  case Intrinsic::amdgcn_waterfall_last_use_vgpr:
     return selectWaterfallIntrinsic(I, IntrinsicID);
-  case Intrinsic::amdgcn_waterfall_loop_end:
-    return selectWaterfallIntrinsicLoopEnd(I);
   }
   return selectImpl(I, *CoverageInfo);
 }
@@ -4469,21 +4465,6 @@ bool AMDGPUInstructionSelector::selectWaterfallIntrinsic(
 
   MachineInstrBuilder MIB =
       BuildMI(*MBB, &I, DL, TII.get(Opc), DstReg).addReg(TokReg).addReg(ValReg);
-  I.eraseFromParent();
-  constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
-  return true;
-}
-
-bool AMDGPUInstructionSelector::selectWaterfallIntrinsicLoopEnd(
-    MachineInstr &I) const {
-  // op0=intrinsicID, op1=token
-  MachineBasicBlock *MBB = I.getParent();
-  const DebugLoc &DL = I.getDebugLoc();
-  Register TokReg = I.getOperand(1).getReg();
-
-  MachineInstrBuilder MIB =
-      BuildMI(*MBB, &I, DL, TII.get(AMDGPU::SI_WATERFALL_LOOP_END))
-          .addReg(TokReg);
   I.eraseFromParent();
   constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
   return true;

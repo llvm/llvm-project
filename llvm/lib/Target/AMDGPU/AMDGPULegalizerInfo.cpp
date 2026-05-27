@@ -8572,14 +8572,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return true;
   case Intrinsic::amdgcn_waterfall_readfirstlane:
   case Intrinsic::amdgcn_waterfall_end:
-  case Intrinsic::amdgcn_waterfall_last_use:
-  case Intrinsic::amdgcn_waterfall_last_use_vgpr:
     // op0=value_result, op1=intrinsicID, op2=token_input, op3=value
     legalizeWaterfallTokenReg(MRI, MI.getOperand(2).getReg());
-    return true;
-  case Intrinsic::amdgcn_waterfall_loop_end:
-    // op0=intrinsicID, op1=token_input
-    legalizeWaterfallTokenReg(MRI, MI.getOperand(1).getReg());
     return true;
 
   default: {

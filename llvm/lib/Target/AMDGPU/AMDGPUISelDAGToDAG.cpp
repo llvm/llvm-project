@@ -3260,14 +3260,6 @@ void AMDGPUDAGToDAGISel::SelectWaterfallIntrinsic(SDNode *N, unsigned IntrID) {
   CurDAG->SelectNodeTo(N, Opc, VTs, {Tok, Val, Chain});
 }
 
-void AMDGPUDAGToDAGISel::SelectWaterfallIntrinsicLoopEnd(SDNode *N) {
-  // op0=chain, op1=intrinsicID, op2=token(Untyped)
-  SDValue Chain = N->getOperand(0);
-  SDValue Tok = N->getOperand(2);
-  CurDAG->SelectNodeTo(N, AMDGPU::SI_WATERFALL_LOOP_END,
-                       CurDAG->getVTList(MVT::Other), {Tok, Chain});
-}
-
 void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
   unsigned IntrID = N->getConstantOperandVal(1);
   switch (IntrID) {
@@ -3292,8 +3284,6 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_waterfall_begin:
   case Intrinsic::amdgcn_waterfall_readfirstlane:
   case Intrinsic::amdgcn_waterfall_end:
-  case Intrinsic::amdgcn_waterfall_last_use:
-  case Intrinsic::amdgcn_waterfall_last_use_vgpr:
     SelectWaterfallIntrinsic(N, IntrID);
     return;
   }
@@ -3388,9 +3378,6 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_VOID(SDNode *N) {
   case Intrinsic::amdgcn_tensor_load_to_lds:
   case Intrinsic::amdgcn_tensor_store_from_lds:
     SelectTensorLoadStore(N, IntrID);
-    return;
-  case Intrinsic::amdgcn_waterfall_loop_end:
-    SelectWaterfallIntrinsicLoopEnd(N);
     return;
   default:
     break;

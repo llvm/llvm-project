@@ -405,7 +405,6 @@ def : AlwaysUniform<int_amdgcn_ballot>;
 def : AlwaysUniform<int_amdgcn_if_break>;
 def : AlwaysUniform<int_amdgcn_waterfall_readfirstlane>;
 def : AlwaysUniform<int_amdgcn_waterfall_begin>;
-def : AlwaysUniform<int_amdgcn_waterfall_last_use>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_x>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_y>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_z>;
@@ -468,14 +467,3 @@ def : WaterfallPseudoInfo<int_amdgcn_waterfall_end, 2, SI_WATERFALL_END_V2>;
 def : WaterfallPseudoInfo<int_amdgcn_waterfall_end, 4, SI_WATERFALL_END_V4>;
 def : WaterfallPseudoInfo<int_amdgcn_waterfall_end, 8, SI_WATERFALL_END_V8>;
 
-def : WaterfallPseudoInfo<int_amdgcn_waterfall_last_use, 1, SI_WATERFALL_LAST_USE_V1>;
-def : WaterfallPseudoInfo<int_amdgcn_waterfall_last_use, 2, SI_WATERFALL_LAST_USE_V2>;
-def : WaterfallPseudoInfo<int_amdgcn_waterfall_last_use, 4, SI_WATERFALL_LAST_USE_V4>;
-def : WaterfallPseudoInfo<int_amdgcn_waterfall_last_use, 8, SI_WATERFALL_LAST_USE_V8>;
-
-def : WaterfallPseudoInfo<int_amdgcn_waterfall_last_use_vgpr, 1, SI_WATERFALL_LAST_USE_V1_V>;
-def : WaterfallPseudoInfo<int_amdgcn_waterfall_last_use_vgpr, 2, SI_WATERFALL_LAST_USE_V2_V>;
-def : WaterfallPseudoInfo<int_amdgcn_waterfall_last_use_vgpr, 4, SI_WATERFALL_LAST_USE_V4_V>;
-def : WaterfallPseudoInfo<int_amdgcn_waterfall_last_use_vgpr, 8, SI_WATERFALL_LAST_USE_V8_V>;
-
-def : WaterfallPseudoInfo<int_amdgcn_waterfall_loop_end, 0, SI_WATERFALL_LOOP_END>;

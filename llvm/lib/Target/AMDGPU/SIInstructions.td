@@ -1421,10 +1421,6 @@ class SI_WATERFALL_END<RegisterClass rc> : SPseudoInstSI <
   (outs rc:$dst),
   (ins WaterfallTokenType:$tok, rc:$src)>;
 
-class SI_WATERFALL_LAST_USE<RegisterClass rc> : SPseudoInstSI <
-  (outs rc:$dst),
-  (ins WaterfallTokenType:$tok, rc:$src)>;
-
 } // End UseNamedOperandTable = 1
 
 // TODO: Do we still need the size variants (_V1, _V2, etc.) when selection
@@ -1443,22 +1439,6 @@ def SI_WATERFALL_END_V1 : SI_WATERFALL_END<VGPR_32>;
 def SI_WATERFALL_END_V2 : SI_WATERFALL_END<VReg_64>;
 def SI_WATERFALL_END_V4 : SI_WATERFALL_END<VReg_128>;
 def SI_WATERFALL_END_V8 : SI_WATERFALL_END<VReg_256>;
-
-def SI_WATERFALL_LAST_USE_V1   : SI_WATERFALL_LAST_USE<SGPR_32>;
-def SI_WATERFALL_LAST_USE_V1_V : SI_WATERFALL_LAST_USE<VGPR_32>;
-def SI_WATERFALL_LAST_USE_V2   : SI_WATERFALL_LAST_USE<SReg_64>;
-def SI_WATERFALL_LAST_USE_V2_V : SI_WATERFALL_LAST_USE<VReg_64>;
-def SI_WATERFALL_LAST_USE_V4   : SI_WATERFALL_LAST_USE<SGPR_128>;
-def SI_WATERFALL_LAST_USE_V4_V : SI_WATERFALL_LAST_USE<SReg_128>;
-def SI_WATERFALL_LAST_USE_V8   : SI_WATERFALL_LAST_USE<SReg_256>;
-def SI_WATERFALL_LAST_USE_V8_V : SI_WATERFALL_LAST_USE<VReg_256>;
-
-let Defs = [SCC],
-    UseNamedOperandTable = 1 in
-def SI_WATERFALL_LOOP_END : SPseudoInstSI <
-  (outs),
-  (ins WaterfallTokenType:$tok)
->;
 
 //===----------------------------------------------------------------------===//
 // VOP1 Patterns

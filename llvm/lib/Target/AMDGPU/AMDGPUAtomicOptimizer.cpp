@@ -218,20 +218,6 @@ static Instruction *findLastInWaterfall(Instruction &Begin) {
         if (Last->comesBefore(Intrin))
           Last = Intrin;
         break;
-      case Intrinsic::amdgcn_waterfall_last_use:
-      case Intrinsic::amdgcn_waterfall_last_use_vgpr: {
-        // Find the actual last use
-        for (auto &LastUse : Intrin->uses()) {
-          auto *LUI = static_cast<Instruction *>(LastUse.getUser());
-          if (LUI->getParent() != Intrin->getParent()) {
-            // LUI has to be in same BB as waterfall intrinsics.
-            return nullptr;
-          }
-          if (Last->comesBefore(LUI))
-            Last = LUI;
-        }
-        break;
-      }
       case Intrinsic::amdgcn_waterfall_readfirstlane:
         // Always in the middle of a group - so doesn't have any effect on group
         // detection

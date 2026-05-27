@@ -2726,9 +2726,8 @@ def int_amdgcn_cs_chain:
 // Best case (all lanes have the same values) the loop will execute once, worst case (all lanes
 // have different values) the loop will execute wave-size times.
 // The waterfall.begin intrinsic returns a new token that must be threaded through the
-// corresponding waterfall.readfirstlane and waterfall.end or
-// waterfall.last.use intrinsics, forming a waterfall group of intrinsics that together
-// define a waterfall region.
+// corresponding waterfall.readfirstlane and waterfall.end intrinsics, forming a
+// waterfall group of intrinsics that together define a waterfall region.
 // All intrinsics in a waterfall group must reside within the same basic block.
 // Where the intrinsic specifies "llvm_any_ty", the intrinsic will accept any of
 // the following types:
@@ -2759,32 +2758,6 @@ def int_amdgcn_waterfall_end :
     Intrinsic<[llvm_any_ty],      // Returns any value
               [llvm_token_ty,     // Token from final begin
                LLVMMatchType<0>], // Same as return value
-              [IntrConvergent]>;
-
-// Effectively a no-op, no code results directly from this intrinsic. This is
-// used to indicate that the use of the defined value constitutes the end of the
-// waterfall propagation. This is roughly equivalent to the end intrinsic, but
-// can be used to tag values that are used in non-defining operations such as a
-// store.
-def int_amdgcn_waterfall_last_use :
-    Intrinsic<[llvm_any_ty],      // Returns any value
-              [llvm_token_ty,     // Token from begin
-               LLVMMatchType<0>], // Same as return value
-              [IntrConvergent]>;
-
-// Special variant where the last-use uses a VGPR that needs to be uniform.
-def int_amdgcn_waterfall_last_use_vgpr :
-    Intrinsic<[llvm_any_ty],      // Returns any value
-              [llvm_token_ty,     // Token from begin
-               LLVMMatchType<0>], // Same as return value
-              []>;
-
-// Special waterfall loop end intrinsic to be used with last.use
-// This is inserted late, before codegen, mainly to mark the loop end
-// for special handling such as scc clobbers.
-def int_amdgcn_waterfall_loop_end :
-    Intrinsic<[],
-              [llvm_token_ty],    // Token from begin
               [IntrConvergent]>;
 
 // Run a function with all the lanes enabled. Only direct calls are allowed. The

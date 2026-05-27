@@ -77,45 +77,6 @@ static unsigned getWFEndSize(const unsigned Opcode) {
   return 0; // Not SI_WATERFALL_END_*
 }
 
-static unsigned getWFLastUseSize(const unsigned Opcode) {
-  switch (Opcode) {
-  case AMDGPU::SI_WATERFALL_LAST_USE_V1:
-  case AMDGPU::SI_WATERFALL_LAST_USE_V1_V:
-    return 1;
-  case AMDGPU::SI_WATERFALL_LAST_USE_V2:
-  case AMDGPU::SI_WATERFALL_LAST_USE_V2_V:
-    return 2;
-  case AMDGPU::SI_WATERFALL_LAST_USE_V4:
-  case AMDGPU::SI_WATERFALL_LAST_USE_V4_V:
-    return 4;
-  case AMDGPU::SI_WATERFALL_LAST_USE_V8:
-  case AMDGPU::SI_WATERFALL_LAST_USE_V8_V:
-    return 8;
-  default:
-    break;
-  }
-
-  return 0; // Not SI_WATERFALL_LAST_USE_*
-}
-
-static bool isWFLastUseVGPR(const unsigned Opcode) {
-  switch (Opcode) {
-  case AMDGPU::SI_WATERFALL_LAST_USE_V1_V:
-  case AMDGPU::SI_WATERFALL_LAST_USE_V2_V:
-  case AMDGPU::SI_WATERFALL_LAST_USE_V4_V:
-  case AMDGPU::SI_WATERFALL_LAST_USE_V8_V:
-    return true;
-  default:
-    break;
-  }
-
-  return false;
-}
-
-static bool isWFLoopEnd(const unsigned Opcode) {
-  return Opcode == AMDGPU::SI_WATERFALL_LOOP_END;
-}
-
 static void readFirstLaneReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
                              const SIRegisterInfo *RI, const SIInstrInfo *TII,
                              MachineBasicBlock::iterator &I, const DebugLoc &DL,
@@ -278,13 +239,10 @@ private:
     const MachineRegisterInfo *MRI;
     Register TokReg; // This is always the token from the last begin intrinsic
     MachineInstr *Final;
-    bool hasVGPRLastUse;
 
     std::vector<MachineInstr *> BeginList;
     std::vector<MachineInstr *> RFLList;
     std::vector<MachineInstr *> EndList;
-    std::vector<MachineInstr *> LastUseList;
-    std::vector<MachineInstr *> LoopEndList;
 
     // List of corresponding init, newdst and phi registers used in loop for
     // end pseudos
@@ -294,7 +252,7 @@ private:
     WaterfallWorkitem() = default;
     WaterfallWorkitem(MachineInstr *_Begin, const SIInstrInfo *_TII,
                       MachineRegisterInfo *_MRI)
-        : TII(_TII), MRI(_MRI), Final(nullptr), hasVGPRLastUse(false) {
+        : TII(_TII), MRI(_MRI), Final(nullptr) {
 
       auto TokMO = TII->getNamedOperand(*_Begin, AMDGPU::OpName::tok_ret);
 
@@ -312,24 +270,9 @@ private:
 
     void processCandidate(MachineInstr *Cand) {
       unsigned Opcode = Cand->getOpcode();
-      // Trivially end any waterfall intrinsic instructions
       if (getWFBeginSize(Opcode) || getWFRFLSize(Opcode) ||
-          getWFEndSize(Opcode) || getWFLastUseSize(Opcode) ||
-          isWFLoopEnd(Opcode)) {
-        // TODO: A new waterfall clause shouldn't overlap with any uses
-        // tagged by a last_use intrinsic
+          getWFEndSize(Opcode))
         return;
-      }
-
-      // Iterate over the LastUseList to determine if this instruction has a
-      // later use of a tagged last_use
-      for (auto Use : LastUseList) {
-        auto UseMO = TII->getNamedOperand(*Use, AMDGPU::OpName::dst);
-        Register UseReg = UseMO->getReg();
-
-        if (Cand->findRegisterUseOperand(UseReg, /*TRI=*/nullptr))
-          Final = Cand;
-      }
     }
 
     MachineInstr *getDefInstr(const MachineOperand *MO) const {
@@ -362,8 +305,7 @@ private:
       unsigned Opcode = Cand->getOpcode();
 
       assert((getWFBeginSize(Opcode) || getWFRFLSize(Opcode) ||
-              getWFEndSize(Opcode) || getWFLastUseSize(Opcode) ||
-              isWFLoopEnd(Opcode)) &&
+              getWFEndSize(Opcode)) &&
              "expected a waterfall instruction in addCandidate");
 
       auto CandTokMO = TII->getNamedOperand(*Cand, AMDGPU::OpName::tok);
@@ -401,14 +343,6 @@ private:
           EndList.push_back(Cand);
           Final = Cand;
           return true;
-        } else if (getWFLastUseSize(Opcode)) {
-          LastUseList.push_back(Cand);
-          if (isWFLastUseVGPR(Opcode))
-            hasVGPRLastUse = true;
-          return true;
-        } else if (isWFLoopEnd(Opcode)) {
-          LoopEndList.push_back(Cand);
-          return true;
         } else {
           report_fatal_error("Unknown opcode, expected waterfall intrinsic");
         }
@@ -424,10 +358,6 @@ private:
         RFLMI->eraseFromParent();
       for (auto EndMI : EndList)
         EndMI->eraseFromParent();
-      for (auto LUMI : LastUseList)
-        LUMI->eraseFromParent();
-      for (auto LEMI : LoopEndList)
-        LEMI->eraseFromParent();
     }
   };
 
@@ -523,20 +453,16 @@ bool AMDGPUInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
   // Note: this test also returns true when there are NO RFL intrinsics, the
   // case where a prior pass has removed all of them and the loop is now
   // redundant
-  // Also check for the special case where there are no RFL intrinsics, but
-  // there are some last.use with VGPR uses.
-  if (!Item.BeginList.size() ||
-      (Removed == Item.RFLList.size() && !Item.hasVGPRLastUse)) {
+  if (!Item.BeginList.size() || Removed == Item.RFLList.size()) {
     // Removed all of the RFLs
     // We can remove the waterfall loop entirely
 
     // Protocol is to replace all dst operands for the waterfall_end intrinsics
-    // with their src operands. Replace all last_use dst operands with their src
-    // operands We don't need to check that the loop index isn't used anywhere
-    // as the protocol for waterfall intrinsics is to only use the begin index
-    // via a readfirstlane intrinsic anyway (which should also be removed) Any
-    // problems due to errors in this pass around loop removal will be picked up
-    // later by e.g. use before def errors
+    // with their src operands. We don't need to check that the loop index isn't
+    // used anywhere as the protocol for waterfall intrinsics is to only use the
+    // begin index via a readfirstlane intrinsic anyway (which should also be
+    // removed). Any problems due to errors in this pass around loop removal
+    // will be picked up later by e.g. use before def errors
     LLVM_DEBUG(
         dbgs()
         << "detected case for waterfall loop removal - already all uniform\n");
@@ -544,11 +470,6 @@ bool AMDGPUInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
       auto EndDstOp = TII->getNamedOperand(*EndMI, AMDGPU::OpName::dst);
       auto EndSrcOp = TII->getNamedOperand(*EndMI, AMDGPU::OpName::src);
       replaceRegIncSubReg(MRI, RI, EndDstOp, EndSrcOp);
-    }
-    for (auto LUMI : Item.LastUseList) {
-      auto LUDstOp = TII->getNamedOperand(*LUMI, AMDGPU::OpName::dst);
-      auto LUSrcOp = TII->getNamedOperand(*LUMI, AMDGPU::OpName::src);
-      replaceRegIncSubReg(MRI, RI, LUDstOp, LUSrcOp);
     }
     // If all the begins were removed, we have to replace the RFL with actual
     // RFL, these will show up in the NewRLFList
@@ -611,8 +532,7 @@ bool AMDGPUInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
       continue;
     }
 
-    assert((Item.RFLList.size() || Item.hasVGPRLastUse) &&
-           (Item.EndList.size() || Item.LastUseList.size()) &&
+    assert(Item.RFLList.size() && Item.EndList.size() &&
            "SI_WATERFALL* pseudo instruction group must have at least 1 of "
            "each type");
 
@@ -663,12 +583,6 @@ bool AMDGPUInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
       Item.EndRegs.emplace_back(
           TII->getNamedOperand(*EndMI, AMDGPU::OpName::dst),
           TII->getNamedOperand(*EndMI, AMDGPU::OpName::src));
-    for (auto LUMI : Item.LastUseList) {
-      auto LUSrc = TII->getNamedOperand(*LUMI, AMDGPU::OpName::src);
-      auto LUDst = TII->getNamedOperand(*LUMI, AMDGPU::OpName::dst);
-      replaceRegIncSubReg(MRI, RI, LUDst, LUSrc);
-    }
-
     // EXEC mask handling
     Register Exec = ST->isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
     unsigned SaveExecOpc = ST->isWave32() ? AMDGPU::S_AND_SAVEEXEC_B32
@@ -721,8 +635,7 @@ bool AMDGPUInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
     BuildMI(LoopHeaderBB, LH, DL, TII->get(MovOpc), SaveExec).addReg(Exec);
 
     // Move all instructions from the SI_WATERFALL_BEGIN to the last
-    // SI_WATERFALL_END or last use tagged from SI_WATERFALL_LAST_USE
-    // into the new LoopBB
+    // SI_WATERFALL_END into the new LoopBB
     MachineBasicBlock::iterator SpliceE(Item.Final);
     ++SpliceE;
     LoopBB.splice(LoopBB.begin(), CurrMBB, I, SpliceE);
@@ -872,8 +785,7 @@ bool AMDGPUInsertWaterfall::runOnMachineFunction(MachineFunction &MF) {
             llvm_unreachable("Incorrect SI_WATERFALL_* groups");
           }
         }
-      } else if (getWFRFLSize(Opcode) || getWFEndSize(Opcode) ||
-                 getWFLastUseSize(Opcode) || isWFLoopEnd(Opcode)) {
+      } else if (getWFRFLSize(Opcode) || getWFEndSize(Opcode)) {
         // On to the body of the group intrinsics,
 
         // Tag StartNew as true if we encounter another begin
