@@ -838,8 +838,22 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
      placed here, since at this point other tasks might have been released
      hence overlapping the destructor invocations with some other work in the
      released tasks.  The OpenMP spec is not specific on when the destructors
-     are invoked, so we should be free to choose. */
-  if (UNLIKELY(taskdata->td_flags.destructors_thunk)) {
+     are invoked, so we should be free to choose.
+
+     For tasks owned by a taskgraph record, the same task descriptor (and
+     therefore the same .kmp_privates.t storage) is reused for every replay.
+     Firing the per-task destructor here would destruct the per-task
+     'firstprivate' copies (e.g. the snapshot used to realise the OpenMP 6.0
+     'firstprivate(saved: ...)' modifier) on the first replay completion,
+     leaving subsequent replays observing destructed state.  Defer the
+     destructor invocation to __kmp_taskgraph_free, which fires it exactly
+     once per task at end-of-taskgraph. */
+  bool defer_destructors_to_taskgraph_free = false;
+#if OMP_TASKGRAPH_EXPERIMENTAL
+  defer_destructors_to_taskgraph_free = is_taskgraph;
+#endif
+  if (UNLIKELY(taskdata->td_flags.destructors_thunk) &&
+      !defer_destructors_to_taskgraph_free) {
     kmp_routine_entry_t destr_thunk = task->data1.destructors;
     KMP_ASSERT(destr_thunk);
     destr_thunk(gtid, task);
@@ -5823,7 +5837,22 @@ static void __kmp_taskgraph_free(kmp_int32 gtid, kmp_taskgraph_record_t *rec,
   __kmp_taskgraph_free_region_metadata(thread, rec->root);
 
   for (size_t task = 0; task < rec->num_tasks; task++) {
-    kmp_taskdata *taskdata = KMP_TASK_TO_TASKDATA(rec->record_map[task].task);
+    // Skip entries that don't have an associated task (e.g. taskwait nodes
+    // recorded by __kmpc_taskgraph_taskwait).
+    if (rec->record_map[task].task == nullptr)
+      continue;
+    kmp_task_t *taskptr = rec->record_map[task].task;
+    kmp_taskdata *taskdata = KMP_TASK_TO_TASKDATA(taskptr);
+    // Fire the per-task destructor thunk exactly once here, at end-of-
+    // taskgraph.  __kmp_task_finish deliberately skips the thunk for
+    // taskgraph-owned tasks so that the per-replay state (in particular the
+    // 'firstprivate(saved: ...)' snapshot held in .kmp_privates.t) is not
+    // destructed between replays.
+    if (UNLIKELY(taskdata->td_flags.destructors_thunk)) {
+      kmp_routine_entry_t destr_thunk = taskptr->data1.destructors;
+      KMP_ASSERT(destr_thunk);
+      destr_thunk(gtid, taskptr);
+    }
     // Setting this here keeps an assertion in __kmp_free_task happy: the
     // clone may never have been replayed, in which case 'complete' will be
     // zero here, as initialized.
@@ -5862,14 +5891,18 @@ static kmp_taskgraph_header_t *__kmp_taskgraph_header_alloc(kmp_int32 gtid) {
 
 // Clone a (new) task that has had its private variables and shared variables
 // initialised already.
+//
+// The bitwise memcpy below is sufficient for trivially-copyable firstprivate
+// fields stored in the task's .kmp_privates.t region.  For
+// non-trivially-copyable firstprivates, the caller (\c __kmpc_taskgraph_task)
+// invokes a compiler-emitted \c task_clone thunk after we return, to re-run
+// the copy constructors with the source taken from the origin task's already
+// initialised privates record.
 static kmp_task_t *__kmp_taskgraph_clone_task(kmp_info_t *thread,
                                               kmp_taskgraph_record_t *taskgraph,
                                               kmp_task_t *orig,
                                               size_t sizeof_kmp_task_t,
                                               size_t sizeof_shareds) {
-  // FIXME: This should use a "taskdup" function like taskloops in cases where
-  // private variables are not trivially copyable.  For now, do it by plain
-  // bitwise copy.
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(orig);
   size_t shareds_offset = sizeof(kmp_taskdata_t) + sizeof_kmp_task_t;
   shareds_offset = __kmp_round_up_to_val(shareds_offset, sizeof(kmp_uint64));
@@ -6025,7 +6058,8 @@ kmp_uint32 __kmpc_taskgraph_task(ident_t *loc_ref, kmp_int32 gtid,
                                  size_t sizeof_kmp_task_t,
                                  size_t sizeof_shareds, kmp_int32 ndeps,
                                  kmp_depend_info_t *dep_list,
-                                 kmp_task_relocate_t relocate) {
+                                 kmp_task_relocate_t relocate,
+                                 void *task_clone) {
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskgroup_t *taskgroup = thread->th.th_current_task->td_taskgroup;
   kmp_taskgraph_record_t *rec = __kmp_taskgraph_or_parent_recording(taskgroup);
@@ -6035,6 +6069,15 @@ kmp_uint32 __kmpc_taskgraph_task(ident_t *loc_ref, kmp_int32 gtid,
     if (status == KMP_TDG_RECORDING) {
       kmp_task_t *cloned_task = __kmp_taskgraph_clone_task(
           thread, rec, new_task, sizeof_kmp_task_t, sizeof_shareds);
+      // If the compiler emitted a task-clone helper, run it now so that any
+      // non-trivially-copyable firstprivate fields are copy-constructed from
+      // the origin task's privates record instead of bitwise-copied.  Shares
+      // its calling convention with the taskloop \c task_dup callback; the
+      // \c lastpriv argument is unused for plain tasks.
+      if (task_clone) {
+        p_task_dup_t clone_fn = (p_task_dup_t)task_clone;
+        clone_fn(cloned_task, new_task, /*lastpriv=*/0);
+      }
       kmp_taskgraph_node_t *node = __kmp_taskgraph_node_alloc(rec, cloned_task);
       if (taskgroup->taskgraph.reduce_input) {
         node->reduce_input = taskgroup->taskgraph.reduce_input;
