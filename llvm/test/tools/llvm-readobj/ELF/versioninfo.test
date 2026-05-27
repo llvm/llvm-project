@@ -5,6 +5,8 @@
 # RUN: yaml2obj %s --docnum=1 -o %t1
 # RUN: llvm-readobj -V %t1 | FileCheck %s --check-prefix=LLVM
 # RUN: llvm-readelf -V %t1 | FileCheck %s --check-prefix=GNU
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print -V %t1 \
+# RUN:   | FileCheck %s --check-prefix=JSON
 
 --- !ELF
 FileHeader:
@@ -273,3 +275,15 @@ DynamicSymbols:
 # GNU-NEXT:    0x0050:   Name: v2  Flags: <unknown>  Version: 5
 # GNU-NEXT:    0x0060: Version: 1  File: verneed2.so.0  Cnt: 1
 # GNU-NEXT:    0x0070:   Name: v3  Flags: none  Version: 6
+
+## --elf-output-style=JSON must emit well-formed JSON for Predecessors.
+# JSON:      "VersionDefinitions": [
+# JSON:        "Definition": {
+# JSON:          "Name": "VERSION1",
+# JSON-NEXT:     "Predecessors": []
+# JSON:        "Definition": {
+# JSON:          "Name": "VERSION2",
+# JSON-NEXT:     "Predecessors": [
+# JSON-NEXT:       "VERSION1",
+# JSON-NEXT:       "VERSION3"
+# JSON-NEXT:     ]
