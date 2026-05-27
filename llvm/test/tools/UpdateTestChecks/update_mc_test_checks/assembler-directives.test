@@ -1,0 +1,8 @@
+# REQUIRES: riscv-registered-target
+## Check that .ifdef and macros are handled correctly
+
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: cp -f %S/Inputs/assembler_directives.s %t/assembler_directives.s
+# RUN: cp -f %S/Inputs/include_file.inc %t/include_file.inc
+# RUN: %update_mc_test_checks %t/assembler_directives.s
+# RUN: diff -u %S/Inputs/assembler_directives.s.expected %t/assembler_directives.s
