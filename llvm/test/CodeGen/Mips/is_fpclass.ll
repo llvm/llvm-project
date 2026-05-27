@@ -536,10 +536,14 @@ define i1 @isclass_positive_nnan_float(float nofpclass(nan) %x) nounwind {
 ;
 ; R2-LABEL: isclass_positive_nnan_float:
 ; R2:       # %bb.0:
-; R2-NEXT:    mfc1 $1, $f12
-; R2-NEXT:    addiu $2, $zero, -1
+; R2-NEXT:    addiu $1, $zero, 1
+; R2-NEXT:    c.un.s $f12, $f12
+; R2-NEXT:    movf $1, $zero, $fcc0
+; R2-NEXT:    mfc1 $2, $f12
+; R2-NEXT:    addiu $3, $zero, -1
+; R2-NEXT:    slt $2, $3, $2
 ; R2-NEXT:    jr $ra
-; R2-NEXT:    slt $2, $2, $1
+; R2-NEXT:    or $2, $1, $2
   %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 960)
   ret i1 %1
 }
@@ -555,11 +559,15 @@ define i1 @isclass_positive_nnan_double(double nofpclass(nan) %x) nounwind {
 ;
 ; R2-LABEL: isclass_positive_nnan_double:
 ; R2:       # %bb.0:
+; R2-NEXT:    addiu $1, $zero, 1
+; R2-NEXT:    c.un.d $f12, $f12
+; R2-NEXT:    movf $1, $zero, $fcc0
 ; R2-NEXT:    cvt.s.d $f0, $f12
-; R2-NEXT:    mfc1 $1, $f0
-; R2-NEXT:    addiu $2, $zero, -1
+; R2-NEXT:    mfc1 $2, $f0
+; R2-NEXT:    addiu $3, $zero, -1
+; R2-NEXT:    slt $2, $3, $2
 ; R2-NEXT:    jr $ra
-; R2-NEXT:    slt $2, $2, $1
+; R2-NEXT:    or $2, $1, $2
   %1 = call i1 @llvm.is.fpclass.f64(double %x, i32 960)
   ret i1 %1
 }
@@ -597,9 +605,13 @@ define i1 @isclass_negative_nnan_float(float nofpclass(nan) %x) nounwind {
 ;
 ; R2-LABEL: isclass_negative_nnan_float:
 ; R2:       # %bb.0:
-; R2-NEXT:    mfc1 $1, $f12
+; R2-NEXT:    addiu $1, $zero, 1
+; R2-NEXT:    c.un.s $f12, $f12
+; R2-NEXT:    movt $1, $zero, $fcc0
+; R2-NEXT:    mfc1 $2, $f12
+; R2-NEXT:    slti $2, $2, 0
 ; R2-NEXT:    jr $ra
-; R2-NEXT:    srl $2, $1, 31
+; R2-NEXT:    and $2, $1, $2
   %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 60)
   ret i1 %1
 }
@@ -615,10 +627,14 @@ define i1 @isclass_negative_nnan_double(double nofpclass(nan) %x) nounwind {
 ;
 ; R2-LABEL: isclass_negative_nnan_double:
 ; R2:       # %bb.0:
+; R2-NEXT:    addiu $1, $zero, 1
+; R2-NEXT:    c.un.d $f12, $f12
+; R2-NEXT:    movt $1, $zero, $fcc0
 ; R2-NEXT:    cvt.s.d $f0, $f12
-; R2-NEXT:    mfc1 $1, $f0
+; R2-NEXT:    mfc1 $2, $f0
+; R2-NEXT:    slti $2, $2, 0
 ; R2-NEXT:    jr $ra
-; R2-NEXT:    srl $2, $1, 31
+; R2-NEXT:    and $2, $1, $2
   %1 = call i1 @llvm.is.fpclass.f64(double %x, i32 60)
   ret i1 %1
 }

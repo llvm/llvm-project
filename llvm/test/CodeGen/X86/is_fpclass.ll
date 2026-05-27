@@ -2906,15 +2906,25 @@ define i1 @not_issubnormal_or_zero_or_qnan_f(float %x) {
 define i1 @isclass_positive_nnan(float nofpclass(nan) %x) nounwind {
 ; X86-LABEL: isclass_positive_nnan:
 ; X86:       # %bb.0:
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    setns %al
+; X86-NEXT:    setns %cl
+; X86-NEXT:    fucomp %st(0)
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    setp %al
+; X86-NEXT:    orb %cl, %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: isclass_positive_nnan:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movmskps %xmm0, %eax
+; X64-NEXT:    ucomiss %xmm0, %xmm0
+; X64-NEXT:    setp %cl
 ; X64-NEXT:    testb $1, %al
 ; X64-NEXT:    sete %al
+; X64-NEXT:    orb %cl, %al
 ; X64-NEXT:    retq
   %ispos = call i1 @llvm.is.fpclass.f32(float %x, i32 960)
   ret i1 %ispos
@@ -2940,16 +2950,25 @@ define i1 @isclass_positive(float %x) nounwind {
 define i1 @isclass_negative_nnan(float nofpclass(nan) %x) nounwind {
 ; X86-LABEL: isclass_negative_nnan:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrl $31, %eax
-; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    sets %cl
+; X86-NEXT:    fucomp %st(0)
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    setnp %al
+; X86-NEXT:    andb %cl, %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: isclass_negative_nnan:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movmskps %xmm0, %eax
-; X64-NEXT:    andl $1, %eax
-; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    ucomiss %xmm0, %xmm0
+; X64-NEXT:    setnp %cl
+; X64-NEXT:    testb $1, %al
+; X64-NEXT:    setne %al
+; X64-NEXT:    andb %cl, %al
 ; X64-NEXT:    retq
   %isneg = call i1 @llvm.is.fpclass.f32(float %x, i32 60)
   ret i1 %isneg
@@ -2990,30 +3009,67 @@ define i1 @isclass_negative(float %x) nounwind {
 define <4 x i1> @isclass_positive_nnan_v4f32(<4 x float> nofpclass(nan) %x) nounwind {
 ; X86-LABEL: isclass_positive_nnan_v4f32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    setns %cl
-; X86-NEXT:    shlb $2, %cl
+; X86-NEXT:    sets %dl
+; X86-NEXT:    fucomp %st(0)
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    setnp %dh
+; X86-NEXT:    andb %dl, %dh
+; X86-NEXT:    xorb $1, %dh
+; X86-NEXT:    shlb $2, %dh
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    setns %dl
+; X86-NEXT:    sets %bl
+; X86-NEXT:    fucomp %st(0)
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    setnp %dl
+; X86-NEXT:    andb %bl, %dl
+; X86-NEXT:    notb %dl
 ; X86-NEXT:    shlb $3, %dl
-; X86-NEXT:    orb %cl, %dl
+; X86-NEXT:    orb %dh, %dl
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    setns %cl
+; X86-NEXT:    sets %bl
+; X86-NEXT:    fucomp %st(0)
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    setnp %dh
+; X86-NEXT:    andb %bl, %dh
+; X86-NEXT:    xorb $1, %dh
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    setns %ch
-; X86-NEXT:    addb %ch, %ch
-; X86-NEXT:    orb %cl, %ch
-; X86-NEXT:    orb %dl, %ch
-; X86-NEXT:    movb %ch, (%eax)
+; X86-NEXT:    sets %bl
+; X86-NEXT:    fucomp %st(0)
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    setnp %al
+; X86-NEXT:    andb %bl, %al
+; X86-NEXT:    xorb $1, %al
+; X86-NEXT:    addb %al, %al
+; X86-NEXT:    orb %dh, %al
+; X86-NEXT:    orb %dl, %al
+; X86-NEXT:    andb $15, %al
+; X86-NEXT:    movb %al, (%ecx)
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: isclass_positive_nnan_v4f32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pxor %xmm1, %xmm1
 ; X64-NEXT:    pcmpgtd %xmm0, %xmm1
-; X64-NEXT:    pcmpeqd %xmm0, %xmm0
-; X64-NEXT:    pxor %xmm1, %xmm0
+; X64-NEXT:    cmpordps %xmm0, %xmm0
+; X64-NEXT:    andps %xmm1, %xmm0
+; X64-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    retq
   %ispos = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %x, i32 960)
   ret <4 x i1> %ispos
@@ -3055,29 +3111,61 @@ define <4 x i1> @isclass_positive_v4f32(<4 x float> %x) nounwind {
 define <4 x i1> @isclass_negative_nnan_v4f32(<4 x float> nofpclass(nan) %x) nounwind {
 ; X86-LABEL: isclass_negative_nnan_v4f32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    sets %cl
-; X86-NEXT:    shlb $2, %cl
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    sets %dl
+; X86-NEXT:    fucomp %st(0)
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    setnp %dh
+; X86-NEXT:    andb %dl, %dh
+; X86-NEXT:    shlb $2, %dh
+; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    sets %bl
+; X86-NEXT:    fucomp %st(0)
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    setnp %dl
+; X86-NEXT:    andb %bl, %dl
 ; X86-NEXT:    shlb $3, %dl
-; X86-NEXT:    orb %cl, %dl
+; X86-NEXT:    orb %dh, %dl
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    sets %cl
+; X86-NEXT:    sets %bl
+; X86-NEXT:    fucomp %st(0)
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    setnp %dh
+; X86-NEXT:    andb %bl, %dh
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    sets %ch
-; X86-NEXT:    addb %ch, %ch
-; X86-NEXT:    orb %cl, %ch
-; X86-NEXT:    orb %dl, %ch
-; X86-NEXT:    movb %ch, (%eax)
+; X86-NEXT:    sets %bl
+; X86-NEXT:    fucomp %st(0)
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    setnp %al
+; X86-NEXT:    andb %bl, %al
+; X86-NEXT:    addb %al, %al
+; X86-NEXT:    orb %dh, %al
+; X86-NEXT:    orb %dl, %al
+; X86-NEXT:    movb %al, (%ecx)
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: isclass_negative_nnan_v4f32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pxor %xmm1, %xmm1
 ; X64-NEXT:    pcmpgtd %xmm0, %xmm1
-; X64-NEXT:    movdqa %xmm1, %xmm0
+; X64-NEXT:    cmpordps %xmm0, %xmm0
+; X64-NEXT:    andps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %isneg = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %x, i32 60)
   ret <4 x i1> %isneg

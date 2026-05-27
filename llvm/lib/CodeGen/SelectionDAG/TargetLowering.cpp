@@ -10010,16 +10010,15 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
 
     SDValue SignBitResult =
         getFloatSign(ResultVT, NeedFPTrunc, Op, DAG, DL, *this);
-    if (!DAG.isKnownNeverNaN(Op)) {
-      if (testNaN) {
-        SDValue IsNaN = DAG.getSetCC(DL, ResultVT, Op, Op, ISD::SETUO);
-        SignBitResult =
-            DAG.getNode(ISD::OR, DL, ResultVT, IsNaN, SignBitResult);
-      } else {
-        SDValue NotNaN = DAG.getSetCC(DL, ResultVT, Op, Op, ISD::SETO);
-        SignBitResult =
-            DAG.getNode(ISD::AND, DL, ResultVT, NotNaN, SignBitResult);
-      }
+    // This logic is not needed if we are sure that Op is not NaN,
+    // while combiner will help us to remove it: maybe in future.
+    if (testNaN) {
+      SDValue IsNaN = DAG.getSetCC(DL, ResultVT, Op, Op, ISD::SETUO);
+      SignBitResult = DAG.getNode(ISD::OR, DL, ResultVT, IsNaN, SignBitResult);
+    } else {
+      SDValue NotNaN = DAG.getSetCC(DL, ResultVT, Op, Op, ISD::SETO);
+      SignBitResult =
+          DAG.getNode(ISD::AND, DL, ResultVT, NotNaN, SignBitResult);
     }
 
     bool IsICmpImmLegal =
