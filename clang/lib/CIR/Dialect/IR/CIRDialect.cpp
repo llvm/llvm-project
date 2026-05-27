@@ -526,12 +526,22 @@ LogicalResult cir::CastOp::verify() {
                               "address space of the operand";
     }
 
-  if (mlir::isa<cir::VectorType>(srcType) &&
-      mlir::isa<cir::VectorType>(resType)) {
+  auto kind = getKind();
+  auto srcVTy = mlir::dyn_cast<cir::VectorType>(srcType);
+  auto resVTy = mlir::dyn_cast<cir::VectorType>(resType);
+  if (srcVTy && resVTy) {
+    if ((kind == cir::CastKind::int_to_float ||
+         kind == cir::CastKind::float_to_int) &&
+        srcVTy.getSize() != resVTy.getSize()) {
+      return emitOpError()
+             << "vector float-to-int and int-to-float casts require "
+                "source and destination vectors to have the same number of "
+                "elements";
+    }
     // Use the element type of the vector to verify the cast kind. (Except for
     // bitcast, see below.)
-    srcType = mlir::dyn_cast<cir::VectorType>(srcType).getElementType();
-    resType = mlir::dyn_cast<cir::VectorType>(resType).getElementType();
+    srcType = srcVTy.getElementType();
+    resType = resVTy.getElementType();
   }
 
   switch (getKind()) {
