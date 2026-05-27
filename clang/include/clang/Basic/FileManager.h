@@ -145,6 +145,8 @@ class FileManager : public RefCountedBase<FileManager> {
   llvm::ErrorOr<DirectoryEntryRef> getDirectoryRefImpl(StringRef DirName,
                                                        bool CacheFailure);
 
+  /// Retrieves the directory that the given \p Filename resides in.
+  /// \p Filename can point to either a real file or a virtual file.
   llvm::ErrorOr<DirectoryEntryRef> getDirectoryFromFile(StringRef Filename,
                                                         bool CacheFailure);
 

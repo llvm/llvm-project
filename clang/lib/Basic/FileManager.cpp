@@ -83,8 +83,6 @@ void FileManager::setStatCache(std::unique_ptr<FileSystemStatCache> statCache) {
 
 void FileManager::clearStatCache() { StatCache.reset(); }
 
-/// Retrieve the directory that the given file name resides in.
-/// Filename can point to either a real file or a virtual file.
 llvm::ErrorOr<DirectoryEntryRef>
 FileManager::getDirectoryFromFile(StringRef Filename, bool CacheFailure) {
   if (Filename.empty())
