@@ -627,8 +627,10 @@ toolchains::MinGW::GetExceptionModel(const ArgList &Args) const {
   return llvm::ExceptionHandling::DwarfCFI;
 }
 
-SanitizerMask toolchains::MinGW::getSupportedSanitizers() const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+SanitizerMask toolchains::MinGW::getSupportedSanitizers(
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;

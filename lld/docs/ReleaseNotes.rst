@@ -43,6 +43,11 @@ ELF Improvements
 Breaking changes
 ----------------
 
+* The symbol partition feature has been removed. lld no longer recognizes
+  ``SHT_LLVM_SYMPART`` sections, which are now treated as ordinary sections. The
+  feature saw no adoption beyond a Chromium experiment that has since been
+  retired.
+
 COFF Improvements
 -----------------
 
@@ -59,6 +64,8 @@ MachO Improvements
 * ``--bp-compression-sort-section`` now accepts optional layout and match
   priorities (same syntax as ELF). In Mach-O, the glob matches the
   concatenated segment+section name (e.g. ``__TEXT__text``).
+* Restructure thunk generation algorithm to be more efficiently create thunks
+  (`#193367 <https://github.com/llvm/llvm-project/pull/193367>`_)
 
 WebAssembly Improvements
 ------------------------

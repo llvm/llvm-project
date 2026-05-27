@@ -4,7 +4,7 @@
 
 declare amdgpu_gfx_whole_wave i32 @good_callee(i1 %active, i32 %x, i32 %y, i32 inreg %c)
 
-define amdgpu_gfx void @basic_test(i32 %x, i32 inreg %c, ptr addrspace(1) %ptr) {
+define amdgpu_gfx void @basic_test(i32 %x, i32 inreg %c, ptr addrspace(1) %ptr) #0 {
 ; DAGISEL-LABEL: basic_test:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -96,7 +96,7 @@ define amdgpu_gfx void @basic_test(i32 %x, i32 inreg %c, ptr addrspace(1) %ptr) 
   ret void
 }
 
-define amdgpu_gfx i32 @tail_call_from_gfx(i32 %x, i32 inreg %c) {
+define amdgpu_gfx i32 @tail_call_from_gfx(i32 %x, i32 inreg %c) #0 {
 ; DAGISEL-LABEL: tail_call_from_gfx:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -127,7 +127,7 @@ define amdgpu_gfx i32 @tail_call_from_gfx(i32 %x, i32 inreg %c) {
   ret i32 %ret
 }
 
-define amdgpu_gfx_whole_wave i32 @tail_call_from_whole_wave(i1 %active, i32 %x, i32 inreg %c) {
+define amdgpu_gfx_whole_wave i32 @tail_call_from_whole_wave(i1 %active, i32 %x, i32 inreg %c) #0 {
 ; DAGISEL-LABEL: tail_call_from_whole_wave:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -764,7 +764,7 @@ define amdgpu_gfx_whole_wave i32 @tail_call_from_whole_wave(i1 %active, i32 %x, 
 
 declare amdgpu_gfx_whole_wave void @void_callee(i1 %active, i32 %x)
 
-define amdgpu_gfx void @ret_void(i32 %x) {
+define amdgpu_gfx void @ret_void(i32 %x) #0 {
 ; DAGISEL-LABEL: ret_void:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -838,3 +838,4 @@ define amdgpu_gfx void @ret_void(i32 %x) {
   ret void
 }
 
+attributes #0 = { nounwind }

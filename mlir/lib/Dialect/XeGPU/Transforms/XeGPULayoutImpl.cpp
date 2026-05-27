@@ -25,6 +25,7 @@
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -122,6 +123,25 @@ static xegpu::DistributeLayoutAttr getLayoutFromUsePoints(Value result) {
     }
   }
   return layout;
+}
+
+// Returns true if `op` is safe and cheap to clone (no side effects, no
+// regions, and all operands are themselves trivially rematerializable, e.g.
+// block-arg-free pure value generators such as `vector.step`, splat
+// `arith.constant`, or `vector.create_mask` whose operands are constants).
+bool xegpu::isTriviallyRematerializable(Operation *op) {
+  if (!op || op->getNumRegions() != 0)
+    return false;
+  if (!isMemoryEffectFree(op))
+    return false;
+  for (Value v : op->getOperands()) {
+    Operation *defOp = v.getDefiningOp();
+    if (!defOp)
+      return false;
+    if (!isTriviallyRematerializable(defOp))
+      return false;
+  }
+  return true;
 }
 
 // For regular operations: First the result layouts are propagated from uses.
@@ -1170,11 +1190,11 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
 /// load matrix lowers to load gather and 1d block load. All of them share the
 /// same layout setup logic.
 /// For Subgroup layout, uses the consumer layout directly.
-/// non-chunked loads:
+/// non-chunked loads (1D or 2D):
 ///   InstData = {1, ..., min(consumer, maxLaneLoadSize * subgroupSize)}
 ///   LaneLayout = {1, ..., subgroupSize}
 ///   lane_data = {1, ..., min(consumer, maxLaneLoadSize)}
-/// chunked loads:
+/// chunked loads (2D only):
 ///   InstData = {subgroupSize, min(consumer, maxLaneLoadSize)}
 ///   LaneLayout = {subgroupSize, 1}
 ///   lane_data={1,min(consumer, maxLaneLoadSize)}
@@ -1268,12 +1288,12 @@ xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
 
 /// Sets up the anchor layout for store scatter and store matrix operation.
 /// store matrix lowers to store scatter and 1d block store. All of them share
-/// the same layout setup logic. For Subgroup layout, not support yet.
-/// non-chunked stores:
+/// the same layout setup logic. For Subgroup layout, not supported yet.
+/// non-chunked stores (1D or 2D):
 ///   InstData = {1, ..., subgroupSize}
 ///   LaneLayout = {1, ..., subgroupSize}
 ///   lane_data = {1, ..., 1}
-/// chunked stores:
+/// chunked stores (2D only):
 ///   InstData = {subgroupSize, min(srcVec, maxLaneStoreSize)}
 ///   LaneLayout = {subgroupSize, 1}
 ///   lane_data={1,min(srcVec, maxLaneStoreSize)}

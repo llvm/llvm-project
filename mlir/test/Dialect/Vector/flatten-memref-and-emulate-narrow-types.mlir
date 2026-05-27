@@ -2,10 +2,10 @@
 
 // This test verifies that narrow-type-emulation works correctly for
 // rank > 1 memrefs by combining memref flattening with vector narrow type
-// emulation patterns. 
+// emulation patterns.
 //
 // The patterns tested here demonstrate the composition of two transformations,
-// memref flattening for vector ops and vector op narrow type emulation.
+// memref flattening and vector op narrow type emulation.
 //
 // TODO: Support `vector.transfer_write` operation.
 

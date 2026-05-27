@@ -29,6 +29,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/ScaledNumber.h"
 #include "llvm/Support/StringSaver.h"
@@ -1769,12 +1770,19 @@ public:
     return ValueInfo(HaveGVs, VP);
   }
 
-  /// Return a ValueInfo for \p GV and mark it as belonging to GV.
-  ValueInfo getOrInsertValueInfo(const GlobalValue *GV) {
+  /// Return a ValueInfo for \p GV with GUID \p GUID and mark it as belonging to
+  /// GV.
+  ValueInfo getOrInsertValueInfo(const GlobalValue *GV,
+                                 GlobalValue::GUID GUID) {
     assert(HaveGVs);
-    auto VP = getOrInsertValuePtr(GV->getGUID());
+    auto VP = getOrInsertValuePtr(GUID);
     VP->second.U.GV = GV;
     return ValueInfo(HaveGVs, VP);
+  }
+
+  /// Return a ValueInfo for \p GV and mark it as belonging to GV.
+  ValueInfo getOrInsertValueInfo(const GlobalValue *GV) {
+    return getOrInsertValueInfo(GV, GV->getGUID());
   }
 
   /// Return the GUID for \p OriginalId in the OidGuidMap.

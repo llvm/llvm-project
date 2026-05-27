@@ -90,9 +90,7 @@ define signext i16 @srem_i16(i16 signext %a, i16 signext %b) {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    div $zero, $5, $4
 ; MIPS32-NEXT:    teq $4, $zero, 7
-; MIPS32-NEXT:    mfhi $1
-; MIPS32-NEXT:    sll $1, $1, 16
-; MIPS32-NEXT:    sra $2, $1, 16
+; MIPS32-NEXT:    mfhi $2
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:

@@ -47,7 +47,7 @@
 ; RUN: llvm-as src1.ll -o src1.o
 ; RUN: llvm-as src1.o.thinlto.ll -o src1.o.thinlto.bc
 
-; RUN: opt -passes=memprof-context-disambiguation src1.o -S -memprof-import-summary=src1.o.thinlto.bc | FileCheck %s
+; RUN: opt -passes=assign-guid,memprof-context-disambiguation src1.o -S -memprof-import-summary=src1.o.thinlto.bc | FileCheck %s
 
 ;; Per the cloning results in the summary, none of the original functions should
 ;; call any memprof clones.
