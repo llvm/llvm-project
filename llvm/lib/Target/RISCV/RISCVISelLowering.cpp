@@ -5224,9 +5224,7 @@ static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, int &EvenSrc,
   if (VT.getScalarSizeInBits() >= Subtarget.getELen()) {
     if (!Subtarget.hasVendorXRivosVizip() && !Subtarget.hasStdExtZvzip())
       return false;
-    if (Subtarget.hasStdExtZvzip() &&
-        !isLegalVTForZvzipOperand(VT, Subtarget,
-                                  *Subtarget.getTargetLowering()))
+    if (Subtarget.hasStdExtZvzip() && !isLegalVTForZvzipOperand(VT, Subtarget))
       return false;
   }
 
