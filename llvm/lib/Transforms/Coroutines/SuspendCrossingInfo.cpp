@@ -97,12 +97,8 @@ bool SuspendCrossingInfo::computeBlockData(
     auto BBNo = Mapping.blockToIndex(BB);
     auto &B = Block[BBNo];
 
-    // Verify BlockData on initialize
     // We don't need to count the predecessors when initialization.
-    if constexpr (Initialize)
-      assert(!(B.AlwaysKill && B.NeverKill) &&
-             "AlwaysKill and NeverKill cannot both be true");
-    else {
+    if constexpr (!Initialize)
       // If all the predecessors of the current Block don't change,
       // the BlockData for the current block must not change too.
       if (all_of(predecessors(B), [this](BasicBlock *BB) {
@@ -111,7 +107,6 @@ bool SuspendCrossingInfo::computeBlockData(
         B.Changed = false;
         continue;
       }
-    }
 
     // Saved Consumes and Kills bitsets so that it is easy to see
     // if anything changed after propagation.
@@ -126,13 +121,13 @@ bool SuspendCrossingInfo::computeBlockData(
       B.Consumes |= P.Consumes;
       B.Kills |= P.Kills;
 
-      if (P.AlwaysKill)
+      if (P.isAlwaysKill())
         B.Kills |= P.Consumes;
     }
 
-    if (B.AlwaysKill) {
+    if (B.isAlwaysKill()) {
       B.Kills |= B.Consumes;
-    } else if (B.NeverKill) {
+    } else if (B.isNeverKill()) {
       B.Kills.reset();
     } else {
       // This is reached when B block it not Suspend nor coro.end and it
@@ -172,7 +167,7 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, const coro::Shape &Shape)
     assert(CE->getParent()->getFirstInsertionPt() == CE->getIterator() &&
            CE->getParent()->size() <= 2 && "CoroEnd must be in its own BB");
 
-    getBlockData(CE->getParent()).NeverKill = true;
+    getBlockData(CE->getParent()).setNeverKill();
   }
 
   for (auto *InRamp : Shape.CoroIsInRampInsts)
@@ -180,7 +175,7 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, const coro::Shape &Shape)
       if (auto *Br = dyn_cast<CondBrInst>(U)) {
         auto *TrueBB = Br->getSuccessor(0);
         if (TrueBB->getSinglePredecessor())
-          getBlockData(TrueBB).NeverKill = true;
+          getBlockData(TrueBB).setNeverKill();
       }
 
   // Mark all suspend blocks and indicate that they kill everything they
@@ -190,7 +185,7 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, const coro::Shape &Shape)
   auto markSuspendBlock = [&](IntrinsicInst *BarrierInst) {
     BasicBlock *SuspendBlock = BarrierInst->getParent();
     auto &B = getBlockData(SuspendBlock);
-    B.AlwaysKill = true;
+    B.setAlwaysKill();
     B.Kills |= B.Consumes;
   };
   for (auto *CSI : Shape.CoroSuspends) {

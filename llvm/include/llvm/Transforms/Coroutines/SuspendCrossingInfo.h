@@ -72,10 +72,24 @@ class SuspendCrossingInfo {
   struct BlockData {
     BitVector Consumes;
     BitVector Kills;
-    bool AlwaysKill = false;
-    bool NeverKill = false;
     bool KillLoop = false;
     bool Changed = false;
+
+  private:
+    bool AlwaysKill = false;
+    bool NeverKill = false;
+
+  public:
+    bool isAlwaysKill() const { return AlwaysKill; }
+    bool isNeverKill() const { return NeverKill; }
+    void setAlwaysKill() {
+      AlwaysKill = true;
+      NeverKill = false;
+    }
+    void setNeverKill() {
+      AlwaysKill = false;
+      NeverKill = true;
+    }
   };
   SmallVector<BlockData, 32> Block;
 
