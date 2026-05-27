@@ -1502,7 +1502,7 @@ void populateXeGPUWgToSgDistributeTypeConversions(TypeConverter &converter,
       });
 
   // Context-aware 1:N conversion for VectorType based on sg_layout/sg_data.
-  xegpu::addContextAwareVectorTypeConversion(
+  xegpu::addVectorTypeConversion(
       converter, topLevelOp,
       [](VectorType vecTy, xegpu::DistributeLayoutAttr layout)
           -> std::pair<SmallVector<int64_t>, int> {

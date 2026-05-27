@@ -852,7 +852,7 @@ bool xegpu::matchSplitDimExpansion(
 // Context-aware type conversion utilities
 //===----------------------------------------------------------------------===//
 
-void xegpu::addContextAwareVectorTypeConversion(
+void xegpu::addVectorTypeConversion(
     TypeConverter &converter, Operation *topLevelOp,
     SubShapeAndCountFn getSubShapeAndCount) {
   // Pre-compute 1:N type mappings for scf.while block arguments.

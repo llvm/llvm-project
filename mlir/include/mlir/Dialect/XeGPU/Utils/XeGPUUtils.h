@@ -242,7 +242,7 @@ using SubShapeAndCountFn = std::function<std::pair<SmallVector<int64_t>, int>(
 /// making Block::getParent() crash (LLVM ilist assertion). The
 /// `getSubShapeAndCount` callback computes (subShape, count) for a VectorType
 /// and its layout; count <= 0 means no conversion needed.
-void addContextAwareVectorTypeConversion(
+void addVectorTypeConversion(
     TypeConverter &converter, Operation *topLevelOp,
     SubShapeAndCountFn getSubShapeAndCount);
 

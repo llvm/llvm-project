@@ -419,7 +419,7 @@ void XeGPUBlockingPass::runOnOperation() {
         });
 
     // Context-aware 1:N conversion for VectorType based on inst_data.
-    xegpu::addContextAwareVectorTypeConversion(
+    xegpu::addVectorTypeConversion(
         converter, op,
         [&](VectorType vecTy, xegpu::DistributeLayoutAttr layout)
             -> std::pair<SmallVector<int64_t>, int> {
