@@ -11765,7 +11765,7 @@ public:
       AccessSpecifier AS, SourceLocation ModulePrivateLoc,
       SourceLocation FriendLoc, unsigned NumOuterTemplateParamLists,
       TemplateParameterList **OuterTemplateParamLists,
-      SkipBodyInfo *SkipBody = nullptr);
+      bool IsMemberSpecialization, SkipBodyInfo *SkipBody = nullptr);
 
   /// Translates template arguments as provided by the parser
   /// into template arguments used by semantic analysis.
