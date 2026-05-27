@@ -100,8 +100,7 @@ add_libc_test(
     strtoint32_test.cpp
   DEPENDS
     libc.hdr.stdint_proxy
-    libc.src.__support.str_to_integer
-    libc.src.errno.errno
+    libc.src.stdlib.str_to_util
     .strtol_test_support
 )
 
@@ -113,8 +112,7 @@ add_libc_test(
     strtoint64_test.cpp
   DEPENDS
     libc.hdr.stdint_proxy
-    libc.src.__support.str_to_integer
-    libc.src.errno.errno
+    libc.src.stdlib.str_to_util
     .strtol_test_support
 )
 

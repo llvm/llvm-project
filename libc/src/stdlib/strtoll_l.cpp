@@ -7,24 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/strtoll_l.h"
-#include "src/__support/common.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/str_to_integer.h"
+#include "src/stdlib/str_to_util.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long long, strtoll_l,
                    (const char *__restrict str, char **__restrict str_end,
                     int base, locale_t)) {
-  auto result = internal::strtointeger<long long>(str, base);
-  if (result.has_error())
-    libc_errno = result.error;
-
-  if (str_end != nullptr)
-    *str_end = const_cast<char *>(str + result.parsed_len);
-
-  return result;
+  return internal::str_to_helper<long long>(str, str_end, base);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

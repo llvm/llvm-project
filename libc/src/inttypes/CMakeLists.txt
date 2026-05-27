@@ -6,8 +6,7 @@ add_entrypoint_object(
     strtoimax.h
   DEPENDS
     libc.hdr.stdint_proxy
-    libc.src.__support.str_to_integer
-    libc.src.errno.errno
+    libc.src.stdlib.str_to_util
 )
 
 add_entrypoint_object(
@@ -18,8 +17,7 @@ add_entrypoint_object(
     strtoumax.h
   DEPENDS
     libc.hdr.stdint_proxy
-    libc.src.__support.str_to_integer
-    libc.src.errno.errno
+    libc.src.stdlib.str_to_util
 )
 
 add_entrypoint_object(

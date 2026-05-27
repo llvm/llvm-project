@@ -5,8 +5,7 @@ add_entrypoint_object(
   HDRS
     atoi.h
   DEPENDS
-    libc.src.errno.errno
-    libc.src.__support.str_to_integer
+    .str_to_util
 )
 
 add_entrypoint_object(
@@ -27,8 +26,7 @@ add_entrypoint_object(
   HDRS
     atol.h
   DEPENDS
-    libc.src.errno.errno
-    libc.src.__support.str_to_integer
+    .str_to_util
 )
 
 add_entrypoint_object(
@@ -38,8 +36,7 @@ add_entrypoint_object(
   HDRS
     atoll.h
   DEPENDS
-    libc.src.errno.errno
-    libc.src.__support.str_to_integer
+    .str_to_util
 )
 
 add_entrypoint_object(
@@ -144,6 +141,16 @@ add_header_library(
     libc.src.__support.CPP.type_traits
 )
 
+add_header_library(
+  str_to_util
+  HDRS
+    str_to_util.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.str_to_integer
+)
+
 add_entrypoint_object(
   strtof
   SRCS
@@ -184,8 +191,7 @@ add_entrypoint_object(
   HDRS
     strtol.h
   DEPENDS
-    libc.src.errno.errno
-    libc.src.__support.str_to_integer
+    .str_to_util
 )
 
 add_entrypoint_object(
@@ -195,8 +201,7 @@ add_entrypoint_object(
   HDRS
     strtoll.h
   DEPENDS
-    libc.src.errno.errno
-    libc.src.__support.str_to_integer
+    .str_to_util
 )
 
 add_entrypoint_object(
@@ -206,8 +211,7 @@ add_entrypoint_object(
   HDRS
     strtoul.h
   DEPENDS
-    libc.src.errno.errno
-    libc.src.__support.str_to_integer
+    .str_to_util
 )
 
 add_entrypoint_object(
@@ -217,8 +221,7 @@ add_entrypoint_object(
   HDRS
     strtoull.h
   DEPENDS
-    libc.src.errno.errno
-    libc.src.__support.str_to_integer
+    .str_to_util
 )
 
 add_entrypoint_object(
@@ -612,8 +615,7 @@ add_entrypoint_object(
   HDRS
     strtol_l.h
   DEPENDS
-    libc.src.errno.errno
-    libc.src.__support.str_to_integer
+    .str_to_util
 )
 
 add_entrypoint_object(
@@ -623,8 +625,7 @@ add_entrypoint_object(
   HDRS
     strtoll_l.h
   DEPENDS
-    libc.src.errno.errno
-    libc.src.__support.str_to_integer
+    .str_to_util
 )
 
 add_entrypoint_object(
@@ -634,8 +635,7 @@ add_entrypoint_object(
   HDRS
     strtoul_l.h
   DEPENDS
-    libc.src.errno.errno
-    libc.src.__support.str_to_integer
+    .str_to_util
 )
 
 add_entrypoint_object(
@@ -645,8 +645,7 @@ add_entrypoint_object(
   HDRS
     strtoull_l.h
   DEPENDS
-    libc.src.errno.errno
-    libc.src.__support.str_to_integer
+    .str_to_util
 )
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})

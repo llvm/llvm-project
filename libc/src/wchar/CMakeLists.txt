@@ -60,8 +60,7 @@ add_entrypoint_object(
   HDRS
     wcstol.h
   DEPENDS
-    libc.src.errno.errno
-    libc.src.__support.str_to_integer
+    libc.src.stdlib.str_to_util
 )
 
 add_entrypoint_object(
@@ -71,8 +70,7 @@ add_entrypoint_object(
   HDRS
     wcstoll.h
   DEPENDS
-    libc.src.errno.errno
-    libc.src.__support.str_to_integer
+    libc.src.stdlib.str_to_util
 )
 
 add_entrypoint_object(
@@ -82,8 +80,7 @@ add_entrypoint_object(
   HDRS
     wcstoul.h
   DEPENDS
-    libc.src.errno.errno
-    libc.src.__support.str_to_integer
+    libc.src.stdlib.str_to_util
 )
 
 add_entrypoint_object(
@@ -93,8 +90,7 @@ add_entrypoint_object(
   HDRS
     wcstoull.h
   DEPENDS
-    libc.src.errno.errno
-    libc.src.__support.str_to_integer
+    libc.src.stdlib.str_to_util
 )
 
 add_entrypoint_object(
