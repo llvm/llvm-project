@@ -29,21 +29,23 @@
 
 // Require `nomerge` for better crash attribution.
 #  define _LIBCPP_ASSERTION_HANDLER(message) \
-  ({ [[clang::nomerge]] _LIBCPP_VERBOSE_TRAP(message); })
+  ({ [[clang::__nomerge__]] _LIBCPP_VERBOSE_TRAP(message); })
 
 #elif _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // Calling this saves code size compared to
 // `__libcpp_verbose_abort("%s", "error message")`.
-[[__noreturn__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_NOINLINE
+// Force it to be `hidden` so we also don't have to pay for runtime
+// relocations.
+[[clang::__nomerge__]] [[__noreturn__]] _LIBCPP_HIDDEN
 inline void __libcpp_android_verbose_abort(const char *__message) {
   _LIBCPP_VERBOSE_ABORT("%s", __message);
 }
 _LIBCPP_END_NAMESPACE_STD
 
 #  define _LIBCPP_ASSERTION_HANDLER(message) \
-  ({ [[clang::nomerge]] ::std::__libcpp_android_verbose_abort(message); })
+  ::std::__libcpp_android_verbose_abort(message)
 
 #else
 
