@@ -4260,7 +4260,7 @@ SwitchInstProfUpdateWrapper::CaseWeightOpt
 SwitchInstProfUpdateWrapper::getSuccessorWeight(const SwitchInst &SI,
                                                 unsigned idx) {
   if (MDNode *ProfileData = getValidBranchWeightMDNode(SI)) {
-    SmallVector<uint32_t, 8> Weights;
+    SmallVector<uint32_t> Weights;
     extractFromBranchWeightMD32(ProfileData, Weights);
     return Weights[idx];
   }
