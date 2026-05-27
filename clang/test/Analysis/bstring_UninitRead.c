@@ -152,3 +152,10 @@ void ff_mov_lang_to_iso639() {
   memcpy(ff_mov_lang_to_iso639_to,
          mov_mdhd_language_map[ff_mov_lang_to_iso639_code], 4);
 }
+
+void memcpy_multidim_crossing_subarray(void *dst) {
+  const long b[4][1200] = {};
+  const long *f = &b[0][0];
+  f = f + 2001; // crosses into b[1][801]
+  memcpy(dst, f, sizeof(long)); // no-warning
+}
