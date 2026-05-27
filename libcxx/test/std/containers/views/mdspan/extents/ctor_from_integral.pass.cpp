@@ -38,6 +38,12 @@
 #include "CtorTestCombinations.h"
 #include "test_macros.h"
 
+struct RValueInt {
+  int val;
+  constexpr RValueInt(int v) : val(v) {}
+  constexpr operator int() && noexcept { return val; }
+};
+
 struct IntegralCtorTest {
   template <class E, class AllExtents, class Extents, size_t... Indices>
   static constexpr void test_construction(AllExtents all_ext, Extents ext, std::index_sequence<Indices...>) {
@@ -56,11 +62,20 @@ constexpr bool test_ctor_from_bool() {
   return true;
 }
 
+constexpr bool test_ctor_from_rvalue_convertible() {
+  constexpr size_t D = std::dynamic_extent;
+  std::extents<int, D> e(RValueInt{1});
+  assert(e.extent(0) == 1);
+  return true;
+}
+
 int main(int, char**) {
   test_index_type_combo<IntegralCtorTest>();
   static_assert(test_index_type_combo<IntegralCtorTest>());
   test_ctor_from_bool();
   static_assert(test_ctor_from_bool());
+  test_ctor_from_rvalue_convertible();
+  static_assert(test_ctor_from_rvalue_convertible());
 
   constexpr size_t D = std::dynamic_extent;
   using E            = std::extents<int, 1, D, 3, D>;

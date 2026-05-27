@@ -28,6 +28,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Intrinsics.h"
@@ -35,6 +36,7 @@
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <algorithm>
 #include <optional>
 #include <utility>
 
@@ -2271,10 +2273,9 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
         if (!isa<Constant>(ArgVal)) {
           CleanupKind Cleanup = getARCCleanupKind();
           QualType Ty = TheExpr->getType();
-          RawAddress Alloca = RawAddress::invalid();
-          RawAddress Addr = CreateMemTemp(Ty, "os.log.arg", &Alloca);
+          RawAddress Alloca = CreateMemTempWithoutCast(Ty, "os.log.arg");
           ArgVal = EmitARCRetain(Ty, ArgVal);
-          Builder.CreateStore(ArgVal, Addr);
+          Builder.CreateStore(ArgVal, Alloca);
           pushLifetimeExtendedDestroy(Cleanup, Alloca, Ty,
                                       CodeGenFunction::destroyARCStrongPrecise,
                                       Cleanup & EHCleanup);
@@ -2669,6 +2670,341 @@ RValue CodeGenFunction::emitStdcFirstBit(const CallExpr *E, Intrinsic::ID IntID,
     Result = Builder.CreateIntCast(Result, ResultType, false);
   return RValue::get(Result);
 }
+
+namespace {
+
+// PaddingClearer is a utility class that clears padding bits in a
+// c/c++ type. It traverses the type recursively, collecting occupied
+// bit intervals, and then computes the padding intervals.
+// In the end, it clears the padding bits by writing zeros
+// to the padding intervals bytes-by-bytes. If a byte only contains
+// some padding bits, it writes zeros to only those bits. This is
+// the case for bit-fields.
+struct PaddingClearer {
+  PaddingClearer(CodeGenFunction &F)
+      : CGF(F), CharWidth(CGF.getContext().getCharWidth()) {}
+
+  void run(Address Src, QualType Ty) {
+    OccuppiedIntervals.clear();
+    Stack.clear();
+
+    Stack.push_back(Data{0, Ty, true});
+    while (!Stack.empty()) {
+      auto Current = Stack.back();
+      Stack.pop_back();
+      Visit(Current);
+    }
+
+    MergeOccuppiedIntervals();
+    auto PaddingIntervals =
+        GetPaddingIntervals(CGF.getContext().getTypeSize(Ty));
+    for (const auto &Interval : PaddingIntervals) {
+      ClearPadding(Src, Interval);
+    }
+  }
+
+private:
+  struct BitInterval {
+    // [First, Last)
+    uint64_t First;
+    uint64_t Last;
+  };
+
+  struct Data {
+    uint64_t StartBitOffset;
+    QualType Ty;
+    bool VisitVirtualBase;
+  };
+
+  // Return the number of non padding bits of a scalar type.
+  //
+  // The property that we specifically care about here is whether the scalar
+  // type has padding bits, i.e. are there bits in the type which are not
+  // specified by the ABI.
+  //
+  // We currently don't care about this anywhere else in clang: layout cares
+  // about the ABI size, calling convention code cares about specific types, but
+  // nothing cares about padding specifically. And it's not something we can
+  // easily query from LLVM due to the type system mismatches.
+  // DL.getTypeSizeInBits(convertTypeForLoadStore(T)) is probably close, but the
+  // DataLayout methods aren't really designed for this usage.
+  //
+  // Therefore, it is better to explicitly list all the scalar types containing
+  // padding bits that we know of, namely, _BitInt(N) and x87 long double.
+  uint64_t getScalarOccupiedSizeInBits(QualType Ty) const {
+    if (const auto *BIT = Ty->getAs<BitIntType>())
+      return BIT->getNumBits();
+
+    if (const auto *BT = Ty->getAs<BuiltinType>()) {
+      if (BT->getKind() == BuiltinType::LongDouble &&
+          &CGF.getTarget().getLongDoubleFormat() ==
+              &APFloat::x87DoubleExtended())
+        return APFloat::getSizeInBits(CGF.getTarget().getLongDoubleFormat());
+    }
+
+    return CGF.getContext().getTypeSize(Ty);
+  }
+
+  void Visit(const Data &D) {
+    if (auto *AT = dyn_cast<ConstantArrayType>(D.Ty)) {
+      VisitArray(AT, D.StartBitOffset);
+      return;
+    }
+
+    if (auto *Record = D.Ty->getAsRecordDecl()) {
+      VisitStruct(Record, D.StartBitOffset, D.VisitVirtualBase);
+      return;
+    }
+
+    if (D.Ty->isAtomicType()) {
+      auto Unwrapped = D;
+      Unwrapped.Ty = D.Ty.getAtomicUnqualifiedType();
+      Stack.push_back(Unwrapped);
+      return;
+    }
+
+    if (const auto *Complex = D.Ty->getAs<ComplexType>()) {
+      VisitComplex(Complex, D.StartBitOffset);
+      return;
+    }
+
+    if (const auto *VT = D.Ty->getAs<clang::VectorType>()) {
+      VisitVector(VT, D.StartBitOffset);
+      return;
+    }
+
+    uint64_t SizeBit = getScalarOccupiedSizeInBits(D.Ty);
+    OccuppiedIntervals.push_back(
+        BitInterval{D.StartBitOffset, D.StartBitOffset + SizeBit});
+  }
+
+  void VisitArray(const ConstantArrayType *AT, uint64_t StartBitOffset) {
+    for (uint64_t ArrIndex = 0; ArrIndex < AT->getSize().getLimitedValue();
+         ++ArrIndex) {
+
+      QualType ElementQualType = AT->getElementType();
+      auto ElementSize = CGF.getContext().getTypeSizeInChars(ElementQualType);
+      auto ElementAlign = CGF.getContext().getTypeAlignInChars(ElementQualType);
+      auto Offset = ElementSize.alignTo(ElementAlign);
+
+      Stack.push_back(
+          Data{StartBitOffset + ArrIndex * Offset.getQuantity() * CharWidth,
+               ElementQualType, /*VisitVirtualBase*/ true});
+    }
+  }
+
+  void VisitStruct(const RecordDecl *R, uint64_t StartBitOffset,
+                   bool VisitVirtualBase) {
+    const auto &DL = CGF.CGM.getModule().getDataLayout();
+    const ASTRecordLayout &ASTLayout = CGF.getContext().getASTRecordLayout(R);
+
+    auto *CXXRecord = dyn_cast<CXXRecordDecl>(R);
+
+    if (CXXRecord) {
+      if (ASTLayout.hasOwnVFPtr()) {
+        OccuppiedIntervals.push_back(BitInterval{
+            StartBitOffset, StartBitOffset + DL.getPointerSizeInBits()});
+      }
+
+      const auto VisitBase = [&ASTLayout, StartBitOffset, this](
+                                 const CXXBaseSpecifier &Base, auto GetOffset) {
+        auto *BaseRecord = Base.getType()->getAsCXXRecordDecl();
+        if (!BaseRecord) {
+          return;
+        }
+        auto BaseOffset =
+            std::invoke(GetOffset, ASTLayout, BaseRecord).getQuantity();
+
+        Stack.push_back(Data{StartBitOffset + BaseOffset * CharWidth,
+                             Base.getType(), /*VisitVirtualBase*/ false});
+      };
+
+      for (auto Base : CXXRecord->bases()) {
+        if (!Base.isVirtual()) {
+          VisitBase(Base, &ASTRecordLayout::getBaseClassOffset);
+        }
+      }
+
+      if (VisitVirtualBase) {
+        for (auto VBase : CXXRecord->vbases()) {
+          VisitBase(VBase, &ASTRecordLayout::getVBaseClassOffset);
+        }
+      }
+    }
+
+    for (auto *Field : R->fields()) {
+      auto FieldOffset = ASTLayout.getFieldOffset(Field->getFieldIndex());
+      if (Field->isBitField()) {
+        OccuppiedIntervals.push_back(BitInterval{
+            StartBitOffset + FieldOffset,
+            StartBitOffset + FieldOffset + Field->getBitWidthValue()});
+      } else {
+        Stack.push_back(Data{StartBitOffset + FieldOffset, Field->getType(),
+                             /*VisitVirtualBase*/ true});
+      }
+    }
+  }
+
+  void VisitComplex(const ComplexType *CT, uint64_t StartBitOffset) {
+    QualType ElementQualType = CT->getElementType();
+    auto ElementSize = CGF.getContext().getTypeSizeInChars(ElementQualType);
+    auto ElementAlign = CGF.getContext().getTypeAlignInChars(ElementQualType);
+    auto ImgOffset = ElementSize.alignTo(ElementAlign);
+
+    Stack.push_back(
+        Data{StartBitOffset, ElementQualType, /*VisitVirtualBase*/ true});
+    Stack.push_back(Data{StartBitOffset + ImgOffset.getQuantity() * CharWidth,
+                         ElementQualType, /*VisitVirtualBase*/ true});
+  }
+
+  void VisitVector(const clang::VectorType *VT, uint64_t StartBitOffset) {
+    ASTContext &Ctx = CGF.getContext();
+    uint64_t SizeBit = [&]() -> uint64_t {
+      if (VT->isPackedVectorBoolType(Ctx))
+        return VT->getNumElements();
+      return getScalarOccupiedSizeInBits(VT->getElementType()) *
+             VT->getNumElements();
+    }();
+    OccuppiedIntervals.push_back(
+        BitInterval{StartBitOffset, StartBitOffset + SizeBit});
+  }
+
+  void MergeOccuppiedIntervals() {
+    std::sort(OccuppiedIntervals.begin(), OccuppiedIntervals.end(),
+              [](const BitInterval &lhs, const BitInterval &rhs) {
+                return std::tie(lhs.First, lhs.Last) <
+                       std::tie(rhs.First, rhs.Last);
+              });
+
+    llvm::SmallVector<BitInterval> Merged;
+    Merged.reserve(OccuppiedIntervals.size());
+
+    for (const BitInterval &NextInterval : OccuppiedIntervals) {
+      if (Merged.empty()) {
+        Merged.push_back(NextInterval);
+        continue;
+      }
+      auto &LastInterval = Merged.back();
+
+      if (NextInterval.First > LastInterval.Last) {
+        Merged.push_back(NextInterval);
+      } else {
+        LastInterval.Last = std::max(LastInterval.Last, NextInterval.Last);
+      }
+    }
+
+    OccuppiedIntervals = Merged;
+  }
+
+  llvm::SmallVector<BitInterval>
+  GetPaddingIntervals(uint64_t SizeInBits) const {
+    llvm::SmallVector<BitInterval> Results;
+    if (OccuppiedIntervals.size() == 1 &&
+        OccuppiedIntervals.front().First == 0 &&
+        OccuppiedIntervals.front().Last == SizeInBits) {
+      return Results;
+    }
+    Results.reserve(OccuppiedIntervals.size() + 1);
+    uint64_t CurrentPos = 0;
+    for (const BitInterval &OccupiedInterval : OccuppiedIntervals) {
+      if (OccupiedInterval.First > CurrentPos) {
+        Results.push_back(BitInterval{CurrentPos, OccupiedInterval.First});
+      }
+      CurrentPos = OccupiedInterval.Last;
+    }
+    if (SizeInBits > CurrentPos) {
+      Results.push_back(BitInterval{CurrentPos, SizeInBits});
+    }
+    return Results;
+  }
+
+  void ClearPadding(Address Src, const BitInterval &PaddingInterval) {
+    auto *I8Ptr =
+        CGF.Builder.CreateBitCast(Src.getBasePointer(), CGF.Int8PtrTy);
+    auto *Zero = ConstantInt::get(CGF.Int8Ty, 0);
+
+    // Calculate byte indices and bit positions
+    auto StartByte = PaddingInterval.First / CharWidth;
+    auto StartBit = PaddingInterval.First % CharWidth;
+    auto EndByte = PaddingInterval.Last / CharWidth;
+    auto EndBit = PaddingInterval.Last % CharWidth;
+
+    if (StartByte == EndByte) {
+      // Interval is within a single byte
+      auto *Index = ConstantInt::get(CGF.IntTy, StartByte);
+      auto *Element = CGF.Builder.CreateGEP(CGF.Int8Ty, I8Ptr, Index);
+      Address ElementAddr(Element, CGF.Int8Ty,
+                          Src.getAlignment().alignmentAtOffset(
+                              CharUnits::fromQuantity(StartByte)));
+
+      auto *Value = CGF.Builder.CreateLoad(ElementAddr);
+
+      // Create mask to clear bits within the byte
+      // We want to clear bits from StartBit to EndBit-1
+      uint8_t bitsToClear = ((1 << EndBit) - 1) & ~((1 << StartBit) - 1);
+      uint8_t bitsToKeep = ~bitsToClear;
+      auto *MaskValue = ConstantInt::get(CGF.Int8Ty, bitsToKeep);
+      auto *NewValue = CGF.Builder.CreateAnd(Value, MaskValue);
+
+      CGF.Builder.CreateStore(NewValue, ElementAddr);
+    } else {
+      // Handle the start byte
+      if (StartBit != 0) {
+        auto *Index = ConstantInt::get(CGF.IntTy, StartByte);
+        auto *Element = CGF.Builder.CreateGEP(CGF.Int8Ty, I8Ptr, Index);
+        Address ElementAddr(Element, CGF.Int8Ty,
+                            Src.getAlignment().alignmentAtOffset(
+                                CharUnits::fromQuantity(StartByte)));
+
+        auto *Value = CGF.Builder.CreateLoad(ElementAddr);
+
+        uint8_t bitsToClear = ((1 << (CharWidth - StartBit)) - 1) << StartBit;
+        uint8_t bitsToKeep = ~bitsToClear;
+        auto *MaskValue = ConstantInt::get(CGF.Int8Ty, bitsToKeep);
+        auto *NewValue = CGF.Builder.CreateAnd(Value, MaskValue);
+
+        CGF.Builder.CreateStore(NewValue, ElementAddr);
+        ++StartByte;
+      }
+
+      // Handle full bytes in the middle
+      for (auto Offset = StartByte; Offset < EndByte; ++Offset) {
+        auto *Index = ConstantInt::get(CGF.IntTy, Offset);
+        auto *Element = CGF.Builder.CreateGEP(CGF.Int8Ty, I8Ptr, Index);
+        Address ElementAddr(Element, CGF.Int8Ty,
+                            Src.getAlignment().alignmentAtOffset(
+                                CharUnits::fromQuantity(Offset)));
+
+        CGF.Builder.CreateStore(Zero, ElementAddr);
+      }
+
+      // Handle the end byte
+      if (EndBit != 0) {
+        auto *Index = ConstantInt::get(CGF.IntTy, EndByte);
+        auto *Element = CGF.Builder.CreateGEP(CGF.Int8Ty, I8Ptr, Index);
+        Address ElementAddr(Element, CGF.Int8Ty,
+                            Src.getAlignment().alignmentAtOffset(
+                                CharUnits::fromQuantity(EndByte)));
+
+        auto *Value = CGF.Builder.CreateLoad(ElementAddr);
+
+        uint8_t bitsToClear = (1 << EndBit) - 1;
+        uint8_t bitsToKeep = ~bitsToClear;
+        auto *MaskValue = ConstantInt::get(CGF.Int8Ty, bitsToKeep);
+        auto *NewValue = CGF.Builder.CreateAnd(Value, MaskValue);
+
+        CGF.Builder.CreateStore(NewValue, ElementAddr);
+      }
+    }
+  }
+
+  CodeGenFunction &CGF;
+  const uint64_t CharWidth;
+  llvm::SmallVector<Data> Stack;
+  llvm::SmallVector<BitInterval> OccuppiedIntervals;
+};
+
+} // namespace
 
 RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
@@ -4247,6 +4583,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_fshr:
     return RValue::get(
         emitBuiltinWithOneOverloadedType<3>(*this, E, Intrinsic::fshr));
+  case Builtin::BI__builtin_elementwise_clmul:
+    return RValue::get(
+        emitBuiltinWithOneOverloadedType<2>(*this, E, Intrinsic::clmul));
 
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat: {
@@ -5156,6 +5495,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Ptr = Builder.CreateLaunderInvariantGroup(Ptr);
 
     return RValue::get(Ptr);
+  }
+  case Builtin::BI__builtin_clear_padding: {
+    Address Src = EmitPointerWithAlignment(E->getArg(0));
+    auto PointeeTy = E->getArg(0)->getType()->getPointeeType();
+    PaddingClearer clearer{*this};
+    clearer.run(Src, PointeeTy);
+    return RValue::get(nullptr);
   }
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_sub:
@@ -6343,13 +6689,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           getContext().getSizeType(), ArraySize, nullptr,
           ArraySizeModifier::Normal,
           /*IndexTypeQuals=*/0);
-      auto Tmp = CreateMemTemp(SizeArrayTy, "block_sizes");
-      llvm::Value *TmpPtr = Tmp.getPointer();
-      // The EmitLifetime* pair expect a naked Alloca as their last argument,
-      // however for cases where the default AS is not the Alloca AS, Tmp is
-      // actually the Alloca ascasted to the default AS, hence the
-      // stripPointerCasts()
-      llvm::Value *Alloca = TmpPtr->stripPointerCasts();
+      auto Tmp = CreateMemTempWithoutCast(SizeArrayTy, "block_sizes");
+      llvm::Value *Alloca = Tmp.getPointer();
       llvm::Value *ElemPtr;
       EmitLifetimeStart(Alloca);
       // Each of the following arguments specifies the size of the corresponding
@@ -6366,8 +6707,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         Builder.CreateAlignedStore(
             V, GEP, CGM.getDataLayout().getPrefTypeAlign(SizeTy));
       }
-      // Return the Alloca itself rather than a potential ascast as this is only
-      // used by the paired EmitLifetimeEnd.
       return {ElemPtr, Alloca};
     };
 
@@ -6798,7 +7137,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // always just emit into it.
   TypeEvaluationKind EvalKind = getEvaluationKind(E->getType());
   if (EvalKind == TEK_Aggregate && ReturnValue.isNull()) {
-    Address DestPtr = CreateMemTemp(E->getType(), "agg.tmp");
+    Address DestPtr = CreateMemTempWithoutCast(E->getType(), "agg.tmp");
     ReturnValue = ReturnValueSlot(DestPtr, false);
   }
 

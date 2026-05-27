@@ -710,6 +710,7 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
       CI->setCalledFunction(Intrinsic::getOrInsertDeclaration(
           CI->getModule(), Intrinsic::ldexp,
           {CI->getType(), CI->getArgOperand(1)->getType()}));
+      CI->setCallingConv(CallingConv::C);
       return true;
     }
     case AMDGPULibFunc::EI_POW:
@@ -1869,7 +1870,7 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
     return true;
 
   case AMDGPULibFunc::EI_EXP:
-    Res0 = APFloat{exp(opr0)};
+    Res0 = APFloat{std::exp(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_EXP2:

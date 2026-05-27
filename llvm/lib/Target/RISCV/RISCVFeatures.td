@@ -906,6 +906,49 @@ def HasStdExtZvvfmm : Predicate<"Subtarget->hasStdExtZvvfmm()">,
                       AssemblerPredicate<(all_of FeatureStdExtZvvfmm),
                           "'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)">;
 
+// Zvbdota family of batched dot-product extensions
+def FeatureStdExtZvqwbdota8i
+    : RISCVExperimentalExtension<0, 2,
+                                 "8-bit integer batched dot-product extension",
+                                 [FeatureStdExtZve32x]>;
+def FeatureStdExtZvqwbdota16i
+    : RISCVExperimentalExtension<0, 2,
+                                 "16-bit integer batched dot-product extension",
+                                 [FeatureStdExtZve64x]>;
+def HasStdExtZvqwbdota8iOrZvqwbdota16i
+    : Predicate<"Subtarget->hasStdExtZvqwbdota8i() || Subtarget->hasStdExtZvqwbdota16i()">,
+      AssemblerPredicate<(any_of FeatureStdExtZvqwbdota8i,
+                                 FeatureStdExtZvqwbdota16i),
+                         "'Zvqwbdota8i' or 'Zvqwbdota16i' (8-bit or 16-bit "
+                         "integer batched dot-product extension)">;
+
+def FeatureStdExtZvfwbdota16bf
+    : RISCVExperimentalExtension<0, 2,
+                                 "BF16 batched dot-product extension",
+                                 [FeatureStdExtZve32f]>;
+def HasStdExtZvfwbdota16bf
+    : Predicate<"Subtarget->hasStdExtZvfwbdota16bf()">,
+      AssemblerPredicate<(all_of FeatureStdExtZvfwbdota16bf),
+                         "'Zvfwbdota16bf' (BF16 batched dot-product extension)">;
+
+def FeatureStdExtZvfqwbdota8f
+    : RISCVExperimentalExtension<0, 2,
+                                 "OCP FP8 batched dot-product extension",
+                                 [FeatureStdExtZve32f]>;
+def HasStdExtZvfqwbdota8f
+    : Predicate<"Subtarget->hasStdExtZvfqwbdota8f()">,
+      AssemblerPredicate<(all_of FeatureStdExtZvfqwbdota8f),
+                         "'Zvfqwbdota8f' (OCP FP8 batched dot-product extension)">;
+
+def FeatureStdExtZvfbdota32f
+    : RISCVExperimentalExtension<0, 2,
+                                 "FP32 batched dot-product extension",
+                                 [FeatureStdExtZve32f]>;
+def HasStdExtZvfbdota32f
+    : Predicate<"Subtarget->hasStdExtZvfbdota32f()">,
+      AssemblerPredicate<(all_of FeatureStdExtZvfbdota32f),
+                         "'Zvfbdota32f' (FP32 batched dot-product extension)">;
+
 // Vector instruction predicates
 
 def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">,
@@ -1534,6 +1577,14 @@ def HasVendorXqccmp
     : Predicate<"Subtarget->hasVendorXqccmp()">,
       AssemblerPredicate<(all_of FeatureVendorXqccmp),
                          "'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)">;
+
+def FeatureVendorXqccmt
+    : RISCVExperimentalExtension<0, 1, "Qualcomm 16-bit Table Jump",
+                     [FeatureStdExtZca, FeatureStdExtZicsr]>;
+def HasVendorXqccmt
+    : Predicate<"Subtarget->hasVendorXqccmt()">,
+      AssemblerPredicate<(all_of FeatureVendorXqccmt),
+                         "'Xqccmt' (Qualcomm 16-bit Table Jump)">;
 
 def FeatureVendorXqcia
     : RISCVExtension<0, 7, "Qualcomm uC Arithmetic Extension">;
