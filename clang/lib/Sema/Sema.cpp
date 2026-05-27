@@ -2114,15 +2114,12 @@ void Sema::emitDeferredDiags() {
         continue;
       if (CUDA().DeviceKnownEmittedFns.count(FD))
         continue;
-      bool HasError = false;
-      for (const PartialDiagnosticAt &PDAt : Pair.second) {
-        if (getDiagnostics().getDiagnosticLevel(PDAt.second.getDiagID(),
-                                                PDAt.first) >=
-            DiagnosticsEngine::Error) {
-          HasError = true;
-          break;
-        }
-      }
+      bool HasError =
+          llvm::any_of(Pair.second, [&](const PartialDiagnosticAt &PDAt) {
+            return getDiagnostics().getDiagnosticLevel(PDAt.second.getDiagID(),
+                                                       PDAt.first) >=
+                   DiagnosticsEngine::Error;
+          });
       if (!HasError)
         continue;
       Pair.second.clear();
