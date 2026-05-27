@@ -4932,7 +4932,7 @@ ExprResult Sema::CheckConceptTemplateId(
     LocalInstantiationScope Scope(*this);
 
     EnterExpressionEvaluationContext EECtx{
-        *this, ExpressionEvaluationContext::Unevaluated};
+        *this, ExpressionEvaluationContext::Unevaluated, CSD};
 
     Error = CheckConstraintSatisfaction(
         NamedConcept, AssociatedConstraint(Concept->getConstraintExpr()), MLTAL,
@@ -8109,7 +8109,8 @@ static Expr *BuildExpressionFromIntegralTemplateArgumentValue(
 static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(
     Sema &S, QualType T, const APValue &Val, SourceLocation Loc) {
   auto MakeInitList = [&](ArrayRef<Expr *> Elts) -> Expr * {
-    auto *ILE = new (S.Context) InitListExpr(S.Context, Loc, Elts, Loc);
+    auto *ILE = new (S.Context)
+        InitListExpr(S.Context, Loc, Elts, Loc, /*isExplicit=*/false);
     ILE->setType(T);
     return ILE;
   };
@@ -10790,6 +10791,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
 
     VarDecl *Prev = Previous.getAsSingle<VarDecl>();
     VarTemplateDecl *PrevTemplate = Previous.getAsSingle<VarTemplateDecl>();
+    const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
 
     if (!PrevTemplate) {
       if (!Prev || !Prev->isStaticDataMember()) {
@@ -10858,6 +10860,8 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
       // Ignore access control bits, we don't need them for redeclaration
       // checking.
       Prev = cast<VarDecl>(Res.get());
+      ArgsAsWritten =
+          ASTTemplateArgumentListInfo::Create(Context, TemplateArgs);
     }
 
     // C++0x [temp.explicit]p2:
@@ -10912,9 +10916,6 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
       return true;
     }
 
-    const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
-    if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(Prev))
-      ArgsAsWritten = VTSD->getTemplateArgsAsWritten();
     addExplicitInstantiationDecl(
         Context, CurContext, Prev, ExternLoc, TemplateLoc,
         D.getCXXScopeSpec().getWithLocInContext(Context), ArgsAsWritten,

@@ -478,6 +478,9 @@ The current vendor extensions supported are:
 ``Xqccmp``
   LLVM implements `version 0.3 of the 16-bit Push/Pop instructions and double-moves extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqccmp_extension-0.3.0>`__ by Qualcomm. All instructions are prefixed with `qc.` as described in the specification.
 
+``experimental-Xqccmt``
+  LLVM implements `version 0.1 of the Qualcomm 16-bit Table Jump extension specification <https://github.com/riscv/riscv-unified-db/pull/1788>`__ by Qualcomm. All instructions are prefixed with ``qc.`` as described in the specification.
+
 ``Xqci``
   LLVM implements `version 0.13 of the Qualcomm uC extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 

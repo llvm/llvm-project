@@ -129,6 +129,12 @@ struct LoweringPreparePass
   /// Get the declaration for the 'wrapper' function for a global-TLS variable.
   cir::FuncOp getOrCreateThreadLocalWrapper(CIRBaseBuilderTy &builder,
                                             cir::GlobalOp op);
+  // Function that generates the guard global variable, get-global, and 'if'
+  // condition for global TLS init function generation. This inserts an 'if'
+  // with the store at the beginning of the 'then' region, so inserts into the
+  // body should happen after that.
+  cir::IfOp buildGlobalTlsGuardCheck(CIRBaseBuilderTy &builder,
+                                     mlir::Location loc, cir::GlobalOp guard);
   /// Handle the dtor region by registering destructor with __cxa_atexit
   cir::FuncOp getOrCreateDtorFunc(CIRBaseBuilderTy &builder, cir::GlobalOp op,
                                   mlir::Region &dtorRegion,
@@ -159,6 +165,8 @@ struct LoweringPreparePass
   /// ------------
 
   llvm::StringMap<FuncOp> cudaKernelMap;
+  llvm::SmallVector<std::pair<cir::GlobalOp, cir::CUDAVarRegistrationInfoAttr>>
+      cudaDeviceVars;
 
   /// Build the CUDA module constructor that registers the fat binary
   /// with the CUDA runtime.
@@ -166,6 +174,8 @@ struct LoweringPreparePass
   std::optional<FuncOp> buildCUDAModuleDtor();
   std::optional<FuncOp> buildHIPModuleDtor();
   std::optional<FuncOp> buildCUDARegisterGlobals();
+  void buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
+                             FuncOp regGlobalFunc);
   void buildCUDARegisterGlobalFunctions(cir::CIRBaseBuilderTy &builder,
                                         FuncOp regGlobalFunc);
 
@@ -180,6 +190,10 @@ struct LoweringPreparePass
 
   /// Get or create the __init_tls function.
   cir::FuncOp getTlsInitFn();
+
+  // Create the __tls_guard variable.
+  cir::GlobalOp createGlobalThreadLocalGuard(CIRBaseBuilderTy &builder,
+                                             mlir::Location loc);
 
   /// Create a guard global variable for a static local.
   cir::GlobalOp createGuardGlobalOp(CIRBaseBuilderTy &builder,
@@ -377,6 +391,9 @@ struct LoweringPreparePass
     entryBB.getOperations().splice(entryBB.end(), dtorBlock.getOperations(),
                                    dtorBlock.begin(),
                                    std::prev(dtorBlock.end()));
+    // make sure we leave the insert location after the operations we just
+    // inserted.
+    builder.setInsertionPointToEnd(&entryBB);
   }
 
   /// Emit the guarded initialization for a static local variable.
@@ -1143,20 +1160,44 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   // the function entry, and discard extra blocks (which contain only
   // unreachable terminators from EH cleanup paths).
   mlir::Block *entryBB = f.addEntryBlock();
+  builder.setInsertionPointToStart(entryBB);
+
+  // If this is a global TLS variable (that is, declared at namespace scope), we
+  // have to emit the guard variable here.
+  bool needsTlsGuard = op.getDynTlsRefs() && op.getDynTlsRefs()->getGuardName();
+  cir::IfOp guardIf;
+  if (needsTlsGuard) {
+    guardIf = buildGlobalTlsGuardCheck(
+        builder, op.getLoc(),
+        getOrCreateStaticLocalDeclGuardAddress(
+            builder, op, op.getDynTlsRefs()->getGuardName().getValue(),
+            /*isLocalVarDecl=*/false,
+            /*useInt8GuardVariable=*/op.hasInternalLinkage()));
+    builder.setInsertionPointToEnd(&guardIf.getThenRegion().front());
+  }
+
   if (!op.getCtorRegion().empty()) {
     mlir::Block &block = op.getCtorRegion().front();
-    entryBB->getOperations().splice(entryBB->begin(), block.getOperations(),
-                                    block.begin(), std::prev(block.end()));
+    mlir::Block *insertBlock = builder.getBlock();
+    insertBlock->getOperations().splice(insertBlock->end(),
+                                        block.getOperations(), block.begin(),
+                                        std::prev(block.end()));
   }
 
   // Register the destructor call with __cxa_atexit
   mlir::Region &dtorRegion = op.getDtorRegion();
   if (!dtorRegion.empty()) {
     assert(!cir::MissingFeatures::astVarDeclInterface());
-    assert(!cir::MissingFeatures::opGlobalThreadLocal());
 
     emitGlobalGuardedDtorRegion(builder, op, dtorRegion,
-                                op.getTlsModel().has_value(), *entryBB);
+                                op.getTlsModel().has_value(),
+                                *builder.getBlock());
+  }
+
+  // If we're actually in the 'if' above, create a yield.
+  if (needsTlsGuard) {
+    builder.setInsertionPointToEnd(&guardIf.getThenRegion().back());
+    cir::YieldOp::create(builder, op.getLoc());
   }
 
   // Replace cir.yield with cir.return
@@ -1710,9 +1751,56 @@ void LoweringPreparePass::buildGlobalCtorDtorList() {
   }
 }
 
+cir::GlobalOp
+LoweringPreparePass::createGlobalThreadLocalGuard(CIRBaseBuilderTy &builder,
+                                                  mlir::Location loc) {
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(mlirModule.getBody());
+
+  // The TLS Guard is always an Int8Ty.
+  cir::IntType guardTy = builder.getSIntNTy(8);
+  auto g = cir::GlobalOp::create(builder, loc, "__tls_guard", guardTy);
+  g.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
+      builder.getContext(), cir::GlobalLinkageKind::InternalLinkage));
+  g.setAlignment(clang::CharUnits::One().getAsAlign().value());
+  // At the moment, we only have implementation for this mode, as it is the
+  // default.  At one point we might need to load this mode from the module.
+  g.setTlsModel(TLS_Model::GeneralDynamic);
+  g.setInitialValueAttr(cir::IntAttr::get(guardTy, 0));
+  return g;
+}
+
+cir::IfOp LoweringPreparePass::buildGlobalTlsGuardCheck(
+    CIRBaseBuilderTy &builder, mlir::Location loc, cir::GlobalOp guard) {
+  cir::GetGlobalOp getGuard = builder.createGetGlobal(guard, /*tls=*/true);
+  mlir::Value getGuardValue = getGuard;
+
+  // Classic codegen always just loads the first byte of the guard instead of
+  // the whole thing. __tls_guard is already only 8 bits, but for the case of
+  // unordered TLS, it gets created as 64 bits.
+  if (guard.getSymType() != builder.getSIntNTy(8))
+    getGuardValue = builder.createBitcast(
+        getGuard, cir::PointerType::get(builder.getSIntNTy(8)));
+
+  mlir::Value guardLoad =
+      builder.createAlignedLoad(loc, getGuardValue, *guard.getAlignment());
+  auto zero = builder.getConstantInt(loc, builder.getSIntNTy(8), 0);
+  cir::CmpOp compare =
+      builder.createCompare(loc, cir::CmpOpKind::eq, guardLoad, zero);
+  return cir::IfOp::create(
+      builder, loc, compare,
+      /*withElseRegion=*/false, [&](mlir::OpBuilder &, mlir::Location loc) {
+        // Classic codegen still does this store as a i8, but it doesn't seem
+        // reasonable to do an i8 store into a 64 bit value?
+        builder.createStore(
+            loc, builder.getConstantInt(loc, guard.getSymType(), 1), getGuard);
+      });
+}
+
 void LoweringPreparePass::buildCXXGlobalTlsFunc() {
   if (globalThreadLocalInitializers.empty())
     return;
+
   // The global-ordered-init function for TLS variables just calls each of the
   // init-functions in order after doing a guard.
 
@@ -1721,9 +1809,20 @@ void LoweringPreparePass::buildCXXGlobalTlsFunc() {
   CIRBaseBuilderTy builder(getContext());
   mlir::Block *entryBB = tlsInit.addEntryBlock();
   builder.setInsertionPointToStart(entryBB);
-  // Note: a followup patch will emit the body here correctly.
+
+  cir::IfOp ifOperation = buildGlobalTlsGuardCheck(
+      builder, loc, createGlobalThreadLocalGuard(builder, loc));
+
+  // Emit the body of the guarded spot.
+  builder.setInsertionPointToEnd(&ifOperation.getThenRegion().front());
+  for (cir::FuncOp initFunc : globalThreadLocalInitializers)
+    builder.createCallOp(loc, initFunc, {});
+  cir::YieldOp::create(builder, loc);
+
+  builder.setInsertionPointAfter(ifOperation);
   cir::ReturnOp::create(builder, loc);
 }
+
 void LoweringPreparePass::buildCXXGlobalInitFunc() {
   if (dynamicInitializers.empty())
     return;
@@ -2144,6 +2243,9 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerComplexMulOp(complexMul);
   } else if (auto glob = mlir::dyn_cast<cir::GlobalOp>(op)) {
     lowerGlobalOp(glob);
+    if (auto regAttr = glob->getAttrOfType<CUDAVarRegistrationInfoAttr>(
+            CUDAVarRegistrationInfoAttr::getMnemonic()))
+      cudaDeviceVars.emplace_back(glob, regAttr);
   } else if (auto getGlob = mlir::dyn_cast<cir::GetGlobalOp>(op)) {
     lowerGetGlobalOp(getGlob);
   } else if (auto unaryOp = mlir::dyn_cast<cir::UnaryOpInterface>(op)) {
@@ -2209,7 +2311,7 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
 
   // For CUDA without -fgpu-rdc, it's safe to stop generating ctor
   // if there's nothing to register.
-  if (cudaKernelMap.empty())
+  if (cudaKernelMap.empty() && cudaDeviceVars.empty())
     return;
 
   // There's no device-side binary, so no need to proceed for CUDA.
@@ -2563,8 +2665,7 @@ std::optional<FuncOp> LoweringPreparePass::buildHIPModuleDtor() {
 }
 
 std::optional<FuncOp> LoweringPreparePass::buildCUDARegisterGlobals() {
-  // There is nothing to register.
-  if (cudaKernelMap.empty())
+  if (cudaKernelMap.empty() && cudaDeviceVars.empty())
     return {};
 
   cir::CIRBaseBuilderTy builder(getContext());
@@ -2588,8 +2689,7 @@ std::optional<FuncOp> LoweringPreparePass::buildCUDARegisterGlobals() {
   builder.setInsertionPointToStart(regGlobalFunc.addEntryBlock());
 
   buildCUDARegisterGlobalFunctions(builder, regGlobalFunc);
-  // TODO: Handle shadow registration
-  assert(!cir::MissingFeatures::globalRegistration());
+  buildCUDARegisterVars(builder, regGlobalFunc);
 
   ReturnOp::create(builder, loc);
   return regGlobalFunc;
@@ -2676,6 +2776,88 @@ void LoweringPreparePass::buildCUDARegisterGlobalFunctions(
         {fatbinHandle, hostFunc, deviceFunc, deviceFunc,
          ConstantOp::create(builder, loc, IntAttr::get(intTy, -1)), cirNullPtr,
          cirNullPtr, cirNullPtr, cirNullPtr, cirNullPtr});
+  }
+}
+
+// Emit `__{cuda|hip}RegisterVar` calls inside `__{cuda|hip}_register_globals`
+// for every device-side shadow that carries a `cu.var_registration` attribute
+// (attached by `CIRGenNVCUDARuntime::handleVarRegistration`).
+void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
+                                                FuncOp regGlobalFunc) {
+  mlir::Location loc = mlirModule.getLoc();
+  llvm::StringRef cudaPrefix = getCUDAPrefix(astCtx);
+  cir::CIRDataLayout dataLayout(mlirModule);
+
+  PointerType voidPtrTy = builder.getVoidPtrTy();
+  PointerType voidPtrPtrTy = builder.getPointerTo(voidPtrTy);
+  IntType intTy = builder.getSIntNTy(32);
+  IntType sizeTy =
+      builder.getUIntNTy(astCtx->getTargetInfo().getMaxPointerWidth());
+  IntType charTy = cir::IntType::get(&getContext(), astCtx->getCharWidth(),
+                                     /*isSigned=*/false);
+
+  if (cudaDeviceVars.empty())
+    return;
+
+  cir::CIRBaseBuilderTy globalBuilder(getContext());
+  globalBuilder.setInsertionPointToStart(mlirModule.getBody());
+
+  // void __{cuda|hip}RegisterVar(void **fatbinHandle,
+  //                              char *hostVar, char *deviceAddress,
+  //                              const char *deviceName, int ext,
+  //                              size_t size, int constant, int normalized);
+  // OG ignores parameter types, treating pointers as void*.
+  cir::VoidType voidTy = builder.getVoidTy();
+  FuncOp cudaRegisterVar = buildRuntimeFunction(
+      globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterVar"), loc,
+      FuncType::get({voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, intTy,
+                     sizeTy, intTy, intTy},
+                    voidTy));
+
+  auto makeConstantString = [&](llvm::StringRef str) -> GlobalOp {
+    auto strType = ArrayType::get(&getContext(), charTy, 1 + str.size());
+    auto tmpString = cir::GlobalOp::create(
+        globalBuilder, loc, (".str" + str).str(), strType,
+        /*isConstant=*/true, {},
+        /*linkage=*/cir::GlobalLinkageKind::PrivateLinkage);
+    tmpString.setInitialValueAttr(
+        ConstArrayAttr::get(strType, StringAttr::get(str + "\0", strType)));
+    tmpString.setPrivate();
+    return tmpString;
+  };
+
+  mlir::Value fatbinHandle = *regGlobalFunc.args_begin();
+
+  for (auto &[global, regAttr] : cudaDeviceVars) {
+    switch (regAttr.getKind()) {
+    case cir::CUDADeviceVarKind::Variable:
+      break;
+    case cir::CUDADeviceVarKind::Surface:
+      llvm_unreachable("Surface registration NYI");
+    case cir::CUDADeviceVarKind::Texture:
+      llvm_unreachable("Texture registration NYI");
+    }
+
+    if (regAttr.getIsManaged())
+      llvm_unreachable("Managed variable registration NYI");
+
+    GlobalOp deviceNameStr = makeConstantString(regAttr.getDeviceSideName());
+    mlir::Value deviceName = builder.createBitcast(
+        builder.createGetGlobal(deviceNameStr), voidPtrTy);
+    mlir::Value hostVar =
+        builder.createBitcast(builder.createGetGlobal(global), voidPtrTy);
+
+    auto isExtern = ConstantOp::create(
+        builder, loc, IntAttr::get(intTy, regAttr.getIsExtern() ? 1 : 0));
+    llvm::TypeSize size = dataLayout.getTypeAllocSize(global.getSymType());
+    auto varSize = ConstantOp::create(
+        builder, loc, IntAttr::get(sizeTy, size.getFixedValue()));
+    auto isConstant = ConstantOp::create(
+        builder, loc, IntAttr::get(intTy, regAttr.getIsConstant() ? 1 : 0));
+    auto normalized = ConstantOp::create(builder, loc, IntAttr::get(intTy, 0));
+    builder.createCallOp(loc, cudaRegisterVar,
+                         {fatbinHandle, hostVar, deviceName, deviceName,
+                          isExtern, varSize, isConstant, normalized});
   }
 }
 

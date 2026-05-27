@@ -7,6 +7,7 @@ add_integration_test(
   SRCS
     pthread_mutex_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.stdint_proxy
     libc.include.pthread
     libc.src.errno.errno

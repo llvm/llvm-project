@@ -763,7 +763,7 @@ static bool buildAtomicCompareExchangeInst(
     MemSemUnequal = getSPIRVMemSemantics(MemOrdNeq) | MemSemStorage;
     if (static_cast<unsigned>(MemOrdEq) == MemSemEqual)
       MemSemEqualReg = Call->Arguments[3];
-    if (static_cast<unsigned>(MemOrdNeq) == MemSemEqual)
+    if (static_cast<unsigned>(MemOrdNeq) == MemSemUnequal)
       MemSemUnequalReg = Call->Arguments[4];
   }
   if (!MemSemEqualReg.isValid())

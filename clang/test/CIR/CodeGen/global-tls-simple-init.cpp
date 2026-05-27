@@ -54,12 +54,25 @@ struct CtorDtor {
 
 // Full init of all variables (func names below).
 // CIR-LABEL: cir.func internal private @__tls_init() {
+// CIR: %[[GET_GUARD:.*]] = cir.get_global thread_local @__tls_guard : !cir.ptr<!s8i>
+// CIR: %[[LOAD_GUARD:.*]] = cir.load align(1) %[[GET_GUARD]] : !cir.ptr<!s8i>, !s8i
+// CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s8i
+// CIR: %[[CMP:.*]] = cir.cmp eq %[[LOAD_GUARD]], %[[ZERO]] : !s8i
+// CIR: cir.if %[[CMP]] {
+// CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s8i
+// CIR:   cir.store %[[ONE]], %[[GET_GUARD]] : !s8i, !cir.ptr<!s8i>
+// CIR:   cir.call @[[TLS_INT_DYN_INIT:.*]]() : () -> ()
+// CIR:   cir.call @[[TLS_INT_REF_INIT:.*]]() : () -> ()
+// CIR:   cir.call @[[TLS_INT_SELF_REF_INIT:.*]]() : () -> ()
+// CIR:   cir.call @[[DEF_INITED_DYN:.*]]() : () -> ()
+// CIR: }
 // CIR: cir.return
 
 // CIR-LABEL: cir.func comdat weak_odr private hidden @_ZTW7tls_int() -> !cir.ptr<!s32i> {
 // CIR: %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_int : !cir.ptr<!s32i>
 // CIR: cir.return %[[GET_GLOB]]
 
+// LLVM-BOTH-DAG: @__tls_guard = internal thread_local global i8 0, align 1
 // LLVM-BOTH-DAG: @tls_int = thread_local global i32 5, align 4
 // LLVM-BOTH-DAG: @tls_int_dyn = thread_local global i32 0, align 4
 // LLVM-BOTH-DAG: @tls_int_ref = thread_local global ptr null, align 8
@@ -107,6 +120,17 @@ struct CtorDtor {
 // LLVM:   ret ptr %[[GET_GLOB]]
 
 // LLVM: define internal void @__tls_init() {
+// LLVM:   %[[GET_GUARD:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @__tls_guard)
+// LLVM:   %[[LOAD_GUARD:.*]] = load i8, ptr %[[GET_GUARD]], align 1
+// LLVM:   %[[IS_UNINIT:.*]] = icmp eq i8 %[[LOAD_GUARD]], 0
+// LLVM:   br i1 %[[IS_UNINIT]]
+//
+// LLVM:   store i8 1, ptr %[[GET_GUARD]], align 1
+// LLVM:   call void @[[TLS_INT_DYN_INIT:.*]]()
+// LLVM:   call void @[[TLS_INT_REF_INIT:.*]]()
+// LLVM:   call void @[[TLS_INT_SELF_REF_INIT:.*]]()
+// LLVM:   call void @[[DEF_INITED_DYN:.*]]()
+// LLVM:   br label 
 // LLVM:   ret void
 
 // LLVM: define weak_odr hidden ptr @_ZTW7tls_int() {
@@ -126,12 +150,12 @@ thread_local int tls_int_dyn = get_i();
 // CIR-BEFORE-LPP:   cir.store {{.*}}%[[CALL]], %[[GET_GLOB]] : !s32i, !cir.ptr<!s32i>
 // CIR-BEFORE-LPP: }
 // CIR: cir.global external tls_dyn dyn_tls_refs = <"_ZTW11tls_int_dyn", "_ZTH11tls_int_dyn"> @tls_int_dyn = #cir.int<0> : !s32i 
-// CIR: cir.func internal private @[[TLS_INT_DYN_INIT:.*]]() {
+// CIR: cir.func internal private @[[TLS_INT_DYN_INIT]]() {
 // CIR:   %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_int_dyn : !cir.ptr<!s32i>
 // CIR:   %[[CALL:.*]] = cir.call @_Z5get_iv() : () -> (!s32i {llvm.noundef})
 // CIR:   cir.store {{.*}}%[[CALL]], %[[GET_GLOB]] : !s32i, !cir.ptr<!s32i>
 // CIR:   cir.return
-// LLVM: define internal void @[[TLS_INT_DYN_INIT:.*]]() {
+// LLVM: define internal void @[[TLS_INT_DYN_INIT]]() {
 // OGCG: define internal void @[[TLS_INT_DYN_INIT:.*]]()
 // OGCG:   %[[CALL:.*]] = call noundef i32 @_Z5get_iv()
 // LLVM-BOTH:   %[[GET_GLOB:.*]] = call {{.*}}ptr @llvm.threadlocal.address.p0(ptr {{.*}}@tls_int_dyn)
@@ -146,12 +170,12 @@ thread_local int &tls_int_ref = tls_int_dyn;
 // CIR-BEFORE-LPP:   cir.store {{.*}}%[[GET_OTHER]], %[[GET_GLOB]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CIR-BEFORE-LPP: }
 // CIR: cir.global external tls_dyn dyn_tls_refs = <"_ZTW11tls_int_ref", "_ZTH11tls_int_ref"> @tls_int_ref = #cir.ptr<null> : !cir.ptr<!s32i>
-// CIR: cir.func internal private @[[TLS_INT_REF_INIT:.*]]() {
+// CIR: cir.func internal private @[[TLS_INT_REF_INIT]]() {
 // CIR:   %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_int_ref : !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   %[[GET_REF:.*]] = cir.call @_ZTW11tls_int_dyn() : () -> !cir.ptr<!s32i>
 // CIR:   cir.store {{.*}}%[[GET_REF]], %[[GET_GLOB]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   cir.return
-// LLVM: define internal void @[[TLS_INT_REF_INIT:.*]]() {
+// LLVM: define internal void @[[TLS_INT_REF_INIT]]() {
 // OGCG: define internal void @[[TLS_INT_REF_INIT:.*]]()
 // OGCG:   %[[GET_REF:.*]] = call ptr @_ZTW11tls_int_dyn()
 // LLVM-BOTH:   %[[GET_GLOB:.*]] = call {{.*}}ptr @llvm.threadlocal.address.p0(ptr {{.*}}@tls_int_ref)
@@ -174,7 +198,7 @@ thread_local int tls_int_self_init = tls_int_self_init + get_i();
 // CIR-BEFORE-LPP:    cir.store {{.*}}%[[ADD]], %[[GET_GLOB]] : !s32i, !cir.ptr<!s32i>
 // CIR-BEFORE-LPP:  }
 // CIR: cir.global external tls_dyn dyn_tls_refs = <"_ZTW17tls_int_self_init", "_ZTH17tls_int_self_init"> @tls_int_self_init = #cir.int<0> : !s32i
-// CIR: cir.func internal private @[[TLS_INT_SELF_REF_INIT:.*]]() {
+// CIR: cir.func internal private @[[TLS_INT_SELF_REF_INIT]]() {
 // CIR:   %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_int_self_init : !cir.ptr<!s32i>
 // CIR:   %[[GET_SELF_FROM_WRAPPER:.*]] = cir.call @_ZTW17tls_int_self_init() : () -> !cir.ptr<!s32i>
 // CIR:   %[[SELF_LOAD:.*]] = cir.load {{.*}}%[[GET_SELF_FROM_WRAPPER]] : !cir.ptr<!s32i>, !s32i
@@ -182,7 +206,7 @@ thread_local int tls_int_self_init = tls_int_self_init + get_i();
 // CIR:   %[[ADD:.*]] = cir.add nsw %[[SELF_LOAD]], %[[CALL]] : !s32i
 // CIR:   cir.store{{.*}} %[[ADD]], %[[GET_GLOB]] : !s32i, !cir.ptr<!s32i>
 // CIR:   cir.return
-// LLVM: define internal void @[[TLS_INT_SELF_REF_INIT:.*]]() {
+// LLVM: define internal void @[[TLS_INT_SELF_REF_INIT]]() {
 // OGCG: define internal void @[[TLS_INT_SELF_REF_INIT:.*]]()
 // LLVM:   %[[GET_GLOB:.*]] = call {{.*}}ptr @llvm.threadlocal.address.p0(ptr {{.*}}@tls_int_self_init)
 // LLVM-BOTH:   %[[GET_SELF_FROM_WRAPPER:.*]] = call ptr @_ZTW17tls_int_self_init()
@@ -209,12 +233,12 @@ extern thread_local int definitely_inited_dyn = get_i();
 // CIR-BEFORE-LPP:   cir.store {{.*}}%[[CALL]], %[[GET_GLOB]] : !s32i, !cir.ptr<!s32i>
 // CIR-BEFORE-LPP: }
 // CIR: cir.global external tls_dyn dyn_tls_refs = <"_ZTW21definitely_inited_dyn", "_ZTH21definitely_inited_dyn"> @definitely_inited_dyn = #cir.int<0> : !s32i
-// CIR: cir.func internal private @[[DEF_INITED_DYN:.*]]() {
+// CIR: cir.func internal private @[[DEF_INITED_DYN]]() {
 // CIR:   %[[GET_GLOB:.*]] = cir.get_global thread_local @definitely_inited_dyn : !cir.ptr<!s32i>
 // CIR:   %[[CALL:.*]] = cir.call @_Z5get_iv() : () -> (!s32i {llvm.noundef})
 // CIR:   cir.store align(4) %[[CALL]], %[[GET_GLOB]] : !s32i, !cir.ptr<!s32i>
 // CIR:   cir.return
-// LLVM: define internal void @[[DEF_INITED_DYN:.*]]() {
+// LLVM: define internal void @[[DEF_INITED_DYN]]() {
 // OGCG: define internal void @[[DEF_INITED_DYN:.*]]()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @definitely_inited_dyn)
 // LLVM-BOTH:   %[[CALL:.*]] = call noundef i32 @_Z5get_iv()

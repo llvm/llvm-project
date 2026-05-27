@@ -373,7 +373,7 @@ bool SPIRVModuleAnalysis::isDeclSection(const MachineRegisterInfo &MRI,
          TII->isInlineAsmDefInstr(MI);
 }
 
-// This is a special case of a function pointer refering to a possibly
+// This is a special case of a function pointer referring to a possibly
 // forward function declaration. The operand is a dummy OpUndef that
 // requires a special treatment.
 // FunPtrOp is the MachineOperand previously recorded via
@@ -382,8 +382,8 @@ bool SPIRVModuleAnalysis::isDeclSection(const MachineRegisterInfo &MRI,
 void SPIRVModuleAnalysis::visitFunPtrUse(
     Register OpReg, const MachineOperand *FunPtrOp,
     InstrGRegsMap &SignatureToGReg,
-    std::map<const Value *, unsigned> &GlobalToGReg, const MachineFunction *MF,
-    const MachineInstr &MI) {
+    std::map<const Value *, unsigned> &GlobalToGReg,
+    const MachineFunction *MF) {
   const MachineOperand *OpFunDef = GR->getFunctionDefinitionByUse(FunPtrOp);
   assert(OpFunDef && OpFunDef->isReg());
   // find the actual function definition and number it globally in advance
@@ -421,7 +421,7 @@ void SPIRVModuleAnalysis::visitDecl(
     if (Opcode == SPIRV::OpConstantFunctionPointerINTEL &&
         MRI.getRegClass(OpReg) == &SPIRV::pIDRegClass) {
       visitFunPtrUse(OpReg, &MI.getOperand(2), SignatureToGReg, GlobalToGReg,
-                     MF, MI);
+                     MF);
       continue;
     }
     // Skip already processed instructions
@@ -593,7 +593,7 @@ void SPIRVModuleAnalysis::collectDeclarations(const Module &M) {
                     const MachineOperand *FunPtrOp = &DefMI->getOperand(0);
                     if (GR->getFunctionDefinitionByUse(FunPtrOp))
                       visitFunPtrUse(InvokeReg, FunPtrOp, SignatureToGReg,
-                                     GlobalToGReg, MF, MI);
+                                     GlobalToGReg, MF);
                   }
                 }
               }
@@ -1069,8 +1069,10 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
         static_cast<SPIRV::LinkageType::LinkageType>(LinkageOp);
     if (LnkType == SPIRV::LinkageType::LinkOnceODR)
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_linkonce_odr);
-    else if (LnkType == SPIRV::LinkageType::Weak)
+    else if (LnkType == SPIRV::LinkageType::WeakAMD) {
       Reqs.addExtension(SPIRV::Extension::SPV_AMD_weak_linkage);
+      Reqs.addCapability(SPIRV::Capability::WeakLinkageAMD);
+    }
   } else if (Dec == SPIRV::Decoration::CacheControlLoadINTEL ||
              Dec == SPIRV::Decoration::CacheControlStoreINTEL) {
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_cache_controls);

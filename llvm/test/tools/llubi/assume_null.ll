@@ -7,6 +7,6 @@ define void @main() {
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   call void @llvm.assume(i1 true) [ "nonnull"(ptr null) ] at @main
+; CHECK-NEXT: #0   call void @llvm.assume(i1 true) [ "nonnull"(ptr null) ] at @main <stdin>:5
 ; CHECK-NEXT: Immediate UB detected: The pointer ptr 0x0 [dangling] violates nonnull assumption.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

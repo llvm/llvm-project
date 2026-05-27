@@ -251,7 +251,7 @@ private:
   void visitFunPtrUse(Register OpReg, const MachineOperand *FunPtrOp,
                       InstrGRegsMap &SignatureToGReg,
                       std::map<const Value *, unsigned> &GlobalToGReg,
-                      const MachineFunction *MF, const MachineInstr &MI);
+                      const MachineFunction *MF);
   bool isDeclSection(const MachineRegisterInfo &MRI, const MachineInstr &MI);
 
   const SPIRVSubtarget *ST;

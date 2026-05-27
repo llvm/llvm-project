@@ -138,6 +138,8 @@ bool IsPointerAssignment(const evaluate::Assignment &x);
 MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
 
 bool IsLoopTransforming(llvm::omp::Directive dir);
+bool HasDataEnvironment(llvm::omp::Directive dir);
+
 bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec);
 
 inline bool IsDoConcurrentLegal(unsigned version) {
@@ -152,7 +154,7 @@ struct LoopControl {
   LoopControl(const parser::LoopControl::Bounds &x);
   LoopControl(const parser::ConcurrentControl &x);
 
-  parser::Name iv;
+  const parser::Name &iv;
   WithSource<MaybeExpr> lbound, ubound, step;
 
 private:

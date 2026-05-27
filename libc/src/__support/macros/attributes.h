@@ -40,20 +40,68 @@
        // (defined(LIBC_COMPILER_IS_CLANG) && LIBC_COMPILER_CLANG
 #endif // LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED
 
+#ifndef LIBC_HAS_BUILTIN_BIT_CAST
+#if __has_builtin(__builtin_bit_cast) || defined(LIBC_COMPILER_IS_MSVC)
+#define LIBC_HAS_BUILTIN_BIT_CAST 1
+#else
+#define LIBC_HAS_BUILTIN_BIT_CAST 0
+#endif // has_builtin(__builtin_bit_cast)
+#endif // LIBC_HAS_BUILTIN_BIT_CAST
+
+#if LIBC_HAS_BUILTIN_BIT_CAST
+#define LIBC_BIT_CAST_CONSTEXPR constexpr
+#define LIBC_BIT_CAST_CONSTEXPR_VAR constexpr
+#else
+#define LIBC_BIT_CAST_CONSTEXPR
+#define LIBC_BIT_CAST_CONSTEXPR_VAR const
+#endif // LIBC_HAS_BUILTIN_BIT_CAST
+
+#ifndef LIBC_HAS_CONSTANT_EVALUATION
+#define LIBC_HAS_CONSTANT_EVALUATION                                           \
+  (LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED && LIBC_HAS_BUILTIN_BIT_CAST)
+#endif // LIBC_HAS_CONSTANT_EVALUATION
+
+#if LIBC_HAS_CONSTANT_EVALUATION
+#define LIBC_CONSTEXPR_DEFAULT constexpr
+#define LIBC_CONSTEXPR_VAR_DEFAULT constexpr
+#else
+#define LIBC_CONSTEXPR_DEFAULT
+#define LIBC_CONSTEXPR_VAR_DEFAULT const
+#endif // LIBC_HAS_CONSTANT_EVALUATION
+
 // TODO: Remove the macro once Clang/LLVM bump their minimum compilers' version.
 // The reason for indirection is GCC is known to fail with constexpr qualified
-// functions that doesn't produce constant expression. This avoids it by using
-// LIBC_ENABLE_CONSTEXPR as a flag to control whether the function should be
-// constexpr qualified or not.
-#if LIBC_ENABLE_CONSTEXPR &&                                                   \
-    (LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED ||                                 \
-     (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 1100)) ||     \
-     (defined(LIBC_COMPILER_IS_CLANG) && LIBC_COMPILER_CLANG_VER >= 900))
-#define LIBC_HAS_CONSTANT_EVALUATION
+// functions that doesn't produce constant expression.
+// Also, there are some circular dependency in the generic functions without
+// __builtin_func for the following functions:
+//   fputil::fma
+//   fputil::sqrt
+#if LIBC_ENABLE_CONSTEXPR && LIBC_HAS_CONSTANT_EVALUATION
+#define LIBC_USE_CONSTEXPR
 #define LIBC_CONSTEXPR constexpr
+#define LIBC_CONSTEXPR_VAR constexpr
 #else
 #define LIBC_CONSTEXPR
+#define LIBC_CONSTEXPR_VAR const
+#endif // LIBC_USE_CONSTEXPR
+
+#ifndef LIBC_HAS_BUILTIN_IS_ASSIGNABLE
+#if (__has_builtin(__is_assignable) ||                                         \
+     (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 800)))
+#define LIBC_HAS_BUILTIN_IS_ASSIGNABLE 1
+#else
+#define LIBC_HAS_BUILTIN_IS_ASSIGNABLE 0
 #endif
+#endif // LIBC_HAS_BUILTIN_IS_ASSIGNABLE
+
+#ifndef LIBC_HAS_BUILTIN_IS_CONSTRUCTIBLE
+#if (__has_builtin(__is_constructible) ||                                      \
+     (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 800)))
+#define LIBC_HAS_BUILTIN_IS_CONSTRUCTIBLE 1
+#else
+#define LIBC_HAS_BUILTIN_IS_CONSTRUCTIBLE 0
+#endif
+#endif // LIBC_HAS_BUILTIN_IS_CONSTRUCTIBLE
 
 // Uses the platform specific specialization
 #define LIBC_THREAD_MODE_PLATFORM 0

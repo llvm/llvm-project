@@ -1819,6 +1819,13 @@ defm debug_info_for_profiling : BoolFOption<"debug-info-for-profiling",
   PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Emit extra debug info to make sample profile more accurate">,
   NegFlag<SetFalse, [], [ClangOption, FlangOption]>>;
+defm debug_record_sysroot : BoolFOption<"debug-record-sysroot",
+  CodeGenOpts<"DebugRecordSysroot">, DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Record the sysroot path in debug info as DW_AT_LLVM_sysroot and in DW_AT_LLVM_include_path "
+          "(used by LLDB to locate the SDK for Clang module imports).">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+          "Scrub the sysroot path from debug info.">>;
 def fprofile_generate_cold_function_coverage : Flag<["-"], "fprofile-generate-cold-function-coverage">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect coverage info for cold functions into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
@@ -1993,12 +2000,12 @@ defm bounds_safety : BoolFOption<
   BothFlags<[], [CC1Option],
           " experimental bounds safety extension for C">>;
 
-defm lifetime_safety : BoolFOption<
-  "lifetime-safety",
-  LangOpts<"EnableLifetimeSafety">, DefaultTrue,
+defm debug_run_lifetime_safety : BoolFOption<
+  "debug-run-lifetime-safety",
+  LangOpts<"DebugRunLifetimeSafety">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
-  BothFlags<[], [CC1Option], " lifetime safety for C++">>;
+  BothFlags<[], [CC1Option], " lifetime safety analysis for C++. Warnings are still controlled by -Wlifetime-safety. Primarily used to surface crashes or compile-time regressions without showing analysis findings.">>;
 
 def lifetime_safety_max_cfg_blocks
     : Joined<["-"], "lifetime-safety-max-cfg-blocks=">,
@@ -6082,6 +6089,15 @@ def mstack_protector_guard_offset_EQ : Joined<["-"], "mstack-protector-guard-off
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Use the given offset for addressing the stack-protector guard">,
   MarshallingInfoInt<CodeGenOpts<"StackProtectorGuardOffset">, "INT_MAX", "int">;
+def mstack_protector_guard_value_width_EQ : Joined<["-"], "mstack-protector-guard-value-width=">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Use the given width for the value of the the stack-protector guard (AArch64-only)">,
+  MarshallingInfoInt<CodeGenOpts<"StackProtectorGuardValueWidth">, "UINT_MAX", "unsigned">,
+  DocBrief<[{Set the width of the stack-protector guard variable. By default,
+the width is the same as the pointer width.  Currently only supported on AArch64
+targets.  Only the values "4" and "8" are currently supported.  This currently
+only modifies the size of accesses to the global variable, not the value
+stored on the stack.}]>;
 def mstack_protector_guard_symbol_EQ : Joined<["-"], "mstack-protector-guard-symbol=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Use the given symbol for addressing the stack-protector guard">,
@@ -7459,6 +7475,8 @@ def fsycl : Flag<["-"], "fsycl">,
   HelpText<"Enable SYCL C++ extensions">;
 def fno_sycl : Flag<["-"], "fno-sycl">,
   HelpText<"Disable SYCL C++ extensions">;
+def nolibsycl : Flag<["-"], "nolibsycl">,
+  HelpText<"Do not link the SYCL runtime library">;
 def fsycl_device_only : Flag<["-"], "fsycl-device-only">,
   Alias<offload_device_only>, HelpText<"Compile SYCL code for device only">;
 def fsycl_host_only : Flag<["-"], "fsycl-host-only">,

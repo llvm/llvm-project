@@ -661,7 +661,7 @@ ConstString ClassDescriptorV2::GetClassName() {
       if (!Read_class_row(process, *objc_class, class_ro, class_rw))
         return m_name;
 
-      m_name = ConstString(class_ro->m_name.c_str());
+      m_name = ConstString(class_ro->m_name);
     }
   }
   return m_name;

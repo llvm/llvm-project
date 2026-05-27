@@ -192,6 +192,9 @@ struct basic_string_view {
 };
 using string_view = basic_string_view<char>;
 
+template <typename T>
+basic_string_view<T>::basic_string_view(const T *) {}
+
 template<typename T>
 struct span {
   span();
