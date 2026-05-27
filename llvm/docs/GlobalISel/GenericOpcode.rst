@@ -342,9 +342,9 @@ These each perform their respective integer arithmetic on a scalar.
 The above example adds %src1 to %src0 and stores the result in %dst.
 
 G_CLMUL
-^^^^^^
+^^^^^^^
 
-Perform integer carry-less multiplication with saturation.
+Perform integer carry-less multiplication.
 
 .. code-block:: none
 
