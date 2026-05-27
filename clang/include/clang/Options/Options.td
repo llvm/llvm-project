@@ -4885,6 +4885,12 @@ def fstable_pointer_subtraction :
   HelpText<
     "Allow stable subtraction of pointers not aligned to object boundaries"
   >,
+  DocBrief<
+    "When subtracting two pointers, do not assume that the byte difference is an "
+    "exact multiple of the pointee type size. The computed result is rounded "
+    "toward zero instead of producing a poison value. Users should prefer casting "
+    "pointers to ``char *`` before subtracting instead of relying on this flag."
+  >,
   MarshallingInfoFlag<LangOpts<"StablePointerSubtraction">>;
 def fno_wrapv_pointer : Flag<["-"], "fno-wrapv-pointer">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, FlangOption]>;
