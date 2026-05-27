@@ -898,6 +898,10 @@ void SPIRVAsmPrinter::outputModuleSections() {
 
 bool SPIRVAsmPrinter::doInitialization(Module &M) {
   ModuleSectionsEmitted = false;
+  if (!M.getModuleInlineAsm().empty())
+    report_fatal_error(
+        "SPIR-V does not support module-level inline assembly", false);
+
   // Register the NSDI handler before calling the base class so that
   // AsmPrinter::doInitialization() calls Handler->beginModule(M) for it.
   if (M.getNamedMetadata("llvm.dbg.cu")) {
