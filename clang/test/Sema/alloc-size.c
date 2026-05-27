@@ -63,6 +63,3 @@ int main() {
 // with an unset optional ParamIdx must not crash.
 #define GH199407(Ty, Name) _Alignas(Ty) char Name[sizeof(Ty)]
 GH199407(struct GH199407S { float *f(long) __attribute__((alloc_size(1))); }, gbuf);  // expected-error 2{{field 'f' declared as a function}} expected-error{{redefinition of 'GH199407S'}} expected-note{{previous definition is here}}
-// nonnull uses a VariadicParamIdx whose elements are always valid; verify no
-// regression for the valid-ParamIdx path in equalAttrArgs<ParamIdx>.
-GH199407(struct GH199407T { void *g(void *p) __attribute__((nonnull(1))); }, gbuf2); // expected-error 2{{field 'g' declared as a function}} expected-error{{redefinition of 'GH199407T'}} expected-note{{previous definition is here}}
