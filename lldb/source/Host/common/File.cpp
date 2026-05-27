@@ -264,30 +264,34 @@ IOObject::WaitableHandle NativeFileBase::GetWaitableHandle() {
 
 FILE *NativeFileBase::GetStream() {
   ValueGuard stream_guard = StreamIsValid();
-  if (!stream_guard) {
-    if (ValueGuard descriptor_guard = DescriptorIsValid()) {
-      auto mode = GetStreamOpenModeFromOptions(m_options);
-      if (!mode)
-        llvm::consumeError(mode.takeError());
-      else {
-        if (!m_own_descriptor) {
-          // We must duplicate the file descriptor if we don't own it because
-          // when you call fdopen, the stream will own the fd.
-          m_descriptor = Dup(m_descriptor);
-          m_own_descriptor = true;
-        }
+  if (stream_guard)
+    return m_stream;
 
-        m_stream = llvm::sys::RetryAfterSignal(nullptr, ::fdopen, m_descriptor,
-                                               mode.get());
+  ValueGuard descriptor_guard = DescriptorIsValid();
+  if (!descriptor_guard)
+    return m_stream;
 
-        // If we got a stream, then we own the stream and should no longer own
-        // the descriptor because fclose() will close it for us
+  auto mode = GetStreamOpenModeFromOptions(m_options);
+  if (!mode)
+    llvm::consumeError(mode.takeError());
+  else {
+    if (!m_own_descriptor) {
+      // We must duplicate the file descriptor if we don't own it because
+      // when you call fdopen, the stream will own the fd.
+      m_descriptor = Dup(m_descriptor);
+      m_own_descriptor = true;
+    }
 
-        if (m_stream) {
-          m_own_stream = true;
-          m_own_descriptor = false;
-        }
-      }
+    m_stream = llvm::sys::RetryAfterSignal(nullptr, ::fdopen, m_descriptor,
+                                           mode.get());
+
+    // If we got a stream, then we own the stream and should no longer own
+    // the descriptor because fclose() will close it for us
+
+    if (m_stream) {
+      m_own_stream = true;
+      m_own_descriptor = false;
+      OnStreamOpened();
     }
   }
   return m_stream;
