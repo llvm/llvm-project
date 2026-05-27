@@ -20,7 +20,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -512,21 +512,6 @@ void AMDGPUInstPrinter::printAVLdSt32Align2RegOp(const MCInst *MI,
   printRegOperand(Reg, O, MRI);
 }
 
-void AMDGPUInstPrinter::printImmediateInt16(uint32_t Imm,
-                                            const MCSubtargetInfo &STI,
-                                            raw_ostream &O) {
-  int32_t SImm = static_cast<int32_t>(Imm);
-  if (isInlinableIntLiteral(SImm)) {
-    O << SImm;
-    return;
-  }
-
-  if (printImmediateFloat32(Imm, STI, O))
-    return;
-
-  O << formatHex(static_cast<uint64_t>(Imm & 0xffff));
-}
-
 static bool printImmediateFP16(uint32_t Imm, const MCSubtargetInfo &STI,
                                raw_ostream &O) {
   if (Imm == 0x3C00)
@@ -551,6 +536,21 @@ static bool printImmediateFP16(uint32_t Imm, const MCSubtargetInfo &STI,
     return false;
 
   return true;
+}
+
+void AMDGPUInstPrinter::printImmediateInt16(uint32_t Imm,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &O) {
+  int32_t SImm = static_cast<int32_t>(Imm);
+  if (isInlinableIntLiteral(SImm)) {
+    O << SImm;
+    return;
+  }
+
+  if (printImmediateFP16(Imm, STI, O))
+    return;
+
+  O << formatHex(static_cast<uint64_t>(Imm & 0xffff));
 }
 
 static bool printImmediateBFloat16(uint32_t Imm, const MCSubtargetInfo &STI,

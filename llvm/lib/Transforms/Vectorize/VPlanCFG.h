@@ -262,17 +262,22 @@ vp_depth_first_shallow(const VPBlockBase *G) {
 /// Returns the VPBasicBlocks forming the loop body of a plain (pre-region)
 /// VPlan in reverse post-order starting from \p Header.
 inline SmallVector<VPBasicBlock *>
-vp_plain_cfg_loop_body(VPBasicBlock *Header) {
+vp_rpo_plain_cfg_loop_body(VPBasicBlock *Header) {
   assert(!Header->getParent() && "Header must not be inside a region");
   VPBlockBase *Middle = Header->getPredecessors()[1]->getSuccessors()[0];
   SmallVector<VPBasicBlock *> Result;
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Header);
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksAs<VPBasicBlock>(RPOT)) {
     if (VPBB == Middle)
       break;
-    if (!isa<VPIRBasicBlock>(VPBB))
-      Result.push_back(VPBB);
+    // Skip exit blocks.
+    if (isa<VPIRBasicBlock>(VPBB)) {
+      assert(is_contained(Header->getPlan()->getExitBlocks(), VPBB) &&
+             "skipped VPIRBBs must be exit blocks");
+      continue;
+    }
+    Result.push_back(VPBB);
   }
   return Result;
 }

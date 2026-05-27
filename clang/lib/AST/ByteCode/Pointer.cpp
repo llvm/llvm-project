@@ -230,11 +230,6 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     return ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex));
   };
 
-  bool UsePath = true;
-  if (const ValueDecl *VD = getDeclDesc()->asValueDecl();
-      VD && VD->getType()->isReferenceType())
-    UsePath = false;
-
   // Build the path into the object.
   bool OnePastEnd = isOnePastEnd() && !isZeroSizeArray();
   Pointer Ptr = *this;
@@ -318,10 +313,9 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   // Just invert the order of the elements.
   std::reverse(Path.begin(), Path.end());
 
-  if (UsePath)
-    return APValue(Base, Offset, Path, OnePastEnd);
-
-  return APValue(Base, Offset, APValue::NoLValuePath());
+  auto Result = APValue(Base, Offset, Path, OnePastEnd);
+  Result.setConstexprUnknown(isConstexprUnknown());
+  return Result;
 }
 
 void Pointer::print(llvm::raw_ostream &OS) const {
@@ -437,7 +431,10 @@ std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
   if (isIntegralPointer())
     return (Twine("&(") + Twine(asIntPointer().Value + Offset) + ")").str();
 
-  return toAPValue(Ctx).getAsString(Ctx, getType());
+  QualType Ty = getType();
+  if (Ty->isLValueReferenceType())
+    Ty = Ty->getPointeeType();
+  return toAPValue(Ctx).getAsString(Ctx, Ty);
 }
 
 bool Pointer::isInitialized() const {

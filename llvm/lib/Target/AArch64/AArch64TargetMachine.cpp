@@ -277,7 +277,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64SLSHardeningLegacyPass(PR);
   initializeAArch64StackTaggingPass(PR);
   initializeAArch64StackTaggingPreRALegacyPass(PR);
-  initializeAArch64LowerHomogeneousPrologEpilogPass(PR);
+  initializeAArch64LowerHomogeneousPrologEpilogLegacyPass(PR);
   initializeAArch64DAGToDAGISelLegacyPass(PR);
   initializeAArch64CondBrTuningPass(PR);
   initializeAArch64Arm64ECCallLoweringPass(PR);

@@ -18,11 +18,11 @@
 
 using namespace lldb_private;
 
-typedef HRESULT(WINAPI *CreatePseudoConsole_t)(COORD size, HANDLE hInput,
-                                               HANDLE hOutput, DWORD dwFlags,
-                                               HPCON *phPC);
+using CreatePseudoConsole_t = HRESULT(WINAPI *)(COORD size, HANDLE hInput,
+                                                HANDLE hOutput, DWORD dwFlags,
+                                                HPCON *phPC);
 
-typedef VOID(WINAPI *ClosePseudoConsole_t)(HPCON hPC);
+using ClosePseudoConsole_t = VOID(WINAPI *)(HPCON hPC);
 
 static constexpr DWORD PSEUDOCONSOLE_INHERIT_CURSOR = 0x1;
 
@@ -73,14 +73,14 @@ llvm::Error PseudoConsole::CreateOverlappedPipePair(HANDLE &out_read,
            GetCurrentProcessId(), this);
   out_read =
       CreateNamedPipeW(pipe_name, PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
-                       PIPE_TYPE_BYTE | PIPE_WAIT, 1, 4096, 4096, 0, NULL);
+                       PIPE_TYPE_BYTE | PIPE_WAIT, 1, 4096, 4096, 0, nullptr);
   if (out_read == INVALID_HANDLE_VALUE)
     return llvm::errorCodeToError(
         std::error_code(GetLastError(), std::system_category()));
-  SECURITY_ATTRIBUTES write_sa = {sizeof(SECURITY_ATTRIBUTES), NULL, TRUE};
-  out_write =
-      CreateFileW(pipe_name, GENERIC_WRITE, 0, inheritable ? &write_sa : NULL,
-                  OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+  SECURITY_ATTRIBUTES write_sa = {sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE};
+  out_write = CreateFileW(pipe_name, GENERIC_WRITE, 0,
+                          inheritable ? &write_sa : nullptr, OPEN_EXISTING,
+                          FILE_ATTRIBUTE_NORMAL, nullptr);
   if (out_write == INVALID_HANDLE_VALUE) {
     CloseHandle(out_read);
     out_read = INVALID_HANDLE_VALUE;
@@ -120,7 +120,7 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
 
   HANDLE hInputRead = INVALID_HANDLE_VALUE;
   HANDLE hInputWrite = INVALID_HANDLE_VALUE;
-  if (!CreatePipe(&hInputRead, &hInputWrite, NULL, 0)) {
+  if (!CreatePipe(&hInputRead, &hInputWrite, nullptr, 0)) {
     CloseHandle(hOutputRead);
     CloseHandle(hOutputWrite);
     return llvm::errorCodeToError(
@@ -170,7 +170,7 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
         llvm::formatv("\x1b[{0};{1}R", cursorRow, cursorCol).sstr<32>();
     DWORD nwritten = 0;
     WriteFile(m_conpty_input, response.data(), response.size(), &nwritten,
-              NULL);
+              nullptr);
   }
 
   return llvm::Error::success();
@@ -219,7 +219,7 @@ llvm::Error PseudoConsole::OpenAnonymousPipes() {
   assert(m_mode == Mode::None &&
          "Attempted to open a AnonymousPipes in a different mode than None");
 
-  SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES), NULL, TRUE};
+  SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE};
   HANDLE hStdinRead = INVALID_HANDLE_VALUE;
   HANDLE hStdinWrite = INVALID_HANDLE_VALUE;
   if (!CreatePipe(&hStdinRead, &hStdinWrite, &sa, 0))
