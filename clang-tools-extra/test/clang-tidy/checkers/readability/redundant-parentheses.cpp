@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-redundant-parentheses %t
+﻿// RUN: %check_clang_tidy %s readability-redundant-parentheses %t
 
 void parenExpr() {
   1 + 1;
@@ -98,6 +98,73 @@ struct Foo
     return y;
   }
 };
+
+// Parens used as the object of a member access are not redundant.
+struct Stream {
+  Stream &operator<<(const char *);
+  const char *str() const;
+};
+struct Val {
+  int x;
+};
+struct Iter {
+  Val operator*() const;
+};
+struct PtrIter {
+  Val *operator*() const;
+};
+
+void memberAccessOnParen(Stream &s, Iter it, PtrIter pit) {
+  // Overloaded operator calls as base: parens are syntactically required.
+  (s << "x").str();
+  auto v = (*it).x;
+  auto u = (*pit)->x;
+
+  // Plain expressions: parens are redundant even as member-access base.
+  const char *p = (s).str();
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    const char *p = s.str();
+
+  Val val{};
+  auto w = (val).x;
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    auto w = val.x;
+
+  Foo foo2{};
+  auto z = (foo2.fooBar()).z;
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    auto z = foo2.fooBar().z;
+}
+
+// Overloaded comparison operators (CXXOperatorCallExpr) match callExpr() and
+// are flagged when the parentheses are genuinely redundant. Built-in binary
+// operators (BinaryOperator) are not matched by callExpr() and are not
+// currently flagged; fixing that inconsistency is tracked separately.
+struct CmpIter {
+  bool operator!=(const CmpIter &) const;
+  bool operator==(const CmpIter &) const;
+  bool operator>=(const CmpIter &) const;
+};
+
+bool overloadedComparisonWarn(CmpIter it, CmpIter end) {
+  if ((it != end))
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    if (it != end)
+    return true;
+  if ((it == end))
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    if (it == end)
+    return false;
+  return (it >= end);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    return it >= end;
+}
+
+bool builtinComparisonNoWarn(int i, int j) {
+  bool a = (i == j);
+  bool b = (i != j);
+  return (i >= j);
+}
 
 void memberExpr() {
   Foo foo{};
