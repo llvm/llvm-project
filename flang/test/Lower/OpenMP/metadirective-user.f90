@@ -102,7 +102,7 @@ end subroutine
 ! CHECK:         fir.if %[[COND]] {
 ! CHECK:           omp.barrier
 ! CHECK:         } else {
-! CHECK:         }
+! CHECK-NEXT:    }
 ! CHECK:         return
 subroutine test_dynamic_condition(flag)
   logical, intent(in) :: flag
@@ -124,7 +124,7 @@ end subroutine
 ! CHECK:         fir.if %[[CMP]] {
 ! CHECK:           omp.barrier
 ! CHECK:         } else {
-! CHECK:         }
+! CHECK-NEXT:    }
 ! CHECK:         return
 subroutine test_dynamic_condition_expr(n)
   integer, intent(in) :: n
@@ -135,6 +135,31 @@ subroutine test_dynamic_condition_expr(n)
 #else
   !$omp & default(nothing)
 #endif
+end subroutine
+
+! A directive clause on a dynamically selected variant is lowered inside its
+! runtime-selected region.
+! CHECK-LABEL: func.func @_QPtest_dynamic_variant_clause(
+! CHECK:         fir.if %{{.*}} {
+! CHECK:           omp.task if(%{{.*}}) {
+! CHECK:             fir.call @_QPfoo()
+! CHECK:             omp.terminator
+! CHECK:           }
+! CHECK:         } else {
+! CHECK:           fir.call @_QPfoo()
+! CHECK:         }
+! CHECK:         return
+subroutine test_dynamic_variant_clause(select, task_cond)
+  logical, intent(in) :: select, task_cond
+  !$omp begin metadirective &
+  !$omp & when(user={condition(select)}: task if(task_cond)) &
+#ifdef OMP_52
+  !$omp & otherwise(nothing)
+#else
+  !$omp & default(nothing)
+#endif
+  call foo()
+  !$omp end metadirective
 end subroutine
 
 ! Both when clauses pass vendor(llvm) statically. The first has a dynamic

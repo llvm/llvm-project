@@ -4885,6 +4885,25 @@ static void genMetadirective(lower::AbstractConverter &converter,
   mlir::Location loc = converter.genLocation(clauseList.source);
   lower::StatementContext stmtCtx;
 
+  // All candidates are statically applicable here; only the user condition may
+  // require a runtime check. Candidates are still selected using normal OpenMP
+  // variant ranking.
+  //
+  // When the best-ranked candidate has a runtime condition, emit it as the next
+  // if/else branch and rank the remaining candidates in the else branch:
+  //
+  //   when(user={condition(a)}: barrier)
+  //   when(user={condition(b)}: taskwait)
+  //   otherwise(nothing)
+  //
+  // becomes:
+  //
+  //   if (a) barrier
+  //   else if (b) taskwait
+  //   else nothing
+  //
+  // The cascade ends when the selected candidate has no runtime condition, or
+  // when all runtime-conditioned candidates failed and the fallback is emitted.
   while (!remainingCandidates.empty()) {
     std::optional<unsigned> selected =
         selectBestCandidate(remainingCandidates, candidates, ompCtx);
