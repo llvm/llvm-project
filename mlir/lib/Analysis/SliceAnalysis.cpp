@@ -62,10 +62,10 @@ getForwardSliceImpl(Operation *op, DenseSet<Operation *> &visited,
       // 'visited' set across regions/blocks as long as we remove operations
       // from the set again when the DFS traverses back from the leaf to the
       // root.
-      if (forwardSlice->count(userOp) == 0 && visited.insert(userOp).second)
+      if (forwardSlice->count(userOp) == 0 && visited.insert(userOp).second) {
         getForwardSliceImpl(userOp, visited, forwardSlice, filter);
-
-      visited.erase(userOp);
+        visited.erase(userOp);
+      }
     }
 
   forwardSlice->insert(op);
@@ -121,11 +121,12 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
   auto processValue = [&](Value value) {
     if (auto *definingOp = value.getDefiningOp()) {
       if (backwardSlice->count(definingOp) == 0 &&
-          visited.insert(definingOp).second)
-        return getBackwardSliceImpl(definingOp, visited, backwardSlice,
-                                    options);
-
-      visited.erase(definingOp);
+          visited.insert(definingOp).second) {
+        LogicalResult result =
+            getBackwardSliceImpl(definingOp, visited, backwardSlice, options);
+        visited.erase(definingOp);
+        return result;
+      }
     } else if (auto blockArg = dyn_cast<BlockArgument>(value)) {
       if (options.omitBlockArguments)
         return success();
