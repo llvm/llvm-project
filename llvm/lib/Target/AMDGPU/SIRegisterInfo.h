@@ -274,6 +274,20 @@ public:
     return RC->TSFlags & SIRCFlags::HasSGPR;
   }
 
+  /// \returns the VGPR register bank index (0-3)
+  unsigned getVGPRBankIndex(MCRegister Reg) const;
+
+  /// \returns true if MI is a VALU instruction that may have
+  /// 3 VGPR operands.
+  bool canHave3VGPROperands(const MachineInstr &MI) const;
+
+  /// Add register allocation hints to avoid VGPRs that would cause
+  /// bank conflicts
+  void addVGPRBankConflictHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
+                            SmallVectorImpl<MCPhysReg> &Hints,
+                            const MachineFunction &MF,
+                            const VirtRegMap *VRM) const;
+
   /// \returns true if this class contains any vector registers.
   static bool hasVectorRegisters(const TargetRegisterClass *RC) {
     return hasVGPRs(RC) || hasAGPRs(RC);
