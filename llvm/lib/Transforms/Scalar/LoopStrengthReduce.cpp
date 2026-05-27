@@ -4226,7 +4226,10 @@ void LSRInstance::GenerateConstantOffsetsImpl(
   for (Immediate Offset : Worklist)
     GenerateOffset(G, Offset);
 
-  Immediate Imm = ExtractImmediate(G, SE, Base.BaseOffset.isScalable());
+  // TODO: It likely makes sense to extract the immediate corresponding to the
+  // access type (i.e., set PreferScalable to AccessTy.MemTy &&
+  // AccessTy.MemTy->isScalableTy()).
+  Immediate Imm = ExtractImmediate(G, SE, /*PreferScalable=*/false);
   if (G->isZero() || Imm.isZero() ||
       !Base.BaseOffset.isCompatibleImmediate(Imm))
     return;
