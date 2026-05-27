@@ -69,7 +69,7 @@ public:
       if (isa<emitc::ArrayType>(resultType))
         return rewriter.notifyMatchFailure(
             callOp,
-            "converting functions returning arrays is not supported ATM");
+            "converting function calls returning arrays is not supported ATM");
     }
 
     rewriter.replaceOpWithNewOp<emitc::CallOp>(callOp, callOp.getResultTypes(),
@@ -169,7 +169,7 @@ public:
         isa<emitc::ArrayType>(adaptor.getOperands()[0].getType()))
       return rewriter.notifyMatchFailure(
           returnOp,
-          "converting functions returning arrays is not supported ATM");
+          "converting returnOp is only supported for non-array values ATM");
 
     rewriter.replaceOpWithNewOp<emitc::ReturnOp>(
         returnOp,
