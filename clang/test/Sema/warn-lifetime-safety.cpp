@@ -2985,7 +2985,7 @@ void placement_new_heap_then_delete_use_after_free() {
 struct PlacementArg {};
 
 struct VariadicPlacementNew {
-  void *operator new(decltype(sizeof(0)), ...);
+  void *operator new(std::size_t, ...);
 };
 
 void variadic_placement_new() {
