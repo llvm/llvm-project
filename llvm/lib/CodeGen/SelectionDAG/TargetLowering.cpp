@@ -5752,6 +5752,10 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
     return DAG.getSetCC(dl, VT, N0.getOperand(0), N0.getOperand(1), Cond);
   }
 
+  if ((Cond == ISD::SETO || Cond == ISD::SETUO) && DAG.isKnownNeverNaN(N0) &&
+      DAG.isKnownNeverNaN(N1))
+    return DAG.getBoolConstant(Cond == ISD::SETO, dl, VT, OpVT);
+
   // Could not fold it.
   return SDValue();
 }
