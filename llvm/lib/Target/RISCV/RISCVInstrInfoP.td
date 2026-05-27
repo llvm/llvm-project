@@ -408,6 +408,7 @@ class RVPPairShift_rr<bits<3> f, bits<2> w, string opcodestr,
                   "$rd, $rs1, $rs2", DefVXSAT> {
   bits<5> rs2;
 
+  let Inst{31}    = 0b0;
   let Inst{26-25} = w;
   let Inst{24-20} = rs2;
 }
