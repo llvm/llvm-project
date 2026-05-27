@@ -875,17 +875,14 @@ INTERCEPTOR(int, hipModuleUnload, void *module) {
   return REAL(hipModuleUnload)(module);
 }
 
-static int installHipModuleInterceptors() {
+__attribute__((constructor)) static void installHipModuleInterceptors() {
   if (!INTERCEPT_FUNCTION(hipModuleLoad))
-    return 0;
+    return;
   if (isVerboseMode())
     PROF_NOTE("%s", "Installing hipModuleLoad*/hipModuleUnload interceptors\n");
   INTERCEPT_FUNCTION(hipModuleLoadData);
   INTERCEPT_FUNCTION(hipModuleLoadDataEx);
   INTERCEPT_FUNCTION(hipModuleUnload);
-  return 0;
 }
-
-static int HipModuleInterceptorsInstalled = installHipModuleInterceptors();
 
 #endif /* __linux__ */
