@@ -12,6 +12,10 @@
 
 # END.
 
+## AIX needs the regex because alternative versions of cat generate different
+## formats of error message. %errc_ENOENT can't be used here because [[...]]
+## inside {{...}} is not supported.
+
 # CHECK: -- Testing:
 
 # CHECK: FAIL: shtest-format :: external_shell/fail.txt
@@ -23,7 +27,7 @@
 # CHECK: Command Output (stderr):
 # CHECK-NEXT: --
 # CHECK-NOT: --
-# AIX: cat{{(_64)?(\.exe)?}}: cannot open does-not-exist
+# AIX: cat{{(_64)?(\.exe)?}}: {{(cannot open does-not-exist|.*does-not-exist.*: No such file or directory)}}
 # NON-AIX: cat{{(_64)?(\.exe)?}}: {{.*does-not-exist.*}}: [[ERROR_MSG]]
 # CHECK: --
 
