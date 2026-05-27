@@ -10,13 +10,15 @@ struct HeaderObj {
   ~HeaderObj() {}
 };
 
-HeaderObj &header_param(HeaderObj &obj); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers in other translation units; add it to the declaration instead}}
-// CHECK: fix-it:"{{.*}}cross.h":{[[#]]:{{[0-9]+}}-[[#]]:{{[0-9]+}}}:" {{\[\[}}clang::lifetimebound{{\]\]}}"
+HeaderObj &header_param(HeaderObj &  // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers in other translation units; add it to the declaration instead}}
+	obj  // CHECK: fix-it:"{{.*}}cross.h":{[[#]]:{{[0-9]+}}-[[#]]:{{[0-9]+}}}:" {{\[\[}}clang::lifetimebound{{\]\]}}"
+);
 
 struct HeaderS {
   HeaderObj data;
-  HeaderObj &header_this(); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers in other translation units; add it to the declaration instead}}
-  // CHECK: fix-it:"{{.*}}cross.h":{[[#]]:{{[0-9]+}}-[[#]]:{{[0-9]+}}}:" {{\[\[}}clang::lifetimebound{{\]\]}}"
+  HeaderObj &header_this(
+  );  // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers in other translation units; add it to the declaration instead}}
+      // CHECK: fix-it:"{{.*}}cross.h":{[[#]]:{{[0-9]+}}-[[#]]:{{[0-9]+}}}:" {{\[\[}}clang::lifetimebound{{\]\]}}"
 };
 
 //--- cross.cpp
