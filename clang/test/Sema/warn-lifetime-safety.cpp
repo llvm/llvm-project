@@ -3350,19 +3350,19 @@ struct [[gsl::Owner]] optional : __optional_storage_base<T> {
 
 const MyObj& return_optional_deref() {
   optional<MyObj> opt;
-  return *opt; // expected-warning {{address of stack memory is returned later}} \
+  return *opt; // expected-warning {{stack memory associated with local variable 'opt' is returned}} \
                // expected-note {{returned here}}
 }
 
 const MyObj& return_optional_value() {
   optional<MyObj> opt;
-  return opt.value(); // expected-warning {{address of stack memory is returned later}} \
+  return opt.value(); // expected-warning {{stack memory associated with local variable 'opt' is returned}} \
                       // expected-note {{returned here}}
 }
 
 const int* return_optional_arrow() {
   optional<MyObj> opt;
-  return &opt->id; // expected-warning {{address of stack memory is returned later}} \
+  return &opt->id; // expected-warning {{stack memory associated with local variable 'opt' is returned}} \
                    // expected-note {{returned here}}
 }
 
