@@ -20,6 +20,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Object/GOFFObjectFile.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
@@ -70,6 +71,8 @@ object::Archive::Kind NewArchiveMember::detectKindFromObject() const {
     if (isa<object::COFFObjectFile>(**OptionalObject) ||
         isa<object::COFFImportFile>(**OptionalObject))
       return object::Archive::K_COFF;
+    if (isa<object::GOFFObjectFile>(**OptionalObject))
+      return object::Archive::K_ZOS;
     return object::Archive::K_GNU;
   }
 
@@ -186,6 +189,10 @@ static bool isCOFFArchive(object::Archive::Kind Kind) {
   return Kind == object::Archive::K_COFF;
 }
 
+static bool isZOSArchive(object::Archive::Kind Kind) {
+  return Kind == object::Archive::K_ZOS;
+}
+
 static bool isBSDLike(object::Archive::Kind Kind) {
   switch (Kind) {
   case object::Archive::K_GNU:
@@ -254,6 +261,24 @@ printBSDMemberHeader(raw_ostream &Out, uint64_t Pos, StringRef Name,
 }
 
 static void
+printZOSMemberHeader(raw_ostream &Out, uint64_t Pos, StringRef Name,
+                     const sys::TimePoint<std::chrono::seconds> &ModTime,
+                     unsigned UID, unsigned GID, unsigned Perms,
+                     uint64_t Size) {
+  std::string AHeader;
+  raw_string_ostream AOut(AHeader);
+  if (Name.size() <= 16) {
+    printWithSpacePadding(AOut, Twine(Name), 16);
+    printRestOfMemberHeader(AOut, ModTime, UID, GID, Perms, Size);
+  } else {
+    printBSDMemberHeader(AOut, Pos, Name, ModTime, UID, GID, Perms, Size);
+  }
+  SmallString<256> EHeader;
+  ConverterEBCDIC::convertToEBCDIC(AHeader, EHeader);
+  Out << EHeader.str();
+}
+
+static void
 printBigArchiveMemberHeader(raw_ostream &Out, StringRef Name,
                             const sys::TimePoint<std::chrono::seconds> &ModTime,
                             unsigned UID, unsigned GID, unsigned Perms,
@@ -305,6 +330,9 @@ printMemberHeader(raw_ostream &Out, uint64_t Pos, raw_ostream &StringTable,
                   sys::TimePoint<std::chrono::seconds> ModTime, uint64_t Size) {
   if (isBSDLike(Kind))
     return printBSDMemberHeader(Out, Pos, M.MemberName, ModTime, M.UID, M.GID,
+                                M.Perms, Size);
+  if (isZOSArchive(Kind))
+    return printZOSMemberHeader(Out, Pos, M.MemberName, ModTime, M.UID, M.GID,
                                 M.Perms, Size);
   if (!useStringTable(Thin, M.MemberName))
     return printGNUSmallMemberHeader(Out, M.MemberName, ModTime, M.UID, M.GID,
@@ -390,8 +418,11 @@ static uint64_t computeSymbolTableSize(object::Archive::Kind Kind,
   uint64_t Size = OffsetSize; // Number of entries
   if (isBSDLike(Kind))
     Size += NumSyms * OffsetSize * 2; // Table
+  else if (isZOSArchive(Kind))
+    Size += NumSyms * OffsetSize * 2; // MemberOffset + symbol flags
   else
     Size += NumSyms * OffsetSize; // Table
+
   if (isBSDLike(Kind))
     Size += OffsetSize; // byte count
   Size += StringTableSize;
@@ -451,6 +482,10 @@ static void writeSymbolTableHeader(raw_ostream &Out, object::Archive::Kind Kind,
   } else if (isAIXBigArchive(Kind)) {
     printBigArchiveMemberHeader(Out, "", now(Deterministic), 0, 0, 0, Size,
                                 PrevMemberOffset, NextMemberOffset);
+  } else if (isZOSArchive(Kind)) {
+    const char *Name = "__.SYMDEF";
+    printZOSMemberHeader(Out, Out.tell(), Name, now(Deterministic), 0, 0, 0,
+                         Size);
   } else {
     const char *Name = is64BitKind(Kind) ? "/SYM64" : "";
     printGNUSmallMemberHeader(Out, Name, now(Deterministic), 0, 0, 0, Size);
@@ -611,6 +646,10 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
                                          StringTable.size(), &Pad);
   writeSymbolTableHeader(Out, Kind, Deterministic, Size, PrevMemberOffset,
                          NextMemberOffset);
+  // Padding size is not included in the Size field of the z/OS symbol table
+  // header
+  if (isZOSArchive(Kind))
+    Size -= Pad;
 
   if (isBSDLike(Kind))
     printNBits(Out, Kind, NumSyms * 2 * OffsetSize);
@@ -631,6 +670,8 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
       if (isBSDLike(Kind))
         printNBits(Out, Kind, StringOffset);
       printNBits(Out, Kind, Pos); // member offset
+      if (isZOSArchive(Kind))
+        printNBits(Out, Kind, Pos); // symbol flags
     }
     Pos += M.Header.size() + M.Data.size() + M.Padding.size();
   }
@@ -638,7 +679,16 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
   if (isBSDLike(Kind))
     // byte count of the string table
     printNBits(Out, Kind, StringTable.size());
-  Out << StringTable;
+  if (isZOSArchive(Kind)) {
+    std::string AStringTable;
+    raw_string_ostream AOut(AStringTable);
+    AOut << StringTable;
+    SmallString<256> EStringTable;
+    ConverterEBCDIC::convertToEBCDIC(AStringTable, EStringTable);
+    Out << EStringTable.str();
+  } else {
+    Out << StringTable;
+  }
 
   while (Pad--)
     Out.write(uint8_t(0));
@@ -783,6 +833,8 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
                   LLVMContext &Context, ArrayRef<NewArchiveMember> NewMembers,
                   std::optional<bool> IsEC, function_ref<void(Error)> Warn) {
   static char PaddingData[8] = {'\n', '\n', '\n', '\n', '\n', '\n', '\n', '\n'};
+  static char ZOSPaddingData[8] = {0x15, 0x15, 0x15, 0x15,
+                                   0x15, 0x15, 0x15, 0x15}; // EBCDIC newlines.
   uint64_t MemHeadPadSize = 0;
   uint64_t Pos =
       isAIXBigArchive(Kind) ? sizeof(object::BigArchive::FixLenHdr) : 0;
@@ -846,6 +898,8 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
   }
 
   std::vector<std::unique_ptr<SymbolicFile>> SymFiles;
+  uint32_t LastZosObjIndex =
+      UINT_MAX; // Only set when writing symbol table in z/OS archive.
 
   if (NeedSymbols != SymtabWritingMode::NoSymtab || isAIXBigArchive(Kind)) {
     for (const NewArchiveMember &M : NewMembers) {
@@ -856,6 +910,8 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
       if (!SymFileOrErr)
         return createFileError(M.MemberName, SymFileOrErr.takeError());
       SymFiles.push_back(std::move(*SymFileOrErr));
+      if (isZOSArchive(Kind) && SymFiles.back().get())
+        LastZosObjIndex = SymFiles.size() - 1;
     }
   }
 
@@ -905,6 +961,8 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
     unsigned TailPadding =
         offsetToAlignment(Data.size() + MemberPadding, Align(2));
     StringRef Padding = StringRef(PaddingData, MemberPadding + TailPadding);
+    if (isZOSArchive(Kind))
+      Padding = StringRef(ZOSPaddingData, MemberPadding + TailPadding);
 
     sys::TimePoint<std::chrono::seconds> ModTime;
     if (UniqueTimestamps)
@@ -971,6 +1029,15 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
       Symbols = std::move(*SymbolsOrErr);
       if (CurSymFile)
         HasObject = true;
+    }
+    // On z/OS, when there are no symbols, add a dummy blank symbol
+    // into the symbol table. This is done since the z/OS binder:
+    //   - emits an error if there is no symbol table in the archive
+    //   - emits an error if the symbol table has 0 symbols
+    //   - should not find any references to a blank symbol
+    if ((LastZosObjIndex == Index) && (SymNames.tell() == 0)) {
+      Symbols.push_back(0);
+      SymNames << ' ' << '\0';
     }
 
     Pos += Header.size() + Data.size() + Padding.size();
@@ -1148,6 +1215,8 @@ Error writeArchiveToStream(raw_ostream &Out,
     Out << "!<thin>\n";
   else if (isAIXBigArchive(Kind))
     Out << "<bigaf>\n";
+  else if (isZOSArchive(Kind))
+    Out << ZOSArchiveMagic;
   else
     Out << "!<arch>\n";
 
