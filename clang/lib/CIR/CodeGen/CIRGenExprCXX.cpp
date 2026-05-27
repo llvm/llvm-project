@@ -216,6 +216,11 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
       return RValue::get(nullptr);
 
     if (trivialAssignment) {
+      // We don't like to generate the trivial copy/move assignment operator
+      // when it isn't necessary; just produce the proper effect here.  It's
+      // important that we use the result of emitLValue here rather than
+      // emitting call arguments, in order to preserve TBAA information from
+      // the RHS.
       LValue rhs = isa<CXXOperatorCallExpr>(ce) ? trivialAssignmentRhs
                                                 : emitLValue(*ce->arg_begin());
       emitAggregateAssign(thisPtr, rhs, ce->getType());
