@@ -1931,8 +1931,37 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
     if (!referenceTemporaryDtor)
       return;
 
-    cgf.cgm.errorNYI(e->getSourceRange(), "pushTemporaryCleanup: static/thread "
-                                          "storage duration with destructors");
+    // Classic codegen calls registerGlobalDtor here, passing either the
+    // destructor or a generated array-destroy helper. CIR handles globals with
+    // non-trivial destructors by attaching a dtor region to the cir.global op.
+    CIRGenModule &cgm = cgf.cgm;
+    auto globalOp =
+        mlir::cast<cir::GlobalOp>(cgm.getAddrOfGlobalTemporary(m, e));
+
+    CIRGenBuilderTy &builder = cgm.getBuilder();
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    assert(globalOp.getDtorRegion().empty() &&
+           "global temporary already has a dtor region");
+    mlir::Block *block = builder.createBlock(&globalOp.getDtorRegion());
+    builder.setInsertionPointToStart(block);
+
+    mlir::Location loc = cgm.getLoc(m->getSourceRange());
+    mlir::Value tempAddr = builder.createGetGlobal(globalOp);
+
+    if (e->getType()->isArrayType()) {
+      // emitDestroy will produce a cir.array.dtor here. LoweringPrepare's
+      // getOrCreateDtorFunc recognizes the non-trivial dtor region and
+      // hoists it into a __cxx_global_array_dtor helper.
+      Address addr{tempAddr, cgf.convertTypeForMem(e->getType()),
+                   referenceTemporary.getAlignment()};
+      cgf.emitDestroy(addr, e->getType(), CIRGenFunction::destroyCXXObject);
+    } else {
+      GlobalDecl gd(referenceTemporaryDtor, Dtor_Complete);
+      cir::FuncOp dtorFn = cgm.getAddrAndTypeOfCXXStructor(gd).second;
+      builder.createCallOp(loc, dtorFn, mlir::ValueRange{tempAddr});
+    }
+
+    cir::YieldOp::create(builder, loc);
     break;
   }
 
@@ -1985,11 +2014,17 @@ LValue CIRGenFunction::emitMaterializeTemporaryExpr(
 
   // Create and initialize the reference temporary.
   Address object = createReferenceTemporary(*this, m, e);
+  cir::GlobalOp var = nullptr;
+  if (auto getGlobalOp = object.getPointer().getDefiningOp<cir::GetGlobalOp>())
+    var = mlir::dyn_cast_or_null<cir::GlobalOp>(
+        cgm.getGlobalValue(getGlobalOp.getName()));
 
-  if (auto var = object.getPointer().getDefiningOp<cir::GlobalOp>()) {
-    // TODO(cir): add something akin to stripPointerCasts() to ptr above
-    cgm.errorNYI(e->getSourceRange(), "emitMaterializeTemporaryExpr: GlobalOp");
-    return {};
+  if (var) {
+    if (!var.getInitialValue().has_value()) {
+      var.setInitialValueAttr(cir::ZeroAttr::get(var.getSymType()));
+      assert(!cir::MissingFeatures::pointerAuthentication());
+      emitAnyExprToMem(e, object, Qualifiers(), /*isInitializer=*/true);
+    }
   } else {
     assert(!cir::MissingFeatures::emitLifetimeMarkers());
     emitAnyExprToMem(e, object, Qualifiers(), /*isInitializer=*/true);

@@ -1597,16 +1597,19 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
       // a guard variable for them (since they cannot use the global guard), so
       // we differentiate them that way.
 
-      if (op.getDynTlsRefs()->getGuardName()) {
+      // Some TLS globals (e.g. internal-linkage lifetime-extended reference
+      // temporaries) have no wrapper at all, so there are no dyn_tls_refs to
+      // associate them with. They still need to participate in the ordered
+      // __tls_init flow, but no wrapper alias is required.
+      if (op.getDynTlsRefs() && op.getDynTlsRefs()->getGuardName()) {
         // Unordered: the alias is the function we just generated.
         initAlias = defineGlobalThreadLocalInitAlias(op, f);
       } else {
-        // Ordered: Get the __tls_init, and make the alias to that.
-        initAlias = defineGlobalThreadLocalInitAlias(op, getTlsInitFn());
-        // Ordered inits also need to get called from the __tls_init function,
-        // so we add the init function to the list, so that we can add them to
-        // it later.
+        // Ordered: add the init function to the list so __tls_init picks it
+        // up later. If a wrapper exists, also point its alias at __tls_init.
         globalThreadLocalInitializers.push_back(f);
+        if (op.getDynTlsRefs())
+          initAlias = defineGlobalThreadLocalInitAlias(op, getTlsInitFn());
       }
     } else {
       dynamicInitializers.push_back(f);

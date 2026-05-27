@@ -2934,6 +2934,16 @@ void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d) {
   if (d.isStaticLocal() || tlm != cir::TLS_Model::GeneralDynamic)
     return;
 
+  // The wrapper/init machinery belongs to d's own user-facing cir.global.
+  // When we're setting the TLS mode on a different global whose extending
+  // declaration happens to be d (e.g. a lifetime-extended reference
+  // temporary, whose symbol is _ZGR... rather than d's mangled name), the
+  // wrapper plumbing will be attached separately when d's own cir.global
+  // is emitted; attaching it here would point the wrapper alias at the
+  // wrong global.
+  if (global.getSymName() != getMangledName(GlobalDecl(&d)))
+    return;
+
   setGlobalTlsReferences(d, global);
 }
 
@@ -3886,7 +3896,10 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
     }
   }
   cir::GlobalOp gv = createGlobalOp(loc, name, type, isConstant);
-  gv.setInitialValueAttr(initialValue);
+  if (initialValue)
+    gv.setInitialValueAttr(initialValue);
+  gv.setLinkage(linkage);
+  gv.setVisibility(getMLIRVisibilityFromCIRLinkage(linkage));
 
   if (emitter)
     emitter->finalize(gv);
@@ -3901,8 +3914,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
     errorNYI(mte->getSourceRange(),
              "Global temporary with comdat/weak linkage");
   if (varDecl->getTLSKind())
-    errorNYI(mte->getSourceRange(),
-             "Global temporary with thread local storage");
+    setTLSMode(gv, *varDecl);
   mlir::Operation *cv = gv;
 
   assert(!cir::MissingFeatures::addressSpace());
