@@ -31547,9 +31547,8 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
       auto CallAttrs = SMECallAttrs(*Base, &getRuntimeLibcallsInfo());
       if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
           CallAttrs.requiresPreservingZT0() ||
-          CallAttrs.requiresPreservingAllZAState()) {
+          CallAttrs.requiresPreservingAllZAState())
         return true;
-      }
     }
   }
   return false;

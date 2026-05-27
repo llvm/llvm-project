@@ -811,9 +811,10 @@ define aarch64_sve_vector_pcs void @only_ppr_csr_vla(i64 %n) {
 ; CHECK-NEXT:    .cfi_offset w19, -16
 ; CHECK-NEXT:    .cfi_offset w30, -24
 ; CHECK-NEXT:    .cfi_offset w29, -32
-; CHECK-NEXT:    add x8, x0, #15
-; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
-; CHECK-NEXT:    sub x8, sp, x8
+; CHECK-NEXT:    add x9, x0, #15
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
+; CHECK-NEXT:    sub x8, x8, x9
 ; CHECK-NEXT:    mov sp, x8
 ; CHECK-NEXT:    // fake_use: $x8
 ; CHECK-NEXT:    //APP
@@ -855,9 +856,10 @@ define aarch64_sve_vector_pcs void @only_zpr_csr_vla(i64 %n) {
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xe0, 0x77, 0x22 // $d8 @ cfa - 8 * VG - 1056
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xe0, 0x77, 0x22 // $d9 @ cfa - 16 * VG - 1056
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xe0, 0x77, 0x22 // $d10 @ cfa - 24 * VG - 1056
-; CHECK-NEXT:    add x8, x0, #15
-; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
-; CHECK-NEXT:    sub x8, sp, x8
+; CHECK-NEXT:    add x9, x0, #15
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
+; CHECK-NEXT:    sub x8, x8, x9
 ; CHECK-NEXT:    mov sp, x8
 ; CHECK-NEXT:    // fake_use: $x8
 ; CHECK-NEXT:    sub x8, x29, #1024
@@ -906,9 +908,10 @@ define aarch64_sve_vector_pcs void @zpr_ppr_csr_vla(i64 %n) {
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xe0, 0x77, 0x22 // $d8 @ cfa - 16 * VG - 1056
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xe0, 0x77, 0x22 // $d9 @ cfa - 24 * VG - 1056
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xe0, 0x77, 0x22 // $d10 @ cfa - 32 * VG - 1056
-; CHECK-NEXT:    add x8, x0, #15
-; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
-; CHECK-NEXT:    sub x8, sp, x8
+; CHECK-NEXT:    add x9, x0, #15
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
+; CHECK-NEXT:    sub x8, x8, x9
 ; CHECK-NEXT:    mov sp, x8
 ; CHECK-NEXT:    // fake_use: $x8
 ; CHECK-NEXT:    sub x8, x29, #1024
@@ -954,9 +957,10 @@ define void @sve_locals_only_ppr_csr_vla(i64 %n, <vscale x 16 x i1> %pred, <vsca
 ; CHECK-NEXT:    .cfi_offset w19, -16
 ; CHECK-NEXT:    .cfi_offset w30, -24
 ; CHECK-NEXT:    .cfi_offset w29, -32
-; CHECK-NEXT:    add x8, x0, #15
-; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
-; CHECK-NEXT:    sub x8, sp, x8
+; CHECK-NEXT:    add x9, x0, #15
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
+; CHECK-NEXT:    sub x8, x8, x9
 ; CHECK-NEXT:    mov sp, x8
 ; CHECK-NEXT:    // fake_use: $x8
 ; CHECK-NEXT:    sub x8, x29, #1024
@@ -1007,9 +1011,10 @@ define void @sve_locals_only_zpr_csr_vla(i64 %n, <vscale x 16 x i1> %pred, <vsca
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xe0, 0x77, 0x22 // $d8 @ cfa - 16 * VG - 1056
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xe0, 0x77, 0x22 // $d9 @ cfa - 24 * VG - 1056
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xe0, 0x77, 0x22 // $d10 @ cfa - 32 * VG - 1056
-; CHECK-NEXT:    add x8, x0, #15
-; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
-; CHECK-NEXT:    sub x8, sp, x8
+; CHECK-NEXT:    add x9, x0, #15
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
+; CHECK-NEXT:    sub x8, x8, x9
 ; CHECK-NEXT:    mov sp, x8
 ; CHECK-NEXT:    // fake_use: $x8
 ; CHECK-NEXT:    sub x8, x29, #1024
@@ -1065,9 +1070,10 @@ define void @sve_locals_zpr_ppr_csr_vla(i64 %n, <vscale x 16 x i1> %pred, <vscal
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xe0, 0x77, 0x22 // $d8 @ cfa - 24 * VG - 1056
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xe0, 0x77, 0x22 // $d9 @ cfa - 32 * VG - 1056
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x58, 0x1e, 0x22, 0x11, 0xe0, 0x77, 0x22 // $d10 @ cfa - 40 * VG - 1056
-; CHECK-NEXT:    add x8, x0, #15
-; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
-; CHECK-NEXT:    sub x8, sp, x8
+; CHECK-NEXT:    add x9, x0, #15
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
+; CHECK-NEXT:    sub x8, x8, x9
 ; CHECK-NEXT:    mov sp, x8
 ; CHECK-NEXT:    // fake_use: $x8
 ; CHECK-NEXT:    sub x8, x29, #1024

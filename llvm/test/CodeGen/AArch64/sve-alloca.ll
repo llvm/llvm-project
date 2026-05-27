@@ -54,10 +54,11 @@ define void @foo(<vscale x 4 x i64> %dst, i1 %cond) {
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4d, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d13 @ cfa - 48 * VG - 32
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d14 @ cfa - 56 * VG - 32
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d15 @ cfa - 64 * VG - 32
-; CHECK-NEXT:    rdvl x8, #2
-; CHECK-NEXT:    add x8, x8, #15
-; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
-; CHECK-NEXT:    sub x8, sp, x8
+; CHECK-NEXT:    rdvl x9, #2
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    add x9, x9, #15
+; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
+; CHECK-NEXT:    sub x8, x8, x9
 ; CHECK-NEXT:    and x0, x8, #0xffffffffffffffe0
 ; CHECK-NEXT:    mov sp, x0
 ; CHECK-NEXT:    str z1, [x0, #1, mul vl]

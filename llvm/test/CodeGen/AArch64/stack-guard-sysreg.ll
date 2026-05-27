@@ -55,16 +55,17 @@ define dso_local void @foo(i64 %t) local_unnamed_addr #0 {
 ; CHECK-TPIDR0:  mrs     x8, TPIDR_EL0
 ; CHECK-TPIDR1:  mrs     x8, TPIDR_EL1
 ; CHECK-TPIDR2:  mrs     x8, TPIDR_EL2
-; CHECK-NO-OFFSET-NEXT: ldr     x8, [x8]
-; CHECK-POSITIVE-OFFSET-NEXT: ldr x8, [x8, #8]
-; CHECK-NEGATIVE-OFFSET-NEXT: ldur x8, [x8, #-8]
-; CHECK-NPOT-OFFSET-NEXT:     ldur x8, [x8, #1]
-; CHECK-NPOT-NEG-OFFSET-NEXT: ldur x8, [x8, #-1]
+; CHECK-NEXT:    lsl     x9, x0, #2
+; CHECK-NO-OFFSET: ldr     x8, [x8]
+; CHECK-POSITIVE-OFFSET: ldr x8, [x8, #8]
+; CHECK-NEGATIVE-OFFSET: ldur x8, [x8, #-8]
+; CHECK-NPOT-OFFSET:     ldur x8, [x8, #1]
+; CHECK-NPOT-NEG-OFFSET: ldur x8, [x8, #-1]
+; CHECK-NEXT:    add     x9, x9, #15
 ; CHECK-NEXT:    stur    x8, [x29, #-8]
-; CHECK-NEXT:    lsl     x8, x0, #2
-; CHECK-NEXT:    add     x8, x8, #15
-; CHECK-NEXT     and     x8, x8, #0xfffffffffffffff0
-; CHECK-NEXT     sub     x0, sp, x8
+; CHECK-NEXT     mov     x8, sp
+; CHECK-NEXT     and     x9, x9, #0xfffffffffffffff0
+; CHECK-NEXT     sub     x0, x8, x9
 ; CHECK-NEXT     mov     sp, x0
 ; CHECK-NEXT     bl      baz
 ; CHECK-SP:      mrs     x8, SP_EL0
@@ -108,14 +109,15 @@ define dso_local void @foo(i64 %t) local_unnamed_addr #0 {
 ; CHECK-ADD-NEXT:        sub     sp, sp, #16
 ; CHECK-FAR1:            mrs     x8, FAR_EL1
 ; CHECK-FAR2:            mrs     x8, FAR_EL2
+; CHECK-ADD-NEXT:        lsl     x9, x0, #2
 ; CHECK-MINUS-257-OFFSET: sub     x8, x8, #257
 ; CHECK-257-OFFSET:      add     x8, x8, #257
 ; CHECK-ADD-NEXT:        ldr     x8, [x8]
+; CHECK-ADD-NEXT:        add     x9, x9, #15
+; CHECK-ADD-NEXT:        and     x9, x9, #0xfffffffffffffff0
 ; CHECK-ADD-NEXT:        stur    x8, [x29, #-8]
-; CHECK-ADD-NEXT:        lsl     x8, x0, #2
-; CHECK-ADD-NEXT:        add     x8, x8, #15
-; CHECK-ADD-NEXT:        and     x8, x8, #0xfffffffffffffff0
-; CHECK-ADD-NEXT:        sub     x0, sp, x8
+; CHECK-ADD-NEXT:        mov     x8, sp
+; CHECK-ADD-NEXT:        sub     x0, x8, x9
 ; CHECK-ADD-NEXT:        mov     sp, x0
 ; CHECK-ADD-NEXT:        bl      baz
 ; CHECK-FAR1:            mrs     x8, FAR_EL1

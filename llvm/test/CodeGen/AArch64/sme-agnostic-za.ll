@@ -212,7 +212,8 @@ define void @agnostic_za_buffer_alloc_with_stack_probes() nounwind "aarch64_za_s
 ; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    bl __arm_sme_state_size
-; CHECK-NEXT:    sub x19, sp, x0
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    sub x19, x8, x0
 ; CHECK-NEXT:  .LBB7_1: // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub sp, sp, #16, lsl #12 // =65536
 ; CHECK-NEXT:    cmp sp, x19

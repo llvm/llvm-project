@@ -72,8 +72,8 @@ define float @multi_bb_stpidr2_save_required_stackprobe(i32 %a, float %b, float 
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    mul x9, x8, x8
-; CHECK-NEXT:    sub x9, sp, x9
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:  .LBB2_1: // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub sp, sp, #16, lsl #12 // =65536
 ; CHECK-NEXT:    cmp sp, x9

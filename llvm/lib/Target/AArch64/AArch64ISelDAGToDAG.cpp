@@ -5062,13 +5062,15 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     break;
 
   case ISD::SUB: {
-    // Check for stack guard unmixing pattern: SUB(CopyFromReg(SP), X)
+    // Check for stack guard unmixing pattern: SUB(CopyFromReg(SP), LOAD(...))
     // Select STACK_GUARD_UNMIX pseudo which will be expanded post-RA
+    // Only match when N1 is a LOAD (the stored guard value from stack).
+    // Other patterns like shifts for dynamic allocation will use normal SUB.
     SDValue N0 = Node->getOperand(0);
-    if (N0.getOpcode() == ISD::CopyFromReg) {
+    SDValue N1 = Node->getOperand(1);
+    if (N0.getOpcode() == ISD::CopyFromReg && N1.getOpcode() == ISD::LOAD) {
       RegisterSDNode *R = dyn_cast<RegisterSDNode>(N0.getOperand(1));
       if (R && R->getReg() == AArch64::SP && VT == MVT::i64) {
-        SDValue N1 = Node->getOperand(1);
         SDValue Ops[] = {N1};
         SDNode *ResNode = CurDAG->getMachineNode(AArch64::STACK_GUARD_UNMIX,
                                                  SDLoc(Node), MVT::i64, Ops);

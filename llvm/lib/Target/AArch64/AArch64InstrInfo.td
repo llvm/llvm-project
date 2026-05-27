@@ -2754,9 +2754,21 @@ def : InstAlias<"mov $dst, $src",
 defm ADDS : AddSubS<0, "adds", AArch64add_flag, "cmn", "subs", "cmp">;
 defm SUBS : AddSubS<1, "subs", AArch64sub_flag, "cmp", "adds", "cmn">;
 
+// Matches when SP is used directly via CopyFromReg, not after being moved to a GPR.
+// This ensures we don't incorrectly optimize "mov x8, sp; sub x8, x8, x9" into
+// "sub x8, sp, x9" - once SP is in x8, it's no longer a CopyFromReg node.
 def copyFromSP: PatLeaf<(i64 GPR64:$src), [{
   return N->getOpcode() == ISD::CopyFromReg &&
          cast<RegisterSDNode>(N->getOperand(1))->getReg() == AArch64::SP;
+}]>;
+
+// Helper to convert shift amount to UXTX extend with LSL (valid range 0-4)
+def UXTXLSLImm : SDNodeXForm<imm, [{
+  uint64_t ShiftAmt = N->getZExtValue();
+  assert(ShiftAmt <= 4 && "Invalid shift amount for UXTX");
+  return CurDAG->getTargetConstant(
+      AArch64_AM::getArithExtendImm(AArch64_AM::UXTX, ShiftAmt),
+      SDLoc(N), MVT::i32);
 }]>;
 
 // Pseudo instruction for stack guard cookie unmixing (epilogue).
@@ -2785,6 +2797,9 @@ def : Pat<(sub GPR64sp:$R2, arith_extended_reg32to64_i64:$R3),
           (SUBSXrx GPR64sp:$R2, arith_extended_reg32to64_i64:$R3)>;
 def : Pat<(sub copyFromSP:$R2, (arith_uxtx GPR64:$R3, arith_extendlsl64:$imm)),
           (SUBXrx64 GPR64sp:$R2, GPR64:$R3, arith_extendlsl64:$imm)>;
+// Handle SUB(copyFromSP, SHL) for dynamic stack allocation
+def : Pat<(sub copyFromSP:$sp, (shl GPR64:$val, (i64 imm:$shift))),
+          (SUBXrx64 GPR64sp:$sp, GPR64:$val, (UXTXLSLImm (i64 imm:$shift)))>;
 }
 
 // Because of the immediate format for add/sub-imm instructions, the

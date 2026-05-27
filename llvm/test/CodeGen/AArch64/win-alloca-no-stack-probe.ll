@@ -11,6 +11,7 @@ declare void @func2(ptr)
 
 ; CHECK: add [[REG1:x[0-9]+]], x0, #15
 ; CHECK-NOT: bl __chkstk
+; CHECK: mov [[REG2:x[0-9]+]], sp
 ; CHECK: and [[REG1]], [[REG1]], #0xfffffffffffffff0
-; CHECK: sub [[REG3:x[0-9]+]], sp, [[REG1]]
+; CHECK: sub [[REG3:x[0-9]+]], [[REG2]], [[REG1]]
 ; CHECK: mov sp, [[REG3]]
