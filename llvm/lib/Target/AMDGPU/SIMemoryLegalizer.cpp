@@ -750,14 +750,16 @@ static bool hasAVNoneMMRA(const MachineInstr &MI) {
   auto MMRA = MMRAMetadata(MI.getMMRAMetadata());
   if (!MMRA)
     return false;
+  bool TagFound = false;
   for (const auto &[Prefix, Suffix] : MMRA) {
     if (Prefix != "amdgcn-av")
       continue;
     if (Suffix == "none")
-      return true;
-    diagnoseUnknownAVMetadata(MI, Suffix);
+      TagFound = true;
+    else
+      diagnoseUnknownAVMetadata(MI, Suffix);
   }
-  return false;
+  return TagFound;
 }
 
 } // end anonymous namespace
