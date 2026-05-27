@@ -950,6 +950,32 @@ SDValue AMDGPUTargetLowering::getNegatedExpression(
       return DAG.getNode(AMDGPUISD::RCP, SL, VT, NegSrc, Op->getFlags());
     return SDValue();
   }
+  case ISD::FDIV: {
+    // fdiv(1.0, x) lowers via lowerFastUnsafeFDIV to rcp(x). Negating it
+    // via the generic constant-flip path produces fdiv(-1.0, x), which
+    // lowers to rcp(fneg(x)) -- planting an fneg on x's producer that may
+    // force a VOP3 encoding. Only allow the negation when x can absorb the
+    // fneg via source modifiers (mirrors AMDGPUISD::RCP).
+    // See llvm/llvm-project#187482.
+    auto *CLHS = dyn_cast<ConstantFPSDNode>(Op.getOperand(0));
+    if (CLHS && CLHS->isExactlyValue(1.0)) {
+      EVT VT = Op.getValueType();
+      if (VT == MVT::f16 || VT == MVT::bf16 ||
+          (VT == MVT::f32 && Op->getFlags().hasApproximateFuncs())) {
+        SDValue Src = Op.getOperand(1);
+        SDLoc SL(Op);
+        SDValue NegSrc = getNegatedExpression(Src, DAG, LegalOperations,
+                                              ForCodeSize, Cost, Depth + 1);
+        if (NegSrc)
+          return DAG.getNode(ISD::FDIV, SL, VT, Op.getOperand(0), NegSrc,
+                             Op->getFlags());
+        // x is not cheaply negatable; suppress the generic handler so it
+        // doesn't fall back to flipping the constant numerator.
+        return SDValue();
+      }
+    }
+    break;
+  }
   default:
     break;
   }

@@ -26,9 +26,9 @@ define float @fma_fdiv_fneg_fdiv_spelling(float %x, float %y, float %z) {
 ; CHECK-LABEL: fma_fdiv_fneg_fdiv_spelling:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mul_f32_e64 v0, v0, -v0
+; CHECK-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; CHECK-NEXT:    v_rcp_f32_e32 v0, v0
-; CHECK-NEXT:    v_fma_f32 v0, v0, v1, v2
+; CHECK-NEXT:    v_fma_f32 v0, v0, -v1, v2
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %fmul = fmul float %x, %x
   %fdiv = fdiv afn float 1.000000e+00, %fmul
