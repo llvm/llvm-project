@@ -57,20 +57,26 @@ with multiple names.  A warning is emitted for each such directive
 
 ## Extensions enabled by flag
 
-### `-facc-allow-default-none-scalars` — pre-OpenACC-3.2 scalar behavior under `DEFAULT(NONE)`
+### `-fno-openacc-default-none-scalars-strict` — pre-OpenACC-3.2 scalar behavior under `DEFAULT(NONE)`
 
 OpenACC version 3.2 (section 1.16, change 733) clarified that the
 `default(none)` clause applies to scalar variables.  Prior to version 3.2,
 `default(none)` did not impose a data-clause requirement on scalar variables.
 
-When this flag is enabled, Flang reverts to the pre-3.2 behavior: scalar
-variables referenced inside a `default(none)` compute region without an
-explicit data clause do not produce an error.  Instead, Flang infers implicit
-data attributes for those scalars via the same implicit-copy logic applied
-in regions without `default(none)`.
+By default, Flang enforces the OpenACC 3.2 behavior: scalar variables
+referenced inside a `default(none)` compute region without an explicit data
+clause produce an error.
+
+When `-fno-openacc-default-none-scalars-strict` is specified, Flang reverts to
+the pre-3.2 behavior: scalar variables referenced inside a `default(none)`
+compute region without an explicit data clause do not produce an error.
+Instead, Flang infers implicit data attributes for those scalars via the same
+implicit-copy logic applied in regions without `default(none)`.
 
 Array variables always require an explicit data clause under `default(none)`
 regardless of this flag.
 
-When a scalar is implicitly attributed under this extension, a warning is
-emitted at `-pedantic` level (or explicitly via `-Wacc-implicit-scalar`).
+When a scalar is implicitly attributed under this extension no warning is
+emitted by default; explicit opt-in to the non-standard behavior is treated as
+acknowledgement.  Use `-Wopenacc-default-none-scalars-strict` to enable
+per-use warnings for audit purposes.
