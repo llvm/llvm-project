@@ -159,8 +159,6 @@ void SIPreEmitPeephole::updateMLIBeforeRemovingEdge(
   MLI->destroy(Loop);
 }
 
-// Based on dead-mi-elimination.  dead-mi-elimination is not used instead
-// of this code because it is too aggressive at this late stage in the pipeline.
 void SIPreEmitPeephole::eliminateDeadMeta(MachineFunction &MF,
                                           MachineBasicBlock *MBB) const {
   LiveRegUnits LivePhysRegs;
@@ -809,7 +807,7 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
   MF.RenumberBlocks();
 
   for (MachineBasicBlock &MBB : MF) {
-    bool BlockChanged=false;
+    bool BlockChanged = false;
     MachineBasicBlock::iterator TermI = MBB.getFirstTerminator();
     // Check first terminator for branches to optimize
     if (TermI != MBB.end()) {
@@ -823,24 +821,15 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
         BlockChanged = removeExeczBranch(MI, MBB);
         break;
       }
-      Changed|=BlockChanged;
+      Changed |= BlockChanged;
+      // Was the block transformed so that it only contains branches and
+      // meta-instructions? If so, eliminate dead meta-instructions so that
+      // branch folding can be more effective.
       if (BlockChanged &&
-	  std::all_of(MBB.begin(), MBB.end(), [](const MachineInstr &MI) {
-	    return MI.isMetaInstruction() ||
-	      MI.getOpcode() == AMDGPU::S_BRANCH;
-	  }))
-	eliminateDeadMeta(MF, &MBB);
-      /*
-      if (BlockChanged) {
-	for (auto &MI : MBB) {
-	  if (MI.isMetaInstruction())
-	    continue;
-	  if (MI.getOpcode() == AMDGPU::S_BRANCH)
-	    eliminateDeadMeta(MF, &MBB);
-	  break;	  
-	}
-      }
-      */
+          llvm::all_of(MBB.instrs(), [](const MachineInstr &MI) {
+            return MI.isMetaInstruction() || MI.isBranch();
+          }))
+        eliminateDeadMeta(MF, &MBB);
     }
 
     if (!ST.hasVGPRIndexMode())
