@@ -300,7 +300,7 @@ public:
         } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
           // Return stack address.
           SemaHelper->reportUseAfterReturn(
-              IssueExpr, RetEscape->getReturnExpr(), MovedExpr, ExpiryLoc);
+              IssueExpr, RetEscape->getReturnExpr(), MovedExpr);
         else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
           // Dangling field.
           SemaHelper->reportDanglingField(
@@ -356,8 +356,11 @@ public:
 
     // We iterate in reverse order (from most recent to oldest) to find
     // the first declaration in each file.
-    for (const FunctionDecl *Redecl :
-         llvm::reverse(llvm::to_vector(FDef->redecls())))
+
+    // Store in temporary variable to manually extend lifetime
+    auto redecls = llvm::to_vector(FDef->redecls());
+
+    for (const FunctionDecl *Redecl : llvm::reverse(redecls))
       AddCrossTUDecl(Redecl);
 
     return Targets;

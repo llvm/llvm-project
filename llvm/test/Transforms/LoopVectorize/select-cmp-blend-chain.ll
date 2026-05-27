@@ -282,3 +282,170 @@ loop.latch:
 exit:
   ret i32 %rdx.next
 }
+
+; The latch's blend mask is itself a select recipe (here %cond). When the
+; AnyOf chain rewrite walks the blend's operands it must clone all recipe
+; kinds matched by m_Select, not only VPInstruction.
+define i32 @anyof_blend_with_select_mask(i1 %a, i1 %b, i32 %n) {
+; CHECK-LABEL: define i32 @anyof_blend_with_select_mask(
+; CHECK-SAME: i1 [[A:%.*]], i1 [[B:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N]], i32 1)
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[SMAX]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[SMAX]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[SMAX]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[A]], i1 [[B]], i1 false
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[VEC_IND]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i1> [[VEC_PHI]], [[TMP1]]
+; CHECK-NEXT:    [[PREDPHI]] = select i1 [[TMP0]], <4 x i1> [[VEC_PHI]], <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[PREDPHI]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[SMAX]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RDX_NEXT:%.*]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[A]], i1 [[B]], i1 false
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_LATCH]], label %[[IF_THEN:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    [[CMP_INNER:%.*]] = icmp eq i32 [[IV]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP_INNER]], i32 0, i32 [[RDX]]
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[RDX_NEXT]] = phi i32 [ [[RDX]], %[[LOOP_HEADER]] ], [ [[SEL]], %[[IF_THEN]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp slt i32 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP_HEADER]], label %[[EXIT]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP_LATCH]] ], [ 0, %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i32 [[RDX_NEXT_LCSSA]]
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %rdx = phi i32 [ 0, %entry ], [ %rdx.next, %loop.latch ]
+  %cond = select i1 %a, i1 %b, i1 false
+  br i1 %cond, label %loop.latch, label %if.then
+
+if.then:
+  %cmp.inner = icmp eq i32 %iv, 0
+  %sel = select i1 %cmp.inner, i32 0, i32 %rdx
+  br label %loop.latch
+
+loop.latch:
+  %rdx.next = phi i32 [ %rdx, %loop.header ], [ %sel, %if.then ]
+  %iv.next = add i32 %iv, 1
+  %ec = icmp slt i32 %iv.next, %n
+  br i1 %ec, label %loop.header, label %exit
+
+exit:
+  ret i32 %rdx.next
+}
+
+; Same as @anyof_blend_with_select_mask but the select recipe used as the
+; latch blend's mask depends on a load, so it stays inside the vector body
+; as a VPWidenRecipe to be cloned by the AnyOf chain rewrite.
+define i32 @anyof_blend_with_widen_select_mask(ptr noalias %A, i32 %n) {
+; CHECK-LABEL: define i32 @anyof_blend_with_widen_select_mask(
+; CHECK-SAME: ptr noalias [[A:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N]], i32 1)
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[SMAX]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[SMAX]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[SMAX]], [[N_MOD_VF]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[INDEX]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD]], splat (i32 100)
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[TMP3]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 5)
+; CHECK-NEXT:    [[TMP6:%.*]] = or <4 x i1> [[VEC_PHI]], [[TMP5]]
+; CHECK-NEXT:    [[PREDPHI]] = select <4 x i1> [[TMP4]], <4 x i1> [[VEC_PHI]], <4 x i1> [[TMP6]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[PREDPHI]])
+; CHECK-NEXT:    [[TMP9:%.*]] = freeze i1 [[TMP8]]
+; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP9]], i32 1, i32 0
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[SMAX]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RDX_NEXT:%.*]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[IV_ZEXT:%.*]] = zext i32 [[IV]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[A]], i64 [[IV_ZEXT]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[V]], 0
+; CHECK-NEXT:    [[B:%.*]] = icmp slt i32 [[V]], 100
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[A]], i1 [[B]], i1 false
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_LATCH]], label %[[IF_THEN:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    [[CMP_INNER:%.*]] = icmp eq i32 [[V]], 5
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP_INNER]], i32 1, i32 [[RDX]]
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[RDX_NEXT]] = phi i32 [ [[RDX]], %[[LOOP_HEADER]] ], [ [[SEL]], %[[IF_THEN]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp slt i32 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP_HEADER]], label %[[EXIT]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP_LATCH]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i32 [[RDX_NEXT_LCSSA]]
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %rdx = phi i32 [ 0, %entry ], [ %rdx.next, %loop.latch ]
+  %iv.zext = zext i32 %iv to i64
+  %gep = getelementptr i32, ptr %A, i64 %iv.zext
+  %v = load i32, ptr %gep
+  %a = icmp ne i32 %v, 0
+  %b = icmp slt i32 %v, 100
+  %cond = select i1 %a, i1 %b, i1 false
+  br i1 %cond, label %loop.latch, label %if.then
+
+if.then:
+  %cmp.inner = icmp eq i32 %v, 5
+  %sel = select i1 %cmp.inner, i32 1, i32 %rdx
+  br label %loop.latch
+
+loop.latch:
+  %rdx.next = phi i32 [ %rdx, %loop.header ], [ %sel, %if.then ]
+  %iv.next = add i32 %iv, 1
+  %ec = icmp slt i32 %iv.next, %n
+  br i1 %ec, label %loop.header, label %exit
+
+exit:
+  ret i32 %rdx.next
+}
