@@ -11,7 +11,8 @@
 // <mdspan>
 
 // template<class LayoutLeftPaddedMapping>
-// constexpr mapping(const LayoutLeftPaddedMapping& other) noexcept;
+//   constexpr explicit(see below)
+//     mapping(const LayoutLeftPaddedMapping&);
 
 #include <cassert>
 #include <cstddef>
@@ -26,7 +27,7 @@ constexpr void assert_same_mapping(const Dst& dst, const Src& src) {
 
   if constexpr (Dst::extents_type::rank() > 0) {
     for (typename Dst::rank_type r = 0; r < Dst::extents_type::rank(); ++r)
-      assert(dst.stride(r) == static_cast<typename Dst::index_type>(src.stride(r)));
+      assert(dst.stride(r) == static_cast<Dst::index_type>(src.stride(r)));
   }
 }
 
@@ -58,10 +59,24 @@ constexpr bool test() {
   }
 
   {
-    using Src = std::layout_left_padded<4>::mapping<std::extents<size_t, 5>>;
+    using Src = std::layout_left::mapping<std::extents<size_t, 5>>;
     using Dst = std::layout_right_padded<4>::mapping<std::extents<size_t, D>>;
     Src source;
     test_conversion<true, Dst>(source);
+  }
+
+  {
+    using Src = std::layout_left_padded<4>::mapping<std::extents<size_t, D>>;
+    using Dst = std::layout_right_padded<4>::mapping<std::extents<size_t, 5>>;
+    Src source(std::extents<size_t, D>(5));
+    test_conversion<false, Dst>(source);
+  }
+
+  {
+    using Src = std::layout_left::mapping<std::extents<size_t, D>>;
+    using Dst = std::layout_right_padded<4>::mapping<std::extents<size_t, 5>>;
+    Src source(std::extents<size_t, D>(5));
+    test_conversion<false, Dst>(source);
   }
 
   return true;
