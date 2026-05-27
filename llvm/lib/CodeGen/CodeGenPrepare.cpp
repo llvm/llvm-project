@@ -8589,8 +8589,8 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
   if (!DL.typeSizeEqualsStoreSize(SplitStoreType))
     return false;
 
-  // Don't split the store if it is volatile.
-  if (SI.isVolatile())
+  // Don't split the store if it is volatile or atomic.
+  if (!SI.isSimple())
     return false;
 
   // Match the following patterns:

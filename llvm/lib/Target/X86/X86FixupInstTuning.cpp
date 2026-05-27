@@ -304,7 +304,7 @@ bool X86FixupInstTuningImpl::processInstruction(
       MI.addOperand(MI.getOperand(NumOperands - 2));
     }
     LLVM_DEBUG(dbgs() << "     With: " << MI);
-    return false;
+    return true;
   };
 
   // `vpermq ymm, ymm, 0x44` -> `vinserti128 ymm, ymm, xmm, 1`

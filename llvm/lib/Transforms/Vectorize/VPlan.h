@@ -604,6 +604,10 @@ protected:
 /// types.
 LLVM_ABI Type *getScalarTypeOrInfer(VPValue *V);
 
+/// Compute the scalar result type for an IR \p Opcode given \p Operands.
+LLVM_ABI Type *computeScalarTypeForInstruction(unsigned Opcode,
+                                               ArrayRef<VPValue *> Operands);
+
 /// VPSingleDefRecipe is a base class for recipes that model a sequence of one
 /// or more output IR that define a single result VPValue. Note that
 /// VPSingleDefRecipe must inherit from VPRecipeBase before VPSingleDefValue.
@@ -1238,6 +1242,9 @@ public:
     // The size of the mask returned is VF * Multiplier (UF, third op).
     ActiveLaneMask,
     ExplicitVectorLength,
+    // Represents the incoming loop-invariant alias-mask. All memory accesses
+    // in the loop must stay within the active lanes.
+    IncomingAliasMask,
     CalculateTripCountMinusVF,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
@@ -1276,8 +1283,9 @@ public:
     // part if it is scalar. In the latter case, the recipe will be removed
     // during unrolling.
     ExtractPenultimateElement,
-    LogicalAnd, // Non-poison propagating logical And.
-    LogicalOr,  // Non-poison propagating logical Or.
+    LogicalAnd,     // Non-poison propagating logical And.
+    LogicalOr,      // Non-poison propagating logical Or.
+    NumActiveLanes, // Counts the number of active lanes in a mask.
     // Add an offset in bytes (second operand) to a base pointer (first
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
@@ -1393,15 +1401,19 @@ private:
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                 const VPIRFlags &Flags = {}, const VPIRMetadata &MD = {},
-                DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "");
+                DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "",
+                Type *ResultTy = nullptr);
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPInstructionSC)
 
-  VPInstruction *clone() override { return cloneWithOperands(operands()); }
+  VPInstruction *clone() override {
+    return cloneWithOperands(operands(), getScalarType());
+  }
 
-  VPInstruction *cloneWithOperands(ArrayRef<VPValue *> NewOperands) {
+  VPInstruction *cloneWithOperands(ArrayRef<VPValue *> NewOperands,
+                                   Type *ResultTy = nullptr) {
     auto *New = new VPInstruction(Opcode, NewOperands, *this, *this,
-                                  getDebugLoc(), Name);
+                                  getDebugLoc(), Name, ResultTy);
     if (getUnderlyingValue())
       New->setUnderlyingValue(getUnderlyingInstr());
     return New;
@@ -1521,18 +1533,15 @@ protected:
 /// directly determine the result type. Note that there is no separate recipe ID
 /// for VPInstructionWithType; it shares the same ID as VPInstruction and is
 /// distinguished purely by the opcode.
+/// TODO: Merge with VPInstruction, now that VPRecipeValue provides the type.
 class VPInstructionWithType : public VPInstruction {
-  /// Scalar result type produced by the recipe.
-  Type *ResultTy;
-
 public:
   VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
                         Type *ResultTy, const VPIRFlags &Flags = {},
                         const VPIRMetadata &Metadata = {},
                         DebugLoc DL = DebugLoc::getUnknown(),
                         const Twine &Name = "")
-      : VPInstruction(Opcode, Operands, Flags, Metadata, DL, Name),
-        ResultTy(ResultTy) {}
+      : VPInstruction(Opcode, Operands, Flags, Metadata, DL, Name, ResultTy) {}
 
   static inline bool classof(const VPRecipeBase *R) {
     // VPInstructionWithType are VPInstructions with specific opcodes requiring
@@ -1575,7 +1584,7 @@ public:
     return 0;
   }
 
-  Type *getResultType() const { return ResultTy; }
+  Type *getResultType() const { return getScalarType(); }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1652,8 +1661,9 @@ public:
 
 struct LLVM_ABI_FOR_TEST VPPhi : public VPInstruction, public VPPhiAccessors {
   VPPhi(ArrayRef<VPValue *> Operands, const VPIRFlags &Flags, DebugLoc DL,
-        const Twine &Name = "")
-      : VPInstruction(Instruction::PHI, Operands, Flags, {}, DL, Name) {}
+        const Twine &Name = "", Type *ResultTy = nullptr)
+      : VPInstruction(Instruction::PHI, Operands, Flags, {}, DL, Name,
+                      ResultTy) {}
 
   static inline bool classof(const VPUser *U) {
     auto *VPI = dyn_cast<VPInstruction>(U);
@@ -3323,9 +3333,11 @@ public:
 
   ~VPReplicateRecipe() override = default;
 
-  VPReplicateRecipe *clone() override {
+  VPReplicateRecipe *clone() override { return cloneWithOperands(operands()); }
+
+  VPReplicateRecipe *cloneWithOperands(ArrayRef<VPValue *> NewOperands) {
     auto *Copy = new VPReplicateRecipe(
-        getUnderlyingInstr(), operands(), IsSingleScalar,
+        getUnderlyingInstr(), NewOperands, IsSingleScalar,
         isPredicated() ? getMask() : nullptr, *this, *this, getDebugLoc());
     Copy->transferFlags(*this);
     return Copy;
@@ -3479,17 +3491,23 @@ public:
       : VPExpressionRecipe(ExpressionTypes::ExtMulAccReduction,
                            {Ext0, Ext1, Mul, Red}) {}
   VPExpressionRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
-                     VPWidenRecipe *Mul, VPWidenRecipe *Sub,
+                     VPWidenRecipe *Mul, VPWidenRecipe *Neg,
                      VPReductionRecipe *Red)
       : VPExpressionRecipe(ExpressionTypes::ExtNegatedMulAccReduction,
-                           {Ext0, Ext1, Mul, Sub, Red}) {
-    assert(Mul->getOpcode() == Instruction::Mul && "Expected a mul");
-    assert(Red->getRecurrenceKind() == RecurKind::Add &&
+                           {Ext0, Ext1, Mul, Neg, Red}) {
+    assert((Mul->getOpcode() == Instruction::Mul ||
+            Mul->getOpcode() == Instruction::FMul) &&
+           "Expected a mul");
+    assert((Red->getRecurrenceKind() == RecurKind::Add ||
+            Red->getRecurrenceKind() == RecurKind::FAdd) &&
            "Expected an add reduction");
     assert(getNumOperands() >= 3 && "Expected at least three operands");
-    [[maybe_unused]] auto *SubConst = dyn_cast<VPConstantInt>(getOperand(2));
-    assert(SubConst && SubConst->isZero() &&
-           Sub->getOpcode() == Instruction::Sub && "Expected a negating sub");
+    if (Neg->getOpcode() == Instruction::Sub) {
+      [[maybe_unused]] auto *SubConst = dyn_cast<VPConstantInt>(getOperand(2));
+      assert(SubConst && SubConst->isZero() &&
+             Neg->getOpcode() == Instruction::Sub && "Expected a negating sub");
+    } else
+      assert(Neg->getOpcode() == Instruction::FNeg && "Unexpected opcode");
   }
 
   ~VPExpressionRecipe() override {
@@ -3555,8 +3573,8 @@ public:
   /// effects.
   bool mayHaveSideEffects() const;
 
-  /// Returns true if the result of this VPExpressionRecipe is a single-scalar.
-  bool isSingleScalar() const;
+  /// Returns true if this VPExpressionRecipe produces a single scalar.
+  bool isVectorToScalar() const;
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
