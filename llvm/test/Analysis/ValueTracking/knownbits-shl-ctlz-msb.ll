@@ -12,12 +12,7 @@ declare i64 @llvm.ctlz.i64(i64, i1 immarg)
 
 define i32 @msb_at_14_bit_set(i32 %x) {
 ; CHECK-LABEL: @msb_at_14_bit_set(
-; CHECK-NEXT:    [[C:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[XORED:%.*]] = xor i32 [[C]], 31
-; CHECK-NEXT:    [[SHAMT:%.*]] = sub nsw i32 14, [[XORED]]
-; CHECK-NEXT:    [[S:%.*]] = shl i32 [[X]], [[SHAMT]]
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[S]], 16384
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 16384
 ;
   %c = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
   %xored = xor i32 %c, 31
@@ -29,12 +24,7 @@ define i32 @msb_at_14_bit_set(i32 %x) {
 
 define i32 @msb_at_14_high_bits_clear(i32 %x) {
 ; CHECK-LABEL: @msb_at_14_high_bits_clear(
-; CHECK-NEXT:    [[C:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[XORED:%.*]] = xor i32 [[C]], 31
-; CHECK-NEXT:    [[SHAMT:%.*]] = sub nsw i32 14, [[XORED]]
-; CHECK-NEXT:    [[S:%.*]] = shl i32 [[X]], [[SHAMT]]
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[S]], -32768
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 0
 ;
   %c = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
   %xored = xor i32 %c, 31
@@ -46,12 +36,7 @@ define i32 @msb_at_14_high_bits_clear(i32 %x) {
 
 define i32 @msb_at_14_xor_commuted(i32 %x) {
 ; CHECK-LABEL: @msb_at_14_xor_commuted(
-; CHECK-NEXT:    [[C:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[XORED:%.*]] = xor i32 [[C]], 31
-; CHECK-NEXT:    [[SHAMT:%.*]] = sub nsw i32 14, [[XORED]]
-; CHECK-NEXT:    [[S:%.*]] = shl i32 [[X]], [[SHAMT]]
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[S]], -32768
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 0
 ;
   %c = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
   %xored = xor i32 31, %c
@@ -63,12 +48,7 @@ define i32 @msb_at_14_xor_commuted(i32 %x) {
 
 define i32 @msb_at_14_zero_not_undef(i32 %x) {
 ; CHECK-LABEL: @msb_at_14_zero_not_undef(
-; CHECK-NEXT:    [[C:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[XORED:%.*]] = xor i32 [[C]], 31
-; CHECK-NEXT:    [[SHAMT:%.*]] = sub nsw i32 14, [[XORED]]
-; CHECK-NEXT:    [[S:%.*]] = shl i32 [[X]], [[SHAMT]]
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[S]], 16384
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 16384
 ;
   %c = call i32 @llvm.ctlz.i32(i32 %x, i1 false)
   %xored = xor i32 %c, 31
@@ -80,12 +60,7 @@ define i32 @msb_at_14_zero_not_undef(i32 %x) {
 
 define <2 x i32> @msb_at_14_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @msb_at_14_vec(
-; CHECK-NEXT:    [[C:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[XORED:%.*]] = xor <2 x i32> [[C]], splat (i32 31)
-; CHECK-NEXT:    [[SHAMT:%.*]] = sub nsw <2 x i32> splat (i32 14), [[XORED]]
-; CHECK-NEXT:    [[S:%.*]] = shl <2 x i32> [[X]], [[SHAMT]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[S]], splat (i32 16384)
-; CHECK-NEXT:    ret <2 x i32> [[R]]
+; CHECK-NEXT:    ret <2 x i32> splat (i32 16384)
 ;
   %c = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %x, i1 true)
   %xored = xor <2 x i32> %c, <i32 31, i32 31>
