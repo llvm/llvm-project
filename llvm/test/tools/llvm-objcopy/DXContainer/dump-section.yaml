@@ -2,17 +2,10 @@
 # RUN: llvm-objcopy --dump-section=DXIL=%t.bc %t.dxbc
 # RUN: llvm-objcopy --dump-section=ILDB=%t0.bc %t.dxbc
 
-## Verify that when dumping ILDB and DXIL parts we get the bitcode,
-## not the header.
+## Verify that when dumping ILDB and DXIL parts we get only the bitcode bytes.
 # RUN: od -t x1 %t.bc | FileCheck %s --check-prefix=BITCODE
 # RUN: od -t x1 %t0.bc | FileCheck %s --check-prefix=BITCODE
-# BITCODE: 42 43 12 34
-
-## Verify the size of the bitcode data.
-# RUN: wc -c %t.bc | FileCheck %s --check-prefix=DXIL-SIZE
-# DXIL-SIZE: 4
-# RUN: wc -c %t0.bc | FileCheck %s --check-prefix=ILDB-SIZE
-# ILDB-SIZE: 4
+# BITCODE: {{^}}0000000 42 43 12 34{{$}}
 
 ## Dump the PSV0 part and verify its size.
 # RUN: llvm-objcopy --dump-section=PSV0=%t.psv0 %t.dxbc
