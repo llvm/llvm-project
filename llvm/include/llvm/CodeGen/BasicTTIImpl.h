@@ -2168,6 +2168,9 @@ public:
       return Cost;
     }
     case Intrinsic::get_active_lane_mask:
+      return thisT()->getActiveLaneMaskCost(RetTy, ICA.getArgTypes()[0],
+                                            ICA.getFlags(), CostKind,
+                                            /* NumResults */ 1);
     case Intrinsic::experimental_vector_match:
     case Intrinsic::experimental_vector_histogram_add:
     case Intrinsic::experimental_vector_histogram_uadd_sat:
@@ -2609,27 +2612,10 @@ public:
       Cost *= PtrsTy->getNumElements();
       return Cost;
     }
-    case Intrinsic::get_active_lane_mask: {
-      Type *ArgTy = ICA.getArgTypes()[0];
-      EVT ResVT = getTLI()->getValueType(DL, RetTy, true);
-      EVT ArgVT = getTLI()->getValueType(DL, ArgTy, true);
-
-      // If we're not expanding the intrinsic then we assume this is cheap
-      // to implement.
-      if (!getTLI()->shouldExpandGetActiveLaneMask(ResVT, ArgVT))
-        return getTypeLegalizationCost(RetTy).first;
-
-      // Create the expanded types that will be used to calculate the uadd_sat
-      // operation.
-      Type *ExpRetTy =
-          VectorType::get(ArgTy, cast<VectorType>(RetTy)->getElementCount());
-      IntrinsicCostAttributes Attrs(Intrinsic::uadd_sat, ExpRetTy, {}, FMF);
-      InstructionCost Cost =
-          thisT()->getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, ExpRetTy, RetTy,
-                                          CmpInst::ICMP_ULT, CostKind);
-      return Cost;
-    }
+    case Intrinsic::get_active_lane_mask:
+      return thisT()->getActiveLaneMaskCost(RetTy, ICA.getArgTypes()[0],
+                                            ICA.getFlags(), CostKind,
+                                            /* NumResults */ 1);
     case Intrinsic::experimental_memset_pattern:
       // This cost is set to match the cost of the memset_pattern16 libcall.
       // It should likely be re-evaluated after migration to this intrinsic
@@ -3428,6 +3414,32 @@ public:
     return ShuffleCost + MinMaxCost +
            thisT()->getVectorInstrCost(Instruction::ExtractElement, Ty,
                                        CostKind, 0, nullptr, nullptr);
+  }
+
+  InstructionCost getActiveLaneMaskCost(Type *ResTy, Type *ArgTy,
+                                        FastMathFlags FMF,
+                                        TTI::TargetCostKind CostKind,
+                                        unsigned NumResults) const override {
+    auto ResSubTy = VectorType::getOneNthElementsVectorType(
+        cast<VectorType>(ResTy), NumResults);
+    EVT ResVT = getTLI()->getValueType(DL, ResSubTy, true);
+    EVT ArgVT = getTLI()->getValueType(DL, ArgTy, true);
+
+    // If we're not expanding the intrinsic then we assume this is cheap
+    // to implement.
+    if (!getTLI()->shouldExpandGetActiveLaneMask(ResVT, ArgVT))
+      return getTypeLegalizationCost(ResTy).first * NumResults;
+
+    // Create the expanded types that will be used to calculate the uadd_sat
+    // operation.
+    Type *ExpRetTy =
+        VectorType::get(ArgTy, cast<VectorType>(ResTy)->getElementCount());
+    IntrinsicCostAttributes Attrs(Intrinsic::uadd_sat, ExpRetTy, {}, FMF);
+    InstructionCost Cost =
+        thisT()->getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
+    Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, ExpRetTy, ResTy,
+                                        CmpInst::ICMP_ULT, CostKind);
+    return Cost * NumResults;
   }
 
   InstructionCost

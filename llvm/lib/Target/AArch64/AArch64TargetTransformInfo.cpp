@@ -1024,54 +1024,6 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       break;
     return TyL.first + ExtraCost;
   }
-  case Intrinsic::get_active_lane_mask: {
-    auto RetTy = cast<VectorType>(ICA.getReturnType());
-    EVT RetVT = getTLI()->getValueType(DL, RetTy);
-    EVT OpVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
-    if (getTLI()->shouldExpandGetActiveLaneMask(RetVT, OpVT))
-      break;
-
-    if (RetTy->isScalableTy()) {
-      if (TLI->getTypeAction(RetTy->getContext(), RetVT) !=
-          TargetLowering::TypeSplitVector)
-        break;
-
-      auto LT = getTypeLegalizationCost(RetTy);
-      InstructionCost Cost = LT.first;
-      // When SVE2p1 or SME2 is available, we can halve getTypeLegalizationCost
-      // as get_active_lane_mask may lower to the sve_whilelo_x2 intrinsic, e.g.
-      //   nxv32i1 = get_active_lane_mask(base, idx) ->
-      //    {nxv16i1, nxv16i1} = sve_whilelo_x2(base, idx)
-      if (ST->hasSVE2p1() || ST->hasSME2()) {
-        Cost /= 2;
-        if (Cost == 1)
-          return Cost;
-      }
-
-      // If more than one whilelo intrinsic is required, include the extra cost
-      // required by the saturating add & select required to increment the
-      // start value after the first intrinsic call.
-      Type *OpTy = ICA.getArgTypes()[0];
-      IntrinsicCostAttributes AddAttrs(Intrinsic::uadd_sat, OpTy, {OpTy, OpTy});
-      InstructionCost SplitCost = getIntrinsicInstrCost(AddAttrs, CostKind);
-      Type *CondTy = OpTy->getWithNewBitWidth(1);
-      SplitCost += getCmpSelInstrCost(Instruction::Select, OpTy, CondTy,
-                                      CmpInst::ICMP_UGT, CostKind);
-      return Cost + (SplitCost * (Cost - 1));
-    } else if (!getTLI()->isTypeLegal(RetVT)) {
-      // We don't have enough context at this point to determine if the mask
-      // is going to be kept live after the block, which will force the vXi1
-      // type to be expanded to legal vectors of integers, e.g. v4i1->v4i32.
-      // For now, we just assume the vectorizer created this intrinsic and
-      // the result will be the input for a PHI. In this case the cost will
-      // be extremely high for fixed-width vectors.
-      // NOTE: getScalarizationOverhead returns a cost that's far too
-      // pessimistic for the actual generated codegen. In reality there are
-      // two instructions generated per lane.
-      return cast<FixedVectorType>(RetTy)->getNumElements() * 2;
-    }
-    break;
-  }
   case Intrinsic::experimental_vector_match: {
     auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
     EVT SearchVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
@@ -5716,6 +5668,83 @@ AArch64TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
   }
 
   return LegalizationCost + /*Cost of horizontal reduction*/ 2;
+}
+
+InstructionCost AArch64TTIImpl::getActiveLaneMaskCost(
+    Type *ResTy, Type *ArgTy, FastMathFlags FMF, TTI::TargetCostKind CostKind,
+    unsigned NumResults) const {
+  if (cast<VectorType>(ResTy)->getElementCount() ==
+      ElementCount::getScalable(1))
+    return InstructionCost::getInvalid();
+
+  EVT RetVT = getTLI()->getValueType(DL, ResTy);
+  EVT OpVT = getTLI()->getValueType(DL, ArgTy);
+  if (ST->hasSVE2p1() || ST->hasSME2())
+    NumResults = (NumResults + 1) / 2;
+
+  if (getTLI()->shouldExpandGetActiveLaneMask(RetVT, OpVT))
+    return BaseT::getActiveLaneMaskCost(ResTy, ArgTy, FMF, CostKind,
+                                        NumResults);
+
+  InstructionCost ExtractCost = 0;
+  if (NumResults > 1) {
+    auto ResSubTy = VectorType::getOneNthElementsVectorType(
+        cast<VectorType>(ResTy), NumResults);
+    RetVT = getTLI()->getValueType(DL, ResSubTy);
+    if (ResSubTy->getElementCount() == ElementCount::getScalable(1))
+      return InstructionCost::getInvalid();
+
+    if (!ST->hasSVE2p1() && !ST->hasSME2())
+      ExtractCost = getTLI()->isTypeLegal(RetVT)
+                        ? 1 * NumResults
+                        : getTypeLegalizationCost(ResSubTy).first * NumResults;
+  }
+
+  if (ResTy->isScalableTy()) {
+    if (TLI->getTypeAction(ResTy->getContext(), RetVT) !=
+        TargetLowering::TypeSplitVector)
+      return BaseT::getActiveLaneMaskCost(ResTy, ArgTy, FMF, CostKind,
+                                          NumResults) +
+             ExtractCost;
+
+    auto LT = getTypeLegalizationCost(ResTy);
+    InstructionCost Cost = LT.first;
+    // When SVE2p1 or SME2 is available, we can halve getTypeLegalizationCost
+    // as get_active_lane_mask may lower to the sve_whilelo_x2 intrinsic, e.g.
+    //   nxv32i1 = get_active_lane_mask(base, idx) ->
+    //    {nxv16i1, nxv16i1} = sve_whilelo_x2(base, idx)
+    if (ST->hasSVE2p1() || ST->hasSME2()) {
+      Cost /= 2;
+      if (Cost == 1)
+        return Cost + ExtractCost;
+    }
+
+    // If more than one whilelo intrinsic is required, include the extra cost
+    // required by the saturating add & select required to increment the
+    // start value after the first intrinsic call.
+    IntrinsicCostAttributes AddAttrs(Intrinsic::uadd_sat, ArgTy,
+                                     {ArgTy, ArgTy});
+    InstructionCost SplitCost = getIntrinsicInstrCost(AddAttrs, CostKind);
+    Type *CondTy = ArgTy->getWithNewBitWidth(1);
+    SplitCost += getCmpSelInstrCost(Instruction::Select, ArgTy, CondTy,
+                                    CmpInst::ICMP_UGT, CostKind);
+    return (Cost + (SplitCost * (Cost - 1))) + ExtractCost;
+  } else if (!getTLI()->isTypeLegal(RetVT)) {
+    // We don't have enough context at this point to determine if the mask
+    // is going to be kept live after the block, which will force the vXi1
+    // type to be expanded to legal vectors of integers, e.g. v4i1->v4i32.
+    // For now, we just assume the vectorizer created this intrinsic and
+    // the result will be the input for a PHI. In this case the cost will
+    // be extremely high for fixed-width vectors.
+    // NOTE: getScalarizationOverhead returns a cost that's far too
+    // pessimistic for the actual generated codegen. In reality there are
+    // two instructions generated per lane.
+    return (cast<FixedVectorType>(ResTy)->getNumElements() * 2) + ExtractCost;
+  }
+
+  IntrinsicCostAttributes Attrs(Intrinsic::get_active_lane_mask, ResTy, {ArgTy},
+                                FMF);
+  return BaseT::getIntrinsicInstrCost(Attrs, CostKind) + ExtractCost;
 }
 
 InstructionCost AArch64TTIImpl::getArithmeticReductionCostSVE(

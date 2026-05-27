@@ -1751,6 +1751,11 @@ public:
       Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF = FastMathFlags(),
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
+  LLVM_ABI InstructionCost getActiveLaneMaskCost(
+      Type *ResTy, Type *ArgTy, FastMathFlags FMF = FastMathFlags(),
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      unsigned NumResults = 1) const;
+
   /// Calculate the cost of an extended reduction pattern, similar to
   /// getArithmeticReductionCost of an Add/Sub reduction with multiply and
   /// optional extensions. This is the cost of as:

@@ -2089,22 +2089,28 @@ ARMTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
   return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
 }
 
+InstructionCost ARMTTIImpl::getActiveLaneMaskCost(Type *RetTy, Type *ArgTy,
+                                                  FastMathFlags FMF,
+                                                  TTI::TargetCostKind CostKind,
+                                                  unsigned NumResults) const {
+  // Currently we make a somewhat optimistic assumption that
+  // active_lane_mask's are always free. In reality it may be freely folded
+  // into a tail predicated loop, expanded into a VCPT or expanded into a lot
+  // of add/icmp code. We may need to improve this in the future, but being
+  // able to detect if it is free or not involves looking at a lot of other
+  // code. We currently assume that the vectorizer inserted these, and knew
+  // what it was doing in adding one.
+  if (ST->hasMVEIntegerOps())
+    return 0;
+
+  return BaseT::getActiveLaneMaskCost(RetTy, ArgTy, FMF, CostKind, NumResults);
+}
+
 InstructionCost
 ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                   TTI::TargetCostKind CostKind) const {
   unsigned Opc = ICA.getID();
   switch (Opc) {
-  case Intrinsic::get_active_lane_mask:
-    // Currently we make a somewhat optimistic assumption that
-    // active_lane_mask's are always free. In reality it may be freely folded
-    // into a tail predicated loop, expanded into a VCPT or expanded into a lot
-    // of add/icmp code. We may need to improve this in the future, but being
-    // able to detect if it is free or not involves looking at a lot of other
-    // code. We currently assume that the vectorizer inserted these, and knew
-    // what it was doing in adding one.
-    if (ST->hasMVEIntegerOps())
-      return 0;
-    break;
   case Intrinsic::sadd_sat:
   case Intrinsic::ssub_sat:
   case Intrinsic::uadd_sat:
