@@ -1882,9 +1882,9 @@ const char *tools::SplitDebugName(const JobAction &JA, const ArgList &Args,
   if (const Arg *A = Args.getLastArg(options::OPT_dumpdir)) {
     T = A->getValue();
   } else {
-    Arg *FinalOutput = Args.getLastArg(options::OPT_o, options::OPT__SLASH_o,
-                                       options::OPT__SLASH_Fo);
-    if (FinalOutput && Args.hasArg(options::OPT_c) && Output.isFilename()) {
+    if (Args.hasArg(options::OPT_o, options::OPT__SLASH_o,
+                    options::OPT__SLASH_Fo) &&
+        Args.hasArg(options::OPT_c) && Output.isFilename()) {
       // The driver has resolved /Fo<dir>/ into a concrete obj path in Output.
       StringRef Obj = Output.getFilename();
       T = Obj;
