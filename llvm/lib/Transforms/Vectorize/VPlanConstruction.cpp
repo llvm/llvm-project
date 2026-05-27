@@ -983,15 +983,15 @@ bool VPlanTransforms::finalizeSCEVPredicates(VPlan &Plan,
                                              unsigned SCEVCheckThreshold,
                                              OptimizationRemarkEmitter *ORE,
                                              Loop *TheLoop) {
-  // Collect which header IVs have predicates and add them to PSE.
+  // Collect which wide IVs have predicates and add them to PSE.
   auto [HeaderVPBB, _] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
   SmallPtrSet<VPWidenInductionRecipe *, 4> PredicatedIVs;
   for (auto &R : HeaderVPBB->phis()) {
     auto *WideIV = dyn_cast<VPWidenInductionRecipe>(&R);
-    if (!WideIV || WideIV->getPredicates().empty())
+    if (!WideIV || WideIV->getNoWrapPredicates().empty())
       continue;
     PredicatedIVs.insert(WideIV);
-    for (const auto *P : WideIV->getPredicates())
+    for (const auto *P : WideIV->getNoWrapPredicates())
       PSE.addPredicate(*P);
   }
 
@@ -999,8 +999,9 @@ bool VPlanTransforms::finalizeSCEVPredicates(VPlan &Plan,
   // predicated SCEV may not hold outside the loop (PR33706). Check each IV's
   // predicates directly, regardless of whether PSE was already non-trivial
   // from other sources (e.g., LAI predicates).
-  // TODO: Overly conservative; exit values from vector registers are safe
-  // when guarded by runtime checks, but later passes may use the SCEV.
+  // TODO: Overly conservative; the pre-computed exit values are not correct
+  // outside the loop, but the exit values could be extracted from the vector
+  // loop.
   if (!PredicatedIVs.empty())
     for (auto *EB : Plan.getExitBlocks())
       for (VPRecipeBase &R : EB->phis())

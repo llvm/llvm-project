@@ -2655,11 +2655,11 @@ public:
   /// Attempts to produce an AddRecExpr for V by adding additional SCEV
   /// predicates. If we can't transform the expression into an AddRecExpr we
   /// return nullptr and not add additional SCEV predicates to the current
-  /// context. If \p ExtraPreds is non-null, the required predicates are
+  /// context. If \p WrapPredsAdded is non-null, the required predicates are
   /// collected there instead of being added to this context.
   LLVM_ABI const SCEVAddRecExpr *
   getAsAddRec(Value *V,
-              SmallVectorImpl<const SCEVPredicate *> *ExtraPreds = nullptr);
+              SmallVectorImpl<const SCEVPredicate *> *WrapPredsAdded = nullptr);
 
   /// Proves that V doesn't overflow by adding SCEV predicate.
   LLVM_ABI void setNoOverflow(Value *V,
@@ -2681,7 +2681,7 @@ public:
   LLVM_ABI void print(raw_ostream &OS, unsigned Depth) const;
 
   /// Check if \p AR1 and \p AR2 are equal, while taking into account
-  /// Equal predicates in Preds.
+  /// Equal predicates in Preds and \p ExtraPreds.
   LLVM_ABI bool areAddRecsEqualWithPreds(
       const SCEVAddRecExpr *AR1, const SCEVAddRecExpr *AR2,
       ArrayRef<const SCEVPredicate *> ExtraPreds = {}) const;

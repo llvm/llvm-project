@@ -2534,8 +2534,8 @@ public:
   const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
 
   /// Returns the SCEV predicates associated with this induction.
-  ArrayRef<const SCEVPredicate *> getPredicates() const {
-    return IndDesc.getPredicates();
+  ArrayRef<const SCEVPredicate *> getNoWrapPredicates() const {
+    return IndDesc.getNoWrapPredicates();
   }
 
   VPValue *getBackedgeValue() override {

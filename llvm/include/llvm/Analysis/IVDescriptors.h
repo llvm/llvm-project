@@ -406,10 +406,14 @@ public:
   /// analysis, it can be passed through \p Expr. If the def-use chain
   /// associated with the phi includes casts (that we know we can ignore
   /// under proper runtime checks), they are passed through \p CastsToIgnore.
-  LLVM_ABI static bool isInductionPHI(
-      PHINode *Phi, const Loop *L, ScalarEvolution *SE, InductionDescriptor &D,
-      ArrayRef<const SCEVPredicate *> Preds = {}, const SCEV *Expr = nullptr,
-      SmallVectorImpl<Instruction *> *CastsToIgnore = nullptr);
+  /// SCEV predicates checking potential overflow for \p Phi to be an induction,
+  /// if any, are passed via \p NoWrapPreds and recorded.
+  LLVM_ABI static bool
+  isInductionPHI(PHINode *Phi, const Loop *L, ScalarEvolution *SE,
+                 InductionDescriptor &D,
+                 ArrayRef<const SCEVPredicate *> NoWrapPreds = {},
+                 const SCEV *Expr = nullptr,
+                 SmallVectorImpl<Instruction *> *CastsToIgnore = nullptr);
 
   /// Returns true if \p Phi is a floating point induction in the loop \p L.
   /// If \p Phi is an induction, the induction descriptor \p D will contain
@@ -451,7 +455,9 @@ public:
   ArrayRef<Instruction *> getCastInsts() const { return RedundantCasts; }
 
   /// Returns the SCEV predicates associated with this induction.
-  ArrayRef<const SCEVPredicate *> getPredicates() const { return Predicates; }
+  ArrayRef<const SCEVPredicate *> getNoWrapPredicates() const {
+    return NoWrapPredicates;
+  }
 
 private:
   /// Private constructor - used by \c isInductionPHI and
@@ -459,7 +465,7 @@ private:
   InductionDescriptor(Value *Start, InductionKind K, const SCEV *Step,
                       BinaryOperator *InductionBinOp = nullptr,
                       SmallVectorImpl<Instruction *> *Casts = nullptr,
-                      ArrayRef<const SCEVPredicate *> Preds = {});
+                      ArrayRef<const SCEVPredicate *> NoWrapPreds = {});
 
   /// Start value.
   TrackingVH<Value> StartValue;
@@ -472,8 +478,8 @@ private:
   // Instructions used for type-casts of the induction variable,
   // that are redundant when guarded with a runtime SCEV overflow check.
   SmallVector<Instruction *, 2> RedundantCasts;
-  // SCEV predicates (overflow checks) needed for this induction.
-  SmallVector<const SCEVPredicate *, 2> Predicates;
+  // SCEV predicates checking overflow needed for this induction.
+  SmallVector<const SCEVPredicate *, 2> NoWrapPredicates;
 };
 
 } // end namespace llvm

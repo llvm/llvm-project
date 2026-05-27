@@ -817,11 +817,9 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     // can convert it to select during if-conversion. No need to check if
     // the PHIs in this block are induction or reduction variables.
     if (BB != Header) {
-      // Non-header phi nodes that have outside uses can be vectorized. Add
-      // them to the list of allowed exits.
-      // Unsafe cyclic dependencies with header phis are identified during
-      // legalization for reduction, induction and fixed order
-      // recurrences.
+      // Non-header phi nodes that have outside uses can be vectorized. Unsafe
+      // cyclic dependencies with header phis are identified during legalization
+      // for reduction, induction and fixed order recurrences.
       return true;
     }
 
@@ -859,12 +857,6 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
                  ID.getConstIntStepValue() == nullptr;
         };
 
-    // 1. Reduction phis as they represent the one-before-last value, which
-    // is not available when vectorized
-    // 2. Induction phis and increment when SCEV predicates cannot be used
-    // outside the loop - see finalizeSCEVPredicates
-    // 3. FixedOrderRecurrence phis that can possibly be handled by
-    // extraction.
     InductionDescriptor ID;
     if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID) &&
         !IsDisallowedStridedPointerInduction(ID)) {

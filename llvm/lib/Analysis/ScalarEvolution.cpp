@@ -5865,16 +5865,18 @@ ScalarEvolution::createAddRecFromPHIWithCasts(const SCEVUnknown *SymbolicPHI) {
 // "%step == (sext ix (trunc iy to ix) to iy)".
 bool PredicatedScalarEvolution::areAddRecsEqualWithPreds(
     const SCEVAddRecExpr *AR1, const SCEVAddRecExpr *AR2,
-    ArrayRef<const SCEVPredicate *> ExtraPreds) const {
+    ArrayRef<const SCEVPredicate *> NoWrapPreds) const {
   if (AR1 == AR2)
     return true;
 
-  SCEVUnionPredicate ExtraPred(ExtraPreds, SE);
-  SCEVUnionPredicate AllPreds = Preds->getUnionWith(&ExtraPred, SE);
-  auto areExprsEqual = [&](const SCEV *Expr1, const SCEV *Expr2) {
-    return Expr1 == Expr2 ||
-           AllPreds.implies(SE.getEqualPredicate(Expr1, Expr2), SE) ||
-           AllPreds.implies(SE.getEqualPredicate(Expr2, Expr1), SE);
+  SCEVUnionPredicate NoWrapUnionPred(NoWrapPreds, SE);
+  SCEVUnionPredicate AllPreds = Preds->getUnionWith(&NoWrapUnionPred, SE);
+  auto areExprsEqual = [&](const SCEV *Expr1, const SCEV *Expr2) -> bool {
+    if (Expr1 != Expr2 &&
+        !AllPreds.implies(SE.getEqualPredicate(Expr1, Expr2), SE) &&
+        !AllPreds.implies(SE.getEqualPredicate(Expr2, Expr1), SE))
+      return false;
+    return true;
   };
 
   if (!areExprsEqual(AR1->getStart(), AR2->getStart()) ||

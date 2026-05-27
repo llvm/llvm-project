@@ -314,6 +314,8 @@ cl::opt<unsigned> NumberOfStoresToPredicate(
     "vectorize-num-stores-pred", cl::init(1), cl::Hidden,
     cl::desc("Max number of stores to be predicated behind an if."));
 
+// TODO: Move size-based thresholds out of legality checking, make cost based
+// decisions instead of hard thresholds.
 static cl::opt<unsigned> VectorizeSCEVCheckThreshold(
     "vectorize-scev-check-threshold", cl::init(16), cl::Hidden,
     cl::desc("The maximum number of SCEV checks allowed."));
@@ -6828,7 +6830,6 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
   RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
 
   // Add surviving induction predicates to PSE and check constraints.
-  // TODO: Run after removeDeadRecipes to drop predicates from dead IVs.
   bool ForceVectorization = Hints.getForce() == LoopVectorizeHints::FK_Enabled;
   bool OptForSize =
       !ForceVectorization &&
