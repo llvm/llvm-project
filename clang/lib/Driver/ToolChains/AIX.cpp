@@ -594,7 +594,7 @@ void AIX::addProfileRTLibs(const llvm::opt::ArgList &Args,
             Args.getLastArgNoClaim(options::OPT_fprofile_update_EQ)) {
       StringRef Val = A->getValue();
       if (Val == "atomic" || Val == "prefer-atomic")
-        CmdArgs.push_back("-latomic");
+        CmdArgs.push_back("-lcompiler_rt");
     }
   }
 

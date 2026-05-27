@@ -79,13 +79,6 @@ functions:
     return_type: int
     arguments:
       - type: mbstate_t *
-  - name: mblen
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: const char *
-      - type: size_t
   - name: mbrlen
     standards:
       - stdc

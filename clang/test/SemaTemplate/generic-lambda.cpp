@@ -83,3 +83,10 @@ int foo(auto... fn) {
 int v = foo(42);
 
 } // namespace GH95735
+
+namespace ExpectionSpec1 {
+  template <class> void f() {
+    [](auto...) noexcept(false) {}();
+  }
+  template void f<int>();
+} // namespace ExceptionSpec1

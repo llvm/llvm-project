@@ -263,10 +263,6 @@ module std_core [system] {
       header "__type_traits/is_reference.h"
       export std_core.type_traits.integral_constant
     }
-    module is_referenceable {
-      header "__type_traits/is_referenceable.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_same {
       header "__type_traits/is_same.h"
       export std_core.type_traits.integral_constant
@@ -467,7 +463,10 @@ module std [system] {
       export std.iterator.aliasing_iterator
     }
     module move_backward                          { header "__algorithm/move_backward.h" }
-    module move                                   { header "__algorithm/move.h" }
+    module move                                   {
+      header "__algorithm/move.h"
+      export std.algorithm.in_out_result
+    }
     module next_permutation                       { header "__algorithm/next_permutation.h" }
     module none_of                                { header "__algorithm/none_of.h" }
     module nth_element                            { header "__algorithm/nth_element.h" }
@@ -845,7 +844,10 @@ module std [system] {
     module unique_copy                            { header "__algorithm/unique_copy.h" }
     module unique                                 { header "__algorithm/unique.h" }
     module unwrap_iter                            { header "__algorithm/unwrap_iter.h" }
-    module unwrap_range                           { header "__algorithm/unwrap_range.h" }
+    module unwrap_range                           {
+      header "__algorithm/unwrap_range.h"
+      export std.utility.pair
+    }
     module upper_bound                            { header "__algorithm/upper_bound.h" }
 
     header "algorithm"
@@ -1082,6 +1084,7 @@ module std [system] {
     module movable                  { header "__concepts/movable.h" }
     module predicate                { header "__concepts/predicate.h" }
     module primary_template         { header "__concepts/primary_template.h" }
+    module referenceable            { header "__concepts/referenceable.h" }
     module regular                  { header "__concepts/regular.h" }
     module relation                 { header "__concepts/relation.h" }
     module same_as                  { header "__concepts/same_as.h" }
@@ -1607,13 +1610,13 @@ module std [system] {
       textual header "__locale_dir/support/newlib.h"
       textual header "__locale_dir/support/no_locale/characters.h"
       textual header "__locale_dir/support/no_locale/strtonum.h"
+      textual header "__locale_dir/support/openbsd.h"
       textual header "__locale_dir/support/windows.h"
     }
 
     module locale_base_api {
       textual header "__locale_dir/locale_base_api/bsd_locale_fallbacks.h"
       textual header "__locale_dir/locale_base_api/ibm.h"
-      textual header "__locale_dir/locale_base_api/openbsd.h"
     }
     export *
   }

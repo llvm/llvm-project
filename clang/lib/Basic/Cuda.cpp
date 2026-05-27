@@ -46,6 +46,8 @@ static const CudaVersionMapEntry CudaNameVersionMap[] = {
     CUDA_ENTRY(12, 8),
     CUDA_ENTRY(12, 9),
     CUDA_ENTRY(13, 0),
+    CUDA_ENTRY(13, 1),
+    CUDA_ENTRY(13, 2),
     {"", CudaVersion::NEW, llvm::VersionTuple(std::numeric_limits<int>::max())},
     {"unknown", CudaVersion::UNKNOWN, {}} // End of list tombstone.
 };

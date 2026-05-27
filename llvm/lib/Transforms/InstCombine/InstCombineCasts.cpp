@@ -122,6 +122,28 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
         Res = CallInst::Create(Fn->getFunctionType(), Fn);
         break;
       }
+      case Intrinsic::umin:
+      case Intrinsic::umax:
+      case Intrinsic::smin:
+      case Intrinsic::smax: {
+        Value *Op0 = EvaluateInDifferentTypeImpl(II->getArgOperand(0), Ty,
+                                                 isSigned, IC, Processed);
+        Value *Op1 = EvaluateInDifferentTypeImpl(II->getArgOperand(1), Ty,
+                                                 isSigned, IC, Processed);
+        Function *Fn = Intrinsic::getOrInsertDeclaration(
+            I->getModule(), II->getIntrinsicID(), {Ty});
+        Res = CallInst::Create(Fn->getFunctionType(), Fn, {Op0, Op1});
+        break;
+      }
+      case Intrinsic::abs: {
+        Value *Arg = EvaluateInDifferentTypeImpl(II->getArgOperand(0), Ty,
+                                                 isSigned, IC, Processed);
+        Function *Fn = Intrinsic::getOrInsertDeclaration(
+            I->getModule(), II->getIntrinsicID(), {Ty});
+        Res = CallInst::Create(Fn->getFunctionType(), Fn,
+                               {Arg, ConstantInt::getFalse(I->getContext())});
+        break;
+      }
       }
     }
     break;
@@ -607,6 +629,35 @@ bool TypeEvaluationHelper::canEvaluateTruncatedPred(Value *V, Type *Ty,
     return canEvaluateTruncatedImpl(I->getOperand(0), Ty, IC, CxtI) &&
            canEvaluateTruncatedImpl(I->getOperand(1), Ty, IC, CxtI);
 
+  case Instruction::Call: {
+    Value *AbsOp;
+    if (match(I, m_Intrinsic<Intrinsic::abs>(m_Value(AbsOp), m_Value()))) {
+      if (IC.ComputeMaxSignificantBits(AbsOp, CxtI) > Ty->getScalarSizeInBits())
+        return false;
+      return canEvaluateTruncatedImpl(AbsOp, Ty, IC, CxtI);
+    }
+    auto *MM = dyn_cast<MinMaxIntrinsic>(I);
+    if (!MM)
+      return false;
+    // The min/max can be performed in the narrow type when each operand has
+    // zero high bits (for umin/umax) or enough sign bits (for smin/smax).
+    Value *Op0 = MM->getLHS();
+    Value *Op1 = MM->getRHS();
+    uint32_t BitWidth = Ty->getScalarSizeInBits();
+    if (MM->isSigned()) {
+      if (IC.ComputeMaxSignificantBits(Op0, CxtI) > BitWidth ||
+          IC.ComputeMaxSignificantBits(Op1, CxtI) > BitWidth)
+        break;
+    } else {
+      APInt Mask =
+          APInt::getBitsSetFrom(OrigTy->getScalarSizeInBits(), BitWidth);
+      if (!IC.MaskedValueIsZero(Op0, Mask, CxtI) ||
+          !IC.MaskedValueIsZero(Op1, Mask, CxtI))
+        break;
+    }
+    return canEvaluateTruncatedImpl(Op0, Ty, IC, CxtI) &&
+           canEvaluateTruncatedImpl(Op1, Ty, IC, CxtI);
+  }
   default:
     // TODO: Can handle more cases here.
     break;
