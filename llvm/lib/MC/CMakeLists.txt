@@ -84,6 +84,7 @@ add_llvm_component_library(LLVMMC
 
   DEPENDS
   intrinsics_gen
+  llvm_vcsrevision_h
   )
 
 add_subdirectory(MCParser)
