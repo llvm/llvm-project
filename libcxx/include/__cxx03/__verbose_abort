@@ -40,9 +40,9 @@ _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 1, 2) void __libcpp_verbose_abort(const cha
 #  if !_LIBCPP_AVAILABILITY_HAS_VERBOSE_ABORT
 // The decltype is there to suppress -Wunused warnings in this configuration.
 void __use(const char*, ...);
-#    define _LIBCPP_VERBOSE_ABORT(...) (decltype(::std::__use(__VA_ARGS__))(), __builtin_abort())
+#    define _LIBCPP_VERBOSE_ABORT(...) ({ decltype(::std::__use(__VA_ARGS__))(); [[clang::__nomerge__]] __builtin_abort(); })
 #  else
-#    define _LIBCPP_VERBOSE_ABORT(...) ::std::__libcpp_verbose_abort(__VA_ARGS__)
+#    define _LIBCPP_VERBOSE_ABORT(...) ({ [[clang::__nomerge__]] ::std::__libcpp_verbose_abort(__VA_ARGS__); })
 #  endif
 
 #endif // !defined(_LIBCPP_VERBOSE_ABORT)

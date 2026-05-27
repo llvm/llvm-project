@@ -23,12 +23,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // version before upstream Clang actually got the builtin.
 // TODO: Remove once AppleClang supports the two-arguments version of the builtin.
 #  if defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1700
-#    define _LIBCPP_VERBOSE_TRAP(message) __builtin_verbose_trap(message)
+#    define _LIBCPP_VERBOSE_TRAP(message) ({ [[clang::__nomerge__]] __builtin_verbose_trap(message); })
 #  else
-#    define _LIBCPP_VERBOSE_TRAP(message) __builtin_verbose_trap("libc++", message)
+#    define _LIBCPP_VERBOSE_TRAP(message) ({ [[clang::__nomerge__]] __builtin_verbose_trap("libc++", message); })
 #  endif
 #else
-#  define _LIBCPP_VERBOSE_TRAP(message) ((void)message, __builtin_trap())
+#  define _LIBCPP_VERBOSE_TRAP(message) ({ (void)message; [[clang::__nomerge__]] __builtin_trap(); })
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
