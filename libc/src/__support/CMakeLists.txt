@@ -470,6 +470,7 @@ add_subdirectory(wchar)
 add_subdirectory(wctype)
 
 add_subdirectory(math)
+add_subdirectory(builtins)
 if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
   add_subdirectory(mathvec)
 endif()

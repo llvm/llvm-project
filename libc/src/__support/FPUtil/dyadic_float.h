@@ -416,6 +416,9 @@ template <size_t Bits> struct DyadicFloat {
 #if defined(LIBC_TYPES_HAS_FLOAT16) && !defined(__LIBC_USE_FLOAT16_CONVERSION)
                   || cpp::is_same_v<T, float16>
 #endif
+#if defined(LIBC_TYPES_HAS_FLOAT128)
+                  || cpp::is_same_v<T, float128>
+#endif
     )
       return generic_as<T, ShouldSignalExceptions>();
     else
