@@ -33132,7 +33132,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
 /// 2. (nx)v2i64/(nx)v16i8: accumulate in two steps via v4i32, using
 ///    (U|S)ADDW(B|T) when available, otherwise add(add(Acc, ext(lo), ext(hi))).
 /// 3. SUMLA on (v4i32, v16i8) or (v2i32, v8i8) without +i8mm: rewrite as two
-///    UDOTs using sext(s) = zext(s ^ 0x80) - 0x80.
+///    UDOTs using the bias-128 identity sext(s) = zext(s ^ 128) - 128.
 SDValue
 AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                SelectionDAG &DAG) const {
@@ -33157,17 +33157,18 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   }
 
   // Lower PARTIAL_REDUCE_SUMLA on targets without +i8mm using udot via
-  //   sum(zext(RHS) * sext(LHS)) =
-  //       sum(zext(RHS) * zext(LHS ^ 0x80)) - sum(zext(RHS) * 0x80)
-  // using sext(s) = zext(s ^ 0x80) - 0x80. LHS=signed, RHS=unsigned.
+  //   sum(sext(LHS) * zext(RHS)) =
+  //       sum(zext(LHS ^ 128) * zext(RHS)) - sum(128 * zext(RHS))
+  // using sext(s) = zext(s ^ 128) - 128, where XOR with 128 flips the
+  // sign bit of each i8 lane, mapping signed values to their unsigned
+  // bias-128 representation.
   // The (v2i64, v16i8) case is handled by the v4i32 reduction below, which
   // recursively re-enters this path.
   if (Op.getOpcode() == ISD::PARTIAL_REDUCE_SUMLA &&
+      !Subtarget->hasMatMulInt8() && Subtarget->hasDotProd() &&
       ((ResultVT == MVT::v4i32 && OpVT == MVT::v16i8) ||
        (ResultVT == MVT::v2i32 && OpVT == MVT::v8i8))) {
-    assert(!Subtarget->hasMatMulInt8() && Subtarget->hasDotProd() &&
-           "Custom SUMLA lowering only registered for plain dotprod targets");
-    SDValue SignFlipMask = DAG.getConstant(0x80, DL, OpVT);
+    SDValue SignFlipMask = DAG.getConstant(128, DL, OpVT);
     SDValue BiasedLHS = DAG.getNode(ISD::XOR, DL, OpVT, LHS, SignFlipMask);
     SDValue BiasedDot = DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, DL, ResultVT, Acc,
                                     BiasedLHS, RHS);
