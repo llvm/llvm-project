@@ -4796,19 +4796,6 @@ bool SIInstrInfo::isInlineConstant(int64_t Imm, uint8_t OperandType) const {
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
     return AMDGPU::isInlinableLiteral64(Imm, ST.hasInv2PiInlineImm());
-  case AMDGPU::OPERAND_REG_IMM_INT16:
-  case AMDGPU::OPERAND_REG_INLINE_C_INT16:
-    // We would expect inline immediates to not be concerned with an integer/fp
-    // distinction. However, in the case of 16-bit integer operations, the
-    // "floating point" values appear to not work. It seems read the low 16-bits
-    // of 32-bit immediates, which happens to always work for the integer
-    // values.
-    //
-    // See llvm bugzilla 46302.
-    //
-    // TODO: Theoretically we could use op-sel to use the high bits of the
-    // 32-bit FP values.
-    return AMDGPU::isInlinableIntLiteral(Imm);
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
     return AMDGPU::isInlinableLiteralV2I16(Imm);
@@ -4822,6 +4809,11 @@ bool SIInstrInfo::isInlineConstant(int64_t Imm, uint8_t OperandType) const {
     return AMDGPU::isInlinableLiteralV2BF16(Imm);
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     return false;
+  case AMDGPU::OPERAND_REG_IMM_INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_INT16:
+    if (AMDGPU::isInlinableIntLiteral(Imm))
+      return true;
+    [[fallthrough]];
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16: {
     if (isInt<16>(Imm) || isUInt<16>(Imm)) {
