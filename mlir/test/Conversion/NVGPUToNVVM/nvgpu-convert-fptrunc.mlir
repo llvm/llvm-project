@@ -70,6 +70,39 @@ func.func @cvt_float_f32_to_e4m3(%in : vector<8xf32>) {
   return 
 }
 
+// CHECK-LABEL: @cvt_float_f16_to_e2m3(
+// CHECK-SAME: %[[IN:.+]]: vector<8xf16>
+func.func @cvt_float_f16_to_e2m3(%in : vector<8xf16>) {
+  // CHECK: llvm.bitcast %[[IN]] : vector<8xf16> to vector<4xi32>
+  // CHECK: llvm.mlir.undef : vector<2xi32>
+  // CHECK: llvm.mlir.undef : vector<2xi16>
+  // CHECK: nvvm.convert.f16x2.to.f6x2
+  // CHECK-SAME: : vector<2xf16> -> i16(f6E2M3FN)
+  // CHECK: llvm.insertelement {{.*}} : vector<2xi16>
+  // CHECK: nvvm.convert.f16x2.to.f6x2
+  // CHECK-SAME: : vector<2xf16> -> i16(f6E2M3FN)
+  // CHECK: llvm.insertelement {{.*}} : vector<2xi16>
+  // CHECK: llvm.bitcast {{.*}} : vector<2xi16> to i32
+  // CHECK: llvm.bitcast {{.*}} : vector<2xi32> to vector<8xi8>
+  // CHECK: llvm.trunc {{.*}} : vector<8xi8> to vector<8xi6>
+  %out = nvgpu.convert.fptrunc %in : vector<8xf16> to vector<8xf6E2M3FN>
+  return
+}
+
+// CHECK-LABEL: @cvt_float_bf16_to_e3m2(
+// CHECK-SAME: %[[IN:.+]]: vector<8xbf16>
+func.func @cvt_float_bf16_to_e3m2(%in : vector<8xbf16>) {
+  // CHECK: llvm.bitcast %[[IN]] : vector<8xbf16> to vector<4xi32>
+  // CHECK: nvvm.convert.bf16x2.to.f6x2
+  // CHECK-SAME: : vector<2xbf16> -> i16(f6E3M2FN)
+  // CHECK: nvvm.convert.bf16x2.to.f6x2
+  // CHECK-SAME: : vector<2xbf16> -> i16(f6E3M2FN)
+  // CHECK: llvm.bitcast {{.*}} : vector<2xi32> to vector<8xi8>
+  // CHECK: llvm.trunc {{.*}} : vector<8xi8> to vector<8xi6>
+  %out = nvgpu.convert.fptrunc %in : vector<8xbf16> to vector<8xf6E3M2FN>
+  return
+}
+
 // CHECK-LABEL: @cvt_float_f32_to_e2m3(
 // CHECK-SAME: %[[IN:.+]]: vector<8xf32>
 func.func @cvt_float_f32_to_e2m3(%in : vector<8xf32>) {
@@ -90,7 +123,8 @@ func.func @cvt_float_f32_to_e2m3(%in : vector<8xf32>) {
   // CHECK: llvm.bitcast {{.*}} : vector<2xi16> to i32
   // CHECK: llvm.insertelement {{.*}} : vector<2xi32>
   // CHECK: llvm.bitcast {{.*}} : vector<2xi32> to vector<8xi8>
-  %out = nvgpu.convert.fptrunc %in {packed_kind = #nvgpu.subbytes_packedkind<u6_unpack_u8_e2m3>}: vector<8xf32> to vector<8xi8>
+  // CHECK: llvm.trunc {{.*}} : vector<8xi8> to vector<8xi6>
+  %out = nvgpu.convert.fptrunc %in : vector<8xf32> to vector<8xf6E2M3FN>
   return 
 }
 

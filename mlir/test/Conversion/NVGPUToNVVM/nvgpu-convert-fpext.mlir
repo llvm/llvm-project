@@ -77,9 +77,11 @@ func.func @cvt_float_e8m0_to_bf16(%in : vector<8xf8E8M0FNU>) {
 // -----
 
 // CHECK-LABEL: @cvt_float_e2m3_to_f16(
-// CHECK: %[[IN:.+]]: vector<8xi8>
-func.func @cvt_float_e2m3_to_f16(%in : vector<8xi8>) {
-  // CHECK: %[[IN_I32:.+]] = llvm.bitcast %[[IN]] : vector<8xi8> to vector<2xi32>
+// CHECK-SAME: %[[IN:.+]]: vector<8xf6E2M3FN>
+func.func @cvt_float_e2m3_to_f16(%in : vector<8xf6E2M3FN>) {
+  // CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[IN]] : vector<8xf6E2M3FN> to vector<8xi6>
+  // CHECK: llvm.zext %[[CAST]] : vector<8xi6> to vector<8xi8>
+  // CHECK: llvm.bitcast {{.*}} : vector<8xi8> to vector<2xi32>
   // CHECK: llvm.mlir.undef : vector<4xi32>
   // CHECK: llvm.bitcast {{.*}} : i32 to vector<2xi16>
   // CHECK: llvm.bitcast {{.*}} : i16 to vector<2xi8>
@@ -90,16 +92,18 @@ func.func @cvt_float_e2m3_to_f16(%in : vector<8xi8>) {
   // CHECK: nvvm.convert.f6x2.to.f16x2
   // CHECK: nvvm.convert.f6x2.to.f16x2
   // CHECK: llvm.bitcast {{.*}} : vector<4xi32> to vector<8xf16>
-  %out = nvgpu.convert.fpext %in {packed_kind = #nvgpu.subbytes_packedkind<u6_unpack_u8_e2m3>} : vector<8xi8> to vector<8xf16>
+  %out = nvgpu.convert.fpext %in : vector<8xf6E2M3FN> to vector<8xf16>
   return 
 }
 
 // -----
 
 // CHECK-LABEL: @cvt_float_e3m2_to_f16(
-// CHECK: %[[IN:.+]]: vector<8xi8>
-func.func @cvt_float_e3m2_to_f16(%in : vector<8xi8>) {
-  // CHECK: %[[IN_I32:.+]] = llvm.bitcast %[[IN]] : vector<8xi8> to vector<2xi32>
+// CHECK-SAME: %[[IN:.+]]: vector<8xf6E3M2FN>
+func.func @cvt_float_e3m2_to_f16(%in : vector<8xf6E3M2FN>) {
+  // CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[IN]] : vector<8xf6E3M2FN> to vector<8xi6>
+  // CHECK: llvm.zext %[[CAST]] : vector<8xi6> to vector<8xi8>
+  // CHECK: llvm.bitcast {{.*}} : vector<8xi8> to vector<2xi32>
   // CHECK: %[[OUT_I32:.+]] = llvm.mlir.undef : vector<4xi32>
   // CHECK: llvm.bitcast {{.*}} : i32 to vector<2xi16>
   // CHECK: llvm.bitcast {{.*}} : i16 to vector<2xi8>
@@ -113,7 +117,7 @@ func.func @cvt_float_e3m2_to_f16(%in : vector<8xi8>) {
   // CHECK: nvvm.convert.f6x2.to.f16x2
   // CHECK: nvvm.convert.f6x2.to.f16x2
   // CHECK: llvm.bitcast {{.*}} : vector<4xi32> to vector<8xf16>
-  %out = nvgpu.convert.fpext %in {packed_kind = #nvgpu.subbytes_packedkind<u6_unpack_u8_e3m2>} : vector<8xi8> to vector<8xf16>
+  %out = nvgpu.convert.fpext %in : vector<8xf6E3M2FN> to vector<8xf16>
   return
 }
 
@@ -196,13 +200,15 @@ func.func @fpext_e8m0_to_f32(%in : vector<4xf8E8M0FNU>) -> vector<4xf32> {
 // -----
 
 // CHECK-LABEL: @fpext_e2m3_to_f32(
-// CHECK-SAME: %[[IN:.+]]: vector<4xi8>
-func.func @fpext_e2m3_to_f32(%in : vector<4xi8>) -> vector<4xf32> {
+// CHECK-SAME: %[[IN:.+]]: vector<4xf6E2M3FN>
+func.func @fpext_e2m3_to_f32(%in : vector<4xf6E2M3FN>) -> vector<4xf32> {
+  // CHECK: builtin.unrealized_conversion_cast %[[IN]] : vector<4xf6E2M3FN> to vector<4xi6>
+  // CHECK: llvm.zext {{.*}} : vector<4xi6> to vector<4xi8>
   // CHECK: nvvm.convert.f6x2.to.f16x2
   // CHECK: nvvm.convert.f6x2.to.f16x2
   // CHECK: llvm.bitcast {{.*}} : vector<2xi32> to vector<4xf16>
   // CHECK: llvm.fpext {{.*}} : vector<4xf16> to vector<4xf32>
-  %out = nvgpu.convert.fpext %in {packed_kind = #nvgpu.subbytes_packedkind<u6_unpack_u8_e2m3>} : vector<4xi8> to vector<4xf32>
+  %out = nvgpu.convert.fpext %in : vector<4xf6E2M3FN> to vector<4xf32>
   return %out : vector<4xf32>
 }
 
@@ -284,11 +290,12 @@ func.func @fpext_f4_to_f64(%arg0: vector<8xf4E2M1FN>) -> vector<8xf64> {
 }
 
 // CHECK-LABEL: @fpext_e2m3_to_f64
-func.func @fpext_e2m3_to_f64(%arg0: vector<4xi8>) -> vector<4xf64> {
+func.func @fpext_e2m3_to_f64(%arg0: vector<4xf6E2M3FN>) -> vector<4xf64> {
+  // CHECK: llvm.zext {{.*}} : vector<8xi6> to vector<8xi8>
   // CHECK: nvvm.convert.f6x2.to.f16x2
   // CHECK: llvm.fpext {{.*}} to {{.*}}f64
   // CHECK-NOT: llvm.fpext {{.*}} to {{.*}}f32
-  %out = nvgpu.convert.fpext %arg0 {packed_kind = #nvgpu.subbytes_packedkind<u6_unpack_u8_e2m3>} : vector<4xi8> to vector<4xf64>
+  %out = nvgpu.convert.fpext %arg0 : vector<4xf6E2M3FN> to vector<4xf64>
   return %out : vector<4xf64>
 }
 

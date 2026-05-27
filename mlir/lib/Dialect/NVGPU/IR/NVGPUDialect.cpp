@@ -741,7 +741,6 @@ LogicalResult FPTruncOp::verify() {
   Type outType = getType();
   Type srcType = getElementTypeOrSelf(inType);
   Type dstType = getElementTypeOrSelf(outType);
-  SubBytesPackedKind packedKind = getPackedKind();
   int srcBitWidth = srcType.getIntOrFloatBitWidth();
   int dstBitWidth = dstType.getIntOrFloatBitWidth();
   auto rnd = getRnd();
@@ -757,22 +756,6 @@ LogicalResult FPTruncOp::verify() {
   if (!(srcBitWidth == 64 || srcBitWidth == 32 || srcBitWidth == 16))
     return emitOpError("input type must be 64/32/16 bitwidth, but got ")
            << srcBitWidth;
-
-  if (dstBitWidth == 6)
-    return emitOpError("currently doesn't support fp6 compact result type");
-
-  if ((packedKind == SubBytesPackedKind::U6_UNPACK_U8_E3M2 ||
-       packedKind == SubBytesPackedKind::U6_UNPACK_U8_E2M3) &&
-      !dstType.isInteger(8))
-    return emitOpError("result type expects `i8` with `u6_unpack_u8` packed "
-                       "kind, but got ")
-           << dstType;
-
-  if (packedKind == SubBytesPackedKind::COMPACT &&
-      !llvm::isa<FloatType>(dstType))
-    return emitOpError("result type expects float type with `compact` packed "
-                       "kind, but got ")
-           << dstType;
 
   if (llvm::isa<Float8E8M0FNUType>(dstType)) {
     if (rnd != mlir::NVVM::FPRoundingMode::RZ &&
@@ -808,7 +791,6 @@ LogicalResult FPExtOp::verify() {
   Type outType = getType();
   Type srcType = getElementTypeOrSelf(inType);
   Type dstType = getElementTypeOrSelf(outType);
-  SubBytesPackedKind packedKind = getPackedKind();
   int srcBitWidth = srcType.getIntOrFloatBitWidth();
   int dstBitWidth = dstType.getIntOrFloatBitWidth();
   auto rnd = getRnd();
@@ -824,22 +806,6 @@ LogicalResult FPExtOp::verify() {
   if (dstBitWidth != 16 && dstBitWidth != 32 && dstBitWidth != 64)
     return emitOpError("result type must be 16, 32, or 64 bitwidth, but got ")
            << dstBitWidth;
-
-  if (srcBitWidth == 6)
-    return emitOpError("currently doesn't support fp6 compact input type");
-
-  if ((packedKind == SubBytesPackedKind::U6_UNPACK_U8_E3M2 ||
-       packedKind == SubBytesPackedKind::U6_UNPACK_U8_E2M3) &&
-      !srcType.isInteger(8))
-    return emitOpError("input type expects `i8` with `u6_unpack_u8` packed "
-                       "kind, but got ")
-           << srcType;
-
-  if (packedKind == SubBytesPackedKind::COMPACT &&
-      !llvm::isa<FloatType>(srcType))
-    return emitOpError("input type expects float type with `compact` packed "
-                       "kind, but got ")
-           << srcType;
 
   if (llvm::isa<Float8E8M0FNUType>(srcType) &&
       !llvm::isa<BFloat16Type>(dstType) && !dstType.isF32())

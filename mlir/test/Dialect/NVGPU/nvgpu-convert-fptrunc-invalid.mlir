@@ -18,30 +18,6 @@ func.func @fptrunc_src_bitwidth(%in : vector<16xf8E5M2>) {
 
 // -----
 
-func.func @fptrunc_fp6_compact(%in : vector<16xf32>) {
-  // expected-error @+1 {{'nvgpu.convert.fptrunc' op currently doesn't support fp6 compact result type}}
-  %out = nvgpu.convert.fptrunc %in : vector<16xf32> to vector<16xf6E2M3FN>
-  return
-}
-
-// -----
-
-func.func @fptrunc_u6_packed_not_i8(%in : vector<16xf32>) {
-  // expected-error @+1 {{'nvgpu.convert.fptrunc' op result type expects `i8` with `u6_unpack_u8` packed kind, but got 'f8E4M3FN'}}
-  %out = nvgpu.convert.fptrunc %in {packed_kind = #nvgpu.subbytes_packedkind<u6_unpack_u8_e3m2>} : vector<16xf32> to vector<16xf8E4M3FN>
-  return
-}
-
-// -----
-
-func.func @fptrunc_compact_not_float(%in : vector<16xf32>) {
-  // expected-error @+1 {{'nvgpu.convert.fptrunc' op result type expects float type with `compact` packed kind, but got 'i8'}}
-  %out = nvgpu.convert.fptrunc %in : vector<16xf32> to vector<16xi8>
-  return
-}
-
-// -----
-
 func.func @fptrunc_e8m0_bad_rounding(%in : vector<16xf32>) {
   // expected-error @+1 {{'nvgpu.convert.fptrunc' op expects RZ or RP rounding mode when result type is e8m0, but got #nvvm.fp_rnd_mode<rn>}}
   %out = nvgpu.convert.fptrunc %in {rnd = #nvvm.fp_rnd_mode<rn>}
