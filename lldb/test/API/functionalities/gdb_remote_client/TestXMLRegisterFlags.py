@@ -41,7 +41,7 @@ class MultiDocResponder(MockGDBServerResponder):
         )
 
 
-class TestXMLRegisterFlags(GDBRemoteTestBase):
+class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
     def setup_multidoc_test(self, docs):
         self.server.responder = MultiDocResponder(docs)
         target = self.dbg.CreateTarget("")
@@ -464,7 +464,7 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
     @skipIfRemote
     def test_flags_child_limit(self):
         # Flags print like C types so they should follow the child limit setting.
-        self.runCmd("settings set target.max-children-count 3")
+        self.runCmd("settings set target.max-children-count 2")
         self.setup_flags_test(
             '<field name="field_0" start="0" end="0"/>'
             '<field name="field_1" start="1" end="1"/>'
@@ -609,7 +609,7 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
     @skipIfXmlSupportMissing
     @skipIfRemote
     def test_flags_in_register_info(self):
-        # See RegisterFlags for comprehensive formatting tests.
+        # See RegisterTypeFlags for comprehensive formatting tests.
         self.setup_flags_test(
             '<field name="D" start="0" end="7"/>'
             '<field name="C" start="8" end="15"/>'

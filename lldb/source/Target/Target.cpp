@@ -2696,13 +2696,13 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                                                             create_on_demand);
 }
 
-CompilerType Target::GetRegisterType(const std::string &name,
-                                     const lldb_private::RegisterFlags &flags,
-                                     uint32_t byte_size) {
+CompilerType
+Target::GetRegisterType(const lldb_private::RegisterType &type_info,
+                        uint32_t byte_size) {
   if (!m_register_type_builder_sp)
     m_register_type_builder_sp = PluginManager::GetRegisterTypeBuilder(*this);
   assert(m_register_type_builder_sp);
-  return m_register_type_builder_sp->GetRegisterType(name, flags, byte_size);
+  return m_register_type_builder_sp->GetRegisterType(type_info, byte_size);
 }
 
 std::vector<lldb::TypeSystemSP>

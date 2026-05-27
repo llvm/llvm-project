@@ -23,7 +23,7 @@ class DynamicLibrary;
 namespace lldb_private {
 class Platform;
 class ExecutionContext;
-class RegisterFlags;
+class RegisterType;
 
 typedef llvm::SmallString<256> PathSmallString;
 
@@ -64,10 +64,10 @@ struct RegisterInfo {
   uint32_t *invalidate_regs;
   /// If not nullptr, a type defined by XML descriptions.
   /// Register info tables are constructed as const, but this field may need to
-  /// be updated if a specific target OS has a different layout. To enable that,
+  /// be updated if a specific target OS has a different type. To enable that,
   /// this is mutable. The data pointed to is still const, so you must swap a
-  /// whole set of flags for another.
-  mutable const RegisterFlags *flags_type;
+  /// whole type for another whole type.
+  mutable const RegisterType *register_type;
 
   llvm::ArrayRef<uint8_t> data(const uint8_t *context_base) const {
     return llvm::ArrayRef<uint8_t>(context_base + byte_offset, byte_size);

@@ -22,6 +22,7 @@
 #include "lldb/Host/HostThread.h"
 #include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/RegisterType.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
@@ -525,19 +526,18 @@ private:
   void ParseExpeditedRegisters(ExpeditedRegisterMap &expedited_register_map,
                                lldb::ThreadSP thread_sp);
 
-  // Lists of register fields generated from the remote's target XML.
-  // Pointers to these RegisterFlags will be set in the register info passed
+  // Lists of register types generated from the remote's target XML.
+  // Pointers to these RegisterTypes will be set in the register info passed
   // back to the upper levels of lldb. Doing so is safe because this class will
   // live at least as long as the debug session. We therefore do not store the
   // data directly in the map because the map may reallocate it's storage as new
   // entries are added. Which would invalidate any pointers set in the register
   // info up to that point.
-  llvm::StringMap<std::unique_ptr<RegisterFlags>> m_registers_flags_types;
-
-  // Enum types are referenced by register fields. This does not store the data
-  // directly because the map may reallocate. Pointers to these are contained
-  // within instances of RegisterFlags.
-  llvm::StringMap<std::unique_ptr<FieldEnum>> m_registers_enum_types;
+  // The key is the XML ID of the type. The kind of element does not play a part
+  // here, the XML author should use unique global IDs.
+  // RegisterTypes may contain pointers to other RegisterTypes, but they will
+  // not attempt to destroy those types when they themselves destruct.
+  llvm::StringMap<std::unique_ptr<RegisterType>> m_register_types;
 };
 
 } // namespace process_gdb_remote

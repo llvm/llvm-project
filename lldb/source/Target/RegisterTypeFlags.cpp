@@ -1,4 +1,4 @@
-//===-- RegisterFlags.cpp -------------------------------------------------===//
+//===-- RegisterTypeFlags.cpp ---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Target/RegisterFlags.h"
+#include "lldb/Target/RegisterTypeFlags.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Casting.h"
 
 #include <limits>
 #include <numeric>
@@ -18,18 +19,18 @@
 
 using namespace lldb_private;
 
-RegisterFlags::Field::Field(std::string name, unsigned start, unsigned end)
+RegisterTypeFlags::Field::Field(std::string name, unsigned start, unsigned end)
     : m_name(std::move(name)), m_start(start), m_end(end),
       m_enum_type(nullptr) {
   assert(m_start <= m_end && "Start bit must be <= end bit.");
 }
 
-RegisterFlags::Field::Field(std::string name, unsigned bit_position)
+RegisterTypeFlags::Field::Field(std::string name, unsigned bit_position)
     : m_name(std::move(name)), m_start(bit_position), m_end(bit_position),
       m_enum_type(nullptr) {}
 
-RegisterFlags::Field::Field(std::string name, unsigned start, unsigned end,
-                            const FieldEnum *enum_type)
+RegisterTypeFlags::Field::Field(std::string name, unsigned start, unsigned end,
+                                const RegisterTypeEnum *enum_type)
     : m_name(std::move(name)), m_start(start), m_end(end),
       m_enum_type(enum_type) {
   if (m_enum_type) {
@@ -47,18 +48,18 @@ RegisterFlags::Field::Field(std::string name, unsigned start, unsigned end,
   }
 }
 
-void RegisterFlags::Field::DumpToLog(Log *log) const {
+void RegisterTypeFlags::Field::DumpToLog(Log *log) const {
   LLDB_LOG(log, "  Name: \"{0}\" Start: {1} End: {2}", m_name.c_str(), m_start,
            m_end);
 }
 
-bool RegisterFlags::Field::Overlaps(const Field &other) const {
+bool RegisterTypeFlags::Field::Overlaps(const Field &other) const {
   unsigned overlap_start = std::max(GetStart(), other.GetStart());
   unsigned overlap_end = std::min(GetEnd(), other.GetEnd());
   return overlap_start <= overlap_end;
 }
 
-unsigned RegisterFlags::Field::PaddingDistance(const Field &other) const {
+unsigned RegisterTypeFlags::Field::PaddingDistance(const Field &other) const {
   assert(!Overlaps(other) &&
          "Cannot get padding distance for overlapping fields.");
   assert((other < (*this)) && "Expected fields in MSB to LSB order.");
@@ -78,15 +79,15 @@ unsigned RegisterFlags::Field::PaddingDistance(const Field &other) const {
   return lhs_start - rhs_end - 1;
 }
 
-unsigned RegisterFlags::Field::GetSizeInBits(unsigned start, unsigned end) {
+unsigned RegisterTypeFlags::Field::GetSizeInBits(unsigned start, unsigned end) {
   return end - start + 1;
 }
 
-unsigned RegisterFlags::Field::GetSizeInBits() const {
+unsigned RegisterTypeFlags::Field::GetSizeInBits() const {
   return GetSizeInBits(m_start, m_end);
 }
 
-uint64_t RegisterFlags::Field::GetMaxValue(unsigned start, unsigned end) {
+uint64_t RegisterTypeFlags::Field::GetMaxValue(unsigned start, unsigned end) {
   uint64_t max = std::numeric_limits<uint64_t>::max();
   unsigned bits = GetSizeInBits(start, end);
   // If the field is >= 64 bits the shift below would be undefined.
@@ -99,61 +100,34 @@ uint64_t RegisterFlags::Field::GetMaxValue(unsigned start, unsigned end) {
   return max;
 }
 
-uint64_t RegisterFlags::Field::GetMaxValue() const {
+uint64_t RegisterTypeFlags::Field::GetMaxValue() const {
   return GetMaxValue(m_start, m_end);
 }
 
-uint64_t RegisterFlags::Field::GetMask() const {
+uint64_t RegisterTypeFlags::Field::GetMask() const {
   return GetMaxValue() << m_start;
 }
 
-void RegisterFlags::SetFields(const std::vector<Field> &fields) {
+void RegisterTypeFlags::SetFields(const std::vector<Field> &fields) {
   // We expect that these are unsorted but do not overlap.
   // They could fill the register but may have gaps.
-  std::vector<Field> provided_fields = fields;
+  m_fields = fields;
 
-  m_fields.clear();
-  m_fields.reserve(provided_fields.size());
-
-  // ProcessGDBRemote should have sorted these in descending order already.
-  assert(std::is_sorted(provided_fields.rbegin(), provided_fields.rend()));
-
-  // Build a new list of fields that includes anonymous (empty name) fields
-  // wherever there is a gap. This will simplify processing later.
-  std::optional<Field> previous_field;
-  unsigned register_msb = (m_size * 8) - 1;
-  for (auto field : provided_fields) {
-    if (previous_field) {
-      unsigned padding = previous_field->PaddingDistance(field);
-      if (padding) {
-        // -1 to end just before the previous field.
-        unsigned end = previous_field->GetStart() - 1;
-        // +1 because if you want to pad 1 bit you want to start and end
-        // on the same bit.
-        m_fields.push_back(Field("", field.GetEnd() + 1, end));
-      }
-    } else {
-      // This is the first field. Check that it starts at the register's MSB.
-      if (field.GetEnd() != register_msb)
-        m_fields.push_back(Field("", field.GetEnd() + 1, register_msb));
-    }
-    m_fields.push_back(field);
-    previous_field = field;
-  }
-
-  // The last field may not extend all the way to bit 0.
-  if (previous_field && previous_field->GetStart() != 0)
-    m_fields.push_back(Field("", 0, previous_field->GetStart() - 1));
+  std::vector<const RegisterType *> dependencies;
+  for (const auto &field : m_fields)
+    if (auto enum_type = field.GetEnum())
+      dependencies.push_back(dynamic_cast<const RegisterType *>(enum_type));
+  SetDependencies(dependencies);
 }
 
-RegisterFlags::RegisterFlags(std::string id, unsigned size,
-                             const std::vector<Field> &fields)
-    : m_id(std::move(id)), m_size(size) {
+RegisterTypeFlags::RegisterTypeFlags(std::string id, unsigned size,
+                                     const std::vector<Field> &fields)
+    : RegisterType(RegisterType::eRegisterTypeKindFlags, id), m_size(size) {
   SetFields(fields);
 }
 
-void RegisterFlags::DumpToLog(Log *log) const {
-  LLDB_LOG(log, "ID: \"{0}\" Size: {1}", m_id.c_str(), m_size);
+void RegisterTypeFlags::DumpToLog(Log *log) const {
+  LLDB_LOG(log, "flags ID: \"{0}\" Size: {1}", GetID().c_str(), m_size);
   for (const Field &field : m_fields)
     field.DumpToLog(log);
 }
@@ -185,53 +159,74 @@ static void EmitTable(std::string &out, std::array<std::string, 3> &table) {
                          });
 }
 
-std::string RegisterFlags::AsTable(uint32_t max_width) const {
+static void EmitField(const RegisterTypeFlags::Field &field, uint32_t max_width,
+                      uint32_t &current_width, std::string &table,
+                      std::array<std::string, 3> &lines) {
+  StreamString position;
+  if (field.GetEnd() == field.GetStart())
+    position.Printf(" %d ", field.GetEnd());
+  else
+    position.Printf(" %d-%d ", field.GetEnd(), field.GetStart());
+
+  StreamString name;
+  name.Printf(" %s ", field.GetName().c_str());
+
+  unsigned column_width = position.GetString().size();
+  unsigned name_width = name.GetString().size();
+  if (name_width > column_width)
+    column_width = name_width;
+
+  // If the next column would overflow and we have already formatted at least
+  // one column, put out what we have and move to a new table on the next line
+  // (+1 here because we need to cap the ends with '|'). If this is the first
+  // column, just let it overflow and we'll wrap next time around. There's not
+  // much we can do with a very small terminal.
+  if (current_width && ((current_width + column_width + 1) >= max_width)) {
+    EmitTable(table, lines);
+    // Blank line between each.
+    table += "\n\n";
+
+    for (std::string &line : lines)
+      line.clear();
+    current_width = 0;
+  }
+
+  StreamString aligned_position = FormatCell(position, column_width);
+  lines[0] += aligned_position.GetString();
+  StreamString grid;
+  grid << '|' << std::string(column_width, '-');
+  lines[1] += grid.GetString();
+  StreamString aligned_name = FormatCell(name, column_width);
+  lines[2] += aligned_name.GetString();
+
+  // +1 for the left side '|'.
+  current_width += column_width + 1;
+}
+
+std::string RegisterTypeFlags::AsTable(uint32_t max_width) const {
   std::string table;
   // position / gridline / name
   std::array<std::string, 3> lines;
   uint32_t current_width = 0;
+  std::optional<Field> previous_field = std::nullopt;
 
-  for (const RegisterFlags::Field &field : m_fields) {
-    StreamString position;
-    if (field.GetEnd() == field.GetStart())
-      position.Printf(" %d ", field.GetEnd());
-    else
-      position.Printf(" %d-%d ", field.GetEnd(), field.GetStart());
-
-    StreamString name;
-    name.Printf(" %s ", field.GetName().c_str());
-
-    unsigned column_width = position.GetString().size();
-    unsigned name_width = name.GetString().size();
-    if (name_width > column_width)
-      column_width = name_width;
-
-    // If the next column would overflow and we have already formatted at least
-    // one column, put out what we have and move to a new table on the next line
-    // (+1 here because we need to cap the ends with '|'). If this is the first
-    // column, just let it overflow and we'll wrap next time around. There's not
-    // much we can do with a very small terminal.
-    if (current_width && ((current_width + column_width + 1) >= max_width)) {
-      EmitTable(table, lines);
-      // Blank line between each.
-      table += "\n\n";
-
-      for (std::string &line : lines)
-        line.clear();
-      current_width = 0;
+  for (const Field &field : m_fields) {
+    if (previous_field) {
+      // If there is a gap between this field and the last, fill it with an
+      // anonymous field.
+      if (previous_field->PaddingDistance(field))
+        EmitField(Field("", field.GetEnd() + 1, previous_field->GetStart() - 1),
+                  max_width, current_width, table, lines);
     }
 
-    StreamString aligned_position = FormatCell(position, column_width);
-    lines[0] += aligned_position.GetString();
-    StreamString grid;
-    grid << '|' << std::string(column_width, '-');
-    lines[1] += grid.GetString();
-    StreamString aligned_name = FormatCell(name, column_width);
-    lines[2] += aligned_name.GetString();
-
-    // +1 for the left side '|'.
-    current_width += column_width + 1;
+    EmitField(field, max_width, current_width, table, lines);
+    previous_field = field;
   }
+
+  // If the last field did not extend to bit 0, pad down to bit 0.
+  if (previous_field && previous_field->GetStart() != 0)
+    EmitField(Field("", 0, previous_field->GetStart() - 1), max_width,
+              current_width, table, lines);
 
   // If we didn't overflow and still have table to print out.
   if (lines[0].size())
@@ -245,7 +240,7 @@ std::string RegisterFlags::AsTable(uint32_t max_width) const {
 // Subject to the limits of the terminal width.
 static void DumpEnumerators(StreamString &strm, size_t indent,
                             size_t current_width, uint32_t max_width,
-                            const FieldEnum::Enumerators &enumerators) {
+                            const RegisterTypeEnum::Enumerators &enumerators) {
   for (auto it = enumerators.cbegin(); it != enumerators.cend(); ++it) {
     StreamString enumerator_strm;
     // The first enumerator of a line doesn't need to be separated.
@@ -285,16 +280,17 @@ static void DumpEnumerators(StreamString &strm, size_t indent,
   }
 }
 
-std::string RegisterFlags::DumpEnums(uint32_t max_width) const {
+std::string RegisterTypeFlags::DumpEnums(uint32_t max_width) const {
   StreamString strm;
   bool printed_enumerators_once = false;
 
   for (const auto &field : m_fields) {
-    const FieldEnum *enum_type = field.GetEnum();
+    const RegisterTypeEnum *enum_type = field.GetEnum();
     if (!enum_type)
       continue;
 
-    const FieldEnum::Enumerators &enumerators = enum_type->GetEnumerators();
+    const RegisterTypeEnum::Enumerators &enumerators =
+        enum_type->GetEnumerators();
     if (enumerators.empty())
       continue;
 
@@ -316,30 +312,25 @@ std::string RegisterFlags::DumpEnums(uint32_t max_width) const {
   return strm.GetString().str();
 }
 
-void RegisterFlags::EnumsToXML(Stream &strm, llvm::StringSet<> &seen) const {
-  for (const Field &field : m_fields)
-    if (const FieldEnum *enum_type = field.GetEnum()) {
-      const std::string &id = enum_type->GetID();
-      if (!seen.contains(id)) {
-        enum_type->ToXML(strm, GetSize());
-        seen.insert(id);
-      }
-    }
-}
-
-void FieldEnum::ToXML(Stream &strm, unsigned size) const {
+void RegisterTypeEnum::ToXMLElement(Stream &strm,
+                                    const RegisterType *user) const {
   // Example XML:
   // <enum id="foo" size="4">
   //  <evalue name="bar" value="1"/>
   // </enum>
   // Note that "size" is only emitted for GDB compatibility, LLDB does not need
   // it.
-
   strm.Indent();
-  strm << "<enum id=\"" << GetID() << "\" ";
-  // This is the size of the underlying enum type if this were a C type.
-  // In other words, the size of the register in bytes.
-  strm.Printf("size=\"%d\"", size);
+  strm << "<enum id=\"" << GetID() << "\"";
+
+  // We don't expect the user of an enum type to be anything but a register,
+  // but we cannot crash if that isn't true.
+  if (const RegisterTypeFlags *flags_type =
+          llvm::dyn_cast_if_present<RegisterTypeFlags>(user)) {
+    // This is the size of the underlying enum type if this were a C type.
+    // In other words, the size of the register in bytes.
+    strm.Printf(" size=\"%d\"", flags_type->GetSize());
+  }
 
   const Enumerators &enumerators = GetEnumerators();
   if (enumerators.empty()) {
@@ -351,14 +342,14 @@ void FieldEnum::ToXML(Stream &strm, unsigned size) const {
   strm.IndentMore();
   for (const auto &enumerator : enumerators) {
     strm.Indent();
-    enumerator.ToXML(strm);
+    enumerator.ToXMLElement(strm);
     strm.PutChar('\n');
   }
   strm.IndentLess();
   strm.Indent("</enum>\n");
 }
 
-void FieldEnum::Enumerator::ToXML(Stream &strm) const {
+void RegisterTypeEnum::Enumerator::ToXMLElement(Stream &strm) const {
   std::string escaped_name;
   llvm::raw_string_ostream escape_strm(escaped_name);
   llvm::printHTMLEscaped(m_name, escape_strm);
@@ -366,17 +357,19 @@ void FieldEnum::Enumerator::ToXML(Stream &strm) const {
               escaped_name.c_str(), m_value);
 }
 
-void FieldEnum::Enumerator::DumpToLog(Log *log) const {
+void RegisterTypeEnum::Enumerator::DumpToLog(Log *log) const {
   LLDB_LOG(log, "  Name: \"{0}\" Value: {1}", m_name.c_str(), m_value);
 }
 
-void FieldEnum::DumpToLog(Log *log) const {
-  LLDB_LOG(log, "ID: \"{0}\"", m_id.c_str());
+void RegisterTypeEnum::DumpToLog(Log *log) const {
+  LLDB_LOG(log, "enum ID: \"{0}\"", GetID().c_str());
   for (const auto &enumerator : GetEnumerators())
     enumerator.DumpToLog(log);
 }
 
-void RegisterFlags::ToXML(Stream &strm) const {
+void RegisterTypeFlags::ToXMLElement(Stream &strm,
+                                     const RegisterType *user) const {
+  (void)user;
   // Example XML:
   // <flags id="cpsr_flags" size="4">
   //   <field name="incorrect" start="0" end="0"/>
@@ -392,14 +385,14 @@ void RegisterFlags::ToXML(Stream &strm) const {
 
     strm << "\n";
     strm.IndentMore();
-    field.ToXML(strm);
+    field.ToXMLElement(strm);
     strm.IndentLess();
   }
   strm.PutChar('\n');
   strm.Indent("</flags>\n");
 }
 
-void RegisterFlags::Field::ToXML(Stream &strm) const {
+void RegisterTypeFlags::Field::ToXMLElement(Stream &strm) const {
   // Example XML with an enum:
   // <field name="correct" start="0" end="0" type="some_enum">
   // Without:
@@ -414,14 +407,16 @@ void RegisterFlags::Field::ToXML(Stream &strm) const {
 
   strm.Printf("start=\"%d\" end=\"%d\"", GetStart(), GetEnd());
 
-  if (const FieldEnum *enum_type = GetEnum())
+  if (const RegisterTypeEnum *enum_type = GetEnum())
     strm << " type=\"" << enum_type->GetID() << "\"";
 
   strm << "/>";
 }
 
-FieldEnum::FieldEnum(std::string id, const Enumerators &enumerators)
-    : m_id(id), m_enumerators(enumerators) {
+RegisterTypeEnum::RegisterTypeEnum(std::string id,
+                                   const Enumerators &enumerators)
+    : RegisterType(RegisterType::eRegisterTypeKindEnum, id),
+      m_enumerators(enumerators) {
   for (const auto &enumerator : m_enumerators) {
     UNUSED_IF_ASSERT_DISABLED(enumerator);
     assert(enumerator.m_name.size() && "Enumerator name cannot be empty");

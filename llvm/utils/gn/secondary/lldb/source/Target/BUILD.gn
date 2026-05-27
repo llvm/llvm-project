@@ -60,7 +60,7 @@ static_library("Target") {
     "QueueList.cpp",
     "RegisterContext.cpp",
     "RegisterContextUnwind.cpp",
-    "RegisterFlags.cpp",
+    "RegisterTypeFlags.cpp",
     "RegisterNumber.cpp",
     "RemoteAwarePlatform.cpp",
     "ScriptedThreadPlan.cpp",

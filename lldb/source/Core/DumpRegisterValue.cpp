@@ -9,7 +9,7 @@
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
-#include "lldb/Target/RegisterFlags.h"
+#include "lldb/Target/RegisterTypeFlags.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -21,38 +21,27 @@
 
 using namespace lldb;
 
-template <typename T>
-static void dump_type_value(lldb_private::CompilerType &fields_type, T value,
-                            lldb_private::ExecutionContextScope *exe_scope,
+static void dump_type_value(lldb_private::CompilerType &fields_type,
+                            lldb_private::RegisterValue reg_val,
                             const lldb_private::RegisterInfo &reg_info,
+                            lldb_private::ExecutionContextScope *exe_scope,
                             lldb_private::Stream &strm) {
+  auto heap_buf_sp =
+      std::make_shared<lldb_private::DataBufferHeap>(reg_val.GetByteSize(), 0);
   lldb::ByteOrder target_order = exe_scope->CalculateProcess()->GetByteOrder();
+  lldb_private::Status err;
+  uint32_t wrote =
+      reg_val.GetAsMemoryData(reg_info, heap_buf_sp->GetBytes(),
+                              reg_val.GetByteSize(), target_order, err);
+  if (wrote != reg_val.GetByteSize() || err.Fail())
+    return;
 
-  // For the bitfield types we generate, it is expected that the fields are
-  // in what is usually a big endian order. Most significant field first.
-  // This is also clang's internal ordering and the order we want to print
-  // them. On a big endian host this all matches up, for a little endian
-  // host we have to swap the order of the fields before display.
-  if (target_order == lldb::ByteOrder::eByteOrderLittle) {
-    value = reg_info.flags_type->ReverseFieldOrder(value);
-  }
-
-  // Then we need to match the target's endian on a byte level as well.
-  if (lldb_private::endian::InlHostByteOrder() != target_order)
-    value = llvm::byteswap(value);
-
-  lldb_private::DataExtractor data_extractor{
-      &value, sizeof(T), lldb_private::endian::InlHostByteOrder(), 8};
-
+  lldb_private::DataExtractor data_extractor(heap_buf_sp);
+  data_extractor.SetByteOrder(target_order);
   lldb::ValueObjectSP vobj_sp = lldb_private::ValueObjectConstResult::Create(
       exe_scope, fields_type, lldb_private::ConstString(), data_extractor);
   lldb_private::DumpValueObjectOptions dump_options;
-  lldb_private::DumpValueObjectOptions::ChildPrintingDecider decider =
-      [](lldb_private::ConstString varname) {
-        // Unnamed bit-fields are padding that we don't want to show.
-        return varname.GetLength();
-      };
-  dump_options.SetChildPrintingDecider(decider).SetHideRootType(true);
+  dump_options.SetHideRootType(true);
 
   if (llvm::Error error = vobj_sp->Dump(strm, dump_options))
     strm << "error: " << toString(std::move(error));
@@ -121,23 +110,19 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
                     0,                    // item_bit_offset
                     exe_scope);
 
-  if (!print_flags || !reg_info.flags_type || !exe_scope || !target_sp ||
-      (reg_info.byte_size != 4 && reg_info.byte_size != 8))
+  if (!print_flags || !reg_info.register_type || !exe_scope || !target_sp)
     return;
 
-  CompilerType fields_type = target_sp->GetRegisterType(
-      reg_info.name, *reg_info.flags_type, reg_info.byte_size);
+  CompilerType register_type =
+      target_sp->GetRegisterType(*reg_info.register_type, reg_info.byte_size);
+  if (!register_type.IsValid())
+    return;
 
   // Use a new stream so we can remove a trailing newline later.
-  StreamString fields_stream;
+  StreamString register_type_stream;
 
-  if (reg_info.byte_size == 4) {
-    dump_type_value(fields_type, reg_val.GetAsUInt32(), exe_scope, reg_info,
-                    fields_stream);
-  } else {
-    dump_type_value(fields_type, reg_val.GetAsUInt64(), exe_scope, reg_info,
-                    fields_stream);
-  }
+  dump_type_value(register_type, reg_val, reg_info, exe_scope,
+                  register_type_stream);
 
   // Registers are indented like:
   // (lldb) register read foo
@@ -146,16 +131,18 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
 
   // First drop the extra newline that the value printer added. The register
   // command will add one itself.
-  llvm::StringRef fields_str = fields_stream.GetString().drop_back();
+  llvm::StringRef register_type_str =
+      register_type_stream.GetString().drop_back();
 
   // End the line that contains "    foo = 0x12345678".
   s.EOL();
 
   // Then split the value lines and indent each one.
   bool first = true;
-  while (fields_str.size()) {
-    std::pair<llvm::StringRef, llvm::StringRef> split = fields_str.split('\n');
-    fields_str = split.second;
+  while (register_type_str.size()) {
+    std::pair<llvm::StringRef, llvm::StringRef> split =
+        register_type_str.split('\n');
+    register_type_str = split.second;
     // Indent as far as the register name did.
     s.Printf(fmt.c_str(), "");
 
@@ -168,7 +155,7 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
 
     // On the last line we don't want a newline because the command will add
     // one too.
-    if (fields_str.size())
+    if (register_type_str.size())
       s.EOL();
   }
 }

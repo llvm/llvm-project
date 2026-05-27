@@ -729,9 +729,6 @@ void ValueObjectPrinter::PrintChildren(
 
     for (size_t idx = 0; idx < num_children; ++idx) {
       if (ValueObjectSP child_sp = GenerateChild(synth_valobj, idx)) {
-        if (m_options.m_child_printing_decider &&
-            !m_options.m_child_printing_decider(child_sp->GetName()))
-          continue;
         if (!any_children_printed) {
           PrintChildrenPreamble(value_printed, summary_printed);
           any_children_printed = true;
@@ -789,9 +786,6 @@ bool ValueObjectPrinter::PrintChildrenOneLiner(bool hide_names) {
         child_sp = child_sp->GetQualifiedRepresentationIfAvailable(
             m_options.m_use_dynamic, m_options.m_use_synthetic);
       if (child_sp) {
-        if (m_options.m_child_printing_decider &&
-            !m_options.m_child_printing_decider(child_sp->GetName()))
-          continue;
         if (idx && did_print_children)
           m_stream->PutCString(", ");
         did_print_children = true;
