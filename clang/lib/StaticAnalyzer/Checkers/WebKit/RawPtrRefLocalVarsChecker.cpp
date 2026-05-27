@@ -384,13 +384,11 @@ public:
 
               if (isa<ParmVarDecl>(MaybeGuardian)) {
                 if (auto *FD = dyn_cast<FunctionDecl>(DeclWithIssue)) {
-                  GuardianVisitor guardianVisitor(MaybeGuardian);
-                  if (guardianVisitor.TraverseStmt(FD->getBody()))
+                  if (GuardianVisitor{MaybeGuardian}.TraverseStmt(FD->getBody()))
                     return true;
                 }
                 if (auto *MD = dyn_cast<ObjCMethodDecl>(DeclWithIssue)) {
-                  GuardianVisitor guardianVisitor(MaybeGuardian);
-                  if (guardianVisitor.TraverseStmt(MD->getBody()))
+                  if (GuardianVisitor{MaybeGuardian}.TraverseStmt(MD->getBody()))
                     return true;
                 }
               }
