@@ -2218,8 +2218,6 @@ void createProfileSamplingVar(Module &M) {
 }
 } // namespace llvm
 
-namespace {
-
 // For GPU targets: Allocate contiguous arrays for all profile data.
 // This solves the linker reordering problem by using ONE symbol per section
 // type, so there's nothing for the linker to reorder.
@@ -2238,5 +2236,3 @@ StructType *InstrLowerer::getProfileDataTy() {
   ProfileDataTy = StructType::get(Ctx, ArrayRef(DataTypes));
   return ProfileDataTy;
 }
-
-} // namespace
