@@ -20118,6 +20118,19 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return true;
   }
 
+  case Builtin::BI__builtin_exp:
+  case Builtin::BI__builtin_expf: {
+    APFloat Input(0.);
+    if (!EvaluateFloat(E->getArg(0), Input, Info))
+      return false;
+    Result = exp(Input);
+    return true;
+  }
+  case Builtin::BI__builtin_expl:
+  case Builtin::BI__builtin_expf16:
+  case Builtin::BI__builtin_expf128:
+    return false;
+
   case Builtin::BI__builtin_fmax:
   case Builtin::BI__builtin_fmaxf:
   case Builtin::BI__builtin_fmaxl:

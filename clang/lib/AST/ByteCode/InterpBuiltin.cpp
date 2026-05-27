@@ -710,6 +710,14 @@ static bool interp__builtin_fpclassify(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_exp(InterpState &S, CodePtr OpPC,
+                                const InterpFrame *Frame) {
+  const Floating &Arg = S.Stk.pop<Floating>();
+  APFloat Result = exp(Arg.getAPFloat());
+  S.Stk.push<Floating>(Floating(Result));
+  return true;
+}
+
 static inline Floating abs(InterpState &S, const Floating &In) {
   if (!In.isNegative())
     return In;
@@ -4612,6 +4620,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_copysignl:
   case Builtin::BI__builtin_copysignf128:
     return interp__builtin_copysign(S, OpPC, Frame);
+
+  case Builtin::BI__builtin_exp:
+  case Builtin::BI__builtin_expf:
+    return interp__builtin_exp(S, OpPC, Frame);
+  case Builtin::BI__builtin_expl:
+  case Builtin::BI__builtin_expf16:
+  case Builtin::BI__builtin_expf128:
+    return false;
 
   case Builtin::BI__builtin_fmin:
   case Builtin::BI__builtin_fminf:
