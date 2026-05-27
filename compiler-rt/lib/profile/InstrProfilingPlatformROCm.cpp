@@ -143,7 +143,7 @@ static void doEnsureHipLoaded(void) {
   if (pHipGetDeviceCount && pHipGetDeviceProperties) {
     int Count = 0;
     if (pHipGetDeviceCount(&Count) == 0 && Count > 0) {
-      DeviceArchNames = (char(*)[256])calloc(Count, sizeof(*DeviceArchNames));
+      DeviceArchNames = (char (*)[256])calloc(Count, sizeof(*DeviceArchNames));
       if (!DeviceArchNames) {
         PROF_ERR("%s\n", "failed to allocate device arch name table");
         return;
