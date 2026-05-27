@@ -18,7 +18,7 @@
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
-#include "src/__support/OSUtil/syscall.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/futex.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
@@ -95,8 +95,7 @@ public:
     if (timeout && timeout->is_realtime())
       op |= FUTEX_CLOCK_REALTIME;
     for (;;) {
-      ErrorOr<int> ret = linux_syscalls::syscall_checked<int>(
-          /*syscall_number=*/FUTEX_SYSCALL_ID,
+      ErrorOr<int> ret = linux_syscalls::futex(
           /*futex_addr=*/&owner,
           /*op=*/op,
           /*ignored=*/0,
@@ -150,8 +149,7 @@ public:
       return MutexError::NONE;
 
     int op = is_shared ? FUTEX_UNLOCK_PI : FUTEX_UNLOCK_PI_PRIVATE;
-    ErrorOr<int> ret = linux_syscalls::syscall_checked<int>(
-        /*syscall_number=*/FUTEX_SYSCALL_ID,
+    ErrorOr<int> ret = linux_syscalls::futex(
         /*futex_addr=*/&owner,
         /*op=*/op,
         /*ignored=*/0,
