@@ -46091,6 +46091,36 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     break;
   }
+  case X86ISD::BZHI: {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+
+    if (auto *Cst1 = dyn_cast<ConstantSDNode>(Op1)) {
+      uint64_t Val = Cst1->getZExtValue();
+      uint64_t Masked = Val & 0xFF;
+      if (Masked != Val) {
+        SDLoc DL(Op);
+        return TLO.CombineTo(
+            Op, TLO.DAG.getNode(X86ISD::BZHI, DL, VT, Op0,
+                                TLO.DAG.getConstant(Masked, DL, VT)));
+      }
+    }
+
+    KnownBits Known1;
+    APInt DemandedMask(APInt::getLowBitsSet(BitWidth, 8));
+    if (SimplifyDemandedBits(Op1, DemandedMask, Known1, TLO, Depth + 1))
+      return true;
+
+    uint64_t MaxIdx = Known1.trunc(8).getMaxValue().getZExtValue();
+    if (MaxIdx < BitWidth) {
+      APInt DemandedSrc =
+          OriginalDemandedBits & APInt::getLowBitsSet(BitWidth, MaxIdx);
+      if (SimplifyDemandedBits(Op0, DemandedSrc, Known, TLO, Depth + 1))
+        return true;
+    }
+
+    break;
+  }
   case X86ISD::VPMADD52L:
   case X86ISD::VPMADD52H: {
     KnownBits KnownOp0, KnownOp1, KnownOp2;
