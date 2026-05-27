@@ -149,10 +149,15 @@ bool X86InterleavedAccessGroup::isSupported() const {
   if (ShuffleElemSize == 64 && WideInstSize == 1024 && Factor == 4)
     return true;
 
-  if (ShuffleElemSize == 8 && isa<StoreInst>(Inst) && Factor == 4 &&
-      (WideInstSize == 256 || WideInstSize == 512 || WideInstSize == 1024 ||
-       WideInstSize == 2048))
-    return true;
+  if (ShuffleElemSize == 8 && isa<StoreInst>(Inst) && Factor == 4) {
+    if (Subtarget.hasVBMI() &&
+        (WideInstSize == 512 || WideInstSize == 1024 || WideInstSize == 2048))
+      return false;
+
+    if (WideInstSize == 256 || WideInstSize == 512 || WideInstSize == 1024 ||
+        WideInstSize == 2048)
+      return true;
+  }
 
   if (ShuffleElemSize == 8 && Factor == 3 &&
       (WideInstSize == 384 || WideInstSize == 768 || WideInstSize == 1536))
