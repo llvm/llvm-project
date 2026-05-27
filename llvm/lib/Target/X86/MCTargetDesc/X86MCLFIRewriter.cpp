@@ -115,7 +115,7 @@ bool X86::X86MCLFIRewriter::isFSAccess(const MCInst &Inst) {
 // movq 16(%r15), %rax
 // movq (%rax, %rdi), %rax
 //
-// movq 8(%rdi, %rsi, 2), %rax
+// movq %fs:8(%rdi, %rsi, 2), %rax
 // ->
 // movq 16(%r15), %rax
 // leaq (%rax, %rdi), %rax
