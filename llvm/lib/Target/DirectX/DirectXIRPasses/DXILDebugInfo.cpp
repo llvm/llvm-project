@@ -39,7 +39,7 @@ static void replaceDbgVariableIntr(DbgVariableIntrinsic *DVI, Function *NewF,
   CallInst *NewI = CallInst::Create(NewF->getFunctionType(), NewF, NewOps);
   NewI->setTailCall(DVI->isTailCall());
   NewI->setDebugLoc(DVI->getDebugLoc());
-  Res.IReplace.insert({DVI, decltype(Res.IReplace)::mapped_type(NewI)});
+  Res.InstReplace.insert({DVI, decltype(Res.InstReplace)::mapped_type(NewI)});
 }
 
 static void replaceDbgValue(Module &M, DXILDebugInfoMap &Res) {
@@ -55,7 +55,7 @@ static void replaceDbgValue(Module &M, DXILDebugInfoMap &Res) {
       /*isVarArg=*/false);
   Function *NewF = Function::Create(NewFT, F->getLinkage(), F->getName());
   NewF->copyAttributesFrom(F);
-  Res.FReplace.insert({F, decltype(Res.FReplace)::mapped_type(NewF)});
+  Res.FuncReplace.insert({F, decltype(Res.FuncReplace)::mapped_type(NewF)});
 
   for (User *U : F->users()) {
     auto *DVI = cast<DbgVariableIntrinsic>(U);
