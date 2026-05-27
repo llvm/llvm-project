@@ -5753,7 +5753,8 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
   }
 
   if ((Cond == ISD::SETO || Cond == ISD::SETUO) &&
-      (DAG.isKnownNeverNaN(N0) && DAG.isKnownNeverNaN(N1) || Flags.hasNoNaNs()))
+      ((DAG.isKnownNeverNaN(N0) && DAG.isKnownNeverNaN(N1)) ||
+       Flags.hasNoNaNs()))
     return DAG.getBoolConstant(Cond == ISD::SETO, dl, VT, OpVT);
 
   // Could not fold it.
