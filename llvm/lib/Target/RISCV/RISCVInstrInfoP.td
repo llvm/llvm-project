@@ -2299,7 +2299,23 @@ let Predicates = [HasStdExtP, IsRV32] in {
             (PADD_DBS (v8i8 X0_Pair), GPR:$rs2)>;
   def : Pat<(v4i16 (splat_vector (XLenVT GPR:$rs2))),
             (PADD_DHS (v4i16 X0_Pair), GPR:$rs2)>;
-  // v2i32 on RV32 is handled by buildGPRPair in RISCVISelDAGToDAG.cpp
+  def : Pat<(v2i32 (splat_vector (XLenVT GPR:$rs2))),
+            (BuildGPRPair GPR:$rs2, GPR:$rs2)>;
+
+  // Build vector patterns
+  def : Pat<(v2i32 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
+            (BuildGPRPair GPR:$a, GPR:$b)>;
+
+  // Concat vector patterns
+  def : Pat<(v8i8 (concat_vectors (v4i8 GPR:$a), (v4i8 GPR:$b))),
+            (BuildGPRPair GPR:$a, GPR:$b)>;
+  def : Pat<(v4i16 (concat_vectors (v2i16 GPR:$a), (v2i16 GPR:$b))),
+            (BuildGPRPair GPR:$a, GPR:$b)>;
+
+  def : Pat<(i32 (extractelt (v2i32 GPRPair:$vec), (i32 0))),
+            (EXTRACT_SUBREG GPRPair:$vec, sub_gpr_even)>;
+  def : Pat<(i32 (extractelt (v2i32 GPRPair:$vec), (i32 1))),
+            (EXTRACT_SUBREG GPRPair:$vec, sub_gpr_odd)>;
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
