@@ -2671,6 +2671,18 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     }
   }
 
+  if (FunctionScopeInfo *FSI = getCurFunction()) {
+    if (OperatorDelete &&
+        !OperatorDelete->isReservedGlobalPlacementOperator()) {
+      if (const auto *CCE = dyn_cast_or_null<CXXConstructExpr>(Initializer)) {
+        const auto *FPT =
+            CCE->getConstructor()->getType()->castAs<FunctionProtoType>();
+        if (!FPT->isNothrow())
+          FSI->ObjUnwindingLocs.push_back(StartLoc);
+      }
+    }
+  }
+
   return CXXNewExpr::Create(Context, UseGlobal, OperatorNew, OperatorDelete,
                             IAP, UsualArrayDeleteWantsSize, PlacementArgs,
                             TypeIdParens, ArraySize, InitStyle, Initializer,
