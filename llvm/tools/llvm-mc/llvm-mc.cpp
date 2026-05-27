@@ -87,6 +87,11 @@ static cl::opt<bool>
              cl::cat(MCCategory));
 
 static cl::opt<bool>
+    ShowSourceLoc("show-source-loc",
+                  cl::desc("Show source location of instructions"),
+                  cl::cat(MCCategory));
+
+static cl::opt<bool>
     ShowInstOperands("show-inst-operands",
                      cl::desc("Show instructions operands as parsed"),
                      cl::cat(MCCategory));
@@ -409,6 +414,7 @@ int main(int argc, char **argv) {
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
   MCOptions.CompressDebugSections = CompressDebugSections.getValue();
   MCOptions.ShowMCInst = ShowInst;
+  MCOptions.ShowMCInstSourceLoc = ShowSourceLoc;
   MCOptions.AsmVerbose = true;
   MCOptions.MCNoExecStack = NoExecStack;
   MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
