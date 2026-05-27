@@ -88,7 +88,7 @@ void DWARF5AcceleratorTable::preAllocateUnits(DWARFContext &DwCtx) {
 
     // Iterate DWO info section units for type units (Foreign TU list).
     DWARFContext &DWOCtx = (*DWOCU)->getContext();
-    for (const auto &TU : DWOCtx.dwo_units()) {
+    for (const auto &TU : DWOCtx.dwo_info_section_units()) {
       if (!TU->isTypeUnit())
         continue;
       const uint64_t TUHash = cast<DWARFTypeUnit>(TU.get())->getTypeHash();
