@@ -2502,6 +2502,68 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
 }
 
 //===--------------------------------------------------------------------===//
+// MetadataAsValueOp
+//===--------------------------------------------------------------------===//
+
+def LLVM_MetadataAsValueOp : LLVM_Op<"mlir.metadata_as_value", [Pure]> {
+  let summary =
+      "Wraps an LLVM `metadata` constant so it can be used as an SSA value.";
+  let description = [{
+    Materializes an `!llvm.metadata` SSA value that mirrors LLVM IR's
+    `llvm::MetadataAsValue`: a wrapper that lifts an arbitrary
+    `llvm::Metadata` node into the value domain so it can be used as an
+    operand to instructions that take `metadata` arguments (for example the
+    constrained floating-point intrinsics or `llvm.read_register`).
+
+    The wrapped metadata is described by the `metadata` attribute, which
+    must be one of the LLVM dialect's metadata-attribute classes:
+
+    * `#llvm.md_string<"...">` &mdash; `llvm::MDString`.
+    * `#llvm.md_const<...>` &mdash; `llvm::ConstantAsMetadata`.
+    * `#llvm.md_func<@symbol>` &mdash; `llvm::ValueAsMetadata` of a function.
+    * `#llvm.md_node<...>` &mdash; `llvm::MDNode` over any of the above.
+
+    These can be nested arbitrarily to form metadata trees. Lowering to LLVM
+    IR materialises the corresponding `llvm::Metadata` via the dialect's
+    metadata-attribute converter and wraps the result with
+    `llvm::MetadataAsValue::get(ctx, md)`.
+
+    Example:
+
+    ```mlir
+    // Rounding-mode operand of a constrained-FP intrinsic:
+    %rm = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+        : !llvm.metadata
+    // Named-register metadata for llvm.read_register:
+    %nr = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+        : !llvm.metadata
+    ```
+  }];
+
+  let arguments = (ins LLVM_AnyMDAttr:$metadata);
+  let results = (outs LLVM_MetadataType:$res);
+
+  let assemblyFormat = "$metadata attr-dict";
+
+  let builders = [
+    OpBuilder<(ins "::mlir::Attribute":$metadata), [{
+      build($_builder, $_state,
+            ::mlir::LLVM::LLVMMetadataType::get($_builder.getContext()),
+            metadata);
+    }]>,
+  ];
+
+  let llvmBuilder = [{
+    ::llvm::Metadata *md = convertMetadataAttr(
+        op.getMetadataAttr(), builder, moduleTranslation);
+    if (!md)
+      return ::mlir::emitError(op.getLoc(),
+          "llvm.mlir.metadata_as_value: cannot lower metadata attribute");
+    $res = ::llvm::MetadataAsValue::get(builder.getContext(), md);
+  }];
+}
+
+//===--------------------------------------------------------------------===//
 // CallIntrinsicOp
 //===--------------------------------------------------------------------===//
 

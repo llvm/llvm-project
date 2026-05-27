@@ -149,6 +149,42 @@ static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
   return failure();
 }
 
+/// Recursively converts an `llvm::Metadata` node to the matching LLVM dialect
+/// metadata attribute. Returns a null attribute for shapes that the dialect's
+/// metadata-attribute hierarchy does not currently model.
+static Attribute convertMetadataToAttr(MLIRContext *ctx,
+                                       const llvm::Metadata *md) {
+  if (!md)
+    return {};
+  if (auto *mdStr = dyn_cast<llvm::MDString>(md))
+    return MDStringAttr::get(ctx, StringAttr::get(ctx, mdStr->getString()));
+  if (auto *cam = dyn_cast<llvm::ConstantAsMetadata>(md)) {
+    auto *ci = dyn_cast<llvm::ConstantInt>(cam->getValue());
+    if (!ci)
+      return {};
+    auto intType = IntegerType::get(ctx, ci->getBitWidth());
+    return MDConstantAttr::get(ctx, IntegerAttr::get(intType, ci->getValue()));
+  }
+  if (auto *vam = dyn_cast<llvm::ValueAsMetadata>(md)) {
+    auto *fn = dyn_cast<llvm::Function>(vam->getValue());
+    if (!fn)
+      return {};
+    return MDFuncAttr::get(ctx, FlatSymbolRefAttr::get(ctx, fn->getName()));
+  }
+  if (auto *node = dyn_cast<llvm::MDNode>(md)) {
+    SmallVector<Attribute> operands;
+    operands.reserve(node->getNumOperands());
+    for (const llvm::MDOperand &op : node->operands()) {
+      Attribute opAttr = convertMetadataToAttr(ctx, op.get());
+      if (!opAttr)
+        return {};
+      operands.push_back(opAttr);
+    }
+    return MDNodeAttr::get(ctx, operands);
+  }
+  return {};
+}
+
 /// Get a topologically sorted list of blocks for the given basic blocks.
 static SetVector<llvm::BasicBlock *>
 getTopologicallySortedBlocks(ArrayRef<llvm::BasicBlock *> basicBlocks) {
@@ -1980,10 +2016,29 @@ LogicalResult ModuleImport::convertIntrinsicArguments(
     value = nullptr;
   }
 
+  // Convert a single intrinsic operand into an MLIR value.
+  // `llvm::MetadataAsValue` operands (e.g. the rounding-mode / FP-exception
+  // MDString arguments used by the constrained floating-point intrinsics, or
+  // the named-register MDNode used by `llvm.read_register`) are lifted into a
+  // `llvm.mlir.metadata_as_value` SSA op carrying the corresponding metadata
+  // attribute. All other operands go through the standard `convertValue` path,
+  // which rejects metadata values.
+  auto convertOperand = [&](llvm::Value *value) -> FailureOr<Value> {
+    if (auto *mdAsVal = dyn_cast<llvm::MetadataAsValue>(value)) {
+      Attribute mdAttr = convertMetadataToAttr(context, mdAsVal->getMetadata());
+      if (!mdAttr)
+        return failure();
+      return MetadataAsValueOp::create(builder, UnknownLoc::get(context),
+                                       mdAttr)
+          .getRes();
+    }
+    return convertValue(value);
+  };
+
   for (llvm::Value *value : operands) {
     if (!value)
       continue;
-    auto mlirValue = convertValue(value);
+    auto mlirValue = convertOperand(value);
     if (failed(mlirValue))
       return failure();
     valuesOut.push_back(*mlirValue);
@@ -2000,7 +2055,7 @@ LogicalResult ModuleImport::convertIntrinsicArguments(
       opBundleTagAttrs.push_back(StringAttr::get(context, bundle.getTagName()));
 
       for (const llvm::Use &opBundleOperand : bundle.Inputs) {
-        auto operandMlirValue = convertValue(opBundleOperand.get());
+        auto operandMlirValue = convertOperand(opBundleOperand.get());
         if (failed(operandMlirValue))
           return failure();
         valuesOut.push_back(*operandMlirValue);

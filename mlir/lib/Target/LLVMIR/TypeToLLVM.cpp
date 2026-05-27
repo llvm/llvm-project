@@ -62,9 +62,8 @@ public:
             .Case([this](LLVM::LLVMLabelType) {
               return llvm::Type::getLabelTy(context);
             })
-            .Case([this](LLVM::LLVMMetadataType) {
-              return llvm::Type::getMetadataTy(context);
-            })
+            .Case<LLVM::LLVMMetadataType>(
+                [this](Type) { return llvm::Type::getMetadataTy(context); })
             .Case([this](LLVM::LLVMX86AMXType) {
               return llvm::Type::getX86_AMXTy(context);
             })

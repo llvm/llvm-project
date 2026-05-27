@@ -77,3 +77,38 @@ define signext i32 @test_intrin_arg_attr(i32 signext %a) nounwind {
     %val = call i32 @llvm.riscv.sha256sig0(i32 signext %a)
     ret i32 %val
 }
+
+; // -----
+
+; Constrained FP intrinsics with no dedicated MLIR op should fall back to
+; `llvm.call_intrinsic`, and their `metadata !"..."` operands should be
+; imported as `llvm.mlir.metadata_as_value` ops wrapping the corresponding
+; `#llvm.md_string` attribute.
+
+declare float @llvm.experimental.constrained.sqrt.f32(float, metadata, metadata)
+
+; CHECK-LABEL: llvm.func @constrained_sqrt
+; CHECK: %[[RM:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+; CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+; CHECK: %{{.*}} = llvm.call_intrinsic "llvm.experimental.constrained.sqrt.f32"(%{{.*}}, %[[RM]], %[[EB]]) : (f32, !llvm.metadata, !llvm.metadata) -> f32
+define float @constrained_sqrt(float %a) {
+  %r = call float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  ret float %r
+}
+
+; // -----
+
+; Importer should also handle MDNode metadata operands such as the
+; `!{!"register_name"}` form used by `llvm.read_register`.
+
+declare i32 @llvm.read_register.i32(metadata)
+
+; CHECK-LABEL: llvm.func @read_named_register
+; CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+; CHECK: %{{.*}} = llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]]) : (!llvm.metadata) -> i32
+define i32 @read_named_register() {
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = !{!"sp"}
