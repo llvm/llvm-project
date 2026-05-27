@@ -658,6 +658,80 @@ unsigned NVPTXTTIImpl::getAssumedAddrSpace(const Value *V) const {
   return -1;
 }
 
+bool NVPTXTTIImpl::kernelHasAnyPointerStore(const Function &F) const {
+  if (!isKernelFunction(F))
+    return false;
+
+  SmallPtrSet<const Function *, 8> Visiting;
+  auto VisitFunction = [&](auto &&Self, const Function &Fn) -> bool {
+    if (auto It = CachedFunctionHasPointerStore.find(&Fn);
+        It != CachedFunctionHasPointerStore.end())
+      return It->second;
+
+    // Break cycles conservatively and continue scanning the caller.
+    if (!Visiting.insert(&Fn).second)
+      return false;
+
+    bool HasPointerStore = false;
+    for (const BasicBlock &BB : Fn) {
+      for (const Instruction &I : BB) {
+        if (const auto *SI = dyn_cast<StoreInst>(&I)) {
+          // Any pointer store may overwrite a kernel-argument pointer slot with
+          // a non-global pointer, so disable the promotion conservatively.
+          if (SI->getValueOperand()->getType()->isPointerTy()) {
+            HasPointerStore = true;
+            break;
+          }
+          continue;
+        }
+
+        const auto *CB = dyn_cast<CallBase>(&I);
+        if (!CB) {
+          // Conservatively treat opaque memory-writing instructions as unsafe
+          // (e.g. atomics), as they may clobber pointer slots via type-punning.
+          if (I.mayWriteToMemory()) {
+            HasPointerStore = true;
+            break;
+          }
+          continue;
+        }
+
+        const Function *Callee = CB->getCalledFunction();
+        if (!Callee) {
+          if (!CB->onlyReadsMemory()) {
+            HasPointerStore = true;
+            break;
+          }
+          continue;
+        }
+
+        if (Callee->isDeclaration()) {
+          // Conservatively reject declarations that may write memory, including
+          // memory intrinsics (e.g. memcpy/memset) that can overwrite slots.
+          if (!CB->onlyReadsMemory()) {
+            HasPointerStore = true;
+            break;
+          }
+          continue;
+        }
+
+        if (Self(Self, *Callee)) {
+          HasPointerStore = true;
+          break;
+        }
+      }
+      if (HasPointerStore)
+        break;
+    }
+
+    Visiting.erase(&Fn);
+    CachedFunctionHasPointerStore[&Fn] = HasPointerStore;
+    return HasPointerStore;
+  };
+
+  return VisitFunction(VisitFunction, F);
+}
+
 int NVPTXTTIImpl::getPointerLoadAddressSpace(const Value *V) const {
   const NVPTXTargetMachine &TM =
       static_cast<const NVPTXTargetMachine &>(getTLI()->getTargetMachine());
@@ -668,14 +742,19 @@ int NVPTXTTIImpl::getPointerLoadAddressSpace(const Value *V) const {
   if (!Load)
     return -1;
 
+  if (kernelHasAnyPointerStore(*Load->getFunction()))
+    return -1;
+
   const Value *UO = getUnderlyingObject(Load->getPointerOperand());
   if (const auto *Arg = dyn_cast<Argument>(UO)) {
-    if (!isKernelFunction(*Arg->getParent()) || !Arg->onlyReadsMemory())
+    // No store ptr in this kernel, so pointer slots in kernel args still hold
+    // global pointers from the host. Writable vs readonly no longer matters.
+    if (!isKernelFunction(*Arg->getParent()))
       return -1;
     return ADDRESS_SPACE_GLOBAL;
   }
 
-  // Follow chains like load(load(readonly %A)[i])[j].
+  // Follow chains like load(load(%A)[i])[j].
   if (const auto *PrevLoad = dyn_cast<LoadInst>(UO))
     return getPointerLoadAddressSpace(PrevLoad);
 
