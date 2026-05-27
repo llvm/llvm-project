@@ -363,8 +363,7 @@ bool RISCVMoveMerge::mergeMoveSARegPair(MachineBasicBlock &MBB) {
       }
 
       MachineBasicBlock::iterator Paired = E;
-      if ((ST->hasStdExtZcmp() || ST->hasVendorXqccmp()) &&
-          (MoveFromSToA || MoveFromAToS)) {
+      if (MoveFromSToA || MoveFromAToS) {
         Paired = findMatchingInst(MBBI, MoveFromSToA, RegPair.value());
         if (Paired != E) {
           MBBI = mergePairedInsns(MBBI, Paired, MoveFromSToA);
