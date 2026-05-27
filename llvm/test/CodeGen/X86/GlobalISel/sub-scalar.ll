@@ -8,7 +8,7 @@ define i128 @test_sub_i128(i128 %arg1, i128 %arg2) nounwind {
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    subq %rdx, %rax
 ; X64-NEXT:    setb %dl
-; X64-NEXT:    cmpb $1, %dl
+; X64-NEXT:    negb %dl
 ; X64-NEXT:    sbbq %rcx, %rsi
 ; X64-NEXT:    movq %rsi, %rdx
 ; X64-NEXT:    retq
@@ -25,13 +25,13 @@ define i128 @test_sub_i128(i128 %arg1, i128 %arg2) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    setb %bl
-; X86-NEXT:    cmpb $1, %bl
+; X86-NEXT:    negb %bl
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    setb %bl
-; X86-NEXT:    cmpb $1, %bl
+; X86-NEXT:    negb %bl
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    setb %bl
-; X86-NEXT:    cmpb $1, %bl
+; X86-NEXT:    negb %bl
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    movl %edx, 4(%eax)
@@ -58,7 +58,7 @@ define i64 @test_sub_i64(i64 %arg1, i64 %arg2) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    setb %cl
-; X86-NEXT:    cmpb $1, %cl
+; X86-NEXT:    negb %cl
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    retl
   %ret = sub i64 %arg1, %arg2

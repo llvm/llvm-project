@@ -1560,3 +1560,25 @@ namespace no_pragma_test {
   // CHECK-LABEL: define void @_ZN14no_pragma_test1SC2Ev(
   // CHECK-HIDDEN-LABEL: define hidden void @_ZN14no_pragma_test1SC2Ev(
 }
+
+namespace FunctionTemplateRedecl1 {
+  template <class> void f();
+  extern template DEFAULT void f<int>();
+  template <class> void f() {}
+  template void f<int>();
+  // CHECK-LABEL: define weak_odr void @_ZN23FunctionTemplateRedecl11fIiEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr void @_ZN23FunctionTemplateRedecl11fIiEEvv(
+} // namespace FunctionTemplateRedecl1
+
+namespace SpecOutOfLine1 {
+  template <class> struct A {
+    A<void> f();
+  };
+  template <>
+  struct DEFAULT A<void> {
+    ~A();
+  };
+  A<void>::~A() {}
+  // CHECK-LABEL: define void @_ZN14SpecOutOfLine11AIvED1Ev(
+  // CHECK-HIDDEN-LABEL: define void @_ZN14SpecOutOfLine11AIvED1Ev(
+} // namespace SpecOutOfLine1

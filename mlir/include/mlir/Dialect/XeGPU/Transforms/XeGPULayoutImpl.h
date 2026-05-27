@@ -240,6 +240,12 @@ setupDpasMxLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
 /// users and determine the expected layout accordingly.
 DistributeLayoutAttr getConsumerLayoutAt(OpOperand &operand);
 
+/// Returns true if `op` is safe and cheap to clone: it has no side effects,
+/// no regions, and all of its operands are themselves trivially
+/// rematerializable (e.g. `vector.step`, splat `arith.constant`, or
+/// `vector.create_mask` whose operands are constants).
+bool isTriviallyRematerializable(Operation *op);
+
 } // namespace xegpu
 
 } // namespace mlir
