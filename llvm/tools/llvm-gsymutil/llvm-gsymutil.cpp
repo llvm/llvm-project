@@ -167,8 +167,7 @@ static void parseArgs(int argc, char **argv) {
   BenchmarkStride = 1;
   if (Args.hasArg(OPT_benchmark_reader_all)) {
     BenchmarkReader = true;
-  } else if (const llvm::opt::Arg *A =
-                 Args.getLastArg(OPT_benchmark_reader)) {
+  } else if (const llvm::opt::Arg *A = Args.getLastArg(OPT_benchmark_reader)) {
     BenchmarkReader = true;
     StringRef S{A->getValue()};
     if (!S.empty()) {
@@ -800,8 +799,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
   if (BenchmarkReader) {
     for (const auto &GSYMPath : InputFilenames)
-      if (auto Err =
-              benchmarkReader(GSYMPath, BenchmarkStart, BenchmarkStride))
+      if (auto Err = benchmarkReader(GSYMPath, BenchmarkStart, BenchmarkStride))
         error("Benchmark failed: ", std::move(Err));
     return EXIT_SUCCESS;
   }
