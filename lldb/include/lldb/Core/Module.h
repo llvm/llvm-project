@@ -522,6 +522,10 @@ public:
 
   ConstString GetObjectName() const;
 
+  std::optional<lldb::addr_t> GetMemoryModuleAddress() const {
+    return m_memory_module_addr;
+  }
+
   uint64_t GetObjectOffset() const { return m_object_offset; }
 
   /// Get the object file representation for the current architecture.
@@ -1062,6 +1066,9 @@ protected:
   ConstString m_object_name; ///< The name an object within this module that is
                              /// selected, or empty of the module is represented
                              /// by \a m_file.
+  std::optional<lldb::addr_t>
+      m_memory_module_addr; ///< For a Module read from memory,
+                            ///  the address it was read from.
   uint64_t m_object_offset = 0;
   llvm::sys::TimePoint<> m_object_mod_time;
 
