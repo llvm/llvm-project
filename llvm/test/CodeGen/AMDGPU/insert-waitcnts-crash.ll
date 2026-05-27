@@ -3,7 +3,7 @@
 
 declare fastcc void @bar()
 
-define fastcc i32 @foo() {
+define fastcc i32 @foo() #0 {
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
@@ -56,3 +56,5 @@ define fastcc i32 @foo() {
 1:
   br label %1
 }
+
+attributes #0 = { nounwind }

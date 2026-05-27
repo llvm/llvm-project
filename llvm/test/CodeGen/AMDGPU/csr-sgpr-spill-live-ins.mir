@@ -15,6 +15,12 @@ body: |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
   ; CHECK-NEXT:   S_NOP 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:

@@ -169,7 +169,7 @@ def CallAndMessageChecker
            CmdLineOption<Boolean, "ArgPointeeInitializedness",
                          "Check whether the pointee of a pass-by-reference or "
                          "pass-by-pointer is undefined",
-                         "false", InAlpha>,
+                         "false", Released>,
            CmdLineOption<
                Boolean, "NilReceiver",
                "Check whether the receiver in the message expression is nil",

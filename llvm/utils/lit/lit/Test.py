@@ -8,7 +8,7 @@ from lit.TestTimes import read_test_times
 # Test result codes.
 
 
-class ResultCode(object):
+class ResultCode:
     """Test result codes."""
 
     # All result codes (including user-defined ones) in declaration order
@@ -59,7 +59,7 @@ XPASS = ResultCode("XPASS", "Unexpectedly Passed", True)
 # Test metric values.
 
 
-class MetricValue(object):
+class MetricValue:
     def format(self):
         """
         format() -> str
@@ -149,7 +149,7 @@ def toMetricValue(value):
 # Test results.
 
 
-class Result(object):
+class Result:
     """Wrapper for the results of executing an individual test."""
 
     def __init__(

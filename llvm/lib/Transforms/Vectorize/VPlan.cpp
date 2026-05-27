@@ -333,40 +333,18 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     return Shuf;
   };
 
-  if (!hasScalarValue(Def, {0})) {
-    Value *IRV = Def->getLiveInIRValue();
-    Value *B = GetBroadcastInstrs(IRV);
-    set(Def, B);
-    return B;
-  }
-
   Value *ScalarValue = get(Def, VPLane(0));
-  // If we aren't vectorizing, we can just copy the scalar map values over
-  // to the vector map.
-  if (VF.isScalar()) {
-    set(Def, ScalarValue);
-    return ScalarValue;
-  }
-
-  bool IsSingleScalar = vputils::isSingleScalar(Def);
-  VPLane LastLane(IsSingleScalar ? 0 : VF.getFixedValue() - 1);
-
-  // We need to construct the vector value for a single-scalar value by
-  // broadcasting the scalar to all lanes.
-  // TODO: Replace by introducing Broadcast VPInstructions.
-  assert(IsSingleScalar && "must be a single-scalar at this point");
-  // Set the insert point after the last scalarized instruction or after the
-  // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
-  // will directly follow the scalar definitions.
-  auto OldIP = Builder.saveIP();
-  auto *LastInst = cast<Instruction>(get(Def, LastLane));
-  auto NewIP = isa<PHINode>(LastInst)
-                   ? LastInst->getParent()->getFirstNonPHIIt()
-                   : std::next(BasicBlock::iterator(LastInst));
-  Builder.SetInsertPoint(&*NewIP);
+  VPLane LastLane = VPLane::getLastLaneForVF(VF);
+  IRBuilderBase::InsertPointGuard Guard(Builder);
+  if (auto *LastInst = dyn_cast<Instruction>(get(Def, LastLane)))
+    // Set the insert point after the last scalarized instruction or after the
+    // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
+    // will directly follow the scalar definitions.
+    Builder.SetInsertPoint(isa<PHINode>(LastInst)
+                               ? LastInst->getParent()->getFirstNonPHIIt()
+                               : std::next(BasicBlock::iterator(LastInst)));
   Value *VectorValue = GetBroadcastInstrs(ScalarValue);
   set(Def, VectorValue);
-  Builder.restoreIP(OldIP);
   return VectorValue;
 }
 

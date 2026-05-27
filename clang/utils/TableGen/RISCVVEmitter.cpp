@@ -250,17 +250,19 @@ void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
     OS << "  TWiden = " << RVVI->getTWiden() << ";\n";
 
   OS << "  PolicyAttrs = " << RVVI->getPolicyAttrsBits() << ";\n";
-  unsigned IndexedLoadStorePtrIdx = getIndexedLoadStorePtrIdx(RVVI);
-  if (IndexedLoadStorePtrIdx != UnknownIndex) {
-    OS << "  {\n";
-    OS << "    auto PointeeType = E->getArg(" << IndexedLoadStorePtrIdx
-       << ")->getType()->getPointeeType();\n";
-    OS << "    SegInstSEW = "
-          "llvm::Log2_64(getContext().getTypeSize(PointeeType));\n";
-    OS << "  }\n";
-  } else {
-    OS << "  SegInstSEW = " << getSegInstLog2SEW(RVVI->getOverloadedName())
-       << ";\n";
+  if (RVVI->hasSegInstSEW()) {
+    unsigned IndexedLoadStorePtrIdx = getIndexedLoadStorePtrIdx(RVVI);
+    if (IndexedLoadStorePtrIdx != UnknownIndex) {
+      OS << "  {\n";
+      OS << "    auto PointeeType = E->getArg(" << IndexedLoadStorePtrIdx
+         << ")->getType()->getPointeeType();\n";
+      OS << "    SegInstSEW = "
+            "llvm::Log2_64(getContext().getTypeSize(PointeeType));\n";
+      OS << "  }\n";
+    } else {
+      OS << "  SegInstSEW = " << getSegInstLog2SEW(RVVI->getOverloadedName())
+         << ";\n";
+    }
   }
 
   if (RVVI->hasManualCodegen()) {
@@ -677,6 +679,7 @@ void RVVEmitter::createRVVIntrinsics(
     StringRef IRName = R->getValueAsString("IRName");
     StringRef MaskedIRName = R->getValueAsString("MaskedIRName");
     unsigned NF = R->getValueAsInt("NF");
+    bool HasSegInstSEW = R->getValueAsBit("HasSegInstSEW");
     unsigned TWiden = R->getValueAsInt("TWiden");
     bool IsTuple = R->getValueAsBit("IsTuple");
     bool HasFRMRoundModeOp = R->getValueAsBit("HasFRMRoundModeOp");
@@ -726,8 +729,8 @@ void RVVEmitter::createRVVIntrinsics(
             Name, SuffixStr, OverloadedName, OverloadedSuffixStr, IRName,
             /*IsMasked=*/false, /*HasMaskedOffOperand=*/false, HasVL,
             UnMaskedPolicyScheme, SupportOverloading, HasBuiltinAlias,
-            ManualCodegen, *Types, IntrinsicTypes, NF, DefaultPolicy,
-            HasFRMRoundModeOp, TWiden, AltFmt));
+            ManualCodegen, *Types, IntrinsicTypes, NF, HasSegInstSEW,
+            DefaultPolicy, HasFRMRoundModeOp, TWiden, AltFmt));
         if (UnMaskedPolicyScheme != PolicyScheme::SchemeNone)
           for (auto P : SupportedUnMaskedPolicies) {
             SmallVector<PrototypeDescriptor> PolicyPrototype =
@@ -741,8 +744,8 @@ void RVVEmitter::createRVVIntrinsics(
                 Name, SuffixStr, OverloadedName, OverloadedSuffixStr, IRName,
                 /*IsMask=*/false, /*HasMaskedOffOperand=*/false, HasVL,
                 UnMaskedPolicyScheme, SupportOverloading, HasBuiltinAlias,
-                ManualCodegen, *PolicyTypes, IntrinsicTypes, NF, P,
-                HasFRMRoundModeOp, TWiden, AltFmt));
+                ManualCodegen, *PolicyTypes, IntrinsicTypes, NF, HasSegInstSEW,
+                P, HasFRMRoundModeOp, TWiden, AltFmt));
           }
         if (!HasMasked)
           continue;
@@ -753,8 +756,8 @@ void RVVEmitter::createRVVIntrinsics(
             Name, SuffixStr, OverloadedName, OverloadedSuffixStr, MaskedIRName,
             /*IsMasked=*/true, HasMaskedOffOperand, HasVL, MaskedPolicyScheme,
             SupportOverloading, HasBuiltinAlias, ManualCodegen, *MaskTypes,
-            IntrinsicTypes, NF, DefaultPolicy, HasFRMRoundModeOp, TWiden,
-            AltFmt));
+            IntrinsicTypes, NF, HasSegInstSEW, DefaultPolicy, HasFRMRoundModeOp,
+            TWiden, AltFmt));
         if (MaskedPolicyScheme == PolicyScheme::SchemeNone)
           continue;
         for (auto P : SupportedMaskedPolicies) {
@@ -768,7 +771,7 @@ void RVVEmitter::createRVVIntrinsics(
               Name, SuffixStr, OverloadedName, OverloadedSuffixStr,
               MaskedIRName, /*IsMasked=*/true, HasMaskedOffOperand, HasVL,
               MaskedPolicyScheme, SupportOverloading, HasBuiltinAlias,
-              ManualCodegen, *PolicyTypes, IntrinsicTypes, NF, P,
+              ManualCodegen, *PolicyTypes, IntrinsicTypes, NF, HasSegInstSEW, P,
               HasFRMRoundModeOp, TWiden, AltFmt));
         }
       } // End for Log2LMULList

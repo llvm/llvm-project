@@ -21,8 +21,10 @@
 //
 // Insert this code to the cpp file:
 //
+//   namespace clang::ssaf {
 //   // NOLINTNEXTLINE(misc-use-internal-linkage)
-//   volatile int SSAFMyFormatAnchorSource = 0;
+//   volatile int MyFormatAnchorSource = 0;
+//   } // namespace clang::ssaf
 //   static SerializationFormatRegistry::Add<MyFormat>
 //     RegisterFormat("MyFormat", "My awesome serialization format");
 //   LLVM_DEFINE_REGISTRY(llvm::Registry<MyFormat::FormatInfo>)
@@ -47,14 +49,10 @@
 //         "The MyFormat format info implementation for MyAnalysis"
 //       );
 //
-// Finally, insert a use of the new anchor symbol into the force-linker header:
+// Finally, extend the `AnchorSources` list in the force-linker header:
 // clang/include/clang/ScalableStaticAnalysisFramework/SSAFBuiltinForceLinker.h:
 //
 // This anchor is used to force the linker to link the MyFormat registration.
-//
-//   extern volatile int SSAFMyFormatAnchorSource;
-//   [[maybe_unused]] static int SSAFMyFormatAnchorDestination =
-//       SSAFMyFormatAnchorSource;
 //
 //===----------------------------------------------------------------------===//
 

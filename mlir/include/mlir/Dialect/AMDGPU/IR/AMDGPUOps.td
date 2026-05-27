@@ -825,6 +825,43 @@ def AMDGPU_PermlaneSwapOp : AMDGPU_Op<"permlane_swap", [Pure, AllTypesMatch<["re
   let hasVerifier = 1;
 }
 
+def AMDGPU_PermlaneVarOp : AMDGPU_Op<"permlane_var",
+    [Pure, AllTypesMatch<["result", "src"]>]> {
+  let summary = "AMDGPU variable-selector permlane op (GFX12+)";
+  let description = [{
+    High-level wrapper on `rocdl.permlane16.var` and `rocdl.permlanex16.var`
+    for per-lane variable-selector permutations within a wave32 subgroup.
+
+    Supports arbitrary int/float/vector types, which will be repacked to i32
+    and one or more ROCDL intrinsic calls during lowering.
+
+    - `cross = false`: intra-row permutation (each lane in a 16-lane row reads
+      from a lane in the same row, selected by `$selector`). Maps to
+      `rocdl.permlane16.var`.
+    - `cross = true`: cross-row permutation (each lane reads from the opposite
+      16-lane row, selected by `$selector`). Maps to `rocdl.permlanex16.var`.
+
+    `$selector` is an i32 VGPR providing the per-lane source-lane index.
+
+    Example:
+    ```mlir
+    %0 = amdgpu.permlane_var %src, %sel { cross = false } : f16
+    %1 = amdgpu.permlane_var %src, %sel { cross = true } : f32
+    ```
+
+    Note: Lowering is only supported on GFX12+.
+  }];
+  let arguments = (ins AnyIntegerOrFloatOr1DVector:$src,
+                       I32:$selector,
+                       DefaultValuedAttr<BoolAttr, "false">:$cross,
+                       DefaultValuedAttr<BoolAttr, "false">:$fetch_inactive,
+                       DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl);
+  let results = (outs AnyIntegerOrFloatOr1DVector:$result);
+  let assemblyFormat = [{
+    $src `,` $selector attr-dict `:` type($result)
+  }];
+}
+
 def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
   let summary = "Barrier that includes a wait for LDS memory operations.";
   let description = [{

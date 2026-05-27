@@ -814,6 +814,11 @@ On macOS with debugserver, we expedite the frame pointer backchain for a thread
 the previous FP and PC), and follow the backchain. Most backtraces on macOS and
 iOS now don't require us to read any memory.
 
+An expedited register may have an empty string as its value (`"21":""`)
+which indicates that the register cannot be read at this current
+stop point, and lldb should not try to read the register value with
+a separate `p` read-register request, it will not succeed.
+
 **Priority To Implement:** Low
 
 This is a performance optimization, which speeds up debugging by avoiding
@@ -2174,6 +2179,9 @@ following forms:
   followed by a series of key/value pairs:
     * If key is a hex number, it is a register number and value is
       the hex value of the register in debuggee endian byte order.
+      An empty value indicates that the register cannot be fetched
+      at this stop point; lldb will not succeed if it sends a separate
+      read-register packet.
     * If key == "thread", then the value is the big endian hex
       thread-id of the stopped thread.
     * If key == "core", then value is a hex number of the core on

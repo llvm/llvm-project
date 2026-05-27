@@ -4,7 +4,7 @@
 ; Check that nofpclass attributes on call returns are used in
 ; selectiondag.
 
-define internal float @func_f32(ptr addrspace(1) %ptr) {
+define internal float @func_f32(ptr addrspace(1) %ptr) #0 {
 ; CHECK-LABEL: func_f32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15,7 +15,7 @@ define internal float @func_f32(ptr addrspace(1) %ptr) {
   ret float %ld
 }
 
-define float @call_nofpclass_funcs_f32(ptr addrspace(1) %ptr) {
+define float @call_nofpclass_funcs_f32(ptr addrspace(1) %ptr) #0 {
 ; CHECK-LABEL: call_nofpclass_funcs_f32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -51,7 +51,7 @@ define float @call_nofpclass_funcs_f32(ptr addrspace(1) %ptr) {
   ret float %min
 }
 
-define internal <2 x float> @func_v2f32(ptr addrspace(1) %ptr) {
+define internal <2 x float> @func_v2f32(ptr addrspace(1) %ptr) #0 {
 ; CHECK-LABEL: func_v2f32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -62,7 +62,7 @@ define internal <2 x float> @func_v2f32(ptr addrspace(1) %ptr) {
   ret <2 x float> %ld
 }
 
-define <2 x float> @call_nofpclass_funcs_v2f32(ptr addrspace(1) %ptr) {
+define <2 x float> @call_nofpclass_funcs_v2f32(ptr addrspace(1) %ptr) #0 {
 ; CHECK-LABEL: call_nofpclass_funcs_v2f32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -102,7 +102,7 @@ define <2 x float> @call_nofpclass_funcs_v2f32(ptr addrspace(1) %ptr) {
   ret <2 x float> %min
 }
 
-define internal double @func_f64(ptr addrspace(1) %ptr) {
+define internal double @func_f64(ptr addrspace(1) %ptr) #0 {
 ; CHECK-LABEL: func_f64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -113,7 +113,7 @@ define internal double @func_f64(ptr addrspace(1) %ptr) {
   ret double %ld
 }
 
-define double @call_nofpclass_funcs_f64(ptr addrspace(1) %ptr) {
+define double @call_nofpclass_funcs_f64(ptr addrspace(1) %ptr) #0 {
 ; CHECK-LABEL: call_nofpclass_funcs_f64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -152,7 +152,7 @@ define double @call_nofpclass_funcs_f64(ptr addrspace(1) %ptr) {
   ret double %min
 }
 
-define float @call_nofpclass_intrinsic_f32(float %x, float %y, float %z) {
+define float @call_nofpclass_intrinsic_f32(float %x, float %y, float %z) #0 {
 ; CHECK-LABEL: call_nofpclass_intrinsic_f32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -168,7 +168,7 @@ define float @call_nofpclass_intrinsic_f32(float %x, float %y, float %z) {
   ret float %min
 }
 
-define <2 x half> @call_nofpclass_intrinsic_v2f16(float %x, float %y, float %z, float %w) {
+define <2 x half> @call_nofpclass_intrinsic_v2f16(float %x, float %y, float %z, float %w) #0 {
 ; CHECK-LABEL: call_nofpclass_intrinsic_v2f16:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -190,7 +190,7 @@ define <2 x half> @call_nofpclass_intrinsic_v2f16(float %x, float %y, float %z, 
   ret <2 x half> %min
 }
 
-define nofpclass(nan inf) { double, double } @aggregate() {
+define nofpclass(nan inf) { double, double } @aggregate() #0 {
 ; CHECK-LABEL: aggregate:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -226,7 +226,7 @@ entry:
 
 declare hidden nofpclass(nan inf) { float, float } @aggregate_f32()
 
-define { float, float } @aggregate_use(float %z) {
+define { float, float } @aggregate_use(float %z) #0 {
 ; CHECK-LABEL: aggregate_use:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -269,7 +269,7 @@ define { float, float } @aggregate_use(float %z) {
    ret { float, float } %insert.1
 }
 
-define internal <5 x double> @func_v5f64(ptr addrspace(1) %ptr) {
+define internal <5 x double> @func_v5f64(ptr addrspace(1) %ptr) #0 {
 ; CHECK-LABEL: func_v5f64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -286,7 +286,7 @@ define internal <5 x double> @func_v5f64(ptr addrspace(1) %ptr) {
   ret <5 x double> %ld
 }
 
-define <5 x double> @call_nofpclass_funcs_v5f64_non_mvt_vector(ptr addrspace(1) %ptr) {
+define <5 x double> @call_nofpclass_funcs_v5f64_non_mvt_vector(ptr addrspace(1) %ptr) #0 {
 ; CHECK-LABEL: call_nofpclass_funcs_v5f64_non_mvt_vector:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -336,3 +336,5 @@ define <5 x double> @call_nofpclass_funcs_v5f64_non_mvt_vector(ptr addrspace(1) 
   %min = call <5 x double> @llvm.minnum.v5f64(<5 x double> %call0, <5 x double> %call1)
   ret <5 x double> %min
 }
+
+attributes #0 = { nounwind }

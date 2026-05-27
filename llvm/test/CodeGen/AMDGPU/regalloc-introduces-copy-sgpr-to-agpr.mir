@@ -12,7 +12,7 @@
     ret void
   }
 
-  attributes #0 = { "amdgpu-waves-per-eu"="7,7" }
+  attributes #0 = { "amdgpu-waves-per-eu"="7,7" nounwind }
 
 ...
 ---

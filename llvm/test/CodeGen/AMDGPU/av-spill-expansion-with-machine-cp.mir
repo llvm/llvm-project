@@ -21,6 +21,8 @@ body: |
     ; GFX908-PEI-LABEL: name: agpr-spill-to-vgpr-machine-cp
     ; GFX908-PEI: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33
     ; GFX908-PEI-NEXT: {{  $}}
+    ; GFX908-PEI-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; GFX908-PEI-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; GFX908-PEI-NEXT: renamable $agpr0 = COPY renamable $vgpr0, implicit $exec
     ; GFX908-PEI-NEXT: renamable $agpr2 = COPY renamable $vgpr1, implicit $exec
     ; GFX908-PEI-NEXT: $vgpr33 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr0_agpr1_agpr2
@@ -31,6 +33,8 @@ body: |
     ; GFX908-PEI-MACHINECP-LABEL: name: agpr-spill-to-vgpr-machine-cp
     ; GFX908-PEI-MACHINECP: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33
     ; GFX908-PEI-MACHINECP-NEXT: {{  $}}
+    ; GFX908-PEI-MACHINECP-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; GFX908-PEI-MACHINECP-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; GFX908-PEI-MACHINECP-NEXT: renamable $agpr0 = COPY renamable $vgpr0, implicit $exec
     ; GFX908-PEI-MACHINECP-NEXT: renamable $agpr2 = COPY renamable $vgpr1, implicit $exec
     ; GFX908-PEI-MACHINECP-NEXT: $vgpr33 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr0_agpr1_agpr2
@@ -63,6 +67,8 @@ body: |
     ; GFX908-PEI-LABEL: name: agpr-spill-to-vgpr-to-stack-machine-cp
     ; GFX908-PEI: liveins: $vgpr0, $vgpr1, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $sgpr0_sgpr1_sgpr2_sgpr3
     ; GFX908-PEI-NEXT: {{  $}}
+    ; GFX908-PEI-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; GFX908-PEI-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; GFX908-PEI-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; GFX908-PEI-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; GFX908-PEI-NEXT: renamable $agpr0 = COPY renamable $vgpr0, implicit $exec
@@ -79,6 +85,8 @@ body: |
     ; GFX908-PEI-MACHINECP-LABEL: name: agpr-spill-to-vgpr-to-stack-machine-cp
     ; GFX908-PEI-MACHINECP: liveins: $vgpr0, $vgpr1, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $sgpr0_sgpr1_sgpr2_sgpr3
     ; GFX908-PEI-MACHINECP-NEXT: {{  $}}
+    ; GFX908-PEI-MACHINECP-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; GFX908-PEI-MACHINECP-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; GFX908-PEI-MACHINECP-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; GFX908-PEI-MACHINECP-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; GFX908-PEI-MACHINECP-NEXT: renamable $agpr0 = COPY renamable $vgpr0, implicit $exec

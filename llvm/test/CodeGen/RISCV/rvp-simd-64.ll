@@ -1810,33 +1810,12 @@ define <8 x i8> @test_psslai_b(<8 x i8> %a) {
 define <4 x i16> @test_pssla_hs(<4 x i16> %a, i16 %shamt) {
 ; RV32-LABEL: test_pssla_hs:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a4, 8
-; RV32-NEXT:    plui.h a5, -512
-; RV32-NEXT:    psll.dhs a6, a0, a2
-; RV32-NEXT:    psra.dhs a2, a6, a2
-; RV32-NEXT:    pmseq.dh a2, a0, a2
-; RV32-NEXT:    pmsltz.dh a0, a0
-; RV32-NEXT:    addi a4, a4, -1
-; RV32-NEXT:    pmv.hs a4, a4
-; RV32-NEXT:    merge a1, a4, a5
-; RV32-NEXT:    merge a3, a1, a7
-; RV32-NEXT:    merge a0, a4, a5
-; RV32-NEXT:    merge a2, a0, a6
-; RV32-NEXT:    padd.dw a0, a2, zero
+; RV32-NEXT:    pssha.dhs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pssla_hs:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pmsltz.h a2, a0
-; RV64-NEXT:    lui a3, 8
-; RV64-NEXT:    plui.h a4, -512
-; RV64-NEXT:    addi a3, a3, -1
-; RV64-NEXT:    pmv.hs a3, a3
-; RV64-NEXT:    merge a2, a3, a4
-; RV64-NEXT:    psll.hs a3, a0, a1
-; RV64-NEXT:    psra.hs a1, a3, a1
-; RV64-NEXT:    pmseq.h a0, a0, a1
-; RV64-NEXT:    merge a0, a2, a3
+; RV64-NEXT:    pssha.hs a0, a0, a1
 ; RV64-NEXT:    ret
   %insert = insertelement <4 x i16> poison, i16 %shamt, i32 0
   %b = shufflevector <4 x i16> %insert, <4 x i16> poison, <4 x i32> zeroinitializer
@@ -1848,22 +1827,12 @@ define <4 x i16> @test_pssla_hs(<4 x i16> %a, i16 %shamt) {
 define <2 x i32> @test_pssla_ws(<2 x i32> %a, i32 %shamt) {
 ; RV32-LABEL: test_pssla_ws:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    ssha a1, a1, a2
-; RV32-NEXT:    ssha a0, a0, a2
+; RV32-NEXT:    pssha.dws a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pssla_ws:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pmsltz.w a2, a0
-; RV64-NEXT:    lui a3, 524288
-; RV64-NEXT:    plui.w a4, -512
-; RV64-NEXT:    addiw a3, a3, -1
-; RV64-NEXT:    pmv.ws a3, a3
-; RV64-NEXT:    merge a2, a3, a4
-; RV64-NEXT:    psll.ws a3, a0, a1
-; RV64-NEXT:    psra.ws a1, a3, a1
-; RV64-NEXT:    pmseq.w a0, a0, a1
-; RV64-NEXT:    merge a0, a2, a3
+; RV64-NEXT:    pssha.ws a0, a0, a1
 ; RV64-NEXT:    ret
   %insert = insertelement <2 x i32> poison, i32 %shamt, i32 0
   %b = shufflevector <2 x i32> %insert, <2 x i32> poison, <2 x i32> zeroinitializer

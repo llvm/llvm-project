@@ -86,6 +86,11 @@ static lto::Config createConfig() {
 static void saveOrHardlinkBuffer(StringRef buffer, const Twine &path,
                                  std::optional<StringRef> originalPath) {
   if (originalPath) {
+    // Delete the hardlink if it exists. Otherwise, it is possible for the
+    // create_hard_link to fail (as the hardlink exists already), and when
+    // saveBuffer is subsequently called the hardlink'd file may get truncated
+    // and reading from it causes a crash.
+    fs::remove(path);
     auto err = fs::create_hard_link(*originalPath, path);
     if (!err)
       return;

@@ -14,7 +14,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -global-isel=0 < %s | FileCheck -check-prefixes=GFX12DAGISEL %s
 
 
-define amdgpu_kernel void @uniform_value_float(ptr addrspace(1) %out, float %in) {
+define amdgpu_kernel void @uniform_value_float(ptr addrspace(1) %out, float %in) #0 {
 ; GFX8DAGISEL-LABEL: uniform_value_float:
 ; GFX8DAGISEL:       ; %bb.0: ; %entry
 ; GFX8DAGISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -134,7 +134,7 @@ entry:
   ret void
 }
 
-define void @divergent_value_float(ptr addrspace(1) %out, float %in) {
+define void @divergent_value_float(ptr addrspace(1) %out, float %in) #0 {
 ; GFX8DAGISEL-LABEL: divergent_value_float:
 ; GFX8DAGISEL:       ; %bb.0: ; %entry
 ; GFX8DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -399,7 +399,7 @@ entry:
   ret void
 }
 
-define void @divergent_value_float_dpp(ptr addrspace(1) %out, float %in) {
+define void @divergent_value_float_dpp(ptr addrspace(1) %out, float %in) #0 {
 ; GFX8DAGISEL-LABEL: divergent_value_float_dpp:
 ; GFX8DAGISEL:       ; %bb.0: ; %entry
 ; GFX8DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -858,7 +858,7 @@ entry:
   ret void
 }
 
-define void @divergent_value_double_dpp(ptr addrspace(1) %out, double %in) {
+define void @divergent_value_double_dpp(ptr addrspace(1) %out, double %in) #0 {
 ; GFX8DAGISEL-LABEL: divergent_value_double_dpp:
 ; GFX8DAGISEL:       ; %bb.0: ; %entry
 ; GFX8DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1736,7 +1736,7 @@ entry:
   ret void
 }
 
-define void @divergent_cfg_float(ptr addrspace(1) %out, float %in, float %in2) {
+define void @divergent_cfg_float(ptr addrspace(1) %out, float %in, float %in2) #0 {
 ; GFX8DAGISEL-LABEL: divergent_cfg_float:
 ; GFX8DAGISEL:       ; %bb.0: ; %entry
 ; GFX8DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2377,7 +2377,7 @@ endif:
   ret void
 }
 
-define amdgpu_kernel void @uniform_value_double(ptr addrspace(1) %out, double %in) {
+define amdgpu_kernel void @uniform_value_double(ptr addrspace(1) %out, double %in) #0 {
 ; GFX8DAGISEL-LABEL: uniform_value_double:
 ; GFX8DAGISEL:       ; %bb.0: ; %entry
 ; GFX8DAGISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
@@ -2492,7 +2492,7 @@ entry:
   ret void
 }
 
-define void @divergent_value_double(ptr addrspace(1) %out, double %in) {
+define void @divergent_value_double(ptr addrspace(1) %out, double %in) #0 {
 ; GFX8DAGISEL-LABEL: divergent_value_double:
 ; GFX8DAGISEL:       ; %bb.0: ; %entry
 ; GFX8DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2814,7 +2814,7 @@ entry:
   ret void
 }
 
-define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2) {
+define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2) #0 {
 ; GFX8DAGISEL-LABEL: divergent_cfg_double:
 ; GFX8DAGISEL:       ; %bb.0: ; %entry
 ; GFX8DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3581,3 +3581,5 @@ endif:
   store double %combine, ptr addrspace(1) %out
   ret void
 }
+
+attributes #0 = { nounwind }

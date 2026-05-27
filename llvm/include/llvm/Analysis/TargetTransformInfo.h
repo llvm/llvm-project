@@ -1939,6 +1939,12 @@ public:
   /// vectorization, false - otherwise.
   LLVM_ABI bool preferAlternateOpcodeVectorization() const;
 
+  /// \returns True if the SLP vectorizer should apply the instruction-count
+  /// check that rejects 2-element vector trees when the vector instruction
+  /// count exceeds the scalar instruction count, false if the target opts out
+  /// of this heuristic.
+  LLVM_ABI bool preferSLPInstCountCheck() const;
+
   /// \returns True if the target prefers reductions of \p Kind to be performed
   /// in the loop.
   LLVM_ABI bool preferInLoopReduction(RecurKind Kind, Type *Ty) const;

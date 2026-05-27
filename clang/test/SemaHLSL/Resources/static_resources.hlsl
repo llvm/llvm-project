@@ -15,6 +15,7 @@ RWStructuredBuffer<int> ArrayWithCounter[2] : register(u7, space4);
 // startup (register 1, space 5).
 // CHECK: define internal void @__cxx_global_var_init{{.*}}
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: call void @hlsl::RWBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
 // CHECK-SAME: (ptr {{.*}} @One, i32 noundef 1, i32 noundef 5, i32 noundef 1, i32 noundef 0, ptr noundef [[ONE_STR]])
 
@@ -22,6 +23,7 @@ RWStructuredBuffer<int> ArrayWithCounter[2] : register(u7, space4);
 // startup (register 2, space 4).
 // CHECK: define internal void @__cxx_global_var_init{{.*}}
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: call void @hlsl::RWStructuredBuffer<int>::__createFromBindingWithImplicitCounter(unsigned int, unsigned int, int, unsigned int, char const*, unsigned int)
 // CHECK-SAME: (ptr {{.*}} @OneWithCounter, i32 noundef 2, i32 noundef 4, i32 noundef 1, i32 noundef 0, ptr noundef [[ONEWITHCOUNTER_STR]], i32 noundef 0)
 
@@ -35,6 +37,7 @@ static RWBuffer<float> StaticArray[2];
 // constructor and not from binding. It will initalize the handle to poison.
 // CHECK: define internal void @__cxx_global_var_init{{.*}}
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: call void @hlsl::RWBuffer<float>::RWBuffer()(ptr {{.*}} @StaticOne)
 
 // Check that StaticArray elements are initialized on startup with the default
@@ -42,9 +45,11 @@ static RWBuffer<float> StaticArray[2];
 // elements and call the default constructor for each one, setting the handle to poison.
 // CHECK: define internal void @__cxx_global_var_init{{.*}}
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: br label %arrayctor.loop
 // CHECK: arrayctor.loop:                                   ; preds = %arrayctor.loop, %entry
 // CHECK-NEXT:   %arrayctor.cur = phi ptr [ @StaticArray, %entry ], [ %arrayctor.next, %arrayctor.loop ]
+// CHECK-NEXT:   %[[#CV_LOOP:]] = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %[[#C_ENTRY]]) ]
 // CHECK-NEXT: call void @hlsl::RWBuffer<float>::RWBuffer()(ptr {{.*}} %arrayctor.cur)
 // CHECK-NEXT: %arrayctor.next = getelementptr inbounds %"class.hlsl::RWBuffer", ptr %arrayctor.cur, i32 1
 // CHECK-NEXT: %arrayctor.done = icmp eq ptr %arrayctor.next, getelementptr inbounds nuw (i8, ptr @StaticArray, i32 8)
@@ -58,6 +63,7 @@ static RWStructuredBuffer<int> StaticOneWithCounter;
 // constructor and not from binding. It will initalize the handle to poison.
 // CHECK: define internal void @__cxx_global_var_init{{.*}}
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: call void @hlsl::RWStructuredBuffer<int>::RWStructuredBuffer()(ptr {{.*}} @StaticOneWithCounter)
 
 // No other global initialization routines should be present.
@@ -67,6 +73,7 @@ static RWStructuredBuffer<int> StaticOneWithCounter;
 void main() {
 // CHECK: define internal void @main()()
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: %[[TMP0:.*]] = alloca %"class.hlsl::RWBuffer"
 
   static RWBuffer<float> StaticLocal;

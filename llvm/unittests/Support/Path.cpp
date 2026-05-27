@@ -2791,11 +2791,12 @@ TEST_F(FileSystemTest, makeLongFormPath) {
   if (!*Enabled)
     GTEST_SKIP() << "Short 8.3 form names not enabled in: " << TestDirectory;
 
+  const bool PreferForwardSlash = path::native("/") == "/";
+
   // Setup: A test directory longer than 8 characters for which a distinct
   // short 8.3 form name will be created on Windows. Typically, 123456~1.
-  const char *OneDir = LLVM_WINDOWS_PREFER_FORWARD_SLASH
-                           ? "/123456789"
-                           : "\\123456789"; // >8 chars
+  const char *OneDir =
+      PreferForwardSlash ? "/123456789" : "\\123456789"; // >8 chars
 
   // Setup: Create a path where even if all components were reduced to short 8.3
   // form names, the total length would exceed MAX_PATH.
@@ -2827,8 +2828,8 @@ TEST_F(FileSystemTest, makeLongFormPath) {
   std::string DotAndDotDot = getShortPathName(WithDots);
   ASSERT_FALSE(DotAndDotDot.empty())
       << "Expected short 8.3 form path for test directory.";
-  auto ContainsDotAndDotDot = [](llvm::StringRef S) {
-    if (LLVM_WINDOWS_PREFER_FORWARD_SLASH)
+  auto ContainsDotAndDotDot = [PreferForwardSlash](llvm::StringRef S) {
+    if (PreferForwardSlash)
       return S.contains("/./") && S.contains("/../");
     return S.contains("\\.\\") && S.contains("\\..\\");
   };

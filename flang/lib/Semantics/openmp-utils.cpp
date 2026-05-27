@@ -613,8 +613,8 @@ static bool IsTransformableLoop(const parser::ExecutionPartConstruct &epc) {
   return false;
 }
 
-LoopControl::LoopControl(const parser::LoopControl::Bounds &x) {
-  iv = x.Name().thing;
+LoopControl::LoopControl(const parser::LoopControl::Bounds &x)
+    : iv(x.Name().thing) {
   lbound = fromParserExpr(parser::UnwrapRef<parser::Expr>(x.Lower()));
   ubound = fromParserExpr(parser::UnwrapRef<parser::Expr>(x.Upper()));
   if (auto &inc{x.Step()}) {
@@ -622,9 +622,9 @@ LoopControl::LoopControl(const parser::LoopControl::Bounds &x) {
   }
 }
 
-LoopControl::LoopControl(const parser::ConcurrentControl &x) {
-  auto &[name, lower, upper, inc]{x.t};
-  iv = name;
+LoopControl::LoopControl(const parser::ConcurrentControl &x)
+    : iv(std::get<parser::Name>(x.t)) {
+  auto &[_, lower, upper, inc]{x.t};
   lbound = fromParserExpr(parser::UnwrapRef<parser::Expr>(lower));
   ubound = fromParserExpr(parser::UnwrapRef<parser::Expr>(upper));
   if (inc) {

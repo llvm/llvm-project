@@ -9,7 +9,7 @@
 declare hidden void @external_void_func_v16i32_v16i32_v4i32(<16 x i32>, <16 x i32>, <4 x i32>) #0
 declare hidden void @external_void_func_byval(ptr addrspace(5) byval([16 x i32])) #0
 
-define amdgpu_kernel void @kernel_caller_stack() {
+define amdgpu_kernel void @kernel_caller_stack() #2 {
 ; MUBUF-LABEL: kernel_caller_stack:
 ; MUBUF:       ; %bb.0:
 ; MUBUF-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
@@ -57,7 +57,7 @@ define amdgpu_kernel void @kernel_caller_stack() {
   ret void
 }
 
-define amdgpu_kernel void @kernel_caller_byval() {
+define amdgpu_kernel void @kernel_caller_byval() #2 {
 ; MUBUF-LABEL: kernel_caller_byval:
 ; MUBUF:       ; %bb.0:
 ; MUBUF-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
@@ -213,7 +213,7 @@ define amdgpu_kernel void @kernel_caller_byval() {
   ret void
 }
 
-define void @func_caller_stack() {
+define void @func_caller_stack() #2 {
 ; MUBUF-LABEL: func_caller_stack:
 ; MUBUF:       ; %bb.0:
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -291,7 +291,7 @@ define void @func_caller_stack() {
   ret void
 }
 
-define void @func_caller_byval(ptr addrspace(5) %argptr) {
+define void @func_caller_byval(ptr addrspace(5) %argptr) #2 {
 ; MUBUF-LABEL: func_caller_byval:
 ; MUBUF:       ; %bb.0:
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -432,3 +432,4 @@ declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture writeonly, i8, i32, 
 
 attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 attributes #1 = { argmemonly nofree nounwind willreturn writeonly }
+attributes #2 = { nounwind }

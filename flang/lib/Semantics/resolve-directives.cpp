@@ -171,7 +171,6 @@ protected:
   Symbol *DeclareNewAccessEntity(const Symbol &, Symbol::Flag, Scope &);
   Symbol *DeclareAccessEntity(const parser::Name &, Symbol::Flag, Scope &);
   Symbol *DeclareAccessEntity(Symbol &, Symbol::Flag, Scope &);
-  Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
 
   UnorderedSymbolSet dataSharingAttributeObjects_; // on one directive
   SemanticsContext &context_;
@@ -1026,11 +1025,6 @@ private:
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpUseDevicePtr,
       Symbol::Flag::OmpUseDeviceAddr, Symbol::Flag::OmpIsDevicePtr,
       Symbol::Flag::OmpHasDeviceAddr, Symbol::Flag::OmpUniform};
-
-  Symbol::Flags ompFlagsRequireMark{Symbol::Flag::OmpThreadprivate,
-      Symbol::Flag::OmpDeclareTarget, Symbol::Flag::OmpExclusiveScan,
-      Symbol::Flag::OmpInclusiveScan, Symbol::Flag::OmpInScanReduction,
-      Symbol::Flag::OmpGroupPrivate};
 
   Symbol::Flags dataCopyingAttributeFlags{
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
@@ -3009,9 +3003,7 @@ void OmpAttributeVisitor::PropagateOmpFlagToEquivalenceSet(
       // Set the OpenMP flag on the equivalenced symbol
       if (Symbol * resolvedSymbol{ResolveOmp(eqSymbol, ompFlag, currScope())}) {
         // Also add to the context if needed
-        if (ompFlagsRequireMark.test(ompFlag)) {
-          AddToContextObjectWithExplicitDSA(*resolvedSymbol, ompFlag);
-        }
+        AddToContextObjectWithExplicitDSA(*resolvedSymbol, ompFlag);
       }
     }
   }
@@ -3102,9 +3094,7 @@ Symbol *OmpAttributeVisitor::DeclareOrMarkOtherAccessEntity(
 
 Symbol *OmpAttributeVisitor::DeclareOrMarkOtherAccessEntity(
     Symbol &object, Symbol::Flag ompFlag) {
-  if (ompFlagsRequireMark.test(ompFlag)) {
-    object.set(ompFlag);
-  }
+  object.set(ompFlag);
   return &object;
 }
 

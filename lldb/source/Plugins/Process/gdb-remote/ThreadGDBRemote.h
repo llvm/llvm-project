@@ -118,6 +118,8 @@ protected:
 
   bool PrivateSetRegisterValue(uint32_t reg, uint64_t regval);
 
+  void PrivateSetRegisterUnavailable(uint32_t reg);
+
   bool CachedQueueInfoIsValid() const {
     return m_queue_kind != lldb::eQueueKindUnknown;
   }

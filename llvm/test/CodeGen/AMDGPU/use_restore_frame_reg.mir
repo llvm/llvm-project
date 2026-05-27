@@ -39,11 +39,43 @@ body:             |
   ; MUBUF-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; MUBUF-NEXT:   liveins: $sgpr40, $sgpr41, $vgpr1
   ; MUBUF-NEXT: {{  $}}
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr4
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr5
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr6
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr7
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr8
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr9
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr10
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr11
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr12
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr13
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr14
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr15
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr16
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr17
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr18
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr19
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr20
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr21
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr22
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr23
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr24
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr25
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr26
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
   ; MUBUF-NEXT:   $sgpr40 = frame-setup COPY $sgpr33
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr40
   ; MUBUF-NEXT:   $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
   ; MUBUF-NEXT:   $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
   ; MUBUF-NEXT:   $sgpr41 = frame-setup COPY $sgpr34
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr41
   ; MUBUF-NEXT:   $sgpr34 = frame-setup COPY $sgpr32
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_register $sgpr33
   ; MUBUF-NEXT:   $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 11010048, implicit-def dead $scc
   ; MUBUF-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; MUBUF-NEXT:   S_NOP 0, implicit-def $sgpr4, implicit-def $sgpr5, implicit-def $sgpr6, implicit-def $sgpr7, implicit-def $sgpr8, implicit-def $sgpr9, implicit-def $sgpr10, implicit-def $sgpr11, implicit-def $sgpr12, implicit-def $sgpr13, implicit-def $sgpr14, implicit-def $sgpr15, implicit-def $sgpr16, implicit-def $sgpr17, implicit-def $sgpr18, implicit-def $sgpr19, implicit-def $sgpr20, implicit-def $sgpr21, implicit-def $sgpr22, implicit-def $sgpr23, implicit-def $sgpr24, implicit-def $sgpr25, implicit-def $sgpr26, implicit-def $sgpr27, implicit-def $sgpr28, implicit-def $sgpr29, implicit-def $sgpr30, implicit-def $sgpr31, implicit-def $vcc
@@ -66,6 +98,7 @@ body:             |
   ; MUBUF-NEXT: {{  $}}
   ; MUBUF-NEXT:   $sgpr32 = frame-destroy COPY $sgpr34
   ; MUBUF-NEXT:   $sgpr34 = frame-destroy COPY $sgpr41
+  ; MUBUF-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa_register $sgpr32
   ; MUBUF-NEXT:   $sgpr33 = frame-destroy COPY $sgpr40
   ; MUBUF-NEXT:   S_ENDPGM 0
   ;
@@ -74,11 +107,43 @@ body:             |
   ; FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; FLATSCR-NEXT:   liveins: $sgpr40, $sgpr41, $vgpr1
   ; FLATSCR-NEXT: {{  $}}
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr4
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr5
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr6
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr7
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr8
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr9
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr10
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr11
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr12
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr13
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr14
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr15
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr16
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr17
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr18
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr19
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr20
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr21
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr22
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr23
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr24
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr25
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr26
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
   ; FLATSCR-NEXT:   $sgpr40 = frame-setup COPY $sgpr33
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr40
   ; FLATSCR-NEXT:   $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
   ; FLATSCR-NEXT:   $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
   ; FLATSCR-NEXT:   $sgpr41 = frame-setup COPY $sgpr34
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr41
   ; FLATSCR-NEXT:   $sgpr34 = frame-setup COPY $sgpr32
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x41, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
   ; FLATSCR-NEXT:   $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 172032, implicit-def dead $scc
   ; FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; FLATSCR-NEXT:   S_NOP 0, implicit-def $sgpr4, implicit-def $sgpr5, implicit-def $sgpr6, implicit-def $sgpr7, implicit-def $sgpr8, implicit-def $sgpr9, implicit-def $sgpr10, implicit-def $sgpr11, implicit-def $sgpr12, implicit-def $sgpr13, implicit-def $sgpr14, implicit-def $sgpr15, implicit-def $sgpr16, implicit-def $sgpr17, implicit-def $sgpr18, implicit-def $sgpr19, implicit-def $sgpr20, implicit-def $sgpr21, implicit-def $sgpr22, implicit-def $sgpr23, implicit-def $sgpr24, implicit-def $sgpr25, implicit-def $sgpr26, implicit-def $sgpr27, implicit-def $sgpr28, implicit-def $sgpr29, implicit-def $sgpr30, implicit-def $sgpr31, implicit-def $vcc
@@ -104,6 +169,7 @@ body:             |
   ; FLATSCR-NEXT: {{  $}}
   ; FLATSCR-NEXT:   $sgpr32 = frame-destroy COPY $sgpr34
   ; FLATSCR-NEXT:   $sgpr34 = frame-destroy COPY $sgpr41
+  ; FLATSCR-NEXT:   frame-destroy CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
   ; FLATSCR-NEXT:   $sgpr33 = frame-destroy COPY $sgpr40
   ; FLATSCR-NEXT:   S_ENDPGM 0
   bb.0:

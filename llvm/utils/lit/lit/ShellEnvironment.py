@@ -16,7 +16,7 @@ kAvoidDevNull = kIsWindows
 kDevNull = "/dev/null"
 
 
-class ShellCommandResult(object):
+class ShellCommandResult:
     """Captures the result of an individual command."""
 
     def __init__(
@@ -36,7 +36,7 @@ class InternalShellError(Exception):
         self.message = message
 
 
-class ShellEnvironment(object):
+class ShellEnvironment:
 
     """Mutable shell environment containing things like CWD and env vars.
 

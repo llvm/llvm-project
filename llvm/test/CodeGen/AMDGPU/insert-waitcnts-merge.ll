@@ -7,7 +7,7 @@
 %struct.bar = type { %struct.bar.0 }
 %struct.bar.0 = type { float, float, float, float }
 
-define amdgpu_kernel void @widget(ptr addrspace(1) %arg, i1 %arg1) {
+define amdgpu_kernel void @widget(ptr addrspace(1) %arg, i1 %arg1) #0 {
   ; CHECK-LABEL: name: widget
   ; CHECK: bb.0.bb:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
@@ -166,3 +166,5 @@ bb13:                                             ; preds = %bb2
   %load14 = load i32, ptr addrspace(1) null, align 4
   br label %bb2
 }
+
+attributes #0 = { nounwind }

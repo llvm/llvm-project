@@ -1179,9 +1179,13 @@ void TypeInfo::typeScan(mlir::Type ty) {
     typeScan(pty.getEleTy());
   } else {
     // The scan ends when reaching any built-in, record or boxproc type.
+    // A `none` element type is reached for unlimited polymorphic entities
+    // (e.g. `class(*)`), which are always inside a box; the copy is then
+    // performed through the descriptor, so no scalar type info is needed.
     assert(ty.isIntOrIndexOrFloat() || mlir::isa<mlir::ComplexType>(ty) ||
            mlir::isa<fir::LogicalType>(ty) || mlir::isa<fir::RecordType>(ty) ||
-           mlir::isa<fir::BoxProcType>(ty));
+           mlir::isa<fir::BoxProcType>(ty) ||
+           (inBox && mlir::isa<mlir::NoneType>(ty)));
   }
 }
 

@@ -551,7 +551,13 @@ void X86AvoidSFBImpl::findPotentiallylBlockedCopies(MachineFunction &MF) {
             isRelevantAddressingMode(&MI) &&
             isRelevantAddressingMode(&StoreMI) &&
             MI.hasOneMemOperand() && StoreMI.hasOneMemOperand()) {
-          if (!alias(**MI.memoperands_begin(), **StoreMI.memoperands_begin()))
+          // Don't split volatile or atomic accesses.
+          const MachineMemOperand *LMMO = *MI.memoperands_begin();
+          const MachineMemOperand *SMMO = *StoreMI.memoperands_begin();
+          if (LMMO->isVolatile() || LMMO->isAtomic() || SMMO->isVolatile() ||
+              SMMO->isAtomic())
+            continue;
+          if (!alias(*LMMO, *SMMO))
             BlockedLoadsStoresPairs.push_back(std::make_pair(&MI, &StoreMI));
         }
       }

@@ -1212,6 +1212,9 @@ private:
           if (isBuiltinCptrType) {
             auto recTy = mlir::dyn_cast<fir::RecordType>(type);
             mlir::Type fieldTy = recTy.getTypeList()[0].second;
+            if (fir::isa_builtin_cdevptr_type(type))
+              fieldTy =
+                  mlir::cast<fir::RecordType>(fieldTy).getTypeList()[0].second;
             passType = fir::ReferenceType::get(fieldTy);
           } else {
             passType = type;

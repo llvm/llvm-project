@@ -300,7 +300,7 @@ public:
         } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
           // Return stack address.
           SemaHelper->reportUseAfterReturn(
-              IssueExpr, RetEscape->getReturnExpr(), MovedExpr, ExpiryLoc);
+              IssueExpr, RetEscape->getReturnExpr(), MovedExpr);
         else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
           // Dangling field.
           SemaHelper->reportDanglingField(

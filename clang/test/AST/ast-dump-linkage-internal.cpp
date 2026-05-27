@@ -80,7 +80,7 @@ const int ConstInt = 0;
 template <typename T>
 T TemplatedVar = T{};
 // CHECK: | |-VarTemplateDecl {{.*}} TemplatedVar internal-linkage
-// CHECK: | | |-VarDecl {{.*}} TemplatedVar 'T' cinit instantiated_from 0x{{[0-9a-f]*}}
+// CHECK: | | |-VarDecl {{.*}} TemplatedVar 'T' cinit
 // CHECK: | | `-VarTemplateSpecializationDecl {{.*}} used TemplatedVar 'int' implicit_instantiation cinit instantiated_from 0x{{[0-9a-f]*}} internal-linkage
 
 // FIXME: VarTemplateSpecializationDecl node is printed twice.

@@ -25,7 +25,8 @@
    "\\(i[0-9]+\\|"
    (regexp-opt
     '("void" "half" "bfloat" "float" "double" "fp128" "x86_fp80" "ppc_fp128"
-      "x86_mmx" "x86_amx" "ptr" "type" "label" "opaque" "token") t)
+      "x86_mmx" "x86_amx" "ptr" "type" "label" "opaque" "token")
+    'symbols)
    "\\)"))
 
 (defvar llvm-font-lock-keywords

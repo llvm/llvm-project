@@ -46,7 +46,7 @@ jobs:
           # If there are multiple /cherry-pick commands they will all be included in the output.
           # This is fine since the github-automation.py script can handle multiple cherry-pick commands.
           validated_comment=$(\
-            grep -o -e '/cherry-pick \(https://github.com/llvm/llvm-project/commit/\)\?[a-f0-9]\+' <<< $COMMENT_BODY \
+            grep -o -e '/cherry-pick \(https://github.com/llvm/llvm-project/commit/\)\?[a-f0-9 ]\+' <<< $COMMENT_BODY \
           )
           echo "Validated Comment is:"
           echo ${validated_comment}

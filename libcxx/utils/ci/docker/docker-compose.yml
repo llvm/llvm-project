@@ -14,7 +14,7 @@ services:
       context: ../../../.. # monorepo root
       dockerfile: libcxx/utils/ci/docker/linux-builder-base.dockerfile
       args:
-        GCC_HEAD_VERSION: 16
+        GCC_HEAD_VERSION: 17
         LLVM_HEAD_VERSION: 23
 
   libcxx-linux-builder:

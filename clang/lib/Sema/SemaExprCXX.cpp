@@ -479,7 +479,11 @@ ParsedType Sema::getDestructorTypeForDecltype(const DeclSpec &DS,
     return nullptr;
   }
 
-  return ParsedType::make(T);
+  TypeLocBuilder TLB;
+  DecltypeTypeLoc DecltypeTL = TLB.push<DecltypeTypeLoc>(T);
+  DecltypeTL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
+  DecltypeTL.setRParenLoc(DS.getTypeofParensRange().getEnd());
+  return CreateParsedType(T, TLB.getTypeSourceInfo(Context, T));
 }
 
 bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,

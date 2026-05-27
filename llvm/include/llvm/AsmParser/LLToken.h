@@ -513,6 +513,7 @@ enum Kind {
   DwarfVirtuality,     // DW_VIRTUALITY_foo
   DwarfLang,           // DW_LANG_foo
   DwarfSourceLangName, // DW_LNAME_foo
+  DwarfLangDialect,    // DW_LLVM_LANG_DIALECT_foo
   DwarfCC,             // DW_CC_foo
   EmissionKind,        // lineTablesOnly
   NameTableKind,       // GNU

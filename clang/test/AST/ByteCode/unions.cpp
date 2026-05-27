@@ -386,6 +386,18 @@ namespace CopyCtor {
   static_assert(y.a == 42, "");
   static_assert(y.b == 42, ""); // both-error {{constant expression}} \
                                 // both-note {{'b' of union with active member 'a'}}
+
+  /// Non-defaulted copy ctor.
+  union U2 {
+    int a;
+    constexpr U2() : a(100) {}
+    constexpr U2(const U2 &u) {
+      a = 20;
+    };
+  };
+  constexpr U2 u2;
+  constexpr U2 u22(u2);
+  static_assert(u22.a == 20, "");
 }
 
 namespace UnionInBase {

@@ -4,7 +4,7 @@
 
 ; Check LDS barrier arrive operations are marked as atomic.
 
-define void @test_ds_atomic_barrier_arrive_rtn_b64(i64 %data, ptr addrspace(3) %bar) {
+define void @test_ds_atomic_barrier_arrive_rtn_b64(i64 %data, ptr addrspace(3) %bar) #0 {
   ; GCN-LABEL: name: test_ds_atomic_barrier_arrive_rtn_b64
   ; GCN: bb.0.entry:
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -16,7 +16,7 @@ entry:
   ret void
 }
 
-define void @test_ds_atomic_async_barrier_arrive_b64(ptr addrspace(3) %bar) {
+define void @test_ds_atomic_async_barrier_arrive_b64(ptr addrspace(3) %bar) #0 {
   ; GCN-LABEL: name: test_ds_atomic_async_barrier_arrive_b64
   ; GCN: bb.0.entry:
   ; GCN-NEXT:   liveins: $vgpr0
@@ -27,3 +27,5 @@ entry:
   call void @llvm.amdgcn.ds.atomic.async.barrier.arrive.b64(ptr addrspace(3) %bar)
   ret void
 }
+
+attributes #0 = { nounwind }

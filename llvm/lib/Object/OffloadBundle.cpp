@@ -206,9 +206,14 @@ Error object::extractOffloadBundleFatBinary(
       uint64_t SectionOffset = 0;
       if (Obj.isELF()) {
         SectionOffset = ELFSectionRef(Sec).getOffset();
-      } else if (Obj.isCOFF()) // TODO: add COFF Support.
-        return createStringError(object_error::parse_failed,
-                                 "COFF object files not supported");
+      } else if (Obj.isCOFF()) {
+        const COFFObjectFile &COFF = cast<COFFObjectFile>(Obj);
+        Expected<const coff_section *> SecOrErr =
+            COFF.getSection(COFF.getSectionID(Sec));
+        if (!SecOrErr)
+          return SecOrErr.takeError();
+        SectionOffset = (*SecOrErr)->PointerToRawData;
+      }
 
       MemoryBufferRef Contents(*Buffer, Obj.getFileName());
       if (Error Err = extractOffloadBundle(Contents, SectionOffset,

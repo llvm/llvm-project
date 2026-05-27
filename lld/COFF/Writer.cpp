@@ -840,8 +840,10 @@ void Writer::run() {
                << "': " << toString(std::move(e));
 }
 
-static StringRef getOutputSectionName(StringRef name) {
+static StringRef getOutputSectionName(StringRef name, bool isMinGW) {
   StringRef s = name.split('$').first;
+  if (!isMinGW)
+    return s;
 
   // Treat a later period as a separator for MinGW, for sections like
   // ".ctors.01234".
@@ -1155,7 +1157,7 @@ void Writer::createSections() {
   // contributes to .text, for example. See PE/COFF spec 3.2.
   for (auto it : partialSections) {
     PartialSection *pSec = it.second;
-    StringRef name = getOutputSectionName(pSec->name);
+    StringRef name = getOutputSectionName(pSec->name, ctx.config.mingw);
     uint32_t outChars = pSec->characteristics;
 
     if (name == ".CRT") {

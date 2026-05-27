@@ -988,7 +988,7 @@ def NegSubInlineIntConst16 : ImmLeaf<i16, [{
 }], NegateImm>;
 
 def ShiftAmt32Imm : ImmLeaf <i32, [{
-  return Imm < 32;
+  return static_cast<uint32_t>(Imm) < 32;
 }]>;
 
 def fp16_zeros_high_16bits : PatLeaf<(f16 VGPR_32:$src), [{

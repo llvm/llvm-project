@@ -10228,4 +10228,62 @@ TEST(APFloatTest, DecimalStringPreservesInexactStatus) {
   EXPECT_EQ(F.bitcastToAPInt(), Expected.bitcastToAPInt());
 }
 
+TEST(APFloatTest, expf) {
+  // exp(+-0) = 1.
+  EXPECT_EQ(1.0f, llvm::exp(APFloat(0.0f)).convertToFloat());
+  EXPECT_EQ(1.0f, llvm::exp(APFloat(-0.0f)).convertToFloat());
+  // exp(+Inf) = +Inf.
+  EXPECT_EQ(std::numeric_limits<float>::infinity(),
+            llvm::exp(APFloat::getInf(APFloat::IEEEsingle(), false))
+                .convertToFloat());
+  // exp(-Inf) = 0.
+  EXPECT_EQ(
+      0.0f,
+      llvm::exp(APFloat::getInf(APFloat::IEEEsingle(), true)).convertToFloat());
+  // exp(NaN) = NaN.
+  EXPECT_TRUE(llvm::exp(APFloat::getNaN(APFloat::IEEEsingle())).isNaN());
+  // exp(1)
+  EXPECT_EQ(0x1.5bf0a8p1f, llvm::exp(APFloat(1.0f)).convertToFloat());
+  // exp(float max)
+  EXPECT_EQ(std::numeric_limits<float>::infinity(),
+            llvm::exp(APFloat::getLargest(APFloat::IEEEsingle(), false))
+                .convertToFloat());
+  // exp(min_denormal)
+  EXPECT_EQ(1.0f, llvm::exp(APFloat::getSmallest(APFloat::IEEEsingle(), false))
+                      .convertToFloat());
+  // exp(-1)
+  EXPECT_EQ(0x1.78b564p-2f, llvm::exp(APFloat(-1.0f)).convertToFloat());
+  // exp(-90)
+  EXPECT_EQ(0x1.1d85p-130f, llvm::exp(APFloat(-90.0f)).convertToFloat());
+}
+
+TEST(APFloatTest, exp) {
+  // exp(+-0) = 1.
+  EXPECT_EQ(1.0, llvm::exp(APFloat(0.0)).convertToDouble());
+  EXPECT_EQ(1.0, llvm::exp(APFloat(-0.0)).convertToDouble());
+  // exp(+Inf) = +Inf.
+  EXPECT_EQ(std::numeric_limits<double>::infinity(),
+            llvm::exp(APFloat::getInf(APFloat::IEEEdouble(), false))
+                .convertToDouble());
+  // exp(-Inf) = 0.
+  EXPECT_EQ(0.0, llvm::exp(APFloat::getInf(APFloat::IEEEdouble(), true))
+                     .convertToDouble());
+  // exp(NaN) = NaN.
+  EXPECT_TRUE(llvm::exp(APFloat::getNaN(APFloat::IEEEdouble())).isNaN());
+  // exp(1)
+  EXPECT_EQ(0x1.5bf0a8b145769p1, llvm::exp(APFloat(1.0)).convertToDouble());
+  // exp(float max)
+  EXPECT_EQ(std::numeric_limits<double>::infinity(),
+            llvm::exp(APFloat::getLargest(APFloat::IEEEdouble(), false))
+                .convertToDouble());
+  // exp(min_denormal)
+  EXPECT_EQ(1.0, llvm::exp(APFloat::getSmallest(APFloat::IEEEdouble(), false))
+                     .convertToDouble());
+  // exp(-1)
+  EXPECT_EQ(0x1.78b56362cef38p-2, llvm::exp(APFloat(-1.0)).convertToDouble());
+  // exp(-710)
+  EXPECT_EQ(0x1.9c017e9459e18p-1025,
+            llvm::exp(APFloat(-710.0)).convertToDouble());
+}
+
 } // namespace

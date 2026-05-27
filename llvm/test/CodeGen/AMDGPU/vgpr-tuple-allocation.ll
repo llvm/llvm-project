@@ -5,7 +5,7 @@
 
 declare void @extern_func() #2
 
-define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, float %bias, float %zcompare, float %s, float %t, float %clamp) {
+define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, float %bias, float %zcompare, float %s, float %t, float %clamp) #3 {
 ; The vgpr tuple8 operand in image_gather4_c_b_cl instruction needs not be
 ; preserved across the call and should get 8 scratch registers.
 ; GFX9-LABEL: non_preserved_vgpr_tuple8:
@@ -193,7 +193,7 @@ main_body:
   ret <4 x float> %v
 }
 
-define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, float %bias, float %zcompare, float %s, float %t, float %clamp) {
+define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, float %bias, float %zcompare, float %s, float %t, float %clamp) #3 {
 ; The vgpr tuple8 operand in image_gather4_c_b_cl instruction needs to be preserved
 ; across the call and should get allcoated to 8 CSRs.
 ; Only the lower 5 sub-registers of the tuple are preserved.
@@ -365,3 +365,4 @@ declare <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.2d.v4f32.f32.f32(i32 immar
 attributes #0 = { nounwind writeonly }
 attributes #1 = { nounwind readonly }
 attributes #2 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+attributes #3 = { nounwind }

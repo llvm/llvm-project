@@ -131,11 +131,64 @@ class UnsafeBufferReachableAnalysis
     : public DerivedAnalysis<UnsafeBufferReachableAnalysisResult,
                              PointerFlowAnalysisResult,
                              UnsafeBufferUsageAnalysisResult> {
-  using GraphT = std::map<EntityId, EdgeSet>;
-  const GraphT *Graph = nullptr;
 
-  // Use pointers for efficiency. Both `Graph` and `Reachables` in the result
-  // are tree-based containers that only grow. So pointers to them are stable.
+  /// BoundsPropagationGraph adds bounds propagation semantics to the
+  /// pointer-flow graph, which represents the set of static pointer assignment
+  /// sites collected from the source code. Consider the following example:
+  ///
+  /// void f(int ***p, int **q) {
+  ///   *p = q;
+  ///   (**p)[5] = 0;
+  /// }
+  ///
+  /// There is one static pointer assignment thus one pointer-flow edge: (p, 2)
+  /// -> (q, 1). In terms of bounds propagation, this assignment implies that if
+  /// 'p' at pointer level 2 requires bounds, 'q' at pointer level 1 must also
+  /// have them. Furthermore, this relationship propagates to deeper indirection
+  /// levels: if 'p' at level 3 requires bounds, so does 'q' at level 2.
+  ///
+  /// In the example above, `(**p)` requires bounds (due to the array index),
+  /// and therefore `*q` must require bounds as well.
+  ///
+  /// To generalize the idea, the BoundsPropagationGraph is defined as a super
+  /// graph of the input pointer-flow graph by:
+  ///
+  ///   For each edge (src, i) -> (dest, j) in the pointer-flow graph, the
+  ///   BoundsPropagationGraph has a finite set of edges
+  ///   {(src, i + d) -> (dest, j + d) | 0 <= d < UB}, where UB is an upper
+  ///   bound based on the maximum pointer level the pointer type can have.
+  struct BoundsPropagationGraph {
+  private:
+    const std::map<EntityPointerLevel, EntityPointerLevelSet> &PointerFlows;
+
+  public:
+    BoundsPropagationGraph(const EdgeSet &PointerFlows)
+        : PointerFlows(PointerFlows) {}
+
+    /// Returns the EntityPointerLevelSet that are reachable from \p Src by
+    /// one edge in the BoundsPropagationGraph.
+    EntityPointerLevelSet getDestNodes(const EntityPointerLevel &Src) const {
+      unsigned SrcPtrLv = Src.getPointerLevel();
+      EntityPointerLevelSet Result;
+
+      for (unsigned P = 1; P <= SrcPtrLv; ++P) {
+        auto I = PointerFlows.find(buildEntityPointerLevel(Src.getEntity(), P));
+
+        if (I != PointerFlows.end()) {
+          unsigned Delta = SrcPtrLv - P;
+          for (const auto &EPL : I->second)
+            Result.insert(buildEntityPointerLevel(
+                EPL.getEntity(), EPL.getPointerLevel() + Delta));
+        }
+      }
+      return Result;
+    }
+  };
+
+  std::map<EntityId, BoundsPropagationGraph> BPG;
+
+  // Use pointers for efficiency. EPLs are in tree-based containers that only
+  // grow. So pointers to them are stable.
   using EPLPtr = const EntityPointerLevel *;
 
   // Find all outgoing edges from `EPL` in the `Graph`, insert their
@@ -143,25 +196,23 @@ class UnsafeBufferReachableAnalysis
   // `Worklist`:
   void updateReachablesWithOutgoings(EPLPtr EPL,
                                      std::vector<EPLPtr> &WorkList) {
-    for (auto &[Id, SubGraph] : *Graph) {
-      auto I = SubGraph.find(*EPL);
-      EntityPointerLevelSet &ReachablesOfId = getResult().Reachables[Id];
+    for (auto &[Id, SubGraph] : BPG) {
+      auto R = SubGraph.getDestNodes(*EPL);
 
-      if (I != SubGraph.end()) {
-        for (const auto &EPL : I->second) {
-          auto [Ignored, Inserted] = ReachablesOfId.insert(EPL);
-          if (Inserted)
-            WorkList.push_back(&EPL);
-        }
+      for (const auto &Dst : R) {
+        auto [It, Inserted] = getResult().Reachables[Id].insert(Dst);
+        if (Inserted)
+          WorkList.push_back(&*It);
       }
     }
   }
 
 public:
   llvm::Error
-  initialize(const PointerFlowAnalysisResult &Graph,
+  initialize(const PointerFlowAnalysisResult &PtrFlowGraph,
              const UnsafeBufferUsageAnalysisResult &Starter) override {
-    this->Graph = &Graph.Edges;
+    for (auto &[Id, SubGraph] : PtrFlowGraph.Edges)
+      BPG.try_emplace(Id, BoundsPropagationGraph(SubGraph));
     assert(getResult().Reachables.empty());
     getResult().Reachables.insert(Starter.begin(), Starter.end());
     return llvm::Error::success();
@@ -193,5 +244,7 @@ AnalysisRegistry::Add<UnsafeBufferReachableAnalysis>
 
 } // namespace
 
+namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int UnsafeBufferUsageAnalysisAnchorSource = 0;
+} // namespace clang::ssaf

@@ -739,6 +739,8 @@ public:
 
   bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
 
+  bool hasFmaLegacy32Insts() const { return hasGFX10_3Insts(); }
+
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
     return AMDGPU::IsaInfo::getSGPRAllocGranule(*this);

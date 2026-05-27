@@ -5,7 +5,7 @@
 
 @gv = external addrspace(4) constant i32
 
-define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align4(i32 %n) {
+define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align4(i32 %n) #0 {
 ; GFX9-LABEL: kernel_dynamic_stackalloc_sgpr_align4:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dword s5, s[8:9], 0x0
@@ -63,7 +63,7 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align4(i32 %n) {
   ret void
 }
 
-define void @func_dynamic_stackalloc_sgpr_align4() {
+define void @func_dynamic_stackalloc_sgpr_align4() #0 {
 ; GFX9-LABEL: func_dynamic_stackalloc_sgpr_align4:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -146,7 +146,7 @@ define void @func_dynamic_stackalloc_sgpr_align4() {
   ret void
 }
 
-define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align16(i32 %n) {
+define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align16(i32 %n) #0 {
 ; GFX9-LABEL: kernel_dynamic_stackalloc_sgpr_align16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dword s5, s[8:9], 0x0
@@ -204,7 +204,7 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align16(i32 %n) {
   ret void
 }
 
-define void @func_dynamic_stackalloc_sgpr_align16() {
+define void @func_dynamic_stackalloc_sgpr_align16() #0 {
 ; GFX9-LABEL: func_dynamic_stackalloc_sgpr_align16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -287,7 +287,7 @@ define void @func_dynamic_stackalloc_sgpr_align16() {
   ret void
 }
 
-define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align32(i32 %n) {
+define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align32(i32 %n) #0 {
 ; GFX9-LABEL: kernel_dynamic_stackalloc_sgpr_align32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dword s4, s[8:9], 0x0
@@ -348,7 +348,7 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align32(i32 %n) {
   ret void
 }
 
-define void @func_dynamic_stackalloc_sgpr_align32(ptr addrspace(1) %out) {
+define void @func_dynamic_stackalloc_sgpr_align32(ptr addrspace(1) %out) #0 {
 ; GFX9-LABEL: func_dynamic_stackalloc_sgpr_align32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -445,3 +445,5 @@ define void @func_dynamic_stackalloc_sgpr_align32(ptr addrspace(1) %out) {
   store i32 0, ptr addrspace(5) %alloca
   ret void
 }
+
+attributes #0 = { nounwind }

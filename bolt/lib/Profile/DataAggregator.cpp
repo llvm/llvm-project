@@ -169,6 +169,29 @@ std::vector<SectionNameAndRange> getTextSections(const BinaryContext *BC) {
 
 DataAggregator::~DataAggregator() { deleteTempFiles(); }
 
+void DataAggregator::markFunctionsWithProfile() {
+  std::unordered_set<uint64_t> Samples;
+  std::unordered_set<BinaryFunction *> Funcs;
+
+  for (const auto &[PC, _] : BasicSamples)
+    Samples.insert(PC);
+
+  for (const PerfMemSample &Sample : MemSamples)
+    Samples.insert(Sample.PC);
+
+  for (const auto &[Trace, Info] : Traces) {
+    Samples.insert(Trace.Branch);
+    Samples.insert(Trace.From);
+  }
+
+  for (const uint64_t Addr : Samples)
+    Funcs.insert(getBinaryFunctionContainingAddress(Addr));
+
+  Funcs.erase(nullptr);
+  for (BinaryFunction *BF : Funcs)
+    BF->setHasProfileAvailable();
+}
+
 namespace {
 void deleteTempFile(const std::string &FileName) {
   if (std::error_code Errc = sys::fs::remove(FileName.c_str()))
@@ -557,7 +580,7 @@ int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
   return PI.ReturnCode;
 }
 
-void DataAggregator::parsePerfData(BinaryContext &BC) {
+void DataAggregator::parsePerfData() {
   auto ErrorCallback = [](int ReturnCode, StringRef ErrBuf) {
     errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
     exit(1);
@@ -570,7 +593,7 @@ void DataAggregator::parsePerfData(BinaryContext &BC) {
       ErrorCallback(ReturnCode, ErrBuf);
   };
 
-  if (std::optional<StringRef> FileBuildID = BC.getFileBuildID()) {
+  if (std::optional<StringRef> FileBuildID = BC->getFileBuildID()) {
     outs() << "BOLT-INFO: binary build-id is:     " << *FileBuildID << "\n";
     processFileBuildID(*FileBuildID);
   } else {
@@ -578,7 +601,7 @@ void DataAggregator::parsePerfData(BinaryContext &BC) {
               "not read one from input binary\n";
   }
 
-  if (BC.IsLinuxKernel) {
+  if (BC->IsLinuxKernel) {
     // Current MMap parsing logic does not work with linux kernel.
     // MMap entries for linux kernel uses PERF_RECORD_MMAP
     // format instead of typical PERF_RECORD_MMAP2 format.
@@ -683,6 +706,13 @@ void DataAggregator::imputeFallThroughs() {
     outs() << "BOLT-INFO: imputed " << InferredTraces << " traces\n";
 }
 
+void DataAggregator::parseInput() {
+  if (opts::ReadPreAggregated)
+    parsePreAggregated();
+  else
+    parsePerfData();
+}
+
 Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   this->BC = &BC;
 
@@ -692,11 +722,11 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
       exit(1);
     }
     exit(0);
-  } else if (opts::ReadPreAggregated) {
-    parsePreAggregated();
-  } else {
-    parsePerfData(BC);
   }
+
+  parseInput();
+
+  markFunctionsWithProfile();
 
   // Sort parsed traces for faster processing.
   llvm::sort(Traces, llvm::less_first());
@@ -1387,6 +1417,11 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     if (std::error_code EC = AddrOrErr.getError())
       return EC;
     Addr[I] = AddrOrErr.get();
+    // Reset external addresses, but preserve sentinel values (BR_ONLY,
+    // FT_EXTERNAL_ORIGIN, FT_EXTERNAL_RETURN).
+    if (Addr[I]->Offset < Trace::FT_EXTERNAL_RETURN &&
+        Addr[I]->Name != FilterBuildID)
+      Addr[I]->Offset = Trace::EXTERNAL;
   }
 
   /// Parse counters depending on entry type.
@@ -1406,41 +1441,28 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     return make_error_code(llvm::errc::io_error);
   }
 
+  int64_t Count = Counters[0];
+  int64_t Mispreds = Counters[1];
+
+  switch (Type) {
   /// Record event name into \p EventNames and return.
-  if (Type == EVENT_NAME) {
+  case EVENT_NAME: {
     EventNames.insert(EventName);
     return std::error_code();
   }
 
-  // Reset external addresses, but preserve sentinel values (BR_ONLY,
-  // FT_EXTERNAL_ORIGIN, FT_EXTERNAL_RETURN).
-  for (std::optional<Location> &Loc : Addr)
-    if (Loc && Loc->Offset < Trace::FT_EXTERNAL_RETURN &&
-        Loc->Name != FilterBuildID)
-      Loc->Offset = Trace::EXTERNAL;
-
-  const uint64_t FromOffset = Addr[0]->Offset;
-  BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(FromOffset);
-  if (FromFunc)
-    FromFunc->setHasProfileAvailable();
-
-  int64_t Count = Counters[0];
-  int64_t Mispreds = Counters[1];
-
   /// Record basic IP sample into \p BasicSamples and return.
-  if (Type == SAMPLE) {
+  case SAMPLE: {
+    const uint64_t FromOffset = Addr[0]->Offset;
     BasicSamples[FromOffset] += Count;
     NumTotalSamples += Count;
     return std::error_code();
   }
 
-  const uint64_t ToOffset = Addr[1]->Offset;
-  BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(ToOffset);
-  if (ToFunc)
-    ToFunc->setHasProfileAvailable();
-
   /// For fall-through types, adjust locations to match Trace container.
-  if (Type == FT || Type == FT_EXTERNAL_ORIGIN || Type == FT_EXTERNAL_RETURN) {
+  case FT:
+  case FT_EXTERNAL_ORIGIN:
+  case FT_EXTERNAL_RETURN: {
     Addr[2] = Location(Addr[1]->Offset); // Trace To
     Addr[1] = Location(Addr[0]->Offset); // Trace From
     // Put a magic value into Trace Branch to differentiate from a full trace:
@@ -1452,17 +1474,28 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
       Addr[0] = Location(Trace::FT_EXTERNAL_RETURN);
     else
       llvm_unreachable("Unexpected fall-through type");
+    break;
   }
 
   /// For branch type, mark Trace To to differentiate from a full trace.
-  if (Type == BRANCH)
+  case BRANCH: {
     Addr[2] = Location(Trace::BR_ONLY);
+    break;
+  }
 
-  if (Type == RETURN) {
+  case RETURN: {
     if (!Addr[0]->Offset)
       Addr[0]->Offset = Trace::FT_EXTERNAL_RETURN;
     else
       Returns.emplace(Addr[0]->Offset, true);
+    break;
+  }
+
+  case TRACE:
+    break;
+
+  default:
+    llvm_unreachable("Unexpected Type");
   }
 
   /// Record a trace.
@@ -1684,12 +1717,8 @@ std::error_code DataAggregator::parseBranchEvents() {
   }
 
   Traces.reserve(TraceMap.size());
-  for (const auto &[Trace, Info] : TraceMap) {
+  for (const auto &[Trace, Info] : TraceMap)
     Traces.emplace_back(Trace, Info);
-    for (const uint64_t Addr : {Trace.Branch, Trace.From})
-      if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Addr))
-        BF->setHasProfileAvailable();
-  }
   clear(TraceMap);
 
   outs() << "PERF2BOLT: read " << NumSamples << " samples and " << NumEntries
@@ -1751,9 +1780,6 @@ std::error_code DataAggregator::parseBasicEvents() {
       continue;
     ++NumTotalSamples;
 
-    if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Sample->PC))
-      BF->setHasProfileAvailable();
-
     ++BasicSamples[Sample->PC];
     EventNames.insert(Sample->EventName);
   }
@@ -1791,10 +1817,8 @@ std::error_code DataAggregator::parseMemEvents() {
     if (std::error_code EC = Sample.getError())
       return EC;
 
-    if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Sample->PC)) {
-      BF->setHasProfileAvailable();
+    if (getBinaryFunctionContainingAddress(Sample->PC))
       MemSamples.emplace_back(std::move(Sample.get()));
-    }
   }
 
   return std::error_code();

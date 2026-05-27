@@ -1098,7 +1098,6 @@ def int_memset  : DefaultAttrsIntrinsic<[],
 // Memset version that is guaranteed to be inlined.
 // In particular this means that the generated code is not allowed to call any
 // external function.
-// The third argument (specifying the size) must be a constant.
 def int_memset_inline
     : DefaultAttrsIntrinsic<[],
       [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty, llvm_i1_ty],
