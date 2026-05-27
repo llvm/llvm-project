@@ -19,22 +19,22 @@ void test() {
   Container c;
   Container::iterator it = c.begin();
 
-  // expected-warning-re@+1 {{(ignoring return value of function declared with 'nodiscard' attribute|expression result unused)}}
+  // expected-warning-re@+1 {{{{(ignoring return value of function declared with 'nodiscard' attribute|expression result unused)}}}}
   *it;
 
-  // expected-warning-re@+1 {{(ignoring return value of function declared with 'nodiscard' attribute|expression result unused)}}
+  // expected-warning-re@+1 {{{{(ignoring return value of function declared with 'nodiscard' attribute|expression result unused)}}}}
   it[0];
 
-  // expected-warning-re@+1 {{(ignoring return value of function declared with 'nodiscard' attribute|expression result unused)}}
+  // expected-warning-re@+1 {{{{(ignoring return value of function declared with 'nodiscard' attribute|expression result unused)}}}}
   it + 1;
 
-  // expected-warning-re@+1 {{(ignoring return value of function declared with 'nodiscard' attribute|expression result unused)}}
+  // expected-warning-re@+1 {{{{(ignoring return value of function declared with 'nodiscard' attribute|expression result unused)}}}}
   1 + it;
 
-  // expected-warning-re@+1 {{(ignoring return value of function declared with 'nodiscard' attribute|expression result unused)}}
+  // expected-warning-re@+1 {{{{(ignoring return value of function declared with 'nodiscard' attribute|expression result unused)}}}}
   it - 1;
 
-  // expected-warning-re@+1 {{(ignoring return value of function declared with 'nodiscard' attribute|expression result unused)}}
+  // expected-warning-re@+1 {{{{(ignoring return value of function declared with 'nodiscard' attribute|expression result unused)}}}}
   it - it;
 
 #if defined(_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY)
