@@ -13,14 +13,12 @@ define void @copy_bitcast_fusion(ptr noalias %foo, ptr noalias %bar) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 true, i64 1, i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 false, i64 1, i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 true, i64 1, i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr { float, float }, ptr [[FOO]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr { float, float }, ptr [[FOO]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr { float, float }, ptr [[FOO]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr [[FOO]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = load float, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = load float, ptr [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP12:%.*]] = load float, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x float> poison, float [[TMP9]], i32 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP13]], float [[TMP10]], i32 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x float> [[TMP14]], float [[TMP11]], i32 2

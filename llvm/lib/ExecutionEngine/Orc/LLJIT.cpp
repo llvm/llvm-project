@@ -777,7 +777,7 @@ Error LLJITBuilderState::prepareForConstruction() {
       D = std::make_unique<InPlaceTaskDispatcher>();
 #endif // LLVM_ENABLE_THREADS
     if (auto EPCOrErr =
-            SelfExecutorProcessControl::Create(nullptr, std::move(D), nullptr))
+            SelfExecutorProcessControl::Create(nullptr, std::move(D)))
       EPC = std::move(*EPCOrErr);
     else
       return EPCOrErr.takeError();
@@ -828,9 +828,10 @@ Error LLJITBuilderState::prepareForConstruction() {
       if (!JTMB->getCodeModel())
         JTMB->setCodeModel(CodeModel::Small);
       JTMB->setRelocationModel(Reloc::PIC_);
-      CreateObjectLinkingLayer =
-          [](ExecutionSession &ES) -> Expected<std::unique_ptr<ObjectLayer>> {
-        return std::make_unique<ObjectLinkingLayer>(ES);
+      CreateObjectLinkingLayer = [](ExecutionSession &ES,
+                                    jitlink::JITLinkMemoryManager &MemMgr)
+          -> Expected<std::unique_ptr<ObjectLayer>> {
+        return std::make_unique<ObjectLinkingLayer>(ES, MemMgr);
       };
     }
   }
@@ -942,12 +943,20 @@ Expected<ExecutorAddr> LLJIT::lookupLinkerMangled(JITDylib &JD,
     return Sym.takeError();
 }
 
+Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+LLJIT::createMemoryManager(LLJITBuilderState &S, ExecutionSession &ES) {
+  if (S.CreateMemoryManager)
+    return S.CreateMemoryManager(ES);
+  return ES.getExecutorProcessControl().createDefaultMemoryManager();
+}
+
 Expected<std::unique_ptr<ObjectLayer>>
-LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
+LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES,
+                                jitlink::JITLinkMemoryManager &MemMgr) {
 
   // If the config state provided an ObjectLinkingLayer factory then use it.
   if (S.CreateObjectLinkingLayer)
-    return S.CreateObjectLinkingLayer(ES);
+    return S.CreateObjectLinkingLayer(ES, MemMgr);
 
   // Otherwise default to creating an RTDyldObjectLinkingLayer that constructs
   // a new SectionMemoryManager for each object.
@@ -1012,6 +1021,13 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     }
   }
 
+  if (auto MM = createMemoryManager(S, *ES))
+    MemMgr = std::move(*MM);
+  else {
+    Err = MM.takeError();
+    return;
+  }
+
   if (auto DM = ES->getExecutorProcessControl().createDefaultDylibMgr())
     DylibMgr = std::move(*DM);
   else {
@@ -1019,7 +1035,7 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     return;
   }
 
-  auto ObjLayer = createObjectLinkingLayer(S, *ES);
+  auto ObjLayer = createObjectLinkingLayer(S, *ES, *MemMgr);
   if (!ObjLayer) {
     Err = ObjLayer.takeError();
     return;

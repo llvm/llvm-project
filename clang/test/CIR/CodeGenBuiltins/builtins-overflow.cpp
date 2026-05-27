@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck %s --check-prefix=LLVM --input-file=%t-cir.ll
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck %s --check-prefix=OGCG --input-file=%t.ll
+// RUN: FileCheck %s --check-prefix=LLVM --input-file=%t.ll
 
 bool test_add_overflow_uint_uint_uint(unsigned x, unsigned y, unsigned *res) {
   return __builtin_add_overflow(x, y, res);
@@ -20,8 +20,6 @@ bool test_add_overflow_uint_uint_uint(unsigned x, unsigned y, unsigned *res) {
 // LLVM: define{{.*}} i1 @_Z32test_add_overflow_uint_uint_uintjjPj(i32{{.*}}, i32{{.*}}, ptr{{.*}})
 // LLVM:   call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %{{.+}}, i32 %{{.+}})
 
-// OGCG: define{{.*}} i1 @_Z32test_add_overflow_uint_uint_uintjjPj(i32{{.*}}, i32{{.*}}, ptr{{.*}})
-// OGCG:   call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %{{.+}}, i32 %{{.+}})
 
 bool test_add_overflow_int_int_int(int x, int y, int *res) {
   return __builtin_add_overflow(x, y, res);
@@ -40,11 +38,11 @@ bool test_add_overflow_xint31_xint31_xint31(_BitInt(31) x, _BitInt(31) y, _BitIn
 }
 
 //      CIR: cir.func {{.*}} @_Z38test_add_overflow_xint31_xint31_xint31DB31_S_PS_
-//      CIR:   %[[#LHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.int<s, 31>>, !cir.int<s, 31>
-// CIR-NEXT:   %[[#RHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.int<s, 31>>, !cir.int<s, 31>
-// CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!cir.int<s, 31>>>, !cir.ptr<!cir.int<s, 31>>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.add.overflow %[[#LHS]], %[[#RHS]] : !cir.int<s, 31> -> !cir.int<s, 31>
-// CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !cir.int<s, 31>, !cir.ptr<!cir.int<s, 31>>
+//      CIR:   %[[#LHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.int<s, 31, bitint>>, !cir.int<s, 31, bitint>
+// CIR-NEXT:   %[[#RHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.int<s, 31, bitint>>, !cir.int<s, 31, bitint>
+// CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!cir.int<s, 31, bitint>>>, !cir.ptr<!cir.int<s, 31, bitint>>
+//      CIR:   %[[RES:.+]], %{{.+}} = cir.add.overflow %{{.+}}, %{{.+}} : !cir.int<s, 31> -> !cir.int<s, 31, bitint>
+// CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !cir.int<s, 31, bitint>, !cir.ptr<!cir.int<s, 31, bitint>>
 //      CIR: }
 
 bool test_sub_overflow_uint_uint_uint(unsigned x, unsigned y, unsigned *res) {
@@ -76,11 +74,11 @@ bool test_sub_overflow_xint31_xint31_xint31(_BitInt(31) x, _BitInt(31) y, _BitIn
 }
 
 //      CIR: cir.func {{.*}} @_Z38test_sub_overflow_xint31_xint31_xint31DB31_S_PS_
-//      CIR:   %[[#LHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.int<s, 31>>, !cir.int<s, 31>
-// CIR-NEXT:   %[[#RHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.int<s, 31>>, !cir.int<s, 31>
-// CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!cir.int<s, 31>>>, !cir.ptr<!cir.int<s, 31>>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.sub.overflow %[[#LHS]], %[[#RHS]] : !cir.int<s, 31> -> !cir.int<s, 31>
-// CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !cir.int<s, 31>, !cir.ptr<!cir.int<s, 31>>
+//      CIR:   %[[#LHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.int<s, 31, bitint>>, !cir.int<s, 31, bitint>
+// CIR-NEXT:   %[[#RHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.int<s, 31, bitint>>, !cir.int<s, 31, bitint>
+// CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!cir.int<s, 31, bitint>>>, !cir.ptr<!cir.int<s, 31, bitint>>
+//      CIR:   %[[RES:.+]], %{{.+}} = cir.sub.overflow %{{.+}}, %{{.+}} : !cir.int<s, 31> -> !cir.int<s, 31, bitint>
+// CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !cir.int<s, 31, bitint>, !cir.ptr<!cir.int<s, 31, bitint>>
 //      CIR: }
 
 bool test_mul_overflow_uint_uint_uint(unsigned x, unsigned y, unsigned *res) {
@@ -112,11 +110,11 @@ bool test_mul_overflow_xint31_xint31_xint31(_BitInt(31) x, _BitInt(31) y, _BitIn
 }
 
 //      CIR: cir.func {{.*}} @_Z38test_mul_overflow_xint31_xint31_xint31DB31_S_PS_
-//      CIR:   %[[#LHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.int<s, 31>>, !cir.int<s, 31>
-// CIR-NEXT:   %[[#RHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.int<s, 31>>, !cir.int<s, 31>
-// CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!cir.int<s, 31>>>, !cir.ptr<!cir.int<s, 31>>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.mul.overflow %[[#LHS]], %[[#RHS]] : !cir.int<s, 31> -> !cir.int<s, 31>
-// CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !cir.int<s, 31>, !cir.ptr<!cir.int<s, 31>>
+//      CIR:   %[[#LHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.int<s, 31, bitint>>, !cir.int<s, 31, bitint>
+// CIR-NEXT:   %[[#RHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.int<s, 31, bitint>>, !cir.int<s, 31, bitint>
+// CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!cir.int<s, 31, bitint>>>, !cir.ptr<!cir.int<s, 31, bitint>>
+//      CIR:   %[[RES:.+]], %{{.+}} = cir.mul.overflow %{{.+}}, %{{.+}} : !cir.int<s, 31> -> !cir.int<s, 31, bitint>
+// CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !cir.int<s, 31, bitint>, !cir.ptr<!cir.int<s, 31, bitint>>
 //      CIR: }
 
 bool test_mul_overflow_ulong_ulong_long(unsigned long x, unsigned long y, unsigned long *res) {
@@ -372,3 +370,21 @@ bool test_smulll_overflow(long long x, long long y, long long *res) {
 // CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.mul.overflow %[[#X]], %[[#Y]] : !s64i -> !s64i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !s64i, !cir.ptr<!s64i>
 //      CIR: }
+
+bool test_bool_math_overflow(bool x, bool y, int *res) {
+  return __builtin_add_overflow(x, y, res);
+// CIR-LABEL: test_bool_math_overflow
+//      CIR: %[[LOAD_X:.*]] = cir.load align(1) %{{.*}} : !cir.ptr<!cir.bool>, !cir.bool
+// CIR-NEXT: %[[LOAD_Y:.*]] = cir.load align(1) %{{.*}} : !cir.ptr<!cir.bool>, !cir.bool
+// CIR-NEXT: %[[#RES_PTR:]] = cir.load align(8) %{{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR-NEXT: %[[X_CAST:.*]] = cir.cast bool_to_int %[[LOAD_X]] : !cir.bool -> !s32i
+// CIR-NEXT: %[[Y_CAST:.*]] = cir.cast bool_to_int %[[LOAD_Y]] : !cir.bool -> !s32i
+// CIR-NEXT: %[[RES:.*]], %{{.*}} = cir.add.overflow %[[X_CAST]], %[[Y_CAST]] : !s32i -> !s32i
+// CIR-NEXT: cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !s32i, !cir.ptr<!s32i>
+
+// LLVM-LABEL: test_bool_math_overflow
+// LLVM: %[[X_CAST:.*]] = zext i1 %{{.*}} to i32
+// LLVM: %[[Y_CAST:.*]] = zext i1 %{{.*}} to i32
+// LLVM: call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %[[X_CAST]], i32 %[[Y_CAST]])
+}
+

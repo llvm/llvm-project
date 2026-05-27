@@ -106,10 +106,10 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
       // required for scratch access.
       ScratchRSrcReg = AMDGPU::isChainCC(CC)
                            ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
-                           : ScratchRSrcReg = AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
+                           : AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
 
       ArgInfo.PrivateSegmentBuffer =
-        ArgDescriptor::createRegister(ScratchRSrcReg);
+          ArgDescriptor::createRegister(ScratchRSrcReg);
     }
 
     if (!F.hasFnAttribute("amdgpu-no-implicitarg-ptr") &&
@@ -563,18 +563,16 @@ bool SIMachineFunctionInfo::removeDeadFrameIndices(
   // otherwise, it could result in an unexpected side effect and bug, in case of
   // any re-mapping of freed frame indices by later pass(es) like "stack slot
   // coloring".
-  for (auto &R : make_early_inc_range(SGPRSpillsToVirtualVGPRLanes)) {
+  for (auto &R : SGPRSpillsToVirtualVGPRLanes)
     MFI.RemoveStackObject(R.first);
-    SGPRSpillsToVirtualVGPRLanes.erase(R.first);
-  }
+  SGPRSpillsToVirtualVGPRLanes.clear();
 
   // Remove the dead frame indices of CSR SGPRs which are spilled to physical
   // VGPR lanes during SILowerSGPRSpills pass.
   if (!ResetSGPRSpillStackIDs) {
-    for (auto &R : make_early_inc_range(SGPRSpillsToPhysicalVGPRLanes)) {
+    for (auto &R : SGPRSpillsToPhysicalVGPRLanes)
       MFI.RemoveStackObject(R.first);
-      SGPRSpillsToPhysicalVGPRLanes.erase(R.first);
-    }
+    SGPRSpillsToPhysicalVGPRLanes.clear();
   }
   bool HaveSGPRToMemory = false;
 

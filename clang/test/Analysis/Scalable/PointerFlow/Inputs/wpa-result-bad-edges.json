@@ -1,0 +1,30 @@
+{
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "namespace": [
+          {
+            "kind": "LinkUnit",
+            "name": "test.exe"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@foo#"
+      }
+    }
+  ],
+  "results": [
+    {
+      "analysis_name": "PointerFlowAnalysisResult",
+      "result": {
+        "PointerFlowAnalysisResult": [
+          {
+            "@": 0
+          },
+          "not-an-array"
+        ]
+      }
+    }
+  ]
+}

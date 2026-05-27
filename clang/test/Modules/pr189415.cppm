@@ -2,9 +2,9 @@
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
 // 
-// RUN: %clang_cc1 -std=c++20 %t/counter.cppm -triple %itanium_abi_triple \
+// RUN: %clang_cc1 -std=c++20 %t/counter.cppm -triple x86_64-pc-linux-gnu \
 // RUN:   -emit-reduced-module-interface -o %t/counter.pcm
-// RUN: %clang_cc1 -std=c++20 %t/user.cpp -triple %itanium_abi_triple -fprebuilt-module-path=%t \
+// RUN: %clang_cc1 -std=c++20 %t/user.cpp -triple x86_64-pc-linux-gnu -fprebuilt-module-path=%t \
 // RUN:   -disable-llvm-passes -emit-llvm -o - | FileCheck %s
 
 //--- counter.cppm

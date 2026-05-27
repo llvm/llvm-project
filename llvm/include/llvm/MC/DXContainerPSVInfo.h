@@ -68,7 +68,7 @@ struct PSVRuntimeInfo {
   std::array<SmallVector<uint32_t>, 4> InputOutputMap;
   SmallVector<uint32_t> InputPatchMap;
   SmallVector<uint32_t> PatchOutputMap;
-  llvm::StringRef EntryName;
+  StringRef EntryName;
 
   // Serialize PSVInfo into the provided raw_ostream. The version field
   // specifies the data version to encode, the default value specifies encoding
@@ -76,7 +76,8 @@ struct PSVRuntimeInfo {
   void write(raw_ostream &OS,
              uint32_t Version = std::numeric_limits<uint32_t>::max()) const;
 
-  void finalize(Triple::EnvironmentType Stage);
+  void finalize(Triple::EnvironmentType Stage,
+                uint32_t Version = std::numeric_limits<uint32_t>::max());
 
 private:
   SmallVector<uint32_t, 64> IndexBuffer;

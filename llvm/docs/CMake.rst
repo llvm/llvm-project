@@ -808,6 +808,21 @@ its enabled sub-projects. Nearly all of these variable names begin with
   library ID control variables (e.g., ``CMAKE_INSTALL_NAME_DIR``) are being
   set to non-standard values.
 
+**LLVM_VERSIONED_DYLIB_NAME_ON_DARWIN**:BOOL
+  Defaults to ``ON``. If set to ``ON``, Darwin shared libraries built through
+  LLVM's CMake helpers use versioned dylib filenames and install names, matching
+  the behavior on other Unix platforms more closely. If set to ``OFF``, Darwin
+  keeps the legacy unversioned dylib install name, for compatibility with
+  existing consumers that expect ``@rpath/libLLVM.dylib``.
+
+**LLVM_UNVERSIONED_{LIBLTO,LIBCLANG}_ON_DARWIN**:BOOL
+  Default to ``ON``. When ``LLVM_VERSIONED_DYLIB_NAME_ON_DARWIN`` is ``ON``,
+  these keep ``libLTO`` and ``libclang``'s Darwin dylib identities
+  unversioned. Set ``LLVM_UNVERSIONED_LIBLTO_ON_DARWIN`` to ``OFF`` to
+  version ``libLTO`` using its Darwin ``LTO_VERSION`` policy instead. Set
+  ``LLVM_UNVERSIONED_LIBCLANG_ON_DARWIN`` to ``OFF`` to version
+  ``libclang`` using its existing ABI version policy instead.
+
 **LLVM_OPTIMIZED_TABLEGEN**:BOOL
   If enabled and building a debug or assert build, the CMake build system will
   generate a Release build tree to build a fully optimized tablegen for use
@@ -912,8 +927,9 @@ its enabled sub-projects. Nearly all of these variable names begin with
 
 **LLVM_USE_SANITIZER**:STRING
   Define the sanitizer used to build LLVM binaries and tests. Possible values
-  are ``Address``, ``Memory``, ``MemoryWithOrigins``, ``Undefined``, ``Thread``,
-  ``DataFlow``, and ``Address;Undefined``. Defaults to empty string.
+  are ``Address``, ``HWAddress``, ``Memory``, ``MemoryWithOrigins``, ``Undefined``,
+  ``Thread``, ``DataFlow``, ``Leaks``, and ``Address;Undefined``. Defaults to
+  empty string.
 
 **LLVM_USE_SPLIT_DWARF**:BOOL
   If enabled CMake will pass ``-gsplit-dwarf`` to the compiler. This option

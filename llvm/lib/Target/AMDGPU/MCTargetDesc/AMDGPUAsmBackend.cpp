@@ -21,7 +21,7 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -203,7 +203,7 @@ bool AMDGPUAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   // be writing data into the text section (otherwise we have unaligned
   // instructions, and thus have far bigger problems), so just write zeros
   // instead.
-  unsigned MinInstAlignment = getContext().getAsmInfo()->getMinInstAlignment();
+  unsigned MinInstAlignment = getContext().getAsmInfo().getMinInstAlignment();
   OS.write_zeros(Count % MinInstAlignment);
 
   // We are properly aligned, so write NOPs as requested.

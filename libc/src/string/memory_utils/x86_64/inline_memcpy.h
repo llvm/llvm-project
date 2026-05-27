@@ -8,8 +8,9 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMCPY_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMCPY_H
 
-#include "hdr/stdint_proxy.h"                  // SIZE_MAX
-#include "src/__support/macros/attributes.h"   // LIBC_INLINE_VAR
+#include "hdr/stdint_proxy.h"                // SIZE_MAX
+#include "src/__support/macros/attributes.h" // LIBC_INLINE_VAR
+#include "src/__support/macros/is_defined.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/op_x86.h"

@@ -30,10 +30,10 @@ define void @test(ptr %A) {
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[TMP13:%.*]] = add <4 x i32> [[STRIDED_VEC]], splat (i32 2)
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP13]], i32 0
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP13]], i32 1
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i32> [[TMP13]], i32 2
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i32> [[TMP13]], i32 3
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP13]], i64 0
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP13]], i64 1
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i32> [[TMP13]], i64 2
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i32> [[TMP13]], i64 3
 ; CHECK-NEXT:    store i32 [[TMP14]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    store i32 [[TMP16]], ptr [[TMP10]], align 4

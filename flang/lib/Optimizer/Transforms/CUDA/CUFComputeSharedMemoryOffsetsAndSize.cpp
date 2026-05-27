@@ -159,18 +159,13 @@ struct CUFComputeSharedMemoryOffsetsAndSize
       if (nbDynamicSharedVariables == 0 && nbStaticSharedVariables == 0)
         continue;
 
-      if (nbDynamicSharedVariables > 0 && nbStaticSharedVariables > 0)
-        mlir::emitError(
-            funcOp.getLoc(),
-            "static and dynamic shared variables in a single kernel");
-
-      if (nbStaticSharedVariables > 0)
-        continue;
-
-      auto sharedMemType = fir::SequenceType::get(sharedMemSize, i8Ty);
-      createSharedMemoryGlobal(builder, funcOp.getLoc(), funcOp.getName(), "",
-                               gpuMod, sharedMemType, sharedMemSize, alignment,
-                               /*isDynamic=*/true);
+      if (nbDynamicSharedVariables > 0) {
+        auto sharedMemType = fir::SequenceType::get(sharedMemSize, i8Ty);
+        createSharedMemoryGlobal(builder, funcOp.getLoc(), funcOp.getName(), "",
+                                 gpuMod, sharedMemType, sharedMemSize,
+                                 alignment,
+                                 /*isDynamic=*/true);
+      }
     }
   }
 };

@@ -1,0 +1,46 @@
+REQUIRES: x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows weak-ref.s -o weak-ref.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows weak-def.s -o weak-def.obj
+
+RUN: env LLD_IN_TEST=1 not lld-link -entry:entry -subsystem:console -out:test.exe weak-ref.obj weak-def.obj 2>&1 | FileCheck -check-prefix=ERR %s
+
+ERR: error: duplicate symbol: weakfunc
+
+
+Test that we get the same choice for weakfunc (pointing at the definition
+in weak-def.s, not the absolute null fallback provided by weak-ref.s),
+regardless of which object is linked first.
+
+RUN: lld-link -lld-allow-duplicate-weak -entry:entry -subsystem:console -out:test.exe weak-def.obj weak-ref.obj
+RUN: llvm-objdump -s test.exe | FileCheck %s
+RUN: lld-link -lld-allow-duplicate-weak -entry:entry -subsystem:console -out:test.exe weak-ref.obj weak-def.obj
+RUN: llvm-objdump -s test.exe | FileCheck %s
+
+CHECK:      Contents of section .rdata:
+CHECK-NEXT:  140002000 14100040 01000000
+
+#--- weak-ref.s
+	.text
+	.globl	entry
+entry:
+	cmpq	$0, .refptr.weakfunc(%rip)
+	je	.LBB0_1
+	rex64 jmpq	*.refptr.weakfunc(%rip)
+.LBB0_1:
+	retq
+
+	.section	.rdata$.refptr.weakfunc,"dr",discard,.refptr.weakfunc
+	.globl	.refptr.weakfunc
+.refptr.weakfunc:
+	.quad	weakfunc
+
+	.weak	weakfunc
+
+#--- weak-def.s
+	.section	.text$b,"xr"
+	.balign	4
+	.weak	weakfunc
+weakfunc:
+	retq

@@ -338,7 +338,7 @@ Value MemorySlotPromoter::getOrCreateDefaultValue() {
     return defaultValue;
 
   OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToStart(slot.ptr.getParentBlock());
+  builder.setInsertionPointToStart(&slot.ptr.getParentRegion()->front());
   return defaultValue = allocator.getDefaultValue(slot, builder);
 }
 
@@ -421,8 +421,9 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
     for (OpOperand *blockingUse : newBlockingUses) {
       assert(llvm::is_contained(user->getResults(), blockingUse->get()));
 
+      Operation *useOwner = blockingUse->getOwner();
       SmallPtrSetImpl<OpOperand *> &newUserBlockingUseSet =
-          blockingUsesMap[blockingUse->getOwner()];
+          userToBlockingUses[useOwner->getParentRegion()][useOwner];
       newUserBlockingUseSet.insert(blockingUse);
     }
   }

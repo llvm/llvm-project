@@ -67,18 +67,37 @@ subroutine do_simd_reduction()
   !$omp end do simd
 end subroutine do_simd_reduction
 
+! Verify that the simd reduction var references the wsloop's reduction
+! block arg (not the original array), ensuring proper chaining of
+! per-SIMD-lane results into the wsloop's thread-private reduction copy.
+! CHECK-LABEL: {{.*}}do_simd_array_reduction{{.*}}
+subroutine do_simd_array_reduction()
+  integer :: a(100)
+  a = 0
+  ! CHECK:      omp.wsloop
+  ! CHECK-SAME: reduction(byref @[[ADD_RED_SYM:.*]] %{{.*}} -> %[[ADD_RED_OUTER:.*]] : !fir.ref<!fir.box<!fir.array<100xi32>>>)
+  ! CHECK-NEXT: omp.simd
+  ! CHECK-SAME: reduction(byref @[[ADD_RED_SYM]] %[[ADD_RED_OUTER]] -> %[[ADD_RED_INNER:.*]] : !fir.ref<!fir.box<!fir.array<100xi32>>>)
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp do simd reduction(+:a)
+    do index_ = 1, 10
+      a = a + index_
+    end do
+  !$omp end do simd
+end subroutine do_simd_array_reduction
+
 ! CHECK-LABEL: func.func @_QPdo_simd_private(
 subroutine do_simd_private()
   integer, allocatable :: tmp
-  ! CHECK:      %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFdo_simd_privateEi"}
   ! CHECK:      omp.wsloop
   ! CHECK-NEXT: omp.simd
-  ! CHECK-SAME: private(@[[PRIV_BOX_SYM:.*]] %{{.*}} -> %[[PRIV_BOX:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>>)
+  ! CHECK-SAME: private(@[[PRIV_BOX_SYM:.*]] %{{.*}} -> %[[PRIV_BOX:.*]], @[[PRIV_IVAR_SYM:.*]] %{{.*}} -> %[[PRIV_IVAR:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<i32>)
   ! CHECK-NEXT: omp.loop_nest (%[[IVAR:.*]]) : i32
   !$omp do simd private(tmp)
   do i=1, 10
   ! CHECK:      %[[PRIV_BOX_DECL:.*]]:2 = hlfir.declare %[[PRIV_BOX]]
-  ! CHECK:      hlfir.assign %[[IVAR]] to %[[I_DECL]]#0
+  ! CHECK:      %[[PRIV_IVAR_DECL:.*]]:2 = hlfir.declare %[[PRIV_IVAR]]
+  ! CHECK:      hlfir.assign %[[IVAR]] to %[[PRIV_IVAR_DECL]]#0
   ! CHECK:      %[[PRIV_BOX_LOAD:.*]] = fir.load %[[PRIV_BOX_DECL]]
   ! CHECK:      hlfir.assign %{{.*}} to %[[PRIV_BOX_DECL]]#0
   ! CHECK:      omp.yield
@@ -92,12 +111,12 @@ subroutine do_simd_lastprivate_firstprivate()
   ! CHECK:      omp.wsloop
   ! CHECK-SAME: private(@[[FIRSTPRIVATE_A_SYM:.*]] %{{.*}} -> %[[FIRSTPRIVATE_A:.*]] : !fir.ref<i32>)
   ! CHECK-NEXT: omp.simd
-  ! CHECK-SAME: linear({{.*}}#0 : !fir.ref<i32> = %{{[^:]*}} : i32)
-  ! CHECK-SAME: private(@[[PRIVATE_A_SYM:.*]] %{{.*}} -> %[[PRIVATE_A:.*]] : !fir.ref<i32>)
+  ! CHECK-SAME: private(@[[PRIVATE_A_SYM:.*]] %{{.*}} -> %[[PRIVATE_A:.*]], @[[PRIVATE_I_SYM:.*]] %{{.*}} -> %[[PRIVATE_I:.*]] : !fir.ref<i32>, !fir.ref<i32>)
   !$omp do simd lastprivate(a) firstprivate(a)
   do i = 1, 10
     ! CHECK: %[[FIRSTPRIVATE_A_DECL:.*]]:2 = hlfir.declare %[[FIRSTPRIVATE_A]]
     ! CHECK: %[[PRIVATE_A_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_A]]
+    ! CHECK: %[[PRIVATE_I_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_I]]
     a = a + 1
   end do
   !$omp end do simd

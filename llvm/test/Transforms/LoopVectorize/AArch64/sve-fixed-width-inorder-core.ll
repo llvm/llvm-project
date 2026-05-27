@@ -199,7 +199,7 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 entry:
   %cmp9.not = icmp eq i64 %n, 0
   br i1 %cmp9.not, label %for.cond.cleanup, label %for.body
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds nuw float, ptr %a, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -211,7 +211,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 }
 ;.

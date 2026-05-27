@@ -22,7 +22,7 @@ class MSP430MCAsmInfo : public MCAsmInfoELF {
   void anchor() override;
 
 public:
-  explicit MSP430MCAsmInfo(const Triple &TT);
+  explicit MSP430MCAsmInfo(const Triple &TT, const MCTargetOptions &Options);
 };
 
 } // namespace llvm

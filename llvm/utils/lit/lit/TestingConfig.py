@@ -2,7 +2,7 @@ import os
 import sys
 
 
-class TestingConfig(object):
+class TestingConfig:
     """
     TestingConfig - Information on the tests inside a suite.
     """
@@ -88,6 +88,14 @@ class TestingConfig(object):
             # environment variable indicating that we want to execute them with
             # the current user.
             environment["__COMPAT_LAYER"] = "RunAsInvoker"
+
+        if sys.platform == "zos":
+            pass_vars.append("_BPXK_AUTOCVT")
+            pass_vars.append("_CEE_RUNOPTS")
+            pass_vars.append("_TAG_REDIR_ERR")
+            pass_vars.append("_TAG_REDIR_IN")
+            pass_vars.append("_TAG_REDIR_OUT")
+            pass_vars.append("LIBPATH")
 
         for var in pass_vars:
             val = os.environ.get(var, "")

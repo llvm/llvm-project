@@ -4,7 +4,7 @@
 define float @log1pf_const() {
 ; CHECK-LABEL: define float @log1pf_const() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float 7.000000e+00)
-; CHECK-NEXT:    ret float 0x4000A2B240000000
+; CHECK-NEXT:    ret float f0x40051592
 ;
   %r = call float @log1pf(float 7.000000e+00)
   ret float %r
@@ -13,7 +13,7 @@ define float @log1pf_const() {
 define double @log1p_const() {
 ; CHECK-LABEL: define double @log1p_const() {
 ; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double 7.000000e+00)
-; CHECK-NEXT:    ret double 0x4000A2B23F3BAB73
+; CHECK-NEXT:    ret double f0x4000A2B23F3BAB73
 ;
   %r = call double @log1p(double 7.000000e+00)
   ret double %r
@@ -130,7 +130,7 @@ define double @log1p_neg1_memory_none() {
 define float @log1pf_neg2() {
 ; CHECK-LABEL: define float @log1pf_neg2() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float -5.000000e-01)
-; CHECK-NEXT:    ret float 0xBFE62E4300000000
+; CHECK-NEXT:    ret float f0xBF317218
 ;
   %r = call float @log1pf(float -5.000000e-01)
   ret float %r
@@ -139,7 +139,7 @@ define float @log1pf_neg2() {
 define double @log1p_neg2() {
 ; CHECK-LABEL: define double @log1p_neg2() {
 ; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double -5.000000e-01)
-; CHECK-NEXT:    ret double 0xBFE62E42FEFA39EF
+; CHECK-NEXT:    ret double f0xBFE62E42FEFA39EF
 ;
   %r = call double @log1p(double -5.000000e-01)
   ret double %r
@@ -147,7 +147,7 @@ define double @log1p_neg2() {
 
 define float @log1pf_inf() {
 ; CHECK-LABEL: define float @log1pf_inf() {
-; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float 0x7FF0000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float +inf)
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @log1pf(float 0x7FF0000000000000)
@@ -156,7 +156,7 @@ define float @log1pf_inf() {
 
 define double @log1p_inf() {
 ; CHECK-LABEL: define double @log1p_inf() {
-; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double 0x7FF0000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double +inf)
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @log1p(double 0x7FF0000000000000)
@@ -165,7 +165,7 @@ define double @log1p_inf() {
 
 define float @log1pf_inf_memory_none() {
 ; CHECK-LABEL: define float @log1pf_inf_memory_none() {
-; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float 0x7FF0000000000000) #[[ATTR0]]
+; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float +inf) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @log1pf(float 0x7FF0000000000000) readnone
@@ -174,7 +174,7 @@ define float @log1pf_inf_memory_none() {
 
 define double @log1p_inf_memory_none() {
 ; CHECK-LABEL: define double @log1p_inf_memory_none() {
-; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double 0x7FF0000000000000) #[[ATTR0]]
+; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double +inf) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @log1p(double 0x7FF0000000000000) readnone
@@ -183,7 +183,7 @@ define double @log1p_inf_memory_none() {
 
 define float @log1pf_neg_inf() {
 ; CHECK-LABEL: define float @log1pf_neg_inf() {
-; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float 0xFFF0000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float -inf)
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @log1pf(float 0xFFF0000000000000)
@@ -192,7 +192,7 @@ define float @log1pf_neg_inf() {
 
 define double @log1p_neg_inf() {
 ; CHECK-LABEL: define double @log1p_neg_inf() {
-; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double 0xFFF0000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double -inf)
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @log1p(double 0xFFF0000000000000)
@@ -201,7 +201,7 @@ define double @log1p_neg_inf() {
 
 define float @log1pf_neg_inf_memory_none() {
 ; CHECK-LABEL: define float @log1pf_neg_inf_memory_none() {
-; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float 0xFFF0000000000000) #[[ATTR0]]
+; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float -inf) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @log1pf(float 0xFFF0000000000000) readnone
@@ -210,7 +210,7 @@ define float @log1pf_neg_inf_memory_none() {
 
 define double @log1p_neg_inf_memory_none() {
 ; CHECK-LABEL: define double @log1p_neg_inf_memory_none() {
-; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double 0xFFF0000000000000) #[[ATTR0]]
+; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double -inf) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @log1p(double 0xFFF0000000000000) readnone
@@ -219,7 +219,7 @@ define double @log1p_neg_inf_memory_none() {
 
 define float @log1pf_nan() {
 ; CHECK-LABEL: define float @log1pf_nan() {
-; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float 0x7FF8000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float +qnan)
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @log1pf(float 0x7FF8000000000000)
@@ -228,7 +228,7 @@ define float @log1pf_nan() {
 
 define double @log1p_nan() {
 ; CHECK-LABEL: define double @log1p_nan() {
-; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double 0x7FF8000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double +qnan)
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @log1p(double 0x7FF8000000000000)
@@ -237,7 +237,7 @@ define double @log1p_nan() {
 
 define float @log1pf_nan_memory_none() {
 ; CHECK-LABEL: define float @log1pf_nan_memory_none() {
-; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float 0x7FF8000000000000) #[[ATTR0]]
+; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float +qnan) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @log1pf(float 0x7FF8000000000000) readnone
@@ -246,7 +246,7 @@ define float @log1pf_nan_memory_none() {
 
 define double @log1p_nan_memory_none() {
 ; CHECK-LABEL: define double @log1p_nan_memory_none() {
-; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double 0x7FF8000000000000) #[[ATTR0]]
+; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double +qnan) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @log1p(double 0x7FF8000000000000) readnone

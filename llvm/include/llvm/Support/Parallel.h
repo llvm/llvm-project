@@ -78,6 +78,8 @@ public:
       Cond.notify_all();
   }
 
+  uint32_t getCount() const { return Count.load(std::memory_order_acquire); }
+
   void sync() const {
     std::unique_lock<std::mutex> lock(Mutex);
     Cond.wait(lock, [&] { return Count.load(std::memory_order_relaxed) == 0; });
@@ -94,11 +96,7 @@ public:
   LLVM_ABI ~TaskGroup();
 
   // Spawn a task, but does not wait for it to finish.
-  // Tasks marked with \p Sequential will be executed
-  // exactly in the order which they were spawned.
   LLVM_ABI void spawn(std::function<void()> f);
-
-  void sync() const { L.sync(); }
 
   bool isParallel() const { return Parallel; }
 };
