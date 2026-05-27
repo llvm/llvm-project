@@ -1932,11 +1932,14 @@ public:
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
   OMPClause *RebuildOMPFirstprivateClause(ArrayRef<Expr *> VarList,
+                                          OpenMPFirstprivateModifier FPKind,
+                                          SourceLocation FPKindLoc,
+                                          SourceLocation ColonLoc,
                                           SourceLocation StartLoc,
                                           SourceLocation LParenLoc,
                                           SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPFirstprivateClause(VarList, StartLoc,
-                                                            LParenLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPFirstprivateClause(
+        VarList, FPKind, FPKindLoc, ColonLoc, StartLoc, LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'lastprivate' clause.
@@ -11220,7 +11223,8 @@ OMPClause *TreeTransform<Derived>::TransformOMPFirstprivateClause(
     Vars.push_back(EVar.get());
   }
   return getDerived().RebuildOMPFirstprivateClause(
-      Vars, C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+      Vars, C->getKind(), C->getKindLoc(), C->getColonLoc(), C->getBeginLoc(),
+      C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>

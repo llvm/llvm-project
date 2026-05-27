@@ -1269,10 +1269,10 @@ public:
                                       SourceLocation LParenLoc,
                                       SourceLocation EndLoc);
   /// Called on well-formed 'firstprivate' clause.
-  OMPClause *ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
-                                           SourceLocation StartLoc,
-                                           SourceLocation LParenLoc,
-                                           SourceLocation EndLoc);
+  OMPClause *ActOnOpenMPFirstprivateClause(
+      ArrayRef<Expr *> VarList, OpenMPFirstprivateModifier FPKind,
+      SourceLocation FPKindLoc, SourceLocation ColonLoc,
+      SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc);
   /// Called on well-formed 'lastprivate' clause.
   OMPClause *ActOnOpenMPLastprivateClause(
       ArrayRef<Expr *> VarList, OpenMPLastprivateModifier LPKind,
