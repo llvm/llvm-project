@@ -309,7 +309,14 @@ unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
 #define GET_MIMGG16MappingTable_IMPL
 #define GET_MAIInstInfoTable_IMPL
 #define GET_WMMAInstInfoTable_IMPL
+#define GET_WaterfallPseudoTable_IMPL
 #include "AMDGPUGenSearchableTables.inc"
+
+unsigned getWaterfallPseudoOpcode(unsigned IntrID, unsigned SizeDwords) {
+  if (auto *Info = getWaterfallPseudoOpcodeHelper(IntrID, SizeDwords))
+    return Info->Opcode;
+  return 0;
+}
 
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
                   unsigned VDataDwords, unsigned VAddrDwords) {

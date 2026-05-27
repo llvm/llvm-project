@@ -433,3 +433,49 @@ def AMDGPUImageDMaskIntrinsicTable : GenericTable {
   let PrimaryKeyName = "getAMDGPUImageDMaskIntrinsic";
   let PrimaryKeyEarlyOut = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// Waterfall intrinsic to pseudo opcode mapping.
+//===----------------------------------------------------------------------===//
+
+class WaterfallPseudoInfo<Intrinsic intr, int size, Instruction opcode> {
+  Intrinsic Intr = intr;
+  bits<8> SizeDwords = size;
+  Instruction Opcode = opcode;
+}
+
+def WaterfallPseudoTable : GenericTable {
+  let FilterClass = "WaterfallPseudoInfo";
+  let CppTypeName = "WaterfallPseudoInfo";
+  let Fields = ["Intr", "SizeDwords", "Opcode"];
+
+  let PrimaryKey = ["Intr", "SizeDwords"];
+  let PrimaryKeyName = "getWaterfallPseudoOpcodeHelper";
+}
+
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_begin, 1, SI_WATERFALL_BEGIN_V1>;
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_begin, 2, SI_WATERFALL_BEGIN_V2>;
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_begin, 4, SI_WATERFALL_BEGIN_V4>;
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_begin, 8, SI_WATERFALL_BEGIN_V8>;
+
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_readfirstlane, 1, SI_WATERFALL_READFIRSTLANE_V1>;
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_readfirstlane, 2, SI_WATERFALL_READFIRSTLANE_V2>;
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_readfirstlane, 4, SI_WATERFALL_READFIRSTLANE_V4>;
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_readfirstlane, 8, SI_WATERFALL_READFIRSTLANE_V8>;
+
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_end, 1, SI_WATERFALL_END_V1>;
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_end, 2, SI_WATERFALL_END_V2>;
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_end, 4, SI_WATERFALL_END_V4>;
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_end, 8, SI_WATERFALL_END_V8>;
+
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_last_use, 1, SI_WATERFALL_LAST_USE_V1>;
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_last_use, 2, SI_WATERFALL_LAST_USE_V2>;
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_last_use, 4, SI_WATERFALL_LAST_USE_V4>;
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_last_use, 8, SI_WATERFALL_LAST_USE_V8>;
+
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_last_use_vgpr, 1, SI_WATERFALL_LAST_USE_V1_V>;
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_last_use_vgpr, 2, SI_WATERFALL_LAST_USE_V2_V>;
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_last_use_vgpr, 4, SI_WATERFALL_LAST_USE_V4_V>;
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_last_use_vgpr, 8, SI_WATERFALL_LAST_USE_V8_V>;
+
+def : WaterfallPseudoInfo<int_amdgcn_waterfall_loop_end, 0, SI_WATERFALL_LOOP_END>;
