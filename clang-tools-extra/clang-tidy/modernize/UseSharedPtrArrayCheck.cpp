@@ -426,7 +426,7 @@ void UseSharedPtrArrayCheck::check(const MatchFinder::MatchResult &Result) {
     return CanonicalFallbackBuff;
   }();
 
-  auto warn = [&]() -> DiagnosticBuilder {
+  auto Warn = [&]() -> DiagnosticBuilder {
     return diag(Ctor->getBeginLoc(),
                 "use 'std::shared_ptr<%0[]>' instead of "
                 "'std::shared_ptr<%0>' with explicit array deleter")
