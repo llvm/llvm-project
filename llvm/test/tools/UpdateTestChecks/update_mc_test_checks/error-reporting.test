@@ -1,0 +1,11 @@
+# REQUIRES: riscv-registered-target
+## Check that update_mc_test_checks prints a useful error message with stderr when the command fails
+
+# RUN: cp -f %S/Inputs/error_reporting.s %t.s
+# RUN: not %update_mc_test_checks %t.s 2>&1 | FileCheck %s
+
+# CHECK: Error running command: {{.*}}llvm-mc{{.*}} -triple=riscv64
+# CHECK: Exit code: 1
+# CHECK: Stderr:
+# CHECK: error: expected
+# CHECK: Error: Failed to update test
