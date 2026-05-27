@@ -26,8 +26,9 @@ enum class LitModifier { None, Lit, Lit64 };
 ///   - max
 ///   - min
 ///
-/// \note If the 'or'/'max'/'min' operations are provided only a single argument, the
-/// operation will act as a no-op and simply resolve as the provided argument.
+/// \note If the 'or'/'max'/'min' operations are provided only a single
+/// argument, the operation will act as a no-op and simply resolve as the
+/// provided argument.
 ///
 class AMDGPUMCExpr : public MCTargetExpr {
 public:
@@ -87,10 +88,10 @@ public:
                                        MCContext &Ctx) {
     return create(VariantKind::AGVK_Max, Args, Ctx);
   }
-  static const AMDGPUMCExpr *createMin(ArrayRef<const MCExpr *> Args, 
-                                      MCContext &Ctx) {
+  static const AMDGPUMCExpr *createMin(ArrayRef<const MCExpr *> Args,
+                                       MCContext &Ctx) {
     return create(VariantKind::AGVK_Min, Args, Ctx);
-                                      }
+  }
 
   static const AMDGPUMCExpr *createExtraSGPRs(const MCExpr *VCCUsed,
                                               const MCExpr *FlatScrUsed,
