@@ -189,7 +189,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
         return SE.getCouldNotCompute();
       SCEVOps.push_back(S);
     }
-    return CreateFn(SCEVOps);
+    return PSE.getPredicatedSCEV(CreateFn(SCEVOps));
   };
 
   VPValue *LHSVal, *RHSVal;
@@ -289,10 +289,9 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   ArrayRef<VPValue *> Ops;
   Type *SourceElementType;
   if (match(V, m_GetElementPtr(SourceElementType, Ops))) {
-    const SCEV *GEPExpr = CreateSCEV(Ops, [&](ArrayRef<SCEVUse> Ops) {
+    return CreateSCEV(Ops, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getGEPExpr(Ops.front(), Ops.drop_front(), SourceElementType);
     });
-    return PSE.getPredicatedSCEV(GEPExpr);
   }
 
   // TODO: Support constructing SCEVs for more recipes as needed.
