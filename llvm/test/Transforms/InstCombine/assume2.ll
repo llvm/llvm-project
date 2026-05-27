@@ -169,6 +169,21 @@ define i1 @fold_or_using_assume_implication(i1 %p, i1 %q) {
   ret i1 %or
 }
 
+define i1 @fold_or_using_assume_implication_commuted(i1 %p, i1 %q) {
+; CHECK-LABEL: @fold_or_using_assume_implication_commuted(
+; CHECK-NEXT:    [[NOT_P:%.*]] = xor i1 [[P:%.*]], true
+; CHECK-NEXT:    [[IMPL:%.*]] = or i1 [[Q:%.*]], [[NOT_P]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IMPL]])
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[Q]], [[P]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %not_p = xor i1 %p, true
+  %impl = or i1 %not_p, %q
+  call void @llvm.assume(i1 %impl)
+  %or = or i1 %q, %p
+  ret i1 %or
+}
+
 define i1 @fold_and_using_assume_implication(i1 %p, i1 %q) {
 ; CHECK-LABEL: @fold_and_using_assume_implication(
 ; CHECK-NEXT:    [[NOT_P:%.*]] = xor i1 [[P:%.*]], true
@@ -181,6 +196,21 @@ define i1 @fold_and_using_assume_implication(i1 %p, i1 %q) {
   %impl = or i1 %not_p, %q
   call void @llvm.assume(i1 %impl)
   %and = and i1 %p, %q
+  ret i1 %and
+}
+
+define i1 @fold_and_using_assume_implication_commuted(i1 %p, i1 %q) {
+; CHECK-LABEL: @fold_and_using_assume_implication_commuted(
+; CHECK-NEXT:    [[NOT_P:%.*]] = xor i1 [[P:%.*]], true
+; CHECK-NEXT:    [[IMPL:%.*]] = or i1 [[Q:%.*]], [[NOT_P]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IMPL]])
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[Q]], [[P]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %not_p = xor i1 %p, true
+  %impl = or i1 %not_p, %q
+  call void @llvm.assume(i1 %impl)
+  %and = and i1 %q, %p
   ret i1 %and
 }
 
