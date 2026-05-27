@@ -330,11 +330,21 @@ namespace cxx_member_operator_call {
     Foo& operator+(RefCountable* bad);
     friend Foo& operator-(Foo& lhs, RefCountable* bad);
     void operator()(RefCountable* bad);
+    int operator[](unsigned i);
   };
 
   RefCountable* global;
 
-  void foo() {
+  struct Container : public RefCountable {
+    int m[4];
+    int& operator[](unsigned i) {
+      some_function();
+      return m[i];
+    }
+  };
+  Container container();
+
+  void foo12() {
     Foo f;
     f + global;
     // expected-warning@-1{{Call argument for parameter 'bad' is uncounted and unsafe}}
@@ -342,6 +352,8 @@ namespace cxx_member_operator_call {
     // expected-warning@-1{{Call argument for parameter 'bad' is uncounted and unsafe}}
     f(global);
     // expected-warning@-1{{Call argument for parameter 'bad' is uncounted and unsafe}}
+    container()[0] = 3;
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
 }
 

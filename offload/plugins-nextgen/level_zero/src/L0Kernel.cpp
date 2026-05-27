@@ -159,58 +159,6 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
   return Plugin::success();
 }
 
-static Error launchKernelWithCmdQueue(L0DeviceTy &l0Device,
-                                      ze_kernel_handle_t zeKernel,
-                                      L0LaunchEnvTy &KEnv) {
-  const auto DeviceId = l0Device.getDeviceId();
-  const auto *IdStr = l0Device.getZeIdCStr();
-
-  auto CmdListOrErr = l0Device.getCmdList();
-  if (!CmdListOrErr)
-    return CmdListOrErr.takeError();
-  ze_command_list_handle_t CmdList = *CmdListOrErr;
-  auto CmdQueueOrErr = l0Device.getCmdQueue();
-  if (!CmdQueueOrErr)
-    return CmdQueueOrErr.takeError();
-  const ze_command_queue_handle_t CmdQueue = *CmdQueueOrErr;
-
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Using regular command list for kernel submission.\n");
-
-  ze_event_handle_t Event = nullptr;
-
-  if (KEnv.IsCooperative) {
-    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-         "Launching cooperative kernel " DPxMOD "\n", DPxPTR(zeKernel));
-    CALL_ZE_RET_ERROR(zeCommandListAppendLaunchCooperativeKernel, CmdList,
-                      zeKernel, &KEnv.GroupCounts, Event, 0, nullptr);
-  } else {
-    CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
-                      &KEnv.GroupCounts, Event, 0, nullptr);
-  }
-  KEnv.Lock.unlock();
-  CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
-
-  // Ensure command list is reset even on errors after this point.
-  llvm::scope_exit ResetOnExit(
-      [&]() { CALL_ZE_SILENT(zeCommandListReset, CmdList); });
-
-  CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, l0Device.getMutex(),
-                        CmdQueue, 1, &CmdList, nullptr);
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Submitted kernel " DPxMOD " to device %s\n", DPxPTR(zeKernel), IdStr);
-  CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
-  if (Event) {
-    if (auto Err = l0Device.releaseEvent(Event))
-      return Err;
-  }
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Executed kernel entry " DPxMOD " on device %s\n", DPxPTR(zeKernel),
-       IdStr);
-
-  return Plugin::success();
-}
-
 Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
                                   uint32_t NumThreads[3],
                                   uint32_t NumBlocks[3]) const {
@@ -355,13 +303,9 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = setIndirectFlags(l0Device, KEnv))
     return Err;
 
-  // The next calls should unlock the KernelLock internally.
-  const bool UseImmCmdList = l0Device.useImmForCompute();
-  if (UseImmCmdList)
-    return launchKernelWithImmCmdList(l0Device, zeKernel, KEnv,
-                                      Options.CommandMode);
-
-  return launchKernelWithCmdQueue(l0Device, zeKernel, KEnv);
+  // The next call should unlock the KernelLock internally.
+  return launchKernelWithImmCmdList(l0Device, zeKernel, KEnv,
+                                    Options.CommandMode);
 }
 
 Expected<uint32_t>

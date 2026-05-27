@@ -10,6 +10,7 @@ types:
   - type_name: socklen_t
   - type_name: sa_family_t
   - type_name: struct_cmsghdr
+  - type_name: struct_mmsghdr
   - type_name: struct_msghdr
   - type_name: struct_iovec
   - type_name: struct_linger
@@ -120,6 +121,15 @@ functions:
       - type: int
       - type: const void*
       - type: size_t
+      - type: int
+  - name: sendmmsg
+    standards:
+      - linux
+    return_type: int
+    arguments:
+      - type: int
+      - type: struct mmsghdr *
+      - type: unsigned int
       - type: int
   - name: sendmsg
     standards:

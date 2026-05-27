@@ -35,6 +35,7 @@ add_header_library(
     libc.hdr.sys_auxv_macros
     libc.hdr.sys_mman_macros
     libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.CPP.optional

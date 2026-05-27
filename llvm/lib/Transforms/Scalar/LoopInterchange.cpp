@@ -106,8 +106,7 @@ static cl::list<RuleTy> Profitabilities(
     cl::Hidden,
     cl::desc("List of profitability heuristics to be used. They are applied in "
              "the given order"),
-    cl::list_init<RuleTy>({RuleTy::PerLoopCacheAnalysis,
-                           RuleTy::PerInstrOrderCost,
+    cl::list_init<RuleTy>({RuleTy::PerInstrOrderCost,
                            RuleTy::ForVectorization}),
     cl::values(clEnumValN(RuleTy::PerLoopCacheAnalysis, "cache",
                           "Prioritize loop cache cost"),
@@ -183,8 +182,6 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
       if (!isa<Instruction>(I))
         return false;
       NumInsts++;
-      if (!isa<Instruction>(I))
-        return false;
       if (auto *Ld = dyn_cast<LoadInst>(&I)) {
         if (!Ld->isSimple())
           return false;
