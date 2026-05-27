@@ -915,9 +915,10 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
 
   let description = [{DPAS performs matrix multiplication on matrix A of `mxk`
     size, B of `kxn` size, and accumulate on matrix C of `mxn` to the same size
-    matrix , `m=8`, `n=16` and `k=8 * 32/bit_width_of_elem_type`. So for fp16
-    data type, the matrices are `A: vector<8x16xf16>`, `B: vector<16x16xf16>`,
-    and `C/D: vector<8x16xf32>`.
+    matrix. The dimensions are microarchitecture-specific: for Xe2 and Xe3,
+    `n=16` and `k=8 * 32/bit_width_of_elem_type`, while `m` can be 1 to 8.
+    For example, for fp16 data type on Xe2/Xe3, typical matrices are
+    `A: vector<8x16xf16>`, `B: vector<16x16xf16>`, and `C/D: vector<8x16xf32>`.
 
     The operands can be 2D, 3D, or 4D vectors. When the vectors have more than 2
     dimensions, the leading dimensions are treated as **batch dimensions** that

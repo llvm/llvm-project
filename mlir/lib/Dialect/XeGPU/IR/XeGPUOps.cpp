@@ -1021,8 +1021,9 @@ LogicalResult DpasMxOp::verify() {
       // match scale_b's second-to-last dim
       if (scaleAShape.back() != scaleBShape[scaleBShape.size() - 2])
         return emitOpError("Scale K dimension mismatch: scale_a has K=")
-               << scaleAShape.back() << " but scale_b has K="
-               << scaleBShape[scaleBShape.size() - 2] << ".";
+               << scaleAShape.back()
+               << " but scale_b has K=" << scaleBShape[scaleBShape.size() - 2]
+               << ".";
     }
   }
 
