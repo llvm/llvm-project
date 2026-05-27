@@ -56,7 +56,6 @@ multiclass SiFive8ProcResources<int num_iex, int num_fex, int num_vex = 1,
                                              !cast<ProcResource>(NAME#"VEXQ"#i))>;
 
   if !gt(num_vex, 0) then {
-    // Baler has 2 pipes for Load and Store.
     def VLD          : ProcResource<1>;
     def VST          : ProcResource<1>;
     def VDiv         : ProcResource<1>;
@@ -149,7 +148,6 @@ multiclass SiFive8BaseWriteRes<SiFive8IntProcResources IntProcRes,
     let ReleaseAtCycles = [1, 19];
   }
 
-  let Latency = 1 in {
   // Bitmanip
   def : WriteRes<WriteRotateImm, [IntProcRes.Arith]>;
   def : WriteRes<WriteRotateImm32, [IntProcRes.Arith]>;
@@ -173,10 +171,8 @@ multiclass SiFive8BaseWriteRes<SiFive8IntProcResources IntProcRes,
   def : WriteRes<WriteSingleBitImm, [IntProcRes.Arith]>;
   def : WriteRes<WriteBEXT, [IntProcRes.Arith]>;
   def : WriteRes<WriteBEXTI, [IntProcRes.Arith]>;
-  }
 
   // Memory
-  let Latency = 1 in {
   def : WriteRes<WriteSTB, [LSUProcRes.Store]>;
   def : WriteRes<WriteSTH, [LSUProcRes.Store]>;
   def : WriteRes<WriteSTW, [LSUProcRes.Store]>;
@@ -184,7 +180,7 @@ multiclass SiFive8BaseWriteRes<SiFive8IntProcResources IntProcRes,
   def : WriteRes<WriteFST16, [LSUProcRes.Store]>;
   def : WriteRes<WriteFST32, [LSUProcRes.Store]>;
   def : WriteRes<WriteFST64, [LSUProcRes.Store]>;
-  }
+
   let Latency = 4 in {
   def : WriteRes<WriteLDB, [LSUProcRes.Load]>;
   def : WriteRes<WriteLDH, [LSUProcRes.Load]>;
