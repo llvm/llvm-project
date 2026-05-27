@@ -714,7 +714,8 @@ double nan(const char *__tagp) {
   return __spirv_ocl_nan(__make_mantissa(__tagp));
 }
 
-// normcdfinv implementation using Acklam's Inverse Normal CDF approximation algorithm 
+// normcdfinv implementation using Acklam's Inverse Normal CDF approximation
+// algorithm
 __DEVICE__ double normcdfinv(double __p) {
   if (__p <= 0.0)
     return -INFINITY;
@@ -752,19 +753,20 @@ __DEVICE__ double normcdfinv(double __p) {
   } else if (__p <= p_high) {
     q = __p - 0.5;
     r = q * q;
-    result = fma(fma(fma(fma(fma(a1, r, a2), r, a3), r, a4), r, a5), r, a6) * q /
+    result = fma(fma(fma(fma(fma(a1, r, a2), r, a3), r, a4), r, a5), r, a6) *
+             q /
              fma(fma(fma(fma(fma(b1, r, b2), r, b3), r, b4), r, b5), r, 1.0);
   } else {
     q = sqrt(-2.0 * log(1.0 - __p));
     result = -fma(fma(fma(fma(fma(c1, q, c2), q, c3), q, c4), q, c5), q, c6) /
-              fma(fma(fma(fma(d1, q, d2), q, d3), q, d4), q, 1.0);
+             fma(fma(fma(fma(d1, q, d2), q, d3), q, d4), q, 1.0);
   }
 
   return result;
 }
 
 __DEVICE__ float normcdfinvf(float __p) {
-    if (__p <= 0.0f)
+  if (__p <= 0.0f)
     return -INFINITY;
   if (__p >= 1.0f)
     return INFINITY;
@@ -794,17 +796,21 @@ __DEVICE__ float normcdfinvf(float __p) {
   float q, r, result;
   if (__p < p_low) {
     q = sqrtf(-2.0f * logf(__p));
-    result = fmaf(fmaf(fmaf(fmaf(fmaf(c1, q, c2), q, c3), q, c4), q, c5), q, c6) /
-             fmaf(fmaf(fmaf(fmaf(d1, q, d2), q, d3), q, d4), q, 1.0f);
+    result =
+        fmaf(fmaf(fmaf(fmaf(fmaf(c1, q, c2), q, c3), q, c4), q, c5), q, c6) /
+        fmaf(fmaf(fmaf(fmaf(d1, q, d2), q, d3), q, d4), q, 1.0f);
   } else if (__p <= p_high) {
     q = __p - 0.5f;
     r = q * q;
-    result = fmaf(fmaf(fmaf(fmaf(fmaf(a1, r, a2), r, a3), r, a4), r, a5), r, a6) * q /
-             fmaf(fmaf(fmaf(fmaf(fmaf(b1, r, b2), r, b3), r, b4), r, b5), r, 1.0f);
+    result =
+        fmaf(fmaf(fmaf(fmaf(fmaf(a1, r, a2), r, a3), r, a4), r, a5), r, a6) *
+        q /
+        fmaf(fmaf(fmaf(fmaf(fmaf(b1, r, b2), r, b3), r, b4), r, b5), r, 1.0f);
   } else {
     q = sqrtf(-2.0f * logf(1.0f - __p));
-    result = -fmaf(fmaf(fmaf(fmaf(fmaf(c1, q, c2), q, c3), q, c4), q, c5), q, c6) /
-              fmaf(fmaf(fmaf(fmaf(d1, q, d2), q, d3), q, d4), q, 1.0f);
+    result =
+        -fmaf(fmaf(fmaf(fmaf(fmaf(c1, q, c2), q, c3), q, c4), q, c5), q, c6) /
+        fmaf(fmaf(fmaf(fmaf(d1, q, d2), q, d3), q, d4), q, 1.0f);
   }
 
   return result;
