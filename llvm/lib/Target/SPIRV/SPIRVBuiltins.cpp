@@ -375,16 +375,19 @@ static MachineInstr *getBlockStructInstr(Register ParamReg,
   //   or       = G_GLOBAL_VALUE @block_literal_global
   //   %1:_(pN) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.bitcast), %0
   //   %2:_(p4) = G_ADDRSPACE_CAST %1:_(pN)
+  // Under opaque pointers either cast may be absent when the IR addrspacecasts
+  // the block literal directly.
   MachineInstr *MI = MRI->getUniqueVRegDef(ParamReg);
-  assert(MI->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST &&
-         MI->getOperand(1).isReg());
-  Register BitcastReg = MI->getOperand(1).getReg();
-  MachineInstr *BitcastMI = MRI->getUniqueVRegDef(BitcastReg);
-  assert(isSpvIntrinsic(*BitcastMI, Intrinsic::spv_bitcast) &&
-         BitcastMI->getOperand(2).isReg());
-  Register ValueReg = BitcastMI->getOperand(2).getReg();
-  MachineInstr *ValueMI = MRI->getUniqueVRegDef(ValueReg);
-  return ValueMI;
+  if (MI->getOpcode() != TargetOpcode::G_ADDRSPACE_CAST ||
+      !MI->getOperand(1).isReg())
+    return MI;
+  Register SrcReg = MI->getOperand(1).getReg();
+  MachineInstr *SrcMI = MRI->getUniqueVRegDef(SrcReg);
+  if (!isSpvIntrinsic(*SrcMI, Intrinsic::spv_bitcast) ||
+      !SrcMI->getOperand(2).isReg())
+    return SrcMI;
+  Register ValueReg = SrcMI->getOperand(2).getReg();
+  return MRI->getUniqueVRegDef(ValueReg);
 }
 
 // Return an integer constant corresponding to the given register and
