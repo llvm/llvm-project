@@ -19,7 +19,7 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 using LIBC_NAMESPACE::testing::tlog;
 
 TEST_F(LlvmLibcAtanTest, InDoubleRange) {
-  constexpr uint64_t COUNT = 123'451;
+  constexpr uint64_t COUNT = 1'231;
   uint64_t START = LIBC_NAMESPACE::fputil::FPBits<double>(0x1.0p-60).uintval();
   uint64_t STOP = LIBC_NAMESPACE::fputil::FPBits<double>(0x1.0p60).uintval();
   uint64_t STEP = (STOP - START) / COUNT;

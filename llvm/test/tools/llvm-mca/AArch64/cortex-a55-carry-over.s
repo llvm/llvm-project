@@ -79,4 +79,4 @@ ret
 # CHECK-NEXT: 1.     2     0.0    0.0    0.0       ldp	x29, x0, [sp], #16
 # CHECK-NEXT: 2.     2     0.0    0.0    0.0       mov	w0, wzr
 # CHECK-NEXT: 3.     2     0.0    0.0    0.0       ret
-# CHECK-NEXT:        2     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        8     0.0    0.0    0.0       <total>

@@ -206,7 +206,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                  {{s32, s32}})
       .lower();
 
-  getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
+  getActionDefinitionsBuilder(G_BITREVERSE)
+      .customFor(ST.hasStdExtZbkb(), {s8})
+      .maxScalar(0, sXLen)
+      .lower();
 
   getActionDefinitionsBuilder(G_BITCAST).legalIf(
       all(LegalityPredicates::any(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
@@ -941,7 +944,6 @@ bool RISCVLegalizerInfo::shouldBeInConstantPool(const APInt &APImm,
 
 bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
                                         MachineIRBuilder &MIB) const {
-  const LLT XLenTy(STI.getXLenVT());
   Register Dst = MI.getOperand(0).getReg();
 
   // We define our scalable vector types for lmul=1 to use a 64 bit known
@@ -958,23 +960,25 @@ bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
   if (isPowerOf2_64(Val)) {
     uint64_t Log2 = Log2_64(Val);
     if (Log2 < 3) {
-      auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-      MIB.buildLShr(Dst, VLENB, MIB.buildConstant(XLenTy, 3 - Log2));
+      auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {sXLen}, {});
+      MIB.buildLShr(Dst, VLENB, MIB.buildConstant(sXLen, 3 - Log2),
+                    MachineInstr::IsExact);
     } else if (Log2 > 3) {
-      auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-      MIB.buildShl(Dst, VLENB, MIB.buildConstant(XLenTy, Log2 - 3));
+      auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {sXLen}, {});
+      MIB.buildShl(Dst, VLENB, MIB.buildConstant(sXLen, Log2 - 3));
     } else {
       MIB.buildInstr(RISCV::G_READ_VLENB, {Dst}, {});
     }
   } else if ((Val % 8) == 0) {
     // If the multiplier is a multiple of 8, scale it down to avoid needing
     // to shift the VLENB value.
-    auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-    MIB.buildMul(Dst, VLENB, MIB.buildConstant(XLenTy, Val / 8));
+    auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {sXLen}, {});
+    MIB.buildMul(Dst, VLENB, MIB.buildConstant(sXLen, Val / 8));
   } else {
-    auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-    auto VScale = MIB.buildLShr(XLenTy, VLENB, MIB.buildConstant(XLenTy, 3));
-    MIB.buildMul(Dst, VScale, MIB.buildConstant(XLenTy, Val));
+    auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {sXLen}, {});
+    auto VScale = MIB.buildLShr(sXLen, VLENB, MIB.buildConstant(sXLen, 3),
+                                MachineInstr::IsExact);
+    MIB.buildMul(Dst, VScale, MIB.buildConstant(sXLen, Val));
   }
   MI.eraseFromParent();
   return true;
@@ -1385,6 +1389,29 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
   return true;
 }
 
+bool RISCVLegalizerInfo::legalizeBitreverse(MachineInstr &MI,
+                                            MachineIRBuilder &MIB) const {
+  assert(MI.getOpcode() == TargetOpcode::G_BITREVERSE && "Unexpected opcode");
+
+  if (!STI.hasStdExtZbkb())
+    return false;
+
+  MachineRegisterInfo &MRI = *MIB.getMRI();
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+
+  if (!MRI.getType(Dst).isScalar(8))
+    return false;
+
+  auto WideSrc = MIB.buildAnyExt(sXLen, Src);
+  auto Brev = MIB.buildInstr(RISCV::G_BREV8, {sXLen}, {WideSrc.getReg(0)});
+  MIB.buildTrunc(Dst, Brev.getReg(0));
+
+  MI.eraseFromParent();
+  return true;
+}
+
 static unsigned getRISCVWOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
@@ -1576,6 +1603,8 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return legalizeExtractSubvector(MI, MIRBuilder);
   case TargetOpcode::G_INSERT_SUBVECTOR:
     return legalizeInsertSubvector(MI, Helper, MIRBuilder);
+  case TargetOpcode::G_BITREVERSE:
+    return legalizeBitreverse(MI, MIRBuilder);
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
     return legalizeLoadStore(MI, Helper, MIRBuilder);
