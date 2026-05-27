@@ -23,6 +23,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PrintPasses.h"
@@ -271,10 +272,10 @@ static stable_hash hashValueIdentity(const Value &V) {
 /// the previous pass's hash for the same tracker ID. Equal hash → "did
 /// not change" → skip emission.
 ///
-/// Captures: opcode, result type, operand count, per-operand type, the
-/// per-operand kind bits (is-Constant, is-Argument), a stable identity for
-/// non-constant operands when one is available (argument number, global name,
-/// basic-block name, instruction source-point identity), the commutative flag,
+/// Captures: opcode, result type, raw optional flag bits, operand count,
+/// per-operand type, the per-operand kind bits (is-Constant, is-Argument), a
+/// stable identity for non-constant operands when one is available (argument
+/// number, global name, basic-block name, instruction source-point identity),
 /// the CmpInst predicate, and the value of any ConstantInt operand.
 ///
 /// The important property is that operand rewrites which change the rendered
@@ -282,7 +283,7 @@ static stable_hash hashValueIdentity(const Value &V) {
 ///
 ///   %a = add i32 %x, %y         hash X
 ///   %b = add i32 %x, %z         hash Y      (different source-point identity)
-///   %c = add i32 %x, 1          hash Y      (kind bit changed)
+///   %c = add i32 %x, 1          hash M      (second operand kind changed)
 ///   %d = add i32 %x, 2          hash Z      (ConstantInt value changed)
 ///   %e = sub i32 %x, %y         hash W      (opcode changed)
 ///   %f = icmp eq i32 %x, %y     hash V
@@ -293,8 +294,9 @@ static stable_hash hashValueIdentity(const Value &V) {
 /// attached metadata changes. Metadata tracking is opt-in via separate flags
 /// (deferred to a follow-up PR).
 static stable_hash hashInstruction(const Instruction &I) {
-  stable_hash H = stable_hash_combine(I.getOpcode(), I.getType()->getTypeID(),
-                                      I.getNumOperands());
+  stable_hash H =
+      stable_hash_combine(I.getOpcode(), I.getType()->getTypeID(),
+                          I.getRawSubclassOptionalData(), I.getNumOperands());
   for (const Use &U : I.operands()) {
     Value *V = U.get();
     H = stable_hash_combine(
@@ -307,11 +309,49 @@ static stable_hash hashInstruction(const Instruction &I) {
       H = stable_hash_combine(
           H, static_cast<stable_hash>(hash_value(C->getValue())));
   }
-  if (I.isCommutative())
-    H = stable_hash_combine(H, 1);
   if (auto *CI = dyn_cast<CmpInst>(&I))
     H = stable_hash_combine(H, CI->getPredicate());
   return H;
+}
+
+static void writeOptimizationInfo(raw_ostream &OS, const User *U) {
+  if (const auto *FPO = dyn_cast<const FPMathOperator>(U))
+    OS << FPO->getFastMathFlags();
+
+  if (const auto *OBO = dyn_cast<OverflowingBinaryOperator>(U)) {
+    if (OBO->hasNoUnsignedWrap())
+      OS << " nuw";
+    if (OBO->hasNoSignedWrap())
+      OS << " nsw";
+  } else if (const auto *Div = dyn_cast<PossiblyExactOperator>(U)) {
+    if (Div->isExact())
+      OS << " exact";
+  } else if (const auto *PDI = dyn_cast<PossiblyDisjointInst>(U)) {
+    if (PDI->isDisjoint())
+      OS << " disjoint";
+  } else if (const auto *GEP = dyn_cast<GEPOperator>(U)) {
+    if (GEP->isInBounds())
+      OS << " inbounds";
+    else if (GEP->hasNoUnsignedSignedWrap())
+      OS << " nusw";
+    if (GEP->hasNoUnsignedWrap())
+      OS << " nuw";
+    if (auto InRange = GEP->getInRange()) {
+      OS << " inrange(" << InRange->getLower() << ", " << InRange->getUpper()
+         << ")";
+    }
+  } else if (const auto *NNI = dyn_cast<PossiblyNonNegInst>(U)) {
+    if (NNI->hasNonNeg())
+      OS << " nneg";
+  } else if (const auto *TI = dyn_cast<TruncInst>(U)) {
+    if (TI->hasNoUnsignedWrap())
+      OS << " nuw";
+    if (TI->hasNoSignedWrap())
+      OS << " nsw";
+  } else if (const auto *ICmp = dyn_cast<ICmpInst>(U)) {
+    if (ICmp->hasSameSign())
+      OS << " samesign";
+  }
 }
 
 /// Compute the hash that identifies "this source point" for tracker-ID
@@ -365,10 +405,7 @@ static stable_hash hashTrackerIdentity(const DILocation *Loc) {
 
 static void printAPIntValue(raw_ostream &OS, const APInt &V) {
   SmallString<32> Tmp;
-  if (V.isNegative())
-    V.toStringSigned(Tmp, 10);
-  else
-    V.toStringUnsigned(Tmp, 10);
+  V.toStringSigned(Tmp, 10);
   OS << Tmp;
 }
 
@@ -724,10 +761,10 @@ class IRTrackerRecorder {
     /// fallback for arithmetic / cast / etc.
     ///
     /// Deliberately omits attribute lists, alignment suffixes,
-    /// attached metadata, sync scope, atomic ordering, GEP inrange
-    /// markers, fast-math flags, and ``tail`` markers -- the recorder
-    /// records structural shape, not full LLVM IR text. The omissions
-    /// are what keep the emitted text compact and inexpensive to produce.
+    /// attached metadata, sync scope, atomic ordering, and ``tail`` markers --
+    /// the recorder records structural shape, not full LLVM IR text. The
+    /// omissions are what keep the emitted text compact and inexpensive to
+    /// produce.
     ///
     /// CurID is the current instruction's tracker ID; passed in so
     /// printInstructionText can put ``%t<CurID>`` as the result name
@@ -745,6 +782,7 @@ class IRTrackerRecorder {
       }
 
       OS << I.getOpcodeName();
+      writeOptimizationInfo(OS, &I);
       if (const auto *CI = dyn_cast<CmpInst>(&I))
         OS << ' ' << CI->getPredicate();
 

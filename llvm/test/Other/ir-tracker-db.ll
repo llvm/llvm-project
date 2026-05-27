@@ -8,6 +8,8 @@
 ; RUN: FileCheck %s --input-file=%t-ssa.tsv --check-prefix=SSA
 ; RUN: opt -disable-output -passes=instcombine -filter-print-funcs=f -ir-tracker-output=%t-filter.tsv %s
 ; RUN: FileCheck %s --input-file=%t-filter.tsv --check-prefix=FILTER
+; RUN: opt -disable-output -passes=instcombine -filter-print-funcs=flags -ir-tracker-output=%t-flags.tsv %s
+; RUN: FileCheck %s --input-file=%t-flags.tsv --check-prefix=FLAGS
 
 define i32 @f(i32 %x) !dbg !6 {
 entry:
@@ -41,6 +43,14 @@ entry:
   ret i32 %b, !dbg !25
 }
 
+define i32 @flags(i32 %x, i32 %y) !dbg !26 {
+entry:
+  %add = add nsw i32 %x, %y, !dbg !27
+  %div = udiv exact i32 %add, 2, !dbg !28
+  %cmp = icmp samesign slt i32 %div, %y, !dbg !29
+  ret i32 %div, !dbg !30
+}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2}
 
@@ -55,6 +65,7 @@ entry:
 !12 = distinct !DISubprogram(name: "h", scope: !15, file: !15, line: 7, type: !4, scopeLine: 7, spFlags: DISPFlagDefinition, unit: !0)
 !16 = distinct !DISubprogram(name: "mid", scope: !1, file: !1, line: 19, type: !4, scopeLine: 19, spFlags: DISPFlagDefinition, unit: !0)
 !20 = distinct !DISubprogram(name: "ssa", scope: !1, file: !1, line: 25, type: !4, scopeLine: 25, spFlags: DISPFlagDefinition, unit: !0)
+!26 = distinct !DISubprogram(name: "flags", scope: !1, file: !1, line: 33, type: !4, scopeLine: 33, spFlags: DISPFlagDefinition, unit: !0)
 !8 = !DILocation(line: 8, column: 3, scope: !6)
 !9 = !DILocation(line: 9, column: 3, scope: !6)
 !10 = !DILocation(line: 14, column: 3, scope: !7)
@@ -67,6 +78,10 @@ entry:
 !21 = !DILocation(line: 26, column: 3, scope: !20)
 !22 = !DILocation(line: 27, column: 3, scope: !20)
 !25 = !DILocation(line: 30, column: 3, scope: !20)
+!27 = !DILocation(line: 34, column: 3, scope: !26)
+!28 = !DILocation(line: 35, column: 3, scope: !26)
+!29 = !DILocation(line: 36, column: 3, scope: !26)
+!30 = !DILocation(line: 37, column: 3, scope: !26)
 !15 = !DIFile(filename: "ir-tracker-other.c", directory: "/tmp")
 
 ; Output is the cost-improvement TSV form: P/T/I rows. T rows carry source
@@ -114,3 +129,8 @@ entry:
 ; FILTER: I{{	}}f{{	}}entry{{	}}1{{	}}ret
 ; FILTER-NOT: I{{	}}g{{	}}
 ; FILTER-NOT: ir_unit{{[" :]+}}g
+
+; FLAGS: P{{	}}0{{	}}initial{{	}}<initial>{{	}}flags
+; FLAGS: I{{	}}flags{{	}}entry{{	}}0{{	}}add{{	}}{{[0-9]+}}{{	}}%add = add nsw i32 %x, %y
+; FLAGS: I{{	}}flags{{	}}entry{{	}}1{{	}}udiv{{	}}{{[0-9]+}}{{	}}%div = udiv exact i32 %add, 2
+; FLAGS: I{{	}}flags{{	}}entry{{	}}2{{	}}icmp{{	}}{{[0-9]+}}{{	}}%cmp = icmp samesign slt i1 %div, %y
