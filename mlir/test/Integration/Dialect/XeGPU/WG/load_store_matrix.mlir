@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --pass-pipeline="builtin.module(gpu.module(xegpu-wg-to-sg-distribute, xegpu-blocking, xegpu-sg-to-wi-distribute-experimental), xevm-attach-target{chip=pvc}, gpu.module(convert-xegpu-to-xevm))" \
+// RUN: mlir-opt %s --pass-pipeline="builtin.module(gpu.module(xegpu-wg-to-sg-distribute, xegpu-blocking, xegpu-sg-to-lane-distribute), xevm-attach-target{chip=pvc}, gpu.module(convert-xegpu-to-xevm))" \
 // RUN: | FileCheck %s
 
 #layout_1d = #xegpu.layout<sg_layout = [16], sg_data = [256], inst_data = [16], lane_layout = [16], lane_data = [1]>

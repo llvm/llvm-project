@@ -2065,3 +2065,10 @@ namespace WcslenInvalidArg {
   static_assert(__builtin_wcslen(L"x") == 1);
 
 }
+
+namespace SubCb {
+  constexpr unsigned char subcb(unsigned char lhs, unsigned char rhs, unsigned char carry) {
+    return __builtin_subcb(lhs, rhs, carry, &rhs);
+  }
+  static_assert(subcb(10, 15, 1) == 250);
+}

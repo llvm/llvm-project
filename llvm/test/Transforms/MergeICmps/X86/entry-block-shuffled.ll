@@ -74,7 +74,7 @@ opeq1.exit:
 !3 = !{!"branch_weights", i32 11, i32 13}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nofree nosync }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: read) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i32 10}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 2, i32 3}

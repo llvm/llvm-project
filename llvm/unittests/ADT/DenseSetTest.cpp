@@ -281,4 +281,15 @@ TEST(DenseSetCustomTest, ConstTest) {
   EXPECT_TRUE(Map.contains(B));
   EXPECT_TRUE(Map.contains(C));
 }
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+TEST(DenseSetCustomTest, EraseInvalidatesIterators) {
+  DenseSet<int> Set;
+  Set.insert(1);
+  Set.insert(2);
+  auto It = Set.find(1);
+  Set.erase(2);
+  EXPECT_DEATH((void)*It, "invalid iterator access");
+}
+#endif
 }
