@@ -1777,3 +1777,10 @@ func.func @test_assert_equal_shape() {
   tosa.assert_equal_shape %0, %1 {allow_broadcast = true} : (!tosa.shape<2>, !tosa.shape<2>) -> ()
   return
 }
+
+// -----
+// CHECK-LABEL: test_apply_scale_rank_0_vector
+func.func @test_apply_scale_rank_0_vector(%arg0: vector<i32>, %arg1: vector<i32>, %arg2: vector<i8>) -> vector<i32> {
+  %0 = tosa.apply_scale %arg0, %arg1, %arg2 {rounding_mode = SINGLE_ROUND} : (vector<i32>, vector<i32>, vector<i8>) -> vector<i32>
+  return %0 : vector<i32>
+}
