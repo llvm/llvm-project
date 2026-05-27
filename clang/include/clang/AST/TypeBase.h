@@ -116,6 +116,7 @@ namespace clang {
 class ASTContext;
 template <typename> class CanQual;
 class CXXRecordDecl;
+class Decl;
 class DeclContext;
 class EnumDecl;
 class Expr;
@@ -2762,6 +2763,14 @@ public:
   bool isNothrowT() const;                      // C++   std::nothrow_t
   bool isAlignValT() const;                     // C++17 std::align_val_t
   bool isStdByteType() const;                   // C++17 std::byte
+  bool
+  isStdClassTemplateSpecialization(const ASTContext &Ctx, StringRef ClassName,
+                                   QualType *TypeArg = nullptr,
+                                   ClassTemplateDecl **CachedDecl = nullptr,
+                                   const Decl **MalformedDecl = nullptr) const;
+  bool isStdInitializerListType(
+      const ASTContext &Ctx,
+      QualType *Element = nullptr) const; // C++11 std::initializer_list<T>
   bool isAtomicType() const;                    // C11 _Atomic()
   bool isUndeducedAutoType() const;             // C++11 auto or
                                                 // C++14 decltype(auto)

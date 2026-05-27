@@ -259,6 +259,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 #### C++2c Feature Support
 
 - Clang now propagates `constinit` and `constexpr` in structured bindings with tuple-like initializers.
+- Clang now supports `P2752R3 <https://wg21.link/p2752r3>`_ 'Static storage for braced initializers'. (#GH104487)
 
 - Clang now has partial support for [P1306R5](https://wg21.link/P1306R5) Expansion Statements. Iterating expansion
   statements currently cannot be expanded and will result in a diagnostic, but other types of expansion statements work.
