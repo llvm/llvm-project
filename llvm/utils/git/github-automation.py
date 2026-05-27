@@ -244,25 +244,27 @@ def get_user_values_str(values: list) -> str:
 
 class PRGreeter:
     COMMENT_TAG = "<!--LLVM NEW CONTRIBUTOR COMMENT-->\n"
+
+    # NOTE: Please keep this in sync with .github/new-prs-labeler.yml
     SPECIFIC_CONTRIBUTOR_GUIDE_LIST = {
-      "The [InstCombine Contributor Guide](https://llvm.org/docs/InstCombineContributorGuide.html) lays out a series of rules that contributions to InstCombine (and other middle-end components) should follow.": [
-        "llvm/include/llvm/Analysis/ConstantFolding.h",
-        "llvm/include/llvm/Analysis/InstructionSimplify.h",
-        "llvm/include/llvm/IR/ConstantFold.h",
-        "llvm/include/llvm/IR/ConstantFolder.h",
-        "llvm/include/llvm/Transforms/InstCombine/",
-        "llvm/include/llvm/Transforms/Vectorize/VectorCombine.h",
-        "llvm/lib/Analysis/ConstantFolding.cpp",
-        "llvm/lib/Analysis/InstructionSimplify.cpp",
-        "llvm/lib/Analysis/ValueTracking.cpp",
-        "llvm/lib/IR/ConstantFold.cpp",
-        "llvm/lib/Transforms/InstCombine/",
-        "llvm/lib/Transforms/Vectorize/VectorCombine.cpp",
-        "llvm/test/Analysis/ValueTracking/",
-        "llvm/test/Transforms/InstCombine/",
-        "llvm/test/Transforms/InstSimplify/",
-        "llvm/test/Transforms/VectorCombine/",
-      ]
+        "The [InstCombine Contributor Guide](https://llvm.org/docs/InstCombineContributorGuide.html) lays out a series of rules that contributions to InstCombine (and other middle-end components) should follow.": [
+            "llvm/include/llvm/Analysis/ConstantFolding.h",
+            "llvm/include/llvm/Analysis/InstructionSimplify.h",
+            "llvm/include/llvm/IR/ConstantFold.h",
+            "llvm/include/llvm/IR/ConstantFolder.h",
+            "llvm/include/llvm/Transforms/InstCombine/",
+            "llvm/include/llvm/Transforms/Vectorize/VectorCombine.h",
+            "llvm/lib/Analysis/ConstantFolding.cpp",
+            "llvm/lib/Analysis/InstructionSimplify.cpp",
+            "llvm/lib/Analysis/ValueTracking.cpp",
+            "llvm/lib/IR/ConstantFold.cpp",
+            "llvm/lib/Transforms/InstCombine/",
+            "llvm/lib/Transforms/Vectorize/VectorCombine.cpp",
+            "llvm/test/Analysis/ValueTracking/",
+            "llvm/test/Transforms/InstCombine/",
+            "llvm/test/Transforms/InstSimplify/",
+            "llvm/test/Transforms/VectorCombine/",
+        ]
     }
 
     def __init__(self, token: str, repo: str, pr_number: int, author: str):
@@ -273,7 +275,9 @@ class PRGreeter:
         self.specific_contributor_guide = ""
         filenames = [file.filename for file in self.pr.get_files()]
         for desc, glob_list in PRGreeter.SPECIFIC_CONTRIBUTOR_GUIDE_LIST.items():
-            if any(pattern in filename for pattern in glob_list for filename in filenames):
+            if any(
+                pattern in filename for pattern in glob_list for filename in filenames
+            ):
                 self.specific_contributor_guide += f"* {desc}\n"
 
     def run(self) -> bool:
