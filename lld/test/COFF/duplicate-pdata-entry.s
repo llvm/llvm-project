@@ -13,15 +13,15 @@
 #
 # RUN: yaml2obj %s -o %t.obj
 #
-# With ICF: helper_b folds into helper_a, making the two .pdata entries
-# duplicates. Only one survives = 12 bytes = 0xC.
+# When ICF is enabled, helper_b folds into helper_a, making the two .pdata
+# entries duplicates. Only one survives = 12 bytes = 0xC.
 # RUN: lld-link %t.obj -dll -noentry -out:%t.dll -verbose 2>&1 | FileCheck --check-prefix=ICF-VERBOSE %s
 # RUN: llvm-readobj --sections %t.dll | FileCheck --check-prefix=ICF %s
 # ICF-VERBOSE: Removed duplicate .pdata entry in .pdata$parent_b
 # ICF:      Name: .pdata
 # ICF-NEXT: VirtualSize: 0xC
 #
-# Without ICF: both helpers remain distinct, so both .pdata entries are
+# Without ICF, both helpers remain distinct, so both .pdata entries are
 # unique = 24 bytes = 0x18.
 # RUN: lld-link %t.obj -dll -noentry -out:%t_noicf.dll -opt:noicf
 # RUN: llvm-readobj --sections %t_noicf.dll | FileCheck --check-prefix=NOICF %s
