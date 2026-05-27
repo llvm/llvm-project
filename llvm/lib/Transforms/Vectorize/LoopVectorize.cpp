@@ -8173,13 +8173,31 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, Loop *L,
 // loop with the bound load speculatively hoisted.
 //
 // Uses the LV cost model to estimate the cost of the runtime checks that
-// versioning would add, and applies the MinTC2 heuristic from
-// isOutsideLoopWorkProfitable to reject cases where the expected trip count
-// is too small to amortize the check overhead.
+// versioning would add, and applies two minimum-trip-count thresholds:
+//
+//   MinTC2      (mirrors isOutsideLoopWorkProfitable):
+//     RtC * 10 / VectorizeMemoryCheckThreshold < TC
+//     Guards against loops where the RTC overhead is a large fraction of the
+//     total scalar cost.
+//
+//   MinTC_load  (load-elimination benefit):
+//     ceil(RtC / LoadSaving) < TC
+//     The per-iteration saving from eliminating the bound load in the versioned
+//     clone.  This directly models the benefit of the transform: a cheap load
+//     requires more iterations to amortize the RTC cost; an expensive load
+//     pays back quickly.
+//
+// Versioning is rejected when the known trip count is below
+// max(MinTC2, MinTC_load).
 static bool isSpeculativeBoundVersioningProfitable(
-    const LoopAccessInfo &LAI, Loop *L, PredicatedScalarEvolution &PSE,
-    DominatorTree *DT, LoopInfo *LI, TargetTransformInfo *TTI,
-    OptimizationRemarkEmitter *ORE) {
+    const LoopAccessInfo &LAI, Loop *L, LoadInst *BoundLoad,
+    PredicatedScalarEvolution &PSE, DominatorTree *DT, LoopInfo *LI,
+    TargetTransformInfo *TTI, OptimizationRemarkEmitter *ORE) {
+  
+  // We expect this function to only be called when we have identified a candidate load for speculative bound versioning, Should this be an assertion instead?
+  if (!BoundLoad)
+    return false;
+  
   // Hard cap: too many existing checks means too much overhead.
   if (LAI.getNumRuntimePointerChecks() > VectorizeMemoryCheckThreshold) {
     LLVM_DEBUG(dbgs() << "LV: Skipping speculative bound versioning: too many "
@@ -8202,6 +8220,27 @@ static bool isSpeculativeBoundVersioningProfitable(
     return false;
   }
 
+  // Compute the per-iteration saving from eliminating the bound load in the
+  // versioned clone.  The load executes once per scalar iteration; hoisting it
+  // out of the loop saves this cost on every iteration of the fast path.
+  Type *LoadTy = BoundLoad->getType();
+  Align LoadAlign = BoundLoad->getAlign();
+  unsigned AS = BoundLoad->getPointerAddressSpace();
+  TTI::OperandValueInfo OpInfo =
+      TTI::getOperandInfo(BoundLoad->getPointerOperand());
+  InstructionCost LoadSaving =
+      TTI->getMemoryOpCost(Instruction::Load, LoadTy, LoadAlign, AS,
+                           TTI::TCK_RecipThroughput, OpInfo, BoundLoad);
+  if (!LoadSaving.isValid())
+    return false;
+
+  // MinTC_load: minimum trip count for the load saving alone to amortize RtC.
+  //   LoadSaving * TC >= RtC  =>  TC >= ceil(RtC / LoadSaving)
+  // When LoadSaving is zero this threshold is left at 0 (no-op).
+  uint64_t MinTC_load = 0;
+  if (LoadSaving.getValue() > 0)
+    MinTC_load = divideCeil(RtC.getValue(), LoadSaving.getValue());
+
   // MinTC2 heuristic (mirrors isOutsideLoopWorkProfitable):
   //   require  RtC * 10 / ScalarCostProxy  <  TC
   // We use VectorizeMemoryCheckThreshold as a conservative scalar-cost proxy
@@ -8213,10 +8252,12 @@ static bool isSpeculativeBoundVersioningProfitable(
   if (auto ExpectedTC = getSmallBestKnownTC(PSE, L)) {
     uint64_t MinTC2 =
         divideCeil(RtC.getValue() * 10, VectorizeMemoryCheckThreshold);
-    if (ExpectedTC->isFixed() && ExpectedTC->getFixedValue() < MinTC2) {
+    uint64_t MinTC = std::max(MinTC2, MinTC_load);
+    if (ExpectedTC->isFixed() && ExpectedTC->getFixedValue() < MinTC) {
       LLVM_DEBUG(dbgs() << "LV: Skipping speculative bound versioning: "
-                           "expected TC ("
-                        << *ExpectedTC << ") < MinTC (" << MinTC2 << ")\n");
+                           "expected TC (" << *ExpectedTC << ") < MinTC ("
+                        << MinTC << ") [RtC=" << RtC
+                        << ", LoadSaving=" << LoadSaving << "]\n");
       return false;
     }
   }
@@ -8301,8 +8342,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         if (LoadInst *BoundLoad =
                 LVL.tryToFindDynamicBoundLoadCandidate(L, *AA)) {
           const LoopAccessInfo &PreLAI = LAIs->getInfo(*L);
-          if (isSpeculativeBoundVersioningProfitable(PreLAI, L, PSE, DT, LI,
-                                                     TTI, ORE))
+          if (isSpeculativeBoundVersioningProfitable(PreLAI, L, BoundLoad, PSE,
+                                                     DT, LI, TTI, ORE))
             if (Loop *Cand = versionLoopForInvariantBoundLoad(
                     L, BoundLoad, *DT, *LI, *AA, PSE, AC)) {
               SE->forgetLoop(L);
