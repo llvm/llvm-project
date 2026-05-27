@@ -22,7 +22,6 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/MachOUniversal.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -121,9 +120,9 @@ static Error executeObjcopyOnRawBinary(ConfigManager &ConfigMgr,
   llvm_unreachable("unsupported output format");
 }
 
-/// Returns the format identifier string for non-auto FileFormat values.
-/// Returns "" for Unspecified/ELF so callers can fall back to the input
-/// object's own format string (e.g. "elf64-x86-64").
+/// Returns the format name string for explicit file formats (binary, ihex,
+/// srec). Returns "" for all other formats so callers can fall back to the
+/// input object's own format string (e.g. "elf64-x86-64").
 static StringRef toFileFormatName(FileFormat Fmt) {
   switch (Fmt) {
   case FileFormat::Binary:
@@ -185,8 +184,6 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
     BinaryHolder = std::move(*BinaryOrErr);
 
     if (Archive *Ar = dyn_cast<Archive>(BinaryHolder.getBinary())) {
-      // Handle Archive. Per-member verbose output is emitted inside
-      // executeObjcopyOnArchive.
       if (Error E = executeObjcopyOnArchive(ConfigMgr, *Ar))
         return E;
     } else {

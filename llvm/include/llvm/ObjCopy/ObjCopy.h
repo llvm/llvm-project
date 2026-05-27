@@ -9,7 +9,6 @@
 #ifndef LLVM_OBJCOPY_OBJCOPY_H
 #define LLVM_OBJCOPY_OBJCOPY_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
@@ -25,12 +24,12 @@ namespace objcopy {
 class MultiFormatConfig;
 
 /// Returns the format name of \p B if it is an ObjectFile, or "" otherwise.
-StringRef getObjectFormatName(const object::Binary &B);
+LLVM_ABI StringRef getObjectFormatName(const object::Binary &B);
 
-/// Prints a verbose "copy from 'InPath' [InFmt] to 'OutPath' [OutFmt]"
-/// message to stdout.
-void printCopyMessage(StringRef InPath, StringRef InFormatName,
-                      StringRef OutPath, StringRef OutFormatName);
+/// Prints information about the input and output files involved in a copy
+/// operation to stdout.
+LLVM_ABI void printCopyMessage(StringRef InPath, StringRef InFormatName,
+                               StringRef OutPath, StringRef OutFormatName);
 
 /// Applies the transformations described by \p Config to
 /// each member in archive \p Ar.
