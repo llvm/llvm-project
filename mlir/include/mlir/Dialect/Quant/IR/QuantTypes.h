@@ -19,7 +19,6 @@
 #include "llvm/Support/MathExtras.h"
 
 namespace mlir {
-
 namespace quant {
 namespace detail {
 
