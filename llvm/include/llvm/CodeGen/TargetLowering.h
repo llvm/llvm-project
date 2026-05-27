@@ -4576,7 +4576,8 @@ public:
   /// unable to simplify it, return a null SDValue.
   SDValue SimplifySetCC(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                         bool foldBooleans, DAGCombinerInfo &DCI,
-                        const SDLoc &dl) const;
+                        const SDLoc &dl,
+                        SDNodeFlags Flags = SDNodeFlags()) const;
 
   // For targets which wrap address, unwrap for analysis.
   virtual SDValue unwrapAddress(SDValue N) const { return N; }

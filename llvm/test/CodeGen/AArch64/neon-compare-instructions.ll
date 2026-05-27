@@ -3247,36 +3247,51 @@ define <2 x i64> @fcmone2xdouble_fast(<2 x double> %A, <2 x double> %B) {
 }
 
 define <2 x i32> @fcmord2xfloat_fast(<2 x float> %A, <2 x float> %B) {
-; CHECK-LABEL: fcmord2xfloat_fast:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcmge v2.2s, v0.2s, v1.2s
-; CHECK-NEXT:    fcmgt v0.2s, v1.2s, v0.2s
-; CHECK-NEXT:    orr v0.8b, v0.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fcmord2xfloat_fast:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcmord2xfloat_fast:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmge v2.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    fcmgt v0.2s, v1.2s, v0.2s
+; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    ret
   %tmp3 = fcmp fast ord <2 x float> %A, %B
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
   ret <2 x i32> %tmp4
 }
 
 define <4 x i32> @fcmord4xfloat_fast(<4 x float> %A, <4 x float> %B) {
-; CHECK-LABEL: fcmord4xfloat_fast:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcmge v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fcmord4xfloat_fast:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcmord4xfloat_fast:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmge v2.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    ret
   %tmp3 = fcmp fast ord <4 x float> %A, %B
   %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
   ret <4 x i32> %tmp4
 }
 
 define <2 x i64> @fcmord2xdouble_fast(<2 x double> %A, <2 x double> %B) {
-; CHECK-LABEL: fcmord2xdouble_fast:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcmge v2.2d, v0.2d, v1.2d
-; CHECK-NEXT:    fcmgt v0.2d, v1.2d, v0.2d
-; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fcmord2xdouble_fast:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcmord2xdouble_fast:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmge v2.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    fcmgt v0.2d, v1.2d, v0.2d
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    ret
   %tmp3 = fcmp fast ord <2 x double> %A, %B
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
   ret <2 x i64> %tmp4
@@ -3284,39 +3299,54 @@ define <2 x i64> @fcmord2xdouble_fast(<2 x double> %A, <2 x double> %B) {
 
 
 define <2 x i32> @fcmuno2xfloat_fast(<2 x float> %A, <2 x float> %B) {
-; CHECK-LABEL: fcmuno2xfloat_fast:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcmge v2.2s, v0.2s, v1.2s
-; CHECK-NEXT:    fcmgt v0.2s, v1.2s, v0.2s
-; CHECK-NEXT:    orr v0.8b, v0.8b, v2.8b
-; CHECK-NEXT:    mvn v0.8b, v0.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fcmuno2xfloat_fast:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcmuno2xfloat_fast:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmge v2.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    fcmgt v0.2s, v1.2s, v0.2s
+; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    mvn v0.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %tmp3 = fcmp fast uno <2 x float> %A, %B
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
   ret <2 x i32> %tmp4
 }
 
 define <4 x i32> @fcmuno4xfloat_fast(<4 x float> %A, <4 x float> %B) {
-; CHECK-LABEL: fcmuno4xfloat_fast:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcmge v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    mvn v0.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fcmuno4xfloat_fast:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcmuno4xfloat_fast:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmge v2.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %tmp3 = fcmp fast uno <4 x float> %A, %B
   %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
   ret <4 x i32> %tmp4
 }
 
 define <2 x i64> @fcmuno2xdouble_fast(<2 x double> %A, <2 x double> %B) {
-; CHECK-LABEL: fcmuno2xdouble_fast:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcmge v2.2d, v0.2d, v1.2d
-; CHECK-NEXT:    fcmgt v0.2d, v1.2d, v0.2d
-; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    mvn v0.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fcmuno2xdouble_fast:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcmuno2xdouble_fast:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmge v2.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    fcmgt v0.2d, v1.2d, v0.2d
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %tmp3 = fcmp fast uno <2 x double> %A, %B
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
   ret <2 x i64> %tmp4
@@ -3804,30 +3834,45 @@ define <2 x i64> @fcmonez2xdouble_fast(<2 x double> %A) {
 }
 
 define <2 x i32> @fcmordz2xfloat_fast(<2 x float> %A) {
-; CHECK-LABEL: fcmordz2xfloat_fast:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcmeq v0.2s, v0.2s, v0.2s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fcmordz2xfloat_fast:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcmordz2xfloat_fast:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmeq v0.2s, v0.2s, v0.2s
+; CHECK-GI-NEXT:    ret
   %tmp3 = fcmp fast ord <2 x float> %A, zeroinitializer
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
   ret <2 x i32> %tmp4
 }
 
 define <4 x i32> @fcmordz4xfloat_fast(<4 x float> %A) {
-; CHECK-LABEL: fcmordz4xfloat_fast:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcmeq v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fcmordz4xfloat_fast:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcmordz4xfloat_fast:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmeq v0.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    ret
   %tmp3 = fcmp fast ord <4 x float> %A, zeroinitializer
   %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
   ret <4 x i32> %tmp4
 }
 
 define <2 x i64> @fcmordz2xdouble_fast(<2 x double> %A) {
-; CHECK-LABEL: fcmordz2xdouble_fast:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcmeq v0.2d, v0.2d, v0.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fcmordz2xdouble_fast:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcmordz2xdouble_fast:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmeq v0.2d, v0.2d, v0.2d
+; CHECK-GI-NEXT:    ret
   %tmp3 = fcmp fast ord <2 x double> %A, zeroinitializer
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
   ret <2 x i64> %tmp4
@@ -4114,33 +4159,48 @@ define <2 x i64> @fcmunez2xdouble_fast(<2 x double> %A) {
 }
 
 define <2 x i32> @fcmunoz2xfloat_fast(<2 x float> %A) {
-; CHECK-LABEL: fcmunoz2xfloat_fast:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcmeq v0.2s, v0.2s, v0.2s
-; CHECK-NEXT:    mvn v0.8b, v0.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fcmunoz2xfloat_fast:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcmunoz2xfloat_fast:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmeq v0.2s, v0.2s, v0.2s
+; CHECK-GI-NEXT:    mvn v0.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %tmp3 = fcmp fast uno <2 x float> %A, zeroinitializer
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
   ret <2 x i32> %tmp4
 }
 
 define <4 x i32> @fcmunoz4xfloat_fast(<4 x float> %A) {
-; CHECK-LABEL: fcmunoz4xfloat_fast:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcmeq v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    mvn v0.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fcmunoz4xfloat_fast:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcmunoz4xfloat_fast:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmeq v0.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %tmp3 = fcmp fast uno <4 x float> %A, zeroinitializer
   %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
   ret <4 x i32> %tmp4
 }
 
 define <2 x i64> @fcmunoz2xdouble_fast(<2 x double> %A) {
-; CHECK-LABEL: fcmunoz2xdouble_fast:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcmeq v0.2d, v0.2d, v0.2d
-; CHECK-NEXT:    mvn v0.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fcmunoz2xdouble_fast:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcmunoz2xdouble_fast:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmeq v0.2d, v0.2d, v0.2d
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %tmp3 = fcmp fast uno <2 x double> %A, zeroinitializer
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
   ret <2 x i64> %tmp4
@@ -4513,13 +4573,18 @@ define <4 x float> @vselect_one_nnan(<4 x float> %a, <4 x float> %b, <4 x float>
 }
 
 define <4 x float> @vselect_ord_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
-; CHECK-LABEL: vselect_ord_nnan:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcmge v4.4s, v0.4s, v1.4s
-; CHECK-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    orr v0.16b, v0.16b, v4.16b
-; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: vselect_ord_nnan:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_ord_nnan:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmge v4.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    ret
   %c = fcmp nnan ord <4 x float> %a, %b
   %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
   ret <4 x float> %r
@@ -4638,10 +4703,7 @@ define <4 x float> @vselect_une_nnan(<4 x float> %a, <4 x float> %b, <4 x float>
 define <4 x float> @vselect_uno_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
 ; CHECK-SD-LABEL: vselect_uno_nnan:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcmge v4.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v4.16b
-; CHECK-SD-NEXT:    bsl v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    mov v0.16b, v3.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vselect_uno_nnan:
@@ -4757,9 +4819,7 @@ define <4 x float> @vselect_one_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x flo
 define <4 x float> @vselect_ord_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
 ; CHECK-SD-LABEL: vselect_ord_knownnnan:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-SD-NEXT:    fcmeq v0.4s, v0.4s, v0.4s
-; CHECK-SD-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vselect_ord_knownnnan:
@@ -4920,9 +4980,7 @@ define <4 x float> @vselect_une_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x flo
 define <4 x float> @vselect_uno_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
 ; CHECK-SD-LABEL: vselect_uno_knownnnan:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-SD-NEXT:    fcmeq v0.4s, v0.4s, v0.4s
-; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v1.16b
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vselect_uno_knownnnan:
