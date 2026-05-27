@@ -301,15 +301,13 @@ public:
 
   void Profile(llvm::FoldingSetNodeID &ID);
 
-  static void ProfileCommon(llvm::FoldingSetNodeID &ID,
-                            AnalysisDeclContext *ctx, const StackFrame *parent,
-                            const void *data);
-
   static void Profile(llvm::FoldingSetNodeID &ID, AnalysisDeclContext *ADC,
                       const StackFrame *SF, const void *Data, const Expr *E,
                       const CFGBlock *Block, unsigned BlockCount,
                       unsigned Index) {
-    ProfileCommon(ID, ADC, SF, E);
+    ID.AddPointer(ADC);
+    ID.AddPointer(SF);
+    ID.AddPointer(E);
     ID.AddPointer(Data);
     ID.AddPointer(Block);
     ID.AddInteger(BlockCount);
@@ -318,7 +316,7 @@ public:
 };
 
 class StackFrameManager {
-  llvm::FoldingSet<StackFrame> Contexts;
+  llvm::FoldingSet<StackFrame> Frames;
 
   // ID used for generating a new location context.
   int64_t NewID = 0;

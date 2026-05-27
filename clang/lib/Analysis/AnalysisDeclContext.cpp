@@ -396,14 +396,6 @@ StackFrameManager &AnalysisDeclContext::getStackFrameManager() {
 // FoldingSet profiling.
 //===----------------------------------------------------------------------===//
 
-void StackFrame::ProfileCommon(llvm::FoldingSetNodeID &ID,
-                               AnalysisDeclContext *ctx,
-                               const StackFrame *parent, const void *data) {
-  ID.AddPointer(ctx);
-  ID.AddPointer(parent);
-  ID.AddPointer(data);
-}
-
 void StackFrame::Profile(llvm::FoldingSetNodeID &ID) {
   Profile(ID, getAnalysisDeclContext(), getParent(), Data, CallSite, Block,
           BlockCount, Index);
@@ -419,11 +411,10 @@ const StackFrame *StackFrameManager::getStackFrame(
   llvm::FoldingSetNodeID ID;
   StackFrame::Profile(ID, Ctx, Parent, Data, E, Blk, BlockCount, StmtIdx);
   void *InsertPos;
-  auto *L =
-      cast_or_null<StackFrame>(Contexts.FindNodeOrInsertPos(ID, InsertPos));
+  auto *L = cast_or_null<StackFrame>(Frames.FindNodeOrInsertPos(ID, InsertPos));
   if (!L) {
     L = new StackFrame(Ctx, Parent, Data, E, Blk, BlockCount, StmtIdx, ++NewID);
-    Contexts.InsertNode(L, InsertPos);
+    Frames.InsertNode(L, InsertPos);
   }
   return L;
 }
@@ -626,12 +617,12 @@ AnalysisDeclContext::~AnalysisDeclContext() {
 StackFrameManager::~StackFrameManager() { clear(); }
 
 void StackFrameManager::clear() {
-  for (llvm::FoldingSet<StackFrame>::iterator I = Contexts.begin(),
-                                              E = Contexts.end();
+  for (llvm::FoldingSet<StackFrame>::iterator I = Frames.begin(),
+                                              E = Frames.end();
        I != E;) {
     StackFrame *SF = &*I;
     ++I;
     delete SF;
   }
-  Contexts.clear();
+  Frames.clear();
 }
