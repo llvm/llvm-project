@@ -40,7 +40,7 @@
 
 ;; Simply check that we don't crash when trying to find the ValueInfo for each
 ;; function in the IR.
-; RUN: opt -passes=memprof-context-disambiguation src1.o -S -memprof-import-summary=src1.o.thinlto.bc
+; RUN: opt -passes=assign-guid,memprof-context-disambiguation src1.o -S -memprof-import-summary=src1.o.thinlto.bc
 
 ;--- src1.ll
 ; ModuleID = 'src1.o'

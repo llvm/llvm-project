@@ -1242,6 +1242,9 @@ public:
     // The size of the mask returned is VF * Multiplier (UF, third op).
     ActiveLaneMask,
     ExplicitVectorLength,
+    // Represents the incoming loop-invariant alias-mask. All memory accesses
+    // in the loop must stay within the active lanes.
+    IncomingAliasMask,
     CalculateTripCountMinusVF,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
@@ -1280,8 +1283,9 @@ public:
     // part if it is scalar. In the latter case, the recipe will be removed
     // during unrolling.
     ExtractPenultimateElement,
-    LogicalAnd, // Non-poison propagating logical And.
-    LogicalOr,  // Non-poison propagating logical Or.
+    LogicalAnd,     // Non-poison propagating logical And.
+    LogicalOr,      // Non-poison propagating logical Or.
+    NumActiveLanes, // Counts the number of active lanes in a mask.
     // Add an offset in bytes (second operand) to a base pointer (first
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).

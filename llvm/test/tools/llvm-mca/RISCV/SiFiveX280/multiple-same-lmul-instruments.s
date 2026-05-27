@@ -94,4 +94,4 @@ vsub.vv v12, v12, v12
 # CHECK-NEXT: 5.     1     0.0    0.0    0.0       vsetvli	zero, a0, e8, m4, tu, mu
 # CHECK-NEXT: 6.     1     0.0    0.0    0.0       vadd.vv	v12, v12, v12
 # CHECK-NEXT: 7.     1     0.0    0.0    0.0       vsub.vv	v12, v12, v12
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        8     0.0    0.0    0.0       <total>
