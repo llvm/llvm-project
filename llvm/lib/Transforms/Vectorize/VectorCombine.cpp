@@ -155,6 +155,7 @@ private:
   bool foldReduceAddCmpZero(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
   bool foldInterleaveIntrinsics(Instruction &I);
+  bool foldDeinterleaveIntrinsics(Instruction &I);
   bool shrinkType(Instruction &I);
   bool shrinkLoadForShuffles(Instruction &I);
   bool shrinkPhiOfShuffles(Instruction &I);
@@ -5691,6 +5692,137 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
   return true;
 }
 
+/// Given this sequence:
+/// ```
+/// %d = llvm.vector.deinterleave2 <vscale x 16 x i32> %v
+/// %f0 = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } %d, 0
+/// %f1 = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } %d, 1
+///
+/// %low0 = and <vscale x 8 x i32> %f0, splat (i32 65535)
+/// %low1 = shl <vscale x 8 x i32> %f1, splat (i32 16)
+/// %merge0 = or disjoint <vscale x 8 x i32> %low0, %low1
+///
+/// %high0 = and <vscale x 8 x i32> %f1, splat (i32 -65536)
+/// %high1 = lshr <vscale x 8 x i32> %f0, splat (i32 16)
+/// %merge1 = or disjoint <vscale x 8 x i32> %high0, %high1
+/// ```
+/// It is actually just de-interleaving a 16-bit vector with double the
+/// vector length. More generally speaking, it's de-interleaving on a vector
+/// with half the element width as the original vector.
+///
+/// Therefore, we can turn it into:
+/// ```
+/// %narrow.v = bitcast <vscale x 16 x i32> %v to <vscale x 32 x i16>
+/// %d = llvm.vector.deinterleave2 <vscale x 32 x i16> %narrow.v
+/// %f0 = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } %d, 0
+/// %f1 = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } %d, 1
+///
+/// %merge0 = bitcast <vscale x 16 x i16> %f0 to <vscale x 8 x i32>
+/// %merge1 = bitcast <vscale x 16 x i16> %f1 to <vscale x 8 x i32>
+/// ```
+bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
+  // This pattern involves bitcast that is not compatible with big endian.
+  if (DL->isBigEndian())
+    return false;
+
+  using namespace PatternMatch;
+  Value *DeinterleavedVal;
+  if (!match(&I, m_Deinterleave2(m_Value(DeinterleavedVal))))
+    return false;
+
+  VectorType *VecTy = cast<VectorType>(DeinterleavedVal->getType());
+  IntegerType *ElementTy = dyn_cast<IntegerType>(VecTy->getElementType());
+  if (!ElementTy)
+    return false;
+  unsigned ElementWidth = ElementTy->getBitWidth();
+  if (ElementWidth < 2 || !isPowerOf2_32(ElementWidth))
+    return false;
+  unsigned HalfElementWidth = ElementWidth / 2;
+
+  if (!I.hasNUses(2))
+    return false;
+  std::array<ExtractValueInst *, 2> OrigFields{};
+  for (User *Usr : I.users()) {
+    auto *E = dyn_cast<ExtractValueInst>(Usr);
+    // The deinterleave result can only be used by extractions.
+    if (!E || E->getNumIndices() != 1)
+      return false;
+    unsigned Idx = *E->idx_begin();
+    // A single field cannot be extracted more than once.
+    if (Idx >= 2 || OrigFields[Idx] || !E->hasNUses(2))
+      return false;
+    OrigFields[Idx] = E;
+  }
+
+  // Find the merge instruction (i.e. OR) first.
+  SmallVector<Instruction *, 2> MergeInsts;
+  for (auto *FieldUsr : OrigFields[0]->users()) {
+    if (!FieldUsr->hasOneUse() || !isa<Instruction>(FieldUsr->user_back()))
+      return false;
+    MergeInsts.push_back(cast<Instruction>(FieldUsr->user_back()));
+  }
+  assert(MergeInsts.size() == 2);
+
+  // Pattern match bottom-up from the merge instructions.
+  auto MatchMerge = [&](void) -> bool {
+    APInt LoMask = APInt::getLowBitsSet(ElementWidth, HalfElementWidth);
+    APInt HiMask = APInt::getHighBitsSet(ElementWidth, HalfElementWidth);
+    return match(MergeInsts[0],
+                 m_c_Or(m_And(m_Specific(OrigFields[0]), m_SpecificInt(LoMask)),
+                        m_Shl(m_Specific(OrigFields[1]),
+                              m_SpecificInt(HalfElementWidth)))) &&
+           match(MergeInsts[1],
+                 m_c_Or(m_And(m_Specific(OrigFields[1]), m_SpecificInt(HiMask)),
+                        m_LShr(m_Specific(OrigFields[0]),
+                               m_SpecificInt(HalfElementWidth))));
+  };
+  if (!MatchMerge()) {
+    std::swap(MergeInsts[0], MergeInsts[1]);
+    if (!MatchMerge())
+      return false;
+  }
+
+  // Profitability check.
+  InstructionCost OldCost =
+      TTI.getInstructionCost(MergeInsts[0], CostKind) +
+      TTI.getInstructionCost(cast<Instruction>(MergeInsts[0]->getOperand(0)),
+                             CostKind) +
+      TTI.getInstructionCost(cast<Instruction>(MergeInsts[0]->getOperand(1)),
+                             CostKind);
+  // There are two fields (assuming SHL has the same cost as LSHR).
+  OldCost *= 2;
+
+  auto *NewFieldTy = VecTy->getWithNewBitWidth(HalfElementWidth);
+  auto *NewVecTy =
+      VectorType::getDoubleElementsVectorType(cast<VectorType>(NewFieldTy));
+  InstructionCost NewCost =
+      TTI.getCastInstrCost(Instruction::BitCast, VecTy, NewVecTy,
+                           TTI::CastContextHint::None, CostKind) +
+      TTI.getCastInstrCost(Instruction::BitCast, NewFieldTy,
+                           MergeInsts[0]->getType(), TTI::CastContextHint::None,
+                           CostKind) *
+          2;
+  if (OldCost <= NewCost || !NewCost.isValid()) {
+    LLVM_DEBUG(
+        dbgs() << "VC: New deinterleave2 sequence cost (" << NewCost << ")"
+               << " is higher than that of the old one (" << OldCost << ")\n");
+    return false;
+  }
+
+  // Do the replacement.
+  IRBuilder<> Builder(&I);
+  Value *NewVecCast = Builder.CreateBitCast(DeinterleavedVal, NewVecTy);
+  Value *NewDeinterleave = Builder.CreateIntrinsic(
+      Intrinsic::vector_deinterleave2, {NewVecTy}, {NewVecCast});
+  for (auto [Idx, MergeInst] : enumerate(MergeInsts)) {
+    Value *NewField = Builder.CreateExtractValue(NewDeinterleave, Idx);
+    NewField = Builder.CreateBitCast(NewField, MergeInst->getType());
+    replaceValue(*MergeInst, *NewField);
+  }
+
+  return true;
+}
+
 // Attempt to shrink loads that are only used by shufflevector instructions.
 bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
   auto *OldLoad = dyn_cast<LoadInst>(&I);
@@ -5971,6 +6103,9 @@ bool VectorCombine::run() {
       if (foldInterleaveIntrinsics(I))
         return true;
     }
+
+    if (foldDeinterleaveIntrinsics(I))
+      return true;
 
     if (Opcode == Instruction::Store)
       if (foldSingleElementStore(I))
