@@ -21,18 +21,13 @@ namespace mlir::tosa {
 namespace {
 
 template <typename OpAdaptor>
-Value getInput1(OpAdaptor adaptor) {
-  return adaptor.getInput1();
+spirv::TosaExtNaNPropagationModeType getNanMode(OpAdaptor adaptor) {
+  return static_cast<spirv::TosaExtNaNPropagationModeType>(
+      adaptor.getNanMode());
 }
 
-Value getInput1(tosa::ErfOpAdaptor adaptor) { return adaptor.getInput(); }
-
-Value getInput1(tosa::SigmoidOpAdaptor adaptor) { return adaptor.getInput(); }
-
-Value getInput1(tosa::TanhOpAdaptor adaptor) { return adaptor.getInput(); }
-
-template <typename SourceOp, typename TargetOp>
-struct UnaryElementwiseOpConvert final : public OpConversionPattern<SourceOp> {
+template <typename SourceOp, typename Replacer>
+struct TosaOpConvert final : public OpConversionPattern<SourceOp> {
   using OpConversionPattern<SourceOp>::OpConversionPattern;
 
   LogicalResult
@@ -41,42 +36,49 @@ struct UnaryElementwiseOpConvert final : public OpConversionPattern<SourceOp> {
     Type type = this->getTypeConverter()->convertType(op.getType());
     if (!type)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
-    rewriter.replaceOpWithNewOp<TargetOp>(op, type, getInput1(adaptor));
+    return Replacer::replace(op, adaptor, type, rewriter);
+  }
+};
+
+template <typename TargetOp>
+struct UnaryInput1Replace {
+  template <typename SourceOp>
+  static LogicalResult replace(SourceOp op, typename SourceOp::Adaptor adaptor,
+                               Type type, ConversionPatternRewriter &rewriter) {
+    rewriter.replaceOpWithNewOp<TargetOp>(op, type, adaptor.getInput1());
     return success();
   }
 };
 
-template <typename SourceOp, typename TargetOp>
-struct BinaryElementwiseOpConvert final : public OpConversionPattern<SourceOp> {
-  using OpConversionPattern<SourceOp>::OpConversionPattern;
+template <typename TargetOp>
+struct UnaryInputReplace {
+  template <typename SourceOp>
+  static LogicalResult replace(SourceOp op, typename SourceOp::Adaptor adaptor,
+                               Type type, ConversionPatternRewriter &rewriter) {
+    rewriter.replaceOpWithNewOp<TargetOp>(op, type, adaptor.getInput());
+    return success();
+  }
+};
 
-  LogicalResult
-  matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Type type = this->getTypeConverter()->convertType(op.getType());
-    if (!type)
-      return rewriter.notifyMatchFailure(op, "type conversion failed");
+template <typename TargetOp>
+struct BinaryElementwiseReplace {
+  template <typename SourceOp>
+  static LogicalResult replace(SourceOp op, typename SourceOp::Adaptor adaptor,
+                               Type type, ConversionPatternRewriter &rewriter) {
     rewriter.replaceOpWithNewOp<TargetOp>(op, type, adaptor.getInput1(),
                                           adaptor.getInput2());
     return success();
   }
 };
 
-template <typename SourceOp, typename TargetOp>
-struct BinaryNanModeElementwiseOpConvert final
-    : public OpConversionPattern<SourceOp> {
-  using OpConversionPattern<SourceOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto nanMode =
-        static_cast<spirv::TosaExtNaNPropagationModeType>(adaptor.getNanMode());
-    Type type = this->getTypeConverter()->convertType(op.getType());
-    if (!type)
-      return rewriter.notifyMatchFailure(op, "type conversion failed");
-    rewriter.replaceOpWithNewOp<TargetOp>(
-        op, type, nanMode, adaptor.getInput1(), adaptor.getInput2());
+template <typename TargetOp>
+struct BinaryNanModeElementwiseReplace {
+  template <typename SourceOp>
+  static LogicalResult replace(SourceOp op, typename SourceOp::Adaptor adaptor,
+                               Type type, ConversionPatternRewriter &rewriter) {
+    rewriter.replaceOpWithNewOp<TargetOp>(op, type, getNanMode(adaptor),
+                                          adaptor.getInput1(),
+                                          adaptor.getInput2());
     return success();
   }
 };
@@ -86,41 +88,55 @@ struct BinaryNanModeElementwiseOpConvert final
 void populateTosaToSPIRVTosaOpsConversionPatterns(
     SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<
-      UnaryElementwiseOpConvert<tosa::ErfOp, spirv::TosaErfOp>,
-      UnaryElementwiseOpConvert<tosa::SigmoidOp, spirv::TosaSigmoidOp>,
-      UnaryElementwiseOpConvert<tosa::TanhOp, spirv::TosaTanhOp>,
-      BinaryElementwiseOpConvert<tosa::AddOp, spirv::TosaAddOp>,
-      BinaryElementwiseOpConvert<tosa::BitwiseAndOp, spirv::TosaBitwiseAndOp>,
-      BinaryElementwiseOpConvert<tosa::BitwiseOrOp, spirv::TosaBitwiseOrOp>,
-      BinaryElementwiseOpConvert<tosa::BitwiseXorOp, spirv::TosaBitwiseXorOp>,
-      BinaryElementwiseOpConvert<tosa::IntDivOp, spirv::TosaIntDivOp>,
-      BinaryElementwiseOpConvert<tosa::LogicalAndOp, spirv::TosaLogicalAndOp>,
-      BinaryElementwiseOpConvert<tosa::LogicalLeftShiftOp,
-                                 spirv::TosaLogicalLeftShiftOp>,
-      BinaryElementwiseOpConvert<tosa::LogicalRightShiftOp,
-                                 spirv::TosaLogicalRightShiftOp>,
-      BinaryElementwiseOpConvert<tosa::LogicalOrOp, spirv::TosaLogicalOrOp>,
-      BinaryElementwiseOpConvert<tosa::LogicalXorOp, spirv::TosaLogicalXorOp>,
-      BinaryNanModeElementwiseOpConvert<tosa::MaximumOp, spirv::TosaMaximumOp>,
-      BinaryNanModeElementwiseOpConvert<tosa::MinimumOp, spirv::TosaMinimumOp>,
-      BinaryElementwiseOpConvert<tosa::PowOp, spirv::TosaPowOp>,
-      BinaryElementwiseOpConvert<tosa::SubOp, spirv::TosaSubOp>,
-      UnaryElementwiseOpConvert<tosa::AbsOp, spirv::TosaAbsOp>,
-      UnaryElementwiseOpConvert<tosa::BitwiseNotOp, spirv::TosaBitwiseNotOp>,
-      UnaryElementwiseOpConvert<tosa::CeilOp, spirv::TosaCeilOp>,
-      UnaryElementwiseOpConvert<tosa::ClzOp, spirv::TosaClzOp>,
-      UnaryElementwiseOpConvert<tosa::CosOp, spirv::TosaCosOp>,
-      UnaryElementwiseOpConvert<tosa::ExpOp, spirv::TosaExpOp>,
-      UnaryElementwiseOpConvert<tosa::FloorOp, spirv::TosaFloorOp>,
-      UnaryElementwiseOpConvert<tosa::LogOp, spirv::TosaLogOp>,
-      UnaryElementwiseOpConvert<tosa::LogicalNotOp, spirv::TosaLogicalNotOp>,
-      UnaryElementwiseOpConvert<tosa::ReciprocalOp, spirv::TosaReciprocalOp>,
-      UnaryElementwiseOpConvert<tosa::RsqrtOp, spirv::TosaRsqrtOp>,
-      UnaryElementwiseOpConvert<tosa::SinOp, spirv::TosaSinOp>,
-      BinaryElementwiseOpConvert<tosa::EqualOp, spirv::TosaEqualOp>,
-      BinaryElementwiseOpConvert<tosa::GreaterOp, spirv::TosaGreaterOp>,
-      BinaryElementwiseOpConvert<tosa::GreaterEqualOp,
-                                 spirv::TosaGreaterEqualOp>>(
+      TosaOpConvert<tosa::ErfOp, UnaryInputReplace<spirv::TosaErfOp>>,
+      TosaOpConvert<tosa::SigmoidOp, UnaryInputReplace<spirv::TosaSigmoidOp>>,
+      TosaOpConvert<tosa::TanhOp, UnaryInputReplace<spirv::TosaTanhOp>>,
+      TosaOpConvert<tosa::AddOp, BinaryElementwiseReplace<spirv::TosaAddOp>>,
+      TosaOpConvert<tosa::BitwiseAndOp,
+                    BinaryElementwiseReplace<spirv::TosaBitwiseAndOp>>,
+      TosaOpConvert<tosa::BitwiseOrOp,
+                    BinaryElementwiseReplace<spirv::TosaBitwiseOrOp>>,
+      TosaOpConvert<tosa::BitwiseXorOp,
+                    BinaryElementwiseReplace<spirv::TosaBitwiseXorOp>>,
+      TosaOpConvert<tosa::IntDivOp,
+                    BinaryElementwiseReplace<spirv::TosaIntDivOp>>,
+      TosaOpConvert<tosa::LogicalAndOp,
+                    BinaryElementwiseReplace<spirv::TosaLogicalAndOp>>,
+      TosaOpConvert<tosa::LogicalLeftShiftOp,
+                    BinaryElementwiseReplace<spirv::TosaLogicalLeftShiftOp>>,
+      TosaOpConvert<tosa::LogicalRightShiftOp,
+                    BinaryElementwiseReplace<spirv::TosaLogicalRightShiftOp>>,
+      TosaOpConvert<tosa::LogicalOrOp,
+                    BinaryElementwiseReplace<spirv::TosaLogicalOrOp>>,
+      TosaOpConvert<tosa::LogicalXorOp,
+                    BinaryElementwiseReplace<spirv::TosaLogicalXorOp>>,
+      TosaOpConvert<tosa::MaximumOp,
+                    BinaryNanModeElementwiseReplace<spirv::TosaMaximumOp>>,
+      TosaOpConvert<tosa::MinimumOp,
+                    BinaryNanModeElementwiseReplace<spirv::TosaMinimumOp>>,
+      TosaOpConvert<tosa::PowOp, BinaryElementwiseReplace<spirv::TosaPowOp>>,
+      TosaOpConvert<tosa::SubOp, BinaryElementwiseReplace<spirv::TosaSubOp>>,
+      TosaOpConvert<tosa::AbsOp, UnaryInput1Replace<spirv::TosaAbsOp>>,
+      TosaOpConvert<tosa::BitwiseNotOp,
+                    UnaryInput1Replace<spirv::TosaBitwiseNotOp>>,
+      TosaOpConvert<tosa::CeilOp, UnaryInput1Replace<spirv::TosaCeilOp>>,
+      TosaOpConvert<tosa::ClzOp, UnaryInput1Replace<spirv::TosaClzOp>>,
+      TosaOpConvert<tosa::CosOp, UnaryInput1Replace<spirv::TosaCosOp>>,
+      TosaOpConvert<tosa::ExpOp, UnaryInput1Replace<spirv::TosaExpOp>>,
+      TosaOpConvert<tosa::FloorOp, UnaryInput1Replace<spirv::TosaFloorOp>>,
+      TosaOpConvert<tosa::LogOp, UnaryInput1Replace<spirv::TosaLogOp>>,
+      TosaOpConvert<tosa::LogicalNotOp,
+                    UnaryInput1Replace<spirv::TosaLogicalNotOp>>,
+      TosaOpConvert<tosa::ReciprocalOp,
+                    UnaryInput1Replace<spirv::TosaReciprocalOp>>,
+      TosaOpConvert<tosa::RsqrtOp, UnaryInput1Replace<spirv::TosaRsqrtOp>>,
+      TosaOpConvert<tosa::SinOp, UnaryInput1Replace<spirv::TosaSinOp>>,
+      TosaOpConvert<tosa::EqualOp,
+                    BinaryElementwiseReplace<spirv::TosaEqualOp>>,
+      TosaOpConvert<tosa::GreaterOp,
+                    BinaryElementwiseReplace<spirv::TosaGreaterOp>>,
+      TosaOpConvert<tosa::GreaterEqualOp,
+                    BinaryElementwiseReplace<spirv::TosaGreaterEqualOp>>>(
       typeConverter, patterns.getContext());
 }
 
