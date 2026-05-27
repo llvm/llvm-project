@@ -415,7 +415,6 @@ private:
   bool emitComplexBoolCast(const Expr *E);
   bool emitComplexComparison(const Expr *LHS, const Expr *RHS,
                              const BinaryOperator *E);
-  bool emitVectorElementwiseCast(const CastExpr *E);
   bool emitRecordDestructionPop(const Record *R, SourceInfo Loc);
   bool emitDestructionPop(const Descriptor *Desc, SourceInfo Loc);
   bool emitDummyPtr(const DeclTy &D, const Expr *E);
