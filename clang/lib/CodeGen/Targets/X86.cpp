@@ -3168,7 +3168,7 @@ RValue X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     // FIXME: Cleanup.
     assert(AI.isDirect() && "Unexpected ABI info for mixed regs");
     llvm::StructType *ST = cast<llvm::StructType>(AI.getCoerceToType());
-    Address Tmp = CGF.CreateMemTemp(Ty);
+    Address Tmp = CGF.CreateMemTempWithoutCast(Ty);
     Tmp = Tmp.withElementType(ST);
     assert(ST->getNumElements() == 2 && "Unexpected ABI info for mixed regs");
     llvm::Type *TyLo = ST->getElementType(0);
@@ -3228,7 +3228,7 @@ RValue X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     //   The stored size of this structure is smaller than its actual size,
     //   which may lead to reading past the end of the register save area.
     if (CoTy && (AI.getDirectOffset() == 8 || RegSize < TySize)) {
-      Address Tmp = CGF.CreateMemTemp(Ty);
+      Address Tmp = CGF.CreateMemTempWithoutCast(Ty);
       llvm::Value *Addr =
           CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea, GpOrFpOffset);
       llvm::Value *Src = CGF.Builder.CreateAlignedLoad(CoTy, Addr, TyAlign);
@@ -3247,7 +3247,7 @@ RValue X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
       // Copy into a temporary if the type is more aligned than the
       // register save area.
       if (neededInt && TyAlign.getQuantity() > 8) {
-        Address Tmp = CGF.CreateMemTemp(Ty);
+        Address Tmp = CGF.CreateMemTempWithoutCast(Ty);
         CGF.Builder.CreateMemCpy(Tmp, RegAddr, TySize, false);
         RegAddr = Tmp;
       }
@@ -3271,7 +3271,7 @@ RValue X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                          ? AI.getCoerceToType()
                          : llvm::StructType::get(CGF.DoubleTy, CGF.DoubleTy);
     llvm::Value *V;
-    Address Tmp = CGF.CreateMemTemp(Ty);
+    Address Tmp = CGF.CreateMemTempWithoutCast(Ty);
     Tmp = Tmp.withElementType(ST);
     V = CGF.Builder.CreateLoad(
         RegAddrLo.withElementType(ST->getStructElementType(0)));

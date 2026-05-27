@@ -897,6 +897,15 @@ def HasStdExtZvvmm : Predicate<"Subtarget->hasStdExtZvvmm()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvvmm),
                          "'Zvvmm' (Integer Matrix Multiply-Accumulate)">;
 
+// Integrated Matrix Extension floating-point matrix multiply-accumulate
+def FeatureStdExtZvvfmm
+    : RISCVExperimentalExtension<0, 1,
+                                 "Floating-Point Matrix Multiply-Accumulate",
+                                 [FeatureStdExtZve32f]>;
+def HasStdExtZvvfmm : Predicate<"Subtarget->hasStdExtZvvfmm()">,
+                      AssemblerPredicate<(all_of FeatureStdExtZvvfmm),
+                          "'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)">;
+
 // Vector instruction predicates
 
 def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">,
@@ -1525,6 +1534,14 @@ def HasVendorXqccmp
     : Predicate<"Subtarget->hasVendorXqccmp()">,
       AssemblerPredicate<(all_of FeatureVendorXqccmp),
                          "'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)">;
+
+def FeatureVendorXqccmt
+    : RISCVExperimentalExtension<0, 1, "Qualcomm 16-bit Table Jump",
+                     [FeatureStdExtZca, FeatureStdExtZicsr]>;
+def HasVendorXqccmt
+    : Predicate<"Subtarget->hasVendorXqccmt()">,
+      AssemblerPredicate<(all_of FeatureVendorXqccmt),
+                         "'Xqccmt' (Qualcomm 16-bit Table Jump)">;
 
 def FeatureVendorXqcia
     : RISCVExtension<0, 7, "Qualcomm uC Arithmetic Extension">;

@@ -43,7 +43,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <optional>
 
 using namespace llvm;
@@ -86,6 +86,7 @@ public:
     bool hasFPModifiers() const { return Abs || Neg; }
     bool hasIntModifiers() const { return Sext; }
     bool hasModifiers() const { return hasFPModifiers() || hasIntModifiers(); }
+    bool isForcedLit() const { return Lit == LitModifier::Lit; }
     bool isForcedLit64() const { return Lit == LitModifier::Lit64; }
 
     int64_t getFPModifiersOperand() const {
@@ -1051,6 +1052,10 @@ public:
 
   bool hasIntModifiers() const {
     return getModifiers().hasIntModifiers();
+  }
+
+  bool isForcedLit() const {
+    return isImmLiteral() && getModifiers().isForcedLit();
   }
 
   bool isForcedLit64() const {
@@ -3353,6 +3358,8 @@ ParseStatus AMDGPUAsmParser::parseImm(OperandVector &Operands,
     }
 
     if (Expr->evaluateAsAbsolute(IntVal)) {
+      if (Lit == LitModifier::Lit && !isInt<32>(IntVal) && !isUInt<32>(IntVal))
+        return Error(S, "literal value out of range");
       Operands.push_back(AMDGPUOperand::CreateImm(this, IntVal, S));
       AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
       Op.setModifiers(Mods);
@@ -3989,7 +3996,7 @@ AMDGPUAsmParser::checkVOPDRegBankConstraints(const MCInst &Inst, bool AsVOPD3) {
       Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx13 ||
       Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx1250 ||
       Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx13;
-  bool AllowSameVGPR = isGFX1250Plus();
+  bool AllowSameVGPR = isGFX12Plus();
 
   if (AsVOPD3) { // Literal constants are not allowed with VOPD3.
     for (auto OpName : {OpName::src0X, OpName::src0Y}) {
@@ -5133,11 +5140,12 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
       Imm = getLitValue(MO.getExpr());
 
     bool IsAnotherLiteral = false;
+    bool IsForcedLit = findMCOperand(Operands, OpIdx).isForcedLit();
     bool IsForcedLit64 = findMCOperand(Operands, OpIdx).isForcedLit64();
     if (!Imm.has_value()) {
       // Literal value not known, so we conservately assume it's different.
       IsAnotherLiteral = true;
-    } else if (IsForcedLit64 || !isInlineConstant(Inst, OpIdx)) {
+    } else if (IsForcedLit || IsForcedLit64 || !isInlineConstant(Inst, OpIdx)) {
       uint64_t Value = *Imm;
       bool IsForcedFP64 =
           Desc.operands()[OpIdx].OperandType == AMDGPU::OPERAND_KIMM64 ||
@@ -5145,12 +5153,21 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
            HasMandatoryLiteral);
       bool IsFP64 = (IsForcedFP64 || AMDGPU::isSISrcFPOperand(Desc, OpIdx)) &&
                     AMDGPU::getOperandSize(Desc.operands()[OpIdx]) == 8;
-      bool IsValid32Op = AMDGPU::isValid32BitLiteral(Value, IsFP64);
+      bool IsValid32Op =
+          IsForcedLit || AMDGPU::isValid32BitLiteral(Value, IsFP64);
 
       if (((!IsValid32Op && !isInt<32>(Value) && !isUInt<32>(Value) &&
             !IsForcedFP64) ||
            (IsForcedLit64 && !HasMandatoryLiteral)) &&
           (!has64BitLiterals() || Desc.getSize() != 4)) {
+        Error(getOperandLoc(Operands, OpIdx),
+              "invalid operand for instruction");
+        return false;
+      }
+
+      // Only src0 can use lit64 in VOP* encoding.
+      if (!IsForcedFP64 && (IsForcedLit64 || !IsValid32Op) &&
+          OpIdx != getNamedOperandIdx(Opcode, OpName::src0)) {
         Error(getOperandLoc(Operands, OpIdx),
               "invalid operand for instruction");
         return false;
@@ -5928,8 +5945,7 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
   if (Version.Major >= 10)
     NumSGPRs = MCConstantExpr::create(0, Ctx);
   else {
-    unsigned MaxAddressableNumSGPRs =
-        IsaInfo::getAddressableNumSGPRs(&getSTI());
+    unsigned MaxAddressableNumSGPRs = IsaInfo::getAddressableNumSGPRs(getSTI());
 
     if (NumSGPRs->evaluateAsAbsolute(EvaluatedSGPRs) && Version.Major >= 8 &&
         !Features.test(FeatureSGPRInitBug) &&
@@ -5967,9 +5983,9 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
 
   VGPRBlocks = GetNumGPRBlocks(
       NextFreeVGPR,
-      IsaInfo::getVGPREncodingGranule(&getSTI(), EnableWavefrontSize32));
+      IsaInfo::getVGPREncodingGranule(getSTI(), EnableWavefrontSize32));
   SGPRBlocks =
-      GetNumGPRBlocks(NumSGPRs, IsaInfo::getSGPREncodingGranule(&getSTI()));
+      GetNumGPRBlocks(NumSGPRs, IsaInfo::getSGPREncodingGranule(getSTI()));
 
   return false;
 }
@@ -6555,7 +6571,7 @@ bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
 
 bool AMDGPUAsmParser::ParseDirectiveAMDKernelCodeT() {
   AMDGPUMCKernelCodeT KernelCode;
-  KernelCode.initDefault(&getSTI(), getContext());
+  KernelCode.initDefault(getSTI(), getContext());
 
   while (true) {
     // Lex EndOfStatement.  This is in a while loop, because lexing a comment
@@ -6719,7 +6735,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPULDS() {
   if (getParser().parseComma())
     return true;
 
-  unsigned LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(&getSTI());
+  unsigned LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(getSTI());
 
   int64_t Size;
   SMLoc SizeLoc = getLoc();
@@ -9342,6 +9358,7 @@ bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
                   .Case("totalnumvgprs", AGVK::AGVK_TotalNumVGPRs)
                   .Case("alignto", AGVK::AGVK_AlignTo)
                   .Case("occupancy", AGVK::AGVK_Occupancy)
+                  .Case("instprefsize", AGVK::AGVK_InstPrefSize)
                   .Default(AGVK::AGVK_None);
 
     if (VK != AGVK::AGVK_None && peekToken().is(AsmToken::LParen)) {

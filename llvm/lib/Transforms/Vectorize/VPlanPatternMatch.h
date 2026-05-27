@@ -295,7 +295,8 @@ private:
   /// Helper to check if predicate \p P holds on all tuple elements in Ops using
   /// the provided index sequence.
   template <typename Fn, std::size_t... Is>
-  bool all_of_tuple_elements(std::index_sequence<Is...>, Fn P) const {
+  bool all_of_tuple_elements(std::index_sequence<Is...>,
+                             [[maybe_unused]] Fn P) const {
     return (P(std::get<Is>(Ops), Is) && ...);
   }
 };
@@ -535,6 +536,11 @@ inline AllRecipe_match<Instruction::SExt, Op0_t> m_SExt(const Op0_t &Op0) {
 template <typename Op0_t>
 inline AllRecipe_match<Instruction::FPExt, Op0_t> m_FPExt(const Op0_t &Op0) {
   return m_Unary<Instruction::FPExt, Op0_t>(Op0);
+}
+
+template <typename Op0_t>
+inline AllRecipe_match<Instruction::FNeg, Op0_t> m_FNeg(const Op0_t &Op0) {
+  return m_Unary<Instruction::FNeg, Op0_t>(Op0);
 }
 
 template <typename Op0_t>
@@ -807,6 +813,31 @@ struct canonical_iv_match {
 };
 
 inline canonical_iv_match m_CanonicalIV() { return {}; }
+
+/// Match a canonical VPWidenIntOrFpInductionRecipe optionally capturing it.
+struct canonical_widen_iv_match {
+  VPWidenIntOrFpInductionRecipe **Capture = nullptr;
+
+  canonical_widen_iv_match() = default;
+  canonical_widen_iv_match(VPWidenIntOrFpInductionRecipe *&V) : Capture(&V) {}
+
+  template <typename ArgTy> bool match(ArgTy *V) const {
+    auto *WidenIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(V);
+    if (!WidenIV || !WidenIV->isCanonical())
+      return false;
+    if (Capture)
+      *Capture = WidenIV;
+    return true;
+  }
+};
+
+inline canonical_widen_iv_match m_CanonicalWidenIV() { return {}; }
+
+/// Match a canonical VPWidenIntOrFpInductionRecipe, capturing it.
+inline canonical_widen_iv_match
+m_CanonicalWidenIV(VPWidenIntOrFpInductionRecipe *&V) {
+  return canonical_widen_iv_match(V);
+}
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
 inline auto m_ScalarIVSteps(const Op0_t &Op0, const Op1_t &Op1,

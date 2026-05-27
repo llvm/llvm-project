@@ -26,7 +26,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CIRTransformUtils.h"
 #include "PassDetail.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
@@ -35,6 +34,8 @@
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/Dialect/Transforms/CIRTransformUtils.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/TargetParser/Triple.h"
@@ -621,17 +622,36 @@ ItaniumEHLowering::resolveCatchCopyThunk(cir::ConstructCatchParamOp op) {
 mlir::LogicalResult
 ItaniumEHLowering::lowerConstructCatchParam(cir::ConstructCatchParamOp op,
                                             mlir::Value exnPtr) {
+  mlir::Location loc = op.getLoc();
+  mlir::Value paramAddr = op.getParamAddr();
+  cir::PointerType paramAddrType =
+      mlir::cast<cir::PointerType>(paramAddr.getType());
+
+  if (op.getKind() == cir::InitCatchKind::Reference) {
+    assert(!MissingFeatures::sizeOfUnwindException());
+    constexpr unsigned headerSize = 32;
+
+    builder.setInsertionPoint(op);
+    auto index = cir::ConstantOp::create(
+        builder, loc, cir::IntAttr::get(u32Type, headerSize));
+    assert((exnPtr.getType() == voidPtrType || exnPtr.getType() == u8PtrType) &&
+           "lowerConstructCatchParam exn ptr not void* or i8*");
+    auto exnObj =
+        cir::PtrStrideOp::create(builder, loc, exnPtr.getType(), exnPtr, index);
+    mlir::Value casted =
+        cir::CastOp::create(builder, loc, paramAddrType.getPointee(),
+                            cir::CastKind::bitcast, exnObj);
+    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {});
+    op.erase();
+    return success();
+  }
+
   if (op.getKind() != cir::InitCatchKind::NonTrivialCopy)
     return op.emitError(
         "ConstructCatchParam: only non_trivial_copy is supported");
 
-  mlir::Location loc = op.getLoc();
   ensureRuntimeDecls(loc);
   ensureClangCallTerminate(loc);
-
-  mlir::Value paramAddr = op.getParamAddr();
-  cir::PointerType paramAddrType =
-      mlir::cast<cir::PointerType>(paramAddr.getType());
 
   // Call __cxa_get_exception_ptr to get the in-flight exception.
   builder.setInsertionPoint(op);
@@ -723,8 +743,9 @@ void ItaniumEHLowering::lowerInitCatchParam(cir::InitCatchParamOp op) {
       // this by-value pointer and use the exception object instead.
       if (auto ptr = mlir::dyn_cast<cir::PointerType>(ref.getPointee()))
         if (!mlir::isa<cir::RecordType>(ptr.getPointee()))
-          llvm_unreachable(
-              "InitCatchParam: reference of pointer or non-record is NYI");
+          // Extracting and storing the actual exception object was performed by
+          // cir.construct_catch_param before cir.begin_catch.
+          break;
     }
 
     mlir::Value casted = cir::CastOp::create(builder, loc, elementType,

@@ -158,33 +158,13 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
                                        const VSETVLIInfo &PrevInfo) {
   ++NumInsertedVSETVL;
 
-  if (Info.getTWiden()) {
-    if (Info.hasAVLVLMAX()) {
-      Register DestReg = MRI->createVirtualRegister(&RISCV::GPRNoX0RegClass);
-      auto MI = BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoSF_VSETTNTX0))
-                    .addReg(DestReg, RegState::Define | RegState::Dead)
-                    .addReg(RISCV::X0, RegState::Kill)
-                    .addImm(Info.encodeVTYPE());
-      if (LIS) {
-        LIS->InsertMachineInstrInMaps(*MI);
-        LIS->createAndComputeVirtRegInterval(DestReg);
-      }
-    } else {
-      auto MI = BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoSF_VSETTNT))
-                    .addReg(RISCV::X0, RegState::Define | RegState::Dead)
-                    .addReg(Info.getAVLReg())
-                    .addImm(Info.encodeVTYPE());
-      if (LIS)
-        LIS->InsertMachineInstrInMaps(*MI);
-    }
-    return;
-  }
-
   if (PrevInfo.isKnown()) {
     // Use X0, X0 form if the AVL is the same and the SEW+LMUL gives the same
     // VLMAX.
     if (Info.hasSameAVL(PrevInfo) && Info.hasSameVLMAX(PrevInfo)) {
-      auto MI = BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0X0))
+      auto MI = BuildMI(MBB, InsertPt, DL,
+                        TII->get(Info.getTWiden() ? RISCV::PseudoSF_VSETTNTX0X0
+                                                  : RISCV::PseudoVSETVLIX0X0))
                     .addReg(RISCV::X0, RegState::Define | RegState::Dead)
                     .addReg(RISCV::X0, RegState::Kill)
                     .addImm(Info.encodeVTYPE())
@@ -203,7 +183,9 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
         VSETVLIInfo DefInfo = VIA.getInfoForVSETVLI(*DefMI);
         if (DefInfo.hasSameAVL(PrevInfo) && DefInfo.hasSameVLMAX(PrevInfo)) {
           auto MI =
-              BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0X0))
+              BuildMI(MBB, InsertPt, DL,
+                      TII->get(Info.getTWiden() ? RISCV::PseudoSF_VSETTNTX0X0
+                                                : RISCV::PseudoVSETVLIX0X0))
                   .addReg(RISCV::X0, RegState::Define | RegState::Dead)
                   .addReg(RISCV::X0, RegState::Kill)
                   .addImm(Info.encodeVTYPE())
@@ -228,7 +210,9 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
 
   if (Info.hasAVLVLMAX()) {
     Register DestReg = MRI->createVirtualRegister(&RISCV::GPRNoX0RegClass);
-    auto MI = BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0))
+    auto MI = BuildMI(MBB, InsertPt, DL,
+                      TII->get(Info.getTWiden() ? RISCV::PseudoSF_VSETTNTX0
+                                                : RISCV::PseudoVSETVLIX0))
                   .addReg(DestReg, RegState::Define | RegState::Dead)
                   .addReg(RISCV::X0, RegState::Kill)
                   .addImm(Info.encodeVTYPE());
@@ -241,7 +225,9 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
 
   Register AVLReg = Info.getAVLReg();
   MRI->constrainRegClass(AVLReg, &RISCV::GPRNoX0RegClass);
-  auto MI = BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLI))
+  auto MI = BuildMI(MBB, InsertPt, DL,
+                    TII->get(Info.getTWiden() ? RISCV::PseudoSF_VSETTNT
+                                              : RISCV::PseudoVSETVLI))
                 .addReg(RISCV::X0, RegState::Define | RegState::Dead)
                 .addReg(AVLReg)
                 .addImm(Info.encodeVTYPE());

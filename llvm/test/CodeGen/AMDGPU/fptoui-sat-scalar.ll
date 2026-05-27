@@ -1205,9 +1205,8 @@ define i1 @test_unsigned_i1_f16(half %f) nounwind {
 ; GFX12-GI-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GI-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GI-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
-; GFX12-GI-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; GFX12-GI-NEXT:    v_min_u32_e32 v0, 1, v0
+; GFX12-GI-NEXT:    v_cvt_u16_f16_e32 v0.l, v0.l
+; GFX12-GI-NEXT:    v_min_u16 v0.l, v0.l, 1
 ; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
     %x = call i1 @llvm.fptoui.sat.i1.f16(half %f)
     ret i1 %x
@@ -1272,9 +1271,8 @@ define i8 @test_unsigned_i8_f16(half %f) nounwind {
 ; GFX12-GI-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GI-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GI-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
-; GFX12-GI-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; GFX12-GI-NEXT:    v_min_u32_e32 v0, 0xff, v0
+; GFX12-GI-NEXT:    v_cvt_u16_f16_e32 v0.l, v0.l
+; GFX12-GI-NEXT:    v_min_u16 v0.l, 0xff, v0.l
 ; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
     %x = call i8 @llvm.fptoui.sat.i8.f16(half %f)
     ret i8 %x
@@ -1541,13 +1539,8 @@ define i1 @test_s_unsigned_i1_f16(half inreg %f) nounwind {
 ; GFX12-GI-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GI-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GI-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GI-NEXT:    s_cvt_f32_f16 s0, s0
-; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GI-NEXT:    s_cvt_u32_f32 s0, s0
-; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GI-NEXT:    s_min_u32 s0, s0, 1
-; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GI-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-GI-NEXT:    v_cvt_u16_f16_e32 v0.l, s0
+; GFX12-GI-NEXT:    v_min_u16 v0.l, v0.l, 1
 ; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
     %x = call i1 @llvm.fptoui.sat.i1.f16(half %f)
     ret i1 %x
@@ -1617,13 +1610,8 @@ define i8 @test_s_unsigned_i8_f16(half inreg %f) nounwind {
 ; GFX12-GI-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GI-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GI-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GI-NEXT:    s_cvt_f32_f16 s0, s0
-; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GI-NEXT:    s_cvt_u32_f32 s0, s0
-; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GI-NEXT:    s_min_u32 s0, s0, 0xff
-; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GI-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-GI-NEXT:    v_cvt_u16_f16_e32 v0.l, s0
+; GFX12-GI-NEXT:    v_min_u16 v0.l, 0xff, v0.l
 ; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
     %x = call i8 @llvm.fptoui.sat.i8.f16(half %f)
     ret i8 %x

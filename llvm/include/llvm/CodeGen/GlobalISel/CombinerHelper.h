@@ -290,6 +290,13 @@ public:
   /// Replace \p MI with a build_vector.
   void applyCombineShuffleToBuildVector(MachineInstr &MI) const;
 
+  /// Combine G_BUILD_VECTOR(G_UNMERGE(G_BITCAST), Undef) to
+  /// G_BITCAST(G_BUILD_VECTOR(..))
+  bool matchCombineBuildVectorOfBitcast(MachineInstr &MI,
+                                        SmallVector<Register> &Ops) const;
+  void applyCombineBuildVectorOfBitcast(MachineInstr &MI,
+                                        SmallVector<Register> &Ops) const;
+
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
   /// Returns true if MI changed.
   ///
@@ -539,9 +546,11 @@ public:
   /// Check if operand \p OpIdx is undef.
   bool matchOperandIsUndef(MachineInstr &MI, unsigned OpIdx) const;
 
-  /// Check if operand \p OpIdx is known to be a power of 2.
-  bool matchOperandIsKnownToBeAPowerOfTwo(MachineInstr &MI,
-                                          unsigned OpIdx) const;
+  /// Check if operand \p MO is known to be a power of 2. When \p OrNegative
+  /// is true, also match operands whose negation is a power of 2 (i.e. whose
+  /// absolute value is a power of 2).
+  bool matchOperandIsKnownToBeAPowerOfTwo(const MachineOperand &MO,
+                                          bool OrNegative = false) const;
 
   /// Erase \p MI
   void eraseInst(MachineInstr &MI) const;
@@ -759,6 +768,9 @@ public:
   /// Given an G_UDIV \p MI expressing an unsigned divided by a pow2 constant,
   /// return expressions that implements it by shifting.
   void applyUDivByPow2(MachineInstr &MI) const;
+
+  /// Combine G_SREM x, (+/-2^k) to a bias-and-mask sequence.
+  void applySimplifySRemByPow2(MachineInstr &MI) const;
 
   // G_UMULH x, (1 << c)) -> x >> (bitwidth - c)
   bool matchUMulHToLShr(MachineInstr &MI) const;
@@ -1067,6 +1079,9 @@ public:
   // (ctlz (xor x, (sra x, bitwidth-1))) -> (add (ctls x), 1) or
   // (ctlz (or (shl (xor x, (sra x, bitwidth-1)), 1), 1) -> (ctls x)
   bool matchCtls(MachineInstr &CtlzMI, BuildFnTy &MatchInfo) const;
+
+  bool matchAVG(MachineInstr &MI, MachineRegisterInfo &MRI, Register X,
+                Register Y, unsigned TargetOpc) const;
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.

@@ -22,6 +22,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
@@ -203,7 +204,7 @@ static void emitStoresForConstant(CIRGenModule &cgm, const VarDecl &d,
   // The address is usually and alloca, but there is at least one case where
   // emitAutoVarInit is called from the OpenACC codegen with an address that
   // is not an alloca.
-  auto allocaOp = addr.getDefiningOp<cir::AllocaOp>();
+  cir::AllocaOp allocaOp = addr.getUnderlyingAllocaOp();
   if (allocaOp)
     allocaOp.setInitAttr(mlir::UnitAttr::get(&cgm.getMLIRContext()));
 
@@ -303,9 +304,9 @@ void CIRGenFunction::emitAutoVarInit(
     if (!emission.wasEmittedAsOffloadClause()) {
       // In case lv has uses it means we indeed initialized something
       // out of it while trying to build the expression, mark it as such.
-      mlir::Value val = lv.getAddress().getPointer();
-      assert(val && "Should have an address");
-      auto allocaOp = val.getDefiningOp<cir::AllocaOp>();
+      Address addr = lv.getAddress();
+      assert(addr.isValid() && "Should have an address");
+      cir::AllocaOp allocaOp = addr.getUnderlyingAllocaOp();
       assert(allocaOp && "Address should come straight out of the alloca");
 
       if (!allocaOp.use_empty())
@@ -487,10 +488,10 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   }
 
   GlobalDecl gd;
-  if (isa<CXXConstructorDecl>(dc))
-    errorNYI(d.getSourceRange(), "C++ constructors static var context");
-  else if (isa<CXXDestructorDecl>(dc))
-    errorNYI(d.getSourceRange(), "C++ destructors static var context");
+  if (const auto *cd = dyn_cast<CXXConstructorDecl>(dc))
+    gd = GlobalDecl(cd, Ctor_Base);
+  else if (const auto *dd = dyn_cast<CXXDestructorDecl>(dc))
+    gd = GlobalDecl(dd, Dtor_Base);
   else if (const auto *fd = dyn_cast<FunctionDecl>(dc))
     gd = GlobalDecl(fd);
   else {
