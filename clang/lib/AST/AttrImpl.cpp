@@ -306,16 +306,17 @@ equalAttrArgs(T A1, T A2, StructuralEquivalenceContext &Context) {
   return A1 == A2;
 }
 
-// ParamIdx has an explicit specialization because it can be invalid (when
-// representing an optional parameter that was not specified).  Two invalid
-// ParamIdx values compare equal; an invalid value is not equal to any valid
-// one.  ParamIdx::operator== asserts both sides are valid, so we must guard
-// against the invalid case here before delegating to operator==.
 template <>
 bool equalAttrArgs<ParamIdx>(ParamIdx P1, ParamIdx P2,
                              StructuralEquivalenceContext &) {
-  if (!P1.isValid() || !P2.isValid())
-    return P1.isValid() == P2.isValid();
+  // ParamIdx can be invalid when representing an optional parameter that was
+  // not specified (e.g. the second argument of alloc_size(N)).
+  // ParamIdx::operator== asserts both sides are valid, so guard against the
+  // invalid case before delegating to it.
+  if (P1.isValid() != P2.isValid())
+    return false;
+  if (!P1.isValid())
+    return true;
   return P1 == P2;
 }
 
