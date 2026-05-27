@@ -80,4 +80,4 @@ add  w19, w20, w21
 # CHECK-NEXT: 3.     1     0.0    0.0    0.0       ldp	w7, w8, [x11]
 # CHECK-NEXT: 4.     1     0.0    0.0    0.0       add	w16, w17, w18
 # CHECK-NEXT: 5.     1     0.0    0.0    0.0       add	w19, w20, w21
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        6     0.0    0.0    0.0       <total>

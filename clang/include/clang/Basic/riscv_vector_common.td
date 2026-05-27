@@ -249,6 +249,10 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // Set to true if the builtin is associated with tuple types.
   bit IsTuple = false;
 
+  // Set to true if the builtin has a SegInstSEW parameter. This is typically
+  // used for segment load/store instructions.
+  bit HasSegInstSEW = false;
+
   // Set to true if the builtin has a parameter that models floating-point
   // rounding mode control
   bit HasFRMRoundModeOp = false;

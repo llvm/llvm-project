@@ -1968,32 +1968,6 @@ llvm::SmallVector<mlir::Value> fir::factory::updateRuntimeExtentsForEmptyArrays(
   return newExtents;
 }
 
-void fir::factory::genDimInfoFromBox(
-    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value box,
-    llvm::SmallVectorImpl<mlir::Value> *lbounds,
-    llvm::SmallVectorImpl<mlir::Value> *extents,
-    llvm::SmallVectorImpl<mlir::Value> *strides) {
-  auto boxType = mlir::dyn_cast<fir::BaseBoxType>(box.getType());
-  assert(boxType && "must be a box");
-  if (!lbounds && !extents && !strides)
-    return;
-
-  unsigned rank = fir::getBoxRank(boxType);
-  assert(!boxType.isAssumedRank() && "must be an array of known rank");
-  mlir::Type idxTy = builder.getIndexType();
-  for (unsigned i = 0; i < rank; ++i) {
-    mlir::Value dim = builder.createIntegerConstant(loc, idxTy, i);
-    auto dimInfo =
-        fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy, box, dim);
-    if (lbounds)
-      lbounds->push_back(dimInfo.getLowerBound());
-    if (extents)
-      extents->push_back(dimInfo.getExtent());
-    if (strides)
-      strides->push_back(dimInfo.getByteStride());
-  }
-}
-
 mlir::Value fir::factory::genLifetimeStart(mlir::OpBuilder &builder,
                                            mlir::Location loc,
                                            fir::AllocaOp alloc,

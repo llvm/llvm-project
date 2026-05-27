@@ -19,7 +19,7 @@ target triple = "x86_64-unknown-linux-gnu"
 declare void @caller()
 declare void @caller_noattr()
 
-; CHECK: define void @importer() [[ATTR_PROP:#[0-9]+]] {
+; CHECK: define void @importer() [[ATTR_PROP:#[0-9]+]] !guid !1 {
 define void @importer() {
   call void @caller()
   ret void
@@ -27,7 +27,7 @@ define void @importer() {
 
 ; If somehow the caller doesn't get the attributes, we
 ; shouldn't propagate from the internal callee.
-; CHECK: define void @importer_noattr() #0 {
+; CHECK: define void @importer_noattr() [[ATTR_PROP]] !guid !2 {
 define void @importer_noattr() {
   call void @caller_noattr()
   ret void
