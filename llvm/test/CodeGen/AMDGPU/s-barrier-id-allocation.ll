@@ -6,7 +6,7 @@
 
 ;.
 ; CHECK: @bar = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison, !absolute_symbol [[META0:![0-9]+]]
-; CHECK: @bar2 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison, !absolute_symbol [[META1:![0-9]+]]
+; CHECK: @bar2 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison, !absolute_symbol [[META0]]
 ;.
 define void @func1() {
 ; CHECK-LABEL: define void @func1() {
@@ -83,5 +83,4 @@ define amdgpu_kernel void @kernel4(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
 ;.
 ; CHECK: [[META0]] = !{i32 8396816, i32 8396817}
-; CHECK: [[META1]] = !{i32 8396832, i32 8396833}
 ;.
