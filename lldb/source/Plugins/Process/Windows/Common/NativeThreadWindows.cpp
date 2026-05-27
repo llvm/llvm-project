@@ -99,17 +99,8 @@ Status NativeThreadWindows::DoResume(lldb::StateType resume_state) {
 }
 
 std::string NativeThreadWindows::GetName() {
-  if (!m_name.empty())
-    return m_name;
-
-  // Name is not a property of the Windows thread. Create one with the
-  // process's.
-  NativeProcessProtocol &process = GetProcess();
-  ProcessInstanceInfo process_info;
-  if (Host::GetProcessInfo(process.GetID(), process_info)) {
-    std::string process_name(process_info.GetName());
-    m_name = process_name;
-  }
+  // Windows threads only have a name when the inferior calls
+  // SetThreadDescription explicitly.
   return m_name;
 }
 
