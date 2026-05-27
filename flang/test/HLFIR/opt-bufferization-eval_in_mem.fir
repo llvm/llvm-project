@@ -146,3 +146,34 @@ func.func @_QPnegative_test_target_local_captured_before(
 // CHECK:         %[[TMP:.*]] = fir.alloca !fir.array<10xf32>
 // CHECK:         hlfir.as_expr
 // CHECK:         return
+
+
+// A multi-block (post-CFG) function: the capturing fir.embox is in a later
+// block than `call`. The "use textually after op in the same block" skip rule
+// is unsound here because the cf.br could form a back-edge, so the temporary
+// must be preserved.
+func.func @_QPnegative_test_target_local_multi_block(
+    %arg_ptr: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) {
+  %c10 = arith.constant 10 : index
+  %0 = fir.alloca !fir.array<10xf32> {bindc_name = "x", fir.target, uniq_name = "_QFnegative_test_target_local_multi_blockEx"}
+  %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %2:2 = hlfir.declare %0(%1) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFnegative_test_target_local_multi_blockEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+  %3 = hlfir.eval_in_mem shape %1 : (!fir.shape<1>) -> !hlfir.expr<10xf32> {
+  ^bb0(%arg1: !fir.ref<!fir.array<10xf32>>):
+    %4 = fir.call @_QPfoo() fastmath<contract> : () -> !fir.array<10xf32>
+    fir.save_result %4 to %arg1(%1) : !fir.array<10xf32>, !fir.ref<!fir.array<10xf32>>, !fir.shape<1>
+  }
+  hlfir.assign %3 to %2#0 : !hlfir.expr<10xf32>, !fir.ref<!fir.array<10xf32>>
+  hlfir.destroy %3 : !hlfir.expr<10xf32>
+  cf.br ^bb1
+^bb1:
+  %5 = fir.convert %2#0 : (!fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<?xf32>>
+  %6 = fir.embox %5(%1) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  fir.store %6 to %arg_ptr : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+  return
+}
+// CHECK-LABEL: func.func @_QPnegative_test_target_local_multi_block(
+// CHECK:         fir.alloca !fir.array<10xf32>
+// CHECK:         %[[TMP:.*]] = fir.alloca !fir.array<10xf32>
+// CHECK:         hlfir.as_expr
+// CHECK:         fir.embox

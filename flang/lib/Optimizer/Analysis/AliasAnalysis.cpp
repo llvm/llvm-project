@@ -813,6 +813,12 @@ bool AliasAnalysis::mayBeCapturedBefore(mlir::Operation *declareOp,
   auto funcOp = op->getParentOfType<mlir::FunctionOpInterface>();
   if (!funcOp)
     return true;
+  // The same-block "after callAnchor" skip below is unsound when funcOp has
+  // CFG back-edges; gate it on a single-block body.
+  bool topLevelIsAcyclic = false;
+  if (mlir::Region *body = funcOp.getCallableRegion())
+    topLevelIsAcyclic = body->hasOneBlock();
+
   mlir::Operation *callAnchor = op;
   while (callAnchor->getParentOp() && callAnchor->getParentOp() != funcOp)
     callAnchor = callAnchor->getParentOp();
@@ -829,7 +835,7 @@ bool AliasAnalysis::mayBeCapturedBefore(mlir::Operation *declareOp,
       mlir::Operation *userOp = use.getOwner();
       if (userOp == op || userOp == callAnchor)
         continue;
-      if (userOp->getBlock() == callAnchor->getBlock() &&
+      if (topLevelIsAcyclic && userOp->getBlock() == callAnchor->getBlock() &&
           callAnchor->isBeforeInBlock(userOp))
         continue;
       // OpenACC / OpenMP data-clause ops only describe device staging of the
