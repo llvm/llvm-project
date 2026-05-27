@@ -510,6 +510,63 @@ LogicalResult mlir::runRegionDCE(RewriterBase &rewriter,
   return deleteDeadness(rewriter, regions, liveMap);
 }
 
+int64_t mlir::eliminateTriviallyDeadOps(
+    RewriterBase &rewriter, Region &region, SmallVector<Operation *> &worklist,
+    function_ref<void(Operation *)> markOpForDeletionInParent) {
+  LDBG(2) << "Initial worklist size: " << worklist.size();
+  int64_t numErased = 0;
+  while (!worklist.empty()) {
+    Operation *op = worklist.pop_back_val();
+    LDBG(2) << "Popped operation from worklist: "
+            << OpWithFlags(op, OpPrintingFlags().skipRegions());
+    /// Erase each operand to drop its use count before checking its defining
+    /// op: by the time we call isOpTriviallyDead on defOp, the
+    /// about-to-be-erased `op` is no longer counted as a user. Only
+    /// actually-dead ops enter the worklist.
+    ///
+    /// Walk nested operations as well because erasing `op` also implicitly
+    /// erases every operation nested under it and therefore drops their operand
+    /// uses.
+    op->walk([&](Operation *erasedOp) {
+      LDBG(3) << "Processing operands of operation erased: "
+              << OpWithFlags(erasedOp, OpPrintingFlags().skipRegions());
+      for (OpOperand &opOperand : erasedOp->getOpOperands()) {
+        Operation *defOp = opOperand.get().getDefiningOp();
+        if (!defOp) {
+          LDBG(4) << "Skipping operand #" << opOperand.getOperandNumber()
+                  << ": value has no defining operation";
+          continue;
+        }
+        if (defOp->getParentRegion() != &region) {
+          LDBG(4) << "Skipping operand #" << opOperand.getOperandNumber()
+                  << ": defining operation is outside the current region";
+          opOperand.drop();
+          if (isOpTriviallyDead(defOp) && markOpForDeletionInParent)
+            markOpForDeletionInParent(defOp);
+          continue;
+        }
+        LDBG(4) << "Dropping operand #" << opOperand.getOperandNumber()
+                << " from defining operation: "
+                << OpWithFlags(defOp, OpPrintingFlags().skipRegions());
+        opOperand.drop();
+        if (isOpTriviallyDead(defOp)) {
+          LDBG(2) << "Enqueued newly trivially dead defining operation: "
+                  << OpWithFlags(defOp, OpPrintingFlags().skipRegions());
+          worklist.push_back(defOp);
+        } else {
+          LDBG(4) << "Defining operation is still not trivially dead: "
+                  << OpWithFlags(defOp, OpPrintingFlags().skipRegions());
+        }
+      }
+    });
+    LDBG() << "Erasing trivially dead worklist operation: "
+           << OpWithFlags(op, OpPrintingFlags().skipRegions());
+    rewriter.eraseOp(op);
+    ++numErased;
+  }
+  return numErased;
+}
+
 bool mlir::eliminateTriviallyDeadOps(RewriterBase &rewriter, Region &region,
                                      bool includeNestedRegions) {
   LDBG() << "Starting eliminateTriviallyDeadOps with "
@@ -520,9 +577,8 @@ bool mlir::eliminateTriviallyDeadOps(RewriterBase &rewriter, Region &region,
             << OpWithFlags(parentOp, OpPrintingFlags().skipRegions());
 
   bool changed = false;
-  unsigned erasedOps = 0;
-  unsigned seededOps = 0;
-  unsigned enqueuedDefs = 0;
+  int64_t erasedOps = 0;
+  int64_t seededOps = 0;
 
   // Step 1: walk each op in reverse program order. If the op is already
   // trivially dead, erase it outright — there's no point recursing into
@@ -564,8 +620,8 @@ bool mlir::eliminateTriviallyDeadOps(RewriterBase &rewriter, Region &region,
 
   // Step 2: worklist over ops in this region only.
   //
-  // Worklist invariant: an op is pushed only once we have verified it is
-  // trivially dead. No speculative enqueues: every op on the worklist will
+  // Worklist invariant: an op is pushed *only* once we have verified it is
+  // trivially dead. No speculative enqueues — every op on the worklist will
   // be erased when popped. Two things enforce this:
   //   - the initial seed below calls isOpTriviallyDead before enqueueing,
   //   - the propagation inside the loop drops the erasing op's use of
@@ -581,62 +637,16 @@ bool mlir::eliminateTriviallyDeadOps(RewriterBase &rewriter, Region &region,
       LDBG(2) << "Seeded worklist with operation: "
               << OpWithFlags(&op, OpPrintingFlags().skipRegions());
       worklist.push_back(&op);
-      changed = true;
       ++seededOps;
     }
   }
-  LDBG(2) << "Initial worklist size: " << worklist.size();
-
-  while (!worklist.empty()) {
-    Operation *op = worklist.pop_back_val();
-    LDBG(2) << "Popped operation from worklist: "
-            << OpWithFlags(op, OpPrintingFlags().skipRegions());
-    /// Erase each operand to drop its use count before checking its defining
-    /// op: by the time we call isOpTriviallyDead on defOp, the
-    /// about-to-be-erased `op` is no longer counted as a user. Only
-    /// actually-dead ops enter the worklist.
-    ///
-    /// Walk nested operations as well because erasing `op` also implicitly
-    /// erases every operation nested under it and therefore drops their operand
-    /// uses.
-    op->walk([&](Operation *erasedOp) {
-      LDBG(3) << "Processing operands of operation erased: "
-              << OpWithFlags(erasedOp, OpPrintingFlags().skipRegions());
-      for (OpOperand &opOperand : erasedOp->getOpOperands()) {
-        Operation *defOp = opOperand.get().getDefiningOp();
-        if (!defOp) {
-          LDBG(4) << "Skipping operand #" << opOperand.getOperandNumber()
-                  << ": value has no defining operation";
-          continue;
-        }
-        if (defOp->getParentRegion() != &region) {
-          LDBG(4) << "Skipping operand #" << opOperand.getOperandNumber()
-                  << ": defining operation is outside the current region";
-          continue;
-        }
-        LDBG(4) << "Dropping operand #" << opOperand.getOperandNumber()
-                << " from defining operation: "
-                << OpWithFlags(defOp, OpPrintingFlags().skipRegions());
-        opOperand.drop();
-        if (isOpTriviallyDead(defOp)) {
-          LDBG(2) << "Enqueued newly trivially dead defining operation: "
-                  << OpWithFlags(defOp, OpPrintingFlags().skipRegions());
-          worklist.push_back(defOp);
-          ++enqueuedDefs;
-        } else {
-          LDBG(4) << "Defining operation is still not trivially dead: "
-                  << OpWithFlags(defOp, OpPrintingFlags().skipRegions());
-        }
-      }
-    });
-    LDBG() << "Erasing trivially dead worklist operation: "
-           << OpWithFlags(op, OpPrintingFlags().skipRegions());
-    rewriter.eraseOp(op);
-    ++erasedOps;
-  }
+  int64_t worklistErasedOps =
+      eliminateTriviallyDeadOps(rewriter, region, worklist);
+  erasedOps += worklistErasedOps;
+  changed |= worklistErasedOps != 0;
   LDBG() << "Finished eliminateTriviallyDeadOps, erased " << erasedOps
-         << " operations, seeded " << seededOps << " operations, enqueued "
-         << enqueuedDefs << " defining operations, changed=" << changed;
+         << " operations, seeded " << seededOps
+         << " operations, changed=" << changed;
   return changed;
 }
 

@@ -51,7 +51,10 @@ void CSE::runOnOperation() {
     return markAllAnalysesPreserved();
 
   // We only delete redundant operations without moving any operation to a
-  // different block, so the dominance tree structure remains unchanged and
-  // DominanceInfo/PostDominanceInfo can be safely preserved.
-  markAnalysesPreserved<DominanceInfo, PostDominanceInfo>();
+  // different block, so the dominance tree structure remains unchanged. The
+  // CSE driver invalidates cached dominance for regions owned by erased ops.
+  // TODO: Preserve PostDominanceInfo as well by threading the analysis into
+  // the CSE driver and invalidating cached post-dominance for regions owned by
+  // erased ops, matching the DominanceInfo handling above.
+  markAnalysesPreserved<DominanceInfo>();
 }

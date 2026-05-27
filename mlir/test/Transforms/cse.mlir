@@ -12,6 +12,43 @@ func.func @simple_constant() -> (i32, i32) {
 
 // -----
 
+// CHECK-LABEL: @cse_erases_duplicate_producer_after_scope
+func.func @cse_erases_duplicate_producer_after_scope(%arg0: index)
+    -> (index, index) {
+  // CHECK-NEXT: %[[C1:.*]] = arith.constant 1 : index
+  %c1 = arith.constant 1 : index
+  %duplicate_c1 = arith.constant 1 : index
+  // CHECK-NEXT: %[[SUM:.*]] = arith.addi %arg0, %[[C1]] : index
+  %sum0 = arith.addi %arg0, %c1 : index
+  %sum1 = arith.addi %arg0, %duplicate_c1 : index
+  // CHECK-NEXT: return %[[SUM]], %[[SUM]] : index, index
+  return %sum0, %sum1 : index, index
+}
+
+// -----
+
+// Test that CSE performs simple DCE, including when an op from a parent region becomes
+// dead after deletion of an operation in a nested region.
+// CHECK-LABEL: func.func @cse_performs_dce
+// CHECK-SAME: (%[[ARG0:.*]]: i32) -> i32
+// CHECK-NOT: arith.constant
+// CHECK-NOT: arith.addi
+module {
+  func.func @cse_performs_dce(%arg0: i32) -> i32 {
+    %c0_i32 = arith.constant 0 : i32
+    %0 = affine.for %arg1 = 0 to 10 iter_args(%arg2 = %arg0) -> (i32) {
+      %1 = affine.for %arg3 = 0 to 10 iter_args(%arg4 = %arg2) -> (i32) {
+        %2 = arith.addi %c0_i32, %c0_i32 : i32 // Dead
+        affine.yield %arg4 : i32
+      }
+      affine.yield %1 : i32
+    }
+    return %0 : i32
+  }
+}
+
+// -----
+
 // CHECK: #[[$MAP:.*]] = affine_map<(d0) -> (d0 mod 2)>
 #map0 = affine_map<(d0) -> (d0 mod 2)>
 

@@ -49,26 +49,25 @@ func.func @loop_with_load_and_store(%a1: !arr_d1, %a2: !arr_d1, %a3: !arr_d1) {
 // CHECK:  func @loop_with_load_and_store(%[[VAL_0:.*]]: !fir.ref<!fir.array<?xf32>>, %[[VAL_1:.*]]: !fir.ref<!fir.array<?xf32>>, %[[VAL_2:.*]]: !fir.ref<!fir.array<?xf32>>) {
 // CHECK:    %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK:    %[[VAL_4:.*]] = arith.constant 100 : index
-// CHECK:    %[[VAL_5:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
-// CHECK:    %[[VAL_6:.*]] = affine.apply #{{.*}}(){{\[}}%[[VAL_3]], %[[VAL_4]]]
-// CHECK:    %[[VAL_7:.*]] = fir.alloca !fir.array<?xf32>, %[[VAL_6]]
-// CHECK:    %[[VAL_8:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
-// CHECK:    %[[VAL_9:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
-// CHECK:    %[[VAL_10:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
-// CHECK:    affine.for %[[VAL_11:.*]] = %[[VAL_3]] to #{{.*}}(){{\[}}%[[VAL_4]]] {
-// CHECK:      %[[VAL_12:.*]] = affine.apply #{{.*}}(%[[VAL_11]]){{\[}}%[[VAL_3]], %[[VAL_4]], %[[VAL_3]]]
-// CHECK:      %[[VAL_13:.*]] = affine.load %[[VAL_8]]{{\[}}%[[VAL_12]]] : memref<?xf32>
-// CHECK:      %[[VAL_14:.*]] = affine.load %[[VAL_9]]{{\[}}%[[VAL_12]]] : memref<?xf32>
-// CHECK:      %[[VAL_15:.*]] = arith.addf %[[VAL_13]], %[[VAL_14]] : f32
-// CHECK:      affine.store %[[VAL_15]], %[[VAL_10]]{{\[}}%[[VAL_12]]] : memref<?xf32>
+// CHECK:    %[[VAL_5:.*]] = affine.apply #{{.*}}(){{\[}}%[[VAL_3]], %[[VAL_4]]]
+// CHECK:    %[[VAL_6:.*]] = fir.alloca !fir.array<?xf32>, %[[VAL_5]]
+// CHECK:    %[[VAL_7:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
+// CHECK:    %[[VAL_8:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
+// CHECK:    %[[VAL_9:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
+// CHECK:    affine.for %[[VAL_10:.*]] = %[[VAL_3]] to #{{.*}}(){{\[}}%[[VAL_4]]] {
+// CHECK:      %[[VAL_11:.*]] = affine.apply #{{.*}}(%[[VAL_10]]){{\[}}%[[VAL_3]], %[[VAL_4]], %[[VAL_3]]]
+// CHECK:      %[[VAL_12:.*]] = affine.load %[[VAL_7]]{{\[}}%[[VAL_11]]] : memref<?xf32>
+// CHECK:      %[[VAL_13:.*]] = affine.load %[[VAL_8]]{{\[}}%[[VAL_11]]] : memref<?xf32>
+// CHECK:      %[[VAL_14:.*]] = arith.addf %[[VAL_12]], %[[VAL_13]] : f32
+// CHECK:      affine.store %[[VAL_14]], %[[VAL_9]]{{\[}}%[[VAL_11]]] : memref<?xf32>
 // CHECK:    }
-// CHECK:    %[[VAL_16:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
-// CHECK:    affine.for %[[VAL_17:.*]] = %[[VAL_3]] to #{{.*}}(){{\[}}%[[VAL_4]]] {
-// CHECK:      %[[VAL_18:.*]] = affine.apply #{{.*}}(%[[VAL_17]]){{\[}}%[[VAL_3]], %[[VAL_4]], %[[VAL_3]]]
-// CHECK:      %[[VAL_19:.*]] = affine.load %[[VAL_10]]{{\[}}%[[VAL_18]]] : memref<?xf32>
-// CHECK:      %[[VAL_20:.*]] = affine.load %[[VAL_9]]{{\[}}%[[VAL_18]]] : memref<?xf32>
-// CHECK:      %[[VAL_21:.*]] = arith.mulf %[[VAL_19]], %[[VAL_20]] : f32
-// CHECK:      affine.store %[[VAL_21]], %[[VAL_16]]{{\[}}%[[VAL_18]]] : memref<?xf32>
+// CHECK:    %[[VAL_15:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
+// CHECK:    affine.for %[[VAL_16:.*]] = %[[VAL_3]] to #{{.*}}(){{\[}}%[[VAL_4]]] {
+// CHECK:      %[[VAL_17:.*]] = affine.apply #{{.*}}(%[[VAL_16]]){{\[}}%[[VAL_3]], %[[VAL_4]], %[[VAL_3]]]
+// CHECK:      %[[VAL_18:.*]] = affine.load %[[VAL_9]]{{\[}}%[[VAL_17]]] : memref<?xf32>
+// CHECK:      %[[VAL_19:.*]] = affine.load %[[VAL_8]]{{\[}}%[[VAL_17]]] : memref<?xf32>
+// CHECK:      %[[VAL_20:.*]] = arith.mulf %[[VAL_18]], %[[VAL_19]] : f32
+// CHECK:      affine.store %[[VAL_20]], %[[VAL_15]]{{\[}}%[[VAL_17]]] : memref<?xf32>
 // CHECK:    }
 // CHECK:    return
 // CHECK:  }
@@ -108,25 +107,21 @@ func.func @loop_with_if(%a: !arr_d1, %v: f32) {
 }
 
 // CHECK: func @loop_with_if(%[[VAL_0:.*]]: !fir.ref<!fir.array<?xf32>>, %[[VAL_1:.*]]: f32) {
-// CHECK:   %[[VAL_2:.*]] = arith.constant 0 : index
-// CHECK:   %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK:   %[[VAL_4:.*]] = arith.constant 2 : index
-// CHECK:   %[[VAL_5:.*]] = arith.constant 100 : index
-// CHECK:   %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
-// CHECK:   %[[VAL_7:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
-// CHECK:   affine.for %[[VAL_8:.*]] = %[[VAL_3]] to #{{.*}}(){{\[}}%[[VAL_5]]] {
-// CHECK:     %[[VAL_9:.*]] = affine.apply #{{.*}}(%[[VAL_8]]){{\[}}%[[VAL_3]], %[[VAL_5]], %[[VAL_3]]]
-// CHECK:     affine.store %[[VAL_1]], %[[VAL_7]]{{\[}}%[[VAL_9]]] : memref<?xf32>
+// CHECK:   %[[VAL_2:.*]] = arith.constant 1 : index
+// CHECK:   %[[VAL_3:.*]] = arith.constant 100 : index
+// CHECK:   %[[VAL_4:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
+// CHECK:   affine.for %[[VAL_5:.*]] = %[[VAL_2]] to #{{.*}}(){{\[}}%[[VAL_3]]] {
+// CHECK:     %[[VAL_6:.*]] = affine.apply #{{.*}}(%[[VAL_5]]){{\[}}%[[VAL_2]], %[[VAL_3]], %[[VAL_2]]]
+// CHECK:     affine.store %[[VAL_1]], %[[VAL_4]]{{\[}}%[[VAL_6]]] : memref<?xf32>
 // CHECK:   }
-// CHECK:   affine.for %[[VAL_10:.*]] = %[[VAL_3]] to #{{.*}}(){{\[}}%[[VAL_5]]] {
-// CHECK:     %[[VAL_11:.*]] = affine.apply #{{.*}}(%[[VAL_10]]){{\[}}%[[VAL_3]], %[[VAL_5]], %[[VAL_3]]]
-// CHECK:     affine.store %[[VAL_1]], %[[VAL_7]]{{\[}}%[[VAL_11]]] : memref<?xf32>
+// CHECK:   affine.for %[[VAL_7:.*]] = %[[VAL_2]] to #{{.*}}(){{\[}}%[[VAL_3]]] {
+// CHECK:     %[[VAL_8:.*]] = affine.apply #{{.*}}(%[[VAL_7]]){{\[}}%[[VAL_2]], %[[VAL_3]], %[[VAL_2]]]
+// CHECK:     affine.store %[[VAL_1]], %[[VAL_4]]{{\[}}%[[VAL_8]]] : memref<?xf32>
 // CHECK:   }
-// CHECK:   affine.for %[[VAL_12:.*]] = %[[VAL_3]] to #{{.*}}(){{\[}}%[[VAL_5]]] {
-// CHECK:     %[[VAL_13:.*]] = arith.subi %[[VAL_12]], %[[VAL_4]] : index
-// CHECK:     affine.if #set(%[[VAL_12]]) {
-// CHECK:       %[[VAL_14:.*]] = affine.apply #{{.*}}(%[[VAL_12]]){{\[}}%[[VAL_3]], %[[VAL_5]], %[[VAL_3]]]
-// CHECK:       affine.store %[[VAL_1]], %[[VAL_7]]{{\[}}%[[VAL_14]]] : memref<?xf32>
+// CHECK:   affine.for %[[VAL_9:.*]] = %[[VAL_2]] to #{{.*}}(){{\[}}%[[VAL_3]]] {
+// CHECK:     affine.if #set(%[[VAL_9]]) {
+// CHECK:       %[[VAL_10:.*]] = affine.apply #{{.*}}(%[[VAL_9]]){{\[}}%[[VAL_2]], %[[VAL_3]], %[[VAL_2]]]
+// CHECK:       affine.store %[[VAL_1]], %[[VAL_4]]{{\[}}%[[VAL_10]]] : memref<?xf32>
 // CHECK:     }
 // CHECK:   }
 // CHECK:   return
@@ -180,40 +175,39 @@ func.func @loop_with_result(%arg0: !fir.ref<!fir.array<100xf32>>, %arg1: !fir.re
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_1:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[VAL_2:.*]] = arith.constant 100 : index
-// CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_2]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
-// CHECK:           %[[VAL_5:.*]] = fir.alloca i32
-// CHECK:           %[[VAL_6:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<100xf32>>) -> memref<?xf32>
-// CHECK:           %[[VAL_7:.*]] = affine.for %[[VAL_8:.*]] = %[[VAL_0]] to #{{.*}}(){{\[}}%[[VAL_2]]] iter_args(%[[VAL_9:.*]] = %[[VAL_1]]) -> (f32) {
-// CHECK:             %[[VAL_10:.*]] = affine.apply #{{.*}}(%[[VAL_8]]){{\[}}%[[VAL_0]], %[[VAL_2]], %[[VAL_0]]]
-// CHECK:             %[[VAL_11:.*]] = affine.load %[[VAL_6]]{{\[}}%[[VAL_10]]] : memref<?xf32>
-// CHECK:             %[[VAL_12:.*]] = arith.addf %[[VAL_9]], %[[VAL_11]] fastmath<contract> : f32
-// CHECK:             affine.yield %[[VAL_12]] : f32
+// CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
+// CHECK:           %[[VAL_4:.*]] = fir.alloca i32
+// CHECK:           %[[VAL_5:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<100xf32>>) -> memref<?xf32>
+// CHECK:           %[[VAL_6:.*]] = affine.for %[[VAL_7:.*]] = %[[VAL_0]] to #{{.*}}(){{\[}}%[[VAL_2]]] iter_args(%[[VAL_8:.*]] = %[[VAL_1]]) -> (f32) {
+// CHECK:             %[[VAL_9:.*]] = affine.apply #{{.*}}(%[[VAL_7]]){{\[}}%[[VAL_0]], %[[VAL_2]], %[[VAL_0]]]
+// CHECK:             %[[VAL_10:.*]] = affine.load %[[VAL_5]]{{\[}}%[[VAL_9]]] : memref<?xf32>
+// CHECK:             %[[VAL_11:.*]] = arith.addf %[[VAL_8]], %[[VAL_10]] fastmath<contract> : f32
+// CHECK:             affine.yield %[[VAL_11]] : f32
 // CHECK:           }
-// CHECK:           %[[VAL_13:.*]]:2 = fir.do_loop %[[VAL_14:.*]] = %[[VAL_0]] to %[[VAL_2]] step %[[VAL_0]] iter_args(%[[VAL_15:.*]] = %[[VAL_7]]) -> (index, f32) {
-// CHECK:             %[[VAL_16:.*]] = fir.array_coor %[[ARG1]](%[[VAL_4]]) %[[VAL_0]], %[[VAL_14]] : (!fir.ref<!fir.array<100x100xf32>>, !fir.shape<2>, index, index) -> !fir.ref<f32>
-// CHECK:             %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<f32>) -> !fir.ref<!fir.array<100xf32>>
-// CHECK:             %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (!fir.ref<!fir.array<100xf32>>) -> memref<?xf32>
-// CHECK:             %[[VAL_19:.*]] = affine.for %[[VAL_20:.*]] = %[[VAL_0]] to #{{.*}}(){{\[}}%[[VAL_2]]] iter_args(%[[VAL_21:.*]] = %[[VAL_15]]) -> (f32) {
-// CHECK:               %[[VAL_22:.*]] = affine.apply #{{.*}}(%[[VAL_20]]){{\[}}%[[VAL_0]], %[[VAL_2]], %[[VAL_0]]]
-// CHECK:               %[[VAL_23:.*]] = affine.load %[[VAL_18]]{{\[}}%[[VAL_22]]] : memref<?xf32>
-// CHECK:               %[[VAL_24:.*]] = arith.addf %[[VAL_21]], %[[VAL_23]] fastmath<contract> : f32
-// CHECK:               affine.yield %[[VAL_24]] : f32
+// CHECK:           %[[VAL_12:.*]]:2 = fir.do_loop %[[VAL_13:.*]] = %[[VAL_0]] to %[[VAL_2]] step %[[VAL_0]] iter_args(%[[VAL_14:.*]] = %[[VAL_6]]) -> (index, f32) {
+// CHECK:             %[[VAL_15:.*]] = fir.array_coor %[[ARG1]](%[[VAL_3]]) %[[VAL_0]], %[[VAL_13]] : (!fir.ref<!fir.array<100x100xf32>>, !fir.shape<2>, index, index) -> !fir.ref<f32>
+// CHECK:             %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (!fir.ref<f32>) -> !fir.ref<!fir.array<100xf32>>
+// CHECK:             %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.array<100xf32>>) -> memref<?xf32>
+// CHECK:             %[[VAL_18:.*]] = affine.for %[[VAL_19:.*]] = %[[VAL_0]] to #{{.*}}(){{\[}}%[[VAL_2]]] iter_args(%[[VAL_20:.*]] = %[[VAL_14]]) -> (f32) {
+// CHECK:               %[[VAL_21:.*]] = affine.apply #{{.*}}(%[[VAL_19]]){{\[}}%[[VAL_0]], %[[VAL_2]], %[[VAL_0]]]
+// CHECK:               %[[VAL_22:.*]] = affine.load %[[VAL_17]]{{\[}}%[[VAL_21]]] : memref<?xf32>
+// CHECK:               %[[VAL_23:.*]] = arith.addf %[[VAL_20]], %[[VAL_22]] fastmath<contract> : f32
+// CHECK:               affine.yield %[[VAL_23]] : f32
 // CHECK:             }
-// CHECK:             %[[VAL_25:.*]] = arith.addi %[[VAL_14]], %[[VAL_0]] overflow<nsw> : index
-// CHECK:             fir.result %[[VAL_25]], %[[VAL_19]] : index, f32
+// CHECK:             %[[VAL_24:.*]] = arith.addi %[[VAL_13]], %[[VAL_0]] overflow<nsw> : index
+// CHECK:             fir.result %[[VAL_24]], %[[VAL_18]] : index, f32
 // CHECK:           }
-// CHECK:           %[[VAL_26:.*]] = fir.convert %[[ARG2]] : (!fir.ref<!fir.array<100xf32>>) -> memref<?xf32>
-// CHECK:           %[[VAL_27:.*]]:2 = affine.for %[[VAL_28:.*]] = %[[VAL_0]] to #{{.*}}(){{\[}}%[[VAL_2]]] iter_args(%[[VAL_29:.*]] = %[[VAL_30:.*]]#1, %[[VAL_31:.*]] = %[[VAL_1]]) -> (f32, f32) {
-// CHECK:             %[[VAL_32:.*]] = affine.apply #{{.*}}(%[[VAL_28]]){{\[}}%[[VAL_0]], %[[VAL_2]], %[[VAL_0]]]
-// CHECK:             %[[VAL_33:.*]] = affine.load %[[VAL_6]]{{\[}}%[[VAL_32]]] : memref<?xf32>
+// CHECK:           %[[VAL_25:.*]] = fir.convert %[[ARG2]] : (!fir.ref<!fir.array<100xf32>>) -> memref<?xf32>
+// CHECK:           %[[VAL_26:.*]]:2 = affine.for %[[VAL_27:.*]] = %[[VAL_0]] to #{{.*}}(){{\[}}%[[VAL_2]]] iter_args(%[[VAL_28:.*]] = %[[VAL_12]]#1, %[[VAL_29:.*]] = %[[VAL_1]]) -> (f32, f32) {
+// CHECK:             %[[VAL_30:.*]] = affine.apply #{{.*}}(%[[VAL_27]]){{\[}}%[[VAL_0]], %[[VAL_2]], %[[VAL_0]]]
+// CHECK:             %[[VAL_31:.*]] = affine.load %[[VAL_5]]{{\[}}%[[VAL_30]]] : memref<?xf32>
+// CHECK:             %[[VAL_32:.*]] = arith.addf %[[VAL_28]], %[[VAL_31]] fastmath<contract> : f32
+// CHECK:             %[[VAL_33:.*]] = affine.load %[[VAL_25]]{{\[}}%[[VAL_30]]] : memref<?xf32>
 // CHECK:             %[[VAL_34:.*]] = arith.addf %[[VAL_29]], %[[VAL_33]] fastmath<contract> : f32
-// CHECK:             %[[VAL_35:.*]] = affine.load %[[VAL_26]]{{\[}}%[[VAL_32]]] : memref<?xf32>
-// CHECK:             %[[VAL_36:.*]] = arith.addf %[[VAL_31]], %[[VAL_35]] fastmath<contract> : f32
-// CHECK:             affine.yield %[[VAL_34]], %[[VAL_36]] : f32, f32
+// CHECK:             affine.yield %[[VAL_32]], %[[VAL_34]] : f32, f32
 // CHECK:           }
-// CHECK:           %[[VAL_37:.*]] = arith.addf %[[VAL_38:.*]]#0, %[[VAL_38]]#1 fastmath<contract> : f32
-// CHECK:           %[[VAL_39:.*]] = fir.convert %[[VAL_40:.*]]#0 : (index) -> i32
-// CHECK:           fir.store %[[VAL_39]] to %[[VAL_5]] : !fir.ref<i32>
-// CHECK:           return %[[VAL_37]] : f32
+// CHECK:           %[[VAL_35:.*]] = arith.addf %[[VAL_26]]#0, %[[VAL_26]]#1 fastmath<contract> : f32
+// CHECK:           %[[VAL_36:.*]] = fir.convert %[[VAL_12]]#0 : (index) -> i32
+// CHECK:           fir.store %[[VAL_36]] to %[[VAL_4]] : !fir.ref<i32>
+// CHECK:           return %[[VAL_35]] : f32
 // CHECK:         }

@@ -599,9 +599,6 @@ func.func @expand_shape_dynamic(%arg0 : memref<1x?xf32>, %sz0: index) -> memref<
 // CHECK:           %[[UNREALIZED_CONVERSION_CAST_1:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<1x?xf32> to !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:           %[[EXTRACTVALUE_0:.*]] = llvm.extractvalue %[[UNREALIZED_CONVERSION_CAST_1]][0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:           %[[EXTRACTVALUE_1:.*]] = llvm.extractvalue %[[UNREALIZED_CONVERSION_CAST_1]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-// CHECK:           %[[MLIR_0:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64)>
-// CHECK:           %[[INSERTVALUE_0:.*]] = llvm.insertvalue %[[EXTRACTVALUE_0]], %[[MLIR_0]][0] : !llvm.struct<(ptr, ptr, i64)>
-// CHECK:           %[[INSERTVALUE_1:.*]] = llvm.insertvalue %[[EXTRACTVALUE_1]], %[[INSERTVALUE_0]][1] : !llvm.struct<(ptr, ptr, i64)>
 // CHECK:           %[[MLIR_1:.*]] = llvm.mlir.constant(0 : index) : i64
 // CHECK:           %[[EXTRACTVALUE_2:.*]] = llvm.extractvalue %[[UNREALIZED_CONVERSION_CAST_1]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:           %[[MLIR_2:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
@@ -637,10 +634,6 @@ func.func @expand_shape_dynamic_with_non_identity_layout(
 // CHECK:           %[[UNREALIZED_CONVERSION_CAST_1:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<1x?xf32, strided<[?, ?], offset: ?>> to !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:           %[[EXTRACTVALUE_0:.*]] = llvm.extractvalue %[[UNREALIZED_CONVERSION_CAST_1]][0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:           %[[EXTRACTVALUE_1:.*]] = llvm.extractvalue %[[UNREALIZED_CONVERSION_CAST_1]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-// CHECK:           %[[MLIR_0:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64)>
-// CHECK:           %[[INSERTVALUE_0:.*]] = llvm.insertvalue %[[EXTRACTVALUE_0]], %[[MLIR_0]][0] : !llvm.struct<(ptr, ptr, i64)>
-// CHECK:           %[[INSERTVALUE_1:.*]] = llvm.insertvalue %[[EXTRACTVALUE_1]], %[[INSERTVALUE_0]][1] : !llvm.struct<(ptr, ptr, i64)>
-// CHECK:           %[[MLIR_1:.*]] = llvm.mlir.constant(0 : index) : i64
 // CHECK:           %[[EXTRACTVALUE_2:.*]] = llvm.extractvalue %[[UNREALIZED_CONVERSION_CAST_1]][2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:           %[[EXTRACTVALUE_3:.*]] = llvm.extractvalue %[[UNREALIZED_CONVERSION_CAST_1]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:           %[[EXTRACTVALUE_4:.*]] = llvm.extractvalue %[[UNREALIZED_CONVERSION_CAST_1]][4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
