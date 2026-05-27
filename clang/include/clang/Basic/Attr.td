@@ -3559,6 +3559,12 @@ def M68kRTD: DeclOrTypeAttr {
   let Documentation = [M68kRTDDocs];
 }
 
+def WasmMultivalue : DeclOrTypeAttr,
+                     TargetSpecificAttr<TargetWebAssembly> {
+  let Spellings = [Clang<"wasm_multivalue">];
+  let Documentation = [WasmMultivalueDocs];
+}
+
 def PreserveNone : DeclOrTypeAttr,
                    TargetSpecificAttr<TargetArch<!listconcat(TargetAArch64.Arches, TargetAnyX86.Arches)>> {
   let Spellings = [Clang<"preserve_none">];

@@ -13837,7 +13837,7 @@ def err_builtin_pass_in_regs_non_class : Error<
   "argument %0 is not an unqualified class type">;
 
 
-// WebAssembly reference type and table diagnostics.
+// WebAssembly-related diagnostics.
 def err_wasm_reference_pr : Error<
   "%select{pointer|reference}0 to WebAssembly reference type is not allowed">;
 def err_wasm_ca_reference : Error<
@@ -13880,6 +13880,9 @@ def err_wasm_builtin_test_fp_sig_cannot_include_struct_or_union
     : Error<"not supported with the multivalue ABI for "
             "function pointers with a struct/union as %select{return "
             "value|parameter}0">;
+def err_wasm_multivalue_requires_feature : Error<
+  "the 'wasm_multivalue' calling convention requires the 'multivalue' target "
+  "feature to be enabled">;
 
 // OpenACC diagnostics.
 def warn_acc_routine_unimplemented

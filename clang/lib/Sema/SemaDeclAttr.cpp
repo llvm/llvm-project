@@ -5543,6 +5543,9 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   case ParsedAttr::AT_M68kRTD:
     D->addAttr(::new (S.Context) M68kRTDAttr(S.Context, AL));
     return;
+  case ParsedAttr::AT_WasmMultivalue:
+    D->addAttr(::new (S.Context) WasmMultivalueAttr(S.Context, AL));
+    return;
   case ParsedAttr::AT_PreserveNone:
     D->addAttr(::new (S.Context) PreserveNoneAttr(S.Context, AL));
     return;
@@ -5813,6 +5816,15 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     break;
   case ParsedAttr::AT_M68kRTD:
     CC = CC_M68kRTD;
+    break;
+  case ParsedAttr::AT_WasmMultivalue:
+    CC = CC_WasmMultivalue;
+    if (Context.getTargetInfo().getTriple().isWasm() &&
+        !Context.getTargetInfo().hasFeature("multivalue")) {
+      Attrs.setInvalid();
+      Diag(Attrs.getLoc(), diag::err_wasm_multivalue_requires_feature);
+      return true;
+    }
     break;
   case ParsedAttr::AT_PreserveNone:
     CC = CC_PreserveNone;
@@ -8068,6 +8080,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_PreserveNone:
   case ParsedAttr::AT_RISCVVectorCC:
   case ParsedAttr::AT_RISCVVLSCC:
+  case ParsedAttr::AT_WasmMultivalue:
     handleCallConvAttr(S, D, AL);
     break;
   case ParsedAttr::AT_DeviceKernel:

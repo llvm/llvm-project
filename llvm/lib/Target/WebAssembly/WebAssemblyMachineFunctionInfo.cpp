@@ -68,8 +68,9 @@ void llvm::computeSignatureVTs(const FunctionType *Ty,
 
   MVT PtrVT = MVT::getIntegerVT(TM.createDataLayout().getPointerSizeInBits());
   if (!WebAssembly::canLowerReturn(
-          Results.size(),
-          &TM.getSubtarget<WebAssemblySubtarget>(ContextFunc))) {
+          Results.size(), &TM.getSubtarget<WebAssemblySubtarget>(ContextFunc),
+          TargetFunc ? TargetFunc->getCallingConv()
+                     : CallingConv::ID(CallingConv::C))) {
     // WebAssembly can't lower returns of multiple values without demoting to
     // sret unless multivalue is enabled (see
     // WebAssemblyTargetLowering::CanLowerReturn). So replace multiple return

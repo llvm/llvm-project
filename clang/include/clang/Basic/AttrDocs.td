@@ -3732,6 +3732,21 @@ using the `rtd` instruction.
   }];
 }
 
+def WasmMultivalueDocs : Documentation {
+  let Category = DocCatCallingConvs;
+  let Content = [{
+On WebAssembly targets, this attribute selects the ``wasm-multivalue`` calling
+convention as defined in the WebAssembly/tool-conventions repository. Relative
+to the default calling convention this takes advantage of the multi-value
+proposal in its ABI definition.
+
+This calling convention requires the ``multivalue`` target feature. Using the
+attribute without this feature enabled is a compile-time error. Enabling
+``multivalue`` does not change the default calling convention; this attribute
+must be used to opt in to the new behavior on a per-function basis.
+  }];
+}
+
 def DocCatConsumed : DocumentationCategory<"Consumed Annotation Checking"> {
   let Content = [{
 Clang supports additional attributes for checking basic resource management

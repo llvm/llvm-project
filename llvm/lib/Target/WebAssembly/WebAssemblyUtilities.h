@@ -16,6 +16,7 @@
 #define LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WEBASSEMBLYUTILITIES_H
 
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace llvm {
@@ -69,13 +70,17 @@ unsigned getCopyOpcodeForRegClass(const TargetRegisterClass *RC);
 
 /// Returns true if multivalue returns of a function can be lowered directly,
 /// i.e., not indirectly via a pointer parameter that points to the value in
-/// memory.
-bool canLowerMultivalueReturn(const WebAssemblySubtarget *Subtarget);
+/// memory. The calling convention of the call or function whose return is
+/// being lowered is taken into account when making this determination.
+bool canLowerMultivalueReturn(const WebAssemblySubtarget *Subtarget,
+                              CallingConv::ID CC);
 
 /// Returns true if the function's return value(s) can be lowered directly,
 /// i.e., not indirectly via a pointer parameter that points to the value in
-/// memory.
-bool canLowerReturn(size_t ResultSize, const WebAssemblySubtarget *Subtarget);
+/// memory. The calling convention of the call or function whose return is
+/// being lowered is taken into account when making this determination.
+bool canLowerReturn(size_t ResultSize, const WebAssemblySubtarget *Subtarget,
+                    CallingConv::ID CC);
 
 // Get the TLS base value for the current target
 // If using libcall thread context, calls

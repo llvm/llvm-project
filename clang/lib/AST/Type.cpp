@@ -3742,6 +3742,8 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
     return "preserve_all";
   case CC_M68kRTD:
     return "m68k_rtd";
+  case CC_WasmMultivalue:
+    return "wasm_multivalue";
   case CC_PreserveNone:
     return "preserve_none";
     // clang-format off
@@ -4553,6 +4555,7 @@ bool AttributedType::isCallingConv() const {
   case attr::PreserveMost:
   case attr::PreserveAll:
   case attr::M68kRTD:
+  case attr::WasmMultivalue:
   case attr::PreserveNone:
   case attr::RISCVVectorCC:
   case attr::RISCVVLSCC:

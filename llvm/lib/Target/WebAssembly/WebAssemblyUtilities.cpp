@@ -184,15 +184,20 @@ unsigned WebAssembly::getCopyOpcodeForRegClass(const TargetRegisterClass *RC) {
 }
 
 bool WebAssembly::canLowerMultivalueReturn(
-    const WebAssemblySubtarget *Subtarget) {
+    const WebAssemblySubtarget *Subtarget, CallingConv::ID CC) {
+  if (!Subtarget->hasMultivalue())
+    return false;
+  if (CC == CallingConv::WASM_Multivalue)
+    return true;
   const auto &TM = static_cast<const WebAssemblyTargetMachine &>(
       Subtarget->getTargetLowering()->getTargetMachine());
-  return Subtarget->hasMultivalue() && TM.usesMultivalueABI();
+  return TM.usesMultivalueABI();
 }
 
 bool WebAssembly::canLowerReturn(size_t ResultSize,
-                                 const WebAssemblySubtarget *Subtarget) {
-  return ResultSize <= 1 || canLowerMultivalueReturn(Subtarget);
+                                 const WebAssemblySubtarget *Subtarget,
+                                 CallingConv::ID CC) {
+  return ResultSize <= 1 || canLowerMultivalueReturn(Subtarget, CC);
 }
 
 MachineSDNode *WebAssembly::getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
