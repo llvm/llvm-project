@@ -633,6 +633,10 @@ void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
 
 void FactsGenerator::handlePlacementNew(const CXXNewExpr *NE,
                                         OriginList *NewList) {
+  // Check if we have a placement new where the second argument is void*, to
+  // avoid flowing from non-pointer parameters, such as std::nothrow.
+  // And that the placement parameter num is 1,
+  // that is to mostly limit to standard library placement new.
   if (NE->getNumPlacementArgs() != 1)
     return;
 
@@ -667,10 +671,6 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
   OriginList *NewList = getOriginsList(*NE);
   const Expr *Init = NE->getInitializer();
 
-  // Check if we have a placement new where the second argument is void*, to
-  // avoid flowing from non-pointer parameters, such as std::nothrow.
-  // And that the placement parameter num is 1,
-  // that is to mostly limit to standard library placement new.
   if (NE->getNumPlacementArgs() == 1) {
     handlePlacementNew(NE, NewList);
   } else {
