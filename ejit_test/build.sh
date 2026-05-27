@@ -101,7 +101,7 @@ _set_min_libs() {
     ${_l}/libLLVMObject.a ${_l}/libLLVMProfileData.a ${_l}/libLLVMExecutionEngine.a
     ${_l}/libLLVMOrcJIT.a ${_l}/libLLVMOrcShared.a ${_l}/libLLVMJITLink.a
     ${_l}/libLLVMRemarks.a ${_l}/libLLVMOption.a ${_l}/libLLVMMCDisassembler.a
-    ${_l}/libLLVMGlobalISel.a ${_l}/libLLVMIRPrinter.a ${_l}/libLLVMCFGuard.a
+    ${_l}/libLLVMIRPrinter.a ${_l}/libLLVMCFGuard.a
     ${_l}/libLLVMInstrumentation.a
     ${_l}/libLLVMDebugInfoCodeView.a ${_l}/libLLVMDebugInfoDWARF.a
     ${_l}/libLLVMDebugInfoDWARFLowLevel.a ${_l}/libLLVMMCParser.a
@@ -205,6 +205,11 @@ build_one() {
   echo "  Linking ${name} (${ARCH}) ..."
   if ${USE_LIPO}; then
     "${CXX}" -fuse-ld="${LD_LLD}" \
+      -Os -Wl,--gc-sections ${STRIP_FLAG} \
+      "${LIPO_ABS}" \
+      ${LINK_LIBS} \
+      "${obj}" -o "${bin}"
+    echo "${CXX}" -fuse-ld="${LD_LLD}" \
       -Os -Wl,--gc-sections ${STRIP_FLAG} \
       "${LIPO_ABS}" \
       ${LINK_LIBS} \

@@ -39,7 +39,7 @@ COMMON_LIBS = [
     "libLLVMObject.a", "libLLVMProfileData.a", "libLLVMExecutionEngine.a",
     "libLLVMOrcJIT.a", "libLLVMOrcShared.a", "libLLVMJITLink.a",
     "libLLVMRemarks.a", "libLLVMOption.a", "libLLVMMCDisassembler.a",
-    "libLLVMGlobalISel.a", "libLLVMIRPrinter.a", "libLLVMCFGuard.a",
+    "libLLVMIRPrinter.a", "libLLVMCFGuard.a",
     "libLLVMInstrumentation.a", "libLLVMDebugInfoCodeView.a",
     "libLLVMDebugInfoDWARF.a", "libLLVMDebugInfoDWARFLowLevel.a",
     "libLLVMMCParser.a", "libLLVMCGData.a", "libLLVMObjCARCOpts.a",
@@ -130,9 +130,17 @@ def doit_extract(args):
 
     # ── 3. Extract .o from map + trace dependencies ───────────────────────
     print("[3/4] Extracting .o files + tracing dependencies ...", flush=True)
+    if args.exclude:
+        print(f"       excluding patterns: {args.exclude}")
     pattern = re.compile(r"(libLLVM\S+\.a)\(([^)]+)\)")
     seen = set()   # (aname, member)
     extracted = set()  # unique_name present in work/
+
+    def _is_excluded(member):
+        for pat in args.exclude:
+            if pat in member:
+                return True
+        return False
 
     # Helper: extract member from archive with unique name
     def extract_one(aname, member):
@@ -151,6 +159,8 @@ def doit_extract(args):
     # From map
     for m in pattern.finditer(map_text):
         aname, member = m.group(1), m.group(2)
+        if _is_excluded(member):
+            continue
         key = (aname, member)
         if key not in seen:
             seen.add(key)
@@ -178,6 +188,8 @@ def doit_extract(args):
                     mangled = parts[-1]
                     if mangled in sym2file:
                         aname, member = sym2file[mangled]
+                        if _is_excluded(member):
+                            continue
                         key = (aname, member)
                         if key not in seen:
                             seen.add(key)
@@ -316,6 +328,8 @@ def main():
     e.add_argument("--arch", required=True, choices=["x86", "aarch64"])
     e.add_argument("--build-dir", required=True, help="LLVM build directory")
     e.add_argument("--output", help="Output .a path")
+    e.add_argument("--exclude", action="append", default=[],
+                   help="Exclude .o files matching this substring (repeatable)")
 
     g = sub.add_parser("gc-merge", help="gc-merge an existing lipo .a")
     g.add_argument("--input", required=True, help="Input .a from extract step")

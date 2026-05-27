@@ -22,6 +22,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
+#ifndef EJIT_BARE_METAL
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
@@ -29,6 +30,7 @@
 #include "llvm/CodeGen/GlobalISel/LoadStoreOpt.h"
 #include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
+#endif
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
@@ -233,7 +235,9 @@ LLVMInitializeAArch64Target() {
   RegisterTargetMachine<AArch64leTargetMachine> W(getTheARM64_32Target());
   RegisterTargetMachine<AArch64leTargetMachine> V(getTheAArch64_32Target());
   auto &PR = *PassRegistry::getPassRegistry();
+#ifndef EJIT_BARE_METAL
   initializeGlobalISel(PR);
+#endif
   initializeAArch64A53Fix835769Pass(PR);
   initializeAArch64A57FPLoadBalancingPass(PR);
   initializeAArch64AdvSIMDScalarPass(PR);

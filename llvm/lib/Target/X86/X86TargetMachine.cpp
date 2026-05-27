@@ -24,12 +24,14 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/ExecutionDomainFix.h"
+#ifndef EJIT_BARE_METAL
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
+#endif
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineScheduler.h"
@@ -72,7 +74,9 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86LowerAMXIntrinsicsLegacyPassPass(PR);
   initializeX86LowerAMXTypeLegacyPassPass(PR);
   initializeX86PreTileConfigPass(PR);
+#ifndef EJIT_BARE_METAL
   initializeGlobalISel(PR);
+#endif
   initializeWinEHStatePassPass(PR);
   initializeFixupBWInstPassPass(PR);
   initializeCompressEVEXPassPass(PR);
@@ -529,10 +533,12 @@ bool X86PassConfig::addRegBankSelect() {
 }
 
 bool X86PassConfig::addGlobalInstructionSelect() {
+#ifndef EJIT_BARE_METAL
   addPass(new InstructionSelect(getOptLevel()));
   // Add GlobalBaseReg in case there is no SelectionDAG passes afterwards
   if (isGlobalISelAbortEnabled())
     addPass(createX86GlobalBaseRegPass());
+#endif
   return false;
 }
 
