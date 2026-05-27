@@ -1133,12 +1133,12 @@ static void scalarize(Instruction *I,
     else if (auto *CastI = dyn_cast<CastInst>(I))
       NewOp = Builder.CreateCast(CastI->getOpcode(), Ext,
                                  I->getType()->getScalarType());
-    else if (auto *II = dyn_cast<IntrinsicInst>(I);
-             II && (II->getIntrinsicID() == Intrinsic::fptoui_sat ||
-                    II->getIntrinsicID() == Intrinsic::fptosi_sat))
+    else if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      assert(II->getIntrinsicID() == Intrinsic::fptoui_sat ||
+             II->getIntrinsicID() == Intrinsic::fptosi_sat);
       NewOp = Builder.CreateIntrinsic(I->getType()->getScalarType(),
                                       II->getIntrinsicID(), {Ext});
-    else
+    } else
       llvm_unreachable("Unsupported instruction type");
 
     Result = Builder.CreateInsertElement(Result, NewOp, Idx);
