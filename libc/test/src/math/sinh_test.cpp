@@ -69,9 +69,8 @@ TEST_F(LlvmLibcSinhTest, InDoubleRange) {
       if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Sinh, neg_x,
                                              neg_result, 0.5, rounding_mode)) {
         ++fails;
-        while (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Sinh, neg_x,
-                                                  neg_result, tol,
-                                                  rounding_mode)) {
+        while (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(
+            mpfr::Operation::Sinh, neg_x, neg_result, tol, rounding_mode)) {
           mx = neg_x;
           mr = neg_result;
           if (tol > 1000.0)
