@@ -1643,6 +1643,19 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareSimdDirective &x) {
   const Scope &containingScope = context_.FindScope(dirName.source);
   const Scope &progUnitScope = GetProgramUnitContaining(containingScope);
 
+  // A DECLARE SIMD directive may legally appear in an interface body, but it
+  // applies to the external procedure being declared rather than to any
+  // definition in this compilation. Flang does not propagate the directive to
+  // callers, so it has no effect; warn the user instead of silently ignoring
+  // it. See https://github.com/llvm/llvm-project/issues/192581.
+  if (const Symbol *progUnitSym{progUnitScope.symbol()}) {
+    if (const auto *subpDetails{progUnitSym->detailsIf<SubprogramDetails>()};
+        subpDetails && subpDetails->isInterface()) {
+      context_.Warn(common::UsageWarning::OpenMPUsage, dirName.source,
+          "'DECLARE SIMD' directive in an interface body has no effect"_warn_en_US);
+    }
+  }
+
   for (const parser::OmpClause &clause : x.v.Clauses().v) {
     const auto *u = std::get_if<parser::OmpClause::Uniform>(&clause.u);
     if (!u) {
