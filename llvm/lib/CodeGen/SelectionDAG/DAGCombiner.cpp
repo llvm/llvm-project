@@ -16163,15 +16163,15 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
     return DAG.getAnyExtOrTrunc(N0.getOperand(0), DL, VT);
 
   // Fold (aext (and (trunc x), cst)) -> (and x, cst)
-  // if the trunc is not free.
+  // if either of the casts is not free.
   if (N0.getOpcode() == ISD::AND &&
       N0.getOperand(0).getOpcode() == ISD::TRUNCATE &&
       N0.getOperand(1).getOpcode() == ISD::Constant &&
-      !TLI.isTruncateFree(N0.getOperand(0).getOperand(0), N0.getValueType())) {
+      (!TLI.isTruncateFree(N0.getOperand(0).getOperand(0), N0.getValueType()) ||
+       !TLI.isZExtFree(N0.getValueType(), VT))) {
     SDValue X = DAG.getAnyExtOrTrunc(N0.getOperand(0).getOperand(0), DL, VT);
-    SDValue Y = DAG.getNode(ISD::ANY_EXTEND, DL, VT, N0.getOperand(1));
-    assert(isa<ConstantSDNode>(Y) && "Expected constant to be folded!");
-    return DAG.getNode(ISD::AND, DL, VT, X, Y);
+    APInt Mask = N0.getConstantOperandAPInt(1).zext(VT.getSizeInBits());
+    return DAG.getNode(ISD::AND, DL, VT, X, DAG.getConstant(Mask, DL, VT));
   }
 
   // fold (aext (load x)) -> (aext (truncate (extload x)))
