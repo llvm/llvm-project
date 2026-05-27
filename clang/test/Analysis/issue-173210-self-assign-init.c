@@ -1,8 +1,8 @@
 // RUN: %clang_analyze_cc1 -xc %s \
-// RUN:   -analyzer-checker=core,debug.ExprInspection \
+// RUN:   -analyzer-checker=core,debug.ExprInspection,deadcode.DeadStores \
 // RUN:   -verify
 // RUN: %clang_analyze_cc1 -xc++ %s \
-// RUN:   -analyzer-checker=core,debug.ExprInspection \
+// RUN:   -analyzer-checker=core,debug.ExprInspection,deadcode.DeadStores \
 // RUN:   -verify -w
 
 // Self assignment initialization in C code will be treated as nop.
