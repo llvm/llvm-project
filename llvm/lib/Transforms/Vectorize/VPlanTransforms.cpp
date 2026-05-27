@@ -1109,6 +1109,12 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPValue *Op,
   if (!WideIV)
     return nullptr;
 
+  // Skip pre-computing the final value for IVs that require SCEV predicates;
+  // their SCEV-derived end value may rely on predicates that only hold inside
+  // the loop.
+  if (Incoming == WideIV && !WideIV->getNoWrapPredicates().empty())
+    return nullptr;
+
   VPValue *EndValue = EndValues.lookup(WideIV);
   assert(EndValue && "Must have computed the end value up front");
 

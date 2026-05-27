@@ -996,28 +996,6 @@ bool VPlanTransforms::finalizeSCEVPredicates(VPlan &Plan,
       PSE.addPredicate(*P);
   }
 
-  // Bail out if exit phis use predicated IVs via ExitingIVValue, as the
-  // predicated SCEV may not hold outside the loop (PR33706). Check each IV's
-  // predicates directly, regardless of whether PSE was already non-trivial
-  // from other sources (e.g., LAI predicates).
-  // TODO: Overly conservative; the pre-computed exit values are not correct
-  // outside the loop, but the exit values could be extracted from the vector
-  // loop.
-  if (!PredicatedIVs.empty())
-    for (auto *EB : Plan.getExitBlocks())
-      for (VPRecipeBase &R : EB->phis())
-        for (VPValue *Op : R.operands()) {
-          VPValue *Inner;
-          if (!match(Op, m_ExitingIVValue(m_VPValue(Inner))))
-            continue;
-          auto *WideIV = dyn_cast<VPWidenInductionRecipe>(Inner);
-          if (!WideIV || !PredicatedIVs.contains(WideIV))
-            continue;
-          LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Predicated IV has "
-                               "outside-loop use via ExitingIVValue\n");
-          return false;
-        }
-
   unsigned TotalComplexity = PSE.getPredicate().getComplexity();
   if (TotalComplexity && OptForSize) {
     LLVM_DEBUG(
