@@ -207,6 +207,9 @@ def update_test(ti: common.TestInfo):
         commands = [cmd.strip() for cmd in l.split("|")]
         assert len(commands) >= 2
         mc_cmd = " | ".join(commands[:-1])
+        if "-filetype=obj" in mc_cmd or re.search(r"-filetype\s+obj", mc_cmd):
+            common.warn("Skipping object-emitting RUN line: " + l)
+            continue
         filecheck_cmd = commands[-1]
 
         # special handling for negating exit status
