@@ -2880,8 +2880,13 @@ bool CombinerHelper::matchUndefShuffleVectorMask(MachineInstr &MI) const {
 
 bool CombinerHelper::matchUndefStore(MachineInstr &MI) const {
   assert(MI.getOpcode() == TargetOpcode::G_STORE);
-  return getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MI.getOperand(0).getReg(),
-                      MRI);
+  auto &Store = cast<GStore>(MI);
+  // An undef store can be erased only if it has no side effects beyond the
+  // value written. That holds for non-atomic and unordered atomic stores, but
+  // not for volatile or ordered atomic stores, which must be preserved.
+  if (!Store.isUnordered())
+    return false;
+  return getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, Store.getValueReg(), MRI);
 }
 
 bool CombinerHelper::matchUndefSelectCmp(MachineInstr &MI) const {

@@ -2352,7 +2352,8 @@ body: |
     ; CI-NEXT: {{  $}}
     ; CI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; CI-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; CI-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 1, addrspace 1)
+    ; CI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; CI-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 1, addrspace 1)
     ;
     ; VI-LABEL: name: test_store_global_p999_align1
     ; VI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -2407,21 +2408,24 @@ body: |
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; GFX9-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 1, addrspace 1)
+    ; GFX9-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; GFX9-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 1, addrspace 1)
     ;
     ; GFX11-LABEL: name: test_store_global_p999_align1
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; GFX11-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 1, addrspace 1)
+    ; GFX11-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; GFX11-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 1, addrspace 1)
     ;
     ; GFX12-LABEL: name: test_store_global_p999_align1
     ; GFX12: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; GFX12-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 1, addrspace 1)
+    ; GFX12-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; GFX12-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 1, addrspace 1)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(p999) = COPY $vgpr2_vgpr3
     G_STORE %1, %0 :: (store (p999), align 1, addrspace 1)
@@ -2464,7 +2468,8 @@ body: |
     ; CI-NEXT: {{  $}}
     ; CI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; CI-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; CI-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 2, addrspace 1)
+    ; CI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; CI-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 2, addrspace 1)
     ;
     ; VI-LABEL: name: test_store_global_p999_align2
     ; VI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -2497,21 +2502,24 @@ body: |
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; GFX9-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 2, addrspace 1)
+    ; GFX9-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; GFX9-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 2, addrspace 1)
     ;
     ; GFX11-LABEL: name: test_store_global_p999_align2
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; GFX11-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 2, addrspace 1)
+    ; GFX11-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; GFX11-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 2, addrspace 1)
     ;
     ; GFX12-LABEL: name: test_store_global_p999_align2
     ; GFX12: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; GFX12-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 2, addrspace 1)
+    ; GFX12-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; GFX12-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 2, addrspace 1)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(p999) = COPY $vgpr2_vgpr3
     G_STORE %1, %0 :: (store (p999), align 2, addrspace 1)
@@ -2528,42 +2536,48 @@ body: |
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; SI-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 4, addrspace 1)
+    ; SI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; SI-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 4, addrspace 1)
     ;
     ; CI-LABEL: name: test_store_global_p999_align4
     ; CI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; CI-NEXT: {{  $}}
     ; CI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; CI-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; CI-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 4, addrspace 1)
+    ; CI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; CI-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 4, addrspace 1)
     ;
     ; VI-LABEL: name: test_store_global_p999_align4
     ; VI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; VI-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 4, addrspace 1)
+    ; VI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; VI-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 4, addrspace 1)
     ;
     ; GFX9-LABEL: name: test_store_global_p999_align4
     ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; GFX9-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 4, addrspace 1)
+    ; GFX9-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; GFX9-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 4, addrspace 1)
     ;
     ; GFX11-LABEL: name: test_store_global_p999_align4
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; GFX11-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 4, addrspace 1)
+    ; GFX11-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; GFX11-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 4, addrspace 1)
     ;
     ; GFX12-LABEL: name: test_store_global_p999_align4
     ; GFX12: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; GFX12-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 4, addrspace 1)
+    ; GFX12-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; GFX12-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 4, addrspace 1)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(p999) = COPY $vgpr2_vgpr3
     G_STORE %1, %0 :: (store (p999), align 4, addrspace 1)
@@ -2580,42 +2594,48 @@ body: |
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; SI-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), addrspace 1)
+    ; SI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; SI-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), addrspace 1)
     ;
     ; CI-LABEL: name: test_store_global_p999_align8
     ; CI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; CI-NEXT: {{  $}}
     ; CI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; CI-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; CI-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), addrspace 1)
+    ; CI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; CI-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), addrspace 1)
     ;
     ; VI-LABEL: name: test_store_global_p999_align8
     ; VI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; VI-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), addrspace 1)
+    ; VI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; VI-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), addrspace 1)
     ;
     ; GFX9-LABEL: name: test_store_global_p999_align8
     ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; GFX9-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), addrspace 1)
+    ; GFX9-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; GFX9-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), addrspace 1)
     ;
     ; GFX11-LABEL: name: test_store_global_p999_align8
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; GFX11-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), addrspace 1)
+    ; GFX11-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; GFX11-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), addrspace 1)
     ;
     ; GFX12-LABEL: name: test_store_global_p999_align8
     ; GFX12: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; GFX12-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), addrspace 1)
+    ; GFX12-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; GFX12-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), addrspace 1)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(p999) = COPY $vgpr2_vgpr3
     G_STORE %1, %0 :: (store (p999), align 8, addrspace 1)
@@ -2632,42 +2652,48 @@ body: |
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; SI-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 16, addrspace 1)
+    ; SI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; SI-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 16, addrspace 1)
     ;
     ; CI-LABEL: name: test_store_global_p999_align16
     ; CI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; CI-NEXT: {{  $}}
     ; CI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; CI-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; CI-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 16, addrspace 1)
+    ; CI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; CI-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 16, addrspace 1)
     ;
     ; VI-LABEL: name: test_store_global_p999_align16
     ; VI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; VI-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 16, addrspace 1)
+    ; VI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; VI-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 16, addrspace 1)
     ;
     ; GFX9-LABEL: name: test_store_global_p999_align16
     ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; GFX9-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 16, addrspace 1)
+    ; GFX9-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; GFX9-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 16, addrspace 1)
     ;
     ; GFX11-LABEL: name: test_store_global_p999_align16
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; GFX11-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 16, addrspace 1)
+    ; GFX11-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; GFX11-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 16, addrspace 1)
     ;
     ; GFX12-LABEL: name: test_store_global_p999_align16
     ; GFX12: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; GFX12-NEXT: G_STORE [[COPY1]](p999), [[COPY]](p1) :: (store (p999), align 16, addrspace 1)
+    ; GFX12-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p999)
+    ; GFX12-NEXT: G_STORE [[PTRTOINT]](s64), [[COPY]](p1) :: (store (p999), align 16, addrspace 1)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(p999) = COPY $vgpr2_vgpr3
     G_STORE %1, %0 :: (store (p999), align 16, addrspace 1)

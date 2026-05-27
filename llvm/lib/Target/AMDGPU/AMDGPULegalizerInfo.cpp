@@ -542,8 +542,20 @@ static bool loadStoreBitcastWorkaround(const LLT Ty) {
   return EltSize != 32 && EltSize != 64;
 }
 
+// True for a pointer in an address space beyond the known AMDGPU address
+// spaces (e.g. produced by an illegal addrspacecast). Such pointers have no
+// register class or load/store selection pattern.
+static bool isUnsupportedPointerType(LLT Ty) {
+  return Ty.isPointer() && Ty.getAddressSpace() > AMDGPUAS::MAX_AMDGPU_ADDRESS;
+}
+
 static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query) {
   const LLT Ty = Query.Types[0];
+  // Stores of a pointer in an unsupported address space have no selection
+  // pattern; route them to custom legalization, which reinterprets the stored
+  // value as an integer of the same size.
+  if (Query.Opcode == TargetOpcode::G_STORE && isUnsupportedPointerType(Ty))
+    return false;
   return isRegisterType(ST, Ty) && isLoadStoreSizeLegal(ST, Query) &&
          !hasBufferRsrcWorkaround(Ty) && !loadStoreBitcastWorkaround(Ty);
 }
@@ -1597,6 +1609,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       [=](const LegalityQuery &Query) -> bool {
         return isLoadStoreLegal(ST, Query);
       });
+
+    // Stores of a pointer in an address space without a register class (e.g.
+    // produced by an illegal addrspacecast) have no selection pattern.
+    // Reinterpret the value as an integer of the same size, which does.
+    if (IsStore) {
+      Actions.customIf([=](const LegalityQuery &Query) -> bool {
+        return isUnsupportedPointerType(Query.Types[0]);
+      });
+    }
 
     // The custom pointers (fat pointers, buffer resources) don't work with load
     // and store at this level. Fat pointers should have been lowered to
@@ -3505,6 +3526,17 @@ bool AMDGPULegalizerInfo::legalizeStore(LegalizerHelper &Helper,
   if (hasBufferRsrcWorkaround(DataTy)) {
     Observer.changingInstr(MI);
     castBufferRsrcArgToV4I32(MI, B, 0);
+    Observer.changedInstr(MI);
+    return true;
+  }
+
+  // A pointer in an address space without a register class (e.g. produced by
+  // an addrspacecast to an illegal address space) has no store pattern.
+  // Reinterpret the value as an integer of the same size, which does.
+  if (isUnsupportedPointerType(DataTy)) {
+    auto Cast = B.buildPtrToInt(LLT::scalar(DataTy.getSizeInBits()), DataReg);
+    Observer.changingInstr(MI);
+    MI.getOperand(0).setReg(Cast.getReg(0));
     Observer.changedInstr(MI);
     return true;
   }
