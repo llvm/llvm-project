@@ -103,6 +103,8 @@ config_setting(
 # this `Make` variable.
 llvm_copts = [
     "$(STACK_FRAME_UNLIMITED)",
+    "-Wno-gnu-zero-variadic-macro-arguments",
+    "-DisLegalVTForZvzipOperand(a,b,...)=isLegalVTForZvzipOperand(a,b)",
 ]
 
 enum_targets_gen(
