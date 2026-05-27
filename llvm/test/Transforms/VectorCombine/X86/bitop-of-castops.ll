@@ -547,7 +547,7 @@ define i16 @or_bitcast_v16i1_to_i16(<16 x i1> %a, <16 x i1> %b) {
 
 define <2 x i32> @issue199783_1(i64 %x) {
 ; CHECK-LABEL: @issue199783_1(
-; CHECK-NEXT:    [[OR_DISJOINT_INNER:%.*]] = or disjoint i64 [[X:%.*]], 4294967297
+; CHECK-NEXT:    [[OR_DISJOINT_INNER:%.*]] = or i64 [[X:%.*]], 4294967297
 ; CHECK-NEXT:    [[OR_DISJOINT:%.*]] = bitcast i64 [[OR_DISJOINT_INNER]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[OR_DISJOINT]]
 ;
@@ -559,7 +559,7 @@ define <2 x i32> @issue199783_1(i64 %x) {
 
 define <2 x i32> @issue199783_2(i64 %x, i64 %y) {
 ; CHECK-LABEL: @issue199783_2(
-; CHECK-NEXT:    [[OR_DISJOINT1:%.*]] = or disjoint i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR_DISJOINT1:%.*]] = or i64 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[OR_DISJOINT:%.*]] = bitcast i64 [[OR_DISJOINT1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[OR_DISJOINT]]
 ;
