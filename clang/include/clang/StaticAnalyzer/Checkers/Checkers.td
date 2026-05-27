@@ -788,6 +788,10 @@ def SmartPtrChecker: Checker<"SmartPtr">,
   Dependencies<[SmartPtrModeling]>,
   Documentation<HasDocumentation>;
 
+def LifetimeAnnotations : Checker<"LifetimeAnnotations">,
+  HelpText<"Check for lifetime violations using lifetime annotations">,
+  Documentation<NotDocumented>;
+
 } // end: "alpha.cplusplus"
 
 //===----------------------------------------------------------------------===//
