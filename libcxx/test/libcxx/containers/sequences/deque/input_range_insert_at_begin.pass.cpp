@@ -9,8 +9,6 @@
 // Check that inserting an unsized input range at the start of a deque uses
 // existing front spare capacity instead of materializing the range first.
 
-// UNSUPPORTED: c++03
-
 #include <cassert>
 #include <deque>
 
@@ -45,7 +43,7 @@ void test_insert_iter_iter() {
 
   {
     DisableAllocationGuard guard;
-    auto it = c.insert(c.begin(), Iter(input), Iter(input + 4));
+    std::deque<int>::iterator it = c.insert(c.begin(), Iter(input), Iter(input + 4));
     assert(it == c.begin());
   }
 
