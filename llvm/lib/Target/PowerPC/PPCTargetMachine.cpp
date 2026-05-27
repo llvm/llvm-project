@@ -247,7 +247,7 @@ getEffectivePPCCodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
   if (JIT)
     return CodeModel::Small;
   if (TT.isOSAIX()) {
-    // 64-bit AIX uses large code model by default.
+    // Use large code model for 64-bit AIX by default.
     if (TT.isArch64Bit())
       return CodeModel::Large;
     return CodeModel::Small;
