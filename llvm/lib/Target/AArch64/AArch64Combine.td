@@ -357,6 +357,13 @@ def combine_mul_cmlt : GICombineRule<
   (apply [{ applyCombineMulCMLT(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
+def remove_zext_when_lowering_shl : GICombineRule<
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SHL):$root,
+         [{ return matchRemoveZextWhenLoweringShl(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyRemoveZextWhenLoweringShl(*${root}, MRI, B, Observer, ${matchinfo}); }])
+>;
+
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
@@ -395,5 +402,6 @@ def AArch64PostLegalizerCombiner
                         combine_mul_cmlt, combine_use_vector_truncate,
                         extmultomull, subaddmulreassoc, truncsat_combines,
                         lshr_of_trunc_of_lshr,
-                        funnel_shift_from_or_shift_constants_are_legal]> {
+                        funnel_shift_from_or_shift_constants_are_legal,
+                        remove_zext_when_lowering_shl]> {
 }
