@@ -53,14 +53,8 @@ entry:
 ; CHECK:        - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Type:            I32
+; CHECK-NEXT:         Type:            I64
 ; CHECK-NEXT:         Mutable:         true
-; CHECK-NEXT:         InitExpr:
-; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           65536
-; CHECK-NEXT:       - Index:       1
-; CHECK-NEXT:         Type:        I64
-; CHECK-NEXT:         Mutable:     true
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I64_CONST
 ; CHECK-NEXT:           Value:           456
@@ -84,8 +78,6 @@ entry:
 ; CHECK-NEXT:         Name:            use_global
 ; CHECK-NEXT:     GlobalNames:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Name:            __stack_pointer
-; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Name:            used_global
 ; CHECK-NEXT:     DataSegmentNames:
 ; CHECK-NEXT:       - Index:           0

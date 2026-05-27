@@ -458,10 +458,8 @@ public:
   /// Inserts writeback (unless \p IsAVNone) followed by an unconditional wait.
   bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
-                     Position Pos, bool IsAVNone) const {
-    bool Changed = false;
-    if (!IsAVNone)
-      Changed |= insertWriteback(MI, Scope, AddrSpace, Pos);
+                     Position Pos) const {
+    bool Changed = insertWriteback(MI, Scope, AddrSpace, Pos);
     Changed |= insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
                           IsCrossAddrSpaceOrdering, Pos,
                           AtomicOrdering::Release, /*AtomicsOnly=*/false);
@@ -2113,8 +2111,9 @@ bool SIGfx12CacheControl::insertWriteback(MachineBasicBlock::iterator &MI,
   case SIAtomicScope::WAVEFRONT:
   case SIAtomicScope::SINGLETHREAD:
     break;
-  default:
+  case SIAtomicScope::NONE:
     llvm_unreachable("Unsupported synchronization scope");
+    break;
   }
 
   if (NeedsWB) {

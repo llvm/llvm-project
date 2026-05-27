@@ -903,26 +903,29 @@ void PMDataManager::removeNotPreservedAnalysis(Pass *P) {
     return;
 
   const AnalysisUsage::VectorType &PreservedSet = AnUsage->getPreservedSet();
-  auto IsNotPreserved = [&](const auto &Entry) {
-    if (Entry.second->getAsImmutablePass() != nullptr ||
-        is_contained(PreservedSet, Entry.first))
-      return false;
-    // Remove this analysis
-    if (PassDebugging >= Details) {
-      Pass *S = Entry.second;
-      dbgs() << " -- '" << P->getPassName() << "' is not preserving '";
-      dbgs() << S->getPassName() << "'\n";
-    }
-    return true;
-  };
-  AvailableAnalysis.remove_if(IsNotPreserved);
-
+  SmallVector<DenseMap<AnalysisID, Pass *> *, 8> Maps = {&AvailableAnalysis};
   // Check inherited analysis also. If P is not preserving analysis
   // provided by parent manager then remove it here.
-  for (DenseMap<AnalysisID, Pass *> *IA : InheritedAnalysis) {
-    if (!IA)
-      continue;
-    IA->remove_if(IsNotPreserved);
+  for (DenseMap<AnalysisID, Pass *> *IA : InheritedAnalysis)
+    if (IA)
+      Maps.push_back(IA);
+  // Prune every map from a single remove_if call site. The instantiated
+  // DenseMap::remove_if is a local function; sharing it across more than one
+  // call site makes the inliner emit it out of line, which adds a call in this
+  // hot per-pass path. A single call site keeps it inlined here.
+  for (DenseMap<AnalysisID, Pass *> *M : Maps) {
+    M->remove_if([&](const auto &Entry) {
+      if (Entry.second->getAsImmutablePass() != nullptr ||
+          is_contained(PreservedSet, Entry.first))
+        return false;
+      // Remove this analysis
+      if (PassDebugging >= Details) {
+        Pass *S = Entry.second;
+        dbgs() << " -- '" << P->getPassName() << "' is not preserving '";
+        dbgs() << S->getPassName() << "'\n";
+      }
+      return true;
+    });
   }
 }
 

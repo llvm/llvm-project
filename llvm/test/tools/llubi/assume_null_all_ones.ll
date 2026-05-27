@@ -15,6 +15,6 @@ define void @main() {
 ; CHECK-NEXT:   store i64 -1, ptr %storage, align 4
 ; CHECK-NEXT:   %res = load ptr addrspace(1), ptr %storage, align 8 => ptr 0xFFFFFFFFFFFFFFFF [dangling]
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   call void @llvm.assume(i1 true) [ "nonnull"(ptr addrspace(1) %res) ] at @main
+; CHECK-NEXT: #0   call void @llvm.assume(i1 true) [ "nonnull"(ptr addrspace(1) %res) ] at @main <stdin>:10
 ; CHECK-NEXT: Immediate UB detected: The pointer ptr 0xFFFFFFFFFFFFFFFF [dangling] violates nonnull assumption.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

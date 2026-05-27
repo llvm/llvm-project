@@ -391,6 +391,9 @@ private:
   /// Coordinate reading and parsing of perf.data file
   void parsePerfData(BinaryContext &BC);
 
+  /// Mark binary functions covered by parsed profile data.
+  void markFunctionsWithProfile();
+
   /// Coordinate reading and parsing of pre-aggregated file
   ///
   /// The regular perf2bolt aggregation job is to read perf output directly.
