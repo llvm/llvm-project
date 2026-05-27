@@ -3615,6 +3615,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   // types only.
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat:
+  case Builtin::BI__builtin_elementwise_clmul:
     if (BuiltinElementwiseMath(TheCall,
                                EltwiseBuiltinArgTyRestriction::IntegerTy))
       return ExprError();
@@ -4216,6 +4217,8 @@ void Sema::checkLifetimeCaptureBy(FunctionDecl *FD, bool IsMemberFunction,
 
     Expr *Captured = const_cast<Expr *>(GetArgAt(ArgIdx));
     for (int CapturingParamIdx : Attr->params()) {
+      if (CapturingParamIdx == LifetimeCaptureByAttr::Invalid)
+        continue;
       // lifetime_capture_by(this) case is handled in the lifetimebound expr
       // initialization codepath.
       if (CapturingParamIdx == LifetimeCaptureByAttr::This &&

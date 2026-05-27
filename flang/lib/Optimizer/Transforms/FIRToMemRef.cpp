@@ -522,14 +522,29 @@ FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
     }
   }
 
+  const int nonScalarRank = llvm::count(filledPositions, false);
+  const bool hasReducedRankIndices =
+      static_cast<int>(idxs.size()) == nonScalarRank;
+  const bool hasFullRankIndices = static_cast<int>(idxs.size()) == rank;
+  if (!hasReducedRankIndices && !hasFullRankIndices)
+    return failure();
+
   int arrayCoorIdx = 0;
   for (int i = 0; i < rank; ++i) {
     if (filledPositions[i])
       continue;
 
-    assert((unsigned int)arrayCoorIdx < idxs.size() &&
-           "empty dimension should be eliminated\n");
-    Value index = canonicalizeIndex(idxs[arrayCoorIdx], rewriter);
+    Value sourceIndex;
+    if (hasFullRankIndices) {
+      // Canonicalized rank-reducing array_coor may carry full-rank indices
+      // (including scalar-sliced dimensions).
+      sourceIndex = idxs[i];
+    } else {
+      assert((unsigned int)arrayCoorIdx < idxs.size() &&
+             "empty dimension should be eliminated\n");
+      sourceIndex = idxs[arrayCoorIdx];
+    }
+    Value index = canonicalizeIndex(sourceIndex, rewriter);
     Type cTy = index.getType();
     if (!llvm::isa<IndexType>(cTy)) {
       assert(cTy.isSignlessInteger() && "expected signless integer type");
@@ -560,7 +575,8 @@ FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
     Value finalIndex = arith::AddIOp::create(rewriter, loc, scaled, offset);
 
     indices[i] = finalIndex;
-    arrayCoorIdx++;
+    if (hasReducedRankIndices)
+      arrayCoorIdx++;
   }
 
   std::reverse(indices.begin(), indices.end());
@@ -694,9 +710,35 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   strides.reserve(rank);
 
   SmallVector<Value> &shapeVec = sliceInfo.shapeVec;
-  if (sliceInfo.hasProjectedSlice || shapeVec.empty()) {
-    // Projected slices carry their physical layout in the descriptor. Rebuild
-    // the MemRef view from box metadata instead of from slice triplets.
+  const bool firMemrefIsBox = mlir::isa<fir::BaseBoxType>(firMemref.getType());
+  const bool firMemrefIsEmbox =
+      firMemref.getDefiningOp<fir::EmboxOp>() != nullptr;
+  // Pick how to derive sizes/strides for the reinterpret_cast view:
+  //
+  //   shapeVec path: synthesize row-major strides from fir.shape extents.
+  //     Valid when the converted MemRef describes a contiguous storage block:
+  //     either the array_coor base is a raw ref/heap/ptr (no descriptor at
+  //     all), or it is a fir.box produced by fir.embox -- getFIRConvert
+  //     rewinds to embox.getMemref()/box_addr(embox) in that case, so the
+  //     reinterpret_cast operates on the underlying contiguous ref. This
+  //     matches CodeGen XArrayCoorOp's non-boxed branch.
+  //
+  //   box_dims path: query the descriptor at runtime. Required when:
+  //     (a) the slice is projected (physical layout is owned by the box);
+  //     (b) we have no shape information at all; or
+  //     (c) the array_coor base is a fir.box that is NOT a fir.embox result.
+  //         getFIRConvert materializes fir.box_addr(box) -- an opaque pointer
+  //         with no layout in its type -- so strides must come from the
+  //         descriptor. This matches CodeGen XArrayCoorOp's boxed branch
+  //         (getStrideFromBox); shape/shape_shift on array_coor is
+  //         informational only (lower bounds for index translation).
+  const bool descriptorOwnsLayout = sliceInfo.hasProjectedSlice ||
+                                    shapeVec.empty() ||
+                                    (firMemrefIsBox && !firMemrefIsEmbox);
+  if (descriptorOwnsLayout) {
+    // Rebuild the MemRef view from descriptor metadata instead of from slice
+    // triplets. Reached only when firMemref is a fir.box value (case b/c), or
+    // for projected slices (case a) where the source remains the box.
     auto boxElementSize =
         fir::BoxEleSizeOp::create(rewriter, loc, indexTy, firMemref);
 
@@ -705,6 +747,12 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
       auto boxDims = fir::BoxDimsOp::create(rewriter, loc, indexTy, indexTy,
                                             indexTy, firMemref, dim);
 
+      // TODO: when an explicit fir.shape/fir.shape_shift is available
+      // (shapeVec non-empty), prefer its extents over the descriptor's
+      // box_dims extent result. For boxed array_coor the shape extents must
+      // agree with the descriptor's runtime extents, so either source is
+      // correct; using the shape would let constant extents reach the
+      // reinterpret_cast and improve downstream analysis.
       Value extent = boxDims->getResult(1);
       sizes.push_back(castTypeToIndexType(extent, rewriter));
 
@@ -1153,7 +1201,13 @@ void FIRToMemRef::replaceFIRMemrefs(Value firMemref, Value converted,
   Type ty = firMemref.getType();
 
   for (auto op : worklist) {
-    rewriter.setInsertionPoint(op);
+    // If op is directly inside a LoopWrapperInterface region, inserting before
+    // op would violate the single-nested-op invariant. Walk up the wrapper
+    // chain and insert before the outermost wrapper instead.
+    Operation *insertBefore = op;
+    while (mlir::isa<omp::LoopWrapperInterface>(insertBefore->getParentOp()))
+      insertBefore = insertBefore->getParentOp();
+    rewriter.setInsertionPoint(insertBefore);
     Location loc = op->getLoc();
     Value replaceConvert = fir::ConvertOp::create(rewriter, loc, ty, converted);
     op->replaceUsesOfWith(firMemref, replaceConvert);

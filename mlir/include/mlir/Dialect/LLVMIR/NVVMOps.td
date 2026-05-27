@@ -502,6 +502,34 @@ def NVVM_Ex2Op : NVVM_F32UnaryApproxOp<"ex2"> {
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM rsqrt op definitions
+//===----------------------------------------------------------------------===//
+
+def NVVM_RsqrtOp
+    : NVVM_SingleResultIntrinsicOp<"rsqrt", [Pure, SameOperandsAndResultType]> {
+  let summary = "Reciprocal square root (fast approximation)";
+  let description = [{
+    Computes an approximation of the reciprocal of the square root of the
+    input value: `d = 1 / sqrt(a)`. Supports both f32 and f64. The maximum
+    relative error for the f32 form over the entire positive finite range
+    is 2^-22.9.
+
+    The `ftz` attribute, when set, flushes subnormal inputs and results to
+    sign-preserving zero. For f64 inputs, `ftz=true` selects a coarser
+    approximation that uses only the upper 32 bits of the input (the lower
+    32 bits of the result are zeroed).
+
+    For more information, see PTX ISA:
+    [rsqrt](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-rsqrt)
+  }];
+
+  let arguments = (ins AnyTypeOf<[F32, F64]>:$src,
+      DefaultValuedAttr<BoolAttr, "false">:$ftz);
+  let results = (outs AnyTypeOf<[F32, F64]>:$res);
+  let assemblyFormat = "$src attr-dict `:` type($src)";
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM redux op definitions
 //===----------------------------------------------------------------------===//
 
@@ -6514,6 +6542,63 @@ def NVVM_FmaOp : NVVM_Op<"fma", [Pure, SameOperandsAndResultType]> {
   let llvmBuilder = [{
     NVVM::FmaOp::lowerFmaToLLVMIR(*op, moduleTranslation, builder);
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM sqrt op definitions
+//===----------------------------------------------------------------------===//
+
+def NVVM_SqrtOp
+    : NVVM_SingleResultIntrinsicOp<"sqrt", [Pure, SameOperandsAndResultType]> {
+  let summary = "Take the square root of a value";
+  let description = [{
+    Compute sqrt(src) and store the result in res.
+
+    For more information, see PTX ISA:
+    [sqrt](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sqrt)
+  }];
+  let arguments = (ins AnyTypeOf<[F32, F64]>:$src, FPArithRoundingMode:$rnd,
+      DefaultValuedAttr<BoolAttr, "false">:$ftz);
+  let results = (outs AnyTypeOf<[F32, F64]>:$res);
+  let assemblyFormat = "$src attr-dict `:` type($src)";
+  let hasVerifier = 1;
+}
+
+def NVVM_SqrtApproxOp : NVVM_F32UnaryApproxOp<"sqrt.approx"> {
+  let summary = "Square root (fast approximation)";
+  let description = [{
+    Computes a fast approximation of the square root of the input value
+    (`res = sqrt(src)`). The maximum relative error over the entire positive
+    finite range is 2^-23.
+
+    The `ftz` attribute, when set, flushes subnormal inputs and results to
+    sign-preserving zero.
+
+    For more information, see PTX ISA:
+    [sqrt](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sqrt)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM div op definitions
+//===----------------------------------------------------------------------===//
+
+def NVVM_DivFOp
+    : NVVM_SingleResultIntrinsicOp<"divf", [Pure, SameOperandsAndResultType]> {
+  let summary = "Divide one value by another";
+  let description = [{
+    Divides lhs by rhs, stores result in res (`res = lhs / rhs`).
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-div)
+  }];
+  let arguments = (ins AnyTypeOf<[F32, F64]>:$lhs, AnyTypeOf<[F32, F64]>:$rhs,
+      DefaultValuedAttr<FPArithRoundingMode, "FPRoundingMode::NONE">:$rnd,
+      DefaultValuedAttr<BoolAttr, "false">:$ftz,
+      DefaultValuedAttr<BoolAttr, "false">:$approx,
+      DefaultValuedAttr<BoolAttr, "false">:$full);
+  let results = (outs AnyTypeOf<[F32, F64]>:$res);
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($res)";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

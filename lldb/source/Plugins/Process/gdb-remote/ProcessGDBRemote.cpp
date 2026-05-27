@@ -177,6 +177,12 @@ public:
     const uint32_t idx = ePropertyUseGPacketForReading;
     return GetPropertyAtIndexAs<bool>(idx, true);
   }
+
+  uint64_t GetPacketTestDelay() const {
+    const uint32_t idx = ePropertyPacketTestDelay;
+    return GetPropertyAtIndexAs<uint64_t>(
+        idx, g_processgdbremote_properties[idx].default_uint_value);
+  }
 };
 
 std::chrono::seconds ResumeTimeout() { return std::chrono::seconds(5); }
@@ -223,6 +229,11 @@ void ProcessGDBRemote::DumpPluginHistory(Stream &s) {
 
 std::chrono::seconds ProcessGDBRemote::GetPacketTimeout() {
   return std::chrono::seconds(GetGlobalPluginProperties().GetPacketTimeout());
+}
+
+std::chrono::milliseconds ProcessGDBRemote::GetPacketTestDelay() {
+  return std::chrono::milliseconds(
+      GetGlobalPluginProperties().GetPacketTestDelay());
 }
 
 ArchSpec ProcessGDBRemote::GetSystemArchitecture() {
@@ -828,7 +839,7 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
       // make sure to use the actual executable path found in the launch_info...
       Args args = launch_info.GetArguments();
       if (FileSpec exe_file = launch_info.GetExecutableFile())
-        args.ReplaceArgumentAtIndex(0, exe_file.GetPath(false));
+        args.ReplaceArgumentAtIndex(0, exe_file.GetPath(/*denormalize=*/true));
       if (llvm::Error err = m_gdb_comm.LaunchProcess(args)) {
         error = Status::FromErrorStringWithFormatv(
             "Cannot launch '{0}': {1}", args.GetArgumentAtIndex(0),
@@ -1752,13 +1763,19 @@ void ProcessGDBRemote::ParseExpeditedRegisters(
   RegisterContextSP gdb_reg_ctx_sp(gdb_thread->GetRegisterContext());
 
   for (const auto &pair : expedited_register_map) {
-    StringExtractor reg_value_extractor(pair.second);
-    WritableDataBufferSP buffer_sp(
-        new DataBufferHeap(reg_value_extractor.GetStringRef().size() / 2, 0));
-    reg_value_extractor.GetHexBytes(buffer_sp->GetData(), '\xcc');
     uint32_t lldb_regnum = gdb_reg_ctx_sp->ConvertRegisterKindToRegisterNumber(
         eRegisterKindProcessPlugin, pair.first);
-    gdb_thread->PrivateSetRegisterValue(lldb_regnum, buffer_sp->GetData());
+    if (lldb_regnum != LLDB_INVALID_REGNUM) {
+      StringExtractor reg_value_extractor(pair.second);
+      if (reg_value_extractor.GetStringRef().empty()) {
+        gdb_thread->PrivateSetRegisterUnavailable(lldb_regnum);
+        continue;
+      }
+      WritableDataBufferSP buffer_sp(
+          new DataBufferHeap(reg_value_extractor.GetStringRef().size() / 2, 0));
+      reg_value_extractor.GetHexBytes(buffer_sp->GetData(), '\xcc');
+      gdb_thread->PrivateSetRegisterValue(lldb_regnum, buffer_sp->GetData());
+    }
   }
 }
 
@@ -5536,6 +5553,9 @@ llvm::Error ProcessGDBRemote::LoadModules() {
 
       if (obj->GetType() != ObjectFile::Type::eTypeExecutable)
         return IterationAction::Continue;
+
+      if (target.GetExecutableModulePointer() == module_sp.get())
+        return IterationAction::Stop;
 
       lldb::ModuleSP module_copy_sp = module_sp;
       target.SetExecutableModule(module_copy_sp, eLoadDependentsNo);

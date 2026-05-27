@@ -11,7 +11,7 @@
 ## Dump the PSV0 part and verify its size.
 # RUN: llvm-objcopy --dump-section=PSV0=%t.psv0 %t.dxbc
 # RUN: wc -c %t.psv0 | FileCheck %s --check-prefix=PSV0-SIZE
-# RUN: od -v -Ax -t x1 %t.psv0 | FileCheck %s --check-prefix=PSV0-CONTENTS
+# RUN: od -v -Ax -t x1 %t.psv0 | FileCheck %s --check-prefix=PSV0-CONTENTS --ignore-case
 # PSV0-SIZE: 76
 
 # For a compute shader the structure size is encoded followed by a bunch of 00'd

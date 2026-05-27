@@ -48,6 +48,7 @@
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ABI/IRTypeMapper.h"
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
@@ -548,13 +549,10 @@ CodeGenModule::CodeGenModule(ASTContext &C,
   // Generate the module name hash here if needed.
   if (CodeGenOpts.UniqueInternalLinkageNames &&
       !getModule().getSourceFileName().empty()) {
-    std::string Path = getModule().getSourceFileName();
+    SmallString<256> Path(getModule().getSourceFileName());
     // Check if a path substitution is needed from the MacroPrefixMap.
-    for (const auto &Entry : LangOpts.MacroPrefixMap)
-      if (Path.rfind(Entry.first, 0) != std::string::npos) {
-        Path = Entry.second + Path.substr(Entry.first.size());
-        break;
-      }
+    clang::Preprocessor::processPathForFileMacro(Path, LangOpts,
+                                                 Context.getTargetInfo());
     ModuleNameHash = llvm::getUniqueInternalLinkagePostfix(Path);
   }
 
@@ -1716,6 +1714,9 @@ void CodeGenModule::Release() {
   if (getCodeGenOpts().StackProtectorGuardOffset != INT_MAX)
     getModule().setStackProtectorGuardOffset(
         getCodeGenOpts().StackProtectorGuardOffset);
+  if (getCodeGenOpts().StackProtectorGuardValueWidth != UINT_MAX)
+    getModule().setStackProtectorGuardValueWidth(
+        getCodeGenOpts().StackProtectorGuardValueWidth);
   if (getCodeGenOpts().StackAlignment)
     getModule().setOverrideStackAlignment(getCodeGenOpts().StackAlignment);
   if (getCodeGenOpts().SkipRaxSetup)
@@ -8695,6 +8696,10 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
   assert(NewBuilder->DeferredVTables.empty() &&
          "Newly created module should not have deferred vtables");
   NewBuilder->DeferredVTables = std::move(DeferredVTables);
+
+  assert(NewBuilder->EmittedVTables.empty() &&
+         "Newly created module should not have defined vtables");
+  NewBuilder->EmittedVTables = std::move(EmittedVTables);
 
   assert(NewBuilder->MangledDeclNames.empty() &&
          "Newly created module should not have mangled decl names");
