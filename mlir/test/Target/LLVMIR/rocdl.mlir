@@ -1468,7 +1468,7 @@ llvm.func @rocdl.permlane16.var(%src : i32) -> i32 {
   %sel = llvm.mlir.constant(-1 : i32) : i32
   // CHECK-LABEL: rocdl.permlane16.var
   // CHECK: call i32 @llvm.amdgcn.permlane16.var(i32 %{{.*}}, i32 %{{.*}}, i32 -1, i1 false, i1 true)
-  %ret = rocdl.permlane16.var %src, %src, %sel, false, true : (i32, i32) -> i32
+  %ret = rocdl.permlane16.var %src, %src, %sel, false, true : (i32, i32, i32) -> i32
   llvm.return %ret : i32
 }
 
@@ -1476,7 +1476,7 @@ llvm.func @rocdl.permlanex16.var(%src : i32) -> i32 {
   %sel = llvm.mlir.constant(-1 : i32) : i32
   // CHECK-LABEL: rocdl.permlanex16.var
   // CHECK: call i32 @llvm.amdgcn.permlanex16.var(i32 %{{.*}}, i32 %{{.*}}, i32 -1, i1 false, i1 true)
-  %ret = rocdl.permlanex16.var %src, %src, %sel, false, true : (i32, i32) -> i32
+  %ret = rocdl.permlanex16.var %src, %src, %sel, false, true : (i32, i32, i32) -> i32
   llvm.return %ret : i32
 }
 

@@ -2488,7 +2488,7 @@ def ROCDL_Permlane16VarOp : ROCDL_IntrOp<"permlane16.var", [], [],
              I1Attr:$fi, I1Attr:$boundControl)> {
   let results = (outs I32:$res);
   let assemblyFormat = [{
-    attr-dict $old `,` $src0 `,` $src1 `,` $fi `,` $boundControl `:` `(` type($old) `,` type($src0) `)` `->` type($res)
+    attr-dict $old `,` $src0 `,` $src1 `,` $fi `,` $boundControl `:` functional-type(operands, $res)
   }];
   let description = [{
     Performs a `permlane16.var` operation: a per-lane variable-selector
@@ -2502,7 +2502,7 @@ def ROCDL_Permlane16VarOp : ROCDL_IntrOp<"permlane16.var", [], [],
 
     Example:
     ```mlir
-    %res = rocdl.permlane16.var %old, %src, %selector, false, true : (i32, i32) -> i32
+    %res = rocdl.permlane16.var %old, %src, %selector, false, true : (i32, i32, i32) -> i32
     ```
   }];
 }
@@ -2518,7 +2518,7 @@ def ROCDL_PermlaneX16VarOp : ROCDL_IntrOp<"permlanex16.var", [], [],
              I1Attr:$fi, I1Attr:$boundControl)> {
   let results = (outs I32:$res);
   let assemblyFormat = [{
-    attr-dict $old `,` $src0 `,` $src1 `,` $fi `,` $boundControl `:` `(` type($old) `,` type($src0) `)` `->` type($res)
+    attr-dict $old `,` $src0 `,` $src1 `,` $fi `,` $boundControl `:` functional-type(operands, $res)
   }];
   let description = [{
     Performs a `permlanex16.var` operation: a per-lane variable-selector
@@ -2533,7 +2533,7 @@ def ROCDL_PermlaneX16VarOp : ROCDL_IntrOp<"permlanex16.var", [], [],
 
     Example:
     ```mlir
-    %res = rocdl.permlanex16.var %old, %src, %selector, false, true : (i32, i32) -> i32
+    %res = rocdl.permlanex16.var %old, %src, %selector, false, true : (i32, i32, i32) -> i32
     ```
   }];
 }
