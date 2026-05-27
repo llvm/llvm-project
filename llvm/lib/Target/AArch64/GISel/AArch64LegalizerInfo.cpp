@@ -207,7 +207,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .moreElementsToNextPow2(0);
 
-  getActionDefinitionsBuilder(G_MUL)
+  getActionDefinitionsBuilder({G_MUL, G_CLMUL})
       .legalFor({i32, i64, v8i8, v16i8, v4i16, v8i16, v2i32, v4i32, v2i64})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
@@ -1942,7 +1942,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::aarch64_neon_fminnm:
     return LowerBinOp(TargetOpcode::G_FMINNUM);
   case Intrinsic::aarch64_neon_pmul:
-    return LowerBinOp(AArch64::G_CLMUL);
+    return LowerBinOp(TargetOpcode::G_CLMUL);
   case Intrinsic::aarch64_neon_pmull:
   case Intrinsic::aarch64_neon_pmull64:
     return LowerBinOp(AArch64::G_PMULL);
