@@ -233,8 +233,13 @@ foreach(entry ${runtimes})
   string(REPLACE "-" "_" canon_name ${name})
   string(TOUPPER ${canon_name} canon_name)
   list(APPEND prefixes ${canon_name})
-  if (${canon_name} STREQUAL "OPENMP")
+  if(canon_name STREQUAL "OPENMP")
     list(APPEND prefixes "LIBOMP" "LIBOMPTARGET")
+  endif()
+  # Add LIBOMPTARGET for offload so LIBOMPTARGET_* options are forwarded.
+  # Note that the LIBOMPTARGET_* prefix was inherited from OpenMP's CMake setup.
+  if(canon_name STREQUAL "OFFLOAD")
+    list(APPEND prefixes "LIBOMPTARGET")
   endif()
   # Many compiler-rt options start with SANITIZER_ and DARWIN_ rather than
   # COMPILER_RT_, so when compiler-rt is enabled, consider both.
