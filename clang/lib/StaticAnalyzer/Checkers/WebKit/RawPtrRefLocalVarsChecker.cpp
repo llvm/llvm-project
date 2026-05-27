@@ -86,6 +86,8 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
     auto *Callee = CE->getDirectCallee();
     if (!Callee)
       return false;
+    if (isPtrConversion(Callee))
+      return true;
     unsigned ArgIndex = 0;
     unsigned ArgOffset = isa<CXXOperatorCallExpr>(CE);
     for (auto *Arg : CE->arguments()) {
@@ -327,13 +329,14 @@ public:
 
     std::optional<bool> IsUncountedPtr = isUnsafePtr(V->getType());
     if (IsUncountedPtr && *IsUncountedPtr) {
-      if (isPtrOriginSafe(V, Value))
+      if (isPtrOriginSafe(V, Value, DeclWithIssue))
         return;
       reportBug(V, Value, nullptr, DeclWithIssue);
     }
   }
 
-  bool isPtrOriginSafe(const VarDecl *V, const Expr *Value) const {
+  bool isPtrOriginSafe(const VarDecl *V, const Expr *Value,
+                       const Decl *DeclWithIssue) const {
     return tryToFindPtrOrigin(
         Value, /*StopAtFirstRefCountedObj=*/false,
         [&](const clang::CXXRecordDecl *Record) { return isSafePtr(Record); },
