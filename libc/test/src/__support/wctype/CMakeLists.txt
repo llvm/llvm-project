@@ -9,6 +9,7 @@ add_libc_test(
   COMPILE_OPTIONS
     $<$<CXX_COMPILER_ID:Clang>:-Xclang -fconstexpr-steps=10000000>
     $<$<CXX_COMPILER_ID:GNU>:-fconstexpr-ops-limit=10000000>
+    -DLIBC_ENABLE_CONSTEXPR=1
   DEPENDS
     libc.src.__support.wctype.lower_to_upper
     libc.src.__support.wctype.upper_to_lower

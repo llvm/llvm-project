@@ -32,10 +32,19 @@ TEST(LlvmLibcTowLower, SimpleTest) {
 
   // Boundary / Out-of-domain Tests (should return unchanged)
   EXPECT_EQ(LIBC_NAMESPACE::towlower(0xFFFF), static_cast<wint_t>(0xFFFF));
+#if WCHAR_MAX > 0xFFFF
   EXPECT_EQ(LIBC_NAMESPACE::towlower(0x110000), static_cast<wint_t>(0x110000));
+#endif
 
-  // Non-ASCII tests
-#if LIBC_CONF_WCTYPE_MODE == 1 // UTF8 Mode
+  // Non-ASCII Lowercase (Already lowercase: should remain unchanged
+  // unconditionally in BOTH modes)
+  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'α'), static_cast<wint_t>(L'α'));
+  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'а'), static_cast<wint_t>(L'а'));
+  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'é'), static_cast<wint_t>(L'é'));
+}
+
+#if LIBC_CONF_WCTYPE_MODE == LIBC_WCTYPE_MODE_UTF8
+TEST(LlvmLibcTowLower, NonAsciiTestUtf8) {
   // Greek conversions
   EXPECT_EQ(LIBC_NAMESPACE::towlower(L'Α'), static_cast<wint_t>(L'α')); // alpha
   EXPECT_EQ(LIBC_NAMESPACE::towlower(L'Ω'), static_cast<wint_t>(L'ω')); // omega
@@ -53,10 +62,24 @@ TEST(LlvmLibcTowLower, SimpleTest) {
   EXPECT_EQ(LIBC_NAMESPACE::towlower(L'\U00010400'),
             static_cast<wint_t>(L'\U00010428'));
 #endif
+}
+#endif
 
-  // Already lowercase / unchanged
-  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'α'), static_cast<wint_t>(L'α'));
-  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'а'), static_cast<wint_t>(L'а'));
-  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'é'), static_cast<wint_t>(L'é'));
+#if LIBC_CONF_WCTYPE_MODE == LIBC_WCTYPE_MODE_ASCII
+TEST(LlvmLibcTowLower, NonAsciiTestAscii) {
+  // Non-ASCII uppercase characters must return unchanged under ASCII-only mode
+  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'Α'), static_cast<wint_t>(L'Α'));
+  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'Ω'), static_cast<wint_t>(L'Ω'));
+
+  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'А'), static_cast<wint_t>(L'А'));
+  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'Я'), static_cast<wint_t>(L'Я'));
+
+  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'É'), static_cast<wint_t>(L'É'));
+  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'Ü'), static_cast<wint_t>(L'Ü'));
+
+#if WCHAR_MAX > 0xFFFF
+  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'\U00010400'),
+            static_cast<wint_t>(L'\U00010400'));
 #endif
 }
+#endif
