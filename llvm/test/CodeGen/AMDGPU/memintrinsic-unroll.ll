@@ -9,7 +9,7 @@
 
 ; memcpy for address spaces 0, 1, 4, 5
 
-define void @memcpy_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
+define void @memcpy_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0) align 1 readonly %src) #1 {
 ; CHECK-LABEL: memcpy_p0_p0_sz2048:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -85,7 +85,6 @@ define void @memcpy_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0)
 ; ALIGNED-LABEL: memcpy_p0_p0_sz2048:
 ; ALIGNED:       ; %bb.0: ; %entry
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; ALIGNED-NEXT:    s_mov_b64 s[4:5], 0
 ; ALIGNED-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
@@ -103,6 +102,7 @@ define void @memcpy_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0)
 ; ALIGNED-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v63, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v72, off, s[0:3], s32 ; 4-byte Folded Spill
+; ALIGNED-NEXT:    s_mov_b64 s[4:5], 0
 ; ALIGNED-NEXT:  .LBB0_1: ; %static-memcpy-expansion-main-body
 ; ALIGNED-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ALIGNED-NEXT:    v_add_co_u32 v4, vcc_lo, v2, s4
@@ -794,7 +794,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
+define void @memcpy_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align 1 readonly %src) #1 {
 ; CHECK-LABEL: memcpy_p1_p1_sz2048:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -865,7 +865,6 @@ define void @memcpy_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1)
 ; ALIGNED-LABEL: memcpy_p1_p1_sz2048:
 ; ALIGNED:       ; %bb.0: ; %entry
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; ALIGNED-NEXT:    s_mov_b64 s[4:5], 0
 ; ALIGNED-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
@@ -874,6 +873,7 @@ define void @memcpy_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1)
 ; ALIGNED-NEXT:    buffer_store_dword v45, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v47, off, s[0:3], s32 ; 4-byte Folded Spill
+; ALIGNED-NEXT:    s_mov_b64 s[4:5], 0
 ; ALIGNED-NEXT:  .LBB1_1: ; %static-memcpy-expansion-main-body
 ; ALIGNED-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ALIGNED-NEXT:    v_add_co_u32 v24, vcc_lo, v2, s4
@@ -1547,7 +1547,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
+define void @memcpy_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align 1 readonly %src) #1 {
 ; CHECK-LABEL: memcpy_p0_p4_sz2048:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2161,7 +2161,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
+define void @memcpy_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5) align 1 readonly %src) #1 {
 ; CHECK-LABEL: memcpy_p5_p5_sz2048:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2373,7 +2373,6 @@ define void @memcpy_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5)
 ; ALIGNED-LABEL: memcpy_p5_p5_sz2048:
 ; ALIGNED:       ; %bb.0: ; %entry
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; ALIGNED-NEXT:    s_mov_b64 s[4:5], 0
 ; ALIGNED-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
@@ -2422,6 +2421,7 @@ define void @memcpy_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5)
 ; ALIGNED-NEXT:    buffer_store_dword v125, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v126, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v127, off, s[0:3], s32 ; 4-byte Folded Spill
+; ALIGNED-NEXT:    s_mov_b64 s[4:5], 0
 ; ALIGNED-NEXT:  .LBB3_1: ; %static-memcpy-expansion-main-body
 ; ALIGNED-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ALIGNED-NEXT:    s_clause 0x34
@@ -3608,7 +3608,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
+define void @memcpy_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5) align 1 readonly %src) #1 {
 ; CHECK-LABEL: memcpy_p0_p5_sz2048:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5371,7 +5371,7 @@ entry:
 
 ; memmove for address spaces 0, 1, 4, 5
 
-define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
+define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0) align 1 readonly %src) #1 {
 ; CHECK-LABEL: memmove_p0_p0_sz2048:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6916,7 +6916,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
+define void @memmove_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align 1 readonly %src) #1 {
 ; CHECK-LABEL: memmove_p1_p1_sz2048:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8431,7 +8431,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
+define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align 1 readonly %src) #1 {
 ; CHECK-LABEL: memmove_p0_p4_sz2048:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9674,7 +9674,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
+define void @memmove_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5) align 1 readonly %src) #1 {
 ; CHECK-LABEL: memmove_p5_p5_sz2048:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12475,7 +12475,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
+define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5) align 1 readonly %src) #1 {
 ; CHECK-LABEL: memmove_p0_p5_sz2048:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12705,8 +12705,6 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-LABEL: memmove_p0_p5_sz2048:
 ; ALIGNED:       ; %bb.0: ; %entry
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; ALIGNED-NEXT:    v_mov_b32_e32 v69, v1
-; ALIGNED-NEXT:    v_mov_b32_e32 v68, v0
 ; ALIGNED-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
@@ -12755,6 +12753,8 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_store_dword v125, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v126, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v127, off, s[0:3], s32 ; 4-byte Folded Spill
+; ALIGNED-NEXT:    v_mov_b32_e32 v69, v1
+; ALIGNED-NEXT:    v_mov_b32_e32 v68, v0
 ; ALIGNED-NEXT:    s_mov_b32 s4, exec_lo
 ; ALIGNED-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[68:69]
 ; ALIGNED-NEXT:    v_cndmask_b32_e32 v3, -1, v68, vcc_lo
@@ -15939,7 +15939,7 @@ entry:
   ret void
 }
 
-define void @memset_p0_sz2048(ptr addrspace(0) %dst) {
+define void @memset_p0_sz2048(ptr addrspace(0) %dst) #1 {
 ; CHECK-LABEL: memset_p0_sz2048:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16370,7 +16370,7 @@ entry:
   ret void
 }
 
-define void @memset_p1_sz2048(ptr addrspace(1) %dst) {
+define void @memset_p1_sz2048(ptr addrspace(1) %dst) #1 {
 ; CHECK-LABEL: memset_p1_sz2048:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16794,7 +16794,7 @@ entry:
   ret void
 }
 
-define void @memset_p3_sz2048(ptr addrspace(3) %dst) {
+define void @memset_p3_sz2048(ptr addrspace(3) %dst) #1 {
 ; CHECK-LABEL: memset_p3_sz2048:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17153,7 +17153,7 @@ entry:
   ret void
 }
 
-define void @memset_p5_sz2048(ptr addrspace(5) %dst) {
+define void @memset_p5_sz2048(ptr addrspace(5) %dst) #1 {
 ; CHECK-LABEL: memset_p5_sz2048:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17569,5 +17569,6 @@ declare void @llvm.memset.p1.i64(ptr addrspace(1) nocapture writeonly, i8, i64, 
 declare void @llvm.memset.p3.i64(ptr addrspace(3) nocapture writeonly, i8, i64, i1 immarg) #3
 declare void @llvm.memset.p5.i64(ptr addrspace(5) nocapture writeonly, i8, i64, i1 immarg) #3
 
+attributes #1 = { nounwind }
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }

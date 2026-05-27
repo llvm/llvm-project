@@ -67,41 +67,65 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
   }
 
   bool VisitCXXConstructExpr(CXXConstructExpr *CE) override {
-    if (auto *Ctor = CE->getConstructor()) {
-      if (Ctor->isMoveConstructor() && CE->getNumArgs() == 1) {
-        auto *Arg = CE->getArg(0)->IgnoreParenCasts();
-        if (auto *VarRef = dyn_cast<DeclRefExpr>(Arg)) {
-          if (VarRef->getDecl() == Guardian)
-            return false;
-        }
+    auto *Ctor = CE->getConstructor();
+    if (!Ctor)
+      return false;
+    unsigned ArgIndex = 0;
+    for (auto *Arg : CE->arguments()) {
+      ParmVarDecl *Parm = nullptr;
+      if (ArgIndex < Ctor->getNumParams())
+        Parm = Ctor->getParamDecl(ArgIndex);
+      if (mutatesGuardian(Arg, Parm))
+        return false;
+      ArgIndex++;
+    }
+    return true;
+  }
+
+  bool VisitCallExpr(CallExpr *CE) override {
+    auto *Callee = CE->getDirectCallee();
+    if (!Callee)
+      return false;
+    unsigned ArgIndex = 0;
+    unsigned ArgOffset = isa<CXXOperatorCallExpr>(CE);
+    for (auto *Arg : CE->arguments()) {
+      ParmVarDecl *Parm = nullptr;
+      if (ArgIndex >= ArgOffset) {
+        unsigned ParmIndex = ArgIndex - ArgOffset;
+        if (ParmIndex < Callee->getNumParams())
+          Parm = Callee->getParamDecl(ParmIndex);
       }
+      if (mutatesGuardian(Arg, Parm))
+        return false;
+      ArgIndex++;
     }
     return true;
   }
 
   bool VisitCXXMemberCallExpr(CXXMemberCallExpr *MCE) override {
-    auto MethodName = safeGetName(MCE->getMethodDecl());
-    if (MethodName == "swap" || MethodName == "leakRef" ||
-        MethodName == "releaseNonNull" || MethodName == "clear") {
-      auto *ThisArg = MCE->getImplicitObjectArgument()->IgnoreParenCasts();
-      if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
-        if (VarRef->getDecl() == Guardian)
-          return false;
-      }
+    auto *Method = MCE->getMethodDecl();
+    auto ObjType = MCE->getObjectType();
+    if (ObjType.isConstQualified())
+      return true;
+    auto *ThisArg = MCE->getImplicitObjectArgument()->IgnoreParenCasts();
+    if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
+      if (!isa<CXXConversionDecl>(Method) && VarRef->getDecl() == Guardian)
+        return false;
     }
     return true;
   }
 
-  bool VisitCXXOperatorCallExpr(CXXOperatorCallExpr *OCE) override {
-    if (OCE->isAssignmentOp()) {
-      assert(OCE->getNumArgs() == 2);
-      auto *ThisArg = OCE->getArg(0)->IgnoreParenCasts();
-      if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
-        if (VarRef->getDecl() == Guardian)
-          return false;
+private:
+  bool mutatesGuardian(const Expr *Arg, const ParmVarDecl *ParmDecl) {
+    Arg = Arg->IgnoreParenCasts();
+    if (auto *VarRef = dyn_cast<DeclRefExpr>(Arg)) {
+      if (VarRef->getDecl() == Guardian) {
+        auto ArgType = ParmDecl ? ParmDecl->getType() : Arg->getType();
+        if (!ArgType.isConstQualified())
+          return true;
       }
     }
-    return true;
+    return false;
   }
 };
 
@@ -289,76 +313,89 @@ public:
     if (shouldSkipVarDecl(V))
       return;
 
+    if (auto *DD = dyn_cast<DecompositionDecl>(V)) {
+      for (auto *BD : DD->bindings()) {
+        auto *Binding = BD->getBinding();
+        if (!Binding)
+          continue;
+        std::optional<bool> IsUncountedPtr = isUnsafePtr(Binding->getType());
+        if (!IsUncountedPtr || !*IsUncountedPtr)
+          continue;
+        reportBug(V, nullptr, BD, DeclWithIssue);
+      }
+    }
+
     std::optional<bool> IsUncountedPtr = isUnsafePtr(V->getType());
     if (IsUncountedPtr && *IsUncountedPtr) {
-      if (tryToFindPtrOrigin(
-              Value, /*StopAtFirstRefCountedObj=*/false,
-              [&](const clang::CXXRecordDecl *Record) {
-                return isSafePtr(Record);
-              },
-              [&](const clang::QualType Type) { return isSafePtrType(Type); },
-              [&](const clang::Decl *D) { return isSafeDecl(D); },
-              [&](const clang::Expr *InitArgOrigin, bool IsSafe) {
-                if (!InitArgOrigin || IsSafe)
-                  return true;
-
-                if (isa<CXXThisExpr>(InitArgOrigin))
-                  return true;
-
-                if (isNullPtr(InitArgOrigin))
-                  return true;
-
-                if (isa<IntegerLiteral>(InitArgOrigin))
-                  return true;
-
-                if (isConstOwnerPtrMemberExpr(InitArgOrigin))
-                  return true;
-
-                if (EFA.isACallToEnsureFn(InitArgOrigin))
-                  return true;
-
-                if (isSafeExpr(InitArgOrigin))
-                  return true;
-
-                if (auto *Ref = llvm::dyn_cast<DeclRefExpr>(InitArgOrigin)) {
-                  if (auto *MaybeGuardian =
-                          dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
-                    const auto *MaybeGuardianArgType =
-                        MaybeGuardian->getType().getTypePtr();
-                    if (MaybeGuardianArgType) {
-                      const CXXRecordDecl *const MaybeGuardianArgCXXRecord =
-                          MaybeGuardianArgType->getAsCXXRecordDecl();
-                      if (MaybeGuardianArgCXXRecord) {
-                        if (MaybeGuardian->isLocalVarDecl() &&
-                            (isSafePtr(MaybeGuardianArgCXXRecord) ||
-                             isRefcountedStringsHack(MaybeGuardian)) &&
-                            isGuardedScopeEmbeddedInGuardianScope(
-                                V, MaybeGuardian))
-                          return true;
-                      }
-                    }
-
-                    if (isa<ParmVarDecl>(MaybeGuardian)) {
-                      if (auto *FD = dyn_cast<FunctionDecl>(DeclWithIssue)) {
-                        GuardianVisitor guardianVisitor(MaybeGuardian);
-                        if (guardianVisitor.TraverseStmt(FD->getBody()))
-                          return true;
-                      }
-                      if (auto *MD = dyn_cast<ObjCMethodDecl>(DeclWithIssue)) {
-                        GuardianVisitor guardianVisitor(MaybeGuardian);
-                        if (guardianVisitor.TraverseStmt(MD->getBody()))
-                          return true;
-                      }
-                    }
-                  }
-                }
-
-                return false;
-              }))
+      if (isPtrOriginSafe(V, Value))
         return;
-
-      reportBug(V, Value, DeclWithIssue);
+      reportBug(V, Value, nullptr, DeclWithIssue);
     }
+  }
+
+  bool isPtrOriginSafe(const VarDecl *V, const Expr *Value) const {
+    return tryToFindPtrOrigin(
+        Value, /*StopAtFirstRefCountedObj=*/false,
+        [&](const clang::CXXRecordDecl *Record) { return isSafePtr(Record); },
+        [&](const clang::QualType Type) { return isSafePtrType(Type); },
+        [&](const clang::Decl *D) { return isSafeDecl(D); },
+        [&](const clang::Expr *InitArgOrigin, bool IsSafe) {
+          if (!InitArgOrigin || IsSafe)
+            return true;
+
+          if (isa<CXXThisExpr>(InitArgOrigin))
+            return true;
+
+          if (isNullPtr(InitArgOrigin))
+            return true;
+
+          if (isa<IntegerLiteral>(InitArgOrigin))
+            return true;
+
+          if (isConstOwnerPtrMemberExpr(InitArgOrigin))
+            return true;
+
+          if (EFA.isACallToEnsureFn(InitArgOrigin))
+            return true;
+
+          if (isSafeExpr(InitArgOrigin))
+            return true;
+
+          if (auto *Ref = llvm::dyn_cast<DeclRefExpr>(InitArgOrigin)) {
+            if (auto *MaybeGuardian =
+                    dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
+              const auto *MaybeGuardianArgType =
+                  MaybeGuardian->getType().getTypePtr();
+              if (MaybeGuardianArgType) {
+                const CXXRecordDecl *const MaybeGuardianArgCXXRecord =
+                    MaybeGuardianArgType->getAsCXXRecordDecl();
+                if (MaybeGuardianArgCXXRecord) {
+                  if (MaybeGuardian->isLocalVarDecl() &&
+                      (isSafePtr(MaybeGuardianArgCXXRecord) ||
+                       isRefcountedStringsHack(MaybeGuardian)) &&
+                      isGuardedScopeEmbeddedInGuardianScope(
+                          V, MaybeGuardian))
+                    return true;
+                }
+              }
+
+              if (isa<ParmVarDecl>(MaybeGuardian)) {
+                if (auto *FD = dyn_cast<FunctionDecl>(DeclWithIssue)) {
+                  GuardianVisitor guardianVisitor(MaybeGuardian);
+                  if (guardianVisitor.TraverseStmt(FD->getBody()))
+                    return true;
+                }
+                if (auto *MD = dyn_cast<ObjCMethodDecl>(DeclWithIssue)) {
+                  GuardianVisitor guardianVisitor(MaybeGuardian);
+                  if (guardianVisitor.TraverseStmt(MD->getBody()))
+                    return true;
+                }
+              }
+            }
+          }
+
+          return false;
+        });
   }
 
   bool shouldSkipVarDecl(const VarDecl *V) const {
@@ -368,7 +405,7 @@ public:
     return BR->getSourceManager().isInSystemHeader(V->getLocation());
   }
 
-  void reportBug(const VarDecl *V, const Expr *Value,
+  void reportBug(const VarDecl *V, const Expr *Value, const Decl *BindingDecl,
                  const Decl *DeclWithIssue) const {
     assert(V);
     SmallString<100> Buf;
@@ -392,7 +429,10 @@ public:
         Os << "Global variable ";
       else
         Os << "Variable ";
-      printQuotedQualifiedName(Os, V);
+      if (BindingDecl)
+        Os << "'" << safeGetName(BindingDecl) << "'";
+      else
+        printQuotedQualifiedName(Os, V);
       Os << " is " << ptrKind() << " and unsafe.";
 
       PathDiagnosticLocation BSLoc(V->getLocation(), BR->getSourceManager());

@@ -2602,7 +2602,7 @@ def select_initialized_entity_kind : TextSubstitution<
   "returning object|initializing statement expression result|"
   "throwing object|copying member subobject|copying array element|"
   "allocating object|copying temporary|initializing base subobject|"
-  "initializing vector element|capturing value}0">;
+  "initializing vector element|capturing value|||||||||initializing binding}0">;
 
 def err_temp_copy_no_viable : Error<
   "no viable constructor %sub{select_initialized_entity_kind}0 of type %1">;
@@ -6899,9 +6899,6 @@ def note_goto_ms_asm_label : Note<
 def warn_unused_label : Warning<"unused label %0">,
   InGroup<UnusedLabel>, DefaultIgnore;
 
-def err_continue_from_cond_var_init : Error<
-  "cannot jump from this continue statement to the loop increment; "
-  "jump bypasses initialization of loop condition variable">;
 def err_goto_into_protected_scope : Error<
   "cannot jump from this goto statement to its label">;
 def ext_goto_into_protected_scope : ExtWarn<
@@ -9681,6 +9678,11 @@ def warn_atomic_stripped_in_enum : Warning<
   "'_Atomic' qualifier ignored; operations involving the enumeration type will "
   "be non-atomic">,
   InGroup<DiagGroup<"underlying-atomic-qualifier-ignored">>, DefaultError;
+def err_clear_padding_needs_trivial_copy : Error<
+  "argument to __builtin_clear_padding must be a pointer to a "
+  "trivially-copyable type (%0 invalid)">;
+def err_clear_padding_no_flexible_array : Error<
+  "%0 has flexible array member, which is unsupported by __builtin_clear_padding">;
 
 def err_overflow_builtin_must_be_int : Error<
   "operand argument to %select{overflow builtin|checked integer operation}0 "
@@ -10072,6 +10074,9 @@ let CategoryName = "Inline Assembly Issue" in {
     "invalid lvalue in asm input for constraint '%0'">;
   def err_asm_invalid_input_constraint : Error<
     "invalid input constraint '%0' in asm">;
+  def err_asm_constraint_embedded_null : Error<
+    "%select{output constraint|input constraint|clobber}0 contains "
+    "an embedded null character">;
   def err_asm_tying_incompatible_types : Error<
     "unsupported inline asm: input with type "
     "%diff{$ matching output with type $|}0,1">;
@@ -10970,16 +10975,15 @@ def warn_lifetime_safety_use_after_free : Warning<
     "%select{allocated object|parameter}0 does not live long enough">,
     InGroup<LifetimeSafetyUseAfterFree>, DefaultIgnore;
 
-def warn_lifetime_safety_return_stack_addr
-    : Warning<"address of stack memory is returned later">,
-      InGroup<LifetimeSafetyReturnStackAddr>,
-      DefaultIgnore;
-def warn_lifetime_safety_return_stack_addr_moved
-    : Warning<"address of stack memory may be returned later. "
-      "This could be false positive as the storage may have been moved. "
-      "Consider moving first and then aliasing later to resolve the issue">,
-      InGroup<LifetimeSafetyReturnStackAddrMoved>,
-      DefaultIgnore;
+def warn_lifetime_safety_return_stack_addr : Warning<
+  "stack memory associated with %0 is returned">,
+  InGroup<LifetimeSafetyReturnStackAddr>, DefaultIgnore;
+
+def warn_lifetime_safety_return_stack_addr_moved : Warning<
+  "stack memory associated with %0 may be returned later. "
+  "This could be a false positive as the storage may have been moved. "
+  "Consider moving first and then aliasing later to resolve the issue">,
+  InGroup<LifetimeSafetyReturnStackAddrMoved>, DefaultIgnore;
 
 def warn_lifetime_safety_invalidation
     : Warning<"%select{object whose reference is captured|parameter}0 is later invalidated">,
@@ -11204,9 +11208,6 @@ def err_break_continue_label_not_found : Error<
   "%select{loop or 'switch'|loop}0">;
 def err_continue_switch : Error<
   "label of 'continue' refers to a switch statement">;
-def warn_loop_ctrl_binds_to_inner : Warning<
-  "'%0' is bound to current loop, GCC binds it to the enclosing loop">,
-  InGroup<GccCompat>;
 def err_omp_bind_required_on_loop : Error<
   "expected 'bind' clause for 'loop' construct without an enclosing OpenMP "
   "construct">;
@@ -11214,9 +11215,6 @@ def err_omp_loop_reduction_clause : Error<
   "'reduction' clause not allowed with '#pragma omp loop bind(teams)'">;
 def err_omp_split_counts_not_one_omp_fill : Error<
   "exactly one 'omp_fill' must appear in the 'counts' clause">;
-def warn_break_binds_to_switch : Warning<
-  "'break' is bound to loop, GCC binds it to switch">,
-  InGroup<GccCompat>;
 def err_default_not_in_switch : Error<
   "'default' statement not in switch statement">;
 def err_case_not_in_switch : Error<"'case' statement not in switch statement">;
@@ -13293,8 +13291,6 @@ def err_memtag_any2arg_pointer : Error<
   "at least one argument of MTE builtin function must be a pointer (%0, %1 invalid)">;
 def err_memtag_arg_must_be_pointer : Error<
   "%0 argument of MTE builtin function must be a pointer (%1 invalid)">;
-def err_memtag_arg_must_be_integer : Error<
-  "%0 argument of MTE builtin function must be an integer type (%1 invalid)">;
 
 def warn_dereference_of_noderef_type : Warning<
   "dereferencing %0; was declared with a 'noderef' type">, InGroup<NoDeref>;
@@ -13999,7 +13995,8 @@ def err_acc_reduction_type
             "value, or array of scalars, or composite of "
             "scalars}|%MemberNotScalar{not a scalar value}|%NotAgg{not an "
             "aggregate}|%NotComplete{not a complete type}|%NotClassStruct{not "
-            "a class or struct}}1">;
+            "a class or struct}|%NotConstantArray{not an array with constant "
+            "length}}1">;
 def note_acc_reduction_array
     : Note<"used as element type of "
            "%enum_select<OACCReductionArray>{%Section{sub-array"

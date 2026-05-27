@@ -79,24 +79,29 @@ TEST_P(olLaunchKernelFooTest, Success) {
 
 TEST_P(olLaunchKernelFooTest, SuccessThreaded) {
   threadify([&](size_t) {
-    void *Mem;
-    ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
-                              LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
+    void *DevAlloc, *HstAlloc;
+    size_t Size = LaunchArgs.GroupSize.x * sizeof(uint32_t);
+    ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &DevAlloc));
+    ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_HOST, Size, &HstAlloc));
+
     struct {
       void *Mem;
-    } Args{Mem};
+    } Args{DevAlloc};
 
     ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
                                   &LaunchArgs, nullptr));
 
+    ASSERT_SUCCESS(olMemcpy(Queue, HstAlloc, Host, DevAlloc, Device, Size));
+
     ASSERT_SUCCESS(olSyncQueue(Queue));
 
-    uint32_t *Data = (uint32_t *)Mem;
-    for (uint32_t i = 0; i < 64; i++) {
+    uint32_t *Data = static_cast<uint32_t *>(HstAlloc);
+    for (uint32_t i = 0; i < LaunchArgs.GroupSize.x; i++) {
       ASSERT_EQ(Data[i], i);
     }
 
-    ASSERT_SUCCESS(olMemFree(Mem));
+    ASSERT_SUCCESS(olMemFree(DevAlloc));
+    ASSERT_SUCCESS(olMemFree(HstAlloc));
   });
 }
 
@@ -248,7 +253,7 @@ TEST_P(olLaunchKernelSingleCounterSyncEventTest, SuccessSyncEvent) {
   ASSERT_SUCCESS(olMemcpy(Queue, &FinalResVal, Host, ResNum, Device, Size));
 
   ol_event_handle_t Event = nullptr;
-  ASSERT_SUCCESS(olCreateEvent(Queue, &Event));
+  ASSERT_SUCCESS(olCreateEvent(Queue, OL_EVENT_FLAGS_NONE, &Event));
   ASSERT_SUCCESS(olSyncEvent(Event));
 
   ASSERT_EQ(FinalResVal, NumberToAdd * LoopRange);
@@ -298,7 +303,7 @@ TEST_P(olLaunchKernelSingleCounterSyncEventTest, SuccessTwoQueues) {
                                 &LaunchArgs, nullptr));
 
   ol_event_handle_t Event = nullptr;
-  ASSERT_SUCCESS(olCreateEvent(Queue, &Event));
+  ASSERT_SUCCESS(olCreateEvent(Queue, OL_EVENT_FLAGS_NONE, &Event));
   ASSERT_SUCCESS(olWaitEvents(Queue2, &Event, 1));
   ArgsSingleCounter Args2{LoopRange, NumberToAdd, (uint32_t *)ResNum1,
                           (uint32_t *)ResNum2};

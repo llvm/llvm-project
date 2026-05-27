@@ -128,16 +128,22 @@ static bool isReferenceOrPointerLikeType(QualType QT) {
   return QT->isReferenceType() || isPointerLikeType(QT);
 }
 
-bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
+bool shouldTrackImplicitObjectArg(const Expr &ImplicitObjectArgument,
+                                  const CXXMethodDecl *Callee,
                                   bool RunningUnderLifetimeSafety) {
   if (!Callee)
     return false;
+  // Check both the declaring class and the call-site object: a gsl::Owner
+  // may inherit its accessors from a non-Owner base (e.g. libc++ optional).
+  const bool IsGslOwnerImplicitObject =
+      isGslOwnerType(Callee->getFunctionObjectParameterType()) ||
+      (RunningUnderLifetimeSafety &&
+       isGslOwnerType(ImplicitObjectArgument.getBestDynamicClassType()));
   if (auto *Conv = dyn_cast<CXXConversionDecl>(Callee))
-    if (isGslPointerType(Conv->getConversionType()) &&
-        Callee->getParent()->hasAttr<OwnerAttr>())
+    if (isGslPointerType(Conv->getConversionType()) && IsGslOwnerImplicitObject)
       return true;
   if (!isGslPointerType(Callee->getFunctionObjectParameterType()) &&
-      !isGslOwnerType(Callee->getFunctionObjectParameterType()))
+      !IsGslOwnerImplicitObject)
     return false;
 
   // Begin and end iterators.
@@ -181,7 +187,7 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
     if (!Callee->getIdentifier())
       // e.g., std::optional<T>::operator->() returns T*.
       return RunningUnderLifetimeSafety
-                 ? Callee->getParent()->hasAttr<OwnerAttr>() &&
+                 ? IsGslOwnerImplicitObject &&
                        Callee->getOverloadedOperator() ==
                            OverloadedOperatorKind::OO_Arrow
                  : false;
@@ -192,7 +198,7 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
   if (Callee->getReturnType()->isReferenceType()) {
     if (!Callee->getIdentifier()) {
       auto OO = Callee->getOverloadedOperator();
-      if (!Callee->getParent()->hasAttr<OwnerAttr>())
+      if (!IsGslOwnerImplicitObject)
         return false;
       return OO == OverloadedOperatorKind::OO_Subscript ||
              OO == OverloadedOperatorKind::OO_Star;
@@ -272,8 +278,7 @@ bool shouldTrackSecondArgument(const FunctionDecl *FD) {
          !isa<CXXMethodDecl>(FD);
 }
 
-template <typename T> static bool isRecordWithAttr(QualType Type) {
-  auto *RD = Type->getAsCXXRecordDecl();
+template <typename T> static bool isRecordWithAttr(const CXXRecordDecl *RD) {
   if (!RD)
     return false;
   // Generally, if a primary template class declaration is annotated with an
@@ -299,8 +304,15 @@ template <typename T> static bool isRecordWithAttr(QualType Type) {
   return Result;
 }
 
+template <typename T> static bool isRecordWithAttr(QualType Type) {
+  return isRecordWithAttr<T>(Type->getAsCXXRecordDecl());
+}
+
 bool isGslPointerType(QualType QT) { return isRecordWithAttr<PointerAttr>(QT); }
 bool isGslOwnerType(QualType QT) { return isRecordWithAttr<OwnerAttr>(QT); }
+bool isGslOwnerType(const CXXRecordDecl *RD) {
+  return isRecordWithAttr<OwnerAttr>(RD);
+}
 
 static StringRef getName(const CXXRecordDecl &RD) {
   if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(&RD))

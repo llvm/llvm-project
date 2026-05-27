@@ -44,14 +44,19 @@ entry:
 }
 
 define bfloat @fabs_bf16(bfloat %a) {
-; CHECK-LABEL: fabs_bf16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w8, w8, #0x7fff
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
-; CHECK-NEXT:    ret
+; CHECK-NOFP16-LABEL: fabs_bf16:
+; CHECK-NOFP16:       // %bb.0: // %entry
+; CHECK-NOFP16-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-NOFP16-NEXT:    fmov w8, s0
+; CHECK-NOFP16-NEXT:    and w8, w8, #0x7fff
+; CHECK-NOFP16-NEXT:    fmov s0, w8
+; CHECK-NOFP16-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NOFP16-NEXT:    ret
+;
+; CHECK-FP16-LABEL: fabs_bf16:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    fabs h0, h0
+; CHECK-FP16-NEXT:    ret
 entry:
   %c = call bfloat @llvm.fabs.f16(bfloat %a)
   ret bfloat %c
@@ -260,41 +265,87 @@ entry:
 }
 
 define <7 x bfloat> @fabs_v7bf16(<7 x bfloat> %a) {
-; CHECK-LABEL: fabs_v7bf16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    bic v0.8h, #128, lsl #8
-; CHECK-NEXT:    ret
+; CHECK-NOFP16-SD-LABEL: fabs_v7bf16:
+; CHECK-NOFP16-SD:       // %bb.0: // %entry
+; CHECK-NOFP16-SD-NEXT:    bic v0.8h, #128, lsl #8
+; CHECK-NOFP16-SD-NEXT:    ret
+;
+; CHECK-FP16-LABEL: fabs_v7bf16:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    fabs v0.8h, v0.8h
+; CHECK-FP16-NEXT:    ret
+;
+; CHECK-NOFP16-GI-LABEL: fabs_v7bf16:
+; CHECK-NOFP16-GI:       // %bb.0: // %entry
+; CHECK-NOFP16-GI-NEXT:    mvni v1.8h, #128, lsl #8
+; CHECK-NOFP16-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NOFP16-GI-NEXT:    ret
 entry:
   %c = call <7 x bfloat> @llvm.fabs.v7bf16(<7 x bfloat> %a)
   ret <7 x bfloat> %c
 }
 
 define <4 x bfloat> @fabs_v4bf16(<4 x bfloat> %a) {
-; CHECK-LABEL: fabs_v4bf16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    bic v0.4h, #128, lsl #8
-; CHECK-NEXT:    ret
+; CHECK-NOFP16-SD-LABEL: fabs_v4bf16:
+; CHECK-NOFP16-SD:       // %bb.0: // %entry
+; CHECK-NOFP16-SD-NEXT:    bic v0.4h, #128, lsl #8
+; CHECK-NOFP16-SD-NEXT:    ret
+;
+; CHECK-FP16-LABEL: fabs_v4bf16:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    fabs v0.4h, v0.4h
+; CHECK-FP16-NEXT:    ret
+;
+; CHECK-NOFP16-GI-LABEL: fabs_v4bf16:
+; CHECK-NOFP16-GI:       // %bb.0: // %entry
+; CHECK-NOFP16-GI-NEXT:    mvni v1.4h, #128, lsl #8
+; CHECK-NOFP16-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NOFP16-GI-NEXT:    ret
 entry:
   %c = call <4 x bfloat> @llvm.fabs.v4bf16(<4 x bfloat> %a)
   ret <4 x bfloat> %c
 }
 
 define <8 x bfloat> @fabs_v8bf16(<8 x bfloat> %a) {
-; CHECK-LABEL: fabs_v8bf16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    bic v0.8h, #128, lsl #8
-; CHECK-NEXT:    ret
+; CHECK-NOFP16-SD-LABEL: fabs_v8bf16:
+; CHECK-NOFP16-SD:       // %bb.0: // %entry
+; CHECK-NOFP16-SD-NEXT:    bic v0.8h, #128, lsl #8
+; CHECK-NOFP16-SD-NEXT:    ret
+;
+; CHECK-FP16-LABEL: fabs_v8bf16:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    fabs v0.8h, v0.8h
+; CHECK-FP16-NEXT:    ret
+;
+; CHECK-NOFP16-GI-LABEL: fabs_v8bf16:
+; CHECK-NOFP16-GI:       // %bb.0: // %entry
+; CHECK-NOFP16-GI-NEXT:    mvni v1.8h, #128, lsl #8
+; CHECK-NOFP16-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NOFP16-GI-NEXT:    ret
 entry:
   %c = call <8 x bfloat> @llvm.fabs.v8bf16(<8 x bfloat> %a)
   ret <8 x bfloat> %c
 }
 
 define <16 x bfloat> @fabs_v16bf16(<16 x bfloat> %a) {
-; CHECK-LABEL: fabs_v16bf16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    bic v0.8h, #128, lsl #8
-; CHECK-NEXT:    bic v1.8h, #128, lsl #8
-; CHECK-NEXT:    ret
+; CHECK-NOFP16-SD-LABEL: fabs_v16bf16:
+; CHECK-NOFP16-SD:       // %bb.0: // %entry
+; CHECK-NOFP16-SD-NEXT:    bic v0.8h, #128, lsl #8
+; CHECK-NOFP16-SD-NEXT:    bic v1.8h, #128, lsl #8
+; CHECK-NOFP16-SD-NEXT:    ret
+;
+; CHECK-FP16-LABEL: fabs_v16bf16:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    fabs v0.8h, v0.8h
+; CHECK-FP16-NEXT:    fabs v1.8h, v1.8h
+; CHECK-FP16-NEXT:    ret
+;
+; CHECK-NOFP16-GI-LABEL: fabs_v16bf16:
+; CHECK-NOFP16-GI:       // %bb.0: // %entry
+; CHECK-NOFP16-GI-NEXT:    mvni v2.8h, #128, lsl #8
+; CHECK-NOFP16-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NOFP16-GI-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NOFP16-GI-NEXT:    ret
 entry:
   %c = call <16 x bfloat> @llvm.fabs.v16bf16(<16 x bfloat> %a)
   ret <16 x bfloat> %c

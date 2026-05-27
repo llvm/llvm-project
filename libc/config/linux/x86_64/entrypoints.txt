@@ -327,6 +327,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # TODO: These functions are not compatible with 64-bit musl. They need to
     # be excluded if overlaying musl.
     libc.src.sys.socket.recvmsg
+    libc.src.sys.socket.sendmmsg
     libc.src.sys.socket.sendmsg
 
     # sys/stat.h entrypoints
@@ -378,6 +379,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.termios.tcsetattr
 
     # unistd.h entrypoints
+    libc.src.unistd.alarm
     libc.src.unistd.access
     libc.src.unistd.chdir
     libc.src.unistd.chown
@@ -847,6 +849,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.hypotf16
     libc.src.math.ilogbf16
     libc.src.math.iscanonicalf16
+    libc.src.math.isnanf16
     libc.src.math.issignalingf16
     libc.src.math.ldexpf16
     libc.src.math.llogbf16
@@ -1349,12 +1352,14 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.setenv
     libc.src.stdlib.mbstowcs
     libc.src.stdlib.mbtowc
+    libc.src.stdlib.mblen
     libc.src.stdlib.quick_exit
     libc.src.stdlib.wcstombs
     libc.src.stdlib.wctomb
 
     # signal.h entrypoints
     libc.src.signal.kill
+    libc.src.signal.pthread_sigmask
     libc.src.signal.raise
     libc.src.signal.sigaction
     libc.src.signal.sigaddset
@@ -1462,7 +1467,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.select.select
 
     # wchar.h entrypoints
-    libc.src.wchar.mblen
     libc.src.wchar.mbrlen
     libc.src.wchar.mbsinit
     libc.src.wchar.mbrtowc

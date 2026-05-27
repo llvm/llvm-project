@@ -503,11 +503,10 @@ let Predicates = [MMA, IsNotISAFuture] in {
               IIC_VecGeneral,
               [(set v512i1:$AT, (int_ppc_mma_xxmtacc v512i1:$ATi))]>,
               RegConstraint<"$ATi = $AT">;
-  def KILL_PAIR : PPCPostRAExpPseudo<(outs vsrprc:$XTp), (ins vsrprc:$XSp),
-                                      "#KILL_PAIR", []>,
+  def KILL_PAIR : PPCPostRAExpPseudo<(outs vsrprc:$XTp), (ins vsrprc:$XSp)>,
                                       RegConstraint<"$XTp = $XSp">;
-  def BUILD_UACC : PPCPostRAExpPseudo<(outs acc:$AT), (ins uacc:$AS),
-                                      "#BUILD_UACC $AT, $AS", []>;
+  def BUILD_UACC : PPCPostRAExpPseudo<(outs acc:$AT), (ins uacc:$AS), [],
+                                      "#BUILD_UACC $AT, $AS">;
   // We define XXSETACCZ as rematerializable to undo CSE of that intrinsic in
   // the backend. We avoid CSE here because it generates a copy of the acc
   // register and this copy is more expensive than calling the intrinsic again.
