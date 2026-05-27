@@ -1891,6 +1891,9 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
     if (isa<UndefValue>(C) && !V->getType()->isAggregateType())
       return isa<PoisonValue>(C) ? DAG.getPOISON(VT) : DAG.getUNDEF(VT);
 
+    if (isa<ConstantTokenNone>(C))
+      return DAG.getUNDEF(VT);
+
     if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(C)) {
       visit(CE->getOpcode(), *CE);
       SDValue N1 = NodeMap[V];

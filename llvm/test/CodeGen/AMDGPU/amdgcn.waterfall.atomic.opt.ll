@@ -61,7 +61,7 @@ bb:
   %load = load <2 x i32>, ptr addrspace(1) %getelementptr, align 8
   %extractelement = extractelement <2 x i32> %load, i32 0
   %extractelement3 = extractelement <2 x i32> %load, i32 1
-  %call = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %extractelement3)
+  %call = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %extractelement3)
   %call4 = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %call, i32 %extractelement3)
   %sext = sext i32 %call4 to i64
   %getelementptr5 = getelementptr i8, ptr addrspace(4) %arg2, i64 %sext
@@ -175,7 +175,7 @@ bb:
   %getelementptr5 = getelementptr i8, ptr addrspace(4) %arg2, i64 %sext
   %load6 = load <4 x i32>, ptr addrspace(4) %getelementptr5, align 4
   %call = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 1, <4 x i32> %load6, i32 0, i32 0, i32 0, i32 0)
-  %call7 = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %extractelement4)
+  %call7 = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %extractelement4)
   %call8 = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %call7, i32 %extractelement4)
   %sext9 = sext i32 %call8 to i64
   %getelementptr10 = getelementptr i8, ptr addrspace(4) %arg2, i64 %sext9
@@ -283,7 +283,7 @@ bb:
   %load = load <2 x i32>, ptr addrspace(1) %getelementptr, align 8
   %extractelement = extractelement <2 x i32> %load, i32 0
   %extractelement4 = extractelement <2 x i32> %load, i32 1
-  %call7 = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %extractelement4)
+  %call7 = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %extractelement4)
   %call8 = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %call7, i32 %extractelement4)
   %sext9 = sext i32 %call8 to i64
   %getelementptr10 = getelementptr i8, ptr addrspace(4) %arg2, i64 %sext9
@@ -377,7 +377,7 @@ bb:
   %load = load <2 x i32>, ptr addrspace(1) %getelementptr, align 8
   %extractelement = extractelement <2 x i32> %load, i32 0
   %extractelement4 = extractelement <2 x i32> %load, i32 1
-  %token = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %extractelement)
+  %token = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %extractelement)
   %sext = sext i32 %arg3 to i64
   %getelementptr5 = getelementptr i8, ptr addrspace(4) %arg2, i64 %sext
   %load6 = load <4 x i32>, ptr addrspace(4) %getelementptr5, align 4
@@ -520,7 +520,7 @@ bb:
   %idx1 = extractelement <3 x i32> %load, i32 0
   %idx2 = extractelement <3 x i32> %load, i32 1
   %idx3 = extractelement <3 x i32> %load, i32 2
-  %tok1 = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %idx1)
+  %tok1 = call token @llvm.amdgcn.waterfall.begin.i32(token none, i32 %idx1)
   %tok2 = call token @llvm.amdgcn.waterfall.begin.i32(token %tok1, i32 %idx2)
   %tok3 = call token @llvm.amdgcn.waterfall.begin.i32(token %tok2, i32 %idx3)
   %rfl = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %tok3, i32 %idx3)
