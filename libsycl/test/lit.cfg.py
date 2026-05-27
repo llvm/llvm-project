@@ -205,7 +205,7 @@ try:
     import psutil
 
     # Set timeout for a single test
-    config.maxIndividualTestTime = 600
+    lit_config.maxIndividualTestTime = 600
 
 except ImportError:
     pass
