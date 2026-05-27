@@ -807,7 +807,7 @@ static bool isSavedLocal(const fir::AliasAnalysis::Source &src) {
 }
 
 bool AliasAnalysis::mayBeCapturedBefore(mlir::Operation *declareOp,
-                                       mlir::Operation *op) {
+                                        mlir::Operation *op) {
   if (!declareOp || !op)
     return true;
   auto funcOp = op->getParentOfType<mlir::FunctionOpInterface>();
@@ -832,11 +832,32 @@ bool AliasAnalysis::mayBeCapturedBefore(mlir::Operation *declareOp,
       if (userOp->getBlock() == callAnchor->getBlock() &&
           callAnchor->isBeforeInBlock(userOp))
         continue;
-      if (mlir::isa<fir::DeclareOp, hlfir::DeclareOp, hlfir::DesignateOp,
-                    fir::ArrayCoorOp, fir::CoordinateOp>(userOp)) {
-        for (mlir::Value r : userOp->getResults())
+      // OpenACC / OpenMP data-clause ops only describe device staging of the
+      // host variable; they do not bind the host address into Fortran-visible
+      // pointer state.  Check before the generic view-propagation path because
+      // some acc data-clause ops also implement FortranObjectViewOpInterface
+      // (their device-pointer result is not a host address-aliasing view).
+      if (mlir::isa<ACC_DATA_CLAUSE_OPS, mlir::acc::ReductionInitOp,
+                    mlir::omp::MapInfoOp>(userOp))
+        continue;
+      // Address-aliasing view ops (declare, designate, coordinate_of,
+      // array_coor, embox, rebox, box_addr, convert, volatile_cast) implement
+      // fir::FortranObjectViewOpInterface, which is the same abstraction
+      // getSource() uses to walk address-view chains. Propagate to each result
+      // whose view-source operand is the current value -- except an embox into
+      // a POINTER / HEAP descriptor, which materialises a pointer-association
+      // descriptor and counts as a capture.
+      if (auto view =
+              mlir::dyn_cast<fir::FortranObjectViewOpInterface>(userOp)) {
+        for (mlir::OpResult r : userOp->getResults()) {
+          if (view.getViewSource(r) != v)
+            continue;
+          if (auto boxT = mlir::dyn_cast<fir::BoxType>(r.getType()))
+            if (mlir::isa<fir::PointerType, fir::HeapType>(boxT.getEleTy()))
+              return true;
           if (seen.insert(r).second)
             worklist.push_back(r);
+        }
         continue;
       }
       if (mlir::isa<fir::LoadOp, hlfir::AssignOp>(userOp))
@@ -846,20 +867,6 @@ bool AliasAnalysis::mayBeCapturedBefore(mlir::Operation *declareOp,
           return true;
         continue;
       }
-      if (auto embox = mlir::dyn_cast<fir::EmboxOp>(userOp)) {
-        if (auto boxT =
-                mlir::dyn_cast<fir::BoxType>(embox.getResult().getType())) {
-          if (mlir::isa<fir::PointerType, fir::HeapType>(boxT.getEleTy()))
-            return true;
-          for (mlir::Value r : userOp->getResults())
-            if (seen.insert(r).second)
-              worklist.push_back(r);
-          continue;
-        }
-      }
-      if (mlir::isa<ACC_DATA_CLAUSE_OPS, mlir::acc::ReductionInitOp,
-                    mlir::omp::MapInfoOp>(userOp))
-        continue;
       return true;
     }
   }
