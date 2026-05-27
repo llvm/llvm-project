@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Pool for Regular Expression AST nodes.
+/// Pool for Regular Expression AST nodes (Implementation).
 ///
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/regex/regex_expr_pool.h"
-#include "include/llvm-libc-macros/regex-macros.h"
+#include "hdr/regex_macros.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/hash.h"
@@ -25,6 +25,10 @@ namespace {
 
 // Hash an Expr node for hash-consing.
 uint64_t hash_expr(const Expr &e) {
+  // Initialise HashState with a constant seed. The specific value (0x12345678)
+  // is an arbitrary placeholder; HashState immediately mixes this seed with
+  // high-entropy constants (derived from aHash) to produce a strong hash, while
+  // the constant value guarantees deterministic hashing for hash-consing.
   internal::HashState hasher(0x12345678);
   uint64_t kind = static_cast<uint64_t>(e.kind);
   hasher.update(&kind, sizeof(kind));
@@ -48,13 +52,17 @@ uint64_t hash_expr(const Expr &e) {
 ExprPool::Block::Block() : next(nullptr), used(0) {}
 
 ExprPool::ExprPool() : head(nullptr), current(nullptr), node_count(0) {
-  for (size_t i = 0; i < HASH_SIZE; ++i)
-    hashtable[i] = nullptr;
+  AllocChecker ac;
+  hashtable = new (ac) Expr *[HASH_TABLE_SIZE];
+  if (ac) {
+    for (size_t i = 0; i < HASH_TABLE_SIZE; ++i)
+      hashtable[i] = nullptr;
+  }
 }
 
 ExprPool::~ExprPool() {
-  // TODO: This manual traversal can be simplified once cpp::forward_list
-  // is available for block management.
+  if (hashtable)
+    delete[] hashtable;
   Block *b = head;
   while (b) {
     Block *next_b = b->next;
@@ -64,9 +72,12 @@ ExprPool::~ExprPool() {
 }
 
 cpp::expected<Expr *, int> ExprPool::intern(const Expr &e) {
+  if (!hashtable)
+    return cpp::unexpected(REG_ESPACE);
+
   // 1. Calculate the initial bucket for the given structural definition.
   uint64_t h = hash_expr(e);
-  size_t idx = h % HASH_SIZE;
+  size_t idx = h & (HASH_TABLE_SIZE - 1);
 
   // 2. Linear Probing: Search for an existing node with identical content.
   //    Because pointers are unique, O(1) comparison is guaranteed if
@@ -75,19 +86,19 @@ cpp::expected<Expr *, int> ExprPool::intern(const Expr &e) {
   while (hashtable[idx]) {
     if (*hashtable[idx] == e)
       return hashtable[idx];
-    idx = (idx + 1) % HASH_SIZE;
+    idx = (idx + 1) & (HASH_TABLE_SIZE - 1);
     if (idx == start_idx) {
-      // Table full (invariant check: HASH_SIZE >> MAX_NODES)
+      // Table full (invariant check: HASH_TABLE_SIZE >> MAX_NODE_LIMIT)
       return cpp::unexpected(REG_ESPACE);
     }
   }
 
   // 3. Admission Control: Check the hard limit on AST nodes.
-  if (node_count >= MAX_NODES)
+  if (node_count >= MAX_NODE_LIMIT)
     return cpp::unexpected(REG_ESPACE);
 
   // 4. Arena Allocation: If no matching node found, allocate a stable slot.
-  if (!current || current->used == Block::SIZE) {
+  if (!current || current->used == Block::BLOCK_SIZE) {
     // New blocks are allocated on demand using AllocChecker.
     AllocChecker ac;
     Block *new_block = new (ac) Block();
@@ -100,7 +111,7 @@ cpp::expected<Expr *, int> ExprPool::intern(const Expr &e) {
     current = new_block;
   }
 
-  // 5. Node Initialization: Copy the structural definition into the arena.
+  // 5. Node Initialisation: Copy the structural definition into the arena.
   Expr *new_node = &current->nodes[current->used++];
   LIBC_CRASH_ON_NULLPTR(new_node);
   *new_node = e;

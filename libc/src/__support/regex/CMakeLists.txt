@@ -9,4 +9,7 @@ add_object_library(
     libc.src.__support.CPP.new
     libc.src.__support.hash
     libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.alloc_checker
+    libc.hdr.regex_macros
 )

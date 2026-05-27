@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Pool for Regular Expression AST nodes.
+/// Pool for Regular Expression AST nodes (Class Definitions).
 ///
 //===----------------------------------------------------------------------===//
 
@@ -37,15 +37,15 @@ class ExprPool {
   /// it is available in LLVM-libc.
   struct Block {
     /// Number of Expr nodes stored in each block.
-    static constexpr size_t SIZE = 256;
+    static constexpr size_t BLOCK_SIZE = 256;
     /// The actual storage for Expr nodes.
-    Expr nodes[SIZE];
+    Expr nodes[BLOCK_SIZE];
     /// Pointer to the next block in the chain.
     Block *next = nullptr;
     /// Number of nodes currently used in this block.
     size_t used = 0;
 
-    /// Initializes an empty block.
+    /// Initialises an empty block.
     Block();
   };
 
@@ -56,11 +56,15 @@ class ExprPool {
   /// Total number of nodes allocated across all blocks.
   size_t node_count = 0;
 
-  /// Size of the hash table used for hash-consing.
-  /// Must be significantly larger than MAX_NODES to maintain efficiency.
-  static constexpr size_t HASH_SIZE = 16384;
+  /// The size of the hash table used for hash-consing (interning) expression
+  /// nodes. Choosing 0x4000 (16,384) is the smallest power of two that keeps
+  /// the load factor below 70% when the pool reaches its limit of 10,000 nodes
+  /// (peak load factor is ~61%). Using a power of two allows for efficient
+  /// indexing using bitwise AND instead of modulo, while the low load factor
+  /// minimizes collisions and guarantees O(1) average interning time.
+  static constexpr size_t HASH_TABLE_SIZE = 0x4000;
   /// Hash table storing pointers to unique Expr nodes.
-  Expr *hashtable[HASH_SIZE];
+  Expr **hashtable = nullptr;
 
   /// Core hash-consing function (Interning).
   ///
@@ -73,8 +77,12 @@ class ExprPool {
   ///          or REG_ESPACE on failure.
   cpp::expected<Expr *, int> intern(const Expr &e);
 
-  /// Maximum number of nodes allowed in the pool to prevent memory exhaustion.
-  static constexpr size_t MAX_NODES = 10000;
+  /// The maximum number of nodes allowed in the pool to prevent memory
+  /// exhaustion during compilation of highly complex or maliciously crafted
+  /// regular expressions. A limit of 10,000 nodes provides a sufficient budget
+  /// for most practical regexes while keeping the peak memory footprint
+  /// manageable (approx. 320KB-500KB depending on architecture).
+  static constexpr size_t MAX_NODE_LIMIT = 10000;
 
 public:
   ExprPool();
