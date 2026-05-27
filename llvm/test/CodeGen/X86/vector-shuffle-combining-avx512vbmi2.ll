@@ -56,3 +56,19 @@ define <16 x i8> @combine_vpshrd_vpshufb(<16 x i8> %x, <16 x i8> %y) {
   %r = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %bf, <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
   ret <16 x i8> %r
 }
+
+define <8 x i8> @PR145276(<8 x i8> %a0, <8 x i8> %a1) {
+; VLX-LABEL: PR145276:
+; VLX:       # %bb.0:
+; VLX-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; VLX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,0,2,4,6,8,10,12,u,u,u,u,u,u,u,u]
+; VLX-NEXT:    ret{{[l|q]}}
+;
+; NOVLX-LABEL: PR145276:
+; NOVLX:       # %bb.0:
+; NOVLX-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; NOVLX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,0,2,4,6,8,10,12,u,u,u,u,u,u,u,u]
+; NOVLX-NEXT:    ret{{[l|q]}}
+  %r = shufflevector <8 x i8> %a0, <8 x i8> %a1, <8 x i32> <i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6>
+  ret <8 x i8> %r
+}
