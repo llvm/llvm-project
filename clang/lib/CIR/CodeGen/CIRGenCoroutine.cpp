@@ -335,7 +335,7 @@ coroutineBodyExceptionHelper(CIRGenFunction &cgf, const CoroutineBodyStmt &s) {
     }
     ~handlerEmitter() override = default;
   } emitter{s};
-  ;
+
   mlir::LogicalResult res = cgf.emitCXXTryStmt(*tryStmt, emitter);
 
   return res;
