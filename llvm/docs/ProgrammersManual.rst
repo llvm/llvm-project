@@ -450,6 +450,9 @@ Format provider options
     S = formatv("{0:8}",   I);  // S == "01234567";
     S = formatv("{0:x}",   I);  // S == "0x12d687";
     S = formatv("{0:x8}",  I);  // S == "0x0012d687";
+    S = formatv("{0:x-}",  I);  // S == "12d687";
+    S = formatv("{0:X-}",  I);  // S == "12D687";
+    S = formatv("{0:x-8}", I);  // S == "0012d687";
     S = formatv("{0:n}",   I);  // S == "1,234,567";
     S = formatv("{0:+d}",  I);  // S == "+1234567";
     S = formatv("{0:+d}", -I);  // S == "-1234567";

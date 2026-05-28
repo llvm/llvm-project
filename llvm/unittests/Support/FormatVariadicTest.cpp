@@ -909,6 +909,9 @@ TEST(FormatVariadicTest, DocsInt) {
   EXPECT_EQ(formatv("{0:8}", I).str(), "01234567");
   EXPECT_EQ(formatv("{0:x}", I).str(), "0x12d687");
   EXPECT_EQ(formatv("{0:x8}", I).str(), "0x0012d687");
+  EXPECT_EQ(formatv("{0:x-}", I).str(), "12d687");
+  EXPECT_EQ(formatv("{0:X-}", I).str(), "12D687");
+  EXPECT_EQ(formatv("{0:x-8}", I).str(), "0012d687");
   EXPECT_EQ(formatv("{0:n}", I).str(), "1,234,567");
   EXPECT_EQ(formatv("{0:+d}", I).str(), "+1234567");
   EXPECT_EQ(formatv("{0:+d}", -I).str(), "-1234567");
