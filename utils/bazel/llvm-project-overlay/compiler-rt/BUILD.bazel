@@ -39,7 +39,9 @@ cc_library(
             "lib/profile/*.cpp",
             "lib/profile/*.h",
         ],
-        exclude = WIN32_ONLY_FILES,
+        exclude = WIN32_ONLY_FILES + [
+            "lib/profile/InstrProfilingPlatformROCm.cpp",
+        ],
     ) + select({
         "@platforms//os:windows": WIN32_ONLY_FILES,
         "//conditions:default": [],
