@@ -2982,6 +2982,17 @@ void placement_new_heap_then_delete_use_after_free() {
   (void)*p;                  // expected-note {{later used here}}
 }
 
+struct PlacementArg {};
+
+struct VariadicPlacementNew {
+  void *operator new(std::size_t, ...);
+};
+
+void variadic_placement_new() {
+  PlacementArg arg;
+  (void)new (arg) VariadicPlacementNew;
+}
+
 int* foo(int* x [[clang::lifetimebound]], int* y [[clang::lifetimebound]]);
 
 void placement_new_delete_result_of_lifetimebound_call() {
