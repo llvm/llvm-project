@@ -180,12 +180,27 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
   // All operands must be prefix-mask. This means an icmp ult/ule LHS, RHS where
   // the LHS is monotonically increasing and RHS is uniform across VFs and UF.
   for (VPValue *Op : LastActiveLane.operands()) {
-    if (vputils::isHeaderMask(Op, Plan))
+    VPValue *Mask = Op;
+    VPValue *HeaderMask;
+
+    // Look through any `and`s with a loop_dependence_war_mask, which is always
+    // a prefix mask. TODO: Verify the full loop.dependence.mask chain.
+    if (match(Op,
+              m_c_BinaryAnd(
+                  m_VPValue(HeaderMask),
+                  m_CombineOr(
+                      m_c_BinaryAnd(
+                          m_Intrinsic<Intrinsic::loop_dependence_war_mask>(),
+                          m_VPValue()),
+                      m_Intrinsic<Intrinsic::loop_dependence_war_mask>()))))
+      Mask = HeaderMask;
+
+    if (vputils::isHeaderMask(Mask, Plan))
       continue;
 
     CmpPredicate Pred;
     VPValue *LHS, *RHS;
-    if (match(Op, m_ICmp(Pred, m_VPValue(LHS), m_VPValue(RHS))) &&
+    if (match(Mask, m_ICmp(Pred, m_VPValue(LHS), m_VPValue(RHS))) &&
         (Pred == CmpInst::ICMP_ULE || Pred == CmpInst::ICMP_ULT) &&
         isKnownMonotonic(LHS) &&
         (vputils::isUniformAcrossVFsAndUFs(RHS) ||
@@ -258,6 +273,34 @@ bool VPlanVerifier::verifyRecipeTypes(const VPRecipeBase &R) const {
   case VPRecipeBase::VPFirstOrderRecurrencePHISC:
     return CheckOperandTypes() &&
            CheckScalarType(getScalarTypeOrInfer(R.getOperand(0)));
+  case VPRecipeBase::VPInstructionSC: {
+    auto *VPI = cast<VPInstruction>(&R);
+    if (isa<VPInstructionWithType>(VPI) ||
+        is_contained(
+            ArrayRef<unsigned>{
+                Instruction::ExtractValue, VPInstruction::FirstActiveLane,
+                VPInstruction::LastActiveLane, VPInstruction::NumActiveLanes,
+                VPInstruction::IncomingAliasMask, Instruction::Load,
+                Instruction::Alloca, Instruction::Call},
+            VPI->getOpcode()))
+      return true;
+    SmallVector<VPValue *, 4> Ops(VPI->operandsWithoutMask());
+    return CheckScalarType(
+        computeScalarTypeForInstruction(VPI->getOpcode(), Ops));
+  }
+  case VPRecipeBase::VPReplicateSC: {
+    auto *RepR = cast<VPReplicateRecipe>(&R);
+    SmallVector<VPValue *, 4> Ops(RepR->operands());
+    if (RepR->isPredicated())
+      Ops.pop_back();
+    return CheckScalarType(
+        VPReplicateRecipe::computeScalarType(RepR->getUnderlyingInstr(), Ops));
+  }
+  case VPRecipeBase::VPWidenSC: {
+    SmallVector<VPValue *, 4> Ops(R.operands());
+    return CheckScalarType(computeScalarTypeForInstruction(
+        cast<VPWidenRecipe>(&R)->getOpcode(), Ops));
+  }
   default:
     return true;
   }

@@ -1120,18 +1120,20 @@ void RuleMatcher::emit(MatchTable &Table) {
   assert(Matchers.size() == 1 && "Cannot handle multi-root matchers yet");
 
   unsigned LabelID = Table.allocateLabelID();
-  Table << MatchTable::Opcode("GIM_Try", +1)
-        << MatchTable::Comment("On fail goto")
-        << MatchTable::JumpTarget(LabelID)
-        << MatchTable::Comment(("Rule ID " + Twine(RuleID) + " //").str())
-        << MatchTable::LineBreak;
 
   if (!RequiredFeatures.empty() || HwModeIdx >= 0) {
-    Table << MatchTable::Opcode("GIM_CheckFeatures")
+    Table << MatchTable::Opcode("GIM_Try_CheckFeatures", +1)
+          << MatchTable::Comment("On fail goto")
+          << MatchTable::JumpTarget(LabelID)
           << MatchTable::NamedValue(
-                 2, getNameForFeatureBitset(RequiredFeatures, HwModeIdx))
-          << MatchTable::LineBreak;
+                 2, getNameForFeatureBitset(RequiredFeatures, HwModeIdx));
+  } else {
+    Table << MatchTable::Opcode("GIM_Try", +1)
+          << MatchTable::Comment("On fail goto")
+          << MatchTable::JumpTarget(LabelID);
   }
+  Table << MatchTable::Comment(("Rule ID " + Twine(RuleID) + " //").str())
+        << MatchTable::LineBreak;
 
   if (!RequiredSimplePredicates.empty()) {
     for (const auto &Pred : RequiredSimplePredicates) {
