@@ -42,7 +42,7 @@
 ; RUN: touch %t/libs/shadow.bc %t/libs2/shadow.bc
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L %t/libs2 -L %t/libs --bc-library shadow.bc -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS-ORDER
-; DEVLIBS-ORDER: link: inputs: {{.*}}.bc  libfiles: {{.*}}libs2/shadow.bc  output: {{.*}}.bc
+; DEVLIBS-ORDER: link: inputs: {{.*}}.bc  libfiles: {{.*}}libs2{{[/\\]}}shadow.bc  output: {{.*}}.bc
 ;
 ; Test a simple case with a random file (not bitcode) as input.
 ; RUN: touch %t/dummy.o
