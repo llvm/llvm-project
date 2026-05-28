@@ -11,7 +11,7 @@ define i32 @cmps() {
 ; CHECK-MVE-NEXT:  Cost Model: Found costs of 1 for: %a = icmp slt i8 undef, undef
 ; CHECK-MVE-NEXT:  Cost Model: Found costs of 1 for: %b = icmp ult i16 undef, undef
 ; CHECK-MVE-NEXT:  Cost Model: Found costs of 1 for: %c = icmp sge i32 undef, undef
-; CHECK-MVE-NEXT:  Cost Model: Found costs of 1 for: %d = icmp ne i64 undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found costs of 2 for: %d = icmp ne i64 undef, undef
 ; CHECK-MVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %e = icmp slt <16 x i8> undef, undef
 ; CHECK-MVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %f = icmp ult <8 x i16> undef, undef
 ; CHECK-MVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %g = icmp sge <4 x i32> undef, undef
@@ -29,16 +29,16 @@ define i32 @cmps() {
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 1 for: %a = icmp slt i8 undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 1 for: %b = icmp ult i16 undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 1 for: %c = icmp sge i32 undef, undef
-; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 1 for: %d = icmp ne i64 undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 2 for: %d = icmp ne i64 undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 32 for: %e = icmp slt <16 x i8> undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 16 for: %f = icmp ult <8 x i16> undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 8 for: %g = icmp sge <4 x i32> undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 1 for: %a7 = fcmp oge half undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 1 for: %a8 = fcmp ogt float undef, undef
-; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 1 for: %a9 = fcmp ogt double undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 2 for: %a9 = fcmp ogt double undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 16 for: %a10 = fcmp olt <8 x half> undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 8 for: %a11 = fcmp oge <4 x float> undef, undef
-; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 6 for: %a12 = fcmp oge <2 x double> undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 8 for: %a12 = fcmp oge <2 x double> undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 1 for: %p = icmp eq ptr undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 8 for: %q = icmp eq <4 x ptr> undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 1 for: ret i32 undef
@@ -47,16 +47,16 @@ define i32 @cmps() {
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: %a = icmp slt i8 undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: %b = icmp ult i16 undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: %c = icmp sge i32 undef, undef
-; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: %d = icmp ne i64 undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 2 for: %d = icmp ne i64 undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 32 for: %e = icmp slt <16 x i8> undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 16 for: %f = icmp ult <8 x i16> undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 8 for: %g = icmp sge <4 x i32> undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: %a7 = fcmp oge half undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: %a8 = fcmp ogt float undef, undef
-; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: %a9 = fcmp ogt double undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 2 for: %a9 = fcmp ogt double undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 16 for: %a10 = fcmp olt <8 x half> undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 8 for: %a11 = fcmp oge <4 x float> undef, undef
-; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 6 for: %a12 = fcmp oge <2 x double> undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 8 for: %a12 = fcmp oge <2 x double> undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: %p = icmp eq ptr undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 8 for: %q = icmp eq <4 x ptr> undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: ret i32 undef
@@ -65,7 +65,7 @@ define i32 @cmps() {
 ; CHECK-V8R-NEXT:  Cost Model: Found costs of 1 for: %a = icmp slt i8 undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found costs of 1 for: %b = icmp ult i16 undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found costs of 1 for: %c = icmp sge i32 undef, undef
-; CHECK-V8R-NEXT:  Cost Model: Found costs of 1 for: %d = icmp ne i64 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found costs of 2 for: %d = icmp ne i64 undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found costs of 1 for: %e = icmp slt <16 x i8> undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found costs of 1 for: %f = icmp ult <8 x i16> undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found costs of 1 for: %g = icmp sge <4 x i32> undef, undef

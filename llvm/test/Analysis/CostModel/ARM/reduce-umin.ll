@@ -8,10 +8,10 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 define i32 @reduce_i64(i32 %arg) {
 ; V8M-LABEL: 'reduce_i64'
 ; V8M-NEXT:  Cost Model: Found costs of 2 for: %V1 = call i64 @llvm.vector.reduce.umin.v1i64(<1 x i64> undef)
-; V8M-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:14 Lat:13 SizeLat:13 for: %V2 = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> undef)
-; V8M-NEXT:  Cost Model: Found costs of RThru:35 CodeSize:38 Lat:35 SizeLat:35 for: %V4 = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> undef)
-; V8M-NEXT:  Cost Model: Found costs of RThru:79 CodeSize:86 Lat:79 SizeLat:79 for: %V8 = call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> undef)
-; V8M-NEXT:  Cost Model: Found costs of RThru:167 CodeSize:182 Lat:167 SizeLat:167 for: %V16 = call i64 @llvm.vector.reduce.umin.v16i64(<16 x i64> undef)
+; V8M-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:15 Lat:14 SizeLat:14 for: %V2 = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> undef)
+; V8M-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:41 Lat:38 SizeLat:38 for: %V4 = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> undef)
+; V8M-NEXT:  Cost Model: Found costs of RThru:86 CodeSize:93 Lat:86 SizeLat:86 for: %V8 = call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> undef)
+; V8M-NEXT:  Cost Model: Found costs of RThru:182 CodeSize:197 Lat:182 SizeLat:182 for: %V16 = call i64 @llvm.vector.reduce.umin.v16i64(<16 x i64> undef)
 ; V8M-NEXT:  Cost Model: Found costs of 1 for: ret i32 undef
 ;
 ; NEON-LABEL: 'reduce_i64'
@@ -24,10 +24,10 @@ define i32 @reduce_i64(i32 %arg) {
 ;
 ; MVE-LABEL: 'reduce_i64'
 ; MVE-NEXT:  Cost Model: Found costs of 8 for: %V1 = call i64 @llvm.vector.reduce.umin.v1i64(<1 x i64> undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:110 CodeSize:59 Lat:110 SizeLat:110 for: %V2 = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:212 CodeSize:110 Lat:212 SizeLat:212 for: %V4 = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:416 CodeSize:212 Lat:416 SizeLat:416 for: %V8 = call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:824 CodeSize:416 Lat:824 SizeLat:824 for: %V16 = call i64 @llvm.vector.reduce.umin.v16i64(<16 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:114 CodeSize:61 Lat:114 SizeLat:114 for: %V2 = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:220 CodeSize:114 Lat:220 SizeLat:220 for: %V4 = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:432 CodeSize:220 Lat:432 SizeLat:432 for: %V8 = call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:856 CodeSize:432 Lat:856 SizeLat:856 for: %V16 = call i64 @llvm.vector.reduce.umin.v16i64(<16 x i64> undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
   %V1  = call i64 @llvm.vector.reduce.umin.v1i64(<1 x i64> undef)

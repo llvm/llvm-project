@@ -188,19 +188,19 @@ entry:
 define arm_aapcscc i32 @swap_cmp_rotr(i32 %a, i32 %b) {
 ; CHECK-LABEL: swap_cmp_rotr:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    cmp r1, r0, ror #11
-; CHECK-NEXT:    movwls r2, #1
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    ror r2, r0, #11
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    cmp r2, r1
+; CHECK-NEXT:    movwhs r0, #1
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECK-T2-LABEL: swap_cmp_rotr:
 ; CHECK-T2:       @ %bb.0: @ %entry
-; CHECK-T2-NEXT:    movs r2, #0
-; CHECK-T2-NEXT:    cmp.w r1, r0, ror #11
-; CHECK-T2-NEXT:    it ls
-; CHECK-T2-NEXT:    movls r2, #1
-; CHECK-T2-NEXT:    mov r0, r2
+; CHECK-T2-NEXT:    ror.w r2, r0, #11
+; CHECK-T2-NEXT:    movs r0, #0
+; CHECK-T2-NEXT:    cmp r2, r1
+; CHECK-T2-NEXT:    it hs
+; CHECK-T2-NEXT:    movhs r0, #1
 ; CHECK-T2-NEXT:    bx lr
 entry:
   %lsr = lshr i32 %a, 11

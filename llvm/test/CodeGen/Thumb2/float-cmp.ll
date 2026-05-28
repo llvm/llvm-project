@@ -524,9 +524,7 @@ define i1 @cmp_d_one(double %a, double %b) {
 ; SP-NEXT:    bl __aeabi_dcmpeq
 ; SP-NEXT:    clz r0, r0
 ; SP-NEXT:    lsrs r0, r0, #5
-; SP-NEXT:    ands.w r0, r0, r8
-; SP-NEXT:    it ne
-; SP-NEXT:    movne r0, #1
+; SP-NEXT:    and.w r0, r0, r8
 ; SP-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
 
   %1 = fcmp one double %a, %b
@@ -683,8 +681,6 @@ define i1 @cmp_d_ueq(double %a, double %b) {
 ; SP-NEXT:    it ne
 ; SP-NEXT:    movne r0, #1
 ; SP-NEXT:    orrs r0, r7
-; SP-NEXT:    it ne
-; SP-NEXT:    movne r0, #1
 ; SP-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
   %1 = fcmp ueq double %a, %b
   ret i1 %1

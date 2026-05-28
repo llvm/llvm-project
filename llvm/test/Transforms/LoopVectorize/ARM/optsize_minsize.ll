@@ -181,24 +181,137 @@ for.cond.cleanup:
 define void @tail_predicate_without_optsize(ptr %p, i8 %a, i8 %b, i8 %c, i32 %n) {
 ; DEFAULT-LABEL: define void @tail_predicate_without_optsize(
 ; DEFAULT-SAME: ptr [[P:%.*]], i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]], i32 [[N:%.*]]) {
-; DEFAULT-NEXT:  [[ENTRY:.*]]:
+; DEFAULT-NEXT:  [[ENTRY:.*:]]
 ; DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
 ; DEFAULT:       [[FOR_BODY]]:
-; DEFAULT-NEXT:    [[TMP69:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; DEFAULT-NEXT:    [[TMP0:%.*]] = trunc nuw nsw i64 [[TMP69]] to i8
-; DEFAULT-NEXT:    [[MUL:%.*]] = mul i8 [[A]], [[TMP0]]
-; DEFAULT-NEXT:    [[SHR:%.*]] = lshr i8 [[TMP0]], 1
-; DEFAULT-NEXT:    [[MUL5:%.*]] = mul i8 [[SHR]], [[B]]
-; DEFAULT-NEXT:    [[ADD:%.*]] = add i8 [[MUL5]], [[MUL]]
-; DEFAULT-NEXT:    [[SHR7:%.*]] = lshr i8 [[TMP0]], 2
-; DEFAULT-NEXT:    [[MUL9:%.*]] = mul i8 [[SHR7]], [[C]]
-; DEFAULT-NEXT:    [[TMP71:%.*]] = add i8 [[ADD]], [[MUL9]]
-; DEFAULT-NEXT:    [[TMP70:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP69]]
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[A]], i64 0
+; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i8> poison, i8 [[B]], i64 0
+; DEFAULT-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT1]], <16 x i8> poison, <16 x i32> zeroinitializer
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <16 x i8> poison, i8 [[C]], i64 0
+; DEFAULT-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT3]], <16 x i8> poison, <16 x i32> zeroinitializer
+; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
+; DEFAULT:       [[VECTOR_BODY]]:
+; DEFAULT-NEXT:    [[TMP0:%.*]] = mul <16 x i8> [[BROADCAST_SPLAT]], <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>
+; DEFAULT-NEXT:    [[TMP1:%.*]] = mul <16 x i8> <i8 0, i8 0, i8 1, i8 1, i8 2, i8 2, i8 3, i8 3, i8 4, i8 4, i8 5, i8 5, i8 6, i8 6, i8 7, i8 7>, [[BROADCAST_SPLAT2]]
+; DEFAULT-NEXT:    [[TMP2:%.*]] = add <16 x i8> [[TMP1]], [[TMP0]]
+; DEFAULT-NEXT:    [[TMP3:%.*]] = mul <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 1, i8 1, i8 1, i8 1, i8 2, i8 2, i8 2, i8 2, i8 3, i8 3, i8 3, i8 3>, [[BROADCAST_SPLAT4]]
+; DEFAULT-NEXT:    [[TMP4:%.*]] = add <16 x i8> [[TMP2]], [[TMP3]]
+; DEFAULT-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; DEFAULT:       [[PRED_STORE_IF]]:
+; DEFAULT-NEXT:    [[TMP5:%.*]] = extractelement <16 x i8> [[TMP4]], i64 0
+; DEFAULT-NEXT:    store i8 [[TMP5]], ptr [[P]], align 1
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; DEFAULT:       [[PRED_STORE_CONTINUE]]:
+; DEFAULT-NEXT:    br i1 true, label %[[PRED_STORE_IF5:.*]], label %[[FOR_COND_CLEANUP:.*]]
+; DEFAULT:       [[PRED_STORE_IF5]]:
+; DEFAULT-NEXT:    [[TMP70:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1
+; DEFAULT-NEXT:    [[TMP71:%.*]] = extractelement <16 x i8> [[TMP4]], i64 1
 ; DEFAULT-NEXT:    store i8 [[TMP71]], ptr [[TMP70]], align 1
-; DEFAULT-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[TMP69]], 1
-; DEFAULT-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 15
-; DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY]]
+; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP]]
 ; DEFAULT:       [[FOR_COND_CLEANUP]]:
+; DEFAULT-NEXT:    br i1 true, label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
+; DEFAULT:       [[PRED_STORE_IF7]]:
+; DEFAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
+; DEFAULT-NEXT:    [[TMP9:%.*]] = extractelement <16 x i8> [[TMP4]], i64 2
+; DEFAULT-NEXT:    store i8 [[TMP9]], ptr [[TMP8]], align 1
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
+; DEFAULT:       [[PRED_STORE_CONTINUE8]]:
+; DEFAULT-NEXT:    br i1 true, label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
+; DEFAULT:       [[PRED_STORE_IF9]]:
+; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 3
+; DEFAULT-NEXT:    [[TMP11:%.*]] = extractelement <16 x i8> [[TMP4]], i64 3
+; DEFAULT-NEXT:    store i8 [[TMP11]], ptr [[TMP10]], align 1
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
+; DEFAULT:       [[PRED_STORE_CONTINUE10]]:
+; DEFAULT-NEXT:    br i1 true, label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
+; DEFAULT:       [[PRED_STORE_IF11]]:
+; DEFAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; DEFAULT-NEXT:    [[TMP13:%.*]] = extractelement <16 x i8> [[TMP4]], i64 4
+; DEFAULT-NEXT:    store i8 [[TMP13]], ptr [[TMP12]], align 1
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
+; DEFAULT:       [[PRED_STORE_CONTINUE12]]:
+; DEFAULT-NEXT:    br i1 true, label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
+; DEFAULT:       [[PRED_STORE_IF13]]:
+; DEFAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 5
+; DEFAULT-NEXT:    [[TMP15:%.*]] = extractelement <16 x i8> [[TMP4]], i64 5
+; DEFAULT-NEXT:    store i8 [[TMP15]], ptr [[TMP14]], align 1
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
+; DEFAULT:       [[PRED_STORE_CONTINUE14]]:
+; DEFAULT-NEXT:    br i1 true, label %[[PRED_STORE_IF15:.*]], label %[[PRED_STORE_CONTINUE16:.*]]
+; DEFAULT:       [[PRED_STORE_IF15]]:
+; DEFAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 6
+; DEFAULT-NEXT:    [[TMP17:%.*]] = extractelement <16 x i8> [[TMP4]], i64 6
+; DEFAULT-NEXT:    store i8 [[TMP17]], ptr [[TMP16]], align 1
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE16]]
+; DEFAULT:       [[PRED_STORE_CONTINUE16]]:
+; DEFAULT-NEXT:    br i1 true, label %[[PRED_STORE_IF17:.*]], label %[[PRED_STORE_CONTINUE18:.*]]
+; DEFAULT:       [[PRED_STORE_IF17]]:
+; DEFAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 7
+; DEFAULT-NEXT:    [[TMP19:%.*]] = extractelement <16 x i8> [[TMP4]], i64 7
+; DEFAULT-NEXT:    store i8 [[TMP19]], ptr [[TMP18]], align 1
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE18]]
+; DEFAULT:       [[PRED_STORE_CONTINUE18]]:
+; DEFAULT-NEXT:    br i1 true, label %[[PRED_STORE_IF19:.*]], label %[[PRED_STORE_CONTINUE20:.*]]
+; DEFAULT:       [[PRED_STORE_IF19]]:
+; DEFAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+; DEFAULT-NEXT:    [[TMP21:%.*]] = extractelement <16 x i8> [[TMP4]], i64 8
+; DEFAULT-NEXT:    store i8 [[TMP21]], ptr [[TMP20]], align 1
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE20]]
+; DEFAULT:       [[PRED_STORE_CONTINUE20]]:
+; DEFAULT-NEXT:    br i1 true, label %[[PRED_STORE_IF21:.*]], label %[[PRED_STORE_CONTINUE22:.*]]
+; DEFAULT:       [[PRED_STORE_IF21]]:
+; DEFAULT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 9
+; DEFAULT-NEXT:    [[TMP23:%.*]] = extractelement <16 x i8> [[TMP4]], i64 9
+; DEFAULT-NEXT:    store i8 [[TMP23]], ptr [[TMP22]], align 1
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE22]]
+; DEFAULT:       [[PRED_STORE_CONTINUE22]]:
+; DEFAULT-NEXT:    br i1 true, label %[[PRED_STORE_IF23:.*]], label %[[PRED_STORE_CONTINUE24:.*]]
+; DEFAULT:       [[PRED_STORE_IF23]]:
+; DEFAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 10
+; DEFAULT-NEXT:    [[TMP25:%.*]] = extractelement <16 x i8> [[TMP4]], i64 10
+; DEFAULT-NEXT:    store i8 [[TMP25]], ptr [[TMP24]], align 1
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE24]]
+; DEFAULT:       [[PRED_STORE_CONTINUE24]]:
+; DEFAULT-NEXT:    br i1 true, label %[[PRED_STORE_IF25:.*]], label %[[PRED_STORE_CONTINUE26:.*]]
+; DEFAULT:       [[PRED_STORE_IF25]]:
+; DEFAULT-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 11
+; DEFAULT-NEXT:    [[TMP27:%.*]] = extractelement <16 x i8> [[TMP4]], i64 11
+; DEFAULT-NEXT:    store i8 [[TMP27]], ptr [[TMP26]], align 1
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE26]]
+; DEFAULT:       [[PRED_STORE_CONTINUE26]]:
+; DEFAULT-NEXT:    br i1 true, label %[[PRED_STORE_IF27:.*]], label %[[PRED_STORE_CONTINUE28:.*]]
+; DEFAULT:       [[PRED_STORE_IF27]]:
+; DEFAULT-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 12
+; DEFAULT-NEXT:    [[TMP29:%.*]] = extractelement <16 x i8> [[TMP4]], i64 12
+; DEFAULT-NEXT:    store i8 [[TMP29]], ptr [[TMP28]], align 1
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE28]]
+; DEFAULT:       [[PRED_STORE_CONTINUE28]]:
+; DEFAULT-NEXT:    br i1 true, label %[[PRED_STORE_IF29:.*]], label %[[PRED_STORE_CONTINUE30:.*]]
+; DEFAULT:       [[PRED_STORE_IF29]]:
+; DEFAULT-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 13
+; DEFAULT-NEXT:    [[TMP31:%.*]] = extractelement <16 x i8> [[TMP4]], i64 13
+; DEFAULT-NEXT:    store i8 [[TMP31]], ptr [[TMP30]], align 1
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE30]]
+; DEFAULT:       [[PRED_STORE_CONTINUE30]]:
+; DEFAULT-NEXT:    br i1 true, label %[[PRED_STORE_IF31:.*]], label %[[PRED_STORE_CONTINUE32:.*]]
+; DEFAULT:       [[PRED_STORE_IF31]]:
+; DEFAULT-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 14
+; DEFAULT-NEXT:    [[TMP33:%.*]] = extractelement <16 x i8> [[TMP4]], i64 14
+; DEFAULT-NEXT:    store i8 [[TMP33]], ptr [[TMP32]], align 1
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE32]]
+; DEFAULT:       [[PRED_STORE_CONTINUE32]]:
+; DEFAULT-NEXT:    br i1 false, label %[[PRED_STORE_IF33:.*]], label %[[PRED_STORE_CONTINUE34:.*]]
+; DEFAULT:       [[PRED_STORE_IF33]]:
+; DEFAULT-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 15
+; DEFAULT-NEXT:    [[TMP35:%.*]] = extractelement <16 x i8> [[TMP4]], i64 15
+; DEFAULT-NEXT:    store i8 [[TMP35]], ptr [[TMP34]], align 1
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE34]]
+; DEFAULT:       [[PRED_STORE_CONTINUE34]]:
+; DEFAULT-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; DEFAULT:       [[MIDDLE_BLOCK]]:
+; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP1:.*]]
+; DEFAULT:       [[FOR_COND_CLEANUP1]]:
 ; DEFAULT-NEXT:    ret void
 ;
 ; OPTSIZE-LABEL: define void @tail_predicate_without_optsize(

@@ -32,10 +32,10 @@ declare <64 x i8>  @llvm.smin.v64i8(<64 x i8>, <64 x i8>)
 
 define i32 @smin(i32 %arg) {
 ; MVE-LABEL: 'smin'
-; MVE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:3 SizeLat:3 for: %I64 = call i64 @llvm.smin.i64(i64 undef, i64 undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:19 Lat:38 SizeLat:38 for: %V2I64 = call <2 x i64> @llvm.smin.v2i64(<2 x i64> undef, <2 x i64> undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:38 Lat:76 SizeLat:76 for: %V4I64 = call <4 x i64> @llvm.smin.v4i64(<4 x i64> undef, <4 x i64> undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:152 CodeSize:76 Lat:152 SizeLat:152 for: %V8I64 = call <8 x i64> @llvm.smin.v8i64(<8 x i64> undef, <8 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:5 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.smin.i64(i64 undef, i64 undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:42 CodeSize:21 Lat:42 SizeLat:42 for: %V2I64 = call <2 x i64> @llvm.smin.v2i64(<2 x i64> undef, <2 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:84 CodeSize:42 Lat:84 SizeLat:84 for: %V4I64 = call <4 x i64> @llvm.smin.v4i64(<4 x i64> undef, <4 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:168 CodeSize:84 Lat:168 SizeLat:168 for: %V8I64 = call <8 x i64> @llvm.smin.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:2 SizeLat:2 for: %I32 = call i32 @llvm.smin.i32(i32 undef, i32 undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:11 Lat:22 SizeLat:22 for: %V2I32 = call <2 x i32> @llvm.smin.v2i32(<2 x i32> undef, <2 x i32> undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %V4I32 = call <4 x i32> @llvm.smin.v4i32(<4 x i32> undef, <4 x i32> undef)
@@ -114,10 +114,10 @@ declare <64 x i8>  @llvm.smax.v64i8(<64 x i8>, <64 x i8>)
 
 define i32 @smax(i32 %arg) {
 ; MVE-LABEL: 'smax'
-; MVE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:3 SizeLat:3 for: %I64 = call i64 @llvm.smax.i64(i64 undef, i64 undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:19 Lat:38 SizeLat:38 for: %V2I64 = call <2 x i64> @llvm.smax.v2i64(<2 x i64> undef, <2 x i64> undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:38 Lat:76 SizeLat:76 for: %V4I64 = call <4 x i64> @llvm.smax.v4i64(<4 x i64> undef, <4 x i64> undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:152 CodeSize:76 Lat:152 SizeLat:152 for: %V8I64 = call <8 x i64> @llvm.smax.v8i64(<8 x i64> undef, <8 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:5 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.smax.i64(i64 undef, i64 undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:42 CodeSize:21 Lat:42 SizeLat:42 for: %V2I64 = call <2 x i64> @llvm.smax.v2i64(<2 x i64> undef, <2 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:84 CodeSize:42 Lat:84 SizeLat:84 for: %V4I64 = call <4 x i64> @llvm.smax.v4i64(<4 x i64> undef, <4 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:168 CodeSize:84 Lat:168 SizeLat:168 for: %V8I64 = call <8 x i64> @llvm.smax.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:2 SizeLat:2 for: %I32 = call i32 @llvm.smax.i32(i32 undef, i32 undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:11 Lat:22 SizeLat:22 for: %V2I32 = call <2 x i32> @llvm.smax.v2i32(<2 x i32> undef, <2 x i32> undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %V4I32 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> undef, <4 x i32> undef)
@@ -197,10 +197,10 @@ declare <64 x i8>  @llvm.umin.v64i8(<64 x i8>, <64 x i8>)
 
 define i32 @umin(i32 %arg) {
 ; MVE-LABEL: 'umin'
-; MVE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:3 SizeLat:3 for: %I64 = call i64 @llvm.umin.i64(i64 undef, i64 undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:19 Lat:38 SizeLat:38 for: %V2I64 = call <2 x i64> @llvm.umin.v2i64(<2 x i64> undef, <2 x i64> undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:38 Lat:76 SizeLat:76 for: %V4I64 = call <4 x i64> @llvm.umin.v4i64(<4 x i64> undef, <4 x i64> undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:152 CodeSize:76 Lat:152 SizeLat:152 for: %V8I64 = call <8 x i64> @llvm.umin.v8i64(<8 x i64> undef, <8 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:5 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.umin.i64(i64 undef, i64 undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:42 CodeSize:21 Lat:42 SizeLat:42 for: %V2I64 = call <2 x i64> @llvm.umin.v2i64(<2 x i64> undef, <2 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:84 CodeSize:42 Lat:84 SizeLat:84 for: %V4I64 = call <4 x i64> @llvm.umin.v4i64(<4 x i64> undef, <4 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:168 CodeSize:84 Lat:168 SizeLat:168 for: %V8I64 = call <8 x i64> @llvm.umin.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:2 SizeLat:2 for: %I32 = call i32 @llvm.umin.i32(i32 undef, i32 undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:11 Lat:22 SizeLat:22 for: %V2I32 = call <2 x i32> @llvm.umin.v2i32(<2 x i32> undef, <2 x i32> undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %V4I32 = call <4 x i32> @llvm.umin.v4i32(<4 x i32> undef, <4 x i32> undef)
@@ -279,10 +279,10 @@ declare <64 x i8>  @llvm.umax.v64i8(<64 x i8>, <64 x i8>)
 
 define i32 @umax(i32 %arg) {
 ; MVE-LABEL: 'umax'
-; MVE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:3 SizeLat:3 for: %I64 = call i64 @llvm.umax.i64(i64 undef, i64 undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:19 Lat:38 SizeLat:38 for: %V2I64 = call <2 x i64> @llvm.umax.v2i64(<2 x i64> undef, <2 x i64> undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:38 Lat:76 SizeLat:76 for: %V4I64 = call <4 x i64> @llvm.umax.v4i64(<4 x i64> undef, <4 x i64> undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:152 CodeSize:76 Lat:152 SizeLat:152 for: %V8I64 = call <8 x i64> @llvm.umax.v8i64(<8 x i64> undef, <8 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:5 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.umax.i64(i64 undef, i64 undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:42 CodeSize:21 Lat:42 SizeLat:42 for: %V2I64 = call <2 x i64> @llvm.umax.v2i64(<2 x i64> undef, <2 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:84 CodeSize:42 Lat:84 SizeLat:84 for: %V4I64 = call <4 x i64> @llvm.umax.v4i64(<4 x i64> undef, <4 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:168 CodeSize:84 Lat:168 SizeLat:168 for: %V8I64 = call <8 x i64> @llvm.umax.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:2 SizeLat:2 for: %I32 = call i32 @llvm.umax.i32(i32 undef, i32 undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:11 Lat:22 SizeLat:22 for: %V2I32 = call <2 x i32> @llvm.umax.v2i32(<2 x i32> undef, <2 x i32> undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %V4I32 = call <4 x i32> @llvm.umax.v4i32(<4 x i32> undef, <4 x i32> undef)

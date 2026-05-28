@@ -1199,9 +1199,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setOperationAction(ISD::EH_SJLJ_LONGJMP, MVT::Other, Custom);
   setOperationAction(ISD::EH_SJLJ_SETUP_DISPATCH, MVT::Other, Custom);
 
-  setOperationAction(ISD::SETCC,     MVT::i32, Expand);
-  setOperationAction(ISD::SETCC,     MVT::f32, Expand);
-  setOperationAction(ISD::SETCC,     MVT::f64, Expand);
+  setOperationAction(ISD::SETCC,     MVT::i32, Custom);
+  setOperationAction(ISD::SETCC,     MVT::f32, Custom);
+  setOperationAction(ISD::SETCC,     MVT::f64, Custom);
   setOperationAction(ISD::SELECT,    MVT::i32, Custom);
   setOperationAction(ISD::SELECT,    MVT::f32, Custom);
   setOperationAction(ISD::SELECT,    MVT::f64, Custom);
@@ -1209,7 +1209,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setOperationAction(ISD::SELECT_CC, MVT::f32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::f64, Custom);
   if (Subtarget->hasFullFP16()) {
-    setOperationAction(ISD::SETCC,     MVT::f16, Expand);
+    setOperationAction(ISD::SETCC,     MVT::f16, Custom);
     setOperationAction(ISD::SELECT,    MVT::f16, Custom);
     setOperationAction(ISD::SELECT_CC, MVT::f16, Custom);
   }
@@ -4930,8 +4930,7 @@ SDValue ARMTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  return DAG.getSelectCC(dl, Cond,
-                         DAG.getConstant(0, dl, Cond.getValueType()),
+  return DAG.getSelectCC(dl, Cond, DAG.getConstant(0, dl, Cond.getValueType()),
                          SelectTrue, SelectFalse, ISD::SETNE);
 }
 
@@ -5262,12 +5261,6 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
 
       return DAG.getNode(ISD::AND, dl, VT, LHS, Shift);
     }
-
-    // (SELECT_CC setlt, x, 0, 1, 0) -> SRL(x, bw-1)
-    if (CC == ISD::SETLT && isNullConstant(RHS) && isOneConstant(TrueVal) &&
-        isNullConstant(FalseVal) && LHS.getValueType() == VT)
-      return DAG.getNode(ISD::SRL, dl, VT, LHS,
-                         DAG.getConstant(VT.getSizeInBits() - 1, dl, VT));
   }
 
   if (LHS.getValueType() == MVT::i32) {
@@ -10269,42 +10262,65 @@ static void ReplaceCMP_SWAP_64Results(SDNode *N,
   Results.push_back(SDValue(CmpSwap, 2));
 }
 
-SDValue ARMTargetLowering::LowerFSETCC(SDValue Op, SelectionDAG &DAG) const {
-  SDLoc dl(Op);
-  EVT VT = Op.getValueType();
-  SDValue Chain = Op.getOperand(0);
-  SDValue LHS = Op.getOperand(1);
-  SDValue RHS = Op.getOperand(2);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(3))->get();
-  bool IsSignaling = Op.getOpcode() == ISD::STRICT_FSETCCS;
+SDValue ARMTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
 
-  // If we don't have instructions of this float type then soften to a libcall
-  // and use SETCC instead.
+  if (Op.getValueType().isVector())
+    return LowerVSETCC(Op, DAG, Subtarget);
+
+  bool IsStrict = Op->isStrictFPOpcode();
+  bool IsSignaling = Op.getOpcode() == ISD::STRICT_FSETCCS;
+  unsigned OpNo = IsStrict ? 1 : 0;
+  SDValue Chain;
+  if (IsStrict)
+    Chain = Op.getOperand(0);
+  SDValue LHS = Op.getOperand(OpNo + 0);
+  SDValue RHS = Op.getOperand(OpNo + 1);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(OpNo + 2))->get();
+  SDLoc dl(Op);
+
+  // We chose ZeroOrOneBooleanContents, so use zero and one.
+  EVT VT = Op.getValueType();
+  SDValue TrueVal = DAG.getConstant(1, dl, VT);
+  SDValue FalseVal = DAG.getConstant(0, dl, VT);
+
   if (isUnsupportedFloatingType(LHS.getValueType())) {
     softenSetCCOperands(DAG, LHS.getValueType(), LHS, RHS, CC, dl, LHS, RHS,
                         Chain, IsSignaling);
+
+    // If softenSetCCOperands returned a scalar, use it.
     if (!RHS.getNode()) {
-      RHS = DAG.getConstant(0, dl, LHS.getValueType());
-      CC = ISD::SETNE;
+      assert(LHS.getValueType() == Op.getValueType() &&
+             "Unexpected setcc expansion!");
+      return IsStrict ? DAG.getMergeValues({LHS, Chain}, dl) : LHS;
     }
-    SDValue Result = DAG.getNode(ISD::SETCC, dl, VT, LHS, RHS,
-                                 DAG.getCondCode(CC));
-    return DAG.getMergeValues({Result, Chain}, dl);
   }
+
+  if (LHS.getValueType().isInteger()) {
+    // (SETCC setlt, x, 0) -> SRL(x, bw-1)
+    if (CC == ISD::SETLT && isNullConstant(RHS) && LHS.getValueType() == VT)
+      return DAG.getNode(ISD::SRL, dl, VT, LHS,
+                         DAG.getConstant(VT.getSizeInBits() - 1, dl, VT));
+
+    SDValue ARMcc;
+    SDValue Cmp = getARMCmp(LHS, RHS, CC, ARMcc, DAG, dl);
+    SDValue Result = getCMOV(dl, VT, FalseVal, TrueVal, ARMcc, Cmp, DAG);
+    return IsStrict ? DAG.getMergeValues({Result, Chain}, dl) : Result;
+  }
+
+  // Now we know we're dealing with FP values.
+  assert(LHS.getValueType() == MVT::f16 || LHS.getValueType() == MVT::f32 ||
+         LHS.getValueType() == MVT::f64);
 
   ARMCC::CondCodes CondCode, CondCode2;
   FPCCToARMCC(CC, CondCode, CondCode2);
-
-  SDValue True = DAG.getConstant(1, dl, VT);
-  SDValue False =  DAG.getConstant(0, dl, VT);
   SDValue ARMcc = DAG.getConstant(CondCode, dl, MVT::i32);
   SDValue Cmp = getVFPCmp(LHS, RHS, DAG, dl, IsSignaling);
-  SDValue Result = getCMOV(dl, VT, False, True, ARMcc, Cmp, DAG);
+  SDValue Result = getCMOV(dl, VT, FalseVal, TrueVal, ARMcc, Cmp, DAG);
   if (CondCode2 != ARMCC::AL) {
-    ARMcc = DAG.getConstant(CondCode2, dl, MVT::i32);
-    Result = getCMOV(dl, VT, Result, True, ARMcc, Cmp, DAG);
+    SDValue ARMcc2 = DAG.getConstant(CondCode2, dl, MVT::i32);
+    Result = getCMOV(dl, VT, Result, TrueVal, ARMcc2, Cmp, DAG);
   }
-  return DAG.getMergeValues({Result, Chain}, dl);
+  return IsStrict ? DAG.getMergeValues({Result, Chain}, dl) : Result;
 }
 
 SDValue ARMTargetLowering::LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const {
@@ -10491,7 +10507,10 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_POISON: return LowerCTTZ(Op.getNode(), DAG, Subtarget);
   case ISD::CTPOP:         return LowerCTPOP(Op.getNode(), DAG, Subtarget);
-  case ISD::SETCC:         return LowerVSETCC(Op, DAG, Subtarget);
+  case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS:
+  case ISD::SETCC:
+    return LowerSETCC(Op, DAG);
   case ISD::SETCCCARRY:    return LowerSETCCCARRY(Op, DAG);
   case ISD::ConstantFP:    return LowerConstantFP(Op, DAG, Subtarget);
   case ISD::BUILD_VECTOR:  return LowerBUILD_VECTOR(Op, DAG, Subtarget);
@@ -10585,8 +10604,6 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_ROUND: return LowerFP_ROUND(Op, DAG);
   case ISD::STRICT_FP_EXTEND:
   case ISD::FP_EXTEND: return LowerFP_EXTEND(Op, DAG);
-  case ISD::STRICT_FSETCC:
-  case ISD::STRICT_FSETCCS: return LowerFSETCC(Op, DAG);
   case ISD::SPONENTRY:
     return LowerSPONENTRY(Op, DAG);
   case ISD::FP_TO_BF16:
