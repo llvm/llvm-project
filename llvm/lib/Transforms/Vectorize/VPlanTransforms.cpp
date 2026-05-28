@@ -86,8 +86,9 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
               nullptr /*Mask*/, false /*Consecutive*/, *VPI,
               Ingredient.getDebugLoc());
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
-          NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands(), *VPI,
-                                           Ingredient.getDebugLoc());
+          NewRecipe = new VPWidenGEPRecipe(GEP->getSourceElementType(),
+                                           Ingredient.operands(), *VPI,
+                                           Ingredient.getDebugLoc(), GEP);
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
           Intrinsic::ID VectorID = getVectorIntrinsicIDForCall(CI, &TLI);
           if (VectorID == Intrinsic::not_intrinsic)
