@@ -130,3 +130,26 @@ add_entrypoint_object(
     libc.src.__support.wctype_utils
     libc.hdr.types.wint_t
 )
+
+add_entrypoint_object(
+  iswctype
+  SRCS
+    iswctype.cpp
+  HDRS
+    iswctype.h
+  DEPENDS
+    libc.src.__support.wctype_impl
+    libc.hdr.types.wctype_t
+    libc.hdr.types.wint_t
+)
+
+add_entrypoint_object(
+  wctype
+  SRCS
+    wctype.cpp
+  HDRS
+    wctype.h
+  DEPENDS
+    libc.src.__support.wctype_impl
+    libc.hdr.types.wctype_t
+)

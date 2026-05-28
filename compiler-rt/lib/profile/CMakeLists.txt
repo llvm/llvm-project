@@ -89,6 +89,7 @@ if (NOT COMPILER_RT_PROFILE_BAREMETAL)
   list(APPEND PROFILE_SOURCES
     GCDAProfiling.c
     InstrProfilingFile.c
+    InstrProfilingPlatformROCm.cpp
     InstrProfilingRuntime.cpp
     InstrProfilingUtil.c
     InstrProfilingValue.c
@@ -155,6 +156,17 @@ if(COMPILER_RT_PROFILE_BAREMETAL)
      -DCOMPILER_RT_PROFILE_BAREMETAL=1)
 endif()
 
+set(PROFILE_OBJECT_LIBS)
+if(COMPILER_RT_HAS_INTERCEPTION AND NOT COMPILER_RT_PROFILE_BAREMETAL)
+  # RTInterception references __sanitizer_internal_{memcpy,memset,memmove} and other
+  # sanitizer_common symbols; merge the same object libs as clang_rt.cfi (without
+  # coverage/symbolizer) so -fprofile-instr-generate links stay self-contained.
+  list(APPEND PROFILE_OBJECT_LIBS
+    RTInterception
+    RTSanitizerCommon
+    RTSanitizerCommonLibc)
+endif()
+
 if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
   append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding EXTRA_FLAGS)
   append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib EXTRA_FLAGS)
@@ -162,17 +174,30 @@ if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
   if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
     append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
                    "SHELL:-Xclang -mcode-object-version=none" EXTRA_FLAGS)
+  elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "nvptx")
+    list(APPEND EXTRA_FLAGS --cuda-feature=+ptx63)
   endif()
 endif()
 
 if(MSVC)
-  # profile historically has only been supported with the static runtime
-  # on windows
-  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
+  # profile historically used the static CRT (/MT). When we merge RTInterception and
+  # RTSanitizerCommon (same object libs as clang_rt.cfi on ELF), those targets are
+  # built with MultiThreadedDLL (/MD) — see interception/CMakeLists.txt and
+  # sanitizer_common/CMakeLists.txt. Mixing /MD objects into a /MT libclang_rt.profile
+  # yields LNK2019 (__imp__stricmp from interception_win.cpp) and LNK4098 in Profile-*.
+  if(COMPILER_RT_HAS_INTERCEPTION AND NOT COMPILER_RT_PROFILE_BAREMETAL)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
+  else()
+    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
+  endif()
 endif()
 
 # We don't use the C++ Standard Library here, so avoid including it by mistake.
 append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ EXTRA_FLAGS)
+# C++ profile sources (e.g. InstrProfilingPlatformROCm.cpp) must not emit exception
+# personality symbols: host libclang_rt.profile.a is linked from C code and from C++
+# tests that do not pull in __gxx_personality_v0 (Profile-* / premerge).
+append_list_if(COMPILER_RT_HAS_FNO_EXCEPTIONS_FLAG -fno-exceptions EXTRA_FLAGS)
 # XRay uses C++ standard library headers.
 string(REGEX REPLACE "-?-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
@@ -184,21 +209,34 @@ append_list_if(COMPILER_RT_HAS_WD4221_FLAG /wd4221 EXTRA_FLAGS)
 # Disable 'nonstandard extension used: translation unit is empty'.
 append_list_if(COMPILER_RT_HAS_WD4206_FLAG /wd4206 EXTRA_FLAGS)
 
+# In the GPU runtimes build, link `runtimes-libc-headers` for its
+# `-isystem` include dir and for waiting on header generation.
+# The target is created at compiler-rt top level from `HandleLibC.cmake`
+# when `LLVM_RUNTIMES_BUILD` is set.
+set(PROFILE_LINK_LIBS)
+if(COMPILER_RT_GPU_BUILD AND TARGET runtimes-libc-headers)
+  list(APPEND PROFILE_LINK_LIBS runtimes-libc-headers)
+endif()
+
 if(APPLE)
   add_compiler_rt_runtime(clang_rt.profile
     STATIC
     OS ${PROFILE_SUPPORTED_OS}
     ARCHS ${PROFILE_SUPPORTED_ARCH}
+    OBJECT_LIBS ${PROFILE_OBJECT_LIBS}
     CFLAGS ${EXTRA_FLAGS}
     SOURCES ${PROFILE_SOURCES}
     ADDITIONAL_HEADERS ${PROFILE_HEADERS}
+    LINK_LIBS ${PROFILE_LINK_LIBS}
     PARENT_TARGET profile)
 else()
   add_compiler_rt_runtime(clang_rt.profile
     STATIC
     ARCHS ${PROFILE_SUPPORTED_ARCH}
+    OBJECT_LIBS ${PROFILE_OBJECT_LIBS}
     CFLAGS ${EXTRA_FLAGS}
     SOURCES ${PROFILE_SOURCES}
     ADDITIONAL_HEADERS ${PROFILE_HEADERS}
+    LINK_LIBS ${PROFILE_LINK_LIBS}
     PARENT_TARGET profile)
 endif()

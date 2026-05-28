@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 //  Shared error-handling, format-registry cache, and summary-file abstraction
-//  used by clang-ssaf-linker and clang-ssaf-format.
+//  used by clang-ssaf tools.
 //
 //  All declarations live in the clang::ssaf namespace.
 //
@@ -32,27 +32,6 @@ namespace clang::ssaf {
 
 /// Returns the name of the running tool, as set by initTool().
 llvm::StringRef getToolName();
-
-//===----------------------------------------------------------------------===//
-// Error Messages
-//===----------------------------------------------------------------------===//
-
-namespace ErrorMessages {
-
-constexpr const char *CannotValidateSummary =
-    "failed to validate summary '{0}': {1}";
-
-constexpr const char *ExtensionNotSupplied = "Extension not supplied";
-
-constexpr const char *NoFormatForExtension =
-    "Format not registered for extension '{0}'";
-
-constexpr const char *OutputDirectoryMissing =
-    "Parent directory does not exist";
-
-constexpr const char *FailedToLoadPlugin = "failed to load plugin '{0}': {1}";
-
-} // namespace ErrorMessages
 
 //===----------------------------------------------------------------------===//
 // Diagnostic Utilities
@@ -87,14 +66,28 @@ void initTool(int argc, const char **argv, llvm::StringRef Version,
 // Data Structures
 //===----------------------------------------------------------------------===//
 
-struct SummaryFile {
+struct FormatFile {
   std::string Path;
   SerializationFormat *Format = nullptr;
 
-  /// Constructs a SummaryFile by resolving the serialization format from the
-  /// file extension. Calls fail() and exits if the extension is missing or
-  /// unregistered.
-  static SummaryFile fromPath(llvm::StringRef Path);
+  /// Validates an input path and returns a FormatFile.
+  ///
+  /// Checks that the path exists and is a regular file, then resolves the
+  /// serialization format from the file extension. Read permission is not
+  /// checked here because llvm::sys::fs::AccessMode does not support Read; read
+  /// errors are caught when the file is opened during deserialization.
+  ///
+  /// Calls fail() and exits on any validation error.
+  static FormatFile fromInputPath(llvm::StringRef Path);
+
+  /// Validates an output path and returns a FormatFile.
+  ///
+  /// Checks that the output file does not already exist, that the parent
+  /// directory exists and is writable, then resolves the serialization format
+  /// from the file extension.
+  ///
+  /// Calls fail() and exits on any validation error.
+  static FormatFile fromOutputPath(llvm::StringRef Path);
 };
 
 } // namespace clang::ssaf

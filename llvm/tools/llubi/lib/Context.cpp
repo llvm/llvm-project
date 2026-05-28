@@ -15,9 +15,9 @@
 
 namespace llvm::ubi {
 
-Context::Context(Module &M)
-    : Ctx(M.getContext()), M(M), DL(M.getDataLayout()),
-      TLIImpl(M.getTargetTriple()) {}
+Context::Context(Module &M, const AsmParserContext *ParserContext)
+    : Ctx(M.getContext()), M(M), ParserContext(ParserContext),
+      DL(M.getDataLayout()), TLIImpl(M.getTargetTriple()) {}
 
 Context::~Context() = default;
 
@@ -28,7 +28,8 @@ bool Context::initGlobalValues() {
     if (F.hasAddressTaken()) {
       // TODO: Use precise alignment for function pointers if it is necessary.
       auto FuncObj = allocate(0, F.getPointerAlignment(DL).value(), F.getName(),
-                              DL.getProgramAddressSpace(), MemInitKind::Zeroed);
+                              DL.getProgramAddressSpace(), MemInitKind::Zeroed,
+                              MemAllocKind::Global);
       if (!FuncObj)
         return false;
       ValidFuncTargets.try_emplace(FuncObj->getAddress(),
@@ -40,7 +41,7 @@ bool Context::initGlobalValues() {
       if (!BB.hasAddressTaken())
         continue;
       auto BlockObj = allocate(0, 1, BB.getName(), DL.getProgramAddressSpace(),
-                               MemInitKind::Zeroed);
+                               MemInitKind::Zeroed, MemAllocKind::Global);
       if (!BlockObj)
         return false;
       ValidBlockTargets.try_emplace(BlockObj->getAddress(),
@@ -60,8 +61,7 @@ AnyValue Context::getConstantValueImpl(Constant *C) {
     return AnyValue::getNullValue(*this, C->getType());
 
   if (isa<ConstantPointerNull>(C))
-    return Pointer::null(
-        DL.getPointerSizeInBits(C->getType()->getPointerAddressSpace()));
+    return Pointer::null(C->getType()->getPointerAddressSpace(), DL);
 
   if (auto *CI = dyn_cast<ConstantInt>(C)) {
     if (auto *VecTy = dyn_cast<VectorType>(CI->getType()))
@@ -111,7 +111,8 @@ const AnyValue &Context::getConstantValue(Constant *C) {
 }
 
 AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
-                            uint32_t OffsetInBits, bool CheckPaddingBits) {
+                            uint32_t OffsetInBits, bool CheckPaddingBits,
+                            bool *ContainsUndefinedBits) {
   uint32_t NumBits = DL.getTypeSizeInBits(Ty).getFixedValue();
   uint32_t NewOffsetInBits = OffsetInBits + NumBits;
   if (CheckPaddingBits)
@@ -136,17 +137,24 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
     uint32_t Mask = (1U << NumBitsInByte) - 1;
     // If any of the bits in the byte is poison, the whole value is poison.
     if (~LogicalByte.ConcreteMask & ~LogicalByte.Value & Mask) {
+      if (ContainsUndefinedBits)
+        *ContainsUndefinedBits = true;
       OffsetInBits = NewOffsetInBits;
       return AnyValue::poison();
     }
     uint8_t RandomBits = 0;
-    if (UndefBehavior == UndefValueBehavior::NonDeterministic &&
-        (~LogicalByte.ConcreteMask & Mask)) {
+    if (~LogicalByte.ConcreteMask & Mask) {
       // This byte contains undef bits.
-      // We don't use std::uniform_int_distribution here because it produces
-      // different results across different library implementations. Instead,
-      // we directly use the low bits from Rng.
-      RandomBits = static_cast<uint8_t>(Rng());
+      if (ContainsUndefinedBits)
+        *ContainsUndefinedBits = true;
+
+      if (getEffectiveUndefValueBehavior() ==
+          UndefValueBehavior::NonDeterministic) {
+        // We don't use std::uniform_int_distribution here because it produces
+        // different results across different library implementations. Instead,
+        // we directly use the low bits from Rng.
+        RandomBits = static_cast<uint8_t>(Rng());
+      }
     }
     uint8_t ActualBits = ((LogicalByte.Value & LogicalByte.ConcreteMask) |
                           (RandomBits & ~LogicalByte.ConcreteMask)) &
@@ -159,8 +167,11 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
 
   // Padding bits for non-byte-sized scalar types must be zero.
   if (NeedsPadding) {
-    if (!Bits.isIntN(NumBits))
+    if (!Bits.isIntN(NumBits)) {
+      if (ContainsUndefinedBits)
+        *ContainsUndefinedBits = true;
       return AnyValue::poison();
+    }
     Bits = Bits.trunc(NumBits);
   }
 
@@ -173,12 +184,13 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
   return Pointer(Bits);
 }
 
-AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty) {
+AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
+                            bool *ContainsUndefinedBits) {
   assert(Bytes.size() == getEffectiveTypeStoreSize(Ty) &&
          "Invalid byte array size for the type");
   if (Ty->isIntegerTy() || Ty->isFloatingPointTy() || Ty->isPointerTy())
     return fromBytes(ConstBytesView(Bytes, DL), Ty, /*OffsetInBits=*/0,
-                     /*CheckPaddingBits=*/true);
+                     /*CheckPaddingBits=*/true, ContainsUndefinedBits);
 
   if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
     Type *ElemTy = VecTy->getElementType();
@@ -192,8 +204,11 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty) {
       const Byte &PaddingByte = View[Bytes.size() - 1];
       uint32_t Mask = (~0U << (VecBits % 8)) & 255U;
       // Make sure all high padding bits are zero.
-      if ((PaddingByte.ConcreteMask & ~PaddingByte.Value & Mask) != Mask)
+      if ((PaddingByte.ConcreteMask & ~PaddingByte.Value & Mask) != Mask) {
+        if (ContainsUndefinedBits)
+          *ContainsUndefinedBits = true;
         return AnyValue::getPoisonValue(*this, Ty);
+      }
     }
 
     std::vector<AnyValue> ValVec;
@@ -202,11 +217,11 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty) {
     // the integer, and for big endian element zero is put in the most
     // significant bits.
     for (uint32_t I = 0; I != NumElements; ++I)
-      ValVec.push_back(fromBytes(View, ElemTy,
-                                 DL.isLittleEndian()
-                                     ? I * ElemBits
-                                     : VecBits - ElemBits - I * ElemBits,
-                                 /*CheckPaddingBits=*/false));
+      ValVec.push_back(
+          fromBytes(View, ElemTy,
+                    DL.isLittleEndian() ? I * ElemBits
+                                        : VecBits - ElemBits - I * ElemBits,
+                    /*CheckPaddingBits=*/false, ContainsUndefinedBits));
     return AnyValue(std::move(ValVec));
   }
   if (auto *ArrTy = dyn_cast<ArrayType>(Ty)) {
@@ -217,7 +232,8 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty) {
     std::vector<AnyValue> ValVec;
     ValVec.reserve(NumElements);
     for (uint32_t I = 0; I != NumElements; ++I)
-      ValVec.push_back(fromBytes(Bytes.slice(I * Stride, StoreSize), ElemTy));
+      ValVec.push_back(fromBytes(Bytes.slice(I * Stride, StoreSize), ElemTy,
+                                 ContainsUndefinedBits));
     return AnyValue(std::move(ValVec));
   }
   if (auto *StructTy = dyn_cast<StructType>(Ty)) {
@@ -230,7 +246,7 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty) {
       ValVec.push_back(fromBytes(
           Bytes.slice(getEffectiveTypeSize(Layout->getElementOffset(I)),
                       getEffectiveTypeStoreSize(ElemTy)),
-          ElemTy));
+          ElemTy, ContainsUndefinedBits));
     }
     return AnyValue(std::move(ValVec));
   }
@@ -358,9 +374,11 @@ void Context::toBytes(const AnyValue &Val, Type *Ty,
   llvm_unreachable("Unsupported first class type.");
 }
 
-AnyValue Context::load(MemoryObject &MO, uint64_t Offset, Type *ValTy) {
+AnyValue Context::load(MemoryObject &MO, uint64_t Offset, Type *ValTy,
+                       bool *ContainsUndefinedBits) {
   return fromBytes(
-      MO.getBytes().slice(Offset, getEffectiveTypeStoreSize(ValTy)), ValTy);
+      MO.getBytes().slice(Offset, getEffectiveTypeStoreSize(ValTy)), ValTy,
+      ContainsUndefinedBits);
 }
 
 void Context::store(MemoryObject &MO, uint64_t Offset, const AnyValue &Val,
@@ -379,7 +397,7 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
   if (Val.isPoison()) {
     uint32_t Bits = DL.getTypeSizeInBits(Ty);
     APInt RandomVal = APInt::getZero(Bits);
-    if (UndefBehavior == UndefValueBehavior::NonDeterministic) {
+    if (mayUseNonDeterminism()) {
       SmallVector<APInt::WordType> RandomWords;
       uint32_t NumWords = APInt::getNumWords(Bits);
       RandomWords.reserve(NumWords);
@@ -387,7 +405,7 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
                         std::numeric_limits<APInt::WordType>::digits,
                     "Unexpected Rng result type.");
       for (uint32_t I = 0; I != NumWords; ++I)
-        RandomWords.push_back(static_cast<APInt::WordType>(Rng()));
+        RandomWords.push_back(static_cast<APInt::WordType>(getRandomUInt64()));
       RandomVal = APInt(Bits, RandomWords);
     }
     if (Ty->isIntegerTy())
@@ -421,10 +439,12 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
 
 MemoryObject::~MemoryObject() = default;
 MemoryObject::MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name,
-                           unsigned AS, MemInitKind InitKind)
+                           unsigned AS, MemInitKind InitKind,
+                           MemAllocKind AllocKind)
     : Address(Addr), Size(Size), Name(Name), AS(AS),
       State(InitKind != MemInitKind::Poisoned ? MemoryObjectState::Alive
-                                              : MemoryObjectState::Dead) {
+                                              : MemoryObjectState::Dead),
+      AllocKind(AllocKind) {
   switch (InitKind) {
   case MemInitKind::Zeroed:
     Bytes.resize(Size, Byte::concrete(0));
@@ -438,29 +458,30 @@ MemoryObject::MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name,
   }
 }
 
-IntrusiveRefCntPtr<MemoryObject> Context::allocate(uint64_t Size,
-                                                   uint64_t Align,
-                                                   StringRef Name, unsigned AS,
-                                                   MemInitKind InitKind) {
+IntrusiveRefCntPtr<MemoryObject>
+Context::allocate(uint64_t Size, uint64_t Align, StringRef Name, unsigned AS,
+                  MemInitKind InitKind, MemAllocKind AllocKind) {
   // Even if the memory object is zero-sized, it still occupies a byte to obtain
   // a unique address.
   uint64_t AllocateSize = std::max(Size, (uint64_t)1);
   if (MaxMem != 0 && SaturatingAdd(UsedMem, AllocateSize) >= MaxMem)
     return nullptr;
   uint64_t AlignedAddr = alignTo(AllocationBase, Align);
-  auto MemObj =
-      makeIntrusiveRefCnt<MemoryObject>(AlignedAddr, Size, Name, AS, InitKind);
+  auto MemObj = makeIntrusiveRefCnt<MemoryObject>(AlignedAddr, Size, Name, AS,
+                                                  InitKind, AllocKind);
   MemoryObjects[AlignedAddr] = MemObj;
   AllocationBase = AlignedAddr + AllocateSize;
   UsedMem += AllocateSize;
   return MemObj;
 }
 
-bool Context::free(uint64_t Address) {
+bool Context::free(const MemoryObject &Obj) {
+  uint64_t Address = Obj.getAddress();
   auto It = MemoryObjects.find(Address);
-  if (It == MemoryObjects.end())
+  if (It == MemoryObjects.end() || It->second.get() != &Obj)
     return false;
-  UsedMem -= std::max(It->second->getSize(), (uint64_t)1);
+
+  UsedMem -= std::max(It->second->getSize(), static_cast<uint64_t>(1));
   It->second->markAsFreed();
   MemoryObjects.erase(It);
   return true;
@@ -499,9 +520,76 @@ uint64_t Context::getEffectiveTypeStoreSize(Type *Ty) {
   return getEffectiveTypeSize(DL.getTypeStoreSize(Ty));
 }
 
+RoundingMode Context::getCurrentRoundingMode() const {
+  return CurrentRoundingMode;
+}
+
+fp::ExceptionBehavior Context::getCurrentExceptionBehavior() const {
+  return CurrentExceptionBehavior;
+}
+
+void Context::setCurrentRoundingMode(RoundingMode RM) {
+  CurrentRoundingMode = RM;
+}
+
+void Context::setCurrentExceptionBehavior(fp::ExceptionBehavior EB) {
+  CurrentExceptionBehavior = EB;
+}
+
+bool Context::isDefaultFPEnv() const {
+  return isDefaultFPEnvironment(CurrentExceptionBehavior, CurrentRoundingMode);
+}
+
+UndefValueBehavior Context::getEffectiveUndefValueBehavior() const {
+  if (isDeterministic())
+    return UndefValueBehavior::Zero;
+  return UndefBehavior;
+}
+
+NaNPropagationBehavior Context::getEffectiveNaNPropagationBehavior() const {
+  if (isDeterministic())
+    return NaNPropagationBehavior::PreferredNaN;
+  return NaNBehavior;
+}
+
+bool Context::getRandomBool() {
+  // We use the lowest bit of the raw bits from RNG as the result:
+  if (mayUseNonDeterminism())
+    return static_cast<bool>(Rng() & 1);
+  return false;
+}
+
+uint64_t Context::getRandomUInt64() {
+  if (mayUseNonDeterminism())
+    return Rng();
+  return 0;
+}
+
 void MemoryObject::markAsFreed() {
   State = MemoryObjectState::Freed;
   Bytes.clear();
+}
+
+bool MemoryObject::isGlobal() const {
+  return AllocKind == MemAllocKind::Global;
+}
+
+bool MemoryObject::isStackAllocated() const {
+  return AllocKind == MemAllocKind::Stack;
+}
+
+bool MemoryObject::isHeapAllocated() const {
+  switch (AllocKind) {
+  case MemAllocKind::Global:
+  case MemAllocKind::Stack:
+    return false;
+  case MemAllocKind::Malloc:
+  case MemAllocKind::New:
+  case MemAllocKind::NewArray:
+    return true;
+  }
+
+  llvm_unreachable("Unknown MemAllocKind");
 }
 
 } // namespace llvm::ubi

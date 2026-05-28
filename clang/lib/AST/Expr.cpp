@@ -142,6 +142,11 @@ bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
   // If this is a non-scalar-integer type, we don't care enough to try.
   if (!E->getType()->isIntegralOrEnumerationType()) return false;
 
+  if (!Semantic)
+    if (const auto *BIT = E->getType()->getAs<BitIntType>();
+        BIT && BIT->isUnsigned() && BIT->getNumBits() == 1)
+      return true;
+
   if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
     switch (UO->getOpcode()) {
     case UO_Plus:
@@ -2404,12 +2409,14 @@ EmbedExpr::EmbedExpr(const ASTContext &Ctx, SourceLocation Loc,
 }
 
 InitListExpr::InitListExpr(const ASTContext &C, SourceLocation lbraceloc,
-                           ArrayRef<Expr *> initExprs, SourceLocation rbraceloc)
+                           ArrayRef<Expr *> initExprs, SourceLocation rbraceloc,
+                           bool isExplicit)
     : Expr(InitListExprClass, QualType(), VK_PRValue, OK_Ordinary),
       InitExprs(C, initExprs.size()), LBraceLoc(lbraceloc),
       RBraceLoc(rbraceloc), AltForm(nullptr, true) {
   sawArrayRangeDesignator(false);
   InitExprs.insert(C, InitExprs.end(), initExprs.begin(), initExprs.end());
+  InitListExprBits.IsExplicit = isExplicit;
 
   setDependence(computeDependence(this));
 }
@@ -3504,6 +3511,24 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
     if (Exp->getOpcode() == UO_Extension)
       return Exp->getSubExpr()->isConstantInitializer(Ctx, false, Culprit);
     break;
+  }
+  case ObjCBoxedExprClass: {
+    const ObjCBoxedExpr *BE = cast<ObjCBoxedExpr>(this);
+    if (Culprit)
+      *Culprit = this;
+    return BE->isExpressibleAsConstantInitializer();
+  }
+  case ObjCArrayLiteralClass: {
+    const ObjCArrayLiteral *ALE = cast<ObjCArrayLiteral>(this);
+    if (Culprit)
+      *Culprit = this;
+    return ALE->isExpressibleAsConstantInitializer();
+  }
+  case ObjCDictionaryLiteralClass: {
+    const ObjCDictionaryLiteral *DLE = cast<ObjCDictionaryLiteral>(this);
+    if (Culprit)
+      *Culprit = this;
+    return DLE->isExpressibleAsConstantInitializer();
   }
   case PackIndexingExprClass: {
     return cast<PackIndexingExpr>(this)
@@ -4915,7 +4940,8 @@ DesignatedInitUpdateExpr::DesignatedInitUpdateExpr(const ASTContext &C,
            OK_Ordinary) {
   BaseAndUpdaterExprs[0] = baseExpr;
 
-  InitListExpr *ILE = new (C) InitListExpr(C, lBraceLoc, {}, rBraceLoc);
+  InitListExpr *ILE =
+      new (C) InitListExpr(C, lBraceLoc, {}, rBraceLoc, /*isExplicit=*/false);
   ILE->setType(baseExpr->getType());
   BaseAndUpdaterExprs[1] = ILE;
 

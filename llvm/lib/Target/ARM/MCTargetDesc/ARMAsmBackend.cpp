@@ -1082,18 +1082,27 @@ static unsigned getFixupKindContainerSizeBytes(unsigned Kind) {
 std::optional<bool> ARMAsmBackend::evaluateFixup(const MCFragment &F,
                                                  MCFixup &Fixup, MCValue &,
                                                  uint64_t &Value) {
-  // For a few PC-relative fixups in Thumb mode, offsets need to be aligned
-  // down. We compensate here because the default handler's `Value` decrement
-  // doesn't account for this alignment.
+  // Thumb PC-relative fixups compute displacement relative to
+  // AlignDown(PC, 4). Pre-seed Value with the low bits so the generic
+  // evaluateFixup (which subtracts the raw source offset) effectively
+  // subtracts the aligned offset.
   switch (Fixup.getKind()) {
   case ARM::fixup_t2_ldst_pcrel_12:
   case ARM::fixup_t2_pcrel_10:
   case ARM::fixup_t2_pcrel_9:
-  case ARM::fixup_thumb_adr_pcrel_10:
   case ARM::fixup_t2_adr_pcrel_12:
   case ARM::fixup_arm_thumb_blx:
+    // These Thumb2/BLX fixups are not on relaxable fragments, so Stretch
+    // (which is only nonzero during relaxation) must be zero here.
+    assert(Asm->getStretch() == 0);
+    [[fallthrough]];
+  case ARM::fixup_thumb_adr_pcrel_10:
   case ARM::fixup_arm_thumb_cp:
-    Value = (Asm->getFragmentOffset(F) + Fixup.getOffset()) % 4;
+    // Subtract Stretch so both the pre-seed and the displacement use the
+    // pre-Stretch (old) source offset. This avoids an epoch mismatch that
+    // produces misaligned values when Stretch % 4 != 0.
+    Value =
+        (Asm->getFragmentOffset(F) - Asm->getStretch() + Fixup.getOffset()) % 4;
   }
   return {};
 }
@@ -1171,13 +1180,20 @@ enum CompactUnwindEncodings {
 uint64_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
     const MCDwarfFrameInfo *FI, const MCContext *Ctxt) const {
   DEBUG_WITH_TYPE("compact-unwind", llvm::dbgs() << "generateCU()\n");
+
   // Only armv7k uses CFI based unwinding.
   if (Subtype != MachO::CPU_SUBTYPE_ARM_V7K)
     return 0;
+
+  // Signal frames cannot be encoded in compact unwind.
+  if (FI->IsSignalFrame)
+    return CU::UNWIND_ARM_MODE_DWARF;
+
   // No .cfi directives means no frame.
   ArrayRef<MCCFIInstruction> Instrs = FI->Instructions;
   if (Instrs.empty())
     return 0;
+
   if (!isDarwinCanonicalPersonality(FI->Personality) &&
       !Ctxt->emitCompactUnwindNonCanonical())
     return CU::UNWIND_ARM_MODE_DWARF;

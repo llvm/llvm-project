@@ -769,13 +769,12 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     }
   }
 
-  const MCAsmInfo *AsmInfo = TM->getMCAsmInfo();
+  const MCAsmInfo &AsmInfo = TM->getMCAsmInfo();
   const BasicBlock *BB = MBB->getBasicBlock();
   const Function &F = MF->getFunction();
   if (LandingPadSuccs.size() > 1 &&
-      !(AsmInfo &&
-        AsmInfo->getExceptionHandlingType() == ExceptionHandling::SjLj &&
-        BB && isa<SwitchInst>(BB->getTerminator())) &&
+      !(AsmInfo.getExceptionHandlingType() == ExceptionHandling::SjLj && BB &&
+        isa<SwitchInst>(BB->getTerminator())) &&
       !isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
     report("MBB has more than one landing pad successor", MBB);
 
@@ -1252,7 +1251,9 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
   case TargetOpcode::G_ZEXTLOAD:
-  case TargetOpcode::G_SEXTLOAD: {
+  case TargetOpcode::G_SEXTLOAD:
+  case TargetOpcode::G_FPEXTLOAD:
+  case TargetOpcode::G_FPTRUNCSTORE: {
     LLT ValTy = MRI->getType(MI->getOperand(0).getReg());
     LLT PtrTy = MRI->getType(MI->getOperand(1).getReg());
     if (!PtrTy.isPointer())
@@ -1265,11 +1266,14 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
              MI);
     } else {
       const MachineMemOperand &MMO = **MI->memoperands_begin();
-      if (MI->getOpcode() == TargetOpcode::G_ZEXTLOAD ||
-          MI->getOpcode() == TargetOpcode::G_SEXTLOAD) {
+      if (isa<GExtLoad>(*MI)) {
         if (TypeSize::isKnownGE(MMO.getSizeInBits().getValue(),
                                 ValTy.getSizeInBits()))
           report("Generic extload must have a narrower memory type", MI);
+      } else if (isa<GFPTruncStore>(*MI)) {
+        if (TypeSize::isKnownGE(MMO.getSizeInBits().getValue(),
+                                ValTy.getSizeInBits()))
+          report("Generic truncstore must have a narrower memory type", MI);
       } else if (MI->getOpcode() == TargetOpcode::G_LOAD) {
         if (TypeSize::isKnownGT(MMO.getSize().getValue(),
                                 ValTy.getSizeInBytes()))
@@ -1294,7 +1298,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       }
 
       const AtomicOrdering Order = MMO.getSuccessOrdering();
-      if (Opc == TargetOpcode::G_STORE) {
+      if (isa<GAnyStore>(*MI)) {
         if (Order == AtomicOrdering::Acquire ||
             Order == AtomicOrdering::AcquireRelease)
           report("atomic store cannot use acquire ordering", MI);
@@ -1344,6 +1348,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     if (SameType && SrcTy.isVector())
       SameType &= SrcTy.getElementCount() == DstTy.getElementCount();
+    if (SameType && SrcTy.isFloatOrFloatVector())
+      SameType &= SrcTy.getFpSemantics() == DstTy.getFpSemantics();
 
     if (SameType)
       report("bitcast must change the type", MI);
@@ -1826,12 +1832,16 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    if (Src1Ty.isScalable() != DstTy.isScalable()) {
-      report("Vector types must both be fixed or both be scalable", MI);
+    if (!DstTy.isScalable() && Src1Ty.isScalable()) {
+      report("Cannot insert a scalable vector into a fixed length vector", MI);
       break;
     }
 
-    if (ElementCount::isKnownGT(Src1Ty.getElementCount(),
+    bool IsMixedFixedIntoScalable =
+        DstTy.isScalableVector() && Src1Ty.isFixedVector();
+
+    if (!IsMixedFixedIntoScalable &&
+        ElementCount::isKnownGT(Src1Ty.getElementCount(),
                                 DstTy.getElementCount())) {
       report("Second source must be smaller than destination vector", MI);
       break;
@@ -1847,7 +1857,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     uint64_t DstMinLen = DstTy.getElementCount().getKnownMinValue();
-    if (Idx >= DstMinLen || Idx + Src1MinLen > DstMinLen) {
+    if (Idx >= DstMinLen ||
+        (!IsMixedFixedIntoScalable && Idx + Src1MinLen > DstMinLen)) {
       report("Subvector type and index must not cause insert to overrun the "
              "vector being inserted into",
              MI);
@@ -1887,8 +1898,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    if (SrcTy.isScalable() != DstTy.isScalable()) {
-      report("Vector types must both be fixed or both be scalable", MI);
+    if (DstTy.isScalable() && !SrcTy.isScalable()) {
+      report("Cannot extract a scalable vector from a fixed length vector", MI);
       break;
     }
 
@@ -1907,8 +1918,11 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
+    bool IsMixedFixedFromScalable =
+        DstTy.isFixedVector() && SrcTy.isScalableVector();
     uint64_t SrcMinLen = SrcTy.getElementCount().getKnownMinValue();
-    if (Idx >= SrcMinLen || Idx + DstMinLen > SrcMinLen) {
+    if (Idx >= SrcMinLen ||
+        (!IsMixedFixedFromScalable && Idx + DstMinLen > SrcMinLen)) {
       report("Destination type and index must not cause extract to overrun the "
              "source vector",
              MI);
@@ -3149,9 +3163,12 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
       addRegWithSubRegs(regsDefined, Reg);
 
     // Verify SSA form.
-    if (MRI->isSSA() && Reg.isVirtual() &&
-        std::next(MRI->def_begin(Reg)) != MRI->def_end())
-      report("Multiple virtual register defs in SSA form", MO, MONum);
+    if (MRI->isSSA() && Reg.isVirtual()) {
+      if (!MRI->hasOneDef(Reg))
+        report("Multiple virtual register defs in SSA form", MO, MONum);
+      if (MO->getSubReg())
+        report("Subreg def in SSA form", MO, MONum);
+    }
 
     // Check LiveInts for a live segment, but only for virtual registers.
     if (LiveInts && !LiveInts->isNotInMIMap(*MI)) {

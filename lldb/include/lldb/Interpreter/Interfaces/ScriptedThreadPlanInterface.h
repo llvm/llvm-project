@@ -14,12 +14,11 @@
 #include "ScriptedInterface.h"
 
 namespace lldb_private {
-class ScriptedThreadPlanInterface : public ScriptedInterface {
+class ScriptedThreadPlanInterface : virtual public ScriptedInterface {
 public:
   virtual llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(llvm::StringRef class_name,
-                     lldb::ThreadPlanSP thread_plan_sp,
-                     const StructuredDataImpl &args_sp) = 0;
+  CreatePluginObject(const ScriptedMetadata &scripted_metadata,
+                     lldb::ThreadPlanSP thread_plan_sp) = 0;
 
   virtual llvm::Expected<bool> ExplainsStop(Event *event) { return true; }
 

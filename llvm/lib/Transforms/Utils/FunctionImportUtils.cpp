@@ -28,13 +28,7 @@ static cl::opt<bool> UseSourceFilenameForPromotedLocals(
              "This requires that the source filename has a unique name / "
              "path to avoid name collisions."));
 
-/// FIXME: The current optimization that avoids unnecessary renaming of
-/// promoted locals is incompatible with distributed ThinLTO and therefore
-/// must be enabled by default.
-cl::opt<bool>
-    AlwaysRenamePromotedLocals("always-rename-promoted-locals", cl::init(true),
-                               cl::Hidden,
-                               cl::desc("Always rename promoted locals."));
+extern cl::opt<bool> AlwaysRenamePromotedLocals;
 
 cl::list<GlobalValue::GUID> MoveSymbolGUID(
     "thinlto-move-symbols",
@@ -191,7 +185,7 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
     // and/or optimization, but are turned into declarations later
     // during the EliminateAvailableExternally pass.
     if (doImportAsDefinition(SGV) && !isa<GlobalAlias>(SGV))
-      return SymbolsToMove.contains(SGV->getGUID())
+      return SymbolsToMove.contains(SGV->getGUIDOrFallback())
                  ? GlobalValue::ExternalLinkage
                  : GlobalValue::AvailableExternallyLinkage;
     // An imported external declaration stays external.
@@ -267,7 +261,7 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
 
   ValueInfo VI;
   if (GV.hasName())
-    VI = ImportIndex.getValueInfo(GV.getGUID());
+    VI = ImportIndex.getValueInfo(GV.getGUIDOrFallback());
 
   // We should always have a ValueInfo (i.e. GV in index) for definitions when
   // we are exporting, and also when importing that value.
@@ -316,6 +310,10 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
   if (VI && GV.hasLocalLinkage())
     Summary = ImportIndex.findSummaryInModule(
         VI, GV.getParent()->getModuleIdentifier());
+
+  assert((!Summary || !Summary->noRenameOnPromotion() ||
+          shouldPromoteLocalToGlobal(&GV, Summary)) &&
+         "noRenameOnPromotion requires promotion to external linkage");
 
   if (GV.hasLocalLinkage() && shouldPromoteLocalToGlobal(&GV, Summary)) {
     // Save the original name string before we rename GV below.

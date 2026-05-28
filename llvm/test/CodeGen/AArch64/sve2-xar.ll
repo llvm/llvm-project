@@ -151,15 +151,15 @@ define <vscale x 16 x i8> @xar_nxv16i8_r(<vscale x 16 x i8> %x, <vscale x 16 x i
 define <vscale x 2 x i64> @xar_nxv2i64_l_neg1(<vscale x 2 x i64> %x, <vscale x 2 x i64> %y, <vscale x 2 x i64> %z) {
 ; CHECK-LABEL: xar_nxv2i64_l_neg1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z3.d, z2.d
-; CHECK-NEXT:    subr z2.d, z2.d, #0 // =0x0
+; CHECK-NEXT:    movprfx z3, z2
+; CHECK-NEXT:    subr z3.d, z3.d, #0 // =0x0
 ; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:    and z2.d, z2.d, #0x3f
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z3.d, z3.d, #0x3f
-; CHECK-NEXT:    and z2.d, z2.d, #0x3f
-; CHECK-NEXT:    lslr z3.d, p0/m, z3.d, z0.d
-; CHECK-NEXT:    lsr z0.d, p0/m, z0.d, z2.d
-; CHECK-NEXT:    orr z0.d, z3.d, z0.d
+; CHECK-NEXT:    lslr z2.d, p0/m, z2.d, z0.d
+; CHECK-NEXT:    lsr z0.d, p0/m, z0.d, z3.d
+; CHECK-NEXT:    orr z0.d, z2.d, z0.d
 ; CHECK-NEXT:    ret
     %a = xor <vscale x 2 x i64> %x, %y
     %b = call <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %a, <vscale x 2 x i64> %z)

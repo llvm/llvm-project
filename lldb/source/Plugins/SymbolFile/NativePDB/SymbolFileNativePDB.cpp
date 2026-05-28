@@ -1497,8 +1497,11 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
     for (const LineColumnEntry &group : lines) {
       llvm::Expected<uint32_t> file_index_or_err =
           GetFileIndex(*cii, group.NameIndex);
-      if (!file_index_or_err)
+      if (!file_index_or_err) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), file_index_or_err.takeError(),
+                       "failed to get file index for line entry: {0}");
         continue;
+      }
       uint32_t file_index = file_index_or_err.get();
       lldbassert(!group.LineNumbers.empty());
       CompilandIndexItem::GlobalLineTable::Entry line_entry(
@@ -1701,8 +1704,11 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
   FileSpec decl_file;
   llvm::Expected<uint32_t> file_index_or_err =
       GetFileIndex(*cii, inlinee_line.Header->FileID);
-  if (!file_index_or_err)
+  if (!file_index_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), file_index_or_err.takeError(),
+                   "failed to get file index for inline site: {0}");
     return;
+  }
   uint32_t file_offset = file_index_or_err.get();
   decl_file = files.GetFileSpecAtIndex(file_offset);
   uint32_t decl_line = inlinee_line.Header->SourceLineNum;
@@ -1826,7 +1832,7 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
         S_INLINESITE) {
       // Its parent is another inline site, lookup parent site's range vector
       // for callsite line.
-      ParseInlineSite(parent_id, func_base);
+      ParseInlineSite(parent_id, Address(func_base));
       std::shared_ptr<InlineSite> parent_site =
           m_inline_sites[toOpaqueUid(parent_id)];
       FileSpec &parent_decl_file =
@@ -1937,8 +1943,11 @@ size_t SymbolFileNativePDB::ParseSymbolArrayInScope(
 void SymbolFileNativePDB::DumpClangAST(Stream &s, llvm::StringRef filter,
                                        bool show_color) {
   auto ts_or_err = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
-  if (!ts_or_err)
+  if (!ts_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), ts_or_err.takeError(),
+                   "failed to get C++ type system: {0}");
     return;
+  }
   auto ts = *ts_or_err;
   TypeSystemClang *clang = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang)
@@ -3109,13 +3118,13 @@ SymbolFileNativePDB::ResolveUdtDeclaration(PdbTypeSymId type_id) {
 
   auto it = m_udt_declarations.find(type_id.index);
   if (it == m_udt_declarations.end())
-    return llvm::createStringError("No UDT declaration found");
+    return llvm::createStringError("no UDT declaration found");
 
   llvm::StringRef file_name;
   if (it->second.IsIpiIndex) {
     CVType cvt = m_index->ipi().getType(it->second.FileNameIndex);
     if (cvt.kind() != LF_STRING_ID)
-      return llvm::createStringError("File name was not a LF_STRING_ID");
+      return llvm::createStringError("file name was not a LF_STRING_ID");
 
     StringIdRecord sid;
     if (auto err = TypeDeserializer::deserializeAs(cvt, sid))

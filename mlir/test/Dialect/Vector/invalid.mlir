@@ -1545,6 +1545,15 @@ func.func @gather_non_power_of_two_alignment(%base: memref<16xf32>, %indices: ve
 
 // -----
 
+func.func @gather_tensor_alignment(%base: tensor<16xf32>, %indices: vector<16xi32>,
+                                %mask: vector<16xi1>, %pass_thru: vector<16xf32>, %c0 : index) {
+  // expected-error@+1 {{'vector.gather' op alignment is only supported for memref bases, not tensor bases}}
+  %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
+    { alignment = 8 : i64 } : tensor<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+}
+
+// -----
+
 func.func @scatter_to_vector(%base: vector<16xf32>, %indices: vector<16xi32>,
                              %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
@@ -1624,6 +1633,15 @@ func.func @scatter_non_power_of_2_alignment(%base: memref<?xf32>, %indices: vect
 
 // -----
 
+func.func @scatter_tensor_alignment(%base: tensor<?xf32>, %indices: vector<16xi32>,
+                                %mask: vector<16xi1>, %value: vector<16xf32>, %c0: index) {
+  // expected-error@+1 {{'vector.scatter' op alignment is only supported for memref bases, not tensor bases}}
+  vector.scatter %base[%c0][%indices], %mask, %value { alignment = 8 : i64 }
+    : tensor<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> -> tensor<?xf32>
+}
+
+// -----
+
 func.func @expand_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.expandload' op base element type ('f64') does not match result element type ('f32')}}
@@ -1642,8 +1660,16 @@ func.func @expand_base_scalable(%base: memref<?xf32>, %mask: vector<[16]xi1>, %p
 
 func.func @expand_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<17xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.expandload' op expected result dim to match mask dim}}
+  // expected-error@+1 {{'vector.expandload' op expected result shape to match mask shape}}
   %0 = vector.expandload %base[%c0], %mask, %pass_thru : memref<?xf32>, vector<17xi1>, vector<16xf32> into vector<16xf32>
+}
+
+// -----
+
+func.func @expand_shape_mask_mismatch(%base: memref<?xf32>, %mask: vector<2x7xi1>, %pass_thru: vector<2x8xf32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{'vector.expandload' op expected result shape to match mask shape}}
+  %0 = vector.expandload %base[%c0], %mask, %pass_thru : memref<?xf32>, vector<2x7xi1>, vector<2x8xf32> into vector<2x8xf32>
 }
 
 // -----
@@ -1696,8 +1722,16 @@ func.func @compress_scalable(%base: memref<?xf32>, %mask: vector<[16]xi1>, %valu
 
 func.func @compress_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<17xi1>, %value: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.compressstore' op expected valueToStore dim to match mask dim}}
+  // expected-error@+1 {{'vector.compressstore' op expected valueToStore shape to match mask shape}}
   vector.compressstore %base[%c0], %mask, %value : memref<?xf32>, vector<17xi1>, vector<16xf32>
+}
+
+// -----
+
+func.func @compress_shape_mask_mismatch(%base: memref<?xf32>, %mask: vector<2x7xi1>, %value: vector<2x8xf32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{'vector.compressstore' op expected valueToStore shape to match mask shape}}
+  vector.compressstore %base[%c0], %mask, %value : memref<?xf32>, vector<2x7xi1>, vector<2x8xf32>
 }
 
 // -----

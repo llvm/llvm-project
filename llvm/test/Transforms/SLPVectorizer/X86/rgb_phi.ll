@@ -23,23 +23,25 @@ target triple = "i386-apple-macosx10.9.0"
 define float @foo(ptr nocapture readonly %A) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi float [ [[TMP3]], [[ENTRY:%.*]] ], [ [[DOTPRE:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE:%.*]] ]
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE]] ]
 ; CHECK-NEXT:    [[B_032:%.*]] = phi float [ [[TMP2]], [[ENTRY]] ], [ [[ADD14:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x float> [ [[TMP1]], [[ENTRY]] ], [ [[TMP11:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE]] ]
+; CHECK-NEXT:    [[G_031:%.*]] = phi float [ [[TMP1]], [[ENTRY]] ], [ [[TMP16:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE]] ]
+; CHECK-NEXT:    [[R_030:%.*]] = phi float [ [[TMP3]], [[ENTRY]] ], [ [[TMP15:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE]] ]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP4]], 7.000000e+00
+; CHECK-NEXT:    [[TMP15]] = fadd float [[R_030]], [[MUL]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[ARRAYIDX7]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> poison, float [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> [[TMP8]], float [[TMP7]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = fmul <2 x float> [[TMP9]], <float 7.000000e+00, float 8.000000e+00>
-; CHECK-NEXT:    [[TMP11]] = fadd <2 x float> [[TMP5]], [[TMP10]]
+; CHECK-NEXT:    [[MUL8:%.*]] = fmul float [[TMP7]], 8.000000e+00
+; CHECK-NEXT:    [[TMP16]] = fadd float [[G_031]], [[MUL8]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load float, ptr [[ARRAYIDX12]], align 4
@@ -54,8 +56,6 @@ define float @foo(ptr nocapture readonly %A) {
 ; CHECK-NEXT:    [[DOTPRE]] = load float, ptr [[ARRAYIDX3_PHI_TRANS_INSERT]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x float> [[TMP11]], i32 0
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[TMP11]], i32 1
 ; CHECK-NEXT:    [[ADD16:%.*]] = fadd float [[TMP15]], [[TMP16]]
 ; CHECK-NEXT:    [[ADD17:%.*]] = fadd float [[ADD16]], [[ADD14]]
 ; CHECK-NEXT:    ret float [[ADD17]]

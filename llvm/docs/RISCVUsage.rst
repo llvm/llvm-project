@@ -206,6 +206,7 @@ on support follow.
      ``Zicboz``        Assembly Support
      ``Ziccamoa``      Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Ziccamoc``      Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ziccid``        Supported
      ``Ziccif``        Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zicclsm``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Ziccrse``       Supported (`See note <#riscv-profiles-extensions-note>`__)
@@ -336,7 +337,7 @@ LLVM supports (to various degrees) a number of experimental extensions.  All exp
 The primary goal of experimental support is to assist in the process of ratification by providing an existence proof of an implementation, and simplifying efforts to validate the value of a proposed extension against large code bases.  Experimental extensions are expected to either transition to ratified status, or be eventually removed.  The decision on whether to accept an experimental extension is currently done on an entirely case by case basis; if you want to propose one, attending the bi-weekly RISC-V sync-up call is strongly advised.
 
 ``experimental-p``
-  LLVM implements the `019 draft specification <https://www.jhauser.us/RISCV/ext-P/>`__.
+  LLVM implements the `0.21 draft specification <https://github.com/riscv/riscv-p-spec/blob/master/P-ext-proposal.adoc>`__.
 
 ``experimental-zibi``
   LLVM implements the `0.1 release specification <https://github.com/riscv/zibi/releases/tag/v0.1.0>`__.
@@ -361,6 +362,15 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 ``experimental-zvzip``
   LLVM implements the `0.1 draft specification <https://github.com/ved-rivos/riscv-isa-manual/blob/zvzip/src/zvzip.adoc>`__.
+
+``experimental-zvvfmm``
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-fa55752-2026-05-04>`__.
+
+``experimental-zvvmm``
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-fa55752-2026-05-04>`__.
+
+``experimental-zvqwbdota8i``, ``experimental-zvqwbdota16i``, ``experimental-zvfqwbdota8f``, ``experimental-zvfwbdota16bf``, ``experimental-zvfbdota32f``
+  LLVM implements the `0.2 draft specification <https://github.com/aswaterman/riscv-misc/blob/main/isa/ldot-bdot/ldot-bdot.adoc>`__.
 
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
@@ -471,6 +481,9 @@ The current vendor extensions supported are:
 ``Xqccmp``
   LLVM implements `version 0.3 of the 16-bit Push/Pop instructions and double-moves extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqccmp_extension-0.3.0>`__ by Qualcomm. All instructions are prefixed with `qc.` as described in the specification.
 
+``experimental-Xqccmt``
+  LLVM implements `version 0.1 of the Qualcomm 16-bit Table Jump extension specification <https://github.com/riscv/riscv-unified-db/pull/1788>`__ by Qualcomm. All instructions are prefixed with ``qc.`` as described in the specification.
+
 ``Xqci``
   LLVM implements `version 0.13 of the Qualcomm uC extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
@@ -536,9 +549,6 @@ The current vendor extensions supported are:
 
 ``Xmipslsp``
   LLVM implements load/store pair instructions for the `p8700 processor <https://mips.com/products/hardware/p8700/>`__ by MIPS.
-
-``experimental-XRivosVisni``
-  LLVM implements `version 0.1 of the Rivos Vector Integer Small New Instructions extension specification <https://github.com/rivosinc/rivos-custom-extensions>`__.
 
 ``experimental-XRivosVizip``
   LLVM implements `version 0.1 of the Rivos Vector Register Zips extension specification <https://github.com/rivosinc/rivos-custom-extensions>`__.

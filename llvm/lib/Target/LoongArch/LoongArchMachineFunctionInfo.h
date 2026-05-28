@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_LOONGARCH_LOONGARCHMACHINEFUNCTIONINFO_H
 
 #include "LoongArchSubtarget.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 
@@ -32,16 +33,16 @@ private:
   /// Size of stack frame to save callee saved registers
   unsigned CalleeSavedStackSize = 0;
 
-  /// Amount of bytes on stack consumed by the arguments being passed on
-  /// the stack
-  unsigned ArgumentStackSize = 0;
+  /// Incoming indirect argument pointers saved as virtual registers, keyed by
+  /// formal parameter index. Used for musttail forwarding of indirect args.
+  /// Virtual registers (not SDValues) are used because the SelectionDAG is
+  /// cleared between basic blocks, and musttail calls may be in non-entry
+  /// blocks.
+  DenseMap<unsigned, Register> IncomingIndirectArgs;
 
   /// FrameIndex of the spill slot when there is no scavenged register in
   /// insertIndirectBranch.
   int BranchRelaxationSpillFrameIndex = -1;
-
-  /// Incoming ByVal arguments
-  SmallVector<SDValue, 8> IncomingByValArgs;
 
   /// Registers that have been sign extended from i32.
   SmallVector<Register, 8> SExt32Registers;
@@ -70,8 +71,14 @@ public:
   unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
 
-  unsigned getArgumentStackSize() const { return ArgumentStackSize; }
-  void setArgumentStackSize(unsigned size) { ArgumentStackSize = size; }
+  void setIncomingIndirectArg(unsigned ArgIndex, Register Reg) {
+    IncomingIndirectArgs[ArgIndex] = Reg;
+  }
+  Register getIncomingIndirectArg(unsigned ArgIndex) const {
+    auto It = IncomingIndirectArgs.find(ArgIndex);
+    assert(It != IncomingIndirectArgs.end() && "No incoming indirect arg");
+    return It->second;
+  }
 
   int getBranchRelaxationSpillFrameIndex() {
     return BranchRelaxationSpillFrameIndex;
@@ -79,10 +86,6 @@ public:
   void setBranchRelaxationSpillFrameIndex(int Index) {
     BranchRelaxationSpillFrameIndex = Index;
   }
-
-  void addIncomingByValArgs(SDValue Val) { IncomingByValArgs.push_back(Val); }
-  SDValue getIncomingByValArgs(int Idx) { return IncomingByValArgs[Idx]; }
-  unsigned getIncomingByValArgsSize() const { return IncomingByValArgs.size(); }
 
   void addSExt32Register(Register Reg) { SExt32Registers.push_back(Reg); }
 

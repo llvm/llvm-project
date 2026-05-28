@@ -38,7 +38,7 @@ struct Location {
   uint64_t Offset;
 
   explicit Location(uint64_t Offset)
-      : IsSymbol(false), Name("[unknown]"), Offset(Offset) {}
+      : IsSymbol(false), Name(""), Offset(Offset) {}
 
   Location(bool IsSymbol, StringRef Name, uint64_t Offset)
       : IsSymbol(IsSymbol), Name(Name), Offset(Offset) {}
@@ -92,12 +92,6 @@ struct FuncBranchData {
   ContainerTy Data;
   ContainerTy EntryData;
 
-  /// Total execution count for the function.
-  int64_t ExecutionCount{0};
-
-  /// Total entry count from external code for the function.
-  uint64_t ExternEntryCount{0};
-
   /// Indicate if the data was used.
   bool Used{false};
 
@@ -114,6 +108,9 @@ struct FuncBranchData {
   /// Returns the total number of executed branches in this function
   /// by counting the number of executed branches for each BranchInfo
   uint64_t getNumExecutedBranches() const;
+
+  /// Set entry counts derived from EntryData to \p BF.
+  void setEntryCounts(BinaryFunction &BF) const;
 
   /// Aggregation helpers
   DenseMap<uint64_t, DenseMap<uint64_t, size_t>> IntraIndex;

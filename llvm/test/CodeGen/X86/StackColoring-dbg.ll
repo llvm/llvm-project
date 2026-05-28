@@ -30,6 +30,8 @@ declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
 !0 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "clang", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !{}, retainedTypes: !{})
 !1 = !DIFile(filename: "t.c", directory: "")
 !16 = !DIBasicType(tag: DW_TAG_base_type, name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
-!2 = distinct !DISubprogram(unit: !0)
+!2 = distinct !DISubprogram(unit: !0, type: !25)
 !22 = !DILocalVariable(name: "x", line: 16, scope: !2, file: !1, type: !16)
 !23 = !{i32 1, !"Debug Info Version", i32 3}
+!24 = !{null}
+!25 = !DISubroutineType(types: !24)

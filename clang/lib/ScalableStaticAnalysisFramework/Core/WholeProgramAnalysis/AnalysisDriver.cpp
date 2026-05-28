@@ -72,7 +72,7 @@ AnalysisDriver::toposort(llvm::ArrayRef<AnalysisName> Roots) {
         // Expected on every subsequent access.
         std::unique_ptr<AnalysisBase> Analysis = std::move(*V);
 
-        for (const auto &Dep : Analysis->dependencyNames()) {
+        for (const auto &Dep : Analysis->getDependencyNames()) {
           if (auto Err = visit(Dep)) {
             return Err;
           }
@@ -102,12 +102,12 @@ AnalysisDriver::toposort(llvm::ArrayRef<AnalysisName> Roots) {
 
 llvm::Error AnalysisDriver::executeSummaryAnalysis(SummaryAnalysisBase &Summary,
                                                    WPASuite &Suite) const {
-  SummaryName SN = Summary.summaryName();
+  SummaryName SN = Summary.getSummaryName();
   auto DataIt = LU->Data.find(SN);
   if (DataIt == LU->Data.end()) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 "no data for analysis '{0}' in LUSummary",
-                                Summary.analysisName())
+                                Summary.getAnalysisName())
         .build();
   }
 
@@ -132,12 +132,12 @@ llvm::Error AnalysisDriver::executeDerivedAnalysis(DerivedAnalysisBase &Derived,
                                                    WPASuite &Suite) const {
   std::map<AnalysisName, const AnalysisResult *> DepMap;
 
-  for (const auto &DepName : Derived.dependencyNames()) {
+  for (const auto &DepName : Derived.getDependencyNames()) {
     auto It = Suite.Data.find(DepName);
     if (It == Suite.Data.end()) {
       ErrorBuilder::fatal("missing dependency '{0}' for analysis '{1}': "
                           "dependency graph is not topologically sorted",
-                          DepName, Derived.analysisName());
+                          DepName, Derived.getAnalysisName());
     }
     DepMap[DepName] = It->second.get();
   }
@@ -186,8 +186,8 @@ llvm::Expected<WPASuite> AnalysisDriver::execute(
       break;
     }
     }
-    AnalysisName Name = Analysis->analysisName();
-    Suite.Data.emplace(std::move(Name), std::move(*Analysis).result());
+    AnalysisName Name = Analysis->getAnalysisName();
+    Suite.Data.emplace(std::move(Name), std::move(*Analysis).takeResult());
   }
 
   return std::move(Suite);

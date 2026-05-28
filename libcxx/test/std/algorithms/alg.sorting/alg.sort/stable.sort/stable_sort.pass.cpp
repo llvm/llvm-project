@@ -81,7 +81,7 @@ TEST_CONSTEXPR_CXX26 std::vector<T> generate_sawtooth(int N, int M) {
 }
 
 template <class T>
-TEST_CONSTEXPR_CXX26 void test_larger_sorts(int N, int M) {
+TEST_CONSTEXPR_CXX26 void test_sort_patterns_impl(int N, int M) {
   assert(N != 0);
   assert(M != 0);
 
@@ -145,19 +145,19 @@ TEST_CONSTEXPR_CXX26 void test_larger_sorts(int N, int M) {
 }
 
 template <class T>
-TEST_CONSTEXPR_CXX26 void test_larger_sorts(int N) {
-  test_larger_sorts<T>(N, 1);
-  test_larger_sorts<T>(N, 2);
-  test_larger_sorts<T>(N, 3);
-  test_larger_sorts<T>(N, N / 2 - 1);
-  test_larger_sorts<T>(N, N / 2);
-  test_larger_sorts<T>(N, N / 2 + 1);
-  test_larger_sorts<T>(N, N - 2);
-  test_larger_sorts<T>(N, N - 1);
-  test_larger_sorts<T>(N, N);
+TEST_CONSTEXPR_CXX26 void test_sort_patterns(int N) {
+  test_sort_patterns_impl<T>(N, 1);
+  test_sort_patterns_impl<T>(N, 2);
+  test_sort_patterns_impl<T>(N, 3);
+  test_sort_patterns_impl<T>(N, N / 2 - 1);
+  test_sort_patterns_impl<T>(N, N / 2);
+  test_sort_patterns_impl<T>(N, N / 2 + 1);
+  test_sort_patterns_impl<T>(N, N - 2);
+  test_sort_patterns_impl<T>(N, N - 1);
+  test_sort_patterns_impl<T>(N, N);
 }
 
-template <class T>
+template <class T, bool TestExhaustive>
 TEST_CONSTEXPR_CXX26 bool test() {
   // test null range
   {
@@ -166,28 +166,32 @@ TEST_CONSTEXPR_CXX26 bool test() {
   }
 
   // exhaustively test all possibilities up to length 8
-  if (!TEST_IS_CONSTANT_EVALUATED) {
-    test_sort_exhaustive<T>(1);
-    test_sort_exhaustive<T>(2);
-    test_sort_exhaustive<T>(3);
-    test_sort_exhaustive<T>(4);
+  test_sort_exhaustive<T>(1);
+  test_sort_exhaustive<T>(2);
+  test_sort_exhaustive<T>(3);
+  test_sort_exhaustive<T>(4);
+  if (TestExhaustive) { // those take a lot of time, we don't run them for all types
     test_sort_exhaustive<T>(5);
     test_sort_exhaustive<T>(6);
     test_sort_exhaustive<T>(7);
     test_sort_exhaustive<T>(8);
+  } else {
+    test_sort_patterns<T>(5);
+    test_sort_patterns<T>(6);
+    test_sort_patterns<T>(7);
+    test_sort_patterns<T>(8);
   }
 
-  test_larger_sorts<T>(256);
-  test_larger_sorts<T>(257);
+  test_sort_patterns<T>(256);
+  test_sort_patterns<T>(257);
   if (!TEST_IS_CONSTANT_EVALUATED) { // avoid blowing past constexpr evaluation limit
-    test_larger_sorts<T>(499);
-    test_larger_sorts<T>(500);
-    test_larger_sorts<T>(997);
-    test_larger_sorts<T>(1000);
-    test_larger_sorts<T>(1009);
-    test_larger_sorts<T>(1024);
-    test_larger_sorts<T>(1031);
-    test_larger_sorts<T>(2053);
+    test_sort_patterns<T>(499);
+    test_sort_patterns<T>(500);
+    test_sort_patterns<T>(997);
+    test_sort_patterns<T>(1000);
+    test_sort_patterns<T>(1009);
+    test_sort_patterns<T>(1024);
+    test_sort_patterns<T>(2053);
   }
 
   // check that the algorithm works without memory
@@ -221,11 +225,6 @@ bool test_floating_special_values() {
   return true;
 }
 
-template <class T>
-bool test_floating() {
-  return test<T>() && test_floating_special_values<T>();
-}
-
 enum struct Enum : int { a, b, c, d, e, f, g, h };
 TEST_CONSTEXPR_CXX26 bool operator<(Enum x, Enum y) { return static_cast<int>(x) > static_cast<int>(y); }
 
@@ -247,17 +246,26 @@ TEST_CONSTEXPR_CXX26 bool test_enum() {
 }
 
 int main(int, char**) {
-  test<int>();
-  test_floating<float>();
-  test_floating<double>();
-  test_floating<long double>();
+  // Exhaustive test with all permutations, all sizes and no-memory
+  test<int, /* TestExhaustive */ true>();
+
+  // Don't test *everything* for floating points, but include radix sort sizes.
+  test<float, /* TestExhaustive */ false>();
+  test<double, /* TestExhaustive */ false>();
+  test<long double, /* TestExhaustive */ false>();
+
+  // Also test special values for floating points
+  test_floating_special_values<float>();
+  test_floating_special_values<double>();
+  test_floating_special_values<long double>();
+
   test_enum();
 #if TEST_STD_VER >= 26
-  static_assert(test<int>());
-  static_assert(test<float>());
-  static_assert(test<double>());
+  static_assert(test<int, /* TestExhaustive */ false>());
+  static_assert(test<float, /* TestExhaustive */ false>());
+  static_assert(test<double, /* TestExhaustive */ false>());
   // test constexprness of radix sort branch
-  static_assert(test<char>());
+  static_assert(test<char, /* TestExhaustive */ false>());
 #endif
   return 0;
 }

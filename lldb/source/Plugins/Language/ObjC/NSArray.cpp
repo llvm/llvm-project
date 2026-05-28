@@ -485,8 +485,8 @@ lldb_private::formatters::NSArrayMSyntheticFrontEndBase::GetChildAtIndex(
   object_at_idx += (pyhs_idx * m_ptr_size);
   StreamString idx_name;
   idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(idx_name.GetString(), object_at_idx,
-                                      m_exe_ctx_ref, m_id_type);
+  return CreateChildValueObjectFromAddress(idx_name.GetString(), object_at_idx,
+                                           m_exe_ctx_ref, m_id_type);
 }
 
 template <typename D32, typename D64>
@@ -662,8 +662,8 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
     return lldb::ValueObjectSP();
   StreamString idx_name;
   idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(idx_name.GetString(), object_at_idx,
-                                      m_exe_ctx_ref, m_id_type);
+  return CreateChildValueObjectFromAddress(idx_name.GetString(), object_at_idx,
+                                           m_exe_ctx_ref, m_id_type);
 }
 
 lldb_private::formatters::NSArray0SyntheticFrontEnd::NSArray0SyntheticFrontEnd(

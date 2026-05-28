@@ -23,6 +23,7 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -33,14 +34,17 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -287,6 +291,8 @@ private:
   GlobalVariable *NamesVar = nullptr;
   size_t NamesSize = 0;
 
+  StructType *ProfileDataTy = nullptr;
+
   // vector of counter load/store pairs to be register promoted.
   std::vector<LoadStorePair> PromotionCandidates;
 
@@ -407,6 +413,9 @@ private:
   /// Create a static initializer for our data, on platforms that need it,
   /// and for any profile output file that was specified.
   void emitInitialization();
+
+  /// Return the __llvm_profile_data struct type.
+  StructType *getProfileDataTy();
 };
 
 ///
@@ -1190,19 +1199,22 @@ void InstrLowerer::lowerTimestamp(
 
 void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
   auto *Addr = getCounterAddress(Inc);
-
   IRBuilder<> Builder(Inc);
   if (isGPUProfTarget(M)) {
-    auto *I64Ty = Builder.getInt64Ty();
+    auto *Int64Ty = Builder.getInt64Ty();
     auto *PtrTy = Builder.getPtrTy();
     auto *CalleeTy = FunctionType::get(Type::getVoidTy(M.getContext()),
-                                       {PtrTy, PtrTy, I64Ty}, false);
-    auto Callee =
-        M.getOrInsertFunction("__llvm_profile_instrument_gpu", CalleeTy);
+                                       {PtrTy, PtrTy, Int64Ty}, false);
+    FunctionCallee Callee =
+        M.getOrInsertFunction(RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+                                  RTLIB::impl___llvm_profile_instrument_gpu),
+                              CalleeTy);
     Value *CastAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, PtrTy);
     Value *Uniform =
         ConstantPointerNull::get(PointerType::getUnqual(M.getContext()));
-    Builder.CreateCall(Callee, {CastAddr, Uniform, Inc->getStep()});
+    Value *StepI64 =
+        Builder.CreateZExtOrTrunc(Inc->getStep(), Int64Ty, "step.i64");
+    Builder.CreateCall(Callee, {CastAddr, Uniform, StepI64});
   } else if (Options.Atomic || AtomicCounterUpdateAll ||
              (Inc->getIndex()->isNullValue() && AtomicFirstCounter)) {
     Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
@@ -1400,6 +1412,12 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
   if (shouldUsePublicSymbol(Fn))
     return Fn;
 
+  // For GPU targets, weak functions cannot use private aliases because
+  // LTO may pick a different TU's copy, leaving the alias undefined
+  if (isGPUProfTarget(*Fn->getParent()) &&
+      GlobalValue::isWeakForLinker(Fn->getLinkage()))
+    return Fn;
+
   // When possible use a private alias to avoid symbolic relocations.
   auto *GA = GlobalAlias::create(GlobalValue::LinkageTypes::PrivateLinkage,
                                  Fn->getName() + ".local", Fn);
@@ -1425,6 +1443,10 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
 }
 
 static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
+  // NVPTX is an ELF target but PTX does not expose sections or linker symbols.
+  if (TT.isNVPTX())
+    return true;
+
   // compiler-rt uses linker support to get data/counters/name start/end for
   // ELF, COFF, Mach-O, XCOFF, and Wasm.
   if (TT.isOSBinFormatELF() || TT.isOSBinFormatCOFF() ||
@@ -1619,11 +1641,15 @@ GlobalVariable *InstrLowerer::setupProfileSection(InstrProfInstBase *Inc,
   }
 
   Ptr->setVisibility(Visibility);
-  // Put the counters and bitmaps in their own sections so linkers can
-  // remove unneeded sections.
   Ptr->setSection(getInstrProfSectionName(IPSK, TT.getObjectFormat()));
   Ptr->setLinkage(Linkage);
-  maybeSetComdat(Ptr, Fn, VarName);
+  if (isGPUProfTarget(M) && !Ptr->hasComdat()) {
+    Ptr->setComdat(M.getOrInsertComdat(VarName));
+    Ptr->setLinkage(GlobalValue::LinkOnceODRLinkage);
+    Ptr->setVisibility(GlobalValue::ProtectedVisibility);
+  } else {
+    maybeSetComdat(Ptr, Fn, VarName);
+  }
   return Ptr;
 }
 
@@ -1795,7 +1821,8 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   }
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
-  auto *CounterPtr = PD.RegionCounters;
+
+  Constant *CounterPtr = PD.RegionCounters;
 
   uint64_t NumBitmapBytes = PD.NumBitmapBytes;
 
@@ -1803,11 +1830,7 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   auto *IntPtrTy = M.getDataLayout().getIntPtrType(M.getContext());
   auto *Int16Ty = Type::getInt16Ty(Ctx);
   auto *Int16ArrayTy = ArrayType::get(Int16Ty, IPVK_Last + 1);
-  Type *DataTypes[] = {
-#define INSTR_PROF_DATA(Type, LLVMType, Name, Init) LLVMType,
-#include "llvm/ProfileData/InstrProfData.inc"
-  };
-  auto *DataTy = StructType::get(Ctx, ArrayRef(DataTypes));
+  auto *DataTy = getProfileDataTy();
 
   Constant *FunctionAddr = getFuncAddrForProfData(Fn);
 
@@ -1816,7 +1839,12 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     Int16ArrayVals[Kind] = ConstantInt::get(Int16Ty, PD.NumValueSites[Kind]);
 
   if (isGPUProfTarget(M)) {
-    Linkage = GlobalValue::ExternalLinkage;
+    // For GPU targets, weak functions need weak linkage for their profile data
+    // aliases to allow linker deduplication across TUs
+    if (GlobalValue::isWeakForLinker(Fn->getLinkage()))
+      Linkage = Fn->getLinkage();
+    else
+      Linkage = GlobalValue::ExternalLinkage;
     Visibility = GlobalValue::ProtectedVisibility;
   }
   // If the data variable is not referenced by code (if we don't emit
@@ -1830,14 +1858,22 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   // If profd is in a deduplicate comdat, NS==0 with a hash suffix guarantees
   // that other copies must have the same CFG and cannot have value profiling.
   // If no hash suffix, other profd copies may be referenced by code.
-  else if (NS == 0 && !(DataReferencedByCode && NeedComdat && !Renamed) &&
-           (TT.isOSBinFormatELF() ||
-            (!DataReferencedByCode && TT.isOSBinFormatCOFF()))) {
+  if (!isGPUProfTarget(M) && NS == 0 &&
+      !(DataReferencedByCode && NeedComdat && !Renamed) &&
+      (TT.isOSBinFormatELF() ||
+       (!DataReferencedByCode && TT.isOSBinFormatCOFF()))) {
     Linkage = GlobalValue::PrivateLinkage;
     Visibility = GlobalValue::DefaultVisibility;
   }
+  // GPU-target ELF objects are always ET_DYN, so non-local symbols with
+  // default visibility are preemptible. The CounterPtr label difference
+  // emits a REL32 relocation that lld rejects against preemptible targets.
+  if (TT.isGPU() && TT.isOSBinFormatELF() &&
+      !GlobalValue::isLocalLinkage(Linkage))
+    Visibility = GlobalValue::ProtectedVisibility;
   auto *Data =
       new GlobalVariable(M, DataTy, false, Linkage, nullptr, DataVarName);
+
   Constant *RelativeCounterPtr;
   GlobalVariable *BitmapPtr = PD.RegionBitmaps;
   Constant *RelativeBitmapPtr = ConstantInt::get(IntPtrTy, 0);
@@ -1849,6 +1885,12 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     RelativeCounterPtr = ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy);
     if (BitmapPtr != nullptr)
       RelativeBitmapPtr = ConstantExpr::getPtrToInt(BitmapPtr, IntPtrTy);
+  } else if (TT.isNVPTX()) {
+    // The NVPTX target cannot handle self-referencing constant expressions in
+    // global initializers at all. Use absolute pointers and have the runtime
+    // registration convert them to relative offsets.
+    DataSectionKind = IPSK_data;
+    RelativeCounterPtr = ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy);
   } else {
     // Reference the counter variable with a label difference (link-time
     // constant).
@@ -1872,7 +1914,12 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   Data->setSection(
       getInstrProfSectionName(DataSectionKind, TT.getObjectFormat()));
   Data->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
-  maybeSetComdat(Data, Fn, CntsVarName);
+  if (isGPUProfTarget(M) && !Data->hasComdat()) {
+    Data->setComdat(M.getOrInsertComdat(CntsVarName));
+    Data->setLinkage(GlobalValue::LinkOnceODRLinkage);
+  } else {
+    maybeSetComdat(Data, Fn, CntsVarName);
+  }
 
   PD.DataVar = Data;
 
@@ -1950,20 +1997,18 @@ void InstrLowerer::emitNameData() {
   auto &Ctx = M.getContext();
   auto *NamesVal =
       ConstantDataArray::getString(Ctx, StringRef(CompressedNameStr), false);
-  NamesVar = new GlobalVariable(M, NamesVal->getType(), true,
-                                GlobalValue::PrivateLinkage, NamesVal,
-                                getInstrProfNamesVarName());
-  if (isGPUProfTarget(M)) {
-    NamesVar->setLinkage(GlobalValue::ExternalLinkage);
-    NamesVar->setVisibility(GlobalValue::ProtectedVisibility);
-  }
+  std::string NamesVarName = std::string(getInstrProfNamesVarName());
+  NamesVar =
+      new GlobalVariable(M, NamesVal->getType(), true,
+                         GlobalValue::PrivateLinkage, NamesVal, NamesVarName);
 
   NamesSize = CompressedNameStr.size();
   setGlobalVariableLargeSection(TT, *NamesVar);
-  NamesVar->setSection(
+  std::string NamesSectionName =
       ProfileCorrelate == InstrProfCorrelator::BINARY
           ? getInstrProfSectionName(IPSK_covname, TT.getObjectFormat())
-          : getInstrProfSectionName(IPSK_name, TT.getObjectFormat()));
+          : getInstrProfSectionName(IPSK_name, TT.getObjectFormat());
+  NamesVar->setSection(NamesSectionName);
   // On COFF, it's important to reduce the alignment down to 1 to prevent the
   // linker from inserting padding before the start of the names section or
   // between names entries.
@@ -2048,6 +2093,11 @@ void InstrLowerer::emitRegistration() {
 }
 
 bool InstrLowerer::emitRuntimeHook() {
+  // GPU profiling data is read directly by the host offload runtime. We do not
+  // need the standard runtime hook.
+  if (TT.isGPU())
+    return false;
+
   // We expect the linker to be invoked with -u<hook_var> flag for Linux
   // in which case there is no need to emit the external variable.
   if (TT.isOSLinux() || TT.isOSAIX())
@@ -2062,10 +2112,7 @@ bool InstrLowerer::emitRuntimeHook() {
   auto *Var =
       new GlobalVariable(M, Int32Ty, false, GlobalValue::ExternalLinkage,
                          nullptr, getInstrProfRuntimeHookVarName());
-  if (isGPUProfTarget(M))
-    Var->setVisibility(GlobalValue::ProtectedVisibility);
-  else
-    Var->setVisibility(GlobalValue::HiddenVisibility);
+  Var->setVisibility(GlobalValue::HiddenVisibility);
 
   if (TT.isOSBinFormatELF() && !TT.isPS()) {
     // Mark the user variable as used so that it isn't stripped out.
@@ -2170,3 +2217,22 @@ void createProfileSamplingVar(Module &M) {
   appendToCompilerUsed(M, SamplingVar);
 }
 } // namespace llvm
+
+// For GPU targets: Allocate contiguous arrays for all profile data.
+// This solves the linker reordering problem by using ONE symbol per section
+// type, so there's nothing for the linker to reorder.
+StructType *InstrLowerer::getProfileDataTy() {
+  if (ProfileDataTy)
+    return ProfileDataTy;
+
+  auto &Ctx = M.getContext();
+  auto *IntPtrTy = M.getDataLayout().getIntPtrType(M.getContext());
+  auto *Int16Ty = Type::getInt16Ty(Ctx);
+  auto *Int16ArrayTy = ArrayType::get(Int16Ty, IPVK_Last + 1);
+  Type *DataTypes[] = {
+#define INSTR_PROF_DATA(Type, LLVMType, Name, Init) LLVMType,
+#include "llvm/ProfileData/InstrProfData.inc"
+  };
+  ProfileDataTy = StructType::get(Ctx, ArrayRef(DataTypes));
+  return ProfileDataTy;
+}

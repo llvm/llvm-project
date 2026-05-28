@@ -128,9 +128,7 @@ define <4 x float> @fmulnegtwo_vec_undefs(<4 x float> %a, <4 x float> %b) {
 ; CHECK-GI-LABEL: fmulnegtwo_vec_undefs:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fmov s2, #-2.00000000
-; CHECK-GI-NEXT:    mov v3.s[1], v2.s[0]
-; CHECK-GI-NEXT:    mov v3.s[3], v2.s[0]
-; CHECK-GI-NEXT:    fmul v1.4s, v1.4s, v3.4s
+; CHECK-GI-NEXT:    fmul v1.4s, v1.4s, v2.s[0]
 ; CHECK-GI-NEXT:    fadd v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    ret
   %mul = fmul <4 x float> %b, <float undef, float -2.0, float undef, float -2.0>
@@ -148,10 +146,7 @@ define <4 x float> @fmulnegtwo_vec_commute_undefs(<4 x float> %a, <4 x float> %b
 ; CHECK-GI-LABEL: fmulnegtwo_vec_commute_undefs:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fmov s2, #-2.00000000
-; CHECK-GI-NEXT:    fmov s3, #-2.00000000
-; CHECK-GI-NEXT:    mov v3.s[2], v2.s[0]
-; CHECK-GI-NEXT:    mov v3.s[3], v2.s[0]
-; CHECK-GI-NEXT:    fmul v1.4s, v1.4s, v3.4s
+; CHECK-GI-NEXT:    fmul v1.4s, v1.4s, v2.s[0]
 ; CHECK-GI-NEXT:    fadd v0.4s, v1.4s, v0.4s
 ; CHECK-GI-NEXT:    ret
   %mul = fmul <4 x float> %b, <float -2.0, float undef, float -2.0, float -2.0>

@@ -151,6 +151,7 @@ Sel.  Mnemonic                         Stack Effect                             
 0x11  ``get_child_at_index``            ``(Object UInt @get_child_at_index -> Object)``         ``SBValue::GetChildAtIndex``
 0x12  ``get_child_with_name``           ``(Object String @get_child_with_name -> Object)``      ``SBValue::GetChildMemberWithName``
 0x13  ``get_child_index``               ``(Object String @get_child_index -> UInt)``            ``SBValue::GetChildIndex``
+0x14  ``get_parent``                    ``(Object @get_parent -> Object)``                      ``SBValue::GetParent``
 0x15  ``get_type``                      ``(Object @get_type -> Type)``                          ``SBValue::GetType``
 0x16  ``get_template_argument_type``    ``(Object UInt @get_template_argument_type -> Type)``   ``SBValue::GetTemplateArgumentType``
 0x17  ``cast``                          ``(Object Type @cast -> Object)``                       ``SBValue::Cast``
@@ -160,6 +161,7 @@ Sel.  Mnemonic                         Stack Effect                             
 0x21  ``get_value_as_unsigned``         ``(Object @get_value_as_unsigned -> UInt)``             ``SBValue::GetValueAsUnsigned``
 0x22  ``get_value_as_signed``           ``(Object @get_value_as_signed -> Int)``                ``SBValue::GetValueAsSigned``
 0x23  ``get_value_as_address``          ``(Object @get_value_as_address -> UInt)``              ``SBValue::GetValueAsAddress``
+0x24  ``clone``                         ``(Object String @clone -> Object)``                    ``SBValue::Clone``
 0x40  ``read_memory_byte``              ``(UInt @read_memory_byte -> UInt)``                    ``Target::ReadMemory``
 0x41  ``read_memory_uint32``            ``(UInt @read_memory_uint32 -> UInt)``                  ``Target::ReadMemory``
 0x42  ``read_memory_int32``             ``(UInt @read_memory_int32 -> Int)``                    ``Target::ReadMemory``
@@ -223,7 +225,7 @@ Signature    Mnemonic                Stack Effect
   0x03      ``@get_child_index``      ``(Object+ String -> UInt)``
   0x04      ``@get_child_at_index``   ``(Object+ UInt -> Object)``
   0x05      ``@get_value``            ``(Object+ -> String)``
-  0x06      ``@update``               ``(Object -> Object+)``
+  0x06      ``@update``               ``(Object+ -> Object+)``
 =========  ========================= ==============================
 
 If not specified, the init function defaults to an empty function that just passes the Object along. Its results may be cached and allow common prep work to be done for an Object that can be reused by subsequent calls to the other methods. This way subsequent calls to ``@get_child_at_index`` can avoid recomputing shared information, for example.

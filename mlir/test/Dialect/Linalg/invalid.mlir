@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
 func.func @load_number_of_indices(%v : memref<f32>) {
-  // expected-error @+2 {{incorrect number of indices for load}}
+  // expected-error @+2 {{invalid number of indices for accessed memref, expected 0 but got 1}}
   %c0 = arith.constant 0 : index
   memref.load %v[%c0] : memref<f32>
 }
@@ -9,7 +9,7 @@ func.func @load_number_of_indices(%v : memref<f32>) {
 // -----
 
 func.func @store_number_of_indices(%v : memref<f32>) {
-  // expected-error @+3 {{store index operand count not equal to memref rank}}
+  // expected-error @+3 {{invalid number of indices for accessed memref, expected 0 but got 1}}
   %c0 = arith.constant 0 : index
   %f0 = arith.constant 0.0 : f32
   memref.store %f0, %v[%c0] : memref<f32>
@@ -1877,7 +1877,7 @@ func.func @pack_invalid(%input: tensor<256x128xf32>, %output: tensor<8x8x32x16xf
 
 func.func @pack_mismatch_inner_tile_size_and_output_shape(
   %input : tensor<?x?xf32>, %output : tensor<?x?x8x8xf32>) -> tensor<?x?x8x8xf32> {
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
+  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type at index 1: got 8 != 4}}
   %0 = linalg.pack %input inner_dims_pos = [0, 1] inner_tiles = [8, 4] into %output : tensor<?x?xf32> -> tensor<?x?x8x8xf32>
   return %0 : tensor<?x?x8x8xf32>
 }
@@ -1887,7 +1887,7 @@ func.func @pack_mismatch_inner_tile_size_and_output_shape(
 func.func @pack_dynamic_inner_tile_size_and_static_output_shape(
   %input : tensor<?x?xf32>, %output : tensor<?x?x8x8xf32>) -> tensor<?x?x8x8xf32> {
   %c8 = arith.constant 8 : index
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
+  // expected-error@+1 {{mismatch in inner tile sizes specified at index 1: got static shape 8 but dynamic tile size}}
   %0 = linalg.pack %input inner_dims_pos = [0, 1] inner_tiles = [8, %c8] into %output : tensor<?x?xf32> -> tensor<?x?x8x8xf32>
   return %0 : tensor<?x?x8x8xf32>
 }
@@ -1896,7 +1896,7 @@ func.func @pack_dynamic_inner_tile_size_and_static_output_shape(
 
 func.func @pack_static_inner_tile_size_and_dynamic_output_shape(
   %input : tensor<?x?xf32>, %output : tensor<?x?x8x?xf32>) -> tensor<?x?x8x?xf32> {
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
+  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type at index 1: got}}
   %0 = linalg.pack %input inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %output : tensor<?x?xf32> -> tensor<?x?x8x?xf32>
   return %0 : tensor<?x?x8x?xf32>
 }
@@ -1987,7 +1987,7 @@ func.func @unpack_invalid_source_shape(%output: tensor<256x128xf32>, %input: ten
 
 func.func @unpack_mismatch_inner_tile_size_and_output_shape(
   %input : tensor<?x?x8x8xf32>, %output : tensor<?x?xf32>) -> tensor<?x?xf32> {
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
+  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type at index 1: got 8 != 4}}
   %0 = linalg.unpack %input inner_dims_pos = [0, 1] inner_tiles = [8, 4] into %output : tensor<?x?x8x8xf32> -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
@@ -1997,7 +1997,7 @@ func.func @unpack_mismatch_inner_tile_size_and_output_shape(
 func.func @unpack_dynamic_inner_tile_size_and_static_output_shape(
   %input : tensor<?x?x8x4xf32>, %output : tensor<?x?xf32>) -> tensor<?x?xf32> {
   %c8 = arith.constant 8 : index
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
+  // expected-error@+1 {{mismatch in inner tile sizes specified at index 0: got static shape 8 but dynamic tile size}}
   %0 = linalg.unpack %input inner_dims_pos = [0, 1] inner_tiles = [%c8, 4] into %output : tensor<?x?x8x4xf32> -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
@@ -2006,7 +2006,7 @@ func.func @unpack_dynamic_inner_tile_size_and_static_output_shape(
 
 func.func @unpack_static_inner_tile_size_and_dynamic_output_shape(
   %input : tensor<?x?x?x4xf32>, %output : tensor<?x?xf32>) -> tensor<?x?xf32> {
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
+  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type at index 0: got}}
   %0 = linalg.unpack %input inner_dims_pos = [0, 1] inner_tiles = [8, 4] into %output : tensor<?x?x?x4xf32> -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
@@ -2193,4 +2193,16 @@ func.func @reduce_unequal_input_output_count(
       }
   %ext = tensor.extract %reduced[] : tensor<i32>
   return %ext : i32
+}
+
+// -----
+
+func.func @reduce_no_inputs() {
+  // expected-error @+1 {{'linalg.reduce' op expected at least one input}}
+  linalg.reduce
+      dimensions = []
+      () {
+        linalg.yield
+      }
+  func.return
 }

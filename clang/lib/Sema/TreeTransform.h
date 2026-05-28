@@ -1769,6 +1769,17 @@ public:
                                                      EndLoc);
   }
 
+  OMPClause *RebuildOMPCountsClause(ArrayRef<Expr *> Counts,
+                                    SourceLocation StartLoc,
+                                    SourceLocation LParenLoc,
+                                    SourceLocation EndLoc,
+                                    std::optional<unsigned> FillIdx,
+                                    SourceLocation FillLoc) {
+    unsigned FillCount = FillIdx ? 1 : 0;
+    return getSema().OpenMP().ActOnOpenMPCountsClause(
+        Counts, StartLoc, LParenLoc, EndLoc, FillIdx, FillLoc, FillCount);
+  }
+
   /// Build a new OpenMP 'permutation' clause.
   OMPClause *RebuildOMPPermutationClause(ArrayRef<Expr *> PermExprs,
                                          SourceLocation StartLoc,
@@ -3118,10 +3129,9 @@ public:
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
-  ExprResult RebuildInitList(SourceLocation LBraceLoc,
-                             MultiExprArg Inits,
-                             SourceLocation RBraceLoc) {
-    return SemaRef.BuildInitList(LBraceLoc, Inits, RBraceLoc);
+  ExprResult RebuildInitList(SourceLocation LBraceLoc, MultiExprArg Inits,
+                             SourceLocation RBraceLoc, bool IsExplicit) {
+    return SemaRef.BuildInitList(LBraceLoc, Inits, RBraceLoc, IsExplicit);
   }
 
   /// Build a new designated initializer expression.
@@ -4521,7 +4531,8 @@ ExprResult TreeTransform<Derived>::TransformInitializer(Expr *Init,
   // If this was list initialization, revert to syntactic list form.
   if (Construct->isListInitialization())
     return getDerived().RebuildInitList(Construct->getBeginLoc(), NewArgs,
-                                        Construct->getEndLoc());
+                                        Construct->getEndLoc(),
+                                        /*IsExplicit=*/true);
 
   // Build a ParenListExpr to represent anything else.
   SourceRange Parens = Construct->getParenOrBraceRange();
@@ -9761,6 +9772,17 @@ StmtResult TreeTransform<Derived>::TransformOMPInterchangeDirective(
 
 template <typename Derived>
 StmtResult
+TreeTransform<Derived>::TransformOMPSplitDirective(OMPSplitDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult
 TreeTransform<Derived>::TransformOMPFuseDirective(OMPFuseDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
@@ -10613,6 +10635,28 @@ OMPClause *TreeTransform<Derived>::TransformOMPSizesClause(OMPSizesClause *C) {
     return C;
   return RebuildOMPSizesClause(TransformedSizes, C->getBeginLoc(),
                                C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPCountsClause(OMPCountsClause *C) {
+  SmallVector<Expr *, 4> TransformedCounts;
+  TransformedCounts.reserve(C->getNumCounts());
+  for (Expr *E : C->getCountsRefs()) {
+    if (!E) {
+      TransformedCounts.push_back(nullptr);
+      continue;
+    }
+
+    ExprResult T = getDerived().TransformExpr(E);
+    if (T.isInvalid())
+      return nullptr;
+    TransformedCounts.push_back(T.get());
+  }
+
+  return RebuildOMPCountsClause(TransformedCounts, C->getBeginLoc(),
+                                C->getLParenLoc(), C->getEndLoc(),
+                                C->getOmpFillIndex(), C->getOmpFillLoc());
 }
 
 template <typename Derived>
@@ -12607,12 +12651,25 @@ void OpenACCClauseTransform<Derived>::VisitCollapseClause(
 
   ExprResult NewLoopCount = Self.TransformExpr(LoopCount);
 
+  if (!NewLoopCount.isUsable())
+    return;
+
   NewLoopCount = Self.getSema().OpenACC().ActOnIntExpr(
       OpenACCDirectiveKind::Invalid, ParsedClause.getClauseKind(),
       NewLoopCount.get()->getBeginLoc(), NewLoopCount.get());
 
+  // FIXME: It isn't clear whether this is properly tested here, we should
+  // probably see if we can come up with a test for this.
+  if (!NewLoopCount.isUsable())
+    return;
+
   NewLoopCount =
       Self.getSema().OpenACC().CheckCollapseLoopCount(NewLoopCount.get());
+
+  // FIXME: It isn't clear whether this is properly tested here, we should
+  // probably see if we can come up with a test for this.
+  if (!NewLoopCount.isUsable())
+    return;
 
   ParsedClause.setCollapseDetails(C.hasForce(), NewLoopCount.get());
   NewClause = OpenACCCollapseClause::Create(
@@ -12636,6 +12693,11 @@ void OpenACCClauseTransform<Derived>::VisitTileClause(
     NewSizeExpr = Self.getSema().OpenACC().ActOnIntExpr(
         OpenACCDirectiveKind::Invalid, ParsedClause.getClauseKind(),
         NewSizeExpr.get()->getBeginLoc(), NewSizeExpr.get());
+
+    // FIXME: It isn't clear whether this is properly tested here, we should
+    // probably see if we can come up with a test for this.
+    if (!NewSizeExpr.isUsable())
+      return;
 
     NewSizeExpr = Self.getSema().OpenACC().CheckTileSizeExpr(NewSizeExpr.get());
 
@@ -14064,7 +14126,7 @@ TreeTransform<Derived>::TransformInitListExpr(InitListExpr *E) {
   }
 
   return getDerived().RebuildInitList(E->getLBraceLoc(), Inits,
-                                      E->getRBraceLoc());
+                                      E->getRBraceLoc(), E->isExplicit());
 }
 
 template<typename Derived>
@@ -15676,7 +15738,8 @@ TreeTransform<Derived>::TransformCXXTemporaryObjectExpr(
       return ExprError();
 
     if (E->isListInitialization() && !E->isStdInitListInitialization()) {
-      ExprResult Res = RebuildInitList(E->getBeginLoc(), Args, E->getEndLoc());
+      ExprResult Res = RebuildInitList(E->getBeginLoc(), Args, E->getEndLoc(),
+                                       /*IsExplicit=*/true);
       if (Res.isInvalid())
         return ExprError();
       Args = {Res.get()};
@@ -16004,7 +16067,10 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   assert(FPTL && "Not a FunctionProtoType?");
 
   AssociatedConstraint TRC = E->getCallOperator()->getTrailingRequiresClause();
-  if (!TRC.ArgPackSubstIndex)
+  // If the concept refers to any outer parameter packs, we track the SubstIndex
+  // for evaluation.
+  if (TRC && TRC.ConstraintExpr->containsUnexpandedParameterPack() &&
+      !TRC.ArgPackSubstIndex)
     TRC.ArgPackSubstIndex = SemaRef.ArgPackSubstIndex;
 
   getSema().CompleteLambdaCallOperator(

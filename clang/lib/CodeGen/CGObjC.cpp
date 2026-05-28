@@ -20,6 +20,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/NSAPI.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
@@ -62,6 +63,14 @@ llvm::Value *CodeGenFunction::EmitObjCStringLiteral(const ObjCStringLiteral *E)
 ///
 llvm::Value *
 CodeGenFunction::EmitObjCBoxedExpr(const ObjCBoxedExpr *E) {
+  // If decided in Sema constant initializers are supported by the runtime, not
+  // disabled, and the contents can be emitted as a constant NSNumber subclass;
+  // use the ConstEmitter
+  if (E->isExpressibleAsConstantInitializer()) {
+    ConstantEmitter ConstEmitter(CGM);
+    return ConstEmitter.tryEmitAbstract(E, E->getType());
+  }
+
   // Generate the correct selector for this literal's concrete type.
   // Get the method.
   const ObjCMethodDecl *BoxingMethod = E->getBoxingMethod();
@@ -128,9 +137,18 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
   if (!ALE)
     DLE = cast<ObjCDictionaryLiteral>(E);
 
-  // Optimize empty collections by referencing constants, when available.
-  uint64_t NumElements =
-    ALE ? ALE->getNumElements() : DLE->getNumElements();
+  const bool CanBeExpressedAsConstant =
+      ALE ? ALE->isExpressibleAsConstantInitializer()
+          : DLE->isExpressibleAsConstantInitializer();
+  if (CanBeExpressedAsConstant) {
+    ConstantEmitter ConstEmitter(CGM);
+    return ConstEmitter.tryEmitAbstract(E, E->getType());
+  }
+
+  // Optimize empty collections by referencing constants, when available and
+  // constant initializers aren't supported
+  uint64_t NumElements = ALE ? ALE->getNumElements() : DLE->getNumElements();
+
   if (NumElements == 0 && CGM.getLangOpts().ObjCRuntime.hasEmptyCollections()) {
     StringRef ConstantName = ALE ? "__NSArray0__" : "__NSDictionary0__";
     QualType IdTy(CGM.getContext().getObjCIdType());
@@ -761,7 +779,20 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
 
   const CGFunctionInfo &FI = CGM.getTypes().arrangeObjCMethodDeclaration(OMD);
   if (OMD->isDirectMethod()) {
+    // Default hidden visibility
     Fn->setVisibility(llvm::Function::HiddenVisibility);
+    if (CGM.isObjCDirectPreconditionThunkEnabled()) {
+      // However, if we expose the symbol, and the decl (property or method)
+      // have visibility attribute set ...
+      const NamedDecl *Decl = OMD;
+      if (const auto *PD = OMD->findPropertyDecl()) {
+        Decl = PD;
+      }
+      // ... then respect source level visibility setting
+      if (auto V = Decl->getExplicitVisibility(NamedDecl::VisibilityForValue)) {
+        Fn->setVisibility(CGM.GetLLVMVisibility(*V));
+      }
+    }
     CGM.SetLLVMFunctionAttributes(OMD, FI, Fn, /*IsThunk=*/false);
     CGM.SetLLVMFunctionAttributesForDefinition(OMD, Fn);
   } else {
@@ -781,10 +812,6 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
                 OMD->getLocation(), StartLoc);
 
   if (OMD->isDirectMethod()) {
-    // This function is a direct call, it has to implement a nil check
-    // on entry.
-    //
-    // TODO: possibly have several entry points to elide the check
     CGM.getObjCRuntime().GenerateDirectMethodPrologue(*this, Fn, OMD, CD);
   }
 
@@ -1209,7 +1236,12 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     uint64_t retTySize = CGM.getDataLayout().getTypeSizeInBits(retTy);
     if (ivarSize > retTySize) {
       bitcastType = llvm::Type::getIntNTy(getLLVMContext(), retTySize);
-      ivarVal = Builder.CreateTrunc(ivarVal, bitcastType);
+      if (getterMethod->getReturnType()->hasBooleanRepresentation() &&
+          CGM.getCodeGenOpts().isConvertingBoolWithCmp0())
+        ivarVal = Builder.CreateICmpNE(
+            ivarVal, llvm::Constant::getNullValue(ivarVal->getType()));
+      else
+        ivarVal = Builder.CreateTrunc(ivarVal, bitcastType);
     }
     Builder.CreateStore(ivarVal, ReturnValue.withElementType(bitcastType));
 

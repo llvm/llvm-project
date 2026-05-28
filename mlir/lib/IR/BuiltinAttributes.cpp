@@ -649,15 +649,15 @@ APInt DenseElementsAttr::IntElementIterator::operator*() const {
 
 DenseElementsAttr::ComplexIntElementIterator::ComplexIntElementIterator(
     DenseElementsAttr attr, size_t dataIndex)
-    : DenseElementIndexedIteratorImpl<ComplexIntElementIterator,
-                                      std::complex<APInt>, std::complex<APInt>,
-                                      std::complex<APInt>>(
-          attr.getRawData().data(), attr.isSplat(), dataIndex) {
+    : DenseElementIndexedIteratorImpl<
+          ComplexIntElementIterator, mlir::Complex<APInt>, mlir::Complex<APInt>,
+          mlir::Complex<APInt>>(attr.getRawData().data(), attr.isSplat(),
+                                dataIndex) {
   auto complexType = llvm::cast<ComplexType>(attr.getElementType());
   bitWidth = getDenseElementBitWidth(complexType.getElementType());
 }
 
-std::complex<APInt>
+mlir::Complex<APInt>
 DenseElementsAttr::ComplexIntElementIterator::operator*() const {
   size_t storageWidth = getDenseElementStorageWidth(bitWidth);
   size_t offset = getDataIndex() * storageWidth * 2;
@@ -922,8 +922,8 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
   size_t storageBitWidth = getDenseElementStorageWidth(type.getElementType());
   return DenseTypedElementsAttr::getRaw(type, storageBitWidth, values);
 }
-DenseElementsAttr DenseElementsAttr::get(ShapedType type,
-                                         ArrayRef<std::complex<APInt>> values) {
+DenseElementsAttr
+DenseElementsAttr::get(ShapedType type, ArrayRef<mlir::Complex<APInt>> values) {
   ComplexType complex = llvm::cast<ComplexType>(type.getElementType());
   assert(llvm::isa<IntegerType>(complex.getElementType()));
   assert(hasSameNumElementsOrSplat(type, values));
@@ -945,7 +945,7 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
 }
 DenseElementsAttr
 DenseElementsAttr::get(ShapedType type,
-                       ArrayRef<std::complex<APFloat>> values) {
+                       ArrayRef<mlir::Complex<APFloat>> values) {
   ComplexType complex = llvm::cast<ComplexType>(type.getElementType());
   assert(llvm::isa<FloatType>(complex.getElementType()));
   assert(hasSameNumElementsOrSplat(type, values));

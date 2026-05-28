@@ -841,7 +841,18 @@ convertModuleFlagValueFromMDTuple(ModuleOp mlirModule,
   if (key == LLVMDialect::getModuleFlagKeyProfileSummaryName())
     return convertProfileSummaryModuleFlagValue(mlirModule, llvmModule,
                                                 mdTuple);
-  return nullptr;
+  // Handle MDTuples whose operands are all MDStrings (e.g. "riscv-isa").
+  // Convert them to ArrayAttr of StringAttrs for a lossless round-trip.
+  Builder builder(mlirModule->getContext());
+  SmallVector<Attribute> strings;
+  strings.reserve(mdTuple->getNumOperands());
+  for (const llvm::MDOperand &operand : mdTuple->operands()) {
+    auto *mdString = dyn_cast_if_present<llvm::MDString>(operand.get());
+    if (!mdString)
+      return nullptr;
+    strings.push_back(builder.getStringAttr(mdString->getString()));
+  }
+  return builder.getArrayAttr(strings);
 }
 
 LogicalResult ModuleImport::convertModuleFlagsMetadata() {
@@ -2879,6 +2890,9 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
                                  stringRefFramePointerKind)
                                  .value()));
   }
+
+  if (func->hasFnAttribute("use-sample-profile"))
+    funcOp.setUseSampleProfile(true);
 
   if (llvm::Attribute attr = func->getFnAttribute("target-cpu");
       attr.isStringAttribute())

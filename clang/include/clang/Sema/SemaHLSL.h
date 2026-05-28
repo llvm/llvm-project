@@ -131,6 +131,7 @@ public:
   void ActOnVariableDeclarator(VarDecl *VD);
   bool ActOnUninitializedVarDecl(VarDecl *D);
   void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
+  bool ActOnResourceMemberAccessExpr(MemberExpr *ME);
   void CheckEntryPoint(FunctionDecl *FD);
 
   // Return true if everything is ok; returns false if there was an error.
@@ -141,6 +142,17 @@ public:
                                        QualType LHSType, QualType RHSType,
                                        bool IsCompAssign);
   void emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS, BinaryOperatorKind Opc);
+
+  // Returns the result of converting ConstantBuffer<T> to
+  // `const hlsl_constant T&`. If `BaseExpr`'s type is not ConstantBuffer<T>
+  // then the return value is `std::nullopt`.
+  std::optional<ExprResult>
+  tryPerformConstantBufferConversion(ExprResult &BaseExpr);
+
+  // Returns the conversion operator to convert `RD` to `const hlsl_constant
+  // Type&`. Returns `nullptr` if it could not be found.
+  NamedDecl *getConstantBufferConversionFunction(QualType Type,
+                                                 CXXRecordDecl *RD);
 
   /// Computes the unique Root Signature identifier from the given signature,
   /// then lookup if there is a previousy created Root Signature decl.
@@ -175,6 +187,9 @@ public:
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
+  void handleMatrixLayoutAttr(Decl *D, const ParsedAttr &AL);
+  bool diagnoseInstantiatedMatrixLayoutAttr(Decl *D,
+                                            const HLSLMatrixLayoutAttr *Attr);
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
 
   template <typename T>
@@ -190,6 +205,7 @@ public:
   void handleSemanticAttr(Decl *D, const ParsedAttr &AL);
 
   void handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkExtBuiltinOutputAttr(Decl *D, const ParsedAttr &AL);
   void handleVkPushConstantAttr(Decl *D, const ParsedAttr &AL);
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
@@ -200,6 +216,7 @@ public:
   // HLSL Type trait implementations
   bool IsScalarizedLayoutCompatible(QualType T1, QualType T2) const;
   bool IsTypedResourceElementCompatible(QualType T1);
+  bool IsConstantBufferElementCompatible(QualType T1);
 
   bool CheckCompatibleParameterABI(FunctionDecl *New, FunctionDecl *Old);
 

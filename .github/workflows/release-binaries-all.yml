@@ -64,11 +64,18 @@ jobs:
       release-version: ${{ steps.vars.outputs.release-version }}
       upload: ${{ steps.vars.outputs.upload }}
     steps:
+      - name: Validate Input
+        if: inputs.release-version != ''
+        uses: ./.github/workflows/validate-release-version
+        with:
+          release-version: ${{ inputs.release-version }}
       - shell: bash
         id: vars
+        env:
+          RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
           upload="${{ inputs.upload }}"
-          release_version="${{ inputs.release-version }}"
+          release_version="$RELEASE_VERSION"
           if [ "${{ github.event_name }}" = "pull_request" ] || [ "${{ github.event_name }}" = "schedule" ]; then
             upload="false"
             release_version=""
@@ -102,7 +109,8 @@ jobs:
       upload: ${{ needs.setup-variables.outputs.upload == 'true'}}
       runs-on: "${{ matrix.runs-on }}"
     secrets:
-      # This will be empty for pull_request events, but that's fine, because
-      # the release-binaries workflow does not use this secret for the
+      # These will be empty for pull_request events, but that's fine, because
+      # the release-binaries workflow does not use these secrets for the
       # pull_request event.
-      RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+      LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+      LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}

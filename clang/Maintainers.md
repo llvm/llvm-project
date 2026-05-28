@@ -205,6 +205,9 @@ umbrella or components used to support such tools.
 MyDeveloperDay \
 mydeveloperday@gmail.com (email), MyDeveloperDay (Phabricator), [MyDeveloperDay](https://github.com/MyDeveloperDay) (GitHub)
 
+Björn Schäpers \
+llvm@hazardy.de (email), [HazardyKnusperkeks](https://github.com/HazardyKnusperkeks) (GitHub), HazardyKnusperkeks (Discourse)
+
 ## ABIs
 
 The following people are responsible for decisions involving ABI.
@@ -231,6 +234,11 @@ components within the compiler.
 
 Aaron Ballman \
 aaron@aaronballman.com (email), aaron.ballman (Phabricator), [AaronBallman](https://github.com/AaronBallman) (GitHub), AaronBallman (Discourse), aaronballman (Discord)
+
+### Floating-point and numerics
+
+Joshua Cranmer \
+joshua.cranmer@intel.com (email), [jcranmer-intel](https://github.com/jcranmer-intel) (GitHub), jcranmer (Discourse)
 
 ### Plugins
 
@@ -313,7 +321,10 @@ ekeane@nvidia.com (email), ErichKeane (Phabricator), [erichkeane](https://github
 ### SYCL conformance
 
 Alexey Bader \
-alexey.bader@intel.com (email), bader (Phabricator), [bader](https://github.com/bader) (GitHub)
+alexey.bader@intel.com (email), [bader](https://github.com/bader) (GitHub), bader7427 (Discord), bader (Discourse)
+
+Tom Honermann \
+tom@honermann.net (email), [tahonermann](https://github.com/tahonermann) (GitHub), tahonermann (Discord), tahonermann (Discourse)
 
 ### HLSL conformance
 

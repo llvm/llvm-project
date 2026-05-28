@@ -49,6 +49,7 @@ MachineFunctionPass *createNVPTXPrologEpilogPass();
 MachineFunctionPass *createNVPTXReplaceImageHandlesPass();
 FunctionPass *createNVPTXImageOptimizerPass();
 FunctionPass *createNVPTXLowerArgsPass();
+FunctionPass *createNVPTXSetByValParamAlignPass();
 FunctionPass *createNVPTXLowerAllocaPass();
 FunctionPass *createNVPTXLowerUnreachablePass(bool TrapUnreachable,
                                               bool NoTrapAfterNoreturn);
@@ -70,6 +71,7 @@ void initializeNVPTXLowerAggrCopiesPass(PassRegistry &);
 void initializeNVPTXLowerAllocaPass(PassRegistry &);
 void initializeNVPTXLowerUnreachablePass(PassRegistry &);
 void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
+void initializeNVPTXSetByValParamAlignLegacyPassPass(PassRegistry &);
 void initializeNVPTXProxyRegErasurePass(PassRegistry &);
 void initializeNVPTXForwardParamsPassPass(PassRegistry &);
 void initializeNVVMIntrRangePass(PassRegistry &);
@@ -82,15 +84,15 @@ void initializeNVPTXTagInvariantLoadLegacyPassPass(PassRegistry &);
 void initializeNVPTXIRPeepholePass(PassRegistry &);
 void initializeNVPTXPrologEpilogPassPass(PassRegistry &);
 
-struct NVVMIntrRangePass : PassInfoMixin<NVVMIntrRangePass> {
+struct NVVMIntrRangePass : OptionalPassInfoMixin<NVVMIntrRangePass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-struct NVPTXIRPeepholePass : PassInfoMixin<NVPTXIRPeepholePass> {
+struct NVPTXIRPeepholePass : OptionalPassInfoMixin<NVPTXIRPeepholePass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-struct NVVMReflectPass : PassInfoMixin<NVVMReflectPass> {
+struct NVVMReflectPass : OptionalPassInfoMixin<NVVMReflectPass> {
   NVVMReflectPass() : SmVersion(0) {}
   NVVMReflectPass(unsigned SmVersion) : SmVersion(SmVersion) {}
   PreservedAnalyses run(Module &F, ModuleAnalysisManager &AM);
@@ -99,15 +101,20 @@ private:
   unsigned SmVersion;
 };
 
-struct GenericToNVVMPass : PassInfoMixin<GenericToNVVMPass> {
+struct GenericToNVVMPass : OptionalPassInfoMixin<GenericToNVVMPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-struct NVPTXCopyByValArgsPass : PassInfoMixin<NVPTXCopyByValArgsPass> {
+struct NVPTXCopyByValArgsPass : OptionalPassInfoMixin<NVPTXCopyByValArgsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-struct NVPTXLowerArgsPass : PassInfoMixin<NVPTXLowerArgsPass> {
+struct NVPTXSetByValParamAlignPass
+    : OptionalPassInfoMixin<NVPTXSetByValParamAlignPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+struct NVPTXLowerArgsPass : OptionalPassInfoMixin<NVPTXLowerArgsPass> {
 private:
   TargetMachine &TM;
 
@@ -117,11 +124,12 @@ public:
 };
 
 struct NVPTXMarkKernelPtrsGlobalPass
-    : PassInfoMixin<NVPTXMarkKernelPtrsGlobalPass> {
+    : OptionalPassInfoMixin<NVPTXMarkKernelPtrsGlobalPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-struct NVPTXTagInvariantLoadsPass : PassInfoMixin<NVPTXTagInvariantLoadsPass> {
+struct NVPTXTagInvariantLoadsPass
+    : OptionalPassInfoMixin<NVPTXTagInvariantLoadsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
@@ -229,7 +237,8 @@ enum CvtMode {
   BASE_MASK = 0x0F,
   FTZ_FLAG = 0x10,
   SAT_FLAG = 0x20,
-  RELU_FLAG = 0x40
+  RELU_FLAG = 0x40,
+  SATFINITE_FLAG = 0x80
 };
 }
 

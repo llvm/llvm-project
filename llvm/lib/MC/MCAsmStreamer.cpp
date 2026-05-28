@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/MC/MCAsmStreamer.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
@@ -19,6 +20,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCLFI.h"
 #include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -42,7 +44,7 @@ using namespace llvm;
 
 namespace {
 
-class MCAsmStreamer final : public MCStreamer {
+class MCAsmStreamer final : public MCAsmBaseStreamer {
   std::unique_ptr<formatted_raw_ostream> OSOwner;
   formatted_raw_ostream &OS;
   const MCAsmInfo *MAI;
@@ -87,8 +89,8 @@ public:
                 std::unique_ptr<MCInstPrinter> printer,
                 std::unique_ptr<MCCodeEmitter> emitter,
                 std::unique_ptr<MCAsmBackend> asmbackend)
-      : MCStreamer(Context), OSOwner(std::move(os)), OS(*OSOwner),
-        MAI(Context.getAsmInfo()), InstPrinter(std::move(printer)),
+      : MCAsmBaseStreamer(Context), OSOwner(std::move(os)), OS(*OSOwner),
+        MAI(&Context.getAsmInfo()), InstPrinter(std::move(printer)),
         Assembler(std::make_unique<MCAssembler>(
             Context, std::move(asmbackend), std::move(emitter),
             (asmbackend) ? asmbackend->createObjectWriter(NullStream)
@@ -100,14 +102,12 @@ public:
 
     Context.setUseNamesOnTempLabels(true);
 
-    auto *TO = Context.getTargetOptions();
-    if (!TO)
-      return;
-    IsVerboseAsm = TO->AsmVerbose;
+    const MCTargetOptions &TO = Context.getTargetOptions();
+    IsVerboseAsm = TO.AsmVerbose;
     if (IsVerboseAsm)
       InstPrinter->setCommentStream(CommentStream);
-    ShowInst = TO->ShowMCInst;
-    switch (TO->MCUseDwarfDirectory) {
+    ShowInst = TO.ShowMCInst;
+    switch (TO.MCUseDwarfDirectory) {
     case MCTargetOptions::DisableDwarfDirectory:
       UseDwarfDirectory = false;
       break;
@@ -116,7 +116,7 @@ public:
       break;
     case MCTargetOptions::DefaultDwarfDirectory:
       UseDwarfDirectory =
-          Context.getAsmInfo()->enableDwarfFileDirectoryDefault();
+          Context.getAsmInfo().enableDwarfFileDirectoryDefault();
       break;
     }
   }
@@ -286,7 +286,8 @@ public:
 
   void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
-  void emitPrefAlign(Align Alignment) override;
+  void emitPrefAlign(Align Alignment, const MCSymbol &End, bool EmitNops,
+                     uint8_t Fill, const MCSubtargetInfo &STI) override;
 
   void emitValueToOffset(const MCExpr *Offset,
                          unsigned char Value,
@@ -359,6 +360,10 @@ public:
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       codeview::DefRangeFramePointerRelHeader DRHdr) override;
 
+  void emitCVDefRangeDirective(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+      codeview::DefRangeRegisterRelIndirHeader DRHdr) override;
+
   void emitCVStringTableDirective() override;
   void emitCVFileChecksumsDirective() override;
   void emitCVFileChecksumOffsetDirective(unsigned FileNo) override;
@@ -392,6 +397,20 @@ public:
   void emitCFINegateRAState(SMLoc Loc) override;
   void emitCFINegateRAStateWithPC(SMLoc Loc) override;
   void emitCFIReturnColumn(int64_t Register) override;
+  void emitCFILLVMRegisterPair(int64_t Register, int64_t R1, int64_t R1Size,
+                               int64_t R2, int64_t R2Size, SMLoc Loc) override;
+  void emitCFILLVMVectorRegisters(
+      int64_t Register, ArrayRef<MCCFIInstruction::VectorRegisterWithLane> VRs,
+      SMLoc Loc) override;
+  void emitCFILLVMVectorOffset(int64_t Register, int64_t RegisterSize,
+                               int64_t MaskRegister, int64_t MaskRegisterSize,
+                               int64_t Offset, SMLoc Loc) override;
+  void emitCFILLVMVectorRegisterMask(int64_t Register, int64_t SpillRegister,
+                                     int64_t SpillRegisterLaneSizeInBits,
+                                     int64_t MaskRegister,
+                                     int64_t MaskRegisterSizeInBits,
+                                     SMLoc Loc) override;
+
   void emitCFILabelDirective(SMLoc Loc, StringRef Name) override;
   void emitCFIValOffset(int64_t Register, int64_t Offset, SMLoc Loc) override;
 
@@ -1562,8 +1581,15 @@ void MCAsmStreamer::emitCodeAlignment(Align Alignment,
     emitAlignmentDirective(Alignment.value(), std::nullopt, 1, MaxBytesToEmit);
 }
 
-void MCAsmStreamer::emitPrefAlign(Align Alignment) {
-  OS << "\t.prefalign\t" << Alignment.value();
+void MCAsmStreamer::emitPrefAlign(Align Alignment, const MCSymbol &End,
+                                  bool EmitNops, uint8_t Fill,
+                                  const MCSubtargetInfo &) {
+  OS << "\t.prefalign\t" << Log2(Alignment) << ", ";
+  End.print(OS, MAI);
+  if (EmitNops)
+    OS << ", nop";
+  else
+    OS << ", " << static_cast<unsigned>(Fill);
   EmitEOL();
 }
 
@@ -1943,6 +1969,16 @@ void MCAsmStreamer::emitCVDefRangeDirective(
   EmitEOL();
 }
 
+void MCAsmStreamer::emitCVDefRangeDirective(
+    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+    codeview::DefRangeRegisterRelIndirHeader DRHdr) {
+  PrintCVDefRangePrefix(Ranges);
+  OS << ", reg_rel_indir, ";
+  OS << DRHdr.Register << ", " << DRHdr.Flags << ", " << DRHdr.BasePointerOffset
+     << ", " << DRHdr.OffsetInUdt;
+  EmitEOL();
+}
+
 void MCAsmStreamer::emitCVStringTableDirective() {
   OS << "\t.cv_stringtable";
   EmitEOL();
@@ -2163,6 +2199,67 @@ void MCAsmStreamer::emitCFIRegister(int64_t Register1, int64_t Register2,
   EmitRegisterName(Register1);
   OS << ", ";
   EmitRegisterName(Register2);
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILLVMRegisterPair(int64_t Register, int64_t R1,
+                                            int64_t R1Size, int64_t R2,
+                                            int64_t R2Size, SMLoc Loc) {
+  MCStreamer::emitCFILLVMRegisterPair(Register, R1, R1Size, R2, R2Size, Loc);
+
+  OS << "\t.cfi_llvm_register_pair ";
+  EmitRegisterName(Register);
+  OS << ", ";
+  EmitRegisterName(R1);
+  OS << ", " << R1Size << ", ";
+  EmitRegisterName(R2);
+  OS << ", " << R2Size;
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILLVMVectorRegisters(
+    int64_t Register, ArrayRef<MCCFIInstruction::VectorRegisterWithLane> VRs,
+    SMLoc Loc) {
+  MCStreamer::emitCFILLVMVectorRegisters(Register, VRs, Loc);
+
+  OS << "\t.cfi_llvm_vector_registers ";
+  EmitRegisterName(Register);
+  for (auto [Reg, Lane, Size] : VRs)
+    OS << ", " << Reg << ", " << Lane << ", " << Size;
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILLVMVectorOffset(int64_t Register,
+                                            int64_t RegisterSize,
+                                            int64_t MaskRegister,
+                                            int64_t MaskRegisterSize,
+                                            int64_t Offset, SMLoc Loc) {
+  MCStreamer::emitCFILLVMVectorOffset(Register, RegisterSize, MaskRegister,
+                                      MaskRegisterSize, Offset, Loc);
+
+  OS << "\t.cfi_llvm_vector_offset ";
+  EmitRegisterName(Register);
+  OS << ", " << RegisterSize << ", ";
+  EmitRegisterName(MaskRegister);
+  OS << ", " << MaskRegisterSize << ", " << Offset;
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILLVMVectorRegisterMask(
+    int64_t Register, int64_t SpillRegister,
+    int64_t SpillRegisterLaneSizeInBits, int64_t MaskRegister,
+    int64_t MaskRegisterSizeInBits, SMLoc Loc) {
+  MCStreamer::emitCFILLVMVectorRegisterMask(
+      Register, SpillRegister, SpillRegisterLaneSizeInBits, MaskRegister,
+      MaskRegisterSizeInBits, Loc);
+
+  OS << "\t.cfi_llvm_vector_register_mask ";
+  EmitRegisterName(Register);
+  OS << ", ";
+  EmitRegisterName(SpillRegister);
+  OS << ", " << SpillRegisterLaneSizeInBits << ", ";
+  EmitRegisterName(MaskRegister);
+  OS << ", " << MaskRegisterSizeInBits;
   EmitEOL();
 }
 
@@ -2581,6 +2678,9 @@ void MCAsmStreamer::emitRawTextImpl(StringRef String) {
 }
 
 void MCAsmStreamer::finishImpl() {
+  if (getContext().getTargetTriple().isLFI())
+    emitLFINoteSection(*this, getContext());
+
   // If we are generating dwarf for assembly source files dump out the sections.
   if (getContext().getGenDwarfForAssembly())
     MCGenDwarfInfo::Emit(this);
@@ -2678,9 +2778,9 @@ void MCAsmStreamer::emitDwarfLineEndEntry(MCSection *Section,
 
   if (!EndLabel)
     EndLabel = TextSection->getEndSymbol(Ctx);
-  const MCAsmInfo *AsmInfo = Ctx.getAsmInfo();
+  const MCAsmInfo &AsmInfo = Ctx.getAsmInfo();
   emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, EndLabel,
-                           AsmInfo->getCodePointerSize());
+                           AsmInfo.getCodePointerSize());
 }
 
 // Generate DWARF line sections for assembly mode without .loc/.file

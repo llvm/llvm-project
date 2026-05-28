@@ -10,7 +10,7 @@
 //
 // UNSUPPORTED: nvptx64-nvidia-cuda
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
-// XFAIL: intelgpu
+// UNSUPPORTED: intelgpu
 // clang-format on
 
 #include <cassert>

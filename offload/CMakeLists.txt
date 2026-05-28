@@ -4,6 +4,10 @@
 cmake_minimum_required(VERSION 3.20.0)
 set(LLVM_SUBPROJECT_TITLE "liboffload")
 
+# The minimum versions required for dependencies.
+set(OFFLOAD_MIN_CUDA_VERSION 11.8.0)
+set(OFFLOAD_MIN_CUDA_VERSION_CODE 11080)
+
 # Check that the library can actually be built.
 if(APPLE OR WIN32 OR WASM)
   message(WARNING "libomptarget cannot be built on Windows and MacOS X!")
@@ -23,8 +27,14 @@ endif()
 set(OFFLOAD_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 # When building in tree we install the runtime according to the LLVM settings.
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
-  set(OFFLOAD_INSTALL_LIBDIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE STRING
+  set(OFFLOAD_TARGET_SUBDIR "${LLVM_DEFAULT_TARGET_TRIPLE}")
+  if(OFFLOAD_LIBDIR_SUBDIR)
+    string(APPEND OFFLOAD_TARGET_SUBDIR "/${OFFLOAD_LIBDIR_SUBDIR}")
+  endif()
+  cmake_path(NORMAL_PATH OFFLOAD_TARGET_SUBDIR)
+  set(OFFLOAD_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}/${OFFLOAD_TARGET_SUBDIR}" CACHE STRING
     "Path where built offload libraries should be installed.")
 else()
   set(OFFLOAD_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}" CACHE STRING
@@ -43,10 +53,6 @@ list(INSERT CMAKE_MODULE_PATH 0
   "${LLVM_COMMON_CMAKE_UTILS}"
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
-
-set(OPENMP_ENABLE_WERROR ${LLVM_ENABLE_WERROR})
-# If building in tree, we honor the same install suffix LLVM uses.
-set(OPENMP_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}")
 
 set(OPENMP_TEST_C_COMPILER_default "${LLVM_TOOLS_BINARY_DIR}/clang${CMAKE_EXECUTABLE_SUFFIX}")
 set(OPENMP_TEST_CXX_COMPILER_default "${LLVM_TOOLS_BINARY_DIR}/clang++${CMAKE_EXECUTABLE_SUFFIX}")
@@ -84,17 +90,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED NO)
 set(CMAKE_CXX_EXTENSIONS NO)
 
 # Set the path of all resulting libraries to a unified location so that it can
-# be used for testing.
-set(LIBOMPTARGET_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+# be used for testing and found in the build tree.
+if(LLVM_LIBRARY_OUTPUT_INTDIR)
+  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+    set(LIBOMPTARGET_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${OFFLOAD_TARGET_SUBDIR})
+  else()
+    set(LIBOMPTARGET_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+  endif()
+else()
+  set(LIBOMPTARGET_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+endif()
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
-
-if(NOT LLVM_LIBRARY_OUTPUT_INTDIR)
-  set(LIBOMPTARGET_INTDIR ${LIBOMPTARGET_LIBRARY_DIR})
-else()
-  set(LIBOMPTARGET_INTDIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
-endif()
 
 # Get dependencies for the different components of the project.
 include(LibomptargetGetDependencies)
@@ -123,11 +131,8 @@ if(LIBOMPTARGET_PLUGINS_TO_BUILD STREQUAL "all")
   set(LIBOMPTARGET_PLUGINS_TO_BUILD ${LIBOMPTARGET_ALL_PLUGIN_TARGETS})
 endif()
 
-# Add host if not already in LIBOMPTARGET_PLUGINS_TO_BUILD
-list(FIND LIBOMPTARGET_PLUGINS_TO_BUILD "host" FOUND_HOST)
-if(FOUND_HOST EQUAL -1)
-  list(APPEND LIBOMPTARGET_PLUGINS_TO_BUILD "host")
-endif()
+list(APPEND LIBOMPTARGET_PLUGINS_TO_BUILD "host")
+list(REMOVE_DUPLICATES LIBOMPTARGET_PLUGINS_TO_BUILD)
 
 if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$"
         AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
@@ -149,10 +154,6 @@ if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(AMD64)$" AND
                    "Linux/Windows x86_64 or ppc64le hosts")
     list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "level_zero")
   endif()
-endif()
-if("level_zero" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD AND
-   NOT LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND)
-  list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "level_zero")
 endif()
 message(STATUS "Building the offload library with support for "
                "the \"${LIBOMPTARGET_PLUGINS_TO_BUILD}\" plugins")
@@ -283,9 +284,10 @@ if(LIBOMP_OMP_TOOLS_INCLUDE_DIR)
   include_directories(${LIBOMP_OMP_TOOLS_INCLUDE_DIR})
 endif()
 
+# TODO: Use RUNTIMES_OUTPUT_RESOURCE_LIB_DIR instead
 set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
   "Path to folder containing llvm library libomptarget.so")
-set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_INTDIR}" CACHE STRING
+set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_LIBRARY_DIR}" CACHE STRING
   "Path to folder where intermediate libraries will be output")
 
 add_subdirectory(tools/offload-tblgen)
@@ -317,4 +319,18 @@ if(TARGET omptarget)
 endif()
 if(TARGET LLVMOffload)
   add_dependencies(offload LLVMOffload)
+endif()
+
+add_custom_target(install-offload
+  COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload)
+add_custom_target(install-offload-stripped
+  COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload --strip)
+
+if(TARGET omptarget)
+  add_dependencies(install-offload omptarget)
+  add_dependencies(install-offload-stripped omptarget)
+endif()
+if(TARGET LLVMOffload)
+  add_dependencies(install-offload LLVMOffload)
+  add_dependencies(install-offload-stripped LLVMOffload)
 endif()

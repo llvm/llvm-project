@@ -1,6 +1,5 @@
 add_custom_target(libc_include_tests)
-add_dependencies(check-libc libc_include_tests)
-add_dependencies(check-libc-lit libc_include_tests)
+add_dependencies(check-libc libc_include_tests-build)
 
 add_libc_test(
   assert_test
@@ -86,6 +85,17 @@ add_libc_test(
     stdckdint_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.stdckdint_macros
+)
+
+add_libc_test(
+  sched_test
+  UNIT_TEST_ONLY
+  SUITE
+    libc_include_tests
+  SRCS
+    sched_test.cpp
+  DEPENDS
+    libc.include.sched
 )
 
 add_libc_test(

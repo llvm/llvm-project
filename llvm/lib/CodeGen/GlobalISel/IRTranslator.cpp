@@ -174,8 +174,8 @@ void IRTranslator::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<StackProtector>();
   AU.addRequired<TargetPassConfig>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
-  AU.addRequired<AssumptionCacheTracker>();
   if (OptLevel != CodeGenOptLevel::None) {
+    AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<BranchProbabilityInfoWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
   }
@@ -218,6 +218,25 @@ ArrayRef<Register> IRTranslator::getOrCreateVRegs(const Value &Val) {
     assert(Val.getType()->isSized() &&
            "Don't know how to create an empty vreg");
 
+  // Fast-path values that lower to a single vreg.
+  if (!Val.getType()->isAggregateType()) {
+    LLT Ty = getLLTForType(*Val.getType(), *DL);
+    if (Offsets->empty())
+      Offsets->push_back(0);
+    VRegs->push_back(MRI->createGenericVirtualRegister(Ty));
+    if (isa<Constant>(Val)) {
+      bool Success = translate(cast<Constant>(Val), VRegs->front());
+      if (!Success) {
+        OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
+                                   MF->getFunction().getSubprogram(),
+                                   &MF->getFunction().getEntryBlock());
+        R << "unable to translate constant: " << ore::NV("Type", Val.getType());
+        reportTranslationError(*MF, *ORE, R);
+      }
+    }
+    return *VRegs;
+  }
+
   SmallVector<LLT, 4> SplitTys;
   computeValueLLTs(*DL, *Val.getType(), SplitTys,
                    Offsets->empty() ? Offsets : nullptr);
@@ -228,26 +247,12 @@ ArrayRef<Register> IRTranslator::getOrCreateVRegs(const Value &Val) {
     return *VRegs;
   }
 
-  if (Val.getType()->isAggregateType()) {
-    // UndefValue, ConstantAggregateZero
-    auto &C = cast<Constant>(Val);
-    unsigned Idx = 0;
-    while (auto Elt = C.getAggregateElement(Idx++)) {
-      auto EltRegs = getOrCreateVRegs(*Elt);
-      llvm::append_range(*VRegs, EltRegs);
-    }
-  } else {
-    assert(SplitTys.size() == 1 && "unexpectedly split LLT");
-    VRegs->push_back(MRI->createGenericVirtualRegister(SplitTys[0]));
-    bool Success = translate(cast<Constant>(Val), VRegs->front());
-    if (!Success) {
-      OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
-                                 MF->getFunction().getSubprogram(),
-                                 &MF->getFunction().getEntryBlock());
-      R << "unable to translate constant: " << ore::NV("Type", Val.getType());
-      reportTranslationError(*MF, *ORE, R);
-      return *VRegs;
-    }
+  // UndefValue, ConstantAggregateZero
+  auto &C = cast<Constant>(Val);
+  unsigned Idx = 0;
+  while (auto Elt = C.getAggregateElement(Idx++)) {
+    auto EltRegs = getOrCreateVRegs(*Elt);
+    llvm::append_range(*VRegs, EltRegs);
   }
 
   return *VRegs;
@@ -887,7 +892,7 @@ bool IRTranslator::emitJumpTableHeader(SwitchCG::JumpTable &JT,
   // This value may be smaller or larger than the target's pointer type, and
   // therefore require extension or truncating.
   auto *PtrIRTy = PointerType::getUnqual(SValue.getContext());
-  const LLT PtrScalarTy = LLT::scalar(DL->getTypeSizeInBits(PtrIRTy));
+  const LLT PtrScalarTy = LLT::integer(DL->getTypeSizeInBits(PtrIRTy));
   Sub = MIB.buildZExtOrTrunc(PtrScalarTy, Sub);
 
   JT.Reg = Sub.getReg(0);
@@ -1117,14 +1122,14 @@ void IRTranslator::emitBitTestHeader(SwitchCG::BitTestBlock &B,
   LLT MaskTy = SwitchOpTy;
   if (MaskTy.getSizeInBits() > PtrTy.getSizeInBits() ||
       !llvm::has_single_bit<uint32_t>(MaskTy.getSizeInBits()))
-    MaskTy = LLT::scalar(PtrTy.getSizeInBits());
+    MaskTy = LLT::integer(PtrTy.getSizeInBits());
   else {
     // Ensure that the type will fit the mask value.
     for (const SwitchCG::BitTestCase &Case : B.Cases) {
       if (!isUIntN(SwitchOpTy.getSizeInBits(), Case.Mask)) {
         // Switch table case range are encoded into series of masks.
         // Just use pointer type, it's guaranteed to fit.
-        MaskTy = LLT::scalar(PtrTy.getSizeInBits());
+        MaskTy = LLT::integer(PtrTy.getSizeInBits());
         break;
       }
     }
@@ -1387,13 +1392,10 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
     return true;
 
   ArrayRef<Register> Regs = getOrCreateVRegs(LI);
-  ArrayRef<uint64_t> Offsets = *VMap.getOffsets(LI);
   Register Base = getOrCreateVReg(*LI.getPointerOperand());
   AAMDNodes AAInfo = LI.getAAMetadata();
 
   const Value *Ptr = LI.getPointerOperand();
-  Type *OffsetIRTy = DL->getIndexType(Ptr->getType());
-  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
 
   if (CLI->supportSwiftError() && isSwiftError(Ptr)) {
     assert(Regs.size() == 1 && "swifterror should be single pointer");
@@ -1404,7 +1406,7 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
   }
 
   MachineMemOperand::Flags Flags =
-      TLI->getLoadMemOperandFlags(LI, *DL, AC, LibInfo);
+      TLI->getLoadMemOperandFlags(LI, *DL, AC, LibInfo, OptLevel);
   if (AA && !(Flags & MachineMemOperand::MOInvariant)) {
     if (AA->pointsToConstantMemory(
             MemoryLocation(Ptr, LocationSize::precise(StoreSize), AAInfo))) {
@@ -1412,18 +1414,30 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
     }
   }
 
-  const MDNode *Ranges =
-      Regs.size() == 1 ? LI.getMetadata(LLVMContext::MD_range) : nullptr;
+  // Fast-path the common single-register load.
+  if (Regs.size() == 1) {
+    auto *MMO = MF->getMachineMemOperand(
+        MachinePointerInfo(LI.getPointerOperand()), Flags,
+        MRI->getType(Regs[0]), getMemOpAlign(LI), AAInfo,
+        LI.getMetadata(LLVMContext::MD_range), LI.getSyncScopeID(),
+        LI.getOrdering());
+    MIRBuilder.buildLoad(Regs[0], Base, *MMO);
+    return true;
+  }
+
+  ArrayRef<uint64_t> Offsets = *VMap.getOffsets(LI);
+  Type *OffsetIRTy = DL->getIndexType(Ptr->getType());
+  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
   for (unsigned i = 0; i < Regs.size(); ++i) {
     Register Addr;
     MIRBuilder.materializeObjectPtrOffset(Addr, Base, OffsetTy, Offsets[i]);
 
     MachinePointerInfo Ptr(LI.getPointerOperand(), Offsets[i]);
     Align BaseAlign = getMemOpAlign(LI);
-    auto MMO =
-        MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Regs[i]),
-                                 commonAlignment(BaseAlign, Offsets[i]), AAInfo,
-                                 Ranges, LI.getSyncScopeID(), LI.getOrdering());
+    auto *MMO = MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Regs[i]),
+                                         commonAlignment(BaseAlign, Offsets[i]),
+                                         AAInfo, nullptr, LI.getSyncScopeID(),
+                                         LI.getOrdering());
     MIRBuilder.buildLoad(Regs[i], Addr, *MMO);
   }
 
@@ -1436,11 +1450,7 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
     return true;
 
   ArrayRef<Register> Vals = getOrCreateVRegs(*SI.getValueOperand());
-  ArrayRef<uint64_t> Offsets = *VMap.getOffsets(*SI.getValueOperand());
   Register Base = getOrCreateVReg(*SI.getPointerOperand());
-
-  Type *OffsetIRTy = DL->getIndexType(SI.getPointerOperandType());
-  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
 
   if (CLI->supportSwiftError() && isSwiftError(SI.getPointerOperand())) {
     assert(Vals.size() == 1 && "swifterror should be single pointer");
@@ -1452,17 +1462,29 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
   }
 
   MachineMemOperand::Flags Flags = TLI->getStoreMemOperandFlags(SI, *DL);
+  // Fast-path the common single-register store.
+  if (Vals.size() == 1) {
+    auto *MMO = MF->getMachineMemOperand(
+        MachinePointerInfo(SI.getPointerOperand()), Flags,
+        MRI->getType(Vals[0]), getMemOpAlign(SI), SI.getAAMetadata(), nullptr,
+        SI.getSyncScopeID(), SI.getOrdering());
+    MIRBuilder.buildStore(Vals[0], Base, *MMO);
+    return true;
+  }
 
+  ArrayRef<uint64_t> Offsets = *VMap.getOffsets(*SI.getValueOperand());
+  Type *OffsetIRTy = DL->getIndexType(SI.getPointerOperandType());
+  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
   for (unsigned i = 0; i < Vals.size(); ++i) {
     Register Addr;
     MIRBuilder.materializeObjectPtrOffset(Addr, Base, OffsetTy, Offsets[i]);
 
     MachinePointerInfo Ptr(SI.getPointerOperand(), Offsets[i]);
     Align BaseAlign = getMemOpAlign(SI);
-    auto MMO = MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Vals[i]),
-                                        commonAlignment(BaseAlign, Offsets[i]),
-                                        SI.getAAMetadata(), nullptr,
-                                        SI.getSyncScopeID(), SI.getOrdering());
+    auto *MMO = MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Vals[i]),
+                                         commonAlignment(BaseAlign, Offsets[i]),
+                                         SI.getAAMetadata(), nullptr,
+                                         SI.getSyncScopeID(), SI.getOrdering());
     MIRBuilder.buildStore(Vals[i], Addr, *MMO);
   }
   return true;
@@ -2093,6 +2115,10 @@ static unsigned getConstrainedOpcode(Intrinsic::ID ID) {
     return TargetOpcode::G_STRICT_FSQRT;
   case Intrinsic::experimental_constrained_ldexp:
     return TargetOpcode::G_STRICT_FLDEXP;
+  case Intrinsic::experimental_constrained_fcmp:
+    return TargetOpcode::G_STRICT_FCMP;
+  case Intrinsic::experimental_constrained_fcmps:
+    return TargetOpcode::G_STRICT_FCMPS;
   default:
     return 0;
   }
@@ -2109,6 +2135,19 @@ bool IRTranslator::translateConstrainedFPIntrinsic(
   uint32_t Flags = MachineInstr::copyFlagsFromInstruction(FPI);
   if (EB == fp::ExceptionBehavior::ebIgnore)
     Flags |= MachineInstr::NoFPExcept;
+
+  if (Opcode == TargetOpcode::G_STRICT_FCMP ||
+      Opcode == TargetOpcode::G_STRICT_FCMPS) {
+    auto *FPCmp = cast<ConstrainedFPCmpIntrinsic>(&FPI);
+    Register Operand0 = getOrCreateVReg(*FPCmp->getArgOperand(0));
+    Register Operand1 = getOrCreateVReg(*FPCmp->getArgOperand(1));
+    Register Result = getOrCreateVReg(FPI);
+    MIRBuilder.buildInstr(Opcode, {Result}, {}, Flags)
+        .addPredicate(FPCmp->getPredicate())
+        .addUse(Operand0)
+        .addUse(Operand1);
+    return true;
+  }
 
   SmallVector<llvm::SrcOp, 4> VRegs;
   for (unsigned I = 0, E = FPI.getNonMetadataArgCount(); I != E; ++I)
@@ -2443,11 +2482,11 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::ctlz: {
     ConstantInt *Cst = cast<ConstantInt>(CI.getArgOperand(1));
     bool isTrailing = ID == Intrinsic::cttz;
-    unsigned Opcode = isTrailing
-                          ? Cst->isZero() ? TargetOpcode::G_CTTZ
-                                          : TargetOpcode::G_CTTZ_ZERO_UNDEF
-                          : Cst->isZero() ? TargetOpcode::G_CTLZ
-                                          : TargetOpcode::G_CTLZ_ZERO_UNDEF;
+    unsigned Opcode = isTrailing      ? Cst->isZero()
+                                            ? TargetOpcode::G_CTTZ
+                                            : TargetOpcode::G_CTTZ_ZERO_POISON
+                      : Cst->isZero() ? TargetOpcode::G_CTLZ
+                                      : TargetOpcode::G_CTLZ_ZERO_POISON;
     MIRBuilder.buildInstr(Opcode, {getOrCreateVReg(CI)},
                           {getOrCreateVReg(*CI.getArgOperand(0))});
     return true;
@@ -4204,13 +4243,13 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   if (EnableOpts) {
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
     FuncInfo.BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
+    AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
+        MF->getFunction());
   } else {
     AA = nullptr;
     FuncInfo.BPI = nullptr;
+    AC = nullptr;
   }
-
-  AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
-      MF->getFunction());
   LibInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   Libcalls = &getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
       *F.getParent(), Subtarget);
@@ -4282,7 +4321,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     ArrayRef<Register> VRegs = getOrCreateVRegs(Arg);
     VRegArgs.push_back(VRegs);
 
-    if (Arg.hasSwiftErrorAttr()) {
+    if (CLI->supportSwiftError() && Arg.hasSwiftErrorAttr()) {
       assert(VRegs.size() == 1 && "Too many vregs for Swift error");
       SwiftError.setCurrentVReg(EntryBB, SwiftError.getFunctionArg(), VRegs[0]);
     }

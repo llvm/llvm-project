@@ -253,7 +253,7 @@ define void @fcvtzu_v8f16_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    ldr q0, [x0]
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
@@ -325,15 +325,8 @@ define <2 x i16> @fcvtzu_v2f32_v2i16(<2 x float> %op1) vscale_range(2,0) #0 {
 define <4 x i16> @fcvtzu_v4f32_v4i16(<4 x float> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcvtzu_v4f32_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzu v1.4s, v0.4s
-; CHECK-NEXT:    mov w8, v1.s[1]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    mov w9, v1.s[2]
-; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    mov w8, v1.s[3]
-; CHECK-NEXT:    mov v0.h[2], w9
-; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
   %res = fptoui <4 x float> %op1 to <4 x i16>
   ret <4 x i16> %res
@@ -1147,7 +1140,7 @@ define void @fcvtzs_v8f16_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    ldr q0, [x0]
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
@@ -1219,15 +1212,8 @@ define <2 x i16> @fcvtzs_v2f32_v2i16(<2 x float> %op1) vscale_range(2,0) #0 {
 define <4 x i16> @fcvtzs_v4f32_v4i16(<4 x float> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcvtzs_v4f32_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzs v1.4s, v0.4s
-; CHECK-NEXT:    mov w8, v1.s[1]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    mov w9, v1.s[2]
-; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    mov w8, v1.s[3]
-; CHECK-NEXT:    mov v0.h[2], w9
-; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
   %res = fptosi <4 x float> %op1 to <4 x i16>
   ret <4 x i16> %res

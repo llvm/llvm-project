@@ -228,8 +228,8 @@ Expected<StringRef> createOutputFile(const Twine &Prefix, StringRef Extension) {
   if (SaveTemps) {
     (PrefixStr + "." + Extension).toNullTerminatedStringRef(OutputFile);
   } else {
-    if (std::error_code EC =
-            sys::fs::createTemporaryFile(PrefixStr, Extension, OutputFile))
+    if (std::error_code EC = sys::fs::createTemporaryFile(
+            sys::path::filename(PrefixStr), Extension, OutputFile))
       return createFileError(OutputFile, EC);
   }
 
@@ -410,8 +410,7 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
 
   // Create a new file to write the linked device image to.
-  auto TempFileOrErr =
-      createOutputFile(sys::path::filename(ExecutableName), "fatbin");
+  auto TempFileOrErr = createOutputFile(ExecutableName, "fatbin");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -455,8 +454,7 @@ fatbinary(ArrayRef<std::tuple<StringRef, StringRef, StringRef>> InputFiles,
     return OffloadBundlerPath.takeError();
 
   // Create a new file to write the linked device image to.
-  auto TempFileOrErr =
-      createOutputFile(sys::path::filename(ExecutableName), "hipfb");
+  auto TempFileOrErr = createOutputFile(ExecutableName, "hipfb");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -518,8 +516,7 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   // input filename already has the device and architecture.
   std::string OutputFileBase =
       "." + Triple.getArchName().str() + "." + Arch.str();
-  auto TempFileOrErr = createOutputFile(
-      sys::path::filename(ExecutableName) + OutputFileBase, "img");
+  auto TempFileOrErr = createOutputFile(ExecutableName + OutputFileBase, "img");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -701,10 +698,8 @@ Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
     M.setDataLayout(TM->createDataLayout());
 
   int FD = -1;
-  auto TempFileOrErr =
-      createOutputFile(sys::path::filename(ExecutableName) + "." +
-                           getOffloadKindName(Kind) + ".image.wrapper",
-                       "o");
+  auto TempFileOrErr = createOutputFile(
+      ExecutableName + "." + getOffloadKindName(Kind) + ".image.wrapper", "o");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
   if (std::error_code EC = sys::fs::openFileForWrite(*TempFileOrErr, FD))
@@ -775,10 +770,9 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
     errs() << M;
   if (Args.hasArg(OPT_save_temps)) {
     int FD = -1;
-    auto TempFileOrErr =
-        createOutputFile(sys::path::filename(ExecutableName) + "." +
-                             getOffloadKindName(Kind) + ".image.wrapper",
-                         "bc");
+    auto TempFileOrErr = createOutputFile(
+        ExecutableName + "." + getOffloadKindName(Kind) + ".image.wrapper",
+        "bc");
     if (!TempFileOrErr)
       return TempFileOrErr.takeError();
     if (std::error_code EC = sys::fs::openFileForWrite(*TempFileOrErr, FD))
@@ -1332,7 +1326,7 @@ int main(int Argc, char **Argv) {
         Args.hasArg(OPT_help_hidden), Args.hasArg(OPT_help_hidden));
     return EXIT_SUCCESS;
   }
-  if (Args.hasArg(OPT_v)) {
+  if (Args.hasArg(OPT_version)) {
     printVersion(outs());
     return EXIT_SUCCESS;
   }
