@@ -127,12 +127,12 @@ void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
           hasType(pointerType(pointee(voidType()))),
           hasSourceExpression(ignoringImpCasts(
               hasTypePointingTo(cxxRecordDecl().bind(BaseNode)))))),
-      hasTypePointingTo(
-          cxxRecordDecl(isDerivedFrom(equalsBoundNode(BaseNode))).bind(DerivedNode)));
+      hasTypePointingTo(cxxRecordDecl(isDerivedFrom(equalsBoundNode(BaseNode)))
+                            .bind(DerivedNode)));
 
   auto ExplicitCast =
-      explicitCastExpr(anyOf(MatchExprPtr, MatchExprRefTypeDef, MatchExprPtrObjC,
-                             MatchExprPtrVoidCast))
+        explicitCastExpr(anyOf(MatchExprPtr, MatchExprRefTypeDef,
+                             MatchExprPtrObjC, MatchExprPtrVoidCast))
           .bind(WarnRecordDecl);
   auto Cast = stmt(ExplicitCast);
 
