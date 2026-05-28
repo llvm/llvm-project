@@ -60,8 +60,10 @@ add_header_library(
     libc.src.__support.FPUtil.multiply_add 
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
+    libc.src.__support.math.log
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
 )
 
 add_header_library(
@@ -419,6 +421,7 @@ add_header_library(
     atanpif16.h
   DEPENDS
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
     libc.include.llvm-libc-macros.float16_macros
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fenv_impl
@@ -467,6 +470,7 @@ add_header_library(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.polyeval
@@ -1445,6 +1449,7 @@ add_header_library(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
     libc.src.__support.FPUtil.double_double
     libc.src.__support.macros.config
 )
@@ -2806,6 +2811,7 @@ add_header_library(
     .sincosf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
@@ -3066,6 +3072,7 @@ add_header_library(
     .expf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.except_value_utils
@@ -3985,6 +3992,7 @@ add_header_library(
     .expxf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
     libc.src.__support.common
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.except_value_utils
@@ -4587,6 +4595,7 @@ add_header_library(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
@@ -4601,6 +4610,7 @@ add_header_library(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
@@ -4834,6 +4844,7 @@ add_header_library(
     .sincosf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
     libc.include.llvm-libc-macros.float16_macros
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fenv_impl
@@ -4907,6 +4918,7 @@ add_header_library(
     .expxf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl
@@ -4926,6 +4938,7 @@ add_header_library(
     .expxf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl
@@ -4944,6 +4957,7 @@ add_header_library(
     .expxf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl
@@ -5022,6 +5036,7 @@ add_header_library(
     .expxf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl
@@ -5144,6 +5159,7 @@ add_header_library(
     .exp_constants
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
     libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.fenv_impl
@@ -5229,6 +5245,7 @@ add_header_library(
     .sincosf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
     libc.include.llvm-libc-macros.float16_macros
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.except_value_utils
@@ -5260,6 +5277,7 @@ add_header_library(
     .expxf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.except_value_utils
@@ -5380,6 +5398,7 @@ add_header_library(
     .sincosf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
@@ -5411,6 +5430,7 @@ add_header_library(
   DEPENDS
     .expxf16_utils
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
@@ -5450,6 +5470,7 @@ add_header_library(
     .sincosf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.math.log
     libc.include.llvm-libc-macros.float16_macros
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.except_value_utils

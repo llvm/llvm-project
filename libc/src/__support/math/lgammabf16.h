@@ -19,6 +19,7 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/math/log.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
@@ -70,7 +71,7 @@ LIBC_INLINE double lgamma_positive_d(double x) {
   if (x >= 8.0) {
     // Stirling series; 0.5*ln(2*pi)
     constexpr double HALF_LN_2PI = 0x1.d67f1c864beb4p-1;
-    double lx = __builtin_log(x);
+    double lx = math::log(x);
     double x2 = x * x;
     double result = (x - 0.5) * lx - x + HALF_LN_2PI;
     result += 1.0 / (12.0 * x) - 1.0 / (360.0 * x * x2);
@@ -83,7 +84,7 @@ LIBC_INLINE double lgamma_positive_d(double x) {
   double log_product = 0.0;
   double xs = x;
   while (xs < 4.0) {
-    log_product += __builtin_log(xs);
+    log_product += math::log(xs);
     xs += 1.0;
   }
   // xs is now in [4, 8); cast to float for polynomial evaluation.
@@ -167,8 +168,7 @@ LIBC_INLINE bfloat16 lgammabf16(bfloat16 x) {
         (1.0 +
          x_pi2_d * (DC1 + x_pi2_d * (DC2 + x_pi2_d * (DC3 + x_pi2_d * DC4))));
 
-    double log_sin_d =
-        (sin_pi_frac_d == 1.0) ? 0.0 : __builtin_log(sin_pi_frac_d);
+    double log_sin_d = (sin_pi_frac_d == 1.0) ? 0.0 : math::log(sin_pi_frac_d);
     // Use double addition: 1.0 + double(ax) preserves tiny ax values that
     // would be lost by 1.0f + ax in float (e.g. ax=2e-5 rounds to 1.0f).
     double lgp_d = lgamma_positive_d(1.0 + static_cast<double>(ax));
