@@ -3343,17 +3343,38 @@ void GVNPass::assignValNumForDeadCode() {
   }
 }
 
-/// Same-iteration AA walk over L's blocks. See canMemoizeLoadAcrossLoop.
-static bool canHoistLoadWithAA(Loop *L, LoadInst *Load, AAResults *AA) {
+/// Phi-aware in-loop clobber check for the min-finding select rewrite.
+///
+/// Reject if any instruction in L may write either Load's address or
+/// AltLoad's address. Load is the hoistable load; AltLoad is the other
+/// operand of the compare (LHS). The recognizer established the algebraic
+/// gate C1 - C2 == sizeof(LoadType) * KStep, which makes AltLoad's
+/// same-iteration address exactly Load's next-iteration address on the
+/// cmp = true arm of the select being built. So the two locations together
+/// cover both select arms; no symbolic PHI translation is needed.
+///
+/// The walk covers every instruction in L, including instructions before
+/// Load in Load's parent block: in a single-block self-loop those run
+/// between Load's read at iter N and Load's read at iter N+1 via the
+/// back-edge and can therefore clobber the memoized value.
+///
+/// TODO: When PHITransAddr learns to translate through SelectInst (the
+/// IndexValPhi's back-edge incoming is the very select we are about to
+/// build), this helper becomes redundant: MemoryDependenceResults's
+/// NonLocal walker would perform the per-edge translation that this code
+/// encodes by hand using the recognizer's domain knowledge.
+static bool canHoistLoadWithAA(Loop *L, LoadInst *Load, LoadInst *AltLoad,
+                               AAResults *AA) {
   MemoryLocation Loc = MemoryLocation::get(Load);
+  MemoryLocation AltLoc = MemoryLocation::get(AltLoad);
   for (BasicBlock *BB : L->blocks()) {
-    BasicBlock::iterator It =
-        BB == Load->getParent() ? std::next(Load->getIterator()) : BB->begin();
-    for (auto E = BB->end(); It != E; ++It) {
-      Instruction &I = *It;
+    for (Instruction &I : *BB) {
+      if (&I == Load || &I == AltLoad)
+        continue;
       if (!I.mayWriteToMemory())
         continue;
-      if (isModSet(AA->getModRefInfo(&I, Loc))) {
+      if (isModSet(AA->getModRefInfo(&I, Loc)) ||
+          isModSet(AA->getModRefInfo(&I, AltLoc))) {
         LLVM_DEBUG(dbgs() << "GVN (minindx): Cannot hoist - clobbered in "
                              "loop by "
                           << I << "\n");
@@ -3375,12 +3396,13 @@ static bool canHoistLoadWithAA(Loop *L, LoadInst *Load, AAResults *AA) {
 ///    loads from constant memory or with !invariant.load are always safe.
 ///  - Aliasing: no instruction in L may write Load's location, including
 ///    across the back-edge. With MSSA, this is canHoistLoad(IsSink=true),
-///    which walks every in-loop MemoryDef with phi translation. Without
-///    MSSA, fall back to a same-iteration AA walk (FIXME: not phi-aware;
-///    a follow-up commit will replace this with a MemoryDependenceResults
-///    query).
-static bool canMemoizeLoadAcrossLoop(LoadInst &Load, Loop *L, AAResults *AA,
-                                     DominatorTree *DT, MemorySSAUpdater *MSSAU,
+///    which walks every in-loop MemoryDef. Without MSSA, use a phi-aware
+///    AA walk that probes both Load and AltLoad locations; AltLoad is the
+///    LHS of the compare and, by the recognizer's algebraic gate, equals
+///    Load's next-iteration address on the cmp = true arm.
+static bool canMemoizeLoadAcrossLoop(LoadInst &Load, LoadInst &AltLoad, Loop *L,
+                                     AAResults *AA, DominatorTree *DT,
+                                     MemorySSAUpdater *MSSAU,
                                      OptimizationRemarkEmitter *ORE) {
   if (!Load.hasOneUse()) {
     LLVM_DEBUG(dbgs() << "GVN (minindx): hoistable load has extra uses.\n");
@@ -3405,7 +3427,7 @@ static bool canMemoizeLoadAcrossLoop(LoadInst &Load, Loop *L, AAResults *AA,
     if (canHoistLoad(Load, AA, DT, L, MSSA,
                      /*TargetExecutesOncePerLoop=*/true, Flags, ORE))
       return true;
-  } else if (canHoistLoadWithAA(L, &Load, AA)) {
+  } else if (canHoistLoadWithAA(L, &Load, &AltLoad, AA)) {
     return true;
   }
 
@@ -3472,8 +3494,12 @@ bool GVNPass::transformMinFindingSelectPattern(
   Value *LoadVal = Comparison->getOperand(1);
 
   auto *HoistableLoad = cast<LoadInst>(LoadVal);
-  if (!canMemoizeLoadAcrossLoop(*HoistableLoad, L, VN.getAliasAnalysis(), DT,
-                                MSSAU, ORE))
+  // LHS is the other compare operand. The recognizer requires it to be a
+  // load and (via the algebraic gate) ties its address to HoistableLoad's
+  // next-iteration address on the cmp = true arm of Select.
+  auto *AltLoad = cast<LoadInst>(LHS);
+  if (!canMemoizeLoadAcrossLoop(*HoistableLoad, *AltLoad, L,
+                                VN.getAliasAnalysis(), DT, MSSAU, ORE))
     return false;
 
   IRBuilder<> Builder(Preheader->getTerminator());

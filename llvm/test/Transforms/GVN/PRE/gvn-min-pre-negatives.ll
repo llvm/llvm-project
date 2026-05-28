@@ -906,6 +906,119 @@ exit:
   ret i32 %min.idx.next
 }
 
+; Negative test: a store appears before the hoistable load in the same
+; block, at an address BasicAA proves only MayAlias against the load.
+; Forwarding does not eliminate the load, but the store would clobber
+; the memoized value via the back-edge. The whole-body walk visits the
+; store; a walk that started at next(matched-load) would miss it.
+define i32 @test_preload_store(ptr %arr) {
+; CHECK-LABEL: define i32 @test_preload_store(
+; CHECK-SAME: ptr [[ARR:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CNT:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[CNT_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i32 [ 1, %[[ENTRY]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[PTR_CUR:%.*]] = getelementptr i32, ptr [[ARR]], i64 [[IV]]
+; CHECK-NEXT:    [[VAL_FIRST:%.*]] = load i32, ptr [[PTR_CUR]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[PTR_CUR]], align 4
+; CHECK-NEXT:    [[MIN_EXT:%.*]] = sext i32 [[MIN_IDX]] to i64
+; CHECK-NEXT:    [[PTR_MIN_BASE:%.*]] = getelementptr i32, ptr [[ARR]], i64 [[MIN_EXT]]
+; CHECK-NEXT:    [[PTR_SECOND:%.*]] = getelementptr i8, ptr [[PTR_MIN_BASE]], i64 -4
+; CHECK-NEXT:    [[VAL_CURRENT_MIN:%.*]] = load i32, ptr [[PTR_SECOND]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[VAL_FIRST]], [[VAL_CURRENT_MIN]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[NEXT_IDX_TRUNC:%.*]] = trunc i64 [[IV_NEXT]] to i32
+; CHECK-NEXT:    [[MIN_IDX_NEXT]] = select i1 [[CMP]], i32 [[NEXT_IDX_TRUNC]], i32 [[MIN_IDX]]
+; CHECK-NEXT:    [[CNT_NEXT]] = add i64 [[CNT]], 1
+; CHECK-NEXT:    [[CONT:%.*]] = icmp ult i64 [[CNT_NEXT]], 2
+; CHECK-NEXT:    br i1 [[CONT]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[MIN_IDX_NEXT]]
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop ]
+  %cnt = phi i64 [ 0, %entry ], [ %cnt.next, %loop ]
+  %min.idx = phi i32 [ 1, %entry ], [ %min.idx.next, %loop ]
+  %ptr.cur = getelementptr i32, ptr %arr, i64 %iv
+  %val.first = load i32, ptr %ptr.cur, align 4
+  store i32 0, ptr %ptr.cur, align 4
+  %min.ext = sext i32 %min.idx to i64
+  %ptr.min.base = getelementptr i32, ptr %arr, i64 %min.ext
+  %ptr.second = getelementptr i8, ptr %ptr.min.base, i64 -4
+  %val.current.min = load i32, ptr %ptr.second, align 4
+  %cmp = icmp slt i32 %val.first, %val.current.min
+  %iv.next = add i64 %iv, 1
+  %next.idx.trunc = trunc i64 %iv.next to i32
+  %min.idx.next = select i1 %cmp, i32 %next.idx.trunc, i32 %min.idx
+  %cnt.next = add i64 %cnt, 1
+  %cont = icmp ult i64 %cnt.next, 2
+  br i1 %cont, label %loop, label %exit
+exit:
+  ret i32 %min.idx.next
+}
+
+; Negative test: a store sharing val.current.min's index SSA is provably
+; disjoint from val.current.min same-iteration, but its same-iteration
+; address aliases val.first (different-SSA index). By the recognizer's
+; algebraic gate, val.current.min's next-iteration address on the cmp =
+; true arm equals val.first's same-iteration address, so this store is
+; a cross-iteration clobber that only the AltLoad (LHS) probe catches.
+define i32 @test_crossiter_store(ptr %arr) {
+; CHECK-LABEL: define i32 @test_crossiter_store(
+; CHECK-SAME: ptr [[ARR:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CNT:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[CNT_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i32 [ 1, %[[ENTRY]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[PTR_CUR:%.*]] = getelementptr i32, ptr [[ARR]], i64 [[IV]]
+; CHECK-NEXT:    [[VAL_FIRST:%.*]] = load i32, ptr [[PTR_CUR]], align 4
+; CHECK-NEXT:    [[MIN_EXT:%.*]] = sext i32 [[MIN_IDX]] to i64
+; CHECK-NEXT:    [[PTR_MIN_BASE:%.*]] = getelementptr i32, ptr [[ARR]], i64 [[MIN_EXT]]
+; CHECK-NEXT:    [[PTR_SECOND:%.*]] = getelementptr i8, ptr [[PTR_MIN_BASE]], i64 -4
+; CHECK-NEXT:    [[VAL_CURRENT_MIN:%.*]] = load i32, ptr [[PTR_SECOND]], align 4
+; CHECK-NEXT:    [[PTR_STORE:%.*]] = getelementptr i32, ptr [[PTR_MIN_BASE]], i64 100
+; CHECK-NEXT:    store i32 0, ptr [[PTR_STORE]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[VAL_FIRST]], [[VAL_CURRENT_MIN]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[NEXT_IDX_TRUNC:%.*]] = trunc i64 [[IV_NEXT]] to i32
+; CHECK-NEXT:    [[MIN_IDX_NEXT]] = select i1 [[CMP]], i32 [[NEXT_IDX_TRUNC]], i32 [[MIN_IDX]]
+; CHECK-NEXT:    [[CNT_NEXT]] = add i64 [[CNT]], 1
+; CHECK-NEXT:    [[CONT:%.*]] = icmp ult i64 [[CNT_NEXT]], 2
+; CHECK-NEXT:    br i1 [[CONT]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[MIN_IDX_NEXT]]
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop ]
+  %cnt = phi i64 [ 0, %entry ], [ %cnt.next, %loop ]
+  %min.idx = phi i32 [ 1, %entry ], [ %min.idx.next, %loop ]
+  %ptr.cur = getelementptr i32, ptr %arr, i64 %iv
+  %val.first = load i32, ptr %ptr.cur, align 4
+  %min.ext = sext i32 %min.idx to i64
+  %ptr.min.base = getelementptr i32, ptr %arr, i64 %min.ext
+  %ptr.second = getelementptr i8, ptr %ptr.min.base, i64 -4
+  %val.current.min = load i32, ptr %ptr.second, align 4
+  %ptr.store = getelementptr i32, ptr %ptr.min.base, i64 100
+  store i32 0, ptr %ptr.store, align 4
+  %cmp = icmp slt i32 %val.first, %val.current.min
+  %iv.next = add i64 %iv, 1
+  %next.idx.trunc = trunc i64 %iv.next to i32
+  %min.idx.next = select i1 %cmp, i32 %next.idx.trunc, i32 %min.idx
+  %cnt.next = add i64 %cnt, 1
+  %cont = icmp ult i64 %cnt.next, 2
+  br i1 %cont, label %loop, label %exit
+exit:
+  ret i32 %min.idx.next
+}
+
 ; Negative test: hoistable load is unordered-atomic. Memoizing across
 ; iterations would drop the per-iteration atomic semantics.
 define i32 @test_atomic_hoistable_load(ptr %a) {
