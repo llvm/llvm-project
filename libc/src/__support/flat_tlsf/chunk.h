@@ -93,11 +93,29 @@ template <class T> LIBC_INLINE void write_word(void *ptr, T value) {
 }
 
 template <class T> LIBC_INLINE T read_big_endian(const void *ptr) {
-  return Endian::to_big_endian(read_word<T>(ptr));
+  T val = read_word<T>(ptr);
+  if constexpr (sizeof(T) == 8)
+    return static_cast<T>(Endian::to_big_endian(static_cast<uint64_t>(val)));
+  else if constexpr (sizeof(T) == 4)
+    return static_cast<T>(Endian::to_big_endian(static_cast<uint32_t>(val)));
+  else if constexpr (sizeof(T) == 2)
+    return static_cast<T>(Endian::to_big_endian(static_cast<uint16_t>(val)));
+  else
+    __builtin_trap();
 }
 
 template <class T> LIBC_INLINE void write_big_endian(void *ptr, T value) {
-  write_word<T>(ptr, Endian::to_big_endian(value));
+  if constexpr (sizeof(T) == 8)
+    write_word<T>(ptr, static_cast<T>(Endian::to_big_endian(
+                           static_cast<uint64_t>(value))));
+  else if constexpr (sizeof(T) == 4)
+    write_word<T>(ptr, static_cast<T>(Endian::to_big_endian(
+                           static_cast<uint32_t>(value))));
+  else if constexpr (sizeof(T) == 2)
+    write_word<T>(ptr, static_cast<T>(Endian::to_big_endian(
+                           static_cast<uint16_t>(value))));
+  else
+    __builtin_trap();
 }
 
 } // namespace chunk
