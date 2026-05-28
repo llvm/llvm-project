@@ -101,30 +101,30 @@ INTERCEPTOR(void*, vec_calloc, uptr nmemb, uptr size) {
 }
 #  endif
 
-// TODO: Fix malloc/calloc interceptors to return 16-byte alignment with AIX on
-// PASE.
 INTERCEPTOR(void*, malloc, uptr size) {
   if (DlsymAlloc::Use())
-    return DlsymAlloc::Allocate(size);
+    return DlsymAlloc::Allocate(size, kWordSize);
   GET_STACK_TRACE_MALLOC;
   return asan_malloc(size, &stack);
 }
 
 INTERCEPTOR(void*, calloc, uptr nmemb, uptr size) {
   if (DlsymAlloc::Use())
-    return DlsymAlloc::Callocate(nmemb, size);
+    return DlsymAlloc::Callocate(nmemb, size, kWordSize);
   GET_STACK_TRACE_MALLOC;
   return asan_calloc(nmemb, size, &stack);
 }
 
-// TODO: AIX needs a method to ensure 16-byte alignment if the incoming
-// pointer was allocated with a 16-byte alignment requirement (or perhaps
-// merely if it happens to have 16-byte alignment).
+// On AIX, route realloc through asan_vec_realloc.
 INTERCEPTOR(void*, realloc, void *ptr, uptr size) {
   if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
-    return DlsymAlloc::Realloc(ptr, size);
+    return DlsymAlloc::Realloc(ptr, size, kWordSize);
   GET_STACK_TRACE_MALLOC;
+#  if SANITIZER_AIX
+  return asan_vec_realloc(ptr, size, &stack);
+#  else
   return asan_realloc(ptr, size, &stack);
+#  endif
 }
 
 #if SANITIZER_INTERCEPT_REALLOCARRAY
