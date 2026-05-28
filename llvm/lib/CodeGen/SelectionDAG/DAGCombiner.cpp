@@ -19959,7 +19959,7 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
 
   // FIXME: We should be able to use node-level FMF here.
   EVT VT = N->getValueType(0);
-  if (!TLI.isOperationLegal(ISD::FTRUNC, VT))
+  if (!TLI.isOperationLegalOrCustom(ISD::FTRUNC, VT))
     return SDValue();
 
   bool IsUnsigned = N->getOpcode() == ISD::UINT_TO_FP;

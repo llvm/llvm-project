@@ -21029,58 +21029,6 @@ static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-// Combine (sint_to_fp (fp_to_sint (x) )) to FRINTZ instructions,
-// provided that signed zeros can be ignored.
-static SDValue performFpToSIntToFPCombine(SDNode *N, SelectionDAG &DAG,
-                                          const AArch64Subtarget *Subtarget,
-                                          const AArch64TargetLowering &TLI) {
-  SDValue Op(N, 0);
-  assert(Op.getOpcode() == ISD::SINT_TO_FP && "Expected sint_to_fp combine");
-
-  EVT VT = Op.getValueType();
-  if (!VT.isVector())
-    return SDValue();
-
-  SDLoc DL(Op);
-  SDValue Src = Op.getOperand(0);
-  // Only combine if the first opcode is fp_to_sint with a single use
-  if (Src.getOpcode() != ISD::FP_TO_SINT || !Src.hasOneUse())
-    return SDValue();
-
-  SDValue FPSrc = Src.getOperand(0);
-  // The source FP type must match the result type
-  if (FPSrc.getValueType() != VT)
-    return SDValue();
-
-  if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
-      !DAG.canIgnoreSignBitOfZero(Op))
-    return SDValue();
-
-  if (!Subtarget->isSVEorStreamingSVEAvailable() ||
-      !(Subtarget->hasSVE2p2() || Subtarget->hasSME2p2()))
-    return SDValue();
-
-  if (!(VT.isScalableVector() && TLI.isTypeLegal(VT)) ||
-      !(VT.isFixedLengthVector() &&
-        TLI.useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable())))
-    return SDValue();
-
-  EVT ContainerVT =
-      VT.isFixedLengthVector() ? getContainerForFixedLengthVector(DAG, VT) : VT;
-
-  SDValue Pg = getPredicateForVector(DAG, DL, VT);
-  SDValue Val = VT.isFixedLengthVector()
-                    ? convertToScalableVector(DAG, ContainerVT, FPSrc)
-                    : FPSrc;
-
-  SDValue Res =
-      DAG.getNode(AArch64ISD::FTRUNC_MERGE_PASSTHRU, DL, ContainerVT, Pg, Val,
-                  DAG.getPOISON(ContainerVT), Op->getFlags());
-
-  return VT.isFixedLengthVector() ? convertFromScalableVector(DAG, VT, Res)
-                                  : Res;
-}
-
 // Given a tree of and/or(csel(0, 1, cc0), csel(0, 1, cc1)), we may be able to
 // convert to csel(ccmp(.., cc0)), depending on cc1:
 
@@ -29772,8 +29720,6 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::MUL:
     return performMulCombine(N, DAG, DCI, Subtarget);
   case ISD::SINT_TO_FP:
-    if (auto R = performFpToSIntToFPCombine(N, DAG, Subtarget, *this))
-      return R;
     return performIntToFpCombine(N, DAG, DCI, Subtarget);
   case ISD::UINT_TO_FP:
     return performIntToFpCombine(N, DAG, DCI, Subtarget);
