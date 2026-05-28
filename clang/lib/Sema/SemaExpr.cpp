@@ -1752,7 +1752,7 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
     return Context.getCommonSugaredType(LHSType, RHSType);
 
   // At this point, we have two different arithmetic types.
-  
+
   if ((LHSType->isFixedPointType() && RHSType->isBitIntType()) ||
       (LHSType->isBitIntType() && RHSType->isFixedPointType()))
     return QualType();
