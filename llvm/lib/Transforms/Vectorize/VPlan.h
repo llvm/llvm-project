@@ -3323,7 +3323,8 @@ public:
                     bool IsSingleScalar, VPValue *Mask = nullptr,
                     const VPIRFlags &Flags = {}, VPIRMetadata Metadata = {},
                     DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeWithIRFlags(VPRecipeBase::VPReplicateSC, Operands, Flags, DL),
+      : VPRecipeWithIRFlags(VPRecipeBase::VPReplicateSC, Operands,
+                            computeScalarType(I, Operands), Flags, DL),
         VPIRMetadata(Metadata), IsSingleScalar(IsSingleScalar),
         IsPredicated(Mask) {
     setUnderlyingValue(I);
@@ -3332,6 +3333,11 @@ public:
   }
 
   ~VPReplicateRecipe() override = default;
+
+  /// Compute the scalar result type for a VPReplicateRecipe wrapping \p I with
+  /// \p Operands (excluding any predicate mask).
+  static Type *computeScalarType(const Instruction *I,
+                                 ArrayRef<VPValue *> Operands);
 
   VPReplicateRecipe *clone() override { return cloneWithOperands(operands()); }
 

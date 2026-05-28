@@ -389,7 +389,10 @@ private:
   std::optional<std::pair<StringRef, StringRef>> parseNameBuildIDPair();
 
   /// Coordinate reading and parsing of perf.data file
-  void parsePerfData(BinaryContext &BC);
+  void parsePerfData();
+
+  /// Parse this aggregator's input file.
+  void parseInput();
 
   /// Mark binary functions covered by parsed profile data.
   void markFunctionsWithProfile();
