@@ -5208,14 +5208,13 @@ void Fortran::lower::genOpenMPRequires(mlir::Operation *mod,
 
   if (auto offloadMod =
           llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(mod)) {
-    semantics::WithOmpDeclarative::RequiresClauses reqs;
+    semantics::WithOmpDeclarative::OmpClauseSet reqs;
     if (symbol) {
       common::visit(
           [&](const auto &details) {
             if constexpr (std::is_base_of_v<semantics::WithOmpDeclarative,
                                             std::decay_t<decltype(details)>>) {
-              if (details.has_ompRequires())
-                reqs = *details.ompRequires();
+              reqs = details.ompRequires();
             }
           },
           symbol->details());

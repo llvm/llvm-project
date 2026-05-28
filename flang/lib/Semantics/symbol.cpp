@@ -72,25 +72,35 @@ static void DumpList(llvm::raw_ostream &os, const char *label, const T &list) {
 
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const WithOmpDeclarative &x) {
-  if (x.has_ompRequires() || x.has_ompAtomicDefaultMemOrder()) {
-    os << " OmpRequirements:(";
-    if (const common::OmpMemoryOrderType *admo{x.ompAtomicDefaultMemOrder()}) {
-      os << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(
-                llvm::omp::Clause::OMPC_atomic_default_mem_order))
-         << '(' << parser::ToLowerCaseLetters(EnumToString(*admo)) << ')';
-      if (x.has_ompRequires()) {
+  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
+
+  auto toLower = [](std::string_view sv) {
+    return parser::ToLowerCaseLetters(sv);
+  };
+  auto getLowerName = [&](llvm::omp::Clause c) {
+    return toLower(llvm::omp::getOpenMPClauseName(c, x.version_));
+  };
+  auto printClauses = [&](const OmpClauseSet &cs) {
+    size_t idx{0}, size{cs.count()};
+    cs.IterateOverMembers([&](llvm::omp::Clause c) {
+      os << getLowerName(c);
+      switch (c) {
+      case llvm::omp::Clause::OMPC_atomic_default_mem_order:
+        os << '(' << toLower(EnumToString(*x.ompAtomicDefaultMemOrder()))
+           << ')';
+        break;
+      default:
+        break;
+      }
+      if (++idx < size) {
         os << ',';
       }
-    }
-    if (const WithOmpDeclarative::RequiresClauses *reqs{x.ompRequires()}) {
-      size_t num{0}, size{reqs->count()};
-      reqs->IterateOverMembers([&](llvm::omp::Clause f) {
-        os << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(f));
-        if (++num < size) {
-          os << ',';
-        }
-      });
-    }
+    });
+  };
+
+  if (const OmpClauseSet &reqs{x.ompRequires()}; reqs.count()) {
+    os << " OmpRequirements:(";
+    printClauses(reqs);
     os << ')';
   }
   return os;
