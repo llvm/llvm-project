@@ -48,14 +48,6 @@ func.func @index_args_out_of_range_2(%arg : i32) {
 
 // -----
 
-func.func @member_call_no_operands() {
-    // expected-error @+1 {{'emitc.call_opaque' op member call requires at least one operand (receiver)}}
-    emitc.call_opaque "method" () {is_member_call = true} : () -> ()
-    return
-}
-
-// -----
-
 func.func @empty_callee() {
     // expected-error @+1 {{'emitc.call_opaque' op callee must not be empty}}
     emitc.call_opaque "" () : () -> ()

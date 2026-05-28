@@ -916,23 +916,6 @@ static LogicalResult printOperation(CppEmitter &emitter,
 
   if (failed(emitter.emitAssignPrefix(op)))
     return failure();
-
-  bool isMemberCall = callOpaqueOp.getIsMemberCall();
-
-  if (isMemberCall) {
-    Value receiver = op.getOperand(0);
-    bool isPtr = llvm::isa<emitc::PointerType>(receiver.getType());
-
-    if (failed(emitter.emitOperand(receiver)))
-      return failure();
-
-    if (isPtr) {
-      os << "->";
-    } else {
-      os << ".";
-    }
-  }
-
   os << callOpaqueOp.getCallee();
 
   // Template arguments can't refer to SSA values and as such the template
@@ -968,18 +951,10 @@ static LogicalResult printOperation(CppEmitter &emitter,
 
   os << "(";
 
-  LogicalResult emittedArgs = success();
-  if (callOpaqueOp.getArgs()) {
-    emittedArgs =
-        interleaveCommaWithError(*callOpaqueOp.getArgs(), os, emitArgs);
-  } else if (isMemberCall) {
-    emittedArgs = interleaveCommaWithError(
-        llvm::seq<size_t>(1, op.getNumOperands()), os,
-        [&](size_t i) { return emitter.emitOperand(op.getOperand(i)); });
-  } else {
-    emittedArgs = emitter.emitOperands(op);
-  }
-
+  LogicalResult emittedArgs =
+      callOpaqueOp.getArgs()
+          ? interleaveCommaWithError(*callOpaqueOp.getArgs(), os, emitArgs)
+          : emitter.emitOperands(op);
   if (failed(emittedArgs))
     return failure();
   os << ")";
