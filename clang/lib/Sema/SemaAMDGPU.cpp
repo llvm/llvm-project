@@ -459,10 +459,11 @@ static bool checkGlobalOrFlatPointerArg(SemaAMDGPU &S, CallExpr *TheCall) {
   unsigned AS =
       S.getASTContext().getTargetAddressSpace(PtrTy.getAddressSpace());
   if (AS != llvm::AMDGPUAS::FLAT_ADDRESS &&
-      AS != llvm::AMDGPUAS::GLOBAL_ADDRESS)
+      AS != llvm::AMDGPUAS::GLOBAL_ADDRESS) {
     return S.Diag(TheCall->getBeginLoc(),
                   diag::err_amdgcn_global_or_flat_pointer_required)
            << PtrArg->getSourceRange();
+  }
   return false;
 }
 
@@ -471,11 +472,13 @@ static bool checkScopeAsInt(SemaAMDGPU &S, Expr *Scope) {
     return false;
   auto ScopeModel = AtomicScopeModel::create(AtomicScopeModelKind::Generic);
   if (std::optional<llvm::APSInt> Result =
-          Scope->getIntegerConstantExpr(S.SemaRef.Context))
-    if (!ScopeModel->isValid(Result->getZExtValue()))
+          Scope->getIntegerConstantExpr(S.SemaRef.Context)) {
+    if (!ScopeModel->isValid(Result->getZExtValue())) {
       return S.Diag(Scope->getBeginLoc(),
                     diag::err_atomic_op_has_invalid_sync_scope)
              << Scope->getSourceRange();
+    }
+  }
   return false;
 }
 
