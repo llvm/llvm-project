@@ -274,7 +274,7 @@ define void @infer_noalias1(ptr dereferenceable(8) noalias nofree %p) {
 
 ; CHECK-LABEL: 'infer_noalias2'
 ; CHECK: %p
-define void @infer_noalias2(ptr dereferenceable(8) noalias readonly %p) nosync {
+define void @infer_noalias2(ptr dereferenceable(8) noalias readonly %p) {
   call void @mayfree()
   %v = load i32, ptr %p
   ret void
