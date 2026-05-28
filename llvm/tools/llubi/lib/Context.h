@@ -12,6 +12,7 @@
 #include "Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/AsmParser/AsmParserContext.h"
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Module.h"
 #include <map>
@@ -197,6 +198,7 @@ class Context {
   // Module
   LLVMContext &Ctx;
   Module &M;
+  const AsmParserContext *ParserContext;
   const DataLayout &DL;
   const TargetLibraryInfoImpl TLIImpl;
 
@@ -208,6 +210,7 @@ class Context {
   bool Deterministic = false;
   UndefValueBehavior UndefBehavior = UndefValueBehavior::NonDeterministic;
   NaNPropagationBehavior NaNBehavior = NaNPropagationBehavior::NonDeterministic;
+  bool FusedMultiplyAdd = false;
 
   std::mt19937_64 Rng;
 
@@ -249,7 +252,7 @@ class Context {
   // TODO: errno
 
 public:
-  explicit Context(Module &M);
+  explicit Context(Module &M, const AsmParserContext *ParserContext);
   Context(const Context &) = delete;
   Context(Context &&) = delete;
   Context &operator=(const Context &) = delete;
@@ -260,6 +263,7 @@ public:
   void setVScale(uint32_t VS) { VScale = VS; }
   void setMaxSteps(uint32_t MS) { MaxSteps = MS; }
   void setMaxStackDepth(uint32_t Depth) { MaxStackDepth = Depth; }
+  void setFusedMultiplyAdd(bool F) { FusedMultiplyAdd = F; }
   uint64_t getMemoryLimit() const { return MaxMem; }
   uint32_t getVScale() const { return VScale; }
   uint32_t getMaxSteps() const { return MaxSteps; }
@@ -269,6 +273,7 @@ public:
   bool mayUseNonDeterminism() const { return !Deterministic; }
   UndefValueBehavior getEffectiveUndefValueBehavior() const;
   NaNPropagationBehavior getEffectiveNaNPropagationBehavior() const;
+  bool fuseMultiplyAdd() const { return FusedMultiplyAdd; }
   void setUndefValueBehavior(UndefValueBehavior UB) { UndefBehavior = UB; }
   void setNaNPropagationBehavior(NaNPropagationBehavior NaNBehav) {
     NaNBehavior = NaNBehav;
@@ -276,6 +281,8 @@ public:
   void reseed(uint32_t Seed) { Rng.seed(Seed); }
 
   LLVMContext &getContext() const { return Ctx; }
+  Module &getModule() const { return M; }
+  const AsmParserContext *getParserContext() const { return ParserContext; }
   const DataLayout &getDataLayout() const { return DL; }
   const Triple &getTargetTriple() const { return M.getTargetTriple(); }
   const TargetLibraryInfoImpl &getTLIImpl() const { return TLIImpl; }

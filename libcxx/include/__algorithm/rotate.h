@@ -39,7 +39,7 @@ __rotate_left(_ForwardIterator __first, _ForwardIterator __last) {
   using _Ops = _IterOps<_AlgPolicy>;
 
   value_type __tmp       = _Ops::__iter_move(__first);
-  _ForwardIterator __lm1 = std::__move<_AlgPolicy>(_Ops::next(__first), __last, __first).second;
+  _ForwardIterator __lm1 = std::__move<_AlgPolicy>(_Ops::next(__first), __last, __first).__out_;
   *__lm1                 = std::move(__tmp);
   return __lm1;
 }
@@ -52,7 +52,7 @@ __rotate_right(_BidirectionalIterator __first, _BidirectionalIterator __last) {
 
   _BidirectionalIterator __lm1 = _Ops::prev(__last);
   value_type __tmp             = _Ops::__iter_move(__lm1);
-  _BidirectionalIterator __fp1 = std::__move_backward<_AlgPolicy>(__first, __lm1, std::move(__last)).second;
+  _BidirectionalIterator __fp1 = std::__move_backward<_AlgPolicy>(__first, __lm1, std::move(__last)).__out_;
   *__first                     = std::move(__tmp);
   return __fp1;
 }

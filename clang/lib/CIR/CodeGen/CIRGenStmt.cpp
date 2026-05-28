@@ -107,7 +107,8 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
           !assumptionExpr->HasSideEffects(getContext())) {
         mlir::Value assumptionValue = emitCheckedArgForAssume(assumptionExpr);
         cir::AssumeOp::create(builder, getLoc(s.getSourceRange()),
-                              assumptionValue);
+                              assumptionValue, cir::AssumeBundleKind::None,
+                              mlir::ValueRange{});
       }
     } break;
     }
@@ -802,7 +803,7 @@ CIRGenFunction::emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
   // If the substmt is default stmt or case stmt, try to handle the special case
   // to make it into the simple form. e.g.
   //
-  //  swtich () {
+  //  switch () {
   //    case 1:
   //    default:
   //      ...
@@ -1164,10 +1165,35 @@ mlir::LogicalResult CIRGenFunction::emitSwitchBody(const Stmt *s) {
 
   auto *compoundStmt = cast<CompoundStmt>(s);
 
-  mlir::Block *swtichBlock = builder.getBlock();
-  for (auto *c : compoundStmt->body()) {
+  ArrayRef<Stmt *> body{compoundStmt->body_begin(), compoundStmt->body_end()};
+
+  mlir::Block *switchBlock = builder.getBlock();
+
+  // Any statements appearing before the first case statement are 'unassociated'
+  // with anything. So we have to create them FIRST in their own block. After
+  // that, the 'case' regions will take care of future ones.
+  if (!body.empty() && !isa<SwitchCase>(body.front())) {
+    builder.setInsertionPointToEnd(switchBlock);
+    while (!body.empty() && !isa<SwitchCase>(body.front())) {
+
+      auto *c = body.front();
+      if (mlir::failed(emitStmt(c, /*useCurrentScope=*/!isa<CompoundStmt>(c))))
+        return mlir::failure();
+
+      body = body.drop_front();
+    }
+
+    // Now that we've emitted ALL of the statements, we can create a new block
+    // for the actual case statements/etc to appear.
+    mlir::Block *lastBlock = builder.getBlock();
+    switchBlock = builder.createBlock(switchBlock->getParent());
+    builder.setInsertionPointToEnd(lastBlock);
+    cir::BrOp::create(builder, getLoc(s->getSourceRange()), switchBlock);
+  }
+
+  for (auto *c : body) {
     if (auto *switchCase = dyn_cast<SwitchCase>(c)) {
-      builder.setInsertionPointToEnd(swtichBlock);
+      builder.setInsertionPointToEnd(switchBlock);
       // Reset insert point automatically, so that we can attach following
       // random stmt to the region of previous built case op to try to make
       // the being generated `cir.switch` to be in simple form.
@@ -1253,9 +1279,16 @@ void CIRGenFunction::emitReturnOfRValue(mlir::Location loc, RValue rv,
   if (rv.isScalar()) {
     builder.createStore(loc, rv.getValue(), returnValue);
   } else if (rv.isAggregate()) {
-    LValue dest = makeAddrLValue(returnValue, ty);
-    LValue src = makeAddrLValue(rv.getAggregateAddress(), ty);
-    emitAggregateCopy(dest, src, ty, getOverlapForReturnValue());
+    Address rvAddr = rv.getAggregateAddress();
+    // If the aggregate is already in the return slot (e.g. a callee was
+    // invoked through a ReturnValueSlot bound to returnValue), the copy is
+    // a no-op.  Calling emitAggregateCopy here would also incorrectly
+    // require the type to have a trivial copy/move.
+    if (rvAddr.getPointer() != returnValue.getPointer()) {
+      LValue dest = makeAddrLValue(returnValue, ty);
+      LValue src = makeAddrLValue(rvAddr, ty);
+      emitAggregateCopy(dest, src, ty, getOverlapForReturnValue());
+    }
   } else {
     cgm.errorNYI(loc, "emitReturnOfRValue: complex return type");
   }

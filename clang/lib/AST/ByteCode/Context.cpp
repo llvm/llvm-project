@@ -345,7 +345,7 @@ Context::tryEvaluateObjectSize(State &Parent, const Expr *E, unsigned Kind) {
 
   std::optional<uint64_t> Result;
 
-  auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+  auto PtrRes = C.interpretAsLValuePointer(E, [&](const Pointer &Ptr) {
     const Descriptor *DeclDesc = Ptr.getDeclDesc();
     if (!DeclDesc)
       return false;

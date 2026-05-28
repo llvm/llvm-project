@@ -132,9 +132,6 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   ctx.symAux.emplace_back();
   ctx.symtab = std::make_unique<SymbolTable>(ctx);
 
-  ctx.partitions.clear();
-  ctx.partitions.emplace_back(ctx);
-
   ctx.arg.progName = args[0];
 
   ctx.driver.linkerMain(args);
@@ -210,8 +207,8 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
               mb.getBufferIdentifier() +
                   ": could not get the buffer for a child of the archive");
     if (addToTar)
-      ctx.tar->append(relativeToRoot(check(c.getFullName())),
-                      mbref.getBuffer());
+      job.tarEntries.emplace_back(relativeToRoot(check(c.getFullName())),
+                                  mbref.getBuffer());
     v.push_back(std::make_pair(mbref, c.getChildOffset()));
   }
   if (err)
@@ -246,6 +243,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
                         /*asNeeded=*/false,
                         /*withLOption=*/false,
                         nextGroupId,
+                        {},
                         {},
                         {}});
   } else {
@@ -284,6 +282,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
                         ctx.arg.asNeeded,
                         withLOption,
                         nextGroupId,
+                        {},
                         {},
                         {}});
   }
@@ -2202,6 +2201,9 @@ void LinkerDriver::loadFiles() {
   for (auto &job : loadJobs) {
     if (job.kind == LoadJob::Archive)
       archiveFiles.emplace_back(job.path, (unsigned)job.out.size());
+    if (ctx.tar)
+      for (const auto &[path, data] : job.tarEntries)
+        ctx.tar->append(path, data);
     files.append(std::make_move_iterator(job.out.begin()),
                  std::make_move_iterator(job.out.end()));
     ctx.memoryBuffers.append(std::make_move_iterator(job.thinBufs.begin()),
@@ -2743,64 +2745,6 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
   }
 }
 
-// This function reads a symbol partition specification section. These sections
-// are used to control which partition a symbol is allocated to. See
-// https://lld.llvm.org/Partitions.html for more details on partitions.
-template <typename ELFT>
-static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
-  // Read the relocation that refers to the partition's entry point symbol.
-  Symbol *sym;
-  const RelsOrRelas<ELFT> rels = s->template relsOrRelas<ELFT>();
-  auto readEntry = [](InputFile *file, const auto &rels) -> Symbol * {
-    for (const auto &rel : rels)
-      return &file->getRelocTargetSym(rel);
-    return nullptr;
-  };
-  if (rels.areRelocsCrel())
-    sym = readEntry(s->file, rels.crels);
-  else if (rels.areRelocsRel())
-    sym = readEntry(s->file, rels.rels);
-  else
-    sym = readEntry(s->file, rels.relas);
-  if (!isa_and_nonnull<Defined>(sym) || !sym->isExported)
-    return;
-
-  StringRef partName = reinterpret_cast<const char *>(s->content().data());
-  for (Partition &part : ctx.partitions) {
-    if (part.name == partName) {
-      sym->partition = part.getNumber(ctx);
-      return;
-    }
-  }
-
-  // Forbid partitions from being used on incompatible targets, and forbid them
-  // from being used together with various linker features that assume a single
-  // set of output sections.
-  if (ctx.script->hasSectionsCommand)
-    ErrAlways(ctx) << s->file
-                   << ": partitions cannot be used with the SECTIONS command";
-  if (ctx.script->hasPhdrsCommands())
-    ErrAlways(ctx) << s->file
-                   << ": partitions cannot be used with the PHDRS command";
-  if (!ctx.arg.sectionStartMap.empty())
-    ErrAlways(ctx) << s->file
-                   << ": partitions cannot be used with "
-                      "--section-start, -Ttext, -Tdata or -Tbss";
-  if (ctx.arg.emachine == EM_MIPS)
-    ErrAlways(ctx) << s->file << ": partitions cannot be used on this target";
-
-  // Impose a limit of no more than 254 partitions. This limit comes from the
-  // sizes of the Partition fields in InputSectionBase and Symbol, as well as
-  // the amount of space devoted to the partition number in RankFlags.
-  if (ctx.partitions.size() == 254)
-    Fatal(ctx) << "may not have more than 254 partitions";
-
-  ctx.partitions.emplace_back(ctx);
-  Partition &newPart = ctx.partitions.back();
-  newPart.name = partName;
-  sym->partition = newPart.getNumber(ctx);
-}
-
 static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
   // With --thinlto-index-only, all buffers are nearly unused from now on
   // (except symbol/section names used by infrequent passes). Mark input file
@@ -3188,18 +3132,21 @@ static void readSecurityNotes(Ctx &ctx) {
     }
 
     if (ctx.aarch64PauthAbiCoreInfo != f->aarch64PauthAbiCoreInfo)
-      Err(ctx)
-          << "incompatible values of AArch64 PAuth core info found\n"
-          << "platform:\n"
-          << ">>> " << referenceFileName << ": 0x"
-          << toHex(ctx.aarch64PauthAbiCoreInfo->platform, /*LowerCase=*/true)
-          << "\n>>> " << f << ": 0x"
-          << toHex(f->aarch64PauthAbiCoreInfo->platform, /*LowerCase=*/true)
-          << "\nversion:\n"
-          << ">>> " << referenceFileName << ": 0x"
-          << toHex(ctx.aarch64PauthAbiCoreInfo->version, /*LowerCase=*/true)
-          << "\n>>> " << f << ": 0x"
-          << toHex(f->aarch64PauthAbiCoreInfo->version, /*LowerCase=*/true);
+      Err(ctx) << "incompatible values of AArch64 PAuth core info found\n"
+               << "platform:\n"
+               << ">>> " << referenceFileName << ": 0x"
+               << utohexstr(ctx.aarch64PauthAbiCoreInfo->platform,
+                            /*LowerCase=*/true, /*Width=*/16)
+               << "\n>>> " << f << ": 0x"
+               << utohexstr(f->aarch64PauthAbiCoreInfo->platform,
+                            /*LowerCase=*/true, /*Width=*/16)
+               << "\nversion:\n"
+               << ">>> " << referenceFileName << ": 0x"
+               << utohexstr(ctx.aarch64PauthAbiCoreInfo->version,
+                            /*LowerCase=*/true, /*Width=*/16)
+               << "\n>>> " << f << ": 0x"
+               << utohexstr(f->aarch64PauthAbiCoreInfo->version,
+                            /*LowerCase=*/true, /*Width=*/16);
   }
 
   // Force enable Shadow Stack.
@@ -3519,14 +3466,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   {
     llvm::TimeTraceScope timeScope("Strip sections");
-    if (ctx.hasSympart.load(std::memory_order_relaxed)) {
-      llvm::erase_if(ctx.inputSections, [&ctx = ctx](InputSectionBase *s) {
-        if (s->type != SHT_LLVM_SYMPART)
-          return false;
-        readSymbolPartitionSection<ELFT>(ctx, s);
-        return true;
-      });
-    }
     // We do not want to emit debug sections if --strip-all
     // or --strip-debug are given.
     if (ctx.arg.strip != StripPolicy::None) {
@@ -3547,10 +3486,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // a .d file to record build dependencies.
   if (!ctx.arg.dependencyFile.empty())
     writeDependencyFile(ctx);
-
-  // Now that the number of partitions is fixed, save a pointer to the main
-  // partition.
-  ctx.mainPart = &ctx.partitions[0];
 
   // Read .note.gnu.property sections from input object files which
   // contain a hint to tweak linker's and loader's behaviors.
@@ -3585,10 +3520,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Garbage collection and removal of shared symbols from unused shared objects.
   markLive<ELFT>(ctx);
-
-  // Make copies of any input sections that need to be copied into each
-  // partition.
-  copySectionsIntoPartitions(ctx);
 
   if (canHaveMemtagGlobals(ctx)) {
     llvm::TimeTraceScope timeScope("Process memory tagged symbols");

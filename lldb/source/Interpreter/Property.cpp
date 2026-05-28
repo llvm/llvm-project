@@ -234,11 +234,16 @@ Property::Property(llvm::StringRef name, llvm::StringRef desc, bool is_global,
     : m_name(name), m_description(desc), m_value_sp(value_sp),
       m_is_global(is_global) {}
 
-bool Property::DumpQualifiedName(Stream &strm) const {
+bool Property::DumpQualifiedName(
+    Stream &strm, std::optional<Stream::HighlightSettings> highlight) const {
   if (!m_name.empty()) {
-    if (m_value_sp->DumpQualifiedName(strm))
-      strm.PutChar('.');
-    strm << m_name;
+    bool has_sub_properties = static_cast<bool>(m_value_sp->GetAsProperties());
+    bool dumped_something = m_value_sp->DumpQualifiedName(strm, highlight);
+    if (!has_sub_properties) {
+      if (dumped_something)
+        strm.PutChar('.');
+      strm.PutCStringColorHighlighted(m_name, highlight);
+    }
     return true;
   }
   return false;

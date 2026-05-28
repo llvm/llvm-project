@@ -17,6 +17,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/macros/config.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -169,6 +170,55 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
   app.env_ptr = reinterpret_cast<uintptr_t *>(storage);
 
   return true;
+}
+
+int EnvironmentManager::set(cpp::string_view name, cpp::string_view value,
+                            bool overwrite) {
+  cpp::optional<size_t> idx = find_var(name);
+
+  // If the variable exists and we're not overwriting, do nothing.
+  if (idx && !overwrite)
+    return 0;
+
+  // Ensure we have capacity. If the variable doesn't exist, we need one
+  // more slot.
+  size_t needed = idx ? count : count + 1;
+  if (!ensure_capacity(needed))
+    return -1;
+
+  // Build the "name=value" string.
+  size_t name_len = name.size();
+  size_t value_len = value.size();
+  size_t total_len = name_len + 1 + value_len + 1; // name + '=' + value + '\0'
+
+  AllocChecker ac;
+  char *new_string = new (ac) char[total_len];
+  if (!ac)
+    return -1;
+
+  inline_memcpy(new_string, name.data(), name_len);
+  new_string[name_len] = '=';
+  inline_memcpy(new_string + name_len + 1, value.data(), value_len);
+  new_string[name_len + 1 + value_len] = '\0';
+
+  char **env_array = get_array();
+
+  if (idx) {
+    // Replace existing variable. Free old string if we own it.
+    if (ownership[*idx].can_free())
+      delete[] env_array[*idx];
+
+    env_array[*idx] = new_string;
+    ownership[*idx].allocated_by_us = true;
+  } else {
+    // Add new variable at the end.
+    env_array[count] = new_string;
+    ownership[count].allocated_by_us = true;
+    count++;
+    env_array[count] = nullptr; // Maintain null terminator.
+  }
+
+  return 0;
 }
 
 } // namespace internal

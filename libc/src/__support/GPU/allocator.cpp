@@ -327,15 +327,16 @@ struct Slab {
 
         uint32_t after = before | bitmask;
         uint64_t waiting = gpu::ballot(lane_mask, !result);
-        if (!result)
+        if (!result) {
           start =
               gpu::shuffle(waiting, cpp::countr_zero(waiting),
                            ~after ? __builtin_align_down(index, BITS_IN_WORD) +
                                         cpp::countr_zero(~after)
                                   : __builtin_align_down(
                                         impl::xorshift32(state), BITS_IN_WORD));
-        if (!result)
-          sleep_briefly();
+          if (!gpu::shuffle(waiting, cpp::countr_zero(waiting), ~after))
+            sleep_briefly();
+        }
       }
     }
     return result;

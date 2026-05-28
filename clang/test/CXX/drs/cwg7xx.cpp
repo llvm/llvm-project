@@ -335,6 +335,29 @@ namespace cwg727 { // cwg727: partial
   Collision<int, int> c; // #cwg727-Collision-int-int
 } // namespace cwg727
 
+namespace cwg730 { // cwg730: 2.7
+struct A {
+  template <typename> struct S {};
+  template <typename> void f() {}
+};
+
+template <> struct A::S<int> {};
+template <> void A::f<int>() {}
+} // namespace cwg730
+
+namespace cwg743 { // cwg743: 3.1
+#if __cplusplus >= 201103L
+struct S {
+  using T = int;
+};
+
+decltype(S())::T i;
+
+template <typename T>
+using foo = typename decltype(T())::I;
+#endif
+} // namespace cwg743
+
 namespace cwg777 { // cwg777: 3.7
 #if __cplusplus >= 201103L
 template <typename... T>

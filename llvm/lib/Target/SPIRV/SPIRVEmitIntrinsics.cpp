@@ -747,6 +747,8 @@ void SPIRVEmitIntrinsics::maybeAssignPtrType(Type *&Ty, Value *Op, Type *RefTy,
     if (!UnknownElemTypeI8)
       return;
     insertTodoType(Op);
+    if (isa<IntToPtrInst>(Op))
+      return;
   }
   Ty = RefTy;
 }

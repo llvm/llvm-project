@@ -351,18 +351,20 @@ public:
     resetDataLayout();
   }
 
-  // SPIR-V targeting requires a fully specified Vulkan environment.
-  // SPIR-V requires the enviornment to be in a valid shader stage as well.
-  // Validate here before CreateTargetInfo() to emit a proper diagnostic.
+  // When targeting Vulkan, require a fully specified Vulkan environment
+  // (version + valid shader stage). Non-Vulkan OS triples (e.g. mesa3d)
+  // could be used for OpenCL SPIR-V.
   bool validateTarget(DiagnosticsEngine &Diags) const override {
-    if (getTriple().getOS() != llvm::Triple::Vulkan ||
-        getTriple().getVulkanVersion() == llvm::VersionTuple(0)) {
+    if (getTriple().getOS() != llvm::Triple::Vulkan)
+      return true;
+    if (getTriple().getVulkanVersion() == llvm::VersionTuple(0)) {
       Diags.Report(diag::err_target_spirv_requires_vulkan);
       return false;
     }
-    if (getTriple().getEnvironment() < llvm::Triple::Pixel ||
-        getTriple().getEnvironment() > llvm::Triple::Amplification) {
-      Diags.Report(diag::err_target_spirv_requires_shader_stage);
+    if (getTriple().getEnvironment() != llvm::Triple::UnknownEnvironment &&
+        (getTriple().getEnvironment() < llvm::Triple::Pixel ||
+         getTriple().getEnvironment() > llvm::Triple::Amplification)) {
+      Diags.Report(diag::err_target_spirv_invalid_shader_stage);
       return false;
     }
     return true;
@@ -380,8 +382,10 @@ public:
            "Invalid architecture for 32-bit SPIR-V.");
     assert((getTriple().getOS() == llvm::Triple::UnknownOS ||
             getTriple().getOS() == llvm::Triple::ChipStar ||
-            getTriple().getOS() == llvm::Triple::Vulkan) &&
-           "32-bit SPIR-V target must use unknown, chipstar, or vulkan OS");
+            getTriple().getOS() == llvm::Triple::Vulkan ||
+            getTriple().getOS() == llvm::Triple::Mesa3D) &&
+           "32-bit SPIR-V target must use unknown, chipstar, vulkan, or mesa3d "
+           "OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "32-bit SPIR-V target must use unknown environment type");
     PointerWidth = PointerAlign = 32;
@@ -405,8 +409,10 @@ public:
            "Invalid architecture for 64-bit SPIR-V.");
     assert((getTriple().getOS() == llvm::Triple::UnknownOS ||
             getTriple().getOS() == llvm::Triple::ChipStar ||
-            getTriple().getOS() == llvm::Triple::Vulkan) &&
-           "64-bit SPIR-V target must use unknown, chipstar, or vulkan OS");
+            getTriple().getOS() == llvm::Triple::Vulkan ||
+            getTriple().getOS() == llvm::Triple::Mesa3D) &&
+           "64-bit SPIR-V target must use unknown, chipstar, vulkan, or mesa3d "
+           "OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "64-bit SPIR-V target must use unknown environment type");
     PointerWidth = PointerAlign = 64;

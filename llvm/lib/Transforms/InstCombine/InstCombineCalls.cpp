@@ -1224,6 +1224,27 @@ static bool signBitMustBeTheSame(Value *Op0, Value *Op1,
   return *Known0 == *Known1;
 }
 
+// Determines if ldexp(ldexp(x, a), b) -> ldexp(x, sadd.sat(a, b)) is safe.
+//
+// This is true if, when the add saturates, the resulting ldexp is guaranteed to
+// produce 0 or inf.
+static bool ldexpSaturatingAddIsSafe(Type *FpTy, Type *ExpTy) {
+  const fltSemantics &FltSem = FpTy->getScalarType()->getFltSemantics();
+  if (!APFloat::semanticsHasInf(FltSem))
+    return false;
+
+  // Cap ExpBits at 32 because scalbn takes an int.  This is sufficient for any
+  // reasonable fp type (for example, `double` only has 11 exponent bits).
+  unsigned ExpBits = std::min(ExpTy->getScalarSizeInBits(), 32u);
+  int SignedMax = static_cast<int>(maxIntN(ExpBits));
+  int SignedMin = static_cast<int>(minIntN(ExpBits));
+  APFloat ScaledUp = scalbn(APFloat::getSmallest(FltSem), SignedMax,
+                            APFloat::rmNearestTiesToEven);
+  APFloat ScaledDown = scalbn(APFloat::getLargest(FltSem), SignedMin,
+                              APFloat::rmNearestTiesToEven);
+  return ScaledUp.isInfinity() && ScaledDown.isZero();
+}
+
 /// Try to canonicalize min/max(X + C0, C1) as min/max(X, C1 - C0) + C0. This
 /// can trigger other combines.
 static Instruction *moveAddAfterMinMax(IntrinsicInst *II,
@@ -3198,24 +3219,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::ldexp: {
-    // ldexp(ldexp(x, a), b) -> ldexp(x, a + b)
-    //
-    // The danger is if the first ldexp would overflow to infinity or underflow
-    // to zero, but the combined exponent avoids it. We ignore this with
-    // reassoc.
-    //
-    // It's also safe to fold if we know both exponents are >= 0 or <= 0 since
-    // it would just double down on the overflow/underflow which would occur
-    // anyway.
-    //
-    // TODO: Could do better if we had range tracking for the input value
-    // exponent. Also could broaden sign check to cover == 0 case.
     Value *Src = II->getArgOperand(0);
     Value *Exp = II->getArgOperand(1);
 
+    // ldexp(x, K) -> fmul x, 2^K
     uint64_t ConstExp;
     if (match(Exp, m_ConstantInt(ConstExp))) {
-      // ldexp(x, K) -> fmul x, 2^K
       const fltSemantics &FPTy =
           Src->getType()->getScalarType()->getFltSemantics();
 
@@ -3228,6 +3237,21 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
+    // ldexp(ldexp(x, a), b) -> ldexp(x, sadd.sat(a, b))
+    //
+    // A danger is if the first ldexp would overflow to infinity or underflow to
+    // zero, but the combined exponent avoids it.
+    //
+    // We ignore this with reassoc, or if we know both exponents have the same
+    // sign (since then we'd just double down on the over/underflow which would
+    // occur anyway).
+    //
+    // ldexp can take arbitrary integer types, so we also need to ensure that
+    // our exponent type is wide enough so that if sadd.sat(a, b) saturates,
+    // then ldexp at the saturated exponent saturates to inf or zero as well.
+    //
+    // TODO: Could do better if we had range tracking for the input value
+    // exponent. Also could broaden sign check to cover == 0 case.
     Value *InnerSrc;
     Value *InnerExp;
     if (match(Src, m_OneUse(m_Intrinsic<Intrinsic::ldexp>(
@@ -3236,11 +3260,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       FastMathFlags FMF = II->getFastMathFlags();
       FastMathFlags InnerFlags = cast<FPMathOperator>(Src)->getFastMathFlags();
 
-      if ((FMF.allowReassoc() && InnerFlags.allowReassoc()) ||
-          signBitMustBeTheSame(Exp, InnerExp, SQ.getWithInstruction(II))) {
-        // TODO: Add nsw/nuw probably safe if integer type exceeds exponent
-        // width.
-        Value *NewExp = Builder.CreateAdd(InnerExp, Exp);
+      if (ldexpSaturatingAddIsSafe(II->getType(), Exp->getType()) &&
+          ((FMF.allowReassoc() && InnerFlags.allowReassoc()) ||
+           signBitMustBeTheSame(Exp, InnerExp, SQ.getWithInstruction(II)))) {
+        Value *NewExp =
+            Builder.CreateBinaryIntrinsic(Intrinsic::sadd_sat, InnerExp, Exp);
         II->setArgOperand(1, NewExp);
         II->setFastMathFlags(InnerFlags); // Or the inner flags.
         return replaceOperand(*II, 0, InnerSrc);
@@ -3604,32 +3628,19 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   case Intrinsic::assume: {
     Value *IIOperand = II->getArgOperand(0);
-    SmallVector<OperandBundleDef, 4> OpBundles;
-    II->getOperandBundlesAsDefs(OpBundles);
-
-    /// This will remove the boolean Condition from the assume given as
-    /// argument and remove the assume if it becomes useless.
-    /// always returns nullptr for use as a return values.
-    auto RemoveConditionFromAssume = [&](Instruction *Assume) -> Instruction * {
-      assert(isa<AssumeInst>(Assume));
-      if (isAssumeWithEmptyBundle(*cast<AssumeInst>(II)))
-        return eraseInstFromFunction(CI);
-      replaceUse(II->getOperandUse(0), ConstantInt::getTrue(II->getContext()));
-      return nullptr;
-    };
 
     // Canonicalize assume(a && b) -> assume(a); assume(b);
     // Note: New assumption intrinsics created here are registered by
     // the InstCombineIRInserter object.
     Value *A, *B;
     if (match(IIOperand, m_LogicalAnd(m_Value(A), m_Value(B)))) {
-      Builder.CreateAssumption(A, OpBundles);
+      Builder.CreateAssumption(A);
       Builder.CreateAssumption(B);
       return eraseInstFromFunction(*II);
     }
     // assume(!(a || b)) -> assume(!a); assume(!b);
     if (match(IIOperand, m_Not(m_LogicalOr(m_Value(A), m_Value(B))))) {
-      Builder.CreateAssumption(Builder.CreateNot(A), OpBundles);
+      Builder.CreateAssumption(Builder.CreateNot(A));
       Builder.CreateAssumption(Builder.CreateNot(B));
       return eraseInstFromFunction(*II);
     }
@@ -3706,7 +3717,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
-    Instruction *Next = II->getNextNode();
     // Convert nonnull assume like:
     // %A = icmp ne i32* %PTR, null
     // call void @llvm.assume(i1 %A)
@@ -3740,15 +3750,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           /// offset and alignment.
           /// TODO: we can generate a GEP instead of merging the alignment with
           /// the offset.
-          RetainedKnowledge RK{Attribute::Alignment,
-                               MinAlign(Offset, AlignMask + 1), A};
-          if (auto *Replacement =
-                  buildAssumeFromKnowledge(RK, Next, &AC, &DT)) {
-
-            Replacement->insertAfter(II->getIterator());
-            AC.registerAssumption(Replacement);
-          }
-          return RemoveConditionFromAssume(II);
+          Builder.CreateAlignmentAssumption(getDataLayout(), A,
+                                            MinAlign(Offset, AlignMask + 1));
+          return eraseInstFromFunction(*II);
         }
       }
     }
@@ -4131,14 +4135,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::vector_reduce_mul: {
     if (IID == Intrinsic::vector_reduce_mul) {
-      // Multiplicative reduction over the vector with (potentially-extended)
-      // i1 element type is actually a (potentially zero-extended)
-      // logical `and` reduction over the original non-extended value:
-      //   vector_reduce_mul(?ext(<n x i1>))
-      //     -->
-      //   zext(vector_reduce_and(<n x i1>))
       Value *Arg = II->getArgOperand(0);
-      Value *Vect;
 
       if (Value *NewOp =
               simplifyReductionOperand(Arg, /*CanReorderLanes=*/true)) {
@@ -4146,14 +4143,26 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return II;
       }
 
-      if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
-        if (auto *VTy = dyn_cast<VectorType>(Vect->getType()))
-          if (VTy->getElementType() == Builder.getInt1Ty()) {
-            Value *Res = Builder.CreateAndReduce(Vect);
-            Res = Builder.CreateZExt(Res, II->getType());
-            return replaceInstUsesWith(CI, Res);
-          }
+      // vector_reduce_mul(zext(<n x i1>)), or
+      // vector_reduce_mul(sext(<n x i1>)) (if n is even) -->
+      //   zext(vector_reduce_and(<n x i1>)).
+      // (The sext case doesn't work if n is odd because multiplying an odd
+      // number of -1's produces -1, not 1.)
+      Value *Vect;
+      bool IsZext = match(Arg, m_ZExt(m_Value(Vect))) &&
+                    Vect->getType()->isIntOrIntVectorTy(1);
+      bool IsSext =
+          match(Arg, m_SExt(m_Value(Vect))) &&
+          Vect->getType()->isIntOrIntVectorTy(1) &&
+          cast<VectorType>(Vect->getType())->getElementCount().isKnownEven();
+      if (IsZext || IsSext) {
+        Value *Res = Builder.CreateAndReduce(Vect);
+        return CastInst::Create(Instruction::ZExt, Res, II->getType());
       }
+
+      // vector_reduce_mul(<n x i1>) --> vector_reduce_and(<n x i1>)
+      if (Arg->getType()->isIntOrIntVectorTy(1))
+        return replaceInstUsesWith(CI, Builder.CreateAndReduce(Arg));
     }
     [[fallthrough]];
   }
@@ -4421,6 +4430,8 @@ static Value *optimizeModularFormat(CallInst *CI, IRBuilderBase &B) {
   [[maybe_unused]] bool Error;
   Error = Args[2].getAsInteger(10, FirstArgIdx);
   assert(!Error && "invalid first arg index");
+  if (FirstArgIdx == 0)
+    return nullptr;
   --FirstArgIdx;
   StringRef FnName = Args[3];
   StringRef ImplName = Args[4];

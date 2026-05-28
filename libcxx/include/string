@@ -694,6 +694,7 @@ _LIBCPP_PUSH_MACROS
 #  endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 // basic_string
 
@@ -939,12 +940,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string()
       _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value)
-#  if _LIBCPP_STD_VER >= 20 // TODO(LLVM 23): Remove this condition; this is a workaround for https://llvm.org/PR154567
-      : __rep_(__short())
-#  else
-      : __rep_()
-#  endif
-  {
+      : __rep_() {
     __annotate_new(0);
   }
 
@@ -954,12 +950,7 @@ public:
 #  else
       _NOEXCEPT
 #  endif
-#  if _LIBCPP_STD_VER >= 20 // TODO(LLVM 23): Remove this condition; this is a workaround for https://llvm.org/PR154567
-      : __rep_(__short()),
-#  else
-      : __rep_(),
-#  endif
-        __alloc_(__a) {
+      : __rep_(), __alloc_(__a) {
     __annotate_new(0);
   }
 
@@ -3966,6 +3957,7 @@ inline constexpr bool __format::__enable_insertable<std::basic_string<wchar_t>> 
 
 #  endif
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

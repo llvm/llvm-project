@@ -838,14 +838,14 @@ HANDLE_TARGET_OPCODE(G_VECTOR_COMPRESS)
 /// Generic count trailing zeroes.
 HANDLE_TARGET_OPCODE(G_CTTZ)
 
-/// Same as above, undefined for zero inputs.
-HANDLE_TARGET_OPCODE(G_CTTZ_ZERO_UNDEF)
+/// Same as above, poisoned for zero inputs.
+HANDLE_TARGET_OPCODE(G_CTTZ_ZERO_POISON)
 
 /// Generic count leading zeroes.
 HANDLE_TARGET_OPCODE(G_CTLZ)
 
-/// Same as above, undefined for zero inputs.
-HANDLE_TARGET_OPCODE(G_CTLZ_ZERO_UNDEF)
+/// Same as above, poisoned for zero inputs.
+HANDLE_TARGET_OPCODE(G_CTLZ_ZERO_POISON)
 
 /// Generic count extra sign bits.
 HANDLE_TARGET_OPCODE(G_CTLS)
