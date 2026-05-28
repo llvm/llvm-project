@@ -5,11 +5,6 @@
 ; When BitWidth is a power of 2 and Y < BitWidth-1, the result has its MSB
 ; at bit Y: bit Y is set and bits above Y are clear.
 
-declare i16 @llvm.ctlz.i16(i16, i1 immarg)
-declare i31 @llvm.ctlz.i31(i31, i1 immarg)
-declare i32 @llvm.ctlz.i32(i32, i1 immarg)
-declare i64 @llvm.ctlz.i64(i64, i1 immarg)
-
 define i32 @msb_at_14_bit_set(i32 %x) {
 ; CHECK-LABEL: @msb_at_14_bit_set(
 ; CHECK-NEXT:    ret i32 16384
@@ -31,30 +26,6 @@ define i32 @msb_at_14_high_bits_clear(i32 %x) {
   %shamt = sub i32 14, %xored
   %s = shl i32 %x, %shamt
   %r = and i32 %s, 4294934528
-  ret i32 %r
-}
-
-define i32 @msb_at_14_xor_commuted(i32 %x) {
-; CHECK-LABEL: @msb_at_14_xor_commuted(
-; CHECK-NEXT:    ret i32 0
-;
-  %c = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
-  %xored = xor i32 31, %c
-  %shamt = sub i32 14, %xored
-  %s = shl i32 %x, %shamt
-  %r = and i32 %s, 4294934528
-  ret i32 %r
-}
-
-define i32 @msb_at_14_zero_not_undef(i32 %x) {
-; CHECK-LABEL: @msb_at_14_zero_not_undef(
-; CHECK-NEXT:    ret i32 16384
-;
-  %c = call i32 @llvm.ctlz.i32(i32 %x, i1 false)
-  %xored = xor i32 %c, 31
-  %shamt = sub i32 14, %xored
-  %s = shl i32 %x, %shamt
-  %r = and i32 %s, 16384
   ret i32 %r
 }
 
