@@ -1287,7 +1287,6 @@ static QualType handleFloatConversion(Sema &S, ExprResult &LHS,
 /// Helper function of UsualArithmeticConversions().
 static bool unsupportedTypeConversion(const Sema &S, QualType LHSType,
                                       QualType RHSType) {
-
   // No issue if either is not a floating point type.
   if (!LHSType->isFloatingType() || !RHSType->isFloatingType())
     return false;
