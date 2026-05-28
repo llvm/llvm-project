@@ -18779,7 +18779,8 @@ bool hasNearbyPairedStore(Iter It, Iter End, Value *Ptr, const DataLayout &DL) {
   unsigned IdxWidth = DL.getIndexSizeInBits(0);
   APInt OffsetA(IdxWidth, 0), OffsetB(IdxWidth, 0);
   const Value *PtrA1 =
-      Ptr->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetA);
+      Ptr->stripAndAccumulateConstantOffsets(DL, OffsetA,
+                                             /*AllowNonInbounds=*/true);
 
   while (++It != End) {
     if (It->isDebugOrPseudoInst())
@@ -18788,8 +18789,8 @@ bool hasNearbyPairedStore(Iter It, Iter End, Value *Ptr, const DataLayout &DL) {
       break;
     if (const auto *SI = dyn_cast<StoreInst>(&*It)) {
       const Value *PtrB1 =
-          SI->getPointerOperand()->stripAndAccumulateInBoundsConstantOffsets(
-              DL, OffsetB);
+          SI->getPointerOperand()->stripAndAccumulateConstantOffsets(
+              DL, OffsetB, /*AllowNonInbounds=*/true);
       if (PtrA1 == PtrB1 &&
           (OffsetA.sextOrTrunc(IdxWidth) - OffsetB.sextOrTrunc(IdxWidth))
                   .abs() == 16)
@@ -23414,6 +23415,34 @@ static SDValue performExtBinopLoadFold(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(N->getOpcode(), DL, VT, Ext0, NShift);
 }
 
+// Convert A + zext(B) * C -> A - zext(B) * -C if C can be negated in order to
+// use umsubl.
+static SDValue performAddMulZextCombine(SDNode *N,
+                                        TargetLowering::DAGCombinerInfo &DCI) {
+  EVT VT = N->getValueType(0);
+  if (!DCI.isAfterLegalizeDAG() || N->getOpcode() != ISD::ADD || VT != MVT::i64)
+    return SDValue();
+
+  SDValue Mul = N->getOperand(0);
+  SDValue Other = N->getOperand(1);
+  if (Mul.getOpcode() != ISD::MUL)
+    std::swap(Mul, Other);
+  if (Mul.getOpcode() != ISD::MUL)
+    return SDValue();
+
+  if (!Mul.hasOneUse() || Mul.getOperand(0).getOpcode() != ISD::ZERO_EXTEND ||
+      !isa<ConstantSDNode>(Mul.getOperand(1)))
+    return SDValue();
+  int64_t C = Mul.getConstantOperandVal(1);
+  if (C > 0 || C < -0xffffffffll)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue NMul = DCI.DAG.getNode(ISD::MUL, DL, VT, Mul.getOperand(0),
+                                 DCI.DAG.getConstant(-C, DL, MVT::i64));
+  return DCI.DAG.getNode(ISD::SUB, DL, VT, Other, NMul);
+}
+
 // Attempt to combine the following patterns:
 //   SUB x, (CSET LO, (CMP a, b)) -> SBC x, 0, (CMP a, b)
 //   SUB (SUB x, y), (CSET LO, (CMP a, b)) -> SBC x, y, (CMP a, b)
@@ -23568,6 +23597,8 @@ static SDValue performAddSubCombine(SDNode *N,
   if (SDValue Val = performAddWithSBCCombine(N, DCI.DAG))
     return Val;
   if (SDValue Val = performExtBinopLoadFold(N, DCI.DAG))
+    return Val;
+  if (SDValue Val = performAddMulZextCombine(N, DCI))
     return Val;
 
   return performAddSubLongCombine(N, DCI);

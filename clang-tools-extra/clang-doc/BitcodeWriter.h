@@ -19,7 +19,6 @@
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
-#include <vector>
 
 namespace clang {
 namespace doc {
@@ -225,8 +224,8 @@ private:
     llvm::BitstreamWriter &Stream;
 
   public:
-    StreamSubBlockGuard(llvm::BitstreamWriter &Stream_, BlockId ID)
-        : Stream(Stream_) {
+    StreamSubBlockGuard(llvm::BitstreamWriter &Stream, BlockId ID)
+        : Stream(Stream) {
       // NOTE: SubBlockIDSize could theoretically be calculated on the fly,
       // based on the initialization list of records in each block.
       Stream.EnterSubblock(ID, BitCodeConstants::SubblockIDSize);

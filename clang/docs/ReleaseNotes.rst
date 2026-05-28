@@ -104,6 +104,9 @@ ABI Changes in This Version
 - Fixed Itanium mangling for lambdas in instantiated non-static data member
   initializers by preserving the field-name closure-prefix. This changes the
   mangled names for affected lambdas. (#GH190555)
+- Clang now uses MSVC-compatible manglings for supported AArch64 SVE builtin
+  types when targeting the Microsoft ABI. This changes symbol names for
+  affected declarations compared to previous Clang releases. (#GH196170)
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -185,6 +188,8 @@ C++ Language Changes
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+
+- Clang now propagates ``constinit`` and ``constexpr`` in structured bindings with tuple-like initializers.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -278,6 +283,10 @@ Non-comprehensive list of changes in this release
   extends bit-reversal support to all standard integers type, including
   ``_BitInt``
 
+- Added ``__builtin_elementwise_clmul`` for carry-less multiplication of
+  integers including ``_BitInt`` types. This includes constexpr evaluation
+  support.
+
 - Deprecated float types support from ``__builtin_elementwise_max`` and
   ``__builtin_elementwise_min``.
 
@@ -348,6 +357,11 @@ Modified Compiler Flags
 - The `-mno-outline` flag will now add the `nooutline` IR attribute, so that
   `-mno-outline` and `-moutline` objects can be mixed correctly during LTO.
 
+- Slightly changed hash id generation to get the unique linkage symbols names 
+  by ``-unique-internal-linkage-names`` option. Now it uses a path that
+  normalized in favor of the target system (same as the preprocessor does
+  for the file macros) and allows the reproducable IDs on any build system.
+
 Removed Compiler Flags
 ----------------------
 
@@ -401,6 +415,20 @@ Attribute Changes in Clang
       - Name: myUnsafeFunction
         UnsafeBufferUsage: true
 
+- When using ``-Wunsafe-buffer-usage`` without
+  ``-fsafe-buffer-usage-suggestions``, warnings are now emitted only
+  once per source file. Pre-compiled code (such as PCH or module
+  headers) is no longer repeatedly analyzed, as it is analyzed during
+  its initial compilation. (Traditionally included headers are still
+  analyzed within each translation unit that includes them).  This
+  behavior matches most of other ``-W`` diagnostics.
+
+  When ``-fsafe-buffer-usage-suggestions`` is enabled, the behavior
+  remains the same as before: pre-compiled code is deserialized and
+  analyzed alongside the translation unit that uses it, because fix-it
+  suggestion analysis requires full visibility of the translation
+  unit.
+
 - Added support for ``[[msvc::forceinline]]`` for functions and
   ``[[msvc::forceinline_calls]]`` for statements. Both are aliases to
   ``[[clang::always_inline]]`` with additional checks to ensure that they
@@ -412,6 +440,13 @@ Attribute Changes in Clang
   usage.
 
 - Clang now allows GNU attributes between a member declarator and bit-field width. (#GH184954)
+
+- The ``[[clang::noescape]]`` attribute now disallows deallocating memory
+  through the annotated parameter. This information is currently not exposed to
+  LLVM for optimization purposes, to prevent breaking existing adopters. It may
+  instead be used by warnings and static analyses to provide more information
+  about pointer lifetimes. It may be used to power optimizations in the future,
+  however there are no concrete plans to do so at the moment.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -551,6 +586,9 @@ Improvements to Clang's diagnostics
 
 - Clang now emits error when attribute is missing closing ``]]`` followed by ``;;``. (#GH187223)
 
+- Clang now rejects inline asm constraints and clobbers that contain an
+  embedded null character, instead of silently truncating them. (#GH173900)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -673,9 +711,12 @@ Bug Fixes to AST Handling
 - Fixed a crash when parsing Doxygen ``@param`` commands attached to invalid declarations or non-function entities. (#GH182737)
 - Fixed the SourceLocation and SourceRange of reversed rewritten CXXOperatorCallExpr. (#GH192467)
 - Fixed a assertion when ``__block`` is used on global variables in C mode. (#GH183974)
+- Added missing AST nodes representing the ``decltype`` specifiers in destructor call to AST.
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a crash whith the AST text dumper, when dumping a reference to a
+  decomposition with no bindinds. (#GH198842)
 - Fixed the arguments of the format attribute on ``__builtin_os_log_format``.  Previously, they were off by 1.
 
 Miscellaneous Clang Crashes Fixed
@@ -703,6 +744,8 @@ Miscellaneous Clang Crashes Fixed
 - Fixed an assertion failure when parsing an invalid out-of-line enum definition with template parameters. (#GH187909)
 - Fixed an assertion failure on invalid template template parameter during typo correction. (#GH183983)
 - Fixed an assertion failure in ``isAtEndOfMacroExpansion`` on macro expansions crossing the boundary of two fileIDs. (#GH115007), (#GH21755)
+- Fixed an assertion failure when ``__builtin_dump_struct`` is used with an
+  immediate-escalated callable. (#GH192846)
 
 OpenACC Specific Changes
 ------------------------
@@ -771,6 +814,10 @@ AIX Support
   (instead of `all`) which only extracts static init from archive members which
   would otherwise be referenced.
   (See https://www.ibm.com/docs/en/aix/7.2.0?topic=l-ld-command for details).
+- The driver now uses ``-lcompiler_rt`` instead of ``-latomic``, and the compiler-rt
+  archive has been renamed from ``libatomic.a`` to ``libcompiler_rt.a`` to avoid conflicts
+  between the LLVM libatomic and the GNU libatomic from the AIX toolbox as they share
+  the same library name.
 
 NetBSD Support
 ^^^^^^^^^^^^^^
@@ -832,6 +879,7 @@ libclang
 - Visit switch initializer statements (https://bugs.kde.org/show_bug.cgi?id=415537#c2)
 - Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
 - The clang_Module_getASTFile API is deprecated and now always returns nullptr
+- The clang_Cursor_getCommentRange API will now return a comment range for macro definitions that have documentation comments.
 
 Code Completion
 ---------------

@@ -257,6 +257,68 @@ static cir::VectorType getNeonPairwiseWidenInputType(cir::VectorType resType,
   return result;
 }
 
+// Derive the LLVM intrinsic's per-operand argument types and its result
+// type for use when emitting the intrinsic call.
+//
+// `modifier` is the TypeModifier bitmask from `ARMVectorIntrinsicInfo`
+// (callers pass `info.TypeModifier`; see AArch64CodeGenUtils.h). It encodes
+// how the intrinsic's argument and return types relate to the builtin's
+// scalar types. For SISD builtins the key flags are:
+//   - VectorizeArgTypes: wrap each arg type into a fixed-width vector
+//   - Use64BitVectors / Use128BitVectors: choose the vector width
+//     (when neither is set the vector has 1 element)
+//   - AddRetType / VectorizeRetType: analogous flags for the return type
+//
+// ARM.cpp lets LLVM resolve the intrinsic's signature (via
+// `CGM.getIntrinsic`) and then walks the resolved Function* formal
+// parameter types. CIR has no LLVMContext here, so we derive the same
+// argument/result types directly from the Clang operand types.
+static std::pair<mlir::Type, llvm::SmallVector<mlir::Type>>
+deriveNeonSISDIntrinsicOperandTypes(CIRGenFunction &cgf, unsigned modifier,
+                                    mlir::Type arg0Ty, mlir::Type resultTy,
+                                    llvm::ArrayRef<mlir::Value> ops) {
+  int vectorSize = 0;
+  if (modifier & Use64BitVectors)
+    vectorSize = 64;
+  else if (modifier & Use128BitVectors)
+    vectorSize = 128;
+
+  auto wrapAsVector = [&](mlir::Type ty) -> cir::VectorType {
+    unsigned bits = cgf.cgm.getDataLayout().getTypeSizeInBits(ty);
+    unsigned elts = vectorSize ? vectorSize / bits : 1;
+    return cir::VectorType::get(ty, elts);
+  };
+
+  // Determine the vectorized data type.
+  cir::VectorType vecArgTy;
+  if (modifier & VectorizeArgTypes)
+    vecArgTy = wrapAsVector(arg0Ty);
+
+  // Determine the intrinsic result type: `VectorizeRetType` returns a
+  // vector; otherwise, if data args are vectorized and `AddRetType` is
+  // unset, use a vector return with the same shape as those args.
+  mlir::Type funcResTy = resultTy;
+  if (modifier & VectorizeRetType)
+    funcResTy = wrapAsVector(resultTy);
+  else if (vecArgTy && !(modifier & AddRetType))
+    funcResTy = wrapAsVector(resultTy);
+
+  // When VectorizeArgTypes is set, wrap every operand that has the same
+  // scalar type as arg0 into a vector. This covers intrinsics with multiple
+  // data operands of the same type (e.g. vsri takes two data operands,
+  // both of which must be wrapped into the same vector type).
+  llvm::SmallVector<mlir::Type> argTypes;
+  argTypes.reserve(ops.size());
+  for (mlir::Value op : ops) {
+    if ((modifier & VectorizeArgTypes) && vecArgTy && op.getType() == arg0Ty)
+      argTypes.push_back(vecArgTy);
+    else
+      argTypes.push_back(op.getType());
+  }
+
+  return {funcResTy, std::move(argTypes)};
+}
+
 static mlir::Value emitCommonNeonSISDBuiltinExpr(
     CIRGenFunction &cgf, const ARMVectorIntrinsicInfo &info,
     llvm::SmallVectorImpl<mlir::Value> &ops, const CallExpr *expr) {
@@ -369,12 +431,26 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vmaxv_f32:
   case NEON::BI__builtin_neon_vmaxvq_f32:
   case NEON::BI__builtin_neon_vmaxvq_f64:
-    return emitNeonCall(cgf.cgm, cgf.getBuilder(),
-                        {cgf.convertType(expr->getArg(0)->getType())}, ops,
-                        llvmIntrName, cgf.convertType(expr->getType()), loc);
+  case NEON::BI__builtin_neon_vqrshrund_n_s64:
+  case NEON::BI__builtin_neon_vqrshrnd_n_s64:
+  case NEON::BI__builtin_neon_vqrshrnd_n_u64:
+  case NEON::BI__builtin_neon_vsrid_n_s64:
+  case NEON::BI__builtin_neon_vsrid_n_u64:
+    break;
   }
 
-  return nullptr;
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Type arg0Ty = cgf.convertType(expr->getArg(0)->getType());
+  mlir::Type resultTy = cgf.convertType(expr->getType());
+
+  // Derive per-operand argument types and the result type from the
+  // TypeModifier flags. `emitNeonCall` takes care of per-operand
+  // bitcasts to `argTypes`.
+  auto [funcResTy, argTypes] = deriveNeonSISDIntrinsicOperandTypes(
+      cgf, info.TypeModifier, arg0Ty, resultTy, ops);
+
+  return emitNeonCall(cgf.cgm, builder, std::move(argTypes), ops, llvmIntrName,
+                      funcResTy, loc);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2393,8 +2469,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vdupb_lane_mf8:
   case NEON::BI__builtin_neon_vgetq_lane_mf8:
   case NEON::BI__builtin_neon_vdupb_laneq_mf8:
-    return cir::VecExtractOp::create(builder, loc, ops[0],
-                                     emitScalarExpr(expr->getArg(1)));
   case NEON::BI__builtin_neon_vget_lane_i16:
   case NEON::BI__builtin_neon_vduph_lane_i16:
   case NEON::BI__builtin_neon_vgetq_lane_i16:
@@ -2409,8 +2483,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vdupd_lane_f64:
   case NEON::BI__builtin_neon_vgetq_lane_i64:
   case NEON::BI__builtin_neon_vdupd_laneq_i64:
-    return cir::VecExtractOp::create(builder, loc, ops[0],
-                                     emitScalarExpr(expr->getArg(1)));
   case NEON::BI__builtin_neon_vget_lane_f32:
   case NEON::BI__builtin_neon_vget_lane_f64:
   case NEON::BI__builtin_neon_vgetq_lane_f32:
@@ -2678,10 +2750,34 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vrecpsd_f64:
   case NEON::BI__builtin_neon_vrecpsh_f16:
   case NEON::BI__builtin_neon_vqshrun_n_v:
-  case NEON::BI__builtin_neon_vqrshrun_n_v:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  case NEON::BI__builtin_neon_vqrshrun_n_v: {
+    cir::VectorType argTy = builder.getExtendedOrTruncatedElementVectorType(
+        ty, /*isExtended=*/true, /*isSigned=*/true);
+    return emitNeonCall(cgm, builder, {argTy, sInt32Ty}, ops,
+                        "aarch64.neon.sqrshrun", ty, loc);
+  }
   case NEON::BI__builtin_neon_vqshrn_n_v:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vrshrn_n_v:
-  case NEON::BI__builtin_neon_vqrshrn_n_v:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  case NEON::BI__builtin_neon_vqrshrn_n_v: {
+    cir::VectorType argTy = builder.getExtendedOrTruncatedElementVectorType(
+        ty, /*isExtended=*/true, /*isSigned=*/!usgn);
+    llvm::StringRef intrName =
+        usgn ? "aarch64.neon.uqrshrn" : "aarch64.neon.sqrshrn";
+    return emitNeonCall(cgm, builder, {argTy, sInt32Ty}, ops, intrName, ty,
+                        loc);
+  }
   case NEON::BI__builtin_neon_vrndah_f16:
   case NEON::BI__builtin_neon_vrnda_v:
   case NEON::BI__builtin_neon_vrndaq_v:
@@ -2858,9 +2954,23 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return result;
   }
   case NEON::BI__builtin_neon_vsri_n_v:
-  case NEON::BI__builtin_neon_vsriq_n_v:
+  case NEON::BI__builtin_neon_vsriq_n_v: {
+    llvm::SmallVector<mlir::Value, 4> vsriArgs = {
+        ops[0], ops[1], builder.createIntCast(ops[2], builder.getUInt32Ty())};
+    return emitNeonCall(cgm, builder, {ty, ty, builder.getUInt32Ty()}, vsriArgs,
+                        "aarch64.neon.vsri", ty, loc);
+  }
   case NEON::BI__builtin_neon_vsli_n_v:
-  case NEON::BI__builtin_neon_vsliq_n_v:
+  case NEON::BI__builtin_neon_vsliq_n_v: {
+
+    intrName = "aarch64.neon.vsli";
+
+    llvm::SmallVector<mlir::Type> argTypes = {ty, ty, ops[2].getType()};
+
+    return emitNeonCall(cgm, builder, argTypes, ops, intrName, ty, loc,
+                        /*isConstrainedFPIntrinsic=*/false,
+                        /*shift=*/0, /*rightshift=*/false);
+  }
   case NEON::BI__builtin_neon_vsra_n_v:
   case NEON::BI__builtin_neon_vsraq_n_v:
     cgm.errorNYI(expr->getSourceRange(),

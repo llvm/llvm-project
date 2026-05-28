@@ -101,6 +101,10 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
   case llvm::Triple::loongarch32:
   case llvm::Triple::loongarch64:
   case llvm::Triple::m68k:
+  case llvm::Triple::mips64:
+  case llvm::Triple::mips64el:
+  case llvm::Triple::mips:
+  case llvm::Triple::mipsel:
     return !clang::driver::tools::areOptimizationsEnabled(Args);
   default:
     break;
@@ -117,10 +121,6 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
     case llvm::Triple::armeb:
     case llvm::Triple::thumb:
     case llvm::Triple::thumbeb:
-    case llvm::Triple::mips64:
-    case llvm::Triple::mips64el:
-    case llvm::Triple::mips:
-    case llvm::Triple::mipsel:
     case llvm::Triple::systemz:
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:

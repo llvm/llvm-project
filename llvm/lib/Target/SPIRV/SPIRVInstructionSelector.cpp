@@ -3718,19 +3718,21 @@ bool SPIRVInstructionSelector::selectBitreverse64(Register ResVReg,
   if (!selectBitreverseNative(Reverse32, VecI32Type, I, Vec32))
     return false;
 
-  // Splits result into highbit lane and lowbit lane
-  auto MaybeParts = splitEvenOddLanes(Reverse32, ComponentCount, I, I32Type);
-  if (!MaybeParts)
-    return false;
-  SplitParts &Parts = *MaybeParts;
-
   // Reversing a 64-bit value = reverse each 32-bit half AND swap them,
   // so the old High word becomes lane 0 (low) and old Low becomes lane 1
   // (high).
   Register SwappedVec = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
-  if (!selectOpWithSrcs(SwappedVec, VecI32Type, I, {Parts.High, Parts.Low},
-                        SPIRV::OpCompositeConstruct))
-    return false;
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                     TII.get(SPIRV::OpVectorShuffle))
+                 .addDef(SwappedVec)
+                 .addUse(GR.getSPIRVTypeID(VecI32Type))
+                 .addUse(Reverse32)
+                 .addUse(Reverse32);
+  for (unsigned J = 0; J < ComponentCount; ++J) {
+    MIB.addImm(2 * J + 1);
+    MIB.addImm(2 * J);
+  }
+  MIB.constrainAllUses(TII, TRI, RBI);
 
   // Groups 32 bit vector back to 64 bit scalar.
   return selectOpWithSrcs(ResVReg, ResType, I, {SwappedVec}, SPIRV::OpBitcast);
