@@ -55,6 +55,12 @@
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBSERR
 ; DEVLIBSERR: '{{.*}}lib3.bc' library file not found
 ;
+; Test that there is no implicit CWD search: a bare bitcode name without any -L
+; must fail to resolve, even if a same-named file exists in the CWD.
+; RUN: cd %t && not clang-sycl-linker --dry-run input1.bc --bc-library input1.bc -o a.spv 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=NO-CWD-SEARCH
+; NO-CWD-SEARCH: 'input1.bc' library file not found
+;
 ; Test AOT compilation for an Intel GPU.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none -arch=bmg_g21 %t/input1.bc %t/input2.bc -o %t/aot-gpu.out 2>&1 \
 ; RUN:     --ocloc-options="-a -b" \

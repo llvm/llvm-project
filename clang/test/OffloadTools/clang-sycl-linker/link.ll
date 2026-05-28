@@ -22,7 +22,7 @@
 ; CHECK-MULTIPLE-DEFS: error: Linking globals named {{.*}}bar_func1{{.*}} symbol multiply defined!
 ;
 ; Test linking with a BC library file.
-; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc --bc-library %t/libfoo.bc --dry-run -o a.spv --print-linked-module 2>&1 \
+; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc --bc-library %t/libfoo.bc -L "" --dry-run -o a.spv --print-linked-module 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-DEVICE-LIB
 ; CHECK-DEVICE-LIB: define {{.*}}foo_func1{{.*}}
 ; CHECK-DEVICE-LIB: define {{.*}}foo_func2{{.*}}
