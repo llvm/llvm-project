@@ -3716,7 +3716,7 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
       const SCEV *A;
       if (match(LHS, m_scev_Add(m_scev_APInt(NMinusM),
                                 m_scev_Mul(m_scev_APInt(M), m_SCEV(A))))) {
-        if (N.isPowerOf2() && M->isPowerOf2() && M->slt(N) &&
+        if (N.isPowerOf2() && M->isPowerOf2() && M->ult(N) &&
             *NMinusM == N - *M) {
           return getUDivExpr(
               getAddExpr(getConstant(N - 1), getMulExpr(getConstant(*M), A)),
