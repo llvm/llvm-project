@@ -103,8 +103,7 @@ define i32 @sink_after_dead_inst(ptr %A.ptr) {
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i16> [[STEP_ADD]], splat (i16 1)
-; CHECK-NEXT:    [[TMP4:%.*]] = or <4 x i16> [[TMP7]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP4]] to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP7]] to <4 x i32>
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[TMP2]], i64 2
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_END]]:
