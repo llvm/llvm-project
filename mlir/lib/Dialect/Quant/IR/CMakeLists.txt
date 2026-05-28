@@ -3,6 +3,7 @@ add_mlir_dialect_library(MLIRQuantDialect
   QuantDialectBytecode.cpp
   QuantOps.cpp
   QuantTypes.cpp
+  TypeDetail.h
   TypeParser.cpp
 
   ADDITIONAL_HEADER_DIRS

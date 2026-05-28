@@ -9,7 +9,6 @@
 #ifndef MLIR_DIALECT_QUANT_IR_QUANTTYPES_H
 #define MLIR_DIALECT_QUANT_IR_QUANTTYPES_H
 
-#include "mlir/Dialect/Quant/IR/detail/TypeDetail.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -28,6 +27,7 @@ struct UniformQuantizedSubChannelTypeStorage;
 struct UniformQuantizedTypeStorage;
 struct UniformQuantizedPerAxisTypeStorage;
 struct CalibratedQuantizedTypeStorage;
+struct QuantileTypeStorage;
 
 } // namespace detail
 

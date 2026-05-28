@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "QuantDialectBytecode.h"
-#include "mlir/Dialect/Quant/IR/detail/TypeDetail.h"
+#include "TypeDetail.h"
 
 #include "mlir/Dialect/Quant/IR/Quant.h"
 #include "mlir/Dialect/Quant/IR/QuantTypes.h"
