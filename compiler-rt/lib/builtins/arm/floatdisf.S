@@ -37,12 +37,12 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_l2f)
   ands    r2, xh, #0x80000000
   bpl     0f                    // if positive, skip the negation
   rsbs    xl, xl, #0
-#if !__thumb__
-  rsc     xh, xh, #0
-#else
+#if __thumb__
   // Thumb has no RSC, so simulate it by bitwise inversion and then ADC
   mvn     xh, xh
   adc     xh, xh, #0
+#else
+  rsc     xh, xh, #0
 #endif
 0:
 
@@ -109,13 +109,13 @@ LOCAL_LABEL(normalise):
   // < 0 then the AArch32 shift instruction semantics will treat it as a shift
   // of more than 32 bits, shifting xl right off the bottom of the word, and
   // again not modify xh.
-#if !__thumb__
-  orr     xh, xh, xl, lsr r3   // if shift negative then xh unaltered
-#else
+#if __thumb__
   // Thumb can't fold a register-controlled shift into an ORR, so we must use
   // two separate instructions.
   lsr     r12, xl, r3
   orr     xh, xh, r12
+#else
+  orr     xh, xh, xl, lsr r3   // if shift negative then xh unaltered
 #endif
 
   // Combine the exponent adjustment in r3 with the starting exponent and sign

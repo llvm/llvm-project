@@ -45,9 +45,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_ui2f)
   // was actually zero. In that situation, we can just return immediately,
   // because r0 still _contains_ the input integer, which has the same
   // representation as the floating-point +0 that we should return.
-#if !__thumb__
-  bxeq    lr
-#else
+#if __thumb__
   // In Thumb, we do the conditional return by branching to a return
   // instruction later in the function. This costs more time in the case where
   // the return is taken, but saves an IT in the case where it's not, and we
@@ -55,6 +53,8 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_ui2f)
   // (This also improves the _worst-case_ running time, because the nonzero
   // code path is the limiting factor.)
   beq     LOCAL_LABEL(return)
+#else
+  bxeq    lr
 #endif
 
   // Shift the exponent up to its final bit position.
@@ -62,24 +62,12 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_ui2f)
 
   // Recombine the mantissa with the exponent, and round. This is done
   // differently between Arm and Thumb.
-#if !__thumb__
-  // Arm rounding sequence: shift the round bit off the top of r2 into C, and
-  // simultaneously set Z if the lower-down bits are all zero.
-  lsls    r3, r2, #25
-  // Recombine mantissa with exponent, using ADC so that this also adds 1 if
-  // we're rounding up.
-  adc     r0, r1, r2, lsr #8
-  // If C was clear, we can't possibly need to round to even, so return.
-  bxcc    lr
-  // Now we've definitely rounded up, and if Z is set, round to even.
-  biceq   r0, r0, #1
-  bx      lr
-#else
-  // Thumb rounding sequence: we do things in a slightly different order, by
-  // recombining first with plain ADD, and _then_ testing the round bit. On
-  // simple M-profile CPUs like Cortex-M3, this avoids the IT instruction
-  // (inserted before BXCC lr) costing a cycle, because it immediately follows
-  // a 16-bit LSLS instruction, so the CPU had already fetched it.
+#if __thumb__
+  // Thumb rounding sequence: recombine first with plain ADD, and _then_
+  // testing the round bit. On simple M-profile CPUs like Cortex-M3, this
+  // avoids the IT instruction (inserted before BXCC lr) costing a cycle,
+  // because it immediately follows a 16-bit LSLS instruction, so the CPU had
+  // already fetched it.
   //
   // So we save a cycle in the case where we don't round up, at the cost of a
   // cycle in the case where we do (requiring a separate ADD instruction after
@@ -95,6 +83,18 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_ui2f)
   add     r0, r0, #1
   biceq   r0, r0, #1
 LOCAL_LABEL(return):                    // label we branch to from the 0 case above
+  bx      lr
+#else
+  // Arm rounding sequence: shift the round bit off the top of r2 into C, and
+  // simultaneously set Z if the lower-down bits are all zero.
+  lsls    r3, r2, #25
+  // Recombine mantissa with exponent, using ADC so that this also adds 1 if
+  // we're rounding up.
+  adc     r0, r1, r2, lsr #8
+  // If C was clear, we can't possibly need to round to even, so return.
+  bxcc    lr
+  // Now we've definitely rounded up, and if Z is set, round to even.
+  biceq   r0, r0, #1
   bx      lr
 #endif
 

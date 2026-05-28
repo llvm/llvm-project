@@ -129,13 +129,13 @@ LOCAL_LABEL(highword):
   // working out the rightward shift distance, and make the full top word of
   // the mantissa.
   rsb     r12, r3, #32
-#if !__thumb__
-  orr     xh, xh, xl, lsr r12
-#else
+#if __thumb__
   // In Thumb we have to do the register-controlled shift and the OR in
   // separate instructions.
   lsr     r12, xl, r12
   orr     xh, xh, r12
+#else
+  orr     xh, xh, xl, lsr r12
 #endif
   // Shift xl left as well, so that xh:xl are now the full output mantissa,
   // with its leading bit in bit 20 of xh.
@@ -177,13 +177,13 @@ LOCAL_LABEL(shiftdown):
   lsl     r12, xh, lr             // r12 = bits shifted out of xh
   lsr     xh, xh, r4              // shift xh right to make its final value
   lsl     r3, xl, lr              // r3 = bits shifted out of xl
-#if !__thumb__
-  orrs    xl, r12, xl, lsr r4     // shift xl right and combine with r12
-#else
+#if __thumb__
   // In Thumb we have to do the register-controlled shift and the OR in
   // separate instructions.
   lsrs    xl, xl, r4
   orr     xl, xl, r12
+#else
+  orrs    xl, r12, xl, lsr r4     // shift xl right and combine with r12
 #endif
   pop     {r4,lr}
 
