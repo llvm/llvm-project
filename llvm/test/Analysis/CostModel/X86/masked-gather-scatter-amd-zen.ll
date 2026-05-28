@@ -22,85 +22,85 @@
 
 define <2 x i32> @gather_v2i32(<2 x ptr> %ptrs, <2 x i1> %mask) {
 ; ZNVER4-LABEL: 'gather_v2i32'
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 %ptrs, <2 x i1> %mask, <2 x i32> undef)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 %ptrs, <2 x i1> %mask, <2 x i32> poison)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %v
 ;
 ; ZNVER5-LABEL: 'gather_v2i32'
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 %ptrs, <2 x i1> %mask, <2 x i32> undef)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 %ptrs, <2 x i1> %mask, <2 x i32> poison)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %v
 ;
 ; ZNVER3-LABEL: 'gather_v2i32'
-; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 %ptrs, <2 x i1> %mask, <2 x i32> undef)
+; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 %ptrs, <2 x i1> %mask, <2 x i32> poison)
 ; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %v
 ;
 ; SKX-LABEL: 'gather_v2i32'
-; SKX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 %ptrs, <2 x i1> %mask, <2 x i32> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 %ptrs, <2 x i1> %mask, <2 x i32> poison)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %v
 ;
-  %v = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> %ptrs, i32 4, <2 x i1> %mask, <2 x i32> undef)
+  %v = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> %ptrs, i32 4, <2 x i1> %mask, <2 x i32> poison)
   ret <2 x i32> %v
 }
 
 define <4 x i32> @gather_v4i32(<4 x ptr> %ptrs, <4 x i1> %mask) {
 ; ZNVER4-LABEL: 'gather_v4i32'
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %ptrs, <4 x i1> %mask, <4 x i32> undef)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %ptrs, <4 x i1> %mask, <4 x i32> poison)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %v
 ;
 ; ZNVER5-LABEL: 'gather_v4i32'
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %ptrs, <4 x i1> %mask, <4 x i32> undef)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %ptrs, <4 x i1> %mask, <4 x i32> poison)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %v
 ;
 ; ZNVER3-LABEL: 'gather_v4i32'
-; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %ptrs, <4 x i1> %mask, <4 x i32> undef)
+; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %ptrs, <4 x i1> %mask, <4 x i32> poison)
 ; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %v
 ;
 ; SKX-LABEL: 'gather_v4i32'
-; SKX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %ptrs, <4 x i1> %mask, <4 x i32> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %ptrs, <4 x i1> %mask, <4 x i32> poison)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %v
 ;
-  %v = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ptrs, i32 4, <4 x i1> %mask, <4 x i32> undef)
+  %v = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ptrs, i32 4, <4 x i1> %mask, <4 x i32> poison)
   ret <4 x i32> %v
 }
 
 define <8 x i32> @gather_v8i32(<8 x ptr> %ptrs, <8 x i1> %mask) {
 ; ZNVER4-LABEL: 'gather_v8i32'
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x i32> undef)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x i32> poison)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %v
 ;
 ; ZNVER5-LABEL: 'gather_v8i32'
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x i32> undef)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x i32> poison)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %v
 ;
 ; ZNVER3-LABEL: 'gather_v8i32'
-; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x i32> undef)
+; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x i32> poison)
 ; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %v
 ;
 ; SKX-LABEL: 'gather_v8i32'
-; SKX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x i32> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x i32> poison)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %v
 ;
-  %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %ptrs, i32 4, <8 x i1> %mask, <8 x i32> undef)
+  %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %ptrs, i32 4, <8 x i1> %mask, <8 x i32> poison)
   ret <8 x i32> %v
 }
 
 define <16 x i32> @gather_v16i32(<16 x ptr> %ptrs, <16 x i1> %mask) {
 ; ZNVER4-LABEL: 'gather_v16i32'
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> undef)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %v
 ;
 ; ZNVER5-LABEL: 'gather_v16i32'
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> undef)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %v
 ;
 ; ZNVER3-LABEL: 'gather_v16i32'
-; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 55 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> undef)
+; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 55 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
 ; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %v
 ;
 ; SKX-LABEL: 'gather_v16i32'
-; SKX-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %v
 ;
-  %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> undef)
+  %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> poison)
   ret <16 x i32> %v
 }
 
@@ -110,64 +110,64 @@ define <16 x i32> @gather_v16i32(<16 x ptr> %ptrs, <16 x i1> %mask) {
 
 define <2 x i64> @gather_v2i64(<2 x ptr> %ptrs, <2 x i1> %mask) {
 ; ZNVER4-LABEL: 'gather_v2i64'
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> align 8 %ptrs, <2 x i1> %mask, <2 x i64> undef)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> align 8 %ptrs, <2 x i1> %mask, <2 x i64> poison)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %v
 ;
 ; ZNVER5-LABEL: 'gather_v2i64'
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> align 8 %ptrs, <2 x i1> %mask, <2 x i64> undef)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> align 8 %ptrs, <2 x i1> %mask, <2 x i64> poison)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %v
 ;
 ; ZNVER3-LABEL: 'gather_v2i64'
-; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> align 8 %ptrs, <2 x i1> %mask, <2 x i64> undef)
+; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> align 8 %ptrs, <2 x i1> %mask, <2 x i64> poison)
 ; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %v
 ;
 ; SKX-LABEL: 'gather_v2i64'
-; SKX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> align 8 %ptrs, <2 x i1> %mask, <2 x i64> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> align 8 %ptrs, <2 x i1> %mask, <2 x i64> poison)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %v
 ;
-  %v = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> %ptrs, i32 8, <2 x i1> %mask, <2 x i64> undef)
+  %v = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> %ptrs, i32 8, <2 x i1> %mask, <2 x i64> poison)
   ret <2 x i64> %v
 }
 
 define <4 x i64> @gather_v4i64(<4 x ptr> %ptrs, <4 x i1> %mask) {
 ; ZNVER4-LABEL: 'gather_v4i64'
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 %ptrs, <4 x i1> %mask, <4 x i64> undef)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 %ptrs, <4 x i1> %mask, <4 x i64> poison)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %v
 ;
 ; ZNVER5-LABEL: 'gather_v4i64'
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 %ptrs, <4 x i1> %mask, <4 x i64> undef)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 %ptrs, <4 x i1> %mask, <4 x i64> poison)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %v
 ;
 ; ZNVER3-LABEL: 'gather_v4i64'
-; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 %ptrs, <4 x i1> %mask, <4 x i64> undef)
+; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 %ptrs, <4 x i1> %mask, <4 x i64> poison)
 ; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %v
 ;
 ; SKX-LABEL: 'gather_v4i64'
-; SKX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 %ptrs, <4 x i1> %mask, <4 x i64> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 %ptrs, <4 x i1> %mask, <4 x i64> poison)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %v
 ;
-  %v = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> %ptrs, i32 8, <4 x i1> %mask, <4 x i64> undef)
+  %v = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> %ptrs, i32 8, <4 x i1> %mask, <4 x i64> poison)
   ret <4 x i64> %v
 }
 
 define <8 x i64> @gather_v8i64(<8 x ptr> %ptrs, <8 x i1> %mask) {
 ; ZNVER4-LABEL: 'gather_v8i64'
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %v = call <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr> align 8 %ptrs, <8 x i1> %mask, <8 x i64> undef)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %v = call <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr> align 8 %ptrs, <8 x i1> %mask, <8 x i64> poison)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %v
 ;
 ; ZNVER5-LABEL: 'gather_v8i64'
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %v = call <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr> align 8 %ptrs, <8 x i1> %mask, <8 x i64> undef)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %v = call <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr> align 8 %ptrs, <8 x i1> %mask, <8 x i64> poison)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %v
 ;
 ; ZNVER3-LABEL: 'gather_v8i64'
-; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: %v = call <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr> align 8 %ptrs, <8 x i1> %mask, <8 x i64> undef)
+; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: %v = call <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr> align 8 %ptrs, <8 x i1> %mask, <8 x i64> poison)
 ; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %v
 ;
 ; SKX-LABEL: 'gather_v8i64'
-; SKX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v = call <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr> align 8 %ptrs, <8 x i1> %mask, <8 x i64> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v = call <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr> align 8 %ptrs, <8 x i1> %mask, <8 x i64> poison)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %v
 ;
-  %v = call <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr> %ptrs, i32 8, <8 x i1> %mask, <8 x i64> undef)
+  %v = call <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr> %ptrs, i32 8, <8 x i1> %mask, <8 x i64> poison)
   ret <8 x i64> %v
 }
 
@@ -177,85 +177,85 @@ define <8 x i64> @gather_v8i64(<8 x ptr> %ptrs, <8 x i1> %mask) {
 
 define <2 x float> @gather_v2f32(<2 x ptr> %ptrs, <2 x i1> %mask) {
 ; ZNVER4-LABEL: 'gather_v2f32'
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call <2 x float> @llvm.masked.gather.v2f32.v2p0(<2 x ptr> align 4 %ptrs, <2 x i1> %mask, <2 x float> undef)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call <2 x float> @llvm.masked.gather.v2f32.v2p0(<2 x ptr> align 4 %ptrs, <2 x i1> %mask, <2 x float> poison)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x float> %v
 ;
 ; ZNVER5-LABEL: 'gather_v2f32'
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call <2 x float> @llvm.masked.gather.v2f32.v2p0(<2 x ptr> align 4 %ptrs, <2 x i1> %mask, <2 x float> undef)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call <2 x float> @llvm.masked.gather.v2f32.v2p0(<2 x ptr> align 4 %ptrs, <2 x i1> %mask, <2 x float> poison)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x float> %v
 ;
 ; ZNVER3-LABEL: 'gather_v2f32'
-; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v = call <2 x float> @llvm.masked.gather.v2f32.v2p0(<2 x ptr> align 4 %ptrs, <2 x i1> %mask, <2 x float> undef)
+; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v = call <2 x float> @llvm.masked.gather.v2f32.v2p0(<2 x ptr> align 4 %ptrs, <2 x i1> %mask, <2 x float> poison)
 ; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x float> %v
 ;
 ; SKX-LABEL: 'gather_v2f32'
-; SKX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call <2 x float> @llvm.masked.gather.v2f32.v2p0(<2 x ptr> align 4 %ptrs, <2 x i1> %mask, <2 x float> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call <2 x float> @llvm.masked.gather.v2f32.v2p0(<2 x ptr> align 4 %ptrs, <2 x i1> %mask, <2 x float> poison)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x float> %v
 ;
-  %v = call <2 x float> @llvm.masked.gather.v2f32.v2p0(<2 x ptr> %ptrs, i32 4, <2 x i1> %mask, <2 x float> undef)
+  %v = call <2 x float> @llvm.masked.gather.v2f32.v2p0(<2 x ptr> %ptrs, i32 4, <2 x i1> %mask, <2 x float> poison)
   ret <2 x float> %v
 }
 
 define <4 x float> @gather_v4f32(<4 x ptr> %ptrs, <4 x i1> %mask) {
 ; ZNVER4-LABEL: 'gather_v4f32'
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 %ptrs, <4 x i1> %mask, <4 x float> undef)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 %ptrs, <4 x i1> %mask, <4 x float> poison)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %v
 ;
 ; ZNVER5-LABEL: 'gather_v4f32'
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 %ptrs, <4 x i1> %mask, <4 x float> undef)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 %ptrs, <4 x i1> %mask, <4 x float> poison)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %v
 ;
 ; ZNVER3-LABEL: 'gather_v4f32'
-; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %v = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 %ptrs, <4 x i1> %mask, <4 x float> undef)
+; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %v = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 %ptrs, <4 x i1> %mask, <4 x float> poison)
 ; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %v
 ;
 ; SKX-LABEL: 'gather_v4f32'
-; SKX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 %ptrs, <4 x i1> %mask, <4 x float> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 %ptrs, <4 x i1> %mask, <4 x float> poison)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %v
 ;
-  %v = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> %ptrs, i32 4, <4 x i1> %mask, <4 x float> undef)
+  %v = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> %ptrs, i32 4, <4 x i1> %mask, <4 x float> poison)
   ret <4 x float> %v
 }
 
 define <8 x float> @gather_v8f32(<8 x ptr> %ptrs, <8 x i1> %mask) {
 ; ZNVER4-LABEL: 'gather_v8f32'
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x float> undef)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x float> poison)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x float> %v
 ;
 ; ZNVER5-LABEL: 'gather_v8f32'
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x float> undef)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x float> poison)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x float> %v
 ;
 ; ZNVER3-LABEL: 'gather_v8f32'
-; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %v = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x float> undef)
+; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %v = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x float> poison)
 ; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x float> %v
 ;
 ; SKX-LABEL: 'gather_v8f32'
-; SKX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x float> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x float> poison)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x float> %v
 ;
-  %v = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> %ptrs, i32 4, <8 x i1> %mask, <8 x float> undef)
+  %v = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> %ptrs, i32 4, <8 x i1> %mask, <8 x float> poison)
   ret <8 x float> %v
 }
 
 define <16 x float> @gather_v16f32(<16 x ptr> %ptrs, <16 x i1> %mask) {
 ; ZNVER4-LABEL: 'gather_v16f32'
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x float> undef)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x float> poison)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x float> %v
 ;
 ; ZNVER5-LABEL: 'gather_v16f32'
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x float> undef)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x float> poison)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x float> %v
 ;
 ; ZNVER3-LABEL: 'gather_v16f32'
-; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 51 for instruction: %v = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x float> undef)
+; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 51 for instruction: %v = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x float> poison)
 ; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x float> %v
 ;
 ; SKX-LABEL: 'gather_v16f32'
-; SKX-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x float> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x float> poison)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x float> %v
 ;
-  %v = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x float> undef)
+  %v = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x float> poison)
   ret <16 x float> %v
 }
 
@@ -265,64 +265,64 @@ define <16 x float> @gather_v16f32(<16 x ptr> %ptrs, <16 x i1> %mask) {
 
 define <2 x double> @gather_v2f64(<2 x ptr> %ptrs, <2 x i1> %mask) {
 ; ZNVER4-LABEL: 'gather_v2f64'
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> align 8 %ptrs, <2 x i1> %mask, <2 x double> undef)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> align 8 %ptrs, <2 x i1> %mask, <2 x double> poison)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x double> %v
 ;
 ; ZNVER5-LABEL: 'gather_v2f64'
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> align 8 %ptrs, <2 x i1> %mask, <2 x double> undef)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> align 8 %ptrs, <2 x i1> %mask, <2 x double> poison)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x double> %v
 ;
 ; ZNVER3-LABEL: 'gather_v2f64'
-; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> align 8 %ptrs, <2 x i1> %mask, <2 x double> undef)
+; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> align 8 %ptrs, <2 x i1> %mask, <2 x double> poison)
 ; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x double> %v
 ;
 ; SKX-LABEL: 'gather_v2f64'
-; SKX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> align 8 %ptrs, <2 x i1> %mask, <2 x double> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> align 8 %ptrs, <2 x i1> %mask, <2 x double> poison)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x double> %v
 ;
-  %v = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> %ptrs, i32 8, <2 x i1> %mask, <2 x double> undef)
+  %v = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> %ptrs, i32 8, <2 x i1> %mask, <2 x double> poison)
   ret <2 x double> %v
 }
 
 define <4 x double> @gather_v4f64(<4 x ptr> %ptrs, <4 x i1> %mask) {
 ; ZNVER4-LABEL: 'gather_v4f64'
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 %ptrs, <4 x i1> %mask, <4 x double> undef)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 %ptrs, <4 x i1> %mask, <4 x double> poison)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x double> %v
 ;
 ; ZNVER5-LABEL: 'gather_v4f64'
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 %ptrs, <4 x i1> %mask, <4 x double> undef)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 %ptrs, <4 x i1> %mask, <4 x double> poison)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x double> %v
 ;
 ; ZNVER3-LABEL: 'gather_v4f64'
-; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %v = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 %ptrs, <4 x i1> %mask, <4 x double> undef)
+; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %v = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 %ptrs, <4 x i1> %mask, <4 x double> poison)
 ; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x double> %v
 ;
 ; SKX-LABEL: 'gather_v4f64'
-; SKX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 %ptrs, <4 x i1> %mask, <4 x double> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 %ptrs, <4 x i1> %mask, <4 x double> poison)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x double> %v
 ;
-  %v = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> %ptrs, i32 8, <4 x i1> %mask, <4 x double> undef)
+  %v = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> %ptrs, i32 8, <4 x i1> %mask, <4 x double> poison)
   ret <4 x double> %v
 }
 
 define <8 x double> @gather_v8f64(<8 x ptr> %ptrs, <8 x i1> %mask) {
 ; ZNVER4-LABEL: 'gather_v8f64'
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> align 8 %ptrs, <8 x i1> %mask, <8 x double> undef)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> align 8 %ptrs, <8 x i1> %mask, <8 x double> poison)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x double> %v
 ;
 ; ZNVER5-LABEL: 'gather_v8f64'
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> align 8 %ptrs, <8 x i1> %mask, <8 x double> undef)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> align 8 %ptrs, <8 x i1> %mask, <8 x double> poison)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x double> %v
 ;
 ; ZNVER3-LABEL: 'gather_v8f64'
-; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> align 8 %ptrs, <8 x i1> %mask, <8 x double> undef)
+; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> align 8 %ptrs, <8 x i1> %mask, <8 x double> poison)
 ; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x double> %v
 ;
 ; SKX-LABEL: 'gather_v8f64'
-; SKX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v = call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> align 8 %ptrs, <8 x i1> %mask, <8 x double> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v = call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> align 8 %ptrs, <8 x i1> %mask, <8 x double> poison)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x double> %v
 ;
-  %v = call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> %ptrs, i32 8, <8 x i1> %mask, <8 x double> undef)
+  %v = call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> %ptrs, i32 8, <8 x i1> %mask, <8 x double> poison)
   ret <8 x double> %v
 }
 
@@ -565,26 +565,26 @@ define void @scatter_v8f64(<8 x double> %src, <8 x ptr> %ptrs, <8 x i1> %mask) {
 define <16 x i32> @gather_v16i32_gep(ptr %base, <16 x i32> %idx, <16 x i1> %mask) {
 ; ZNVER4-LABEL: 'gather_v16i32_gep'
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr i32, ptr %base, <16 x i32> %idx
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> undef)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %v
 ;
 ; ZNVER5-LABEL: 'gather_v16i32_gep'
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr i32, ptr %base, <16 x i32> %idx
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> undef)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %v
 ;
 ; ZNVER3-LABEL: 'gather_v16i32_gep'
 ; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr i32, ptr %base, <16 x i32> %idx
-; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 55 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> undef)
+; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 55 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
 ; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %v
 ;
 ; SKX-LABEL: 'gather_v16i32_gep'
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr i32, ptr %base, <16 x i32> %idx
-; SKX-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %v
 ;
   %ptrs = getelementptr i32, ptr %base, <16 x i32> %idx
-  %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> undef)
+  %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> poison)
   ret <16 x i32> %v
 }
 
