@@ -499,7 +499,8 @@ struct GPUToLLVMSPVConversionPass final
                         gpu::ShuffleOp, gpu::SubgroupIdOp, gpu::SubgroupSizeOp,
                         gpu::ThreadIdOp, gpu::PrintfOp>();
 
-    populateGpuToLLVMSPVConversionPatterns(converter, patterns, convertMathToOCL);
+    populateGpuToLLVMSPVConversionPatterns(converter, patterns,
+                                           convertMathToOCL);
     populateGpuMemorySpaceAttributeConversions(converter);
     patterns.add<GPUPrintfOpToLLVMCallLowering>(converter, /*addressSpace=*/2,
                                                 LLVM::cconv::CConv::SPIR_FUNC,
