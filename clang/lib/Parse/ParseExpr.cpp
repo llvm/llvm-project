@@ -2836,7 +2836,9 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
       ColonProtection.restore();
       RParenLoc = T.getCloseLocation();
 
-      if (MissingCloseParen && DS.getTypeSpecType() == DeclSpec::TST_struct) {
+      if (MissingCloseParen && (DS.getTypeSpecType() == DeclSpec::TST_struct ||
+                                DS.getTypeSpecType() == DeclSpec::TST_class ||
+                                DS.getTypeSpecType() == DeclSpec::TST_union)) {
         TPA.Revert();
         return ExprError();
       }
