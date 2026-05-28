@@ -696,6 +696,32 @@ TEST_P(ImportType, ImportUsingType) {
                  cxxNewExpr(hasType(pointerType(pointee(usingType())))))));
 }
 
+struct ImportReflection : ASTImporterOptionSpecificTestBase {
+  std::vector<std::string> getExtraArgs() const override {
+    return {"-Xclang", "-freflection"};
+  }
+};
+
+TEST_P(ImportReflection, ImportMetaInfoBuiltinType) {
+  Decl *FromTU = getTuDecl("using declToImport = decltype(^^int);",
+                           Lang_CXX26, "input.cc");
+  auto *FromTA = FirstDeclMatcher<TypeAliasDecl>().match(
+      FromTU, typeAliasDecl(hasName("declToImport")));
+  ASSERT_TRUE(FromTA);
+
+  const auto *FromBT =
+      FromTA->getUnderlyingType().getCanonicalType()->getAs<BuiltinType>();
+  ASSERT_TRUE(FromBT);
+  ASSERT_EQ(BuiltinType::MetaInfo, FromBT->getKind());
+
+  auto *ToTA = Import(FromTA, Lang_CXX26);
+  ASSERT_TRUE(ToTA);
+  const auto *ToBT =
+      ToTA->getUnderlyingType().getCanonicalType()->getAs<BuiltinType>();
+  ASSERT_TRUE(ToBT);
+  EXPECT_EQ(BuiltinType::MetaInfo, ToBT->getKind());
+}
+
 TEST_P(ImportDecl, ImportFunctionTemplateDecl) {
   MatchVerifier<Decl> Verifier;
   testImport("template <typename T> void declToImport() { };", Lang_CXX03, "",
@@ -10861,6 +10887,9 @@ INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportInjectedClassNameType,
                          DefaultTestValuesForRunOptions);
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportMatrixType,
+                         DefaultTestValuesForRunOptions);
+
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportReflection,
                          DefaultTestValuesForRunOptions);
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportTemplateParmDeclDefaultValue,

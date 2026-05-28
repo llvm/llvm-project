@@ -681,6 +681,7 @@ namespace clang {
     ExpectedStmt VisitCXXThisExpr(CXXThisExpr *E);
     ExpectedStmt VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr *E);
     ExpectedStmt VisitCXXPseudoDestructorExpr(CXXPseudoDestructorExpr *E);
+    ExpectedStmt VisitCXXReflectExpr(CXXReflectExpr *E);
     ExpectedStmt VisitMemberExpr(MemberExpr *E);
     ExpectedStmt VisitCallExpr(CallExpr *E);
     ExpectedStmt VisitLambdaExpr(LambdaExpr *LE);
@@ -8709,6 +8710,16 @@ ExpectedStmt ASTNodeImporter::VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr *E) {
 
   return CXXBoolLiteralExpr::Create(Importer.getToContext(), E->getValue(),
                                     *ToTypeOrErr, *ToLocationOrErr);
+}
+
+ExpectedStmt ASTNodeImporter::VisitCXXReflectExpr(CXXReflectExpr *E) {
+  Error Err = Error::success();
+  auto ToOperatorLoc = importChecked(Err, E->getOperatorLoc());
+  auto ToTSI = importChecked(Err, E->getTypeSourceInfo());
+  if (Err)
+    return std::move(Err);
+
+  return CXXReflectExpr::Create(Importer.getToContext(), ToOperatorLoc, ToTSI);
 }
 
 ExpectedStmt ASTNodeImporter::VisitMemberExpr(MemberExpr *E) {
