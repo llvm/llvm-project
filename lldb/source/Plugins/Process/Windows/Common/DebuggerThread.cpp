@@ -156,7 +156,7 @@ lldb::thread_result_t DebuggerThread::DebuggerThreadAttachRoutine(
   LLDB_LOG(log, "preparing to attach to process '{0}' on background thread.",
            pid);
 
-  if (!DebugActiveProcess((DWORD)pid)) {
+  if (!DebugActiveProcess(static_cast<DWORD>(pid))) {
     Status error(::GetLastError(), eErrorTypeWin32);
     m_debug_delegate->OnDebuggerError(error, 0);
     return {};
@@ -522,7 +522,8 @@ static std::optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
     return std::nullopt;
 
   AutoHandle filemap(
-      ::CreateFileMappingW(hFile, nullptr, PAGE_READONLY, 0, 1, NULL), nullptr);
+      ::CreateFileMappingW(hFile, nullptr, PAGE_READONLY, 0, 1, nullptr),
+      nullptr);
   if (!filemap.IsValid())
     return std::nullopt;
 
