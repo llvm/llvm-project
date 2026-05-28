@@ -416,31 +416,10 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
     if (ValueVT.getSizeInBits() == PartEVT.getSizeInBits())
       return DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
 
-    // If the parts vector has fewer elements but is wider than the value
-    // vector, bitcast it to the value element type and extract the elements we
-    // want. Otherwise, if the parts vector has more elements than the value
-    // vector, extract the elements we want directly.
+    // If the parts vector has more elements than the value vector, then we
+    // have a vector widening case (e.g. <2 x float> -> <4 x float>).
+    // Extract the elements we want.
     if (PartEVT.getVectorElementCount() != ValueVT.getVectorElementCount()) {
-      if (PartEVT.getVectorElementCount().getKnownMinValue() <
-              ValueVT.getVectorElementCount().getKnownMinValue() &&
-          PartEVT.getVectorElementCount().isScalable() ==
-              ValueVT.getVectorElementCount().isScalable() &&
-          ValueVT.bitsLT(PartEVT)) {
-        const TypeSize PartSize = PartEVT.getSizeInBits();
-        const uint64_t ValueEltSize = ValueVT.getScalarSizeInBits();
-        assert(PartSize.isKnownMultipleOf(ValueEltSize) &&
-               "Cannot bitcast parts vector to value element type");
-
-        const ElementCount CastEltCount = ElementCount::get(
-            static_cast<unsigned>(PartSize.getKnownMinValue() / ValueEltSize),
-            PartSize.isScalable());
-        EVT CastVT = EVT::getVectorVT(
-            *DAG.getContext(), ValueVT.getVectorElementType(), CastEltCount);
-        Val = DAG.getBitcast(CastVT, Val);
-        return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ValueVT, Val,
-                           DAG.getVectorIdxConstant(0, DL));
-      }
-
       assert((PartEVT.getVectorElementCount().getKnownMinValue() >
               ValueVT.getVectorElementCount().getKnownMinValue()) &&
              (PartEVT.getVectorElementCount().isScalable() ==
@@ -478,6 +457,11 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
        return DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
      } else if (ValueVT.bitsLT(PartEVT)) {
        const uint64_t ValueSize = ValueVT.getFixedSizeInBits();
+       if (!PartEVT.isInteger()) {
+         EVT PartIntVT =
+             EVT::getIntegerVT(*DAG.getContext(), PartEVT.getSizeInBits());
+         Val = DAG.getNode(ISD::BITCAST, DL, PartIntVT, Val);
+       }
        EVT IntermediateType = EVT::getIntegerVT(*DAG.getContext(), ValueSize);
        // Drop the extra bits.
        Val = DAG.getNode(ISD::TRUNCATE, DL, IntermediateType, Val);

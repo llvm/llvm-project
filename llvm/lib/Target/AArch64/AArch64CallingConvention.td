@@ -36,7 +36,8 @@ defvar AArch64_Common = [
 
   CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
-  CCIfType<[v2f64, v4f32], CCBitConvertToType<v2i64>>,
+  CCIfType<[v4f32], CCBitConvertToType<v4i32>>,
+  CCIfType<[v2f64], CCBitConvertToType<v2i64>>,
 
   // Big endian vectors must be passed as if they were 1-element vectors so that
   // their lanes are in a consistent order.
@@ -129,7 +130,8 @@ let Entry = 1 in
 def RetCC_AArch64_AAPCS : CallingConv<[
   CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
-  CCIfType<[v2f64, v4f32], CCBitConvertToType<v2i64>>,
+  CCIfType<[v4f32], CCBitConvertToType<v4i32>>,
+  CCIfType<[v2f64], CCBitConvertToType<v2i64>>,
 
   CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Block">>,
   CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[X21]>>>,
@@ -368,7 +370,8 @@ def CC_AArch64_DarwinPCS : CallingConv<[
 
   CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
-  CCIfType<[v2f64, v4f32, f128], CCBitConvertToType<v2i64>>,
+  CCIfType<[v4f32], CCBitConvertToType<v4i32>>,
+  CCIfType<[v2f64, f128], CCBitConvertToType<v2i64>>,
 
   // An SRet is passed in X8, not X0 like a normal pointer parameter.
   CCIfSRet<CCIfType<[i64], CCAssignToReg<[X8]>>>,
@@ -444,7 +447,8 @@ def CC_AArch64_DarwinPCS_VarArg : CallingConv<[
 
   CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
-  CCIfType<[v2f64, v4f32, f128], CCBitConvertToType<v2i64>>,
+  CCIfType<[v4f32], CCBitConvertToType<v4i32>>,
+  CCIfType<[v2f64, f128], CCBitConvertToType<v2i64>>,
 
   CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Stack_Block">>,
 

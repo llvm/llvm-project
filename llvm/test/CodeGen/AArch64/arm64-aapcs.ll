@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=arm64-linux-gnu -enable-misched=false -disable-post-ra < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64_be-linux-gnu -enable-misched=false -disable-post-ra < %s | FileCheck %s --check-prefix=BE
 
 @var = dso_local global i32 0, align 4
 
@@ -127,6 +128,9 @@ define dso_local <3 x float> @test_v3f32_vreg_stack([8 x <2 x double>],
 ; CHECK-LABEL: test_v3f32_vreg_stack:
 ; CHECK:       ldr q0, [sp]
 ; CHECK-NEXT:  ret
+; BE-LABEL: test_v3f32_vreg_stack:
+; BE:       ldr q0, [sp]
+; BE-NEXT:  ret
   ret <3 x float> %arg
 }
 
