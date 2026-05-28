@@ -240,6 +240,10 @@ class URReg<bits<8> num, string n, list<string> alt = []> : XtensaReg<n> {
   let AltNames = alt;
 }
 
+// ESP32S2 registers
+def GPIO_OUT : URReg<0, "gpio_out", ["GPIO_OUT"]>;
+def EXPSTATE : URReg<230, "expstate", ["EXPSTATE"]>;
+
 // Thread Pointer register
 def THREADPTR : URReg<231, "threadptr", ["THREADPTR"]>;
 
@@ -252,7 +256,7 @@ def F64R_HI : URReg<235, "f64r_hi", ["F64R_HI"]>;
 def F64S : URReg<236, "f64s", ["F64S"]>;
 
 def UR :  RegisterClass<"Xtensa", [i32], 32, (add
-  THREADPTR, FCR, FSR, F64R_LO, F64R_HI, F64S)>;
+  GPIO_OUT, EXPSTATE, THREADPTR, FCR, FSR, F64R_LO, F64R_HI, F64S)>;
 
 //===----------------------------------------------------------------------===//
 // Floating-Point registers

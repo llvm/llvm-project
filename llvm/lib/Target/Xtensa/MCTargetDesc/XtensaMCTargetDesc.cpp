@@ -203,6 +203,10 @@ bool Xtensa::checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits,
   case Xtensa::ATOMCTL:
   case Xtensa::SCOMPARE1:
     return FeatureBits[Xtensa::FeatureS32C1I];
+    return FeatureBits[Xtensa::FeatureWindowed];
+  case Xtensa::GPIO_OUT:
+  case Xtensa::EXPSTATE:
+    return FeatureBits[Xtensa::FeatureESP32S2Ops];
   case Xtensa::NoRegister:
     return false;
   }
@@ -226,6 +230,10 @@ MCRegister Xtensa::getUserRegister(unsigned Code, const MCRegisterInfo &MRI) {
     UserReg = Xtensa::F64S;
   } else if (MRI.getEncodingValue(Xtensa::THREADPTR) == Code) {
     UserReg = Xtensa::THREADPTR;
+  } else if (MRI.getEncodingValue(Xtensa::GPIO_OUT) == Code) {
+    UserReg = Xtensa::GPIO_OUT;
+  } else if (MRI.getEncodingValue(Xtensa::EXPSTATE) == Code) {
+    UserReg = Xtensa::EXPSTATE;
   }
 
   return UserReg;

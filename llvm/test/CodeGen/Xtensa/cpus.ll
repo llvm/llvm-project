@@ -3,6 +3,7 @@
 
 ; RUN: llc < %s --mtriple=xtensa --mcpu=esp8266 2>&1 | FileCheck -check-prefix=XTENSA-ESP8266  %s
 ; RUN: llc < %s --mtriple=xtensa --mcpu=esp32 2>&1 | FileCheck -check-prefix=XTENSA-ESP32 %s
+; RUN: llc < %s --mtriple=xtensa --mcpu=esp32s2 2>&1 | FileCheck -check-prefix=XTENSA-ESP32S2 %s
 ; RUN: llc < %s --mtriple=xtensa --mcpu=generic 2>&1 | FileCheck -check-prefix=XTENSA-GENERIC %s
 
 define i32 @f(i32 %z) {
@@ -19,6 +20,14 @@ define i32 @f(i32 %z) {
 ; XTENSA-ESP32-NEXT:    .cfi_def_cfa_offset 32
 ; XTENSA-ESP32-NEXT:    movi a2, 0
 ; XTENSA-ESP32-NEXT:    retw.n
+;
+; XTENSA-ESP32S2-LABEL: f:
+; XTENSA-ESP32S2:         .cfi_startproc
+; XTENSA-ESP32S2-NEXT:  # %bb.0:
+; XTENSA-ESP32S2-NEXT:    entry a1, 32
+; XTENSA-ESP32S2-NEXT:    .cfi_def_cfa_offset 32
+; XTENSA-ESP32S2-NEXT:    movi.n a2, 0
+; XTENSA-ESP32S2-NEXT:    retw.n
 ;
 ; XTENSA-GENERIC-LABEL: f:
 ; XTENSA-GENERIC:         .cfi_startproc
