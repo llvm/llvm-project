@@ -83,11 +83,8 @@ namespace Undefined {
   static_assert(A<short>::f<int>() == 1);
   static_assert(A<short>::x<int> == 1);
   static_assert(A<short>::x<int*> == 2);
-#if 0
-  // FIXME: crashes
   static_assert(A<short>::B<int>::y == 1);
   static_assert(A<short>::B<int*>::y == 2);
-#endif
 } // namespace Undefined
 
 namespace Defined {
@@ -337,8 +334,5 @@ namespace Dependent {
 
   static_assert(A<0>::f<2>() == 2);
   static_assert(A<0>::x<2> == 2);
-#if 0
-  // FIXME: crashes
   static_assert(A<0>::B<2>::y == 2);
-#endif
 } // namespace Dependent

@@ -35,7 +35,7 @@ class LitConfig:
         order,
         params,
         config_prefix=None,
-        maxIndividualTestTime=0,
+        maxIndividualTestTime=None,
         maxRetriesPerTest=None,
         parallelism_groups={},
         per_test_coverage=False,
@@ -123,6 +123,9 @@ class LitConfig:
         Interface for setting maximum time to spend executing
         a single test
         """
+        if value is None:
+            self._maxIndividualTestTime = None
+            return
         if not isinstance(value, int):
             self.fatal("maxIndividualTestTime must set to a value of type int.")
         self._maxIndividualTestTime = value

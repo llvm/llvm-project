@@ -19582,8 +19582,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       // uses a vector phi at the exit block and the extract stays there
       // (scale = 1), so we keep the PHI's own block as the effective site.
       if (LI->getLoopFor(PHI->getParent())) {
-        for (unsigned Idx = 0, E = PHI->getNumIncomingValues(); Idx != E;
-             ++Idx) {
+        for (unsigned Idx : seq<unsigned>(PHI->getNumIncomingValues())) {
           if (PHI->getIncomingValue(Idx) != EU.Scalar)
             continue;
           BasicBlock *InBB = PHI->getIncomingBlock(Idx);
@@ -19895,8 +19894,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     if (!ExternalUsesAsOriginalScalar.contains(EU.Scalar)) {
       if (ExtraCost.isValid() && ExtraCost != 0) {
         BasicBlock *ExtractBB = ScalarToExtractBlock.lookup(EU.Scalar);
-        const Loop *L = ExtractBB ? LI->getLoopFor(ExtractBB) : nullptr;
-        if (L) {
+        if (const Loop *L = ExtractBB ? LI->getLoopFor(ExtractBB) : nullptr) {
           uint64_t Scale = getLoopNestScale(
               findInnermostNonInvariantLoop(L, ArrayRef<Value *>(EU.Scalar)));
           LLVM_DEBUG(dbgs()
