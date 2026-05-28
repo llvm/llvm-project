@@ -44,6 +44,13 @@
 #define __CLC_FAST_FMA_F64 0
 #endif
 
+#ifdef CLC_SPIRV
+bool __attribute__((noinline)) __clc_runtime_has_hw_fma32(void);
+#define __CLC_HAVE_HW_FMA32() __clc_runtime_has_hw_fma32()
+#else
+#define __CLC_HAVE_HW_FMA32() (1)
+#endif
+
 #define HAVE_BITALIGN() (0)
 
 #define MATH_DIVIDE(X, Y) ((X) / (Y))
