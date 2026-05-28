@@ -69,4 +69,9 @@ consteval void test()
 
     int a;
     static_assert(^^int == ^^decltype(a));
+
+    using foo = const int;
+    static_assert(^^foo != ^^const int);
+    static_assert(^^const foo == ^^const int);
+    static_assert(^^const int == ^^int const);
 }

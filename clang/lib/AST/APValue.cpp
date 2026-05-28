@@ -500,11 +500,7 @@ static void profileIntValue(llvm::FoldingSetNodeID &ID, const llvm::APInt &V) {
     ID.AddInteger((uint32_t)V.extractBitsAsZExtValue(std::min(32u, N - I), I));
 }
 
-/// Unwrap reflected type for profiling
-static QualType unwrapReflectedTypeForProfile(QualType QT) {
-
-  // TODO(Reflection)
-
+static bool isTypeAliasAsReflectionName(QualType QT) {
   /// [expr.reflect] p5, if a reflect-expression R matches the form ^^reflection-name
   /// it is interpreted as such; the identifier is looked up and the representation of R is determined as follows:
   /// - if lookup fines a type alias A, R represents the type the underlying entity of A if A
@@ -514,29 +510,24 @@ static QualType unwrapReflectedTypeForProfile(QualType QT) {
   /// if type-id is neither a placeholder type nor in the form of nested-name-specifier_opt template_opt simple-template-id
   /// then R represents the type denoted by the type-id
 
-  bool IsConst = QT.isConstQualified();
-  bool IsVolatile = QT.isVolatileQualified();
-  bool UnwrapAliases = (IsConst || IsVolatile);
+  return QT.getLocalQualifiers() == Qualifiers{};
+}
 
-  void *AsPtr;
-  do {
-    AsPtr = QT.getAsOpaquePtr();
-    if (const auto *DTT = dyn_cast<DecltypeType>(QT)) {
-      QT = DTT->desugar();
-      UnwrapAliases = true;
+/// Unwrap reflected type for profiling
+static void unwrapReflectedTypeForProfile(llvm::FoldingSetNodeID &ID, QualType QT) {
+  // TODO(Reflection)
+
+  if (isTypeAliasAsReflectionName(QT)) {
+    if (const auto *TDT = QT->getAs<TypedefType>()) {
+      ID.AddBoolean(true);
+      ID.AddPointer(TDT->getDecl()->getCanonicalDecl());
+      return;
     }
-    if (const auto *UT = dyn_cast<UsingType>(QT); UT && UnwrapAliases)
-      QT = UT->desugar();
-    if (const auto *TDT = dyn_cast<TypedefType>(QT); TDT && UnwrapAliases)
-      QT = TDT->desugar();
-  } while (QT.getAsOpaquePtr() != AsPtr);
+  }
 
-  if (IsConst)
-    QT = QT.withConst();
-  if (IsVolatile)
-    QT = QT.withVolatile();
+  ID.AddBoolean(false);
+  QT.getCanonicalType().Profile(ID);
 
-  return QT;
 }
 
 static void profileReflection(llvm::FoldingSetNodeID &ID, APValue V) {
@@ -547,8 +538,7 @@ static void profileReflection(llvm::FoldingSetNodeID &ID, APValue V) {
   case ReflectionKind::Type: {
     const TypeSourceInfo *Info =
         static_cast<const TypeSourceInfo *>(V.getReflectionOpaqueOperand());
-    QualType QT = unwrapReflectedTypeForProfile(Info->getType());
-    ID.AddPointer(QT.getAsOpaquePtr());
+    unwrapReflectedTypeForProfile(ID, Info->getType());
     return;
   }
   }
