@@ -200,6 +200,8 @@ Expected<SmallVector<std::string>> getInput(const ArgList &Args) {
       return createStringError("Unsupported file type");
     BitcodeFiles.push_back(*Filename);
   }
+  if (BitcodeFiles.empty())
+    return createStringError("No input files provided");
   return BitcodeFiles;
 }
 
@@ -713,7 +715,7 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
       return Err;
 
     if (!SPIRVDumpDir.empty()) {
-      SmallString<256> DumpFile(SPIRVDumpDir);
+      SmallString<128> DumpFile(SPIRVDumpDir);
       sys::path::append(DumpFile, sys::path::filename(CodeGenFile));
       if (std::error_code EC = sys::fs::copy_file(CodeGenFile, DumpFile))
         return createFileError(DumpFile, EC);
@@ -813,6 +815,10 @@ int main(int argc, char **argv) {
     else
       Dir.append(llvm::sys::path::get_separator());
 
+    if (std::error_code EC = sys::fs::create_directories(Dir))
+      reportError(createStringError(
+          EC, "cannot create SPIR-V dump directory '" + Dir + "'"));
+
     SPIRVDumpDir = Dir;
   }
 
@@ -820,9 +826,6 @@ int main(int argc, char **argv) {
   auto FilesOrErr = getInput(Args);
   if (!FilesOrErr)
     reportError(FilesOrErr.takeError());
-
-  if (FilesOrErr->empty())
-    reportError(createStringError("No input files provided"));
 
   // Run SYCL linking process on the generated inputs.
   if (Error Err = runSYCLLink(*FilesOrErr, Args))
