@@ -32,6 +32,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <optional>
+#include <pathcch.h>
 #include <psapi.h>
 
 #ifndef STATUS_WX86_BREAKPOINT
