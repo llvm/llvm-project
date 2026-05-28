@@ -1188,6 +1188,20 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
       return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, Mask));
     }
 
+    // shl(fshr(a, b, C), C) --> and(b, -1 << C)
+    // shl(fshl(a, b, BW-C), C) --> and(b, -1 << C)
+    {
+      const APInt *FShAmt;
+      Value *A, *B;
+      if ((match(Op0, m_FShr(m_Value(A), m_Value(B), m_APInt(FShAmt))) &&
+           *FShAmt == ShAmtC) ||
+          (match(Op0, m_FShl(m_Value(A), m_Value(B), m_APInt(FShAmt))) &&
+           *FShAmt == BitWidth - ShAmtC)) {
+        APInt Mask(APInt::getHighBitsSet(BitWidth, BitWidth - ShAmtC));
+        return BinaryOperator::CreateAnd(B, ConstantInt::get(Ty, Mask));
+      }
+    }
+
     const APInt *C1;
     if (match(Op0, m_Exact(m_Shr(m_Value(X), m_APInt(C1)))) &&
         C1->ult(BitWidth)) {
