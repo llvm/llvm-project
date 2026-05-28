@@ -42,8 +42,8 @@ static std::string renderJSON(const json::Value &Value) {
 }
 
 #ifndef _WIN32
-static std::string makeRawHTTPResponse(unsigned Code, const char *ContentType,
-                                       StringRef Body, bool KeepAlive = false) {
+static std::string makeRawHTTPHeader(unsigned Code, const char *ContentType,
+                                     size_t BodyLen, bool KeepAlive = false) {
   std::string Out;
   raw_string_ostream OS(Out);
   const char *Reason =
@@ -52,12 +52,11 @@ static std::string makeRawHTTPResponse(unsigned Code, const char *ContentType,
           : (Code == 201 ? "Created" : (Code == 404 ? "Not Found" : "Error"));
   OS << "HTTP/1.1 " << Code << ' ' << Reason << "\r\n";
   OS << "Content-Type: " << ContentType << "\r\n";
-  OS << "Content-Length: " << Body.size() << "\r\n";
+  OS << "Content-Length: " << BodyLen << "\r\n";
   OS << "Access-Control-Allow-Origin: *\r\n";
   OS << "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n";
   OS << "Access-Control-Allow-Headers: Content-Type\r\n";
   OS << "Connection: " << (KeepAlive ? "keep-alive" : "close") << "\r\n\r\n";
-  OS << Body;
   OS.flush();
   return Out;
 }
@@ -877,9 +876,10 @@ Error llvm::advisor::HTTPServer::run() {
       // Auth check for API routes
       if (IsAPI && !checkAuth(Req.AuthHeader)) {
         Res = makeJSONErrorStr(401, "unauthorized");
-        std::string Out =
-            makeRawHTTPResponse(Res.Code, Res.ContentType, Res.Body);
-        (void)sendAll(FD, Out);
+        std::string Header =
+            makeRawHTTPHeader(Res.Code, Res.ContentType, Res.Body.size());
+        (void)sendAll(FD, Header);
+        (void)sendAll(FD, Res.Body);
         ::close(FD);
         return;
       }
@@ -954,9 +954,10 @@ Error llvm::advisor::HTTPServer::run() {
         Res = makeJSONErrorStr(405, "method not allowed");
       }
 
-      std::string Out = makeRawHTTPResponse(Res.Code, Res.ContentType, Res.Body,
-                                            Req.KeepAlive);
-      (void)sendAll(FD, Out);
+      std::string Header = makeRawHTTPHeader(Res.Code, Res.ContentType,
+                                             Res.Body.size(), Req.KeepAlive);
+      (void)sendAll(FD, Header);
+      (void)sendAll(FD, Res.Body);
       ::close(FD);
     });
   }
