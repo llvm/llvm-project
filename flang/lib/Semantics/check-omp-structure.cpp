@@ -395,7 +395,7 @@ void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
     // on those.
     return;
   }
-  if (auto *symbol{GetObjectSymbol(object)}) {
+  if (auto *symbol{GetObjectSymbol(object, /*ultimate=*/true)}) {
     // Eliminate certain kinds of symbols before running the analyzer to
     // avoid confusing error messages. The analyzer assumes that the context
     // of the object use is an expression, and some diagnostics are tailored
@@ -1569,7 +1569,7 @@ void OmpStructureChecker::Enter(const parser::OmpGroupprivateDirective &x) {
 
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     auto *locator{std::get_if<parser::OmpLocator>(&arg.u)};
-    const Symbol *sym{GetArgumentSymbol(arg)};
+    const Symbol *sym{GetArgumentSymbol(arg, /*ultimate=*/true)};
 
     if (!locator || !sym ||
         (!IsVariableListItem(*sym) && !IsCommonBlock(*sym))) {
@@ -1643,6 +1643,19 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareSimdDirective &x) {
   const Scope &containingScope = context_.FindScope(dirName.source);
   const Scope &progUnitScope = GetProgramUnitContaining(containingScope);
 
+  // A DECLARE SIMD directive may legally appear in an interface body, but it
+  // applies to the external procedure being declared rather than to any
+  // definition in this compilation. Flang does not propagate the directive to
+  // callers, so it has no effect; warn the user instead of silently ignoring
+  // it. See https://github.com/llvm/llvm-project/issues/192581.
+  if (const Symbol *progUnitSym{progUnitScope.symbol()}) {
+    if (const auto *subpDetails{progUnitSym->detailsIf<SubprogramDetails>()};
+        subpDetails && subpDetails->isInterface()) {
+      context_.Warn(common::UsageWarning::OpenMPUsage, dirName.source,
+          "'DECLARE SIMD' directive in an interface body has no effect"_warn_en_US);
+    }
+  }
+
   for (const parser::OmpClause &clause : x.v.Clauses().v) {
     const auto *u = std::get_if<parser::OmpClause::Uniform>(&clause.u);
     if (!u) {
@@ -1682,7 +1695,7 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareSimdDirective &x) {
   }};
 
   const parser::OmpArgument &arg{args.v.front()};
-  if (auto *sym{GetArgumentSymbol(arg)}) {
+  if (auto *sym{GetArgumentSymbol(arg, /*ultimate=*/true)}) {
     if (!isValidSymbol(sym)) {
       auto &msg{context_.Say(arg.source,
           "The name '%s' should refer to a procedure"_err_en_US, sym->name())};
@@ -1737,11 +1750,13 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareVariantDirective &x) {
   common::visit( //
       common::visitors{
           [&](const parser::OmpBaseVariantNames &y) {
-            CheckSymbol(GetObjectSymbol(std::get<0>(y.t)), arg.source);
-            CheckSymbol(GetObjectSymbol(std::get<1>(y.t)), arg.source);
+            CheckSymbol(GetObjectSymbol(std::get<0>(y.t), /*ultimate=*/true),
+                arg.source);
+            CheckSymbol(GetObjectSymbol(std::get<1>(y.t), /*ultimate=*/true),
+                arg.source);
           },
           [&](const parser::OmpLocator &y) {
-            CheckSymbol(GetArgumentSymbol(arg), arg.source);
+            CheckSymbol(GetArgumentSymbol(arg, /*ultimate=*/true), arg.source);
           },
           [&](auto &&y) { InvalidArgument(arg.source); },
       },
@@ -2040,7 +2055,7 @@ void OmpStructureChecker::CheckIndividualAllocateDirective(
       continue;
     }
 
-    if (const Symbol *symbol{GetObjectSymbol(*object)}) {
+    if (const Symbol *symbol{GetObjectSymbol(*object, /*ultimate=*/true)}) {
       if (!IsTypeParamInquiry(*symbol)) {
         checkSymbol(*symbol, arg.source);
       }
@@ -2073,7 +2088,7 @@ void OmpStructureChecker::CheckExecutableAllocateDirective(
       hasEmptyList = true;
     }
     for (const parser::OmpArgument &arg : spec.Arguments().v) {
-      if (auto *sym{GetArgumentSymbol(arg)}) {
+      if (auto *sym{GetArgumentSymbol(arg, /*ultimate=*/true)}) {
         // Ignore these checks for structure members. They are not allowed
         // in the first place, so don't tell the users that they need to
         // be specified somewhere,
@@ -2204,7 +2219,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Allocate &x) {
       if (auto *found{parser::omp::FindClause(spec, dsaClause)}) {
         for (auto &object : GetOmpObjectList(*found)->v) {
           if (auto *symbol{GetObjectSymbol(object)}) {
-            privatized.insert(symbol);
+            privatized.insert(&symbol->GetUltimate());
           }
         }
       }
@@ -2212,7 +2227,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Allocate &x) {
 
     for (auto &object : GetOmpObjectList(x)->v) {
       if (auto *symbol{GetObjectSymbol(object)}) {
-        if (!privatized.count(symbol)) {
+        if (!privatized.count(&symbol->GetUltimate())) {
           context_.Say(
               GetObjectSource(object).value_or(GetContext().clauseSource),
               "The ALLOCATE clause requires that '%s' must be listed in a private data-sharing attribute clause on the same directive"_err_en_US,
@@ -2310,7 +2325,7 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareTargetDirective &x) {
 
   // Check if arguments are extended-list-items.
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-    const Symbol *symbol{GetArgumentSymbol(arg)};
+    const Symbol *symbol{GetArgumentSymbol(arg, /*ultimate=*/true)};
     if (!symbol) {
       context_.Say(arg.source,
           "An argument to the DECLARE TARGET directive should be an extended-list-item"_err_en_US);
@@ -2568,7 +2583,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPAllocatorsConstruct &x) {
     }
     for (auto &object : DEREF(GetOmpObjectList(clause)).v) {
       CheckVarIsNotPartOfAnotherVar(dirName.source, object);
-      if (auto *symbol{GetObjectSymbol(object)}) {
+      if (auto *symbol{GetObjectSymbol(object, /*ultimate=*/true)}) {
         if (IsStructureComponent(*symbol)) {
           continue;
         }
@@ -3029,7 +3044,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPFlushConstruct &x) {
 
   if (flushList) {
     for (const parser::OmpArgument &arg : flushList->v) {
-      if (auto *sym{GetArgumentSymbol(arg)};
+      if (auto *sym{GetArgumentSymbol(arg, /*ultimate=*/true)};
           sym && !isVariableListItemOrCommonBlock(*sym)) {
         context_.Say(arg.source,
             "FLUSH argument must be a variable list item"_err_en_US);
@@ -3888,7 +3903,7 @@ void OmpStructureChecker::CheckReductionObjects(
   // Iterate on objects because `GetSymbolsInObjectList` expands common block
   // names into the lists of their members.
   for (const parser::OmpObject &object : objects.v) {
-    auto *symbol{GetObjectSymbol(object)};
+    auto *symbol{GetObjectSymbol(object, /*ultimate=*/true)};
     if (symbol && IsCommonBlock(*symbol)) {
       auto source{GetObjectSource(object)};
       context_.Say(source ? *source : GetContext().clauseSource,

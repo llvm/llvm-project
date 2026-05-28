@@ -760,13 +760,11 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBuiltIn(Expr *E) {
   CallExpr *CE = cast<CallExpr>(E->IgnoreParens());
   ASTContext &Ctx = getASTContext();
   QualType BoolTy = Ctx.getLogicalOperationType();
-  llvm::APInt False = llvm::APInt::getZero(Ctx.getIntWidth(BoolTy));
-  llvm::APInt True = llvm::APInt::getAllOnes(Ctx.getIntWidth(BoolTy));
   SourceLocation Loc = CE->getExprLoc();
 
   if (!CE->getBuiltinCallee())
     return *ExpandedPredicates
-                .insert(IntegerLiteral::Create(Ctx, False, BoolTy, Loc))
+                .insert(SemaRef.BuildBoolLiteral(Loc, false).get())
                 .first;
 
   bool P = false;
@@ -824,9 +822,7 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBuiltIn(Expr *E) {
     P = Builtin::evaluateRequiredTargetFeatures(RF, CF);
   }
 
-  return *ExpandedPredicates
-              .insert(
-                  IntegerLiteral::Create(Ctx, P ? True : False, BoolTy, Loc))
+  return *ExpandedPredicates.insert(SemaRef.BuildBoolLiteral(Loc, P).get())
               .first;
 }
 
