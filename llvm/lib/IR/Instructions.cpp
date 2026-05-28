@@ -614,7 +614,7 @@ CallBase *CallBase::removeOperandBundleAt(CallBase *CB, size_t Offset,
   auto OpBundleCount = CB->getNumOperandBundles();
   assert(Offset < OpBundleCount &&
          "Trying to remove non-existant operand bundle");
-  SmallVector<OperandBundleDef, 1> Bundles;
+  SmallVector<OperandBundleDef> Bundles;
   Bundles.reserve(OpBundleCount - 1);
   size_t I = 0;
   for (; I != Offset; ++I)
