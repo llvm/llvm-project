@@ -407,14 +407,13 @@ void StackFrame::Profile(llvm::FoldingSetNodeID &ID) {
 
 const StackFrame *StackFrameManager::getStackFrame(
     AnalysisDeclContext *Ctx, const StackFrame *Parent, const void *Data,
-    const Expr *E, const CFGBlock *Blk, unsigned BlockCount, unsigned StmtIdx) {
+    const Expr *E, const CFGBlock *B, unsigned BlockCount, unsigned StmtIdx) {
   llvm::FoldingSetNodeID ID;
-  StackFrame::Profile(ID, Ctx, Parent, Data, E, Blk, BlockCount, StmtIdx);
+  StackFrame::Profile(ID, Ctx, Parent, Data, E, B, BlockCount, StmtIdx);
   void *InsertPos;
   StackFrame *SF = Frames.FindNodeOrInsertPos(ID, InsertPos);
   if (!SF) {
-    SF =
-        new StackFrame(Ctx, Parent, Data, E, Blk, BlockCount, StmtIdx, ++NewID);
+    SF = new StackFrame(Ctx, Parent, Data, E, B, BlockCount, StmtIdx, ++NewID);
     Frames.InsertNode(SF, InsertPos);
   }
   return SF;
