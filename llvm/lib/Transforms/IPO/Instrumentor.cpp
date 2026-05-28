@@ -97,7 +97,9 @@ template <typename IRBuilderTy> void ensureDbgLoc(IRBuilderTy &IRB) {
     IRB.SetCurrentDebugLocation(DILocation::get(BB->getContext(), 0, 0, SP));
 }
 
-/// Attempt to cast \p V to type \p Ty.
+/// Attempt to cast \p V to type \p Ty using only bit-preserving casts.
+/// This ensures that floating-point values are converted via bitcast (not
+/// fptosi/fptoui) to preserve their exact bit representation.
 template <typename IRBTy>
 Value *tryToCast(IRBTy &IRB, Value *V, Type *Ty, const DataLayout &DL,
                  bool AllowTruncate = false) {
@@ -113,18 +115,35 @@ Value *tryToCast(IRBTy &IRB, Value *V, Type *Ty, const DataLayout &DL,
   bool ShouldTruncate = RequestedSize < ValueSize;
   if (ShouldTruncate && !AllowTruncate)
     return V;
-  if (ShouldTruncate && AllowTruncate)
+  if (ShouldTruncate && AllowTruncate) {
+    // First convert to integer of the same size if needed.
+    Value *IntV = V;
+    if (VTy->isFloatingPointTy())
+      IntV = IRB.CreateBitCast(V, IRB.getIntNTy(ValueSize));
     return tryToCast(IRB,
-                     IRB.CreateIntCast(V, IRB.getIntNTy(RequestedSize),
+                     IRB.CreateIntCast(IntV, IRB.getIntNTy(RequestedSize),
                                        /*IsSigned=*/false),
                      Ty, DL, AllowTruncate);
+  }
   if (VTy->isPointerTy() && Ty->isPointerTy())
     return IRB.CreatePointerBitCastOrAddrSpaceCast(V, Ty);
   if (VTy->isIntegerTy() && Ty->isIntegerTy())
     return IRB.CreateIntCast(V, Ty, /*IsSigned=*/false);
+  // Use bit-preserving casts for floating-point values: convert float to int
+  // of the same size via bitcast, then extend/truncate the integer if needed.
   if (VTy->isFloatingPointTy() && Ty->isIntOrPtrTy()) {
     return tryToCast(IRB, IRB.CreateBitCast(V, IRB.getIntNTy(ValueSize)), Ty,
                      DL, AllowTruncate);
+  }
+  // When converting int to float, never use sitofp/uitofp as they perform value
+  // conversion, not bit-preserving cast.
+  if (VTy->isIntegerTy() && Ty->isFloatingPointTy()) {
+    if (ValueSize == RequestedSize)
+      return IRB.CreateBitCast(V, Ty);
+    return tryToCast(
+        IRB,
+        IRB.CreateIntCast(V, IRB.getIntNTy(RequestedSize), /*IsSigned=*/false),
+        Ty, DL, AllowTruncate);
   }
   return IRB.CreateBitOrPointerCast(V, Ty);
 }
@@ -290,7 +309,7 @@ bool InstrumentorImpl::instrumentFunction(Function &Fn) {
     ++IIRB.Epoch;
 
     IIRB.IRB.SetInsertPoint(
-        cast<Function>(FPtr)->getEntryBlock().getFirstInsertionPt());
+        cast<Function>(FPtr)->getEntryBlock().getFirstNonPHIOrDbgOrAlloca());
     ensureDbgLoc(IIRB.IRB);
     IO->instrument(FPtr, Changed, IConf, IIRB, ICaches);
     IIRB.returnAllocas();
@@ -412,15 +431,23 @@ bool InstrumentorImpl::instrument() {
   StringRef FunctionRegexStr = IConf.FunctionRegex->getString();
   ParsedFunctionRegex = createRegex(FunctionRegexStr, "function", IIRB.Ctx);
 
+  // Helper to register an IO for all its opcodes.
+  auto RegisterForAllOpcodes = [](auto &InstChoices,
+                                  InstrumentationOpportunity *IO) {
+    ArrayRef<unsigned> Opcodes = IO->getAllOpcodes();
+    // Register for all opcodes.
+    for (unsigned Opcode : Opcodes)
+      InstChoices[Opcode] = IO;
+  };
+
   for (auto &[Name, IO] :
        IConf.IChoices[InstrumentationLocation::INSTRUCTION_PRE])
     if (IO->Enabled)
-      InstChoicesPRE[IO->getOpcode()] = IO;
+      RegisterForAllOpcodes(InstChoicesPRE, IO);
   for (auto &[Name, IO] :
        IConf.IChoices[InstrumentationLocation::INSTRUCTION_POST])
     if (IO->Enabled)
-      InstChoicesPOST[IO->getOpcode()] = IO;
-
+      RegisterForAllOpcodes(InstChoicesPOST, IO);
   Changed |= instrumentModule();
 
   for (Function &Fn : M)
@@ -527,6 +554,7 @@ void InstrumentationConfig::populate(InstrumentorIRBuilderTy &IIRB) {
   UnreachableIO::populate(*this, IIRB);
   LoadIO::populate(*this, IIRB);
   StoreIO::populate(*this, IIRB);
+  CastIO::populate(*this, IIRB);
 }
 
 void InstrumentationConfig::addChoice(InstrumentationOpportunity &IO,
@@ -1570,3 +1598,82 @@ Value *GlobalVarIO::isDefinition(Value &V, Type &Ty,
   GlobalVariable &GV = cast<GlobalVariable>(V);
   return getCI(&Ty, !GV.isDeclaration());
 }
+
+/// CastIO
+/// {
+void CastIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
+                  ConfigTy *UserConfig) {
+  if (UserConfig)
+    Config = *UserConfig;
+  bool IsPRE = getLocationKind() == InstrumentationLocation::INSTRUCTION_PRE;
+  if (Config.has(PassInput))
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "input", "Input value of the cast.",
+                             IRTArg::POTENTIALLY_INDIRECT, getInput));
+  if (Config.has(PassInputTypeId))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "input_type_id",
+                             "The type id of the input value.", IRTArg::NONE,
+                             getInputTypeId));
+  if (Config.has(PassInputSize))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "input_size",
+                             "The size of the input value.", IRTArg::NONE,
+                             getInputSize));
+  if (!IsPRE && Config.has(PassResult))
+    IRTArgs.push_back(
+        IRTArg(IIRB.Int64Ty, "result", "Result of the cast.",
+               IRTArg::REPLACABLE | IRTArg::POTENTIALLY_INDIRECT, getValue,
+               Config.has(ReplaceResult) ? replaceValue : nullptr));
+  if (Config.has(PassResultTypeId))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "result_type_id",
+                             "The type id of the result value.", IRTArg::NONE,
+                             getResultTypeId));
+  if (Config.has(PassResultSize))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "result_size",
+                             "The size of the result value.", IRTArg::NONE,
+                             getResultSize));
+  if (Config.has(PassOpcode))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "opcode",
+                             "The opcode of the cast instruction.",
+                             IRTArg::NONE, getOpcode));
+
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  IConf.addChoice(*this, IIRB.Ctx);
+}
+
+Value *CastIO::getInput(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                        InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CastInst>(V);
+  return CI.getOperand(0);
+}
+
+Value *CastIO::getInputTypeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                              InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CastInst>(V);
+  return getCI(&Ty, CI.getSrcTy()->getTypeID());
+}
+
+Value *CastIO::getInputSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                            InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CastInst>(V);
+  auto &DL = CI.getDataLayout();
+  return getCI(&Ty, DL.getTypeStoreSize(CI.getSrcTy()));
+}
+
+Value *CastIO::getResultTypeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                               InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CastInst>(V);
+  return getCI(&Ty, CI.getDestTy()->getTypeID());
+}
+
+Value *CastIO::getResultSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                             InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CastInst>(V);
+  auto &DL = CI.getDataLayout();
+  return getCI(&Ty, DL.getTypeStoreSize(CI.getDestTy()));
+}
+
+Value *CastIO::getOpcode(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                         InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  return getCI(&Ty, I.getOpcode());
+}
+///}

@@ -204,6 +204,25 @@
       "is_volatile.description": "Flag indicating a volatile store.",
       "id": true,
       "id.description": "A unique ID associated with the given instrumentor call"
+    },
+    "cast": {
+      "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
+      "input": true,
+      "input.description": "Input value of the cast.",
+      "input_type_id": true,
+      "input_type_id.description": "The type id of the input value.",
+      "input_size": true,
+      "input_size.description": "The size of the input value.",
+      "result_type_id": true,
+      "result_type_id.description": "The type id of the result value.",
+      "result_size": true,
+      "result_size.description": "The size of the result value.",
+      "opcode": true,
+      "opcode.description": "The opcode of the cast instruction.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
     }
   },
   "instruction_post": {
@@ -273,6 +292,28 @@
       "sync_scope_id.description": "The sync scope id of the store.",
       "is_volatile": true,
       "is_volatile.description": "Flag indicating a volatile store.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    },
+    "cast": {
+      "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
+      "input": true,
+      "input.description": "Input value of the cast.",
+      "input_type_id": true,
+      "input_type_id.description": "The type id of the input value.",
+      "input_size": true,
+      "input_size.description": "The size of the input value.",
+      "result": true,
+      "result.replace": true,
+      "result.description": "Result of the cast.",
+      "result_type_id": true,
+      "result_type_id.description": "The type id of the result value.",
+      "result_size": true,
+      "result_size.description": "The size of the result value.",
+      "opcode": true,
+      "opcode.description": "The opcode of the cast instruction.",
       "id": true,
       "id.description": "A unique ID associated with the given instrumentor call"
     }
