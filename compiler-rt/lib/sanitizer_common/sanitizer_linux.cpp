@@ -90,7 +90,8 @@
 extern "C" SANITIZER_WEAK_ATTRIBUTE const char *strerrorname_np(int);
 #  endif
 
-#  if SANITIZER_LINUX && (defined(__loongarch__) || defined(__hexagon__))
+#  if SANITIZER_LINUX && \
+      (defined(__loongarch__) || defined(__hexagon__) || defined(__alpha__))
 #    include <sys/sysmacros.h>
 #  endif
 
@@ -263,6 +264,8 @@ ScopedBlockSignals::~ScopedBlockSignals() { SetSigProcMask(&saved_, nullptr); }
 #    include "sanitizer_syscall_linux_hexagon.inc"
 #  elif SANITIZER_LINUX && SANITIZER_LOONGARCH64
 #    include "sanitizer_syscall_linux_loongarch64.inc"
+#  elif SANITIZER_LINUX && SANITIZER_ALPHA
+#    include "sanitizer_syscall_linux_alpha.inc"
 #  else
 #    include "sanitizer_syscall_generic.inc"
 #  endif
@@ -373,7 +376,8 @@ static void stat64_to_stat(struct stat64 *in, struct stat *out) {
 }
 #    endif
 
-#    if SANITIZER_LINUX && (defined(__loongarch__) || defined(__hexagon__))
+#    if SANITIZER_LINUX && \
+        (defined(__loongarch__) || defined(__hexagon__) || defined(__alpha__))
 static void statx_to_stat(struct statx *in, struct stat *out) {
   internal_memset(out, 0, sizeof(*out));
   out->st_dev = makedev(in->stx_dev_major, in->stx_dev_minor);
@@ -453,7 +457,7 @@ uptr internal_stat(const char *path, void *buf) {
 #    if SANITIZER_FREEBSD
   return internal_syscall(SYSCALL(fstatat), AT_FDCWD, (uptr)path, (uptr)buf, 0);
 #    elif SANITIZER_LINUX
-#      if defined(__loongarch__) || defined(__hexagon__)
+#      if defined(__loongarch__) || defined(__hexagon__) || defined(__alpha__)
   struct statx bufx;
   int res = internal_syscall(SYSCALL(statx), AT_FDCWD, (uptr)path,
                              AT_NO_AUTOMOUNT, STATX_BASIC_STATS, (uptr)&bufx);
@@ -491,7 +495,7 @@ uptr internal_lstat(const char *path, void *buf) {
   return internal_syscall(SYSCALL(fstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           AT_SYMLINK_NOFOLLOW);
 #    elif SANITIZER_LINUX
-#      if defined(__loongarch__) || defined(__hexagon__)
+#      if defined(__loongarch__) || defined(__hexagon__) || defined(__alpha__)
   struct statx bufx;
   int res = internal_syscall(SYSCALL(statx), AT_FDCWD, (uptr)path,
                              AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT,
@@ -539,7 +543,7 @@ uptr internal_fstat(fd_t fd, void *buf) {
   int res = internal_syscall(SYSCALL(fstat64), fd, &kbuf);
   kernel_stat_to_stat(&kbuf, (struct stat *)buf);
   return res;
-#      elif SANITIZER_LINUX && defined(__loongarch__)
+#      elif SANITIZER_LINUX && (defined(__loongarch__) || defined(__alpha__))
   struct statx bufx;
   int res = internal_syscall(SYSCALL(statx), fd, "", AT_EMPTY_PATH,
                              STATX_BASIC_STATS, (uptr)&bufx);
@@ -1018,7 +1022,7 @@ int internal_sigaction_norestorer(int signum, const void *act, void *oldact) {
     // rt_sigaction, so we need to do the same (we'll need to reimplement the
     // restorers; for x86_64 the restorer address can be obtained from
     // oldact->sa_restorer upon a call to sigaction(xxx, NULL, oldact).
-#      if !SANITIZER_ANDROID || !SANITIZER_MIPS32
+#      if (!SANITIZER_ANDROID || !SANITIZER_MIPS32) && !defined(__alpha__)
     k_act.sa_restorer = u_act->sa_restorer;
 #      endif
   }
@@ -1034,7 +1038,7 @@ int internal_sigaction_norestorer(int signum, const void *act, void *oldact) {
     internal_memcpy(&u_oldact->sa_mask, &k_oldact.sa_mask,
                     sizeof(__sanitizer_kernel_sigset_t));
     u_oldact->sa_flags = k_oldact.sa_flags;
-#      if !SANITIZER_ANDROID || !SANITIZER_MIPS32
+#      if (!SANITIZER_ANDROID || !SANITIZER_MIPS32) && !defined(__alpha__)
     u_oldact->sa_restorer = k_oldact.sa_restorer;
 #      endif
   }
@@ -1243,6 +1247,16 @@ uptr GetMaxVirtualAddress() {
   // loongarch64 also has multiple address space layouts: default is 47-bit.
   // RISC-V 64 also has multiple address space layouts: 39, 48 and 57-bit.
   return (1ULL << (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1)) - 1;
+#    elif SANITIZER_ALPHA
+  // Linux/Alpha uses a 42-bit user VAS (TASK_SIZE = 0x40000000000).  With
+  // fixed shadow offset 0x10000000000 (1 TiB) the layout is:
+  //   LowMem:    [0x000000000000, 0x00ffffffffff]  (1 TiB)
+  //   LowShadow: [0x010000000000, 0x011fffffffff]  (128 GiB)
+  //   ShadowGap: [0x012000000000, 0x012fffffffff]
+  //   HighShadow:[0x013000000000, 0x017fffffffff]  (256 GiB)
+  //   HighMem:   [0x018000000000, 0x03ffffffffff]  (2.5 TiB, stack near top)
+  // Capping at TASK_SIZE - 1 avoids treating kernel addresses as HighMem.
+  return (1ULL << 42) - 1;  // TASK_SIZE - 1
 #    elif SANITIZER_MIPS64
   return (1ULL << 40) - 1;  // 0x000000ffffffffffUL;
 #    elif defined(__s390x__)
@@ -2777,6 +2791,11 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   *pc = ucontext->uc_mcontext.__pc;
   *bp = ucontext->uc_mcontext.__gregs[22];
   *sp = ucontext->uc_mcontext.__gregs[3];
+#  elif defined(__alpha__)
+  ucontext_t* ucontext = (ucontext_t*)context;
+  *pc = ucontext->uc_mcontext.sc_pc;
+  *bp = ucontext->uc_mcontext.sc_regs[15];  // $fp / $s6
+  *sp = ucontext->uc_mcontext.sc_regs[30];  // $sp
 #  else
 #    error "Unsupported arch"
 #  endif

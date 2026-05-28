@@ -2197,24 +2197,27 @@ class LLVM_ABI_FOR_TEST VPWidenGEPRecipe : public VPRecipeWithIRFlags {
   }
 
 public:
-  VPWidenGEPRecipe(GetElementPtrInst *GEP, ArrayRef<VPValue *> Operands,
+  VPWidenGEPRecipe(Type *SourceElementTy, ArrayRef<VPValue *> Operands,
                    const VPIRFlags &Flags = {},
-                   DebugLoc DL = DebugLoc::getUnknown())
+                   DebugLoc DL = DebugLoc::getUnknown(),
+                   GetElementPtrInst *UV = nullptr)
       : VPRecipeWithIRFlags(VPRecipeBase::VPWidenGEPSC, Operands,
                             getScalarTypeOrInfer(Operands[0]), Flags, DL),
-        SourceElementTy(GEP->getSourceElementType()) {
-    setUnderlyingValue(GEP);
-    SmallVector<std::pair<unsigned, MDNode *>> Metadata;
-    (void)Metadata;
-    getMetadataToPropagate(GEP, Metadata);
-    assert(Metadata.empty() && "unexpected metadata on GEP");
+        SourceElementTy(SourceElementTy) {
+    if (UV) {
+      setUnderlyingValue(UV);
+      [[maybe_unused]] SmallVector<std::pair<unsigned, MDNode *>> Metadata;
+      getMetadataToPropagate(UV, Metadata);
+      assert(Metadata.empty() && "unexpected metadata on GEP");
+    }
   }
 
   ~VPWidenGEPRecipe() override = default;
 
   VPWidenGEPRecipe *clone() override {
-    return new VPWidenGEPRecipe(cast<GetElementPtrInst>(getUnderlyingInstr()),
-                                operands(), *this, getDebugLoc());
+    return new VPWidenGEPRecipe(
+        getSourceElementType(), operands(), *this, getDebugLoc(),
+        cast_or_null<GetElementPtrInst>(getUnderlyingValue()));
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenGEPSC)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import enum
 import os
 import pathlib
 import re
@@ -1434,7 +1435,8 @@ def applySubstitutions(script, substitutions, conditions={}, recursion_limit=Non
     return output
 
 
-class ParserKind:
+@enum.unique
+class ParserKind(enum.IntEnum):
     """
     An enumeration representing the style of an integrated test keyword or
     command.
@@ -1453,43 +1455,21 @@ class ParserKind:
         'REDEFINE: %{name}=value'
     """
 
-    TAG = 0
-    COMMAND = 1
-    LIST = 2
-    SPACE_LIST = 3
-    BOOLEAN_EXPR = 4
-    INTEGER = 5
-    CUSTOM = 6
-    DEFINE = 7
-    REDEFINE = 8
+    def __new__(cls, value, suffixes):
+        obj = int.__new__(cls, value)
+        obj._value_ = value
+        obj.allowed_suffixes = suffixes
+        return obj
 
-    @staticmethod
-    def allowedKeywordSuffixes(value):
-        return {
-            ParserKind.TAG: ["."],
-            ParserKind.COMMAND: [":"],
-            ParserKind.LIST: [":"],
-            ParserKind.SPACE_LIST: [":"],
-            ParserKind.BOOLEAN_EXPR: [":"],
-            ParserKind.INTEGER: [":"],
-            ParserKind.CUSTOM: [":", "."],
-            ParserKind.DEFINE: [":"],
-            ParserKind.REDEFINE: [":"],
-        }[value]
-
-    @staticmethod
-    def str(value):
-        return {
-            ParserKind.TAG: "TAG",
-            ParserKind.COMMAND: "COMMAND",
-            ParserKind.LIST: "LIST",
-            ParserKind.SPACE_LIST: "SPACE_LIST",
-            ParserKind.BOOLEAN_EXPR: "BOOLEAN_EXPR",
-            ParserKind.INTEGER: "INTEGER",
-            ParserKind.CUSTOM: "CUSTOM",
-            ParserKind.DEFINE: "DEFINE",
-            ParserKind.REDEFINE: "REDEFINE",
-        }[value]
+    TAG = (0, ["."])
+    COMMAND = (1, [":"])
+    LIST = (2, [":"])
+    SPACE_LIST = (3, [":"])
+    BOOLEAN_EXPR = (4, [":"])
+    INTEGER = (5, [":"])
+    CUSTOM = (6, [":", "."])
+    DEFINE = (7, [":"])
+    REDEFINE = (8, [":"])
 
 
 class IntegratedTestKeywordParser:
@@ -1502,18 +1482,17 @@ class IntegratedTestKeywordParser:
     """
 
     def __init__(self, keyword, kind, parser=None, initial_value=None):
-        allowedSuffixes = ParserKind.allowedKeywordSuffixes(kind)
+        allowedSuffixes = kind.allowed_suffixes
         if len(keyword) == 0 or keyword[-1] not in allowedSuffixes:
             if len(allowedSuffixes) == 1:
                 raise ValueError(
                     "Keyword '%s' of kind '%s' must end in '%s'"
-                    % (keyword, ParserKind.str(kind), allowedSuffixes[0])
+                    % (keyword, kind.name, allowedSuffixes[0])
                 )
             else:
                 raise ValueError(
                     "Keyword '%s' of kind '%s' must end in "
-                    " one of '%s'"
-                    % (keyword, ParserKind.str(kind), " ".join(allowedSuffixes))
+                    " one of '%s'" % (keyword, kind.name, " ".join(allowedSuffixes))
                 )
 
         if parser is not None and kind != ParserKind.CUSTOM:
