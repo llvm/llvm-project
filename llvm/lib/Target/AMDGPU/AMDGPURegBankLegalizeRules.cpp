@@ -1766,8 +1766,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivV2S32}, {{VgprV2S32}, {IntrId, Vgpr32}}});
 
   addRulesForIOpcs(
-      {amdgcn_cvt_scalef32_sr_bf8_bf16, amdgcn_cvt_scalef32_sr_fp8_bf16,
-       amdgcn_cvt_scalef32_sr_bf8_f16, amdgcn_cvt_scalef32_sr_fp8_f16})
+      {amdgcn_cvt_scalef32_sr_bf8_f16, amdgcn_cvt_scalef32_sr_fp8_f16})
       .Any({{DivS32},
             {{Vgpr32}, {IntrId, Vgpr32, Vgpr16, Vgpr32, Vgpr32, Imm}}});
 
