@@ -1,6 +1,7 @@
 #include "PdbAstBuilderClang.h"
 
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
+#include "llvm/DebugInfo/CodeView/Formatters.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/RecordName.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
@@ -61,8 +62,15 @@ struct CreateMethodDecl : public TypeVisitorCallbacks {
     assert(method_list_type.kind() == LF_METHODLIST);
 
     MethodOverloadListRecord method_list;
-    llvm::cantFail(TypeDeserializer::deserializeAs<MethodOverloadListRecord>(
-        method_list_type, method_list));
+    llvm::Error err = TypeDeserializer::deserializeAs<MethodOverloadListRecord>(
+        method_list_type, method_list);
+    if (err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                     "Failed to deserialize {1} as MethodOverloadList: {0}",
+                     method_list_idx);
+      // Continue even if we couldn't deserialize.
+      return llvm::Error::success();
+    }
 
     for (const OneMethodRecord &method : method_list.Methods) {
       if (method.getType().getIndex() == func_type_index.getIndex())
@@ -471,8 +479,14 @@ PdbAstBuilderClang::GetParentClangDeclContext(PdbSymUid uid) {
     case SymbolKind::S_PROCREF:
     case SymbolKind::S_LPROCREF: {
       ProcRefSym ref{global.kind()};
-      llvm::cantFail(
-          SymbolDeserializer::deserializeAs<ProcRefSym>(global, ref));
+      llvm::Error err =
+          SymbolDeserializer::deserializeAs<ProcRefSym>(global, ref);
+      if (err) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                       "Failed to deserialize {1} as ProcRef: {0}",
+                       uid.asGlobalSym());
+        return nullptr;
+      }
       PdbCompilandSymId cu_sym_id{ref.modi(), ref.SymOffset};
       return GetParentClangDeclContext(cu_sym_id);
     }
@@ -809,16 +823,21 @@ CompilerType PdbAstBuilderClang::GetOrCreateTypedefType(PdbGlobalSymId id) {
   PdbIndex &index = pdb->GetIndex();
   CVSymbol sym = index.ReadSymbolRecord(id);
   lldbassert(sym.kind() == S_UDT);
-  UDTSym udt = llvm::cantFail(SymbolDeserializer::deserializeAs<UDTSym>(sym));
+  llvm::Expected<UDTSym> udt = SymbolDeserializer::deserializeAs<UDTSym>(sym);
+  if (!udt) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), udt.takeError(),
+                   "Failed to deserialize {1} as UDT: {0}", id);
+    return CompilerType();
+  }
 
   clang::DeclContext *scope = GetParentClangDeclContext(id);
 
-  PdbTypeSymId real_type_id{udt.Type, false};
+  PdbTypeSymId real_type_id{udt->Type, false};
   clang::QualType qt = GetOrCreateClangType(real_type_id);
   if (qt.isNull() || !scope)
     return CompilerType();
 
-  std::string uname = std::string(DropNameScope(udt.Name));
+  std::string uname = std::string(DropNameScope(udt->Name));
 
   CompilerType ct = ToCompilerType(qt).CreateTypedef(
       uname.c_str(), ToCompilerDeclContext(scope), 0);
@@ -845,15 +864,25 @@ clang::QualType PdbAstBuilderClang::CreateType(PdbTypeSymId type) {
 
   if (cvt.kind() == LF_MODIFIER) {
     ModifierRecord modifier;
-    llvm::cantFail(
-        TypeDeserializer::deserializeAs<ModifierRecord>(cvt, modifier));
+    llvm::Error err =
+        TypeDeserializer::deserializeAs<ModifierRecord>(cvt, modifier);
+    if (err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                     "Failed to deserialize {1} as Modifier: {0}", type.index);
+      return {};
+    }
     return CreateModifierType(modifier);
   }
 
   if (cvt.kind() == LF_POINTER) {
     PointerRecord pointer;
-    llvm::cantFail(
-        TypeDeserializer::deserializeAs<PointerRecord>(cvt, pointer));
+    llvm::Error err =
+        TypeDeserializer::deserializeAs<PointerRecord>(cvt, pointer);
+    if (err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                     "Failed to deserialize {1} as Pointer: {0}", type.index);
+      return {};
+    }
     return CreatePointerType(pointer);
   }
 
@@ -868,21 +897,37 @@ clang::QualType PdbAstBuilderClang::CreateType(PdbTypeSymId type) {
 
   if (cvt.kind() == LF_ARRAY) {
     ArrayRecord ar;
-    llvm::cantFail(TypeDeserializer::deserializeAs<ArrayRecord>(cvt, ar));
+    llvm::Error err = TypeDeserializer::deserializeAs<ArrayRecord>(cvt, ar);
+    if (err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                     "Failed to deserialize {1} as Array: {0}", type.index);
+      return {};
+    }
     return CreateArrayType(ar);
   }
 
   if (cvt.kind() == LF_PROCEDURE) {
     ProcedureRecord pr;
-    llvm::cantFail(TypeDeserializer::deserializeAs<ProcedureRecord>(cvt, pr));
+    llvm::Error err = TypeDeserializer::deserializeAs<ProcedureRecord>(cvt, pr);
+    if (err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                     "Failed to deserialize {1} as Procedure: {0}", type.index);
+      return {};
+    }
     return CreateFunctionType(pr.ArgumentList, pr.ReturnType, pr.CallConv,
                               /*type_quals=*/0);
   }
 
   if (cvt.kind() == LF_MFUNCTION) {
     MemberFunctionRecord mfr;
-    llvm::cantFail(
-        TypeDeserializer::deserializeAs<MemberFunctionRecord>(cvt, mfr));
+    llvm::Error err =
+        TypeDeserializer::deserializeAs<MemberFunctionRecord>(cvt, mfr);
+    if (err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                     "Failed to deserialize {1} as MemberFunction: {0}",
+                     type.index);
+      return {};
+    }
     unsigned int type_quals = 0;
     if (!mfr.ThisType.isNoneType()) {
       clang::QualType this_type = GetOrCreateClangType(mfr.getThisType());
@@ -971,8 +1016,14 @@ clang::FunctionDecl *PdbAstBuilderClang::CreateFunctionDecl(
 
     CVType cvt = index.tpi().getType(func_ti);
     MemberFunctionRecord func_record(static_cast<TypeRecordKind>(cvt.kind()));
-    llvm::cantFail(TypeDeserializer::deserializeAs<MemberFunctionRecord>(
-        cvt, func_record));
+    llvm::Error err =
+        TypeDeserializer::deserializeAs<MemberFunctionRecord>(cvt, func_record);
+    if (err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                     "Failed to deserialize {1} as MemberFunction: {0}",
+                     func_ti);
+      return nullptr;
+    }
     TypeIndex class_index = func_record.getClassType();
 
     CVType parent_cvt = index.tpi().getType(class_index);
@@ -1030,7 +1081,14 @@ clang::FunctionDecl *PdbAstBuilderClang::GetOrCreateInlinedFunctionDecl(
   CompilandIndexItem *cii = index.compilands().GetCompiland(inlinesite_id.modi);
   CVSymbol sym = cii->m_debug_stream.readSymbolAtOffset(inlinesite_id.offset);
   InlineSiteSym inline_site(static_cast<SymbolRecordKind>(sym.kind()));
-  cantFail(SymbolDeserializer::deserializeAs<InlineSiteSym>(sym, inline_site));
+  llvm::Error err =
+      SymbolDeserializer::deserializeAs<InlineSiteSym>(sym, inline_site);
+  if (err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                   "Failed to deserialize {1} as InlineSite: {0}",
+                   inlinesite_id);
+    return nullptr;
+  }
 
   // Inlinee is the id index to the function id record that is inlined.
   PdbTypeSymId func_id(inline_site.Inlinee, true);
@@ -1077,8 +1135,14 @@ PdbAstBuilderClang::CreateFunctionDeclFromId(PdbTypeSymId func_tid,
   switch (func_cvt->kind()) {
   case LF_MFUNC_ID: {
     MemberFuncIdRecord mfr;
-    cantFail(
-        TypeDeserializer::deserializeAs<MemberFuncIdRecord>(*func_cvt, mfr));
+    llvm::Error err =
+        TypeDeserializer::deserializeAs<MemberFuncIdRecord>(*func_cvt, mfr);
+    if (err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                     "Failed to deserialize {1} (IPI) as MemberFuncId: {0}",
+                     func_tid.index);
+      return nullptr;
+    }
     func_name = mfr.getName();
     func_ti = mfr.getFunctionType();
     PdbTypeSymId class_type_id(mfr.ClassType, false);
@@ -1087,7 +1151,14 @@ PdbAstBuilderClang::CreateFunctionDeclFromId(PdbTypeSymId func_tid,
   }
   case LF_FUNC_ID: {
     FuncIdRecord fir;
-    cantFail(TypeDeserializer::deserializeAs<FuncIdRecord>(*func_cvt, fir));
+    llvm::Error err =
+        TypeDeserializer::deserializeAs<FuncIdRecord>(*func_cvt, fir);
+    if (err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                     "Failed to deserialize {1} (IPI) as FuncId: {0}",
+                     func_tid.index);
+      return nullptr;
+    }
     func_name = fir.getName();
     func_ti = fir.getFunctionType();
     parent = FromCompilerDeclContext(GetTranslationUnitDecl());
@@ -1095,8 +1166,13 @@ PdbAstBuilderClang::CreateFunctionDeclFromId(PdbTypeSymId func_tid,
       CVType parent_cvt = index.ipi().getType(fir.ParentScope);
       if (parent_cvt.kind() == LF_STRING_ID) {
         StringIdRecord sir;
-        cantFail(
-            TypeDeserializer::deserializeAs<StringIdRecord>(parent_cvt, sir));
+        err = TypeDeserializer::deserializeAs<StringIdRecord>(parent_cvt, sir);
+        if (err) {
+          LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                         "Failed to deserialize {1} (IPI) as StringId: {0}",
+                         fir.ParentScope);
+          return nullptr;
+        }
         parent = GetOrCreateNamespaceDecl(sir.String.data(), *parent);
       }
     }
@@ -1135,7 +1211,12 @@ PdbAstBuilderClang::GetOrCreateFunctionDecl(PdbCompilandSymId func_id) {
   PdbIndex &index = pdb->GetIndex();
   CVSymbol cvs = index.ReadSymbolRecord(func_id);
   ProcSym proc(static_cast<SymbolRecordKind>(cvs.kind()));
-  llvm::cantFail(SymbolDeserializer::deserializeAs<ProcSym>(cvs, proc));
+  llvm::Error err = SymbolDeserializer::deserializeAs<ProcSym>(cvs, proc);
+  if (err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                   "Failed to deserialize {1} as Proc: {0}", func_id);
+    return nullptr;
+  }
 
   PdbTypeSymId type_id(proc.FunctionType);
   clang::QualType qt = GetOrCreateClangType(type_id);
@@ -1215,6 +1296,7 @@ void PdbAstBuilderClang::CreateFunctionParameters(
   std::vector<clang::ParmVarDecl *> params;
   for (uint32_t i = 0; i < param_count && begin != end;) {
     uint32_t record_offset = begin.offset();
+    PdbCompilandSymId sym_id(func_id.modi, record_offset);
     CVSymbol sym = *begin++;
 
     TypeIndex param_type;
@@ -1222,29 +1304,52 @@ void PdbAstBuilderClang::CreateFunctionParameters(
     switch (sym.kind()) {
     case S_REGREL32: {
       RegRelativeSym reg(SymbolRecordKind::RegRelativeSym);
-      cantFail(SymbolDeserializer::deserializeAs<RegRelativeSym>(sym, reg));
+      llvm::Error err =
+          SymbolDeserializer::deserializeAs<RegRelativeSym>(sym, reg);
+      if (err) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                       "Failed to deserialize {1} as RegRelative: {0}", sym_id);
+        return;
+      }
       param_type = reg.Type;
       param_name = reg.Name;
       break;
     }
     case S_REGREL32_INDIR: {
       RegRelativeIndirSym reg(SymbolRecordKind::RegRelativeIndirSym);
-      cantFail(
-          SymbolDeserializer::deserializeAs<RegRelativeIndirSym>(sym, reg));
+      llvm::Error err =
+          SymbolDeserializer::deserializeAs<RegRelativeIndirSym>(sym, reg);
+      if (err) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                       "Failed to deserialize {1} as RegRelativeIndir: {0}",
+                       sym_id);
+        return;
+      }
       param_type = reg.Type;
       param_name = reg.Name;
       break;
     }
     case S_REGISTER: {
       RegisterSym reg(SymbolRecordKind::RegisterSym);
-      cantFail(SymbolDeserializer::deserializeAs<RegisterSym>(sym, reg));
+      llvm::Error err =
+          SymbolDeserializer::deserializeAs<RegisterSym>(sym, reg);
+      if (err) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                       "Failed to deserialize {1} as Register: {0}", sym_id);
+        return;
+      }
       param_type = reg.Index;
       param_name = reg.Name;
       break;
     }
     case S_LOCAL: {
       LocalSym local(SymbolRecordKind::LocalSym);
-      cantFail(SymbolDeserializer::deserializeAs<LocalSym>(sym, local));
+      llvm::Error err = SymbolDeserializer::deserializeAs<LocalSym>(sym, local);
+      if (err) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                       "Failed to deserialize {1} as Local: {0}", sym_id);
+        return;
+      }
       if ((local.Flags & LocalSymFlags::IsParameter) == LocalSymFlags::None)
         continue;
       param_type = local.Type;
@@ -1332,8 +1437,13 @@ clang::QualType PdbAstBuilderClang::CreateFunctionType(
   TpiStream &stream = index.tpi();
   CVType args_cvt = stream.getType(args_type_idx);
   ArgListRecord args;
-  llvm::cantFail(
-      TypeDeserializer::deserializeAs<ArgListRecord>(args_cvt, args));
+  llvm::Error err =
+      TypeDeserializer::deserializeAs<ArgListRecord>(args_cvt, args);
+  if (err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                   "Failed to deserialize {1} as ArgList: {0}", args_type_idx);
+    return {};
+  }
 
   llvm::ArrayRef<TypeIndex> arg_indices = llvm::ArrayRef(args.ArgIndices);
   bool is_variadic = IsCVarArgsFunction(arg_indices);
