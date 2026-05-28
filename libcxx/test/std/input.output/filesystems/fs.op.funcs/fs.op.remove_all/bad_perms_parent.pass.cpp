@@ -22,20 +22,19 @@
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
 namespace fs = std::filesystem;
-using namespace fs;
 
 int main(int, char**) {
   scoped_test_env env;
 
-  const path parent_dir = env.create_dir("parent");
-  const path child_dir  = env.create_dir(parent_dir / "child");
-  permissions(parent_dir, perms::owner_read | perms::owner_write);
+  const fs::path parent_dir = env.create_dir("parent");
+  const fs::path child_dir  = env.create_dir(parent_dir / "child");
+  permissions(parent_dir, fs::perms::owner_read | fs::perms::owner_write);
 
   const auto BadRet = static_cast<std::uintmax_t>(-1);
   std::error_code ec;
   assert(fs::remove_all(parent_dir, ec) == BadRet);
   assert(ec == std::errc::permission_denied);
 
-  permissions(parent_dir, perms::owner_all);
+  permissions(parent_dir, fs::perms::owner_all);
   return 0;
 }
