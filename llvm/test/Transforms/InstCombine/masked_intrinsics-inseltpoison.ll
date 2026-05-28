@@ -24,6 +24,14 @@ define <2 x double> @load_onemask(ptr %ptr, <2 x double> %passthru)  {
   ret <2 x double> %res
 }
 
+define <2 x double> @load_poisonmask(ptr %ptr, <2 x double> %passthru)  {
+; CHECK-LABEL: @load_poisonmask(
+; CHECK-NEXT:    ret <2 x double> [[PASSTHRU:%.*]]
+;
+  %res = call <2 x double> @llvm.masked.load.v2f64.p0(ptr %ptr, i32 1, <2 x i1> splat(i1 poison), <2 x double> %passthru)
+  ret <2 x double> %res
+}
+
 @G = external global i8
 
 define <2 x double> @load_cemask(ptr %ptr, <2 x double> %passthru)  {

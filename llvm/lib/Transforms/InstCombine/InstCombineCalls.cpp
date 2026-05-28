@@ -296,7 +296,7 @@ Value *InstCombinerImpl::simplifyMaskedLoad(IntrinsicInst &II) {
 
   // If the mask is all ones or poisons, this is a plain vector load of the 1st
   // argument.
-  if (match(Mask, m_AllOnes()) || match(Mask, m_Poison())) {
+  if (match(Mask, m_AllOnesOrPoison())) {
     LoadInst *L = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
                                             "unmaskedload");
     L->copyMetadata(II);
@@ -327,12 +327,12 @@ Instruction *InstCombinerImpl::simplifyMaskedStore(IntrinsicInst &II) {
     return nullptr;
 
   // If the mask is all zeros or poisons, this instruction does nothing.
-  if (match(ConstMask, m_Zero()) || match(ConstMask, m_Poison()))
+  if (match(ConstMask, m_ZeroOrPoison()))
     return eraseInstFromFunction(II);
 
   // If the mask is all ones or poisons, this is a plain vector store of the 1st
   // argument.
-  if (match(ConstMask, m_AllOnes())) {
+  if (match(ConstMask, m_AllOnesOrPoison())) {
     StoreInst *S =
         new StoreInst(II.getArgOperand(0), StorePtr, false, Alignment);
     S->copyMetadata(II);
@@ -391,18 +391,20 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
     return nullptr;
 
   // If the mask is all zeros or poisons, a scatter does nothing.
-  if (match(ConstMask, m_Zero()) || match(ConstMask, m_Poison()))
+  if (match(ConstMask, m_ZeroOrPoison()))
     return eraseInstFromFunction(II);
 
   // Vector splat address -> scalar store
   if (auto *SplatPtr = getSplatValue(II.getArgOperand(1))) {
     // scatter(splat(value), splat(ptr), non-zero-mask) -> store value, ptr
     if (auto *SplatValue = getSplatValue(II.getArgOperand(0))) {
-      Align Alignment = II.getParamAlign(1).valueOrOne();
-      StoreInst *S =
-          new StoreInst(SplatValue, SplatPtr, /*IsVolatile=*/false, Alignment);
-      S->copyMetadata(II);
-      return S;
+      if (maskContainsAllOneOrUndef(ConstMask)) {
+        Align Alignment = II.getParamAlign(1).valueOrOne();
+        StoreInst *S =
+            new StoreInst(SplatValue, SplatPtr, /*IsVolatile=*/false, Alignment);
+        S->copyMetadata(II);
+        return S;
+      }
     }
     // scatter(vector, splat(ptr), splat(true)) -> store extract(vector,
     // lastlane), ptr

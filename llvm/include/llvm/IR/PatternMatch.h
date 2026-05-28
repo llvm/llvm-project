@@ -497,6 +497,10 @@ inline cst_pred_ty<is_all_ones, false> m_AllOnesForbidPoison() {
   return cst_pred_ty<is_all_ones, false>();
 }
 
+inline auto m_AllOnesOrPoison() {
+  return m_CombineOr(m_AllOnes(), m_Poison());
+}
+
 struct is_maxsignedvalue {
   bool isValue(const APInt &C) const { return C.isMaxSignedValue(); }
 };
@@ -587,6 +591,10 @@ struct is_zero {
 /// Match any null constant or a vector with all elements equal to 0.
 /// For vectors, this includes constants with undefined elements.
 inline is_zero m_Zero() { return is_zero(); }
+
+inline auto m_ZeroOrPoison() {
+  return m_CombineOr(m_Zero(), m_Poison());
+}
 
 struct is_power2 {
   bool isValue(const APInt &C) const { return C.isPowerOf2(); }
