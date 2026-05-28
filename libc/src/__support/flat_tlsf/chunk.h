@@ -14,13 +14,13 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FLAT_TLSF_CHUNK_H
 #define LLVM_LIBC_SRC___SUPPORT_FLAT_TLSF_CHUNK_H
 
+#include "src/__support/endian_internal.h"
 #include "src/__support/flat_tlsf/bit_utils.h"
 #include "src/__support/flat_tlsf/common.h"
 #include "src/__support/flat_tlsf/node.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
-#include "src/__support/endian_internal.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace flat_tlsf {

@@ -46,7 +46,8 @@ class Heap {
   LIBC_INLINE cpp::optional<SearchResult>
   full_search_bin(uint32_t bin, size_t required_size, size_t align_mask) {
     for (Node *node = gap_list[bin]; node != nullptr; node = node->next) {
-      size_t size = chunk::read_big_endian<size_t>(chunk::gap_node_to_size(node));
+      size_t size =
+          chunk::read_big_endian<size_t>(chunk::gap_node_to_size(node));
 
       Byte *base = chunk::gap_node_to_base(node);
       Byte *end = base + size;
@@ -298,8 +299,8 @@ public:
     // the presence of an end flag.
     Byte *below_tag_ptr = chunk::end_to_tag(chunk_base);
     if (!tag::is_allocated(chunk::read_word<Byte>(below_tag_ptr))) {
-      size_t below_size =
-          chunk::read_big_endian<size_t>(chunk::gap_end_to_size_and_flag(chunk_base));
+      size_t below_size = chunk::read_big_endian<size_t>(
+          chunk::gap_end_to_size_and_flag(chunk_base));
 
       Byte *below_base = chunk_base - below_size;
       deregister_gap(below_base, below_size);
@@ -426,7 +427,8 @@ public:
 
     size_t shift = (HEADER_SIZE + align - 1) & ~(align - 1);
     size_t shift_exponent = static_cast<size_t>(cpp::countr_zero(shift));
-    LIBC_ASSERT(shift_exponent <= SHIFT_MASK && "Alignment too large for allocation header");
+    LIBC_ASSERT(shift_exponent <= SHIFT_MASK &&
+                "Alignment too large for allocation header");
     if (shift_exponent > SHIFT_MASK)
       return nullptr;
 
@@ -456,7 +458,8 @@ public:
     size_t header_val = *header;
 
     size_t shift_exponent = header_val & SHIFT_MASK;
-    LIBC_ASSERT(shift_exponent >= MIN_SHIFT_EXPONENT && "Invalid or double freed pointer");
+    LIBC_ASSERT(shift_exponent >= MIN_SHIFT_EXPONENT &&
+                "Invalid or double freed pointer");
     if (shift_exponent < MIN_SHIFT_EXPONENT)
       return;
 
