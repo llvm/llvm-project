@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_ACOSH_H
 
 #include "log.h"
+#include "log1p.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/multiply_add.h"
@@ -43,16 +44,19 @@ LIBC_INLINE double acosh(double x) {
         fputil::raise_except_if_required(FE_INVALID);
         return FPBits::quiet_nan().get_val();
       }
-      return x; // +inf (negative inf is excluded by x <= 1.0 above)
+      return x; // +inf (negative inf excluded by x <= 1.0 above)
     }
-    // acosh(x) = log(2x) + O(1/x^2); for x >= 2^28 the correction is < 0.5 ULP.
+    // acosh(x) = log(2x) + O(1/x^2); for x >= 2^28 the correction < 0.5 ULP.
     constexpr double LOG_2 = 0x1.62e42fefa39efp-1;
     return math::log(x) + LOG_2;
   }
 
-  // General case: acosh(x) = log(x + sqrt(x^2 - 1)).
-  double x2m1 = fputil::multiply_add(x, x, -1.0);
-  return math::log(x + fputil::sqrt<double>(x2m1));
+  // General case: acosh(x) = log1p(t + sqrt(t * (t + 2)))  where t = x - 1.
+  // Using log1p avoids cancellation when x is close to 1 and
+  // x + sqrt(x^2 - 1) - 1 is a small number.
+  double t = x - 1.0;
+  double s = fputil::sqrt<double>(fputil::multiply_add(t, t, 2.0 * t));
+  return math::log1p(t + s);
 }
 
 } // namespace math

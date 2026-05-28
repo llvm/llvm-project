@@ -102,6 +102,7 @@ add_header_library(
     acosh.h
   DEPENDS
     .log
+    .log1p
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
