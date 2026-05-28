@@ -2929,48 +2929,6 @@ bool llvm::removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
   return Changed;
 }
 
-/// Check if two !mem.cache_hint metadata nodes are equal.
-static bool areMemCacheHintMetadataEqual(const MDNode *A, const MDNode *B) {
-  if (A == B)
-    return true;
-  if (!A || !B || A->getNumOperands() != B->getNumOperands())
-    return false;
-
-  for (unsigned I = 0, E = A->getNumOperands(); I != E; I += 2) {
-    if (mdconst::extract<ConstantInt>(A->getOperand(I))->getValue() !=
-        mdconst::extract<ConstantInt>(B->getOperand(I))->getValue())
-      return false;
-
-    const auto *AHintNode = cast<MDNode>(A->getOperand(I + 1));
-    const auto *BHintNode = cast<MDNode>(B->getOperand(I + 1));
-    if (AHintNode->getNumOperands() != BHintNode->getNumOperands())
-      return false;
-
-    for (unsigned J = 0, JE = AHintNode->getNumOperands(); J != JE; J += 2) {
-      if (cast<MDString>(AHintNode->getOperand(J))->getString() !=
-          cast<MDString>(BHintNode->getOperand(J))->getString())
-        return false;
-
-      Metadata *AValue = AHintNode->getOperand(J + 1).get();
-      Metadata *BValue = BHintNode->getOperand(J + 1).get();
-      const auto *AValueStr = dyn_cast<MDString>(AValue);
-      const auto *BValueStr = dyn_cast<MDString>(BValue);
-      if (AValueStr || BValueStr) {
-        if (!AValueStr || !BValueStr ||
-            AValueStr->getString() != BValueStr->getString())
-          return false;
-        continue;
-      }
-      // If the hint node value is not a string, it must be an integer constant.
-      if (mdconst::extract<ConstantInt>(AValue)->getValue() !=
-          mdconst::extract<ConstantInt>(BValue)->getValue())
-        return false;
-    }
-  }
-
-  return true;
-}
-
 /// If AAOnly is set, only intersect alias analysis metadata and preserve other
 /// known metadata. Unknown metadata is always dropped.
 static void combineMetadata(Instruction *K, const Instruction *J,
@@ -3077,12 +3035,8 @@ static void combineMetadata(Instruction *K, const Instruction *J,
       case LLVMContext::MD_mem_cache_hint:
         // Preserve !mem.cache_hint only if it is present and equivalent on both
         // instructions.
-        if (!AAOnly) {
-          if (areMemCacheHintMetadataEqual(KMD, JMD))
-            K->setMetadata(Kind, JMD);
-          else
-            K->setMetadata(Kind, nullptr);
-        }
+        if (!AAOnly && KMD != JMD)
+          K->setMetadata(Kind, nullptr);
         break;
       case LLVMContext::MD_noalias_addrspace:
         if (DoesKMove)
@@ -3101,9 +3055,7 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         break;
       case LLVMContext::MD_alloc_token:
         // Preserve !alloc_token if both K and J have it, and they are equal.
-        if (KMD == JMD)
-          K->setMetadata(Kind, JMD);
-        else
+        if (KMD != JMD)
           K->setMetadata(Kind, nullptr);
         break;
       }

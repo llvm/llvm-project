@@ -7828,38 +7828,39 @@ different value.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``!mem.cache_hint`` metadata may be attached to any instruction that reads
-or writes memory, except non-intrinsic calls. Cache hints are not
-permitted on function calls because their memory behavior
-depends on attributes, which may change independently.
+or writes memory, except non-intrinsic calls. Cache hints are not permitted on
+function calls because their memory behavior depends on attributes, which may
+change independently.
 
-The ``!mem.cache_hint`` metadata provides target-specific cache control hints for the
-memory operation. This metadata is purely a performance hint: dropping or ignoring it
-must not change the observable behavior of the program (particularly, cache hints do not affect memory model semantics).
+The ``!mem.cache_hint`` metadata provides target-specific cache control hints
+for the memory operation. This metadata is purely a performance hint: dropping
+or ignoring it must not change the observable behavior of the program
+(particularly, cache hints do not affect memory model semantics).
 
-The ``!mem.cache_hint`` node must contain an even number of entries, alternating between
-``i32`` operand numbers and metadata hint nodes.
+The ``!mem.cache_hint`` node must contain an even number of entries,
+alternating between ``i32`` operand numbers and metadata hint nodes.
 
-Each operand number identifies the pointer operand to which the following hint node applies.
-For non-call instructions, the operand number is the IR operand index.
-For intrinsic calls, the operand number is the call argument index.
-Operand numbers must be unique within
-a ``!mem.cache_hint`` node and must refer to a pointer-typed operand.
+Each operand number identifies the pointer operand to which the following hint
+node applies. For non-call instructions, the operand number is the IR operand
+index. For intrinsic calls, the operand number is the call argument index.
+Operand numbers must be unique within a ``!mem.cache_hint`` node and must refer
+to a pointer-typed operand.
 
-For example, for a ``load``, the pointer is operand 0. For a ``store``, the value is
-operand 0 and the pointer is operand 1. For intrinsic calls such as
+For example, for a ``load``, the pointer is operand 0. For a ``store``, the
+value is operand 0 and the pointer is operand 1. For intrinsic calls such as
 ``llvm.memcpy``, operand numbers correspond to argument positions: e.g.,
 destination is argument 0 and source is argument 1.
 
 Each hint node is a metadata node containing target-prefixed key/value pairs.
-Keys must be strings, and values must be either strings or integer constants. Keys within
-a single hint node must be unique.
+Keys must be strings, and values must be either strings or integer constants.
+Keys within a single hint node must be unique.
 
 The hint node keys are prefixed with a target identifier (e.g., ``nvvm.``) and
 their interpretation is target-dependent. Each hint must describe a property of
-the individual memory access through the corresponding pointer operand. The IR verifier enforces only
-the structural rules above; validation of target-specific keys and values is
-performed by the corresponding backend. Unsupported properties may be silently
-ignored during code generation.
+the individual memory access through the corresponding pointer operand. The IR
+verifier enforces only the structural rules above; validation of target-specific
+keys and values is performed by the corresponding backend. Unsupported
+properties may be silently ignored during code generation.
 
 The following examples use ``nvvm.`` prefixed keys for NVIDIA GPU targets.
 Other targets may define their own prefixed keys.
@@ -7889,8 +7890,9 @@ Example: memcpy with per-operand hints:
 
 .. code-block:: llvm
 
-    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %d, ptr addrspace(1) %s,
-                                      i64 16, i1 false), !mem.cache_hint !0
+    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %d,
+                                      ptr addrspace(1) %s, i64 16, i1 false),
+                                      !mem.cache_hint !0
 
     !0 = !{ i32 0, !1, i32 1, !2 }
     !1 = !{ !"nvvm.l1_eviction", !"last" }
