@@ -33,7 +33,8 @@ Error AsyncQueueTy::deinit() {
   reset();
 
   if (CmdList)
-    CALL_ZE_RET_ERROR(zeCommandListDestroy, CmdList);
+    if (auto Err = Device.releaseImmCmdList(CmdList))
+      return Err;
 
   CmdList = nullptr;
   return Plugin::success();

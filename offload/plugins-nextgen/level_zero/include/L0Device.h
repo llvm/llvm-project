@@ -372,6 +372,12 @@ public:
     return createImmCmdList(getComputeEngine(), getComputeIndex(), InOrder);
   }
 
+  /// Release an immediate command list.
+  Error releaseImmCmdList(ze_command_list_handle_t CmdList) {
+    CALL_ZE_RET_ERROR(zeCommandListDestroy, CmdList);
+    return Plugin::success();
+  }
+
   /// Enqueue non-blocking memory copy.
   Error enqueueMemCopy(void *Dst, const void *Src, size_t Size,
                        __tgt_async_info *AsyncInfo) {
