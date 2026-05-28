@@ -10061,16 +10061,17 @@ def SentinelDocs : Documentation {
   let Content = [{
 The ``sentinel`` attribute can be applied to variadic functions and pointers to
 variadic functions, to diagnose each function call that do not pass a sentinel
-value at the end of the argument list. It checks if a null pointer constant
-exists at the end of the argument list by default, or at the (N+1)th position
-starting from the end when an argument is provided.
+value (a null pointer constant) in the argument list, at the end by default.
+The attribute accepts 2 optional parameters: the first parameter is the
+position of the expected sentinel value, starting from the last parameter which
+defaults to 0, and the second parameter describes whether the last fixed
+parameter is treated as a valid sentinel value when set to 1 (defaults to 0).
+The attribute is also supported with blocks and in Objective-C.
 
 .. code-block:: c
-
-  #include <stddef.h>
-
   void foo(const char*, ...) __attribute__((sentinel));
   void bar(int, ...) __attribute__((sentinel(1)));
+  void baz(const char*, const char*, ...) __attribute__((sentinel(0, 1)));
 
   void example() {
     foo("Example", (void*)0);
@@ -10081,8 +10082,32 @@ starting from the end when an argument is provided.
     bar(1, 2, 3, nullptr, 4);   // OK: `nullptr` is valid in C23
     bar(1, 2, 3, 4, NULL);      // Not OK
 
+    baz("Test", "with", "multiple", "args", NULL);
+    baz("One", NULL);           // OK: last fixed parameter is a valid sentinel
+
     void (*ptr) (int arg, ...) __attribute__ ((__sentinel__));
     ptr(1, 2, 3, NULL);
+  }
+
+.. code-block:: c++
+  struct Ty {
+      int value;
+
+      template<typename T>
+      auto&& foo(T&& val, ...) __attribute__((sentinel(1))) {
+          return std::forward<T>(val);
+      }
+
+      template<class Self>
+      auto&& bar(this Self&& self, ...) __attribute__((sentinel(1))) {
+          return std::forward<Self>(self).value;
+      }
+  };
+
+  void example2() {
+      auto sty = Ty{};
+      sty.foo(1, nullptr, 3);
+      sty.bar(1, nullptr, 3);
   }
   }];
 }
