@@ -2201,8 +2201,12 @@ public:
       : VPRecipeWithIRFlags(VPRecipeBase::VPWidenGEPSC, Operands,
                             getScalarTypeOrInfer(Operands[0]), Flags, DL),
         SourceElementTy(SourceElementTy) {
-    if (UV)
+    if (UV) {
       setUnderlyingValue(UV);
+      [[maybe_unused]] SmallVector<std::pair<unsigned, MDNode *>> Metadata;
+      getMetadataToPropagate(UV, Metadata);
+      assert(Metadata.empty() && "unexpected metadata on GEP");
+    }
   }
 
   ~VPWidenGEPRecipe() override = default;
