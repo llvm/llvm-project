@@ -206,20 +206,29 @@ CandidateHeuristics::getHWUIFromFlavor(InstructionFlavor Flavor) {
   return nullptr;
 }
 
-unsigned CandidateHeuristics::getHWUICyclesForSU(SUnit *SU) {
-  assert(SchedModel && SchedModel->hasInstrSchedModel());
-  MachineInstr *MI = SU->getInstr();
+unsigned CandidateHeuristics::getMaxBlockingCycles(const MCSchedClassDesc *SC,
+                                                   const MachineInstr *MI) {
   // Loads and stores are not pipelined
   if (MI->mayLoadOrStore())
     return SchedModel->computeInstrLatency(MI, false);
+
   unsigned ReleaseAtCycle = 0;
-  const MCSchedClassDesc *SC = DAG->getSchedClass(SU);
   for (TargetSchedModel::ProcResIter PI = SchedModel->getWriteProcResBegin(SC),
                                      PE = SchedModel->getWriteProcResEnd(SC);
        PI != PE; ++PI) {
     ReleaseAtCycle = std::max(ReleaseAtCycle, (unsigned)PI->ReleaseAtCycle);
   }
   return ReleaseAtCycle;
+}
+
+unsigned CandidateHeuristics::getHWUICyclesForSU(SUnit *SU) {
+  assert(SchedModel && SchedModel->hasInstrSchedModel());
+  return getMaxBlockingCycles(DAG->getSchedClass(SU), SU->getInstr());
+}
+
+unsigned CandidateHeuristics::getHWUICyclesForMI(MachineInstr *MI) {
+  assert(SchedModel && SchedModel->hasInstrSchedModel());
+  return getMaxBlockingCycles(SchedModel->resolveSchedClass(MI), MI);
 }
 
 void CandidateHeuristics::updateForScheduling(SUnit *SU) {
@@ -227,22 +236,6 @@ void CandidateHeuristics::updateForScheduling(SUnit *SU) {
       getHWUIFromFlavor(classifyFlavor(*SU->getInstr(), *SII));
   assert(HWUI);
   HWUI->markScheduled(SU, getHWUICyclesForSU(SU));
-}
-
-unsigned CandidateHeuristics::getHWUICyclesForMI(MachineInstr *MI) {
-  assert(SchedModel && SchedModel->hasInstrSchedModel());
-  // Loads and stores are not pipelined
-  if (MI->mayLoadOrStore())
-    return SchedModel->computeInstrLatency(MI, false);
-
-  unsigned ReleaseAtCycle = 0;
-  const MCSchedClassDesc *SC = SchedModel->resolveSchedClass(MI);
-  for (TargetSchedModel::ProcResIter PI = SchedModel->getWriteProcResBegin(SC),
-                                     PE = SchedModel->getWriteProcResEnd(SC);
-       PI != PE; ++PI) {
-    ReleaseAtCycle = std::max(ReleaseAtCycle, (unsigned)PI->ReleaseAtCycle);
-  }
-  return ReleaseAtCycle;
 }
 
 void CandidateHeuristics::initialize(ScheduleDAGMI *SchedDAG,
@@ -411,7 +404,8 @@ unsigned CandidateHeuristics::getStructuralStallCycles(SchedBoundary &Zone,
   }
 
   // Query HazardRecognizer for sequence-dependent hazard penalties.
-  if (Zone.HazardRec && Zone.HazardRec->isEnabled()) {
+  if (!DAG->hasVRegLiveness() && Zone.HazardRec &&
+      Zone.HazardRec->isEnabled()) {
     auto *HR = static_cast<GCNHazardRecognizer *>(Zone.HazardRec);
     Stall = std::max(Stall, HR->getHazardWaitStates(MI));
   }
@@ -460,6 +454,7 @@ bool CandidateHeuristics::tryEffectiveStall(
     Costs.Ready = ReadyCycle > CurrCycle ? ReadyCycle - CurrCycle : 0;
     Costs.Structural = getStructuralStallCycles(Zone, SU);
     Costs.Latency = Zone.getLatencyStallCycles(SU);
+<<<<<<< HEAD
     Costs.Buffer = getBufferFullStalls(SU);
     unsigned TryCarriedLatency =
         CarriedLatencies.contains(TryCand.SU->getInstr())
@@ -469,6 +464,13 @@ bool CandidateHeuristics::tryEffectiveStall(
         TryCarriedLatency > CurrCycle ? TryCarriedLatency - CurrCycle : 0;
     Costs.Effective = std::max({Costs.Ready, Costs.Structural, Costs.Latency,
                                 Costs.Buffer, Costs.Carried});
+=======
+    unsigned CarriedLatency = CarriedLatencies.lookup_or(SU->getInstr(), 0);
+    Costs.Carried = CarriedLatency > CurrCycle ? CarriedLatency - CurrCycle : 0;
+
+    Costs.Effective =
+        std::max({Costs.Ready, Costs.Structural, Costs.Latency, Costs.Carried});
+>>>>>>> bc92b4193270 (Claude Code review)
     return Costs;
   };
 

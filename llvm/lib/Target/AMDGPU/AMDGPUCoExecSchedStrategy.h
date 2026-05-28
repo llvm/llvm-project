@@ -306,6 +306,11 @@ protected:
   /// heuristics.
   void collectRegionSummary();
 
+  /// \returns the maximum blocking cycles according to the SchedModel for a
+  /// given MCSchedClassDesc \p SC
+  unsigned getMaxBlockingCycles(const MCSchedClassDesc *SC,
+                                const MachineInstr *MI);
+
   /// Compute the blocking cycles for the appropriate HardwareUnit given an \p
   /// SU
   unsigned getHWUICyclesForSU(SUnit *SU);
