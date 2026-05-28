@@ -135,7 +135,7 @@ void f13(void) {
   fp();
 }
 // CIR-LABEL: cir.func{{.*}} @f13()
-// CIR: %[[FP_ALLOCA:.*]] = cir.alloca !cir.ptr<!cir.func<()>>, !cir.ptr<!cir.ptr<!cir.func<()>>>, ["fp"]
+// CIR: %[[FP_ALLOCA:.*]] = cir.alloca "fp" {{.*}} !cir.ptr<!cir.func<()>> -> !cir.ptr<!cir.ptr<!cir.func<()>>>
 // CIR: %[[LOAD_FP:.*]] = cir.load align(8) atomic(seq_cst) %[[FP_ALLOCA]] : !cir.ptr<!cir.ptr<!cir.func<()>>>, !cir.ptr<!cir.func<()>>
 // CIR: cir.call %[[LOAD_FP]]() : (!cir.ptr<!cir.func<()>>) -> ()
 

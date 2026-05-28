@@ -40,9 +40,9 @@ Wrapper makeWrapper() {
 }
 
 // CIR: cir.func {{.*}} @_Z11makeWrapperv() -> !rec_Wrapper
-// CIR:   %[[RETVAL:.*]] = cir.alloca !rec_Wrapper, !cir.ptr<!rec_Wrapper>, ["__retval"]
-// CIR:   %[[CLEANUP_COND:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
-// CIR:   %[[AGG_TMP0:.*]] = cir.alloca !rec_std3A3Aunique_ptr3CBase3E, !cir.ptr<!rec_std3A3Aunique_ptr3CBase3E>, ["agg.tmp0"]
+// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} !rec_Wrapper -> !cir.ptr<!rec_Wrapper>
+// CIR:   %[[CLEANUP_COND:.*]] = cir.alloca "cleanup.cond" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
+// CIR:   %[[AGG_TMP0:.*]] = cir.alloca "agg.tmp0" {{.*}} !rec_std3A3Aunique_ptr3CBase3E -> !cir.ptr<!rec_std3A3Aunique_ptr3CBase3E>
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[FLAG:.*]] = cir.load{{.*}} %{{.*}}
 // CIR:     %[[FALSE:.*]] = cir.const #false
@@ -144,16 +144,16 @@ void APFixedPoint::add(int x) const {
 }
 
 // CIR: cir.func {{.*}} @_ZNK12APFixedPoint3addEi(%{{.*}}: !cir.ptr<!rec_APFixedPoint>{{.*}}, %{{.*}}: !s32i{{.*}})
-// CIR:   %[[X_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
-// CIR:   %[[THISVAL:.*]] = cir.alloca !rec_APInt, !cir.ptr<!rec_APInt>, ["ThisVal"]
-// CIR:   %[[CLEANUP_COND_TRUE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
-// CIR:   %[[CLEANUP_COND_FALSE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
+// CIR:   %[[X_ADDR:.*]] = cir.alloca "x" {{.*}} init !s32i -> !cir.ptr<!s32i>
+// CIR:   %[[THISVAL:.*]] = cir.alloca "ThisVal" {{.*}} !rec_APInt -> !cir.ptr<!rec_APInt>
+// CIR:   %[[CLEANUP_COND_TRUE:.*]] = cir.alloca "cleanup.cond" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
+// CIR:   %[[CLEANUP_COND_FALSE:.*]] = cir.alloca "cleanup.cond" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
 // CIR:   cir.cleanup.scope {
 // CIR:     cir.scope {
 // CIR:       %[[X:.*]] = cir.load{{.*}} %[[X_ADDR]]
 // CIR:       %[[X_BOOL:.*]] = cir.cast int_to_bool %[[X]]
 // CIR:       cir.if %[[X_BOOL]] {
-// CIR:         %[[AGG_TMP:.*]] = cir.alloca !rec_APInt, !cir.ptr<!rec_APInt>, ["agg.tmp.ensured"]
+// CIR:         %[[AGG_TMP:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} !rec_APInt -> !cir.ptr<!rec_APInt>
 // CIR:         cir.cleanup.scope {
 // CIR:           %[[X2:.*]] = cir.load{{.*}} %[[X_ADDR]]
 // CIR:           %[[X2_BOOL:.*]] = cir.cast int_to_bool %[[X2]]
@@ -278,17 +278,17 @@ void makeEntry() {
 }
 
 // CIR: cir.func {{.*}} @_Z9makeEntryv()
-// CIR:   %[[REF_TMP:.*]] = cir.alloca !rec_Iter, !cir.ptr<!rec_Iter>, ["ref.tmp0"]
-// CIR:   %[[CLEANUP_COND:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
-// CIR:   %[[AGG_TMP0:.*]] = cir.alloca !rec_Path, !cir.ptr<!rec_Path>, ["agg.tmp0"]
+// CIR:   %[[REF_TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} !rec_Iter -> !cir.ptr<!rec_Iter>
+// CIR:   %[[CLEANUP_COND:.*]] = cir.alloca "cleanup.cond" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
+// CIR:   %[[AGG_TMP0:.*]] = cir.alloca "agg.tmp0" {{.*}} !rec_Path -> !cir.ptr<!rec_Path>
 // CIR:   cir.cleanup.scope {
 // CIR:     cir.cleanup.scope {
 // CIR:       %[[CALL:.*]] = cir.call @_ZN4ItercvbEv(%[[REF_TMP]])
 // CIR:       cir.if %[[CALL]] {
-// CIR:         %[[ENSURED_T:.*]] = cir.alloca !rec_Entry, !cir.ptr<!rec_Entry>, ["agg.tmp.ensured"]
+// CIR:         %[[ENSURED_T:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} !rec_Entry -> !cir.ptr<!rec_Entry>
 // CIR:         cir.call @_ZN5EntryC1Ev(%[[ENSURED_T]])
 // CIR:       } else {
-// CIR:         %[[ENSURED_F:.*]] = cir.alloca !rec_Entry, !cir.ptr<!rec_Entry>, ["agg.tmp.ensured"]
+// CIR:         %[[ENSURED_F:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} !rec_Entry -> !cir.ptr<!rec_Entry>
 // CIR:         %{{.*}} = cir.get_global @g_path
 // CIR:         %[[TRUE:.*]] = cir.const #true
 // CIR:         cir.store %[[TRUE]], %[[CLEANUP_COND]]

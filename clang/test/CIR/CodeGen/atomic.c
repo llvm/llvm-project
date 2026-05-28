@@ -1003,8 +1003,8 @@ float *atomic_fetch_ptr_to_ptr(float **ptr, int value) {
   // OGCG-LABEL: @atomic_fetch_ptr_to_ptr
 
   return __atomic_fetch_add(ptr, value, __ATOMIC_SEQ_CST);
-  // CIR: %[[PTR:.*]] = cir.alloca !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, ["ptr", init]
-  // CIR: %[[ATOMIC_TEMP:.*]] = cir.alloca !cir.ptr<!cir.float>, !cir.ptr<!cir.ptr<!cir.float>>, ["atomic-temp"] {alignment = 8 : i64}
+  // CIR: %[[PTR:.*]] = cir.alloca "ptr" {{.*}} init !cir.ptr<!cir.ptr<!cir.float>> -> !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>
+  // CIR: %[[ATOMIC_TEMP:.*]] = cir.alloca "atomic-temp" align(8) !cir.ptr<!cir.float> -> !cir.ptr<!cir.ptr<!cir.float>>
   // CIR: %[[PTR_LOAD:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, !cir.ptr<!cir.ptr<!cir.float>>
   // CIR: %[[PTR_CAST:.*]] = cir.cast bitcast %[[PTR_LOAD]] : !cir.ptr<!cir.ptr<!cir.float>> -> !cir.ptr<!s64i>
   // CIR: %[[RESULT:.*]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR_CAST]], %{{.*}} : (!cir.ptr<!s64i>, !s64i) -> !s64i
@@ -1023,8 +1023,8 @@ float *atomic_fetch_ptr_to_ptr2(float **ptr, int value) {
   // LLVM-LABEL: @atomic_fetch_ptr_to_ptr2
   // OGCG-LABEL: @atomic_fetch_ptr_to_ptr2
   return __atomic_add_fetch(ptr, value, __ATOMIC_SEQ_CST);
-  // CIR: %[[PTR:.*]] = cir.alloca !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, ["ptr", init]
-  // CIR: %[[ATOMIC_TEMP:.*]] = cir.alloca !cir.ptr<!cir.float>, !cir.ptr<!cir.ptr<!cir.float>>, ["atomic-temp"] {alignment = 8 : i64}
+  // CIR: %[[PTR:.*]] = cir.alloca "ptr" {{.*}} init !cir.ptr<!cir.ptr<!cir.float>> -> !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>
+  // CIR: %[[ATOMIC_TEMP:.*]] = cir.alloca "atomic-temp" align(8) !cir.ptr<!cir.float> -> !cir.ptr<!cir.ptr<!cir.float>>
   // CIR: %[[PTR_LOAD:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, !cir.ptr<!cir.ptr<!cir.float>>
   // CIR: %[[PTR_CAST:.*]] = cir.cast bitcast %[[PTR_LOAD]] : !cir.ptr<!cir.ptr<!cir.float>> -> !cir.ptr<!s64i>
   // CIR: %[[RESULT:.*]] = cir.atomic.fetch add seq_cst syncscope(system) %[[PTR_CAST]], %{{.*}} : (!cir.ptr<!s64i>, !s64i) -> !s64i

@@ -18,8 +18,8 @@ void foo() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z3foov()
-// CIR:         %[[FMT_RAW:.*]] = cir.alloca !cir.array<!s8i x 6>, !cir.ptr<!cir.array<!s8i x 6>, target_address_space(5)>, ["fmt"
-// CIR-NEXT:    %[[TMP_RAW:.*]] = cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>, target_address_space(5)>, ["tmp"
+// CIR:         %[[FMT_RAW:.*]] = cir.alloca "fmt" {{.*}} !cir.array<!s8i x 6> -> !cir.ptr<!cir.array<!s8i x 6>, target_address_space(5)>
+// CIR-NEXT:    %[[TMP_RAW:.*]] = cir.alloca "tmp" {{.*}} !cir.ptr<!s8i> -> !cir.ptr<!cir.ptr<!s8i>, target_address_space(5)>
 // CIR-DAG:     %[[FMT:.*]] = cir.cast address_space %[[FMT_RAW]] : !cir.ptr<!cir.array<!s8i x 6>, target_address_space(5)> -> !cir.ptr<!cir.array<!s8i x 6>>
 // CIR-DAG:     %[[TMP:.*]] = cir.cast address_space %[[TMP_RAW]] : !cir.ptr<!cir.ptr<!s8i>, target_address_space(5)> -> !cir.ptr<!cir.ptr<!s8i>>
 // CIR:         %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[FMT]] : !cir.ptr<!cir.array<!s8i x 6>> -> !cir.ptr<!s8i>

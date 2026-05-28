@@ -142,7 +142,7 @@ void use_TakesFunc() {
 }
 
 // CIR-LABEL: _Z9TakesFuncIFivEEDcRKT_
-// CIR-NEXT: %[[FUNC_ALLOCA:.*]] = cir.alloca !cir.ptr<!cir.func<() -> !s32i>>, !cir.ptr<!cir.ptr<!cir.func<() -> !s32i>>>, ["f", init, const]
+// CIR-NEXT: %[[FUNC_ALLOCA:.*]] = cir.alloca "f" {{.*}} init const !cir.ptr<!cir.func<() -> !s32i>> -> !cir.ptr<!cir.ptr<!cir.func<() -> !s32i>>>
 // CIR: %[[FUNC_LOAD:.*]] = cir.load %[[FUNC_ALLOCA]] : !cir.ptr<!cir.ptr<!cir.func<() -> !s32i>>>, !cir.ptr<!cir.func<() -> !s32i>>
 // CIR-NEXT: %[[CALL:.*]] = cir.call %[[FUNC_LOAD]]() : (!cir.ptr<!cir.func<() -> !s32i>>) -> (!s32i {llvm.noundef})
 
