@@ -182,6 +182,10 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
   AMDGPU::CanBeVOPD SecondCanBeVOPD =
       AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, IsVOPD3);
 
+  if (!(FirstCanBeVOPD.X && SecondCanBeVOPD.Y) &&
+      !(FirstCanBeVOPD.Y && SecondCanBeVOPD.X))
+    return std::nullopt;
+
   // If SecondMI depends on FirstMI they cannot execute at the same time.
   if (TII.hasRAWDependency(FirstMI, SecondMI))
     return std::nullopt;
@@ -194,12 +198,11 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
       return VOPDMatchInfo{&FirstMI, &SecondMI, IsVOPD3};
   }
 
-  // AllowSameVGPR relaxes the VGPR bank overlap check for source operands.
-  // Only enable it when there is no antidependency.
-  bool IsAntiDep = TII.hasRAWDependency(SecondMI, FirstMI);
-  AllowSameVGPR &= !IsAntiDep;
-
   if (FirstCanBeVOPD.Y && SecondCanBeVOPD.X) {
+    // AllowSameVGPR relaxes the VGPR bank overlap check for source operands.
+    // Only enable it when there is no antidependency.
+    bool IsAntiDep = TII.hasRAWDependency(SecondMI, FirstMI);
+    AllowSameVGPR &= !IsAntiDep;
     if (IsAntiDep && !TII.isVOPDAntidependencyAllowed(SecondMI))
       return std::nullopt;
     if (checkVOPDRegConstraints(TII, SecondMI, FirstMI, IsVOPD3, AllowSameVGPR))

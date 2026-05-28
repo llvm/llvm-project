@@ -8,6 +8,7 @@
 
 #include "flang/Support/Fortran.h"
 #include "flang/Support/Fortran-features.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace Fortran::common {
 
@@ -179,6 +180,41 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
   } else {
     return false;
   }
+}
+
+std::string FormatVectorTypeAsFortran(
+    int category, int64_t elementCategory, int64_t elementKind) {
+  std::string buf;
+  llvm::raw_string_ostream ss{buf};
+
+  switch (static_cast<VectorTypeCategory>(category)) {
+  case (VectorTypeCategory::IntrinsicVector): {
+    CHECK(elementCategory >= 0 && elementKind > 0);
+    ss << "vector(";
+    switch (static_cast<VectorElementCategory>(elementCategory)) {
+    case VectorElementCategory::Integer:
+      ss << "integer(" << elementKind << ")";
+      break;
+    case VectorElementCategory::Unsigned:
+      ss << "unsigned(" << elementKind << ")";
+      break;
+    case VectorElementCategory::Real:
+      ss << "real(" << elementKind << ")";
+      break;
+    }
+    ss << ")";
+    break;
+  }
+  case (VectorTypeCategory::PairVector):
+    ss << "__vector_pair";
+    break;
+  case (VectorTypeCategory::QuadVector):
+    ss << "__vector_quad";
+    break;
+  default:
+    CHECK(false && "Vector element type not implemented");
+  }
+  return buf;
 }
 
 } // namespace Fortran::common

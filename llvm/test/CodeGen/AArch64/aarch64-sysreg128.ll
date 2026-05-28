@@ -5,12 +5,12 @@
 define i128 @test_rsr128() #0 {
 ; CHECK-LE-LABEL: test_rsr128:
 ; CHECK-LE:       // %bb.0: // %entry
-; CHECK-LE-NEXT:    mrrs x0, x1, S1_2_C3_C4_5
+; CHECK-LE-NEXT:    mrrs x0, x1, S3_2_C3_C4_5
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_rsr128:
 ; CHECK-BE:       // %bb.0: // %entry
-; CHECK-BE-NEXT:    mrrs x2, x3, S1_2_C3_C4_5
+; CHECK-BE-NEXT:    mrrs x2, x3, S3_2_C3_C4_5
 ; CHECK-BE-NEXT:    mov x0, x3
 ; CHECK-BE-NEXT:    mov x1, x2
 ; CHECK-BE-NEXT:    ret
@@ -26,14 +26,14 @@ define void @test_wsr128(i128 noundef %v) #0 {
 ; CHECK-LE:       // %bb.0: // %entry
 ; CHECK-LE-NEXT:    // kill: def $x1 killed $x1 killed $x0_x1 def $x0_x1
 ; CHECK-LE-NEXT:    // kill: def $x0 killed $x0 killed $x0_x1 def $x0_x1
-; CHECK-LE-NEXT:    msrr S1_2_C3_C4_5, x0, x1
+; CHECK-LE-NEXT:    msrr S3_2_C3_C4_5, x0, x1
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_wsr128:
 ; CHECK-BE:       // %bb.0: // %entry
 ; CHECK-BE-NEXT:    mov x2, x1
 ; CHECK-BE-NEXT:    mov x3, x0
-; CHECK-BE-NEXT:    msrr S1_2_C3_C4_5, x2, x3
+; CHECK-BE-NEXT:    msrr S3_2_C3_C4_5, x2, x3
 ; CHECK-BE-NEXT:    ret
 entry:
   call void @llvm.write_register.i128(metadata !1, i128 %v)
@@ -45,4 +45,4 @@ declare void @llvm.write_register.i128(metadata, i128) #1
 attributes #0 = { noinline nounwind }
 attributes #1 = { nounwind }
 
-!1 = !{!"1:2:3:4:5"}
+!1 = !{!"3:2:3:4:5"}

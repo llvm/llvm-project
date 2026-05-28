@@ -4120,21 +4120,27 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
 }
 
 //===----------------------------------------------------------------------===//
-// ThrowOp
+// ThrowOp / TryThrowOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult cir::ThrowOp::verify() {
-  // For the no-rethrow version, it must have at least the exception pointer.
-  if (rethrows())
-    return success();
+template <typename ThrowOpTy>
+static mlir::LogicalResult verifyThrowOpImpl(ThrowOpTy op) {
+  if (op.rethrows())
+    return mlir::success();
 
-  if (getNumOperands() != 0) {
-    if (getTypeInfo())
-      return success();
-    return emitOpError() << "'type_info' symbol attribute missing";
+  if (op.getNumOperands() != 0) {
+    if (op.getTypeInfo())
+      return mlir::success();
+    return op.emitOpError() << "'type_info' symbol attribute missing";
   }
 
-  return failure();
+  return mlir::failure();
+}
+
+mlir::LogicalResult cir::ThrowOp::verify() { return verifyThrowOpImpl(*this); }
+
+mlir::LogicalResult cir::TryThrowOp::verify() {
+  return verifyThrowOpImpl(*this);
 }
 
 //===----------------------------------------------------------------------===//

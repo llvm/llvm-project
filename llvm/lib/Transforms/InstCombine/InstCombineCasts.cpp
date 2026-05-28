@@ -1562,6 +1562,9 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   if (Instruction *Result = commonCastTransforms(Zext))
     return Result;
 
+  if (auto *NewI = foldExtractionOfVectorDeinterleave(Zext))
+    return NewI;
+
   Value *Src = Zext.getOperand(0);
   Type *SrcTy = Src->getType(), *DestTy = Zext.getType();
 

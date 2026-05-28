@@ -2015,11 +2015,11 @@ parser::CharBlock MakeNameFromOperator(
   case parser::DefinedOperator::IntrinsicOperator::AND:
     return parser::CharBlock{"op.AND", 6};
   case parser::DefinedOperator::IntrinsicOperator::OR:
-    return parser::CharBlock{"op.OR", 6};
+    return parser::CharBlock{"op.OR", 5};
   case parser::DefinedOperator::IntrinsicOperator::EQV:
-    return parser::CharBlock{"op.EQV", 7};
+    return parser::CharBlock{"op.EQV", 6};
   case parser::DefinedOperator::IntrinsicOperator::NEQV:
-    return parser::CharBlock{"op.NEQV", 8};
+    return parser::CharBlock{"op.NEQV", 7};
 
   default:
     context.Say("Unsupported operator in DECLARE REDUCTION"_err_en_US);
@@ -2074,17 +2074,24 @@ void OmpVisitor::ProcessReductionSpecifier(
   // the first, or only, instance with this name). The details then
   // gets stored in the symbol when it's created.
   UserReductionDetails *reductionDetails{&reductionDetailsTemp};
-  Symbol *symbol{currScope().FindSymbol(mangledName)};
+  // Use scope-local lookup to avoid false matches from parent scopes.
+  Symbol *symbol{FindInScope(currScope(), mangledName)};
   if (symbol) {
-    // If we found a symbol, we append the type info to the
-    // existing reductionDetails.
-    reductionDetails = symbol->detailsIf<UserReductionDetails>();
+    if (symbol->detailsIf<UseDetails>()) {
+      // USE-associated reduction: shadow it with a new local declaration.
+      EraseSymbol(*symbol);
+      symbol = nullptr;
+    } else {
+      // If we found a local symbol, we append the type info to the
+      // existing reductionDetails.
+      reductionDetails = symbol->detailsIf<UserReductionDetails>();
 
-    if (!reductionDetails) {
-      context().Say(
-          "Duplicate definition of '%s' in DECLARE REDUCTION"_err_en_US,
-          mangledName);
-      return;
+      if (!reductionDetails) {
+        context().Say(
+            "Duplicate definition of '%s' in DECLARE REDUCTION"_err_en_US,
+            mangledName);
+        return;
+      }
     }
   }
 
@@ -4463,6 +4470,38 @@ Scope *ModuleVisitor::FindModule(const parser::Name &name,
   return scope;
 }
 
+// Map a mangled declare reduction name (e.g., op.+, op.max, op..myop.) back
+// to the Fortran identifier that controls its accessibility in a module scope.
+// Intrinsic operators map to "operator(+)" etc., named functions to "max" etc.,
+// and defined operators to "operator(.myop.)" etc.
+static std::string GetReductionIdentifierName(const SourceName &mangledName) {
+  llvm::StringRef name{mangledName.begin(), mangledName.size()};
+  if (!name.starts_with("op.")) {
+    return {};
+  }
+  llvm::StringRef suffix{name.drop_front(3)};
+  // Intrinsic arithmetic operators: op.+ → operator(+)
+  if (suffix == "+" || suffix == "-" || suffix == "*") {
+    return ("operator(" + suffix + ")").str();
+  }
+  // Intrinsic logical operators (mangled uppercase, scope uses lowercase)
+  llvm::StringRef logicalOp{llvm::StringSwitch<llvm::StringRef>(suffix)
+          .Case("AND", ".and.")
+          .Case("OR", ".or.")
+          .Case("EQV", ".eqv.")
+          .Case("NEQV", ".neqv.")
+          .Default("")};
+  if (!logicalOp.empty()) {
+    return ("operator(" + logicalOp + ")").str();
+  }
+  // Defined operators: op..myop. → operator(.myop.)
+  if (suffix.size() > 2 && suffix.front() == '.' && suffix.back() == '.') {
+    return ("operator(" + suffix + ")").str();
+  }
+  // Named functions: op.max → max
+  return suffix.str();
+}
+
 void ModuleVisitor::ApplyDefaultAccess() {
   const auto *moduleDetails{
       DEREF(currScope().symbol()).detailsIf<ModuleDetails>()};
@@ -4482,6 +4521,21 @@ void ModuleVisitor::ApplyDefaultAccess() {
             attr = Attr::PUBLIC;
           } else if (generic->derivedType()->attrs().test(Attr::PRIVATE)) {
             attr = Attr::PRIVATE;
+          }
+        }
+      } else if (symbol.detailsIf<UserReductionDetails>()) {
+        // OpenMP 6.0 §7.6.14: A declare reduction directive that appears in
+        // a module has accessibility as if it were declared as a module entity.
+        // If the corresponding operator/procedure has explicit accessibility,
+        // the reduction inherits it.
+        std::string opName{GetReductionIdentifierName(symbol.name())};
+        if (!opName.empty()) {
+          if (auto *opSym{FindInScope(currScope(), SourceName{opName})}) {
+            if (opSym->attrs().test(Attr::PUBLIC)) {
+              attr = Attr::PUBLIC;
+            } else if (opSym->attrs().test(Attr::PRIVATE)) {
+              attr = Attr::PRIVATE;
+            }
           }
         }
       }

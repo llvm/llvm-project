@@ -266,6 +266,89 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
   ];
 }
 
+def PromotableAliaserInterface : OpInterface<"PromotableAliaserInterface"> {
+  let description = [{
+    Describes an operation that creates a transparent alias of a memory slot
+    accessed through one of its operands. Mem2Reg traverses chains of these
+    aliases to project slot values across them. This allows load and store
+    operations on the alias to be promoted as if they were directly accessing
+    the underlying slot.
+
+    Since an alias remains a blocking use of the underlying slot pointer, the
+    operation must also implement either `PromotableOpInterface` or
+    `PromotableMemOpInterface`. This ensures that mem2reg can remove the alias
+    after the slot has been promoted.
+  }];
+  let cppNamespace = "::mlir";
+
+  let verify = [{
+    if (!::mlir::isa<::mlir::PromotableOpInterface,
+                     ::mlir::PromotableMemOpInterface>($_op))
+      return $_op->emitOpError(
+          "implements `PromotableAliaserInterface` but must also implement "
+          "`PromotableOpInterface` or `PromotableMemOpInterface`.");
+    return ::mlir::success();
+  }];
+
+  let methods = [
+    InterfaceMethod<[{
+        Populates `newMemorySlots` with the memory slots this operation
+        exposes by aliasing `parentSlot` (accessed via
+        `aliasedSlotPointerOperand`). Each new slot's pointer must be a
+        result of this operation, and its element type may differ from the
+        parent's. Leave the vector empty if no alias is exposed. An operation
+        can expose multiple aliases for the same parent slot.
+
+        `parentSlot` is provided so that aliasers using opaque pointers can
+        derive the new slot's element type from `parentSlot.elemType`.
+
+        Exposing an alias requires implementing the two projection methods
+        below to bridge values between the parent and new slot element types.
+        If these projections cannot be performed, leave `newMemorySlots` empty.
+
+        No IR mutation is allowed in this method.
+      }],
+      "void",
+      "getPromotableSlotAliases",
+      (ins "::mlir::OpOperand &":$aliasedSlotPointerOperand,
+           "const ::mlir::MemorySlot &":$parentSlot,
+           "::llvm::SmallVectorImpl<::mlir::MemorySlot> &":$newMemorySlots)
+    >,
+    InterfaceMethod<[{
+        Extracts the value of `aliasSlot` from `slotValue` (the value of
+        `parentSlot`). Mem2Reg invokes this method when a load on the new slot
+        requires the parent's value to be materialized with the new slot's
+        element type.
+      }],
+      "::mlir::Value",
+      "projectSlotValueToAliasValue",
+      (ins "::mlir::OpOperand &":$aliasedSlotPointerOperand,
+           "const ::mlir::MemorySlot &":$parentSlot,
+           "const ::mlir::MemorySlot &":$aliasSlot,
+           "::mlir::Value":$slotValue,
+           "::mlir::OpBuilder &":$builder), [{}],
+      [{ return slotValue; }]
+    >,
+    InterfaceMethod<[{
+        Reconstructs the value of `parentSlot` from `aliasValue` (a store to
+        `aliasSlot`) and `reachingDef` (the parent slot's value immediately
+        preceding the store). For full aliases, `reachingDef` can be ignored.
+        For partial sub-aliases, it allows the result to be constructed by
+        inserting `aliasValue` into `reachingDef`.
+      }],
+      "::mlir::Value",
+      "projectAliasValueToSlotValue",
+      (ins "::mlir::OpOperand &":$aliasedSlotPointerOperand,
+           "const ::mlir::MemorySlot &":$parentSlot,
+           "const ::mlir::MemorySlot &":$aliasSlot,
+           "::mlir::Value":$aliasValue,
+           "::mlir::Value":$reachingDef,
+           "::mlir::OpBuilder &":$builder), [{}],
+      [{ return aliasValue; }]
+    >,
+  ];
+}
+
 def PromotableRegionOpInterface
     : OpInterface<"PromotableRegionOpInterface"> {
   let description = [{

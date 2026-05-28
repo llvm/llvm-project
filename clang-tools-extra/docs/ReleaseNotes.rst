@@ -506,6 +506,10 @@ Changes in existing checks
   - Fixed false positive where a pointer used with placement new was
     incorrectly diagnosed as allowing the pointee to be made ``const``.
 
+  - Fixed false positive where calling a non-const member function on a
+    pointer was incorrectly treated as mutating the pointer, when it only
+    mutates the pointee.
+
   - Fixed false positives when pointers were later passed or bound through
     ``const``-qualified pointer references.
 
@@ -727,6 +731,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-member-init>` check by adding an
   `IgnoreMacros` option to suppress warnings when the initializer involves
   macros that may expand differently in other configurations.
+
+- Improved :doc:`readability-redundant-parentheses
+  <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a
+  false positive for parentheses present around an overloaded operator in the
+  context of a binary operation.
 
 - Improved :doc:`readability-redundant-preprocessor
   <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a

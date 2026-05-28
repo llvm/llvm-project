@@ -500,10 +500,7 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
         // FIXME: Should we put the new global into a COMDAT?
         return RawAddress(C, GV->getValueType(), alignment);
       }
-    RawAddress Addr = CGF.CreateMemTempWithoutCast(Ty, "ref.tmp");
-    if (Alloca)
-      *Alloca = Addr;
-    return Addr;
+    return CGF.CreateMemTemp(Ty, "ref.tmp", Alloca);
   }
   case SD_Thread:
   case SD_Static:
@@ -1630,7 +1627,7 @@ RValue CodeGenFunction::GetUndefRValue(QualType Ty) {
   // identifiable address.  Just because the contents of the value are undefined
   // doesn't mean that the address can't be taken and compared.
   case TEK_Aggregate: {
-    Address DestPtr = CreateMemTempWithoutCast(Ty, "undef.agg.tmp");
+    Address DestPtr = CreateMemTemp(Ty, "undef.agg.tmp");
     return RValue::getAggregate(DestPtr);
   }
 
@@ -3458,6 +3455,16 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
     Address Addr = emitDeclTargetVarDeclLValue(CGF, VD, T);
     if (Addr.isValid())
       return CGF.MakeAddrLValue(Addr, T, AlignmentSource::Decl);
+  }
+
+  // Global HLSL resource arrays initialized on access; create a temporary with
+  // the initialized global resource array.
+  if (CGF.getLangOpts().HLSL && VD->getType()->isHLSLResourceRecordArray()) {
+    std::optional<LValue> LV =
+        CGF.CGM.getHLSLRuntime().emitGlobalResourceArrayAsLValue(
+            CGF, VD, E->getExprLoc());
+    if (LV.has_value())
+      return LV.value();
   }
 
   llvm::Value *V = CGF.CGM.GetAddrOfGlobalVar(VD);
@@ -5970,7 +5977,7 @@ LValue CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E){
     // make sure to emit the VLA size.
     EmitVariablyModifiedType(E->getType());
 
-  Address DeclPtr = CreateMemTempWithoutCast(E->getType(), ".compoundliteral");
+  Address DeclPtr = CreateMemTemp(E->getType(), ".compoundliteral");
   const Expr *InitExpr = E->getInitializer();
   LValue Result = MakeAddrLValue(DeclPtr, E->getType(), AlignmentSource::Decl);
 
@@ -6767,9 +6774,14 @@ LValue CodeGenFunction::EmitHLSLArrayAssignLValue(const BinaryOperator *E) {
 
   // If the RHS is a global resource array, copy all individual resources
   // into LHS.
-  if (E->getRHS()->getType()->isHLSLResourceRecordArray())
-    if (CGM.getHLSLRuntime().emitResourceArrayCopy(LHS, E->getRHS(), *this))
+  if (E->getRHS()->getType()->isHLSLResourceRecordArray()) {
+    AggValueSlot Slot = AggValueSlot::forAddr(
+        LHS.getAddress(), Qualifiers(), AggValueSlot::IsDestructed_t(true),
+        AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsAliased_t(false),
+        AggValueSlot::DoesNotOverlap);
+    if (CGM.getHLSLRuntime().emitGlobalResourceArray(*this, E->getRHS(), Slot))
       return LHS;
+  }
 
   // In C the RHS of an assignment operator is an RValue.
   // EmitAggregateAssign takes an LValue for the RHS. Instead we can call

@@ -165,6 +165,7 @@ list(APPEND wctype_utils_deps
 if ("${LIBC_CONF_WCTYPE_MODE}" STREQUAL "LIBC_WCTYPE_MODE_UTF8")
   list(APPEND wctype_utils_deps
       libc.src.__support.wctype.wctype_classification_utils
+      libc.src.__support.wctype.wctype_conversion_utils
   )
 endif()
 

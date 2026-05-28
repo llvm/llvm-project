@@ -313,6 +313,8 @@ module LLVM_Object {
   requires cplusplus
   umbrella "llvm/Object"
   module * { export * }
+
+  textual header "llvm/Object/BBAddrMap.def"
 }
 
 module LLVM_Option {

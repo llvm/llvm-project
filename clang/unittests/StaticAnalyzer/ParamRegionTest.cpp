@@ -27,7 +27,8 @@ class ParamRegionTestConsumer : public ExprEngineConsumer {
   void performTest(const Decl *D) {
     StoreManager &StMgr = Eng.getStoreManager();
     MemRegionManager &MRMgr = StMgr.getRegionManager();
-    const StackFrame *SF = Eng.getAnalysisDeclContextManager().getStackFrame(D);
+    const StackFrame *SF =
+        Eng.getAnalysisDeclContextManager().getTopStackFrame(D);
 
     if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
       for (const auto *P : FD->parameters()) {

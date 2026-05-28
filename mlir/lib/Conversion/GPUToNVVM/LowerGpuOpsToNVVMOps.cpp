@@ -425,8 +425,7 @@ struct GPUBarrierOpToNVVMLowering final
           LLVM::ExtractValueOp::create(rewriter, loc, namedBarrier, 0);
       Value numberOfThreads =
           LLVM::ExtractValueOp::create(rewriter, loc, namedBarrier, 1);
-      NVVM::BarrierOp::create(rewriter, loc, barrierId, numberOfThreads,
-                              NVVM::BarrierReductionAttr{}, Value{});
+      NVVM::BarrierOp::create(rewriter, loc, barrierId, numberOfThreads);
       rewriter.eraseOp(op);
       return success();
     }

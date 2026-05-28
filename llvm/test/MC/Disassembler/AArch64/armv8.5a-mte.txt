@@ -384,6 +384,10 @@
 # NOMTE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 
+[0x9f,0x40,0x03,0xd5]
+# CHECK: msr	TCO, #0
+# NOMTE: :[[@LINE-2]]:2: warning: invalid instruction encoding
+
 
 [0x60,0x76,0x08,0xd5]
 # CHECK: dc	igvac, x0
@@ -470,11 +474,6 @@
 # CHECK: mrs	x8, GMID_EL1
 # NOMTE: mrs	x8, S3_1_C0_C0_4
 
-
-
-[0x9f,0x40,0x03,0xd5]
-# CHECK: msr	TCO, #0
-# NOMTE: msr	S0_3_C4_C0_4, xzr
 
 
 [0xe0,0x42,0x1b,0xd5]

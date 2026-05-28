@@ -426,4 +426,212 @@ for.exit:
   ret void
 }
 
+; In this test the accesses are offset by the vector length (i.e, #1, mul vl apart),
+; but include a non-trival SCEV expression for the base address.
+; The SCEV expressions for the accesses are:
+; %gep.part0 =
+;  {(324 + (4 * (sext i32 (3 + (-1 * %3)<nsw> + %0) to i64))<nsw> + %ptr),+,(32 * vscale)<nuw><nsw>}<%vector.body>
+; %gep.part1 =
+;  {(324 + (4 * (sext i32 (3 + (-1 * %3)<nsw> + %0) to i64))<nsw> + (16 * vscale)<nuw><nsw> + %ptr),+,(32 * vscale)<nuw><nsw>}
+; This test checks that LSR can extract the offset of `(16 * vscale)` from the
+; expression for %gep.part1 (and use mul vl addressing from a common base for
+; both loads and stores).
+define void @vscale_complex_base_address(ptr %ptr, i32 %0, i64 %n) local_unnamed_addr #0 {
+; BASE-LABEL: vscale_complex_base_address:
+; BASE:       // %bb.0: // %entry
+; BASE-NEXT:    mov w9, #21846 // =0x5556
+; BASE-NEXT:    sub w8, w1, #1
+; BASE-NEXT:    ptrue p0.s
+; BASE-NEXT:    movk w9, #21845, lsl #16
+; BASE-NEXT:    mov x10, xzr
+; BASE-NEXT:    smull x8, w8, w9
+; BASE-NEXT:    lsr x9, x8, #32
+; BASE-NEXT:    add x8, x9, x8, lsr #63
+; BASE-NEXT:    add w8, w8, w8, lsl #1
+; BASE-NEXT:    add w8, w8, #4
+; BASE-NEXT:    add x8, x0, w8, sxtw #2
+; BASE-NEXT:    add x8, x8, #324
+; BASE-NEXT:    mov x9, x8
+; BASE-NEXT:    incb x8
+; BASE-NEXT:  .LBB7_1: // %vector.body
+; BASE-NEXT:    // =>This Inner Loop Header: Depth=1
+; BASE-NEXT:    ld1w { z0.s }, p0/z, [x9, x10, lsl #2]
+; BASE-NEXT:    ld1w { z1.s }, p0/z, [x8, x10, lsl #2]
+; BASE-NEXT:    sub z0.s, z0.s, #10 // =0xa
+; BASE-NEXT:    sub z1.s, z1.s, #10 // =0xa
+; BASE-NEXT:    st1w { z0.s }, p0, [x9, x10, lsl #2]
+; BASE-NEXT:    st1w { z1.s }, p0, [x8, x10, lsl #2]
+; BASE-NEXT:    inch x10
+; BASE-NEXT:    cmp x2, x10
+; BASE-NEXT:    b.ne .LBB7_1
+; BASE-NEXT:  // %bb.2: // %exit
+; BASE-NEXT:    ret
+;
+; PREINDEX-LABEL: vscale_complex_base_address:
+; PREINDEX:       // %bb.0: // %entry
+; PREINDEX-NEXT:    mov w9, #21846 // =0x5556
+; PREINDEX-NEXT:    sub w8, w1, #1
+; PREINDEX-NEXT:    ptrue p0.s
+; PREINDEX-NEXT:    movk w9, #21845, lsl #16
+; PREINDEX-NEXT:    mov x10, xzr
+; PREINDEX-NEXT:    smull x8, w8, w9
+; PREINDEX-NEXT:    lsr x9, x8, #32
+; PREINDEX-NEXT:    add x8, x9, x8, lsr #63
+; PREINDEX-NEXT:    add w8, w8, w8, lsl #1
+; PREINDEX-NEXT:    add w8, w8, #4
+; PREINDEX-NEXT:    add x8, x0, w8, sxtw #2
+; PREINDEX-NEXT:    add x8, x8, #324
+; PREINDEX-NEXT:    mov x9, x8
+; PREINDEX-NEXT:    incb x8
+; PREINDEX-NEXT:  .LBB7_1: // %vector.body
+; PREINDEX-NEXT:    // =>This Inner Loop Header: Depth=1
+; PREINDEX-NEXT:    ld1w { z0.s }, p0/z, [x9, x10, lsl #2]
+; PREINDEX-NEXT:    ld1w { z1.s }, p0/z, [x8, x10, lsl #2]
+; PREINDEX-NEXT:    sub z0.s, z0.s, #10 // =0xa
+; PREINDEX-NEXT:    sub z1.s, z1.s, #10 // =0xa
+; PREINDEX-NEXT:    st1w { z0.s }, p0, [x9, x10, lsl #2]
+; PREINDEX-NEXT:    st1w { z1.s }, p0, [x8, x10, lsl #2]
+; PREINDEX-NEXT:    inch x10
+; PREINDEX-NEXT:    cmp x2, x10
+; PREINDEX-NEXT:    b.ne .LBB7_1
+; PREINDEX-NEXT:  // %bb.2: // %exit
+; PREINDEX-NEXT:    ret
+;
+; POSTINDEX-LABEL: vscale_complex_base_address:
+; POSTINDEX:       // %bb.0: // %entry
+; POSTINDEX-NEXT:    mov w10, #21846 // =0x5556
+; POSTINDEX-NEXT:    sub w9, w1, #1
+; POSTINDEX-NEXT:    add x11, x0, #324
+; POSTINDEX-NEXT:    movk w10, #21845, lsl #16
+; POSTINDEX-NEXT:    ptrue p0.s
+; POSTINDEX-NEXT:    mov x8, xzr
+; POSTINDEX-NEXT:    smull x9, w9, w10
+; POSTINDEX-NEXT:    lsr x10, x9, #32
+; POSTINDEX-NEXT:    add x9, x10, x9, lsr #63
+; POSTINDEX-NEXT:    add w9, w9, w9, lsl #1
+; POSTINDEX-NEXT:    add w9, w9, #4
+; POSTINDEX-NEXT:    sbfiz x10, x9, #2, #32
+; POSTINDEX-NEXT:    add x9, x11, x10
+; POSTINDEX-NEXT:    incb x10
+; POSTINDEX-NEXT:    add x10, x11, x10
+; POSTINDEX-NEXT:  .LBB7_1: // %vector.body
+; POSTINDEX-NEXT:    // =>This Inner Loop Header: Depth=1
+; POSTINDEX-NEXT:    ld1w { z0.s }, p0/z, [x9, x8, lsl #2]
+; POSTINDEX-NEXT:    ld1w { z1.s }, p0/z, [x10, x8, lsl #2]
+; POSTINDEX-NEXT:    sub z0.s, z0.s, #10 // =0xa
+; POSTINDEX-NEXT:    sub z1.s, z1.s, #10 // =0xa
+; POSTINDEX-NEXT:    st1w { z0.s }, p0, [x9, x8, lsl #2]
+; POSTINDEX-NEXT:    st1w { z1.s }, p0, [x10, x8, lsl #2]
+; POSTINDEX-NEXT:    inch x8
+; POSTINDEX-NEXT:    cmp x2, x8
+; POSTINDEX-NEXT:    b.ne .LBB7_1
+; POSTINDEX-NEXT:  // %bb.2: // %exit
+; POSTINDEX-NEXT:    ret
+entry:
+  %1 = add i32 %0, 3
+  %2 = add i32 %0, -1
+  %3 = srem i32 %2, 3
+  %4 = sub i32 %1, %3
+  %5 = sext i32 %4 to i64
+  %ptr.offset = getelementptr inbounds nuw i8, ptr %ptr, i64 324
+  %complex.base = getelementptr [4 x i8], ptr %ptr.offset, i64 %5
+  %vscale = tail call i64 @llvm.vscale.i64()
+  %VFxUF = shl nuw i64 %vscale, 3
+  %off = shl i64 %vscale, 4
+  br label %vector.body
+
+vector.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %vector.body ]
+  %gep.part0 = getelementptr [4 x i8], ptr %complex.base, i64 %iv
+  %gep.part1 = getelementptr i8, ptr %gep.part0, i64 %off
+  %data = load <vscale x 4 x i32>, ptr %gep.part0, align 4
+  %data2 = load <vscale x 4 x i32>, ptr %gep.part1, align 4
+  %add = add <vscale x 4 x i32> %data, splat (i32 -10)
+  %add2 = add <vscale x 4 x i32> %data2, splat (i32 -10)
+  store <vscale x 4 x i32> %add, ptr %gep.part0, align 4
+  store <vscale x 4 x i32> %add2, ptr %gep.part1, align 4
+  %iv.next = add nuw i64 %iv, %VFxUF
+  %exit.cond = icmp eq i64 %iv.next, %n
+  br i1 %exit.cond, label %exit, label %vector.body
+
+exit:
+  ret void
+}
+
+; Tests a simple memcpy-like routine where source and destination accesses are
+; offset by 8 bytes. That is the SCEV expression for any load/store is:
+; {(8 + ((16 * offset) * vscale) + %dst)<nuw>,+,(64 * vscale)}
+; where `offset` is 0, 1, 2, or 3. This should use be able to use `mul vl`
+; addressing (with the offset of 8 moved out of the loop).
+define void @offset_memcpy(ptr %src, ptr %dst, i64 %n.vec) "target-cpu"="neoverse-v2" nounwind {
+; COMMON-LABEL: offset_memcpy:
+; COMMON:       // %bb.0: // %entry
+; COMMON-NEXT:    rdvl x11, #3
+; COMMON-NEXT:    rdvl x12, #2
+; COMMON-NEXT:    add x10, x1, #8
+; COMMON-NEXT:    add x17, x0, #8
+; COMMON-NEXT:    mov x8, xzr
+; COMMON-NEXT:    orr x14, x11, #0x8
+; COMMON-NEXT:    rdvl x13, #1
+; COMMON-NEXT:    cnth x9
+; COMMON-NEXT:    orr x15, x12, #0x8
+; COMMON-NEXT:    orr x16, x13, #0x8
+; COMMON-NEXT:    ptrue p0.d
+; COMMON-NEXT:    add x11, x1, x14
+; COMMON-NEXT:    add x12, x1, x15
+; COMMON-NEXT:    add x13, x1, x16
+; COMMON-NEXT:    add x14, x0, x14
+; COMMON-NEXT:    add x15, x0, x15
+; COMMON-NEXT:    add x16, x0, x16
+; COMMON-NEXT:    .p2align 5, , 16
+; COMMON-NEXT:  .LBB8_1: // %vector.body
+; COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
+; COMMON-NEXT:    ld1d { z0.d }, p0/z, [x17, x8, lsl #3]
+; COMMON-NEXT:    ld1d { z1.d }, p0/z, [x16, x8, lsl #3]
+; COMMON-NEXT:    ld1d { z2.d }, p0/z, [x15, x8, lsl #3]
+; COMMON-NEXT:    ld1d { z3.d }, p0/z, [x14, x8, lsl #3]
+; COMMON-NEXT:    st1d { z0.d }, p0, [x10, x8, lsl #3]
+; COMMON-NEXT:    st1d { z1.d }, p0, [x13, x8, lsl #3]
+; COMMON-NEXT:    st1d { z2.d }, p0, [x12, x8, lsl #3]
+; COMMON-NEXT:    st1d { z3.d }, p0, [x11, x8, lsl #3]
+; COMMON-NEXT:    add x8, x8, x9
+; COMMON-NEXT:    cmp x2, x8
+; COMMON-NEXT:    b.ne .LBB8_1
+; COMMON-NEXT:  // %bb.2: // %exit
+; COMMON-NEXT:    ret
+entry:
+  %7 = call i64 @llvm.vscale.i64()
+  %8 = shl nuw i64 %7, 1
+  %9 = shl nuw i64 %8, 2
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %11 = add i64 1, %index
+  %12 = getelementptr inbounds nuw [8 x i8], ptr %src, i64 %11
+  %13 = shl nuw nsw i64 %8, 1
+  %14 = mul nuw nsw i64 %8, 3
+  %15 = getelementptr inbounds nuw ptr, ptr %12, i64 %8
+  %16 = getelementptr inbounds nuw ptr, ptr %12, i64 %13
+  %17 = getelementptr inbounds nuw ptr, ptr %12, i64 %14
+  %wide.load = load <vscale x 2 x ptr>, ptr %12, align 8
+  %wide.load3 = load <vscale x 2 x ptr>, ptr %15, align 8
+  %wide.load4 = load <vscale x 2 x ptr>, ptr %16, align 8
+  %wide.load5 = load <vscale x 2 x ptr>, ptr %17, align 8
+  %18 = getelementptr inbounds nuw [8 x i8], ptr %dst, i64 %11
+  %19 = getelementptr inbounds nuw ptr, ptr %18, i64 %8
+  %20 = getelementptr inbounds nuw ptr, ptr %18, i64 %13
+  %21 = getelementptr inbounds nuw ptr, ptr %18, i64 %14
+  store <vscale x 2 x ptr> %wide.load, ptr %18, align 8
+  store <vscale x 2 x ptr> %wide.load3, ptr %19, align 8
+  store <vscale x 2 x ptr> %wide.load4, ptr %20, align 8
+  store <vscale x 2 x ptr> %wide.load5, ptr %21, align 8
+  %index.next = add nuw i64 %index, %9
+  %22 = icmp eq i64 %index.next, %n.vec
+  br i1 %22, label %exit, label %vector.body
+
+exit:
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve2" vscale_range(1,16) }

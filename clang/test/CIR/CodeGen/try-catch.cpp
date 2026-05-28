@@ -1645,7 +1645,7 @@ int init_catch_param_with_ref_to_ptr_to_non_record() {
 // CIR:         cir.store {{.*}} %[[P_VAL]], %[[RV_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:         cir.yield
 // CIR:       } cleanup all {
-// CIR:         cir.end_catch %catch_token : !cir.catch_token
+// CIR:         cir.end_catch %[[CATCH_TOKEN]] : !cir.catch_token
 // CIR:         cir.yield
 // CIR:       }
 // CIR:       cir.yield
@@ -1762,3 +1762,100 @@ int init_catch_param_with_ref_to_ptr_to_non_record() {
 // OGCG:   %[[TMP_EXCEPTION_INFO:.*]] = insertvalue { ptr, i32 } poison, ptr %[[TMP_EXCEPTION]], 0
 // OGCG:   %[[EXCEPTION_INFO:.*]] = insertvalue { ptr, i32 } %[[TMP_EXCEPTION_INFO]], i32 %[[TMP_EH_TYPE_ID]], 1
 // OGCG:   resume { ptr, i32 } %[[EXCEPTION_INFO]]
+
+void direct_inside_try_catch_with_exception_type() {
+  try {
+    throw 42;
+  } catch (int e) {
+  }
+}
+
+// CIR: cir.func {{.*}} @_Z43direct_inside_try_catch_with_exception_typev() personality(@__gxx_personality_v0)
+// CIR:   cir.scope {
+// CIR:     %[[E:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["e"]
+// CIR:     cir.try {
+// CIR:       %[[EXN:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
+// CIR:       %[[FORTYTWO:.*]] = cir.const #cir.int<42> : !s32i
+// CIR:       cir.store{{.*}} %[[FORTYTWO]], %[[EXN]]
+// CIR:       cir.throw %[[EXN]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:       cir.unreachable
+// CIR:     } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%[[TOKEN:.*]]: !cir.eh_token {{.*}}) {
+// CIR:       %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %{{.*}} : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CIR:       cir.cleanup.scope {
+// CIR:         cir.init_catch_param scalar %[[EXN_PTR]] to %[[E]] : !cir.ptr<!void>, !cir.ptr<!s32i>
+// CIR:         cir.yield
+// CIR:       } cleanup all {
+// CIR:         cir.end_catch %[[CATCH_TOKEN]] : !cir.catch_token
+// CIR:         cir.yield
+// CIR:       }
+// CIR:       cir.yield
+// CIR:     } unwind (%{{.*}}: !cir.eh_token {{.*}}) {
+// CIR:       cir.resume %{{.*}} : !cir.eh_token
+// CIR:     }
+// CIR:   }
+
+// LLVM: define {{.*}} void @_Z43direct_inside_try_catch_with_exception_typev() {{.*}} personality ptr @__gxx_personality_v0 {
+// LLVM:   %[[E:.*]] = alloca i32
+// LLVM:   %[[EXN:.*]] = call ptr @__cxa_allocate_exception(i64 4)
+// LLVM:   store i32 42, ptr %[[EXN]]
+// LLVM:   invoke void @__cxa_throw(ptr %[[EXN]], ptr @_ZTIi, ptr null)
+// LLVM:           to label %[[UNREACHABLE:.*]] unwind label %[[LANDING_PAD:.*]]
+// LLVM: [[LANDING_PAD]]:
+// LLVM:   %[[LP:.*]] = landingpad { ptr, i32 }
+// LLVM:                   catch ptr @_ZTIi
+// LLVM:   br label %[[CATCH:.*]]
+// LLVM: [[CATCH]]:
+// LLVM:   br label %[[DISPATCH:.*]]
+// LLVM: [[DISPATCH]]:
+// LLVM:   %[[EXN_PTR:.*]] = phi ptr
+// LLVM:   %[[EH_SELECTOR:.*]] = phi i32
+// LLVM:   %[[INT_TYPE_ID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi)
+// LLVM:   %[[TYPE_ID_EQ:.*]] = icmp eq i32 %[[EH_SELECTOR]], %[[INT_TYPE_ID]]
+// LLVM:   br i1 %[[TYPE_ID_EQ]], label %[[CATCH_INT:.*]], label %[[RESUME:.*]]
+// LLVM: [[CATCH_INT]]:
+// LLVM:   %[[EXN_PTR:.*]] = phi ptr
+// LLVM:   %[[EH_SELECTOR:.*]] = phi i32
+// LLVM:   %[[BEGIN_CATCH:.*]] = call ptr @__cxa_begin_catch(ptr %[[EXN_PTR]])
+// LLVM:   call void @__cxa_end_catch()
+// LLVM:   br label %[[AFTER_CATCH:.*]]
+// LLVM: [[AFTER_CATCH]]:
+// LLVM:   br label %[[END_DISPATCH:.*]]
+// LLVM: [[END_DISPATCH]]:
+// LLVM:   br label %[[END_TRY:.*]]
+// LLVM: [[RESUME]]:
+// LLVM:   resume { ptr, i32 }
+// LLVM: [[END_TRY]]:
+// LLVM:   br label %[[TRY_CONT:.*]]
+// LLVM: [[TRY_CONT]]:
+// LLVM:   ret void
+// LLVM: [[UNREACHABLE]]:
+// LLVM:   unreachable
+
+// OGCG: define {{.*}} void @_Z43direct_inside_try_catch_with_exception_typev() {{.*}} personality ptr @__gxx_personality_v0 {
+// OGCG:   %[[EXN_SLOT:.*]] = alloca ptr
+// OGCG:   %[[EH_SELECTOR_SLOT:.*]] = alloca i32
+// OGCG:   %[[E:.*]] = alloca i32
+// OGCG:   %[[EXN:.*]] = call ptr @__cxa_allocate_exception(i64 4)
+// OGCG:   store i32 42, ptr %[[EXN]]
+// OGCG:   invoke void @__cxa_throw(ptr %[[EXN]], ptr @_ZTIi, ptr null)
+// OGCG:           to label %[[UNREACHABLE:.*]] unwind label %[[LANDING_PAD:.*]]
+// OGCG: [[LANDING_PAD]]:
+// OGCG:   %[[LP:.*]] = landingpad { ptr, i32 }
+// OGCG:                   catch ptr @_ZTIi
+// OGCG:   br label %[[DISPATCH:.*]]
+// OGCG: [[DISPATCH]]:
+// OGCG:   %[[EH_SELECTOR:.*]] = load i32, ptr %[[EH_SELECTOR_SLOT]]
+// OGCG:   %[[INT_TYPE_ID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi)
+// OGCG:   %[[TYPE_ID_EQ:.*]] = icmp eq i32 %[[EH_SELECTOR]], %[[INT_TYPE_ID]]
+// OGCG:   br i1 %[[TYPE_ID_EQ]], label %[[CATCH_INT:.*]], label %[[RESUME:.*]]
+// OGCG: [[CATCH_INT]]:
+// OGCG:   %[[EXN_PTR:.*]] = load ptr, ptr %[[EXN_SLOT]]
+// OGCG:   %[[BEGIN_CATCH:.*]] = call ptr @__cxa_begin_catch(ptr %[[EXN_PTR]])
+// OGCG:   call void @__cxa_end_catch()
+// OGCG:   br label %[[TRY_CONT:.*]]
+// OGCG: [[TRY_CONT]]:
+// OGCG:   ret void
+// OGCG: [[RESUME]]:
+// OGCG:   resume { ptr, i32 }
+// OGCG: [[UNREACHABLE]]:
+// OGCG:   unreachable

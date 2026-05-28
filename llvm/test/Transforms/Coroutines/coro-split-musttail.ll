@@ -10,7 +10,7 @@ entry:
 
   %save = call token @llvm.coro.save(ptr null)
   %addr1 = call ptr @llvm.coro.subfn.addr(ptr null, i8 0)
-  call fastcc void %addr1(ptr null)
+  call void %addr1(ptr null)
 
   %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
   switch i8 %suspend, label %exit [
@@ -34,12 +34,12 @@ exit:
 ; Verify that in the initial function resume is not marked with musttail.
 ; CHECK-LABEL: @f(
 ; CHECK: %[[addr1:.+]] = call ptr @llvm.coro.subfn.addr(ptr null, i8 0)
-; CHECK-NOT: musttail call fastcc void %[[addr1]](ptr null)
+; CHECK-NOT: musttail call void %[[addr1]](ptr null)
 
 ; Verify that in the resume part resume call is marked with musttail.
 ; CHECK-LABEL: @f.resume(
 ; CHECK: %[[addr2:.+]] = call ptr @llvm.coro.subfn.addr
-; CHECK-NEXT: musttail call fastcc void %[[addr2]]
+; CHECK-NEXT: musttail call void %[[addr2]]
 ; CHECK-NEXT: ret void
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1

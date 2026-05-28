@@ -29,7 +29,6 @@ namespace clang {
 class AnalyzerOptions;
 class CallExpr;
 class Decl;
-class LocationContext;
 class Stmt;
 class TranslationUnitDecl;
 
@@ -411,8 +410,7 @@ public:
                               const InvalidatedSymbols *invalidated,
                               ArrayRef<const MemRegion *> ExplicitRegions,
                               ArrayRef<const MemRegion *> Regions,
-                              const LocationContext *LCtx,
-                              const CallEvent *Call);
+                              const StackFrame *SF, const CallEvent *Call);
 
   /// Run checkers when pointers escape.
   ///
@@ -523,13 +521,11 @@ public:
 
   using CheckLiveSymbolsFunc = CheckerFn<void (ProgramStateRef,SymbolReaper &)>;
 
-  using CheckRegionChangesFunc =
-      CheckerFn<ProgramStateRef (ProgramStateRef,
-                                 const InvalidatedSymbols *symbols,
-                                 ArrayRef<const MemRegion *> ExplicitRegions,
-                                 ArrayRef<const MemRegion *> Regions,
-                                 const LocationContext *LCtx,
-                                 const CallEvent *Call)>;
+  using CheckRegionChangesFunc = CheckerFn<ProgramStateRef(
+      ProgramStateRef, const InvalidatedSymbols *symbols,
+      ArrayRef<const MemRegion *> ExplicitRegions,
+      ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
+      const CallEvent *Call)>;
 
   using CheckPointerEscapeFunc =
       CheckerFn<ProgramStateRef (ProgramStateRef,

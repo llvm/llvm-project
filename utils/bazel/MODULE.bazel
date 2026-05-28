@@ -18,6 +18,8 @@ bazel_dep(name = "rules_shell", version = "0.6.1")
 bazel_dep(name = "zlib-ng", version = "2.0.7", repo_name = "llvm_zlib")
 bazel_dep(name = "zstd", version = "1.5.7", repo_name = "llvm_zstd")
 
+bazel_dep(name = "llvm", version = "0.7.1", dev_dependency = True)
+
 llvm_repos_extension = use_extension(":extensions.bzl", "llvm_repos_extension")
 use_repo(
     llvm_repos_extension,

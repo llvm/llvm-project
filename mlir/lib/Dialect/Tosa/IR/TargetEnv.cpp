@@ -12,6 +12,16 @@
 namespace mlir {
 namespace tosa {
 
+TosaLevel getTosaLevelFromEnum(const Level level) {
+  switch (level) {
+  case Level::eightK:
+    return TOSA_LEVEL_EIGHTK;
+  case Level::none:
+    return TOSA_LEVEL_NONE;
+  }
+  llvm_unreachable("Unknown TOSA level");
+}
+
 llvm::SmallString<4> stringifyVersion(TosaSpecificationVersion version) {
   return llvm::formatv("{0}.{1}{2}", version.getMajor(), version.getMinor(),
                        version.isDraft() ? ".draft" : "");

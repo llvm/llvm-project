@@ -730,7 +730,22 @@ Depend makeDepend(const parser::OmpDependClause::TaskDep &inp,
       m0 ? makeIterator(*m0, semaCtx) : std::optional<Iterator>{};
   return Depend{{/*DependenceType=*/makeDepType(*m1),
                  /*Iterator=*/std::move(maybeIter),
+                 /*Vector=*/std::nullopt,
                  /*LocatorList=*/makeObjects(t1, semaCtx)}};
+}
+
+// depend(source) / depend(sink: vec) on ordered (4.5..5.1 spelling, deprecated
+// in 5.2 in favor of the dedicated doacross clause). Internally modelled as a
+// Depend with the optional iteration Vector populated and an empty
+// LocatorList, mirroring the shape of Doacross.
+Depend makeDependDoacross(const parser::OmpDoacross &doa,
+                          semantics::SemanticsContext &semaCtx) {
+  Doacross doacross = makeDoacross(doa, semaCtx);
+  return Depend{
+      {/*DependenceType=*/std::get<Doacross::DependenceType>(doacross.t),
+       /*Iterator=*/std::nullopt,
+       /*Vector=*/std::get<Doacross::Vector>(std::move(doacross.t)),
+       /*LocatorList=*/{}}};
 }
 
 // Depobj: empty
@@ -1733,8 +1748,14 @@ Clause makeClause(const parser::OmpClause &cls,
               return makeClause(llvm::omp::Clause::OMPC_depend,
                                 clause::makeDepend(*dep, semaCtx), cls.source);
             } else if (auto *doa = std::get_if<parser::OmpDoacross>(&s.v.u)) {
-              return makeClause(llvm::omp::Clause::OMPC_doacross,
-                                clause::makeDoacross(*doa, semaCtx),
+              // depend(source) / depend(sink:) on ordered is the
+              // 4.5 - 5.1 spelling of what 5.2 renamed to the doacross
+              // clause. Represent it as OMPC_depend (the surface clause is
+              // depend) rather than rewriting to OMPC_doacross, otherwise
+              // construct decomposition rejects the clause at OpenMP < 5.2
+              // even though the construct itself is valid since 4.5.
+              return makeClause(llvm::omp::Clause::OMPC_depend,
+                                clause::makeDependDoacross(*doa, semaCtx),
                                 cls.source);
             } else {
               llvm_unreachable("Unexpected alternative");

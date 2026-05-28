@@ -24,11 +24,11 @@ define void @main() {
 ; CHECK-NEXT:   %int_freeze_poison2 = freeze i32 poison => i32 1044445579
 ; CHECK-NEXT:   %float_freeze = freeze float 1.000000e+00 => float 1.000000e+00
 ; CHECK-NEXT:   %float_freeze_poison = freeze float poison => float 0xF032E8B9
-; CHECK-NEXT:   %ptr_freeze = freeze ptr null => ptr 0x0 [dangling]
-; CHECK-NEXT:   %ptr_freeze_poison = freeze ptr poison => ptr 0x98F56903CEE3FCEE [dangling]
+; CHECK-NEXT:   %ptr_freeze = freeze ptr null => ptr 0x0 [nullary]
+; CHECK-NEXT:   %ptr_freeze_poison = freeze ptr poison => ptr 0x98F56903CEE3FCEE [nullary]
 ; CHECK-NEXT:   %vec_freeze = freeze <2 x i32> <i32 10, i32 poison> => { i32 10, i32 990324140 }
 ; CHECK-NEXT:   %arr_freeze = freeze [2 x i32] [i32 10, i32 poison] => { i32 10, i32 -44045842 }
 ; CHECK-NEXT:   %struct_freeze = freeze { i32, float } { i32 10, float poison } => { i32 10, float 0x042AE12F }
-; CHECK-NEXT:   %struct_freeze_nested = freeze { i32, { float, ptr } } { i32 poison, { float, ptr } { float 1.000000e+01, ptr poison } } => { i32 1166165736, { float 1.000000e+01, ptr 0xD79E62976F604366 [dangling] } }
+; CHECK-NEXT:   %struct_freeze_nested = freeze { i32, { float, ptr } } { i32 poison, { float, ptr } { float 1.000000e+01, ptr poison } } => { i32 1166165736, { float 1.000000e+01, ptr 0xD79E62976F604366 [nullary] } }
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

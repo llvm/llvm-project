@@ -28,6 +28,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Semantics/type.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 #include "llvm/Support/CommandLine.h"
@@ -662,6 +663,14 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupUnboxedDerivedType(
       builder.setInsertionPointToEnd(initBlock);
     fir::StoreOp::create(builder, loc, scalarInitValue, allocatedPrivVarArg);
   }
+  // For reductions, the init callback handles initialization, either inline
+  // component-wise stores or explicit initializer clause.
+  if (isReduction(kind)) {
+    if (needsInitialization && fir::isa_derived(valType) &&
+        fir::isRecordWithDescriptorMember(valType))
+      TODO(loc, "reduction of derived type requiring runtime initialization");
+    needsInitialization = false;
+  }
   mlir::Type boxedTy = fir::BoxType::get(valType);
   mlir::Value newBox =
       fir::EmboxOp::create(builder, loc, boxedTy, allocatedPrivVarArg);
@@ -795,4 +804,43 @@ void Fortran::lower::populateByRefInitAndCleanupRegions(
       if (load.use_empty())
         load.erase();
   }
+}
+
+void Fortran::lower::genInlineTypeDefaultInit(
+    Fortran::lower::AbstractConverter &converter, fir::FirOpBuilder &builder,
+    mlir::Location loc, mlir::Type type, mlir::Value destRef,
+    const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec,
+    const Fortran::semantics::Symbol *sym) {
+  mlir::Type unwrappedType = fir::unwrapRefType(type);
+
+  if (fir::isa_trivial(unwrappedType) ||
+      mlir::isa<fir::CharacterType>(unwrappedType)) {
+    // Trivial types and fixed-length CHARACTER: zero-initialize.
+    mlir::Value zero = fir::ZeroOp::create(builder, loc, unwrappedType);
+    fir::StoreOp::create(builder, loc, zero, destRef);
+    return;
+  }
+
+  if (fir::isa_derived(unwrappedType)) {
+    bool hasDefaults =
+        derivedTypeSpec && derivedTypeSpec->HasDefaultInitialization(
+                               /*ignoreAllocatable=*/false,
+                               /*ignorePointer=*/true);
+    if (hasDefaults) {
+      assert(sym && "derived type has default initialization but no symbol "
+                    "provided; default values would be lost");
+      // Reuse the existing default-initializer infrastructure from
+      // ConvertVariable to build an SSA aggregate value, then store it.
+      mlir::Value initVal = Fortran::lower::genScalarDefaultInitializerValue(
+          converter, loc, *sym, unwrappedType);
+      fir::StoreOp::create(builder, loc, initVal, destRef);
+    } else {
+      // Derived type without defaults: zero-initialize the whole record.
+      mlir::Value zero = fir::ZeroOp::create(builder, loc, unwrappedType);
+      fir::StoreOp::create(builder, loc, zero, destRef);
+    }
+    return;
+  }
+
+  llvm_unreachable("unhandled type in genInlineTypeDefaultInit");
 }

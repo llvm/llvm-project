@@ -32,6 +32,42 @@ WIN32_ONLY_FILES = [
 ]
 
 cc_library(
+    name = "sanitizer_common_headers",
+    hdrs = glob([
+        "lib/sanitizer_common/*.h",
+        "lib/sanitizer_common/*.inc",
+        "lib/sanitizer_common/*.inc.S",
+    ]),
+    includes = ["lib"],
+)
+
+cc_library(
+    name = "sanitizer_common",
+    srcs = glob(
+        [
+            "lib/sanitizer_common/*.cpp",
+            "lib/sanitizer_common/*.S",
+        ],
+    ),
+    linkstatic = True,
+    deps = [
+        ":interception",
+        ":sanitizer_common_headers",
+    ],
+)
+
+cc_library(
+    name = "interception",
+    srcs = glob(["lib/interception/*.cpp"]),
+    hdrs = glob(["lib/interception/*.h"]),
+    includes = [":lib"],
+    linkstatic = True,
+    deps = [
+        ":sanitizer_common_headers",
+    ],
+)
+
+cc_library(
     name = "profile",
     srcs = glob(
         [
@@ -54,6 +90,7 @@ cc_library(
     linkstatic = True,
     deps = [
         ":config",
+        ":interception",
     ],
 )
 

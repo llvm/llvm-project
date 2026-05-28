@@ -121,6 +121,12 @@ protected:
         llvm::Triple::EnvironmentType::UnknownEnvironment;
     /// LC_VERSION_MIN_... SDK.
     std::string min_version_os_sdk;
+    /// When we need to read a binary's mach header and load commands
+    /// out of memory, this specifies how much to read to get
+    /// everything in one read packet, if known.  Increase the
+    /// default 512 bytes to 3192 which is enough to include most
+    /// mach header + load commands.
+    uint32_t mh_and_load_cmd_size = 3192;
 
     ImageInfo() = default;
 
@@ -137,6 +143,7 @@ protected:
       os_type = llvm::Triple::OSType::UnknownOS;
       os_env = llvm::Triple::EnvironmentType::UnknownEnvironment;
       min_version_os_sdk.clear();
+      mh_and_load_cmd_size = 3192;
     }
 
     bool operator==(const ImageInfo &rhs) const {
@@ -144,7 +151,8 @@ protected:
              file_spec == rhs.file_spec && uuid == rhs.uuid &&
              memcmp(&header, &rhs.header, sizeof(header)) == 0 &&
              segments == rhs.segments && os_type == rhs.os_type &&
-             os_env == rhs.os_env;
+             os_env == rhs.os_env &&
+             mh_and_load_cmd_size == rhs.mh_and_load_cmd_size;
     }
 
     bool UUIDValid() const { return uuid.IsValid(); }

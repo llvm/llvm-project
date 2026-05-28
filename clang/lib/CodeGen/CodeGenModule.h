@@ -1297,6 +1297,9 @@ public:
   // are needed or if they are alias to each other.
   llvm::Function *codegenCXXStructor(GlobalDecl GD);
 
+  /// Emit a trap stub body for functions in ASTContext::CUDADeviceInvalidFuncs.
+  bool tryEmitCUDADeviceInvalidFunctionBody(GlobalDecl GD, llvm::Function *Fn);
+
   /// Return the address of the constructor/destructor of the given type.
   llvm::Constant *
   getAddrOfCXXStructor(GlobalDecl GD, const CGFunctionInfo *FnInfo = nullptr,

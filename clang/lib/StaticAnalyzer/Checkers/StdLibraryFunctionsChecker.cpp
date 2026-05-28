@@ -1477,10 +1477,9 @@ bool StdLibraryFunctionsChecker::evalCall(const CallEvent &Call,
   switch (Summary.getInvalidationKd()) {
   case EvalCallAsPure: {
     ProgramStateRef State = C.getState();
-    const LocationContext *LC = C.getLocationContext();
     const auto *CE = cast<CallExpr>(Call.getOriginExpr());
     SVal V = C.getSValBuilder().conjureSymbolVal(Call, C.blockCount());
-    State = State->BindExpr(CE, LC, V);
+    State = State->BindExpr(CE, C.getStackFrame(), V);
 
     C.addTransition(State);
 

@@ -16,6 +16,7 @@ namespace {
 struct olGetEventElapsedTimeTest : OffloadQueueTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
+    SKIP_KNOWN_FAILURE(LevelZero{"unsupported feature"});
 
     ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
     ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),

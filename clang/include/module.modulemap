@@ -150,6 +150,7 @@ module Clang_ScalableStaticAnalysisFramework {
   requires cplusplus
   umbrella "clang/ScalableStaticAnalysisFramework"
 
+  textual header "clang/ScalableStaticAnalysisFramework/BuiltinAnchorSources.def"
   textual header "clang/ScalableStaticAnalysisFramework/Core/Model/PrivateFieldNames.def"
 
   module * { export * }

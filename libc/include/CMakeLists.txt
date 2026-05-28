@@ -789,6 +789,7 @@ add_header_macro(
     .llvm-libc-types.struct_cmsghdr
     .llvm-libc-types.struct_iovec
     .llvm-libc-types.struct_linger
+    .llvm-libc-types.struct_mmsghdr
     .llvm-libc-types.struct_msghdr
     .llvm-libc-types.struct_sockaddr
     .llvm-libc-types.struct_sockaddr_storage

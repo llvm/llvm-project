@@ -4939,16 +4939,12 @@ _func:
 
         mrs x12, s3_7_c15_c1_5
         mrs x13, s3_2_c11_c15_7
-        mrs x14, s1_3_c9_c2_1
         msr s3_0_c15_c0_0, x12
         msr s3_7_c11_c13_7, x5
-        msr s1_3_c9_c2_1, x4
 // CHECK: mrs     x12, {{s3_7_c15_c1_5|S3_7_C15_C1_5}}      // encoding: [0xac,0xf1,0x3f,0xd5]
 // CHECK: mrs     x13, {{s3_2_c11_c15_7|S3_2_C11_C15_7}}    // encoding: [0xed,0xbf,0x3a,0xd5]
-// CHECK: mrs     x14, {{s1_3_c9_c2_1|S1_3_C9_C2_1}}        // encoding: [0x2e,0x92,0x2b,0xd5]
 // CHECK: msr     {{s3_0_c15_c0_0|S3_0_C15_C0_0}}, x12      // encoding: [0x0c,0xf0,0x18,0xd5]
 // CHECK: msr     {{s3_7_c11_c13_7|S3_7_C11_C13_7}}, x5     // encoding: [0xe5,0xbd,0x1f,0xd5]
-// CHECK: msr     {{s1_3_c9_c2_1|S1_3_C9_C2_1}}, x4         // encoding: [0x24,0x92,0x0b,0xd5]
 
 //------------------------------------------------------------------------------
 // Unconditional branch (immediate)

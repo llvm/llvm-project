@@ -655,7 +655,6 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   Value convertedVal = *converted;
   MemRefType memRefTy = dyn_cast<MemRefType>(convertedVal.getType());
 
-  bool isRebox = firMemref.getDefiningOp<fir::ReboxOp>() != nullptr;
   bool isDescriptor = mlir::isa<fir::BaseBoxType>(firMemref.getType()) ||
                       firMemref.getDefiningOp<fir::BoxAddrOp>() != nullptr;
 
@@ -669,6 +668,7 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   else if (auto rebox = firMemref.getDefiningOp<fir::ReboxOp>())
     collectSliceInfoFrom(rebox, sliceInfo);
   auto srcTy = cast<MemRefType>((*converted).getType());
+  std::optional<int64_t> complexPartIdx;
   if (sliceInfo.hasProjectedSlice) {
     if (auto complexTy = dyn_cast<mlir::ComplexType>(srcTy.getElementType())) {
       if (!sliceInfo.projectedSliceStart ||
@@ -680,24 +680,25 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
                "0 (real) or 1 (imaginary), bailing out of conversion\n");
         return failure();
       }
-      auto projection = *sliceInfo.projectedSliceStart;
+      complexPartIdx = *sliceInfo.projectedSliceStart;
       SmallVector<int64_t> shape(srcTy.getShape());
       shape.push_back(2);
-      Value compMemref =
+      convertedVal =
           fir::ConvertOp::create(
               rewriter, loc, MemRefType::get(shape, complexTy.getElementType()),
               *converted)
               .getResult();
+      memRefTy = cast<MemRefType>(convertedVal.getType());
       indices.push_back(
-          arith::ConstantIndexOp::create(rewriter, loc, projection));
-      return std::pair{compMemref, indices};
+          arith::ConstantIndexOp::create(rewriter, loc, *complexPartIdx));
     }
   }
 
   // Static shape does not imply contiguous layout for descriptor-backed
-  // entities (e.g. boxed array sections with non-unit stride). Keep the
-  // reinterpret-cast path so descriptor strides are preserved.
-  if (memRefTy.hasStaticShape() && !isRebox && !isDescriptor)
+  // entities (e.g. boxed array sections with non-unit stride). Projected
+  // complex %re/%im also need reinterpret_cast even when the converted type
+  // is statically shaped (e.g. memref<Nx2xT>).
+  if (!complexPartIdx && memRefTy.hasStaticShape() && !isDescriptor)
     return std::pair{*converted, indices};
 
   unsigned rank = arrayCoorOp.getIndices().size();
@@ -736,11 +737,14 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
                                     shapeVec.empty() ||
                                     (firMemrefIsBox && !firMemrefIsEmbox);
   if (descriptorOwnsLayout) {
-    // Rebuild the MemRef view from descriptor metadata instead of from slice
-    // triplets. Reached only when firMemref is a fir.box value (case b/c), or
-    // for projected slices (case a) where the source remains the box.
-    auto boxElementSize =
-        fir::BoxEleSizeOp::create(rewriter, loc, indexTy, firMemref);
+    // Complex %re/%im: memref_stride = box_dims_byte_stride / sizeof(T),
+    Value boxElementSize =
+        complexPartIdx
+            ? arith::ConstantIndexOp::create(
+                  rewriter, loc,
+                  memRefTy.getElementType().getIntOrFloatBitWidth() / 8)
+            : fir::BoxEleSizeOp::create(rewriter, loc, indexTy, firMemref)
+                  .getResult();
 
     for (unsigned i = 0; i < rank; ++i) {
       Value dim = arith::ConstantIndexOp::create(rewriter, loc, rank - i - 1);
@@ -779,7 +783,11 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
     strides.push_back(oneIdx);
   }
 
-  assert(strides.size() == sizes.size() && sizes.size() == rank);
+  if (complexPartIdx) {
+    sizes.push_back(arith::ConstantIndexOp::create(rewriter, loc, 2));
+    strides.push_back(arith::ConstantIndexOp::create(rewriter, loc, 1));
+    ++rank;
+  }
 
   int64_t dynamicOffset = ShapedType::kDynamic;
   SmallVector<int64_t> dynamicStrides(rank, ShapedType::kDynamic);
@@ -793,7 +801,7 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   Value offset = arith::ConstantIndexOp::create(rewriter, loc, 0);
 
   auto reinterpret = memref::ReinterpretCastOp::create(
-      rewriter, loc, memRefTy, *converted, offset, sizes, strides);
+      rewriter, loc, memRefTy, convertedVal, offset, sizes, strides);
 
   Value result = reinterpret->getResult(0);
   return std::pair{result, indices};

@@ -2755,8 +2755,8 @@ public:
   ///
   ///      partial_reduce_umls acc, lhs, rhs
   /// <=> -partial_reduce_umla -acc, lhs, rhs
-  SDValue getPartialReduceMLS(unsigned Opc, const SDLoc &DL, SDValue Acc,
-                              SDValue LHS, SDValue RHS);
+  LLVM_ABI SDValue getPartialReduceMLS(unsigned Opc, const SDLoc &DL,
+                                       SDValue Acc, SDValue LHS, SDValue RHS);
 
   /// Some opcodes may create immediate undefined behavior when used with some
   /// values (integer division-by-zero for example). Therefore, these operations

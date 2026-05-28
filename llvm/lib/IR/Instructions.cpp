@@ -609,6 +609,22 @@ CallBase *CallBase::removeOperandBundle(CallBase *CB, uint32_t ID,
   return CreateNew ? Create(CB, Bundles, InsertPt) : CB;
 }
 
+CallBase *CallBase::removeOperandBundleAt(CallBase *CB, size_t Offset,
+                                          InsertPosition InsertPt) {
+  auto OpBundleCount = CB->getNumOperandBundles();
+  assert(Offset < OpBundleCount &&
+         "Trying to remove non-existant operand bundle");
+  SmallVector<OperandBundleDef> Bundles;
+  Bundles.reserve(OpBundleCount - 1);
+  size_t I = 0;
+  for (; I != Offset; ++I)
+    Bundles.emplace_back(CB->getOperandBundleAt(I));
+  ++I;
+  for (; I != OpBundleCount; ++I)
+    Bundles.emplace_back(CB->getOperandBundleAt(I));
+  return Create(CB, Bundles, InsertPt);
+}
+
 bool CallBase::hasReadingOperandBundles() const {
   // Implementation note: this is a conservative implementation of operand
   // bundle semantics, where *any* non-assume operand bundle (other than
@@ -4259,11 +4275,11 @@ void SwitchInstProfUpdateWrapper::setSuccessorWeight(
 SwitchInstProfUpdateWrapper::CaseWeightOpt
 SwitchInstProfUpdateWrapper::getSuccessorWeight(const SwitchInst &SI,
                                                 unsigned idx) {
-  if (MDNode *ProfileData = getBranchWeightMDNode(SI))
-    if (ProfileData->getNumOperands() == SI.getNumSuccessors() + 1)
-      return mdconst::extract<ConstantInt>(ProfileData->getOperand(idx + 1))
-          ->getValue()
-          .getZExtValue();
+  if (MDNode *ProfileData = getValidBranchWeightMDNode(SI)) {
+    SmallVector<uint32_t> Weights;
+    extractFromBranchWeightMD32(ProfileData, Weights);
+    return Weights[idx];
+  }
 
   return std::nullopt;
 }

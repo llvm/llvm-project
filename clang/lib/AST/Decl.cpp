@@ -4485,6 +4485,26 @@ FunctionDecl::setTemplateSpecializationKind(TemplateSpecializationKind TSK,
     llvm_unreachable("Function cannot have a template specialization kind");
 }
 
+bool FunctionDecl::isImplicitHDExplicitInstantiation() const {
+  auto HasImplicitAttr = [this](const Attr *A) {
+    return A ? A->isImplicit() : isImplicit();
+  };
+  if (!HasImplicitAttr(getAttr<CUDAHostAttr>()) ||
+      !HasImplicitAttr(getAttr<CUDADeviceAttr>()))
+    return false;
+  auto IsExplicitInstTSK = [](TemplateSpecializationKind TSK) {
+    return TSK == TSK_ExplicitInstantiationDeclaration ||
+           TSK == TSK_ExplicitInstantiationDefinition;
+  };
+  if (IsExplicitInstTSK(getTemplateSpecializationKind()))
+    return true;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(this))
+    if (const auto *Spec =
+            dyn_cast<ClassTemplateSpecializationDecl>(MD->getParent()))
+      return IsExplicitInstTSK(Spec->getTemplateSpecializationKind());
+  return false;
+}
+
 SourceLocation FunctionDecl::getPointOfInstantiation() const {
   if (FunctionTemplateSpecializationInfo *FTSInfo
         = TemplateOrSpecialization.dyn_cast<

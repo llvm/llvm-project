@@ -5,9 +5,9 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 ; CHECK: define float @fma(float, float, float) unnamed_addr #0
 define dso_local float @fma(float %0, float %1, float %2) local_unnamed_addr #0 !dbg !6 {
-; CHECK-NEXT: call void @llvm.dbg.value(metadata float %0, metadata [[VarX:[!][0-9]+]], metadata [[Expr:[!][0-9]+]]), !dbg [[Line1:[!][0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.value(metadata float %1, metadata [[VarY:[!][0-9]+]], metadata [[Expr]]), !dbg [[Line1]]
-; CHECK-NEXT: call void @llvm.dbg.value(metadata float %2, metadata [[VarZ:[!][0-9]+]], metadata [[Expr]]), !dbg [[Line1]]
+; CHECK-NEXT: call void @llvm.dbg.value(metadata float %0, i64 0, metadata [[VarX:[!][0-9]+]], metadata [[Expr:[!][0-9]+]]), !dbg [[Line1:[!][0-9]+]]
+; CHECK-NEXT: call void @llvm.dbg.value(metadata float %1, i64 0, metadata [[VarY:[!][0-9]+]], metadata [[Expr]]), !dbg [[Line1]]
+; CHECK-NEXT: call void @llvm.dbg.value(metadata float %2, i64 0, metadata [[VarZ:[!][0-9]+]], metadata [[Expr]]), !dbg [[Line1]]
   call void @llvm.dbg.value(metadata float %0, metadata !11, metadata !DIExpression()), !dbg !14
   call void @llvm.dbg.value(metadata float %1, metadata !12, metadata !DIExpression()), !dbg !14
   call void @llvm.dbg.value(metadata float %2, metadata !13, metadata !DIExpression()), !dbg !14

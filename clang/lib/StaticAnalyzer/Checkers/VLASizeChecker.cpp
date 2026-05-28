@@ -296,9 +296,8 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
 
   // VLASizeChecker is responsible for defining the extent of the array.
   if (VD) {
-    State =
-        setDynamicExtent(State, State->getRegion(VD, C.getLocationContext()),
-                         ArraySize.castAs<NonLoc>());
+    State = setDynamicExtent(State, State->getRegion(VD, C.getStackFrame()),
+                             ArraySize.castAs<NonLoc>());
   }
 
   // Remember our assumptions!

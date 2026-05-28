@@ -111,7 +111,9 @@ ArraySectionAnalyzer::analyze(mlir::Value ref1, mlir::Value ref2,
   if (!des1 || !des2)
     return SlicesOverlapKind::Unknown;
 
-  if (des1.getMemref() != des2.getMemref()) {
+  if (des1.getMemref() != des2.getMemref() &&
+      (!areKnownEquivalent ||
+       !areKnownEquivalent(des1.getMemref(), des2.getMemref()))) {
     // If the bases are different, then there is unknown overlap.
     LLVM_DEBUG(llvm::dbgs() << "No identical base for:\n"
                             << des1 << "and:\n"

@@ -100,16 +100,16 @@ define void @main() {
 ; CHECK-NEXT:   %gep_poison_idx = getelementptr i8, ptr %alloc, i64 poison => poison
 ; CHECK-NEXT:   %gep_trunc_idx = getelementptr i32, ptr %alloc, i128 18446744073709551616 => ptr 0x8 [alloc]
 ; CHECK-NEXT:   %gep_sext_idx = getelementptr i32, ptr %alloc, i8 -1 => ptr 0x4 [alloc + -4]
-; CHECK-NEXT:   %large_address = inttoptr i64 -1 to ptr => ptr 0xFFFFFFFFFFFFFFFF [dangling]
-; CHECK-NEXT:   %gep_update_idx_bits = getelementptr i32, ptr %large_address, i64 1 => ptr 0xFFFFFFFF00000003 [dangling]
+; CHECK-NEXT:   %large_address = inttoptr i64 -1 to ptr => ptr 0xFFFFFFFFFFFFFFFF [nullary]
+; CHECK-NEXT:   %gep_update_idx_bits = getelementptr i32, ptr %large_address, i64 1 => ptr 0xFFFFFFFF00000003 [nullary]
 ; CHECK-NEXT:   %gep_struct = getelementptr %struct, ptr %alloc_struct, i64 0, i32 1, i32 1 => ptr 0x1C [alloc_struct + 12]
-; CHECK-NEXT:   %gep_scalable_vec = getelementptr <vscale x 4 x i32>, ptr null, i64 4 => ptr 0x100 [dangling]
+; CHECK-NEXT:   %gep_scalable_vec = getelementptr <vscale x 4 x i32>, ptr null, i64 4 => ptr 0x100 [nullary]
 ; CHECK-NEXT:   %gep_vec_idx = getelementptr [2 x i32], ptr %alloc, i64 1, <2 x i64> <i64 0, i64 2> => { ptr 0x10 [alloc + 8], ptr 0x18 [alloc + 16] }
 ; CHECK-NEXT:   %ptr_vec_insert = insertelement <2 x ptr> poison, ptr %alloc, i32 0 => { ptr 0x8 [alloc], poison }
 ; CHECK-NEXT:   %ptr_vec_splat = shufflevector <2 x ptr> %ptr_vec_insert, <2 x ptr> poison, <2 x i32> zeroinitializer => { ptr 0x8 [alloc], ptr 0x8 [alloc] }
 ; CHECK-NEXT:   %gep_vec_ptr = getelementptr i32, <2 x ptr> %ptr_vec_splat, i64 1 => { ptr 0xC [alloc + 4], ptr 0xC [alloc + 4] }
 ; CHECK-NEXT:   %gep_vec_ptr_vec_idx = getelementptr i32, <2 x ptr> %ptr_vec_splat, <2 x i64> <i64 0, i64 2> => { ptr 0x8 [alloc], ptr 0x10 [alloc + 8] }
-; CHECK-NEXT:   %gep_inbounds_valid_null = getelementptr inbounds i8, ptr null, i64 0 => ptr 0x0 [dangling]
+; CHECK-NEXT:   %gep_inbounds_valid_null = getelementptr inbounds i8, ptr null, i64 0 => ptr 0x0 [nullary]
 ; CHECK-NEXT:   %gep_inbounds_invalid_null = getelementptr inbounds i8, ptr null, i64 1 => poison
 ; CHECK-NEXT:   %gep_inbounds_valid1 = getelementptr inbounds i8, ptr %alloc, i64 3 => ptr 0xB [alloc + 3]
 ; CHECK-NEXT:   %gep_inbounds_valid2 = getelementptr inbounds i8, ptr %alloc, i64 4 => ptr 0xC [alloc + 4]
@@ -120,25 +120,25 @@ define void @main() {
 ; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x28 [alloc]
 ; CHECK-NEXT:   ret ptr %alloc
 ; CHECK-NEXT: Exiting function: dead_stack_object
-; CHECK-NEXT:   %dead_stack_ptr = call ptr @dead_stack_object() => ptr 0x28 [dangling]
-; CHECK-NEXT:   %gep_inbounds_valid4 = getelementptr inbounds i8, ptr %dead_stack_ptr, i64 4 => ptr 0x2C [dangling]
+; CHECK-NEXT:   %dead_stack_ptr = call ptr @dead_stack_object() => ptr 0x28 [alloc (dangling)]
+; CHECK-NEXT:   %gep_inbounds_valid4 = getelementptr inbounds i8, ptr %dead_stack_ptr, i64 4 => ptr 0x2C [alloc + 4 (dangling)]
 ; CHECK-NEXT:   %gep_inbounds_invalid4 = getelementptr inbounds i8, ptr %dead_stack_ptr, i64 5 => poison
 ; CHECK-NEXT:   %gep_nusw_valid1 = getelementptr nusw i8, ptr %alloc, i64 -1 => ptr 0x7 [alloc + -1]
 ; CHECK-NEXT:   %gep_nusw_invalid1 = getelementptr nusw i8, ptr %large_address, i64 -2147483649 => poison
-; CHECK-NEXT:   %gep_nusw_valid2 = getelementptr nusw i32, ptr null, i32 536870911 => ptr 0x7FFFFFFC [dangling]
+; CHECK-NEXT:   %gep_nusw_valid2 = getelementptr nusw i32, ptr null, i32 536870911 => ptr 0x7FFFFFFC [nullary]
 ; CHECK-NEXT:   %gep_nusw_invalid2 = getelementptr nusw i32, ptr null, i32 536870912 => poison
-; CHECK-NEXT:   %gep_nusw_valid3 = getelementptr nusw [2 x i16], ptr null, i32 536870911, i32 1 => ptr 0x7FFFFFFE [dangling]
+; CHECK-NEXT:   %gep_nusw_valid3 = getelementptr nusw [2 x i16], ptr null, i32 536870911, i32 1 => ptr 0x7FFFFFFE [nullary]
 ; CHECK-NEXT:   %gep_nusw_invalid3 = getelementptr nusw [2 x i16], ptr null, i32 536870911, i32 2 => poison
-; CHECK-NEXT:   %large_address2 = inttoptr i64 -4 to ptr => ptr 0xFFFFFFFFFFFFFFFC [dangling]
-; CHECK-NEXT:   %gep_nusw_valid4 = getelementptr nusw i8, ptr %large_address2, i64 3 => ptr 0xFFFFFFFFFFFFFFFF [dangling]
+; CHECK-NEXT:   %large_address2 = inttoptr i64 -4 to ptr => ptr 0xFFFFFFFFFFFFFFFC [nullary]
+; CHECK-NEXT:   %gep_nusw_valid4 = getelementptr nusw i8, ptr %large_address2, i64 3 => ptr 0xFFFFFFFFFFFFFFFF [nullary]
 ; CHECK-NEXT:   %gep_nusw_invalid4 = getelementptr nusw i8, ptr %large_address2, i64 4 => poison
-; CHECK-NEXT:   %gep_nusw_valid5 = getelementptr nusw i8, ptr %large_address2, i64 -4 => ptr 0xFFFFFFFFFFFFFFF8 [dangling]
+; CHECK-NEXT:   %gep_nusw_valid5 = getelementptr nusw i8, ptr %large_address2, i64 -4 => ptr 0xFFFFFFFFFFFFFFF8 [nullary]
 ; CHECK-NEXT:   %gep_nusw_invalid5 = getelementptr nusw i8, ptr %alloc, i64 -16 => poison
-; CHECK-NEXT:   %gep_nuw_valid1 = getelementptr nuw i8, ptr null, i64 2147483647 => ptr 0x7FFFFFFF [dangling]
+; CHECK-NEXT:   %gep_nuw_valid1 = getelementptr nuw i8, ptr null, i64 2147483647 => ptr 0x7FFFFFFF [nullary]
 ; CHECK-NEXT:   %gep_nuw_invalid1 = getelementptr nuw i8, ptr null, i64 -1 => poison
-; CHECK-NEXT:   %gep_nuw_valid2 = getelementptr nuw i32, ptr null, i32 1073741823 => ptr 0xFFFFFFFC [dangling]
+; CHECK-NEXT:   %gep_nuw_valid2 = getelementptr nuw i32, ptr null, i32 1073741823 => ptr 0xFFFFFFFC [nullary]
 ; CHECK-NEXT:   %gep_nuw_invalid2 = getelementptr nuw i32, ptr null, i32 1073741824 => poison
-; CHECK-NEXT:   %gep_nuw_valid3 = getelementptr nuw [2 x i16], ptr null, i32 1073741823, i32 1 => ptr 0xFFFFFFFE [dangling]
+; CHECK-NEXT:   %gep_nuw_valid3 = getelementptr nuw [2 x i16], ptr null, i32 1073741823, i32 1 => ptr 0xFFFFFFFE [nullary]
 ; CHECK-NEXT:   %gep_nuw_invalid3 = getelementptr nuw [2 x i16], ptr null, i32 1073741823, i32 2 => poison
 ; CHECK-NEXT:   %gep_nuw_valid4 = getelementptr nuw i32, ptr %alloc, i64 1073741821 => ptr 0xFFFFFFFC [alloc + 4294967284]
 ; CHECK-NEXT:   %gep_nuw_invalid4 = getelementptr nuw i32, ptr %alloc, i64 1073741822 => poison

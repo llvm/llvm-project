@@ -150,22 +150,19 @@ class MemIntrinsicCostAttributes {
   Align Alignment;
 
 public:
-  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
-                                      const Value *Ptr, bool VariableMask,
-                                      Align Alignment,
-                                      const Instruction *I = nullptr)
+  MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, const Value *Ptr,
+                             bool VariableMask, Align Alignment,
+                             const Instruction *I = nullptr)
       : I(I), Ptr(Ptr), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
         Alignment(Alignment) {}
 
-  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
-                                      Align Alignment,
-                                      unsigned AddressSpace = 0)
+  MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, Align Alignment,
+                             unsigned AddressSpace = 0)
       : DataTy(DataTy), IID(Id), AddressSpace(AddressSpace),
         Alignment(Alignment) {}
 
-  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
-                                      bool VariableMask, Align Alignment,
-                                      const Instruction *I = nullptr)
+  MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, bool VariableMask,
+                             Align Alignment, const Instruction *I = nullptr)
       : I(I), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
         Alignment(Alignment) {}
 
@@ -1071,7 +1068,8 @@ public:
   };
 
   /// Calculates a VectorInstrContext from \p I.
-  static VectorInstrContext getVectorInstrContextHint(const Instruction *I);
+  LLVM_ABI static VectorInstrContext
+  getVectorInstrContextHint(const Instruction *I);
 
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or

@@ -37,6 +37,9 @@ ForwardIt1 search( ForwardIt1 first, ForwardIt1 last,
 template<typename T>
 typename remove_reference<T>::type &&move(T &&t) noexcept;
 
+template<typename T>
+T &&forward(typename remove_reference<T>::type &t) noexcept;
+
 template <typename C>
 auto data(const C &c) -> decltype(c.data());
 

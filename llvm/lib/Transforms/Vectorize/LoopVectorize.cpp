@@ -6757,10 +6757,12 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
   if (!shouldWiden(Instr, Range))
     return nullptr;
 
-  if (VPI->getOpcode() == Instruction::GetElementPtr)
-    return new VPWidenGEPRecipe(cast<GetElementPtrInst>(Instr),
+  if (VPI->getOpcode() == Instruction::GetElementPtr) {
+    auto *GEP = cast<GetElementPtrInst>(Instr);
+    return new VPWidenGEPRecipe(GEP->getSourceElementType(),
                                 VPI->operandsWithoutMask(), *VPI,
-                                VPI->getDebugLoc());
+                                VPI->getDebugLoc(), GEP);
+  }
 
   if (Instruction::isCast(VPI->getOpcode())) {
     auto *CI = cast<CastInst>(Instr);

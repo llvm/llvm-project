@@ -112,6 +112,15 @@ define void @main() {
   store {i8, i32} zeroinitializer, ptr %alloc_struct_padding
   %load_struct_noundef = load {i8, i32}, ptr %alloc_struct_padding, !noundef !{}
 
+  %alloc_ptr = alloca ptr
+  store ptr %alloc_ptr, ptr %alloc_ptr
+  ; It should recover the provenance.
+  %ptr_with_provenance = load ptr, ptr %alloc_ptr
+  %addr_bits = load i8, ptr %alloc_ptr
+  store i8 %addr_bits, ptr %alloc_ptr
+  ; The first byte is tainted. We cannot recover the provenance.
+  %ptr_without_provenance = load ptr, ptr %alloc_ptr
+
   ret void
 }
 ; CHECK: Entering function: main
@@ -139,7 +148,7 @@ define void @main() {
 ; CHECK-NEXT:   %val11 = load i25, ptr %alloc, align 4 => poison
 ; CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr poison)
 ; CHECK-NEXT:   call void @llvm.lifetime.end.p0(ptr poison)
-; CHECK-NEXT:   %alloc_lifetime = alloca i32, align 4 => ptr 0xC [alloc_lifetime]
+; CHECK-NEXT:   %alloc_lifetime = alloca i32, align 4 => ptr 0xC [alloc_lifetime (dead)]
 ; CHECK-NEXT:   %val12 = load i32, ptr %alloc_lifetime, align 4 => poison
 ; CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr %alloc_lifetime)
 ; CHECK-NEXT:   %val13 = load i32, ptr %alloc_lifetime, align 4 => i32 -289830082
@@ -195,5 +204,11 @@ define void @main() {
 ; CHECK-NEXT:   %alloc_struct_padding = alloca { i8, i32 }, align 8 => ptr 0x88 [alloc_struct_padding]
 ; CHECK-NEXT:   store { i8, i32 } zeroinitializer, ptr %alloc_struct_padding, align 4
 ; CHECK-NEXT:   %load_struct_noundef = load { i8, i32 }, ptr %alloc_struct_padding, align 4, !noundef !0 => { i8 0, i32 0 }
+; CHECK-NEXT:   %alloc_ptr = alloca ptr, align 8 => ptr 0x90 [alloc_ptr]
+; CHECK-NEXT:   store ptr %alloc_ptr, ptr %alloc_ptr, align 8
+; CHECK-NEXT:   %ptr_with_provenance = load ptr, ptr %alloc_ptr, align 8 => ptr 0x90 [alloc_ptr]
+; CHECK-NEXT:   %addr_bits = load i8, ptr %alloc_ptr, align 1 => i8 -112
+; CHECK-NEXT:   store i8 %addr_bits, ptr %alloc_ptr, align 1
+; CHECK-NEXT:   %ptr_without_provenance = load ptr, ptr %alloc_ptr, align 8 => ptr 0x90 [nullary]
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

@@ -1769,6 +1769,187 @@ TestMultiSlotAlloca::handleDestructuringComplete(
   return createNewMultiAllocaWithoutSlot(slot, builder, *this);
 }
 
+//===----------------------------------------------------------------------===//
+// TestTransparentAlias
+//===----------------------------------------------------------------------===//
+
+void TestTransparentAlias::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot & /*parentSlot*/,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  if (aliasedSlotPointerOperand.get() != getSource())
+    return;
+  Type elemType = cast<MemRefType>(getResult().getType()).getElementType();
+  newMemorySlots.push_back(MemorySlot{getResult(), elemType});
+}
+
+bool TestTransparentAlias::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  for (OpOperand &use : getResult().getUses())
+    newBlockingUses.push_back(&use);
+  return true;
+}
+
+DeletionKind TestTransparentAlias::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+//===----------------------------------------------------------------------===//
+// TestTransparentCastAlias
+//===----------------------------------------------------------------------===//
+
+void TestTransparentCastAlias::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot & /*parentSlot*/,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  if (aliasedSlotPointerOperand.get() != getSource())
+    return;
+  Type elemType = cast<MemRefType>(getResult().getType()).getElementType();
+  newMemorySlots.push_back(MemorySlot{getResult(), elemType});
+}
+
+bool TestTransparentCastAlias::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  for (OpOperand &use : getResult().getUses())
+    newBlockingUses.push_back(&use);
+  return true;
+}
+
+DeletionKind TestTransparentCastAlias::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+Value TestTransparentCastAlias::projectSlotValueToAliasValue(
+    OpOperand & /*aliasedSlotPointerOperand*/,
+    const MemorySlot & /*parentSlot*/, const MemorySlot &aliasSlot,
+    Value slotValue, OpBuilder &builder) {
+  if (slotValue.getType() == aliasSlot.elemType)
+    return slotValue;
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            aliasSlot.elemType, slotValue)
+      .getResult(0);
+}
+
+Value TestTransparentCastAlias::projectAliasValueToSlotValue(
+    OpOperand & /*aliasedSlotPointerOperand*/, const MemorySlot &parentSlot,
+    const MemorySlot & /*aliasSlot*/, Value aliasValue, Value /*reachingDef*/,
+    OpBuilder &builder) {
+  if (aliasValue.getType() == parentSlot.elemType)
+    return aliasValue;
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            parentSlot.elemType, aliasValue)
+      .getResult(0);
+}
+
+//===----------------------------------------------------------------------===//
+// TestTransparentDualAlias
+//===----------------------------------------------------------------------===//
+
+void TestTransparentDualAlias::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot & /*parentSlot*/,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  if (aliasedSlotPointerOperand.get() != getSource())
+    return;
+  // Expose both results as aliases of the same parent at their own
+  // signedness (same bit width as the parent's signless i32).
+  newMemorySlots.push_back(MemorySlot{
+      getResultSigned(),
+      cast<MemRefType>(getResultSigned().getType()).getElementType()});
+  newMemorySlots.push_back(MemorySlot{
+      getResultUnsigned(),
+      cast<MemRefType>(getResultUnsigned().getType()).getElementType()});
+}
+
+bool TestTransparentDualAlias::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  for (Value result : getResults())
+    for (OpOperand &use : result.getUses())
+      newBlockingUses.push_back(&use);
+  return true;
+}
+
+DeletionKind TestTransparentDualAlias::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+Value TestTransparentDualAlias::projectSlotValueToAliasValue(
+    OpOperand & /*aliasedSlotPointerOperand*/,
+    const MemorySlot & /*parentSlot*/, const MemorySlot &aliasSlot,
+    Value slotValue, OpBuilder &builder) {
+  if (slotValue.getType() == aliasSlot.elemType)
+    return slotValue;
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            aliasSlot.elemType, slotValue)
+      .getResult(0);
+}
+
+Value TestTransparentDualAlias::projectAliasValueToSlotValue(
+    OpOperand & /*aliasedSlotPointerOperand*/, const MemorySlot &parentSlot,
+    const MemorySlot & /*aliasSlot*/, Value aliasValue, Value /*reachingDef*/,
+    OpBuilder &builder) {
+  if (aliasValue.getType() == parentSlot.elemType)
+    return aliasValue;
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            parentSlot.elemType, aliasValue)
+      .getResult(0);
+}
+
+//===----------------------------------------------------------------------===//
+// TestPartialAlias
+//===----------------------------------------------------------------------===//
+
+void TestPartialAlias::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot & /*parentSlot*/,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  if (aliasedSlotPointerOperand.get() != getSource())
+    return;
+  newMemorySlots.push_back(MemorySlot{
+      getResult(), cast<MemRefType>(getResult().getType()).getElementType()});
+}
+
+bool TestPartialAlias::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  for (OpOperand &use : getResult().getUses())
+    newBlockingUses.push_back(&use);
+  return true;
+}
+
+DeletionKind TestPartialAlias::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+Value TestPartialAlias::projectSlotValueToAliasValue(
+    OpOperand & /*aliasedSlotPointerOperand*/,
+    const MemorySlot & /*parentSlot*/, const MemorySlot &aliasSlot,
+    Value slotValue, OpBuilder &builder) {
+  // Sub-value extraction: 1-input cast.
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            aliasSlot.elemType, slotValue)
+      .getResult(0);
+}
+
+Value TestPartialAlias::projectAliasValueToSlotValue(
+    OpOperand & /*aliasedSlotPointerOperand*/, const MemorySlot &parentSlot,
+    const MemorySlot & /*aliasSlot*/, Value aliasValue, Value reachingDef,
+    OpBuilder &builder) {
+  // Sub-value insertion into the current reaching definition: emit a 2-input
+  // cast taking both the new alias value and the existing parent value.
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            parentSlot.elemType,
+                                            ValueRange{aliasValue, reachingDef})
+      .getResult(0);
+}
+
 namespace {
 /// Returns test dialect's memref layout for test dialect's tensor encoding when
 /// applicable.

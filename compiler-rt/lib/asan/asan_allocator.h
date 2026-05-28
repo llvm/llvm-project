@@ -215,6 +215,11 @@ typedef VeryDenseSizeClassMap SizeClassMap;
 #    elif defined(__sparc__)
 const uptr kAllocatorSize = 0x20000000000ULL;  // 2T.
 typedef DefaultSizeClassMap SizeClassMap;
+#    elif SANITIZER_ALPHA
+// Alpha has a 42-bit user VAS (TASK_SIZE = 0x40000000000).  Use 512G so the
+// allocator fits comfortably within the 2.5T HighMem region.
+const uptr kAllocatorSize = 0x8000000000ULL;  // 512G.
+typedef DefaultSizeClassMap SizeClassMap;
 #    elif SANITIZER_WINDOWS
 const uptr kAllocatorSize  =  0x8000000000ULL;  // 500G
 typedef DefaultSizeClassMap SizeClassMap;

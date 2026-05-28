@@ -103,6 +103,10 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr>,
     bool isHostDeviceProcedure,
     const LanguageFeatureControl *features = nullptr);
 
+// Format vector type as Fortran string
+std::string FormatVectorTypeAsFortran(
+    int category, int64_t elementCategory, int64_t elementKind);
+
 static constexpr char blankCommonObjectName[] = "__BLNK__";
 
 // Get the assembly name for a non BIND(C) external symbol other than the blank

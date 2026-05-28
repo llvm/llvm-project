@@ -651,9 +651,7 @@ bool ClauseProcessor::processInitializer(
     };
     return true;
   }
-  TODO(converter.getCurrentLocation(),
-       "declare reduction without an initializer clause is not yet "
-       "supported");
+  return false;
 }
 
 bool ClauseProcessor::processMergeable(

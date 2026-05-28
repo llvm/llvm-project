@@ -23,6 +23,7 @@ add_libc_test(
   SRCS
     wctype_perfect_hash_test.cpp
   COMPILE_OPTIONS
+    -DLIBC_ENABLE_CONSTEXPR=1
     ${CONSTEXPR_FLAGS}
   DEPENDS
     libc.src.__support.wctype.lower_to_upper

@@ -87,7 +87,7 @@
 "`P3396R1 <https://wg21.link/P3396R1>`__","``std::execution`` wording fixes","2024-11 (Wrocław)","","","`#118376 <https://github.com/llvm/llvm-project/issues/118376>`__",""
 "`P2835R7 <https://wg21.link/P2835R7>`__","Expose ``std::atomic_ref``'s object address","2024-11 (Wrocław)","|Complete|","22","`#118377 <https://github.com/llvm/llvm-project/issues/118377>`__",""
 "`P3323R1 <https://wg21.link/P3323R1>`__","cv-qualified types in ``atomic`` and ``atomic_ref``","2024-11 (Wrocław)","","","`#118378 <https://github.com/llvm/llvm-project/issues/118378>`__",""
-"`P3508R0 <https://wg21.link/P3508R0>`__","Wording for ""constexpr for specialized memory algorithms""","2024-11 (Wrocław)","","","`#118379 <https://github.com/llvm/llvm-project/issues/118379>`__",""
+"`P3508R0 <https://wg21.link/P3508R0>`__","Wording for ""constexpr for specialized memory algorithms""","2024-11 (Wrocław)","|Complete|","23","`#118379 <https://github.com/llvm/llvm-project/issues/118379>`__",""
 "`P3369R0 <https://wg21.link/P3369R0>`__","constexpr for ``uninitialized_default_construct``","2024-11 (Wrocław)","","","`#118380 <https://github.com/llvm/llvm-project/issues/118380>`__",""
 "`P3370R1 <https://wg21.link/P3370R1>`__","Add new library headers from C23","2024-11 (Wrocław)","","","`#118381 <https://github.com/llvm/llvm-project/issues/118381>`__",""
 "`P3309R3 <https://wg21.link/P3309R3>`__","constexpr ``atomic`` and ``atomic_ref``","2024-11 (Wrocław)","","","`#118382 <https://github.com/llvm/llvm-project/issues/118382>`__",""

@@ -490,6 +490,21 @@ define void @redundant_nonnull3(ptr %ptr) {
   ret void
 }
 
+define void @partially_redundant(ptr %ptr, ptr %ptr2, ptr %ptr3, ptr %ptr4, ptr %ptr5) {
+; CHECK-LABEL: @partially_redundant(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR2:%.*]]) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR:%.*]]) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR4:%.*]]), "nonnull"(ptr [[PTR3:%.*]]) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR5:%.*]]) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr), "nonnull"(ptr %ptr2) ]
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr), "nonnull"(ptr %ptr3) ]
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr4), "nonnull"(ptr %ptr5), "nonnull"(ptr %ptr3) ]
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr5) ]
+  ret void
+}
+
 ; PR35846 - https://bugs.llvm.org/show_bug.cgi?id=35846
 
 define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {

@@ -162,6 +162,27 @@ class FrameRecognizerTestCase(TestBase):
                     substrs=['*a = 78'])
         """
 
+    def test_recognized_args_filtered_by_name(self):
+        """Test that 'frame variable <name>' only prints matching recognized args."""
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "foo")
+
+        self.runCmd("frame recognizer clear")
+        self.runCmd("command script import recognizer.py")
+        self.runCmd(
+            "frame recognizer add -l recognizer.MyFrameRecognizer -s a.out -n foo"
+        )
+
+        # With no args, both recognized args are printed.
+        self.expect("frame variable", substrs=["(int) a = 42", "(int) b = 56"])
+
+        # With a specific name, only the matching recognized arg is printed.
+        self.expect("frame variable a", substrs=["(int) a = 42"])
+        self.expect("frame variable a", matching=False, substrs=["b = 56"])
+
+        self.expect("frame variable b", substrs=["(int) b = 56"])
+        self.expect("frame variable b", matching=False, substrs=["a = 42"])
+
     def test_frame_recognizer_hiding(self):
         self.build()
 

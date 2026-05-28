@@ -457,7 +457,7 @@ cc_library(
         # be an empty library unless zstd is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.
         "//third-party:zstd",
-        "//libc:shared_math_headers",
+        "//libc:shared_math_headers_for_apfloat",
     ],
 )
 
@@ -1746,6 +1746,7 @@ cc_library(
         ":BinaryFormat",
         ":Core",
         ":Demangle",
+        ":FrontendOffloading",
         ":MC",
         ":ProfileData",
         ":Scalar",

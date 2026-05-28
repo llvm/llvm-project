@@ -465,7 +465,7 @@ void OmpStructureChecker::CheckIterationVariables(
     if (llvm::omp::isDataSharingAttributeClause(clauseId, version)) {
       for (const parser::OmpObject &object :
           parser::omp::GetOmpObjectList(clause)->v) {
-        if (const Symbol *symbol{GetObjectSymbol(object)}) {
+        if (const Symbol *symbol{GetObjectSymbol(object, /*ultimate=*/true)}) {
           auto maybeSource{parser::omp::GetObjectSource(object)};
           assert(maybeSource && "Expecting object source");
           dsa.insert(

@@ -18098,13 +18098,12 @@ DeclResult Sema::ActOnTemplatedFriendTag(
                                 Name, NameLoc, Attr, TemplateParams, AS_public,
                                 /*ModulePrivateLoc=*/SourceLocation(),
                                 FriendLoc, TempParamLists.size() - 1,
-                                TempParamLists.data())
+                                TempParamLists.data(), IsMemberSpecialization)
           .get();
     } else {
       // The "template<>" header is extraneous.
       Diag(TemplateParams->getTemplateLoc(), diag::err_template_tag_noparams)
-        << TypeWithKeyword::getTagTypeKindName(Kind) << Name;
-      IsMemberSpecialization = true;
+          << TypeWithKeyword::getTagTypeKindName(Kind) << Name;
     }
   }
 

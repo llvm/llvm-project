@@ -87,18 +87,8 @@ private:
     lldb::addr_t m_data_ptr = 0;
     uint8_t m_flags = 0;
 
-    objc_class_t() = default;
-
-    void Clear() {
-      m_isa = 0;
-      m_superclass = 0;
-      m_cache_ptr = 0;
-      m_vtable_ptr = 0;
-      m_data_ptr = 0;
-      m_flags = 0;
-    }
-
-    bool Read(Process *process, lldb::addr_t addr);
+    static llvm::Expected<objc_class_t> Read(Process *process,
+                                             lldb::addr_t addr);
   };
 
   struct class_ro_t {
@@ -144,11 +134,12 @@ private:
     uint32_t m_count;
     lldb::addr_t m_first_ptr;
 
-    bool Read(Process *process, lldb::addr_t addr);
+    static llvm::Expected<method_list_t> Read(Process *process,
+                                              lldb::addr_t addr);
   };
 
-  std::optional<method_list_t>
-  GetMethodList(Process *process, lldb::addr_t method_list_ptr) const;
+  static llvm::Expected<method_list_t>
+  GetMethodList(Process *process, lldb::addr_t method_list_ptr);
 
   struct method_t {
     lldb::addr_t m_name_ptr;
@@ -219,7 +210,8 @@ private:
     uint16_t m_image_index;
     int64_t m_list_offset;
 
-    bool Read(Process *process, lldb::addr_t addr);
+    static llvm::Expected<relative_list_entry_t> Read(Process *process,
+                                                      lldb::addr_t addr);
   };
 
   struct relative_list_list_t {
@@ -227,7 +219,8 @@ private:
     uint32_t m_count;
     lldb::addr_t m_first_ptr;
 
-    bool Read(Process *process, lldb::addr_t addr);
+    static llvm::Expected<relative_list_list_t> Read(Process *process,
+                                                     lldb::addr_t addr);
   };
 
   class iVarsStorage {
@@ -255,18 +248,15 @@ private:
         m_ivars_storage(), m_image_to_method_lists(), m_last_version_updated() {
   }
 
-  bool Read_objc_class(Process *process,
-                       std::unique_ptr<objc_class_t> &objc_class) const;
-
   bool Read_class_row(Process *process, const objc_class_t &objc_class,
                       std::unique_ptr<class_ro_t> &class_ro,
                       std::unique_ptr<class_rw_t> &class_rw) const;
 
-  bool ProcessMethodList(std::function<bool(const char *, const char *)> const
+  void ProcessMethodList(std::function<bool(const char *, const char *)> const
                              &instance_method_func,
                          method_list_t &method_list) const;
 
-  bool ProcessRelativeMethodLists(
+  llvm::Error ProcessRelativeMethodLists(
       std::function<bool(const char *, const char *)> const
           &instance_method_func,
       lldb::addr_t relative_method_list_ptr) const;

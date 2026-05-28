@@ -1250,6 +1250,10 @@ public:
   removeOperandBundle(CallBase *CB, uint32_t ID,
                       InsertPosition InsertPt = nullptr);
 
+  LLVM_ABI static CallBase *
+  removeOperandBundleAt(CallBase *CB, size_t Offset,
+                        InsertPosition InsertPtr = nullptr);
+
   /// Return the convergence control token for this call, if it exists.
   Value *getConvergenceControlToken() const {
     if (auto Bundle = getOperandBundle(llvm::LLVMContext::OB_convergencectrl)) {

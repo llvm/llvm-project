@@ -237,6 +237,37 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, BasicPrimary) {
   }
 }
 
+SCUDO_TYPED_TEST(ScudoPrimaryTest, FindNearestBlock) {
+  using Primary = TestAllocator<TypeParam, scudo::DefaultSizeClassMap>;
+  std::unique_ptr<Primary> Allocator(new Primary);
+  Allocator->init(/*ReleaseToOsInterval=*/-1);
+  typename Primary::SizeClassAllocatorT SizeClassAllocator;
+  SizeClassAllocator.init(nullptr, Allocator.get());
+
+  const scudo::uptr Size = 64U;
+  if (Primary::canAllocate(Size)) {
+    const scudo::uptr ClassId = Primary::SizeClassMap::getClassIdBySize(Size);
+    void *P = SizeClassAllocator.allocate(ClassId);
+    ASSERT_NE(P, nullptr);
+
+    scudo::uptr Ptr = reinterpret_cast<scudo::uptr>(P);
+    scudo::BlockInfo Info = Allocator->findNearestBlock(Ptr);
+
+    if (Info.BlockSize != 0) {
+      EXPECT_EQ(Info.BlockBegin, Ptr);
+      EXPECT_EQ(Info.BlockSize,
+                Primary::SizeClassMap::getSizeByClassId(ClassId));
+
+      scudo::BlockInfo Info2 = Allocator->findNearestBlock(Ptr + 10);
+      EXPECT_EQ(Info2.BlockBegin, Ptr);
+    }
+
+    SizeClassAllocator.deallocate(ClassId, P);
+  }
+
+  SizeClassAllocator.destroy(nullptr);
+}
+
 struct SmallRegionsConfig {
   static const bool MaySupportMemoryTagging = false;
   template <typename> using TSDRegistryT = void;

@@ -1,4 +1,4 @@
-//==- PrettyStackTraceLocationContext.h - show analysis backtrace --*- C++ -*-//
+//===- PrettyStackTraceStackFrame.h - show analysis backtrace --*- C++ -*--===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,20 +25,19 @@ namespace ento {
 ///        #1 void test()
 /// 3.     crash-trace.c:6:3: Error evaluating statement
 /// \endcode
-class PrettyStackTraceLocationContext : public llvm::PrettyStackTraceEntry {
-  const LocationContext *LCtx;
+class PrettyStackTraceStackFrame : public llvm::PrettyStackTraceEntry {
+  const StackFrame *SF;
+
 public:
-  PrettyStackTraceLocationContext(const LocationContext *LC) : LCtx(LC) {
-    assert(LCtx);
-  }
+  PrettyStackTraceStackFrame(const StackFrame *SF) : SF(SF) { assert(SF); }
 
   void print(raw_ostream &Out) const override {
     Out << "While analyzing stack: \n";
-    LCtx->dumpStack(Out);
+    SF->dumpStack(Out);
   }
 };
 
-} // end ento namespace
-} // end clang namespace
+} // namespace ento
+} // namespace clang
 
 #endif
