@@ -379,6 +379,24 @@ function(runtime_register_target name)
     endif()
   endforeach()
 
+  # Add libomp-mod target for OpenMP Fortran modules when openmp is enabled
+  if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
+    foreach(_name IN ITEMS ${ARG_BASE_NAME} ${name})
+      if(RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
+        if("openmp" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
+          set(libomp-mod-${name} libomp-mod)
+          list(APPEND ${name}_extra_targets libomp-mod-${name})
+          break()
+        endif()
+      else()
+        # Use global LLVM_ENABLE_RUNTIMES if per-target not set
+        set(libomp-mod-${name} libomp-mod)
+        list(APPEND ${name}_extra_targets libomp-mod-${name})
+        break()
+      endif()
+    endforeach()
+  endif()
+
   if(LLVM_INCLUDE_TESTS)
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_TESTSUITES "@${LLVM_BINARY_DIR}/runtimes/runtimes-${name}-bins/lit.tests")
     set(runtimes-test-depends-${name} runtimes-test-depends)
@@ -477,6 +495,31 @@ function(runtime_register_target name)
     endif()
     add_dependencies(install-${runtime_name}-stripped install-${runtime_name}-${name}-stripped)
   endforeach()
+  
+  # Create forwarding target for libomp-mod if openmp is enabled
+  if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
+    foreach(_name IN ITEMS ${ARG_BASE_NAME} ${name})
+      if(RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
+        if("openmp" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
+          if(NOT TARGET libomp-mod)
+            add_custom_target(libomp-mod)
+            set_target_properties(libomp-mod PROPERTIES FOLDER "OpenMP")
+          endif()
+          add_dependencies(libomp-mod libomp-mod-${name})
+          break()
+        endif()
+      else()
+        # Use global LLVM_ENABLE_RUNTIMES if per-target not set
+        if(NOT TARGET libomp-mod)
+          add_custom_target(libomp-mod)
+          set_target_properties(libomp-mod PROPERTIES FOLDER "OpenMP")
+        endif()
+        add_dependencies(libomp-mod libomp-mod-${name})
+        break()
+      endif()
+    endforeach()
+  endif()
+  
   foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
     add_dependencies(${component} ${component}-${name})
     add_dependencies(install-${component} install-${component}-${name})
@@ -590,6 +633,9 @@ if(build_runtimes)
       message(STATUS "Configuring build of omp_lib.mod and omp_lib_kinds.mod via flang")
       set(LIBOMP_FORTRAN_MODULES_COMPILER "${CMAKE_BINARY_DIR}/bin/flang")
       set(LIBOMP_MODULES_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}/flang")
+      list(APPEND extra_cmake_args
+        "-DLIBOMP_FORTRAN_MODULES_COMPILER=${CMAKE_BINARY_DIR}/bin/flang"
+        "-DLIBOMP_MODULES_INSTALL_PATH=${CMAKE_INSTALL_INCLUDEDIR}/flang")
       # TODO: This is a workaround until flang becomes a first-class project
       # in llvm/CMakeList.txt.  Until then, this line ensures that flang is
       # built before "openmp" is built as a runtime project.  Besides "flang"
