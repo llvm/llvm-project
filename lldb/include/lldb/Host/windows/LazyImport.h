@@ -15,18 +15,15 @@ namespace lldb_private {
 
 template <typename FnPtr> class LazyImport {
 public:
-  constexpr LazyImport(const wchar_t *dll, const char *symbol)
-      : m_dll(dll), m_symbol(symbol) {}
+  LazyImport(const wchar_t *dll, const char *symbol)
+      : m_resolved(Resolve(dll, symbol)) {}
 
   /// Returns the resolved function pointer, or nullptr if the DLL or symbol
-  /// is unavailable on this system. Resolution happens once.
-  FnPtr get() const {
-    static FnPtr resolved = Resolve(m_dll, m_symbol);
-    return resolved;
-  }
+  /// is unavailable on this system.
+  FnPtr get() const { return m_resolved; }
 
-  explicit operator bool() const { return get() != nullptr; }
-  FnPtr operator*() const { return get(); }
+  explicit operator bool() const { return m_resolved != nullptr; }
+  FnPtr operator*() const { return m_resolved; }
 
 private:
   static FnPtr Resolve(const wchar_t *dll, const char *symbol) {
@@ -37,8 +34,7 @@ private:
         reinterpret_cast<void *>(::GetProcAddress(module, symbol)));
   }
 
-  const wchar_t *m_dll;
-  const char *m_symbol;
+  FnPtr m_resolved;
 };
 
 } // namespace lldb_private
