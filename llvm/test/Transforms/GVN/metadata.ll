@@ -521,8 +521,8 @@ define i64 @test_mem_cache_hint_one(ptr %p) {
 ; CHECK-NEXT:    [[C:%.*]] = add i64 [[A]], [[A]]
 ; CHECK-NEXT:    ret i64 [[C]]
 ;
-  %a = load i64, ptr %p
-  %b = load i64, ptr %p, !mem.cache_hint !12
+  %a = load i64, ptr %p, !mem.cache_hint !12
+  %b = load i64, ptr %p
   %c = add i64 %a, %b
   ret i64 %c
 }
