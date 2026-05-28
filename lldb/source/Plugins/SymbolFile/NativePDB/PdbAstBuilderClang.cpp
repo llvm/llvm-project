@@ -1152,8 +1152,15 @@ PdbAstBuilderClang::GetOrCreateFunctionDecl(PdbCompilandSymId func_id) {
   CompilerType func_ct = ToCompilerType(qt);
 
   llvm::StringRef proc_name = proc.Name;
-  proc_name.consume_front(context_name);
-  proc_name.consume_front("::");
+  if (!context_name.empty() && !(proc_name.consume_front(context_name) &&
+                                 proc_name.consume_front("::"))) {
+    // If we have some context, but the function name doesn't start with it, use
+    // the basename.
+    MSVCUndecoratedNameParser parser(proc.Name);
+    llvm::ArrayRef<MSVCUndecoratedNameSpecifier> specs(parser.GetSpecifiers());
+    if (!specs.empty())
+      proc_name = specs.back().GetBaseName();
+  }
   clang::FunctionDecl *function_decl =
       CreateFunctionDecl(func_id, proc_name, proc.FunctionType, func_ct,
                          func_type->getNumParams(), storage, false, parent);

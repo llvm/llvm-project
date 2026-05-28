@@ -34,11 +34,11 @@ int main() {
 
 // CHECK:      namespace `public: void __cdecl Foo::fun(void)'::`1' {
 // CHECK-NEXT:     class <lambda_1> {
-// CHECK-NEXT:         int Foo::fun::<lambda_1>::operator()() const;
+// CHECK-NEXT:         int operator()() const;
 // CHECK-NEXT:         Foo *__this;
 // CHECK-NEXT:     };
 // CHECK-NEXT:     class <lambda_2> {
-// CHECK-NEXT:         int Foo::fun::<lambda_2>::operator()();
+// CHECK-NEXT:         int operator()();
 // CHECK-NEXT:         int local;
 // CHECK-NEXT:     };
 // CHECK-NEXT: }

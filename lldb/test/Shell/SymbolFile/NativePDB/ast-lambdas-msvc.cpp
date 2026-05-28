@@ -33,12 +33,10 @@ int main() {
 
 // CHECK:      namespace `public: void __cdecl Foo::fun(void)'::`{{.*}}' {
 // CHECK-NEXT:     class <lambda_1> {
-// CHECK:              int `Foo::fun'::`{{.*}}'::<lambda_1>::operator()() const;
 // CHECK:              int operator()() const;
 // CHECK:              Foo *__this;
 // CHECK-NEXT:     };
 // CHECK-NEXT:     class <lambda_2> {
-// CHECK:              int `Foo::fun'::`{{.*}}'::<lambda_2>::operator()();
 // CHECK:              int operator()();
 // CHECK:              int local;
 // CHECK-NEXT:     };
