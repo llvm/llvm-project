@@ -1408,7 +1408,7 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
   // Create a temporary variable for the result, which is either going
   // to be a single resource instance or a local array of resources (we need to
   // return an LValue).
-  RawAddress TmpVar = CGF.CreateMemTempWithoutCast(ResultTy);
+  RawAddress TmpVar = CGF.CreateMemTemp(ResultTy);
   if (CGF.EmitLifetimeStart(TmpVar.getPointer()))
     CGF.pushFullExprCleanup<CodeGenFunction::CallLifetimeEnd>(
         NormalEHLifetimeMarker, TmpVar);
@@ -1541,14 +1541,19 @@ RawAddress CGHLSLRuntime::createBufferMatrixTempAddress(const LValue &LV,
          "expected cbuffer matrix");
 
   QualType MatQualTy = LV.getType();
+  llvm::Type *MemTy = CGF.ConvertTypeForMem(MatQualTy);
   llvm::Type *LayoutTy = HLSLBufferLayoutBuilder(CGF.CGM).layOutType(MatQualTy);
+
+  if (LayoutTy == MemTy)
+    return LV.getAddress();
+
   Address SrcAddr = LV.getAddress();
-
-  if (LayoutTy == CGF.ConvertTypeForMem(MatQualTy))
-    return SrcAddr;
-
-  RawAddress DestAlloca =
-      CGF.CreateMemTempWithoutCast(MatQualTy, "matrix.buf.copy");
+  // NOTE: B\C CreateMemTemp flattens MatrixTypes which causes
+  // overlapping GEPs in emitBufferCopy. Use CreateTempAlloca with
+  // the non-padded layout.
+  CharUnits Align =
+      CharUnits::fromQuantity(CGF.CGM.getDataLayout().getABITypeAlign(MemTy));
+  RawAddress DestAlloca = CGF.CreateTempAlloca(MemTy, Align, "matrix.buf.copy");
   emitBufferCopy(CGF, DestAlloca, SrcAddr, MatQualTy);
   return DestAlloca;
 }
