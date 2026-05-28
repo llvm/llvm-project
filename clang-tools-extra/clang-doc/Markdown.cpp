@@ -22,9 +22,11 @@ static MDNode makeText(llvm::StringRef S) {
 // A line is a table separator if it only contains |, -, :, and spaces,
 // and has at least one -.
 static bool isSepRow(llvm::StringRef Line) {
-  return llvm::all_of(Line, [](char C) {
-    return C == '|' || C == '-' || C == ':' || C == ' ';
-  }) && Line.contains('-');
+  return llvm::all_of(Line,
+                      [](char C) {
+                        return C == '|' || C == '-' || C == ':' || C == ' ';
+                      }) &&
+         Line.contains('-');
 }
 
 static llvm::ArrayRef<MDNode>

@@ -42,7 +42,7 @@ enum class NodeKind : uint8_t {
 
 struct MDNode {
   NodeKind Kind;
-  llvm::StringRef Content;       // lang tag for FencedCode, leaf text for Text
+  llvm::StringRef Content; // lang tag for FencedCode, leaf text for Text
   llvm::ArrayRef<MDNode> Children; // arena allocated
 };
 
