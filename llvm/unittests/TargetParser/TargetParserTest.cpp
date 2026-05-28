@@ -1574,7 +1574,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+cmh"));
   EXPECT_TRUE(llvm::is_contained(Features, "+lscp"));
   EXPECT_TRUE(llvm::is_contained(Features, "+tlbid"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+mpamv2"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+mpamv2-deprecated"));
   EXPECT_TRUE(llvm::is_contained(Features, "+mtetc"));
   EXPECT_TRUE(llvm::is_contained(Features, "+gcie"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme2p3"));
@@ -1755,7 +1755,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"cmh", "nocmh", "+cmh", "-cmh"},
       {"lscp", "nolscp", "+lscp", "-lscp"},
       {"tlbid", "notlbid", "+tlbid", "-tlbid"},
-      {"mpamv2", "nompamv2", "+mpamv2", "-mpamv2"},
+      {"mpamv2-deprecated", "nompamv2-deprecated", "+mpamv2-deprecated", "-mpamv2-deprecated"},
       {"mtetc", "nomtetc", "+mtetc", "-mtetc"},
       {"gcie", "nogcie", "+gcie", "-gcie"},
       {"sme2p3", "nosme2p3", "+sme2p3", "-sme2p3"},

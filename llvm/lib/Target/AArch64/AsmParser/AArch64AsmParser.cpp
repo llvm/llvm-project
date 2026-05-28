@@ -3941,7 +3941,7 @@ static const struct Extension {
     {"cmh", {AArch64::FeatureCMH}},
     {"lscp", {AArch64::FeatureLSCP}},
     {"tlbid", {AArch64::FeatureTLBID}},
-    {"mpamv2", {AArch64::FeatureMPAMv2}},
+    {"mpamv2-deprecated", {AArch64::FeatureMPAMv2}},
     {"mtetc", {AArch64::FeatureMTETC}},
     {"gcie", {AArch64::FeatureGCIE}},
     {"sme2p3", {AArch64::FeatureSME2p3}},

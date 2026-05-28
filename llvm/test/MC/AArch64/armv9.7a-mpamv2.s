@@ -1,15 +1,15 @@
-// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+mpamv2 < %s \
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+mpamv2-deprecated < %s \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 // RUN: not llvm-mc -triple=aarch64 -show-encoding < %s 2>&1 \
 // RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
-// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+mpamv2 < %s \
-// RUN:        | llvm-objdump -d --mattr=+mpamv2 --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-INST
-// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+mpamv2 < %s \
-// RUN:        | llvm-objdump -d --mattr=-mpamv2 --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-UNKNOWN
+// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+mpamv2-deprecated < %s \
+// RUN:        | llvm-objdump -d --mattr=+mpamv2-deprecated --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-INST
+// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+mpamv2-deprecated < %s \
+// RUN:        | llvm-objdump -d --mattr=-mpamv2-deprecated --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 // Disassemble encoding and check the re-encoding (-show-encoding) matches.
-// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+mpamv2 < %s \
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+mpamv2-deprecated < %s \
 // RUN:        | sed '/.text/d' | sed 's/.*encoding: //g' \
-// RUN:        | llvm-mc -triple=aarch64 -mattr=+mpamv2 -disassemble -show-encoding \
+// RUN:        | llvm-mc -triple=aarch64 -mattr=+mpamv2-deprecated -disassemble -show-encoding \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 
 //------------------------------------------------------------------------------
@@ -36,18 +36,18 @@ msr MPAMCTL_EL3, x0
 // CHECK-ENCODING: [0x40,0xa5,0x1e,0xd5]
 // CHECK-UNKNOWN: d51ea540
 
-msr MPAMVIDCR_EL2, x0
-// CHECK-INST:    msr     MPAMVIDCR_EL2, x0
+msr MPAM_DEPRECATED_VIDCR_EL2, x0
+// CHECK-INST:    msr     MPAM_DEPRECATED_VIDCR_EL2, x0
 // CHECK-ENCODING: [0x00,0xa7,0x1c,0xd5]
 // CHECK-UNKNOWN: d51ca700
 
-msr MPAMVIDSR_EL2, x0
-// CHECK-INST:    msr     MPAMVIDSR_EL2, x0
+msr MPAM_DEPRECATED_VIDSR_EL2, x0
+// CHECK-INST:    msr     MPAM_DEPRECATED_VIDSR_EL2, x0
 // CHECK-ENCODING: [0x20,0xa7,0x1c,0xd5]
 // CHECK-UNKNOWN: d51ca720
 
-msr MPAMVIDSR_EL3, x0
-// CHECK-INST:    msr     MPAMVIDSR_EL3, x0
+msr MPAM_DEPRECATED_VIDSR_EL3, x0
+// CHECK-INST:    msr     MPAM_DEPRECATED_VIDSR_EL3, x0
 // CHECK-ENCODING: [0x20,0xa7,0x1e,0xd5]
 // CHECK-UNKNOWN: d51ea720
 
@@ -72,18 +72,18 @@ mrs x0, MPAMCTL_EL3
 // CHECK-ENCODING: [0x40,0xa5,0x3e,0xd5]
 // CHECK-UNKNOWN: d53ea540
 
-mrs x0, MPAMVIDCR_EL2
-// CHECK-INST:   mrs     x0, MPAMVIDCR_EL2
+mrs x0, MPAM_DEPRECATED_VIDCR_EL2
+// CHECK-INST:   mrs     x0, MPAM_DEPRECATED_VIDCR_EL2
 // CHECK-ENCODING: [0x00,0xa7,0x3c,0xd5]
 // CHECK-UNKNOWN: d53ca700
 
-mrs x0, MPAMVIDSR_EL2
-// CHECK-INST:   mrs     x0, MPAMVIDSR_EL2
+mrs x0, MPAM_DEPRECATED_VIDSR_EL2
+// CHECK-INST:   mrs     x0, MPAM_DEPRECATED_VIDSR_EL2
 // CHECK-ENCODING: [0x20,0xa7,0x3c,0xd5]
 // CHECK-UNKNOWN: d53ca720
 
-mrs x0, MPAMVIDSR_EL3
-// CHECK-INST:   mrs     x0, MPAMVIDSR_EL3
+mrs x0, MPAM_DEPRECATED_VIDSR_EL3
+// CHECK-INST:   mrs     x0, MPAM_DEPRECATED_VIDSR_EL3
 // CHECK-ENCODING: [0x20,0xa7,0x3e,0xd5]
 // CHECK-UNKNOWN: d53ea720
 

@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=aarch64 -mattr=+mpamv2 -show-encoding < %s 2>&1 \
+// RUN: not llvm-mc -triple=aarch64 -mattr=+mpamv2-deprecated -show-encoding < %s 2>&1 \
 // RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 
 //------------------------------------------------------------------------------
