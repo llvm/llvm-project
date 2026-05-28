@@ -1224,6 +1224,27 @@ static bool signBitMustBeTheSame(Value *Op0, Value *Op1,
   return *Known0 == *Known1;
 }
 
+// Determines if ldexp(ldexp(x, a), b) -> ldexp(x, sadd.sat(a, b)) is safe.
+//
+// This is true if, when the add saturates, the resulting ldexp is guaranteed to
+// produce 0 or inf.
+static bool ldexpSaturatingAddIsSafe(Type *FpTy, Type *ExpTy) {
+  const fltSemantics &FltSem = FpTy->getScalarType()->getFltSemantics();
+  if (!APFloat::semanticsHasInf(FltSem))
+    return false;
+
+  // Cap ExpBits at 32 because scalbn takes an int.  This is sufficient for any
+  // reasonable fp type (for example, `double` only has 11 exponent bits).
+  unsigned ExpBits = std::min(ExpTy->getScalarSizeInBits(), 32u);
+  int SignedMax = static_cast<int>(maxIntN(ExpBits));
+  int SignedMin = static_cast<int>(minIntN(ExpBits));
+  APFloat ScaledUp = scalbn(APFloat::getSmallest(FltSem), SignedMax,
+                            APFloat::rmNearestTiesToEven);
+  APFloat ScaledDown = scalbn(APFloat::getLargest(FltSem), SignedMin,
+                              APFloat::rmNearestTiesToEven);
+  return ScaledUp.isInfinity() && ScaledDown.isZero();
+}
+
 /// Try to canonicalize min/max(X + C0, C1) as min/max(X, C1 - C0) + C0. This
 /// can trigger other combines.
 static Instruction *moveAddAfterMinMax(IntrinsicInst *II,
@@ -3198,24 +3219,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::ldexp: {
-    // ldexp(ldexp(x, a), b) -> ldexp(x, a + b)
-    //
-    // The danger is if the first ldexp would overflow to infinity or underflow
-    // to zero, but the combined exponent avoids it. We ignore this with
-    // reassoc.
-    //
-    // It's also safe to fold if we know both exponents are >= 0 or <= 0 since
-    // it would just double down on the overflow/underflow which would occur
-    // anyway.
-    //
-    // TODO: Could do better if we had range tracking for the input value
-    // exponent. Also could broaden sign check to cover == 0 case.
     Value *Src = II->getArgOperand(0);
     Value *Exp = II->getArgOperand(1);
 
+    // ldexp(x, K) -> fmul x, 2^K
     uint64_t ConstExp;
     if (match(Exp, m_ConstantInt(ConstExp))) {
-      // ldexp(x, K) -> fmul x, 2^K
       const fltSemantics &FPTy =
           Src->getType()->getScalarType()->getFltSemantics();
 
@@ -3228,6 +3237,21 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
+    // ldexp(ldexp(x, a), b) -> ldexp(x, sadd.sat(a, b))
+    //
+    // A danger is if the first ldexp would overflow to infinity or underflow to
+    // zero, but the combined exponent avoids it.
+    //
+    // We ignore this with reassoc, or if we know both exponents have the same
+    // sign (since then we'd just double down on the over/underflow which would
+    // occur anyway).
+    //
+    // ldexp can take arbitrary integer types, so we also need to ensure that
+    // our exponent type is wide enough so that if sadd.sat(a, b) saturates,
+    // then ldexp at the saturated exponent saturates to inf or zero as well.
+    //
+    // TODO: Could do better if we had range tracking for the input value
+    // exponent. Also could broaden sign check to cover == 0 case.
     Value *InnerSrc;
     Value *InnerExp;
     if (match(Src, m_OneUse(m_Intrinsic<Intrinsic::ldexp>(
@@ -3236,11 +3260,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       FastMathFlags FMF = II->getFastMathFlags();
       FastMathFlags InnerFlags = cast<FPMathOperator>(Src)->getFastMathFlags();
 
-      if ((FMF.allowReassoc() && InnerFlags.allowReassoc()) ||
-          signBitMustBeTheSame(Exp, InnerExp, SQ.getWithInstruction(II))) {
-        // TODO: Add nsw/nuw probably safe if integer type exceeds exponent
-        // width.
-        Value *NewExp = Builder.CreateAdd(InnerExp, Exp);
+      if (ldexpSaturatingAddIsSafe(II->getType(), Exp->getType()) &&
+          ((FMF.allowReassoc() && InnerFlags.allowReassoc()) ||
+           signBitMustBeTheSame(Exp, InnerExp, SQ.getWithInstruction(II)))) {
+        Value *NewExp =
+            Builder.CreateBinaryIntrinsic(Intrinsic::sadd_sat, InnerExp, Exp);
         II->setArgOperand(1, NewExp);
         II->setFastMathFlags(InnerFlags); // Or the inner flags.
         return replaceOperand(*II, 0, InnerSrc);
@@ -3652,7 +3676,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
         // Remove align 1 bundles; they don't add any useful information.
         if (RK.ArgValue == 1)
-          return CallBase::removeOperandBundle(II, OBU.getTagID());
+          return CallBase::removeOperandBundleAt(II, Idx);
 
         // Don't try to remove align assumptions for pointers derived from
         // arguments. We might lose information if the function gets inline and
@@ -3666,7 +3690,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if ((1ULL << computeKnownBits(RK.WasOn, II).countMinTrailingZeros()) <
             RK.ArgValue)
           continue;
-        return CallBase::removeOperandBundle(II, OBU.getTagID());
+        return CallBase::removeOperandBundleAt(II, Idx);
       }
 
       if (OBU.getTagName() == "nonnull" && OBU.Inputs.size() == 1) {
@@ -3677,7 +3701,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
         // Drop assume if we can prove nonnull without it
         if (isKnownNonZero(RK.WasOn, getSimplifyQuery().getWithInstruction(II)))
-          return CallBase::removeOperandBundle(II, OBU.getTagID());
+          return CallBase::removeOperandBundleAt(II, Idx);
 
         // Fold the assume into metadata if it's valid at the load
         if (auto *LI = dyn_cast<LoadInst>(RK.WasOn);
@@ -3686,7 +3710,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           MDNode *MD = MDNode::get(II->getContext(), {});
           LI->setMetadata(LLVMContext::MD_nonnull, MD);
           LI->setMetadata(LLVMContext::MD_noundef, MD);
-          return CallBase::removeOperandBundle(II, OBU.getTagID());
+          return CallBase::removeOperandBundleAt(II, Idx);
         }
 
         // TODO: apply nonnull return attributes to calls and invokes

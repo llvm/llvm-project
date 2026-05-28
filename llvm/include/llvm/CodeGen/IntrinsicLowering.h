@@ -15,6 +15,8 @@
 #ifndef LLVM_CODEGEN_INTRINSICLOWERING_H
 #define LLVM_CODEGEN_INTRINSICLOWERING_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class CallInst;
 class DataLayout;
@@ -35,11 +37,11 @@ public:
   /// implement it (often a call to a non-intrinsic function) is inserted
   /// _after_ the call instruction and the call is deleted. The caller must
   /// be capable of handling this kind of change.
-  void LowerIntrinsicCall(CallInst *CI);
+  LLVM_ABI void LowerIntrinsicCall(CallInst *CI);
 
   /// Try to replace a call instruction with a call to a bswap intrinsic. Return
   /// false if the call is not a simple integer bswap.
-  static bool LowerToByteSwap(CallInst *CI);
+  LLVM_ABI static bool LowerToByteSwap(CallInst *CI);
 };
 }
 
