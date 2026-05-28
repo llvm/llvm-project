@@ -49,14 +49,14 @@ void ExpensiveValueOrCheck::check(const MatchFinder::MatchResult &Result) {
   if (!WarnOnRvalueOptional && ObjExpr && !ObjExpr->isLValue())
     return;
 
-  QualType ValueType = Call->getType().getCanonicalType();
+  const QualType ValueType = Call->getType().getCanonicalType();
   if (ValueType->isDependentType() || ValueType->isIncompleteType())
     return;
 
   const ASTContext &Ctx = *Result.Context;
-  int64_t ValueSize = Ctx.getTypeSizeInChars(ValueType).getQuantity();
-  bool IsExpensive = !ValueType.isTriviallyCopyableType(Ctx) ||
-                     ValueSize > static_cast<int64_t>(SizeThreshold);
+  const int64_t ValueSize = Ctx.getTypeSizeInChars(ValueType).getQuantity();
+  const bool IsExpensive = !ValueType.isTriviallyCopyableType(Ctx) ||
+                           ValueSize > static_cast<int64_t>(SizeThreshold);
 
   if (!IsExpensive)
     return;
