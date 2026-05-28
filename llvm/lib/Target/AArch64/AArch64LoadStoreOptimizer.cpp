@@ -3027,25 +3027,42 @@ bool AArch64LoadStoreOpt::tryToMergeIndexLdSt(MachineBasicBlock::iterator &MBBI,
 static unsigned getGPRToFPRStoreOpcode(unsigned GPRStoreOpc) {
   switch (GPRStoreOpc) {
   // Unsigned immediate.
-  case AArch64::STRBBui:  return AArch64::STRBui;
-  case AArch64::STRHHui:  return AArch64::STRHui;
-  case AArch64::STRWui:   return AArch64::STRSui;
-  case AArch64::STRXui:   return AArch64::STRDui;
+  case AArch64::STRBBui:
+    return AArch64::STRBui;
+  case AArch64::STRHHui:
+    return AArch64::STRHui;
+  case AArch64::STRWui:
+    return AArch64::STRSui;
+  case AArch64::STRXui:
+    return AArch64::STRDui;
   // Unscaled immediate.
-  case AArch64::STURBBi:  return AArch64::STURBi;
-  case AArch64::STURHHi:  return AArch64::STURHi;
-  case AArch64::STURWi:   return AArch64::STURSi;
-  case AArch64::STURXi:   return AArch64::STURDi;
+  case AArch64::STURBBi:
+    return AArch64::STURBi;
+  case AArch64::STURHHi:
+    return AArch64::STURHi;
+  case AArch64::STURWi:
+    return AArch64::STURSi;
+  case AArch64::STURXi:
+    return AArch64::STURDi;
   // Register offset.
-  case AArch64::STRBBroW: return AArch64::STRBroW;
-  case AArch64::STRBBroX: return AArch64::STRBroX;
-  case AArch64::STRHHroW: return AArch64::STRHroW;
-  case AArch64::STRHHroX: return AArch64::STRHroX;
-  case AArch64::STRWroW:  return AArch64::STRSroW;
-  case AArch64::STRWroX:  return AArch64::STRSroX;
-  case AArch64::STRXroW:  return AArch64::STRDroW;
-  case AArch64::STRXroX:  return AArch64::STRDroX;
-  default: return 0;
+  case AArch64::STRBBroW:
+    return AArch64::STRBroW;
+  case AArch64::STRBBroX:
+    return AArch64::STRBroX;
+  case AArch64::STRHHroW:
+    return AArch64::STRHroW;
+  case AArch64::STRHHroX:
+    return AArch64::STRHroX;
+  case AArch64::STRWroW:
+    return AArch64::STRSroW;
+  case AArch64::STRWroX:
+    return AArch64::STRSroX;
+  case AArch64::STRXroW:
+    return AArch64::STRDroW;
+  case AArch64::STRXroX:
+    return AArch64::STRDroX;
+  default:
+    return 0;
   }
 }
 
@@ -3053,11 +3070,16 @@ static unsigned getGPRToFPRStoreOpcode(unsigned GPRStoreOpc) {
 // the vector register, or 0 if the opcode is not a supported UMOV.
 static unsigned getUMOVSubRegIdx(unsigned UMOVOpc) {
   switch (UMOVOpc) {
-  case AArch64::UMOVvi8_idx0:  return AArch64::bsub;
-  case AArch64::UMOVvi16_idx0: return AArch64::hsub;
-  case AArch64::UMOVvi32_idx0: return AArch64::ssub;
-  case AArch64::UMOVvi64_idx0: return AArch64::dsub;
-  default: return 0;
+  case AArch64::UMOVvi8_idx0:
+    return AArch64::bsub;
+  case AArch64::UMOVvi16_idx0:
+    return AArch64::hsub;
+  case AArch64::UMOVvi32_idx0:
+    return AArch64::ssub;
+  case AArch64::UMOVvi64_idx0:
+    return AArch64::dsub;
+  default:
+    return 0;
   }
 }
 
