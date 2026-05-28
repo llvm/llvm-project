@@ -264,6 +264,46 @@ ejit.o (39 MB / ~140K symbols)
 仅保留 GLOBAL 符号供动态解析使用。因此符号膨胀主要影响**中间产物大小**
 和**链接速度**，对最终二进制大小影响有限。
 
+### 4.8.7 InitializeAll* 的依赖链（交叉编译的核心问题）
+
+为什么 `EJit.cpp` 里改 2 行初始化函数会导致 ejit.o 从 18 MB 膨胀到 42 MB？
+根本原因是交叉编译：
+
+**修复前（`InitializeNativeTarget` + `InitializeNativeTargetAsmPrinter`）：**
+```
+build_release_aarch64/include/llvm/Config/llvm-config.h:
+  #define LLVM_NATIVE_ARCH X86           ← CMake 检测 host 是 x86
+  #undef LLVM_NATIVE_TARGET              ← 但 LLVM_TARGETS_TO_BUILD=AArch64
+  #undef LLVM_NATIVE_ASMPRINTER          ← 没有编译 X86 target
+```
+两个函数展开后都是**空操作**——没有任何符号引用产生。AArch64 后端完全未被拉入。
+
+**修复后（`InitializeAll*`）：**
+```
+InitializeAllTargetInfos()  → LLVMInitializeAArch64TargetInfo()   → AArch64Info
+InitializeAllTargets()      → LLVMInitializeAArch64Target()       → AArch64TargetMachine
+                              └→ PassRegistry 注册所有 pass:
+                                 ├ initializeAArch64DAGToDAGISel() → SelectionDAG (26 .o)
+                                 ├ initializeAArch64AsmPrinter()   → AsmPrinter (24 .o)
+                                 ├ initializeGlobalISel()          → GlobalISel (23 .o)
+                                 └ AArch64CodeGen 全部 (59 .o)     → CodeGen (221 .o)
+InitializeAllTargetMCs()     → LLVMInitializeAArch64TargetMC()    → AArch64Desc (12 .o)
+                                                                    → MC (61 .o)
+InitializeAllAsmPrinters()   → LLVMInitializeAArch64AsmPrinter()  → AsmPrinter passes
+```
+
+真实新增的 `.o` 数量：
+
+| 阶段 | .o 总数 | 新增库 |
+|---|---|---|
+| 修复前 (Native=noop) | 585 | 无后端代码 |
+| 修复后 (InitializeAll) | 1053 | +CodeGen 221, +AArch64CodeGen 59, +MC 61, +SelectionDAG 26, +AsmPrinter 24, +GlobalISel 23, +AArch64Desc 12 = **+468 .o** |
+
+这 468 个 `.o` 是 JIT 编译的**核心功能**——没有它们 TargetMachine 无法创建，JIT 完全不能工作。
+修复不是"引入膨胀"，而是"补上了之前缺失的核心功能"。
+膨胀主要来自 LLVM 的 monorepo 架构（详见 4.8.1-4.8.5），我们通过 3.3 节的源码裁剪将不需要的
+部分（CodeView/GlobalISel（部分）/DWARF debug/ObjCARC/CFGuard）去掉了，最终收敛到 978 .o（39 MB）。
+
 ---
 
 ## 5. 体积数据
