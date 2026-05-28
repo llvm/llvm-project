@@ -354,7 +354,7 @@ static cl::opt<unsigned>
     DebugThreadCount("debug-thread-count",
                      cl::desc("specifies thread count for the multithreading "
                               "for updating DWARF debug info"),
-                     cl::init(1), cl::cat(BoltCategory));
+                     cl::init(32), cl::cat(BoltCategory));
 
 static cl::opt<bool>
     PreserveOrder("dwarf-preserve-order",
@@ -478,8 +478,11 @@ static void fixupDWARFRanges(DIEBuilder &DIEBlder, DWARFUnit &Unit,
     if (RangesVal &&
         (Version < 5 || RangesVal.getForm() == dwarf::DW_FORM_sec_offset)) {
       uint64_t OldVal = RangesVal.getDIEInteger().getValue();
-      DIEBlder.replaceValue(Die, dwarf::DW_AT_ranges, RangesVal.getForm(),
-                            DIEInteger(OldVal + Offset));
+      // Empty ranges are stored at offset 0 in both local and global
+      // buffers, so must not be shifted during merge.
+      if (OldVal != DebugRangesSectionWriter::getEmptyRangesOffset())
+        DIEBlder.replaceValue(Die, dwarf::DW_AT_ranges, RangesVal.getForm(),
+                              DIEInteger(OldVal + Offset));
     }
 
     if (Version < 5) {
@@ -834,12 +837,19 @@ void DWARFRewriter::mergePerBucketLocsAndRanges(
 
   std::unique_ptr<DebugBufferVector> LegacyBuf =
       LocalWriters.LegacyRangesWriter->releaseBuffer();
-  // emission order is established later by emitBucketCompileUnits
+  // Local buffers reserve offset 0 for an empty ranges terminator via
+  // initSection(). When appending to the global buffer, skip that local
+  // terminator since the global buffer has its own at offset 0. Adjust
+  // the fixup offset to account for the skipped prefix.
+  const uint64_t LocalTerminatorSize = 16;
+  const uint64_t GlobalOffset =
+      LegacyRangesSectionWriter->getSectionOffset() - LocalTerminatorSize;
   for (DWARFUnit *CU : SortedCUs)
     if (CU->getVersion() <= 4)
-      fixupDWARFRanges(PartDIEBlder, *CU,
-                       LegacyRangesSectionWriter->getSectionOffset());
-  LegacyRangesSectionWriter->appendToRangeBuffer(*LegacyBuf);
+      fixupDWARFRanges(PartDIEBlder, *CU, GlobalOffset);
+  DebugBufferVector TrimmedBuf(LegacyBuf->begin() + LocalTerminatorSize,
+                               LegacyBuf->end());
+  LegacyRangesSectionWriter->appendToRangeBuffer(TrimmedBuf);
 }
 
 void DWARFRewriter::createRangeLocListAndAddressWriters() {
@@ -904,9 +914,11 @@ void DWARFRewriter::processMainBinaryCU(DWARFUnit &Unit, DIEBuilder &DIEBlder,
       LocalWriter.RngListsWriter =
           std::make_unique<DebugRangeListsSectionWriter>();
   } else {
-    if (!LocalWriter.LegacyRangesWriter)
+    if (!LocalWriter.LegacyRangesWriter) {
       LocalWriter.LegacyRangesWriter =
           std::make_unique<DebugRangesSectionWriter>();
+      LocalWriter.LegacyRangesWriter->initSection();
+    }
   }
 
   DebugRangesSectionWriter &RangesSectionWriter =

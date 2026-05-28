@@ -175,7 +175,7 @@ public:
 
   /// Returns an offset of an empty address ranges list that is always written
   /// to .debug_ranges
-  uint64_t getEmptyRangesOffset() const { return EmptyRangesOffset; }
+  static uint64_t getEmptyRangesOffset() { return EmptyRangesOffset; }
 
   /// Returns the SectionOffset.
   uint64_t getSectionOffset();
