@@ -12,16 +12,12 @@
 
 #include "CIRGenModule.h"
 
-#include "mlir/Dialect/OpenACC/OpenACCOpsDialect.h.inc"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
 #include "clang/AST/DeclGroup.h"
 #include "clang/CIR/CIRGenerator.h"
-#include "clang/CIR/Dialect/IR/CIRDialect.h"
-#include "clang/CIR/Dialect/OpenACC/RegisterOpenACCExtensions.h"
-#include "clang/CIR/Dialect/OpenMP/RegisterOpenMPExtensions.h"
+#include "clang/CIR/Dialect/CIRDialectRegistration.h"
 #include "llvm/IR/DataLayout.h"
 
 using namespace cir;
@@ -52,15 +48,8 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
   this->astContext = &astContext;
 
   mlirContext = std::make_unique<mlir::MLIRContext>();
-  mlirContext->loadDialect<mlir::DLTIDialect>();
-  mlirContext->loadDialect<cir::CIRDialect>();
-  mlirContext->getOrLoadDialect<mlir::acc::OpenACCDialect>();
-  mlirContext->getOrLoadDialect<mlir::omp::OpenMPDialect>();
-
-  // Register extensions to integrate CIR types with OpenACC and OpenMP.
   mlir::DialectRegistry registry;
-  cir::acc::registerOpenACCExtensions(registry);
-  cir::omp::registerOpenMPExtensions(registry);
+  cir::registerCIRDialects(registry);
   mlirContext->appendDialectRegistry(registry);
 
   cgm = std::make_unique<clang::CIRGen::CIRGenModule>(
