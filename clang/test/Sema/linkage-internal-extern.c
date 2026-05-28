@@ -23,7 +23,7 @@ void test_param_shadow(int p) {
 
 static int z;
 void test_chained_shadow(void) {
-    extern int z;      // expected-note {{previous}} #2: internal linkage
+    extern int z;      // expected-note {{previous}}
     {
         int z;         // shadow: no linkage
         { extern int z; } // expected-error {{declared with both internal and external linkage}}
