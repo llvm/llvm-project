@@ -15,6 +15,7 @@
 #include <optional>
 #include <sstream>
 
+#include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/SafeMachO.h"
@@ -42,6 +43,7 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_ZLIB
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/TargetParser/Triple.h"
 
 #if HAVE_LIBCOMPRESSION
 #include <compression.h>
@@ -4255,41 +4257,55 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
                 if (symbol_load_addr != LLDB_INVALID_ADDRESS)
                   break;
                 if (sc.symbol) {
-                  switch (sc.symbol->GetType()) {
-                  case eSymbolTypeInvalid:
-                  case eSymbolTypeAbsolute:
-                  case eSymbolTypeUndefined:
-                  case eSymbolTypeSourceFile:
-                  case eSymbolTypeHeaderFile:
-                  case eSymbolTypeObjectFile:
-                  case eSymbolTypeCommonBlock:
-                  case eSymbolTypeBlock:
-                  case eSymbolTypeLocal:
-                  case eSymbolTypeParam:
-                  case eSymbolTypeVariable:
-                  case eSymbolTypeVariableType:
-                  case eSymbolTypeLineEntry:
-                  case eSymbolTypeLineHeader:
-                  case eSymbolTypeScopeBegin:
-                  case eSymbolTypeScopeEnd:
-                  case eSymbolTypeAdditional:
-                  case eSymbolTypeCompiler:
-                  case eSymbolTypeInstrumentation:
-                  case eSymbolTypeTrampoline:
-                    break;
+                  if (sc.module_sp->GetArchitecture()
+                          .GetTriple()
+                          .getObjectFormat() ==
+                      llvm::Triple::ObjectFormatType::MachO) {
+                    switch (sc.symbol->GetType()) {
+                    case eSymbolTypeInvalid:
+                    case eSymbolTypeAbsolute:
+                    case eSymbolTypeUndefined:
+                    case eSymbolTypeSourceFile:
+                    case eSymbolTypeHeaderFile:
+                    case eSymbolTypeObjectFile:
+                    case eSymbolTypeCommonBlock:
+                    case eSymbolTypeBlock:
+                    case eSymbolTypeLocal:
+                    case eSymbolTypeParam:
+                    case eSymbolTypeVariable:
+                    case eSymbolTypeVariableType:
+                    case eSymbolTypeLineEntry:
+                    case eSymbolTypeLineHeader:
+                    case eSymbolTypeScopeBegin:
+                    case eSymbolTypeScopeEnd:
+                    case eSymbolTypeAdditional:
+                    case eSymbolTypeCompiler:
+                    case eSymbolTypeInstrumentation:
+                    case eSymbolTypeTrampoline:
+                      break;
 
-                  case eSymbolTypeCode:
-                  case eSymbolTypeResolver:
-                  case eSymbolTypeData:
-                  case eSymbolTypeRuntime:
-                  case eSymbolTypeException:
-                  case eSymbolTypeObjCClass:
-                  case eSymbolTypeObjCMetaClass:
-                  case eSymbolTypeObjCIVar:
-                  case eSymbolTypeReExported:
+                    case eSymbolTypeCode:
+                    case eSymbolTypeResolver:
+                    case eSymbolTypeData:
+                    case eSymbolTypeRuntime:
+                    case eSymbolTypeException:
+                    case eSymbolTypeObjCClass:
+                    case eSymbolTypeObjCMetaClass:
+                    case eSymbolTypeObjCIVar:
+                    case eSymbolTypeReExported:
+                      symbol_load_addr =
+                          sc.symbol->GetLoadAddress(&process->GetTarget());
+                      break;
+                    }
+                  } else {
+                    // GDB does return symbols even when they are of unknown
+                    // type, following this behavior on non Mach-O
+                    // architectures.
                     symbol_load_addr =
                         sc.symbol->GetLoadAddress(&process->GetTarget());
-                    break;
+                    if (symbol_load_addr == LLDB_INVALID_ADDRESS) {
+                      symbol_load_addr = sc.symbol->GetRawValue();
+                    }
                   }
                 }
               }
