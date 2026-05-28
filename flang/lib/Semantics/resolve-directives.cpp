@@ -2191,9 +2191,29 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPCriticalConstruct &x) {
 bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_declare_target);
 
+  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
+  std::map<const Symbol *, WithOmpDeclarative> details;
+  std::optional<common::OmpDeviceType> device;
+
+  if (auto *devClause{
+          parser::omp::FindClause(x.v, llvm::omp::Clause::OMPC_device_type)}) {
+    device = parser::UnwrapRef<common::OmpDeviceType>(*devClause);
+  }
+
+  auto addClause{[&](const parser::OmpObject &object,
+                     llvm::omp::Clause clauseId) {
+    if (const Symbol *sym{omp::GetObjectSymbol(object)}) {
+      auto &clauseSet{const_cast<OmpClauseSet &>(details[sym].ompDeclTarget())};
+      clauseSet.set(clauseId);
+    }
+  }};
+
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     if (auto *object{parser::omp::GetArgumentObject(arg)}) {
       ResolveOmpObject(*object, Symbol::Flag::OmpDeclareTarget);
+      // Always record this as "enter", even with older OpenMP versions
+      // (as opposed to "to").
+      addClause(*object, llvm::omp::Clause::OMPC_enter);
     }
   }
 
@@ -2201,9 +2221,52 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
     if (auto *objects{parser::omp::GetOmpObjectList(clause)}) {
       for (const parser::OmpObject &object : objects->v) {
         ResolveOmpObject(object, Symbol::Flag::OmpDeclareTarget);
+        addClause(object, clause.Id());
       }
     }
   }
+
+  if (x.v.Arguments().v.empty() && x.v.Clauses().v.empty()) {
+    // "!$omp declare_target" alone applies to the associated procedure.
+    const Scope &scope{omp::GetScopingUnit(context_.FindScope(x.source))};
+    if (auto *proc{const_cast<Symbol *>(scope.symbol())}) {
+      proc->flags().set(Symbol::Flag::OmpDeclareTarget);
+      auto &clauseSet{
+          const_cast<OmpClauseSet &>(details[proc].ompDeclTarget())};
+      clauseSet.set(llvm::omp::Clause::OMPC_enter);
+    }
+  }
+
+  for (auto &pair : details) {
+    const Symbol *sym{&pair.first->GetUltimate()};
+    const WithOmpDeclarative &decl{pair.second};
+    common::visit(
+        [&](auto &d) {
+          using TypeD = llvm::remove_cvref_t<decltype(d)>;
+          if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
+            auto &clauseSet{const_cast<OmpClauseSet &>(d.ompDeclTarget())};
+            clauseSet |= decl.ompDeclTarget();
+            if (device) {
+              clauseSet.set(llvm::omp::Clause::OMPC_device_type);
+              auto &deviceType{
+                  const_cast<decltype(device) &>(d.ompDeviceType())};
+              deviceType = device;
+            }
+          } else if constexpr (std::is_same_v<GenericDetails, TypeD> ||
+              std::is_same_v<TypeParamDetails, TypeD> ||
+              std::is_same_v<MiscDetails, TypeD>) { // e.g. KindParamInquiry
+            // These cannot be specified on DECLARE_TARGET. The symbol will
+            // receive the OmpDeclareTarget flag (for a diagnostic message),
+            // but no details will be modified.
+          } else {
+            // Catch any unexpected cases.
+            assert((std::is_base_of_v<WithOmpDeclarative, TypeD>) &&
+                "Unexpected details type");
+          }
+        },
+        const_cast<Symbol *>(sym)->details());
+  }
+
   return true;
 }
 

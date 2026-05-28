@@ -70,37 +70,55 @@ static void DumpList(llvm::raw_ostream &os, const char *label, const T &list) {
   }
 }
 
-llvm::raw_ostream &operator<<(
-    llvm::raw_ostream &os, const WithOmpDeclarative &x) {
-  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
-
+void WithOmpDeclarative::printClauseSet(llvm::raw_ostream &os,
+    const OmpClauseSet &clauses, parser::CharBlock name) const {
   auto toLower = [](std::string_view sv) {
     return parser::ToLowerCaseLetters(sv);
   };
   auto getLowerName = [&](llvm::omp::Clause c) {
-    return toLower(llvm::omp::getOpenMPClauseName(c, x.version_));
+    return toLower(llvm::omp::getOpenMPClauseName(c, version_));
   };
-  auto printClauses = [&](const OmpClauseSet &cs) {
-    size_t idx{0}, size{cs.count()};
-    cs.IterateOverMembers([&](llvm::omp::Clause c) {
-      os << getLowerName(c);
-      switch (c) {
-      case llvm::omp::Clause::OMPC_atomic_default_mem_order:
-        os << '(' << toLower(EnumToString(*x.ompAtomicDefaultMemOrder()))
-           << ')';
-        break;
-      default:
-        break;
+
+  size_t idx{0}, size{clauses.count()};
+  clauses.IterateOverMembers([&](llvm::omp::Clause c) {
+    os << getLowerName(c);
+    switch (c) {
+    case llvm::omp::Clause::OMPC_atomic_default_mem_order:
+      os << '(' << toLower(EnumToString(*ompAtomicDefaultMemOrder())) << ')';
+      break;
+    case llvm::omp::Clause::OMPC_device_type:
+      os << "(" << toLower(EnumToString(*ompDeviceType())) << ')';
+      break;
+    case llvm::omp::Clause::OMPC_enter:
+    case llvm::omp::Clause::OMPC_link:
+      if (!name.empty()) {
+        os << '(' << name.ToString() << ')';
       }
-      if (++idx < size) {
-        os << ',';
-      }
-    });
-  };
+      break;
+    case llvm::omp::Clause::OMPC_indirect:
+      os << "(true)";
+      break;
+    default:
+      break;
+    }
+    if (++idx < size) {
+      os << ' ';
+    }
+  });
+}
+
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const WithOmpDeclarative &x) {
+  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
 
   if (const OmpClauseSet &reqs{x.ompRequires()}; reqs.count()) {
     os << " OmpRequirements:(";
-    printClauses(reqs);
+    x.printClauseSet(os, reqs);
+    os << ')';
+  }
+  if (const OmpClauseSet &dtgt{x.ompDeclTarget()}; dtgt.count()) {
+    os << " OmpDeclareTargetFlags:(";
+    x.printClauseSet(os, dtgt);
     os << ')';
   }
   return os;
@@ -545,6 +563,7 @@ llvm::raw_ostream &operator<<(
   if (x.cudaDataAttr()) {
     os << " cudaDataAttr: " << common::EnumToString(*x.cudaDataAttr());
   }
+  os << static_cast<const WithOmpDeclarative &>(x);
   return os;
 }
 
@@ -584,6 +603,7 @@ llvm::raw_ostream &operator<<(
   if (x.isCUDAKernel()) {
     os << " isCUDAKernel";
   }
+  os << static_cast<const WithOmpDeclarative &>(x);
   return os;
 }
 
@@ -679,6 +699,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
             for (const auto &object : x.objects()) {
               os << ' ' << object->name();
             }
+            os << static_cast<const WithOmpDeclarative &>(x);
           },
           [&](const TypeParamDetails &x) {
             DumpOptional(os, "type", x.type());
