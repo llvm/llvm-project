@@ -526,6 +526,8 @@ CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
 MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 
 #define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"
+#define SPIRV_WAS_AVAILABLE_EXTERNALLY_ATTR "spv.was-available-externally"
+
 bool getVacantFunctionName(Module &M, std::string &Name);
 
 void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,

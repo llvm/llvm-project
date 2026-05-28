@@ -13,6 +13,7 @@
 
 #include "MCTargetDesc/SPIRVInstPrinter.h"
 #include "SPIRV.h"
+#include "SPIRVAuxDataHandler.h"
 #include "SPIRVInstrInfo.h"
 #include "SPIRVMCInstLower.h"
 #include "SPIRVModuleAnalysis.h"
@@ -110,6 +111,8 @@ public:
   // The handler's lifetime is managed by AsmPrinter (the base class of this
   // object), so this pointer cannot dangle.
   SPIRVNonSemanticDebugHandler *NSDebugHandler = nullptr;
+
+  std::unique_ptr<SPIRVAuxDataHandler> AuxDataHandler;
 
 protected:
   void cleanUp(Module &M);
@@ -569,7 +572,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
     const Function &F = *FI;
     // Only operands of OpEntryPoint instructions are allowed to be
     // <Entry Point> operands of OpExecutionMode
-    if (F.isDeclarationForLinker() || !isEntryPoint(F))
+    if (F.isDeclaration() || !isEntryPoint(F))
       continue;
     MCRegister FReg = MAI->getGlobalObjReg(&F);
     assert(FReg.isValid());
@@ -850,10 +853,18 @@ void SPIRVAsmPrinter::outputModuleSections() {
   MAI = &getAnalysis<SPIRVModuleAnalysis>().MAI;
   assert(ST && TII && MAI && M && "Module analysis is required");
 
+  if (!AuxDataHandler) {
+    auto Handler = std::make_unique<SPIRVAuxDataHandler>(*this, *M);
+    if (Handler->hasWork())
+      AuxDataHandler = std::move(Handler);
+  }
+
   // Let the NSDI handler add its extension and ext inst import entry to MAI
   // before the module header sections are emitted.
   if (NSDebugHandler)
     NSDebugHandler->prepareModuleOutput(*ST, *MAI);
+  if (AuxDataHandler)
+    AuxDataHandler->prepareModuleOutput(*ST, *MAI);
 
   // Output instructions according to the Logical Layout of a Module:
   // 1,2. All OpCapability instructions, then optional OpExtension
@@ -890,6 +901,8 @@ void SPIRVAsmPrinter::outputModuleSections() {
   // MB_NonSemanticGlobalDI section in MAI is intentionally left empty.
   if (NSDebugHandler)
     NSDebugHandler->emitNonSemanticGlobalDebugInfo(*MAI);
+  if (AuxDataHandler)
+    AuxDataHandler->emitAuxData(*MAI);
   // 11. All function declarations (functions without a body).
   outputExtFuncDecls();
   // 12. All function definitions (functions with a body).

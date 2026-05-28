@@ -830,6 +830,13 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
   Changed |= terminateBlocksAfterTrap(M, Intrinsic::ubsantrap);
 
   for (Function &F : M) {
+    // MachineFunctionPass skips available_externally; strip + tag so AuxData
+    // can re-emit the original linkage as NonSemantic.AuxData::Linkage.
+    if (F.hasAvailableExternallyLinkage() && !F.isDeclaration()) {
+      F.addFnAttr(SPIRV_WAS_AVAILABLE_EXTERNALLY_ATTR);
+      F.setLinkage(GlobalValue::ExternalLinkage);
+      Changed = true;
+    }
     Changed |= substituteAbortKHRCalls(&F);
     Changed |= substituteIntrinsicCalls(&F);
     Changed |= sortBlocks(F);

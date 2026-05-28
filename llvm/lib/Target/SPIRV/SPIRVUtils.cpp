@@ -1217,6 +1217,11 @@ getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
   if (GV.hasLocalLinkage())
     return std::nullopt;
 
+  // Preserved via NonSemantic.AuxData; skip LinkageAttributes.
+  if (const auto *F = dyn_cast<Function>(&GV))
+    if (F->hasFnAttribute(SPIRV_WAS_AVAILABLE_EXTERNALLY_ATTR))
+      return std::nullopt;
+
   if (GV.isDeclarationForLinker()) {
     // Interface variables must not get Import linkage.
     if (const auto *GVar = dyn_cast<GlobalVariable>(&GV)) {
