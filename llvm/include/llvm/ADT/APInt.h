@@ -2489,13 +2489,6 @@ LLVM_ABI APInt clmulr(const APInt &LHS, const APInt &RHS);
 /// clmulh(a, b) = clmulr(a, b) >> 1
 LLVM_ABI APInt clmulh(const APInt &LHS, const APInt &RHS);
 
-/// Compute the parity (inclusive prefix XOR) for each bit in V.
-/// This is equivalent to clmul(V, ~0).
-///
-/// Example:
-/// bitwiseParity(i4 0b1010) = 0b0110
-LLVM_ABI APInt bitwiseParity(const APInt &V);
-
 /// Perform a "compress" operation, also known as pext or bext.
 ///
 /// Selects the bits from /p Val at the positions where /p Mask has a 1-bit,

@@ -4018,14 +4018,6 @@ TEST(APIntTest, sqrt) {
             APInt(256, "340282366920938463463374607431768211456", 10));
 }
 
-TEST(APIntTest, bitwiseParity) {
-  EXPECT_EQ(APIntOps::bitwiseParity(APInt(8, 0)).getZExtValue(), 0U);
-  EXPECT_EQ(APIntOps::bitwiseParity(APInt(8, 1)).getZExtValue(), 0xFFU);
-  EXPECT_EQ(APIntOps::bitwiseParity(APInt(4, 0xAU)).getZExtValue(), 6U);
-  EXPECT_EQ(APIntOps::bitwiseParity(APInt(4, 0xFU)).getZExtValue(), 5U);
-  EXPECT_EQ(APIntOps::bitwiseParity(APInt(8, 0xAAU)).getZExtValue(), 0x66U);
-}
-
 TEST(APIntTest, compressBits) {
   EXPECT_EQ(APIntOps::compressBits(APInt(8, 0), APInt(8, 0xAAU)).getZExtValue(),
             0U);

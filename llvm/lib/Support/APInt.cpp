@@ -3260,60 +3260,22 @@ APInt llvm::APIntOps::clmulh(const APInt &LHS, const APInt &RHS) {
   return clmulr(LHS, RHS).lshr(1);
 }
 
-APInt llvm::APIntOps::bitwiseParity(const APInt &V) {
-  // This computes `clmul(V, ~0)`,
-  // but we don't use `clmul` because this special case has lower complexity
-  // (logarithmic amount of loop iterations instead of linear in BW).
-  unsigned BW = V.getBitWidth();
-  APInt Result = V;
-  for (unsigned I = 1; I < BW; I <<= 1)
-    Result ^= Result.shl(I);
+APInt llvm::APIntOps::compressBits(const APInt &Val, const APInt &Mask) {
+  unsigned BW = Val.getBitWidth();
+  assert(BW == Mask.getBitWidth() && "Operand mismatch");
+  APInt Result = APInt::getZero(BW);
+  for (unsigned I = 0, P = 0; I != BW; ++I)
+    if (Mask[I])
+      Result.setBitVal(P++, Val[I]);
   return Result;
 }
 
-APInt llvm::APIntOps::compressBits(const APInt &Val, const APInt &Mask) {
-  // See also Hacker's Delight 2nd Edition,
-  // §7–4 Compress, or Generalized Extract
-  unsigned BW = Val.getBitWidth();
-  assert(BW == Mask.getBitWidth() && "Operand mismatch");
-  APInt V = Val & Mask;
-  APInt M = Mask;
-  APInt Mk = (~M).shl(1);
-  for (unsigned I = 1; I < BW; I <<= 1) {
-    APInt MkParity = bitwiseParity(Mk);
-    APInt Move = MkParity & M;
-    M = (M ^ Move) | Move.lshr(I);
-    APInt T = V & Move;
-    V = (V ^ T) | T.lshr(I);
-    Mk &= ~MkParity;
-  }
-  return V;
-}
-
 APInt llvm::APIntOps::expandBits(const APInt &Val, const APInt &Mask) {
-  // See also Hacker's Delight 2nd Edition,
-  // §7–5 Expand, or Generalized Insert
   unsigned BW = Val.getBitWidth();
   assert(BW == Mask.getBitWidth() && "Operand mismatch");
-  SmallVector<APInt> MoveArray;
-  unsigned LogN = Log2_32_Ceil(BW);
-  MoveArray.reserve(LogN);
-
-  APInt M = Mask;
-  APInt Mk = (~M).shl(1);
-  for (unsigned I = 0; I < LogN; ++I) {
-    APInt MkParity = bitwiseParity(Mk);
-    APInt Move = MkParity & M;
-    M = (M ^ Move) | Move.lshr(1u << I);
-    MoveArray.push_back(std::move(Move));
-    Mk &= ~MkParity;
-  }
-
-  APInt V = Val;
-  for (unsigned I = LogN; I-- > 0;) {
-    APInt Move = MoveArray[I];
-    APInt T = V.shl(1u << I);
-    V = (V & ~Move) | (T & Move);
-  }
-  return V & Mask;
+  APInt Result = APInt::getZero(BW);
+  for (unsigned I = 0, P = 0; I != BW; ++I)
+    if (Mask[I])
+      Result.setBitVal(I, Val[P++]);
+  return Result;
 }
