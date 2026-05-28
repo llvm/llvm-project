@@ -7154,8 +7154,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return EmitFP8NeonFDOTCall(Intrinsic::aarch64_neon_fp8_fdot4_lane,
                                ExtendLaneArg, FloatTy, Ops, E, "fdot4_lane");
 
-  case NEON::BI__builtin_neon_vdot_f32:
-  case NEON::BI__builtin_neon_vdotq_f32: {
+  case NEON::BI__builtin_neon_vdot_f32_f16:
+  case NEON::BI__builtin_neon_vdotq_f32_f16: {
     llvm::Type *InputTy =
         llvm::FixedVectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);
     llvm::Type *Tys[2] = {Ty, InputTy};
@@ -7163,10 +7163,10 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                         Ops, "vdot");
   }
 
-  case NEON::BI__builtin_neon_vdot_lane_f32:
-  case NEON::BI__builtin_neon_vdot_laneq_f32:
-  case NEON::BI__builtin_neon_vdotq_lane_f32:
-  case NEON::BI__builtin_neon_vdotq_laneq_f32: {
+  case NEON::BI__builtin_neon_vdot_lane_f32_f16:
+  case NEON::BI__builtin_neon_vdot_laneq_f32_f16:
+  case NEON::BI__builtin_neon_vdotq_lane_f32_f16:
+  case NEON::BI__builtin_neon_vdotq_laneq_f32_f16: {
     llvm::FixedVectorType *InputTy =
         llvm::FixedVectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);
     llvm::FixedVectorType *LaneTy = llvm::FixedVectorType::get(

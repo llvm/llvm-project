@@ -7,106 +7,106 @@
 
 #include <arm_neon.h>
 
-// CHECK-LABEL: define dso_local <2 x float> @test_vdot_f32(
+// CHECK-LABEL: define dso_local <2 x float> @test_vdot_f32_f16(
 // CHECK-SAME: <2 x float> noundef [[R:%.*]], <4 x half> noundef [[A:%.*]], <4 x half> noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VDOT3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fdot.v2f32.v4f16(<2 x float> [[R]], <4 x half> [[A]], <4 x half> [[B]])
 // CHECK-NEXT:    ret <2 x float> [[VDOT3_I]]
 //
-// CHECK-CXX-LABEL: define dso_local noundef <2 x float> @_Z13test_vdot_f3213__Float32x2_t13__Float16x4_tS0_(
+// CHECK-CXX-LABEL: define dso_local noundef <2 x float> @_Z17test_vdot_f32_f1613__Float32x2_t13__Float16x4_tS0_(
 // CHECK-CXX-SAME: <2 x float> noundef [[R:%.*]], <4 x half> noundef [[A:%.*]], <4 x half> noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    [[VDOT3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fdot.v2f32.v4f16(<2 x float> [[R]], <4 x half> [[A]], <4 x half> [[B]])
 // CHECK-CXX-NEXT:    ret <2 x float> [[VDOT3_I]]
 //
-float32x2_t test_vdot_f32(float32x2_t r, float16x4_t a, float16x4_t b) {
-  return vdot_f32(r, a, b);
+float32x2_t test_vdot_f32_f16(float32x2_t r, float16x4_t a, float16x4_t b) {
+  return vdot_f32_f16(r, a, b);
 }
 
-// CHECK-LABEL: define dso_local <4 x float> @test_vdotq_f32(
+// CHECK-LABEL: define dso_local <4 x float> @test_vdotq_f32_f16(
 // CHECK-SAME: <4 x float> noundef [[R:%.*]], <8 x half> noundef [[A:%.*]], <8 x half> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VDOT3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fdot.v4f32.v8f16(<4 x float> [[R]], <8 x half> [[A]], <8 x half> [[B]])
 // CHECK-NEXT:    ret <4 x float> [[VDOT3_I]]
 //
-// CHECK-CXX-LABEL: define dso_local noundef <4 x float> @_Z14test_vdotq_f3213__Float32x4_t13__Float16x8_tS0_(
+// CHECK-CXX-LABEL: define dso_local noundef <4 x float> @_Z18test_vdotq_f32_f1613__Float32x4_t13__Float16x8_tS0_(
 // CHECK-CXX-SAME: <4 x float> noundef [[R:%.*]], <8 x half> noundef [[A:%.*]], <8 x half> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    [[VDOT3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fdot.v4f32.v8f16(<4 x float> [[R]], <8 x half> [[A]], <8 x half> [[B]])
 // CHECK-CXX-NEXT:    ret <4 x float> [[VDOT3_I]]
 //
-float32x4_t test_vdotq_f32(float32x4_t r, float16x8_t a, float16x8_t b) {
-  return vdotq_f32(r, a, b);
+float32x4_t test_vdotq_f32_f16(float32x4_t r, float16x8_t a, float16x8_t b) {
+  return vdotq_f32_f16(r, a, b);
 }
 
-// CHECK-LABEL: define dso_local <2 x float> @test_vdot_lane_f32(
+// CHECK-LABEL: define dso_local <2 x float> @test_vdot_lane_f32_f16(
 // CHECK-SAME: <2 x float> noundef [[R:%.*]], <4 x half> noundef [[A:%.*]], <4 x half> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[LANE:%.*]] = shufflevector <4 x half> [[B]], <4 x half> poison, <4 x i32> zeroinitializer
 // CHECK-NEXT:    [[VDOT2:%.*]] = call <2 x float> @llvm.aarch64.neon.fdot.v2f32.v4f16(<2 x float> [[R]], <4 x half> [[A]], <4 x half> [[LANE]])
 // CHECK-NEXT:    ret <2 x float> [[VDOT2]]
 //
-// CHECK-CXX-LABEL: define dso_local noundef <2 x float> @_Z18test_vdot_lane_f3213__Float32x2_t13__Float16x4_tS0_(
+// CHECK-CXX-LABEL: define dso_local noundef <2 x float> @_Z22test_vdot_lane_f32_f1613__Float32x2_t13__Float16x4_tS0_(
 // CHECK-CXX-SAME: <2 x float> noundef [[R:%.*]], <4 x half> noundef [[A:%.*]], <4 x half> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    [[LANE:%.*]] = shufflevector <4 x half> [[B]], <4 x half> poison, <4 x i32> zeroinitializer
 // CHECK-CXX-NEXT:    [[VDOT2:%.*]] = call <2 x float> @llvm.aarch64.neon.fdot.v2f32.v4f16(<2 x float> [[R]], <4 x half> [[A]], <4 x half> [[LANE]])
 // CHECK-CXX-NEXT:    ret <2 x float> [[VDOT2]]
 //
-float32x2_t test_vdot_lane_f32(float32x2_t r, float16x4_t a, float16x4_t b) {
-  return vdot_lane_f32(r, a, b, 0);
+float32x2_t test_vdot_lane_f32_f16(float32x2_t r, float16x4_t a, float16x4_t b) {
+  return vdot_lane_f32_f16(r, a, b, 0);
 }
 
-// CHECK-LABEL: define dso_local <2 x float> @test_vdot_laneq_f32(
+// CHECK-LABEL: define dso_local <2 x float> @test_vdot_laneq_f32_f16(
 // CHECK-SAME: <2 x float> noundef [[R:%.*]], <4 x half> noundef [[A:%.*]], <8 x half> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[LANE:%.*]] = shufflevector <8 x half> [[B]], <8 x half> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 // CHECK-NEXT:    [[VDOT2:%.*]] = call <2 x float> @llvm.aarch64.neon.fdot.v2f32.v4f16(<2 x float> [[R]], <4 x half> [[A]], <4 x half> [[LANE]])
 // CHECK-NEXT:    ret <2 x float> [[VDOT2]]
 //
-// CHECK-CXX-LABEL: define dso_local noundef <2 x float> @_Z19test_vdot_laneq_f3213__Float32x2_t13__Float16x4_t13__Float16x8_t(
+// CHECK-CXX-LABEL: define dso_local noundef <2 x float> @_Z23test_vdot_laneq_f32_f1613__Float32x2_t13__Float16x4_t13__Float16x8_t(
 // CHECK-CXX-SAME: <2 x float> noundef [[R:%.*]], <4 x half> noundef [[A:%.*]], <8 x half> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    [[LANE:%.*]] = shufflevector <8 x half> [[B]], <8 x half> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 // CHECK-CXX-NEXT:    [[VDOT2:%.*]] = call <2 x float> @llvm.aarch64.neon.fdot.v2f32.v4f16(<2 x float> [[R]], <4 x half> [[A]], <4 x half> [[LANE]])
 // CHECK-CXX-NEXT:    ret <2 x float> [[VDOT2]]
 //
-float32x2_t test_vdot_laneq_f32(float32x2_t r, float16x4_t a, float16x8_t b) {
-  return vdot_laneq_f32(r, a, b, 3);
+float32x2_t test_vdot_laneq_f32_f16(float32x2_t r, float16x4_t a, float16x8_t b) {
+  return vdot_laneq_f32_f16(r, a, b, 3);
 }
 
-// CHECK-LABEL: define dso_local <4 x float> @test_vdotq_lane_f32(
+// CHECK-LABEL: define dso_local <4 x float> @test_vdotq_lane_f32_f16(
 // CHECK-SAME: <4 x float> noundef [[R:%.*]], <8 x half> noundef [[A:%.*]], <4 x half> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[LANE:%.*]] = shufflevector <4 x half> [[B]], <4 x half> poison, <8 x i32> zeroinitializer
 // CHECK-NEXT:    [[VDOT2:%.*]] = call <4 x float> @llvm.aarch64.neon.fdot.v4f32.v8f16(<4 x float> [[R]], <8 x half> [[A]], <8 x half> [[LANE]])
 // CHECK-NEXT:    ret <4 x float> [[VDOT2]]
 //
-// CHECK-CXX-LABEL: define dso_local noundef <4 x float> @_Z19test_vdotq_lane_f3213__Float32x4_t13__Float16x8_t13__Float16x4_t(
+// CHECK-CXX-LABEL: define dso_local noundef <4 x float> @_Z23test_vdotq_lane_f32_f1613__Float32x4_t13__Float16x8_t13__Float16x4_t(
 // CHECK-CXX-SAME: <4 x float> noundef [[R:%.*]], <8 x half> noundef [[A:%.*]], <4 x half> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    [[LANE:%.*]] = shufflevector <4 x half> [[B]], <4 x half> poison, <8 x i32> zeroinitializer
 // CHECK-CXX-NEXT:    [[VDOT2:%.*]] = call <4 x float> @llvm.aarch64.neon.fdot.v4f32.v8f16(<4 x float> [[R]], <8 x half> [[A]], <8 x half> [[LANE]])
 // CHECK-CXX-NEXT:    ret <4 x float> [[VDOT2]]
 //
-float32x4_t test_vdotq_lane_f32(float32x4_t r, float16x8_t a, float16x4_t b) {
-  return vdotq_lane_f32(r, a, b, 0);
+float32x4_t test_vdotq_lane_f32_f16(float32x4_t r, float16x8_t a, float16x4_t b) {
+  return vdotq_lane_f32_f16(r, a, b, 0);
 }
 
-// CHECK-LABEL: define dso_local <4 x float> @test_vdotq_laneq_f32(
+// CHECK-LABEL: define dso_local <4 x float> @test_vdotq_laneq_f32_f16(
 // CHECK-SAME: <4 x float> noundef [[R:%.*]], <8 x half> noundef [[A:%.*]], <8 x half> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[LANE:%.*]] = shufflevector <8 x half> [[B]], <8 x half> poison, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 // CHECK-NEXT:    [[VDOT2:%.*]] = call <4 x float> @llvm.aarch64.neon.fdot.v4f32.v8f16(<4 x float> [[R]], <8 x half> [[A]], <8 x half> [[LANE]])
 // CHECK-NEXT:    ret <4 x float> [[VDOT2]]
 //
-// CHECK-CXX-LABEL: define dso_local noundef <4 x float> @_Z20test_vdotq_laneq_f3213__Float32x4_t13__Float16x8_tS0_(
+// CHECK-CXX-LABEL: define dso_local noundef <4 x float> @_Z24test_vdotq_laneq_f32_f1613__Float32x4_t13__Float16x8_tS0_(
 // CHECK-CXX-SAME: <4 x float> noundef [[R:%.*]], <8 x half> noundef [[A:%.*]], <8 x half> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    [[LANE:%.*]] = shufflevector <8 x half> [[B]], <8 x half> poison, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 // CHECK-CXX-NEXT:    [[VDOT2:%.*]] = call <4 x float> @llvm.aarch64.neon.fdot.v4f32.v8f16(<4 x float> [[R]], <8 x half> [[A]], <8 x half> [[LANE]])
 // CHECK-CXX-NEXT:    ret <4 x float> [[VDOT2]]
 //
-float32x4_t test_vdotq_laneq_f32(float32x4_t r, float16x8_t a, float16x8_t b) {
-  return vdotq_laneq_f32(r, a, b, 3);
+float32x4_t test_vdotq_laneq_f32_f16(float32x4_t r, float16x8_t a, float16x8_t b) {
+  return vdotq_laneq_f32_f16(r, a, b, 3);
 }

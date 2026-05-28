@@ -60,6 +60,3 @@ define <4 x float> @test_vdotq_lane_f32(<4 x float> %r, <8 x half> %a, <4 x half
   %res = call <4 x float> @llvm.aarch64.neon.fdot.v4f32.v8f16(<4 x float> %r, <8 x half> %a, <8 x half> %lane)
   ret <4 x float> %res
 }
-
-declare <2 x float> @llvm.aarch64.neon.fdot.v2f32.v4f16(<2 x float>, <4 x half>, <4 x half>)
-declare <4 x float> @llvm.aarch64.neon.fdot.v4f32.v8f16(<4 x float>, <8 x half>, <8 x half>)

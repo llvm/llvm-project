@@ -1904,10 +1904,10 @@ let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "d
 }
 
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "f16f32dot,neon" in {
-  def VDOT_F16 : SInst<"vdot", "..<<", "fQf">;
-  def VDOT_LANE_F16 : SInst<"vdot_lane", "..<(<q)I", "fQf",
+  def VDOT_F16 : SInst<"vdot_f32", ">>..", "hQh">;
+  def VDOT_LANE_F16 : SInst<"vdot_lane_f32", ">>.qI", "hQh",
                            [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
-  def VDOT_LANEQ_F16 : SInst<"vdot_laneq", "..<(<Q)I", "fQf",
+  def VDOT_LANEQ_F16 : SInst<"vdot_laneq_f32", ">>.QI", "hQh",
                             [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
 }
 
