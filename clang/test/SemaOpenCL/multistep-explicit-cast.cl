@@ -4,7 +4,7 @@
 typedef __attribute__((ext_vector_type(2)))  char char2;
 
 void vectorIncrementDecrementOps() {
-  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} vectorIncrementDecrementOps 'void (void)'{{$}}
+  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} vectorIncrementDecrementOps 'void (void)' external-linkage{{$}}
   // CHECK: CStyleCastExpr {{.*}} <col:{{.*}}> 'char2':'char __attribute__((ext_vector_type(2)))' <VectorSplat>{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'char' <IntegralCast> part_of_explicit_cast{{$}}
   // CHECK-NEXT: IntegerLiteral {{.*}} <col:{{.*}}> 'int' 1{{$}}

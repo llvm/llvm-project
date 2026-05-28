@@ -3291,6 +3291,12 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
 
   Opts.DashX = DashX;
 
+  // CIR is a source-level frontend pipeline. When the input is already LLVM IR
+  // (e.g. during the backend phase of OpenMP offloading), the standard LLVM
+  // backend should be used instead.
+  if (Opts.UseClangIRPipeline && DashX.getLanguage() == Language::LLVM_IR)
+    Opts.UseClangIRPipeline = false;
+
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
@@ -5110,6 +5116,13 @@ bool CompilerInvocation::CreateFromArgsImpl(
   // Set the triple of the host for OpenMP device compile.
   if (LangOpts.OpenMPIsTargetDevice)
     Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
+
+  // Set the default and host triples for SYCL device compilation.
+  if (LangOpts.SYCLIsDevice) {
+    if (!Args.hasArg(options::OPT_triple))
+      Res.getTargetOpts().Triple = "spirv64-unknown-unknown";
+    Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
+  }
 
   ParseCodeGenArgs(Res.getCodeGenOpts(), Args, DashX, Diags, T,
                    Res.getFrontendOpts().OutputFile, LangOpts);

@@ -32,6 +32,10 @@
 // Simplified only for test purpose.
 struct LOCKABLE Mutex {};
 
+struct Task {
+  struct Mutex mu;
+};
+
 struct Foo {
   struct Mutex *mu_;
   int  a_value GUARDED_BY(mu_);
@@ -42,6 +46,10 @@ struct Foo {
   } bar;
 
   int* a_ptr PT_GUARDED_BY(bar.other_mu);
+
+  struct Task *task;
+  int  b_value GUARDED_BY(&task->mu);
+  int* b_ptr PT_GUARDED_BY(&task->mu);
 };
 
 struct LOCKABLE Lock {};
@@ -206,22 +214,29 @@ int main(void) {
     a_ = 42;
   }
 
-  foo_.a_value = 0; // expected-warning {{writing variable 'a_value' requires holding mutex 'mu_' exclusively}}
-  *foo_.a_ptr = 1; // expected-warning {{writing the value pointed to by 'a_ptr' requires holding mutex 'bar.other_mu' exclusively}}
-
+  foo_.a_value = 0; // expected-warning {{writing variable 'a_value' requires holding mutex 'foo_.mu_' exclusively}}
+  *foo_.a_ptr = 1; // expected-warning {{writing the value pointed to by 'a_ptr' requires holding mutex 'foo_.bar.other_mu' exclusively}}
+  foo_.b_value = 0; // expected-warning {{writing variable 'b_value' requires holding mutex 'foo_.task->mu' exclusively}}
+  *foo_.b_ptr = 1; // expected-warning {{writing the value pointed to by 'b_ptr' requires holding mutex 'foo_.task->mu' exclusively}}
 
   mutex_exclusive_lock(foo_.bar.other_mu);
+  *foo_.a_ptr = 1;
   mutex_exclusive_lock(foo_.bar.third_mu); // expected-warning{{mutex 'third_mu' must be acquired before 'other_mu'}}
   mutex_exclusive_lock(foo_.mu_); // expected-warning{{mutex 'mu_' must be acquired before 'other_mu'}}
   mutex_exclusive_unlock(foo_.mu_);
   mutex_exclusive_unlock(foo_.bar.other_mu);
   mutex_exclusive_unlock(foo_.bar.third_mu);
 
+  mutex_exclusive_lock(&foo_.task->mu);
+  foo_.b_value = 0;
+  *foo_.b_ptr = 1;
+  mutex_exclusive_unlock(&foo_.task->mu);
+
 #ifdef LATE_PARSING
-  late_parsing.a_value_defined_before = 1; // expected-warning{{writing variable 'a_value_defined_before' requires holding mutex 'a_mutex_defined_late' exclusively}}
+  late_parsing.a_value_defined_before = 1; // expected-warning{{writing variable 'a_value_defined_before' requires holding mutex 'late_parsing.a_mutex_defined_late' exclusively}}
   late_parsing.a_ptr_defined_before = 0;
   set_value(&late_parsing.a_value_defined_before, 0); // expected-warning{{calling function 'set_value' requires holding mutex 'foo_.mu_' exclusively}}
-                                                      // expected-warning@-1{{passing pointer to variable 'a_value_defined_before' requires holding mutex 'a_mutex_defined_late'}}
+                                                      // expected-warning@-1{{passing pointer to variable 'a_value_defined_before' requires holding mutex 'late_parsing.a_mutex_defined_late'}}
   mutex_exclusive_lock(late_parsing.a_mutex_defined_late);
   mutex_exclusive_lock(late_parsing.a_mutex_defined_early); // expected-warning{{mutex 'a_mutex_defined_early' must be acquired before 'a_mutex_defined_late'}}
   mutex_exclusive_unlock(late_parsing.a_mutex_defined_early);
@@ -280,6 +295,48 @@ struct TestInit test_init(void) {
   mutex_exclusive_unlock(&foo.mu);
 
   return foo;
+}
+
+// Function pointer struct members.
+struct FPOps {
+  struct Mutex mu;
+  int a GUARDED_BY(&mu);
+  void (*lock)(void) EXCLUSIVE_LOCK_FUNCTION(&mu);
+  void (*unlock)(void) UNLOCK_FUNCTION(&mu);
+  void (*requires_mu)(void) EXCLUSIVE_LOCKS_REQUIRED(&mu);
+};
+
+void test_fp_ops(struct FPOps *ops) {
+  ops->lock();
+  ops->a = 42;
+  ops->requires_mu();
+  ops->unlock();
+}
+
+void test_fp_ops_fail(struct FPOps *ops) {
+  ops->a = 42; // expected-warning {{writing variable 'a' requires holding mutex '&FPOps::mu' exclusively}}
+  ops->requires_mu(); // expected-warning {{calling function 'requires_mu' requires holding mutex '&FPOps::mu' exclusively}}
+}
+
+// Function pointer attributes referring to parameters.
+struct BDev {
+  struct Mutex lock;
+  int a GUARDED_BY(&lock);
+};
+
+struct BDevOps {
+  void (*lock)(struct BDev *bdev) EXCLUSIVE_LOCK_FUNCTION(bdev->lock);
+  void (*unlock)(struct BDev *bdev) UNLOCK_FUNCTION(bdev->lock);
+};
+
+void test_bdev_ops(struct BDevOps *ops, struct BDev *bdev) {
+  ops->lock(bdev);
+  bdev->a = 42;
+  ops->unlock(bdev);
+}
+
+void test_bdev_ops_fail(struct BDevOps *ops, struct BDev *bdev) {
+  ops->unlock(bdev); // expected-warning {{releasing mutex 'bdev->lock' that was not held}}
 }
 
 // We had a problem where we'd skip all attributes that follow a late-parsed

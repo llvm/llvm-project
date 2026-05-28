@@ -5,19 +5,42 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// NOTE: Please #define DEF_DISABLE_AUTO_UNDEF before including more than one
+//       .def file to stop the .def file from automatically undefing macros.
+//
 
-//    ClassID, Class
 #ifndef DEF_VALUE
 #define DEF_VALUE(ID, CLASS)
+#define DEF_VALUE_DEFINED_INTERNALLY
 #endif
 
 #ifndef DEF_USER
 #define DEF_USER(ID, CLASS)
+#define DEF_USER_DEFINED_INTERNALLY
 #endif
 
 #ifndef DEF_CONST
 #define DEF_CONST(ID, CLASS)
+#define DEF_CONST_DEFINED_INTERNALLY
 #endif
+
+#ifndef DEF_INSTR
+#define DEF_INSTR(ID, OPCODE, CLASS)
+#define DEF_INSTR_DEFINED_INTERNALLY
+#endif
+
+#ifndef OP
+#define OP(OPCODE)
+#define OP_DEFINED_INTERNALLY
+#endif
+
+#ifndef OPCODES
+#define OPCODES(...)
+#define OPCODES_DEFINED_INTERNALLY
+#endif
+
+//    ClassID, Class
 
 DEF_CONST(Function, Function)
 DEF_VALUE(Argument, Argument)
@@ -47,17 +70,6 @@ DEF_CONST(ConstantExpr, ConstantExpr)
 DEF_CONST(DSOLocalEquivalent, DSOLocalEquivalent)
 DEF_CONST(ConstantTokenNone, ConstantTokenNone)
 
-#ifndef DEF_INSTR
-#define DEF_INSTR(ID, OPCODE, CLASS)
-#endif
-
-#ifndef OP
-#define OP(OPCODE)
-#endif
-
-#ifndef OPCODES
-#define OPCODES(...)
-#endif
 // clang-format off
 //        ClassID,        Opcode(s),          Class
 DEF_INSTR(Opaque,         OP(Opaque),         OpaqueInst)
@@ -135,21 +147,48 @@ DEF_INSTR(ICmp,           OP(ICmp),          FCmpInst)
 DEF_INSTR(FCmp,           OP(FCmp),          ICmpInst)
 
 // clang-format on
-#ifdef DEF_VALUE
+
+// Undefine all internally defined macros.
+
+#ifdef DEF_VALUE_DEFINED_INTERNALLY
 #undef DEF_VALUE
+#undef DEF_VALUE_DEFINED_INTERNALLY
 #endif
-#ifdef DEF_USER
+
+#ifdef DEF_USER_DEFINED_INTERNALLY
 #undef DEF_USER
+#undef DEF_USER_DEFINED_INTERNALLY
 #endif
-#ifdef DEF_CONST
+
+#ifdef DEF_CONST_DEFINED_INTERNALLY
 #undef DEF_CONST
+#undef DEF_CONST_DEFINED_INTERNALLY
 #endif
-#ifdef DEF_INSTR
+
+#ifdef DEF_INSTR_DEFINED_INTERNALLY
 #undef DEF_INSTR
+#undef DEF_INSTR_DEFINED_INTERNALLY
 #endif
-#ifdef OP
+
+#ifdef OP_DEFINED_INTERNALLY
 #undef OP
+#undef OP_DEFINED_INTERNALLY
 #endif
-#ifdef OPCODES
+
+#ifdef OPCODES_DEFINED_INTERNALLY
 #undef OPCODES
+#undef OPCODES_DEFINED_INTERNALLY
 #endif
+
+// Undefine all externally defined macros.
+#ifndef DEF_DISABLE_AUTO_UNDEF
+
+#undef DEF_VALUE
+#undef DEF_USER
+#undef DEF_CONST
+#undef DEF_INSTR
+#undef OP
+#undef OPCODES
+
+#endif // DEF_DISABLE_AUTO_UNDEF
+#undef DEF_DISABLE_AUTO_UNDEF

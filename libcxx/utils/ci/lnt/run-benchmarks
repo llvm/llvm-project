@@ -38,6 +38,10 @@ def gather_machine_information(args):
     info['compiler'] = subprocess.check_output([args.compiler, '--version']).decode().strip().splitlines()[0]
     info['test_suite_commit'] = subprocess.check_output(['git', '-C', args.git_repo, 'rev-parse', args.test_suite_commit]).decode().strip()
 
+    if args.spec_dir is not None:
+        with open(args.spec_dir / 'version.txt', 'r') as f:
+            info['spec'] = f.read().strip()
+
     return info
 
 def gather_run_information(args):

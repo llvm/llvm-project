@@ -297,8 +297,14 @@ def NoEscapeDocs : Documentation {
 the compiler that the pointer cannot escape: that is, no reference to the object
 the pointer points to that is derived from the parameter value will survive
 after the function returns. Users are responsible for making sure parameters
-annotated with ``noescape`` do not actually escape. Calling ``free()`` on such
-a parameter does not constitute an escape.
+annotated with ``noescape`` do not actually escape. The optimizer may make
+assumptions based on the fact that it knows that a call to the function does
+not escape a certain parameter, so incorrectly annotating a parameter with
+``noescape`` leads to undefined behavior. The callee is also not allowed to
+deallocate memory through a ``noescape`` parameter: the optimizer does not make
+assumptions based on this information at the moment, but may do so in the
+future. Some cases of invalid uses of ``noescape`` can be found with
+:ref:`-Wlifetime-safety-noescape <Wlifetime-safety-noescape>`.
 
 For example:
 
@@ -312,6 +318,23 @@ For example:
 
   void escapingFunc(__attribute__((noescape)) int *p) {
     gp = p; // Not OK.
+  }
+
+  void freeingFunc(__attribute__((noescape)) int *p) {
+    free(p); // Not OK.
+  }
+
+Since ``noescape`` is a parameter attribute and not a type attribute, it only
+applies to the outermost pointer level, regardless of where in the parameter
+declaration you place it:
+
+.. code-block:: c
+
+  int **gp;
+
+  void nestingEscapes(__attribute__((noescape)) int **p) {
+    gp = p; // Not OK.
+    *gp = *p; // OK, p does not escape.
   }
 
 Additionally, when the parameter is a `block pointer
@@ -330,6 +353,36 @@ applies to copies of the block. For example:
   void escapingFunc(__attribute__((noescape)) BlockTy block) {
     g0 = block; // Not OK.
     g1 = Block_copy(block); // Not OK either.
+  }
+
+The function *is* allowed to leak information about the memory address of the
+pointer, but not any provenance of the allocation:
+
+.. code-block:: c
+
+  bool isNull(__attribute__((noescape)) void *p) {
+    return !p; // OK.
+  }
+
+  uintptr_t gi;
+
+  void escapingAddress(__attribute__((noescape)) int *p) {
+    // OK *if and only if* gi is never casted back to a pointer.
+    gi = (uintptr_t)p;
+  }
+
+  bool usingEscapedAddress(int *p) {
+    return (uintptr_t)p > gi; // OK.
+  }
+
+  bool usingEscapedPointer(int *p) {
+    return p > (int*)gi; // Not OK.
+  }
+
+  int *gp;
+
+  void escapingEndFunc(__attribute__((noescape)) int *p, size_t len) {
+    gp = p + len; // Not OK.
   }
 
   }];
@@ -1663,7 +1716,9 @@ safely deallocated with the standard ``free()``.
 The annotations ``ownership_takes`` and ``ownership_holds`` both prevent memory
 leak reports (concerning the specified parameter); the difference between them
 is that using taken memory is a use-after-free error, while using held memory
-is assumed to be legitimate.
+is assumed to be legitimate. However, releasing the held memory or passing it
+to another holding call is reported by the analyzer as an "attempt to release
+non-owned memory".
 
 Example:
 
@@ -2198,6 +2253,7 @@ attributes are ignored. Supported platforms are:
 ``visionOS``
 ``visionOSApplicationExtension``
 ``driverkit``
+``anyAppleOS``
 ``swift``
 ``android``
 ``fuchsia``
@@ -2221,6 +2277,7 @@ Some platforms have alias names:
 ``maccatalyst_app_extension``
 ``visionos``
 ``visionos_app_extension``
+``anyappleos``
 ``shadermodel``
 
 Supported environment names for the ShaderModel platform:
@@ -2240,6 +2297,13 @@ Supported environment names for the ShaderModel platform:
 ``mesh``
 ``amplification``
 ``library``
+
+The special platform ``anyAppleOS`` (alias: ``anyappleos``) is a shorthand that
+applies the availability attribute to all Apple Darwin platforms. An explicit
+platform-specific availability attribute takes precedence over an ``anyAppleOS``
+attribute for that platform. Versions specified with ``anyAppleOS`` must be at
+least 26.0, which is the first OS release where all supported Apple platforms
+share a unified version number.
 
 A declaration can typically be used even when deploying back to a platform
 version prior to when the declaration was introduced. When this happens, the
@@ -3423,6 +3487,10 @@ create machine code that meets the request.
 def AMDGPUNumSGPRNumVGPRDocs : Documentation {
   let Category = DocCatAMDGPUAttributes;
   let Content = [{
+.. warning::
+  These attributes are deprecated. Use the ``amdgpu_waves_per_eu`` attribute to
+  control SGPR and VGPR usage instead.
+
 Clang supports the ``__attribute__((amdgpu_num_sgpr(<num_sgpr>)))`` and
 ``__attribute__((amdgpu_num_vgpr(<num_vgpr>)))`` attributes for the AMDGPU
 target. These attributes may be attached to a kernel function definition and are
@@ -7828,7 +7896,7 @@ that provide transparent access to the pointed-to object. These include:
 
 * Dereference operators: ``operator*``, ``operator->``
 * Data access methods: ``data()``, ``c_str()``, ``get()``
-* Iterator methods: ``begin()``, ``end()``, ``rbegin()``, ``rend()``, ``cbegin()``, ``cend()``, ``crbegin()``, ``crend()``
+* Iterator operations: ``begin()``, ``end()``, ``rbegin()``, ``rend()``, ``cbegin()``, ``cend()``, ``crbegin()``, ``crend()``, ``operator+``, ``operator-``, ``operator++``, ``operator--``
 
 When these methods return pointers, view types, or references, the analysis treats them as
 transparently borrowing from the same object that the pointer itself borrows from,
@@ -9242,6 +9310,23 @@ This attribute maps to the 'Location' SPIR-V decoration.
   }];
 }
 
+def HLSLMatrixLayoutDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "row_major, column_major";
+  let Content = [{
+The ``row_major`` and ``column_major`` keywords specify the memory layout 
+of an HLSL matrix type. 
+
+* ``row_major``: Matrices are stored in memory row-by-row.
+* ``column_major``: Matrices are stored in memory column-by-column (default).
+
+Example:
+.. code-block:: hlsl
+
+  row_major float2x2 myMatrix;
+  }];
+}
+
 def WebAssemblyFuncrefDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
@@ -9912,7 +9997,7 @@ the symbol ``<impl_name>_<aspect>`` at the point of the call. This arranges for
 code and data needed to support the aspect of the implementation to be brought
 into the link to satisfy weak references in the modular implemenation function.
 If the compiler does not understand an aspect, it must summarily consider any
-call to require that aspect. 
+call to require that aspect.
 
 For example, say ``printf`` is annotated with
 ``modular_format(__modular_printf, "__printf", "float")``. Then, a call to

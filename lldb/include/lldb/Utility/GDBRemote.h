@@ -42,6 +42,9 @@ public:
   ///     Number of bytes written.
   // TODO: Convert this function to take ArrayRef<uint8_t>
   int PutEscapedBytes(const void *s, size_t src_len);
+
+  /// Equivalent to PutEscapedBytes(str.data(), str.size());
+  int PutEscapedBytes(llvm::StringRef str);
 };
 
 /// GDB remote packet as used by the GDB remote communication history. Packets

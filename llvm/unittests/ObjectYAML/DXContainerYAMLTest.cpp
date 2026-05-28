@@ -8,9 +8,11 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Config/config.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/MemoryBufferRef.h"
+#include "llvm/Support/VCSRevision.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
@@ -576,4 +578,119 @@ Parts:
 
   EXPECT_EQ(Storage.size(), 148U);
   EXPECT_TRUE(memcmp(Buffer, Storage.data(), 148U) == 0);
+}
+
+TEST(DXCFile, ParseILDNPart) {
+  SmallString<128> Storage;
+
+  // First read a fully explicit yaml with all sizes and offsets provided
+  ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       1
+  PartOffsets:     [ 36 ]
+Parts:
+  - Name:            ILDN
+    Size:            12
+    DebugName:
+     Flags:           0
+     NameLength:      7
+     DebugName:       abc.pdb
+     )"));
+
+  uint8_t Buffer[] = {
+      0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x38, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+      0x49, 0x4C, 0x44, 0x4E, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00,
+      0x61, 0x62, 0x63, 0x2E, 0x70, 0x64, 0x62, 0x00};
+
+  EXPECT_EQ(Storage.size(), 56u);
+  EXPECT_TRUE(memcmp(Buffer, Storage.data(), 56u) == 0);
+}
+
+TEST(DXCFile, ParseVERSPart) {
+  SmallString<128> Storage;
+
+  // Read a fully explicit yaml with all sizes and offsets provided.
+  ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
+  Header:
+    Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                       0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+    Version:
+      Major:           1
+      Minor:           0
+    PartCount:       1
+  Parts:
+    - Name:            VERS
+      Size:            40
+      CompilerVersion:
+       Major:           1
+       Minor:           10
+       IsDebugBuild:    true
+       IsValidated:     false
+       CommitCount:     5267
+       ContentSizeInBytes: 21
+       CommitSha:       21f060b7
+       CustomVersionString: 1.9.0.15267
+    )"));
+
+  uint8_t Buffer[] = {
+      0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x54, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+      0x56, 0x45, 0x52, 0x53, 0x28, 0x00, 0x00, 0x00, 0x01, 0x00, 0x0A, 0x00,
+      0x01, 0x00, 0x00, 0x00, 0x93, 0x14, 0x00, 0x00, 0x15, 0x00, 0x00, 0x00,
+      0x32, 0x31, 0x66, 0x30, 0x36, 0x30, 0x62, 0x37, 0x00, 0x31, 0x2E, 0x39,
+      0x2E, 0x30, 0x2E, 0x31, 0x35, 0x32, 0x36, 0x37, 0x00, 0x00, 0x00, 0x00};
+
+  EXPECT_EQ(Storage.size(), 84u);
+  EXPECT_TRUE(memcmp(Buffer, Storage.data(), 84u) == 0);
+}
+
+TEST(DXCFile, ComputeVERSPart) {
+  SmallString<128> Storage;
+
+  // Check default values of compiler version part fields.
+  ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
+  Header:
+    Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                       0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+    Version:
+      Major:           1
+      Minor:           0
+    PartCount:       1
+  Parts:
+    - Name:            VERS
+      Size:            100
+      CompilerVersion:
+    )"));
+
+  DXContainer C =
+      llvm::cantFail(DXContainer::create(MemoryBufferRef(Storage, "")));
+  const std::optional<mcdxbc::CompilerVersion> &VERS =
+      C.getCompilerVersionInfo();
+  EXPECT_TRUE(VERS.has_value());
+  dxbc::CompilerVersionHeader Header = VERS->Parameters;
+  EXPECT_EQ(Header.Major, LLVM_VERSION_MAJOR);
+  EXPECT_EQ(Header.Minor, LLVM_VERSION_MINOR);
+#ifndef NDEBUG
+  EXPECT_TRUE(!!(Header.Flags & dxbc::CompilerVersionFlags::Debug));
+#else
+  EXPECT_FALSE(!!(Header.Flags & dxbc::CompilerVersionFlags::Debug));
+#endif
+  EXPECT_FALSE(!!(Header.Flags & dxbc::CompilerVersionFlags::Internal));
+  EXPECT_EQ(Header.CommitCount, 0u);
+#ifdef LLVM_REVISION
+  EXPECT_EQ(VERS->CommitSha, LLVM_REVISION);
+#else
+  EXPECT_TRUE(VERS->CommitSha.empty());
+#endif
+  EXPECT_EQ(VERS->CustomVersionString, PACKAGE_VERSION);
+  EXPECT_EQ(VERS->Parameters.ContentSizeInBytes,
+            VERS->CommitSha.size() + 1 + VERS->CustomVersionString.size() + 1);
 }

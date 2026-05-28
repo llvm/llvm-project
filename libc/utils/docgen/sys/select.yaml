@@ -1,0 +1,17 @@
+functions:
+  pselect:
+    in-latest-posix: ""
+  select:
+    in-latest-posix: ""
+
+macros:
+  FD_CLR:
+    in-latest-posix: ""
+  FD_ISSET:
+    in-latest-posix: ""
+  FD_SET:
+    in-latest-posix: ""
+  FD_SETSIZE:
+    in-latest-posix: ""
+  FD_ZERO:
+    in-latest-posix: ""

@@ -168,6 +168,38 @@ func.func @func_with_ops(%a: vector<8xi32>) {
 
 // -----
 
+func.func @func_with_ops(%a: f32) {
+  // expected-error@+1 {{'arith.subui_extended' op operand #0 must be signless-non-zero-bitwidth-integer-like}}
+  %r:2 = arith.subui_extended %a, %a : f32, i32
+  return
+}
+
+// -----
+
+func.func @func_with_ops(%a: i32) {
+  // expected-error@+1 {{'arith.subui_extended' op result #1 must be bool-like}}
+  %r:2 = arith.subui_extended %a, %a : i32, i32
+  return
+}
+
+// -----
+
+func.func @func_with_ops(%a: vector<8xi32>) {
+  // expected-error@+1 {{'arith.subui_extended' op if an operand is non-scalar, then all results must be non-scalar}}
+  %r:2 = arith.subui_extended %a, %a : vector<8xi32>, i1
+  return
+}
+
+// -----
+
+func.func @func_with_ops(%a: vector<8xi32>) {
+  // expected-error@+1 {{'arith.subui_extended' op all non-scalar operands/results must have the same shape and base type}}
+  %r:2 = arith.subui_extended %a, %a : vector<8xi32>, tensor<8xi1>
+  return
+}
+
+// -----
+
 func.func @func_with_ops(i32) {
 ^bb0(%a : i32):
   %sf = arith.addf %a, %a : i32  // expected-error {{'arith.addf' op operand #0 must be floating-point-like}}

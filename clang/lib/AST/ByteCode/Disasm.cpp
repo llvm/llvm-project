@@ -28,6 +28,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -150,7 +151,14 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS,
   }
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_GREEN, true});
-    OS << getName() << " " << (const void *)this << "\n";
+    if (const FunctionDecl *FD = getDecl()) {
+      FD->getNameForDiagnostic(
+          OS, P.getContext().getASTContext().getPrintingPolicy(),
+          /*Qualified=*/true);
+    } else {
+      OS << getName();
+    }
+    OS << " " << (const void *)this << "\n";
   }
   OS << "frame size: " << getFrameSize() << "\n";
   OS << "arg size:   " << getArgSize() << "\n";
@@ -321,9 +329,9 @@ static std::string formatBytes(size_t B) {
   if (B < (1u << 10u))
     SS << B << " B";
   else if (B < (1u << 20u))
-    SS << llvm::format("{0:F2}", B / 1024.) << " KB";
+    SS << llvm::formatv("{0:F2}", B / 1024.) << " KB";
   else
-    SS << llvm::format("{0:F2}", B / 1024. / 1024.) << " MB";
+    SS << llvm::formatv("{0:F2}", B / 1024. / 1024.) << " MB";
 
   return Result;
 }
@@ -440,13 +448,14 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
 
   // Print a few interesting bits about the descriptor.
   if (isPrimitiveArray())
-    OS << " primitive-array";
+    OS << " primitive-array " << getNumElems() << ' '
+       << primTypeToString(getPrimType());
   else if (isCompositeArray())
-    OS << " composite-array";
+    OS << " composite-array " << getNumElems();
   else if (isUnion())
-    OS << " union";
+    OS << " union(" << ElemRecord->getName() << ")";
   else if (isRecord())
-    OS << " record";
+    OS << " record(" << ElemRecord->getName() << ")";
   else if (isPrimitive())
     OS << " primitive " << primTypeToString(getPrimType());
 

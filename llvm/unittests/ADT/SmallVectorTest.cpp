@@ -1237,6 +1237,12 @@ TEST(SmallVectorTest, ToVector) {
     IntVector = to_vector<3>(V);
     EXPECT_THAT(IntVector, testing::ElementsAre(1, 2, 3));
   }
+  {
+    SmallVector<bool> V = {true, false, true};
+    ArrayRef<bool> ref = V;
+    auto copy = to_vector(ref);
+    EXPECT_THAT(copy, testing::ElementsAre(true, false, true));
+  }
 }
 
 struct To {

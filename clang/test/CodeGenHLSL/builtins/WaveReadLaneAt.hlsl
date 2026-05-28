@@ -10,7 +10,7 @@
 // CHECK-LABEL: test_int
 int test_int(int expr, uint idx) {
   // CHECK-SPIRV: %[[#entry_tok0:]] = call token @llvm.experimental.convergence.entry()
-  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.readlane.i32([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok0]]) ]
+  // CHECK-SPIRV:  %[[RET:.*]] = call [[TY:.*]] @llvm.spv.wave.readlane.i32([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok0]]) ]
   // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.readlane.i32([[TY]] %[[#]], i32 %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveReadLaneAt(expr, idx);
@@ -22,7 +22,7 @@ int test_int(int expr, uint idx) {
 // CHECK-LABEL: test_uint
 uint test_uint(uint expr, uint idx) {
   // CHECK-SPIRV: %[[#entry_tok0:]] = call token @llvm.experimental.convergence.entry()
-  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.readlane.i32([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok0]]) ]
+  // CHECK-SPIRV:  %[[RET:.*]] = call [[TY:.*]] @llvm.spv.wave.readlane.i32([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok0]]) ]
   // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.readlane.i32([[TY]] %[[#]], i32 %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveReadLaneAt(expr, idx);
@@ -31,7 +31,7 @@ uint test_uint(uint expr, uint idx) {
 // CHECK-LABEL: test_int64_t
 int64_t test_int64_t(int64_t expr, uint idx) {
   // CHECK-SPIRV: %[[#entry_tok0:]] = call token @llvm.experimental.convergence.entry()
-  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.readlane.i64([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok0]]) ]
+  // CHECK-SPIRV:  %[[RET:.*]] = call [[TY:.*]] @llvm.spv.wave.readlane.i64([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok0]]) ]
   // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.readlane.i64([[TY]] %[[#]], i32 %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveReadLaneAt(expr, idx);
@@ -43,7 +43,7 @@ int64_t test_int64_t(int64_t expr, uint idx) {
 // CHECK-LABEL: test_uint64_t
 uint64_t test_uint64_t(uint64_t expr, uint idx) {
   // CHECK-SPIRV: %[[#entry_tok0:]] = call token @llvm.experimental.convergence.entry()
-  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.readlane.i64([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok0]]) ]
+  // CHECK-SPIRV:  %[[RET:.*]] = call [[TY:.*]] @llvm.spv.wave.readlane.i64([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok0]]) ]
   // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.readlane.i64([[TY]] %[[#]], i32 %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveReadLaneAt(expr, idx);
@@ -53,7 +53,7 @@ uint64_t test_uint64_t(uint64_t expr, uint idx) {
 // CHECK-LABEL: test_int16
 int16_t test_int16(int16_t expr, uint idx) {
   // CHECK-SPIRV: %[[#entry_tok1:]] = call token @llvm.experimental.convergence.entry()
-  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.readlane.i16([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok1]]) ]
+  // CHECK-SPIRV:  %[[RET:.*]] = call [[TY:.*]] @llvm.spv.wave.readlane.i16([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok1]]) ]
   // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.readlane.i16([[TY]] %[[#]], i32 %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveReadLaneAt(expr, idx);
@@ -65,7 +65,7 @@ int16_t test_int16(int16_t expr, uint idx) {
 // CHECK-LABEL: test_uint16
 uint16_t test_uint16(uint16_t expr, uint idx) {
   // CHECK-SPIRV: %[[#entry_tok1:]] = call token @llvm.experimental.convergence.entry()
-  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.readlane.i16([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok1]]) ]
+  // CHECK-SPIRV:  %[[RET:.*]] = call [[TY:.*]] @llvm.spv.wave.readlane.i16([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok1]]) ]
   // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.readlane.i16([[TY]] %[[#]], i32 %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveReadLaneAt(expr, idx);
@@ -77,7 +77,7 @@ uint16_t test_uint16(uint16_t expr, uint idx) {
 // CHECK-LABEL: test_half
 half test_half(half expr, uint idx) {
   // CHECK-SPIRV: %[[#entry_tok2:]] = call token @llvm.experimental.convergence.entry()
-  // CHECK-SPIRV:  %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn spir_func [[TY:.*]] @llvm.spv.wave.readlane.f16([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok2]]) ]
+  // CHECK-SPIRV:  %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn [[TY:.*]] @llvm.spv.wave.readlane.f16([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok2]]) ]
   // CHECK-DXIL:  %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn [[TY:.*]] @llvm.dx.wave.readlane.f16([[TY]] %[[#]], i32 %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveReadLaneAt(expr, idx);
@@ -89,7 +89,7 @@ half test_half(half expr, uint idx) {
 // CHECK-LABEL: test_double
 double test_double(double expr, uint idx) {
   // CHECK-SPIRV: %[[#entry_tok3:]] = call token @llvm.experimental.convergence.entry()
-  // CHECK-SPIRV:  %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn spir_func [[TY:.*]] @llvm.spv.wave.readlane.f64([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok3]]) ]
+  // CHECK-SPIRV:  %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn [[TY:.*]] @llvm.spv.wave.readlane.f64([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok3]]) ]
   // CHECK-DXIL:  %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn [[TY:.*]] @llvm.dx.wave.readlane.f64([[TY]] %[[#]], i32 %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveReadLaneAt(expr, idx);
@@ -101,7 +101,7 @@ double test_double(double expr, uint idx) {
 // CHECK-LABEL: test_floatv4
 float4 test_floatv4(float4 expr, uint idx) {
   // CHECK-SPIRV: %[[#entry_tok4:]] = call token @llvm.experimental.convergence.entry()
-  // CHECK-SPIRV:  %[[RET1:.*]] = call reassoc nnan ninf nsz arcp afn spir_func [[TY1:.*]] @llvm.spv.wave.readlane.v4f32([[TY1]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok4]]) ]
+  // CHECK-SPIRV:  %[[RET1:.*]] = call reassoc nnan ninf nsz arcp afn [[TY1:.*]] @llvm.spv.wave.readlane.v4f32([[TY1]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok4]]) ]
   // CHECK-DXIL:  %[[RET1:.*]] = call reassoc nnan ninf nsz arcp afn [[TY1:.*]] @llvm.dx.wave.readlane.v4f32([[TY1]] %[[#]], i32 %[[#]])
   // CHECK:  ret [[TY1]] %[[RET1]]
   return WaveReadLaneAt(expr, idx);

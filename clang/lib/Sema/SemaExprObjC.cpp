@@ -434,24 +434,6 @@ ExprResult SemaObjC::BuildObjCNumericLiteral(SourceLocation AtLoc,
   return SemaRef.MaybeBindToTemporary(NumberLiteral);
 }
 
-ExprResult SemaObjC::ActOnObjCBoolLiteral(SourceLocation AtLoc,
-                                          SourceLocation ValueLoc, bool Value) {
-  ASTContext &Context = getASTContext();
-  ExprResult Inner;
-  if (getLangOpts().CPlusPlus) {
-    Inner = SemaRef.ActOnCXXBoolLiteral(ValueLoc,
-                                        Value ? tok::kw_true : tok::kw_false);
-  } else {
-    // C doesn't actually have a way to represent literal values of type
-    // _Bool. So, we'll use 0/1 and implicit cast to _Bool.
-    Inner = SemaRef.ActOnIntegerConstant(ValueLoc, Value ? 1 : 0);
-    Inner = SemaRef.ImpCastExprToType(Inner.get(), Context.BoolTy,
-                                      CK_IntegralToBoolean);
-  }
-
-  return BuildObjCNumericLiteral(AtLoc, Inner.get());
-}
-
 /// Check that the given expression is a valid element of an Objective-C
 /// collection literal.
 static ExprResult CheckObjCCollectionLiteralElement(Sema &S, Expr *Element,
@@ -669,7 +651,7 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
       BoxingMethod = StringWithUTF8StringMethod;
       BoxedType = NSStringPointer;
       // Transfer the nullability from method's return type.
-      std::optional<NullabilityKind> Nullability =
+      NullabilityKindOrNone Nullability =
           BoxingMethod->getReturnType()->getNullability();
       if (Nullability)
         BoxedType =
@@ -1704,16 +1686,14 @@ QualType SemaObjC::getMessageSendResultType(const Expr *Receiver,
 
   // Map the nullability of the result into a table index.
   unsigned receiverNullabilityIdx = 0;
-  if (std::optional<NullabilityKind> nullability =
-          ReceiverType->getNullability()) {
+  if (NullabilityKindOrNone nullability = ReceiverType->getNullability()) {
     if (*nullability == NullabilityKind::NullableResult)
       nullability = NullabilityKind::Nullable;
     receiverNullabilityIdx = 1 + static_cast<unsigned>(*nullability);
   }
 
   unsigned resultNullabilityIdx = 0;
-  if (std::optional<NullabilityKind> nullability =
-          resultType->getNullability()) {
+  if (NullabilityKindOrNone nullability = resultType->getNullability()) {
     if (*nullability == NullabilityKind::NullableResult)
       nullability = NullabilityKind::Nullable;
     resultNullabilityIdx = 1 + static_cast<unsigned>(*nullability);

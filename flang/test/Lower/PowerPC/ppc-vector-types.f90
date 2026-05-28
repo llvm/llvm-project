@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-LLVM
+! RUN: %flang_fc1 -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-LLVM
 ! REQUIRES: target=powerpc{{.*}}
 
 ! CHECK-LLVM-LABEL: define void @_QQmain

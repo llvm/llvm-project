@@ -2,7 +2,7 @@
 ; RUN:  FileCheck %s -check-prefix=CHECK
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -passes=loop-vectorize -tail-predication=enabled \
-; RUN:     -prefer-predicate-over-epilogue=predicate-dont-vectorize -S < %s | \
+; RUN:     -tail-folding-policy=must-fold-tail -S < %s | \
 ; RUN:     FileCheck -check-prefix=PREDFLAG %s
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"

@@ -26,7 +26,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <cstdint>
 #include <utility>
 
@@ -670,6 +670,8 @@ void SemaAMDGPU::handleAMDGPUWavesPerEUAttr(Decl *D, const ParsedAttr &AL) {
 }
 
 void SemaAMDGPU::handleAMDGPUNumSGPRAttr(Decl *D, const ParsedAttr &AL) {
+  Diag(AL.getLoc(), diag::warn_amdgpu_num_reg_attr_deprecated) << AL;
+
   uint32_t NumSGPR = 0;
   Expr *NumSGPRExpr = AL.getArgAsExpr(0);
   if (!SemaRef.checkUInt32Argument(AL, NumSGPRExpr, NumSGPR))
@@ -680,6 +682,8 @@ void SemaAMDGPU::handleAMDGPUNumSGPRAttr(Decl *D, const ParsedAttr &AL) {
 }
 
 void SemaAMDGPU::handleAMDGPUNumVGPRAttr(Decl *D, const ParsedAttr &AL) {
+  Diag(AL.getLoc(), diag::warn_amdgpu_num_reg_attr_deprecated) << AL;
+
   uint32_t NumVGPR = 0;
   Expr *NumVGPRExpr = AL.getArgAsExpr(0);
   if (!SemaRef.checkUInt32Argument(AL, NumVGPRExpr, NumVGPR))
@@ -756,13 +760,11 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBuiltIn(Expr *E) {
   CallExpr *CE = cast<CallExpr>(E->IgnoreParens());
   ASTContext &Ctx = getASTContext();
   QualType BoolTy = Ctx.getLogicalOperationType();
-  llvm::APInt False = llvm::APInt::getZero(Ctx.getIntWidth(BoolTy));
-  llvm::APInt True = llvm::APInt::getAllOnes(Ctx.getIntWidth(BoolTy));
   SourceLocation Loc = CE->getExprLoc();
 
   if (!CE->getBuiltinCallee())
     return *ExpandedPredicates
-                .insert(IntegerLiteral::Create(Ctx, False, BoolTy, Loc))
+                .insert(SemaRef.BuildBoolLiteral(Loc, false).get())
                 .first;
 
   bool P = false;
@@ -820,9 +822,7 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBuiltIn(Expr *E) {
     P = Builtin::evaluateRequiredTargetFeatures(RF, CF);
   }
 
-  return *ExpandedPredicates
-              .insert(
-                  IntegerLiteral::Create(Ctx, P ? True : False, BoolTy, Loc))
+  return *ExpandedPredicates.insert(SemaRef.BuildBoolLiteral(Loc, P).get())
               .first;
 }
 
@@ -1020,7 +1020,9 @@ bool DiagnoseUnguardedBuiltins::VisitCallExpr(CallExpr *CE) {
       for (auto &&F : llvm::split(BInfo.getRequiredFeatures(GID), ','))
         FeatureMap[F] = true;
   } else {
-    static const llvm::Triple AMDGCN("amdgcn-amd-amdhsa");
+    static const llvm::Triple AMDGCN(llvm::Triple::amdgcn,
+                                     llvm::Triple::NoSubArch, llvm::Triple::AMD,
+                                     llvm::Triple::AMDHSA);
     llvm::AMDGPU::fillAMDGPUFeatureMap(CurrentGFXIP.back().second, AMDGCN,
                                        FeatureMap);
   }

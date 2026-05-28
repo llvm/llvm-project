@@ -814,8 +814,7 @@ private:
     return __p;
   }
 
-  _LIBCPP_NODEBUG _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-  __swap_layouts(_SplitBuffer& __sb) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_layouts(_SplitBuffer& __sb) {
     __sb.__swap_layouts(__begin_, __end_, __cap_);
   }
 };
@@ -1031,10 +1030,10 @@ vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, _Sentinel __last,
   if (__new_size <= capacity()) {
     auto const __size = size();
     if (__new_size > __size) {
-      auto __mid = std::__copy_n<_AlgPolicy>(std::move(__first), __size, this->__begin_).first;
+      auto __mid = std::__copy_n<_AlgPolicy>(std::move(__first), __size, this->__begin_).__in_;
       __construct_at_end(std::move(__mid), std::move(__last), __new_size - __size);
     } else {
-      pointer __m = std::__copy(std::move(__first), __last, this->__begin_).second;
+      pointer __m = std::__copy(std::move(__first), __last, this->__begin_).__out_;
       this->__destruct_at_end(__m);
     }
   } else {

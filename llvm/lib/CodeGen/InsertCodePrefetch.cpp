@@ -112,9 +112,10 @@ insertPrefetchHints(MachineFunction &MF,
   // Sort prefetch hints by their callsite index so we can insert them by one
   // pass over the block's instructions.
   for (auto &[SiteBBID, Hints] : PrefetchHintsBySiteBBID) {
-    llvm::sort(Hints, [](const PrefetchHint &H1, const PrefetchHint &H2) {
-      return H1.SiteID.CallsiteIndex < H2.SiteID.CallsiteIndex;
-    });
+    llvm::stable_sort(
+        Hints, [](const PrefetchHint &H1, const PrefetchHint &H2) {
+          return H1.SiteID.CallsiteIndex < H2.SiteID.CallsiteIndex;
+        });
   }
   auto PtrTy =
       PointerType::getUnqual(MF.getFunction().getParent()->getContext());
@@ -155,8 +156,15 @@ insertPrefetchHints(MachineFunction &MF,
           // __llvm_prefetch_target_foo_x_y:
           MCSymbolELF *WeakFallbackSym = static_cast<MCSymbolELF *>(
               MF.getContext().getOrCreateSymbol(TargetSymbolName));
-          WeakFallbackSym->setBinding(ELF::STB_WEAK);
-          PrefetchInstr->setPostInstrSymbol(MF, WeakFallbackSym);
+          // The fallback symbol may have been defined via another prefetch
+          // instruction in the same module, in which case we should not emit it
+          // here. Ideally, getOrCreateSymbol should tell us if the symbol
+          // existed, but we use `isBindingSet()` since that API is not
+          // available.
+          if (!WeakFallbackSym->isBindingSet()) {
+            WeakFallbackSym->setBinding(ELF::STB_WEAK);
+            PrefetchInstr->setPostInstrSymbol(MF, WeakFallbackSym);
+          }
         }
         PrefetchInserted = true;
         ++HintIt;

@@ -87,7 +87,13 @@ DenseMap<Attribute, MemorySlot> LLVM::AllocaOp::destructure(
 
   auto destructurableType = cast<DestructurableTypeInterface>(getElemType());
   DenseMap<Attribute, MemorySlot> slotMap;
-  for (Attribute index : usedIndices) {
+  // Iterate subelements in their original type order to produce allocas in a
+  // deterministic, readable order (matching appearance in the source type).
+  Type i32 = IntegerType::get(getContext(), 32);
+  for (size_t i = 0; i < slot.subelementTypes.size(); i++) {
+    Attribute index = IntegerAttr::get(i32, i);
+    if (!usedIndices.contains(index))
+      continue;
     Type elemType = destructurableType.getTypeAtIndex(index);
     assert(elemType && "used index must exist");
     auto subAlloca = LLVM::AllocaOp::create(

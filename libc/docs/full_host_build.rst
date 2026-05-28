@@ -139,10 +139,25 @@ headers.
    # Use -L to dereference the asm symlink and copy the actual files
    cp -R -L /usr/include/asm $SYSROOT/usr/include/
 
+If you instead want to build the headers from the kernel sources, you can run
+the following commands:
+
+.. code-block:: sh
+
+   # Create the include directory
+   mkdir -p $SYSROOT/usr/include
+
+   git clone --depth=1 git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git /tmp/linux
+   make LLVM=1 INSTALL_HDR_PATH=$SYSROOT/usr -C /tmp/linux headers_install
+
+The headers can be built to target non-host architectures by adding the
+``ARCH={arm|arm64|i386}`` to the above invocation of ``make``.
+
 .. note::
    For a more production-ready sysroot, you would typically download a specific
    kernel version and install the headers using ``make headers_install``
-   configured for the target architecture and installation path.
+   configured for the target architecture and installation path using the above
+   instructions.
 
 Step 3: Build and Install Runtimes
 ----------------------------------

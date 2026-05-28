@@ -101,7 +101,7 @@ attributes(global) subroutine devsub()
 end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
-! CHECK: nvvm.barrier0
+! CHECK: nvvm.barrier
 ! CHECK: nvvm.bar.warp.sync %c1{{.*}} : i32 
 ! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<and> %c1{{.*}} -> i32
 ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
@@ -212,7 +212,7 @@ end
 
 ! CHECK-LABEL: func.func @_QPhost1()
 ! CHECK: cuf.kernel
-! CHECK: nvvm.barrier0
+! CHECK: nvvm.barrier
 ! CHECK: nvvm.bar.warp.sync %c1{{.*}} : i32 
 ! CHECK: nvvm.barrier #nvvm.reduction<and> %c1{{.*}} -> i32
 ! CHECK: nvvm.barrier #nvvm.reduction<popc> %c1{{.*}} -> i32

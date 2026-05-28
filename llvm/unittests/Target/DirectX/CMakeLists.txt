@@ -10,7 +10,7 @@ set(LLVM_LINK_COMPONENTS
   DirectXCodeGen
   DirectXDesc
   DirectXInfo
-  DirectXPointerTypeAnalysis
+  DirectXIRPasses
   MC
   Passes
   Support

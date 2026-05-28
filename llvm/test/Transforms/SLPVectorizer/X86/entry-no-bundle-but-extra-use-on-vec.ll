@@ -18,7 +18,7 @@ define void @test(ptr %nExp, float %0, i1 %cmp, float %1) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi float [ [[TMP1]], %[[IF_THEN]] ], [ [[TMP0]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi float [ 0.000000e+00, %[[IF_THEN]] ], [ [[TMP1]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x float> [ [[TMP9]], %[[IF_THEN]] ], [ zeroinitializer, %[[ENTRY]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = phi <2 x float> [ zeroinitializer, %[[IF_THEN]] ], [ <float 0x7FF8000000000000, float 1.000000e+00>, %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi <2 x float> [ zeroinitializer, %[[IF_THEN]] ], [ <float +qnan, float 1.000000e+00>, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = phi <2 x float> [ [[TMP5]], %[[IF_THEN]] ], [ zeroinitializer, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x float> [[TMP14]], <2 x float> <float poison, float 0.000000e+00>, <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    [[TMP18:%.*]] = fmul <2 x float> [[TMP15]], [[TMP13]]

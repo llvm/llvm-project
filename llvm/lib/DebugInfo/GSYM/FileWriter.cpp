@@ -16,6 +16,10 @@ using namespace gsym;
 
 FileWriter::~FileWriter() { OS.flush(); }
 
+void FileWriter::writeStringOffset(uint64_t Value) {
+  writeUnsigned(Value, StringOffsetSize);
+}
+
 void FileWriter::writeSLEB(int64_t S) {
   uint8_t Bytes[32];
   auto Length = encodeSLEB128(S, Bytes);
