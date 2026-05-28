@@ -1486,7 +1486,7 @@ bool RISCVLegalizerInfo::legalizeInsertVectorElt(MachineInstr &MI,
   auto VMVOp = MIB.buildInstr(RISCV::G_VMV_S_VL, {ContainerTy},
                               {MIB.buildUndef(ContainerTy), Elt, VL});
 
-  // InSertVL
+  // InsertVL
   const LLT sXLen = LLT::scalar(STI.getXLen());
   auto CstOne = MIB.buildConstant(sXLen, 1);
   auto Add = MIB.buildAdd(sXLen, Idx, CstOne);

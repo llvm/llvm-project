@@ -144,6 +144,7 @@ bool RISCVPostLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
 
   switch (MI.getOpcode()) {
   case RISCV::G_VMV_S_VL: {
+    Helper.getBuilder().setInstrAndDebugLoc(MI);
     MachineRegisterInfo &MRI = *Helper.getBuilder().getMRI();
     MachineOperand &Dst = MI.getOperand(0);
     MachineOperand &Src = MI.getOperand(1);
