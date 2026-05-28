@@ -26,6 +26,9 @@ extern "C" {
 // real kind.
 double RTNAME(CpuTime)();
 
+// Interface for Timef()
+double RTNAME(Timef)();
+
 // Interface for the SYSTEM_CLOCK intrinsic. We break it up into 3 distinct
 // function calls, one for each of SYSTEM_CLOCK's optional output arguments.
 // Lowering converts the results to the types of the actual arguments,

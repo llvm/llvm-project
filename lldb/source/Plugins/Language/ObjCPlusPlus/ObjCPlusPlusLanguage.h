@@ -37,7 +37,7 @@ public:
 
   static lldb_private::Language *CreateInstance(lldb::LanguageType language);
 
-  llvm::StringRef GetInstanceVariableName() override { return "self"; }
+  llvm::StringRef GetInstanceName() override { return "self"; }
 
   virtual std::optional<bool>
   GetBooleanFromString(llvm::StringRef str) const override;

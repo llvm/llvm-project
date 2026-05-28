@@ -476,11 +476,10 @@ void ThreadList::RefreshStateAfterStop() {
 
   m_process.UpdateThreadListIfNeeded();
 
-  Log *log = GetLog(LLDBLog::Step);
-  if (log && log->GetVerbose())
-    LLDB_LOGF(log,
-              "Turning off notification of new threads while single stepping "
-              "a thread.");
+  LLDB_LOGF_VERBOSE(
+      GetLog(LLDBLog::Step),
+      "Turning off notification of new threads while single stepping "
+      "a thread.");
 
   collection::iterator pos, end = m_threads.end();
   for (pos = m_threads.begin(); pos != end; ++pos)
@@ -515,12 +514,18 @@ bool ThreadList::WillResume(RunDirection &direction) {
   for (const auto &thread_sp : m_threads) {
     ThreadPlan *plan = thread_sp->GetCurrentPlan();
     if (plan && plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
-      // Suppress the re-enable side effect in DidPop() — the breakpoint
-      // may still be disabled from the previous batch, and we don't want
-      // to toggle it. The new plans will handle disable/re-enable correctly.
-      static_cast<ThreadPlanStepOverBreakpoint *>(plan)
-          ->SetReenabledBreakpointSite();
-      thread_sp->DiscardPlan();
+      auto *bp_plan = static_cast<ThreadPlanStepOverBreakpoint *>(plan);
+      // Only pop plans created by our batching logic (deferred plans).
+      // Plans from the single-thread path must not be popped, as doing so
+      // would change the StopOthers scan result and cause other threads
+      // to lose their breakpoint stop reason.
+      if (bp_plan->GetDeferReenableBreakpointSite()) {
+        // Suppress the re-enable side effect in DidPop(), the breakpoint
+        // may still be disabled from the previous batch, and we don't want
+        // to toggle it. The new plans will handle re-enable correctly.
+        bp_plan->SetReenabledBreakpointSite();
+        thread_sp->DiscardPlan();
+      }
     }
   }
 
@@ -686,20 +691,40 @@ bool ThreadList::WillResume(RunDirection &direction) {
   }
 
   if (thread_to_run != nullptr) {
-    Log *log = GetLog(LLDBLog::Step);
-    if (log && log->GetVerbose())
-      LLDB_LOGF(log, "Turning on notification of new threads while single "
-                     "stepping a thread.");
+    LLDB_LOGF_VERBOSE(GetLog(LLDBLog::Step),
+                      "Turning on notification of new threads while single "
+                      "stepping a thread.");
     m_process.StartNoticingNewThreads();
   } else {
-    Log *log = GetLog(LLDBLog::Step);
-    if (log && log->GetVerbose())
-      LLDB_LOGF(log, "Turning off notification of new threads while single "
-                     "stepping a thread.");
+    LLDB_LOGF_VERBOSE(GetLog(LLDBLog::Step),
+                      "Turning off notification of new threads while single "
+                      "stepping a thread.");
     m_process.StopNoticingNewThreads();
   }
 
   bool need_to_resume = true;
+
+  // Check if any threads should always be allowed to run based on their name.
+  Args always_run_names = m_process.GetAlwaysRunThreadNames();
+  auto resume_state_for_thread = [&](const ThreadSP &thread_sp) -> StateType {
+    if (always_run_names.GetArgumentCount() == 0)
+      return eStateSuspended;
+    const char *name = thread_sp->GetName();
+    if (!name)
+      return eStateSuspended;
+    llvm::StringRef name_str(name);
+    Log *log = GetLog(LLDBLog::Step);
+    for (size_t i = 0; i < always_run_names.GetArgumentCount(); ++i) {
+      if (name_str == always_run_names.GetArgumentAtIndex(i)) {
+        LLDB_LOG(log,
+                 "Thread \"{0}\" (tid={1:x}) will continue due to "
+                 "always-run-thread-names setting",
+                 name, thread_sp->GetID());
+        return eStateRunning;
+      }
+    }
+    return eStateSuspended;
+  };
 
   if (!batched_step_threads.empty()) {
     // Batched stepping: all threads in the batch step together,
@@ -714,8 +739,8 @@ bool ThreadList::WillResume(RunDirection &direction) {
         if (!thread_sp->ShouldResume(thread_sp->GetCurrentPlan()->RunState()))
           need_to_resume = false;
       } else {
-        // Suspend it since it's not in the batch.
-        thread_sp->ShouldResume(eStateSuspended);
+        // Suspend it since it's not in the batch, unless it should always run.
+        thread_sp->ShouldResume(resume_state_for_thread(thread_sp));
       }
     }
   } else if (thread_to_run == nullptr) {
@@ -751,7 +776,7 @@ bool ThreadList::WillResume(RunDirection &direction) {
         if (!thread_sp->ShouldResume(thread_sp->GetCurrentPlan()->RunState()))
           need_to_resume = false;
       } else
-        thread_sp->ShouldResume(eStateSuspended);
+        thread_sp->ShouldResume(resume_state_for_thread(thread_sp));
     }
   }
 

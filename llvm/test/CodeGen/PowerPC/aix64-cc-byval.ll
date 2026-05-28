@@ -1,9 +1,9 @@
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -stop-after=machine-cp -mcpu=pwr4 \
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -stop-after=machine-cp -mcpu=pwr4 \
 ; RUN: -mattr=-altivec -verify-machineinstrs < %s | \
 ; RUN: FileCheck %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \
-; RUN:  -mtriple powerpc64-ibm-aix-xcoff < %s | \
+; RUN:  -mtriple powerpc64-ibm-aix-xcoff --code-model=small < %s | \
 ; RUN: FileCheck --check-prefix=ASM %s
 
 %struct.S5 = type { [5 x i8] }

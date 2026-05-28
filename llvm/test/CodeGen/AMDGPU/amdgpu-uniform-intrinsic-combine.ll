@@ -52,7 +52,7 @@ define amdgpu_kernel void @permlane64_nonuniform(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CURRENT-CHECK-NEXT:    [[V:%.*]] = tail call i32 @llvm.amdgcn.permlane64.i32(i32 [[TID]])
 ; CURRENT-CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TID]] to i64
-; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 [[TMP1]]
+; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[OUT]], i64 [[TMP1]]
 ; CURRENT-CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -86,7 +86,7 @@ define amdgpu_kernel void @permlane64_nonuniform_expression(ptr addrspace(1) %ou
 ; CURRENT-CHECK-NEXT:    [[TID2:%.*]] = add nuw nsw i32 [[TID]], 1
 ; CURRENT-CHECK-NEXT:    [[V:%.*]] = tail call i32 @llvm.amdgcn.permlane64.i32(i32 [[TID2]])
 ; CURRENT-CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TID]] to i64
-; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 [[TMP1]]
+; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[OUT]], i64 [[TMP1]]
 ; CURRENT-CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -165,7 +165,7 @@ define amdgpu_kernel void @readlane_nonuniform_workitem(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-NEXT:    [[TIDY:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.y()
 ; CURRENT-CHECK-NEXT:    [[V:%.*]] = tail call i32 @llvm.amdgcn.readlane.i32(i32 [[TIDX]], i32 [[TIDY]])
 ; CURRENT-CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TIDX]] to i64
-; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 [[TMP1]]
+; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[OUT]], i64 [[TMP1]]
 ; CURRENT-CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -204,7 +204,7 @@ define amdgpu_kernel void @readlane_nonuniform_expression(ptr addrspace(1) %out)
 ; CURRENT-CHECK-NEXT:    [[TIDY2:%.*]] = add nuw nsw i32 [[TIDY]], 2
 ; CURRENT-CHECK-NEXT:    [[V:%.*]] = tail call i32 @llvm.amdgcn.readlane.i32(i32 [[TIDX2]], i32 [[TIDY2]])
 ; CURRENT-CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TIDX]] to i64
-; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 [[TMP1]]
+; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[OUT]], i64 [[TMP1]]
 ; CURRENT-CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -292,7 +292,7 @@ define amdgpu_kernel void @readfirstlane_with_workitem_id(ptr addrspace(1) %out)
 ; CURRENT-CHECK-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CURRENT-CHECK-NEXT:    [[V:%.*]] = tail call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TID]])
 ; CURRENT-CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TID]] to i64
-; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 [[TMP1]]
+; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[OUT]], i64 [[TMP1]]
 ; CURRENT-CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -326,7 +326,7 @@ define amdgpu_kernel void @readfirstlane_expression(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-NEXT:    [[TID2:%.*]] = add nuw nsw i32 [[TID]], 1
 ; CURRENT-CHECK-NEXT:    [[V:%.*]] = tail call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TID2]])
 ; CURRENT-CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TID2]] to i64
-; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 [[TMP1]]
+; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[OUT]], i64 [[TMP1]]
 ; CURRENT-CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;

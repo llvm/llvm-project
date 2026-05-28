@@ -93,6 +93,22 @@ static ParameterElement *getEncapsulatedParameterElement(FormatElement *el) {
       .DefaultUnreachable("unexpected struct element type");
 }
 
+/// Returns true if the parameter is an `ArrayRefParameter` or
+/// `OptionalArrayRefParameter` without a custom printer or parser. Such
+/// parameters use a comma-separated list as their default format, which is
+/// ambiguous when used in a `struct` directive followed by other parameters.
+static bool isUndelimitedArrayRefParam(const ParameterElement *el) {
+  // If the parameter has a custom printer or parser, the user controls the
+  // format and printer/parser symmetry is their responsibility.
+  if (el->getParam().getPrinter() || el->getParam().getParser())
+    return false;
+  const auto *defInit = dyn_cast<llvm::DefInit>(el->getParam().getDef());
+  if (!defInit)
+    return false;
+  return defInit->getDef()->isSubClassOf("ArrayRefParameter") ||
+         defInit->getDef()->isSubClassOf("OptionalArrayRefParameter");
+}
+
 /// Shorthand functions that can be used with ranged-based conditions.
 static bool paramIsOptional(ParameterElement *el) { return el->isOptional(); }
 static bool formatIsOptional(FormatElement *el) {
@@ -224,9 +240,10 @@ private:
   void genVariablePrinter(ParameterElement *el, FmtContext &ctx, MethodBody &os,
                           bool skipGuard = false);
   /// Generate a printer for comma-separated format elements.
-  void genCommaSeparatedPrinter(ArrayRef<FormatElement *> params,
-                                FmtContext &ctx, MethodBody &os,
-                                function_ref<void(FormatElement *)> extra);
+  void genCommaSeparatedPrinter(
+      ArrayRef<FormatElement *> params, FmtContext &ctx, MethodBody &os,
+      function_ref<void(FormatElement *)> extra,
+      function_ref<void(FormatElement *)> extraPost = nullptr);
   /// Generate the printer code for a `params` directive.
   void genParamsPrinter(ParamsDirective *el, FmtContext &ctx, MethodBody &os);
   /// Generate the printer code for a `struct` directive.
@@ -579,13 +596,27 @@ void DefFormat::genStructParser(StructDirective *el, FmtContext &ctx,
   os.indent()
       << "const auto _loop_body = [&](::llvm::StringRef _paramKey) -> bool {\n";
   genLiteralParser("=", ctx, os.indent());
-  for (FormatElement *arg : el->getElements()) {
+  ArrayRef<FormatElement *> structElems = el->getElements();
+  for (auto [idx, arg] : llvm::enumerate(structElems)) {
     ParameterElement *param = getEncapsulatedParameterElement(arg);
     os.getStream().printReindented(strfmt(checkParamKey, param->getName()));
+    // An `ArrayRefParameter` without a custom parser in a non-last position
+    // uses `[...]` delimiters to avoid ambiguity with the struct-level comma.
+    bool useBrackets = isa<ParameterElement>(arg) &&
+                       isUndelimitedArrayRefParam(param) &&
+                       idx != structElems.size() - 1;
+    if (useBrackets) {
+      os.indent();
+      genLiteralParser("[", ctx, os);
+    }
     if (isa<ParameterElement>(arg))
       genVariableParser(param, ctx, os.indent());
     else if (auto *custom = dyn_cast<CustomDirective>(arg))
       genCustomParser(custom, ctx, os.indent());
+    if (useBrackets) {
+      os.unindent();
+      genLiteralParser("]", ctx, os);
+    }
     os.unindent() << "} else ";
     // Print the check for duplicate or unknown parameter.
   }
@@ -751,9 +782,11 @@ void DefFormat::genPrinter(MethodBody &os) {
   os.indent();
   os << "::mlir::Builder odsBuilder(getContext());\n";
 
-  // Generate printers.
-  shouldEmitSpace = true;
-  lastWasPunctuation = false;
+  // Start with no leading space: the generated dispatcher
+  // (`generatedAttributePrinter` / `generatedTypePrinter`) is responsible for
+  // emitting any space between the mnemonic and the first printed element.
+  shouldEmitSpace = false;
+  lastWasPunctuation = true;
   for (FormatElement *el : elements)
     genElementPrinter(el, ctx, os);
 }
@@ -851,7 +884,8 @@ static void guardOnAnyOptional(FmtContext &ctx, MethodBody &os,
 
 void DefFormat::genCommaSeparatedPrinter(
     ArrayRef<FormatElement *> args, FmtContext &ctx, MethodBody &os,
-    function_ref<void(FormatElement *)> extra) {
+    function_ref<void(FormatElement *)> extra,
+    function_ref<void(FormatElement *)> extraPost) {
   // Emit a space if necessary, but only if the struct is present.
   if (shouldEmitSpace || !lastWasPunctuation) {
     bool allOptional = llvm::all_of(args, formatIsOptional);
@@ -880,6 +914,8 @@ void DefFormat::genCommaSeparatedPrinter(
       genVariablePrinter(realParam, ctx, os);
     else if (auto *custom = dyn_cast<CustomDirective>(arg))
       genCustomPrinter(custom, ctx, os);
+    if (extraPost)
+      extraPost(arg);
     if (param->isOptional())
       os.unindent() << "}\n";
   }
@@ -897,10 +933,29 @@ void DefFormat::genParamsPrinter(ParamsDirective *el, FmtContext &ctx,
 
 void DefFormat::genStructPrinter(StructDirective *el, FmtContext &ctx,
                                  MethodBody &os) {
-  genCommaSeparatedPrinter(el->getElements(), ctx, os, [&](FormatElement *arg) {
-    ParameterElement *param = getEncapsulatedParameterElement(arg);
-    os << tgfmt("$_printer << \"$0 = \";\n", &ctx, param->getName());
-  });
+  ArrayRef<FormatElement *> elems = el->getElements();
+  // An `ArrayRefParameter` without a custom printer in a non-last struct
+  // position must be wrapped in `[...]` to avoid ambiguity with the
+  // struct-level comma separator. Track the element index via elemIdx, which is
+  // incremented once per element in the extraPost callback.
+  size_t elemIdx = 0;
+  genCommaSeparatedPrinter(
+      elems, ctx, os,
+      [&](FormatElement *arg) {
+        ParameterElement *param = getEncapsulatedParameterElement(arg);
+        os << tgfmt("$_printer << \"$0 = \";\n", &ctx, param->getName());
+        auto *paramEl = dyn_cast<ParameterElement>(arg);
+        if (paramEl && isUndelimitedArrayRefParam(paramEl) &&
+            elemIdx + 1 < elems.size())
+          os << tgfmt("$_printer << \"[\";\n", &ctx);
+      },
+      [&](FormatElement *arg) {
+        auto *paramEl = dyn_cast<ParameterElement>(arg);
+        if (paramEl && isUndelimitedArrayRefParam(paramEl) &&
+            elemIdx + 1 < elems.size())
+          os << tgfmt("$_printer << \"]\";\n", &ctx);
+        ++elemIdx;
+      });
 }
 
 void DefFormat::genCustomPrinter(CustomDirective *el, FmtContext &ctx,

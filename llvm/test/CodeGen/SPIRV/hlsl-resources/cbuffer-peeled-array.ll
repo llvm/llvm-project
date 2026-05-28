@@ -17,11 +17,9 @@
 ; CHECK-DAG: %[[MYCBUFFER:[0-9]+]] = OpVariable %[[PTR_WRAPPER]] Uniform
 
 
-; TODO(168401): This array stride and offset of element 1 are incorrect. This
-; is an issue with how 3 element vectors are handled.
-; CHECK-DAG: OpDecorate %[[ARRAY]] ArrayStride 20
+; CHECK-DAG: OpDecorate %[[ARRAY]] ArrayStride 16
 ; CHECK-DAG: OpMemberDecorate %[[STRUCT_PAD]] 0 Offset 0
-; CHECK-DAG: OpMemberDecorate %[[STRUCT_PAD]] 1 Offset 16
+; CHECK-DAG: OpMemberDecorate %[[STRUCT_PAD]] 1 Offset 12
 ; CHECK-DAG: OpMemberDecorate %[[WRAPPER]] 0 Offset 0
 ; CHECK-DAG: OpDecorate %[[WRAPPER]] Block
 %__cblayout_MyCBuffer = type <{ <{ [2 x <{ <3 x float>, target("spirv.Padding", 4) }>], <3 x float> }> }>

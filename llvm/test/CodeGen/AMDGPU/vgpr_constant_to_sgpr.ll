@@ -23,6 +23,8 @@ define protected amdgpu_kernel void @kern(ptr %addr) !llvm.amdgcn.lds.kernel.id 
 ; CHECK-NEXT:    v_readlane_b32 s14, v40, 0
 ; CHECK-NEXT:    s_mov_b64 s[16:17], s[8:9]
 ; CHECK-NEXT:    s_load_dwordx2 s[8:9], s[16:17], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_load_dwordx2 s[8:9], s[16:17], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v5, 42
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s8

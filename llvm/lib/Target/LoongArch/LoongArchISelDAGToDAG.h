@@ -60,10 +60,13 @@ public:
 
   bool selectVSplat(SDNode *N, APInt &Imm, unsigned MinSizeInBits) const;
 
-  template <unsigned ImmSize, bool IsSigned = false>
+  template <unsigned ImmSize, unsigned EltSize = 0, bool IsSigned = false>
   bool selectVSplatImm(SDValue N, SDValue &SplatVal);
-
+  template <unsigned ImmSize>
+  bool selectVSplatImmNeg(SDValue N, SDValue &SplatVal) const;
+  template <unsigned EltSize = 0>
   bool selectVSplatUimmInvPow2(SDValue N, SDValue &SplatImm) const;
+  template <unsigned EltSize = 0>
   bool selectVSplatUimmPow2(SDValue N, SDValue &SplatImm) const;
 
   // Return the LoongArch branch opcode that matches the given DAG integer

@@ -172,12 +172,28 @@ def skipTestIfFn(expected_fn, bugnumber=None):
         return skipTestIfFn_impl
 
 
-def _xfailForDebugInfo(expected_fn, bugnumber=None):
+def _xfailForVariant(variant_name, expected_fn, bugnumber=None):
+    """Mark a test method as expected-failure for a specific variant dimension.
+
+    Adds *expected_fn* to the decorated function's `__variant_xfail__`
+    dictionary under the key *variant_name*.  When the `LLDBTestCaseFactory`
+    metaclass expands the test method, it looks up *variant_name* in this
+    dictionary and calls the corresponding function with the concrete variant
+    value.  If the function returns a reason string, the expanded test method
+    is marked as expected failure via `unittest.expectedFailure`.
+
+    Args:
+        variant_name: The variant dimension name (e.g. `"debug_info"`).
+        expected_fn: Callable `(**{variant_name: value}) -> reason | None`.
+        bugnumber: Optional bug reference or the decorated function itself
+            (when the decorator is used without parentheses).
+    """
     def expectedFailure_impl(func):
         if isinstance(func, type) and issubclass(func, unittest.TestCase):
             raise Exception("Decorator can only be used to decorate a test method")
-
-        func.__xfail_for_debug_info_cat_fn__ = expected_fn
+        xfail_dict = getattr(func, "__variant_xfail__", {})
+        xfail_dict[variant_name] = expected_fn
+        func.__variant_xfail__ = xfail_dict
         return func
 
     if callable(bugnumber):
@@ -186,12 +202,39 @@ def _xfailForDebugInfo(expected_fn, bugnumber=None):
         return expectedFailure_impl
 
 
-def _skipForDebugInfo(expected_fn, bugnumber=None):
+def _skipForVariant(variant_name, expected_fn, bugnumber=None):
+    """Mark a test method as skipped for a specific variant dimension.
+
+    Adds *expected_fn* to the decorated function's `__variant_skip__`
+    dictionary under the key *variant_name*.  When the `LLDBTestCaseFactory`
+    metaclass expands the test method, it looks up *variant_name* in this
+    dictionary and calls the corresponding function with the concrete variant
+    value.  If the function returns a reason string, the expanded test method
+    is skipped via `unittest.skip(reason)`.
+
+    Args:
+        variant_name: The variant dimension name (e.g. `"debug_info"`).
+        expected_fn: Callable `(**{variant_name: value}) -> reason | None`.
+        bugnumber: Optional bug reference or the decorated function itself
+            (when the decorator is used without parentheses).
+    """
     def skipImpl(func):
         if isinstance(func, type) and issubclass(func, unittest.TestCase):
             raise Exception("Decorator can only be used to decorate a test method")
+        skip_dict = getattr(func, "__variant_skip__", {})
+        existing_fn = skip_dict.get(variant_name)
+        if existing_fn:
+            # Chain the decorator with the existing one.
+            def chained_fn(**kwargs):
+                reason = expected_fn(**kwargs)
+                if reason:
+                    return reason
+                return existing_fn(**kwargs)
 
-        func.__skip_for_debug_info_cat_fn__ = expected_fn
+            skip_dict[variant_name] = chained_fn
+        else:
+            skip_dict[variant_name] = expected_fn
+        func.__variant_skip__ = skip_dict
         return func
 
     if callable(bugnumber):
@@ -218,7 +261,7 @@ def _decorateTest(
     setting=None,
     asan=None,
 ):
-    def fn(actual_debug_info=None):
+    def fn(**actual_variants):
         skip_for_os = _match_decorator_property(
             lldbplatform.translate(oslist), lldbplatformutil.getPlatform()
         )
@@ -231,7 +274,9 @@ def _decorateTest(
         skip_for_arch = _match_decorator_property(
             archs, lldbplatformutil.getArchitecture()
         )
-        skip_for_debug_info = _match_decorator_property(debug_info, actual_debug_info)
+        skip_for_debug_info = _match_decorator_property(
+            debug_info, actual_variants.get("debug_info")
+        )
         skip_for_triple = _match_decorator_property(
             triple, lldb.selected_platform.GetTriple()
         )
@@ -311,11 +356,11 @@ def _decorateTest(
 
     if mode == DecorateMode.Skip:
         if debug_info:
-            return _skipForDebugInfo(fn, bugnumber)
+            return _skipForVariant("debug_info", fn, bugnumber)
         return skipTestIfFn(fn, bugnumber)
     elif mode == DecorateMode.Xfail:
         if debug_info:
-            return _xfailForDebugInfo(fn, bugnumber)
+            return _xfailForVariant("debug_info", fn, bugnumber)
         return expectedFailureIf(fn(), bugnumber)
     else:
         return None
@@ -446,15 +491,26 @@ def unicode_test(func):
     """Decorate the item as a test which requires Unicode to be enabled.
 
     lldb checks the value of the `LANG` environment variable for the substring "utf-8"
-    to determine if the terminal supports Unicode (except on Windows, where we assume
-    it's always supported).
+    to determine if the terminal supports Unicode (except on Windows, where stdout
+    being connected to an interactive console is used as the signal instead).
     This decorator sets LANG to `utf-8` before running the test and resets it to its
     previous value afterwards.
     """
 
     if sys.platform == "win32":
-        # Unicode support on Windows is flaky in CI.
-        return expectedFailureWindows
+        import ctypes
+
+        STD_OUTPUT_HANDLE = -11
+        FILE_TYPE_CHAR = 0x0002
+        handle = ctypes.windll.kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
+        file_type = ctypes.windll.kernel32.GetFileType(handle)
+        # Mirror Terminal::SupportsUnicode(): Unicode is supported only when
+        # stdout is connected to a real console.
+        if file_type != FILE_TYPE_CHAR:
+            return unittest.skip(
+                "Unicode test requires an interactive console (stderr is redirected)"
+            )
+        return func
 
     def unicode_wrapped(*args, **kwargs):
         import os
@@ -818,6 +874,16 @@ def skipIfLinux(func):
     return skipIfPlatform(["linux"])(func)
 
 
+def skipIfWasm(func):
+    """Decorate the item to skip tests that should be skipped on WebAssembly."""
+    return skipIfPlatform(["wasip1", "wasi"])(func)
+
+
+def skipIfNoSignals(func):
+    """Decorate the item to skip tests on platforms without signal support."""
+    return skipIfPlatform(["windows", "wasip1", "wasi"])(func)
+
+
 def skipIfWindows(func=None, windows_version=None):
     """Decorate the item to skip tests that should be skipped on Windows."""
 
@@ -864,6 +930,20 @@ def skipIfWindowsAndNonEnglish(func):
 def skipUnlessWindows(func):
     """Decorate the item to skip tests that should be skipped on any non-Windows platform."""
     return skipUnlessPlatform(["windows"])(func)
+
+
+def skipUnlessWindowsConPTY(func):
+    """Skip if on Windows older than 10.0.17763 (the first build to ship ConPTY)."""
+    return skipIfWindows(windows_version=["<", "10.0.17763"])(func)
+
+
+def skipUnlessWindowsConPTY2022(func):
+    """Skip on Windows older than 10.0.20348 (Server 2022).
+
+    Windows Server 2019 (10.0.17763) emits additional VT initialisation
+    sequences that LLDB does not handle.
+    """
+    return skipIfWindows(windows_version=["<", "10.0.20348"])(func)
 
 
 def skipUnlessDarwin(func):
@@ -921,6 +1001,27 @@ def skipUnlessPlatform(oslist):
     return unittest.skipUnless(
         lldbplatformutil.getPlatform() in oslist,
         "requires one of %s" % (", ".join(oslist)),
+    )
+
+
+def skipIfTargetDoesNotSupportThreads():
+    """Skip tests that require thread support (e.g. pthreads)."""
+    platform = lldbplatformutil.getPlatform()
+    # WASI targets ending in "-threads" (e.g. wasip1-threads) support threads;
+    # other WASI targets (e.g. wasip1, wasip2) do not.
+    no_threads = platform.startswith("wasi") and not platform.endswith("threads")
+    return unittest.skipIf(
+        no_threads,
+        "threads are not supported on %s" % platform,
+    )
+
+
+def skipIfTargetDoesNotSupportSharedLibraries():
+    """Skip tests that require shared library (dylib/so) support."""
+    platform = lldbplatformutil.getPlatform()
+    return unittest.skipIf(
+        platform.startswith("wasi"),
+        "shared libraries are not supported on %s" % platform,
     )
 
 
@@ -1027,6 +1128,25 @@ def skipUnlessCompilerIsClang(func):
     return skipTestIfFn(is_compiler_clang)(func)
 
 
+def skipUnlessMSVC(func):
+    """Decorate the item to skip test unless msvc is available."""
+
+    def is_msvc_in_path():
+        try:
+            result = subprocess.run(
+                ["cl.exe"],
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError:
+            return f"Test requires MSVC to be in the Path."
+        if result.returncode != 0:
+            return f"Test requires MSVC to be in the Path."
+        return None
+
+    return skipTestIfFn(is_msvc_in_path)(func)
+
+
 def skipUnlessThreadSanitizer(func):
     """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
 
@@ -1095,6 +1215,17 @@ def is_running_under_asan():
     return None
 
 
+def is_running_under_mte():
+    if configuration.mte_enabled:
+        return "MTE unsupported"
+    return None
+
+
+def skipIfMTE(func):
+    """Skip this test when running with MTE (Memory Tagging Extension) enabled."""
+    return skipTestIfFn(is_running_under_mte)(func)
+
+
 def skipUnlessAddressSanitizer(func):
     """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
 
@@ -1123,6 +1254,17 @@ def skipUnlessBoundsSafety(func):
         return None
 
     return skipTestIfFn(is_compiler_with_bounds_safety)(func)
+
+
+def skipUnlessCompilerSupports(flag):
+    """Decorate the item to skip the test unless the compiler supports this flag."""
+
+    def does_compiler_support_flag():
+        if not _compiler_supports(lldbplatformutil.getCompiler(), flag):
+            return f"Compiler does not support flag {flag}"
+        return None
+
+    return skipTestIfFn(does_compiler_support_flag)
 
 
 def skipIfAsan(func):
@@ -1207,10 +1349,6 @@ def skipIfEditlineWideCharSupportMissing(func):
     return _get_bool_config_skip_if_decorator("editline_wchar")(func)
 
 
-def skipIfFBSDVMCoreSupportMissing(func):
-    return _get_bool_config_skip_if_decorator("fbsdvmcore")(func)
-
-
 def skipIfZLIBSupportMissing(func):
     return _get_bool_config_skip_if_decorator("zlib")(func)
 
@@ -1247,3 +1385,69 @@ def skipIfBuildType(types: list[str]):
         and configuration.cmake_build_type.lower() in types,
         "skip on {} build type(s)".format(", ".join(types)),
     )
+
+
+def skipUnlessArm64eSupported(func):
+    """Decorate the item to skip test unless Clang can target arm64e."""
+
+    def can_build_and_run_arm64e():
+        arch = lldbplatformutil.getArchitecture()
+
+        # We need to be running the test suite for arm64 or arm64e. If we're
+        # running the whole test suite as arm64e, we don't need any additional
+        # checks.
+        if arch == "arm64e":
+            return None
+        elif arch != "arm64":
+            return "Not targeting arm64"
+
+        # Need at least macOS Tahoe (26) to run arm64e binaries.
+        if platform.mac_ver()[0] == "" or _check_expected_version(
+            "<", "26.0", platform.mac_ver()[0]
+        ):
+            return "Host cannot run arm64e binaries"
+
+        # Need a compiler that can target arm64e.
+        compiler_path = lldbplatformutil.getCompiler()
+        if not _compiler_supports(compiler_path, "-arch arm64e"):
+            return "Compiler cannot target arm64e"
+
+        # Need debugserver built with arm64e support.
+        if not configuration.arm64e_debugserver:
+            return "debugserver not built with arm64e support"
+
+        # Technically ASan is supported, but we need an arm64e sanitizer
+        # runtime and we assume that's not the case unless we run the whole
+        # test suite as arm64e.
+        if is_running_under_asan():
+            return "Sanitizer runtime may not support arm64e"
+
+        return None
+
+    return skipTestIfFn(can_build_and_run_arm64e)(func)
+
+
+def skipUnlessPackageAvailable(name):
+    """Skip the test case if the named package is not available on the system."""
+    available = True
+    try:
+        __import__(name)
+    except ImportError:
+        available = False
+
+    return unittest.skipUnless(available, f"requires the '{name}' package")
+
+
+def skipUnlessTargetIsHost(func):
+    """Skip the test case if the test binary architecture does not match LLDB.framework."""
+
+    def check_arch_match():
+        # The lldb executable is built the same as the framework.
+        lldb_arch = lldbplatformutil.getLLDBArchitecture()
+        test_arch = lldbplatformutil.getArchitecture()
+
+        if lldb_arch != test_arch:
+            return "Test binary architecture differs from host architecture"
+        return None
+
+    return skipTestIfFn(check_arch_match)(func)

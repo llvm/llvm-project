@@ -344,6 +344,8 @@ public:
 
   bool GetMultiMemReadSupported();
 
+  bool GetMultiBreakpointSupported();
+
   LazyBool SupportsAllocDeallocMemory() // const
   {
     // Uncomment this to have lldb pretend the debug server doesn't respond to
@@ -403,6 +405,8 @@ public:
                        // the process to exit
       std::string
           *command_output, // Pass nullptr if you don't want the command output
+      std::string *separated_error_output, // Pass nullptr if you don't want the
+                                           // command error output
       const Timeout<std::micro> &timeout);
 
   llvm::ErrorOr<llvm::MD5::MD5Result> CalculateMD5(const FileSpec &file_spec);
@@ -577,6 +581,7 @@ protected:
   LazyBool m_supports_reverse_continue = eLazyBoolCalculate;
   LazyBool m_supports_reverse_step = eLazyBoolCalculate;
   LazyBool m_supports_multi_mem_read = eLazyBoolCalculate;
+  LazyBool m_supports_multi_breakpoint = eLazyBoolCalculate;
 
   bool m_supports_qProcessInfoPID : 1, m_supports_qfProcessInfo : 1,
       m_supports_qUserName : 1, m_supports_qGroupName : 1,

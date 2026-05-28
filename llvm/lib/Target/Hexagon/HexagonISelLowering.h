@@ -287,6 +287,10 @@ public:
     return AtomicExpansionKind::LLSC;
   }
 
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *BB) const override;
+
 private:
   void initializeHVXLowering();
   unsigned getPreferredHvxVectorAction(MVT VecTy) const;
@@ -501,6 +505,7 @@ private:
 
   SDValue CreateTLWrapper(SDValue Op, SelectionDAG &DAG) const;
   SDValue RemoveTLWrapper(SDValue Op, SelectionDAG &DAG) const;
+  SDValue WidenHvxTruncateToBool(SDValue Op, SelectionDAG &DAG) const;
 
   std::pair<const TargetRegisterClass*, uint8_t>
   findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT)

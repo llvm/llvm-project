@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --output=%t --format=json --executor=standalone %s
+// RUN: clang-doc --pretty-json --output=%t --format=json --executor=standalone %s
 // RUN: FileCheck %s < %t/json/GlobalNamespace/_ZTV7MyClass.json --check-prefix=BASE
 // RUN: FileCheck %s < %t/json/GlobalNamespace/_ZTV7MyClassIiE.json --check-prefix=SPECIALIZATION
 
@@ -20,7 +20,8 @@ template<> struct MyClass<int> {};
 // BASE-NEXT:        "End": true,
 // BASE-NEXT:        "Param": "typename T"
 // BASE-NEXT:      }
-// BASE-NEXT:    ]
+// BASE-NEXT:    ],
+// BASE-NEXT:    "VerticalDisplay": false
 // BASE-NEXT:  },
 
 // SPECIALIZATION:       "MangledName": "_ZTV7MyClassIiE",
@@ -34,10 +35,11 @@ template<> struct MyClass<int> {};
 // SPECIALIZATION-NEXT:    "Specialization": {
 // SPECIALIZATION-NEXT:      "Parameters": [
 // SPECIALIZATION-NEXT:        {
-// SPECIALIZATION-NEXT:          "End": true,
-// SPECIALIZATION-NEXT:          "Param": "int"
+// SPECIALIZATION-NEXT:          "Param": "int",
+// SPECIALIZATION-NEXT:          "SpecParamEnd": true
 // SPECIALIZATION-NEXT:        }
 // SPECIALIZATION-NEXT:      ],
-// SPECIALIZATION-NEXT:      "SpecializationOf": "{{[0-9A-F]*}}"
+// SPECIALIZATION-NEXT:      "SpecializationOf": "{{[0-9A-F]*}}",
+// SPECIALIZATION-NEXT:      "VerticalDisplay": false
 // SPECIALIZATION-NEXT:    }
 // SPECIALIZATION-NEXT:  },

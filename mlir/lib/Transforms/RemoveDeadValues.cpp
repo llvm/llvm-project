@@ -19,12 +19,7 @@
 // (C) Removes unneccesary operands, results, region arguments, and region
 // terminator operands of region branch ops, and,
 // (D) Removes simple and region branch ops that have all non-live results and
-// don't affect memory in any way,
-//
-// iff
-//
-// the IR doesn't have any non-function symbol ops, non-call symbol user ops and
-// branch ops.
+// don't affect memory in any way.
 //
 // Here, a "simple op" refers to an op that isn't a symbol op, symbol-user op,
 // region branch op, branch op, region branch terminator op, or return-like.
@@ -63,7 +58,7 @@
 #define DEBUG_TYPE "remove-dead-values"
 
 namespace mlir {
-#define GEN_PASS_DEF_REMOVEDEADVALUES
+#define GEN_PASS_DEF_REMOVEDEADVALUESPASS
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -142,9 +137,8 @@ static bool hasLive(ValueRange values, const DenseSet<Value> &nonLiveSet,
     if (liveness->isLive) {
       LDBG() << "Value " << value << " is live according to liveness analysis";
       return true;
-    } else {
-      LDBG() << "Value " << value << " is dead according to liveness analysis";
     }
+    LDBG() << "Value " << value << " is dead according to liveness analysis";
   }
   return false;
 }
@@ -285,7 +279,15 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
            << funcOp.getOperation()->getName();
     return;
   }
-
+  SymbolTable::UseRange uses = *funcOp.getSymbolUses(module);
+  if (llvm::any_of(uses, [](SymbolTable::SymbolUse use) {
+        return !isa<CallOpInterface>(use.getUser());
+      })) {
+    // If a non-call operation references the function (e.g. spirv.EntryPoint),
+    // we cannot safely remove arguments or return values since we don't know
+    // what the user expects. Skip this function entirely.
+    return;
+  }
   // Get the list of unnecessary (non-live) arguments in `nonLiveArgs`.
   SmallVector<Value> arguments(funcOp.getArguments());
   BitVector nonLiveArgs = markLives(arguments, nonLiveSet, la);
@@ -299,10 +301,8 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // Do (2). (Skip creating generic operand cleanup entries for call ops.
   // Call arguments will be removed in the call-site specific segment-aware
   // cleanup, avoiding generic eraseOperands bitvector mechanics.)
-  SymbolTable::UseRange uses = *funcOp.getSymbolUses(module);
   for (SymbolTable::SymbolUse use : uses) {
     Operation *callOp = use.getUser();
-    assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
     // Push an empty operand cleanup entry so that call-site specific logic in
     // cleanUpDeadVals runs (it keys off CallOpInterface). The BitVector is
     // intentionally all false to avoid generic erasure.
@@ -614,8 +614,8 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
   // AttrSizedOperandSegments) in the next phase.
   DenseMap<Operation *, BitVector> erasedFuncArgs;
   for (auto &f : list.functions) {
-    LDBG() << "Cleaning up function: " << f.funcOp.getOperation()->getName()
-           << " (" << f.funcOp.getOperation() << ")";
+    LDBG() << "Cleaning up function: " << f.funcOp.getName() << " ("
+           << f.funcOp.getOperation() << ")";
     LDBG_OS([&](raw_ostream &os) {
       os << "  Erasing non-live arguments [";
       llvm::interleaveComma(f.nonLiveArgs.set_bits(), os);
@@ -634,6 +634,9 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
       // Record only if we actually erased something.
       if (f.nonLiveArgs.any())
         erasedFuncArgs.try_emplace(f.funcOp.getOperation(), f.nonLiveArgs);
+    } else {
+      LDBG() << "Failed to erase arguments for function: "
+             << f.funcOp.getName();
     }
     (void)f.funcOp.eraseResults(f.nonLiveRets);
   }
@@ -755,7 +758,10 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
   LDBG() << "Finished cleanup of dead values";
 }
 
-struct RemoveDeadValues : public impl::RemoveDeadValuesBase<RemoveDeadValues> {
+struct RemoveDeadValues
+    : public impl::RemoveDeadValuesPassBase<RemoveDeadValues> {
+  using impl::RemoveDeadValuesPassBase<
+      RemoveDeadValues>::RemoveDeadValuesPassBase;
   void runOnOperation() override;
 };
 } // namespace
@@ -813,8 +819,4 @@ void RemoveDeadValues::runOnOperation() {
     module->emitError("greedy pattern rewrite failed to converge");
     signalPassFailure();
   }
-}
-
-std::unique_ptr<Pass> mlir::createRemoveDeadValuesPass() {
-  return std::make_unique<RemoveDeadValues>();
 }

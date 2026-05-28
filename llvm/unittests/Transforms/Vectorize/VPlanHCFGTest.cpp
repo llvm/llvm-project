@@ -50,22 +50,22 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   // Check that the region following the preheader consists of a block for the
   // original header and a separate latch.
   VPBasicBlock *VecBB = Plan->getVectorLoopRegion()->getEntryBasicBlock();
-  EXPECT_EQ(11u, VecBB->size());
+  EXPECT_EQ(10u, VecBB->size());
   EXPECT_EQ(0u, VecBB->getNumPredecessors());
   EXPECT_EQ(0u, VecBB->getNumSuccessors());
   EXPECT_EQ(VecBB->getParent()->getEntryBasicBlock(), VecBB);
   EXPECT_EQ(&*Plan, VecBB->getPlan());
 
   auto Iter = VecBB->begin();
-  auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(&*Iter++);
-  EXPECT_NE(nullptr, CanIV);
-  auto *Phi = dyn_cast<VPPhi>(&*Iter++);
-  EXPECT_NE(nullptr, Phi);
+  // The first recipe is now a scalar PHI for the canonical IV
+  VPRecipeBase *ScalarIVPhi = &*Iter++;
+  VPValue *IVValue = ScalarIVPhi->getVPSingleValue();
+  EXPECT_NE(nullptr, IVValue);
 
   VPInstruction *Idx = dyn_cast<VPInstruction>(&*Iter++);
   EXPECT_EQ(Instruction::GetElementPtr, Idx->getOpcode());
   EXPECT_EQ(2u, Idx->getNumOperands());
-  EXPECT_EQ(Phi, Idx->getOperand(1));
+  EXPECT_EQ(IVValue, Idx->getOperand(1));
 
   VPInstruction *Load = dyn_cast<VPInstruction>(&*Iter++);
   EXPECT_EQ(Instruction::Load, Load->getOpcode());
@@ -86,7 +86,7 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   VPInstruction *IndvarAdd = dyn_cast<VPInstruction>(&*Iter++);
   EXPECT_EQ(Instruction::Add, IndvarAdd->getOpcode());
   EXPECT_EQ(2u, IndvarAdd->getNumOperands());
-  EXPECT_EQ(Phi, IndvarAdd->getOperand(0));
+  EXPECT_EQ(IVValue, IndvarAdd->getOperand(0));
 
   VPInstruction *ICmp = dyn_cast<VPInstruction>(&*Iter++);
   EXPECT_EQ(Instruction::ICmp, ICmp->getOpcode());
@@ -113,13 +113,13 @@ compound=true
   N0 -> N2 [ label="F"]
   N1 [label =
     "scalar.ph:\l" +
-    "  EMIT-SCALAR vp\<%6\> = phi [ ir\<%indvars.iv\>, middle.block ], [ ir\<0\>, ir-bb\<entry\> ]\l" +
+    "  EMIT-SCALAR vp\<%8\> = phi [ vp\<%6\>, middle.block ], [ ir\<0\>, ir-bb\<entry\> ]\l" +
     "Successor(s): ir-bb\<for.body\>\l"
   ]
   N1 -> N3 [ label=""]
   N3 [label =
     "ir-bb\<for.body\>:\l" +
-    "  IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ] (extra operand: vp\<%6\> from scalar.ph)\l" +
+    "  IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ] (extra operand: vp\<%8\> from scalar.ph)\l" +
     "  IR   %arr.idx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv\l" +
     "  IR   %l1 = load i32, ptr %arr.idx, align 4\l" +
     "  IR   %res = add i32 %l1, 10\l" +
@@ -136,12 +136,12 @@ compound=true
   subgraph cluster_N5 {
     fontname=Courier
     label="\<x1\> vector loop"
+    "vp\<%2\> = CANONICAL-IV"
     N4 [label =
       "vector.body:\l" +
-      "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
       "  EMIT-SCALAR ir\<%indvars.iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%indvars.iv.next\>, vector.body ]\l" +
       "  EMIT ir\<%arr.idx\> = getelementptr inbounds ir\<%A\>, ir\<%indvars.iv\>\l" +
-      "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
+      "  EMIT-SCALAR ir\<%l1\> = load ir\<%arr.idx\>\l" +
       "  EMIT ir\<%res\> = add ir\<%l1\>, ir\<10\>\l" +
       "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
       "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\>, ir\<1\>\l" +
@@ -155,6 +155,8 @@ compound=true
   N4 -> N6 [ label="" ltail=cluster_N5]
   N6 [label =
     "middle.block:\l" +
+    "  EMIT vp\<%5\> = extract-last-part ir\<%indvars.iv.next\>\l" +
+    "  EMIT vp\<%6\> = extract-last-lane vp\<%5\>\l" +
     "  EMIT vp\<%cmp.n\> = icmp eq ir\<%N\>, vp\<%1\>\l" +
     "  EMIT branch-on-cond vp\<%cmp.n\>\l" +
     "Successor(s): ir-bb\<for.end\>, scalar.ph\l"
@@ -212,13 +214,12 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   // Check that the region following the preheader consists of a block for the
   // original header and a separate latch.
   VPBasicBlock *VecBB = Plan->getVectorLoopRegion()->getEntryBasicBlock();
-  EXPECT_EQ(12u, VecBB->size());
+  EXPECT_EQ(11u, VecBB->size());
   EXPECT_EQ(0u, VecBB->getNumPredecessors());
   EXPECT_EQ(0u, VecBB->getNumSuccessors());
   EXPECT_EQ(VecBB->getParent()->getEntryBasicBlock(), VecBB);
 
   auto Iter = VecBB->begin();
-  EXPECT_NE(nullptr, dyn_cast<VPCanonicalIVPHIRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenPHIRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenGEPRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryRecipe>(&*Iter++));
@@ -282,13 +283,13 @@ compound=true
   N0 -> N2 [ label="F"]
   N1 [label =
     "scalar.ph:\l" +
-    "  EMIT-SCALAR vp\<%6\> = phi [ ir\<%iv\>, middle.block ], [ ir\<0\>, ir-bb\<entry\> ]\l" +
+    "  EMIT-SCALAR vp\<%8\> = phi [ vp\<%6\>, middle.block ], [ ir\<0\>, ir-bb\<entry\> ]\l" +
     "Successor(s): ir-bb\<loop.header\>\l"
   ]
   N1 -> N3 [ label=""]
   N3 [label =
     "ir-bb\<loop.header\>:\l" +
-    "  IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp\<%6\> from scalar.ph)\l" +
+    "  IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp\<%8\> from scalar.ph)\l" +
     "  IR   %arr.idx = getelementptr inbounds i32, ptr %A, i64 %iv\l" +
     "  IR   %l1 = load i32, ptr %arr.idx, align 4\l" +
     "  IR   %c = icmp eq i32 %l1, 0\l" +
@@ -302,12 +303,12 @@ compound=true
   subgraph cluster_N5 {
     fontname=Courier
     label="\<x1\> vector loop"
+    "vp\<%2\> = CANONICAL-IV"
     N4 [label =
       "vector.body:\l" +
-      "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
       "  EMIT-SCALAR ir\<%iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%iv.next\>, loop.latch ]\l" +
       "  EMIT ir\<%arr.idx\> = getelementptr inbounds ir\<%A\>, ir\<%iv\>\l" +
-      "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
+      "  EMIT-SCALAR ir\<%l1\> = load ir\<%arr.idx\>\l" +
       "  EMIT ir\<%c\> = icmp eq ir\<%l1\>, ir\<0\>\l" +
       "Successor(s): loop.latch\l"
     ]
@@ -327,6 +328,8 @@ compound=true
   N6 -> N7 [ label="" ltail=cluster_N5]
   N7 [label =
     "middle.block:\l" +
+    "  EMIT vp\<%5\> = extract-last-part ir\<%iv.next\>\l" +
+    "  EMIT vp\<%6\> = extract-last-lane vp\<%5\>\l" +
     "  EMIT vp\<%cmp.n\> = icmp eq ir\<%N\>, vp\<%1\>\l" +
     "  EMIT branch-on-cond vp\<%cmp.n\>\l" +
     "Successor(s): ir-bb\<exit.2\>, scalar.ph\l"

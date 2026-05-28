@@ -21,7 +21,7 @@ class BasicBlock;
 class DominatorTree;
 class RegionInfo;
 class LoopInfo;
-class BranchInst;
+class CondBrInst;
 } // namespace llvm
 
 namespace polly {
@@ -62,10 +62,10 @@ using BBPair = std::pair<llvm::BasicBlock *, llvm::BasicBlock *>;
 ///
 /// @return  An std::pair:
 ///              - The first element is a BBPair of (StartBlock, EndBlock).
-///              - The second element is the BranchInst which conditionally
+///              - The second element is the CondBrInst which conditionally
 ///                branches to the SCoP based on the RTC.
 ///
-std::pair<BBPair, llvm::BranchInst *>
+std::pair<BBPair, llvm::CondBrInst *>
 executeScopConditionally(Scop &S, llvm::Value *RTC, llvm::DominatorTree &DT,
                          llvm::RegionInfo &RI, llvm::LoopInfo &LI);
 } // namespace polly

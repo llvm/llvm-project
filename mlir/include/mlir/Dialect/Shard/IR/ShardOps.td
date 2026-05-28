@@ -901,13 +901,13 @@ def Shard_ReduceScatterOp : Shard_CollectiveCommunicationOpBase<"reduce_scatter"
     `grid_axes` using the specified reduction method. The reduction is performed
     element-wise across the tensor pieces from all devices in the group.
     After reduction, the reduction result is scattered (split and distributed)
-    across the device group along `scatter_axis`.
+    across the device group along `scatter_dim`.
     Example:
     ```
     shard.grid @grid0(shape = 2x2)
     ...
     %1 = shard.reduce_scatter %0 on @grid0 grid_axes = [1]
-      reduction = <max> scatter_axis = 0
+      reduction = <max> scatter_dim = 0
       : tensor<2x2xf32> -> tensor<1x2xf64>
     ```
     Input:
@@ -940,17 +940,17 @@ def Shard_ReduceScatterOp : Shard_CollectiveCommunicationOpBase<"reduce_scatter"
     ```
   }];
   let arguments = !con(commonArgs, (ins
-    AnyNon0RankedTensor:$input,
+    AnyTypeOf<[AnyMemRef, AnyRankedTensor]>:$input,
     DefaultValuedAttr<Shard_ReductionKindAttr, "::mlir::shard::ReductionKind::Sum">:$reduction,
-    IndexAttr:$scatter_axis
+    IndexAttr:$scatter_dim
   ));
   let results = (outs
-    AnyRankedTensor:$result
+    AnyTypeOf<[AnyMemRef, AnyRankedTensor]>:$result
   );
   let assemblyFormat = [{
     $input `on` $grid (`grid_axes` `=` $grid_axes^)?
     (`reduction` `=` $reduction^)?
-    `scatter_axis` `=` $scatter_axis
+    `scatter_dim` `=` $scatter_dim
     attr-dict `:` type($input) `->` type($result)
   }];
   let hasCanonicalizer = 1;
@@ -964,7 +964,7 @@ def Shard_ScatterOp : Shard_CollectiveCommunicationOpBase<"scatter", [
   let summary = "Scatter over a device grid.";
   let description = [{
     For each device group defined by `grid_axes`, the input tensor on the `root`
-    device is split along axis `scatter_axis` and distributed across the group.
+    device is split along axis `scatter_dim` and distributed across the group.
     The content of the input on all other (non-root) devices is ignored.
     The `root` device is defined by its in-group multi-index.
 
@@ -972,7 +972,7 @@ def Shard_ScatterOp : Shard_CollectiveCommunicationOpBase<"scatter", [
     ```
     shard.grid @grid0(shape = 2x2)
     %1 = shard.scatter %0 on @grid0 grid_axes = [0]
-      scatter_axis = 0
+      scatter_dim = 0
       root = [1]
       : (tensor<2x2xi8>) -> tensor<1x2xi8>
     ```
@@ -1011,7 +1011,7 @@ def Shard_ScatterOp : Shard_CollectiveCommunicationOpBase<"scatter", [
   }];
   let arguments = !con(commonArgs, (ins
     AnyNon0RankedTensor:$input,
-    IndexAttr:$scatter_axis,
+    IndexAttr:$scatter_dim,
     DenseI64ArrayAttr:$root,
     Variadic<Index>:$root_dynamic
   ));
@@ -1020,7 +1020,7 @@ def Shard_ScatterOp : Shard_CollectiveCommunicationOpBase<"scatter", [
   );
   let assemblyFormat = [{
     $input `on` $grid (`grid_axes` `=` $grid_axes^)?
-    `scatter_axis` `=` $scatter_axis
+    `scatter_dim` `=` $scatter_dim
     `root` `=` custom<DynamicIndexList>($root_dynamic, $root)
     attr-dict `:` functional-type(operands, results)
   }];

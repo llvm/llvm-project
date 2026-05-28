@@ -106,6 +106,8 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
         -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN="${LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN}"
         -DLLVM_INCLUDE_BENCHMARKS=OFF
         -DLLVM_INCLUDE_TESTS=OFF
+        -DLLVM_INCLUDE_DOCS=OFF
+        -DLLVM_INCLUDE_EXAMPLES=OFF
         -DLLVM_TABLEGEN_FLAGS="${llvm_tablegen_flags}"
         ${python_executable_flag}
         ${build_type_flags} ${linker_flag} ${external_clang_dir} ${libc_flags}

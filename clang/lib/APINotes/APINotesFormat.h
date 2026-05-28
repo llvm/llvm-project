@@ -1,4 +1,4 @@
-//===-- APINotesWriter.h - API Notes Writer ---------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,7 +24,8 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 38; // SwiftSafety
+const uint16_t VERSION_MINOR = 40; // 39 for BoundsSafety;
+                                   // 40 for UnsafeBufferUsageAttr
 
 const uint8_t kSwiftConforms = 1;
 const uint8_t kSwiftDoesNotConform = 2;

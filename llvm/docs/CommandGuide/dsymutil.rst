@@ -23,6 +23,12 @@ OPTIONS
  Specify the desired type of accelerator table. Valid options are 'Apple',
  'Dwarf', 'Default' and 'None'.
 
+.. option:: --allow <path>
+
+ Only process debug map objects listed in the YAML file at <path>. Only filters
+ N_OSO entries. If `--oso-prepend-path` is specified, the path prefix applies,
+ i.e. paths in the file should exact match that of N_OSO entries.
+
 .. option:: --arch <arch>
 
  Link DWARF debug information only for specified CPU architecture types.
@@ -40,6 +46,17 @@ OPTIONS
  'profile'. Setting the DYLD_IMAGE_SUFFIX environment variable will
  cause dyld to load the specified variant at runtime.
 
+.. option:: --codesign <identity>
+
+ Code sign the dSYM bundle with the given signing identity after linking.
+ Cannot be used with :option:`--flat` or :option:`--no-output`.
+
+.. option:: --disallow <path>
+
+ Exclude debug map objects listed in the YAML file at <path>. Only filters
+ N_OSO entries. If `--oso-prepend-path` is specified, the path prefix applies,
+ i.e. paths in the file should exact match that of N_OSO entries.
+
 .. option:: --dump-debug-map
 
  Dump the *executable*'s debug-map (the list of the object files containing the
@@ -51,6 +68,13 @@ OPTIONS
  This is used for mergeable libraries, so dsymutil knows where to look
  for dSYM files with  debug information about symbols present in those
  libraries.
+
+.. option:: --embed-resource <src-path>=<bundle-relative-path>
+
+ Copy a file or directory into the dSYM bundle's ``Contents/Resources/``
+ directory. The argument is ``<source-path>=<destination-relative-to-Resources>``.
+ If the source is a directory, its contents are copied recursively. This option
+ can be specified multiple times.
 
 .. option:: --fat64
 

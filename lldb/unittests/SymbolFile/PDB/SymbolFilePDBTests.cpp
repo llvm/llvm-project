@@ -72,7 +72,7 @@ public:
 
   void TearDown() override {
     SymbolFilePDB::Terminate();
-    TypeSystemClang::Initialize();
+    TypeSystemClang::Terminate();
     plugin::dwarf::SymbolFileDWARF::Terminate();
     ObjectFilePECOFF::Terminate();
     HostInfo::Terminate();
@@ -633,6 +633,7 @@ TEST_F(SymbolFilePDBTests, TestFindSymbolsWithNameAndType) {
 
   SymbolContext sc;
   EXPECT_TRUE(sc_list.GetContextAtIndex(0, sc));
-  EXPECT_STREQ("int foo(int)",
-               sc.GetFunctionName(Mangled::ePreferDemangled).AsCString());
+  EXPECT_STREQ(
+      "int foo(int)",
+      sc.GetFunctionName(Mangled::ePreferDemangled).AsCString(nullptr));
 }

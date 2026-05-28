@@ -941,3 +941,93 @@ func.func @ds_barrier_state_phase_parity(%state: !amdgpu.ds_barrier_state) -> i1
   %parity = amdgpu.ds_barrier_state_phase_parity %state : !amdgpu.ds_barrier_state -> i1
   func.return %parity : i1
 }
+
+// -----
+// global_load_async_to_lds_bN
+
+// CHECK-LABEL: func @global_load_async_to_lds_b32
+func.func @global_load_async_to_lds_b32(
+    %global : memref<128x72xf32, #gpu.address_space<global>>) {
+  %c0 = arith.constant 0 : index
+  %c12 = arith.constant 12 : index
+  %c32 = arith.constant 32 : index
+  %alloc = memref.alloc() : memref<64x64xf32, #gpu.address_space<workgroup>>
+  // CHECK: rocdl.global.load.async.to.lds.b32
+  amdgpu.global_load_async_to_lds %global[%c12, %c0], %alloc[%c32, %c0]
+    : f32, memref<128x72xf32, #gpu.address_space<global>>,
+      memref<64x64xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @global_load_async_to_lds_b8
+func.func @global_load_async_to_lds_b8(
+    %global : memref<128x72xi8, #gpu.address_space<global>>) {
+  %c0 = arith.constant 0 : index
+  %alloc = memref.alloc() : memref<64x64xi8, #gpu.address_space<workgroup>>
+  // CHECK: rocdl.global.load.async.to.lds.b8
+  amdgpu.global_load_async_to_lds %global[%c0, %c0], %alloc[%c0, %c0]
+    : i8, memref<128x72xi8, #gpu.address_space<global>>,
+      memref<64x64xi8, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @global_load_async_to_lds_b64
+func.func @global_load_async_to_lds_b64(
+    %global : memref<128x72xf32, #gpu.address_space<global>>) {
+  %c0 = arith.constant 0 : index
+  %alloc = memref.alloc() : memref<64x64xf32, #gpu.address_space<workgroup>>
+  // CHECK: rocdl.global.load.async.to.lds.b64
+  amdgpu.global_load_async_to_lds %global[%c0, %c0], %alloc[%c0, %c0]
+    : vector<2xf32>, memref<128x72xf32, #gpu.address_space<global>>,
+      memref<64x64xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @global_load_async_to_lds_b128
+func.func @global_load_async_to_lds_b128(
+    %global : memref<128x72xf32, #gpu.address_space<global>>) {
+  %c0 = arith.constant 0 : index
+  %alloc = memref.alloc() : memref<64x64xf32, #gpu.address_space<workgroup>>
+  // CHECK: rocdl.global.load.async.to.lds.b128
+  amdgpu.global_load_async_to_lds %global[%c0, %c0], %alloc[%c0, %c0]
+    : vector<4xf32>, memref<128x72xf32, #gpu.address_space<global>>,
+      memref<64x64xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @global_load_async_to_lds_dynamic_indices
+func.func @global_load_async_to_lds_dynamic_indices(
+    %global : memref<512xi32, #gpu.address_space<global>>,
+    %src_idx : index, %dst_idx : index) {
+  %alloc = memref.alloc() : memref<256xi32, #gpu.address_space<workgroup>>
+  // CHECK: rocdl.global.load.async.to.lds.b32
+  amdgpu.global_load_async_to_lds %global[%src_idx], %alloc[%dst_idx]
+    : i32, memref<512xi32, #gpu.address_space<global>>,
+      memref<256xi32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @global_load_async_to_lds_b128_masked
+func.func @global_load_async_to_lds_b128_masked(
+    %global : memref<128x72xf32, #gpu.address_space<global>>, %mask : i1) {
+  %c0 = arith.constant 0 : index
+  %alloc = memref.alloc() : memref<64x64xf32, #gpu.address_space<workgroup>>
+  // CHECK: [[NULLPTR_INT:%.*]] = llvm.mlir.constant(-1 : i32) : i32
+  // CHECK: [[NULLPTR:%.*]] = llvm.inttoptr [[NULLPTR_INT]] : i32 to !llvm.ptr<3>
+  // CHECK: [[DST:%.*]] = llvm.select {{.*}}, {{.*}}, [[NULLPTR]] : i1, !llvm.ptr<3>
+  // CHECK: rocdl.global.load.async.to.lds.b128 {{.*}}, [[DST]]
+  amdgpu.global_load_async_to_lds %global[%c0, %c0], %alloc[%c0, %c0], %mask
+    : vector<4xf32>, memref<128x72xf32, #gpu.address_space<global>>,
+      memref<64x64xf32, #gpu.address_space<workgroup>>
+  func.return
+}

@@ -36,6 +36,19 @@ template <typename T> constexpr auto addr_if(const std::optional<T> &x) {
   return x ? &*x : nullptr;
 }
 
+const parser::Designator *GetDesignatorFromObj(const parser::OmpObject &object);
+const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object);
+const parser::ArrayElement *GetArrayElementFromObj(
+    const parser::OmpObject &object);
+std::optional<parser::CharBlock> GetObjectSource(
+    const parser::OmpObject &object);
+const parser::OmpObject *GetArgumentObject(const parser::OmpArgument &argument);
+
+const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
+    const OpenMPConstruct &x);
+const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
+    const OpenMPDeclarativeConstruct &x);
+
 namespace detail {
 struct DirectiveNameScope {
   static OmpDirectiveName MakeName(CharBlock source = {},
@@ -50,11 +63,7 @@ struct DirectiveNameScope {
     return x;
   }
 
-  static OmpDirectiveName GetOmpDirectiveName(const OmpBeginLoopDirective &x) {
-    return x.DirName();
-  }
-
-  static OmpDirectiveName GetOmpDirectiveName(const OpenMPSectionConstruct &x) {
+  static OmpDirectiveName GetOmpDirectiveName(const OmpSectionDirective &x) {
     if (auto &spec{std::get<std::optional<OmpDirectiveSpecification>>(x.t)}) {
       return spec->DirName();
     } else {
@@ -113,105 +122,53 @@ template <typename T> OmpDirectiveName GetOmpDirectiveName(const T &x) {
   return detail::DirectiveNameScope::GetOmpDirectiveName(x);
 }
 
+std::string GetUpperName(llvm::omp::Clause id, unsigned version);
+std::string GetUpperName(llvm::omp::Directive id, unsigned version);
+
 const OpenMPDeclarativeConstruct *GetOmp(const DeclarationConstruct &x);
 const OpenMPConstruct *GetOmp(const ExecutionPartConstruct &x);
 
 const OpenMPLoopConstruct *GetOmpLoop(const ExecutionPartConstruct &x);
 const DoConstruct *GetDoConstruct(const ExecutionPartConstruct &x);
 
-// Is the template argument "Statement<T>" for some T?
-template <typename T> struct IsStatement {
-  static constexpr bool value{false};
-};
-template <typename T> struct IsStatement<Statement<T>> {
-  static constexpr bool value{true};
-};
-
-std::optional<Label> GetStatementLabel(const ExecutionPartConstruct &x);
-std::optional<Label> GetFinalLabel(const OpenMPConstruct &x);
-
 namespace detail {
-// Clauses with flangClass = "OmpObjectList".
-using MemberObjectListClauses =
-    std::tuple<OmpClause::Copyin, OmpClause::Copyprivate, OmpClause::Exclusive,
-        OmpClause::Firstprivate, OmpClause::HasDeviceAddr, OmpClause::Inclusive,
-        OmpClause::IsDevicePtr, OmpClause::Link, OmpClause::Private,
-        OmpClause::Shared, OmpClause::UseDeviceAddr, OmpClause::UseDevicePtr>;
-
-// Clauses with flangClass = "OmpSomeClause", and OmpObjectList a
-// member of tuple OmpSomeClause::t.
-using TupleObjectListClauses = std::tuple<OmpClause::AdjustArgs,
-    OmpClause::Affinity, OmpClause::Aligned, OmpClause::Allocate,
-    OmpClause::Enter, OmpClause::From, OmpClause::InReduction,
-    OmpClause::Lastprivate, OmpClause::Linear, OmpClause::Map,
-    OmpClause::Reduction, OmpClause::TaskReduction, OmpClause::To>;
-
-// Does U have WrapperTrait (i.e. has a member 'v'), and if so, is T the
-// type of v?
-template <typename T, typename U, bool IsWrapper> struct WrappedInType {
-  static constexpr bool value{false};
-};
-
-template <typename T, typename U> struct WrappedInType<T, U, true> {
-  static constexpr bool value{std::is_same_v<T, decltype(U::v)>};
-};
-
-// Same as WrappedInType, but with a list of types Us. Satisfied if any
-// type U in Us satisfies WrappedInType<T, U>.
-template <typename...> struct WrappedInTypes;
-
-template <typename T> struct WrappedInTypes<T> {
-  static constexpr bool value{false};
-};
-
-template <typename T, typename U, typename... Us>
-struct WrappedInTypes<T, U, Us...> {
-  static constexpr bool value{WrappedInType<T, U, WrapperTrait<U>>::value ||
-      WrappedInTypes<T, Us...>::value};
-};
-
-// Same as WrappedInTypes, but takes type list in a form of a tuple or
-// a variant.
-template <typename...> struct WrappedInTupleOrVariant {
-  static constexpr bool value{false};
-};
-template <typename T, typename... Us>
-struct WrappedInTupleOrVariant<T, std::tuple<Us...>> {
-  static constexpr bool value{WrappedInTypes<T, Us...>::value};
-};
-template <typename T, typename... Us>
-struct WrappedInTupleOrVariant<T, std::variant<Us...>> {
-  static constexpr bool value{WrappedInTypes<T, Us...>::value};
-};
-template <typename T, typename U>
-constexpr bool WrappedInTupleOrVariantV{WrappedInTupleOrVariant<T, U>::value};
-} // namespace detail
-
-template <typename T> const OmpObjectList *GetOmpObjectList(const T &clause) {
-  using namespace detail;
-  static_assert(std::is_class_v<T>, "Unexpected argument type");
-
-  if constexpr (common::HasMember<T, decltype(OmpClause::u)>) {
-    if constexpr (common::HasMember<T, MemberObjectListClauses>) {
-      return &clause.v;
-    } else if constexpr (common::HasMember<T, TupleObjectListClauses>) {
-      return &std::get<OmpObjectList>(clause.v.t);
+struct OmpObjectListScope {
+  template <typename T> static const OmpObjectList *Get(const T &x) {
+    if constexpr (std::is_same_v<OmpObjectList, T>) {
+      return &x;
+    } else if constexpr (WrapperTrait<T>) {
+      return Get(x.v);
+    } else if constexpr (UnionTrait<T>) {
+      return std::visit([](auto &&s) { return Get(s); }, x.u);
+    } else if constexpr (TupleTrait<T>) {
+      return GetFromTuple(
+          x.t, std::make_index_sequence<std::tuple_size_v<decltype(x.t)>>{});
+    } else if constexpr (ConstraintTrait<T>) {
+      return Get(x.thing);
     } else {
       return nullptr;
     }
-  } else if constexpr (WrappedInTupleOrVariantV<T, TupleObjectListClauses>) {
-    return &std::get<OmpObjectList>(clause.t);
-  } else if constexpr (WrappedInTupleOrVariantV<T, decltype(OmpClause::u)>) {
-    return nullptr;
-  } else {
-    // The condition should be type-dependent, but it should always be false.
-    static_assert(sizeof(T) < 0 && "Unexpected argument type");
   }
-}
 
-const OmpObjectList *GetOmpObjectList(const OmpClause &clause);
-const OmpObjectList *GetOmpObjectList(const OmpClause::Depend &clause);
-const OmpObjectList *GetOmpObjectList(const OmpDependClause::TaskDep &x);
+  template <typename T>
+  static const OmpObjectList *Get(const common::Indirection<T> &x) {
+    return Get(x.value());
+  }
+
+  template <typename... Ts, size_t... Is>
+  static const OmpObjectList *GetFromTuple(
+      const std::tuple<Ts...> &t, std::index_sequence<Is...>) {
+    const OmpObjectList *objects{nullptr};
+    ((objects = objects ? objects : Get(std::get<Is>(t))), ...);
+    return objects;
+  }
+};
+} // namespace detail
+
+template <typename T> const OmpObjectList *GetOmpObjectList(const T &clause) {
+  static_assert(std::is_class_v<T>, "Unexpected argument type");
+  return detail::OmpObjectListScope::Get(clause);
+}
 
 template <typename T>
 const T *GetFirstArgument(const OmpDirectiveSpecification &spec) {
@@ -222,6 +179,9 @@ const T *GetFirstArgument(const OmpDirectiveSpecification &spec) {
   }
   return nullptr;
 }
+
+const OmpClause *FindClause(
+    const OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId);
 
 const BlockConstruct *GetFortranBlockConstruct(
     const ExecutionPartConstruct &epc);
@@ -238,6 +198,19 @@ struct OmpAllocateInfo {
 };
 
 OmpAllocateInfo SplitOmpAllocate(const OmpAllocateDirective &x);
+
+template <typename R, typename = void, typename = void> struct is_range {
+  static constexpr bool value{false};
+};
+
+template <typename R>
+struct is_range<R, //
+    std::void_t<decltype(std::declval<R>().begin())>,
+    std::void_t<decltype(std::declval<R>().end())>> {
+  static constexpr bool value{true};
+};
+
+template <typename R> constexpr bool is_range_v = is_range<R>::value;
 
 // Iterate over a range of parser::Block::const_iterator's. When the end
 // of the range is reached, the iterator becomes invalid.
@@ -277,14 +250,28 @@ struct ExecutionPartIterator {
   using IteratorType = Block::const_iterator;
   using IteratorRange = llvm::iterator_range<IteratorType>;
 
+  // An iterator range with a third iterator indicating a position inside
+  // the range.
+  struct IteratorGauge : public IteratorRange {
+    IteratorGauge(IteratorType b, IteratorType e)
+        : IteratorRange(b, e), at(b) {}
+    IteratorGauge(IteratorRange r) : IteratorRange(r), at(r.begin()) {}
+
+    bool atEnd() const { return at == end(); }
+    IteratorType at;
+  };
+
   struct Construct {
     Construct(IteratorType b, IteratorType e, const ExecutionPartConstruct *c)
-        : range(b, e), owner(c) {}
+        : location(b, e), owner(c) {}
     template <typename R>
     Construct(const R &r, const ExecutionPartConstruct *c)
-        : range(r), owner(c) {}
+        : location(r), owner(c) {}
     Construct(const Construct &c) = default;
-    IteratorRange range;
+    // The original range of the construct with the current position in it.
+    // The location.at is the construct currently being pointed at, or
+    // stepped into.
+    IteratorGauge location;
     const ExecutionPartConstruct *owner;
   };
 
@@ -296,9 +283,7 @@ struct ExecutionPartIterator {
     stack_.emplace_back(b, e, c);
     adjust();
   }
-  template <typename R, //
-      typename = decltype(std::declval<R>().begin()),
-      typename = decltype(std::declval<R>().end())>
+  template <typename R, typename = std::enable_if_t<is_range_v<R>>>
   ExecutionPartIterator(const R &range, Step stepping = Step::Default,
       const ExecutionPartConstruct *construct = nullptr)
       : ExecutionPartIterator(range.begin(), range.end(), stepping, construct) {
@@ -315,6 +300,7 @@ struct ExecutionPartIterator {
 
   bool valid() const { return !stack_.empty(); }
 
+  const std::vector<Construct> &stack() const { return stack_; }
   decltype(auto) operator*() const { return *at(); }
   bool operator==(const ExecutionPartIterator &other) const {
     if (valid() != other.valid()) {
@@ -322,7 +308,7 @@ struct ExecutionPartIterator {
     }
     // Invalid iterators are considered equal.
     return !valid() ||
-        stack_.back().range.begin() == other.stack_.back().range.begin();
+        stack_.back().location.at == other.stack_.back().location.at;
   }
   bool operator!=(const ExecutionPartIterator &other) const {
     return !(*this == other);
@@ -351,7 +337,7 @@ struct ExecutionPartIterator {
   using iterator_category = std::forward_iterator_tag;
 
 private:
-  IteratorType at() const { return stack_.back().range.begin(); };
+  IteratorType at() const { return stack_.back().location.at; };
 
   // If the iterator is not at a legal location, keep advancing it until
   // it lands at a legal location or becomes invalid.
@@ -368,9 +354,7 @@ template <typename Iterator = ExecutionPartIterator> struct ExecutionPartRange {
       Step stepping = Step::Default,
       const ExecutionPartConstruct *owner = nullptr)
       : begin_(begin, end, stepping, owner), end_() {}
-  template <typename R, //
-      typename = decltype(std::declval<R>().begin()),
-      typename = decltype(std::declval<R>().end())>
+  template <typename R, typename = std::enable_if_t<is_range_v<R>>>
   ExecutionPartRange(const R &range, Step stepping = Step::Default,
       const ExecutionPartConstruct *owner = nullptr)
       : ExecutionPartRange(range.begin(), range.end(), stepping, owner) {}
@@ -390,9 +374,7 @@ struct LoopNestIterator : public ExecutionPartIterator {
       : ExecutionPartIterator(b, e, s, c) {
     adjust();
   }
-  template <typename R, //
-      typename = decltype(std::declval<R>().begin()),
-      typename = decltype(std::declval<R>().end())>
+  template <typename R, typename = std::enable_if_t<is_range_v<R>>>
   LoopNestIterator(const R &range, Step stepping = Step::Default,
       const ExecutionPartConstruct *construct = nullptr)
       : LoopNestIterator(range.begin(), range.end(), stepping, construct) {}

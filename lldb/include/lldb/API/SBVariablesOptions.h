@@ -46,6 +46,10 @@ public:
 
   void SetIncludeStatics(bool);
 
+  bool GetIncludeSynthetic() const;
+
+  void SetIncludeSynthetic(bool);
+
   bool GetInScopeOnly() const;
 
   void SetInScopeOnly(bool);

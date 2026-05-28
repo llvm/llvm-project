@@ -26,6 +26,7 @@
       defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX ||                 \
       defined HANDLE_DW_END || defined HANDLE_DW_SECT ||                       \
       defined HANDLE_DW_APPLE_ENUM_KIND ||                                     \
+      defined HANDLE_DW_LLVM_LANG_DIALECT ||                                   \
       ( defined HANDLE_DW_ASPACE && defined HANDLE_DW_ASPACE_PRED) )
 #error "Missing macro definition of HANDLE_DW*"
 #endif
@@ -150,6 +151,10 @@
 
 #ifndef HANDLE_DW_APPLE_ENUM_KIND
 #define HANDLE_DW_APPLE_ENUM_KIND(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_LLVM_LANG_DIALECT
+#define HANDLE_DW_LLVM_LANG_DIALECT(ID, NAME)
 #endif
 
 #ifndef HANDLE_DW_ASPACE
@@ -648,6 +653,7 @@ HANDLE_DW_AT(0x3e11, LLVM_lanes, 0, LLVM)
 HANDLE_DW_AT(0x3e12, LLVM_lane_pc, 0, LLVM)
 HANDLE_DW_AT(0x3e13, LLVM_vector_size, 0, LLVM)
 HANDLE_DW_AT(0x3e14, LLVM_virtual_call_origin, 0, LLVM)
+HANDLE_DW_AT(0x3e15, LLVM_language_dialect, 0, LLVM)
 
 // https://llvm.org/docs/AMDGPUUsage.html#address-space-identifier
 HANDLE_DW_ASPACE(0x0, none)
@@ -748,7 +754,7 @@ HANDLE_DW_OP(0x10, constu, 1, 0, 2, DWARF)
 HANDLE_DW_OP(0x11, consts, 1, 0, 2, DWARF)
 HANDLE_DW_OP(0x12, dup, 0, 1, 2, DWARF)
 HANDLE_DW_OP(0x13, drop, 0, 1, 2, DWARF)
-HANDLE_DW_OP(0x14, over, 0, 1, 2, DWARF)
+HANDLE_DW_OP(0x14, over, 0, 2, 2, DWARF)
 HANDLE_DW_OP(0x15, pick, 1, -1, 2, DWARF)
 HANDLE_DW_OP(0x16, swap, 0, 2, 2, DWARF)
 HANDLE_DW_OP(0x17, rot, 0, 3, 2, DWARF)
@@ -1327,6 +1333,10 @@ HANDLE_DW_APPLE_PROPERTY(0x4000, class)
 HANDLE_DW_APPLE_ENUM_KIND(0x00, Closed)
 HANDLE_DW_APPLE_ENUM_KIND(0x01, Open)
 
+// LLVM language dialect kinds for DW_AT_LLVM_language_dialect.
+HANDLE_DW_LLVM_LANG_DIALECT(0x01, simt)
+HANDLE_DW_LLVM_LANG_DIALECT(0x02, tile)
+
 // DWARF v5 Unit Types.
 HANDLE_DW_UT(0x01, compile)
 HANDLE_DW_UT(0x02, type)
@@ -1426,5 +1436,6 @@ HANDLE_DW_SECT(8, RNGLISTS)
 #undef HANDLE_DW_END
 #undef HANDLE_DW_SECT
 #undef HANDLE_DW_APPLE_ENUM_KIND
+#undef HANDLE_DW_LLVM_LANG_DIALECT
 #undef HANDLE_DW_ASPACE
 #undef HANDLE_DW_ASPACE_PRED

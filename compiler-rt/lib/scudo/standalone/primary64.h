@@ -93,6 +93,8 @@ public:
   static BlockInfo findNearestBlock(const char *RegionInfoData,
                                     uptr Ptr) NO_THREAD_SAFETY_ANALYSIS;
 
+  BlockInfo findNearestBlock(uptr Ptr);
+
   void init(s32 ReleaseToOsInterval) NO_THREAD_SAFETY_ANALYSIS;
 
   void unmapTestOnly();
@@ -1102,6 +1104,8 @@ void SizeClassAllocator64<Config>::iterateOverBlocks(F Callback) {
 template <typename Config>
 void SizeClassAllocator64<Config>::getStats(ScopedString *Str) {
   // TODO(kostyak): get the RSS per region.
+  Str->append("\nConfig Stats Primary64: ");
+  Config::getConfigValues(Str);
   uptr TotalMapped = 0;
   uptr PoppedBlocks = 0;
   uptr PushedBlocks = 0;
@@ -1167,14 +1171,13 @@ void SizeClassAllocator64<Config>::getStats(ScopedString *Str, uptr ClassId,
     const u64 LastReleaseSecAgo = DiffSinceLastReleaseNs / 1000000000;
     const u64 LastReleaseMsAgo =
         (DiffSinceLastReleaseNs % 1000000000) / 1000000;
-    Str->append(" Latest release: %6" PRIu64 ":%" PRIu64 " seconds ago",
+    Str->append(" Latest release: %6" PRIu64 ":%03" PRIu64 " seconds ago",
                 LastReleaseSecAgo, LastReleaseMsAgo);
   }
-#if SCUDO_LINUX
-  const uptr MapBase = Region->MemMapInfo.MemMap.getBase();
-  Str->append(" Resident Pages: %6" PRIu64,
-              getResidentPages(MapBase, RegionSize));
-#endif
+  const s64 ResidentPages = Region->MemMapInfo.MemMap.getResidentPages();
+  if (ResidentPages >= 0) {
+    Str->append(" Resident Pages: %6" PRIu64, ResidentPages);
+  }
   Str->append("\n");
 }
 
@@ -1347,6 +1350,57 @@ uptr SizeClassAllocator64<Config>::releaseToOS(ReleaseToOS ReleaseType) {
     }
   }
   return TotalReleasedBytes;
+}
+
+template <typename Config>
+BlockInfo SizeClassAllocator64<Config>::findNearestBlock(uptr Ptr)
+    NO_THREAD_SAFETY_ANALYSIS {
+  uptr ClassId;
+  uptr MinDistance = -1UL;
+  for (uptr I = 0; I != NumClasses; ++I) {
+    if (I == SizeClassMap::BatchClassId)
+      continue;
+
+    ScopedLock ML(RegionInfoArray[I].MMLock);
+    uptr Begin = RegionInfoArray[I].RegionBeg;
+    uptr End = Begin + RegionInfoArray[I].MemMapInfo.AllocatedUser;
+    if (Begin > End || End - Begin < SizeClassMap::getSizeByClassId(I))
+      continue;
+    uptr RegionDistance;
+    if (Begin <= Ptr) {
+      if (Ptr < End)
+        RegionDistance = 0;
+      else
+        RegionDistance = Ptr - End;
+    } else {
+      RegionDistance = Begin - Ptr;
+    }
+
+    if (RegionDistance < MinDistance) {
+      MinDistance = RegionDistance;
+      ClassId = I;
+      if (RegionDistance == 0)
+        break;
+    }
+  }
+
+  if (MinDistance > 8192) {
+    return {};
+  }
+
+  ScopedLock ML(RegionInfoArray[ClassId].MMLock);
+  BlockInfo B = {};
+  B.RegionBegin = RegionInfoArray[ClassId].RegionBeg;
+  B.RegionEnd =
+      B.RegionBegin + RegionInfoArray[ClassId].MemMapInfo.AllocatedUser;
+  B.BlockSize = SizeClassMap::getSizeByClassId(ClassId);
+  B.BlockBegin = B.RegionBegin + uptr(sptr(Ptr - B.RegionBegin) /
+                                      sptr(B.BlockSize) * sptr(B.BlockSize));
+  while (B.BlockBegin < B.RegionBegin)
+    B.BlockBegin += B.BlockSize;
+  while (B.RegionEnd < B.BlockBegin + B.BlockSize)
+    B.BlockBegin -= B.BlockSize;
+  return B;
 }
 
 template <typename Config>

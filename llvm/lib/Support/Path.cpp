@@ -38,13 +38,23 @@ namespace {
   using llvm::sys::path::is_separator;
   using llvm::sys::path::Style;
 
+  inline bool prefer_forward_slash() {
+    static bool prefer = []() {
+      if (std::optional<std::string> Env =
+              sys::Process::GetEnv("LLVM_WINDOWS_PREFER_FORWARD_SLASH"))
+        return *Env == "1";
+      return static_cast<bool>(LLVM_WINDOWS_PREFER_FORWARD_SLASH);
+    }();
+    return prefer;
+  }
+
   inline Style real_style(Style style) {
     if (style != Style::native)
       return style;
     if (is_style_posix(style))
       return Style::posix;
-    return LLVM_WINDOWS_PREFER_FORWARD_SLASH ? Style::windows_slash
-                                             : Style::windows_backslash;
+    return prefer_forward_slash() ? Style::windows_slash
+                                  : Style::windows_backslash;
   }
 
   inline const char *separators(Style style) {
@@ -548,6 +558,12 @@ void native(const Twine &path, SmallVectorImpl<char> &result, Style style) {
   native(result, style);
 }
 
+std::string native(const Twine &path, Style style) {
+  SmallString<128> Result;
+  native(path, Result, style);
+  return std::string(Result);
+}
+
 void native(SmallVectorImpl<char> &Path, Style style) {
   if (Path.empty())
     return;
@@ -847,6 +863,9 @@ void createUniquePath(const Twine &Model, SmallVectorImpl<char> &ResultPath,
                       bool MakeAbsolute) {
   SmallString<128> ModelStorage;
   Model.toVector(ModelStorage);
+
+  assert(llvm::is_contained(ModelStorage, '%') &&
+         "createUniquePath: Model must contain at least one '%'");
 
   if (MakeAbsolute) {
     // Make model absolute by prepending a temp directory if it's not already.

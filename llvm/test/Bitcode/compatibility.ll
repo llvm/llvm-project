@@ -38,7 +38,7 @@ $comdat.samesize = comdat samesize
 @const.int = constant i32 zeroinitializer
 ; CHECK: @const.int = constant i32 0
 @const.float = constant double 0.0
-; CHECK: @const.float = constant double 0.0
+; CHECK: @const.float = constant double 0.000000e+00
 @const.null = constant ptr null
 ; CHECK: @const.null = constant ptr null
 %const.struct.type = type { i32, i8, i64 }
@@ -56,7 +56,7 @@ $comdat.samesize = comdat samesize
 @constant.array.i32 = constant [3 x i32] [i32 -0, i32 1, i32 0]
 ; CHECK: @constant.array.i64 = constant [3 x i64] [i64 0, i64 1, i64 0]
 @constant.array.i64 = constant [3 x i64] [i64 -0, i64 1, i64 0]
-; CHECK: @constant.array.f16 = constant [3 x half] [half 0xH8000, half 0xH3C00, half 0xH0000]
+; CHECK: @constant.array.f16 = constant [3 x half] [half -0.000000e+00, half 1.000000e+00, half 0.000000e+00]
 @constant.array.f16 = constant [3 x half] [half -0.0, half 1.0, half 0.0]
 ; CHECK: @constant.array.f32 = constant [3 x float] [float -0.000000e+00, float 1.000000e+00, float 0.000000e+00]
 @constant.array.f32 = constant [3 x float] [float -0.0, float 1.0, float 0.0]
@@ -71,7 +71,7 @@ $comdat.samesize = comdat samesize
 @constant.vector.i32 = constant <3 x i32> <i32 -0, i32 1, i32 0>
 ; CHECK: @constant.vector.i64 = constant <3 x i64> <i64 0, i64 1, i64 0>
 @constant.vector.i64 = constant <3 x i64> <i64 -0, i64 1, i64 0>
-; CHECK: @constant.vector.f16 = constant <3 x half> <half 0xH8000, half 0xH3C00, half 0xH0000>
+; CHECK: @constant.vector.f16 = constant <3 x half> <half -0.000000e+00, half 1.000000e+00, half 0.000000e+00>
 @constant.vector.f16 = constant <3 x half> <half -0.0, half 1.0, half 0.0>
 ; CHECK: @constant.vector.f32 = constant <3 x float> <float -0.000000e+00, float 1.000000e+00, float 0.000000e+00>
 @constant.vector.f32 = constant <3 x float> <float -0.0, float 1.0, float 0.0>
@@ -955,6 +955,12 @@ define void @fp_atomics(ptr %word) {
 ; CHECK: %atomicrmw.fminimum = atomicrmw fminimum ptr %word, float 1.000000e+00 monotonic
   %atomicrmw.fminimum = atomicrmw fminimum ptr %word, float 1.0 monotonic
 
+; CHECK: %atomicrmw.fmaximumnum = atomicrmw fmaximumnum ptr %word, float 1.000000e+00 monotonic
+  %atomicrmw.fmaximumnum = atomicrmw fmaximumnum ptr %word, float 1.0 monotonic
+
+; CHECK: %atomicrmw.fminimumnum = atomicrmw fminimumnum ptr %word, float 1.000000e+00 monotonic
+  %atomicrmw.fminimumnum = atomicrmw fminimumnum ptr %word, float 1.0 monotonic
+
   ret void
 }
 
@@ -1017,6 +1023,16 @@ define void @usub_cond_usub_sat_atomics(ptr %word) {
 define void @pointer_atomics(ptr %word) {
 ; CHECK: %atomicrmw.xchg = atomicrmw xchg ptr %word, ptr null monotonic
   %atomicrmw.xchg = atomicrmw xchg ptr %word, ptr null monotonic
+  ret void
+}
+
+define void @elementwise_atomics(ptr %word, <4 x i32> %ival, <4 x float> %fval) {
+; CHECK: %atomicrmw.add = atomicrmw elementwise add ptr %word, <4 x i32> %ival monotonic, align 16
+  %atomicrmw.add = atomicrmw elementwise add ptr %word, <4 x i32> %ival monotonic, align 16
+
+; CHECK: %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval seq_cst, align 16
+  %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval seq_cst, align 16
+
   ret void
 }
 
@@ -1288,6 +1304,8 @@ define void @typesystem() {
   ; CHECK: %t9 = alloca <4 x i32>
   %t10 = alloca <vscale x 4 x i32>
   ; CHECK: %t10 = alloca <vscale x 4 x i32>
+  %t11 = alloca b8
+  ; CHECK: %t11 = alloca b8
 
   ret void
 }
@@ -1879,7 +1897,7 @@ declare void @llvm.instrprof_increment(ptr, i64, i32, i32)
 !10 = !{!"rax"}
 define void @intrinsics.codegen() {
   call ptr @llvm.returnaddress(i32 1)
-  ; CHECK: call ptr @llvm.returnaddress(i32 1)
+  ; CHECK: call ptr @llvm.returnaddress.p0(i32 1)
   call ptr @llvm.frameaddress(i32 1)
   ; CHECK: call ptr @llvm.frameaddress.p0(i32 1)
 
@@ -1907,7 +1925,7 @@ define void @intrinsics.codegen() {
   ; CHECK: call i64 @llvm.readcyclecounter()
 
   call void @llvm.clear_cache(ptr null, ptr null)
-  ; CHECK: call void @llvm.clear_cache(ptr null, ptr null)
+  ; CHECK: call void @llvm.clear_cache.p0(ptr null, ptr null)
 
   call void @llvm.instrprof_increment(ptr null, i64 0, i32 0, i32 0)
   ; CHECK: call void @llvm.instrprof_increment(ptr null, i64 0, i32 0, i32 0)

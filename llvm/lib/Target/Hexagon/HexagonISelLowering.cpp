@@ -2051,7 +2051,8 @@ void HexagonTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::hexagon_V6_vgather_vscattermh_128B: {
     const Module &M = *I.getParent()->getParent()->getParent();
     Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Type *VecTy = I.getArgOperand(1)->getType();
+    Type *VecTy = I.getArgOperand(I.arg_size() - 1)->getType();
+    assert(VecTy->isVectorTy() && "Expected vector operand for vgather");
     Info.memVT = MVT::getVT(VecTy);
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
@@ -3954,6 +3955,18 @@ TargetLowering::AtomicExpansionKind
 HexagonTargetLowering::shouldExpandAtomicCmpXchgInIR(
     const AtomicCmpXchgInst *AI) const {
   return AtomicExpansionKind::LLSC;
+}
+
+MachineBasicBlock *HexagonTargetLowering::EmitInstrWithCustomInserter(
+    MachineInstr &MI, MachineBasicBlock *BB) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::PATCHABLE_EVENT_CALL:
+  case TargetOpcode::PATCHABLE_TYPED_EVENT_CALL:
+    // These are lowered in the AsmPrinter.
+    return BB;
+  default:
+    llvm_unreachable("Unexpected instruction with custom inserter");
+  }
 }
 
 bool HexagonTargetLowering::isMaskAndCmp0FoldingBeneficial(

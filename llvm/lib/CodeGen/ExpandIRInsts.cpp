@@ -55,7 +55,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
-#include <llvm/Support/Casting.h>
 #include <optional>
 
 #define DEBUG_TYPE "expand-ir-insts"
@@ -68,19 +67,17 @@ extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 static cl::opt<unsigned>
     ExpandFpConvertBits("expand-fp-convert-bits", cl::Hidden,
-                        cl::init(llvm::IntegerType::MAX_INT_BITS),
+                        cl::init(IntegerType::MAX_INT_BITS),
                         cl::desc("fp convert instructions on integers with "
                                  "more than <N> bits are expanded."));
 
 static cl::opt<unsigned>
     ExpandDivRemBits("expand-div-rem-bits", cl::Hidden,
-                     cl::init(llvm::IntegerType::MAX_INT_BITS),
+                     cl::init(IntegerType::MAX_INT_BITS),
                      cl::desc("div and rem instructions on integers with "
                               "more than <N> bits are expanded."));
 
-namespace {
-
-bool isConstantPowerOfTwo(llvm::Value *V, bool SignedOp) {
+static bool isConstantPowerOfTwo(Value *V, bool SignedOp) {
   auto *C = dyn_cast<ConstantInt>(V);
   if (!C)
     return false;
@@ -91,13 +88,111 @@ bool isConstantPowerOfTwo(llvm::Value *V, bool SignedOp) {
   return Val.isPowerOf2();
 }
 
-bool isSigned(unsigned int Opcode) {
+static bool isSigned(unsigned Opcode) {
   return Opcode == Instruction::SDiv || Opcode == Instruction::SRem;
+}
+
+/// For signed div/rem by a power of 2, compute the bias-adjusted dividend:
+///   Sign = ashr X, (BitWidth - 1)          -- 0 or -1
+///   Bias = lshr Sign, (BitWidth - ShiftAmt) -- 0 or 2^ShiftAmt - 1
+///   Adjusted = add X, Bias
+/// The bias adds (2^ShiftAmt - 1) for negative X, correcting rounding towards
+/// zero (instead of towards -inf that a plain ashr would give).
+/// The lshr form is used instead of 'and' to avoid large immediate constants.
+static Value *addSignedBias(IRBuilder<> &Builder, Value *X, unsigned BitWidth,
+                            unsigned ShiftAmt) {
+  assert(ShiftAmt > 0 && ShiftAmt < BitWidth &&
+         "ShiftAmt out of range; callers should handle ShiftAmt == 0");
+  Value *Sign = Builder.CreateAShr(X, BitWidth - 1, "sign");
+  Value *Bias = Builder.CreateLShr(Sign, BitWidth - ShiftAmt, "bias");
+  return Builder.CreateAdd(X, Bias, "adjusted");
+}
+
+/// Expand division or remainder by a power-of-2 constant.
+/// Division (let C = log2(|divisor|)):
+///   udiv X, 2^C  ->  lshr X, C
+///   sdiv X, 2^C  ->  ashr (add X, Bias), C  (Bias corrects rounding)
+///   sdiv exact X, 2^C  ->  ashr exact X, C  (no bias needed)
+///   For negative power-of-2 divisors, the division result is negated.
+/// Remainder (let C = log2(|divisor|)):
+///   urem X, 2^C  ->  and X, (2^C - 1)
+///   srem X, 2^C  ->  sub X, (shl (ashr (add X, Bias), C), C)
+static void expandPow2DivRem(BinaryOperator *BO) {
+  LLVM_DEBUG(dbgs() << "Expanding instruction: " << *BO << '\n');
+
+  unsigned Opcode = BO->getOpcode();
+  bool IsDiv = (Opcode == Instruction::UDiv || Opcode == Instruction::SDiv);
+  bool IsSigned = isSigned(Opcode);
+  // isExact() is only valid for div.
+  bool IsExact = IsDiv && BO->isExact();
+
+  assert(isConstantPowerOfTwo(BO->getOperand(1), IsSigned) &&
+         "Expected power-of-2 constant divisor");
+
+  Value *X = BO->getOperand(0);
+  auto *C = cast<ConstantInt>(BO->getOperand(1));
+  Type *Ty = BO->getType();
+  unsigned BitWidth = Ty->getIntegerBitWidth();
+
+  APInt DivisorVal = C->getValue();
+  bool IsNegativeDivisor = IsSigned && DivisorVal.isNegative();
+  // Use countr_zero() to get the shift amount directly from the bit pattern.
+  // This works correctly for both positive and negative powers of 2, including
+  // INT_MIN, without needing to negate the value first.
+  unsigned ShiftAmt = DivisorVal.countr_zero();
+
+  IRBuilder<> Builder(BO);
+  Value *Result;
+
+  if (ShiftAmt == 0) {
+    // Div by 1/-1: X / 1 = X, X / -1 = -X.
+    // Rem by 1/-1: always 0.
+    if (IsDiv)
+      Result = IsNegativeDivisor ? Builder.CreateNeg(X) : X;
+    else
+      Result = ConstantInt::get(Ty, 0);
+  } else if (IsSigned) {
+    // The signed expansion uses X multiple times (bias computation, shift,
+    // and sub for remainder). Freeze X to ensure consistent behavior if it is
+    // undef/poison. For exact division, no bias is needed and X is used only
+    // once, so freeze is unnecessary.
+    if (!IsExact && !isGuaranteedNotToBeUndefOrPoison(X))
+      X = Builder.CreateFreeze(X, X->getName() + ".fr");
+    // For exact division, no bias is needed since there's no rounding.
+    Value *Dividend =
+        IsExact ? X : addSignedBias(Builder, X, BitWidth, ShiftAmt);
+    Value *Quotient = Builder.CreateAShr(
+        Dividend, ShiftAmt, IsDiv && IsNegativeDivisor ? "pre.neg" : "shifted",
+        IsExact);
+    if (IsDiv) {
+      Result = IsNegativeDivisor ? Builder.CreateNeg(Quotient) : Quotient;
+    } else {
+      // Rem = X - (Quotient << ShiftAmt):
+      // clear lower ShiftAmt bits via round-trip shift, then subtract.
+      Value *Truncated = Builder.CreateShl(Quotient, ShiftAmt, "truncated");
+      Result = Builder.CreateSub(X, Truncated);
+    }
+  } else {
+    if (IsDiv) {
+      Result = Builder.CreateLShr(X, ShiftAmt, "", IsExact);
+    } else {
+      APInt Mask = APInt::getLowBitsSet(BitWidth, ShiftAmt);
+      Result = Builder.CreateAnd(X, ConstantInt::get(Ty, Mask));
+    }
+  }
+
+  BO->replaceAllUsesWith(Result);
+  if (Result != X)
+    if (auto *RI = dyn_cast<Instruction>(Result))
+      RI->takeName(BO);
+  BO->dropAllReferences();
+  BO->eraseFromParent();
 }
 
 /// This class implements a precise expansion of the frem instruction.
 /// The generated code is based on the fmod implementation in the AMD device
 /// libs.
+namespace {
 class FRemExpander {
   /// The IRBuilder to use for the expansion.
   IRBuilder<> &B;
@@ -171,8 +266,7 @@ public:
       MaxIter = 1;
     }
 
-    unsigned Precision =
-        llvm::APFloat::semanticsPrecision(Ty->getFltSemantics());
+    unsigned Precision = APFloat::semanticsPrecision(Ty->getFltSemantics());
     return FRemExpander{B, Ty, Precision / MaxIter, ComputeTy};
   }
 
@@ -190,7 +284,7 @@ public:
 private:
   FRemExpander(IRBuilder<> &B, Type *FremTy, unsigned Bits, Type *ComputeFpTy)
       : B(B), FremTy(FremTy), ComputeFpTy(ComputeFpTy), ExTy(B.getInt32Ty()),
-        Bits(ConstantInt::get(ExTy, Bits)), One(ConstantInt::get(ExTy, 1)) {};
+        Bits(ConstantInt::get(ExTy, Bits)), One(ConstantInt::get(ExTy, 1)) {}
 
   Value *createRcp(Value *V, const Twine &Name) const {
     // Leave it to later optimizations to turn this into an rcp
@@ -342,13 +436,13 @@ private:
     Value *XFinite =
         NoInfs || (SQ && isKnownNeverInfinity(X, *SQ))
             ? B.getTrue()
-            : B.CreateFCmpULT(B.CreateUnaryIntrinsic(Intrinsic::fabs, X),
-                              ConstantFP::getInfinity(FremTy));
+            : B.CreateFCmpULT(B.CreateFAbs(X), ConstantFP::getInfinity(FremTy));
     Ret = B.CreateSelect(XFinite, Ret, Nan);
 
     return Ret;
   }
 };
+} // namespace
 
 Value *FRemExpander::buildApproxFRem(Value *X, Value *Y) const {
   IRBuilder<>::FastMathFlagGuard Guard(B);
@@ -378,8 +472,8 @@ Value *FRemExpander::buildFRem(Value *X, Value *Y,
   //   { ret = x or 0 with sign of x }
   //   Adjust ret to NaN/inf in input
   //   return ret
-  Value *Ax = B.CreateUnaryIntrinsic(Intrinsic::fabs, X, {}, "ax");
-  Value *Ay = B.CreateUnaryIntrinsic(Intrinsic::fabs, Y, {}, "ay");
+  Value *Ax = B.CreateFAbs(X, {}, "ax");
+  Value *Ay = B.CreateFAbs(Y, {}, "ay");
   if (ComputeFpTy != X->getType()) {
     Ax = B.CreateFPExt(Ax, ComputeFpTy, "ax");
     Ay = B.CreateFPExt(Ay, ComputeFpTy, "ay");
@@ -424,7 +518,6 @@ Value *FRemExpander::buildFRem(Value *X, Value *Y,
 
   return Ret;
 }
-} // namespace
 
 static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
   LLVM_DEBUG(dbgs() << "Expanding instruction: " << I << '\n');
@@ -879,7 +972,7 @@ static void expandIToFP(Instruction *IToFP) {
 
   // if.then4:
   Builder.SetInsertPoint(IfThen4);
-  llvm::SwitchInst *SI = Builder.CreateSwitch(Sub1, SwDefault);
+  SwitchInst *SI = Builder.CreateSwitch(Sub1, SwDefault);
   SI->addCase(Builder.getIntN(BitWidthNew, FPMantissaWidth + 2), SwBB);
   SI->addCase(Builder.getIntN(BitWidthNew, FPMantissaWidth + 3), SwEpilog);
   // Add branch weights to the SwitchInst. The weights are provided for the
@@ -1103,7 +1196,12 @@ static void scalarize(Instruction *I,
     else if (auto *CastI = dyn_cast<CastInst>(I))
       NewOp = Builder.CreateCast(CastI->getOpcode(), Ext,
                                  I->getType()->getScalarType());
-    else
+    else if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      assert(II->getIntrinsicID() == Intrinsic::fptoui_sat ||
+             II->getIntrinsicID() == Intrinsic::fptosi_sat);
+      NewOp = Builder.CreateIntrinsic(I->getType()->getScalarType(),
+                                      II->getIntrinsicID(), {Ext});
+    } else
       llvm_unreachable("Unsupported instruction type");
 
     Result = Builder.CreateInsertElement(Result, NewOp, Idx);
@@ -1132,17 +1230,17 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
 
   unsigned MaxLegalFpConvertBitWidth =
       TLI.getMaxLargeFPConvertBitWidthSupported();
-  if (ExpandFpConvertBits != llvm::IntegerType::MAX_INT_BITS)
+  if (ExpandFpConvertBits != IntegerType::MAX_INT_BITS)
     MaxLegalFpConvertBitWidth = ExpandFpConvertBits;
 
   unsigned MaxLegalDivRemBitWidth = TLI.getMaxDivRemBitWidthSupported();
-  if (ExpandDivRemBits != llvm::IntegerType::MAX_INT_BITS)
+  if (ExpandDivRemBits != IntegerType::MAX_INT_BITS)
     MaxLegalDivRemBitWidth = ExpandDivRemBits;
 
   bool DisableExpandLargeFp =
-      MaxLegalFpConvertBitWidth >= llvm::IntegerType::MAX_INT_BITS;
+      MaxLegalFpConvertBitWidth >= IntegerType::MAX_INT_BITS;
   bool DisableExpandLargeDivRem =
-      MaxLegalDivRemBitWidth >= llvm::IntegerType::MAX_INT_BITS;
+      MaxLegalDivRemBitWidth >= IntegerType::MAX_INT_BITS;
   bool DisableFrem = !FRemExpander::shouldExpandAnyFremType(TLI);
 
   if (DisableExpandLargeFp && DisableFrem && DisableExpandLargeDivRem)
@@ -1171,12 +1269,13 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     case Instruction::SDiv:
     case Instruction::URem:
     case Instruction::SRem:
+      // Power-of-2 divisors are handled inside the expansion (via efficient
+      // shift/mask sequences) rather than being excluded here, so that
+      // backends that cannot lower wide div/rem even for powers of two
+      // (e.g. when DAGCombiner is disabled) still get valid lowered code.
       return !DisableExpandLargeDivRem &&
              cast<IntegerType>(Ty->getScalarType())->getIntegerBitWidth() >
-                 MaxLegalDivRemBitWidth
-             // The backend has peephole optimizations for powers of two.
-             // TODO: We don't consider vectors here.
-             && !isConstantPowerOfTwo(I.getOperand(1), isSigned(I.getOpcode()));
+                 MaxLegalDivRemBitWidth;
     case Instruction::Call: {
       auto *II = dyn_cast<IntrinsicInst>(&I);
       if (II && (II->getIntrinsicID() == Intrinsic::fptoui_sat ||
@@ -1235,13 +1334,22 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
 
     case Instruction::UDiv:
     case Instruction::SDiv:
-      expandDivision(cast<BinaryOperator>(I));
-      break;
     case Instruction::URem:
-    case Instruction::SRem:
-      expandRemainder(cast<BinaryOperator>(I));
+    case Instruction::SRem: {
+      auto *BO = cast<BinaryOperator>(I);
+      // TODO: isConstantPowerOfTwo does not handle vector constants, so
+      // vector div/rem by a power-of-2 splat goes through the generic path.
+      if (isConstantPowerOfTwo(BO->getOperand(1), isSigned(BO->getOpcode()))) {
+        expandPow2DivRem(BO);
+      } else {
+        unsigned Opc = BO->getOpcode();
+        if (Opc == Instruction::UDiv || Opc == Instruction::SDiv)
+          expandDivision(BO);
+        else
+          expandRemainder(BO);
+      }
       break;
-
+    }
     case Instruction::Call: {
       auto *II = cast<IntrinsicInst>(I);
       assert(II->getIntrinsicID() == Intrinsic::fptoui_sat ||
@@ -1266,7 +1374,7 @@ public:
   ExpandIRInstsLegacyPass(CodeGenOptLevel OptLevel)
       : FunctionPass(ID), OptLevel(OptLevel) {}
 
-  ExpandIRInstsLegacyPass() : ExpandIRInstsLegacyPass(CodeGenOptLevel::None) {};
+  ExpandIRInstsLegacyPass() : ExpandIRInstsLegacyPass(CodeGenOptLevel::None) {}
 
   bool runOnFunction(Function &F) override {
     auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
