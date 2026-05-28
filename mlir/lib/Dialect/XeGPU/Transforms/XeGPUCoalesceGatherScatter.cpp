@@ -320,8 +320,7 @@ private:
     auto values = llvm::to_vector(dense.getValues<APInt>());
     int64_t innerCont = inner;
     int64_t innerConst = inner;
-    int64_t innerStride =
-        values[1].getSExtValue() - values[0].getSExtValue();
+    int64_t innerStride = values[1].getSExtValue() - values[0].getSExtValue();
     int64_t base = values[0].getSExtValue();
     int64_t baseDiv = highestPow2Divisor(base);
     for (int64_t o = 0; o < outer; ++o) {
@@ -380,16 +379,14 @@ private:
       if (sIdx < 0) {
         v.constancy[d] = resExt;
         v.contiguity[d] = 1;
-        v.divisibility[d] =
-            src.isInitialized() ? src.divisibility.front() : 1;
+        v.divisibility[d] = src.isInitialized() ? src.divisibility.front() : 1;
         continue;
       }
       int64_t srcExt = srcVt.getShape()[sIdx];
       if (srcExt == 1 && resExt > 1) {
         v.constancy[d] = resExt;
         v.contiguity[d] = 1;
-        v.divisibility[d] =
-            src.isInitialized() ? src.divisibility[sIdx] : 1;
+        v.divisibility[d] = src.isInitialized() ? src.divisibility[sIdx] : 1;
       } else if (src.isInitialized()) {
         v.contiguity[d] = src.contiguity[sIdx];
         v.constancy[d] = src.constancy[sIdx];
@@ -403,7 +400,8 @@ private:
     // source dim's stride is preserved when its extent matches the result.
     auto resShapeArr = resTy.getShape();
     int64_t innerExt = resShapeArr.back();
-    int sIdxInner = static_cast<int>(rRank - 1) - static_cast<int>(rRank - sRank);
+    int sIdxInner =
+        static_cast<int>(rRank - 1) - static_cast<int>(rRank - sRank);
     if (sIdxInner < 0) {
       v.innerStride = 0;
     } else if (srcVt) {
@@ -523,8 +521,7 @@ private:
   }
 
   template <bool IsSub, typename OpTy>
-  LogicalResult visitAddSub(OpTy op,
-                            ArrayRef<const AxisInfoLattice *> operands,
+  LogicalResult visitAddSub(OpTy op, ArrayRef<const AxisInfoLattice *> operands,
                             ArrayRef<AxisInfoLattice *> results) {
     auto vt = dyn_cast<VectorType>(op.getType());
     if (!vt) {
@@ -547,8 +544,8 @@ private:
       // contiguity propagates through add when one side is constant on the
       // run, and through sub only when the rhs is constant on the run.
       int64_t cont = IsSub ? std::min(lhsCont, rhsConst)
-                            : std::max(std::min(lhsCont, rhsConst),
-                                       std::min(rhsCont, lhsConst));
+                           : std::max(std::min(lhsCont, rhsConst),
+                                      std::min(rhsCont, lhsConst));
       v.contiguity[d] = std::max<int64_t>(1, cont);
       v.constancy[d] = std::min(lhsConst, rhsConst);
       v.divisibility[d] = std::gcd(lhs.divisibility[d], rhs.divisibility[d]);
@@ -634,8 +631,7 @@ private:
   // require positive constants so the signed/unsigned distinction is moot
   // here.
   template <bool IsSigned, bool IsRem, typename OpTy>
-  LogicalResult visitDivRem(OpTy op,
-                            ArrayRef<const AxisInfoLattice *> operands,
+  LogicalResult visitDivRem(OpTy op, ArrayRef<const AxisInfoLattice *> operands,
                             ArrayRef<AxisInfoLattice *> results) {
     auto vt = dyn_cast<VectorType>(op.getType());
     if (!vt) {
@@ -677,8 +673,7 @@ private:
       v.constancy[inner] = shape[inner];
       // The remainder is in [0, c-1], so any power-of-two divisor of c is a
       // lower bound on alignment. Use lhs's existing divisibility too.
-      v.divisibility[inner] =
-          std::gcd(baseDivLhs, highestPow2Divisor(c));
+      v.divisibility[inner] = std::gcd(baseDivLhs, highestPow2Divisor(c));
     } else {
       if (baseDivLhs % c != 0) {
         propagateIfChanged(results[0], results[0]->join(v));
@@ -767,8 +762,7 @@ private:
   // (truncating, but for non-negative values the trunc is exact when
   // `(1 << k)` divides the value). We model them by reducing to mul/divui.
   template <bool IsLeft, typename OpTy>
-  LogicalResult visitShift(OpTy op,
-                           ArrayRef<const AxisInfoLattice *> operands,
+  LogicalResult visitShift(OpTy op, ArrayRef<const AxisInfoLattice *> operands,
                            ArrayRef<AxisInfoLattice *> results) {
     auto vt = dyn_cast<VectorType>(op.getType());
     if (!vt) {
@@ -806,8 +800,8 @@ private:
         else if (*v.innerStride == 0)
           v.constancy[inner] = shape[inner];
       }
-      v.divisibility[inner] = std::min<int64_t>(
-          kAxisInfoTop, lhs.divisibility[inner] * factor);
+      v.divisibility[inner] =
+          std::min<int64_t>(kAxisInfoTop, lhs.divisibility[inner] * factor);
     } else {
       // x >> k == x / factor (for non-negative x); same conditions as divui.
       if (lhs.innerStride && *lhs.innerStride % factor == 0 &&
@@ -921,8 +915,8 @@ static CoalesceDecision decide(const AxisInfo &info,
 
   // Pick lane_layout first: PropagateLayout's default for a 1-D / inner dim
   // is `min(subgroupSize, inner)`, rounded down to a divisor of inner.
-  int64_t laneLayout = largestPow2Divisor(
-      inner, std::min<int64_t>(subgroupSize, inner));
+  int64_t laneLayout =
+      largestPow2Divisor(inner, std::min<int64_t>(subgroupSize, inner));
   if (laneLayout < 1)
     laneLayout = 1;
 
@@ -980,7 +974,6 @@ static xegpu::LayoutAttr buildLaneDataLayout(MLIRContext *ctx, unsigned rank,
   instData.back() = static_cast<int32_t>(innerLaneLayout * innerLaneData);
   return xegpu::LayoutAttr::get(ctx, instData, laneLayout, laneData);
 }
-
 
 //===----------------------------------------------------------------------===//
 // Rewrites.
@@ -1070,8 +1063,9 @@ struct CoalesceLoadPattern final : OpRewritePattern<xegpu::LoadGatherOp> {
     auto d = decide(lat->getValue(), offsetsTy.getShape(), origChunk,
                     maxChunkSize, subgroupSize);
 
-    if (d.kind == CoalesceDecision::Kind::Broadcast)
-      return rewriteBroadcastLoad(op, rewriter);
+    // TODO: Don't do broadcast coalescing for now.
+    // if (d.kind == CoalesceDecision::Kind::Broadcast)
+    //   return rewriteBroadcastLoad(op, rewriter);
 
     if (d.kind != CoalesceDecision::Kind::Chunked)
       return rewriter.notifyMatchFailure(op, "offsets not coalescible");

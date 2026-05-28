@@ -56,22 +56,6 @@ func.func @load_dense_ap_offsets(%ptr: i64) -> vector<32xi32> {
 }
 
 // -----
-// All-equal offsets -> broadcast load (single load + vector.broadcast).
-// CHECK-LABEL: func.func @load_broadcast_offsets(
-// CHECK: %[[L:.*]] = xegpu.load
-// CHECK-SAME: : i64, vector<1xindex>, vector<1xi1> -> vector<1xf32>
-// CHECK: %[[E:.*]] = vector.extract %[[L]][0]
-// CHECK: %[[B:.*]] = vector.broadcast %[[E]] : f32 to vector<32xf32>
-// CHECK: return %[[B]]
-func.func @load_broadcast_offsets(%ptr: i64) -> vector<32xf32> {
-  %offsets = arith.constant dense<0> : vector<32xindex>
-  %mask = arith.constant dense<true> : vector<32xi1>
-  %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
-      : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
-  return %v : vector<32xf32>
-}
-
-// -----
 // Non-stride-1 (stride 4) offsets: not contiguous, no layout attached.
 // CHECK-LABEL: func.func @load_stride4_unchanged(
 // CHECK: xegpu.load
@@ -325,14 +309,13 @@ gpu.module @kernel_divsi [#xevm.target<chip = "pvc">] {
 
 // -----
 // `remui` by a constant that divides the inner stride: every element of a
-// row is the same residue class -> inner-dim constant -> the load becomes a
-// broadcast load (length-1 load + vector.broadcast).
+// row is the same residue class -> inner-dim constant. The decision picks
+// the broadcast case, which is currently disabled, so the load is left
+// alone (no layout, no chunk_size change).
 // CHECK-LABEL: gpu.func @load_remui_inner_uniform(
-// CHECK: %[[L:.*]] = xegpu.load
-// CHECK-SAME: : i64, vector<1xindex>, vector<1xi1> -> vector<1xf32>
-// CHECK: %[[E:.*]] = vector.extract %[[L]][0]
-// CHECK: %[[B:.*]] = vector.broadcast %[[E]] : f32 to vector<16xf32>
-// CHECK: gpu.return %[[B]]
+// CHECK: xegpu.load
+// CHECK-NOT: lane_data
+// CHECK-SAME: : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
 gpu.module @kernel_remui [#xevm.target<chip = "pvc">] {
   gpu.func @load_remui_inner_uniform(%ptr: i64) -> vector<16xf32> {
     %even = arith.constant dense<[
@@ -350,13 +333,12 @@ gpu.module @kernel_remui [#xevm.target<chip = "pvc">] {
 
 // -----
 // `andi` with a power-of-two-minus-one mask is `% (1 << k)`. With stride 2
-// and mask 1 (= 2-1), every result element is uniform -> broadcast load.
+// and mask 1 (= 2-1), every result element is uniform: same broadcast case
+// as remui above, currently disabled, so the load is left alone.
 // CHECK-LABEL: gpu.func @load_andi_inner_uniform(
-// CHECK: %[[L:.*]] = xegpu.load
-// CHECK-SAME: : i64, vector<1xindex>, vector<1xi1> -> vector<1xf32>
-// CHECK: %[[E:.*]] = vector.extract %[[L]][0]
-// CHECK: %[[B:.*]] = vector.broadcast %[[E]] : f32 to vector<16xf32>
-// CHECK: gpu.return %[[B]]
+// CHECK: xegpu.load
+// CHECK-NOT: lane_data
+// CHECK-SAME: : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
 gpu.module @kernel_andi [#xevm.target<chip = "pvc">] {
   gpu.func @load_andi_inner_uniform(%ptr: i64) -> vector<16xf32> {
     %even = arith.constant dense<[
