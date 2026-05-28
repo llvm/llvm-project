@@ -15,6 +15,6 @@ entry:
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %ptr = call ptr @malloc(i64 10) => ptr 0x10 [ptr]
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   %0 = call i32 @puts(ptr %ptr) at @main
+; CHECK-NEXT: #0   %0 = call i32 @puts(ptr %ptr) at @main <stdin>:11
 ; CHECK-NEXT: Immediate UB detected: Read uninitialized or poison memory while parsing C-string at offset 0.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

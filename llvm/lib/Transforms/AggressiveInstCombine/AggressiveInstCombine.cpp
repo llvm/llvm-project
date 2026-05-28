@@ -524,7 +524,7 @@ static Value *matchPopCountBytes(Value *V, unsigned Len, const DataLayout &DL) {
     return nullptr;
 
   Value *Sub1;
-  llvm::APInt NegThree(Len, -3, /*isSigned=*/true);
+  APInt NegThree(Len, -3, /*isSigned=*/true);
   // Match
   //   x = (x & 0x33333333) + ((x >> 2) & 0x33333333)"
   // Or
