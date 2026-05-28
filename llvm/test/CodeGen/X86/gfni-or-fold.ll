@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512bw,+avx512f,+gfni | FileCheck %s --check-prefixes=AVX512
 
 declare <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8>, <64 x i8>, i8)
+declare <32 x i8> @llvm.x86.vgf2p8affineqb.256(<32 x i8>, <32 x i8>, i8)
 declare <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8>, <16 x i8>, i8)
 
 define <64 x i8> @test_or_disjoint_fold_512(<64 x i8> %src, <64 x i8> %matrix) nounwind {
@@ -80,43 +81,31 @@ define <64 x i8> @test_or_disjoint_overlap_with_imm(<64 x i8> %src, <64 x i8> %m
   ret <64 x i8> %or
 }
 
+
 define <16 x i8> @test_affine_or_fold_v16i8(<16 x i8> %a) {
 ; AVX512-LABEL: test_affine_or_fold_v16i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vgf2p8affineqb $15, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0]
+; AVX512-NEXT:    vgf2p8affineqb $87, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [17,0,53,0,89,0,125,0,2,0,38,0,74,0,110,0]
 ; AVX512-NEXT:    retq
   %gf = tail call <16 x i8> @llvm.x86.vgf2p8affineqb.128(
       <16 x i8> %a,
-      <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128>,
-      i8 0)
-  %or = or <16 x i8> %gf, splat(i8 15)
+      <16 x i8> <i8 17, i8 35, i8 53, i8 71, i8 89, i8 107, i8 125, i8 -113,
+                 i8 2, i8 20, i8 38, i8 56, i8 74, i8 92, i8 110, i8 -128>,
+      i8 18)
+  %or = or <16 x i8> %gf, splat(i8 85)
   ret <16 x i8> %or
 }
 
-define <16 x i8> @test_affine_or_fold_v16i8_commuted(<16 x i8> %a) {
-; AVX512-LABEL: test_affine_or_fold_v16i8_commuted:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vgf2p8affineqb $15, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0]
-; AVX512-NEXT:    retq
-  %gf = tail call <16 x i8> @llvm.x86.vgf2p8affineqb.128(
-      <16 x i8> %a,
-      <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128>,
-      i8 0)
-  %or = or <16 x i8> splat(i8 15), %gf
-  ret <16 x i8> %or
-}
 
 define <16 x i8> @test_affine_or_fold_v16i8_mask33(<16 x i8> %a) {
 ; AVX512-LABEL: test_affine_or_fold_v16i8_mask33:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vgf2p8affineqb $51, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [90,165,0,0,24,129,0,0,90,165,0,0,24,129,0,0]
+; AVX512-NEXT:    vgf2p8affineqb $51, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [90,165,0,0,24,129,0,0,109,146,0,0,66,189,0,0]
 ; AVX512-NEXT:    retq
   %gf = tail call <16 x i8> @llvm.x86.vgf2p8affineqb.128(
       <16 x i8> %a,
       <16 x i8> <i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
-                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1>,
+                 i8 109, i8 -110, i8 36, i8 -37, i8 66, i8 -67, i8 -103, i8 102>,
       i8 0)
   %or = or <16 x i8> %gf, splat(i8 51)
   ret <16 x i8> %or
@@ -126,46 +115,31 @@ define <16 x i8> @test_affine_or_fold_v16i8_mask33(<16 x i8> %a) {
 define <32 x i8> @test_affine_or_fold_v32i8(<32 x i8> %a) {
 ; AVX512-LABEL: test_affine_or_fold_v32i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vgf2p8affineqb $15, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0]
+; AVX512-NEXT:    vgf2p8affineqb $162, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [0,2,52,86,120,154,188,222,0,240,30,225,45,210,60,195,0,85,102,119,136,153,170,187,0,87,155,223,36,104,172,224]
 ; AVX512-NEXT:    retq
   %gf = tail call <32 x i8> @llvm.x86.vgf2p8affineqb.256(
       <32 x i8> %a,
-      <32 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128>,
-      i8 0)
-  %or = or <32 x i8> %gf, splat (i8 15)
+      <32 x i8> <i8 -127, i8 2, i8 52, i8 86, i8 120, i8 -102, i8 -68, i8 -34,
+                 i8 15, i8 -16, i8 30, i8 -31, i8 45, i8 -46, i8 60, i8 -61,
+                 i8 68, i8 85, i8 102, i8 119, i8 -120, i8 -103, i8 -86, i8 -69,
+                 i8 19, i8 87, i8 -101, i8 -33, i8 36, i8 104, i8 -84, i8 -32>,
+      i8 34)
+  %or = or <32 x i8> %gf, splat(i8 -128)
   ret <32 x i8> %or
 }
 
-define <32 x i8> @test_affine_or_fold_v32i8_commuted(<32 x i8> %a) {
-; AVX512-LABEL: test_affine_or_fold_v32i8_commuted:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vgf2p8affineqb $15, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0]
-; AVX512-NEXT:    retq
-  %gf = tail call <32 x i8> @llvm.x86.vgf2p8affineqb.256(
-      <32 x i8> %a,
-      <32 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128>,
-      i8 0)
-  %or = or <32 x i8> splat (i8 15), %gf
-  ret <32 x i8> %or
-}
 
 define <32 x i8> @test_affine_or_fold_v32i8_mask33(<32 x i8> %a) {
 ; AVX512-LABEL: test_affine_or_fold_v32i8_mask33:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vgf2p8affineqb $51, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [90,165,0,0,24,129,0,0,90,165,0,0,24,129,0,0,90,165,0,0,24,129,0,0,90,165,0,0,24,129,0,0]
+; AVX512-NEXT:    vgf2p8affineqb $51, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [90,165,0,0,24,129,0,0,109,146,0,0,66,189,0,0,16,50,0,0,152,186,0,0,239,205,0,0,103,69,0,0]
 ; AVX512-NEXT:    retq
   %gf = tail call <32 x i8> @llvm.x86.vgf2p8affineqb.256(
       <32 x i8> %a,
       <32 x i8> <i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
-                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
-                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
-                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1>,
+                 i8 109, i8 -110, i8 36, i8 -37, i8 66, i8 -67, i8 -103, i8 102,
+                 i8 16, i8 50, i8 84, i8 118, i8 -104, i8 -70, i8 -36, i8 -2,
+                 i8 -17, i8 -51, i8 -85, i8 -119, i8 103, i8 69, i8 35, i8 1>,
       i8 0)
   %or = or <32 x i8> %gf, splat(i8 51)
   ret <32 x i8> %or
@@ -175,58 +149,39 @@ define <32 x i8> @test_affine_or_fold_v32i8_mask33(<32 x i8> %a) {
 define <64 x i8> @test_affine_or_fold_512_v64i8(<64 x i8> %a) {
 ; AVX512-LABEL: test_affine_or_fold_512_v64i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vgf2p8affineqb $15, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0]
+; AVX512-NEXT:    vgf2p8affineqb $170, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,35,0,103,0,171,0,239,0,50,0,118,0,186,0,254,0,165,0,195,0,129,0,1,0,146,0,219,0,189,0,102,0,240,0,225,0,210,0,195,0,87,0,223,0,104,0,224,0,127,0,191,0,223,0,239,0,85,0,51,0,15,0,102]
 ; AVX512-NEXT:    retq
   %gf = tail call <64 x i8> @llvm.x86.vgf2p8affineqb.512(
       <64 x i8> %a,
-      <64 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128>,
-      i8 0)
-  %or = or <64 x i8> %gf, splat(i8 15)
+      <64 x i8> <i8 1, i8 35, i8 69, i8 103, i8 -119, i8 -85, i8 -51, i8 -17,
+                 i8 16, i8 50, i8 84, i8 118, i8 -104, i8 -70, i8 -36, i8 -2,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 109, i8 -110, i8 36, i8 -37, i8 66, i8 -67, i8 -103, i8 102,
+                 i8 15, i8 -16, i8 30, i8 -31, i8 45, i8 -46, i8 60, i8 -61,
+                 i8 19, i8 87, i8 -101, i8 -33, i8 36, i8 104, i8 -84, i8 -32,
+                 i8 -128, i8 127, i8 64, i8 -65, i8 32, i8 -33, i8 16, i8 -17,
+                 i8 -86, i8 85, i8 -52, i8 51, i8 -16, i8 15, i8 -103, i8 102>,
+      i8 10)
+  %or = or <64 x i8> %gf, splat(i8 -86)
   ret <64 x i8> %or
 }
 
-define <64 x i8> @test_affine_or_fold_512_v64i8_commuted(<64 x i8> %a) {
-; AVX512-LABEL: test_affine_or_fold_512_v64i8_commuted:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vgf2p8affineqb $15, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0,1,2,4,8,0,0,0,0]
-; AVX512-NEXT:    retq
-  %gf = tail call <64 x i8> @llvm.x86.vgf2p8affineqb.512(
-      <64 x i8> %a,
-      <64 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
-                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128>,
-      i8 0)
-  %or = or <64 x i8> splat (i8 15), %gf
-  ret <64 x i8> %or
-}
 
 define dso_local <64 x i8> @test_affine_or_fold_v64i8_mask33(<64 x i8> %a) {
 ; AVX512-LABEL: test_affine_or_fold_v64i8_mask33:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vgf2p8affineqb $51, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [90,165,0,0,24,129,0,0,90,165,0,0,24,129,0,0,90,165,0,0,24,129,0,0,90,165,0,0,24,129,0,0,90,165,0,0,24,129,0,0,90,165,0,0,24,129,0,0,90,165,0,0,24,129,0,0,90,165,0,0,24,129,0,0]
+; AVX512-NEXT:    vgf2p8affineqb $51, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [90,165,0,0,24,129,0,0,109,146,0,0,66,189,0,0,16,50,0,0,152,186,0,0,239,205,0,0,103,69,0,0,129,2,0,0,120,154,0,0,15,240,0,0,45,210,0,0,68,85,0,0,136,153,0,0,19,87,0,0,36,104,0,0]
 ; AVX512-NEXT:    retq
   %gf = tail call <64 x i8> @llvm.x86.vgf2p8affineqb.512(
       <64 x i8> %a,
       <64 x i8> <i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
-                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
-                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
-                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
-                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
-                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
-                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
-                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1>,
+                 i8 109, i8 -110, i8 36, i8 -37, i8 66, i8 -67, i8 -103, i8 102,
+                 i8 16, i8 50, i8 84, i8 118, i8 -104, i8 -70, i8 -36, i8 -2,
+                 i8 -17, i8 -51, i8 -85, i8 -119, i8 103, i8 69, i8 35, i8 1,
+                 i8 -127, i8 2, i8 52, i8 86, i8 120, i8 -102, i8 -68, i8 -34,
+                 i8 15, i8 -16, i8 30, i8 -31, i8 45, i8 -46, i8 60, i8 -61,
+                 i8 68, i8 85, i8 102, i8 119, i8 -120, i8 -103, i8 -86, i8 -69,
+                 i8 19, i8 87, i8 -101, i8 -33, i8 36, i8 104, i8 -84, i8 -32>,
       i8 0)
   %or = or <64 x i8> %gf, splat(i8 51)
   ret <64 x i8> %or
