@@ -2366,7 +2366,8 @@ struct AANoFreeFloating : AANoFreeImpl {
         const AANoCapture *NoCaptureAA = nullptr;
         if (!AA::hasAssumedIRAttr<Attribute::Captures>(
                 A, this, IRPosition::callsite_argument(*CB, ArgNo),
-                DepClassTy::REQUIRED, IsKnown, false, &NoCaptureAA)) {
+                DepClassTy::REQUIRED, IsKnown,
+                /*IgnoreSubsumingPositions=*/false, &NoCaptureAA)) {
           if (NoCaptureAA && NoCaptureAA->isAssumedNoCaptureMaybeReturned()) {
             Follow = true;
             return true;
