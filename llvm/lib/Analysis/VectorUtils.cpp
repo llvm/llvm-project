@@ -1358,7 +1358,7 @@ bool InterleavedAccessInfo::isStrided(int Stride) {
 }
 
 void InterleavedAccessInfo::collectConstStrideAccesses(
-    PredicatedScalarEvolution &PSE,
+    PredicatedScalarEvolution &TmpPSE,
     MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
     const DenseMap<Value *, const SCEV *> &Strides) {
   auto &DL = TheLoop->getHeader()->getDataLayout();
@@ -1391,11 +1391,12 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
       // wrap around the address space we would do a memory access at nullptr
       // even without the transformation. The wrapping checks are therefore
       // deferred until after we've formed the interleaved groups.
-      int64_t Stride = getPtrStride(PSE, ElementTy, Ptr, TheLoop, *DT, Strides,
-                                    /*Assume=*/true, /*ShouldCheckWrap=*/false)
-                           .value_or(0);
+      int64_t Stride =
+          getPtrStride(TmpPSE, ElementTy, Ptr, TheLoop, *DT, Strides,
+                       /*Assume=*/true, /*ShouldCheckWrap=*/false)
+              .value_or(0);
 
-      const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
+      const SCEV *Scev = replaceSymbolicStrideSCEV(TmpPSE, Strides, Ptr);
       AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size,
                                               getLoadStoreAlignment(&I));
     }

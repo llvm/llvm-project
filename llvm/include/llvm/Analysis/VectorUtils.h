@@ -822,7 +822,7 @@ private:
 
   /// Collect all the accesses with a constant stride in program order.
   void collectConstStrideAccesses(
-      PredicatedScalarEvolution &PSE,
+      PredicatedScalarEvolution &TmpPSE,
       MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
       const DenseMap<Value *, const SCEV *> &Strides);
 
