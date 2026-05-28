@@ -672,14 +672,12 @@ protected:
               if (!results) {
                 // No variables matched. Try recognized args as fallback.
                 bool found_recognized = false;
-                if (recognized_arg_list) {
-                  for (auto &rec_value_sp : recognized_arg_list->GetObjects()) {
+                if (recognized_arg_list)
+                  for (auto &rec_value_sp : recognized_arg_list->GetObjects())
                     if (regex.Execute(rec_value_sp->GetName())) {
                       found_recognized = true;
                       print_value(rec_value_sp);
                     }
-                  }
-                }
                 if (!found_recognized) {
                   result.AppendErrorWithFormat(
                       "no variables matched the regular expression '%s'",
@@ -764,15 +762,13 @@ protected:
             } else {
               // Variable lookup failed. Check recognized args as a fallback.
               bool found_recognized = false;
-              if (recognized_arg_list) {
-                for (auto &obj_sp : recognized_arg_list->GetObjects()) {
+              if (recognized_arg_list)
+                for (auto &obj_sp : recognized_arg_list->GetObjects())
                   if (obj_sp->GetName() == entry.ref()) {
                     found_recognized = true;
                     print_value(obj_sp);
                     break;
                   }
-                }
-              }
               if (!found_recognized) {
                 // Check only the `error` argument, because doing
                 // `valobj_sp->GetError()` will update the value and potentially
