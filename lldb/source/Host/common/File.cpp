@@ -288,7 +288,7 @@ FILE *NativeFileBase::GetStream() {
       llvm::sys::RetryAfterSignal(nullptr, ::fdopen, m_descriptor, mode.get());
 
   // If we got a stream, then we own the stream and should no longer own
-  // the descriptor because fclose() will close it for us
+  // the descriptor because fclose() will close it for us.
   if (m_stream) {
     m_own_stream = true;
     m_own_descriptor = false;
