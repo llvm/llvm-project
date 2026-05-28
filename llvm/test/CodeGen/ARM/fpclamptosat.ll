@@ -98,7 +98,7 @@ define i32 @utest_f64i32(double %x) {
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    vmov r0, r1, d0
 ; VFP2-NEXT:    bl __aeabi_d2ulz
-; VFP2-NEXT:    subs.w r2, r0, #-1
+; VFP2-NEXT:    adds r2, r0, #1
 ; VFP2-NEXT:    sbcs r1, r1, #0
 ; VFP2-NEXT:    it hs
 ; VFP2-NEXT:    movhs.w r0, #-1
@@ -159,7 +159,7 @@ define i32 @ustest_f64i32(double %x) {
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    vmov r0, r1, d0
 ; VFP2-NEXT:    bl __aeabi_d2lz
-; VFP2-NEXT:    subs.w r3, r0, #-1
+; VFP2-NEXT:    adds r3, r0, #1
 ; VFP2-NEXT:    mov.w r2, #0
 ; VFP2-NEXT:    sbcs r3, r1, #0
 ; VFP2-NEXT:    mov.w r3, #0
@@ -1010,7 +1010,7 @@ define i64 @stest_f64i64(double %x) {
 ; VFP2-NEXT:    .save {r4, r5, r7, lr}
 ; VFP2-NEXT:    push {r4, r5, r7, lr}
 ; VFP2-NEXT:    bl __fixdfti
-; VFP2-NEXT:    subs.w r4, r0, #-1
+; VFP2-NEXT:    adds r4, r0, #1
 ; VFP2-NEXT:    mvn lr, #-2147483648
 ; VFP2-NEXT:    sbcs.w r4, r1, lr
 ; VFP2-NEXT:    mov.w r12, #0
@@ -1042,7 +1042,7 @@ define i64 @stest_f64i64(double %x) {
 ; FULL-NEXT:    .save {r4, r5, r7, lr}
 ; FULL-NEXT:    push {r4, r5, r7, lr}
 ; FULL-NEXT:    bl __fixdfti
-; FULL-NEXT:    subs.w lr, r0, #-1
+; FULL-NEXT:    adds.w lr, r0, #1
 ; FULL-NEXT:    mvn r12, #-2147483648
 ; FULL-NEXT:    sbcs.w lr, r1, r12
 ; FULL-NEXT:    sbcs lr, r2, #0
@@ -1266,7 +1266,7 @@ define i64 @stest_f32i64(float %x) {
 ; VFP2-NEXT:    .save {r4, r5, r7, lr}
 ; VFP2-NEXT:    push {r4, r5, r7, lr}
 ; VFP2-NEXT:    bl __fixsfti
-; VFP2-NEXT:    subs.w r4, r0, #-1
+; VFP2-NEXT:    adds r4, r0, #1
 ; VFP2-NEXT:    mvn lr, #-2147483648
 ; VFP2-NEXT:    sbcs.w r4, r1, lr
 ; VFP2-NEXT:    mov.w r12, #0
@@ -1298,7 +1298,7 @@ define i64 @stest_f32i64(float %x) {
 ; FULL-NEXT:    .save {r4, r5, r7, lr}
 ; FULL-NEXT:    push {r4, r5, r7, lr}
 ; FULL-NEXT:    bl __fixsfti
-; FULL-NEXT:    subs.w lr, r0, #-1
+; FULL-NEXT:    adds.w lr, r0, #1
 ; FULL-NEXT:    mvn r12, #-2147483648
 ; FULL-NEXT:    sbcs.w lr, r1, r12
 ; FULL-NEXT:    sbcs lr, r2, #0
@@ -1527,7 +1527,7 @@ define i64 @stest_f16i64(half %x) {
 ; VFP2-NEXT:    bl __aeabi_h2f
 ; VFP2-NEXT:    vmov s0, r0
 ; VFP2-NEXT:    bl __fixsfti
-; VFP2-NEXT:    subs.w r4, r0, #-1
+; VFP2-NEXT:    adds r4, r0, #1
 ; VFP2-NEXT:    mvn lr, #-2147483648
 ; VFP2-NEXT:    sbcs.w r4, r1, lr
 ; VFP2-NEXT:    mov.w r12, #0
@@ -1561,7 +1561,7 @@ define i64 @stest_f16i64(half %x) {
 ; FULL-NEXT:    vmov.f16 r0, s0
 ; FULL-NEXT:    vmov s0, r0
 ; FULL-NEXT:    bl __fixhfti
-; FULL-NEXT:    subs.w lr, r0, #-1
+; FULL-NEXT:    adds.w lr, r0, #1
 ; FULL-NEXT:    mvn r12, #-2147483648
 ; FULL-NEXT:    sbcs.w lr, r1, r12
 ; FULL-NEXT:    sbcs lr, r2, #0
@@ -2676,7 +2676,7 @@ define i64 @stest_f64i64_mm(double %x) {
 ; VFP2-NEXT:    .save {r4, r5, r7, lr}
 ; VFP2-NEXT:    push {r4, r5, r7, lr}
 ; VFP2-NEXT:    bl __fixdfti
-; VFP2-NEXT:    subs.w r4, r0, #-1
+; VFP2-NEXT:    adds r4, r0, #1
 ; VFP2-NEXT:    mvn lr, #-2147483648
 ; VFP2-NEXT:    sbcs.w r4, r1, lr
 ; VFP2-NEXT:    mov.w r12, #0
@@ -2711,7 +2711,7 @@ define i64 @stest_f64i64_mm(double %x) {
 ; FULL-NEXT:    .save {r4, r5, r7, lr}
 ; FULL-NEXT:    push {r4, r5, r7, lr}
 ; FULL-NEXT:    bl __fixdfti
-; FULL-NEXT:    subs.w lr, r0, #-1
+; FULL-NEXT:    adds.w lr, r0, #1
 ; FULL-NEXT:    mvn r12, #-2147483648
 ; FULL-NEXT:    sbcs.w lr, r1, r12
 ; FULL-NEXT:    sbcs lr, r2, #0
@@ -2989,7 +2989,7 @@ define i64 @stest_f32i64_mm(float %x) {
 ; VFP2-NEXT:    .save {r4, r5, r7, lr}
 ; VFP2-NEXT:    push {r4, r5, r7, lr}
 ; VFP2-NEXT:    bl __fixsfti
-; VFP2-NEXT:    subs.w r4, r0, #-1
+; VFP2-NEXT:    adds r4, r0, #1
 ; VFP2-NEXT:    mvn lr, #-2147483648
 ; VFP2-NEXT:    sbcs.w r4, r1, lr
 ; VFP2-NEXT:    mov.w r12, #0
@@ -3024,7 +3024,7 @@ define i64 @stest_f32i64_mm(float %x) {
 ; FULL-NEXT:    .save {r4, r5, r7, lr}
 ; FULL-NEXT:    push {r4, r5, r7, lr}
 ; FULL-NEXT:    bl __fixsfti
-; FULL-NEXT:    subs.w lr, r0, #-1
+; FULL-NEXT:    adds.w lr, r0, #1
 ; FULL-NEXT:    mvn r12, #-2147483648
 ; FULL-NEXT:    sbcs.w lr, r1, r12
 ; FULL-NEXT:    sbcs lr, r2, #0
@@ -3307,7 +3307,7 @@ define i64 @stest_f16i64_mm(half %x) {
 ; VFP2-NEXT:    bl __aeabi_h2f
 ; VFP2-NEXT:    vmov s0, r0
 ; VFP2-NEXT:    bl __fixsfti
-; VFP2-NEXT:    subs.w r4, r0, #-1
+; VFP2-NEXT:    adds r4, r0, #1
 ; VFP2-NEXT:    mvn lr, #-2147483648
 ; VFP2-NEXT:    sbcs.w r4, r1, lr
 ; VFP2-NEXT:    mov.w r12, #0
@@ -3344,7 +3344,7 @@ define i64 @stest_f16i64_mm(half %x) {
 ; FULL-NEXT:    vmov.f16 r0, s0
 ; FULL-NEXT:    vmov s0, r0
 ; FULL-NEXT:    bl __fixhfti
-; FULL-NEXT:    subs.w lr, r0, #-1
+; FULL-NEXT:    adds.w lr, r0, #1
 ; FULL-NEXT:    mvn r12, #-2147483648
 ; FULL-NEXT:    sbcs.w lr, r1, r12
 ; FULL-NEXT:    sbcs lr, r2, #0

@@ -315,6 +315,12 @@ private:
 
   void SelectCMPZ(SDNode *N, bool &SwitchEQNEToPLMI);
 
+  /// Emit Thumb flag-setting ADD/S; returns nullptr if immediate does not fit.
+  SDNode *emitThumbFlagSettingAdds(SDLoc dl, SDValue X, uint64_t PosImm);
+
+  /// Thumb CMP/CMPZ -> flag-setting ADD/S when profitable.
+  bool selectThumbCmpToAdds(SDNode *N);
+
   void SelectCMP_SWAP(SDNode *N);
 
   /// SelectInlineAsmMemoryOperand - Implement addressing mode selection for
@@ -3552,6 +3558,73 @@ bool ARMDAGToDAGISel::tryV6T2BitfieldExtractOp(SDNode *N, bool isSigned) {
   return false;
 }
 
+SDNode *ARMDAGToDAGISel::emitThumbFlagSettingAdds(SDLoc dl, SDValue X,
+                                                  uint64_t PosImm) {
+  if (!Subtarget->isThumb())
+    return nullptr;
+  if (PosImm > 255)
+    return nullptr;
+  SDValue ImmOp = CurDAG->getTargetConstant(PosImm, dl, MVT::i32);
+  SDVTList VTs = CurDAG->getVTList(MVT::i32, MVT::i32);
+  if (Subtarget->isThumb1Only()) {
+    unsigned Opc = PosImm <= 7 ? ARM::tADDSi3 : ARM::tADDSi8;
+    SDValue Ops[] = {X, ImmOp};
+    return CurDAG->getMachineNode(Opc, dl, VTs, Ops);
+  }
+  SDValue Ops[] = {X, ImmOp, getAL(CurDAG, dl),
+                   CurDAG->getRegister(0, MVT::i32)};
+  return CurDAG->getMachineNode(ARM::t2ADDSri, dl, VTs, Ops);
+}
+
+bool ARMDAGToDAGISel::selectThumbCmpToAdds(SDNode *N) {
+  unsigned Opc = N->getOpcode();
+  assert(Opc == ARMISD::CMP || Opc == ARMISD::CMPZ);
+  if (!Subtarget->isThumb())
+    return false;
+
+  // icmp eq (add X, C), 0  ->  CMPZ(ADD, 0). Fold add+cmp into one adds.
+  if (Opc == ARMISD::CMPZ && isNullConstant(N->getOperand(1))) {
+    SDValue Add = N->getOperand(0);
+    if (Add.getOpcode() == ISD::ADD && Add.hasOneUse()) {
+      SDValue X;
+      const ConstantSDNode *AddImm = nullptr;
+      if (auto *RHSC = dyn_cast<ConstantSDNode>(Add.getOperand(1))) {
+        X = Add.getOperand(0);
+        AddImm = RHSC;
+      } else if (auto *LHSC = dyn_cast<ConstantSDNode>(Add.getOperand(0))) {
+        X = Add.getOperand(1);
+        AddImm = LHSC;
+      }
+      if (AddImm) {
+        SDLoc dl(N);
+        SDNode *Adds = emitThumbFlagSettingAdds(dl, X, AddImm->getZExtValue());
+        if (Adds) {
+          ReplaceUses(SDValue(Add.getNode(), 0), SDValue(Adds, 0));
+          ReplaceUses(SDValue(N, 0), SDValue(Adds, 1));
+          CurDAG->RemoveDeadNode(N);
+          CurDAG->RemoveDeadNode(Add.getNode());
+          return true;
+        }
+      }
+    }
+  }
+
+  // icmp (eq|ne|slt|...) X, #-C  ->  CMP/CMPZ(X, #-C). One adds, flags only.
+  const auto *C = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!C)
+    return false;
+  int64_t Imm = C->getSExtValue();
+  if (Imm >= 0 || Imm < -255)
+    return false;
+  SDLoc dl(N);
+  SDNode *Adds = emitThumbFlagSettingAdds(dl, N->getOperand(0), (uint64_t)-Imm);
+  if (!Adds)
+    return false;
+  ReplaceUses(SDValue(N, 0), SDValue(Adds, 1));
+  CurDAG->RemoveDeadNode(N);
+  return true;
+}
+
 /// We've got special pseudo-instructions for these
 void ARMDAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
   unsigned Opcode;
@@ -4196,44 +4269,11 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     CurDAG->SelectNodeTo(N, Opc, MVT::Other, Ops);
     return;
   }
-
-  case ARMISD::CMPZ: {
-    // select (CMPZ X, #-C) -> (CMPZ (ADDS X, #C), #0)
-    //   This allows us to avoid materializing the expensive negative constant.
-    //   The CMPZ #0 is useless and will be peepholed away but we need to keep
-    //   it for its flags output.
-    SDValue X = N->getOperand(0);
-    auto *C = dyn_cast<ConstantSDNode>(N->getOperand(1).getNode());
-    if (C && C->getSExtValue() < 0 && Subtarget->isThumb()) {
-      int64_t Addend = -C->getSExtValue();
-
-      SDNode *Add = nullptr;
-      // ADDS can be better than CMN if the immediate fits in a
-      // 16-bit ADDS, which means either [0,256) for tADDi8 or [0,8) for tADDi3.
-      // Outside that range we can just use a CMN which is 32-bit but has a
-      // 12-bit immediate range.
-      if (Addend < 1<<8) {
-        if (Subtarget->isThumb2()) {
-          SDValue Ops[] = { X, CurDAG->getTargetConstant(Addend, dl, MVT::i32),
-                            getAL(CurDAG, dl), CurDAG->getRegister(0, MVT::i32),
-                            CurDAG->getRegister(0, MVT::i32) };
-          Add = CurDAG->getMachineNode(ARM::t2ADDri, dl, MVT::i32, Ops);
-        } else {
-          unsigned Opc = (Addend < 1<<3) ? ARM::tADDi3 : ARM::tADDi8;
-          SDValue Ops[] = {CurDAG->getRegister(ARM::CPSR, MVT::i32), X,
-                           CurDAG->getTargetConstant(Addend, dl, MVT::i32),
-                           getAL(CurDAG, dl), CurDAG->getRegister(0, MVT::i32)};
-          Add = CurDAG->getMachineNode(Opc, dl, MVT::i32, Ops);
-        }
-      }
-      if (Add) {
-        SDValue Ops2[] = {SDValue(Add, 0), CurDAG->getConstant(0, dl, MVT::i32)};
-        CurDAG->MorphNodeTo(N, ARMISD::CMPZ, N->getVTList(), Ops2);
-      }
-    }
-    // Other cases are autogenerated.
+  case ARMISD::CMPZ:
+  case ARMISD::CMP:
+    if (selectThumbCmpToAdds(N))
+      return;
     break;
-  }
 
   case ARMISD::CMOV: {
     SDValue Flags = N->getOperand(3);

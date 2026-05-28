@@ -396,15 +396,15 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    b .LBB1_6
 ; CHECK-NEXT:  .LBB1_2: @ %for.body6.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB1_6 Depth=1
+; CHECK-NEXT:    adds.w r0, r11, #4
+; CHECK-NEXT:    movw r2, #18725
 ; CHECK-NEXT:    mov r0, r11
-; CHECK-NEXT:    cmn.w r11, #4
+; CHECK-NEXT:    movt r2, #9362
 ; CHECK-NEXT:    it le
 ; CHECK-NEXT:    mvnle r0, #3
-; CHECK-NEXT:    movw r2, #18725
-; CHECK-NEXT:    adds r0, #6
-; CHECK-NEXT:    movt r2, #9362
-; CHECK-NEXT:    sub.w r1, r0, r11
 ; CHECK-NEXT:    mov r10, r3
+; CHECK-NEXT:    adds r0, #6
+; CHECK-NEXT:    sub.w r1, r0, r11
 ; CHECK-NEXT:    umull r2, r3, r1, r2
 ; CHECK-NEXT:    subs r2, r1, r3
 ; CHECK-NEXT:    add.w r2, r3, r2, lsr #1
@@ -426,7 +426,7 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    subs.w r1, r5, lr
 ; CHECK-NEXT:    asr.w r0, r5, #31
 ; CHECK-NEXT:    sbcs.w r0, r0, r12
-; CHECK-NEXT:    bge.w .LBB1_28
+; CHECK-NEXT:    bge .LBB1_28
 ; CHECK-NEXT:  .LBB1_6: @ %for.cond2.preheader
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB1_19 Depth 2
@@ -460,7 +460,7 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:  .LBB1_9: @ %for.cond.cleanup17.us
 ; CHECK-NEXT:    @ in Loop: Header=BB1_10 Depth=2
 ; CHECK-NEXT:    add.w r11, r0, #7
-; CHECK-NEXT:    cmn.w r0, #4
+; CHECK-NEXT:    adds r0, #4
 ; CHECK-NEXT:    mov.w r10, #0
 ; CHECK-NEXT:    mov r0, r11
 ; CHECK-NEXT:    bge .LBB1_5
@@ -537,20 +537,20 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    bne .LBB1_27
 ; CHECK-NEXT:  @ %bb.20: @ %for.cond.cleanup17.us63
 ; CHECK-NEXT:    @ in Loop: Header=BB1_19 Depth=2
-; CHECK-NEXT:    cmn.w r0, #4
+; CHECK-NEXT:    adds r1, r0, #4
 ; CHECK-NEXT:    bge.w .LBB1_3
 ; CHECK-NEXT:  @ %bb.21: @ %for.cond.cleanup17.us63.1
 ; CHECK-NEXT:    @ in Loop: Header=BB1_19 Depth=2
-; CHECK-NEXT:    cmn.w r0, #12
+; CHECK-NEXT:    adds.w r1, r0, #12
 ; CHECK-NEXT:    bgt .LBB1_24
 ; CHECK-NEXT:  @ %bb.22: @ %for.cond.cleanup17.us63.2
 ; CHECK-NEXT:    @ in Loop: Header=BB1_19 Depth=2
-; CHECK-NEXT:    cmn.w r0, #19
+; CHECK-NEXT:    adds.w r1, r0, #19
 ; CHECK-NEXT:    bgt .LBB1_25
 ; CHECK-NEXT:  @ %bb.23: @ %for.cond.cleanup17.us63.3
 ; CHECK-NEXT:    @ in Loop: Header=BB1_19 Depth=2
 ; CHECK-NEXT:    add.w r11, r0, #28
-; CHECK-NEXT:    cmn.w r0, #25
+; CHECK-NEXT:    adds r0, #25
 ; CHECK-NEXT:    mov.w r10, #0
 ; CHECK-NEXT:    mov r0, r11
 ; CHECK-NEXT:    blt .LBB1_19

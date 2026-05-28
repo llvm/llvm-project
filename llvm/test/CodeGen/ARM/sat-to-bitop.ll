@@ -165,22 +165,20 @@ define i16 @sat1_base_16bit(i16 %x) #0 {
 ;
 ; CHECK-T-LABEL: sat1_base_16bit:
 ; CHECK-T:       @ %bb.0: @ %entry
-; CHECK-T-NEXT:    movs r1, #0
-; CHECK-T-NEXT:    mvns r1, r1
-; CHECK-T-NEXT:    lsls r2, r0, #16
-; CHECK-T-NEXT:    asrs r2, r2, #16
-; CHECK-T-NEXT:    cmp r2, r1
-; CHECK-T-NEXT:    blt .LBB5_2
-; CHECK-T-NEXT:  @ %bb.1: @ %entry
-; CHECK-T-NEXT:    movs r1, r0
+; CHECK-T-NEXT:    lsls r1, r0, #16
+; CHECK-T-NEXT:    asrs r1, r1, #16
+; CHECK-T-NEXT:    adds r1, r1, #1
+; CHECK-T-NEXT:    bge .LBB5_2
+; CHECK-T-NEXT:  @ %bb.1:
+; CHECK-T-NEXT:    movs r0, #0
+; CHECK-T-NEXT:    mvns r0, r0
 ; CHECK-T-NEXT:  .LBB5_2: @ %entry
-; CHECK-T-NEXT:    movs r0, r1
 ; CHECK-T-NEXT:    bx lr
 ;
 ; CHECK-T2-LABEL: sat1_base_16bit:
 ; CHECK-T2:       @ %bb.0: @ %entry
 ; CHECK-T2-NEXT:    sxth r1, r0
-; CHECK-T2-NEXT:    cmp.w r1, #-1
+; CHECK-T2-NEXT:    adds r1, #1
 ; CHECK-T2-NEXT:    it lt
 ; CHECK-T2-NEXT:    movlt.w r0, #-1
 ; CHECK-T2-NEXT:    bx lr
@@ -203,22 +201,20 @@ define i8 @sat1_base_8bit(i8 %x) #0 {
 ;
 ; CHECK-T-LABEL: sat1_base_8bit:
 ; CHECK-T:       @ %bb.0: @ %entry
-; CHECK-T-NEXT:    movs r1, #0
-; CHECK-T-NEXT:    mvns r1, r1
-; CHECK-T-NEXT:    lsls r2, r0, #24
-; CHECK-T-NEXT:    asrs r2, r2, #24
-; CHECK-T-NEXT:    cmp r2, r1
-; CHECK-T-NEXT:    blt .LBB6_2
-; CHECK-T-NEXT:  @ %bb.1: @ %entry
-; CHECK-T-NEXT:    movs r1, r0
+; CHECK-T-NEXT:    lsls r1, r0, #24
+; CHECK-T-NEXT:    asrs r1, r1, #24
+; CHECK-T-NEXT:    adds r1, r1, #1
+; CHECK-T-NEXT:    bge .LBB6_2
+; CHECK-T-NEXT:  @ %bb.1:
+; CHECK-T-NEXT:    movs r0, #0
+; CHECK-T-NEXT:    mvns r0, r0
 ; CHECK-T-NEXT:  .LBB6_2: @ %entry
-; CHECK-T-NEXT:    movs r0, r1
 ; CHECK-T-NEXT:    bx lr
 ;
 ; CHECK-T2-LABEL: sat1_base_8bit:
 ; CHECK-T2:       @ %bb.0: @ %entry
 ; CHECK-T2-NEXT:    sxtb r1, r0
-; CHECK-T2-NEXT:    cmp.w r1, #-1
+; CHECK-T2-NEXT:    adds r1, #1
 ; CHECK-T2-NEXT:    it lt
 ; CHECK-T2-NEXT:    movlt.w r0, #-1
 ; CHECK-T2-NEXT:    bx lr

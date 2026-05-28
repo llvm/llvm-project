@@ -312,11 +312,11 @@ define arm_aapcs_vfpcc <2 x i64> @vqshrni64_umaxmin(<2 x i64> %so) {
 ; CHECK-NEXT:    lsrl r0, r1, #3
 ; CHECK-NEXT:    lsrl r2, r3, #3
 ; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
-; CHECK-NEXT:    subs.w r2, r2, #-1
+; CHECK-NEXT:    adds r2, #1
 ; CHECK-NEXT:    sbcs r2, r3, #0
 ; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
 ; CHECK-NEXT:    csetm r2, lo
-; CHECK-NEXT:    subs.w r0, r0, #-1
+; CHECK-NEXT:    adds r0, #1
 ; CHECK-NEXT:    mov.w r3, #0
 ; CHECK-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
@@ -341,11 +341,11 @@ define arm_aapcs_vfpcc <2 x i64> @vqshrni64_uminmax(<2 x i64> %so) {
 ; CHECK-NEXT:    lsrl r0, r1, #3
 ; CHECK-NEXT:    lsrl r2, r3, #3
 ; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
-; CHECK-NEXT:    subs.w r2, r2, #-1
+; CHECK-NEXT:    adds r2, #1
 ; CHECK-NEXT:    sbcs r2, r3, #0
 ; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
 ; CHECK-NEXT:    csetm r2, lo
-; CHECK-NEXT:    subs.w r0, r0, #-1
+; CHECK-NEXT:    adds r0, #1
 ; CHECK-NEXT:    mov.w r3, #0
 ; CHECK-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEXT:    bfi r3, r2, #0, #8

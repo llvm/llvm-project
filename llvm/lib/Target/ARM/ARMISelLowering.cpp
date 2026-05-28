@@ -13094,7 +13094,7 @@ static SDValue PerformAddeSubeCombine(SDNode *N,
     SelectionDAG &DAG = DCI.DAG;
     SDValue RHS = N->getOperand(1);
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
-      int64_t imm = C->getSExtValue();
+      int32_t imm = C->getSExtValue();
       if (imm < 0) {
         SDLoc DL(N);
 
@@ -19729,16 +19729,12 @@ bool ARMTargetLowering::isLegalAddressingMode(const DataLayout &DL,
 /// icmp immediate, that is the target has icmp instructions which can compare
 /// a register against the immediate without having to materialize the
 /// immediate into a register.
+
+// Integer comparisons have the same range as ADDS/SUBS, and for thumb1,
+// implemented as adds.
 bool ARMTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
   // Thumb2 and ARM modes can use cmn for negative immediates.
-  if (!Subtarget->isThumb())
-    return ARM_AM::getSOImmVal((uint32_t)Imm) != -1 ||
-           ARM_AM::getSOImmVal(-(uint32_t)Imm) != -1;
-  if (Subtarget->isThumb2())
-    return ARM_AM::getT2SOImmVal((uint32_t)Imm) != -1 ||
-           ARM_AM::getT2SOImmVal(-(uint32_t)Imm) != -1;
-  // Thumb1 doesn't have cmn, and only 8-bit immediates.
-  return Imm >= 0 && Imm <= 255;
+  return isLegalAddImmediate(Imm);
 }
 
 /// isLegalAddImmediate - Return true if the specified immediate is a legal add

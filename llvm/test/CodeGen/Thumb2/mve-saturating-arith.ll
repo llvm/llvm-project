@@ -187,7 +187,7 @@ define arm_aapcs_vfpcc <2 x i64> @ssub_int64_t(<2 x i64> %src1, <2 x i64> %src2)
 ; CHECK-NEXT:    vmov r2, r4, d0
 ; CHECK-NEXT:    sbcs.w r0, r3, r1
 ; CHECK-NEXT:    mrs r1, apsr
-; CHECK-NEXT:    cmp.w r0, #-1
+; CHECK-NEXT:    adds r3, r0, #1
 ; CHECK-NEXT:    cset r3, gt
 ; CHECK-NEXT:    msr apsr_nzcvq, r1
 ; CHECK-NEXT:    vmov r1, lr, d2
@@ -196,7 +196,7 @@ define arm_aapcs_vfpcc <2 x i64> @ssub_int64_t(<2 x i64> %src1, <2 x i64> %src2)
 ; CHECK-NEXT:    subs r5, r2, r1
 ; CHECK-NEXT:    sbcs.w r2, r4, lr
 ; CHECK-NEXT:    mrs r4, apsr
-; CHECK-NEXT:    cmp.w r2, #-1
+; CHECK-NEXT:    adds r1, r2, #1
 ; CHECK-NEXT:    vmov q0[2], q0[0], r5, r12
 ; CHECK-NEXT:    cset r1, gt
 ; CHECK-NEXT:    msr apsr_nzcvq, r4

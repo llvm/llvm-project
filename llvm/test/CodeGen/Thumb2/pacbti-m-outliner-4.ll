@@ -40,7 +40,7 @@ define hidden i32 @_Z1hii(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; CHECK-NEXT:    .cfi_offset lr, -4
 ; CHECK-NEXT:    .cfi_offset ra_auth_code, -8
 ; CHECK-NEXT:    .cfi_offset r7, -12
-; CHECK-NEXT:    cmp.w r0, #-1
+; CHECK-NEXT:    adds r2, r0, #1
 ; CHECK-NEXT:    ble .LBB0_2
 ; CHECK-NEXT:  @ %bb.1: @ %if.end
 ; CHECK-NEXT:    add r0, r1

@@ -86,8 +86,8 @@ define i32 @selecti64i32(i64 %a) {
 ; CHECK6M-LABEL: selecti64i32:
 ; CHECK6M:       @ %bb.0:
 ; CHECK6M-NEXT:    ldr r0, .LCPI2_0
-; CHECK6M-NEXT:    cmp r1, #0
-; CHECK6M-NEXT:    bge .LBB2_2
+; CHECK6M-NEXT:    adds r1, r1, #1
+; CHECK6M-NEXT:    bgt .LBB2_2
 ; CHECK6M-NEXT:  @ %bb.1:
 ; CHECK6M-NEXT:    adds r0, r0, #1
 ; CHECK6M-NEXT:  .LBB2_2:
@@ -327,8 +327,8 @@ define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ;
 ; CHECK6M-LABEL: icmpasrne:
 ; CHECK6M:       @ %bb.0:
-; CHECK6M-NEXT:    cmp r0, #0
-; CHECK6M-NEXT:    bge .LBB9_2
+; CHECK6M-NEXT:    adds r0, r0, #1
+; CHECK6M-NEXT:    bgt .LBB9_2
 ; CHECK6M-NEXT:  @ %bb.1:
 ; CHECK6M-NEXT:    mov r1, r2
 ; CHECK6M-NEXT:  .LBB9_2:
@@ -337,7 +337,7 @@ define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ;
 ; CHECK7M-LABEL: icmpasrne:
 ; CHECK7M:       @ %bb.0:
-; CHECK7M-NEXT:    cmp.w r0, #-1
+; CHECK7M-NEXT:    adds r0, #1
 ; CHECK7M-NEXT:    it le
 ; CHECK7M-NEXT:    movle r1, r2
 ; CHECK7M-NEXT:    mov r0, r1
@@ -345,7 +345,7 @@ define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ;
 ; CHECK81M-LABEL: icmpasrne:
 ; CHECK81M:       @ %bb.0:
-; CHECK81M-NEXT:    cmp.w r0, #-1
+; CHECK81M-NEXT:    adds r0, #1
 ; CHECK81M-NEXT:    csel r0, r1, r2, gt
 ; CHECK81M-NEXT:    bx lr
   %sh = ashr i32 %input, 31

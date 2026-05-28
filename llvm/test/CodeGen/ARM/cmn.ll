@@ -7,7 +7,7 @@ define i32 @compare_i_gt(i32 %a) {
 ; T2-LABEL: compare_i_gt:
 ; T2:       @ %bb.0: @ %entry
 ; T2-NEXT:    movs r1, #24
-; T2-NEXT:    cmn.w r0, #78
+; T2-NEXT:    adds r0, #78
 ; T2-NEXT:    it gt
 ; T2-NEXT:    movgt r1, #42
 ; T2-NEXT:    mov r0, r1
@@ -15,9 +15,7 @@ define i32 @compare_i_gt(i32 %a) {
 ;
 ; T1-LABEL: compare_i_gt:
 ; T1:       @ %bb.0: @ %entry
-; T1-NEXT:    movs r1, #77
-; T1-NEXT:    mvns r1, r1
-; T1-NEXT:    cmp r0, r1
+; T1-NEXT:    adds r0, #78
 ; T1-NEXT:    bgt .LBB0_2
 ; T1-NEXT:  @ %bb.1: @ %entry
 ; T1-NEXT:    movs r0, #24

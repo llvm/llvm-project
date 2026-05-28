@@ -144,28 +144,28 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 }
 
 define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
-; CHECK-T1-LABEL: func16:
-; CHECK-T1:       @ %bb.0:
-; CHECK-T1-NEXT:    adds r0, r0, r1
-; CHECK-T1-NEXT:    ldr r1, .LCPI2_0
-; CHECK-T1-NEXT:    cmp r0, r1
-; CHECK-T1-NEXT:    blt .LBB2_2
-; CHECK-T1-NEXT:  @ %bb.1:
-; CHECK-T1-NEXT:    {{movs|mov}} r0, r1
-; CHECK-T1-NEXT:  .LBB2_2:
-; CHECK-T1-NEXT:    ldr r1, .LCPI2_1
-; CHECK-T1-NEXT:    cmp r0, r1
-; CHECK-T1-NEXT:    bgt .LBB2_4
-; CHECK-T1-NEXT:  @ %bb.3:
-; CHECK-T1-NEXT:    {{movs|mov}} r0, r1
-; CHECK-T1-NEXT:  .LBB2_4:
-; CHECK-T1-NEXT:    bx lr
-; CHECK-T1-NEXT:    .p2align 2
-; CHECK-T1-NEXT:  @ %bb.5:
-; CHECK-T1-NEXT:  .LCPI2_0:
-; CHECK-T1-NEXT:    .long 32767 @ 0x7fff
-; CHECK-T1-NEXT:  .LCPI2_1:
-; CHECK-T1-NEXT:    .long 4294934528 @ 0xffff8000
+; CHECK-T16-LABEL: func16:
+; CHECK-T16:       @ %bb.0:
+; CHECK-T16-NEXT:    adds r0, r0, r1
+; CHECK-T16-NEXT:    ldr r1, .LCPI2_0
+; CHECK-T16-NEXT:    cmp r0, r1
+; CHECK-T16-NEXT:    blt .LBB2_2
+; CHECK-T16-NEXT:  @ %bb.1:
+; CHECK-T16-NEXT:    mov r0, r1
+; CHECK-T16-NEXT:  .LBB2_2:
+; CHECK-T16-NEXT:    ldr r1, .LCPI2_1
+; CHECK-T16-NEXT:    cmp r0, r1
+; CHECK-T16-NEXT:    bgt .LBB2_4
+; CHECK-T16-NEXT:  @ %bb.3:
+; CHECK-T16-NEXT:    mov r0, r1
+; CHECK-T16-NEXT:  .LBB2_4:
+; CHECK-T16-NEXT:    bx lr
+; CHECK-T16-NEXT:    .p2align 2
+; CHECK-T16-NEXT:  @ %bb.5:
+; CHECK-T16-NEXT:  .LCPI2_0:
+; CHECK-T16-NEXT:    .long 32767 @ 0x7fff
+; CHECK-T16-NEXT:  .LCPI2_1:
+; CHECK-T16-NEXT:    .long 4294934528 @ 0xffff8000
 ;
 ; CHECK-T2NODSP-LABEL: func16:
 ; CHECK-T2NODSP:       @ %bb.0:
@@ -203,6 +203,29 @@ define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 ; CHECK-ARMBASEDSP-NEXT:    asr r0, r0, #16
 ; CHECK-ARMBASEDSP-NEXT:    bx lr
 ;
+; CHECK-T15TE-LABEL: func16:
+; CHECK-T15TE:       @ %bb.0:
+; CHECK-T15TE-NEXT:    adds r0, r0, r1
+; CHECK-T15TE-NEXT:    ldr r1, .LCPI2_0
+; CHECK-T15TE-NEXT:    cmp r0, r1
+; CHECK-T15TE-NEXT:    blt .LBB2_2
+; CHECK-T15TE-NEXT:  @ %bb.1:
+; CHECK-T15TE-NEXT:    movs r0, r1
+; CHECK-T15TE-NEXT:  .LBB2_2:
+; CHECK-T15TE-NEXT:    ldr r1, .LCPI2_1
+; CHECK-T15TE-NEXT:    cmp r0, r1
+; CHECK-T15TE-NEXT:    bgt .LBB2_4
+; CHECK-T15TE-NEXT:  @ %bb.3:
+; CHECK-T15TE-NEXT:    movs r0, r1
+; CHECK-T15TE-NEXT:  .LBB2_4:
+; CHECK-T15TE-NEXT:    bx lr
+; CHECK-T15TE-NEXT:    .p2align 2
+; CHECK-T15TE-NEXT:  @ %bb.5:
+; CHECK-T15TE-NEXT:  .LCPI2_0:
+; CHECK-T15TE-NEXT:    .long 32767 @ 0x7fff
+; CHECK-T15TE-NEXT:  .LCPI2_1:
+; CHECK-T15TE-NEXT:    .long 4294934528 @ 0xffff8000
+;
 ; CHECK-ARMDSP-LABEL: func16:
 ; CHECK-ARMDSP:       @ %bb.0:
 ; CHECK-ARMDSP-NEXT:    qadd16 r0, r0, r1
@@ -213,22 +236,22 @@ define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 }
 
 define signext i8 @func8(i8 signext %x, i8 signext %y) nounwind {
-; CHECK-T1-LABEL: func8:
-; CHECK-T1:       @ %bb.0:
-; CHECK-T1-NEXT:    adds r0, r0, r1
-; CHECK-T1-NEXT:    movs r1, #127
-; CHECK-T1-NEXT:    cmp r0, #127
-; CHECK-T1-NEXT:    blt .LBB3_2
-; CHECK-T1-NEXT:  @ %bb.1:
-; CHECK-T1-NEXT:    {{movs|mov}} r0, r1
-; CHECK-T1-NEXT:  .LBB3_2:
-; CHECK-T1-NEXT:    mvns r1, r1
-; CHECK-T1-NEXT:    cmp r0, r1
-; CHECK-T1-NEXT:    bgt .LBB3_4
-; CHECK-T1-NEXT:  @ %bb.3:
-; CHECK-T1-NEXT:    {{movs|mov}} r0, r1
-; CHECK-T1-NEXT:  .LBB3_4:
-; CHECK-T1-NEXT:    bx lr
+; CHECK-T16-LABEL: func8:
+; CHECK-T16:       @ %bb.0:
+; CHECK-T16-NEXT:    adds r0, r0, r1
+; CHECK-T16-NEXT:    movs r1, #127
+; CHECK-T16-NEXT:    cmp r0, #127
+; CHECK-T16-NEXT:    blt .LBB3_2
+; CHECK-T16-NEXT:  @ %bb.1:
+; CHECK-T16-NEXT:    mov r0, r1
+; CHECK-T16-NEXT:  .LBB3_2:
+; CHECK-T16-NEXT:    mov r2, r0
+; CHECK-T16-NEXT:    adds r2, #128
+; CHECK-T16-NEXT:    bgt .LBB3_4
+; CHECK-T16-NEXT:  @ %bb.3:
+; CHECK-T16-NEXT:    mvns r0, r1
+; CHECK-T16-NEXT:  .LBB3_4:
+; CHECK-T16-NEXT:    bx lr
 ;
 ; CHECK-T2NODSP-LABEL: func8:
 ; CHECK-T2NODSP:       @ %bb.0:
@@ -259,6 +282,23 @@ define signext i8 @func8(i8 signext %x, i8 signext %y) nounwind {
 ; CHECK-ARMBASEDSP-NEXT:    asr r0, r0, #24
 ; CHECK-ARMBASEDSP-NEXT:    bx lr
 ;
+; CHECK-T15TE-LABEL: func8:
+; CHECK-T15TE:       @ %bb.0:
+; CHECK-T15TE-NEXT:    adds r0, r0, r1
+; CHECK-T15TE-NEXT:    movs r1, #127
+; CHECK-T15TE-NEXT:    cmp r0, #127
+; CHECK-T15TE-NEXT:    blt .LBB3_2
+; CHECK-T15TE-NEXT:  @ %bb.1:
+; CHECK-T15TE-NEXT:    movs r0, r1
+; CHECK-T15TE-NEXT:  .LBB3_2:
+; CHECK-T15TE-NEXT:    movs r2, r0
+; CHECK-T15TE-NEXT:    adds r2, #128
+; CHECK-T15TE-NEXT:    bgt .LBB3_4
+; CHECK-T15TE-NEXT:  @ %bb.3:
+; CHECK-T15TE-NEXT:    mvns r0, r1
+; CHECK-T15TE-NEXT:  .LBB3_4:
+; CHECK-T15TE-NEXT:    bx lr
+;
 ; CHECK-ARMDSP-LABEL: func8:
 ; CHECK-ARMDSP:       @ %bb.0:
 ; CHECK-ARMDSP-NEXT:    qadd8 r0, r0, r1
@@ -269,22 +309,22 @@ define signext i8 @func8(i8 signext %x, i8 signext %y) nounwind {
 }
 
 define signext i4 @func3(i4 signext %x, i4 signext %y) nounwind {
-; CHECK-T1-LABEL: func3:
-; CHECK-T1:       @ %bb.0:
-; CHECK-T1-NEXT:    adds r0, r0, r1
-; CHECK-T1-NEXT:    movs r1, #7
-; CHECK-T1-NEXT:    cmp r0, #7
-; CHECK-T1-NEXT:    blt .LBB4_2
-; CHECK-T1-NEXT:  @ %bb.1:
-; CHECK-T1-NEXT:    {{movs|mov}} r0, r1
-; CHECK-T1-NEXT:  .LBB4_2:
-; CHECK-T1-NEXT:    mvns r1, r1
-; CHECK-T1-NEXT:    cmp r0, r1
-; CHECK-T1-NEXT:    bgt .LBB4_4
-; CHECK-T1-NEXT:  @ %bb.3:
-; CHECK-T1-NEXT:    {{movs|mov}} r0, r1
-; CHECK-T1-NEXT:  .LBB4_4:
-; CHECK-T1-NEXT:    bx lr
+; CHECK-T16-LABEL: func3:
+; CHECK-T16:       @ %bb.0:
+; CHECK-T16-NEXT:    adds r0, r0, r1
+; CHECK-T16-NEXT:    movs r1, #7
+; CHECK-T16-NEXT:    cmp r0, #7
+; CHECK-T16-NEXT:    blt .LBB4_2
+; CHECK-T16-NEXT:  @ %bb.1:
+; CHECK-T16-NEXT:    mov r0, r1
+; CHECK-T16-NEXT:  .LBB4_2:
+; CHECK-T16-NEXT:    mov r2, r0
+; CHECK-T16-NEXT:    adds r2, #8
+; CHECK-T16-NEXT:    bgt .LBB4_4
+; CHECK-T16-NEXT:  @ %bb.3:
+; CHECK-T16-NEXT:    mvns r0, r1
+; CHECK-T16-NEXT:  .LBB4_4:
+; CHECK-T16-NEXT:    bx lr
 ;
 ; CHECK-T2NODSP-LABEL: func3:
 ; CHECK-T2NODSP:       @ %bb.0:
@@ -316,6 +356,23 @@ define signext i4 @func3(i4 signext %x, i4 signext %y) nounwind {
 ; CHECK-ARMBASEDSP-NEXT:    qadd r0, r0, r1
 ; CHECK-ARMBASEDSP-NEXT:    asr r0, r0, #28
 ; CHECK-ARMBASEDSP-NEXT:    bx lr
+;
+; CHECK-T15TE-LABEL: func3:
+; CHECK-T15TE:       @ %bb.0:
+; CHECK-T15TE-NEXT:    adds r0, r0, r1
+; CHECK-T15TE-NEXT:    movs r1, #7
+; CHECK-T15TE-NEXT:    cmp r0, #7
+; CHECK-T15TE-NEXT:    blt .LBB4_2
+; CHECK-T15TE-NEXT:  @ %bb.1:
+; CHECK-T15TE-NEXT:    movs r0, r1
+; CHECK-T15TE-NEXT:  .LBB4_2:
+; CHECK-T15TE-NEXT:    movs r2, r0
+; CHECK-T15TE-NEXT:    adds r2, #8
+; CHECK-T15TE-NEXT:    bgt .LBB4_4
+; CHECK-T15TE-NEXT:  @ %bb.3:
+; CHECK-T15TE-NEXT:    mvns r0, r1
+; CHECK-T15TE-NEXT:  .LBB4_4:
+; CHECK-T15TE-NEXT:    bx lr
 ;
 ; CHECK-ARMDSP-LABEL: func3:
 ; CHECK-ARMDSP:       @ %bb.0:

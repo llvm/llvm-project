@@ -14,12 +14,12 @@ define <2 x i64> @v2i64(i32 %index, i32 %TC, <2 x i64> %V1, <2 x i64> %V2) {
 ; CHECK-NEXT:    vmov lr, r12, d2
 ; CHECK-NEXT:    adds r6, r0, #1
 ; CHECK-NEXT:    adc r4, r4, #0
-; CHECK-NEXT:    subs.w r0, lr, #-1
+; CHECK-NEXT:    adds.w r0, lr, #1
 ; CHECK-NEXT:    vmov q1[2], q1[0], lr, r6
 ; CHECK-NEXT:    sbcs r0, r12, #0
 ; CHECK-NEXT:    vmov q1[3], q1[1], r12, r4
 ; CHECK-NEXT:    csetm r12, lo
-; CHECK-NEXT:    subs.w r6, r6, #-1
+; CHECK-NEXT:    adds r6, #1
 ; CHECK-NEXT:    bfi r5, r12, #0, #8
 ; CHECK-NEXT:    sbcs r6, r4, #0
 ; CHECK-NEXT:    mov.w r0, #0

@@ -190,11 +190,11 @@ define signext i8 @func8(i8 signext %x, i8 signext %y) nounwind {
 ; CHECK-T1-NEXT:  @ %bb.1:
 ; CHECK-T1-NEXT:    mov r0, r1
 ; CHECK-T1-NEXT:  .LBB3_2:
-; CHECK-T1-NEXT:    mvns r1, r1
-; CHECK-T1-NEXT:    cmp r0, r1
+; CHECK-T1-NEXT:    mov r2, r0
+; CHECK-T1-NEXT:    adds r2, #128
 ; CHECK-T1-NEXT:    bgt .LBB3_4
 ; CHECK-T1-NEXT:  @ %bb.3:
-; CHECK-T1-NEXT:    mov r0, r1
+; CHECK-T1-NEXT:    mvns r0, r1
 ; CHECK-T1-NEXT:  .LBB3_4:
 ; CHECK-T1-NEXT:    bx lr
 ;
@@ -246,11 +246,11 @@ define signext i4 @func3(i4 signext %x, i4 signext %y) nounwind {
 ; CHECK-T1-NEXT:  @ %bb.1:
 ; CHECK-T1-NEXT:    mov r0, r1
 ; CHECK-T1-NEXT:  .LBB4_2:
-; CHECK-T1-NEXT:    mvns r1, r1
-; CHECK-T1-NEXT:    cmp r0, r1
+; CHECK-T1-NEXT:    mov r2, r0
+; CHECK-T1-NEXT:    adds r2, #8
 ; CHECK-T1-NEXT:    bgt .LBB4_4
 ; CHECK-T1-NEXT:  @ %bb.3:
-; CHECK-T1-NEXT:    mov r0, r1
+; CHECK-T1-NEXT:    mvns r0, r1
 ; CHECK-T1-NEXT:  .LBB4_4:
 ; CHECK-T1-NEXT:    bx lr
 ;

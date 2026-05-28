@@ -2507,9 +2507,13 @@ defm t2RSBS : T2I_rbin_s_is <ARMsubc>;
 // details.
 // The AddedComplexity preferences the first variant over the others since
 // it can be shrunk to a 16-bit wide encoding, while the others cannot.
-let AddedComplexity = 1 in
+let AddedComplexity = 1 in {
 def : T2Pat<(add        rGPR:$src, imm1_255_neg:$imm),
             (t2SUBri    rGPR:$src, imm1_255_neg:$imm)>;
+def : T2Pat<(sub        rGPR:$src, imm1_255_neg:$imm),
+            (t2ADDri    rGPR:$src, imm1_255_neg:$imm)>;
+}
+
 def : T2Pat<(add        rGPR:$src, t2_so_imm_neg:$imm),
             (t2SUBri    rGPR:$src, t2_so_imm_neg:$imm)>;
 def : T2Pat<(add        rGPR:$src, imm0_4095_neg:$imm),
@@ -2522,9 +2526,13 @@ def : T1Pat<(add tGPR:$src, imm0_65535_neg:$imm),
              (tSUBrr tGPR:$src, (t2MOVi16 (imm_neg_XFORM imm:$imm)))>,
              Requires<[HasV8MBaseline]>;
 
-let AddedComplexity = 1 in
+let AddedComplexity = 1 in {
 def : T2Pat<(ARMaddc    rGPR:$src, imm1_255_neg:$imm),
             (t2SUBSri   rGPR:$src, imm1_255_neg:$imm)>;
+def : T2Pat<(ARMsubc    rGPR:$src, imm1_255_neg:$imm),
+            (t2ADDSri   rGPR:$src, imm1_255_neg:$imm)>;
+}
+
 def : T2Pat<(ARMaddc    rGPR:$src, t2_so_imm_neg:$imm),
             (t2SUBSri   rGPR:$src, t2_so_imm_neg:$imm)>;
 def : T2Pat<(ARMaddc    rGPR:$src, imm0_65535_neg:$imm),
