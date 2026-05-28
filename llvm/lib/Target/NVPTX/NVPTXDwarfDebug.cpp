@@ -286,6 +286,8 @@ void NVPTXDwarfDebug::finishTargetUnitAttributes(const DICompileUnit &DIUnit,
   // A zero dialect means "no dialect specified"; nothing to emit. This field
   // should have already been range-checked by the assembly parser, IR verifier,
   // and bitcode reader.
+  assert(Dialect <= dwarf::DW_LLVM_LANG_DIALECT_max &&
+         "Invalid or unsupported NVPTX language dialect.");
   if (Dialect == 0)
     return;
 
