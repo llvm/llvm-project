@@ -4709,8 +4709,8 @@ getStructuredGEPArrayIndexFlags(llvm::Type *IndexedType, llvm::Value *Index,
 
 static SmallVector<llvm::StructuredGEPFlags>
 getStructuredGEPFlagsForIndices(llvm::Type *BaseType,
-                                ArrayRef<llvm::Value *> Indices,
-                                bool InBounds, bool SignedIndices) {
+                                ArrayRef<llvm::Value *> Indices, bool InBounds,
+                                bool SignedIndices) {
   SmallVector<llvm::StructuredGEPFlags> Flags;
   Flags.reserve(Indices.size());
   llvm::Type *CurrentType = BaseType;
@@ -4724,8 +4724,8 @@ getStructuredGEPFlagsForIndices(llvm::Type *BaseType,
       continue;
     }
 
-    Flags.push_back(getStructuredGEPArrayIndexFlags(
-        CurrentType, Index, InBounds, SignedIndices));
+    Flags.push_back(getStructuredGEPArrayIndexFlags(CurrentType, Index,
+                                                    InBounds, SignedIndices));
     if (auto *AT = dyn_cast<llvm::ArrayType>(CurrentType))
       CurrentType = AT->getElementType();
     else if (auto *VT = dyn_cast<llvm::VectorType>(CurrentType))
@@ -5778,12 +5778,12 @@ static Address emitRawAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
       CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMType();
 
   if (CGF.getLangOpts().EmitLogicalPointer)
-    return RawAddress(CGF.Builder.CreateStructuredGEP(
-                          StructType, base.emitRawPointer(CGF),
-                          {CGF.Builder.getSize(idx)},
-                          {llvm::StructuredGEPFlags::inBounds() |
-                           llvm::StructuredGEPFlags::nneg()}),
-                      base.getElementType(), base.getAlignment());
+    return RawAddress(
+        CGF.Builder.CreateStructuredGEP(StructType, base.emitRawPointer(CGF),
+                                        {CGF.Builder.getSize(idx)},
+                                        {llvm::StructuredGEPFlags::inBounds() |
+                                         llvm::StructuredGEPFlags::nneg()}),
+        base.getElementType(), base.getAlignment());
 
   if (!IsInBounds)
     return CGF.Builder.CreateConstGEP2_32(base, 0, idx, field->getName());

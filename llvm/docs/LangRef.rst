@@ -15589,7 +15589,7 @@ All indices must be consumed, and it is illegal to index into a scalar type,
 meaning the maximum number of indices depends on the depth of the basetype.
 
 If the indexed type is a struct with N fields, the index must be an
-integer constant in the range ``[0, N)``.
+integer constant in the range ``[0, N[``.
 
 If the constraints implied by a flag bit are violated, the result is ``poison``.
 If the source pointer is poison, the instruction returns poison.
@@ -15602,7 +15602,7 @@ Defined flag bits:
 ``inbounds``
   Bit 0 (``1 << 0``) - specifies that this index is within the bounds of the type
   being indexed at that level. In particular, when indexing an array or vector
-  ``[ N x T ]``, implies that the index is in the range ``[0, N)``. As an exception,
+  ``[ N x T ]``, implies that the index is in the range ``[0, N[``. As an exception,
   if ``N`` is 0, the bound is treated as an unknown, dynamic value, but the flag
   still implies that the index is inside that runtime bound.
   Structure accesses are always ``inbounds`` and must be marked as
@@ -15679,12 +15679,14 @@ Or:
 This is, however, dependent on context that codegen has an insight on. The
 fact that `[ i32 x 4 ]` and `%S` are equivalent depends on the target.
 
-**Array bounds handling**
+**Bounds handling**
 
 .. code-block:: cpp
 
-    float array[M][N];
-    float val = array[i][j];
+    // Type that treats indices separately, such as by allowing swizzling or
+    // per-dimension bounds checks.
+    tensor2d<float, M, N> array;
+    float val = array[i, j];
 
 Could be translated to:
 
@@ -15710,7 +15712,7 @@ When dealing with dynamic bounds, a "0-sized" array is used, so
 
 .. code-block:: cpp
 
-    float array[];
+    tensor1d<float, kDynamic> array[];
     float val = array[i];
 
 could be translated to:

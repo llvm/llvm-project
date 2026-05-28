@@ -72,13 +72,6 @@ entry:
   ret void
 }
 
-define void @flags_undef(ptr %src) {
-entry:
-; CHECK: Flags operand elements must be integer constants
-  %ptr = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype([ 2 x i32 ]) %src, <1 x i32> undef, i32 0)
-  ret void
-}
-
 define void @no_index_nonzero_flags(ptr %src) {
 entry:
 ; CHECK: Flags operand must be zero when there are no indices

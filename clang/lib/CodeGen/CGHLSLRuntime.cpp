@@ -100,8 +100,8 @@ getHLSLStructuredGEPFlags(llvm::Type *BaseType, ArrayRef<Value *> Indices,
     }
 
     bool SignedIndex = IndexNo == 0 ? FirstIndexSigned.value_or(true) : true;
-    Flags.push_back(getHLSLStructuredGEPArrayIndexFlags(
-        CurrentType, Index, InBounds, SignedIndex));
+    Flags.push_back(getHLSLStructuredGEPArrayIndexFlags(CurrentType, Index,
+                                                        InBounds, SignedIndex));
     if (auto *AT = dyn_cast<llvm::ArrayType>(CurrentType))
       CurrentType = AT->getElementType();
     else if (auto *VT = dyn_cast<llvm::VectorType>(CurrentType))
