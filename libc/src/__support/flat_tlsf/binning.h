@@ -30,49 +30,49 @@ struct Binning {
 
   static constexpr size_t BIN_COUNT = BitField::BITS - 1;
 
-  /// A fast binning algorithm with relatively even coverage and configurable
-  /// behavior.
-  ///
-  /// This is the default binning algorithm used due to having a good spread of
-  /// bin intervals, being able to take advantage of many or few buckets well,
-  /// and being very fast (only a handful of instructions with one branch).
-  ///
-  /// # Behavior by size
-  /// - `0..=(CHUNK_UNIT*LIN_DIVS*LIN_EXT_MULTI)` : Bins sizes into
-  /// one-bin-per-chunk-size
-  /// - `(CHUNK_UNIT*LIN_DIVS*LIN_EXT_MULTI)..`   : Bins sizes by
-  /// linearly-subdivided exponential levels.
-  ///
-  /// # Parameters
-  /// - `LIN_DIVS`: the number of linear regions per power of two in the
-  /// exponential region.
-  ///     - The higher this is, the more buckets are needed but the binning is
-  ///     more fine-grained.
-  ///     - Must be a power of two.
-  ///     - Typically 2 (few bins, subpar granularity), 4, or 8 (lots of bins,
-  ///     good granularity).
-  ///     - This is the parameter you want to figure out first for a given
-  ///     number of bins.
-  ///
-  /// - `LIN_EXT_MULTI`: the linear region extent multiplier.
-  ///     - Scales the extent of the linear region.
-  ///     - Must be a power of two.
-  ///     - Set this to 1 by default.
-  ///     - If there are too many bins being used on excessively-high size
-  ///     regions, this is useful for spending those bins on more buckets for
-  ///     small sizes instead.
-  ///
-  /// # Deciding on the parameters
-  /// `LIN_DIVS` has a much larger effect so tinker with that first while
-  /// keeping `LIN_EXT_MULTI` low, and then increase `LIN_EXT_MULTI` if there is
-  /// useless range at the top, given the number of bins you have.
-  ///
-  /// Having a range up to around 128MiB~2GiB is enough for most applications.
-  /// But keep in mind the largest bucket size you'll ever make use of is the
-  /// largest contiguous span of memory.
-  ///
-  /// The main effects on the allocator will be the heap efficiency and the
-  /// performance.
+  // A fast binning algorithm with relatively even coverage and configurable
+  // behavior.
+  //
+  // This is the default binning algorithm used due to having a good spread of
+  // bin intervals, being able to take advantage of many or few buckets well,
+  // and being very fast (only a handful of instructions with one branch).
+  //
+  // # Behavior by size
+  // - `0..=(CHUNK_UNIT*LIN_DIVS*LIN_EXT_MULTI)` : Bins sizes into
+  // one-bin-per-chunk-size
+  // - `(CHUNK_UNIT*LIN_DIVS*LIN_EXT_MULTI)..`   : Bins sizes by
+  // linearly-subdivided exponential levels.
+  //
+  // # Parameters
+  // - `LIN_DIVS`: the number of linear regions per power of two in the
+  // exponential region.
+  //     - The higher this is, the more buckets are needed but the binning is
+  //     more fine-grained.
+  //     - Must be a power of two.
+  //     - Typically 2 (few bins, subpar granularity), 4, or 8 (lots of bins,
+  //     good granularity).
+  //     - This is the parameter you want to figure out first for a given
+  //     number of bins.
+  //
+  // - `LIN_EXT_MULTI`: the linear region extent multiplier.
+  //     - Scales the extent of the linear region.
+  //     - Must be a power of two.
+  //     - Set this to 1 by default.
+  //     - If there are too many bins being used on excessively-high size
+  //     regions, this is useful for spending those bins on more buckets for
+  //     small sizes instead.
+  //
+  // # Deciding on the parameters
+  // `LIN_DIVS` has a much larger effect so tinker with that first while
+  // keeping `LIN_EXT_MULTI` low, and then increase `LIN_EXT_MULTI` if there is
+  // useless range at the top, given the number of bins you have.
+  //
+  // Having a range up to around 128MiB~2GiB is enough for most applications.
+  // But keep in mind the largest bucket size you'll ever make use of is the
+  // largest contiguous span of memory.
+  //
+  // The main effects on the allocator will be the heap efficiency and the
+  // performance.
   template <size_t LIN_DIVS, size_t LIN_EXT_MULTI>
   LIBC_INLINE static constexpr size_t
   linear_extend_then_linearly_divided_exponential_binning(size_t size) {
