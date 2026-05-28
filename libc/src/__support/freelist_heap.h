@@ -53,6 +53,8 @@ private:
 
   void *allocate_impl(size_t alignment, size_t size);
 
+  bool shrink_in_place(Block *block, size_t size);
+
   span<cpp::byte> block_to_span(Block *block) {
     return span<cpp::byte>(block->usable_space(), block->inner_size());
   }
@@ -97,7 +99,8 @@ LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
   if (!block)
     return nullptr;
 
-  auto block_info = Block::allocate(block, alignment, size);
+  auto block_info =
+      Block::allocate(block, alignment, size, FreeStore::MIN_OUTER_SIZE);
   if (block_info.next)
     free_store.insert(block_info.next);
   if (block_info.prev)
@@ -158,6 +161,47 @@ LIBC_INLINE void FreeListHeap::free(void *ptr) {
   free_store.insert(block);
 }
 
+LIBC_INLINE bool FreeListHeap::shrink_in_place(Block *block, size_t size) {
+  size_t min_outer_size = Block::outer_size(cpp::max(size, sizeof(size_t)));
+  uintptr_t next_block_start = Block::next_possible_block_start(
+      reinterpret_cast<uintptr_t>(block) + min_outer_size, Block::MIN_ALIGN);
+  size_t new_outer_size = next_block_start - reinterpret_cast<uintptr_t>(block);
+  // only split the block if the trailing part can be inserted into freelist
+  if (block->outer_size() >= new_outer_size &&
+      block->outer_size() - new_outer_size >= FreeStore::MIN_OUTER_SIZE) {
+    // We must temporarily mark the block as free to allow splitting.
+    // A block's usable space overlaps with the next block's prev_ field. When
+    // the next block is created via splitting, its header constructor writes to
+    // its prev_ field (initializing it to 0). Since the original block is
+    // currently in use, this write will corrupt the last sizeof(size_t) bytes
+    // of active user data. We back up these bytes here and restore them after
+    // the split is completed.
+    cpp::byte *overlap_ptr =
+        reinterpret_cast<cpp::byte *>(block) + new_outer_size;
+    size_t backup;
+    LIBC_NAMESPACE::inline_memcpy(&backup, overlap_ptr, sizeof(size_t));
+    block->mark_free();
+    optional<Block *> next =
+        block->split(size, Block::MIN_ALIGN, FreeStore::MIN_OUTER_SIZE);
+    block->mark_used();
+
+    LIBC_NAMESPACE::inline_memcpy(overlap_ptr, &backup, sizeof(size_t));
+
+    // register the new block on successful split
+    if (next.has_value()) {
+      Block *next_block = *next;
+      Block *right = next_block->next();
+      if (right != nullptr && !right->used()) {
+        free_store.remove(right);
+        next_block->merge_next();
+      }
+      free_store.insert(next_block);
+    }
+    return true;
+  }
+  return false;
+}
+
 // Follows constract of the C standard realloc() function
 // If ptr is free'd, will return nullptr.
 LIBC_INLINE void *FreeListHeap::realloc(void *ptr, size_t size) {
@@ -180,10 +224,10 @@ LIBC_INLINE void *FreeListHeap::realloc(void *ptr, size_t size) {
     return nullptr;
   size_t old_size = block->inner_size();
 
-  // Do nothing and return ptr if the required memory size is smaller than
-  // the current size.
-  if (old_size >= size)
+  if (old_size >= size) {
+    shrink_in_place(block, size);
     return ptr;
+  }
 
   void *new_ptr = allocate(size);
   // Don't invalidate ptr if allocate(size) fails to initilize the memory.

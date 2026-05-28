@@ -180,7 +180,8 @@ TEST_FOR_EACH_ALLOCATOR(ReallocSmallerSize, 2048) {
   void *ptr1 = allocator.allocate(ALLOC_SIZE);
   void *ptr2 = allocator.realloc(ptr1, kNewAllocSize);
 
-  // For smaller sizes, realloc will not shrink the block.
+  // For smaller sizes, realloc will shrink the block in-place, returning the
+  // same pointer.
   EXPECT_EQ(ptr1, ptr2);
 }
 
