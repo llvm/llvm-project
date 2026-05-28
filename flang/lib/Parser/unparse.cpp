@@ -2100,7 +2100,19 @@ public:
   void Unparse(const OpenACCRoutineConstruct &x) {
     BeginOpenACC();
     Word("!$ACC ROUTINE");
-    Walk("(", std::get<std::optional<Name>>(x.t), ")");
+    const auto &names{std::get<std::list<Name>>(x.t)};
+    if (!names.empty()) {
+      Put("(");
+      bool first{true};
+      for (const auto &name : names) {
+        if (!first) {
+          Put(",");
+        }
+        Walk(name);
+        first = false;
+      }
+      Put(")");
+    }
     Walk(std::get<AccClauseList>(x.t));
     Put("\n");
     EndOpenACC();
