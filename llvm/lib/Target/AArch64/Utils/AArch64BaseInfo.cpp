@@ -175,21 +175,26 @@ uint32_t AArch64SysReg::parseGenericRegister(StringRef Name) {
   Ops[3].getAsInteger(10, CRn);
   Ops[4].getAsInteger(10, CRm);
   Ops[5].getAsInteger(10, Op2);
-  Bits = (Op0 << 14) | (Op1 << 11) | (CRn << 7) | (CRm << 3) | Op2;
 
+  if (Op0 < 2)
+    return -1; // Op0 must be 2 or 3 for a valid system register.
+
+  // Top bit of Op0 is assumed to be 1.
+  Bits = ((Op0 & 0x1) << 14) | (Op1 << 11) | (CRn << 7) | (CRm << 3) | Op2;
   return Bits;
 }
 
 std::string AArch64SysReg::genericRegisterString(uint32_t Bits) {
-  assert(Bits < 0x10000);
-  uint32_t Op0 = (Bits >> 14) & 0x3;
+  assert(Bits < 0x8000);
+  uint32_t Op0 = (Bits >> 14) & 0x1;
   uint32_t Op1 = (Bits >> 11) & 0x7;
   uint32_t CRn = (Bits >> 7) & 0xf;
   uint32_t CRm = (Bits >> 3) & 0xf;
   uint32_t Op2 = Bits & 0x7;
 
-  return "S" + utostr(Op0) + "_" + utostr(Op1) + "_C" + utostr(CRn) + "_C" +
-         utostr(CRm) + "_" + utostr(Op2);
+  // Add the top bit of Op0 back in.
+  return "S" + utostr(Op0 | 0x2) + "_" + utostr(Op1) + "_C" + utostr(CRn) +
+         "_C" + utostr(CRm) + "_" + utostr(Op2);
 }
 
 namespace llvm {

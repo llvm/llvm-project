@@ -14,8 +14,12 @@
 #include "wrappers_c.h"
 #include "wrappers_c_checks.h"
 
+#include "string_utils.h"
+
 #include <stdint.h>
 #include <stdio.h>
+
+#include <sys/uio.h>
 
 #if defined(SCUDO_PREFIX_NAME)
 #define SCUDO_PREFIX(name) CONCATENATE(SCUDO_PREFIX_NAME, name)
@@ -426,6 +430,13 @@ SCUDO_PREFIX(malloc_set_add_large_allocation_slack)(int add_slack) {
 INTERFACE void __scudo_print_stats(void) { Allocator.printStats(); }
 
 #if !SCUDO_FUCHSIA
+
+INTERFACE void
+__scudo_get_fault_error_info(uintptr_t fault_address,
+                             struct scudo_error_info *error_info) {
+  Allocator.getErrorInfo(fault_address, error_info);
+}
+
 INTERFACE void __scudo_get_error_info(
     struct scudo_error_info *error_info, uintptr_t fault_addr,
     const char *stack_depot, size_t stack_depot_size, const char *region_info,

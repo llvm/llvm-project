@@ -51,6 +51,7 @@ spirv::VerCapExtAttr getDefaultVerCapExtAttr(MLIRContext *context) {
           spirv::Extension::SPV_EXT_replicated_composites,
           spirv::Extension::SPV_KHR_bfloat16,
           spirv::Extension::SPV_EXT_float8,
+          spirv::Extension::SPV_KHR_non_semantic_info,
       },
       context);
 }

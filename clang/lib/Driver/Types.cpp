@@ -59,7 +59,8 @@ types::ID types::getPreprocessedType(ID Id) {
 }
 
 static bool isPreprocessedModuleType(ID Id) {
-  return Id == TY_CXXModule || Id == TY_PP_CXXModule;
+  return Id == TY_CXXModule || Id == TY_PP_CXXModule || Id == TY_CXXStdModule ||
+         Id == TY_PP_CXXStdModule;
 }
 
 static bool isPreprocessedHeaderUnitType(ID Id) {
@@ -101,13 +102,28 @@ bool types::onlyPrecompileType(ID Id) {
 
 bool types::canTypeBeUserSpecified(ID Id) {
   static const clang::driver::types::ID kStaticLangageTypes[] = {
-      TY_CUDA_DEVICE,   TY_HIP_DEVICE,    TY_PP_CHeader,
-      TY_PP_ObjCHeader, TY_PP_CXXHeader,  TY_PP_ObjCXXHeader,
-      TY_PP_CXXModule,  TY_LTO_IR,        TY_LTO_BC,
-      TY_Plist,         TY_RewrittenObjC, TY_RewrittenLegacyObjC,
-      TY_Remap,         TY_PCH,           TY_Object,
-      TY_Image,         TY_dSYM,          TY_Dependencies,
-      TY_CUDA_FATBIN,   TY_HIP_FATBIN};
+      TY_CUDA_DEVICE,
+      TY_HIP_DEVICE,
+      TY_PP_CHeader,
+      TY_PP_ObjCHeader,
+      TY_PP_CXXHeader,
+      TY_PP_ObjCXXHeader,
+      TY_PP_CXXModule,
+      TY_CXXStdModule,
+      TY_PP_CXXStdModule,
+      TY_LTO_IR,
+      TY_LTO_BC,
+      TY_Plist,
+      TY_RewrittenObjC,
+      TY_RewrittenLegacyObjC,
+      TY_Remap,
+      TY_PCH,
+      TY_Object,
+      TY_Image,
+      TY_dSYM,
+      TY_Dependencies,
+      TY_CUDA_FATBIN,
+      TY_HIP_FATBIN};
   return !llvm::is_contained(kStaticLangageTypes, Id);
 }
 
@@ -148,7 +164,10 @@ bool types::isAcceptedByClang(ID Id) {
   case TY_CXXHUHeader:
   case TY_PP_CXXHeaderUnit:
   case TY_ObjCXXHeader: case TY_PP_ObjCXXHeader:
-  case TY_CXXModule: case TY_PP_CXXModule:
+  case TY_CXXModule:
+  case TY_PP_CXXModule:
+  case TY_CXXStdModule:
+  case TY_PP_CXXStdModule:
   case TY_AST: case TY_ModuleFile: case TY_PCH:
   case TY_LLVM_IR: case TY_LLVM_BC:
   case TY_API_INFO:
@@ -209,6 +228,8 @@ bool types::isDerivedFromC(ID Id) {
   case TY_ObjCXXHeader:
   case TY_CXXModule:
   case TY_PP_CXXModule:
+  case TY_CXXStdModule:
+  case TY_PP_CXXStdModule:
     return true;
   }
 }
@@ -253,6 +274,8 @@ bool types::isCXX(ID Id) {
   case TY_ObjCXXHeader: case TY_PP_ObjCXXHeader:
   case TY_CXXModule:
   case TY_PP_CXXModule:
+  case TY_CXXStdModule:
+  case TY_PP_CXXStdModule:
   case TY_ModuleFile:
   case TY_PP_CLCXX:
   case TY_CUDA: case TY_PP_CUDA: case TY_CUDA_DEVICE:
@@ -435,6 +458,7 @@ ID types::lookupHeaderTypeForSourceType(ID Id) {
     return types::TY_CHeader;
   case types::TY_CXX:
   case types::TY_CXXModule:
+  case types::TY_CXXStdModule:
     return types::TY_CXXHeader;
   case types::TY_ObjC:
     return types::TY_ObjCHeader;

@@ -19,9 +19,9 @@ define void @tail_call_i32_inreg_divergent(i32 %vgpr) #0 {
 ; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
 ; CHECK-NEXT:    v_writelane_b32 v1, s30, 0
-; CHECK-NEXT:    s_mov_b64 s[18:19], exec
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v1, s31, 1
+; CHECK-NEXT:    s_mov_b64 s[18:19], exec
 ; CHECK-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_readfirstlane_b32 s16, v0
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s16, v0
@@ -61,6 +61,7 @@ define void @indirect_tail_call_i32_inreg_divergent(i32 %vgpr) #0 {
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
 ; CHECK-NEXT:    v_writelane_b32 v40, s16, 20
+; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v40, s34, 0
 ; CHECK-NEXT:    v_writelane_b32 v40, s35, 1
 ; CHECK-NEXT:    v_writelane_b32 v40, s36, 2
@@ -74,18 +75,18 @@ define void @indirect_tail_call_i32_inreg_divergent(i32 %vgpr) #0 {
 ; CHECK-NEXT:    v_writelane_b32 v40, s52, 10
 ; CHECK-NEXT:    v_writelane_b32 v40, s53, 11
 ; CHECK-NEXT:    v_writelane_b32 v40, s54, 12
-; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v40, s55, 13
 ; CHECK-NEXT:    v_writelane_b32 v40, s64, 14
+; CHECK-NEXT:    v_writelane_b32 v40, s65, 15
+; CHECK-NEXT:    v_writelane_b32 v40, s66, 16
+; CHECK-NEXT:    v_writelane_b32 v40, s67, 17
+; CHECK-NEXT:    v_writelane_b32 v40, s30, 18
+; CHECK-NEXT:    v_writelane_b32 v40, s31, 19
 ; CHECK-NEXT:    s_mov_b64 s[48:49], s[4:5]
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, constant@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, constant@rel32@hi+12
-; CHECK-NEXT:    v_writelane_b32 v40, s65, 15
 ; CHECK-NEXT:    s_load_dwordx2 s[64:65], s[4:5], 0x0
-; CHECK-NEXT:    v_writelane_b32 v40, s66, 16
-; CHECK-NEXT:    v_writelane_b32 v40, s67, 17
-; CHECK-NEXT:    v_writelane_b32 v40, s30, 18
 ; CHECK-NEXT:    s_mov_b32 s50, s15
 ; CHECK-NEXT:    s_mov_b32 s51, s14
 ; CHECK-NEXT:    s_mov_b32 s52, s13
@@ -94,7 +95,6 @@ define void @indirect_tail_call_i32_inreg_divergent(i32 %vgpr) #0 {
 ; CHECK-NEXT:    s_mov_b64 s[36:37], s[8:9]
 ; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
 ; CHECK-NEXT:    s_mov_b64 s[54:55], exec
-; CHECK-NEXT:    v_writelane_b32 v40, s31, 19
 ; CHECK-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_readfirstlane_b32 s16, v0
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s16, v0

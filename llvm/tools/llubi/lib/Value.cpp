@@ -20,13 +20,15 @@ void Pointer::print(raw_ostream &OS) const {
   SmallString<32> AddrStr;
   Address.toStringUnsigned(AddrStr, 16);
   OS << "ptr 0x" << AddrStr << " [";
-  if (Obj && Obj->getState() != MemoryObjectState::Freed) {
+  if (Obj) {
     OS << Obj->getName();
-    // TODO: print " (dead)" if the stack object is out of lifetime.
     if (Address != Obj->getAddress())
       OS << " + " << (Address - Obj->getAddress());
+    MemoryObjectState State = Obj->getState();
+    if (State != MemoryObjectState::Alive)
+      OS << (State == MemoryObjectState::Dead ? " (dead)" : " (dangling)");
   } else {
-    OS << "dangling";
+    OS << "nullary";
   }
   OS << "]";
 }

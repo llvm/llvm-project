@@ -1543,8 +1543,20 @@ Currently, only the following parameter attributes are defined:
       is null is captured in some other way.
 
 ``nofree``
-    This indicates that the callee does not free the pointer argument. This is not
-    a valid attribute for return values.
+    This indicates that a pointer based on this argument cannot be freed during
+    the execution of the function.
+
+    More formally, a ``nofree`` argument provides the callee with a new pointer
+    with the same address and a derived provenance, where the derived
+    provenance has the same permissions as the original, except that the
+    underlying object cannot be freed until the function returns (or unwinds),
+    otherwise the behavior is undefined. This includes frees of the pointer on
+    other threads if the free *happens-before* the function return.
+
+    Notably, it is still possible to free the underlying object through a
+    pointer that is not based on the argument.
+
+    This is not a valid attribute for return values.
 
 .. _nest:
 
@@ -2326,22 +2338,21 @@ For example:
     internal linkage and only has one call site, so the original
     call is dead after inlining.
 ``nofree``
-    This function attribute indicates that the function does not, directly or
-    transitively, call a memory-deallocation function (``free``, for example)
-    on a memory allocation which existed before the call.
+    This function attribute indicates that the function does not free any memory
+    allocation which existed before the call, either through direct calls to
+    a memory-deallocation function like ``free``, or through synchronization.
+    Freeing through synchronization here means that a deallocation
+    *happens-before* the function exit but does not *happens-before* the
+    function entry.
 
-    As a result, uncaptured pointers that are known to be dereferenceable
-    prior to a call to a function with the ``nofree`` attribute are still
-    known to be dereferenceable after the call. The capturing condition is
-    necessary in environments where the function might communicate the
-    pointer to another thread which then deallocates the memory.  Alternatively,
-    ``nosync`` would ensure such communication cannot happen and even captured
-    pointers cannot be freed by the function.
+    As a result, pointers that are known to be dereferenceable prior to a call
+    to a function with the ``nofree`` attribute are still known to be
+    dereferenceable after the call.
 
     A ``nofree`` function is explicitly allowed to free memory which it
-    allocated or (if not ``nosync``) arrange for another thread to free
-    memory on its behalf.  As a result, perhaps surprisingly, a ``nofree``
-    function can return a pointer to a previously deallocated
+    allocated or arrange for another thread to free such memory on its behalf.
+    As a result, perhaps surprisingly, a ``nofree`` function can return a
+    pointer to a previously deallocated
     :ref:`allocated object<allocatedobjects>`.
 ``noimplicitfloat``
     Disallows implicit floating-point code. This inhibits optimizations that
@@ -4044,17 +4055,21 @@ For a simpler introduction to the ordering constraints, see the
 .. _syncscope:
 
 If an atomic operation is marked ``syncscope("singlethread")``, it only
-*synchronizes with* and only participates in the seq\_cst total orderings of
-other operations running in the same thread (for example, in signal handlers).
+*synchronizes with* other operations running in the same thread (for
+example, in signal handlers) and it is related in the seq\_cst order and
+the monotonic modification order with other operations in the same
+thread.
 
 If an atomic operation is marked ``syncscope("<target-scope>")``, where
-``<target-scope>`` is a target-specific synchronization scope, then it is target
-dependent if it *synchronizes with* and participates in the seq\_cst total
-orderings of other operations.
+``<target-scope>`` is a target-specific synchronization scope, then it
+is target-dependent if it *synchronizes with* other operations and
+if it is related with other operations in the seq\_cst order and the
+monotonic modification order.
 
-Otherwise, an atomic operation that is not marked ``syncscope("singlethread")``
-or ``syncscope("<target-scope>")`` *synchronizes with* and participates in the
-seq\_cst total orderings of other operations that are not marked
+Otherwise, an atomic operation that is not marked
+``syncscope("singlethread")`` or ``syncscope("<target-scope>")``
+*synchronizes with* and is related in the seq\_cst order and the
+monotonic modification order with other operations that are not marked
 ``syncscope("singlethread")`` or ``syncscope("<target-scope>")``.
 
 .. _floatenv:

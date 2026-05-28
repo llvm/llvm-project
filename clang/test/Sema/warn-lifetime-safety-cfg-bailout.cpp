@@ -27,7 +27,7 @@ void single_block_cfg() {
   MyObj* p;
   {
     MyObj s;
-    p = &s;     // bailout-warning {{object whose reference is captured does not live long enough}}
+    p = &s;     // bailout-warning {{local variable 's' does not live long enough}}
   }             // bailout-note {{destroyed here}}
   (void)*p;     // bailout-note {{later used here}}
 }
@@ -39,7 +39,7 @@ void multiple_block_cfg() {
   {
     if (a > 5) {
       MyObj s;
-      p = &s;    // nobailout-warning {{object whose reference is captured does not live long enough}}
+      p = &s;    // nobailout-warning {{local variable 's' does not live long enough}}
     } else {     // nobailout-note {{destroyed here}}
       p = &safe;
     }     

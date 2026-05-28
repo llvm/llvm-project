@@ -100,3 +100,29 @@ msrr   VTTBR_EL2, x24, x25
 msrr   VTTBR_EL2, x26, x27
 // CHECK-INST: msrr VTTBR_EL2, x26, x27
 // CHECK-ENCODING: encoding: [0x1a,0x21,0x5c,0xd5]
+
+// Test generic register assembly
+
+msrr S2_0_C0_C0_0, x0, x1
+// CHECK-INST: msrr S2_0_C0_C0_0, x0, x1
+// CHECK-ENCODING: encoding: [0x00,0x00,0x50,0xd5]
+
+msrr S3_0_C0_C0_0, x0, x1
+// CHECK-INST: msrr S3_0_C0_C0_0, x0, x1
+// CHECK-ENCODING: encoding: [0x00,0x00,0x58,0xd5]
+
+msrr S2_7_C0_C0_0, x0, x1
+// CHECK-INST: msrr S2_7_C0_C0_0, x0, x1
+// CHECK-ENCODING: encoding: [0x00,0x00,0x57,0xd5]
+
+msrr S2_0_C15_C0_0, x0, x1
+// CHECK-INST: msrr S2_0_C15_C0_0, x0, x1
+// CHECK-ENCODING: encoding: [0x00,0xf0,0x50,0xd5]
+
+msrr S2_0_C0_C15_0, x0, x1
+// CHECK-INST: msrr S2_0_C0_C15_0, x0, x1
+// CHECK-ENCODING: encoding: [0x00,0x0f,0x50,0xd5]
+
+msrr S2_0_C0_C0_7, x0, x1
+// CHECK-INST: msrr DBGWCR0_EL1, x0, x1
+// CHECK-ENCODING: encoding: [0xe0,0x00,0x50,0xd5]

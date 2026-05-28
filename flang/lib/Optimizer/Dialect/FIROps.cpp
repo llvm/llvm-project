@@ -568,6 +568,33 @@ llvm::LogicalResult fir::ArrayCoorOp::verify() {
   return mlir::success();
 }
 
+// Helper shared by array_coor canonicalization patterns. Returns true if
+// folding `producers` into `consumer` would cross an ACC data-clause or CUDA
+// kernel boundary that the lowering pipeline relies on:
+//
+//   - ACC: when `consumer` lives inside an ACC compute or data construct and
+//     any producer's result is referenced by an ACC data-clause op, the
+//     producer must remain (the data legalization pipeline expects it to be
+//     the copyin var / kernel argument).
+//   - CUF: every producer must share the same enclosing CUDA kernel as the
+//     consumer; otherwise the kernel would end up capturing a host-side
+//     descriptor directly, causing illegal device dereferences at runtime.
+static bool arrayCoorFoldCrossesACCOrCUDABoundary(
+    mlir::Operation *consumer, llvm::ArrayRef<mlir::Operation *> producers) {
+  if (consumer->getParentOfType<ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS>() &&
+      llvm::any_of(producers, [](mlir::Operation *p) {
+        return llvm::any_of(p->getUsers(), [](mlir::Operation *u) {
+          return mlir::isa<ACC_DATA_ENTRY_OPS>(u);
+        });
+      }))
+    return true;
+  auto consumerKernel = consumer->getParentOfType<fir::CUDAKernelOpInterface>();
+  for (mlir::Operation *p : producers)
+    if (p->getParentOfType<fir::CUDAKernelOpInterface>() != consumerKernel)
+      return true;
+  return false;
+}
+
 // Pull in fir.embox and fir.rebox into fir.array_coor when possible.
 struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
   using mlir::OpRewritePattern<fir::ArrayCoorOp>::OpRewritePattern;
@@ -609,24 +636,12 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
           emboxOp.getAccessMap())
         return mlir::failure();
     } else if (auto reboxOp = mlir::dyn_cast_or_null<fir::ReboxOp>(defOp)) {
-      // Don't pull in rebox when the array_coor is inside an ACC construct
-      // and the rebox result is referenced by an ACC data clause.
-      // The data legalization pipeline relies on the rebox result being the
-      // copyin var; folding through it would leave the rebox source as an
-      // unhandled live-in inside the compute region.
-      if (op->getParentOfType<ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS>() &&
-          llvm::any_of(reboxOp->getUsers(), [](mlir::Operation *u) {
-            return mlir::isa<ACC_DATA_ENTRY_OPS>(u);
-          }))
-        return mlir::failure();
-      // Don't pull in rebox defined outside a CUDA kernel boundary when the
-      // array_coor is inside that kernel. CUF lowering converts such a rebox
-      // into a managed-memory descriptor that the kernel needs to receive as
-      // its argument; folding the rebox away would leave the kernel capturing
-      // the host-side descriptor directly, causing illegal device dereferences
-      // at runtime.
-      if (op->getParentOfType<fir::CUDAKernelOpInterface>() !=
-          reboxOp->getParentOfType<fir::CUDAKernelOpInterface>())
+      // Skip when folding the rebox into the array_coor would cross an ACC
+      // data-clause or CUDA kernel boundary that the lowering pipeline
+      // relies on (data legalization expects the rebox to remain as the
+      // copyin var / kernel argument; folding across a CUDA kernel boundary
+      // would leave the kernel capturing a host-side descriptor directly).
+      if (arrayCoorFoldCrossesACCOrCUDABoundary(op, {reboxOp}))
         return mlir::failure();
       boxedMemref = reboxOp.getBox();
       boxedShape = reboxOp.getShape();
@@ -1111,10 +1126,127 @@ private:
   }
 };
 
+// Pull a producer fir.array_coor (via a fir.convert that reinterprets a
+// scalar element address as an M-D array ref) into the consumer fir.array_coor.
+// Mirrors the slice-designator lowering pattern emitted by ConvertHLFIRtoFIR
+// for Fortran array sections like `dx(1:3)` or `dx(1:3, 4)`.
+//
+// Pattern:
+//   %outer = fir.array_coor %base(%base_shape) %ox_0, ..., %ox_{N-1}
+//                : (BaseTy, ShapeTy, index, ...) -> !fir.ref<EleTy>
+//   %view  = fir.convert %outer
+//                : !fir.ref<EleTy> -> !fir.ref<!fir.array<...x EleTy>>  (M-D)
+//   %inner = fir.array_coor %view(%inner_shape) %ix_0, ..., %ix_{M-1}
+//                : (!fir.ref<!fir.array<...>>, !fir.shape<M>, index, ...)
+//                -> !fir.ref<EleTy>
+//
+// In Fortran column-major storage, the M leading dimensions of the original
+// array are exactly the dimensions of the contiguous sub-array; the trailing
+// (N-M) outer indices stay fixed. So %inner is rewritten as:
+//   %combined_i = arith.addi %ox_i, arith.subi(%ix_i, 1)        for i in 0..M-1
+//   %inner = fir.array_coor %base(%base_shape)
+//                %combined_0, ..., %combined_{M-1},
+//                %ox_M, ..., %ox_{N-1}
+//                : (BaseTy, ShapeTy, index, ...) -> !fir.ref<EleTy>
+//
+// Restrictions (kept minimal):
+//   - No slice on outer or inner.
+//   - Inner shape must be a plain fir.shape (default lb=1); shift/shape_shift
+//     on the inner are not handled.
+//   - Outer's result type must be a scalar ref (not an array ref).
+//   - Convert source type must equal outer's result type.
+//   - Convert result type's element type must equal outer's pointee.
+//   - Inner rank M <= outer rank N.
+//   - Neither op carries typeparams.
+//   - Mirrors SimplifyArrayCoorOp's ACC/CUF guards.
+struct MergeArrayCoorOnConvert
+    : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
+  using mlir::OpRewritePattern<fir::ArrayCoorOp>::OpRewritePattern;
+  llvm::LogicalResult
+  matchAndRewrite(fir::ArrayCoorOp inner,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (inner.getSlice() || !inner.getTypeparams().empty())
+      return mlir::failure();
+
+    auto innerShapeOp = mlir::dyn_cast_or_null<fir::ShapeOp>(
+        inner.getShape() ? inner.getShape().getDefiningOp() : nullptr);
+    if (!innerShapeOp)
+      return mlir::failure();
+
+    auto convertOp = inner.getMemref().getDefiningOp<fir::ConvertOp>();
+    if (!convertOp)
+      return mlir::failure();
+
+    auto outer = convertOp.getValue().getDefiningOp<fir::ArrayCoorOp>();
+    if (!outer)
+      return mlir::failure();
+
+    if (outer.getSlice() || !outer.getTypeparams().empty())
+      return mlir::failure();
+
+    mlir::Type outerResTy = outer.getType();
+    mlir::Type outerEleTy = fir::dyn_cast_ptrEleTy(outerResTy);
+    if (!outerEleTy || mlir::isa<fir::SequenceType>(outerEleTy))
+      return mlir::failure();
+
+    if (convertOp.getValue().getType() != outerResTy)
+      return mlir::failure();
+
+    mlir::Type convResTy = convertOp.getType();
+    mlir::Type convResEleTy = fir::dyn_cast_ptrEleTy(convResTy);
+    auto convResSeqTy = mlir::dyn_cast_or_null<fir::SequenceType>(convResEleTy);
+    if (!convResSeqTy || convResSeqTy.getEleTy() != outerEleTy)
+      return mlir::failure();
+
+    unsigned innerRank = inner.getIndices().size();
+    unsigned outerRank = outer.getIndices().size();
+    if (innerRank == 0 || innerRank > outerRank)
+      return mlir::failure();
+
+    if (innerShapeOp.getExtents().size() != innerRank)
+      return mlir::failure();
+
+    // Skip when folding the convert+outer chain into the inner array_coor
+    // would cross an ACC data-clause or CUDA kernel boundary.
+    if (arrayCoorFoldCrossesACCOrCUDABoundary(inner, {convertOp, outer}))
+      return mlir::failure();
+
+    mlir::Location loc = inner.getLoc();
+    mlir::Type idxTy = rewriter.getIndexType();
+    mlir::Value one = mlir::arith::ConstantIndexOp::create(rewriter, loc, 1);
+    auto nsw = mlir::arith::IntegerOverflowFlags::nsw;
+
+    auto toIndex = [&](mlir::Value v) -> mlir::Value {
+      if (v.getType() == idxTy)
+        return v;
+      return fir::ConvertOp::create(rewriter, loc, idxTy, v);
+    };
+
+    llvm::SmallVector<mlir::Value> combinedIndices;
+    combinedIndices.reserve(outerRank);
+    for (unsigned i = 0; i < innerRank; ++i) {
+      mlir::Value outerIdx = toIndex(outer.getIndices()[i]);
+      mlir::Value innerIdx = toIndex(inner.getIndices()[i]);
+      mlir::Value innerMinusOne =
+          mlir::arith::SubIOp::create(rewriter, loc, innerIdx, one, nsw);
+      mlir::Value combined = mlir::arith::AddIOp::create(
+          rewriter, loc, outerIdx, innerMinusOne, nsw);
+      combinedIndices.push_back(combined);
+    }
+    for (unsigned i = innerRank; i < outerRank; ++i)
+      combinedIndices.push_back(outer.getIndices()[i]);
+
+    rewriter.replaceOpWithNewOp<fir::ArrayCoorOp>(
+        inner, inner.getType(), outer.getMemref(), outer.getShape(),
+        /*slice=*/mlir::Value{}, combinedIndices, outer.getTypeparams());
+    return mlir::success();
+  }
+};
+
 void fir::ArrayCoorOp::getCanonicalizationPatterns(
     mlir::RewritePatternSet &patterns, mlir::MLIRContext *context) {
   // TODO: !fir.shape<1> operand may be removed from array_coor always.
-  patterns.add<SimplifyArrayCoorOp>(context);
+  patterns.add<SimplifyArrayCoorOp, MergeArrayCoorOnConvert>(context);
 }
 
 std::optional<std::int64_t> fir::ArrayCoorOp::getViewOffset(mlir::OpResult) {

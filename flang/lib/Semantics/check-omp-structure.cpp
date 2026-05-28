@@ -3954,12 +3954,16 @@ static bool CheckSymbolSupportsType(const Scope &scope,
     }
   }
   // Look through module scopes in the global scope.
-  // This covers reductions declared in a module and used via USE association
+  // This covers reductions declared in a module and used via USE association.
   const SemanticsContext &semCtx{scope.context()};
   Scope &global = const_cast<SemanticsContext &>(semCtx).globalScope();
   for (const Scope &child : global.children()) {
     if (child.kind() == Scope::Kind::Module) {
       if (const auto *symbol{child.FindSymbol(name)}) {
+        // Skip PRIVATE reductions that aren't visible in the current scope.
+        if (symbol->attrs().test(Attr::PRIVATE)) {
+          continue;
+        }
         if (const auto *reductionDetails{
                 symbol->detailsIf<UserReductionDetails>()}) {
           return reductionDetails->SupportsType(type);

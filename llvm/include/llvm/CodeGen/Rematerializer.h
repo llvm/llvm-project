@@ -158,7 +158,7 @@ public:
 
     /// Returns the first and last user of the register in region \p UseRegion.
     /// If the register has no user in the region, returns a pair of nullptr's.
-    std::pair<MachineInstr *, MachineInstr *>
+    LLVM_ABI std::pair<MachineInstr *, MachineInstr *>
     getRegionUseBounds(unsigned UseRegion, const LiveIntervals &LIS) const;
 
     bool isAlive() const { return DefMI; }
@@ -175,7 +175,7 @@ public:
   /// specific events inside the rematerializer. All hooks do nothing by
   /// default. Listeners can be added or removed at any time during the
   /// rematerializer's lifetime.
-  class Listener {
+  class LLVM_ABI Listener {
   public:
     using RegisterIdx = Rematerializer::RegisterIdx;
 
@@ -208,13 +208,13 @@ public:
 
   /// Simply initializes some internal state, does not identify
   /// rematerialization candidates.
-  Rematerializer(MachineFunction &MF,
-                 SmallVectorImpl<RegionBoundaries> &Regions,
-                 LiveIntervals &LIS);
+  LLVM_ABI Rematerializer(MachineFunction &MF,
+                          SmallVectorImpl<RegionBoundaries> &Regions,
+                          LiveIntervals &LIS);
 
   /// Goes through the whole MF and identifies all rematerializable registers.
   /// Returns whether there is any rematerializable register in regions.
-  bool analyze();
+  LLVM_ABI bool analyze();
 
   /// Adds a new listener to the rematerializer.
   void addListener(Listener *Listen) {
@@ -277,7 +277,7 @@ public:
   /// rematerializable register tracked by the rematerializer, returns its
   /// index in the \ref Regs vector. Otherwise returns \ref
   /// Rematerializer::NoReg.
-  RegisterIdx getDefRegIdx(const MachineInstr &MI) const;
+  LLVM_ABI RegisterIdx getDefRegIdx(const MachineInstr &MI) const;
 
   /// When rematerializating a register (called the "root" register in this
   /// context) to a given position, we must decide what to do with all its
@@ -340,8 +340,9 @@ public:
   /// registers of the root's dependency DAG that needed to be rematerialized
   /// along the root. References to \ref Rematerializer::Reg should be
   /// considered invalidated by calls to this method.
-  RegisterIdx rematerializeToRegion(RegisterIdx RootIdx, unsigned UseRegion,
-                                    DependencyReuseInfo &DRI);
+  LLVM_ABI RegisterIdx rematerializeToRegion(RegisterIdx RootIdx,
+                                             unsigned UseRegion,
+                                             DependencyReuseInfo &DRI);
 
   /// Rematerializes register \p RootIdx before position \p InsertPos in \p
   /// UseRegion and returns the new register's index. The root's dependency DAG
@@ -351,9 +352,10 @@ public:
   /// registers of the root's dependency DAG that needed to be rematerialized
   /// along the root. References to \ref Rematerializer::Reg should be
   /// considered invalidated by calls to this method.
-  RegisterIdx rematerializeToPos(RegisterIdx RootIdx, unsigned UseRegion,
-                                 MachineBasicBlock::iterator InsertPos,
-                                 DependencyReuseInfo &DRI);
+  LLVM_ABI RegisterIdx rematerializeToPos(RegisterIdx RootIdx,
+                                          unsigned UseRegion,
+                                          MachineBasicBlock::iterator InsertPos,
+                                          DependencyReuseInfo &DRI);
 
   /// Rematerializes register \p RegIdx before \p InsertPos in \p UseRegion,
   /// adding the new rematerializable register to the backing vector \ref Regs
@@ -364,60 +366,65 @@ public:
   /// method appends to \ref Regs, references to elements within it should be
   /// considered invalidated across calls to this method unless the vector can
   /// be guaranteed to have enough space for an extra element.
-  RegisterIdx rematerializeReg(RegisterIdx RegIdx, unsigned UseRegion,
-                               MachineBasicBlock::iterator InsertPos,
-                               SmallVectorImpl<Reg::Dependency> &&Dependencies);
+  LLVM_ABI RegisterIdx
+  rematerializeReg(RegisterIdx RegIdx, unsigned UseRegion,
+                   MachineBasicBlock::iterator InsertPos,
+                   SmallVectorImpl<Reg::Dependency> &&Dependencies);
 
   /// Re-creates a previously deleted register \p RegIdx before \p InsertPos in
   /// \p DefRegion. \p DefReg must be the original virtual register that \p
   /// RegIdx used to define. Sets the new register's rematerializable
   /// dependencies to \p Dependencies (these are assumed to already exist in the
   /// MIR).
-  void recreateReg(RegisterIdx RegIdx, unsigned DefRegion,
-                   MachineBasicBlock::iterator InsertPos, Register DefReg,
-                   SmallVectorImpl<Reg::Dependency> &&Dependencies);
+  LLVM_ABI void recreateReg(RegisterIdx RegIdx, unsigned DefRegion,
+                            MachineBasicBlock::iterator InsertPos,
+                            Register DefReg,
+                            SmallVectorImpl<Reg::Dependency> &&Dependencies);
 
   /// Transfers all users of register \p FromRegIdx in region \p UseRegion to \p
   /// ToRegIdx, the latter of which must be a rematerialization of the former or
   /// have the same origin register. Users in \p UseRegion must be reachable
   /// from \p ToRegIdx.
-  void transferRegionUsers(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx,
-                           unsigned UseRegion);
+  LLVM_ABI void transferRegionUsers(RegisterIdx FromRegIdx,
+                                    RegisterIdx ToRegIdx, unsigned UseRegion);
 
   /// Transfers user \p UserMI in region \p UserRegion from register \p
   /// FromRegIdx to \p ToRegIdx, the latter of which must be a rematerialization
   /// of the former or have the same origin register. \p UserMI must be a direct
   /// user of \p FromRegIdx. \p UserMI must be reachable from \p ToRegIdx.
-  void transferUser(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx,
-                    unsigned UserRegion, MachineInstr &UserMI);
+  LLVM_ABI void transferUser(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx,
+                             unsigned UserRegion, MachineInstr &UserMI);
 
   /// Transfers all users of register \p FromRegIdx to register \p ToRegIdx, the
   /// latter of which must be a rematerialization of the former or have the same
   /// origin register. Users of \p FromRegIdx must be reachable from \p
   /// ToRegIdx.
-  void transferAllUsers(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx);
+  LLVM_ABI void transferAllUsers(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx);
 
   /// Recomputes all live intervals that have changed as a result of previous
   /// rematerializations.
-  void updateLiveIntervals();
+  LLVM_ABI void updateLiveIntervals();
 
   /// Determines whether (sub-)register operand \p MO has the same value at
   /// all \p Uses as at \p MO. This implies that it is also available at all \p
   /// Uses according to its current live interval.
-  bool isMOIdenticalAtUses(MachineOperand &MO, ArrayRef<SlotIndex> Uses) const;
+  LLVM_ABI bool isMOIdenticalAtUses(MachineOperand &MO,
+                                    ArrayRef<SlotIndex> Uses) const;
 
   /// Finds the closest rematerialization of register \p RegIdx in region \p
   /// Region that exists before slot \p Before. If no such rematerialization
   /// exists, returns \ref Rematerializer::NoReg.
-  RegisterIdx findRematInRegion(RegisterIdx RegIdx, unsigned Region,
-                                SlotIndex Before) const;
+  LLVM_ABI RegisterIdx findRematInRegion(RegisterIdx RegIdx, unsigned Region,
+                                         SlotIndex Before) const;
 
-  Printable printDependencyDAG(RegisterIdx RootIdx) const;
-  Printable printID(RegisterIdx RegIdx) const;
-  Printable printRematReg(RegisterIdx RegIdx, bool SkipRegions = false) const;
-  Printable printRegUsers(RegisterIdx RegIdx) const;
-  Printable printUser(const MachineInstr *MI,
-                      std::optional<unsigned> UseRegion = std::nullopt) const;
+  LLVM_ABI Printable printDependencyDAG(RegisterIdx RootIdx) const;
+  LLVM_ABI Printable printID(RegisterIdx RegIdx) const;
+  LLVM_ABI Printable printRematReg(RegisterIdx RegIdx,
+                                   bool SkipRegions = false) const;
+  LLVM_ABI Printable printRegUsers(RegisterIdx RegIdx) const;
+  LLVM_ABI Printable
+  printUser(const MachineInstr *MI,
+            std::optional<unsigned> UseRegion = std::nullopt) const;
 
 private:
   SmallVectorImpl<RegionBoundaries> &Regions;
@@ -505,7 +512,7 @@ private:
 /// Rematerializer listener with the ability to re-create deleted registers and
 /// rollback rematerializations. Starts recording register deletions and
 /// rematerializations as soon as it is attached to the rematerializer.
-class Rollbacker : public Rematerializer::Listener {
+class LLVM_ABI Rollbacker : public Rematerializer::Listener {
 public:
   Rollbacker() = default;
 
@@ -538,7 +545,7 @@ private:
     /// stores its index. Otherwise equals \ref Rematerializer::NoReg.
     RegisterIdx NextRegIdx;
 
-    RollbackInfo(const Rematerializer &Remater, RegisterIdx RegIdx);
+    LLVM_ABI RollbackInfo(const Rematerializer &Remater, RegisterIdx RegIdx);
   };
 
   /// Original registers that have been deleted, in order of deletion.

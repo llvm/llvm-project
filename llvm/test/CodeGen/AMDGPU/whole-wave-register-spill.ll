@@ -27,9 +27,9 @@ define void @test() #0 {
 ; GCN-NEXT:    v_writelane_b32 v40, s28, 2
 ; GCN-NEXT:    v_writelane_b32 v40, s29, 3
 ; GCN-NEXT:    v_writelane_b32 v40, s30, 0
-; GCN-NEXT:    ; implicit-def: $vgpr39 : SGPR spill to VGPR lane
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
+; GCN-NEXT:    ; implicit-def: $vgpr39 : SGPR spill to VGPR lane
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s16
 ; GCN-NEXT:    ;;#ASMEND

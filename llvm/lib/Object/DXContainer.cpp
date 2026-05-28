@@ -81,7 +81,11 @@ static Error readString(StringRef Buffer, const char *&Src, size_t MaxSize,
 DXContainer::DXContainer(MemoryBufferRef O) : Data(O) {}
 
 Error DXContainer::parseHeader() {
-  return readStruct(Data.getBuffer(), Data.getBuffer().data(), Header);
+  if (Error Err = readStruct(Data.getBuffer(), Data.getBuffer().data(), Header))
+    return Err;
+  if (StringRef(reinterpret_cast<char *>(Header.Magic), 4) != "DXBC")
+    return parseFailed("Missing DXBC header magic");
+  return Error::success();
 }
 
 Error DXContainer::parseDXILHeader(dxbc::PartType PT, StringRef Part) {

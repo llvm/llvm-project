@@ -180,11 +180,11 @@ ProgramStateRef BuiltinFunctionChecker::initStateAftetBuiltinOverflow(
   auto BoolTy = C.getASTContext().BoolTy;
 
   ProgramStateRef NewState =
-      State->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
+      State->BindExpr(Call.getOriginExpr(), C.getStackFrame(),
                       SVB.makeTruthVal(IsOverflow, BoolTy));
 
   if (auto L = Call.getArgSVal(2).getAs<Loc>()) {
-    NewState = NewState->bindLoc(*L, RetVal, C.getLocationContext());
+    NewState = NewState->bindLoc(*L, RetVal, C.getStackFrame());
 
     // Propagate taint if any of the arguments were tainted
     if (isTainted(State, Arg1) || isTainted(State, Arg2))
@@ -255,11 +255,11 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
   if (!FD)
     return false;
 
-  const LocationContext *LCtx = C.getLocationContext();
+  const StackFrame *SF = C.getStackFrame();
   const Expr *CE = Call.getOriginExpr();
 
   if (isBuiltinLikeFunction(Call)) {
-    C.addTransition(state->BindExpr(CE, LCtx, Call.getArgSVal(0)));
+    C.addTransition(state->BindExpr(CE, SF, Call.getArgSVal(0)));
     return true;
   }
 
@@ -311,7 +311,7 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
     // are represented the same way in the analyzer.
     assert (Call.getNumArgs() > 0);
     SVal Arg = Call.getArgSVal(0);
-    C.addTransition(state->BindExpr(CE, LCtx, Arg));
+    C.addTransition(state->BindExpr(CE, SF, Arg));
     return true;
   }
 
@@ -339,7 +339,7 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
         V = SVB.makeIntVal(0, CE->getType());
     }
 
-    C.addTransition(state->BindExpr(CE, LCtx, V));
+    C.addTransition(state->BindExpr(CE, SF, V));
     return true;
   }
   }

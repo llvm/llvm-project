@@ -447,6 +447,9 @@ template<typename T> static inline void releaseOSObject(T ptr)
 
 template<typename T> class OSObjectPtr {
 public:
+    using ValueType = typename RemovePointer<T>::Type;
+    using PtrType = ValueType*;
+
     OSObjectPtr()
         : m_ptr(nullptr)
     {
@@ -460,6 +463,7 @@ public:
 
     T get() const { return m_ptr; }
 
+    operator PtrType() const { return m_ptr; }
     explicit operator bool() const { return m_ptr; }
     bool operator!() const { return !m_ptr; }
 

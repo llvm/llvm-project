@@ -21,11 +21,11 @@ enum class AnnotationKind : uint8_t {
   ReservedName,
 };
 /// Returns the annotation kind of the global variable \p GV.
-AnnotationKind getAnnotationKind(const GlobalVariable &GV);
+LLVM_ABI AnnotationKind getAnnotationKind(const GlobalVariable &GV);
 
 /// Returns true if the annotation kind of the global variable \p GV is
 /// AnnotationOK.
-bool IsAnnotationOK(const GlobalVariable &GV);
+LLVM_ABI bool IsAnnotationOK(const GlobalVariable &GV);
 } // namespace memprof
 
 /// A class that holds the constants that represent static data and their

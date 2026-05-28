@@ -275,7 +275,7 @@ define float @mutually_recursive1(float %arg) {
 
 define float @recursive_phi(ptr %ptr) {
 ; CHECK-LABEL: define nofpclass(nan) float @recursive_phi
-; CHECK-SAME: (ptr nofree [[PTR:%.*]]) {
+; CHECK-SAME: (ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RET:%.*]] = call nofpclass(nan) float @ret_nofpclass_nan()
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -1878,7 +1878,7 @@ define double @fpext(float noundef nofpclass(inf nan) %arg) {
 }
 
 define float @atomicrmw_fadd(ptr %ptr, float nofpclass(inf nan) %val) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CHECK: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define float @atomicrmw_fadd
 ; CHECK-SAME: (ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[PTR:%.*]], float nofpclass(nan inf) [[VAL:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    [[RESULT:%.*]] = atomicrmw fadd ptr [[PTR]], float [[VAL]] seq_cst, align 4
@@ -1904,7 +1904,7 @@ define float @load(ptr %ptr, float noundef nofpclass(nan inf) %val) {
 }
 
 define float @load_atomic(ptr %ptr, float noundef nofpclass(nan inf) %val) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CHECK: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define noundef nofpclass(ninf nzero nsub nnorm) float @load_atomic
 ; CHECK-SAME: (ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[PTR:%.*]], float noundef nofpclass(nan inf) [[VAL:%.*]]) #[[ATTR6]] {
 ; CHECK-NEXT:    store atomic float [[VAL]], ptr [[PTR]] seq_cst, align 4
@@ -1934,22 +1934,34 @@ define <8 x float> @shufflevector_shufflevector(<4 x float> nofpclass(inf nan) %
 }
 
 define float @constrained_sitofp(i32 %arg) strictfp {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite)
-; CHECK-LABEL: define nofpclass(nan nzero sub) float @constrained_sitofp
-; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR8:[0-9]+]] {
-; CHECK-NEXT:    [[VAL:%.*]] = call nofpclass(nan nzero sub) float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR24]]
-; CHECK-NEXT:    ret float [[VAL]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite)
+; TUNIT-LABEL: define nofpclass(nan nzero sub) float @constrained_sitofp
+; TUNIT-SAME: (i32 [[ARG:%.*]]) #[[ATTR8:[0-9]+]] {
+; TUNIT-NEXT:    [[VAL:%.*]] = call nofpclass(nan nzero sub) float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR27:[0-9]+]]
+; TUNIT-NEXT:    ret float [[VAL]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite)
+; CGSCC-LABEL: define nofpclass(nan nzero sub) float @constrained_sitofp
+; CGSCC-SAME: (i32 [[ARG:%.*]]) #[[ATTR8:[0-9]+]] {
+; CGSCC-NEXT:    [[VAL:%.*]] = call nofpclass(nan nzero sub) float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR26:[0-9]+]]
+; CGSCC-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %val
 }
 
 define float @constrained_uitofp(i32 %arg) strictfp {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite)
-; CHECK-LABEL: define nofpclass(nan ninf nzero sub nnorm) float @constrained_uitofp
-; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR8]] {
-; CHECK-NEXT:    [[VAL:%.*]] = call nofpclass(nan ninf nzero sub nnorm) float @llvm.experimental.constrained.uitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR24]]
-; CHECK-NEXT:    ret float [[VAL]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite)
+; TUNIT-LABEL: define nofpclass(nan ninf nzero sub nnorm) float @constrained_uitofp
+; TUNIT-SAME: (i32 [[ARG:%.*]]) #[[ATTR8]] {
+; TUNIT-NEXT:    [[VAL:%.*]] = call nofpclass(nan ninf nzero sub nnorm) float @llvm.experimental.constrained.uitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR27]]
+; TUNIT-NEXT:    ret float [[VAL]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite)
+; CGSCC-LABEL: define nofpclass(nan ninf nzero sub nnorm) float @constrained_uitofp
+; CGSCC-SAME: (i32 [[ARG:%.*]]) #[[ATTR8]] {
+; CGSCC-NEXT:    [[VAL:%.*]] = call nofpclass(nan ninf nzero sub nnorm) float @llvm.experimental.constrained.uitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR26]]
+; CGSCC-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %val
@@ -2297,7 +2309,7 @@ define float @fadd_known_positive_daz(float nofpclass(ninf nsub nnorm) %arg0, fl
 define float @test_fadd_no_nan_from_no_ninf(float nofpclass(nan ninf) %arg0, float nofpclass(nan ninf) %arg1) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nan) float @test_fadd_no_nan_from_no_ninf
-; CHECK-SAME: (float nofpclass(nan ninf) [[ARG0:%.*]], float nofpclass(nan ninf) [[ARG1:%.*]]) #[[ATTR:[0-9]+]] {
+; CHECK-SAME: (float nofpclass(nan ninf) [[ARG0:%.*]], float nofpclass(nan ninf) [[ARG1:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
@@ -2308,7 +2320,7 @@ define float @test_fadd_no_nan_from_no_ninf(float nofpclass(nan ninf) %arg0, flo
 define float @test_fadd_no_nan_from_no_pinf(float nofpclass(nan pinf) %arg0, float nofpclass(nan pinf) %arg1) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nan) float @test_fadd_no_nan_from_no_pinf
-; CHECK-SAME: (float nofpclass(nan pinf) [[ARG0:%.*]], float nofpclass(nan pinf) [[ARG1:%.*]]) #[[ATTR:[0-9]+]] {
+; CHECK-SAME: (float nofpclass(nan pinf) [[ARG0:%.*]], float nofpclass(nan pinf) [[ARG1:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
@@ -2319,7 +2331,7 @@ define float @test_fadd_no_nan_from_no_pinf(float nofpclass(nan pinf) %arg0, flo
 define float @test_fadd_may_nan_from_no_pinf_no_ninf(float nofpclass(nan pinf) %arg0, float nofpclass(nan ninf) %arg1) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define float @test_fadd_may_nan_from_no_pinf_no_ninf
-; CHECK-SAME: (float nofpclass(nan pinf) [[ARG0:%.*]], float nofpclass(nan ninf) [[ARG1:%.*]]) #[[ATTR:[0-9]+]] {
+; CHECK-SAME: (float nofpclass(nan pinf) [[ARG0:%.*]], float nofpclass(nan ninf) [[ARG1:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
@@ -2330,7 +2342,7 @@ define float @test_fadd_may_nan_from_no_pinf_no_ninf(float nofpclass(nan pinf) %
 define float @test_fadd_may_nan_from_no_ninf_no_pinf(float nofpclass(nan ninf) %arg0, float nofpclass(nan pinf) %arg1) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define float @test_fadd_may_nan_from_no_ninf_no_pinf
-; CHECK-SAME: (float nofpclass(nan ninf) [[ARG0:%.*]], float nofpclass(nan pinf) [[ARG1:%.*]]) #[[ATTR:[0-9]+]] {
+; CHECK-SAME: (float nofpclass(nan ninf) [[ARG0:%.*]], float nofpclass(nan pinf) [[ARG1:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
@@ -3643,13 +3655,21 @@ define float @fadd_double_no_zero__output_only_is_dynamic(float noundef nofpclas
 
 ; Implies return must be 0
 define float @assume_select_condition_not_nan(float noundef %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: write)
-; CHECK-LABEL: define noundef nofpclass(nan inf nzero sub norm) float @assume_select_condition_not_nan
-; CHECK-SAME: (float noundef [[ARG:%.*]]) #[[ATTR19:[0-9]+]] {
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[ORD]]) #[[ATTR22]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[ORD]], float 0.000000e+00, float [[ARG]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: write)
+; TUNIT-LABEL: define noundef nofpclass(nan inf nzero sub norm) float @assume_select_condition_not_nan
+; TUNIT-SAME: (float noundef [[ARG:%.*]]) #[[ATTR19:[0-9]+]] {
+; TUNIT-NEXT:    [[ORD:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
+; TUNIT-NEXT:    call void @llvm.assume(i1 noundef [[ORD]]) #[[ATTR28:[0-9]+]]
+; TUNIT-NEXT:    [[SELECT:%.*]] = select i1 [[ORD]], float 0.000000e+00, float [[ARG]]
+; TUNIT-NEXT:    ret float [[SELECT]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: write)
+; CGSCC-LABEL: define noundef nofpclass(nan inf nzero sub norm) float @assume_select_condition_not_nan
+; CGSCC-SAME: (float noundef [[ARG:%.*]]) #[[ATTR19:[0-9]+]] {
+; CGSCC-NEXT:    [[ORD:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
+; CGSCC-NEXT:    call void @llvm.assume(i1 noundef [[ORD]]) #[[ATTR27:[0-9]+]]
+; CGSCC-NEXT:    [[SELECT:%.*]] = select i1 [[ORD]], float 0.000000e+00, float [[ARG]]
+; CGSCC-NEXT:    ret float [[SELECT]]
 ;
   %ord = fcmp ord float %arg, 0.0
   call void @llvm.assume(i1 %ord)
@@ -3658,13 +3678,21 @@ define float @assume_select_condition_not_nan(float noundef %arg) {
 }
 
 define float @assume_select_condition_not_nan_commute(float noundef %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: write)
-; CHECK-LABEL: define noundef nofpclass(inf nzero sub norm) float @assume_select_condition_not_nan_commute
-; CHECK-SAME: (float noundef [[ARG:%.*]]) #[[ATTR19]] {
-; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno float [[ARG]], 0.000000e+00
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[UNO]]) #[[ATTR22]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[UNO]], float [[ARG]], float 0.000000e+00
-; CHECK-NEXT:    ret float [[SELECT]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: write)
+; TUNIT-LABEL: define noundef nofpclass(inf nzero sub norm) float @assume_select_condition_not_nan_commute
+; TUNIT-SAME: (float noundef [[ARG:%.*]]) #[[ATTR19]] {
+; TUNIT-NEXT:    [[UNO:%.*]] = fcmp uno float [[ARG]], 0.000000e+00
+; TUNIT-NEXT:    call void @llvm.assume(i1 noundef [[UNO]]) #[[ATTR28]]
+; TUNIT-NEXT:    [[SELECT:%.*]] = select i1 [[UNO]], float [[ARG]], float 0.000000e+00
+; TUNIT-NEXT:    ret float [[SELECT]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: write)
+; CGSCC-LABEL: define noundef nofpclass(inf nzero sub norm) float @assume_select_condition_not_nan_commute
+; CGSCC-SAME: (float noundef [[ARG:%.*]]) #[[ATTR19]] {
+; CGSCC-NEXT:    [[UNO:%.*]] = fcmp uno float [[ARG]], 0.000000e+00
+; CGSCC-NEXT:    call void @llvm.assume(i1 noundef [[UNO]]) #[[ATTR27]]
+; CGSCC-NEXT:    [[SELECT:%.*]] = select i1 [[UNO]], float [[ARG]], float 0.000000e+00
+; CGSCC-NEXT:    ret float [[SELECT]]
 ;
   %uno = fcmp uno float %arg, 0.0
   call void @llvm.assume(i1 %uno)
@@ -3674,13 +3702,21 @@ define float @assume_select_condition_not_nan_commute(float noundef %arg) {
 
 ; Implies no return nan
 define float @assume_load(ptr %ptr) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
-; CHECK-LABEL: define nofpclass(nan) float @assume_load
-; CHECK-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[PTR:%.*]]) #[[ATTR20:[0-9]+]] {
-; CHECK-NEXT:    [[VAL:%.*]] = load float, ptr [[PTR]], align 4
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[VAL]], 0.000000e+00
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[ORD]]) #[[ATTR22]]
-; CHECK-NEXT:    ret float [[VAL]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
+; TUNIT-LABEL: define nofpclass(nan) float @assume_load
+; TUNIT-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[PTR:%.*]]) #[[ATTR20:[0-9]+]] {
+; TUNIT-NEXT:    [[VAL:%.*]] = load float, ptr [[PTR]], align 4
+; TUNIT-NEXT:    [[ORD:%.*]] = fcmp ord float [[VAL]], 0.000000e+00
+; TUNIT-NEXT:    call void @llvm.assume(i1 noundef [[ORD]]) #[[ATTR28]]
+; TUNIT-NEXT:    ret float [[VAL]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
+; CGSCC-LABEL: define nofpclass(nan) float @assume_load
+; CGSCC-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[PTR:%.*]]) #[[ATTR20:[0-9]+]] {
+; CGSCC-NEXT:    [[VAL:%.*]] = load float, ptr [[PTR]], align 4
+; CGSCC-NEXT:    [[ORD:%.*]] = fcmp ord float [[VAL]], 0.000000e+00
+; CGSCC-NEXT:    call void @llvm.assume(i1 noundef [[ORD]]) #[[ATTR27]]
+; CGSCC-NEXT:    ret float [[VAL]]
 ;
   %val = load float, ptr %ptr
   %ord = fcmp ord float %val, 0.0
@@ -3690,12 +3726,19 @@ define float @assume_load(ptr %ptr) {
 
 ; FIXME: Why is this not working?
 define float @assume_returned_arg(float noundef %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: write)
-; CHECK-LABEL: define noundef float @assume_returned_arg
-; CHECK-SAME: (float noundef returned [[ARG:%.*]]) #[[ATTR19]] {
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[ORD]]) #[[ATTR22]]
-; CHECK-NEXT:    ret float [[ARG]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: write)
+; TUNIT-LABEL: define noundef float @assume_returned_arg
+; TUNIT-SAME: (float noundef returned [[ARG:%.*]]) #[[ATTR19]] {
+; TUNIT-NEXT:    [[ORD:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
+; TUNIT-NEXT:    call void @llvm.assume(i1 noundef [[ORD]]) #[[ATTR28]]
+; TUNIT-NEXT:    ret float [[ARG]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: write)
+; CGSCC-LABEL: define noundef float @assume_returned_arg
+; CGSCC-SAME: (float noundef returned [[ARG:%.*]]) #[[ATTR19]] {
+; CGSCC-NEXT:    [[ORD:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
+; CGSCC-NEXT:    call void @llvm.assume(i1 noundef [[ORD]]) #[[ATTR27]]
+; CGSCC-NEXT:    ret float [[ARG]]
 ;
   %ord = fcmp ord float %arg, 0.0
   call void @llvm.assume(i1 %ord)

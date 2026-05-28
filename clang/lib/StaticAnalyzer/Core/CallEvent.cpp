@@ -154,7 +154,7 @@ AnalysisDeclContext *CallEvent::getCalleeAnalysisDeclContext() const {
     return nullptr;
 
   AnalysisDeclContext *ADC =
-      LCtx->getAnalysisDeclContext()->getManager()->getContext(D);
+      SF->getAnalysisDeclContext()->getManager()->getContext(D);
 
   return ADC;
 }
@@ -173,7 +173,7 @@ const StackFrame *CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
   // instead of doing this reverse lookup, we would be able to build the stack
   // frame for non-expression-based calls, and also we wouldn't need the reverse
   // lookup.
-  const CFGStmtMap *Map = LCtx->getAnalysisDeclContext()->getCFGStmtMap();
+  const CFGStmtMap *Map = SF->getAnalysisDeclContext()->getCFGStmtMap();
   const CFGBlock *B = Map->getBlock(E);
   assert(B);
 
@@ -185,7 +185,7 @@ const StackFrame *CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
         break;
   assert(Idx < Sz);
 
-  return ADC->getStackFrame(LCtx, nullptr, E, B, BlockCount, Idx);
+  return ADC->getStackFrame(SF, nullptr, E, B, BlockCount, Idx);
 }
 
 const ParamVarRegion
@@ -296,7 +296,7 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
   // NOTE: Even if RegionsToInvalidate is empty, we may still invalidate
   //  global variables.
   return State->invalidateRegions(ValuesToInvalidate, getCFGElementRef(),
-                                  BlockCount, getLocationContext(),
+                                  BlockCount, getStackFrame(),
                                   /*CausedByPointerEscape*/ true,
                                   /*Symbols=*/nullptr, this, &ETraits);
 }
@@ -306,8 +306,8 @@ ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,
 
   if (const Expr *E = getOriginExpr()) {
     if (IsPreVisit)
-      return PreStmt(E, getLocationContext(), Tag);
-    return PostStmt(E, getLocationContext(), Tag);
+      return PreStmt(E, getStackFrame(), Tag);
+    return PostStmt(E, getStackFrame(), Tag);
   }
 
   const Decl *D = getDecl();
@@ -317,8 +317,8 @@ ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,
 
   SourceLocation Loc = getSourceRange().getBegin();
   if (IsPreVisit)
-    return PreImplicitCall(D, Loc, getLocationContext(), ElemRef, Tag);
-  return PostImplicitCall(D, Loc, getLocationContext(), ElemRef, Tag);
+    return PreImplicitCall(D, Loc, getStackFrame(), ElemRef, Tag);
+  return PostImplicitCall(D, Loc, getStackFrame(), ElemRef, Tag);
 }
 
 SVal CallEvent::getArgSVal(unsigned Index) const {
@@ -535,12 +535,8 @@ const ConstructionContext *CallEvent::getConstructionContext() const {
 }
 
 const CallEventRef<> CallEvent::getCaller() const {
-  const auto *CallLocationContext = this->getLocationContext();
-  if (!CallLocationContext || CallLocationContext->inTopFrame())
-    return nullptr;
-
-  const auto *CallSF = CallLocationContext->getStackFrame();
-  if (!CallSF)
+  const auto *CallSF = this->getStackFrame();
+  if (!CallSF || CallSF->inTopFrame())
     return nullptr;
 
   CallEventManager &CEMgr = State->getStateManager().getCallEventManager();
@@ -561,10 +557,10 @@ std::optional<SVal> CallEvent::getReturnValueUnderConstruction() const {
 
   EvalCallOptions CallOpts;
   ExprEngine &Engine = getState()->getStateManager().getOwningEngine();
-  unsigned NumVisitedCall = Engine.getNumVisited(
-      getLocationContext(), getCFGElementRef().getParent());
+  unsigned NumVisitedCall =
+      Engine.getNumVisited(getStackFrame(), getCFGElementRef().getParent());
   SVal RetVal = Engine.computeObjectUnderConstruction(
-      getOriginExpr(), getState(), NumVisitedCall, getLocationContext(), CC,
+      getOriginExpr(), getState(), NumVisitedCall, getStackFrame(), CC,
       CallOpts);
   return RetVal;
 }
@@ -584,8 +580,7 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
   // Note that the AnalysisDeclContext will have the FunctionDecl with
   // the definition (if one exists).
   AnalysisDeclContext *AD =
-    getLocationContext()->getAnalysisDeclContext()->
-    getManager()->getContext(FD);
+      getStackFrame()->getAnalysisDeclContext()->getManager()->getContext(FD);
   bool IsAutosynthesized;
   Stmt* Body = AD->getBody(IsAutosynthesized);
   LLVM_DEBUG({
@@ -985,9 +980,9 @@ void AnyCXXConstructorCall::getInitialStackFrameContents(
 }
 
 const StackFrame *CXXInheritedConstructorCall::getInheritingStackFrame() const {
-  const StackFrame *SF = getLocationContext()->getStackFrame();
+  const StackFrame *SF = getStackFrame();
   while (isa<CXXInheritedCtorInitExpr>(SF->getCallSite()))
-    SF = SF->getParent()->getStackFrame();
+    SF = SF->getParent();
   return SF;
 }
 
@@ -1049,7 +1044,7 @@ SVal ObjCMethodCall::getReceiverSVal() const {
   // An instance message with no expression means we are sending to super.
   // In this case the object reference is the same as 'self'.
   assert(getOriginExpr()->getReceiverKind() == ObjCMessageExpr::SuperInstance);
-  SVal SelfVal = getState()->getSelfSVal(getLocationContext());
+  SVal SelfVal = getState()->getSelfSVal(getStackFrame());
   assert(SelfVal.isValid() && "Calling super but not in ObjC method");
   return SelfVal;
 }
@@ -1063,7 +1058,7 @@ bool ObjCMethodCall::isReceiverSelfOrSuper() const {
     return false;
 
   SVal RecVal = getSVal(getOriginExpr()->getInstanceReceiver());
-  SVal SelfVal = getState()->getSelfSVal(getLocationContext());
+  SVal SelfVal = getState()->getSelfSVal(getStackFrame());
 
   return (RecVal == SelfVal);
 }
@@ -1102,7 +1097,7 @@ getSyntacticFromForPseudoObjectExpr(const PseudoObjectExpr *POE) {
 ObjCMessageKind ObjCMethodCall::getMessageKind() const {
   if (!Data) {
     // Find the parent, ignoring implicit casts.
-    const ParentMap &PM = getLocationContext()->getParentMap();
+    const ParentMap &PM = getStackFrame()->getParentMap();
     const Stmt *S = PM.getParentIgnoreParenCasts(getOriginExpr());
 
     // Check if parent is a PseudoObjectExpr.
@@ -1345,7 +1340,7 @@ RuntimeDefinition ObjCMethodCall::getRuntimeDefinition() const {
         // instance (not class).
         if (ReceiverT->isObjCClass()) {
 
-          SVal SelfVal = getState()->getSelfSVal(getLocationContext());
+          SVal SelfVal = getState()->getSelfSVal(getStackFrame());
           // For [self classMethod], return compiler visible declaration.
           if (Receiver == SelfVal.getAsRegion()) {
             return RuntimeDefinition(findDefiningRedecl(E->getMethodDecl()));
@@ -1439,41 +1434,41 @@ CallEventManager::CallEventManager(llvm::BumpPtrAllocator &alloc)
 
 CallEventRef<>
 CallEventManager::getSimpleCall(const CallExpr *CE, ProgramStateRef State,
-                                const LocationContext *LCtx,
+                                const StackFrame *SF,
                                 CFGBlock::ConstCFGElementRef ElemRef) {
   if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(CE))
-    return create<CXXMemberCall>(MCE, State, LCtx, ElemRef);
+    return create<CXXMemberCall>(MCE, State, SF, ElemRef);
 
   if (const auto *OpCE = dyn_cast<CXXOperatorCallExpr>(CE)) {
     const FunctionDecl *DirectCallee = OpCE->getDirectCallee();
     if (const auto *MD = dyn_cast<CXXMethodDecl>(DirectCallee)) {
       if (MD->isImplicitObjectMemberFunction())
-        return create<CXXMemberOperatorCall>(OpCE, State, LCtx, ElemRef);
+        return create<CXXMemberOperatorCall>(OpCE, State, SF, ElemRef);
       if (MD->isStatic())
-        return create<CXXStaticOperatorCall>(OpCE, State, LCtx, ElemRef);
+        return create<CXXStaticOperatorCall>(OpCE, State, SF, ElemRef);
     }
 
   } else if (CE->getCallee()->getType()->isBlockPointerType()) {
-    return create<BlockCall>(CE, State, LCtx, ElemRef);
+    return create<BlockCall>(CE, State, SF, ElemRef);
   }
 
   // Otherwise, it's a normal function call, static member function call, or
   // something we can't reason about.
-  return create<SimpleFunctionCall>(CE, State, LCtx, ElemRef);
+  return create<SimpleFunctionCall>(CE, State, SF, ElemRef);
 }
 
 CallEventRef<> CallEventManager::getCaller(const StackFrame *CalleeSF,
                                            ProgramStateRef State) {
-  const LocationContext *ParentCtx = CalleeSF->getParent();
-  const LocationContext *CallerCtx = ParentCtx->getStackFrame();
+  const StackFrame *ParentSF = CalleeSF->getParent();
+  const StackFrame *CallerSF = ParentSF;
   CFGBlock::ConstCFGElementRef ElemRef = {CalleeSF->getCallSiteBlock(),
                                           CalleeSF->getIndex()};
-  assert(CallerCtx && "This should not be used for top-level stack frames");
+  assert(CallerSF && "This should not be used for top-level stack frames");
 
   const Expr *CallSite = CalleeSF->getCallSite();
 
   if (CallSite) {
-    if (CallEventRef<> Out = getCall(CallSite, State, CallerCtx, ElemRef))
+    if (CallEventRef<> Out = getCall(CallSite, State, CallerSF, ElemRef))
       return Out;
 
     SValBuilder &SVB = State->getStateManager().getSValBuilder();
@@ -1482,11 +1477,11 @@ CallEventRef<> CallEventManager::getCaller(const StackFrame *CalleeSF,
     SVal ThisVal = State->getSVal(ThisPtr);
 
     if (const auto *CE = dyn_cast<CXXConstructExpr>(CallSite))
-      return getCXXConstructorCall(CE, ThisVal.getAsRegion(), State, CallerCtx,
+      return getCXXConstructorCall(CE, ThisVal.getAsRegion(), State, CallerSF,
                                    ElemRef);
     if (const auto *CIE = dyn_cast<CXXInheritedCtorInitExpr>(CallSite))
       return getCXXInheritedConstructorCall(CIE, ThisVal.getAsRegion(), State,
-                                            CallerCtx, ElemRef);
+                                            CallerSF, ElemRef);
     // All other cases are handled by getCall.
     llvm_unreachable("This is not an inlineable statement");
   }
@@ -1514,20 +1509,20 @@ CallEventRef<> CallEventManager::getCaller(const StackFrame *CalleeSF,
 
   return getCXXDestructorCall(Dtor, Trigger, ThisVal.getAsRegion(),
                               E.getAs<CFGBaseDtor>().has_value(), State,
-                              CallerCtx, ElemRef);
+                              CallerSF, ElemRef);
 }
 
 CallEventRef<> CallEventManager::getCall(const Stmt *S, ProgramStateRef State,
-                                         const LocationContext *LC,
+                                         const StackFrame *SF,
                                          CFGBlock::ConstCFGElementRef ElemRef) {
   if (const auto *CE = dyn_cast<CallExpr>(S)) {
-    return getSimpleCall(CE, State, LC, ElemRef);
+    return getSimpleCall(CE, State, SF, ElemRef);
   } else if (const auto *NE = dyn_cast<CXXNewExpr>(S)) {
-    return getCXXAllocatorCall(NE, State, LC, ElemRef);
+    return getCXXAllocatorCall(NE, State, SF, ElemRef);
   } else if (const auto *DE = dyn_cast<CXXDeleteExpr>(S)) {
-    return getCXXDeallocatorCall(DE, State, LC, ElemRef);
+    return getCXXDeallocatorCall(DE, State, SF, ElemRef);
   } else if (const auto *ME = dyn_cast<ObjCMessageExpr>(S)) {
-    return getObjCMethodCall(ME, State, LC, ElemRef);
+    return getObjCMethodCall(ME, State, SF, ElemRef);
   } else {
     return nullptr;
   }

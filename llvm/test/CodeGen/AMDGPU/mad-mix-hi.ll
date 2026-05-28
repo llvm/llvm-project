@@ -70,7 +70,7 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_constlo(half %src0, half %s
 ; SDAG-GFX11-TRUE16:       ; %bb.0:
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-GFX11-TRUE16-NEXT:    v_fma_mixhi_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1]
-; SDAG-GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 1.0
+; SDAG-GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0x3c00
 ; SDAG-GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX11-FAKE16-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_constlo:

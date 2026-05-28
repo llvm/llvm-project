@@ -1185,8 +1185,9 @@ body: |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   liveins: $sgpr0_sgpr1, $sgpr2, $vgpr2
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   S_WAIT_XCNT 0
+  ; GCN-NEXT:   S_WAIT_XCNT 1
   ; GCN-NEXT:   $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+  ; GCN-NEXT:   S_WAIT_XCNT 0
   ; GCN-NEXT:   $vgpr2 = V_MOV_B32_e32 0, implicit $exec
   ; GCN-NEXT:   $sgpr0 = S_MOV_B32 $sgpr0
   bb.0:

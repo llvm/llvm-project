@@ -232,7 +232,7 @@ class GISelCSEAnalysis : public AnalysisInfoMixin<GISelCSEAnalysis> {
 
 public:
   using Result = std::unique_ptr<GISelCSEInfo>;
-  LLVM_ABI GISelCSEAnalysis(TargetMachine *TM) : TM(TM) {};
+  GISelCSEAnalysis(TargetMachine *TM) : TM(TM) {};
 
   LLVM_ABI Result run(MachineFunction &MF,
                       MachineFunctionAnalysisManager &MFAM);

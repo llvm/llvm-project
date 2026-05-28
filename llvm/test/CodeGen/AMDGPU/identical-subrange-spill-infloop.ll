@@ -30,9 +30,9 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_writelane_b32 v6, s70, 18
 ; CHECK-NEXT:    v_writelane_b32 v6, s71, 19
 ; CHECK-NEXT:    v_writelane_b32 v6, s30, 20
+; CHECK-NEXT:    v_writelane_b32 v6, s31, 21
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], 0
-; CHECK-NEXT:    v_writelane_b32 v6, s31, 21
 ; CHECK-NEXT:    s_mov_b32 s68, 0
 ; CHECK-NEXT:    s_mov_b32 s69, s4
 ; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[8:9], 0x0

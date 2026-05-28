@@ -126,7 +126,7 @@ ExprEngine::inlineCall and ExprEngine::processCallExit.
 
 If the conditions are right for inlining, a CallEnter node is created and added
 to the analysis work list. The CallEnter node marks the change to a new
-LocationContext representing the called function, and its state includes the
+StackFrame representing the called function, and its state includes the
 contents of the new stack frame. When the CallEnter node is actually processed,
 its single successor will be an edge to the first CFG block in the function.
 
@@ -145,7 +145,7 @@ reasonable steps:
    bindings.
 
 4. A CallExitEnd node is generated, which marks the transition back to the
-   caller's LocationContext.
+   caller's StackFrame.
 
 5. Custom post-call checks are processed and the final nodes are pushed back
    onto the work list, so that evaluation of the caller can continue.
@@ -179,7 +179,7 @@ some cases, however, where the analyzer chooses not to inline:
   cannot be computed.  These are prerequisites for analyzing a function body,
   with or without inlining.
 
-- If the LocationContext chain for a given ExplodedNode reaches a maximum cutoff
+- If the StackFrame chain for a given ExplodedNode reaches a maximum cutoff
   depth.  This prevents unbounded analysis due to infinite recursion, but also
   serves as a useful cutoff for performance reasons.
 
@@ -377,7 +377,7 @@ CallEvent
 
 A CallEvent represents a specific call to a function, method, or other body of
 code. It is path-sensitive, containing both the current state (ProgramStateRef)
-and stack space (LocationContext), and provides uniform access to the argument
+and stack space (StackFrame), and provides uniform access to the argument
 values and return type of a call, no matter how the call is written in the
 source or what sort of code body is being invoked.
 

@@ -2231,10 +2231,10 @@ public:
   }
 
   /// Note that this member template is a specialization.
+  /// A partial specialization may be a member specialization even if it is not
+  /// an instantiation of a member partial specialization.
   void setMemberSpecialization() {
     auto *First = cast<ClassTemplatePartialSpecializationDecl>(getFirstDecl());
-    assert(First->InstantiatedFromMember.getPointer() &&
-           "Only member templates can be member template specializations");
     return First->InstantiatedFromMember.setInt(true);
   }
 
@@ -2999,10 +2999,10 @@ public:
   }
 
   /// Note that this member template is a specialization.
+  /// A partial specialization may be a member specialization even if it is not
+  /// an instantiation of a member partial specialization.
   void setMemberSpecialization() {
     auto *First = cast<VarTemplatePartialSpecializationDecl>(getFirstDecl());
-    assert(First->InstantiatedFromMember.getPointer() &&
-           "Only member templates can be member template specializations");
     return First->InstantiatedFromMember.setInt(true);
   }
 

@@ -36,6 +36,6 @@ define void @main() {
 ; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x70 [alloc]
 ; CHECK-NEXT:   ret ptr %alloc
 ; CHECK-NEXT: Exiting function: stack_address
-; CHECK-NEXT:   %ptr = call ptr @stack_address() => ptr 0x70 [dangling]
+; CHECK-NEXT:   %ptr = call ptr @stack_address() => ptr 0x70 [alloc (dangling)]
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

@@ -959,8 +959,10 @@ void DAP::Received(const protocol::Event &event) {
 }
 
 void DAP::Received(const protocol::Request &request) {
-  if (request.command == "disconnect")
+  if (request.command == "disconnect") {
+    std::lock_guard<std::mutex> guard(m_queue_mutex);
     m_disconnecting = true;
+  }
 
   const std::optional<CancelArguments> cancel_args =
       getArgumentsIfRequest<CancelArguments>(request, "cancel");

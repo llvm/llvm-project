@@ -4260,9 +4260,14 @@ static int getIntOperandFromRegisterString(StringRef RegString) {
           "Unexpected non-integer value in special register string.");
   (void)AllIntFields;
 
+  if (Ops[0] < 2 || Ops[1] > 7 || Ops[2] > 15 || Ops[3] > 15 || Ops[4] > 7)
+    return -1;
+
   // Need to combine the integer fields of the string into a single value
-  // based on the bit encoding of MRS/MSR instruction.
-  return (Ops[0] << 14) | (Ops[1] << 11) | (Ops[2] << 7) |
+  // based on the bit encoding of MRS/MSR instruction. We also mask Ops[0], as
+  // top bit as it is implicitly assumed to be 1 for MRS/MSR instruction and is
+  // not part of the encoding.
+  return ((Ops[0] & 0x1) << 14) | (Ops[1] << 11) | (Ops[2] << 7) |
          (Ops[3] << 3) | (Ops[4]);
 }
 

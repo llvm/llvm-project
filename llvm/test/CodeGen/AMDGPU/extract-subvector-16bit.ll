@@ -1612,7 +1612,7 @@ define amdgpu_gfx <8 x i16> @vec_16xi16_extract_8xi16_0(i1 inreg %cond, ptr addr
 ; GFX11-TRUE16-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x3801, v7.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.h, 0x3900
 ; GFX11-TRUE16-NEXT:    v_cmp_gt_u16_e64 s0, 0x3801, v6.l
-; GFX11-TRUE16-NEXT:    v_cmp_lt_u16_e64 s1, 0.5, v7.h
+; GFX11-TRUE16-NEXT:    v_cmp_lt_u16_e64 s1, 0x3800, v7.h
 ; GFX11-TRUE16-NEXT:    v_cmp_gt_u16_e64 s2, 0x3801, v4.h
 ; GFX11-TRUE16-NEXT:    v_cmp_gt_u16_e64 s3, 0x3801, v5.h
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v3.l, v3.h, 0x3d00, vcc_lo
@@ -1677,7 +1677,7 @@ define amdgpu_gfx <8 x i16> @vec_16xi16_extract_8xi16_0(i1 inreg %cond, ptr addr
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_3)
 ; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v0, v2, 0x5040100
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v1, 0x3900, v1, vcc_lo
-; GFX11-FAKE16-NEXT:    v_cmp_lt_u16_e32 vcc_lo, 0.5, v8
+; GFX11-FAKE16-NEXT:    v_cmp_lt_u16_e32 vcc_lo, 0x3800, v8
 ; GFX11-FAKE16-NEXT:    v_perm_b32 v2, v7, v4, 0x5040100
 ; GFX11-FAKE16-NEXT:    v_perm_b32 v1, v1, v3, 0x5040100
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v6, 0x3d00, v9, vcc_lo

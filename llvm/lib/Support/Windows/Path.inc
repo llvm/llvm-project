@@ -1183,6 +1183,8 @@ void mapped_file_region::unmapImpl() {
 
 void mapped_file_region::dontNeedImpl() {}
 
+void mapped_file_region::randomAccessImpl() {}
+
 void mapped_file_region::willNeedImpl() {
   struct MEMORY_RANGE_ENTRY {
     PVOID VirtualAddress;

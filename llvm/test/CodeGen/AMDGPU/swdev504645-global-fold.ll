@@ -10,16 +10,16 @@ define void @test_load_zext() #0 {
 ; CHECK-NEXT:    s_or_saveexec_b64 s[2:3], -1
 ; CHECK-NEXT:    scratch_store_dword off, v40, s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[2:3]
-; CHECK-NEXT:    s_add_i32 s32, s32, 16
 ; CHECK-NEXT:    v_writelane_b32 v40, s0, 2
+; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
+; CHECK-NEXT:    s_add_i32 s32, s32, 16
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
 ; CHECK-NEXT:    s_getpc_b64 s[0:1]
 ; CHECK-NEXT:    s_add_u32 s0, s0, has_spgr_args@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s1, s1, has_spgr_args@gotpcrel32@hi+12
 ; CHECK-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
 ; CHECK-NEXT:    s_mov_b32 s0, DescriptorBuffer@abs32@lo
-; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0

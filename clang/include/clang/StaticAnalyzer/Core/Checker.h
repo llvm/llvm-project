@@ -346,16 +346,13 @@ public:
 class RegionChanges {
   template <typename CHECKER>
   static ProgramStateRef
-  _checkRegionChanges(void *checker,
-                      ProgramStateRef state,
+  _checkRegionChanges(void *checker, ProgramStateRef state,
                       const InvalidatedSymbols *invalidated,
                       ArrayRef<const MemRegion *> Explicits,
-                      ArrayRef<const MemRegion *> Regions,
-                      const LocationContext *LCtx,
+                      ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
                       const CallEvent *Call) {
-    return ((const CHECKER *) checker)->checkRegionChanges(state, invalidated,
-                                                           Explicits, Regions,
-                                                           LCtx, Call);
+    return ((const CHECKER *)checker)
+        ->checkRegionChanges(state, invalidated, Explicits, Regions, SF, Call);
   }
 
 public:

@@ -7,7 +7,7 @@
 ; CHECK:        %[[begin:.*]] = call noalias nonnull ptr @llvm.coro.begin(
 ; CHECK:        #dbg_declare(ptr %[[begin]], ![[CORO_FRAME:[0-9]+]], !DIExpression(),
 ;
-; CHECK:       define internal fastcc void @f.resume(
+; CHECK:       define internal void @f.resume(
 ; CHECK:       entry.resume:
 ; CHECK:            %[[FramePtr_RESUME:.*]] = alloca ptr
 ; CHECK:            #dbg_declare(ptr %[[FramePtr_RESUME]], ![[CORO_FRAME_IN_RESUME:[0-9]+]], !DIExpression(DW_OP_deref)

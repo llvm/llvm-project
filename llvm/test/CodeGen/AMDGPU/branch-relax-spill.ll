@@ -939,10 +939,10 @@ define void @spill_func(ptr addrspace(1) %arg) #0 {
 ; CHECK-NEXT:    v_writelane_b32 v0, s99, 34
 ; CHECK-NEXT:    v_writelane_b32 v0, s100, 35
 ; CHECK-NEXT:    v_writelane_b32 v0, s101, 36
-; CHECK-NEXT:    s_mov_b32 s40, s12
 ; CHECK-NEXT:    v_writelane_b32 v0, s30, 37
-; CHECK-NEXT:    s_cmp_eq_u32 s40, 0
 ; CHECK-NEXT:    v_writelane_b32 v0, s31, 38
+; CHECK-NEXT:    s_mov_b32 s40, s12
+; CHECK-NEXT:    s_cmp_eq_u32 s40, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    ;;#ASMEND

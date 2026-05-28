@@ -881,12 +881,12 @@ v_cmp_eq_i16 vcc, v127.h, v2.l
 // W64: v_cmp_eq_i16_e32 vcc, v127.h, v2.l      ; encoding: [0xff,0x05,0x64,0x7c]
 
 v_cmp_eq_i16 vcc_lo, 0x3800, v2.l
-// W32: v_cmp_eq_i16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x64,0x7c]
+// W32: v_cmp_eq_i16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x64,0x7c,0x00,0x38,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_eq_i16 vcc, 0x3800, v2.l
 // W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-// W64: v_cmp_eq_i16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x64,0x7c]
+// W64: v_cmp_eq_i16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x64,0x7c,0x00,0x38,0x00,0x00]
 
 v_cmp_eq_i16 vcc_lo, src_scc, v2.h
 // W32: v_cmp_eq_i16_e32 vcc_lo, src_scc, v2.h  ; encoding: [0xfd,0x04,0x65,0x7c]
@@ -1259,12 +1259,12 @@ v_cmp_eq_u16 vcc, v127.h, v2.l
 // W64: v_cmp_eq_u16_e32 vcc, v127.h, v2.l      ; encoding: [0xff,0x05,0x74,0x7c]
 
 v_cmp_eq_u16 vcc_lo, 0x3800, v2.l
-// W32: v_cmp_eq_u16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x74,0x7c]
+// W32: v_cmp_eq_u16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x74,0x7c,0x00,0x38,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_eq_u16 vcc, 0x3800, v2.l
 // W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-// W64: v_cmp_eq_u16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x74,0x7c]
+// W64: v_cmp_eq_u16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x74,0x7c,0x00,0x38,0x00,0x00]
 
 v_cmp_eq_u16 vcc_lo, src_scc, v2.h
 // W32: v_cmp_eq_u16_e32 vcc_lo, src_scc, v2.h  ; encoding: [0xfd,0x04,0x75,0x7c]
@@ -1989,12 +1989,12 @@ v_cmp_ge_i16 vcc, 0xfe0b, v127.l
 // W64: v_cmp_ge_i16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x6c,0x7c,0x0b,0xfe,0x00,0x00]
 
 v_cmp_ge_i16 vcc_lo, 0x3800, v2.l
-// W32: v_cmp_ge_i16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x6c,0x7c]
+// W32: v_cmp_ge_i16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x6c,0x7c,0x00,0x38,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_ge_i16 vcc, 0x3800, v2.l
 // W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-// W64: v_cmp_ge_i16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x6c,0x7c]
+// W64: v_cmp_ge_i16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x6c,0x7c,0x00,0x38,0x00,0x00]
 
 v_cmp_ge_i16 vcc_lo, v1.h, v2.l
 // W32: v_cmp_ge_i16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x6c,0x7c]
@@ -2367,12 +2367,12 @@ v_cmp_ge_u16 vcc, 0xfe0b, v127.l
 // W64: v_cmp_ge_u16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x7c,0x7c,0x0b,0xfe,0x00,0x00]
 
 v_cmp_ge_u16 vcc_lo, 0x3800, v2.l
-// W32: v_cmp_ge_u16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x7c,0x7c]
+// W32: v_cmp_ge_u16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x7c,0x7c,0x00,0x38,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_ge_u16 vcc, 0x3800, v2.l
 // W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-// W64: v_cmp_ge_u16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x7c,0x7c]
+// W64: v_cmp_ge_u16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x7c,0x7c,0x00,0x38,0x00,0x00]
 
 v_cmp_ge_u16 vcc_lo, v1.h, v2.l
 // W32: v_cmp_ge_u16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x7c,0x7c]
@@ -3113,12 +3113,12 @@ v_cmp_gt_i16 vcc, 0xfe0b, v127.l
 // W64: v_cmp_gt_i16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x68,0x7c,0x0b,0xfe,0x00,0x00]
 
 v_cmp_gt_i16 vcc_lo, 0x3800, v2.l
-// W32: v_cmp_gt_i16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x68,0x7c]
+// W32: v_cmp_gt_i16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x68,0x7c,0x00,0x38,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_gt_i16 vcc, 0x3800, v2.l
 // W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-// W64: v_cmp_gt_i16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x68,0x7c]
+// W64: v_cmp_gt_i16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x68,0x7c,0x00,0x38,0x00,0x00]
 
 v_cmp_gt_i16 vcc_lo, v1.h, v2.l
 // W32: v_cmp_gt_i16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x68,0x7c]
@@ -3491,12 +3491,12 @@ v_cmp_gt_u16 vcc, 0xfe0b, v127.l
 // W64: v_cmp_gt_u16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x78,0x7c,0x0b,0xfe,0x00,0x00]
 
 v_cmp_gt_u16 vcc_lo, 0x3800, v2.l
-// W32: v_cmp_gt_u16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x78,0x7c]
+// W32: v_cmp_gt_u16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x78,0x7c,0x00,0x38,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_gt_u16 vcc, 0x3800, v2.l
 // W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-// W64: v_cmp_gt_u16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x78,0x7c]
+// W64: v_cmp_gt_u16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x78,0x7c,0x00,0x38,0x00,0x00]
 
 v_cmp_gt_u16 vcc_lo, v1.h, v2.l
 // W32: v_cmp_gt_u16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x78,0x7c]
@@ -4237,12 +4237,12 @@ v_cmp_le_i16 vcc, 0xfe0b, v127.l
 // W64: v_cmp_le_i16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x66,0x7c,0x0b,0xfe,0x00,0x00]
 
 v_cmp_le_i16 vcc_lo, 0x3800, v2.l
-// W32: v_cmp_le_i16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x66,0x7c]
+// W32: v_cmp_le_i16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x66,0x7c,0x00,0x38,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_le_i16 vcc, 0x3800, v2.l
 // W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-// W64: v_cmp_le_i16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x66,0x7c]
+// W64: v_cmp_le_i16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x66,0x7c,0x00,0x38,0x00,0x00]
 
 v_cmp_le_i16 vcc_lo, v1.h, v2.l
 // W32: v_cmp_le_i16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x66,0x7c]
@@ -4615,12 +4615,12 @@ v_cmp_le_u16 vcc, 0xfe0b, v127.l
 // W64: v_cmp_le_u16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x76,0x7c,0x0b,0xfe,0x00,0x00]
 
 v_cmp_le_u16 vcc_lo, 0x3800, v2.l
-// W32: v_cmp_le_u16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x76,0x7c]
+// W32: v_cmp_le_u16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x76,0x7c,0x00,0x38,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_le_u16 vcc, 0x3800, v2.l
 // W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-// W64: v_cmp_le_u16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x76,0x7c]
+// W64: v_cmp_le_u16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x76,0x7c,0x00,0x38,0x00,0x00]
 
 v_cmp_le_u16 vcc_lo, v1.h, v2.l
 // W32: v_cmp_le_u16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x76,0x7c]
@@ -5729,12 +5729,12 @@ v_cmp_lt_i16 vcc, 0xfe0b, v127.l
 // W64: v_cmp_lt_i16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x62,0x7c,0x0b,0xfe,0x00,0x00]
 
 v_cmp_lt_i16 vcc_lo, 0x3800, v2.l
-// W32: v_cmp_lt_i16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x62,0x7c]
+// W32: v_cmp_lt_i16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x62,0x7c,0x00,0x38,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_lt_i16 vcc, 0x3800, v2.l
 // W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-// W64: v_cmp_lt_i16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x62,0x7c]
+// W64: v_cmp_lt_i16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x62,0x7c,0x00,0x38,0x00,0x00]
 
 v_cmp_lt_i16 vcc_lo, v1.h, v2.l
 // W32: v_cmp_lt_i16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x62,0x7c]
@@ -6107,12 +6107,12 @@ v_cmp_lt_u16 vcc, 0xfe0b, v127.l
 // W64: v_cmp_lt_u16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x72,0x7c,0x0b,0xfe,0x00,0x00]
 
 v_cmp_lt_u16 vcc_lo, 0x3800, v2.l
-// W32: v_cmp_lt_u16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x72,0x7c]
+// W32: v_cmp_lt_u16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x72,0x7c,0x00,0x38,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_lt_u16 vcc, 0x3800, v2.l
 // W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-// W64: v_cmp_lt_u16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x72,0x7c]
+// W64: v_cmp_lt_u16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x72,0x7c,0x00,0x38,0x00,0x00]
 
 v_cmp_lt_u16 vcc_lo, v1.h, v2.l
 // W32: v_cmp_lt_u16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x72,0x7c]
@@ -6485,12 +6485,12 @@ v_cmp_ne_i16 vcc, 0xfe0b, v127.l
 // W64: v_cmp_ne_i16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x6a,0x7c,0x0b,0xfe,0x00,0x00]
 
 v_cmp_ne_i16 vcc_lo, 0x3800, v2.l
-// W32: v_cmp_ne_i16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x6a,0x7c]
+// W32: v_cmp_ne_i16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x6a,0x7c,0x00,0x38,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_ne_i16 vcc, 0x3800, v2.l
 // W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-// W64: v_cmp_ne_i16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x6a,0x7c]
+// W64: v_cmp_ne_i16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x6a,0x7c,0x00,0x38,0x00,0x00]
 
 v_cmp_ne_i16 vcc_lo, v1.h, v2.l
 // W32: v_cmp_ne_i16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x6a,0x7c]
@@ -6863,12 +6863,12 @@ v_cmp_ne_u16 vcc, 0xfe0b, v127.l
 // W64: v_cmp_ne_u16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x7a,0x7c,0x0b,0xfe,0x00,0x00]
 
 v_cmp_ne_u16 vcc_lo, 0x3800, v2.l
-// W32: v_cmp_ne_u16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x7a,0x7c]
+// W32: v_cmp_ne_u16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x7a,0x7c,0x00,0x38,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_ne_u16 vcc, 0x3800, v2.l
 // W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-// W64: v_cmp_ne_u16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x7a,0x7c]
+// W64: v_cmp_ne_u16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x7a,0x7c,0x00,0x38,0x00,0x00]
 
 v_cmp_ne_u16 vcc_lo, v1.h, v2.l
 // W32: v_cmp_ne_u16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x7a,0x7c]

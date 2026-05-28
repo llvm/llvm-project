@@ -17,17 +17,17 @@
 ;
 ; We want to make sure that the "this" pointer is accessable in debugger before and after the suspension point.
 ;
-; CHECK: define internal fastcc void @foo.resume(ptr noundef nonnull align 8 dereferenceable(32) %[[HDL:.*]])
+; CHECK: define internal void @foo.resume(ptr noundef nonnull align 8 dereferenceable(32) %[[HDL:.*]])
 ; CHECK-NEXT: entry.resume:
 ; CHECK-NEXT:   %[[HDL]].debug = alloca ptr, align 8
 ; CHECK-NEXT:   #dbg_declare(ptr %[[HDL]].debug, ![[THIS_RESUME:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 24),
 ;
-; CHECK: define internal fastcc void @foo.destroy(ptr noundef nonnull align 8 dereferenceable(32) %[[HDL]])
+; CHECK: define internal void @foo.destroy(ptr noundef nonnull align 8 dereferenceable(32) %[[HDL]])
 ; CHECK-NEXT: entry.destroy:
 ; CHECK-NEXT:   %[[HDL]].debug = alloca ptr, align 8
 ; CHECK-NEXT:   #dbg_declare(ptr %[[HDL]].debug, ![[THIS_DESTROY:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 24),
 ;
-; CHECK: define internal fastcc void @foo.cleanup(ptr noundef nonnull align 8 dereferenceable(32) %[[HDL]])
+; CHECK: define internal void @foo.cleanup(ptr noundef nonnull align 8 dereferenceable(32) %[[HDL]])
 ; CHECK-NEXT: entry.cleanup:
 ; CHECK-NEXT:   %[[HDL]].debug = alloca ptr, align 8
 ; CHECK-NEXT:   #dbg_declare(ptr %[[HDL]].debug, ![[THIS_CLEANUP:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 24),
