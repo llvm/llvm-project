@@ -95,10 +95,12 @@ public:
                            const FieldDecl *DanglingField,
                            const Expr *MovedExpr,
                            SourceLocation ExpiryLoc) override {
-    S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_dangling_field_moved
-                     : diag::warn_lifetime_safety_dangling_field)
-        << IssueExpr->getSourceRange();
+    unsigned DiagID = MovedExpr
+                          ? diag::warn_lifetime_safety_dangling_field_moved
+                          : diag::warn_lifetime_safety_dangling_field;
+
+    S.Diag(IssueExpr->getExprLoc(), DiagID)
+        << getDiagSubjectDescription(IssueExpr) << IssueExpr->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
@@ -111,10 +113,12 @@ public:
                             const VarDecl *DanglingGlobal,
                             const Expr *MovedExpr,
                             SourceLocation ExpiryLoc) override {
-    S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_dangling_global_moved
-                     : diag::warn_lifetime_safety_dangling_global)
-        << IssueExpr->getSourceRange();
+    unsigned DiagID = MovedExpr
+                          ? diag::warn_lifetime_safety_dangling_global_moved
+                          : diag::warn_lifetime_safety_dangling_global;
+
+    S.Diag(IssueExpr->getExprLoc(), DiagID)
+        << getDiagSubjectDescription(IssueExpr) << IssueExpr->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();

@@ -10999,21 +10999,21 @@ def warn_lifetime_safety_invalidated_global
       DefaultIgnore;
 
 def warn_lifetime_safety_dangling_field
-    : Warning<"address of stack memory escapes to a field">,
+    : Warning<"%0 escapes to a field and will dangle">,
       InGroup<LifetimeSafetyDanglingField>,
       DefaultIgnore;
 def warn_lifetime_safety_dangling_field_moved
-    : Warning<"address of stack memory escapes to a field. "
+    : Warning<"%0 may escape to a field and dangle. "
       "This could be a false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingFieldMoved>,
       DefaultIgnore;
 def warn_lifetime_safety_dangling_global
-    : Warning<"address of stack memory escapes to global or static storage">,
+    : Warning<"%0 escapes to global or static storage and will dangle">,
       InGroup<LifetimeSafetyDanglingGlobal>,
       DefaultIgnore;
 def warn_lifetime_safety_dangling_global_moved
-    : Warning<"address of stack memory escapes to global or static storage. "
+    : Warning<"%0 may escape to global or static storage and dangle. "
       "This could be a false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingGlobalMoved>,

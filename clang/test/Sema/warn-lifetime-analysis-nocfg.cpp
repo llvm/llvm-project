@@ -86,13 +86,13 @@ struct DanglingGslPtrField {
   MyLongPointerFromConversion p2; // expected-note {{pointer member declared here}} \
                                   // cfg-note 2 {{this field dangles}}
 
-  DanglingGslPtrField(int i) : p(&i) {} // cfg-warning {{address of stack memory escapes to a field}}
+  DanglingGslPtrField(int i) : p(&i) {} // cfg-warning {{parameter 'i' escapes to a field and will dangle}}
   DanglingGslPtrField() : p2(MyLongOwnerWithConversion{}) {}  // expected-warning {{initializing pointer member 'p2' to point to a temporary object whose lifetime is shorter than the lifetime of the constructed object}} \
-                                                              // cfg-warning {{address of stack memory escapes to a field}}
+                                                              // cfg-warning {{local temporary object escapes to a field and will dangle}}
   DanglingGslPtrField(double) : p(MyIntOwner{}) {}  // expected-warning {{initializing pointer member 'p' to point to a temporary object whose lifetime is shorter than the lifetime of the constructed object}} \
-                                                    // cfg-warning {{address of stack memory escapes to a field}}
-  DanglingGslPtrField(MyIntOwner io) : p(io) {} // cfg-warning {{address of stack memory escapes to a field}}
-  DanglingGslPtrField(MyLongOwnerWithConversion lo) : p2(lo) {} // cfg-warning {{address of stack memory escapes to a field}}
+                                                    // cfg-warning {{local temporary object escapes to a field and will dangle}}
+  DanglingGslPtrField(MyIntOwner io) : p(io) {} // cfg-warning {{parameter 'io' escapes to a field and will dangle}}
+  DanglingGslPtrField(MyLongOwnerWithConversion lo) : p2(lo) {} // cfg-warning {{parameter 'lo' escapes to a field and will dangle}}
 };
 
 MyIntPointer danglingGslPtrFromLocal() {
@@ -1124,7 +1124,7 @@ struct Foo2 {
 };
 
 struct Test {
-  Test(Foo2 foo) : bar(foo.bar.get()),  // cfg-warning-re {{address of stack memory escapes to a field. {{.*}} may have been moved}}
+  Test(Foo2 foo) : bar(foo.bar.get()),  // cfg-warning-re {{parameter 'foo' may escape to a field and dangle. {{.*}} may have been moved}}
       storage(std::move(foo.bar)) {};   // cfg-note {{potentially moved here}}
 
   Bar* bar; // cfg-note {{this field dangles}}
