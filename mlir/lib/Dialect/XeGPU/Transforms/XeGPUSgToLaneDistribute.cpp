@@ -1748,8 +1748,8 @@ void xegpu::populateXeGPUSgToLaneDistributeTypeConversions(
   });
   // For VectorType, distribute based on the lane layout (1:1 shape-changing
   // conversion). Uses xegpu::addVectorTypeConversion with a pre-computed
-  // map for scf.while block args (see precomputeWhileBlockArgTypes for the
-  // detached-block rationale).
+  // map for SCF loop block args (see precomputeLoopBlockArgTypes for the
+  // rationale).
   auto getSubShapeAndCount = [](VectorType vecTy,
                                 xegpu::DistributeLayoutAttr layout)
       -> std::pair<SmallVector<int64_t>, int> {
@@ -1758,10 +1758,10 @@ void xegpu::populateXeGPUSgToLaneDistributeTypeConversions(
       return {{}, 0};
     return {SmallVector<int64_t>(distTyOrFailure->getShape()), 1};
   };
-  auto whileArgTypes =
-      xegpu::precomputeWhileBlockArgTypes(topLevelOp, getSubShapeAndCount);
+  auto loopArgTypes =
+      xegpu::precomputeLoopBlockArgTypes(topLevelOp, getSubShapeAndCount);
   xegpu::addVectorTypeConversion(typeConverter, getSubShapeAndCount,
-                                 std::move(whileArgTypes));
+                                 std::move(loopArgTypes));
 }
 
 void xegpu::populateXeGPUSgToLaneDistributeTypeConversionAndLegality(

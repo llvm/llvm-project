@@ -1510,10 +1510,10 @@ void populateXeGPUWgToSgDistributeTypeConversions(TypeConverter &converter,
       return {{}, 0};
     return getSgShapeAndCount(vecTy.getShape(), layout);
   };
-  auto whileArgTypes =
-      xegpu::precomputeWhileBlockArgTypes(topLevelOp, getSubShapeAndCount);
+  auto loopArgTypes =
+      xegpu::precomputeLoopBlockArgTypes(topLevelOp, getSubShapeAndCount);
   xegpu::addVectorTypeConversion(converter, getSubShapeAndCount,
-                                 std::move(whileArgTypes));
+                                 std::move(loopArgTypes));
 }
 
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {

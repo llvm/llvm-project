@@ -425,10 +425,10 @@ void XeGPUBlockingPass::runOnOperation() {
         -> std::pair<SmallVector<int64_t>, int> {
       return getTileShapeAndCount(vecTy.getShape(), layout);
     };
-    auto whileArgTypes =
-        xegpu::precomputeWhileBlockArgTypes(op, getSubShapeAndCount);
+    auto loopArgTypes =
+        xegpu::precomputeLoopBlockArgTypes(op, getSubShapeAndCount);
     xegpu::addVectorTypeConversion(converter, getSubShapeAndCount,
-                                   std::move(whileArgTypes));
+                                   std::move(loopArgTypes));
     // Source (N:1) and target (1:1) materializations using
     // UnrealizedConversionCastOp.
     auto materializeCast = [](OpBuilder &builder, Type type, ValueRange inputs,

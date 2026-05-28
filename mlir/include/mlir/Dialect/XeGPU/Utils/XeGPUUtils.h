@@ -235,29 +235,31 @@ bool matchSplitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
 using SubShapeAndCountFn = std::function<std::pair<SmallVector<int64_t>, int>(
     VectorType, DistributeLayoutAttr)>;
 
-/// Pre-computes VectorType mappings for `scf.while` block arguments under
-/// `topLevelOp` (1:1 shape-changing or 1:N). Pre-computation is needed because
-/// during structural type conversion `scf::WhileOpConversion` detaches the
-/// before/after blocks from their parent region before invoking
-/// `convertSignatureBlock`. At that point, looking up a BlockArgument's layout
-/// via `getDistributeLayoutAttr` walks `v.getParentBlock()->getParent()`,
-/// which trips an LLVM ilist assertion on detached blocks. For scf.for /
-/// scf.if (whose blocks stay attached) the direct lookup works, so they don't
-/// need this pre-computation.
+/// Pre-computes VectorType mappings for SCF loop block arguments under
+/// `topLevelOp` (1:1 shape-changing or 1:N). Covers `scf.while`
+/// before/after-region arguments and `scf.for` iter_args. Pre-computation is
+/// needed because during structural type conversion the SCF converters
+/// transiently detach/replace the loop body before all queries against the
+/// old block arguments have finished, at which point
+/// `getDistributeLayoutAttr(BlockArgument)` returns null (either the parent
+/// op is gone, or the new parent op has not inherited the temporary
+/// `layout_operand_N` attributes set by layout recovery). Caching the
+/// distributed types by `Value` identity sidesteps both failure modes.
+/// `scf.if` has no block arguments and therefore needs no entry here.
 DenseMap<Value, SmallVector<Type>>
-precomputeWhileBlockArgTypes(Operation *topLevelOp,
-                             SubShapeAndCountFn getSubShapeAndCount);
+precomputeLoopBlockArgTypes(Operation *topLevelOp,
+                            SubShapeAndCountFn getSubShapeAndCount);
 
 /// Adds a context-aware VectorType conversion to `converter` (1:1
 /// shape-changing or 1:N, depending on `getSubShapeAndCount`'s returned
 /// count). `getSubShapeAndCount` computes (subShape, count) for a VectorType
-/// and its layout; count <= 0 means no conversion needed. `whileArgTypes`
-/// (typically obtained from `precomputeWhileBlockArgTypes`) provides the
-/// pre-computed types for `scf.while` block arguments; pass an empty map if
-/// the IR has no `scf.while` ops.
+/// and its layout; count <= 0 means no conversion needed. `loopArgTypes`
+/// (typically obtained from `precomputeLoopBlockArgTypes`) provides the
+/// pre-computed types for SCF loop block arguments (`scf.while`,
+/// `scf.for`); pass an empty map if the IR has no such loops.
 void addVectorTypeConversion(TypeConverter &converter,
                              SubShapeAndCountFn getSubShapeAndCount,
-                             DenseMap<Value, SmallVector<Type>> whileArgTypes);
+                             DenseMap<Value, SmallVector<Type>> loopArgTypes);
 
 /// Cleans up UnrealizedConversionCastOps inserted during SCF structural type
 /// conversion. Folds cancelling N:1->1:N and 1:N->N:1 cast chains (inserting
