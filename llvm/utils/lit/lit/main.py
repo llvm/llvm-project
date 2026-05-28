@@ -44,7 +44,6 @@ def main(builtin_params={}):
         gtest_sharding=opts.gtest_sharding,
         maxRetriesPerTest=opts.maxRetriesPerTest,
         update_tests=opts.update_tests,
-        fnSelection=opts.fnSelection,
     )
 
     discovered_tests = lit.discovery.find_tests_for_inputs(

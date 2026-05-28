@@ -39,6 +39,10 @@ extra_substitutions = extra_substitutions = (
 )
 config.test_format = lit.formats.ShTest(not use_lit_shell, extra_substitutions)
 
+from lit.llvm import fn_selection
+
+fn_selection.install(config, lit_config)
+
 # suffixes: A list of file extensions to treat as test files. This is overriden
 # by individual lit.local.cfg files in the test subdirectories.
 config.suffixes = [".ll", ".c", ".test", ".txt", ".s", ".mir", ".yaml", ".spv"]

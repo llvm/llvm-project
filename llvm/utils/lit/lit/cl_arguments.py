@@ -428,16 +428,6 @@ def parse_args():
         default=os.environ.get("LIT_FILTER", ".*"),
     )
     selection_group.add_argument(
-        "--fn",
-        dest="fnSelection",
-        metavar="NAMES",
-        type=_comma_list,
-        default=None,
-        help="Inject select-function pass into opt commands so only the "
-        "named functions (and their dependencies) are compiled. "
-        "NAMES is a comma-separated list of function names.",
-    )
-    selection_group.add_argument(
         "--filter-out",
         metavar="REGEX",
         type=_case_insensitive_regex,
@@ -595,13 +585,6 @@ def _case_insensitive_regex(arg):
 
 def _semicolon_list(arg):
     return arg.split(";")
-
-
-def _comma_list(arg):
-    names = [n.strip() for n in arg.split(",") if n.strip()]
-    if not names:
-        raise _error("empty function name list")
-    return names
 
 
 def _error(desc, *args):

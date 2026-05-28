@@ -1921,23 +1921,6 @@ def _expandLateSubstitutionsExternal(commandLine):
         commandLine = "%s && test -e %s" % (commandLine, filePath)
     return commandLine
 
-
-def _applyFnSelection(script, fn_names):
-    """Inject select-function pass into opt -passes= pipelines."""
-    if not fn_names:
-        return script
-    fn_args = ";".join("fn=" + n for n in fn_names)
-    sel = "select-function<" + fn_args + ">"
-    out = []
-    for cmd in script:
-        # -passes='...' or -passes="..."
-        cmd = re.sub(r"""-passes=(['"])""", r"-passes=\1" + sel + ",", cmd)
-        # -passes=word (unquoted) — wrap in quotes to protect angle brackets
-        cmd = re.sub(r"-passes=([^'\"\s]\S*)", r"-passes='" + sel + r",\1'", cmd)
-        out.append(cmd)
-    return out
-
-
 def executeShTest(
     test, litConfig, useExternalSh, extra_substitutions=[], preamble_commands=[]
 ):
@@ -1971,8 +1954,6 @@ def executeShTest(
         conditions,
         recursion_limit=test.config.recursiveExpansionLimit,
     )
-
-    script = _applyFnSelection(script, litConfig.fnSelection)
 
     if useExternalSh:
         for index, command in enumerate(script):
