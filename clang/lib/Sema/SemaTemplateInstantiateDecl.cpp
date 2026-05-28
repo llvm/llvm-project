@@ -1762,11 +1762,15 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
       D->getDeclName(), /*AllowDeducedTST*/ true);
   bool Invalid = false;
   if (!TSI) {
+    if (!InstantiatingVarTemplate)
+      return nullptr;
     TSI = D->getTypeSourceInfo();
     Invalid = true;
   } else if (TSI->getType()->isFunctionType()) {
     SemaRef.Diag(D->getLocation(), diag::err_variable_instantiates_to_function)
         << D->isStaticDataMember() << TSI->getType();
+    if (!InstantiatingVarTemplate)
+      return nullptr;
     Invalid = true;
   }
 
