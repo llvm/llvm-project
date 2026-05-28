@@ -334,6 +334,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MinPrefetchStride = 1024;
     break;
   case Olympus:
+    CacheLineSize = 64;
     EpilogueVectorizationMinVF = 8;
     ScatterOverhead = 13;
     PrefFunctionAlignment = Align(16);
