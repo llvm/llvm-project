@@ -10,10 +10,10 @@
 declare %ty @arr_ret()
 
 ; CHECK: OpFunction
-; CHECK: [[AGG:%[0-9]+]] = OpFunctionCall {{%[0-9]+}} {{%[0-9]+}}
-; CHECK: [[ARR:%[0-9]+]] = OpCompositeExtract {{%[0-9]+}} [[AGG]] 2
-; CHECK: [[ELT:%[0-9]+]] = OpCompositeExtract {{%[0-9]+}} [[ARR]] 0
-; CHECK: OpStore {{%[0-9]+}} [[ELT]]
+; CHECK: %[[#AGG:]] = OpFunctionCall %[[#]] %[[#]]
+; CHECK: %[[#ARR:]] = OpCompositeExtract %[[#]] %[[#AGG]] 2
+; CHECK: %[[#ELT:]] = OpCompositeExtract %[[#]] %[[#ARR]] 0
+; CHECK: OpStore %[[#]] %[[#ELT]]
 define void @chain(ptr addrspace(4) %p) {
   %1 = call %ty @arr_ret()
   %2 = extractvalue %ty %1, 2
