@@ -2111,16 +2111,14 @@ Value *BlockAddress::handleOperandChangeImpl(Value *From, Value *To) {
 
   // See if the 'new' entry already exists, if not, just update this in place
   // and return early.
-  BlockAddress *&NewBA = getContext().pImpl->BlockAddresses[NewBB];
-  if (NewBA)
+  if (BlockAddress *NewBA = getContext().pImpl->BlockAddresses.lookup(NewBB))
     return NewBA;
 
   getBasicBlock()->setHasAddressTaken(false);
 
-  // Remove the old entry, this can't cause the map to rehash (just a
-  // tombstone will get added).
+  // erase invalidates iterators/references, hence the duplicate NewBB lookup.
   getContext().pImpl->BlockAddresses.erase(getBasicBlock());
-  NewBA = this;
+  getContext().pImpl->BlockAddresses[NewBB] = this;
   setOperand(0, NewBB);
   getBasicBlock()->setHasAddressTaken(true);
 
@@ -2156,9 +2154,8 @@ Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
 
   // The replacement is with another global value.
   if (const auto *ToObj = dyn_cast<GlobalValue>(To)) {
-    DSOLocalEquivalent *&NewEquiv =
-        getContext().pImpl->DSOLocalEquivalents[ToObj];
-    if (NewEquiv)
+    if (DSOLocalEquivalent *NewEquiv =
+            getContext().pImpl->DSOLocalEquivalents.lookup(ToObj))
       return llvm::ConstantExpr::getBitCast(NewEquiv, getType());
   }
 
@@ -2170,13 +2167,13 @@ Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
   // The replacement could be a bitcast or an alias to another function. We can
   // replace it with a bitcast to the dso_local_equivalent of that function.
   auto *Func = cast<Function>(To->stripPointerCastsAndAliases());
-  DSOLocalEquivalent *&NewEquiv = getContext().pImpl->DSOLocalEquivalents[Func];
-  if (NewEquiv)
+  if (DSOLocalEquivalent *NewEquiv =
+          getContext().pImpl->DSOLocalEquivalents.lookup(Func))
     return llvm::ConstantExpr::getBitCast(NewEquiv, getType());
 
-  // Replace this with the new one.
+  // erase invalidates iterators/references, hence the duplicate Func lookup.
   getContext().pImpl->DSOLocalEquivalents.erase(getGlobalValue());
-  NewEquiv = this;
+  getContext().pImpl->DSOLocalEquivalents[Func] = this;
   setOperand(0, Func);
 
   if (Func->getType() != getType()) {
@@ -2214,12 +2211,12 @@ Value *NoCFIValue::handleOperandChangeImpl(Value *From, Value *To) {
   GlobalValue *GV = dyn_cast<GlobalValue>(To->stripPointerCasts());
   assert(GV && "Can only replace the operands with a global value");
 
-  NoCFIValue *&NewNC = getContext().pImpl->NoCFIValues[GV];
-  if (NewNC)
+  if (NoCFIValue *NewNC = getContext().pImpl->NoCFIValues.lookup(GV))
     return llvm::ConstantExpr::getBitCast(NewNC, getType());
 
+  // erase invalidates iterators/references, hence the duplicate GV lookup.
   getContext().pImpl->NoCFIValues.erase(getGlobalValue());
-  NewNC = this;
+  getContext().pImpl->NoCFIValues[GV] = this;
   setOperand(0, GV);
 
   if (GV->getType() != getType())
