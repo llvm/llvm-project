@@ -14,9 +14,9 @@
 ; CHECK-DAG: %[[#Int128Ty:]] = OpTypeInt 128 0
 
 ; CHECK: OpFunction
-; CHECK: %{{[0-9]+}} = OpSGreaterThan %[[#BoolTy]]
-; CHECK: %{{[0-9]+}} = OpIEqual %[[#BoolTy]]
-; CHECK: %{{[0-9]+}} = OpULessThan %[[#BoolTy]]
+; CHECK: [[#]] = OpSGreaterThan %[[#BoolTy]]
+; CHECK: [[#]] = OpIEqual %[[#BoolTy]]
+; CHECK: [[#]] = OpULessThan %[[#BoolTy]]
 define spir_func void @test_icmp_i128(i128 %a, i128 %b, ptr %out) {
 entry:
   %sgt = icmp sgt i128 %a, %b
