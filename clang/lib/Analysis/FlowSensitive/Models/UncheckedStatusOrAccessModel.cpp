@@ -363,6 +363,42 @@ static auto isStatusPtrReturningCall() {
           recordType(hasDeclaration(statusClass()))))))))));
 }
 
+static auto ofClassReturnIfErrorAdaptor() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  // TODO: b/517587184 - remove absl version once supported upstream.
+  return ofClass(
+      hasName("::absl::status_macro_internal::ReturnIfErrorAdaptor"));
+}
+
+static auto returnIfErrorAdaptorClass() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  // TODO: b/517587184 - remove absl version once supported upstream.
+  return cxxRecordDecl(
+      hasName("::absl::status_macro_internal::ReturnIfErrorAdaptor"));
+}
+
+static auto returnIfErrorAdaptorType() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return hasUnqualifiedDesugaredType(
+      recordType(hasDeclaration(returnIfErrorAdaptorClass())));
+}
+
+static auto isReturnIfErrorAdaptorOperatorBoolCall() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return cxxMemberCallExpr(
+      on(expr(unless(cxxThisExpr()))),
+      callee(cxxMethodDecl(hasName("operator bool"),
+                           ofClassReturnIfErrorAdaptor())));
+}
+
+static auto isMacroAdaptorCall() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  // TODO: b/517587184 - remove absl version once supported upstream.
+  return callExpr(callee(
+      functionDecl(hasName("::absl::status_macro_internal::MacroAdaptor"),
+                   returns(returnIfErrorAdaptorType()))));
+}
+
 static auto
 buildDiagnoseMatchSwitch(const UncheckedStatusOrAccessModelOptions &Options) {
   return CFGMatchSwitchBuilder<const Environment,
@@ -472,6 +508,12 @@ static bool isStatusIsMatcherType(QualType Type) {
                      "CanonicalStatusIsMatcher");
 }
 
+static bool IsMacroAdaptorType(clang::QualType type) {
+  // TODO: b/517587184 - remove absl version once supported upstream.
+  return isTypeNamed(type, {"absl", "status_macro_internal"},
+                     "ReturnIfErrorAdaptor");
+}
+
 llvm::StringMap<QualType> getSyntheticFields(QualType Ty, QualType StatusType,
                                              const CXXRecordDecl &RD) {
   if (auto *TRD = getStatusOrBaseClass(Ty))
@@ -485,6 +527,8 @@ llvm::StringMap<QualType> getSyntheticFields(QualType Ty, QualType StatusType,
     return {{"ok_predicate", RD.getASTContext().BoolTy}};
   if (isStatusIsMatcherType(Ty))
     return {{"ok_matcher", RD.getASTContext().BoolTy}};
+  if (IsMacroAdaptorType(Ty))
+    return {{"status", StatusType}};
   return {};
 }
 
@@ -1143,6 +1187,34 @@ getSmartPtrLikeStorageLocation(const Expr &E, const Environment &Env) {
         &PointerVal->getPointeeLoc());
   return nullptr;
 }
+static void transferMacroAdaptorCall(const clang::CallExpr *Expr,
+                                     const MatchFinder::MatchResult &,
+                                     LatticeTransferState &State) {
+  assert(Expr->getNumArgs() > 0);
+
+  auto *StatusAdaptorLoc =
+      State.Env.get<RecordStorageLocation>(*Expr->getArg(0));
+  if (StatusAdaptorLoc == nullptr)
+    return;
+
+  copyRecord(*StatusAdaptorLoc,
+             locForStatus(clang::cast<RecordStorageLocation>(
+                 State.Env.getResultObjectLocation(*Expr))),
+             State.Env);
+}
+
+static void transferReturnIfErrorAdaptorOperatorBoolCall(
+    const clang::CXXMemberCallExpr *Expr, const MatchFinder::MatchResult &,
+    LatticeTransferState &State) {
+  // TODO(sgatev): Add tests with pointer receivers.
+  RecordStorageLocation *StatusAdaptorLoc =
+      getImplicitObjectLocation(*Expr, State.Env);
+  if (StatusAdaptorLoc == nullptr)
+    return;
+
+  auto &OkVal = valForOk(locForStatus(*StatusAdaptorLoc), State.Env);
+  State.Env.setValue(*Expr, OkVal);
+}
 
 CFGMatchSwitch<LatticeTransferState>
 buildTransferMatchSwitch(ASTContext &Ctx,
@@ -1312,6 +1384,11 @@ buildTransferMatchSwitch(ASTContext &Ctx,
       .CaseOfCFGStmt<ImplicitCastExpr>(
           implicitCastExpr(hasCastKind(CK_PointerToBoolean)),
           transferPointerToBoolean)
+      .CaseOfCFGStmt<clang::CXXMemberCallExpr>(
+          isReturnIfErrorAdaptorOperatorBoolCall(),
+          transferReturnIfErrorAdaptorOperatorBoolCall)
+      .CaseOfCFGStmt<clang::CallExpr>(isMacroAdaptorCall(),
+                                      transferMacroAdaptorCall)
       .Build();
 }
 
