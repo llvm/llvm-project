@@ -37,11 +37,11 @@ LIBC_INLINE bool is_heap_end(Byte tag) { return tag & HEAP_END_FLAG; }
 
 LIBC_INLINE void set_above_free(Byte *ptr) { *ptr |= ABOVE_FREE_FLAG; }
 
-LIBC_INLINE void clear_above_free(Byte *ptr) { *ptr ^= ABOVE_FREE_FLAG; }
+LIBC_INLINE void clear_above_free(Byte *ptr) { *ptr &= ~ABOVE_FREE_FLAG; }
 
-LIBC_INLINE void set_end_flag(Byte *ptr) { *ptr ^= HEAP_END_FLAG; }
+LIBC_INLINE void set_end_flag(Byte *ptr) { *ptr |= HEAP_END_FLAG; }
 
-LIBC_INLINE void clear_end_flag(Byte *ptr) { *ptr ^= HEAP_END_FLAG; }
+LIBC_INLINE void clear_end_flag(Byte *ptr) { *ptr &= ~HEAP_END_FLAG; }
 
 } // namespace tag
 } // namespace flat_tlsf

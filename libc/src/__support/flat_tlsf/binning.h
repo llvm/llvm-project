@@ -75,7 +75,7 @@ struct Binning {
   /// performance.
   template <size_t LIN_DIVS, size_t LIN_EXT_MULTI>
   LIBC_INLINE static constexpr size_t
-  linear_extend_then_linearly_divided_expotential_binning(size_t size) {
+  linear_extend_then_linearly_divided_exponential_binning(size_t size) {
     static_assert(bit_utils::is_power_of_2(LIN_DIVS),
                   "LIN_DIVS must be a power of two");
     static_assert(bit_utils::is_power_of_2(LIN_EXT_MULTI),
@@ -144,10 +144,10 @@ struct Binning {
   LIBC_INLINE constexpr static uint32_t size_to_bin(size_t size) {
     if constexpr (sizeof(void *) == 8)
       return static_cast<uint32_t>(
-          linear_extend_then_linearly_divided_expotential_binning<8, 4>(size));
+          linear_extend_then_linearly_divided_exponential_binning<8, 4>(size));
     else
       return static_cast<uint32_t>(
-          linear_extend_then_linearly_divided_expotential_binning<4, 4>(size));
+          linear_extend_then_linearly_divided_exponential_binning<4, 4>(size));
   }
 
   LIBC_INLINE constexpr static uint32_t size_to_bin_ceil(size_t size) {

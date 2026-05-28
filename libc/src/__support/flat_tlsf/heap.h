@@ -16,6 +16,7 @@
 
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/algorithm.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/flat_tlsf/binning.h"
@@ -111,7 +112,8 @@ public:
 
     // Gap lists haven't been initialized
     if (gap_list == nullptr) {
-      base = cpp::max(cpp::bit_cast<Byte *>(uintptr_t{1}), base);
+      if (base == nullptr)
+        base = cpp::bit_cast<Byte *>(uintptr_t{1});
       heap_base = bit_utils::align_up_by(base, alignof(Node *));
       size_t gap_list_size = sizeof(Node *) * Binning::BIN_COUNT;
       gap_base = chunk::align_up(heap_base + gap_list_size + sizeof(Byte));
@@ -406,6 +408,8 @@ public:
   }
 
   static constexpr size_t HEADER_SIZE = sizeof(size_t);
+  static constexpr size_t SHIFT_MASK = CHUNK_UNIT - 1;
+  static constexpr size_t MIN_SHIFT_EXPONENT = cpp::countr_zero(HEADER_SIZE);
 
   LIBC_INLINE void *malloc(size_t size) {
     return aligned_alloc(CHUNK_UNIT, size);
@@ -419,6 +423,11 @@ public:
     size_t allocated_align = cpp::max(align, header_align);
 
     size_t shift = (HEADER_SIZE + align - 1) & ~(align - 1);
+    size_t shift_exponent = static_cast<size_t>(cpp::countr_zero(shift));
+    LIBC_ASSERT(shift_exponent <= SHIFT_MASK && "Alignment too large for allocation header");
+    if (shift_exponent > SHIFT_MASK)
+      return nullptr;
+
     size_t allocated_size = size + shift;
 
     Byte *base_ptr = allocate(allocated_size, allocated_align);
@@ -428,10 +437,8 @@ public:
     size_t actual_chunk_size = chunk::required_chunk_size(allocated_size);
     Byte *user_ptr = base_ptr + shift;
 
-    size_t shift_exponent = static_cast<size_t>(cpp::countr_zero(shift));
-
     size_t *header = reinterpret_cast<size_t *>(user_ptr - HEADER_SIZE);
-    *header = actual_chunk_size | (shift_exponent & 31);
+    *header = actual_chunk_size | shift_exponent;
 
     return user_ptr;
   }
@@ -444,13 +451,13 @@ public:
     size_t *header = reinterpret_cast<size_t *>(user_ptr - HEADER_SIZE);
     size_t header_val = *header;
 
-    size_t shift_exponent = header_val & 31;
-    LIBC_ASSERT(shift_exponent >= 3 && "Invalid or double freed pointer");
-    if (shift_exponent < 3)
+    size_t shift_exponent = header_val & SHIFT_MASK;
+    LIBC_ASSERT(shift_exponent >= MIN_SHIFT_EXPONENT && "Invalid or double freed pointer");
+    if (shift_exponent < MIN_SHIFT_EXPONENT)
       return;
 
     size_t shift = size_t{1} << shift_exponent;
-    size_t actual_chunk_size = header_val & ~31;
+    size_t actual_chunk_size = header_val & ~SHIFT_MASK;
 
     Byte *base_ptr = user_ptr - shift;
 
@@ -470,12 +477,12 @@ public:
     size_t *header = reinterpret_cast<size_t *>(user_ptr - HEADER_SIZE);
     size_t header_val = *header;
 
-    size_t shift_exponent = header_val & 31;
-    if (shift_exponent < 3)
+    size_t shift_exponent = header_val & SHIFT_MASK;
+    if (shift_exponent < MIN_SHIFT_EXPONENT)
       return nullptr;
 
     size_t shift = size_t{1} << shift_exponent;
-    size_t old_chunk_size = header_val & ~31;
+    size_t old_chunk_size = header_val & ~SHIFT_MASK;
 
     Byte *base_ptr = user_ptr - shift;
 

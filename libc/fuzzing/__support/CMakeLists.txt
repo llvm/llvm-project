@@ -52,4 +52,18 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
     PROPERTIES
       MSVC_DEBUG_INFORMATION_FORMAT ""
   )
+
+  add_libc_fuzzer(
+    tlsf_heap_fuzz
+    SRCS
+      tlsf_heap_fuzz.cpp
+    DEPENDS
+      libc.src.__support.flat_tlsf.heap
+  )
+  get_fq_target_name(tlsf_heap_fuzz tlsf_heap_fuzz_target_name)
+  set_target_properties(
+    ${tlsf_heap_fuzz_target_name}
+    PROPERTIES
+      MSVC_DEBUG_INFORMATION_FORMAT ""
+  )
 endif()

@@ -141,7 +141,7 @@ TEST_F(LlvmLibcFlatTlsfBinningTest,
        TestLinearExtentThenLinearlyDividedExponentialBinning) {
   auto size_to_bin_fn = [](size_t size) {
     return static_cast<uint32_t>(
-        Binning::linear_extend_then_linearly_divided_expotential_binning<8, 4>(
+        Binning::linear_extend_then_linearly_divided_exponential_binning<8, 4>(
             size));
   };
   check_binning_properties(nullopt, size_to_bin_fn);

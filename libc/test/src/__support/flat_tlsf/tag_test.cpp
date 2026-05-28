@@ -44,6 +44,16 @@ TEST(LlvmLibcFlatTlsfTagTest, MutatesFlags) {
   EXPECT_TRUE(tag::is_above_free(byte));
   EXPECT_TRUE(tag::is_allocated(byte));
 
+  // Test idempotency: setting already set flag should keep it set.
+  tag::set_above_free(&byte);
+  EXPECT_TRUE(tag::is_above_free(byte));
+  EXPECT_TRUE(tag::is_allocated(byte));
+
+  tag::clear_above_free(&byte);
+  EXPECT_FALSE(tag::is_above_free(byte));
+  EXPECT_TRUE(tag::is_allocated(byte));
+
+  // Test idempotency: clearing already cleared flag should keep it clear.
   tag::clear_above_free(&byte);
   EXPECT_FALSE(tag::is_above_free(byte));
   EXPECT_TRUE(tag::is_allocated(byte));
@@ -52,6 +62,16 @@ TEST(LlvmLibcFlatTlsfTagTest, MutatesFlags) {
   EXPECT_TRUE(tag::is_heap_end(byte));
   EXPECT_TRUE(tag::is_allocated(byte));
 
+  // Test idempotency: setting already set flag should keep it set.
+  tag::set_end_flag(&byte);
+  EXPECT_TRUE(tag::is_heap_end(byte));
+  EXPECT_TRUE(tag::is_allocated(byte));
+
+  tag::clear_end_flag(&byte);
+  EXPECT_FALSE(tag::is_heap_end(byte));
+  EXPECT_TRUE(tag::is_allocated(byte));
+
+  // Test idempotency: clearing already cleared flag should keep it clear.
   tag::clear_end_flag(&byte);
   EXPECT_FALSE(tag::is_heap_end(byte));
   EXPECT_TRUE(tag::is_allocated(byte));
