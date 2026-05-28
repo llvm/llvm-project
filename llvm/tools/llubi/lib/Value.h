@@ -104,27 +104,65 @@ enum class StorageKind {
 /// Tri-state boolean value.
 enum class BooleanKind { False, True, Poison };
 
-class Pointer {
+/// Components of a pointer excluding address.
+/// Each node will be assigned a unique, pointer-sized tag, which is used to
+/// represent the pointer in the memory.
+class PointerComponents : public RefCountedBase<PointerComponents> {
+  // TODO: store reference to the components of the pointer it is derived from
+
   // The underlying memory object. It can be null for invalid or dangling
   // pointers.
   IntrusiveRefCntPtr<MemoryObject> Obj;
+
+  // A tag is a randomly generated unique identifier to recover the provenance
+  // of a pointer. The length of tag is equal to the store size of the pointer
+  // type, in bits. It may produce false negatives in some corner cases. But in
+  // real practice the false negative rate should be negligible.
+  // A zero tag is invalid.
+  // TODO: we need a special tag for wildcard provenance, which is introduced by
+  // inttoptr.
+  APInt Tag;
+
+  // TODO: modeling nofree
+  // TODO: modeling captures
+  // TODO: modeling inrange(Start, End) attribute
+
+  const APInt &getTag() const { return Tag; }
+  void setTag(const APInt &T) { Tag = T; }
+
+  friend class Context;
+
+public:
+  PointerComponents(IntrusiveRefCntPtr<MemoryObject> Obj)
+      : Obj(std::move(Obj)) {}
+  static IntrusiveRefCntPtr<PointerComponents> nullary();
+  MemoryObject *getMemoryObject() const { return Obj.get(); }
+};
+
+class Pointer {
+  // Components of a pointer excluding address.
+  IntrusiveRefCntPtr<PointerComponents> Metadata;
   // The address of the pointer. The bit width is determined by
   // DataLayout::getPointerSizeInBits.
   APInt Address;
-  // TODO: modeling inrange(Start, End) attribute
 
 public:
-  explicit Pointer(const APInt &Address) : Obj(nullptr), Address(Address) {}
-  explicit Pointer(IntrusiveRefCntPtr<MemoryObject> Obj, const APInt &Address)
-      : Obj(std::move(Obj)), Address(Address) {}
+  explicit Pointer(const APInt &Address)
+      : Metadata(PointerComponents::nullary()), Address(Address) {}
+  explicit Pointer(IntrusiveRefCntPtr<PointerComponents> Metadata,
+                   const APInt &Address)
+      : Metadata(std::move(Metadata)), Address(Address) {
+    assert(this->Metadata && "Invalid pointer components.");
+  }
   Pointer getWithNewAddr(const APInt &NewAddr) const {
-    return Pointer(Obj, NewAddr);
+    return Pointer(Metadata, NewAddr);
   }
   static AnyValue null(unsigned AS, const DataLayout &DL);
   bool isNullPtr(unsigned AS, const DataLayout &DL) const;
   void print(raw_ostream &OS) const;
   const APInt &address() const { return Address; }
-  MemoryObject *getMemoryObject() const { return Obj.get(); }
+  PointerComponents &components() const { return *Metadata; }
+  MemoryObject *getMemoryObject() const { return Metadata->getMemoryObject(); }
 };
 
 // Value representation for actual values of LLVM values.

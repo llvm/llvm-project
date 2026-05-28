@@ -110,20 +110,21 @@ const AnyValue &Context::getConstantValue(Constant *C) {
   return ConstCache.emplace(C, getConstantValueImpl(C)).first->second;
 }
 
-APInt Context::getTag(uint32_t BitWidth, MemoryObject *Obj) {
+APInt Context::getTag(uint32_t BitWidth, PointerComponents &Comp) {
   // Nullary provenance.
-  if (!Obj)
+  if (!Comp.getMemoryObject())
     return APInt::getZero(BitWidth);
   // The tag is already initialized.
-  if (!Obj->getTag().isZero())
-    return Obj->getTag();
+  if (!Comp.getTag().isZero())
+    return Comp.getTag();
 
   // FIXME: This doesn't work when the address space is too small.
   while (true) {
     APInt Tag = generateRandomAPInt(BitWidth);
-    if (Tag.isZero() || !TaggedMemoryObjects.try_emplace(Tag, Obj).second)
+    if (Tag.isZero() || !TaggedPointerComponents.try_emplace(Tag, &Comp).second)
       continue;
-    Obj->setTag(Tag);
+    Comp.setTag(Tag);
+    Comp.getMemoryObject()->AssociatedTags.push_back(Tag);
     return Tag;
   }
 }
@@ -215,7 +216,8 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
   // Try to recover provenance from the tag.
   if (IsTagValid) {
     APInt Tag(NumBitsToExtract, RawTagBits);
-    return Pointer(TaggedMemoryObjects.lookup(Tag), Bits);
+    if (auto Comp = TaggedPointerComponents.lookup(Tag))
+      return Pointer(std::move(Comp), Bits);
   }
   return Pointer(Bits);
 }
@@ -349,18 +351,12 @@ void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
               /*TagBits=*/nullptr);
   } else if (Ty->isPointerTy()) {
     auto &AddressBits = Val.asPointer().address();
-    if (auto *MO = Val.asPointer().getMemoryObject()) {
-      APInt Tag = getTag(AddressBits.getBitWidth(), MO);
-      if (NeedsPadding)
-        Tag = Tag.zext(NewOffsetInBits - OffsetInBits);
-      WriteBits(NeedsPadding ? AddressBits.zext(NewOffsetInBits - OffsetInBits)
-                             : AddressBits,
-                &Tag);
-    } else {
-      WriteBits(NeedsPadding ? AddressBits.zext(NewOffsetInBits - OffsetInBits)
-                             : AddressBits,
-                /*TagBits=*/nullptr);
-    }
+    APInt Tag = getTag(AddressBits.getBitWidth(), Val.asPointer().components());
+    if (NeedsPadding)
+      Tag = Tag.zext(NewOffsetInBits - OffsetInBits);
+    WriteBits(NeedsPadding ? AddressBits.zext(NewOffsetInBits - OffsetInBits)
+                           : AddressBits,
+              &Tag);
   } else {
     llvm_unreachable("Unsupported scalar type.");
   }
@@ -547,15 +543,23 @@ bool Context::free(const MemoryObject &Obj) {
     return false;
 
   UsedMem -= std::max(It->second->getSize(), static_cast<uint64_t>(1));
-  It->second->markAsFreed();
+
+  MemoryObject &MutableObj = *It->second;
+  MutableObj.State = MemoryObjectState::Freed;
+  MutableObj.Bytes.clear();
+  for (const APInt &Tag : MutableObj.AssociatedTags)
+    TaggedPointerComponents.erase(Tag);
+  MutableObj.AssociatedTags.clear();
+
   MemoryObjects.erase(It);
   return true;
 }
 
 Pointer Context::deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj) {
   assert(Obj && "Cannot determine the address space of a null memory object");
-  return Pointer(Obj, APInt(DL.getPointerSizeInBits(Obj->getAddressSpace()),
-                            Obj->getAddress()));
+  return Pointer(makeIntrusiveRefCnt<PointerComponents>(Obj),
+                 APInt(DL.getPointerSizeInBits(Obj->getAddressSpace()),
+                       Obj->getAddress()));
 }
 
 Function *Context::getTargetFunction(const Pointer &Ptr) {
@@ -628,11 +632,6 @@ uint64_t Context::getRandomUInt64() {
   if (mayUseNonDeterminism())
     return Rng();
   return 0;
-}
-
-void MemoryObject::markAsFreed() {
-  State = MemoryObjectState::Freed;
-  Bytes.clear();
 }
 
 bool MemoryObject::isGlobal() const {

@@ -108,16 +108,11 @@ class MemoryObject : public RefCountedBase<MemoryObject> {
   MemAllocKind AllocKind;
   bool IsConstant = false;
 
-  // A tag is a randomly generated unique identifier to recover the provenance
-  // of a pointer. The length of tag is equal to the store size of the pointer
-  // type, in bits. It may produce false negatives in some corner cases. But in
-  // real practice the false negative rate should be negligible.
-  // A zero tag is invalid.
-  // TODO: we need a tag->provenance mapping instead of assigning a tag to each
-  // memory object.
-  // TODO: we need a special tag encoding for wildcard provenance, which is
-  // introduced by inttoptr.
-  APInt Tag;
+  // Tagged pointer components related to this memory object.
+  // It is used to erasing the tags after the memory object is freed.
+  SmallVector<APInt> AssociatedTags;
+
+  friend class Context;
 
 public:
   MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name, unsigned AS,
@@ -137,8 +132,6 @@ public:
   MemAllocKind getAllocKind() const { return AllocKind; }
   bool isConstant() const { return IsConstant; }
   void setIsConstant(bool C) { IsConstant = C; }
-  const APInt &getTag() const { return Tag; }
-  void setTag(const APInt &T) { Tag = T; }
 
   bool inBounds(const APInt &NewAddr) const {
     return NewAddr.uge(Address) && NewAddr.ule(Address + Size);
@@ -150,8 +143,6 @@ public:
   }
   ArrayRef<Byte> getBytes() const { return Bytes; }
   MutableArrayRef<Byte> getBytes() { return Bytes; }
-
-  void markAsFreed();
 
   bool isGlobal() const;
   bool isStackAllocated() const;
@@ -238,15 +229,15 @@ class Context {
   uint64_t AllocationBase = 8;
   // All live memory objects.
   DenseMap<uint64_t, IntrusiveRefCntPtr<MemoryObject>> MemoryObjects;
-  // Mapping from tags to memory objects. Tags are lazily generated when a
+  // Mapping from tags to pointer components. Tags are lazily generated when a
   // pointer is captured by memory.
-  DenseMap<APInt, IntrusiveRefCntPtr<MemoryObject>> TaggedMemoryObjects;
+  DenseMap<APInt, IntrusiveRefCntPtr<PointerComponents>>
+      TaggedPointerComponents;
   // TODO: Maintains a global list of 'exposed' provenances. This is used to
   // convert an address back to a pointer with a previously exposed provenance.
 
-  /// Get the tag for a pointer to the given memory object.
-  /// TODO: encode metadata bits into the tag.
-  APInt getTag(uint32_t BitWidth, MemoryObject *Obj);
+  /// Get the tag for the given pointer metadata.
+  APInt getTag(uint32_t BitWidth, PointerComponents &Comp);
   AnyValue fromBytes(ConstBytesView Bytes, Type *Ty, uint32_t OffsetInBits,
                      bool CheckPaddingBits, bool *ContainsUndefinedBits);
   void toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,

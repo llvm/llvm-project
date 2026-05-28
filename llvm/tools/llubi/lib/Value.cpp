@@ -16,11 +16,17 @@
 
 namespace llvm::ubi {
 
+IntrusiveRefCntPtr<PointerComponents> PointerComponents::nullary() {
+  static IntrusiveRefCntPtr<PointerComponents> Instance =
+      makeIntrusiveRefCnt<PointerComponents>(nullptr);
+  return Instance;
+}
+
 void Pointer::print(raw_ostream &OS) const {
   SmallString<32> AddrStr;
   Address.toStringUnsigned(AddrStr, 16);
   OS << "ptr 0x" << AddrStr << " [";
-  if (Obj) {
+  if (MemoryObject *Obj = getMemoryObject()) {
     OS << Obj->getName();
     if (Address != Obj->getAddress())
       OS << " + " << (Address - Obj->getAddress());
@@ -34,7 +40,8 @@ void Pointer::print(raw_ostream &OS) const {
 }
 
 AnyValue Pointer::null(unsigned AS, const DataLayout &DL) {
-  return AnyValue(Pointer(nullptr, DL.getNullPtrValue(AS)));
+  return AnyValue(
+      Pointer(PointerComponents::nullary(), DL.getNullPtrValue(AS)));
 }
 
 bool Pointer::isNullPtr(unsigned AS, const DataLayout &DL) const {
