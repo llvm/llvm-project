@@ -309,10 +309,10 @@ TEST_F(FormatTestMacroExpansion, IndentChildrenWithinMacroCall) {
                Style);
 }
 
-// clang-format off
 TEST_F(FormatTestMacroExpansion, NestedMacrosInLambdas) {
   // These are tests for regressions reported in
   // https://github.com/llvm/llvm-project/pull/169037#issuecomment-4056423543
+  // clang-format off
   verifyFormat(
       "void f() {\n"
       "  RETURN_IF_ERROR(Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
@@ -361,9 +361,11 @@ TEST_F(FormatTestMacroExpansion, NestedMacrosInLambdas) {
       "      }));\n"
       "}",
       getGoogleStyle());
+  // clang-format on
 }
 
 TEST_F(FormatTestMacroExpansion, PredefinedGoogleMacros) {
+  // clang-format off
   verifyFormat(
       "void f() {\n"
       "  ASSIGN_OR_RETURN(MySomewhatLongType* variable,\n"
@@ -409,8 +411,8 @@ TEST_F(FormatTestMacroExpansion, PredefinedGoogleMacros) {
       "                            MySomewhatLongFunction(SomethingElse()));\n"
       "}",
       getGoogleStyle());
+  // clang-format on
 }
-// clang-format on
 
 } // namespace
 } // namespace test
