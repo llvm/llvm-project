@@ -5702,6 +5702,8 @@ void Verifier::visitMemCacheHintMetadata(Instruction &I, MDNode *MD) {
   unsigned NumOperands = CB ? CB->arg_size() : I.getNumOperands();
 
   SmallDenseSet<unsigned, 4> SeenOperandNos;
+  uint64_t LastOperandNo = 0;
+  bool HasLastOperandNo = false;
 
   // Top-level metadata alternates: i32 operand_no, MDNode hint_node.
   for (unsigned J = 0; J + 1 < MD->getNumOperands(); J += 2) {
@@ -5723,8 +5725,13 @@ void Verifier::visitMemCacheHintMetadata(Instruction &I, MDNode *MD) {
     Check(Operand->getType()->isPtrOrPtrVectorTy(),
           "!mem.cache_hint operand number must refer to a pointer operand", &I);
 
-    Check(SeenOperandNos.insert(OperandNo).second,
-          "!mem.cache_hint contains duplicate operand number", MD);
+    bool Inserted = SeenOperandNos.insert(OperandNo).second;
+    Check(Inserted, "!mem.cache_hint contains duplicate operand number", MD);
+
+    Check(!Inserted || !HasLastOperandNo || OperandNo > LastOperandNo,
+          "!mem.cache_hint operand numbers must be in increasing order", MD);
+    LastOperandNo = OperandNo;
+    HasLastOperandNo = true;
 
     const auto *Node = dyn_cast<MDNode>(MD->getOperand(J + 1));
     Check(Node,

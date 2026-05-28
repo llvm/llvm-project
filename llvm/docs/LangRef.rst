@@ -7843,8 +7843,8 @@ alternating between ``i32`` operand numbers and metadata hint nodes.
 Each operand number identifies the pointer operand to which the following hint
 node applies. For non-call instructions, the operand number is the IR operand
 index. For intrinsic calls, the operand number is the call argument index.
-Operand numbers must be unique within a ``!mem.cache_hint`` node and must refer
-to a pointer-typed operand.
+Operand numbers must be unique and appear in increasing order within a
+``!mem.cache_hint`` node and must refer to a pointer-typed operand.
 
 For example, for a ``load``, the pointer is operand 0. For a ``store``, the
 value is operand 0 and the pointer is operand 1. For intrinsic calls such as

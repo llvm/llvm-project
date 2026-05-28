@@ -59,6 +59,14 @@ define void @duplicate_operand_no(ptr %p) {
   ret void
 }
 
+; CHECK: !mem.cache_hint operand numbers must be in increasing order
+define void @operand_no_not_increasing(ptr %d, ptr %s) {
+  call void @llvm.memcpy.p0.p0.i64(ptr %d, ptr %s, i64 8, i1 false), !mem.cache_hint !{
+      i32 1, !{!"nvvm.l1_eviction", !"first"},
+      i32 0, !{!"nvvm.l1_eviction", !"last"}}
+  ret void
+}
+
 ; CHECK: !mem.cache_hint must alternate between i32 operand numbers and metadata hint nodes
 define void @hint_node_not_mdnode(ptr %p) {
   %v = load i32, ptr %p, !mem.cache_hint !{i32 0, !"not_a_node"}
