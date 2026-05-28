@@ -2287,6 +2287,19 @@ let append Predicates = [IsRV32] in {
             (BuildGPRPair GPR:$rs2, GPR:$rs2)>;
 
   // Build vector patterns
+  def : Pat<(v8i8 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b),
+                                (XLenVT GPR:$c), (XLenVT GPR:$d),
+                                (XLenVT GPR:$e), (XLenVT GPR:$f),
+                                (XLenVT GPR:$g), (XLenVT GPR:$h))),
+            (BuildGPRPair (PACK (PPAIRE_B GPR:$a, GPR:$b),
+                                (PPAIRE_B GPR:$c, GPR:$d)),
+                          (PACK (PPAIRE_B GPR:$e, GPR:$f),
+                                (PPAIRE_B GPR:$g, GPR:$h)))>;
+
+  def : Pat<(v4i16 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b),
+                                 (XLenVT GPR:$c), (XLenVT GPR:$d))),
+            (BuildGPRPair (PACK GPR:$a, GPR:$b), (PACK GPR:$c, GPR:$d))>;
+
   def : Pat<(v2i32 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
             (BuildGPRPair GPR:$a, GPR:$b)>;
 
