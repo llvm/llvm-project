@@ -718,9 +718,9 @@ double nan(const char *__tagp) {
 // algorithm
 __DEVICE__ double normcdfinv(double __p) {
   if (__p <= 0.0)
-    return -INFINITY;
+    return -__builtin_inf();
   if (__p >= 1.0)
-    return INFINITY;
+    return __builtin_inf();
 
   const double a1 = -3.969683028665376e+01;
   const double a2 = 2.209460984245205e+02;
@@ -767,9 +767,9 @@ __DEVICE__ double normcdfinv(double __p) {
 
 __DEVICE__ float normcdfinvf(float __p) {
   if (__p <= 0.0f)
-    return -INFINITY;
+    return -__builtin_inff();
   if (__p >= 1.0f)
-    return INFINITY;
+    return __builtin_inff();
   const float a1 = -3.969683028665376e+01f;
   const float a2 = 2.209460984245205e+02f;
   const float a3 = -2.759285104469687e+02f;
