@@ -26,6 +26,11 @@ v16f def512(v16f x) {
   return x;
 }
 
+// Internal definitions do not warn
+static v8f internal_def256(v8f x) {
+  return x;
+}
+
 __attribute__((target("avx")))
 v8f def256_avx(v8f x) {
   return x;
@@ -35,3 +40,16 @@ __attribute__((target("avx512f")))
 v16f def512_avx512(v16f x) {
   return x;
 }
+
+// Check to make sure deduced return lambdas still have valid source location which allows these pragmas to work
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpsabi"
+template <class T>
+T template_lambda_return() {
+  return []() { return T{}; }();
+}
+
+v8f use_template_lambda_return() {
+  return template_lambda_return<v8f>();
+}
+#pragma clang diagnostic pop

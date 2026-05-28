@@ -90,6 +90,9 @@ inline constexpr size_t __native_vector_size = 1;
 template <class _ArithmeticT, size_t _Np>
 using __simd_vector __attribute__((__ext_vector_type__(_Np))) _LIBCPP_NODEBUG = _ArithmeticT;
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wpsabi")
+
 template <class _VecT>
 inline constexpr size_t __simd_vector_size_v = []<bool _False = false>() -> size_t {
   static_assert(_False, "Not a vector!");
@@ -115,8 +118,6 @@ template <class _VecT, class _Iter>
 }
 
 // Load the first _Np elements, zero the rest
-_LIBCPP_DIAGNOSTIC_PUSH
-_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wpsabi")
 template <class _VecT, size_t _Np, class _Iter>
 [[__nodiscard__]] _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _VecT __partial_load(_Iter __iter) noexcept {
   return [=]<size_t... _LoadIndices, size_t... _ZeroIndices>(
@@ -174,6 +175,7 @@ template <class _Tp, size_t _Np>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t __find_first_not_set(__simd_vector<_Tp, _Np> __vec) noexcept {
   return std::__find_first_set(~__vec);
 }
+_LIBCPP_DIAGNOSTIC_POP
 
 _LIBCPP_END_NAMESPACE_STD
 
