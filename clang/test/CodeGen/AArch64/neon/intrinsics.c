@@ -29,6 +29,66 @@
 // TODO: Implement SISD variants
 //===------------------------------------------------------===//
 
+// ALL-LABEL: @test_vqrshrunh_n_s16(
+uint8_t test_vqrshrunh_n_s16(int16_t a) {
+  // CIR:  {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrun"
+
+  // LLVM-SAME: i16 noundef {{.*}})
+  // LLVM:      call {{.*}}@llvm.aarch64.neon.sqrshrun.v8i8(
+  // LLVM:      ret i8 {{%.*}}
+  return (uint8_t)vqrshrunh_n_s16(a, 8);
+}
+
+// ALL-LABEL: @test_vqrshruns_n_s32(
+uint16_t test_vqrshruns_n_s32(int32_t a) {
+  // CIR:  {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrun"
+
+  // LLVM-SAME: i32 noundef {{.*}})
+  // LLVM:      call {{.*}}@llvm.aarch64.neon.sqrshrun.v4i16(
+  // LLVM:      ret i16 {{%.*}}
+  return (uint16_t)vqrshruns_n_s32(a, 16);
+}
+
+// ALL-LABEL: @test_vqrshrnh_n_s16(
+int8_t test_vqrshrnh_n_s16(int16_t a) {
+  // CIR:  {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrn"
+
+  // LLVM-SAME: i16 noundef {{.*}})
+  // LLVM:      call {{.*}}@llvm.aarch64.neon.sqrshrn.v8i8(
+  // LLVM:      ret i8 {{%.*}}
+  return (int8_t)vqrshrnh_n_s16(a, 8);
+}
+
+// ALL-LABEL: @test_vqrshrns_n_s32(
+int16_t test_vqrshrns_n_s32(int32_t a) {
+  // CIR:  {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrn"
+
+  // LLVM-SAME: i32 noundef {{.*}})
+  // LLVM:      call {{.*}}@llvm.aarch64.neon.sqrshrn.v4i16(
+  // LLVM:      ret i16 {{%.*}}
+  return (int16_t)vqrshrns_n_s32(a, 16);
+}
+
+// ALL-LABEL: @test_vqrshrnh_n_u16(
+uint8_t test_vqrshrnh_n_u16(uint16_t a) {
+  // CIR:  {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqrshrn"
+
+  // LLVM-SAME: i16 noundef {{.*}})
+  // LLVM:      call {{.*}}@llvm.aarch64.neon.uqrshrn.v8i8(
+  // LLVM:      ret i8 {{%.*}}
+  return (uint8_t)vqrshrnh_n_u16(a, 8);
+}
+
+// ALL-LABEL: @test_vqrshrns_n_u32(
+uint16_t test_vqrshrns_n_u32(uint32_t a) {
+  // CIR:  {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqrshrn"
+
+  // LLVM-SAME: i32 noundef {{.*}})
+  // LLVM:      call {{.*}}@llvm.aarch64.neon.uqrshrn.v4i16(
+  // LLVM:      ret i16 {{%.*}}
+  return (uint16_t)vqrshrns_n_u32(a, 16);
+}
+
 // ALL-LABEL: @test_vqrshrun_n_s16(
 uint8x8_t test_vqrshrun_n_s16(int16x8_t a) {
   // CIR:   cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" 
