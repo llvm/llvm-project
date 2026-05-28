@@ -712,6 +712,13 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
                                Result.TargetTriple, Args, CodeGenFile, C))
       return Err;
 
+    if (!SPIRVDumpDir.empty()) {
+      SmallString<256> DumpFile(SPIRVDumpDir);
+      sys::path::append(DumpFile, sys::path::filename(CodeGenFile));
+      if (std::error_code EC = sys::fs::copy_file(CodeGenFile, DumpFile))
+        return createFileError(DumpFile, EC);
+    }
+
     SplitModules[I].ModuleFilePath = CodeGenFile;
     if (IsAOTCompileNeeded) {
       std::string AOTFile = (Stem + "_" + Twine(I) + ".out").str();
