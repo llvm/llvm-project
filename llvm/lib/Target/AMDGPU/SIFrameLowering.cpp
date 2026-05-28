@@ -1311,6 +1311,11 @@ void SIFrameLowering::emitCSRSpillStores(
         LiveUnits.addReg(Reg);
     }
   }
+
+  // Remove the spill entry created for EXEC. It is needed only for CFISaves in
+  // the prologue.
+  if (TRI.isCFISavedRegsSpillEnabled())
+    FuncInfo->removePrologEpilogSGPRSpillEntry(TRI.getExec());
 }
 
 void SIFrameLowering::emitCSRSpillRestores(
@@ -1877,6 +1882,13 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
     // Reset it at this point. There are no whole-wave copies and spills
     // encountered.
     MFI->setSGPRForEXECCopy(AMDGPU::NoRegister);
+  }
+
+  if (TRI->isCFISavedRegsSpillEnabled()) {
+    Register Exec = TRI->getExec();
+    assert(!MFI->hasPrologEpilogSGPRSpillEntry(Exec) &&
+           "Re-reserving spill slot for EXEC");
+    getVGPRSpillLaneOrTempRegister(MF, LiveUnits, Exec, RC);
   }
 
   // Functions that don't return to the caller don't need to preserve
