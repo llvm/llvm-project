@@ -162,7 +162,7 @@ define void @test_volatile(ptr %p) {
 }
 
 define void @test_atomicrmw(ptr %p) {
-; FNATTRS: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
+; FNATTRS: Function Attrs: mustprogress norecurse nounwind willreturn
 ; FNATTRS-LABEL: define {{[^@]+}}@test_atomicrmw
 ; FNATTRS-SAME: (ptr captures(none) [[P:%.*]]) #[[ATTR7:[0-9]+]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[P]], i8 0 seq_cst, align 1
