@@ -976,7 +976,14 @@ public:
 
   lldb::ChildCacheState Update() override {
     if (auto reflection_ctx = GetReflectionContext()) {
-      ValueObjectSP task_obj_sp = m_backend.GetChildMemberWithName("_task");
+      // Newer stdlibs store the task as `_rawTask` (a non-owning wrapper
+      // around a `Builtin.RawPointer`); see swiftlang/swift#89283.
+      ValueObjectSP task_obj_sp;
+      if (auto raw_sp = m_backend.GetChildMemberWithName("_rawTask"))
+        task_obj_sp = raw_sp->GetChildMemberWithName("_rawValue");
+      // Fallback, older stdlibs used to store a _task property
+      if (!task_obj_sp)
+        task_obj_sp = m_backend.GetChildMemberWithName("_task");
       if (!task_obj_sp)
         return ChildCacheState::eRefetch;
       m_task_ptr = task_obj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
