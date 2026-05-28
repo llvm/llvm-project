@@ -639,14 +639,7 @@ define <4 x half> @load_v4half_align2(ptr %ptr) {
 ;
 ; STRICTALIGN-LABEL: load_v4half_align2:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #2]
-; STRICTALIGN-NEXT:    ldrh w11, [x0]
-; STRICTALIGN-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    fmov d0, x8
+; STRICTALIGN-NEXT:    ld1 { v0.4h }, [x0]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v4half_align2:
@@ -656,14 +649,8 @@ define <4 x half> @load_v4half_align2(ptr %ptr) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v4half_align2:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #2]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #6]
-; STRICTALIGN-BE-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    fmov d0, x8
+; STRICTALIGN-BE-NEXT:    ld1 { v0.4h }, [x0]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
 ; STRICTALIGN-BE-NEXT:    ret
   %val = load <4 x half>, ptr %ptr, align 2
   ret <4 x half> %val
@@ -677,14 +664,7 @@ define void @store_v4half_align2(ptr %ptr, <4 x half> %val) {
 ;
 ; STRICTALIGN-LABEL: store_v4half_align2:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    fmov x8, d0
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    strh w8, [x0]
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
+; STRICTALIGN-NEXT:    st1 { v0.4h }, [x0]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v4half_align2:
@@ -694,14 +674,8 @@ define void @store_v4half_align2(ptr %ptr, <4 x half> %val) {
 ;
 ; STRICTALIGN-BE-LABEL: store_v4half_align2:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    fmov x8, d0
-; STRICTALIGN-BE-NEXT:    str h0, [x0, #6]
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #16
-; STRICTALIGN-BE-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    strh w10, [x0, #2]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
+; STRICTALIGN-BE-NEXT:    st1 { v0.4h }, [x0]
 ; STRICTALIGN-BE-NEXT:    ret
   store <4 x half> %val, ptr %ptr, align 2
   ret void
@@ -716,16 +690,8 @@ define <4 x half> @load_v4half_align2_post8(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v4half_align2_post8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #2]
-; STRICTALIGN-NEXT:    ldrh w11, [x0]
-; STRICTALIGN-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    fmov d0, x8
-; STRICTALIGN-NEXT:    add x8, x0, #8
-; STRICTALIGN-NEXT:    str x8, [x1]
+; STRICTALIGN-NEXT:    ld1 { v0.4h }, [x0], #8
+; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v4half_align2_post8:
@@ -736,16 +702,9 @@ define <4 x half> @load_v4half_align2_post8(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v4half_align2_post8:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #2]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #6]
-; STRICTALIGN-BE-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    fmov d0, x8
-; STRICTALIGN-BE-NEXT:    add x8, x0, #8
-; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    ld1 { v0.4h }, [x0], #8
+; STRICTALIGN-BE-NEXT:    str x0, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 8
   %val = load <4 x half>, ptr %ptr, align 2
@@ -762,15 +721,9 @@ define <4 x half> @load_v4half_align2_pre8(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v4half_align2_pre8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #8]!
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w11, [x0, #2]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    orr w9, w10, w9, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x11, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-NEXT:    fmov d0, x8
+; STRICTALIGN-NEXT:    add x8, x0, #8
+; STRICTALIGN-NEXT:    ld1 { v0.4h }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v4half_align2_pre8:
@@ -781,15 +734,10 @@ define <4 x half> @load_v4half_align2_pre8(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v4half_align2_pre8:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0, #8]!
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #6]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #2]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    orr x9, x10, x9, lsl #16
-; STRICTALIGN-BE-NEXT:    orr w8, w11, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    fmov d0, x8
+; STRICTALIGN-BE-NEXT:    add x8, x0, #8
+; STRICTALIGN-BE-NEXT:    ld1 { v0.4h }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 8
   %val = load <4 x half>, ptr %newptr, align 2
@@ -806,16 +754,8 @@ define void @store_v4half_align2_post8(ptr %ptr, <4 x half> %val, ptr %writeback
 ;
 ; STRICTALIGN-LABEL: store_v4half_align2_post8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    fmov x8, d0
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    strh w8, [x0]
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    add x9, x0, #8
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    str x9, [x1]
+; STRICTALIGN-NEXT:    st1 { v0.4h }, [x0], #8
+; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v4half_align2_post8:
@@ -826,16 +766,9 @@ define void @store_v4half_align2_post8(ptr %ptr, <4 x half> %val, ptr %writeback
 ;
 ; STRICTALIGN-BE-LABEL: store_v4half_align2_post8:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    fmov x8, d0
-; STRICTALIGN-BE-NEXT:    str h0, [x0, #6]
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #16
-; STRICTALIGN-BE-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    add x9, x0, #8
-; STRICTALIGN-BE-NEXT:    strh w10, [x0, #2]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0]
-; STRICTALIGN-BE-NEXT:    str x9, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
+; STRICTALIGN-BE-NEXT:    st1 { v0.4h }, [x0], #8
+; STRICTALIGN-BE-NEXT:    str x0, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 8
   store <4 x half> %val, ptr %ptr, align 2
@@ -852,15 +785,9 @@ define void @store_v4half_align2_pre8(ptr %ptr, <4 x half> %val, ptr %writeback)
 ;
 ; STRICTALIGN-LABEL: store_v4half_align2_pre8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    fmov x8, d0
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    strh w8, [x0, #8]!
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    str x0, [x1]
+; STRICTALIGN-NEXT:    add x8, x0, #8
+; STRICTALIGN-NEXT:    st1 { v0.4h }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v4half_align2_pre8:
@@ -871,15 +798,10 @@ define void @store_v4half_align2_pre8(ptr %ptr, <4 x half> %val, ptr %writeback)
 ;
 ; STRICTALIGN-BE-LABEL: store_v4half_align2_pre8:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    fmov x8, d0
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-BE-NEXT:    lsr x10, x8, #16
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #8]!
-; STRICTALIGN-BE-NEXT:    str h0, [x0, #6]
-; STRICTALIGN-BE-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
+; STRICTALIGN-BE-NEXT:    add x8, x0, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.4h }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 8
   store <4 x half> %val, ptr %newptr, align 2
@@ -896,14 +818,7 @@ define <4 x half> @load_v4half_align2_post16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v4half_align2_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #2]
-; STRICTALIGN-NEXT:    ldrh w11, [x0]
-; STRICTALIGN-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    fmov d0, x8
+; STRICTALIGN-NEXT:    ld1 { v0.4h }, [x0]
 ; STRICTALIGN-NEXT:    add x8, x0, #16
 ; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
@@ -916,16 +831,10 @@ define <4 x half> @load_v4half_align2_post16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v4half_align2_post16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #2]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #6]
-; STRICTALIGN-BE-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    fmov d0, x8
+; STRICTALIGN-BE-NEXT:    ld1 { v0.4h }, [x0]
 ; STRICTALIGN-BE-NEXT:    add x8, x0, #16
 ; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   %val = load <4 x half>, ptr %ptr, align 2
@@ -942,15 +851,9 @@ define <4 x half> @load_v4half_align2_pre16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v4half_align2_pre16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #16]!
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w11, [x0, #2]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    orr w9, w10, w9, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x11, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-NEXT:    fmov d0, x8
+; STRICTALIGN-NEXT:    add x8, x0, #16
+; STRICTALIGN-NEXT:    ld1 { v0.4h }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v4half_align2_pre16:
@@ -961,15 +864,10 @@ define <4 x half> @load_v4half_align2_pre16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v4half_align2_pre16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0, #16]!
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #6]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #2]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    orr x9, x10, x9, lsl #16
-; STRICTALIGN-BE-NEXT:    orr w8, w11, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    fmov d0, x8
+; STRICTALIGN-BE-NEXT:    add x8, x0, #16
+; STRICTALIGN-BE-NEXT:    ld1 { v0.4h }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   %val = load <4 x half>, ptr %newptr, align 2
@@ -986,16 +884,9 @@ define void @store_v4half_align2_post16(ptr %ptr, <4 x half> %val, ptr %writebac
 ;
 ; STRICTALIGN-LABEL: store_v4half_align2_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    fmov x8, d0
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    strh w8, [x0]
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    add x9, x0, #16
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    str x9, [x1]
+; STRICTALIGN-NEXT:    add x8, x0, #16
+; STRICTALIGN-NEXT:    st1 { v0.4h }, [x0]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v4half_align2_post16:
@@ -1006,16 +897,10 @@ define void @store_v4half_align2_post16(ptr %ptr, <4 x half> %val, ptr %writebac
 ;
 ; STRICTALIGN-BE-LABEL: store_v4half_align2_post16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    fmov x8, d0
-; STRICTALIGN-BE-NEXT:    str h0, [x0, #6]
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #16
-; STRICTALIGN-BE-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    add x9, x0, #16
-; STRICTALIGN-BE-NEXT:    strh w10, [x0, #2]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0]
-; STRICTALIGN-BE-NEXT:    str x9, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
+; STRICTALIGN-BE-NEXT:    add x8, x0, #16
+; STRICTALIGN-BE-NEXT:    st1 { v0.4h }, [x0]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   store <4 x half> %val, ptr %ptr, align 2
@@ -1032,15 +917,9 @@ define void @store_v4half_align2_pre16(ptr %ptr, <4 x half> %val, ptr %writeback
 ;
 ; STRICTALIGN-LABEL: store_v4half_align2_pre16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    fmov x8, d0
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    strh w8, [x0, #16]!
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    str x0, [x1]
+; STRICTALIGN-NEXT:    add x8, x0, #16
+; STRICTALIGN-NEXT:    st1 { v0.4h }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v4half_align2_pre16:
@@ -1051,15 +930,10 @@ define void @store_v4half_align2_pre16(ptr %ptr, <4 x half> %val, ptr %writeback
 ;
 ; STRICTALIGN-BE-LABEL: store_v4half_align2_pre16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    fmov x8, d0
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-BE-NEXT:    lsr x10, x8, #16
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #16]!
-; STRICTALIGN-BE-NEXT:    str h0, [x0, #6]
-; STRICTALIGN-BE-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
+; STRICTALIGN-BE-NEXT:    add x8, x0, #16
+; STRICTALIGN-BE-NEXT:    st1 { v0.4h }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   store <4 x half> %val, ptr %newptr, align 2
@@ -1184,7 +1058,7 @@ define void @store_v4half_align8_post8(ptr %ptr, <4 x half> %val, ptr %writeback
 ;
 ; STRICTALIGN-LABEL: store_v4half_align8_post8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str d0, [x0], #8
+; STRICTALIGN-NEXT:    st1 { v0.4h }, [x0], #8
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -2419,24 +2293,7 @@ define <8 x half> @load_v8half_align2(ptr %ptr) {
 ;
 ; STRICTALIGN-LABEL: load_v8half_align2:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #2]
-; STRICTALIGN-NEXT:    ldrh w11, [x0]
-; STRICTALIGN-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #10]
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #8]!
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w11, [x0, #4]
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #16
-; STRICTALIGN-NEXT:    orr w9, w11, w10, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-NEXT:    ldr q0, [sp], #16
+; STRICTALIGN-NEXT:    ld1 { v0.8h }, [x0]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v8half_align2:
@@ -2446,25 +2303,9 @@ define <8 x half> @load_v8half_align2(ptr %ptr) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v8half_align2:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #2]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #6]
-; STRICTALIGN-BE-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    mov x8, x0
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #10]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x8, #8]!
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x8, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x8, #6]
-; STRICTALIGN-BE-NEXT:    orr w9, w10, w9, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x8, x11, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp], #16
+; STRICTALIGN-BE-NEXT:    ld1 { v0.8h }, [x0]
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %val = load <8 x half>, ptr %ptr, align 2
   ret <8 x half> %val
@@ -2478,25 +2319,7 @@ define void @store_v8half_align2(ptr %ptr, <8 x half> %val) {
 ;
 ; STRICTALIGN-LABEL: store_v8half_align2:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp]
-; STRICTALIGN-NEXT:    strh w8, [x0]
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    ldr x11, [sp, #8]
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    lsr x9, x11, #16
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    lsr x8, x11, #48
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-NEXT:    lsr x9, x11, #32
-; STRICTALIGN-NEXT:    strh w11, [x0, #8]!
-; STRICTALIGN-NEXT:    strh w8, [x0, #6]
-; STRICTALIGN-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    st1 { v0.8h }, [x0]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v8half_align2:
@@ -2506,25 +2329,9 @@ define void @store_v8half_align2(ptr %ptr, <8 x half> %val) {
 ;
 ; STRICTALIGN-BE-LABEL: store_v8half_align2:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #6]
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #16
-; STRICTALIGN-BE-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-BE-NEXT:    ldr x11, [sp, #8]
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    lsr x9, x11, #32
-; STRICTALIGN-BE-NEXT:    strh w8, [x0]
-; STRICTALIGN-BE-NEXT:    lsr x8, x11, #48
-; STRICTALIGN-BE-NEXT:    strh w10, [x0, #2]
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-BE-NEXT:    lsr x9, x11, #16
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #8]!
-; STRICTALIGN-BE-NEXT:    strh w11, [x0, #6]
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.8h }, [x0]
 ; STRICTALIGN-BE-NEXT:    ret
   store <8 x half> %val, ptr %ptr, align 2
   ret void
@@ -2539,27 +2346,8 @@ define <8 x half> @load_v8half_align2_post16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v8half_align2_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #2]
-; STRICTALIGN-NEXT:    ldrh w11, [x0]
-; STRICTALIGN-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    add x9, x0, #16
-; STRICTALIGN-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #10]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #8]!
-; STRICTALIGN-NEXT:    ldrh w11, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w12, [x0, #4]
-; STRICTALIGN-NEXT:    orr x8, x10, x8, lsl #16
-; STRICTALIGN-NEXT:    orr w10, w12, w11, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x10, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-NEXT:    ldr q0, [sp]
-; STRICTALIGN-NEXT:    str x9, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    ld1 { v0.8h }, [x0], #16
+; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v8half_align2_post16:
@@ -2571,28 +2359,10 @@ define <8 x half> @load_v8half_align2_post16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v8half_align2_post16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #2]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #6]
-; STRICTALIGN-BE-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    mov x8, x0
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #10]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x8, #8]!
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x8, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x8, #6]
-; STRICTALIGN-BE-NEXT:    orr w9, w10, w9, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x8, x11, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    add x8, x0, #16
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp]
-; STRICTALIGN-BE-NEXT:    str x8, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    ld1 { v0.8h }, [x0], #16
+; STRICTALIGN-BE-NEXT:    str x0, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   %val = load <8 x half>, ptr %ptr, align 2
@@ -2609,27 +2379,9 @@ define <8 x half> @load_v8half_align2_pre16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v8half_align2_pre16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #16]!
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w11, [x0, #2]
-; STRICTALIGN-NEXT:    orr w9, w10, w9, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x11, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-NEXT:    mov x9, x0
-; STRICTALIGN-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldrh w8, [x9, #8]!
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #10]
-; STRICTALIGN-NEXT:    ldrh w11, [x9, #6]
-; STRICTALIGN-NEXT:    ldrh w9, [x9, #4]
-; STRICTALIGN-NEXT:    orr x8, x8, x10, lsl #16
-; STRICTALIGN-NEXT:    orr w9, w9, w11, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-NEXT:    ldr q0, [sp]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    add x8, x0, #16
+; STRICTALIGN-NEXT:    ld1 { v0.8h }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v8half_align2_pre16:
@@ -2641,27 +2393,11 @@ define <8 x half> @load_v8half_align2_pre16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v8half_align2_pre16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0, #16]!
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #6]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #2]
-; STRICTALIGN-BE-NEXT:    orr x9, x10, x9, lsl #16
-; STRICTALIGN-BE-NEXT:    orr w8, w11, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    mov x9, x0
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x9, #8]!
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x9, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x9, #6]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #10]
-; STRICTALIGN-BE-NEXT:    orr x9, x9, x10, lsl #16
-; STRICTALIGN-BE-NEXT:    orr w8, w11, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    add x8, x0, #16
+; STRICTALIGN-BE-NEXT:    ld1 { v0.8h }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   %val = load <8 x half>, ptr %newptr, align 2
@@ -2678,28 +2414,8 @@ define void @store_v8half_align2_post16(ptr %ptr, <8 x half> %val, ptr %writebac
 ;
 ; STRICTALIGN-LABEL: store_v8half_align2_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp]
-; STRICTALIGN-NEXT:    strh w8, [x0]
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    ldr x11, [sp, #8]
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    lsr x9, x11, #16
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    lsr x8, x11, #48
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    lsr x10, x11, #32
-; STRICTALIGN-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-NEXT:    mov x9, x0
-; STRICTALIGN-NEXT:    strh w11, [x9, #8]!
-; STRICTALIGN-NEXT:    strh w8, [x9, #6]
-; STRICTALIGN-NEXT:    add x8, x0, #16
-; STRICTALIGN-NEXT:    strh w10, [x9, #4]
-; STRICTALIGN-NEXT:    str x8, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    st1 { v0.8h }, [x0], #16
+; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v8half_align2_post16:
@@ -2711,27 +2427,10 @@ define void @store_v8half_align2_post16(ptr %ptr, <8 x half> %val, ptr %writebac
 ;
 ; STRICTALIGN-BE-LABEL: store_v8half_align2_post16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #6]
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #16
-; STRICTALIGN-BE-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-BE-NEXT:    ldr x11, [sp, #8]
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    lsr x9, x11, #32
-; STRICTALIGN-BE-NEXT:    strh w8, [x0]
-; STRICTALIGN-BE-NEXT:    lsr x8, x11, #48
-; STRICTALIGN-BE-NEXT:    strh w10, [x0, #2]
-; STRICTALIGN-BE-NEXT:    add x10, x0, #16
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-BE-NEXT:    lsr x9, x11, #16
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #8]!
-; STRICTALIGN-BE-NEXT:    strh w11, [x0, #6]
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    str x10, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.8h }, [x0], #16
+; STRICTALIGN-BE-NEXT:    str x0, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   store <8 x half> %val, ptr %ptr, align 2
@@ -2748,27 +2447,9 @@ define void @store_v8half_align2_pre16(ptr %ptr, <8 x half> %val, ptr %writeback
 ;
 ; STRICTALIGN-LABEL: store_v8half_align2_pre16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp]
-; STRICTALIGN-NEXT:    strh w8, [x0, #16]!
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    ldr x11, [sp, #8]
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    lsr x9, x11, #16
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    lsr x10, x11, #32
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    mov x8, x0
-; STRICTALIGN-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-NEXT:    lsr x9, x11, #48
-; STRICTALIGN-NEXT:    strh w11, [x8, #8]!
-; STRICTALIGN-NEXT:    strh w9, [x8, #6]
-; STRICTALIGN-NEXT:    strh w10, [x8, #4]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    add x8, x0, #16
+; STRICTALIGN-NEXT:    st1 { v0.8h }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v8half_align2_pre16:
@@ -2780,27 +2461,11 @@ define void @store_v8half_align2_pre16(ptr %ptr, <8 x half> %val, ptr %writeback
 ;
 ; STRICTALIGN-BE-LABEL: store_v8half_align2_pre16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp]
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #16]!
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #16
-; STRICTALIGN-BE-NEXT:    ldr x10, [sp, #8]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #6]
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    lsr x9, x10, #32
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-BE-NEXT:    lsr x8, x10, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-BE-NEXT:    mov x9, x0
-; STRICTALIGN-BE-NEXT:    strh w8, [x9, #8]!
-; STRICTALIGN-BE-NEXT:    lsr x8, x10, #16
-; STRICTALIGN-BE-NEXT:    strh w10, [x9, #6]
-; STRICTALIGN-BE-NEXT:    strh w8, [x9, #4]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    add x8, x0, #16
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.8h }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   store <8 x half> %val, ptr %newptr, align 2
@@ -2817,27 +2482,9 @@ define <8 x half> @load_v8half_align2_post32(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v8half_align2_post32:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #2]
-; STRICTALIGN-NEXT:    ldrh w11, [x0]
-; STRICTALIGN-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    add x9, x0, #32
-; STRICTALIGN-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #10]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #8]!
-; STRICTALIGN-NEXT:    ldrh w11, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w12, [x0, #4]
-; STRICTALIGN-NEXT:    orr x8, x10, x8, lsl #16
-; STRICTALIGN-NEXT:    orr w10, w12, w11, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x10, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-NEXT:    ldr q0, [sp]
-; STRICTALIGN-NEXT:    str x9, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    ld1 { v0.8h }, [x0]
+; STRICTALIGN-NEXT:    add x8, x0, #32
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v8half_align2_post32:
@@ -2849,28 +2496,11 @@ define <8 x half> @load_v8half_align2_post32(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v8half_align2_post32:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #2]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #6]
-; STRICTALIGN-BE-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    mov x8, x0
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #10]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x8, #8]!
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x8, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x8, #6]
-; STRICTALIGN-BE-NEXT:    orr w9, w10, w9, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x8, x11, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #8]
+; STRICTALIGN-BE-NEXT:    ld1 { v0.8h }, [x0]
 ; STRICTALIGN-BE-NEXT:    add x8, x0, #32
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp]
 ; STRICTALIGN-BE-NEXT:    str x8, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 32
   %val = load <8 x half>, ptr %ptr, align 2
@@ -2887,27 +2517,9 @@ define <8 x half> @load_v8half_align2_pre32(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v8half_align2_pre32:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #32]!
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w11, [x0, #2]
-; STRICTALIGN-NEXT:    orr w9, w10, w9, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x11, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-NEXT:    mov x9, x0
-; STRICTALIGN-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldrh w8, [x9, #8]!
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #10]
-; STRICTALIGN-NEXT:    ldrh w11, [x9, #6]
-; STRICTALIGN-NEXT:    ldrh w9, [x9, #4]
-; STRICTALIGN-NEXT:    orr x8, x8, x10, lsl #16
-; STRICTALIGN-NEXT:    orr w9, w9, w11, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-NEXT:    ldr q0, [sp]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    add x8, x0, #32
+; STRICTALIGN-NEXT:    ld1 { v0.8h }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v8half_align2_pre32:
@@ -2919,27 +2531,11 @@ define <8 x half> @load_v8half_align2_pre32(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v8half_align2_pre32:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0, #32]!
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #6]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #2]
-; STRICTALIGN-BE-NEXT:    orr x9, x10, x9, lsl #16
-; STRICTALIGN-BE-NEXT:    orr w8, w11, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    mov x9, x0
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x9, #8]!
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x9, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x9, #6]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #10]
-; STRICTALIGN-BE-NEXT:    orr x9, x9, x10, lsl #16
-; STRICTALIGN-BE-NEXT:    orr w8, w11, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    add x8, x0, #32
+; STRICTALIGN-BE-NEXT:    ld1 { v0.8h }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 32
   %val = load <8 x half>, ptr %newptr, align 2
@@ -2956,28 +2552,9 @@ define void @store_v8half_align2_post32(ptr %ptr, <8 x half> %val, ptr %writebac
 ;
 ; STRICTALIGN-LABEL: store_v8half_align2_post32:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp]
-; STRICTALIGN-NEXT:    strh w8, [x0]
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    ldr x11, [sp, #8]
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    lsr x9, x11, #16
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    lsr x8, x11, #48
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    lsr x10, x11, #32
-; STRICTALIGN-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-NEXT:    mov x9, x0
-; STRICTALIGN-NEXT:    strh w11, [x9, #8]!
-; STRICTALIGN-NEXT:    strh w8, [x9, #6]
 ; STRICTALIGN-NEXT:    add x8, x0, #32
-; STRICTALIGN-NEXT:    strh w10, [x9, #4]
+; STRICTALIGN-NEXT:    st1 { v0.8h }, [x0]
 ; STRICTALIGN-NEXT:    str x8, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v8half_align2_post32:
@@ -2989,27 +2566,11 @@ define void @store_v8half_align2_post32(ptr %ptr, <8 x half> %val, ptr %writebac
 ;
 ; STRICTALIGN-BE-LABEL: store_v8half_align2_post32:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #6]
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #16
-; STRICTALIGN-BE-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-BE-NEXT:    ldr x11, [sp, #8]
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    lsr x9, x11, #32
-; STRICTALIGN-BE-NEXT:    strh w8, [x0]
-; STRICTALIGN-BE-NEXT:    lsr x8, x11, #48
-; STRICTALIGN-BE-NEXT:    strh w10, [x0, #2]
-; STRICTALIGN-BE-NEXT:    add x10, x0, #32
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-BE-NEXT:    lsr x9, x11, #16
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #8]!
-; STRICTALIGN-BE-NEXT:    strh w11, [x0, #6]
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    str x10, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    add x8, x0, #32
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.8h }, [x0]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 32
   store <8 x half> %val, ptr %ptr, align 2
@@ -3026,27 +2587,9 @@ define void @store_v8half_align2_pre32(ptr %ptr, <8 x half> %val, ptr %writeback
 ;
 ; STRICTALIGN-LABEL: store_v8half_align2_pre32:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp]
-; STRICTALIGN-NEXT:    strh w8, [x0, #32]!
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    ldr x11, [sp, #8]
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    lsr x9, x11, #16
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    lsr x10, x11, #32
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    mov x8, x0
-; STRICTALIGN-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-NEXT:    lsr x9, x11, #48
-; STRICTALIGN-NEXT:    strh w11, [x8, #8]!
-; STRICTALIGN-NEXT:    strh w9, [x8, #6]
-; STRICTALIGN-NEXT:    strh w10, [x8, #4]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    add x8, x0, #32
+; STRICTALIGN-NEXT:    st1 { v0.8h }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v8half_align2_pre32:
@@ -3058,27 +2601,11 @@ define void @store_v8half_align2_pre32(ptr %ptr, <8 x half> %val, ptr %writeback
 ;
 ; STRICTALIGN-BE-LABEL: store_v8half_align2_pre32:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp]
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #32]!
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #16
-; STRICTALIGN-BE-NEXT:    ldr x10, [sp, #8]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #6]
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    lsr x9, x10, #32
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-BE-NEXT:    lsr x8, x10, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-BE-NEXT:    mov x9, x0
-; STRICTALIGN-BE-NEXT:    strh w8, [x9, #8]!
-; STRICTALIGN-BE-NEXT:    lsr x8, x10, #16
-; STRICTALIGN-BE-NEXT:    strh w10, [x9, #6]
-; STRICTALIGN-BE-NEXT:    strh w8, [x9, #4]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    add x8, x0, #32
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.8h }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 32
   store <8 x half> %val, ptr %newptr, align 2
@@ -3207,7 +2734,7 @@ define void @store_v8half_align16_post16(ptr %ptr, <8 x half> %val, ptr %writeba
 ;
 ; STRICTALIGN-LABEL: store_v8half_align16_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [x0], #16
+; STRICTALIGN-NEXT:    st1 { v0.8h }, [x0], #16
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -4024,14 +3551,7 @@ define <4 x bfloat> @load_v4bfloat_align2(ptr %ptr) {
 ;
 ; STRICTALIGN-LABEL: load_v4bfloat_align2:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #2]
-; STRICTALIGN-NEXT:    ldrh w11, [x0]
-; STRICTALIGN-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    fmov d0, x8
+; STRICTALIGN-NEXT:    ld1 { v0.4h }, [x0]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v4bfloat_align2:
@@ -4041,14 +3561,8 @@ define <4 x bfloat> @load_v4bfloat_align2(ptr %ptr) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v4bfloat_align2:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #2]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #6]
-; STRICTALIGN-BE-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    fmov d0, x8
+; STRICTALIGN-BE-NEXT:    ld1 { v0.4h }, [x0]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
 ; STRICTALIGN-BE-NEXT:    ret
   %val = load <4 x bfloat>, ptr %ptr, align 2
   ret <4 x bfloat> %val
@@ -4062,14 +3576,7 @@ define void @store_v4bfloat_align2(ptr %ptr, <4 x bfloat> %val) {
 ;
 ; STRICTALIGN-LABEL: store_v4bfloat_align2:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    fmov x8, d0
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    strh w8, [x0]
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
+; STRICTALIGN-NEXT:    st1 { v0.4h }, [x0]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v4bfloat_align2:
@@ -4079,14 +3586,8 @@ define void @store_v4bfloat_align2(ptr %ptr, <4 x bfloat> %val) {
 ;
 ; STRICTALIGN-BE-LABEL: store_v4bfloat_align2:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    fmov x8, d0
-; STRICTALIGN-BE-NEXT:    str h0, [x0, #6]
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #16
-; STRICTALIGN-BE-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    strh w10, [x0, #2]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
+; STRICTALIGN-BE-NEXT:    st1 { v0.4h }, [x0]
 ; STRICTALIGN-BE-NEXT:    ret
   store <4 x bfloat> %val, ptr %ptr, align 2
   ret void
@@ -4101,16 +3602,8 @@ define <4 x bfloat> @load_v4bfloat_align2_post8(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v4bfloat_align2_post8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #2]
-; STRICTALIGN-NEXT:    ldrh w11, [x0]
-; STRICTALIGN-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    fmov d0, x8
-; STRICTALIGN-NEXT:    add x8, x0, #8
-; STRICTALIGN-NEXT:    str x8, [x1]
+; STRICTALIGN-NEXT:    ld1 { v0.4h }, [x0], #8
+; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v4bfloat_align2_post8:
@@ -4121,16 +3614,9 @@ define <4 x bfloat> @load_v4bfloat_align2_post8(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v4bfloat_align2_post8:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #2]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #6]
-; STRICTALIGN-BE-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    fmov d0, x8
-; STRICTALIGN-BE-NEXT:    add x8, x0, #8
-; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    ld1 { v0.4h }, [x0], #8
+; STRICTALIGN-BE-NEXT:    str x0, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 8
   %val = load <4 x bfloat>, ptr %ptr, align 2
@@ -4147,15 +3633,9 @@ define <4 x bfloat> @load_v4bfloat_align2_pre8(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v4bfloat_align2_pre8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #8]!
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w11, [x0, #2]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    orr w9, w10, w9, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x11, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-NEXT:    fmov d0, x8
+; STRICTALIGN-NEXT:    add x8, x0, #8
+; STRICTALIGN-NEXT:    ld1 { v0.4h }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v4bfloat_align2_pre8:
@@ -4166,15 +3646,10 @@ define <4 x bfloat> @load_v4bfloat_align2_pre8(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v4bfloat_align2_pre8:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0, #8]!
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #6]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #2]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    orr x9, x10, x9, lsl #16
-; STRICTALIGN-BE-NEXT:    orr w8, w11, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    fmov d0, x8
+; STRICTALIGN-BE-NEXT:    add x8, x0, #8
+; STRICTALIGN-BE-NEXT:    ld1 { v0.4h }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 8
   %val = load <4 x bfloat>, ptr %newptr, align 2
@@ -4191,16 +3666,8 @@ define void @store_v4bfloat_align2_post8(ptr %ptr, <4 x bfloat> %val, ptr %write
 ;
 ; STRICTALIGN-LABEL: store_v4bfloat_align2_post8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    fmov x8, d0
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    strh w8, [x0]
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    add x9, x0, #8
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    str x9, [x1]
+; STRICTALIGN-NEXT:    st1 { v0.4h }, [x0], #8
+; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v4bfloat_align2_post8:
@@ -4211,16 +3678,9 @@ define void @store_v4bfloat_align2_post8(ptr %ptr, <4 x bfloat> %val, ptr %write
 ;
 ; STRICTALIGN-BE-LABEL: store_v4bfloat_align2_post8:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    fmov x8, d0
-; STRICTALIGN-BE-NEXT:    str h0, [x0, #6]
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #16
-; STRICTALIGN-BE-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    add x9, x0, #8
-; STRICTALIGN-BE-NEXT:    strh w10, [x0, #2]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0]
-; STRICTALIGN-BE-NEXT:    str x9, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
+; STRICTALIGN-BE-NEXT:    st1 { v0.4h }, [x0], #8
+; STRICTALIGN-BE-NEXT:    str x0, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 8
   store <4 x bfloat> %val, ptr %ptr, align 2
@@ -4237,15 +3697,9 @@ define void @store_v4bfloat_align2_pre8(ptr %ptr, <4 x bfloat> %val, ptr %writeb
 ;
 ; STRICTALIGN-LABEL: store_v4bfloat_align2_pre8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    fmov x8, d0
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    strh w8, [x0, #8]!
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    str x0, [x1]
+; STRICTALIGN-NEXT:    add x8, x0, #8
+; STRICTALIGN-NEXT:    st1 { v0.4h }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v4bfloat_align2_pre8:
@@ -4256,15 +3710,10 @@ define void @store_v4bfloat_align2_pre8(ptr %ptr, <4 x bfloat> %val, ptr %writeb
 ;
 ; STRICTALIGN-BE-LABEL: store_v4bfloat_align2_pre8:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    fmov x8, d0
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-BE-NEXT:    lsr x10, x8, #16
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #8]!
-; STRICTALIGN-BE-NEXT:    str h0, [x0, #6]
-; STRICTALIGN-BE-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
+; STRICTALIGN-BE-NEXT:    add x8, x0, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.4h }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 8
   store <4 x bfloat> %val, ptr %newptr, align 2
@@ -4281,14 +3730,7 @@ define <4 x bfloat> @load_v4bfloat_align2_post16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v4bfloat_align2_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #2]
-; STRICTALIGN-NEXT:    ldrh w11, [x0]
-; STRICTALIGN-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    fmov d0, x8
+; STRICTALIGN-NEXT:    ld1 { v0.4h }, [x0]
 ; STRICTALIGN-NEXT:    add x8, x0, #16
 ; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
@@ -4301,16 +3743,10 @@ define <4 x bfloat> @load_v4bfloat_align2_post16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v4bfloat_align2_post16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #2]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #6]
-; STRICTALIGN-BE-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    fmov d0, x8
+; STRICTALIGN-BE-NEXT:    ld1 { v0.4h }, [x0]
 ; STRICTALIGN-BE-NEXT:    add x8, x0, #16
 ; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   %val = load <4 x bfloat>, ptr %ptr, align 2
@@ -4327,15 +3763,9 @@ define <4 x bfloat> @load_v4bfloat_align2_pre16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v4bfloat_align2_pre16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #16]!
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w11, [x0, #2]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    orr w9, w10, w9, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x11, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-NEXT:    fmov d0, x8
+; STRICTALIGN-NEXT:    add x8, x0, #16
+; STRICTALIGN-NEXT:    ld1 { v0.4h }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v4bfloat_align2_pre16:
@@ -4346,15 +3776,10 @@ define <4 x bfloat> @load_v4bfloat_align2_pre16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v4bfloat_align2_pre16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0, #16]!
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #6]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #2]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    orr x9, x10, x9, lsl #16
-; STRICTALIGN-BE-NEXT:    orr w8, w11, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    fmov d0, x8
+; STRICTALIGN-BE-NEXT:    add x8, x0, #16
+; STRICTALIGN-BE-NEXT:    ld1 { v0.4h }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   %val = load <4 x bfloat>, ptr %newptr, align 2
@@ -4371,16 +3796,9 @@ define void @store_v4bfloat_align2_post16(ptr %ptr, <4 x bfloat> %val, ptr %writ
 ;
 ; STRICTALIGN-LABEL: store_v4bfloat_align2_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    fmov x8, d0
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    strh w8, [x0]
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    add x9, x0, #16
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    str x9, [x1]
+; STRICTALIGN-NEXT:    add x8, x0, #16
+; STRICTALIGN-NEXT:    st1 { v0.4h }, [x0]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v4bfloat_align2_post16:
@@ -4391,16 +3809,10 @@ define void @store_v4bfloat_align2_post16(ptr %ptr, <4 x bfloat> %val, ptr %writ
 ;
 ; STRICTALIGN-BE-LABEL: store_v4bfloat_align2_post16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    fmov x8, d0
-; STRICTALIGN-BE-NEXT:    str h0, [x0, #6]
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #16
-; STRICTALIGN-BE-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    add x9, x0, #16
-; STRICTALIGN-BE-NEXT:    strh w10, [x0, #2]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0]
-; STRICTALIGN-BE-NEXT:    str x9, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
+; STRICTALIGN-BE-NEXT:    add x8, x0, #16
+; STRICTALIGN-BE-NEXT:    st1 { v0.4h }, [x0]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   store <4 x bfloat> %val, ptr %ptr, align 2
@@ -4417,15 +3829,9 @@ define void @store_v4bfloat_align2_pre16(ptr %ptr, <4 x bfloat> %val, ptr %write
 ;
 ; STRICTALIGN-LABEL: store_v4bfloat_align2_pre16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    fmov x8, d0
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    strh w8, [x0, #16]!
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    str x0, [x1]
+; STRICTALIGN-NEXT:    add x8, x0, #16
+; STRICTALIGN-NEXT:    st1 { v0.4h }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v4bfloat_align2_pre16:
@@ -4436,15 +3842,10 @@ define void @store_v4bfloat_align2_pre16(ptr %ptr, <4 x bfloat> %val, ptr %write
 ;
 ; STRICTALIGN-BE-LABEL: store_v4bfloat_align2_pre16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    fmov x8, d0
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-BE-NEXT:    lsr x10, x8, #16
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #16]!
-; STRICTALIGN-BE-NEXT:    str h0, [x0, #6]
-; STRICTALIGN-BE-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4h, v0.4h
+; STRICTALIGN-BE-NEXT:    add x8, x0, #16
+; STRICTALIGN-BE-NEXT:    st1 { v0.4h }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   store <4 x bfloat> %val, ptr %newptr, align 2
@@ -4569,7 +3970,7 @@ define void @store_v4bfloat_align8_post8(ptr %ptr, <4 x bfloat> %val, ptr %write
 ;
 ; STRICTALIGN-LABEL: store_v4bfloat_align8_post8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str d0, [x0], #8
+; STRICTALIGN-NEXT:    st1 { v0.4h }, [x0], #8
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -5804,24 +5205,7 @@ define <8 x bfloat> @load_v8bfloat_align2(ptr %ptr) {
 ;
 ; STRICTALIGN-LABEL: load_v8bfloat_align2:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #2]
-; STRICTALIGN-NEXT:    ldrh w11, [x0]
-; STRICTALIGN-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #10]
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #8]!
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w11, [x0, #4]
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #16
-; STRICTALIGN-NEXT:    orr w9, w11, w10, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-NEXT:    ldr q0, [sp], #16
+; STRICTALIGN-NEXT:    ld1 { v0.8h }, [x0]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v8bfloat_align2:
@@ -5831,25 +5215,9 @@ define <8 x bfloat> @load_v8bfloat_align2(ptr %ptr) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v8bfloat_align2:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #2]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #6]
-; STRICTALIGN-BE-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    mov x8, x0
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #10]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x8, #8]!
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x8, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x8, #6]
-; STRICTALIGN-BE-NEXT:    orr w9, w10, w9, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x8, x11, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp], #16
+; STRICTALIGN-BE-NEXT:    ld1 { v0.8h }, [x0]
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %val = load <8 x bfloat>, ptr %ptr, align 2
   ret <8 x bfloat> %val
@@ -5863,25 +5231,7 @@ define void @store_v8bfloat_align2(ptr %ptr, <8 x bfloat> %val) {
 ;
 ; STRICTALIGN-LABEL: store_v8bfloat_align2:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp]
-; STRICTALIGN-NEXT:    strh w8, [x0]
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    ldr x11, [sp, #8]
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    lsr x9, x11, #16
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    lsr x8, x11, #48
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-NEXT:    lsr x9, x11, #32
-; STRICTALIGN-NEXT:    strh w11, [x0, #8]!
-; STRICTALIGN-NEXT:    strh w8, [x0, #6]
-; STRICTALIGN-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    st1 { v0.8h }, [x0]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v8bfloat_align2:
@@ -5891,25 +5241,9 @@ define void @store_v8bfloat_align2(ptr %ptr, <8 x bfloat> %val) {
 ;
 ; STRICTALIGN-BE-LABEL: store_v8bfloat_align2:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #6]
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #16
-; STRICTALIGN-BE-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-BE-NEXT:    ldr x11, [sp, #8]
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    lsr x9, x11, #32
-; STRICTALIGN-BE-NEXT:    strh w8, [x0]
-; STRICTALIGN-BE-NEXT:    lsr x8, x11, #48
-; STRICTALIGN-BE-NEXT:    strh w10, [x0, #2]
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-BE-NEXT:    lsr x9, x11, #16
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #8]!
-; STRICTALIGN-BE-NEXT:    strh w11, [x0, #6]
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.8h }, [x0]
 ; STRICTALIGN-BE-NEXT:    ret
   store <8 x bfloat> %val, ptr %ptr, align 2
   ret void
@@ -5924,27 +5258,8 @@ define <8 x bfloat> @load_v8bfloat_align2_post16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v8bfloat_align2_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #2]
-; STRICTALIGN-NEXT:    ldrh w11, [x0]
-; STRICTALIGN-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    add x9, x0, #16
-; STRICTALIGN-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #10]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #8]!
-; STRICTALIGN-NEXT:    ldrh w11, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w12, [x0, #4]
-; STRICTALIGN-NEXT:    orr x8, x10, x8, lsl #16
-; STRICTALIGN-NEXT:    orr w10, w12, w11, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x10, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-NEXT:    ldr q0, [sp]
-; STRICTALIGN-NEXT:    str x9, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    ld1 { v0.8h }, [x0], #16
+; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v8bfloat_align2_post16:
@@ -5956,28 +5271,10 @@ define <8 x bfloat> @load_v8bfloat_align2_post16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v8bfloat_align2_post16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #2]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #6]
-; STRICTALIGN-BE-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    mov x8, x0
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #10]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x8, #8]!
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x8, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x8, #6]
-; STRICTALIGN-BE-NEXT:    orr w9, w10, w9, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x8, x11, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    add x8, x0, #16
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp]
-; STRICTALIGN-BE-NEXT:    str x8, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    ld1 { v0.8h }, [x0], #16
+; STRICTALIGN-BE-NEXT:    str x0, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   %val = load <8 x bfloat>, ptr %ptr, align 2
@@ -5994,27 +5291,9 @@ define <8 x bfloat> @load_v8bfloat_align2_pre16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v8bfloat_align2_pre16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #16]!
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w11, [x0, #2]
-; STRICTALIGN-NEXT:    orr w9, w10, w9, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x11, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-NEXT:    mov x9, x0
-; STRICTALIGN-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldrh w8, [x9, #8]!
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #10]
-; STRICTALIGN-NEXT:    ldrh w11, [x9, #6]
-; STRICTALIGN-NEXT:    ldrh w9, [x9, #4]
-; STRICTALIGN-NEXT:    orr x8, x8, x10, lsl #16
-; STRICTALIGN-NEXT:    orr w9, w9, w11, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-NEXT:    ldr q0, [sp]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    add x8, x0, #16
+; STRICTALIGN-NEXT:    ld1 { v0.8h }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v8bfloat_align2_pre16:
@@ -6026,27 +5305,11 @@ define <8 x bfloat> @load_v8bfloat_align2_pre16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v8bfloat_align2_pre16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0, #16]!
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #6]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #2]
-; STRICTALIGN-BE-NEXT:    orr x9, x10, x9, lsl #16
-; STRICTALIGN-BE-NEXT:    orr w8, w11, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    mov x9, x0
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x9, #8]!
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x9, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x9, #6]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #10]
-; STRICTALIGN-BE-NEXT:    orr x9, x9, x10, lsl #16
-; STRICTALIGN-BE-NEXT:    orr w8, w11, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    add x8, x0, #16
+; STRICTALIGN-BE-NEXT:    ld1 { v0.8h }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   %val = load <8 x bfloat>, ptr %newptr, align 2
@@ -6063,28 +5326,8 @@ define void @store_v8bfloat_align2_post16(ptr %ptr, <8 x bfloat> %val, ptr %writ
 ;
 ; STRICTALIGN-LABEL: store_v8bfloat_align2_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp]
-; STRICTALIGN-NEXT:    strh w8, [x0]
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    ldr x11, [sp, #8]
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    lsr x9, x11, #16
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    lsr x8, x11, #48
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    lsr x10, x11, #32
-; STRICTALIGN-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-NEXT:    mov x9, x0
-; STRICTALIGN-NEXT:    strh w11, [x9, #8]!
-; STRICTALIGN-NEXT:    strh w8, [x9, #6]
-; STRICTALIGN-NEXT:    add x8, x0, #16
-; STRICTALIGN-NEXT:    strh w10, [x9, #4]
-; STRICTALIGN-NEXT:    str x8, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    st1 { v0.8h }, [x0], #16
+; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v8bfloat_align2_post16:
@@ -6096,27 +5339,10 @@ define void @store_v8bfloat_align2_post16(ptr %ptr, <8 x bfloat> %val, ptr %writ
 ;
 ; STRICTALIGN-BE-LABEL: store_v8bfloat_align2_post16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #6]
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #16
-; STRICTALIGN-BE-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-BE-NEXT:    ldr x11, [sp, #8]
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    lsr x9, x11, #32
-; STRICTALIGN-BE-NEXT:    strh w8, [x0]
-; STRICTALIGN-BE-NEXT:    lsr x8, x11, #48
-; STRICTALIGN-BE-NEXT:    strh w10, [x0, #2]
-; STRICTALIGN-BE-NEXT:    add x10, x0, #16
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-BE-NEXT:    lsr x9, x11, #16
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #8]!
-; STRICTALIGN-BE-NEXT:    strh w11, [x0, #6]
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    str x10, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.8h }, [x0], #16
+; STRICTALIGN-BE-NEXT:    str x0, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   store <8 x bfloat> %val, ptr %ptr, align 2
@@ -6133,27 +5359,9 @@ define void @store_v8bfloat_align2_pre16(ptr %ptr, <8 x bfloat> %val, ptr %write
 ;
 ; STRICTALIGN-LABEL: store_v8bfloat_align2_pre16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp]
-; STRICTALIGN-NEXT:    strh w8, [x0, #16]!
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    ldr x11, [sp, #8]
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    lsr x9, x11, #16
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    lsr x10, x11, #32
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    mov x8, x0
-; STRICTALIGN-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-NEXT:    lsr x9, x11, #48
-; STRICTALIGN-NEXT:    strh w11, [x8, #8]!
-; STRICTALIGN-NEXT:    strh w9, [x8, #6]
-; STRICTALIGN-NEXT:    strh w10, [x8, #4]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    add x8, x0, #16
+; STRICTALIGN-NEXT:    st1 { v0.8h }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v8bfloat_align2_pre16:
@@ -6165,27 +5373,11 @@ define void @store_v8bfloat_align2_pre16(ptr %ptr, <8 x bfloat> %val, ptr %write
 ;
 ; STRICTALIGN-BE-LABEL: store_v8bfloat_align2_pre16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp]
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #16]!
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #16
-; STRICTALIGN-BE-NEXT:    ldr x10, [sp, #8]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #6]
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    lsr x9, x10, #32
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-BE-NEXT:    lsr x8, x10, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-BE-NEXT:    mov x9, x0
-; STRICTALIGN-BE-NEXT:    strh w8, [x9, #8]!
-; STRICTALIGN-BE-NEXT:    lsr x8, x10, #16
-; STRICTALIGN-BE-NEXT:    strh w10, [x9, #6]
-; STRICTALIGN-BE-NEXT:    strh w8, [x9, #4]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    add x8, x0, #16
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.8h }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   store <8 x bfloat> %val, ptr %newptr, align 2
@@ -6202,27 +5394,9 @@ define <8 x bfloat> @load_v8bfloat_align2_post32(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v8bfloat_align2_post32:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #2]
-; STRICTALIGN-NEXT:    ldrh w11, [x0]
-; STRICTALIGN-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    add x9, x0, #32
-; STRICTALIGN-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #10]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #8]!
-; STRICTALIGN-NEXT:    ldrh w11, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w12, [x0, #4]
-; STRICTALIGN-NEXT:    orr x8, x10, x8, lsl #16
-; STRICTALIGN-NEXT:    orr w10, w12, w11, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x10, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-NEXT:    ldr q0, [sp]
-; STRICTALIGN-NEXT:    str x9, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    ld1 { v0.8h }, [x0]
+; STRICTALIGN-NEXT:    add x8, x0, #32
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v8bfloat_align2_post32:
@@ -6234,28 +5408,11 @@ define <8 x bfloat> @load_v8bfloat_align2_post32(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v8bfloat_align2_post32:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #2]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #6]
-; STRICTALIGN-BE-NEXT:    orr w8, w9, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x9, x11, x10, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    mov x8, x0
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #10]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x8, #8]!
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x8, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x8, #6]
-; STRICTALIGN-BE-NEXT:    orr w9, w10, w9, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x8, x11, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #8]
+; STRICTALIGN-BE-NEXT:    ld1 { v0.8h }, [x0]
 ; STRICTALIGN-BE-NEXT:    add x8, x0, #32
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp]
 ; STRICTALIGN-BE-NEXT:    str x8, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 32
   %val = load <8 x bfloat>, ptr %ptr, align 2
@@ -6272,27 +5429,9 @@ define <8 x bfloat> @load_v8bfloat_align2_pre32(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v8bfloat_align2_pre32:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldrh w8, [x0, #32]!
-; STRICTALIGN-NEXT:    ldrh w9, [x0, #6]
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #4]
-; STRICTALIGN-NEXT:    ldrh w11, [x0, #2]
-; STRICTALIGN-NEXT:    orr w9, w10, w9, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x11, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-NEXT:    mov x9, x0
-; STRICTALIGN-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldrh w8, [x9, #8]!
-; STRICTALIGN-NEXT:    ldrh w10, [x0, #10]
-; STRICTALIGN-NEXT:    ldrh w11, [x9, #6]
-; STRICTALIGN-NEXT:    ldrh w9, [x9, #4]
-; STRICTALIGN-NEXT:    orr x8, x8, x10, lsl #16
-; STRICTALIGN-NEXT:    orr w9, w9, w11, lsl #16
-; STRICTALIGN-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-NEXT:    ldr q0, [sp]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    add x8, x0, #32
+; STRICTALIGN-NEXT:    ld1 { v0.8h }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v8bfloat_align2_pre32:
@@ -6304,27 +5443,11 @@ define <8 x bfloat> @load_v8bfloat_align2_pre32(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v8bfloat_align2_pre32:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x0, #32]!
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x0, #6]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #2]
-; STRICTALIGN-BE-NEXT:    orr x9, x10, x9, lsl #16
-; STRICTALIGN-BE-NEXT:    orr w8, w11, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    mov x9, x0
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldrh w8, [x9, #8]!
-; STRICTALIGN-BE-NEXT:    ldrh w10, [x9, #4]
-; STRICTALIGN-BE-NEXT:    ldrh w9, [x9, #6]
-; STRICTALIGN-BE-NEXT:    ldrh w11, [x0, #10]
-; STRICTALIGN-BE-NEXT:    orr x9, x9, x10, lsl #16
-; STRICTALIGN-BE-NEXT:    orr w8, w11, w8, lsl #16
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    add x8, x0, #32
+; STRICTALIGN-BE-NEXT:    ld1 { v0.8h }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 32
   %val = load <8 x bfloat>, ptr %newptr, align 2
@@ -6341,28 +5464,9 @@ define void @store_v8bfloat_align2_post32(ptr %ptr, <8 x bfloat> %val, ptr %writ
 ;
 ; STRICTALIGN-LABEL: store_v8bfloat_align2_post32:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp]
-; STRICTALIGN-NEXT:    strh w8, [x0]
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    ldr x11, [sp, #8]
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    lsr x9, x11, #16
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    lsr x8, x11, #48
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    lsr x10, x11, #32
-; STRICTALIGN-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-NEXT:    mov x9, x0
-; STRICTALIGN-NEXT:    strh w11, [x9, #8]!
-; STRICTALIGN-NEXT:    strh w8, [x9, #6]
 ; STRICTALIGN-NEXT:    add x8, x0, #32
-; STRICTALIGN-NEXT:    strh w10, [x9, #4]
+; STRICTALIGN-NEXT:    st1 { v0.8h }, [x0]
 ; STRICTALIGN-NEXT:    str x8, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v8bfloat_align2_post32:
@@ -6374,27 +5478,11 @@ define void @store_v8bfloat_align2_post32(ptr %ptr, <8 x bfloat> %val, ptr %writ
 ;
 ; STRICTALIGN-BE-LABEL: store_v8bfloat_align2_post32:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #6]
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #16
-; STRICTALIGN-BE-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-BE-NEXT:    ldr x11, [sp, #8]
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    lsr x9, x11, #32
-; STRICTALIGN-BE-NEXT:    strh w8, [x0]
-; STRICTALIGN-BE-NEXT:    lsr x8, x11, #48
-; STRICTALIGN-BE-NEXT:    strh w10, [x0, #2]
-; STRICTALIGN-BE-NEXT:    add x10, x0, #32
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-BE-NEXT:    lsr x9, x11, #16
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #8]!
-; STRICTALIGN-BE-NEXT:    strh w11, [x0, #6]
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    str x10, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    add x8, x0, #32
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.8h }, [x0]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 32
   store <8 x bfloat> %val, ptr %ptr, align 2
@@ -6411,27 +5499,9 @@ define void @store_v8bfloat_align2_pre32(ptr %ptr, <8 x bfloat> %val, ptr %write
 ;
 ; STRICTALIGN-LABEL: store_v8bfloat_align2_pre32:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp]
-; STRICTALIGN-NEXT:    strh w8, [x0, #32]!
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-NEXT:    ldr x11, [sp, #8]
-; STRICTALIGN-NEXT:    lsr x10, x8, #32
-; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    lsr x9, x11, #16
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    lsr x10, x11, #32
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    mov x8, x0
-; STRICTALIGN-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-NEXT:    lsr x9, x11, #48
-; STRICTALIGN-NEXT:    strh w11, [x8, #8]!
-; STRICTALIGN-NEXT:    strh w9, [x8, #6]
-; STRICTALIGN-NEXT:    strh w10, [x8, #4]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    add x8, x0, #32
+; STRICTALIGN-NEXT:    st1 { v0.8h }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v8bfloat_align2_pre32:
@@ -6443,27 +5513,11 @@ define void @store_v8bfloat_align2_pre32(ptr %ptr, <8 x bfloat> %val, ptr %write
 ;
 ; STRICTALIGN-BE-LABEL: store_v8bfloat_align2_pre32:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp]
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #32]!
-; STRICTALIGN-BE-NEXT:    lsr x9, x8, #16
-; STRICTALIGN-BE-NEXT:    ldr x10, [sp, #8]
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #6]
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    lsr x9, x10, #32
-; STRICTALIGN-BE-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-BE-NEXT:    lsr x8, x10, #48
-; STRICTALIGN-BE-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-BE-NEXT:    mov x9, x0
-; STRICTALIGN-BE-NEXT:    strh w8, [x9, #8]!
-; STRICTALIGN-BE-NEXT:    lsr x8, x10, #16
-; STRICTALIGN-BE-NEXT:    strh w10, [x9, #6]
-; STRICTALIGN-BE-NEXT:    strh w8, [x9, #4]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    rev64 v0.8h, v0.8h
+; STRICTALIGN-BE-NEXT:    add x8, x0, #32
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.8h }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 32
   store <8 x bfloat> %val, ptr %newptr, align 2
@@ -6592,7 +5646,7 @@ define void @store_v8bfloat_align16_post16(ptr %ptr, <8 x bfloat> %val, ptr %wri
 ;
 ; STRICTALIGN-LABEL: store_v8bfloat_align16_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [x0], #16
+; STRICTALIGN-NEXT:    st1 { v0.8h }, [x0], #16
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -7219,9 +6273,7 @@ define <2 x float> @load_v2float_align4(ptr %ptr) {
 ;
 ; STRICTALIGN-LABEL: load_v2float_align4:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldp w9, w8, [x0]
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    fmov d0, x8
+; STRICTALIGN-NEXT:    ld1 { v0.2s }, [x0]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v2float_align4:
@@ -7231,9 +6283,8 @@ define <2 x float> @load_v2float_align4(ptr %ptr) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v2float_align4:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldp w8, w9, [x0]
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    fmov d0, x8
+; STRICTALIGN-BE-NEXT:    ld1 { v0.2s }, [x0]
+; STRICTALIGN-BE-NEXT:    rev64 v0.2s, v0.2s
 ; STRICTALIGN-BE-NEXT:    ret
   %val = load <2 x float>, ptr %ptr, align 4
   ret <2 x float> %val
@@ -7247,9 +6298,7 @@ define void @store_v2float_align4(ptr %ptr, <2 x float> %val) {
 ;
 ; STRICTALIGN-LABEL: store_v2float_align4:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    fmov x8, d0
-; STRICTALIGN-NEXT:    lsr x9, x8, #32
-; STRICTALIGN-NEXT:    stp w8, w9, [x0]
+; STRICTALIGN-NEXT:    st1 { v0.2s }, [x0]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v2float_align4:
@@ -7259,10 +6308,8 @@ define void @store_v2float_align4(ptr %ptr, <2 x float> %val) {
 ;
 ; STRICTALIGN-BE-LABEL: store_v2float_align4:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    fmov x8, d0
-; STRICTALIGN-BE-NEXT:    str s0, [x0, #4]
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-BE-NEXT:    str w8, [x0]
+; STRICTALIGN-BE-NEXT:    rev64 v0.2s, v0.2s
+; STRICTALIGN-BE-NEXT:    st1 { v0.2s }, [x0]
 ; STRICTALIGN-BE-NEXT:    ret
   store <2 x float> %val, ptr %ptr, align 4
   ret void
@@ -7277,11 +6324,8 @@ define <2 x float> @load_v2float_align4_post8(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v2float_align4_post8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldp w9, w8, [x0]
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    fmov d0, x8
-; STRICTALIGN-NEXT:    add x8, x0, #8
-; STRICTALIGN-NEXT:    str x8, [x1]
+; STRICTALIGN-NEXT:    ld1 { v0.2s }, [x0], #8
+; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v2float_align4_post8:
@@ -7292,11 +6336,9 @@ define <2 x float> @load_v2float_align4_post8(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v2float_align4_post8:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldp w8, w9, [x0]
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    fmov d0, x8
-; STRICTALIGN-BE-NEXT:    add x8, x0, #8
-; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    ld1 { v0.2s }, [x0], #8
+; STRICTALIGN-BE-NEXT:    str x0, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.2s, v0.2s
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 8
   %val = load <2 x float>, ptr %ptr, align 4
@@ -7313,10 +6355,9 @@ define <2 x float> @load_v2float_align4_pre8(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v2float_align4_pre8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldp w8, w9, [x0, #8]!
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-NEXT:    fmov d0, x8
+; STRICTALIGN-NEXT:    add x8, x0, #8
+; STRICTALIGN-NEXT:    ld1 { v0.2s }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v2float_align4_pre8:
@@ -7327,10 +6368,10 @@ define <2 x float> @load_v2float_align4_pre8(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v2float_align4_pre8:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldp w8, w9, [x0, #8]!
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    fmov d0, x8
+; STRICTALIGN-BE-NEXT:    add x8, x0, #8
+; STRICTALIGN-BE-NEXT:    ld1 { v0.2s }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.2s, v0.2s
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 8
   %val = load <2 x float>, ptr %newptr, align 4
@@ -7347,11 +6388,8 @@ define void @store_v2float_align4_post8(ptr %ptr, <2 x float> %val, ptr %writeba
 ;
 ; STRICTALIGN-LABEL: store_v2float_align4_post8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    fmov x8, d0
-; STRICTALIGN-NEXT:    lsr x9, x8, #32
-; STRICTALIGN-NEXT:    stp w8, w9, [x0]
-; STRICTALIGN-NEXT:    add x8, x0, #8
-; STRICTALIGN-NEXT:    str x8, [x1]
+; STRICTALIGN-NEXT:    st1 { v0.2s }, [x0], #8
+; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v2float_align4_post8:
@@ -7362,12 +6400,9 @@ define void @store_v2float_align4_post8(ptr %ptr, <2 x float> %val, ptr %writeba
 ;
 ; STRICTALIGN-BE-LABEL: store_v2float_align4_post8:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    fmov x8, d0
-; STRICTALIGN-BE-NEXT:    add x9, x0, #8
-; STRICTALIGN-BE-NEXT:    str s0, [x0, #4]
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-BE-NEXT:    str w8, [x0]
-; STRICTALIGN-BE-NEXT:    str x9, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.2s, v0.2s
+; STRICTALIGN-BE-NEXT:    st1 { v0.2s }, [x0], #8
+; STRICTALIGN-BE-NEXT:    str x0, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 8
   store <2 x float> %val, ptr %ptr, align 4
@@ -7384,10 +6419,9 @@ define void @store_v2float_align4_pre8(ptr %ptr, <2 x float> %val, ptr %writebac
 ;
 ; STRICTALIGN-LABEL: store_v2float_align4_pre8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    fmov x8, d0
-; STRICTALIGN-NEXT:    lsr x9, x8, #32
-; STRICTALIGN-NEXT:    stp w8, w9, [x0, #8]!
-; STRICTALIGN-NEXT:    str x0, [x1]
+; STRICTALIGN-NEXT:    add x8, x0, #8
+; STRICTALIGN-NEXT:    st1 { v0.2s }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v2float_align4_pre8:
@@ -7398,11 +6432,10 @@ define void @store_v2float_align4_pre8(ptr %ptr, <2 x float> %val, ptr %writebac
 ;
 ; STRICTALIGN-BE-LABEL: store_v2float_align4_pre8:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    fmov x8, d0
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-BE-NEXT:    str w8, [x0, #8]!
-; STRICTALIGN-BE-NEXT:    str s0, [x0, #4]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.2s, v0.2s
+; STRICTALIGN-BE-NEXT:    add x8, x0, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.2s }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 8
   store <2 x float> %val, ptr %newptr, align 4
@@ -7419,9 +6452,7 @@ define <2 x float> @load_v2float_align4_post16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v2float_align4_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldp w9, w8, [x0]
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    fmov d0, x8
+; STRICTALIGN-NEXT:    ld1 { v0.2s }, [x0]
 ; STRICTALIGN-NEXT:    add x8, x0, #16
 ; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
@@ -7434,11 +6465,10 @@ define <2 x float> @load_v2float_align4_post16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v2float_align4_post16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldp w8, w9, [x0]
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    fmov d0, x8
+; STRICTALIGN-BE-NEXT:    ld1 { v0.2s }, [x0]
 ; STRICTALIGN-BE-NEXT:    add x8, x0, #16
 ; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.2s, v0.2s
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   %val = load <2 x float>, ptr %ptr, align 4
@@ -7455,10 +6485,9 @@ define <2 x float> @load_v2float_align4_pre16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v2float_align4_pre16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldp w8, w9, [x0, #16]!
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-NEXT:    fmov d0, x8
+; STRICTALIGN-NEXT:    add x8, x0, #16
+; STRICTALIGN-NEXT:    ld1 { v0.2s }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v2float_align4_pre16:
@@ -7469,10 +6498,10 @@ define <2 x float> @load_v2float_align4_pre16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v2float_align4_pre16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldp w8, w9, [x0, #16]!
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    fmov d0, x8
+; STRICTALIGN-BE-NEXT:    add x8, x0, #16
+; STRICTALIGN-BE-NEXT:    ld1 { v0.2s }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.2s, v0.2s
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   %val = load <2 x float>, ptr %newptr, align 4
@@ -7489,10 +6518,8 @@ define void @store_v2float_align4_post16(ptr %ptr, <2 x float> %val, ptr %writeb
 ;
 ; STRICTALIGN-LABEL: store_v2float_align4_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    fmov x8, d0
-; STRICTALIGN-NEXT:    lsr x9, x8, #32
-; STRICTALIGN-NEXT:    stp w8, w9, [x0]
 ; STRICTALIGN-NEXT:    add x8, x0, #16
+; STRICTALIGN-NEXT:    st1 { v0.2s }, [x0]
 ; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -7504,12 +6531,10 @@ define void @store_v2float_align4_post16(ptr %ptr, <2 x float> %val, ptr %writeb
 ;
 ; STRICTALIGN-BE-LABEL: store_v2float_align4_post16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    fmov x8, d0
-; STRICTALIGN-BE-NEXT:    add x9, x0, #16
-; STRICTALIGN-BE-NEXT:    str s0, [x0, #4]
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-BE-NEXT:    str w8, [x0]
-; STRICTALIGN-BE-NEXT:    str x9, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.2s, v0.2s
+; STRICTALIGN-BE-NEXT:    add x8, x0, #16
+; STRICTALIGN-BE-NEXT:    st1 { v0.2s }, [x0]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   store <2 x float> %val, ptr %ptr, align 4
@@ -7526,10 +6551,9 @@ define void @store_v2float_align4_pre16(ptr %ptr, <2 x float> %val, ptr %writeba
 ;
 ; STRICTALIGN-LABEL: store_v2float_align4_pre16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    fmov x8, d0
-; STRICTALIGN-NEXT:    lsr x9, x8, #32
-; STRICTALIGN-NEXT:    stp w8, w9, [x0, #16]!
-; STRICTALIGN-NEXT:    str x0, [x1]
+; STRICTALIGN-NEXT:    add x8, x0, #16
+; STRICTALIGN-NEXT:    st1 { v0.2s }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v2float_align4_pre16:
@@ -7540,11 +6564,10 @@ define void @store_v2float_align4_pre16(ptr %ptr, <2 x float> %val, ptr %writeba
 ;
 ; STRICTALIGN-BE-LABEL: store_v2float_align4_pre16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    fmov x8, d0
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-BE-NEXT:    str w8, [x0, #16]!
-; STRICTALIGN-BE-NEXT:    str s0, [x0, #4]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.2s, v0.2s
+; STRICTALIGN-BE-NEXT:    add x8, x0, #16
+; STRICTALIGN-BE-NEXT:    st1 { v0.2s }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   store <2 x float> %val, ptr %newptr, align 4
@@ -7669,7 +6692,7 @@ define void @store_v2float_align8_post8(ptr %ptr, <2 x float> %val, ptr %writeba
 ;
 ; STRICTALIGN-LABEL: store_v2float_align8_post8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str d0, [x0], #8
+; STRICTALIGN-NEXT:    st1 { v0.2s }, [x0], #8
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -8523,15 +7546,7 @@ define <4 x float> @load_v4float_align4(ptr %ptr) {
 ;
 ; STRICTALIGN-LABEL: load_v4float_align4:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    sub sp, sp, #16
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldp w9, w8, [x0, #8]
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-NEXT:    ldp w9, w8, [x0]
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp]
-; STRICTALIGN-NEXT:    ldr q0, [sp], #16
+; STRICTALIGN-NEXT:    ld1 { v0.4s }, [x0]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v4float_align4:
@@ -8541,15 +7556,9 @@ define <4 x float> @load_v4float_align4(ptr %ptr) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v4float_align4:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    sub sp, sp, #16
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldp w8, w9, [x0, #8]
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    ldp w8, w9, [x0]
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp]
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp], #16
+; STRICTALIGN-BE-NEXT:    ld1 { v0.4s }, [x0]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4s, v0.4s
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %val = load <4 x float>, ptr %ptr, align 4
   ret <4 x float> %val
@@ -8563,16 +7572,7 @@ define void @store_v4float_align4(ptr %ptr, <4 x float> %val) {
 ;
 ; STRICTALIGN-LABEL: store_v4float_align4:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp, #8]
-; STRICTALIGN-NEXT:    str w8, [x0, #8]
-; STRICTALIGN-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-NEXT:    ldr x9, [sp]
-; STRICTALIGN-NEXT:    str w8, [x0, #12]
-; STRICTALIGN-NEXT:    lsr x8, x9, #32
-; STRICTALIGN-NEXT:    stp w9, w8, [x0]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    st1 { v0.4s }, [x0]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v4float_align4:
@@ -8582,16 +7582,9 @@ define void @store_v4float_align4(ptr %ptr, <4 x float> %val) {
 ;
 ; STRICTALIGN-BE-LABEL: store_v4float_align4:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    str w8, [x0, #12]
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-BE-NEXT:    ldr x9, [sp]
-; STRICTALIGN-BE-NEXT:    stp w9, w8, [x0, #4]
-; STRICTALIGN-BE-NEXT:    lsr x8, x9, #32
-; STRICTALIGN-BE-NEXT:    str w8, [x0]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    rev64 v0.4s, v0.4s
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.4s }, [x0]
 ; STRICTALIGN-BE-NEXT:    ret
   store <4 x float> %val, ptr %ptr, align 4
   ret void
@@ -8606,18 +7599,8 @@ define <4 x float> @load_v4float_align4_post16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v4float_align4_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    sub sp, sp, #16
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldp w9, w8, [x0, #8]
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-NEXT:    ldp w9, w8, [x0]
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp]
-; STRICTALIGN-NEXT:    add x8, x0, #16
-; STRICTALIGN-NEXT:    ldr q0, [sp]
-; STRICTALIGN-NEXT:    str x8, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    ld1 { v0.4s }, [x0], #16
+; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v4float_align4_post16:
@@ -8629,18 +7612,10 @@ define <4 x float> @load_v4float_align4_post16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v4float_align4_post16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    sub sp, sp, #16
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldp w8, w9, [x0, #8]
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    ldp w8, w9, [x0]
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp]
-; STRICTALIGN-BE-NEXT:    add x8, x0, #16
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp]
-; STRICTALIGN-BE-NEXT:    str x8, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    ld1 { v0.4s }, [x0], #16
+; STRICTALIGN-BE-NEXT:    str x0, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4s, v0.4s
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   %val = load <4 x float>, ptr %ptr, align 4
@@ -8657,18 +7632,9 @@ define <4 x float> @load_v4float_align4_pre16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v4float_align4_pre16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    sub sp, sp, #16
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr w8, [x0, #16]!
-; STRICTALIGN-NEXT:    ldp w10, w9, [x0, #8]
-; STRICTALIGN-NEXT:    orr x9, x10, x9, lsl #32
-; STRICTALIGN-NEXT:    str x9, [sp, #8]
-; STRICTALIGN-NEXT:    ldr w9, [x0, #4]
-; STRICTALIGN-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp]
-; STRICTALIGN-NEXT:    ldr q0, [sp]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    add x8, x0, #16
+; STRICTALIGN-NEXT:    ld1 { v0.4s }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v4float_align4_pre16:
@@ -8680,18 +7646,11 @@ define <4 x float> @load_v4float_align4_pre16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v4float_align4_pre16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    sub sp, sp, #16
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr w8, [x0, #16]!
-; STRICTALIGN-BE-NEXT:    ldp w9, w10, [x0, #8]
-; STRICTALIGN-BE-NEXT:    orr x9, x10, x9, lsl #32
-; STRICTALIGN-BE-NEXT:    str x9, [sp, #8]
-; STRICTALIGN-BE-NEXT:    ldr w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp]
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    add x8, x0, #16
+; STRICTALIGN-BE-NEXT:    ld1 { v0.4s }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4s, v0.4s
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   %val = load <4 x float>, ptr %newptr, align 4
@@ -8708,18 +7667,8 @@ define void @store_v4float_align4_post16(ptr %ptr, <4 x float> %val, ptr %writeb
 ;
 ; STRICTALIGN-LABEL: store_v4float_align4_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp, #8]
-; STRICTALIGN-NEXT:    str w8, [x0, #8]
-; STRICTALIGN-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-NEXT:    ldr x9, [sp]
-; STRICTALIGN-NEXT:    str w8, [x0, #12]
-; STRICTALIGN-NEXT:    lsr x8, x9, #32
-; STRICTALIGN-NEXT:    stp w9, w8, [x0]
-; STRICTALIGN-NEXT:    add x9, x0, #16
-; STRICTALIGN-NEXT:    str x9, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    st1 { v0.4s }, [x0], #16
+; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v4float_align4_post16:
@@ -8731,18 +7680,10 @@ define void @store_v4float_align4_post16(ptr %ptr, <4 x float> %val, ptr %writeb
 ;
 ; STRICTALIGN-BE-LABEL: store_v4float_align4_post16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    str w8, [x0, #12]
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-BE-NEXT:    ldr x9, [sp]
-; STRICTALIGN-BE-NEXT:    stp w9, w8, [x0, #4]
-; STRICTALIGN-BE-NEXT:    lsr x8, x9, #32
-; STRICTALIGN-BE-NEXT:    add x9, x0, #16
-; STRICTALIGN-BE-NEXT:    str w8, [x0]
-; STRICTALIGN-BE-NEXT:    str x9, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    rev64 v0.4s, v0.4s
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.4s }, [x0], #16
+; STRICTALIGN-BE-NEXT:    str x0, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   store <4 x float> %val, ptr %ptr, align 4
@@ -8759,17 +7700,9 @@ define void @store_v4float_align4_pre16(ptr %ptr, <4 x float> %val, ptr %writeba
 ;
 ; STRICTALIGN-LABEL: store_v4float_align4_pre16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp]
-; STRICTALIGN-NEXT:    str w8, [x0, #16]!
-; STRICTALIGN-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-NEXT:    ldr x9, [sp, #8]
-; STRICTALIGN-NEXT:    lsr x10, x9, #32
-; STRICTALIGN-NEXT:    stp w8, w9, [x0, #4]
-; STRICTALIGN-NEXT:    str w10, [x0, #12]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    add x8, x0, #16
+; STRICTALIGN-NEXT:    st1 { v0.4s }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v4float_align4_pre16:
@@ -8781,17 +7714,11 @@ define void @store_v4float_align4_pre16(ptr %ptr, <4 x float> %val, ptr %writeba
 ;
 ; STRICTALIGN-BE-LABEL: store_v4float_align4_pre16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x10, [sp]
-; STRICTALIGN-BE-NEXT:    lsr x9, x10, #32
-; STRICTALIGN-BE-NEXT:    str w9, [x0, #16]!
-; STRICTALIGN-BE-NEXT:    ldr x9, [sp, #8]
-; STRICTALIGN-BE-NEXT:    lsr x8, x9, #32
-; STRICTALIGN-BE-NEXT:    str w9, [x0, #12]
-; STRICTALIGN-BE-NEXT:    stp w10, w8, [x0, #4]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    rev64 v0.4s, v0.4s
+; STRICTALIGN-BE-NEXT:    add x8, x0, #16
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.4s }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   store <4 x float> %val, ptr %newptr, align 4
@@ -8808,18 +7735,9 @@ define <4 x float> @load_v4float_align4_post32(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v4float_align4_post32:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    sub sp, sp, #16
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldp w9, w8, [x0, #8]
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-NEXT:    ldp w9, w8, [x0]
-; STRICTALIGN-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp]
+; STRICTALIGN-NEXT:    ld1 { v0.4s }, [x0]
 ; STRICTALIGN-NEXT:    add x8, x0, #32
-; STRICTALIGN-NEXT:    ldr q0, [sp]
 ; STRICTALIGN-NEXT:    str x8, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v4float_align4_post32:
@@ -8831,18 +7749,11 @@ define <4 x float> @load_v4float_align4_post32(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v4float_align4_post32:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    sub sp, sp, #16
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldp w8, w9, [x0, #8]
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    ldp w8, w9, [x0]
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp]
+; STRICTALIGN-BE-NEXT:    ld1 { v0.4s }, [x0]
 ; STRICTALIGN-BE-NEXT:    add x8, x0, #32
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp]
 ; STRICTALIGN-BE-NEXT:    str x8, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    rev64 v0.4s, v0.4s
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 32
   %val = load <4 x float>, ptr %ptr, align 4
@@ -8859,18 +7770,9 @@ define <4 x float> @load_v4float_align4_pre32(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v4float_align4_pre32:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    sub sp, sp, #16
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr w8, [x0, #32]!
-; STRICTALIGN-NEXT:    ldp w10, w9, [x0, #8]
-; STRICTALIGN-NEXT:    orr x9, x10, x9, lsl #32
-; STRICTALIGN-NEXT:    str x9, [sp, #8]
-; STRICTALIGN-NEXT:    ldr w9, [x0, #4]
-; STRICTALIGN-NEXT:    orr x8, x8, x9, lsl #32
-; STRICTALIGN-NEXT:    str x8, [sp]
-; STRICTALIGN-NEXT:    ldr q0, [sp]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    add x8, x0, #32
+; STRICTALIGN-NEXT:    ld1 { v0.4s }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v4float_align4_pre32:
@@ -8882,18 +7784,11 @@ define <4 x float> @load_v4float_align4_pre32(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v4float_align4_pre32:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    sub sp, sp, #16
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr w8, [x0, #32]!
-; STRICTALIGN-BE-NEXT:    ldp w9, w10, [x0, #8]
-; STRICTALIGN-BE-NEXT:    orr x9, x10, x9, lsl #32
-; STRICTALIGN-BE-NEXT:    str x9, [sp, #8]
-; STRICTALIGN-BE-NEXT:    ldr w9, [x0, #4]
-; STRICTALIGN-BE-NEXT:    orr x8, x9, x8, lsl #32
-; STRICTALIGN-BE-NEXT:    str x8, [sp]
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    add x8, x0, #32
+; STRICTALIGN-BE-NEXT:    ld1 { v0.4s }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    rev64 v0.4s, v0.4s
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 32
   %val = load <4 x float>, ptr %newptr, align 4
@@ -8910,18 +7805,9 @@ define void @store_v4float_align4_post32(ptr %ptr, <4 x float> %val, ptr %writeb
 ;
 ; STRICTALIGN-LABEL: store_v4float_align4_post32:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp, #8]
-; STRICTALIGN-NEXT:    str w8, [x0, #8]
-; STRICTALIGN-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-NEXT:    ldr x9, [sp]
-; STRICTALIGN-NEXT:    str w8, [x0, #12]
-; STRICTALIGN-NEXT:    lsr x8, x9, #32
-; STRICTALIGN-NEXT:    stp w9, w8, [x0]
-; STRICTALIGN-NEXT:    add x9, x0, #32
-; STRICTALIGN-NEXT:    str x9, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    add x8, x0, #32
+; STRICTALIGN-NEXT:    st1 { v0.4s }, [x0]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v4float_align4_post32:
@@ -8933,18 +7819,11 @@ define void @store_v4float_align4_post32(ptr %ptr, <4 x float> %val, ptr %writeb
 ;
 ; STRICTALIGN-BE-LABEL: store_v4float_align4_post32:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    str w8, [x0, #12]
-; STRICTALIGN-BE-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-BE-NEXT:    ldr x9, [sp]
-; STRICTALIGN-BE-NEXT:    stp w9, w8, [x0, #4]
-; STRICTALIGN-BE-NEXT:    lsr x8, x9, #32
-; STRICTALIGN-BE-NEXT:    add x9, x0, #32
-; STRICTALIGN-BE-NEXT:    str w8, [x0]
-; STRICTALIGN-BE-NEXT:    str x9, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    rev64 v0.4s, v0.4s
+; STRICTALIGN-BE-NEXT:    add x8, x0, #32
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.4s }, [x0]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 32
   store <4 x float> %val, ptr %ptr, align 4
@@ -8961,17 +7840,9 @@ define void @store_v4float_align4_pre32(ptr %ptr, <4 x float> %val, ptr %writeba
 ;
 ; STRICTALIGN-LABEL: store_v4float_align4_pre32:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp]
-; STRICTALIGN-NEXT:    str w8, [x0, #32]!
-; STRICTALIGN-NEXT:    lsr x8, x8, #32
-; STRICTALIGN-NEXT:    ldr x9, [sp, #8]
-; STRICTALIGN-NEXT:    lsr x10, x9, #32
-; STRICTALIGN-NEXT:    stp w8, w9, [x0, #4]
-; STRICTALIGN-NEXT:    str w10, [x0, #12]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    add x8, x0, #32
+; STRICTALIGN-NEXT:    st1 { v0.4s }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v4float_align4_pre32:
@@ -8983,17 +7854,11 @@ define void @store_v4float_align4_pre32(ptr %ptr, <4 x float> %val, ptr %writeba
 ;
 ; STRICTALIGN-BE-LABEL: store_v4float_align4_pre32:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x10, [sp]
-; STRICTALIGN-BE-NEXT:    lsr x9, x10, #32
-; STRICTALIGN-BE-NEXT:    str w9, [x0, #32]!
-; STRICTALIGN-BE-NEXT:    ldr x9, [sp, #8]
-; STRICTALIGN-BE-NEXT:    lsr x8, x9, #32
-; STRICTALIGN-BE-NEXT:    str w9, [x0, #12]
-; STRICTALIGN-BE-NEXT:    stp w10, w8, [x0, #4]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    rev64 v0.4s, v0.4s
+; STRICTALIGN-BE-NEXT:    add x8, x0, #32
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.4s }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 32
   store <4 x float> %val, ptr %newptr, align 4
@@ -9122,7 +7987,7 @@ define void @store_v4float_align16_post16(ptr %ptr, <4 x float> %val, ptr %write
 ;
 ; STRICTALIGN-LABEL: store_v4float_align16_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [x0], #16
+; STRICTALIGN-NEXT:    st1 { v0.2d }, [x0], #16
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -9766,7 +8631,7 @@ define void @store_v1double_align8_post8(ptr %ptr, <1 x double> %val, ptr %write
 ;
 ; STRICTALIGN-LABEL: store_v1double_align8_post8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str d0, [x0], #8
+; STRICTALIGN-NEXT:    st1 { v0.1d }, [x0], #8
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -10441,13 +9306,7 @@ define <2 x double> @load_v2double_align8(ptr %ptr) {
 ;
 ; STRICTALIGN-LABEL: load_v2double_align8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    sub sp, sp, #16
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [x0, #8]
-; STRICTALIGN-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-NEXT:    ldr x8, [x0]
-; STRICTALIGN-NEXT:    str x8, [sp]
-; STRICTALIGN-NEXT:    ldr q0, [sp], #16
+; STRICTALIGN-NEXT:    ld1 { v0.2d }, [x0]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v2double_align8:
@@ -10457,13 +9316,8 @@ define <2 x double> @load_v2double_align8(ptr %ptr) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v2double_align8:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    sub sp, sp, #16
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [x0, #8]
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    ldr x8, [x0]
-; STRICTALIGN-BE-NEXT:    str x8, [sp]
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp], #16
+; STRICTALIGN-BE-NEXT:    ld1 { v0.2d }, [x0]
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %val = load <2 x double>, ptr %ptr, align 8
   ret <2 x double> %val
@@ -10477,13 +9331,7 @@ define void @store_v2double_align8(ptr %ptr, <2 x double> %val) {
 ;
 ; STRICTALIGN-LABEL: store_v2double_align8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp, #8]
-; STRICTALIGN-NEXT:    str x8, [x0, #8]
-; STRICTALIGN-NEXT:    ldr x8, [sp]
-; STRICTALIGN-NEXT:    str x8, [x0]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    st1 { v0.2d }, [x0]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v2double_align8:
@@ -10493,13 +9341,8 @@ define void @store_v2double_align8(ptr %ptr, <2 x double> %val) {
 ;
 ; STRICTALIGN-BE-LABEL: store_v2double_align8:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    str x8, [x0, #8]
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp]
-; STRICTALIGN-BE-NEXT:    str x8, [x0]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.2d }, [x0]
 ; STRICTALIGN-BE-NEXT:    ret
   store <2 x double> %val, ptr %ptr, align 8
   ret void
@@ -10514,16 +9357,8 @@ define <2 x double> @load_v2double_align8_post16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v2double_align8_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    sub sp, sp, #16
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [x0, #8]
-; STRICTALIGN-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-NEXT:    ldr x8, [x0]
-; STRICTALIGN-NEXT:    str x8, [sp]
-; STRICTALIGN-NEXT:    add x8, x0, #16
-; STRICTALIGN-NEXT:    ldr q0, [sp]
-; STRICTALIGN-NEXT:    str x8, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    ld1 { v0.2d }, [x0], #16
+; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v2double_align8_post16:
@@ -10535,16 +9370,9 @@ define <2 x double> @load_v2double_align8_post16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v2double_align8_post16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    sub sp, sp, #16
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [x0, #8]
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    ldr x8, [x0]
-; STRICTALIGN-BE-NEXT:    str x8, [sp]
-; STRICTALIGN-BE-NEXT:    add x8, x0, #16
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp]
-; STRICTALIGN-BE-NEXT:    str x8, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    ld1 { v0.2d }, [x0], #16
+; STRICTALIGN-BE-NEXT:    str x0, [x1]
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   %val = load <2 x double>, ptr %ptr, align 8
@@ -10561,14 +9389,9 @@ define <2 x double> @load_v2double_align8_pre16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v2double_align8_pre16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldr x8, [x0, #16]!
-; STRICTALIGN-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [x0, #8]
-; STRICTALIGN-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-NEXT:    ldr q0, [sp]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    add x8, x0, #16
+; STRICTALIGN-NEXT:    ld1 { v0.2d }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v2double_align8_pre16:
@@ -10580,14 +9403,10 @@ define <2 x double> @load_v2double_align8_pre16(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v2double_align8_pre16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldr x8, [x0, #16]!
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [x0, #8]
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    add x8, x0, #16
+; STRICTALIGN-BE-NEXT:    ld1 { v0.2d }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   %val = load <2 x double>, ptr %newptr, align 8
@@ -10604,15 +9423,8 @@ define void @store_v2double_align8_post16(ptr %ptr, <2 x double> %val, ptr %writ
 ;
 ; STRICTALIGN-LABEL: store_v2double_align8_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp, #8]
-; STRICTALIGN-NEXT:    add x9, x0, #16
-; STRICTALIGN-NEXT:    str x8, [x0, #8]
-; STRICTALIGN-NEXT:    ldr x8, [sp]
-; STRICTALIGN-NEXT:    str x8, [x0]
-; STRICTALIGN-NEXT:    str x9, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    st1 { v0.2d }, [x0], #16
+; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v2double_align8_post16:
@@ -10624,15 +9436,9 @@ define void @store_v2double_align8_post16(ptr %ptr, <2 x double> %val, ptr %writ
 ;
 ; STRICTALIGN-BE-LABEL: store_v2double_align8_post16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    add x9, x0, #16
-; STRICTALIGN-BE-NEXT:    str x8, [x0, #8]
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp]
-; STRICTALIGN-BE-NEXT:    str x8, [x0]
-; STRICTALIGN-BE-NEXT:    str x9, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    st1 { v0.2d }, [x0], #16
+; STRICTALIGN-BE-NEXT:    str x0, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   store <2 x double> %val, ptr %ptr, align 8
@@ -10649,14 +9455,9 @@ define void @store_v2double_align8_pre16(ptr %ptr, <2 x double> %val, ptr %write
 ;
 ; STRICTALIGN-LABEL: store_v2double_align8_pre16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp]
-; STRICTALIGN-NEXT:    str x8, [x0, #16]!
-; STRICTALIGN-NEXT:    ldr x8, [sp, #8]
-; STRICTALIGN-NEXT:    str x8, [x0, #8]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    add x8, x0, #16
+; STRICTALIGN-NEXT:    st1 { v0.2d }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v2double_align8_pre16:
@@ -10668,14 +9469,10 @@ define void @store_v2double_align8_pre16(ptr %ptr, <2 x double> %val, ptr %write
 ;
 ; STRICTALIGN-BE-LABEL: store_v2double_align8_pre16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp]
-; STRICTALIGN-BE-NEXT:    str x8, [x0, #16]!
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    str x8, [x0, #8]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    add x8, x0, #16
+; STRICTALIGN-BE-NEXT:    st1 { v0.2d }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   store <2 x double> %val, ptr %newptr, align 8
@@ -10692,16 +9489,9 @@ define <2 x double> @load_v2double_align8_post32(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v2double_align8_post32:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    sub sp, sp, #16
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [x0, #8]
-; STRICTALIGN-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-NEXT:    ldr x8, [x0]
-; STRICTALIGN-NEXT:    str x8, [sp]
+; STRICTALIGN-NEXT:    ld1 { v0.2d }, [x0]
 ; STRICTALIGN-NEXT:    add x8, x0, #32
-; STRICTALIGN-NEXT:    ldr q0, [sp]
 ; STRICTALIGN-NEXT:    str x8, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v2double_align8_post32:
@@ -10713,16 +9503,10 @@ define <2 x double> @load_v2double_align8_post32(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v2double_align8_post32:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    sub sp, sp, #16
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [x0, #8]
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    ldr x8, [x0]
-; STRICTALIGN-BE-NEXT:    str x8, [sp]
+; STRICTALIGN-BE-NEXT:    ld1 { v0.2d }, [x0]
 ; STRICTALIGN-BE-NEXT:    add x8, x0, #32
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp]
 ; STRICTALIGN-BE-NEXT:    str x8, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 32
   %val = load <2 x double>, ptr %ptr, align 8
@@ -10739,14 +9523,9 @@ define <2 x double> @load_v2double_align8_pre32(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: load_v2double_align8_pre32:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    ldr x8, [x0, #32]!
-; STRICTALIGN-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [x0, #8]
-; STRICTALIGN-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-NEXT:    ldr q0, [sp]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    add x8, x0, #32
+; STRICTALIGN-NEXT:    ld1 { v0.2d }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: load_v2double_align8_pre32:
@@ -10758,14 +9537,10 @@ define <2 x double> @load_v2double_align8_pre32(ptr %ptr, ptr %writeback) {
 ;
 ; STRICTALIGN-BE-LABEL: load_v2double_align8_pre32:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    ldr x8, [x0, #32]!
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [x0, #8]
-; STRICTALIGN-BE-NEXT:    str x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    ldr q0, [sp]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    add x8, x0, #32
+; STRICTALIGN-BE-NEXT:    ld1 { v0.2d }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 32
   %val = load <2 x double>, ptr %newptr, align 8
@@ -10782,15 +9557,9 @@ define void @store_v2double_align8_post32(ptr %ptr, <2 x double> %val, ptr %writ
 ;
 ; STRICTALIGN-LABEL: store_v2double_align8_post32:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp, #8]
-; STRICTALIGN-NEXT:    add x9, x0, #32
-; STRICTALIGN-NEXT:    str x8, [x0, #8]
-; STRICTALIGN-NEXT:    ldr x8, [sp]
-; STRICTALIGN-NEXT:    str x8, [x0]
-; STRICTALIGN-NEXT:    str x9, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    add x8, x0, #32
+; STRICTALIGN-NEXT:    st1 { v0.2d }, [x0]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v2double_align8_post32:
@@ -10802,15 +9571,10 @@ define void @store_v2double_align8_post32(ptr %ptr, <2 x double> %val, ptr %writ
 ;
 ; STRICTALIGN-BE-LABEL: store_v2double_align8_post32:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    add x9, x0, #32
-; STRICTALIGN-BE-NEXT:    str x8, [x0, #8]
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp]
-; STRICTALIGN-BE-NEXT:    str x8, [x0]
-; STRICTALIGN-BE-NEXT:    str x9, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    add x8, x0, #32
+; STRICTALIGN-BE-NEXT:    st1 { v0.2d }, [x0]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 32
   store <2 x double> %val, ptr %ptr, align 8
@@ -10827,14 +9591,9 @@ define void @store_v2double_align8_pre32(ptr %ptr, <2 x double> %val, ptr %write
 ;
 ; STRICTALIGN-LABEL: store_v2double_align8_pre32:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-NEXT:    ldr x8, [sp]
-; STRICTALIGN-NEXT:    str x8, [x0, #32]!
-; STRICTALIGN-NEXT:    ldr x8, [sp, #8]
-; STRICTALIGN-NEXT:    str x8, [x0, #8]
-; STRICTALIGN-NEXT:    str x0, [x1]
-; STRICTALIGN-NEXT:    add sp, sp, #16
+; STRICTALIGN-NEXT:    add x8, x0, #32
+; STRICTALIGN-NEXT:    st1 { v0.2d }, [x8]
+; STRICTALIGN-NEXT:    str x8, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v2double_align8_pre32:
@@ -10846,14 +9605,10 @@ define void @store_v2double_align8_pre32(ptr %ptr, <2 x double> %val, ptr %write
 ;
 ; STRICTALIGN-BE-LABEL: store_v2double_align8_pre32:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
-; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp]
-; STRICTALIGN-BE-NEXT:    str x8, [x0, #32]!
-; STRICTALIGN-BE-NEXT:    ldr x8, [sp, #8]
-; STRICTALIGN-BE-NEXT:    str x8, [x0, #8]
-; STRICTALIGN-BE-NEXT:    str x0, [x1]
-; STRICTALIGN-BE-NEXT:    add sp, sp, #16
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    add x8, x0, #32
+; STRICTALIGN-BE-NEXT:    st1 { v0.2d }, [x8]
+; STRICTALIGN-BE-NEXT:    str x8, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 32
   store <2 x double> %val, ptr %newptr, align 8
@@ -10982,7 +9737,7 @@ define void @store_v2double_align16_post16(ptr %ptr, <2 x double> %val, ptr %wri
 ;
 ; STRICTALIGN-LABEL: store_v2double_align16_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    str q0, [x0], #16
+; STRICTALIGN-NEXT:    st1 { v0.2d }, [x0], #16
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;

@@ -1871,6 +1871,7 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
 
   ISD::LoadExtType ExtType = LD->getExtensionType();
   bool InsertTo64 = false;
+  bool OffsetIsXZR = false;
   if (VT == MVT::i64)
     Opcode = IsPre ? AArch64::LDRXpre : AArch64::LDRXpost;
   else if (VT == MVT::i32) {
@@ -1918,9 +1919,13 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
   } else if (VT == MVT::f32) {
     Opcode = IsPre ? AArch64::LDRSpre : AArch64::LDRSpost;
   } else if (VT == MVT::f64 ||
-             (VT.is64BitVector() && Subtarget->isLittleEndian())) {
+             (VT.is64BitVector() && Subtarget->isLittleEndian() &&
+              (!Subtarget->requiresStrictAlign() ||
+               LD->getAlign() >= VT.getStoreSize()))) {
     Opcode = IsPre ? AArch64::LDRDpre : AArch64::LDRDpost;
-  } else if (VT.is128BitVector() && Subtarget->isLittleEndian()) {
+  } else if (VT.is128BitVector() && Subtarget->isLittleEndian() &&
+             (!Subtarget->requiresStrictAlign() ||
+              LD->getAlign() >= VT.getStoreSize())) {
     Opcode = IsPre ? AArch64::LDRQpre : AArch64::LDRQpost;
   } else if (VT.is64BitVector()) {
     if (IsPre || OffsetVal != 8)
@@ -1941,6 +1946,7 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
     default:
       llvm_unreachable("Expected vector element to be a power of 2");
     }
+    OffsetIsXZR = true;
   } else if (VT.is128BitVector()) {
     if (IsPre || OffsetVal != 16)
       return false;
@@ -1960,13 +1966,14 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
     default:
       llvm_unreachable("Expected vector element to be a power of 2");
     }
+    OffsetIsXZR = true;
   } else
     return false;
   SDValue Chain = LD->getChain();
   SDValue Base = LD->getBasePtr();
   SDLoc dl(N);
   // LD1 encodes an immediate offset by using XZR as the offset register.
-  SDValue Offset = (VT.isVector() && !Subtarget->isLittleEndian())
+  SDValue Offset = OffsetIsXZR
                        ? CurDAG->getRegister(AArch64::XZR, MVT::i64)
                        : CurDAG->getTargetConstant(OffsetVal, dl, MVT::i64);
   SDValue Ops[] = { Base, Offset, Chain };
