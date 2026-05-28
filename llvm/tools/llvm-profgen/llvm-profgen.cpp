@@ -225,6 +225,9 @@ int main(int argc, const char *argv[]) {
       Counters = &EtmReader->getSampleCounters();
     } else {
       PerfReader = PerfReaderBase::create(Binary.get(), File, PIDFilter);
+      if (PerfReader->profileIsCS() && SkipDisassembly)
+        exitWithError("--skip-disassembly is not compatible with CSSPGO.");
+
       // Parse perf events and samples
       PerfReader->parsePerfTraces();
 
