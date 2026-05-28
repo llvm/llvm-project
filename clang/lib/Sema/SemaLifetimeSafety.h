@@ -97,9 +97,13 @@ public:
                            const FieldDecl *DanglingField,
                            const Expr *MovedExpr,
                            SourceLocation ExpiryLoc) override {
-    S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_dangling_field_moved
-                     : diag::warn_lifetime_safety_dangling_field)
+    unsigned DiagID = MovedExpr
+                          ? diag::warn_lifetime_safety_dangling_field_moved
+                          : diag::warn_lifetime_safety_dangling_field;
+
+    S.Diag(IssueExpr->getExprLoc(), DiagID)
+        << getDiagSubjectDescription(IssueExpr)
+        << getDiagSubjectDescription(DanglingField)
         << IssueExpr->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
@@ -113,9 +117,13 @@ public:
                             const VarDecl *DanglingGlobal,
                             const Expr *MovedExpr,
                             SourceLocation ExpiryLoc) override {
-    S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_dangling_global_moved
-                     : diag::warn_lifetime_safety_dangling_global)
+    unsigned DiagID = MovedExpr
+                          ? diag::warn_lifetime_safety_dangling_global_moved
+                          : diag::warn_lifetime_safety_dangling_global;
+
+    S.Diag(IssueExpr->getExprLoc(), DiagID)
+        << getDiagSubjectDescription(IssueExpr)
+        << getDiagSubjectDescription(DanglingGlobal)
         << IssueExpr->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
@@ -442,7 +450,20 @@ private:
   std::string getDiagSubjectDescription(const ValueDecl *VD) {
     std::string Res;
     llvm::raw_string_ostream OS(Res);
-    OS << (isa<ParmVarDecl>(VD) ? "parameter" : "local variable");
+    if (isa<FieldDecl>(VD)) {
+      OS << "field";
+    } else if (isa<ParmVarDecl>(VD)) {
+      OS << "parameter";
+    } else if (const auto *Var = dyn_cast<VarDecl>(VD)) {
+      if (Var->isStaticLocal() || Var->isStaticDataMember())
+        OS << "static variable";
+      else if (Var->hasGlobalStorage())
+        OS << "global variable";
+      else
+        OS << "local variable";
+    } else {
+      OS << "variable";
+    }
     OS << " '";
     VD->getNameForDiagnostic(OS, S.getPrintingPolicy(), /*Qualified=*/false);
     OS << "'";
