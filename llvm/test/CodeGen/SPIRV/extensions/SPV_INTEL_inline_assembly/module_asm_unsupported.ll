@@ -5,7 +5,7 @@
 ; The backend must reject it with a clean diagnostic
 ; rather than reach the unimplemented MC asm parser path.
 
-; CHECK: LLVM ERROR: SPIR-V does not support module-level inline assembly
+; CHECK: error: SPIR-V does not support module-level inline assembly
 
 module asm "foo"
 
