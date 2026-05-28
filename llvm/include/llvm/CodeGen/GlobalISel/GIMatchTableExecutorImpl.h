@@ -38,6 +38,25 @@
 
 namespace llvm {
 
+/// Imported SelectionDAG patterns describe pointer operands with integer MVTs
+/// (e.g. i64, v2i64). GlobalISel may keep distinct pointer LLTs (e.g. p0,
+/// v2p0). For \p GIM_CheckType, accept the match when the actual operand is a
+/// pointer or pointer vector and equals the expected integer type after
+/// normalizing with \p LLT::changeElementType.
+///
+/// This is a one-way bridge (pointer actual, integer expected). When the
+/// pattern already knows the operand is a pointer, \p GIM_CheckPointerToAny
+/// is used instead.
+static inline bool isLLTIntegerCompatibleWithPointer(const LLT &Actual,
+                                                     const LLT &Expected) {
+  if (Actual == Expected)
+    return true;
+  if (!Actual.isPointerOrPointerVector() || Expected.isPointerOrPointerVector())
+    return false;
+  return Actual.changeElementType(LLT::integer(Actual.getScalarSizeInBits())) ==
+         Expected;
+}
+
 template <class TgtExecutor, class PredicateBitset, class ComplexMatcherMemFn,
           class CustomRendererFn>
 bool GIMatchTableExecutor::executeMatchTable(
@@ -752,7 +771,9 @@ bool GIMatchTableExecutor::executeMatchTable(
                              << "), TypeID=" << TypeID << ")\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
-      if (!MO.isReg() || MRI.getType(MO.getReg()) != getTypeFromIdx(TypeID)) {
+      if (!MO.isReg() ||
+          !isLLTIntegerCompatibleWithPointer(MRI.getType(MO.getReg()),
+                                             getTypeFromIdx(TypeID))) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       }
@@ -781,7 +802,8 @@ bool GIMatchTableExecutor::executeMatchTable(
       assert(SizeInBits != 0 && "Pointer size must be known");
 
       if (MO.isReg()) {
-        if (!Ty.isPointer() || Ty.getSizeInBits() != SizeInBits)
+        if (!Ty.isPointerOrPointerVector() ||
+            Ty.getScalarSizeInBits() != SizeInBits)
           if (handleReject() == RejectAndGiveUp)
             return false;
       } else if (handleReject() == RejectAndGiveUp)

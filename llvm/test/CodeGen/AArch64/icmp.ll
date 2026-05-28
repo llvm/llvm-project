@@ -2,12 +2,6 @@
 ; RUN: llc -mtriple=aarch64 -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for v2p0_p0
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v3p0_p0
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v4p0_p0
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for icmp_eq_v2p0_Zero_RHS
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for icmp_eq_v2p0_Zero_LHS
-
 define i64 @i64_i64(i64 %a, i64 %b, i64 %d, i64 %e) {
 ; CHECK-LABEL: i64_i64:
 ; CHECK:       // %bb.0: // %entry
@@ -1428,11 +1422,18 @@ entry:
 }
 
 define <2 x ptr> @v2p0_p0(<2 x ptr> %a, <2 x ptr> %b, <2 x ptr> %d, <2 x ptr> %e) {
-; CHECK-LABEL: v2p0_p0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmeq v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    bsl v0.16b, v3.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: v2p0_p0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    cmeq v0.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    bsl v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: v2p0_p0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    cmeq v0.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    ret
 entry:
   %c = icmp ne <2 x ptr> %a, %b
   %s = select <2 x i1> %c, <2 x ptr> %d, <2 x ptr> %e
@@ -1440,32 +1441,62 @@ entry:
 }
 
 define <3 x ptr> @v3p0_p0(<3 x ptr> %a, <3 x ptr> %b, <3 x ptr> %d, <3 x ptr> %e) {
-; CHECK-LABEL: v3p0_p0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d4 killed $d4 def $q4
-; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    // kill: def $d6 killed $d6 def $q6
-; CHECK-NEXT:    // kill: def $d7 killed $d7 def $q7
-; CHECK-NEXT:    // kill: def $d5 killed $d5 def $q5
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    ldr d16, [sp, #24]
-; CHECK-NEXT:    ldr d17, [sp]
-; CHECK-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-NEXT:    mov v6.d[1], v7.d[0]
-; CHECK-NEXT:    ldp d1, d4, [sp, #8]
-; CHECK-NEXT:    mov v1.d[1], v4.d[0]
-; CHECK-NEXT:    cmgt v0.2d, v3.2d, v0.2d
-; CHECK-NEXT:    bsl v0.16b, v6.16b, v1.16b
-; CHECK-NEXT:    cmgt v1.2d, v5.2d, v2.2d
-; CHECK-NEXT:    mov v2.16b, v1.16b
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    bsl v2.16b, v17.16b, v16.16b
-; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: v3p0_p0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d6 killed $d6 def $q6
+; CHECK-SD-NEXT:    // kill: def $d7 killed $d7 def $q7
+; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    ldr d16, [sp, #24]
+; CHECK-SD-NEXT:    ldr d17, [sp]
+; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    mov v6.d[1], v7.d[0]
+; CHECK-SD-NEXT:    ldp d1, d4, [sp, #8]
+; CHECK-SD-NEXT:    mov v1.d[1], v4.d[0]
+; CHECK-SD-NEXT:    cmgt v0.2d, v3.2d, v0.2d
+; CHECK-SD-NEXT:    bsl v0.16b, v6.16b, v1.16b
+; CHECK-SD-NEXT:    cmgt v1.2d, v5.2d, v2.2d
+; CHECK-SD-NEXT:    mov v2.16b, v1.16b
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    bsl v2.16b, v17.16b, v16.16b
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: v3p0_p0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov x8, d1
+; CHECK-GI-NEXT:    fmov x9, d4
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    // kill: def $d6 killed $d6 def $q6
+; CHECK-GI-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-GI-NEXT:    ldr x10, [sp, #24]
+; CHECK-GI-NEXT:    ldp d4, d1, [sp, #8]
+; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v3.d[1], x9
+; CHECK-GI-NEXT:    fmov x8, d7
+; CHECK-GI-NEXT:    fmov x9, d1
+; CHECK-GI-NEXT:    cmgt v1.2d, v5.2d, v2.2d
+; CHECK-GI-NEXT:    mov v6.d[1], x8
+; CHECK-GI-NEXT:    mov v4.d[1], x9
+; CHECK-GI-NEXT:    cmgt v0.2d, v3.2d, v0.2d
+; CHECK-GI-NEXT:    fmov x8, d1
+; CHECK-GI-NEXT:    ldr x9, [sp]
+; CHECK-GI-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-GI-NEXT:    bsl v0.16b, v6.16b, v4.16b
+; CHECK-GI-NEXT:    and x9, x9, x8
+; CHECK-GI-NEXT:    bic x8, x10, x8
+; CHECK-GI-NEXT:    orr x8, x9, x8
+; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    ret
 entry:
   %c = icmp slt <3 x ptr> %a, %b
   %s = select <3 x i1> %c, <3 x ptr> %d, <3 x ptr> %e
@@ -1473,13 +1504,21 @@ entry:
 }
 
 define <4 x ptr> @v4p0_p0(<4 x ptr> %a, <4 x ptr> %b, <4 x ptr> %d, <4 x ptr> %e) {
-; CHECK-LABEL: v4p0_p0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmgt v1.2d, v3.2d, v1.2d
-; CHECK-NEXT:    cmgt v0.2d, v2.2d, v0.2d
-; CHECK-NEXT:    bsl v1.16b, v5.16b, v7.16b
-; CHECK-NEXT:    bsl v0.16b, v4.16b, v6.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: v4p0_p0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    cmgt v1.2d, v3.2d, v1.2d
+; CHECK-SD-NEXT:    cmgt v0.2d, v2.2d, v0.2d
+; CHECK-SD-NEXT:    bsl v1.16b, v5.16b, v7.16b
+; CHECK-SD-NEXT:    bsl v0.16b, v4.16b, v6.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: v4p0_p0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    cmgt v0.2d, v2.2d, v0.2d
+; CHECK-GI-NEXT:    cmgt v1.2d, v3.2d, v1.2d
+; CHECK-GI-NEXT:    bsl v0.16b, v4.16b, v6.16b
+; CHECK-GI-NEXT:    bsl v1.16b, v5.16b, v7.16b
+; CHECK-GI-NEXT:    ret
 entry:
   %c = icmp slt <4 x ptr> %a, %b
   %s = select <4 x i1> %c, <4 x ptr> %d, <4 x ptr> %e
