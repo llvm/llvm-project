@@ -1581,11 +1581,18 @@ void X86_64TargetCodeGenInfo::checkFunctionABI(CodeGenModule &CGM,
     if (const TypeSourceInfo *TSI = FD->getTypeSourceInfo()) {
       TypeLoc TL = TSI->getTypeLoc();
 
-      if (auto FTL = TL.IgnoreParens().getAs<FunctionTypeLoc>())
-        return FTL.getReturnLoc().getBeginLoc();
+      if (auto FTL = TL.IgnoreParens().getAs<FunctionTypeLoc>()) {
+        SourceLocation Loc = FTL.getReturnLoc().getBeginLoc();
+        if (Loc.isValid())
+          return Loc;
+      }
     }
 
-    return FD->getLocation();
+    SourceLocation Loc = FD->getLocation();
+    if (Loc.isValid())
+      return Loc;
+
+    return FD->getBeginLoc();
   };
 
   auto Check = [&](QualType Ty, SourceLocation Loc, bool IsReturn) {
@@ -1607,6 +1614,11 @@ void X86_64TargetCodeGenInfo::checkFunctionABI(CodeGenModule &CGM,
 
     return false;
   };
+
+  // psABI warnings & errors for function definitions that are only visible 
+  // in this translation unit are handled at call site by checkFunctionCallABI
+  if (!FD->isExternallyVisible())
+    return;
 
   // First check the return type and emit diagnostic if required
   Check(FD->getReturnType(), GetReturnTypeLoc(FD), true);
