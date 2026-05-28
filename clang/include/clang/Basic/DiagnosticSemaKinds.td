@@ -14236,7 +14236,7 @@ def note_amdgcn_unguarded_builtin_silence
   : Note<"enclose %0 in a __builtin_amdgcn_is_invocable check to silence "
          "this warning">;
 
-def err_amdgcn_coop_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
+def err_amdgcn_global_or_flat_pointer_required : Error<"builtin requires a global or generic pointer">;
 
 def err_amdgcn_dmask_has_too_many_bits_set
     : Error<"dmask argument cannot have more bits set than there are elements "

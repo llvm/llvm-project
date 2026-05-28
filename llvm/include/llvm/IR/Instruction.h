@@ -24,6 +24,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ModRef.h"
 #include <cstdint>
 #include <utility>
 
@@ -834,6 +835,10 @@ public:
   static bool isNilpotent(unsigned Opcode) {
     return Opcode == Xor;
   }
+
+  /// Return memory effects of the instruction. argmem here refers to the
+  /// operands of the instruction.
+  LLVM_ABI MemoryEffects getMemoryEffects() const LLVM_READONLY;
 
   /// Return true if this instruction may modify memory.
   LLVM_ABI bool mayWriteToMemory() const LLVM_READONLY;
