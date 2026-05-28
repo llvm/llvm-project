@@ -17,8 +17,8 @@ void testSwitchWithCleanup(int n) {
 // region runs the destructor for `x` on the EH unwind path.
 
 // CIR: cir.func{{.*}} @_Z21testSwitchWithCleanupi(%[[ARG:.*]]: !s32i
-// CIR:   %[[N_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init]
-// CIR:   %[[X:.*]] = cir.alloca !rec_Local, !cir.ptr<!rec_Local>, ["x"]
+// CIR:   %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init !s32i -> !cir.ptr<!s32i>
+// CIR:   %[[X:.*]] = cir.alloca "x" {{.*}} !rec_Local -> !cir.ptr<!rec_Local>
 // CIR:   cir.store %[[ARG]], %[[N_ADDR]] : !s32i
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[EXN:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
@@ -39,8 +39,8 @@ void testSwitchWithCleanup(int n) {
 // cleanup chain that runs the destructor and then resumes.
 
 // CIR-FLAT: cir.func{{.*}} @_Z21testSwitchWithCleanupi(%[[ARG:.*]]: !s32i
-// CIR-FLAT:   %[[N_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init]
-// CIR-FLAT:   %[[X:.*]] = cir.alloca !rec_Local, !cir.ptr<!rec_Local>, ["x"]
+// CIR-FLAT:   %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init !s32i -> !cir.ptr<!s32i>
+// CIR-FLAT:   %[[X:.*]] = cir.alloca "x" {{.*}} !rec_Local -> !cir.ptr<!rec_Local>
 // CIR-FLAT:   cir.store %[[ARG]], %[[N_ADDR]]
 // CIR-FLAT:   cir.br ^[[BODY:.+]]
 // CIR-FLAT: ^[[BODY]]:

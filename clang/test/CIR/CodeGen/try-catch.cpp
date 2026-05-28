@@ -1772,7 +1772,7 @@ void direct_inside_try_catch_with_exception_type() {
 
 // CIR: cir.func {{.*}} @_Z43direct_inside_try_catch_with_exception_typev() personality(@__gxx_personality_v0)
 // CIR:   cir.scope {
-// CIR:     %[[E:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["e"]
+// CIR:     %[[E:.*]] = cir.alloca "e" {{.*}} !s32i -> !cir.ptr<!s32i>
 // CIR:     cir.try {
 // CIR:       %[[EXN:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
 // CIR:       %[[FORTYTWO:.*]] = cir.const #cir.int<42> : !s32i
