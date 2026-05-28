@@ -19,6 +19,22 @@ using namespace llvm;
 using namespace llvm::AMDGPU;
 
 #define DEBUG_TYPE "machine-scheduler"
+namespace {
+enum class CarriedLatency { Off, Fence, All };
+} // namespace
+
+static cl::opt<CarriedLatency> BlockCarriedLatency(
+    "amdgpu-block-carried-latency", cl::Hidden,
+    cl::init(CarriedLatency::Off),
+    cl::desc("Prioritize HardwareUnits with non-zero exposed cycles in the "
+             "coexec scheduler's critical-resource sort."),
+    cl::values(
+        clEnumValN(CarriedLatency::Off, "off",
+                   "Disabled- do not pad latency."),
+        clEnumValN(CarriedLatency::Fence, "fence",
+                   "Only pad latency for memory fence (e.g. those surrounding barrier_signal/wait)."),
+        clEnumValN(CarriedLatency::All, "all",
+                   "Pad latency for any SU with an incoming ds_load dependency.")));
 
 namespace {
 
@@ -269,7 +285,33 @@ void CandidateHeuristics::initialize(ScheduleDAGMI *SchedDAG,
 }
 
 unsigned CandidateHeuristics::getCarriedLatency(SUnit *SU) {
+  if (BlockCarriedLatency == CarriedLatency::Off)
+    return 0;
+
   MachineInstr *MI = SU->getInstr();
+  const InstructionFlavor Flavor = classifyFlavor(*MI, *SII);
+  if (Flavor == InstructionFlavor::Fence) {
+    MachineBasicBlock *MBB = MI->getParent();
+    // Check if we have DS instruciton after a fence in any of the predecessor
+    // blocks, if so, this fence instruction has carried latency.
+    for (auto PredMBB : MBB->predecessors()) {
+      auto I = PredMBB->rbegin();
+      auto E = PredMBB->rend();
+      for (; I != E; I++) {
+        const InstructionFlavor ItFlavor = classifyFlavor(*I, *SII);
+        if (ItFlavor == InstructionFlavor::Fence)
+          break;
+
+        // Found carried latency.
+        if (ItFlavor == InstructionFlavor::DS)
+          return getHWUICyclesForMI(&*I);
+      }
+    }
+  }
+
+  if (BlockCarriedLatency == CarriedLatency::Fence)
+    return 0;
+
   unsigned CarriedLatency = 0;
   for (MachineOperand &Op : MI->all_uses()) {
     auto Reg = Op.getReg();
