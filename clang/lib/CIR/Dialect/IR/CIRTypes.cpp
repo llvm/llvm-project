@@ -127,6 +127,67 @@ void CIRDialect::printType(Type type, DialectAsmPrinter &os) const {
 // StructType
 //===----------------------------------------------------------------------===//
 
+// Shared helpers for StructType and UnionType parse/print.
+
+/// Parse "incomplete" or "{type, type, ...}", writing results into
+/// \p incomplete and \p members.  Returns failure if member parsing fails.
+static mlir::ParseResult
+parseRecordBody(mlir::AsmParser &parser, bool &incomplete,
+                llvm::SmallVector<mlir::Type> &members) {
+  assert(incomplete && "caller must pre-initialize incomplete to true");
+  if (parser.parseOptionalKeyword("incomplete").succeeded())
+    return mlir::success();
+  incomplete = false;
+  return parser.parseCommaSeparatedList(
+      AsmParser::Delimiter::Braces, [&parser, &members]() {
+        return parser.parseType(members.emplace_back());
+      });
+}
+
+/// Print a complete CIR record body:
+///   '<' ['class '] [name] ['packed '] ['padded '] body '>'
+/// where body is "incomplete" or "{members[, padding = {type}]}".
+/// RecordTy must be a mutable MLIR type (StructType or UnionType).
+template <typename RecordTy>
+static void printRecordBody(mlir::AsmPrinter &printer, RecordTy self,
+                            mlir::StringAttr name, bool hasClassPrefix,
+                            bool isPacked, bool isPadded, bool isIncomplete,
+                            llvm::ArrayRef<mlir::Type> members,
+                            mlir::Type padding = {}) {
+  printer << '<';
+  if (hasClassPrefix)
+    printer << "class ";
+  if (name)
+    printer << name;
+
+  FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrintGuard =
+      printer.tryStartCyclicPrint(self);
+  if (failed(cyclicPrintGuard)) {
+    printer << '>';
+    return;
+  }
+
+  if (hasClassPrefix || name)
+    printer << ' ';
+  if (isPacked)
+    printer << "packed ";
+  if (isPadded)
+    printer << "padded ";
+  if (isIncomplete) {
+    printer << "incomplete";
+  } else {
+    printer << "{";
+    llvm::interleaveComma(members, printer);
+    printer << "}";
+    if (padding) {
+      printer << ", padding = {";
+      printer.printType(padding);
+      printer << '}';
+    }
+  }
+  printer << '>';
+}
+
 /// Parse the body of a !cir.struct<...> type.
 Type StructType::parse(mlir::AsmParser &parser) {
   FailureOr<AsmParser::CyclicParseReset> cyclicParseGuard;
@@ -173,15 +234,8 @@ Type StructType::parse(mlir::AsmParser &parser) {
 
   bool incomplete = true;
   llvm::SmallVector<mlir::Type> members;
-  if (parser.parseOptionalKeyword("incomplete").failed()) {
-    incomplete = false;
-    const auto delimiter = AsmParser::Delimiter::Braces;
-    const auto parseElementFn = [&parser, &members]() {
-      return parser.parseType(members.emplace_back());
-    };
-    if (parser.parseCommaSeparatedList(delimiter, parseElementFn).failed())
-      return {};
-  }
+  if (parseRecordBody(parser, incomplete, members).failed())
+    return {};
 
   if (parser.parseGreater())
     return {};
@@ -213,35 +267,8 @@ Type StructType::parse(mlir::AsmParser &parser) {
 }
 
 void StructType::print(mlir::AsmPrinter &printer) const {
-  FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrintGuard;
-  printer << '<';
-
-  if (isClass())
-    printer << "class ";
-
-  if (getName())
-    printer << getName();
-
-  cyclicPrintGuard = printer.tryStartCyclicPrint(*this);
-  if (failed(cyclicPrintGuard)) {
-    printer << '>';
-    return;
-  }
-
-  if (isClass() || getName())
-    printer << ' ';
-  if (getPacked())
-    printer << "packed ";
-  if (getPadded())
-    printer << "padded ";
-  if (isIncomplete()) {
-    printer << "incomplete";
-  } else {
-    printer << "{";
-    llvm::interleaveComma(getMembers(), printer);
-    printer << "}";
-  }
-  printer << '>';
+  printRecordBody(printer, *this, getName(), isClass(), getPacked(),
+                  getPadded(), isIncomplete(), getMembers());
 }
 
 mlir::LogicalResult
@@ -343,15 +370,8 @@ Type UnionType::parse(mlir::AsmParser &parser) {
 
   bool incomplete = true;
   llvm::SmallVector<mlir::Type> members;
-  if (parser.parseOptionalKeyword("incomplete").failed()) {
-    incomplete = false;
-    const auto delimiter = AsmParser::Delimiter::Braces;
-    const auto parseElementFn = [&parser, &members]() {
-      return parser.parseType(members.emplace_back());
-    };
-    if (parser.parseCommaSeparatedList(delimiter, parseElementFn).failed())
-      return {};
-  }
+  if (parseRecordBody(parser, incomplete, members).failed())
+    return {};
 
   // Optional tail-padding slot: ", padding = { <type> }".
   if (!incomplete && parser.parseOptionalComma().succeeded()) {
@@ -396,37 +416,9 @@ Type UnionType::parse(mlir::AsmParser &parser) {
 }
 
 void UnionType::print(mlir::AsmPrinter &printer) const {
-  FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrintGuard;
-  printer << '<';
-
-  if (getName())
-    printer << getName();
-
-  cyclicPrintGuard = printer.tryStartCyclicPrint(*this);
-  if (failed(cyclicPrintGuard)) {
-    printer << '>';
-    return;
-  }
-
-  if (getName())
-    printer << ' ';
-  if (getPacked())
-    printer << "packed ";
-  if (getPadded())
-    printer << "padded ";
-  if (isIncomplete()) {
-    printer << "incomplete";
-  } else {
-    printer << "{";
-    llvm::interleaveComma(getMembers(), printer);
-    printer << "}";
-    if (mlir::Type pad = getPadding()) {
-      printer << ", padding = {";
-      printer.printType(pad);
-      printer << '}';
-    }
-  }
-  printer << '>';
+  printRecordBody(printer, *this, getName(), /*hasClassPrefix=*/false,
+                  getPacked(), getPadded(), isIncomplete(), getMembers(),
+                  getPadding());
 }
 
 mlir::LogicalResult
