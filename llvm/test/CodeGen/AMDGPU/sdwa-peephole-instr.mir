@@ -469,6 +469,7 @@ body:             |
 
 # GCN-LABEL: name: negative_v_ashrrev_i16
 # GCN-NOT: V_XOR_B32_sdwa
+# GCN: S_ENDPGM 0
 ---
 # Ensure that V_ASHRREV_I16_* 8, ... instructions are not combined into a sdwa instruction.
 # These instructions zero-fill the high 16-bits and thus do not produce a sign-extended
