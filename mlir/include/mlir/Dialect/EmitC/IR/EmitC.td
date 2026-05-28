@@ -360,6 +360,39 @@ def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", [CExpressionInterface]> {
   let hasVerifier = 1;
 }
 
+def EmitC_MemberCallOpaqueOp : EmitC_Op<"member_call_opaque", [CExpressionInterface]> {
+  let summary = "Opaque member call operation";
+  let description = [{
+    The `emitc.member_call_opaque` operation represents a C++ member function
+    call. It takes a receiver operand, a callee string attribute (the method
+    name), and variadic operands for arguments.
+
+    The call allows specifying order of operands and attributes in the call as
+    follows:
+    - integer value of index type refers to an argument operand;
+    - attribute which will get lowered to constant value in call;
+
+    Example:
+
+    ```mlir
+    %0 = emitc.member_call_opaque %receiver "method" (%arg0, %arg1) : !emitc.opaque<"MyClass">, (i32, i32) -> i32
+    ```
+  }];
+  let arguments = (ins
+    EmitCType:$receiver,
+    StrAttr:$callee,
+    OptionalAttr<ArrayAttr>:$args,
+    OptionalAttr<ArrayAttr>:$template_args,
+    Variadic<EmitCType>:$args_operands
+  );
+  let results = (outs Variadic<EmitCType>);
+
+  let assemblyFormat = [{
+    $receiver $callee `(` $args_operands `)` attr-dict `:` type($receiver) `,` functional-type($args_operands, results)
+  }];
+  let hasVerifier = 1;
+}
+
 def EmitC_CastOp : EmitC_Op<"cast",
     [CExpressionInterface,
      DeclareOpInterfaceMethods<CastOpInterface>]> {

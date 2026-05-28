@@ -961,6 +961,71 @@ static LogicalResult printOperation(CppEmitter &emitter,
   return success();
 }
 
+static LogicalResult
+printOperation(CppEmitter &emitter,
+               emitc::MemberCallOpaqueOp memberCallOpaqueOp) {
+  raw_ostream &os = emitter.ostream();
+  Operation &op = *memberCallOpaqueOp.getOperation();
+
+  if (failed(emitter.emitAssignPrefix(op)))
+    return failure();
+
+  Value receiver = memberCallOpaqueOp.getReceiver();
+  if (failed(emitter.emitOperand(receiver)))
+    return failure();
+
+  if (llvm::isa<emitc::PointerType>(receiver.getType()))
+    os << "->";
+  else
+    os << ".";
+
+  os << memberCallOpaqueOp.getCallee();
+
+  auto emitTemplateArgs = [&](Attribute attr) -> LogicalResult {
+    return emitter.emitAttribute(op.getLoc(), attr);
+  };
+
+  if (memberCallOpaqueOp.getTemplateArgs()) {
+    os << "<";
+    if (failed(interleaveCommaWithError(*memberCallOpaqueOp.getTemplateArgs(),
+                                        os, emitTemplateArgs)))
+      return failure();
+    os << ">";
+  }
+
+  auto emitArgs = [&](Attribute attr) -> LogicalResult {
+    if (auto t = dyn_cast<IntegerAttr>(attr)) {
+      if (t.getType().isIndex()) {
+        int64_t idx = t.getInt();
+        Value operand = op.getOperand(idx + 1);
+        return emitter.emitOperand(operand, /*isInBrackets=*/true);
+      }
+    }
+    if (failed(emitter.emitAttribute(op.getLoc(), attr)))
+      return failure();
+
+    return success();
+  };
+
+  os << "(";
+
+  LogicalResult emittedArgs = success();
+  if (memberCallOpaqueOp.getArgs()) {
+    emittedArgs =
+        interleaveCommaWithError(*memberCallOpaqueOp.getArgs(), os, emitArgs);
+  } else {
+    auto operands = op.getOperands().drop_front(1);
+    emittedArgs = interleaveCommaWithError(operands, os, [&](Value operand) {
+      return emitter.emitOperand(operand, /*isInBrackets=*/true);
+    });
+  }
+
+  if (failed(emittedArgs))
+    return failure();
+  os << ")";
+  return success();
+}
+
 static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::ApplyOp applyOp) {
   raw_ostream &os = emitter.ostream();
@@ -1875,10 +1940,11 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::GetGlobalOp, emitc::GlobalOp, emitc::IfOp,
                 emitc::IncludeOp, emitc::LiteralOp, emitc::LoadOp,
                 emitc::LogicalAndOp, emitc::LogicalNotOp, emitc::LogicalOrOp,
-                emitc::MemberOfPtrOp, emitc::MemberOp, emitc::MulOp,
-                emitc::RemOp, emitc::ReturnOp, emitc::SubscriptOp, emitc::SubOp,
-                emitc::SwitchOp, emitc::UnaryMinusOp, emitc::UnaryPlusOp,
-                emitc::VariableOp, emitc::VerbatimOp>(
+                emitc::MemberCallOpaqueOp, emitc::MemberOfPtrOp,
+                emitc::MemberOp, emitc::MulOp, emitc::RemOp, emitc::ReturnOp,
+                emitc::SubscriptOp, emitc::SubOp, emitc::SwitchOp,
+                emitc::UnaryMinusOp, emitc::UnaryPlusOp, emitc::VariableOp,
+                emitc::VerbatimOp>(
 
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.

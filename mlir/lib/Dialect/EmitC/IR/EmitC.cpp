@@ -378,6 +378,42 @@ LogicalResult emitc::CallOpaqueOp::verify() {
   return success();
 }
 
+LogicalResult emitc::MemberCallOpaqueOp::verify() {
+  // Callee must not be empty.
+  if (getCallee().empty())
+    return emitOpError("callee must not be empty");
+
+  if (std::optional<ArrayAttr> argsAttr = getArgs()) {
+    for (Attribute arg : *argsAttr) {
+      auto intAttr = llvm::dyn_cast<IntegerAttr>(arg);
+      if (intAttr && llvm::isa<IndexType>(intAttr.getType())) {
+        int64_t index = intAttr.getInt();
+        // Args with elements of type index must be in range
+        // [0..args_operands.size).
+        if ((index < 0) ||
+            (index >= static_cast<int64_t>(getArgsOperands().size())))
+          return emitOpError("index argument is out of range");
+
+      } else if (llvm::isa<ArrayAttr>(arg)) {
+        return emitOpError("array argument has no type");
+      }
+    }
+  }
+
+  if (std::optional<ArrayAttr> templateArgsAttr = getTemplateArgs()) {
+    for (Attribute tArg : *templateArgsAttr) {
+      if (!llvm::isa<TypeAttr, IntegerAttr, FloatAttr, emitc::OpaqueAttr>(tArg))
+        return emitOpError("template argument has invalid type");
+    }
+  }
+
+  if (llvm::any_of(getResultTypes(), llvm::IsaPred<ArrayType>)) {
+    return emitOpError() << "cannot return array type";
+  }
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
