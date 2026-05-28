@@ -24,17 +24,17 @@ enum class CarriedLatency { Off, Fence, All };
 } // namespace
 
 static cl::opt<CarriedLatency> BlockCarriedLatency(
-    "amdgpu-block-carried-latency", cl::Hidden,
-    cl::init(CarriedLatency::Off),
+    "amdgpu-block-carried-latency", cl::Hidden, cl::init(CarriedLatency::Off),
     cl::desc("Prioritize HardwareUnits with non-zero exposed cycles in the "
              "coexec scheduler's critical-resource sort."),
     cl::values(
-        clEnumValN(CarriedLatency::Off, "off",
-                   "Disabled- do not pad latency."),
+        clEnumValN(CarriedLatency::Off, "off", "Disabled- do not pad latency."),
         clEnumValN(CarriedLatency::Fence, "fence",
-                   "Only pad latency for memory fence (e.g. those surrounding barrier_signal/wait)."),
-        clEnumValN(CarriedLatency::All, "all",
-                   "Pad latency for any SU with an incoming ds_load dependency.")));
+                   "Only pad latency for memory fence (e.g. those surrounding "
+                   "barrier_signal/wait)."),
+        clEnumValN(
+            CarriedLatency::All, "all",
+            "Pad latency for any SU with an incoming ds_load dependency.")));
 
 namespace {
 
