@@ -139,6 +139,9 @@ const unsigned struct_kernel_stat64_sz = 0;
 #    elif defined(__loongarch__)
 const unsigned struct_kernel_stat_sz = 128;
 const unsigned struct_kernel_stat64_sz = 0;
+#    elif defined(__alpha__)
+const unsigned struct_kernel_stat_sz = 80;
+const unsigned struct_kernel_stat64_sz = 136;
 #    endif
 struct __sanitizer_perf_event_attr {
   unsigned type;
@@ -570,6 +573,14 @@ struct __sanitizer_dirent {
   unsigned short d_reclen;
   // more fields that we don't care about
 };
+#  elif defined(__alpha__)
+struct __sanitizer_dirent {
+  unsigned int d_ino;  // ino_t is 32-bit on Alpha
+  int __pad;           // explicit padding before d_off
+  unsigned long d_off;
+  unsigned short d_reclen;
+  // more fields that we don't care about
+};
 #  else
 struct __sanitizer_dirent {
 #    if SANITIZER_AIX
@@ -772,7 +783,7 @@ struct __sanitizer_sigaction {
 #        endif
 #      endif
 #    endif
-#    if SANITIZER_LINUX || SANITIZER_HAIKU
+#    if (SANITIZER_LINUX || SANITIZER_HAIKU) && !defined(__alpha__)
   void (*sa_restorer)();
 #    endif
 #    if defined(__mips__) && (SANITIZER_WORDSIZE == 32) && !SANITIZER_MUSL
@@ -1065,7 +1076,7 @@ struct __sanitizer_cookie_io_functions_t {
 #  define IOC_NRBITS 8
 #  define IOC_TYPEBITS 8
 #  if defined(__powerpc__) || defined(__powerpc64__) || defined(__mips__) || \
-      defined(__sparc__)
+      defined(__sparc__) || defined(__alpha__)
 #    define IOC_SIZEBITS 13
 #    define IOC_DIRBITS 3
 #    define IOC_NONE 1U
