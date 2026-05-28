@@ -2643,13 +2643,13 @@ public:
 ///
 /// A debug location in source code, used for debug info and otherwise.
 ///
-/// Uses the SubclassData1, SubclassData16 and SubclassData32
-/// Metadata slots.
+/// Uses the SubclassData1 and SubclassData32 Metadata slots.
 
 class DILocation : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
-  uint64_t AtomGroup : 61;
+  uint64_t Column : 32;
+  uint64_t AtomGroup : 29;
   uint64_t AtomRank : 3;
 
   DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
@@ -2710,7 +2710,7 @@ public:
   TempDILocation clone() const { return cloneImpl(); }
 
   unsigned getLine() const { return SubclassData32; }
-  unsigned getColumn() const { return SubclassData16; }
+  unsigned getColumn() const { return Column; }
   DILocalScope *getScope() const { return cast<DILocalScope>(getRawScope()); }
 
   /// Return the linkage name of Subprogram. If the linkage name is empty,
@@ -2965,14 +2965,13 @@ class DILexicalBlock : public DILexicalBlockBase {
   friend class LLVMContextImpl;
   friend class MDNode;
 
-  uint16_t Column;
+  uint32_t Column;
 
   DILexicalBlock(LLVMContext &C, StorageType Storage, unsigned Line,
                  unsigned Column, ArrayRef<Metadata *> Ops)
       : DILexicalBlockBase(C, DILexicalBlockKind, Storage, Ops),
         Column(Column) {
     SubclassData32 = Line;
-    assert(Column < (1u << 16) && "Expected 16-bit column");
   }
   ~DILexicalBlock() = default;
 
