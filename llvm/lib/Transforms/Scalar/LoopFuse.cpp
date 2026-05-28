@@ -1141,11 +1141,17 @@ private:
 
     assert(CurLoopLevel > Levels && "Fusion candidates are not separated");
 
-    if (DepResult->isScalar(CurLoopLevel, true) && !DepResult->isAnti()) {
-      LLVM_DEBUG(dbgs() << "Safe to fuse due to a loop-invariant non-anti "
-                           "dependency\n");
-      NumDA++;
-      return true;
+    if (DepResult->isScalar(CurLoopLevel, true)) {
+      if (DepResult->isInput() || DepResult->isOutput()) {
+        LLVM_DEBUG(dbgs() << "Safe to fuse due to a loop-invariant "
+                          << (DepResult->isInput() ? "input" : "output")
+                          << " dependency\n");
+        NumDA++;
+        return true;
+      }
+      LLVM_DEBUG(
+          dbgs() << "Not safe to fuse due to a scalar flow dependency\n");
+      return false;
     }
 
     unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
