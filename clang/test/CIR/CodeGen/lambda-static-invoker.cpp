@@ -40,7 +40,7 @@ int g3() {
 // CIR: cir.func no_inline lambda internal private dso_local @_ZZ2g3vENK3$_0clERKi(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_G3:.*]]> {{.*}}, %[[REF_I_ARG:.*]]: !cir.ptr<!s32i> {{.*}})
 // CIR:   %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<![[REC_LAM_G3]]> -> !cir.ptr<!cir.ptr<![[REC_LAM_G3]]>>
 // CIR:   %[[REF_I_ALLOCA:.*]] = cir.alloca "i" {{.*}} init const
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}}
+// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval"
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ALLOCA]]
 // CIR:   cir.store %[[REF_I_ARG]], %[[REF_I_ALLOCA]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ALLOCA]]
@@ -68,7 +68,7 @@ int g3() {
 // lambda invoker
 // CIR: cir.func no_inline internal private dso_local @_ZZ2g3vEN3$_08__invokeERKi(%[[REF_I_ARG:.*]]: !cir.ptr<!s32i> {{.*}}) -> (!s32i{{.*}}) {{.*}} {
 // CIR:   %[[REF_I_ALLOCA:.*]] = cir.alloca "i" {{.*}} init const
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}}
+// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval"
 // CIR:   %[[LAM_ALLOCA:.*]] = cir.alloca "unused.capture" {{.*}} ![[REC_LAM_G3]] -> !cir.ptr<![[REC_LAM_G3]]>
 // CIR:   cir.store %[[REF_I_ARG]], %[[REF_I_ALLOCA]]
 // CIR:   %[[REF_I:.*]] = cir.load{{.*}} %[[REF_I_ALLOCA]]

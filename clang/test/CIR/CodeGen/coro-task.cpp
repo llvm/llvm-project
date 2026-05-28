@@ -150,9 +150,9 @@ VoidTask silly_task() {
 }
 
 // CIR: cir.func coroutine {{.*}} @_Z10silly_taskv() -> ![[VoidTask]]
-// CIR: %[[VoidTaskAddr:.*]] = cir.alloca "__retval" {{.*}} ![[VoidTask]] -> {{.*}}
+// CIR: %[[VoidTaskAddr:.*]] = cir.alloca "__retval" {{.*}} ![[VoidTask]]
 // CIR: %[[SavedFrameAddr:.*]] = cir.alloca "__coro_frame_addr" {{.*}} !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!void>>
-// CIR: %[[VoidPromisseAddr:.*]] = cir.alloca "__promise" {{.*}} ![[VoidPromisse]] -> {{.*}}
+// CIR: %[[VoidPromisseAddr:.*]] = cir.alloca "__promise" {{.*}} ![[VoidPromisse]]
 // CIR: %[[SuspendAlwaysAddr:.*]] = cir.alloca "ref.tmp0" {{.*}} ![[SuspendAlways]]
 // CIR: %[[CoroHandleVoidAddr:.*]] = cir.alloca "agg.tmp0" {{.*}} ![[CoroHandleVoid]]
 // CIR: %[[CoroHandlePromiseAddr:.*]] = cir.alloca "agg.tmp1" {{.*}} ![[CoroHandlePromiseVoid]]
@@ -351,11 +351,11 @@ folly::coro::Task<int> byRef(const std::string& s) {
 }
 
 // CIR:  cir.func coroutine {{.*}} @_Z5byRefRKSt6string(%[[ARG:.*]]: !cir.ptr<![[StdString]]> {{.*}}) -> ![[IntTask]]
-// CIR:    %[[AllocaParam:.*]] = cir.alloca "s" {{.*}} init const !cir.ptr<![[StdString]]> -> {{.*}}
-// CIR:    %[[IntTaskAddr:.*]] = cir.alloca "__retval" {{.*}} ![[IntTask]] -> {{.*}}
+// CIR:    %[[AllocaParam:.*]] = cir.alloca "s" {{.*}} init const !cir.ptr<![[StdString]]>
+// CIR:    %[[IntTaskAddr:.*]] = cir.alloca "__retval" {{.*}} ![[IntTask]]
 // CIR:    %[[SavedFrameAddr:.*]]  = cir.alloca "__coro_frame_addr" {{.*}} !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!void>>
-// CIR:    %[[AllocaFnUse:.*]] = cir.alloca "s" {{.*}} init const !cir.ptr<![[StdString]]> -> {{.*}}
-// CIR:    %[[IntPromisseAddr:.*]] = cir.alloca "__promise" {{.*}} ![[IntPromisse]] -> {{.*}}
+// CIR:    %[[AllocaFnUse:.*]] = cir.alloca "s" {{.*}} init const !cir.ptr<![[StdString]]>
+// CIR:    %[[IntPromisseAddr:.*]] = cir.alloca "__promise" {{.*}} ![[IntPromisse]]
 // CIR:    %[[SuspendAlwaysAddr:.*]] = cir.alloca "ref.tmp0" {{.*}} ![[SuspendAlways]]
 // CIR:    %[[CoroHandleVoidAddr:.*]] = cir.alloca "agg.tmp0" {{.*}} ![[CoroHandleVoid]]
 // CIR:    %[[CoroHandlePromiseAddr:.*]] = cir.alloca "agg.tmp1" {{.*}} ![[CoroHandlePromiseInt]]
@@ -444,18 +444,18 @@ folly::coro::Task<void> yield1() {
 // Prologue allocas (still present in output)
 // CIR-DAG: %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} ![[VoidTask]]
 // CIR-DAG: %[[FRAME:.*]] = cir.alloca "__coro_frame_addr" {{.*}} !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!void>>
-// CIR-DAG: %[[PROMISE:.*]] = cir.alloca "__promise" {{.*}} ![[VoidPromisse]] -> {{.*}}
-// CIR-DAG: %[[SUSP0:.*]] = cir.alloca "ref.tmp0" {{.*}} ![[SuspendAlways]] -> {{.*}}
-// CIR-DAG: %[[CH_VOID0:.*]] = cir.alloca "agg.tmp0" {{.*}} ![[CoroHandleVoid]] -> {{.*}}
-// CIR-DAG: %[[CH_PROM0:.*]] = cir.alloca "agg.tmp1" {{.*}} ![[CoroHandlePromiseVoid]] -> {{.*}}
-// CIR-DAG: %[[T_ADDR:.*]] = cir.alloca "t" {{.*}} init ![[VoidTask]] -> {{.*}}
-// CIR-DAG: %[[SUSP1:.*]] = cir.alloca "ref.tmp1" {{.*}} ![[SuspendAlways]] -> {{.*}}
-// CIR-DAG: %[[AWAITER_COPY_ADDR:.*]] = cir.alloca "agg.tmp2" {{.*}} ![[VoidTask]] -> {{.*}}
-// CIR-DAG: %[[CH_VOID1:.*]] = cir.alloca "agg.tmp3" {{.*}} ![[CoroHandleVoid]] -> {{.*}}
-// CIR-DAG: %[[CH_PROM1:.*]] = cir.alloca "agg.tmp4" {{.*}} ![[CoroHandlePromiseVoid]] -> {{.*}}
-// CIR-DAG: %[[SUSP2:.*]] = cir.alloca "ref.tmp2" {{.*}} ![[SuspendAlways]] -> {{.*}}
-// CIR-DAG: %[[CH_VOID2:.*]] = cir.alloca "agg.tmp5" {{.*}} ![[CoroHandleVoid]] -> {{.*}}
-// CIR-DAG: %[[CH_PROM2:.*]] = cir.alloca "agg.tmp6" {{.*}} ![[CoroHandlePromiseVoid]] -> {{.*}}
+// CIR-DAG: %[[PROMISE:.*]] = cir.alloca "__promise" {{.*}} ![[VoidPromisse]]
+// CIR-DAG: %[[SUSP0:.*]] = cir.alloca "ref.tmp0" {{.*}} ![[SuspendAlways]]
+// CIR-DAG: %[[CH_VOID0:.*]] = cir.alloca "agg.tmp0" {{.*}} ![[CoroHandleVoid]]
+// CIR-DAG: %[[CH_PROM0:.*]] = cir.alloca "agg.tmp1" {{.*}} ![[CoroHandlePromiseVoid]]
+// CIR-DAG: %[[T_ADDR:.*]] = cir.alloca "t" {{.*}} init ![[VoidTask]]
+// CIR-DAG: %[[SUSP1:.*]] = cir.alloca "ref.tmp1" {{.*}} ![[SuspendAlways]]
+// CIR-DAG: %[[AWAITER_COPY_ADDR:.*]] = cir.alloca "agg.tmp2" {{.*}} ![[VoidTask]]
+// CIR-DAG: %[[CH_VOID1:.*]] = cir.alloca "agg.tmp3" {{.*}} ![[CoroHandleVoid]]
+// CIR-DAG: %[[CH_PROM1:.*]] = cir.alloca "agg.tmp4" {{.*}} ![[CoroHandlePromiseVoid]]
+// CIR-DAG: %[[SUSP2:.*]] = cir.alloca "ref.tmp2" {{.*}} ![[SuspendAlways]]
+// CIR-DAG: %[[CH_VOID2:.*]] = cir.alloca "agg.tmp5" {{.*}} ![[CoroHandleVoid]]
+// CIR-DAG: %[[CH_PROM2:.*]] = cir.alloca "agg.tmp6" {{.*}} ![[CoroHandlePromiseVoid]]
 
 // CIR: cir.cleanup.scope {
 // initial_suspend + await(init)

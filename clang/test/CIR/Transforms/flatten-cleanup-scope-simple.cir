@@ -612,8 +612,8 @@ cir.func @test_goto_within_nested_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_goto_within_nested_cleanup()
-// CHECK:         %[[A1:.*]] = cir.alloca "c1" {{.*}} !rec_SomeClass{{.*}}
-// CHECK:         %[[A2:.*]] = cir.alloca "c2" {{.*}} !rec_SomeClass{{.*}}
+// CHECK:         %[[A1:.*]] = cir.alloca "c1" {{.*}} !rec_SomeClass
+// CHECK:         %[[A2:.*]] = cir.alloca "c2" {{.*}} !rec_SomeClass
 // CHECK:         cir.call @ctor(%[[A1]])
 // CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
 // CHECK:       ^[[OUTER_BODY]]:

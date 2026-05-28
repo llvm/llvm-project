@@ -200,7 +200,7 @@ void l4() {
 }
 
 // CIR: cir.func{{.*}} @_Z2l4v
-// CIR:   %[[A_ADDR:.*]] = cir.alloca "a" {{.*}}
+// CIR:   %[[A_ADDR:.*]] = cir.alloca "a"
 // CIR:   cir.scope {
 // CIR:     %[[RANGE_ADDR:.*]] = cir.alloca "__range1" {{.*}} init const
 // CIR:     %[[BEGIN_ADDR:.*]] = cir.alloca "__begin1" {{.*}} init

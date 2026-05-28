@@ -89,7 +89,7 @@ int test2(const Point &pt, int Point::*member) {
 // CIR-BEFORE-SAME:        %[[MEMBER_ARG:.*]]: !cir.data_member<!s32i in !rec_Point>
 // CIR-BEFORE:         %[[PT_ADDR:.*]] = cir.alloca "pt" {{.*}} init const
 // CIR-BEFORE:         %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init
-// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}}
+// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval"
 // CIR-BEFORE:         cir.store %[[PT_ARG]], %[[PT_ADDR]]
 // CIR-BEFORE:         cir.store %[[MEMBER_ARG]], %[[MEMBER_ADDR]]
 // CIR-BEFORE:         %[[PT:.*]] = cir.load %[[PT_ADDR]]
@@ -152,7 +152,7 @@ int test3(const Point *pt, int Point::*member) {
 // CIR-BEFORE-SAME:        %[[MEMBER_ARG:.*]]: !cir.data_member<!s32i in !rec_Point>
 // CIR-BEFORE:         %[[PT_ADDR:.*]] = cir.alloca "pt" {{.*}} init
 // CIR-BEFORE:         %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init
-// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}}
+// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval"
 // CIR-BEFORE:         cir.store %[[PT_ARG]], %[[PT_ADDR]]
 // CIR-BEFORE:         cir.store %[[MEMBER_ARG]], %[[MEMBER_ADDR]]
 // CIR-BEFORE:         %[[PT:.*]] = cir.load{{.*}} %[[PT_ADDR]]
@@ -215,7 +215,7 @@ auto test4(int Incomplete::*member) -> int Incomplete::* {
 // CIR-BEFORE:       cir.func {{.*}} @_Z5test4M10Incompletei(
 // CIR-BEFORE-SAME:        %[[MEMBER_ARG:.*]]: !cir.data_member<!s32i in !rec_Incomplete>
 // CIR-BEFORE:         %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init
-// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}}
+// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval"
 // CIR-BEFORE:         cir.store %[[MEMBER_ARG]], %[[MEMBER_ADDR]]
 // CIR-BEFORE:         %[[MEMBER:.*]] = cir.load{{.*}} %[[MEMBER_ADDR]]
 // CIR-BEFORE:         cir.store %[[MEMBER]], %[[RETVAL_ADDR]]
@@ -256,7 +256,7 @@ int test5(Incomplete *ic, int Incomplete::*member) {
 // CIR-BEFORE-SAME:        %[[MEMBER_ARG:.*]]: !cir.data_member<!s32i in !rec_Incomplete>
 // CIR-BEFORE:         %[[IC_ADDR:.*]] = cir.alloca "ic" {{.*}} init
 // CIR-BEFORE:         %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init
-// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}}
+// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval"
 // CIR-BEFORE:         cir.store %[[IC_ARG]], %[[IC_ADDR]]
 // CIR-BEFORE:         cir.store %[[MEMBER_ARG]], %[[MEMBER_ADDR]]
 // CIR-BEFORE:         %[[IC:.*]] = cir.load{{.*}} %[[IC_ADDR]]

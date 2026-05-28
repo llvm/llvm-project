@@ -91,7 +91,7 @@ void NormalFunc(HasSideEffects *ArgHSE, int *ArgInt) {
     // CHECK-NEXT: %[[ARG_HSE_ALLOCA:.*]] = cir.alloca "ArgHSE" {{.*}} !cir.ptr<!rec_HasSideEffects>
     // CHECK-NEXT: %[[ARG_INT_ALLOCA:.*]] = cir.alloca "ArgInt" {{.*}} !cir.ptr<!s32i>
     // CHECK-NEXT: %[[LOC_HSE_ALLOCA:.*]] = cir.alloca "LocalHSE" {{.*}} !cir.ptr<!rec_HasSideEffects>
-    // CHECK-NEXT: %[[LOC_INT_ALLOCA:.*]] = cir.alloca "LocalInt" {{.*}}
+    // CHECK-NEXT: %[[LOC_INT_ALLOCA:.*]] = cir.alloca "LocalInt"
     // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.store
     HasSideEffects *LocalHSE;

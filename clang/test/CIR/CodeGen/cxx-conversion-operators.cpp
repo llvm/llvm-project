@@ -51,8 +51,8 @@ void test() {
 
 // CIR: cir.func {{.*}} @_Z4testv()
 // CIR:   %[[X_ALLOCA:.+]] = cir.alloca "x" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR:   %[[I_ALLOCA:.+]] = cir.alloca "i" {{.*}} {{.*}} -> {{.*}}
-// CIR:   %[[O_ALLOCA:.+]] = cir.alloca "o" {{.*}} {{.*}} -> {{.*}}
+// CIR:   %[[I_ALLOCA:.+]] = cir.alloca "i" {{.*}}
+// CIR:   %[[O_ALLOCA:.+]] = cir.alloca "o" {{.*}}
 // CIR:   %[[CONST_42:.+]] = cir.const #cir.int<42> : !s32i
 // CIR:   cir.store align(4) %[[CONST_42]], %[[X_ALLOCA]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[INLINE_CALL:.+]] = cir.call @_ZNK15inline_operatorcviEv(%[[I_ALLOCA]]) : ({{.*}}) -> (!s32i{{.*}})

@@ -365,7 +365,7 @@ int test_false_positive_conditional(bool c) {
   return S().get() ? 1 : 2;
 }
 // No cleanup.cond alloca — the destructor is unconditional.
-// CIR-NOT:   cir.alloca "cleanup.cond" {{.*}}
+// CIR-NOT:   cir.alloca "cleanup.cond"
 // CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} !rec_S -> !cir.ptr<!rec_S>
 // CIR:   cir.call @_ZN1SC1Ev(%[[TMP]])
 // The cleanup scope wraps the get() + select + store.

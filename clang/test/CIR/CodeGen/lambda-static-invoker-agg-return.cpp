@@ -23,7 +23,7 @@ S agg_invoker() {
 // CIR-SAME:    (%[[I_ARG:.*]]: !s32i {{.*}}) -> !rec_S
 // CIR:         %[[I_ALLOCA:.*]] = cir.alloca "i" {{.*}} init !s32i -> !cir.ptr<!s32i>
 // CIR:         %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} !rec_S -> !cir.ptr<!rec_S>
-// CIR:         %[[UNUSED:.*]] = cir.alloca "unused.capture" {{.*}} !rec_anon{{[^,]*}}
+// CIR:         %[[UNUSED:.*]] = cir.alloca "unused.capture" {{.*}} !rec_anon
 // CIR-NOT:     cir.alloca {{.*}} ["agg.tmp
 // CIR:         cir.store %[[I_ARG]], %[[I_ALLOCA]]
 // CIR:         %[[I:.*]] = cir.load{{.*}} %[[I_ALLOCA]]
