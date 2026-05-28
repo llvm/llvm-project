@@ -149,6 +149,19 @@ static bool typesCompatible(ASTContext &C, QualType A, QualType B) {
     if (A.getTypePtr() == B.getTypePtr())
       return true;
 
+    // When neither type is a pointer and exactly one is a record type, check
+    // target-specific size and alignment. This avoids false positives for
+    // types that wrap another type with the same layout (e.g.
+    // std::atomic<int32_t> vs int32_t, or struct{int32_t x;} vs int32_t),
+    // while preserving warnings for unrelated types that happen to share a
+    // size (e.g. long vs double, struct A vs struct B).
+    if (!A->getAs<PointerType>() && !B->getAs<PointerType>() &&
+        (A->isRecordType() != B->isRecordType()) &&
+        !A->isIncompleteType() && !B->isIncompleteType() &&
+        C.getTypeSize(A) == C.getTypeSize(B) &&
+        C.getTypeAlign(A) <= C.getTypeAlign(B))
+      return true;
+
     if (const PointerType *ptrA = A->getAs<PointerType>())
       if (const PointerType *ptrB = B->getAs<PointerType>()) {
         A = ptrA->getPointeeType();
