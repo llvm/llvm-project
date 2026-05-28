@@ -138,6 +138,7 @@ protected:
                            uint32_t NumWaitEvents = 0,
                            ze_event_handle_t *WaitEvents = nullptr,
                            bool Cooperative = false) {
+    std::lock_guard<std::mutex> Lock(Mtx);
     if (Cooperative) {
       CALL_ZE_RET_ERROR(zeCommandListAppendLaunchCooperativeKernel, CmdList,
                         Kernel, pLaunchFuncArgs, SignalEvent, NumWaitEvents,
