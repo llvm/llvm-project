@@ -1540,7 +1540,7 @@ static QualType handleFixedPointConversion(Sema &S, QualType LHSTy,
           RHSTy->isFixedPointOrIntegerType()) &&
          "Special fixed point arithmetic operation conversions are only "
          "applied to ints or other fixed point types");
-  
+
   // If one operand has signed fixed-point type and the other operand has
   // unsigned fixed-point type, then the unsigned fixed-point operand is
   // converted to its corresponding signed fixed-point type and the resulting
