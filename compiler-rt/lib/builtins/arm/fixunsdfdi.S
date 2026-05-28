@@ -87,7 +87,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_d2ulz)
   sub     r2, r2, #0x340        // first stage: r2 is negative for underflow
   bic     r2, r2, r2, asr #31   // if so, saturate by clearing all bits of r2
   rsbs    r2, r2, #0xfe         // second step: r2 is now the right shift count
-  blt     LOCAL_LABEL(uncommon)        // if it was negative, overflow
+  blt     LOCAL_LABEL(uncommon) // if it was negative, overflow
 
   // Make the top word of the result, which is the easy part: it's a
   // shifted-right version of the top word of the mantissa, which will be zero
@@ -101,13 +101,13 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_d2ulz)
   // nothing to the output, so we just need mh >> (n-32).
   lsr     xl, r12, r2           // start by setting it to ml >> n
   rsbs    r2, r2, #32           // compute 32-n, and find which case we're in
-#if !__thumb__
-  orrhi   xl, xl, r3, lsl r2    // shift count < 32, so OR in ml << (32-n)
-#else
+#if __thumb__
   // In Thumb we must separate the register-controlled shift and the OR into
   // two instructions.
   lslhi   r3, r3, r2
   orrhi   xl, xl, r3
+#else
+  orrhi   xl, xl, r3, lsl r2    // shift count < 32, so OR in ml << (32-n)
 #endif
   rsbls   r2, r2, #0            // shift count > 32, so compute n-32
   lsrls   xl, r3, r2            // replace xl with mh >> (n-32)
