@@ -14,12 +14,6 @@ inputs:
       but no atteastion will be generated and the artifact won't be uploaded
       to the release.
     default: true
-  user-token:
-    description: >-
-      Token with premissions to read llvm teams that is used to ensure that
-      the person who triggred the action has permission to upload artifacts.
-      This is required if upload is true.
-    required: false
   attestation-name:
     description: >-
       This will be used for the artifact name that is attached to the workflow and
@@ -34,6 +28,14 @@ inputs:
   digest:
     description: >-
       sha256 digest to verify the authenticity of the files being uploaded.
+    required: true
+  LLVM_TOKEN_GENERATOR_CLIENT_ID:
+    description: >-
+      Client ID for our GitHub App we use for generating access tokens.
+    required: true
+  LLVM_TOKEN_GENERATOR_PRIVATE_KEY:
+    description: >-
+      Private key for our GitHub App we use for generating access tokens.
     required: true
 
 runs:
@@ -100,13 +102,12 @@ runs:
         pip install --require-hashes -r ./llvm/utils/git/requirements.txt
 
     - name: Check Permissions
-      if: inputs.upload == 'true'
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-        USER_TOKEN: ${{ inputs.user-token }}
-      shell: bash
-      run: |
-        ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" check-permissions
+      uses: ./.github/workflows/require-team-membership
+      with:
+        team-slug: llvm-release-managers
+        LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+        LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+
     - name: Upload Release
       shell: bash
       if: inputs.upload == 'true'
