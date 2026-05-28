@@ -4184,10 +4184,12 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     if (auto *SVI = dyn_cast<ShuffleVectorInst>(V)) {
       auto *VT = cast<FixedVectorType>(SVI->getType());
       auto *SrcVT = cast<FixedVectorType>(SVI->getOperand(0)->getType());
-      auto Kind = (VT == SrcVT) ? TargetTransformInfo::SK_PermuteSingleSrc
-                                : TargetTransformInfo::SK_ExtractSubvector;
-      OrigCost +=
-          TTI.getShuffleCost(Kind, VT, SrcVT, SVI->getShuffleMask(), CostKind);
+      int Index = 0;
+      auto Kind = SVI->isExtractSubvectorMask(Index)
+                      ? TargetTransformInfo::SK_ExtractSubvector
+                      : TargetTransformInfo::SK_PermuteSingleSrc;
+      OrigCost += TTI.getShuffleCost(Kind, VT, SrcVT, SVI->getShuffleMask(),
+                                     CostKind, Index, VT);
     } else if (auto *BO = dyn_cast<BinaryOperator>(V)) {
       OrigCost +=
           TTI.getArithmeticInstrCost(BO->getOpcode(), BO->getType(), CostKind);
