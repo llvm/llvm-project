@@ -8,7 +8,7 @@
 //
 // This tool executes a sequence of steps required to link device code in SYCL
 // device images. SYCL device code linking requires a complex sequence of steps
-// that include linking of llvm bitcode files, linking device library files
+// that include linking of llvm bitcode files, linking bitcode library files
 // with the fully linked source bitcode file(s), running several SYCL specific
 // post-link steps on the fully linked bitcode file(s), and finally generating
 // target-specific device code.
@@ -787,11 +787,10 @@ int main(int argc, char **argv) {
 
   if (Args.hasArg(OPT_help) || Args.hasArg(OPT_help_hidden)) {
     Tbl.printHelp(
-        outs(), "clang-sycl-linker [options] <options to sycl link steps>",
-        "A utility that wraps around several steps required to link SYCL "
-        "device files.\n"
+        outs(), "clang-sycl-linker [options] <input bitcode files>",
+        "A utility that wraps around the SYCL device code linking process.\n"
         "This enables LLVM IR linking, post-linking and code generation for "
-        "SYCL targets.",
+        "SPIR-V JIT and AOT targets.",
         Args.hasArg(OPT_help_hidden), Args.hasArg(OPT_help_hidden));
     return EXIT_SUCCESS;
   }
