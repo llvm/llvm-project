@@ -10069,6 +10069,7 @@ parameter is treated as a valid sentinel value when set to 1 (defaults to 0).
 The attribute is also supported with blocks and in Objective-C.
 
 .. code-block:: c
+
   void foo(const char*, ...) __attribute__((sentinel));
   void bar(int, ...) __attribute__((sentinel(1)));
   void baz(const char*, const char*, ...) __attribute__((sentinel(0, 1)));
@@ -10090,6 +10091,7 @@ The attribute is also supported with blocks and in Objective-C.
   }
 
 .. code-block:: c++
+
   struct Ty {
       int value;
 
