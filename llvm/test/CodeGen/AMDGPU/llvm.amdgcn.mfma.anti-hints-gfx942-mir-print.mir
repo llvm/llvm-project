@@ -1,0 +1,126 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -run-pass=amdgpu-pre-ra-optimizations %s -o - | FileCheck -check-prefix=CHECK %s
+
+--- |
+  target triple = "amdgcn-amd-amdhsa"
+
+  define amdgpu_kernel void @test1() #0 { ret void }
+  define amdgpu_kernel void @test2() #0 { ret void }
+  define amdgpu_kernel void @test3() #0 { ret void }
+
+  attributes #0 = {nounwind "amdgpu-waves-per-eu"="2"  "amdgpu-agpr-alloc"="0" "frame-pointer"="none"}
+
+...
+---
+name:            test1
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test1
+    ; CHECK: registers:
+    ; CHECK:      - { id: 17, class: vreg_128_align2, preferred-register: '', flags: [  ],
+    ; CHECK-NEXT: anti-hints: [ '%8' ] }
+    ; CHECK:      - { id: 23, class: vreg_128_align2, preferred-register: '', flags: [  ],
+    ; CHECK-NEXT: anti-hints: [ '%6', '%19', '%7', '%18', '%16' ] }
+    ; CHECK:      - { id: 29, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [
+    ; CHECK-NEXT: '%4',
+    ; CHECK-NEXT: '%25',
+    ; CHECK-NEXT: '%5',
+    ; CHECK-NEXT: '%22' ] }
+    ; CHECK:      - { id: 30, class: vreg_128_align2, preferred-register: '', flags: [  ],
+    ; CHECK-NEXT: anti-hints: [ '%4', '%25', '%5', '%22' ] }
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:sgpr_128 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %4:vreg_128_align2 = IMPLICIT_DEF
+    %5:vreg_128_align2 = IMPLICIT_DEF
+    %6:vreg_128_align2 = IMPLICIT_DEF
+    %7:vreg_128_align2 = IMPLICIT_DEF
+    %8:vreg_128_align2 = IMPLICIT_DEF
+    %9:vgpr_32 = IMPLICIT_DEF
+    %10:vgpr_32 = V_ADD_U32_e32 4096, %9, implicit $exec
+    %11:vgpr_32 = V_ADD_U32_e32 %0, %3, implicit $exec
+    %12:vgpr_32 = V_ADD_U32_e32 4096, %11, implicit $exec
+    %13:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN %12, %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 8)
+    %14:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN %10, %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 8)
+    %15:vreg_128_align2 = IMPLICIT_DEF
+    %16:vreg_128_align2 = contract V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 %15.sub0_sub1, %14.sub0_sub1, %8, 0, 0, 0, implicit $mode, implicit $exec
+    %17:vreg_128_align2 = DS_READ_B128_gfx9 %1, 4096, 0, implicit $exec :: (load (s128), addrspace 3)
+    dead %18:vreg_128_align2 = contract V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 %15.sub2_sub3, %14.sub2_sub3, %16, 0, 0, 0, implicit $mode, implicit $exec
+    %19:vreg_128_align2 = contract V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 %15.sub0_sub1, %13.sub0_sub1, %7, 0, 0, 0, implicit $mode, implicit $exec
+    %20:vreg_128_align2 = contract V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 %15.sub2_sub3, %13.sub2_sub3, %19, 0, 0, 0, implicit $mode, implicit $exec
+    %21:vreg_128_align2 = IMPLICIT_DEF
+    %22:vreg_128_align2 = contract V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 %21.sub0_sub1, %14.sub0_sub1, %6, 0, 0, 0, implicit $mode, implicit $exec
+    %23:vreg_128_align2 = DS_READ_B128_gfx9 %1, 6144, 0, implicit $exec :: (load (s128), addrspace 3)
+    %24:vreg_128_align2 = contract V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 %21.sub2_sub3, %14.sub2_sub3, %22, 0, 0, 0, implicit $mode, implicit $exec
+    %25:vreg_128_align2 = contract V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 %21.sub0_sub1, %13.sub0_sub1, %5, 0, 0, 0, implicit $mode, implicit $exec
+    %26:vreg_128_align2 = contract V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 %21.sub2_sub3, %13.sub2_sub3, %25, 0, 0, 0, implicit $mode, implicit $exec
+    %27:vreg_128_align2 = contract V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 %17.sub0_sub1, %14.sub0_sub1, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %28:vgpr_32 = IMPLICIT_DEF
+    dead %29:vgpr_32 = V_ADD_U32_e32 %0, %28, implicit $exec
+    %30:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN %9, %2, 0, 2048, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 8)
+    S_ENDPGM 0, implicit %23, implicit %24, implicit %20, implicit %26, implicit %27, implicit %30
+...
+
+---
+name:            test2
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test2
+    ; CHECK: registers:
+    ; CHECK:      - { id: 7, class: vreg_128_align2, preferred-register: '', flags: [  ],
+    ; CHECK-NEXT: anti-hints: [ '%5' ] }
+    %0:vreg_128_align2 = IMPLICIT_DEF
+    %1:vreg_128_align2 = IMPLICIT_DEF
+    %2:vreg_128_align2 = IMPLICIT_DEF
+    %3:vreg_128_align2 = IMPLICIT_DEF
+    %4:vgpr_32 = IMPLICIT_DEF
+    %5:vreg_512_align2 = IMPLICIT_DEF
+    %6:vreg_512_align2 = contract V_MFMA_F32_32X32X16_FP8_FP8_vgprcd_e64 %0.sub0_sub1, %0.sub2_sub3, %5, 0, 0, 0, implicit $mode, implicit $exec
+    %7:vreg_128_align2 = DS_READ_B128_gfx9 %4, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    DS_WRITE_B128_gfx9 %4, %7, 4096, 0, implicit $exec :: (store (s128), addrspace 3)
+    S_ENDPGM 0, implicit %0, implicit %1, implicit %2, implicit %3, implicit %4, implicit %6
+...
+
+---
+name:            test3
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test3
+    ; CHECK: registers:
+    ; CHECK:      - { id: 9, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [
+    ; CHECK-NEXT: '%7' ] }
+    ; CHECK:      - { id: 10, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [
+    ; CHECK-NEXT: '%7' ] }
+    ; CHECK:      - { id: 11, class: vreg_128_align2, preferred-register: '', flags: [  ],
+    ; CHECK-NEXT: anti-hints: [ '%7' ] }
+    ; CHECK:      - { id: 14, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [
+    ; CHECK-NEXT: '%8' ] }
+    ; CHECK:      - { id: 15, class: vreg_128_align2, preferred-register: '', flags: [  ],
+    ; CHECK-NEXT: anti-hints: [ '%8' ] }
+    ; CHECK:      - { id: 18, class: vreg_128_align2, preferred-register: '', flags: [  ],
+    ; CHECK-NEXT: anti-hints: [ '%13' ] }
+    %0:vreg_128_align2 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:sgpr_128 = IMPLICIT_DEF
+    %4:vgpr_32 = V_ADD_U32_e32 4096, %2, implicit $exec
+    %5:vgpr_32 = V_LSHLREV_B32_e32 2, %2, implicit $exec
+    %6:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN %4, %3, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 8)
+    %7:vreg_512_align2 = IMPLICIT_DEF
+    %8:vreg_512_align2 = contract V_MFMA_F32_32X32X16_FP8_FP8_vgprcd_e64 %0.sub0_sub1, %6.sub0_sub1, %7, 0, 0, 0, implicit $mode, implicit $exec
+    %9:vgpr_32 = V_LSHLREV_B32_e32 2, %4, implicit $exec
+    %10:vgpr_32 = V_LSHLREV_B32_e32 4, %2, implicit $exec
+    %11:vreg_128_align2 = DS_READ_B128_gfx9 %1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    DS_WRITE_B128_gfx9 %1, %11, 4096, 0, implicit $exec :: (store (s128), addrspace 3)
+    %12:vgpr_32 = V_ADD_U32_e32 %2, %5, implicit $exec
+    %13:vreg_512_align2 = contract V_MFMA_F32_32X32X16_FP8_FP8_vgprcd_e64 %0.sub2_sub3, %6.sub2_sub3, %8, 0, 0, 0, implicit $mode, implicit $exec
+    %14:vgpr_32 = V_LSHLREV_B32_e32 2, %12, implicit $exec
+    %15:vreg_128_align2 = DS_READ_B128_gfx9 %1, 2048, 0, implicit $exec :: (load (s128), addrspace 3)
+    DS_WRITE_B128_gfx9 %1, %15, 6144, 0, implicit $exec :: (store (s128), addrspace 3)
+    %16:vgpr_32 = V_ADD_U32_e32 8192, %12, implicit $exec
+    %17:vreg_512_align2 = contract V_MFMA_F32_32X32X16_FP8_FP8_vgprcd_e64 %0.sub0_sub1, %0.sub2_sub3, %13, 0, 0, 0, implicit $mode, implicit $exec
+    %18:vreg_128_align2 = DS_READ_B128_gfx9 %1, 4096, 0, implicit $exec :: (load (s128), addrspace 3)
+    DS_WRITE_B128_gfx9 %1, %18, 8192, 0, implicit $exec :: (store (s128), addrspace 3)
+    %19:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN %16, %3, 0, 2048, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 8)
+    S_ENDPGM 0, implicit %0, implicit %1, implicit %2, implicit %5, implicit %9, implicit %10, implicit %14, implicit %17, implicit %19
+...
