@@ -1285,6 +1285,9 @@ static QualType handleFloatConversion(Sema &S, ExprResult &LHS,
 /// Diagnose attempts to convert between __float128, __ibm128 and
 /// long double if there is no support for such conversion.
 /// Helper function of UsualArithmeticConversions().
+/// Returns true if the conversion between LHSType and RHSType is not supported.
+/// This includes conversions between fixed point types and BitInt types,
+/// which would otherwise cause an assertion failure later.
 static bool unsupportedTypeConversion(const Sema &S, QualType LHSType,
                                       QualType RHSType) {
   if ((LHSType->isFixedPointType() && RHSType->isBitIntType()) ||
