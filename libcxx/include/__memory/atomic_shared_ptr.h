@@ -14,6 +14,7 @@
 #include <__atomic/check_memory_order.h>
 #include <__atomic/memory_order.h>
 #include <__atomic/support.h>
+#include <__atomic/to_failure_order.h>
 #include <__config>
 #include <__cstddef/nullptr_t.h>
 #include <__memory/shared_count.h>

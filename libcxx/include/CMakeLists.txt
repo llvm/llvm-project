@@ -229,6 +229,7 @@ set(files
   __atomic/support.h
   __atomic/support/c11.h
   __atomic/support/gcc.h
+  __atomic/to_failure_order.h
   __atomic/to_gcc_order.h
   __bit/bit_cast.h
   __bit/bit_ceil.h

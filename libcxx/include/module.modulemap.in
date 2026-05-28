@@ -888,6 +888,7 @@ module std [system] {
     module is_always_lock_free    { header "__atomic/is_always_lock_free.h" }
     module kill_dependency        { header "__atomic/kill_dependency.h" }
     module memory_order           { header "__atomic/memory_order.h" }
+    module to_failure_order       { header "__atomic/to_failure_order.h" }
     module to_gcc_order           { header "__atomic/to_gcc_order.h" }
 
     module support {
