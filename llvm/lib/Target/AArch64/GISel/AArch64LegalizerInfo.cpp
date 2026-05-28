@@ -207,7 +207,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .moreElementsToNextPow2(0);
 
-  getActionDefinitionsBuilder({G_MUL, G_CLMUL})
+  getActionDefinitionsBuilder(G_MUL)
       .legalFor({i32, i64, v8i8, v16i8, v4i16, v8i16, v2i32, v4i32, v2i64})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
@@ -422,6 +422,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v2s64, v2s64)
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .moreElementsToNextPow2(0)
+      .lower();
+
+  getActionDefinitionsBuilder(G_CLMUL)
+      .legalFor({i32, i64, v8i8, v16i8, v4i16, v8i16, v2i32, v4i32, v2i64})
       .lower();
 
   getActionDefinitionsBuilder(G_BSWAP)
