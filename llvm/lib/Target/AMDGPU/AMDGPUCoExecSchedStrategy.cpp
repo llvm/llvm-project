@@ -417,13 +417,23 @@ bool CandidateHeuristics::tryEffectiveStall(
     GenericSchedulerBase::SchedCandidate &Cand,
     GenericSchedulerBase::SchedCandidate &TryCand, SchedBoundary &Zone) {
 
+  // Treat structural and latency stalls as a single scheduling cost for the
+  // current cycle.
+  struct StallCosts {
+    unsigned Ready = 0;
+    unsigned Structural = 0;
+    unsigned Latency = 0;
+    unsigned Effective = 0;
+    unsigned Carried = 0;
+    unsigned Buffer = 0;
+  };
+
   auto getBufferFullStalls = [this, &Zone](SUnit *SU) -> unsigned {
     InstructionFlavor Flavor = classifyFlavor(
         *SU->getInstr(), *static_cast<const SIInstrInfo *>(DAG->TII));
     HardwareUnitInfo *HWUI = getHWUIFromFlavor(Flavor);
 
-    // A BufferSize of 0 means "unlimited" buffer, thus we will never fill it.
-    if (HWUI->getBufferSize() == 0)
+    if (HWUI->getBufferSize() <= 1)
       return 0;
 
     // getBufferAvailableCycle assumes top-down scheduling.
@@ -436,17 +446,6 @@ bool CandidateHeuristics::tryEffectiveStall(
     return BufferReadyCycle - CurrCycle;
   };
 
-  // Treat structural and latency stalls as a single scheduling cost for the
-  // current cycle.
-  struct StallCosts {
-    unsigned Ready = 0;
-    unsigned Structural = 0;
-    unsigned Latency = 0;
-    unsigned Effective = 0;
-    unsigned Buffer = 0;
-    unsigned Carried = 0;
-  };
-
   unsigned CurrCycle = Zone.getCurrCycle();
   auto GetStallCosts = [&](SUnit *SU) {
     unsigned ReadyCycle = Zone.isTop() ? SU->TopReadyCycle : SU->BotReadyCycle;
@@ -454,23 +453,12 @@ bool CandidateHeuristics::tryEffectiveStall(
     Costs.Ready = ReadyCycle > CurrCycle ? ReadyCycle - CurrCycle : 0;
     Costs.Structural = getStructuralStallCycles(Zone, SU);
     Costs.Latency = Zone.getLatencyStallCycles(SU);
-<<<<<<< HEAD
-    Costs.Buffer = getBufferFullStalls(SU);
-    unsigned TryCarriedLatency =
-        CarriedLatencies.contains(TryCand.SU->getInstr())
-            ? CarriedLatencies[TryCand.SU->getInstr()]
-            : 0;
-    Costs.Carried =
-        TryCarriedLatency > CurrCycle ? TryCarriedLatency - CurrCycle : 0;
-    Costs.Effective = std::max({Costs.Ready, Costs.Structural, Costs.Latency,
-                                Costs.Buffer, Costs.Carried});
-=======
     unsigned CarriedLatency = CarriedLatencies.lookup_or(SU->getInstr(), 0);
     Costs.Carried = CarriedLatency > CurrCycle ? CarriedLatency - CurrCycle : 0;
+    Costs.Buffer = getBufferFullStalls(SU);
 
-    Costs.Effective =
-        std::max({Costs.Ready, Costs.Structural, Costs.Latency, Costs.Carried});
->>>>>>> bc92b4193270 (Claude Code review)
+    Costs.Effective = std::max({Costs.Ready, Costs.Structural, Costs.Latency,
+                                Costs.Carried, Costs.Buffer});
     return Costs;
   };
 
@@ -480,12 +468,12 @@ bool CandidateHeuristics::tryEffectiveStall(
   LLVM_DEBUG(if (TryCosts.Effective || CandCosts.Effective) {
     dbgs() << "Effective stalls: try=" << TryCosts.Effective
            << " (ready=" << TryCosts.Ready << ", struct=" << TryCosts.Structural
-           << ", lat=" << TryCosts.Latency << ", buffer=" << TryCosts.Buffer
-           << ", carried=" << TryCosts.Carried
-           << ") cand=" << CandCosts.Effective << " (ready=" << CandCosts.Ready
+           << ", lat=" << TryCosts.Latency << ", carried=" << TryCosts.Carried
+           << ", buffer=" << TryCosts.Buffer << ") cand=" << CandCosts.Effective
+           << " (ready=" << CandCosts.Ready
            << ", struct=" << CandCosts.Structural
-           << ", lat=" << CandCosts.Latency << ", buffer=" << CandCosts.Buffer
-           << ", carried=" << CandCosts.Carried << ")\n";
+           << ", lat=" << CandCosts.Latency << ", carried=" << CandCosts.Carried
+           << ", buffer=" << CandCosts.Buffer << ")\n";
   });
 
   return tryLess(TryCosts.Effective, CandCosts.Effective, TryCand, Cand,
