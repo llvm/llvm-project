@@ -579,7 +579,8 @@ static bool tryToRecognizePopCount(Instruction &I) {
     return false;
 
   unsigned Len = Ty->getScalarSizeInBits();
-  // FIXME: fix Len == 8 and other irregular type lengths.
+  // Len==8 is handled by tryToRecognizePopCount2n3.
+  // FIXME: other irregular type lengths.
   if (Len > 128 || Len <= 8 || Len % 8 != 0)
     return false;
 
@@ -753,45 +754,53 @@ static bool tryToRecognizePopCount2n3(Instruction &I) {
 
   unsigned Len = Ty->getScalarSizeInBits();
   Value *Add1;
-  const APInt *MaskRes;
-  if (!match(&I, m_And(m_Value(Add1), m_APInt(MaskRes))))
-    return false;
-
-  // Since `(trunc (and x, C))` might be canonicalized into `(and (trunc x), C)`
-  // we might loose the opportunity to recognize `(trunc (popcount y))`. The
-  // following block tries to capture such truncation, update `Len`, and append
-  // the truncation at the end of the emitting popcount, if there is any.
-  Value *TruncSrc;
-  if (match(Add1, m_OneUse(m_Trunc(m_Value(TruncSrc))))) {
-    Add1 = TruncSrc;
-    Len = Add1->getType()->getScalarSizeInBits();
-  }
-
-  if (Len > 64 || Len <= 8 || Len % 8 != 0)
-    return false;
-
-  // Len should be a power of 2 for the loop to work correctly
-  if (!isPowerOf2_32(Len))
-    return false;
-
-  // Number of bits needed to represent Len.
-  unsigned NumLenBits = Log2_32(Len) + 1;
-  // The "mask" here really only needs to fulfill two conditions:
-  // (1) All ones for the lower NumLenBits-bits
-  // (2) Zeros from bit 8 and onward.
-  // Condition (1) is straightforward. The reason behind condition
-  // (2) is that we don't care any 8-bit chunks but the first one
-  // in the original divide-and-conquer algorithm.
-  if (MaskRes->countTrailingOnes() < NumLenBits || MaskRes->getActiveBits() > 8)
-    return false;
-
-  for (unsigned I = Len; I >= 16; I = I / 2) {
-    Value *Add2;
-    // Matching "x = x + (x >> I/2)" for I-bit.
-    if (!match(Add1, m_c_Add(m_LShr(m_Value(Add2), m_SpecificInt(I / 2)),
-                             m_Deferred(Add2))))
+  if (Len == 8) {
+    // Special case for Len == 8, we only need to match the And at the end of
+    // matchPopCountBytes.
+    Add1 = &I;
+  } else {
+    const APInt *MaskRes;
+    if (!match(&I, m_And(m_Value(Add1), m_APInt(MaskRes))))
       return false;
-    Add1 = Add2;
+
+    // Since `(trunc (and x, C))` might be canonicalized into `(and (trunc x),
+    // C)` we might loose the opportunity to recognize `(trunc (popcount y))`.
+    // The following block tries to capture such truncation, update `Len`, and
+    // append the truncation at the end of the emitting popcount, if there is
+    // any.
+    Value *TruncSrc;
+    if (match(Add1, m_OneUse(m_Trunc(m_Value(TruncSrc))))) {
+      Add1 = TruncSrc;
+      Len = Add1->getType()->getScalarSizeInBits();
+    }
+
+    if (Len > 64 || Len <= 8 || Len % 8 != 0)
+      return false;
+
+    // Len should be a power of 2 for the loop to work correctly
+    if (!isPowerOf2_32(Len))
+      return false;
+
+    // Number of bits needed to represent Len.
+    unsigned NumLenBits = Log2_32(Len) + 1;
+    // The "mask" here really only needs to fulfill two conditions:
+    // (1) All ones for the lower NumLenBits-bits
+    // (2) Zeros from bit 8 and onward.
+    // Condition (1) is straightforward. The reason behind condition
+    // (2) is that we don't care any 8-bit chunks but the first one
+    // in the original divide-and-conquer algorithm.
+    if (MaskRes->countTrailingOnes() < NumLenBits ||
+        MaskRes->getActiveBits() > 8)
+      return false;
+
+    for (unsigned I = Len; I >= 16; I = I / 2) {
+      Value *Add2;
+      // Matching "x = x + (x >> I/2)" for I-bit.
+      if (!match(Add1, m_c_Add(m_LShr(m_Value(Add2), m_SpecificInt(I / 2)),
+                               m_Deferred(Add2))))
+        return false;
+      Add1 = Add2;
+    }
   }
 
   Value *Root = matchPopCountBytes(Add1, Len, I.getDataLayout());
