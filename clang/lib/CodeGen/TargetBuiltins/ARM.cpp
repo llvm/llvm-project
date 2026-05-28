@@ -5334,6 +5334,12 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return ConstantInt::get(Builder.getInt32Ty(), 0);
   }
 
+  if (BuiltinID == AArch64::BI__svc) {
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_svc);
+    Builder.CreateCall(F, {EmitScalarExpr(E->getArg(0))});
+    return ConstantInt::get(Builder.getInt32Ty(), 0);
+  }
+
   if (BuiltinID == NEON::BI__builtin_neon_vcvth_bf16_f32)
     return Builder.CreateFPTrunc(
         Builder.CreateBitCast(EmitScalarExpr(E->getArg(0)),

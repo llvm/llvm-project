@@ -410,4 +410,5 @@ let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", 
 let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", Header = "intrin.h" in {
 	def __hlt : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int, ...)">;
 	def __hvc : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int, ...)">;
+	def __svc : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int, ...)">;
 }
