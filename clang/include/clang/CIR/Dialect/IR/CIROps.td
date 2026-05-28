@@ -7006,10 +7006,34 @@ def CIR_VAArgOp : CIR_Op<"va_arg"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ThrowOpBase
+//===----------------------------------------------------------------------===//
+
+// Common base class shared by `cir.throw` and its EH counterpart
+// `cir.try_throw`. Both operations carry the same operands and attributes
+// (an optional exception pointer, an optional RTTI symbol and an optional
+// destructor symbol) and use the same verifier logic; subclasses contribute
+// any additional traits, successors and assembly format pieces.
+class CIR_ThrowOpBase<string mnemonic, list<Trait> traits = []>
+    : CIR_Op<mnemonic, traits> {
+  let arguments = (ins
+    Optional<CIR_PointerType>:$exception_ptr,
+    OptionalAttr<FlatSymbolRefAttr>:$type_info,
+    OptionalAttr<FlatSymbolRefAttr>:$dtor
+  );
+
+  let extraClassDeclaration = [{
+    bool rethrows() { return getNumOperands() == 0; }
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // ThrowOp
 //===----------------------------------------------------------------------===//
 
-def CIR_ThrowOp : CIR_Op<"throw"> {
+def CIR_ThrowOp : CIR_ThrowOpBase<"throw"> {
   let summary = "(Re)Throws an exception";
   let description = [{
     This operation is equivalent to either __cxa_throw or __cxa_rethrow,
@@ -7044,24 +7068,66 @@ def CIR_ThrowOp : CIR_Op<"throw"> {
     ```
   }];
 
-  let arguments = (ins
-    Optional<CIR_PointerType>:$exception_ptr,
-    OptionalAttr<FlatSymbolRefAttr>:$type_info,
-    OptionalAttr<FlatSymbolRefAttr>:$dtor
-  );
-
   let assemblyFormat = [{
     ($exception_ptr^ `:` type($exception_ptr))?
     (`,` $type_info^)?
     (`,` $dtor^)?
     attr-dict
   }];
+}
 
-  let extraClassDeclaration = [{
-    bool rethrows() { return getNumOperands() == 0; }
+//===----------------------------------------------------------------------===//
+// TryThrowOp
+//===----------------------------------------------------------------------===//
+
+def CIR_TryThrowOp : CIR_ThrowOpBase<"try_throw", [Terminator]> {
+  let summary = "throw an exception with an unwind destination";
+  let description = [{
+    Similar to `cir.throw` but acts as a terminator with two destination
+    blocks: a `normalDest` that should contain a `cir.unreachable`
+    operation (since a throw never returns) and an `unwindDest` that
+    receives control when the throw needs to unwind through an enclosing
+    cleanup or catch handler. This is the EH counterpart of `cir.throw`,
+    analogous to how `cir.try_call` is the EH counterpart of `cir.call`.
+
+    Like `cir.throw`, the absence of operands means rethrow. With operands,
+    it carries the same exception pointer, type info, and optional
+    destructor as `cir.throw`.
+
+    This operation is produced by the FlattenCFG pass for `cir.throw`
+    operations that appear inside a cleanup scope or try region. It is
+    later lowered by the EHABI lowering pass to a `cir.try_call` of
+    `__cxa_throw` (or `__cxa_rethrow`).
+
+    Example:
+
+    ```
+    cir.try_throw %exception_addr : !cir.ptr<!s32i>, @_ZTIi
+        ^normalDest, ^unwindDest
+    ^normalDest:
+      cir.unreachable
+    ^unwindDest:
+      ...
+    ```
   }];
 
-  let hasVerifier = 1;
+  let successors = (successor
+    AnySuccessor:$normalDest,
+    AnySuccessor:$unwindDest
+  );
+
+  let assemblyFormat = [{
+    ($exception_ptr^ `:` type($exception_ptr))?
+    (`,` $type_info^)?
+    (`,` $dtor^)?
+    $normalDest `,` $unwindDest
+    attr-dict
+  }];
+
+  // The EHABI lowering pass replaces every cir.try_throw with a cir.try_call
+  // of __cxa_throw / __cxa_rethrow before the LLVM lowering runs, so no
+  // direct LLVM lowering pattern is needed for this op.
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//

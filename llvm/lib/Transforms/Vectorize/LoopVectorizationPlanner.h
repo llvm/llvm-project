@@ -447,6 +447,11 @@ public:
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
+  VPValue *createScalarFreeze(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+    return tryInsertInstruction(
+        new VPInstruction(Instruction::Freeze, Op, {}, {}, DL));
+  }
+
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
                                      Type *ResultTy) {
     return tryInsertInstruction(new VPWidenCastRecipe(
@@ -935,6 +940,11 @@ public:
       bool DisableRuntimeUnroll);
 
 private:
+  /// Build an initial VPlan, with HCFG wrapping the original scalar loop and
+  /// scalar transformations applied. Returns null if an initial VPlan cannot
+  /// be built.
+  VPlanPtr tryToBuildVPlan1();
+
   /// Build a VPlan using VPRecipes according to the information gathered by
   /// Legal and VPlan-based analysis. For outer loops, performs basic recipe
   /// conversion only. For inner loops, \p Range's largest included VF is
@@ -946,9 +956,9 @@ private:
   VPlanPtr tryToBuildVPlan(VPlanPtr InitialPlan, VFRange &Range);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
-  /// according to the information gathered by Legal when it checked if it is
-  /// legal to vectorize the loop.
-  void buildVPlans(ElementCount MinVF, ElementCount MaxVF);
+  /// based on \p VPlan1 and according to the information gathered by Legal
+  /// when it checked if it is legal to vectorize the loop.
+  void buildVPlans(VPlan &VPlan1, ElementCount MinVF, ElementCount MaxVF);
 
   /// Add ComputeReductionResult recipes to the middle block to compute the
   /// final reduction results. Add Select recipes to the latch block when
