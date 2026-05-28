@@ -807,19 +807,12 @@ int main(int argc, char **argv) {
     reportError(createStringError("Output file must be specified"));
   OutputFile = Args.getLastArgValue(OPT_o);
 
-  if (Args.hasArg(OPT_spirv_dump_device_code_EQ)) {
-    Arg *A = Args.getLastArg(OPT_spirv_dump_device_code_EQ);
-    SmallString<128> Dir(A->getValue());
-    if (Dir.empty())
-      llvm::sys::path::native(Dir = "./");
-    else
-      Dir.append(llvm::sys::path::get_separator());
-
-    if (std::error_code EC = sys::fs::create_directories(Dir))
+  if (auto *A = Args.getLastArg(OPT_spirv_dump_device_code_EQ)) {
+    StringRef V = A->getValue();
+    SPIRVDumpDir = V.empty() ? "." : V;
+    if (std::error_code EC = sys::fs::create_directories(SPIRVDumpDir))
       reportError(createStringError(
-          EC, "cannot create SPIR-V dump directory '" + Dir + "'"));
-
-    SPIRVDumpDir = Dir;
+          EC, "cannot create SPIR-V dump directory '" + SPIRVDumpDir + "'"));
   }
 
   // Get the input files to pass to the linking stage.
