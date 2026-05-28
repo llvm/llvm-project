@@ -399,6 +399,9 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
 }
 
 bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
+  assert((!Sext || !TII->getSubtarget().zeroesHigh16BitsOfDest(
+                       getParentInst()->getOpcode())) &&
+         "Cannot use sign-extension with instruction that zeroes high bits");
   switch (MI.getOpcode()) {
   case AMDGPU::V_CVT_F32_FP8_sdwa:
   case AMDGPU::V_CVT_F32_BF8_sdwa:
