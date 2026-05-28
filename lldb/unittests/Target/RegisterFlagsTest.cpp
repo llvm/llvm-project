@@ -11,6 +11,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include "llvm/Support/Casting.h"
+
 using namespace lldb_private;
 using namespace lldb;
 
@@ -341,7 +343,7 @@ TEST(RegisterFlagsTest, DumpEnums) {
             "D: 0 = an_enumerator, 1 = another_enumerator");
 }
 
-TEST(RegisterFieldsTest, FlagsToXML) {
+TEST(RegisterFieldsTest, FlagsToXMLElement) {
   StreamString strm;
 
   // RegisterFlags requires that some fields be given, so no testing of empty
@@ -349,12 +351,13 @@ TEST(RegisterFieldsTest, FlagsToXML) {
 
   // Unnamed fields are padding that are ignored. This applies to fields passed
   // in, and those generated to fill the other bits (31-1 here).
-  RegisterFlags("Foo", 4, {RegisterFlags::Field("", 0, 0)}).ToXML(strm);
+  RegisterFlags("Foo", 4, {RegisterFlags::Field("", 0, 0)}).ToXMLElement(strm);
   ASSERT_EQ(strm.GetString(), "<flags id=\"Foo\" size=\"4\">\n"
                               "</flags>\n");
 
   strm.Clear();
-  RegisterFlags("Foo", 4, {RegisterFlags::Field("abc", 0, 0)}).ToXML(strm);
+  RegisterFlags("Foo", 4, {RegisterFlags::Field("abc", 0, 0)})
+      .ToXMLElement(strm);
   ASSERT_EQ(strm.GetString(), "<flags id=\"Foo\" size=\"4\">\n"
                               "  <field name=\"abc\" start=\"0\" end=\"0\"/>\n"
                               "</flags>\n");
@@ -365,7 +368,7 @@ TEST(RegisterFieldsTest, FlagsToXML) {
   RegisterFlags(
       "Bar", 5,
       {RegisterFlags::Field("f1", 25, 32), RegisterFlags::Field("f2", 10, 24)})
-      .ToXML(strm);
+      .ToXMLElement(strm);
   ASSERT_EQ(strm.GetString(),
             "  <flags id=\"Bar\" size=\"5\">\n"
             "    <field name=\"f1\" start=\"25\" end=\"32\"/>\n"
@@ -379,7 +382,7 @@ TEST(RegisterFieldsTest, FlagsToXML) {
                 {RegisterFlags::Field("A<", 4), RegisterFlags::Field("B>", 3),
                  RegisterFlags::Field("C'", 2), RegisterFlags::Field("D\"", 1),
                  RegisterFlags::Field("E&", 0)})
-      .ToXML(strm);
+      .ToXMLElement(strm);
   ASSERT_EQ(strm.GetString(),
             "<flags id=\"Safe\" size=\"8\">\n"
             "  <field name=\"A&lt;\" start=\"4\" end=\"4\"/>\n"
@@ -395,7 +398,7 @@ TEST(RegisterFieldsTest, FlagsToXML) {
   RegisterFlags("Enumerators", 8,
                 {RegisterFlags::Field("NoEnumerators", 4),
                  RegisterFlags::Field("OneEnumerator", 3, 3, &enum_single)})
-      .ToXML(strm);
+      .ToXMLElement(strm);
   ASSERT_EQ(strm.GetString(),
             "<flags id=\"Enumerators\" size=\"8\">\n"
             "  <field name=\"NoEnumerators\" start=\"4\" end=\"4\"/>\n"
@@ -404,10 +407,10 @@ TEST(RegisterFieldsTest, FlagsToXML) {
             "</flags>\n");
 }
 
-TEST(RegisterFlagsTest, EnumeratorToXML) {
+TEST(RegisterFlagsTest, EnumeratorToXMLElement) {
   StreamString strm;
 
-  FieldEnum::Enumerator(1234, "test").ToXML(strm);
+  FieldEnum::Enumerator(1234, "test").ToXMLElement(strm);
   ASSERT_EQ(strm.GetString(), "<evalue name=\"test\" value=\"1234\"/>");
 
   // Special XML chars in names must be escaped.
@@ -426,58 +429,89 @@ TEST(RegisterFlagsTest, EnumeratorToXML) {
 
   for (const auto &[enumerator, expected] : special_names) {
     strm.Clear();
-    enumerator.ToXML(strm);
+    enumerator.ToXMLElement(strm);
     ASSERT_EQ(strm.GetString(), expected);
   }
 }
 
-TEST(RegisterFlagsTest, EnumToXML) {
+TEST(RegisterFlagsTest, EnumToXMLElement) {
   StreamString strm;
 
-  FieldEnum("empty_enum", {}).ToXML(strm, 4);
+  RegisterFlags user_4("Foo", 4, {RegisterFlags::Field("", 0, 0)});
+  FieldEnum("empty_enum", {})
+      .ToXMLElement(strm, llvm::dyn_cast<const RegisterType>(&user_4));
   ASSERT_EQ(strm.GetString(), "<enum id=\"empty_enum\" size=\"4\"/>\n");
 
   strm.Clear();
+  RegisterFlags user_5("Foo", 5, {RegisterFlags::Field("", 0, 0)});
   FieldEnum("single_enumerator", {FieldEnum::Enumerator(0, "zero")})
-      .ToXML(strm, 5);
+      .ToXMLElement(strm, llvm::dyn_cast<const RegisterType>(&user_5));
   ASSERT_EQ(strm.GetString(), "<enum id=\"single_enumerator\" size=\"5\">\n"
                               "  <evalue name=\"zero\" value=\"0\"/>\n"
                               "</enum>\n");
 
+  // Currently we don't emit size if the user of this type is not a flags.
+  // We don't expect to see this situation in real use.
   strm.Clear();
   FieldEnum("multiple_enumerator",
             {FieldEnum::Enumerator(0, "zero"), FieldEnum::Enumerator(1, "one")})
-      .ToXML(strm, 8);
-  ASSERT_EQ(strm.GetString(), "<enum id=\"multiple_enumerator\" size=\"8\">\n"
+      .ToXMLElement(strm, nullptr);
+  ASSERT_EQ(strm.GetString(), "<enum id=\"multiple_enumerator\">\n"
                               "  <evalue name=\"zero\" value=\"0\"/>\n"
                               "  <evalue name=\"one\" value=\"1\"/>\n"
                               "</enum>\n");
 }
 
-TEST(RegisterFlagsTest, EnumsToXML) {
+TEST(RegisterFlagsTest, RegisterFlagsToXML) {
   // This method should output all the enums used by the register flag set,
-  // only once.
+  // then the flags set itself. There should only be one definition of each
+  // enum, even if it is used by multiple fields.
 
   StreamString strm;
   FieldEnum enum_a("enum_a", {FieldEnum::Enumerator(0, "zero")});
   FieldEnum enum_b("enum_b", {FieldEnum::Enumerator(1, "one")});
   FieldEnum enum_c("enum_c", {FieldEnum::Enumerator(2, "two")});
-  llvm::StringSet<> seen;
+  std::unordered_set<const RegisterType *> previously_emitted;
   // Pretend that enum_c was already emitted for a different flag set.
-  seen.insert("enum_c");
+  previously_emitted.insert(&enum_c);
 
-  RegisterFlags("Test", 4,
-                {
-                    RegisterFlags::Field("f1", 31, 31, &enum_a),
-                    RegisterFlags::Field("f2", 30, 30, &enum_a),
-                    RegisterFlags::Field("f3", 29, 29, &enum_b),
-                    RegisterFlags::Field("f4", 27, 28, &enum_c),
-                })
-      .EnumsToXML(strm, seen);
-  ASSERT_EQ(strm.GetString(), "<enum id=\"enum_a\" size=\"4\">\n"
-                              "  <evalue name=\"zero\" value=\"0\"/>\n"
-                              "</enum>\n"
-                              "<enum id=\"enum_b\" size=\"4\">\n"
-                              "  <evalue name=\"one\" value=\"1\"/>\n"
-                              "</enum>\n");
+  std::vector<RegisterFlags::Field> fields{
+      RegisterFlags::Field("f1", 31, 31, &enum_a),
+      RegisterFlags::Field("f2", 30, 30, &enum_a),
+      RegisterFlags::Field("f3", 29, 29, &enum_b),
+      RegisterFlags::Field("f4", 27, 28, &enum_c),
+  };
+
+  RegisterFlags("Test", 4, fields).ToXML(strm, previously_emitted);
+  ASSERT_EQ(strm.GetString(),
+            "<enum id=\"enum_a\" size=\"4\">\n"
+            "  <evalue name=\"zero\" value=\"0\"/>\n"
+            "</enum>\n"
+            "<enum id=\"enum_b\" size=\"4\">\n"
+            "  <evalue name=\"one\" value=\"1\"/>\n"
+            "</enum>\n"
+            "<flags id=\"Test\" size=\"4\">\n"
+            "  <field name=\"f1\" start=\"31\" end=\"31\" type=\"enum_a\"/>\n"
+            "  <field name=\"f2\" start=\"30\" end=\"30\" type=\"enum_a\"/>\n"
+            "  <field name=\"f3\" start=\"29\" end=\"29\" type=\"enum_b\"/>\n"
+            "  <field name=\"f4\" start=\"27\" end=\"28\" type=\"enum_c\"/>\n"
+            "</flags>\n");
+
+  // If another flag set were to use the same enums we should not output them
+  // again. Only output anything new.
+  strm.Clear();
+  FieldEnum enum_d("enum_d", {FieldEnum::Enumerator(3, "three")});
+  fields.push_back(RegisterFlags::Field("f5", 25, 26, &enum_d));
+  RegisterFlags("Test", 4, fields).ToXML(strm, previously_emitted);
+  ASSERT_EQ(strm.GetString(),
+            "<enum id=\"enum_d\" size=\"4\">\n"
+            "  <evalue name=\"three\" value=\"3\"/>\n"
+            "</enum>\n"
+            "<flags id=\"Test\" size=\"4\">\n"
+            "  <field name=\"f1\" start=\"31\" end=\"31\" type=\"enum_a\"/>\n"
+            "  <field name=\"f2\" start=\"30\" end=\"30\" type=\"enum_a\"/>\n"
+            "  <field name=\"f3\" start=\"29\" end=\"29\" type=\"enum_b\"/>\n"
+            "  <field name=\"f4\" start=\"27\" end=\"28\" type=\"enum_c\"/>\n"
+            "  <field name=\"f5\" start=\"25\" end=\"26\" type=\"enum_d\"/>\n"
+            "</flags>\n");
 }

@@ -314,7 +314,7 @@ void Arm64RegisterFlagsDetector::UpdateRegisterInfo(
 
     if (reg_it != search_registers.end()) {
       // Attach the field information.
-      reg_info->flags_type = reg_it->second;
+      reg_info->register_type = reg_it->second;
       // We do not expect to see this name again so don't look for it again.
       search_registers.erase(reg_it);
     }
