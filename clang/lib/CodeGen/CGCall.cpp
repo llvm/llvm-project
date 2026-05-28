@@ -3207,17 +3207,15 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   }
 
   if (const FunctionDecl *Fn = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
-    if (Fn->isReplaceableGlobalAllocationFunction()) {
-      auto Kind = Fn->getDeclName().getCXXOverloadedOperator();
-      if (Kind == OO_Delete || Kind == OO_Array_Delete) {
-        auto [IRArg, NumIRArgs] = IRFunctionArgs.getIRArgs(0);
-        assert(NumIRArgs == 1 && "Pointer should be a single argument");
-        (void)NumIRArgs;
-        // Add captures(address) to deleted pointer. The provenance is not
-        // captured, because delete destroy the provenane of the pointer. The
-        // address may be captured, as the allocator is replaceable.
-        ArgAttrs[IRArg].addCapturesAttr(llvm::CaptureComponents::Address);
-      }
+    if (Fn->isReplaceableGlobalAllocationFunction() &&
+        Fn->getDeclName().isAnyOperatorDelete()) {
+      auto [IRArg, NumIRArgs] = IRFunctionArgs.getIRArgs(0);
+      assert(NumIRArgs == 1 && "Pointer should be a single argument");
+      (void)NumIRArgs;
+      // Add captures(address) to deleted pointer. The provenance is not
+      // captured, because delete destroy the provenance of the pointer. The
+      // address may be captured, as the allocator is replaceable.
+      ArgAttrs[IRArg].addCapturesAttr(llvm::CaptureComponents::Address);
     }
   }
 
