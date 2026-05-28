@@ -1641,9 +1641,8 @@ class VOP3InstBase<string OpName, VOPProfile P, SDPatternOperator node = null_fr
             ""));
 }
 
-multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag,
-                    list<Predicate> predicates = []> {
-  def _e64 : VOP3InstBase<OpName, P, node>;
+multiclass VOP3Inst_dpp<string OpName, VOPProfile P,
+                        list<Predicate> predicates = []> {
   if P.HasExtVOP3DPP then
     def _e64_dpp  : VOP3_DPP_Pseudo <OpName, P> {
       let SubtargetPredicate = isGFX11Plus;
@@ -1652,6 +1651,21 @@ multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_f
     def _e64_dpp  : VOP3_DPP_Pseudo <OpName, P> {
       let OtherPredicates = !listconcat(predicates, [HasDPALU_DPP]);
     }
+}
+
+multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag,
+                    list<Predicate> predicates = []> :
+    VOP3Inst_dpp<OpName, P, predicates> {
+  def _e64 : VOP3InstBase<OpName, P, node>;
+}
+
+multiclass VOP3Inst_VOPD<string OpName, VOPProfile P, bits<6> VOPDOp,
+                         string VOPDName,
+                         SDPatternOperator node = null_frag,
+                         list<Predicate> predicates = []> :
+    VOP3Inst_dpp<OpName, P, predicates> {
+  def _e64 : VOP3InstBase<OpName, P, node>,
+             VOPD_Component<VOPDOp, VOPDName>;
 }
 
 class UniformUnaryFragOrOp<SDPatternOperator Op> {

@@ -666,7 +666,7 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
 CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(Opc) : 0;
   Opc = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : Opc;
-  // Normalize through VOPDComponentTable so that e32, e64 and e64_dpp variants
+  // Normalize through VOPDComponentTable so that e32 and e64 variants
   // of the same logical opcode all share a single entry.
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   if (!Info)
