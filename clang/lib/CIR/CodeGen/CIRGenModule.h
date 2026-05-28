@@ -626,8 +626,10 @@ public:
   void setGVPropertiesAux(mlir::Operation *op, const NamedDecl *d) const;
 
   /// Set TLS mode for the given operation based on the given variable
-  /// declaration.
-  void setTLSMode(mlir::Operation *op, const VarDecl &d);
+  /// declaration. If `isExtendingDecl` is true, then the operation is a
+  /// temporary whose lifetime is extended by the variable declared by `d`.
+  void setTLSMode(mlir::Operation *op, const VarDecl &d,
+                  bool isExtendingDecl = false);
 
   /// Get TLS mode from CodeGenOptions.
   cir::TLS_Model getDefaultCIRTLSModel() const;

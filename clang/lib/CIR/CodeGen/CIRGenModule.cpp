@@ -2917,7 +2917,8 @@ cir::TLS_Model CIRGenModule::getDefaultCIRTLSModel() const {
   llvm_unreachable("Invalid TLS model!");
 }
 
-void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d) {
+void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d,
+                              bool isExtendingDecl) {
   assert(d.getTLSKind() && "setting TLS mode on non-TLS var!");
 
   cir::TLS_Model tlm = getDefaultCIRTLSModel();
@@ -2934,14 +2935,10 @@ void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d) {
   if (d.isStaticLocal() || tlm != cir::TLS_Model::GeneralDynamic)
     return;
 
-  // The wrapper/init machinery belongs to d's own user-facing cir.global.
-  // When we're setting the TLS mode on a different global whose extending
-  // declaration happens to be d (e.g. a lifetime-extended reference
-  // temporary, whose symbol is _ZGR... rather than d's mangled name), the
-  // wrapper plumbing will be attached separately when d's own cir.global
-  // is emitted; attaching it here would point the wrapper alias at the
-  // wrong global.
-  if (global.getSymName() != getMangledName(GlobalDecl(&d)))
+  // If this function was called to set the TLS mode for a temporary whose
+  // lifetime is extended by the variable declared by `d`, don't emit the
+  // wrapperm init and guard info.
+  if (isExtendingDecl)
     return;
 
   setGlobalTlsReferences(d, global);
@@ -3914,7 +3911,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
     errorNYI(mte->getSourceRange(),
              "Global temporary with comdat/weak linkage");
   if (varDecl->getTLSKind())
-    setTLSMode(gv, *varDecl);
+    setTLSMode(gv, *varDecl, /*isExtendingDecl=*/true);
   mlir::Operation *cv = gv;
 
   assert(!cir::MissingFeatures::addressSpace());
