@@ -6,7 +6,7 @@
 ; RUN: llvm-as %t/foo.ll -o %t/foo.bc
 ; RUN: llvm-as %t/bar.ll -o %t/bar.bc
 ; RUN: llvm-as %t/baz.ll -o %t/baz.bc
-; RUN: llvm-as %t/libLLVMSYCL.ll -o %t/libLLVMSYCL.bc
+; RUN: llvm-as %t/libfoo.ll -o %t/libfoo.bc
 ;
 ; Test linking two input files.
 ; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc -triple=spirv64 --dry-run -o a.spv --print-linked-module 2>&1 \
@@ -22,8 +22,8 @@
 ; RUN:   | FileCheck %s --check-prefix=CHECK-MULTIPLE-DEFS
 ; CHECK-MULTIPLE-DEFS: error: Linking globals named {{.*}}bar_func1{{.*}} symbol multiply defined!
 ;
-; Test linking with a device library file.
-; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc --bc-library %t/libLLVMSYCL.bc -triple=spirv64 --dry-run -o a.spv --print-linked-module 2>&1 \
+; Test linking with a BC library file.
+; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc --bc-library %t/libfoo.bc -triple=spirv64 --dry-run -o a.spv --print-linked-module 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-DEVICE-LIB
 ; CHECK-DEVICE-LIB: define {{.*}}foo_func1{{.*}}
 ; CHECK-DEVICE-LIB: define {{.*}}foo_func2{{.*}}
@@ -81,7 +81,7 @@ entry:
   ret i32 %res
 }
 
-;--- libLLVMSYCL.ll
+;--- libfoo.ll
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
 target triple = "spirv64"
 
