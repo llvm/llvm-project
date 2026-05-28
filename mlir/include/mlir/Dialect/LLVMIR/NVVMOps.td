@@ -2176,7 +2176,7 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
   }];
 }
 
-class NVVM_ConvertToFP16x2Op_Base <string srcType, Type srcArgType, string dstType>
+class NVVM_ConvertToFP16x2Op_Base <string srcType, Type srcArgType, string dstType, list<Type> supportedTypes, int needVerify = 0>
 : NVVM_SingleResultIntrinsicOp<"convert." # !tolower(srcType) # "x2.to." # !tolower(dstType) # "x2", [], "$dst"> {
   let summary = "Convert a pair of " # !tolower(srcType) # " inputs to " # !tolower(dstType) # "x2";
   let description = [{
@@ -2185,32 +2185,52 @@ class NVVM_ConvertToFP16x2Op_Base <string srcType, Type srcArgType, string dstTy
     !tolower(dstType) # [{.
 
     The result `dst` is represented as a vector of }] # !tolower(dstType) # [{ elements.
-    }] #
-    !if(!eq(dstType, "F16"),
-    [{The `relu` attribute, when set, lowers to the '.relu' variant of 
-    the cvt instruction."}], "") # [{
+
+    The `relu` attribute, when set, lowers to the '.relu' variant of 
+    the cvt instruction.}] #
+
+    !if(!eq(dstType, "BF16"),
+    [{The `sat` attribute specifies the saturation mode.
+    
+    The optional scaling-factors for each of the inputs are provided through 
+    the operand `scaleFactor` as a packed i16 type. Only `ue8m0` is supported 
+    as the type of the scale-factor currently.}], "") # [{
     
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
   let results = (outs VectorOfLengthAndType<[2], [!cast<Type>(dstType)]>:$dst);
   let arguments = !if(!eq(dstType, "F16"),
     (ins srcArgType:$src,
-         DefaultValuedAttr<BoolAttr, "false">:$relu,
-         TypeAttr:$srcType),
+         TypeAttrOf<AnyTypeOf<supportedTypes>>:$srcType,
+         DefaultValuedAttr<BoolAttr, "false">:$relu),
     (ins srcArgType:$src,
-         TypeAttr:$srcType));
-  let assemblyFormat = "$src attr-dict `:` type($src) `(` $srcType `)` `->` type($dst)";
-  let hasVerifier = 1;
+         Optional<I16>:$scaleFactor,
+         TypeAttrOf<AnyTypeOf<supportedTypes>>:$srcType,
+         DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
+         DefaultValuedAttr<BoolAttr, "false">:$relu));
+  let assemblyFormat = 
+    !if(!eq(dstType, "F16"),
+      "$src attr-dict `:` type($src) `(` $srcType `)` `->` type($dst)",
+      "$src (`,` $scaleFactor^)? attr-dict `:` type($src) `(` $srcType `)` `->` type($dst)");
+  let hasVerifier = needVerify;
 }
 
 def NVVM_ConvertF8x2ToF16x2Op :
-  NVVM_ConvertToFP16x2Op_Base<"F8", VectorOfLengthAndType<[2], [I8]>, "F16">;
+  NVVM_ConvertToFP16x2Op_Base<"F8", VectorOfLengthAndType<[2], [I8]>, "F16", 
+    [F8E4M3FN, F8E5M2]>;
 def NVVM_ConvertF8x2ToBF16x2Op :
-  NVVM_ConvertToFP16x2Op_Base<"F8", VectorOfLengthAndType<[2], [I8]>, "BF16">;
+  NVVM_ConvertToFP16x2Op_Base<"F8", VectorOfLengthAndType<[2], [I8]>, "BF16", 
+    [F8E8M0FNU, F8E4M3FN, F8E5M2], 1>;
 def NVVM_ConvertF6x2ToF16x2Op :
-  NVVM_ConvertToFP16x2Op_Base<"F6", VectorOfLengthAndType<[2], [I8]>, "F16">;
+  NVVM_ConvertToFP16x2Op_Base<"F6", VectorOfLengthAndType<[2], [I8]>, "F16", 
+    [F6E2M3FN, F6E3M2FN]>;
+def NVVM_ConvertF6x2ToBF16x2Op :
+  NVVM_ConvertToFP16x2Op_Base<"F6", VectorOfLengthAndType<[2], [I8]>, "BF16", 
+    [F6E2M3FN, F6E3M2FN]>;
 def NVVM_ConvertF4x2ToF16x2Op :
-  NVVM_ConvertToFP16x2Op_Base<"F4", I8, "F16">;
+  NVVM_ConvertToFP16x2Op_Base<"F4", I8, "F16", [F4E2M1FN]>;
+def NVVM_ConvertF4x2ToBF16x2Op :
+  NVVM_ConvertToFP16x2Op_Base<"F4", I8, "BF16", [F4E2M1FN]>;
 
 def NVVM_ConvertF32x2ToS2F6x2Op : NVVM_Op<"convert.f32x2.to.s2f6x2"> {
   let summary = "Convert a pair of f32 inputs to S2F6x2";
