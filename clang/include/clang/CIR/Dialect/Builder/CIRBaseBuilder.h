@@ -544,7 +544,9 @@ public:
 
   mlir::Value createPtrBitcast(mlir::Value src, mlir::Type newPointeeTy) {
     assert(mlir::isa<cir::PointerType>(src.getType()) && "expected ptr src");
-    return createBitcast(src, getPointerTo(newPointeeTy));
+    cir::PointerType srcPtrTy = mlir::cast<cir::PointerType>(src.getType());
+    return createBitcast(src,
+                         getPointerTo(newPointeeTy, srcPtrTy.getAddrSpace()));
   }
 
   mlir::Value createPtrIsNull(mlir::Value ptr) {

@@ -10,6 +10,16 @@
 # RUN: llvm-bolt --align-functions=1 --use-old-text=0 -o %t-c.bolt %t-c
 # RUN: llvm-nm -n %t-c.bolt | FileCheck --check-prefix=CHECK-C %s
 
+# RUN: llvm-mc -triple=riscv32 -filetype=obj -o %t.rv32.o %s
+# RUN: ld.lld -q -o %t.rv32 %t.rv32.o
+# RUN: llvm-bolt --align-functions=1 --use-old-text=0 -o %t.rv32.bolt %t.rv32
+# RUN: llvm-nm -n %t.rv32.bolt | FileCheck %s
+
+# RUN: llvm-mc -triple=riscv32 -mattr=+c -filetype=obj -o %t.rv32-c.o %s
+# RUN: ld.lld -q -o %t.rv32-c %t.rv32-c.o
+# RUN: llvm-bolt --align-functions=1 --use-old-text=0 -o %t.rv32-c.bolt %t.rv32-c
+# RUN: llvm-nm -n %t.rv32-c.bolt | FileCheck --check-prefix=CHECK-C %s
+
 # CHECK:      {{[048c]}} T _start
 # CHECK-NEXT: {{[048c]}} T dummy
 

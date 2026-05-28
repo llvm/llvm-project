@@ -1070,10 +1070,27 @@ multiclass IMAD32_Pats <VOP3_Pseudo inst> {
         >;
 }
 
+// AMDGPUmul_u24 only consumes the low 24 bits of its operands, and
+// simplifyMul24 may strip outer AND masks. V_MAD_U64_U32 does a full 32x32
+// multiply, so this fold is only valid when both operands are known to fit
+// in 24 unsigned bits at SDAG level.
+def AMDGPUmul_u24_24bit_ops : PatFrag<
+  (ops node:$src0, node:$src1),
+  (AMDGPUmul_u24 node:$src0, node:$src1),
+  [{
+    // AMDGPUmul_u24 is a PatFrags over an intrinsic and an SDNode; skip the
+    // intrinsic ID operand when needed.
+    unsigned BaseIdx = N->getOpcode() == ISD::INTRINSIC_WO_CHAIN ? 1 : 0;
+    return AMDGPUTargetLowering::numBitsUnsigned(N->getOperand(BaseIdx),
+                                                 *CurDAG) <= 24 &&
+           AMDGPUTargetLowering::numBitsUnsigned(N->getOperand(BaseIdx + 1),
+                                                 *CurDAG) <= 24;
+  }]>;
+
 // Handle cases where amdgpu-codegenprepare-mul24 made a mul24 instead of a normal mul.
 // We need to separate this because otherwise OtherPredicates would be overriden.
 class IMAD32_Mul24_Pats_Impl<VOP3_Pseudo inst, SDPatternOperator AddOp> : GCNPat <
-    (i64 (AddOp (i64 (AMDGPUmul_u24 i32:$src0, i32:$src1)), i64:$src2)),
+    (i64 (AddOp (i64 (AMDGPUmul_u24_24bit_ops i32:$src0, i32:$src1)), i64:$src2)),
     (inst $src0, $src1, $src2, 0 /* clamp */)
     >;
 

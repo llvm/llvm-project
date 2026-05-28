@@ -123,9 +123,7 @@ function (add_flangrt_library name)
   endif ()
 
   # Include the RPC utilities from the `libc` project.
-  if (TARGET llvm-libc-common-utilities)
-    set(extra_deps llvm-libc-common-utilities)
-  endif()
+  set(extra_deps llvm-libc-common-utilities)
 
   # Also add header files to IDEs to list as part of the library.
   set_source_files_properties(${ARG_ADDITIONAL_HEADERS} PROPERTIES HEADER_FILE_ONLY ON)

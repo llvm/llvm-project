@@ -92,7 +92,7 @@ set(supported_sources
 
 # List of source not used for GPU offloading.
 set(host_sources
-  ${FLANG_SOURCE_DIR}/module/iso_fortran_env_impl.f90
+  iso_fortran_env_impl.cpp
   command.cpp
   complex-powi.cpp
   complex-reduction.c
@@ -108,10 +108,8 @@ set(host_sources
   time-intrinsic.cpp
   trampoline.cpp
   unit-map.cpp
+  io-api-server.cpp
 )
-if (TARGET llvm-libc-common-utilities)
-  list(APPEND host_sources io-api-server.cpp)
-endif()
 
 # Sources that can be compiled directly for the GPU.
 set(gpu_sources
@@ -239,7 +237,7 @@ if (NOT WIN32)
     ADDITIONAL_HEADERS ${public_headers} ${private_headers}
   )
 
-  enable_cuda_compilation(flang_rt.runtime "${supported_sources}")
+  enable_cuda_compilation(flang_rt.runtime "${sources}")
 
   # Select a default runtime, which is used for unit and regression tests.
   if (TARGET flang_rt.runtime.default)
