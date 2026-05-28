@@ -49,6 +49,7 @@ Implemented Papers
 - P2322R6: ``ranges::fold`` (`Github <https://llvm.org/PR105208>`__)
 - P4144R1: Remove ``span``'s ``initializer_list`` constructor for C++26 (`Github <https://llvm.org/PR189612>`__)
 - P3383R3: ``mdspan.at()`` (`Github <https://llvm.org/PR175213>`__)
+- P3369R0: constexpr for ``uninitialized_default_construct`` (`Github <https://llvm.org/PR118380>`__)
 - P3508R0: Wording for "constexpr for specialized memory algorithms" (`Github <https://llvm.org/PR118379>`__)
 
 Improvements and New Features

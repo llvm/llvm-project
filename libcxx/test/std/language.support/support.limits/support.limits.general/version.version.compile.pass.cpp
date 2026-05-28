@@ -7811,8 +7811,8 @@
 #  ifndef __cpp_lib_raw_memory_algorithms
 #    error "__cpp_lib_raw_memory_algorithms should be defined in c++26"
 #  endif
-#  if __cpp_lib_raw_memory_algorithms != 201606L
-#    error "__cpp_lib_raw_memory_algorithms should have the value 201606L in c++26"
+#  if __cpp_lib_raw_memory_algorithms != 202411L
+#    error "__cpp_lib_raw_memory_algorithms should have the value 202411L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
