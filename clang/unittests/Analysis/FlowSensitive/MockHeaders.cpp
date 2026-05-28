@@ -1760,7 +1760,6 @@ ReturnIfErrorAdaptor MacroAdaptor(absl::Status&& s,
 #define ABSL_RETURN_IF_ERROR(expr) \
   ABSL_INTERNAL_STATUS_MACROS_RETURN_IF_ERROR_IMPL_(return, expr)
 
-
 #endif // STATUSOR_H_
 )cc";
 
