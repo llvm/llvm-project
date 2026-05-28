@@ -13773,9 +13773,8 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
     SDValue IntID = DAG.getTargetConstant(Intrinsic::riscv_vlm, DL, XLenVT);
     SDValue Ops[] = {Chain, IntID, BasePtr, VL};
     SDVTList VTs = DAG.getVTList({VT, MVT::Other});
-    SDValue Result =
-        DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops, MemVT,
-                                MMO);
+    SDValue Result = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs,
+                                             Ops, MemVT, MMO);
     return DAG.getMergeValues({Result, Result.getValue(1)}, DL);
   }
 
@@ -13933,10 +13932,9 @@ SDValue RISCVTargetLowering::lowerMaskedStore(SDValue Op,
     if (!VL)
       VL = getDefaultVLOps(VT, VT, DL, DAG, Subtarget).second;
     SDValue IntID = DAG.getTargetConstant(Intrinsic::riscv_vsm, DL, XLenVT);
-    return DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL,
-                                   DAG.getVTList(MVT::Other),
-                                   {Chain, IntID, Val, BasePtr, VL}, MemVT,
-                                   MMO);
+    return DAG.getMemIntrinsicNode(
+        ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other),
+        {Chain, IntID, Val, BasePtr, VL}, MemVT, MMO);
   }
 
   MVT ContainerVT = VT;
