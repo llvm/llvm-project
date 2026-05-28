@@ -88,6 +88,34 @@ define i16 @load_2_bytes_both_masked(ptr %p) {
   ret i16 %result
 }
 
+; Non-low-bit masks (high bits and non-contiguous).
+define i16 @load_2_bytes_noncontiguous_masked(ptr %p) {
+; LE-LABEL: load_2_bytes_noncontiguous_masked:
+; LE:       ; %bb.0:
+; LE-NEXT:    ldrh w8, [x0]
+; LE-NEXT:    mov w9, #23205 ; =0x5aa5
+; LE-NEXT:    and w0, w8, w9
+; LE-NEXT:    ret
+;
+; BE-LABEL: load_2_bytes_noncontiguous_masked:
+; BE:       // %bb.0:
+; BE-NEXT:    ldrh w9, [x0]
+; BE-NEXT:    mov w8, #23205 // =0x5aa5
+; BE-NEXT:    rev w9, w9
+; BE-NEXT:    and w0, w8, w9, lsr #16
+; BE-NEXT:    ret
+  %p1 = getelementptr inbounds i8, ptr %p, i64 1
+  %lo = load i8, ptr %p, align 1
+  %hi = load i8, ptr %p1, align 1
+  %lo.m = and i8 %lo, 165
+  %hi.m = and i8 %hi, 90
+  %lo.ext = zext i8 %lo.m to i16
+  %hi.ext = zext i8 %hi.m to i16
+  %hi.shift = shl i16 %hi.ext, 8
+  %result = or i16 %hi.shift, %lo.ext
+  ret i16 %result
+}
+
 ; Four bytes, last byte masked.
 define i32 @load_4_bytes_last_masked(ptr %p) {
 ; LE-LABEL: load_4_bytes_last_masked:

@@ -9642,7 +9642,10 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     if (!Result)
       return std::nullopt;
 
-    if (MaskByte != 0xFF && ByteMask)
+    // Only record the mask if this byte is actually provided (not zero).
+    // A ConstantZero result may be discarded by the OR handler in favor of
+    // the other operand, so writing the mask here would corrupt ByteMask.
+    if (MaskByte != 0xFF && ByteMask && !Result->isConstantZero())
       ByteMask[StartingIndex] &= MaskByte;
 
     return Result;

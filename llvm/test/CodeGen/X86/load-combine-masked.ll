@@ -66,6 +66,26 @@ define i16 @load_2_bytes_both_masked(ptr %p) {
   ret i16 %result
 }
 
+; Non-low-bit masks (high bits and non-contiguous).
+define i16 @load_2_bytes_noncontiguous_masked(ptr %p) {
+; CHECK-LABEL: load_2_bytes_noncontiguous_masked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    andl $23205, %eax # imm = 0x5AA5
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
+  %p1 = getelementptr inbounds i8, ptr %p, i64 1
+  %lo = load i8, ptr %p, align 1
+  %hi = load i8, ptr %p1, align 1
+  %lo.m = and i8 %lo, 165
+  %hi.m = and i8 %hi, 90
+  %lo.ext = zext i8 %lo.m to i16
+  %hi.ext = zext i8 %hi.m to i16
+  %hi.shift = shl i16 %hi.ext, 8
+  %result = or i16 %hi.shift, %lo.ext
+  ret i16 %result
+}
+
 ; Four bytes, last byte masked.
 define i32 @load_4_bytes_last_masked(ptr %p) {
 ; CHECK-LABEL: load_4_bytes_last_masked:
