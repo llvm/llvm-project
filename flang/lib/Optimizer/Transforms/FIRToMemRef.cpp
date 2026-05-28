@@ -725,17 +725,22 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   //     matches CodeGen XArrayCoorOp's non-boxed branch.
   //
   //   box_dims path: query the descriptor at runtime. Required when:
-  //     (a) the slice is projected (physical layout is owned by the box);
-  //     (b) we have no shape information at all; or
-  //     (c) the array_coor base is a fir.box that is NOT a fir.embox result.
+  //     (a) we have no shape information at all; or
+  //     (b) the array_coor base is a fir.box that is NOT a fir.embox result;
+  //         or a fir.box with a projected slice (layout in the descriptor); or
+  //     (c) embox cannot supply layout for this coor (non-embox box above).
   //         getFIRConvert materializes fir.box_addr(box) -- an opaque pointer
   //         with no layout in its type -- so strides must come from the
   //         descriptor. This matches CodeGen XArrayCoorOp's boxed branch
   //         (getStrideFromBox); shape/shape_shift on array_coor is
   //         informational only (lower bounds for index translation).
-  const bool descriptorOwnsLayout = sliceInfo.hasProjectedSlice ||
-                                    shapeVec.empty() ||
-                                    (firMemrefIsBox && !firMemrefIsEmbox);
+  //     Projected complex %re/%im on a bare ref uses the shapeVec path with
+  //     strides scaled by two scalar slots per complex.
+  const bool boxNeedsDescriptorStrides =
+      firMemrefIsBox &&
+      (!firMemrefIsEmbox || sliceInfo.hasProjectedSlice);
+  const bool descriptorOwnsLayout =
+      shapeVec.empty() || boxNeedsDescriptorStrides;
   if (descriptorOwnsLayout) {
     // Complex %re/%im: memref_stride = box_dims_byte_stride / sizeof(T),
     Value boxElementSize =
@@ -776,13 +781,27 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
       Value stride = shapeVec[0];
       for (unsigned j = 1; j <= i - 1; ++j)
         stride = arith::MulIOp::create(rewriter, loc, shapeVec[j], stride);
+      if (complexPartIdx)
+        stride = arith::MulIOp::create(
+            rewriter, loc, stride, arith::ConstantIndexOp::create(rewriter, loc, 2));
       strides.push_back(castTypeToIndexType(stride, rewriter));
     }
 
     sizes.push_back(castTypeToIndexType(shapeVec[0], rewriter));
-    strides.push_back(oneIdx);
+    // shapeVec strides count array elements (complexes).  After fir.convert to
+    // memref<...x2xT>, each step along an array dim must skip two scalars (re
+    // then im), so multiply by 2.  (Box path uses byte_stride / sizeof(T) for
+    // the same spacing; no /8 here because extents are already index units.)
+    if (complexPartIdx)
+      strides.push_back(arith::ConstantIndexOp::create(rewriter, loc, 2));
+    else
+      strides.push_back(oneIdx);
   }
 
+  // fir.convert above already made memref<...x2xT>; sizes/strides built so far
+  // cover only the array section (rank from array_coor).  Finish the
+  // reinterpret_cast layout with the pair dim that view already has: extent 2
+  // (re and im), stride 1 (contiguous scalars — index 0/1 from array_coor).
   if (complexPartIdx) {
     sizes.push_back(arith::ConstantIndexOp::create(rewriter, loc, 2));
     strides.push_back(arith::ConstantIndexOp::create(rewriter, loc, 1));
