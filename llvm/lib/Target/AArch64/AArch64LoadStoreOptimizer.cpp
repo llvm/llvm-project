@@ -2927,8 +2927,10 @@ bool AArch64LoadStoreOpt::tryToMergeLdStUpdate
   // performing register writeback do not set a valid instruction syndrome,
   // making it impossible to handle MMIO in protected hypervisors.
   // Exclude accesses based on the stack pointer, as these can't be MMIO.
+  // Also exclude MTE tag store instructions.
   if (MBBI->hasOrderedMemoryRef() &&
-      AArch64InstrInfo::getLdStBaseOp(MI).getReg() != AArch64::SP)
+      AArch64InstrInfo::getLdStBaseOp(MI).getReg() != AArch64::SP &&
+      !isTagStore(MI) && MI.getOpcode() != AArch64::STGPi)
     return false;
 
   // Look forward to try to form a post-index instruction. For example,
