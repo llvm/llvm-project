@@ -582,6 +582,9 @@ public:
   /// Insert a `PAUTH_EPILOGUE` pseudo before the first terminator in \p MBB to
   /// authenticate the return address. Adds an implicit def of X16 when the
   /// branch protection uses PAuthLR but the subtarget lacks PAuthLR
+  /// instructions. If the epilogue has callee-popped argument stack to restore,
+  /// it additionally implicit defines X15 and X17 to cover clobbered registers
+  /// for the required sequence on subtargets both with and without PAuthLR
   /// instructions.
   void createPauthEpilogueInstr(MachineBasicBlock &MBB, DebugLoc DL) const;
 

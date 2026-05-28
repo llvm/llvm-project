@@ -833,7 +833,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     return this->delegate(SubExpr);
 
   case CK_LValueBitCast:
-    return this->emitInvalidCast(CastKind::ReinterpretLike, /*Fatal=*/true, E);
+    if (!this->emitInvalidCast(CastKind::ReinterpretLike, /*Fatal=*/false, E))
+      return false;
+    return this->delegate(SubExpr);
 
   case CK_HLSLArrayRValue: {
     // Non-decaying array rvalue cast - creates an rvalue copy of an lvalue
@@ -2178,6 +2180,13 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
              R->getField(InitIndex)->isUnnamedBitField())
         ++InitIndex;
 
+      // If this is a child of a DesignatedInitUpdateExpr, skip elements which
+      // aren't supposed to be modified.
+      if (isa<NoInitExpr>(Init)) {
+        ++InitIndex;
+        continue;
+      }
+
       if (OptPrimType T = classify(Init)) {
         const Record::Field *FieldToInit = R->getField(InitIndex);
         if (!initPrimitiveField(FieldToInit, Init, *T))
@@ -2238,6 +2247,10 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
         };
         if (!EmbedS->doForEachDataElement(Eval, ElementIndex))
           return false;
+      } else if (isa<NoInitExpr>(Init)) {
+        // If this is a child of a DesignatedInitUpdateExpr, skip elements which
+        // aren't supposed to be modified.
+        ++ElementIndex;
       } else {
         if (!this->visitArrayElemInit(ElementIndex, Init, InitT))
           return false;
@@ -2247,7 +2260,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
     // Expand the filler expression.
     // FIXME: This should go away.
-    if (ArrayFiller) {
+    if (ArrayFiller && !isa<NoInitExpr>(ArrayFiller)) {
       for (; ElementIndex != NumElems; ++ElementIndex) {
         if (!this->visitArrayElemInit(ElementIndex, ArrayFiller, InitT))
           return false;
@@ -5286,7 +5299,8 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
         return checkDecl();
       // The previous attempt at initialization might've been unsuccessful,
       // so let's try this one.
-    } else if ((GlobalIndex = P.createGlobal(VD, Init))) {
+    } else if ((GlobalIndex =
+                    P.createGlobal(VD, Init, VariablesAreConstexprUnknown))) {
     } else {
       return false;
     }
@@ -6844,8 +6858,8 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     return false;
   bool IsUnion = R->isUnion();
 
-  // Union copy and move ctors are special.
-  if (IsUnion && Ctor->isCopyOrMoveConstructor()) {
+  // Default union copy and move ctors are special.
+  if (IsUnion && Ctor->isCopyOrMoveConstructor() && Ctor->isDefaulted()) {
     LocOverrideScope<Emitter> LOS(this, SourceInfo{});
 
     // No special case for NumFields == 0 here, so the Memcpy op
@@ -7639,7 +7653,9 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     if (IsReference) {
       if (!Ctx.getLangOpts().CPlusPlus11)
         return this->emitGetGlobal(classifyPrim(E), *GlobalIndex, E);
-      return this->emitGetGlobalUnchecked(classifyPrim(E), *GlobalIndex, E);
+      if (!Ctx.getLangOpts().CPlusPlus23)
+        return this->emitGetGlobalUnchecked(classifyPrim(E), *GlobalIndex, E);
+      return this->emitGetRefGlobal(*GlobalIndex, E);
     }
 
     return this->emitGetPtrGlobal(*GlobalIndex, E);
@@ -7725,7 +7741,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
                                         true);
       return this->visitDeclRef(D, E);
     }
-    return revisit(VD);
+    return revisit(VD, !VD->isConstexpr() && DeclType->isReferenceType());
   }
 
   // FIXME: The evaluateValue() check here is a little ridiculous, since
@@ -7749,13 +7765,23 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
                                       /*InitializerFailed=*/true, E);
   }
 
-  return this->emitDummyPtr(D, E);
+  return this->emitDummyPtr(
+      D, E, Ctx.getLangOpts().CPlusPlus23 && DeclType->isReferenceType());
 }
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   const auto *D = E->getDecl();
   return this->visitDeclRef(D, E);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitDesignatedInitUpdateExpr(
+    const DesignatedInitUpdateExpr *E) {
+  assert(E->getType()->isRecordType());
+  if (!this->visitInitializer(E->getBase()))
+    return false;
+  return this->visitInitializer(E->getUpdater());
 }
 
 template <class Emitter> bool Compiler<Emitter>::emitCleanup() {
@@ -8057,9 +8083,9 @@ bool Compiler<Emitter>::emitDestructionPop(const Descriptor *Desc,
 /// Create a dummy pointer for the given decl (or expr) and
 /// push a pointer to it on the stack.
 template <class Emitter>
-bool Compiler<Emitter>::emitDummyPtr(const DeclTy &D, const Expr *E) {
+bool Compiler<Emitter>::emitDummyPtr(const DeclTy &D, const Expr *E, bool CU) {
   assert(!DiscardResult && "Should've been checked before");
-  unsigned DummyID = P.getOrCreateDummy(D);
+  unsigned DummyID = P.getOrCreateDummy(D, CU);
 
   if (!this->emitGetPtrGlobal(DummyID, E))
     return false;

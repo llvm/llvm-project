@@ -1,3 +1,5 @@
+# REQUIRES: host-byteorder-little-endian
+#
 # RUN: rm -rf %t && split-file %s %t && cd %t
 #
 # RUN: yaml2obj a.yaml -o a.o

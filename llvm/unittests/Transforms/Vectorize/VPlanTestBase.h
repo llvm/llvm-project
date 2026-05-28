@@ -78,8 +78,8 @@ protected:
 
     Loop *L = LI->getLoopFor(LoopHeader);
     PredicatedScalarEvolution PSE(*SE, *L);
-    auto Plan = VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64),
-                                             {}, PSE);
+    auto Plan =
+        VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64), PSE);
 
     if (Style != UncountableExitStyle::NoUncountableExit) {
       Inductions.clear();
@@ -100,7 +100,7 @@ protected:
     VPlanTransforms::addMiddleCheck(*Plan, false);
 
     if (CreateLoopRegions)
-      VPlanTransforms::createLoopRegions(*Plan);
+      VPlanTransforms::createLoopRegions(*Plan, {});
     return Plan;
   }
 
@@ -111,7 +111,7 @@ protected:
 
     Loop *L = LI->getLoopFor(LoopHeader);
     PredicatedScalarEvolution PSE(*SE, *L);
-    return VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64), {},
+    return VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64),
                                         PSE);
   }
 };

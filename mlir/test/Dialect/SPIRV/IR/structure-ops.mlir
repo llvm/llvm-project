@@ -66,6 +66,8 @@ func.func @const() -> () {
   // CHECK: spirv.Constant dense<4.200000e+00> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
   // CHECK: spirv.Constant dense<0> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
   // CHECK: spirv.Constant dense<4> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
+  // CHECK: spirv.Constant [1 : i32, 2.000000e+00 : f32] : !spirv.struct<(i32, f32)>
+  // CHECK: spirv.Constant [1 : i32, [dense<2> : vector<2xi32>]] : !spirv.struct<(i32, !spirv.array<1 x vector<2xi32>>)>
 
   %0 = spirv.Constant true
   %1 = spirv.Constant 42 : i32
@@ -81,6 +83,8 @@ func.func @const() -> () {
   %11 = spirv.Constant dense<4.200000e+00> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
   %12 = spirv.Constant dense<0> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
   %13 = spirv.Constant dense<4> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
+  %14 = spirv.Constant [1 : i32, 2.0 : f32] : !spirv.struct<(i32, f32)>
+  %15 = spirv.Constant [1 : i32, [dense<2> : vector<2xi32>]] : !spirv.struct<(i32, !spirv.array<1 x vector<2xi32>>)>
   return
 }
 
@@ -103,7 +107,7 @@ func.func @array_constant() -> () {
 // -----
 
 func.func @array_constant() -> () {
-  // expected-error @+1 {{must have spirv.array result type for array value}}
+  // expected-error @+1 {{must have spirv.array or spirv.struct result type for array value}}
   %0 = spirv.Constant [dense<3.0> : vector<2xf32>] : !spirv.rtarray<vector<2xf32>>
   return
 }
@@ -148,6 +152,30 @@ func.func @coop_matrix_const_non_splat() -> () {
 
 // -----
 
+func.func @struct_constant_wrong_member_count() -> () {
+  // expected-error @+1 {{number of constituents (1) does not match number of struct members (2)}}
+  %0 = spirv.Constant [1 : i32] : !spirv.struct<(i32, f32)>
+  return
+}
+
+// -----
+
+func.func @struct_constant_wrong_member_type() -> () {
+  // expected-error @+1 {{result type ('f32') does not match value type ('i32')}}
+  %0 = spirv.Constant [1 : i32, 2 : i32] : !spirv.struct<(i32, f32)>
+  return
+}
+
+// -----
+
+func.func @struct_constant_identified() -> () {
+  // expected-error @+1 {{cannot have an identified struct as a constant type}}
+  %0 = spirv.Constant [1 : i32] : !spirv.struct<S, (i32)>
+  return
+}
+
+// -----
+
 func.func @coop_matrix_const_non_dense() -> () {
     // expected-error @+2 {{floating point value not valid for specified type}}
     %0 = spirv.Constant 0.000000e+00 : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
@@ -170,7 +198,7 @@ func.func @coop_matrix_const_wrong_type() -> () {
 //===----------------------------------------------------------------------===//
 
 func.func @ccr_result_not_composite() -> () {
-  // expected-error @+1 {{op result #0 must be vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float or BFloat16 or Float8E4M3 or Float8E5M2 values of length 2/3/4/8/16 of ranks 1 or any SPIR-V array type or any SPIR-V runtime array type or any SPIR-V struct type or any SPIR-V cooperative matrix type or any SPIR-V matrix type or any SPIR-V tensorArm type, but got 'i32'}}
+  // expected-error @+1 {{op result #0 must be vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1 or vector of BFloat16 or Float8E4M3 or Float8E5M2 values of length 2/3/4/8/16 of ranks 1 or any SPIR-V array type or any SPIR-V runtime array type or any SPIR-V struct type or any SPIR-V cooperative matrix type or any SPIR-V matrix type or any SPIR-V tensorArm type, but got 'i32'}}
   %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : i32
   return
 }

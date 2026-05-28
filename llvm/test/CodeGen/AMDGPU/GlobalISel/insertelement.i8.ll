@@ -303,6 +303,47 @@ define amdgpu_ps void @insertelement_s_v2i8_v_s(ptr addrspace(4) inreg %ptr, i8 
 ; GFX11-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: insertelement_s_v2i8_v_s:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-TRUE16-NEXT:    s_mov_b32 m0, s4
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[2:3]
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX11-TRUE16-NEXT:    s_and_b32 s1, 0xffff, s0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-TRUE16-NEXT:    s_lshr_b32 s1, s1, 8
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_movreld_b32_e32 v1, v0
+; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v2.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v0.h, 0xff, v1.l
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 8, v0.l
+; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.h, v0.l
+; GFX11-TRUE16-NEXT:    global_store_b16 v[1:2], v0, off
+; GFX11-TRUE16-NEXT:    s_endpgm
+; GFX11-FAKE16-LABEL: insertelement_s_v2i8_v_s:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-FAKE16-NEXT:    s_mov_b32 m0, s4
+; GFX11-FAKE16-NEXT:    global_load_u16 v1, v1, s[2:3]
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX11-FAKE16-NEXT:    s_lshr_b32 s1, s0, 8
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
+; GFX11-FAKE16-NEXT:    v_movreld_b32_e32 v1, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xff, v2
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v2, 0xff, v1
+; GFX11-FAKE16-NEXT:    v_lshlrev_b16 v3, 8, v0
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    v_or_b32_e32 v2, v2, v3
+; GFX11-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX11-FAKE16-NEXT:    s_endpgm
   %vec = load <2 x i8>, ptr addrspace(4) %ptr
   %insert = insertelement <2 x i8> %vec, i8 %val, i32 %idx
   store <2 x i8> %insert, ptr addrspace(1) null

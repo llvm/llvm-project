@@ -1081,11 +1081,10 @@ static void DoPrintMacros(Preprocessor &PP, raw_ostream *OS) {
   PP.LexTokensUntilEOF();
 
   SmallVector<id_macro_pair, 128> MacrosByID;
-  for (Preprocessor::macro_iterator I = PP.macro_begin(), E = PP.macro_end();
-       I != E; ++I) {
-    auto *MD = I->second.getLatest();
+  for (const auto &M : PP.macros()) {
+    auto *MD = M.second.getLatest();
     if (MD && MD->isDefined())
-      MacrosByID.push_back(id_macro_pair(I->first, MD->getMacroInfo()));
+      MacrosByID.push_back(id_macro_pair(M.first, MD->getMacroInfo()));
   }
   llvm::array_pod_sort(MacrosByID.begin(), MacrosByID.end(), MacroIDCompare);
 

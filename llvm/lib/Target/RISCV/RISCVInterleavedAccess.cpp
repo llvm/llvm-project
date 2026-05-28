@@ -69,6 +69,12 @@ static const Intrinsic::ID FixedVlssegIntrIds[] = {
     Intrinsic::riscv_sseg6_load_mask, Intrinsic::riscv_sseg7_load_mask,
     Intrinsic::riscv_sseg8_load_mask};
 
+static const Intrinsic::ID ScalableVlssegIntrIds[] = {
+    Intrinsic::riscv_vlsseg2_mask, Intrinsic::riscv_vlsseg3_mask,
+    Intrinsic::riscv_vlsseg4_mask, Intrinsic::riscv_vlsseg5_mask,
+    Intrinsic::riscv_vlsseg6_mask, Intrinsic::riscv_vlsseg7_mask,
+    Intrinsic::riscv_vlsseg8_mask};
+
 static const Intrinsic::ID ScalableVlsegIntrIds[] = {
     Intrinsic::riscv_vlseg2_mask, Intrinsic::riscv_vlseg3_mask,
     Intrinsic::riscv_vlseg4_mask, Intrinsic::riscv_vlseg5_mask,
@@ -349,15 +355,25 @@ bool RISCVTargetLowering::lowerInterleavedStore(Instruction *Store,
 }
 
 bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    Instruction *Load, Value *Mask, IntrinsicInst *DI) const {
+    Instruction *Load, Value *Mask, IntrinsicInst *DI,
+    const APInt &GapMask) const {
   const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
+  assert(GapMask.getBitWidth() == Factor);
   if (Factor > 8)
     return false;
 
+  // We only support cases where the skipped fields are the trailing ones.
+  if (!GapMask.isMask())
+    return false;
   IRBuilder<> Builder(Load);
 
   VectorType *ResVTy = getDeinterleavedVectorType(DI);
 
+  unsigned MaskFactor = GapMask.getActiveBits();
+  // For MaskFactor of 1, we still want to lower it with segmented load
+  // (of the original Factor), because the sole field extraction will eventually
+  // turn it into a strided load.
+  bool UseStridedSeg = MaskFactor < Factor && MaskFactor > 1;
   const DataLayout &DL = Load->getDataLayout();
   auto *XLenTy = Builder.getIntNTy(Subtarget.getXLen());
 
@@ -371,22 +387,53 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
   if (!isLegalInterleavedAccessType(ResVTy, Factor, Alignment, AS, DL))
     return false;
 
+  unsigned ElementSizeInBytes = DL.getTypeStoreSize(ResVTy->getElementType());
   Value *Return;
   if (isa<FixedVectorType>(ResVTy)) {
-    Return = Builder.CreateIntrinsic(FixedVlsegIntrIds[Factor - 2],
-                                     {ResVTy, PtrTy, XLenTy}, {Ptr, Mask, VL});
+    Value *SegLoad;
+    if (UseStridedSeg) {
+      // Lower to strided segmented load.
+      Value *Stride = ConstantInt::get(XLenTy, Factor * ElementSizeInBytes);
+      SegLoad = Builder.CreateIntrinsic(FixedVlssegIntrIds[MaskFactor - 2],
+                                        {ResVTy, PtrTy, XLenTy, XLenTy},
+                                        {Ptr, Stride, Mask, VL});
+    } else {
+      SegLoad =
+          Builder.CreateIntrinsic(FixedVlsegIntrIds[Factor - 2],
+                                  {ResVTy, PtrTy, XLenTy}, {Ptr, Mask, VL});
+    }
+
+    if (MaskFactor != Factor) {
+      // Replace masked-off factors with poisons.
+      SmallVector<Type *, 8> AggrTypes{Factor, ResVTy};
+      Return = PoisonValue::get(StructType::get(Load->getContext(), AggrTypes));
+      for (unsigned I = 0; I < MaskFactor; ++I) {
+        Value *SubVec = Builder.CreateExtractValue(SegLoad, I);
+        Return = Builder.CreateInsertValue(Return, SubVec, I);
+      }
+    } else {
+      Return = SegLoad;
+    }
   } else {
     unsigned SEW = DL.getTypeSizeInBits(ResVTy->getElementType());
     unsigned NumElts = ResVTy->getElementCount().getKnownMinValue();
     Type *VecTupTy = TargetExtType::get(
         Load->getContext(), "riscv.vector.tuple",
         ScalableVectorType::get(Builder.getInt8Ty(), NumElts * SEW / 8),
-        Factor);
-    Function *VlsegNFunc = Intrinsic::getOrInsertDeclaration(
-        Load->getModule(), ScalableVlsegIntrIds[Factor - 2],
-        {VecTupTy, PtrTy, Mask->getType(), VL->getType()});
+        UseStridedSeg ? MaskFactor : Factor);
+    Function *SegLoadFunc;
+    if (UseStridedSeg) {
+      // Lower to strided segmented load.
+      SegLoadFunc = Intrinsic::getOrInsertDeclaration(
+          Load->getModule(), ScalableVlssegIntrIds[MaskFactor - 2],
+          {VecTupTy, PtrTy, XLenTy, Mask->getType()});
+    } else {
+      SegLoadFunc = Intrinsic::getOrInsertDeclaration(
+          Load->getModule(), ScalableVlsegIntrIds[Factor - 2],
+          {VecTupTy, PtrTy, Mask->getType(), VL->getType()});
+    }
 
-    Value *Operands[] = {
+    SmallVector<Value *, 8> Operands = {
         PoisonValue::get(VecTupTy),
         Ptr,
         Mask,
@@ -394,12 +441,16 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
         ConstantInt::get(XLenTy,
                          RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC),
         ConstantInt::get(XLenTy, Log2_64(SEW))};
+    if (UseStridedSeg) {
+      Value *Stride = ConstantInt::get(XLenTy, Factor * ElementSizeInBytes);
+      Operands.insert(std::next(Operands.begin(), 2), Stride);
+    }
 
-    CallInst *Vlseg = Builder.CreateCall(VlsegNFunc, Operands);
+    CallInst *Vlseg = Builder.CreateCall(SegLoadFunc, Operands);
 
-    SmallVector<Type *, 2> AggrTypes{Factor, ResVTy};
+    SmallVector<Type *, 8> AggrTypes{Factor, ResVTy};
     Return = PoisonValue::get(StructType::get(Load->getContext(), AggrTypes));
-    for (unsigned i = 0; i < Factor; ++i) {
+    for (unsigned i = 0; i < MaskFactor; ++i) {
       Value *VecExtract = Builder.CreateIntrinsic(
           Intrinsic::riscv_tuple_extract, {ResVTy, VecTupTy},
           {Vlseg, Builder.getInt32(i)});

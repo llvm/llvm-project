@@ -4412,16 +4412,12 @@
 
 # CHECK: mrs     x12, {{s3_7_c15_c1_5|S3_7_C15_C1_5}}
 # CHECK: mrs     x13, {{s3_2_c11_c15_7|S3_2_C11_C15_7}}
-# CHECK: mrs     xzr, {{s0_0_c4_c0_0|S0_0_C4_C0_0}}
 # CHECK: msr     {{s3_0_c15_c0_0|S3_0_C15_C0_0}}, x12
 # CHECK: msr     {{s3_7_c11_c13_7|S3_7_C11_C13_7}}, x5
-# CHECK: msr     {{s0_0_c4_c0_0|S0_0_C4_C0_0}}, xzr
 0xac 0xf1 0x3f 0xd5
 0xed 0xbf 0x3a 0xd5
-0x1f 0x40 0x20 0xd5
 0x0c 0xf0 0x18 0xd5
 0xe5 0xbd 0x1f 0xd5
-0x1f 0x40 0x00 0xd5
 
 #------------------------------------------------------------------------------
 # Test and branch (immediate)

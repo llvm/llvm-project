@@ -251,11 +251,11 @@ define <1 x i32> @intrinsic_column_major_load_dot_product_i32_stride_too_large_1
 ; CHECK-LABEL: @intrinsic_column_major_load_dot_product_i32_stride_too_large_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x i32>, ptr [[LHS_ADDRESS:%.*]], align 4
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i32, ptr [[LHS_ADDRESS]], i64 4
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds i32, ptr [[LHS_ADDRESS]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <1 x i32>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr i32, ptr [[LHS_ADDRESS]], i64 8
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds i32, ptr [[LHS_ADDRESS]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x i32>, ptr [[VEC_GEP2]], align 4
-; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr i32, ptr [[LHS_ADDRESS]], i64 12
+; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr inbounds i32, ptr [[LHS_ADDRESS]], i64 12
 ; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <1 x i32>, ptr [[VEC_GEP4]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <1 x i32> [[COL_LOAD]], <1 x i32> [[COL_LOAD1]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <1 x i32> [[COL_LOAD3]], <1 x i32> [[COL_LOAD5]], <2 x i32> <i32 0, i32 1>
@@ -280,11 +280,11 @@ define <1 x i32> @intrinsic_column_major_load_dot_product_i32_stride_too_large_2
 ; CHECK-LABEL: @intrinsic_column_major_load_dot_product_i32_stride_too_large_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x i32>, ptr [[LHS_ADDRESS:%.*]], align 4
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i32, ptr [[LHS_ADDRESS]], i64 5
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds i32, ptr [[LHS_ADDRESS]], i64 5
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <1 x i32>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr i32, ptr [[LHS_ADDRESS]], i64 10
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds i32, ptr [[LHS_ADDRESS]], i64 10
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x i32>, ptr [[VEC_GEP2]], align 4
-; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr i32, ptr [[LHS_ADDRESS]], i64 15
+; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr inbounds i32, ptr [[LHS_ADDRESS]], i64 15
 ; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <1 x i32>, ptr [[VEC_GEP4]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <1 x i32> [[COL_LOAD]], <1 x i32> [[COL_LOAD1]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <1 x i32> [[COL_LOAD3]], <1 x i32> [[COL_LOAD5]], <2 x i32> <i32 0, i32 1>
@@ -327,16 +327,16 @@ declare <4 x i32> @llvm.matrix.multiply.v4i32.v4i32.v4i32(<4 x i32>, <4 x i32>, 
 define <1 x i32> @test_builtin_column_major_variable_stride(ptr %src, <4 x i32> %a, i64 %stride) {
 ; CHECK-LABEL: @test_builtin_column_major_variable_stride(
 ; CHECK-NEXT:    [[VEC_START:%.*]] = mul i64 0, [[STRIDE:%.*]]
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i32, ptr [[SRC:%.*]], i64 [[VEC_START]]
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[VEC_START]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x i32>, ptr [[VEC_GEP]], align 4
 ; CHECK-NEXT:    [[VEC_START1:%.*]] = mul i64 1, [[STRIDE]]
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[VEC_START1]]
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[VEC_START1]]
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x i32>, ptr [[VEC_GEP2]], align 4
 ; CHECK-NEXT:    [[VEC_START4:%.*]] = mul i64 2, [[STRIDE]]
-; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[VEC_START4]]
+; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[VEC_START4]]
 ; CHECK-NEXT:    [[COL_LOAD6:%.*]] = load <1 x i32>, ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    [[VEC_START7:%.*]] = mul i64 3, [[STRIDE]]
-; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[VEC_START7]]
+; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[VEC_START7]]
 ; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <1 x i32>, ptr [[VEC_GEP8]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <1 x i32> [[COL_LOAD]], <1 x i32> [[COL_LOAD3]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <1 x i32> [[COL_LOAD6]], <1 x i32> [[COL_LOAD9]], <2 x i32> <i32 0, i32 1>

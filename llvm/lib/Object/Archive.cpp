@@ -390,6 +390,10 @@ ZOSArchiveMemberHeader::ZOSArchiveMemberHeader(const Archive *Parent,
                                                uint64_t Size, Error *Err)
     : ArchiveMemberHeader(Parent, RawHeaderPtr, Size, Err) {
   ErrorAsOutParameter ErrAsOutParam(Err);
+  // If the base class constructor already detected an error
+  // do not attempt to read header fields
+  if (Err && *Err)
+    return;
   setMemberHeaderStrings(Err, Size);
 }
 

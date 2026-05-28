@@ -35,122 +35,6 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPBlendRecipe *R) {
   return ResTy;
 }
 
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
-  // Set the result type from the first operand, check if the types for all
-  // other operands match and cache them.
-  auto SetResultTyFromOp = [this, R]() {
-    Type *ResTy = inferScalarType(R->getOperand(0));
-    unsigned NumOperands = R->getNumOperandsWithoutMask();
-    for (unsigned Op = 1; Op != NumOperands; ++Op) {
-      VPValue *OtherV = R->getOperand(Op);
-      assert(inferScalarType(OtherV) == ResTy &&
-             "different types inferred for different operands");
-      CachedTypes[OtherV] = ResTy;
-    }
-    return ResTy;
-  };
-
-  unsigned Opcode = R->getOpcode();
-  if (Instruction::isBinaryOp(Opcode) || Instruction::isUnaryOp(Opcode))
-    return SetResultTyFromOp();
-
-  switch (Opcode) {
-  case Instruction::PHI:
-    for (VPValue *Op : R->operands()) {
-      if (auto *VIR = dyn_cast<VPIRValue>(Op))
-        return VIR->getType();
-      if (auto *Ty = CachedTypes.lookup(Op))
-        return Ty;
-    }
-  LLVM_FALLTHROUGH;
-  case Instruction::ExtractElement:
-  case Instruction::InsertElement:
-  case Instruction::Freeze:
-  case VPInstruction::Broadcast:
-  case VPInstruction::ComputeReductionResult:
-  case VPInstruction::ExitingIVValue:
-  case VPInstruction::ExtractLastLane:
-  case VPInstruction::ExtractPenultimateElement:
-  case VPInstruction::ExtractLastPart:
-  case VPInstruction::ExtractLastActive:
-  case VPInstruction::PtrAdd:
-  case VPInstruction::WidePtrAdd:
-  case VPInstruction::ReductionStartVector:
-  case VPInstruction::ResumeForEpilogue:
-  case VPInstruction::Reverse:
-    return inferScalarType(R->getOperand(0));
-  case Instruction::Select: {
-    Type *ResTy = inferScalarType(R->getOperand(1));
-    VPValue *OtherV = R->getOperand(2);
-    assert(inferScalarType(OtherV) == ResTy &&
-           "different types inferred for different operands");
-    CachedTypes[OtherV] = ResTy;
-    return ResTy;
-  }
-  case Instruction::ICmp:
-  case Instruction::FCmp:
-  case VPInstruction::ActiveLaneMask:
-    assert(inferScalarType(R->getOperand(0)) ==
-               inferScalarType(R->getOperand(1)) &&
-           "different types inferred for different operands");
-    return IntegerType::get(Ctx, 1);
-  case VPInstruction::ExplicitVectorLength:
-    return Type::getIntNTy(Ctx, 32);
-  case VPInstruction::FirstOrderRecurrenceSplice:
-  case VPInstruction::Not:
-  case VPInstruction::CalculateTripCountMinusVF:
-  case VPInstruction::CanonicalIVIncrementForPart:
-  case VPInstruction::AnyOf:
-  case VPInstruction::BuildStructVector:
-  case VPInstruction::BuildVector:
-  case VPInstruction::Unpack:
-    return SetResultTyFromOp();
-  case VPInstruction::ExtractLane:
-    return inferScalarType(R->getOperand(1));
-  case VPInstruction::FirstActiveLane:
-  case VPInstruction::LastActiveLane:
-    // Assume that the maximum possible number of elements in a vector fits
-    // within the index type for the default address space.
-    return DL.getIndexType(Ctx, 0);
-  case VPInstruction::LogicalAnd:
-  case VPInstruction::LogicalOr:
-    assert(inferScalarType(R->getOperand(0))->isIntegerTy(1) &&
-           inferScalarType(R->getOperand(1))->isIntegerTy(1) &&
-           "LogicalAnd/Or operands should be bool");
-    return IntegerType::get(Ctx, 1);
-  case VPInstruction::MaskedCond:
-    assert(inferScalarType(R->getOperand(0))->isIntegerTy(1));
-    return IntegerType::get(Ctx, 1);
-  case VPInstruction::BranchOnCond:
-  case VPInstruction::BranchOnTwoConds:
-  case VPInstruction::BranchOnCount:
-  case Instruction::Store:
-  case Instruction::Switch:
-    return Type::getVoidTy(Ctx);
-  case Instruction::Load:
-    return cast<LoadInst>(R->getUnderlyingValue())->getType();
-  case Instruction::Alloca:
-    return cast<AllocaInst>(R->getUnderlyingValue())->getType();
-  case Instruction::Call: {
-    unsigned CallIdx = R->getNumOperandsWithoutMask() - 1;
-    return cast<Function>(R->getOperand(CallIdx)->getLiveInIRValue())
-        ->getReturnType();
-  }
-  case Instruction::GetElementPtr:
-    return inferScalarType(R->getOperand(0));
-  case Instruction::ExtractValue:
-    return cast<ExtractValueInst>(R->getUnderlyingValue())->getType();
-  default:
-    break;
-  }
-  // Type inference not implemented for opcode.
-  LLVM_DEBUG({
-    dbgs() << "LV: Found unhandled opcode for: ";
-    R->getVPSingleValue()->dump();
-  });
-  llvm_unreachable("Unhandled opcode!");
-}
-
 Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenRecipe *R) {
   unsigned Opcode = R->getOpcode();
   if (Instruction::isBinaryOp(Opcode) || Instruction::isShift(Opcode) ||
@@ -195,119 +79,26 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenRecipe *R) {
   llvm_unreachable("Unhandled opcode!");
 }
 
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenCallRecipe *R) {
-  auto &CI = *cast<CallInst>(R->getUnderlyingInstr());
-  return CI.getType();
-}
-
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenMemoryRecipe *R) {
-  assert((isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(R)) &&
-         "Store recipes should not define any values");
-  return cast<LoadInst>(&R->getIngredient())->getType();
-}
-
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPReplicateRecipe *R) {
-  unsigned Opcode = R->getUnderlyingInstr()->getOpcode();
-
-  if (Instruction::isBinaryOp(Opcode) || Instruction::isShift(Opcode) ||
-      Instruction::isBitwiseLogicOp(Opcode)) {
-    Type *ResTy = inferScalarType(R->getOperand(0));
-    assert(ResTy == inferScalarType(R->getOperand(1)) &&
-           "inferred types for operands of binary op don't match");
-    CachedTypes[R->getOperand(1)] = ResTy;
-    return ResTy;
-  }
-
-  if (Instruction::isCast(Opcode))
-    return R->getUnderlyingInstr()->getType();
-
-  switch (Opcode) {
-  case Instruction::Call: {
-    unsigned CallIdx = R->getNumOperands() - (R->isPredicated() ? 2 : 1);
-    return cast<Function>(R->getOperand(CallIdx)->getLiveInIRValue())
-        ->getReturnType();
-  }
-  case Instruction::Select: {
-    Type *ResTy = inferScalarType(R->getOperand(1));
-    assert(ResTy == inferScalarType(R->getOperand(2)) &&
-           "inferred types for operands of select op don't match");
-    CachedTypes[R->getOperand(2)] = ResTy;
-    return ResTy;
-  }
-  case Instruction::ICmp:
-  case Instruction::FCmp:
-    return IntegerType::get(Ctx, 1);
-  case Instruction::Alloca:
-  case Instruction::ExtractValue:
-    return R->getUnderlyingInstr()->getType();
-  case Instruction::Freeze:
-  case Instruction::FNeg:
-  case Instruction::GetElementPtr:
-    return inferScalarType(R->getOperand(0));
-  case Instruction::Load:
-    return cast<LoadInst>(R->getUnderlyingInstr())->getType();
-  case Instruction::Store:
-    // FIXME: VPReplicateRecipes with store opcodes still define a result
-    // VPValue, so we need to handle them here. Remove the code here once this
-    // is modeled accurately in VPlan.
-    return Type::getVoidTy(Ctx);
-  default:
-    break;
-  }
-  // Type inference not implemented for opcode.
-  LLVM_DEBUG({
-    dbgs() << "LV: Found unhandled opcode for: ";
-    R->getVPSingleValue()->dump();
-  });
-  llvm_unreachable("Unhandled opcode");
-}
-
 Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   if (Type *CachedTy = CachedTypes.lookup(V))
     return CachedTy;
 
-  if (auto *IRV = dyn_cast<VPIRValue>(V))
-    return IRV->getType();
-
-  if (auto *SymbolicV = dyn_cast<VPSymbolicValue>(V))
-    return SymbolicV->getType();
-
-  if (auto *RegionV = dyn_cast<VPRegionValue>(V))
-    return RegionV->getType();
+  if (isa<VPIRValue, VPRegionValue, VPSymbolicValue, VPMultiDefValue,
+          VPExpandSCEVRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe,
+          VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe, VPWidenCastRecipe,
+          VPWidenIntrinsicRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
+          VPVectorEndPointerRecipe, VPWidenCallRecipe, VPWidenLoadRecipe,
+          VPWidenLoadEVLRecipe, VPDerivedIVRecipe, VPHeaderPHIRecipe,
+          VPInstruction, VPReplicateRecipe>(V)) {
+    Type *Ty = V->getScalarType();
+    assert(Ty && "Scalar type must be set by recipe construction");
+    return Ty;
+  }
 
   Type *ResultTy =
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
-          .Case<VPActiveLaneMaskPHIRecipe, VPFirstOrderRecurrencePHIRecipe,
-                VPReductionPHIRecipe, VPWidenPointerInductionRecipe,
-                VPCurrentIterationPHIRecipe>([this](const auto *R) {
-            // Handle header phi recipes, except VPWidenIntOrFpInduction
-            // which needs special handling due it being possibly truncated.
-            // TODO: consider inferring/caching type of siblings, e.g.,
-            // backedge value, here and in cases below.
-            return inferScalarType(R->getStartValue());
-          })
-          .Case<VPWidenIntOrFpInductionRecipe, VPDerivedIVRecipe>(
-              [](const auto *R) { return R->getScalarType(); })
-          .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,
-                VPScalarIVStepsRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
-                VPVectorEndPointerRecipe, VPWidenCanonicalIVRecipe>(
-              [this](const VPRecipeBase *R) {
-                return inferScalarType(R->getOperand(0));
-              })
-          // VPInstructionWithType must be handled before VPInstruction.
-          .Case<VPInstructionWithType, VPWidenIntrinsicRecipe,
-                VPWidenCastRecipe>(
-              [](const auto *R) { return R->getResultType(); })
-          .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
-                VPWidenCallRecipe, VPWidenMemoryRecipe>(
+          .Case<VPBlendRecipe, VPWidenRecipe>(
               [this](const auto *R) { return inferScalarTypeForRecipe(R); })
-          .Case([V](const VPInterleaveBase *R) {
-            // TODO: Use info from interleave group.
-            return V->getUnderlyingValue()->getType();
-          })
-          .Case([](const VPExpandSCEVRecipe *R) {
-            return R->getSCEV()->getType();
-          })
           .Case([this](const VPReductionRecipe *R) {
             return inferScalarType(R->getChainOp());
           })

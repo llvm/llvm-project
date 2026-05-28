@@ -354,16 +354,16 @@ bool RISCVMoveMerge::mergeMoveSARegPair(MachineBasicBlock &MBB) {
     auto RegPair = TII->isCopyInstrImpl(*MBBI);
     if (RegPair.has_value()) {
       bool MoveFromSToA = isCandidateToMergeMVA01S(*RegPair);
+      bool MoveFromAToS = isCandidateToMergeMVSA01(*RegPair);
       bool IsEven = isGPRPairCopyCandidateEven(*RegPair);
       bool IsOdd = isGPRPairCopyCandidateOdd(*RegPair);
-      if (!MoveFromSToA && !isCandidateToMergeMVSA01(*RegPair) && !IsEven &&
-          !IsOdd) {
+      if (!MoveFromSToA && !MoveFromAToS && !IsEven && !IsOdd) {
         ++MBBI;
         continue;
       }
 
       MachineBasicBlock::iterator Paired = E;
-      if (ST->hasStdExtZcmp() || ST->hasVendorXqccmp()) {
+      if (MoveFromSToA || MoveFromAToS) {
         Paired = findMatchingInst(MBBI, MoveFromSToA, RegPair.value());
         if (Paired != E) {
           MBBI = mergePairedInsns(MBBI, Paired, MoveFromSToA);

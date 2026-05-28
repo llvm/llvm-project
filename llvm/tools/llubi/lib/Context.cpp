@@ -15,9 +15,9 @@
 
 namespace llvm::ubi {
 
-Context::Context(Module &M)
-    : Ctx(M.getContext()), M(M), DL(M.getDataLayout()),
-      TLIImpl(M.getTargetTriple()) {}
+Context::Context(Module &M, const AsmParserContext *ParserContext)
+    : Ctx(M.getContext()), M(M), ParserContext(ParserContext),
+      DL(M.getDataLayout()), TLIImpl(M.getTargetTriple()) {}
 
 Context::~Context() = default;
 
@@ -110,6 +110,24 @@ const AnyValue &Context::getConstantValue(Constant *C) {
   return ConstCache.emplace(C, getConstantValueImpl(C)).first->second;
 }
 
+APInt Context::getTag(uint32_t BitWidth, MemoryObject *Obj) {
+  // Nullary provenance.
+  if (!Obj)
+    return APInt::getZero(BitWidth);
+  // The tag is already initialized.
+  if (!Obj->getTag().isZero())
+    return Obj->getTag();
+
+  // FIXME: This doesn't work when the address space is too small.
+  while (true) {
+    APInt Tag = generateRandomAPInt(BitWidth);
+    if (Tag.isZero() || !TaggedMemoryObjects.try_emplace(Tag, Obj).second)
+      continue;
+    Obj->setTag(Tag);
+    return Tag;
+  }
+}
+
 AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
                             uint32_t OffsetInBits, bool CheckPaddingBits,
                             bool *ContainsUndefinedBits) {
@@ -119,7 +137,12 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
     NewOffsetInBits = alignTo(NewOffsetInBits, 8);
   bool NeedsPadding = NewOffsetInBits != OffsetInBits + NumBits;
   uint32_t NumBitsToExtract = NewOffsetInBits - OffsetInBits;
-  SmallVector<uint64_t> RawBits(alignTo(NumBitsToExtract, 8));
+  uint32_t NumWords = divideCeil(NumBitsToExtract, 8);
+  SmallVector<uint64_t> RawBits(NumWords);
+  bool IsTagValid = Ty->isPointerTy();
+  SmallVector<uint64_t> RawTagBits;
+  if (Ty->isPointerTy())
+    RawTagBits.resize(NumWords);
   for (uint32_t I = 0; I < NumBitsToExtract; I += 8) {
     // Try to form a 'logical' byte that represents the bits in the range
     // [BitsStart, BitsEnd].
@@ -160,6 +183,15 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
                           (RandomBits & ~LogicalByte.ConcreteMask)) &
                          Mask;
     RawBits[I / 64] |= static_cast<APInt::WordType>(ActualBits) << (I % 64);
+    if (IsTagValid) {
+      if ((LogicalByte.TagMask & LogicalByte.ConcreteMask & Mask) == Mask) {
+        uint8_t ActualTagBits = LogicalByte.TagValue & Mask;
+        RawTagBits[I / 64] |= static_cast<APInt::WordType>(ActualTagBits)
+                              << (I % 64);
+      } else {
+        IsTagValid = false;
+      }
+    }
   }
   OffsetInBits = NewOffsetInBits;
 
@@ -180,7 +212,11 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
   if (Ty->isFloatingPointTy())
     return APFloat(Ty->getFltSemantics(), Bits);
   assert(Ty->isPointerTy() && "Expect a pointer type");
-  // TODO: recover provenance
+  // Try to recover provenance from the tag.
+  if (IsTagValid) {
+    APInt Tag(NumBitsToExtract, RawTagBits);
+    return Pointer(TaggedMemoryObjects.lookup(Tag), Bits);
+  }
   return Pointer(Bits);
 }
 
@@ -260,7 +296,7 @@ void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
   if (PaddingBits)
     NewOffsetInBits = alignTo(NewOffsetInBits, 8);
   bool NeedsPadding = NewOffsetInBits != OffsetInBits + NumBits;
-  auto WriteBits = [&](const APInt &Bits) {
+  auto WriteBits = [&](const APInt &Bits, const APInt *TagBits) {
     for (uint32_t I = 0, E = Bits.getBitWidth(); I < E; I += 8) {
       uint32_t NumBitsInByte = std::min(8U, E - I);
       uint32_t BitsStart = OffsetInBits + I;
@@ -277,6 +313,21 @@ void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
         Bytes[BitsEnd / 8].writeBits(
             static_cast<uint8_t>((1U << (BitsEnd % 8 + 1)) - 1),
             static_cast<uint8_t>(BitsVal >> (8 - (BitsStart % 8))));
+
+      if (TagBits) {
+        uint8_t TagBitsVal = static_cast<uint8_t>(
+            TagBits->extractBitsAsZExtValue(NumBitsInByte, I));
+        Bytes[BitsStart / 8].writeTagBits(
+            static_cast<uint8_t>(((1U << NumBitsInByte) - 1)
+                                 << (BitsStart % 8)),
+            static_cast<uint8_t>(TagBitsVal << (BitsStart % 8)));
+        // If it is a cross-byte access, write the remaining bits to the next
+        // byte.
+        if (((BitsStart ^ BitsEnd) & ~7) != 0)
+          Bytes[BitsEnd / 8].writeTagBits(
+              static_cast<uint8_t>((1U << (BitsEnd % 8 + 1)) - 1),
+              static_cast<uint8_t>(TagBitsVal >> (8 - (BitsStart % 8))));
+      }
     }
   };
   if (Val.isPoison()) {
@@ -290,14 +341,26 @@ void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
     }
   } else if (Ty->isIntegerTy()) {
     auto &Bits = Val.asInteger();
-    WriteBits(NeedsPadding ? Bits.zext(NewOffsetInBits - OffsetInBits) : Bits);
+    WriteBits(NeedsPadding ? Bits.zext(NewOffsetInBits - OffsetInBits) : Bits,
+              /*TagBits=*/nullptr);
   } else if (Ty->isFloatingPointTy()) {
     auto Bits = Val.asFloat().bitcastToAPInt();
-    WriteBits(NeedsPadding ? Bits.zext(NewOffsetInBits - OffsetInBits) : Bits);
+    WriteBits(NeedsPadding ? Bits.zext(NewOffsetInBits - OffsetInBits) : Bits,
+              /*TagBits=*/nullptr);
   } else if (Ty->isPointerTy()) {
-    auto &Bits = Val.asPointer().address();
-    WriteBits(NeedsPadding ? Bits.zext(NewOffsetInBits - OffsetInBits) : Bits);
-    // TODO: save metadata of the pointer.
+    auto &AddressBits = Val.asPointer().address();
+    if (auto *MO = Val.asPointer().getMemoryObject()) {
+      APInt Tag = getTag(AddressBits.getBitWidth(), MO);
+      if (NeedsPadding)
+        Tag = Tag.zext(NewOffsetInBits - OffsetInBits);
+      WriteBits(NeedsPadding ? AddressBits.zext(NewOffsetInBits - OffsetInBits)
+                             : AddressBits,
+                &Tag);
+    } else {
+      WriteBits(NeedsPadding ? AddressBits.zext(NewOffsetInBits - OffsetInBits)
+                             : AddressBits,
+                /*TagBits=*/nullptr);
+    }
   } else {
     llvm_unreachable("Unsupported scalar type.");
   }
@@ -393,21 +456,23 @@ void Context::storeRawBytes(MemoryObject &MO, uint64_t Offset, const void *Data,
     MO[Offset + I] = Byte::concrete(static_cast<const uint8_t *>(Data)[I]);
 }
 
+APInt Context::generateRandomAPInt(uint32_t BitWidth) {
+  SmallVector<APInt::WordType> RandomWords;
+  uint32_t NumWords = APInt::getNumWords(BitWidth);
+  RandomWords.reserve(NumWords);
+  static_assert(decltype(Rng)::word_size >=
+                    std::numeric_limits<APInt::WordType>::digits,
+                "Unexpected Rng result type.");
+  for (uint32_t I = 0; I != NumWords; ++I)
+    RandomWords.push_back(static_cast<APInt::WordType>(Rng()));
+  return APInt(BitWidth, RandomWords);
+}
+
 void Context::freeze(AnyValue &Val, Type *Ty) {
   if (Val.isPoison()) {
     uint32_t Bits = DL.getTypeSizeInBits(Ty);
-    APInt RandomVal = APInt::getZero(Bits);
-    if (mayUseNonDeterminism()) {
-      SmallVector<APInt::WordType> RandomWords;
-      uint32_t NumWords = APInt::getNumWords(Bits);
-      RandomWords.reserve(NumWords);
-      static_assert(decltype(Rng)::word_size >=
-                        std::numeric_limits<APInt::WordType>::digits,
-                    "Unexpected Rng result type.");
-      for (uint32_t I = 0; I != NumWords; ++I)
-        RandomWords.push_back(static_cast<APInt::WordType>(getRandomUInt64()));
-      RandomVal = APInt(Bits, RandomWords);
-    }
+    APInt RandomVal = mayUseNonDeterminism() ? generateRandomAPInt(Bits)
+                                             : APInt::getZero(Bits);
     if (Ty->isIntegerTy())
       Val = AnyValue(RandomVal);
     else if (Ty->isFloatingPointTy())

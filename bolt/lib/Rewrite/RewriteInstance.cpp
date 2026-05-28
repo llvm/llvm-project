@@ -365,7 +365,7 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
 #endif
 
 #ifdef RISCV_AVAILABLE
-  if (Arch == Triple::riscv64)
+  if (Arch == Triple::riscv64 || Arch == Triple::riscv32)
     return createRISCVMCPlusBuilder(Analysis, Info, RegInfo, STI);
 #endif
 
@@ -427,7 +427,7 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
   // Read RISCV subtarget features from input file
   std::unique_ptr<SubtargetFeatures> Features;
   Triple TheTriple = File->makeTriple();
-  if (TheTriple.getArch() == llvm::Triple::riscv64) {
+  if (TheTriple.isRISCV()) {
     Expected<SubtargetFeatures> FeaturesOrErr = File->getFeatures();
     if (auto E = FeaturesOrErr.takeError()) {
       Err = std::move(E);
@@ -2250,8 +2250,11 @@ Error RewriteInstance::readSpecialSections() {
     BC->updateLSDAEncoding();
   }
 
-  HasTextRelocations = (bool)BC->getUniqueSectionByName(
-      ".rela" + std::string(BC->getMainCodeSectionName()));
+  HasTextRelocations =
+      (bool)BC->getUniqueSectionByName(std::string(".rela") +
+                                       BC->getMainCodeSectionName()) ||
+      (bool)BC->getUniqueSectionByName(std::string(".crel") +
+                                       BC->getMainCodeSectionName());
   HasSymbolTable = (bool)BC->getUniqueSectionByName(".symtab");
   EHFrameSection = BC->getUniqueSectionByName(".eh_frame");
 
@@ -2321,6 +2324,17 @@ void RewriteInstance::adjustCommandLineOptions() {
   if (BC->isAArch64() && !BC->HasRelocations)
     BC->errs() << "BOLT-WARNING: non-relocation mode for AArch64 is not fully "
                   "supported\n";
+
+  // RV32 support is currently limited to statically linked, non-PIE
+  // programs. Reject anything that requires features still out of scope
+  // (PLT, GOT, dynamic relocations, TLS, instrumentation runtime).
+  if (BC->TheTriple->getArch() == llvm::Triple::riscv32 &&
+      (!BC->IsStaticExecutable || !BC->HasFixedLoadAddress ||
+       BC->HasInterpHeader)) {
+    BC->errs() << "BOLT-ERROR: RV32 support is currently limited to "
+                  "statically linked, non-PIE binaries\n";
+    exit(1);
+  }
 
   if (RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary())
     RtLibrary->adjustCommandLineOptions(*BC);
@@ -2473,6 +2487,10 @@ int64_t getRelocationAddend(const ELFObjectFile<ELFT> *Obj,
   case ELF::SHT_RELA: {
     const Elf_Rela *RelA = Obj->getRela(Rel);
     Addend = RelA->r_addend;
+    break;
+  }
+  case ELF::SHT_CREL: {
+    Addend = Obj->getCrel(Rel).r_addend;
     break;
   }
   }
@@ -4880,7 +4898,8 @@ template <typename ELFShdrTy>
 bool RewriteInstance::shouldStrip(const ELFShdrTy &Section,
                                   StringRef SectionName) {
   // Strip non-allocatable relocation sections.
-  if (!(Section.sh_flags & ELF::SHF_ALLOC) && Section.sh_type == ELF::SHT_RELA)
+  if (!(Section.sh_flags & ELF::SHF_ALLOC) &&
+      (Section.sh_type == ELF::SHT_RELA || Section.sh_type == ELF::SHT_CREL))
     return true;
 
   // Strip debug sections if not updating them.
