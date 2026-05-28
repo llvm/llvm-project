@@ -1,12 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.MemoryUnsafeCastChecker -verify %s
 
-@protocol NSObject
-+alloc;
--init;
-@end
-
-@interface NSObject <NSObject> {}
-@end
+#include "mock-types.h"
+#include "objc-mock-types.h"
 
 @interface BaseClass : NSObject
 @end
@@ -61,4 +56,15 @@ void testUnrelated(Class1 *c1) {
   Class2 *c2 = (Class2*)c1;
   // expected-warning@-1{{Unsafe cast from type 'Class1' to an unrelated type 'Class2'}}
   Class1 *c1_same = reinterpret_cast<Class1*>(c1); // no warning
+}
+
+struct Base : RefCountable { virtual ~Base() {} };
+struct Derived : Base { int extra; };
+
+void fn_cast_01(Base* base) {
+  auto* d1 = static_cast<Derived*>(base);
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+
+  auto* d2 = static_cast<Derived*>(static_cast<void*>(base));
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
 }
