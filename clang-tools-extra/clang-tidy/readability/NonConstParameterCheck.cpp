@@ -104,7 +104,12 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
   } else if (const auto *VD = Result.Nodes.getNodeAs<VarDecl>("Mark")) {
     const QualType T = VD->getType();
     if (T->isDependentType()) {
-      const Expr *Init = VD->getInit()->IgnoreParenCasts();
+      // Initializer matched by hasInitializer() may be attached to a different
+      // redeclaration.
+      const Expr *Init = VD->getInit();
+      if (!Init)
+        return;
+      Init = Init->IgnoreParenCasts();
       if (const auto *U = dyn_cast<UnaryOperator>(Init);
           U && U->getOpcode() == UO_Deref) {
         markCanNotBeConst(U->getSubExpr(), true);

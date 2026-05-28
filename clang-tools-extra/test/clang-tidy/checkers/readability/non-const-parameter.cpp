@@ -433,3 +433,11 @@ void dependentInitInGenericLambdaMultiArg() {
     DependentCtor2<T> s(p, p);
   };
 }
+
+template <class T>
+struct StaticMemberWithDependentType {
+  static const T X = 0;
+};
+
+template <class T>
+const T StaticMemberWithDependentType<T>::X;
