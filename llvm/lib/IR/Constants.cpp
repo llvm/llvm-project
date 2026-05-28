@@ -42,22 +42,6 @@ static cl::opt<bool> UseConstantIntForFixedLengthSplat(
 static cl::opt<bool> UseConstantIntForScalableSplat(
     "use-constant-int-for-scalable-splat", cl::init(false), cl::Hidden,
     cl::desc("Use ConstantInt's native scalable vector splat support."));
-static cl::opt<bool> UseConstantPtrNullForFixedLengthSplat(
-    "use-constant-ptrnull-for-fixed-length-splat", cl::init(true), cl::Hidden,
-    cl::desc("Use ConstantPointerNull's native fixed-length vector splat "
-             "support."));
-static cl::opt<bool> UseConstantPtrNullForScalableSplat(
-    "use-constant-ptrnull-for-scalable-splat", cl::init(true), cl::Hidden,
-    cl::desc(
-        "Use ConstantPointerNull's native scalable vector splat support."));
-
-static bool shouldUseConstantPointerNullForVector(VectorType *VTy) {
-  if (!VTy->getElementType()->isPointerTy())
-    return false;
-  return VTy->getElementCount().isScalable()
-             ? UseConstantPtrNullForScalableSplat
-             : UseConstantPtrNullForFixedLengthSplat;
-}
 
 //===----------------------------------------------------------------------===//
 //                              Constant Class
@@ -415,7 +399,7 @@ Constant *Constant::getNullValue(Type *Ty) {
     return ConstantPointerNull::get(cast<PointerType>(Ty));
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID:
-    if (shouldUseConstantPointerNullForVector(cast<VectorType>(Ty)))
+    if (cast<VectorType>(Ty)->getElementType()->isPointerTy())
       return ConstantPointerNull::get(Ty);
     return ConstantAggregateZero::get(Ty);
   case Type::StructTyID:
@@ -1579,8 +1563,7 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   bool isSplatFP = isa<ConstantFP>(C);
   bool isSplatInt = UseConstantIntForFixedLengthSplat && isa<ConstantInt>(C);
   bool isSplatByte = isa<ConstantByte>(C);
-  bool isSplatPtrNull =
-      UseConstantPtrNullForFixedLengthSplat && isa<ConstantPointerNull>(C);
+  bool isSplatPtrNull = isa<ConstantPointerNull>(C);
 
   if (isZero || isUndef || isSplatFP || isSplatInt || isSplatByte ||
       isSplatPtrNull) {
@@ -1623,8 +1606,7 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
 Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
   if (isa<ConstantPointerNull>(V)) {
     VectorType *VTy = VectorType::get(V->getType(), EC);
-    if (shouldUseConstantPointerNullForVector(VTy))
-      return ConstantPointerNull::get(VTy);
+    return ConstantPointerNull::get(VTy);
   }
 
   if (auto *CB = dyn_cast<ConstantByte>(V))
