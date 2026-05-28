@@ -1931,7 +1931,8 @@ DeclResult Sema::CheckClassTemplate(
     const ParsedAttributesView &Attr, TemplateParameterList *TemplateParams,
     AccessSpecifier AS, SourceLocation ModulePrivateLoc,
     SourceLocation FriendLoc, unsigned NumOuterTemplateParamLists,
-    TemplateParameterList **OuterTemplateParamLists, SkipBodyInfo *SkipBody) {
+    TemplateParameterList **OuterTemplateParamLists,
+    bool IsMemberSpecialization, SkipBodyInfo *SkipBody) {
   assert(TemplateParams && TemplateParams->size() > 0 &&
          "No template parameters");
   assert(TUK != TagUseKind::Reference &&
@@ -2256,11 +2257,11 @@ DeclResult Sema::CheckClassTemplate(
   if (ModulePrivateLoc.isValid())
     NewTemplate->setModulePrivate();
 
-  // If we are providing an explicit specialization of a member that is a
-  // class template, make a note of that.
-  if (PrevClassTemplate &&
-      PrevClassTemplate->getInstantiatedFromMemberTemplate())
-    PrevClassTemplate->setMemberSpecialization();
+  if (IsMemberSpecialization) {
+    assert(PrevClassTemplate &&
+           "Member specialization without a primary template?");
+    NewTemplate->setMemberSpecialization();
+  }
 
   // Set the access specifier.
   if (!Invalid && TUK != TagUseKind::Friend &&
@@ -4494,11 +4495,6 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
       VarTemplate->AddPartialSpecialization(Partial, InsertPos);
     Specialization = Partial;
 
-    // If we are providing an explicit specialization of a member variable
-    // template specialization, make a note of that.
-    if (PrevPartial && PrevPartial->getInstantiatedFromMember())
-      PrevPartial->setMemberSpecialization();
-
     CheckTemplatePartialSpecialization(Partial);
   } else {
     // Create a new class template specialization declaration node for
@@ -4703,8 +4699,8 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
     //   given (implicit) specialization of the enclosing class template, the
     //   primary member template and its other partial specializations are still
     //   considered for this specialization of the enclosing class template.
-    if (Template->getMostRecentDecl()->isMemberSpecialization() &&
-        !Partial->getMostRecentDecl()->isMemberSpecialization())
+    if (Template->isMemberSpecialization() &&
+        !Partial->isMemberSpecialization())
       continue;
 
     TemplateDeductionInfo Info(FailedCandidates.getLocation());
@@ -9004,7 +9000,7 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
           TemplateNameLoc, Attr, TemplateParams, AS_none,
           /*ModulePrivateLoc=*/SourceLocation(),
           /*FriendLoc*/ SourceLocation(), TemplateParameterLists.size() - 1,
-          TemplateParameterLists.data());
+          TemplateParameterLists.data(), isMemberSpecialization);
     }
 
     // Create a new class template partial specialization declaration node.
@@ -9027,8 +9023,8 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
 
     // If we are providing an explicit specialization of a member class
     // template specialization, make a note of that.
-    if (PrevPartial && PrevPartial->getInstantiatedFromMember())
-      PrevPartial->setMemberSpecialization();
+    if (isMemberSpecialization)
+      Partial->setMemberSpecialization();
 
     CheckTemplatePartialSpecialization(Partial);
   }

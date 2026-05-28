@@ -7435,7 +7435,10 @@ cc_library(
 cc_library(
     name = "SPIRVBinaryUtils",
     srcs = ["lib/Target/SPIRV/SPIRVBinaryUtils.cpp"],
-    hdrs = ["include/mlir/Target/SPIRV/SPIRVBinaryUtils.h"],
+    hdrs = [
+        "include/mlir/Target/SPIRV/SPIRVBinaryUtils.h",
+        "include/mlir/Target/SPIRV/SPIRVExtInstSets.h",
+    ],
     includes = ["include"],
     deps = [
         ":SPIRVDialect",

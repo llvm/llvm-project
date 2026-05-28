@@ -67,8 +67,8 @@ inner.body:
   br label %inner.header
 
 ; outer.latch is AFTER inner.body: LCSSA-phi users are the only external
-; users of %a/%b. The fix changes their scale from outer_TC=2 to
-; inner_TC*outer_TC=200, raising the extract cost from 8 to 800.
+; users of %a/%b. The fix changes their scale from outer_TC (2) to
+; inner_TC*outer_TC (101*2=202), raising the extract cost from 8 to 808.
 outer.latch:
   %v0.lc = phi i32 [ %a, %inner.header ]
   %v1.lc = phi i32 [ %b, %inner.header ]

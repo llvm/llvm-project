@@ -12902,6 +12902,42 @@ static SDValue lowerShuffleAsShift(const SDLoc &DL, MVT VT, SDValue V1,
   return DAG.getBitcast(VT, V);
 }
 
+/// Try to match a vector shuffle as a X86ISD::VSHLD funnel shift.
+static int matchShuffleAsVSHLD(MVT &ShiftVT, SDValue &V1, SDValue &V2,
+                               unsigned ScalarSizeInBits, ArrayRef<int> Mask) {
+  assert(isPowerOf2_32(ScalarSizeInBits) && ScalarSizeInBits >= 8 &&
+         "Unexpected element size");
+  int Size = Mask.size();
+  if (llvm::is_contained(Mask, SM_SentinelZero))
+    return -1;
+
+  SmallVector<int, 32> FunnelMask(Size);
+  for (int Scale = 2; (Scale * ScalarSizeInBits) <= 64; Scale *= 2) {
+    for (int Shift = 1; Shift != Scale; ++Shift) {
+      for (int Elt = 0; Elt != Size; Elt += Scale) {
+        std::iota(FunnelMask.begin() + Elt, FunnelMask.begin() + Elt + Shift,
+                  Elt + Size + (Scale - Shift));
+        std::iota(FunnelMask.begin() + Elt + Shift,
+                  FunnelMask.begin() + Elt + Scale, Elt);
+      }
+      if (isShuffleEquivalent(Mask, FunnelMask)) {
+        MVT ShiftSVT = MVT::getIntegerVT(ScalarSizeInBits * Scale);
+        ShiftVT = MVT::getVectorVT(ShiftSVT, Size / Scale);
+        return Shift * 8;
+      }
+      ShuffleVectorSDNode::commuteMask(FunnelMask);
+      if (isShuffleEquivalent(Mask, FunnelMask)) {
+        MVT ShiftSVT = MVT::getIntegerVT(ScalarSizeInBits * Scale);
+        ShiftVT = MVT::getVectorVT(ShiftSVT, Size / Scale);
+        std::swap(V1, V2);
+        return Shift * 8;
+      }
+    }
+  }
+
+  return -1;
+}
+
 // EXTRQ: Extract Len elements from lower half of source, starting at Idx.
 // Remainder of lower half result is zero and upper half is all undef.
 static bool matchShuffleAsEXTRQ(MVT VT, SDValue &V1, SDValue &V2,
@@ -40683,6 +40719,16 @@ static bool matchBinaryPermuteShuffle(
       Shuffle = X86ISD::PALIGNR;
       ShuffleVT = MVT::getVectorVT(MVT::i8, MaskVT.getSizeInBits() / 8);
       PermuteImm = ByteRotation;
+      return true;
+    }
+  }
+
+  // Attempt to match against VSHLD funnel shift.
+  if (AllowIntDomain && Subtarget.hasVBMI2()) {
+    int ShiftAmt = matchShuffleAsVSHLD(ShuffleVT, V1, V2, EltSizeInBits, Mask);
+    if (0 < ShiftAmt) {
+      Shuffle = X86ISD::VSHLD;
+      PermuteImm = (unsigned)ShiftAmt;
       return true;
     }
   }

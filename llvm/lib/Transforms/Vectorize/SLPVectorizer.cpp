@@ -16395,19 +16395,17 @@ uint64_t BoUpSLP::getScaleToLoopIterations(const TreeEntry &TE, Value *Scalar,
                                            Instruction *U) {
   BasicBlock *Parent = nullptr;
   if (U) {
-    // For PHI node users that are themselves inside a loop, the
-    // extractelement is placed in the incoming block for the scalar
-    // operand, not in the PHI's own block. This matters for LCSSA phis at
-    // an inner-loop exit that is still inside an outer loop: the PHI block
-    // is in the outer loop, but the operand flows from the inner loop body,
-    // so the extract executes at inner-loop frequency. Using the PHI's own
-    // block would underestimate the scale (outer TC instead of inner*outer
-    // TC) and make the ordering of external users affect the cost, since
-    // ExtractCostCalculated deduplicates by scalar and only the first
-    // encountered user determines the scale.
-    // When the PHI is outside all loops (a true loop-exit phi) the extract
-    // is materialised at the phi's location and scale = 1 remains correct,
-    // so we only apply this adjustment when PHI is contained in the loop.
+    // The extractelement for a PHI-node user is created in the incoming
+    // block that feeds the matching operand, not in the PHI block itself
+    // When the PHI is inside a loop that incoming block can belong to a deeper
+    // loop than the PHI block. Scaling by the PHI block would use
+    // the outer trip count instead of inner*outer, and because
+    // ExtractCostCalculated deduplicates by scalar (only the first external
+    // user fixes the scale) it would also make the cost depend on external-user
+    // ordering. A PHI outside all loops is a plain loop-exit phi: its live-out
+    // lanes are normally rebuilt as a vector LCSSA phi in the exit block, which
+    // hoists the extract out of the loop, so scale = 1 (via U->getParent()
+    // below) is kept and the adjustment is restricted to in-loop PHIs.
     if (auto *PHI = dyn_cast<PHINode>(U); PHI && Scalar) {
       if (LI->getLoopFor(PHI->getParent())) {
         // Use the deepest incoming block among all slots where Scalar
