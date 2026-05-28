@@ -175,11 +175,11 @@ Status TargetThreadWindows::DoResume() {
 
 const char *TargetThreadWindows::GetName() {
   Log *log = GetLog(LLDBLog::Thread);
-  static LazyImport<HRESULT(WINAPI *)(HANDLE, PWSTR *)> kGetThreadDescription{
-      L"Kernel32.dll", "GetThreadDescription"};
-  if (!kGetThreadDescription)
+  static LazyImport<HRESULT(WINAPI *)(HANDLE, PWSTR *)>
+      s_get_thread_description{L"Kernel32.dll", "GetThreadDescription"};
+  if (!s_get_thread_description)
     return m_name.c_str();
-  auto GetThreadDescription = *kGetThreadDescription;
+  auto GetThreadDescription = *s_get_thread_description;
 
   PWSTR pszThreadName;
   if (SUCCEEDED(GetThreadDescription(
