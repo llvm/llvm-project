@@ -33,8 +33,7 @@ struct RISCVMoveMerge : public MachineFunctionPass {
   // Track which register units have been modified and used.
   LiveRegUnits ModifiedRegUnits, UsedRegUnits;
 
-  bool isGPRPairCopyCandidateEven(const DestSourcePair &RegPair);
-  bool isGPRPairCopyCandidateOdd(const DestSourcePair &RegPair);
+  bool isGPRPairCopyCandidate(const DestSourcePair &RegPair, bool EvenRegPair);
 
   bool isCandidateToMergeMVA01S(const DestSourcePair &RegPair);
   bool isCandidateToMergeMVSA01(const DestSourcePair &RegPair);
@@ -88,7 +87,8 @@ static unsigned getCM_MVOpcode(const RISCVSubtarget &ST, bool MoveFromSToA) {
   llvm_unreachable("Unhandled subtarget with paired move.");
 }
 
-bool RISCVMoveMerge::isGPRPairCopyCandidateEven(const DestSourcePair &RegPair) {
+bool RISCVMoveMerge::isGPRPairCopyCandidate(const DestSourcePair &RegPair,
+                                            bool EvenRegPair) {
   Register Destination = RegPair.Destination->getReg();
   Register Source = RegPair.Source->getReg();
 
@@ -97,26 +97,12 @@ bool RISCVMoveMerge::isGPRPairCopyCandidateEven(const DestSourcePair &RegPair) {
 
   if ((!ST->hasStdExtZdinx() && !ST->hasStdExtP()) || ST->is64Bit())
     return false;
-  Register SrcPair = TRI->getMatchingSuperReg(Source, RISCV::sub_gpr_even,
+
+  unsigned SubIdx = EvenRegPair ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
+
+  Register SrcPair = TRI->getMatchingSuperReg(Source, SubIdx,
                                               &RISCV::GPRPairRegClass);
-  Register DestPair = TRI->getMatchingSuperReg(Destination, RISCV::sub_gpr_even,
-                                               &RISCV::GPRPairRegClass);
-
-  return SrcPair.isValid() && DestPair.isValid();
-}
-
-bool RISCVMoveMerge::isGPRPairCopyCandidateOdd(const DestSourcePair &RegPair) {
-  Register Destination = RegPair.Destination->getReg();
-  Register Source = RegPair.Source->getReg();
-
-  if (Source == Destination)
-    return false;
-
-  if ((!ST->hasStdExtZdinx() && !ST->hasStdExtP()) || ST->is64Bit())
-    return false;
-  Register SrcPair = TRI->getMatchingSuperReg(Source, RISCV::sub_gpr_odd,
-                                              &RISCV::GPRPairRegClass);
-  Register DestPair = TRI->getMatchingSuperReg(Destination, RISCV::sub_gpr_odd,
+  Register DestPair = TRI->getMatchingSuperReg(Destination, SubIdx,
                                                &RISCV::GPRPairRegClass);
 
   return SrcPair.isValid() && DestPair.isValid();
@@ -355,8 +341,8 @@ bool RISCVMoveMerge::mergeMoveSARegPair(MachineBasicBlock &MBB) {
     if (RegPair.has_value()) {
       bool MoveFromSToA = isCandidateToMergeMVA01S(*RegPair);
       bool MoveFromAToS = isCandidateToMergeMVSA01(*RegPair);
-      bool IsEven = isGPRPairCopyCandidateEven(*RegPair);
-      bool IsOdd = isGPRPairCopyCandidateOdd(*RegPair);
+      bool IsEven = isGPRPairCopyCandidate(*RegPair, /*EvenRegPair=*/true);
+      bool IsOdd = isGPRPairCopyCandidate(*RegPair, /*EvenRegPair=*/false);
       if (!MoveFromSToA && !MoveFromAToS && !IsEven && !IsOdd) {
         ++MBBI;
         continue;
