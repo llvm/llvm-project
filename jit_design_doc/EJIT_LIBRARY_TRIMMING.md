@@ -16,6 +16,7 @@
 | 静态链接 | 所有符号编译期确定，无动态库 |
 | 单线程 | 默认同步编译模式，无后台线程 |
 | 内存受限 | RAM 100 KB – 2 MB，Flash 对应中等受限 |
+| `ld -r` 部分链接 | 产物为单个 relocatable `.o`，合并后丢失 COMDAT `.group` 信息，导致 `objcopy`/`strip` 拒绝操作合并段中的 LOCAL 符号（如 ARM `$x`/`$d`）；合并后 `.shstrtab` 可被 merge.ld DISCARD 但符号级裁剪需在 merge 前完成或直接操作 ELF |
 
 ---
 
