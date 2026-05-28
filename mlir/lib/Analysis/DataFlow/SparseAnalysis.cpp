@@ -557,8 +557,11 @@ AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
   // this op.
   if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op)) {
     LDBG() << "Processing RegionBranchTerminatorOpInterface operation";
-    if (auto branch = dyn_cast<RegionBranchOpInterface>(op->getParentOp())) {
-      visitRegionSuccessorsFromTerminator(terminator, branch);
+    // This is a region branch terminator if its parent is a region branch op.
+    // (Its successors -- including any early-exit ancestors -- come from the
+    // terminator's own `getSuccessorRegions`.)
+    if (isa<RegionBranchOpInterface>(op->getParentOp())) {
+      visitRegionSuccessorsFromTerminator(terminator);
       return success();
     }
   }
@@ -638,23 +641,30 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
 
 void AbstractSparseBackwardDataFlowAnalysis::
     visitRegionSuccessorsFromTerminator(
-        RegionBranchTerminatorOpInterface terminator,
-        RegionBranchOpInterface branch) {
-  assert(terminator->getParentOp() == branch.getOperation() &&
-         "expected `branch` to be the parent op of `terminator`");
-
+        RegionBranchTerminatorOpInterface terminator) {
   // Not all operands are forwarded to a successor. This set can be
   // non-contiguous in the presence of multiple successors.
   BitVector unaccounted(terminator->getNumOperands(), true);
 
-  RegionBranchSuccessorMapping mapping;
-  branch.getSuccessorOperandInputMapping(mapping,
-                                         RegionBranchPoint(terminator));
-  for (const auto &[operand, inputs] : mapping) {
-    for (Value input : inputs) {
-      meet(getLatticeElement(operand->get()),
+  SmallVector<RegionSuccessor> successors;
+  SmallVector<Attribute> constantOperands(terminator->getNumOperands(),
+                                          nullptr);
+  terminator.getSuccessorRegions(constantOperands, successors);
+  for (const RegionSuccessor &successor : successors) {
+    // The op whose successor inputs the operands are forwarded to: an
+    // early-exit successor names its (possibly non-immediate) ancestor target;
+    // any other successor belongs to the terminator's immediately enclosing op.
+    Operation *ownerOp = successor.isEarlyExit() ? successor.getSuccessorOp()
+                                                 : terminator->getParentOp();
+    auto branch = cast<RegionBranchOpInterface>(ownerOp);
+    OperandRange operands = terminator.getSuccessorOperands(successor);
+    ValueRange inputs = branch.getSuccessorInputs(successor);
+    assert(operands.size() == inputs.size() &&
+           "expected the same number of successor operands and inputs");
+    for (auto [index, input] : llvm::enumerate(inputs)) {
+      meet(getLatticeElement(operands[index]),
            *getLatticeElementFor(getProgramPointAfter(terminator), input));
-      unaccounted.reset(operand->getOperandNumber());
+      unaccounted.reset(operands.getBeginOperandIndex() + index);
     }
   }
 

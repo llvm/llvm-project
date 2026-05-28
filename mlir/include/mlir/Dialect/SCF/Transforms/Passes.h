@@ -64,6 +64,10 @@ std::unique_ptr<Pass> createParallelForToNestedForsPass();
 // Creates a pass which lowers for loops into while loops.
 std::unique_ptr<Pass> createForToWhileLoopPass();
 
+/// Creates a pass that lowers away region-breaking terminators (`scf.break`),
+/// producing an SCF program that uses only `scf.yield` terminators.
+std::unique_ptr<Pass> createSCFLowerEarlyExitPass();
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//

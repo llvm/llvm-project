@@ -374,11 +374,15 @@ LogicalResult DeadCodeAnalysis::visit(ProgramPoint *point) {
   }
 
   if (isRegionOrCallableReturn(op)) {
-    if (auto branch = dyn_cast<RegionBranchOpInterface>(op->getParentOp())) {
+    auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op);
+    if (terminator && isa<RegionBranchOpInterface>(op->getParentOp())) {
       LDBG() << "Visiting region terminator: "
              << OpWithFlags(op, OpPrintingFlags().skipRegions());
-      // Visit the exiting terminator of a region.
-      visitRegionTerminator(op, branch);
+      // Visit the exiting terminator of a region. The owning op of each edge is
+      // derived per region successor (it may be a non-immediate ancestor for an
+      // early-exit terminator). A region terminator that does not implement the
+      // interface has no region successors and is skipped.
+      visitRegionTerminator(terminator);
     } else if (auto callable =
                    dyn_cast<CallableOpInterface>(op->getParentOp())) {
       LDBG() << "Visiting callable terminator: "
@@ -499,48 +503,54 @@ void DeadCodeAnalysis::visitRegionBranchOperation(
   SmallVector<RegionSuccessor> successors;
   branch.getEntrySuccessorRegions(*operands, successors);
 
-  visitRegionBranchEdges(branch, branch.getOperation(), successors);
+  // When entering the op, regions/parent successors all belong to `branch`.
+  visitRegionBranchEdges(branch.getOperation(), branch.getOperation(),
+                         successors);
 }
 
-void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
-                                             RegionBranchOpInterface branch) {
-  LDBG() << "visitRegionTerminator: " << *op;
-  std::optional<SmallVector<Attribute>> operands = getOperandValues(op);
+void DeadCodeAnalysis::visitRegionTerminator(
+    RegionBranchTerminatorOpInterface terminator) {
+  LDBG() << "visitRegionTerminator: " << *terminator;
+  std::optional<SmallVector<Attribute>> operands = getOperandValues(terminator);
   if (!operands)
     return;
 
   SmallVector<RegionSuccessor> successors;
-  auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op);
-  if (!terminator)
-    return;
   terminator.getSuccessorRegions(*operands, successors);
-  visitRegionBranchEdges(branch, op, successors);
+  // Region/parent successors belong to the terminator's immediately enclosing
+  // op; early-exit successors carry their own (ancestor) target.
+  visitRegionBranchEdges(terminator->getParentOp(), terminator, successors);
 }
 
 void DeadCodeAnalysis::visitRegionBranchEdges(
-    RegionBranchOpInterface regionBranchOp, Operation *predecessorOp,
+    Operation *defaultBranchOp, Operation *predecessorOp,
     const SmallVector<RegionSuccessor> &successors) {
   for (const RegionSuccessor &successor : successors) {
-    // The successor can be either an entry block or the parent operation.
+    // Determine the op that owns this edge: an early-exit successor names a
+    // (possibly non-immediate) ancestor; every other successor (a region or
+    // "parent") belongs to `defaultBranchOp`. Control "leaving the op" resumes
+    // after that owning op.
+    Operation *ownerOp =
+        successor.isEarlyExit() ? successor.getSuccessorOp() : defaultBranchOp;
+    bool leavesOp = successor.isParent() || successor.isEarlyExit();
     // Skip empty regions — they have no entry block to mark executable.
-    if (!successor.isParent() && successor.getSuccessor()->empty())
+    if (!leavesOp && successor.getSuccessor()->empty())
       continue;
     ProgramPoint *point =
-        successor.isParent()
-            ? getProgramPointAfter(regionBranchOp)
-            : getProgramPointBefore(&successor.getSuccessor()->front());
+        leavesOp ? getProgramPointAfter(ownerOp)
+                 : getProgramPointBefore(&successor.getSuccessor()->front());
 
     // Mark the entry block as executable.
     auto *state = getOrCreate<Executable>(point);
     propagateIfChanged(state, state->setToLive());
     LDBG() << "Marked region successor live: " << *point;
 
-    // Add the parent op as a predecessor.
+    // Add the predecessor, forwarding the owning op's successor inputs.
+    auto branch = cast<RegionBranchOpInterface>(ownerOp);
     auto *predecessors = getOrCreate<PredecessorState>(point);
     propagateIfChanged(
-        predecessors,
-        predecessors->join(predecessorOp,
-                           regionBranchOp.getSuccessorInputs(successor)));
+        predecessors, predecessors->join(predecessorOp,
+                                         branch.getSuccessorInputs(successor)));
     LDBG() << "Added region branch as predecessor for successor: " << *point;
   }
 }

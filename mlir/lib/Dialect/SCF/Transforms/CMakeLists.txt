@@ -5,6 +5,7 @@ add_mlir_dialect_library(MLIRSCFTransforms
   ForallToParallel.cpp
   ForToWhile.cpp
   LoopCanonicalization.cpp
+  LowerEarlyExit.cpp
   LoopPipelining.cpp
   LoopRangeFolding.cpp
   LoopSpecialization.cpp
@@ -39,6 +40,7 @@ add_mlir_dialect_library(MLIRSCFTransforms
   MLIRSCFDialect
   MLIRSCFUtils
   MLIRSideEffectInterfaces
+  MLIRUBDialect
   MLIRSupport
   MLIRTensorTransforms
   MLIRTransforms

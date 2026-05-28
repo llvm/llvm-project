@@ -332,6 +332,85 @@ func.func @execute_region() -> i64 {
   return %res : i64
 }
 
+// CHECK-LABEL: func @execute_region_token
+func.func @execute_region_token(%cond: i1, %val: f32) -> f32 {
+  // CHECK: scf.execute_region -> f32 {
+  // CHECK-NEXT: ^bb0(%[[TOK:.*]]: token):
+  // CHECK-NEXT:   scf.if
+  // CHECK-NEXT:     scf.break %[[TOK]], %{{.*}} : f32
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   scf.yield %{{.*}} : f32
+  // CHECK-NEXT: }
+  %res = scf.execute_region -> f32 {
+  ^bb0(%tok: token):
+    scf.if %cond {
+      scf.break %tok, %val : f32
+    }
+    scf.yield %val : f32
+  }
+  return %res : f32
+}
+
+// CHECK-LABEL: func @execute_region_token_no_results
+func.func @execute_region_token_no_results(%cond: i1) {
+  // CHECK: scf.execute_region {
+  // CHECK-NEXT: ^bb0(%[[TOK:.*]]: token):
+  // CHECK-NEXT:   scf.if
+  // CHECK-NEXT:     scf.break %[[TOK]]
+  scf.execute_region {
+  ^bb0(%tok: token):
+    scf.if %cond {
+      scf.break %tok
+    }
+    scf.yield
+  }
+  return
+}
+
+// Early exit through a nested `scf.execute_region`. The inner break targets
+// the outer op via the outer's token.
+// CHECK-LABEL: func @execute_region_token_nested
+func.func @execute_region_token_nested(%cond: i1, %val: f32) -> f32 {
+  // CHECK: %[[OUTER:.*]] = scf.execute_region -> f32 {
+  // CHECK-NEXT: ^bb0(%[[T1:.*]]: token):
+  %res = scf.execute_region -> f32 {
+  ^bb0(%t1: token):
+    // CHECK: scf.execute_region {
+    // CHECK-NEXT: ^bb0(%{{.*}}: token):
+    // CHECK: scf.break %[[T1]], %{{.*}} : f32
+    scf.execute_region {
+    ^bb0(%t2: token):
+      scf.if %cond {
+        scf.break %t1, %val : f32
+      }
+      scf.yield
+    }
+    scf.yield %val : f32
+  }
+  return %res : f32
+}
+
+// All terminators of the inner `scf.execute_region` break to the outer one, so
+// the inner op declares a result (of a type that need not match the outer's)
+// that is never produced. The break carries the outer op's result type. This is
+// valid IR.
+// CHECK-LABEL: func @execute_region_all_break_outer
+func.func @execute_region_all_break_outer(%val: f32) -> f32 {
+  // CHECK: scf.execute_region -> f32 {
+  // CHECK-NEXT: ^bb0(%[[TOK:.*]]: token):
+  %res = scf.execute_region -> f32 {
+  ^bb0(%tok_outer: token):
+    // CHECK: scf.execute_region -> i32 {
+    // CHECK: scf.break %[[TOK]], %{{.*}} : f32
+    %inner = scf.execute_region -> i32 {
+    ^bb1(%tok_inner: token):
+      scf.break %tok_outer, %val : f32
+    }
+    scf.yield %val : f32
+  }
+  return %res : f32
+}
+
 // CHECK-LABEL: func.func @normalized_forall
 func.func @normalized_forall(%in: tensor<100xf32>, %out: tensor<100xf32>) {
   %c1 = arith.constant 1 : index

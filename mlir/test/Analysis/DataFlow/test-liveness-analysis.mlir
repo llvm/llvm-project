@@ -400,3 +400,43 @@ func.func @unstructured_cf(%val: f32, %c: i1) -> f32 attributes {tag = "func"} {
 ^bb1(%arg1: f32):
   return %arg1: f32
 }
+
+// -----
+
+// Liveness is threaded across an early-exit (`scf.break`) edge: the broken-out
+// value becomes the `scf.execute_region` result, so it is live when that result
+// is live. Here the result is stored, hence the broken-out value is live.
+// CHECK-LABEL: test_tag: live_break_val:
+// CHECK-NEXT:  result #0: live
+func.func @early_exit_live(%arg0: memref<i32>, %cond: i1) {
+  %live = arith.constant {tag = "live_break_val"} 1 : i32
+  %0 = scf.execute_region -> i32 {
+  ^bb0(%tok: token):
+    scf.if %cond {
+      scf.break %tok, %live : i32
+    }
+    %c0 = arith.constant 0 : i32
+    scf.yield %c0 : i32
+  }
+  memref.store %0, %arg0[] : memref<i32>
+  return
+}
+
+// -----
+
+// Conversely, when the `scf.execute_region` result is unused, the broken-out
+// value is dead.
+// CHECK-LABEL: test_tag: dead_break_val:
+// CHECK-NEXT:  result #0: not live
+func.func @early_exit_dead(%cond: i1) {
+  %dead = arith.constant {tag = "dead_break_val"} 1 : i32
+  %0 = scf.execute_region -> i32 {
+  ^bb0(%tok: token):
+    scf.if %cond {
+      scf.break %tok, %dead : i32
+    }
+    %c0 = arith.constant 0 : i32
+    scf.yield %c0 : i32
+  }
+  return
+}

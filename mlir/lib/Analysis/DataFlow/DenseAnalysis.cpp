@@ -318,9 +318,17 @@ void AbstractDenseForwardDataFlowAnalysis::visitRegionBranchOperation(
     //   before the parent.
     // In the latter case, just perform the join as it isn't the control flow
     // affected by the region.
-    std::optional<unsigned> regionFrom =
-        op == branch ? std::optional<unsigned>()
-                     : op->getBlock()->getParent()->getRegionNumber();
+    // Determine the region of `branch` that (transitively, in the case of an
+    // early exit) contains `op`. This is `std::nullopt` if `op` is the branch
+    // op itself or is not nested in any region of `branch`.
+    std::optional<unsigned> regionFrom;
+    if (op != branch.getOperation()) {
+      Region *region = op->getParentRegion();
+      while (region && region->getParentOp() != branch.getOperation())
+        region = region->getParentOp()->getParentRegion();
+      if (region)
+        regionFrom = region->getRegionNumber();
+    }
     LDBG() << "      regionFrom: "
            << (regionFrom ? std::to_string(*regionFrom) : "parent");
 
@@ -336,9 +344,10 @@ void AbstractDenseForwardDataFlowAnalysis::visitRegionBranchOperation(
              "expected to be visiting the branch itself");
       LDBG() << "      Point is not block start, checking if predecessor is "
                 "region or op itself";
-      // Only need to call the arc transfer when the predecessor is the region
-      // or the op itself, not the previous op.
-      if (op->getParentOp() == branch || op == branch) {
+      // Only need to call the arc transfer when the predecessor is one of the
+      // branch op's region terminators (possibly via an early exit) or the op
+      // itself, not the previous op.
+      if (regionFrom.has_value() || op == branch.getOperation()) {
         LDBG() << "      Predecessor is region or op itself, calling "
                   "visitRegionBranchControlFlowTransfer";
         visitRegionBranchControlFlowTransfer(
@@ -586,13 +595,19 @@ void AbstractDenseBackwardDataFlowAnalysis::visitBlock(Block *block) {
     }
 
     // If this block is exiting from an operation with region-based control
-    // flow, propagate the lattice back along the control flow edge.
-    if (auto branch = dyn_cast<RegionBranchOpInterface>(block->getParentOp())) {
-      LDBG() << "    Exit block of region branch operation";
-      auto terminator =
-          cast<RegionBranchTerminatorOpInterface>(block->getTerminator());
-      visitRegionBranchOperation(point, branch, terminator, before);
-      return;
+    // flow, propagate the lattice back along the control flow edge. The
+    // terminator's successors (including any early-exit ancestors) are derived
+    // per successor inside `visitRegionBranchOperation`; the immediately
+    // enclosing op is passed as the default branch op.
+    if (auto terminator =
+            dyn_cast_if_present<RegionBranchTerminatorOpInterface>(
+                block->empty() ? nullptr : &block->back())) {
+      if (auto branch = dyn_cast_or_null<RegionBranchOpInterface>(
+              terminator->getParentOp())) {
+        LDBG() << "    Exit block of region branch operation";
+        visitRegionBranchOperation(point, branch, terminator, before);
+        return;
+      }
     }
 
     // Cannot reason about successors of an exit block, set the pessimistic
@@ -629,17 +644,30 @@ void AbstractDenseBackwardDataFlowAnalysis::visitRegionBranchOperation(
   LDBG() << "  branchPoint: " << (branchPoint.isParent() ? "parent" : "region");
   LDBG() << "  before state: " << *before;
 
-  // The successors of the operation may be either the first operation of the
-  // entry block of each possible successor region, or the next operation when
-  // the branch is a successor of itself.
+  // Gather successors. When branching from a terminator, take them from the
+  // terminator itself so early-exit (and multi-target) successors are included;
+  // when entering the op, take them from the op. `branch` is the default owning
+  // op for region/"parent" successors.
   SmallVector<RegionSuccessor> successors;
-  branch.getSuccessorRegions(branchPoint, successors);
+  if (RegionBranchTerminatorOpInterface terminator =
+          branchPoint.getTerminatorPredecessorOrNull()) {
+    SmallVector<Attribute> constants(terminator->getNumOperands(), nullptr);
+    terminator.getSuccessorRegions(constants, successors);
+  } else {
+    branch.getSuccessorRegions(branchPoint, successors);
+  }
   LDBG() << "  Processing " << successors.size() << " successor regions";
   for (const RegionSuccessor &successor : successors) {
+    // The owning op of an early-exit successor is the (possibly non-immediate)
+    // ancestor it names; any other successor belongs to `branch`.
+    auto owner = successor.isEarlyExit()
+                     ? cast<RegionBranchOpInterface>(successor.getSuccessorOp())
+                     : branch;
     const AbstractDenseLattice *after;
-    if (successor.isParent() || successor.getSuccessor()->empty()) {
-      LDBG() << "    Successor is parent or empty region";
-      after = getLatticeFor(point, getProgramPointAfter(branch));
+    if (successor.isParent() || successor.isEarlyExit() ||
+        successor.getSuccessor()->empty()) {
+      LDBG() << "    Successor is parent, early exit, or empty region";
+      after = getLatticeFor(point, getProgramPointAfter(owner));
     } else {
       Region *successorRegion = successor.getSuccessor();
       assert(!successorRegion->empty() && "unexpected empty successor region");
@@ -658,7 +686,7 @@ void AbstractDenseBackwardDataFlowAnalysis::visitRegionBranchOperation(
     }
     LDBG() << "    After state: " << *after;
 
-    visitRegionBranchControlFlowTransfer(branch, branchPoint, successor, *after,
+    visitRegionBranchControlFlowTransfer(owner, branchPoint, successor, *after,
                                          before);
   }
 }

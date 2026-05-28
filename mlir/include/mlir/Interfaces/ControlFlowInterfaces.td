@@ -127,8 +127,10 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
 
     A "region branch point" indicates a point from which a branch originates. It
     can indicate:
-    1. A `RegionBranchTerminatorOpInterface` terminator in any of the
-       immediately nested regions of this op.
+    1. A `RegionBranchTerminatorOpInterface` terminator, nested within a region
+       of this op, that transfers control to this op. (Region branch terminators
+       that transfer control to another op are not region branch points of this
+       op.)
     2. `RegionBranchPoint::parent()`: the branch originates from outside of the
        op, i.e., when first executing this op.
 
@@ -150,13 +152,13 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
 
 
     Note: This interface works in conjunction with
-    `RegionBranchTerminatorOpInterface`. All immediately nested block
-    terminators that model branching between regions must implement the
-    `RegionBranchTerminatorOpInterface`. Otherwise, analyses/transformations
-    may miss control flow edges and produce incorrect results. Not every block
-    terminator is necessarily a region branch terminator: e.g., in the presence
-    of unstructured control flow, a block terminator could indicate a branch to
-    a different block within the same region.
+    `RegionBranchTerminatorOpInterface`. All terminators that model branching
+    between regions must implement the `RegionBranchTerminatorOpInterface`.
+    Otherwise, analyses/transformations may miss control flow edges and produce
+    incorrect results. Not every block terminator is necessarily a region branch
+    terminator: e.g., in the presence of unstructured control flow, a block
+    terminator could indicate a branch to a different block within the same
+    region.
 
     Example:
 
@@ -231,8 +233,16 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
 
         When `point = RegionBranchPoint::parent()`, this method returns the
         region successors when entering the operation. Otherwise, this method
-        returns the successor regions when branching from the region indicated
-        by `point`.
+        returns the successor regions when branching from the terminator
+        indicated by `point`.
+
+        A non-parent `point` is always a terminator that transfers control back
+        to this op (one returned by `getRegionBranchPointTerminators`); this
+        method enumerates only the edges this op owns. A region-breaking
+        terminator nested within this op but targeting a *further-enclosing* op
+        is not a branch point of this op and is enumerated by that ancestor
+        instead; it must not be reported here (otherwise the edge would be
+        counted twice).
 
         Example: In the above example, this method returns the region of the
         `scf.for` and `parent` for either region branch point. An implementation
@@ -245,6 +255,31 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
            "::llvm::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions)
     >,
     InterfaceMethod<[{
+        Populate `terminators` with the `RegionBranchTerminatorOpInterface`
+        terminators in `region` that transfer control to this op, i.e. this op's
+        non-parent region branch points originating from `region`.
+
+        The default implementation returns the terminator of each (non-empty)
+        block in `region`. Operations that can be the target of region-breaking
+        terminators (early exit) nested deeper than `region`'s blocks should
+        override this to also include those terminators (e.g. by inspecting the
+        users of an identifying token).
+      }],
+      "void", "getRegionBranchPointTerminators",
+      (ins "::mlir::Region &":$region,
+           "::llvm::SmallVectorImpl<::mlir::RegionBranchTerminatorOpInterface> &"
+             :$terminators),
+      [{}],
+      /*defaultImplementation=*/[{
+        for (::mlir::Block &block : region) {
+          if (block.empty())
+            continue;
+          if (auto terminator =
+                  dyn_cast<RegionBranchTerminatorOpInterface>(block.back()))
+            terminators.push_back(terminator);
+        }
+      }]>,
+    InterfaceMethod<[{
         Returns the potential region successors when branching from any
         terminator in `region`.
       }],
@@ -253,14 +288,14 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
            "::llvm::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions),
       [{}],
       /*defaultImplementation=*/[{
-        for (::mlir::Block &block : region) {
-          if (block.empty())
-            continue;
-          if (auto terminator =
-                  dyn_cast<RegionBranchTerminatorOpInterface>(block.back()))
-            $_op.getSuccessorRegions(RegionBranchPoint(terminator),
-                                     regions);
-        }
+        // Dispatch to the per-branch-point overload for each region branch
+        // point terminator originating from `region`.
+        ::llvm::SmallVector<::mlir::RegionBranchTerminatorOpInterface>
+            terminators;
+        $_op.getRegionBranchPointTerminators(region, terminators);
+        for (::mlir::RegionBranchTerminatorOpInterface terminator : terminators)
+          $_op.getSuccessorRegions(::mlir::RegionBranchPoint(terminator),
+                                   regions);
       }]>,
     InterfaceMethod<[{
         Return all successor inputs for the given region successor. If the
@@ -289,8 +324,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
           ::llvm::SmallVector<::mlir::RegionSuccessor> successors;
           op.getSuccessorRegions(point, successors);
           bool isPred = llvm::any_of(successors, [&] (const auto &succ) {
-            return succ.getSuccessor() == successor.getSuccessor() ||
-                   (succ.isParent() && successor.isParent());
+            return succ == successor;
             });
           if (isPred)
             predecessors.push_back(point);
@@ -417,6 +451,15 @@ def RegionBranchTerminatorOpInterface :
     in the presence of a parent `RegionBranchOpInterface` implementation. It
     acts as a marker for valid region branch points and specifies which
     operands are passed to which region successor.
+
+    `getSuccessorRegions` fully describes where control may transfer: each
+    `RegionSuccessor` is a region, the immediately enclosing op ("parent"), or
+    (for region-breaking terminators / early exit) a non-immediate
+    `RegionBranchOpInterface` ancestor whose results receive the successor
+    operands. A single terminator may have several such successors, possibly
+    targeting different ancestors. Every operation on the path from a
+    region-breaking terminator up to a targeted ancestor must be transparent to
+    region-breaking control flow (carry the `PropagateControlFlowBreak` trait).
 
     Note: If an operation does not implement the
     `RegionBranchTerminatorOpInterface`, then that op has no region successors.

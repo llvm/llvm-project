@@ -515,13 +515,16 @@ However, when control flow enters a region, it always begins in the first block
 of the region, called the *entry* block. Terminator operations ending each block
 represent control flow by explicitly specifying the successor blocks of the
 block. Control flow can only pass to one of the specified successor blocks as in
-a `branch` operation, or back to the containing operation as in a `return`
+a `branch` operation, or back to an enclosing operation as in a `return`
 operation. Terminator operations without successors can only pass control back
-to the containing operation. Within these restrictions, the particular semantics
-of terminator operations is determined by the specific dialect operations
-involved. Blocks (other than the entry block) that are not listed as a successor
-of a terminator operation are defined to be unreachable and can be removed
-without affecting the semantics of the containing operation.
+to an enclosing operation. By default, control returns to the *immediately*
+containing operation, but a terminator may also pass control further out by
+referring to an outer enclosing operation; see the [region-breaking
+terminator](#region-breaking-terminators) section. Within these restrictions,
+the particular semantics of terminator operations is determined by the specific
+dialect operations involved. Blocks (other than the entry block) that are not
+listed as a successor of a terminator operation are defined to be unreachable
+and can be removed without affecting the semantics of the containing operation.
 
 Although control flow always enters a region through the entry block, control
 flow may exit a region through any block with an appropriate terminator. The
@@ -557,6 +560,18 @@ func.func @accelerator_compute(i64, i1) -> i64 { // An SSACFG region
   ...
 }
 ```
+
+#### Region-Breaking Terminators
+
+A region-breaking terminator is a terminator that passes control back to an
+enclosing operation other than its immediately containing one. It typically
+identifie its destination through a [token](#token-type) operand, where the
+token is an entry block argument of the enclosing operation that the terminator
+transfers control to.
+
+Any operation on the path from a region-breaking terminator to the operation it
+transfers control to (excluding the target operation itself) must carry the
+`PropagateControlFlowBreak` trait.
 
 #### Operations with Multiple Regions
 
