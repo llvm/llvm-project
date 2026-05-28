@@ -84,7 +84,8 @@ target-defined scopes and constraints:
 - "wavefront" scope
 - "singlethread" scope (same as LLVM)
 
-These are arranged from largest scope ("") to smallest scope ("singlethread").
+These are arranged from largest scope (*system scope*) to smallest scope
+("singlethread").
 
 - Every instance ``X`` of some scope ``S1`` other than "singlethread" scope is
   partitioned by the scope ``S2`` one level below it. Each subset defined by this
@@ -175,7 +176,7 @@ operation with scope ``syncscope``.
 
    .. code-block:: llvm
 
-      store ptr, data !amdgcn-av:scope
+      store ptr, data, !mmra !{!"amdgcn-av", !"workgroup"}
 
    If the metadata is dropped or ignored, there is no guarantee that the store
    will become available at the intended scope. In implementation terms, the
@@ -188,19 +189,19 @@ MakeAvailable and MakeVisible
 
 .. code-block:: llvm
 
-   store atomic [syncscope("<target-scope>")] <ordering> [!amdgcn-av-none]
-   load atomic  [syncscope("<target-scope>")] <ordering> [!amdgcn-av-none]
-   atomicrmw    [syncscope("<target-scope>")] <ordering> [!amdgcn-av-none]
-   cmpxchg      [syncscope("<target-scope>")] <ordering> [!amdgcn-av-none]
-   fence        [syncscope("<target-scope>")] <ordering> [!amdgcn-av-none]
+   store atomic [syncscope("<target-scope>")] <ordering> [, !mmra !{!"amdgcn-av", !"none"}]
+   load atomic  [syncscope("<target-scope>")] <ordering> [, !mmra !{!"amdgcn-av", !"none"}]
+   atomicrmw    [syncscope("<target-scope>")] <ordering> [, !mmra !{!"amdgcn-av", !"none"}]
+   cmpxchg      [syncscope("<target-scope>")] <ordering> [, !mmra !{!"amdgcn-av", !"none"}]
+   fence        [syncscope("<target-scope>")] <ordering> [, !mmra !{!"amdgcn-av", !"none"}]
 
 A synchronization operation with at least ``release`` ordering is a
-``MakeAvailable`` operation with scope ``syncscope``, if it does not have the
-``!amdgcn-av-none`` metadata.
+``MakeAvailable`` operation with scope ``syncscope``, if it is not marked as
+``!{!"amdgcn-av", !"none"}``.
 
 A synchronization operation with at least ``acquire`` ordering is a
-``MakeVisible`` operation with scope ``syncscope``, if it does not have the
-``!amdgcn-av-none`` metadata.
+``MakeVisible`` operation with scope ``syncscope``, if it is not marked as
+``!{!"amdgcn-av", !"none"}``.
 
 These operations include ``MakeVisible`` and ``MakeAvailable`` operations by
 default. The presence of this metadata removes this ability and essentially
@@ -224,7 +225,7 @@ the ordering of other memory accesses.
    ; - The atomic store at "agent" scope,
    ; - A store-available operation at "agent" scope on `ptr`.
    ; Noteably, it does not include a `MakeAvailable` operation on other memory accesses.
-   store atomic syncscope("agent") release ptr !amdgcn-av-none
+   store atomic syncscope("agent") release ptr, !mmra !{!"amdgcn-av", !"none"}
 
 Ordering
 ========
@@ -332,9 +333,10 @@ Properties
 The following properties follow from the definitions above:
 
 1. **Happens-before is necessary for location-order.** A write ``W`` is
-*location-ordered* before a read ``R`` only if ``W`` happens-before ``R``. This
-follows from the definition of availability and visibility operations, which
-always require a happens-before link with the preceding operation in the chain.
+   *location-ordered* before a read ``R`` only if ``W`` happens-before ``R``.
+   This follows from the definition of availability and visibility operations,
+   which always require a happens-before link with the preceding operation in
+   the chain.
 
 2. **A write cannot be made available in a scope that does not contain it.** The
    definition of an availability operation ``X`` requires that ``X``'s scope
@@ -375,18 +377,18 @@ particular, the following instructions are equivalent.
 
 .. csv-table::
    :header: "LLVM", "SPIRV", "Available/Visible Semantics"
-   :widths: 25, 25, 50
+   :widths: 20, 20, 60
 
    "``load``", "``OpLoad NonPrivatePointer``", "\-"
    "``load-visible``", "``OpLoad NonPrivatePointer``", "``MakePointerVisible``"
    "``store``", "``OpStore NonPrivatePointer``", "\-"
    "``store-available``", "``OpStore NonPrivatePointer``", "``MakePointerAvailable``"
    "``load atomic``", "``OpAtomicLoad``", "``MakePointerVisible``. Also ``MakeVisible`` when order is at least ``acquire``."
-   "``load atomic !amdgcn-av-none``", "``OpAtomicLoad``", "``MakePointerVisible``"
+   "``load atomic !{!""amdgcn-av"", !""none""}``", "``OpAtomicLoad``", "``MakePointerVisible``"
    "``store atomic``", "``OpAtomicStore``", "``MakePointerAvailable``. Also ``MakeAvailable`` when order is at least ``release``."
-   "``store atomic !amdgcn-av-none``", "``OpAtomicStore``", "``MakePointerAvailable``"
+   "``store atomic !{!""amdgcn-av"", !""none""}``", "``OpAtomicStore``", "``MakePointerAvailable``"
    "``fence``", "``OpMemoryBarrier``", "``MakeAvailable`` when order is at least ``release``, and ``MakeVisible`` when order is at least ``acquire``."
-   "``fence !amdgcn-av-none``", "``OpMemoryBarrier``", "\-"
+   "``fence !{!""amdgcn-av"", !""none""}``", "``OpMemoryBarrier``", "\-"
 
 .. note::
 
@@ -397,15 +399,16 @@ particular, the following instructions are equivalent.
 
    - "``MakeAvailable`` if the order is at least ``release``, and the operation
      results in a store",
-   - "Only if ``!amdgcn-av-none`` is absent", etc.
+   - "Only if it is not marked as ``!{!"amdgcn-av", !"none"}``", etc.
 
 The AMDGPU memory model is a special case of the Vulkan memory model:
 
 a. LLVM fence/atomic ordering operations have ``MakeAvailable`` /
-   ``MakeVisible`` semantics by default, thus satisfying these chains. Hence the
-   LLVM memory model is a "strong" subset of the Vulkan memory model.
+   ``MakeVisible`` semantics by default, thus satisfying the availability and
+   visibility chains required in Vulkan. Hence the LLVM memory model is a
+   "strong" subset of the Vulkan memory model.
 b. The AMDGPU memory model described here makes it possible to opt-out of the
-   default availability and visibility semantics, and instead specify it on
-   select places including the new *load-visible* and *store-available*
+   default ``MakeAvailable`` and ``MakeVisible`` semantics, and instead specify
+   it on select places including the new *load-visible* and *store-available*
    operations. This expands the subset of the Vulkan memory model that can now
    be expressed in LLVM IR.
