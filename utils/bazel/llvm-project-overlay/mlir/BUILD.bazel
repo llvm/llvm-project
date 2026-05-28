@@ -4612,6 +4612,7 @@ cc_library(
     deps = [
         ":IR",
         ":MemorySlotInterfacesIncGen",
+        "//llvm:Support",
     ],
 )
 
