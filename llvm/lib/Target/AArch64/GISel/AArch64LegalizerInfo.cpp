@@ -425,7 +425,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lower();
 
   getActionDefinitionsBuilder(G_CLMUL)
-      .legalFor({i32, i64, v8i8, v16i8, v4i16, v8i16, v2i32, v4i32, v2i64})
+      .legalFor({v8i8, v16i8})
       .lower();
 
   getActionDefinitionsBuilder(G_BSWAP)
