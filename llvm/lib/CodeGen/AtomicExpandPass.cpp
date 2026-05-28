@@ -1152,6 +1152,7 @@ AtomicRMWInst *AtomicExpandImpl::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
       Op, PMV.AlignedAddr, NewOperand, PMV.AlignedAddrAlignment,
       AI->getOrdering(), AI->getSyncScopeID());
 
+  NewAI->setVolatile(AI->isVolatile());
   copyMetadataForAtomic(*NewAI, *AI);
 
   Value *FinalOldResult = extractMaskedValue(Builder, NewAI, PMV);
@@ -1709,6 +1710,8 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 }
 
 bool AtomicExpandImpl::isIdempotentRMW(AtomicRMWInst *RMWI) {
+  if (RMWI->isVolatile())
+    return false;
   // TODO: Add floating point support.
   auto C = dyn_cast<ConstantInt>(RMWI->getValOperand());
   if (!C)

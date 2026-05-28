@@ -9265,12 +9265,9 @@ bool Sema::AddOverriddenMethods(CXXRecordDecl *DC, CXXMethodDecl *MD) {
         continue;
       if (Overridden.insert(BaseMD).second) {
         MD->addOverriddenMethod(BaseMD);
-        bool Invalid = false;
-        Invalid |= CheckOverridingFunctionReturnType(MD, BaseMD);
-        Invalid |= CheckOverridingFunctionAttributes(MD, BaseMD);
-        Invalid |= CheckOverridingFunctionExceptionSpec(MD, BaseMD);
-        if (Invalid)
-          MD->setInvalidDecl();
+        CheckOverridingFunctionReturnType(MD, BaseMD);
+        CheckOverridingFunctionAttributes(MD, BaseMD);
+        CheckOverridingFunctionExceptionSpec(MD, BaseMD);
         CheckIfOverriddenFunctionIsMarkedFinal(MD, BaseMD);
       }
 
@@ -21297,21 +21294,6 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
 
     if (IsEmittedForExternalSymbol())
       return FunctionEmissionStatus::Emitted;
-
-    // If FD is a virtual destructor of an explicit instantiation
-    // of a template class, return Emitted.
-    if (auto *Destructor = dyn_cast<CXXDestructorDecl>(FD)) {
-      if (Destructor->isVirtual()) {
-        if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(
-                Destructor->getParent())) {
-          TemplateSpecializationKind TSK =
-              Spec->getTemplateSpecializationKind();
-          if (TSK == TSK_ExplicitInstantiationDeclaration ||
-              TSK == TSK_ExplicitInstantiationDefinition)
-            return FunctionEmissionStatus::Emitted;
-        }
-      }
-    }
   }
 
   // Otherwise, the function is known-emitted if it's in our set of

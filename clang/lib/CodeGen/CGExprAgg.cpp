@@ -972,6 +972,10 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     [[fallthrough]];
 
   case CK_HLSLArrayRValue:
+    if (CGF.getLangOpts().HLSL &&
+        E->getSubExpr()->getType()->isHLSLResourceRecordArray())
+      if (CGF.CGM.getHLSLRuntime().emitGlobalResourceArray(CGF, E, Dest))
+        break;
     Visit(E->getSubExpr());
     break;
   case CK_HLSLAggregateSplatCast: {
