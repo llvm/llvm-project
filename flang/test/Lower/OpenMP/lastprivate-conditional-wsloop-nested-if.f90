@@ -24,7 +24,7 @@ end subroutine
 
 ! -- The struct is stack-allocated (fir.alloca), not a global -----------------
 ! CHECK-LABEL: func.func @_QPtest_nested_if
-! CHECK:         fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,kx:i64}>
+! CHECK:         fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,$x:i64}>
 ! CHECK-NOT:     fir.address_of(@_lp_cond_global
 
 ! -- No nesting guard emitted (this is not orphaned) -------------------------

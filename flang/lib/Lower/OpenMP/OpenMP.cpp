@@ -72,17 +72,21 @@ static mlir::omp::DeclareReductionOp buildConditionalLastPrivateReduction(
     Fortran::lower::AbstractConverter &converter, fir::RecordType lpCondType,
     const llvm::SetVector<const Fortran::semantics::Symbol *> &condLpSyms);
 
-static void rewriteConditionalLpAssignsInWsLoops(
-    Fortran::lower::AbstractConverter &converter, mlir::omp::WsloopOp wsloopOp,
-    fir::RecordType lpType,
-    const llvm::MapVector<mlir::Value, std::string> &condLpOrigAddrs,
-    mlir::Location loc);
+static llvm::MapVector<mlir::Value, std::string> bindCondLpSymsToStructFields(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    fir::RecordType lpType, mlir::Value structArg,
+    const llvm::SetVector<const Fortran::semantics::Symbol *> &condLpSyms);
 
-static void rewriteConditionalLpAssignsInSections(
-    Fortran::lower::AbstractConverter &converter,
-    mlir::omp::SectionsOp sectionsOp, fir::RecordType lpType,
-    const llvm::MapVector<mlir::Value, std::string> &condLpOrigAddrs,
-    mlir::Location loc);
+static void injectCondLpIndexStores(
+    fir::FirOpBuilder &builder, mlir::Location loc, fir::RecordType lpType,
+    mlir::Value structArg, mlir::Region &region,
+    const llvm::MapVector<mlir::Value, std::string> &valAddrToSymName,
+    llvm::function_ref<mlir::Value(fir::FirOpBuilder &, mlir::Location)>
+        genIndexVal);
+
+static mlir::Value
+computeFlattenedCanonicalIV(fir::FirOpBuilder &builder, mlir::Location loc,
+                            mlir::omp::LoopNestOp loopNestOp);
 
 static void initConditionalLpStruct(fir::FirOpBuilder &builder,
                                     mlir::Location loc,
@@ -2542,19 +2546,21 @@ genFlushOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                                     operandRange);
 }
 
-static mlir::omp::LoopNestOp
-genLoopNestOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
-              semantics::SemanticsContext &semaCtx,
-              lower::pft::Evaluation &eval, mlir::Location loc,
-              const ConstructQueue &queue, ConstructQueue::const_iterator item,
-              mlir::omp::LoopNestOperands &clauseOps,
-              llvm::ArrayRef<const semantics::Symbol *> iv,
-              llvm::ArrayRef<std::pair<mlir::omp::BlockArgOpenMPOpInterface,
-                                       const ObjectEntryBlockArgs &>>
-                  wrapperArgs,
-              llvm::omp::Directive directive, DataSharingProcessor &dsp) {
+static mlir::omp::LoopNestOp genLoopNestOp(
+    lower::AbstractConverter &converter, lower::SymMap &symTable,
+    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+    mlir::Location loc, const ConstructQueue &queue,
+    ConstructQueue::const_iterator item, mlir::omp::LoopNestOperands &clauseOps,
+    llvm::ArrayRef<const semantics::Symbol *> iv,
+    llvm::ArrayRef<std::pair<mlir::omp::BlockArgOpenMPOpInterface,
+                             const ObjectEntryBlockArgs &>>
+        wrapperArgs,
+    llvm::omp::Directive directive, DataSharingProcessor &dsp,
+    llvm::function_ref<void(mlir::Operation *)> loopPostIvCb = nullptr) {
   auto ivCallback = [&](mlir::Operation *op) {
     genLoopVars(op, converter, loc, iv, wrapperArgs);
+    if (loopPostIvCb)
+      loopPostIvCb(op);
     return llvm::SmallVector<const semantics::Symbol *>(iv);
   };
 
@@ -3150,10 +3156,26 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::Operation *terminator =
       lower::genOpenMPTerminator(builder, sectionsOp, loc);
 
+  // Save address-to-name mapping for conditional LP symbols before section
+  // bodies are lowered (binding will overwrite them inside each section's
+  // callback).  The addresses are needed for the post-reduction copy-back.
+  llvm::MapVector<mlir::Value, std::string> condLpOrigAddrs;
+  for (const auto *sym : condLpSyms) {
+    mlir::Value addr = converter.getSymbolAddress(*sym);
+    if (addr)
+      condLpOrigAddrs[addr] = sym->name().ToString();
+  }
+
   // Generate nested SECTION constructs.
   // This is done here rather than in genOMP([...], OmpSectionDirective )
   // because we need to run genReductionVars on each omp.section so that the
-  // reduction variable gets mapped to the private version
+  // reduction variable gets mapped to the private version.
+  //
+  // When conditional lastprivate symbols are present, a custom region entry
+  // callback binds them to the section's struct value-field addresses before
+  // the body is lowered, so that lowering naturally uses the struct fields.
+  llvm::SmallVector<llvm::MapVector<mlir::Value, std::string>>
+      perSectionValAddrs;
   for (auto [construct, nestedEval] :
        llvm::zip(sectionBlocks, eval.getNestedEvaluations())) {
     const auto *sectionConstruct =
@@ -3169,25 +3191,62 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         sectionConstruct->source, llvm::omp::Directive::OMPD_section, {})};
 
     builder.setInsertionPoint(terminator);
-    genOpWithBody<mlir::omp::SectionOp>(
-        OpWithBodyGenInfo(converter, symTable, semaCtx, loc, nestedEval,
-                          llvm::omp::Directive::OMPD_section)
-            .setClauses(&sectionQueue.begin()->clauses)
-            .setDataSharingProcessor(&dsp)
-            .setEntryBlockArgs(&args),
-        sectionQueue, sectionQueue.begin());
+
+    if (condLpSyms.empty()) {
+      genOpWithBody<mlir::omp::SectionOp>(
+          OpWithBodyGenInfo(converter, symTable, semaCtx, loc, nestedEval,
+                            llvm::omp::Directive::OMPD_section)
+              .setClauses(&sectionQueue.begin()->clauses)
+              .setDataSharingProcessor(&dsp)
+              .setEntryBlockArgs(&args),
+          sectionQueue, sectionQueue.begin());
+    } else {
+      llvm::MapVector<mlir::Value, std::string> sectionValAddrs;
+      auto sectionRegionEntryCb = [&](mlir::Operation *op)
+          -> llvm::SmallVector<const semantics::Symbol *> {
+        genEntryBlock(builder, args.asEntryBlockArgs(), op->getRegion(0));
+        auto blockArgIface =
+            mlir::cast<mlir::omp::BlockArgOpenMPOpInterface>(*op);
+        bindEntryBlockArgs(converter, blockArgIface, args);
+        mlir::Value structArg = blockArgIface.getReductionBlockArgs().back();
+        sectionValAddrs = bindCondLpSymsToStructFields(converter, loc, lpType,
+                                                       structArg, condLpSyms);
+        return args.getSyms();
+      };
+      genOpWithBody<mlir::omp::SectionOp>(
+          OpWithBodyGenInfo(converter, symTable, semaCtx, loc, nestedEval,
+                            llvm::omp::Directive::OMPD_section)
+              .setClauses(&sectionQueue.begin()->clauses)
+              .setDataSharingProcessor(&dsp)
+              .setGenRegionEntryCb(sectionRegionEntryCb),
+          sectionQueue, sectionQueue.begin());
+      perSectionValAddrs.push_back(std::move(sectionValAddrs));
+    }
   }
 
-  // Capture original addresses and rewrite conditional LP assigns in sections.
-  llvm::MapVector<mlir::Value, std::string> condLpOrigAddrs;
+  // Inject index stores after each assignment to a conditional LP value field
+  // inside every section.
   if (!condLpSyms.empty()) {
-    for (const auto *sym : condLpSyms) {
-      mlir::Value addr = converter.getSymbolAddress(*sym);
-      if (addr)
-        condLpOrigAddrs[addr] = sym->name().ToString();
+    unsigned sectionIdx = 0;
+    for (mlir::Operation &op : sectionsOp.getRegion().front()) {
+      auto sectionOp = mlir::dyn_cast<mlir::omp::SectionOp>(op);
+      if (!sectionOp)
+        continue;
+
+      auto sectionArgIface =
+          mlir::cast<mlir::omp::BlockArgOpenMPOpInterface>(*sectionOp);
+      mlir::Value sectionStructArg =
+          sectionArgIface.getReductionBlockArgs().back();
+
+      unsigned idx = sectionIdx;
+      injectCondLpIndexStores(
+          builder, loc, lpType, sectionStructArg, sectionOp.getRegion(),
+          perSectionValAddrs[sectionIdx],
+          [idx](fir::FirOpBuilder &b, mlir::Location l) -> mlir::Value {
+            return b.createIntegerConstant(l, b.getI64Type(), idx);
+          });
+      ++sectionIdx;
     }
-    rewriteConditionalLpAssignsInSections(converter, sectionsOp, lpType,
-                                          condLpOrigAddrs, loc);
   }
 
   // Collect conditional LP symbol names so we can skip them in the normal
@@ -3268,7 +3327,25 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           builder, loc, builder.getRefType(valType), lpAlloca,
           llvm::SmallVector<fir::IntOrValue, 1>{valFIdx});
       mlir::Value val = fir::LoadOp::create(builder, loc, fieldAddr);
+
+      // Only copy back if some iteration actually assigned to this variable
+      // (index >= 0).  Otherwise the original must not be overwritten.
+      unsigned idxFieldIdx = lpType.getFieldIndex("$" + symName);
+      fir::IntOrValue idxFIdx =
+          mlir::IntegerAttr::get(builder.getI32Type(), idxFieldIdx);
+      mlir::Value idxAddr = fir::CoordinateOp::create(
+          builder, loc, builder.getRefType(builder.getI64Type()), lpAlloca,
+          llvm::SmallVector<fir::IntOrValue, 1>{idxFIdx});
+      mlir::Value idxVal = fir::LoadOp::create(builder, loc, idxAddr);
+      mlir::Value zero =
+          builder.createIntegerConstant(loc, builder.getI64Type(), 0);
+      mlir::Value cond = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::sge, idxVal, zero);
+      auto ifOp =
+          fir::IfOp::create(builder, loc, cond, /*withElseRegion=*/false);
+      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
       fir::StoreOp::create(builder, loc, val, origAddr);
+      builder.setInsertionPointAfter(ifOp);
     }
     mlir::omp::TerminatorOp::create(builder, loc);
   }
@@ -3891,7 +3968,8 @@ static void initConditionalLpStruct(fir::FirOpBuilder &builder,
                                     mlir::Location loc,
                                     fir::RecordType lpCondType,
                                     mlir::Value structRef) {
-  auto fields = lpCondType.getTypeList();
+  llvm::ArrayRef<std::pair<std::string, mlir::Type>> fields =
+      lpCondType.getTypeList();
   unsigned numVars = fields.size() / 2;
   for (unsigned i = 0, e = fields.size(); i < e; ++i) {
     mlir::Type fieldTy = fields[i].second;
@@ -3902,8 +3980,10 @@ static void initConditionalLpStruct(fir::FirOpBuilder &builder,
     mlir::Value initVal;
     if (i >= numVars) // index field (second half)
       initVal = builder.createIntegerConstant(loc, fieldTy, -1);
-    else // value field (first half)
+    else if (fir::isa_trivial(fieldTy))
       initVal = fir::factory::createZeroValue(builder, loc, fieldTy);
+    else // derived type or other non-trivial: use all-bits-zero
+      initVal = fir::ZeroOp::create(builder, loc, fieldTy);
     fir::StoreOp::create(builder, loc, initVal, fieldAddr);
   }
 }
@@ -4107,11 +4187,8 @@ static mlir::omp::WsloopOp genStandaloneDo(
   auto wsloopOp = genWrapperOp<mlir::omp::WsloopOp>(
       converter, loc, wsloopClauseOps, wsloopArgs);
 
-  // Capture original addresses of conditional LP symbols
-  // before the loop body is lowered.  These SSA values are the addresses
-  // visible at this point (dummy arguments or host variables); they must
-  // not be remapped by privatization since conditional lastprivate
-  // variables are shared (they appear in a reduction clause, not private).
+  // Save address-to-name mapping for conditional LP symbols before scoped
+  // binding overwrites them — needed for the post-reduction copy-back.
   llvm::MapVector<mlir::Value, std::string> condLpOrigAddrs;
   for (const auto *sym : condLpSyms) {
     mlir::Value addr = converter.getSymbolAddress(*sym);
@@ -4119,15 +4196,38 @@ static mlir::omp::WsloopOp genStandaloneDo(
       condLpOrigAddrs[addr] = sym->name().ToString();
   }
 
+  // Use scoped symbol binding so that all references to conditional LP symbols
+  // inside the loop body resolve to struct value-field addresses directly.
+  // The map is populated by the post-IV callback and consumed by the index
+  // store injection pass after body lowering.
+  llvm::MapVector<mlir::Value, std::string> condLpValAddrs;
+  auto loopPostIvCb = [&](mlir::Operation *) {
+    if (condLpSyms.empty())
+      return;
+    auto blockArgIface =
+        mlir::cast<mlir::omp::BlockArgOpenMPOpInterface>(*wsloopOp);
+    mlir::Value structArg = blockArgIface.getReductionBlockArgs().back();
+    condLpValAddrs = bindCondLpSymsToStructFields(converter, loc, lpType,
+                                                  structArg, condLpSyms);
+  };
+
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
                 loopNestClauseOps, iv, {{wsloopOp, wsloopArgs}},
-                llvm::omp::Directive::OMPD_do, dsp);
+                llvm::omp::Directive::OMPD_do, dsp, loopPostIvCb);
 
-  // Rewrite assignments to conditional LP symbols
-  // to store into struct fields + record iteration index.
+  // Inject index stores after each assignment to a conditional LP value field.
   if (!condLpSyms.empty()) {
-    rewriteConditionalLpAssignsInWsLoops(converter, wsloopOp, lpType,
-                                         condLpOrigAddrs, loc);
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    auto blockArgIface =
+        mlir::cast<mlir::omp::BlockArgOpenMPOpInterface>(*wsloopOp);
+    mlir::Value structArg = blockArgIface.getReductionBlockArgs().back();
+    auto loopNestOp =
+        mlir::cast<mlir::omp::LoopNestOp>(wsloopOp.getWrappedLoop());
+    injectCondLpIndexStores(
+        builder, loc, lpType, structArg, loopNestOp.getRegion(), condLpValAddrs,
+        [&](fir::FirOpBuilder &b, mlir::Location l) -> mlir::Value {
+          return computeFlattenedCanonicalIV(b, l, loopNestOp);
+        });
   }
 
   // Post-reduction copy-back.  When nowait is absent, the wsloop's implicit
@@ -4159,7 +4259,25 @@ static mlir::omp::WsloopOp genStandaloneDo(
           builder, loc, builder.getRefType(valType), lpAlloca,
           llvm::SmallVector<fir::IntOrValue, 1>{valFIdx});
       mlir::Value val = fir::LoadOp::create(builder, loc, fieldAddr);
+
+      // Only copy back if some iteration actually assigned to this variable
+      // (index >= 0).  Otherwise the original must not be overwritten.
+      unsigned idxFieldIdx = lpType.getFieldIndex("$" + symName);
+      fir::IntOrValue idxFIdx =
+          mlir::IntegerAttr::get(builder.getI32Type(), idxFieldIdx);
+      mlir::Value idxAddr = fir::CoordinateOp::create(
+          builder, loc, builder.getRefType(builder.getI64Type()), lpAlloca,
+          llvm::SmallVector<fir::IntOrValue, 1>{idxFIdx});
+      mlir::Value idxVal = fir::LoadOp::create(builder, loc, idxAddr);
+      mlir::Value zero =
+          builder.createIntegerConstant(loc, builder.getI64Type(), 0);
+      mlir::Value cond = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::sge, idxVal, zero);
+      auto ifOp =
+          fir::IfOp::create(builder, loc, cond, /*withElseRegion=*/false);
+      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
       fir::StoreOp::create(builder, loc, val, origAddr);
+      builder.setInsertionPointAfter(ifOp);
     }
     mlir::omp::TerminatorOp::create(builder, loc);
   }
@@ -5165,53 +5283,63 @@ computeFlattenedCanonicalIV(fir::FirOpBuilder &builder, mlir::Location loc,
   return flatIdx;
 }
 
-/// Common helper: within a given region, replace uses of original variable
-/// addresses with struct value fields and inject index stores after each
-/// assignment.
-/// \p genIndexVal is called at the point of each assignment to produce the
-/// i64 index value to store (e.g. canonical loop IV or constant section index).
-static void rewriteCondLpInRegion(
+/// Bind conditional lastprivate symbols to their value fields inside the
+/// reduction struct.  This must be called \b before body lowering so that all
+/// references to the LP symbols resolve to struct field addresses directly,
+/// avoiding the need for a post-hoc address-replacement rewrite.
+///
+/// Returns a map from the newly-created struct-field addresses to symbol names
+/// so that \c injectCondLpIndexStores can later locate writes to these fields.
+static llvm::MapVector<mlir::Value, std::string> bindCondLpSymsToStructFields(
+    lower::AbstractConverter &converter, mlir::Location loc,
+    fir::RecordType lpType, mlir::Value structArg,
+    const llvm::SetVector<const semantics::Symbol *> &condLpSyms) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  llvm::MapVector<mlir::Value, std::string> valAddrToSymName;
+  for (const auto *sym : condLpSyms) {
+    std::string symName = sym->name().ToString();
+    unsigned valFieldIdx = lpType.getFieldIndex(symName);
+    mlir::Type valType = lpType.getType(valFieldIdx);
+
+    fir::IntOrValue valFIdx =
+        mlir::IntegerAttr::get(builder.getI32Type(), valFieldIdx);
+    mlir::Value valAddr = fir::CoordinateOp::create(
+        builder, loc, builder.getRefType(valType), structArg,
+        llvm::SmallVector<fir::IntOrValue, 1>{valFIdx});
+
+    converter.bindSymbol(*sym, valAddr);
+    valAddrToSymName[valAddr] = symName;
+  }
+  return valAddrToSymName;
+}
+
+/// Walk the given region to find assignments (hlfir.assign / fir.store) that
+/// target one of the struct value-field addresses in \p valAddrToSymName and
+/// inject a store of the index value (produced by \p genIndexVal) into the
+/// corresponding index field immediately after each such assignment.
+static void injectCondLpIndexStores(
     fir::FirOpBuilder &builder, mlir::Location loc, fir::RecordType lpType,
     mlir::Value structArg, mlir::Region &region,
-    const llvm::MapVector<mlir::Value, std::string> &condLpOrigAddrs,
+    const llvm::MapVector<mlir::Value, std::string> &valAddrToSymName,
     llvm::function_ref<mlir::Value(fir::FirOpBuilder &, mlir::Location)>
         genIndexVal) {
-  // Step 1: Replace uses of original addresses with struct value field addrs.
-  llvm::MapVector<mlir::Value, std::string> valAddrToSymName;
-  {
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToStart(&region.front());
+  // Look through hlfir.declare to find the underlying struct field address.
+  // When symbols are bound via bindCondLpSymsToStructFields, the lowering
+  // wraps the fir.coordinate_of result in hlfir.declare, so the actual write
+  // target is the declare result rather than the raw coordinate_of.
+  auto lookThroughDeclare = [](mlir::Value v) -> mlir::Value {
+    if (auto declOp = v.getDefiningOp<hlfir::DeclareOp>())
+      return declOp.getMemref();
+    return v;
+  };
 
-    for (auto &[origAddrConst, symName] : condLpOrigAddrs) {
-      mlir::Value origAddr = origAddrConst;
-      unsigned valFieldIdx = lpType.getFieldIndex(symName);
-      mlir::Type valType = lpType.getType(valFieldIdx);
-
-      fir::IntOrValue valFIdx =
-          mlir::IntegerAttr::get(builder.getI32Type(), valFieldIdx);
-      mlir::Value valAddr = fir::CoordinateOp::create(
-          builder, loc, builder.getRefType(valType), structArg,
-          llvm::SmallVector<fir::IntOrValue, 1>{valFIdx});
-
-      origAddr.replaceUsesWithIf(valAddr, [&](mlir::OpOperand &use) {
-        return region.isAncestor(use.getOwner()->getParentRegion());
-      });
-
-      valAddrToSymName[valAddr] = symName;
-    }
-  }
-
-  // Step 2: Walk ops that write to struct value fields (hlfir.assign and
-  // fir.store) and inject a store of the index value after each write.
-  // Both forms must be tracked because lowering may produce either depending
-  // on the variable type and context.
   llvm::SmallVector<mlir::Operation *> toAnnotate;
   region.walk([&](hlfir::AssignOp assignOp) {
-    if (valAddrToSymName.count(assignOp.getLhs()))
+    if (valAddrToSymName.count(lookThroughDeclare(assignOp.getLhs())))
       toAnnotate.push_back(assignOp);
   });
   region.walk([&](fir::StoreOp storeOp) {
-    if (valAddrToSymName.count(storeOp.getMemref()))
+    if (valAddrToSymName.count(lookThroughDeclare(storeOp.getMemref())))
       toAnnotate.push_back(storeOp);
   });
 
@@ -5230,12 +5358,13 @@ static void rewriteCondLpInRegion(
   for (mlir::Operation *writeOp : toAnnotate) {
     mlir::Value target;
     if (auto assignOp = mlir::dyn_cast<hlfir::AssignOp>(writeOp))
-      target = assignOp.getLhs();
+      target = lookThroughDeclare(assignOp.getLhs());
     else
-      target = mlir::cast<fir::StoreOp>(writeOp).getMemref();
+      target =
+          lookThroughDeclare(mlir::cast<fir::StoreOp>(writeOp).getMemref());
 
     std::string symName = valAddrToSymName.lookup(target);
-    unsigned idxFieldIdx = lpType.getFieldIndex("k" + symName);
+    unsigned idxFieldIdx = lpType.getFieldIndex("$" + symName);
     mlir::Type idxType = lpType.getType(idxFieldIdx);
 
     mlir::OpBuilder::InsertionGuard guard(builder);
@@ -5248,67 +5377,6 @@ static void rewriteCondLpInRegion(
         llvm::SmallVector<fir::IntOrValue, 1>{idxFIdx});
 
     fir::StoreOp::create(builder, loc, indexVal, idxAddr);
-  }
-}
-
-/// Rewrite references to conditional lastprivate symbols inside the
-/// loop body to use the reduction struct's value fields instead. Then inject
-/// a store of the canonical iteration number into the corresponding index
-/// field after each assignment.
-static void rewriteConditionalLpAssignsInWsLoops(
-    lower::AbstractConverter &converter, mlir::omp::WsloopOp wsloopOp,
-    fir::RecordType lpType,
-    const llvm::MapVector<mlir::Value, std::string> &condLpOrigAddrs,
-    mlir::Location loc) {
-  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-
-  // Get the struct reduction block arg (last reduction, since we appended it).
-  auto blockArgIface =
-      mlir::cast<mlir::omp::BlockArgOpenMPOpInterface>(*wsloopOp);
-  mlir::Value structArg = blockArgIface.getReductionBlockArgs().back();
-
-  // Get the loop nest op and compute a flattened canonical IV across all
-  // dimensions (handles both single and collapsed loops).
-  auto loopNestOp =
-      mlir::cast<mlir::omp::LoopNestOp>(wsloopOp.getWrappedLoop());
-
-  rewriteCondLpInRegion(
-      builder, loc, lpType, structArg, loopNestOp.getRegion(), condLpOrigAddrs,
-      [&](fir::FirOpBuilder &b, mlir::Location l) -> mlir::Value {
-        return computeFlattenedCanonicalIV(b, l, loopNestOp);
-      });
-}
-
-/// Rewrite conditional lastprivate assignments inside an omp.sections region.
-/// For each omp.section, replace uses of the original variable address with
-/// the struct's value field, and store the compile-time section index into
-/// the index field after each assignment.
-static void rewriteConditionalLpAssignsInSections(
-    lower::AbstractConverter &converter, mlir::omp::SectionsOp sectionsOp,
-    fir::RecordType lpType,
-    const llvm::MapVector<mlir::Value, std::string> &condLpOrigAddrs,
-    mlir::Location loc) {
-  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  mlir::Region &sectionsRegion = sectionsOp.getRegion();
-
-  unsigned sectionIdx = 0;
-  for (mlir::Operation &op : sectionsRegion.front()) {
-    auto sectionOp = mlir::dyn_cast<mlir::omp::SectionOp>(op);
-    if (!sectionOp)
-      continue;
-
-    auto sectionArgIface =
-        mlir::cast<mlir::omp::BlockArgOpenMPOpInterface>(*sectionOp);
-    mlir::Value sectionStructArg =
-        sectionArgIface.getReductionBlockArgs().back();
-
-    unsigned idx = sectionIdx++;
-    rewriteCondLpInRegion(
-        builder, loc, lpType, sectionStructArg, sectionOp.getRegion(),
-        condLpOrigAddrs,
-        [idx](fir::FirOpBuilder &b, mlir::Location l) -> mlir::Value {
-          return b.createIntegerConstant(l, b.getI64Type(), idx);
-        });
   }
 }
 
@@ -5334,7 +5402,7 @@ static mlir::omp::DeclareReductionOp buildConditionalLastPrivateReduction(
 
   // Combiner callback: for each (value, index) pair, pick the later iteration.
   // Fields are arranged as: {val_0, ..., val_{N-1}, idx_0, ..., idx_{N-1}}
-  // where idx field names are "k" + val field name.
+  // where idx field names are "$" + val field name.
   // If rhs.idx > lhs.idx, copy rhs value and index into lhs.
   auto genCombinerCB = [lpCondType](fir::FirOpBuilder &builder,
                                     mlir::Location loc, mlir::Type type,
@@ -5344,11 +5412,12 @@ static mlir::omp::DeclareReductionOp buildConditionalLastPrivateReduction(
     auto fields = lpType.getTypeList();
     unsigned numVars = fields.size() / 2;
 
-    // Walk the first half (value fields). Index field name = "k" +
-    // value name.
+    // Walk the first half (value fields). Index field name = "$" +
+    // value name.  The "$" character is invalid in Fortran identifiers,
+    // so the prefix cannot collide with any user variable name.
     for (unsigned i = 0; i < numVars; ++i) {
       auto [valName, valType] = fields[i];
-      std::string idxName = "k" + valName;
+      std::string idxName = "$" + valName;
       unsigned valIdx = lpType.getFieldIndex(valName);
       unsigned idxIdx = lpType.getFieldIndex(idxName);
       mlir::Type idxType = lpType.getType(idxIdx);
@@ -5458,7 +5527,7 @@ static fir::RecordType buildConditionalLpType(
 
   // Then index fields (i64).
   for (const auto *sym : condLpSyms) {
-    std::string indexName = "k" + sym->name().ToString();
+    std::string indexName = "$" + sym->name().ToString();
     fields.push_back({indexName, builder.getI64Type()});
   }
 

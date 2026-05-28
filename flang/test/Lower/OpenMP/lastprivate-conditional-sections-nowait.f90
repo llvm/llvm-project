@@ -20,7 +20,7 @@ subroutine test_conditional_lp_sections_nowait(x)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_conditional_lp_sections_nowait
-! CHECK:         %[[STRUCT:.*]] = fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,kx:i64}>
+! CHECK:         %[[STRUCT:.*]] = fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,$x:i64}>
 
 ! CHECK:         omp.parallel {
 ! CHECK:           omp.sections nowait
@@ -32,6 +32,11 @@ end subroutine
 ! CHECK:           omp.single {
 ! CHECK:             fir.coordinate_of %[[STRUCT]], x
 ! CHECK:             fir.load
-! CHECK:             fir.store
+! CHECK:             fir.coordinate_of %[[STRUCT]], $x
+! CHECK:             fir.load
+! CHECK:             arith.cmpi sge
+! CHECK:             fir.if
+! CHECK:               fir.store
+! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }

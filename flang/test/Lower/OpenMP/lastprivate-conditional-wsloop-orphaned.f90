@@ -23,7 +23,7 @@ end subroutine
 
 ! -- declare_reduction for the struct type ------------------------------------
 ! CHECK-LABEL: omp.declare_reduction @lp_cond_byref_rec__lp_cond_t
-! CHECK-SAME:    : !fir.ref<!fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,kx:i64}>>
+! CHECK-SAME:    : !fir.ref<!fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,$x:i64}>>
 
 ! -- Function body: address_of global (no fir.alloca for the struct) ----------
 ! CHECK-LABEL: func.func @_QPtest_orphaned_wsloop
@@ -38,14 +38,14 @@ end subroutine
 ! CHECK:         }
 
 ! CHECK-NOT:     fir.alloca !fir.type<_lp_cond_t
-! CHECK:         %[[GADDR:.*]] = fir.address_of(@_lp_cond_global.{{l[0-9]+\.[0-9]+}}) : !fir.ref<!fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,kx:i64}>>
+! CHECK:         %[[GADDR:.*]] = fir.address_of(@_lp_cond_global.{{l[0-9]+\.[0-9]+}}) : !fir.ref<!fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,$x:i64}>>
 
 ! -- Init sentinels written inside omp.single --------------------------------
 ! CHECK:         omp.single {
 ! CHECK:           %[[XCOORD:.*]] = fir.coordinate_of %[[GADDR]], x
 ! CHECK:           %[[C0:.*]] = arith.constant 0 : i32
 ! CHECK:           fir.store %[[C0]] to %[[XCOORD]]
-! CHECK:           %[[KXCOORD:.*]] = fir.coordinate_of %[[GADDR]], kx
+! CHECK:           %[[KXCOORD:.*]] = fir.coordinate_of %[[GADDR]], $x
 ! CHECK:           %[[CM1:.*]] = arith.constant -1 : i64
 ! CHECK:           fir.store %[[CM1]] to %[[KXCOORD]]
 ! CHECK:           omp.terminator
@@ -61,13 +61,18 @@ end subroutine
 ! CHECK:           omp.loop_nest
 ! CHECK:             fir.coordinate_of %[[SARG]], x
 ! CHECK:             hlfir.assign
-! CHECK:             fir.coordinate_of %[[SARG]], kx
+! CHECK:             fir.coordinate_of %[[SARG]], $x
 ! CHECK:             fir.store
 
 ! -- Copy-back: load winning value from global and store to dummy arg ---------
 ! CHECK:         fir.coordinate_of %[[GADDR]], x
 ! CHECK:         fir.load
-! CHECK:         fir.store
+! CHECK:         fir.coordinate_of %[[GADDR]], $x
+! CHECK:         fir.load
+! CHECK:         arith.cmpi sge
+! CHECK:         fir.if
+! CHECK:           fir.store
+! CHECK:         }
 
 ! -- Module-level global declared at end of module (not a stack alloca) -------
-! CHECK: fir.global internal @_lp_cond_global.{{l[0-9]+\.[0-9]+}} : !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,kx:i64}>
+! CHECK: fir.global internal @_lp_cond_global.{{l[0-9]+\.[0-9]+}} : !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,$x:i64}>

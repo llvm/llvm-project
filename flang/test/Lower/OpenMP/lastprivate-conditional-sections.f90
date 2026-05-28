@@ -27,7 +27,7 @@ end subroutine
 
 ! -- declare_reduction with struct type containing value/index pairs ----------
 ! CHECK-LABEL: omp.declare_reduction @lp_cond_byref_rec__lp_cond_t
-! CHECK-SAME:    : !fir.ref<!fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,y:i32,kx:i64,ky:i64}>>
+! CHECK-SAME:    : !fir.ref<!fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,y:i32,$x:i64,$y:i64}>>
 
 ! -- Init region: value fields = 0, index fields = -1 ------------------------
 ! CHECK:       init {
@@ -45,7 +45,7 @@ end subroutine
 
 ! -- Struct alloca + init before parallel -------------------------------------
 ! CHECK-LABEL: func.func @_QPtest_conditional_lp_sections
-! CHECK:         %[[STRUCT:.*]] = fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,y:i32,kx:i64,ky:i64}>
+! CHECK:         %[[STRUCT:.*]] = fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,y:i32,$x:i64,$y:i64}>
 ! CHECK-DAG:     arith.constant 0 : i32
 ! CHECK-DAG:     arith.constant -1 : i64
 
@@ -71,10 +71,21 @@ end subroutine
 ! CHECK:               hlfir.assign
 ! CHECK:               fir.store %[[IDX1]]
 
-! -- Copy-back after sections -------------------------------------------------
-! CHECK:           fir.coordinate_of %[[STRUCT]], {{[xy]}}
-! CHECK:           fir.load
-! CHECK:           fir.store
-! CHECK:           fir.coordinate_of %[[STRUCT]], {{[xy]}}
-! CHECK:           fir.load
-! CHECK:           fir.store
+! -- Copy-back after sections (guarded: only store if index >= 0) --------------
+! CHECK:           omp.single {
+! CHECK:             fir.coordinate_of %[[STRUCT]], {{[xy]}}
+! CHECK:             fir.load
+! CHECK:             fir.coordinate_of %[[STRUCT]], ${{[xy]}}
+! CHECK:             fir.load
+! CHECK:             arith.cmpi sge
+! CHECK:             fir.if
+! CHECK:               fir.store
+! CHECK:             }
+! CHECK:             fir.coordinate_of %[[STRUCT]], {{[xy]}}
+! CHECK:             fir.load
+! CHECK:             fir.coordinate_of %[[STRUCT]], ${{[xy]}}
+! CHECK:             fir.load
+! CHECK:             arith.cmpi sge
+! CHECK:             fir.if
+! CHECK:               fir.store
+! CHECK:             }
