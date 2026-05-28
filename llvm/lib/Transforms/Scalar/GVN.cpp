@@ -3395,8 +3395,8 @@ static bool canHoistLoadWithAA(Loop *L, LoadInst *RunningMinLoad,
 /// Return true if RunningMinLoad can be hoisted out of L and its value
 /// reused across iterations via a header PHI.
 ///
-/// Single source of truth for the load-hoist legality in the min-finding
-/// select rewrite. Three conditions:
+/// This the one-stop function for the load-hoist legality in the min-finding
+/// select rewrite. It checks the following three conditions:
 ///  - Single use: RunningMinLoad must have exactly one in-loop use (the
 ///    compare). The rewrite RAUWs RunningMinLoad with a header PHI; an
 ///    extra in-loop use would observe the PHI value in place of the
@@ -3415,18 +3415,18 @@ static bool canHoistLoadWithAA(Loop *L, LoadInst *RunningMinLoad,
 ///    address equal RunningMinLoad's next-iteration address on the
 ///    cmp = true arm.
 ///
-/// canHoistLoadWithAA is used for both the MemDep-enabled and the
+/// Note: canHoistLoadWithAA() is used for both the MemDep-enabled and the
 /// MemorySSA-enabled GVN configurations. The LICM helpers
 /// llvm::canHoistLoad / pointerInvalidatedByLoop are insufficient for
 /// this rewrite:
-///   - With IsSink=true, LICM's pointerInvalidatedByBlock treats a
+///   - With IsSink=true, LICM's pointerInvalidatedByBlock() treats a
 ///     same-block MemoryDef that locally dominates the load as
 ///     non-invalidating (FIXME in LICM). For the recognizer's
 ///     single-block self-loop, such a Def is a cross-iteration
 ///     clobber via the back-edge; LICM silently allows it.
 ///     canHoistLoadWithAA catches it because it walks every
 ///     instruction in the loop body.
-///   - With IsSink=false, LICM delegates to getClobberingMemoryAccess,
+///   - With IsSink=false, LICM delegates to getClobberingMemoryAccess(),
 ///     which uses PHITransAddr to walk through the loop header's
 ///     MemoryPhi. PHITransAddr does not handle SelectInst, and the
 ///     IndexValPhi's back-edge incoming is the very select the
@@ -3434,7 +3434,7 @@ static bool canHoistLoadWithAA(Loop *L, LoadInst *RunningMinLoad,
 ///     the load pointer across the back-edge and misses cross-iteration
 ///     aliases when BasicAA reports same-iter NoAlias on
 ///     differently-named SSA indices.
-/// canHoistLoadWithAA sidesteps both gaps by walking every in-loop
+/// canHoistLoadWithAA() sidesteps both gaps by walking every in-loop
 /// instruction and probing both RunningMinLoad's and IterValueLoad's
 /// locations. The recognizer's single-block self-loop gate makes LICM's
 /// multi-block CFG reasoning unnecessary for this rewrite, so no
@@ -3524,17 +3524,18 @@ bool GVNPass::transformMinFindingSelectPattern(
   Value *LHS = Comparison->getOperand(0);
   Value *LoadVal = Comparison->getOperand(1);
 
-  // RunningMinLoad: produces the running-min value; the rewrite hoists
-  // it to the preheader and memoizes its value across iterations via a
-  // PHI inserted in the loop header.
   // IterValueLoad: produces this iteration's value, compared against
   // the running min, and supplies the refresh value for the memoizing
   // PHI when the select picks it. The recognizer's algebraic gate ties
   // IterValueLoad's same-iteration address to RunningMinLoad's
   // next-iteration address on the cmp = true arm, so the clobber walk
   // must cover both locations.
-  auto *RunningMinLoad = cast<LoadInst>(LoadVal);
+  //
+  // RunningMinLoad: produces the running-min value; the rewrite hoists
+  // it to the preheader and memoizes its value across iterations via a
+  // PHI inserted in the loop header.
   auto *IterValueLoad = cast<LoadInst>(LHS);
+  auto *RunningMinLoad = cast<LoadInst>(LoadVal);
   if (!canMemoizeLoadAcrossLoop(*RunningMinLoad, *IterValueLoad, L,
                                 VN.getAliasAnalysis()))
     return false;
@@ -3560,13 +3561,12 @@ bool GVNPass::transformMinFindingSelectPattern(
                                          OffsetVal, "hoist_gep2");
 
   // 4. hoisted_load = load float, ptr HoistedGEP2
-  // Preserve alignment and metadata from the original load; IRBuilder's
+  // Preserve alignment and metadata from RunningMinLoad; IRBuilder's
   // natural alignment may exceed what the user declared, which would
   // fault on strict-alignment targets at runtime.
-  LoadInst *OrigLoad = cast<LoadInst>(LoadVal);
   LoadInst *NewLoad = Builder.CreateLoad(LoadType, HoistedGEP2, "hoisted_load");
-  NewLoad->setAlignment(OrigLoad->getAlign());
-  copyMetadataForLoad(*NewLoad, *OrigLoad);
+  NewLoad->setAlignment(RunningMinLoad->getAlign());
+  copyMetadataForLoad(*NewLoad, *RunningMinLoad);
 
   // Update MemorySSA before erasing the original load.
   if (MSSAU) {
