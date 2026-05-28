@@ -6,9 +6,12 @@
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8.1m.main-none-none-eabi"
 
-; CHECK-LABEL: vld2
-; CHECK-2: vector.body
-; CHECK-NO2-NOT: vector.body
+; CHECK-LABEL: define void @vld2(
+; CHECK-2:       vector.body:
+; CHECK-2:         %{{.*}} = load <16 x half>, ptr
+; CHECK-2:         store <16 x half> {{.*}}, ptr
+;
+; CHECK-NO2-NOT: vector.body:
 define void @vld2(ptr nocapture readonly %pIn, ptr nocapture %pOut, i32 %numRows, i32 %numCols, i32 %scale.coerce) #0 {
 entry:
   %tmp.0.extract.trunc = trunc i32 %scale.coerce to i16
@@ -40,9 +43,12 @@ while.end:
   ret void
 }
 
-; CHECK-LABEL: vld4
-; CHECK-4: vector.body
-; CHECK-NO4-NOT: vector.body
+; CHECK-LABEL: define void @vld4(
+; CHECK-4:       vector.body:
+; CHECK-4:         %{{.*}} = load <32 x half>, ptr
+; CHECK-4:         store <32 x half> {{.*}}, ptr
+;
+; CHECK-NO4-NOT: vector.body:
 define void @vld4(ptr nocapture readonly %pIn, ptr nocapture %pOut, i32 %numRows, i32 %numCols, i32 %scale.coerce) #0 {
 entry:
   %tmp.0.extract.trunc = trunc i32 %scale.coerce to i16
