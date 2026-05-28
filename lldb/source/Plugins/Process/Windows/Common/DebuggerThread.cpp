@@ -553,7 +553,14 @@ ConvertNtDevicePathToDosPath(llvm::ArrayRef<wchar_t> nt_path) {
     return result;
   } while (::FindNextVolumeW(vol_iter, vol_name.data(), vol_name.size()));
 
-  LLDB_LOG(log, "ConvertNtDevicePathToDosPath: no matching volume found");
+  std::wstring nt_str(nt_path.data(),
+                      ::wcsnlen(nt_path.data(), nt_path.size()));
+  std::string nt_utf8;
+  llvm::convertWideToUTF8(nt_str, nt_utf8);
+  LLDB_LOG(log,
+           "ConvertNtDevicePathToDosPath: no matching volume found for "
+           "nt_path \"{0}\"",
+           nt_utf8);
   return std::nullopt;
 }
 
@@ -586,10 +593,15 @@ static std::optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
 
 static std::optional<std::string> GetFileNameByLoadAddress(HANDLE hProcess,
                                                            LPVOID base_addr) {
+  Log *log = GetLog(WindowsLog::Event);
   std::array<wchar_t, MAX_PATH + 1> module_filename;
   DWORD len =
       ::GetModuleFileNameExW(hProcess, reinterpret_cast<HMODULE>(base_addr),
                              module_filename.data(), module_filename.size());
+  LLDB_LOG(log,
+           "GetFileNameByLoadAddress: GetModuleFileNameExW(base={0:x}) "
+           "len={1}, error={2}",
+           base_addr, len, ::GetLastError());
   if (len > 0 && len < module_filename.size()) {
     std::string path_utf8;
     llvm::convertWideToUTF8(std::wstring(module_filename.data(), len),
@@ -605,52 +617,141 @@ static std::optional<std::string> GetFileNameByLoadAddress(HANDLE hProcess,
         hProcess, base_addr, mapped_filename.data(), mapped_filename.size());
     if (mapped_len < mapped_filename.size())
       break;
-    if (::GetLastError() != ERROR_INSUFFICIENT_BUFFER)
+    if (::GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
+      LLDB_LOG(log,
+               "GetFileNameByLoadAddress: GetMappedFileNameW(base={0:x}) "
+               "failed, buffer={1}, error={2}",
+               base_addr, mapped_filename.size(), ::GetLastError());
       return std::nullopt;
+    }
     mapped_filename.resize(mapped_filename.size() * 2);
   }
+  LLDB_LOG(log,
+           "GetFileNameByLoadAddress: GetMappedFileNameW(base={0:x}) len={1}",
+           base_addr, mapped_len);
   std::optional<std::string> dos_path = ConvertNtDevicePathToDosPath(
       llvm::ArrayRef<wchar_t>(mapped_filename.data(), mapped_len + 1));
+  LLDB_LOG(log,
+           "GetFileNameByLoadAddress: ConvertNtDevicePathToDosPath -> {0}",
+           dos_path ? *dos_path : "<nullopt>");
   return dos_path;
+}
+
+// Determine how many bytes can be read at `addr` in `hProcess` before crossing
+// out of the committed memory region containing it. Returns 0 if the address
+// is not within a committed region.
+static SIZE_T BytesReadableAt(HANDLE hProcess, LPCVOID addr) {
+  MEMORY_BASIC_INFORMATION mbi{};
+  if (!::VirtualQueryEx(hProcess, addr, &mbi, sizeof(mbi)))
+    return 0;
+  if (mbi.State != MEM_COMMIT)
+    return 0;
+  uintptr_t region_end =
+      reinterpret_cast<uintptr_t>(mbi.BaseAddress) + mbi.RegionSize;
+  uintptr_t a = reinterpret_cast<uintptr_t>(addr);
+  if (a >= region_end)
+    return 0;
+  return region_end - a;
 }
 
 // Resolve the LOAD_DLL_DEBUG_INFO::lpImageName field.
 static std::optional<std::string>
 GetFileNameFromImageNameField(HANDLE hProcess,
                               const LOAD_DLL_DEBUG_INFO &info) {
-  if (info.lpImageName == nullptr)
+  Log *log = GetLog(WindowsLog::Event);
+  if (info.lpImageName == nullptr) {
+    LLDB_LOG(log, "GetFileNameFromImageNameField: lpImageName is null");
     return std::nullopt;
+  }
 
   LPVOID name_addr = nullptr;
   SIZE_T bytes_read = 0;
   if (!::ReadProcessMemory(hProcess, info.lpImageName, &name_addr,
                            sizeof(name_addr), &bytes_read) ||
-      bytes_read != sizeof(name_addr) || name_addr == nullptr)
+      bytes_read != sizeof(name_addr) || name_addr == nullptr) {
+    LLDB_LOG(log,
+             "GetFileNameFromImageNameField: ReadProcessMemory(lpImageName="
+             "{0:x}) bytes_read={1}, name_addr={2:x}, error={3}",
+             info.lpImageName, bytes_read, name_addr, ::GetLastError());
     return std::nullopt;
+  }
 
   if (info.fUnicode) {
     std::array<wchar_t, MAX_PATH + 1> wbuf{};
-    if (!::ReadProcessMemory(hProcess, name_addr, wbuf.data(),
-                             wbuf.size() * sizeof(wchar_t), &bytes_read))
+    // Bound the read by the size of the committed region at name_addr to
+    // avoid ERROR_PARTIAL_COPY when the path is short and the buffer would
+    // otherwise span into an unmapped page.
+    SIZE_T to_read =
+        std::min<SIZE_T>(wbuf.size() * sizeof(wchar_t),
+                         BytesReadableAt(hProcess, name_addr));
+    to_read &= ~SIZE_T(1); // round down to a wchar_t boundary
+    if (to_read < sizeof(wchar_t)) {
+      LLDB_LOG(log,
+               "GetFileNameFromImageNameField: no readable bytes at "
+               "name_addr={0:x}",
+               name_addr);
       return std::nullopt;
-    if (wbuf[MAX_PATH] != L'\0')
+    }
+    if (!::ReadProcessMemory(hProcess, name_addr, wbuf.data(), to_read,
+                             &bytes_read)) {
+      LLDB_LOG(log,
+               "GetFileNameFromImageNameField: ReadProcessMemory(unicode "
+               "name_addr={0:x}, to_read={1}) failed, error={2}",
+               name_addr, to_read, ::GetLastError());
       return std::nullopt;
+    }
+    size_t max_chars = bytes_read / sizeof(wchar_t);
+    size_t wlen = ::wcsnlen(wbuf.data(), max_chars);
+    if (wlen == 0) {
+      LLDB_LOG(log, "GetFileNameFromImageNameField: unicode name is empty");
+      return std::nullopt;
+    }
+    if (wlen == max_chars) {
+      LLDB_LOG(log,
+               "GetFileNameFromImageNameField: unicode name not "
+               "null-terminated within {0} chars",
+               max_chars);
+      return std::nullopt;
+    }
     std::string path_utf8;
-    llvm::convertWideToUTF8(wbuf.data(), path_utf8);
-    if (path_utf8.empty())
-      return std::nullopt;
+    llvm::convertWideToUTF8(std::wstring(wbuf.data(), wlen), path_utf8);
+    LLDB_LOG(log, "GetFileNameFromImageNameField: unicode resolved -> {0}",
+             path_utf8);
     return path_utf8;
   }
 
   std::array<char, MAX_PATH + 1> abuf{};
-  if (!::ReadProcessMemory(hProcess, name_addr, abuf.data(), abuf.size(),
-                           &bytes_read))
+  SIZE_T to_read =
+      std::min<SIZE_T>(abuf.size(), BytesReadableAt(hProcess, name_addr));
+  if (to_read == 0) {
+    LLDB_LOG(log,
+             "GetFileNameFromImageNameField: no readable bytes at "
+             "name_addr={0:x}",
+             name_addr);
     return std::nullopt;
-  if (abuf[MAX_PATH] != '\0')
+  }
+  if (!::ReadProcessMemory(hProcess, name_addr, abuf.data(), to_read,
+                           &bytes_read)) {
+    LLDB_LOG(log,
+             "GetFileNameFromImageNameField: ReadProcessMemory(ascii "
+             "name_addr={0:x}, to_read={1}) failed, error={2}",
+             name_addr, to_read, ::GetLastError());
     return std::nullopt;
-  std::string path(abuf.data());
-  if (path.empty())
+  }
+  size_t alen = ::strnlen(abuf.data(), bytes_read);
+  if (alen == 0) {
+    LLDB_LOG(log, "GetFileNameFromImageNameField: ascii name is empty");
     return std::nullopt;
+  }
+  if (alen == bytes_read) {
+    LLDB_LOG(log,
+             "GetFileNameFromImageNameField: ascii name not null-terminated "
+             "within {0} bytes",
+             bytes_read);
+    return std::nullopt;
+  }
+  std::string path(abuf.data(), alen);
+  LLDB_LOG(log, "GetFileNameFromImageNameField: ascii resolved -> {0}", path);
   return path;
 }
 
@@ -658,6 +759,10 @@ DWORD
 DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
                                    DWORD thread_id) {
   Log *log = GetLog(WindowsLog::Event);
+  LLDB_LOG(log,
+           "HandleLoadDllEvent: hFile={0}, lpBaseOfDll={1:x}, "
+           "lpImageName={2:x}, fUnicode={3}",
+           info.hFile, info.lpBaseOfDll, info.lpImageName, info.fUnicode);
 
   auto on_load_dll = [&](llvm::StringRef path) {
     FileSpec file_spec(path);
@@ -684,8 +789,17 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
       llvm::StringRef path_str = path_str_utf8;
       path_str.consume_front("\\\\?\\");
       resolved_path = path_str.str();
+      LLDB_LOG(log,
+               "HandleLoadDllEvent: GetFinalPathNameByHandleW resolved -> {0}",
+               *resolved_path);
     } else {
+      LLDB_LOG(log,
+               "HandleLoadDllEvent: GetFinalPathNameByHandleW failed, error={0}"
+               ", trying GetFileNameFromHandleFallback",
+               ::GetLastError());
       resolved_path = GetFileNameFromHandleFallback(info.hFile);
+      LLDB_LOG(log, "HandleLoadDllEvent: GetFileNameFromHandleFallback -> {0}",
+               resolved_path ? *resolved_path : "<nullopt>");
     }
   }
 
