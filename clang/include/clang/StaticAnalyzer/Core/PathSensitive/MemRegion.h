@@ -706,7 +706,7 @@ class BlockDataRegion : public TypedRegion {
   friend class MemRegionManager;
 
   const BlockCodeRegion *BC;
-  const StackFrame *SF; // Can be null
+  const StackFrame *SF;
   unsigned BlockCount;
   void *ReferencedVars = nullptr;
   void *OriginalVars = nullptr;

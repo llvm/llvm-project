@@ -201,7 +201,7 @@ private:
   StackFrameManager &getStackFrameManager();
 };
 
-/// It represents a stack frame of the call stack (based on CallEvent).
+/// It represents a stack frame of the call stack
 class StackFrame final : public llvm::FoldingSetNode {
   friend class StackFrameManager;
 

@@ -629,8 +629,8 @@ private:
 class CallEnter : public ProgramPoint {
 public:
   CallEnter(const Stmt *stmt, const StackFrame *CalleeSF,
-            const StackFrame *callerSF)
-      : ProgramPoint(stmt, CalleeSF, CallEnterKind, callerSF, nullptr) {}
+            const StackFrame *CallerSF)
+      : ProgramPoint(stmt, CalleeSF, CallEnterKind, CallerSF, nullptr) {}
 
   const Stmt *getCallExpr() const {
     return static_cast<const Stmt *>(getData1());

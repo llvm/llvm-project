@@ -411,12 +411,13 @@ const StackFrame *StackFrameManager::getStackFrame(
   llvm::FoldingSetNodeID ID;
   StackFrame::Profile(ID, Ctx, Parent, Data, E, Blk, BlockCount, StmtIdx);
   void *InsertPos;
-  auto *L = cast_or_null<StackFrame>(Frames.FindNodeOrInsertPos(ID, InsertPos));
-  if (!L) {
-    L = new StackFrame(Ctx, Parent, Data, E, Blk, BlockCount, StmtIdx, ++NewID);
-    Frames.InsertNode(L, InsertPos);
+  StackFrame *SF = Frames.FindNodeOrInsertPos(ID, InsertPos);
+  if (!SF) {
+    SF =
+        new StackFrame(Ctx, Parent, Data, E, Blk, BlockCount, StmtIdx, ++NewID);
+    Frames.InsertNode(SF, InsertPos);
   }
-  return L;
+  return SF;
 }
 
 //===----------------------------------------------------------------------===//

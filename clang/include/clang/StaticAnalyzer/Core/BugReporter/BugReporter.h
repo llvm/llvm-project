@@ -321,7 +321,7 @@ protected:
   llvm::DenseMap<const MemRegion *, bugreporter::TrackingKind>
       InterestingRegions;
 
-  /// A set of stack frames that correspoind to call sites which should be
+  /// A set of stack frames that correspond to call sites which should be
   /// considered "interesting".
   llvm::SmallPtrSet<const StackFrame *, 2> InterestingStackFrames;
 
