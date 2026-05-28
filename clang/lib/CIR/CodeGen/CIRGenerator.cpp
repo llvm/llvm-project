@@ -51,6 +51,7 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
   mlir::DialectRegistry registry;
   cir::registerCIRDialects(registry);
   mlirContext->appendDialectRegistry(registry);
+  mlirContext->loadAllAvailableDialects();
 
   cgm = std::make_unique<clang::CIRGen::CIRGenModule>(
       *mlirContext.get(), astContext, codeGenOpts, diags);
