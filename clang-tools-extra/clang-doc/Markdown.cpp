@@ -15,9 +15,7 @@ namespace clang {
 namespace doc {
 namespace markdown {
 
-static MDNode makeText(llvm::StringRef S) {
-  return {NodeKind::Text, S, {}};
-}
+static MDNode makeText(llvm::StringRef S) { return {NodeKind::Text, S, {}}; }
 
 // A line is a table separator if it only contains |, -, :, and spaces,
 // and has at least one -.
