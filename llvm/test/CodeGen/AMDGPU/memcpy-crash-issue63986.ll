@@ -29,7 +29,6 @@ define void @issue63986(i64 %0, i64 %idxprom, ptr inreg %ptr) {
 ; CHECK-NEXT:  ; %bb.2: ; %dynamic-memcpy-expansion-residual-cond
 ; CHECK-NEXT:    s_branch .LBB0_4
 ; CHECK-NEXT:  ; %bb.3:
-; CHECK-NEXT:    ; implicit-def: $vgpr6_vgpr7
 ; CHECK-NEXT:    s_branch .LBB0_5
 ; CHECK-NEXT:  .LBB0_4: ; %dynamic-memcpy-expansion-residual-cond.dynamic-memcpy-post-expansion_crit_edge
 ; CHECK-NEXT:    v_lshlrev_b64 v[6:7], 6, v[2:3]
@@ -159,7 +158,6 @@ define void @issue63986_reduced_expanded(i64 %idxprom) {
 ; CHECK-NEXT:    s_mov_b32 s5, 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB1_4
 ; CHECK-NEXT:  ; %bb.3:
-; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; CHECK-NEXT:    s_branch .LBB1_5
 ; CHECK-NEXT:  .LBB1_4: ; %loop-memcpy-residual-header.post-loop-memcpy-expansion_crit_edge
 ; CHECK-NEXT:    v_lshlrev_b64 v[0:1], 1, v[0:1]

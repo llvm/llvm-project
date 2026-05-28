@@ -113,7 +113,6 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; GFX9-NEXT:    v_perm_b32 v1, v3, v1, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ; GFX9-NEXT:  .LBB0_4:
-; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
 ; GFX9-NEXT:    s_branch .LBB0_2
 ;
 ; GFX11-TRUE16-LABEL: vec_8xi16_extract_4xi16:
@@ -141,7 +140,6 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v1.l
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB0_4:
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
 ; GFX11-TRUE16-NEXT:    s_branch .LBB0_2
 ;
 ; GFX11-FAKE16-LABEL: vec_8xi16_extract_4xi16:
@@ -174,7 +172,6 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; GFX11-FAKE16-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-FAKE16-NEXT:  .LBB0_4:
-; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
 ; GFX11-FAKE16-NEXT:    s_branch .LBB0_2
   %cond = icmp eq i32 %cond.arg, 0
   br i1 %cond, label %T, label %F
@@ -305,7 +302,6 @@ define <4 x i16> @vec_8xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX9-NEXT:    v_perm_b32 v1, v2, v1, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ; GFX9-NEXT:  .LBB1_4:
-; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
 ; GFX9-NEXT:    s_branch .LBB1_2
 ;
 ; GFX11-TRUE16-LABEL: vec_8xi16_extract_4xi16_2:
@@ -333,7 +329,6 @@ define <4 x i16> @vec_8xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-TRUE16-NEXT:    v_or_b16 v1.h, 0x8000, v1.h
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB1_4:
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
 ; GFX11-TRUE16-NEXT:    s_branch .LBB1_2
 ;
 ; GFX11-FAKE16-LABEL: vec_8xi16_extract_4xi16_2:
@@ -366,7 +361,6 @@ define <4 x i16> @vec_8xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-FAKE16-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-FAKE16-NEXT:  .LBB1_4:
-; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
 ; GFX11-FAKE16-NEXT:    s_branch .LBB1_2
   %cond = icmp eq i32 %cond.arg, 0
   br i1 %cond, label %T, label %F
@@ -497,7 +491,6 @@ define <4 x half> @vec_8xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX9-NEXT:    v_pack_b32_f16 v0, v4, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ; GFX9-NEXT:  .LBB2_4:
-; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
 ; GFX9-NEXT:    s_branch .LBB2_2
 ;
 ; GFX11-TRUE16-LABEL: vec_8xf16_extract_4xf16:
@@ -528,7 +521,6 @@ define <4 x half> @vec_8xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, v1.l, 0x3d00, s2
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB2_4:
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
 ; GFX11-TRUE16-NEXT:    s_branch .LBB2_2
 ;
 ; GFX11-FAKE16-LABEL: vec_8xf16_extract_4xf16:
@@ -562,7 +554,6 @@ define <4 x half> @vec_8xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-FAKE16-NEXT:    v_pack_b32_f16 v1, v3, v4
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-FAKE16-NEXT:  .LBB2_4:
-; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
 ; GFX11-FAKE16-NEXT:    s_branch .LBB2_2
   %cond = icmp eq i32 %cond.arg, 0
   br i1 %cond, label %T, label %F
@@ -731,7 +722,6 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX9-NEXT:    v_perm_b32 v1, v2, v1, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ; GFX9-NEXT:  .LBB3_4:
-; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
 ; GFX9-NEXT:    s_branch .LBB3_2
 ;
 ; GFX11-TRUE16-LABEL: vec_16xi16_extract_4xi16:
@@ -763,7 +753,6 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v1.l
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB3_4:
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
 ; GFX11-TRUE16-NEXT:    s_branch .LBB3_2
 ;
 ; GFX11-FAKE16-LABEL: vec_16xi16_extract_4xi16:
@@ -800,7 +789,6 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-FAKE16-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-FAKE16-NEXT:  .LBB3_4:
-; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
 ; GFX11-FAKE16-NEXT:    s_branch .LBB3_2
   %cond = icmp eq i32 %cond.arg, 0
   br i1 %cond, label %T, label %F
@@ -970,7 +958,6 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX9-NEXT:    v_perm_b32 v1, v2, v1, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ; GFX9-NEXT:  .LBB4_4:
-; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
 ; GFX9-NEXT:    s_branch .LBB4_2
 ;
 ; GFX11-TRUE16-LABEL: vec_16xi16_extract_4xi16_2:
@@ -1002,7 +989,6 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX11-TRUE16-NEXT:    v_or_b16 v1.h, 0x8000, v1.h
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB4_4:
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
 ; GFX11-TRUE16-NEXT:    s_branch .LBB4_2
 ;
 ; GFX11-FAKE16-LABEL: vec_16xi16_extract_4xi16_2:
@@ -1039,7 +1025,6 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX11-FAKE16-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-FAKE16-NEXT:  .LBB4_4:
-; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
 ; GFX11-FAKE16-NEXT:    s_branch .LBB4_2
   %cond = icmp eq i32 %cond.arg, 0
   br i1 %cond, label %T, label %F
@@ -1209,7 +1194,6 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX9-NEXT:    v_pack_b32_f16 v0, v2, v3
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ; GFX9-NEXT:  .LBB5_4:
-; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
 ; GFX9-NEXT:    s_branch .LBB5_2
 ;
 ; GFX11-TRUE16-LABEL: vec_16xf16_extract_4xf16:
@@ -1244,7 +1228,6 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, v1.l, 0x3d00, s2
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB5_4:
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
 ; GFX11-TRUE16-NEXT:    s_branch .LBB5_2
 ;
 ; GFX11-FAKE16-LABEL: vec_16xf16_extract_4xf16:
@@ -1282,7 +1265,6 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-FAKE16-NEXT:    v_pack_b32_f16 v1, v3, v4
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-FAKE16-NEXT:  .LBB5_4:
-; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
 ; GFX11-FAKE16-NEXT:    s_branch .LBB5_2
   %cond = icmp eq i32 %cond.arg, 0
   br i1 %cond, label %T, label %F
@@ -1547,7 +1529,6 @@ define amdgpu_gfx <8 x i16> @vec_16xi16_extract_8xi16_0(i1 inreg %cond, ptr addr
 ; GFX9-NEXT:    s_cbranch_execz .LBB7_3
 ; GFX9-NEXT:    s_branch .LBB7_4
 ; GFX9-NEXT:  .LBB7_2:
-; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
 ; GFX9-NEXT:  .LBB7_3: ; %T
 ; GFX9-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:16 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -1602,7 +1583,6 @@ define amdgpu_gfx <8 x i16> @vec_16xi16_extract_8xi16_0(i1 inreg %cond, ptr addr
 ; GFX11-TRUE16-NEXT:    s_cbranch_vccz .LBB7_3
 ; GFX11-TRUE16-NEXT:    s_branch .LBB7_4
 ; GFX11-TRUE16-NEXT:  .LBB7_2:
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
 ; GFX11-TRUE16-NEXT:  .LBB7_3: ; %T
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1648,7 +1628,6 @@ define amdgpu_gfx <8 x i16> @vec_16xi16_extract_8xi16_0(i1 inreg %cond, ptr addr
 ; GFX11-FAKE16-NEXT:    s_cbranch_vccz .LBB7_3
 ; GFX11-FAKE16-NEXT:    s_branch .LBB7_4
 ; GFX11-FAKE16-NEXT:  .LBB7_2:
-; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
 ; GFX11-FAKE16-NEXT:  .LBB7_3: ; %T
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1867,7 +1846,6 @@ define amdgpu_gfx <8 x half> @vec_16xf16_extract_8xf16_0(i1 inreg %cond, ptr add
 ; GFX9-NEXT:    s_cbranch_execz .LBB8_3
 ; GFX9-NEXT:    s_branch .LBB8_4
 ; GFX9-NEXT:  .LBB8_2:
-; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
 ; GFX9-NEXT:  .LBB8_3: ; %T
 ; GFX9-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:16 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -1920,7 +1898,6 @@ define amdgpu_gfx <8 x half> @vec_16xf16_extract_8xf16_0(i1 inreg %cond, ptr add
 ; GFX11-TRUE16-NEXT:    s_cbranch_vccz .LBB8_3
 ; GFX11-TRUE16-NEXT:    s_branch .LBB8_4
 ; GFX11-TRUE16-NEXT:  .LBB8_2:
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
 ; GFX11-TRUE16-NEXT:  .LBB8_3: ; %T
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1966,7 +1943,6 @@ define amdgpu_gfx <8 x half> @vec_16xf16_extract_8xf16_0(i1 inreg %cond, ptr add
 ; GFX11-FAKE16-NEXT:    s_cbranch_vccz .LBB8_3
 ; GFX11-FAKE16-NEXT:    s_branch .LBB8_4
 ; GFX11-FAKE16-NEXT:  .LBB8_2:
-; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
 ; GFX11-FAKE16-NEXT:  .LBB8_3: ; %T
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)

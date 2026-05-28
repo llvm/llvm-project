@@ -5,6 +5,7 @@
 ---
 
 name: skip_execz_flat
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: skip_execz_flat
   ; CHECK: bb.0:
@@ -34,6 +35,7 @@ body: |
 ---
 
 name: skip_execz_mubuf
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: skip_execz_mubuf
   ; CHECK: bb.0:
@@ -63,6 +65,7 @@ body: |
 ---
 
 name: skip_execz_ds
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: skip_execz_ds
   ; CHECK: bb.0:

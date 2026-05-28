@@ -40,6 +40,7 @@ private:
   const SIRegisterInfo *TRI = nullptr;
   MachineLoopInfo *MLI = nullptr;
 
+  void eliminateDeadMeta(MachineFunction &MF, MachineBasicBlock *MBB) const;
   bool optimizeVccBranch(MachineInstr &MI) const;
   void updateMLIBeforeRemovingEdge(MachineBasicBlock *From,
                                    MachineBasicBlock *To) const;
@@ -156,6 +157,24 @@ void SIPreEmitPeephole::updateMLIBeforeRemovingEdge(
     MLI->removeLoop(llvm::find(*MLI, Loop));
 
   MLI->destroy(Loop);
+}
+
+void SIPreEmitPeephole::eliminateDeadMeta(MachineFunction &MF,
+                                          MachineBasicBlock *MBB) const {
+  LiveRegUnits LivePhysRegs;
+  const TargetSubtargetInfo &ST = MF.getSubtarget();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  LivePhysRegs.init(*ST.getRegisterInfo());
+  LivePhysRegs.addLiveOuts(*MBB);
+  for (MachineInstr &MI : make_early_inc_range(reverse(*MBB))) {
+    if (MI.isDebugInstr())
+      continue;
+    if (MI.isMetaInstruction() && MI.isDead(MRI, &LivePhysRegs)) {
+      MI.eraseFromParent();
+      continue;
+    }
+    LivePhysRegs.stepBackward(MI);
+  }
 }
 
 bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
@@ -788,6 +807,7 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
   MF.RenumberBlocks();
 
   for (MachineBasicBlock &MBB : MF) {
+    bool BlockChanged = false;
     MachineBasicBlock::iterator TermI = MBB.getFirstTerminator();
     // Check first terminator for branches to optimize
     if (TermI != MBB.end()) {
@@ -795,12 +815,21 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
       switch (MI.getOpcode()) {
       case AMDGPU::S_CBRANCH_VCCZ:
       case AMDGPU::S_CBRANCH_VCCNZ:
-        Changed |= optimizeVccBranch(MI);
+        BlockChanged = optimizeVccBranch(MI);
         break;
       case AMDGPU::S_CBRANCH_EXECZ:
-        Changed |= removeExeczBranch(MI, MBB);
+        BlockChanged = removeExeczBranch(MI, MBB);
         break;
       }
+      Changed |= BlockChanged;
+      // Was the block transformed so that it only contains branches and
+      // meta-instructions? If so, eliminate dead meta-instructions so that
+      // branch folding can be more effective.
+      if (BlockChanged &&
+          llvm::all_of(MBB.instrs(), [](const MachineInstr &MI) {
+            return MI.isMetaInstruction() || MI.isBranch();
+          }))
+        eliminateDeadMeta(MF, &MBB);
     }
 
     if (!ST.hasVGPRIndexMode())

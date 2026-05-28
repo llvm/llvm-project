@@ -11918,10 +11918,8 @@ define double @flat_atomic_fadd_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1250-SDAG-NEXT:    s_cbranch_execz .LBB110_5
 ; GFX1250-SDAG-NEXT:    s_branch .LBB110_6
 ; GFX1250-SDAG-NEXT:  .LBB110_3:
-; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX1250-SDAG-NEXT:    s_branch .LBB110_7
 ; GFX1250-SDAG-NEXT:  .LBB110_4:
-; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX1250-SDAG-NEXT:  .LBB110_5: ; %atomicrmw.private
 ; GFX1250-SDAG-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
@@ -12024,10 +12022,8 @@ define double @flat_atomic_fadd_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX950-SDAG-NEXT:    s_cbranch_execz .LBB110_5
 ; GFX950-SDAG-NEXT:    s_branch .LBB110_6
 ; GFX950-SDAG-NEXT:  .LBB110_3:
-; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX950-SDAG-NEXT:    s_branch .LBB110_7
 ; GFX950-SDAG-NEXT:  .LBB110_4:
-; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX950-SDAG-NEXT:  .LBB110_5: ; %atomicrmw.private
 ; GFX950-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s2, s0, -1
@@ -12332,7 +12328,6 @@ define double @flat_atomic_fmax_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1250-SDAG-NEXT:    s_cbranch_execz .LBB112_3
 ; GFX1250-SDAG-NEXT:    s_branch .LBB112_4
 ; GFX1250-SDAG-NEXT:  .LBB112_2:
-; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX1250-SDAG-NEXT:  .LBB112_3: ; %atomicrmw.private
 ; GFX1250-SDAG-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
@@ -12405,7 +12400,6 @@ define double @flat_atomic_fmax_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX950-SDAG-NEXT:    s_cbranch_execz .LBB112_3
 ; GFX950-SDAG-NEXT:    s_branch .LBB112_4
 ; GFX950-SDAG-NEXT:  .LBB112_2:
-; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX950-SDAG-NEXT:  .LBB112_3: ; %atomicrmw.private
 ; GFX950-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s0, s0, -1
@@ -12624,7 +12618,6 @@ define double @flat_atomic_fmin_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1250-SDAG-NEXT:    s_cbranch_execz .LBB114_3
 ; GFX1250-SDAG-NEXT:    s_branch .LBB114_4
 ; GFX1250-SDAG-NEXT:  .LBB114_2:
-; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX1250-SDAG-NEXT:  .LBB114_3: ; %atomicrmw.private
 ; GFX1250-SDAG-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
@@ -12697,7 +12690,6 @@ define double @flat_atomic_fmin_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX950-SDAG-NEXT:    s_cbranch_execz .LBB114_3
 ; GFX950-SDAG-NEXT:    s_branch .LBB114_4
 ; GFX950-SDAG-NEXT:  .LBB114_2:
-; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX950-SDAG-NEXT:  .LBB114_3: ; %atomicrmw.private
 ; GFX950-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s0, s0, -1

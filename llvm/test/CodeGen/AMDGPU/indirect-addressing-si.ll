@@ -9591,7 +9591,6 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
 ; SI-MOVREL-NEXT:    s_branch .LBB26_2
 ; SI-MOVREL-NEXT:  .LBB26_1:
-; SI-MOVREL-NEXT:    ; implicit-def: $vgpr0
 ; SI-MOVREL-NEXT:    s_branch .LBB26_6
 ; SI-MOVREL-NEXT:  .LBB26_2: ; %bb2
 ; SI-MOVREL-NEXT:    ; =>This Loop Header: Depth=1
@@ -9627,7 +9626,6 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v0, 8
 ; VI-MOVREL-NEXT:    s_branch .LBB26_2
 ; VI-MOVREL-NEXT:  .LBB26_1:
-; VI-MOVREL-NEXT:    ; implicit-def: $vgpr0
 ; VI-MOVREL-NEXT:    s_branch .LBB26_6
 ; VI-MOVREL-NEXT:  .LBB26_2: ; %bb2
 ; VI-MOVREL-NEXT:    ; =>This Loop Header: Depth=1
@@ -9663,7 +9661,6 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, 8
 ; VI-IDXMODE-NEXT:    s_branch .LBB26_2
 ; VI-IDXMODE-NEXT:  .LBB26_1:
-; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr0
 ; VI-IDXMODE-NEXT:    s_branch .LBB26_6
 ; VI-IDXMODE-NEXT:  .LBB26_2: ; %bb2
 ; VI-IDXMODE-NEXT:    ; =>This Loop Header: Depth=1
@@ -9700,7 +9697,6 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v0, 8
 ; GFX9-IDXMODE-NEXT:    s_branch .LBB26_2
 ; GFX9-IDXMODE-NEXT:  .LBB26_1:
-; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr0
 ; GFX9-IDXMODE-NEXT:    s_branch .LBB26_6
 ; GFX9-IDXMODE-NEXT:  .LBB26_2: ; %bb2
 ; GFX9-IDXMODE-NEXT:    ; =>This Loop Header: Depth=1

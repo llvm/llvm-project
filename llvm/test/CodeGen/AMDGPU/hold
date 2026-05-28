@@ -36418,6 +36418,7 @@ define inreg <48 x half> @bitcast_v48i16_to_v48f16_scalar(<48 x i16> inreg %a, i
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ; SI-NEXT:  .LBB57_4:
+<<<<<<< HEAD
 ; SI-NEXT:    ; implicit-def: $sgpr46
 ; SI-NEXT:    ; implicit-def: $sgpr60
 ; SI-NEXT:    ; implicit-def: $sgpr44
@@ -36441,6 +36442,9 @@ define inreg <48 x half> @bitcast_v48i16_to_v48f16_scalar(<48 x i16> inreg %a, i
 ; SI-NEXT:    ; implicit-def: $sgpr58
 ; SI-NEXT:    ; implicit-def: $sgpr30
 ; SI-NEXT:    ; implicit-def: $sgpr56
+=======
+; SI-NEXT:    ; implicit-def: $sgpr30
+>>>>>>> 989f2d594f3d (Delete dead meta instructions)
 ; SI-NEXT:    ; implicit-def: $sgpr34
 ; SI-NEXT:    s_branch .LBB57_2
 ;

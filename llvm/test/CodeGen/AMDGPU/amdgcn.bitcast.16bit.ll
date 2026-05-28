@@ -302,7 +302,6 @@ define inreg i16 @bitcast_f16_to_i16_scalar(half inreg %a, i32 inreg %b) #0 {
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ; SI-NEXT:  .LBB3_3:
-; SI-NEXT:    ; implicit-def: $sgpr6
 ; SI-NEXT:    s_branch .LBB3_2
 ; SI-NEXT:  .LBB3_4:
 ; SI-NEXT:    v_mov_b32_e32 v0, s6
@@ -508,7 +507,6 @@ define inreg bfloat @bitcast_i16_to_bf16_scalar(i16 inreg %a, i32 inreg %b) #0 {
 ; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ; SI-NEXT:  .LBB5_4:
-; SI-NEXT:    ; implicit-def: $sgpr7
 ; SI-NEXT:    s_branch .LBB5_2
 ;
 ; VI-LABEL: bitcast_i16_to_bf16_scalar:
@@ -737,7 +735,6 @@ define inreg i16 @bitcast_bf16_to_i16_scalar(bfloat inreg %a, i32 inreg %b) #0 {
 ; SI-NEXT:  .LBB7_3: ; %end
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ; SI-NEXT:  .LBB7_4:
-; SI-NEXT:    ; implicit-def: $vgpr0
 ; SI-NEXT:    s_branch .LBB7_2
 ;
 ; VI-LABEL: bitcast_bf16_to_i16_scalar:
@@ -954,7 +951,6 @@ define inreg bfloat @bitcast_f16_to_bf16_scalar(half inreg %a, i32 inreg %b) #0 
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; SI-NEXT:    s_branch .LBB9_5
 ; SI-NEXT:  .LBB9_3:
-; SI-NEXT:    ; implicit-def: $sgpr6
 ; SI-NEXT:    s_branch .LBB9_2
 ; SI-NEXT:  .LBB9_4:
 ; SI-NEXT:    v_mov_b32_e32 v0, s6
@@ -1210,7 +1206,6 @@ define inreg half @bitcast_bf16_to_f16_scalar(bfloat inreg %a, i32 inreg %b) #0 
 ; SI-NEXT:  .LBB11_3: ; %end
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ; SI-NEXT:  .LBB11_4:
-; SI-NEXT:    ; implicit-def: $vgpr0
 ; SI-NEXT:    s_branch .LBB11_2
 ;
 ; VI-LABEL: bitcast_bf16_to_f16_scalar:
