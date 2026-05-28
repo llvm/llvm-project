@@ -23,6 +23,7 @@
 
 #include "flang/Evaluate/type.h"
 #include "flang/Support/Fortran.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/BuiltinTypes.h"
 
 namespace mlir {
@@ -130,6 +131,13 @@ private:
   name_iterator componentIt{};
   name_iterator componentItEnd{};
 };
+
+mlir::arith::CmpIPredicate
+translateSignedRelational(Fortran::common::RelationalOperator rop);
+mlir::arith::CmpIPredicate
+translateUnsignedRelational(Fortran::common::RelationalOperator rop);
+mlir::arith::CmpFPredicate
+translateFloatRelational(Fortran::common::RelationalOperator rop);
 } // namespace lower
 } // namespace Fortran
 

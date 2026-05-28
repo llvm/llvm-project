@@ -12,7 +12,7 @@ define i64 @smax_fold_basic(i32 %x) {
 ; CHECK-NEXT:    %add = add nsw i32 -5, %smax
 ; CHECK-NEXT:    --> (-5 + (5 smax %x))<nsw> U: [0,2147483643) S: [0,2147483643)
 ; CHECK-NEXT:    %ext = zext i32 %add to i64
-; CHECK-NEXT:    --> (zext i32 (-5 + (5 smax %x))<nsw> to i64) U: [0,2147483643) S: [0,2147483643)
+; CHECK-NEXT:    --> (-5 + (zext i32 (5 smax %x) to i64))<nsw> U: [0,2147483643) S: [0,2147483643)
 ; CHECK-NEXT:  Determining loop execution counts for: @smax_fold_basic
 ;
   %smax = call i32 @llvm.smax.i32(i32 %x, i32 5)
@@ -29,7 +29,7 @@ define i64 @smax_fold_larger_k(i32 %x) {
 ; CHECK-NEXT:    %add = add nsw i32 -3, %smax
 ; CHECK-NEXT:    --> (-3 + (10 smax %x))<nsw> U: [7,2147483645) S: [7,2147483645)
 ; CHECK-NEXT:    %ext = zext i32 %add to i64
-; CHECK-NEXT:    --> (zext i32 (-3 + (10 smax %x))<nsw> to i64) U: [7,2147483645) S: [7,2147483645)
+; CHECK-NEXT:    --> (-3 + (zext i32 (10 smax %x) to i64))<nsw> U: [7,2147483645) S: [7,2147483645)
 ; CHECK-NEXT:  Determining loop execution counts for: @smax_fold_larger_k
 ;
   %smax = call i32 @llvm.smax.i32(i32 %x, i32 10)

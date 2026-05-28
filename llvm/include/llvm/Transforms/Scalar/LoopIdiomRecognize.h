@@ -27,30 +27,31 @@ class LPMUpdater;
 /// passes.
 struct DisableLIRP {
   /// When true, the entire pass is disabled.
-  static bool All;
+  LLVM_ABI static bool All;
 
   /// When true, Memset is disabled.
-  static bool Memset;
+  LLVM_ABI static bool Memset;
 
   /// When true, Memcpy is disabled.
-  static bool Memcpy;
+  LLVM_ABI static bool Memcpy;
 
   /// When true, Strlen is disabled.
-  static bool Strlen;
+  LLVM_ABI static bool Strlen;
 
   /// When true, Wcslen is disabled.
-  static bool Wcslen;
+  LLVM_ABI static bool Wcslen;
 
   /// When true, HashRecognize is disabled.
-  static bool HashRecognize;
+  LLVM_ABI static bool HashRecognize;
 };
 
 /// Performs Loop Idiom Recognize Pass.
 class LoopIdiomRecognizePass
     : public OptionalPassInfoMixin<LoopIdiomRecognizePass> {
 public:
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 };
 
 } // end namespace llvm

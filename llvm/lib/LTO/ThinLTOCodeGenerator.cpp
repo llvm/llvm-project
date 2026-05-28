@@ -81,6 +81,7 @@ extern cl::opt<std::optional<uint64_t>, false, remarks::HotnessThresholdParser>
 extern cl::opt<std::string> RemarksFormat;
 extern cl::opt<bool> LTORunCSIRInstr;
 extern cl::opt<std::string> LTOCSIRProfile;
+extern cl::opt<std::string> SampleProfileFile;
 }
 
 // Default to using all available threads in the system, but using only one
@@ -246,6 +247,11 @@ static void optimizeModule(Module &TheModule, TargetMachine &TM,
     PGOOpt = PGOOptions(LTOCSIRProfile, "", "",
                         /*MemoryProfile=*/"", PGOOptions::IRUse,
                         PGOOptions::CSIRUse, PGOOptions::ColdFuncOpt::Default);
+  } else if (!SampleProfileFile.empty()) {
+    PGOOpt =
+        PGOOptions(SampleProfileFile, "", "",
+                   /*MemoryProfile=*/"", PGOOptions::SampleUse,
+                   PGOOptions::NoCSAction, PGOOptions::ColdFuncOpt::Default);
   }
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;

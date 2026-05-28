@@ -2031,7 +2031,21 @@ bb134:                                            ; preds = %bb18, %bb
 }
 
 ; CHECK-LABEL: two_floats_same_op:
-; CHECK-NOT: f32x4.mul
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK: f32x4.mul
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK: f32x4.mul
+; CHECK: i8x16.shuffle	8, 9, 10, 11, 24, 25, 26, 27, 12, 13, 14, 15, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 16, 17, 18, 19, 4, 5, 6, 7, 20, 21, 22, 23
+; CHECK: v128.store
 define hidden void @two_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
   %cmp21.not = icmp eq i32 %N, 0
@@ -2062,7 +2076,21 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: two_floats_vary_op:
-; CHECK-NOT: f32x4
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK: f32x4.add
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK: f32x4.sub
+; CHECK: i8x16.shuffle	8, 9, 10, 11, 24, 25, 26, 27, 12, 13, 14, 15, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 16, 17, 18, 19, 4, 5, 6, 7, 20, 21, 22, 23
+; CHECK: v128.store
 define hidden void @two_floats_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
   %cmp20.not = icmp eq i32 %N, 0
@@ -2210,7 +2238,28 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: two_floats_two_bytes_same_op:
-; CHECK-NOT: v128.load
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK: f32x4.mul
+; CHECK: i32x4.trunc_sat_f32x4_s
+; CHECK: v128.const	255, 255, 255, 255
+; CHECK: v128.and
+; CHECK: i16x8.narrow_i32x4_u
+; CHECK: i8x16.narrow_i16x8_u
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK: f32x4.mul
+; CHECK: i32x4.trunc_sat_f32x4_s
+; CHECK: v128.and
+; CHECK: i16x8.narrow_i32x4_u
+; CHECK: i8x16.narrow_i16x8_u
+; CHECK: i8x16.shuffle	0, 16, 1, 17, 2, 18, 3, 19, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: v128.store64_lane
 define hidden void @two_floats_two_bytes_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
   %cmp22.not = icmp eq i32 %N, 0
@@ -2243,7 +2292,28 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: two_floats_two_bytes_vary_op:
-; CHECK-NOT: v128.load
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK: f32x4.add
+; CHECK: i32x4.trunc_sat_f32x4_s
+; CHECK: v128.const	255, 255, 255, 255
+; CHECK: v128.and
+; CHECK: i16x8.narrow_i32x4_u
+; CHECK: i8x16.narrow_i16x8_u
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK: f32x4.sub
+; CHECK: i32x4.trunc_sat_f32x4_s
+; CHECK: v128.and
+; CHECK: i16x8.narrow_i32x4_u
+; CHECK: i8x16.narrow_i16x8_u
+; CHECK: i8x16.shuffle	0, 16, 1, 17, 2, 18, 3, 19, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: v128.store64_lane
 define hidden void @two_floats_two_bytes_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
   %cmp21.not = icmp eq i32 %N, 0
