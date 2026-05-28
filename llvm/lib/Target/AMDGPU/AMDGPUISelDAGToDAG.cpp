@@ -327,7 +327,7 @@ bool AMDGPUDAGToDAGISel::matchLoadD16FromBuildVector(SDNode *N) const {
 
 bool AMDGPUDAGToDAGISel::preprocessZeroExtend(SDNode *N) const {
   // This is special case for zext from setcc if it can be
-  // selected to SALU. The pattern will be directly selected to `s_cselect`, to
+  // selected to SALU. The pattern will be directly selected to `s_cselect`,
   // to avoid an intermediate i1 virtual register which will be interpreted as a
   // lane mask.
   if (N->isDivergent())
