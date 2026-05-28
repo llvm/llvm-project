@@ -520,7 +520,7 @@ public:
 private:
   StringRef getNextModifiers(StringRef Proto, unsigned &Pos) const;
 
-  std::string mangleName(std::string Name, ClassKind CK) const;
+  std::string mangleName(const std::string &Name, ClassKind CK) const;
 
   void initVariables();
   std::string replaceParamsIn(std::string S);
@@ -1120,7 +1120,8 @@ std::string Intrinsic::getMangledName(bool ForceClassS) const {
   return mangleName(Name, ForceClassS ? ClassS : LocalCK);
 }
 
-std::string Intrinsic::mangleName(std::string Name, ClassKind LocalCK) const {
+std::string Intrinsic::mangleName(const std::string &Name,
+                                  ClassKind LocalCK) const {
   std::string typeCode = getInstTypeCode(BaseType, LocalCK);
   std::string S = Name;
 
@@ -2233,13 +2234,10 @@ NeonEmitter::areRangeChecksCompatible(const ArrayRef<ImmCheck> ChecksA,
   // the same. The element types may differ as they will be resolved
   // per-intrinsic as overloaded types by SemaArm.cpp, though the vector sizes
   // are not and so must be the same.
-  bool compat =
-      std::equal(ChecksA.begin(), ChecksA.end(), ChecksB.begin(), ChecksB.end(),
-                 [](const auto &A, const auto &B) {
-                   return A.getImmArgIdx() == B.getImmArgIdx() &&
-                          A.getKind() == B.getKind() &&
-                          A.getVecSizeInBits() == B.getVecSizeInBits();
-                 });
+  bool compat = llvm::equal(ChecksA, ChecksB, [](const auto &A, const auto &B) {
+    return A.getImmArgIdx() == B.getImmArgIdx() && A.getKind() == B.getKind() &&
+           A.getVecSizeInBits() == B.getVecSizeInBits();
+  });
 
   return compat;
 }

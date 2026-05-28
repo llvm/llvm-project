@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // <atomic>
 
 // template <class T>
@@ -51,12 +49,12 @@ void pointer_to_incomplete_type() {
 void function_pointer() {
   {
     volatile std::atomic<void (*)(int)> fun;
-    // expected-error-re@*:* {{static assertion failed due to requirement '!is_function<void (int)>::value'{{.*}}Pointer to function isn't allowed}}
+    // expected-error-re@*:* {{static assertion failed due to requirement {{.+}}Pointer to function isn't allowed}}
     std::atomic_fetch_sub_explicit(&fun, 0, std::memory_order_relaxed);
   }
   {
     std::atomic<void (*)(int)> fun;
-    // expected-error-re@*:* {{static assertion failed due to requirement '!is_function<void (int)>::value'{{.*}}Pointer to function isn't allowed}}
+    // expected-error-re@*:* {{static assertion failed due to requirement {{.+}}Pointer to function isn't allowed}}
     std::atomic_fetch_sub_explicit(&fun, 0, std::memory_order_relaxed);
   }
 }

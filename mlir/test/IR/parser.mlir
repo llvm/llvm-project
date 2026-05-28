@@ -734,6 +734,13 @@ func.func @densetensorattr() -> () {
   "complex_attr"(){bar = dense<> : tensor<0xcomplex<i64>>} : () -> ()
   // CHECK: dense<> : tensor<2x0xcomplex<i64>>
   "complex_attr"(){bar = dense<> : tensor<2x0xcomplex<i64>>} : () -> ()
+  // Test complex<i1> roundtrip (https://github.com/llvm/llvm-project/issues/140302).
+  // CHECK: dense<(true,true)> : tensor<complex<i1>>
+  "complex_attr"(){bar = dense<(true,true)> : tensor<complex<i1>>} : () -> ()
+  // CHECK: dense<[(true,true), (false,true)]> : tensor<2xcomplex<i1>>
+  "complex_attr"(){bar = dense<[(true,true), (false,true)]> : tensor<2xcomplex<i1>>} : () -> ()
+  // CHECK: dense<[(false,true), (true,false)]> : tensor<2xcomplex<i1>>
+  "complex_attr"(){bar = dense<[(false,true), (true,false)]> : tensor<2xcomplex<i1>>} : () -> ()
   return
 }
 

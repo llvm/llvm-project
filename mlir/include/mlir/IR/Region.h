@@ -210,6 +210,17 @@ public:
     } while ((region = region->getParentRegion()));
     return ParentT();
   }
+  template <typename... ParentT>
+  std::enable_if_t<(sizeof...(ParentT) > 1), Operation *> getParentOfType() {
+    auto *region = this;
+    do {
+      if (!region->container)
+        return nullptr;
+      if (isa<ParentT...>(region->container))
+        return region->container;
+    } while ((region = region->getParentRegion()));
+    return nullptr;
+  }
 
   /// Return the number of this region in the parent operation.
   unsigned getRegionNumber();
@@ -378,6 +389,8 @@ private:
   /// Allow access to `offset_base` and `dereference_iterator`.
   friend RangeBaseT;
 };
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, Region &region);
 
 } // namespace mlir
 

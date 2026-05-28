@@ -9,59 +9,63 @@ LLVM and API reference documentation.
 .. toctree::
    :hidden:
 
-   Atomics
-   BitCodeFormat
-   BlockFrequencyTerminology
-   BranchWeightMetadata
-   Bugpoint
-   CalleeTypeMetadata
-   CIBestPractices
+   HowToUseAttributes
    CommandGuide/index
-   ContentAddressableStorage
-   ConvergenceAndUniformity
+   CommandGuide/llvm-reduce
+   OptBisect
+   SymbolizerMarkupFormat
+   PDB/index
+   GarbageCollection
+   Statepoints
+   LibFuzzer
+   FuzzingLLVM
+   LangRef
+   UndefinedBehavior
+   InAlloca
+   BitCodeFormat
+   MIRLangRef
+   GlobalISel/index
    ConvergentOperations
-   Coroutines
-   DependenceGraphs/index
+   TestingGuide
+   TestSuiteGuide
+   GwpAsan
+   XRay
+   XRayExample
+   FaultMaps
+   Atomics
    ExceptionHandling
    Extensions
-   FaultMaps
-   FuzzingLLVM
-   GarbageCollection
-   GetElementPtr
-   GlobalISel/index
-   GwpAsan
    HowToSetUpLLVMStyleRTTI
-   HowToUseAttributes
-   InAlloca
-   InterfaceExportAnnotations
-   LangRef
-   LibFuzzer
-   MarkedUpDisassembly
-   MIRLangRef
-   OptBisect
-   PCSectionsMetadata
-   PDB/index
-   PointerAuth
-   MLGO
+   BlockFrequencyTerminology
+   BranchWeightMetadata
+   GetElementPtr
    ScudoHardenedAllocator
    MemoryModelRelaxationAnnotations
    MemTagSanitizer
+   DependenceGraphs/index
+   SpeculativeLoadHardening
+   SegmentedStacks
+   MarkedUpDisassembly
+   StackMaps
+   Coroutines
+   PointerAuth
+   YamlIO
+   ConvergenceAndUniformity
+   MLGO
+   ContentAddressableStorage
+   CIBestPractices
+   AIToolPolicy
+   CalleeTypeMetadata
+   CallGraphSection
+   InterfaceExportAnnotations
+   PCSectionsMetadata
+   QualGroup
    Security
    SecurityTransparencyReports
-   SegmentedStacks
-   StackMaps
-   SpeculativeLoadHardening
-   Statepoints
-   SymbolizerMarkupFormat
    SystemLibrary
-   TestingGuide
    TransformMetadata
    TypeMetadata
-   UndefinedBehavior
-   XRay
-   XRayExample
    XRayFDRFormat
-   YamlIO
 
 API Reference
 -------------
@@ -83,7 +87,7 @@ Command Line Utilities
    A reference manual for the LLVM command line utilities ("man" pages for LLVM
    tools).
 
-:doc:`Bugpoint`
+:doc:`llvm-reduce <CommandGuide/llvm-reduce>`
    Automatic bug finder and test-case reducer description and usage
    information.
 
@@ -248,3 +252,7 @@ Additional Topics
 
 :doc:`ContentAddressableStorage`
    A reference guide for using LLVM's CAS library.
+
+:doc:`CIBestPractices`
+   A list of guidelines and best practices to use when working on LLVM's
+   CI systems.

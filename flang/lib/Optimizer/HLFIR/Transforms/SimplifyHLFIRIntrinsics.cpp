@@ -15,6 +15,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
+#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -381,6 +382,10 @@ template <bool IS_MAX>
 static mlir::Value
 genMinMaxComparison(mlir::Location loc, fir::FirOpBuilder &builder,
                     mlir::Value elem, mlir::Value reduction) {
+  // TODO: there is some opportunity to generalize this code with
+  // IntrinsicLibrary::genExtremum(), but one have to be careful
+  // to preserve the NaNs behavior (when needed) that is handled
+  // here with the three FP comparisons.
   if (mlir::isa<mlir::FloatType>(reduction.getType())) {
     // For FP reductions we want the first smallest value to be used, that
     // is not NaN. A OGL/OLT condition will usually work for this unless all
@@ -476,8 +481,10 @@ class MinMaxlocAsElementalConverter : public ReductionAsElementalConverter {
   using Base = ReductionAsElementalConverter;
 
 public:
-  MinMaxlocAsElementalConverter(T op, mlir::PatternRewriter &rewriter)
-      : Base{op.getOperation(), rewriter} {}
+  MinMaxlocAsElementalConverter(
+      T op, mlir::PatternRewriter &rewriter,
+      Fortran::common::FPMaxminBehavior fpMaxminBehavior)
+      : Base{op.getOperation(), rewriter}, fpMaxminBehavior{fpMaxminBehavior} {}
 
 private:
   virtual mlir::Value getSource() const final { return getOp().getArray(); }
@@ -558,6 +565,12 @@ private:
   // value to +/-LARGEST; the coordinates are guaranteed to be updated
   // properly for non-empty input without NaNs.
   bool useIsFirst() const { return getMask() && honorNans(); }
+
+  // Specifies the behavior of max/min idiom.
+  // TODO: for consistency, maxloc/minloc should probably take
+  // this control into account, though, we need to define what
+  // this means exactly.
+  [[maybe_unused]] Fortran::common::FPMaxminBehavior fpMaxminBehavior;
 };
 
 template <typename T>
@@ -762,8 +775,10 @@ class MinMaxvalAsElementalConverter
   using Base = NumericReductionAsElementalConverterBase<T>;
 
 public:
-  MinMaxvalAsElementalConverter(T op, mlir::PatternRewriter &rewriter)
-      : Base{op, rewriter} {}
+  MinMaxvalAsElementalConverter(
+      T op, mlir::PatternRewriter &rewriter,
+      Fortran::common::FPMaxminBehavior fpMaxminBehavior)
+      : Base{op, rewriter}, fpMaxminBehavior{fpMaxminBehavior} {}
 
 private:
   virtual mlir::LogicalResult isConvertible() const final {
@@ -771,6 +786,12 @@ private:
       return this->rewriter.notifyMatchFailure(
           this->getOp(),
           "CHARACTER type is not supported for MINVAL/MAXVAL inlining");
+    if (auto intType =
+            mlir::dyn_cast<mlir::IntegerType>(this->getSourceElementType()))
+      if (intType.isUnsigned())
+        return this->rewriter.notifyMatchFailure(
+            this->getOp(),
+            "UNSIGNED type is not supported for MINVAL/MAXVAL inlining");
     return mlir::success();
   }
 
@@ -785,20 +806,26 @@ private:
     this->checkReductions(currentValue);
     llvm::SmallVector<mlir::Value> result;
     fir::FirOpBuilder &builder = this->builder;
+    builder.setFPMaxminBehavior(fpMaxminBehavior);
     mlir::Location loc = this->loc;
     hlfir::Entity elementValue =
         hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
     mlir::Value currentMinMax = getCurrentMinMax(currentValue);
-    mlir::Value cmp =
-        genMinMaxComparison<isMax>(loc, builder, elementValue, currentMinMax);
-    if (useIsFirst())
-      cmp = mlir::arith::OrIOp::create(builder, loc, cmp,
-                                       getIsFirst(currentValue));
-    mlir::Value newMinMax = mlir::arith::SelectOp::create(
-        builder, loc, cmp, elementValue, currentMinMax);
-    result.push_back(newMinMax);
-    if (useIsFirst())
-      result.push_back(builder.createBool(loc, false));
+    if (isUnordered()) {
+      result.push_back(
+          reduceOneElementUnordered(loc, builder, elementValue, currentMinMax));
+    } else {
+      mlir::Value cmp =
+          genMinMaxComparison<isMax>(loc, builder, elementValue, currentMinMax);
+      if (useIsFirst())
+        cmp = mlir::arith::OrIOp::create(builder, loc, cmp,
+                                         getIsFirst(currentValue));
+      mlir::Value newMinMax = mlir::arith::SelectOp::create(
+          builder, loc, cmp, elementValue, currentMinMax);
+      result.push_back(newMinMax);
+      if (useIsFirst())
+        result.push_back(builder.createBool(loc, false));
+    }
     return result;
   }
 
@@ -830,8 +857,8 @@ private:
   // Return true iff the input can contain NaNs, and they should be
   // honored, such that all-NaNs input must produce NaN result.
   bool honorNans() const {
-    return !static_cast<bool>(this->getFastMath() &
-                              mlir::arith::FastMathFlags::nnan);
+    return !mlir::arith::bitEnumContainsAny(this->getFastMath(),
+                                            mlir::arith::FastMathFlags::nnan);
   }
 
   // Return true iff we have to use the loop-carried IsFirst predicate.
@@ -839,9 +866,47 @@ private:
   // the first elements of the input.
   // If NaNs are not honored, we can initialize the starting MIN/MAX
   // value to +/-LARGEST.
-  bool useIsFirst() const { return this->getMask() && honorNans(); }
+  bool useIsFirst() const {
+    return this->getMask() && honorNans() && !isUnordered();
+  }
+
+  // Return true iff the max/min reduction can be unordered.
+  // This is always true for integer type.
+  // For FP type, this is only true for Extremum and ExtremeNum modes,
+  // and for Portble mode when nnan and nsz are present.
+  // We used to mark the reduction loop unordered when reassoc
+  // FMF was present - it is unclear if it should indeed behave
+  // this way.
+  virtual bool isUnordered() const override {
+    if (mlir::isa<mlir::IntegerType>(this->getSourceElementType()))
+      return true;
+
+    return fpMaxminBehavior == Fortran::common::FPMaxminBehavior::Extremum ||
+           fpMaxminBehavior == Fortran::common::FPMaxminBehavior::ExtremeNum ||
+           (fpMaxminBehavior == Fortran::common::FPMaxminBehavior::Portable &&
+            mlir::arith::bitEnumContainsAll(
+                this->getFastMath(), mlir::arith::FastMathFlags::nnan |
+                                         mlir::arith::FastMathFlags::nsz));
+  }
+
+  // Generate arith.max/minsi, arith.max/minimumf or arith.max/minnumf to reduce
+  // a single element.
+  mlir::Value reduceOneElementUnordered(mlir::Location loc,
+                                        fir::FirOpBuilder &builder,
+                                        mlir::Value elementValue,
+                                        mlir::Value currentMinMax) {
+    assert(!useIsFirst() &&
+           "unordered max/min reduction must not use first predicate");
+
+    if constexpr (isMax)
+      return fir::genMax(builder, loc, {elementValue, currentMinMax});
+    else
+      return fir::genMin(builder, loc, {elementValue, currentMinMax});
+  }
 
   std::size_t getNumReductions() const { return useIsFirst() ? 2 : 1; }
+
+  Fortran::common::FPMaxminBehavior fpMaxminBehavior;
 };
 
 template <typename T>
@@ -854,7 +919,8 @@ MinMaxvalAsElementalConverter<T>::genReductionInitValues(
   mlir::Location loc = this->loc;
 
   fir::IfOp ifOp;
-  if (!useIsFirst() && honorNans()) {
+  // Unordered max/min reductions use +/-LARGEST always.
+  if (!useIsFirst() && honorNans() && !isUnordered()) {
     // Check if we can load the value of the first element in the array
     // or its section (for partial reduction).
     assert(!this->getMask() &&
@@ -929,6 +995,37 @@ private:
 
   // Generate scalar addition of the two values (of the same data type).
   mlir::Value genScalarAdd(mlir::Value value1, mlir::Value value2);
+};
+
+/// Reduction converter for Product.
+class ProductAsElementalConverter
+    : public NumericReductionAsElementalConverterBase<hlfir::ProductOp> {
+  using Base = NumericReductionAsElementalConverterBase;
+
+public:
+  ProductAsElementalConverter(hlfir::ProductOp op,
+                              mlir::PatternRewriter &rewriter)
+      : Base{op, rewriter} {}
+
+private:
+  virtual llvm::SmallVector<mlir::Value> genReductionInitValues(
+      [[maybe_unused]] mlir::ValueRange oneBasedIndices,
+      [[maybe_unused]] const llvm::SmallVectorImpl<mlir::Value> &extents)
+      final {
+    return {fir::factory::createOneValue(builder, loc, getResultElementType())};
+  }
+  virtual llvm::SmallVector<mlir::Value>
+  reduceOneElement(const llvm::SmallVectorImpl<mlir::Value> &currentValue,
+                   hlfir::Entity array,
+                   mlir::ValueRange oneBasedIndices) final {
+    checkReductions(currentValue);
+    hlfir::Entity elementValue =
+        hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
+    return {genScalarMult(currentValue[0], elementValue)};
+  }
+
+  // Generate scalar multiplication of the two values (of the same data type).
+  mlir::Value genScalarMult(mlir::Value value1, mlir::Value value2);
 };
 
 /// Base class for logical reductions like ALL, ANY, COUNT.
@@ -1031,12 +1128,13 @@ private:
         hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
     mlir::Value cond =
         builder.createConvert(loc, builder.getI1Type(), elementValue);
+    mlir::Value zero =
+        builder.createIntegerConstant(loc, getResultElementType(), 0);
     mlir::Value one =
         builder.createIntegerConstant(loc, getResultElementType(), 1);
-    mlir::Value add1 =
-        mlir::arith::AddIOp::create(builder, loc, currentValue[0], one);
-    return {mlir::arith::SelectOp::create(builder, loc, cond, add1,
-                                          currentValue[0])};
+    mlir::Value addend =
+        mlir::arith::SelectOp::create(builder, loc, cond, one, zero);
+    return {mlir::arith::AddIOp::create(builder, loc, currentValue[0], addend)};
   }
 };
 
@@ -1194,6 +1292,20 @@ mlir::Value SumAsElementalConverter::genScalarAdd(mlir::Value value1,
   llvm_unreachable("unsupported SUM reduction type");
 }
 
+mlir::Value ProductAsElementalConverter::genScalarMult(mlir::Value value1,
+                                                       mlir::Value value2) {
+  mlir::Type ty = value1.getType();
+  assert(ty == value2.getType() && "reduction values' types do not match");
+  if (mlir::isa<mlir::FloatType>(ty))
+    return mlir::arith::MulFOp::create(builder, loc, value1, value2);
+  else if (mlir::isa<mlir::ComplexType>(ty))
+    return fir::MulcOp::create(builder, loc, value1, value2);
+  else if (mlir::isa<mlir::IntegerType>(ty))
+    return mlir::arith::MulIOp::create(builder, loc, value1, value2);
+
+  llvm_unreachable("unsupported MUL reduction type");
+}
+
 mlir::Value ReductionAsElementalConverter::genMaskValue(
     mlir::Value mask, mlir::Value isPresentPred, mlir::ValueRange indices) {
   mlir::OpBuilder::InsertionGuard guard(builder);
@@ -1247,15 +1359,7 @@ public:
 
   llvm::LogicalResult
   matchAndRewrite(Op op, mlir::PatternRewriter &rewriter) const override {
-    if constexpr (std::is_same_v<Op, hlfir::MaxlocOp> ||
-                  std::is_same_v<Op, hlfir::MinlocOp>) {
-      MinMaxlocAsElementalConverter<Op> converter(op, rewriter);
-      return converter.convert();
-    } else if constexpr (std::is_same_v<Op, hlfir::MaxvalOp> ||
-                         std::is_same_v<Op, hlfir::MinvalOp>) {
-      MinMaxvalAsElementalConverter<Op> converter(op, rewriter);
-      return converter.convert();
-    } else if constexpr (std::is_same_v<Op, hlfir::CountOp>) {
+    if constexpr (std::is_same_v<Op, hlfir::CountOp>) {
       CountAsElementalConverter converter(op, rewriter);
       return converter.convert();
     } else if constexpr (std::is_same_v<Op, hlfir::AllOp> ||
@@ -1265,9 +1369,46 @@ public:
     } else if constexpr (std::is_same_v<Op, hlfir::SumOp>) {
       SumAsElementalConverter converter{op, rewriter};
       return converter.convert();
+    } else if constexpr (std::is_same_v<Op, hlfir::ProductOp>) {
+      ProductAsElementalConverter converter{op, rewriter};
+      return converter.convert();
     }
     return rewriter.notifyMatchFailure(op, "unexpected reduction operation");
   }
+};
+
+/// Convert an operation that is a partial or total max/min reduction
+/// over an array of values into a reduction loop[-nest]
+/// optionally wrapped into hlfir.elemental.
+template <typename Op>
+class ExtremumReductionConversion : public mlir::OpRewritePattern<Op> {
+public:
+  using mlir::OpRewritePattern<Op>::OpRewritePattern;
+
+  ExtremumReductionConversion(
+      mlir::MLIRContext *ctx,
+      Fortran::common::FPMaxminBehavior fpMaxminBehavior =
+          Fortran::common::FPMaxminBehavior::Legacy)
+      : mlir::OpRewritePattern<Op>{ctx}, fpMaxminBehavior{fpMaxminBehavior} {}
+
+  llvm::LogicalResult
+  matchAndRewrite(Op op, mlir::PatternRewriter &rewriter) const override {
+    if constexpr (std::is_same_v<Op, hlfir::MaxlocOp> ||
+                  std::is_same_v<Op, hlfir::MinlocOp>) {
+      MinMaxlocAsElementalConverter<Op> converter(op, rewriter,
+                                                  fpMaxminBehavior);
+      return converter.convert();
+    } else if constexpr (std::is_same_v<Op, hlfir::MaxvalOp> ||
+                         std::is_same_v<Op, hlfir::MinvalOp>) {
+      MinMaxvalAsElementalConverter<Op> converter(op, rewriter,
+                                                  fpMaxminBehavior);
+      return converter.convert();
+    }
+    return rewriter.notifyMatchFailure(op, "unexpected reduction operation");
+  }
+
+private:
+  Fortran::common::FPMaxminBehavior fpMaxminBehavior;
 };
 
 template <typename Op>
@@ -1371,15 +1512,12 @@ private:
   }
 
   /// The indices computations for the array shifts are done using I64 type.
-  /// For CSHIFT, all computations do not overflow signed and unsigned I64.
-  /// For EOSHIFT, some computations may involve negative shift values,
-  /// so using no-unsigned wrap flag would be incorrect.
+  /// For CSHIFT, and EOSHIFT all computations do not overflow signed I64.
+  /// While no-unsigned wrap could be set on some operation generated for
+  /// CSHIFT, it is in general unsafe to mix with computations involving
+  /// user defined bounds that may be negative.
   static void setArithOverflowFlags(Op op, fir::FirOpBuilder &builder) {
-    if constexpr (std::is_same_v<Op, hlfir::EOShiftOp>)
-      builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw);
-    else
-      builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw |
-                                      mlir::arith::IntegerOverflowFlags::nuw);
+    builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw);
   }
 
   /// Return the element type of the EOSHIFT boundary that may be omitted
@@ -1824,10 +1962,10 @@ private:
     // For CSHIFT, shiftVal is the normalized shift value that satisfies
     // (SH >= 0 && SH < SIZE(ARRAY,DIM)).
     //
-    auto genDimensionShift = [&](mlir::Location loc, fir::FirOpBuilder &builder,
-                                 mlir::Value shiftVal, mlir::Value boundary,
-                                 bool exposeContiguity,
-                                 mlir::ValueRange oneBasedIndices)
+    auto genDimensionShift =
+        [&](mlir::Location loc, fir::FirOpBuilder &builder,
+            mlir::Value shiftVal, [[maybe_unused]] mlir::Value boundary,
+            bool exposeContiguity, mlir::ValueRange oneBasedIndices)
         -> llvm::SmallVector<mlir::Value, 0> {
       // Create a vector of indices (s(1), ..., s(dim-1), nullptr, s(dim+1),
       // ..., s(n)) so that we can update the dimVal index as needed.
@@ -1841,11 +1979,9 @@ private:
       hlfir::Entity srcArray = array;
       if (exposeContiguity && mlir::isa<fir::BaseBoxType>(srcArray.getType())) {
         assert(dimVal == 1 && "can expose contiguity only for dim 1");
-        llvm::SmallVector<mlir::Value, maxRank> arrayLbounds =
-            hlfir::genLowerbounds(loc, builder, arrayShape, array.getRank());
         hlfir::Entity section =
-            hlfir::gen1DSection(loc, builder, srcArray, dimVal, arrayLbounds,
-                                arrayExtents, oneBasedIndices, typeParams);
+            hlfir::gen1DSection(loc, builder, srcArray, dimVal, arrayExtents,
+                                oneBasedIndices, typeParams);
         mlir::Value addr = hlfir::genVariableRawAddress(loc, builder, section);
         mlir::Value shape = hlfir::genShape(loc, builder, section);
         mlir::Type boxType = fir::wrapInClassOrBoxType(
@@ -2280,6 +2416,212 @@ public:
     auto finalCmpResult =
         mlir::arith::CmpIOp::create(builder, loc, predicate, tempRes, zeroInt);
     rewriter.replaceOp(cmp, finalCmpResult);
+    return mlir::success();
+  }
+};
+
+static std::pair<mlir::Value, hlfir::AssociateOp>
+getVariable(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value val) {
+  // If it is an expression - create a variable from it, or forward
+  // the value otherwise.
+  hlfir::AssociateOp associate;
+  if (!mlir::isa<hlfir::ExprType>(val.getType()))
+    return {val, associate};
+  hlfir::Entity entity{val};
+  mlir::NamedAttribute byRefAttr = fir::getAdaptToByRefAttr(builder);
+  associate = hlfir::genAssociateExpr(loc, builder, entity, entity.getType(),
+                                      "", byRefAttr);
+  return {associate.getBase(), associate};
+}
+
+class IndexOpConversion : public mlir::OpRewritePattern<hlfir::IndexOp> {
+public:
+  using mlir::OpRewritePattern<hlfir::IndexOp>::OpRewritePattern;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::IndexOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    // We simplify only limited cases:
+    // 1) a substring length shall be known at compile time
+    // 2) if a substring length is 0 then replace with 1 for forward search,
+    //    or otherwise with the string length + 1 (builder shall const-fold if
+    //    lookup direction is known at compile time).
+    // 3) for known string length at compile time, if it is
+    //    shorter than substring  => replace with zero.
+    // 4) if a substring length is one => inline as simple search loop
+    // 5) for forward search with input strings of kind=1 runtime is faster.
+    // Do not simplify in all the other cases relying on a runtime call.
+
+    fir::FirOpBuilder builder{rewriter, op.getOperation()};
+    const mlir::Location &loc = op->getLoc();
+
+    auto resultTy = op.getType();
+    mlir::Value back = op.getBack();
+    auto substrLenCst =
+        hlfir::getCharLengthIfConst(hlfir::Entity{op.getSubstr()});
+    if (!substrLenCst) {
+      return rewriter.notifyMatchFailure(
+          op, "substring length unknown at compile time");
+    }
+    hlfir::Entity strEntity{op.getStr()};
+    auto i1Ty = builder.getI1Type();
+    auto idxTy = builder.getIndexType();
+    if (*substrLenCst == 0) {
+      mlir::Value oneIdx = builder.createIntegerConstant(loc, idxTy, 1);
+      // zero length substring. For back search replace with
+      // strLen+1, or otherwise with 1.
+      mlir::Value strLen = hlfir::genCharLength(loc, builder, strEntity);
+      mlir::Value strEnd = mlir::arith::AddIOp::create(
+          builder, loc, builder.createConvert(loc, idxTy, strLen), oneIdx);
+      if (back)
+        back = builder.createConvert(loc, i1Ty, back);
+      else
+        back = builder.createIntegerConstant(loc, i1Ty, 0);
+      mlir::Value result =
+          mlir::arith::SelectOp::create(builder, loc, back, strEnd, oneIdx);
+
+      rewriter.replaceOp(op, builder.createConvert(loc, resultTy, result));
+      return mlir::success();
+    }
+
+    if (auto strLenCst = hlfir::getCharLengthIfConst(strEntity)) {
+      if (*strLenCst < *substrLenCst) {
+        rewriter.replaceOp(op, builder.createIntegerConstant(loc, resultTy, 0));
+        return mlir::success();
+      }
+      if (*strLenCst == 0) {
+        // both strings have zero length
+        rewriter.replaceOp(op, builder.createIntegerConstant(loc, resultTy, 1));
+        return mlir::success();
+      }
+    }
+    if (*substrLenCst != 1) {
+      return rewriter.notifyMatchFailure(
+          op, "rely on runtime implementation if substring length > 1");
+    }
+    // For forward search and character kind=1 the runtime uses memchr
+    // which well optimized. But it looks like memchr idiom is not recognized
+    // in LLVM yet. On a micro-kernel test with strings of length 40 runtime
+    // had ~2x less execution time vs inlined code. For unknown search direction
+    // at compile time pessimistically assume "forward".
+    std::optional<bool> isBack;
+    if (back) {
+      if (auto backCst = fir::getIntIfConstant(back))
+        isBack = *backCst != 0;
+    } else {
+      isBack = false;
+    }
+    auto charTy = mlir::cast<fir::CharacterType>(
+        hlfir::getFortranElementType(op.getSubstr().getType()));
+    unsigned kind = charTy.getFKind();
+    if (kind == 1 && (!isBack || !*isBack)) {
+      return rewriter.notifyMatchFailure(
+          op, "rely on runtime implementation for character kind 1");
+    }
+
+    // All checks are passed here. Generate single character search loop.
+    auto [strV, strAssociate] = getVariable(builder, loc, op.getStr());
+    auto [substrV, substrAssociate] = getVariable(builder, loc, op.getSubstr());
+    hlfir::Entity str{strV};
+    hlfir::Entity substr{substrV};
+    mlir::Value oneIdx = builder.createIntegerConstant(loc, idxTy, 1);
+
+    auto genExtractAndConvertToInt = [&charTy, &idxTy, &oneIdx,
+                                      kind](mlir::Location loc,
+                                            fir::FirOpBuilder &builder,
+                                            hlfir::Entity &charStr,
+                                            mlir::Value index) {
+      auto bits = builder.getKindMap().getCharacterBitsize(kind);
+      auto intTy = builder.getIntegerType(bits);
+      auto charLen1Ty =
+          fir::CharacterType::getSingleton(builder.getContext(), kind);
+      mlir::Type designatorTy =
+          fir::ReferenceType::get(charLen1Ty, fir::isa_volatile_type(charTy));
+      auto idxAttr = builder.getIntegerAttr(idxTy, 0);
+
+      auto singleChr = hlfir::DesignateOp::create(
+          builder, loc, designatorTy, charStr, /*component=*/{},
+          /*compShape=*/mlir::Value{}, hlfir::DesignateOp::Subscripts{},
+          /*substring=*/mlir::ValueRange{index, index},
+          /*complexPart=*/std::nullopt,
+          /*shape=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{oneIdx},
+          fir::FortranVariableFlagsAttr{});
+      auto chrVal = fir::LoadOp::create(builder, loc, singleChr);
+      mlir::Value intVal = fir::ExtractValueOp::create(
+          builder, loc, intTy, chrVal, builder.getArrayAttr(idxAttr));
+      return intVal;
+    };
+
+    auto wantChar = genExtractAndConvertToInt(loc, builder, substr, oneIdx);
+
+    // Generate search loop body with the following C equivalent:
+    //  idx_t result = 0;
+    //  idx_t end = strlen + 1;
+    //  char want = substr[0];
+    //  for (idx_t idx = 1; idx < end; ++idx) {
+    //    if (result == 0) {
+    //        idx_t at = back ? end - idx: idx;
+    //        result = str[at-1] == want ? at : result;
+    //    }
+    //  }
+    mlir::Value strLen = hlfir::genCharLength(loc, builder, strEntity);
+    if (!back)
+      back = builder.createIntegerConstant(loc, i1Ty, 0);
+    else
+      back = builder.createConvert(loc, i1Ty, back);
+    mlir::Value strEnd = mlir::arith::AddIOp::create(
+        builder, loc, builder.createConvert(loc, idxTy, strLen), oneIdx);
+    mlir::Value zeroIdx = builder.createIntegerConstant(loc, idxTy, 0);
+    auto genSearchBody = [&](mlir::Location loc, fir::FirOpBuilder &builder,
+                             mlir::ValueRange index,
+                             mlir::ValueRange reductionArgs)
+        -> llvm::SmallVector<mlir::Value, 1> {
+      assert(index.size() == 1 && "expected single loop");
+      assert(reductionArgs.size() == 1 && "expected single reduction value");
+      mlir::Value inRes = reductionArgs[0];
+      auto resEQzero = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::eq, inRes, zeroIdx);
+
+      mlir::Value res =
+          builder
+              .genIfOp(loc, {idxTy}, resEQzero,
+                       /*withElseRegion=*/true)
+              .genThen([&]() {
+                mlir::Value idx = builder.createConvert(loc, idxTy, index[0]);
+                // offset = back ? end - idx : idx;
+                mlir::Value offset = mlir::arith::SelectOp::create(
+                    builder, loc, back,
+                    mlir::arith::SubIOp::create(builder, loc, strEnd, idx),
+                    idx);
+
+                auto haveChar =
+                    genExtractAndConvertToInt(loc, builder, str, offset);
+                auto charsEQ = mlir::arith::CmpIOp::create(
+                    builder, loc, mlir::arith::CmpIPredicate::eq, haveChar,
+                    wantChar);
+                mlir::Value newVal = mlir::arith::SelectOp::create(
+                    builder, loc, charsEQ, offset, inRes);
+
+                fir::ResultOp::create(builder, loc, newVal);
+              })
+              .genElse([&]() { fir::ResultOp::create(builder, loc, inRes); })
+              .getResults()[0];
+      return {res};
+    };
+
+    llvm::SmallVector<mlir::Value, 1> loopOut =
+        hlfir::genLoopNestWithReductions(loc, builder, {strLen},
+                                         /*reductionInits=*/{zeroIdx},
+                                         genSearchBody,
+                                         /*isUnordered=*/false);
+    mlir::Value result = builder.createConvert(loc, resultTy, loopOut[0]);
+
+    if (strAssociate)
+      hlfir::EndAssociateOp::create(builder, loc, strAssociate);
+    if (substrAssociate)
+      hlfir::EndAssociateOp::create(builder, loc, substrAssociate);
+
+    rewriter.replaceOp(op, result);
     return mlir::success();
   }
 };
@@ -2952,17 +3294,23 @@ public:
     mlir::RewritePatternSet patterns(context);
     patterns.insert<TransposeAsElementalConversion>(context);
     patterns.insert<ReductionConversion<hlfir::SumOp>>(context);
+    patterns.insert<ReductionConversion<hlfir::ProductOp>>(context);
     patterns.insert<ArrayShiftConversion<hlfir::CShiftOp>>(context);
     patterns.insert<ArrayShiftConversion<hlfir::EOShiftOp>>(context);
     patterns.insert<CmpCharOpConversion>(context);
+    patterns.insert<IndexOpConversion>(context);
     patterns.insert<MatmulConversion<hlfir::MatmulTransposeOp>>(context);
     patterns.insert<ReductionConversion<hlfir::CountOp>>(context);
     patterns.insert<ReductionConversion<hlfir::AnyOp>>(context);
     patterns.insert<ReductionConversion<hlfir::AllOp>>(context);
-    patterns.insert<ReductionConversion<hlfir::MaxlocOp>>(context);
-    patterns.insert<ReductionConversion<hlfir::MinlocOp>>(context);
-    patterns.insert<ReductionConversion<hlfir::MaxvalOp>>(context);
-    patterns.insert<ReductionConversion<hlfir::MinvalOp>>(context);
+    patterns.insert<ExtremumReductionConversion<hlfir::MaxlocOp>>(
+        context, this->fpMaxminBehavior);
+    patterns.insert<ExtremumReductionConversion<hlfir::MinlocOp>>(
+        context, this->fpMaxminBehavior);
+    patterns.insert<ExtremumReductionConversion<hlfir::MaxvalOp>>(
+        context, this->fpMaxminBehavior);
+    patterns.insert<ExtremumReductionConversion<hlfir::MinvalOp>>(
+        context, this->fpMaxminBehavior);
 
     // If forceMatmulAsElemental is false, then hlfir.matmul inlining
     // will introduce hlfir.eval_in_mem operation with new memory side

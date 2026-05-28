@@ -19,6 +19,7 @@
 #include "flang/Evaluate/rewrite.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/char-block.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/symbol.h"
@@ -41,6 +42,7 @@
 
 namespace Fortran::semantics {
 
+using namespace Fortran::parser::omp;
 using namespace Fortran::semantics::omp;
 
 namespace operation = Fortran::evaluate::operation;
@@ -258,7 +260,7 @@ static std::optional<evaluate::Assignment> GetEvaluateAssignment(
   using AssignmentStmt = common::Indirection<parser::AssignmentStmt>;
   using PointerAssignmentStmt =
       common::Indirection<parser::PointerAssignmentStmt>;
-  using TypedAssignment = parser::AssignmentStmt::TypedAssignment;
+  using TypedAssignment = parser::TypedAssignment;
 
   return common::visit(
       [](auto &&s) -> std::optional<evaluate::Assignment> {
@@ -286,7 +288,7 @@ static std::optional<AnalyzedCondStmt> AnalyzeConditionalStmt(
   // Extract the evaluate::Expr from ScalarLogicalExpr.
   auto getFromLogical{[](const parser::ScalarLogicalExpr &logical) {
     // ScalarLogicalExpr is Scalar<Logical<common::Indirection<Expr>>>
-    const parser::Expr &expr{logical.thing.thing.value()};
+    auto &expr{parser::UnwrapRef<parser::Expr>(logical)};
     return GetEvaluateExpr(expr);
   }};
 
@@ -296,7 +298,7 @@ static std::optional<AnalyzedCondStmt> AnalyzeConditionalStmt(
 
   if (auto &&action{GetActionStmt(x)}) {
     if (auto *ifs{std::get_if<common::Indirection<parser::IfStmt>>(
-            &action.stmt->u)}) {
+            &action.stmt()->u)}) {
       const parser::IfStmt &s{ifs->value()};
       auto &&maybeCond{
           getFromLogical(std::get<parser::ScalarLogicalExpr>(s.t))};
@@ -333,13 +335,13 @@ static std::optional<AnalyzedCondStmt> AnalyzeConditionalStmt(
         AnalyzedCondStmt result{std::move(*maybeCond), stmt.source,
             GetActionStmt(std::get<parser::Block>(s.t)),
             GetActionStmt(std::get<parser::Block>(maybeElse->t))};
-        if (result.ift.stmt && result.iff.stmt) {
+        if (result.ift.stmt() && result.iff.stmt()) {
           return result;
         }
       } else {
         AnalyzedCondStmt result{std::move(*maybeCond), stmt.source,
             GetActionStmt(std::get<parser::Block>(s.t)), SourcedActionStmt{}};
-        if (result.ift.stmt) {
+        if (result.ift.stmt()) {
           return result;
         }
       }
@@ -424,7 +426,7 @@ static void SetExpr(parser::TypedExpr &expr, MaybeExpr value) {
   }
 }
 
-static void SetAssignment(parser::AssignmentStmt::TypedAssignment &assign,
+static void SetAssignment(parser::TypedAssignment &assign,
     std::optional<evaluate::Assignment> value) {
   if (value) {
     assign.Reset(new evaluate::GenericAssignmentWrapper(std::move(value)),
@@ -519,8 +521,8 @@ private:
 ///   function references with scalar data pointer result of non-character
 ///   intrinsic type or variables that are non-polymorphic scalar pointers
 ///   and any length type parameter must be constant.
-void OmpStructureChecker::CheckAtomicType(
-    SymbolRef sym, parser::CharBlock source, std::string_view name) {
+void OmpStructureChecker::CheckAtomicType(SymbolRef sym,
+    parser::CharBlock source, std::string_view name, bool checkTypeOnPointer) {
   const DeclTypeSpec *typeSpec{sym->GetType()};
   if (!typeSpec) {
     return;
@@ -547,6 +549,22 @@ void OmpStructureChecker::CheckAtomicType(
     return;
   }
 
+  // Apply pointer-to-non-intrinsic rule only for intrinsic-assignment paths.
+  if (checkTypeOnPointer) {
+    using Category = DeclTypeSpec::Category;
+    Category cat{typeSpec->category()};
+    if (cat != Category::Numeric && cat != Category::Logical) {
+      std::string details = " has the POINTER attribute";
+      if (const auto *derived{typeSpec->AsDerived()}) {
+        details += " and derived type '"s + derived->name().ToString() + "'";
+      }
+      context_.Say(source,
+          "ATOMIC operation requires an intrinsic scalar variable; '%s'%s"_err_en_US,
+          sym->name(), details);
+      return;
+    }
+  }
+
   // Go over all length parameters, if any, and check if they are
   // explicit.
   if (const DerivedTypeSpec *derived{typeSpec->AsDerived()}) {
@@ -562,21 +580,33 @@ void OmpStructureChecker::CheckAtomicType(
 }
 
 void OmpStructureChecker::CheckAtomicVariable(
-    const SomeExpr &atom, parser::CharBlock source) {
+    const SomeExpr &atom, parser::CharBlock source, bool checkTypeOnPointer) {
   if (atom.Rank() != 0) {
     context_.Say(source, "Atomic variable %s should be a scalar"_err_en_US,
         atom.AsFortran());
   }
 
-  std::vector<SomeExpr> dsgs{GetAllDesignators(atom)};
-  assert(dsgs.size() == 1 && "Should have a single top-level designator");
-  evaluate::SymbolVector syms{evaluate::GetSymbolVector(dsgs.front())};
+  std::vector<SomeExpr> dsgs{GetTopLevelDesignators(atom)};
 
-  CheckAtomicType(syms.back(), source, atom.AsFortran());
+  // Procedure references are valid if they return a pointer to a scalar.
+  // Just return if we don't have exactly one designator - other checks will
+  // diagnose any actual errors.
+  if (dsgs.size() != 1) {
+    return;
+  }
 
-  if (IsAllocatable(syms.back()) && !IsArrayElement(atom)) {
-    context_.Say(source, "Atomic variable %s cannot be ALLOCATABLE"_err_en_US,
-        atom.AsFortran());
+  SymbolVector syms{evaluate::GetSymbolVector(dsgs.front())};
+  if (syms.empty()) {
+    return;
+  }
+
+  CheckAtomicType(syms.back(), source, atom.AsFortran(), checkTypeOnPointer);
+
+  if (!IsArrayElement(atom) && !ExtractComplexPart(atom)) {
+    if (IsAllocatable(syms.back())) {
+      context_.Say(source, "Atomic variable %s cannot be ALLOCATABLE"_err_en_US,
+          atom.AsFortran());
+    }
   }
 }
 
@@ -625,10 +655,10 @@ OmpStructureChecker::CheckUpdateCapture(
 
   SourcedActionStmt act1{GetActionStmt(ec1)};
   SourcedActionStmt act2{GetActionStmt(ec2)};
-  auto maybeAssign1{GetEvaluateAssignment(act1.stmt)};
-  auto maybeAssign2{GetEvaluateAssignment(act2.stmt)};
+  auto maybeAssign1{GetEvaluateAssignment(act1.stmt())};
+  auto maybeAssign2{GetEvaluateAssignment(act2.stmt())};
   if (!maybeAssign1 || !maybeAssign2) {
-    if (!IsAssignment(act1.stmt) || !IsAssignment(act2.stmt)) {
+    if (!IsAssignment(act1.stmt()) || !IsAssignment(act2.stmt())) {
       context_.Say(source,
           "ATOMIC UPDATE operation with CAPTURE should contain two assignments"_err_en_US);
     }
@@ -789,7 +819,8 @@ void OmpStructureChecker::CheckAtomicCaptureAssignment(
   if (!IsVarOrFunctionRef(atom)) {
     ErrorShouldBeVariable(atom, rsrc);
   } else {
-    CheckAtomicVariable(atom, rsrc);
+    CheckAtomicVariable(
+        atom, rsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(capture));
     // This part should have been checked prior to calling this function.
     assert(*GetConvertInput(capture.rhs) == atom &&
         "This cannot be a capture assignment");
@@ -808,7 +839,8 @@ void OmpStructureChecker::CheckAtomicReadAssignment(
     if (!IsVarOrFunctionRef(atom)) {
       ErrorShouldBeVariable(atom, rsrc);
     } else {
-      CheckAtomicVariable(atom, rsrc);
+      CheckAtomicVariable(
+          atom, rsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(read));
       CheckStorageOverlap(atom, {read.lhs}, source);
     }
   } else {
@@ -829,7 +861,8 @@ void OmpStructureChecker::CheckAtomicWriteAssignment(
   if (!IsVarOrFunctionRef(atom)) {
     ErrorShouldBeVariable(atom, rsrc);
   } else {
-    CheckAtomicVariable(atom, lsrc);
+    CheckAtomicVariable(
+        atom, lsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(write));
     CheckStorageOverlap(atom, {write.rhs}, source);
   }
 }
@@ -854,7 +887,8 @@ OmpStructureChecker::CheckAtomicUpdateAssignment(
     return std::nullopt;
   }
 
-  CheckAtomicVariable(atom, lsrc);
+  CheckAtomicVariable(
+      atom, lsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(update));
 
   auto [hasErrors, tryReassoc]{CheckAtomicUpdateAssignmentRhs(
       atom, update.rhs, source, /*suppressDiagnostics=*/true)};
@@ -1017,7 +1051,8 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateAssignment(
     return;
   }
 
-  CheckAtomicVariable(atom, alsrc);
+  CheckAtomicVariable(
+      atom, alsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(assign));
 
   auto top{GetTopLevelOperationIgnoreResizing(cond)};
   // Missing arguments to operations would have been diagnosed by now.
@@ -1073,9 +1108,9 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateStmt(
   // - cond: associated(x, e) ift: x => expr  iff: -
 
   // The if-true statement must be present, and must be an assignment.
-  auto maybeAssign{GetEvaluateAssignment(update.ift.stmt)};
+  auto maybeAssign{GetEvaluateAssignment(update.ift.stmt())};
   if (!maybeAssign) {
-    if (update.ift.stmt && !IsAssignment(update.ift.stmt)) {
+    if (update.ift.stmt() && !IsAssignment(update.ift.stmt())) {
       context_.Say(update.ift.source,
           "In ATOMIC UPDATE COMPARE the update statement should be an assignment"_err_en_US);
     } else {
@@ -1103,7 +1138,7 @@ void OmpStructureChecker::CheckAtomicUpdateOnly(
     parser::CharBlock source) {
   if (body.size() == 1) {
     SourcedActionStmt action{GetActionStmt(&body.front())};
-    if (auto maybeUpdate{GetEvaluateAssignment(action.stmt)}) {
+    if (auto maybeUpdate{GetEvaluateAssignment(action.stmt())}) {
       const SomeExpr &atom{maybeUpdate->lhs};
       auto maybeAssign{
           CheckAtomicUpdateAssignment(*maybeUpdate, action.source)};
@@ -1113,7 +1148,7 @@ void OmpStructureChecker::CheckAtomicUpdateOnly(
       x.analysis = AtomicAnalysis(atom)
                        .addOp0(Analysis::Update, updateAssign)
                        .addOp1(Analysis::None);
-    } else if (!IsAssignment(action.stmt)) {
+    } else if (!IsAssignment(action.stmt())) {
       context_.Say(
           source, "ATOMIC UPDATE operation should be an assignment"_err_en_US);
     }
@@ -1162,7 +1197,7 @@ void OmpStructureChecker::CheckAtomicConditionalUpdate(
 
   if (SourcedActionStmt action{GetActionStmt(cst)}) {
     // The "condition" statement must be `r = cond`.
-    if (auto maybeCond{GetEvaluateAssignment(action.stmt)}) {
+    if (auto maybeCond{GetEvaluateAssignment(action.stmt())}) {
       if (maybeCond->lhs != update.cond) {
         context_.Say(update.source,
             "In ATOMIC UPDATE COMPARE the conditional statement must use %s as the condition"_err_en_US,
@@ -1178,7 +1213,7 @@ void OmpStructureChecker::CheckAtomicConditionalUpdate(
     }
   }
 
-  evaluate::Assignment assign{*GetEvaluateAssignment(update.ift.stmt)};
+  evaluate::Assignment assign{*GetEvaluateAssignment(update.ift.stmt())};
 
   CheckAtomicConditionalUpdateStmt(update, source);
   if (IsCheckForAssociated(update.cond)) {
@@ -1219,8 +1254,8 @@ void OmpStructureChecker::CheckAtomicUpdateCapture(
   SourcedActionStmt cact{GetActionStmt(cec)};
   // The "dereferences" of std::optional are guaranteed to be valid after
   // CheckUpdateCapture.
-  evaluate::Assignment update{*GetEvaluateAssignment(uact.stmt)};
-  evaluate::Assignment capture{*GetEvaluateAssignment(cact.stmt)};
+  evaluate::Assignment update{*GetEvaluateAssignment(uact.stmt())};
+  evaluate::Assignment capture{*GetEvaluateAssignment(cact.stmt())};
 
   const SomeExpr &atom{update.lhs};
 
@@ -1245,7 +1280,7 @@ void OmpStructureChecker::CheckAtomicUpdateCapture(
     return;
   }
 
-  if (GetActionStmt(&body.front()).stmt == uact.stmt) {
+  if (GetActionStmt(&body.front()).stmt() == uact.stmt()) {
     x.analysis = AtomicAnalysis(atom)
                      .addOp0(action, updateAssign)
                      .addOp1(Analysis::Read, capture);
@@ -1281,7 +1316,7 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateCapture(
 
   auto classifyNonUpdate{[&](const SourcedActionStmt &action) {
     // The non-update statement is either "r = cond" or the capture.
-    if (auto maybeAssign{GetEvaluateAssignment(action.stmt)}) {
+    if (auto maybeAssign{GetEvaluateAssignment(action.stmt())}) {
       if (update.cond == maybeAssign->lhs) {
         // If this is "r = cond; if (r) ...", then update the condition.
         update.cond = maybeAssign->rhs;
@@ -1349,10 +1384,10 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateCapture(
   }
 
   // The update must have a form `x = d` or `x => d`.
-  if (auto maybeWrite{GetEvaluateAssignment(update.ift.stmt)}) {
+  if (auto maybeWrite{GetEvaluateAssignment(update.ift.stmt())}) {
     const SomeExpr &atom{maybeWrite->lhs};
     CheckAtomicWriteAssignment(*maybeWrite, update.ift.source);
-    if (auto maybeCapture{GetEvaluateAssignment(capture.stmt)}) {
+    if (auto maybeCapture{GetEvaluateAssignment(capture.stmt())}) {
       CheckAtomicCaptureAssignment(*maybeCapture, atom, capture.source);
 
       if (IsPointerAssignment(*maybeWrite) !=
@@ -1362,14 +1397,14 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateCapture(
         return;
       }
     } else {
-      if (!IsAssignment(capture.stmt)) {
+      if (!IsAssignment(capture.stmt())) {
         context_.Say(capture.source,
             "In ATOMIC UPDATE COMPARE CAPTURE the capture statement should be an assignment"_err_en_US);
       }
       return;
     }
   } else {
-    if (!IsAssignment(update.ift.stmt)) {
+    if (!IsAssignment(update.ift.stmt())) {
       context_.Say(update.ift.source,
           "In ATOMIC UPDATE COMPARE CAPTURE the update statement should be an assignment"_err_en_US);
     }
@@ -1395,8 +1430,8 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateCapture(
   int updateWhen{!condUnused ? Analysis::IfTrue : 0};
   int captureWhen{!captureAlways ? Analysis::IfFalse : 0};
 
-  evaluate::Assignment updAssign{*GetEvaluateAssignment(update.ift.stmt)};
-  evaluate::Assignment capAssign{*GetEvaluateAssignment(capture.stmt)};
+  evaluate::Assignment updAssign{*GetEvaluateAssignment(update.ift.stmt())};
+  evaluate::Assignment capAssign{*GetEvaluateAssignment(capture.stmt())};
   const SomeExpr &atom{updAssign.lhs};
 
   if (captureFirst) {
@@ -1430,7 +1465,7 @@ void OmpStructureChecker::CheckAtomicRead(
 
   if (body.size() == 1) {
     SourcedActionStmt action{GetActionStmt(&body.front())};
-    if (auto maybeRead{GetEvaluateAssignment(action.stmt)}) {
+    if (auto maybeRead{GetEvaluateAssignment(action.stmt())}) {
       CheckAtomicReadAssignment(*maybeRead, action.source);
 
       if (auto maybe{GetConvertInput(maybeRead->rhs)}) {
@@ -1440,7 +1475,7 @@ void OmpStructureChecker::CheckAtomicRead(
                          .addOp0(Analysis::Read, maybeRead)
                          .addOp1(Analysis::None);
       }
-    } else if (!IsAssignment(action.stmt)) {
+    } else if (!IsAssignment(action.stmt())) {
       context_.Say(
           x.source, "ATOMIC READ operation should be an assignment"_err_en_US);
     }
@@ -1465,7 +1500,7 @@ void OmpStructureChecker::CheckAtomicWrite(
 
   if (body.size() == 1) {
     SourcedActionStmt action{GetActionStmt(&body.front())};
-    if (auto maybeWrite{GetEvaluateAssignment(action.stmt)}) {
+    if (auto maybeWrite{GetEvaluateAssignment(action.stmt())}) {
       const SomeExpr &atom{maybeWrite->lhs};
       CheckAtomicWriteAssignment(*maybeWrite, action.source);
 
@@ -1473,7 +1508,7 @@ void OmpStructureChecker::CheckAtomicWrite(
       x.analysis = AtomicAnalysis(atom)
                        .addOp0(Analysis::Write, maybeWrite)
                        .addOp1(Analysis::None);
-    } else if (!IsAssignment(action.stmt)) {
+    } else if (!IsAssignment(action.stmt())) {
       context_.Say(
           x.source, "ATOMIC WRITE operation should be an assignment"_err_en_US);
     }

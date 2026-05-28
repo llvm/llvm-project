@@ -19,6 +19,7 @@
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -103,15 +104,12 @@ std::string WebAssemblyAsmTypeCheck::getTypesString(ArrayRef<StackType> Types,
           WebAssembly::typeToString(std::get<wasm::ValType>(Types[I - 1])));
   }
 
-  std::stringstream SS;
+  std::string S;
+  raw_string_ostream SS(S);
   SS << "[";
-  bool First = true;
-  for (auto It = TypeStrs.rbegin(); It != TypeStrs.rend(); ++It) {
-    if (!First)
-      SS << ", ";
-    SS << *It;
-    First = false;
-  }
+  ListSeparator LS;
+  for (StringRef Type : reverse(TypeStrs))
+    SS << LS << Type;
   SS << "]";
   return SS.str();
 }
@@ -616,6 +614,40 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
       Error |= endOfFunction(ErrorLoc, false);
       pushType(Polymorphic{});
     }
+    return Error;
+  }
+
+  if (Name == "call_ref" || Name == "return_call_ref") {
+    // Funcref target popped from the stack, followed by the signature's
+    // parameters; pushes the signature's results.
+    bool Error = popType(ErrorLoc, wasm::ValType::FUNCREF);
+    Error |= checkSig(ErrorLoc, LastSig);
+    if (Name == "return_call_ref") {
+      Error |= endOfFunction(ErrorLoc, false);
+      pushType(Polymorphic{});
+    }
+    return Error;
+  }
+
+  if (Name == "select") {
+    // Typed select pops an i32 condition and two values of each declared
+    // type, then pushes the declared types back. The result type list lives
+    // in the MCInst operands as a count followed by that many valtype bytes.
+    bool Error = popType(ErrorLoc, wasm::ValType::I32);
+    if (Inst.getNumOperands() == 0)
+      return typeError(ErrorLoc, "select missing type-list operand");
+    uint64_t Count = uint64_t(Inst.getOperand(0).getImm());
+    if (Count > uint64_t(Inst.getNumOperands() - 1))
+      return typeError(ErrorLoc,
+                       "select type-list count exceeds operand count");
+    SmallVector<wasm::ValType, 1> Types;
+    Types.reserve(Count);
+    for (uint64_t I = 0; I < Count; ++I)
+      Types.push_back(
+          static_cast<wasm::ValType>(Inst.getOperand(1 + I).getImm()));
+    Error |= popTypes(ErrorLoc, Types);
+    Error |= popTypes(ErrorLoc, Types);
+    pushTypes(Types);
     return Error;
   }
 

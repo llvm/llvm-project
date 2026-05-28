@@ -44,6 +44,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // bad_function_call
 
 _LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 #  if !_LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_KEY_FUNCTION
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
 #  endif
@@ -65,6 +66,7 @@ public:
   const char* what() const _NOEXCEPT override;
 #  endif
 };
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_DIAGNOSTIC_POP
 
 [[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_function_call() {
@@ -527,8 +529,12 @@ public:
 
 #  if _LIBCPP_HAS_BLOCKS_RUNTIME
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
 extern "C" void* _Block_copy(const void*);
 extern "C" void _Block_release(const void*);
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Rp1, class... _ArgTypes1, class _Rp, class... _ArgTypes>
 class __func<_Rp1 (^)(_ArgTypes1...), _Rp(_ArgTypes...)> : public __base<_Rp(_ArgTypes...)> {
@@ -540,7 +546,7 @@ public:
 #    if __has_feature(objc_arc)
       : __f_(__f)
 #    else
-      : __f_(reinterpret_cast<__block_type>(__f ? _Block_copy(__f) : nullptr))
+      : __f_(reinterpret_cast<__block_type>(__f ? __function::_Block_copy(__f) : nullptr))
 #    endif
   {
   }
@@ -563,7 +569,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy() _NOEXCEPT {
 #    if !__has_feature(objc_arc)
     if (__f_)
-      _Block_release(__f_);
+      __function::_Block_release(__f_);
 #    endif
     __f_ = 0;
   }
@@ -672,11 +678,11 @@ public:
 
 #  if _LIBCPP_HAS_RTTI
   // function target access:
-  _LIBCPP_HIDE_FROM_ABI const std::type_info& target_type() const _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const std::type_info& target_type() const _NOEXCEPT;
   template <typename _Tp>
-  _LIBCPP_HIDE_FROM_ABI _Tp* target() _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _Tp* target() _NOEXCEPT;
   template <typename _Tp>
-  _LIBCPP_HIDE_FROM_ABI const _Tp* target() const _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const _Tp* target() const _NOEXCEPT;
 #  endif // _LIBCPP_HAS_RTTI
 };
 
@@ -684,7 +690,7 @@ public:
 template <class _Rp, class... _Ap>
 function(_Rp (*)(_Ap...)) -> function<_Rp(_Ap...)>;
 
-template <class _Fp, class _Stripped = typename __strip_signature<decltype(&_Fp::operator())>::type>
+template <class _Fp, class _Stripped = __strip_signature_t<decltype(&_Fp::operator())>>
 function(_Fp) -> function<_Stripped>;
 #  endif // _LIBCPP_STD_VER >= 17
 

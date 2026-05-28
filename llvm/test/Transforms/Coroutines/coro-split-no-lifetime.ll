@@ -5,7 +5,7 @@ define ptr @f(i1 %n) presplitcoroutine {
 entry:
   %x = alloca i64
   %y = alloca i64
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call ptr @malloc(i32 %size)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
@@ -37,7 +37,7 @@ cleanup:
   br label %suspend
 
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
 
@@ -52,7 +52,7 @@ declare void @llvm.coro.destroy(ptr)
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 declare void @llvm.lifetime.start.p0(ptr nocapture)
 declare void @llvm.lifetime.end.p0(ptr nocapture)

@@ -35,7 +35,7 @@ template <typename T> struct AssertSymbol {
                 "SymbolUnion not aligned enough");
 };
 
-LLVM_ATTRIBUTE_UNUSED static inline void assertSymbols() {
+[[maybe_unused]] static inline void assertSymbols() {
   AssertSymbol<Defined>();
   AssertSymbol<CommonSymbol>();
   AssertSymbol<Undefined>();
@@ -88,8 +88,16 @@ static uint64_t getSymVA(Ctx &ctx, const Symbol &sym, int64_t addend) {
     // To make this work, we incorporate the addend into the section
     // offset (and zero out the addend for later processing) so that
     // we find the right object in the section.
-    if (d.isSection())
+    if (d.isSection()) {
       offset += addend;
+      if (auto *ms = dyn_cast<MergeInputSection>(isec);
+          ms && offset >= ms->content().size()) {
+        if (offset > ms->content().size())
+          Err(ctx) << ms << ": offset 0x" << Twine::utohexstr(offset)
+                   << " is outside the section";
+        return 0;
+      }
+    }
 
     // In the typical case, this is actually very simple and boils
     // down to adding together 3 numbers:
@@ -304,23 +312,23 @@ void elf::maybeWarnUnorderableSymbol(Ctx &ctx, const Symbol *sym) {
     return;
 
   const InputFile *file = sym->file;
-  auto *d = dyn_cast<Defined>(sym);
-
   auto report = [&](StringRef s) { Warn(ctx) << file << s << sym->getName(); };
-
-  if (sym->isUndefined()) {
+  if (auto *d = dyn_cast<Defined>(sym)) {
+    if (!d->section)
+      report(": unable to order absolute symbol: ");
+    else if (isa<OutputSection>(d->section))
+      report(": unable to order synthetic symbol: ");
+    else if (!d->section->isLive())
+      report(": unable to order discarded symbol: ");
+  } else if (sym->isUndefined()) {
     if (cast<Undefined>(sym)->discardedSecIdx)
       report(": unable to order discarded symbol: ");
     else
       report(": unable to order undefined symbol: ");
-  } else if (sym->isShared())
+  } else {
+    assert(sym->isShared());
     report(": unable to order shared symbol: ");
-  else if (d && !d->section)
-    report(": unable to order absolute symbol: ");
-  else if (d && isa<OutputSection>(d->section))
-    report(": unable to order synthetic symbol: ");
-  else if (d && !d->section->isLive())
-    report(": unable to order discarded symbol: ");
+  }
 }
 
 // Returns true if a symbol can be replaced at load-time by a symbol
@@ -501,6 +509,12 @@ void Symbol::resolve(Ctx &ctx, const Undefined &other) {
     // reference is weak.
     if (other.binding != STB_WEAK || !referenced)
       binding = other.binding;
+    // -u creates a placeholder Undefined (internalFile, STT_NOTYPE).
+    // Adopt the real file and type from the object file's undefined.
+    if (file == ctx.internalFile) {
+      file = other.file;
+      type = other.type;
+    }
   }
 }
 
@@ -565,7 +579,7 @@ void elf::reportDuplicate(Ctx &ctx, const Symbol &sym, const InputFile *newFile,
 }
 
 void Symbol::checkDuplicate(Ctx &ctx, const Defined &other) const {
-  if (isDefined() && !isWeak() && !other.isWeak())
+  if (!isWeak() && !other.isWeak())
     reportDuplicate(ctx, *this, other.file,
                     dyn_cast_or_null<InputSectionBase>(other.section),
                     other.value);

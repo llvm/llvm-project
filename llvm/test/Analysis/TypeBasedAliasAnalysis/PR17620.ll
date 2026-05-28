@@ -13,7 +13,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 %classD = type { ptr }
 
 ; Function Attrs: ssp uwtable
-define ptr @test(ptr %this, ptr %p1) #0 align 2 {
+define ptr @test(ptr %this, ptr %p1) align 2 {
 entry:
 ; CHECK-LABEL: @test
 ; CHECK: load ptr, ptr %p1, align 8, !tbaa
@@ -25,10 +25,7 @@ entry:
   unreachable
 }
 
-declare void @callee(ptr, ptr) #1
-
-attributes #0 = { ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+declare void @callee(ptr, ptr)
 
 !llvm.ident = !{!0}
 

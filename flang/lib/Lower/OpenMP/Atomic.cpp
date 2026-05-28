@@ -13,6 +13,7 @@
 #include "flang/Evaluate/traverse.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/ConvertType.h"
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
@@ -20,6 +21,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/type.h"
 #include "flang/Support/Fortran.h"
@@ -79,7 +81,7 @@ dumpAtomicAnalysis(const parser::OpenMPAtomicConstruct::Analysis &analysis) {
     }
     return "<null>"s;
   };
-  auto assignStr = [&](const parser::AssignmentStmt::TypedAssignment &assign) {
+  auto assignStr = [&](const parser::TypedAssignment &assign) {
     if (auto *maybe = assign.get(); maybe && maybe->v) {
       std::string str;
       llvm::raw_string_ostream os(str);
@@ -183,12 +185,8 @@ getMemoryOrderFromRequires(const semantics::Scope &scope) {
   // scope.
   // For safety, traverse all enclosing scopes and check if their symbol
   // contains REQUIRES.
-  for (const auto *sc{&scope}; sc->kind() != semantics::Scope::Kind::Global;
-       sc = &sc->parent()) {
-    const semantics::Symbol *sym = sc->symbol();
-    if (!sym)
-      continue;
-
+  const semantics::Scope &unitScope = semantics::omp::GetProgramUnit(scope);
+  if (auto *symbol = unitScope.symbol()) {
     const common::OmpMemoryOrderType *admo = common::visit(
         [](auto &&s) {
           using WithOmpDeclarative = semantics::WithOmpDeclarative;
@@ -198,7 +196,8 @@ getMemoryOrderFromRequires(const semantics::Scope &scope) {
           }
           return static_cast<const common::OmpMemoryOrderType *>(nullptr);
         },
-        sym->details());
+        symbol->details());
+
     if (admo)
       return getMemoryOrderKind(*admo);
   }
@@ -214,19 +213,83 @@ getDefaultAtomicMemOrder(semantics::SemanticsContext &semaCtx) {
   return std::nullopt;
 }
 
-static std::optional<mlir::omp::ClauseMemoryOrderKind>
+static std::pair<std::optional<mlir::omp::ClauseMemoryOrderKind>, bool>
 getAtomicMemoryOrder(semantics::SemanticsContext &semaCtx,
                      const omp::List<omp::Clause> &clauses,
                      const semantics::Scope &scope) {
   for (const omp::Clause &clause : clauses) {
     if (auto maybeKind = getMemoryOrderKind(clause.id))
-      return *maybeKind;
+      return std::make_pair(*maybeKind, /*canOverride=*/false);
   }
 
   if (auto maybeKind = getMemoryOrderFromRequires(scope))
-    return *maybeKind;
+    return std::make_pair(*maybeKind, /*canOverride=*/true);
 
-  return getDefaultAtomicMemOrder(semaCtx);
+  return std::make_pair(getDefaultAtomicMemOrder(semaCtx),
+                        /*canOverride=*/false);
+}
+
+static std::optional<mlir::omp::ClauseMemoryOrderKind>
+makeValidForAction(std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
+                   int action0, int action1, unsigned version) {
+  // When the atomic default memory order specified on a REQUIRES directive is
+  // disallowed on a given ATOMIC operation, and it's not ACQ_REL, the order
+  // reverts to RELAXED. ACQ_REL decays to either ACQUIRE or RELEASE, depending
+  // on the operation.
+
+  if (!memOrder) {
+    return memOrder;
+  }
+
+  using Analysis = parser::OpenMPAtomicConstruct::Analysis;
+  // Figure out the main action (i.e. disregard a potential capture operation)
+  int action = action0;
+  if (action1 != Analysis::None)
+    action = action0 == Analysis::Read ? action1 : action0;
+
+  // Avaliable orderings: acquire, acq_rel, relaxed, release, seq_cst
+
+  if (action == Analysis::Read) {
+    // "acq_rel" decays to "acquire"
+    if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel)
+      return mlir::omp::ClauseMemoryOrderKind::Acquire;
+  } else if (action == Analysis::Write) {
+    // "acq_rel" decays to "release"
+    if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel)
+      return mlir::omp::ClauseMemoryOrderKind::Release;
+  }
+
+  if (version > 50) {
+    if (action == Analysis::Read) {
+      // "release" prohibited
+      if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Release)
+        return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+    }
+    if (action == Analysis::Write) {
+      // "acquire" prohibited
+      if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acquire)
+        return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+    }
+  } else {
+    if (action == Analysis::Read) {
+      // "release" prohibited
+      if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Release)
+        return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+    } else {
+      if (action & Analysis::Write) { // include "update"
+        // "acquire" prohibited
+        if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acquire)
+          return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+        if (action == Analysis::Update) {
+          // "acq_rel" prohibited
+          if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel)
+            return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+        }
+      }
+    }
+  }
+
+  return memOrder;
 }
 
 static mlir::omp::ClauseMemoryOrderKindAttr
@@ -423,6 +486,25 @@ genAtomicOperation(lower::AbstractConverter &converter,
   }
 }
 
+/// Reverse a relational operator as if the operands were swapped.
+/// e.g. LT becomes GT, LE becomes GE. Symmetric operators (EQ, NE)
+/// are returned unchanged.
+static common::RelationalOperator reverseRelOp(common::RelationalOperator op) {
+  using RO = common::RelationalOperator;
+  switch (op) {
+  case RO::LT:
+    return RO::GT;
+  case RO::LE:
+    return RO::GE;
+  case RO::GT:
+    return RO::LT;
+  case RO::GE:
+    return RO::LE;
+  default:
+    return op;
+  }
+}
+
 void Fortran::lower::omp::lowerAtomic(
     AbstractConverter &converter, SymMap &symTable,
     semantics::SemanticsContext &semaCtx, pft::Evaluation &eval,
@@ -449,16 +531,139 @@ void Fortran::lower::omp::lowerAtomic(
   mlir::Value atomAddr =
       fir::getBase(converter.genExprAddr(atom, stmtCtx, &loc));
   mlir::IntegerAttr hint = getAtomicHint(converter, clauses);
-  std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder =
-      getAtomicMemoryOrder(semaCtx, clauses,
-                           semaCtx.FindScope(construct.source));
+  auto [memOrder, canOverride] = getAtomicMemoryOrder(
+      semaCtx, clauses, semaCtx.FindScope(construct.source));
+
+  unsigned version = semaCtx.langOptions().OpenMPVersion;
+  int action0 = analysis.op0.what & analysis.Action;
+  int action1 = analysis.op1.what & analysis.Action;
+  if (canOverride)
+    memOrder = makeValidForAction(memOrder, action0, action1, version);
 
   if (auto *cond = get(analysis.cond)) {
-    (void)cond;
-    TODO(loc, "OpenMP ATOMIC COMPARE");
+    // atomic compare: if (x == e) x = d
+    // e : expecteVal
+    // d : desiredVal
+
+    // Check for compound clauses (fail, capture, weak) that are not yet
+    // supported with atomic compare.
+    if (llvm::any_of(clauses, [](const omp::Clause &clause) {
+          return clause.id == llvm::omp::Clause::OMPC_fail ||
+                 clause.id == llvm::omp::Clause::OMPC_capture ||
+                 clause.id == llvm::omp::Clause::OMPC_weak;
+        })) {
+      TODO(loc, "Compound clauses of OpenMP ATOMIC COMPARE");
+    }
+
+    common::RelationalOperator relOpr = common::RelationalOperator::EQ;
+    std::optional<semantics::SomeExpr> expectedExprStorage;
+    bool isUnsigned = false;
+
+    if (const auto *rel =
+            evaluate::UnwrapExpr<evaluate::Relational<evaluate::SomeType>>(
+                *cond)) {
+      std::visit(
+          [&](const auto &relImpl) {
+            relOpr = relImpl.opr;
+            using Operand = typename std::decay_t<decltype(relImpl)>::Operand;
+            isUnsigned = Operand::category == common::TypeCategory::Unsigned;
+            auto leftExpr = evaluate::AsGenericExpr(
+                evaluate::Expr<Operand>{relImpl.left()});
+            auto rightExpr = evaluate::AsGenericExpr(
+                evaluate::Expr<Operand>{relImpl.right()});
+            if (evaluate::IsSameOrConvertOf(rightExpr, atom)) {
+              // e.g. e == x  (atom is on the right)
+              // left operand is expected value (e)
+              // reverse the operator so that the comparison becomes
+              // x <reversed-op> e.
+              expectedExprStorage = std::move(leftExpr);
+              relOpr = reverseRelOp(relOpr);
+            } else {
+              // Form: x == e  (atom is on the left, or default)
+              expectedExprStorage = std::move(rightExpr);
+            }
+          },
+          rel->u);
+    }
+    if (!expectedExprStorage) {
+      mlir::emitError(loc, "internal error: atomic compare condition is not a "
+                           "recognized relational expression");
+      return;
+    }
+
+    mlir::Type elemTypeOfX = fir::unwrapRefType(atomAddr.getType());
+    mlir::Value expectedVal = fir::getBase(
+        converter.genExprValue(*expectedExprStorage, stmtCtx, &loc));
+    if (expectedVal.getType() != elemTypeOfX) {
+      expectedVal = builder.createConvert(loc, elemTypeOfX, expectedVal);
+    }
+
+    mlir::UnitAttr weakAttr = nullptr;
+    mlir::Operation *atomicOp = mlir::omp::AtomicCompareOp::create(
+        builder, loc, atomAddr, weakAttr, hint,
+        makeMemOrderAttr(converter, memOrder));
+    mlir::Block *block = builder.createBlock(&atomicOp->getRegion(0));
+    mlir::Value blockArg = block->addArgument(elemTypeOfX, loc);
+    builder.setInsertionPointToEnd(block);
+
+    // Generate comparison: e.g. x == e
+    mlir::Value cmpResult;
+    if (mlir::isa<mlir::IntegerType>(elemTypeOfX)) {
+      auto pred = isUnsigned ? lower::translateUnsignedRelational(relOpr)
+                             : lower::translateSignedRelational(relOpr);
+      cmpResult = mlir::arith::CmpIOp::create(builder, loc, pred, blockArg,
+                                              expectedVal);
+    } else if (mlir::isa<mlir::FloatType>(elemTypeOfX)) {
+      auto pred = lower::translateFloatRelational(relOpr);
+      cmpResult = mlir::arith::CmpFOp::create(builder, loc, pred, blockArg,
+                                              expectedVal);
+    } else if (fir::isa_complex(elemTypeOfX)) {
+      auto pred = lower::translateFloatRelational(relOpr);
+      cmpResult =
+          fir::CmpcOp::create(builder, loc, pred, blockArg, expectedVal);
+    } else {
+      mlir::emitError(loc, "unsupported type for atomic compare");
+      return;
+    }
+
+    // Check for presence of Assignment (x = d) and wether it is being invoked
+    // only for IfTrue condition.
+
+    // writeActionCond is a bitmask combining the following flags:
+    //  1) the action type (Read/Write/Update)
+    //  2) condition (IfTrue/IfFalse)
+    int writeActionCond = 0;
+    const evaluate::Assignment *writeAssign = nullptr;
+    if (analysis.op0.what & analysis.Write) {
+      writeAssign = get(analysis.op0.assign);
+      writeActionCond = analysis.op0.what;
+    }
+    if (!writeAssign && (analysis.op1.what & analysis.Write)) {
+      writeAssign = get(analysis.op1.assign);
+      writeActionCond = analysis.op1.what;
+    }
+    if (!writeAssign) {
+      mlir::emitError(loc,
+                      "internal error: atomic compare has no write assignment");
+      return;
+    }
+    assert((writeActionCond & analysis.IfTrue) &&
+           "atomic compare write should be conditioned on IfTrue");
+
+    // Generate new/desired value of x e.g. x = d
+    mlir::Value desiredVal =
+        fir::getBase(converter.genExprValue(writeAssign->rhs, stmtCtx, &loc));
+    if (desiredVal.getType() != elemTypeOfX)
+      desiredVal = builder.createConvert(loc, elemTypeOfX, desiredVal);
+    mlir::Value newVal = mlir::arith::SelectOp::create(builder, loc, cmpResult,
+                                                       desiredVal, blockArg);
+
+    // Generate omp.yield
+    mlir::omp::YieldOp::create(builder, loc, newVal);
+    builder.setInsertionPointAfter(atomicOp);
+
+    // END omp atomic compare
   } else {
-    int action0 = analysis.op0.what & analysis.Action;
-    int action1 = analysis.op1.what & analysis.Action;
     mlir::Operation *captureOp = nullptr;
     fir::FirOpBuilder::InsertPoint preAt = builder.saveInsertionPoint();
     fir::FirOpBuilder::InsertPoint atomicAt, postAt;

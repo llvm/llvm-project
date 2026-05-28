@@ -7,15 +7,11 @@
 
 @gv.fptr0 = external hidden unnamed_addr addrspace(4) constant ptr, align 4
 
-; GCN-LABEL: unreachable:
-; Function info:
-; codeLenInByte = 4
 define internal fastcc void @unreachable() {
   %fptr = load ptr, ptr addrspace(4) @gv.fptr0
   call void %fptr()
   unreachable
 }
-
 
 ; GCN-LABEL: entry:
 ; GCN-NOT: s_swappc_b64
@@ -23,8 +19,8 @@ define internal fastcc void @unreachable() {
 
 ; GCN-NOT: .amdhsa_uses_dynamic_stack
 ; GCN-V5: .amdhsa_uses_dynamic_stack
-; ALL: .set entry.private_seg_size, 0
-; ALL: .set entry.has_dyn_sized_stack, 0
+; ALL: .set .Lentry.private_seg_size, 0
+; ALL: .set .Lentry.has_dyn_sized_stack, 0
 define amdgpu_kernel void @entry() {
 bb0:
   br i1 false, label %bb1, label %bb2

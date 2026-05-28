@@ -533,6 +533,24 @@ def LLVM_DIRecursiveTypeAttrInterface
   ];
 }
 
+def LLVM_LLVMAddrSpaceAttrInterface :
+    AttrInterface<"LLVMAddrSpaceAttrInterface"> {
+  let description = [{
+    An interface for attributes that represent LLVM address spaces.
+    Implementing attributes should provide access to the address space value
+    as an unsigned integer.
+  }];
+  let cppNamespace = "::mlir::LLVM";
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the address space as an unsigned integer.",
+      /*retTy=*/"unsigned",
+      /*methodName=*/"getAddressSpace",
+      /*args=*/(ins)
+    >
+  ];
+}
+
 def LLVM_TargetAttrInterface
   : AttrInterface<"TargetAttrInterface", [DLTIQueryInterface]> {
   let description = [{

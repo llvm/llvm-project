@@ -25,6 +25,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include <cassert>
@@ -64,6 +65,8 @@ protected:
   /// A worklist of the instructions that need to be simplified.
   InstructionWorklist &Worklist;
 
+  Function &F;
+
   // Mode in which we are running the combiner.
   const bool MinimizeSize;
 
@@ -98,17 +101,17 @@ protected:
   bool ComputedBackEdges = false;
 
 public:
-  InstCombiner(InstructionWorklist &Worklist, BuilderTy &Builder,
-               bool MinimizeSize, AAResults *AA, AssumptionCache &AC,
-               TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
-               DominatorTree &DT, OptimizationRemarkEmitter &ORE,
-               BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
-               ProfileSummaryInfo *PSI, const DataLayout &DL,
+  InstCombiner(InstructionWorklist &Worklist, BuilderTy &Builder, Function &F,
+               AAResults *AA, AssumptionCache &AC, TargetLibraryInfo &TLI,
+               TargetTransformInfo &TTI, DominatorTree &DT,
+               OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
+               BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
+               const DataLayout &DL,
                ReversePostOrderTraversal<BasicBlock *> &RPOT)
       : TTIForTargetIntrinsicsOnly(TTI), Builder(Builder), Worklist(Worklist),
-        MinimizeSize(MinimizeSize), AA(AA), AC(AC), TLI(TLI), DT(DT), DL(DL),
-        SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
-           /*CanUseUndef*/ true, &DC),
+        F(F), MinimizeSize(F.hasMinSize()), AA(AA), AC(AC), TLI(TLI), DT(DT),
+        DL(DL), SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
+                   /*CanUseUndef*/ true, &DC),
         ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), RPOT(RPOT) {}
 
   virtual ~InstCombiner() = default;
@@ -144,9 +147,9 @@ public:
     if (isa<Constant>(V))
       return isa<UndefValue>(V) ? 0 : 1;
 
-    if (isa<CastInst>(V) || match(V, m_Neg(PatternMatch::m_Value())) ||
-        match(V, m_Not(PatternMatch::m_Value())) ||
-        match(V, m_FNeg(PatternMatch::m_Value())))
+    using namespace llvm::PatternMatch;
+    if (isa<CastInst>(V) || match(V, m_Neg(m_Value())) ||
+        match(V, m_Not(m_Value())) || match(V, m_FNeg(m_Value())))
       return 2;
 
     return 3;
@@ -202,9 +205,9 @@ public:
   /// dereferenceable).
   /// If the inversion will consume instructions, `DoesConsume` will be set to
   /// true. Otherwise it will be false.
-  Value *getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
-                                      BuilderTy *Builder, bool &DoesConsume,
-                                      unsigned Depth);
+  LLVM_ABI Value *getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
+                                        BuilderTy *Builder, bool &DoesConsume,
+                                        unsigned Depth);
 
   Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
                                   BuilderTy *Builder, bool &DoesConsume) {
@@ -255,12 +258,12 @@ public:
         if (shouldAvoidAbsorbingNotIntoSelect(*cast<SelectInst>(I)))
           return false;
         break;
-      case Instruction::Br:
+      case Instruction::CondBr:
         assert(U.getOperandNo() == 0 && "Must be branching on that value.");
         break; // Free to invert by swapping true/false values/destinations.
       case Instruction::Xor: // Can invert 'xor' if it's a 'not', by ignoring
                              // it.
-        if (!match(I, m_Not(PatternMatch::m_Value())))
+        if (!match(I, PatternMatch::m_Not(PatternMatch::m_Value())))
           return false; // Not a 'not'.
         break;
       default:
@@ -329,6 +332,17 @@ public:
     return ConstantVector::get(Out);
   }
 
+  /// Ignore all operations which only change the sign of a value, returning the
+  /// underlying magnitude value.
+  static Value *stripSignOnlyFPOps(Value *Val) {
+    using namespace llvm::PatternMatch;
+
+    match(Val, m_FNeg(m_Value(Val)));
+    match(Val, m_FAbs(m_Value(Val)));
+    match(Val, m_CopySign(m_Value(Val), m_Value()));
+    return Val;
+  }
+
   void addToWorklist(Instruction *I) { Worklist.push(I); }
 
   AssumptionCache &getAssumptionCache() const { return AC; }
@@ -343,18 +357,19 @@ public:
   ProfileSummaryInfo *getProfileSummaryInfo() const { return PSI; }
 
   // Call target specific combiners
-  std::optional<Instruction *> targetInstCombineIntrinsic(IntrinsicInst &II);
-  std::optional<Value *>
+  LLVM_ABI std::optional<Instruction *>
+  targetInstCombineIntrinsic(IntrinsicInst &II);
+  LLVM_ABI std::optional<Value *>
   targetSimplifyDemandedUseBitsIntrinsic(IntrinsicInst &II, APInt DemandedMask,
                                          KnownBits &Known,
                                          bool &KnownBitsComputed);
-  std::optional<Value *> targetSimplifyDemandedVectorEltsIntrinsic(
+  LLVM_ABI std::optional<Value *> targetSimplifyDemandedVectorEltsIntrinsic(
       IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
       APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp);
 
-  void computeBackEdges();
+  LLVM_ABI void computeBackEdges();
   bool isBackEdge(const BasicBlock *From, const BasicBlock *To) {
     if (!ComputedBackEdges)
       computeBackEdges();
@@ -465,6 +480,13 @@ public:
     return llvm::ComputeMaxSignificantBits(Op, DL, &AC, CxtI, &DT, Depth);
   }
 
+  /// Return true if the cast from integer to FP can be proven to be exact
+  /// for all possible inputs (the conversion does not lose any precision).
+  LLVM_ABI bool isKnownExactCastIntToFP(CastInst &I) const;
+  LLVM_ABI bool
+  canBeCastedExactlyIntToFP(Value *V, Type *FPTy, bool IsSigned,
+                            const Instruction *CxtI = nullptr) const;
+
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
                                                const Value *RHS,
                                                const Instruction *CxtI,
@@ -524,7 +546,7 @@ public:
                              unsigned Depth = 0,
                              bool AllowMultipleUsers = false) = 0;
 
-  bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
+  LLVM_ABI bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
 };
 
 } // namespace llvm

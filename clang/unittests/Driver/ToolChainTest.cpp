@@ -17,6 +17,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -442,7 +443,7 @@ TEST(ToolChainTest, ParsedClangName) {
 TEST(ToolChainTest, GetTargetAndMode) {
   llvm::InitializeAllTargets();
   std::string IgnoredError;
-  if (!llvm::TargetRegistry::lookupTarget("x86_64", IgnoredError))
+  if (!llvm::TargetRegistry::lookupTarget(llvm::Triple("x86_64"), IgnoredError))
     GTEST_SKIP();
 
   ParsedClangName Res = ToolChain::getTargetAndModeFromProgramName("clang");
@@ -579,7 +580,8 @@ TEST(CompilerInvocation, SplitSwarfSingleCrash) {
 
 TEST(ToolChainTest, UEFICallingConventionTest) {
   clang::CompilerInstance compiler;
-  compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  compiler.createDiagnostics();
 
   std::string TrStr = "x86_64-unknown-uefi";
   llvm::Triple Tr(TrStr);
@@ -838,10 +840,14 @@ TEST(ToolChainTest, ConfigInexistentInclude) {
     ASSERT_TRUE(C);
     ASSERT_TRUE(C->containsError());
     EXPECT_EQ(1U, DiagConsumer->Errors.size());
-    EXPECT_STRCASEEQ("cannot read configuration file '" USERCONFIG
-                     "': cannot not open file '" UNEXISTENT
-                     "': no such file or directory",
-                     DiagConsumer->Errors[0].c_str());
+    // Expected path style in diagnostics depends on
+    // LLVM_WINDOWS_PREFER_FORWARD_SLASH. Construct the expected string
+    // dynamically to match the native path style.
+    std::string ExpectedError =
+        "cannot read configuration file '" +
+        llvm::sys::path::native(USERCONFIG) + "': cannot not open file '" +
+        llvm::sys::path::native(UNEXISTENT) + "': no such file or directory";
+    EXPECT_STRCASEEQ(ExpectedError.c_str(), DiagConsumer->Errors[0].c_str());
   }
 
 #undef USERCONFIG
@@ -884,9 +890,14 @@ TEST(ToolChainTest, ConfigRecursiveInclude) {
     ASSERT_TRUE(C);
     ASSERT_TRUE(C->containsError());
     EXPECT_EQ(1U, DiagConsumer->Errors.size());
-    EXPECT_STREQ("cannot read configuration file '" USERCONFIG
-                 "': recursive expansion of: '" INCLUDED1 "'",
-                 DiagConsumer->Errors[0].c_str());
+    // Expected path style in diagnostics depends on
+    // LLVM_WINDOWS_PREFER_FORWARD_SLASH. Construct the expected string
+    // dynamically to match the native path style.
+    std::string ExpectedError = "cannot read configuration file '" +
+                                llvm::sys::path::native(USERCONFIG) +
+                                "': recursive expansion of: '" +
+                                llvm::sys::path::native(INCLUDED1) + "'";
+    EXPECT_STRCASEEQ(ExpectedError.c_str(), DiagConsumer->Errors[0].c_str());
   }
 
 #undef USERCONFIG

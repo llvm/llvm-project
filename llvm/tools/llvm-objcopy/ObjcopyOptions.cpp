@@ -16,6 +16,7 @@
 #include "llvm/ObjCopy/ConfigManager.h"
 #include "llvm/ObjCopy/MachO/MachOConfig.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/OffloadBundle.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CRC.h"
@@ -160,6 +161,41 @@ public:
   StripOptTable()
       : GenericOptTable(strip::OptionStrTable, strip::OptionPrefixesTable,
                         strip::StripInfoTable) {
+    setGroupedShortOptions(true);
+  }
+};
+
+enum ExtractBundleEntryID {
+  EXTRACT_BUNDLE_ENTRY_INVALID = 0, // This is not an option ID.
+#define OPTION(...)                                                            \
+  LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(EXTRACT_BUNDLE_ENTRY_, __VA_ARGS__),
+#include "ExtractBundleEntryOpts.inc"
+#undef OPTION
+};
+
+namespace extract_bundle_entry {
+#define OPTTABLE_STR_TABLE_CODE
+#include "ExtractBundleEntryOpts.inc"
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "ExtractBundleEntryOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
+
+static constexpr opt::OptTable::Info ExtractBundleEntryInfoTable[] = {
+#define OPTION(...)                                                            \
+  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(EXTRACT_BUNDLE_ENTRY_, __VA_ARGS__),
+#include "ExtractBundleEntryOpts.inc"
+#undef OPTION
+};
+} // namespace extract_bundle_entry
+
+class ExtractBundleEntryOptTable : public opt::GenericOptTable {
+public:
+  ExtractBundleEntryOptTable()
+      : GenericOptTable(extract_bundle_entry::OptionStrTable,
+                        extract_bundle_entry::OptionPrefixesTable,
+                        extract_bundle_entry::ExtractBundleEntryInfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -418,7 +454,13 @@ template <class T> static ErrorOr<T> getAsInteger(StringRef Val) {
 
 namespace {
 
-enum class ToolType { Objcopy, Strip, InstallNameTool, BitcodeStrip };
+enum class ToolType {
+  Objcopy,
+  Strip,
+  InstallNameTool,
+  BitcodeStrip,
+  ExtractBundleEntry
+};
 
 } // anonymous namespace
 
@@ -441,6 +483,10 @@ static void printHelp(const opt::OptTable &OptTable, raw_ostream &OS,
   case ToolType::BitcodeStrip:
     ToolName = "llvm-bitcode-strip";
     HelpText = " [options] input";
+    break;
+  case ToolType::ExtractBundleEntry:
+    ToolName = "llvm-extract-bundle-entry";
+    HelpText = " URI";
     break;
   }
   OptTable.printHelp(OS, (ToolName + HelpText).str().c_str(),
@@ -811,16 +857,17 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
             .Case("boot_application",
                   COFF::IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION)
             .Case("console", COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI)
-            .Cases("efi_application", "efi-app",
+            .Cases({"efi_application", "efi-app"},
                    COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION)
-            .Cases("efi_boot_service_driver", "efi-bsd",
+            .Cases({"efi_boot_service_driver", "efi-bsd"},
                    COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
             .Case("efi_rom", COFF::IMAGE_SUBSYSTEM_EFI_ROM)
-            .Cases("efi_runtime_driver", "efi-rtd",
+            .Cases({"efi_runtime_driver", "efi-rtd"},
                    COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
             .Case("native", COFF::IMAGE_SUBSYSTEM_NATIVE)
             .Case("posix", COFF::IMAGE_SUBSYSTEM_POSIX_CUI)
             .Case("windows", COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI)
+            .Case("xbox", COFF::IMAGE_SUBSYSTEM_XBOX)
             .Default(COFF::IMAGE_SUBSYSTEM_UNKNOWN);
     if (*COFFConfig.Subsystem == COFF::IMAGE_SUBSYSTEM_UNKNOWN)
       return createStringError(errc::invalid_argument,
@@ -1669,4 +1716,49 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
                              "--preserve-dates requires a file");
 
   return std::move(DC);
+}
+
+Error llvm::objcopy::runExtractBundleEntry(
+    const SmallVectorImpl<StringRef> &Args) {
+  for (StringRef Input : Args)
+    if (Error Err = object::extractOffloadBundleByURI(Input))
+      return Err;
+
+  return Error::success();
+}
+
+Expected<SmallVector<StringRef>>
+objcopy::parseExtractBundleEntryOptions(ArrayRef<const char *> ArgsArr) {
+  ExtractBundleEntryOptTable T;
+  unsigned MissingArgumentIndex, MissingArgumentCount;
+  opt::InputArgList InputArgs =
+      T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
+
+  if (InputArgs.size() == 0) {
+    printHelp(T, errs(), ToolType::ExtractBundleEntry);
+    exit(1);
+  }
+
+  if (InputArgs.hasArg(EXTRACT_BUNDLE_ENTRY_help)) {
+    printHelp(T, outs(), ToolType::ExtractBundleEntry);
+    exit(0);
+  }
+
+  if (InputArgs.hasArg(EXTRACT_BUNDLE_ENTRY_version)) {
+    outs() << "llvm-extract-bundle-entry\n";
+    cl::PrintVersionMessage();
+    exit(0);
+  }
+
+  for (auto *Arg : InputArgs.filtered(EXTRACT_BUNDLE_ENTRY_UNKNOWN))
+    return createStringError(errc::invalid_argument, "unknown argument '%s'",
+                             Arg->getAsString(InputArgs).c_str());
+
+  SmallVector<StringRef> Arguments;
+
+  for (auto *Arg : InputArgs.filtered(EXTRACT_BUNDLE_ENTRY_INPUT))
+    Arguments.push_back(Arg->getValue());
+  assert(!Arguments.empty());
+
+  return Arguments;
 }

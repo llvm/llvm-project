@@ -15,7 +15,8 @@
 namespace llvm {
 
 class Function;
-class GCNSubtarget;
+
+enum class LitModifier { None, Lit, Lit64 };
 
 /// AMDGPU target specific MCExpr operations.
 ///
@@ -36,7 +37,10 @@ public:
     AGVK_ExtraSGPRs,
     AGVK_TotalNumVGPRs,
     AGVK_AlignTo,
-    AGVK_Occupancy
+    AGVK_Occupancy,
+    AGVK_InstPrefSize,
+    AGVK_Lit,
+    AGVK_Lit64,
   };
 
   // Relocation specifiers.
@@ -60,12 +64,13 @@ private:
   ArrayRef<const MCExpr *> Args;
 
   AMDGPUMCExpr(VariantKind Kind, ArrayRef<const MCExpr *> Args, MCContext &Ctx);
-  ~AMDGPUMCExpr();
+  ~AMDGPUMCExpr() override;
 
   bool evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm) const;
   bool evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm) const;
   bool evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const;
   bool evaluateOccupancy(MCValue &Res, const MCAssembler *Asm) const;
+  bool evaluateInstPrefSize(MCValue &Res, const MCAssembler *Asm) const;
 
 public:
   static const AMDGPUMCExpr *
@@ -94,13 +99,18 @@ public:
     return create(VariantKind::AGVK_AlignTo, {Value, Align}, Ctx);
   }
 
-  static const AMDGPUMCExpr *
-  createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
-                  const MCExpr *NumVGPRs, unsigned DynamicVGPRBlockSize,
-                  const GCNSubtarget &STM, MCContext &Ctx);
+  /// Create an expression for instruction prefetch size computation:
+  /// min(divideCeil(CodeSizeBytes, CacheLineSize), (1 << FieldWidth) - 1)
+  /// FieldWidth and CacheLineSize are derived from the subtarget.
+  static const AMDGPUMCExpr *createInstPrefSize(const MCExpr *CodeSizeBytes,
+                                                MCContext &Ctx);
+
+  static const AMDGPUMCExpr *createLit(LitModifier Lit, int64_t Value,
+                                       MCContext &Ctx);
 
   ArrayRef<const MCExpr *> getArgs() const { return Args; }
   VariantKind getKind() const { return Kind; }
+  MCContext &getCtx() const { return Ctx; }
   const MCExpr *getSubExpr(size_t Index) const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
@@ -129,6 +139,13 @@ const MCExpr *foldAMDGPUMCExpr(const MCExpr *Expr, MCContext &Ctx);
 static inline AMDGPUMCExpr::Specifier getSpecifier(const MCSymbolRefExpr *SRE) {
   return AMDGPUMCExpr::Specifier(SRE->getKind());
 }
+
+LLVM_READONLY bool isLitExpr(const MCExpr *Expr);
+
+LLVM_READONLY int64_t getLitValue(const MCExpr *Expr);
+
+LLVM_READONLY AMDGPUMCExpr::VariantKind getExprKind(const MCExpr *Expr);
+
 } // end namespace AMDGPU
 } // end namespace llvm
 

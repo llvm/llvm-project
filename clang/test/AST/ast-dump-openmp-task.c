@@ -8,7 +8,7 @@ void test(void) {
 }
 
 // CHECK: TranslationUnitDecl {{.*}} <<invalid sloc>> <invalid sloc>
-// CHECK: `-FunctionDecl {{.*}} <line:4:1, line:8:1> line:4:6 test 'void (void)'
+// CHECK: `-FunctionDecl {{.*}} <line:4:1, line:8:1> line:4:6 test 'void (void)' external-linkage
 // CHECK-NEXT:   `-CompoundStmt {{.*}} <col:17, line:8:1>
 // CHECK:          `-OMPTaskDirective {{.*}} <line:6:1, col:29>
 // CHECK-NEXT:       |-OMPDetachClause {{.+}} <col:18, col:28>

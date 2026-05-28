@@ -1,4 +1,4 @@
-//===---------- ASTUtils.cpp - clang-tidy ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,13 +24,11 @@ const FunctionDecl *getSurroundingFunction(ASTContext &Context,
 
 bool isBinaryOrTernary(const Expr *E) {
   const Expr *EBase = E->IgnoreImpCasts();
-  if (isa<BinaryOperator>(EBase) || isa<ConditionalOperator>(EBase)) {
+  if (isa<BinaryOperator>(EBase) || isa<ConditionalOperator>(EBase))
     return true;
-  }
 
-  if (const auto *Operator = dyn_cast<CXXOperatorCallExpr>(EBase)) {
+  if (const auto *Operator = dyn_cast<CXXOperatorCallExpr>(EBase))
     return Operator->isInfixBinaryOp();
-  }
 
   return false;
 }
@@ -67,7 +65,7 @@ bool rangeIsEntirelyWithinMacroArgument(SourceRange Range,
   // Check if the range is entirely contained within a macro argument.
   SourceLocation MacroArgExpansionStartForRangeBegin;
   SourceLocation MacroArgExpansionStartForRangeEnd;
-  bool RangeIsEntirelyWithinMacroArgument =
+  const bool RangeIsEntirelyWithinMacroArgument =
       SM &&
       SM->isMacroArgExpansion(Range.getBegin(),
                               &MacroArgExpansionStartForRangeBegin) &&
@@ -102,8 +100,8 @@ bool areStatementsIdentical(const Stmt *FirstStmt, const Stmt *SecondStmt,
   if (isa<Expr>(FirstStmt) && isa<Expr>(SecondStmt)) {
     // If we have errors in expressions, we will be unable
     // to accurately profile and compute hashes for each statements.
-    if (llvm::cast<Expr>(FirstStmt)->containsErrors() ||
-        llvm::cast<Expr>(SecondStmt)->containsErrors())
+    if (cast<Expr>(FirstStmt)->containsErrors() ||
+        cast<Expr>(SecondStmt)->containsErrors())
       return false;
   }
 

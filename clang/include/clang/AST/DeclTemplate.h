@@ -1128,16 +1128,9 @@ protected:
   unsigned Depth : DepthWidth;
   unsigned Position : PositionWidth;
 
-  static constexpr unsigned MaxDepth = (1U << DepthWidth) - 1;
-  static constexpr unsigned MaxPosition = (1U << PositionWidth) - 1;
-
-  TemplateParmPosition(unsigned D, unsigned P) : Depth(D), Position(P) {
-    // The input may fill maximum values to show that it is invalid.
-    // Add one here to convert it to zero.
-    assert((D + 1) <= MaxDepth &&
-           "The depth of template parmeter position is more than 2^20!");
-    assert((P + 1) <= MaxPosition &&
-           "The position of template parmeter position is more than 2^12!");
+  TemplateParmPosition(int D, int P) {
+    setDepth(D);
+    setPosition(P);
   }
 
 public:
@@ -1145,17 +1138,17 @@ public:
 
   /// Get the nesting depth of the template parameter.
   unsigned getDepth() const { return Depth; }
-  void setDepth(unsigned D) {
-    assert((D + 1) <= MaxDepth &&
-           "The depth of template parmeter position is more than 2^20!");
+  void setDepth(int D) {
+    assert(D >= 0 && "The depth cannot be negative");
+    assert(D < (1 << DepthWidth) && "The depth is too large");
     Depth = D;
   }
 
   /// Get the position of the template parameter within its parameter list.
   unsigned getPosition() const { return Position; }
-  void setPosition(unsigned P) {
-    assert((P + 1) <= MaxPosition &&
-           "The position of template parmeter position is more than 2^12!");
+  void setPosition(int P) {
+    assert(P >= 0 && "The position cannot be negative");
+    assert(P < (1 << PositionWidth) && "The position is too large");
     Position = P;
   }
 
@@ -1208,7 +1201,7 @@ class TemplateTypeParmDecl final : public TypeDecl,
 public:
   static TemplateTypeParmDecl *
   Create(const ASTContext &C, DeclContext *DC, SourceLocation KeyLoc,
-         SourceLocation NameLoc, unsigned D, unsigned P, IdentifierInfo *Id,
+         SourceLocation NameLoc, int D, int P, IdentifierInfo *Id,
          bool Typename, bool ParameterPack, bool HasTypeConstraint = false,
          UnsignedOrNone NumExpanded = std::nullopt);
   static TemplateTypeParmDecl *CreateDeserialized(const ASTContext &C,
@@ -1389,14 +1382,14 @@ class NonTypeTemplateParmDecl final
   }
 
   NonTypeTemplateParmDecl(DeclContext *DC, SourceLocation StartLoc,
-                          SourceLocation IdLoc, unsigned D, unsigned P,
+                          SourceLocation IdLoc, int D, int P,
                           const IdentifierInfo *Id, QualType T,
                           bool ParameterPack, TypeSourceInfo *TInfo)
       : DeclaratorDecl(NonTypeTemplateParm, DC, IdLoc, Id, T, TInfo, StartLoc),
         TemplateParmPosition(D, P), ParameterPack(ParameterPack) {}
 
   NonTypeTemplateParmDecl(DeclContext *DC, SourceLocation StartLoc,
-                          SourceLocation IdLoc, unsigned D, unsigned P,
+                          SourceLocation IdLoc, int D, int P,
                           const IdentifierInfo *Id, QualType T,
                           TypeSourceInfo *TInfo,
                           ArrayRef<QualType> ExpandedTypes,
@@ -1405,12 +1398,12 @@ class NonTypeTemplateParmDecl final
 public:
   static NonTypeTemplateParmDecl *
   Create(const ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
-         SourceLocation IdLoc, unsigned D, unsigned P, const IdentifierInfo *Id,
+         SourceLocation IdLoc, int D, int P, const IdentifierInfo *Id,
          QualType T, bool ParameterPack, TypeSourceInfo *TInfo);
 
   static NonTypeTemplateParmDecl *
   Create(const ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
-         SourceLocation IdLoc, unsigned D, unsigned P, const IdentifierInfo *Id,
+         SourceLocation IdLoc, int D, int P, const IdentifierInfo *Id,
          QualType T, TypeSourceInfo *TInfo, ArrayRef<QualType> ExpandedTypes,
          ArrayRef<TypeSourceInfo *> ExpandedTInfos);
 
@@ -1609,8 +1602,8 @@ class TemplateTemplateParmDecl final
   /// The number of parameters in an expanded parameter pack.
   unsigned NumExpandedParams = 0;
 
-  TemplateTemplateParmDecl(DeclContext *DC, SourceLocation L, unsigned D,
-                           unsigned P, bool ParameterPack, IdentifierInfo *Id,
+  TemplateTemplateParmDecl(DeclContext *DC, SourceLocation L, int D, int P,
+                           bool ParameterPack, IdentifierInfo *Id,
                            TemplateNameKind ParameterKind, bool Typename,
                            TemplateParameterList *Params)
       : TemplateDecl(TemplateTemplateParm, DC, L, Id, Params),
@@ -1618,10 +1611,9 @@ class TemplateTemplateParmDecl final
         Typename(Typename), ParameterPack(ParameterPack),
         ExpandedParameterPack(false) {}
 
-  TemplateTemplateParmDecl(DeclContext *DC, SourceLocation L, unsigned D,
-                           unsigned P, IdentifierInfo *Id,
-                           TemplateNameKind ParameterKind, bool Typename,
-                           TemplateParameterList *Params,
+  TemplateTemplateParmDecl(DeclContext *DC, SourceLocation L, int D, int P,
+                           IdentifierInfo *Id, TemplateNameKind ParameterKind,
+                           bool Typename, TemplateParameterList *Params,
                            ArrayRef<TemplateParameterList *> Expansions);
 
   void anchor() override;
@@ -1632,15 +1624,14 @@ public:
   friend TrailingObjects;
 
   static TemplateTemplateParmDecl *
-  Create(const ASTContext &C, DeclContext *DC, SourceLocation L, unsigned D,
-         unsigned P, bool ParameterPack, IdentifierInfo *Id,
-         TemplateNameKind ParameterKind, bool Typename,
-         TemplateParameterList *Params);
+  Create(const ASTContext &C, DeclContext *DC, SourceLocation L, int D, int P,
+         bool ParameterPack, IdentifierInfo *Id, TemplateNameKind ParameterKind,
+         bool Typename, TemplateParameterList *Params);
 
   static TemplateTemplateParmDecl *
-  Create(const ASTContext &C, DeclContext *DC, SourceLocation L, unsigned D,
-         unsigned P, IdentifierInfo *Id, TemplateNameKind ParameterKind,
-         bool Typename, TemplateParameterList *Params,
+  Create(const ASTContext &C, DeclContext *DC, SourceLocation L, int D, int P,
+         IdentifierInfo *Id, TemplateNameKind ParameterKind, bool Typename,
+         TemplateParameterList *Params,
          ArrayRef<TemplateParameterList *> Expansions);
 
   static TemplateTemplateParmDecl *CreateDeserialized(ASTContext &C,
@@ -3395,9 +3386,150 @@ inline UnsignedOrNone getExpandedPackSize(const NamedDecl *Param) {
   return std::nullopt;
 }
 
-/// Internal helper used by Subst* nodes to retrieve the parameter list
-/// for their AssociatedDecl.
-TemplateParameterList *getReplacedTemplateParameterList(const Decl *D);
+/// Internal helper used by Subst* nodes to retrieve a parameter from the
+/// AssociatedDecl, and the template argument substituted into it, if any.
+std::tuple<NamedDecl *, TemplateArgument>
+getReplacedTemplateParameter(Decl *D, unsigned Index);
+
+/// If we have a 'templated' declaration for a template, adjust 'D' to
+/// refer to the actual template.
+/// If we have an implicit instantiation, adjust 'D' to refer to template.
+const Decl &adjustDeclToTemplate(const Decl &D);
+
+/// Represents an explicit instantiation of a template entity in source code.
+///
+/// \code
+///   template void ns::foo<int>(int);        // function template
+///   extern template struct ns::S<int>;      // class template (extern)
+///   template int ns::bar<int>;              // variable template
+///   template void ns::S<int>::method(int);  // member function
+/// \endcode
+class ExplicitInstantiationDecl final
+    : public Decl,
+      private llvm::TrailingObjects<ExplicitInstantiationDecl,
+                                    NestedNameSpecifierLoc,
+                                    const ASTTemplateArgumentListInfo *> {
+  friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+  friend TrailingObjects;
+
+  /// The underlying specialization (low 3 bits: TSK).
+  llvm::PointerIntPair<NamedDecl *, 3, unsigned> SpecAndTSK;
+
+  /// TypeSourceInfo (low 2 bits: trailing-object flags).
+  /// Always non-null after construction.
+  ///   - Class templates: TemplateSpecializationTypeLoc encoding keyword,
+  ///     qualifier, template-name, and argument locations.
+  ///   - Nested classes: TagTypeLoc encoding keyword, qualifier, and name.
+  ///   - Function / variable templates: the declared type.
+  llvm::PointerIntPair<TypeSourceInfo *, 2, unsigned> TypeAndFlags;
+
+  /// Location of the 'extern' keyword (invalid if not extern template).
+  SourceLocation ExternLoc;
+
+  /// Location of the entity name (e.g., 'foo' in 'template void
+  /// ns::foo<int>(int)').
+  SourceLocation NameLoc;
+
+  enum TrailingFlags : unsigned {
+    HasQualifierFlag = 1,
+    HasArgsAsWrittenFlag = 2,
+  };
+
+  size_t numTrailingObjects(OverloadToken<NestedNameSpecifierLoc>) const {
+    return hasTrailingQualifier() ? 1 : 0;
+  }
+
+  /// For class templates / nested classes, returns the TypeLoc encoding the
+  /// entity (TemplateSpecializationTypeLoc or TagTypeLoc).  For function /
+  /// variable templates -- where TypeSourceInfo holds the declared type
+  /// rather than the entity -- returns std::nullopt.
+  std::optional<TypeLoc> getClassTypeLoc() const {
+    if (!isa<RecordDecl>(getSpecialization()))
+      return std::nullopt;
+    if (auto *TSI = TypeAndFlags.getPointer())
+      return TSI->getTypeLoc();
+    return std::nullopt;
+  }
+
+  /// Raw TypeSourceInfo pointer, needed by the serializer.
+  TypeSourceInfo *getRawTypeSourceInfo() const {
+    return TypeAndFlags.getPointer();
+  }
+
+  /// Returns the trailing ASTTemplateArgumentListInfo pointer, or null.
+  const ASTTemplateArgumentListInfo *getTrailingArgsInfo() const {
+    if (!hasTrailingArgsAsWritten())
+      return nullptr;
+    return *getTrailingObjects<const ASTTemplateArgumentListInfo *>();
+  }
+
+  ExplicitInstantiationDecl(
+      DeclContext *DC, NamedDecl *Specialization, SourceLocation ExternLoc,
+      SourceLocation TemplateLoc, NestedNameSpecifierLoc QualifierLoc,
+      const ASTTemplateArgumentListInfo *ArgsAsWritten, SourceLocation NameLoc,
+      TypeSourceInfo *TypeAsWritten, TemplateSpecializationKind TSK);
+
+  ExplicitInstantiationDecl(EmptyShell Empty)
+      : Decl(ExplicitInstantiation, Empty) {}
+
+public:
+  static ExplicitInstantiationDecl *
+  Create(ASTContext &C, DeclContext *DC, NamedDecl *Specialization,
+         SourceLocation ExternLoc, SourceLocation TemplateLoc,
+         NestedNameSpecifierLoc QualifierLoc,
+         const ASTTemplateArgumentListInfo *ArgsAsWritten,
+         SourceLocation NameLoc, TypeSourceInfo *TypeAsWritten,
+         TemplateSpecializationKind TSK);
+
+  static ExplicitInstantiationDecl *
+  CreateDeserialized(ASTContext &C, GlobalDeclID ID, unsigned TrailingFlags);
+
+  NamedDecl *getSpecialization() const { return SpecAndTSK.getPointer(); }
+
+  SourceRange getSourceRange() const override LLVM_READONLY;
+  SourceLocation getEndLoc() const LLVM_READONLY;
+
+  SourceLocation getExternLoc() const { return ExternLoc; }
+  SourceLocation getTemplateLoc() const { return getLocation(); }
+  SourceLocation getNameLoc() const { return NameLoc; }
+
+  /// The tag keyword (struct/class/union) location for class templates /
+  /// nested classes; invalid for function / variable templates.
+  SourceLocation getTagKWLoc() const;
+
+  bool hasTrailingQualifier() const {
+    return TypeAndFlags.getInt() & HasQualifierFlag;
+  }
+  bool hasTrailingArgsAsWritten() const {
+    return TypeAndFlags.getInt() & HasArgsAsWrittenFlag;
+  }
+
+  /// Returns the qualifier regardless of where it is stored.
+  /// For class templates / nested classes, extracted from the class TypeLoc;
+  /// for function / variable templates, from a trailing object.
+  NestedNameSpecifierLoc getQualifierLoc() const;
+
+  /// Returns the number of explicit template arguments, or std::nullopt if
+  /// this entity has no template argument list (e.g., nested classes).
+  std::optional<unsigned> getNumTemplateArgs() const;
+  TemplateArgumentLoc getTemplateArg(unsigned I) const;
+  SourceLocation getTemplateArgsLAngleLoc() const;
+  SourceLocation getTemplateArgsRAngleLoc() const;
+
+  /// The declared type (return type or variable type) for function / variable
+  /// templates.  Null for class templates and nested classes.
+  TypeSourceInfo *getTypeAsWritten() const;
+
+  TemplateSpecializationKind getTemplateSpecializationKind() const {
+    return static_cast<TemplateSpecializationKind>(SpecAndTSK.getInt());
+  }
+
+  bool isExternTemplate() const { return ExternLoc.isValid(); }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == ExplicitInstantiation; }
+};
 
 } // namespace clang
 

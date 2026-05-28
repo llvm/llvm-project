@@ -195,6 +195,36 @@ func.func @assume_alignment(%0 : memref<4x4xf16>) {
 
 // -----
 
+// ALL-LABEL: func @distinct_objects
+//  ALL-SAME:   (%[[ARG0:.*]]: memref<?xf16>, %[[ARG1:.*]]: memref<?xf32>, %[[ARG2:.*]]: memref<?xf64>)
+func.func @distinct_objects(%arg0: memref<?xf16>, %arg1: memref<?xf32>, %arg2: memref<?xf64>) -> (memref<?xf16>, memref<?xf32>, memref<?xf64>) {
+//   ALL-DAG:   %[[CAST_0:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<?xf16> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+//   ALL-DAG:   %[[CAST_1:.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : memref<?xf32> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+//   ALL-DAG:   %[[CAST_2:.*]] = builtin.unrealized_conversion_cast %[[ARG2]] : memref<?xf64> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+//       ALL:   %[[PTR_0:.*]] = llvm.extractvalue %[[CAST_0]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+//       ALL:   %[[PTR_1:.*]] = llvm.extractvalue %[[CAST_1]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+//       ALL:   %[[PTR_2:.*]] = llvm.extractvalue %[[CAST_2]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+//       ALL:   %[[TRUE:.*]] = llvm.mlir.constant(true) : i1
+//       ALL:   llvm.intr.assume %[[TRUE]] ["separate_storage"(%[[PTR_0]], %[[PTR_1]] : !llvm.ptr, !llvm.ptr)] : i1
+//       ALL:   llvm.intr.assume %[[TRUE]] ["separate_storage"(%[[PTR_0]], %[[PTR_2]] : !llvm.ptr, !llvm.ptr)] : i1
+//       ALL:   llvm.intr.assume %[[TRUE]] ["separate_storage"(%[[PTR_1]], %[[PTR_2]] : !llvm.ptr, !llvm.ptr)] : i1
+  %1, %2, %3 = memref.distinct_objects %arg0, %arg1, %arg2 : memref<?xf16>, memref<?xf32>, memref<?xf64>
+  return %1, %2, %3 : memref<?xf16>, memref<?xf32>, memref<?xf64>
+}
+
+// -----
+
+// ALL-LABEL: func @distinct_objects_noop
+//  ALL-SAME:   (%[[ARG0:.*]]: memref<?xf16>)
+func.func @distinct_objects_noop(%arg0: memref<?xf16>) -> memref<?xf16> {
+// 1-operand version is noop
+//  ALL-NEXT:   return %[[ARG0]]
+  %1 = memref.distinct_objects %arg0 : memref<?xf16>
+  return %1 : memref<?xf16>
+}
+
+// -----
+
 // CHECK-LABEL: func @assume_alignment_w_offset
 // CHECK-INTERFACE-LABEL: func @assume_alignment_w_offset
 func.func @assume_alignment_w_offset(%0 : memref<4x4xf16, strided<[?, ?], offset: ?>>) {
@@ -517,6 +547,37 @@ llvm.func @generic_atomic_rmw() {
 
 // -----
 
+// CHECK-LABEL: func @generic_atomic_rmw_f16
+// CHECK-INTERFACE-LABEL: func @generic_atomic_rmw_f16
+llvm.func @generic_atomic_rmw_f16() {
+  %I = "test.foo"() : () -> (memref<10xf16>)
+  %i = "test.foo"() : () -> (index)
+  %x = memref.generic_atomic_rmw %I[%i] : memref<10xf16> {
+    ^bb0(%old_value : f16):
+      memref.atomic_yield %old_value : f16
+  }
+  llvm.return
+}
+// `llvm.cmpxchg` only accepts integer/pointer operands, so floating-point
+// values are bitcast to a same-width integer for the CAS and bitcast back.
+// CHECK:        %[[INIT:.*]] = llvm.load %{{.*}} : !llvm.ptr -> f16
+// CHECK-NEXT:   %[[INIT_INT:.*]] = llvm.bitcast %[[INIT]] : f16 to i16
+// CHECK-NEXT:   llvm.br ^bb1(%[[INIT_INT]] : i16)
+// CHECK-NEXT: ^bb1(%[[LOADED:.*]]: i16):
+// CHECK-NEXT:   %[[LOADED_F16:.*]] = llvm.bitcast %[[LOADED]] : i16 to f16
+// CHECK-NEXT:   %[[RES_INT:.*]] = llvm.bitcast %[[LOADED_F16]] : f16 to i16
+// CHECK-NEXT:   %[[PAIR:.*]] = llvm.cmpxchg %{{.*}}, %[[LOADED]], %[[RES_INT]]
+// CHECK-SAME:                      acq_rel monotonic : !llvm.ptr, i16
+// CHECK-NEXT:   %[[NEW:.*]] = llvm.extractvalue %[[PAIR]][0]
+// CHECK-NEXT:   %[[OK:.*]] = llvm.extractvalue %[[PAIR]][1]
+// CHECK-NEXT:   llvm.cond_br %[[OK]], ^bb2, ^bb1(%[[NEW]] : i16)
+// CHECK-NEXT: ^bb2:
+// CHECK-NEXT:   %{{.*}} = llvm.bitcast %[[NEW]] : i16 to f16
+
+// CHECK-INTERFACE: llvm.cmpxchg
+
+// -----
+
 // CHECK-LABEL: func @generic_atomic_rmw_in_alloca_scope
 // CHECK-INTERFACE-LABEL: func @generic_atomic_rmw_in_alloca_scope
 llvm.func @generic_atomic_rmw_in_alloca_scope() {
@@ -798,5 +859,19 @@ func.func @alloca_unconvertable_memory_space() {
   // CHECK: memref.alloca
   // CHECK-INTERFACE: memref.alloca
   %alloca = memref.alloca() : memref<1x32x33xi32, #spirv.storage_class<StorageBuffer>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @alloca_huge(
+func.func @alloca_huge(%arg0 : index) {
+  // CHECK: %[[D0:.*]] = llvm.mlir.constant(9223372036854775807 : index) : i64
+  // CHECK: %[[D1:.*]] = llvm.mlir.constant(3 : index) : i64
+  // CHECK: %[[C1:.*]] = llvm.mlir.constant(1 : index) : i64
+  // CHECK: %[[NUMELTS:.*]] = llvm.mlir.poison : i64
+  // CHECK: llvm.alloca %[[NUMELTS]] x i32 : (i64) -> !llvm.ptr
+  %1 = memref.alloca() : memref<9223372036854775807x3xi32>
+
   func.return
 }

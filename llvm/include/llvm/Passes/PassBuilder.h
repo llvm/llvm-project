@@ -23,6 +23,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/PGOOptions.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/Inliner.h"
 #include "llvm/Transforms/IPO/ModuleInliner.h"
@@ -35,10 +36,6 @@ class StringRef;
 class AAManager;
 class TargetMachine;
 class ModuleSummaryIndex;
-template <typename T> class IntrusiveRefCntPtr;
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 /// Tunable parameters for passes in the default pipelines.
 class PipelineTuningOptions {
@@ -64,6 +61,9 @@ public:
   /// Tuning option to enable/disable loop interchange. Its default value is
   /// false.
   bool LoopInterchange;
+
+  /// Tuning option to enable/disable loop fusion. Its default value is false.
+  bool LoopFusion;
 
   /// Tuning option to forget all SCEV loops in LoopUnroll. Its default value
   /// is that of the flag: `-forget-scev-loop-unroll`.
@@ -99,6 +99,10 @@ public:
   // analyses after various module->function or cgscc->function adaptors in the
   // default pipelines.
   bool EagerlyInvalidateAnalyses;
+
+  // Tuning option to enable/disable speculative devirtualization.
+  // Its default value is false.
+  bool DevirtualizeSpeculatively;
 };
 
 /// This class provides access to building LLVM's passes.
@@ -112,6 +116,7 @@ class PassBuilder {
   PipelineTuningOptions PTO;
   std::optional<PGOOptions> PGOOpt;
   PassInstrumentationCallbacks *PIC;
+  IntrusiveRefCntPtr<vfs::FileSystem> FS;
 
 public:
   /// A struct to capture parsed pass pipeline names.
@@ -131,7 +136,8 @@ public:
       TargetMachine *TM = nullptr,
       PipelineTuningOptions PTO = PipelineTuningOptions(),
       std::optional<PGOOptions> PGOOpt = std::nullopt,
-      PassInstrumentationCallbacks *PIC = nullptr);
+      PassInstrumentationCallbacks *PIC = nullptr,
+      IntrusiveRefCntPtr<vfs::FileSystem> FS = vfs::getRealFileSystem());
 
   /// Cross register the analysis managers through their proxies.
   ///
@@ -629,13 +635,17 @@ public:
                                        bool RunProfileGen, bool IsCS,
                                        bool AtomicCounterUpdate,
                                        std::string ProfileFile,
-                                       std::string ProfileRemappingFile,
-                                       IntrusiveRefCntPtr<vfs::FileSystem> FS);
+                                       std::string ProfileRemappingFile);
 
   /// Returns PIC. External libraries can use this to register pass
   /// instrumentation callbacks.
   PassInstrumentationCallbacks *getPassInstrumentationCallbacks() const {
     return PIC;
+  }
+
+  /// Returns the virtual file system.
+  IntrusiveRefCntPtr<vfs::FileSystem> getVirtualFileSystemPtr() const {
+    return FS;
   }
 
   // Invoke the callbacks registered for the various extension points.
@@ -736,7 +746,7 @@ private:
   void addRequiredLTOPreLinkPasses(ModulePassManager &MPM);
 
   void addVectorPasses(OptimizationLevel Level, FunctionPassManager &FPM,
-                       bool IsFullLTO);
+                       ThinOrFullLTOPhase LTOPhase);
 
   static std::optional<std::vector<PipelineElement>>
   parsePipelineText(StringRef Text);
@@ -769,8 +779,7 @@ private:
   void addPGOInstrPasses(ModulePassManager &MPM, OptimizationLevel Level,
                          bool RunProfileGen, bool IsCS,
                          bool AtomicCounterUpdate, std::string ProfileFile,
-                         std::string ProfileRemappingFile,
-                         IntrusiveRefCntPtr<vfs::FileSystem> FS);
+                         std::string ProfileRemappingFile);
   void addPostPGOLoopRotation(ModulePassManager &MPM, OptimizationLevel Level);
 
   bool isInstrumentedPGOUse() const;
@@ -901,7 +910,7 @@ bool parseAnalysisUtilityPasses(
 // These are special since they are only for testing purposes.
 
 /// No-op module pass which does nothing.
-struct NoOpModulePass : PassInfoMixin<NoOpModulePass> {
+struct NoOpModulePass : OptionalPassInfoMixin<NoOpModulePass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
     return PreservedAnalyses::all();
   }
@@ -918,7 +927,7 @@ public:
 };
 
 /// No-op CGSCC pass which does nothing.
-struct NoOpCGSCCPass : PassInfoMixin<NoOpCGSCCPass> {
+struct NoOpCGSCCPass : OptionalPassInfoMixin<NoOpCGSCCPass> {
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &,
                         LazyCallGraph &, CGSCCUpdateResult &UR) {
     return PreservedAnalyses::all();
@@ -938,7 +947,7 @@ public:
 };
 
 /// No-op function pass which does nothing.
-struct NoOpFunctionPass : PassInfoMixin<NoOpFunctionPass> {
+struct NoOpFunctionPass : OptionalPassInfoMixin<NoOpFunctionPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
     return PreservedAnalyses::all();
   }
@@ -955,7 +964,7 @@ public:
 };
 
 /// No-op loop nest pass which does nothing.
-struct NoOpLoopNestPass : PassInfoMixin<NoOpLoopNestPass> {
+struct NoOpLoopNestPass : OptionalPassInfoMixin<NoOpLoopNestPass> {
   PreservedAnalyses run(LoopNest &L, LoopAnalysisManager &,
                         LoopStandardAnalysisResults &, LPMUpdater &) {
     return PreservedAnalyses::all();
@@ -963,7 +972,7 @@ struct NoOpLoopNestPass : PassInfoMixin<NoOpLoopNestPass> {
 };
 
 /// No-op loop pass which does nothing.
-struct NoOpLoopPass : PassInfoMixin<NoOpLoopPass> {
+struct NoOpLoopPass : OptionalPassInfoMixin<NoOpLoopPass> {
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &,
                         LoopStandardAnalysisResults &, LPMUpdater &) {
     return PreservedAnalyses::all();
@@ -971,7 +980,8 @@ struct NoOpLoopPass : PassInfoMixin<NoOpLoopPass> {
 };
 
 /// No-op machine function pass which does nothing.
-struct NoOpMachineFunctionPass : public PassInfoMixin<NoOpMachineFunctionPass> {
+struct NoOpMachineFunctionPass
+    : public OptionalPassInfoMixin<NoOpMachineFunctionPass> {
   PreservedAnalyses run(MachineFunction &, MachineFunctionAnalysisManager &) {
     return PreservedAnalyses::all();
   }

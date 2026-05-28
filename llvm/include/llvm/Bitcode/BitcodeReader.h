@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -137,6 +138,11 @@ struct ParserCallbacks {
 
     StringRef getModuleIdentifier() const { return ModuleIdentifier; }
 
+    // Assign a new module identifier to this bitcode module.
+    void setModuleIdentifier(llvm::StringRef ModuleId) {
+      ModuleIdentifier = ModuleId;
+    }
+
     /// Read the bitcode module and prepare for lazy deserialization of function
     /// bodies. If ShouldLazyLoadMetadata is true, lazily load metadata as well.
     /// If IsImporting is true, this module is being parsed for ThinLTO
@@ -160,7 +166,8 @@ struct ParserCallbacks {
     /// into CombinedIndex.
     LLVM_ABI Error
     readSummary(ModuleSummaryIndex &CombinedIndex, StringRef ModulePath,
-                std::function<bool(GlobalValue::GUID)> IsPrevailing = nullptr);
+                std::function<bool(StringRef)> IsPrevailing = nullptr,
+                std::function<void(ValueInfo)> OnValueInfo = nullptr);
   };
 
   struct BitcodeFileContents {

@@ -28,6 +28,7 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include <optional>
 
 using namespace clang;
@@ -312,6 +313,8 @@ Retry:
     Res = ParseReturnStatement();
     SemiError = "co_return";
     break;
+  case tok::kw__Defer: // C defer TS: defer-statement
+    return ParseDeferStatement(TrailingElseLoc);
 
   case tok::kw_asm: {
     for (const ParsedAttr &AL : CXX11Attrs)
@@ -499,6 +502,11 @@ Retry:
     ProhibitAttributes(CXX11Attrs);
     ProhibitAttributes(GNUAttrs);
     HandlePragmaAttribute();
+    return StmtEmpty();
+  case tok::annot_pragma_export:
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
+    HandlePragmaExport();
     return StmtEmpty();
   }
 
@@ -718,7 +726,7 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
     // and followed by a semicolon, GCC will reject (it appears to parse the
     // attributes as part of a statement in that case). That looks like a bug.
     if (!getLangOpts().CPlusPlus || Tok.is(tok::semi))
-      Attrs.takeAllFrom(TempAttrs);
+      Attrs.takeAllAppendingFrom(TempAttrs);
     else {
       StmtVector Stmts;
       ParsedAttributes EmptyCXX11Attrs(AttrFactory);
@@ -813,7 +821,7 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
           return StmtError();
       }
     } else {
-      LHS = Expr;
+      LHS = Actions.ActOnCaseExpr(CaseLoc, Expr);
       MissingCase = false;
     }
 
@@ -1029,6 +1037,9 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
     case tok::annot_pragma_dump:
       HandlePragmaDump();
       break;
+    case tok::annot_pragma_export:
+      HandlePragmaExport();
+      break;
     default:
       checkForPragmas = false;
       break;
@@ -1079,16 +1090,10 @@ bool Parser::ConsumeNullStmt(StmtVector &Stmts) {
 StmtResult Parser::handleExprStmt(ExprResult E, ParsedStmtContext StmtCtx) {
   bool IsStmtExprResult = false;
   if ((StmtCtx & ParsedStmtContext::InStmtExpr) != ParsedStmtContext()) {
-    // For GCC compatibility we skip past NullStmts.
-    unsigned LookAhead = 0;
-    while (GetLookAheadToken(LookAhead).is(tok::semi)) {
-      ++LookAhead;
-    }
-    // Then look to see if the next two tokens close the statement expression;
-    // if so, this expression statement is the last statement in a statement
-    // expression.
-    IsStmtExprResult = GetLookAheadToken(LookAhead).is(tok::r_brace) &&
-                       GetLookAheadToken(LookAhead + 1).is(tok::r_paren);
+    // Look ahead to see if the next two tokens close the statement expression;
+    // if so, this expression statement is the last statement in a
+    // statment expression.
+    IsStmtExprResult = Tok.is(tok::r_brace) && NextToken().is(tok::r_paren);
   }
 
   if (IsStmtExprResult)
@@ -1692,8 +1697,7 @@ StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc,
   // See comments in ParseIfStatement for why we create a scope for the
   // condition and a new scope for substatement in C++.
   //
-  getCurScope()->AddFlags(Scope::BreakScope);
-  getCurScope()->setPrecedingLabel(PrecedingLabel);
+  getCurScope()->EnterSwitchBody(PrecedingLabel);
   ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
 
   // We have incremented the mangling number for the SwitchScope and the
@@ -1737,12 +1741,7 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc,
   // while, for, and switch statements are local to the if, while, for, or
   // switch statement (including the controlled statement).
   //
-  unsigned ScopeFlags;
-  if (C99orCXX)
-    ScopeFlags = Scope::BreakScope | Scope::ContinueScope |
-                 Scope::DeclScope  | Scope::ControlScope;
-  else
-    ScopeFlags = Scope::BreakScope | Scope::ContinueScope;
+  unsigned ScopeFlags = Scope::ControlScope | (C99orCXX ? Scope::DeclScope : 0);
   ParseScope WhileScope(this, ScopeFlags);
 
   // Parse the condition.
@@ -1757,7 +1756,7 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc,
   // combinations, so diagnose that here in OpenACC mode.
   SemaOpenACC::LoopInConstructRAII LCR{getActions().OpenACC()};
   getActions().OpenACC().ActOnWhileStmt(WhileLoc);
-  getCurScope()->setPrecedingLabel(PrecedingLabel);
+  getCurScope()->EnterLoopBody(PrecedingLabel);
 
   // C99 6.8.5p5 - In C99, the body of the while statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this
@@ -1795,19 +1794,14 @@ StmtResult Parser::ParseDoStatement(LabelDecl *PrecedingLabel) {
 
   // C99 6.8.5p5 - In C99, the do statement is a block.  This is not
   // the case for C90.  Start the loop scope.
-  unsigned ScopeFlags;
-  if (getLangOpts().C99)
-    ScopeFlags = Scope::BreakScope | Scope::ContinueScope | Scope::DeclScope;
-  else
-    ScopeFlags = Scope::BreakScope | Scope::ContinueScope;
-
+  unsigned ScopeFlags = getLangOpts().C99 ? Scope::DeclScope : 0;
   ParseScope DoScope(this, ScopeFlags);
 
   // OpenACC Restricts a do-while-loop inside of certain construct/clause
   // combinations, so diagnose that here in OpenACC mode.
   SemaOpenACC::LoopInConstructRAII LCR{getActions().OpenACC()};
   getActions().OpenACC().ActOnDoStmt(DoLoc);
-  getCurScope()->setPrecedingLabel(PrecedingLabel);
+  getCurScope()->EnterLoopBody(PrecedingLabel);
 
   // C99 6.8.5p5 - In C99, the body of the do statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause. We only do this
@@ -1827,7 +1821,7 @@ StmtResult Parser::ParseDoStatement(LabelDecl *PrecedingLabel) {
   InnerScope.Exit();
 
   // Reset this to disallow break/continue out of the condition.
-  getCurScope()->setPrecedingLabel(nullptr);
+  getCurScope()->LeaveLoopBody();
 
   if (Tok.isNot(tok::kw_while)) {
     if (!Body.isInvalid()) {
@@ -1923,10 +1917,12 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   // Names declared in the for-init-statement are in the same declarative-region
   // as those declared in the condition.
   //
-  unsigned ScopeFlags = 0;
-  if (C99orCXXorObjC)
-    ScopeFlags = Scope::DeclScope | Scope::ControlScope;
-
+  // Always enter a ControlScope, even in C90 mode; this is harmless as it
+  // doesn't cause declarations to bind to this scope. We use this to avoid
+  // diagnosing a comma operator in e.g. the third part of a for loop when
+  // '-Wcomma' is enabled.
+  unsigned ScopeFlags =
+      Scope::ControlScope | (C99orCXXorObjC ? Scope::DeclScope : 0);
   ParseScope ForScope(this, ScopeFlags);
 
   BalancedDelimiterTracker T(*this, tok::l_paren);
@@ -2107,8 +2103,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
         SecondPart = ParseCXXCondition(
             /*InitStmt=*/nullptr, ForLoc, CK,
             // FIXME: recovery if we don't see another semi!
-            /*MissingOK=*/true, MightBeForRangeStmt ? &ForRangeInfo : nullptr,
-            /*EnterForConditionScope=*/true);
+            /*MissingOK=*/true, MightBeForRangeStmt ? &ForRangeInfo : nullptr);
 
         if (ForRangeInfo.ParsedForRangeDecl()) {
           Diag(FirstPart.get() ? FirstPart.get()->getBeginLoc()
@@ -2138,9 +2133,6 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
         }
 
       } else {
-        // We permit 'continue' and 'break' in the condition of a for loop.
-        getCurScope()->AddFlags(Scope::BreakScope | Scope::ContinueScope);
-
         ExprResult SecondExpr = ParseExpression();
         if (SecondExpr.isInvalid())
           SecondPart = Sema::ConditionError();
@@ -2151,11 +2143,6 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
       }
     }
   }
-
-  // Enter a break / continue scope, if we didn't already enter one while
-  // parsing the second part.
-  if (!getCurScope()->isContinueScope())
-    getCurScope()->AddFlags(Scope::BreakScope | Scope::ContinueScope);
 
   // Parse the third part of the for statement.
   if (!ForEach && !ForRangeInfo.ParsedForRangeDecl()) {
@@ -2225,7 +2212,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
 
   // Set this only right before parsing the body to disallow break/continue in
   // the other parts.
-  getCurScope()->setPrecedingLabel(PrecedingLabel);
+  getCurScope()->EnterLoopBody(PrecedingLabel);
 
   // C99 6.8.5p5 - In C99, the body of the for statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this
@@ -2376,6 +2363,28 @@ StmtResult Parser::ParseReturnStatement() {
   return Actions.ActOnReturnStmt(ReturnLoc, R.get(), getCurScope());
 }
 
+StmtResult Parser::ParseDeferStatement(SourceLocation *TrailingElseLoc) {
+  assert(Tok.is(tok::kw__Defer));
+  SourceLocation DeferLoc = ConsumeToken();
+
+  Actions.ActOnStartOfDeferStmt(DeferLoc, getCurScope());
+
+  llvm::scope_exit OnError([&] { Actions.ActOnDeferStmtError(getCurScope()); });
+
+  StmtResult Res = ParseStatement(TrailingElseLoc);
+  if (!Res.isUsable())
+    return StmtError();
+
+  // The grammar specifically calls for an unlabeled-statement here.
+  if (auto *L = dyn_cast<LabelStmt>(Res.get())) {
+    Diag(L->getIdentLoc(), diag::err_defer_ts_labeled_stmt);
+    return StmtError();
+  }
+
+  OnError.release();
+  return Actions.ActOnEndOfDeferStmt(Res.get(), getCurScope());
+}
+
 StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
                                        ParsedStmtContext StmtCtx,
                                        SourceLocation *TrailingElseLoc,
@@ -2407,7 +2416,7 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
       Stmts, StmtCtx, TrailingElseLoc, Attrs, EmptyDeclSpecAttrs,
       PrecedingLabel);
 
-  Attrs.takeAllFrom(TempAttrs);
+  Attrs.takeAllPrependingFrom(TempAttrs);
 
   // Start of attribute range may already be set for some invalid input.
   // See PR46336.
@@ -2529,9 +2538,9 @@ StmtResult Parser::ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry) {
     return StmtError(Diag(Tok, diag::err_expected) << tok::l_brace);
 
   StmtResult TryBlock(ParseCompoundStatement(
-      /*isStmtExpr=*/false, Scope::DeclScope | Scope::TryScope |
-                                Scope::CompoundStmtScope |
-                                (FnTry ? Scope::FnTryCatchScope : 0)));
+      /*isStmtExpr=*/false,
+      Scope::DeclScope | Scope::TryScope | Scope::CompoundStmtScope |
+          (FnTry ? Scope::FnTryCatchScope : Scope::NoScope)));
   if (TryBlock.isInvalid())
     return TryBlock;
 
@@ -2593,9 +2602,9 @@ StmtResult Parser::ParseCXXCatchBlock(bool FnCatch) {
   // C++ 3.3.2p3:
   // The name in a catch exception-declaration is local to the handler and
   // shall not be redeclared in the outermost block of the handler.
-  ParseScope CatchScope(this, Scope::DeclScope | Scope::ControlScope |
-                                  Scope::CatchScope |
-                                  (FnCatch ? Scope::FnTryCatchScope : 0));
+  ParseScope CatchScope(
+      this, Scope::DeclScope | Scope::ControlScope | Scope::CatchScope |
+                (FnCatch ? Scope::FnTryCatchScope : Scope::NoScope));
 
   // exception-declaration is equivalent to '...' or a parameter-declaration
   // without default arguments.

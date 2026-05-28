@@ -238,6 +238,9 @@ def page_size: JJ<"page-size=">,
 def initial_memory: JJ<"initial-memory=">,
   HelpText<"Initial size of the linear memory">;
 
+def libcall_thread_context: FF<"libcall-thread-context">,
+  HelpText<"Use library calls for thread context access instead of globals.">;
+  
 def max_memory: JJ<"max-memory=">,
   HelpText<"Maximum size of the linear memory">;
 
@@ -250,8 +253,9 @@ def no_entry: FF<"no-entry">,
 def no_shlib_sigcheck: FF<"no-shlib-sigcheck">,
   HelpText<"Do not check signatures of functions defined in shared libraries.">;
 
-def stack_first: FF<"stack-first">,
-  HelpText<"Place stack at start of linear memory rather than after data">;
+defm stack_first: B<"stack-first",
+    "Place stack at start of linear memory (default)",
+    "Place the stack after static data region">;
 
 def table_base: JJ<"table-base=">,
   HelpText<"Table offset at which to place address taken functions (Defaults to 1)">;
@@ -319,6 +323,6 @@ def thinlto_prefix_replace_eq: JJ<"thinlto-prefix-replace=">;
 def lto_debug_pass_manager: FF<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
 
-// Experimental PIC mode.
+// Legacy experimental PIC flag. Remove this at some point in the future.
 def experimental_pic: FF<"experimental-pic">,
-  HelpText<"Enable Experimental PIC">;
+  HelpText<"Legacy enable Experimental PIC flag; ignored">;

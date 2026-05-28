@@ -18,11 +18,104 @@
 using namespace llvm;
 using namespace llvm::dxbc;
 
+#define ROOT_PARAMETER(Val, Enum)                                              \
+  case Val:                                                                    \
+    return true;
+bool llvm::dxbc::isValidParameterType(uint32_t V) {
+  switch (V) {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  }
+  return false;
+}
+
+bool llvm::dxbc::isValidRangeType(uint32_t V) {
+  return V <= llvm::to_underlying(dxil::ResourceClass::LastEntry);
+}
+
+#define SHADER_VISIBILITY(Val, Enum)                                           \
+  case Val:                                                                    \
+    return true;
+bool llvm::dxbc::isValidShaderVisibility(uint32_t V) {
+  switch (V) {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  }
+  return false;
+}
+
+#define FILTER(Val, Enum)                                                      \
+  case Val:                                                                    \
+    return true;
+bool llvm::dxbc::isValidSamplerFilter(uint32_t V) {
+  switch (V) {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  }
+  return false;
+}
+
+#define TEXTURE_ADDRESS_MODE(Val, Enum)                                        \
+  case Val:                                                                    \
+    return true;
+bool llvm::dxbc::isValidAddress(uint32_t V) {
+  switch (V) {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  }
+  return false;
+}
+
+#define COMPARISON_FUNC(Val, Enum)                                             \
+  case Val:                                                                    \
+    return true;
+bool llvm::dxbc::isValidComparisonFunc(uint32_t V) {
+  switch (V) {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  }
+  return false;
+}
+
+#define STATIC_BORDER_COLOR(Val, Enum)                                         \
+  case Val:                                                                    \
+    return true;
+bool llvm::dxbc::isValidBorderColor(uint32_t V) {
+  switch (V) {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  }
+  return false;
+}
+
+template <typename FlagT>
+static bool isValidFlags(std::underlying_type_t<FlagT> V) {
+  decltype(V) LargestValue =
+      llvm::to_underlying(FlagT::LLVM_BITMASK_LARGEST_ENUMERATOR);
+  return V < NextPowerOf2(LargestValue);
+}
+
+bool llvm::dxbc::isValidRootDesciptorFlags(uint32_t V) {
+  return isValidFlags<dxbc::RootDescriptorFlags>(V);
+}
+
+bool llvm::dxbc::isValidDescriptorRangeFlags(uint32_t V) {
+  return isValidFlags<dxbc::DescriptorRangeFlags>(V);
+}
+
+bool llvm::dxbc::isValidStaticSamplerFlags(uint32_t V) {
+  return isValidFlags<dxbc::StaticSamplerFlags>(V);
+}
+
+bool llvm::dxbc::isValidCompilerVersionFlags(uint32_t V) {
+  return isValidFlags<dxbc::CompilerVersionFlags>(V);
+}
+
 dxbc::PartType dxbc::parsePartType(StringRef S) {
 #define CONTAINER_PART(PartName) .Case(#PartName, PartType::PartName)
   return StringSwitch<dxbc::PartType>(S)
 #include "llvm/BinaryFormat/DXContainerConstants.def"
       .Default(dxbc::PartType::Unknown);
+}
+
+bool dxbc::isDebugProgramPart(PartType PT) { return PT == PartType::ILDB; }
+
+const char *dxbc::getProgramPartName(bool IsDebug) {
+  return IsDebug ? "ILDB" : "DXIL";
 }
 
 bool ShaderHash::isPopulated() {
@@ -87,6 +180,15 @@ static const EnumEntry<DescriptorRangeFlags> DescriptorRangeFlagNames[] = {
 
 ArrayRef<EnumEntry<DescriptorRangeFlags>> dxbc::getDescriptorRangeFlags() {
   return ArrayRef(DescriptorRangeFlagNames);
+}
+
+static const EnumEntry<StaticSamplerFlags> StaticSamplerFlagNames[] = {
+#define STATIC_SAMPLER_FLAG(Val, Enum, Flag) {#Enum, StaticSamplerFlags::Enum},
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<StaticSamplerFlags>> dxbc::getStaticSamplerFlags() {
+  return ArrayRef(StaticSamplerFlagNames);
 }
 
 #define SHADER_VISIBILITY(Val, Enum) {#Enum, ShaderVisibility::Enum},

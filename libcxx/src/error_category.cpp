@@ -8,13 +8,16 @@
 
 #include <__config>
 
-#ifdef _LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS
+// This has technically been removed in LLVM 3.4
+#if !defined(_LIBCPP_OBJECT_FORMAT_COFF) && !defined(_LIBCPP_OBJECT_FORMAT_XCOFF) &&                                   \
+    _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 4
 #  define _LIBCPP_ERROR_CATEGORY_DEFINE_LEGACY_INLINE_FUNCTIONS
 #endif
 
 #include <system_error>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 // class error_category
 
@@ -34,4 +37,5 @@ bool error_category::equivalent(const error_code& code, int condition) const noe
   return *this == code.category() && code.value() == condition;
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

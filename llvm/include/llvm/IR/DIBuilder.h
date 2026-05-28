@@ -49,7 +49,7 @@ namespace llvm {
 
     DICompileUnit *CUNode; ///< The one compile unit created by this DIBuiler.
 
-    SmallVector<TrackingMDNodeRef, 4> AllEnumTypes;
+    SmallVector<TrackingMDNodeRef, 4> EnumTypes;
     /// Track the RetainTypes, since they can be updated later on.
     SmallVector<TrackingMDNodeRef, 4> AllRetainTypes;
     SmallVector<DISubprogram *, 4> AllSubprograms;
@@ -64,8 +64,8 @@ namespace llvm {
     SmallVector<TrackingMDNodeRef, 4> UnresolvedNodes;
     bool AllowUnresolvedNodes;
 
-    /// Each subprogram's preserved local variables, labels and imported
-    /// entities.
+    /// Each subprogram's preserved local variables, labels, imported entities,
+    /// and types.
     ///
     /// Do not use a std::vector.  Some versions of libc++ apparently copy
     /// instead of move on grow operations, and TrackingMDRef is expensive to
@@ -146,9 +146,9 @@ namespace llvm {
     /// \param SDK           The SDK name. On Darwin, this is the last component
     ///                      of the sysroot.
     LLVM_ABI DICompileUnit *
-    createCompileUnit(unsigned Lang, DIFile *File, StringRef Producer,
-                      bool isOptimized, StringRef Flags, unsigned RV,
-                      StringRef SplitName = StringRef(),
+    createCompileUnit(DISourceLanguageName Lang, DIFile *File,
+                      StringRef Producer, bool isOptimized, StringRef Flags,
+                      unsigned RV, StringRef SplitName = StringRef(),
                       DICompileUnit::DebugEmissionKind Kind =
                           DICompileUnit::DebugEmissionKind::FullDebug,
                       uint64_t DWOId = 0, bool SplitDebugInlining = true,
@@ -209,46 +209,84 @@ namespace llvm {
     /// \param NumExtraInhabitants The number of extra inhabitants of the type.
     /// An extra inhabitant is a bit pattern that does not represent a valid
     /// value for instances of a given type. This is used by the Swift language.
+    /// \param DataSizeInBits Optionally describes the number of bits used by
+    /// the value of the object when this is less than the storage size of
+    /// SizeInBits. Default value of zero indicates the object value and storage
+    /// sizes are equal.
     LLVM_ABI DIBasicType *
     createBasicType(StringRef Name, uint64_t SizeInBits, unsigned Encoding,
                     DINode::DIFlags Flags = DINode::FlagZero,
-                    uint32_t NumExtraInhabitants = 0);
+                    uint32_t NumExtraInhabitants = 0,
+                    uint32_t DataSizeInBits = 0);
+
+    /// Create debugging information entry for a basic
+    /// type.
+    /// \param Name        Type name.
+    /// \param File        File where this type is defined.
+    /// \param LineNo      Line number.
+    /// \param Context     The surrounding context for the typedef.
+    /// \param SizeInBits  Size of the type.
+    /// \param Encoding    DWARF encoding code, e.g., dwarf::DW_ATE_float.
+    /// \param Flags       Optional DWARF attributes, e.g., DW_AT_endianity.
+    /// \param NumExtraInhabitants The number of extra inhabitants of the type.
+    /// An extra inhabitant is a bit pattern that does not represent a valid
+    /// value for instances of a given type. This is used by the Swift language.
+    /// \param DataSizeInBits Optionally describes the number of bits used by
+    /// the value of the object when this is less than the storage size of
+    /// SizeInBits. Default value of zero indicates the object value and storage
+    /// sizes are equal.
+    LLVM_ABI DIBasicType *
+    createBasicType(StringRef Name, DIFile *File, unsigned LineNo,
+                    DIScope *Context, uint64_t SizeInBits, unsigned Encoding,
+                    DINode::DIFlags Flags = DINode::FlagZero,
+                    uint32_t NumExtraInhabitants = 0,
+                    uint32_t DataSizeInBits = 0);
 
     /// Create debugging information entry for a binary fixed-point type.
     /// \param Name        Type name.
+    /// \param File        File where this type is defined.
+    /// \param LineNo      Line number.
+    /// \param Context     The surrounding context for the typedef.
     /// \param Encoding    DWARF encoding code, either
     ///                    dwarf::DW_ATE_signed_fixed or DW_ATE_unsigned_fixed.
     /// \param Flags       Optional DWARF attributes, e.g., DW_AT_endianity.
     /// \param Factor      Binary scale factor.
     LLVM_ABI DIFixedPointType *
-    createBinaryFixedPointType(StringRef Name, uint64_t SizeInBits,
+    createBinaryFixedPointType(StringRef Name, DIFile *File, unsigned LineNo,
+                               DIScope *Context, uint64_t SizeInBits,
                                uint32_t AlignInBits, unsigned Encoding,
                                DINode::DIFlags Flags, int Factor);
 
     /// Create debugging information entry for a decimal fixed-point type.
     /// \param Name        Type name.
+    /// \param File        File where this type is defined.
+    /// \param LineNo      Line number.
+    /// \param Context     The surrounding context for the typedef.
     /// \param Encoding    DWARF encoding code, either
     ///                    dwarf::DW_ATE_signed_fixed or DW_ATE_unsigned_fixed.
     /// \param Flags       Optional DWARF attributes, e.g., DW_AT_endianity.
     /// \param Factor      Decimal scale factor.
     LLVM_ABI DIFixedPointType *
-    createDecimalFixedPointType(StringRef Name, uint64_t SizeInBits,
+    createDecimalFixedPointType(StringRef Name, DIFile *File, unsigned LineNo,
+                                DIScope *Context, uint64_t SizeInBits,
                                 uint32_t AlignInBits, unsigned Encoding,
                                 DINode::DIFlags Flags, int Factor);
 
     /// Create debugging information entry for an arbitrary rational
     /// fixed-point type.
     /// \param Name        Type name.
+    /// \param File        File where this type is defined.
+    /// \param LineNo      Line number.
+    /// \param Context     The surrounding context for the typedef.
     /// \param Encoding    DWARF encoding code, either
     ///                    dwarf::DW_ATE_signed_fixed or DW_ATE_unsigned_fixed.
     /// \param Flags       Optional DWARF attributes, e.g., DW_AT_endianity.
     /// \param Numerator   Numerator of scale factor.
     /// \param Denominator Denominator of scale factor.
-    LLVM_ABI DIFixedPointType *
-    createRationalFixedPointType(StringRef Name, uint64_t SizeInBits,
-                                 uint32_t AlignInBits, unsigned Encoding,
-                                 DINode::DIFlags Flags, APInt Numerator,
-                                 APInt Denominator);
+    LLVM_ABI DIFixedPointType *createRationalFixedPointType(
+        StringRef Name, DIFile *File, unsigned LineNo, DIScope *Context,
+        uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+        DINode::DIFlags Flags, APInt Numerator, APInt Denominator);
 
     /// Create debugging information entry for a string
     /// type.
@@ -536,12 +574,15 @@ namespace llvm {
     ///                     for more info.
     /// \param TemplateParms Template type parameters.
     /// \param UniqueIdentifier A unique identifier for the class.
+    /// \param Annotations  Attribute annotations, emitted as
+    /// DW_TAG_LLVM_annotation entries.
     LLVM_ABI DICompositeType *createClassType(
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
         uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
         DINode::DIFlags Flags, DIType *DerivedFrom, DINodeArray Elements,
         unsigned RunTimeLang = 0, DIType *VTableHolder = nullptr,
-        MDNode *TemplateParms = nullptr, StringRef UniqueIdentifier = "");
+        MDNode *TemplateParms = nullptr, StringRef UniqueIdentifier = "",
+        DINodeArray Annotations = nullptr);
 
     /// Create debugging information entry for a struct.
     /// \param Scope        Scope in which this struct is defined.
@@ -559,12 +600,15 @@ namespace llvm {
     /// \param NumExtraInhabitants The number of extra inhabitants of the type.
     /// An extra inhabitant is a bit pattern that does not represent a valid
     /// value for instances of a given type. This is used by the Swift language.
+    /// \param Annotations  Attribute annotations, emitted as
+    /// DW_TAG_LLVM_annotation entries.
     LLVM_ABI DICompositeType *createStructType(
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
         Metadata *SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
         DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang = 0,
         DIType *VTableHolder = nullptr, StringRef UniqueIdentifier = "",
-        DIType *Specification = nullptr, uint32_t NumExtraInhabitants = 0);
+        DIType *Specification = nullptr, uint32_t NumExtraInhabitants = 0,
+        DINodeArray Annotations = nullptr);
 
     /// Create debugging information entry for a struct.
     /// \param Scope        Scope in which this struct is defined.
@@ -582,12 +626,15 @@ namespace llvm {
     /// \param NumExtraInhabitants The number of extra inhabitants of the type.
     /// An extra inhabitant is a bit pattern that does not represent a valid
     /// value for instances of a given type. This is used by the Swift language.
+    /// \param Annotations  Attribute annotations, emitted as
+    /// DW_TAG_LLVM_annotation entries.
     LLVM_ABI DICompositeType *createStructType(
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
         uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
         DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang = 0,
         DIType *VTableHolder = nullptr, StringRef UniqueIdentifier = "",
-        DIType *Specification = nullptr, uint32_t NumExtraInhabitants = 0);
+        DIType *Specification = nullptr, uint32_t NumExtraInhabitants = 0,
+        DINodeArray Annotations = nullptr);
 
     /// Create debugging information entry for an union.
     /// \param Scope        Scope in which this union is defined.
@@ -600,12 +647,13 @@ namespace llvm {
     /// \param Elements     Union elements.
     /// \param RunTimeLang  Optional parameter, Objective-C runtime version.
     /// \param UniqueIdentifier A unique identifier for the union.
-    LLVM_ABI DICompositeType *
-    createUnionType(DIScope *Scope, StringRef Name, DIFile *File,
-                    unsigned LineNumber, uint64_t SizeInBits,
-                    uint32_t AlignInBits, DINode::DIFlags Flags,
-                    DINodeArray Elements, unsigned RunTimeLang = 0,
-                    StringRef UniqueIdentifier = "");
+    /// \param Annotations  Attribute annotations, emitted as
+    /// DW_TAG_LLVM_annotation entries.
+    LLVM_ABI DICompositeType *createUnionType(
+        DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
+        uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
+        DINodeArray Elements, unsigned RunTimeLang = 0,
+        StringRef UniqueIdentifier = "", DINodeArray Annotations = nullptr);
 
     /// Create debugging information entry for a variant part.  A
     /// variant part normally has a discriminator (though this is not
@@ -729,7 +777,8 @@ namespace llvm {
     /// \param Subscripts   Subscripts.
     LLVM_ABI DICompositeType *createVectorType(uint64_t Size,
                                                uint32_t AlignInBits, DIType *Ty,
-                                               DINodeArray Subscripts);
+                                               DINodeArray Subscripts,
+                                               Metadata *BitStride = nullptr);
 
     /// Create debugging information entry for an
     /// enumeration.
@@ -771,7 +820,7 @@ namespace llvm {
     ///                        These flags are used to emit dwarf attributes.
     /// \param CC              Calling convention, e.g. dwarf::DW_CC_normal
     LLVM_ABI DISubroutineType *
-    createSubroutineType(DITypeRefArray ParameterTypes,
+    createSubroutineType(DITypeArray ParameterTypes,
                          DINode::DIFlags Flags = DINode::FlagZero,
                          unsigned CC = 0);
 
@@ -836,8 +885,8 @@ namespace llvm {
     LLVM_ABI DIMacroNodeArray
     getOrCreateMacroArray(ArrayRef<Metadata *> Elements);
 
-    /// Get a DITypeRefArray, create one if required.
-    LLVM_ABI DITypeRefArray getOrCreateTypeArray(ArrayRef<Metadata *> Elements);
+    /// Get a DITypeArray, create one if required.
+    LLVM_ABI DITypeArray getOrCreateTypeArray(ArrayRef<Metadata *> Elements);
 
     /// Create a descriptor for a value range.  This
     /// implicitly uniques the values returned.
@@ -1149,6 +1198,18 @@ namespace llvm {
                                       DILocalVariable *VarInfo,
                                       DIExpression *Expr, const DILocation *DL,
                                       InsertPosition InsertPt);
+
+    /// Insert a new llvm.dbg.declare_value intrinsic call.
+    /// \param Storage      llvm::Value of the variable
+    /// \param VarInfo      Variable's debug info descriptor.
+    /// \param Expr         A complex location expression.
+    /// \param DL           Debug info location.
+    /// \param InsertPt     Location for the new intrinsic.
+    LLVM_ABI DbgInstPtr insertDeclareValue(llvm::Value *Storage,
+                                           DILocalVariable *VarInfo,
+                                           DIExpression *Expr,
+                                           const DILocation *DL,
+                                           InsertPosition InsertPt);
 
     /// Insert a new llvm.dbg.label intrinsic call.
     /// \param LabelInfo    Label's debug info descriptor.

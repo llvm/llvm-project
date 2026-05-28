@@ -14,9 +14,7 @@ algorithm ratio
 algorithm tuple
 algorithm version
 any cstdint
-any cstring
 any initializer_list
-any limits
 any typeinfo
 any version
 array cctype
@@ -247,7 +245,6 @@ deque stdexcept
 deque tuple
 deque version
 exception cstdint
-exception cstdlib
 exception typeinfo
 exception version
 execution version
@@ -357,7 +354,6 @@ format cctype
 format cerrno
 format climits
 format clocale
-format cmath
 format compare
 format cstddef
 format cstdint
@@ -511,7 +507,6 @@ iostream cctype
 iostream cerrno
 iostream climits
 iostream clocale
-iostream cmath
 iostream compare
 iostream cstddef
 iostream cstdint
@@ -656,6 +651,7 @@ memory_resource cerrno
 memory_resource climits
 memory_resource compare
 memory_resource cstdint
+memory_resource cstring
 memory_resource ctime
 memory_resource limits
 memory_resource ratio
@@ -665,11 +661,11 @@ mutex cerrno
 mutex climits
 mutex compare
 mutex cstdint
+mutex cstring
 mutex ctime
 mutex limits
 mutex ratio
 mutex tuple
-mutex typeinfo
 mutex version
 new version
 numbers version
@@ -696,7 +692,6 @@ ostream cctype
 ostream cerrno
 ostream climits
 ostream clocale
-ostream cmath
 ostream compare
 ostream cstddef
 ostream cstdint
@@ -726,7 +721,6 @@ print cctype
 print cerrno
 print climits
 print clocale
-print cmath
 print compare
 print cstddef
 print cstdint
@@ -746,16 +740,11 @@ print string_view
 print tuple
 print typeinfo
 print version
-queue array
 queue cctype
-queue cerrno
 queue climits
-queue clocale
 queue compare
-queue cstddef
 queue cstdint
 queue cstdio
-queue cstdlib
 queue cstring
 queue cwchar
 queue cwctype
@@ -767,7 +756,6 @@ queue stdexcept
 queue string
 queue string_view
 queue tuple
-queue typeinfo
 queue vector
 queue version
 random cctype
@@ -791,6 +779,7 @@ random string
 random string_view
 random tuple
 random version
+ranges array
 ranges cctype
 ranges compare
 ranges concepts
@@ -812,9 +801,7 @@ ranges version
 ratio climits
 ratio cstdint
 ratio version
-regex array
 regex cctype
-regex cerrno
 regex climits
 regex clocale
 regex compare
@@ -862,6 +849,7 @@ set version
 shared_mutex cerrno
 shared_mutex climits
 shared_mutex cstdint
+shared_mutex cstring
 shared_mutex ctime
 shared_mutex limits
 shared_mutex ratio
@@ -1003,7 +991,6 @@ syncstream cctype
 syncstream cerrno
 syncstream climits
 syncstream clocale
-syncstream cmath
 syncstream compare
 syncstream cstddef
 syncstream cstdint
@@ -1125,16 +1112,11 @@ variant cstring
 variant initializer_list
 variant limits
 variant version
-vector array
 vector cctype
-vector cerrno
 vector climits
-vector clocale
 vector compare
-vector cstddef
 vector cstdint
 vector cstdio
-vector cstdlib
 vector cstring
 vector cwchar
 vector cwctype
@@ -1145,5 +1127,4 @@ vector stdexcept
 vector string
 vector string_view
 vector tuple
-vector typeinfo
 vector version

@@ -13,6 +13,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -41,12 +42,7 @@ public:
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (name == "$$dereference$$")
       return 0;
-    auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
-    if (!optional_idx) {
-      return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
-    }
-    return *optional_idx;
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
   llvm::Expected<uint32_t> CalculateNumChildren() override {
@@ -132,7 +128,7 @@ ValueObjectSP GenericOptionalFrontend::GetChildAtIndex(uint32_t _idx) {
   if (!holder_type)
     return ValueObjectSP();
 
-  return val_sp->Clone(ConstString("Value"));
+  return val_sp->Clone("Value");
 }
 
 SyntheticChildrenFrontEnd *

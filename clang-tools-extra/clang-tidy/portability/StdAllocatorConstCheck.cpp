@@ -1,4 +1,4 @@
-//===-- StdAllocatorConstCheck.cpp - clang-tidy --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -54,13 +54,7 @@ void StdAllocatorConstCheck::registerMatchers(MatchFinder *Finder) {
 
 void StdAllocatorConstCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *T = Result.Nodes.getNodeAs<TypeLoc>("type_loc");
-  if (!T)
-    return;
-  // Exclude TypeLoc matches in STL headers.
-  if (isSystem(Result.Context->getSourceManager().getFileCharacteristic(
-          T->getBeginLoc())))
-    return;
-
+  assert(T);
   diag(T->getBeginLoc(),
        "container using std::allocator<const T> is a deprecated libc++ "
        "extension; remove const for compatibility with other standard "

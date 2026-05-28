@@ -193,6 +193,7 @@ template <class charT> class messages_byname;
 
 #  include <__cxx03/__algorithm/copy.h>
 #  include <__cxx03/__algorithm/equal.h>
+#  include <__cxx03/__algorithm/fill_n.h>
 #  include <__cxx03/__algorithm/find.h>
 #  include <__cxx03/__algorithm/max.h>
 #  include <__cxx03/__algorithm/reverse.h>
@@ -220,7 +221,7 @@ template <class charT> class messages_byname;
 
 #  if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 // Most unix variants have catopen.  These are the specific ones that don't.
-#    if !defined(__BIONIC__) && !defined(_NEWLIB_VERSION) && !defined(__EMSCRIPTEN__)
+#    if !defined(__BIONIC__) && !_LIBCPP_LIBC_NEWLIB && !defined(__EMSCRIPTEN__)
 #      define _LIBCPP_HAS_CATOPEN 1
 #      include <nl_types.h>
 #    endif
@@ -1254,12 +1255,9 @@ _LIBCPP_HIDE_FROM_ABI _OutputIterator __pad_and_output(
     __ns -= __sz;
   else
     __ns = 0;
-  for (; __ob < __op; ++__ob, ++__s)
-    *__s = *__ob;
-  for (; __ns; --__ns, ++__s)
-    *__s = __fl;
-  for (; __ob < __oe; ++__ob, ++__s)
-    *__s = *__ob;
+  __s = std::copy(__ob, __op, __s);
+  __s = std::fill_n(__s, __ns, __fl);
+  __s = std::copy(__op, __oe, __s);
   __iob.width(0);
   return __s;
 }
@@ -1313,9 +1311,7 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_ty
   const numpunct<char_type>& __np = std::use_facet<numpunct<char_type> >(__iob.getloc());
   typedef typename numpunct<char_type>::string_type string_type;
   string_type __nm = __v ? __np.truename() : __np.falsename();
-  for (typename string_type::iterator __i = __nm.begin(); __i != __nm.end(); ++__i, ++__s)
-    *__s = *__i;
-  return __s;
+  return std::copy(__nm.begin(), __nm.end(), __s);
 }
 
 template <class _CharT, class _OutputIterator>
@@ -2030,10 +2026,6 @@ protected:
   _LIBCPP_HIDE_FROM_ABI ~__time_get_storage() {}
 
   time_base::dateorder __do_date_order() const;
-
-private:
-  void init(const ctype<_CharT>&);
-  string_type __analyze(char __fmt, const ctype<_CharT>&);
 };
 
 #  define _LIBCPP_TIME_GET_STORAGE_EXPLICIT_INSTANTIATION(_CharT)                                                      \
@@ -2043,19 +2035,10 @@ private:
     _LIBCPP_EXPORTED_FROM_ABI __time_get_storage<_CharT>::__time_get_storage(const char*);                             \
     template <>                                                                                                        \
     _LIBCPP_EXPORTED_FROM_ABI __time_get_storage<_CharT>::__time_get_storage(const string&);                           \
-    template <>                                                                                                        \
-    _LIBCPP_EXPORTED_FROM_ABI void __time_get_storage<_CharT>::init(const ctype<_CharT>&);                             \
-    template <>                                                                                                        \
-    _LIBCPP_EXPORTED_FROM_ABI __time_get_storage<_CharT>::string_type __time_get_storage<_CharT>::__analyze(           \
-        char, const ctype<_CharT>&);                                                                                   \
     extern template _LIBCPP_EXPORTED_FROM_ABI time_base::dateorder __time_get_storage<_CharT>::__do_date_order()       \
         const;                                                                                                         \
     extern template _LIBCPP_EXPORTED_FROM_ABI __time_get_storage<_CharT>::__time_get_storage(const char*);             \
-    extern template _LIBCPP_EXPORTED_FROM_ABI __time_get_storage<_CharT>::__time_get_storage(const string&);           \
-    extern template _LIBCPP_EXPORTED_FROM_ABI void __time_get_storage<_CharT>::init(const ctype<_CharT>&);             \
-    extern template _LIBCPP_EXPORTED_FROM_ABI __time_get_storage<_CharT>::string_type                                  \
-    __time_get_storage<_CharT>::__analyze(char, const ctype<_CharT>&);                                                 \
-    /**/
+    extern template _LIBCPP_EXPORTED_FROM_ABI __time_get_storage<_CharT>::__time_get_storage(const string&);
 
 _LIBCPP_TIME_GET_STORAGE_EXPLICIT_INSTANTIATION(char)
 #  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
@@ -2605,7 +2588,7 @@ bool money_get<_CharT, _InputIterator>::__do_get(
           __err |= ios_base::failbit;
           return false;
         }
-        for (++__b; __fd > 0; --__fd, ++__b) {
+        for (++__b; __fd > 0; --__fd, (void)++__b) {
           if (__b == __e || !__ct.is(ctype_base::digit, *__b)) {
             __err |= ios_base::failbit;
             return false;
@@ -2623,7 +2606,7 @@ bool money_get<_CharT, _InputIterator>::__do_get(
     }
   }
   if (__trailing_sign) {
-    for (unsigned __i = 1; __i < __trailing_sign->size(); ++__i, ++__b) {
+    for (unsigned __i = 1; __i < __trailing_sign->size(); ++__i, (void)++__b) {
       if (__b == __e || *__b != (*__trailing_sign)[__i]) {
         __err |= ios_base::failbit;
         return false;

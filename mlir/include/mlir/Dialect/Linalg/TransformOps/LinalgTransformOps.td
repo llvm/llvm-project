@@ -17,15 +17,9 @@ include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Dialect/SCF/IR/DeviceMappingInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/RegionKindInterface.td"
-
-// This is roughly similar to OpFoldResult assuming the handle produces a single
-// value in the payload IR.
-def TransformAnyParamTypeOrAnyHandle : Type<
-    Or<[TransformHandleTypeInterface.predicate,
-        TransformParamTypeInterface.predicate]>,
-    "transform any param type or any handle type">;
 
 //===----------------------------------------------------------------------===//
 // Apply...PatternsOp
@@ -149,6 +143,28 @@ def ApplyFoldPackUnpackIntoEmptyPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyDataLayoutPropagationPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.data_layout_propagation",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collection of patterns to bubble up or down data layout ops across other
+    operations.
+  }];
+
+  let arguments = (ins DefaultValuedAttr<BoolAttr, "false">:$poison_padding);
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyExtractSliceSinkingPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.extract_slice_sinking",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Patterns to sink extract slice across other operations.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
@@ -236,11 +252,51 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
                       Transform_AnyOpType:$new_ops);
   let assemblyFormat = "$target attr-dict `:` type($target)";
   let hasVerifier = 1;
+}
 
-  let builders = [
-    OpBuilder<(ins "Value":$target, "Attribute":$memorySpace)>,
-    OpBuilder<(ins "Value":$target, "int64_t":$memorySpace)>
-  ];
+//===----------------------------------------------------------------------===//
+// PromoteTensorOp
+//===----------------------------------------------------------------------===//
+
+def PromoteTensorOp : Op<Transform_Dialect, "structured.promote_tensor",
+                         [DeclareOpInterfaceMethods<TransformOpInterface>,
+                          DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+                          SameOperandsAndResultType]> {
+  let summary = "Request a tensor value to live in a specific memory space "
+                "after bufferization";
+  let description = [{
+    Requests that a tensor value lives in a specific memory space for its
+    lifetime. This is achieved by allocating a new tensor in the desired
+    memory space with `bufferization.alloc_tensor` and optionally materializing
+    the source value into that allocation with
+    `bufferization.materialize_in_destination`. All uses of the original value
+    are then redirected to the promoted value.
+
+    The generated code for promoting tensor value %0 resembles the following:
+
+      %1 = bufferization.alloc_tensor(<dynamic dims of %0>)
+           { memory_space = memory_space }
+      // Note: the materialization is omitted if %0 is never read and is only
+      // written into (i.e., it behaves as a result tensor).
+      %2 = bufferization.materialize_in_destination %0 in %1
+      // ...
+      <all users of %0 now use %2 instead>
+
+    Deallocation is not handled by this transform.
+
+    Return modes:
+    - Produces a silenceable failure if the given handle does not point to
+      tensor-typed values.
+    - Succeeds otherwise and returns a handle to the promoted value(s), i.e.,
+      the result of materialization if present and the allocation otherwise.
+  }];
+
+  let arguments = (ins TransformValueHandleTypeInterface:$tensor,
+      OptionalAttr<AnyAttr>:$memory_space);
+  let results = (outs TransformValueHandleTypeInterface:$promoted);
+
+  let assemblyFormat =
+      "(`to` $memory_space^)? $tensor attr-dict `:` type($tensor)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -254,9 +310,13 @@ def DecomposeOp : Op<Transform_Dialect, "structured.decompose",
      TransformEachOpTrait,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Decomposes named complex operations, such as higher-dimensional
-    (depthwise) convolutions, into combinations of lower-dimensional equivalents
-    when possible.
+    Decomposes higher-dimensional convolution ops into lower-dimensional
+    equivalents when possible. This operates on both named ops and equivalent
+    `linalg.generic` ops that have convolution-like structure (as determined
+    by `inferConvolutionDims`).
+
+    The transformation always attempts to specialize the result back to a named
+    op when possible.
 
     #### Return modes
 
@@ -354,31 +414,82 @@ def EliminateLinalgOpAnchoredEmptyTensorsOp
 //===----------------------------------------------------------------------===//
 
 def FuseOp : Op<Transform_Dialect, "structured.fuse",
-    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
-     DeclareOpInterfaceMethods<TransformOpInterface>,
-     ReportTrackingListenerFailuresOpTrait]> {
+       [AttrSizedOperandSegments,
+        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+        TransformOpInterface, ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
     Tiles the operations pointed to by the target handle and fuses their
-    producers greedily using the options provided as attributes.
+    producers greedily using the options provided as attributes. Tile sizes
+    and loop interchange permutation can be provided as either static
+    attributes or dynamic values (transform parameters or payload handles).
+
+    Additionally, tile sizes can also be provided as a single handle containing
+    variadic number of values. In that case, the number of loops generated is
+    determined at runtime from the number of values in the packed handle.
+    For each target, created loops are appended to the single return handle in
+    the same order as the target operations.
 
     If `apply_cleanup` is true then slice canonicalization is applied between
-    fusion steps.
+    fusion steps. If `use_forall` is true then tiling method generates a
+    `scf.forall` loop instead of `scf.for` loops.
   }];
 
   let arguments =
     (ins TransformHandleTypeInterface:$target,
-         DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes,
-         DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_interchange,
-         DefaultValuedAttr<BoolAttr, "false">:$apply_cleanup);
+        Variadic<TransformAnyParamTypeOrAnyHandle> : $tile_sizes,
+        Variadic<TransformAnyParamTypeOrAnyHandle> : $tile_interchange,
+        Optional<TransformAnyParamTypeOrAnyHandle> : $packed_tile_sizes,
+        DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_tile_sizes,
+        DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_tile_interchange,
+        UnitAttr:$apply_cleanup,
+        UnitAttr:$use_forall);
   let results = (outs TransformHandleTypeInterface:$transformed,
                       Variadic<TransformHandleTypeInterface>:$loops);
+  let builders = [
+    OpBuilder<(ins "TypeRange":$loopTypes,
+                   "Value":$target,
+                   "ArrayRef<int64_t>":$staticTileSizes,
+                   "ArrayRef<int64_t>":$staticTileInterchange,
+                   CArg<"bool", "false">:$applyCleanup,
+                   CArg<"bool", "false">:$useForall)>,
+    OpBuilder<(ins "TypeRange":$loopTypes,
+                   "Value":$target,
+                   "ArrayRef<OpFoldResult>":$mixedTileSizes,
+                   "ArrayRef<OpFoldResult>":$mixedTileInterchange,
+                   CArg<"bool", "false">:$applyCleanup,
+                   CArg<"bool", "false">:$useForall)>,
+    OpBuilder<(ins "Value":$target,
+                   "ArrayRef<int64_t>":$staticTileSizes,
+                   "ArrayRef<int64_t>":$staticTileInterchange,
+                   CArg<"bool", "false">:$applyCleanup,
+                   CArg<"bool", "false">:$useForall)>,
+    OpBuilder<(ins "Value":$target,
+                   "ArrayRef<OpFoldResult>":$mixedTileSizes,
+                   "ArrayRef<OpFoldResult>":$mixedTileInterchange,
+                   CArg<"bool", "false">:$applyCleanup,
+                   CArg<"bool", "false">:$useForall)>,
+  ];
 
   let assemblyFormat = [{
-    $target ($tile_sizes^)? (`interchange` $tile_interchange^)?
-    (`apply_cleanup` `=` $apply_cleanup^)? attr-dict
-    `:` functional-type(operands, results)
+    $target oilist(
+      `tile_sizes` custom<PackedOrDynamicIndexList>($packed_tile_sizes,
+                                                    $tile_sizes,
+                                                    $static_tile_sizes) |
+      `interchange` custom<DynamicIndexList>($tile_interchange, $static_tile_interchange)
+    )
+    attr-dict `:` functional-type(operands, results)
   }];
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure apply(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::transform::TransformResults &transformResults,
+        ::mlir::transform::TransformState &state);
+
+    ::mlir::SmallVector<::mlir::OpFoldResult> getMixedTileSizes();
+    ::mlir::SmallVector<::mlir::OpFoldResult> getMixedTileInterchange();
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -486,20 +597,22 @@ def SpecializeOp : Op<Transform_Dialect, "structured.specialize",
      TransformOpInterface, TransformEachOpTrait,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Transforms a generic operation into the equivalent named form.
+    Transforms a generic operation into the equivalent named or category form.
+
+    By default, operations are specialized into named forms.
 
     #### Return modes
 
     This operation ignores non-Linalg ops and drops them in the return. If all
     the operations referred to by the `target` handle specialize, the transform
-    succeeds; otherwise, the operation produces a silenceable failure.  The return
-    handle points to only the subset of successfully produced equivalent named
+    succeeds; otherwise, the operation produces a silenceable failure. The return
+    handle points to only the subset of successfully produced equivalent specialized
     operations, which can be empty or contain the original ops if they were already
-    in named form. The supported specialization to named Linalg operations are:
-    - linalg.copy of any rank.
+    in the target form.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$target);
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       DefaultValuedAttr<BoolAttr, "false">:$emit_category);
   let results = (outs TransformHandleTypeInterface:$transformed);
   let assemblyFormat = [{
       $target attr-dict `:` 
@@ -641,7 +754,7 @@ def LowerUnPackOp : Op<Transform_Dialect, "structured.lower_unpack", [
                          ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
     Lower a linalg.unpack into empty + linalg.transpose + tensor.collapse_shape +
-    tensor.extract_slice.
+    tensor.extract_slice + linalg.copy.
 
     #### Return modes
 
@@ -649,7 +762,7 @@ def LowerUnPackOp : Op<Transform_Dialect, "structured.lower_unpack", [
     operation produces a silenceable failure if the rewrite fails for any
     reason. If all the operations referred to by the `target` are rewritten,
     the transform succeeds. Return handles to the newly produced empty,
-    transpose, collapse_shape and extract_slice ops.
+    transpose, collapse_shape, extract_slice and copy ops.
   }];
 
   let arguments = (ins Transform_ConcreteOpType<"linalg.unpack">:$target,
@@ -657,7 +770,8 @@ def LowerUnPackOp : Op<Transform_Dialect, "structured.lower_unpack", [
   let results = (outs Transform_ConcreteOpType<"tensor.empty">:$empty_op,
                       Transform_ConcreteOpType<"linalg.transpose">:$transpose_op,
                       Transform_ConcreteOpType<"tensor.collapse_shape">:$collapse_shape_op,
-                      Transform_ConcreteOpType<"tensor.extract_slice">:$extract_slice_op);
+                      Transform_ConcreteOpType<"tensor.extract_slice">:$extract_slice_op,
+                      Transform_ConcreteOpType<"linalg.copy">:$copy_op);
   let assemblyFormat = [{
     $target attr-dict `:` functional-type(operands, results)
   }];
@@ -1527,7 +1641,21 @@ def DecomposeInterfaceOp : Op<Transform_Dialect, "structured.decompose_interface
      TransformEachOpTrait,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    TODO
+    Decomposes target operations into sequences of simpler ops.
+
+    #### Return modes
+
+    This operation ignores ops that do not implement the AggregatedOpInterface
+    and drops them in the return. If any such op is encountered, the transform
+    emits a silenceable failure.
+
+    If all the operations referred to by the `target` handle decompose
+    properly, the transform succeeds. Otherwise the transform produces a
+    silenceable failure.
+    The return handle points to a subset of successfully produced operations.
+    For each target, the handle contains one value per its result. That is,
+    the handle contains at most as many ops as the targets had results.
+    The handle can be empty.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target);
@@ -2017,8 +2145,8 @@ def TileReductionUsingForallOp :
                    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$tile_sizes,
                    OptionalAttr<DeviceMappingArrayAttr>:$mapping);
   let results = (outs Variadic<TransformHandleTypeInterface>:$fill_op,
-                      TransformHandleTypeInterface:$split_linalg_op,
-                      TransformHandleTypeInterface:$combining_linalg_op,
+                      TransformHandleTypeInterface:$split_op,
+                      TransformHandleTypeInterface:$combining_op,
                       TransformHandleTypeInterface:$forall_op);
 
   let builders = [
@@ -2042,7 +2170,7 @@ def TileReductionUsingForallOp :
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::transform::TransformRewriter &rewriter,
-        ::mlir::linalg::LinalgOp target,
+        Operation *target,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];

@@ -277,7 +277,8 @@ public:
 
   void Dump(Stream &s) override;
 
-  void DumpClangAST(Stream &s, llvm::StringRef filter) override;
+  void DumpClangAST(Stream &s, llvm::StringRef filter,
+                    bool show_colors) override;
 
   /// List separate dwo files.
   bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,
@@ -329,7 +330,8 @@ public:
     return LLDB_INVALID_OFFSET;
   }
 
-  virtual bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
+  virtual bool ParseVendorDWARFOpcode(uint8_t op,
+                                      const llvm::DataExtractor &opcodes,
                                       lldb::offset_t &offset,
                                       RegisterContext *reg_ctx,
                                       lldb::RegisterKind reg_kind,

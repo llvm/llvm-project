@@ -29,11 +29,11 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Linkage.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/OptionalUnsigned.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/UnsignedOrNone.h"
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -80,6 +80,7 @@ class TypeAliasTemplateDecl;
 class UnresolvedSetImpl;
 class VarTemplateDecl;
 enum class ImplicitParamKind;
+struct UsualDeleteParams;
 
 // Holds a constraint expression along with a pack expansion index, if
 // expanded.
@@ -858,13 +859,11 @@ public:
 
   void setTrailingRequiresClause(const AssociatedConstraint &AC);
 
-  unsigned getNumTemplateParameterLists() const {
-    return hasExtInfo() ? getExtInfo()->NumTemplParamLists : 0;
-  }
-
-  TemplateParameterList *getTemplateParameterList(unsigned index) const {
-    assert(index < getNumTemplateParameterLists());
-    return getExtInfo()->TemplParamLists[index];
+  ArrayRef<TemplateParameterList *> getTemplateParameterLists() const {
+    if (!hasExtInfo())
+      return {};
+    return {/*data=*/getExtInfo()->TemplParamLists,
+            /*length=*/getExtInfo()->NumTemplParamLists};
   }
 
   void setTemplateParameterListsInfo(ASTContext &Context,
@@ -1209,6 +1208,21 @@ public:
             // C++11 [dcl.stc]p4
             (getStorageClass() == SC_None && getTSCSpec() == TSCS_thread_local))
       && !isFileVarDecl();
+  }
+
+  /// Returns true if this is a file-scope variable with internal linkage.
+  bool isInternalLinkageFileVar() const {
+    // Calling isExternallyVisible() can trigger linkage computation/caching,
+    // which may produce stale results when a decl's DeclContext changes after
+    // creation (e.g., OpenMP declare mapper variables), so here we determine
+    // it syntactically instead.
+    if (!isFileVarDecl())
+      return false;
+    // Linkage is determined by enclosing class/namespace for static data
+    // members.
+    if (getStorageClass() == SC_Static && !isStaticDataMember())
+      return true;
+    return isInAnonymousNamespace();
   }
 
   /// Returns true if a variable has extern or __private_extern__
@@ -1714,6 +1728,10 @@ public:
   /// This can only be called for declarations where hasInit() is true.
   CharUnits getFlexibleArrayInitChars(const ASTContext &Ctx) const;
 
+  /// Apply a deduced address space, if one isn't already set.
+  void assignAddressSpace(const ASTContext &Ctxt, LangAS AS);
+  void deduceParmAddressSpace(const ASTContext &Ctxt);
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K >= firstVar && K <= lastVar; }
@@ -1748,16 +1766,7 @@ enum class ImplicitParamKind {
 class ImplicitParamDecl : public VarDecl {
   void anchor() override;
 
-public:
-  /// Create implicit parameter.
-  static ImplicitParamDecl *Create(ASTContext &C, DeclContext *DC,
-                                   SourceLocation IdLoc, IdentifierInfo *Id,
-                                   QualType T, ImplicitParamKind ParamKind);
-  static ImplicitParamDecl *Create(ASTContext &C, QualType T,
-                                   ImplicitParamKind ParamKind);
-
-  static ImplicitParamDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
-
+protected:
   ImplicitParamDecl(ASTContext &C, DeclContext *DC, SourceLocation IdLoc,
                     const IdentifierInfo *Id, QualType Type,
                     ImplicitParamKind ParamKind)
@@ -1775,6 +1784,16 @@ public:
     setImplicit();
   }
 
+public:
+  /// Create implicit parameter.
+  static ImplicitParamDecl *Create(ASTContext &C, DeclContext *DC,
+                                   SourceLocation IdLoc,
+                                   const IdentifierInfo *Id, QualType T,
+                                   ImplicitParamKind ParamKind);
+  static ImplicitParamDecl *Create(ASTContext &C, QualType T,
+                                   ImplicitParamKind ParamKind);
+
+  static ImplicitParamDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
   /// Returns the implicit parameter kind.
   ImplicitParamKind getParameterKind() const {
     return static_cast<ImplicitParamKind>(NonParmVarDeclBits.ImplicitParamKind);
@@ -2334,7 +2353,7 @@ public:
   }
 
   void setDefaultedOrDeletedInfo(DefaultedOrDeletedFunctionInfo *Info);
-  DefaultedOrDeletedFunctionInfo *getDefalutedOrDeletedInfo() const;
+  DefaultedOrDeletedFunctionInfo *getDefaultedOrDeletedInfo() const;
 
   /// Whether this function is variadic.
   bool isVariadic() const;
@@ -2645,6 +2664,8 @@ public:
   /// Determine whether this is a type aware operator new or delete.
   bool isTypeAwareOperatorNewOrDelete() const;
   void setIsTypeAwareOperatorNewOrDelete(bool IsTypeAwareOperator = true);
+
+  UsualDeleteParams getUsualDeleteParams() const;
 
   /// Compute the language linkage.
   LanguageLinkage getLanguageLinkage() const;
@@ -3101,6 +3122,10 @@ public:
   /// represents.
   void setTemplateSpecializationKind(TemplateSpecializationKind TSK,
                         SourceLocation PointOfInstantiation = SourceLocation());
+
+  /// True if both __host__ and __device__ are implicit attributes and this is
+  /// (or is a member of) an explicit template instantiation.
+  bool isImplicitHDExplicitInstantiation() const;
 
   /// Retrieve the (first) point of instantiation of a function template
   /// specialization or a member of a class template specialization.
@@ -3768,6 +3793,12 @@ protected:
   /// True if this decl is currently being defined.
   void setBeingDefined(bool V = true) { TagDeclBits.IsBeingDefined = V; }
 
+  void printAnonymousTagDecl(llvm::raw_ostream &OS,
+                             const PrintingPolicy &Policy) const;
+
+  void printAnonymousTagDeclLocation(llvm::raw_ostream &OS,
+                                     const PrintingPolicy &Policy) const;
+
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
@@ -3966,13 +3997,11 @@ public:
 
   void setQualifierInfo(NestedNameSpecifierLoc QualifierLoc);
 
-  unsigned getNumTemplateParameterLists() const {
-    return hasExtInfo() ? getExtInfo()->NumTemplParamLists : 0;
-  }
-
-  TemplateParameterList *getTemplateParameterList(unsigned i) const {
-    assert(i < getNumTemplateParameterLists());
-    return getExtInfo()->TemplParamLists[i];
+  ArrayRef<TemplateParameterList *> getTemplateParameterLists() const {
+    if (!hasExtInfo())
+      return {};
+    return {/*data=*/getExtInfo()->TemplParamLists,
+            /*length=*/getExtInfo()->NumTemplParamLists};
   }
 
   // These types are created lazily, use the ASTContext methods to obtain them.
@@ -4037,6 +4066,11 @@ class EnumDecl : public TagDecl {
   /// and can be accessed with the provided accessors.
   unsigned ODRHash;
 
+  /// Source range covering the enum key:
+  ///  - 'enum'              (unscoped)
+  ///  - 'enum class|struct' (scoped)
+  SourceRange EnumKeyRange;
+
   EnumDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
            SourceLocation IdLoc, IdentifierInfo *Id, EnumDecl *PrevDecl,
            bool Scoped, bool ScopedUsingClassTag, bool Fixed);
@@ -4073,6 +4107,10 @@ public:
   /// True if this is an Objective-C, C++11, or
   /// Microsoft-style enumeration with a fixed underlying type.
   void setFixed(bool Fixed = true) { EnumDeclBits.IsFixed = Fixed; }
+
+  SourceRange getEnumKeyRange() const { return EnumKeyRange; }
+
+  void setEnumKeyRange(SourceRange Range) { EnumKeyRange = Range; }
 
 private:
   /// True if a valid hash is stored in ODRHash.
@@ -4519,6 +4557,28 @@ public:
   // Whether there are any fields (non-static data members) in this record.
   bool field_empty() const {
     return field_begin() == field_end();
+  }
+
+  /// Returns the number of fields (non-static data members) in this record.
+  unsigned getNumFields() const {
+    return std::distance(field_begin(), field_end());
+  }
+
+  /// noload_fields - Iterate over the fields stored in this record
+  /// that are currently loaded; don't attempt to retrieve anything
+  /// from an external source.
+  field_range noload_fields() const {
+    return field_range(noload_field_begin(), noload_field_end());
+  }
+
+  field_iterator noload_field_begin() const;
+  field_iterator noload_field_end() const {
+    return field_iterator(decl_iterator());
+  }
+
+  // Whether there are any fields (non-static data members) in this record.
+  bool noload_field_empty() const {
+    return noload_field_begin() == noload_field_end();
   }
 
   /// Note that the definition of this type is now complete.

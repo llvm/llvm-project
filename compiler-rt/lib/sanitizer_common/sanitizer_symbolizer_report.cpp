@@ -184,7 +184,7 @@ static void MaybeReportNonExecRegion(uptr pc) {
   MemoryMappedSegment segment;
   while (proc_maps.Next(&segment)) {
     if (pc >= segment.start && pc < segment.end && !segment.IsExecutable())
-      Report("Hint: PC is at a non-executable region. Maybe a wild jump?\n");
+      Report("HINT: PC is at a non-executable region. Maybe a wild jump?\n");
   }
 #endif
 }
@@ -254,7 +254,7 @@ static void ReportDeadlySignalImpl(const SignalContext &sig, u32 tid,
            (void *)sig.bp, (void *)sig.sp, tid);
   Printf("%s", d.Default());
   if (sig.pc < GetPageSizeCached())
-    Report("Hint: pc points to the zero page.\n");
+    Report("HINT: pc points to the zero page.\n");
   if (sig.is_memory_access) {
     const char *access_type =
         sig.write_flag == SignalContext::Write
@@ -262,11 +262,12 @@ static void ReportDeadlySignalImpl(const SignalContext &sig, u32 tid,
             : (sig.write_flag == SignalContext::Read ? "READ" : "UNKNOWN");
     Report("The signal is caused by a %s memory access.\n", access_type);
     if (!sig.is_true_faulting_addr)
-      Report("Hint: this fault was caused by a dereference of a high value "
-             "address (see register values below).  Disassemble the provided "
-             "pc to learn which register was used.\n");
+      Report(
+          "HINT: this fault was caused by a dereference of a high value "
+          "address (see register values below).  Disassemble the provided "
+          "pc to learn which register was used.\n");
     else if (sig.addr < GetPageSizeCached())
-      Report("Hint: address points to the zero page.\n");
+      Report("HINT: address points to the zero page.\n");
   }
   MaybeReportNonExecRegion(sig.pc);
   InternalMmapVector<BufferedStackTrace> stack_buffer(1);

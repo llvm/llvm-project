@@ -12,6 +12,7 @@ unittest("FormatTests") {
   ]
   sources = [
     "AlignBracketsTest.cpp",
+    "AlignmentTest.cpp",
     "BracesInserterTest.cpp",
     "BracesRemoverTest.cpp",
     "CleanupTest.cpp",
@@ -38,6 +39,7 @@ unittest("FormatTests") {
     "MacroExpanderTest.cpp",
     "MatchFilePathTest.cpp",
     "NamespaceEndCommentsFixerTest.cpp",
+    "NumericLiteralCaseTest.cpp",
     "NumericLiteralInfoTest.cpp",
     "ObjCPropertyAttributeOrderFixerTest.cpp",
     "QualifierFixerTest.cpp",

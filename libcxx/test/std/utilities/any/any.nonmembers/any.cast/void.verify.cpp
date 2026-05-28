@@ -11,24 +11,13 @@
 // <any>
 
 // template<class T>
-// const T* any_cast(const any* operand) noexcept;
-
-// template<class T>
 // T* any_cast(any* operand) noexcept;
 
 #include <any>
 
 void test() {
-  {
-    const std::any ca = 1;
+  std::any a = 1;
 
-    // expected-error-re@any:* {{static assertion failed{{.*}}_ValueType may not be void.}}
-    std::any_cast<void>(&ca); // expected-note {{requested here}}
-  }
-  {
-    std::any a = 1;
-
-    // expected-error-re@any:* {{static assertion failed{{.*}}_ValueType may not be void.}}
-    std::any_cast<void>(&a); // expected-note {{requested here}}
-  }
+  // expected-error-re@any:* {{static assertion failed{{.*}}_ValueType may not be void.}}
+  (void)std::any_cast<void>(&a); // expected-note {{requested here}}
 }

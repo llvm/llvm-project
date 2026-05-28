@@ -77,6 +77,12 @@
 // REFERENCE-TYPES: "-target-feature" "+reference-types"
 // NO-REFERENCE-TYPES: "-target-feature" "-reference-types"
 
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mrelaxed-atomics 2>&1 | FileCheck %s -check-prefix=RELAXED-ATOMICS
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-relaxed-atomics 2>&1 | FileCheck %s -check-prefix=NO-RELAXED-ATOMICS
+
+// RELAXED-ATOMICS: "-target-feature" "+relaxed-atomics"
+// NO-RELAXED-ATOMICS: "-target-feature" "-relaxed-atomics"
+
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mrelaxed-simd 2>&1 | FileCheck %s -check-prefix=RELAXED-SIMD
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-relaxed-simd 2>&1 | FileCheck %s -check-prefix=NO-RELAXED-SIMD
 
@@ -106,3 +112,9 @@
 
 // WIDE-ARITH: "-target-feature" "+wide-arithmetic"
 // NO-WIDE-ARITH: "-target-feature" "-wide-arithmetic"
+
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mcompact-imports 2>&1 | FileCheck %s -check-prefix=COMPACT-IMPORTS
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-compact-imports 2>&1 | FileCheck %s -check-prefix=NO-COMPACT-IMPORTS
+
+// COMPACT-IMPORTS: "-target-feature" "+compact-imports"
+// NO-COMPACT-IMPORTS: "-target-feature" "-compact-imports"

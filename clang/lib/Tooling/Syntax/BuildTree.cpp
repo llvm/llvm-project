@@ -77,8 +77,10 @@ static Expr *IgnoreImplicit(Expr *E) {
                          IgnoreCXXFunctionalCastExprWrappingConstructor);
 }
 
-LLVM_ATTRIBUTE_UNUSED
-static bool isImplicitExpr(Expr *E) { return IgnoreImplicit(E) != E; }
+[[maybe_unused]]
+static bool isImplicitExpr(Expr *E) {
+  return IgnoreImplicit(E) != E;
+}
 
 namespace {
 /// Get start location of the Declarator from the TypeLoc.
@@ -735,6 +737,14 @@ public:
     return true;
   }
 
+  // ExplicitInstantiationDecl is an auxiliary AST node that records source
+  // info. The syntax tree is already built by
+  // TraverseClassTemplateSpecializationDecl or by the parser for
+  // function/variable templates, so skip this node.
+  bool TraverseExplicitInstantiationDecl(ExplicitInstantiationDecl *) {
+    return true;
+  }
+
   bool WalkUpFromTemplateDecl(TemplateDecl *S) {
     foldTemplateDeclaration(
         Builder.getDeclarationRange(S),
@@ -746,7 +756,7 @@ public:
   bool WalkUpFromTagDecl(TagDecl *C) {
     // FIXME: build the ClassSpecifier node.
     if (!C->isFreeStanding()) {
-      assert(C->getNumTemplateParameterLists() == 0);
+      assert(C->getTemplateParameterLists().empty());
       return true;
     }
     handleFreeStandingTagDecl(C);
@@ -770,8 +780,8 @@ public:
     };
     if (auto *S = dyn_cast<ClassTemplatePartialSpecializationDecl>(C))
       ConsumeTemplateParameters(*S->getTemplateParameters());
-    for (unsigned I = C->getNumTemplateParameterLists(); 0 < I; --I)
-      ConsumeTemplateParameters(*C->getTemplateParameterList(I - 1));
+    for (TemplateParameterList *TPL : C->getTemplateParameterLists())
+      ConsumeTemplateParameters(*TPL);
     return Result;
   }
 
@@ -973,13 +983,6 @@ public:
         if (BeginLoc.isInvalid())
           BeginLoc = TST.getTemplateNameLoc();
         return buildSimpleTemplateName({BeginLoc, TST.getEndLoc()});
-      }
-      case TypeLoc::DependentTemplateSpecialization: {
-        auto DT = TL.castAs<DependentTemplateSpecializationTypeLoc>();
-        SourceLocation BeginLoc = DT.getTemplateKeywordLoc();
-        if (BeginLoc.isInvalid())
-          BeginLoc = DT.getTemplateNameLoc();
-        return buildSimpleTemplateName({BeginLoc, DT.getEndLoc()});
       }
       case TypeLoc::Decltype: {
         const auto DTL = TL.castAs<DecltypeTypeLoc>();

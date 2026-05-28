@@ -28,6 +28,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Object/BuildID.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/CommandLine.h"
@@ -72,10 +73,22 @@ enum SpecialFrameAddr {
 
 using RangesTy = std::vector<std::pair<uint64_t, uint64_t>>;
 
+enum DwarfNameStatus {
+  // Dwarf name matches with the symbol table (or symbol table just doesn't have
+  // this entry)
+  Matched = 0,
+  // Dwarf name is missing, but we fixed it with the name from symbol table
+  Missing = 1,
+  // Symbol table has different names on this. Log these GUIDs in
+  // AlternativeFunctionGUIDs
+  Mismatch = 2,
+};
+
 struct BinaryFunction {
   StringRef FuncName;
   // End of range is an exclusive bound.
   RangesTy Ranges;
+  DwarfNameStatus NameStatus = DwarfNameStatus::Matched;
 
   uint64_t getFuncSize() {
     uint64_t Sum = 0;
@@ -117,7 +130,7 @@ struct PrologEpilogTracker {
       PrologEpilogSet.insert(I.first);
       InstructionPointer IP(Binary, I.first);
       if (!IP.advance())
-        break;
+        continue;
       PrologEpilogSet.insert(IP.Address);
     }
   }
@@ -128,7 +141,7 @@ struct PrologEpilogTracker {
       PrologEpilogSet.insert(Addr);
       InstructionPointer IP(Binary, Addr);
       if (!IP.backward())
-        break;
+        continue;
       PrologEpilogSet.insert(IP.Address);
     }
   }
@@ -176,11 +189,25 @@ private:
 
 using AddressRange = std::pair<uint64_t, uint64_t>;
 
+// The parsed MMap event
+struct MMapEvent {
+  int64_t PID = 0;
+  uint64_t Address = 0;
+  uint64_t Size = 0;
+  uint64_t Offset = 0;
+  StringRef MemProtectionFlag;
+  StringRef BinaryPath;
+};
+
 class ProfiledBinary {
+  // The executable binary file.
+  object::OwningBinary<object::Binary> OBinary;
   // Absolute path of the executable binary.
   std::string Path;
   // Path of the debug info binary.
   std::string DebugBinaryPath;
+  // Path of the pseudo probe binary, either Path or DebugBinaryPath if present.
+  StringRef PseudoProbeBinPath;
   // The target triple.
   Triple TheTriple;
   // Path of symbolizer path which should be pointed to binary with debug info.
@@ -218,19 +245,27 @@ class ProfiledBinary {
   // A list of binary functions that have samples.
   std::unordered_set<const BinaryFunction *> ProfiledFunctions;
 
-  // GUID to Elf symbol start address map
+  // GUID to symbol start address map
   DenseMap<uint64_t, uint64_t> SymbolStartAddrs;
+
+  // Binary function to GUID mapping that stores the alternative names in symbol
+  // table, despite the original name from DWARF info
+  std::unordered_multimap<const BinaryFunction *, uint64_t>
+      AlternativeFunctionGUIDs;
+
+  // Mapping of profiled binary function to its pseudo probe name
+  std::unordered_map<const BinaryFunction *, StringRef> PseudoProbeNames;
 
   // These maps are for temporary use of warning diagnosis.
   DenseSet<int64_t> AddrsWithMultipleSymbols;
   DenseSet<std::pair<uint64_t, uint64_t>> AddrsWithInvalidInstruction;
 
-  // Start address to Elf symbol GUID map
+  // Start address to symbol GUID map
   std::unordered_multimap<uint64_t, uint64_t> StartAddrToSymMap;
 
   // An ordered map of mapping function's start address to function range
-  // relevant info. Currently to determine if the offset of ELF is the start of
-  // a real function, we leverage the function range info from DWARF.
+  // relevant info. Currently to determine if the offset of ELF/COFF is the
+  // start of a real function, we leverage the function range info from DWARF.
   std::map<uint64_t, FuncRange> StartAddrToFuncRangeMap;
 
   // Address to context location map. Used to expand the context.
@@ -250,6 +285,10 @@ class ProfiledBinary {
   std::set<uint64_t> UncondBranchAddrSet;
   // A set of branch instruction addresses.
   std::unordered_set<uint64_t> BranchAddressSet;
+  // A set of indirect branch instruction addresses.
+  std::unordered_set<uint64_t> IndirectBranchAddressSet;
+  // A set of branch target addresses (destinations of branches/calls).
+  std::unordered_set<uint64_t> BranchTargetAddressSet;
 
   // Estimate and track function prolog and epilog ranges.
   PrologEpilogTracker ProEpilogTracker;
@@ -267,6 +306,19 @@ class ProfiledBinary {
   // String table owning function name strings created from the symbolizer.
   std::unordered_set<std::string> NameStrings;
 
+  // MMap events for PT_LOAD segments without 'x' memory protection flag.
+  std::map<uint64_t, MMapEvent, std::greater<uint64_t>> NonTextMMapEvents;
+
+  // Records the file offset, file size and virtual address of program headers.
+  struct PhdrInfo {
+    uint64_t FileOffset;
+    uint64_t FileSz;
+    uint64_t VirtualAddr;
+  };
+
+  // Program header information for non-text PT_LOAD segments.
+  SmallVector<PhdrInfo> NonTextPhdrInfo;
+
   // A collection of functions to print disassembly for.
   StringSet<> DisassembleFunctionSet;
 
@@ -275,8 +327,6 @@ class ProfiledBinary {
 
   // Function name to probe frame map for top-level outlined functions.
   StringMap<MCDecodedPseudoProbeInlineTree *> TopLevelProbeFrameMap;
-
-  bool UsePseudoProbes = false;
 
   bool UseFSDiscriminator = false;
 
@@ -294,7 +344,27 @@ class ProfiledBinary {
 
   bool IsCOFF = false;
 
+  // Whether the binary has a PT_INTERP program header (PIE executables do,
+  // true shared libraries don't). Used to distinguish PIE from .so since
+  // both are ET_DYN.
+  bool HasInterp = false;
+
+  // Build ID used to filter perfscript addresses in [buildid:]addr format.
+  // For shared libraries, set to the binary's build ID.
+  // For main executables, kept empty (addresses have no buildid prefix).
+  std::string FilterBuildID;
+
   void setPreferredTextSegmentAddresses(const object::ObjectFile *O);
+
+  // LLVMSymbolizer's symbolize{Code, Data} interfaces requires a section index
+  // for each address to be symbolized. This is a helper function to
+  // construct a SectionedAddress object with the given address and section
+  // index. The section index is set to UndefSection by default.
+  static object::SectionedAddress getSectionedAddress(
+      uint64_t Address,
+      uint64_t SectionIndex = object::SectionedAddress::UndefSection) {
+    return object::SectionedAddress{Address, SectionIndex};
+  }
 
   template <class ELFT>
   void setPreferredTextSegmentAddresses(const object::ELFFile<ELFT> &Obj,
@@ -302,9 +372,10 @@ class ProfiledBinary {
   void setPreferredTextSegmentAddresses(const object::COFFObjectFile *Obj,
                                         StringRef FileName);
 
-  void checkPseudoProbe(const object::ELFObjectFileBase *Obj);
+  // Return true if pseudo probe in Obj is usable.
+  bool checkPseudoProbe(const object::ObjectFile *Obj, StringRef ObjPath);
 
-  void decodePseudoProbe(const object::ELFObjectFileBase *Obj);
+  void decodePseudoProbe(const object::ObjectFile *Obj);
 
   void checkUseFSDiscriminator(
       const object::ObjectFile *Obj,
@@ -320,8 +391,11 @@ class ProfiledBinary {
   // Load debug info from DWARF unit.
   void loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit);
 
-  // Create elf symbol to its start address mapping.
-  void populateElfSymbolAddressList(const object::ELFObjectFileBase *O);
+  // Create symbol to its start address mapping.
+  void populateSymbolAddressList(const object::ObjectFile *O);
+
+  // Load functions from its symbol table (when DWARF info is missing).
+  void loadSymbolsFromSymtab(const object::ObjectFile *O);
 
   // A function may be spilt into multiple non-continuous address ranges. We use
   // this to set whether start a function range is the real entry of the
@@ -342,6 +416,11 @@ class ProfiledBinary {
   SampleContextFrameVector symbolize(const InstructionPointer &IP,
                                      bool UseCanonicalFnName = false,
                                      bool UseProbeDiscriminator = false);
+
+public:
+  ProfiledBinary(const StringRef ExeBinPath, const StringRef DebugBinPath);
+  ~ProfiledBinary();
+
   /// Decode the interesting parts of the binary and build internal data
   /// structures. On high level, the parts of interest are:
   ///   1. Text sections, including the main code section and the PLT
@@ -349,20 +428,25 @@ class ProfiledBinary {
   ///   2. The .debug_line section, used by Dwarf-based profile generation.
   ///   3. Pseudo probe related sections, used by probe-based profile
   ///   generation.
-  void load();
+  void load(StringRef TripleStr = "");
 
-public:
-  ProfiledBinary(const StringRef ExeBinPath, const StringRef DebugBinPath);
-  ~ProfiledBinary();
+  /// Symbolize an address and return the symbol name. The returned StringRef is
+  /// owned by this ProfiledBinary object.
+  StringRef symbolizeDataAddress(uint64_t Address);
 
   void decodePseudoProbe();
 
   StringRef getPath() const { return Path; }
   StringRef getName() const { return llvm::sys::path::filename(Path); }
+  const Triple &getTriple() const { return TheTriple; }
+  const object::Binary &getBinary() const { return *OBinary.getBinary(); }
   uint64_t getBaseAddress() const { return BaseAddress; }
   void setBaseAddress(uint64_t Address) { BaseAddress = Address; }
 
   bool isCOFF() const { return IsCOFF; }
+
+  // Return the build ID used for filtering perfscript addresses.
+  StringRef getFilterBuildID() const { return FilterBuildID; }
 
   // Canonicalize to use preferred load address as base address.
   uint64_t canonicalizeVirtualAddress(uint64_t Address) {
@@ -404,6 +488,12 @@ public:
     return ProEpilogTracker.PrologEpilogSet.count(Address);
   }
 
+  bool addressIsBranchTarget(uint64_t Address) const {
+    return BranchTargetAddressSet.count(Address);
+  }
+  bool addressIsIndirectBranch(uint64_t Address) const {
+    return IndirectBranchAddressSet.count(Address);
+  }
   bool addressIsTransfer(uint64_t Address) {
     return BranchAddressSet.count(Address) || RetAddressSet.count(Address) ||
            CallAddressSet.count(Address);
@@ -422,7 +512,7 @@ public:
 
   size_t getCodeAddrVecSize() const { return CodeAddressVec.size(); }
 
-  bool usePseudoProbes() const { return UsePseudoProbes; }
+  bool usePseudoProbes() const { return !PseudoProbeBinPath.empty(); }
   bool useFSDiscriminator() const { return UseFSDiscriminator; }
   bool isKernel() const { return IsKernel; }
 
@@ -493,7 +583,7 @@ public:
   void setProfiledFunctions(std::unordered_set<const BinaryFunction *> &Funcs) {
     ProfiledFunctions = Funcs;
   }
-  
+
   BinaryFunction *getBinaryFunction(FunctionId FName) {
     if (FName.isStringRef()) {
       auto I = BinaryFunctions.find(FName.str());
@@ -562,6 +652,10 @@ public:
 
   void computeInlinedContextSizeForFunc(const BinaryFunction *Func);
 
+  void loadSymbolsFromPseudoProbe();
+
+  StringRef findPseudoProbeName(const BinaryFunction *Func);
+
   const MCDecodedPseudoProbe *getCallProbeForAddr(uint64_t Address) const {
     return ProbeDecoder.getCallProbeForAddr(Address);
   }
@@ -594,6 +688,46 @@ public:
   getInlinerDescForProbe(const MCDecodedPseudoProbe *Probe) {
     return ProbeDecoder.getInlinerDescForProbe(Probe);
   }
+
+  bool isNonOverlappingAddressInterval(std::pair<uint64_t, uint64_t> LHS,
+                                       std::pair<uint64_t, uint64_t> RHS) {
+    if (LHS.second <= RHS.first || RHS.second <= LHS.first)
+      return true;
+    return false;
+  }
+
+  Error addMMapNonTextEvent(MMapEvent Event) {
+    // Given the mmap events of the profiled binary, the virtual address
+    // intervals of mmaps most often doesn't overlap with each other. The
+    // implementation validates so, and runtime data address is mapped to
+    // a mmap event using look-up. With this implementation, data addresses
+    // from dynamic shared libraries (not the profiled binary) are not mapped or
+    // symbolized. To map runtime address to binary address in case of
+    // overlapping mmap events, the implementation could store all the mmap
+    // events in a vector and in the order they are added and reverse iterate
+    // the vector to find the mmap events. We opt'ed for the non-overlapping
+    // implementation for simplicity.
+    for (const auto &ExistingMMap : NonTextMMapEvents) {
+      if (isNonOverlappingAddressInterval(
+              {ExistingMMap.second.Address,
+               ExistingMMap.second.Address + ExistingMMap.second.Size},
+              {Event.Address, Event.Address + Event.Size})) {
+        continue;
+      }
+      return createStringError(
+          inconvertibleErrorCode(),
+          "Non-text mmap event overlaps with existing event at address: %lx",
+          Event.Address);
+    }
+    NonTextMMapEvents[Event.Address] = Event;
+    return Error::success();
+  }
+
+  // Given a non-text runtime address, canonicalize it to the virtual address in
+  // the binary.
+  // TODO: Consider unifying the canonicalization of text and non-text addresses
+  // in the ProfiledBinary class.
+  uint64_t CanonicalizeNonTextAddress(uint64_t Address);
 
   bool getTrackFuncContextSize() { return TrackFuncContextSize; }
 

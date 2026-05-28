@@ -505,15 +505,14 @@ void CheckerManager::runCheckersForBeginFunction(ExplodedNodeSet &Dst,
 /// Run checkers for end of path.
 // Note, We do not chain the checker output (like in expandGraphWithCheckers)
 // for this callback since end of path nodes are expected to be final.
-void CheckerManager::runCheckersForEndFunction(NodeBuilderContext &BC,
-                                               ExplodedNodeSet &Dst,
+void CheckerManager::runCheckersForEndFunction(ExplodedNodeSet &Dst,
                                                ExplodedNode *Pred,
                                                ExprEngine &Eng,
                                                const ReturnStmt *RS) {
   // We define the builder outside of the loop because if at least one checker
   // creates a successor for Pred, we do not need to generate an
   // autotransition for it.
-  NodeBuilder Bldr(Pred, Dst, BC);
+  NodeBuilder Bldr(Pred, Dst, Eng.getBuilderContext());
   for (const auto &checkFn : EndFunctionCheckers) {
     const ProgramPoint &L =
         FunctionExitPoint(RS, Pred->getLocationContext(), checkFn.Checker);
@@ -731,19 +730,22 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
     ExplodedNodeSet checkDst;
     NodeBuilder B(Pred, checkDst, Eng.getBuilderContext());
 
+    ProgramStateRef State = Pred->getState();
+    CallEventRef<> UpdatedCall = Call.cloneWithState(State);
+
     // Check if any of the EvalCall callbacks can evaluate the call.
     for (const auto &EvalCallChecker : EvalCallCheckers) {
       // TODO: Support the situation when the call doesn't correspond
       // to any Expr.
       ProgramPoint L = ProgramPoint::getProgramPoint(
-          Call.getOriginExpr(), ProgramPoint::PostStmtKind,
+          UpdatedCall->getOriginExpr(), ProgramPoint::PostStmtKind,
           Pred->getLocationContext(), EvalCallChecker.Checker);
       bool evaluated = false;
-      { // CheckerContext generates transitions(populates checkDest) on
+      { // CheckerContext generates transitions (populates checkDest) on
         // destruction, so introduce the scope to make sure it gets properly
         // populated.
         CheckerContext C(B, Eng, Pred, L);
-        evaluated = EvalCallChecker(Call, C);
+        evaluated = EvalCallChecker(*UpdatedCall, C);
       }
 #ifndef NDEBUG
       if (evaluated && evaluatorChecker) {
@@ -774,7 +776,7 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
     // If none of the checkers evaluated the call, ask ExprEngine to handle it.
     if (!evaluatorChecker) {
       NodeBuilder B(Pred, Dst, Eng.getBuilderContext());
-      Eng.defaultEvalCall(B, Pred, Call, CallOpts);
+      Eng.defaultEvalCall(B, Pred, *UpdatedCall, CallOpts);
     }
   }
 }

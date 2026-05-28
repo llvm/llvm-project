@@ -11,8 +11,8 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -343,10 +343,17 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // whether or not that will be the case at this point. So, unconditionally
   // pass LTO options to ensure proper codegen, metadata production, etc if
   // LTO indeed occurs.
+
+  tools::addDTLTOOptions(TC, Args, CmdArgs);
+
   if (Args.hasFlag(options::OPT_funified_lto, options::OPT_fno_unified_lto,
                    true))
     CmdArgs.push_back(D.getLTOMode() == LTOK_Thin ? "--lto=thin"
                                                   : "--lto=full");
+
+  if (Args.hasFlag(options::OPT_ffat_lto_objects,
+                   options::OPT_fno_fat_lto_objects, false))
+    CmdArgs.push_back("--fat-lto-objects");
 
   AddLTOFlag("-emit-jump-table-sizes-section");
 
@@ -485,6 +492,9 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
   // control of header or library search. If we're not linking, don't check
   // for missing libraries.
   auto CheckSDKPartExists = [&](StringRef Dir, StringRef Desc) {
+    // In ThinLTO code generation mode SDK files are not required.
+    if (Args.hasArgNoClaim(options::OPT_fthinlto_index_EQ))
+      return true;
     if (llvm::sys::fs::exists(Dir))
       return true;
     D.Diag(clang::diag::warn_drv_unable_to_find_directory_expected)
@@ -550,8 +560,10 @@ Tool *toolchains::PS5CPU::buildLinker() const {
   return new tools::PS5cpu::Linker(*this);
 }
 
-SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers() const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers(
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
@@ -559,8 +571,10 @@ SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers() const {
   return Res;
 }
 
-SanitizerMask toolchains::PS5CPU::getSupportedSanitizers() const {
-  SanitizerMask Res = PS4PS5Base::getSupportedSanitizers();
+SanitizerMask toolchains::PS5CPU::getSupportedSanitizers(
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      PS4PS5Base::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Thread;
   return Res;
 }

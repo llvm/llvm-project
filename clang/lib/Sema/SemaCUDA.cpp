@@ -52,16 +52,90 @@ bool SemaCUDA::PopForceHostDevice() {
 ExprResult SemaCUDA::ActOnExecConfigExpr(Scope *S, SourceLocation LLLLoc,
                                          MultiExprArg ExecConfig,
                                          SourceLocation GGGLoc) {
-  FunctionDecl *ConfigDecl = getASTContext().getcudaConfigureCallDecl();
+  bool IsDeviceKernelCall = false;
+  switch (CurrentTarget()) {
+  case CUDAFunctionTarget::Global:
+  case CUDAFunctionTarget::Device:
+    IsDeviceKernelCall = true;
+    break;
+  case CUDAFunctionTarget::HostDevice:
+    if (getLangOpts().CUDAIsDevice) {
+      IsDeviceKernelCall = true;
+      if (FunctionDecl *Caller =
+              SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
+          Caller && isImplicitHostDeviceFunction(Caller)) {
+        // Under the device compilation, config call under an HD function should
+        // be treated as a device kernel call. But, for implicit HD ones (such
+        // as lambdas), need to check whether RDC is enabled or not.
+        if (!getLangOpts().GPURelocatableDeviceCode)
+          IsDeviceKernelCall = false;
+        // HIP doesn't support device-side kernel call yet. Still treat it as
+        // the host-side kernel call.
+        if (getLangOpts().HIP)
+          IsDeviceKernelCall = false;
+      }
+    }
+    break;
+  default:
+    break;
+  }
+
+  if (IsDeviceKernelCall && getLangOpts().HIP)
+    return ExprError(
+        Diag(LLLLoc, diag::err_cuda_device_kernel_launch_not_supported));
+
+  FunctionDecl *ConfigDecl = IsDeviceKernelCall
+                                 ? getASTContext().getcudaLaunchDeviceDecl()
+                                 : getASTContext().getcudaConfigureCallDecl();
   if (!ConfigDecl)
     return ExprError(Diag(LLLLoc, diag::err_undeclared_var_use)
-                     << getConfigureFuncName());
+                     << (IsDeviceKernelCall ? getLaunchDeviceFuncName()
+                                            : getConfigureFuncName()));
+  // Additional check on the launch function if it's a device kernel call.
+  if (IsDeviceKernelCall) {
+    auto *GetParamBuf = getASTContext().getcudaGetParameterBufferDecl();
+    if (!GetParamBuf)
+      return ExprError(Diag(LLLLoc, diag::err_undeclared_var_use)
+                       << getGetParameterBufferFuncName());
+  }
+
   QualType ConfigQTy = ConfigDecl->getType();
 
   DeclRefExpr *ConfigDR = new (getASTContext()) DeclRefExpr(
       getASTContext(), ConfigDecl, false, ConfigQTy, VK_LValue, LLLLoc);
   SemaRef.MarkFunctionReferenced(LLLLoc, ConfigDecl);
 
+  if (IsDeviceKernelCall) {
+    SmallVector<Expr *> Args;
+    // Use a null pointer as the kernel function, which may not be resolvable
+    // here. For example, resolving that kernel function may need additional
+    // kernel arguments.
+    llvm::APInt Zero(SemaRef.Context.getTypeSize(SemaRef.Context.IntTy), 0);
+    Args.push_back(IntegerLiteral::Create(SemaRef.Context, Zero,
+                                          SemaRef.Context.IntTy, LLLLoc));
+    // Use a null pointer as the placeholder of the parameter buffer, which
+    // should be replaced with the actual allocation later, in the codegen.
+    Args.push_back(IntegerLiteral::Create(SemaRef.Context, Zero,
+                                          SemaRef.Context.IntTy, LLLLoc));
+    // Add the original config arguments.
+    llvm::append_range(Args, ExecConfig);
+    // Add the default blockDim if it's missing.
+    if (Args.size() < 4) {
+      llvm::APInt One(SemaRef.Context.getTypeSize(SemaRef.Context.IntTy), 1);
+      Args.push_back(IntegerLiteral::Create(SemaRef.Context, One,
+                                            SemaRef.Context.IntTy, LLLLoc));
+    }
+    // Add the default sharedMemSize if it's missing.
+    if (Args.size() < 5)
+      Args.push_back(IntegerLiteral::Create(SemaRef.Context, Zero,
+                                            SemaRef.Context.IntTy, LLLLoc));
+    // Add the default stream if it's missing.
+    if (Args.size() < 6)
+      Args.push_back(new (SemaRef.Context) CXXNullPtrLiteralExpr(
+          SemaRef.Context.NullPtrTy, LLLLoc));
+    return SemaRef.BuildCallExpr(S, ConfigDR, LLLLoc, Args, GGGLoc, nullptr,
+                                 /*IsExecConfig=*/true);
+  }
   return SemaRef.BuildCallExpr(S, ConfigDR, LLLLoc, ExecConfig, GGGLoc, nullptr,
                                /*IsExecConfig=*/true);
 }
@@ -137,11 +211,20 @@ CUDAFunctionTarget SemaCUDA::IdentifyTarget(const FunctionDecl *D,
   if (D == nullptr)
     return CurCUDATargetCtx.Target;
 
+  // C++ deduction guides are never codegen'ed and only participate in template
+  // argument deduction.  Treat them as if they were always host+device so that
+  // CUDA/HIP target checking never rejects their use based solely on target.
+  if (isa<CXXDeductionGuideDecl>(D))
+    return CUDAFunctionTarget::HostDevice;
+
   if (D->hasAttr<CUDAInvalidTargetAttr>())
     return CUDAFunctionTarget::InvalidTarget;
 
   if (D->hasAttr<CUDAGlobalAttr>())
     return CUDAFunctionTarget::Global;
+
+  if (D->isConsteval())
+    return CUDAFunctionTarget::HostDevice;
 
   if (hasAttr<CUDADeviceAttr>(D, IgnoreImplicitHDAttr)) {
     if (hasAttr<CUDAHostAttr>(D, IgnoreImplicitHDAttr))
@@ -165,7 +248,7 @@ SemaCUDA::CUDAVariableTarget SemaCUDA::IdentifyTarget(const VarDecl *Var) {
     return CVT_Unified;
   // Only constexpr and const variabless with implicit constant attribute
   // are emitted on both sides. Such variables are promoted to device side
-  // only if they have static constant intializers on device side.
+  // only if they have static constant initializers on device side.
   if ((Var->isConstexpr() || Var->getType().isConstQualified()) &&
       Var->hasAttr<CUDAConstantAttr>() &&
       !hasExplicitAttr<CUDAConstantAttr>(Var))
@@ -243,12 +326,12 @@ SemaCUDA::IdentifyPreference(const FunctionDecl *Caller,
       CalleeTarget == CUDAFunctionTarget::InvalidTarget)
     return CFP_Never;
 
-  // (a) Can't call global from some contexts until we support CUDA's
-  // dynamic parallelism.
+  // (a) Call global from either global or device contexts is allowed as part
+  // of CUDA's dynamic parallelism support.
   if (CalleeTarget == CUDAFunctionTarget::Global &&
       (CallerTarget == CUDAFunctionTarget::Global ||
        CallerTarget == CUDAFunctionTarget::Device))
-    return CFP_Never;
+    return CFP_Native;
 
   // (b) Calling HostDevice is OK for everyone.
   if (CalleeTarget == CUDAFunctionTarget::HostDevice)
@@ -276,7 +359,8 @@ SemaCUDA::IdentifyPreference(const FunctionDecl *Caller,
   if (CallerTarget == CUDAFunctionTarget::HostDevice) {
     // It's OK to call a compilation-mode matching function from an HD one.
     if ((getLangOpts().CUDAIsDevice &&
-         CalleeTarget == CUDAFunctionTarget::Device) ||
+         (CalleeTarget == CUDAFunctionTarget::Device ||
+          CalleeTarget == CUDAFunctionTarget::Global)) ||
         (!getLangOpts().CUDAIsDevice &&
          (CalleeTarget == CUDAFunctionTarget::Host ||
           CalleeTarget == CUDAFunctionTarget::Global)))
@@ -313,6 +397,10 @@ bool SemaCUDA::isImplicitHostDeviceFunction(const FunctionDecl *D) {
   bool IsImplicitDevAttr = hasImplicitAttr<CUDADeviceAttr>(D);
   bool IsImplicitHostAttr = hasImplicitAttr<CUDAHostAttr>(D);
   return IsImplicitDevAttr && IsImplicitHostAttr;
+}
+
+bool SemaCUDA::isImplicitHDExplicitInstantiation(const FunctionDecl *FD) {
+  return FD && FD->isImplicitHDExplicitInstantiation();
 }
 
 void SemaCUDA::EraseUnwantedMatches(
@@ -373,21 +461,6 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
                                                    CXXMethodDecl *MemberDecl,
                                                    bool ConstRHS,
                                                    bool Diagnose) {
-  // If MemberDecl is virtual destructor of an explicit template class
-  // instantiation, it must be emitted, therefore it needs to be inferred
-  // conservatively by ignoring implicit host/device attrs of member and parent
-  // dtors called by it. Also, it needs to be checed by deferred diag visitor.
-  bool IsExpVDtor = false;
-  if (isa<CXXDestructorDecl>(MemberDecl) && MemberDecl->isVirtual()) {
-    if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(ClassDecl)) {
-      TemplateSpecializationKind TSK = Spec->getTemplateSpecializationKind();
-      IsExpVDtor = TSK == TSK_ExplicitInstantiationDeclaration ||
-                   TSK == TSK_ExplicitInstantiationDefinition;
-    }
-  }
-  if (IsExpVDtor)
-    SemaRef.DeclsToCheckForDeferredDiags.insert(MemberDecl);
-
   // If the defaulted special member is defined lexically outside of its
   // owning class, or the special member already has explicit device or host
   // attributes, do not infer.
@@ -408,7 +481,9 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
 
   // Look for special members in base classes that should be invoked from here.
   // Infer the target of this member base on the ones it should call.
-  // Skip direct and indirect virtual bases for abstract classes.
+  // Skip direct and indirect virtual bases for abstract classes, except for
+  // destructors — the complete destructor variant destroys virtual bases
+  // regardless of whether the class is abstract.
   llvm::SmallVector<const CXXBaseSpecifier *, 16> Bases;
   for (const auto &B : ClassDecl->bases()) {
     if (!B.isVirtual()) {
@@ -416,9 +491,8 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
     }
   }
 
-  if (!ClassDecl->isAbstract()) {
+  if (!ClassDecl->isAbstract() || CSM == CXXSpecialMemberKind::Destructor)
     llvm::append_range(Bases, llvm::make_pointer_range(ClassDecl->vbases()));
-  }
 
   for (const auto *B : Bases) {
     auto *BaseClassDecl = B->getType()->getAsCXXRecordDecl();
@@ -436,8 +510,7 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
     if (!SMOR.getMethod())
       continue;
 
-    CUDAFunctionTarget BaseMethodTarget =
-        IdentifyTarget(SMOR.getMethod(), IsExpVDtor);
+    CUDAFunctionTarget BaseMethodTarget = IdentifyTarget(SMOR.getMethod());
 
     if (!InferredTarget) {
       InferredTarget = BaseMethodTarget;
@@ -479,8 +552,7 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
     if (!SMOR.getMethod())
       continue;
 
-    CUDAFunctionTarget FieldMethodTarget =
-        IdentifyTarget(SMOR.getMethod(), IsExpVDtor);
+    CUDAFunctionTarget FieldMethodTarget = IdentifyTarget(SMOR.getMethod());
 
     if (!InferredTarget) {
       InferredTarget = FieldMethodTarget;
@@ -854,6 +926,8 @@ SemaBase::SemaDiagnosticBuilder SemaCUDA::DiagIfDeviceCode(SourceLocation Loc,
       if (SemaRef.IsLastErrorImmediate &&
           getDiagnostics().getDiagnosticIDs()->isNote(DiagID))
         return SemaDiagnosticBuilder::K_Immediate;
+      if (isImplicitHDExplicitInstantiation(CurFunContext))
+        return SemaDiagnosticBuilder::K_Deferred;
       return (SemaRef.getEmissionStatus(CurFunContext) ==
               Sema::FunctionEmissionStatus::Emitted)
                  ? SemaDiagnosticBuilder::K_ImmediateWithCallStack
@@ -901,7 +975,14 @@ bool SemaCUDA::CheckCall(SourceLocation Loc, FunctionDecl *Callee) {
   assert(Callee && "Callee may not be null.");
 
   const auto &ExprEvalCtx = SemaRef.currentEvaluationContext();
-  if (ExprEvalCtx.isUnevaluated() || ExprEvalCtx.isConstantEvaluated())
+  if (ExprEvalCtx.isUnevaluated() || ExprEvalCtx.isConstantEvaluated() ||
+      ExprEvalCtx.isDiscardedStatementContext())
+    return true;
+
+  // C++ deduction guides participate in overload resolution but are not
+  // callable functions and are never codegen'ed.  Treat them as always
+  // allowed for CUDA/HIP compatibility checking.
+  if (isa<CXXDeductionGuideDecl>(Callee))
     return true;
 
   // FIXME: Is bailing out early correct here?  Should we instead assume that
@@ -914,8 +995,11 @@ bool SemaCUDA::CheckCall(SourceLocation Loc, FunctionDecl *Callee) {
   // Otherwise, mark the call in our call graph so we can traverse it later.
   bool CallerKnownEmitted = SemaRef.getEmissionStatus(Caller) ==
                             Sema::FunctionEmissionStatus::Emitted;
+  bool CallerIsImplicitHDExplicitInst =
+      isImplicitHDExplicitInstantiation(Caller);
   SemaDiagnosticBuilder::Kind DiagKind = [this, Caller, Callee,
-                                          CallerKnownEmitted] {
+                                          CallerKnownEmitted,
+                                          CallerIsImplicitHDExplicitInst] {
     switch (IdentifyPreference(Caller, Callee)) {
     case CFP_Never:
     case CFP_WrongSide:
@@ -923,7 +1007,7 @@ bool SemaCUDA::CheckCall(SourceLocation Loc, FunctionDecl *Callee) {
       // If we know the caller will be emitted, we know this wrong-side call
       // will be emitted, so it's an immediate error.  Otherwise, defer the
       // error until we know the caller is emitted.
-      return CallerKnownEmitted
+      return (CallerKnownEmitted && !CallerIsImplicitHDExplicitInst)
                  ? SemaDiagnosticBuilder::K_ImmediateWithCallStack
                  : SemaDiagnosticBuilder::K_Deferred;
     default:
@@ -931,9 +1015,20 @@ bool SemaCUDA::CheckCall(SourceLocation Loc, FunctionDecl *Callee) {
     }
   }();
 
+  bool IsDeviceKernelCall = Callee == getASTContext().getcudaLaunchDeviceDecl();
+  bool CallerHD = Caller && Caller->hasAttr<CUDAHostAttr>() &&
+                  Caller->hasAttr<CUDADeviceAttr>();
+  bool CallerDiscard = SemaRef.getEmissionStatus(Caller) ==
+                       Sema::FunctionEmissionStatus::TemplateDiscarded;
+  bool RDC = getLangOpts().GPURelocatableDeviceCode;
+  if (IsDeviceKernelCall && !(CallerHD && CallerDiscard) && !RDC) {
+    Diag(Loc, diag::err_cuda_device_kernel_launch_require_rdc);
+    return false;
+  }
+
   if (DiagKind == SemaDiagnosticBuilder::K_Nop) {
     // For -fgpu-rdc, keep track of external kernels used by host functions.
-    if (getLangOpts().CUDAIsDevice && getLangOpts().GPURelocatableDeviceCode &&
+    if (getLangOpts().CUDAIsDevice && RDC &&
         Callee->hasAttr<CUDAGlobalAttr>() && !Callee->isDefined() &&
         (!Caller || (!Caller->getDescribedFunctionTemplate() &&
                      getASTContext().GetGVALinkageForFunction(Caller) ==
@@ -1098,6 +1193,14 @@ std::string SemaCUDA::getConfigureFuncName() const {
 
   // Legacy CUDA kernel configuration call
   return "cudaConfigureCall";
+}
+
+std::string SemaCUDA::getGetParameterBufferFuncName() const {
+  return "cudaGetParameterBuffer";
+}
+
+std::string SemaCUDA::getLaunchDeviceFuncName() const {
+  return "cudaLaunchDevice";
 }
 
 // Record any local constexpr variables that are passed one way on the host

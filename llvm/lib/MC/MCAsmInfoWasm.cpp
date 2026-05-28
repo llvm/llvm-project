@@ -18,11 +18,12 @@
 
 using namespace llvm;
 
-MCAsmInfoWasm::MCAsmInfoWasm() {
+MCAsmInfoWasm::MCAsmInfoWasm(const MCTargetOptions &Options)
+    : MCAsmInfo(Options) {
   HasIdentDirective = true;
   HasNoDeadStrip = true;
   WeakRefDirective = "\t.weak\t";
-  PrivateGlobalPrefix = ".L";
+  InternalSymbolPrefix = ".L";
   PrivateLabelPrefix = ".L";
 }
 

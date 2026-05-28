@@ -30,7 +30,7 @@ The following requirements are shared on all platforms.
 If you want to run the test suite, you'll need to build LLDB with Python
 scripting support.
 
-* `Python <http://www.python.org/>`_ 3.8 or later.
+* `Python <http://www.python.org/>`_ 3.8 or later (3.11 or later on Windows).
 * `SWIG <http://swig.org/>`_ 4 or later.
 
 If you are on FreeBSD or NetBSD, you will need to install ``gmake`` for building
@@ -62,7 +62,7 @@ CMake configuration error.
 +-------------------+--------------------------------------------------------------+--------------------------+
 | Libxml2           | XML                                                          | ``LLDB_ENABLE_LIBXML2``  |
 +-------------------+--------------------------------------------------------------+--------------------------+
-| Python            | Python scripting. >= 3.8 is required.                        | ``LLDB_ENABLE_PYTHON``   |
+| Python            | Python scripting. 3.8 or later (3.11 or later on Windows).   | ``LLDB_ENABLE_PYTHON``   |
 +-------------------+--------------------------------------------------------------+--------------------------+
 | Lua               | Lua scripting. Lua 5.3 and 5.4 are supported.                | ``LLDB_ENABLE_LUA``      |
 +-------------------+--------------------------------------------------------------+--------------------------+
@@ -95,37 +95,41 @@ commands below.
 Windows
 *******
 
-* Visual Studio 2019.
-* The latest Windows SDK.
-* The Active Template Library (ATL).
-* `GnuWin32 <http://gnuwin32.sourceforge.net/>`_ for CoreUtils and Make.
-* `Python 3 <https://www.python.org/downloads/windows/>`_.  Make sure to (1) get
-  the x64 variant if that's what you're targeting and (2) install the debug
-  library if you want to build a debug lldb. The standalone installer is the
-  easiest way to get the debug library.
-* `Python Tools for Visual Studio
-  <https://github.com/Microsoft/PTVS/>`_. If you plan to debug test failures
-  or even write new tests at all, PTVS is an indispensable debugging
-  extension to VS that enables full editing and debugging support for Python
-  (including mixed native/managed debugging).
-* `SWIG for Windows <http://www.swig.org/download.html>`_
+The steps outlined here describe how to set up your system and install the
+required dependencies for building and testing LLDB on Windows. They only need
+to be performed once.
 
-The steps outlined here describes how to set up your system and install the
-required dependencies such that they can be found when needed during the build
-process. They only need to be performed once.
+Build Requirements
+^^^^^^^^^^^^^^^^^^
 
-#. Install Visual Studio with the "Desktop Development with C++" workload and
-   the "Python Development" workload.
-#. Install GnuWin32, making sure ``<GnuWin32 install dir>\bin`` is added to
-   your PATH environment variable. Verify that utilities like ``dirname`` and
-   ``make`` are available from your terminal.
-#. Install SWIG for Windows, making sure ``<SWIG install dir>`` is added to
-   your PATH environment variable. Verify that ``swig`` is available from your
-   terminal.
-#. Install Python 3 from the standalone installer and include the debug libraries
-   in the install, making sure the Python install path is added to your PATH
-   environment variable.
-#. Register the Debug Interface Access DLLs with the Registry from a privileged
+Please follow the steps below if you only want to **build** lldb.
+
+1. Install `Visual Studio <https://visualstudio.microsoft.com>`_ with the
+   "Desktop Development with C++" workload. Make sure that the latest Windows
+   SDK and the Active Template Library (ATL) are installed.
+2. Install `Git Bash <https://git-scm.com/install/windows>`_ and add
+   ``<Git install dir>\usr\bin`` to your ``PATH``. Verify that utilities like
+   ``dirname`` are available from your terminal.
+3. Install `make <https://sourceforge.net/projects/ezwinports/files/>`_ and
+   verify that it's in your ``PATH``.
+4. Install `Python 3.11 <https://www.python.org/downloads/windows/>`_ or later.
+   Either using the "Windows Installer" or "Python Install Manager". Make sure
+   ``python`` is added to your ``PATH``.
+
+   .. note::
+      Building LLDB in debug mode requires a debug version of Python (because
+      all parts of a debug build must use the debug C runtime).
+
+      If you use the "Windows installer", **include the debug libraries** during
+      the install.
+
+      The "Python Install Manager" has no way to install debug libraries, so you
+      must `build <https://devguide.python.org/getting-started/setup-building/>`_
+      a debug version of Python yourself.
+5. Install `SWIG for Windows <http://www.swig.org/download.html>`_. Make sure
+   ``swig`` is added to your ``PATH`` and that ``swig -swiglib`` points to the
+   correct directory.
+6. Register the Debug Interface Access DLLs with the Registry from a privileged
    terminal.
 
 ::
@@ -138,6 +142,16 @@ environment setup. This means you should open an appropriate `Developer Command
 Prompt for VS <https://docs.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=vs-2019>`_
 corresponding to the version you wish to use or run ``vcvarsall.bat`` or
 ``VsDevCmd.bat``.
+
+Test Requirements
+^^^^^^^^^^^^^^^^^
+
+Please follow the steps above and below if you want to **test** `lldb`.
+
+* Install `Python Tools for Visual Studio <https://github.com/Microsoft/PTVS/>`_,
+  an indispensable debugging extension to Visual Studio which enables full
+  editing and debugging support for Python (including mixed native/managed
+  debugging).
 
 macOS
 *****
@@ -203,18 +217,17 @@ checked out above, but now we will have multiple build-trees:
   single one in ``/path/to/llvm-build``
 
 Run CMake with ``-B`` pointing to a new directory for the provided
-build-tree\ :sup:`1` and the positional argument pointing to the ``llvm``
-directory in the source-tree.\ :sup:`2` Note that we leave out LLDB here and only include
-Clang. Then we build the ``ALL`` target with ninja:
+build-tree and the positional argument pointing to the ``llvm``
+directory in the source-tree.\ :sup:`1` Note that we leave out LLDB here and only include
+Clang. Then we build the ``ALL`` target:
 
 ::
 
   $ cmake -B /path/to/llvm-build -G Ninja \
           -DCMAKE_BUILD_TYPE=[<build type>] \
           -DLLVM_ENABLE_PROJECTS=clang \
-          -DCMAKE_BUILD_TYPE=Release \
           [<more cmake options>] /path/to/llvm-project/llvm
-  $ ninja
+  $ cmake --build /path/to/llvm-build
 
 Now run CMake a second time with ``-B`` pointing to a new directory for the
 main build-tree and the positional argument pointing to the ``lldb`` directory
@@ -226,19 +239,16 @@ build directory for Clang, remember to pass its module path via ``Clang_DIR``
 ::
 
   $ cmake -B /path/to/lldb-build -G Ninja \
-          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_BUILD_TYPE=[<build type>] \
           -DLLVM_DIR=/path/to/llvm-build/lib/cmake/llvm \
           [<more cmake options>] /path/to/llvm-project/lldb
-  $ ninja lldb lldb-server
+  $ cmake --build /path/to/lldb-build -t lldb lldb-server
 
 If you do not require or cannot build ``lldb-server`` on your platform, simply
 remove it from the Ninja command.
 
 .. note::
 
-   #. The ``-B`` argument was undocumented for a while and is only officially
-      supported since `CMake version 3.14
-      <https://cmake.org/cmake/help/v3.14/release/3.14.html#command-line>`_
    #. If you want to have a standalone LLDB build with tests enabled, you also
       need to pass in ``-DLLVM_ENABLE_RUNTIME='libcxx;libcxxabi;libunwind'`` to your CMake invocation when configuring your LLVM standalone build.
 
@@ -648,6 +658,40 @@ arm64 build:
 
 Note that currently only lldb-server is functional on android. The lldb client
 is not supported and unlikely to work.
+
+Example 4: Cross-compiling for FreeBSD arm64 on FreeBSD host using distset
+**************************************************************************
+
+Start by identifying the FreeBSD version you want to target — in this case,
+FreeBSD 15.0.
+
+Download and decompress the FreeBSD 15.0 distset:
+
+::
+
+  fetch https://download.freebsd.org/releases/arm64/15.0-RELEASE/base.txz
+  sudo mkdir -p /path/to/sysroot/arm64
+  sudo tar -xJf base.txz -C /path/to/sysroot/arm64
+
+Then configure with CMake as follows:
+
+::
+
+  cmake <path-to-monorepo>/llvm-project/llvm -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DLLVM_ENABLE_PROJECTS="clang;lldb" \
+    -DCMAKE_SYSTEM_NAME=FreeBSD \
+    -DCMAKE_SYSTEM_PROCESSOR=AArch64 \
+    -DCMAKE_ASM_FLAGS_INIT="-target aarch64-unknown-freebsd15.0 --sysroot /path/to/sysroot/arm64" \
+    -DCMAKE_C_FLAGS_INIT="-target aarch64-unknown-freebsd15.0 --sysroot /path/to/sysroot/arm64" \
+    -DCMAKE_CXX_FLAGS_INIT="-target aarch64-unknown-freebsd15.0 --sysroot /path/to/sysroot/arm64" \
+    -DCMAKE_FIND_ROOT_PATH="/path/to/sysroot/arm64" \
+    -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+    -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
+    -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
+    -DLLVM_DEFAULT_TARGET_TRIPLE=aarch64-unknown-freebsd15.0 \
+    -DLLVM_HOST_TRIPLE=aarch64-unknown-freebsd15.0 \
+    -DLLVM_TARGET_ARCH=AArch64
 
 Verifying Python Support
 ------------------------

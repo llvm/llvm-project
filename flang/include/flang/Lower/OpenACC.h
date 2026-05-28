@@ -66,44 +66,25 @@ struct Evaluation;
 } // namespace pft
 
 static constexpr llvm::StringRef declarePostAllocSuffix =
-    "_acc_declare_update_desc_post_alloc";
+    "_acc_declare_post_alloc";
 static constexpr llvm::StringRef declarePreDeallocSuffix =
-    "_acc_declare_update_desc_pre_dealloc";
+    "_acc_declare_pre_dealloc";
 static constexpr llvm::StringRef declarePostDeallocSuffix =
-    "_acc_declare_update_desc_post_dealloc";
+    "_acc_declare_post_dealloc";
 
 static constexpr llvm::StringRef privatizationRecipePrefix = "privatization";
 
 mlir::Value genOpenACCConstruct(AbstractConverter &,
                                 Fortran::semantics::SemanticsContext &,
                                 pft::Evaluation &,
-                                const parser::OpenACCConstruct &);
+                                const parser::OpenACCConstruct &,
+                                Fortran::lower::SymMap &localSymbols);
 void genOpenACCDeclarativeConstruct(
     AbstractConverter &, Fortran::semantics::SemanticsContext &,
     StatementContext &, const parser::OpenACCDeclarativeConstruct &);
 void genOpenACCRoutineConstruct(
     AbstractConverter &, mlir::ModuleOp, mlir::func::FuncOp,
     const std::vector<Fortran::semantics::OpenACCRoutineInfo> &);
-
-/// Get a acc.private.recipe op for the given type or create it if it does not
-/// exist yet.
-mlir::acc::PrivateRecipeOp createOrGetPrivateRecipe(fir::FirOpBuilder &,
-                                                    llvm::StringRef,
-                                                    mlir::Location, mlir::Type);
-
-/// Get a acc.reduction.recipe op for the given type or create it if it does not
-/// exist yet.
-mlir::acc::ReductionRecipeOp
-createOrGetReductionRecipe(fir::FirOpBuilder &, llvm::StringRef, mlir::Location,
-                           mlir::Type, mlir::acc::ReductionOperator,
-                           llvm::SmallVector<mlir::Value> &);
-
-/// Get a acc.firstprivate.recipe op for the given type or create it if it does
-/// not exist yet.
-mlir::acc::FirstprivateRecipeOp
-createOrGetFirstprivateRecipe(fir::FirOpBuilder &, llvm::StringRef,
-                              mlir::Location, mlir::Type,
-                              llvm::SmallVector<mlir::Value> &);
 
 void attachDeclarePostAllocAction(AbstractConverter &, fir::FirOpBuilder &,
                                   const Fortran::semantics::Symbol &);
@@ -121,16 +102,47 @@ void genOpenACCTerminator(fir::FirOpBuilder &, mlir::Operation *,
 /// clause.
 uint64_t getLoopCountForCollapseAndTile(const Fortran::parser::AccClauseList &);
 
+/// Parse collapse clause and return {size, force}. If absent, returns
+/// {1,false}.
+std::pair<uint64_t, bool>
+getCollapseSizeAndForce(const Fortran::parser::AccClauseList &);
+
 /// Checks whether the current insertion point is inside OpenACC loop.
 bool isInOpenACCLoop(fir::FirOpBuilder &);
+
+/// Record a DoConstruct as having been absorbed by a collapse clause.
+/// The PFT walker should skip generating a loop for it.
+void markDoConstructAsCollapsed(const Fortran::parser::DoConstruct &);
+
+/// Check whether a DoConstruct was absorbed by a collapse clause.
+bool isCollapsedDoConstruct(const Fortran::parser::DoConstruct &);
+
+/// Clear the collapsed DoConstruct tracking set.
+void clearCollapsedDoConstructs();
 
 /// Checks whether the current insertion point is inside OpenACC compute
 /// construct.
 bool isInsideOpenACCComputeConstruct(fir::FirOpBuilder &);
 
+/// Checks whether the current insertion point is inside an explicit
+/// `!$acc routine` function.
+bool isInsideOpenACCRoutine(fir::FirOpBuilder &);
+
+/// True when Fortran DO loops should be lowered as `acc.loop` for IV
+/// privatization.
+bool shouldLowerDoConstructAsAccLoop(fir::FirOpBuilder &);
+
 void setInsertionPointAfterOpenACCLoopIfInside(fir::FirOpBuilder &);
 
 void genEarlyReturnInOpenACCLoop(fir::FirOpBuilder &, mlir::Location);
+
+/// If \p targetBlock is outside the ACC region containing the current
+/// insertion point, generate the appropriate region terminator
+/// (acc.terminator or acc.yield) instead of a cross-region branch.
+/// Returns true if the exit was handled, false if no ACC region boundary
+/// is crossed.
+bool genOpenACCRegionExitBranch(fir::FirOpBuilder &, mlir::Location,
+                                mlir::Block *targetBlock);
 
 /// Generates an OpenACC loop from a do construct in order to
 /// properly capture the loop bounds, parallelism determination mode,

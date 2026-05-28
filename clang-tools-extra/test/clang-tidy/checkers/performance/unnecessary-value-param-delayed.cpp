@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s performance-unnecessary-value-param %t -- -- -fdelayed-template-parsing
+// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t -- -- -fdelayed-template-parsing
 
 struct ExpensiveToCopyType {
   const ExpensiveToCopyType & constReference() const {
@@ -152,7 +152,7 @@ void NegativeTypedefParam(const Container<ExpensiveToCopyType>::const_reference 
   void inMacro(const ExpensiveToCopyType T) {           \
   }                                                     \
 // Ensure fix is not applied.
-// CHECK-FIXES: void inMacro(const ExpensiveToCopyType T) {
+// CHECK-FIXES: void inMacro(const ExpensiveToCopyType T) { {{\\}}
 
 UNNECESSARY_VALUE_PARAM_IN_MACRO_BODY()
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: the const qualified parameter 'T'
@@ -162,7 +162,7 @@ UNNECESSARY_VALUE_PARAM_IN_MACRO_BODY()
 
 UNNECESSARY_VALUE_PARAM_IN_MACRO_ARGUMENT(void inMacroArgument(const ExpensiveToCopyType InMacroArg) {})
 // CHECK-MESSAGES: [[@LINE-1]]:90: warning: the const qualified parameter 'InMacroArg'
-// CHECK-FIXES: void inMacroArgument(const ExpensiveToCopyType InMacroArg) {}
+// CHECK-FIXES: UNNECESSARY_VALUE_PARAM_IN_MACRO_ARGUMENT(void inMacroArgument(const ExpensiveToCopyType InMacroArg) {})
 
 struct VirtualMethod {
   virtual ~VirtualMethod() {}
@@ -171,7 +171,7 @@ struct VirtualMethod {
 
 struct NegativeOverriddenMethod : public VirtualMethod {
   void handle(ExpensiveToCopyType Overridden) const {
-    // CHECK-FIXES: handle(ExpensiveToCopyType Overridden) const {
+    // CHECK-FIXES: void handle(ExpensiveToCopyType Overridden) const {
   }
 };
 

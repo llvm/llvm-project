@@ -29,6 +29,25 @@ enum HeatmapModeKind {
   HM_Optional   // perf2bolt --heatmap
 };
 
+/// Strategy used to partition blocks into fragments.
+enum SplitFunctionsStrategy : char {
+  /// Split each function into a hot and cold fragment using profiling
+  /// information.
+  Profile2 = 0,
+  /// Split each function into a hot, warm, and cold fragment using
+  /// profiling information.
+  CDSplit,
+  /// Split each function into a hot and cold fragment at a randomly chosen
+  /// split point (ignoring any available profiling information).
+  Random2,
+  /// Split each function into N fragments at a randomly chosen split points
+  /// (ignoring any available profiling information).
+  RandomN,
+  /// Split all basic blocks of each function into fragments such that each
+  /// fragment contains exactly a single basic block.
+  All
+};
+
 using HeatmapBlockSizes = std::vector<unsigned>;
 struct HeatmapBlockSpecParser : public llvm::cl::parser<HeatmapBlockSizes> {
   explicit HeatmapBlockSpecParser(llvm::cl::Option &O)
@@ -78,6 +97,8 @@ extern llvm::cl::opt<std::string> OutputFilename;
 extern llvm::cl::opt<std::string> PerfData;
 extern llvm::cl::opt<bool> PrintCacheMetrics;
 extern llvm::cl::opt<bool> PrintSections;
+extern llvm::cl::opt<bool> UpdateBranchProtection;
+extern llvm::cl::opt<SplitFunctionsStrategy> SplitStrategy;
 
 // The format to use with -o in aggregation mode (perf2bolt)
 enum ProfileFormatKind { PF_Fdata, PF_YAML };
@@ -109,9 +130,27 @@ bool processAllFunctions();
 /// Return true if we should dump dot graphs for the given function.
 bool shouldDumpDot(const llvm::bolt::BinaryFunction &Function);
 
-enum GadgetScannerKind { GS_PACRET, GS_PAUTH, GS_ALL };
+/// Bitmask representing a subset of possible gadget kinds.
+enum GadgetKindBitmask : unsigned {
+  /// Scan for unprotected backward control-flow (return instructions).
+  GS_PTRAUTH_RETURN_TARGETS = (1 << 0),
+  /// Scan for tail calls performed with untrusted link register.
+  GS_PTRAUTH_TAIL_CALLS = (1 << 1),
+  /// Scan for unprotected forward control-flow (branch and call instructions).
+  GS_PTRAUTH_BRANCH_AND_CALL_TARGETS = (1 << 2),
+  /// Scan for signing oracles.
+  GS_PTRAUTH_SIGN_ORACLES = (1 << 3),
+  /// Scan for authentication oracles.
+  GS_PTRAUTH_AUTH_ORACLES = (1 << 4),
 
-extern llvm::cl::bits<GadgetScannerKind> GadgetScannersToRun;
+  /// Scan for all Pointer Authentication issues.
+  GS_PTRAUTH_ALL_MASK = GS_PTRAUTH_RETURN_TARGETS | GS_PTRAUTH_TAIL_CALLS |
+                        GS_PTRAUTH_BRANCH_AND_CALL_TARGETS |
+                        GS_PTRAUTH_SIGN_ORACLES | GS_PTRAUTH_AUTH_ORACLES,
+
+  /// Run all implemented scanners.
+  GS_ALL_MASK = GS_PTRAUTH_ALL_MASK,
+};
 
 } // namespace opts
 

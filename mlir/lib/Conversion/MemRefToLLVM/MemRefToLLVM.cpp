@@ -48,8 +48,8 @@ static bool isStaticStrideOrOffset(int64_t strideOrOffset) {
 }
 
 static FailureOr<LLVM::LLVMFuncOp>
-getFreeFn(OpBuilder &b, const LLVMTypeConverter *typeConverter, ModuleOp module,
-          SymbolTableCollection *symbolTables) {
+getFreeFn(OpBuilder &b, const LLVMTypeConverter *typeConverter,
+          Operation *module, SymbolTableCollection *symbolTables) {
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
 
   if (useGenericFn)
@@ -465,6 +465,51 @@ struct AssumeAlignmentOpLowering
   }
 };
 
+struct DistinctObjectsOpLowering
+    : public ConvertOpToLLVMPattern<memref::DistinctObjectsOp> {
+  using ConvertOpToLLVMPattern<
+      memref::DistinctObjectsOp>::ConvertOpToLLVMPattern;
+  explicit DistinctObjectsOpLowering(const LLVMTypeConverter &converter)
+      : ConvertOpToLLVMPattern<memref::DistinctObjectsOp>(converter) {}
+
+  LogicalResult
+  matchAndRewrite(memref::DistinctObjectsOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    ValueRange operands = adaptor.getOperands();
+    if (operands.size() <= 1) {
+      // Fast path.
+      rewriter.replaceOp(op, operands);
+      return success();
+    }
+
+    Location loc = op.getLoc();
+    SmallVector<Value> ptrs;
+    for (auto [origOperand, newOperand] :
+         llvm::zip_equal(op.getOperands(), operands)) {
+      auto memrefType = cast<MemRefType>(origOperand.getType());
+      MemRefDescriptor memRefDescriptor(newOperand);
+      Value ptr = memRefDescriptor.bufferPtr(rewriter, loc, *getTypeConverter(),
+                                             memrefType);
+      ptrs.push_back(ptr);
+    }
+
+    auto cond =
+        LLVM::ConstantOp::create(rewriter, loc, rewriter.getI1Type(), 1);
+    // Generate separate_storage assumptions for each pair of pointers.
+    for (auto i : llvm::seq<size_t>(ptrs.size() - 1)) {
+      for (auto j : llvm::seq<size_t>(i + 1, ptrs.size())) {
+        Value ptr1 = ptrs[i];
+        Value ptr2 = ptrs[j];
+        LLVM::AssumeOp::create(rewriter, loc, cond,
+                               LLVM::AssumeSeparateStorageTag{}, ptr1, ptr2);
+      }
+    }
+
+    rewriter.replaceOp(op, operands);
+    return success();
+  }
+};
+
 // A `dealloc` is converted into a call to `free` on the underlying data buffer.
 // The memref descriptor being an SSA value, there is no need to clean it up
 // in any way.
@@ -483,8 +528,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     // Insert the `free` declaration if it is not already present.
     FailureOr<LLVM::LLVMFuncOp> freeFunc =
-        getFreeFn(rewriter, getTypeConverter(), op->getParentOfType<ModuleOp>(),
-                  symbolTables);
+        getFreeFn(rewriter, getTypeConverter(),
+                  op->getParentWithTrait<OpTrait::SymbolTable>(), symbolTables);
     if (failed(freeFunc))
       return failure();
     Value allocatedPtr;
@@ -666,10 +711,20 @@ struct GenericAtomicRMWOpLowering
     auto loc = atomicOp.getLoc();
     Type valueType = typeConverter->convertType(atomicOp.getResult().getType());
 
+    // `llvm.cmpxchg` only supports integer or pointer operands. For
+    // floating-point element types, perform the CAS on a same-width integer
+    // and bitcast at the boundaries.
+    bool needsBitcast = isa<FloatType>(valueType);
+    Type cmpxchgType = valueType;
+    if (needsBitcast) {
+      unsigned bitWidth = cast<FloatType>(valueType).getWidth();
+      cmpxchgType = rewriter.getIntegerType(bitWidth);
+    }
+
     // Split the block into initial, loop, and ending parts.
     auto *initBlock = rewriter.getInsertionBlock();
     auto *loopBlock = rewriter.splitBlock(initBlock, Block::iterator(atomicOp));
-    loopBlock->addArgument(valueType, loc);
+    loopBlock->addArgument(cmpxchgType, loc);
 
     auto *endBlock =
         rewriter.splitBlock(loopBlock, Block::iterator(atomicOp)++);
@@ -682,21 +737,34 @@ struct GenericAtomicRMWOpLowering
     Value init = LLVM::LoadOp::create(
         rewriter, loc, typeConverter->convertType(memRefType.getElementType()),
         dataPtr);
+    if (needsBitcast)
+      init = LLVM::BitcastOp::create(rewriter, loc, cmpxchgType, init);
     LLVM::BrOp::create(rewriter, loc, init, loopBlock);
 
     // Prepare the body of the loop block.
     rewriter.setInsertionPointToStart(loopBlock);
 
     // Clone the GenericAtomicRMWOp region and extract the result.
-    auto loopArgument = loopBlock->getArgument(0);
+    Value loopArgument = loopBlock->getArgument(0);
+    Value loopArgForBody = loopArgument;
+    if (needsBitcast)
+      loopArgForBody =
+          LLVM::BitcastOp::create(rewriter, loc, valueType, loopArgument);
     IRMapping mapping;
-    mapping.map(atomicOp.getCurrentValue(), loopArgument);
+    mapping.map(atomicOp.getCurrentValue(), loopArgForBody);
     Block &entryBlock = atomicOp.body().front();
     for (auto &nestedOp : entryBlock.without_terminator()) {
       Operation *clone = rewriter.clone(nestedOp, mapping);
       mapping.map(nestedOp.getResults(), clone->getResults());
     }
-    Value result = mapping.lookup(entryBlock.getTerminator()->getOperand(0));
+
+    Value result =
+        mapping.lookupOrNull(entryBlock.getTerminator()->getOperand(0));
+    if (!result) {
+      return atomicOp.emitError("result not defined in region");
+    }
+    if (needsBitcast)
+      result = LLVM::BitcastOp::create(rewriter, loc, cmpxchgType, result);
 
     // Prepare the epilog of the loop block.
     // Append the cmpxchg op to the end of the loop block.
@@ -713,9 +781,14 @@ struct GenericAtomicRMWOpLowering
     LLVM::CondBrOp::create(rewriter, loc, ok, endBlock, ArrayRef<Value>(),
                            loopBlock, newLoaded);
 
+    // The 'result' of the atomic_rmw op is the newly loaded value. Bitcast
+    // back to the float type if needed. Insert at the start of `endBlock` so
+    // the bitcast precedes the existing terminator (split into endBlock).
+    if (needsBitcast) {
+      rewriter.setInsertionPointToStart(endBlock);
+      newLoaded = LLVM::BitcastOp::create(rewriter, loc, valueType, newLoaded);
+    }
     rewriter.setInsertionPointToEnd(endBlock);
-
-    // The 'result' of the atomic_rmw op is the newly loaded value.
     rewriter.replaceOp(atomicOp, {newLoaded});
 
     return success();
@@ -1205,9 +1278,11 @@ struct MemorySpaceCastOpLowering
 
     Type resultType = op.getDest().getType();
     if (auto resultTypeR = dyn_cast<MemRefType>(resultType)) {
-      auto resultDescType =
-          cast<LLVM::LLVMStructType>(typeConverter->convertType(resultTypeR));
-      Type newPtrType = resultDescType.getBody()[0];
+      auto convertedType =
+          typeConverter->convertType<LLVM::LLVMStructType>(resultTypeR);
+      if (!convertedType)
+        return rewriter.notifyMatchFailure(op, "memref type conversion failed");
+      Type newPtrType = convertedType.getBody()[0];
 
       SmallVector<Value> descVals;
       MemRefDescriptor::unpack(rewriter, loc, adaptor.getSource(), resultTypeR,
@@ -1366,8 +1441,8 @@ private:
       memref::ReinterpretCastOp::Adaptor adaptor, Value *descriptor) const {
     MemRefType targetMemRefType =
         cast<MemRefType>(castOp.getResult().getType());
-    auto llvmTargetDescriptorTy = dyn_cast_or_null<LLVM::LLVMStructType>(
-        typeConverter->convertType(targetMemRefType));
+    auto llvmTargetDescriptorTy =
+        typeConverter->convertType<LLVM::LLVMStructType>(targetMemRefType);
     if (!llvmTargetDescriptorTy)
       return failure();
 
@@ -1435,8 +1510,8 @@ private:
     if (shapeMemRefType.hasStaticShape()) {
       MemRefType targetMemRefType =
           cast<MemRefType>(reshapeOp.getResult().getType());
-      auto llvmTargetDescriptorTy = dyn_cast_or_null<LLVM::LLVMStructType>(
-          typeConverter->convertType(targetMemRefType));
+      auto llvmTargetDescriptorTy =
+          typeConverter->convertType<LLVM::LLVMStructType>(targetMemRefType);
       if (!llvmTargetDescriptorTy)
         return failure();
 
@@ -1997,22 +2072,23 @@ void mlir::populateFinalizeMemRefToLLVMConversionPatterns(
   patterns.add<
       AllocaOpLowering,
       AllocaScopeOpLowering,
-      AtomicRMWOpLowering,
       AssumeAlignmentOpLowering,
+      AtomicRMWOpLowering,
       ConvertExtractAlignedPointerAsIndex,
       DimOpLowering,
+      DistinctObjectsOpLowering,
       ExtractStridedMetadataOpLowering,
       GenericAtomicRMWOpLowering,
       GetGlobalMemrefOpLowering,
       LoadOpLowering,
       MemRefCastOpLowering,
-      MemorySpaceCastOpLowering,
       MemRefReinterpretCastOpLowering,
       MemRefReshapeOpLowering,
+      MemorySpaceCastOpLowering,
       PrefetchOpLowering,
       RankOpLowering,
-      ReassociatingReshapeOpConversion<memref::ExpandShapeOp>,
       ReassociatingReshapeOpConversion<memref::CollapseShapeOp>,
+      ReassociatingReshapeOpConversion<memref::ExpandShapeOp>,
       StoreOpLowering,
       SubViewOpLowering,
       TransposeOpLowering,
@@ -2064,7 +2140,9 @@ struct FinalizeMemRefToLLVMConversionPass
 
 /// Implement the interface to convert MemRef to LLVM.
 struct MemRefToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  MemRefToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();
   }

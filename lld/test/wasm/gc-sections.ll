@@ -53,25 +53,19 @@ entry:
 ; CHECK:        - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Type:            I32
+; CHECK-NEXT:         Type:            I64
 ; CHECK-NEXT:         Mutable:         true
-; CHECK-NEXT:         InitExpr:
-; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           66576
-; CHECK-NEXT:       - Index:       1
-; CHECK-NEXT:         Type:        I64
-; CHECK-NEXT:         Mutable:     true
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I64_CONST
 ; CHECK-NEXT:           Value:           456
 
 ; CHECK:        - Type:            DATA
 ; CHECK-NEXT:     Segments:
-; CHECK-NEXT:       - SectionOffset:   7
+; CHECK-NEXT:       - SectionOffset:   8
 ; CHECK-NEXT:         InitFlags:       0
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           1024
+; CHECK-NEXT:           Value:           65536
 ; CHECK-NEXT:         Content:         '02000000'
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            name
@@ -84,8 +78,6 @@ entry:
 ; CHECK-NEXT:         Name:            use_global
 ; CHECK-NEXT:     GlobalNames:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Name:            __stack_pointer
-; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Name:            used_global
 ; CHECK-NEXT:     DataSegmentNames:
 ; CHECK-NEXT:       - Index:           0
@@ -123,7 +115,7 @@ entry:
 ; NO-GC-NEXT:         Mutable:         true
 ; NO-GC-NEXT:         InitExpr:
 ; NO-GC-NEXT:           Opcode:          I32_CONST
-; NO-GC-NEXT:           Value:           66576
+; NO-GC-NEXT:           Value:           65536
 ; NO-GC-NEXT:       - Index:       1
 ; NO-GC-NEXT:         Type:        I64
 ; NO-GC-NEXT:         Mutable:     true
@@ -139,11 +131,11 @@ entry:
 
 ; NO-GC:        - Type:            DATA
 ; NO-GC-NEXT:     Segments:
-; NO-GC-NEXT:       - SectionOffset:   7
+; NO-GC-NEXT:       - SectionOffset:   8
 ; NO-GC-NEXT:         InitFlags:       0
 ; NO-GC-NEXT:         Offset:
 ; NO-GC-NEXT:           Opcode:          I32_CONST
-; NO-GC-NEXT:           Value:           1024
+; NO-GC-NEXT:           Value:           65536
 ; NO-GC-NEXT:         Content:         '010000000000000002000000'
 ; NO-GC-NEXT:   - Type:            CUSTOM
 ; NO-GC-NEXT:     Name:            name

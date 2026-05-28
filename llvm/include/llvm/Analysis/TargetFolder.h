@@ -20,6 +20,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/IR/ConstantFold.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilderFolder.h"
 #include "llvm/IR/Operator.h"
@@ -129,7 +130,8 @@ public:
     return nullptr;
   }
 
-  Value *FoldSelect(Value *C, Value *True, Value *False) const override {
+  Value *FoldSelect(Value *C, Value *True, Value *False,
+                    FastMathFlags FMF) const override {
     auto *CC = dyn_cast<Constant>(C);
     auto *TC = dyn_cast<Constant>(True);
     auto *FC = dyn_cast<Constant>(False);
@@ -190,11 +192,11 @@ public:
   }
 
   Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                             Instruction *FMFSource) const override {
+                             FastMathFlags FMF) const override {
     auto *C1 = dyn_cast<Constant>(LHS);
     auto *C2 = dyn_cast<Constant>(RHS);
     if (C1 && C2)
-      return ConstantFoldBinaryIntrinsic(ID, C1, C2, Ty, FMFSource);
+      return ConstantFoldBinaryIntrinsic(ID, C1, C2, Ty);
     return nullptr;
   }
 

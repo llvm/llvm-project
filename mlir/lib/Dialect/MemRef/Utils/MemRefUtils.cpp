@@ -24,6 +24,10 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type) {
   if (!type.hasStaticShape())
     return false;
 
+  int64_t rank = type.getRank();
+  if (rank == 0)
+    return true;
+
   SmallVector<int64_t> strides;
   int64_t offset;
   if (failed(type.getStridesAndOffset(strides, offset)))
@@ -32,7 +36,7 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type) {
   // MemRef is contiguous if outer dimensions are size-1 and inner
   // dimensions have unit strides.
   int64_t runningStride = 1;
-  int64_t curDim = strides.size() - 1;
+  int64_t curDim = rank - 1;
   // Finds all inner dimensions with unit strides.
   while (curDim >= 0 && strides[curDim] == runningStride) {
     runningStride *= type.getDimSize(curDim);
@@ -51,7 +55,8 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type) {
 std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
     OpBuilder &builder, Location loc, int srcBits, int dstBits,
     OpFoldResult offset, ArrayRef<OpFoldResult> sizes,
-    ArrayRef<OpFoldResult> strides, ArrayRef<OpFoldResult> indices) {
+    ArrayRef<OpFoldResult> strides, ArrayRef<OpFoldResult> indices,
+    LinearizedDivKind sizeDivKind) {
   unsigned sourceRank = sizes.size();
   assert(sizes.size() == strides.size() &&
          "expected as many sizes as strides for a memref");
@@ -88,7 +93,10 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
     AffineExpr sizeExpr = symbols[symbolIndex++];
     values.push_back(sizes[i]);
 
-    productExpressions.push_back((strideExpr * sizeExpr).floorDiv(scaler));
+    AffineExpr product = strideExpr * sizeExpr;
+    productExpressions.push_back(sizeDivKind == LinearizedDivKind::Ceil
+                                     ? product.ceilDiv(scaler)
+                                     : product.floorDiv(scaler));
   }
   AffineMap maxMap = AffineMap::get(
       /*dimCount=*/0, /*symbolCount=*/symbolIndex, productExpressions,
@@ -112,13 +120,15 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
 LinearizedMemRefInfo
 getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
                                  int dstBits, OpFoldResult offset,
-                                 ArrayRef<OpFoldResult> sizes) {
+                                 ArrayRef<OpFoldResult> sizes,
+                                 LinearizedDivKind sizeDivKind) {
   SmallVector<OpFoldResult> strides(sizes.size());
   if (!sizes.empty()) {
     strides.back() = builder.getIndexAttr(1);
     AffineExpr s0, s1;
     bindSymbols(builder.getContext(), s0, s1);
-    for (int index = sizes.size() - 1; index > 0; --index) {
+    for (int64_t index = static_cast<int64_t>(sizes.size()) - 1; index > 0;
+         --index) {
       strides[index - 1] = affine::makeComposedFoldedAffineApply(
           builder, loc, s0 * s1,
           ArrayRef<OpFoldResult>{strides[index], sizes[index]});
@@ -128,22 +138,26 @@ getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
   LinearizedMemRefInfo linearizedMemRefInfo;
   std::tie(linearizedMemRefInfo, std::ignore) =
       getLinearizedMemRefOffsetAndSize(builder, loc, srcBits, dstBits, offset,
-                                       sizes, strides);
+                                       sizes, strides, /*indices=*/{},
+                                       sizeDivKind);
   return linearizedMemRefInfo;
 }
 
 /// Returns true if all the uses of op are not read/load.
-/// There can be SubviewOp users as long as all its users are also
+/// There can be view-like-op users as long as all its users are also
 /// StoreOp/transfer_write. If return true it also fills out the uses, if it
 /// returns false uses is unchanged.
 static bool resultIsNotRead(Operation *op, std::vector<Operation *> &uses) {
   std::vector<Operation *> opUses;
   for (OpOperand &use : op->getUses()) {
     Operation *useOp = use.getOwner();
+    // Use escaped the scope
+    if (useOp->mightHaveTrait<OpTrait::IsTerminator>())
+      return false;
     if (isa<memref::DeallocOp>(useOp) ||
         (useOp->getNumResults() == 0 && useOp->getNumRegions() == 0 &&
          !mlir::hasEffect<MemoryEffects::Read>(useOp)) ||
-        (isa<memref::SubViewOp>(useOp) && resultIsNotRead(useOp, opUses))) {
+        (isa<ViewLikeOpInterface>(useOp) && resultIsNotRead(useOp, opUses))) {
       opUses.push_back(useOp);
       continue;
     }
@@ -176,7 +190,7 @@ computeSuffixProductIRBlockImpl(Location loc, OpBuilder &builder,
   AffineExpr s0, s1;
   bindSymbols(builder.getContext(), s0, s1);
 
-  for (int64_t r = strides.size() - 1; r > 0; --r) {
+  for (int64_t r = static_cast<int64_t>(strides.size()) - 1; r > 0; --r) {
     strides[r - 1] = affine::makeComposedFoldedAffineApply(
         builder, loc, s0 * s1, {strides[r], sizes[r]});
   }
@@ -191,7 +205,7 @@ computeSuffixProductIRBlock(Location loc, OpBuilder &builder,
 }
 
 MemrefValue skipFullyAliasingOperations(MemrefValue source) {
-  while (auto op = source.getDefiningOp()) {
+  while (auto *op = source.getDefiningOp()) {
     if (auto subViewOp = dyn_cast<memref::SubViewOp>(op);
         subViewOp && subViewOp.hasZeroOffset() && subViewOp.hasUnitStride()) {
       // A `memref.subview` with an all zero offset, and all unit strides, still
@@ -208,7 +222,7 @@ MemrefValue skipFullyAliasingOperations(MemrefValue source) {
 }
 
 MemrefValue skipViewLikeOps(MemrefValue source) {
-  while (auto op = source.getDefiningOp()) {
+  while (auto *op = source.getDefiningOp()) {
     if (auto viewLike = dyn_cast<ViewLikeOpInterface>(op)) {
       if (source == viewLike.getViewDest()) {
         source = cast<MemrefValue>(viewLike.getViewSource());
@@ -220,10 +234,11 @@ MemrefValue skipViewLikeOps(MemrefValue source) {
   return source;
 }
 
-LogicalResult resolveSourceIndicesExpandShape(
-    Location loc, PatternRewriter &rewriter,
-    memref::ExpandShapeOp expandShapeOp, ValueRange indices,
-    SmallVectorImpl<Value> &sourceIndices, bool startsInbounds) {
+void resolveSourceIndicesExpandShape(Location loc, PatternRewriter &rewriter,
+                                     memref::ExpandShapeOp expandShapeOp,
+                                     ValueRange indices,
+                                     SmallVectorImpl<Value> &sourceIndices,
+                                     bool startsInbounds) {
   SmallVector<OpFoldResult> destShape = expandShapeOp.getMixedOutputShape();
 
   // Traverse all reassociation groups to determine the appropriate indices
@@ -243,14 +258,13 @@ LogicalResult resolveSourceIndicesExpandShape(
         rewriter, loc, groupIndices, groupBasis, /*disjoint=*/startsInbounds);
     sourceIndices.push_back(collapsedIndex);
   }
-  return success();
 }
 
-LogicalResult
-resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
-                                  memref::CollapseShapeOp collapseShapeOp,
-                                  ValueRange indices,
-                                  SmallVectorImpl<Value> &sourceIndices) {
+void resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
+                                       memref::CollapseShapeOp collapseShapeOp,
+                                       ValueRange indices,
+                                       SmallVectorImpl<Value> &sourceIndices,
+                                       bool startsInbounds) {
   // Note: collapse_shape requires a strided memref, we can do this.
   auto metadata = memref::ExtractStridedMetadataOp::create(
       rewriter, loc, collapseShapeOp.getSrc());
@@ -265,10 +279,15 @@ resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
       continue;
     }
 
-    SmallVector<OpFoldResult> basis =
-        llvm::map_to_vector(group, [&](int64_t d) { return sourceSizes[d]; });
+    // If we don't know that this value is in-bounds, the largest return value
+    // of the delinearization may exceed `sourceSizes[d]`, so we drop that first
+    // group entry in order to maintain soundness.
+    auto trimmedGroup =
+        ArrayRef<int64_t>(group).drop_front(startsInbounds ? 0 : 1);
+    SmallVector<OpFoldResult> basis = llvm::map_to_vector(
+        trimmedGroup, [&](int64_t d) { return sourceSizes[d]; });
     auto delinearize = affine::AffineDelinearizeIndexOp::create(
-        rewriter, loc, index, basis, /*hasOuterBound=*/true);
+        rewriter, loc, index, basis, /*hasOuterBound=*/startsInbounds);
     llvm::append_range(sourceIndices, delinearize.getResults());
   }
   if (collapseShapeOp.getReassociationIndices().empty()) {
@@ -282,6 +301,46 @@ resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
           getValueOrCreateConstantIndexOp(rewriter, loc, ofr));
     }
   }
+}
+
+LogicalResult resolveSourceIndicesRankReducingSubview(
+    Location loc, OpBuilder &b, memref::SubViewOp subViewOp, ValueRange indices,
+    SmallVectorImpl<Value> &sourceIndices) {
+  if (!subViewOp.hasZeroOffset() || !subViewOp.hasUnitStride())
+    return failure();
+
+  MemRefType srcType = subViewOp.getSourceType();
+  MemRefType resType = subViewOp.getType();
+  unsigned srcRank = srcType.getRank();
+  unsigned resRank = resType.getRank();
+  if (srcRank <= resRank || indices.size() != resRank)
+    return failure();
+
+  auto droppedDims = subViewOp.getDroppedDims();
+  if (droppedDims.none() || droppedDims.count() != srcRank - resRank)
+    return failure();
+
+  auto mixedSizes = subViewOp.getMixedSizes();
+  if (mixedSizes.size() != srcRank)
+    return failure();
+
+  unsigned resultDim = 0;
+  for (unsigned sourceDim = 0; sourceDim < srcRank; ++sourceDim) {
+    if (droppedDims.test(sourceDim)) {
+      auto sizeCst = getConstantIntValue(mixedSizes[sourceDim]);
+      if (!sizeCst || *sizeCst != 1)
+        return failure();
+      sourceIndices.push_back(
+          getValueOrCreateConstantIndexOp(b, loc, b.getIndexAttr(0)));
+      continue;
+    }
+    if (resultDim >= indices.size())
+      return failure();
+    sourceIndices.push_back(indices[resultDim++]);
+  }
+  if (resultDim != indices.size())
+    return failure();
+
   return success();
 }
 

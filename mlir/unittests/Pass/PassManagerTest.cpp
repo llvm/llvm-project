@@ -14,6 +14,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassInstrumentation.h"
 #include "gtest/gtest.h"
 
 #include <memory>
@@ -116,6 +117,106 @@ struct AddSecondAttrFunctionPass
     op->setAttr("didProcess2", builder.getUnitAttr());
   }
 };
+
+/// PassInstrumentation to count pass callbacks and signal pass failures.
+struct TestPassInstrumentation : public PassInstrumentation {
+  int beforePassCallbackCount = 0;
+  int afterPassCallbackCount = 0;
+  int afterPassFailedCallbackCount = 0;
+
+  bool failBeforePass = false;
+  bool failAfterPass = false;
+
+  void runBeforePass(Pass *pass, Operation *op) override {
+    if (pass->getTypeID() != TypeID::get<AddAttrFunctionPass>())
+      return;
+
+    ++beforePassCallbackCount;
+    if (failBeforePass)
+      signalPassFailure(pass);
+  }
+  void runAfterPass(Pass *pass, Operation *op) override {
+    if (pass->getTypeID() != TypeID::get<AddAttrFunctionPass>())
+      return;
+
+    ++afterPassCallbackCount;
+    if (failAfterPass)
+      signalPassFailure(pass);
+  }
+  void runAfterPassFailed(Pass *pass, Operation *op) override {
+    if (pass->getTypeID() != TypeID::get<AddAttrFunctionPass>())
+      return;
+
+    ++afterPassFailedCallbackCount;
+  }
+};
+
+TEST(PassManagerTest, PassInstrumentation) {
+  MLIRContext context;
+  context.loadDialect<func::FuncDialect>();
+  Builder b(&context);
+
+  // Create a module with 1 function.
+  OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
+  auto func = func::FuncOp::create(b.getUnknownLoc(), "test_func",
+                                   b.getFunctionType({}, {}));
+  func.setPrivate();
+  module->push_back(func);
+
+  struct InstrumentationCounts {
+    int beforePass;
+    int afterPass;
+    int afterPassFailed;
+  };
+
+  auto runInstrumentation =
+      [&](bool failBefore,
+          bool failAfter) -> std::pair<LogicalResult, InstrumentationCounts> {
+    // Instantiate and run our pass.
+    auto pm = PassManager::on<ModuleOp>(&context);
+    auto instrumentation = std::make_unique<TestPassInstrumentation>();
+    auto *instrumentationPtr = instrumentation.get();
+    instrumentation->failBeforePass = failBefore;
+    instrumentation->failAfterPass = failAfter;
+    pm.addInstrumentation(std::move(instrumentation));
+    pm.addNestedPass<func::FuncOp>(std::make_unique<AddAttrFunctionPass>());
+    LogicalResult result = pm.run(module.get());
+
+    InstrumentationCounts counts = {
+        instrumentationPtr->beforePassCallbackCount,
+        instrumentationPtr->afterPassCallbackCount,
+        instrumentationPtr->afterPassFailedCallbackCount};
+    return {result, counts};
+  };
+
+  for (bool failBefore : {false, true}) {
+    for (bool failAfter : {false, true}) {
+      auto [result, counts] = runInstrumentation(failBefore, failAfter);
+
+      InstrumentationCounts expected;
+      if (failBefore) {
+        EXPECT_TRUE(failed(result))
+            << "failBefore=" << failBefore << ", failAfter=" << failAfter;
+        expected = {/*beforePass=*/1, /*afterPass=*/0, /*afterPassFailed=*/1};
+      } else if (failAfter) {
+        EXPECT_TRUE(failed(result))
+            << "failBefore=" << failBefore << ", failAfter=" << failAfter;
+        expected = {/*beforePass=*/1, /*afterPass=*/1, /*afterPassFailed=*/0};
+      } else {
+        EXPECT_TRUE(succeeded(result))
+            << "failBefore=" << failBefore << ", failAfter=" << failAfter;
+        expected = {/*beforePass=*/1, /*afterPass=*/1, /*afterPassFailed=*/0};
+      }
+
+      EXPECT_EQ(counts.beforePass, expected.beforePass)
+          << "failBefore=" << failBefore << ", failAfter=" << failAfter;
+      EXPECT_EQ(counts.afterPass, expected.afterPass)
+          << "failBefore=" << failBefore << ", failAfter=" << failAfter;
+      EXPECT_EQ(counts.afterPassFailed, expected.afterPassFailed)
+          << "failBefore=" << failBefore << ", failAfter=" << failAfter;
+    }
+  }
+}
 
 TEST(PassManagerTest, ExecutionAction) {
   MLIRContext context;

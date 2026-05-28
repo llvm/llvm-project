@@ -105,7 +105,7 @@ void mlir::linalg::hoistRedundantVectorBroadcasts(RewriterBase &rewriter,
         return WalkResult::advance();
 
       // Check that the vector to extract from is a BlockArgument.
-      auto blockArg = dyn_cast<BlockArgument>(extractOp.getVector());
+      auto blockArg = dyn_cast<BlockArgument>(extractOp.getSource());
       if (!blockArg)
         return WalkResult::advance();
 
@@ -141,7 +141,7 @@ void mlir::linalg::hoistRedundantVectorBroadcasts(RewriterBase &rewriter,
           return WalkResult::advance();
 
       rewriter.modifyOpInPlace(broadcast, [&] {
-        extractOp.getVectorMutable().assign(initArg->get());
+        extractOp.getSourceMutable().assign(initArg->get());
       });
       loop.moveOutOfLoop(extractOp);
       rewriter.moveOpAfter(broadcast, loop);
@@ -227,7 +227,8 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
           FailureOr<int64_t> maxLb =
               ValueBoundsConstraintSet::computeConstantBound(
                   presburger::BoundType::UB, lb,
-                  /*stopCondition=*/nullptr, /*closedUB=*/true);
+                  /*stopCondition=*/nullptr,
+                  ValueBoundsOptions{/*closedUB=*/true});
           if (failed(maxLb))
             return;
           FailureOr<int64_t> minUb =

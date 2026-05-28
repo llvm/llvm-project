@@ -51,6 +51,15 @@ namespace Intrinsic {
 typedef unsigned ID;
 }
 
+/// Provide fast-math flags storage, instructions that support fast-math flags
+/// should inherit from this class.
+class FastMathFlagsStorage {
+  friend class FPMathOperator;
+
+protected:
+  FastMathFlags FMF;
+};
+
 //===----------------------------------------------------------------------===//
 //                          UnaryInstruction Class
 //===----------------------------------------------------------------------===//
@@ -68,7 +77,7 @@ protected:
 public:
   // allocate space for exactly one operand
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -164,6 +173,32 @@ public:
   }
 };
 
+/// Unary operators support fast-math flags, users should not use this
+/// class directly, Unary can create instructions with correct type
+/// automatically.
+class FPUnaryOperator : public UnaryOperator, public FastMathFlagsStorage {
+  // Note: Instruction needs to be a friend here to call cloneImpl.
+  friend class Instruction;
+  friend class UnaryOperator;
+  using UnaryOperator::UnaryOperator;
+
+  LLVM_ABI FPUnaryOperator *cloneImpl() const;
+
+public:
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Instruction *I) {
+    switch (I->getOpcode()) {
+    case Instruction::FNeg:
+      return true;
+    default:
+      return false;
+    }
+  }
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
 //===----------------------------------------------------------------------===//
 //                           BinaryOperator Class
 //===----------------------------------------------------------------------===//
@@ -185,7 +220,7 @@ protected:
 public:
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -435,6 +470,35 @@ BinaryOperator *BinaryOperator::CreateDisjoint(BinaryOps Opc, Value *V1,
   return BO;
 }
 
+/// Binary operators support fast-math flags, users should not use this
+/// class directly, BinaryOperator can create instructions with correct type
+/// automatically.
+class FPBinaryOperator : public BinaryOperator, public FastMathFlagsStorage {
+  // Note: Instruction needs to be a friend here to call cloneImpl.
+  friend class Instruction;
+  friend class BinaryOperator;
+  LLVM_ABI FPBinaryOperator *cloneImpl() const;
+  using BinaryOperator::BinaryOperator;
+
+public:
+  static bool classof(const Instruction *I) {
+    switch (I->getOpcode()) {
+    case Instruction::FAdd:
+    case Instruction::FSub:
+    case Instruction::FMul:
+    case Instruction::FDiv:
+    case Instruction::FRem:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
 //===----------------------------------------------------------------------===//
 //                               CastInst Class
 //===----------------------------------------------------------------------===//
@@ -601,11 +665,9 @@ public:
       Instruction::CastOps firstOpcode,  ///< Opcode of first cast
       Instruction::CastOps secondOpcode, ///< Opcode of second cast
       Type *SrcTy,                       ///< SrcTy of 1st cast
-      Type *MidTy,       ///< DstTy of 1st cast & SrcTy of 2nd cast
-      Type *DstTy,       ///< DstTy of 2nd cast
-      Type *SrcIntPtrTy, ///< Integer type corresponding to Ptr SrcTy, or null
-      Type *MidIntPtrTy, ///< Integer type corresponding to Ptr MidTy, or null
-      Type *DstIntPtrTy  ///< Integer type corresponding to Ptr DstTy, or null
+      Type *MidTy,         ///< DstTy of 1st cast & SrcTy of 2nd cast
+      Type *DstTy,         ///< DstTy of 2nd cast
+      const DataLayout *DL ///< Optional data layout
   );
 
   /// Return the opcode of this CastInst
@@ -730,13 +792,12 @@ public:
 protected:
   LLVM_ABI CmpInst(Type *ty, Instruction::OtherOps op, Predicate pred,
                    Value *LHS, Value *RHS, const Twine &Name = "",
-                   InsertPosition InsertBefore = nullptr,
-                   Instruction *FlagsSource = nullptr);
+                   InsertPosition InsertBefore = nullptr);
 
 public:
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Construct a compare instruction, given the opcode, the predicate and
   /// the two operands.  Optionally (if InstBefore is specified) insert the
@@ -953,11 +1014,15 @@ public:
 
   /// @returns true if the predicate is unsigned, false otherwise.
   /// Determine if the predicate is an unsigned operation.
-  LLVM_ABI static bool isUnsigned(Predicate predicate);
+  static bool isUnsigned(Predicate Pred) {
+    return Pred >= ICMP_UGT && Pred <= ICMP_ULE;
+  }
 
   /// @returns true if the predicate is signed, false otherwise.
   /// Determine if the predicate is an signed operation.
-  LLVM_ABI static bool isSigned(Predicate predicate);
+  static bool isSigned(Predicate Pred) {
+    return Pred >= ICMP_SGT && Pred <= ICMP_SLE;
+  }
 
   /// Determine if the predicate is an ordered operation.
   LLVM_ABI static bool isOrdered(Predicate predicate);
@@ -1185,6 +1250,10 @@ public:
   removeOperandBundle(CallBase *CB, uint32_t ID,
                       InsertPosition InsertPt = nullptr);
 
+  LLVM_ABI static CallBase *
+  removeOperandBundleAt(CallBase *CB, size_t Offset,
+                        InsertPosition InsertPtr = nullptr);
+
   /// Return the convergence control token for this call, if it exists.
   Value *getConvergenceControlToken() const {
     if (auto Bundle = getOperandBundle(llvm::LLVMContext::OB_convergencectrl)) {
@@ -1347,7 +1416,7 @@ public:
   /// the call target is an alias.
   Function *getCalledFunction() const {
     if (auto *F = dyn_cast_or_null<Function>(getCalledOperand()))
-      if (F->getValueType() == getFunctionType())
+      if (F->getFunctionType() == getFunctionType())
         return F;
     return nullptr;
   }

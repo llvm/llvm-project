@@ -32,7 +32,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -258,12 +257,16 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   std::string FullFS = X86_MC::ParseX86Triple(TargetTriple);
   assert(!FullFS.empty() && "Failed to parse X86 triple");
 
+  if (TargetTriple.isOSWindows())
+    FullFS += ",-push2pop2,-ppx";
+
   if (!FS.empty())
     FullFS = (Twine(FullFS) + "," + FS).str();
 
   // Disable 64-bit only features in non-64-bit mode.
-  StringRef FeaturesIn64BitOnly[] = {
-      "egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf", "cf", "zu", "uintr"};
+  StringRef FeaturesIn64BitOnly[] = {"egpr",   "push2pop2", "ppx", "ndd",
+                                     "ccmp",   "nf",        "cf",  "zu",
+                                     "jmpabs", "uintr"};
   if (FullFS.find("-64bit-mode") != std::string::npos)
     for (StringRef F : FeaturesIn64BitOnly)
       FullFS += ",-" + F.str();
@@ -284,12 +287,13 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     reportFatalUsageError("64-bit code requested on a subtarget that doesn't "
                           "support it!");
 
-  // Stack alignment is 16 bytes on Darwin, Linux, kFreeBSD, and for all
+  // Stack alignment is 16 bytes on Darwin, Linux, kFreeBSD, Hurd and for all
   // 64-bit targets.  On Solaris (32-bit), stack alignment is 4 bytes
   // following the i386 psABI, while on Illumos it is always 16 bytes.
   if (StackAlignOverride)
     stackAlignment = *StackAlignOverride;
-  else if (isTargetDarwin() || isTargetLinux() || isTargetKFreeBSD() || Is64Bit)
+  else if (isTargetDarwin() || isTargetLinux() || isTargetKFreeBSD() ||
+           isTargetHurd() || Is64Bit)
     stackAlignment = Align(16);
 
   // Consume the vector width attribute or apply any target specific limit.
@@ -299,6 +303,8 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     PreferVectorWidth = 128;
   else if (Prefer256Bit)
     PreferVectorWidth = 256;
+
+  HasUserReservedRegisters = ReservedRReg.any();
 }
 
 X86Subtarget &X86Subtarget::initializeSubtargetDependencies(StringRef CPU,

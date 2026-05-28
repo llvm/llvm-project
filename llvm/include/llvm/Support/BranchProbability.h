@@ -46,6 +46,7 @@ public:
   LLVM_ABI BranchProbability(uint32_t Numerator, uint32_t Denominator);
 
   bool isZero() const { return N == 0; }
+  bool isOne() const { return N == D; }
   bool isUnknown() const { return N == UnknownN; }
 
   static BranchProbability getZero() { return BranchProbability(0); }
@@ -57,6 +58,8 @@ public:
   // Create a BranchProbability object from 64-bit integers.
   LLVM_ABI static BranchProbability getBranchProbability(uint64_t Numerator,
                                                          uint64_t Denominator);
+  // Create a BranchProbability from a double, which must be from 0 to 1.
+  LLVM_ABI static BranchProbability getBranchProbability(double Prob);
 
   // Normalize given probabilties so that the sum of them becomes approximate
   // one.
@@ -71,6 +74,7 @@ public:
 
   uint32_t getNumerator() const { return N; }
   static uint32_t getDenominator() { return D; }
+  double toDouble() const { return static_cast<double>(N) / D; }
 
   // Return (1 - Probability).
   BranchProbability getCompl() const { return BranchProbability(D - N); }
@@ -96,6 +100,9 @@ public:
   ///
   /// \return \c Num divided by \c this.
   LLVM_ABI uint64_t scaleByInverse(uint64_t Num) const;
+
+  /// Compute pow(Probability, N).
+  LLVM_ABI BranchProbability pow(unsigned N) const;
 
   BranchProbability &operator+=(BranchProbability RHS) {
     assert(N != UnknownN && RHS.N != UnknownN &&

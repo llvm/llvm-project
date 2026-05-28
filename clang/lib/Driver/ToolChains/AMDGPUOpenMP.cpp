@@ -10,8 +10,8 @@
 #include "AMDGPU.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace clang::driver;
@@ -28,8 +28,6 @@ AMDGPUOpenMPToolChain::AMDGPUOpenMPToolChain(const Driver &D,
   // Lookup binaries into the driver directory, this is used to
   // discover the 'amdgpu-arch' executable.
   getProgramPaths().push_back(getDriver().Dir);
-  // Diagnose unsupported sanitizer options only once.
-  diagnoseUnsupportedSanitizers(Args);
 }
 
 void AMDGPUOpenMPToolChain::addClangTargetOptions(
@@ -66,21 +64,24 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
 
   const OptTable &Opts = getDriver().getOpts();
 
-  // Skip sanitize options passed from the HostTC. Claim them early.
-  // The decision to sanitize device code is computed only by
-  // 'shouldSkipSanitizeOption'.
-  if (DAL->hasArg(options::OPT_fsanitize_EQ))
-    DAL->claimAllArgs(options::OPT_fsanitize_EQ);
+  for (Arg *A : Args) {
+    // Sanitizer coverage is currently not supported for AMDGPU.
+    if (A->getOption().matches(options::OPT_fsan_cov_Group)) {
+      diagnoseUnsupportedOption(A, *DAL, Args);
+      continue;
+    }
 
-  for (Arg *A : Args)
-    if (!shouldSkipSanitizeOption(*this, Args, BoundArch, A) &&
-        !llvm::is_contained(*DAL, A))
-      DAL->append(A);
+    if (A->getOption().matches(options::OPT_fsanitize_EQ) &&
+        !Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
+                      true))
+      continue;
+
+    DAL->append(A);
+  }
 
   if (!BoundArch.empty()) {
-    DAL->eraseArg(options::OPT_march_EQ);
-    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
-                      BoundArch);
+    DAL->eraseArg(options::OPT_mcpu_EQ);
+    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_mcpu_EQ), BoundArch);
   }
 
   return DAL;
@@ -112,19 +113,6 @@ void AMDGPUOpenMPToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
   HostTC.AddIAMCUIncludeArgs(Args, CC1Args);
 }
 
-SanitizerMask AMDGPUOpenMPToolChain::getSupportedSanitizers() const {
-  // The AMDGPUOpenMPToolChain only supports sanitizers in the sense that it
-  // allows sanitizer arguments on the command line if they are supported by the
-  // host toolchain. The AMDGPUOpenMPToolChain will actually ignore any command
-  // line arguments for any of these "supported" sanitizers. That means that no
-  // sanitization of device code is actually supported at this time.
-  //
-  // This behavior is necessary because the host and device toolchains
-  // invocations often share the command line, so the device toolchain must
-  // tolerate flags meant only for the host toolchain.
-  return HostTC.getSupportedSanitizers();
-}
-
 VersionTuple
 AMDGPUOpenMPToolChain::computeMSVCVersion(const Driver *D,
                                           const ArgList &Args) const {
@@ -138,12 +126,14 @@ AMDGPUOpenMPToolChain::getDeviceLibs(
   if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
     return {};
 
-  StringRef GpuArch = getProcessorFromTargetID(
-      getTriple(), Args.getLastArgValue(options::OPT_march_EQ));
+  AMDGPUToolChain::ParsedTargetIDType TargetID = getParsedTargetID(Args);
+  if (!TargetID.OptionalTargetID)
+    return {};
 
   SmallVector<BitCodeLibraryInfo, 12> BCLibs;
   for (auto BCLib :
-       getCommonDeviceLibNames(Args, GpuArch.str(), DeviceOffloadingKind))
+       getCommonDeviceLibNames(Args, *TargetID.OptionalTargetID,
+                               *TargetID.OptionalGPUArch, DeviceOffloadingKind))
     BCLibs.emplace_back(BCLib);
 
   return BCLibs;

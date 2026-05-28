@@ -43,9 +43,41 @@ class WasmSSA_BlockLikeOp<string mnemonic, string summaryStr> :
   let assemblyFormat = "(`(`$inputs^`)` `:` type($inputs))? attr-dict  `:` $body `>` $target";
 }
 
-def WasmSSA_BlockOp : WasmSSA_BlockLikeOp<"block", "Create a nesting level"> {}
+def WasmSSA_BlockOp : WasmSSA_BlockLikeOp<
+    "block",
+    "Create a nesting level with a label at its exit."> {
+  let description = [{
+  Defines a Wasm block, creating a new nested scope.
+  A block contains a body region and an optional list of input values.
+  Control can enter the block and later branch out to the block target.
+  Example:
 
-def WasmSSA_LoopOp : WasmSSA_BlockLikeOp<"loop", "Create a nesting level similar to Block Op, except that it has itself as a successor."> {}
+  ```mlir
+  wasmssa.block {
+
+    // instructions
+
+  } > ^successor
+  ```
+  }];
+}
+
+def WasmSSA_LoopOp : WasmSSA_BlockLikeOp<
+    "loop",
+    "Create a nesting level that define its entry as jump target."> {
+  let description = [{
+  Represents a Wasm loop construct. This defines a nesting level with
+  a label at the entry of the region.
+
+  Example:
+
+  ```mlir
+  wasmssa.loop {
+
+  } > ^successor
+  ```
+  }];
+}
 
 def WasmSSA_BlockReturnOp : WasmSSA_Op<"block_return", [Terminator,
     DeclareOpInterfaceMethods<LabelBranchingOpInterface>]> {
@@ -55,12 +87,19 @@ def WasmSSA_BlockReturnOp : WasmSSA_Op<"block_return", [Terminator,
     ::mlir::Block* getTarget();
   }];
   let description = [{
-     Marks a return from the current block.
+    Escape from the current nesting level and return the control flow to its successor.
+    Optionally, mark the arguments that should be transfered to the successor block.
 
-     Example:
+    This shouldn't be confused with branch operations that targets the label defined
+    by the nesting level operation.
+
+    For instance, a `wasmssa.block_return` in a loop will give back control to the
+    successor of the loop, where a `branch` targeting the loop will flow back to the entry block of the loop.
+
+    Example:
 
     ```mlir
-      wasmssa.block_return
+    wasmssa.block_return
     ```
   }];
   let assemblyFormat = "($inputs^ `:` type($inputs))? attr-dict";
@@ -127,11 +166,17 @@ def WasmSSA_FuncOp : WasmSSA_Op<"func", [
     - Arguments of the entry block of type `!wasm<local T>`, with T the corresponding type
      in the function type.
 
+    By default, `wasmssa.func` have nested visibility. Functions exported by the module
+    are marked with the exported attribute. This gives them public visibility.
+
      Example:
 
      ```mlir
-     // A simple function with no arguments that returns a float32
+     // Internal function with no arguments that returns a float32
      wasmssa.func @my_f32_func() -> f32
+
+     // Exported function with no arguments that returns a float32
+     wasmssa.func exported @my_f32_func() -> f32
 
      // A function that takes a local ref argument
      wasmssa.func @i64_wrap(%a: !wasmssa<local ref to i64>) -> i32
@@ -141,7 +186,7 @@ def WasmSSA_FuncOp : WasmSSA_Op<"func", [
                      WasmSSA_FuncTypeAttr: $functionType,
                      OptionalAttr<DictArrayAttr>:$arg_attrs,
                      OptionalAttr<DictArrayAttr>:$res_attrs,
-                     DefaultValuedAttr<StrAttr, "\"nested\"">:$sym_visibility);
+                     UnitAttr: $exported);
   let regions = (region AnyRegion: $body);
   let extraClassDeclaration = [{
 
@@ -162,6 +207,12 @@ def WasmSSA_FuncOp : WasmSSA_Op<"func", [
 
     /// Returns the result types of this function.
     ArrayRef<Type> getResultTypes() { return getFunctionType().getResults(); }
+
+    ::mlir::SymbolTable::Visibility getVisibility() {
+      return getExported() ?
+        ::mlir::SymbolTable::Visibility::Public :
+        ::mlir::SymbolTable::Visibility::Nested;
+    };
   }];
 
   let builders = [
@@ -207,8 +258,7 @@ def WasmSSA_FuncImportOp : WasmSSA_Op<"import_func", [
                      StrAttr: $importName,
                      WasmSSA_FuncTypeAttr: $type,
                      OptionalAttr<DictArrayAttr>:$arg_attrs,
-                     OptionalAttr<DictArrayAttr>:$res_attrs,
-                     OptionalAttr<StrAttr>:$sym_visibility);
+                     OptionalAttr<DictArrayAttr>:$res_attrs);
   let extraClassDeclaration = [{
     bool isDeclaration() const { return true; }
 
@@ -221,6 +271,10 @@ def WasmSSA_FuncImportOp : WasmSSA_Op<"import_func", [
     ::llvm::ArrayRef<Type> getResultTypes() {
       return getType().getResults();
     }
+
+    ::mlir::SymbolTable::Visibility getVisibility() {
+      return ::mlir::SymbolTable::Visibility::Nested;
+    };
   }];
   let builders = [
     OpBuilder<(ins "StringRef":$symbol,
@@ -238,30 +292,41 @@ def WasmSSA_GlobalOp : WasmSSA_Op<"global", [
   let arguments = (ins SymbolNameAttr: $sym_name,
                      WasmSSA_ValTypeAttr: $type,
                      UnitAttr: $isMutable,
-                     OptionalAttr<StrAttr>:$sym_visibility);
+                     UnitAttr: $exported);
   let description = [{
     WebAssembly global variable.
     Body contains the initialization instructions for the variable value.
     The body must contain only instructions considered `const` in a webassembly context,
     such as `wasmssa.const` or `global.get`.
 
+    By default, `wasmssa.global` have nested visibility. Global exported by the module
+    are marked with the exported attribute. This gives them public visibility.
+
     Example:
 
     ```mlir
-    // Define a global_var, a mutable i32 global variable equal to 10.
-    wasmssa.global @global_var i32 mutable nested : {
+    // Define module_global_var, an internal mutable i32 global variable equal to 10.
+    wasmssa.global @module_global_var i32 mutable : {
           %[[VAL_0:.*]] = wasmssa.const 10 : i32
+          wasmssa.return %[[VAL_0]] : i32
+    }
+
+    // Define global_var, an exported constant i32 global variable equal to 42.
+    wasmssa.global @global_var i32 : {
+          %[[VAL_0:.*]] = wasmssa.const 42 : i32
           wasmssa.return %[[VAL_0]] : i32
     }
     ```
   }];
   let regions = (region AnyRegion: $initializer);
 
-  let builders = [
-    OpBuilder<(ins "StringRef":$symbol,
-                   "Type": $type,
-                   "bool": $isMutable)>
-  ];
+  let extraClassDeclaration = [{
+    ::mlir::SymbolTable::Visibility getVisibility() {
+      return getExported() ?
+        ::mlir::SymbolTable::Visibility::Public :
+        ::mlir::SymbolTable::Visibility::Nested;
+    };
+  }];
   let hasCustomAssemblyFormat = 1;
 }
 
@@ -283,18 +348,14 @@ def WasmSSA_GlobalImportOp : WasmSSA_Op<"import_global", [
                      StrAttr: $moduleName,
                      StrAttr: $importName,
                      WasmSSA_ValTypeAttr: $type,
-                     UnitAttr: $isMutable,
-                     OptionalAttr<StrAttr>:$sym_visibility);
+                     UnitAttr: $isMutable);
   let extraClassDeclaration = [{
     bool isDeclaration() const { return true; }
+
+    ::mlir::SymbolTable::Visibility getVisibility() {
+      return ::mlir::SymbolTable::Visibility::Nested;
+    };
   }];
-  let builders = [
-    OpBuilder<(ins "StringRef":$symbol,
-                   "StringRef":$moduleName,
-                   "StringRef":$importName,
-                   "Type": $type,
-                   "bool": $isMutable)>
-  ];
   let hasCustomAssemblyFormat = 1;
 }
 
@@ -442,23 +503,33 @@ def WasmSSA_MemOp : WasmSSA_Op<"memory", [Symbol]> {
     Define a memory to be used by the program.
     Multiple memories can be defined in the same module.
 
+    By default, `wasmssa.memory` have nested visibility. Memory exported by
+    the module are marked with the exported attribute. This gives them public
+    visibility.
+
      Example:
 
      ```mlir
-     // Define the `mem_0` memory with defined bounds of 0 -> 65536
+     // Define the `mem_0` (internal)  memory with defined size bounds of [0:65536]
      wasmssa.memory @mem_0 !wasmssa<limit[0:65536]>
+
+     // Define the `mem_1` exported  memory with minimal size of 512
+     wasmssa.memory exported @mem_1 !wasmssa<limit[512:]>
      ```
     }];
   let arguments = (ins SymbolNameAttr: $sym_name,
                      WasmSSA_LimitTypeAttr: $limits,
-                     OptionalAttr<StrAttr>:$sym_visibility);
-  let builders = [
-    OpBuilder<(ins
-    "::llvm::StringRef":$symbol,
-    "wasmssa::LimitType":$limit)>
-  ];
+                     UnitAttr: $exported);
 
-  let assemblyFormat = "$sym_name custom<WasmVisibility>($sym_visibility) $limits attr-dict";
+  let extraClassDeclaration = [{
+    ::mlir::SymbolTable::Visibility getVisibility() {
+      return getExported() ?
+        ::mlir::SymbolTable::Visibility::Public :
+        ::mlir::SymbolTable::Visibility::Nested;
+    };
+  }];
+
+  let assemblyFormat = "(`exported` $exported^)? $sym_name $limits attr-dict";
 }
 
 def WasmSSA_MemImportOp : WasmSSA_Op<"import_mem", [Symbol, ImportOpInterface]> {
@@ -471,21 +542,18 @@ def WasmSSA_MemImportOp : WasmSSA_Op<"import_mem", [Symbol, ImportOpInterface]> 
      ```mlir
      // Import the memory `mem` from `my_module` as @mem_0
      wasmssa.import_mem "mem" from "my_module" as @mem_0 {limits = !wasmssa<limit[2:]>}
-    ```
+     ```
     }];
   let arguments = (ins SymbolNameAttr: $sym_name,
                      StrAttr: $moduleName,
                      StrAttr: $importName,
-                     WasmSSA_LimitTypeAttr: $limits,
-                     OptionalAttr<StrAttr>:$sym_visibility);
+                     WasmSSA_LimitTypeAttr: $limits);
   let extraClassDeclaration = [{
-     bool isDeclaration() const { return true; }
+      bool isDeclaration() const { return true; }
+      ::mlir::SymbolTable::Visibility getVisibility() {
+       return ::mlir::SymbolTable::Visibility::Nested;
+      };
    }];
-  let builders = [OpBuilder<(ins
-    "::llvm::StringRef":$symbol,
-    "::llvm::StringRef":$moduleName,
-    "::llvm::StringRef":$importName,
-    "wasmssa::LimitType":$limits)>];
   let assemblyFormat = "$importName `from` $moduleName `as` $sym_name attr-dict";
 }
 
@@ -493,11 +561,15 @@ def WasmSSA_TableOp : WasmSSA_Op<"table", [Symbol]> {
   let summary= "WebAssembly table value";
   let arguments = (ins SymbolNameAttr: $sym_name,
                      WasmSSA_TableTypeAttr: $type,
-                     OptionalAttr<StrAttr>:$sym_visibility);
-  let builders = [OpBuilder<(ins
-      "::llvm::StringRef":$symbol,
-      "wasmssa::TableType":$type)>];
-  let assemblyFormat = "$sym_name custom<WasmVisibility>($sym_visibility) $type attr-dict";
+                     UnitAttr: $exported);
+  let extraClassDeclaration = [{
+    ::mlir::SymbolTable::Visibility getVisibility() {
+      return getExported() ?
+        ::mlir::SymbolTable::Visibility::Public :
+        ::mlir::SymbolTable::Visibility::Nested;
+    };
+  }];
+  let assemblyFormat = "(`exported` $exported^)? $sym_name $type attr-dict";
 }
 
 def WasmSSA_TableImportOp : WasmSSA_Op<"import_table", [Symbol, ImportOpInterface]> {
@@ -510,22 +582,19 @@ def WasmSSA_TableImportOp : WasmSSA_Op<"import_table", [Symbol, ImportOpInterfac
      ```mlir
      // Import the table `table` from `my_module` as @table_0
      wasmssa.import_table "table" from "my_module" as @table_0 {type = !wasmssa<tabletype !wasmssa.funcref [2:]>}
-    ```
+     ```
     }];
   let arguments = (ins SymbolNameAttr: $sym_name,
                      StrAttr: $moduleName,
                      StrAttr: $importName,
-                     WasmSSA_TableTypeAttr: $type,
-                     OptionalAttr<StrAttr>:$sym_visibility);
+                     WasmSSA_TableTypeAttr: $type);
   let extraClassDeclaration = [{
     bool isDeclaration() const { return true; }
+    ::mlir::SymbolTable::Visibility getVisibility() {
+       return ::mlir::SymbolTable::Visibility::Nested;
+    };
   }];
   let assemblyFormat = "$importName `from` $moduleName `as` $sym_name attr-dict";
-  let builders = [OpBuilder<(ins
-      "::llvm::StringRef":$symbol,
-      "::llvm::StringRef":$moduleName,
-      "::llvm::StringRef":$importName,
-      "wasmssa::TableType":$type)>];
 }
 
 def WasmSSA_ReturnOp : WasmSSA_Op<"return", [Terminator]> {
@@ -555,7 +624,7 @@ def WasmSSA_AddOp : WasmSSA_BinaryNumericalOp<"add",
 
      ```mlir
      %a = wasmssa.add %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -565,7 +634,7 @@ def WasmSSA_AndOp : WasmSSA_BinaryNumericalOp<"and",
 
      ```mlir
      %a = wasmssa.and %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -575,7 +644,7 @@ def WasmSSA_DivOp : WasmSSA_BinaryNumericalOp<"div",
 
      ```mlir
      %a = wasmssa.div %b %c : f32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -585,7 +654,7 @@ def WasmSSA_DivUIOp : WasmSSA_BinaryNumericalOp<"div_ui",
 
      ```mlir
      %a = wasmssa.div_ui %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -595,7 +664,7 @@ def WasmSSA_DivSIOp : WasmSSA_BinaryNumericalOp<"div_si",
 
      ```mlir
      %a = wasmssa.div_si %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -605,7 +674,7 @@ def WasmSSA_MulOp : WasmSSA_BinaryNumericalOp<"mul",
 
      ```mlir
      %a = wasmssa.mul %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -615,7 +684,7 @@ def WasmSSA_OrOp : WasmSSA_BinaryNumericalOp<"or",
 
      ```mlir
      %a = wasmssa.or %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -625,7 +694,7 @@ def WasmSSA_SubOp : WasmSSA_BinaryNumericalOp<"sub",
 
      ```mlir
      %a = wasmssa.sub %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -635,7 +704,7 @@ def WasmSSA_RemUIOp : WasmSSA_BinaryNumericalOp<"rem_ui",
 
      ```mlir
      %a = wasmssa.rem_ui %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -645,7 +714,7 @@ def WasmSSA_RemSIOp : WasmSSA_BinaryNumericalOp<"rem_si",
 
      ```mlir
      %a = wasmssa.rem_si %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -655,7 +724,7 @@ def WasmSSA_XOrOp : WasmSSA_BinaryNumericalOp<"xor",
 
      ```mlir
      %a = wasmssa.xor %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -665,7 +734,7 @@ def WasmSSA_MinOp : WasmSSA_BinaryNumericalOp<"min",
 
      ```mlir
      %a = wasmssa.min %b %c : f32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -675,7 +744,7 @@ def WasmSSA_MaxOp : WasmSSA_BinaryNumericalOp<"max",
 
      ```mlir
      %a = wasmssa.max %b %c : f32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -685,7 +754,7 @@ def WasmSSA_CopySignOp : WasmSSA_BinaryNumericalOp<"copysign",
 
      ```mlir
      %a = wasmssa.copysign %b %c : f32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -705,7 +774,7 @@ def WasmSSA_EqOp : WasmSSA_BinaryComparisonOp<"eq",
 
      ```mlir
      %a = wasmssa.eq %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -715,7 +784,7 @@ def WasmSSA_NeOp : WasmSSA_BinaryComparisonOp<"ne",
 
      ```mlir
      %a = wasmssa.ne %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -725,7 +794,7 @@ def WasmSSA_LtSIOp : WasmSSA_BinaryComparisonOp<"lt_si",
 
      ```mlir
      %a = wasmssa.lt_si %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -735,7 +804,7 @@ def WasmSSA_LtUIOp : WasmSSA_BinaryComparisonOp<"lt_ui",
 
      ```mlir
      %a = wasmssa.lt_ui %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -745,7 +814,7 @@ def WasmSSA_LeSIOp : WasmSSA_BinaryComparisonOp<"le_si",
 
      ```mlir
      %a = wasmssa.le_si %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -755,7 +824,7 @@ def WasmSSA_LeUIOp : WasmSSA_BinaryComparisonOp<"le_ui",
 
      ```mlir
      %a = wasmssa.le_ui %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -765,7 +834,7 @@ def WasmSSA_GtSIOp : WasmSSA_BinaryComparisonOp<"gt_si",
 
      ```mlir
      %a = wasmssa.gt_si %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -775,7 +844,7 @@ def WasmSSA_GtUIOp : WasmSSA_BinaryComparisonOp<"gt_ui",
 
      ```mlir
      %a = wasmssa.gt_ui %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -785,7 +854,7 @@ def WasmSSA_GeSIOp : WasmSSA_BinaryComparisonOp<"ge_si",
 
      ```mlir
      %a = wasmssa.ge_si %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -795,7 +864,7 @@ def WasmSSA_GeUIOp : WasmSSA_BinaryComparisonOp<"ge_ui",
 
      ```mlir
      %a = wasmssa.ge_ui %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -805,7 +874,7 @@ def WasmSSA_LtOp : WasmSSA_BinaryComparisonOp<"lt",
 
      ```mlir
      %a = wasmssa.lt %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -815,7 +884,7 @@ def WasmSSA_LeOp : WasmSSA_BinaryComparisonOp<"le",
 
      ```mlir
      %a = wasmssa.le %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -825,7 +894,7 @@ def WasmSSA_GtOp : WasmSSA_BinaryComparisonOp<"gt",
 
      ```mlir
      %a = wasmssa.gt %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -835,7 +904,7 @@ def WasmSSA_GeOp : WasmSSA_BinaryComparisonOp<"ge",
 
      ```mlir
      %a = wasmssa.ge %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -857,7 +926,7 @@ def WasmSSA_ShLOp : WasmSSA_ShiftRotateOp<"shl",
 
      ```mlir
      %a = wasmssa.shl %b by %c bits : i64
-    ```
+     ```
     }]
     >{}
 
@@ -873,7 +942,7 @@ def WasmSSA_ShRSOp : WasmSSA_ShiftRotateOp<"shr_s",
 
      ```mlir
      %a = wasmssa.shr_s %b by %c bits : i64
-    ```
+     ```
     }]
     >{}
 
@@ -889,7 +958,7 @@ def WasmSSA_ShRUOp : WasmSSA_ShiftRotateOp<"shr_u",
 
      ```mlir
      %a = wasmssa.shr_u %b by %c bits : i64
-    ```
+     ```
     }]
     >{}
 
@@ -903,7 +972,7 @@ def WasmSSA_RotlOp : WasmSSA_ShiftRotateOp<"rotl",
 
      ```mlir
      %a = wasmssa.rotl %b by %c bits : i64
-    ```
+     ```
     }]
     >{}
 
@@ -917,7 +986,7 @@ def WasmSSA_RotrOp : WasmSSA_ShiftRotateOp<"rotr",
 
      ```mlir
      %a = wasmssa.rotr %b by %c bits : i64
-    ```
+     ```
     }]
     >{}
 
@@ -940,7 +1009,7 @@ def WasmSSA_ConvertUOp : WasmSSA_ConversionOp<"convert_u",
 
      ```mlir
      %a = wasmssa.convert_u %b : i32 to f64
-    ```
+     ```
     }],
     [WasmSSA_IntegerType],
     [WasmSSA_FPType]>{}
@@ -953,7 +1022,7 @@ def WasmSSA_ConvertSOp : WasmSSA_ConversionOp<"convert_s",
 
      ```mlir
      %a = wasmssa.convert_s %b : i32 to f64
-    ```
+     ```
     }],
     [WasmSSA_IntegerType],
     [WasmSSA_FPType]>{}
@@ -964,7 +1033,7 @@ def WasmSSA_DemoteOp : WasmSSA_ConversionOp<"demote",
 
      ```mlir
      %a = wasmssa.demote %b : f64 to f32
-    ```
+     ```
     }],
     [F64],
     [F32]>{}
@@ -975,7 +1044,7 @@ def WasmSSA_ExtendSI32Op : WasmSSA_Op<"extend_i32_s">{
 
      ```mlir
      %a = wasmssa.extend_i32_s %b to i64
-    ```
+     ```
     }];
   let arguments = (ins I32:$input);
   let results = (outs I64:$result);
@@ -988,7 +1057,7 @@ def WasmSSA_ExtendUI32Op : WasmSSA_Op<"extend_i32_u">{
 
      ```mlir
      %a = wasmssa.extend_i32_s %b to i64
-    ```
+     ```
     }];
   let arguments = (ins I32:$input);
   let results = (outs I64:$result);

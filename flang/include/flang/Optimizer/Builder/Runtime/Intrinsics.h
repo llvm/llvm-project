@@ -44,8 +44,14 @@ void genDateAndTime(fir::FirOpBuilder &, mlir::Location,
                     std::optional<fir::CharBoxValue> date,
                     std::optional<fir::CharBoxValue> time,
                     std::optional<fir::CharBoxValue> zone, mlir::Value values);
+
+mlir::Value genDsecnds(fir::FirOpBuilder &builder, mlir::Location loc,
+                       mlir::Value refTime);
+
 void genEtime(fir::FirOpBuilder &builder, mlir::Location loc,
               mlir::Value values, mlir::Value time);
+
+void genFlush(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value unit);
 
 void genFree(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value ptr);
 
@@ -76,6 +82,9 @@ mlir::Value genSecnds(fir::FirOpBuilder &builder, mlir::Location loc,
 /// generate time runtime call
 mlir::Value genTime(fir::FirOpBuilder &builder, mlir::Location loc);
 
+/// generate timef runtime call
+mlir::Value genTimef(fir::FirOpBuilder &builder, mlir::Location loc);
+
 /// generate runtime call to transfer intrinsic with no size argument
 void genTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
                  mlir::Value resultBox, mlir::Value sourceBox,
@@ -104,6 +113,15 @@ void genSleep(fir::FirOpBuilder &builder, mlir::Location loc,
 /// generate chdir runtime call
 mlir::Value genChdir(fir::FirOpBuilder &builder, mlir::Location loc,
                      mlir::Value name);
+
+mlir::Value genIrand(fir::FirOpBuilder &builder, mlir::Location loc,
+                     mlir::Value i);
+mlir::Value genRand(fir::FirOpBuilder &builder, mlir::Location loc,
+                    mlir::Value i);
+
+/// generate dump of a descriptor
+void genShowDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
+                       mlir::Value descriptor);
 
 } // namespace runtime
 } // namespace fir

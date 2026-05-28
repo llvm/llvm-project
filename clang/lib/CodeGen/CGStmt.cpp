@@ -19,6 +19,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Stmt.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -43,10 +44,6 @@ using namespace CodeGen;
 //===----------------------------------------------------------------------===//
 //                              Statement Emission
 //===----------------------------------------------------------------------===//
-
-namespace llvm {
-extern cl::opt<bool> EnableSingleByteCoverage;
-} // namespace llvm
 
 void CodeGenFunction::EmitStopPoint(const Stmt *S) {
   if (CGDebugInfo *DI = getDebugInfo()) {
@@ -103,6 +100,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::SEHExceptStmtClass:
   case Stmt::SEHFinallyStmtClass:
   case Stmt::MSDependentExistsStmtClass:
+  case Stmt::UnresolvedSYCLKernelCallStmtClass:
     llvm_unreachable("invalid statement class to emit generically");
   case Stmt::NullStmtClass:
   case Stmt::CompoundStmtClass:
@@ -114,6 +112,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::ContinueStmtClass:
   case Stmt::DefaultStmtClass:
   case Stmt::CaseStmtClass:
+  case Stmt::DeferStmtClass:
   case Stmt::SEHLeaveStmtClass:
   case Stmt::SYCLKernelCallStmtClass:
     llvm_unreachable("should have emitted these statements as simple");
@@ -231,8 +230,14 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPReverseDirectiveClass:
     EmitOMPReverseDirective(cast<OMPReverseDirective>(*S));
     break;
+  case Stmt::OMPSplitDirectiveClass:
+    EmitOMPSplitDirective(cast<OMPSplitDirective>(*S));
+    break;
   case Stmt::OMPInterchangeDirectiveClass:
     EmitOMPInterchangeDirective(cast<OMPInterchangeDirective>(*S));
+    break;
+  case Stmt::OMPFuseDirectiveClass:
+    EmitOMPFuseDirective(cast<OMPFuseDirective>(*S));
     break;
   case Stmt::OMPForDirectiveClass:
     EmitOMPForDirective(cast<OMPForDirective>(*S));
@@ -536,25 +541,14 @@ bool CodeGenFunction::EmitSimpleStmt(const Stmt *S,
   case Stmt::CaseStmtClass:
     EmitCaseStmt(cast<CaseStmt>(*S), Attrs);
     break;
+  case Stmt::DeferStmtClass:
+    EmitDeferStmt(cast<DeferStmt>(*S));
+    break;
   case Stmt::SEHLeaveStmtClass:
     EmitSEHLeaveStmt(cast<SEHLeaveStmt>(*S));
     break;
   case Stmt::SYCLKernelCallStmtClass:
-    // SYCL kernel call statements are generated as wrappers around the body
-    // of functions declared with the sycl_kernel_entry_point attribute. Such
-    // functions are used to specify how a SYCL kernel (a function object) is
-    // to be invoked; the SYCL kernel call statement contains a transformed
-    // variation of the function body and is used to generate a SYCL kernel
-    // caller function; a function that serves as the device side entry point
-    // used to execute the SYCL kernel. The sycl_kernel_entry_point attributed
-    // function is invoked by host code in order to trigger emission of the
-    // device side SYCL kernel caller function and to generate metadata needed
-    // by SYCL run-time library implementations; the function is otherwise
-    // intended to have no effect. As such, the function body is not evaluated
-    // as part of the invocation during host compilation (and the function
-    // should not be called or emitted during device compilation); the SYCL
-    // kernel call statement is thus handled as a null statement for the
-    // purpose of code generation.
+    EmitSYCLKernelCallStmt(cast<SYCLKernelCallStmt>(*S));
     break;
   }
   return true;
@@ -579,48 +573,45 @@ CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
                                               bool GetLast,
                                               AggValueSlot AggSlot) {
 
-  const Stmt *ExprResult = S.getStmtExprResult();
-  assert((!GetLast || (GetLast && ExprResult)) &&
-         "If GetLast is true then the CompoundStmt must have a StmtExprResult");
+  for (CompoundStmt::const_body_iterator I = S.body_begin(),
+                                         E = S.body_end() - GetLast;
+       I != E; ++I)
+    EmitStmt(*I);
 
   Address RetAlloca = Address::invalid();
-
-  for (auto *CurStmt : S.body()) {
-    if (GetLast && ExprResult == CurStmt) {
-      // We have to special case labels here.  They are statements, but when put
-      // at the end of a statement expression, they yield the value of their
-      // subexpression.  Handle this by walking through all labels we encounter,
-      // emitting them before we evaluate the subexpr.
-      // Similar issues arise for attributed statements.
-      while (!isa<Expr>(ExprResult)) {
-        if (const auto *LS = dyn_cast<LabelStmt>(ExprResult)) {
-          EmitLabel(LS->getDecl());
-          ExprResult = LS->getSubStmt();
-        } else if (const auto *AS = dyn_cast<AttributedStmt>(ExprResult)) {
-          // FIXME: Update this if we ever have attributes that affect the
-          // semantics of an expression.
-          ExprResult = AS->getSubStmt();
-        } else {
-          llvm_unreachable("unknown value statement");
-        }
-      }
-
-      EnsureInsertPoint();
-
-      const Expr *E = cast<Expr>(ExprResult);
-      QualType ExprTy = E->getType();
-      if (hasAggregateEvaluationKind(ExprTy)) {
-        EmitAggExpr(E, AggSlot);
+  if (GetLast) {
+    // We have to special case labels here.  They are statements, but when put
+    // at the end of a statement expression, they yield the value of their
+    // subexpression.  Handle this by walking through all labels we encounter,
+    // emitting them before we evaluate the subexpr.
+    // Similar issues arise for attributed statements.
+    const Stmt *LastStmt = S.body_back();
+    while (!isa<Expr>(LastStmt)) {
+      if (const auto *LS = dyn_cast<LabelStmt>(LastStmt)) {
+        EmitLabel(LS->getDecl());
+        LastStmt = LS->getSubStmt();
+      } else if (const auto *AS = dyn_cast<AttributedStmt>(LastStmt)) {
+        // FIXME: Update this if we ever have attributes that affect the
+        // semantics of an expression.
+        LastStmt = AS->getSubStmt();
       } else {
-        // We can't return an RValue here because there might be cleanups at
-        // the end of the StmtExpr.  Because of that, we have to emit the result
-        // here into a temporary alloca.
-        RetAlloca = CreateMemTemp(ExprTy);
-        EmitAnyExprToMem(E, RetAlloca, Qualifiers(),
-                         /*IsInit*/ false);
+        llvm_unreachable("unknown value statement");
       }
+    }
+
+    EnsureInsertPoint();
+
+    const Expr *E = cast<Expr>(LastStmt);
+    QualType ExprTy = E->getType();
+    if (hasAggregateEvaluationKind(ExprTy)) {
+      EmitAggExpr(E, AggSlot);
     } else {
-      EmitStmt(CurStmt);
+      // We can't return an RValue here because there might be cleanups at
+      // the end of the StmtExpr.  Because of that, we have to emit the result
+      // here into a temporary alloca.
+      RetAlloca = CreateMemTemp(ExprTy);
+      EmitAnyExprToMem(E, RetAlloca, Qualifiers(),
+                       /*IsInit*/ false);
     }
   }
 
@@ -628,7 +619,7 @@ CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
 }
 
 void CodeGenFunction::SimplifyForwardingBlocks(llvm::BasicBlock *BB) {
-  llvm::BranchInst *BI = dyn_cast<llvm::BranchInst>(BB->getTerminator());
+  llvm::UncondBrInst *BI = dyn_cast<llvm::UncondBrInst>(BB->getTerminator());
 
   // If there is a cleanup stack, then we it isn't worth trying to
   // simplify this block (we would need to remove it from the scope map
@@ -637,14 +628,14 @@ void CodeGenFunction::SimplifyForwardingBlocks(llvm::BasicBlock *BB) {
     return;
 
   // Can only simplify direct branches.
-  if (!BI || !BI->isUnconditional())
+  if (!BI)
     return;
 
   // Can only simplify empty blocks.
   if (BI->getIterator() != BB->begin())
     return;
 
-  BB->replaceAllUsesWith(BI->getSuccessor(0));
+  BB->replaceAllUsesWith(BI->getSuccessor());
   BI->eraseFromParent();
   BB->eraseFromParent();
 }
@@ -675,7 +666,7 @@ void CodeGenFunction::EmitBranch(llvm::BasicBlock *Target) {
   // terminator, don't emit it.
   llvm::BasicBlock *CurBB = Builder.GetInsertBlock();
 
-  if (!CurBB || CurBB->getTerminator()) {
+  if (!CurBB || CurBB->hasTerminator()) {
     // If there is no insert point or the previous block is already
     // terminated, don't touch it.
   } else {
@@ -871,7 +862,7 @@ void CodeGenFunction::EmitIndirectGotoStmt(const IndirectGotoStmt &S) {
   cast<llvm::PHINode>(IndGotoBB->begin())->addIncoming(V, CurBB);
 
   EmitBranch(IndGotoBB);
-  if (CurBB && CurBB->getTerminator())
+  if (CurBB && CurBB->hasTerminator())
     addInstToCurrentSourceAtom(CurBB->getTerminator(), nullptr);
 }
 
@@ -914,8 +905,8 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
     // If the skipped block has no labels in it, just emit the executed block.
     // This avoids emitting dead code and simplifies the CFG substantially.
     if (S.isConstexpr() || !ContainsLabel(Skipped)) {
-      if (CondConstant)
-        incrementProfileCounter(&S);
+      incrementProfileCounter(CondConstant ? UseExecPath : UseSkipPath, &S,
+                              /*UseBoth=*/true);
       if (Executed) {
         MaybeEmitDeferredVarDeclInit(S.getConditionVariable());
         RunCleanupsScope ExecutedScope(*this);
@@ -926,14 +917,14 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
     }
   }
 
+  auto HasSkip = hasSkipCounter(&S);
+
   // Otherwise, the condition did not fold, or we couldn't elide it.  Just emit
   // the conditional branch.
   llvm::BasicBlock *ThenBlock = createBasicBlock("if.then");
   llvm::BasicBlock *ContBlock = createBasicBlock("if.end");
-  llvm::BasicBlock *ElseBlock = ContBlock;
-  if (Else)
-    ElseBlock = createBasicBlock("if.else");
-
+  llvm::BasicBlock *ElseBlock =
+      (Else || HasSkip ? createBasicBlock("if.else") : ContBlock);
   // Prefer the PGO based weights over the likelihood attribute.
   // When the build isn't optimized the metadata isn't used, so don't generate
   // it.
@@ -969,10 +960,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
 
   // Emit the 'then' code.
   EmitBlock(ThenBlock);
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(S.getThen());
-  else
-    incrementProfileCounter(&S);
+  incrementProfileCounter(UseExecPath, &S);
   {
     RunCleanupsScope ThenScope(*this);
     EmitStmt(S.getThen());
@@ -986,9 +974,9 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
       auto NL = ApplyDebugLocation::CreateEmpty(*this);
       EmitBlock(ElseBlock);
     }
-    // When single byte coverage mode is enabled, add a counter to else block.
-    if (llvm::EnableSingleByteCoverage)
-      incrementProfileCounter(Else);
+    // Add a counter to else block unless it has CounterExpr.
+    if (HasSkip)
+      incrementProfileCounter(UseSkipPath, &S);
     {
       RunCleanupsScope ElseScope(*this);
       EmitStmt(Else);
@@ -998,15 +986,14 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
       auto NL = ApplyDebugLocation::CreateEmpty(*this);
       EmitBranch(ContBlock);
     }
+  } else if (HasSkip) {
+    EmitBlock(ElseBlock);
+    incrementProfileCounter(UseSkipPath, &S);
+    EmitBranch(ContBlock);
   }
 
   // Emit the continuation block for code after the if.
   EmitBlock(ContBlock, true);
-
-  // When single byte coverage mode is enabled, add a counter to continuation
-  // block.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(&S);
 }
 
 bool CodeGenFunction::checkIfLoopMustProgress(const Expr *ControllingExpression,
@@ -1119,15 +1106,11 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
                  SourceLocToDebugLoc(R.getEnd()),
                  checkIfLoopMustProgress(S.getCond(), hasEmptyLoopBody(S)));
 
-  // When single byte coverage mode is enabled, add a counter to loop condition.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(S.getCond());
-
   // As long as the condition is true, go to the loop body.
   llvm::BasicBlock *LoopBody = createBasicBlock("while.body");
   if (EmitBoolCondBranch) {
     llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
-    if (ConditionScope.requiresCleanups())
+    if (hasSkipCounter(&S) || ConditionScope.requiresCleanups())
       ExitBlock = createBasicBlock("while.exit");
     llvm::MDNode *Weights =
         createProfileWeightsForLoop(S.getCond(), getProfileCount(S.getBody()));
@@ -1146,6 +1129,7 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
 
     if (ExitBlock != LoopExit.getBlock()) {
       EmitBlock(ExitBlock);
+      incrementProfileCounter(UseSkipPath, &S);
       EmitBranchThroughCleanup(LoopExit);
     }
   } else if (const Attr *A = Stmt::getLikelihoodAttr(S.getBody())) {
@@ -1163,11 +1147,7 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   {
     RunCleanupsScope BodyScope(*this);
     EmitBlock(LoopBody);
-    // When single byte coverage mode is enabled, add a counter to the body.
-    if (llvm::EnableSingleByteCoverage)
-      incrementProfileCounter(S.getBody());
-    else
-      incrementProfileCounter(&S);
+    incrementProfileCounter(UseExecPath, &S);
     EmitStmt(S.getBody());
   }
 
@@ -1187,13 +1167,10 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
 
   // The LoopHeader typically is just a branch if we skipped emitting
   // a branch, try to erase it.
-  if (!EmitBoolCondBranch)
+  if (!EmitBoolCondBranch) {
     SimplifyForwardingBlocks(LoopHeader.getBlock());
-
-  // When single byte coverage mode is enabled, add a counter to continuation
-  // block.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(&S);
+    PGO->markStmtAsUsed(true, &S);
+  }
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
@@ -1212,10 +1189,7 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   // Emit the body of the loop.
   llvm::BasicBlock *LoopBody = createBasicBlock("do.body");
 
-  if (llvm::EnableSingleByteCoverage)
-    EmitBlockWithFallThrough(LoopBody, S.getBody());
-  else
-    EmitBlockWithFallThrough(LoopBody, &S);
+  EmitBlockWithFallThrough(LoopBody, &S);
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.push_back(emitConvergenceLoopToken(LoopBody));
@@ -1226,9 +1200,6 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   }
 
   EmitBlock(LoopCond.getBlock());
-  // When single byte coverage mode is enabled, add a counter to loop condition.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(S.getCond());
 
   // C99 6.8.5.2: "The evaluation of the controlling expression takes place
   // after each execution of the loop body."
@@ -1251,11 +1222,14 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
                  SourceLocToDebugLoc(R.getEnd()),
                  checkIfLoopMustProgress(S.getCond(), hasEmptyLoopBody(S)));
 
+  auto *LoopFalse = (hasSkipCounter(&S) ? createBasicBlock("do.loopfalse")
+                                        : LoopExit.getBlock());
+
   // As long as the condition is true, iterate the loop.
   if (EmitBoolCondBranch) {
     uint64_t BackedgeCount = getProfileCount(S.getBody()) - ParentCount;
     auto *I = Builder.CreateCondBr(
-        BoolCondVal, LoopBody, LoopExit.getBlock(),
+        BoolCondVal, LoopBody, LoopFalse,
         createProfileWeightsForLoop(S.getCond(), BackedgeCount));
 
     // Key Instructions: Emit the condition and branch as separate source
@@ -1270,6 +1244,11 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
 
   LoopStack.pop();
 
+  if (LoopFalse != LoopExit.getBlock()) {
+    EmitBlock(LoopFalse);
+    incrementProfileCounter(UseSkipPath, &S, /*UseBoth=*/true);
+  }
+
   // Emit the exit block.
   EmitBlock(LoopExit.getBlock());
 
@@ -1277,11 +1256,6 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   // emitting a branch, try to erase it.
   if (!EmitBoolCondBranch)
     SimplifyForwardingBlocks(LoopCond.getBlock());
-
-  // When single byte coverage mode is enabled, add a counter to continuation
-  // block.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(&S);
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
@@ -1291,7 +1265,9 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
                                   ArrayRef<const Attr *> ForAttrs) {
   JumpDest LoopExit = getJumpDestInCurrentScope("for.end");
 
-  LexicalScope ForScope(*this, S.getSourceRange());
+  std::optional<LexicalScope> ForScope;
+  if (getLangOpts().C99 || getLangOpts().CPlusPlus)
+    ForScope.emplace(*this, S.getSourceRange());
 
   // Evaluate the first part before the loop.
   if (S.getInit())
@@ -1342,15 +1318,10 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
       BreakContinueStack.back().ContinueBlock = Continue;
     }
 
-    // When single byte coverage mode is enabled, add a counter to loop
-    // condition.
-    if (llvm::EnableSingleByteCoverage)
-      incrementProfileCounter(S.getCond());
-
     llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
     // If there are any cleanups between here and the loop-exit scope,
     // create a block to stage a loop exit along.
-    if (ForScope.requiresCleanups())
+    if (hasSkipCounter(&S) || (ForScope && ForScope->requiresCleanups()))
       ExitBlock = createBasicBlock("for.cond.cleanup");
 
     // As long as the condition is true, iterate the loop.
@@ -1379,6 +1350,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
     if (ExitBlock != LoopExit.getBlock()) {
       EmitBlock(ExitBlock);
+      incrementProfileCounter(UseSkipPath, &S);
       EmitBranchThroughCleanup(LoopExit);
     }
 
@@ -1386,13 +1358,11 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   } else {
     // Treat it as a non-zero constant.  Don't even create a new block for the
     // body, just fall into it.
+    PGO->markStmtAsUsed(true, &S);
   }
 
-  // When single byte coverage mode is enabled, add a counter to the body.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(S.getBody());
-  else
-    incrementProfileCounter(&S);
+  incrementProfileCounter(UseExecPath, &S);
+
   {
     // Create a separate cleanup scope for the body, in case it is not
     // a compound statement.
@@ -1408,8 +1378,6 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   if (S.getInc()) {
     EmitBlock(Continue.getBlock());
     EmitStmt(S.getInc());
-    if (llvm::EnableSingleByteCoverage)
-      incrementProfileCounter(S.getInc());
   }
 
   BreakContinueStack.pop_back();
@@ -1419,17 +1387,13 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   EmitStopPoint(&S);
   EmitBranch(CondBlock);
 
-  ForScope.ForceCleanup();
+  if (ForScope)
+    ForScope->ForceCleanup();
 
   LoopStack.pop();
 
   // Emit the fall-through block.
   EmitBlock(LoopExit.getBlock(), true);
-
-  // When single byte coverage mode is enabled, add a counter to continuation
-  // block.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(&S);
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
@@ -1472,7 +1436,7 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   // If there are any cleanups between here and the loop-exit scope,
   // create a block to stage a loop exit along.
   llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
-  if (ForScope.requiresCleanups())
+  if (hasSkipCounter(&S) || ForScope.requiresCleanups())
     ExitBlock = createBasicBlock("for.cond.cleanup");
 
   // The loop body, consisting of the specified body and the loop variable.
@@ -1497,14 +1461,12 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
 
   if (ExitBlock != LoopExit.getBlock()) {
     EmitBlock(ExitBlock);
+    incrementProfileCounter(UseSkipPath, &S);
     EmitBranchThroughCleanup(LoopExit);
   }
 
   EmitBlock(ForBody);
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(S.getBody());
-  else
-    incrementProfileCounter(&S);
+  incrementProfileCounter(UseExecPath, &S);
 
   // Create a block for the increment. In case of a 'continue', we jump there.
   JumpDest Continue = getJumpDestInCurrentScope("for.inc");
@@ -1537,11 +1499,6 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
 
   // Emit the fall-through block.
   EmitBlock(LoopExit.getBlock(), true);
-
-  // When single byte coverage mode is enabled, add a counter to continuation
-  // block.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(&S);
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
@@ -1997,6 +1954,87 @@ void CodeGenFunction::EmitDefaultStmt(const DefaultStmt &S,
   EmitStmt(S.getSubStmt());
 }
 
+namespace {
+struct EmitDeferredStatement final : EHScopeStack::Cleanup {
+  const DeferStmt &Stmt;
+  EmitDeferredStatement(const DeferStmt *Stmt) : Stmt(*Stmt) {}
+
+  void Emit(CodeGenFunction &CGF, Flags) override {
+    // Take care that any cleanups pushed by the body of a '_Defer' statement
+    // don't clobber the current cleanup slot value.
+    //
+    // Assume we have a scope that pushes a cleanup; when that scope is exited,
+    // we need to run that cleanup; this is accomplished by emitting the cleanup
+    // into a separate block and then branching to that block at scope exit.
+    //
+    // Where this gets complicated is if we exit the scope in multiple different
+    // ways; e.g. in a 'for' loop, we may exit the scope of its body by falling
+    // off the end (in which case we need to run the cleanup and then branch to
+    // the increment), or by 'break'ing out of the loop (in which case we need
+    // to run the cleanup and then branch to the loop exit block); in both cases
+    // we first branch to the cleanup block to run the cleanup, but the block we
+    // need to jump to *after* running the cleanup is different.
+    //
+    // This is accomplished using a local integer variable called the 'cleanup
+    // slot': before branching to the cleanup block, we store a value into that
+    // slot. Then, in the cleanup block, after running the cleanup, we load the
+    // value of that variable and 'switch' on it to branch to the appropriate
+    // continuation block.
+    //
+    // The problem that arises once '_Defer' statements are involved is that the
+    // body of a '_Defer' is an arbitrary statement which itself can create more
+    // cleanups. This means we may end up overwriting the cleanup slot before we
+    // ever have a chance to 'switch' on it, which means that once we *do* get
+    // to the 'switch', we end up in whatever block the cleanup code happened to
+    // pick as the default 'switch' exit label!
+    //
+    // That is, what is normally supposed to happen is something like:
+    //
+    //   1. Store 'X' to cleanup slot.
+    //   2. Branch to cleanup block.
+    //   3. Execute cleanup.
+    //   4. Read value from cleanup slot.
+    //   5. Branch to the block associated with 'X'.
+    //
+    // But if we encounter a _Defer' statement that contains a cleanup, then
+    // what might instead happen is:
+    //
+    //   1. Store 'X' to cleanup slot.
+    //   2. Branch to cleanup block.
+    //   3. Execute cleanup; this ends up pushing another cleanup, so:
+    //       3a. Store 'Y' to cleanup slot.
+    //       3b. Run steps 2–5 recursively.
+    //   4. Read value from cleanup slot, which is now 'Y' instead of 'X'.
+    //   5. Branch to the block associated with 'Y'... which doesn't even
+    //      exist because the value 'Y' is only meaningful for the inner
+    //      cleanup. The result is we just branch 'somewhere random'.
+    //
+    // The rest of the cleanup code simply isn't prepared to handle this case
+    // because most other cleanups can't push more cleanups, and thus, emitting
+    // other cleanups generally cannot clobber the cleanup slot.
+    //
+    // To prevent this from happening, save the current cleanup slot value and
+    // restore it after emitting the '_Defer' statement.
+    llvm::Value *SavedCleanupDest = nullptr;
+    if (CGF.NormalCleanupDest.isValid())
+      SavedCleanupDest =
+          CGF.Builder.CreateLoad(CGF.NormalCleanupDest, "cleanup.dest.saved");
+
+    CGF.EmitStmt(Stmt.getBody());
+
+    if (SavedCleanupDest && CGF.HaveInsertPoint())
+      CGF.Builder.CreateStore(SavedCleanupDest, CGF.NormalCleanupDest);
+
+    // Cleanups must end with an insert point.
+    CGF.EnsureInsertPoint();
+  }
+};
+} // namespace
+
+void CodeGenFunction::EmitDeferStmt(const DeferStmt &S) {
+  EHStack.pushCleanup<EmitDeferredStatement>(NormalAndEHCleanup, &S);
+}
+
 /// CollectStatementsForCase - Given the body of a 'switch' statement and a
 /// constant value that is being switched on, see if we can dead code eliminate
 /// the body of the switch to a simple series of statements to emit.  Basically,
@@ -2425,6 +2463,18 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
 
   ConditionScope.ForceCleanup();
 
+  // Close the last case (or DefaultBlock).
+  EmitBranch(SwitchExit.getBlock());
+
+  // Insert a False Counter if SwitchStmt doesn't have DefaultStmt.
+  if (hasSkipCounter(S.getCond())) {
+    auto *ImplicitDefaultBlock = createBasicBlock("sw.false");
+    EmitBlock(ImplicitDefaultBlock);
+    incrementProfileCounter(UseSkipPath, S.getCond());
+    Builder.CreateBr(SwitchInsn->getDefaultDest());
+    SwitchInsn->setDefaultDest(ImplicitDefaultBlock);
+  }
+
   // Emit continuation.
   EmitBlock(SwitchExit.getBlock(), true);
   incrementProfileCounter(&S);
@@ -2468,93 +2518,6 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   CaseRangeBlock = SavedCRBlock;
 }
 
-static std::string
-SimplifyConstraint(const char *Constraint, const TargetInfo &Target,
-                 SmallVectorImpl<TargetInfo::ConstraintInfo> *OutCons=nullptr) {
-  std::string Result;
-
-  while (*Constraint) {
-    switch (*Constraint) {
-    default:
-      Result += Target.convertConstraint(Constraint);
-      break;
-    // Ignore these
-    case '*':
-    case '?':
-    case '!':
-    case '=': // Will see this and the following in mult-alt constraints.
-    case '+':
-      break;
-    case '#': // Ignore the rest of the constraint alternative.
-      while (Constraint[1] && Constraint[1] != ',')
-        Constraint++;
-      break;
-    case '&':
-    case '%':
-      Result += *Constraint;
-      while (Constraint[1] && Constraint[1] == *Constraint)
-        Constraint++;
-      break;
-    case ',':
-      Result += "|";
-      break;
-    case 'g':
-      Result += "imr";
-      break;
-    case '[': {
-      assert(OutCons &&
-             "Must pass output names to constraints with a symbolic name");
-      unsigned Index;
-      bool result = Target.resolveSymbolicName(Constraint, *OutCons, Index);
-      assert(result && "Could not resolve symbolic name"); (void)result;
-      Result += llvm::utostr(Index);
-      break;
-    }
-    }
-
-    Constraint++;
-  }
-
-  return Result;
-}
-
-/// AddVariableConstraints - Look at AsmExpr and if it is a variable declared
-/// as using a particular register add that as a constraint that will be used
-/// in this asm stmt.
-static std::string
-AddVariableConstraints(const std::string &Constraint, const Expr &AsmExpr,
-                       const TargetInfo &Target, CodeGenModule &CGM,
-                       const AsmStmt &Stmt, const bool EarlyClobber,
-                       std::string *GCCReg = nullptr) {
-  const DeclRefExpr *AsmDeclRef = dyn_cast<DeclRefExpr>(&AsmExpr);
-  if (!AsmDeclRef)
-    return Constraint;
-  const ValueDecl &Value = *AsmDeclRef->getDecl();
-  const VarDecl *Variable = dyn_cast<VarDecl>(&Value);
-  if (!Variable)
-    return Constraint;
-  if (Variable->getStorageClass() != SC_Register)
-    return Constraint;
-  AsmLabelAttr *Attr = Variable->getAttr<AsmLabelAttr>();
-  if (!Attr)
-    return Constraint;
-  StringRef Register = Attr->getLabel();
-  assert(Target.isValidGCCRegisterName(Register));
-  // We're using validateOutputConstraint here because we only care if
-  // this is a register constraint.
-  TargetInfo::ConstraintInfo Info(Constraint, "");
-  if (Target.validateOutputConstraint(Info) &&
-      !Info.allowsRegister()) {
-    CGM.ErrorUnsupported(&Stmt, "__asm__");
-    return Constraint;
-  }
-  // Canonicalize the register here before returning it.
-  Register = Target.getNormalizedGCCRegisterName(Register);
-  if (GCCReg != nullptr)
-    *GCCReg = Register.str();
-  return (EarlyClobber ? "&{" : "{") + Register.str() + "}";
-}
-
 std::pair<llvm::Value*, llvm::Type *> CodeGenFunction::EmitAsmInputLValue(
     const TargetInfo::ConstraintInfo &Info, LValue InputValue,
     QualType InputType, std::string &ConstraintStr, SourceLocation Loc) {
@@ -2577,7 +2540,6 @@ std::pair<llvm::Value*, llvm::Type *> CodeGenFunction::EmitAsmInputLValue(
   ConstraintStr += '*';
   return {InputValue.getPointer(*this), Addr.getElementType()};
 }
-
 std::pair<llvm::Value *, llvm::Type *>
 CodeGenFunction::EmitAsmInput(const TargetInfo::ConstraintInfo &Info,
                               const Expr *InputExpr,
@@ -2643,32 +2605,29 @@ static llvm::MDNode *getAsmSrcLocInfo(const StringLiteral *Str,
   return llvm::MDNode::get(CGF.getLLVMContext(), Locs);
 }
 
-static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
-                              bool HasUnwindClobber, bool ReadOnly,
-                              bool ReadNone, bool NoMerge, bool NoConvergent,
-                              const AsmStmt &S,
-                              const std::vector<llvm::Type *> &ResultRegTypes,
-                              const std::vector<llvm::Type *> &ArgElemTypes,
-                              CodeGenFunction &CGF,
-                              std::vector<llvm::Value *> &RegResults) {
+void CodeGenFunction::UpdateAsmCallInst(
+    const AsmStmt &S, llvm::CallBase &Result, const AsmConstraintsInfo &AsmInfo,
+    bool HasSideEffect, bool HasUnwindClobber, bool NoMerge, bool NoConvergent,
+    std::vector<llvm::Value *> &RegResults) {
   if (!HasUnwindClobber)
     Result.addFnAttr(llvm::Attribute::NoUnwind);
 
   if (NoMerge)
     Result.addFnAttr(llvm::Attribute::NoMerge);
+
   // Attach readnone and readonly attributes.
   if (!HasSideEffect) {
-    if (ReadNone)
+    if (AsmInfo.ReadNone)
       Result.setDoesNotAccessMemory();
-    else if (ReadOnly)
+    else if (AsmInfo.ReadOnly)
       Result.setOnlyReadsMemory();
   }
 
   // Add elementtype attribute for indirect constraints.
-  for (auto Pair : llvm::enumerate(ArgElemTypes)) {
+  for (auto Pair : llvm::enumerate(AsmInfo.ArgElemTypes)) {
     if (Pair.value()) {
       auto Attr = llvm::Attribute::get(
-          CGF.getLLVMContext(), llvm::Attribute::ElementType, Pair.value());
+          getLLVMContext(), llvm::Attribute::ElementType, Pair.value());
       Result.addParamAttr(Pair.index(), Attr);
     }
   }
@@ -2679,76 +2638,75 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
   if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(&S);
       gccAsmStmt &&
       (SL = dyn_cast<StringLiteral>(gccAsmStmt->getAsmStringExpr()))) {
-    Result.setMetadata("srcloc", getAsmSrcLocInfo(SL, CGF));
+    Result.setMetadata("srcloc", getAsmSrcLocInfo(SL, *this));
   } else {
     // At least put the line number on MS inline asm blobs and GCC asm constexpr
     // strings.
     llvm::Constant *Loc =
-        llvm::ConstantInt::get(CGF.Int64Ty, S.getAsmLoc().getRawEncoding());
+        llvm::ConstantInt::get(Int64Ty, S.getAsmLoc().getRawEncoding());
     Result.setMetadata("srcloc",
-                       llvm::MDNode::get(CGF.getLLVMContext(),
+                       llvm::MDNode::get(getLLVMContext(),
                                          llvm::ConstantAsMetadata::get(Loc)));
   }
 
   // Make inline-asm calls Key for the debug info feature Key Instructions.
-  CGF.addInstToNewSourceAtom(&Result, nullptr);
+  addInstToNewSourceAtom(&Result, nullptr);
 
-  if (!NoConvergent && CGF.getLangOpts().assumeFunctionsAreConvergent())
+  if (!NoConvergent && getLangOpts().assumeFunctionsAreConvergent())
     // Conservatively, mark all inline asm blocks in CUDA or OpenCL as
     // convergent (meaning, they may call an intrinsically convergent op, such
     // as bar.sync, and so can't have certain optimizations applied around
     // them) unless it's explicitly marked 'noconvergent'.
     Result.addFnAttr(llvm::Attribute::Convergent);
   // Extract all of the register value results from the asm.
-  if (ResultRegTypes.size() == 1) {
+  if (AsmInfo.ResultRegTypes.size() == 1) {
     RegResults.push_back(&Result);
   } else {
-    for (unsigned i = 0, e = ResultRegTypes.size(); i != e; ++i) {
-      llvm::Value *Tmp = CGF.Builder.CreateExtractValue(&Result, i, "asmresult");
+    for (unsigned i = 0, e = AsmInfo.ResultRegTypes.size(); i != e; ++i) {
+      llvm::Value *Tmp = Builder.CreateExtractValue(&Result, i, "asmresult");
       RegResults.push_back(Tmp);
     }
   }
 }
 
-static void
-EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
-              const llvm::ArrayRef<llvm::Value *> RegResults,
-              const llvm::ArrayRef<llvm::Type *> ResultRegTypes,
-              const llvm::ArrayRef<llvm::Type *> ResultTruncRegTypes,
-              const llvm::ArrayRef<LValue> ResultRegDests,
-              const llvm::ArrayRef<QualType> ResultRegQualTys,
-              const llvm::BitVector &ResultTypeRequiresCast,
-              const llvm::BitVector &ResultRegIsFlagReg) {
-  CGBuilderTy &Builder = CGF.Builder;
-  CodeGenModule &CGM = CGF.CGM;
-  llvm::LLVMContext &CTX = CGF.getLLVMContext();
+void CodeGenFunction::EmitAsmStores(
+    const AsmStmt &S, const llvm::ArrayRef<llvm::Value *> RegResults,
+    const AsmConstraintsInfo &AsmInfo) {
+  llvm::LLVMContext &CTX = getLLVMContext();
 
-  assert(RegResults.size() == ResultRegTypes.size());
-  assert(RegResults.size() == ResultTruncRegTypes.size());
-  assert(RegResults.size() == ResultRegDests.size());
-  // ResultRegDests can be also populated by addReturnRegisterOutputs() above,
+  assert(RegResults.size() == AsmInfo.ResultRegTypes.size());
+  assert(RegResults.size() == AsmInfo.ResultTruncRegTypes.size());
+  assert(RegResults.size() == AsmInfo.ResultRegDests.size());
+
+  // ResultRegDests can also be populated by addReturnRegisterOutputs() above,
   // in which case its size may grow.
-  assert(ResultTypeRequiresCast.size() <= ResultRegDests.size());
-  assert(ResultRegIsFlagReg.size() <= ResultRegDests.size());
+  assert(AsmInfo.ResultTypeRequiresCast.size() <=
+         AsmInfo.ResultRegDests.size());
+  assert(AsmInfo.ResultBounds.size() <= AsmInfo.ResultRegDests.size());
 
   for (unsigned i = 0, e = RegResults.size(); i != e; ++i) {
     llvm::Value *Tmp = RegResults[i];
-    llvm::Type *TruncTy = ResultTruncRegTypes[i];
+    llvm::Type *TruncTy = AsmInfo.ResultTruncRegTypes[i];
 
-    if ((i < ResultRegIsFlagReg.size()) && ResultRegIsFlagReg[i]) {
-      // Target must guarantee the Value `Tmp` here is lowered to a boolean
-      // value.
-      llvm::Constant *Two = llvm::ConstantInt::get(Tmp->getType(), 2);
+    if (i < AsmInfo.ResultBounds.size() &&
+        AsmInfo.ResultBounds[i].has_value()) {
+      const auto [LowerBound, UpperBound] = AsmInfo.ResultBounds[i].value();
+
+      // FIXME: Support for nonzero lower bounds not yet implemented.
+      assert(LowerBound == 0 && "Output operand lower bound is not zero.");
+
+      llvm::Constant *UpperBoundConst =
+          llvm::ConstantInt::get(Tmp->getType(), UpperBound);
       llvm::Value *IsBooleanValue =
-          Builder.CreateCmp(llvm::CmpInst::ICMP_ULT, Tmp, Two);
+          Builder.CreateCmp(llvm::CmpInst::ICMP_ULT, Tmp, UpperBoundConst);
       llvm::Function *FnAssume = CGM.getIntrinsic(llvm::Intrinsic::assume);
+
       Builder.CreateCall(FnAssume, IsBooleanValue);
     }
 
     // If the result type of the LLVM IR asm doesn't match the result type of
     // the expression, do the conversion.
-    if (ResultRegTypes[i] != TruncTy) {
-
+    if (AsmInfo.ResultRegTypes[i] != TruncTy) {
       // Truncate the integer result to the right size, note that TruncTy can be
       // a pointer.
       if (TruncTy->isFloatingPointTy())
@@ -2771,30 +2729,34 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
       }
     }
 
-    ApplyAtomGroup Grp(CGF.getDebugInfo());
-    LValue Dest = ResultRegDests[i];
+    ApplyAtomGroup Grp(getDebugInfo());
+    LValue Dest = AsmInfo.ResultRegDests[i];
+
     // ResultTypeRequiresCast elements correspond to the first
     // ResultTypeRequiresCast.size() elements of RegResults.
-    if ((i < ResultTypeRequiresCast.size()) && ResultTypeRequiresCast[i]) {
-      unsigned Size = CGF.getContext().getTypeSize(ResultRegQualTys[i]);
-      Address A = Dest.getAddress().withElementType(ResultRegTypes[i]);
-      if (CGF.getTargetHooks().isScalarizableAsmOperand(CGF, TruncTy)) {
+    if (i < AsmInfo.ResultTypeRequiresCast.size() &&
+        AsmInfo.ResultTypeRequiresCast[i]) {
+      unsigned Size = getContext().getTypeSize(AsmInfo.ResultRegQualTys[i]);
+      Address A = Dest.getAddress().withElementType(AsmInfo.ResultRegTypes[i]);
+
+      if (getTargetHooks().isScalarizableAsmOperand(*this, TruncTy)) {
         llvm::StoreInst *S = Builder.CreateStore(Tmp, A);
-        CGF.addInstToCurrentSourceAtom(S, S->getValueOperand());
+        addInstToCurrentSourceAtom(S, S->getValueOperand());
         continue;
       }
 
-      QualType Ty =
-          CGF.getContext().getIntTypeForBitwidth(Size, /*Signed=*/false);
+      QualType Ty = getContext().getIntTypeForBitwidth(Size, /*Signed=*/false);
       if (Ty.isNull()) {
         const Expr *OutExpr = S.getOutputExpr(i);
         CGM.getDiags().Report(OutExpr->getExprLoc(),
                               diag::err_store_value_to_reg);
         return;
       }
-      Dest = CGF.MakeAddrLValue(A, Ty);
+
+      Dest = MakeAddrLValue(A, Ty);
     }
-    CGF.EmitStoreThroughLValue(RValue::get(Tmp), Dest);
+
+    EmitStoreThroughLValue(RValue::get(Tmp), Dest);
   }
 }
 
@@ -2807,7 +2769,6 @@ static void EmitHipStdParUnsupportedAsm(CodeGenFunction *CGF,
     Asm = GCCAsm->getAsmString();
 
   auto &Ctx = CGF->CGM.getLLVMContext();
-
   auto StrTy = llvm::ConstantDataArray::getString(Ctx, Asm);
   auto FnTy = llvm::FunctionType::get(llvm::Type::getVoidTy(Ctx),
                                       {StrTy->getType()}, false);
@@ -2816,144 +2777,128 @@ static void EmitHipStdParUnsupportedAsm(CodeGenFunction *CGF,
   CGF->Builder.CreateCall(UBF, {StrTy});
 }
 
-void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
-  // Pop all cleanup blocks at the end of the asm statement.
-  CodeGenFunction::RunCleanupsScope Cleanups(*this);
-
-  // Assemble the final asm string.
-  std::string AsmString = S.generateAsmString(getContext());
-
-  // Get all the output and input constraints together.
-  SmallVector<TargetInfo::ConstraintInfo, 4> OutputConstraintInfos;
-  SmallVector<TargetInfo::ConstraintInfo, 4> InputConstraintInfos;
-
-  bool IsHipStdPar = getLangOpts().HIPStdPar && getLangOpts().CUDAIsDevice;
+/// Gather and validate the output and input constraints for the given inline
+/// assembly statement. This ensures that the constraints are valid for the
+/// target and prepares them for further processing.
+bool CodeGenFunction::GetOutputAndInputConstraints(
+    const AsmStmt &S,
+    SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos,
+    SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos) {
   bool IsValidTargetAsm = true;
-  for (unsigned i = 0, e = S.getNumOutputs(); i != e && IsValidTargetAsm; i++) {
+  bool IsHipStdPar = getLangOpts().HIPStdPar && getLangOpts().CUDAIsDevice;
+  for (unsigned I = 0, E = S.getNumOutputs(); I != E && IsValidTargetAsm; I++) {
     StringRef Name;
     if (const GCCAsmStmt *GAS = dyn_cast<GCCAsmStmt>(&S))
-      Name = GAS->getOutputName(i);
-    TargetInfo::ConstraintInfo Info(S.getOutputConstraint(i), Name);
-    bool IsValid = getTarget().validateOutputConstraint(Info); (void)IsValid;
+      Name = GAS->getOutputName(I);
+
+    TargetInfo::ConstraintInfo Info(S.getOutputConstraint(I), Name);
+
+    bool IsValid = getTarget().validateOutputConstraint(Info);
     if (IsHipStdPar && !IsValid)
       IsValidTargetAsm = false;
     else
       assert(IsValid && "Failed to parse output constraint");
+
     OutputConstraintInfos.push_back(Info);
   }
 
-  for (unsigned i = 0, e = S.getNumInputs(); i != e && IsValidTargetAsm; i++) {
+  for (unsigned I = 0, E = S.getNumInputs(); I != E && IsValidTargetAsm; I++) {
     StringRef Name;
     if (const GCCAsmStmt *GAS = dyn_cast<GCCAsmStmt>(&S))
-      Name = GAS->getInputName(i);
-    TargetInfo::ConstraintInfo Info(S.getInputConstraint(i), Name);
+      Name = GAS->getInputName(I);
+
+    TargetInfo::ConstraintInfo Info(S.getInputConstraint(I), Name);
+
     bool IsValid =
-      getTarget().validateInputConstraint(OutputConstraintInfos, Info);
+        getTarget().validateInputConstraint(OutputConstraintInfos, Info);
     if (IsHipStdPar && !IsValid)
       IsValidTargetAsm = false;
     else
       assert(IsValid && "Failed to parse input constraint");
+
     InputConstraintInfos.push_back(Info);
   }
 
-  if (!IsValidTargetAsm)
-    return EmitHipStdParUnsupportedAsm(this, S);
+  return IsValidTargetAsm;
+}
 
-  std::string Constraints;
-
-  std::vector<LValue> ResultRegDests;
-  std::vector<QualType> ResultRegQualTys;
-  std::vector<llvm::Type *> ResultRegTypes;
-  std::vector<llvm::Type *> ResultTruncRegTypes;
-  std::vector<llvm::Type *> ArgTypes;
-  std::vector<llvm::Type *> ArgElemTypes;
-  std::vector<llvm::Value*> Args;
-  llvm::BitVector ResultTypeRequiresCast;
-  llvm::BitVector ResultRegIsFlagReg;
-
-  // Keep track of inout constraints.
-  std::string InOutConstraints;
-  std::vector<llvm::Value*> InOutArgs;
-  std::vector<llvm::Type*> InOutArgTypes;
-  std::vector<llvm::Type*> InOutArgElemTypes;
-
-  // Keep track of out constraints for tied input operand.
-  std::vector<std::string> OutputConstraints;
-
+/// Process the output constraints of an inline assembly statement. This method
+/// handles the complexity of determining whether an output should be a
+/// register or memory operand, manages tied operands, and prepares the
+/// necessary arguments for the LLVM inline asm call.
+void CodeGenFunction::HandleOutputConstraints(const AsmStmt &S,
+                                              AsmConstraintsInfo &AsmInfo) {
   // Keep track of defined physregs.
   llvm::SmallSet<std::string, 8> PhysRegOutputs;
 
-  // An inline asm can be marked readonly if it meets the following conditions:
-  //  - it doesn't have any sideeffects
-  //  - it doesn't clobber memory
-  //  - it doesn't return a value by-reference
-  // It can be marked readnone if it doesn't have any input memory constraints
-  // in addition to meeting the conditions listed above.
-  bool ReadOnly = true, ReadNone = true;
-
-  for (unsigned i = 0, e = S.getNumOutputs(); i != e; i++) {
-    TargetInfo::ConstraintInfo &Info = OutputConstraintInfos[i];
+  for (unsigned I = 0, E = S.getNumOutputs(); I != E; I++) {
+    TargetInfo::ConstraintInfo &Info = AsmInfo.OutputConstraintInfos[I];
 
     // Simplify the output constraint.
-    std::string OutputConstraint(S.getOutputConstraint(i));
-    OutputConstraint = SimplifyConstraint(OutputConstraint.c_str() + 1,
-                                          getTarget(), &OutputConstraintInfos);
+    std::string OutputConstraint(S.getOutputConstraint(I));
+    OutputConstraint = getTarget().simplifyConstraint(
+        StringRef(OutputConstraint).substr(1), &AsmInfo.OutputConstraintInfos);
 
-    const Expr *OutExpr = S.getOutputExpr(i);
+    const Expr *OutExpr = S.getOutputExpr(I);
     OutExpr = OutExpr->IgnoreParenNoopCasts(getContext());
 
     std::string GCCReg;
-    OutputConstraint = AddVariableConstraints(OutputConstraint, *OutExpr,
-                                              getTarget(), CGM, S,
-                                              Info.earlyClobber(),
-                                              &GCCReg);
+    OutputConstraint = S.addVariableConstraints(
+        OutputConstraint, *OutExpr, getTarget(), Info.earlyClobber(),
+        [&](const Stmt *UnspStmt, StringRef Msg) {
+          CGM.ErrorUnsupported(UnspStmt, Msg);
+        },
+        &GCCReg);
+
     // Give an error on multiple outputs to same physreg.
     if (!GCCReg.empty() && !PhysRegOutputs.insert(GCCReg).second)
       CGM.Error(S.getAsmLoc(), "multiple outputs to hard register: " + GCCReg);
 
-    OutputConstraints.push_back(OutputConstraint);
+    AsmInfo.OutputConstraints.push_back(OutputConstraint);
     LValue Dest = EmitLValue(OutExpr);
-    if (!Constraints.empty())
-      Constraints += ',';
+    if (!AsmInfo.Constraints.empty())
+      AsmInfo.Constraints += ',';
 
     // If this is a register output, then make the inline asm return it
     // by-value.  If this is a memory result, return the value by-reference.
     QualType QTy = OutExpr->getType();
-    const bool IsScalarOrAggregate = hasScalarEvaluationKind(QTy) ||
-                                     hasAggregateEvaluationKind(QTy);
+    const bool IsScalarOrAggregate =
+        hasScalarEvaluationKind(QTy) || hasAggregateEvaluationKind(QTy);
+
     if (!Info.allowsMemory() && IsScalarOrAggregate) {
+      AsmInfo.Constraints += "=" + OutputConstraint;
+      AsmInfo.ResultRegQualTys.push_back(QTy);
+      AsmInfo.ResultRegDests.push_back(Dest);
 
-      Constraints += "=" + OutputConstraint;
-      ResultRegQualTys.push_back(QTy);
-      ResultRegDests.push_back(Dest);
-
-      bool IsFlagReg = llvm::StringRef(OutputConstraint).starts_with("{@cc");
-      ResultRegIsFlagReg.push_back(IsFlagReg);
+      AsmInfo.ResultBounds.emplace_back(Info.getOutputOperandBounds());
 
       llvm::Type *Ty = ConvertTypeForMem(QTy);
-      const bool RequiresCast = Info.allowsRegister() &&
+      const bool RequiresCast =
+          Info.allowsRegister() &&
           (getTargetHooks().isScalarizableAsmOperand(*this, Ty) ||
            Ty->isAggregateType());
 
-      ResultTruncRegTypes.push_back(Ty);
-      ResultTypeRequiresCast.push_back(RequiresCast);
+      AsmInfo.ResultTruncRegTypes.push_back(Ty);
+      AsmInfo.ResultTypeRequiresCast.push_back(RequiresCast);
 
       if (RequiresCast) {
-        unsigned Size = getContext().getTypeSize(QTy);
-        if (Size)
+        if (unsigned Size = getContext().getTypeSize(QTy))
           Ty = llvm::IntegerType::get(getLLVMContext(), Size);
         else
           CGM.Error(OutExpr->getExprLoc(), "output size should not be zero");
       }
-      ResultRegTypes.push_back(Ty);
+
+      AsmInfo.ResultRegTypes.push_back(Ty);
+
       // If this output is tied to an input, and if the input is larger, then
       // we need to set the actual result type of the inline asm node to be the
       // same as the input type.
       if (Info.hasMatchingInput()) {
         unsigned InputNo;
         for (InputNo = 0; InputNo != S.getNumInputs(); ++InputNo) {
-          TargetInfo::ConstraintInfo &Input = InputConstraintInfos[InputNo];
-          if (Input.hasTiedOperand() && Input.getTiedOperand() == i)
+          TargetInfo::ConstraintInfo &Input =
+              AsmInfo.InputConstraintInfos[InputNo];
+          if (Input.hasTiedOperand() && Input.getTiedOperand() == I)
             break;
         }
         assert(InputNo != S.getNumInputs() && "Didn't find matching input!");
@@ -2962,28 +2907,27 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
         QualType OutputType = OutExpr->getType();
 
         uint64_t InputSize = getContext().getTypeSize(InputTy);
-        if (getContext().getTypeSize(OutputType) < InputSize) {
+        if (getContext().getTypeSize(OutputType) < InputSize)
           // Form the asm to return the value as a larger integer or fp type.
-          ResultRegTypes.back() = ConvertType(InputTy);
-        }
+          AsmInfo.ResultRegTypes.back() = ConvertType(InputTy);
       }
-      if (llvm::Type* AdjTy =
-            getTargetHooks().adjustInlineAsmType(*this, OutputConstraint,
-                                                 ResultRegTypes.back()))
-        ResultRegTypes.back() = AdjTy;
-      else {
+
+      if (llvm::Type *AdjTy = getTargetHooks().adjustInlineAsmType(
+              *this, OutputConstraint, AsmInfo.ResultRegTypes.back()))
+        AsmInfo.ResultRegTypes.back() = AdjTy;
+      else
         CGM.getDiags().Report(S.getAsmLoc(),
                               diag::err_asm_invalid_type_in_input)
             << OutExpr->getType() << OutputConstraint;
-      }
 
       // Update largest vector width for any vector types.
-      if (auto *VT = dyn_cast<llvm::VectorType>(ResultRegTypes.back()))
+      if (auto *VT = dyn_cast<llvm::VectorType>(AsmInfo.ResultRegTypes.back()))
         LargestVectorWidth =
             std::max((uint64_t)LargestVectorWidth,
                      VT->getPrimitiveSizeInBits().getKnownMinValue());
     } else {
       Address DestAddr = Dest.getAddress();
+
       // Matrix types in memory are represented by arrays, but accessed through
       // vector pointers, with the alignment specified on the access operation.
       // For inline assembly, update pointer arguments to use vector pointers.
@@ -2992,84 +2936,105 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       if (isa<MatrixType>(OutExpr->getType().getCanonicalType()))
         DestAddr = DestAddr.withElementType(ConvertType(OutExpr->getType()));
 
-      ArgTypes.push_back(DestAddr.getType());
-      ArgElemTypes.push_back(DestAddr.getElementType());
-      Args.push_back(DestAddr.emitRawPointer(*this));
-      Constraints += "=*";
-      Constraints += OutputConstraint;
-      ReadOnly = ReadNone = false;
+      AsmInfo.ArgTypes.push_back(DestAddr.getType());
+      AsmInfo.ArgElemTypes.push_back(DestAddr.getElementType());
+      AsmInfo.Args.push_back(DestAddr.emitRawPointer(*this));
+
+      AsmInfo.Constraints += "=*" + OutputConstraint;
+      AsmInfo.ReadOnly = false;
+      AsmInfo.ReadNone = false;
     }
 
-    if (Info.isReadWrite()) {
-      InOutConstraints += ',';
+    if (!Info.isReadWrite())
+      continue;
 
-      const Expr *InputExpr = S.getOutputExpr(i);
-      llvm::Value *Arg;
-      llvm::Type *ArgElemType;
-      std::tie(Arg, ArgElemType) = EmitAsmInputLValue(
-          Info, Dest, InputExpr->getType(), InOutConstraints,
-          InputExpr->getExprLoc());
+    AsmInfo.InOutConstraints += ',';
 
-      if (llvm::Type* AdjTy =
-          getTargetHooks().adjustInlineAsmType(*this, OutputConstraint,
-                                               Arg->getType()))
-        Arg = Builder.CreateBitCast(Arg, AdjTy);
-
-      // Update largest vector width for any vector types.
-      if (auto *VT = dyn_cast<llvm::VectorType>(Arg->getType()))
-        LargestVectorWidth =
-            std::max((uint64_t)LargestVectorWidth,
-                     VT->getPrimitiveSizeInBits().getKnownMinValue());
-      // Only tie earlyclobber physregs.
-      if (Info.allowsRegister() && (GCCReg.empty() || Info.earlyClobber()))
-        InOutConstraints += llvm::utostr(i);
-      else
-        InOutConstraints += OutputConstraint;
-
-      InOutArgTypes.push_back(Arg->getType());
-      InOutArgElemTypes.push_back(ArgElemType);
-      InOutArgs.push_back(Arg);
-    }
-  }
-
-  // If this is a Microsoft-style asm blob, store the return registers (EAX:EDX)
-  // to the return value slot. Only do this when returning in registers.
-  if (isa<MSAsmStmt>(&S)) {
-    const ABIArgInfo &RetAI = CurFnInfo->getReturnInfo();
-    if (RetAI.isDirect() || RetAI.isExtend()) {
-      // Make a fake lvalue for the return value slot.
-      LValue ReturnSlot = MakeAddrLValueWithoutTBAA(ReturnValue, FnRetTy);
-      CGM.getTargetCodeGenInfo().addReturnRegisterOutputs(
-          *this, ReturnSlot, Constraints, ResultRegTypes, ResultTruncRegTypes,
-          ResultRegDests, AsmString, S.getNumOutputs());
-      SawAsmBlock = true;
-    }
-  }
-
-  for (unsigned i = 0, e = S.getNumInputs(); i != e; i++) {
-    const Expr *InputExpr = S.getInputExpr(i);
-
-    TargetInfo::ConstraintInfo &Info = InputConstraintInfos[i];
-
-    if (Info.allowsMemory())
-      ReadNone = false;
-
-    if (!Constraints.empty())
-      Constraints += ',';
-
-    // Simplify the input constraint.
-    std::string InputConstraint(S.getInputConstraint(i));
-    InputConstraint = SimplifyConstraint(InputConstraint.c_str(), getTarget(),
-                                         &OutputConstraintInfos);
-
-    InputConstraint = AddVariableConstraints(
-        InputConstraint, *InputExpr->IgnoreParenNoopCasts(getContext()),
-        getTarget(), CGM, S, false /* No EarlyClobber */);
-
-    std::string ReplaceConstraint (InputConstraint);
+    const Expr *InputExpr = S.getOutputExpr(I);
     llvm::Value *Arg;
     llvm::Type *ArgElemType;
-    std::tie(Arg, ArgElemType) = EmitAsmInput(Info, InputExpr, Constraints);
+    std::tie(Arg, ArgElemType) =
+        EmitAsmInputLValue(Info, Dest, InputExpr->getType(),
+                           AsmInfo.InOutConstraints, InputExpr->getExprLoc());
+
+    if (llvm::Type *AdjTy = getTargetHooks().adjustInlineAsmType(
+            *this, OutputConstraint, Arg->getType()))
+      Arg = Builder.CreateBitCast(Arg, AdjTy);
+
+    // Update largest vector width for any vector types.
+    if (auto *VT = dyn_cast<llvm::VectorType>(Arg->getType()))
+      LargestVectorWidth =
+          std::max((uint64_t)LargestVectorWidth,
+                   VT->getPrimitiveSizeInBits().getKnownMinValue());
+
+    // Only tie earlyclobber physregs.
+    if (Info.allowsRegister() && (GCCReg.empty() || Info.earlyClobber()))
+      AsmInfo.InOutConstraints += llvm::utostr(I);
+    else
+      AsmInfo.InOutConstraints += OutputConstraint;
+
+    AsmInfo.InOutArgTypes.push_back(Arg->getType());
+    AsmInfo.InOutArgElemTypes.push_back(ArgElemType);
+    AsmInfo.InOutArgs.push_back(Arg);
+  }
+}
+
+/// Special handling for Microsoft-style inline assembly blocks. This ensures
+/// that return registers (like EAX:EDX) are correctly mapped to the function's
+/// return value slot when necessary.
+void CodeGenFunction::HandleMSStyleAsmBlob(const AsmStmt &S,
+                                           std::string &AsmString,
+                                           AsmConstraintsInfo &AsmInfo) {
+  if (!isa<MSAsmStmt>(&S))
+    return;
+
+  const ABIArgInfo &RetAI = CurFnInfo->getReturnInfo();
+  if (!RetAI.isDirect() && !RetAI.isExtend())
+    return;
+
+  // Make a fake lvalue for the return value slot.
+  LValue ReturnSlot = MakeAddrLValueWithoutTBAA(ReturnValue, FnRetTy);
+  CGM.getTargetCodeGenInfo().addReturnRegisterOutputs(
+      *this, ReturnSlot, AsmInfo.Constraints, AsmInfo.ResultRegTypes,
+      AsmInfo.ResultTruncRegTypes, AsmInfo.ResultRegDests, AsmString,
+      S.getNumOutputs());
+  SawAsmBlock = true;
+}
+
+/// Process the input constraints of an inline assembly statement. It handles
+/// type conversions, extensions for tied operands, and collects the necessary
+/// LLVM values to be passed to the inline assembly call.
+void CodeGenFunction::HandleInputConstraints(const AsmStmt &S,
+                                             AsmConstraintsInfo &AsmInfo) {
+  ASTContext &Ctx = getContext();
+
+  for (unsigned I = 0, E = S.getNumInputs(); I != E; I++) {
+    TargetInfo::ConstraintInfo &Info = AsmInfo.InputConstraintInfos[I];
+    const Expr *InputExpr = S.getInputExpr(I);
+
+    if (Info.allowsMemory())
+      AsmInfo.ReadNone = false;
+
+    if (!AsmInfo.Constraints.empty())
+      AsmInfo.Constraints += ',';
+
+    // Simplify the input constraint.
+    std::string InputConstraint(S.getInputConstraint(I));
+    InputConstraint = getTarget().simplifyConstraint(
+        InputConstraint, &AsmInfo.OutputConstraintInfos);
+
+    InputConstraint = S.addVariableConstraints(
+        InputConstraint, *InputExpr->IgnoreParenNoopCasts(Ctx), getTarget(),
+        false /* No EarlyClobber */,
+        [&](const Stmt *UnspStmt, std::string_view Msg) {
+          CGM.ErrorUnsupported(UnspStmt, Msg);
+        });
+
+    std::string ReplaceConstraint(InputConstraint);
+    llvm::Value *Arg;
+    llvm::Type *ArgElemType;
+    std::tie(Arg, ArgElemType) =
+        EmitAsmInput(Info, InputExpr, AsmInfo.Constraints);
 
     // If this input argument is tied to a larger output result, extend the
     // input to be the same size as the output.  The LLVM backend wants to see
@@ -3081,11 +3046,11 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       QualType OutputType = S.getOutputExpr(Output)->getType();
       QualType InputTy = InputExpr->getType();
 
-      if (getContext().getTypeSize(OutputType) >
-          getContext().getTypeSize(InputTy)) {
+      if (Ctx.getTypeSize(OutputType) > Ctx.getTypeSize(InputTy)) {
         // Use ptrtoint as appropriate so that we can do our extension.
         if (isa<llvm::PointerType>(Arg->getType()))
           Arg = Builder.CreatePtrToInt(Arg, IntPtrTy);
+
         llvm::Type *OutputTy = ConvertType(OutputType);
         if (isa<llvm::IntegerType>(OutputTy))
           Arg = Builder.CreateZExt(Arg, OutputTy);
@@ -3094,12 +3059,13 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
         else if (OutputTy->isFloatingPointTy())
           Arg = Builder.CreateFPExt(Arg, OutputTy);
       }
+
       // Deal with the tied operands' constraint code in adjustInlineAsmType.
-      ReplaceConstraint = OutputConstraints[Output];
+      ReplaceConstraint = AsmInfo.OutputConstraints[Output];
     }
-    if (llvm::Type* AdjTy =
-          getTargetHooks().adjustInlineAsmType(*this, ReplaceConstraint,
-                                                   Arg->getType()))
+
+    if (llvm::Type *AdjTy = getTargetHooks().adjustInlineAsmType(
+            *this, ReplaceConstraint, Arg->getType()))
       Arg = Builder.CreateBitCast(Arg, AdjTy);
     else
       CGM.getDiags().Report(S.getAsmLoc(), diag::err_asm_invalid_type_in_input)
@@ -3111,49 +3077,65 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
           std::max((uint64_t)LargestVectorWidth,
                    VT->getPrimitiveSizeInBits().getKnownMinValue());
 
-    ArgTypes.push_back(Arg->getType());
-    ArgElemTypes.push_back(ArgElemType);
-    Args.push_back(Arg);
-    Constraints += InputConstraint;
+    AsmInfo.ArgTypes.push_back(Arg->getType());
+    AsmInfo.ArgElemTypes.push_back(ArgElemType);
+    AsmInfo.Args.push_back(Arg);
+
+    AsmInfo.Constraints += InputConstraint;
   }
 
-  // Append the "input" part of inout constraints.
-  for (unsigned i = 0, e = InOutArgs.size(); i != e; i++) {
-    ArgTypes.push_back(InOutArgTypes[i]);
-    ArgElemTypes.push_back(InOutArgElemTypes[i]);
-    Args.push_back(InOutArgs[i]);
+  // Append the "input" part of in/out constraints.
+  for (unsigned I = 0, E = AsmInfo.InOutArgs.size(); I != E; I++) {
+    AsmInfo.ArgTypes.push_back(AsmInfo.InOutArgTypes[I]);
+    AsmInfo.ArgElemTypes.push_back(AsmInfo.InOutArgElemTypes[I]);
+    AsmInfo.Args.push_back(AsmInfo.InOutArgs[I]);
   }
-  Constraints += InOutConstraints;
 
-  // Labels
-  SmallVector<llvm::BasicBlock *, 16> Transfer;
-  llvm::BasicBlock *Fallthrough = nullptr;
-  bool IsGCCAsmGoto = false;
-  if (const auto *GS = dyn_cast<GCCAsmStmt>(&S)) {
-    IsGCCAsmGoto = GS->isAsmGoto();
-    if (IsGCCAsmGoto) {
-      for (const auto *E : GS->labels()) {
-        JumpDest Dest = getJumpDestForLabel(E->getLabel());
-        Transfer.push_back(Dest.getBlock());
-        if (!Constraints.empty())
-          Constraints += ',';
-        Constraints += "!i";
-      }
-      Fallthrough = createBasicBlock("asm.fallthrough");
+  AsmInfo.Constraints += AsmInfo.InOutConstraints;
+}
+
+/// Handle labels in an 'asm goto' statement. This method resolves the symbolic
+/// labels to LLVM basic blocks and updates the constraint string to reflect
+/// the indirect jump targets.
+bool CodeGenFunction::HandleLabels(const AsmStmt &S,
+                                   AsmConstraintsInfo &AsmInfo) {
+  if (const auto *GS = dyn_cast<GCCAsmStmt>(&S); GS && GS->isAsmGoto()) {
+    for (const auto *E : GS->labels()) {
+      CodeGenFunction::JumpDest Dest = getJumpDestForLabel(E->getLabel());
+      AsmInfo.IndirectDests.push_back(Dest.getBlock());
+
+      if (!AsmInfo.Constraints.empty())
+        AsmInfo.Constraints += ',';
+
+      AsmInfo.Constraints += "!i";
     }
+
+    AsmInfo.DefaultDest = createBasicBlock("asm.fallthrough");
+    return true;
   }
 
+  return false;
+}
+
+/// Process clobber constraints for an inline assembly statement. This
+/// identifies which registers or system state (like "memory" or "cc") are
+/// modified by the assembly block, which is crucial for correct optimization
+/// and side-effect modeling.
+bool CodeGenFunction::HandleClobbers(const AsmStmt &S,
+                                     AsmConstraintsInfo &AsmInfo) {
+  std::string &Constraints = AsmInfo.Constraints;
   bool HasUnwindClobber = false;
+  for (unsigned I = 0, E = S.getNumClobbers(); I != E; I++) {
+    std::string Clobber = S.getClobber(I);
 
-  // Clobbers
-  for (unsigned i = 0, e = S.getNumClobbers(); i != e; i++) {
-    std::string Clobber = S.getClobber(i);
-
-    if (Clobber == "memory")
-      ReadOnly = ReadNone = false;
-    else if (Clobber == "unwind") {
+    if (Clobber == "unwind") {
       HasUnwindClobber = true;
       continue;
+    }
+
+    if (Clobber == "memory") {
+      AsmInfo.ReadOnly = false;
+      AsmInfo.ReadNone = false;
     } else if (Clobber != "cc") {
       Clobber = getTarget().getNormalizedGCCRegisterName(Clobber);
       if (CGM.getCodeGenOpts().StackClashProtector &&
@@ -3167,12 +3149,14 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       if (Clobber == "eax" || Clobber == "edx") {
         if (Constraints.find("=&A") != std::string::npos)
           continue;
+
         std::string::size_type position1 =
             Constraints.find("={" + Clobber + "}");
         if (position1 != std::string::npos) {
           Constraints.insert(position1 + 1, "&");
           continue;
         }
+
         std::string::size_type position2 = Constraints.find("=A");
         if (position2 != std::string::npos) {
           Constraints.insert(position2 + 1, "&");
@@ -3180,35 +3164,62 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
         }
       }
     }
+
     if (!Constraints.empty())
       Constraints += ',';
 
-    Constraints += "~{";
-    Constraints += Clobber;
-    Constraints += '}';
+    Constraints += "~{" + Clobber + '}';
   }
 
+  return HasUnwindClobber;
+}
+
+void CodeGenFunction::EmitAsmStmt(
+    const AsmStmt &S,
+    SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos,
+    SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos) {
+  // Assemble the final asm string.
+  std::string AsmString = S.generateAsmString(getContext());
+
+  AsmConstraintsInfo AsmInfo(OutputConstraintInfos, InputConstraintInfos);
+
+  // Handle output constraints.
+  HandleOutputConstraints(S, AsmInfo);
+
+  // If this is a Microsoft-style asm blob, store the return registers (EAX:EDX)
+  // to the return value slot. Only do this when returning in registers.
+  HandleMSStyleAsmBlob(S, AsmString, AsmInfo);
+
+  // Handle input constraints.
+  HandleInputConstraints(S, AsmInfo);
+
+  // Handle 'asm goto' labels.
+  bool IsGCCAsmGoto = HandleLabels(S, AsmInfo);
+
+  // Handle any clobbers.
+  bool HasUnwindClobber = HandleClobbers(S, AsmInfo);
   assert(!(HasUnwindClobber && IsGCCAsmGoto) &&
          "unwind clobber can't be used with asm goto");
 
   // Add machine specific clobbers
   std::string_view MachineClobbers = getTarget().getClobbers();
   if (!MachineClobbers.empty()) {
-    if (!Constraints.empty())
-      Constraints += ',';
-    Constraints += MachineClobbers;
+    if (!AsmInfo.Constraints.empty())
+      AsmInfo.Constraints += ',';
+    AsmInfo.Constraints += MachineClobbers;
   }
 
   llvm::Type *ResultType;
-  if (ResultRegTypes.empty())
+  if (AsmInfo.ResultRegTypes.empty())
     ResultType = VoidTy;
-  else if (ResultRegTypes.size() == 1)
-    ResultType = ResultRegTypes[0];
+  else if (AsmInfo.ResultRegTypes.size() == 1)
+    ResultType = AsmInfo.ResultRegTypes[0];
   else
-    ResultType = llvm::StructType::get(getLLVMContext(), ResultRegTypes);
+    ResultType =
+        llvm::StructType::get(getLLVMContext(), AsmInfo.ResultRegTypes);
 
   llvm::FunctionType *FTy =
-    llvm::FunctionType::get(ResultType, ArgTypes, false);
+      llvm::FunctionType::get(ResultType, AsmInfo.ArgTypes, false);
 
   bool HasSideEffect = S.isVolatile() || S.getNumOutputs() == 0;
 
@@ -3216,66 +3227,64 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       CGM.getCodeGenOpts().getInlineAsmDialect() == CodeGenOptions::IAD_ATT
           ? llvm::InlineAsm::AD_ATT
           : llvm::InlineAsm::AD_Intel;
-  llvm::InlineAsm::AsmDialect AsmDialect = isa<MSAsmStmt>(&S) ?
-    llvm::InlineAsm::AD_Intel : GnuAsmDialect;
+  llvm::InlineAsm::AsmDialect AsmDialect =
+      isa<MSAsmStmt>(&S) ? llvm::InlineAsm::AD_Intel : GnuAsmDialect;
 
   llvm::InlineAsm *IA = llvm::InlineAsm::get(
-      FTy, AsmString, Constraints, HasSideEffect,
+      FTy, AsmString, AsmInfo.Constraints, HasSideEffect,
       /* IsAlignStack */ false, AsmDialect, HasUnwindClobber);
   std::vector<llvm::Value*> RegResults;
   llvm::CallBrInst *CBR;
   llvm::DenseMap<llvm::BasicBlock *, SmallVector<llvm::Value *, 4>>
       CBRRegResults;
+
   if (IsGCCAsmGoto) {
-    CBR = Builder.CreateCallBr(IA, Fallthrough, Transfer, Args);
-    EmitBlock(Fallthrough);
-    UpdateAsmCallInst(*CBR, HasSideEffect, /*HasUnwindClobber=*/false, ReadOnly,
-                      ReadNone, InNoMergeAttributedStmt,
-                      InNoConvergentAttributedStmt, S, ResultRegTypes,
-                      ArgElemTypes, *this, RegResults);
+    CBR = Builder.CreateCallBr(IA, AsmInfo.DefaultDest, AsmInfo.IndirectDests,
+                               AsmInfo.Args);
+    EmitBlock(AsmInfo.DefaultDest);
+    UpdateAsmCallInst(S, *CBR, AsmInfo, HasSideEffect,
+                      /*HasUnwindClobber=*/false, InNoMergeAttributedStmt,
+                      InNoConvergentAttributedStmt, RegResults);
+
     // Because we are emitting code top to bottom, we don't have enough
     // information at this point to know precisely whether we have a critical
     // edge. If we have outputs, split all indirect destinations.
     if (!RegResults.empty()) {
-      unsigned i = 0;
+      unsigned I = 0;
       for (llvm::BasicBlock *Dest : CBR->getIndirectDests()) {
         llvm::Twine SynthName = Dest->getName() + ".split";
         llvm::BasicBlock *SynthBB = createBasicBlock(SynthName);
         llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
         Builder.SetInsertPoint(SynthBB);
 
-        if (ResultRegTypes.size() == 1) {
+        if (AsmInfo.ResultRegTypes.size() == 1) {
           CBRRegResults[SynthBB].push_back(CBR);
         } else {
-          for (unsigned j = 0, e = ResultRegTypes.size(); j != e; ++j) {
-            llvm::Value *Tmp = Builder.CreateExtractValue(CBR, j, "asmresult");
+          for (unsigned J = 0, E = AsmInfo.ResultRegTypes.size(); J != E; ++J) {
+            llvm::Value *Tmp = Builder.CreateExtractValue(CBR, J, "asmresult");
             CBRRegResults[SynthBB].push_back(Tmp);
           }
         }
 
         EmitBranch(Dest);
         EmitBlock(SynthBB);
-        CBR->setIndirectDest(i++, SynthBB);
+        CBR->setIndirectDest(I++, SynthBB);
       }
     }
   } else if (HasUnwindClobber) {
-    llvm::CallBase *Result = EmitCallOrInvoke(IA, Args, "");
-    UpdateAsmCallInst(*Result, HasSideEffect, /*HasUnwindClobber=*/true,
-                      ReadOnly, ReadNone, InNoMergeAttributedStmt,
-                      InNoConvergentAttributedStmt, S, ResultRegTypes,
-                      ArgElemTypes, *this, RegResults);
+    llvm::CallBase *Result = EmitCallOrInvoke(IA, AsmInfo.Args, "");
+    UpdateAsmCallInst(S, *Result, AsmInfo, HasSideEffect,
+                      /*HasUnwindClobber=*/true, InNoMergeAttributedStmt,
+                      InNoConvergentAttributedStmt, RegResults);
   } else {
     llvm::CallInst *Result =
-        Builder.CreateCall(IA, Args, getBundlesForFunclet(IA));
-    UpdateAsmCallInst(*Result, HasSideEffect, /*HasUnwindClobber=*/false,
-                      ReadOnly, ReadNone, InNoMergeAttributedStmt,
-                      InNoConvergentAttributedStmt, S, ResultRegTypes,
-                      ArgElemTypes, *this, RegResults);
+        Builder.CreateCall(IA, AsmInfo.Args, getBundlesForFunclet(IA));
+    UpdateAsmCallInst(S, *Result, AsmInfo, HasSideEffect,
+                      /*HasUnwindClobber=*/false, InNoMergeAttributedStmt,
+                      InNoConvergentAttributedStmt, RegResults);
   }
 
-  EmitAsmStores(*this, S, RegResults, ResultRegTypes, ResultTruncRegTypes,
-                ResultRegDests, ResultRegQualTys, ResultTypeRequiresCast,
-                ResultRegIsFlagReg);
+  EmitAsmStores(S, RegResults, AsmInfo);
 
   // If this is an asm goto with outputs, repeat EmitAsmStores, but with a
   // different insertion point; one for each indirect destination and with
@@ -3284,11 +3293,23 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     for (llvm::BasicBlock *Succ : CBR->getIndirectDests()) {
       llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
       Builder.SetInsertPoint(Succ, --(Succ->end()));
-      EmitAsmStores(*this, S, CBRRegResults[Succ], ResultRegTypes,
-                    ResultTruncRegTypes, ResultRegDests, ResultRegQualTys,
-                    ResultTypeRequiresCast, ResultRegIsFlagReg);
+      EmitAsmStores(S, CBRRegResults[Succ], AsmInfo);
     }
   }
+}
+
+void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
+  // Pop all cleanup blocks at the end of the asm statement.
+  CodeGenFunction::RunCleanupsScope Cleanups(*this);
+
+  // Get all the output and input constraints together.
+  SmallVector<TargetInfo::ConstraintInfo, 4> OutputConstraintInfos;
+  SmallVector<TargetInfo::ConstraintInfo, 4> InputConstraintInfos;
+  if (!GetOutputAndInputConstraints(S, OutputConstraintInfos,
+                                    InputConstraintInfos))
+    return EmitHipStdParUnsupportedAsm(this, S);
+
+  EmitAsmStmt(S, OutputConstraintInfos, InputConstraintInfos);
 }
 
 LValue CodeGenFunction::InitCapturedStruct(const CapturedStmt &S) {
@@ -3361,6 +3382,8 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
     llvm::Function::Create(FuncLLVMTy, llvm::GlobalValue::InternalLinkage,
                            CapturedStmtInfo->getHelperName(), &CGM.getModule());
   CGM.SetInternalFunctionAttributes(CD, F, FuncInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    F->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   if (CD->isNothrow())
     F->addFnAttr(llvm::Attribute::NoUnwind);
 

@@ -98,8 +98,8 @@ public:
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CC1Args) const override;
 
-  void AddHIPRuntimeLibArgs(const llvm::opt::ArgList &Args,
-                            llvm::opt::ArgStringList &CmdArgs) const override;
+  void addOffloadRTLibs(unsigned ActiveKinds, const llvm::opt::ArgList &Args,
+                        llvm::opt::ArgStringList &CmdArgs) const override;
 
   void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args) const override;
@@ -114,8 +114,11 @@ public:
                      const llvm::opt::ArgList &Args) const override;
 
   std::string ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
+                                          llvm::StringRef BoundArch,
                                           types::ID InputType) const override;
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 
   void printVerboseInfo(raw_ostream &OS) const override;
 

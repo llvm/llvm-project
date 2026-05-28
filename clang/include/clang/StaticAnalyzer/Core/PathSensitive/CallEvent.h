@@ -53,7 +53,7 @@ namespace clang {
 class LocationContext;
 class ProgramPoint;
 class ProgramPointTag;
-class StackFrameContext;
+class StackFrame;
 
 namespace ento {
 
@@ -199,8 +199,8 @@ protected:
   virtual void cloneTo(void *Dest) const = 0;
 
   /// Get the value of arbitrary expressions at this point in the path.
-  SVal getSVal(const Stmt *S) const {
-    return getState()->getSVal(S, getLocationContext());
+  SVal getSVal(const Expr *E) const {
+    return getState()->getSVal(E, getLocationContext());
   }
 
   using ValueList = SmallVectorImpl<SVal>;
@@ -210,6 +210,16 @@ protected:
   virtual void
   getExtraInvalidatedValues(ValueList &Values,
                             RegionAndSymbolInvalidationTraits *ETraits) const {}
+
+  /// A state for looking up relevant Environment entries (arguments, return
+  /// value), dynamic type information and similar "stable" things.
+  /// WARNING: During the evaluation of a function call, several state
+  /// transitions happen, so this state can become partially obsolete!
+  ///
+  /// TODO: Instead of storing a complete state object in the CallEvent, only
+  /// store the relevant parts (such as argument/return SVals etc.) that aren't
+  /// allowed to become obsolete until the end of the call evaluation.
+  ProgramStateRef getState() const { return State; }
 
 public:
   CallEvent &operator=(const CallEvent &) = delete;
@@ -231,8 +241,11 @@ public:
   }
   void setForeign(bool B) const { Foreign = B; }
 
-  /// The state in which the call is being evaluated.
-  const ProgramStateRef &getState() const { return State; }
+  /// NOTE: There are plans for refactoring that would eliminate this method.
+  /// Prefer to use CheckerContext::getASTContext if possible!
+  const ASTContext &getASTContext() const {
+    return getState()->getStateManager().getContext();
+  }
 
   /// The context in which the call is being evaluated.
   const LocationContext *getLocationContext() const { return LCtx; }
@@ -246,7 +259,7 @@ public:
   virtual RuntimeDefinition getRuntimeDefinition() const = 0;
 
   /// Returns the expression whose value will be the result of this call.
-  /// May be null.
+  /// Null if and only if 'this' is a CXXDestructorCall.
   virtual const Expr *getOriginExpr() const {
     return Origin.dyn_cast<const Expr *>();
   }
@@ -359,19 +372,17 @@ public:
   ProgramPoint getProgramPoint(bool IsPreVisit = false,
                                const ProgramPointTag *Tag = nullptr) const;
 
-  /// Returns a new state with all argument regions invalidated.
-  ///
-  /// This accepts an alternate state in case some processing has already
-  /// occurred.
+  /// Invalidates the regions (arguments, globals, special regions like 'this')
+  /// that may have been written by this call, returning the updated state.
   ProgramStateRef invalidateRegions(unsigned BlockCount,
-                                    ProgramStateRef Orig = nullptr) const;
+                                    ProgramStateRef State) const;
 
   using FrameBindingTy = std::pair<SVal, SVal>;
   using BindingsTy = SmallVectorImpl<FrameBindingTy>;
 
   /// Populates the given SmallVector with the bindings in the callee's stack
   /// frame at the start of this call.
-  virtual void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+  virtual void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                             BindingsTy &Bindings) const = 0;
 
   /// Returns a copy of this CallEvent, but using the given state.
@@ -405,7 +416,7 @@ public:
   /// during analysis if the call is inlined, but it may still be useful
   /// in intermediate calculations even if the call isn't inlined.
   /// May fail; returns null on failure.
-  const StackFrameContext *getCalleeStackFrame(unsigned BlockCount) const;
+  const StackFrame *getCalleeStackFrame(unsigned BlockCount) const;
 
   /// Returns memory location for a parameter variable within the callee stack
   /// frame. The behavior is undefined if the block count is different from the
@@ -519,7 +530,7 @@ public:
 
   bool argumentsMayEscape() const override;
 
-  void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+  void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                     BindingsTy &Bindings) const override;
 
   ArrayRef<ParmVarDecl *> parameters() const override;
@@ -663,7 +674,7 @@ public:
 
   bool argumentsMayEscape() const override { return true; }
 
-  void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+  void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                     BindingsTy &Bindings) const override;
 
   ArrayRef<ParmVarDecl *> parameters() const override;
@@ -708,7 +719,7 @@ public:
 
   RuntimeDefinition getRuntimeDefinition() const override;
 
-  void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+  void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                     BindingsTy &Bindings) const override;
 
   static bool classof(const CallEvent *CA) {
@@ -967,7 +978,7 @@ protected:
       ValueList &Values,
       RegionAndSymbolInvalidationTraits *ETraits) const override;
 
-  void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+  void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                     BindingsTy &Bindings) const override;
 
 public:
@@ -1080,7 +1091,7 @@ public:
 
   /// Obtain the stack frame of the inheriting constructor. Argument expressions
   /// can be found on the call site of that stack frame.
-  const StackFrameContext *getInheritingStackFrame() const;
+  const StackFrame *getInheritingStackFrame() const;
 
   /// Obtain the CXXConstructExpr for the sub-class that inherited the current
   /// constructor (possibly indirectly). It's the statement that contains
@@ -1340,7 +1351,7 @@ public:
 
   bool argumentsMayEscape() const override;
 
-  void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+  void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                     BindingsTy &Bindings) const override;
 
   ArrayRef<ParmVarDecl *> parameters() const override;
@@ -1414,11 +1425,10 @@ class CallEventManager {
   }
 
 public:
-  CallEventManager(llvm::BumpPtrAllocator &alloc) : Alloc(alloc) {}
+  CallEventManager(llvm::BumpPtrAllocator &alloc);
 
   /// Gets an outside caller given a callee context.
-  CallEventRef<> getCaller(const StackFrameContext *CalleeCtx,
-                           ProgramStateRef State);
+  CallEventRef<> getCaller(const StackFrame *CalleeSF, ProgramStateRef State);
 
   /// Gets a call event for a function call, Objective-C method call,
   /// a 'new', or a 'delete' call.

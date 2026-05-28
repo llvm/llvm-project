@@ -20,7 +20,6 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
-#include <optional>
 
 namespace llvm {
 
@@ -49,7 +48,7 @@ struct ScalarizerPassOptions {
   bool ScalarizeLoadStore = false;
 };
 
-class ScalarizerPass : public PassInfoMixin<ScalarizerPass> {
+class ScalarizerPass : public OptionalPassInfoMixin<ScalarizerPass> {
   ScalarizerPassOptions Options;
 
 public:

@@ -20,6 +20,7 @@
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -40,8 +41,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
-
 private:
   CompilerType GetNodeType();
   CompilerType GetElementType(CompilerType table_type);
@@ -52,7 +51,7 @@ private:
   ValueObject *m_tree = nullptr;
   size_t m_num_elements = 0;
   ValueObject *m_next_element = nullptr;
-  std::vector<std::pair<ValueObject *, uint64_t>> m_elements_cache;
+  std::vector<ValueObject *> m_elements_cache;
 };
 
 class LibCxxUnorderedMapIteratorSyntheticFrontEnd
@@ -113,10 +112,11 @@ CompilerType lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
   // wraps a std::pair. Peel away the internal wrapper type - whose structure is
   // of no value to users, to expose the std::pair. This matches the structure
   // returned by the std::map synthetic provider.
-  if (isUnorderedMap(m_backend.GetCompilerType()
-                         .GetNonReferenceType()
-                         .GetCanonicalType()
-                         .GetTypeName())) {
+  CompilerType backend_type = m_backend.GetCompilerType();
+  if (backend_type.IsPointerOrReferenceType())
+    backend_type = backend_type.GetPointeeType();
+
+  if (isUnorderedMap(backend_type.GetCanonicalType().GetTypeName())) {
     std::string name;
     CompilerType field_type =
         element_type.GetFieldAtIndex(0, name, nullptr, nullptr, nullptr);
@@ -134,8 +134,8 @@ CompilerType lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
   if (!table_sp)
     return {};
 
-  auto [node_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
-      *table_sp, /*anon_struct_idx=*/1, "__first_node_", "__p1_");
+  auto [node_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(*table_sp, "__first_node_", "__p1_");
   if (is_compressed_pair)
     node_sp = GetFirstValueOfLibCXXCompressedPair(*node_sp);
 
@@ -191,40 +191,39 @@ lldb::ValueObjectSP lldb_private::formatters::
           return nullptr;
       }
     }
-    m_elements_cache.push_back(
-        {value_sp.get(), hash_sp->GetValueAsUnsigned(0)});
+    m_elements_cache.push_back(value_sp.get());
     m_next_element = node_sp->GetChildMemberWithName("__next_").get();
     if (!m_next_element || m_next_element->GetValueAsUnsigned(0) == 0)
       m_next_element = nullptr;
   }
 
-  std::pair<ValueObject *, uint64_t> val_hash = m_elements_cache[idx];
-  if (!val_hash.first)
+  ValueObject *val_hash = m_elements_cache[idx];
+  if (!val_hash)
     return lldb::ValueObjectSP();
   StreamString stream;
   stream.Printf("[%" PRIu64 "]", (uint64_t)idx);
   DataExtractor data;
   Status error;
-  val_hash.first->GetData(data, error);
+  val_hash->GetData(data, error);
   if (error.Fail())
     return lldb::ValueObjectSP();
   const bool thread_and_frame_only_if_stopped = true;
-  ExecutionContext exe_ctx = val_hash.first->GetExecutionContextRef().Lock(
-      thread_and_frame_only_if_stopped);
-  return CreateValueObjectFromData(stream.GetString(), data, exe_ctx,
-                                   m_element_type);
+  ExecutionContext exe_ctx =
+      val_hash->GetExecutionContextRef().Lock(thread_and_frame_only_if_stopped);
+  return CreateChildValueObjectFromData(stream.GetString(), data, exe_ctx,
+                                        m_element_type);
 }
 
 llvm::Expected<size_t>
 lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     CalculateNumChildrenImpl(ValueObject &table) {
-  auto [size_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
-      table, /*anon_struct_idx=*/2, "__size_", "__p2_");
+  auto [size_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(table, "__size_", "__p2_");
   if (!is_compressed_pair && size_sp)
     return size_sp->GetValueAsUnsigned(0);
 
   if (!is_compressed_pair)
-    return llvm::createStringError("Unsupported std::unordered_map layout.");
+    return llvm::createStringError("unsupported std::unordered_map layout");
 
   ValueObjectSP num_elements_sp = GetFirstValueOfLibCXXCompressedPair(*size_sp);
 
@@ -237,8 +236,8 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
 }
 
 static ValueObjectSP GetTreePointer(ValueObject &table) {
-  auto [tree_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
-      table, /*anon_struct_idx=*/1, "__first_node_", "__p1_");
+  auto [tree_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(table, "__first_node_", "__p1_");
   if (is_compressed_pair)
     tree_sp = GetFirstValueOfLibCXXCompressedPair(*tree_sp);
 
@@ -283,17 +282,6 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::Update() {
     m_next_element = m_tree;
 
   return lldb::ChildCacheState::eRefetch;
-}
-
-llvm::Expected<size_t>
-lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
-  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
-  if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  }
-  return *optional_idx;
 }
 
 SyntheticChildrenFrontEnd *
@@ -374,12 +362,12 @@ lldb::ChildCacheState lldb_private::formatters::
   //
   // std::unordered_map stores the actual key/value pair in
   // __hash_value_type::__cc_ (or previously __cc).
-  auto potential_child_sp = key_value_sp->Clone(ConstString("pair"));
+  auto potential_child_sp = key_value_sp->Clone("pair");
   if (potential_child_sp)
     if (potential_child_sp->GetNumChildrenIgnoringErrors() == 1)
       if (auto child0_sp = potential_child_sp->GetChildAtIndex(0);
           child0_sp->GetName() == "__cc_" || child0_sp->GetName() == "__cc")
-        potential_child_sp = child0_sp->Clone(ConstString("pair"));
+        potential_child_sp = child0_sp->Clone("pair");
 
   m_pair_sp = potential_child_sp;
 
@@ -405,8 +393,7 @@ lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
     return 0;
   if (name == "second")
     return 1;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 SyntheticChildrenFrontEnd *

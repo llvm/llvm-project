@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // This is inspired by LLVM ADT/bit.h header.
-// Some functions are missing, we can add them as needed (popcount, byteswap).
+// Some functions are missing, we can add them as needed.
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H
@@ -16,6 +16,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/sanitizer.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -25,31 +26,53 @@ namespace cpp {
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
 #endif
 
+template <unsigned N>
+LIBC_INLINE constexpr void inline_copy(const char *from, char *to) {
+#if __has_builtin(__builtin_memcpy_inline) &&                                  \
+    defined(LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
+  if (cpp::is_constant_evaluated())
+    for (unsigned i = 0; i < N; ++i)
+      to[i] = from[i];
+  else
+    __builtin_memcpy_inline(to, from, N);
+#else
+  for (unsigned i = 0; i < N; ++i)
+    to[i] = from[i];
+#endif // __has_builtin(__builtin_memcpy_inline)
+}
+
 // This implementation of bit_cast requires trivially-constructible To, to avoid
 // UB in the implementation.
 template <typename To, typename From>
-LIBC_INLINE constexpr cpp::enable_if_t<
+LIBC_INLINE static constexpr cpp::enable_if_t<
     (sizeof(To) == sizeof(From)) &&
         cpp::is_trivially_constructible<To>::value &&
         cpp::is_trivially_copyable<To>::value &&
         cpp::is_trivially_copyable<From>::value,
     To>
 bit_cast(const From &from) {
-  MSAN_UNPOISON(&from, sizeof(From));
-#if __has_builtin(__builtin_bit_cast)
+#if LIBC_HAS_BUILTIN_BIT_CAST
   return __builtin_bit_cast(To, from);
 #else
-  To to;
+  To to{};
   char *dst = reinterpret_cast<char *>(&to);
   const char *src = reinterpret_cast<const char *>(&from);
-#if __has_builtin(__builtin_memcpy_inline)
-  __builtin_memcpy_inline(dst, src, sizeof(To));
-#else
-  for (unsigned i = 0; i < sizeof(To); ++i)
-    dst[i] = src[i];
-#endif // __has_builtin(__builtin_memcpy_inline)
+  inline_copy<sizeof(From)>(src, dst);
   return to;
 #endif // __has_builtin(__builtin_bit_cast)
+}
+
+// The following simple bit copy from a smaller type to maybe-larger type.
+template <typename To, typename From>
+LIBC_INLINE cpp::enable_if_t<(sizeof(To) >= sizeof(From)) &&
+                                 cpp::is_trivially_constructible<To>::value &&
+                                 cpp::is_trivially_copyable<To>::value &&
+                                 cpp::is_trivially_copyable<From>::value,
+                             void>
+bit_copy(const From &from, To &to) {
+  char *dst = reinterpret_cast<char *>(&to);
+  const char *src = reinterpret_cast<const char *>(&from);
+  inline_copy<sizeof(From)>(src, dst);
 }
 
 template <typename T>
@@ -104,10 +127,16 @@ countr_zero(T value) {
 }
 #if __has_builtin(__builtin_ctzs)
 ADD_SPECIALIZATION(countr_zero, unsigned short, __builtin_ctzs)
-#endif
+#endif // __has_builtin(__builtin_ctzs)
+#if __has_builtin(__builtin_ctz)
 ADD_SPECIALIZATION(countr_zero, unsigned int, __builtin_ctz)
+#endif // __has_builtin(__builtin_ctz)
+#if __has_builtin(__builtin_ctzl)
 ADD_SPECIALIZATION(countr_zero, unsigned long, __builtin_ctzl)
+#endif // __has_builtin(__builtin_ctzl)
+#if __has_builtin(__builtin_ctzll)
 ADD_SPECIALIZATION(countr_zero, unsigned long long, __builtin_ctzll)
+#endif // __has_builtin(__builtin_ctzll)
 #endif // __has_builtin(__builtin_ctzg)
 
 /// Count number of 0's from the most significant bit to the least
@@ -143,10 +172,16 @@ countl_zero(T value) {
 }
 #if __has_builtin(__builtin_clzs)
 ADD_SPECIALIZATION(countl_zero, unsigned short, __builtin_clzs)
-#endif
+#endif // __has_builtin(__builtin_clzs)
+#if __has_builtin(__builtin_clz)
 ADD_SPECIALIZATION(countl_zero, unsigned int, __builtin_clz)
+#endif // __has_builtin(__builtin_clz)
+#if __has_builtin(__builtin_clzl)
 ADD_SPECIALIZATION(countl_zero, unsigned long, __builtin_clzl)
+#endif // __has_builtin(__builtin_clzl)
+#if __has_builtin(__builtin_clzll)
 ADD_SPECIALIZATION(countl_zero, unsigned long long, __builtin_clzll)
+#endif // __has_builtin(__builtin_clzll)
 #endif // __has_builtin(__builtin_clzg)
 
 #undef ADD_SPECIALIZATION
@@ -283,13 +318,49 @@ popcount(T value) {
   [[nodiscard]] LIBC_INLINE constexpr int popcount<TYPE>(TYPE value) {         \
     return BUILTIN(value);                                                     \
   }
+#if __has_builtin(__builtin_popcount)
 ADD_SPECIALIZATION(unsigned char, __builtin_popcount)
 ADD_SPECIALIZATION(unsigned short, __builtin_popcount)
 ADD_SPECIALIZATION(unsigned, __builtin_popcount)
+#endif // __builtin_popcount
+#if __has_builtin(__builtin_popcountl)
 ADD_SPECIALIZATION(unsigned long, __builtin_popcountl)
+#endif // __builtin_popcountl
+#if __has_builtin(__builtin_popcountll)
 ADD_SPECIALIZATION(unsigned long long, __builtin_popcountll)
+#endif // __builtin_popcountll
 #endif // __builtin_popcountg
 #undef ADD_SPECIALIZATION
+
+/// Reverses the bytes in the given integer value.
+///
+/// All integral types are allowed, matching C++23 std::byteswap semantics.
+/// Signed types delegate to the unsigned path via static_cast.
+///
+/// The recursive decomposition generates optimal 'bswap' or 'rolw'
+/// instructions on Clang at -O2 without requiring compiler intrinsics.
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_integral_v<T>, T>
+byteswap(T value) {
+  static_assert(sizeof(T) <= 16, "byteswap: unsupported type size");
+  if constexpr (!cpp::is_unsigned_v<T>) {
+    using U = cpp::make_unsigned_t<T>;
+    return static_cast<T>(byteswap(static_cast<U>(value)));
+  } else if constexpr (sizeof(T) == 1) {
+    return value;
+  } else {
+    constexpr unsigned half_bits = sizeof(T) * 8 / 2;
+    using Half = cpp::conditional_t<
+        sizeof(T) == 2, uint8_t,
+        cpp::conditional_t<
+            sizeof(T) == 4, uint16_t,
+            cpp::conditional_t<sizeof(T) == 8, uint32_t, uint64_t>>>;
+    Half lo = static_cast<Half>(value);
+    Half hi = static_cast<Half>(value >> half_bits);
+    return static_cast<T>((static_cast<T>(byteswap(lo)) << half_bits) |
+                          static_cast<T>(byteswap(hi)));
+  }
+}
 
 } // namespace cpp
 } // namespace LIBC_NAMESPACE_DECL

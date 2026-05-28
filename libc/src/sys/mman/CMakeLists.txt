@@ -10,6 +10,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  memfd_create
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.memfd_create
+)
+
+add_entrypoint_object(
   mmap
   ALIAS
   DEPENDS
@@ -84,6 +91,41 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.msync
+)
+
+add_entrypoint_object(
+  pkey_alloc
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pkey_alloc
+)
+
+add_entrypoint_object(
+  pkey_free
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pkey_free
+)
+
+add_entrypoint_object(
+  pkey_get
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pkey_get
+)
+
+add_entrypoint_object(
+  pkey_mprotect
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pkey_mprotect
+)
+
+add_entrypoint_object(
+  pkey_set
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pkey_set
 )
 
 add_entrypoint_object(

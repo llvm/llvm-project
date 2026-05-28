@@ -56,16 +56,16 @@ good implements_child_begin_end(Comment::child_iterator (T::*)() const) {
   return good();
 }
 
-LLVM_ATTRIBUTE_UNUSED
-static inline bad implements_child_begin_end(
-                      Comment::child_iterator (Comment::*)() const) {
+[[maybe_unused]]
+static inline bad
+implements_child_begin_end(Comment::child_iterator (Comment::*)() const) {
   return bad();
 }
 
 #define ASSERT_IMPLEMENTS_child_begin(function) \
   (void) good(implements_child_begin_end(function))
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 static inline void CheckCommentASTNodes() {
 #define ABSTRACT_COMMENT(COMMENT)
 #define COMMENT(CLASS, PARENT) \
@@ -233,11 +233,10 @@ void DeclInfo::fill() {
     Kind = FunctionKind;
     ParamVars = FD->parameters();
     ReturnType = FD->getReturnType();
-    unsigned NumLists = FD->getNumTemplateParameterLists();
-    if (NumLists != 0) {
+    ArrayRef<TemplateParameterList *> TPLs = FD->getTemplateParameterLists();
+    if (!TPLs.empty()) {
       TemplateKind = TemplateSpecialization;
-      TemplateParameters =
-          FD->getTemplateParameterList(NumLists - 1);
+      TemplateParameters = TPLs.back();
     }
 
     if (K == Decl::CXXMethod || K == Decl::CXXConstructor ||

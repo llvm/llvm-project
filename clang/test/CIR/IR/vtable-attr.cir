@@ -1,4 +1,4 @@
-// RUN: cir-opt %s | FileCheck %s
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !rec_Q = !cir.record<struct "Q" {!cir.vptr}>
 !rec_S = !cir.record<struct "S" {!cir.vptr}>

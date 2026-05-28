@@ -86,6 +86,9 @@ public:
 
   Status InitializeConnection(std::unique_ptr<Connection> connection);
 
+  GDBRemoteCommunication::PacketResult
+  SendStructuredDataPacket(const llvm::json::Value &value);
+
   struct DebuggedProcess {
     enum class Flag {
       vkilled = (1u << 0),
@@ -185,6 +188,8 @@ protected:
 
   PacketResult Handle_qsThreadInfo(StringExtractorGDBRemote &packet);
 
+  PacketResult Handle_qStructuredDataPlugins(StringExtractorGDBRemote &packet);
+
   PacketResult Handle_p(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_P(StringExtractorGDBRemote &packet);
@@ -271,6 +276,8 @@ protected:
 
   PacketResult Handle_T(StringExtractorGDBRemote &packet);
 
+  PacketResult Handle_jMultiBreakpoint(StringExtractorGDBRemote &packet);
+
   void SetCurrentThreadID(lldb::tid_t tid);
 
   lldb::tid_t GetCurrentThreadID() const;
@@ -301,6 +308,28 @@ protected:
 
 private:
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> BuildTargetXml();
+
+  struct BreakpointOK {};
+  struct BreakpointIllFormed {
+    std::string message;
+  };
+  struct BreakpointError {
+    uint8_t error_code;
+  };
+
+  using BreakpointResult =
+      std::variant<BreakpointOK, BreakpointIllFormed, BreakpointError>;
+
+  /// Core logic for a Z (set breakpoint/watchpoint) request.
+  BreakpointResult ExecuteSetBreakpoint(llvm::StringRef packet_str);
+
+  /// Core logic for a z (remove breakpoint/watchpoint) request.
+  BreakpointResult ExecuteRemoveBreakpoint(llvm::StringRef packet_str);
+
+  /// Convert a BreakpointResult into a PacketResult, sending the appropriate
+  /// response.
+  PacketResult SendBreakpointResponse(StringExtractorGDBRemote &packet,
+                                      const BreakpointResult &result);
 
   void HandleInferiorState_Exited(NativeProcessProtocol *process);
 

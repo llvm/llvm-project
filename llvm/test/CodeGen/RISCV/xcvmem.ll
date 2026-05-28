@@ -189,6 +189,21 @@ define <2 x i32> @lw_rr_inc(ptr %a, i32 %b) {
   ret <2 x i32> %5
 }
 
+define i32 @lw_ri_inc_neg(ptr %pp) {
+; CHECK-LABEL: lw_ri_inc_neg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a2, 0(a0)
+; CHECK-NEXT:    cv.lw a1, (a2), -4
+; CHECK-NEXT:    sw a2, 0(a0)
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    ret
+  %p = load ptr, ptr %pp, align 4
+  %x = load i32, ptr %p, align 4
+  %next = getelementptr inbounds i8, ptr %p, i32 -4
+  store ptr %next, ptr %pp, align 4
+  ret i32 %x
+}
+
 define i32 @lw_rr(ptr %a, i32 %b) {
 ; CHECK-LABEL: lw_rr:
 ; CHECK:       # %bb.0:

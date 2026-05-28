@@ -1,7 +1,13 @@
 // RUN: %clang_analyze_cc1 -triple hexagon-unknown-linux -analyzer-checker=core,security.VAList -analyzer-output=text -verify %s
 // RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -analyzer-checker=core,security.VAList -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -triple hexagon-unknown-linux -std=c23 -analyzer-checker=core,security.VAList -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -std=c23 -analyzer-checker=core,security.VAList -analyzer-output=text -verify %s
 
+#if __STDC_VERSION__ >= 202311L
+#include "Inputs/system-header-simulator-for-valist-c23.h"
+#else
 #include "Inputs/system-header-simulator-for-valist.h"
+#endif
 
 void f1(int fst, ...) {
   va_list va;
@@ -97,12 +103,28 @@ void copyOverwrite(int fst, ...) {
   // expected-note@-1{{Initialized va_list 'va' is overwritten by an uninitialized one}}
 }
 
+void copyOverwriteUnknown(va_list other, int fst, ...) {
+  va_list va;
+  va_start(va, fst); // expected-note{{Initialized va_list}}
+  va_copy(va, other); // expected-warning{{Initialized va_list 'va' is overwritten by an unknown one}}
+  // expected-note@-1{{Initialized va_list 'va' is overwritten by an unknown one}}
+}
+
+void copyOverwriteReleased(int fst, ...) {
+  va_list va, va2;
+  va_start(va2, fst);
+  va_end(va2);
+  va_start(va, fst); // expected-note{{Initialized va_list}}
+  va_copy(va, va2); // expected-warning{{Initialized va_list 'va' is overwritten by an already released one}}
+  // expected-note@-1{{Initialized va_list 'va' is overwritten by an already released one}}
+}
+
 void recopy(int fst, ...) {
   va_list va, va2;
   va_start(va, fst);
   va_copy(va2, va); // expected-note{{Initialized va_list}}
-  va_copy(va2, va); // expected-warning{{Initialized va_list 'va2' is initialized again}}
-  // expected-note@-1{{Initialized va_list 'va2' is initialized again}}
+  va_copy(va2, va); // expected-warning{{Initialized va_list 'va2' is overwritten by another initialized one}}
+  // expected-note@-1{{Initialized va_list 'va2' is overwritten by another initialized one}}
   va_end(va);
   va_end(va2);
 }

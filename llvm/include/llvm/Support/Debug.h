@@ -44,11 +44,6 @@ class raw_ostream;
 /// level, return false.
 LLVM_ABI bool isCurrentDebugType(const char *Type, int Level = 0);
 
-/// Overload allowing to swap the order of the Type and Level arguments.
-LLVM_ABI inline bool isCurrentDebugType(int Level, const char *Type) {
-  return isCurrentDebugType(Type, Level);
-}
-
 /// setCurrentDebugType - Set the current debug type, as if the -debug-only=X
 /// option were specified.  Note that DebugFlag also needs to be set to true for
 /// debug output to be produced.
@@ -108,6 +103,11 @@ LLVM_ABI extern bool EnableDebugBuffering;
 /// messages.  If debugging is disabled it returns errs().  Use it
 /// like: dbgs() << "foo" << "bar";
 LLVM_ABI raw_ostream &dbgs();
+
+/// If EnableDebugBuffering is true, this flushes the debug stream with
+/// the banner displayed, the same way it is printed automatically on
+/// program termination.
+LLVM_ABI void printDebugLog();
 
 // DEBUG macro - This macro should be used by passes to emit debug information.
 // If the '-debug' option is specified on the commandline, and if this is a

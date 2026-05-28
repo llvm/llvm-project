@@ -187,13 +187,13 @@ define i64 @bittest_31_i64(i64 %a) nounwind {
 ;
 ; RV64ZBS-LABEL: bittest_31_i64:
 ; RV64ZBS:       # %bb.0:
-; RV64ZBS-NEXT:    srliw a0, a0, 31
+; RV64ZBS-NEXT:    sraiw a0, a0, 31
 ; RV64ZBS-NEXT:    seqz a0, a0
 ; RV64ZBS-NEXT:    ret
 ;
 ; RV64XTHEADBS-LABEL: bittest_31_i64:
 ; RV64XTHEADBS:       # %bb.0:
-; RV64XTHEADBS-NEXT:    srliw a0, a0, 31
+; RV64XTHEADBS-NEXT:    sraiw a0, a0, 31
 ; RV64XTHEADBS-NEXT:    seqz a0, a0
 ; RV64XTHEADBS-NEXT:    ret
   %shr = lshr i64 %a, 31
@@ -3517,7 +3517,7 @@ define i32 @bittest_31_andeq0_i64(i64 %x) {
 ;
 ; RV64-LABEL: bittest_31_andeq0_i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srliw a0, a0, 31
+; RV64-NEXT:    sraiw a0, a0, 31
 ; RV64-NEXT:    seqz a0, a0
 ; RV64-NEXT:    ret
   %and = and i64 %x, 2147483648
@@ -3565,7 +3565,6 @@ define i32 @bittest_31_slt0_i32(i32 %x, i1 %y) {
 define i32 @bittest_63_slt0_i64(i32 %x, i1 %y) {
 ; RV32-LABEL: bittest_63_slt0_i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    srli a0, a0, 31
 ; RV32-NEXT:    and a0, a0, a1
 ; RV32-NEXT:    ret

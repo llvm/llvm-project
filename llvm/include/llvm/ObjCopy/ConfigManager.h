@@ -23,7 +23,7 @@ namespace llvm {
 namespace objcopy {
 
 struct LLVM_ABI ConfigManager : public MultiFormatConfig {
-  virtual ~ConfigManager() {}
+  ~ConfigManager() override = default;
 
   const CommonConfig &getCommonConfig() const override { return Common; }
 

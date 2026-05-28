@@ -8,6 +8,7 @@
 
 #include "Descriptor.h"
 #include "Boolean.h"
+#include "Char.h"
 #include "FixedPoint.h"
 #include "Floating.h"
 #include "IntegralAP.h"
@@ -52,7 +53,7 @@ static void dtorTy(Block *, std::byte *Ptr, const Descriptor *) {
 template <typename T>
 static void ctorArrayTy(Block *, std::byte *Ptr, bool, bool, bool, bool, bool,
                         const Descriptor *D) {
-  new (Ptr) InitMapPtr(std::nullopt);
+  new (Ptr) InitMapPtr();
 
   if constexpr (needsCtor<T>()) {
     Ptr += sizeof(InitMapPtr);
@@ -65,9 +66,7 @@ static void ctorArrayTy(Block *, std::byte *Ptr, bool, bool, bool, bool, bool,
 template <typename T>
 static void dtorArrayTy(Block *, std::byte *Ptr, const Descriptor *D) {
   InitMapPtr &IMP = *reinterpret_cast<InitMapPtr *>(Ptr);
-
-  if (IMP)
-    IMP = std::nullopt;
+  IMP.deleteInitMap();
 
   if constexpr (needsCtor<T>()) {
     Ptr += sizeof(InitMapPtr);
@@ -85,10 +84,9 @@ static void ctorArrayDesc(Block *B, std::byte *Ptr, bool IsConst,
       D->ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
 
   unsigned ElemOffset = 0;
-  for (unsigned I = 0; I < NumElems; ++I, ElemOffset += ElemSize) {
+  for (unsigned I = 0; I != NumElems; ++I, ElemOffset += ElemSize) {
     auto *ElemPtr = Ptr + ElemOffset;
     auto *Desc = reinterpret_cast<InlineDescriptor *>(ElemPtr);
-    auto *ElemLoc = reinterpret_cast<std::byte *>(Desc + 1);
     auto *SD = D->ElemDesc;
 
     Desc->Offset = ElemOffset + sizeof(InlineDescriptor);
@@ -102,9 +100,11 @@ static void ctorArrayDesc(Block *B, std::byte *Ptr, bool IsConst,
     Desc->IsArrayElement = true;
     Desc->IsVolatile = IsVolatile;
 
-    if (auto Fn = D->ElemDesc->CtorFn)
+    if (auto Fn = D->ElemDesc->CtorFn) {
+      auto *ElemLoc = reinterpret_cast<std::byte *>(Desc + 1);
       Fn(B, ElemLoc, Desc->IsConst, Desc->IsFieldMutable, IsVolatile, IsActive,
          Desc->InUnion || SD->isUnion(), D->ElemDesc);
+    }
   }
 }
 
@@ -140,6 +140,10 @@ static void initField(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
   Desc->IsVolatile = IsVolatile || D->IsVolatile;
   // True if this field is const AND the parent is mutable.
   Desc->IsConstInMutable = Desc->IsConst && IsMutable;
+  Desc->LifeState =
+      D->isPrimitiveArray()
+          ? Lifetime::Started
+          : (Desc->IsActive ? Lifetime::NotStarted : Lifetime::Started);
 
   if (auto Fn = D->CtorFn)
     Fn(B, Ptr + FieldOffset, Desc->IsConst, Desc->IsFieldMutable,
@@ -390,6 +394,8 @@ QualType Descriptor::getType() const {
 QualType Descriptor::getElemQualType() const {
   assert(isArray());
   QualType T = getType();
+  if (const auto *AT = T->getAs<AtomicType>())
+    T = AT->getValueType();
   if (T->isPointerOrReferenceType())
     T = T->getPointeeType();
 
@@ -435,6 +441,22 @@ QualType Descriptor::getDataType(const ASTContext &Ctx) const {
   return getType();
 }
 
+QualType Descriptor::getDataElemType() const {
+  if (const auto *E = asExpr()) {
+    if (isa<CXXNewExpr>(E))
+      return E->getType()->getPointeeType();
+
+    // std::allocator.allocate() call.
+    if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
+        ME && ME->getRecordDecl()->getName() == "allocator" &&
+        ME->getMethodDecl()->getName() == "allocate")
+      return E->getType()->getPointeeType();
+    return E->getType();
+  }
+
+  return getType();
+}
+
 SourceLocation Descriptor::getLocation() const {
   if (auto *D = dyn_cast<const Decl *>(Source))
     return D->getLocation();
@@ -468,20 +490,12 @@ bool Descriptor::hasTrivialDtor() const {
 
 bool Descriptor::isUnion() const { return isRecord() && ElemRecord->isUnion(); }
 
-InitMap::InitMap(unsigned N)
-    : UninitFields(N), Data(std::make_unique<T[]>(numFields(N))) {}
-
-bool InitMap::initializeElement(unsigned I) {
-  unsigned Bucket = I / PER_FIELD;
-  T Mask = T(1) << (I % PER_FIELD);
-  if (!(data()[Bucket] & Mask)) {
-    data()[Bucket] |= Mask;
-    UninitFields -= 1;
+unsigned Descriptor::getElemDataSize() const {
+  if ((isPrimitive() || isPrimitiveArray()) &&
+      isIntegerOrBoolType(getPrimType())) {
+    if (getPrimType() == PT_Bool)
+      return 1;
+    FIXED_SIZE_INT_TYPE_SWITCH(getPrimType(), { return T::bitWidth() / 8; });
   }
-  return UninitFields == 0;
-}
-
-bool InitMap::isElementInitialized(unsigned I) const {
-  unsigned Bucket = I / PER_FIELD;
-  return data()[Bucket] & (T(1) << (I % PER_FIELD));
+  return ElemSize;
 }

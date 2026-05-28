@@ -268,18 +268,6 @@ public:
 
 /// Make \a path an absolute path.
 ///
-/// Makes \a path absolute using the \a current_directory if it is not already.
-/// An empty \a path will result in the \a current_directory.
-///
-/// /absolute/path   => /absolute/path
-/// relative/../path => <current-directory>/relative/../path
-///
-/// @param path A path that is modified to be an absolute path.
-LLVM_ABI void make_absolute(const Twine &current_directory,
-                            SmallVectorImpl<char> &path);
-
-/// Make \a path an absolute path.
-///
 /// Makes \a path absolute using the current directory if it is not already. An
 /// empty \a path will result in the current directory.
 ///
@@ -311,15 +299,27 @@ LLVM_ABI std::error_code create_directory(const Twine &path,
                                           bool IgnoreExisting = true,
                                           perms Perms = owner_all | group_all);
 
+/// Create a symbolic link from \a from to \a to.
+///
+/// This may fail on Windows if run without create symbolic link permissions.
+///
+/// On Windows
+///   - slashes in the symlink target are normalized to `\`, and
+///   - if \a to does not exist, it will always create a file symlink.
+///
+/// @param to The path to the symlink target.
+/// @param from The path of the symlink to create.
+/// @returns errc::success if the link was created, otherwise a platform
+/// specific error_code.
+LLVM_ABI std::error_code create_symlink(const Twine &to, const Twine &from);
+
 /// Create a link from \a from to \a to.
 ///
-/// The link may be a soft or a hard link, depending on the platform. The caller
-/// may not assume which one. Currently on windows it creates a hard link since
-/// soft links require extra privileges. On unix, it creates a soft link since
-/// hard links don't work on SMB file systems.
+/// Tries to create a symbolic link first, and falls back to a hard link if
+/// that fails. The caller may not assume which type of link is created.
 ///
-/// @param to The path to hard link to.
-/// @param from The path to hard link from. This is created.
+/// @param to The path to link to.
+/// @param from The path to link from. This is created.
 /// @returns errc::success if the link was created, otherwise a platform
 /// specific error_code.
 LLVM_ABI std::error_code create_link(const Twine &to, const Twine &from);
@@ -342,6 +342,16 @@ LLVM_ABI std::error_code create_hard_link(const Twine &to, const Twine &from);
 LLVM_ABI std::error_code real_path(const Twine &path,
                                    SmallVectorImpl<char> &output,
                                    bool expand_tilde = false);
+
+/// Read the target of a symbolic link.
+///
+/// @param path The path of the symlink.
+/// @param output The location to store the symlink target.
+/// @returns errc::success if the symlink target has been stored in output,
+///          errc::invalid_argument if path is not a symbolic link, otherwise
+///          a platform-specific error_code.
+LLVM_ABI std::error_code readlink(const Twine &path,
+                                  SmallVectorImpl<char> &output);
 
 /// Expands ~ expressions to the user's home directory. On Unix ~user
 /// directories are resolved as well.
@@ -409,6 +419,11 @@ LLVM_ABI std::error_code copy_file(const Twine &From, int ToFD);
 /// @returns errc::success if \a path has been resized to \a size, otherwise a
 ///          platform-specific error_code.
 LLVM_ABI std::error_code resize_file(int FD, uint64_t Size);
+
+/// Resize path to size with sparse files explicitly enabled. It uses
+/// FSCTL_SET_SPARSE On Windows. This is the same as resize_file on
+/// non-Windows
+LLVM_ABI std::error_code resize_file_sparse(int FD, uint64_t Size);
 
 /// Resize \p FD to \p Size before mapping \a mapped_file_region::readwrite. On
 /// non-Windows, this calls \a resize_file(). On Windows, this is a no-op,
@@ -801,7 +816,7 @@ enum OpenFlags : unsigned {
 ///
 /// Example: clang-%%-%%-%%-%%-%%.s => clang-a0-b1-c2-d3-e4.s
 ///
-/// @param Model Name to base unique path off of.
+/// @param Model Name to base unique path off of. Must contain at least one '%'.
 /// @param ResultPath Set to the file's path.
 /// @param MakeAbsolute Whether to use the system temp directory.
 LLVM_ABI void createUniquePath(const Twine &Model,
@@ -1317,9 +1332,11 @@ private:
 
   LLVM_ABI void unmapImpl();
   LLVM_ABI void dontNeedImpl();
+  LLVM_ABI void willNeedImpl();
+  LLVM_ABI void randomAccessImpl();
 
   LLVM_ABI std::error_code init(sys::fs::file_t FD, uint64_t Offset,
-                                mapmode Mode);
+                                mapmode Mode, const char *Name);
 
 public:
   mapped_file_region() = default;
@@ -1335,7 +1352,8 @@ public:
 
   /// \param fd An open file descriptor to map. Does not take ownership of fd.
   LLVM_ABI mapped_file_region(sys::fs::file_t fd, mapmode mode, size_t length,
-                              uint64_t offset, std::error_code &ec);
+                              uint64_t offset, std::error_code &ec,
+                              const char *name = nullptr);
 
   ~mapped_file_region() { unmapImpl(); }
 
@@ -1348,6 +1366,8 @@ public:
     copyFrom(mapped_file_region());
   }
   void dontNeed() { dontNeedImpl(); }
+  void willNeed() { willNeedImpl(); }
+  void randomAccess() { randomAccessImpl(); }
 
   LLVM_ABI size_t size() const;
   LLVM_ABI char *data() const;

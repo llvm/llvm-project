@@ -1,5 +1,8 @@
 extern "C" int puts(const char *s);
 
+extern int gGlobal;
+int gGlobal = 23;
+
 struct Structure {
   int number = 30;
   void f() { puts("break inside"); }

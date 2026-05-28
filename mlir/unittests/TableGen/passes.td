@@ -19,8 +19,11 @@ def TestPassWithOptions : Pass<"test"> {
 
   let options = [
     Option<"testOption", "testOption", "int", "0", "Test option">,
-    ListOption<"testListOption", "test-list-option", "int64_t",
-               "Test list option">
+    // Testing the output of multi-line description. This would fail compilation
+    // if not properly handled.
+    ListOption<"testListOption", "test-list-option", "int64_t", [{
+      Test
+               list option}]>
   ];
 }
 

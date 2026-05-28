@@ -19,16 +19,24 @@ namespace clang {
 /// In-memory cache for modules.
 ///
 /// This is a cache for modules for use across a compilation, sharing state
-/// between the CompilerInstances in an implicit modules build.  It must be
-/// shared by each CompilerInstance, ASTReader, ASTWriter, and ModuleManager
-/// that are coordinating.
+/// between the CompilerInstances in a modules build. It must be shared by each
+/// CompilerInstance, ASTReader, ASTWriter, and ModuleManager that are
+/// coordinating.
 ///
 /// Critically, it ensures that a single process has a consistent view of each
-/// PCM.  This is used by \a CompilerInstance when building PCMs to ensure that
-/// each \a ModuleManager sees the same files.
+/// implicitly-built PCM. This is used by \a CompilerInstance when building PCMs
+/// to ensure that each \a ModuleManager sees the same files.
 class InMemoryModuleCache : public llvm::RefCountedBase<InMemoryModuleCache> {
   struct PCM {
+    /// The contents of the PCM as produced by \c ASTWriter.
     std::unique_ptr<llvm::MemoryBuffer> Buffer;
+
+    /// The size of this PCM. This may be different from the size of \c Buffer
+    /// when it's wrapped in an object file.
+    off_t Size = 0;
+
+    /// The modification time of this PCM.
+    time_t ModTime = 0;
 
     /// Track whether this PCM is known to be good (either built or
     /// successfully imported by a CompilerInstance/ASTReader using this
@@ -36,8 +44,8 @@ class InMemoryModuleCache : public llvm::RefCountedBase<InMemoryModuleCache> {
     bool IsFinal = false;
 
     PCM() = default;
-    PCM(std::unique_ptr<llvm::MemoryBuffer> Buffer)
-        : Buffer(std::move(Buffer)) {}
+    PCM(std::unique_ptr<llvm::MemoryBuffer> Buffer, off_t Size, time_t ModTime)
+        : Buffer(std::move(Buffer)), Size(Size), ModTime(ModTime) {}
   };
 
   /// Cache of buffers.
@@ -64,7 +72,8 @@ public:
   /// \post state is Tentative
   /// \return a reference to the buffer as a convenience.
   llvm::MemoryBuffer &addPCM(llvm::StringRef Filename,
-                             std::unique_ptr<llvm::MemoryBuffer> Buffer);
+                             std::unique_ptr<llvm::MemoryBuffer> Buffer,
+                             off_t Size, time_t ModTime);
 
   /// Store a just-built PCM under the Filename.
   ///
@@ -72,7 +81,8 @@ public:
   /// \pre state is not Tentative.
   /// \return a reference to the buffer as a convenience.
   llvm::MemoryBuffer &addBuiltPCM(llvm::StringRef Filename,
-                                  std::unique_ptr<llvm::MemoryBuffer> Buffer);
+                                  std::unique_ptr<llvm::MemoryBuffer> Buffer,
+                                  off_t Size, time_t ModTime);
 
   /// Try to remove a buffer from the cache.  No effect if state is Final.
   ///
@@ -87,8 +97,11 @@ public:
   /// \post state is Final.
   void finalizePCM(llvm::StringRef Filename);
 
-  /// Get a pointer to the pCM if it exists; else nullptr.
-  llvm::MemoryBuffer *lookupPCM(llvm::StringRef Filename) const;
+  /// Get a pointer to the PCM if it exists and set \c Size and \c ModTime to
+  /// its on-disk size and modification time. Otherwise, return nullptr and
+  /// don't change \c Size and \c ModTime.
+  llvm::MemoryBuffer *lookupPCM(llvm::StringRef Filename, off_t &Size,
+                                time_t &ModTime) const;
 
   /// Check whether the PCM is final and has been shown to work.
   ///

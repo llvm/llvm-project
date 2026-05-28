@@ -32,6 +32,7 @@ _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 // money_base
 
@@ -433,7 +434,7 @@ bool money_get<_CharT, _InputIterator>::__do_get(
           __err |= ios_base::failbit;
           return false;
         }
-        for (++__b; __fd > 0; --__fd, ++__b) {
+        for (++__b; __fd > 0; --__fd, (void)++__b) {
           if (__b == __e || !__ct.is(ctype_base::digit, *__b)) {
             __err |= ios_base::failbit;
             return false;
@@ -451,7 +452,7 @@ bool money_get<_CharT, _InputIterator>::__do_get(
     }
   }
   if (__trailing_sign) {
-    for (unsigned __i = 1; __i < __trailing_sign->size(); ++__i, ++__b) {
+    for (unsigned __i = 1; __i < __trailing_sign->size(); ++__i, (void)++__b) {
       if (__b == __e || *__b != (*__trailing_sign)[__i]) {
         __err |= ios_base::failbit;
         return false;
@@ -864,6 +865,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS money_put<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS money_put<wchar_t>;
 #  endif
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

@@ -251,6 +251,10 @@ static void query(const MachineInstr &MI, bool &Read, bool &Write,
       !strcmp(MI.getOperand(0).getSymbolName(), "__stack_pointer"))
     StackPointer = true;
 
+  if (MI.isCall() && MI.getOperand(0).isSymbol() &&
+      !strcmp(MI.getOperand(0).getSymbolName(), "__wasm_get_stack_pointer"))
+    StackPointer = true;
+
   // Analyze calls.
   if (MI.isCall()) {
     queryCallee(MI, Read, Write, Effects, StackPointer);
@@ -287,16 +291,27 @@ static MachineInstr *getVRegDef(unsigned Reg, const MachineInstr *Insert,
 // generalization of MachineRegisterInfo::hasOneNonDBGUse that uses
 // LiveIntervals to handle complex cases in optimized code.
 static bool hasSingleUse(unsigned Reg, MachineRegisterInfo &MRI,
-                         WebAssemblyFunctionInfo &MFI, bool Optimize,
+                         const MachineFunction &MF, bool Optimize,
                          MachineInstr *Def, LiveIntervals *LIS) {
+  auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
+  // The frame base always has an implicit DBG use as DW_AT_frame_base.
+  if (MFI.isFrameBaseVirtual() && MFI.getFrameBaseVreg() == Reg) {
+    // When using global thread context, the frame base can be encoded
+    // as an offset from __stack_pointer, so the vreg can be stackified.
+    // However, when using libcall thread context, we need to keep the frame
+    // base vreg around if debug info is enabled, because there is no
+    // global to refer to.
+    bool NeedsRegForDebug =
+        MF.getFunction().getSubprogram() &&
+        MF.getSubtarget<WebAssemblySubtarget>().hasLibcallThreadContext();
+    if (!Optimize || NeedsRegForDebug)
+      return false;
+  }
   if (!Optimize) {
     // Using "hasOneUse" instead of "hasOneNonDBGUse" here because we don't
     // want to stackify DBG_VALUE operands - WASM stack locations are less
     // useful and less widely supported than WASM local locations.
     if (!MRI.hasOneUse(Reg))
-      return false;
-    // The frame base always has an implicit DBG use as DW_AT_frame_base.
-    if (MFI.isFrameBaseVirtual() && MFI.getFrameBaseVreg() == Reg)
       return false;
     return true;
   }
@@ -867,6 +882,10 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
       if (Insert->isDebugValue())
         continue;
 
+      // Ignore FAKE_USEs, which are no-ops and will be deleted later.
+      if (Insert->isFakeUse())
+        continue;
+
       // Iterate through the inputs in reverse order, since we'll be pulling
       // operands off the stack in LIFO order.
       CommutingState Commuting;
@@ -914,7 +933,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         bool CanMove = SameBlock &&
                        isSafeToMove(Def, &Use, Insert, MFI, MRI, Optimize) &&
                        !TreeWalker.isOnStack(Reg);
-        if (CanMove && hasSingleUse(Reg, MRI, MFI, Optimize, DefI, LIS)) {
+        if (CanMove && hasSingleUse(Reg, MRI, MF, Optimize, DefI, LIS)) {
           Insert = moveForSingleUse(Reg, Use, DefI, MBB, Insert, LIS, MFI, MRI);
 
           // If we are removing the frame base reg completely, remove the debug
@@ -956,7 +975,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
           Register UseReg = SubsequentUse->getReg();
           // TODO: This single-use restriction could be relaxed by using tees
           if (DefReg != UseReg ||
-              !hasSingleUse(DefReg, MRI, MFI, Optimize, nullptr, nullptr))
+              !hasSingleUse(DefReg, MRI, MF, Optimize, nullptr, nullptr))
             break;
           MFI.stackifyVReg(MRI, DefReg);
           ++SubsequentDef;

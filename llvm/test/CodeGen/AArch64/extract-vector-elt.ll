@@ -605,7 +605,7 @@ define i32 @extract_v4i32_select(<4 x i32> %a, <4 x i32> %b, i32 %c, <4 x i1> %c
 ; CHECK-GI-NEXT:    mov w8, w0
 ; CHECK-GI-NEXT:    and x8, x8, #0x3
 ; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #31
+; CHECK-GI-NEXT:    cmlt v1.4s, v1.4s, #0
 ; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v1.16b
 ; CHECK-GI-NEXT:    str q0, [sp]
 ; CHECK-GI-NEXT:    ldr w0, [x9, x8, lsl #2]
@@ -634,7 +634,7 @@ define i32 @extract_v4i32_select_const(<4 x i32> %a, <4 x i32> %b, i32 %c, <4 x 
 ; CHECK-GI-NEXT:    adrp x8, .LCPI23_0
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI23_0]
 ; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #31
+; CHECK-GI-NEXT:    cmlt v1.4s, v1.4s, #0
 ; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v1.16b
 ; CHECK-GI-NEXT:    mov s0, v0.s[2]
 ; CHECK-GI-NEXT:    fmov w0, s0
@@ -765,7 +765,7 @@ define i32 @extract_v4i32_vector_insert(<4 x i32> %a, <2 x i32> %b, i32 %c) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d0, v0.d[1]
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
@@ -1037,10 +1037,11 @@ entry:
 define i32 @extract_v4i32_phi(i64 %val, i32  %limit, ptr %ptr) {
 ; CHECK-SD-LABEL: extract_v4i32_phi:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov x8, #1 // =0x1
 ; CHECK-SD-NEXT:    dup v1.2s, w0
-; CHECK-SD-NEXT:    adrp x8, .LCPI41_0
 ; CHECK-SD-NEXT:    movi v0.2s, #16
-; CHECK-SD-NEXT:    ldr d2, [x8, :lo12:.LCPI41_0]
+; CHECK-SD-NEXT:    movk x8, #2, lsl #32
+; CHECK-SD-NEXT:    fmov d2, x8
 ; CHECK-SD-NEXT:    add v1.2s, v1.2s, v2.2s
 ; CHECK-SD-NEXT:  .LBB41_1: // %loop
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1114,16 +1115,10 @@ entry:
 }
 
 define ptr @v3ext(<3 x ptr> %a, <3 x ptr> %b, <3 x ptr> %x) {
-; CHECK-SD-LABEL: v3ext:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldr d0, [sp]
-; CHECK-SD-NEXT:    fmov x0, d0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: v3ext:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr x0, [sp]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: v3ext:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr x0, [sp]
+; CHECK-NEXT:    ret
 entry:
   %c = extractelement <3 x ptr> %x, i32 2
   ret ptr %c

@@ -8,10 +8,6 @@ define void @eliminate_spill_after_mfma_rewrite(i32 %x, i32 %y, <4 x i32> %arg, 
 ; CHECK-LABEL: eliminate_spill_after_mfma_rewrite:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_accvgpr_write_b32 a3, v5
-; CHECK-NEXT:    v_accvgpr_write_b32 a2, v4
-; CHECK-NEXT:    v_accvgpr_write_b32 a1, v3
-; CHECK-NEXT:    v_accvgpr_write_b32 a0, v2
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
@@ -60,6 +56,11 @@ define void @eliminate_spill_after_mfma_rewrite(i32 %x, i32 %y, <4 x i32> %arg, 
 ; CHECK-NEXT:    buffer_store_dword a61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword a62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword a63, off, s[0:3], s32 ; 4-byte Folded Spill
+; CHECK-NEXT:    v_accvgpr_write_b32 a3, v5
+; CHECK-NEXT:    v_accvgpr_write_b32 a2, v4
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v3
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v2
+; CHECK-NEXT:    s_nop 1
 ; CHECK-NEXT:    v_mfma_i32_4x4x4i8 a[0:3], v0, v1, a[0:3]
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[32:63], v[0:31]
@@ -101,13 +102,8 @@ define void @eliminate_spill_after_mfma_rewrite(i32 %x, i32 %y, <4 x i32> %arg, 
 ; CHECK-NEXT:    v_accvgpr_read_b32 v2, a2
 ; CHECK-NEXT:    v_accvgpr_read_b32 v3, a3
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[0:3]
+; CHECK-NEXT:    ; def v[6:9]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[0:31]
@@ -147,12 +143,7 @@ define void @eliminate_spill_after_mfma_rewrite(i32 %x, i32 %y, <4 x i32> %arg, 
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    global_store_dwordx4 v0, a[36:39], s[16:17] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[16:17]
+; CHECK-NEXT:    global_store_dwordx4 v0, v[6:9], s[16:17]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_load_dword a63, off, s[0:3], s32 ; 4-byte Folded Reload
 ; CHECK-NEXT:    buffer_load_dword a62, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
@@ -222,10 +213,6 @@ define void @eliminate_spill_after_mfma_rewrite_x2(i32 %x, i32 %y, <4 x i32> %ar
 ; CHECK-LABEL: eliminate_spill_after_mfma_rewrite_x2:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_accvgpr_write_b32 a3, v5
-; CHECK-NEXT:    v_accvgpr_write_b32 a2, v4
-; CHECK-NEXT:    v_accvgpr_write_b32 a1, v3
-; CHECK-NEXT:    v_accvgpr_write_b32 a0, v2
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
@@ -274,6 +261,11 @@ define void @eliminate_spill_after_mfma_rewrite_x2(i32 %x, i32 %y, <4 x i32> %ar
 ; CHECK-NEXT:    buffer_store_dword a61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword a62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword a63, off, s[0:3], s32 ; 4-byte Folded Spill
+; CHECK-NEXT:    v_accvgpr_write_b32 a3, v5
+; CHECK-NEXT:    v_accvgpr_write_b32 a2, v4
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v3
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v2
+; CHECK-NEXT:    s_nop 1
 ; CHECK-NEXT:    v_mfma_i32_4x4x4i8 a[0:3], v0, v1, a[0:3]
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[32:63], v[0:31]
@@ -311,26 +303,16 @@ define void @eliminate_spill_after_mfma_rewrite_x2(i32 %x, i32 %y, <4 x i32> %ar
 ; CHECK-NEXT:    v_accvgpr_write_b32 a33, v1
 ; CHECK-NEXT:    v_accvgpr_write_b32 a32, v0
 ; CHECK-NEXT:    v_accvgpr_read_b32 v7, a3
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_accvgpr_read_b32 v6, a2
 ; CHECK-NEXT:    v_accvgpr_read_b32 v5, a1
 ; CHECK-NEXT:    v_accvgpr_read_b32 v4, a0
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[0:3]
+; CHECK-NEXT:    ; def v[8:11]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[0:3]
+; CHECK-NEXT:    ; def v[12:15]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[0:31]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -369,19 +351,9 @@ define void @eliminate_spill_after_mfma_rewrite_x2(i32 %x, i32 %y, <4 x i32> %ar
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    global_store_dwordx4 v0, a[36:39], s[16:17] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
+; CHECK-NEXT:    global_store_dwordx4 v0, v[8:11], s[16:17]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[16:17]
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[16:17]
+; CHECK-NEXT:    global_store_dwordx4 v0, v[12:15], s[16:17]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_load_dword a63, off, s[0:3], s32 ; 4-byte Folded Reload
 ; CHECK-NEXT:    buffer_load_dword a62, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload

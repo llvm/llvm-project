@@ -494,7 +494,7 @@ inline StreamTy &printOpenACCClauseKind(StreamTy &Out, OpenACCClauseKind K) {
 
   case OpenACCClauseKind::Shortloop:
     llvm_unreachable("Shortloop shouldn't be generated in clang");
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case OpenACCClauseKind::Invalid:
     return Out << "<invalid>";
   }

@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/PassManager.h"
@@ -76,30 +77,6 @@ resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
   }
 }
 
-// This pattern lowers ConvertLayoutOp by removing the inst_data field from the
-// layout attributes. Since both producer and consumer operations handle data
-// partitioning based on their own inst_data, while maintaining original input
-// and output shape, ConvertLayoutOp does not need to manage inst_data.
-struct ConvertLayoutOpPattern
-    : public OpRewritePattern<xegpu::ConvertLayoutOp> {
-  using OpRewritePattern::OpRewritePattern;
-  LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
-                                PatternRewriter &rewriter) const override {
-    xegpu::DistributeLayoutAttr input_layout = op.getInputLayoutAttr();
-    xegpu::DistributeLayoutAttr target_layout = op.getTargetLayoutAttr();
-    if (input_layout.getInstDataAsInt().empty() ||
-        target_layout.getInstDataAsInt().empty())
-      return rewriter.notifyMatchFailure(op, "Not a target ConvertLayoutOp.");
-
-    input_layout = input_layout.dropInstData();
-    target_layout = target_layout.dropInstData();
-    auto newOp = rewriter.createOrFold<xegpu::ConvertLayoutOp>(
-        op.getLoc(), op.getType(), op.getSource(), input_layout, target_layout);
-    rewriter.replaceOp(op, newOp);
-    return success();
-  }
-};
-
 //===------------------------------------------------------------------------===//
 // The XeGPUBlockingPass leverages the unroll patterns for XeGPU and Vector ops
 // to partition operations that process large shapes into multiple operations on
@@ -137,17 +114,19 @@ template <typename T, typename>
 std::optional<SmallVector<int64_t>>
 XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
   Value value;
-  if constexpr (std::is_same_v<T, OpOperand>)
+  if constexpr (std::is_same_v<T, OpOperand>) {
     value = operandOrResult.get();
-  else
+  } else {
     value = (Value)operandOrResult;
+  }
 
   xegpu::DistributeLayoutAttr layout =
       xegpu::getDistributeLayoutAttr(operandOrResult);
   if (layout && layout.isForSubgroup()) {
-    if (!layout.getInstDataAsInt().empty())
-      return layout.getInstDataAsInt();
-
+    if (!layout.getEffectiveInstDataAsInt().empty()) {
+      SmallVector<int64_t> instData = layout.getEffectiveInstDataAsInt();
+      return instData;
+    }
     if (auto type = dyn_cast<ShapedType>(value.getType()))
       return llvm::to_vector(type.getShape());
   }
@@ -157,16 +136,35 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
 
 std::optional<SmallVector<int64_t>>
 XeGPUBlockingPass::getTileShape(Operation *op) const {
-  if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp, xegpu::CreateDescOp,
-          xegpu::UpdateOffsetOp, xegpu::LoadMatrixOp>(op))
+  if (isa<xegpu::CreateNdDescOp, xegpu::LoadMatrixOp>(op))
     return getTileShape(op->getOpResult(0));
   if (isa<xegpu::PrefetchNdOp, xegpu::LoadNdOp, xegpu::PrefetchOp,
-          xegpu::LoadGatherOp, xegpu::StoreMatrixOp>(op))
+          xegpu::StoreMatrixOp>(op))
     return getTileShape(op->getOpOperand(0));
-  if (isa<xegpu::StoreNdOp, xegpu::StoreScatterOp>(op))
+  if (isa<xegpu::StoreNdOp>(op))
     return getTileShape(op->getOpOperand(1));
 
-  if (isa<xegpu::DpasOp>(op)) {
+  if (isa<xegpu::LoadGatherOp>(op))
+    return getTileShape(op->getOpResult(0));
+
+  if (auto convertLayoutOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
+    auto inputInstData =
+        convertLayoutOp.getInputLayout().getEffectiveInstDataAsInt();
+    auto targetInstData =
+        convertLayoutOp.getTargetLayout().getEffectiveInstDataAsInt();
+    // return the one with larger size
+    if (computeProduct(inputInstData) >= computeProduct(targetInstData))
+      return inputInstData;
+    else
+      return targetInstData;
+  }
+
+  if (isa<xegpu::StoreScatterOp>(op))
+    return getTileShape(op->getOpOperand(0));
+
+  // Helper lambda to validate and get A/B tiles
+  auto validateABTiles = [&](Operation *op)
+      -> std::optional<std::pair<SmallVector<int64_t>, SmallVector<int64_t>>> {
     std::optional<SmallVector<int64_t>> aTile =
         getTileShape(op->getOpOperand(0));
     std::optional<SmallVector<int64_t>> bTile =
@@ -179,16 +177,122 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
     if ((*aTile)[1] != (*bTile)[0])
       return std::nullopt;
 
+    return std::make_pair(*aTile, *bTile);
+  };
+
+  // Helper lambda to validate C tile
+  auto validateCTile = [&](Operation *op, unsigned cOperandIdx,
+                           const SmallVector<int64_t> &aTile,
+                           const SmallVector<int64_t> &bTile) -> bool {
+    if (op->getNumOperands() <= cOperandIdx)
+      return true;
+
+    std::optional<SmallVector<int64_t>> cTile =
+        getTileShape(op->getOpOperand(cOperandIdx));
+    int64_t expectedCTile[2] = {aTile[0], bTile[1]};
+    if (!cTile || !llvm::equal(*cTile, expectedCTile))
+      return false;
+    return true;
+  };
+
+  // Helper lambda to validate scale A tile for DpasMxOp
+  auto validateScaleATile =
+      [&](Operation *op, unsigned scaleAOperandIdx,
+          const SmallVector<int64_t> &aTile) -> std::optional<int64_t> {
+    std::optional<SmallVector<int64_t>> aScaleTile =
+        getTileShape(op->getOpOperand(scaleAOperandIdx));
+
+    if (!aScaleTile || aScaleTile->size() != 2)
+      return std::nullopt;
+
+    // Validate scale_a tile: [M_tile, K_scale]
+    // M dimension must match A's M dimension
+    if ((*aScaleTile)[0] != aTile[0])
+      return std::nullopt;
+
+    // Return the K scale factor
+    return (*aScaleTile)[1];
+  };
+
+  // Helper lambda to validate scale B tile for DpasMxOp
+  auto validateScaleBTile =
+      [&](Operation *op, unsigned scaleBOperandIdx,
+          const SmallVector<int64_t> &bTile) -> std::optional<int64_t> {
+    std::optional<SmallVector<int64_t>> bScaleTile =
+        getTileShape(op->getOpOperand(scaleBOperandIdx));
+
+    if (!bScaleTile || bScaleTile->size() != 2)
+      return std::nullopt;
+
+    // Validate scale_b tile: [K_scale, N_tile]
+    // N dimension must match B's N dimension
+    if ((*bScaleTile)[1] != bTile[1])
+      return std::nullopt;
+
+    // Return the K scale factor
+    return (*bScaleTile)[0];
+  };
+
+  if (isa<xegpu::DpasOp>(op)) {
+    auto abTiles = validateABTiles(op);
+    if (!abTiles)
+      return std::nullopt;
+
+    auto [aTile, bTile] = *abTiles;
+
     // semantic check for C
-    if (op->getNumOperands() == 3) {
-      std::optional<SmallVector<int64_t>> cTile =
-          getTileShape(op->getOpOperand(2));
-      int64_t expectedCTile[2] = {(*aTile)[0], (*bTile)[1]};
-      if (!cTile || !llvm::equal(*cTile, expectedCTile))
+    if (!validateCTile(op, 2, aTile, bTile))
+      return std::nullopt;
+
+    return SmallVector<int64_t>({aTile[0], aTile[1], bTile[1]});
+  }
+
+  if (auto dpasMxOp = dyn_cast<xegpu::DpasMxOp>(op)) {
+    auto abTiles = validateABTiles(op);
+    if (!abTiles)
+      return std::nullopt;
+
+    auto [aTile, bTile] = *abTiles;
+
+    // Validate C tile if present using op-specific accessor
+    if (dpasMxOp.getAcc()) {
+      unsigned accOperandIdx = 2; // acc is the 3rd operand
+      if (!validateCTile(op, accOperandIdx, aTile, bTile))
         return std::nullopt;
     }
 
-    return SmallVector<int64_t>({(*aTile)[0], (*aTile)[1], (*bTile)[1]});
+    // Validate scale tiles if present using op-specific accessors
+    int64_t kScaleFactor = 1;
+    std::optional<int64_t> scaleAFactor;
+    std::optional<int64_t> scaleBFactor;
+
+    if (dpasMxOp.getScaleA()) {
+      unsigned scaleAOperandIdx = 2 + (dpasMxOp.getAcc() ? 1 : 0);
+      scaleAFactor = validateScaleATile(op, scaleAOperandIdx, aTile);
+      if (!scaleAFactor)
+        return std::nullopt;
+    }
+
+    if (dpasMxOp.getScaleB()) {
+      unsigned scaleBOperandIdx =
+          2 + (dpasMxOp.getAcc() ? 1 : 0) + (dpasMxOp.getScaleA() ? 1 : 0);
+      scaleBFactor = validateScaleBTile(op, scaleBOperandIdx, bTile);
+      if (!scaleBFactor)
+        return std::nullopt;
+    }
+
+    // If both scales are present, their K dimensions must match
+    if (scaleAFactor && scaleBFactor) {
+      if (*scaleAFactor != *scaleBFactor)
+        return std::nullopt;
+      kScaleFactor = *scaleAFactor;
+    } else if (scaleAFactor) {
+      kScaleFactor = *scaleAFactor;
+    } else if (scaleBFactor) {
+      kScaleFactor = *scaleBFactor;
+    }
+
+    return SmallVector<int64_t>({aTile[0], aTile[1], bTile[1], kScaleFactor});
   }
 
   if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1)
@@ -197,7 +301,9 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
   if (isa<vector::MultiDimReductionOp>(op))
     return getTileShape(op->getOpOperand(0));
 
-  if (isa<vector::TransposeOp, vector::BroadcastOp>(op))
+  if (isa<vector::TransposeOp, vector::BroadcastOp, vector::StepOp,
+          vector::ShapeCastOp, vector::ConstantMaskOp, vector::CreateMaskOp,
+          vector::BitCastOp, vector::InterleaveOp, vector::DeinterleaveOp>(op))
     return getTileShape(op->getOpResult(0));
 
   return std::nullopt;
@@ -226,7 +332,7 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
     Type valTy = value.getType();
     if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(valTy)) {
       xegpu::DistributeLayoutAttr layout = tdescTy.getLayoutAttr();
-      return layout && !layout.getInstDataAsInt().empty();
+      return layout && !layout.getEffectiveInstDataAsInt().empty();
     }
     auto shapedType = dyn_cast<ShapedType>(valTy);
     return shapedType && !llvm::equal(tileShape, shapedType.getShape());
@@ -242,26 +348,33 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
         std::optional<SmallVector<int64_t>> tileShape = getTileShape(result);
         return tileShape.has_value() && isUnrollable(result, *tileShape);
       });
-  return hasUnrollableOperands || hasUnrollableResults;
+  // ConvertLayoutOp must be processed to drop the inst_data in the layout
+  bool isConvertLayoutWithInstData = false;
+  if (auto convertLayoutOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
+    auto targettLayout = convertLayoutOp.getTargetLayout();
+    if (targettLayout && !targettLayout.getEffectiveInstDataAsInt().empty()) {
+      isConvertLayoutWithInstData = true;
+    }
+  }
+  return hasUnrollableOperands || hasUnrollableResults ||
+         isConvertLayoutWithInstData;
 }
 
 void XeGPUBlockingPass::runOnOperation() {
   MLIRContext *ctx = &getContext();
   Operation *op = getOperation();
 
-  // Preserve the LayoutAttr for each operand to the owner's DictionaryAttr.
-  // This ensures that the LayoutAttr remains accessible even if the defining
-  // operation is replaced.
-  xegpu::setDistributeLayoutAttrs(
-      op, [](Value v) { return xegpu::getDistributeLayoutAttr(v); });
+  if (!xegpu::recoverTemporaryLayouts(op)) {
+    signalPassFailure();
+    return;
+  }
 
   auto getTileShapeAndCount = [](llvm::ArrayRef<int64_t> shape,
-                                 xegpu::LayoutAttr layout) {
+                                 xegpu::DistributeLayoutAttr layout) {
     int count = 1;
     SmallVector<int64_t> tileShape(shape);
-    if (layout && layout.getInstData()) {
-      DenseI32ArrayAttr instData = layout.getInstData();
-      tileShape = llvm::to_vector_of<int64_t>(instData.asArrayRef());
+    if (layout && !layout.getEffectiveInstDataAsInt().empty()) {
+      tileShape = layout.getEffectiveInstDataAsInt();
       count = computeProduct(shape) / computeProduct(tileShape);
     }
     return std::make_pair(tileShape, count);
@@ -294,7 +407,7 @@ void XeGPUBlockingPass::runOnOperation() {
         Type elemTy = type.getElementType();
         ArrayRef<int64_t> shape = type.getShape();
 
-        xegpu::LayoutAttr layout = type.getLayoutAttr();
+        xegpu::DistributeLayoutAttr layout = type.getLayoutAttr();
         if (layout && layout.isForWorkgroup())
           return failure();
 
@@ -319,39 +432,24 @@ void XeGPUBlockingPass::runOnOperation() {
 
   options.setNativeShapeFn([&](Operation *op) { return getTileShape(op); });
 
-  options.setUnrolledTypesFn([&](ShapedType type, ArrayRef<int64_t> tileShape) {
+  options.setUnrolledTypesFn([&](ShapedType type, ArrayRef<int64_t> tileShape,
+                                 bool returnSingleType = false) {
     Type elemTy = type.getElementType();
     Type newTy;
 
     if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(type)) {
 
       Attribute encoding = tdescTy.getEncoding();
-      // If the encoding is a ScatterTensorDescAttr, we need to
-      // potentially adjust the chunk size based on the inst_data.
-      if (tdescTy.isScattered()) {
-        int64_t chunkSize = tdescTy.getChunkSizeAsInt();
-
-        if (chunkSize > 1) {
-          int64_t blockedChunkSize = chunkSize;
-          auto instData = tdescTy.getLayoutAttr().getInstData();
-          if (!instData.empty())
-            blockedChunkSize = instData.asArrayRef().back();
-
-          // To create a new attribute with a different chunk_size:
-          auto newEncoding = xegpu::ScatterTensorDescAttr::get(
-              ctx, tdescTy.getMemorySpace(), blockedChunkSize);
-
-          encoding = newEncoding;
-        }
-      }
 
       newTy =
           xegpu::TensorDescType::get(ctx, tileShape, elemTy, encoding,
                                      tdescTy.getLayoutAttr().dropInstData());
     } else {
-      newTy = type.clone(tileShape, elemTy);
+      newTy = VectorType::get(tileShape, elemTy);
     }
 
+    if (returnSingleType)
+      return SmallVector<Type>{newTy};
     std::optional<SmallVector<int64_t>> ratio =
         computeShapeRatio(type.getShape(), tileShape);
     assert(ratio && "The shape of the type must be a multiple of tileShape.");
@@ -359,36 +457,50 @@ void XeGPUBlockingPass::runOnOperation() {
   });
 
   RewritePatternSet patterns(ctx);
-  patterns.add<ConvertLayoutOpPattern>(ctx);
-
   vector::UnrollVectorOptions vectorOptions;
   vectorOptions.setNativeShapeFn(options.nativeShape);
 
   populateXeGPUUnrollPatterns(patterns, options);
   vector::populateVectorUnrollPatterns(patterns, vectorOptions);
 
+  // Note: The pattern driver does op folding as well and clean up.
+  // But intermediate insert/extract strided slice ops with
+  // unrealized conversion cast ops in the middle does not get
+  // cleaned up in this step. One more round of folding is needed
+  // after the walk to resolve those unrealized conversion cast ops.
   (void)applyPatternsGreedily(op, std::move(patterns));
 
   op->walk([](Operation *op) {
     // Remove the layout attributes cached per operands.
     for (OpOperand &opr : op->getOpOperands()) {
-      std::string name = xegpu::getLayoutName(opr);
-      if (op->hasAttrOfType<xegpu::LayoutAttr>(name))
+      std::string name = xegpu::getTemporaryLayoutName(opr);
+      if (op->hasAttrOfType<xegpu::DistributeLayoutAttr>(name))
         op->removeAttr(name);
     }
 
     // Update the layout attributes per result.
     for (OpResult result : op->getOpResults()) {
-      std::string name = xegpu::getLayoutName(result);
-      if (auto layout = op->getAttrOfType<xegpu::LayoutAttr>(name)) {
+      std::string name = xegpu::getTemporaryLayoutName(result);
+      if (auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(name)) {
         op->removeAttr(name);
         if (!isa<LoopLikeOpInterface>(op))
           xegpu::setDistributeLayoutAttr(result, layout.dropInstData());
       }
     }
 
+    // Drop left-over inst_data if the unroll pattern does not being applied,
+    // say, inst_data just matches their shape.
+    SmallVector<NamedAttribute> newAttrs =
+        xegpu::dropInstDataOnAttrs(op->getAttrs());
+    op->setAttrs(newAttrs);
+
     // Resolve unrealized conversion cast ops emulating pack/unpack
     if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op))
       resolveUnrealizedConversionCastOp(castOp);
   });
+
+  // One more round of folding to clean up the intermediate
+  // insert/extract strided slice ops.
+  RewritePatternSet emptyPatterns(ctx);
+  (void)applyPatternsGreedily(op, std::move(emptyPatterns));
 }

@@ -166,9 +166,25 @@ add_header_macro(
   stdfix.h
   DEPENDS
     .llvm-libc-macros.stdfix_macros
-    .llvm-libc-types.stdfix-types
+    .llvm-libc-types.int_hk_t
+    .llvm-libc-types.int_hr_t
+    .llvm-libc-types.int_k_t
+    .llvm-libc-types.int_lk_t
+    .llvm-libc-types.int_lr_t
+    .llvm-libc-types.int_r_t
+    .llvm-libc-types.uint_uhk_t
+    .llvm-libc-types.uint_uhr_t
+    .llvm-libc-types.uint_uk_t
+    .llvm-libc-types.uint_ulk_t
+    .llvm-libc-types.uint_ulr_t
+    .llvm-libc-types.uint_ur_t
 )
 
+add_header(
+  syscall
+  HDR
+    syscall.h
+)
 
 add_header_macro(
   sysexits
@@ -189,6 +205,24 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .inttypes
+    .llvm-libc-types.in_addr_t
+    .llvm-libc-types.struct_in_addr
+)
+
+file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
+
+add_header_macro(
+  netinet_in
+  ../libc/include/netinet/in.yaml
+  netinet/in.h
+  DEPENDS
+    .llvm-libc-macros.netinet_in_macros
+    .llvm-libc-types.in_addr_t
+    .llvm-libc-types.in_port_t
+    .llvm-libc-types.sa_family_t
+    .llvm-libc-types.struct_sockaddr_in
+    .llvm-libc-types.struct_in_addr
+    .llvm_libc_common_h
 )
 
 add_header_macro(
@@ -201,12 +235,32 @@ add_header_macro(
 )
 
 add_header_macro(
+  byteswap
+  ../libc/include/byteswap.yaml
+  byteswap.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.byteswap_macros
+)
+
+add_header_macro(
   complex
   ../libc/include/complex.yaml
   complex.h
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.complex_macros
+    .llvm-libc-types.float128
+    .llvm-libc-types.cfloat128
+    .llvm-libc-types.cfloat16
+)
+
+add_header_macro(
+  cpio
+  ../libc/include/cpio.yaml
+  cpio.h
+  DEPENDS
+    .llvm_libc_common_h
 )
 
 add_header_macro(
@@ -225,7 +279,10 @@ add_header_macro(
   string.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.annex_k_macros
     .llvm-libc-macros.null_macro
+    .llvm-libc-types.errno_t
+    .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
 )
 
@@ -246,10 +303,27 @@ add_header_macro(
     .llvm-libc-types.ACTION
     .llvm-libc-types.ENTRY
     .llvm-libc-types.VISIT
+    .llvm-libc-types.posix_tnode
     .llvm-libc-types.__search_compare_t
     .llvm-libc-types.size_t
     .llvm-libc-types.struct_hsearch_data
+    .llvm-libc-types.__action_closure_fn_t
+    .llvm-libc-types.__action_fn_t
+    .llvm-libc-types.__free_fn_t
     .llvm_libc_common_h
+)
+
+add_header_macro(
+  regex
+  ../libc/include/regex.yaml
+  regex.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.regex_macros
+    .llvm-libc-types.regex_t
+    .llvm-libc-types.regmatch_t
+    .llvm-libc-types.regoff_t
+    .llvm-libc-types.size_t
 )
 
 add_header_macro(
@@ -261,11 +335,13 @@ add_header_macro(
     .llvm-libc-macros.null_macro
     .llvm-libc-macros.time_macros
     .llvm-libc-types.clock_t
+    .llvm-libc-types.errno_t
     .llvm-libc-types.time_t
     .llvm-libc-types.struct_tm
     .llvm-libc-types.struct_timespec
     .llvm-libc-types.struct_timeval
     .llvm-libc-types.clockid_t
+    .llvm-libc-types.rsize_t
 )
 
 add_header_macro(
@@ -282,6 +358,7 @@ add_header_macro(
     .llvm-libc-types.thrd_start_t
     .llvm-libc-types.tss_t
     .llvm-libc-types.tss_dtor_t
+    .llvm-libc-types.struct_timespec
 )
 
 add_header_macro(
@@ -291,6 +368,7 @@ add_header_macro(
   DEPENDS
     .llvm-libc-macros.generic_error_number_macros
     .llvm-libc-macros.error_number_macros
+    .llvm-libc-types.errno_t
 )
 
 add_header_macro(
@@ -332,12 +410,15 @@ add_header_macro(
   ../libc/include/stdio.yaml
   stdio.h
   DEPENDS
+    .llvm-libc-macros._LIBC_MODULAR_FORMAT_PRINTF
     .llvm-libc-macros.file_seek_macros
     .llvm-libc-macros.null_macro
     .llvm-libc-macros.stdio_macros
     .llvm-libc-types.FILE
     .llvm-libc-types.cookie_io_functions_t
+    .llvm-libc-types.errno_t
     .llvm-libc-types.off_t
+    .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
     .llvm-libc-types.ssize_t
     .llvm_libc_common_h
@@ -354,10 +435,13 @@ add_header_macro(
     .llvm-libc-types.__qsortcompare_t
     .llvm-libc-types.__qsortrcompare_t
     .llvm-libc-types.__search_compare_t
+    .llvm-libc-types.constraint_handler_t
     .llvm-libc-types.div_t
+    .llvm-libc-types.errno_t
     .llvm-libc-types.ldiv_t
     .llvm-libc-types.lldiv_t
     .llvm-libc-types.locale_t
+    .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
     .llvm_libc_common_h
 )
@@ -390,7 +474,9 @@ add_header_macro(
     .llvm-libc-types.__pthread_once_func_t
     .llvm-libc-types.__pthread_start_t
     .llvm-libc-types.__pthread_tss_dtor_t
+    .llvm-libc-types.clockid_t
     .llvm-libc-types.pthread_attr_t
+    .llvm-libc-types.pthread_cond_t
     .llvm-libc-types.pthread_condattr_t
     .llvm-libc-types.pthread_key_t
     .llvm-libc-types.pthread_barrier_t
@@ -402,8 +488,32 @@ add_header_macro(
     .llvm-libc-types.pthread_rwlockattr_t
     .llvm-libc-types.pthread_spinlock_t
     .llvm-libc-types.pthread_t
+    .llvm-libc-types.pthread_id_np_t
+    .llvm-libc-types.struct_timespec
     .llvm_libc_common_h
 )
+
+if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
+  add_header_macro(
+    ucontext
+    ../libc/include/ucontext.yaml
+    ucontext.h
+    DEPENDS
+      .llvm_libc_common_h
+      .llvm-libc-types.mcontext_t
+      .llvm-libc-types.ucontext_t
+      .llvm-libc-types.sigset_t
+      .llvm-libc-types.stack_t
+  )
+
+  add_header_macro(
+    sys_ucontext
+    ../libc/include/sys/ucontext.yaml
+    sys/ucontext.h
+    DEPENDS
+      .ucontext
+  )
+endif()
 
 add_header_macro(
   sched
@@ -450,6 +560,51 @@ add_header_macro(
   elf.h
   DEPENDS
     .llvm-libc-macros.elf_macros
+    .llvm-libc-types.Elf32_Addr
+    .llvm-libc-types.Elf32_Chdr
+    .llvm-libc-types.Elf32_Dyn
+    .llvm-libc-types.Elf32_Ehdr
+    .llvm-libc-types.Elf32_Half
+    .llvm-libc-types.Elf32_Lword
+    .llvm-libc-types.Elf32_Nhdr
+    .llvm-libc-types.Elf32_Off
+    .llvm-libc-types.Elf32_Phdr
+    .llvm-libc-types.Elf32_Rel
+    .llvm-libc-types.Elf32_Rela
+    .llvm-libc-types.Elf32_Shdr
+    .llvm-libc-types.Elf32_Sword
+    .llvm-libc-types.Elf32_Sym
+    .llvm-libc-types.Elf32_Verdaux
+    .llvm-libc-types.Elf32_Verdef
+    .llvm-libc-types.Elf32_Vernaux
+    .llvm-libc-types.Elf32_Verneed
+    .llvm-libc-types.Elf32_Versym
+    .llvm-libc-types.Elf32_Word
+    .llvm-libc-types.Elf32_Xword
+    .llvm-libc-types.Elf32_auxv_t
+    .llvm-libc-types.Elf64_Addr
+    .llvm-libc-types.Elf64_Chdr
+    .llvm-libc-types.Elf64_Dyn
+    .llvm-libc-types.Elf64_Ehdr
+    .llvm-libc-types.Elf64_Half
+    .llvm-libc-types.Elf64_Lword
+    .llvm-libc-types.Elf64_Nhdr
+    .llvm-libc-types.Elf64_Off
+    .llvm-libc-types.Elf64_Phdr
+    .llvm-libc-types.Elf64_Rel
+    .llvm-libc-types.Elf64_Rela
+    .llvm-libc-types.Elf64_Shdr
+    .llvm-libc-types.Elf64_Sword
+    .llvm-libc-types.Elf64_Sxword
+    .llvm-libc-types.Elf64_Sym
+    .llvm-libc-types.Elf64_Verdaux
+    .llvm-libc-types.Elf64_Verdef
+    .llvm-libc-types.Elf64_Vernaux
+    .llvm-libc-types.Elf64_Verneed
+    .llvm-libc-types.Elf64_Versym
+    .llvm-libc-types.Elf64_Word
+    .llvm-libc-types.Elf64_Xword
+    .llvm-libc-types.Elf64_auxv_t
 )
 
 # TODO: Not all platforms will have a include/sys directory. Add the sys
@@ -488,6 +643,20 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_ipc
+  ../libc/include/sys/ipc.yaml
+  sys/ipc.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_ipc_macros
+    .llvm-libc-types.key_t
+    .llvm-libc-types.uid_t
+    .llvm-libc-types.gid_t
+    .llvm-libc-types.mode_t
+    .llvm-libc-types.struct_ipc_perm
+)
+
+add_header_macro(
   sys_mman
   ../libc/include/sys/mman.yaml
   sys/mman.h
@@ -497,6 +666,15 @@ add_header_macro(
     .llvm-libc-types.off_t
     .llvm-libc-types.size_t
     .llvm-libc-types.ssize_t
+)
+
+add_header_macro(
+  sys_personality
+  ../libc/include/sys/personality.yaml
+  sys/personality.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_personality_macros
 )
 
 add_header_macro(
@@ -574,6 +752,21 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_sem
+  ../libc/include/sys/sem.yaml
+  sys/sem.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_sem_macros
+    .llvm-libc-types.key_t
+    .llvm-libc-types.size_t
+    .llvm-libc-types.struct_ipc_perm
+    .llvm-libc-types.struct_semid_ds
+    .llvm-libc-types.struct_sembuf
+    .llvm-libc-types.struct_seminfo
+)
+
+add_header_macro(
   sys_sendfile
   ../libc/include/sys/sendfile.yaml
   sys/sendfile.h
@@ -593,10 +786,13 @@ add_header_macro(
     .llvm-libc-macros.sys_socket_macros
     .llvm-libc-types.sa_family_t
     .llvm-libc-types.socklen_t
+    .llvm-libc-types.struct_cmsghdr
     .llvm-libc-types.struct_iovec
+    .llvm-libc-types.struct_linger
+    .llvm-libc-types.struct_mmsghdr
     .llvm-libc-types.struct_msghdr
     .llvm-libc-types.struct_sockaddr
-    .llvm-libc-types.struct_sockaddr_un
+    .llvm-libc-types.struct_sockaddr_storage
 )
 
 add_header_macro(
@@ -621,8 +817,9 @@ add_header_macro(
   sys/time.h
   DEPENDS
     .llvm_libc_common_h
-    .llvm-libc-types.struct_timeval
     .llvm-libc-macros.sys_time_macros
+    .llvm-libc-types.struct_itimerval
+    .llvm-libc-types.struct_timeval
 )
 
 add_header_macro(
@@ -637,11 +834,13 @@ add_header_macro(
     .llvm-libc-types.dev_t
     .llvm-libc-types.gid_t
     .llvm-libc-types.ino_t
+    .llvm-libc-types.key_t
     .llvm-libc-types.mode_t
     .llvm-libc-types.nlink_t
     .llvm-libc-types.off_t
     .llvm-libc-types.pid_t
     .llvm-libc-types.pthread_attr_t
+    .llvm-libc-types.pthread_cond_t
     .llvm-libc-types.pthread_key_t
     .llvm-libc-types.pthread_mutex_t
     .llvm-libc-types.pthread_mutexattr_t
@@ -671,6 +870,15 @@ add_header_macro(
     .llvm_libc_common_h
     .llvm-libc-types.struct_iovec
     .llvm-libc-types.ssize_t
+)
+
+add_header_macro(
+  sys_un
+  ../libc/include/sys/un.yaml
+  sys/un.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_sockaddr_un
 )
 
 add_header_macro(
@@ -720,6 +928,7 @@ add_header_macro(
     .llvm-libc-macros.null_macro
     .llvm-libc-macros.wchar_macros
     .llvm-libc-types.mbstate_t
+    .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
     .llvm-libc-types.wint_t
     .llvm-libc-types.wchar_t
@@ -730,8 +939,9 @@ add_header_macro(
   ../libc/include/wctype.yaml
   wctype.h
   DEPENDS
-    .llvm_libc_common_h    
+    .llvm_libc_common_h
     .llvm-libc-types.wint_t
+    .llvm-libc-types.wctype_t
 )
 
 add_header_macro(
@@ -754,6 +964,15 @@ add_header_macro(
     .llvm-libc-types.struct_pollfd
     .llvm-libc-types.nfds_t
     .llvm-libc-macros.poll-macros
+  )
+
+add_header_macro(
+  nl_types
+  ../libc/include/nl_types.yaml
+  nl_types.h
+  DEPENDS
+    .llvm-libc-macros.nl_types_macros
+    .llvm-libc-types.nl_catd
   )
 
 # UEFI spec references "Uefi.h" so we use that name for compatibility
@@ -789,8 +1008,9 @@ function(get_all_install_header_targets out_var)
 endfunction(get_all_install_header_targets)
 
 get_all_install_header_targets(all_install_header_targets ${TARGET_PUBLIC_HEADERS})
+add_custom_target(generate-libc-headers DEPENDS ${all_install_header_targets})
 add_library(libc-headers INTERFACE)
-add_dependencies(libc-headers ${all_install_header_targets})
+add_dependencies(libc-headers generate-libc-headers)
 target_include_directories(libc-headers SYSTEM INTERFACE ${LIBC_INCLUDE_DIR})
 
 foreach(target IN LISTS all_install_header_targets)

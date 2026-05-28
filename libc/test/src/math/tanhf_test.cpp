@@ -8,7 +8,6 @@
 
 #include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/libc_errno.h"
 #include "src/math/tanhf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -21,8 +20,6 @@ using LlvmLibcTanhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcTanhfTest, SpecialNumbers) {
-  libc_errno = 0;
-
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::tanhf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
@@ -40,7 +37,7 @@ TEST_F(LlvmLibcTanhfTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcTanhfTest, InFloatRange) {
-  constexpr uint32_t COUNT = 100'001;
+  constexpr uint32_t COUNT = 1'231;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = FPBits(v).get_val();

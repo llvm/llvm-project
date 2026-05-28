@@ -11,6 +11,8 @@
 ; RUN: opt -passes=verify %t/unknown-correct.ll --disable-output
 
 ; RUN: not opt -passes=verify %t/unknown-invalid.ll --disable-output 2>&1 | FileCheck %s --check-prefix=EXTRA-ARGS
+; RUN: not opt -passes=verify %t/unknown-noargs.ll --disable-output 2>&1 | FileCheck %s --check-prefix=NO-ARGS
+; RUN: not opt -passes=verify %t/unknown-empty.ll --disable-output 2>&1 | FileCheck %s --check-prefix=EMPTY-ARGS
 ; RUN: opt -passes=verify %t/unknown-on-function1.ll -S -o - | FileCheck %s --check-prefix=ON-FUNCTION1
 ; RUN: not opt -passes=verify %t/unknown-on-function2.ll --disable-output 2>&1 | FileCheck %s --check-prefix=ON-FUNCTION2
 ; RUN: not opt -passes=verify %t/invalid-unknown-placement.ll --disable-output 2>&1 | FileCheck %s --check-prefix=INVALID-UNKNOWN-PLACEMENT
@@ -111,7 +113,7 @@ exit:
   ret i32 %r
 }
 
-!0 = !{!"unknown"}
+!0 = !{!"unknown", !"test"}
 
 ;--- unknown-invalid.ll
 define void @test(i32 %a) {
@@ -124,14 +126,14 @@ no:
 }
 
 !0 = !{!"unknown", i32 12, i32 67}
-; EXTRA-ARGS: 'unknown' !prof should have no additional operands
+; EXTRA-ARGS: 'unknown' !prof should have a single additional operand
 
 ;--- unknown-on-function1.ll
 define void @test() !prof !0 {
   ret void
 }
 
-!0 = !{!"unknown"}
+!0 = !{!"unknown", !"test"}
 ; ON-FUNCTION1: define void @test() !prof !0
 
 ;--- unknown-on-function2.ll
@@ -140,12 +142,38 @@ define void @test() !prof !0 {
 }
 
 !0 = !{!"unknown", i64 123}
-; ON-FUNCTION2: first operand should be 'function_entry_count' or 'synthetic_function_entry_count'
+; ON-FUNCTION2: 'unknown' !prof should have an additional operand of type string
 
 ;--- invalid-unknown-placement.ll
 define i32 @test() {
   %r = add i32 1, 2, !prof !0
   ret i32 %r
 }
-!0 = !{!"unknown"}
+!0 = !{!"unknown", !"test"}
 ; INVALID-UNKNOWN-PLACEMENT: 'unknown' !prof should only appear on instructions on which 'branch_weights' would
+
+;--- unknown-noargs.ll
+define void @test(i32 %a) {
+  %c = icmp eq i32 %a, 0
+  br i1 %c, label %yes, label %no, !prof !0
+yes:
+  ret void
+no:
+  ret void
+}
+
+!0 = !{!"unknown"}
+; NO-ARGS: 'unknown' !prof should have a single additional operand
+
+;--- unknown-empty.ll
+define void @test(i32 %a) {
+  %c = icmp eq i32 %a, 0
+  br i1 %c, label %yes, label %no, !prof !0
+yes:
+  ret void
+no:
+  ret void
+}
+
+!0 = !{!"unknown", !""}
+; EMPTY-ARGS: the 'unknown' !prof operand should not be an empty string

@@ -59,6 +59,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.cospi();
   case Operation::Erf:
     return mpfrInput.erf();
+  case Operation::Erfc:
+    return mpfrInput.erfc();
   case Operation::Exp:
     return mpfrInput.exp();
   case Operation::Exp2:
@@ -77,8 +79,12 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.log();
   case Operation::Log2:
     return mpfrInput.log2();
+  case Operation::Log2p1:
+    return mpfrInput.log2p1();
   case Operation::Log10:
     return mpfrInput.log10();
+  case Operation::Log10p1:
+    return mpfrInput.log10p1();
   case Operation::Log1p:
     return mpfrInput.log1p();
   case Operation::Mod2PI:
@@ -91,6 +97,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.round();
   case Operation::RoundEven:
     return mpfrInput.roundeven();
+  case Operation::Rsqrt:
+    return mpfrInput.rsqrt();
   case Operation::Sin:
     return mpfrInput.sin();
   case Operation::Sinpi:
@@ -495,6 +503,8 @@ explain_ternary_operation_one_output_error(Operation,
 #endif
 
 template void explain_ternary_operation_one_output_error(
+    Operation, const TernaryInput<bfloat16> &, bfloat16, double, RoundingMode);
+template void explain_ternary_operation_one_output_error(
     Operation, const TernaryInput<float> &, bfloat16, double, RoundingMode);
 template void explain_ternary_operation_one_output_error(
     Operation, const TernaryInput<double> &, bfloat16, double, RoundingMode);
@@ -760,6 +770,9 @@ compare_ternary_operation_one_output(Operation,
                                      double, RoundingMode);
 #endif
 
+template bool
+compare_ternary_operation_one_output(Operation, const TernaryInput<bfloat16> &,
+                                     bfloat16, double, RoundingMode);
 template bool compare_ternary_operation_one_output(Operation,
                                                    const TernaryInput<float> &,
                                                    bfloat16, double,

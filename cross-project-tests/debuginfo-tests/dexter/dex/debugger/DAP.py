@@ -18,6 +18,7 @@ import sys
 import threading
 import time
 from enum import Enum
+from typing import List, Optional
 
 from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
 from dex.dextIR import FrameIR, LocIR, StepIR, StopReason, ValueIR
@@ -51,18 +52,27 @@ class DAPMessageLogger:
         self.out_handle = None
         self.open = False
         self.lock = threading.Lock()
+        self.start_time: Optional[float] = None
 
     def _custom_enter(self):
         self.open = True
+        self.start_time = time.time()
         if self.log_file is None:
             return
         if self.log_file == "-":
             self.out_handle = sys.stdout
             return
+        if self.log_file == "-e":
+            self.out_handle = sys.stderr
+            return
         self.out_handle = open(self.log_file, "w+", encoding="utf-8")
 
     def _custom_exit(self):
-        if self.out_handle is not None and self.log_file != "-":
+        if (
+            self.out_handle is not None
+            and self.log_file != "-"
+            and self.log_file != "-e"
+        ):
             self.out_handle.close()
         self.open = False
 
@@ -87,6 +97,13 @@ class DAPMessageLogger:
 
     def write_message(self, message: dict, incoming: bool):
         prefix = self.prefix_recv if incoming else self.prefix_send
+        if self.start_time is not None:
+            message_time = time.time() - self.start_time
+            minutes = int(message_time / 60)
+            seconds = int(message_time % 60)
+            milliseconds = int((message_time % 1) * 1000)
+            prefix += f" {minutes}:{seconds:02d}:{milliseconds:03d}"
+
         # ANSI escape codes get butchered by json.dumps(), so we fix them up here.
         message_str = json.dumps(
             self._colorize_dap_message(message), indent=self.indent
@@ -328,6 +345,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         self._proc.stdin.flush()
         return self.seq
 
+    @staticmethod
     def _handle_message(
         message: dict, debugger_state: DAPDebuggerState, logger: Logger
     ):
@@ -412,6 +430,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             request_seq = message["request_seq"]
             debugger_state.set_response(request_seq, message)
 
+    @staticmethod
     def _colorize_dap_message(message: dict) -> dict:
         colorized_message = copy.deepcopy(message)
         if colorized_message["type"] == "event":
@@ -425,6 +444,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             colorized_message["command"] = f"<y>{colorized_message['command']}</>"
         return colorized_message
 
+    @staticmethod
     def _read_dap_output(
         proc: subprocess.Popen,
         debugger_state: DAPDebuggerState,
@@ -447,6 +467,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
                 DAP._handle_message(message, debugger_state, logger)
                 buffer = rest[content_length:]
 
+    @staticmethod
     def _read_dap_err(proc: subprocess.Popen, logger: Logger):
         while True:
             err: bytes = proc.stderr.readline()
@@ -752,20 +773,44 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
 
         launch_request = self._get_launch_params(cmdline)
 
-        # For some reason, we *must* submit in the order launch->configurationDone, and then we will receive responses
-        # in the order configurationDone->launch.
-        self._flush_breakpoints()
+        # Per DAP protocol, we follow the sequence:
+        # 1. Send launch request
+        # 2. Set breakpoints
+        # 3. Send configurationDone to start the process
+        # 4. Wait for launch and configurationDone responses, and a "process" event, to confirm successful launch
+        # NB: Technically, we should also wait for the "initialized" event before sending the launch request, but in
+        # practice there are DAP implementations that do not send the initialized event until post-launch, and all
+        # adapters seem to accept us not waiting for the initialized event, so ignoring it gives maximum compatibility.
         launch_req_id = self.send_message(self.make_request("launch", launch_request))
+
+        # Wait for the initialized event; for LLDB, this will be sent after the launch request has been processed;
+        # for other debuggers, it will have been sent some time after the initialize response was sent.
+        # NB: In all currently known cases this timeout is never hit because the initialized event is usually received
+        # almost immediately after either the initialize response or the launch request/response, and otherwise this
+        # timeout is long enough for any internal debugger timeout to be hit, and so if this gets hit it probably means
+        # the debugger is hanging.
+        initialize_timeout = Timeout(60)
+        while self._proc.poll() is None and not self._debugger_state.initialized:
+            if initialize_timeout.timed_out():
+                raise TimeoutError(
+                    "Timed out while waiting for initialized event from DAP"
+                )
+            time.sleep(0.01)
+
+        # Set breakpoints after receiving launch response but before configurationDone.
+        self._flush_breakpoints()
+
+        # Send configurationDone to allow the process to start running.
         config_done_req_id = self.send_message(self.make_request("configurationDone"))
-        config_done_response = self._await_response(config_done_req_id)
-        assert config_done_response["success"], "Should simply receive an affirmative?"
         launch_response = self._await_response(launch_req_id)
         if not launch_response["success"]:
             raise DebuggerException(
                 f"failure launching debugger: \"{launch_response['body']['error']['format']}\""
             )
-        # We can't interact meaningfully with the process until we have the thread ID and confirmation that the process
-        # has finished launching.
+        config_done_response = self._await_response(config_done_req_id)
+        assert config_done_response["success"]
+
+        # Wait for the process to launch and obtain a thread ID.
         while self._debugger_state.thread is None or not self._debugger_state.launched:
             time.sleep(0.001)
 
@@ -892,6 +937,70 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             program_state=ProgramState(state_frames),
         )
 
+    def get_stack_frames(self, step_index: int) -> StepIR:
+        """Returns a StepIR with stackframes and source locations (but no watched values)."""
+        assert (
+            not self._debugger_state.is_running
+        ), "Cannot get step info while debugger is running!"
+        trace_req_id = self.send_message(
+            self.make_request("stackTrace", {"threadId": self._debugger_state.thread})
+        )
+        trace_response = self._await_response(trace_req_id)
+        if not trace_response["success"]:
+            raise DebuggerException("failed to get stack frames")
+        stackframes = trace_response["body"]["stackFrames"]
+
+        frames = []
+
+        for stackframe in stackframes:
+            # No source, skip the frame! Currently I've only observed this for frames below main, so we break here; if
+            # it happens elsewhere, then this will break more stuff and we'll come up with a better solution.
+            if (
+                stackframe.get("source") is None
+                or stackframe["source"].get("path") is None
+            ):
+                break
+
+            loc_dict = {
+                "path": self._external_to_debug_path(stackframe["source"]["path"]),
+                "lineno": stackframe["line"],
+                "column": stackframe["column"],
+            }
+            loc = LocIR(**loc_dict)
+            frame = FrameIR(
+                function=self._sanitize_function_name(stackframe["name"]),
+                is_inlined=stackframe["name"].startswith("[Inline Frame]"),
+                loc=loc,
+                instruction_addr=stackframe.get("instructionPointerReference", None),
+            )
+
+            # We skip frames that are below "main", since we do not expect those to be user code.
+            fname = frame.function or ""  # pylint: disable=no-member
+            if any(name in fname for name in self.frames_below_main):
+                break
+
+            frames.append(frame)
+
+        if len(frames) == 1 and frames[0].function is None:
+            frames = []
+
+        reason = self._translate_stop_reason(self._debugger_state.stopped_reason)
+
+        return StepIR(
+            step_index=step_index,
+            frames=frames,
+            stop_reason=reason,
+        )
+
+    def collect_watches(self, step: StepIR, watches: List[str]):
+        """Evaluates the provided watches and stores their evaluation results (ValueIR) in the provided step."""
+        frame_idx = 0
+        if not watches:
+            return
+        active_exprs = set(watches)
+        for expr in active_exprs:
+            step.watches[expr] = self.evaluate_expression(expr, frame_idx)
+
     @property
     def is_running(self):
         return self._debugger_state.is_running
@@ -923,10 +1032,16 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             )
         )
         eval_response = self._await_response(eval_req_id)
+        result: str = ""
         if not eval_response["success"]:
-            result: str = eval_response["message"]
+            if eval_response["body"].get("error", None):
+                result = eval_response["body"]["error"]["format"]
+            elif eval_response["message"]:
+                result = eval_response["message"]
+            else:
+                result = "<unable to evaluate expression>"
         else:
-            result: str = eval_response["body"]["result"]
+            result = eval_response["body"]["result"]
         type_str = eval_response["body"].get("type")
 
         return self._evaluate_result_value(expression, result, type_str)

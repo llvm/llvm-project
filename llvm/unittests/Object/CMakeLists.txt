@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   BinaryFormat
+  MC
   Object
   ObjectYAML
   TargetParser
@@ -7,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(ObjectTests
   ArchiveTest.cpp
+  BuildIDTest.cpp
   COFFObjectFileTest.cpp
   DXContainerTest.cpp
   ELFObjectFileTest.cpp

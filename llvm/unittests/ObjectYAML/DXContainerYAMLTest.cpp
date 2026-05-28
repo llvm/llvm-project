@@ -8,9 +8,11 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Config/config.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/MemoryBufferRef.h"
+#include "llvm/Support/VCSRevision.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
@@ -172,8 +174,8 @@ TEST(RootSignature, HeaderData) {
         NumStaticSamplers: 0
         StaticSamplersOffset: 48
         Parameters:
-          - ParameterType: 1
-            ShaderVisibility: 2
+          - ParameterType: Constants32Bit
+            ShaderVisibility: Hull
             Constants:
               Num32BitValues: 16
               ShaderRegister: 15
@@ -224,8 +226,8 @@ TEST(RootSignature, ParseRootConstants) {
         NumStaticSamplers: 0
         StaticSamplersOffset: 48
         Parameters:
-          - ParameterType: 1
-            ShaderVisibility: 2
+          - ParameterType: Constants32Bit
+            ShaderVisibility: Hull
             Constants:
               Num32BitValues: 16
               ShaderRegister: 15
@@ -276,8 +278,8 @@ TEST(RootSignature, ParseRootDescriptorsV10) {
       NumStaticSamplers: 0
       StaticSamplersOffset: 44
       Parameters:         
-      - ParameterType: 2 # SRV
-        ShaderVisibility: 3 # Domain
+      - ParameterType: CBV 
+        ShaderVisibility: Domain 
         Descriptor:
           ShaderRegister: 31
           RegisterSpace: 32
@@ -327,8 +329,8 @@ TEST(RootSignature, ParseRootDescriptorsV11) {
       NumStaticSamplers: 0
       StaticSamplersOffset: 48
       Parameters:         
-      - ParameterType: 2 # SRV
-        ShaderVisibility: 3 # Domain
+      - ParameterType: CBV
+        ShaderVisibility: Domain
         Descriptor:
           ShaderRegister: 31
           RegisterSpace: 32
@@ -379,12 +381,12 @@ TEST(RootSignature, ParseDescriptorTableV10) {
       NumStaticSamplers: 0
       StaticSamplersOffset: 64
       Parameters:         
-      - ParameterType: 0 # SRV
-        ShaderVisibility: 3 # Domain
+      - ParameterType: DescriptorTable
+        ShaderVisibility: Domain
         Table:
           NumRanges: 1
           Ranges:
-            - RangeType: 0
+            - RangeType: SRV
               NumDescriptors: 41
               BaseShaderRegister: 42
               RegisterSpace: 43
@@ -435,12 +437,12 @@ TEST(RootSignature, ParseDescriptorTableV11) {
       NumStaticSamplers: 0
       StaticSamplersOffset: 68
       Parameters:         
-      - ParameterType: 0 # Descriptor Table
-        ShaderVisibility: 3 # Domain
+      - ParameterType: DescriptorTable
+        ShaderVisibility: Domain
         Table:
           NumRanges: 1
           Ranges:
-            - RangeType: 0
+            - RangeType: SRV
               NumDescriptors: -1
               BaseShaderRegister: 42
               RegisterSpace: 43
@@ -492,19 +494,19 @@ Parts:
       StaticSamplersOffset: 24
       Parameters: []
       Samplers: 
-        - Filter: 10 
-          AddressU: 1
-          AddressV: 2
-          AddressW: 5
+        - Filter: MinLinearMagMipPoint 
+          AddressU: Wrap
+          AddressV: Mirror
+          AddressW: MirrorOnce
           MipLODBias: 1.23
           MaxAnisotropy: 20
-          ComparisonFunc: 4
-          BorderColor: 0
+          ComparisonFunc: LessEqual
+          BorderColor: TransparentBlack
           MinLOD: 4.56
           MaxLOD: 8.90
           ShaderRegister: 31 
           RegisterSpace: 32
-          ShaderVisibility:  7
+          ShaderVisibility:  Mesh
       AllowInputAssemblerInputLayout: true
       DenyGeometryShaderRootAccess: true
     )"));
@@ -517,7 +519,7 @@ Parts:
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x52, 0x54, 0x53, 0x30, 0x4c, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
-      0x18, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00,
+      0x18, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00,
       0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
       0xa4, 0x70, 0x9d, 0x3f, 0x14, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x85, 0xeb, 0x91, 0x40, 0x66, 0x66, 0x0e, 0x41,
@@ -525,4 +527,170 @@ Parts:
 
   EXPECT_EQ(Storage.size(), 144u);
   EXPECT_TRUE(memcmp(Buffer, Storage.data(), 144u) == 0);
+}
+
+TEST(RootSignature, ParseStaticSamplersV13) {
+  SmallString<128> Storage;
+
+  // First read a fully explicit yaml with all sizes and offsets provided
+  ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       1
+  PartOffsets:     [ 60 ]
+Parts:
+  - Name:            RTS0
+    Size:            76
+    RootSignature:
+      Version: 3
+      NumRootParameters: 0
+      RootParametersOffset: 24
+      NumStaticSamplers: 1
+      StaticSamplersOffset: 24
+      Parameters: []
+      Samplers: 
+        - ShaderRegister: 31 
+          RegisterSpace: 32
+          ShaderVisibility:  All
+          SAMPLER_FLAG_UINT_BORDER_COLOR: true
+      AllowInputAssemblerInputLayout: true
+      DenyGeometryShaderRootAccess: true
+    )"));
+
+  uint8_t Buffer[] = {
+      0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x90, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x52, 0x54, 0x53, 0x30, 0x4c, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x18, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x55, 0x00, 0x00, 0x00,
+      0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00,
+      0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x7f, 0x7f,
+      0x1f, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x01, 0x00, 0x00, 0x00};
+
+  EXPECT_EQ(Storage.size(), 148U);
+  EXPECT_TRUE(memcmp(Buffer, Storage.data(), 148U) == 0);
+}
+
+TEST(DXCFile, ParseILDNPart) {
+  SmallString<128> Storage;
+
+  // First read a fully explicit yaml with all sizes and offsets provided
+  ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       1
+  PartOffsets:     [ 36 ]
+Parts:
+  - Name:            ILDN
+    Size:            12
+    DebugName:
+     Flags:           0
+     NameLength:      7
+     DebugName:       abc.pdb
+     )"));
+
+  uint8_t Buffer[] = {
+      0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x38, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+      0x49, 0x4C, 0x44, 0x4E, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00,
+      0x61, 0x62, 0x63, 0x2E, 0x70, 0x64, 0x62, 0x00};
+
+  EXPECT_EQ(Storage.size(), 56u);
+  EXPECT_TRUE(memcmp(Buffer, Storage.data(), 56u) == 0);
+}
+
+TEST(DXCFile, ParseVERSPart) {
+  SmallString<128> Storage;
+
+  // Read a fully explicit yaml with all sizes and offsets provided.
+  ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
+  Header:
+    Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                       0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+    Version:
+      Major:           1
+      Minor:           0
+    PartCount:       1
+  Parts:
+    - Name:            VERS
+      Size:            40
+      CompilerVersion:
+       Major:           1
+       Minor:           10
+       IsDebugBuild:    true
+       IsValidated:     false
+       CommitCount:     5267
+       ContentSizeInBytes: 21
+       CommitSha:       21f060b7
+       CustomVersionString: 1.9.0.15267
+    )"));
+
+  uint8_t Buffer[] = {
+      0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x54, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+      0x56, 0x45, 0x52, 0x53, 0x28, 0x00, 0x00, 0x00, 0x01, 0x00, 0x0A, 0x00,
+      0x01, 0x00, 0x00, 0x00, 0x93, 0x14, 0x00, 0x00, 0x15, 0x00, 0x00, 0x00,
+      0x32, 0x31, 0x66, 0x30, 0x36, 0x30, 0x62, 0x37, 0x00, 0x31, 0x2E, 0x39,
+      0x2E, 0x30, 0x2E, 0x31, 0x35, 0x32, 0x36, 0x37, 0x00, 0x00, 0x00, 0x00};
+
+  EXPECT_EQ(Storage.size(), 84u);
+  EXPECT_TRUE(memcmp(Buffer, Storage.data(), 84u) == 0);
+}
+
+TEST(DXCFile, ComputeVERSPart) {
+  SmallString<128> Storage;
+
+  // Check default values of compiler version part fields.
+  ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
+  Header:
+    Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                       0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+    Version:
+      Major:           1
+      Minor:           0
+    PartCount:       1
+  Parts:
+    - Name:            VERS
+      Size:            100
+      CompilerVersion:
+    )"));
+
+  DXContainer C =
+      llvm::cantFail(DXContainer::create(MemoryBufferRef(Storage, "")));
+  const std::optional<mcdxbc::CompilerVersion> &VERS =
+      C.getCompilerVersionInfo();
+  EXPECT_TRUE(VERS.has_value());
+  dxbc::CompilerVersionHeader Header = VERS->Parameters;
+  EXPECT_EQ(Header.Major, LLVM_VERSION_MAJOR);
+  EXPECT_EQ(Header.Minor, LLVM_VERSION_MINOR);
+#ifndef NDEBUG
+  EXPECT_TRUE(!!(Header.Flags & dxbc::CompilerVersionFlags::Debug));
+#else
+  EXPECT_FALSE(!!(Header.Flags & dxbc::CompilerVersionFlags::Debug));
+#endif
+  EXPECT_FALSE(!!(Header.Flags & dxbc::CompilerVersionFlags::Internal));
+  EXPECT_EQ(Header.CommitCount, 0u);
+#ifdef LLVM_REVISION
+  EXPECT_EQ(VERS->CommitSha, LLVM_REVISION);
+#else
+  EXPECT_TRUE(VERS->CommitSha.empty());
+#endif
+  EXPECT_EQ(VERS->CustomVersionString, PACKAGE_VERSION);
+  EXPECT_EQ(VERS->Parameters.ContentSizeInBytes,
+            VERS->CommitSha.size() + 1 + VERS->CustomVersionString.size() + 1);
 }

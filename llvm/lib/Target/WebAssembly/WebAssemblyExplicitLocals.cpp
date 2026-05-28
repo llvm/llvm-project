@@ -216,6 +216,18 @@ static MachineInstr *findStartOfTree(MachineOperand &MO,
   return Def;
 }
 
+// FAKE_USEs are no-ops, so remove them here so that the values used by them
+// will be correctly dropped later.
+static void removeFakeUses(MachineFunction &MF) {
+  SmallVector<MachineInstr *> ToDelete;
+  for (auto &MBB : MF)
+    for (auto &MI : MBB)
+      if (MI.isFakeUse())
+        ToDelete.push_back(&MI);
+  for (auto *MI : ToDelete)
+    MI->eraseFromParent();
+}
+
 bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** Make Locals Explicit **********\n"
                        "********** Function: "
@@ -225,6 +237,8 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+
+  removeFakeUses(MF);
 
   // Map non-stackified virtual registers to their local ids.
   DenseMap<unsigned, unsigned> Reg2Local;
@@ -352,7 +366,14 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
           const TargetRegisterClass *RC = MRI.getRegClass(OldReg);
           Register NewReg = MRI.createVirtualRegister(RC);
           auto InsertPt = std::next(MI.getIterator());
-          if (UseEmpty[OldReg.virtRegIndex()]) {
+          // When libcalls are emitted for thread context, the frame base vreg
+          // has an implicit use in the DW_AT_frame_base debug info, so we
+          // should not remove it.
+          bool NeedsRegForDebug =
+              MFI.isFrameBaseVirtual() && OldReg == MFI.getFrameBaseVreg() &&
+              MF.getFunction().getSubprogram() &&
+              MF.getSubtarget<WebAssemblySubtarget>().hasLibcallThreadContext();
+          if (UseEmpty[OldReg.virtRegIndex()] && !NeedsRegForDebug) {
             unsigned Opc = getDropOpcode(RC);
             MachineInstr *Drop =
                 BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc))

@@ -151,7 +151,10 @@ bool DataLayout::PointerSpec::operator==(const PointerSpec &Other) const {
   return AddrSpace == Other.AddrSpace && BitWidth == Other.BitWidth &&
          ABIAlign == Other.ABIAlign && PrefAlign == Other.PrefAlign &&
          IndexBitWidth == Other.IndexBitWidth &&
-         IsNonIntegral == Other.IsNonIntegral;
+         HasUnstableRepresentation == Other.HasUnstableRepresentation &&
+         HasExternalState == Other.HasExternalState &&
+         NullPtrValue == Other.NullPtrValue &&
+         AddrSpaceName == Other.AddrSpaceName;
 }
 
 namespace {
@@ -172,18 +175,6 @@ struct LessPointerAddrSpace {
 };
 } // namespace
 
-const char *DataLayout::getManglingComponent(const Triple &T) {
-  if (T.isOSBinFormatGOFF())
-    return "-m:l";
-  if (T.isOSBinFormatMachO())
-    return "-m:o";
-  if ((T.isOSWindows() || T.isUEFI()) && T.isOSBinFormatCOFF())
-    return T.getArch() == Triple::x86 ? "-m:x" : "-m:w";
-  if (T.isOSBinFormatXCOFF())
-    return "-m:a";
-  return "-m:e";
-}
-
 // Default primitive type specifications.
 // NOTE: These arrays must be sorted by type bit width.
 constexpr DataLayout::PrimitiveSpec DefaultIntSpecs[] = {
@@ -198,22 +189,14 @@ constexpr DataLayout::PrimitiveSpec DefaultFloatSpecs[] = {
     {64, Align::Constant<8>(), Align::Constant<8>()},    // f64:64:64
     {128, Align::Constant<16>(), Align::Constant<16>()}, // f128:128:128
 };
-constexpr DataLayout::PrimitiveSpec DefaultVectorSpecs[] = {
-    {64, Align::Constant<8>(), Align::Constant<8>()},    // v64:64:64
-    {128, Align::Constant<16>(), Align::Constant<16>()}, // v128:128:128
-};
-
-// Default pointer type specifications.
-constexpr DataLayout::PointerSpec DefaultPointerSpecs[] = {
-    // p0:64:64:64:64
-    {0, 64, Align::Constant<8>(), Align::Constant<8>(), 64, false},
-};
 
 DataLayout::DataLayout()
     : IntSpecs(ArrayRef(DefaultIntSpecs)),
-      FloatSpecs(ArrayRef(DefaultFloatSpecs)),
-      VectorSpecs(ArrayRef(DefaultVectorSpecs)),
-      PointerSpecs(ArrayRef(DefaultPointerSpecs)) {}
+      FloatSpecs(ArrayRef(DefaultFloatSpecs)) {
+  // Default pointer type specifications.
+  setPointerSpec(0, 64, Align::Constant<8>(), Align::Constant<8>(), 64, false,
+                 false, "", APInt::getZero(64));
+}
 
 DataLayout::DataLayout(StringRef LayoutString) : DataLayout() {
   if (Error Err = parseLayoutString(LayoutString))
@@ -225,6 +208,7 @@ DataLayout &DataLayout::operator=(const DataLayout &Other) {
   LayoutMap = nullptr;
   StringRepresentation = Other.StringRepresentation;
   BigEndian = Other.BigEndian;
+  VectorsAreElementAligned = Other.VectorsAreElementAligned;
   AllocaAddrSpace = Other.AllocaAddrSpace;
   ProgramAddrSpace = Other.ProgramAddrSpace;
   DefaultGlobalsAddrSpace = Other.DefaultGlobalsAddrSpace;
@@ -245,6 +229,7 @@ DataLayout &DataLayout::operator=(const DataLayout &Other) {
 bool DataLayout::operator==(const DataLayout &Other) const {
   // NOTE: StringRepresentation might differ, it is not canonicalized.
   return BigEndian == Other.BigEndian &&
+         VectorsAreElementAligned == Other.VectorsAreElementAligned &&
          AllocaAddrSpace == Other.AllocaAddrSpace &&
          ProgramAddrSpace == Other.ProgramAddrSpace &&
          DefaultGlobalsAddrSpace == Other.DefaultGlobalsAddrSpace &&
@@ -279,6 +264,48 @@ static Error parseAddrSpace(StringRef Str, unsigned &AddrSpace) {
   if (!to_integer(Str, AddrSpace, 10) || !isUInt<24>(AddrSpace))
     return createStringError("address space must be a 24-bit integer");
 
+  return Error::success();
+}
+
+/// Attempts to parse an address space component of a specification allowing
+/// name to be specified as well. The input is expected to be of the form
+/// <number> '(' name ' )', with the name otional and the number is optional as
+/// well.
+static Error parseAddrSpaceAndName(StringRef Str, unsigned &AddrSpace,
+                                   StringRef &AddrSpaceName) {
+  if (Str.empty())
+    return createStringError("address space component cannot be empty");
+
+  if (isDigit(Str.front())) {
+    if (Str.consumeInteger(10, AddrSpace) || !isUInt<24>(AddrSpace))
+      return createStringError("address space must be a 24-bit integer");
+  }
+
+  if (Str.empty())
+    return Error::success();
+
+  if (Str.front() != '(')
+    return createStringError("address space must be a 24-bit integer");
+
+  // Expect atleast one character in between the ( and ).
+  if (Str.back() != ')' || Str.size() == 2)
+    return createStringError("Expected `( address space name )`");
+
+  AddrSpaceName = Str.drop_front().drop_back();
+  // TODO: Do we need any additional verification for address space name? Like
+  // should be a valid identifier of some sort? Its not strictly needed.
+
+  // LLVM's assembly parser used names "P", "G" and "A" to represent the
+  // program, default global, and alloca address space. This mapping is not 1:1
+  // in the sense that all of them can map to the same numberic address space.
+  // Diallow using these predefined symbolic address space names as address
+  // space names specified in the data layout.
+  if (AddrSpaceName.size() == 1) {
+    char C = AddrSpaceName.front();
+    if (C == 'P' || C == 'G' || C == 'A')
+      return createStringError(
+          "Cannot use predefined address space names P/G/A in data layout");
+  }
   return Error::success();
 }
 
@@ -406,7 +433,8 @@ Error DataLayout::parseAggregateSpec(StringRef Spec) {
   return Error::success();
 }
 
-Error DataLayout::parsePointerSpec(StringRef Spec) {
+Error DataLayout::parsePointerSpec(
+    StringRef Spec, SmallDenseSet<StringRef, 8> &AddrSpaceNames) {
   // p[<n>]:<size>:<abi>[:<pref>[:<idx>]]
   SmallVector<StringRef, 5> Components;
   assert(Spec.front() == 'p');
@@ -417,9 +445,47 @@ Error DataLayout::parsePointerSpec(StringRef Spec) {
 
   // Address space. Optional, defaults to 0.
   unsigned AddrSpace = 0;
-  if (!Components[0].empty())
-    if (Error Err = parseAddrSpace(Components[0], AddrSpace))
-      return Err;
+  bool ExternalState = false;
+  bool UnstableRepr = false;
+  // Null pointer value flags: default, z = all-zeros, o = all-ones.
+  enum class NullPtrKind { Default, Zero, AllOnes };
+  NullPtrKind NullPtrFlag = NullPtrKind::Default;
+  StringRef AddrSpaceName;
+  StringRef AddrSpaceStr = Components[0];
+  while (!AddrSpaceStr.empty()) {
+    char C = AddrSpaceStr.front();
+    if (C == 'e') {
+      ExternalState = true;
+    } else if (C == 'u') {
+      UnstableRepr = true;
+    } else if (C == 'z') {
+      if (NullPtrFlag != NullPtrKind::Default)
+        return createStringError("only one of 'z' or 'o' may be specified");
+      NullPtrFlag = NullPtrKind::Zero;
+    } else if (C == 'o') {
+      if (NullPtrFlag != NullPtrKind::Default)
+        return createStringError("only one of 'z' or 'o' may be specified");
+      NullPtrFlag = NullPtrKind::AllOnes;
+    } else if (isAlpha(C)) {
+      return createStringError("'%c' is not a valid pointer specification flag",
+                               C);
+    } else {
+      break; // not a valid flag, remaining must be the address space number.
+    }
+    AddrSpaceStr = AddrSpaceStr.drop_front(1);
+  }
+  if (!AddrSpaceStr.empty())
+    if (Error Err =
+            parseAddrSpaceAndName(AddrSpaceStr, AddrSpace, AddrSpaceName))
+      return Err; // Failed to parse the remaining characters as a number
+  if (AddrSpace == 0 && (ExternalState || UnstableRepr))
+    return createStringError(
+        "address space 0 cannot be unstable or have external state");
+
+  // Check for duplicate address space names.
+  if (!AddrSpaceName.empty() && !AddrSpaceNames.insert(AddrSpaceName).second)
+    return createStringError("address space name `" + AddrSpaceName +
+                             "` already used");
 
   // Size. Required, cannot be zero.
   unsigned BitWidth;
@@ -452,13 +518,18 @@ Error DataLayout::parsePointerSpec(StringRef Spec) {
     return createStringError(
         "index size cannot be larger than the pointer size");
 
+  APInt NullPtrValue = NullPtrFlag == NullPtrKind::AllOnes
+                           ? APInt::getAllOnes(BitWidth)
+                           : APInt::getZero(BitWidth);
+
   setPointerSpec(AddrSpace, BitWidth, ABIAlign, PrefAlign, IndexBitWidth,
-                 false);
+                 UnstableRepr, ExternalState, AddrSpaceName, NullPtrValue);
   return Error::success();
 }
 
 Error DataLayout::parseSpecification(
-    StringRef Spec, SmallVectorImpl<unsigned> &NonIntegralAddressSpaces) {
+    StringRef Spec, SmallVectorImpl<unsigned> &NonIntegralAddressSpaces,
+    SmallDenseSet<StringRef, 8> &AddrSpaceNames) {
   // The "ni" specifier is the only two-character specifier. Handle it first.
   if (Spec.starts_with("ni")) {
     // ni:<address space>[:<address space>]...
@@ -479,6 +550,11 @@ Error DataLayout::parseSpecification(
     return Error::success();
   }
 
+  if (Spec == "ve") {
+    VectorsAreElementAligned = true;
+    return Error::success();
+  }
+
   // The rest of the specifiers are single-character.
   assert(!Spec.empty() && "Empty specification is handled by the caller");
   char Specifier = Spec.front();
@@ -490,7 +566,7 @@ Error DataLayout::parseSpecification(
     return parseAggregateSpec(Spec);
 
   if (Specifier == 'p')
-    return parsePointerSpec(Spec);
+    return parsePointerSpec(Spec, AddrSpaceNames);
 
   StringRef Rest = Spec.drop_front();
   switch (Specifier) {
@@ -607,7 +683,7 @@ Error DataLayout::parseSpecification(
 }
 
 Error DataLayout::parseLayoutString(StringRef LayoutString) {
-  StringRepresentation = std::string(LayoutString);
+  StringRepresentation = LayoutString.str();
 
   if (LayoutString.empty())
     return Error::success();
@@ -615,10 +691,12 @@ Error DataLayout::parseLayoutString(StringRef LayoutString) {
   // Split the data layout string into specifications separated by '-' and
   // parse each specification individually, updating internal data structures.
   SmallVector<unsigned, 8> NonIntegralAddressSpaces;
-  for (StringRef Spec : split(LayoutString, '-')) {
+  SmallDenseSet<StringRef, 8> AddessSpaceNames;
+  for (StringRef Spec : split(StringRepresentation, '-')) {
     if (Spec.empty())
       return createStringError("empty specification is not allowed");
-    if (Error Err = parseSpecification(Spec, NonIntegralAddressSpaces))
+    if (Error Err = parseSpecification(Spec, NonIntegralAddressSpaces,
+                                       AddessSpaceNames))
       return Err;
   }
   // Mark all address spaces that were qualified as non-integral now. This has
@@ -629,7 +707,8 @@ Error DataLayout::parseLayoutString(StringRef LayoutString) {
     // the spec for AS0, and we then update that to mark it non-integral.
     const PointerSpec &PS = getPointerSpec(AS);
     setPointerSpec(AS, PS.BitWidth, PS.ABIAlign, PS.PrefAlign, PS.IndexBitWidth,
-                   true);
+                   /*HasUnstableRepr=*/true, /*HasExternalState=*/false,
+                   getAddressSpaceName(AS), PS.NullPtrValue);
   }
 
   return Error::success();
@@ -677,17 +756,24 @@ DataLayout::getPointerSpec(uint32_t AddrSpace) const {
 
 void DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
                                 Align ABIAlign, Align PrefAlign,
-                                uint32_t IndexBitWidth, bool IsNonIntegral) {
+                                uint32_t IndexBitWidth, bool HasUnstableRepr,
+                                bool HasExternalState, StringRef AddrSpaceName,
+                                APInt NullPtrValue) {
   auto I = lower_bound(PointerSpecs, AddrSpace, LessPointerAddrSpace());
   if (I == PointerSpecs.end() || I->AddrSpace != AddrSpace) {
     PointerSpecs.insert(I, PointerSpec{AddrSpace, BitWidth, ABIAlign, PrefAlign,
-                                       IndexBitWidth, IsNonIntegral});
+                                       IndexBitWidth, HasUnstableRepr,
+                                       HasExternalState, AddrSpaceName.str(),
+                                       std::move(NullPtrValue)});
   } else {
     I->BitWidth = BitWidth;
     I->ABIAlign = ABIAlign;
     I->PrefAlign = PrefAlign;
     I->IndexBitWidth = IndexBitWidth;
-    I->IsNonIntegral = IsNonIntegral;
+    I->HasUnstableRepresentation = HasUnstableRepr;
+    I->HasExternalState = HasExternalState;
+    I->AddrSpaceName = AddrSpaceName.str();
+    I->NullPtrValue = std::move(NullPtrValue);
   }
 }
 
@@ -733,6 +819,19 @@ const StructLayout *DataLayout::getStructLayout(StructType *Ty) const {
 
 Align DataLayout::getPointerABIAlignment(unsigned AS) const {
   return getPointerSpec(AS).ABIAlign;
+}
+
+StringRef DataLayout::getAddressSpaceName(unsigned AS) const {
+  return getPointerSpec(AS).AddrSpaceName;
+}
+
+std::optional<unsigned> DataLayout::getNamedAddressSpace(StringRef Name) const {
+  auto II = llvm::find_if(PointerSpecs, [Name](const PointerSpec &PS) {
+    return PS.AddrSpaceName == Name;
+  });
+  if (II != PointerSpecs.end())
+    return II->AddrSpace;
+  return std::nullopt;
 }
 
 Align DataLayout::getPointerPrefAlignment(unsigned AS) const {
@@ -793,6 +892,9 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
     const Align Align = abi_or_pref ? StructABIAlignment : StructPrefAlignment;
     return std::max(Align, Layout->getAlignment());
   }
+  case Type::ByteTyID:
+    // The byte type has the same alignment as the equally sized integer type.
+    return getIntegerAlignment(Ty->getByteBitWidth(), abi_or_pref);
   case Type::IntegerTyID:
     return getIntegerAlignment(Ty->getIntegerBitWidth(), abi_or_pref);
   case Type::HalfTyID:
@@ -823,6 +925,9 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
     auto I = lower_bound(VectorSpecs, BitWidth, LessPrimitiveBitWidth());
     if (I != VectorSpecs.end() && I->BitWidth == BitWidth)
       return abi_or_pref ? I->ABIAlign : I->PrefAlign;
+
+    if (vectorsAreElementAligned())
+      return getAlignment(cast<VectorType>(Ty)->getElementType(), abi_or_pref);
 
     // By default, use natural alignment for vector types. This is consistent
     // with what clang and llvm-gcc do.
@@ -902,6 +1007,21 @@ Type *DataLayout::getIntPtrType(Type *Ty) const {
   if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
     return VectorType::get(IntTy, VecTy);
   return IntTy;
+}
+
+ByteType *DataLayout::getBytePtrType(LLVMContext &C,
+                                     unsigned AddressSpace) const {
+  return ByteType::get(C, getPointerSizeInBits(AddressSpace));
+}
+
+Type *DataLayout::getBytePtrType(Type *Ty) const {
+  assert(Ty->isPtrOrPtrVectorTy() &&
+         "Expected a pointer or pointer vector type.");
+  unsigned NumBits = getPointerTypeSizeInBits(Ty);
+  ByteType *ByteTy = ByteType::get(Ty->getContext(), NumBits);
+  if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
+    return VectorType::get(ByteTy, VecTy);
+  return ByteTy;
 }
 
 Type *DataLayout::getSmallestLegalIntType(LLVMContext &C, unsigned Width) const {

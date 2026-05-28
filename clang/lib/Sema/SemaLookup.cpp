@@ -193,7 +193,7 @@ namespace {
       list.push_back(UnqualUsingEntry(UD->getNominatedNamespace(), Common));
     }
 
-    void done() { llvm::sort(list, UnqualUsingEntry::Comparator()); }
+    void done() { llvm::stable_sort(list, UnqualUsingEntry::Comparator()); }
 
     typedef ListTy::const_iterator const_iterator;
 
@@ -1575,7 +1575,7 @@ void Sema::makeMergedDefinitionVisible(NamedDecl *ND) {
   if (auto *ED = dyn_cast<EnumDecl>(ND);
       ED && ED->isFromGlobalModule() && !ED->isScoped()) {
     for (auto *ECD : ED->enumerators()) {
-      ECD->setVisibleDespiteOwningModule();
+      ECD->setVisiblePromoted();
       DeclContext *RedeclCtx = ED->getDeclContext()->getRedeclContext();
       if (RedeclCtx->lookup(ECD->getDeclName()).empty())
         RedeclCtx->makeDeclVisibleInContext(ECD);
@@ -1589,17 +1589,19 @@ static Module *getDefiningModule(Sema &S, Decl *Entity) {
     // If this function was instantiated from a template, the defining module is
     // the module containing the pattern.
     if (FunctionDecl *Pattern = FD->getTemplateInstantiationPattern())
-      Entity = Pattern;
+      Entity = Pattern->getDefinition();
   } else if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Entity)) {
     if (CXXRecordDecl *Pattern = RD->getTemplateInstantiationPattern())
-      Entity = Pattern;
+      Entity = Pattern->getDefinition();
   } else if (EnumDecl *ED = dyn_cast<EnumDecl>(Entity)) {
     if (auto *Pattern = ED->getTemplateInstantiationPattern())
-      Entity = Pattern;
+      Entity = Pattern->getDefinition();
   } else if (VarDecl *VD = dyn_cast<VarDecl>(Entity)) {
     if (VarDecl *Pattern = VD->getTemplateInstantiationPattern())
-      Entity = Pattern;
+      Entity = Pattern->getDefinition();
   }
+  if (!Entity)
+    return nullptr;
 
   // Walk up to the containing context. That might also have been instantiated
   // from a template.
@@ -2032,7 +2034,8 @@ bool LookupResult::isReachableSlow(Sema &SemaRef, NamedDecl *D) {
   // Directly imported module are necessarily reachable.
   // Since we can't export import a module implementation partition unit, we
   // don't need to count for Exports here.
-  if (CurrentM && CurrentM->getTopLevelModule()->Imports.count(DeclTopModule))
+  if (CurrentM &&
+      llvm::is_contained(CurrentM->getTopLevelModule()->Imports, DeclTopModule))
     return true;
 
   // Then we treat all module implementation partition unit as unreachable.
@@ -2727,9 +2730,7 @@ bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
     IsDependent = !DC && ObjectType->isDependentType();
     assert(((!DC && ObjectType->isDependentType()) ||
             !ObjectType->isIncompleteType() || !ObjectType->getAs<TagType>() ||
-            ObjectType->castAs<TagType>()
-                ->getOriginalDecl()
-                ->isEntityBeingDefined()) &&
+            ObjectType->castAs<TagType>()->getDecl()->isEntityBeingDefined()) &&
            "Caller should have completed object type");
   } else if (SS && SS->isNotEmpty()) {
     // This nested-name-specifier occurs after another nested-name-specifier,
@@ -3191,9 +3192,8 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     //        namespaces of its associated classes.
     case Type::Record: {
       // FIXME: This should use the original decl.
-      CXXRecordDecl *Class =
-          cast<CXXRecordDecl>(cast<RecordType>(T)->getOriginalDecl())
-              ->getDefinitionOrSelf();
+      auto *Class = cast<CXXRecordDecl>(cast<RecordType>(T)->getDecl())
+                        ->getDefinitionOrSelf();
       addAssociatedClassesAndNamespaces(Result, Class);
       break;
     }
@@ -3303,6 +3303,8 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     // Inline SPIR-V types are treated as fundamental types.
     case Type::HLSLInlineSpirv:
       break;
+    case Type::OverflowBehavior:
+      T = cast<OverflowBehaviorType>(T)->getUnderlyingType().getTypePtr();
     }
 
     if (Queue.empty())
@@ -3930,7 +3932,8 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
             break;
           }
 
-          if (!getLangOpts().CPlusPlusModules)
+          if (!D->getOwningModule() ||
+              !D->getOwningModule()->getTopLevelModule()->isNamedModule())
             continue;
 
           if (D->isInExportDeclContext()) {
@@ -3962,7 +3965,9 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
               break;
             }
           }
-        } else if (D->getFriendObjectKind()) {
+        }
+
+        if (D->getFriendObjectKind()) {
           auto *RD = cast<CXXRecordDecl>(D->getLexicalDeclContext());
           // [basic.lookup.argdep]p4:
           //   Argument-dependent lookup finds all declarations of functions and
@@ -4575,6 +4580,13 @@ static void getNestedNameSpecifierIdentifiers(
       case Type::TemplateSpecialization: {
         TemplateName Name =
             cast<TemplateSpecializationType>(T)->getTemplateName();
+        if (const DependentTemplateName *DTN =
+                Name.getAsDependentTemplateName()) {
+          getNestedNameSpecifierIdentifiers(DTN->getQualifier(), Identifiers);
+          if (const auto *II = DTN->getName().getIdentifier())
+            Identifiers.push_back(II);
+          return;
+        }
         if (const QualifiedTemplateName *QTN =
                 Name.getAsQualifiedTemplateName()) {
           getNestedNameSpecifierIdentifiers(QTN->getQualifier(), Identifiers);
@@ -4582,15 +4594,6 @@ static void getNestedNameSpecifierIdentifiers(
         }
         if (const auto *TD = Name.getAsTemplateDecl(/*IgnoreDeduced=*/true))
           Identifiers.push_back(TD->getIdentifier());
-        return;
-      }
-      case Type::DependentTemplateSpecialization: {
-        const DependentTemplateStorage &S =
-            cast<DependentTemplateSpecializationType>(T)
-                ->getDependentTemplateName();
-        getNestedNameSpecifierIdentifiers(S.getQualifier(), Identifiers);
-        // FIXME: Should this dig into the Name as well?
-        // Identifiers.push_back(S.getName().getIdentifier());
         return;
       }
       case Type::SubstTemplateTypeParm:
@@ -4608,7 +4611,7 @@ static void getNestedNameSpecifierIdentifiers(
       case Type::InjectedClassName: {
         auto *TT = cast<TagType>(T);
         getNestedNameSpecifierIdentifiers(TT->getQualifier(), Identifiers);
-        Identifiers.push_back(TT->getOriginalDecl()->getIdentifier());
+        Identifiers.push_back(TT->getDecl()->getIdentifier());
         return;
       }
       case Type::Typedef: {
@@ -4750,7 +4753,7 @@ void TypoCorrectionConsumer::addCorrection(TypoCorrection Correction) {
           RI->getAsString(SemaRef.getLangOpts())};
 
       if (NewKey < PrevKey)
-        *RI = Correction;
+        *RI = std::move(Correction);
       return;
     }
   }
@@ -5487,7 +5490,7 @@ TypoCorrection Sema::CorrectTypo(const DeclarationNameInfo &TypoName,
 
     if (BestTC.getCorrection().getAsString() != "super") {
       if (SecondBestTC.getCorrection().getAsString() == "super")
-        BestTC = SecondBestTC;
+        BestTC = std::move(SecondBestTC);
       else if ((*Consumer)["super"].front().isKeyword())
         BestTC = (*Consumer)["super"].front();
     }

@@ -27,6 +27,9 @@ struct EntryProperties {
   unsigned NumThreadsX{0}; // X component
   unsigned NumThreadsY{0}; // Y component
   unsigned NumThreadsZ{0}; // Z component
+  unsigned WaveSizeMin{0}; // Minimum component
+  unsigned WaveSizeMax{0}; // Maximum component
+  unsigned WaveSizePref{0}; // Preferred component
 
   EntryProperties(const Function *Fn = nullptr) : Entry(Fn) {};
 };
@@ -37,7 +40,7 @@ struct ModuleMetadataInfo {
   Triple::EnvironmentType ShaderProfile{Triple::UnknownEnvironment};
   VersionTuple ValidatorVersion{};
   SmallVector<EntryProperties> EntryPropertyVec{};
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 };
 
 } // namespace dxil
@@ -51,24 +54,22 @@ class DXILMetadataAnalysis : public AnalysisInfoMixin<DXILMetadataAnalysis> {
 public:
   using Result = dxil::ModuleMetadataInfo;
   /// Gather module metadata info for the module \c M.
-  dxil::ModuleMetadataInfo run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI dxil::ModuleMetadataInfo run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Printer pass for the \c DXILMetadataAnalysis results.
 class DXILMetadataAnalysisPrinterPass
-    : public PassInfoMixin<DXILMetadataAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<DXILMetadataAnalysisPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit DXILMetadataAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Legacy pass
-class DXILMetadataAnalysisWrapperPass : public ModulePass {
+class LLVM_ABI DXILMetadataAnalysisWrapperPass : public ModulePass {
   std::unique_ptr<dxil::ModuleMetadataInfo> MetadataInfo;
 
 public:

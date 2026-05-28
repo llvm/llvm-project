@@ -143,6 +143,8 @@ Expr<ImpliedDoIndex::Result> FoldOperation(
 template <typename T>
 Expr<T> FoldOperation(FoldingContext &, ArrayConstructor<T> &&);
 Expr<SomeDerived> FoldOperation(FoldingContext &, StructureConstructor &&);
+template <typename T>
+Expr<T> FoldOperation(FoldingContext &, ConditionalExpr<T> &&);
 
 template <typename T>
 std::optional<Constant<T>> Folder<T>::GetNamedConstant(const Symbol &symbol0) {
@@ -1295,8 +1297,6 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
   return Expr<T>{std::move(funcRef)};
 }
 
-Expr<ImpliedDoIndex::Result> FoldOperation(FoldingContext &, ImpliedDoIndex &&);
-
 // Array constructor folding
 template <typename T> class ArrayConstructorFolder {
 public:
@@ -1862,7 +1862,7 @@ Expr<TO> FoldOperation(
                 std::snprintf(buffer, sizeof buffer,
                     "INTEGER(%d) to REAL(%d) conversion", Operand::kind,
                     TO::kind);
-                RealFlagWarnings(ctx, converted.flags, buffer);
+                ctx.RealFlagWarnings(converted.flags, buffer);
               }
               return ScalarConstantToExpr(std::move(converted.value));
             } else if constexpr (FromCat == TypeCategory::Real) {
@@ -1871,7 +1871,7 @@ Expr<TO> FoldOperation(
               if (!converted.flags.empty()) {
                 std::snprintf(buffer, sizeof buffer,
                     "REAL(%d) to REAL(%d) conversion", Operand::kind, TO::kind);
-                RealFlagWarnings(ctx, converted.flags, buffer);
+                ctx.RealFlagWarnings(converted.flags, buffer);
               }
               if (ctx.targetCharacteristics().areSubnormalsFlushedToZero()) {
                 converted.value = converted.value.FlushSubnormalToZero();
@@ -2012,11 +2012,30 @@ Expr<T> FoldOperation(FoldingContext &context, Add<T> &&x) {
     } else {
       auto sum{folded->first.Add(
           folded->second, context.targetCharacteristics().roundingMode())};
-      RealFlagWarnings(context, sum.flags, "addition");
+      context.RealFlagWarnings(sum.flags, "addition");
       if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
         sum.value = sum.value.FlushSubnormalToZero();
       }
       return Expr<T>{Constant<T>{sum.value}};
+    }
+  } else if constexpr (T::category == TypeCategory::Integer ||
+      T::category == TypeCategory::Unsigned) {
+    if (auto c{GetScalarConstantValue<T>(x.right())}) {
+      if (c->IsZero() && x.left().Rank() == 0) {
+        if (IsVariable(x.left())) {
+          return FoldOperation(context, Parentheses<T>{std::move(x.left())});
+        } else {
+          return std::move(x.left());
+        }
+      }
+    } else if (auto c{GetScalarConstantValue<T>(x.left())}) {
+      if (c->IsZero() && x.right().Rank() == 0) {
+        if (IsVariable(x.right())) {
+          return FoldOperation(context, Parentheses<T>{std::move(x.right())});
+        } else {
+          return std::move(x.right());
+        }
+      }
     }
   }
   return Expr<T>{std::move(x)};
@@ -2041,11 +2060,22 @@ Expr<T> FoldOperation(FoldingContext &context, Subtract<T> &&x) {
     } else {
       auto difference{folded->first.Subtract(
           folded->second, context.targetCharacteristics().roundingMode())};
-      RealFlagWarnings(context, difference.flags, "subtraction");
+      context.RealFlagWarnings(difference.flags, "subtraction");
       if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
         difference.value = difference.value.FlushSubnormalToZero();
       }
       return Expr<T>{Constant<T>{difference.value}};
+    }
+  } else if constexpr (T::category == TypeCategory::Integer ||
+      T::category == TypeCategory::Unsigned) {
+    if (auto c{GetScalarConstantValue<T>(x.right())}) {
+      if (c->IsZero() && x.left().Rank() == 0) {
+        if (IsVariable(x.left())) {
+          return FoldOperation(context, Parentheses<T>{std::move(x.left())});
+        } else {
+          return std::move(x.left());
+        }
+      }
     }
   }
   return Expr<T>{std::move(x)};
@@ -2070,7 +2100,7 @@ Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
     } else {
       auto product{folded->first.Multiply(
           folded->second, context.targetCharacteristics().roundingMode())};
-      RealFlagWarnings(context, product.flags, "multiplication");
+      context.RealFlagWarnings(product.flags, "multiplication");
       if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
         product.value = product.value.FlushSubnormalToZero();
       }
@@ -2141,7 +2171,7 @@ Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
         }
       }
       if (!isCanonicalNaNOrInf) {
-        RealFlagWarnings(context, quotient.flags, "division");
+        context.RealFlagWarnings(quotient.flags, "division");
       }
       if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
         quotient.value = quotient.value.FlushSubnormalToZero();
@@ -2201,7 +2231,7 @@ Expr<T> FoldOperation(FoldingContext &context, RealToIntPower<T> &&x) {
       [&](auto &y) -> Expr<T> {
         if (auto folded{OperandsAreConstants(x.left(), y)}) {
           auto power{evaluate::IntPower(folded->first, folded->second)};
-          RealFlagWarnings(context, power.flags, "power with INTEGER exponent");
+          context.RealFlagWarnings(power.flags, "power with INTEGER exponent");
           if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
             power.value = power.value.FlushSubnormalToZero();
           }
@@ -2211,6 +2241,17 @@ Expr<T> FoldOperation(FoldingContext &context, RealToIntPower<T> &&x) {
         }
       },
       x.right().u);
+}
+
+template <typename T>
+Expr<T> FoldOperation(FoldingContext &context, ConditionalExpr<T> &&x) {
+  x.condition() = Fold(context, std::move(x.condition()));
+  // If the condition is a scalar logical constant, select the branch.
+  if (auto cst{GetScalarConstantValue<LogicalResult>(x.condition())}) {
+    return cst->IsTrue() ? Fold(context, std::move(x.thenValue()))
+                         : Fold(context, std::move(x.elseValue()));
+  }
+  return Expr<T>{std::move(x)};
 }
 
 template <typename T>

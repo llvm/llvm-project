@@ -16,6 +16,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -24,6 +25,12 @@ using namespace llvm;
 using namespace dwarf;
 
 namespace {
+static void appendULEB128(SmallVectorImpl<uint8_t> &V, uint64_t Val) {
+  uint8_t Buf[16];
+  unsigned N = encodeULEB128(Val, Buf);
+  V.append(Buf, Buf + N);
+}
+
 class DWARFExpressionCompactPrinterTest : public ::testing::Test {
 public:
   std::unique_ptr<MCRegisterInfo> MRI;
@@ -58,7 +65,7 @@ void DWARFExpressionCompactPrinterTest::TestExprPrinter(
   // result is as expected.
   std::string Result;
   raw_string_ostream OS(Result);
-  DataExtractor DE(ExprData, true, 8);
+  DataExtractor DE(ExprData, true);
   DWARFExpression Expr(DE, 8);
 
   auto GetRegName = [&](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
@@ -140,4 +147,61 @@ TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_nop_OP_reg) {
 
 TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_LLVM_nop_OP_reg) {
   TestExprPrinter({DW_OP_LLVM_user, DW_OP_LLVM_nop, DW_OP_reg0}, "R0");
+}
+
+TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_LLVM_user_unknown_subop) {
+  TestExprPrinter({DW_OP_LLVM_user, DW_OP_LLVM_form_aspace_address},
+                  "<unknown op DW_OP_LLVM_user (233) subop "
+                  "DW_OP_LLVM_form_aspace_address (2)>");
+}
+
+// NVPTX encodes virtual register names as a packed uint64_t DWARF register
+// number; llvm-dwarfdump must still print the string when MC has no mapping.
+TEST(NVPTXPackedRegister, Compact_DW_OP_regx_NoMRI) {
+  SmallVector<uint8_t, 16> Enc;
+  Enc.push_back(DW_OP_regx);
+  appendULEB128(Enc, 0x25726432u);
+
+  std::string Result;
+  raw_string_ostream OS(Result);
+  DataExtractor DE(Enc, true, 8);
+  DWARFExpression Expr(DE, 8);
+
+  printDwarfExpressionCompact(&Expr, OS, nullptr);
+
+  EXPECT_EQ(OS.str(), "%rd2");
+}
+
+TEST(NVPTXPackedRegister, Full_DW_OP_regx_NoMRI) {
+  SmallVector<uint8_t, 16> Enc;
+  Enc.push_back(DW_OP_regx);
+  appendULEB128(Enc, 0x25726431u);
+
+  std::string Result;
+  raw_string_ostream OS(Result);
+  DataExtractor DE(Enc, true, 8);
+  DWARFExpression Expr(DE, 8);
+
+  DIDumpOptions DumpOpts;
+  printDwarfExpression(&Expr, OS, DumpOpts, nullptr);
+
+  EXPECT_EQ(OS.str(), "DW_OP_regx %rd1");
+}
+
+TEST(NVPTXPackedRegister, Full_DW_OP_regx_CallbackMiss) {
+  SmallVector<uint8_t, 16> Enc;
+  Enc.push_back(DW_OP_regx);
+  appendULEB128(Enc, 0x25727332u);
+
+  std::string Result;
+  raw_string_ostream OS(Result);
+  DataExtractor DE(Enc, true, 8);
+  DWARFExpression Expr(DE, 8);
+
+  DIDumpOptions DumpOpts;
+  DumpOpts.GetNameForDWARFReg = [](uint64_t, bool) -> StringRef { return {}; };
+
+  printDwarfExpression(&Expr, OS, DumpOpts, nullptr);
+
+  EXPECT_EQ(OS.str(), "DW_OP_regx %rs2");
 }

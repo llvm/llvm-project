@@ -40,7 +40,7 @@ bool Mangled::IsMangledName(llvm::StringRef name) {
   return Mangled::GetManglingScheme(name) != Mangled::eManglingSchemeNone;
 }
 
-Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef const name) {
+Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef name) {
   if (name.empty())
     return Mangled::eManglingSchemeNone;
 
@@ -393,10 +393,8 @@ void Mangled::Dump(Stream *s) const {
   if (m_mangled) {
     *s << ", mangled = " << m_mangled;
   }
-  if (m_demangled) {
-    const char *demangled = m_demangled.AsCString();
-    s->Printf(", demangled = %s", demangled[0] ? demangled : "<error>");
-  }
+  if (m_demangled)
+    s->Format(", demangled = {0}", m_demangled.GetStringRef());
 }
 
 // Dumps a debug version of this string with extra object and state information
@@ -428,9 +426,9 @@ lldb::LanguageType Mangled::GuessLanguage() const {
   Language::ForEach([this, &result](Language *l) {
     if (l->SymbolNameFitsToLanguage(*this)) {
       result = l->GetLanguageType();
-      return false;
+      return IterationAction::Stop;
     }
-    return true;
+    return IterationAction::Continue;
   });
   return result;
 }
@@ -515,7 +513,7 @@ bool Mangled::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
 /// saves us a lot of compute time. For these kinds of names we only need to
 /// save the mangled name and have the encoding set to "MangledOnly".
 ///
-/// If a mangled obejct has only a demangled name, then we save only that string
+/// If a mangled object has only a demangled name, then we save only that string
 /// and have the encoding set to "DemangledOnly".
 ///
 /// Some mangled objects have both mangled and demangled names, but the
@@ -532,7 +530,7 @@ void Mangled::Encode(DataEncoder &file, ConstStringTable &strtab) const {
     if (m_demangled) {
       // We have both mangled and demangled names. If the demangled name is the
       // counterpart of the mangled name, then we only need to save the mangled
-      // named. If they are different, we need to save both.
+      // name. If they are different, we need to save both.
       ConstString s;
       if (!(m_mangled.GetMangledCounterpart(s) && s == m_demangled))
         encoding = MangledAndDemangled;
@@ -566,8 +564,7 @@ ConstString Mangled::GetBaseName() const {
   if (!demangled_name)
     return {};
 
-  const char *name_str = demangled_name.AsCString();
   const auto &range = demangled_info->BasenameRange;
   return ConstString(
-      llvm::StringRef(name_str + range.first, range.second - range.first));
+      demangled_name.GetStringRef().slice(range.first, range.second));
 }

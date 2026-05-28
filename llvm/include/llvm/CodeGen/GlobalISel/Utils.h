@@ -132,12 +132,10 @@ LLVM_ABI Register constrainOperandRegClass(
 /// generic) virtual register operands to the instruction's register class.
 /// This could involve inserting COPYs before (for uses) or after (for defs).
 /// This requires the number of operands to match the instruction description.
-/// \returns whether operand regclass constraining succeeded.
-///
 // FIXME: Not all instructions have the same number of operands. We should
 // probably expose a constrain helper per operand and let the target selector
 // constrain individual registers, like fast-isel.
-LLVM_ABI bool constrainSelectedInstRegOperands(MachineInstr &I,
+LLVM_ABI void constrainSelectedInstRegOperands(MachineInstr &I,
                                                const TargetInstrInfo &TII,
                                                const TargetRegisterInfo &TRI,
                                                const RegisterBankInfo &RBI);
@@ -155,12 +153,10 @@ LLVM_ABI bool isTriviallyDead(const MachineInstr &MI,
 /// Report an ISel error as a missed optimization remark to the LLVMContext's
 /// diagnostic stream.  Set the FailedISel MachineFunction property.
 LLVM_ABI void reportGISelFailure(MachineFunction &MF,
-                                 const TargetPassConfig &TPC,
                                  MachineOptimizationRemarkEmitter &MORE,
                                  MachineOptimizationRemarkMissed &R);
 
 LLVM_ABI void reportGISelFailure(MachineFunction &MF,
-                                 const TargetPassConfig &TPC,
                                  MachineOptimizationRemarkEmitter &MORE,
                                  const char *PassName, StringRef Msg,
                                  const MachineInstr &MI);
@@ -168,7 +164,6 @@ LLVM_ABI void reportGISelFailure(MachineFunction &MF,
 /// Report an ISel warning as a missed optimization remark to the LLVMContext's
 /// diagnostic stream.
 LLVM_ABI void reportGISelWarning(MachineFunction &MF,
-                                 const TargetPassConfig &TPC,
                                  MachineOptimizationRemarkEmitter &MORE,
                                  MachineOptimizationRemarkMissed &R);
 
@@ -324,12 +319,12 @@ LLVM_ABI std::optional<APFloat>
 ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy, Register Src,
                        const MachineRegisterInfo &MRI);
 
-/// Tries to constant fold a counting-zero operation (G_CTLZ or G_CTTZ) on \p
-/// Src. If \p Src is a vector then it tries to do an element-wise constant
-/// fold.
-LLVM_ABI std::optional<SmallVector<unsigned>>
-ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
-                       std::function<unsigned(APInt)> CB);
+/// Tries to constant fold a unary integer operation (G_CTLZ, G_CTTZ, G_CTPOP
+/// and their _ZERO_POISON variants, G_ABS, G_BSWAP, G_BITREVERSE) on \p Src.
+/// If \p Src is a vector then it tries to do an element-wise constant fold.
+LLVM_ABI SmallVector<APInt>
+ConstantFoldUnaryIntOp(unsigned Opcode, LLT DstTy, Register Src,
+                       const MachineRegisterInfo &MRI);
 
 LLVM_ABI std::optional<SmallVector<APInt>>
 ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
@@ -338,20 +333,13 @@ ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
 
 /// Test if the given value is known to have exactly one bit set. This differs
 /// from computeKnownBits in that it doesn't necessarily determine which bit is
-/// set.
+/// set. When \p OrNegative is true, the value is also considered a power of two
+/// if its negation is a power of two (i.e. its absolute value is a power of
+/// two).
 LLVM_ABI bool
 isKnownToBeAPowerOfTwo(Register Val, const MachineRegisterInfo &MRI,
-                       GISelValueTracking *ValueTracking = nullptr);
-
-/// Returns true if \p Val can be assumed to never be a NaN. If \p SNaN is true,
-/// this returns if \p Val can be assumed to never be a signaling NaN.
-LLVM_ABI bool isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
-                              bool SNaN = false);
-
-/// Returns true if \p Val can be assumed to never be a signaling NaN.
-inline bool isKnownNeverSNaN(Register Val, const MachineRegisterInfo &MRI) {
-  return isKnownNeverNaN(Val, MRI, true);
-}
+                       GISelValueTracking *ValueTracking = nullptr,
+                       bool OrNegative = false);
 
 LLVM_ABI Align inferAlignFromPtrInfo(MachineFunction &MF,
                                      const MachinePointerInfo &MPO);
@@ -463,7 +451,8 @@ LLVM_ABI bool isBuildVectorConstantSplat(const Register Reg,
 /// G_BUILD_VECTOR_TRUNC where all of the elements are \p SplatValue or undef.
 LLVM_ABI bool isBuildVectorConstantSplat(const Register Reg,
                                          const MachineRegisterInfo &MRI,
-                                         APInt SplatValue, bool AllowUndef);
+                                         const APInt &SplatValue,
+                                         bool AllowUndef);
 
 /// Return true if the specified instruction is a G_BUILD_VECTOR or
 /// G_BUILD_VECTOR_TRUNC where all of the elements are \p SplatValue or undef.
@@ -475,7 +464,8 @@ LLVM_ABI bool isBuildVectorConstantSplat(const MachineInstr &MI,
 /// G_BUILD_VECTOR_TRUNC where all of the elements are \p SplatValue or undef.
 LLVM_ABI bool isBuildVectorConstantSplat(const MachineInstr &MI,
                                          const MachineRegisterInfo &MRI,
-                                         APInt SplatValue, bool AllowUndef);
+                                         const APInt &SplatValue,
+                                         bool AllowUndef);
 
 /// Return true if the specified instruction is a G_BUILD_VECTOR or
 /// G_BUILD_VECTOR_TRUNC where all of the elements are 0 or undef.

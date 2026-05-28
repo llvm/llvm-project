@@ -20,6 +20,7 @@ add_header_library(
     libc.hdr.stdint_proxy
     libc.src.__support.macros.attributes
     libc.src.__support.macros.sanitizer
+    libc.src.__support.macros.properties.compiler
 )
 
 add_header_library(
@@ -129,11 +130,13 @@ add_header_library(
     type_traits/invoke.h
     type_traits/is_arithmetic.h
     type_traits/is_array.h
+    type_traits/is_assignable.h
     type_traits/is_base_of.h
     type_traits/is_class.h
     type_traits/is_complex.h
     type_traits/is_const.h
     type_traits/is_constant_evaluated.h
+    type_traits/is_constructible.h
     type_traits/is_convertible.h
     type_traits/is_destructible.h
     type_traits/is_enum.h
@@ -209,7 +212,16 @@ add_object_library(
     libc.hdr.func.malloc
     libc.hdr.func.aligned_alloc
     libc.src.__support.common
+    libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.os
+)
+
+add_header_library(
+  scope
+  HDRS
+    scope.h
+  DEPENDS
+    .utility
 )
 
 add_header_library(
@@ -224,4 +236,7 @@ add_header_library(
   simd
   HDRS
     simd.h
+  DEPENDS
+    .utility
+    .tuple
 )

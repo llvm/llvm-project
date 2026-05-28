@@ -81,10 +81,13 @@ def FIRToSCFPass : Pass<"fir-to-scf"> {
   let description = [{
     Convert FIR structured control flow ops to SCF dialect.
   }];
-  let constructor = "::fir::createFIRToSCFPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::scf::SCFDialect"
   ];
+  let options = [Option<"parallelUnordered", "parallel-unordered", "bool",
+                        /*default=*/"false",
+                        "Allow converting a fir.do_loop with the `unordered` "
+                        "attribute to scf.parallel (experimental).">];
 }
 
 def AnnotateConstantOperands : Pass<"annotate-constant"> {
@@ -212,6 +215,15 @@ def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> 
   ];
 }
 
+def FIRToMemRef : Pass<"fir-to-memref", "::mlir::func::FuncOp"> {
+  let summary = "Convert FIR memory operations to MemRef dialect";
+  let description = [{
+    Lower FIR memory operations (`fir.alloca`, `fir.load`, `fir.store`, 'fir.array_coor', and etc.) to MLIR's MemRef core dialect.
+  }];
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::arith::ArithDialect",
+                           "mlir::memref::MemRefDialect"];
+}
+
 // This needs to be a "mlir::ModuleOp" pass, because we are creating debug for
 // the module in this pass.
 def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
@@ -238,10 +250,26 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
     Option<"isOptimized", "is-optimized",
            "bool", /*default=*/"false",
            "is optimized.">,
+    Option<"debugInfoForProfiling", "debug-info-for-profiling", "bool",
+           /*default=*/"false",
+            "Emit extra debug info to make sample profile more accurate">,
     Option<"inputFilename", "file-name",
            "std::string",
            /*default=*/"std::string{}",
            "name of the input source file">,
+    Option<"dwarfVersion", "dwarf-version",
+           "int32_t",
+           /*default=*/"0",
+           "dwarf version">,
+    Option<"splitDwarfFile", "split-dwarf-file",
+           "std::string", /*default=*/"std::string{}",
+           "Name of the split dwarf file">,
+    Option<"dwarfDebugFlags", "dwarf-debug-flags",
+           "std::string", /*default=*/"std::string{}",
+           "Command-line flags to append to DWARF producer">,
+    Option<"emitFakeUseForArguments", "emit-fake-use-for-arguments",
+           "bool", /*default=*/"false",
+           "Emit fake use for function arguments to extend their lifetime">
   ];
 }
 
@@ -379,10 +407,10 @@ def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
      Set an attribute for the vscale range on functions, to allow scalable
      vector operations to be used on processors with variable vector length.
   }];
-  let options = [
-    Option<"vscaleRange", "vscale-range",
-           "std::pair<unsigned, unsigned>", /*default=*/"std::pair<unsigned, unsigned>{}",
-           "vector scale range">,
+  let options = [Option<"vscaleMin", "vscale-min", "unsigned", /*default=*/"1",
+                        "vector scale minimum value. Defaults to \"1\"">,
+                 Option<"vscaleMax", "vscale-max", "unsigned", /*default=*/"0",
+                        "vector scale maximum value. Defaults to \"0\"">,
   ];
 }
 
@@ -406,7 +434,8 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
             clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::None, "None", ""),
             clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf, "NonLeaf", ""),
             clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::All, "All", ""),
-            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::Reserved, "Reserved", "")
+            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::Reserved, "Reserved", ""),
+            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::NonLeafNoReserve, "NonLeafNoReserve", "")
           )}]>,
        Option<"instrumentFunctionEntry", "instrument-function-entry",
               "std::string", /*default=*/"",
@@ -417,9 +446,9 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
               "Sets the name of the profiling function called during function "
               "exit">,
        Option<"noInfsFPMath", "no-infs-fp-math", "bool", /*default=*/"false",
-              "Set the no-infs-fp-math attribute on functions in the module.">,
+              "Set the ninf flag on instructions in the module.">,
        Option<"noNaNsFPMath", "no-nans-fp-math", "bool", /*default=*/"false",
-              "Set the no-nans-fp-math attribute on functions in the module.">,
+              "Set the nnan flag on instructions in the module.">,
        Option<"approxFuncFPMath", "approx-func-fp-math", "bool",
               /*default=*/"false",
               "Set the afn flag on instructions in the module.">,
@@ -428,13 +457,17 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
               "Set the no-signed-zeros-fp-math attribute on functions in the "
               "module.">,
        Option<"unsafeFPMath", "unsafe-fp-math", "bool", /*default=*/"false",
-              "Set the unsafe-fp-math attribute on functions in the module.">,
+              "Set all fast-math flags on instructions in the module.">,
        Option<"reciprocals", "mrecip", "std::string", /*default=*/"",
               "Set the reciprocal-estimates attribute on functions in the "
               "module.">,
        Option<"preferVectorWidth", "prefer-vector-width", "std::string",
               /*default=*/"",
               "Set the prefer-vector-width attribute on functions in the "
+              "module.">,
+       Option<"UseSampleProfile", "use-sample-profile", "bool",
+              /*default=*/"false",
+              "Set the use-sample-profile attribute on functions in the "
               "module.">,
        Option<"tuneCPU", "tune-cpu", "std::string", /*default=*/"",
               "Set the tune-cpu attribute on functions in the module.">,
@@ -459,11 +492,20 @@ def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
   ];
 }
 
+def CUFAllocationConversion : Pass<"cuf-allocation-convert", "mlir::ModuleOp"> {
+  let summary = "Convert allocation related CUF operations to runtime calls";
+  let dependentDialects = ["fir::FIROpsDialect"];
+}
+
 def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
-  let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::gpu::GPUDialect", "mlir::DLTIDialect"
-  ];
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::gpu::GPUDialect",
+                           "mlir::DLTIDialect"];
+}
+
+def CUFOpConversionLate : Pass<"cuf-convert-late", "mlir::ModuleOp"> {
+  let summary = "Convert CUF operations to runtime calls late in the pipeline";
+  let dependentDialects = ["fir::FIROpsDialect"];
 }
 
 def CUFDeviceGlobal :
@@ -472,12 +514,30 @@ def CUFDeviceGlobal :
   let dependentDialects = [
     "cuf::CUFDialect", "mlir::gpu::GPUDialect", "mlir::NVVM::NVVMDialect"
   ];
+  let options = [
+    Option<"skipDeadDeclares", "skip-dead-declares", "bool",
+           /*default=*/"true",
+           "Skip globals whose only use is a dead fir.declare">,
+    Option<"cudaUnified", "cuda-unified", "bool", /*default=*/"false",
+           "Treat host module globals as unified memory (-gpu=mem:unified): "
+           "clone them into the GPU module as external declarations so PTX "
+           "emits `.extern .global ...`. The CUDA runtime maps the device "
+           "extern to the host pointer via __cudaRegisterHostVar.">
+  ];
 }
 
 def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
   let summary = "Add constructor to register CUDA Fortran allocators";
   let dependentDialects = [
     "cuf::CUFDialect", "mlir::func::FuncDialect", "mlir::DLTIDialect"
+  ];
+  let options = [
+    Option<"cudaUnified", "cuda-unified", "bool", /*default=*/"false",
+           "Treat host module globals as unified memory (-gpu=mem:unified): "
+           "register every plain host module global that is mirrored in the "
+           "GPU module via CUFRegisterExternalVariable, so the CUDA driver "
+           "maps the device-side symbol to the host pointer at module-load "
+           "time and HMM/ATS handles migration.">
   ];
 }
 
@@ -502,6 +562,41 @@ def CUFComputeSharedMemoryOffsetsAndSize
     "cuf::CUFDialect", "fir::FIROpsDialect", "mlir::gpu::GPUDialect",
     "mlir::DLTIDialect"
   ];
+}
+
+def CUFDeviceFuncTransform
+    : Pass<"cuf-transform-device-func", "::mlir::ModuleOp"> {
+  let summary = "Transform device function to GPU func";
+  let dependentDialects = ["mlir::gpu::GPUDialect",
+                           "mlir::cf::ControlFlowDialect",
+                           "mlir::NVVM::NVVMDialect"];
+  let options = [Option<"computeCap", "compute-capability", "int",
+                        /*default=*/"0", "CUDA compute capability version">];
+}
+
+def CUFFunctionRewrite : Pass<"cuf-function-rewrite", ""> {
+  let summary = "Convert some CUDA Fortran specific call";
+  let dependentDialects = ["fir::FIROpsDialect"];
+}
+
+def CUFLaunchAttachAttr : Pass<"cuf-launch-attach-attr", ""> {
+  let summary = "Attach CUDA attribute to CUF kernel generated launch";
+  let description = [{
+    CUF kernel is generated via gpu.launch and then outlined. The resulting
+    launch operation needs to hava a CUDA attribute attached so it will
+    be distinguishable from other launch.
+  }];
+  let dependentDialects = ["cuf::CUFDialect"];
+}
+
+def CUFPredefinedVarToGPU
+    : Pass<"cuf-predefined-var-to-gpu", "::mlir::func::FuncOp"> {
+  let summary = "Transform predefined variables to GPU operations";
+  let description = [{
+    Change the predefined variables injected in the device function to their
+    corresponding NVVM dialect operations.
+  }];
+  let dependentDialects = ["mlir::NVVM::NVVMDialect"];
 }
 
 def SetRuntimeCallAttributes
@@ -551,6 +646,17 @@ def SimplifyFIROperations : Pass<"simplify-fir-operations", "mlir::ModuleOp"> {
       "Prefer expanding without using Fortran runtime calls.">];
 }
 
+def ConvertComplexPow : Pass<"convert-complex-pow", "mlir::ModuleOp"> {
+  let summary = "Convert complex.pow operations to library calls";
+  let description = [{
+    Replace `complex.pow` operations with calls to the appropriate
+    Fortran runtime or libm functions.
+  }];
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::func::FuncDialect",
+                           "mlir::complex::ComplexDialect",
+                           "mlir::arith::ArithDialect"];
+}
+
 def OptimizeArrayRepacking
     : Pass<"optimize-array-repacking", "mlir::func::FuncOp"> {
   let summary = "Optimizes redundant array repacking operations";
@@ -559,6 +665,36 @@ def OptimizeArrayRepacking
     then this pass erases such operations. The corresponding
     fir.unpack_array operations are also removed.
   }];
+}
+
+def MIFOpConversion : Pass<"mif-convert", "mlir::ModuleOp"> {
+  let summary = "Convert some MIF operations to runtime calls";
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect",
+                           "mlir::cf::ControlFlowDialect"];
+}
+
+def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {
+  let summary = "Hoist invariants from loops";
+  let description = [{
+    Hoist invariants from loops. This is a FIR-specific version of loop
+    invariant code motion, which relies on FIR types, operations (such as
+    fir.declare) and interfaces such as FortranObjectViewOpInterface.
+    The pass only moves existing operations, so there are no dependent
+    dialects.
+  }];
+  let options = [Option<"hoistFromNestedRegions", "hoist-from-nested-regions",
+                        "::fir::LICMNestedHoistingMode",
+                        /*default=*/"::fir::LICMNestedHoistingMode::Cheap",
+                        "Control hoisting of invariant ops from nested regions "
+                        "(e.g. scf.if within loops)",
+                        [{::llvm::cl::values(
+            clEnumValN(::fir::LICMNestedHoistingMode::None,
+                       "none", "Do not hoist from nested regions"),
+            clEnumValN(::fir::LICMNestedHoistingMode::Cheap,
+                       "cheap", "Only hoist cheap ops like fir.convert"),
+            clEnumValN(::fir::LICMNestedHoistingMode::Aggressive,
+                       "aggressive", "Hoist all safe invariant ops")
+           )}]>];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

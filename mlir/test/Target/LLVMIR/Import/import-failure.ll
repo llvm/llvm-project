@@ -1,16 +1,14 @@
 ; RUN: not mlir-translate -import-llvm -emit-expensive-warnings -split-input-file %s 2>&1 -o /dev/null | FileCheck %s
 
-; Check that debug intrinsics with an unsupported argument are dropped.
-
-declare void @llvm.dbg.value(metadata, metadata, metadata)
+; Check that debug records with an unsupported argument are dropped.
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: warning: dropped intrinsic: tail call void @llvm.dbg.value(metadata !DIArgList(i64 %{{.*}}, i64 undef), metadata !3, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 1, DW_OP_mul, DW_OP_plus, DW_OP_stack_value))
+; CHECK-SAME: warning: unhandled debug variable record #dbg_value(!DIArgList(i64 %{{.*}}, i64 undef), !{{.*}}, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 1, DW_OP_mul, DW_OP_plus, DW_OP_stack_value), !{{.*}})
 ; CHECK:      import-failure.ll
-; CHECK-SAME: warning: dropped intrinsic: tail call void @llvm.dbg.value(metadata !6, metadata !3, metadata !DIExpression())
+; CHECK-SAME: warning: unhandled debug variable record #dbg_value(!{{.*}}, !{{.*}}, !DIExpression(), !{{.*}})
 define void @unsupported_argument(i64 %arg1) {
-  tail call void @llvm.dbg.value(metadata !DIArgList(i64 %arg1, i64 undef), metadata !3, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 1, DW_OP_mul, DW_OP_plus, DW_OP_stack_value)), !dbg !5
-  tail call void @llvm.dbg.value(metadata !6, metadata !3, metadata !DIExpression()), !dbg !5
+  #dbg_value(!DIArgList(i64 %arg1, i64 undef), !3, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 1, DW_OP_mul, DW_OP_plus, DW_OP_stack_value), !5)
+  #dbg_value(!6, !3, !DIExpression(), !5)
   ret void
 }
 
@@ -20,9 +18,11 @@ define void @unsupported_argument(i64 %arg1) {
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "import-failure.ll", directory: "/")
 !3 = !DILocalVariable(scope: !4, name: "arg1", file: !2, line: 1, arg: 1, align: 64);
-!4 = distinct !DISubprogram(name: "intrinsic", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!4 = distinct !DISubprogram(name: "intrinsic", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
 !5 = !DILocation(line: 1, column: 2, scope: !4)
 !6 = !{}
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 

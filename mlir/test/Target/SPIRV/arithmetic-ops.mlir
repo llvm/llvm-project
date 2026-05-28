@@ -1,6 +1,11 @@
 // RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip %s | FileCheck %s
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, BFloat16TypeKHR, BFloat16DotProductKHR], [SPV_KHR_bfloat16]> {
   spirv.func @fmul(%arg0 : f32, %arg1 : f32) "None" {
     // CHECK: {{%.*}}= spirv.FMul {{%.*}}, {{%.*}} : f32
     %0 = spirv.FMul %arg0, %arg1 : f32
@@ -49,6 +54,16 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
   spirv.func @imul(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
     // CHECK: {{%.*}} = spirv.IMul {{%.*}}, {{%.*}} : vector<4xi32>
     %0 = spirv.IMul %arg0, %arg1 : vector<4xi32>
+    spirv.Return
+  }
+  spirv.func @isub_borrow(%arg0 : i32, %arg1 : i32) "None" {
+    // CHECK: {{%.*}} = spirv.ISubBorrow {{%.*}}, {{%.*}} : !spirv.struct<(i32, i32)>
+    %0 = spirv.ISubBorrow %arg0, %arg1 : !spirv.struct<(i32, i32)>
+    spirv.Return
+  }
+  spirv.func @isub_borrow_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.ISubBorrow {{%.*}}, {{%.*}} : !spirv.struct<(vector<4xi32>, vector<4xi32>)>
+    %0 = spirv.ISubBorrow %arg0, %arg1 : !spirv.struct<(vector<4xi32>, vector<4xi32>)>
     spirv.Return
   }
   spirv.func @udiv(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {

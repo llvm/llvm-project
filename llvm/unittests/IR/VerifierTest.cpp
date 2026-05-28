@@ -9,6 +9,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -20,7 +21,7 @@
 #include "llvm/IR/Module.h"
 #include "gtest/gtest.h"
 
-namespace llvm {
+using namespace llvm;
 namespace {
 
 TEST(VerifierTest, Branch_i1) {
@@ -32,11 +33,11 @@ TEST(VerifierTest, Branch_i1) {
   BasicBlock *Exit = BasicBlock::Create(C, "exit", F);
   ReturnInst::Create(C, Exit);
 
-  // To avoid triggering an assertion in BranchInst::Create, we first create
+  // To avoid triggering an assertion in CondBrInst::Create, we first create
   // a branch with an 'i1' condition ...
 
   Constant *False = ConstantInt::getFalse(C);
-  BranchInst *BI = BranchInst::Create(Exit, Exit, False, Entry);
+  CondBrInst *BI = CondBrInst::Create(False, Exit, Exit, Entry);
 
   // ... then use setOperand to redirect it to a value of different type.
 
@@ -75,7 +76,7 @@ TEST(VerifierTest, Freeze) {
 
   FI_dbl->eraseFromParent();
 
-  // Valid type : freeze(i32*)
+  // Valid type : freeze(ptr)
   PointerType *PT = PointerType::get(C, 0);
   ConstantPointerNull *CPN = ConstantPointerNull::get(PT);
   FreezeInst *FI_ptr = new FreezeInst(CPN);
@@ -232,8 +233,9 @@ TEST(VerifierTest, DetectInvalidDebugInfo) {
     LLVMContext C;
     Module M("M", C);
     DIBuilder DIB(M);
-    DIB.createCompileUnit(dwarf::DW_LANG_C89, DIB.createFile("broken.c", "/"),
-                          "unittest", false, "", 0);
+    DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C89),
+                          DIB.createFile("broken.c", "/"), "unittest", false,
+                          "", 0);
     DIB.finalize();
     EXPECT_FALSE(verifyModule(M));
 
@@ -244,10 +246,29 @@ TEST(VerifierTest, DetectInvalidDebugInfo) {
     EXPECT_TRUE(verifyModule(M));
   }
   {
+    // A DICompileUnit whose dialect is outside the defined enumeration is
+    // rejected by the verifier. The textual IR parser, the bitcode reader,
+    // and the C API all guard against this, so this path is only reachable
+    // via programmatic IR construction.
     LLVMContext C;
     Module M("M", C);
     DIBuilder DIB(M);
-    auto *CU = DIB.createCompileUnit(dwarf::DW_LANG_C89,
+    const uint16_t OutOfRangeDialect = dwarf::DW_LLVM_LANG_DIALECT_max + 1;
+    DIB.createCompileUnit(
+        DISourceLanguageName(dwarf::DW_LANG_C89, OutOfRangeDialect),
+        DIB.createFile("broken.c", "/"), "unittest", false, "", 0);
+    DIB.finalize();
+
+    std::string Error;
+    raw_string_ostream ErrorOS(Error);
+    EXPECT_TRUE(verifyModule(M, &ErrorOS));
+    EXPECT_TRUE(StringRef(Error).contains("invalid language dialect")) << Error;
+  }
+  {
+    LLVMContext C;
+    Module M("M", C);
+    DIBuilder DIB(M);
+    auto *CU = DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C89),
                                      DIB.createFile("broken.c", "/"),
                                      "unittest", false, "", 0);
     new GlobalVariable(M, Type::getInt8Ty(C), false,
@@ -257,8 +278,9 @@ TEST(VerifierTest, DetectInvalidDebugInfo) {
                                Function::ExternalLinkage, "f", M);
     IRBuilder<> Builder(BasicBlock::Create(C, "", F));
     Builder.CreateUnreachable();
+    auto *SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
     F->setSubprogram(DIB.createFunction(
-        CU, "f", "f", DIB.createFile("broken.c", "/"), 1, nullptr, 1,
+        CU, "f", "f", DIB.createFile("broken.c", "/"), 1, SPType, 1,
         DINode::FlagZero,
         DISubprogram::SPFlagLocalToUnit | DISubprogram::SPFlagDefinition));
     DIB.finalize();
@@ -316,9 +338,9 @@ TEST(VerifierTest, SwitchInst) {
 
   BasicBlock *Exit = BasicBlock::Create(C, "exit", F);
 
-  BranchInst::Create(Exit, Default);
-  BranchInst::Create(Exit, OnTwo);
-  BranchInst::Create(Exit, OnOne);
+  UncondBrInst::Create(Exit, Default);
+  UncondBrInst::Create(Exit, OnTwo);
+  UncondBrInst::Create(Exit, OnOne);
   ReturnInst::Create(C, Exit);
 
   Value *Cond = F->getArg(0);
@@ -327,9 +349,6 @@ TEST(VerifierTest, SwitchInst) {
   Switch->addCase(ConstantInt::get(Int32Ty, 2), OnTwo);
 
   EXPECT_FALSE(verifyFunction(*F));
-  // set one case value to function argument.
-  Switch->setOperand(2, F->getArg(1));
-  EXPECT_TRUE(verifyFunction(*F));
 }
 
 TEST(VerifierTest, CrossFunctionRef) {
@@ -374,7 +393,107 @@ TEST(VerifierTest, AtomicRMW) {
   Constant *CV = ConstantVector::getSplat(ElementCount::getScalable(2), CF);
   new AtomicRMWInst(AtomicRMWInst::FAdd, Ptr, CV, Align(8),
                     AtomicOrdering::SequentiallyConsistent, SyncScope::System,
-                    Entry);
+                    /*Elementwise=*/false, Entry);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(StringRef(Error).starts_with(
+      "atomicrmw fadd operand must have floating-point or "
+      "fixed vector of floating-point type!"))
+      << Error;
+}
+
+TEST(VerifierTest, AtomicRMWElementwiseScalar) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *I32Ty = Type::getInt32Ty(C);
+  Constant *CI = ConstantInt::get(I32Ty, 0);
+
+  new AtomicRMWInst(AtomicRMWInst::Add, Ptr, CI, Align(4),
+                    AtomicOrdering::Monotonic, SyncScope::System,
+                    /*Elementwise=*/true, Entry);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(StringRef(Error).starts_with(
+      "atomicrmw elementwise operand must have fixed vector type!"))
+      << Error;
+}
+
+TEST(VerifierTest, AtomicRMWElementwiseIntOpOnFPVector) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *FPTy = Type::getFloatTy(C);
+  Constant *CV = ConstantVector::getSplat(ElementCount::getFixed(4),
+                                          ConstantFP::getZero(FPTy));
+
+  new AtomicRMWInst(AtomicRMWInst::Add, Ptr, CV, Align(16),
+                    AtomicOrdering::Monotonic, SyncScope::System,
+                    /*Elementwise=*/true, Entry);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(
+      StringRef(Error).starts_with("atomicrmw add operand must have integer"))
+      << Error;
+}
+
+TEST(VerifierTest, AtomicRMWElementwiseOddSizedVector) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *I32Ty = Type::getInt32Ty(C);
+  Constant *CV = ConstantVector::getSplat(ElementCount::getFixed(5),
+                                          ConstantInt::get(I32Ty, 0));
+
+  new AtomicRMWInst(AtomicRMWInst::Add, Ptr, CV, Align(4),
+                    AtomicOrdering::Monotonic, SyncScope::System,
+                    /*Elementwise=*/true, Entry);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(StringRef(Error).starts_with(
+      "atomic memory access' operand must have a power-of-two size"))
+      << Error;
+}
+
+TEST(VerifierTest, AtomicRMWElementwiseFPOpOnIntVector) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *I32Ty = Type::getInt32Ty(C);
+  Constant *CV = ConstantVector::getSplat(ElementCount::getFixed(4),
+                                          ConstantInt::get(I32Ty, 0));
+
+  new AtomicRMWInst(AtomicRMWInst::FAdd, Ptr, CV, Align(16),
+                    AtomicOrdering::Monotonic, SyncScope::System,
+                    /*Elementwise=*/true, Entry);
   ReturnInst::Create(C, Entry);
 
   std::string Error;
@@ -416,5 +535,61 @@ TEST(VerifierTest, GetElementPtrInst) {
       << Error;
 }
 
+TEST(VerifierTest, DeeplyNested) {
+  LLVMContext Ctx;
+  Module M("M", Ctx);
+
+  // Construct an extremely deeply nested metadata node that should cause
+  // a stack overflow on most platforms if recursion through the entire
+  // chain is performed.
+  Metadata *CurrentMetadataNode =
+      ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(Ctx), 0));
+  for (int i = 0; i < 100000; ++i) {
+    CurrentMetadataNode = MDTuple::get(Ctx, {CurrentMetadataNode});
+  }
+
+  NamedMDNode *NamedMetadataNode = M.getOrInsertNamedMetadata("foo");
+  NamedMetadataNode->addOperand(cast<MDNode>(CurrentMetadataNode));
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_FALSE(verifyModule(M, &ErrorOS));
+}
+
+TEST(VerifierTest, IntrinsicRetInvalidStruct) {
+  LLVMContext Ctx;
+
+  // Create 2 invalid struct types for @llvm.nvvm.elect.sync intrinsic.
+  Type *I32Ty = Type::getInt32Ty(Ctx);
+  Type *I1Ty = Type::getInt1Ty(Ctx);
+
+  StructType *NonLiteral = StructType::create(Ctx, {I32Ty, I1Ty}, "st");
+  StructType *LiteralPacked =
+      StructType::get(Ctx, {I32Ty, I1Ty}, /*isPacked=*/true);
+  for (StructType *STy : {NonLiteral, LiteralPacked}) {
+    Module M("M", Ctx);
+    FunctionType *IntrFTy = FunctionType::get(STy, I32Ty, /*isVarArg=*/false);
+    Function *Intr = Function::Create(IntrFTy, Function::InternalLinkage,
+                                      "llvm.nvvm.elect.sync", M);
+
+    FunctionType *FTy =
+        FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
+    Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+    BasicBlock *Entry = BasicBlock::Create(Ctx, "entry", F);
+
+    Constant *Zero = ConstantInt::get(I32Ty, 0);
+    CallInst::Create(Intr, Zero, /*Bundles=*/{}, "ci", Entry);
+    ReturnInst::Create(Ctx, Entry);
+
+    std::string Error;
+    raw_string_ostream ErrorOS(Error);
+    EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+
+    EXPECT_TRUE(StringRef(Error).starts_with(
+        "intrinsic return type expected literal non-packed struct with 2 "
+        "elements, but got"))
+        << Error;
+  }
+}
+
 } // end anonymous namespace
-} // end namespace llvm

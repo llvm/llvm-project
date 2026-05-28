@@ -118,6 +118,45 @@ spirv.func @sin(%arg0: f32, %arg1: vector<3xf16>) "None" {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.Pow
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @pow
+spirv.func @pow(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.pow(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  %0 = spirv.GL.Pow %arg0, %arg0 : f32
+  // CHECK: llvm.intr.pow(%{{.*}}, %{{.*}}) : (vector<3xf16>, vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.Pow %arg1, %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Fma
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @fma
+spirv.func @fma(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.fma(%{{.*}}, %{{.*}}, %{{.*}}) : (f32, f32, f32) -> f32
+  %0 = spirv.GL.Fma %arg0, %arg0, %arg0 : f32
+  // CHECK: llvm.intr.fma(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<3xf16>, vector<3xf16>, vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.Fma %arg1, %arg1, %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.SAbs
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @sabs
+spirv.func @sabs(%arg0: i16, %arg1: vector<3xi32>) "None" {
+  // CHECK: "llvm.intr.abs"(%{{.*}}) <{is_int_min_poison = false}> : (i16) -> i16
+  %0 = spirv.GL.SAbs %arg0 : i16
+  // CHECK: "llvm.intr.abs"(%{{.*}}) <{is_int_min_poison = false}> : (vector<3xi32>) -> vector<3xi32>
+  %1 = spirv.GL.SAbs %arg1 : vector<3xi32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.SMax
 //===----------------------------------------------------------------------===//
 
@@ -144,6 +183,32 @@ spirv.func @smin(%arg0: i16, %arg1: vector<3xi32>) "None" {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.UMax
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @umax
+spirv.func @umax(%arg0: i16, %arg1: vector<3xi32>) "None" {
+  // CHECK: llvm.intr.umax(%{{.*}}, %{{.*}}) : (i16, i16) -> i16
+  %0 = spirv.GL.UMax %arg0, %arg0 : i16
+  // CHECK: llvm.intr.umax(%{{.*}}, %{{.*}}) : (vector<3xi32>, vector<3xi32>) -> vector<3xi32>
+  %1 = spirv.GL.UMax %arg1, %arg1 : vector<3xi32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.UMin
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @umin
+spirv.func @umin(%arg0: i16, %arg1: vector<3xi32>) "None" {
+  // CHECK: llvm.intr.umin(%{{.*}}, %{{.*}}) : (i16, i16) -> i16
+  %0 = spirv.GL.UMin %arg0, %arg0 : i16
+  // CHECK: llvm.intr.umin(%{{.*}}, %{{.*}}) : (vector<3xi32>, vector<3xi32>) -> vector<3xi32>
+  %1 = spirv.GL.UMin %arg1, %arg1 : vector<3xi32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.Sqrt
 //===----------------------------------------------------------------------===//
 
@@ -162,9 +227,7 @@ spirv.func @sqrt(%arg0: f32, %arg1: vector<3xf16>) "None" {
 
 // CHECK-LABEL: @tan
 spirv.func @tan(%arg0: f32) "None" {
-  // CHECK: %[[SIN:.*]] = llvm.intr.sin(%{{.*}}) : (f32) -> f32
-  // CHECK: %[[COS:.*]] = llvm.intr.cos(%{{.*}}) : (f32) -> f32
-  // CHECK: llvm.fdiv %[[SIN]], %[[COS]] : f32
+  // CHECK: llvm.intr.tan(%{{.*}}) : (f32) -> f32
   %0 = spirv.GL.Tan %arg0 : f32
   spirv.Return
 }
@@ -175,14 +238,86 @@ spirv.func @tan(%arg0: f32) "None" {
 
 // CHECK-LABEL: @tanh
 spirv.func @tanh(%arg0: f32) "None" {
-  // CHECK: %[[TWO:.*]] = llvm.mlir.constant(2.000000e+00 : f32) : f32
-  // CHECK: %[[X2:.*]] = llvm.fmul %[[TWO]], %{{.*}} : f32
-  // CHECK: %[[EXP:.*]] = llvm.intr.exp(%[[X2]]) : (f32) -> f32
-  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
-  // CHECK: %[[T0:.*]] = llvm.fsub %[[EXP]], %[[ONE]] : f32
-  // CHECK: %[[T1:.*]] = llvm.fadd %[[EXP]], %[[ONE]] : f32
-  // CHECK: llvm.fdiv %[[T0]], %[[T1]] : f32
+  // CHECK: llvm.intr.tanh(%{{.*}}) : (f32) -> f32
   %0 = spirv.GL.Tanh %arg0 : f32
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Exp2
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @exp2
+spirv.func @exp2(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.exp2(%{{.*}}) : (f32) -> f32
+  %0 = spirv.GL.Exp2 %arg0 : f32
+  // CHECK: llvm.intr.exp2(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.Exp2 %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Log2
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @log2
+spirv.func @log2(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.log2(%{{.*}}) : (f32) -> f32
+  %0 = spirv.GL.Log2 %arg0 : f32
+  // CHECK: llvm.intr.log2(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.Log2 %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Round
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @round
+spirv.func @round(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.round(%{{.*}}) : (f32) -> f32
+  %0 = spirv.GL.Round %arg0 : f32
+  // CHECK: llvm.intr.round(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.Round %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.RoundEven
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @round_even
+spirv.func @round_even(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.roundeven(%{{.*}}) : (f32) -> f32
+  %0 = spirv.GL.RoundEven %arg0 : f32
+  // CHECK: llvm.intr.roundeven(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.RoundEven %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Sinh
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @sinh
+spirv.func @sinh(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.sinh(%{{.*}}) : (f32) -> f32
+  %0 = spirv.GL.Sinh %arg0 : f32
+  // CHECK: llvm.intr.sinh(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.Sinh %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Cosh
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @cosh
+spirv.func @cosh(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.cosh(%{{.*}}) : (f32) -> f32
+  %0 = spirv.GL.Cosh %arg0 : f32
+  // CHECK: llvm.intr.cosh(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.Cosh %arg1 : vector<3xf16>
   spirv.Return
 }
 

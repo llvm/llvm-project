@@ -6,6 +6,9 @@
 // Ensure that we do not run into conflicts when offloading.
 // RUN: %clang_cc1 %s -DIS_STATIC=static -ffreestanding -fopenmp -fopenmp-is-target-device -aux-triple x86_64-unknown-linux-gnu
 // RUN: %clang_cc1 -DIS_STATIC="" -triple nvptx64-nvidia-cuda -aux-triple x86_64-unknown-linux-gnu -aux-target-cpu x86-64 -fcuda-is-device -x cuda %s -o -
+// RUN: %clang_cc1 -DIS_STATIC="" -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu -aux-target-cpu x86-64 -fcuda-is-device -x cuda %s -o -
+// RUN: %clang_cc1 -DIS_STATIC="" -triple spirv64 -aux-triple x86_64-unknown-linux-gnu -aux-target-cpu x86-64 -fcuda-is-device -x cuda %s -o -
+// RUN: %clang_cc1 -DIS_STATIC="" -triple spirv64 -aux-triple x86_64-unknown-linux-gnu -aux-target-cpu x86-64 -fsycl-is-device %s -o -
 
 typedef __SIZE_TYPE__ size_t;
 

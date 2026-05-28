@@ -21,6 +21,11 @@
 using namespace mlir;
 using namespace cir;
 
+namespace mlir {
+#define GEN_PASS_DEF_CIRSIMPLIFY
+#include "clang/CIR/Dialect/Passes.h.inc"
+} // namespace mlir
+
 //===----------------------------------------------------------------------===//
 // Rewrite patterns
 //===----------------------------------------------------------------------===//
@@ -120,7 +125,7 @@ private:
 ///
 ///    %0 = cir.select if %condition then false else true
 ///    ->
-///    %0 = cir.unary not %condition
+///    %0 = cir.not %condition
 struct SimplifySelect : public OpRewritePattern<SelectOp> {
   using OpRewritePattern<SelectOp>::OpRewritePattern;
 
@@ -143,10 +148,9 @@ struct SimplifySelect : public OpRewritePattern<SelectOp> {
       return mlir::success();
     }
 
-    // cir.select if %0 then #false else #true -> cir.unary not %0
+    // cir.select if %0 then #false else #true -> cir.not %0
     if (!trueValue.getValue() && falseValue.getValue()) {
-      rewriter.replaceOpWithNewOp<cir::UnaryOp>(op, cir::UnaryOpKind::Not,
-                                                op.getCondition());
+      rewriter.replaceOpWithNewOp<cir::NotOp>(op, op.getCondition());
       return mlir::success();
     }
 
@@ -283,7 +287,7 @@ struct SimplifyVecSplat : public OpRewritePattern<VecSplatOp> {
 // CIRSimplifyPass
 //===----------------------------------------------------------------------===//
 
-struct CIRSimplifyPass : public CIRSimplifyBase<CIRSimplifyPass> {
+struct CIRSimplifyPass : public impl::CIRSimplifyBase<CIRSimplifyPass> {
   using CIRSimplifyBase::CIRSimplifyBase;
 
   void runOnOperation() override;

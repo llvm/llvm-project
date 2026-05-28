@@ -52,12 +52,14 @@ public:
     K_Decl = 3,
     K_Elem = 5,
     K_RVO = 6,
-    K_InitList = 7
+    K_InitList = 7,
+    K_DIE = 8,
   };
 
   static InitLink This() { return InitLink{K_This}; }
   static InitLink InitList() { return InitLink{K_InitList}; }
   static InitLink RVO() { return InitLink{K_RVO}; }
+  static InitLink DIE() { return InitLink{K_DIE}; }
   static InitLink Field(unsigned Offset) {
     InitLink IL{K_Field};
     IL.Offset = Offset;
@@ -102,7 +104,7 @@ struct VarCreationState {
   bool notCreated() const { return !S; }
 };
 
-enum class ScopeKind { Call, Block };
+enum class ScopeKind { Block, FullExpression, Call };
 
 /// Compilation context for expressions.
 template <class Emitter>
@@ -112,8 +114,22 @@ protected:
   // Aliases for types defined in the emitter.
   using LabelTy = typename Emitter::LabelTy;
   using AddrTy = typename Emitter::AddrTy;
-  using OptLabelTy = std::optional<LabelTy>;
+  using OptLabelTy = UnsignedOrNone;
   using CaseMap = llvm::DenseMap<const SwitchCase *, LabelTy>;
+
+  struct LabelInfo {
+    const Stmt *Name;
+    const VariableScope<Emitter> *BreakOrContinueScope;
+    OptLabelTy BreakLabel;
+    OptLabelTy ContinueLabel;
+    OptLabelTy DefaultLabel;
+    LabelInfo(const Stmt *Name, OptLabelTy BreakLabel, OptLabelTy ContinueLabel,
+              OptLabelTy DefaultLabel,
+              const VariableScope<Emitter> *BreakOrContinueScope)
+        : Name(Name), BreakOrContinueScope(BreakOrContinueScope),
+          BreakLabel(BreakLabel), ContinueLabel(ContinueLabel),
+          DefaultLabel(DefaultLabel) {}
+  };
 
   /// Current compilation context.
   Context &Ctx;
@@ -214,6 +230,9 @@ public:
   bool VisitCXXDeleteExpr(const CXXDeleteExpr *E);
   bool VisitBlockExpr(const BlockExpr *E);
   bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
+  bool VisitObjCDictionaryLiteral(const ObjCDictionaryLiteral *E);
+  bool VisitObjCArrayLiteral(const ObjCArrayLiteral *E);
+  bool VisitDesignatedInitUpdateExpr(const DesignatedInitUpdateExpr *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
@@ -235,13 +254,15 @@ public:
 protected:
   bool visitStmt(const Stmt *S);
   bool visitExpr(const Expr *E, bool DestroyToplevelScope) override;
+  bool visitLValueExpr(const Expr *E, bool DestroyToplevelScope) override;
   bool visitFunc(const FunctionDecl *F) override;
 
-  bool visitDeclAndReturn(const VarDecl *VD, bool ConstantContext) override;
+  bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
+                          bool ConstantContext) override;
 
 protected:
   /// Emits scope cleanup instructions.
-  void emitCleanup();
+  bool emitCleanup();
 
   /// Returns a record type from a record or pointer type.
   const RecordType *getRecordTy(QualType Ty);
@@ -282,6 +303,8 @@ protected:
   /// been created. visitInitializer() then relies on a pointer to this
   /// variable being on top of the stack.
   bool visitInitializer(const Expr *E);
+  /// Similar, but will also pop the pointer.
+  bool visitInitializerPop(const Expr *E);
   bool visitAsLValue(const Expr *E);
   /// Evaluates an expression for side effects and discards the result.
   bool discard(const Expr *E);
@@ -289,10 +312,9 @@ protected:
   /// intact.
   bool delegate(const Expr *E);
   /// Creates and initializes a variable from the given decl.
-  VarCreationState visitVarDecl(const VarDecl *VD, bool Toplevel = false,
-                                bool IsConstexprUnknown = false);
-  VarCreationState visitDecl(const VarDecl *VD,
-                             bool IsConstexprUnknown = false);
+  VarCreationState visitVarDecl(const VarDecl *VD, const Expr *Init,
+                                bool Toplevel = false);
+  VarCreationState visitDecl(const VarDecl *VD);
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
   bool visitAPValueInitializer(const APValue &Val, const Expr *E, QualType T);
@@ -311,15 +333,12 @@ protected:
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
-                                  const ValueDecl *ExtendingDecl = nullptr,
-                                  ScopeKind SC = ScopeKind::Block,
-                                  bool IsConstexprUnknown = false);
+                                  bool IsVolatile = false,
+                                  ScopeKind SC = ScopeKind::Block);
 
   /// Allocates a space storing a local given its type.
   UnsignedOrNone allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
-                               const ValueDecl *ExtendingDecl = nullptr,
-                               ScopeKind = ScopeKind::Block,
-                               bool IsConstexprUnknown = false);
+                               ScopeKind = ScopeKind::Block);
   UnsignedOrNone allocateTemporary(const Expr *E);
 
 private:
@@ -374,6 +393,8 @@ private:
   }
 
   bool emitPrimCast(PrimType FromT, PrimType ToT, QualType ToQT, const Expr *E);
+  bool emitIntegralCast(PrimType FromT, PrimType ToT, QualType ToQT,
+                        const Expr *E);
   PrimType classifyComplexElementType(QualType T) const {
     assert(T->isAnyComplexType());
 
@@ -387,18 +408,46 @@ private:
     return *this->classify(T->getAs<VectorType>()->getElementType());
   }
 
+  PrimType classifyMatrixElementType(QualType T) const {
+    assert(T->isMatrixType());
+    return *this->classify(T->getAs<MatrixType>()->getElementType());
+  }
+
   bool emitComplexReal(const Expr *SubExpr);
   bool emitComplexBoolCast(const Expr *E);
   bool emitComplexComparison(const Expr *LHS, const Expr *RHS,
                              const BinaryOperator *E);
   bool emitRecordDestructionPop(const Record *R, SourceInfo Loc);
   bool emitDestructionPop(const Descriptor *Desc, SourceInfo Loc);
-  bool emitDummyPtr(const DeclTy &D, const Expr *E);
+  bool emitDummyPtr(const DeclTy &D, const Expr *E, bool CU = false);
   bool emitFloat(const APFloat &F, const Expr *E);
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
   bool emitBuiltinBitCast(const CastExpr *E);
+
+  bool emitHLSLAggregateSplat(PrimType SrcT, unsigned SrcOffset,
+                              QualType DestType, const Expr *E);
+
+  /// A scalar element extracted during HLSL aggregate flattening.
+  struct HLSLFlatElement {
+    unsigned LocalOffset;
+    PrimType Type;
+  };
+  unsigned countHLSLFlatElements(QualType Ty);
+  bool emitHLSLFlattenAggregate(QualType SrcType, unsigned SrcPtrOffset,
+                                SmallVectorImpl<HLSLFlatElement> &Elements,
+                                unsigned MaxElements, const Expr *E);
+  bool emitHLSLConstructAggregate(QualType DestType,
+                                  ArrayRef<HLSLFlatElement> Elements,
+                                  unsigned &ElemIdx, const Expr *E);
+  bool emitHLSLConstructAggregate(QualType DestType,
+                                  ArrayRef<HLSLFlatElement> Elements,
+                                  const Expr *E) {
+    unsigned ElemIdx = 0;
+    return emitHLSLConstructAggregate(DestType, Elements, ElemIdx, E);
+  }
+
   bool compileConstructor(const CXXConstructorDecl *Ctor);
   bool compileDestructor(const CXXDestructorDecl *Dtor);
   bool compileUnionAssignmentOperator(const CXXMethodDecl *MD);
@@ -430,6 +479,8 @@ protected:
   bool InStmtExpr = false;
   bool ToLValue = false;
 
+  bool VariablesAreConstexprUnknown = false;
+
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().
   bool Initializing = false;
@@ -443,17 +494,8 @@ protected:
 
   /// Switch case mapping.
   CaseMap CaseLabels;
-
-  /// Scope to cleanup until when we see a break statement.
-  VariableScope<Emitter> *BreakVarScope = nullptr;
-  /// Point to break to.
-  OptLabelTy BreakLabel;
-  /// Scope to cleanup until when we see a continue statement.
-  VariableScope<Emitter> *ContinueVarScope = nullptr;
-  /// Point to continue to.
-  OptLabelTy ContinueLabel;
-  /// Default case label.
-  OptLabelTy DefaultLabel;
+  /// Stack of label information for loops and switch statements.
+  llvm::SmallVector<LabelInfo> LabelInfoStack;
 
   const FunctionDecl *CompilingFunction = nullptr;
 };
@@ -464,44 +506,30 @@ extern template class Compiler<EvalEmitter>;
 /// Scope chain managing the variable lifetimes.
 template <class Emitter> class VariableScope {
 public:
-  VariableScope(Compiler<Emitter> *Ctx, const ValueDecl *VD,
-                ScopeKind Kind = ScopeKind::Block)
-      : Ctx(Ctx), Parent(Ctx->VarScope), ValDecl(VD), Kind(Kind) {
+  VariableScope(Compiler<Emitter> *Ctx, ScopeKind Kind = ScopeKind::Block)
+      : Ctx(Ctx), Parent(Ctx->VarScope), Kind(Kind) {
+    if (Parent)
+      this->LocalsAlwaysEnabled = Parent->LocalsAlwaysEnabled;
     Ctx->VarScope = this;
   }
 
   virtual ~VariableScope() { Ctx->VarScope = this->Parent; }
 
-  virtual void addLocal(const Scope::Local &Local) {
+  virtual void addLocal(Scope::Local Local) {
     llvm_unreachable("Shouldn't be called");
   }
-
-  void addExtended(const Scope::Local &Local, const ValueDecl *ExtendingDecl) {
-    // Walk up the chain of scopes until we find the one for ExtendingDecl.
-    // If there is no such scope, attach it to the parent one.
-    VariableScope *P = this;
-    while (P) {
-      if (P->ValDecl == ExtendingDecl) {
-        P->addLocal(Local);
-        return;
-      }
-      P = P->Parent;
-      if (!P)
-        break;
-    }
-
-    // Use the parent scope.
-    if (this->Parent)
-      this->Parent->addLocal(Local);
-    else
-      this->addLocal(Local);
-  }
-
   /// Like addExtended, but adds to the nearest scope of the given kind.
   void addForScopeKind(const Scope::Local &Local, ScopeKind Kind) {
     VariableScope *P = this;
     while (P) {
+      // We found the right scope kind.
       if (P->Kind == Kind) {
+        P->addLocal(Local);
+        return;
+      }
+      // If we reached the root scope and we're looking for a Block scope,
+      // attach it to the root instead of the current scope.
+      if (!P->Parent && Kind == ScopeKind::Block) {
         P->addLocal(Local);
         return;
       }
@@ -514,18 +542,22 @@ public:
     this->addLocal(Local);
   }
 
-  virtual void emitDestruction() {}
   virtual bool emitDestructors(const Expr *E = nullptr) { return true; }
   virtual bool destroyLocals(const Expr *E = nullptr) { return true; }
+  virtual void forceInit() {}
   VariableScope *getParent() const { return Parent; }
   ScopeKind getKind() const { return Kind; }
+
+  /// Whether locals added to this scope are enabled by default.
+  /// This is almost always true, except for the two branches
+  /// of a conditional operator.
+  bool LocalsAlwaysEnabled = true;
 
 protected:
   /// Compiler instance.
   Compiler<Emitter> *Ctx;
   /// Link to the parent scope.
   VariableScope *Parent;
-  const ValueDecl *ValDecl = nullptr;
   ScopeKind Kind;
 };
 
@@ -533,9 +565,7 @@ protected:
 template <class Emitter> class LocalScope : public VariableScope<Emitter> {
 public:
   LocalScope(Compiler<Emitter> *Ctx, ScopeKind Kind = ScopeKind::Block)
-      : VariableScope<Emitter>(Ctx, nullptr, Kind) {}
-  LocalScope(Compiler<Emitter> *Ctx, const ValueDecl *VD)
-      : VariableScope<Emitter>(Ctx, VD) {}
+      : VariableScope<Emitter>(Ctx, Kind) {}
 
   /// Emit a Destroy op for this scope.
   ~LocalScope() override {
@@ -544,16 +574,6 @@ public:
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
     removeStoredOpaqueValues();
   }
-
-  /// Overriden to support explicit destruction.
-  void emitDestruction() override {
-    if (!Idx)
-      return;
-
-    this->emitDestructors();
-    this->Ctx->emitDestroy(*Idx, SourceInfo{});
-  }
-
   /// Explicit destruction of local variables.
   bool destroyLocals(const Expr *E = nullptr) override {
     if (!Idx)
@@ -566,29 +586,61 @@ public:
     return Success;
   }
 
-  void addLocal(const Scope::Local &Local) override {
+  void addLocal(Scope::Local Local) override {
     if (!Idx) {
       Idx = static_cast<unsigned>(this->Ctx->Descriptors.size());
       this->Ctx->Descriptors.emplace_back();
       this->Ctx->emitInitScope(*Idx, {});
     }
 
+    Local.EnabledByDefault = this->LocalsAlwaysEnabled;
     this->Ctx->Descriptors[*Idx].emplace_back(Local);
+  }
+
+  /// Force-initialize this scope. Usually, scopes are lazily initialized when
+  /// the first local variable is created, but in scenarios with conditonal
+  /// operators, we need to ensure scope is initialized just in case one of the
+  /// arms will create a local and the other won't. In such a case, the
+  /// InitScope() op would be part of the arm that created the local.
+  void forceInit() override {
+    if (!Idx) {
+      Idx = static_cast<unsigned>(this->Ctx->Descriptors.size());
+      this->Ctx->Descriptors.emplace_back();
+      this->Ctx->emitInitScope(*Idx, {});
+    }
   }
 
   bool emitDestructors(const Expr *E = nullptr) override {
     if (!Idx)
       return true;
+
     // Emit destructor calls for local variables of record
     // type with a destructor.
     for (Scope::Local &Local : llvm::reverse(this->Ctx->Descriptors[*Idx])) {
       if (Local.Desc->hasTrivialDtor())
         continue;
-      if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
-        return false;
 
-      if (!this->Ctx->emitDestructionPop(Local.Desc, Local.Desc->getLoc()))
-        return false;
+      if (!Local.EnabledByDefault) {
+        typename Emitter::LabelTy EndLabel = this->Ctx->getLabel();
+        if (!this->Ctx->emitGetLocalEnabled(Local.Offset, E))
+          return false;
+        if (!this->Ctx->jumpFalse(EndLabel, E))
+          return false;
+
+        if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
+          return false;
+
+        if (!this->Ctx->emitDestructionPop(Local.Desc, Local.Desc->getLoc()))
+          return false;
+
+        this->Ctx->fallthrough(EndLabel);
+        this->Ctx->emitLabel(EndLabel);
+      } else {
+        if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
+          return false;
+        if (!this->Ctx->emitDestructionPop(Local.Desc, Local.Desc->getLoc()))
+          return false;
+      }
 
       removeIfStoredOpaqueValue(Local);
     }
@@ -615,14 +667,6 @@ public:
 
   /// Index of the scope in the chain.
   UnsignedOrNone Idx = std::nullopt;
-};
-
-/// Scope for storage declared in a compound statement.
-// FIXME: Remove?
-template <class Emitter> class BlockScope final : public LocalScope<Emitter> {
-public:
-  BlockScope(Compiler<Emitter> *Ctx, ScopeKind Kind = ScopeKind::Block)
-      : LocalScope<Emitter>(Ctx, Kind) {}
 };
 
 template <class Emitter> class ArrayIndexScope final {
@@ -668,22 +712,29 @@ public:
 
   ~InitLinkScope() { this->Ctx->InitStack.pop_back(); }
 
-private:
+public:
   Compiler<Emitter> *Ctx;
 };
 
 template <class Emitter> class InitStackScope final {
 public:
   InitStackScope(Compiler<Emitter> *Ctx, bool Active)
-      : Ctx(Ctx), OldValue(Ctx->InitStackActive) {
+      : Ctx(Ctx), OldValue(Ctx->InitStackActive), Active(Active) {
     Ctx->InitStackActive = Active;
+    if (Active)
+      Ctx->InitStack.push_back(InitLink::DIE());
   }
 
-  ~InitStackScope() { this->Ctx->InitStackActive = OldValue; }
+  ~InitStackScope() {
+    this->Ctx->InitStackActive = OldValue;
+    if (Active)
+      Ctx->InitStack.pop_back();
+  }
 
 private:
   Compiler<Emitter> *Ctx;
   bool OldValue;
+  bool Active;
 };
 
 } // namespace interp

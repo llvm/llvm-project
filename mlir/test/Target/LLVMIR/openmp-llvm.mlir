@@ -156,11 +156,10 @@ llvm.func @test_omp_parallel_if_1(%arg0: i32) -> () {
 // CHECK: %[[IF_COND_VAR_1:.*]] = icmp slt i32 %[[IF_EXPR_1]], 0
 
 
-// CHECK: %[[GTN_IF_1:.*]] = call i32 @__kmpc_global_thread_num(ptr @[[SI_VAR_IF_1:.*]])
 // CHECK: br label %[[OUTLINED_CALL_IF_BLOCK_1:.*]]
 // CHECK: [[OUTLINED_CALL_IF_BLOCK_1]]:
 // CHECK: %[[I32_IF_COND_VAR_1:.*]] = sext i1 %[[IF_COND_VAR_1]] to i32
-// CHECK: call void @__kmpc_fork_call_if(ptr @[[SI_VAR_IF_1]], i32 0, ptr @[[OMP_OUTLINED_FN_IF_1:.*]], i32 %[[I32_IF_COND_VAR_1]], ptr null)
+// CHECK: call void @__kmpc_fork_call_if(ptr @[[SI_VAR_IF_1:.*]], i32 0, ptr @[[OMP_OUTLINED_FN_IF_1:.*]], i32 %[[I32_IF_COND_VAR_1]], ptr null)
 // CHECK: br label %[[OUTLINED_EXIT_IF_1:.*]]
   omp.parallel if(%1) {
     omp.barrier
@@ -328,9 +327,55 @@ llvm.func @test_omp_masked(%arg0: i32)-> () {
 
 // -----
 
+llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+// CHECK-LABEL: @wsloop_linear
+
+// CHECK: %p.lastiter = alloca i32, align 4
+// CHECK: %p.lowerbound = alloca i32, align 4
+// CHECK: %p.upperbound = alloca i32, align 4
+// CHECK: %p.stride = alloca i32, align 4
+// CHECK: %[[LINEAR_VAR:.*]] = alloca i32, align 4
+// CHECK: %[[LINEAR_RESULT:.*]] = alloca i32, align 4
+
+// CHECK: omp_loop.preheader:
+// CHECK: %[[LOAD:.*]] = load i32, ptr %{{.*}}, align 4
+// CHECK: store i32 %[[LOAD]], ptr %[[LINEAR_VAR]], align 4
+
+// CHECK: omp_loop.body:
+// CHECK: %[[LOOP_IV_CALC:.*]] = add i32 %omp_loop.iv, {{.*}}
+// CHECK: %[[LINEAR_VAR_LOAD:.*]] = load i32, ptr %[[LINEAR_VAR]], align 4
+// CHECK: %[[MUL:.*]] = mul i32 %[[LOOP_IV_CALC]], {{.*}}
+// CHECK: %[[ADD:.*]] = add i32 %[[LINEAR_VAR_LOAD]], %[[MUL]]
+// CHECK: store i32 %[[ADD]], ptr %[[LINEAR_RESULT]], align 4
+
+// CHECK: omp_loop.linear_finalization:
+// CHECK: %[[ITER:.*]] = load i32, ptr %p.lastiter, align 4
+// CHECK: %[[CMP:.*]] = icmp ne i32 %[[ITER]], 0
+// CHECK: br i1 %[[CMP]], label %omp_loop.linear_lastiter_exit, label %omp_loop.linear_exit
+
+// CHECK: omp_loop.linear_lastiter_exit:
+// CHECK: %[[LOAD:.*]] = load i32, ptr %[[LINEAR_RESULT]], align 4
+// CHECK: store i32 %[[LOAD]], ptr {{.*}}, align 4
+// CHECK: br label %omp_loop.linear_exit
+
+// CHECK: omp_loop.linear_exit:
+// CHECK: %[[THREAD_ID:.*]] = call i32 @__kmpc_global_thread_num(ptr {{.*}})
+// CHECK: call void @__kmpc_barrier(ptr {{.*}}, i32 %[[THREAD_ID]])
+// CHECK: br label %omp_loop.after
+
+  omp.wsloop linear(%x : !llvm.ptr = %step : i32) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  } {linear_var_types = [i32]}
+  llvm.return
+}
+
+// -----
+
 // CHECK: %struct.ident_t = type
 // CHECK: @[[$loc:.*]] = private unnamed_addr constant {{.*}} c";unknown;unknown;{{[0-9]+}};{{[0-9]+}};;\00"
-// CHECK: @[[$loc_struct:.*]] = private unnamed_addr constant %struct.ident_t {{.*}} @[[$loc]] {{.*}}
+// CHECK: @{{.*}} = private unnamed_addr constant %struct.ident_t {{.*}} @[[$loc]] {{.*}}
 
 // CHECK-LABEL: @wsloop_simple
 llvm.func @wsloop_simple(%arg0: !llvm.ptr) {
@@ -343,7 +388,7 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr) {
         // The form of the emitted IR is controlled by OpenMPIRBuilder and
         // tested there. Just check that the right functions are called.
         // CHECK: call i32 @__kmpc_global_thread_num
-        // CHECK: call void @__kmpc_for_static_init_{{.*}}(ptr @[[$loc_struct]],
+        // CHECK: call void @__kmpc_for_static_init_{{.*}}(ptr @[[$loc_struct:[0-9]+]],
         %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
         %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
         llvm.store %3, %4 : f32, !llvm.ptr
@@ -692,6 +737,98 @@ llvm.func @simd_simple(%lb : i64, %ub : i64, %step : i64, %arg0: !llvm.ptr) {
 }
 // CHECK: llvm.loop.parallel_accesses
 // CHECK-NEXT: llvm.loop.vectorize.enable
+
+// -----
+
+llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+
+// CHECK-LABEL: @simd_linear
+
+// CHECK: %[[LINEAR_VAR:.*]] = alloca i32, align 4
+// CHECK: %[[LINEAR_RESULT:.*]] = alloca i32, align 4
+
+// CHECK: omp_loop.preheader:
+// CHECK: %[[LOAD:.*]] = load i32, ptr {{.*}}, align 4
+// CHECK: store i32 %[[LOAD]], ptr %[[LINEAR_VAR]], align 4
+
+// CHECK: omp_loop.body:
+// CHECK: %[[LOOP_IV_CALC:.*]] = mul i32 %omp_loop.iv, {{.*}}
+// CHECK: %[[ADD:.*]] = add i32 %[[LOOP_IV_CALC]], {{.*}}
+// CHECK: %[[LOAD:.*]] = load i32, ptr %[[LINEAR_VAR]], align 4, !llvm.access.group !1
+// CHECK: %[[MUL:.*]] = mul i32 %omp_loop.iv, {{.*}}
+// CHECK: %[[ADD:.*]] = add i32 %[[LOAD]], %[[MUL]]
+// CHECK: store i32 %[[ADD]], ptr %[[LINEAR_RESULT]], align 4, !llvm.access.group !1
+  omp.simd linear(%x : !llvm.ptr = %step : i32) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  } {linear_var_types = [i32]}
+  llvm.return
+}
+
+// -----
+
+// Test linear clause with mismatched types (i32 step, i64 variable)
+// This is a regression test for issue #173332
+llvm.func @simd_linear_i64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
+  %step = llvm.mlir.constant(1 : i32) : i32
+
+// CHECK-LABEL: @simd_linear_i64_var_i32_step
+
+// CHECK: %[[LINEAR_VAR:.*]] = alloca i64
+// CHECK: %[[LINEAR_RESULT:.*]] = alloca i64
+
+// CHECK: omp_loop.preheader:
+// CHECK: %[[LOAD:.*]] = load i64, ptr {{.*}}
+// CHECK: store i64 %[[LOAD]], ptr %[[LINEAR_VAR]]
+
+// CHECK: omp_loop.body:
+// Verify type conversions: iv (i32) is extended to i64 before multiplication
+// CHECK: %[[IV_I64:.*]] = sext i32 %omp_loop.iv to i64
+// CHECK: %[[LOAD:.*]] = load i64, ptr %[[LINEAR_VAR]], {{.*}}!llvm.access.group
+// Verify multiplication and addition use consistent i64 types
+// CHECK: %[[MUL:.*]] = mul i64 %[[IV_I64]], {{.*}}
+// CHECK: %[[ADD:.*]] = add i64 %[[LOAD]], %[[MUL]]
+// CHECK: store i64 %[[ADD]], ptr %[[LINEAR_RESULT]], {{.*}}!llvm.access.group
+  omp.simd linear(%x : !llvm.ptr = %step : i32) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  } {linear_var_types = [i64]}
+  llvm.return
+}
+
+// -----
+
+// Test linear clause with floating-point variable and i32 step
+// This tests the floating-point path in updateLinearVar
+llvm.func @simd_linear_f64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
+  %step = llvm.mlir.constant(1 : i32) : i32
+
+// CHECK-LABEL: @simd_linear_f64_var_i32_step
+
+// CHECK: %[[LINEAR_VAR:.*]] = alloca double
+// CHECK: %[[LINEAR_RESULT:.*]] = alloca double
+
+// CHECK: omp_loop.preheader:
+// CHECK: %[[LOAD:.*]] = load double, ptr {{.*}}
+// CHECK: store double %[[LOAD]], ptr %[[LINEAR_VAR]]
+
+// CHECK: omp_loop.body:
+// Verify integer multiplication, load, and conversion to float
+// CHECK: mul i32 %omp_loop.iv
+// CHECK: %[[MUL_INT:.*]] = mul i32 %omp_loop.iv, {{.*}}
+// CHECK-NEXT: %[[LOAD:.*]] = load double, ptr %[[LINEAR_VAR]], {{.*}}!llvm.access.group
+// CHECK-NEXT: %[[MUL_FP:.*]] = sitofp i32 %[[MUL_INT]] to double
+// CHECK-NEXT: %[[ADD:.*]] = fadd double %[[LOAD]], %[[MUL_FP]]
+// CHECK-NEXT: store double %[[ADD]], ptr %[[LINEAR_RESULT]], {{.*}}!llvm.access.group
+  omp.simd linear(%x : !llvm.ptr = %step : i32) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  } {linear_var_types = [f64]}
+  llvm.return
+}
 
 // -----
 
@@ -1536,7 +1673,7 @@ llvm.func @omp_atomic_write() {
 //CHECK: %[[VAL_9:.*]] = insertvalue { float, float } undef, float %[[VAL_7]], 0
 //CHECK: %[[VAL_10:.*]] = insertvalue { float, float } %[[VAL_9]], float %[[VAL_8]], 1
 //CHECK: store { float, float } %[[VAL_10]], ptr %[[X_NEW_VAL]], align 4
-//CHECK: %[[VAL_11:.*]] = call i1 @__atomic_compare_exchange(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]], i32 2, i32 2)
+//CHECK: %[[VAL_11:.*]] = call i1 @__atomic_compare_exchange(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]], i32 0, i32 0)
 //CHECK: %[[VAL_12:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 4
 //CHECK: br i1 %[[VAL_11]], label %.atomic.exit, label %.atomic.cont
 
@@ -1588,7 +1725,7 @@ llvm.func @_QPomp_atomic_update_complex() {
 //CHECK: %[[VAL_9:.*]] = insertvalue { float, float } undef, float %[[VAL_7]], 0
 //CHECK: %[[VAL_10:.*]] = insertvalue { float, float } %[[VAL_9]], float %[[VAL_8]], 1
 //CHECK: store { float, float } %[[VAL_10]], ptr %[[X_NEW_VAL]], align 4 
-//CHECK: %[[VAL_11:.*]] = call i1 @__atomic_compare_exchange(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]], i32 2, i32 2)
+//CHECK: %[[VAL_11:.*]] = call i1 @__atomic_compare_exchange(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]], i32 0, i32 0)
 //CHECK: %[[VAL_12:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 4
 //CHECK: br i1 %[[VAL_11]], label %.atomic.exit, label %.atomic.cont
 //CHECK: .atomic.exit
@@ -1623,6 +1760,113 @@ llvm.func @_QPomp_atomic_capture_complex() {
         omp.yield(%20 : !llvm.struct<(f32, f32)>)
       }
       omp.atomic.read %1 = %3 : !llvm.ptr, !llvm.ptr, !llvm.struct<(f32, f32)>
+    }
+    llvm.return
+}
+
+// -----
+
+// Non-struct types with BAD_BINOP (multi-step) still  use the cmpxchg fallback path.
+//
+// CHECK-LABEL: @atomic_update_float_multi_step
+// CHECK-SAME: (ptr %[[x:.*]], float %[[a:.*]], float %[[b:.*]])
+// CHECK: %[[load:.*]] = load atomic i32, ptr %[[x]] monotonic
+// CHECK: %[[phi:.*]] = phi i32
+// CHECK: %[[fltCast:.*]] = bitcast i32 %[[phi]] to float
+// CHECK: %[[t:.*]] = fmul float %[[fltCast]], %[[a]]
+// CHECK: %[[r:.*]] = fadd float %[[t]], %[[b]]
+// CHECK: cmpxchg ptr %[[x]], i32 %[[phi]], i32 %{{.*}} monotonic monotonic
+llvm.func @atomic_update_float_multi_step(%x: !llvm.ptr, %a: f32, %b: f32) {
+  omp.atomic.update %x : !llvm.ptr {
+  ^bb0(%xval: f32):
+    %t = llvm.fmul %xval, %a : f32
+    %r = llvm.fadd %t, %b : f32
+    omp.yield(%r : f32)
+  }
+  llvm.return
+}
+
+// -----
+
+// Non-struct types with BAD_BINOP (unrecognized) ops still
+// use the cmpxchg fallback path.
+//
+// CHECK-LABEL: @atomic_update_float_intrinsic
+// CHECK-SAME: (ptr %[[x:.*]], float %[[expr:.*]])
+// CHECK: %[[load:.*]] = load atomic i32, ptr %[[x]] monotonic
+// CHECK: %[[phi:.*]] = phi i32
+// CHECK: %[[fltCast:.*]] = bitcast i32 %[[phi]] to float
+// CHECK: %[[res:.*]] = call float @llvm.maxnum.f32(float %[[fltCast]], float %[[expr]])
+// CHECK: cmpxchg ptr %[[x]], i32 %[[phi]], i32 %{{.*}} monotonic monotonic
+llvm.func @atomic_update_float_intrinsic(%x: !llvm.ptr, %expr: f32) {
+  omp.atomic.update %x : !llvm.ptr {
+  ^bb0(%xval: f32):
+    %newval = "llvm.intr.maxnum"(%xval, %expr) : (f32, f32) -> f32
+    omp.yield(%newval : f32)
+  }
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: define void @omp_atomic_capture_complex_swap
+llvm.func @omp_atomic_capture_complex_swap(%x_arg: !llvm.ptr, %v_arg: !llvm.ptr) {
+    // CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
+    // CHECK: %[[X_NEW_VAL:.*]] = alloca { float, float }, align 8
+    // CHECK: call void @__atomic_load(i64 8, ptr %{{.*}}, ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
+    // CHECK: %[[PHI:.*]] = phi { float, float }
+    // CHECK: store { float, float } { float 1.000000e+00, float 1.000000e+00 }, ptr %[[X_NEW_VAL]], align 4
+   // CHECK: call i1 @__atomic_compare_exchange(i64 8, ptr %{{.*}}, ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]], i32 0, i32 0)
+    // CHECK: store { float, float } %[[PHI]], ptr %{{.*}}, align 4
+    %0 = llvm.mlir.constant(1.000000e+00 : f32) : f32
+    %1 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+    %2 = llvm.insertvalue %0, %1[0] : !llvm.struct<(f32, f32)>
+    %3 = llvm.insertvalue %0, %2[1] : !llvm.struct<(f32, f32)>
+    omp.atomic.capture {
+      omp.atomic.read %v_arg = %x_arg : !llvm.ptr, !llvm.ptr, !llvm.struct<(f32, f32)>
+      omp.atomic.write %x_arg = %3 : !llvm.ptr, !llvm.struct<(f32, f32)>
+    }
+    llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: define void @omp_atomic_capture_complex8_swap
+llvm.func @omp_atomic_capture_complex8_swap(%x_arg: !llvm.ptr, %v_arg: !llvm.ptr) {
+    // CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { double, double }, align 8
+    // CHECK: %[[X_NEW_VAL:.*]] = alloca { double, double }, align 8
+    // CHECK: call void @__atomic_load(i64 16, ptr %{{.*}}, ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
+    // CHECK: %[[PHI:.*]] = phi { double, double }
+    // CHECK: store { double, double } { double 1.000000e+00, double 1.000000e+00 }, ptr %[[X_NEW_VAL]], align 8
+    // CHECK: call i1 @__atomic_compare_exchange(i64 16, ptr %{{.*}}, ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]], i32 0, i32 0)
+    // CHECK: store { double, double } %[[PHI]], ptr %{{.*}}, align 8
+    %0 = llvm.mlir.constant(1.000000e+00 : f64) : f64
+    %1 = llvm.mlir.undef : !llvm.struct<(f64, f64)>
+    %2 = llvm.insertvalue %0, %1[0] : !llvm.struct<(f64, f64)>
+    %3 = llvm.insertvalue %0, %2[1] : !llvm.struct<(f64, f64)>
+    omp.atomic.capture {
+      omp.atomic.read %v_arg = %x_arg : !llvm.ptr, !llvm.ptr, !llvm.struct<(f64, f64)>
+      omp.atomic.write %x_arg = %3 : !llvm.ptr, !llvm.struct<(f64, f64)>
+    }
+    llvm.return
+}
+
+// -----
+
+// Test that seq_cst ordering is correctly converted to CABI constant (5)
+// in __atomic_compare_exchange, not the raw LLVM enum value (7).
+//
+// CHECK-LABEL: define void @omp_atomic_capture_complex_swap_seq_cst
+// CHECK: call void @__atomic_load(i64 8, ptr %{{.*}}, ptr %{{.*}}, i32 5)
+// CHECK: call i1 @__atomic_compare_exchange(i64 8, ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, i32 5, i32 5)
+llvm.func @omp_atomic_capture_complex_swap_seq_cst(%x_arg: !llvm.ptr, %v_arg: !llvm.ptr) {
+    %0 = llvm.mlir.constant(1.000000e+00 : f32) : f32
+    %1 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+    %2 = llvm.insertvalue %0, %1[0] : !llvm.struct<(f32, f32)>
+    %3 = llvm.insertvalue %0, %2[1] : !llvm.struct<(f32, f32)>
+    omp.atomic.capture memory_order(seq_cst) {
+      omp.atomic.read %v_arg = %x_arg : !llvm.ptr, !llvm.ptr, !llvm.struct<(f32, f32)>
+      omp.atomic.write %x_arg = %3 : !llvm.ptr, !llvm.struct<(f32, f32)>
     }
     llvm.return
 }
@@ -2310,6 +2554,215 @@ llvm.func @omp_atomic_capture_misc(
     }
   }
 
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare
+// CHECK-SAME: (ptr %[[X:.*]], i32 %[[E:.*]], i32 %[[D:.*]], ptr %[[XF:.*]], float %[[EF:.*]], float %[[DF:.*]], ptr %[[XC:.*]], { float, float } %[[EC:.*]], { float, float } %[[DC:.*]], ptr %[[XP:.*]], ptr %[[EP:.*]], ptr %[[DP:.*]])
+llvm.func @omp_atomic_compare(
+  %x : !llvm.ptr, %e : i32, %d : i32,
+  %xf : !llvm.ptr, %ef : f32, %df : f32,
+  %xc : !llvm.ptr, %ec : !llvm.struct<(f32, f32)>, %dc : !llvm.struct<(f32, f32)>,
+  %xp : !llvm.ptr, %ep : !llvm.ptr, %dp : !llvm.ptr) {
+
+  // Integer equality  →  cmpxchg
+  // CHECK: cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic monotonic
+  omp.atomic.compare %x : !llvm.ptr {
+  ^bb0(%xval : i32):
+    %cmp0 = llvm.icmp "eq" %xval, %e : i32
+    %sel0 = llvm.select %cmp0, %d, %xval : i1, i32
+    omp.yield(%sel0 : i32)
+  }
+
+  // Float equality  →  NaN guard + ±0.0 guard + cmpxchg.
+  // IEEE 754: NaN != NaN but same-bit-pattern NaN would match in cmpxchg;
+  // -0.0 == +0.0 but different bit patterns would mismatch.
+  // CHECK: %[[EBC:.*]] = bitcast float %[[EF]] to i32
+  // CHECK: %[[DBC:.*]] = bitcast float %[[DF]] to i32
+  // CHECK: load atomic i32, ptr %[[XF]] monotonic
+  // NaN check: skip cmpxchg if either E or X is NaN.
+  // CHECK: %[[EISNAN:.*]] = fcmp uno float %[[EF]], %[[EF]]
+  // CHECK: %[[XISNAN:.*]] = fcmp uno float %{{.*}}, %{{.*}}
+  // CHECK: %[[EITHERNAN:.*]] = or i1 %[[EISNAN]], %[[XISNAN]]
+  // CHECK: br i1 %[[EITHERNAN]], label %[[NANBB:[^,]+]], label %[[NOTNANBB:[^,]+]]
+  // NaNBB: NaN == anything is always false; skip cmpxchg.
+  // CHECK: [[NANBB]]:
+  // CHECK-NEXT: br label %[[EXIT:[^ ]+]]
+  // NotNaNBB: check ±0.0.
+  // CHECK: [[NOTNANBB]]:
+  // CHECK: %[[XISZERO:.*]] = fcmp oeq float %{{.*}}, 0.000000e+00
+  // CHECK: %[[EISZERO:.*]] = fcmp oeq float %[[EF]], 0.000000e+00
+  // CHECK: %[[BOTH:.*]] = and i1 %[[XISZERO]], %[[EISZERO]]
+  // CHECK: br i1 %[[BOTH]], label %[[ZERO:[^,]+]], label %[[NORMAL:[^,]+]]
+  // ZeroBB: cmpxchg with x's bit-pattern; goto end.
+  // CHECK: [[ZERO]]:
+  // CHECK: cmpxchg ptr %[[XF]], i32 %{{.*}}, i32 %[[DBC]] monotonic monotonic
+  // CHECK-NEXT: extractvalue
+  // CHECK-NEXT: extractvalue
+  // CHECK-NEXT: br label %[[EXIT]]
+  // NormalBB: original cmpxchg; goto end.
+  // CHECK: [[NORMAL]]:
+  // CHECK: cmpxchg ptr %[[XF]], i32 %[[EBC]], i32 %[[DBC]] monotonic monotonic
+  // CHECK-NEXT: extractvalue
+  // CHECK-NEXT: extractvalue
+  // CHECK-NEXT: br label %[[EXIT]]
+  // ExitBB: phi merge (3-way: NaN, Zero, Normal).
+  // CHECK: [[EXIT]]:
+  // CHECK-NEXT: phi i32 [ %{{.*}}, %[[NANBB]] ], [ %{{.*}}, %[[ZERO]] ], [ %{{.*}}, %[[NORMAL]] ]
+  // CHECK-NEXT: phi i1 [ false, %[[NANBB]] ], [ %{{.*}}, %[[ZERO]] ], [ %{{.*}}, %[[NORMAL]] ]
+  omp.atomic.compare %xf : !llvm.ptr {
+  ^bb0(%xval : f32):
+    %cmp1 = llvm.fcmp "oeq" %xval, %ef : f32
+    %sel1 = llvm.select %cmp1, %df, %xval : i1, f32
+    omp.yield(%sel1 : f32)
+  }
+
+  // Complex equality  →  bitcasted integer cmpxchg with consistent alignment
+  // CHECK: %[[EALLOCA:.*]] = alloca { float, float }, align [[ALIGN:[0-9]+]]
+  // CHECK: %[[DALLOCA:.*]] = alloca { float, float }, align [[ALIGN]]
+  // CHECK: store { float, float } %[[EC]], ptr %[[EALLOCA]], align [[ALIGN]]
+  // CHECK: %[[EINT:.*]] = load i64, ptr %[[EALLOCA]], align [[ALIGN]]
+  // CHECK: store { float, float } %[[DC]], ptr %[[DALLOCA]], align [[ALIGN]]
+  // CHECK: %[[DINT:.*]] = load i64, ptr %[[DALLOCA]], align [[ALIGN]]
+  // CHECK: cmpxchg ptr %[[XC]], i64 %[[EINT]], i64 %[[DINT]] monotonic monotonic, align [[ALIGN]]
+  omp.atomic.compare %xc : !llvm.ptr {
+  ^bb0(%xval : !llvm.struct<(f32, f32)>):
+    %re_x = llvm.extractvalue %xval[0] : !llvm.struct<(f32, f32)>
+    %re_e = llvm.extractvalue %ec[0] : !llvm.struct<(f32, f32)>
+    %cmp_re = llvm.fcmp "oeq" %re_x, %re_e : f32
+    %im_x = llvm.extractvalue %xval[1] : !llvm.struct<(f32, f32)>
+    %im_e = llvm.extractvalue %ec[1] : !llvm.struct<(f32, f32)>
+    %cmp_im = llvm.fcmp "oeq" %im_x, %im_e : f32
+    %cmp = llvm.and %cmp_re, %cmp_im : i1
+    %sel = llvm.select %cmp, %dc, %xval : i1, !llvm.struct<(f32, f32)>
+    omp.yield(%sel : !llvm.struct<(f32, f32)>)
+  }
+
+  // Integer x < e  →  atomicrmw max (signed)
+  // CHECK: atomicrmw max ptr %[[X]], i32 %[[E]] monotonic
+  omp.atomic.compare %x : !llvm.ptr {
+  ^bb0(%xval : i32):
+    %cmp2 = llvm.icmp "slt" %xval, %e : i32
+    %sel2 = llvm.select %cmp2, %e, %xval : i1, i32
+    omp.yield(%sel2 : i32)
+  }
+
+  // Integer x > e  →  atomicrmw min (signed)
+  // CHECK: atomicrmw min ptr %[[X]], i32 %[[E]] monotonic
+  omp.atomic.compare %x : !llvm.ptr {
+  ^bb0(%xval : i32):
+    %cmp3 = llvm.icmp "sgt" %xval, %e : i32
+    %sel3 = llvm.select %cmp3, %e, %xval : i1, i32
+    omp.yield(%sel3 : i32)
+  }
+
+  // Float x < e  →  atomicrmw fmax (reversed)
+  // CHECK: atomicrmw fmax ptr %[[XF]], float %[[EF]] monotonic, align 4
+  omp.atomic.compare %xf : !llvm.ptr {
+  ^bb0(%xval : f32):
+    %cmp4 = llvm.fcmp "olt" %xval, %ef : f32
+    %sel4 = llvm.select %cmp4, %ef, %xval : i1, f32
+    omp.yield(%sel4 : f32)
+  }
+
+  // Float x > e  →  atomicrmw fmin (reversed)
+  // CHECK: atomicrmw fmin ptr %[[XF]], float %[[EF]] monotonic, align 4
+  omp.atomic.compare %xf : !llvm.ptr {
+  ^bb0(%xval : f32):
+    %cmp5 = llvm.fcmp "ogt" %xval, %ef : f32
+    %sel5 = llvm.select %cmp5, %ef, %xval : i1, f32
+    omp.yield(%sel5 : f32)
+  }
+
+  // Integer equality with seq_cst  →  cmpxchg + flush
+  // CHECK: cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] seq_cst seq_cst
+  // CHECK: call void @__kmpc_flush(ptr @{{.*}})
+  omp.atomic.compare memory_order(seq_cst) %x : !llvm.ptr {
+  ^bb0(%xval6 : i32):
+    %cmp6 = llvm.icmp "eq" %xval6, %e : i32
+    %sel6 = llvm.select %cmp6, %d, %xval6 : i1, i32
+    omp.yield(%sel6 : i32)
+  }
+
+  // Complex equality with seq_cst  →  cmpxchg + flush
+  // CHECK: cmpxchg ptr %[[XC]], i64 %{{.*}}, i64 %{{.*}} seq_cst seq_cst
+  // CHECK: call void @__kmpc_flush(ptr @{{.*}})
+  omp.atomic.compare memory_order(seq_cst) %xc : !llvm.ptr {
+  ^bb0(%xval7 : !llvm.struct<(f32, f32)>):
+    %re_x7 = llvm.extractvalue %xval7[0] : !llvm.struct<(f32, f32)>
+    %re_e7 = llvm.extractvalue %ec[0] : !llvm.struct<(f32, f32)>
+    %cmp_re7 = llvm.fcmp "oeq" %re_x7, %re_e7 : f32
+    %im_x7 = llvm.extractvalue %xval7[1] : !llvm.struct<(f32, f32)>
+    %im_e7 = llvm.extractvalue %ec[1] : !llvm.struct<(f32, f32)>
+    %cmp_im7 = llvm.fcmp "oeq" %im_x7, %im_e7 : f32
+    %cmp7 = llvm.and %cmp_re7, %cmp_im7 : i1
+    %sel7 = llvm.select %cmp7, %dc, %xval7 : i1, !llvm.struct<(f32, f32)>
+    omp.yield(%sel7 : !llvm.struct<(f32, f32)>)
+  }
+
+  // pointer-associated integer target:
+  // CHECK: %[[EPVAL:.*]] = load i32, ptr %[[EP]]
+  // CHECK: %[[DPVAL:.*]] = load i32, ptr %[[DP]]
+  // CHECK: cmpxchg ptr %[[XP]], i32 %[[EPVAL]], i32 %[[DPVAL]] monotonic monotonic
+  %eval = llvm.load %ep : !llvm.ptr -> i32
+  %dval = llvm.load %dp : !llvm.ptr -> i32
+  omp.atomic.compare %xp : !llvm.ptr {
+  ^bb0(%xval : i32):
+    %cmp = llvm.icmp "eq" %xval, %eval : i32
+    %sel = llvm.select %cmp, %dval, %xval : i1, i32
+    omp.yield(%sel : i32)
+  }
+
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare_float_neg_zero
+// CHECK-SAME: (ptr %[[XF:.*]], float %[[EF:.*]], float %[[DF:.*]])
+// Verify NaN guard + ±0.0 handling.
+llvm.func @omp_atomic_compare_float_neg_zero(%xf : !llvm.ptr, %ef : f32, %df : f32) {
+  // CHECK: %[[EBC:.*]] = bitcast float %[[EF]] to i32
+  // CHECK: %[[DBC:.*]] = bitcast float %[[DF]] to i32
+  // CHECK: load atomic i32, ptr %[[XF]] monotonic
+  // NaN check: skip cmpxchg if either E or X is NaN.
+  // CHECK: %[[EISNAN:.*]] = fcmp uno float %[[EF]], %[[EF]]
+  // CHECK: %[[XISNAN:.*]] = fcmp uno float %{{.*}}, %{{.*}}
+  // CHECK: %[[EITHERNAN:.*]] = or i1 %[[EISNAN]], %[[XISNAN]]
+  // CHECK: br i1 %[[EITHERNAN]], label %[[NANBB:[^,]+]], label %[[NOTNANBB:[^,]+]]
+  // NaNBB: NaN == anything is always false; skip cmpxchg.
+  // CHECK: [[NANBB]]:
+  // CHECK-NEXT: br label %[[EXIT:[^ ]+]]
+  // NotNaNBB: check ±0.0.
+  // CHECK: [[NOTNANBB]]:
+  // CHECK: %[[XISZERO:.*]] = fcmp oeq float %{{.*}}, 0.000000e+00
+  // CHECK: %[[EISZERO:.*]] = fcmp oeq float %[[EF]], 0.000000e+00
+  // CHECK: %[[BOTH:.*]] = and i1 %[[XISZERO]], %[[EISZERO]]
+  // CHECK: br i1 %[[BOTH]], label %[[ZERO:[^,]+]], label %[[NORMAL:[^,]+]]
+  // ZeroBB: cmpxchg with X's loaded bit-pattern; goto end directly.
+  // CHECK: [[ZERO]]:
+  // CHECK: cmpxchg ptr %[[XF]], i32 %{{.*}}, i32 %[[DBC]] monotonic monotonic
+  // CHECK-NEXT: extractvalue
+  // CHECK-NEXT: extractvalue
+  // CHECK-NEXT: br label %[[EXIT]]
+  // NormalBB: original bitwise cmpxchg; goto end.
+  // CHECK: [[NORMAL]]:
+  // CHECK: cmpxchg ptr %[[XF]], i32 %[[EBC]], i32 %[[DBC]] monotonic monotonic
+  // CHECK-NEXT: extractvalue
+  // CHECK-NEXT: extractvalue
+  // CHECK-NEXT: br label %[[EXIT]]
+  // ExitBB: phi merge (3-way: NaN, Zero, Normal).
+  // CHECK: [[EXIT]]:
+  // CHECK-NEXT: phi i32 [ %{{.*}}, %[[NANBB]] ], [ %{{.*}}, %[[ZERO]] ], [ %{{.*}}, %[[NORMAL]] ]
+  // CHECK-NEXT: phi i1 [ false, %[[NANBB]] ], [ %{{.*}}, %[[ZERO]] ], [ %{{.*}}, %[[NORMAL]] ]
+  omp.atomic.compare %xf : !llvm.ptr {
+  ^bb0(%xval : f32):
+    %cmp = llvm.fcmp "oeq" %xval, %ef : f32
+    %sel = llvm.select %cmp, %df, %xval : i1, f32
+    omp.yield(%sel : f32)
+  }
   llvm.return
 }
 
@@ -3339,12 +3792,6 @@ llvm.func @distribute() {
 }
 
 // CHECK-LABEL: define void @distribute
-// CHECK:         call void @[[OUTLINED:.*]]({{.*}})
-// CHECK-NEXT:    br label %[[EXIT:.*]]
-// CHECK:       [[EXIT]]:
-// CHECK:         ret void
-
-// CHECK:       define internal void @[[OUTLINED]]({{.*}})
 // CHECK:         %[[LASTITER:.*]] = alloca i32
 // CHECK:         %[[LB:.*]] = alloca i64
 // CHECK:         %[[UB:.*]] = alloca i64
@@ -3381,14 +3828,16 @@ llvm.func @distribute_wsloop(%lb : i32, %ub : i32, %step : i32) {
 // CHECK:         call void{{.*}}@__kmpc_fork_call({{.*}}, ptr @[[OUTLINED_PARALLEL:.*]],
 
 // CHECK:       define internal void @[[OUTLINED_PARALLEL]]
-// CHECK:         call void @[[OUTLINED_DISTRIBUTE:.*]]({{.*}})
-
-// CHECK:       define internal void @[[OUTLINED_DISTRIBUTE]]
+// CHECK:       omp.par.entry:
+// CHECK:         %[[TID_LOCAL:.*]] = alloca i32, align 4
 // CHECK:         %[[LASTITER:.*]] = alloca i32
 // CHECK:         %[[LB:.*]] = alloca i32
 // CHECK:         %[[UB:.*]] = alloca i32
 // CHECK:         %[[STRIDE:.*]] = alloca i32
-// CHECK:         br label %[[AFTER_ALLOCA:.*]]
+// CHECK:         %[[DIST_UB:.*]] = alloca i32
+
+// CHECK:       distribute.alloca:
+// CHECK-NEXT:    br label %[[AFTER_ALLOCA:.*]]
 
 // CHECK:       [[AFTER_ALLOCA]]:
 // CHECK:         br label %[[DISTRIBUTE_BODY:.*]]
@@ -3409,7 +3858,6 @@ llvm.func @distribute_wsloop(%lb : i32, %ub : i32, %step : i32) {
 // CHECK:         store i32 %[[TRIPCOUNT]], ptr %[[UB]]
 // CHECK:         store i32 1, ptr %[[STRIDE]]
 // CHECK:         %[[TID:.*]] = call i32 @__kmpc_global_thread_num({{.*}})
-// CHECK:         %[[DIST_UB:.*]] = alloca i32
 // CHECK:         call void @__kmpc_dist_for_static_init_{{.*}}(ptr @{{.*}}, i32 %[[TID]], i32 34, ptr %[[LASTITER]], ptr %[[LB]], ptr %[[UB]], ptr %[[DIST_UB]], ptr %[[STRIDE]], i32 1, i32 0)
 
 // -----
@@ -3457,3 +3905,100 @@ llvm.func @nested_task_with_deps() {
 
 // CHECK:         ret void
 // CHECK:       }
+
+llvm.func @task_affinity_plain(%arr: !llvm.ptr {llvm.nocapture}) {
+  %len = llvm.mlir.constant(4 : i64) : i64
+
+  omp.parallel {
+    omp.single {
+      %ae = omp.affinity_entry %arr, %len
+        : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+
+      omp.task affinity(%ae : !omp.affinity_entry_ty<!llvm.ptr, i64>) {
+        omp.terminator
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define internal void @task_affinity_plain
+// CHECK: [[BASE:%.*]] = load ptr, ptr %gep_, align 8
+// CHECK: [[AFFLIST:%.*]] = alloca { i64, i64, i32 }, i64 1, align 8
+// CHECK: [[ENTRY:%.*]] = getelementptr inbounds { i64, i64, i32 }, ptr [[AFFLIST]], i64 0
+// addr
+// CHECK: [[ADDRI64:%.*]] = ptrtoint ptr [[BASE]] to i64
+// CHECK: [[ADDRGEP:%.*]] = getelementptr inbounds nuw { i64, i64, i32 }, ptr [[ENTRY]], i32 0, i32 0
+// CHECK: store i64 [[ADDRI64]], ptr [[ADDRGEP]]
+// len
+// CHECK: [[LENGEP:%.*]] = getelementptr inbounds nuw { i64, i64, i32 }, ptr [[ENTRY]], i32 0, i32 1
+// CHECK: store i64 4, ptr [[LENGEP]]
+// flags is always 0
+// CHECK: [[FLAGGEP:%.*]] = getelementptr inbounds nuw { i64, i64, i32 }, ptr [[ENTRY]], i32 0, i32 2
+// CHECK: store i32 0, ptr [[FLAGGEP]]
+// CHECK: call i32 @__kmpc_omp_reg_task_with_affinity{{.*}}i32 1, ptr [[AFFLIST]]
+
+// -----
+
+module attributes {omp.is_target_device = true, llvm.target_triple = "nvptx64-nvidia-cuda"} {
+llvm.mlir.global internal @any() : i32
+llvm.mlir.global internal @host() : i32
+llvm.mlir.global internal @nohost() : i32
+llvm.func @omp_groupprivate_device() attributes {
+    omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %2 = omp.groupprivate @any device_type(any) : !llvm.ptr
+  llvm.store %0, %2 : i32, !llvm.ptr
+
+  %4 = omp.groupprivate @host device_type(host) : !llvm.ptr
+  llvm.store %0, %4 : i32, !llvm.ptr
+
+  %6 = omp.groupprivate @nohost device_type(nohost) : !llvm.ptr
+  llvm.store %0, %6 : i32, !llvm.ptr
+  llvm.return
+}
+}
+
+// CHECK-DAG: @any = internal global i32 undef
+// CHECK-DAG: @host = internal global i32 undef
+// CHECK-DAG: @nohost = internal global i32 undef
+// CHECK-DAG: @[[SHARED_ANY:any.*]] = internal addrspace(3) global i32 poison
+// CHECK-DAG: @[[SHARED_NOHOST:nohost.*]] = internal addrspace(3) global i32 poison
+// CHECK: define void @omp_groupprivate_device()
+// CHECK: store i32 1, ptr addrspace(3) @[[SHARED_ANY]], align 4
+// CHECK: store i32 1, ptr @host, align 4
+// CHECK: store i32 1, ptr addrspace(3) @[[SHARED_NOHOST]], align 4
+// CHECK: ret void
+
+// -----
+
+module attributes {omp.is_target_device = false} {
+llvm.mlir.global internal @any1() : i32
+llvm.mlir.global internal @host1() : i32
+llvm.mlir.global internal @nohost1() : i32
+llvm.func @omp_groupprivate_host() {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %2 = omp.groupprivate @any1 device_type(any) : !llvm.ptr
+  llvm.store %0, %2 : i32, !llvm.ptr
+
+  %4 = omp.groupprivate @host1 device_type(host) : !llvm.ptr
+  llvm.store %0, %4 : i32, !llvm.ptr
+
+  %6 = omp.groupprivate @nohost1 device_type(nohost) : !llvm.ptr
+  llvm.store %0, %6 : i32, !llvm.ptr
+  llvm.return
+}
+}
+
+// CHECK-DAG: @any1 = internal global i32 undef
+// CHECK-DAG: @host1 = internal global i32 undef
+// CHECK-DAG: @nohost1 = internal global i32 undef
+// CHECK-LABEL: define void @omp_groupprivate_host()
+// CHECK: store i32 1, ptr @any1, align 4
+// CHECK: store i32 1, ptr @host1, align 4
+// CHECK: store i32 1, ptr @nohost1, align 4
+// CHECK: ret void
+
+// -----

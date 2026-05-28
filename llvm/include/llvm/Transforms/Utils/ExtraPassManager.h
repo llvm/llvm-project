@@ -56,7 +56,7 @@ template <typename MarkerTy> struct ShouldRunExtraPasses {
 /// simplifications after loop-vectorization, if runtime checks have been added.
 template <typename MarkerTy>
 class ExtraFunctionPassManager
-    : public PassInfoMixin<ExtraFunctionPassManager<MarkerTy>> {
+    : public RequiredPassInfoMixin<ExtraFunctionPassManager<MarkerTy>> {
   FunctionPassManager InnerFPM;
 
 public:
@@ -71,8 +71,6 @@ public:
     PA.abandon<MarkerTy>();
     return PA;
   }
-
-  static bool isRequired() { return true; }
 };
 
 /// A pass manager to run a set of extra loop passes if the MarkerTy analysis is
@@ -80,7 +78,7 @@ public:
 /// An example is doing additional runs of SimpleLoopUnswitch.
 template <typename MarkerTy>
 class ExtraLoopPassManager
-    : public PassInfoMixin<ExtraLoopPassManager<MarkerTy>> {
+    : public RequiredPassInfoMixin<ExtraLoopPassManager<MarkerTy>> {
   LoopPassManager InnerLPM;
 
 public:
@@ -96,8 +94,6 @@ public:
     PA.abandon<MarkerTy>();
     return PA;
   }
-
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

@@ -17,6 +17,7 @@
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
+#include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -129,6 +130,11 @@ analyzeModule(Module &M) {
       continue;
     }
 
+    if (!hlsl::rootsig::verifyVersion(*V)) {
+      reportError(Ctx, "Invalid Root Signature Version: " + Twine(*V));
+      continue;
+    }
+
     llvm::hlsl::rootsig::MetadataParser MDParser(RootElementListNode);
     llvm::Expected<mcdxbc::RootSignatureDesc> RSDOrErr =
         MDParser.ParseRootSignature(V.value());
@@ -169,6 +175,8 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
                                                     ModuleAnalysisManager &AM) {
 
   RootSignatureBindingInfo &RSDMap = AM.getResult<RootSignatureAnalysis>(M);
+  if (RSDMap.empty())
+    return PreservedAnalyses::all();
 
   OS << "Root Signature Definitions"
      << "\n";
@@ -216,8 +224,9 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
             RS.ParametersContainer.getDescriptorTable(Info.Location);
         OS << "  NumRanges: " << Table.Ranges.size() << "\n";
 
-        for (const dxbc::RTS0::v2::DescriptorRange Range : Table) {
-          OS << "  - Range Type: " << Range.RangeType << "\n"
+        for (const mcdxbc::DescriptorRange &Range : Table) {
+          OS << "  - Range Type: "
+             << dxil::getResourceClassName(Range.RangeType) << "\n"
              << "    Register Space: " << Range.RegisterSpace << "\n"
              << "    Base Shader Register: " << Range.BaseShaderRegister << "\n"
              << "    Num Descriptors: " << Range.NumDescriptors << "\n"

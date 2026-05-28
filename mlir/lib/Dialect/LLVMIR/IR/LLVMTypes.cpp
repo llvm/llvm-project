@@ -134,10 +134,10 @@ static void printExtTypeParams(AsmPrinter &p, ArrayRef<Type> typeParams,
 
 /// These are unused for now.
 /// TODO: Move over to these once more types have been migrated to TypeDef.
-LLVM_ATTRIBUTE_UNUSED static OptionalParseResult
+[[maybe_unused]] static OptionalParseResult
 generatedTypeParser(AsmParser &parser, StringRef *mnemonic, Type &value);
-LLVM_ATTRIBUTE_UNUSED static LogicalResult
-generatedTypePrinter(Type def, AsmPrinter &printer);
+[[maybe_unused]] static LogicalResult generatedTypePrinter(Type def,
+                                                           AsmPrinter &printer);
 
 #include "mlir/Dialect/LLVMIR/LLVMTypeInterfaces.cpp.inc"
 
@@ -208,6 +208,9 @@ LLVMArrayType::getPreferredAlignment(const DataLayout &dataLayout,
 //===----------------------------------------------------------------------===//
 
 bool LLVMFunctionType::isValidArgumentType(Type type) {
+  if (auto structType = dyn_cast<LLVMStructType>(type))
+    return !structType.isOpaque();
+
   return !llvm::isa<LLVMVoidType, LLVMFunctionType>(type);
 }
 
@@ -232,11 +235,18 @@ LLVMFunctionType::getChecked(function_ref<InFlightDiagnostic()> emitError,
 
 LLVMFunctionType LLVMFunctionType::clone(TypeRange inputs,
                                          TypeRange results) const {
-  if (results.size() != 1 || !isValidResultType(results[0]))
+  // LLVM functions have exactly one return type. An empty results range
+  // corresponds to a void return type (as FunctionOpInterface represents void
+  // functions with 0 results). More than one result is not valid.
+  if (results.size() > 1)
+    return {};
+  Type resultType =
+      results.empty() ? LLVMVoidType::get(getContext()) : results[0];
+  if (!isValidResultType(resultType))
     return {};
   if (!llvm::all_of(inputs, isValidArgumentType))
     return {};
-  return get(results[0], llvm::to_vector(inputs), isVarArg());
+  return get(resultType, llvm::to_vector(inputs), isVarArg());
 }
 
 ArrayRef<Type> LLVMFunctionType::getReturnTypes() const {
@@ -667,6 +677,7 @@ LogicalResult LLVMStructType::verifyEntries(DataLayoutEntryListRef entries,
 
 static constexpr llvm::StringRef kSpirvPrefix = "spirv.";
 static constexpr llvm::StringRef kArmSVCount = "aarch64.svcount";
+static constexpr llvm::StringRef kAMDGCNNamedBarrier = "amdgcn.named.barrier";
 
 bool LLVM::LLVMTargetExtType::hasProperty(Property prop) const {
   // See llvm/lib/IR/Type.cpp for reference.
@@ -675,6 +686,9 @@ bool LLVM::LLVMTargetExtType::hasProperty(Property prop) const {
   if (getExtTypeName().starts_with(kSpirvPrefix))
     properties |=
         (LLVMTargetExtType::HasZeroInit | LLVM::LLVMTargetExtType::CanBeGlobal);
+
+  if (getExtTypeName() == kAMDGCNNamedBarrier)
+    properties |= LLVMTargetExtType::CanBeGlobal;
 
   return (properties & prop) == prop;
 }
@@ -703,14 +717,14 @@ const llvm::fltSemantics &LLVMPPCFP128Type::getFloatSemantics() const {
 //===----------------------------------------------------------------------===//
 
 /// Check whether type is a compatible ptr type. These are pointer-like types
-/// with no element type, no metadata, and using the LLVM AddressSpaceAttr
-/// memory space.
+/// with no element type, no metadata, and using the LLVM
+/// LLVMAddrSpaceAttrInterface memory space.
 static bool isCompatiblePtrType(Type type) {
   auto ptrTy = dyn_cast<PtrLikeTypeInterface>(type);
   if (!ptrTy)
     return false;
   return !ptrTy.hasPtrMetadata() && ptrTy.getElementType() == nullptr &&
-         isa<AddressSpaceAttr>(ptrTy.getMemorySpace());
+         isa<LLVMAddrSpaceAttrInterface>(ptrTy.getMemorySpace());
 }
 
 bool mlir::LLVM::isCompatibleOuterType(Type type) {
@@ -759,26 +773,24 @@ static bool isCompatibleImpl(Type type, DenseSet<Type> &compatibleTypes) {
 
   bool result =
       llvm::TypeSwitch<Type, bool>(type)
-          .Case<LLVMStructType>([&](auto structType) {
+          .Case([&](LLVMStructType structType) {
             return llvm::all_of(structType.getBody(), isCompatible);
           })
-          .Case<LLVMFunctionType>([&](auto funcType) {
+          .Case([&](LLVMFunctionType funcType) {
             return isCompatible(funcType.getReturnType()) &&
                    llvm::all_of(funcType.getParams(), isCompatible);
           })
-          .Case<IntegerType>([](auto intType) { return intType.isSignless(); })
-          .Case<VectorType>([&](auto vecType) {
+          .Case([](IntegerType intType) { return intType.isSignless(); })
+          .Case([&](VectorType vecType) {
             return vecType.getRank() == 1 &&
                    isCompatible(vecType.getElementType());
           })
-          .Case<LLVMPointerType>([&](auto pointerType) { return true; })
-          .Case<LLVMTargetExtType>([&](auto extType) {
+          .Case([&](LLVMPointerType pointerType) { return true; })
+          .Case([&](LLVMTargetExtType extType) {
             return llvm::all_of(extType.getTypeParams(), isCompatible);
           })
           // clang-format off
-          .Case<
-              LLVMArrayType
-          >([&](auto containerType) {
+          .Case([&](LLVMArrayType containerType) {
             return isCompatible(containerType.getElementType());
           })
           .Case<
@@ -798,7 +810,7 @@ static bool isCompatibleImpl(Type type, DenseSet<Type> &compatibleTypes) {
           // clang-format on
           .Case<PtrLikeTypeInterface>(
               [](Type type) { return isCompatiblePtrType(type); })
-          .Default([](Type) { return false; });
+          .Default(false);
 
   if (!result)
     compatibleTypes.erase(type);
@@ -891,12 +903,12 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
       .Case<Float64Type>([](Type) { return llvm::TypeSize::getFixed(64); })
       .Case<Float80Type>([](Type) { return llvm::TypeSize::getFixed(80); })
       .Case<Float128Type>([](Type) { return llvm::TypeSize::getFixed(128); })
-      .Case<IntegerType>([](IntegerType intTy) {
+      .Case([](IntegerType intTy) {
         return llvm::TypeSize::getFixed(intTy.getWidth());
       })
       .Case<LLVMPPCFP128Type>(
           [](Type) { return llvm::TypeSize::getFixed(128); })
-      .Case<VectorType>([](VectorType t) {
+      .Case([](VectorType t) {
         assert(isCompatibleVectorType(t) &&
                "unexpected incompatible with LLVM vector type");
         llvm::TypeSize elementSize =

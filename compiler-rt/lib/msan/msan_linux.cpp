@@ -90,7 +90,8 @@ static void CheckMemoryLayoutSanity() {
     CHECK_LT(start, end);
     CHECK_EQ(prev_end, start);
     CHECK(addr_is_type(start, type));
-    CHECK(addr_is_type((start + end) / 2, type));
+    // Use start + (end - start) / 2 to avoid overflow on 32-bit.
+    CHECK(addr_is_type(start + (end - start) / 2, type));
     CHECK(addr_is_type(end - 1, type));
     if (type == MappingDesc::APP || type == MappingDesc::ALLOCATOR) {
       uptr addr = start;
@@ -98,7 +99,7 @@ static void CheckMemoryLayoutSanity() {
       CHECK(MEM_IS_ORIGIN(MEM_TO_ORIGIN(addr)));
       CHECK_EQ(MEM_TO_ORIGIN(addr), SHADOW_TO_ORIGIN(MEM_TO_SHADOW(addr)));
 
-      addr = (start + end) / 2;
+      addr = start + (end - start) / 2;
       CHECK(MEM_IS_SHADOW(MEM_TO_SHADOW(addr)));
       CHECK(MEM_IS_ORIGIN(MEM_TO_ORIGIN(addr)));
       CHECK_EQ(MEM_TO_ORIGIN(addr), SHADOW_TO_ORIGIN(MEM_TO_SHADOW(addr)));
@@ -190,7 +191,15 @@ bool InitShadowWithReExec(bool init_origins) {
               "possibly due to high-entropy ASLR.\n"
               "Re-execing with fixed virtual address space.\n"
               "N.B. reducing ASLR entropy is preferable.\n");
-      CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
+
+      if (personality(old_personality | ADDR_NO_RANDOMIZE) == -1) {
+        Printf(
+            "FATAL: MemorySanitizer: unable to disable ASLR (perhaps "
+            "sandboxing is enabled?).\n");
+        Printf("FATAL: Please rerun without sandboxing and/or ASLR.\n");
+        Die();
+      }
+
       ReExec();
     }
 #  endif

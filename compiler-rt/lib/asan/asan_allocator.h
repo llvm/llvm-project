@@ -198,9 +198,14 @@ const uptr kAllocatorSpace = ~(uptr)0;
 #    endif  // SANITIZER_APPLE
 
 #    if defined(__powerpc64__)
+#      if SANITIZER_AIX
+const uptr kAllocatorSize = 1ULL << 38;  // 256G.
+#      else
 const uptr kAllocatorSize  =  0x20000000000ULL;  // 2T.
+#      endif
 typedef DefaultSizeClassMap SizeClassMap;
-#    elif defined(__aarch64__) && SANITIZER_ANDROID
+#    elif defined(__aarch64__) && \
+        (SANITIZER_ANDROID || defined(SANITIZER_AARCH64_39BIT_VA))
 // Android needs to support 39, 42 and 48 bit VMA.
 const uptr kAllocatorSize  =  0x2000000000ULL;  // 128G.
 typedef VeryCompactSizeClassMap SizeClassMap;
@@ -209,6 +214,11 @@ const uptr kAllocatorSize = 0x2000000000ULL;  // 128G.
 typedef VeryDenseSizeClassMap SizeClassMap;
 #    elif defined(__sparc__)
 const uptr kAllocatorSize = 0x20000000000ULL;  // 2T.
+typedef DefaultSizeClassMap SizeClassMap;
+#    elif SANITIZER_ALPHA
+// Alpha has a 42-bit user VAS (TASK_SIZE = 0x40000000000).  Use 512G so the
+// allocator fits comfortably within the 2.5T HighMem region.
+const uptr kAllocatorSize = 0x8000000000ULL;  // 512G.
 typedef DefaultSizeClassMap SizeClassMap;
 #    elif SANITIZER_WINDOWS
 const uptr kAllocatorSize  =  0x8000000000ULL;  // 500G
@@ -272,9 +282,16 @@ struct AsanThreadLocalMallocStorage {
 
 void *asan_memalign(uptr alignment, uptr size, BufferedStackTrace *stack);
 void asan_free(void *ptr, BufferedStackTrace *stack);
+void asan_free_sized(void* ptr, uptr size, BufferedStackTrace* stack);
+void asan_free_aligned_sized(void* ptr, uptr alignment, uptr size,
+                             BufferedStackTrace* stack);
 
 void *asan_malloc(uptr size, BufferedStackTrace *stack);
 void *asan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack);
+#if SANITIZER_AIX
+void* asan_vec_malloc(uptr size, BufferedStackTrace* stack);
+void* asan_vec_calloc(uptr nmemb, uptr size, BufferedStackTrace* stack);
+#endif
 void *asan_realloc(void *p, uptr size, BufferedStackTrace *stack);
 void *asan_reallocarray(void *p, uptr nmemb, uptr size,
                         BufferedStackTrace *stack);

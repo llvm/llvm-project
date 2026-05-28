@@ -28,18 +28,18 @@ coro_Cleanup:
   br label %coro_Suspend, !dbg !37
 
 coro_Suspend:
-  tail call i1 @llvm.coro.end(ptr null, i1 false, token none) #3, !dbg !40
+  tail call void @llvm.coro.end(ptr null, i1 false, token none) #3, !dbg !40
   ret ptr %2, !dbg !41
 }
 
 ; Check that the resume function contains the `#dbg_label` instructions.
-; CHECK-LABEL:   define internal fastcc void @f.resume({{.*}})
+; CHECK-LABEL:   define internal void @f.resume({{.*}})
 ; CHECK-SAME:      !dbg ![[RESUME_SUBPROGRAM:[0-9]+]]
 ; CHECK:         resume.0:
 ; CHECK-NEXT:        #dbg_label(![[RESUME_0:[0-9]+]], ![[RESUME_LABEL_LOC:[0-9]+]])
 
 ; Check that the destroy function contains the `#dbg_label` instructions.
-; CHECK-LABEL:   define internal fastcc void @f.destroy({{.*}})
+; CHECK-LABEL:   define internal void @f.destroy({{.*}})
 ; CHECK-SAME:      !dbg ![[DESTROY_SUBPROGRAM:[0-9]+]]
 ; CHECK:         resume.0:
 ; CHECK-NEXT:        #dbg_label(![[DESTROY_0:[0-9]+]], ![[DESTROY_LABEL_LOC:[0-9]+]])
@@ -60,7 +60,7 @@ declare token @llvm.coro.save(ptr) #0
 declare i8 @llvm.coro.suspend(token, i1) #0
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #4
 declare void @free(ptr nocapture) local_unnamed_addr #0
-declare i1 @llvm.coro.end(ptr, i1, token) #0
+declare void @llvm.coro.end(ptr, i1, token) #0
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

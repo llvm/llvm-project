@@ -84,8 +84,7 @@ struct DenseMapInfo<T*> {
   }
 
   static unsigned getHashValue(const T *PtrVal) {
-    return (unsigned((uintptr_t)PtrVal) >> 4) ^
-           (unsigned((uintptr_t)PtrVal) >> 9);
+    return densemap::detail::mix(reinterpret_cast<uintptr_t>(PtrVal));
   }
 
   static bool isEqual(const T *LHS, const T *RHS) { return LHS == RHS; }
@@ -139,13 +138,11 @@ struct DenseMapInfo<std::pair<T, U>> {
   using SecondInfo = DenseMapInfo<U>;
 
   static constexpr Pair getEmptyKey() {
-    return std::make_pair(FirstInfo::getEmptyKey(),
-                          SecondInfo::getEmptyKey());
+    return {FirstInfo::getEmptyKey(), SecondInfo::getEmptyKey()};
   }
 
   static constexpr Pair getTombstoneKey() {
-    return std::make_pair(FirstInfo::getTombstoneKey(),
-                          SecondInfo::getTombstoneKey());
+    return {FirstInfo::getTombstoneKey(), SecondInfo::getTombstoneKey()};
   }
 
   static unsigned getHashValue(const Pair& PairVal) {
@@ -194,20 +191,16 @@ template <typename... Ts> struct DenseMapInfo<std::tuple<Ts...>> {
     return getHashValueImpl<0>(values);
   }
 
-  template <unsigned I>
-  static bool isEqualImpl(const Tuple &lhs, const Tuple &rhs) {
-    if constexpr (I == sizeof...(Ts)) {
-      return true;
-    } else {
-      using EltType = std::tuple_element_t<I, Tuple>;
-      return DenseMapInfo<EltType>::isEqual(std::get<I>(lhs),
-                                            std::get<I>(rhs)) &&
-             isEqualImpl<I + 1>(lhs, rhs);
-    }
+  template <std::size_t... Is>
+  static bool isEqualImpl(const Tuple &lhs, const Tuple &rhs,
+                          std::index_sequence<Is...>) {
+    return (DenseMapInfo<std::tuple_element_t<Is, Tuple>>::isEqual(
+                std::get<Is>(lhs), std::get<Is>(rhs)) &&
+            ...);
   }
 
   static bool isEqual(const Tuple &lhs, const Tuple &rhs) {
-    return isEqualImpl<0>(lhs, rhs);
+    return isEqualImpl(lhs, rhs, std::index_sequence_for<Ts...>{});
   }
 };
 

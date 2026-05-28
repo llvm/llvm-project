@@ -26,6 +26,31 @@ using namespace clang::CIRGen;
 CIRGenVTables::CIRGenVTables(CIRGenModule &cgm)
     : cgm(cgm), vtContext(cgm.getASTContext().getVTableContext()) {}
 
+cir::FuncOp CIRGenModule::getAddrOfThunk(StringRef name, mlir::Type fnTy,
+                                         GlobalDecl gd) {
+  return getOrCreateCIRFunction(name, fnTy, gd, /*forVTable=*/true,
+                                /*dontDefer=*/true, /*isThunk=*/true);
+}
+
+static void setThunkProperties(CIRGenModule &cgm, const ThunkInfo &thunk,
+                               cir::FuncOp thunkFn, bool forVTable,
+                               GlobalDecl gd) {
+  cgm.setFunctionLinkage(gd, thunkFn);
+  cgm.getCXXABI().setThunkLinkage(thunkFn, forVTable, gd,
+                                  !thunk.Return.isEmpty());
+
+  // Set the right visibility.
+  cgm.setGVProperties(thunkFn, cast<NamedDecl>(gd.getDecl()));
+
+  if (!cgm.getCXXABI().exportThunk()) {
+    assert(!cir::MissingFeatures::setDLLStorageClass());
+    cgm.setDSOLocal(static_cast<mlir::Operation *>(thunkFn));
+  }
+
+  if (cgm.supportsCOMDAT() && thunkFn.isWeakForLinker())
+    thunkFn.setComdat(true);
+}
+
 mlir::Type CIRGenModule::getVTableComponentType() {
   mlir::Type ptrTy = builder.getUInt8PtrTy();
   assert(!cir::MissingFeatures::vtableRelativeLayout());
@@ -45,6 +70,49 @@ cir::RecordType CIRGenVTables::getVTableType(const VTableLayout &layout) {
   // FIXME(cir): should VTableLayout be encoded like we do for some
   // AST nodes?
   return cgm.getBuilder().getAnonRecordTy(tys, /*incomplete=*/false);
+}
+
+/// At this point in the translation unit, does it appear that can we
+/// rely on the vtable being defined elsewhere in the program?
+///
+/// The response is really only definitive when called at the end of
+/// the translation unit.
+///
+/// The only semantic restriction here is that the object file should
+/// not contain a vtable definition when that vtable is defined
+/// strongly elsewhere.  Otherwise, we'd just like to avoid emitting
+/// vtables when unnecessary.
+/// TODO(cir): this should be merged into common AST helper for codegen.
+bool CIRGenVTables::isVTableExternal(const CXXRecordDecl *rd) {
+  assert(rd->isDynamicClass() && "Non-dynamic classes have no VTable.");
+
+  // We always synthesize vtables if they are needed in the MS ABI. MSVC doesn't
+  // emit them even if there is an explicit template instantiation.
+  if (cgm.getTarget().getCXXABI().isMicrosoft())
+    return false;
+
+  // If we have an explicit instantiation declaration (and not a
+  // definition), the vtable is defined elsewhere.
+  TemplateSpecializationKind tsk = rd->getTemplateSpecializationKind();
+  if (tsk == TSK_ExplicitInstantiationDeclaration)
+    return true;
+
+  // Otherwise, if the class is an instantiated template, the
+  // vtable must be defined here.
+  if (tsk == TSK_ImplicitInstantiation ||
+      tsk == TSK_ExplicitInstantiationDefinition)
+    return false;
+
+  // Otherwise, if the class doesn't have a key function (possibly
+  // anymore), the vtable must be defined here.
+  const CXXMethodDecl *keyFunction =
+      cgm.getASTContext().getCurrentKeyFunction(rd);
+  if (!keyFunction)
+    return false;
+
+  // Otherwise, if we don't have a definition of the key function, the
+  // vtable must be defined somewhere else.
+  return !keyFunction->hasBody();
 }
 
 /// This is a callback from Sema to tell us that a particular vtable is
@@ -77,15 +145,8 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
   assert(!cir::MissingFeatures::vtableRelativeLayout());
 
   switch (component.getKind()) {
-  case VTableComponent::CK_CompleteDtorPointer:
-    cgm.errorNYI("getVTableComponent: CompleteDtorPointer");
-    return mlir::Attribute();
-  case VTableComponent::CK_DeletingDtorPointer:
-    cgm.errorNYI("getVTableComponent: DeletingDtorPointer");
-    return mlir::Attribute();
   case VTableComponent::CK_UnusedFunctionPointer:
-    cgm.errorNYI("getVTableComponent: UnusedFunctionPointer");
-    return mlir::Attribute();
+    return builder.getConstNullPtrAttr(builder.getUInt8PtrTy());
 
   case VTableComponent::CK_VCallOffset:
     return builder.getConstPtrAttr(builder.getUInt8PtrTy(),
@@ -105,26 +166,53 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
            "expected GlobalViewAttr or ConstPtrAttr");
     return rtti;
 
-  case VTableComponent::CK_FunctionPointer: {
-    GlobalDecl gd = component.getGlobalDecl();
+  case VTableComponent::CK_FunctionPointer:
+  case VTableComponent::CK_CompleteDtorPointer:
+  case VTableComponent::CK_DeletingDtorPointer: {
+    GlobalDecl gd = component.getGlobalDecl(
+        cgm.getASTContext().getTargetInfo().emitVectorDeletingDtors(
+            cgm.getASTContext().getLangOpts()));
 
     assert(!cir::MissingFeatures::cudaSupport());
 
+    auto getSpecialVirtFn = [&](StringRef name) -> cir::FuncOp {
+      assert(!cir::MissingFeatures::vtableRelativeLayout());
+
+      if (cgm.getLangOpts().OpenMP && cgm.getLangOpts().OpenMPIsTargetDevice &&
+          cgm.getTriple().isNVPTX())
+        cgm.errorNYI(gd.getDecl()->getSourceRange(),
+                     "getVTableComponent for OMP Device NVPTX");
+
+      cir::FuncType fnTy =
+          cgm.getBuilder().getFuncType({}, cgm.getBuilder().getVoidTy());
+      cir::FuncOp fnPtr = cgm.createRuntimeFunction(fnTy, name);
+
+      assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+      return fnPtr;
+    };
+
     cir::FuncOp fnPtr;
     if (cast<CXXMethodDecl>(gd.getDecl())->isPureVirtual()) {
-      cgm.errorNYI("getVTableComponent: CK_FunctionPointer: pure virtual");
-      return mlir::Attribute();
+      if (!pureVirtualFn)
+        pureVirtualFn =
+            getSpecialVirtFn(cgm.getCXXABI().getPureVirtualCallName());
+      fnPtr = pureVirtualFn;
     } else if (cast<CXXMethodDecl>(gd.getDecl())->isDeleted()) {
-      cgm.errorNYI("getVTableComponent: CK_FunctionPointer: deleted virtual");
-      return mlir::Attribute();
+      if (!deletedVirtualFn)
+        deletedVirtualFn =
+            getSpecialVirtFn(cgm.getCXXABI().getDeletedVirtualCallName());
+      fnPtr = deletedVirtualFn;
     } else if (nextVTableThunkIndex < layout.vtable_thunks().size() &&
                layout.vtable_thunks()[nextVTableThunkIndex].first ==
                    componentIndex) {
-      cgm.errorNYI("getVTableComponent: CK_FunctionPointer: thunk");
-      return mlir::Attribute();
+      const ThunkInfo &thunkInfo =
+          layout.vtable_thunks()[nextVTableThunkIndex].second;
+      nextVTableThunkIndex++;
+      fnPtr = maybeEmitThunk(gd, thunkInfo, /*forVTable=*/true);
+      assert(!cir::MissingFeatures::pointerAuthentication());
     } else {
       // Otherwise we can use the method definition directly.
-      cir::FuncType fnTy = cgm.getTypes().getFunctionTypeForVTable(gd);
+      cir::FuncType fnTy = cgm.getTypes().getFunctionType(gd);
       fnPtr = cgm.getAddrOfFunction(gd, fnTy, /*ForVTable=*/true);
     }
 
@@ -238,6 +326,9 @@ cir::GlobalOp CIRGenVTables::generateConstructionVTable(
   return vtable;
 }
 
+static bool shouldEmitAvailableExternallyVTable(const CIRGenModule &cgm,
+                                                const CXXRecordDecl *rd);
+
 /// Compute the required linkage of the vtable for the given class.
 ///
 /// Note that we only call this at the end of the translation unit.
@@ -281,12 +372,47 @@ cir::GlobalLinkageKind CIRGenModule::getVTableLinkage(const CXXRecordDecl *rd) {
       return cir::GlobalLinkageKind::WeakODRLinkage;
 
     case TSK_ExplicitInstantiationDeclaration:
-      llvm_unreachable("Should not have been asked to emit this");
+      return !def ? cir::GlobalLinkageKind::AvailableExternallyLinkage
+                  : cir::GlobalLinkageKind::ExternalLinkage;
     }
   }
+  // -fapple-kext mode does not support weak linkage, so we must use
+  // internal linkage.
+  if (astContext.getLangOpts().AppleKext)
+    return cir::GlobalLinkageKind::InternalLinkage;
 
-  errorNYI(rd->getSourceRange(), "getVTableLinkage: no key function");
-  return cir::GlobalLinkageKind::ExternalLinkage;
+  auto discardableODRLinkage = cir::GlobalLinkageKind::LinkOnceODRLinkage;
+  auto nonDiscardableODRLinkage = cir::GlobalLinkageKind::WeakODRLinkage;
+  if (rd->hasAttr<DLLExportAttr>()) {
+    // Cannot discard exported vtables.
+    discardableODRLinkage = nonDiscardableODRLinkage;
+  } else if (rd->hasAttr<DLLImportAttr>()) {
+    // Imported vtables are available externally.
+    discardableODRLinkage = cir::GlobalLinkageKind::AvailableExternallyLinkage;
+    nonDiscardableODRLinkage =
+        cir::GlobalLinkageKind::AvailableExternallyLinkage;
+  }
+
+  switch (rd->getTemplateSpecializationKind()) {
+  case TSK_Undeclared:
+  case TSK_ExplicitSpecialization:
+  case TSK_ImplicitInstantiation:
+    return discardableODRLinkage;
+
+  case TSK_ExplicitInstantiationDeclaration:
+    // Explicit instantiations in MSVC do not provide vtables, so we must emit
+    // our own.
+    if (getTarget().getCXXABI().isMicrosoft())
+      return discardableODRLinkage;
+    return shouldEmitAvailableExternallyVTable(*this, rd)
+               ? cir::GlobalLinkageKind::AvailableExternallyLinkage
+               : cir::GlobalLinkageKind::ExternalLinkage;
+
+  case TSK_ExplicitInstantiationDefinition:
+    return nonDiscardableODRLinkage;
+  }
+
+  llvm_unreachable("Invalid TemplateSpecializationKind!");
 }
 
 cir::GlobalOp CIRGenVTables::getAddrOfVTT(const CXXRecordDecl *rd) {
@@ -438,6 +564,422 @@ uint64_t CIRGenVTables::getSecondaryVirtualPointerIndex(const CXXRecordDecl *rd,
   return it->second;
 }
 
+static RValue performReturnAdjustment(CIRGenFunction &cgf, QualType resultType,
+                                      RValue rv, const ThunkInfo &thunk) {
+  // Emit the return adjustment.  For non-reference pointer returns, match
+  // classic codegen: skip the adjustment when the returned pointer is null.
+  bool nullCheckValue = !resultType->isReferenceType();
+  mlir::Value returnValue = rv.getValue();
+
+  const CXXRecordDecl *classDecl =
+      resultType->getPointeeType()->getAsCXXRecordDecl();
+  CharUnits classAlign = cgf.cgm.getClassPointerAlignment(classDecl);
+  mlir::Type pointeeType = cgf.convertTypeForMem(resultType->getPointeeType());
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = returnValue.getLoc();
+
+  if (!nullCheckValue) {
+    returnValue = cgf.cgm.getCXXABI().performReturnAdjustment(
+        cgf, Address(returnValue, pointeeType, classAlign), classDecl,
+        thunk.Return);
+    return RValue::get(returnValue);
+  }
+
+  mlir::Value isNotNull = builder.createPtrIsNotNull(returnValue);
+  returnValue =
+      cir::TernaryOp::create(
+          builder, loc, isNotNull,
+          [&](mlir::OpBuilder &, mlir::Location) {
+            mlir::Value adjusted = cgf.cgm.getCXXABI().performReturnAdjustment(
+                cgf, Address(returnValue, pointeeType, classAlign), classDecl,
+                thunk.Return);
+            builder.createYield(loc, adjusted);
+          },
+          [&](mlir::OpBuilder &, mlir::Location) {
+            mlir::Value nullVal =
+                builder.getNullPtr(returnValue.getType(), loc).getResult();
+            builder.createYield(loc, nullVal);
+          })
+          .getResult();
+
+  return RValue::get(returnValue);
+}
+
+void CIRGenFunction::startThunk(cir::FuncOp fn, GlobalDecl gd,
+                                const CIRGenFunctionInfo &fnInfo,
+                                bool isUnprototyped) {
+  assert(!curGD.getDecl() && "curGD was already set!");
+  curGD = gd;
+  curFuncIsThunk = true;
+
+  // Build FunctionArgs.
+  const CXXMethodDecl *md = cast<CXXMethodDecl>(gd.getDecl());
+  QualType thisType = md->getThisType();
+  QualType resultType;
+  if (isUnprototyped)
+    resultType = cgm.getASTContext().VoidTy;
+  else if (cgm.getCXXABI().hasThisReturn(gd))
+    resultType = thisType;
+  else if (cgm.getCXXABI().hasMostDerivedReturn(gd))
+    resultType = cgm.getASTContext().VoidPtrTy;
+  else
+    resultType = md->getType()->castAs<FunctionProtoType>()->getReturnType();
+  FunctionArgList functionArgs;
+
+  // Create the implicit 'this' parameter declaration.
+  cgm.getCXXABI().buildThisParam(*this, functionArgs);
+
+  // Add the rest of the parameters, if we have a prototype to work with.
+  if (!isUnprototyped) {
+    functionArgs.append(md->param_begin(), md->param_end());
+
+    if (isa<CXXDestructorDecl>(md))
+      cgm.getCXXABI().addImplicitStructorParams(*this, resultType,
+                                                functionArgs);
+  }
+
+  assert(!cir::MissingFeatures::generateDebugInfo());
+
+  // Start defining the function.
+  cir::FuncType funcType = cgm.getTypes().getFunctionType(fnInfo);
+  startFunction(GlobalDecl(), resultType, fn, funcType, functionArgs,
+                md->getLocation(), md->getLocation());
+  // TODO(cir): Move this into startFunction.
+  curFnInfo = &fnInfo;
+  assert(!cir::MissingFeatures::generateDebugInfo());
+
+  // Since we didn't pass a GlobalDecl to startFunction, do this ourselves.
+  cgm.getCXXABI().emitInstanceFunctionProlog(md->getLocation(), *this);
+  cxxThisValue = cxxabiThisValue;
+  curCodeDecl = md;
+  curFuncDecl = md;
+}
+
+void CIRGenFunction::finishThunk() {
+  // Clear these to restore the invariants expected by
+  // startFunction/finishFunction.
+  curCodeDecl = nullptr;
+  curFuncDecl = nullptr;
+
+  finishFunction(SourceLocation());
+}
+
+void CIRGenFunction::emitCallAndReturnForThunk(cir::FuncOp callee,
+                                               const ThunkInfo *thunk,
+                                               bool isUnprototyped) {
+  assert(isa<CXXMethodDecl>(curGD.getDecl()) &&
+         "Please use a new CGF for this thunk");
+  const CXXMethodDecl *md = cast<CXXMethodDecl>(curGD.getDecl());
+
+  // Determine the this pointer class (may differ from md's class for thunks).
+  const CXXRecordDecl *thisValueClass =
+      md->getThisType()->getPointeeCXXRecordDecl();
+  if (thunk)
+    thisValueClass = thunk->ThisType->getPointeeCXXRecordDecl();
+
+  mlir::Value adjustedThisPtr =
+      thunk ? cgm.getCXXABI().performThisAdjustment(*this, loadCXXThisAddress(),
+                                                    thisValueClass, *thunk)
+            : loadCXXThis();
+
+  // If perfect forwarding is required a variadic method, a method using
+  // inalloca, or an unprototyped thunk, use musttail. Emit an error if this
+  // thunk requires a return adjustment, since that is impossible with musttail.
+  assert(!cir::MissingFeatures::opCallInAlloca());
+  if ((curFnInfo && curFnInfo->isVariadic()) || isUnprototyped) {
+    // Error if return adjustment is needed (can't do with musttail).
+    if (thunk && !thunk->Return.isEmpty()) {
+      if (isUnprototyped)
+        cgm.errorUnsupported(
+            md, "return-adjusting thunk with incomplete parameter type");
+      else if (curFnInfo && curFnInfo->isVariadic())
+        llvm_unreachable("shouldn't try to emit musttail return-adjusting "
+                         "thunks for variadic functions");
+      else
+        cgm.errorUnsupported(
+            md, "non-trivial argument copy for return-adjusting thunk");
+    }
+    emitMustTailThunk(curGD, adjustedThisPtr, callee);
+    return;
+  }
+
+  // Build the call argument list.
+  CallArgList callArgs;
+  QualType thisType = md->getThisType();
+  callArgs.add(RValue::get(adjustedThisPtr), thisType);
+
+  if (isa<CXXDestructorDecl>(md))
+    cgm.getCXXABI().adjustCallArgsForDestructorThunk(*this, curGD, callArgs);
+
+#ifndef NDEBUG
+  unsigned prefixArgs = callArgs.size() - 1;
+#endif
+
+  // Add the rest of the method parameters.
+  for (const ParmVarDecl *pd : md->parameters())
+    emitDelegateCallArg(callArgs, pd, SourceLocation());
+
+  const FunctionProtoType *fpt = md->getType()->castAs<FunctionProtoType>();
+
+#ifndef NDEBUG
+  const CIRGenFunctionInfo &callFnInfo = cgm.getTypes().arrangeCXXMethodCall(
+      callArgs, fpt, RequiredArgs::getFromProtoWithExtraSlots(fpt, 1),
+      prefixArgs);
+  assert(callFnInfo.argTypeSize() == curFnInfo->argTypeSize());
+#endif
+
+  // Determine whether we have a return value slot to use.
+  QualType resultType = cgm.getCXXABI().hasThisReturn(curGD) ? thisType
+                        : cgm.getCXXABI().hasMostDerivedReturn(curGD)
+                            ? cgm.getASTContext().VoidPtrTy
+                            : fpt->getReturnType();
+
+  ReturnValueSlot slot;
+  // This should also be tracking volatile, unused, and externally destructed.
+  assert(!cir::MissingFeatures::returnValueSlotFeatures());
+  if (!resultType->isVoidType() && hasAggregateEvaluationKind(resultType))
+    slot = ReturnValueSlot(returnValue);
+
+  // Now emit our call.
+  CIRGenCallee cirCallee = CIRGenCallee::forDirect(callee, curGD);
+  mlir::Location loc = builder.getUnknownLoc();
+  RValue rv = emitCall(*curFnInfo, cirCallee, slot, callArgs,
+                       /*callOrTryCall=*/nullptr, loc);
+
+  // Consider return adjustment if we have ThunkInfo.
+  if (thunk && !thunk->Return.isEmpty())
+    rv = performReturnAdjustment(*this, resultType, rv, *thunk);
+  else
+    assert(!cir::MissingFeatures::opCallMustTail());
+
+  // Emit return.  For aggregate returns the call has already written the
+  // result through the slot bound to returnValue above; emit the
+  // corresponding load+return here rather than leaving the function to
+  // fall off the end and have LexicalScope::emitImplicitReturn drop a
+  // `cir.trap` / `cir.unreachable` in its place (which would silently
+  // discard the result we just stored).
+  if (!resultType->isVoidType()) {
+    if (slot.isNull())
+      cgm.getCXXABI().emitReturnFromThunk(*this, rv, resultType);
+    else
+      emitReturnOfRValue(loc, rv, resultType);
+  }
+
+  // Disable final ARC autorelease.
+  assert(!cir::MissingFeatures::objCLifetime());
+
+  finishThunk();
+}
+
+void CIRGenFunction::emitMustTailThunk(GlobalDecl gd,
+                                       mlir::Value adjustedThisPtr,
+                                       cir::FuncOp callee) {
+  // Forward all function arguments, replacing 'this' with the adjusted pointer.
+  // The call is marked musttail so varargs are forwarded correctly.
+  mlir::Block *entryBlock = getCurFunctionEntryBlock();
+  SmallVector<mlir::Value> args;
+  for (mlir::BlockArgument arg : entryBlock->getArguments())
+    args.push_back(arg);
+
+  // Replace the 'this' argument (first arg) with the adjusted pointer.
+  assert(!args.empty() && "thunk must have at least 'this' argument");
+  if (adjustedThisPtr.getType() != args[0].getType())
+    adjustedThisPtr = builder.createBitcast(adjustedThisPtr, args[0].getType());
+  args[0] = adjustedThisPtr;
+
+  mlir::Location loc = curFn->getLoc();
+  cir::FuncType calleeTy = callee.getFunctionType();
+  mlir::Type retTy = calleeTy.getReturnType();
+
+  cir::CallOp call = builder.createCallOp(loc, callee, args);
+  call->setAttr(cir::CIRDialect::getMustTailAttrName(),
+                mlir::UnitAttr::get(builder.getContext()));
+
+  if (isa<cir::VoidType>(retTy))
+    cir::ReturnOp::create(builder, loc);
+  else
+    cir::ReturnOp::create(builder, loc, call->getResult(0));
+
+  finishThunk();
+}
+
+void CIRGenFunction::generateThunk(cir::FuncOp fn,
+                                   const CIRGenFunctionInfo &fnInfo,
+                                   GlobalDecl gd, const ThunkInfo &thunk,
+                                   bool isUnprototyped) {
+  // Create entry block and set up the builder's insertion point.
+  // This must be done before calling startThunk() which calls startFunction().
+  assert(fn.isDeclaration() && "Function already has body?");
+  mlir::Block *entryBb = fn.addEntryBlock();
+  builder.setInsertionPointToStart(entryBb);
+
+  // Create a scope in the symbol table to hold variable declarations.
+  // This is required before startFunction processes parameters, as it will
+  // insert them into the symbolTable (ScopedHashTable) which requires an
+  // active scope.
+  SymTableScopeTy varScope(symbolTable);
+
+  // Create lexical scope - must stay alive for entire thunk generation.
+  // startFunction() requires currLexScope to be set.
+  SourceLocRAIIObject locRAII(*this, fn.getLoc());
+  LexicalScope lexScope{*this, fn.getLoc(), entryBb};
+
+  startThunk(fn, gd, fnInfo, isUnprototyped);
+  assert(!cir::MissingFeatures::generateDebugInfo());
+
+  // Get our callee. Use a placeholder type if this method is unprototyped so
+  // that CIRGenModule doesn't try to set attributes.
+  mlir::Type ty;
+  if (isUnprototyped)
+    cgm.errorNYI("unprototyped thunk placeholder type");
+  else
+    ty = cgm.getTypes().getFunctionType(fnInfo);
+
+  cir::FuncOp calleeOp = cgm.getAddrOfFunction(gd, ty, /*forVTable=*/true);
+
+  // Make the call and return the result.
+  emitCallAndReturnForThunk(calleeOp, &thunk, isUnprototyped);
+}
+
+static bool shouldEmitVTableThunk(CIRGenModule &cgm, const CXXMethodDecl *md,
+                                  bool isUnprototyped, bool forVTable) {
+  // Always emit thunks in the MS C++ ABI. We cannot rely on other TUs to
+  // provide thunks for us.
+  if (cgm.getTarget().getCXXABI().isMicrosoft())
+    return true;
+
+  // In the Itanium C++ ABI, vtable thunks are provided by TUs that provide
+  // definitions of the main method. Therefore, emitting thunks with the vtable
+  // is purely an optimization. Emit the thunk if optimizations are enabled and
+  // all of the parameter types are complete.
+  if (forVTable)
+    return cgm.getCodeGenOpts().OptimizationLevel && !isUnprototyped;
+
+  // Always emit thunks along with the method definition.
+  return true;
+}
+
+cir::FuncOp CIRGenVTables::maybeEmitThunk(GlobalDecl gd,
+                                          const ThunkInfo &thunkAdjustments,
+                                          bool forVTable) {
+  const CXXMethodDecl *md = cast<CXXMethodDecl>(gd.getDecl());
+  SmallString<256> name;
+  MangleContext &mCtx = cgm.getCXXABI().getMangleContext();
+
+  llvm::raw_svector_ostream out(name);
+  if (const CXXDestructorDecl *dd = dyn_cast<CXXDestructorDecl>(md)) {
+    mCtx.mangleCXXDtorThunk(dd, gd.getDtorType(), thunkAdjustments,
+                            /*elideOverrideInfo=*/false, out);
+  } else {
+    mCtx.mangleThunk(md, thunkAdjustments, /*elideOverrideInfo=*/false, out);
+  }
+
+  if (cgm.getASTContext().useAbbreviatedThunkName(gd, name.str())) {
+    name = "";
+    if (const CXXDestructorDecl *dd = dyn_cast<CXXDestructorDecl>(md))
+      mCtx.mangleCXXDtorThunk(dd, gd.getDtorType(), thunkAdjustments,
+                              /*elideOverrideInfo=*/true, out);
+    else
+      mCtx.mangleThunk(md, thunkAdjustments, /*elideOverrideInfo=*/true, out);
+  }
+
+  cir::FuncType thunkVTableTy = cgm.getTypes().getFunctionType(gd);
+  cir::FuncOp thunk = cgm.getAddrOfThunk(name, thunkVTableTy, gd);
+
+  // If we don't need to emit a definition, return this declaration as is.
+  bool isUnprototyped = !cgm.getTypes().isFuncTypeConvertible(
+      md->getType()->castAs<FunctionType>());
+  if (!shouldEmitVTableThunk(cgm, md, isUnprototyped, forVTable))
+    return thunk;
+
+  // Arrange a function prototype appropriate for a function definition. In some
+  // cases in the MS ABI, we may need to build an unprototyped musttail thunk.
+  const CIRGenFunctionInfo &fnInfo =
+      isUnprototyped ? (cgm.errorNYI("unprototyped must-tail thunk"),
+                        cgm.getTypes().arrangeGlobalDeclaration(gd))
+                     : cgm.getTypes().arrangeGlobalDeclaration(gd);
+  cir::FuncType thunkFnTy = cgm.getTypes().getFunctionType(fnInfo);
+
+  // This is to replace OG's casting to a function, keeping it here to
+  // streamline the 1-to-1 mapping from OG starting below.
+  cir::FuncOp thunkFn = thunk;
+  if (thunk.getFunctionType() != thunkFnTy) {
+    cir::FuncOp oldThunkFn = thunkFn;
+
+    assert(oldThunkFn.isDeclaration() && "Shouldn't replace non-declaration");
+
+    // Remove the name from the old thunk function and get a new thunk.
+    cgm.eraseGlobalSymbol(oldThunkFn);
+    oldThunkFn.setName(StringRef());
+    thunkFn =
+        cir::FuncOp::create(cgm.getBuilder(), thunk->getLoc(), name.str(),
+                            thunkFnTy, cir::GlobalLinkageKind::ExternalLinkage);
+    cgm.insertGlobalSymbol(thunkFn);
+    cgm.setCIRFunctionAttributes(md, fnInfo, thunkFn, /*isThunk=*/false);
+
+    if (!oldThunkFn->use_empty())
+      oldThunkFn->replaceAllUsesWith(thunkFn);
+
+    // Remove the old thunk.
+    oldThunkFn->erase();
+  }
+
+  bool abiHasKeyFunctions = cgm.getTarget().getCXXABI().hasKeyFunctions();
+  bool useAvailableExternallyLinkage = forVTable && abiHasKeyFunctions;
+
+  // If the type of the underlying GlobalValue is wrong, we'll have to replace
+  // it. It should be a declaration.
+  if (!thunkFn.isDeclaration()) {
+    if (!abiHasKeyFunctions || useAvailableExternallyLinkage) {
+      // There is already a thunk emitted for this function, do nothing.
+      return thunkFn;
+    }
+
+    setThunkProperties(cgm, thunkAdjustments, thunkFn, forVTable, gd);
+    return thunkFn;
+  }
+
+  // TODO(cir): Add "thunk" attribute if unprototyped.
+
+  cgm.setCIRFunctionAttributesForDefinition(cast<FunctionDecl>(gd.getDecl()),
+                                            thunkFn);
+
+  // Thunks for variadic methods are special because in general variadic
+  // arguments cannot be perfectly forwarded. In the general case, clang
+  // implements such thunks by cloning the original function body. However, for
+  // thunks with no return adjustment on targets that support musttail, we can
+  // use musttail to perfectly forward the variadic arguments.
+  bool shouldCloneVarArgs = false;
+  if (!isUnprototyped && thunkFn.getFunctionType().isVarArg()) {
+    shouldCloneVarArgs = true;
+    if (thunkAdjustments.Return.isEmpty()) {
+      switch (cgm.getTriple().getArch()) {
+      case llvm::Triple::x86_64:
+      case llvm::Triple::x86:
+      case llvm::Triple::aarch64:
+        shouldCloneVarArgs = false;
+        break;
+      default:
+        break;
+      }
+    }
+  }
+
+  if (shouldCloneVarArgs) {
+    if (useAvailableExternallyLinkage)
+      return thunkFn;
+    cgm.errorNYI("varargs thunk cloning");
+  } else {
+    // Normal thunk body generation.
+    mlir::OpBuilder::InsertionGuard guard(cgm.getBuilder());
+    CIRGenFunction cgf(cgm, cgm.getBuilder());
+    cgf.generateThunk(thunkFn, fnInfo, gd, thunkAdjustments, isUnprototyped);
+  }
+
+  setThunkProperties(cgm, thunkAdjustments, thunkFn, forVTable, gd);
+  return thunkFn;
+}
+
 void CIRGenVTables::emitThunks(GlobalDecl gd) {
   const CXXMethodDecl *md =
       cast<CXXMethodDecl>(gd.getDecl())->getCanonicalDecl();
@@ -452,5 +994,69 @@ void CIRGenVTables::emitThunks(GlobalDecl gd) {
   if (!thunkInfoVector)
     return;
 
-  cgm.errorNYI(md->getSourceRange(), "emitThunks");
+  for (const ThunkInfo &thunk : *thunkInfoVector)
+    maybeEmitThunk(gd, thunk, /*forVTable=*/false);
+}
+
+static bool shouldEmitAvailableExternallyVTable(const CIRGenModule &cgm,
+                                                const CXXRecordDecl *rd) {
+  return cgm.getCodeGenOpts().OptimizationLevel > 0 &&
+         cgm.getCXXABI().canSpeculativelyEmitVTable(rd);
+}
+
+/// Given that we're currently at the end of the translation unit, and
+/// we've emitted a reference to the vtable for this class, should
+/// we define that vtable?
+static bool shouldEmitVTableAtEndOfTranslationUnit(CIRGenModule &cgm,
+                                                   const CXXRecordDecl *rd) {
+  // If vtable is internal then it has to be done.
+  if (!cgm.getVTables().isVTableExternal(rd))
+    return true;
+
+  // If it's external then maybe we will need it as available_externally.
+  return shouldEmitAvailableExternallyVTable(cgm, rd);
+}
+
+/// Given that at some point we emitted a reference to one or more
+/// vtables, and that we are now at the end of the translation unit,
+/// decide whether we should emit them.
+void CIRGenModule::emitDeferredVTables() {
+#ifndef NDEBUG
+  // Remember the size of DeferredVTables, because we're going to assume
+  // that this entire operation doesn't modify it.
+  size_t savedSize = deferredVTables.size();
+#endif
+  for (const CXXRecordDecl *rd : deferredVTables) {
+    if (shouldEmitVTableAtEndOfTranslationUnit(*this, rd))
+      vtables.generateClassData(rd);
+    else if (shouldOpportunisticallyEmitVTables())
+      opportunisticVTables.push_back(rd);
+  }
+
+  assert(savedSize == deferredVTables.size() &&
+         "deferred extra vtables during vtable emission?");
+  deferredVTables.clear();
+}
+
+void CIRGenModule::emitVTablesOpportunistically() {
+  // Try to emit external vtables as available_externally if they have emitted
+  // all inlined virtual functions.  It runs after EmitDeferred() and therefore
+  // is not allowed to create new references to things that need to be emitted
+  // lazily. Note that it also uses fact that we eagerly emitting RTTI.
+
+  assert(
+      (opportunisticVTables.empty() || shouldOpportunisticallyEmitVTables()) &&
+      "Only emit opportunistic vtables with optimizations");
+
+  for (const CXXRecordDecl *rd : opportunisticVTables) {
+    assert(getVTables().isVTableExternal(rd) &&
+           "This queue should only contain external vtables");
+    if (getCXXABI().canSpeculativelyEmitVTable(rd))
+      vtables.generateClassData(rd);
+  }
+  opportunisticVTables.clear();
+}
+
+bool CIRGenModule::shouldOpportunisticallyEmitVTables() {
+  return codeGenOpts.OptimizationLevel > 0;
 }

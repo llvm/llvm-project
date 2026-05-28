@@ -76,7 +76,7 @@ class LoopVectorizeHints {
     Hint(const char *Name, unsigned Value, HintKind Kind)
         : Name(Name), Value(Value), Kind(Kind) {}
 
-    bool validate(unsigned Val);
+    LLVM_ABI bool validate(unsigned Val);
   };
 
   /// Vectorization width.
@@ -118,25 +118,31 @@ public:
     /// Vectorize loops using scalable vectors or fixed-width vectors, but favor
     /// scalable vectors when the cost-model is inconclusive. This is the
     /// default when the scalable.enable hint is enabled through a pragma.
-    SK_PreferScalable = 1
+    SK_PreferScalable = 1,
+    /// Always vectorize loops using scalable vectors if feasible (i.e. the plan
+    /// has a valid cost and is not restricted by fixed-length dependence
+    /// distances).
+    SK_AlwaysScalable = 2
   };
 
-  LoopVectorizeHints(const Loop *L, bool InterleaveOnlyWhenForced,
-                     OptimizationRemarkEmitter &ORE,
-                     const TargetTransformInfo *TTI = nullptr);
+  LLVM_ABI LoopVectorizeHints(const Loop *L, bool InterleaveOnlyWhenForced,
+                              OptimizationRemarkEmitter &ORE,
+                              const TargetTransformInfo *TTI = nullptr);
 
   /// Mark the loop L as already vectorized by setting the width to 1.
-  void setAlreadyVectorized();
+  LLVM_ABI void setAlreadyVectorized();
 
-  bool allowVectorization(Function *F, Loop *L,
-                          bool VectorizeOnlyWhenForced) const;
+  LLVM_ABI bool allowVectorization(Function *F, Loop *L,
+                                   bool VectorizeOnlyWhenForced) const;
 
   /// Dumps all the hint information.
-  void emitRemarkWithHints() const;
+  LLVM_ABI void emitRemarkWithHints() const;
 
   ElementCount getWidth() const {
-    return ElementCount::get(Width.Value, (ScalableForceKind)Scalable.Value ==
-                                              SK_PreferScalable);
+    return ElementCount::get(
+        Width.Value,
+        (ScalableForceKind)Scalable.Value == SK_PreferScalable ||
+            (ScalableForceKind)Scalable.Value == SK_AlwaysScalable);
   }
 
   unsigned getInterleave() const {
@@ -162,16 +168,18 @@ public:
     return (ScalableForceKind)Scalable.Value == SK_FixedWidthOnly;
   }
 
-  /// If hints are provided that force vectorization, use the AlwaysPrint
-  /// pass name to force the frontend to print the diagnostic.
-  const char *vectorizeAnalysisPassName() const;
+  /// \return true if scalable vectorization is always preferred over
+  /// fixed-length when feasible, regardless of cost.
+  bool isScalableVectorizationAlwaysPreferred() const {
+    return (ScalableForceKind)Scalable.Value == SK_AlwaysScalable;
+  }
 
   /// When enabling loop hints are provided we allow the vectorizer to change
   /// the order of operations that is given by the scalar loop. This is not
   /// enabled by default because can be unsafe or inefficient. For example,
   /// reordering floating-point operations will change the way round-off
   /// error accumulates in the loop.
-  bool allowReordering() const;
+  LLVM_ABI bool allowReordering() const;
 
   bool isPotentiallyUnsafe() const {
     // Avoid FP vectorization if the target is unsure about proper support.
@@ -196,6 +204,15 @@ private:
 
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter &ORE;
+
+  /// Reports a condition where loop vectorization is disallowed: prints
+  /// \p DebugMsg for debugging purposes along with the corresponding
+  /// optimization remark \p RemarkName, with \p RemarkMsg as the user-facing
+  /// message. The loop \p L is used for the location of the remark.
+  void reportDisallowedVectorization(const StringRef DebugMsg,
+                                     const StringRef RemarkName,
+                                     const StringRef RemarkMsg,
+                                     const Loop *L) const;
 };
 
 /// This holds vectorization requirements that must be verified late in
@@ -236,6 +253,13 @@ struct HistogramInfo {
       : Load(Load), Update(Update), Store(Store) {}
 };
 
+/// Indicates the characteristics of a loop with an uncountable exit.
+/// * None      -- No uncountable exit present.
+/// * ReadOnly  -- At least one uncountable exit in a readonly loop.
+/// * ReadWrite -- At least one uncountable exit in a loop with side effects
+///                that may require masking.
+enum class UncountableExitTrait { None, ReadOnly, ReadWrite };
+
 /// LoopVectorizationLegality checks if it is legal to vectorize a loop, and
 /// to what vectorization factor.
 /// This class does not look at the profitability of vectorization, only the
@@ -251,18 +275,15 @@ struct HistogramInfo {
 /// induction variable and the different reduction variables.
 class LoopVectorizationLegality {
 public:
-  LoopVectorizationLegality(Loop *L, PredicatedScalarEvolution &PSE,
-                            DominatorTree *DT, TargetTransformInfo *TTI,
-                            TargetLibraryInfo *TLI, Function *F,
-                            LoopAccessInfoManager &LAIs, LoopInfo *LI,
-                            OptimizationRemarkEmitter *ORE,
-                            LoopVectorizationRequirements *R,
-                            LoopVectorizeHints *H, DemandedBits *DB,
-                            AssumptionCache *AC, BlockFrequencyInfo *BFI,
-                            ProfileSummaryInfo *PSI, AAResults *AA)
+  LoopVectorizationLegality(
+      Loop *L, PredicatedScalarEvolution &PSE, DominatorTree *DT,
+      TargetTransformInfo *TTI, TargetLibraryInfo *TLI, Function *F,
+      LoopAccessInfoManager &LAIs, LoopInfo *LI, OptimizationRemarkEmitter *ORE,
+      LoopVectorizationRequirements *R, LoopVectorizeHints *H, DemandedBits *DB,
+      AssumptionCache *AC, bool AllowRuntimeSCEVChecks, AAResults *AA)
       : TheLoop(L), LI(LI), PSE(PSE), TTI(TTI), TLI(TLI), DT(DT), LAIs(LAIs),
-        ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC), BFI(BFI), PSI(PSI),
-        AA(AA) {}
+        ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC),
+        AllowRuntimeSCEVChecks(AllowRuntimeSCEVChecks), AA(AA) {}
 
   /// ReductionList contains the reduction descriptors for all
   /// of the reductions that were found in the loop.
@@ -283,20 +304,20 @@ public:
   /// the new code path being implemented for outer loop vectorization
   /// (should be functional for inner loop vectorization) based on VPlan.
   /// If false, good old LV code.
-  bool canVectorize(bool UseVPlanNativePath);
+  LLVM_ABI bool canVectorize(bool UseVPlanNativePath);
 
   /// Returns true if it is legal to vectorize the FP math operations in this
   /// loop. Vectorizing is legal if we allow reordering of FP operations, or if
   /// we can use in-order reductions.
-  bool canVectorizeFPMath(bool EnableStrictReductions);
+  LLVM_ABI bool canVectorizeFPMath(bool EnableStrictReductions);
 
   /// Return true if we can vectorize this loop while folding its tail by
   /// masking.
-  bool canFoldTailByMasking() const;
+  LLVM_ABI bool canFoldTailByMasking() const;
 
   /// Mark all respective loads/stores for masking. Must only be called when
   /// tail-folding is possible.
-  void prepareToFoldTailByMasking();
+  LLVM_ABI void prepareToFoldTailByMasking();
 
   /// Returns the primary induction variable.
   PHINode *getPrimaryInduction() { return PrimaryInduction; }
@@ -323,42 +344,48 @@ public:
 
   /// Returns True if given store is a final invariant store of one of the
   /// reductions found in the loop.
-  bool isInvariantStoreOfReduction(StoreInst *SI);
+  LLVM_ABI bool isInvariantStoreOfReduction(StoreInst *SI);
 
   /// Returns True if given address is invariant and is used to store recurrent
   /// expression
-  bool isInvariantAddressOfReduction(Value *V);
+  LLVM_ABI bool isInvariantAddressOfReduction(Value *V);
 
   /// Returns True if V is a Phi node of an induction variable in this loop.
-  bool isInductionPhi(const Value *V) const;
+  LLVM_ABI bool isInductionPhi(const Value *V) const;
 
   /// Returns a pointer to the induction descriptor, if \p Phi is an integer or
   /// floating point induction.
-  const InductionDescriptor *getIntOrFpInductionDescriptor(PHINode *Phi) const;
+  LLVM_ABI const InductionDescriptor *
+  getIntOrFpInductionDescriptor(PHINode *Phi) const;
 
   /// Returns a pointer to the induction descriptor, if \p Phi is pointer
   /// induction.
-  const InductionDescriptor *getPointerInductionDescriptor(PHINode *Phi) const;
+  LLVM_ABI const InductionDescriptor *
+  getPointerInductionDescriptor(PHINode *Phi) const;
 
   /// Returns True if V is a cast that is part of an induction def-use chain,
   /// and had been proven to be redundant under a runtime guard (in other
   /// words, the cast has the same SCEV expression as the induction phi).
-  bool isCastedInductionVariable(const Value *V) const;
+  LLVM_ABI bool isCastedInductionVariable(const Value *V) const;
 
   /// Returns True if V can be considered as an induction variable in this
   /// loop. V can be the induction phi, or some redundant cast in the def-use
   /// chain of the inducion phi.
-  bool isInductionVariable(const Value *V) const;
+  LLVM_ABI bool isInductionVariable(const Value *V) const;
 
   /// Returns True if PN is a reduction variable in this loop.
   bool isReductionVariable(PHINode *PN) const { return Reductions.count(PN); }
 
   /// Returns True if Phi is a fixed-order recurrence in this loop.
-  bool isFixedOrderRecurrence(const PHINode *Phi) const;
+  LLVM_ABI bool isFixedOrderRecurrence(const PHINode *Phi) const;
 
   /// Return true if the block BB needs to be predicated in order for the loop
   /// to be vectorized.
-  bool blockNeedsPredication(BasicBlock *BB) const;
+  LLVM_ABI bool blockNeedsPredication(const BasicBlock *BB) const;
+
+  /// Add unit stride predicates for memory accesses to PSE, if runtime checks
+  /// are allowed and an inner loop is vectorized.
+  void collectUnitStridePredicates() const;
 
   /// Check if this pointer is consecutive when vectorizing. This happens
   /// when the last index of the GEP is the induction variable, or that the
@@ -370,20 +397,21 @@ public:
   /// -1 - Address is consecutive, and decreasing.
   /// NOTE: This method must only be used before modifying the original scalar
   /// loop. Do not use after invoking 'createVectorizedLoopSkeleton' (PR34965).
-  int isConsecutivePtr(Type *AccessTy, Value *Ptr) const;
+  LLVM_ABI int isConsecutivePtr(Type *AccessTy, Value *Ptr) const;
 
   /// Returns true if \p V is invariant across all loop iterations according to
   /// SCEV.
-  bool isInvariant(Value *V) const;
+  LLVM_ABI bool isInvariant(Value *V) const;
 
   /// Returns true if value V is uniform across \p VF lanes, when \p VF is
   /// provided, and otherwise if \p V is invariant across all loop iterations.
-  bool isUniform(Value *V, ElementCount VF) const;
+  LLVM_ABI bool isUniform(Value *V, std::optional<ElementCount> VF) const;
 
   /// A uniform memory op is a load or store which accesses the same memory
   /// location on all \p VF lanes, if \p VF is provided and otherwise if the
   /// memory location is invariant.
-  bool isUniformMemOp(Instruction &I, ElementCount VF) const;
+  LLVM_ABI bool isUniformMemOp(Instruction &I,
+                               std::optional<ElementCount> VF) const;
 
   /// Returns the information that we collected about runtime memory check.
   const RuntimePointerChecking *getRuntimePointerChecking() const {
@@ -401,13 +429,17 @@ public:
     return LAI->getDepChecker().getMaxSafeVectorWidthInBits();
   }
 
-  /// Returns true if the loop has exactly one uncountable early exit, i.e. an
-  /// uncountable exit that isn't the latch block.
-  bool hasUncountableEarlyExit() const { return UncountableExitingBB; }
+  /// Returns information about whether this loop contains at least one
+  /// uncountable early exit, and if so, if it also contains instructions (such
+  /// as stores) that cause side-effects.
+  UncountableExitTrait getUncountableExitTrait() const {
+    return UncountableExitType;
+  }
 
-  /// Returns the uncountable early exiting block, if there is exactly one.
-  BasicBlock *getUncountableEarlyExitingBlock() const {
-    return UncountableExitingBB;
+  /// Returns true if the loop has uncountable early exits, i.e. uncountable
+  /// exits that aren't the latch block.
+  bool hasUncountableEarlyExit() const {
+    return getUncountableExitTrait() != UncountableExitTrait::None;
   }
 
   /// Returns true if this is an early exit loop with state-changing or
@@ -415,7 +447,7 @@ public:
   /// exit must be determined before any of the state changes or potentially
   /// faulting operations take place.
   bool hasUncountableExitWithSideEffects() const {
-    return UncountableExitWithSideEffects;
+    return getUncountableExitTrait() == UncountableExitTrait::ReadWrite;
   }
 
   /// Return true if there is store-load forwarding dependencies.
@@ -429,10 +461,13 @@ public:
     return LAI->getDepChecker().getStoreLoadForwardSafeDistanceInBits();
   }
 
-  /// Returns true if vector representation of the instruction \p I
-  /// requires mask.
-  bool isMaskRequired(const Instruction *I) const {
-    return MaskedOp.contains(I);
+  /// Returns true if instruction \p I requires a mask for vectorization.
+  /// This accounts for both control flow masking (conditionally executed
+  /// blocks) and tail-folding masking (predicated loop vectorization).
+  bool isMaskRequired(const Instruction *I, bool TailFolded) const {
+    if (TailFolded)
+      return TailFoldedMaskedOp.contains(I);
+    return ConditionallyExecutedOps.contains(I);
   }
 
   /// Returns true if there is at least one function call in the loop which
@@ -455,12 +490,6 @@ public:
 
   /// Returns a list of all known histogram operations in the loop.
   bool hasHistograms() const { return !Histograms.empty(); }
-
-  /// Returns potentially faulting loads.
-  const SmallPtrSetImpl<const Instruction *> &
-  getPotentiallyFaultingLoads() const {
-    return PotentiallyFaultingLoads;
-  }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
@@ -707,22 +736,19 @@ private:
   /// which a reduction can be computed.
   AssumptionCache *AC;
 
-  /// While vectorizing these instructions we have to generate a
-  /// call to the appropriate masked intrinsic or drop them in case of
-  /// conditional assumes.
-  SmallPtrSet<const Instruction *, 8> MaskedOp;
+  /// Instructions that require masking because they are in source-level
+  /// conditionally executed blocks.
+  SmallPtrSet<const Instruction *, 8> ConditionallyExecutedOps;
+  /// Instructions that require masking only due to tail-folding predication.
+  SmallPtrSet<const Instruction *, 8> TailFoldedMaskedOp;
 
   /// Contains all identified histogram operations, which are sequences of
   /// load -> update -> store instructions where multiple lanes in a vector
   /// may work on the same memory location.
   SmallVector<HistogramInfo, 1> Histograms;
 
-  /// Hold potentially faulting loads.
-  SmallPtrSet<const Instruction *, 4> PotentiallyFaultingLoads;
-
-  /// BFI and PSI are used to check for profile guided size optimizations.
-  BlockFrequencyInfo *BFI;
-  ProfileSummaryInfo *PSI;
+  /// Whether or not creating SCEV predicates is allowed.
+  bool AllowRuntimeSCEVChecks;
 
   // Alias Analysis results used to check for possible aliasing with loads
   // used in uncountable exit conditions.
@@ -738,13 +764,9 @@ private:
   /// the exact backedge taken count is not computable.
   SmallVector<BasicBlock *, 4> CountableExitingBlocks;
 
-  /// Keep track of an uncountable exiting block, if there is exactly one early
-  /// exit.
-  BasicBlock *UncountableExitingBB = nullptr;
-
-  /// If true, the loop has at least one uncountable exit and operations within
-  /// the loop may have observable side effects.
-  bool UncountableExitWithSideEffects = false;
+  /// Records whether we have an uncountable early exit in a loop that's
+  /// either read-only or read-write.
+  UncountableExitTrait UncountableExitType = UncountableExitTrait::None;
 };
 
 } // namespace llvm

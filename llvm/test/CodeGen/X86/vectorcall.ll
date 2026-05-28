@@ -152,10 +152,10 @@ entry:
 
 define x86_vectorcallcc %struct.HVA4 @test_mixed_6(%struct.HVA4 inreg %a, ptr %b) {
 ; CHECK-LABEL: test_mixed_6
-; CHECK:       movaps	(%{{[re]}}sp), %xmm0
-; CHECK:       movaps	16(%{{[re]}}sp), %xmm1
-; CHECK:       movaps	32(%{{[re]}}sp), %xmm2
-; CHECK:       movaps	48(%{{[re]}}sp), %xmm3
+; CHECK-DAG:       movaps	(%{{.*}}), %xmm0
+; CHECK-DAG:       movaps	16(%{{.*}}), %xmm1
+; CHECK-DAG:       movaps	32(%{{.*}}), %xmm2
+; CHECK-DAG:       movaps	48(%{{.*}}), %xmm3
 ; CHECK:       ret{{[ql]}}
 entry:
   %retval = alloca %struct.HVA4, align 16

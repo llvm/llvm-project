@@ -111,6 +111,10 @@ static void transferDecorations(Value &NewVal, VPIntrinsic &VPI) {
 /// OldVP gets erased.
 static void replaceOperation(Value &NewOp, VPIntrinsic &OldOp) {
   transferDecorations(NewOp, OldOp);
+
+  if (isa<Instruction>(NewOp) && !NewOp.hasName() && OldOp.hasName())
+    NewOp.takeName(&OldOp);
+
   OldOp.replaceAllUsesWith(&NewOp);
   OldOp.eraseFromParent();
 }
@@ -253,7 +257,7 @@ bool CachingVPExpander::expandPredicationInBinaryOperator(IRBuilder<> &Builder,
     }
   }
 
-  Value *NewBinOp = Builder.CreateBinOp(OC, Op0, Op1, VPI.getName());
+  Value *NewBinOp = Builder.CreateBinOp(OC, Op0, Op1);
 
   replaceOperation(*NewBinOp, VPI);
   return true;
@@ -268,8 +272,8 @@ bool CachingVPExpander::expandPredicationToIntCall(IRBuilder<> &Builder,
   for (unsigned i = 0; i < VPI.getNumOperands() - 3; i++) {
     Argument.push_back(VPI.getOperand(i));
   }
-  Value *NewOp = Builder.CreateIntrinsic(FID.value(), {VPI.getType()}, Argument,
-                                         /*FMFSource=*/nullptr, VPI.getName());
+  Value *NewOp =
+      Builder.CreateIntrinsic(FID.value(), {VPI.getType()}, Argument);
   replaceOperation(*NewOp, VPI);
   return true;
 }
@@ -281,16 +285,28 @@ bool CachingVPExpander::expandPredicationToFPCall(
 
   switch (UnpredicatedIntrinsicID) {
   case Intrinsic::fabs:
+  case Intrinsic::copysign:
   case Intrinsic::sqrt:
   case Intrinsic::maxnum:
-  case Intrinsic::minnum: {
+  case Intrinsic::minnum:
+  case Intrinsic::maximum:
+  case Intrinsic::minimum:
+  case Intrinsic::ceil:
+  case Intrinsic::floor:
+  case Intrinsic::round:
+  case Intrinsic::roundeven:
+  case Intrinsic::trunc:
+  case Intrinsic::rint:
+  case Intrinsic::nearbyint:
+  case Intrinsic::lrint:
+  case Intrinsic::llrint:
+  case Intrinsic::is_fpclass: {
     SmallVector<Value *, 2> Argument;
     for (unsigned i = 0; i < VPI.getNumOperands() - 3; i++) {
       Argument.push_back(VPI.getOperand(i));
     }
-    Value *NewOp = Builder.CreateIntrinsic(
-        UnpredicatedIntrinsicID, {VPI.getType()}, Argument,
-        /*FMFSource=*/nullptr, VPI.getName());
+    Value *NewOp = Builder.CreateIntrinsic(VPI.getType(),
+                                           UnpredicatedIntrinsicID, Argument);
     replaceOperation(*NewOp, VPI);
     return true;
   }
@@ -305,10 +321,9 @@ bool CachingVPExpander::expandPredicationToFPCall(
         VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
     Value *NewOp;
     if (Intrinsic::isConstrainedFPIntrinsic(UnpredicatedIntrinsicID))
-      NewOp =
-          Builder.CreateConstrainedFPCall(Fn, {Op0, Op1, Op2}, VPI.getName());
+      NewOp = Builder.CreateConstrainedFPCall(Fn, {Op0, Op1, Op2});
     else
-      NewOp = Builder.CreateCall(Fn, {Op0, Op1, Op2}, VPI.getName());
+      NewOp = Builder.CreateCall(Fn, {Op0, Op1, Op2});
     replaceOperation(*NewOp, VPI);
     return true;
   }
@@ -393,9 +408,8 @@ bool CachingVPExpander::expandPredicationToCastIntrinsic(IRBuilder<> &Builder,
   Intrinsic::ID VPID = VPI.getIntrinsicID();
   unsigned CastOpcode = VPIntrinsic::getFunctionalOpcodeForVP(VPID).value();
   assert(Instruction::isCast(CastOpcode));
-  Value *CastOp =
-      Builder.CreateCast(Instruction::CastOps(CastOpcode), VPI.getOperand(0),
-                         VPI.getType(), VPI.getName());
+  Value *CastOp = Builder.CreateCast(Instruction::CastOps(CastOpcode),
+                                     VPI.getOperand(0), VPI.getType());
 
   replaceOperation(*CastOp, VPI);
   return true;
@@ -454,8 +468,8 @@ bool CachingVPExpander::expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
     auto *ElementType = cast<VectorType>(VPI.getType())->getElementType();
     NewMemoryInst = Builder.CreateMaskedGather(
         VPI.getType(), PtrParam,
-        AlignOpt.value_or(DL.getPrefTypeAlign(ElementType)), MaskParam, nullptr,
-        VPI.getName());
+        AlignOpt.value_or(DL.getPrefTypeAlign(ElementType)), MaskParam,
+        nullptr);
     break;
   }
   }
@@ -577,9 +591,17 @@ bool CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   default:
     break;
   case Intrinsic::vp_fneg: {
-    Value *NewNegOp = Builder.CreateFNeg(VPI.getOperand(0), VPI.getName());
+    Value *NewNegOp = Builder.CreateFNeg(VPI.getOperand(0));
     replaceOperation(*NewNegOp, VPI);
     return NewNegOp;
+  }
+  case Intrinsic::vp_select:
+  case Intrinsic::vp_merge: {
+    assert(maySpeculateLanes(VPI) || VPI.canIgnoreVectorLengthParam());
+    Value *NewSelectOp = Builder.CreateSelect(
+        VPI.getOperand(0), VPI.getOperand(1), VPI.getOperand(2));
+    replaceOperation(*NewSelectOp, VPI);
+    return NewSelectOp;
   }
   case Intrinsic::vp_abs:
   case Intrinsic::vp_smax:
@@ -599,13 +621,24 @@ bool CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   case Intrinsic::vp_fshr:
     return expandPredicationToIntCall(Builder, VPI);
   case Intrinsic::vp_fabs:
+  case Intrinsic::vp_copysign:
   case Intrinsic::vp_sqrt:
   case Intrinsic::vp_maxnum:
   case Intrinsic::vp_minnum:
   case Intrinsic::vp_maximum:
   case Intrinsic::vp_minimum:
+  case Intrinsic::vp_ceil:
+  case Intrinsic::vp_floor:
+  case Intrinsic::vp_round:
+  case Intrinsic::vp_roundeven:
+  case Intrinsic::vp_roundtozero:
+  case Intrinsic::vp_rint:
+  case Intrinsic::vp_nearbyint:
+  case Intrinsic::vp_lrint:
+  case Intrinsic::vp_llrint:
   case Intrinsic::vp_fma:
   case Intrinsic::vp_fmuladd:
+  case Intrinsic::vp_is_fpclass:
     return expandPredicationToFPCall(Builder, VPI,
                                      VPI.getFunctionalIntrinsicID().value());
   case Intrinsic::vp_load:

@@ -9,7 +9,7 @@
 #ifndef ____LIBUNWIND_CONFIG_H__
 #define ____LIBUNWIND_CONFIG_H__
 
-#define _LIBUNWIND_VERSION 15000
+#define _LIBUNWIND_VERSION 230000
 
 #if defined(__arm__) && !defined(__USING_SJLJ_EXCEPTIONS__) && \
     !defined(__ARM_DWARF_EH__) && !defined(__SEH__)
@@ -211,5 +211,14 @@
 # define _LIBUNWIND_CURSOR_SIZE 204
 # define _LIBUNWIND_HIGHEST_DWARF_REGISTER 287
 #endif // _LIBUNWIND_IS_NATIVE_ONLY
+
+#if defined(__has_feature)
+#  if __has_feature(ptrauth_calls) && __has_feature(ptrauth_returns)
+#    define _LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING 1
+#  elif __has_feature(ptrauth_calls) != __has_feature(ptrauth_returns)
+#    error "Either both or none of ptrauth_calls and ptrauth_returns "\
+           "is allowed to be enabled"
+#  endif
+#endif
 
 #endif // ____LIBUNWIND_CONFIG_H__

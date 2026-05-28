@@ -370,7 +370,7 @@ void dr266(void) {
    */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wlong-long"
-  (void)sizeof(int[__SIZE_MAX__ / 2][__SIZE_MAX__ / 2]); /* expected-error-re 2 {{array is too large ({{[0-9]+}} elements)}} */
+  (void)sizeof(int[__SIZE_MAX__ / 2][__SIZE_MAX__ / 2]); /* expected-error-re 2 {{array is too large ({{[0-9']+}} elements)}} */
 #pragma clang diagnostic pop
 }
 

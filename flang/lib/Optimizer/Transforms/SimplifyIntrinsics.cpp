@@ -660,7 +660,8 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
                                     unsigned rank, int maskRank,
                                     mlir::Type elementType,
                                     mlir::Type maskElemType,
-                                    mlir::Type resultElemTy, bool isDim) {
+                                    mlir::Type resultElemTy, bool isDim,
+                                    mlir::Location loc) {
   auto init = [isMax](fir::FirOpBuilder builder, mlir::Location loc,
                       mlir::Type elementType) {
     if (auto ty = mlir::dyn_cast<mlir::FloatType>(elementType)) {
@@ -675,7 +676,6 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
     return builder.createIntegerConstant(loc, elementType, initValue);
   };
 
-  mlir::Location loc = mlir::UnknownLoc::get(builder.getContext());
   builder.setInsertionPointToEnd(funcOp.addEntryBlock());
 
   mlir::Value mask = funcOp.front().getArgument(2);
@@ -730,7 +730,6 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
       mlir::Value ifCompatElem =
           fir::ConvertOp::create(builder, loc, ifCompatType, maskElem);
 
-      llvm::SmallVector<mlir::Type> resultsTy = {elementType, elementType};
       fir::IfOp ifOp =
           fir::IfOp::create(builder, loc, elementType, ifCompatElem,
                             /*withElseRegion=*/true);
@@ -1225,10 +1224,10 @@ void SimplifyIntrinsicsPass::simplifyMinMaxlocReduction(
     return genRuntimeMinlocType(builder, rank);
   };
   auto bodyGenerator = [rank, maskRank, inputType, logicalElemType, outType,
-                        isMax, isDim](fir::FirOpBuilder &builder,
-                                      mlir::func::FuncOp &funcOp) {
+                        isMax, isDim, loc](fir::FirOpBuilder &builder,
+                                           mlir::func::FuncOp &funcOp) {
     genRuntimeMinMaxlocBody(builder, funcOp, isMax, rank, maskRank, inputType,
-                            logicalElemType, outType, isDim);
+                            logicalElemType, outType, isDim, loc);
   };
 
   mlir::func::FuncOp newFunc =

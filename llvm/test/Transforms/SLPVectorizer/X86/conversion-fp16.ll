@@ -565,25 +565,23 @@ define void @fpround_v2xf64_v2xf16(ptr %s0, ptr %d0) {
 ;
 ; CHECK-F16C-LABEL: define void @fpround_v2xf64_v2xf16(
 ; CHECK-F16C-SAME: ptr [[S0:%.*]], ptr [[D0:%.*]]) #[[ATTR0]] {
-; CHECK-F16C-NEXT:    [[S1:%.*]] = getelementptr inbounds double, ptr [[S0]], i64 1
-; CHECK-F16C-NEXT:    [[L0:%.*]] = load double, ptr [[S0]], align 4
-; CHECK-F16C-NEXT:    [[L1:%.*]] = load double, ptr [[S1]], align 4
-; CHECK-F16C-NEXT:    [[T0:%.*]] = fptrunc double [[L0]] to half
-; CHECK-F16C-NEXT:    [[T1:%.*]] = fptrunc double [[L1]] to half
+; CHECK-F16C-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[S0]], align 4
+; CHECK-F16C-NEXT:    [[TMP2:%.*]] = fptrunc <2 x double> [[TMP1]] to <2 x half>
 ; CHECK-F16C-NEXT:    [[D1:%.*]] = getelementptr inbounds half, ptr [[D0]], i64 1
+; CHECK-F16C-NEXT:    [[T0:%.*]] = extractelement <2 x half> [[TMP2]], i32 0
 ; CHECK-F16C-NEXT:    store half [[T0]], ptr [[D0]], align 2
+; CHECK-F16C-NEXT:    [[T1:%.*]] = extractelement <2 x half> [[TMP2]], i32 1
 ; CHECK-F16C-NEXT:    store half [[T1]], ptr [[D1]], align 2
 ; CHECK-F16C-NEXT:    ret void
 ;
 ; CHECK-AVX512-LABEL: define void @fpround_v2xf64_v2xf16(
 ; CHECK-AVX512-SAME: ptr [[S0:%.*]], ptr [[D0:%.*]]) #[[ATTR0]] {
-; CHECK-AVX512-NEXT:    [[S1:%.*]] = getelementptr inbounds double, ptr [[S0]], i64 1
-; CHECK-AVX512-NEXT:    [[L0:%.*]] = load double, ptr [[S0]], align 4
-; CHECK-AVX512-NEXT:    [[L1:%.*]] = load double, ptr [[S1]], align 4
-; CHECK-AVX512-NEXT:    [[T0:%.*]] = fptrunc double [[L0]] to half
-; CHECK-AVX512-NEXT:    [[T1:%.*]] = fptrunc double [[L1]] to half
+; CHECK-AVX512-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[S0]], align 4
+; CHECK-AVX512-NEXT:    [[TMP2:%.*]] = fptrunc <2 x double> [[TMP1]] to <2 x half>
 ; CHECK-AVX512-NEXT:    [[D1:%.*]] = getelementptr inbounds half, ptr [[D0]], i64 1
+; CHECK-AVX512-NEXT:    [[T0:%.*]] = extractelement <2 x half> [[TMP2]], i32 0
 ; CHECK-AVX512-NEXT:    store half [[T0]], ptr [[D0]], align 2
+; CHECK-AVX512-NEXT:    [[T1:%.*]] = extractelement <2 x half> [[TMP2]], i32 1
 ; CHECK-AVX512-NEXT:    store half [[T1]], ptr [[D1]], align 2
 ; CHECK-AVX512-NEXT:    ret void
 ;

@@ -400,6 +400,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
     return true;
 
   // Never redeclarable.
+  case Decl::ExplicitInstantiation:
   case Decl::UsingDirective:
   case Decl::Label:
   case Decl::UnresolvedUsingTypename:
@@ -441,6 +442,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::Captured:
   case Decl::Import:
   case Decl::OMPThreadPrivate:
+  case Decl::OMPGroupPrivate:
   case Decl::OMPAllocate:
   case Decl::OMPRequires:
   case Decl::OMPCapturedExpr:

@@ -16,6 +16,7 @@
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -24,6 +25,7 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/Use.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -42,6 +44,7 @@ class OpLowerer {
   DXILResourceTypeMap &DRTM;
   const ModuleMetadataInfo &MMDI;
   SmallVector<CallInst *> CleanupCasts;
+  Function *CleanupNURI = nullptr;
 
 public:
   OpLowerer(Module &M, DXILResourceMap &DRM, DXILResourceTypeMap &DRTM,
@@ -104,6 +107,26 @@ public:
     return Error::success();
   }
 
+  bool isFast(FastMathFlags Flags) {
+    // HLSL Fast Math doesn't enable AllowContract flag; This can be
+    // removed when we enable it in the future.
+    return Flags.allowReassoc() && Flags.noNaNs() && Flags.noInfs() &&
+           Flags.noSignedZeros() && Flags.allowReciprocal() &&
+           Flags.approxFunc();
+  }
+
+  void setDxPrecise(CallInst *CI) {
+    const StringRef Key = "dx.precise";
+    Module *M = CI->getModule();
+
+    LLVMContext &Ctx = M->getContext();
+    MDNode *One =
+        llvm::MDNode::get(Ctx, ConstantAsMetadata::get(ConstantInt::get(
+                                   llvm::Type::getInt32Ty(Ctx), 1)));
+
+    CI->setMetadata(Key, One);
+  }
+
   [[nodiscard]] bool
   replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
                         ArrayRef<IntrinArgSelect> ArgSelects) {
@@ -132,6 +155,10 @@ public:
           OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), F.getReturnType());
       if (Error E = OpCall.takeError())
         return E;
+
+      if (isa<FPMathOperator>(CI) &&
+          !isFast(cast<FPMathOperator>(CI)->getFastMathFlags()))
+        setDxPrecise(*OpCall);
 
       if (isa<StructType>(CI->getType())) {
         if (Error E = replaceNamedStructUses(CI, *OpCall))
@@ -195,6 +222,21 @@ public:
     CleanupCasts.clear();
   }
 
+  void cleanupNonUniformResourceIndexCalls() {
+    // Replace all NonUniformResourceIndex calls with their argument.
+    if (!CleanupNURI)
+      return;
+    for (User *U : make_early_inc_range(CleanupNURI->users())) {
+      CallInst *CI = dyn_cast<CallInst>(U);
+      if (!CI)
+        continue;
+      CI->replaceAllUsesWith(CI->getArgOperand(0));
+      CI->eraseFromParent();
+    }
+    CleanupNURI->eraseFromParent();
+    CleanupNURI = nullptr;
+  }
+
   // Remove the resource global associated with the handleFromBinding call
   // instruction and their uses as they aren't needed anymore.
   // TODO: We should verify that all the globals get removed.
@@ -229,6 +271,61 @@ public:
       NameGlobal->removeFromParent();
   }
 
+  bool hasNonUniformIndex(Value *IndexOp) {
+    if (isa<llvm::Constant>(IndexOp))
+      return false;
+
+    SmallVector<Value *, 16> Worklist;
+    SmallPtrSet<Value *, 16> Visited;
+    Worklist.push_back(IndexOp);
+
+    while (!Worklist.empty()) {
+      Value *V = Worklist.pop_back_val();
+
+      if (isa<llvm::Constant>(V))
+        continue;
+
+      if (!Visited.insert(V).second)
+        continue;
+
+      if (auto *CI = dyn_cast<CallInst>(V))
+        if (CI->getIntrinsicID() == Intrinsic::dx_resource_nonuniformindex)
+          return true;
+
+      // If it's a PHI node, check ALL incoming values —
+      // taint from ANY predecessor counts
+      if (auto *Phi = dyn_cast<PHINode>(V)) {
+        for (Value *Incoming : Phi->incoming_values())
+          Worklist.push_back(Incoming);
+        continue;
+      }
+
+      if (auto *Inst = dyn_cast<Instruction>(V))
+        if (Inst->getNumOperands() > 0 && !Inst->isTerminator())
+          for (Value *Op : Inst->operands())
+            Worklist.push_back(Op);
+    }
+    return false;
+  }
+
+  Error validateRawBufferElementIndex(Value *Resource, Value *ElementIndex) {
+    bool IsStructured =
+        cast<RawBufferExtType>(Resource->getType())->isStructured();
+    bool IsPoison = isa<PoisonValue>(ElementIndex);
+
+    if (IsStructured && IsPoison)
+      return make_error<StringError>(
+          "Element index of structured buffer may not be poison",
+          inconvertibleErrorCode());
+
+    if (!IsStructured && !IsPoison)
+      return make_error<StringError>(
+          "Element index of raw buffer must be poison",
+          inconvertibleErrorCode());
+
+    return Error::success();
+  }
+
   [[nodiscard]] bool lowerToCreateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -250,13 +347,12 @@ public:
         IndexOp = IRB.CreateAdd(IndexOp,
                                 ConstantInt::get(Int32Ty, Binding.LowerBound));
 
-      // FIXME: The last argument is a NonUniform flag which needs to be set
-      // based on resource analysis.
-      // https://github.com/llvm/llvm-project/issues/155701
+      bool HasNonUniformIndex =
+          (Binding.Size == 1) ? false : hasNonUniformIndex(IndexOp);
       std::array<Value *, 4> Args{
           ConstantInt::get(Int8Ty, llvm::to_underlying(RC)),
           ConstantInt::get(Int32Ty, Binding.RecordID), IndexOp,
-          ConstantInt::get(Int1Ty, false)};
+          ConstantInt::get(Int1Ty, HasNonUniformIndex)};
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(OpCode::CreateHandle, Args, CI->getName());
       if (Error E = OpCall.takeError())
@@ -294,17 +390,15 @@ public:
 
       // For `CreateHandleFromBinding` we need the upper bound rather than the
       // size, so we need to be careful about the difference for "unbounded".
-      uint32_t Unbounded = std::numeric_limits<uint32_t>::max();
-      uint32_t UpperBound = Binding.Size == Unbounded
-                                ? Unbounded
+      uint32_t UpperBound = Binding.Size == 0
+                                ? std::numeric_limits<uint32_t>::max()
                                 : Binding.LowerBound + Binding.Size - 1;
       Constant *ResBind = OpBuilder.getResBind(Binding.LowerBound, UpperBound,
                                                Binding.Space, RC);
-      // FIXME: The last argument is a NonUniform flag which needs to be set
-      // based on resource analysis.
-      // https://github.com/llvm/llvm-project/issues/155701
-      Constant *NonUniform = ConstantInt::get(Int1Ty, false);
-      std::array<Value *, 3> BindArgs{ResBind, IndexOp, NonUniform};
+      bool NonUniformIndex =
+          (Binding.Size == 1) ? false : hasNonUniformIndex(IndexOp);
+      Constant *NonUniformOp = ConstantInt::get(Int1Ty, NonUniformIndex);
+      std::array<Value *, 3> BindArgs{ResBind, IndexOp, NonUniformOp};
       Expected<CallInst *> OpBind = OpBuilder.tryCreateOp(
           OpCode::CreateHandleFromBinding, BindArgs, CI->getName());
       if (Error E = OpBind.takeError())
@@ -496,6 +590,60 @@ public:
     });
   }
 
+  // Copies `Src` into `Args` starting at `ArgIdx`. If `Src` is a vector, its
+  // elements are extracted and stored in consecutive slots; otherwise `Src`
+  // is stored directly. At most `MaxElements` elements are expected.
+  static void extractElementsIntoArgs(IRBuilder<> &IRB,
+                                      MutableArrayRef<Value *> Args,
+                                      unsigned ArgIdx, Value *Src,
+                                      unsigned MaxElements) {
+    Type *Ty = Src->getType();
+    if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
+      unsigned Count = VecTy->getNumElements();
+      assert(Count <= MaxElements && "Expected at most 3 elements in vector");
+      for (unsigned I = 0; I < Count; ++I)
+        Args[ArgIdx + I] = IRB.CreateExtractElement(Src, uint64_t(I));
+    } else {
+      Args[ArgIdx] = Src;
+    }
+  }
+
+  [[nodiscard]] bool lowerTextureLoad(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Coords = CI->getArgOperand(1);
+      Value *MipLevel = CI->getArgOperand(2);
+      Value *Offsets = CI->getArgOperand(3);
+
+      Type *OldTy = CI->getType();
+      Type *NewRetTy = OpBuilder.getResRetType(OldTy->getScalarType());
+
+      Value *Undef = UndefValue::get(Int32Ty);
+      std::array<Value *, 8> Args{Handle, MipLevel, Undef, Undef,
+                                  Undef,  Undef,    Undef, Undef};
+
+      // Copy coordinates and offsets into Args.
+      extractElementsIntoArgs(IRB, Args, 2, Coords, 3);
+      if (auto *C = dyn_cast<Constant>(Offsets); !C || !C->isNullValue())
+        extractElementsIntoArgs(IRB, Args, 5, Offsets, 3);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::TextureLoad, Args, CI->getName(), NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/false))
+        return E;
+
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerRawBufferLoad(Function &F) {
     const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
@@ -518,6 +666,11 @@ public:
       Value *Mask = ConstantInt::get(Int8Ty, ~(~0U << NumElements));
       Value *Align =
           ConstantInt::get(Int32Ty, DL.getPrefTypeAlign(ScalarTy).value());
+
+      if (Error E = validateRawBufferElementIndex(CI->getOperand(0), Index1))
+        return E;
+      if (isa<PoisonValue>(Index1))
+        Index1 = UndefValue::get(Index1->getType());
 
       Expected<CallInst *> OpCall =
           MMDI.DXILVersion >= VersionTuple(1, 2)
@@ -586,6 +739,28 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerGetDimensionsX(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Undef = UndefValue::get(Int32Ty);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::GetDimensions, {Handle, Undef}, CI->getName(), Int32Ty);
+      if (Error E = OpCall.takeError())
+        return E;
+      Value *Dim = IRB.CreateExtractValue(*OpCall, 0);
+
+      CI->replaceAllUsesWith(Dim);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerGetPointer(Function &F) {
     // These should have already been handled in DXILResourceAccess, so we can
     // just clean up the dead prototype.
@@ -607,6 +782,13 @@ public:
           createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
       Value *Index0 = CI->getArgOperand(1);
       Value *Index1 = IsRaw ? CI->getArgOperand(2) : UndefValue::get(Int32Ty);
+
+      if (IsRaw) {
+        if (Error E = validateRawBufferElementIndex(CI->getOperand(0), Index1))
+          return E;
+        if (isa<PoisonValue>(Index1))
+          Index1 = UndefValue::get(Index1->getType());
+      }
 
       Value *Data = CI->getArgOperand(IsRaw ? 3 : 2);
       Type *DataTy = Data->getType();
@@ -868,8 +1050,16 @@ public:
       case Intrinsic::dx_resource_getpointer:
         HasErrors |= lowerGetPointer(F);
         break;
+      case Intrinsic::dx_resource_nonuniformindex:
+        assert(!CleanupNURI &&
+               "overloaded llvm.dx.resource.nonuniformindex intrinsics?");
+        CleanupNURI = &F;
+        break;
       case Intrinsic::dx_resource_load_typedbuffer:
         HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/true);
+        break;
+      case Intrinsic::dx_resource_load_level:
+        HasErrors |= lowerTextureLoad(F);
         break;
       case Intrinsic::dx_resource_store_typedbuffer:
         HasErrors |= lowerBufferStore(F, /*IsRaw=*/false);
@@ -887,6 +1077,9 @@ public:
         break;
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
+        break;
+      case Intrinsic::dx_resource_getdimensions_x:
+        HasErrors |= lowerGetDimensionsX(F);
         break;
       case Intrinsic::ctpop:
         HasErrors |= lowerCtpopToCountBits(F);
@@ -908,8 +1101,10 @@ public:
       }
       Updated = true;
     }
-    if (Updated && !HasErrors)
+    if (Updated && !HasErrors) {
       cleanupHandleCasts();
+      cleanupNonUniformResourceIndexCalls();
+    }
 
     return Updated;
   }

@@ -398,3 +398,97 @@ define <2 x i64> @test3_knownbits_vpmadd52h_negative(<2 x i64> %x0, <2 x i64> %x
   %ret = and <2 x i64> %madd, splat (i64 1)
   ret <2 x i64> %ret
 }
+
+define <2 x i64> @test_vpmadd52l_mul_one(<2 x i64> %x0, <2 x i32> %x1) {
+; CHECK-LABEL: test_vpmadd52l_mul_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; CHECK-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %ext = zext <2 x i32> %x1 to <2 x i64>
+  %ifma = call <2 x i64> @llvm.x86.avx512.vpmadd52l.uq.128(<2 x i64> %x0, <2 x i64> splat(i64 1), <2 x i64> %ext)
+  ret <2 x i64> %ifma
+}
+
+define <2 x i64> @test_vpmadd52l_mul_one_commuted(<2 x i64> %x0, <2 x i32> %x1) {
+; CHECK-LABEL: test_vpmadd52l_mul_one_commuted:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; CHECK-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %ext = zext <2 x i32> %x1 to <2 x i64>
+  %ifma = call <2 x i64> @llvm.x86.avx512.vpmadd52l.uq.128(<2 x i64> %x0, <2 x i64> %ext, <2 x i64> splat(i64 1))
+  ret <2 x i64> %ifma
+}
+
+define <2 x i64> @test_vpmadd52l_mul_one_no_mask(<2 x i64> %x0, <2 x i64> %x1) {
+; AVX512-LABEL: test_vpmadd52l_mul_one_no_mask:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmadd52luq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %xmm0
+; AVX512-NEXT:    retq
+;
+; AVX-LABEL: test_vpmadd52l_mul_one_no_mask:
+; AVX:       # %bb.0:
+; AVX-NEXT:    {vex} vpmadd52luq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %ifma = call <2 x i64> @llvm.x86.avx512.vpmadd52l.uq.128(<2 x i64> %x0, <2 x i64> splat(i64 1), <2 x i64> %x1)
+  ret <2 x i64> %ifma
+}
+
+; Mul by (1 << 52) + 1
+define <2 x i64> @test_vpmadd52l_mul_one_in_52bits(<2 x i64> %x0, <2 x i32> %x1) {
+; CHECK-LABEL: test_vpmadd52l_mul_one_in_52bits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; CHECK-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %ext = zext <2 x i32> %x1 to <2 x i64>
+  %ifma = call <2 x i64> @llvm.x86.avx512.vpmadd52l.uq.128(<2 x i64> %x0, <2 x i64> splat(i64 4503599627370497), <2 x i64> %ext)
+  ret <2 x i64> %ifma
+}
+
+; lo(x1) * 1 = lo(x1), the high 52 bits are zeroes still.
+define <2 x i64> @test_vpmadd52h_mul_one(<2 x i64> %x0, <2 x i64> %x1) {
+; CHECK-LABEL: test_vpmadd52h_mul_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    retq
+  %ifma = call <2 x i64> @llvm.x86.avx512.vpmadd52h.uq.128(<2 x i64> %x0, <2 x i64> splat(i64 1), <2 x i64> %x1)
+  ret <2 x i64> %ifma
+}
+
+define <8 x i64> @test_vpmadd52luq_small_vector_width(<8 x i64> %a, <8 x i64> %b) #0 {
+; AVX512-LABEL: test_vpmadd52luq_small_vector_width:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm4 = [8589934591,8589934591,8589934591,8589934591]
+; AVX512-NEXT:    vpand %ymm4, %ymm1, %ymm5
+; AVX512-NEXT:    vpand %ymm4, %ymm0, %ymm4
+; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [524287,524287,524287,524287]
+; AVX512-NEXT:    vpand %ymm0, %ymm3, %ymm3
+; AVX512-NEXT:    vpand %ymm0, %ymm2, %ymm2
+; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpmadd52luq %ymm2, %ymm4, %ymm0
+; AVX512-NEXT:    vpmadd52luq %ymm3, %ymm5, %ymm1
+; AVX512-NEXT:    retq
+;
+; AVX-LABEL: test_vpmadd52luq_small_vector_width:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpbroadcastq {{.*#+}} ymm4 = [8589934591,8589934591,8589934591,8589934591]
+; AVX-NEXT:    vpand %ymm4, %ymm1, %ymm5
+; AVX-NEXT:    vpand %ymm4, %ymm0, %ymm4
+; AVX-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [524287,524287,524287,524287]
+; AVX-NEXT:    vpand %ymm0, %ymm3, %ymm3
+; AVX-NEXT:    vpand %ymm0, %ymm2, %ymm2
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    {vex} vpmadd52luq %ymm2, %ymm4, %ymm0
+; AVX-NEXT:    {vex} vpmadd52luq %ymm3, %ymm5, %ymm1
+; AVX-NEXT:    retq
+  %a_masked = and <8 x i64> %a,  splat (i64 8589934591)
+  %b_masked = and <8 x i64> %b,  splat (i64 524287)
+
+  %res = mul <8 x i64> %a_masked, %b_masked
+  ret <8 x i64> %res
+}
+
+attributes #0 = { "min-legal-vector-width"="0" "target-cpu"="tigerlake" }

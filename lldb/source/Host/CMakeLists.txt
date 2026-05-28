@@ -17,6 +17,8 @@ macro(add_host_subdirectory group)
 endmacro()
 
 add_host_subdirectory(common
+  common/ConPTYUtils.cpp
+  common/DiagnosticsRendering.cpp
   common/FileAction.cpp
   common/FileCache.cpp
   common/File.cpp
@@ -64,9 +66,12 @@ add_host_subdirectory(posix
   )
 
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+  add_subdirectory(windows/PythonPathSetup)
   add_host_subdirectory(windows
+    windows/ConnectionConPTYWindows.cpp
     windows/ConnectionGenericFileWindows.cpp
     windows/FileSystem.cpp
+    windows/FileWindows.cpp
     windows/Host.cpp
     windows/HostInfoWindows.cpp
     windows/HostProcessWindows.cpp
@@ -75,11 +80,14 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
     windows/MainLoopWindows.cpp
     windows/PipeWindows.cpp
     windows/ProcessLauncherWindows.cpp
+    windows/PseudoConsole.cpp
     windows/ProcessRunLock.cpp
+    windows/WindowsFileAction.cpp
     )
 else()
   add_host_subdirectory(posix
     posix/DomainSocket.cpp
+    posix/FilePosix.cpp
     posix/FileSystemPosix.cpp
     posix/HostInfoPosix.cpp
     posix/HostProcessPosix.cpp
@@ -188,5 +196,8 @@ add_lldb_library(lldbHost NO_PLUGIN_DEPENDENCIES
     ${EXTRA_LIBS}
     ${LLDBObjCLibs}
     ${LLDB_LIBEDIT_LIBS}
+  ALLOWED_INTERNAL_DEPENDENCIES
+    lldbUtility
+    lldbHostMacOSXObjCXX
   )
 

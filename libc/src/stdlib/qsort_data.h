@@ -12,22 +12,23 @@
 #include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/cstddef.h"
 #include "src/__support/macros/config.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 class ArrayGenericSize {
-  cpp::byte *array_base;
+  unsigned char *array_base;
   size_t array_len;
   size_t elem_size;
 
-  LIBC_INLINE cpp::byte *get_internal(size_t i) const {
+  LIBC_INLINE unsigned char *get_internal(size_t i) const {
     return array_base + (i * elem_size);
   }
 
 public:
   LIBC_INLINE ArrayGenericSize(void *a, size_t s, size_t e)
-      : array_base(reinterpret_cast<cpp::byte *>(a)), array_len(s),
+      : array_base(reinterpret_cast<unsigned char *>(a)), array_len(s),
         elem_size(e) {}
 
   static constexpr bool has_fixed_size() { return false; }
@@ -45,25 +46,26 @@ public:
     using block_t = uint32_t;
     constexpr size_t BLOCK_SIZE = sizeof(block_t);
 
-    alignas(block_t) cpp::byte tmp_block[BLOCK_SIZE];
+    alignas(block_t) unsigned char tmp_block[BLOCK_SIZE];
 
-    cpp::byte *elem_i = get_internal(i);
-    cpp::byte *elem_j = get_internal(j);
+    unsigned char *elem_i = get_internal(i);
+    unsigned char *elem_j = get_internal(j);
 
     const size_t elem_size_rem = elem_size % BLOCK_SIZE;
-    const cpp::byte *elem_i_block_end = elem_i + (elem_size - elem_size_rem);
+    const unsigned char *elem_i_block_end =
+        elem_i + (elem_size - elem_size_rem);
 
     while (elem_i != elem_i_block_end) {
-      __builtin_memcpy(tmp_block, elem_i, BLOCK_SIZE);
-      __builtin_memcpy(elem_i, elem_j, BLOCK_SIZE);
-      __builtin_memcpy(elem_j, tmp_block, BLOCK_SIZE);
+      inline_memcpy(tmp_block, elem_i, BLOCK_SIZE);
+      inline_memcpy(elem_i, elem_j, BLOCK_SIZE);
+      inline_memcpy(elem_j, tmp_block, BLOCK_SIZE);
 
       elem_i += BLOCK_SIZE;
       elem_j += BLOCK_SIZE;
     }
 
     for (size_t n = 0; n < elem_size_rem; ++n) {
-      cpp::byte tmp = elem_i[n];
+      unsigned char tmp = elem_i[n];
       elem_i[n] = elem_j[n];
       elem_j[n] = tmp;
     }
@@ -88,16 +90,16 @@ public:
 // compile-time what the size of the element is, allows for much more
 // efficient swapping and for cheaper offset calculations.
 template <size_t ELEM_SIZE> class ArrayFixedSize {
-  cpp::byte *array_base;
+  unsigned char *array_base;
   size_t array_len;
 
-  LIBC_INLINE cpp::byte *get_internal(size_t i) const {
+  LIBC_INLINE unsigned char *get_internal(size_t i) const {
     return array_base + (i * ELEM_SIZE);
   }
 
 public:
   LIBC_INLINE ArrayFixedSize(void *a, size_t s)
-      : array_base(reinterpret_cast<cpp::byte *>(a)), array_len(s) {}
+      : array_base(reinterpret_cast<unsigned char *>(a)), array_len(s) {}
 
   // Beware this function is used a heuristic for cheap to swap types, so
   // instantiating `ArrayFixedSize` with `ELEM_SIZE > 100` is probably a bad
@@ -107,14 +109,14 @@ public:
   LIBC_INLINE void *get(size_t i) const { return get_internal(i); }
 
   LIBC_INLINE void swap(size_t i, size_t j) const {
-    alignas(32) cpp::byte tmp[ELEM_SIZE];
+    alignas(32) unsigned char tmp[ELEM_SIZE];
 
-    cpp::byte *elem_i = get_internal(i);
-    cpp::byte *elem_j = get_internal(j);
+    unsigned char *elem_i = get_internal(i);
+    unsigned char *elem_j = get_internal(j);
 
-    __builtin_memcpy(tmp, elem_i, ELEM_SIZE);
+    inline_memcpy(tmp, elem_i, ELEM_SIZE);
     __builtin_memmove(elem_i, elem_j, ELEM_SIZE);
-    __builtin_memcpy(elem_j, tmp, ELEM_SIZE);
+    inline_memcpy(elem_j, tmp, ELEM_SIZE);
   }
 
   LIBC_INLINE size_t len() const { return array_len; }
