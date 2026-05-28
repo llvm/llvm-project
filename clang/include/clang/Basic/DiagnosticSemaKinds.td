@@ -11009,11 +11009,11 @@ def warn_lifetime_safety_dangling_field_moved
       InGroup<LifetimeSafetyDanglingFieldMoved>,
       DefaultIgnore;
 def warn_lifetime_safety_dangling_global
-    : Warning<"stack memory associated with %0 escapes to a %1 which will dangle">,
+    : Warning<"stack memory associated with %0 escapes to the %1 which will dangle">,
       InGroup<LifetimeSafetyDanglingGlobal>,
       DefaultIgnore;
 def warn_lifetime_safety_dangling_global_moved
-    : Warning<"stack memory associated with %0 may escape to a %1 which will dangle. "
+    : Warning<"stack memory associated with %0 may escape to the %1 which will dangle. "
       "This could be a false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingGlobalMoved>,
