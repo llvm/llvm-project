@@ -36,18 +36,18 @@ static std::optional<StringRef> getLiteralSuffix(QualType Ty,
   if (Context.getIntWidth(CanonTy) <= Context.getIntWidth(Context.IntTy))
     return std::nullopt;
 
-  if (Context.hasSameType(CanonTy, Context.LongTy))
+  if (ASTContext::hasSameType(CanonTy, Context.LongTy))
     return "l";
-  if (Context.hasSameType(CanonTy, Context.UnsignedLongTy))
+  if (ASTContext::hasSameType(CanonTy, Context.UnsignedLongTy))
     return "ul";
 
   const bool HasLongLongLiteralSuffix = LangOpts.CPlusPlus11 || LangOpts.C99;
   if (!HasLongLongLiteralSuffix)
     return std::nullopt;
 
-  if (Context.hasSameType(CanonTy, Context.LongLongTy))
+  if (ASTContext::hasSameType(CanonTy, Context.LongLongTy))
     return "ll";
-  if (Context.hasSameType(CanonTy, Context.UnsignedLongLongTy))
+  if (ASTContext::hasSameType(CanonTy, Context.UnsignedLongLongTy))
     return "ull";
 
   return std::nullopt;

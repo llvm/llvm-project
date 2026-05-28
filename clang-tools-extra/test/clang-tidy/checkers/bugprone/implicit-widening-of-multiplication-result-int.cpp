@@ -96,9 +96,10 @@ int64_t t10() {
   return 512 * 1024;
   // CHECK-NOTES-ALL: :[[@LINE-1]]:10: warning: performing an implicit widening conversion to type 'int64_t' (aka 'long long') of a multiplication performed in type 'int'
   // CHECK-NOTES-ALL: :[[@LINE-2]]:10: note: make conversion explicit to silence this warning
-  // CHECK-NOTES-ALL: :[[@LINE-3]]:10: note: perform multiplication in a wider type
-  // CHECK-FIXES-CXX: return static_cast<int64_t>(512ll * 1024);
-  // CHECK-FIXES-C: return (int64_t)(512ll * 1024);
+  // CHECK-NOTES-C:                    (int64_t)()
+  // CHECK-NOTES-CXX:                  static_cast<int64_t>( )
+  // CHECK-NOTES-ALL: :[[@LINE-5]]:10: note: perform multiplication in a wider type
+  // CHECK-NOTES-ALL:                     ll
 }
 long n10(int a, int b) {
   return (long)(a * b);
