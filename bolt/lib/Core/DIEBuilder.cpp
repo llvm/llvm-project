@@ -238,7 +238,7 @@ static unsigned int getCUNum(DWARFContext *DwarfContext, bool IsDWO) {
 
 void DIEBuilder::buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter,
                                 const bool Init) {
-  if (isDWO() && DwarfContext && DwarfContext->isDWP()) {
+  if (DwarfContext->isDWP()) {
     buildTypeUnitsThreadSafe(StrOffsetWriter, Init);
     return;
   }
