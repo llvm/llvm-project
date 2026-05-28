@@ -3643,10 +3643,8 @@ SDValue ARMTargetLowering::LowerGlobalAddressELF(SDValue Op,
   const GlobalValue *GV = cast<GlobalAddressSDNode>(Op)->getGlobal();
   bool IsRO = isReadOnly(GV);
 
-  // promoteToConstantPool only if not generating XO text section.
-  // Weak symbols may be overridden at link time, so don't inline them.
-  if (GV->isDSOLocal() && !Subtarget->genExecuteOnly() &&
-      !GV->isWeakForLinker())
+  // promoteToConstantPool only if not generating XO text section
+  if (GV->isDSOLocal() && !Subtarget->genExecuteOnly())
     if (SDValue V = promoteToConstantPool(this, GV, DAG, PtrVT, dl))
       return V;
 
@@ -3654,7 +3652,7 @@ SDValue ARMTargetLowering::LowerGlobalAddressELF(SDValue Op,
     // Weak symbols need GOT indirection even when hidden/DSO-local.
     // The assembler eagerly resolves PC-relative expressions when the
     // symbol and reference are in the same section, which prevents the
-    // linker from overriding a weak definition with a strong one.
+    // linker from overriding a weak definition with a non-weak one.
     bool UseGOT = !GV->isDSOLocal() || GV->isWeakForLinker();
     SDValue G = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0,
                                            UseGOT ? ARMII::MO_GOT : 0);

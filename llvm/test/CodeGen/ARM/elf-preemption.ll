@@ -138,6 +138,17 @@ define dso_local ptr @dsolocal_func() nounwind {
 ; STATIC-NEXT:    movw r0, :lower16:dsolocal_func
 ; STATIC-NEXT:    movt r0, :upper16:dsolocal_func
 ; STATIC-NEXT:    bx lr
+;
+; PIC-LABEL: dsolocal_func:
+; PIC:       @ %bb.0:
+; PIC-NEXT:    ldr r0, .LCPI6_0
+; PIC-NEXT:  .LPC6_0:
+; PIC-NEXT:    add r0, pc, r0
+; PIC-NEXT:    bx lr
+; PIC-NEXT:    .p2align 2
+; PIC-NEXT:  @ %bb.1:
+; PIC-NEXT:  .LCPI6_0:
+; PIC-NEXT:    .long .Ldsolocal_func$local-(.LPC6_0+8)
   ret ptr @dsolocal_func
 }
 
@@ -171,6 +182,13 @@ define dso_local void @call_dsolocal_func() nounwind {
 ; STATIC-NEXT:    push {r11, lr}
 ; STATIC-NEXT:    bl dsolocal_func
 ; STATIC-NEXT:    pop {r11, pc}
+;
+; PIC-LABEL: call_dsolocal_func:
+; PIC:       @ %bb.0:
+; PIC-NEXT:    .save {r11, lr}
+; PIC-NEXT:    push {r11, lr}
+; PIC-NEXT:    bl .Ldsolocal_func$local
+; PIC-NEXT:    pop {r11, pc}
   call ptr @dsolocal_func()
   ret void
 }
