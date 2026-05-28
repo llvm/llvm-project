@@ -422,7 +422,7 @@ private:
       else
         OS << "local variable";
     } else {
-      OS << "local variable";
+      OS << "variable";
     }
     OS << " '";
     VD->getNameForDiagnostic(OS, S.getPrintingPolicy(), /*Qualified=*/false);
