@@ -67,8 +67,10 @@ define weak i32 @bar() nounwind {
   ret i32 %call
 ; CHECK:      bar:
 ; CHECK-NEXT:   .weak __llvm_prefetch_target_bar_21_1
+; CHECK-NEXT:   .hidden __llvm_prefetch_target_bar_21_1
 ; CHECK-NEXT: __llvm_prefetch_target_bar_21_1:
 ; CHECK-NEXT:   .weak __llvm_prefetch_target_bar_0_0
+; CHECK-NEXT:   .hidden __llvm_prefetch_target_bar_0_0
 ; CHECK-NEXT: __llvm_prefetch_target_bar_0_0:
 ; CHECK:        callq baz@PLT
 ; CHECK-NEXT:   prefetchit1	__llvm_prefetch_target_foo_0_0(%rip)
