@@ -1635,26 +1635,26 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_icmp})
       .Any({{UniS64, _, UniS1},
-            {{Sgpr64}, {IntrId, Vgpr32AExtBoolInReg, Vgpr32AExtBoolInReg}}})
+            {{Sgpr64}, {IntrId, Vcc, Sgpr32AExt}, IcmpI1ToBallot}})
+      .Any({{UniS64, _, DivS1},
+            {{Sgpr64}, {IntrId, Vcc, Sgpr32AExt}, IcmpI1ToBallot}})
       .Any({{UniS64, _, S16}, {{Sgpr64}, {IntrId, Vgpr16, Vgpr16}}})
       .Any({{UniS64, _, S32}, {{Sgpr64}, {IntrId, Vgpr32, Vgpr32}}})
       .Any({{UniS64, _, S64}, {{Sgpr64}, {IntrId, Vgpr64, Vgpr64}}})
 
       .Any({{UniS32, _, UniS1},
-            {{Sgpr32}, {IntrId, Vgpr32AExtBoolInReg, Vgpr32AExtBoolInReg}}})
+            {{Sgpr32}, {IntrId, Vcc, Sgpr32AExt}, IcmpI1ToBallot}})
+      .Any({{UniS32, _, DivS1},
+            {{Sgpr32}, {IntrId, Vcc, Sgpr32AExt}, IcmpI1ToBallot}})
       .Any({{UniS32, _, S16}, {{Sgpr32}, {IntrId, Vgpr16, Vgpr16}}})
       .Any({{UniS32, _, S32}, {{Sgpr32}, {IntrId, Vgpr32, Vgpr32}}})
       .Any({{UniS32, _, S64}, {{Sgpr32}, {IntrId, Vgpr64, Vgpr64}}});
 
   addRulesForIOpcs({amdgcn_fcmp})
-      .Any({{UniS64, _, UniS1},
-            {{Sgpr64}, {IntrId, Vgpr32AExtBoolInReg, Vgpr32AExtBoolInReg}}})
       .Any({{UniS64, _, S16}, {{Sgpr64}, {IntrId, Vgpr16, Vgpr16}}})
       .Any({{UniS64, _, S32}, {{Sgpr64}, {IntrId, Vgpr32, Vgpr32}}})
       .Any({{UniS64, _, S64}, {{Sgpr64}, {IntrId, Vgpr64, Vgpr64}}})
 
-      .Any({{UniS32, _, UniS1},
-            {{Sgpr32}, {IntrId, Vgpr32AExtBoolInReg, Vgpr32AExtBoolInReg}}})
       .Any({{UniS32, _, S16}, {{Sgpr32}, {IntrId, Vgpr16, Vgpr16}}})
       .Any({{UniS32, _, S32}, {{Sgpr32}, {IntrId, Vgpr32, Vgpr32}}})
       .Any({{UniS32, _, S64}, {{Sgpr32}, {IntrId, Vgpr64, Vgpr64}}});

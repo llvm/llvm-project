@@ -3,9 +3,9 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,VI,SDAG-VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9,SDAG-GFX9 %s
 
-; RUN: llc -global-isel=1 -new-reg-bank-select -global-isel-abort=1 -mtriple=amdgcn -mcpu=gfx1100 -mattr="+wavefrontsize64" < %s | FileCheck -check-prefixes=GCN,GFX11,GISEL-GFX11 %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -global-isel-abort=1 -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,VI,GISEL-VI %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -global-isel-abort=1 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9,GISEL-GFX9 %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr="+wavefrontsize64" < %s | FileCheck -check-prefixes=GCN,GFX11,GISEL-GFX11 %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,VI,GISEL-VI %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9,GISEL-GFX9 %s
 
 declare i64 @llvm.amdgcn.icmp.i32(i32, i32, i32) #0
 declare i64 @llvm.amdgcn.icmp.i64(i64, i64, i32) #0
@@ -1935,8 +1935,9 @@ define amdgpu_kernel void @v_icmp_i1_ne0(ptr addrspace(1) %out, i32 %a, i32 %b) 
 ; GISEL-GFX11-NEXT:    s_cselect_b32 s3, 1, 0
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-GFX11-NEXT:    s_and_b32 s2, s2, s3
-; GISEL-GFX11-NEXT:    v_cmp_ne_u32_e64 s[2:3], s2, 0
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GISEL-GFX11-NEXT:    s_cmp_lg_u32 s2, 0
+; GISEL-GFX11-NEXT:    s_cselect_b64 s[2:3], exec, 0
+; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, s3
 ; GISEL-GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
@@ -1951,7 +1952,8 @@ define amdgpu_kernel void @v_icmp_i1_ne0(ptr addrspace(1) %out, i32 %a, i32 %b) 
 ; GISEL-VI-NEXT:    s_cmp_gt_u32 s3, 2
 ; GISEL-VI-NEXT:    s_cselect_b32 s3, 1, 0
 ; GISEL-VI-NEXT:    s_and_b32 s2, s2, s3
-; GISEL-VI-NEXT:    v_cmp_ne_u32_e64 s[2:3], s2, 0
+; GISEL-VI-NEXT:    s_cmp_lg_u32 s2, 0
+; GISEL-VI-NEXT:    s_cselect_b64 s[2:3], exec, 0
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v3, s1
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v1, s3
@@ -1969,7 +1971,8 @@ define amdgpu_kernel void @v_icmp_i1_ne0(ptr addrspace(1) %out, i32 %a, i32 %b) 
 ; GISEL-GFX9-NEXT:    s_cmp_gt_u32 s3, 2
 ; GISEL-GFX9-NEXT:    s_cselect_b32 s3, 1, 0
 ; GISEL-GFX9-NEXT:    s_and_b32 s2, s2, s3
-; GISEL-GFX9-NEXT:    v_cmp_ne_u32_e64 s[2:3], s2, 0
+; GISEL-GFX9-NEXT:    s_cmp_lg_u32 s2, 0
+; GISEL-GFX9-NEXT:    s_cselect_b64 s[2:3], exec, 0
 ; GISEL-GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-GFX9-NEXT:    v_mov_b32_e32 v1, s3
 ; GISEL-GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
@@ -1980,6 +1983,55 @@ define amdgpu_kernel void @v_icmp_i1_ne0(ptr addrspace(1) %out, i32 %a, i32 %b) 
   %result = call i64 @llvm.amdgcn.icmp.i1(i1 %src, i1 false, i32 33)
   store i64 %result, ptr addrspace(1) %out
   ret void
+}
+
+define amdgpu_ps i64 @v_icmp_i1_ne0_divergent(i32 %a) {
+; SDAG-GFX11-LABEL: v_icmp_i1_ne0_divergent:
+; SDAG-GFX11:       ; %bb.0:
+; SDAG-GFX11-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v0
+; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; SDAG-GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; SDAG-GFX11-NEXT:    v_mov_b32_e32 v1, s1
+; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; SDAG-GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; SDAG-GFX11-NEXT:    v_readfirstlane_b32 s1, v1
+; SDAG-GFX11-NEXT:    ; return to shader part epilog
+;
+; SDAG-VI-LABEL: v_icmp_i1_ne0_divergent:
+; SDAG-VI:       ; %bb.0:
+; SDAG-VI-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v0
+; SDAG-VI-NEXT:    v_mov_b32_e32 v0, s0
+; SDAG-VI-NEXT:    v_mov_b32_e32 v1, s1
+; SDAG-VI-NEXT:    v_readfirstlane_b32 s0, v0
+; SDAG-VI-NEXT:    v_readfirstlane_b32 s1, v1
+; SDAG-VI-NEXT:    ; return to shader part epilog
+;
+; SDAG-GFX9-LABEL: v_icmp_i1_ne0_divergent:
+; SDAG-GFX9:       ; %bb.0:
+; SDAG-GFX9-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v0
+; SDAG-GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; SDAG-GFX9-NEXT:    v_mov_b32_e32 v1, s1
+; SDAG-GFX9-NEXT:    v_readfirstlane_b32 s0, v0
+; SDAG-GFX9-NEXT:    v_readfirstlane_b32 s1, v1
+; SDAG-GFX9-NEXT:    ; return to shader part epilog
+;
+; GISEL-GFX11-LABEL: v_icmp_i1_ne0_divergent:
+; GISEL-GFX11:       ; %bb.0:
+; GISEL-GFX11-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v0
+; GISEL-GFX11-NEXT:    ; return to shader part epilog
+;
+; GISEL-VI-LABEL: v_icmp_i1_ne0_divergent:
+; GISEL-VI:       ; %bb.0:
+; GISEL-VI-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v0
+; GISEL-VI-NEXT:    ; return to shader part epilog
+;
+; GISEL-GFX9-LABEL: v_icmp_i1_ne0_divergent:
+; GISEL-GFX9:       ; %bb.0:
+; GISEL-GFX9-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v0
+; GISEL-GFX9-NEXT:    ; return to shader part epilog
+  %cond = icmp eq i32 %a, 0
+  %result = call i64 @llvm.amdgcn.icmp.i1(i1 %cond, i1 false, i32 33)
+  ret i64 %result
 }
 
 define amdgpu_ps void @test_intr_icmp_i32_invalid_cc(ptr addrspace(1) %out, i32 %src) {

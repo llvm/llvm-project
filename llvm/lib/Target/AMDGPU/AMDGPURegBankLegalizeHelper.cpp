@@ -1505,6 +1505,18 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerAbsToNegMax(MI);
   case AbsToS32:
     return lowerAbsToS32(MI);
+  case IcmpI1ToBallot: {
+    // amdgcn.icmp(i1 src, i1 0, NE) -> ballot(src)
+    // This implements the "hack ballot" pattern from SIInstructions.td.
+    // For uniform i1: ballot returns -1 if true, 0 if false.
+    // The src operand has been converted to VCC by the Vcc mapping.
+    assert(cast<GIntrinsic>(&MI)->is(Intrinsic::amdgcn_icmp));
+    Register Dst = MI.getOperand(0).getReg();
+    Register Src = MI.getOperand(2).getReg();
+    B.buildIntrinsic(Intrinsic::amdgcn_ballot, Dst).addUse(Src);
+    MI.eraseFromParent();
+    return true;
+  }
   }
 
   return true;
@@ -1524,7 +1536,6 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr32Trunc:
   case Sgpr32AExt:
   case Sgpr32AExtBoolInReg:
-  case Vgpr32AExtBoolInReg:
   case Sgpr32SExt:
   case Sgpr32ZExt:
   case UniInVgprS32:
@@ -1756,7 +1767,6 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr32Trunc:
   case Sgpr32AExt:
   case Sgpr32AExtBoolInReg:
-  case Vgpr32AExtBoolInReg:
   case Sgpr32SExt:
   case Sgpr32ZExt:
     return SgprRB;
@@ -2216,19 +2226,6 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       auto Cst1 = B.buildConstant(SgprRB_S32, 1);
       auto BoolInReg = B.buildAnd(SgprRB_S32, Aext, Cst1);
       Op.setReg(BoolInReg.getReg(0));
-      break;
-    }
-    case Vgpr32AExtBoolInReg: {
-      // Note: this ext allows S1, and it is meant to be combined away.
-      assert(Ty.getSizeInBits() == 1);
-      assert(RB == SgprRB);
-      auto Aext = B.buildAnyExt(SgprRB_S32, Reg);
-      // Zext SgprS1 is not legal, make AND with 1 instead. This instruction is
-      // most of times meant to be combined away in AMDGPURegBankCombiner.
-      auto Cst1 = B.buildConstant(SgprRB_S32, 1);
-      auto BoolInReg = B.buildAnd(SgprRB_S32, Aext, Cst1);
-
-      Op.setReg(B.buildCopy(VgprRB_S32, BoolInReg).getReg(0));
       break;
     }
     case Sgpr32SExt: {

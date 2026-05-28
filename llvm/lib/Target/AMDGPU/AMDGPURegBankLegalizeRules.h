@@ -285,7 +285,6 @@ enum RegBankLLTMappingApplyID {
   // Src only modifiers: extends
   Sgpr32AExt,
   Sgpr32AExtBoolInReg,
-  Vgpr32AExtBoolInReg,
   Sgpr32SExt,
   Sgpr32ZExt,
   Vgpr32AExt,
@@ -342,7 +341,8 @@ enum LoweringMethodID {
   InsVecEltTo32,
   AbsToNegMax,
   AbsToS32,
-  DynStackAlloc
+  DynStackAlloc,
+  IcmpI1ToBallot
 };
 
 enum FastRulesTypes {
