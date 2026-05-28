@@ -151,18 +151,16 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
      << "\n";
 
   // Emit a macro that expands to local bool declarations for each extension,
-  // parameterized by a caller-provided extension test helper.
+  // parameterized by a caller-provided extension test function.
   OS << "#ifdef EMIT_EXTENSION_FEATURE_LOCAL_DECLS\n"
      << "#ifndef AARCH64_DECLARE_EXTENSION_FEATURE_LOCALS\n"
      << "#define AARCH64_DECLARE_EXTENSION_FEATURE_LOCALS(TEST_EXT) \\\n";
   for (size_t I = 0; I < SortedExtensions.size(); ++I) {
     const Record *Rec = SortedExtensions[I];
     std::string FieldName(Rec->getValueAsString("FieldName"));
-    if (FieldName == "HasSVE")
-      FieldName = "HasSVEExt";
     auto AEK = Rec->getValueAsString("ArchExtKindSpelling").upper();
-    OS << "  [[maybe_unused]] const bool " << FieldName << " = TEST_EXT(" << AEK
-       << ");";
+    OS << "  [[maybe_unused]] const bool " << FieldName
+       << " = TEST_EXT(llvm::AArch64::" << AEK << ");";
     if (I + 1 != SortedExtensions.size())
       OS << " \\\n";
     else

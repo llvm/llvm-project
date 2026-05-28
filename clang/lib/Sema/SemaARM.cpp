@@ -578,7 +578,8 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
     S.Context.getFunctionFeatureMap(CallerFeatures, FD);
 
     // Avoid emitting diagnostics for a function that can never compile.
-    if (FnType == SemaARM::ArmStreaming && !CallerFeatures["sme"])
+    if (FnType == SemaARM::ArmStreaming &&
+        !S.Context.getTargetInfo().hasFeatureEnabled(CallerFeatures, "sme"))
       return false;
 
     const auto FindTopLevelPipe = [](const char *S) {
@@ -602,6 +603,11 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
            "Expected feature string of the form 'SVE-EXPR|SME-EXPR'");
     StringRef NonStreamingBuiltinGuard = StringRef(RequiredFeatures, PipeIdx);
     StringRef StreamingBuiltinGuard = StringRef(RequiredFeatures + PipeIdx + 1);
+
+    if (S.Context.getTargetInfo().hasFeatureEnabled(CallerFeatures, "sve"))
+      CallerFeatures["sve"] = true;
+    if (S.Context.getTargetInfo().hasFeatureEnabled(CallerFeatures, "sme"))
+      CallerFeatures["sme"] = true;
 
     bool SatisfiesSVE = Builtin::evaluateRequiredTargetFeatures(
         NonStreamingBuiltinGuard, CallerFeatures);
@@ -1761,7 +1767,7 @@ bool SemaARM::checkSVETypeSupport(QualType Ty, SourceLocation Loc,
   if (!Ty->isSVESizelessBuiltinType())
     return false;
 
-  if (FeatureMap.lookup("sve"))
+  if (getASTContext().getTargetInfo().hasFeatureEnabled(FeatureMap, "sve"))
     return false;
 
   // No SVE environment available.

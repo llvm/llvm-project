@@ -82,8 +82,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
 
   void computeFeatureLookup();
   bool hasExtension(llvm::AArch64::ArchExtKind Ext) const;
-  bool hasPAuth() const;
-  bool hasFullFP16() const;
+  bool hasFP16Arithmetic() const;
   void setFeatureStateFromEnabledExtensions(
       const llvm::AArch64::ExtensionBitset &EnabledExtensions);
 
@@ -95,8 +94,6 @@ public:
 
   StringRef getABI() const override;
   bool setABI(const std::string &Name) override;
-  bool hasFeatureEnabled(const llvm::StringMap<bool> &Features,
-                         StringRef Name) const override;
 
   bool validateBranchProtection(StringRef Spec, StringRef Arch,
                                 BranchProtectionInfo &BPI,
