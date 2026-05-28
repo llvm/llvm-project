@@ -2138,7 +2138,7 @@ defm objc_constant_literals : BoolFOption<"objc-constant-literals",
   LangOpts<"ObjCConstantLiterals">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [ClangOption], " compile-time constant ObjC literals">>;
+  BothFlags<[NoArgumentUnused], [ClangOption], " compile-time constant ObjC literals">>;
 def fconstant_array_class_EQ : Joined<["-"], "fconstant-array-class=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoString<LangOpts<"ObjCConstantArrayClass">>;
@@ -3816,17 +3816,17 @@ defm constant_nsnumber_literals : BoolFOption<"constant-nsnumber-literals",
   LangOpts<"ConstantNSNumberLiterals">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [ClangOption], " compile-time constant NSNumber literals">>;
+  BothFlags<[NoArgumentUnused], [ClangOption], " compile-time constant NSNumber literals">>;
 defm constant_nsarray_literals : BoolFOption<"constant-nsarray-literals",
   LangOpts<"ConstantNSArrayLiterals">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [ClangOption], " compile-time constant NSArray literals">>;
+  BothFlags<[NoArgumentUnused], [ClangOption], " compile-time constant NSArray literals">>;
 defm constant_nsdictionary_literals : BoolFOption<"constant-nsdictionary-literals",
   LangOpts<"ConstantNSDictionaryLiterals">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [ClangOption], " compile-time constant NSDictionary literals">>;
+  BothFlags<[NoArgumentUnused], [ClangOption], " compile-time constant NSDictionary literals">>;
 def fno_common : Flag<["-"], "fno-common">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Compile common globals like normal definitions">;
