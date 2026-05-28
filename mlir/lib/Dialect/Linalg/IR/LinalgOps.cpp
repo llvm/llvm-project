@@ -30,6 +30,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
@@ -88,6 +89,16 @@ static Operation *getSlice(OpBuilder &b, Location loc, Value source,
                                          strides);
       })
       .Default([&](Type t) -> Operation * { return nullptr; });
+}
+
+static std::optional<TypedAttr>
+getScalarConstantAttrFromDenseSplat(Value input) {
+  DenseElementsAttr splatAttr;
+  matchPattern(input, m_Constant<DenseElementsAttr>(&splatAttr));
+  if (!splatAttr || !splatAttr.isSplat())
+    return std::nullopt;
+
+  return splatAttr.getSplatValue<TypedAttr>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -619,17 +630,10 @@ public:
   // Build the ternary functions defined by OpDSL.
   Value buildTernaryFn(TernaryFn ternaryFn, Value arg0, Value arg1, Value arg2,
                        function_ref<InFlightDiagnostic()> emitError = {}) {
-    bool headBool =
-        isInteger(arg0) && arg0.getType().getIntOrFloatBitWidth() == 1;
-    bool tailFloatingPoint =
-        isFloatingPoint(arg0) && isFloatingPoint(arg1) && isFloatingPoint(arg2);
-    bool tailInteger = isInteger(arg0) && isInteger(arg1) && isInteger(arg2);
     OpBuilder::InsertionGuard g(builder);
     builder.setInsertionPointToEnd(&block);
     switch (ternaryFn) {
     case TernaryFn::select:
-      if (!headBool && !(tailFloatingPoint || tailInteger))
-        llvm_unreachable("unsupported non numeric type");
       return arith::SelectOp::create(builder, arg0.getLoc(), arg0, arg1, arg2);
     }
     if (emitError) {
@@ -1890,6 +1894,21 @@ void ReduceOp::print(OpAsmPrinter &p) {
 LogicalResult ReduceOp::verify() {
   ArrayRef<int64_t> dimensionsRef = getDimensions();
 
+  // The ReduceOp uses `SameVariadicOperandSize`, which requires equal numbers
+  // of inputs and inits. Detect a mismatch early: when they differ, the
+  // ODS-generated getInputs()/getInits() accessors compute each group's size
+  // via floordiv of the total operand count, producing incorrect slices that
+  // would cause out-of-bounds accesses below.
+  if (getInputs().size() != static_cast<size_t>(getNumDpsInputs()))
+    return emitOpError()
+           << "expected equal number of inputs and outputs (required by "
+              "SameVariadicOperandSize), got "
+           << getNumDpsInputs() << " input(s) and " << getNumDpsInits()
+           << " output(s)";
+
+  if (getInputs().empty())
+    return emitOpError() << "expected at least one input";
+
   for (int64_t i = 1; i < getNumDpsInputs(); ++i) {
     if (llvm::cast<ShapedType>(getInputs()[i].getType()).getShape() !=
         llvm::cast<ShapedType>(getInputs()[0].getType()).getShape()) {
@@ -2142,6 +2161,31 @@ struct FoldTransposeWithTranspose : OpRewritePattern<linalg::TransposeOp> {
   }
 };
 
+/// Rewrite a transpose of a dense splat constant into a dense splat constant of
+/// the transposed output shape.
+struct FoldTransposeSplatConstant : OpRewritePattern<linalg::TransposeOp> {
+  using OpRewritePattern<linalg::TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    if (!transposeOp.hasPureTensorSemantics())
+      return failure();
+
+    auto splatValue =
+        getScalarConstantAttrFromDenseSplat(transposeOp.getInput());
+    if (!splatValue.has_value())
+      return failure();
+
+    auto resultType =
+        cast<RankedTensorType>(transposeOp.getResult()[0].getType());
+
+    auto resultAttr = DenseElementsAttr::get(resultType, splatValue.value());
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(transposeOp, resultType,
+                                                   resultAttr);
+    return success();
+  }
+};
+
 /// This pattern canonicalize transpose by swapping the order of
 /// broadcast and transpose:
 ///   transpose(broadcast(input)) -> broadcast(transpose(input))
@@ -2202,7 +2246,8 @@ struct SwapTransposeWithBroadcast : OpRewritePattern<linalg::TransposeOp> {
 
 void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<FoldTransposeWithTranspose, SwapTransposeWithBroadcast>(context);
+  results.add<FoldTransposeWithTranspose, FoldTransposeSplatConstant,
+              SwapTransposeWithBroadcast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2360,9 +2405,39 @@ struct FoldBroadcasts : OpRewritePattern<linalg::BroadcastOp> {
   }
 };
 
+/// Rewrite a broadcast of a dense splat constant into a dense splat constant of
+/// the broadcast output shape.
+struct FoldBroadcastSplatConstant : OpRewritePattern<linalg::BroadcastOp> {
+  using OpRewritePattern<linalg::BroadcastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::BroadcastOp broadcastOp,
+                                PatternRewriter &rewriter) const override {
+    if (!broadcastOp.hasPureTensorSemantics())
+      return failure();
+
+    auto splatValue =
+        getScalarConstantAttrFromDenseSplat(broadcastOp.getInput());
+
+    if (!splatValue.has_value())
+      return failure();
+
+    auto resultType =
+        cast<RankedTensorType>(broadcastOp.getResult()[0].getType());
+    if (!resultType.hasStaticShape())
+      return rewriter.notifyMatchFailure(broadcastOp,
+                                         "result type has dynamic shape");
+
+    auto resultAttr = DenseElementsAttr::get(resultType, splatValue.value());
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(broadcastOp, resultType,
+                                                   resultAttr);
+    return success();
+  }
+};
+
 void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<EraseIdentityLinalgOp<BroadcastOp>, FoldBroadcasts>(context);
+  results.add<EraseIdentityLinalgOp<BroadcastOp>, FoldBroadcasts,
+              FoldBroadcastSplatConstant>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -5002,38 +5077,25 @@ template SmallVector<int64_t>
     getPackedOuterShapeWithoutTransposition<UnPackOp>(UnPackOp);
 
 // Given the (potentially) updated packed type, `newPackedTy`, generates an
-// updated mixed-tile-sizes attribute. A tile size is updated only
-// when:
-//  * a dim from newPackedTy is static, and
-//  * the corresponding size from mixedTiles is still dynamic.
-// Otherwise, the original tile size is preserved.
+// updated mixed-tile-sizes list. For each inner packed dimension that is static
+// in `newPackedTy`, the tile is set to that static size (replacing SSA values
+// or mismatched constants). Dynamic packed dimensions preserve the original
+// tile. The folded tensor type is treated as authoritative for static extents.
 // Note - packed-type-dim and mixed-tile-size should always match!
 static SmallVector<OpFoldResult>
 getNewMixedTileSizes(PatternRewriter &rewriter, Type newPackedTy,
-                     SmallVector<OpFoldResult> mixedTiles) {
+                     ArrayRef<OpFoldResult> mixedTiles) {
   SmallVector<OpFoldResult> newMixedTileSizes;
   for (auto it : llvm::zip(cast<ShapedType>(newPackedTy)
                                .getShape()
                                .take_back(mixedTiles.size()),
                            mixedTiles)) {
-    int64_t shape = std::get<0>(it);
-    if (shape == ShapedType::kDynamic) {
+    int64_t dimSize = std::get<0>(it);
+    if (dimSize == ShapedType::kDynamic) {
       newMixedTileSizes.push_back(std::get<1>(it));
       continue;
     }
-
-    // If the current result dim is static, update the dynamic mixed-size
-    // (provided the original value is dynamic).
-    OpFoldResult tile = std::get<1>(it);
-    if (Attribute attr = llvm::dyn_cast_if_present<Attribute>(tile)) {
-      // Already a constant
-      newMixedTileSizes.push_back(tile);
-    } else {
-      assert(getConstantIntValue(tile).value() == shape &&
-             "tile size and dim size don't match!");
-      newMixedTileSizes.push_back(
-          (rewriter.getIntegerAttr(rewriter.getIndexType(), shape)));
-    }
+    newMixedTileSizes.push_back(rewriter.getIndexAttr(dimSize));
   }
 
   return newMixedTileSizes;
@@ -5119,7 +5181,9 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
 
   // Return true if we have a zero-value tile.
   auto hasZeros = [&](ArrayRef<OpFoldResult> tiles) {
-    return llvm::any_of(tiles, isZeroInteger);
+    return llvm::any_of(tiles, [](OpFoldResult tile) {
+      return isa<Attribute>(tile) && isZeroInteger(tile);
+    });
   };
 
   // Verify that the source and destination are ranked types.
@@ -5185,21 +5249,23 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
   SmallVector<int64_t> expectedPackedShape = PackOp::inferPackedShape(
       unpackedType.getShape(), packOrUnPack.getStaticTiles(),
       packOrUnPack.getInnerDimsPos(), packOrUnPack.getOuterDimsPerm());
-  if (!llvm::all_of(
-          llvm::zip(packedType.getShape().take_back(mixedTiles.size()),
-                    mixedTiles),
-          [](std::tuple<int64_t, OpFoldResult> it) {
-            int64_t shape = std::get<0>(it);
-            if (Attribute attr =
-                    llvm::dyn_cast_if_present<Attribute>(std::get<1>(it))) {
-              IntegerAttr intAttr = dyn_cast_or_null<IntegerAttr>(attr);
-              int64_t staticTileSize = intAttr.getValue().getSExtValue();
-              return shape == staticTileSize;
-            }
-            return ShapedType::isDynamic(shape);
-          })) {
-    return op->emitError("mismatch in inner tile sizes specified and shaped of "
-                         "tiled dimension in the packed type");
+  for (auto it : llvm::enumerate(llvm::zip(
+           packedType.getShape().take_back(mixedTiles.size()), mixedTiles))) {
+    int64_t dimSize = std::get<0>(it.value());
+    if (Attribute attr =
+            llvm::dyn_cast_if_present<Attribute>(std::get<1>(it.value()))) {
+      IntegerAttr intAttr = dyn_cast_or_null<IntegerAttr>(attr);
+      int64_t staticTileSize = intAttr.getValue().getSExtValue();
+      if (dimSize != staticTileSize)
+        return op->emitError(
+                   "mismatch in inner tile sizes specified and shaped of "
+                   "tiled dimension in the packed type at index ")
+               << it.index() << ": got " << dimSize << " != " << staticTileSize;
+    } else if (!ShapedType::isDynamic(dimSize)) {
+      return op->emitError("mismatch in inner tile sizes specified at index ")
+             << it.index() << ": got static shape " << dimSize
+             << " but dynamic tile size";
+    }
   }
   if (failed(
           verifyCompatibleShape(expectedPackedShape, packedType.getShape()))) {
@@ -5503,13 +5569,15 @@ bool PackOp::requirePaddingValue(ArrayRef<int64_t> inputShape,
     if (ShapedType::isDynamic(inputShape[pos]))
       continue;
     std::optional<int64_t> constantTile = getConstantIntValue(tileSize);
-
     if (!constantTile) {
       if (ShapedType::isStatic(outputTileSizes[pos]) &&
           (inputShape[pos] % outputTileSizes[pos] != 0))
         return true;
-    } else if (inputShape[pos] % (*constantTile) != 0) {
-      return true;
+    } else {
+      assert(*constantTile != 0 && "static tile size can't be zero");
+      if (inputShape[pos] % (*constantTile) != 0) {
+        return true;
+      }
     }
   }
   return false;
@@ -5535,6 +5603,7 @@ bool PackOp::requirePaddingValueStrict(ArrayRef<int64_t> inputShape,
     std::optional<int64_t> constantTile = getConstantIntValue(tileSize);
     if (!constantTile)
       return true;
+    assert(*constantTile != 0 && "static tile size can't be zero");
     if (inputShape[pos] % (*constantTile) != 0)
       return true;
   }
@@ -6004,6 +6073,8 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
     // Get the updated mixed-tile-sizes attribute.
     SmallVector<OpFoldResult> newMixedTileSizes =
         getNewMixedTileSizes(rewriter, newResultTypes[0], op.getMixedTiles());
+    if (llvm::any_of(newMixedTileSizes, isZeroInteger))
+      return failure();
 
     // Clone op.
     // TODO: Strictly speaking, discardable attributes should be _discarded_ at

@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This implements an analysis pass that tries to delinearize all GEP
-// instructions in all loops using the SCEV analysis functionality. This pass is
-// only used for testing purposes: if your pass needs delinearization, please
-// use the on-demand SCEVAddRecExpr::delinearize() function.
+// instructions in all loops using the SCEV analysis functionality.
 //
 //===----------------------------------------------------------------------===//
 
@@ -163,10 +161,9 @@ bool getIndexExpressionsFromGEP(ScalarEvolution &SE,
                                 SmallVectorImpl<const SCEV *> &Sizes);
 
 struct DelinearizationPrinterPass
-    : public PassInfoMixin<DelinearizationPrinterPass> {
+    : public RequiredPassInfoMixin<DelinearizationPrinterPass> {
   explicit DelinearizationPrinterPass(raw_ostream &OS);
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 
 private:
   raw_ostream &OS;

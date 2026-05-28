@@ -1,6 +1,9 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900  < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=gfx942  < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 < %s | FileCheck %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900  < %s | FileCheck %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900  < %s | FileCheck %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx942  < %s | FileCheck %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942  < %s | FileCheck %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck %s
 
 ; Loop body exceeds MaxAsyncMarkers on first iteration
 ; Preloop: 5 markers

@@ -142,6 +142,11 @@ bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
   // If this is a non-scalar-integer type, we don't care enough to try.
   if (!E->getType()->isIntegralOrEnumerationType()) return false;
 
+  if (!Semantic)
+    if (const auto *BIT = E->getType()->getAs<BitIntType>();
+        BIT && BIT->isUnsigned() && BIT->getNumBits() == 1)
+      return true;
+
   if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
     switch (UO->getOpcode()) {
     case UO_Plus:
@@ -2255,7 +2260,7 @@ SourceLocExpr::SourceLocExpr(const ASTContext &Ctx, SourceLocIdentKind Kind,
   SourceLocExprBits.Kind = llvm::to_underlying(Kind);
   // In dependent contexts, function names may change.
   setDependence(MayBeDependent(Kind) && ParentContext->isDependentContext()
-                    ? ExprDependence::Value
+                    ? ExprDependence::ValueInstantiation
                     : ExprDependence::None);
 }
 
@@ -2404,12 +2409,14 @@ EmbedExpr::EmbedExpr(const ASTContext &Ctx, SourceLocation Loc,
 }
 
 InitListExpr::InitListExpr(const ASTContext &C, SourceLocation lbraceloc,
-                           ArrayRef<Expr *> initExprs, SourceLocation rbraceloc)
+                           ArrayRef<Expr *> initExprs, SourceLocation rbraceloc,
+                           bool isExplicit)
     : Expr(InitListExprClass, QualType(), VK_PRValue, OK_Ordinary),
       InitExprs(C, initExprs.size()), LBraceLoc(lbraceloc),
       RBraceLoc(rbraceloc), AltForm(nullptr, true) {
   sawArrayRangeDesignator(false);
   InitExprs.insert(C, InitExprs.end(), initExprs.begin(), initExprs.end());
+  InitListExprBits.IsExplicit = isExplicit;
 
   setDependence(computeDependence(this));
 }
@@ -3505,6 +3512,24 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
       return Exp->getSubExpr()->isConstantInitializer(Ctx, false, Culprit);
     break;
   }
+  case ObjCBoxedExprClass: {
+    const ObjCBoxedExpr *BE = cast<ObjCBoxedExpr>(this);
+    if (Culprit)
+      *Culprit = this;
+    return BE->isExpressibleAsConstantInitializer();
+  }
+  case ObjCArrayLiteralClass: {
+    const ObjCArrayLiteral *ALE = cast<ObjCArrayLiteral>(this);
+    if (Culprit)
+      *Culprit = this;
+    return ALE->isExpressibleAsConstantInitializer();
+  }
+  case ObjCDictionaryLiteralClass: {
+    const ObjCDictionaryLiteral *DLE = cast<ObjCDictionaryLiteral>(this);
+    if (Culprit)
+      *Culprit = this;
+    return DLE->isExpressibleAsConstantInitializer();
+  }
   case PackIndexingExprClass: {
     return cast<PackIndexingExpr>(this)
         ->getSelectedExpr()
@@ -4478,8 +4503,8 @@ static MatrixAccessorFormat GetHLSLMatrixAccessorFormat(StringRef Comp) {
 }
 
 template <typename Fn>
-static bool ForEachMatrixAccessorIndex(StringRef Comp, unsigned Rows,
-                                       unsigned Cols, Fn &&F) {
+static bool ForEachMatrixAccessorIndex(StringRef Comp,
+                                       const ConstantMatrixType *MT, Fn &&F) {
   auto Format = GetHLSLMatrixAccessorFormat(Comp);
 
   for (unsigned I = 0, E = Comp.size(); I < E; I += Format.ChunkLen) {
@@ -4491,8 +4516,13 @@ static bool ForEachMatrixAccessorIndex(StringRef Comp, unsigned Rows,
     Col = static_cast<unsigned>(Comp[I + ZeroIndexOffset + 2] - '0') -
           OneIndexOffset;
 
-    assert(Row < Rows && Col < Cols && "matrix swizzle index out of bounds");
-    const unsigned Index = Row * Cols + Col;
+    assert(Row < MT->getNumRows() && Col < MT->getNumColumns() &&
+           "matrix swizzle index out of bounds");
+    // NOTE: AST layer has no access to LangOptions so we will default to row
+    // major b\c all other AST matrix representations are row major.
+    // However in codegen we need to convert to column major if the flag
+    // requires it.
+    const unsigned Index = MT->getFlattenedIndex(Row, Col, /*IsRowMajor*/ true);
     // Callback returns true to continue, false to stop early.
     if (!F(Index))
       return false;
@@ -4507,13 +4537,10 @@ static bool ForEachMatrixAccessorIndex(StringRef Comp, unsigned Rows,
 bool MatrixElementExpr::containsDuplicateElements() const {
   StringRef Comp = Accessor->getName();
   const auto *MT = getBase()->getType()->castAs<ConstantMatrixType>();
-  const unsigned Rows = MT->getNumRows();
-  const unsigned Cols = MT->getNumColumns();
-  const unsigned Max = Rows * Cols;
 
-  llvm::BitVector Seen(Max, /*t=*/false);
+  llvm::BitVector Seen(MT->getNumElementsFlattened(), /*t=*/false);
   bool HasDup = false;
-  ForEachMatrixAccessorIndex(Comp, Rows, Cols, [&](unsigned Index) -> bool {
+  ForEachMatrixAccessorIndex(Comp, MT, [&](unsigned Index) -> bool {
     if (Seen[Index]) {
       HasDup = true;
       return false; // exit early
@@ -4562,9 +4589,7 @@ void MatrixElementExpr::getEncodedElementAccess(
     SmallVectorImpl<uint32_t> &Elts) const {
   StringRef Comp = Accessor->getName();
   const auto *MT = getBase()->getType()->castAs<ConstantMatrixType>();
-  const unsigned Rows = MT->getNumRows();
-  const unsigned Cols = MT->getNumColumns();
-  ForEachMatrixAccessorIndex(Comp, Rows, Cols, [&](unsigned Index) -> bool {
+  ForEachMatrixAccessorIndex(Comp, MT, [&](unsigned Index) -> bool {
     Elts.push_back(Index);
     return true;
   });
@@ -4915,7 +4940,8 @@ DesignatedInitUpdateExpr::DesignatedInitUpdateExpr(const ASTContext &C,
            OK_Ordinary) {
   BaseAndUpdaterExprs[0] = baseExpr;
 
-  InitListExpr *ILE = new (C) InitListExpr(C, lBraceLoc, {}, rBraceLoc);
+  InitListExpr *ILE =
+      new (C) InitListExpr(C, lBraceLoc, {}, rBraceLoc, /*isExplicit=*/false);
   ILE->setType(baseExpr->getType());
   BaseAndUpdaterExprs[1] = ILE;
 

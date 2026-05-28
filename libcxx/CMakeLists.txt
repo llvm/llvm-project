@@ -4,6 +4,12 @@
 cmake_minimum_required(VERSION 3.20.0)
 set(LLVM_SUBPROJECT_TITLE "libc++")
 
+# Unset the C++ Standard: other projects sometimes override this global property, which
+# is incompatible with libc++ (since we set our own standard via other means).
+# TODO: Figure out which other part of the build is setting this and resolve the issue
+#       at the root.
+unset(CMAKE_CXX_STANDARD CACHE)
+
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
 # Add path for custom modules
@@ -106,8 +112,6 @@ option(LIBCXX_ENABLE_UNICODE
   "Whether to include support for Unicode in the library. Disabling Unicode can
    be useful when porting to platforms that don't support UTF-8 encoding (e.g.
    embedded)." ON)
-option(LIBCXX_HAS_TERMINAL_AVAILABLE
-  "Build libc++ with support for checking whether a stream is a terminal." ON)
 option(LIBCXX_ENABLE_WIDE_CHARACTERS
   "Whether to include support for wide characters in the library. Disabling
    wide character support can be useful when porting to platforms that don't
@@ -306,6 +310,7 @@ option(LIBCXX_HAS_WIN32_THREAD_API "Ignore auto-detection and force use of win32
 option(LIBCXX_HAS_EXTERNAL_THREAD_API
   "Build libc++ with an externalized threading API.
    This option may only be set to ON when LIBCXX_ENABLE_THREADS=ON." OFF)
+option(LIBCXX_HAS_C11_THREAD_API "Ignore auto-detection and force use of C11 thread API" OFF)
 
 if (LIBCXX_ENABLE_THREADS)
   set(LIBCXX_PSTL_BACKEND "std_thread" CACHE STRING "Which PSTL backend to use")
@@ -350,6 +355,10 @@ if(NOT LIBCXX_ENABLE_THREADS)
     message(FATAL_ERROR "LIBCXX_HAS_WIN32_THREAD_API can only be set to ON"
                         " when LIBCXX_ENABLE_THREADS is also set to ON.")
   endif()
+  if (LIBCXX_HAS_C11_THREAD_API)
+    message(FATAL_ERROR "LIBCXX_HAS_C11_THREAD_API can only be set to ON"
+                        " when LIBCXX_ENABLE_THREADS is also set to ON.")
+  endif()
 
 endif()
 
@@ -364,12 +373,30 @@ if (LIBCXX_HAS_EXTERNAL_THREAD_API)
                         " and LIBCXX_HAS_WIN32_THREAD_API cannot be both"
                         " set to ON at the same time.")
   endif()
+  if (LIBCXX_HAS_C11_THREAD_API)
+    message(FATAL_ERROR "The options LIBCXX_HAS_EXTERNAL_THREAD_API"
+                        " and LIBCXX_HAS_C11_THREAD_API cannot be both"
+                        " set to ON at the same time.")
+  endif()
 endif()
 
 if (LIBCXX_HAS_PTHREAD_API)
   if (LIBCXX_HAS_WIN32_THREAD_API)
     message(FATAL_ERROR "The options LIBCXX_HAS_PTHREAD_API"
                         " and LIBCXX_HAS_WIN32_THREAD_API cannot be both"
+                        " set to ON at the same time.")
+  endif()
+  if (LIBCXX_HAS_C11_THREAD_API)
+    message(FATAL_ERROR "The options LIBCXX_HAS_PTHREAD_API"
+                        " and LIBCXX_HAS_C11_THREAD_API cannot be both"
+                        " set to ON at the same time.")
+  endif()
+endif()
+
+if (LIBCXX_HAS_WIN32_THREAD_API)
+  if (LIBCXX_HAS_C11_THREAD_API)
+    message(FATAL_ERROR "The options LIBCXX_HAS_WIN32_THREAD_API"
+                        " and LIBCXX_HAS_C11_THREAD_API cannot be both"
                         " set to ON at the same time.")
   endif()
 endif()
@@ -421,6 +448,7 @@ set(LIBCXX_INSTALL_MODULES_DIR "share/libc++/v1" CACHE STRING
 set(LIBCXX_SHARED_OUTPUT_NAME "c++" CACHE STRING "Output name for the shared libc++ runtime library.")
 set(LIBCXX_STATIC_OUTPUT_NAME "c++" CACHE STRING "Output name for the static libc++ runtime library.")
 
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXX_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
   if(LIBCXX_LIBDIR_SUBDIR)
@@ -504,11 +532,13 @@ remove_flags(-Wno-pedantic -pedantic-errors -pedantic)
 # Required flags ==============================================================
 function(cxx_add_basic_build_flags target)
 
-  # Use C++23 for all targets.
-  set_target_properties(${target} PROPERTIES
-    CXX_STANDARD 23
-    CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
-    CXX_EXTENSIONS NO)
+  # Use C++26 for all targets. Note that we don't use CXX_STANDARD or cxx_std_foo
+  # since that requires a newer CMake than is available.
+  if (LIBCXX_TARGETING_CLANG_CL)
+    target_compile_options(${target} PRIVATE /std:c++latest)
+  else()
+    target_compile_options(${target} PRIVATE -std=c++26)
+  endif()
 
   # When building the dylib, don't warn for unavailable aligned allocation
   # functions based on the deployment target -- they are always available
@@ -750,13 +780,13 @@ config_define(${LIBCXX_ABI_FORCE_ITANIUM} _LIBCPP_ABI_FORCE_ITANIUM)
 config_define(${LIBCXX_ABI_FORCE_MICROSOFT} _LIBCPP_ABI_FORCE_MICROSOFT)
 config_define(${LIBCXX_ENABLE_THREADS} _LIBCPP_HAS_THREADS)
 config_define(${LIBCXX_ENABLE_MONOTONIC_CLOCK} _LIBCPP_HAS_MONOTONIC_CLOCK)
-config_define(${LIBCXX_HAS_TERMINAL_AVAILABLE} _LIBCPP_HAS_TERMINAL)
 if (NOT LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION STREQUAL "default")
   config_define("${LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION}" _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION)
 endif()
 config_define(${LIBCXX_HAS_PTHREAD_API} _LIBCPP_HAS_THREAD_API_PTHREAD)
 config_define(${LIBCXX_HAS_EXTERNAL_THREAD_API} _LIBCPP_HAS_THREAD_API_EXTERNAL)
 config_define(${LIBCXX_HAS_WIN32_THREAD_API} _LIBCPP_HAS_THREAD_API_WIN32)
+config_define(${LIBCXX_HAS_C11_THREAD_API} _LIBCPP_HAS_THREAD_API_C11)
 config_define(${LIBCXX_HAS_MUSL_LIBC} _LIBCPP_HAS_MUSL_LIBC)
 config_define_if(LIBCXX_NO_VCRUNTIME _LIBCPP_NO_VCRUNTIME)
 config_define(${LIBCXX_ENABLE_FILESYSTEM} _LIBCPP_HAS_FILESYSTEM)

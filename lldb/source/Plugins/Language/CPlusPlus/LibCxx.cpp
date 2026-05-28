@@ -8,6 +8,10 @@
 
 #include "LibCxx.h"
 
+#include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
+#include "Plugins/Language/CPlusPlus/Generic.h"
+#include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
@@ -23,13 +27,9 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
-
-#include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
-#include "Plugins/Language/CPlusPlus/Generic.h"
-#include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
+#include "llvm/Support/ErrorExtras.h"
 #include <optional>
 #include <tuple>
 
@@ -398,7 +398,7 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::Update() {
   if (!cast_ptr_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  m_ptr_obj = cast_ptr_sp->Clone(ConstString("pointer")).get();
+  m_ptr_obj = cast_ptr_sp->Clone("pointer").get();
 
   lldb::ValueObjectSP cntrl_sp(valobj_sp->GetChildMemberWithName("__cntrl_"));
 
@@ -416,8 +416,7 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
   if (name == "object" || name == "$$dereference$$")
     return 1;
 
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
@@ -493,18 +492,18 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
   if (is_compressed_pair) {
     if (ValueObjectSP value_pointer_sp =
             GetFirstValueOfLibCXXCompressedPair(*ptr_sp))
-      m_value_ptr_sp = value_pointer_sp->Clone(ConstString("pointer"));
+      m_value_ptr_sp = value_pointer_sp->Clone("pointer");
 
     if (ValueObjectSP deleter_sp =
             GetSecondValueOfLibCXXCompressedPair(*ptr_sp))
-      m_deleter_sp = deleter_sp->Clone(ConstString("deleter"));
+      m_deleter_sp = deleter_sp->Clone("deleter");
   } else {
-    m_value_ptr_sp = ptr_sp->Clone(ConstString("pointer"));
+    m_value_ptr_sp = ptr_sp->Clone("pointer");
 
     if (ValueObjectSP deleter_sp =
             valobj_sp->GetChildMemberWithName("__deleter_"))
       if (deleter_sp->GetNumChildrenIgnoringErrors() > 0)
-        m_deleter_sp = deleter_sp->Clone(ConstString("deleter"));
+        m_deleter_sp = deleter_sp->Clone("deleter");
   }
 
   return lldb::ChildCacheState::eRefetch;
@@ -519,8 +518,7 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
     return 1;
   if (name == "obj" || name == "object" || name == "$$dereference$$")
     return 2;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 /// The field layout in a libc++ string (cap, side, data or data, size, cap).

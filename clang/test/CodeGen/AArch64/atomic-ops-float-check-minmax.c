@@ -41,7 +41,7 @@
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[F64_ADDR]], align 8
 // CHECK-NEXT:    store double [[TMP3]], ptr [[TMP4]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[F32_ADDR]], align 8
-// CHECK-NEXT:    store float 0x40450CCCC0000000, ptr [[DOTATOMICTMP1]], align 4
+// CHECK-NEXT:    store float 4.210000e+01, ptr [[DOTATOMICTMP1]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[DOTATOMICTMP1]], align 4
 // CHECK-NEXT:    [[TMP7:%.*]] = atomicrmw fmax ptr [[TMP5]], float [[TMP6]] release, align 4
 // CHECK-NEXT:    [[NEWVAL3:%.*]] = call float @llvm.maxnum.f32(float [[TMP7]], float [[TMP6]])
@@ -50,7 +50,7 @@
 // CHECK-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[F32_ADDR]], align 8
 // CHECK-NEXT:    store float [[TMP8]], ptr [[TMP9]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[F16_ADDR]], align 8
-// CHECK-NEXT:    store half 0xH5143, ptr [[DOTATOMICTMP4]], align 2
+// CHECK-NEXT:    store half 4.209380e+01, ptr [[DOTATOMICTMP4]], align 2
 // CHECK-NEXT:    [[TMP11:%.*]] = load half, ptr [[DOTATOMICTMP4]], align 2
 // CHECK-NEXT:    [[TMP12:%.*]] = atomicrmw fmax ptr [[TMP10]], half [[TMP11]] release, align 2
 // CHECK-NEXT:    [[NEWVAL6:%.*]] = call half @llvm.maxnum.f16(half [[TMP12]], half [[TMP11]])
@@ -59,7 +59,7 @@
 // CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[F16_ADDR]], align 8
 // CHECK-NEXT:    store half [[TMP13]], ptr [[TMP14]], align 2
 // CHECK-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[BF16_ADDR]], align 8
-// CHECK-NEXT:    store bfloat 0xR4228, ptr [[DOTATOMICTMP7]], align 2
+// CHECK-NEXT:    store bfloat 4.200000e+01, ptr [[DOTATOMICTMP7]], align 2
 // CHECK-NEXT:    [[TMP16:%.*]] = load bfloat, ptr [[DOTATOMICTMP7]], align 2
 // CHECK-NEXT:    [[TMP17:%.*]] = atomicrmw fmax ptr [[TMP15]], bfloat [[TMP16]] release, align 2
 // CHECK-NEXT:    [[NEWVAL9:%.*]] = call bfloat @llvm.maxnum.bf16(bfloat [[TMP17]], bfloat [[TMP16]])
@@ -77,7 +77,7 @@
 // CHECK-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[F64_ADDR]], align 8
 // CHECK-NEXT:    store double [[TMP23]], ptr [[TMP24]], align 8
 // CHECK-NEXT:    [[TMP25:%.*]] = load ptr, ptr [[F32_ADDR]], align 8
-// CHECK-NEXT:    store float 0x40450CCCC0000000, ptr [[DOTATOMICTMP13]], align 4
+// CHECK-NEXT:    store float 4.210000e+01, ptr [[DOTATOMICTMP13]], align 4
 // CHECK-NEXT:    [[TMP26:%.*]] = load float, ptr [[DOTATOMICTMP13]], align 4
 // CHECK-NEXT:    [[TMP27:%.*]] = atomicrmw fmin ptr [[TMP25]], float [[TMP26]] release, align 4
 // CHECK-NEXT:    [[NEWVAL15:%.*]] = call float @llvm.minnum.f32(float [[TMP27]], float [[TMP26]])
@@ -86,7 +86,7 @@
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[F32_ADDR]], align 8
 // CHECK-NEXT:    store float [[TMP28]], ptr [[TMP29]], align 4
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[F16_ADDR]], align 8
-// CHECK-NEXT:    store half 0xH5143, ptr [[DOTATOMICTMP16]], align 2
+// CHECK-NEXT:    store half 4.209380e+01, ptr [[DOTATOMICTMP16]], align 2
 // CHECK-NEXT:    [[TMP31:%.*]] = load half, ptr [[DOTATOMICTMP16]], align 2
 // CHECK-NEXT:    [[TMP32:%.*]] = atomicrmw fmin ptr [[TMP30]], half [[TMP31]] release, align 2
 // CHECK-NEXT:    [[NEWVAL18:%.*]] = call half @llvm.minnum.f16(half [[TMP32]], half [[TMP31]])
@@ -95,7 +95,7 @@
 // CHECK-NEXT:    [[TMP34:%.*]] = load ptr, ptr [[F16_ADDR]], align 8
 // CHECK-NEXT:    store half [[TMP33]], ptr [[TMP34]], align 2
 // CHECK-NEXT:    [[TMP35:%.*]] = load ptr, ptr [[BF16_ADDR]], align 8
-// CHECK-NEXT:    store bfloat 0xR4228, ptr [[DOTATOMICTMP19]], align 2
+// CHECK-NEXT:    store bfloat 4.200000e+01, ptr [[DOTATOMICTMP19]], align 2
 // CHECK-NEXT:    [[TMP36:%.*]] = load bfloat, ptr [[DOTATOMICTMP19]], align 2
 // CHECK-NEXT:    [[TMP37:%.*]] = atomicrmw fmin ptr [[TMP35]], bfloat [[TMP36]] release, align 2
 // CHECK-NEXT:    [[NEWVAL21:%.*]] = call bfloat @llvm.minnum.bf16(bfloat [[TMP37]], bfloat [[TMP36]])

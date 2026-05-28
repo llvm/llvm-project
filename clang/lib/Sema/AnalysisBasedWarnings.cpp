@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/AnalysisBasedWarnings.h"
+#include "SemaLifetimeSafety.h"
 #include "TypeLocBuilder.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -31,7 +32,6 @@
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
 #include "clang/Analysis/Analyses/Consumed.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Analysis/Analyses/ReachableCode.h"
 #include "clang/Analysis/Analyses/ThreadSafety.h"
@@ -55,6 +55,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -2141,6 +2142,39 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     Warnings.emplace_back(std::move(Warning), getNotes());
   }
 
+  void handleGuardedByAnyReadNotHeld(const NamedDecl *D,
+                                     ProtectedOperationKind POK,
+                                     ArrayRef<StringRef> LockNames,
+                                     SourceLocation Loc) override {
+    bool IsDeref;
+    switch (POK) {
+    case POK_VarAccess:
+    case POK_PassByRef:
+    case POK_ReturnByRef:
+    case POK_PassPointer:
+    case POK_ReturnPointer:
+      IsDeref = false;
+      break;
+    case POK_VarDereference:
+    case POK_PtPassByRef:
+    case POK_PtReturnByRef:
+    case POK_PtPassPointer:
+    case POK_PtReturnPointer:
+      IsDeref = true;
+      break;
+    case POK_FunctionCall:
+      llvm_unreachable("POK_FunctionCall not applicable here");
+    }
+    std::string Quoted;
+    llvm::raw_string_ostream OS(Quoted);
+    llvm::ListSeparator LS;
+    for (StringRef Name : LockNames)
+      OS << LS << "'" << Name << "'";
+    PartialDiagnosticAt Warning(Loc, S.PDiag(diag::warn_requires_any_of_locks)
+                                         << D << IsDeref << Quoted);
+    Warnings.emplace_back(std::move(Warning), getNotes());
+  }
+
   void handleMutexNotHeld(StringRef Kind, const NamedDecl *D,
                           ProtectedOperationKind POK, Name LockName,
                           LockKind LK, SourceLocation Loc,
@@ -2555,46 +2589,16 @@ public:
     SourceRange Range;
     unsigned MsgParam = 0;
 
+    // This function only handles SpanTwoParamConstructorGadget so far, which
+    // always gives a CXXConstructExpr.
     const auto *CtorExpr = cast<CXXConstructExpr>(Operation);
     Loc = CtorExpr->getLocation();
-    Range = CtorExpr->getSourceRange();
 
-    std::string ContainerName = "std::span";
-    if (auto *TD = CtorExpr->getConstructor()->getParent()) {
-      // This will provide "std::span" if it's in the std namespace
-      ContainerName = TD->getQualifiedNameAsString();
-    }
-
-    // FIX: Pass the container name to fill the %0 parameter
-    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container) << ContainerName;
-
+    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container);
     if (IsRelatedToDecl) {
       assert(!SuggestSuggestions &&
              "Variables blamed for unsafe buffer usage without suggestions!");
       S.Diag(Loc, diag::note_unsafe_buffer_operation) << MsgParam << Range;
-    }
-  }
-
-  void handleUnsafeOperationInStringView(const Stmt *Operation,
-                                         bool IsRelatedToDecl,
-                                         ASTContext &Ctx) override {
-    // Extracting location: prioritize the specific location of the constructor
-    SourceLocation Loc = Operation->getBeginLoc();
-    SourceRange Range = Operation->getSourceRange();
-
-    if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(Operation)) {
-      Loc = CtorExpr->getLocation();
-    }
-
-    // 1. Emit the primary warning for string_view
-    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container)
-        << "std::string_view";
-
-    // 2. If a specific variable is 'blamed', emit the note
-    if (IsRelatedToDecl) {
-      // MsgParam 0 is "unsafe operation"
-      // Range helps the IDE underline the whole expression
-      S.Diag(Loc, diag::note_unsafe_buffer_operation) << 0 << Range;
     }
   }
 
@@ -2902,168 +2906,6 @@ public:
   }
 };
 
-namespace clang::lifetimes {
-namespace {
-class LifetimeSafetySemaHelperImpl : public LifetimeSafetySemaHelper {
-
-public:
-  LifetimeSafetySemaHelperImpl(Sema &S) : S(S) {}
-
-  void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
-                          const Expr *MovedExpr, SourceLocation FreeLoc,
-                          Confidence) override {
-    S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_use_after_scope_moved
-                     : diag::warn_lifetime_safety_use_after_scope)
-        << IssueExpr->getSourceRange();
-    if (MovedExpr)
-      S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
-          << MovedExpr->getSourceRange();
-    S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
-    S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
-        << UseExpr->getSourceRange();
-  }
-
-  void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
-                            const Expr *MovedExpr, SourceLocation ExpiryLoc,
-                            Confidence) override {
-    S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_return_stack_addr_moved
-                     : diag::warn_lifetime_safety_return_stack_addr)
-        << IssueExpr->getSourceRange();
-    if (MovedExpr)
-      S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
-          << MovedExpr->getSourceRange();
-    S.Diag(ReturnExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
-        << ReturnExpr->getSourceRange();
-  }
-  void reportDanglingField(const Expr *IssueExpr,
-                           const FieldDecl *DanglingField,
-                           const Expr *MovedExpr,
-                           SourceLocation ExpiryLoc) override {
-    S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_dangling_field_moved
-                     : diag::warn_lifetime_safety_dangling_field)
-        << IssueExpr->getSourceRange();
-    if (MovedExpr)
-      S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
-          << MovedExpr->getSourceRange();
-    S.Diag(DanglingField->getLocation(),
-           diag::note_lifetime_safety_dangling_field_here)
-        << DanglingField->getEndLoc();
-  }
-
-  void reportUseAfterInvalidation(const Expr *IssueExpr, const Expr *UseExpr,
-                                  const Expr *InvalidationExpr) override {
-    S.Diag(IssueExpr->getExprLoc(), diag::warn_lifetime_safety_invalidation)
-        << false << IssueExpr->getSourceRange();
-    S.Diag(InvalidationExpr->getExprLoc(),
-           diag::note_lifetime_safety_invalidated_here)
-        << InvalidationExpr->getSourceRange();
-    S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
-        << UseExpr->getSourceRange();
-  }
-  void reportUseAfterInvalidation(const ParmVarDecl *PVD, const Expr *UseExpr,
-                                  const Expr *InvalidationExpr) override {
-    S.Diag(PVD->getSourceRange().getBegin(),
-           diag::warn_lifetime_safety_invalidation)
-        << true << PVD->getSourceRange();
-    S.Diag(InvalidationExpr->getExprLoc(),
-           diag::note_lifetime_safety_invalidated_here)
-        << InvalidationExpr->getSourceRange();
-    S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
-        << UseExpr->getSourceRange();
-  }
-
-  void suggestLifetimeboundToParmVar(SuggestionScope Scope,
-                                     const ParmVarDecl *ParmToAnnotate,
-                                     const Expr *EscapeExpr) override {
-    unsigned DiagID =
-        (Scope == SuggestionScope::CrossTU)
-            ? diag::warn_lifetime_safety_cross_tu_param_suggestion
-            : diag::warn_lifetime_safety_intra_tu_param_suggestion;
-    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
-        ParmToAnnotate->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
-    StringRef FixItText = " [[clang::lifetimebound]]";
-    if (!ParmToAnnotate->getIdentifier()) {
-      // For unnamed parameters, placing attributes after the type would be
-      // parsed as a type attribute, not a parameter attribute.
-      InsertionPoint = ParmToAnnotate->getBeginLoc();
-      FixItText = "[[clang::lifetimebound]] ";
-    }
-    S.Diag(ParmToAnnotate->getBeginLoc(), DiagID)
-        << ParmToAnnotate->getSourceRange()
-        << FixItHint::CreateInsertion(InsertionPoint, FixItText);
-    S.Diag(EscapeExpr->getBeginLoc(),
-           diag::note_lifetime_safety_suggestion_returned_here)
-        << EscapeExpr->getSourceRange();
-  }
-
-  void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
-                                          const CXXMethodDecl *MD,
-                                          const Expr *EscapeExpr) override {
-    unsigned DiagID = (Scope == SuggestionScope::CrossTU)
-                          ? diag::warn_lifetime_safety_cross_tu_this_suggestion
-                          : diag::warn_lifetime_safety_intra_tu_this_suggestion;
-    const auto MDL = MD->getTypeSourceInfo()->getTypeLoc();
-    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
-        MDL.getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
-    if (const auto *FPT = MD->getType()->getAs<FunctionProtoType>();
-        FPT && FPT->hasTrailingReturn()) {
-      // For trailing return types, 'getEndLoc()' includes the return type
-      // after '->', placing the attribute in an invalid position.
-      // Instead use 'getLocalRangeEnd()' which gives the '->' location
-      // for trailing returns, so find the last token before it.
-      const auto FTL = MDL.getAs<FunctionTypeLoc>();
-      assert(FTL);
-      InsertionPoint = Lexer::getLocForEndOfToken(
-          Lexer::findPreviousToken(FTL.getLocalRangeEnd(), S.getSourceManager(),
-                                   S.getLangOpts(),
-                                   /*IncludeComments=*/false)
-              ->getLocation(),
-          0, S.getSourceManager(), S.getLangOpts());
-    }
-    S.Diag(InsertionPoint, DiagID)
-        << MD->getNameInfo().getSourceRange()
-        << FixItHint::CreateInsertion(InsertionPoint,
-                                      " [[clang::lifetimebound]]");
-    S.Diag(EscapeExpr->getBeginLoc(),
-           diag::note_lifetime_safety_suggestion_returned_here)
-        << EscapeExpr->getSourceRange();
-  }
-
-  void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
-                               const Expr *EscapeExpr) override {
-    S.Diag(ParmWithNoescape->getBeginLoc(),
-           diag::warn_lifetime_safety_noescape_escapes)
-        << ParmWithNoescape->getSourceRange();
-
-    S.Diag(EscapeExpr->getBeginLoc(),
-           diag::note_lifetime_safety_suggestion_returned_here)
-        << EscapeExpr->getSourceRange();
-  }
-
-  void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
-                               const FieldDecl *EscapeField) override {
-    S.Diag(ParmWithNoescape->getBeginLoc(),
-           diag::warn_lifetime_safety_noescape_escapes)
-        << ParmWithNoescape->getSourceRange();
-
-    S.Diag(EscapeField->getLocation(),
-           diag::note_lifetime_safety_escapes_to_field_here)
-        << EscapeField->getEndLoc();
-  }
-
-  void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) override {
-    S.addLifetimeBoundToImplicitThis(const_cast<CXXMethodDecl *>(MD));
-  }
-
-private:
-  Sema &S;
-};
-} // namespace
-} // namespace clang::lifetimes
-
 static void
 LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
                          clang::lifetimes::LifetimeSafetyStats &LSStats) {
@@ -3080,13 +2922,41 @@ LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
     if (!FD)
       continue;
     AnalysisDeclContext AC(nullptr, FD);
-    AC.getCFGBuildOptions().PruneTriviallyFalseEdges = false;
+    AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
     AC.getCFGBuildOptions().AddLifetime = true;
     AC.getCFGBuildOptions().AddParameterLifetimes = true;
+    AC.getCFGBuildOptions().AddInitializers = true;
+    AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
     AC.getCFGBuildOptions().setAllAlwaysAdd();
     if (AC.getCFG())
       runLifetimeSafetyAnalysis(AC, &SemaHelper, LSStats, S.CollectStats);
   }
+}
+
+static bool shouldRunUnsafeBufferUsageAnalysis(const Sema &S,
+                                               SourceLocation Loc) {
+  const DiagnosticsEngine &Diags = S.getDiagnostics();
+  return !Diags.isIgnored(diag::warn_unsafe_buffer_operation, Loc) ||
+         !Diags.isIgnored(diag::warn_unsafe_buffer_variable, Loc) ||
+         !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container, Loc) ||
+         (!Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, Loc) &&
+          S.getLangOpts().CPlusPlus);
+}
+
+/// \return true iff fix-its should be emitted along with -Wunsafe-buffer-usage
+/// warnings
+static bool shouldEmitUnsafeBufferUsageSuggestions(const Sema &S) {
+  return S.getLangOpts().CPlusPlus20 && S.getDiagnostics()
+                                            .getDiagnosticOptions()
+                                            .ShowSafeBufferUsageSuggestions;
+}
+
+/// \return true iff an extra note that encourages users to turn on fix-its
+/// should be emitted along with -Wunsafe-buffer-usage warnings
+static bool shouldSuggestUnsafeBufferUsageSuggestions(const Sema &S) {
+  return S.getLangOpts().CPlusPlus20 && !S.getDiagnostics()
+                                             .getDiagnosticOptions()
+                                             .ShowSafeBufferUsageSuggestions;
 }
 
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(
@@ -3100,51 +2970,36 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     // exit if having uncompilable errors or ignoring all warnings:
     return;
 
-  DiagnosticOptions &DiagOpts = Diags.getDiagnosticOptions();
+  // When the '-fsafe-buffer-usage-suggestions' option is enabled,
+  // the '-Wunsafe-buffer-usage' analysis is performed at the end of the
+  // translation unit. Otherwise, the analysis is more efficiently performed at
+  // the end of each Decl during parsing.
+  if (shouldEmitUnsafeBufferUsageSuggestions(S)) {
+    UnsafeBufferUsageReporter R(S, /*SuggestSuggestions=*/false);
 
-  // UnsafeBufferUsage analysis settings.
-  bool UnsafeBufferUsageCanEmitSuggestions = S.getLangOpts().CPlusPlus20;
-  bool UnsafeBufferUsageShouldEmitSuggestions =  // Should != Can.
-      UnsafeBufferUsageCanEmitSuggestions &&
-      DiagOpts.ShowSafeBufferUsageSuggestions;
-  bool UnsafeBufferUsageShouldSuggestSuggestions =
-      UnsafeBufferUsageCanEmitSuggestions &&
-      !DiagOpts.ShowSafeBufferUsageSuggestions;
-  UnsafeBufferUsageReporter R(S, UnsafeBufferUsageShouldSuggestSuggestions);
+    // The Callback function that performs analyses:
+    auto CallAnalyzers = [&](const Decl *Node) -> void {
+      if (Node->hasAttr<UnsafeBufferUsageAttr>())
+        return;
 
-  // The Callback function that performs analyses:
-  auto CallAnalyzers = [&](const Decl *Node) -> void {
-    if (Node->hasAttr<UnsafeBufferUsageAttr>())
-      return;
+      // Perform unsafe buffer usage analysis:
+      if (shouldRunUnsafeBufferUsageAnalysis(S, Node->getBeginLoc())) {
+        clang::checkUnsafeBufferUsage(Node, R,
+                                      /*EmitSuggestion =*/true);
+      }
 
-    // Perform unsafe buffer usage analysis:
-    if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation,
-                         Node->getBeginLoc()) ||
-        !Diags.isIgnored(diag::warn_unsafe_buffer_variable,
-                         Node->getBeginLoc()) ||
-        !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
-                         Node->getBeginLoc()) ||
-        !Diags.isIgnored(diag::warn_unsafe_buffer_libc_call,
-                         Node->getBeginLoc())) {
-      clang::checkUnsafeBufferUsage(Node, R,
-                                    UnsafeBufferUsageShouldEmitSuggestions);
+      // More analysis ...
+    };
+    // Emit per-function analysis-based warnings that require the whole-TU
+    // reasoning. Check if any of them is enabled at all before scanning the
+    // AST:
+    if (shouldRunUnsafeBufferUsageAnalysis(S, SourceLocation())) {
+      CallableVisitor(CallAnalyzers, TU->getOwningModule())
+          .TraverseTranslationUnitDecl(TU);
     }
-
-    // More analysis ...
-  };
-  // Emit per-function analysis-based warnings that require the whole-TU
-  // reasoning. Check if any of them is enabled at all before scanning the AST:
-  if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation, SourceLocation()) ||
-      !Diags.isIgnored(diag::warn_unsafe_buffer_variable, SourceLocation()) ||
-      !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
-                       SourceLocation()) ||
-      (!Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, SourceLocation()) &&
-       S.getLangOpts().CPlusPlus /* only warn about libc calls in C++ */)) {
-    CallableVisitor(CallAnalyzers, TU->getOwningModule())
-        .TraverseTranslationUnitDecl(TU);
   }
 
-  if (S.getLangOpts().EnableLifetimeSafety && S.getLangOpts().CPlusPlus &&
+  if (S.getLangOpts().CPlusPlus &&
       S.getLangOpts().EnableLifetimeSafetyTUAnalysis)
     LifetimeSafetyTUAnalysis(S, TU, LSStats);
 }
@@ -3194,23 +3049,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddCXXNewAllocator = false;
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
-  bool IsLifetimeSafetyDiagnosticEnabled =
-      !Diags.isIgnored(diag::warn_lifetime_safety_use_after_scope,
-                       D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_use_after_scope_moved,
-                       D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr,
-                       D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr_moved,
-                       D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_invalidation,
-                       D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_noescape_escapes,
-                       D->getBeginLoc());
   bool EnableLifetimeSafetyAnalysis =
-      S.getLangOpts().EnableLifetimeSafety &&
       !S.getLangOpts().EnableLifetimeSafetyTUAnalysis &&
-      IsLifetimeSafetyDiagnosticEnabled;
+      lifetimes::IsLifetimeSafetyEnabled(S, D);
 
   // Force that certain expressions appear as CFGElements in the CFG.  This
   // is used to speed up various analyses.
@@ -3389,6 +3230,23 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
                                          cfg->getNumBlockIDs());
     } else {
       ++NumFunctionsWithBadCFGs;
+    }
+  }
+
+  // If the '-fsafe-buffer-usage-suggestions' option is not specified or C++20
+  // is not available, '-Wunsafe-buffer-usage' warnings are analyzed at the end
+  // of each Decl. This is because only '-fsafe-buffer-usage-suggestions'
+  // requires visibility of the whole translation unit, hence the cumbersome
+  // post-TU analysis, which deserializes and scans pre-compiled ASTs.
+  if (!shouldEmitUnsafeBufferUsageSuggestions(S) &&
+      !D->hasAttr<UnsafeBufferUsageAttr>()) {
+    UnsafeBufferUsageReporter R(S,
+                                shouldSuggestUnsafeBufferUsageSuggestions(S));
+
+    // Perform unsafe buffer usage analysis:
+    if (shouldRunUnsafeBufferUsageAnalysis(S, D->getBeginLoc())) {
+      clang::checkUnsafeBufferUsage(
+          D, R, /*UnsafeBufferUsageShouldEmitSuggestions=*/false);
     }
   }
 }

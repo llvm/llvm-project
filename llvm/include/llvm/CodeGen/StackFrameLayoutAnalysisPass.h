@@ -14,11 +14,10 @@
 namespace llvm {
 
 class StackFrameLayoutAnalysisPass
-    : public PassInfoMixin<StackFrameLayoutAnalysisPass> {
+    : public RequiredPassInfoMixin<StackFrameLayoutAnalysisPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

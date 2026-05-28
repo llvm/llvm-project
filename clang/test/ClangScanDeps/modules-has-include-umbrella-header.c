@@ -65,7 +65,8 @@ module Dependency { header "dependency.h" }
 // CHECK-NEXT:           "command-line": [
 // CHECK:                ],
 // CHECK:                "file-deps": [
-// CHECK-NEXT:             "[[PREFIX]]/tu.c"
+// CHECK-NEXT:             "[[PREFIX]]/tu.c",
+// CHECK-NEXT:             "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/B.h"
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.c"
 // CHECK-NEXT:         }

@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global | FileCheck %s -enable-var-scope --check-prefix=VI
 ; RUN: llc < %s -mtriple=r600 -mcpu=cypress | FileCheck %s -enable-var-scope --check-prefix=EG
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s -enable-var-scope --check-prefix=GFX10
-; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s -enable-var-scope --check-prefix=GFX10-GISEL
+; RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s -enable-var-scope --check-prefix=GFX10-GISEL
 
 declare i7 @llvm.cttz.i7(i7, i1) nounwind readnone
 declare i8 @llvm.cttz.i8(i8, i1) nounwind readnone
@@ -492,8 +492,10 @@ define amdgpu_kernel void @v_cttz_i8(ptr addrspace(1) noalias %out, ptr addrspac
 ; GFX10-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    global_load_ubyte v1, v0, s[2:3]
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-GISEL-NEXT:    v_or_b32_e32 v1, 0x100, v1
-; GFX10-GISEL-NEXT:    v_ffbl_b32_e32 v1, v1
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s2, v1
+; GFX10-GISEL-NEXT:    s_bitset1_b32 s2, 8
+; GFX10-GISEL-NEXT:    s_ff1_i32_b32 s2, s2
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10-GISEL-NEXT:    global_store_byte v0, v1, s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %val = load i8, ptr addrspace(1) %valptr
@@ -1454,10 +1456,13 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ; GFX10-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    global_load_ushort v1, v0, s[2:3]
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-GISEL-NEXT:    v_or_b32_e32 v2, 0x10000, v1
-; GFX10-GISEL-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v1
-; GFX10-GISEL-NEXT:    v_ffbl_b32_e32 v2, v2
-; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v1, v2, 0xffff, vcc_lo
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s2, v1
+; GFX10-GISEL-NEXT:    s_or_b32 s3, s2, 0x10000
+; GFX10-GISEL-NEXT:    s_and_b32 s2, 0xffff, s2
+; GFX10-GISEL-NEXT:    s_ff1_i32_b32 s3, s3
+; GFX10-GISEL-NEXT:    s_cmp_eq_u32 s2, 0
+; GFX10-GISEL-NEXT:    s_cselect_b32 s2, 0xffff, s3
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10-GISEL-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %val = load i16, ptr addrspace(1) %valptr

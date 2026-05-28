@@ -375,8 +375,7 @@ bool PPCFastISel::PPCComputeAddress(const Value *Obj, Address &Addr) {
     }
     case Instruction::Alloca: {
       const AllocaInst *AI = cast<AllocaInst>(Obj);
-      DenseMap<const AllocaInst*, int>::iterator SI =
-        FuncInfo.StaticAllocaMap.find(AI);
+      auto SI = FuncInfo.StaticAllocaMap.find(AI);
       if (SI != FuncInfo.StaticAllocaMap.end()) {
         Addr.BaseType = Address::FrameIndexBase;
         Addr.Base.FI = SI->second;
@@ -752,7 +751,7 @@ bool PPCFastISel::SelectStore(const Instruction *I) {
 
 // Attempt to fast-select a branch instruction.
 bool PPCFastISel::SelectBranch(const Instruction *I) {
-  const BranchInst *BI = cast<BranchInst>(I);
+  const CondBrInst *BI = cast<CondBrInst>(I);
   MachineBasicBlock *BrBB = FuncInfo.MBB;
   MachineBasicBlock *TBB = FuncInfo.getMBB(BI->getSuccessor(0));
   MachineBasicBlock *FBB = FuncInfo.getMBB(BI->getSuccessor(1));
@@ -1938,7 +1937,7 @@ bool PPCFastISel::fastSelectInstruction(const Instruction *I) {
       return SelectLoad(I);
     case Instruction::Store:
       return SelectStore(I);
-    case Instruction::Br:
+    case Instruction::CondBr:
       return SelectBranch(I);
     case Instruction::IndirectBr:
       return SelectIndirectBr(I);
@@ -2270,8 +2269,7 @@ Register PPCFastISel::fastMaterializeConstant(const Constant *C) {
 // Materialize the address created by an alloca into a register, and
 // return the register number (or zero if we failed to handle it).
 Register PPCFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
-  DenseMap<const AllocaInst *, int>::iterator SI =
-      FuncInfo.StaticAllocaMap.find(AI);
+  auto SI = FuncInfo.StaticAllocaMap.find(AI);
 
   // Don't handle dynamic allocas.
   if (SI == FuncInfo.StaticAllocaMap.end())

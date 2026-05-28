@@ -39,7 +39,8 @@ lldb_framework_path = None
 # Test suite repeat count.  Can be overwritten with '-# count'.
 count = 1
 
-# The 'arch' and 'compiler' can be specified via command line.
+# The 'arch' is derived from the triple. The 'compiler' can be specified via
+# command line.
 arch = None
 compiler = None
 dsymutil = None
@@ -146,6 +147,12 @@ libcxx_library_dir = None
 
 # A plugin whose tests will be enabled, like intel-pt.
 enabled_plugins = []
+
+# Whether MTE (Memory Tagging Extension) is enabled.
+mte_enabled = False
+
+# Whether debugserver is built with arm64e support.
+arm64e_debugserver = False
 
 # the build type of lldb
 # Typical values include Debug, Release, RelWithDebInfo and MinSizeRel

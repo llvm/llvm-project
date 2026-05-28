@@ -7,10 +7,13 @@ module std_config [system] {
   textual header "__configuration/attributes.h"
   textual header "__configuration/availability.h"
   textual header "__configuration/compiler.h"
+  textual header "__configuration/diagnostic_suppression.h"
   textual header "__configuration/experimental.h"
   textual header "__configuration/hardening.h"
   textual header "__configuration/language.h"
+  textual header "__configuration/namespace.h"
   textual header "__configuration/platform.h"
+  textual header "__configuration/utility.h"
   textual header "version"
 }
 
@@ -252,20 +255,12 @@ module std_core [system] {
       header "__type_traits/is_polymorphic.h"
       export std_core.type_traits.integral_constant
     }
-    module is_primary_template {
-      header "__type_traits/is_primary_template.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_reference_wrapper {
       header "__type_traits/is_reference_wrapper.h"
       export std_core.type_traits.integral_constant
     }
     module is_reference {
       header "__type_traits/is_reference.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_referenceable {
-      header "__type_traits/is_referenceable.h"
       export std_core.type_traits.integral_constant
     }
     module is_same {
@@ -327,10 +322,6 @@ module std_core [system] {
     module is_unqualified { header "__type_traits/is_unqualified.h" }
     module is_unsigned {
       header "__type_traits/is_unsigned.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_valid_expansion {
-      header "__type_traits/is_valid_expansion.h"
       export std_core.type_traits.integral_constant
     }
     module is_void {
@@ -472,7 +463,10 @@ module std [system] {
       export std.iterator.aliasing_iterator
     }
     module move_backward                          { header "__algorithm/move_backward.h" }
-    module move                                   { header "__algorithm/move.h" }
+    module move                                   {
+      header "__algorithm/move.h"
+      export std.algorithm.in_out_result
+    }
     module next_permutation                       { header "__algorithm/next_permutation.h" }
     module none_of                                { header "__algorithm/none_of.h" }
     module nth_element                            { header "__algorithm/nth_element.h" }
@@ -850,7 +844,10 @@ module std [system] {
     module unique_copy                            { header "__algorithm/unique_copy.h" }
     module unique                                 { header "__algorithm/unique.h" }
     module unwrap_iter                            { header "__algorithm/unwrap_iter.h" }
-    module unwrap_range                           { header "__algorithm/unwrap_range.h" }
+    module unwrap_range                           {
+      header "__algorithm/unwrap_range.h"
+      export std.utility.pair
+    }
     module upper_bound                            { header "__algorithm/upper_bound.h" }
 
     header "algorithm"
@@ -1086,6 +1083,8 @@ module std [system] {
     module invocable                { header "__concepts/invocable.h" }
     module movable                  { header "__concepts/movable.h" }
     module predicate                { header "__concepts/predicate.h" }
+    module primary_template         { header "__concepts/primary_template.h" }
+    module referenceable            { header "__concepts/referenceable.h" }
     module regular                  { header "__concepts/regular.h" }
     module relation                 { header "__concepts/relation.h" }
     module same_as                  { header "__concepts/same_as.h" }
@@ -1365,7 +1364,15 @@ module std [system] {
     module format_string                      { header "__format/format_string.h" }
     module format_to_n_result                 { header "__format/format_to_n_result.h" }
     module formatter                          { header "__format/formatter.h" }
-    module formatter_bool                     { header "__format/formatter_bool.h" }
+    module formatter_bool                {
+      header "__format/formatter_bool.h"
+      export std.format.formatter
+    }
+    module formatter_bool_impl                {
+      header "__format/formatter_bool_impl.h"
+      export std.format.formatter_bool
+      export std.format.formatter
+    }
     module formatter_char                     { header "__format/formatter_char.h" }
     module formatter_floating_point           { header "__format/formatter_floating_point.h" }
     module formatter_integer                  { header "__format/formatter_integer.h" }
@@ -1596,17 +1603,20 @@ module std [system] {
       textual header "__locale_dir/support/freebsd.h"
       textual header "__locale_dir/support/fuchsia.h"
       textual header "__locale_dir/support/linux.h"
+      textual header "__locale_dir/support/llvm_libc.h"
       textual header "__locale_dir/support/netbsd.h"
+      textual header "__locale_dir/support/no_locale/conversions.h"
+      textual header "__locale_dir/support/no_locale/formatting.h"
       textual header "__locale_dir/support/newlib.h"
       textual header "__locale_dir/support/no_locale/characters.h"
       textual header "__locale_dir/support/no_locale/strtonum.h"
+      textual header "__locale_dir/support/openbsd.h"
       textual header "__locale_dir/support/windows.h"
     }
 
     module locale_base_api {
       textual header "__locale_dir/locale_base_api/bsd_locale_fallbacks.h"
       textual header "__locale_dir/locale_base_api/ibm.h"
-      textual header "__locale_dir/locale_base_api/openbsd.h"
     }
     export *
   }
@@ -1903,6 +1913,7 @@ module std [system] {
     module empty_view                     { header "__ranges/empty_view.h" }
     module enable_borrowed_range          { header "__ranges/enable_borrowed_range.h" }
     module enable_view                    { header "__ranges/enable_view.h" }
+    module enumerate_view                 { header "__ranges/enumerate_view.h" }
     module filter_view {
       header "__ranges/filter_view.h"
       export std.functional.bind_back
@@ -1929,6 +1940,10 @@ module std [system] {
     module size                           { header "__ranges/size.h" }
     module split_view {
       header "__ranges/split_view.h"
+      export std.functional.bind_back
+    }
+    module stride_view {
+      header "__ranges/stride_view.h"
       export std.functional.bind_back
     }
     module subrange {
@@ -2171,6 +2186,7 @@ module std [system] {
       export std_core.type_traits.decay // the macro expansion uses that trait
     }
     module cmp                             { header "__utility/cmp.h" }
+    module constant_wrapper                { header "__utility/constant_wrapper.h" }
     module convert_to_integral             { header "__utility/convert_to_integral.h" }
     module default_three_way_comparator    { header "__utility/default_three_way_comparator.h" }
     module element_count                   { header "__utility/element_count.h" }
@@ -2426,20 +2442,8 @@ module std_complex_h [system] {
   header "complex.h"
   export *
 }
-module std_ctype_h [system] {
-  header "ctype.h"
-  export *
-}
 module std_errno_h [system] {
   header "errno.h"
-  export *
-}
-module std_fenv_h [system] {
-  header "fenv.h"
-  export *
-}
-module std_inttypes_h [system] {
-  header "inttypes.h"
   export *
 }
 module std_math_h [system] {

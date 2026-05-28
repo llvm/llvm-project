@@ -380,7 +380,8 @@ private:
 
   /// Translate branch (br) instruction.
   /// \pre \p U is a branch instruction.
-  bool translateBr(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateUncondBr(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateCondBr(const User &U, MachineIRBuilder &MIRBuilder);
 
   // Begin switch lowering functions.
   bool emitJumpTableHeader(SwitchCG::JumpTable &JT,
@@ -648,6 +649,8 @@ private:
   bool HasTailCall = false;
 
   StackProtectorDescriptor SPDescriptor;
+
+  bool mayTranslateUserTypes(const User &U) const;
 
   /// Switch analysis and optimization.
   class GISelSwitchLowering : public SwitchCG::SwitchLowering {

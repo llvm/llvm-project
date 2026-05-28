@@ -333,7 +333,7 @@ private:
       AU.addRequired<StackSafetyGlobalInfoWrapperPass>();
     if (MergeInit)
       AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
+    AU.addUsedIfAvailable<OptimizationRemarkEmitterWrapperPass>();
   }
 };
 
@@ -518,12 +518,20 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   DL = &Fn.getDataLayout();
   if (MergeInit)
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  OptimizationRemarkEmitter &ORE =
-      getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+
+  std::unique_ptr<OptimizationRemarkEmitter> DeleteORE;
+  OptimizationRemarkEmitter *ORE = nullptr;
+  if (auto *P = getAnalysisIfAvailable<OptimizationRemarkEmitterWrapperPass>())
+    ORE = &P->getORE();
+
+  if (ORE == nullptr) {
+    DeleteORE = std::make_unique<OptimizationRemarkEmitter>(F);
+    ORE = DeleteORE.get();
+  }
 
   memtag::StackInfoBuilder SIB(SSI, DEBUG_TYPE);
   for (Instruction &I : instructions(F))
-    SIB.visit(ORE, I);
+    SIB.visit(*ORE, I);
   memtag::StackInfo &SInfo = SIB.get();
 
   if (SInfo.AllocasToInstrument.empty())
@@ -600,12 +608,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
         tagAlloca(AI, Start->getNextNode(), TagPCall, Size);
 
       auto TagEnd = [&](Instruction *Node) { untagAlloca(AI, Node, Size); };
-      if (!DT || !PDT ||
-          !memtag::forAllReachableExits(*DT, *PDT, *LI, Info, SInfo.RetVec,
-                                        TagEnd)) {
-        for (auto *End : Info.LifetimeEnd)
-          End->eraseFromParent();
-      }
+      memtag::forAllReachableExits(*DT, *PDT, *LI, Info, SInfo.RetVec, TagEnd);
     } else {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
       Value *Ptr = IRB.CreatePointerCast(TagPCall, IRB.getPtrTy());

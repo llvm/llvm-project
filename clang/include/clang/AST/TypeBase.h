@@ -1134,6 +1134,11 @@ public:
   /// Return true if this is a trivially copyable type
   bool isTriviallyCopyConstructibleType(const ASTContext &Context) const;
 
+  /// Returns true if the type uses postfix declarator syntax, i.e. the
+  /// declarator component appears after the name (arrays, functions).
+  /// Looks through pointer-like types to the pointee.
+  bool hasPostfixDeclaratorSyntax() const;
+
   /// Returns true if it is a class and it might be dynamic.
   bool mayBeDynamicClass() const;
 
@@ -1154,6 +1159,10 @@ public:
 
   /// Returns true if it is a OverflowBehaviorType of Trap kind.
   bool isTrapType() const;
+
+  /// Returns true if this type requires laundering by checking if it is a
+  /// dynamic class type, or contains a subobject which is a dynamic class type.
+  bool requiresBuiltinLaunder(const ASTContext &Context) const;
 
   // Don't promise in the API that anything besides 'const' can be
   // easily added.
@@ -1794,6 +1803,33 @@ enum RefQualifierKind {
   RQ_RValue
 };
 
+// The kind of type deduction represented by a DeducedType (ie AutoType).
+enum class DeducedKind {
+  /// Not deduced yet. This is for example an 'auto' which was just parsed.
+  Undeduced,
+
+  /// The normal deduced case. For example, an 'auto' which has been deduced to
+  /// 'int' will be of this kind, with 'int' as the deduced-as type. This is the
+  /// only case where the node is sugar.
+  Deduced,
+
+  /// This is a special case where the initializer is dependent, so we can't
+  /// deduce a type yet. For example, 'auto x = V' where 'V' is a
+  /// value-dependent expression.
+  /// Formally we can't deduce an initializer which is dependent, because for
+  /// one reason it might be non-instantiable (ie it can contain a placeholder
+  /// dependent type such as DependentTy, which cannot be instantiated).
+  /// In general TreeTransform will turn these back to 'Undeduced' so we can try
+  /// to deduce them again.
+  DeducedAsDependent,
+
+  /// Same as above, but additionally this represents a case where the deduced
+  /// entity itself is a pack.
+  /// This currently only happens for a lambda init-capture pack, which always
+  /// uses AutoType.
+  DeducedAsPack,
+};
+
 /// Which keyword(s) were used to create an AutoType.
 enum class AutoTypeKeyword {
   /// auto
@@ -1935,7 +1971,7 @@ protected:
     unsigned : NumTypeBits;
 
     /// The kind (BuiltinType::Kind) of builtin type this is.
-    static constexpr unsigned NumOfBuiltinTypeBits = 9;
+    static constexpr unsigned NumOfBuiltinTypeBits = 10;
     unsigned Kind : NumOfBuiltinTypeBits;
   };
 
@@ -2108,11 +2144,25 @@ protected:
     unsigned AttrKind : 32 - NumTypeBits;
   };
 
+  class DeducedTypeBitfields {
+    friend class DeducedType;
+
+    // One of the base classes uses the KeywordWrapper, so reserve those bits.
+    LLVM_PREFERRED_TYPE(KeywordWrapperBitfields)
+    unsigned : NumTypeWithKeywordBits;
+
+    /// The kind of deduction this type represents, ie 'undeduced' or otherwise.
+    LLVM_PREFERRED_TYPE(DeducedKind)
+    unsigned Kind : 2;
+  };
+
+  static constexpr int NumDeducedTypeBits = NumTypeBits + 2;
+
   class AutoTypeBitfields {
     friend class AutoType;
 
-    LLVM_PREFERRED_TYPE(TypeBitfields)
-    unsigned : NumTypeBits;
+    LLVM_PREFERRED_TYPE(DeducedTypeBitfields)
+    unsigned : NumDeducedTypeBits;
 
     /// Was this placeholder type spelled as 'auto', 'decltype(auto)',
     /// or '__auto_type'?  AutoTypeKeyword value.
@@ -2176,6 +2226,9 @@ protected:
     unsigned hasTypeDifferentFromDecl : 1;
   };
 
+  static constexpr unsigned TemplateTypeParmTypeDepthBits = 15;
+  static constexpr unsigned TemplateTypeParmTypeIndexBits = 16;
+
   class TemplateTypeParmTypeBitfields {
     friend class TemplateTypeParmType;
 
@@ -2183,14 +2236,14 @@ protected:
     unsigned : NumTypeBits;
 
     /// The depth of the template parameter.
-    unsigned Depth : 15;
+    unsigned Depth : TemplateTypeParmTypeDepthBits;
 
     /// Whether this is a template parameter pack.
     LLVM_PREFERRED_TYPE(bool)
     unsigned ParameterPack : 1;
 
     /// The index of the template parameter.
-    unsigned Index : 16;
+    unsigned Index : TemplateTypeParmTypeIndexBits;
   };
 
   class SubstTemplateTypeParmTypeBitfields {
@@ -2320,6 +2373,7 @@ protected:
     ArrayTypeBitfields ArrayTypeBits;
     ConstantArrayTypeBitfields ConstantArrayTypeBits;
     AttributedTypeBitfields AttributedTypeBits;
+    DeducedTypeBitfields DeducedTypeBits;
     AutoTypeBitfields AutoTypeBits;
     TypeOfBitfields TypeOfBits;
     TypedefBitfields TypedefBits;
@@ -3091,7 +3145,7 @@ public:
   /// Note that nullability is only captured as sugar within the type
   /// system, not as part of the canonical type, so nullability will
   /// be lost by canonicalization and desugaring.
-  std::optional<NullabilityKind> getNullability() const;
+  NullabilityKindOrNone getNullability() const;
 
   /// Determine whether the given type can have a nullability
   /// specifier applied to it, i.e., if it is any kind of pointer type.
@@ -6674,7 +6728,7 @@ public:
 
   bool isCallingConv() const;
 
-  std::optional<NullabilityKind> getImmediateNullability() const;
+  NullabilityKindOrNone getImmediateNullability() const;
 
   /// Strip off the top-level nullability annotation on the given
   /// type, if it's there.
@@ -6685,7 +6739,7 @@ public:
   /// to the underlying modified type.
   ///
   /// \returns the top-level nullability, if present.
-  static std::optional<NullabilityKind> stripOuterNullability(QualType &T);
+  static NullabilityKindOrNone stripOuterNullability(QualType &T);
 
   void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, getAttrKind(), ModifiedType, EquivalentType, Attribute);
@@ -7011,6 +7065,8 @@ class TemplateTypeParmType : public Type, public llvm::FoldingSetNode {
                  (PP ? TypeDependence::UnexpandedPack : TypeDependence::None)),
         TTPDecl(TTPDecl) {
     assert(!TTPDecl == Canon.isNull());
+    assert(D < (1 << TemplateTypeParmTypeDepthBits) && "Depth too large");
+    assert(I < (1 << TemplateTypeParmTypeIndexBits) && "Index too large");
     TemplateTypeParmTypeBits.Depth = D;
     TemplateTypeParmTypeBits.Index = I;
     TemplateTypeParmTypeBits.ParameterPack = PP;
@@ -7232,17 +7288,20 @@ class DeducedType : public Type {
   QualType DeducedAsType;
 
 protected:
-  DeducedType(TypeClass TC, QualType DeducedAsType,
-              TypeDependence ExtraDependence, QualType Canon)
-      : Type(TC, Canon,
-             ExtraDependence | (DeducedAsType.isNull()
-                                    ? TypeDependence::None
-                                    : DeducedAsType->getDependence() &
-                                          ~TypeDependence::VariablyModified)),
-        DeducedAsType(DeducedAsType) {}
+  DeducedType(TypeClass TC, DeducedKind DK, QualType DeducedAsTypeOrCanon);
+
+  static void Profile(llvm::FoldingSetNodeID &ID, DeducedKind DK,
+                      QualType Deduced) {
+    ID.AddInteger(llvm::to_underlying(DK));
+    Deduced.Profile(ID);
+  }
 
 public:
-  bool isSugared() const { return !DeducedAsType.isNull(); }
+  DeducedKind getDeducedKind() const {
+    return static_cast<DeducedKind>(DeducedTypeBits.Kind);
+  }
+
+  bool isSugared() const { return getDeducedKind() == DeducedKind::Deduced; }
   QualType desugar() const {
     return isSugared() ? DeducedAsType : QualType(this, 0);
   }
@@ -7250,9 +7309,7 @@ public:
   /// Get the type deduced for this placeholder type, or null if it
   /// has not been deduced.
   QualType getDeducedType() const { return DeducedAsType; }
-  bool isDeduced() const {
-    return !DeducedAsType.isNull() || isDependentType();
-  }
+  bool isDeduced() const { return getDeducedKind() != DeducedKind::Undeduced; }
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == Auto ||
@@ -7262,13 +7319,13 @@ public:
 
 /// Represents a C++11 auto or C++14 decltype(auto) type, possibly constrained
 /// by a type-constraint.
-class AutoType : public DeducedType {
+class AutoType : public DeducedType, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
   TemplateDecl *TypeConstraintConcept;
 
-  AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
-           TypeDependence ExtraDependence, QualType Canon, TemplateDecl *CD,
+  AutoType(DeducedKind DK, QualType DeducedAsTypeOrCanon,
+           AutoTypeKeyword Keyword, TemplateDecl *TypeConstraintConcept,
            ArrayRef<TemplateArgument> TypeConstraintArgs);
 
 public:
@@ -7299,9 +7356,8 @@ public:
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context);
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                      QualType Deduced, AutoTypeKeyword Keyword,
-                      bool IsDependent, TemplateDecl *CD,
-                      ArrayRef<TemplateArgument> Arguments);
+                      DeducedKind DK, QualType Deduced, AutoTypeKeyword Keyword,
+                      TemplateDecl *CD, ArrayRef<TemplateArgument> Arguments);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == Auto;
@@ -7316,34 +7372,35 @@ class DeducedTemplateSpecializationType : public KeywordWrapper<DeducedType>,
   /// The name of the template whose arguments will be deduced.
   TemplateName Template;
 
-  DeducedTemplateSpecializationType(ElaboratedTypeKeyword Keyword,
-                                    TemplateName Template,
-                                    QualType DeducedAsType,
-                                    bool IsDeducedAsDependent, QualType Canon)
-      : KeywordWrapper(Keyword, DeducedTemplateSpecialization, DeducedAsType,
-                       toTypeDependence(Template.getDependence()) |
-                           (IsDeducedAsDependent
-                                ? TypeDependence::DependentInstantiation
-                                : TypeDependence::None),
-                       Canon),
-        Template(Template) {}
+  DeducedTemplateSpecializationType(DeducedKind DK,
+                                    QualType DeducedAsTypeOrCanon,
+                                    ElaboratedTypeKeyword Keyword,
+                                    TemplateName Template)
+      : KeywordWrapper(Keyword, DeducedTemplateSpecialization, DK,
+                       DeducedAsTypeOrCanon),
+        Template(Template) {
+    auto Dep = toTypeDependence(Template.getDependence());
+    // A deduced AutoType only syntactically depends on its template name.
+    if (DK == DeducedKind::Deduced)
+      Dep = toSyntacticDependence(Dep);
+    addDependence(Dep);
+  }
 
 public:
   /// Retrieve the name of the template that we are deducing.
   TemplateName getTemplateName() const { return Template; }
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
-    Profile(ID, getKeyword(), getTemplateName(), getDeducedType(),
-            isDependentType());
+    Profile(ID, getDeducedKind(), getDeducedType(), getKeyword(),
+            getTemplateName());
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, ElaboratedTypeKeyword Keyword,
-                      TemplateName Template, QualType Deduced,
-                      bool IsDependent) {
+  static void Profile(llvm::FoldingSetNodeID &ID, DeducedKind DK,
+                      QualType Deduced, ElaboratedTypeKeyword Keyword,
+                      TemplateName Template) {
+    DeducedType::Profile(ID, DK, Deduced);
     ID.AddInteger(llvm::to_underlying(Keyword));
     Template.Profile(ID);
-    Deduced.Profile(ID);
-    ID.AddBoolean(IsDependent || Template.isDependent());
   }
 
   static bool classof(const Type *T) {

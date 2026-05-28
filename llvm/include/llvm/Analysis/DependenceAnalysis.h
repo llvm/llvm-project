@@ -169,6 +169,10 @@ public:
   /// vector means Src and Dst are reversed in the actual program.
   virtual bool isDirectionNegative() const { return false; }
 
+  /// Negate the dependence by swapping the source and destination, and
+  /// reversing the direction and distance information.
+  virtual void negate(ScalarEvolution &SE) {}
+
   /// If the direction vector is negative, normalize the direction
   /// vector to make it non-negative. Normalization is done by reversing
   /// Src and Dst, plus reversing the dependence directions and distances
@@ -274,6 +278,8 @@ public:
   /// Check if the direction vector is negative. A negative direction
   /// vector means Src and Dst are reversed in the actual program.
   bool isDirectionNegative() const override;
+
+  void negate(ScalarEvolution &SE) override;
 
   /// If the direction vector is negative, normalize the direction
   /// vector to make it non-negative. Normalization is done by reversing
@@ -462,10 +468,11 @@ private:
   /// If no upper bound is available, return NULL.
   const SCEV *collectUpperBound(const Loop *l, Type *T) const;
 
-  /// collectConstantUpperBound - Calls collectUpperBound(), then
-  /// attempts to cast it to SCEVConstant. If the cast fails,
-  /// returns NULL.
-  const SCEVConstant *collectConstantUpperBound(const Loop *l, Type *T) const;
+  /// collectNonNegativeConstantUpperBound - Calls collectUpperBound(), then
+  /// attempts to cast it to APInt. If the cast fails, or the value is negative,
+  /// returns std::nullopt.
+  std::optional<APInt> collectNonNegativeConstantUpperBound(const Loop *L,
+                                                            Type *T) const;
 
   /// classifyPair - Examines the subscript pair (the Src and Dst SCEVs)
   /// and classifies it as either ZIV, SIV, RDIV, MIV, or Nonlinear.
@@ -478,7 +485,6 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// If the dependence isn't proven to exist,
-  /// marks the Result as inconsistent.
   bool testZIV(const SCEV *Src, const SCEV *Dst, FullDependence &Result) const;
 
   /// testSIV - Tests the SIV subscript pair (Src and Dst) for dependence.
@@ -490,7 +496,6 @@ private:
   /// Sets appropriate direction vector entry and, when possible,
   /// the distance vector entry.
   /// If the dependence isn't proven to exist,
-  /// marks the Result as inconsistent.
   bool testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
                FullDependence &Result, bool UnderRuntimeAssumptions);
 
@@ -502,7 +507,6 @@ private:
   /// [c1 + a1*i + a2*j][c2].
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
-  /// Marks the Result as inconsistent.
   bool testRDIV(const SCEV *Src, const SCEV *Dst, FullDependence &Result) const;
 
   /// testMIV - Tests the MIV subscript pair (Src and Dst) for dependence.
@@ -531,11 +535,8 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  /// Set consistent to false.
-  bool weakCrossingSIVtest(const SCEV *SrcCoeff, const SCEV *SrcConst,
-                           const SCEV *DstConst, const Loop *CurrentSrcLoop,
-                           const Loop *CurrentDstLoop, unsigned Level,
-                           FullDependence &Result) const;
+  bool weakCrossingSIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
+                           unsigned Level, FullDependence &Result) const;
 
   /// ExactSIVtest - Tests the SIV subscript pair
   /// (Src and Dst) for dependence.
@@ -545,11 +546,13 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  /// Set consistent to false.
-  bool exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
-                    const SCEV *SrcConst, const SCEV *DstConst,
-                    const Loop *CurrentSrcLoop, const Loop *CurrentDstLoop,
+  bool exactSIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
                     unsigned Level, FullDependence &Result) const;
+
+  /// weakZeroSIVtestImpl - Core implementation for weakZeroSrcSIVtest and
+  /// weakZeroDstSIVtest.
+  bool weakZeroSIVtestImpl(const SCEVAddRecExpr *AR, const SCEV *Const,
+                           unsigned Level, FullDependence &Result) const;
 
   /// weakZeroSrcSIVtest - Tests the weak-zero SIV subscript pair
   /// (Src and Dst) for dependence.
@@ -559,12 +562,8 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  /// Set consistent to false.
-  /// If loop peeling will break the dependence, mark appropriately.
-  bool weakZeroSrcSIVtest(const SCEV *DstCoeff, const SCEV *SrcConst,
-                          const SCEV *DstConst, const Loop *CurrentSrcLoop,
-                          const Loop *CurrentDstLoop, unsigned Level,
-                          FullDependence &Result) const;
+  bool weakZeroSrcSIVtest(const SCEV *SrcConst, const SCEVAddRecExpr *Dst,
+                          unsigned Level, FullDependence &Result) const;
 
   /// weakZeroDstSIVtest - Tests the weak-zero SIV subscript pair
   /// (Src and Dst) for dependence.
@@ -574,42 +573,29 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  /// Set consistent to false.
-  /// If loop peeling will break the dependence, mark appropriately.
-  bool weakZeroDstSIVtest(const SCEV *SrcCoeff, const SCEV *SrcConst,
-                          const SCEV *DstConst, const Loop *CurrentSrcLoop,
-                          const Loop *CurrentDstLoop, unsigned Level,
-                          FullDependence &Result) const;
+  bool weakZeroDstSIVtest(const SCEVAddRecExpr *Src, const SCEV *DstConst,
+                          unsigned Level, FullDependence &Result) const;
 
   /// exactRDIVtest - Tests the RDIV subscript pair for dependence.
   /// Things of the form [c1 + a*i] and [c2 + b*j],
   /// where i and j are induction variable, c1 and c2 are loop invariant,
   /// and a and b are constants.
   /// Returns true if any possible dependence is disproved.
-  /// Marks the result as inconsistent.
   /// Works in some cases that symbolicRDIVtest doesn't,
   /// and vice versa.
-  bool exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
-                     const SCEV *SrcConst, const SCEV *DstConst,
-                     const Loop *SrcLoop, const Loop *DstLoop,
+  bool exactRDIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
                      FullDependence &Result) const;
 
-  /// symbolicRDIVtest - Tests the RDIV subscript pair for dependence.
-  /// Things of the form [c1 + a*i] and [c2 + b*j],
-  /// where i and j are induction variable, c1 and c2 are loop invariant,
-  /// and a and b are constants.
-  /// Returns true if any possible dependence is disproved.
-  /// Marks the result as inconsistent.
-  /// Works in some cases that exactRDIVtest doesn't,
-  /// and vice versa. Can also be used as a backup for
-  /// ordinary SIV tests.
-  bool symbolicRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
-                        const SCEV *SrcConst, const SCEV *DstConst,
-                        const Loop *SrcLoop, const Loop *DstLoop) const;
+  /// exactTestImpl - Core implementation shared by the Exact SIV test and the
+  /// Exact RDIV test. Returns true if any possible dependence is disproved. If
+  /// \p Level is provided, this function will also attempt to explore
+  /// directions and refine \p Result for the given level.
+  bool exactTestImpl(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
+                     FullDependence &Result,
+                     std::optional<unsigned> Level) const;
 
   /// gcdMIVtest - Tests an MIV subscript pair for dependence.
   /// Returns true if any possible dependence is disproved.
-  /// Marks the result as inconsistent.
   /// Can sometimes disprove the equal direction for 1 or more loops.
   //  Can handle some symbolics that even the SIV tests don't get,
   /// so we use it as a backup for everything.
@@ -618,7 +604,6 @@ private:
 
   /// banerjeeMIVtest - Tests an MIV subscript pair for dependence.
   /// Returns true if any possible dependence is disproved.
-  /// Marks the result as inconsistent.
   /// Computes directions.
   bool banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
                        const SmallBitVector &Loops,
@@ -627,8 +612,9 @@ private:
   /// collectCoeffInfo - Walks through the subscript, collecting each
   /// coefficient, the associated loop bounds, and recording its positive and
   /// negative parts for later use.
-  CoefficientInfo *collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
-                                    const SCEV *&Constant) const;
+  void collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
+                        const SCEV *&Constant,
+                        SmallVectorImpl<CoefficientInfo> &CI) const;
 
   /// Given \p Expr of the form
   ///
@@ -642,12 +628,12 @@ private:
   /// in \p RunningGCD. Also, the initial value of \p RunningGCD affects the
   /// result. If we find a term like (c_k * X_k * i_k), where i_k is the
   /// induction variable of \p CurLoop, c_k is stored in \p CurLoopCoeff and not
-  /// included in the GCD computation. Returns false if we fail to find a
+  /// included in the GCD computation. Returns nullptr if we fail to find a
   /// constant coefficient for some loop, e.g., when a term like (X+Y)*i is
-  /// present. Otherwise returns true.
-  bool accumulateCoefficientsGCD(const SCEV *Expr, const Loop *CurLoop,
-                                 const SCEV *&CurLoopCoeff,
-                                 APInt &RunningGCD) const;
+  /// present. Otherwise returns the remaining constant term C.
+  const SCEV *accumulateCoefficientsGCD(const SCEV *Expr, const Loop *CurLoop,
+                                        const SCEV *&CurLoopCoeff,
+                                        APInt &RunningGCD) const;
 
   /// getPositivePart - X^+ = max(X, 0).
   const SCEV *getPositivePart(const SCEV *X) const;
@@ -658,46 +644,47 @@ private:
   /// getLowerBound - Looks through all the bounds info and
   /// computes the lower bound given the current direction settings
   /// at each level.
-  const SCEV *getLowerBound(BoundInfo *Bound) const;
+  const SCEV *getLowerBound(ArrayRef<BoundInfo> Bound) const;
 
   /// getUpperBound - Looks through all the bounds info and
   /// computes the upper bound given the current direction settings
   /// at each level.
-  const SCEV *getUpperBound(BoundInfo *Bound) const;
+  const SCEV *getUpperBound(ArrayRef<BoundInfo> Bound) const;
 
   /// exploreDirections - Hierarchically expands the direction vector
   /// search space, combining the directions of discovered dependences
   /// in the DirSet field of Bound. Returns the number of distinct
   /// dependences discovered. If the dependence is disproved,
   /// it will return 0.
-  unsigned exploreDirections(unsigned Level, CoefficientInfo *A,
-                             CoefficientInfo *B, BoundInfo *Bound,
+  unsigned exploreDirections(unsigned Level, ArrayRef<CoefficientInfo> A,
+                             ArrayRef<CoefficientInfo> B,
+                             MutableArrayRef<BoundInfo> Bound,
                              const SmallBitVector &Loops,
                              unsigned &DepthExpanded, const SCEV *Delta) const;
 
   /// testBounds - Returns true iff the current bounds are plausible.
-  bool testBounds(unsigned char DirKind, unsigned Level, BoundInfo *Bound,
-                  const SCEV *Delta) const;
+  bool testBounds(unsigned char DirKind, unsigned Level,
+                  MutableArrayRef<BoundInfo> Bound, const SCEV *Delta) const;
 
   /// findBoundsALL - Computes the upper and lower bounds for level K
   /// using the * direction. Records them in Bound.
-  void findBoundsALL(CoefficientInfo *A, CoefficientInfo *B, BoundInfo *Bound,
-                     unsigned K) const;
+  void findBoundsALL(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+                     MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// findBoundsLT - Computes the upper and lower bounds for level K
   /// using the < direction. Records them in Bound.
-  void findBoundsLT(CoefficientInfo *A, CoefficientInfo *B, BoundInfo *Bound,
-                    unsigned K) const;
+  void findBoundsLT(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+                    MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// findBoundsGT - Computes the upper and lower bounds for level K
   /// using the > direction. Records them in Bound.
-  void findBoundsGT(CoefficientInfo *A, CoefficientInfo *B, BoundInfo *Bound,
-                    unsigned K) const;
+  void findBoundsGT(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+                    MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// findBoundsEQ - Computes the upper and lower bounds for level K
   /// using the = direction. Records them in Bound.
-  void findBoundsEQ(CoefficientInfo *A, CoefficientInfo *B, BoundInfo *Bound,
-                    unsigned K) const;
+  void findBoundsEQ(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+                    MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// Given a linear access function, tries to recover subscripts
   /// for each dimension of the array element access.
@@ -740,13 +727,11 @@ private:
 
 /// Printer pass to dump DA results.
 struct DependenceAnalysisPrinterPass
-    : public PassInfoMixin<DependenceAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<DependenceAnalysisPrinterPass> {
   DependenceAnalysisPrinterPass(raw_ostream &OS, bool NormalizeResults = false)
       : OS(OS), NormalizeResults(NormalizeResults) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
-
-  static bool isRequired() { return true; }
 
 private:
   raw_ostream &OS;

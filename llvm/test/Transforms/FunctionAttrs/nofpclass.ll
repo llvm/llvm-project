@@ -202,7 +202,7 @@ define internal void @infer_arg_from_constants(float %a, <2 x half> %b, float %c
 define void @call_infer_arg_from_constants() {
 ; CHECK-LABEL: define void @call_infer_arg_from_constants(
 ; CHECK-SAME: ) #[[ATTR2]] {
-; CHECK-NEXT:    call void @infer_arg_from_constants(float 0.000000e+00, <2 x half> <half 0xH3C00, half 0xHBC00>, float poison, float 0x7FF8000000000000)
+; CHECK-NEXT:    call void @infer_arg_from_constants(float 0.000000e+00, <2 x half> <half 1.000000e+00, half -1.000000e+00>, float poison, float +qnan)
 ; CHECK-NEXT:    ret void
 ;
   call void @infer_arg_from_constants(float 0.0, <2 x half> <half 1.0, half -1.0>, float poison, float 0x7FF8000000000000)
@@ -308,8 +308,8 @@ define float @caller_transitive_nonan(float %arg, ptr %ptr) {
   ret float %ret
 }
 ;.
-; CHECK: attributes #[[ATTR0]] = { mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
-; CHECK: attributes #[[ATTR1]] = { mustprogress nofree nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #[[ATTR1]] = { nofree nosync nounwind memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CHECK: attributes #[[ATTR2]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR3]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
 ;.

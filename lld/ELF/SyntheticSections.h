@@ -495,7 +495,10 @@ public:
   /// This overload can be used if the addends are written directly instead of
   /// using relocations on the input section (e.g. MipsGotSection::writeTo()).
   template <bool shard = false> void addReloc(const DynamicReloc &reloc) {
-    relocs.push_back(reloc);
+    if (reloc.type == relativeRel)
+      relativeRelocs.push_back(reloc);
+    else
+      relocs.push_back(reloc);
   }
   /// Add a dynamic relocation against \p sym with an optional addend.
   void addSymbolReloc(RelType dynType, InputSectionBase &isec,
@@ -532,11 +535,11 @@ public:
         {dynType, &sec, offsetInSec, isAgainstSymbol, sym, addend, expr});
   }
   bool isNeeded() const override {
-    return !relocs.empty() ||
+    return !relocs.empty() || !relativeRelocs.empty() ||
            llvm::any_of(relocsVec, [](auto &v) { return !v.empty(); });
   }
   size_t getSize() const override {
-    size_t count = relocs.size();
+    size_t count = relocs.size() + relativeRelocs.size();
     for (const auto &v : relocsVec)
       count += v.size();
     return count * this->entsize;
@@ -545,16 +548,16 @@ public:
   void finalizeContents() override;
 
   int32_t dynamicTag, sizeDynamicTag;
-  SmallVector<DynamicReloc, 0> relocs;
+  SmallVector<DynamicReloc, 0> relocs, relativeRelocs;
 
 protected:
   void mergeRels();
-  void partitionRels();
   void computeRels();
   // Used when parallel relocation scanning adds relocations. The elements
-  // will be moved into relocs by mergeRel().
+  // will be classified into relativeRelocs or relocs by mergeRels().
   SmallVector<SmallVector<DynamicReloc, 0>, 0> relocsVec;
   size_t numRelativeRelocs = 0; // used by -z combreloc
+  RelType relativeRel;
   bool combreloc;
 };
 
@@ -1266,30 +1269,6 @@ private:
   bool finalized = false;
 };
 
-template <typename ELFT>
-class PartitionElfHeaderSection final : public SyntheticSection {
-public:
-  PartitionElfHeaderSection(Ctx &);
-  size_t getSize() const override;
-  void writeTo(uint8_t *buf) override;
-};
-
-template <typename ELFT>
-class PartitionProgramHeadersSection final : public SyntheticSection {
-public:
-  PartitionProgramHeadersSection(Ctx &);
-  size_t getSize() const override;
-  void writeTo(uint8_t *buf) override;
-};
-
-class PartitionIndexSection final : public SyntheticSection {
-public:
-  PartitionIndexSection(Ctx &);
-  size_t getSize() const override;
-  void finalizeContents() override;
-  void writeTo(uint8_t *buf) override;
-};
-
 // See the following link for the Android-specific loader code that operates on
 // this section:
 // https://cs.android.com/android/platform/superproject/+/master:bionic/libc/bionic/libc_init_static.cpp;drc=9425b16978f9c5aa8f2c50c873db470819480d1d;l=192
@@ -1344,8 +1323,8 @@ void combineEhSections(Ctx &);
 bool hasMemtag(Ctx &);
 bool canHaveMemtagGlobals(Ctx &);
 
-template <typename ELFT> void writeEhdr(Ctx &, uint8_t *buf, Partition &part);
-template <typename ELFT> void writePhdrs(uint8_t *buf, Partition &part);
+template <typename ELFT> void writeEhdr(Ctx &, uint8_t *buf);
+template <typename ELFT> void writePhdrs(Ctx &, uint8_t *buf);
 
 Defined *addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
                            uint64_t value, uint64_t size,
@@ -1377,44 +1356,6 @@ struct PhdrEntry {
 
   uint64_t lmaOffset = 0;
 };
-
-// Linker generated per-partition sections.
-struct Partition {
-  Ctx &ctx;
-  StringRef name;
-  uint64_t nameStrTab;
-
-  std::unique_ptr<SyntheticSection> elfHeader;
-  std::unique_ptr<SyntheticSection> programHeaders;
-  SmallVector<std::unique_ptr<PhdrEntry>, 0> phdrs;
-
-  std::unique_ptr<ARMExidxSyntheticSection> armExidx;
-  std::unique_ptr<BuildIdSection> buildId;
-  std::unique_ptr<SyntheticSection> dynamic;
-  std::unique_ptr<StringTableSection> dynStrTab;
-  std::unique_ptr<SymbolTableBaseSection> dynSymTab;
-  std::unique_ptr<EhFrameHeader> ehFrameHdr;
-  std::unique_ptr<EhFrameSection> ehFrame;
-  std::unique_ptr<GnuHashTableSection> gnuHashTab;
-  std::unique_ptr<HashTableSection> hashTab;
-  std::unique_ptr<MemtagAndroidNote> memtagAndroidNote;
-  std::unique_ptr<MemtagGlobalDescriptors> memtagGlobalDescriptors;
-  std::unique_ptr<PackageMetadataNote> packageMetadataNote;
-  std::unique_ptr<RelocationBaseSection> relaDyn;
-  std::unique_ptr<RelrBaseSection> relrDyn;
-  std::unique_ptr<RelrBaseSection> relrAuthDyn;
-  std::unique_ptr<VersionDefinitionSection> verDef;
-  std::unique_ptr<SyntheticSection> verNeed;
-  std::unique_ptr<VersionTableSection> verSym;
-
-  Partition(Ctx &ctx) : ctx(ctx) {}
-  unsigned getNumber(Ctx &ctx) const { return this - &ctx.partitions[0] + 1; }
-};
-
-inline Partition &SectionBase::getPartition(Ctx &ctx) const {
-  assert(isLive());
-  return ctx.partitions[partition - 1];
-}
 
 } // namespace lld::elf
 

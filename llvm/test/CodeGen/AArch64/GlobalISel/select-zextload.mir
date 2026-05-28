@@ -16,8 +16,8 @@ body:             |
     ; CHECK-NEXT: [[LDRHHui:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 0 :: (load (s16))
     ; CHECK-NEXT: $w0 = COPY [[LDRHHui]]
     %0:gpr(p0) = COPY $x0
-    %1:gpr(s32) = G_ZEXTLOAD %0 :: (load (s16))
-    $w0 = COPY %1(s32)
+    %1:gpr(i32) = G_ZEXTLOAD %0 :: (load (s16))
+    $w0 = COPY %1(i32)
 ...
 ---
 name:            zextload_s32_from_s16_not_combined
@@ -36,8 +36,8 @@ body:             |
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s16) = G_LOAD %0 :: (load (s16))
-    %2:gpr(s32) = G_ZEXT %1
-    $w0 = COPY %2(s32)
+    %2:gpr(i32) = G_ZEXT %1
+    $w0 = COPY %2(i32)
 ...
 ---
 name:            i32_to_i64
@@ -56,8 +56,8 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(p0) = COPY $x0
-    %2:gpr(s64) = G_ZEXTLOAD %0(p0) :: (load (s32))
-    $x0 = COPY %2(s64)
+    %2:gpr(i64) = G_ZEXTLOAD %0(p0) :: (load (s32))
+    $x0 = COPY %2(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -78,8 +78,8 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(p0) = COPY $x0
-    %2:gpr(s64) = G_ZEXTLOAD %0(p0) :: (load (s16))
-    $x0 = COPY %2(s64)
+    %2:gpr(i64) = G_ZEXTLOAD %0(p0) :: (load (s16))
+    $x0 = COPY %2(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -100,8 +100,8 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(p0) = COPY $x0
-    %2:gpr(s64) = G_ZEXTLOAD %0(p0) :: (load (s8))
-    $x0 = COPY %2(s64)
+    %2:gpr(i64) = G_ZEXTLOAD %0(p0) :: (load (s8))
+    $x0 = COPY %2(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -121,8 +121,8 @@ body:             |
     ; CHECK-NEXT: $w0 = COPY [[LDRBBui]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(p0) = COPY $x0
-    %2:gpr(s32) = G_ZEXTLOAD %0(p0) :: (load (s8))
-    $w0 = COPY %2(s32)
+    %2:gpr(i32) = G_ZEXTLOAD %0(p0) :: (load (s8))
+    $w0 = COPY %2(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -142,8 +142,8 @@ body:             |
     ; CHECK-NEXT: $w0 = COPY [[LDRHHui]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(p0) = COPY $x0
-    %2:gpr(s32) = G_ZEXTLOAD %0(p0) :: (load (s16))
-    $w0 = COPY %2(s32)
+    %2:gpr(i32) = G_ZEXTLOAD %0(p0) :: (load (s16))
+    $w0 = COPY %2(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -164,7 +164,7 @@ body:             |
     ; CHECK-NEXT: $w0 = COPY [[LDRBBui]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(p0) = COPY $x0
-    %2:gpr(s32) = G_ZEXTLOAD %0(p0) :: (load unordered (s8))
+    %2:gpr(i32) = G_ZEXTLOAD %0(p0) :: (load unordered (s8))
     $w0 = COPY %2
     RET_ReallyLR implicit $w0
 
@@ -186,7 +186,7 @@ body:             |
     ; CHECK-NEXT: $w0 = COPY [[LDRBBui]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(p0) = COPY $x0
-    %2:gpr(s32) = G_ZEXTLOAD %0(p0) :: (load monotonic (s8))
+    %2:gpr(i32) = G_ZEXTLOAD %0(p0) :: (load monotonic (s8))
     $w0 = COPY %2
     RET_ReallyLR implicit $w0
 
@@ -208,7 +208,7 @@ body:             |
     ; CHECK-NEXT: $w0 = COPY [[LDARB]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(p0) = COPY $x0
-    %2:gpr(s32) = G_ZEXTLOAD %0(p0) :: (load acquire (s8))
+    %2:gpr(i32) = G_ZEXTLOAD %0(p0) :: (load acquire (s8))
     $w0 = COPY %2
     RET_ReallyLR implicit $w0
 
@@ -230,7 +230,7 @@ body:             |
     ; CHECK-NEXT: $w0 = COPY [[LDARB]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(p0) = COPY $x0
-    %2:gpr(s32) = G_ZEXTLOAD %0(p0) :: (load seq_cst (s8))
+    %2:gpr(i32) = G_ZEXTLOAD %0(p0) :: (load seq_cst (s8))
     $w0 = COPY %2
     RET_ReallyLR implicit $w0
 
@@ -252,7 +252,7 @@ body:             |
     ; CHECK-NEXT: $w0 = COPY [[LDRHHui]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(p0) = COPY $x0
-    %2:gpr(s32) = G_ZEXTLOAD %0(p0) :: (load unordered (s16))
+    %2:gpr(i32) = G_ZEXTLOAD %0(p0) :: (load unordered (s16))
     $w0 = COPY %2
     RET_ReallyLR implicit $w0
 
@@ -274,7 +274,7 @@ body:             |
     ; CHECK-NEXT: $w0 = COPY [[LDRHHui]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(p0) = COPY $x0
-    %2:gpr(s32) = G_ZEXTLOAD %0(p0) :: (load monotonic (s16))
+    %2:gpr(i32) = G_ZEXTLOAD %0(p0) :: (load monotonic (s16))
     $w0 = COPY %2
     RET_ReallyLR implicit $w0
 
@@ -296,7 +296,7 @@ body:             |
     ; CHECK-NEXT: $w0 = COPY [[LDARH]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(p0) = COPY $x0
-    %2:gpr(s32) = G_ZEXTLOAD %0(p0) :: (load acquire (s16))
+    %2:gpr(i32) = G_ZEXTLOAD %0(p0) :: (load acquire (s16))
     $w0 = COPY %2
     RET_ReallyLR implicit $w0
 
@@ -318,7 +318,7 @@ body:             |
     ; CHECK-NEXT: $w0 = COPY [[LDARH]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(p0) = COPY $x0
-    %2:gpr(s32) = G_ZEXTLOAD %0(p0) :: (load seq_cst (s16))
+    %2:gpr(i32) = G_ZEXTLOAD %0(p0) :: (load seq_cst (s16))
     $w0 = COPY %2
     RET_ReallyLR implicit $w0
 

@@ -365,7 +365,7 @@ void add_sshsuf(void) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr @fl, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @a, align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = sitofp i32 [[TMP1]] to float
-// CHECK-NEXT:    [[TMP3:%.*]] = fmul float [[TMP2]], 0x3F00000000000000
+// CHECK-NEXT:    [[TMP3:%.*]] = fmul float [[TMP2]], f0x38000000
 // CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP3]], [[TMP0]]
 // CHECK-NEXT:    [[TMP4:%.*]] = fmul float [[ADD]], 3.276800e+04
 // CHECK-NEXT:    [[TMP5:%.*]] = fptosi float [[TMP4]] to i32
@@ -380,7 +380,7 @@ void add_afl(void) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @a, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = sitofp i32 [[TMP0]] to float
-// CHECK-NEXT:    [[TMP2:%.*]] = fmul float [[TMP1]], 0x3F00000000000000
+// CHECK-NEXT:    [[TMP2:%.*]] = fmul float [[TMP1]], f0x38000000
 // CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr @fl, align 4
 // CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP3]], [[TMP2]]
 // CHECK-NEXT:    store float [[ADD]], ptr @fl, align 4
@@ -395,7 +395,7 @@ void add_fla(void) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr @fl, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @sa, align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = sitofp i32 [[TMP1]] to float
-// CHECK-NEXT:    [[TMP3:%.*]] = fmul float [[TMP2]], 0x3F00000000000000
+// CHECK-NEXT:    [[TMP3:%.*]] = fmul float [[TMP2]], f0x38000000
 // CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP3]], [[TMP0]]
 // CHECK-NEXT:    [[TMP4:%.*]] = fmul float [[ADD]], 3.276800e+04
 // CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.fptosi.sat.i32.f32(float [[TMP4]])
@@ -410,7 +410,7 @@ void add_safl(void) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @sa, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = sitofp i32 [[TMP0]] to float
-// CHECK-NEXT:    [[TMP2:%.*]] = fmul float [[TMP1]], 0x3F00000000000000
+// CHECK-NEXT:    [[TMP2:%.*]] = fmul float [[TMP1]], f0x38000000
 // CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr @fl, align 4
 // CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP3]], [[TMP2]]
 // CHECK-NEXT:    store float [[ADD]], ptr @fl, align 4
@@ -496,7 +496,7 @@ void sub_csa(void) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr @fl, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @a, align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = sitofp i32 [[TMP1]] to float
-// CHECK-NEXT:    [[TMP3:%.*]] = fmul float [[TMP2]], 0x3F00000000000000
+// CHECK-NEXT:    [[TMP3:%.*]] = fmul float [[TMP2]], f0x38000000
 // CHECK-NEXT:    [[SUB:%.*]] = fsub float [[TMP3]], [[TMP0]]
 // CHECK-NEXT:    [[TMP4:%.*]] = fmul float [[SUB]], 3.276800e+04
 // CHECK-NEXT:    [[TMP5:%.*]] = fptosi float [[TMP4]] to i32
@@ -581,7 +581,7 @@ void mul_csa(void) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr @fl, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @a, align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = sitofp i32 [[TMP1]] to float
-// CHECK-NEXT:    [[TMP3:%.*]] = fmul float [[TMP2]], 0x3F00000000000000
+// CHECK-NEXT:    [[TMP3:%.*]] = fmul float [[TMP2]], f0x38000000
 // CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP3]], [[TMP0]]
 // CHECK-NEXT:    [[TMP4:%.*]] = fmul float [[MUL]], 3.276800e+04
 // CHECK-NEXT:    [[TMP5:%.*]] = fptosi float [[TMP4]] to i32
@@ -666,7 +666,7 @@ void div_csa(void) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr @fl, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @a, align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = sitofp i32 [[TMP1]] to float
-// CHECK-NEXT:    [[TMP3:%.*]] = fmul float [[TMP2]], 0x3F00000000000000
+// CHECK-NEXT:    [[TMP3:%.*]] = fmul float [[TMP2]], f0x38000000
 // CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[TMP3]], [[TMP0]]
 // CHECK-NEXT:    [[TMP4:%.*]] = fmul float [[DIV]], 3.276800e+04
 // CHECK-NEXT:    [[TMP5:%.*]] = fptosi float [[TMP4]] to i32

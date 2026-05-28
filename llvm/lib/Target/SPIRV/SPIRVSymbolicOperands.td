@@ -324,7 +324,7 @@ defm SPV_EXT_shader_atomic_float_add
     : ExtensionOperand<68, [EnvVulkan, EnvOpenCL]>;
 defm SPV_KHR_terminate_invocation : ExtensionOperand<69, [EnvVulkan]>;
 defm SPV_KHR_fragment_shading_rate : ExtensionOperand<70, [EnvVulkan]>;
-defm SPV_EXT_shader_image_int64 : ExtensionOperand<71, [EnvVulkan]>;
+defm SPV_EXT_shader_image_int64 : ExtensionOperand<71, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_fp_fast_math_mode : ExtensionOperand<72, [EnvOpenCL]>;
 defm SPV_INTEL_fpga_cluster_attributes : ExtensionOperand<73, [EnvOpenCL]>;
 defm SPV_INTEL_loop_fuse : ExtensionOperand<74, [EnvOpenCL]>;
@@ -397,6 +397,12 @@ defm SPV_NV_shader_atomic_fp16_vector
 defm SPV_EXT_image_raw10_raw12 :ExtensionOperand<133, [EnvOpenCL, EnvVulkan]>;
 defm SPV_ALTERA_arbitrary_precision_floating_point: ExtensionOperand<134, [EnvOpenCL]>;
 defm SPV_KHR_fma : ExtensionOperand<135, [EnvVulkan, EnvOpenCL]>;
+defm SPV_INTEL_masked_gather_scatter : ExtensionOperand<136, [EnvOpenCL]>;
+defm SPV_AMD_weak_linkage : ExtensionOperand<137, [EnvOpenCL]>;
+// SPV_KHR_abort is currently only supported in the OpenCL environment.
+// Vulkan/Shader support requires emitting explicit layout decorations on the
+// Message Type, which is not yet implemented.
+defm SPV_KHR_abort : ExtensionOperand<138, [EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -516,7 +522,9 @@ defm ImageGatherBiasLodAMD : CapabilityOperand<5009, 0, 0, [], [Shader]>;
 defm FragmentMaskAMD : CapabilityOperand<5010, 0, 0, [], [Shader]>;
 defm StencilExportEXT : CapabilityOperand<5013, 0, 0, [], [Shader]>;
 defm ImageReadWriteLodAMD : CapabilityOperand<5015, 0, 0, [], [Shader]>;
+defm Int64ImageEXT : CapabilityOperand<5016, 0, 0, [SPV_EXT_shader_image_int64], [Int64]>;
 defm ShaderClockKHR : CapabilityOperand<5055, 0, 0, [SPV_KHR_shader_clock], []>;
+defm BFloat16TypeKHR : CapabilityOperand<5116, 0, 0, [SPV_KHR_bfloat16], []>;
 defm SampleMaskOverrideCoverageNV : CapabilityOperand<5249, 0, 0, [], [SampleRateShading]>;
 defm GeometryShaderPassthroughNV : CapabilityOperand<5251, 0, 0, [], [Geometry]>;
 defm ShaderViewportIndexLayerEXT : CapabilityOperand<5254, 0, 0, [], [MultiViewport]>;
@@ -575,12 +583,15 @@ defm AtomicFloat32AddEXT : CapabilityOperand<6033, 0, 0, [SPV_EXT_shader_atomic_
 defm AtomicFloat64AddEXT : CapabilityOperand<6034, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
 defm FmaKHR : CapabilityOperand<6030, 0, 0, [SPV_KHR_fma], []>;
 defm AtomicFloat16AddEXT : CapabilityOperand<6095, 0, 0, [SPV_EXT_shader_atomic_float16_add], []>;
-defm AtomicBFloat16AddINTEL : CapabilityOperand<6255, 0, 0, [SPV_INTEL_16bit_atomics], []>;
+defm AtomicBFloat16AddINTEL : CapabilityOperand<6255, 0, 0, [SPV_INTEL_16bit_atomics], [BFloat16TypeKHR]>;
 defm AtomicFloat16MinMaxEXT : CapabilityOperand<5616, 0, 0, [SPV_EXT_shader_atomic_float_min_max], []>;
 defm AtomicFloat32MinMaxEXT : CapabilityOperand<5612, 0, 0, [SPV_EXT_shader_atomic_float_min_max], []>;
 defm AtomicFloat64MinMaxEXT : CapabilityOperand<5613, 0, 0, [SPV_EXT_shader_atomic_float_min_max], []>;
-defm AtomicBFloat16MinMaxINTEL : CapabilityOperand<6256, 0, 0, [SPV_INTEL_16bit_atomics], []>;
+defm AtomicBFloat16MinMaxINTEL : CapabilityOperand<6256, 0, 0, [SPV_INTEL_16bit_atomics], [BFloat16TypeKHR]>;
 defm AtomicFloat16VectorNV : CapabilityOperand<5404, 0, 0, [SPV_NV_shader_atomic_fp16_vector], []>;
+defm AtomicInt16CompareExchangeINTEL : CapabilityOperand<6260, 0, 0, [SPV_INTEL_16bit_atomics], [Int16]>;
+defm Int16AtomicsINTEL : CapabilityOperand<6261, 0, 0, [SPV_INTEL_16bit_atomics], [AtomicInt16CompareExchangeINTEL]>;
+defm AtomicBFloat16LoadStoreINTEL : CapabilityOperand<6262, 0, 0, [SPV_INTEL_16bit_atomics], [BFloat16TypeKHR]>;
 defm VariableLengthArrayINTEL : CapabilityOperand<5817, 0, 0, [SPV_INTEL_variable_length_array], []>;
 defm GroupUniformArithmeticKHR : CapabilityOperand<6400, 0, 0, [SPV_KHR_uniform_group_instructions], []>;
 defm USMStorageClassesINTEL : CapabilityOperand<5935, 0, 0, [SPV_INTEL_usm_storage_classes], [Kernel]>;
@@ -592,6 +603,7 @@ defm GlobalVariableFPGADecorationsINTEL : CapabilityOperand<6189, 0, 0, [SPV_INT
 defm CacheControlsINTEL : CapabilityOperand<6441, 0, 0, [SPV_INTEL_cache_controls], []>;
 defm CooperativeMatrixKHR : CapabilityOperand<6022, 0, 0, [SPV_KHR_cooperative_matrix], []>;
 defm ArithmeticFenceEXT : CapabilityOperand<6144, 0, 0, [SPV_EXT_arithmetic_fence], []>;
+defm AbortKHR : CapabilityOperand<5120, 0, 0, [SPV_KHR_abort], []>;
 defm SplitBarrierINTEL : CapabilityOperand<6141, 0, 0, [SPV_INTEL_split_barrier], []>;
 defm CooperativeMatrixCheckedInstructionsINTEL : CapabilityOperand<6192, 0, 0, [SPV_INTEL_joint_matrix], []>;
 defm CooperativeMatrixPrefetchINTEL : CapabilityOperand<6411, 0, 0, [SPV_INTEL_joint_matrix], []>;
@@ -620,9 +632,10 @@ defm PredicatedIOINTEL : CapabilityOperand<6257, 0, 0, [SPV_INTEL_predicated_io]
 defm Int4TypeINTEL : CapabilityOperand<5112, 0, 0, [SPV_INTEL_int4], []>;
 defm Int4CooperativeMatrixINTEL : CapabilityOperand<5114, 0, 0, [SPV_INTEL_int4], [Int4TypeINTEL, CooperativeMatrixKHR]>;
 defm TensorFloat32RoundingINTEL : CapabilityOperand<6425, 0, 0, [SPV_INTEL_tensor_float32_conversion], []>;
-defm BFloat16TypeKHR : CapabilityOperand<5116, 0, 0, [SPV_KHR_bfloat16], []>;
+defm MaskedGatherScatterINTEL : CapabilityOperand<6427, 0, 0, [SPV_INTEL_masked_gather_scatter], []>;
 defm BFloat16DotProductKHR : CapabilityOperand<5117, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR]>;
 defm BFloat16CooperativeMatrixKHR : CapabilityOperand<5118, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR, CooperativeMatrixKHR]>;
+defm WeakLinkageAMD : CapabilityOperand<5181, 0, 0, [SPV_AMD_weak_linkage], [Linkage]>;
 defm BlockingPipesALTERA : CapabilityOperand<5945, 0, 0, [SPV_ALTERA_blocking_pipes], []>;
 defm ArbitraryPrecisionFixedPointALTERA : CapabilityOperand<5922, 0, 0, [SPV_ALTERA_arbitrary_precision_fixed_point], []>;
 defm ArbitraryPrecisionFloatingPointALTERA : CapabilityOperand<5845, 0, 0,[SPV_ALTERA_arbitrary_precision_floating_point], []>;
@@ -657,6 +670,7 @@ defm GLSL : SourceLanguageOperand<2>;
 defm OpenCL_C : SourceLanguageOperand<3>;
 defm OpenCL_CPP : SourceLanguageOperand<4>;
 defm HLSL : SourceLanguageOperand<5>;
+defm CPP_for_OpenCL : SourceLanguageOperand<6>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define AddressingModel enum values and at the same time
@@ -1251,6 +1265,7 @@ multiclass LinkageTypeOperand<bits<32> value, list<Capability> reqCapabilities> 
 defm Export : LinkageTypeOperand<0, [Linkage]>;
 defm Import : LinkageTypeOperand<1, [Linkage]>;
 defm LinkOnceODR : LinkageTypeOperand<2, [Linkage]>;
+defm WeakAMD : LinkageTypeOperand<3, [WeakLinkageAMD]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define AccessQualifier enum values and at the same time
@@ -1663,6 +1678,7 @@ defm ImageMemory : MemorySemanticsOperand<0x800, 0, 0, [], []>;
 defm OutputMemoryKHR : MemorySemanticsOperand<0x1000, 0, 0, [], [VulkanMemoryModelKHR]>;
 defm MakeAvailableKHR : MemorySemanticsOperand<0x2000, 0, 0, [], [VulkanMemoryModelKHR]>;
 defm MakeVisibleKHR : MemorySemanticsOperand<0x4000, 0, 0, [], [VulkanMemoryModelKHR]>;
+defm Volatile : MemorySemanticsOperand<0x8000, 0, 0, [], [VulkanMemoryModelKHR]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define MemoryOperand enum values and at the same time

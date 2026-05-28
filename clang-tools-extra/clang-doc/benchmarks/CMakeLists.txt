@@ -12,9 +12,4 @@ target_include_directories(ClangDocBenchmark
 target_link_libraries(ClangDocBenchmark
   PRIVATE
   clangDoc
-  clangTooling
-  clangBasic
-  clangAST
-  clangFrontend
-  clangSerialization
 )

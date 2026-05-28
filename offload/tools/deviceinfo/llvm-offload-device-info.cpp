@@ -43,6 +43,9 @@ void doWrite<ol_platform_backend_t>(std::ostream &S,
   case OL_PLATFORM_BACKEND_AMDGPU:
     S << "AMDGPU";
     break;
+  case OL_PLATFORM_BACKEND_LEVEL_ZERO:
+    S << "LEVEL_ZERO";
+    break;
   case OL_PLATFORM_BACKEND_HOST:
     S << "HOST";
     break;
@@ -209,13 +212,21 @@ ol_result_t printDevice(std::ostream &S, ol_device_handle_t D) {
       printDeviceValue<uint64_t>(S, D, OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE,
                                  "Work Group Shared Mem Size", "B"));
   OFFLOAD_ERR(
+      printDeviceValue<bool>(S, D, OL_DEVICE_INFO_SINGLE_FP_SUPPORT,
+                             "Single Precision Floating Point Support"));
+  OFFLOAD_ERR(
       (printDeviceValue<ol_device_fp_capability_flags_t, PrintKind::FP_FLAGS>(
           S, D, OL_DEVICE_INFO_SINGLE_FP_CONFIG,
           "Single Precision Floating Point Capability")));
   OFFLOAD_ERR(
+      printDeviceValue<bool>(S, D, OL_DEVICE_INFO_DOUBLE_FP_SUPPORT,
+                             "Double Precision Floating Point Support"));
+  OFFLOAD_ERR(
       (printDeviceValue<ol_device_fp_capability_flags_t, PrintKind::FP_FLAGS>(
           S, D, OL_DEVICE_INFO_DOUBLE_FP_CONFIG,
           "Double Precision Floating Point Capability")));
+  OFFLOAD_ERR(printDeviceValue<bool>(S, D, OL_DEVICE_INFO_HALF_FP_SUPPORT,
+                                     "Half Precision Floating Point Support"));
   OFFLOAD_ERR(
       (printDeviceValue<ol_device_fp_capability_flags_t, PrintKind::FP_FLAGS>(
           S, D, OL_DEVICE_INFO_HALF_FP_CONFIG,

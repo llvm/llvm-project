@@ -299,7 +299,7 @@ MCSymbol *ARMAsmPrinter::GetCPISymbol(unsigned CPID) const {
   // The AsmPrinter::GetCPISymbol superclass method tries to use CPID as
   // indexes in MachineConstantPool, which isn't in sync with indexes used here.
   const DataLayout &DL = getDataLayout();
-  return OutContext.getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+  return OutContext.getOrCreateSymbol(Twine(DL.getInternalSymbolPrefix()) +
                                       "CPI" + Twine(getFunctionNumber()) + "_" +
                                       Twine(CPID));
 }
@@ -310,7 +310,7 @@ MCSymbol *ARMAsmPrinter::
 GetARMJTIPICJumpTableLabel(unsigned uid) const {
   const DataLayout &DL = getDataLayout();
   SmallString<60> Name;
-  raw_svector_ostream(Name) << DL.getPrivateGlobalPrefix() << "JTI"
+  raw_svector_ostream(Name) << DL.getInternalSymbolPrefix() << "JTI"
                             << getFunctionNumber() << '_' << uid;
   return OutContext.getOrCreateSymbol(Name);
 }
@@ -1031,7 +1031,7 @@ void ARMAsmPrinter::emitMachineConstantPoolValue(
 
   if (ACPV->getPCAdjustment()) {
     MCSymbol *PCLabel =
-        getPICLabel(DL.getPrivateGlobalPrefix(), getFunctionNumber(),
+        getPICLabel(DL.getInternalSymbolPrefix(), getFunctionNumber(),
                     ACPV->getLabelId(), OutContext);
     const MCExpr *PCRelExpr = MCSymbolRefExpr::create(PCLabel, OutContext);
     PCRelExpr =
@@ -1366,7 +1366,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
       PadBefore = -MI->getOperand(4).getImm() - 8;
       break;
     }
-    if (MAI->getExceptionHandlingType() == ExceptionHandling::ARM) {
+    if (MAI.getExceptionHandlingType() == ExceptionHandling::ARM) {
       if (PadBefore)
         ATS.emitPad(PadBefore);
       ATS.emitRegSave(RegList, Opc == ARM::VSTMDDB_UPD);
@@ -1417,7 +1417,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
         break;
       }
 
-      if (MAI->getExceptionHandlingType() == ExceptionHandling::ARM) {
+      if (MAI.getExceptionHandlingType() == ExceptionHandling::ARM) {
         if (DstReg == FramePtr && FramePtr != ARM::SP)
           // Set-up of the frame pointer. Positive values correspond to "add"
           // instruction.
@@ -1915,12 +1915,8 @@ void ARMAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   const MachineInstr &Call = *std::next(MI.getIterator());
 
   // Adjust the offset for patchable-function-prefix.
-  int64_t PrefixNops = 0;
-  MI.getMF()
-      ->getFunction()
-      .getFnAttribute("patchable-function-prefix")
-      .getValueAsString()
-      .getAsInteger(10, PrefixNops);
+  int64_t PrefixNops = MI.getMF()->getFunction().getFnAttributeAsParsedInteger(
+      "patchable-function-prefix");
 
   // Emit the appropriate instruction sequence based on the opcode variant.
   switch (MI.getOpcode()) {
@@ -2110,7 +2106,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const MCExpr *GVSymExpr = MCSymbolRefExpr::create(GVSym, OutContext);
 
     MCSymbol *LabelSym =
-        getPICLabel(DL.getPrivateGlobalPrefix(), getFunctionNumber(),
+        getPICLabel(DL.getInternalSymbolPrefix(), getFunctionNumber(),
                     MI->getOperand(2).getImm(), OutContext);
     const MCExpr *LabelSymExpr= MCSymbolRefExpr::create(LabelSym, OutContext);
     unsigned PCAdj = (Opc == ARM::MOVi16_ga_pcrel) ? 8 : 4;
@@ -2146,7 +2142,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const MCExpr *GVSymExpr = MCSymbolRefExpr::create(GVSym, OutContext);
 
     MCSymbol *LabelSym =
-        getPICLabel(DL.getPrivateGlobalPrefix(), getFunctionNumber(),
+        getPICLabel(DL.getInternalSymbolPrefix(), getFunctionNumber(),
                     MI->getOperand(3).getImm(), OutContext);
     const MCExpr *LabelSymExpr= MCSymbolRefExpr::create(LabelSym, OutContext);
     unsigned PCAdj = (Opc == ARM::MOVTi16_ga_pcrel) ? 8 : 4;
@@ -2175,7 +2171,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // This is a Branch Future instruction.
 
     const MCExpr *BranchLabel = MCSymbolRefExpr::create(
-        getBFLabel(DL.getPrivateGlobalPrefix(), getFunctionNumber(),
+        getBFLabel(DL.getInternalSymbolPrefix(), getFunctionNumber(),
                    MI->getOperand(0).getIndex(), OutContext),
         OutContext);
 
@@ -2205,7 +2201,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     if (Opc == ARM::t2BFic) {
       const MCExpr *ElseLabel = MCSymbolRefExpr::create(
-          getBFLabel(DL.getPrivateGlobalPrefix(), getFunctionNumber(),
+          getBFLabel(DL.getInternalSymbolPrefix(), getFunctionNumber(),
                      MI->getOperand(2).getIndex(), OutContext),
           OutContext);
       MCInst.addExpr(ElseLabel);
@@ -2222,9 +2218,9 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // This is a pseudo op for a label used by a branch future instruction
 
     // Emit the label.
-    OutStreamer->emitLabel(getBFLabel(DL.getPrivateGlobalPrefix(),
-                                       getFunctionNumber(),
-                                       MI->getOperand(0).getIndex(), OutContext));
+    OutStreamer->emitLabel(
+        getBFLabel(DL.getInternalSymbolPrefix(), getFunctionNumber(),
+                   MI->getOperand(0).getIndex(), OutContext));
     return;
   }
   case ARM::tPICADD: {
@@ -2234,7 +2230,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // This adds the address of LPC0 to r0.
 
     // Emit the label.
-    OutStreamer->emitLabel(getPICLabel(DL.getPrivateGlobalPrefix(),
+    OutStreamer->emitLabel(getPICLabel(DL.getInternalSymbolPrefix(),
                                        getFunctionNumber(),
                                        MI->getOperand(2).getImm(), OutContext));
 
@@ -2255,7 +2251,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // This adds the address of LPC0 to r0.
 
     // Emit the label.
-    OutStreamer->emitLabel(getPICLabel(DL.getPrivateGlobalPrefix(),
+    OutStreamer->emitLabel(getPICLabel(DL.getInternalSymbolPrefix(),
                                        getFunctionNumber(),
                                        MI->getOperand(2).getImm(), OutContext));
 
@@ -2286,7 +2282,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // a PC-relative address at the ldr instruction.
 
     // Emit the label.
-    OutStreamer->emitLabel(getPICLabel(DL.getPrivateGlobalPrefix(),
+    OutStreamer->emitLabel(getPICLabel(DL.getInternalSymbolPrefix(),
                                        getFunctionNumber(),
                                        MI->getOperand(2).getImm(), OutContext));
 

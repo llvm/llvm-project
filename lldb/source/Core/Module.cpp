@@ -14,6 +14,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
@@ -58,7 +59,9 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
@@ -140,14 +143,13 @@ Module::Module(const ModuleSpec &module_spec)
   }
 
   Log *log(GetLog(LLDBLog::Object | LLDBLog::Modules));
-  if (log != nullptr)
-    LLDB_LOGF(log, "%p Module::Module((%s) '%s%s%s%s')",
-              static_cast<void *>(this),
-              module_spec.GetArchitecture().GetArchitectureName(),
-              module_spec.GetFileSpec().GetPath().c_str(),
-              module_spec.GetObjectName().IsEmpty() ? "" : "(",
-              module_spec.GetObjectName().AsCString(""),
-              module_spec.GetObjectName().IsEmpty() ? "" : ")");
+  LLDB_LOGF(log, "%p Module::Module((%s) '%s%s%s%s')",
+            static_cast<void *>(this),
+            module_spec.GetArchitecture().GetArchitectureName(),
+            module_spec.GetFileSpec().GetPath().c_str(),
+            module_spec.GetObjectName().IsEmpty() ? "" : "(",
+            module_spec.GetObjectName().AsCString(""),
+            module_spec.GetObjectName().IsEmpty() ? "" : ")");
 
   auto extractor_sp = module_spec.GetExtractor();
   lldb::offset_t file_size = 0;
@@ -156,10 +158,9 @@ Module::Module(const ModuleSpec &module_spec)
 
   // First extract all module specifications from the file using the local file
   // path. If there are no specifications, then don't fill anything in
-  ModuleSpecList modules_specs;
-  if (ObjectFile::GetModuleSpecifications(module_spec.GetFileSpec(), 0,
-                                          file_size, modules_specs,
-                                          extractor_sp) == 0)
+  ModuleSpecList modules_specs = ObjectFile::GetModuleSpecifications(
+      module_spec.GetFileSpec(), 0, file_size, extractor_sp);
+  if (modules_specs.GetSize() == 0)
     return;
 
   // Now make sure that one of the module specifications matches what we just
@@ -172,9 +173,7 @@ Module::Module(const ModuleSpec &module_spec)
   ModuleSpec matching_module_spec;
   if (!modules_specs.FindMatchingModuleSpec(module_spec,
                                             matching_module_spec)) {
-    if (log) {
-      LLDB_LOGF(log, "Found local object file but the specs didn't match");
-    }
+    LLDB_LOGF(log, "Found local object file but the specs didn't match");
     return;
   }
 
@@ -250,11 +249,9 @@ Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
   }
 
   Log *log(GetLog(LLDBLog::Object | LLDBLog::Modules));
-  if (log != nullptr)
-    LLDB_LOGF(log, "%p Module::Module((%s) '%s%s%s%s')",
-              static_cast<void *>(this), m_arch.GetArchitectureName(),
-              m_file.GetPath().c_str(), m_object_name.IsEmpty() ? "" : "(",
-              m_object_name.AsCString(""), m_object_name.IsEmpty() ? "" : ")");
+  LLDB_LOGF(log, "%p Module::Module((%s) '%s')", static_cast<void *>(this),
+            m_arch.GetArchitectureName(),
+            GetSpecificationDescription().c_str());
 }
 
 Module::Module()
@@ -280,11 +277,9 @@ Module::~Module() {
     modules.erase(pos);
   }
   Log *log(GetLog(LLDBLog::Object | LLDBLog::Modules));
-  if (log != nullptr)
-    LLDB_LOGF(log, "%p Module::~Module((%s) '%s%s%s%s')",
-              static_cast<void *>(this), m_arch.GetArchitectureName(),
-              m_file.GetPath().c_str(), m_object_name.IsEmpty() ? "" : "(",
-              m_object_name.AsCString(""), m_object_name.IsEmpty() ? "" : ")");
+  LLDB_LOGF(log, "%p Module::~Module((%s) '%s')", static_cast<void *>(this),
+            m_arch.GetArchitectureName(),
+            GetSpecificationDescription().c_str());
   // Release any auto pointers before we start tearing down our member
   // variables since the object file and symbol files might need to make
   // function calls back into this module object. The ordering is important
@@ -316,9 +311,7 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
         m_objfile_sp = ObjectFile::FindPlugin(shared_from_this(), process_sp,
                                               header_addr, data_sp);
         if (m_objfile_sp) {
-          StreamString s;
-          s.Printf("0x%16.16" PRIx64, header_addr);
-          m_object_name.SetString(s.GetString());
+          m_memory_module_addr = header_addr;
 
           // Once we get the object file, update our module with the object
           // file's architecture since it might differ in vendor/os if some
@@ -371,12 +364,10 @@ void Module::ForEachTypeSystem(
 }
 
 void Module::ParseAllDebugSymbols() {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  size_t num_comp_units = GetNumCompileUnits();
+  LockedPtr<SymbolFile> symbols = GetSymbolFileLocked();
+  size_t num_comp_units = symbols ? symbols->GetNumCompileUnits() : 0;
   if (num_comp_units == 0)
     return;
-
-  SymbolFile *symbols = GetSymbolFile();
 
   for (size_t cu_idx = 0; cu_idx < num_comp_units; cu_idx++) {
     SymbolContext sc;
@@ -414,8 +405,7 @@ void Module::DumpSymbolContext(Stream *s) {
 }
 
 size_t Module::GetNumCompileUnits() {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  if (SymbolFile *symbols = GetSymbolFile())
+  if (LockedPtr<SymbolFile> symbols = GetSymbolFileLocked())
     return symbols->GetNumCompileUnits();
   return 0;
 }
@@ -433,10 +423,9 @@ CompUnitSP Module::GetCompileUnitAtIndex(size_t index) {
 }
 
 bool Module::ResolveFileAddress(lldb::addr_t vm_addr, Address &so_addr) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  SectionList *section_list = GetSectionList();
+  LockedPtr<SectionList> section_list = GetSectionListLocked();
   if (section_list)
-    return so_addr.ResolveAddressUsingFileSections(vm_addr, section_list);
+    return so_addr.ResolveAddressUsingFileSections(vm_addr, section_list.get());
   return false;
 }
 
@@ -1036,6 +1025,11 @@ std::string Module::GetSpecificationDescription() const {
     spec += m_object_name.GetCString();
     spec += ')';
   }
+  if (m_memory_module_addr.has_value()) {
+    StreamString s;
+    s.Printf("(0x%" PRIx64 ")", m_memory_module_addr.value());
+    spec += s.GetData();
+  }
   return spec;
 }
 
@@ -1059,6 +1053,8 @@ void Module::GetDescription(llvm::raw_ostream &s,
   const char *object_name = m_object_name.GetCString();
   if (object_name)
     s << llvm::formatv("({0})", object_name);
+  if (m_memory_module_addr.has_value())
+    s << llvm::formatv("({0})", m_memory_module_addr.value());
 }
 
 bool Module::FileHasChanged() const {
@@ -1081,7 +1077,7 @@ void Module::ReportWarningOptimization(
   StreamString ss;
   ss << file_name
      << " was compiled with optimization - stepping may behave "
-        "oddly; variables may not be available.";
+        "oddly; variables may not be available";
   llvm::StringRef msg = ss.GetString();
   Debugger::ReportWarning(msg.str(), debugger_id, GetDiagnosticOnceFlag(msg));
 }
@@ -1089,10 +1085,10 @@ void Module::ReportWarningOptimization(
 void Module::ReportWarningUnsupportedLanguage(
     LanguageType language, std::optional<lldb::user_id_t> debugger_id) {
   StreamString ss;
-  ss << "This version of LLDB has no plugin for the language \""
+  ss << "this version of LLDB has no plugin for the language \""
      << Language::GetNameForLanguageType(language)
      << "\". "
-        "Inspection of frame variables will be limited.";
+        "Inspection of frame variables will be limited";
   llvm::StringRef msg = ss.GetString();
   Debugger::ReportWarning(msg.str(), debugger_id, GetDiagnosticOnceFlag(msg));
 }
@@ -1166,10 +1162,7 @@ void Module::Dump(Stream *s) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   // s->Printf("%.*p: ", (int)sizeof(void*) * 2, this);
   s->Indent();
-  s->Printf("Module %s%s%s%s\n", m_file.GetPath().c_str(),
-            m_object_name ? "(" : "",
-            m_object_name ? m_object_name.GetCString() : "",
-            m_object_name ? ")" : "");
+  s->Printf("Module %s\n", GetSpecificationDescription().c_str());
 
   s->IndentMore();
 
@@ -1237,6 +1230,24 @@ SectionList *Module::GetSectionList() {
   return m_sections_up.get();
 }
 
+LockedPtr<ObjectFile> Module::GetObjectFileLocked() {
+  return LockedPtr<ObjectFile>(m_mutex, GetObjectFile());
+}
+
+LockedPtr<SectionList> Module::GetSectionListLocked() {
+  return LockedPtr<SectionList>(m_mutex, GetSectionList());
+}
+
+LockedPtr<SymbolFile> Module::GetSymbolFileLocked(bool can_create,
+                                                  Stream *feedback_strm) {
+  return LockedPtr<SymbolFile>(m_mutex,
+                               GetSymbolFile(can_create, feedback_strm));
+}
+
+LockedPtr<Symtab> Module::GetSymtabLocked(bool can_create) {
+  return LockedPtr<Symtab>(m_mutex, GetSymtab(can_create));
+}
+
 void Module::SectionFileAddressesChanged() {
   ObjectFile *obj_file = GetObjectFile();
   if (obj_file)
@@ -1261,7 +1272,7 @@ const Symbol *Module::FindFirstSymbolWithNameAndType(ConstString name,
                                                      SymbolType symbol_type) {
   LLDB_SCOPED_TIMERF(
       "Module::FindFirstSymbolWithNameAndType (name = %s, type = %i)",
-      name.AsCString(), symbol_type);
+      name.AsCString(""), symbol_type);
   if (Symtab *symtab = GetSymtab())
     return symtab->FindFirstSymbolWithNameAndType(
         name, symbol_type, Symtab::eDebugAny, Symtab::eVisibilityAny);
@@ -1288,7 +1299,7 @@ void Module::SymbolIndicesToSymbolContextList(
 void Module::FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
                                  SymbolContextList &sc_list) {
   LLDB_SCOPED_TIMERF("Module::FindSymbolsFunctions (name = %s, mask = 0x%8.8x)",
-                     name.AsCString(), name_type_mask);
+                     name.AsCString(""), name_type_mask);
   if (Symtab *symtab = GetSymtab())
     symtab->FindFunctionSymbols(name, name_type_mask, sc_list);
 }
@@ -1323,8 +1334,7 @@ void Module::FindSymbolsMatchingRegExAndType(
 }
 
 void Module::PreloadSymbols() {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  SymbolFile *sym_file = GetSymbolFile();
+  LockedPtr<SymbolFile> sym_file = GetSymbolFileLocked();
   if (!sym_file)
     return;
 
@@ -1423,74 +1433,6 @@ bool Module::IsLoadedInTarget(Target *target) {
   return false;
 }
 
-bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
-                                           Stream &feedback_stream) {
-  if (!target) {
-    error = Status::FromErrorString("invalid destination Target");
-    return false;
-  }
-
-  LoadScriptFromSymFile should_load =
-      target->TargetProperties::GetLoadScriptFromSymbolFile();
-
-  if (should_load == eLoadScriptFromSymFileFalse)
-    return false;
-
-  Debugger &debugger = target->GetDebugger();
-  const ScriptLanguage script_language = debugger.GetScriptLanguage();
-  if (script_language != eScriptLanguageNone) {
-
-    PlatformSP platform_sp(target->GetPlatform());
-
-    if (!platform_sp) {
-      error = Status::FromErrorString("invalid Platform");
-      return false;
-    }
-
-    FileSpecList file_specs = platform_sp->LocateExecutableScriptingResources(
-        target, *this, feedback_stream);
-
-    const uint32_t num_specs = file_specs.GetSize();
-    if (num_specs) {
-      ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
-      if (script_interpreter) {
-        for (uint32_t i = 0; i < num_specs; ++i) {
-          FileSpec scripting_fspec(file_specs.GetFileSpecAtIndex(i));
-          if (scripting_fspec &&
-              FileSystem::Instance().Exists(scripting_fspec)) {
-            if (should_load == eLoadScriptFromSymFileWarn) {
-              feedback_stream.Printf(
-                  "warning: '%s' contains a debug script. To run this script "
-                  "in "
-                  "this debug session:\n\n    command script import "
-                  "\"%s\"\n\n"
-                  "To run all discovered debug scripts in this session:\n\n"
-                  "    settings set target.load-script-from-symbol-file "
-                  "true\n",
-                  GetFileSpec().GetFileNameStrippingExtension().GetCString(),
-                  scripting_fspec.GetPath().c_str());
-              return false;
-            }
-            StreamString scripting_stream;
-            scripting_fspec.Dump(scripting_stream.AsRawOstream());
-            LoadScriptOptions options;
-            bool did_load = script_interpreter->LoadScriptingModule(
-                scripting_stream.GetData(), options, error,
-                /*module_sp*/ nullptr, /*extra_path*/ {},
-                target->shared_from_this());
-            if (!did_load)
-              return false;
-          }
-        }
-      } else {
-        error = Status::FromErrorString("invalid ScriptInterpreter");
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
 bool Module::SetArchitecture(const ArchSpec &new_arch) {
   if (!m_arch.IsValid()) {
     m_arch = new_arch;
@@ -1542,9 +1484,9 @@ bool Module::MatchesModuleSpec(const ModuleSpec &module_ref) {
   return true;
 }
 
-bool Module::FindSourceFile(const FileSpec &orig_spec,
-                            FileSpec &new_spec) const {
+bool Module::FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  LoadPrefixMapsIfNeeded();
   if (auto remapped = m_source_mappings.FindFile(orig_spec)) {
     new_spec = *remapped;
     return true;
@@ -1552,8 +1494,68 @@ bool Module::FindSourceFile(const FileSpec &orig_spec,
   return false;
 }
 
-std::optional<std::string> Module::RemapSourceFile(llvm::StringRef path) const {
+void Module::AddPrefixMapSearchDir(FileSpec dir) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  m_prefix_map_search_dirs.insert(ConstString(dir.GetPath()));
+}
+
+void Module::LoadPrefixMapsIfNeeded() {
+  // Must be called with m_mutex held.
+  if (m_prefix_map_search_dirs.empty())
+    return;
+
+  Log *log = GetLog(LLDBLog::Object | LLDBLog::Modules);
+  llvm::vfs::FileSystem &vfs = *llvm::vfs::getRealFileSystem();
+  // Track visited directories so two starting paths that share ancestors
+  // don't redundantly walk the same directory.
+  llvm::DenseSet<ConstString> searched;
+  for (ConstString start_cs : m_prefix_map_search_dirs) {
+    for (FileSpec current(start_cs.GetStringRef());;) {
+      ConstString directory_cs(current.GetPath());
+      if (!searched.insert(directory_cs).second)
+        break;
+      FileSpec map_file(current);
+      map_file.AppendPathComponent("compilation-prefix-map.json");
+      llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> file =
+          vfs.openFileForRead(map_file.GetPath());
+      if (file && *file) {
+        LLDB_LOG(log, "found compilation-prefix-map.json at {0}",
+                 map_file.GetPath());
+        llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> buf =
+            (*file)->getBuffer(map_file.GetPath());
+        if (buf && *buf) {
+          llvm::Expected<llvm::json::Value> val =
+              llvm::json::parse((*buf)->getBuffer());
+          if (!val) {
+            LLDB_LOG_ERROR(log, val.takeError(), "failed to parse {1}: {0}",
+                           map_file.GetPath());
+            continue;
+          }
+          if (llvm::json::Object *obj = val->getAsObject()) {
+            for (const llvm::json::Object::value_type &kv : *obj)
+              if (std::optional<llvm::StringRef> to = kv.second.getAsString()) {
+                LLDB_LOG(log, "applying prefix map: '{0}' -> '{1}'", kv.first,
+                         *to);
+                m_source_mappings.AppendUnique(kv.first.str(), to->str(),
+                                               /*notify=*/false);
+              }
+          }
+        }
+        break;
+      }
+      FileSpec parent = current;
+      parent.RemoveLastPathComponent();
+      if (parent == current)
+        break;
+      current = parent;
+    }
+  }
+  m_prefix_map_search_dirs.clear();
+}
+
+std::optional<std::string> Module::RemapSourceFile(llvm::StringRef path) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  LoadPrefixMapsIfNeeded();
   if (auto remapped = m_source_mappings.RemapPath(path))
     return remapped->GetPath();
   return {};
@@ -1561,6 +1563,7 @@ std::optional<std::string> Module::RemapSourceFile(llvm::StringRef path) const {
 
 void Module::RegisterXcodeSDK(llvm::StringRef sdk_name,
                               llvm::StringRef sysroot) {
+  Progress progress("Looking for Xcode SDK", sdk_name.str());
   auto sdk_path_or_err =
       HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk_name.str()});
 

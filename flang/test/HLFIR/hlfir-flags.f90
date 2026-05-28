@@ -1,11 +1,7 @@
-! Test -flang-deprecated-hlfir, -flang-experimental-hlfir (flang), and
-! -hlfir (bbc), -emit-hlfir, -emit-fir flags
+! Test -emit-hlfir, -emit-fir flags
 ! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck --check-prefix HLFIR --check-prefix ALL %s
 ! RUN: bbc -emit-hlfir -o - %s | FileCheck --check-prefix HLFIR --check-prefix ALL %s
-! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck --check-prefix HLFIR --check-prefix ALL %s
-! RUN: bbc -emit-hlfir -hlfir -o - %s | FileCheck --check-prefix HLFIR --check-prefix ALL %s
 ! RUN: %flang_fc1 -emit-fir -o - %s | FileCheck --check-prefix FIR --check-prefix ALL %s
-! RUN: %flang_fc1 -emit-fir -flang-experimental-hlfir -o - %s | FileCheck %s --check-prefix FIR --check-prefix ALL
 ! RUN: bbc -emit-fir -o - %s | FileCheck --check-prefix FIR --check-prefix ALL %s
 
 ! | Action      | Result                          |

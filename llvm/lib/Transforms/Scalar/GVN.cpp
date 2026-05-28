@@ -105,7 +105,8 @@ STATISTIC(MaxBBSpeculationCutoffReachedTimes,
           "Number of times we we reached gvn-max-block-speculations cut-off "
           "preventing further exploration");
 
-static cl::opt<bool> GVNEnablePRE("enable-pre", cl::init(true), cl::Hidden);
+static cl::opt<bool> GVNEnableScalarPRE("enable-scalar-pre", cl::init(true),
+                                        cl::Hidden);
 static cl::opt<bool> GVNEnableLoadPRE("enable-load-pre", cl::init(true));
 static cl::opt<bool> GVNEnableLoadInLoopPRE("enable-load-in-loop-pre",
                                             cl::init(true));
@@ -648,7 +649,7 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(MemoryAccess *MA) {
 /// lookupOrAdd - Returns the value number for the specified value, assigning
 /// it a new number if it did not have one before.
 uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
-  DenseMap<Value *, uint32_t>::iterator VI = ValueNumbering.find(V);
+  auto VI = ValueNumbering.find(V);
   if (VI != ValueNumbering.end())
     return VI->second;
 
@@ -733,7 +734,7 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
 /// Returns the value number of the specified value. Fails if
 /// the value has not yet been numbered.
 uint32_t GVNPass::ValueTable::lookup(Value *V, bool Verify) const {
-  DenseMap<Value *, uint32_t>::const_iterator VI = ValueNumbering.find(V);
+  auto VI = ValueNumbering.find(V);
   if (Verify) {
     assert(VI != ValueNumbering.end() && "Value not numbered?");
     return VI->second;
@@ -789,26 +790,25 @@ void GVNPass::ValueTable::verifyRemoved(const Value *V) const {
 
 /// Push a new Value to the LeaderTable onto the list for its value number.
 void GVNPass::LeaderMap::insert(uint32_t N, Value *V, const BasicBlock *BB) {
-  LeaderListNode &Curr = NumToLeaders[N];
-  if (!Curr.Entry.Val) {
-    Curr.Entry.Val = V;
-    Curr.Entry.BB = BB;
-    return;
+  const auto &[It, Inserted] = NumToLeaders.try_emplace(N, V, BB, nullptr);
+  if (!Inserted) {
+    // Key already exists: insert new node after the head.
+    auto *NewSlot = TableAllocator.Allocate<LeaderListNode>();
+    new (NewSlot) LeaderListNode(V, BB, It->second.Next);
+    It->second.Next = NewSlot;
   }
-
-  LeaderListNode *Node = TableAllocator.Allocate<LeaderListNode>();
-  Node->Entry.Val = V;
-  Node->Entry.BB = BB;
-  Node->Next = Curr.Next;
-  Curr.Next = Node;
 }
 
 /// Scan the list of values corresponding to a given
 /// value number, and remove the given instruction if encountered.
 void GVNPass::LeaderMap::erase(uint32_t N, Instruction *I,
                                const BasicBlock *BB) {
+  auto It = NumToLeaders.find(N);
+  if (It == NumToLeaders.end())
+    return;
+
   LeaderListNode *Prev = nullptr;
-  LeaderListNode *Curr = &NumToLeaders[N];
+  LeaderListNode *Curr = &It->second;
 
   while (Curr && (Curr->Entry.Val != I || Curr->Entry.BB != BB)) {
     Prev = Curr;
@@ -819,30 +819,24 @@ void GVNPass::LeaderMap::erase(uint32_t N, Instruction *I,
     return;
 
   if (Prev) {
+    // Non-head node: unlink and destroy.
     Prev->Next = Curr->Next;
+    Curr->~LeaderListNode();
+    TableAllocator.Deallocate<LeaderListNode>(Curr);
   } else {
+    // Head node (stored by value in DenseMap).
     if (!Curr->Next) {
-      Curr->Entry.Val = nullptr;
-      Curr->Entry.BB = nullptr;
+      // Only node; erase from map (DenseMap calls the destructor).
+      NumToLeaders.erase(It);
     } else {
+      // Move second node's data into head, then destroy second node.
       LeaderListNode *Next = Curr->Next;
-      Curr->Entry.Val = Next->Entry.Val;
+      Curr->Entry.Val = std::move(Next->Entry.Val);
       Curr->Entry.BB = Next->Entry.BB;
       Curr->Next = Next->Next;
+      Next->~LeaderListNode();
+      TableAllocator.Deallocate<LeaderListNode>(Next);
     }
-  }
-}
-
-void GVNPass::LeaderMap::verifyRemoved(const Value *V) const {
-  // Walk through the value number scope to make sure the instruction isn't
-  // ferreted away in it.
-  for (const auto &I : NumToLeaders) {
-    (void)I;
-    assert(I.second.Entry.Val != V && "Inst still in value numbering scope!");
-    assert(
-        std::none_of(leader_iterator(&I.second), leader_iterator(nullptr),
-                     [=](const LeaderTableEntry &E) { return E.Val == V; }) &&
-        "Inst still in value numbering scope!");
   }
 }
 
@@ -850,8 +844,8 @@ void GVNPass::LeaderMap::verifyRemoved(const Value *V) const {
 //                                GVN Pass
 //===----------------------------------------------------------------------===//
 
-bool GVNPass::isPREEnabled() const {
-  return Options.AllowPRE.value_or(GVNEnablePRE);
+bool GVNPass::isScalarPREEnabled() const {
+  return Options.AllowScalarPRE.value_or(GVNEnableScalarPRE);
 }
 
 bool GVNPass::isLoadPREEnabled() const {
@@ -913,8 +907,8 @@ void GVNPass::printPipeline(
       OS, MapClassName2PassName);
 
   OS << '<';
-  if (Options.AllowPRE != std::nullopt)
-    OS << (*Options.AllowPRE ? "" : "no-") << "pre;";
+  if (Options.AllowScalarPRE != std::nullopt)
+    OS << (*Options.AllowScalarPRE ? "" : "no-") << "scalar-pre;";
   if (Options.AllowLoadPRE != std::nullopt)
     OS << (*Options.AllowLoadPRE ? "" : "no-") << "load-pre;";
   if (Options.AllowLoadPRESplitBackedge != std::nullopt)
@@ -1280,7 +1274,7 @@ static const Instruction *findMayClobberedPtrAccess(LoadInst *Load,
 
 /// Try to locate the three instruction involved in a missed
 /// load-elimination case that is due to an intervening store.
-static void reportMayClobberedLoad(LoadInst *Load, MemDepResult DepInfo,
+static void reportMayClobberedLoad(LoadInst *Load, Instruction *DepInst,
                                    const DominatorTree *DT,
                                    OptimizationRemarkEmitter *ORE) {
   using namespace ore;
@@ -1293,7 +1287,7 @@ static void reportMayClobberedLoad(LoadInst *Load, MemDepResult DepInfo,
   if (OtherAccess)
     R << " in favor of " << NV("OtherAccess", OtherAccess);
 
-  R << " because it is clobbered by " << NV("ClobberedBy", DepInfo.getInst());
+  R << " because it is clobbered by " << NV("ClobberedBy", DepInst);
 
   ORE->emit(R);
 }
@@ -1398,7 +1392,7 @@ GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
         dbgs() << "GVN: load "; Load->printAsOperand(dbgs());
         dbgs() << " is clobbered by " << *DepInst << '\n';);
     if (ORE->allowExtraAnalysis(DEBUG_TYPE))
-      reportMayClobberedLoad(Load, DepInfo, DT, ORE);
+      reportMayClobberedLoad(Load, DepInst, DT, ORE);
 
     return std::nullopt;
   }
@@ -1628,7 +1622,7 @@ void GVNPass::eliminatePartiallyRedundantLoad(
         ++NumPRELoadMoved2CEPred;
         ICF->insertInstructionTo(NewLoad, UnavailableBlock);
         LoadInst *OldLoad = It->second;
-        combineMetadataForCSE(NewLoad, OldLoad, false);
+        combineMetadataForCSE(NewLoad, OldLoad, /*DoesKMove=*/true);
         OldLoad->replaceAllUsesWith(NewLoad);
         replaceValuesPerBlockEntry(ValuesPerBlock, OldLoad, NewLoad);
         if (uint32_t ValNo = VN.lookup(OldLoad, false))
@@ -2029,12 +2023,15 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load) {
   }
 
   bool Changed = false;
-  // If this load follows a GEP, see if we can PRE the indices before analyzing.
-  if (GetElementPtrInst *GEP =
-          dyn_cast<GetElementPtrInst>(Load->getOperand(0))) {
-    for (Use &U : GEP->indices())
-      if (Instruction *I = dyn_cast<Instruction>(U.get()))
-        Changed |= performScalarPRE(I);
+  // This is a limited form of scalar PRE for load indices. If this load follows
+  // a GEP, see if we can PRE the indices before analyzing.
+  if (isScalarPREEnabled()) {
+    if (GetElementPtrInst *GEP =
+            dyn_cast<GetElementPtrInst>(Load->getOperand(0))) {
+      for (Use &U : GEP->indices())
+        if (Instruction *I = dyn_cast<Instruction>(U.get()))
+          Changed |= performScalarPRE(I);
+    }
   }
 
   // Step 2: Analyze the availability of the load.
@@ -2078,7 +2075,7 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load) {
   }
 
   // Step 4: Eliminate partial redundancy.
-  if (!isPREEnabled() || !isLoadPREEnabled())
+  if (!isLoadPREEnabled())
     return Changed;
   if (!isLoadInLoopPREEnabled() && LI->getLoopFor(Load->getParent()))
     return Changed;
@@ -2287,7 +2284,7 @@ bool GVNPass::ValueTable::areCallValsEqual(uint32_t Num, uint32_t NewNum,
   CallInst *Call = nullptr;
   auto Leaders = GVN.LeaderTable.getLeaders(Num);
   for (const auto &Entry : Leaders) {
-    Call = dyn_cast<CallInst>(Entry.Val);
+    Call = dyn_cast<CallInst>(&*Entry.Val);
     if (Call && Call->getParent() == PhiBlock)
       break;
   }
@@ -2704,10 +2701,7 @@ bool GVNPass::processInstruction(Instruction *I) {
 
   // For conditional branches, we can perform simple conditional propagation on
   // the condition value itself.
-  if (BranchInst *BI = dyn_cast<BranchInst>(I)) {
-    if (!BI->isConditional())
-      return false;
-
+  if (CondBrInst *BI = dyn_cast<CondBrInst>(I)) {
     if (isa<Constant>(BI->getCondition()))
       return processFoldableCondBr(BI);
 
@@ -2815,7 +2809,10 @@ bool GVNPass::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   ICF = &ImplicitCFT;
   this->LI = &LI;
   VN.setMemDep(MD);
-  VN.setMemorySSA(MSSA);
+  // Propagate the MSSA-enabled flag so the value-numbering paths in
+  // lookupOrAddCall() and computeLoadStoreVN(), which depends on whether
+  // IsMSSAEnabled is turned on.
+  VN.setMemorySSA(MSSA, isMemorySSAEnabled());
   ORE = RunORE;
   InvalidBlockRPONumbers = true;
   MemorySSAUpdater Updater(MSSA);
@@ -2845,7 +2842,7 @@ bool GVNPass::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
     ++Iteration;
   }
 
-  if (isPREEnabled()) {
+  if (isScalarPREEnabled()) {
     // Fabricate val-num for dead-code in order to suppress assertion in
     // performPRE().
     assignValNumForDeadCode();
@@ -2971,12 +2968,6 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
     if (CallB->isInlineAsm())
       return false;
   }
-
-  // Protected pointer field loads/stores should be paired with the intrinsic
-  // to avoid unnecessary address escapes.
-  if (auto *II = dyn_cast<IntrinsicInst>(CurInst))
-    if (II->getIntrinsicID() == Intrinsic::protected_field_ptr)
-      return false;
 
   uint32_t ValNo = VN.lookup(CurInst);
 
@@ -3214,7 +3205,6 @@ void GVNPass::removeInstruction(Instruction *I) {
 /// internal data structures.
 void GVNPass::verifyRemoved(const Instruction *Inst) const {
   VN.verifyRemoved(Inst);
-  LeaderTable.verifyRemoved(Inst);
 }
 
 /// BB is declared dead, which implied other blocks become dead as well. This
@@ -3309,10 +3299,7 @@ void GVNPass::addDeadBlock(BasicBlock *BB) {
 //     dead blocks with "UndefVal" in an hope these PHIs will optimized away.
 //
 // Return true iff *NEW* dead code are found.
-bool GVNPass::processFoldableCondBr(BranchInst *BI) {
-  if (!BI || BI->isUnconditional())
-    return false;
-
+bool GVNPass::processFoldableCondBr(CondBrInst *BI) {
   // If a branch has two identical successors, we cannot declare either dead.
   if (BI->getSuccessor(0) == BI->getSuccessor(1))
     return false;
@@ -3351,10 +3338,12 @@ public:
   static char ID; // Pass identification, replacement for typeid.
 
   explicit GVNLegacyPass(bool MemDepAnalysis = GVNEnableMemDep,
-                         bool MemSSAAnalysis = GVNEnableMemorySSA)
+                         bool MemSSAAnalysis = GVNEnableMemorySSA,
+                         bool ScalarPRE = true)
       : FunctionPass(ID), Impl(GVNOptions()
                                    .setMemDep(MemDepAnalysis)
-                                   .setMemorySSA(MemSSAAnalysis)) {
+                                   .setMemorySSA(MemSSAAnalysis)
+                                   .setScalarPRE(ScalarPRE)) {
     initializeGVNLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -3416,3 +3405,6 @@ INITIALIZE_PASS_END(GVNLegacyPass, "gvn", "Global Value Numbering", false, false
 
 // The public interface to this file...
 FunctionPass *llvm::createGVNPass() { return new GVNLegacyPass(); }
+FunctionPass *llvm::createGVNPass(bool ScalarPRE) {
+  return new GVNLegacyPass(GVNEnableMemDep, GVNEnableMemorySSA, ScalarPRE);
+}
