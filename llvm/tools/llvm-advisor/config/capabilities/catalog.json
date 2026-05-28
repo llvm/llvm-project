@@ -45,7 +45,7 @@
     {
       "id": "llvm.remarks.detail",
       "name": "Optimization remarks detail",
-      "version": "2",
+      "version": "3",
       "runner": "builtin.remarks_detail",
       "summary": "remarks detail requires an optimization remarks artifact",
       "readiness": "L1",
