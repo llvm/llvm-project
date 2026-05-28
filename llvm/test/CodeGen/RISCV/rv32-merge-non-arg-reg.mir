@@ -33,17 +33,15 @@ body:             |
     ; ZDINX-LABEL: name: merge_copy_non_arg_reg_with_intervening_unrelated_copy
     ; ZDINX: liveins: $x12, $x28, $x29
     ; ZDINX-NEXT: {{  $}}
-    ; ZDINX-NEXT: $x6 = ADDI $x28, 0
+    ; ZDINX-NEXT: $x6_x7 = FSGNJ_D_IN32X $x28_x29, $x28_x29
     ; ZDINX-NEXT: $x18 = ADDI $x12, 0
-    ; ZDINX-NEXT: $x7 = ADDI $x29, 0
     ; ZDINX-NEXT: PseudoRET implicit $x6
     ;
     ; P-EXT-LABEL: name: merge_copy_non_arg_reg_with_intervening_unrelated_copy
     ; P-EXT: liveins: $x12, $x28, $x29
     ; P-EXT-NEXT: {{  $}}
-    ; P-EXT-NEXT: $x6 = ADDI $x28, 0
+    ; P-EXT-NEXT: $x6_x7 = PADD_DW $x28_x29, $x0_pair
     ; P-EXT-NEXT: $x18 = ADDI $x12, 0
-    ; P-EXT-NEXT: $x7 = ADDI $x29, 0
     ; P-EXT-NEXT: PseudoRET implicit $x6
     $x6 = COPY $x28
     $x18 = COPY $x12

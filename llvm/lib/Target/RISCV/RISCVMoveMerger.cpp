@@ -277,16 +277,15 @@ RISCVMoveMerge::findMatchingInstPair(MachineBasicBlock::iterator &MBBI,
 
       // Check if the second pair's registers match the other lane of the
       // GPRPairs.
-      if (SourceReg != TRI->getSubReg(SrcGPRPair, SecondPairIdx) ||
-          DestReg != TRI->getSubReg(DestGPRPair, SecondPairIdx))
-        return E;
+      if (SourceReg == TRI->getSubReg(SrcGPRPair, SecondPairIdx) &&
+          DestReg == TRI->getSubReg(DestGPRPair, SecondPairIdx)) {
+        if (!ModifiedRegUnits.available(DestReg) ||
+            !UsedRegUnits.available(DestReg) ||
+            !ModifiedRegUnits.available(SourceReg))
+          return E;
 
-      if (!ModifiedRegUnits.available(DestReg) ||
-          !UsedRegUnits.available(DestReg) ||
-          !ModifiedRegUnits.available(SourceReg))
-        return E;
-
-      return I;
+        return I;
+      }
     }
     // Update modified / used register units.
     LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits, TRI);
