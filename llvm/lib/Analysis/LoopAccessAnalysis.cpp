@@ -1027,11 +1027,7 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
                      Value *Ptr, Type *AccessTy, const Loop *L, bool Assume,
                      const DominatorTree &DT,
                      std::optional<int64_t> Stride = std::nullopt) {
-  // FIXME: This should probably only return true for NUW.
   if (any(AR->getNoWrapFlags(SCEV::NoWrapMask)))
-    return true;
-
-  if (Ptr && PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
     return true;
 
   // An nusw getelementptr that is an AddRec cannot wrap. If it would wrap,
