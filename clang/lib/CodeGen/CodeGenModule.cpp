@@ -3299,6 +3299,18 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
   return AddedAttr;
 }
 
+/// Return the ELF section prefix for a function based on the function's
+/// code-region affinity: "startup" for functions that run exclusively at
+/// program startup, "exit" for functions that run exclusively at program
+/// exit. Returns nullptr when the function has no such affinity.
+static const char *getCodeRegionSectionPrefix(const FunctionDecl *D) {
+  if (D->hasAttr<ConstructorAttr>())
+    return "startup";
+  if (D->hasAttr<DestructorAttr>())
+    return "exit";
+  return nullptr;
+}
+
 void CodeGenModule::setNonAliasAttributes(GlobalDecl GD,
                                           llvm::GlobalObject *GO) {
   const Decl *D = GD.getDecl();
@@ -3344,6 +3356,14 @@ void CodeGenModule::setNonAliasAttributes(GlobalDecl GD,
       GO->setSection(CSA->getName());
     else if (const auto *SA = D->getAttr<SectionAttr>())
       GO->setSection(SA->getName());
+
+    // Emit constructor/destructor functions into .text.startup/.text.exit on
+    // ELF targets, matching GCC behavior. Skip when the user already specified
+    // an explicit section.
+    if (getTarget().getTriple().isOSBinFormatELF() && !GO->hasSection())
+      if (const auto *FD = dyn_cast<FunctionDecl>(D))
+        if (const char *Prefix = getCodeRegionSectionPrefix(FD))
+          GO->setSectionPrefix(Prefix);
   }
 
   getTargetCodeGenInfo().setTargetAttributes(D, GO, *this);
