@@ -41,9 +41,14 @@
 #include "InstrProfilingPort.h"
 #include "InstrProfilingUtil.h"
 
-/* HIP / offload collection hook implemented in InstrProfilingPlatformROCm.c.
- * It is a no-op when no offload profile data was registered. */
-extern int __llvm_profile_hip_collect_device_data(void);
+/* Weak so non-HIP programs do not force InstrProfilingPlatformROCm.o (and its
+ * transitive sanitizer_common / interception dependencies) into the host link
+ * out of libclang_rt.profile.a. HIP programs emit strong references to other
+ * ROCm-runtime symbols (e.g. __llvm_profile_offload_register_shadow_variable)
+ * that pull in the strong definition.
+ * No COMPILER_RT_VISIBILITY: a hidden weak-undefined symbol is non-preemptible
+ * and the address test at the call site would fold to true. */
+COMPILER_RT_WEAK int __llvm_profile_hip_collect_device_data(void);
 
 /* From where is profile name specified.
  * The order the enumerators define their
@@ -1202,10 +1207,11 @@ int __llvm_profile_write_file(void) {
   if (rc)
     PROF_ERR("Failed to write file \"%s\": %s\n", Filename, strerror(errno));
 
-  /* No-op when no HIP shadow variables or dynamic modules are registered,
-   * or when the HIP runtime is not loaded. Warning on failure is handled
-   * inside the callee so non-HIP programs do not see spurious noise. */
-  (void)__llvm_profile_hip_collect_device_data();
+  /* Weak: only invoked when InstrProfilingPlatformROCm.o is in the link,
+   * which happens when the program references other ROCm-runtime symbols
+   * (HIP-with-PGO). Warning on failure is handled inside the callee. */
+  if (__llvm_profile_hip_collect_device_data)
+    (void)__llvm_profile_hip_collect_device_data();
 
   // Restore SIGKILL.
   if (PDeathSig == 1)
