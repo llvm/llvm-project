@@ -842,6 +842,12 @@ bool Value::canBeFreed() const {
     const Function *F = A->getParent();
     if (F->doesNotFreeMemory() && F->hasNoSync())
       return false;
+
+    // nofree on the argument ensures that it cannot be freed through that
+    // pointer. noalias additionally ensures that it can't be freed through
+    // another pointer to the same allocation. Readonly implies nofree.
+    if ((A->hasNoFreeAttr() || A->onlyReadsMemory()) && A->hasNoAliasAttr())
+      return false;
   }
 
   if (auto *ITP = dyn_cast<IntToPtrInst>(this);
