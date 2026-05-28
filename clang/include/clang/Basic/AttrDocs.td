@@ -10108,6 +10108,9 @@ The attribute is also supported with blocks and in Objective-C.
       auto sty = Ty{};
       sty.foo(1, nullptr, 3);
       sty.bar(1, nullptr, 3);
+
+      auto lmbd = [](int a, ...) __attribute__((sentinel)) {};
+      lmbd(1, 2, nullptr);
   }
   }];
 }
