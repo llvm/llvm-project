@@ -105,7 +105,8 @@ public:
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
     S.Diag(DanglingField->getLocation(),
-           diag::note_lifetime_safety_dangling_field_here)
+           diag::note_lifetime_safety_dangles_here)
+        << getDiagSubjectDescription(DanglingField)
         << DanglingField->getEndLoc();
   }
 
@@ -122,14 +123,10 @@ public:
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
-    if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
-      S.Diag(DanglingGlobal->getLocation(),
-             diag::note_lifetime_safety_dangling_static_here)
-          << DanglingGlobal->getEndLoc();
-    else
-      S.Diag(DanglingGlobal->getLocation(),
-             diag::note_lifetime_safety_dangling_global_here)
-          << DanglingGlobal->getEndLoc();
+    S.Diag(DanglingGlobal->getLocation(),
+           diag::note_lifetime_safety_dangles_here)
+        << getDiagSubjectDescription(DanglingGlobal)
+        << DanglingGlobal->getEndLoc();
   }
 
   void reportUseAfterInvalidation(const Expr *IssueExpr, const Expr *UseExpr,
@@ -177,7 +174,8 @@ public:
     S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
         << InvalidationExpr->getSourceRange();
     S.Diag(DanglingField->getLocation(),
-           diag::note_lifetime_safety_dangling_field_here)
+           diag::note_lifetime_safety_dangles_here)
+        << getDiagSubjectDescription(DanglingField)
         << DanglingField->getEndLoc();
   }
 
@@ -193,7 +191,8 @@ public:
     S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
         << InvalidationExpr->getSourceRange();
     S.Diag(DanglingField->getLocation(),
-           diag::note_lifetime_safety_dangling_field_here)
+           diag::note_lifetime_safety_dangles_here)
+        << getDiagSubjectDescription(DanglingField)
         << DanglingField->getEndLoc();
   }
 
@@ -208,14 +207,10 @@ public:
         << false << IssueExpr->getSourceRange();
     S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
         << InvalidationExpr->getSourceRange();
-    if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
-      S.Diag(DanglingGlobal->getLocation(),
-             diag::note_lifetime_safety_dangling_static_here)
-          << DanglingGlobal->getEndLoc();
-    else
-      S.Diag(DanglingGlobal->getLocation(),
-             diag::note_lifetime_safety_dangling_global_here)
-          << DanglingGlobal->getEndLoc();
+    S.Diag(DanglingGlobal->getLocation(),
+           diag::note_lifetime_safety_dangles_here)
+        << getDiagSubjectDescription(DanglingGlobal)
+        << DanglingGlobal->getEndLoc();
   }
 
   void reportInvalidatedGlobal(const ParmVarDecl *PVD,
@@ -229,14 +224,10 @@ public:
         << true << PVD->getSourceRange();
     S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
         << InvalidationExpr->getSourceRange();
-    if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
-      S.Diag(DanglingGlobal->getLocation(),
-             diag::note_lifetime_safety_dangling_static_here)
-          << DanglingGlobal->getEndLoc();
-    else
-      S.Diag(DanglingGlobal->getLocation(),
-             diag::note_lifetime_safety_dangling_global_here)
-          << DanglingGlobal->getEndLoc();
+    S.Diag(DanglingGlobal->getLocation(),
+           diag::note_lifetime_safety_dangles_here)
+        << getDiagSubjectDescription(DanglingGlobal)
+        << DanglingGlobal->getEndLoc();
   }
 
   void suggestLifetimeboundToParmVar(WarningScope Scope,
@@ -271,7 +262,8 @@ public:
           << EscapeExpr->getSourceRange();
     else if (const auto *EscapeField = Target.dyn_cast<const FieldDecl *>())
       S.Diag(EscapeField->getLocation(),
-             diag::note_lifetime_safety_escapes_to_field_here)
+             diag::note_lifetime_safety_escapes_here)
+          << getDiagSubjectDescription(EscapeField)
           << EscapeField->getSourceRange();
   }
 
@@ -378,9 +370,8 @@ public:
            diag::warn_lifetime_safety_noescape_escapes)
         << ParmWithNoescape->getSourceRange();
 
-    S.Diag(EscapeField->getLocation(),
-           diag::note_lifetime_safety_escapes_to_field_here)
-        << EscapeField->getEndLoc();
+    S.Diag(EscapeField->getLocation(), diag::note_lifetime_safety_escapes_here)
+        << getDiagSubjectDescription(EscapeField) << EscapeField->getEndLoc();
   }
 
   void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
@@ -388,14 +379,8 @@ public:
     S.Diag(ParmWithNoescape->getBeginLoc(),
            diag::warn_lifetime_safety_noescape_escapes)
         << ParmWithNoescape->getSourceRange();
-    if (EscapeGlobal->isStaticLocal() || EscapeGlobal->isStaticDataMember())
-      S.Diag(EscapeGlobal->getLocation(),
-             diag::note_lifetime_safety_escapes_to_static_storage_here)
-          << EscapeGlobal->getEndLoc();
-    else
-      S.Diag(EscapeGlobal->getLocation(),
-             diag::note_lifetime_safety_escapes_to_global_here)
-          << EscapeGlobal->getEndLoc();
+    S.Diag(EscapeGlobal->getLocation(), diag::note_lifetime_safety_escapes_here)
+        << getDiagSubjectDescription(EscapeGlobal) << EscapeGlobal->getEndLoc();
   }
 
   void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) override {
@@ -406,7 +391,20 @@ private:
   std::string getDiagSubjectDescription(const ValueDecl *VD) {
     std::string Res;
     llvm::raw_string_ostream OS(Res);
-    OS << (isa<ParmVarDecl>(VD) ? "parameter" : "local variable");
+    if (isa<FieldDecl>(VD)) {
+      OS << "field";
+    } else if (isa<ParmVarDecl>(VD)) {
+      OS << "parameter";
+    } else if (const auto *Var = dyn_cast<VarDecl>(VD)) {
+      if (Var->isStaticLocal() || Var->isStaticDataMember())
+        OS << "static variable";
+      else if (Var->hasGlobalStorage())
+        OS << "global variable";
+      else
+        OS << "local variable";
+    } else {
+      OS << "local variable";
+    }
     OS << " '";
     VD->getNameForDiagnostic(OS, S.getPrintingPolicy(), /*Qualified=*/false);
     OS << "'";

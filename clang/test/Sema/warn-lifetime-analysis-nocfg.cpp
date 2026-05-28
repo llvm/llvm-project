@@ -82,17 +82,17 @@ void dangligGslPtrFromTemporary() {
 
 struct DanglingGslPtrField {
   MyIntPointer p; // expected-note {{pointer member declared here}} \
-                  // cfg-note 3 {{this field dangles}}
+                  // cfg-note 3 {{field 'p' dangles}}
   MyLongPointerFromConversion p2; // expected-note {{pointer member declared here}} \
-                                  // cfg-note 2 {{this field dangles}}
+                                  // cfg-note 2 {{field 'p2' dangles}}
 
-  DanglingGslPtrField(int i) : p(&i) {} // cfg-warning {{parameter 'i' escapes to a field and will dangle}}
+  DanglingGslPtrField(int i) : p(&i) {} // cfg-warning {{stack memory associated with parameter 'i' escapes to a field which will dangle}}
   DanglingGslPtrField() : p2(MyLongOwnerWithConversion{}) {}  // expected-warning {{initializing pointer member 'p2' to point to a temporary object whose lifetime is shorter than the lifetime of the constructed object}} \
-                                                              // cfg-warning {{local temporary object escapes to a field and will dangle}}
+                                                              // cfg-warning {{stack memory associated with local temporary object escapes to a field which will dangle}}
   DanglingGslPtrField(double) : p(MyIntOwner{}) {}  // expected-warning {{initializing pointer member 'p' to point to a temporary object whose lifetime is shorter than the lifetime of the constructed object}} \
-                                                    // cfg-warning {{local temporary object escapes to a field and will dangle}}
-  DanglingGslPtrField(MyIntOwner io) : p(io) {} // cfg-warning {{parameter 'io' escapes to a field and will dangle}}
-  DanglingGslPtrField(MyLongOwnerWithConversion lo) : p2(lo) {} // cfg-warning {{parameter 'lo' escapes to a field and will dangle}}
+                                                    // cfg-warning {{stack memory associated with local temporary object escapes to a field which will dangle}}
+  DanglingGslPtrField(MyIntOwner io) : p(io) {} // cfg-warning {{stack memory associated with parameter 'io' escapes to a field which will dangle}}
+  DanglingGslPtrField(MyLongOwnerWithConversion lo) : p2(lo) {} // cfg-warning {{stack memory associated with parameter 'lo' escapes to a field which will dangle}}
 };
 
 MyIntPointer danglingGslPtrFromLocal() {
@@ -361,8 +361,8 @@ struct X {
     pointee(*up),             // cfg-warning {{may have been moved.}}
     pointee2(up.get()),       // cfg-warning {{may have been moved.}}
     pointer(std::move(up)) {} // cfg-note 2 {{potentially moved here}}
-  int &pointee;               // cfg-note {{this field dangles}}
-  int *pointee2;              // cfg-note {{this field dangles}}
+  int &pointee;               // cfg-note {{field 'pointee' dangles}}
+  int *pointee2;              // cfg-note {{field 'pointee2' dangles}}
   std::unique_ptr<int> pointer;
 };
 
@@ -375,7 +375,7 @@ struct X2 {
   X2(XOwner owner) :
     pointee(owner.get()),       // cfg-warning {{may have been moved.}}
     owner(std::move(owner)) {}  // cfg-note {{potentially moved here}}
-  int* pointee;                 // cfg-note {{this field dangles}}
+  int* pointee;                 // cfg-note {{field 'pointee' dangles}}
   XOwner owner;
 };
 
@@ -1124,10 +1124,10 @@ struct Foo2 {
 };
 
 struct Test {
-  Test(Foo2 foo) : bar(foo.bar.get()),  // cfg-warning-re {{parameter 'foo' may escape to a field and dangle. {{.*}} may have been moved}}
+  Test(Foo2 foo) : bar(foo.bar.get()),  // cfg-warning-re {{stack memory associated with parameter 'foo' may escape to a field which will dangle. {{.*}} may have been moved}}
       storage(std::move(foo.bar)) {};   // cfg-note {{potentially moved here}}
 
-  Bar* bar; // cfg-note {{this field dangles}}
+  Bar* bar; // cfg-note {{field 'bar' dangles}}
   std::unique_ptr<Bar> storage;
 };
 

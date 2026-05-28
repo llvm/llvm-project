@@ -10999,21 +10999,21 @@ def warn_lifetime_safety_invalidated_global
       DefaultIgnore;
 
 def warn_lifetime_safety_dangling_field
-    : Warning<"%0 escapes to a field and will dangle">,
+    : Warning<"stack memory associated with %0 escapes to a field which will dangle">,
       InGroup<LifetimeSafetyDanglingField>,
       DefaultIgnore;
 def warn_lifetime_safety_dangling_field_moved
-    : Warning<"%0 may escape to a field and dangle. "
+    : Warning<"stack memory associated with %0 may escape to a field which will dangle. "
       "This could be a false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingFieldMoved>,
       DefaultIgnore;
 def warn_lifetime_safety_dangling_global
-    : Warning<"%0 escapes to global or static storage and will dangle">,
+    : Warning<"stack memory associated with %0 escapes to global or static storage which will dangle">,
       InGroup<LifetimeSafetyDanglingGlobal>,
       DefaultIgnore;
 def warn_lifetime_safety_dangling_global_moved
-    : Warning<"%0 may escape to global or static storage and dangle. "
+    : Warning<"stack memory associated with %0 may escape to global or static storage which will dangle. "
       "This could be a false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingGlobalMoved>,
@@ -11040,12 +11040,8 @@ def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
 def note_lifetime_safety_freed_here : Note<"freed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
 def note_lifetime_safety_moved_here : Note<"potentially moved here">;
-def note_lifetime_safety_dangling_field_here: Note<"this field dangles">;
-def note_lifetime_safety_dangling_global_here: Note<"this global dangles">;
-def note_lifetime_safety_dangling_static_here: Note<"this static storage dangles">;
-def note_lifetime_safety_escapes_to_field_here: Note<"escapes to this field">;
-def note_lifetime_safety_escapes_to_global_here: Note<"escapes to this global storage">;
-def note_lifetime_safety_escapes_to_static_storage_here: Note<"escapes to this static storage">;
+def note_lifetime_safety_dangles_here: Note<"%0 dangles">;
+def note_lifetime_safety_escapes_here: Note<"escapes to %0">;
 def note_lifetime_safety_lifetimebound_here: Note<"'lifetimebound' attribute appears here on the definition">;
 
 def warn_lifetime_safety_intra_tu_param_suggestion

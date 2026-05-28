@@ -113,13 +113,13 @@ View escape_through_unannotated_call(const MyObj& in [[clang::noescape]]) { // e
   return no_annotation_identity(in); // expected-note {{returned here}}
 }
 
-View global_view; // expected-note {{escapes to this global storage}}
+View global_view; // expected-note {{escapes to global variable 'global_view'}}
 
 void escape_through_global_var(const MyObj& in [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
   global_view = in;
 }
 struct ObjWithStaticField {
-  static int *static_field; // expected-note {{escapes to this static storage}}
+  static int *static_field; // expected-note {{escapes to static variable 'static_field'}}
 }; 
   
 void escape_to_static_data_member(int *data [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
@@ -129,11 +129,11 @@ void escape_to_static_data_member(int *data [[clang::noescape]]) { // expected-w
 
 
 void escape_through_static_local(int *data [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
-  static int *static_local; // expected-note {{escapes to this static storage}}
+  static int *static_local; // expected-note {{escapes to static variable 'static_local'}}
   static_local = data;
 }
 
-thread_local int *thread_local_storage; // expected-note {{escapes to this global storage}}
+thread_local int *thread_local_storage; // expected-note {{escapes to global variable 'thread_local_storage'}}
 
 void escape_through_thread_local(int *data [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
   // FIXME: We might want to report whenever anything derived from a 
@@ -147,7 +147,7 @@ struct ObjConsumer {
     member_view = in;
   }
 
-  View member_view; // expected-note {{escapes to this field}}
+  View member_view; // expected-note {{escapes to field 'member_view'}}
 };
 
 // FIXME: Escaping through another param is not detected.
