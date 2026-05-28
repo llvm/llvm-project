@@ -3490,6 +3490,20 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_acosh",
+    hdrs = ["src/__support/math/acosh.h"],
+    deps = [
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_log",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_acoshf",
     hdrs = ["src/__support/math/acoshf.h"],
     deps = [
@@ -9496,6 +9510,11 @@ libc_math_function(
         ":__support_math_acosf16",
         ":errno",
     ],
+)
+
+libc_math_function(
+    name = "acosh",
+    additional_deps = [":__support_math_acosh"],
 )
 
 libc_math_function(

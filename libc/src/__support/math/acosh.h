@@ -12,6 +12,7 @@
 #include "log.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
@@ -25,38 +26,32 @@ LIBC_INLINE double acosh(double x) {
   FPBits xbits(x);
   uint64_t x_u = xbits.uintval();
 
-  // Handle NaN.
-  if (LIBC_UNLIKELY(xbits.is_nan())) {
-    if (xbits.is_signaling_nan()) {
-      fputil::raise_except_if_required(FE_INVALID);
-      return FPBits::quiet_nan().get_val();
-    }
-    return x;
-  }
-
-  // acosh(+inf) = +inf.
-  if (LIBC_UNLIKELY(xbits.is_inf()))
-    return x;
-
-  // Domain error: acosh(x) is undefined for x < 1.
-  if (LIBC_UNLIKELY(x_u < 0x3ff0000000000000ULL)) {
+  // acosh is defined only for x >= 1.  The comparison x <= 1.0 is false for
+  // NaN, so NaN falls through to the large-x / NaN path below.
+  if (LIBC_UNLIKELY(x <= 1.0)) {
+    if (x == 1.0)
+      return 0.0;
     fputil::set_errno_if_required(EDOM);
     fputil::raise_except_if_required(FE_INVALID);
     return FPBits::quiet_nan().get_val();
   }
 
-  // acosh(1) = 0.
-  if (LIBC_UNLIKELY(x_u == 0x3ff0000000000000ULL))
-    return 0.0;
-
-  // For large x (x >= 2^28): acosh(x) ~ log(2x) = log(x) + log(2).
+  // For large x (x >= 2^28) and for NaN / +inf.
   if (LIBC_UNLIKELY(x_u >= 0x41b0000000000000ULL)) {
+    if (LIBC_UNLIKELY(xbits.is_inf_or_nan())) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
+      return x; // +inf (negative inf is excluded by x <= 1.0 above)
+    }
+    // acosh(x) = log(2x) + O(1/x^2); for x >= 2^28 the correction is < 0.5 ULP.
     constexpr double LOG_2 = 0x1.62e42fefa39efp-1;
     return math::log(x) + LOG_2;
   }
 
   // General case: acosh(x) = log(x + sqrt(x^2 - 1)).
-  double x2m1 = x * x - 1.0;
+  double x2m1 = fputil::multiply_add(x, x, -1.0);
   return math::log(x + fputil::sqrt<double>(x2m1));
 }
 

@@ -14,6 +14,7 @@
 #include "math/acos.h"
 #include "math/acosf.h"
 #include "math/acosf16.h"
+#include "math/acosh.h"
 #include "math/acoshf.h"
 #include "math/acoshf16.h"
 #include "math/acospif.h"

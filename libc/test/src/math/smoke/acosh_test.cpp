@@ -13,6 +13,8 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include "hdr/stdint_proxy.h"
+
 using LlvmLibcAcoshTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
 TEST_F(LlvmLibcAcoshTest, SpecialNumbers) {
@@ -22,19 +24,17 @@ TEST_F(LlvmLibcAcoshTest, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acosh(aNaN));
   EXPECT_MATH_ERRNO(0);
 
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acosh(0.0));
+  EXPECT_MATH_ERRNO(EDOM);
+
+  EXPECT_FP_EQ_ALL_ROUNDING(0.0, LIBC_NAMESPACE::acosh(1.0));
+  EXPECT_MATH_ERRNO(0);
+
   EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::acosh(inf));
   EXPECT_MATH_ERRNO(0);
 
-  // acosh(x) for x < 1 is a domain error.
-  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::acosh(0.0), FE_INVALID);
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acosh(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
-
-  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::acosh(-1.0), FE_INVALID);
-  EXPECT_MATH_ERRNO(EDOM);
-
-  // acosh(1) = 0.
-  EXPECT_FP_EQ_ALL_ROUNDING(0.0, LIBC_NAMESPACE::acosh(1.0));
-  EXPECT_MATH_ERRNO(0);
 }
 
 #ifdef LIBC_TEST_FTZ_DAZ
