@@ -152,8 +152,8 @@ RISCVMoveMerge::mergeGPRPairInsns(MachineBasicBlock::iterator I,
                                   bool RegPairIsEven) {
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineBasicBlock::iterator NextI = next_nodbg(I, E);
-  DestSourcePair FirstPair = TII->isCopyInstrImpl(*I).value();
-  DestSourcePair SecondPair = TII->isCopyInstrImpl(*Paired).value();
+  DestSourcePair FirstPair = *TII->isCopyInstrImpl(*I);
+  DestSourcePair SecondPair = *TII->isCopyInstrImpl(*Paired);
 
   if (NextI == Paired)
     NextI = next_nodbg(NextI, E);
@@ -195,8 +195,8 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
   const MachineOperand *Sreg1, *Sreg2;
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineBasicBlock::iterator NextI = next_nodbg(I, E);
-  DestSourcePair FirstPair = TII->isCopyInstrImpl(*I).value();
-  DestSourcePair PairedRegs = TII->isCopyInstrImpl(*Paired).value();
+  DestSourcePair FirstPair = *TII->isCopyInstrImpl(*I);
+  DestSourcePair PairedRegs = *TII->isCopyInstrImpl(*Paired);
 
   if (NextI == Paired)
     NextI = next_nodbg(NextI, E);
@@ -364,7 +364,7 @@ bool RISCVMoveMerge::mergeMoveSARegPair(MachineBasicBlock &MBB) {
 
       MachineBasicBlock::iterator Paired = E;
       if (MoveFromSToA || MoveFromAToS) {
-        Paired = findMatchingInst(MBBI, MoveFromSToA, RegPair.value());
+        Paired = findMatchingInst(MBBI, MoveFromSToA, *RegPair);
         if (Paired != E) {
           MBBI = mergePairedInsns(MBBI, Paired, MoveFromSToA);
           Modified = true;
@@ -372,7 +372,7 @@ bool RISCVMoveMerge::mergeMoveSARegPair(MachineBasicBlock &MBB) {
         }
       }
       if (IsEven != IsOdd) {
-        Paired = findMatchingInstPair(MBBI, IsEven, RegPair.value());
+        Paired = findMatchingInstPair(MBBI, IsEven, *RegPair);
         if (Paired != E) {
           MBBI = mergeGPRPairInsns(MBBI, Paired, IsEven);
           Modified = true;
