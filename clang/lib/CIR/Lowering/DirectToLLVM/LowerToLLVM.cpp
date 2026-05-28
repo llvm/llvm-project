@@ -27,6 +27,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -820,42 +821,15 @@ mlir::LogicalResult CIRToLLVMSignBitOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMAssumeOpLowering::matchAndRewrite(
     cir::AssumeOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  auto cond = adaptor.getPredicate();
-  rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(op, cond);
-  return mlir::success();
-}
+  mlir::Value cond = adaptor.getPredicate();
+  if (op.getBundleKind() == cir::AssumeBundleKind::None) {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(op, cond);
+    return mlir::success();
+  }
 
-mlir::LogicalResult CIRToLLVMAssumeAlignedOpLowering::matchAndRewrite(
-    cir::AssumeAlignedOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  SmallVector<mlir::Value, 3> opBundleArgs{adaptor.getPointer()};
-
-  auto alignment = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                                  adaptor.getAlignmentAttr());
-  opBundleArgs.push_back(alignment);
-
-  if (mlir::Value offset = adaptor.getOffset())
-    opBundleArgs.push_back(offset);
-
-  auto cond = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                             rewriter.getI1Type(), 1);
-  mlir::LLVM::AssumeOp::create(rewriter, op.getLoc(), cond, "align",
-                               opBundleArgs);
-
-  // The llvm.assume operation does not have a result, so we need to replace
-  // all uses of this cir.assume_aligned operation with the input ptr itself.
-  rewriter.replaceOp(op, adaptor.getPointer());
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMAssumeSepStorageOpLowering::matchAndRewrite(
-    cir::AssumeSepStorageOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  auto cond = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                             rewriter.getI1Type(), 1);
-  rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(
-      op, cond, mlir::LLVM::AssumeSeparateStorageTag{}, adaptor.getPtr1(),
-      adaptor.getPtr2());
+  llvm::StringRef tag = cir::stringifyAssumeBundleKind(op.getBundleKind());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(op, cond, tag,
+                                                    adaptor.getBundleArgs());
   return mlir::success();
 }
 
@@ -1979,6 +1953,12 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     return mlir::success();
   }
 
+  if (mlir::isa<cir::UndefAttr>(attr)) {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::UndefOp>(
+        op, getTypeConverter()->convertType(op.getType()));
+    return mlir::success();
+  }
+
   if (mlir::isa<mlir::IntegerType>(op.getType())) {
     // Verified cir.const operations cannot actually be of these types, but the
     // lowering pass may generate temporary cir.const operations with these
@@ -2071,6 +2051,12 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
       mlir::ArrayAttr array = rewriter.getArrayAttr({zeroAttr, zeroAttr});
       rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
           op, getTypeConverter()->convertType(op.getType()), array);
+      return mlir::success();
+    }
+
+    if (mlir::isa<cir::UndefAttr>(op.getValue())) {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::UndefOp>(
+          op, getTypeConverter()->convertType(op.getType()));
       return mlir::success();
     }
 

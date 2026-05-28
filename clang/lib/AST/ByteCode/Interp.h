@@ -1237,8 +1237,8 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     }
   }
 
-  unsigned VL = LHS.getByteOffset();
-  unsigned VR = RHS.getByteOffset();
+  unsigned VL = LHS.computeOffsetForComparison(S.getASTContext());
+  unsigned VR = RHS.computeOffsetForComparison(S.getASTContext());
   S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
   return true;
 }

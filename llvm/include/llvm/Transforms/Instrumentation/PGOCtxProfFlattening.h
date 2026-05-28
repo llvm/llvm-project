@@ -22,7 +22,7 @@ class PGOCtxProfFlatteningPass
 public:
   explicit PGOCtxProfFlatteningPass(bool IsPreThinlink)
       : IsPreThinlink(IsPreThinlink) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 } // namespace llvm
 #endif
