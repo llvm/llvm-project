@@ -1202,8 +1202,15 @@ int SlotTracker::processIndex() {
   // Start numbering the GUIDs after the module ids.
   GUIDNext = ModulePathNext;
 
-  for (auto &GlobalList : *TheIndex)
-    CreateGUIDSlot(GlobalList.first);
+  // Sort by GUID for deterministic slot assignment.
+  SmallVector<const GlobalValueSummaryMapTy::value_type *, 0> SortedGVS;
+  SortedGVS.reserve(TheIndex->size());
+  for (const auto &E : *TheIndex)
+    SortedGVS.push_back(&E);
+  llvm::sort(SortedGVS,
+             [](const auto *A, const auto *B) { return A->first < B->first; });
+  for (const auto *Entry : SortedGVS)
+    CreateGUIDSlot(Entry->first);
 
   // Start numbering the TypeIdCompatibleVtables after the GUIDs.
   TypeIdCompatibleVtableNext = GUIDNext;
@@ -3229,16 +3236,24 @@ void AssemblyWriter::printModuleSummaryIndex() {
 
   // FIXME: Change AliasSummary to hold a ValueInfo instead of summary pointer
   // for aliasee (then update BitcodeWriter.cpp and remove get/setAliaseeGUID).
-  for (auto &GlobalList : *TheIndex) {
-    auto GUID = GlobalList.first;
-    for (auto &Summary : GlobalList.second.getSummaryList())
+  // Sort by GUID for deterministic output matching slot assignment order.
+  SmallVector<const GlobalValueSummaryMapTy::value_type *, 0> SortedGVS;
+  SortedGVS.reserve(TheIndex->size());
+  for (const auto &E : *TheIndex)
+    SortedGVS.push_back(&E);
+  llvm::sort(SortedGVS,
+             [](const auto *A, const auto *B) { return A->first < B->first; });
+
+  for (const auto *Entry : SortedGVS) {
+    auto GUID = Entry->first;
+    for (auto &Summary : Entry->second.getSummaryList())
       SummaryToGUIDMap[Summary.get()] = GUID;
   }
 
   // Print the global value summary entries.
-  for (auto &GlobalList : *TheIndex) {
-    auto GUID = GlobalList.first;
-    auto VI = TheIndex->getValueInfo(GlobalList);
+  for (const auto *Entry : SortedGVS) {
+    auto GUID = Entry->first;
+    auto VI = TheIndex->getValueInfo(*Entry);
     printSummaryInfo(Machine.getGUIDSlot(GUID), VI);
   }
 

@@ -2479,8 +2479,15 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
 DenseSet<GlobalValue::GUID>
 IndexCallsiteContextGraph::findAliaseeGUIDsPrevailingInDifferentModule() {
   DenseSet<GlobalValue::GUID> AliaseeGUIDs;
-  for (auto &I : Index) {
-    auto VI = Index.getValueInfo(I);
+  // Sort by GUID for deterministic graph construction order.
+  SmallVector<const GlobalValueSummaryMapTy::value_type *, 0> SortedEntries;
+  SortedEntries.reserve(Index.size());
+  for (const auto &E : Index)
+    SortedEntries.push_back(&E);
+  llvm::sort(SortedEntries,
+             [](const auto *A, const auto *B) { return A->first < B->first; });
+  for (const auto *I : SortedEntries) {
+    auto VI = Index.getValueInfo(*I);
     for (auto &S : VI.getSummaryList()) {
       // We only care about aliases to functions.
       auto *AS = dyn_cast<AliasSummary>(S.get());
@@ -2525,8 +2532,15 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
   // by MemProfTopNImportant. Must be a std::map (not DenseMap) because keys
   // must be sorted.
   std::map<uint64_t, uint32_t> TotalSizeToContextIdTopNCold;
-  for (auto &I : Index) {
-    auto VI = Index.getValueInfo(I);
+  // Sort by GUID for deterministic graph construction order.
+  SmallVector<const GlobalValueSummaryMapTy::value_type *, 0> SortedEntries;
+  SortedEntries.reserve(Index.size());
+  for (const auto &E : Index)
+    SortedEntries.push_back(&E);
+  llvm::sort(SortedEntries,
+             [](const auto *A, const auto *B) { return A->first < B->first; });
+  for (const auto *I : SortedEntries) {
+    auto VI = Index.getValueInfo(*I);
     if (GUIDsToSkip.contains(VI.getGUID()))
       continue;
     for (auto &S : VI.getSummaryList()) {

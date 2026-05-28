@@ -230,10 +230,18 @@ public:
     GlobalValueId = VE.getValues().size();
     if (!Index)
       return;
-    for (const auto &GUIDSummaryLists : *Index)
+    // Sort by GUID for deterministic value ID assignment.
+    SmallVector<const GlobalValueSummaryMapTy::value_type *, 0> Sorted;
+    Sorted.reserve(Index->size());
+    for (const auto &E : *Index)
+      Sorted.push_back(&E);
+    llvm::sort(Sorted, [](const auto *A, const auto *B) {
+      return A->first < B->first;
+    });
+    for (const auto *GUIDSummaryLists : Sorted)
       // Examine all summaries for this GUID.
-      for (auto &Summary : GUIDSummaryLists.second.getSummaryList())
-        if (auto FS = dyn_cast<FunctionSummary>(Summary.get())) {
+      for (auto &Summary : GUIDSummaryLists->second.getSummaryList())
+        if (auto *FS = dyn_cast<FunctionSummary>(Summary.get())) {
           // For each call in the function summary, see if the call
           // is to a GUID (which means it is for an indirect call,
           // otherwise we would have a Value for it). If so, synthesize
@@ -584,9 +592,17 @@ public:
             Callback({AS->getAliaseeGUID(), &AS->getAliasee()}, true);
         }
     } else {
-      for (auto &Summaries : Index)
-        for (auto &Summary : Summaries.second.getSummaryList())
-          Callback({Summaries.first, Summary.get()}, false);
+      // Sort by GUID for deterministic output.
+      SmallVector<const GlobalValueSummaryMapTy::value_type *, 0> Sorted;
+      Sorted.reserve(Index.size());
+      for (const auto &E : Index)
+        Sorted.push_back(&E);
+      llvm::sort(Sorted, [](const auto *A, const auto *B) {
+        return A->first < B->first;
+      });
+      for (const auto *Entry : Sorted)
+        for (auto &Summary : Entry->second.getSummaryList())
+          Callback({Entry->first, Summary.get()}, false);
     }
   }
 

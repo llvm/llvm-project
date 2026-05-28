@@ -39,6 +39,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <map>
 #include <memory>
 #include <optional>
@@ -180,13 +181,54 @@ private:
 };
 
 /// Map from global value GUID to corresponding summary structures. Use a
-/// std::map rather than a DenseMap so that pointers to the map's value_type
-/// (which are used by ValueInfo) are not invalidated by insertion. Also it will
-/// likely incur less overhead, as the value type is not very small and the size
-/// of the map is unknown, resulting in inefficiencies due to repeated
-/// insertions and resizing.
-using GlobalValueSummaryMapTy =
-    std::map<GlobalValue::GUID, GlobalValueSummaryInfo>;
+/// DenseMap for O(1) lookup and a std::deque for storage. std::deque
+/// guarantees that pointers to elements are not invalidated by push_back,
+/// which is required because ValueInfo stores a raw pointer to elements of
+/// this container.
+class GlobalValueSummaryMap {
+public:
+  using key_type = GlobalValue::GUID;
+  using mapped_type = GlobalValueSummaryInfo;
+  using value_type = std::pair<key_type, mapped_type>;
+  using iterator = std::deque<value_type>::iterator;
+  using const_iterator = std::deque<value_type>::const_iterator;
+  using size_type = std::deque<value_type>::size_type;
+
+private:
+  DenseMap<key_type, unsigned> Map;
+  std::deque<value_type> Storage;
+
+public:
+  template <typename... Ts>
+  std::pair<iterator, bool> try_emplace(key_type Key, Ts &&...Args) {
+    auto Res = Map.try_emplace(Key, Storage.size());
+    if (Res.second) {
+      Storage.emplace_back(std::piecewise_construct, std::forward_as_tuple(Key),
+                           std::forward_as_tuple(std::forward<Ts>(Args)...));
+      return {std::prev(Storage.end()), true};
+    }
+    return {Storage.begin() + Res.first->second, false};
+  }
+
+  iterator find(key_type Key) {
+    auto It = Map.find(Key);
+    return It == Map.end() ? Storage.end() : Storage.begin() + It->second;
+  }
+
+  const_iterator find(key_type Key) const {
+    auto It = Map.find(Key);
+    return It == Map.end() ? Storage.end() : Storage.begin() + It->second;
+  }
+
+  iterator begin() { return Storage.begin(); }
+  const_iterator begin() const { return Storage.begin(); }
+  iterator end() { return Storage.end(); }
+  const_iterator end() const { return Storage.end(); }
+  size_type size() const { return Storage.size(); }
+  bool empty() const { return Storage.empty(); }
+};
+
+using GlobalValueSummaryMapTy = GlobalValueSummaryMap;
 
 /// Struct that holds a reference to a particular GUID in a global value
 /// summary.
@@ -1564,7 +1606,7 @@ private:
 
   GlobalValueSummaryMapTy::value_type *
   getOrInsertValuePtr(GlobalValue::GUID GUID) {
-    return &*GlobalValueMap.emplace(GUID, GlobalValueSummaryInfo(HaveGVs))
+    return &*GlobalValueMap.try_emplace(GUID, GlobalValueSummaryInfo(HaveGVs))
                  .first;
   }
 
