@@ -3117,7 +3117,7 @@ bool RISCVTargetLowering::mergeStoresAfterLegalization(EVT VT) const {
     return false;
 
   return !Subtarget.useRVVForFixedLengthVectors() ||
-         (VT.isFixedLengthVector() && VT.getVectorElementType() == MVT::i1);
+         VT.isFixedLengthVectorOf(MVT::i1);
 }
 
 bool RISCVTargetLowering::isLegalElementTypeForRVV(EVT ScalarTy) const {
@@ -10734,7 +10734,7 @@ SDValue RISCVTargetLowering::lowerVectorMaskTrunc(SDValue Op,
   SDLoc DL(Op);
   EVT MaskVT = Op.getValueType();
   // Only expect to custom-lower truncations to mask types
-  assert(MaskVT.isVector() && MaskVT.getVectorElementType() == MVT::i1 &&
+  assert(MaskVT.isVectorOf(MVT::i1) &&
          "Unexpected type for vector mask lowering");
   SDValue Src = Op.getOperand(0);
   MVT VecVT = Src.getSimpleValueType();
@@ -21220,7 +21220,7 @@ static SDValue combineToVCPOP(SDNode *N, SelectionDAG &DAG,
 
   MVT SrcMVT = SrcEVT.getSimpleVT();
   // Make sure the input is an i1 vector.
-  if (!SrcMVT.isVector() || SrcMVT.getVectorElementType() != MVT::i1)
+  if (!SrcMVT.isVectorOf(MVT::i1))
     return SDValue();
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -22379,12 +22379,12 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
           isNullConstant(Val.getOperand(1)))) &&
         Val.hasOneUse()) {
       SDValue Src = Val.getOperand(0);
-      MVT VecVT = Src.getSimpleValueType();
+      EVT VecVT = Src.getValueType();
       // VecVT should be scalable and memory VT should match the element type.
       if (!Store->isIndexed() && Store->isSimple() &&
-          VecVT.isScalableVector() && MemVT == VecVT.getVectorElementType()) {
+          VecVT.isScalableVectorOf(MemVT)) {
         SDLoc DL(N);
-        MVT MaskVT = getMaskTypeFor(VecVT);
+        MVT MaskVT = getMaskTypeFor(VecVT.getSimpleVT());
         // Create a vector memory VT so allowsMisalignedMemoryAccesses will
         // work correctly.
         MemVT = EVT::getVectorVT(*DAG.getContext(), MemVT, 1);
