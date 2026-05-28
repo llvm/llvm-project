@@ -224,7 +224,7 @@
       "id": true,
       "id.description": "A unique ID associated with the given instrumentor call"
     },
-    "operation": {
+    "numeric": {
       "enabled": true,
       "filter": "",
       "filter.description": "Static property filter to exclude instrumentation.",
@@ -334,7 +334,7 @@
       "id": true,
       "id.description": "A unique ID associated with the given instrumentor call"
     },
-    "operation": {
+    "numeric": {
       "enabled": true,
       "filter": "",
       "filter.description": "Static property filter to exclude instrumentation.",

@@ -555,7 +555,7 @@ void InstrumentationConfig::populate(InstrumentorIRBuilderTy &IIRB) {
   LoadIO::populate(*this, IIRB);
   StoreIO::populate(*this, IIRB);
   CastIO::populate(*this, IIRB);
-  OperationIO::populate(*this, IIRB);
+  NumericIO::populate(*this, IIRB);
 }
 
 void InstrumentationConfig::addChoice(InstrumentationOpportunity &IO,
@@ -1689,14 +1689,14 @@ Value *CastIO::getResultSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
 }
 ///}
 
-Value *OperationIO::getLeft(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                            InstrumentorIRBuilderTy &IIRB) {
+Value *NumericIO::getLeft(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                          InstrumentorIRBuilderTy &IIRB) {
   auto &I = cast<Instruction>(V);
   return I.getOperand(0);
 }
 
-Value *OperationIO::getRight(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                             InstrumentorIRBuilderTy &IIRB) {
+Value *NumericIO::getRight(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                           InstrumentorIRBuilderTy &IIRB) {
   auto &I = cast<Instruction>(V);
   if (I.getNumOperands() > 1)
     return I.getOperand(1);
@@ -1704,8 +1704,8 @@ Value *OperationIO::getRight(Value &V, Type &Ty, InstrumentationConfig &IConf,
     return PoisonValue::get(&Ty);
 }
 
-void OperationIO::init(InstrumentationConfig &IConf,
-                       InstrumentorIRBuilderTy &IIRB, ConfigTy *UserConfig) {
+void NumericIO::init(InstrumentationConfig &IConf,
+                     InstrumentorIRBuilderTy &IIRB, ConfigTy *UserConfig) {
   if (UserConfig)
     Config = UserConfig;
   bool IsPRE = getLocationKind() == InstrumentationLocation::INSTRUCTION_PRE;

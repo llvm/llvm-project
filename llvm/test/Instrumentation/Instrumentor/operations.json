@@ -3,7 +3,7 @@
     "runtime_prefix": "__instrumentor_"
   },
   "instruction_pre": {
-    "operation": {
+    "numeric": {
       "enabled": true,
       "type_id": true,
       "size": true,
@@ -14,7 +14,7 @@
     }
   },
   "instruction_post": {
-    "operation": {
+    "numeric": {
       "enabled": true,
       "type_id": true,
       "size": true,

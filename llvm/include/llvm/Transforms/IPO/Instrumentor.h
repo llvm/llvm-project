@@ -1086,16 +1086,16 @@ struct CastIO final
 
 /// Instrumentation opportunity for numeric operations. This includes Add, FAdd,
 /// Sub, FSub, Mul, FMul, UDiv, FDiv, SDiv, URem, SRem, FRem, Shl, LShr, AShr,
-/// And, Or, Xor, and FNeg
-struct OperationIO : public InstructionIO<
-                         Instruction::Add, Instruction::FAdd, Instruction::Sub,
-                         Instruction::FSub, Instruction::Mul, Instruction::FMul,
-                         Instruction::UDiv, Instruction::FDiv,
-                         Instruction::SDiv, Instruction::URem,
-                         Instruction::SRem, Instruction::FRem, Instruction::Shl,
-                         Instruction::LShr, Instruction::AShr, Instruction::And,
-                         Instruction::Or, Instruction::Xor, Instruction::FNeg> {
-  OperationIO(InstrumentationLocation::KindTy Kind) : InstructionIO(Kind) {}
+/// And, Or, Xor, and FNeg.
+struct NumericIO : public InstructionIO<
+                       Instruction::Add, Instruction::FAdd, Instruction::Sub,
+                       Instruction::FSub, Instruction::Mul, Instruction::FMul,
+                       Instruction::UDiv, Instruction::FDiv, Instruction::SDiv,
+                       Instruction::URem, Instruction::SRem, Instruction::FRem,
+                       Instruction::Shl, Instruction::LShr, Instruction::AShr,
+                       Instruction::And, Instruction::Or, Instruction::Xor,
+                       Instruction::FNeg> {
+  NumericIO(InstrumentationLocation::KindTy Kind) : InstructionIO(Kind) {}
 
   enum ConfigKind {
     PassTypeId,
@@ -1112,7 +1112,7 @@ struct OperationIO : public InstructionIO<
   using ConfigTy = BaseConfigTy<ConfigKind>;
   ConfigTy Config;
 
-  StringRef getName() const override { return "operation"; }
+  StringRef getName() const override { return "numeric"; }
 
   void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
             ConfigTy *UserConfig = nullptr);
@@ -1125,10 +1125,10 @@ struct OperationIO : public InstructionIO<
   static void populate(InstrumentationConfig &IConf,
                        InstrumentorIRBuilderTy &IIRB) {
     auto *PreIO =
-        IConf.allocate<OperationIO>(InstrumentationLocation::INSTRUCTION_PRE);
+        IConf.allocate<NumericIO>(InstrumentationLocation::INSTRUCTION_PRE);
     PreIO->init(IConf, IIRB);
     auto *PostIO =
-        IConf.allocate<OperationIO>(InstrumentationLocation::INSTRUCTION_POST);
+        IConf.allocate<NumericIO>(InstrumentationLocation::INSTRUCTION_POST);
     PostIO->init(IConf, IIRB);
   }
 };
