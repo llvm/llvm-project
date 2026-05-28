@@ -19,11 +19,11 @@ define void @icmp() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v4i32 = icmp slt <4 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:34 Lat:36 SizeLat:36 for: %v8i32 = icmp slt <8 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:68 Lat:72 SizeLat:72 for: %v16i32 = icmp slt <16 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:18 Lat:36 SizeLat:36 for: %v2i64 = icmp slt <2 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:36 Lat:72 SizeLat:72 for: %v4i64 = icmp slt <4 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:144 CodeSize:72 Lat:144 SizeLat:144 for: %v8i64 = icmp slt <8 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:68 CodeSize:34 Lat:68 SizeLat:68 for: %v2i128 = icmp slt <2 x i128> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:136 CodeSize:68 Lat:136 SizeLat:136 for: %v4i128 = icmp slt <4 x i128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:20 Lat:40 SizeLat:40 for: %v2i64 = icmp slt <2 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:40 Lat:80 SizeLat:80 for: %v4i64 = icmp slt <4 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:80 Lat:160 SizeLat:160 for: %v8i64 = icmp slt <8 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:40 Lat:80 SizeLat:80 for: %v2i128 = icmp slt <2 x i128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:80 Lat:160 SizeLat:160 for: %v4i128 = icmp slt <4 x i128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %v2i8 = icmp slt <2 x i8> undef, undef
