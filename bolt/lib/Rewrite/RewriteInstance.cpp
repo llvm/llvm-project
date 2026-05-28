@@ -6286,6 +6286,47 @@ void RewriteInstance::rewriteFunctionsInPlace(raw_fd_ostream &OS) {
   }
 }
 
+void RewriteInstance::zeroPaddingForReusedSections(raw_fd_ostream &OS) {
+  // The output starts as a byte-for-byte copy of the input, so alignment
+  // padding after BOLT-written sections could retain stale data from the
+  // original binary. Zero the padding as if we were writing sections onto
+  // new file offset (i.e., not reusing old existing sections).
+
+  // Collect file offsets of all sections (allocatable and non-allocatable)
+  // that occupy file bytes.
+  SmallVector<uint64_t, 16> SectionStarts;
+  for (BinarySection &Section : BC->sections()) {
+    if (Section.isVirtual())
+      continue;
+    uint64_t Offset = Section.getOutputFileOffset();
+    if (!Offset)
+      Offset = Section.getInputFileOffset();
+    if (Offset)
+      SectionStarts.push_back(Offset);
+  }
+  llvm::sort(SectionStarts);
+
+  uint64_t SavedPos = OS.tell();
+  for (BinarySection &Section : BC->allocatableSections()) {
+    if (!Section.isFinalized() || !Section.getOutputData())
+      continue;
+    if (Section.isLinkOnly() || !Section.getOutputSize())
+      continue;
+    if (!(Section.getELFFlags() & ELF::SHF_EXECINSTR))
+      continue;
+    uint64_t SecEnd = Section.getOutputFileOffset() + Section.getOutputSize();
+    auto It = llvm::upper_bound(SectionStarts, SecEnd - 1);
+    if (It != SectionStarts.end()) {
+      uint64_t NextStart = *It;
+      if (NextStart > SecEnd) {
+        OS.seek(SecEnd);
+        OS.write_zeros(NextStart - SecEnd);
+      }
+    }
+  }
+  OS.seek(SavedPos);
+}
+
 void RewriteInstance::rewriteFile() {
   std::error_code EC;
   Out = std::make_unique<ToolOutputFile>(opts::OutputFilename, EC,
@@ -6374,6 +6415,9 @@ void RewriteInstance::rewriteFile() {
 
   // Copy non-allocatable sections once allocatable part is finished.
   rewriteNoteSections();
+
+  if (opts::UseOldText)
+    zeroPaddingForReusedSections(OS);
 
   if (BC->HasRelocations) {
     patchELFAllocatableRelaSections();
