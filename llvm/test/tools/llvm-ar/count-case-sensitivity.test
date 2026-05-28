@@ -37,6 +37,10 @@
 # RUN: llvm-ar rc --thin archive-dPN.a a/file.txt a/FILE.txt
 # RUN: llvm-ar t archive-dPN.a | FileCheck %s --check-prefix=THIN-BEFORE --implicit-check-not={{.}}
 
+## The path to `FILE.TXT` does not match because the directory name has a different case; expect no-op.
+# RUN: llvm-ar dPN 2 --thin archive-dPN.a A/FILE.txt
+# RUN: llvm-ar t archive-dPN.a | FileCheck %s --check-prefix=THIN-BEFORE --implicit-check-not={{.}}
+
 ## The uppercase filename occurs only once; expect no-op.
 # RUN: llvm-ar dPN 2 --thin archive-dPN.a a/FILE.txt
 # RUN: llvm-ar t archive-dPN.a | FileCheck %s --check-prefix=THIN-BEFORE --implicit-check-not={{.}}
