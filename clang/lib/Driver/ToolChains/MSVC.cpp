@@ -205,6 +205,10 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (TC.getVFS().exists(LibPath))
       CmdArgs.push_back(Args.MakeArgString("-libpath:" + LibPath));
   }
+  for (const auto &LibPath : TC.getFilePaths()) {
+    if (LibPath.length() > 0)
+      CmdArgs.push_back(Args.MakeArgString("-libpath:" + LibPath));
+  }
   auto CRTPath = TC.getCompilerRTPath();
   if (TC.getVFS().exists(CRTPath))
     CmdArgs.push_back(Args.MakeArgString("-libpath:" + CRTPath));

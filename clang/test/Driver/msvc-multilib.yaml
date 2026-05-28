@@ -5,12 +5,16 @@
 # RUN:   | FileCheck --check-prefix=CHECK-DEBUG %s
 # CHECK-DEBUG:      "-cc1" "-triple" "x86_64-pc-windows-msvc
 # CHECK-DEBUG:      "-internal-isystem" "{{[^"]*}}{{[/\\]}}x86_64-pc-windows-msvc/debug"
+# CHECK-DEBUG:      "-libpath:{{[^"]*}}/debug"
 
 # Default behavior where no variant path is prepended.
 # RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \
 # RUN:     --target=x86_64-pc-windows-msvc \
 # RUN:     -ccc-install-dir %S/Inputs/multilib_msvc_tree/bin \
 # RUN:   | FileCheck --check-prefix=CHECK-DEFAULT %s
+# CHECK-DEFAULT-NOT: "-libpath:{{[^"]*}}/debug"
+# CHECK-DEFAULT-NOT: "-libpath:{{[^"]*}}/release"
+# CHECK-DEFAULT-NOT: "-libpath:{{[^"]*}}/noexcept"
 # CHECK-DEFAULT-NOT: "-internal-isystem" "{{[^"]*}}{{[/\\]}}x86_64-pc-windows-msvc/debug"
 # CHECK-DEFAULT-NOT: "-internal-isystem" "{{[^"]*}}{{[/\\]}}x86_64-pc-windows-msvc/release"
 # CHECK-DEFAULT-NOT: "-internal-isystem" "{{[^"]*}}{{[/\\]}}x86_64-pc-windows-msvc/noexcept"
@@ -22,6 +26,8 @@
 # RUN:   | FileCheck --check-prefix=CHECK-LAYERED %s
 # CHECK-LAYERED:      "-internal-isystem" "{{[^"]*}}{{[/\\]}}x86_64-pc-windows-msvc/noexcept"
 # CHECK-LAYERED-SAME: "-internal-isystem" "{{[^"]*}}{{[/\\]}}x86_64-pc-windows-msvc/debug"
+# CHECK-LAYERED:      "-libpath:{{[^"]*}}/noexcept"
+# CHECK-LAYERED-SAME: "-libpath:{{[^"]*}}/debug"
 
 # Lists selected variant directories.
 # RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
