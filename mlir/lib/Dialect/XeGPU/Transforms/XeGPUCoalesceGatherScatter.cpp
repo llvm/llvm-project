@@ -37,6 +37,8 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
+#include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
@@ -83,13 +85,20 @@ static constexpr int64_t kAxisInfoTop = 1LL << 30;
 ///     dimension `d`.
 ///   - `knownConstant`: scalar value if the entire vector is uniformly
 ///     known to be a single constant.
+///   - `innerStride`: when set, every "row" along the innermost dimension
+///     is an arithmetic progression with this stride. Per-row base may
+///     differ across outer indices; per-row alignment is captured by
+///     `divisibility[innerDim]`. `innerStride = 1` implies stride-1
+///     contiguity; `innerStride = 0` implies inner-dim constancy.
 ///
-/// Pessimistic / entry value: contiguity=1, constancy=1, divisibility=1.
+/// Pessimistic / entry value: contiguity=1, constancy=1, divisibility=1,
+/// innerStride absent.
 struct AxisInfo {
   SmallVector<int64_t> contiguity;
   SmallVector<int64_t> constancy;
   SmallVector<int64_t> divisibility;
   std::optional<int64_t> knownConstant;
+  std::optional<int64_t> innerStride;
 
   AxisInfo() = default;
 
@@ -107,7 +116,7 @@ struct AxisInfo {
   bool operator==(const AxisInfo &rhs) const {
     return contiguity == rhs.contiguity && constancy == rhs.constancy &&
            divisibility == rhs.divisibility &&
-           knownConstant == rhs.knownConstant;
+           knownConstant == rhs.knownConstant && innerStride == rhs.innerStride;
   }
 
   /// Conservative join. Two values reaching the same SSA value via different
@@ -131,6 +140,9 @@ struct AxisInfo {
     if (lhs.knownConstant && rhs.knownConstant &&
         *lhs.knownConstant == *rhs.knownConstant)
       out.knownConstant = lhs.knownConstant;
+    if (lhs.innerStride && rhs.innerStride &&
+        *lhs.innerStride == *rhs.innerStride)
+      out.innerStride = lhs.innerStride;
     return out;
   }
 
@@ -144,6 +156,8 @@ struct AxisInfo {
     os << "]";
     if (knownConstant)
       os << " const=" << *knownConstant;
+    if (innerStride)
+      os << " innerStride=" << *innerStride;
   }
 };
 
@@ -172,6 +186,7 @@ static AxisInfo splatAxisInfo(ArrayRef<int64_t> shape, int64_t c) {
   v.constancy.assign(shape.begin(), shape.end());
   v.divisibility.assign(r, highestPow2Divisor(c));
   v.knownConstant = c;
+  v.innerStride = 0;
   return v;
 }
 
@@ -194,12 +209,34 @@ public:
       return visitBroadcast(bcast, operands, results);
     if (auto sc = dyn_cast<vector::ShapeCastOp>(op))
       return visitShapeCast(sc, operands, results);
+    if (auto tp = dyn_cast<vector::TransposeOp>(op))
+      return visitTranspose(tp, operands, results);
     if (auto add = dyn_cast<arith::AddIOp>(op))
       return visitAddSub</*IsSub=*/false>(add, operands, results);
     if (auto sub = dyn_cast<arith::SubIOp>(op))
       return visitAddSub</*IsSub=*/true>(sub, operands, results);
     if (auto mul = dyn_cast<arith::MulIOp>(op))
       return visitMul(mul, operands, results);
+    if (auto div = dyn_cast<arith::DivUIOp>(op))
+      return visitDivRem</*IsSigned=*/false, /*IsRem=*/false>(div, operands,
+                                                              results);
+    if (auto div = dyn_cast<arith::DivSIOp>(op))
+      return visitDivRem</*IsSigned=*/true, /*IsRem=*/false>(div, operands,
+                                                             results);
+    if (auto rem = dyn_cast<arith::RemUIOp>(op))
+      return visitDivRem</*IsSigned=*/false, /*IsRem=*/true>(rem, operands,
+                                                             results);
+    if (auto rem = dyn_cast<arith::RemSIOp>(op))
+      return visitDivRem</*IsSigned=*/true, /*IsRem=*/true>(rem, operands,
+                                                            results);
+    if (auto andi = dyn_cast<arith::AndIOp>(op))
+      return visitAndI(andi, operands, results);
+    if (auto shl = dyn_cast<arith::ShLIOp>(op))
+      return visitShift</*IsLeft=*/true>(shl, operands, results);
+    if (auto shr = dyn_cast<arith::ShRUIOp>(op))
+      return visitShift</*IsLeft=*/false>(shr, operands, results);
+    if (auto sel = dyn_cast<arith::SelectOp>(op))
+      return visitSelect(sel, operands, results);
     if (auto cast = dyn_cast<arith::IndexCastOp>(op))
       return visitPassThrough(cast, operands, results);
     if (auto cast = dyn_cast<arith::IndexCastUIOp>(op))
@@ -230,6 +267,7 @@ private:
     v.contiguity = {n};
     v.constancy = {1};
     v.divisibility = {kAxisInfoTop};
+    v.innerStride = 1;
     propagateIfChanged(results[0], results[0]->join(v));
     return success();
   }
@@ -308,6 +346,8 @@ private:
       v.constancy[r - 1] = innerConst;
     // For a non-AP inner dim, leave at pessimistic.
     v.divisibility[r - 1] = baseDiv;
+    if (innerStride != std::numeric_limits<int64_t>::min())
+      v.innerStride = innerStride;
     propagateIfChanged(results[0], results[0]->join(v));
     return success();
   }
@@ -358,6 +398,21 @@ private:
     }
     if (src.knownConstant)
       v.knownConstant = src.knownConstant;
+    // A broadcast that fans out a scalar / leading-1 source has the broadcast
+    // dim repeating its value -> inner stride 0. Otherwise, the trailing
+    // source dim's stride is preserved when its extent matches the result.
+    auto resShapeArr = resTy.getShape();
+    int64_t innerExt = resShapeArr.back();
+    int sIdxInner = static_cast<int>(rRank - 1) - static_cast<int>(rRank - sRank);
+    if (sIdxInner < 0) {
+      v.innerStride = 0;
+    } else if (srcVt) {
+      int64_t srcInner = srcVt.getShape()[sIdxInner];
+      if (srcInner == 1 && innerExt > 1)
+        v.innerStride = 0;
+      else if (srcInner == innerExt && src.innerStride)
+        v.innerStride = src.innerStride;
+    }
     propagateIfChanged(results[0], results[0]->join(v));
     return success();
   }
@@ -424,6 +479,45 @@ private:
     }
     if (src.knownConstant)
       v.knownConstant = src.knownConstant;
+    // Identity-like and general row-major reshape both preserve the source
+    // inner-stride property when the source has a single AP characterization.
+    if (src.innerStride)
+      v.innerStride = src.innerStride;
+    propagateIfChanged(results[0], results[0]->join(v));
+    return success();
+  }
+
+  // vector.transpose: permute per-dim contiguity / constancy / divisibility
+  // according to the transpose permutation. permutation[i] is the source
+  // dim that ends up at result dim i.
+  LogicalResult visitTranspose(vector::TransposeOp op,
+                               ArrayRef<const AxisInfoLattice *> operands,
+                               ArrayRef<AxisInfoLattice *> results) {
+    auto resTy = dyn_cast<VectorType>(op.getType());
+    if (!resTy) {
+      setAllPessimistic(op, results);
+      return success();
+    }
+    AxisInfo src = operands[0]->getValue();
+    if (!src.isInitialized()) {
+      setAllPessimistic(op, results);
+      return success();
+    }
+    ArrayRef<int64_t> perm = op.getPermutation();
+    unsigned r = resTy.getRank();
+    AxisInfo v = AxisInfo::getPessimistic(r);
+    for (unsigned d = 0; d < r; ++d) {
+      unsigned s = static_cast<unsigned>(perm[d]);
+      v.contiguity[d] = src.contiguity[s];
+      v.constancy[d] = src.constancy[s];
+      v.divisibility[d] = src.divisibility[s];
+    }
+    if (src.knownConstant)
+      v.knownConstant = src.knownConstant;
+    // innerStride only survives when the new inner dim came from the old
+    // inner dim (otherwise a different axis is now the contiguous one).
+    if (src.innerStride && perm.back() == src.getRank() - 1)
+      v.innerStride = src.innerStride;
     propagateIfChanged(results[0], results[0]->join(v));
     return success();
   }
@@ -458,6 +552,18 @@ private:
       v.contiguity[d] = std::max<int64_t>(1, cont);
       v.constancy[d] = std::min(lhsConst, rhsConst);
       v.divisibility[d] = std::gcd(lhs.divisibility[d], rhs.divisibility[d]);
+    }
+    // x + uniform-c: stride preserved. x - uniform-c: same. uniform-c - x:
+    // stride flips sign (only useful for the "stride 0" case, which it
+    // preserves trivially).
+    auto isUniform = [&](const AxisInfo &a) {
+      unsigned inner = vt.getRank() - 1;
+      return a.constancy[inner] >= vt.getShape()[inner];
+    };
+    if (lhs.innerStride && isUniform(rhs)) {
+      v.innerStride = *lhs.innerStride;
+    } else if (rhs.innerStride && isUniform(lhs)) {
+      v.innerStride = IsSub ? -*rhs.innerStride : *rhs.innerStride;
     }
     propagateIfChanged(results[0], results[0]->join(v));
     return success();
@@ -496,6 +602,247 @@ private:
       else
         v.contiguity[d] = 1;
     }
+    // x * uniform-c: stride scales by c. (Both operands uniform => 0.)
+    unsigned inner = vt.getRank() - 1;
+    auto isUniformInner = [&](const AxisInfo &a) {
+      return a.constancy[inner] >= shape[inner];
+    };
+    if (lhs.innerStride && isUniformInner(rhs) && rhs.knownConstant) {
+      v.innerStride = *lhs.innerStride * *rhs.knownConstant;
+    } else if (rhs.innerStride && isUniformInner(lhs) && lhs.knownConstant) {
+      v.innerStride = *rhs.innerStride * *lhs.knownConstant;
+    }
+    propagateIfChanged(results[0], results[0]->join(v));
+    return success();
+  }
+
+  // arith.divui / arith.divsi / arith.remui / arith.remsi by a uniform
+  // positive constant `c`.
+  //
+  // Division (IsRem=false): when the lhs is an inner-dim AP `(base, s, n)`
+  // with `c | s` and `c | divisibility[inner]` (so the per-row base / c is
+  // exact), the result is an AP with stride `s / c` and inner divisibility
+  // `divisibility[inner] / c`. Special cases: `s/c == 1` flags inner-dim
+  // contiguity; `s/c == 0` flags inner-dim constancy.
+  //
+  // Remainder (IsRem=true): when `c | s`, every element of a row sits at
+  // the same residue class -> inner-dim constant -> `innerStride = 0`,
+  // `constancy[inner] = inner` (matches the analysis's notion of
+  // chunk-uniform values along the inner dim).
+  //
+  // Signed vs unsigned only differs in the constant interpretation; we
+  // require positive constants so the signed/unsigned distinction is moot
+  // here.
+  template <bool IsSigned, bool IsRem, typename OpTy>
+  LogicalResult visitDivRem(OpTy op,
+                            ArrayRef<const AxisInfoLattice *> operands,
+                            ArrayRef<AxisInfoLattice *> results) {
+    auto vt = dyn_cast<VectorType>(op.getType());
+    if (!vt) {
+      setAllPessimistic(op, results);
+      return success();
+    }
+    AxisInfo lhs = operands[0]->getValue();
+    AxisInfo rhs = operands[1]->getValue();
+    if (!lhs.isInitialized() || !rhs.isInitialized()) {
+      setAllPessimistic(op, results);
+      return success();
+    }
+    unsigned r = vt.getRank();
+    unsigned inner = r - 1;
+    auto shape = vt.getShape();
+    AxisInfo v = AxisInfo::getPessimistic(r);
+
+    bool rhsUniform = rhs.constancy[inner] >= shape[inner] && rhs.knownConstant;
+    if (!rhsUniform || *rhs.knownConstant <= 0) {
+      propagateIfChanged(results[0], results[0]->join(v));
+      return success();
+    }
+    int64_t c = *rhs.knownConstant;
+
+    if (!lhs.innerStride) {
+      propagateIfChanged(results[0], results[0]->join(v));
+      return success();
+    }
+    int64_t s = *lhs.innerStride;
+    int64_t baseDivLhs = lhs.divisibility[inner];
+    if (s % c != 0) {
+      propagateIfChanged(results[0], results[0]->join(v));
+      return success();
+    }
+
+    if (IsRem) {
+      // (base + i*s) mod c, with c | s, is the constant base mod c.
+      v.innerStride = 0;
+      v.constancy[inner] = shape[inner];
+      // The remainder is in [0, c-1], so any power-of-two divisor of c is a
+      // lower bound on alignment. Use lhs's existing divisibility too.
+      v.divisibility[inner] =
+          std::gcd(baseDivLhs, highestPow2Divisor(c));
+    } else {
+      if (baseDivLhs % c != 0) {
+        propagateIfChanged(results[0], results[0]->join(v));
+        return success();
+      }
+      int64_t newStride = s / c;
+      v.innerStride = newStride;
+      if (newStride == 1)
+        v.contiguity[inner] = shape[inner];
+      else if (newStride == 0)
+        v.constancy[inner] = shape[inner];
+      v.divisibility[inner] = baseDivLhs / c;
+    }
+    propagateIfChanged(results[0], results[0]->join(v));
+    return success();
+  }
+
+  // arith.andi: `x & m` with a uniform positive constant mask `m`.
+  // The most useful case is `x & (P - 1)` for `P` a power of 2: this is
+  // equivalent to `x mod P`, so when the lhs is an inner-dim AP with stride
+  // divisible by `P` the result is inner-dim constant. We also handle the
+  // trivial `m == 0` (always zero) and `m == -1`/all-ones (identity)
+  // shapes.
+  LogicalResult visitAndI(arith::AndIOp op,
+                          ArrayRef<const AxisInfoLattice *> operands,
+                          ArrayRef<AxisInfoLattice *> results) {
+    auto vt = dyn_cast<VectorType>(op.getType());
+    if (!vt) {
+      setAllPessimistic(op, results);
+      return success();
+    }
+    AxisInfo lhs = operands[0]->getValue();
+    AxisInfo rhs = operands[1]->getValue();
+    if (!lhs.isInitialized() || !rhs.isInitialized()) {
+      setAllPessimistic(op, results);
+      return success();
+    }
+    unsigned r = vt.getRank();
+    unsigned inner = r - 1;
+    auto shape = vt.getShape();
+    AxisInfo v = AxisInfo::getPessimistic(r);
+
+    // Look for a uniform constant mask on either side.
+    auto getUniformMask = [&](const AxisInfo &a) -> std::optional<int64_t> {
+      if (a.constancy[inner] >= shape[inner] && a.knownConstant)
+        return a.knownConstant;
+      return std::nullopt;
+    };
+    std::optional<int64_t> mLhs = getUniformMask(lhs);
+    std::optional<int64_t> mRhs = getUniformMask(rhs);
+    if (!mLhs && !mRhs) {
+      propagateIfChanged(results[0], results[0]->join(v));
+      return success();
+    }
+    const AxisInfo &x = mLhs ? rhs : lhs;
+    int64_t m = mLhs ? *mLhs : *mRhs;
+
+    if (m == 0) {
+      v.knownConstant = 0;
+      v.innerStride = 0;
+      v.constancy[inner] = shape[inner];
+      v.divisibility[inner] = kAxisInfoTop;
+      propagateIfChanged(results[0], results[0]->join(v));
+      return success();
+    }
+
+    // `m == P - 1` with P a power of 2 -> equivalent to `x mod P`.
+    if (m > 0 && llvm::isPowerOf2_64(static_cast<uint64_t>(m + 1))) {
+      int64_t P = m + 1;
+      if (x.innerStride && *x.innerStride % P == 0) {
+        v.innerStride = 0;
+        v.constancy[inner] = shape[inner];
+        v.divisibility[inner] =
+            std::gcd(x.divisibility[inner], highestPow2Divisor(P));
+        propagateIfChanged(results[0], results[0]->join(v));
+        return success();
+      }
+    }
+    // Conservative fallback for unrecognized masks.
+    propagateIfChanged(results[0], results[0]->join(v));
+    return success();
+  }
+
+  // arith.shli (left shift) / arith.shrui (logical right shift) by a
+  // uniform constant `k`. These are `* (1 << k)` and `/ (1 << k)`
+  // (truncating, but for non-negative values the trunc is exact when
+  // `(1 << k)` divides the value). We model them by reducing to mul/divui.
+  template <bool IsLeft, typename OpTy>
+  LogicalResult visitShift(OpTy op,
+                           ArrayRef<const AxisInfoLattice *> operands,
+                           ArrayRef<AxisInfoLattice *> results) {
+    auto vt = dyn_cast<VectorType>(op.getType());
+    if (!vt) {
+      setAllPessimistic(op, results);
+      return success();
+    }
+    AxisInfo lhs = operands[0]->getValue();
+    AxisInfo rhs = operands[1]->getValue();
+    if (!lhs.isInitialized() || !rhs.isInitialized()) {
+      setAllPessimistic(op, results);
+      return success();
+    }
+    unsigned r = vt.getRank();
+    unsigned inner = r - 1;
+    auto shape = vt.getShape();
+    AxisInfo v = AxisInfo::getPessimistic(r);
+
+    if (rhs.constancy[inner] < shape[inner] || !rhs.knownConstant) {
+      propagateIfChanged(results[0], results[0]->join(v));
+      return success();
+    }
+    int64_t k = *rhs.knownConstant;
+    if (k < 0 || k >= 63) {
+      propagateIfChanged(results[0], results[0]->join(v));
+      return success();
+    }
+    int64_t factor = 1LL << k;
+
+    if (IsLeft) {
+      // x << k == x * factor.
+      if (lhs.innerStride) {
+        v.innerStride = *lhs.innerStride * factor;
+        if (*v.innerStride == 1)
+          v.contiguity[inner] = shape[inner];
+        else if (*v.innerStride == 0)
+          v.constancy[inner] = shape[inner];
+      }
+      v.divisibility[inner] = std::min<int64_t>(
+          kAxisInfoTop, lhs.divisibility[inner] * factor);
+    } else {
+      // x >> k == x / factor (for non-negative x); same conditions as divui.
+      if (lhs.innerStride && *lhs.innerStride % factor == 0 &&
+          lhs.divisibility[inner] % factor == 0) {
+        int64_t newStride = *lhs.innerStride / factor;
+        v.innerStride = newStride;
+        if (newStride == 1)
+          v.contiguity[inner] = shape[inner];
+        else if (newStride == 0)
+          v.constancy[inner] = shape[inner];
+        v.divisibility[inner] = lhs.divisibility[inner] / factor;
+      }
+    }
+    propagateIfChanged(results[0], results[0]->join(v));
+    return success();
+  }
+
+  // arith.select: result is at least as constrained as the meet of the two
+  // arms. We propagate fields where both arms agree.
+  LogicalResult visitSelect(arith::SelectOp op,
+                            ArrayRef<const AxisInfoLattice *> operands,
+                            ArrayRef<AxisInfoLattice *> results) {
+    auto vt = dyn_cast<VectorType>(op.getType());
+    if (!vt) {
+      setAllPessimistic(op, results);
+      return success();
+    }
+    // operands: [cond, true, false]
+    AxisInfo t = operands[1]->getValue();
+    AxisInfo f = operands[2]->getValue();
+    if (!t.isInitialized() || !f.isInitialized()) {
+      setAllPessimistic(op, results);
+      return success();
+    }
+    AxisInfo v = AxisInfo::join(t, f);
     propagateIfChanged(results[0], results[0]->join(v));
     return success();
   }
@@ -527,7 +874,8 @@ using ::mlir::xegpu::detail::axis_dataflow::AxisInfoLattice;
 struct CoalesceDecision {
   enum class Kind { None, Broadcast, Chunked };
   Kind kind = Kind::None;
-  int64_t factor = 1; // lane_data factor along the innermost dim
+  int64_t laneLayout = 1; // lane_layout along the innermost dim
+  int64_t factor = 1;     // lane_data factor along the innermost dim
 };
 
 /// Largest power-of-two `<= bound` that divides `numLanes`.
@@ -547,9 +895,16 @@ static int64_t largestPow2Divisor(int64_t numLanes, int64_t bound) {
 }
 
 /// Decide how to coalesce given the offsets axis info.
+///
+/// We pick `lane_layout[inner]` first using the same default rule as
+/// `XeGPUPropagateLayout`: `lane_layout[inner] = min(subgroupSize, inner)`,
+/// rounded down to a power-of-2 divisor of `inner`. The remaining lane
+/// budget then becomes `lane_data[inner] = inner / lane_layout`, capped by
+/// the per-lane chunk-size budget and the offsets contiguity.
 static CoalesceDecision decide(const AxisInfo &info,
                                ArrayRef<int64_t> offsetsShape,
-                               int64_t origChunk, unsigned maxChunkSize) {
+                               int64_t origChunk, unsigned maxChunkSize,
+                               unsigned subgroupSize) {
   CoalesceDecision d;
   if (!info.isInitialized() || offsetsShape.empty())
     return d;
@@ -564,18 +919,34 @@ static CoalesceDecision decide(const AxisInfo &info,
     return d;
   }
 
+  // Pick lane_layout first: PropagateLayout's default for a 1-D / inner dim
+  // is `min(subgroupSize, inner)`, rounded down to a divisor of inner.
+  int64_t laneLayout = largestPow2Divisor(
+      inner, std::min<int64_t>(subgroupSize, inner));
+  if (laneLayout < 1)
+    laneLayout = 1;
+
+  // Each lane sees `inner / laneLayout` elements of the offsets vector.
+  int64_t perLane = inner / laneLayout;
+  if (perLane < 2)
+    return d; // already one element per lane, nothing to coalesce.
+
   if (origChunk < 1)
     origChunk = 1;
   int64_t budget = static_cast<int64_t>(maxChunkSize) / origChunk;
   if (budget < 2)
     return d;
+
   int64_t bound = std::min<int64_t>(info.contiguity[innerDim], budget);
+  bound = std::min<int64_t>(bound, perLane);
   if (bound < 2)
     return d;
-  int64_t factor = largestPow2Divisor(inner, bound);
+
+  int64_t factor = largestPow2Divisor(perLane, bound);
   if (factor < 2)
     return d;
   d.kind = CoalesceDecision::Kind::Chunked;
+  d.laneLayout = laneLayout;
   d.factor = factor;
   return d;
 }
@@ -594,18 +965,22 @@ static bool isAllTrueMask(Value mask) {
   return dense.getSplatValue<APInt>().getBoolValue();
 }
 
-/// Build a `lane_layout`/`lane_data` layout of rank `rank`, with lane_data
-/// = factor on the innermost dim (1 elsewhere) and lane_layout = inner /
-/// factor on the innermost dim (1 elsewhere).
+/// Build a `lane_layout`/`lane_data`/`inst_data` layout of rank `rank`,
+/// with the given lane_layout / lane_data on the innermost dim (1
+/// elsewhere). `inst_data` is `lane_layout * lane_data` per dim, so the
+/// invariant `inst_data[d] == lane_layout[d] * lane_data[d]` holds.
 static xegpu::LayoutAttr buildLaneDataLayout(MLIRContext *ctx, unsigned rank,
-                                             int64_t innerLanes,
-                                             int64_t factor) {
+                                             int64_t innerLaneLayout,
+                                             int64_t innerLaneData) {
   SmallVector<int32_t> laneLayout(rank, 1);
   SmallVector<int32_t> laneData(rank, 1);
-  laneLayout.back() = static_cast<int32_t>(innerLanes / factor);
-  laneData.back() = static_cast<int32_t>(factor);
-  return xegpu::LayoutAttr::get(ctx, laneLayout, laneData);
+  SmallVector<int32_t> instData(rank, 1);
+  laneLayout.back() = static_cast<int32_t>(innerLaneLayout);
+  laneData.back() = static_cast<int32_t>(innerLaneData);
+  instData.back() = static_cast<int32_t>(innerLaneLayout * innerLaneData);
+  return xegpu::LayoutAttr::get(ctx, instData, laneLayout, laneData);
 }
+
 
 //===----------------------------------------------------------------------===//
 // Rewrites.
@@ -647,6 +1022,17 @@ static LogicalResult rewriteBroadcastLoad(xegpu::LoadGatherOp op,
 
 namespace {
 
+/// Look up the subgroup size from the enclosing gpu.module's xevm.target.
+/// Falls back to 16 when no target chip is found or the chip is unknown,
+/// matching the typical Intel Xe2 default. This keeps the pass usable on
+/// plain `module { ... }` IR (e.g. unit lit tests) where there's no
+/// gpu.module / xevm.target wrapper.
+static unsigned lookupSubgroupSize(Operation *op) {
+  const auto *uArch =
+      xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
+  return uArch ? static_cast<unsigned>(uArch->getSubgroupSize()) : 16u;
+}
+
 struct CoalesceLoadPattern final : OpRewritePattern<xegpu::LoadGatherOp> {
   CoalesceLoadPattern(MLIRContext *ctx, unsigned maxChunkSize,
                       DataFlowSolver &solver)
@@ -670,13 +1056,19 @@ struct CoalesceLoadPattern final : OpRewritePattern<xegpu::LoadGatherOp> {
       if (!layout.getEffectiveLaneDataAsInt().empty())
         return rewriter.notifyMatchFailure(op, "lane_data already set");
 
+    int64_t origChunk = static_cast<int64_t>(op.getChunkSize().value_or(1));
+    if (op.getChunkSizeAttr() && origChunk > 1)
+      return rewriter.notifyMatchFailure(
+          op, "explicit chunk_size > 1, leaving op alone");
+
+    unsigned subgroupSize = lookupSubgroupSize(op);
+
     const auto *lat = solver.lookupState<AxisInfoLattice>(op.getOffsets());
     if (!lat || !lat->getValue().isInitialized())
       return rewriter.notifyMatchFailure(op, "no axis-info available");
 
-    int64_t origChunk = static_cast<int64_t>(op.getChunkSize().value_or(1));
     auto d = decide(lat->getValue(), offsetsTy.getShape(), origChunk,
-                    maxChunkSize);
+                    maxChunkSize, subgroupSize);
 
     if (d.kind == CoalesceDecision::Kind::Broadcast)
       return rewriteBroadcastLoad(op, rewriter);
@@ -684,10 +1076,16 @@ struct CoalesceLoadPattern final : OpRewritePattern<xegpu::LoadGatherOp> {
     if (d.kind != CoalesceDecision::Kind::Chunked)
       return rewriter.notifyMatchFailure(op, "offsets not coalescible");
 
-    int64_t innerLanes = offsetsTy.getShape().back();
     auto layout = buildLaneDataLayout(op.getContext(), valueTy.getRank(),
-                                      innerLanes, d.factor);
-    rewriter.modifyOpInPlace(op, [&] { op.setLayoutAttr(layout); });
+                                      d.laneLayout, d.factor);
+    // If the op carried an explicit chunk_size = 1 (the trivial / default
+    // value), drop it: the new lane_data FCD > 1 supersedes it.
+    bool dropChunk = op.getChunkSizeAttr() && origChunk == 1 && d.factor > 1;
+    rewriter.modifyOpInPlace(op, [&] {
+      op.setLayoutAttr(layout);
+      if (dropChunk)
+        op.removeChunkSizeAttr();
+    });
     return success();
   }
 
@@ -717,13 +1115,19 @@ struct CoalesceStorePattern final : OpRewritePattern<xegpu::StoreScatterOp> {
       if (!layout.getEffectiveLaneDataAsInt().empty())
         return rewriter.notifyMatchFailure(op, "lane_data already set");
 
+    int64_t origChunk = static_cast<int64_t>(op.getChunkSize().value_or(1));
+    if (op.getChunkSizeAttr() && origChunk > 1)
+      return rewriter.notifyMatchFailure(
+          op, "explicit chunk_size > 1, leaving op alone");
+
+    unsigned subgroupSize = lookupSubgroupSize(op);
+
     const auto *lat = solver.lookupState<AxisInfoLattice>(op.getOffsets());
     if (!lat || !lat->getValue().isInitialized())
       return rewriter.notifyMatchFailure(op, "no axis-info available");
 
-    int64_t origChunk = static_cast<int64_t>(op.getChunkSize().value_or(1));
     auto d = decide(lat->getValue(), offsetsTy.getShape(), origChunk,
-                    maxChunkSize);
+                    maxChunkSize, subgroupSize);
 
     if (d.kind == CoalesceDecision::Kind::Broadcast)
       return rewriter.notifyMatchFailure(
@@ -732,10 +1136,14 @@ struct CoalesceStorePattern final : OpRewritePattern<xegpu::StoreScatterOp> {
     if (d.kind != CoalesceDecision::Kind::Chunked)
       return rewriter.notifyMatchFailure(op, "offsets not coalescible");
 
-    int64_t innerLanes = offsetsTy.getShape().back();
     auto layout = buildLaneDataLayout(op.getContext(), valueTy.getRank(),
-                                      innerLanes, d.factor);
-    rewriter.modifyOpInPlace(op, [&] { op.setLayoutAttr(layout); });
+                                      d.laneLayout, d.factor);
+    bool dropChunk = op.getChunkSizeAttr() && origChunk == 1 && d.factor > 1;
+    rewriter.modifyOpInPlace(op, [&] {
+      op.setLayoutAttr(layout);
+      if (dropChunk)
+        op.removeChunkSizeAttr();
+    });
     return success();
   }
 

@@ -145,6 +145,15 @@ def XeGPUCoalesceGatherScatter : Pass<"xegpu-coalesce-gather-scatter"> {
     Pass options:
     - `max-chunk-size`: upper bound on the produced `chunk_size`. Defaults to
       8, matching typical Xe scatter chunk-size limits.
+
+    Ops that already declare an explicit `chunk_size > 1` are left alone:
+    a downstream pass has already committed to a per-lane chunked access,
+    and the verifier-imposed shape relationship between value, offsets,
+    and mask makes coalescing unsafe without a deeper rewrite.
+
+    The subgroup size is read per-op from the enclosing `gpu.module`'s
+    `xevm.target` chip (the same lookup as `xegpu-propagate-layout`). If no
+    target chip is found, the pass falls back to a subgroup size of 16.
   }];
   let dependentDialects = [
       "arith::ArithDialect", "memref::MemRefDialect", "xegpu::XeGPUDialect",

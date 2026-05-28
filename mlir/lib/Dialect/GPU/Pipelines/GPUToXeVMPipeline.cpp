@@ -74,6 +74,8 @@ void buildGPUPassPipeline(OpPassManager &pm,
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
+    pm.addNestedPass<gpu::GPUModuleOp>(
+        xegpu::createXeGPUCoalesceGatherScatter());
     xegpu::XeGPUPropagateLayoutOptions instDataOptions;
     instDataOptions.layoutKind = "inst";
     pm.addNestedPass<gpu::GPUModuleOp>(
