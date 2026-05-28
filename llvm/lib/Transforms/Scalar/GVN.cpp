@@ -72,7 +72,6 @@
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/Transforms/Utils/VNCoercion.h"
 #include <algorithm>
@@ -3345,36 +3344,44 @@ void GVNPass::assignValNumForDeadCode() {
 
 /// Phi-aware in-loop clobber check for the min-finding select rewrite.
 ///
-/// Reject if any instruction in L may write either Load's address or
-/// AltLoad's address. Load is the hoistable load; AltLoad is the other
-/// operand of the compare (LHS). The recognizer established the algebraic
-/// gate C1 - C2 == sizeof(LoadType) * KStep, which makes AltLoad's
-/// same-iteration address exactly Load's next-iteration address on the
-/// cmp = true arm of the select being built. So the two locations together
-/// cover both select arms; no symbolic PHI translation is needed.
+/// Two loads from the recognized pattern participate in the rewrite:
+///   - RunningMinLoad: produces the running-min value; the rewrite
+///     hoists it to the preheader and memoizes its value across
+///     iterations via a PHI.
+///   - IterValueLoad: produces this iteration's value, compared
+///     against the running min; re-issued every iteration.
+///
+/// Reject if any instruction in L may write either load's address.
+/// The recognizer established the algebraic gate
+/// C1 - C2 == sizeof(LoadType) * KStep, which makes IterValueLoad's
+/// same-iteration address exactly RunningMinLoad's next-iteration address
+/// on the cmp = true arm of the select being built. The two locations
+/// together cover both select arms; no symbolic PHI translation is
+/// needed.
 ///
 /// The walk covers every instruction in L, including instructions before
-/// Load in Load's parent block: in a single-block self-loop those run
-/// between Load's read at iter N and Load's read at iter N+1 via the
-/// back-edge and can therefore clobber the memoized value.
+/// RunningMinLoad in its parent block: in a single-block self-loop those
+/// run between RunningMinLoad's read at iter N and its read at iter N+1
+/// via the back-edge, and can therefore clobber the memoized value.
 ///
 /// TODO: When PHITransAddr learns to translate through SelectInst (the
-/// IndexValPhi's back-edge incoming is the very select we are about to
-/// build), this helper becomes redundant: MemoryDependenceResults's
-/// NonLocal walker would perform the per-edge translation that this code
-/// encodes by hand using the recognizer's domain knowledge.
-static bool canHoistLoadWithAA(Loop *L, LoadInst *Load, LoadInst *AltLoad,
-                               AAResults *AA) {
-  MemoryLocation Loc = MemoryLocation::get(Load);
-  MemoryLocation AltLoc = MemoryLocation::get(AltLoad);
+/// IndexValPhi's back-edge incoming is the very select the transform is
+/// about to build), this helper becomes redundant:
+/// MemoryDependenceResults's NonLocal walker would perform the per-edge
+/// translation that this code encodes by hand using the recognizer's
+/// domain knowledge.
+static bool canHoistLoadWithAA(Loop *L, LoadInst *RunningMinLoad,
+                               LoadInst *IterValueLoad, AAResults *AA) {
+  MemoryLocation RunningMinLoc = MemoryLocation::get(RunningMinLoad);
+  MemoryLocation IterValueLoc = MemoryLocation::get(IterValueLoad);
   for (BasicBlock *BB : L->blocks()) {
     for (Instruction &I : *BB) {
-      if (&I == Load || &I == AltLoad)
+      if (&I == RunningMinLoad || &I == IterValueLoad)
         continue;
       if (!I.mayWriteToMemory())
         continue;
-      if (isModSet(AA->getModRefInfo(&I, Loc)) ||
-          isModSet(AA->getModRefInfo(&I, AltLoc))) {
+      if (isModSet(AA->getModRefInfo(&I, RunningMinLoc)) ||
+          isModSet(AA->getModRefInfo(&I, IterValueLoc))) {
         LLVM_DEBUG(dbgs() << "GVN (minindx): Cannot hoist - clobbered in "
                              "loop by "
                           << I << "\n");
@@ -3385,51 +3392,75 @@ static bool canHoistLoadWithAA(Loop *L, LoadInst *Load, LoadInst *AltLoad,
   return true;
 }
 
-/// Return true if Load can be safely memoized across iterations of L.
+/// Return true if RunningMinLoad can be hoisted out of L and its value
+/// reused across iterations via a header PHI.
 ///
-/// Single source of truth for the load-hoist correctness in the min-finding
-/// select rewrite. Three concerns:
-///  - RAUW safety: the rewrite replaces Load with a memoizing PHI, so an
-///    extra in-loop use of Load would observe an inconsistent value.
-///  - Load characteristics: memoization is unsound for any non-simple
-///    (volatile or atomic) load because it drops per-iteration freshness;
-///    loads from constant memory or with !invariant.load are always safe.
-///  - Aliasing: no instruction in L may write Load's location, including
-///    across the back-edge. With MSSA, this is canHoistLoad(IsSink=true),
-///    which walks every in-loop MemoryDef. Without MSSA, use a phi-aware
-///    AA walk that probes both Load and AltLoad locations; AltLoad is the
-///    LHS of the compare and, by the recognizer's algebraic gate, equals
-///    Load's next-iteration address on the cmp = true arm.
-static bool canMemoizeLoadAcrossLoop(LoadInst &Load, LoadInst &AltLoad, Loop *L,
-                                     AAResults *AA, DominatorTree *DT,
-                                     MemorySSAUpdater *MSSAU,
-                                     OptimizationRemarkEmitter *ORE) {
-  if (!Load.hasOneUse()) {
+/// Single source of truth for the load-hoist legality in the min-finding
+/// select rewrite. Three conditions:
+///  - Single use: RunningMinLoad must have exactly one in-loop use (the
+///    compare). The rewrite RAUWs RunningMinLoad with a header PHI; an
+///    extra in-loop use would observe the PHI value in place of the
+///    original per-iteration load.
+///  - Simple load: LoadInst::isSimple() (non-volatile, non-atomic).
+///    Volatile/atomic loads cannot be removed or replaced with a PHI
+///    that supplies the prior iteration's value. Loads from constant
+///    memory (mod-ref mask) and loads carrying !invariant.load are
+///    unconditionally safe and short-circuit the clobber check below.
+///  - No in-loop clobber: no instruction in L may write the memory
+///    that RunningMinLoad's or IterValueLoad's location aliases,
+///    including across L's back-edge. canHoistLoadWithAA performs the
+///    walk. IterValueLoad's location is also probed because the
+///    recognizer's algebraic gate (see Phase 6 of
+///    recognizeMinFindingSelectPattern) makes its same-iteration
+///    address equal RunningMinLoad's next-iteration address on the
+///    cmp = true arm.
+///
+/// canHoistLoadWithAA is used for both the MemDep-enabled and the
+/// MemorySSA-enabled GVN configurations. The LICM helpers
+/// llvm::canHoistLoad / pointerInvalidatedByLoop are insufficient for
+/// this rewrite:
+///   - With IsSink=true, LICM's pointerInvalidatedByBlock treats a
+///     same-block MemoryDef that locally dominates the load as
+///     non-invalidating (FIXME in LICM). For the recognizer's
+///     single-block self-loop, such a Def is a cross-iteration
+///     clobber via the back-edge; LICM silently allows it.
+///     canHoistLoadWithAA catches it because it walks every
+///     instruction in the loop body.
+///   - With IsSink=false, LICM delegates to getClobberingMemoryAccess,
+///     which uses PHITransAddr to walk through the loop header's
+///     MemoryPhi. PHITransAddr does not handle SelectInst, and the
+///     IndexValPhi's back-edge incoming is the very select the
+///     transform is about to build, so PHITransAddr cannot translate
+///     the load pointer across the back-edge and misses cross-iteration
+///     aliases when BasicAA reports same-iter NoAlias on
+///     differently-named SSA indices.
+/// canHoistLoadWithAA sidesteps both gaps by walking every in-loop
+/// instruction and probing both RunningMinLoad's and IterValueLoad's
+/// locations. The recognizer's single-block self-loop gate makes LICM's
+/// multi-block CFG reasoning unnecessary for this rewrite, so no
+/// precision is lost by going through one consolidated walk. See the
+/// doc comment on canHoistLoadWithAA for the soundness argument.
+static bool canMemoizeLoadAcrossLoop(LoadInst &RunningMinLoad,
+                                     LoadInst &IterValueLoad, Loop *L,
+                                     AAResults *AA) {
+  if (!RunningMinLoad.hasOneUse()) {
     LLVM_DEBUG(dbgs() << "GVN (minindx): hoistable load has extra uses.\n");
     return false;
   }
 
-  if (!Load.isSimple()) {
+  if (!RunningMinLoad.isSimple()) {
     LLVM_DEBUG(dbgs() << "GVN (minindx): atomic/volatile hoistable load.\n");
     return false;
   }
 
-  // Always-safe shortcuts: loads from constant memory and invariant loads
-  // need no aliasing walk.
-  if (!isModSet(AA->getModRefInfoMask(Load.getPointerOperand())))
+  // loads from constant memory and invariant loads need no aliasing walk.
+  if (!isModSet(AA->getModRefInfoMask(RunningMinLoad.getPointerOperand())))
     return true;
-  if (Load.hasMetadata(LLVMContext::MD_invariant_load))
+  if (RunningMinLoad.hasMetadata(LLVMContext::MD_invariant_load))
     return true;
 
-  if (MSSAU) {
-    MemorySSA &MSSA = *MSSAU->getMemorySSA();
-    SinkAndHoistLICMFlags Flags(/*IsSink=*/true, *L, MSSA);
-    if (canHoistLoad(Load, AA, DT, L, MSSA,
-                     /*TargetExecutesOncePerLoop=*/true, Flags, ORE))
-      return true;
-  } else if (canHoistLoadWithAA(L, &Load, &AltLoad, AA)) {
+  if (canHoistLoadWithAA(L, &RunningMinLoad, &IterValueLoad, AA))
     return true;
-  }
 
   LLVM_DEBUG(dbgs() << "GVN (minindx): Cannot hoist - may be clobbered by "
                        "some instruction in the loop.\n");
@@ -3493,13 +3524,19 @@ bool GVNPass::transformMinFindingSelectPattern(
   Value *LHS = Comparison->getOperand(0);
   Value *LoadVal = Comparison->getOperand(1);
 
-  auto *HoistableLoad = cast<LoadInst>(LoadVal);
-  // LHS is the other compare operand. The recognizer requires it to be a
-  // load and (via the algebraic gate) ties its address to HoistableLoad's
-  // next-iteration address on the cmp = true arm of Select.
-  auto *AltLoad = cast<LoadInst>(LHS);
-  if (!canMemoizeLoadAcrossLoop(*HoistableLoad, *AltLoad, L,
-                                VN.getAliasAnalysis(), DT, MSSAU, ORE))
+  // RunningMinLoad: produces the running-min value; the rewrite hoists
+  // it to the preheader and memoizes its value across iterations via a
+  // PHI inserted in the loop header.
+  // IterValueLoad: produces this iteration's value, compared against
+  // the running min, and supplies the refresh value for the memoizing
+  // PHI when the select picks it. The recognizer's algebraic gate ties
+  // IterValueLoad's same-iteration address to RunningMinLoad's
+  // next-iteration address on the cmp = true arm, so the clobber walk
+  // must cover both locations.
+  auto *RunningMinLoad = cast<LoadInst>(LoadVal);
+  auto *IterValueLoad = cast<LoadInst>(LHS);
+  if (!canMemoizeLoadAcrossLoop(*RunningMinLoad, *IterValueLoad, L,
+                                VN.getAliasAnalysis()))
     return false;
 
   IRBuilder<> Builder(Preheader->getTerminator());
