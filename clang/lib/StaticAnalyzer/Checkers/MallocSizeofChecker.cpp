@@ -156,9 +156,8 @@ static bool typesCompatible(ASTContext &C, QualType A, QualType B) {
     // while preserving warnings for unrelated types that happen to share a
     // size (e.g. long vs double, struct A vs struct B).
     if (!A->getAs<PointerType>() && !B->getAs<PointerType>() &&
-        (A->isRecordType() != B->isRecordType()) &&
-        !A->isIncompleteType() && !B->isIncompleteType() &&
-        C.getTypeSize(A) == C.getTypeSize(B) &&
+        (A->isRecordType() != B->isRecordType()) && !A->isIncompleteType() &&
+        !B->isIncompleteType() && C.getTypeSize(A) == C.getTypeSize(B) &&
         C.getTypeAlign(A) <= C.getTypeAlign(B))
       return true;
 
