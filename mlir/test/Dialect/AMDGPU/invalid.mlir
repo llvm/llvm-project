@@ -294,7 +294,7 @@ func.func @transpose_load_elem_f32(%idx1 : index, %idx2 : index, %mem : memref<1
 // -----
 
 func.func @transpose_load_vector_size_f16(%idx1 : index, %idx2 : index, %mem : memref<128x32xf16, 3>) -> vector<2xf16> {
-  // expected-error@+1 {{'amdgpu.transpose_load' op Transferring type size mismatch: expected num of elements: 4}}
+  // expected-error@+1 {{'amdgpu.transpose_load' op Transferring type size mismatch: expected num of elements: 4 or 8}}
   %0 = amdgpu.transpose_load %mem[%idx1, %idx2] : memref<128x32xf16, 3> -> vector<2xf16>
   func.return %0 : vector<2xf16>
 }
@@ -343,6 +343,26 @@ func.func @global_transpose_load_wrong_addrspace(%i : index, %j : index,
 
 // -----
 
+func.func @global_transpose_load_flat_addrspace(%i : index, %j : index,
+    %src : memref<128x256xf16>) -> vector<8xf16> {
+  // expected-error@+1 {{'amdgpu.global_transpose_load' op source memory address space must be Global}}
+  %0 = amdgpu.global_transpose_load %src[%i, %j]
+         : memref<128x256xf16> -> vector<8xf16>
+  func.return %0 : vector<8xf16>
+}
+
+// -----
+
+func.func @global_transpose_load_integer_flat_addrspace(%i : index,
+    %j : index, %src : memref<128x256xf16, 0>) -> vector<8xf16> {
+  // expected-error@+1 {{'amdgpu.global_transpose_load' op source memory address space must be Global}}
+  %0 = amdgpu.global_transpose_load %src[%i, %j]
+         : memref<128x256xf16, 0> -> vector<8xf16>
+  func.return %0 : vector<8xf16>
+}
+
+// -----
+
 func.func @global_transpose_load_wrong_num_indices(%idx : index, %mem : memref<128x32xf16, #gpu.address_space<global>>) -> vector<8xf16> {
   // expected-error@+1 {{'amdgpu.global_transpose_load' op expected 2 source indices, got 1}}
   %0 = amdgpu.global_transpose_load %mem[%idx] : memref<128x32xf16, #gpu.address_space<global>> -> vector<8xf16>
@@ -377,6 +397,16 @@ func.func @gather_to_lds_wrong_num_indices(%idx : index,
 
 // -----
 
+func.func @gather_to_lds_bad_integer_address_space(%idx : index,
+    %src : memref<32xf16, 8>,
+    %dst : memref<32xf16, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.gather_to_lds' op source memory address space must be global or fat raw buffer}}
+  amdgpu.gather_to_lds %src[%idx], %dst[%idx] : vector<2xf16>, memref<32xf16, 8>, memref<32xf16, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
 func.func @global_load_async_to_lds_non_lds(%idx1 : index,
     %mem1 : memref<32xf32, #gpu.address_space<global>>,
     %mem2 : memref<32xf32>) {
@@ -406,6 +436,30 @@ func.func @global_load_async_to_lds_src_not_global(%idx1 : index,
   // expected-error@+1 {{'amdgpu.global_load_async_to_lds' op source memory address space must be global}}
   amdgpu.global_load_async_to_lds %mem1[%idx1], %mem2[%idx1]
     : f32, memref<32xf32, #gpu.address_space<workgroup>>,
+      memref<32xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+func.func @global_load_async_to_lds_src_flat(%idx1 : index,
+    %mem1 : memref<32xf32>,
+    %mem2 : memref<32xf32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.global_load_async_to_lds' op source memory address space must be global}}
+  amdgpu.global_load_async_to_lds %mem1[%idx1], %mem2[%idx1]
+    : f32, memref<32xf32>,
+      memref<32xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+func.func @global_load_async_to_lds_src_integer_flat(%idx1 : index,
+    %mem1 : memref<32xf32, 0>,
+    %mem2 : memref<32xf32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.global_load_async_to_lds' op source memory address space must be global}}
+  amdgpu.global_load_async_to_lds %mem1[%idx1], %mem2[%idx1]
+    : f32, memref<32xf32, 0>,
       memref<32xf32, #gpu.address_space<workgroup>>
   func.return
 }
@@ -463,6 +517,26 @@ func.func @make_dma_base_invalid_addressspace(%idx: index, %smem : memref<8xi32,
 
 // -----
 
+func.func @make_dma_base_flat_global_addressspace(%idx: index,
+    %mem: memref<8xi32>,
+    %smem: memref<8xi32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.make_dma_base' op global memref must have global address space attribute.}}
+  amdgpu.make_dma_base %mem[%idx], %smem[%idx] : memref<8xi32>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+  return
+}
+
+// -----
+
+func.func @make_dma_base_integer_flat_global_addressspace(%idx: index,
+    %mem: memref<8xi32, 0>,
+    %smem: memref<8xi32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.make_dma_base' op global memref must have global address space attribute.}}
+  amdgpu.make_dma_base %mem[%idx], %smem[%idx] : memref<8xi32, 0>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+  return
+}
+
+// -----
+
 func.func @make_gather_dma_base_invalid_addressspace(%idx: index, %mem: memref<8xi32>) {
   // expected-error@+1 {{'amdgpu.make_gather_dma_base' op lds memref must have workgroup address space attribute.}}
   amdgpu.make_gather_dma_base %mem[%idx], %mem[%idx] : memref<8xi32>, memref<8xi32> -> !amdgpu.tdm_gather_base<i32, i16>
@@ -482,6 +556,26 @@ func.func @make_gather_dma_base_invalid_index_type(%idx: index, %smem: memref<8x
 func.func @make_gather_dma_base_invalid_addressspace(%idx: index, %smem : memref<8xi32, #gpu.address_space<workgroup>>) {
   // expected-error@+1 {{'amdgpu.make_gather_dma_base' op global memref must have global address space attribute.}}
   amdgpu.make_gather_dma_base %smem[%idx], %smem[%idx] : memref<8xi32, #gpu.address_space<workgroup>>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_gather_base<i32, i16>
+  return
+}
+
+// -----
+
+func.func @make_gather_dma_base_flat_global_addressspace(%idx: index,
+    %mem: memref<8xi32>,
+    %smem: memref<8xi32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.make_gather_dma_base' op global memref must have global address space attribute.}}
+  amdgpu.make_gather_dma_base %mem[%idx], %smem[%idx] : memref<8xi32>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_gather_base<i32, i16>
+  return
+}
+
+// -----
+
+func.func @make_gather_dma_base_integer_flat_global_addressspace(%idx: index,
+    %mem: memref<8xi32, 0>,
+    %smem: memref<8xi32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.make_gather_dma_base' op global memref must have global address space attribute.}}
+  amdgpu.make_gather_dma_base %mem[%idx], %smem[%idx] : memref<8xi32, 0>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_gather_base<i32, i16>
   return
 }
 

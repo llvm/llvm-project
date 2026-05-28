@@ -382,11 +382,17 @@ define i64 @combined(ptr nocapture noundef readonly %src) {
 ;
 ; AVX512-LABEL: @combined(
 ; AVX512-NEXT:  entry:
-; AVX512-NEXT:    [[TMP0:%.*]] = load <12 x i64>, ptr [[SRC:%.*]], align 2
-; AVX512-NEXT:    [[TMP1:%.*]] = icmp ne <12 x i64> [[TMP0]], zeroinitializer
-; AVX512-NEXT:    [[TMP2:%.*]] = shufflevector <12 x i64> [[TMP0]], <12 x i64> <i64 1, i64 2, i64 4, i64 8, i64 16, i64 32, i64 64, i64 128, i64 poison, i64 poison, i64 poison, i64 poison>, <12 x i32> <i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 8, i32 9, i32 10, i32 10>
-; AVX512-NEXT:    [[TMP3:%.*]] = select <12 x i1> [[TMP1]], <12 x i64> [[TMP2]], <12 x i64> zeroinitializer
-; AVX512-NEXT:    [[OP_RDX:%.*]] = call i64 @llvm.vector.reduce.or.v12i64(<12 x i64> [[TMP3]])
+; AVX512-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[SRC:%.*]], align 2
+; AVX512-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i64> [[TMP0]], zeroinitializer
+; AVX512-NEXT:    [[TMP2:%.*]] = bitcast <8 x i1> [[TMP1]] to i8
+; AVX512-NEXT:    [[TMP3:%.*]] = zext i8 [[TMP2]] to i64
+; AVX512-NEXT:    [[ARRAYIDX_8:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 8
+; AVX512-NEXT:    [[TMP4:%.*]] = load <4 x i64>, ptr [[ARRAYIDX_8]], align 2
+; AVX512-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i64> [[TMP4]], zeroinitializer
+; AVX512-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
+; AVX512-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP5]], <4 x i64> zeroinitializer, <4 x i64> [[TMP6]]
+; AVX512-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP7]])
+; AVX512-NEXT:    [[OP_RDX:%.*]] = or i64 [[TMP3]], [[TMP8]]
 ; AVX512-NEXT:    ret i64 [[OP_RDX]]
 ;
 entry:
