@@ -20,7 +20,7 @@ namespace llvm::omp::target::plugin {
 /// common methods
 
 Error AsyncQueueTy::init() {
-  auto CmdListOrErr = Device.createImmCmdList(IsInorder);
+  auto CmdListOrErr = Device.getCmdListManager(IsInorder);
   if (!CmdListOrErr)
     return CmdListOrErr.takeError();
   CmdList = *CmdListOrErr;
@@ -33,7 +33,7 @@ Error AsyncQueueTy::deinit() {
   reset();
 
   if (CmdList)
-    if (auto Err = Device.releaseImmCmdList(CmdList))
+    if (auto Err = Device.releaseCmdListManager(CmdList))
       return Err;
 
   CmdList = nullptr;
@@ -84,8 +84,8 @@ Error L0AsyncQueueTy::synchronizeImpl() {
   bool WaitDone = false;
   for (auto Itr = WaitEvents.rbegin(); Itr != WaitEvents.rend(); Itr++) {
     if (!WaitDone) {
-      SyncErrors =
-          joinErrors(std::move(SyncErrors), eventHostSynchronize(*Itr));
+      SyncErrors = joinErrors(std::move(SyncErrors),
+                              CmdList->eventHostSynchronize(*Itr));
       if (*Itr == KernelEvent)
         WaitDone = true;
     }
@@ -127,8 +127,8 @@ Error L0AsyncQueueTy::memoryCopyImpl(void *Dst, const void *Src, size_t Size) {
   ze_event_handle_t SignalEvent = *EventOrErr;
   auto [NumWaitEvents, WaitEventsPtr] = getMemCopyEvents();
 
-  Error AllErrors = appendMemoryCopy(Dst, Src, Size, SignalEvent, NumWaitEvents,
-                                     WaitEventsPtr);
+  Error AllErrors = CmdList->appendMemoryCopy(Dst, Src, Size, SignalEvent,
+                                              NumWaitEvents, WaitEventsPtr);
   if (!AllErrors) {
     WaitEvents.push_back(SignalEvent);
   } else {
@@ -212,9 +212,9 @@ Error L0AsyncQueueTy::launchKernelImpl(ze_kernel_handle_t Kernel,
   auto [NumWaitEvents, WaitEventsPtr] = getLaunchKernelEvents();
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, Device.getDeviceId(),
        "Kernel depends on %zu data copying events.\n", NumWaitEvents);
-  Error AllErrors =
-      appendLaunchKernel(Kernel, &KEnv.GroupCounts, SignalEvent, NumWaitEvents,
-                         WaitEventsPtr, KEnv.IsCooperative);
+  Error AllErrors = CmdList->appendLaunchKernel(
+      Kernel, &KEnv.GroupCounts, SignalEvent, NumWaitEvents, WaitEventsPtr,
+      KEnv.IsCooperative);
   KEnv.Lock.unlock();
   if (AllErrors) {
     if (auto Err = Device.releaseEvent(SignalEvent))
@@ -232,8 +232,8 @@ Error L0AsyncQueueTy::memoryFillImpl(void *Ptr, const void *Pattern,
   if (!EventOrErr)
     return EventOrErr.takeError();
   ze_event_handle_t SignalEvent = *EventOrErr;
-  if (auto Err = appendMemoryFill(Ptr, Pattern, PatternSize, Size, SignalEvent,
-                                  0, nullptr)) {
+  if (auto Err = CmdList->appendMemoryFill(Ptr, Pattern, PatternSize, Size,
+                                           SignalEvent, 0, nullptr)) {
     if (auto ReleaseErr = Device.releaseEvent(SignalEvent))
       return joinErrors(std::move(Err), std::move(ReleaseErr));
     return Err;
@@ -250,13 +250,14 @@ Error L0AsyncOrderedQueueTy::synchronizeImpl() {
       WaitEvents.empty() ? nullptr : WaitEvents.back();
   // Only need to wait for the last event.
   if (LastEvent) {
-    SyncErrors =
-        joinErrors(std::move(SyncErrors), eventHostSynchronize(LastEvent));
+    SyncErrors = joinErrors(std::move(SyncErrors),
+                            CmdList->eventHostSynchronize(LastEvent));
   }
   // Synchronize on kernel event to support printf().
   ze_event_handle_t KE = KernelEvent;
   if (KE && KE != LastEvent && !SyncErrors) {
-    SyncErrors = joinErrors(std::move(SyncErrors), eventHostSynchronize(KE));
+    SyncErrors =
+        joinErrors(std::move(SyncErrors), CmdList->eventHostSynchronize(KE));
   }
   for (auto &Event : WaitEvents) {
     if (auto Err = Device.releaseEvent(Event))
@@ -283,29 +284,21 @@ L0AsyncOrderedQueueTy::getLaunchKernelEvents() {
 }
 
 // L0InorderQueueTy implementation.
-Error L0InorderQueueTy::synchronizeImpl() { return hostSynchronize(); }
+Error L0InorderQueueTy::synchronizeImpl() { return CmdList->hostSynchronize(); }
 
 Expected<bool> L0InorderQueueTy::hasPendingWorkImpl() {
-  ze_result_t RC;
-  CALL_ZE(RC, zeCommandListHostSynchronize, CmdList, 0);
-  if (RC == ZE_RESULT_SUCCESS)
-    return false;
-  if (RC == ZE_RESULT_NOT_READY)
-    return true;
-  return Plugin::error(ErrorCode::UNKNOWN,
-                       "zeCommandListHostSynchronize query failed: %s",
-                       getZeErrorName(RC));
+  return CmdList->queryPendingWork();
 }
 
 Error L0InorderQueueTy::memoryCopyImpl(void *Dst, const void *Src,
                                        size_t Size) {
-  return appendMemoryCopy(Dst, Src, Size);
+  return CmdList->appendMemoryCopy(Dst, Src, Size);
 }
 
 Error L0InorderQueueTy::launchKernelImpl(ze_kernel_handle_t Kernel,
                                          L0LaunchEnvTy &KEnv) {
-  Error Err = appendLaunchKernel(Kernel, &KEnv.GroupCounts, nullptr, 0, nullptr,
-                                 KEnv.IsCooperative);
+  Error Err = CmdList->appendLaunchKernel(Kernel, &KEnv.GroupCounts, nullptr, 0,
+                                          nullptr, KEnv.IsCooperative);
   KEnv.Lock.unlock();
   return Err;
 }
@@ -314,14 +307,14 @@ Error L0InorderQueueTy::launchKernelImpl(ze_kernel_handle_t Kernel,
 Error L0SyncQueueTy::memoryCopyImpl(void *Dst, const void *Src, size_t Size) {
   if (auto Err = L0InorderQueueTy::memoryCopyImpl(Dst, Src, Size))
     return Err;
-  return hostSynchronize();
+  return CmdList->hostSynchronize();
 }
 
 Error L0SyncQueueTy::launchKernelImpl(ze_kernel_handle_t Kernel,
                                       L0LaunchEnvTy &KEnv) {
   if (auto Err = L0InorderQueueTy::launchKernelImpl(Kernel, KEnv))
     return Err;
-  return hostSynchronize();
+  return CmdList->hostSynchronize();
 }
 
 // L0QueueCache implementation.

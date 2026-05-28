@@ -745,7 +745,7 @@ Error L0DeviceTy::dataFence(__tgt_async_info *Async) {
   if (!QueueOrErr)
     return QueueOrErr.takeError();
   AsyncQueueTy *Queue = *QueueOrErr;
-  ze_command_list_handle_t CmdList = Queue->CmdList;
+  ze_command_list_handle_t CmdList = Queue->getCmdList();
   CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, CmdList, nullptr, 0, nullptr);
 
   return Plugin::success();

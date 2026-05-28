@@ -20,6 +20,7 @@
 #include <mutex>
 #include <tuple>
 
+#include "L0CmdListManager.h"
 #include "L0Options.h"
 
 namespace llvm::omp::target::plugin {
@@ -32,9 +33,7 @@ struct AsyncQueueTy {
   /// Device owning this queue.
   L0DeviceTy &Device;
   /// Underlying immediate command list.
-  ze_command_list_handle_t CmdList = nullptr;
-  /// Mutex to protect L0 operations that are not thread safe.
-  std::mutex Mtx;
+  L0CmdListManagerTy *CmdList = nullptr;
   /// Whether the queue is in-order or out-of-order.
   bool IsInorder;
 
@@ -44,6 +43,8 @@ struct AsyncQueueTy {
 
   /// Clear data.
   void reset() { resetImpl(); }
+
+  ze_command_list_handle_t getCmdList() const { return CmdList->getCmdList(); }
 
   Error init();
   Error deinit();
@@ -95,60 +96,7 @@ struct AsyncQueueTy {
 
   virtual Error memoryFillImpl(void *Ptr, const void *Pattern,
                                size_t PatternSize, size_t Size) {
-    return appendMemoryFill(Ptr, Pattern, PatternSize, Size);
-  }
-
-protected:
-  // L0 helper functions.
-  Error hostSynchronize(uint64_t TimeoutNs = L0DefaultTimeout) {
-    CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, CmdList, TimeoutNs);
-    return Plugin::success();
-  }
-
-  Error eventHostSynchronize(ze_event_handle_t Event,
-                             uint64_t TimeoutNs = L0DefaultTimeout) {
-    CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event, TimeoutNs);
-    return Plugin::success();
-  }
-
-  Error appendMemoryCopy(void *Dst, const void *Src, size_t Size,
-                         ze_event_handle_t SignalEvent = nullptr,
-                         uint32_t NumWaitEvents = 0,
-                         ze_event_handle_t *WaitEvents = nullptr) {
-    std::lock_guard<std::mutex> Lock(Mtx);
-    CALL_ZE_RET_ERROR(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
-                      SignalEvent, NumWaitEvents, WaitEvents);
-    return Plugin::success();
-  }
-
-  Error appendMemoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
-                         size_t Size, ze_event_handle_t SignalEvent = nullptr,
-                         uint32_t NumWaitEvents = 0,
-                         ze_event_handle_t *WaitEvents = nullptr) {
-    std::lock_guard<std::mutex> Lock(Mtx);
-    CALL_ZE_RET_ERROR(zeCommandListAppendMemoryFill, CmdList, Ptr, Pattern,
-                      PatternSize, Size, SignalEvent, NumWaitEvents,
-                      WaitEvents);
-    return Plugin::success();
-  }
-
-  Error appendLaunchKernel(ze_kernel_handle_t Kernel,
-                           const ze_group_count_t *pLaunchFuncArgs,
-                           ze_event_handle_t SignalEvent = nullptr,
-                           uint32_t NumWaitEvents = 0,
-                           ze_event_handle_t *WaitEvents = nullptr,
-                           bool Cooperative = false) {
-    std::lock_guard<std::mutex> Lock(Mtx);
-    if (Cooperative) {
-      CALL_ZE_RET_ERROR(zeCommandListAppendLaunchCooperativeKernel, CmdList,
-                        Kernel, pLaunchFuncArgs, SignalEvent, NumWaitEvents,
-                        WaitEvents);
-    } else {
-      CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, Kernel,
-                        pLaunchFuncArgs, SignalEvent, NumWaitEvents,
-                        WaitEvents);
-    }
-    return Plugin::success();
+    return CmdList->appendMemoryFill(Ptr, Pattern, PatternSize, Size);
   }
 };
 

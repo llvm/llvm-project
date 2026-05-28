@@ -19,6 +19,7 @@
 
 #include "AsyncQueue.h"
 #include "L0Context.h"
+#include "L0CmdListManager.h"
 #include "L0Program.h"
 #include "PluginInterface.h"
 
@@ -375,6 +376,22 @@ public:
   /// Release an immediate command list.
   Error releaseImmCmdList(ze_command_list_handle_t CmdList) {
     CALL_ZE_RET_ERROR(zeCommandListDestroy, CmdList);
+    return Plugin::success();
+  }
+
+  Expected<L0CmdListManagerTy *> getCmdListManager(bool InOrder = false) {
+    auto CmdListOrErr = createImmCmdList(InOrder);
+    if (!CmdListOrErr)
+      return CmdListOrErr.takeError();
+    return new L0CmdListManagerTy(*CmdListOrErr);
+  }
+
+  Error releaseCmdListManager(L0CmdListManagerTy *CmndListMngr) {
+    if (CmndListMngr) {
+      auto CmdList = CmndListMngr->getCmdList();
+      CALL_ZE_RET_ERROR(zeCommandListDestroy, CmdList);
+      delete CmndListMngr;
+    }
     return Plugin::success();
   }
 
