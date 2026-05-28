@@ -2037,31 +2037,52 @@ static bool isAcceptableSlotElemTypePair(mlir::Type srcElem,
   return srcBits && dstBits && *srcBits == *dstBits;
 }
 
-std::optional<mlir::PromotableSlotView>
-fir::ConvertOp::getPromotableSlotView() {
-  mlir::Type srcElem = slotPointeeElemType(getValue().getType());
-  mlir::Type dstElem = slotPointeeElemType(getResult().getType());
-  if (!srcElem || !dstElem || !isAcceptableSlotElemTypePair(srcElem, dstElem))
-    return std::nullopt;
-  return mlir::PromotableSlotView{getValue(),
-                                  mlir::MemorySlot{getResult(), dstElem}};
+static bool isPromotableSlotAliasConvert(fir::ConvertOp op) {
+  mlir::Type srcElem = slotPointeeElemType(op.getValue().getType());
+  mlir::Type dstElem = slotPointeeElemType(op.getResult().getType());
+  return srcElem && dstElem && isAcceptableSlotElemTypePair(srcElem, dstElem);
 }
 
-mlir::Value fir::ConvertOp::convertSlotValue(mlir::Value value,
-                                             mlir::Type targetType,
-                                             mlir::OpBuilder &builder) {
-  if (value.getType() == targetType)
-    return value;
-  return fir::BitcastOp::create(builder, getLoc(), targetType, value);
+void fir::ConvertOp::getPromotableSlotAliases(
+    mlir::OpOperand &aliasedSlotPointerOperand,
+    const mlir::MemorySlot & /*parentSlot*/,
+    llvm::SmallVectorImpl<mlir::MemorySlot> &newMemorySlots) {
+  if (aliasedSlotPointerOperand.get() != getValue())
+    return;
+  if (!isPromotableSlotAliasConvert(*this))
+    return;
+  mlir::Type dstElem = slotPointeeElemType(getResult().getType());
+  newMemorySlots.push_back(mlir::MemorySlot{getResult(), dstElem});
+}
+
+mlir::Value fir::ConvertOp::projectSlotValueToAliasValue(
+    mlir::OpOperand & /*aliasedSlotPointerOperand*/,
+    const mlir::MemorySlot & /*parentSlot*/, const mlir::MemorySlot &aliasSlot,
+    mlir::Value slotValue, mlir::OpBuilder &builder) {
+  if (slotValue.getType() == aliasSlot.elemType)
+    return slotValue;
+  return fir::BitcastOp::create(builder, getLoc(), aliasSlot.elemType,
+                                slotValue);
+}
+
+mlir::Value fir::ConvertOp::projectAliasValueToSlotValue(
+    mlir::OpOperand & /*aliasedSlotPointerOperand*/,
+    const mlir::MemorySlot &parentSlot, const mlir::MemorySlot & /*aliasSlot*/,
+    mlir::Value aliasValue, mlir::Value /*reachingDef*/,
+    mlir::OpBuilder &builder) {
+  if (aliasValue.getType() == parentSlot.elemType)
+    return aliasValue;
+  return fir::BitcastOp::create(builder, getLoc(), parentSlot.elemType,
+                                aliasValue);
 }
 
 bool fir::ConvertOp::canUsesBeRemoved(
     const mlir::SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
     mlir::SmallVectorImpl<mlir::OpOperand *> &newBlockingUses,
     const mlir::DataLayout &dataLayout) {
-  // Only participate in promotion when this convert is a slot view (if the
-  // address is cast is not used, DCE should have removed it)
-  if (!getPromotableSlotView())
+  // Only participate in promotion when this convert is a slot alias (if the
+  // address cast is not used, DCE should have removed it).
+  if (!isPromotableSlotAliasConvert(*this))
     return false;
   for (mlir::OpOperand &use : getResult().getUses())
     newBlockingUses.push_back(&use);
@@ -6115,15 +6136,18 @@ mlir::DeletionKind fir::DeclareOp::removeBlockingUses(
   return mlir::DeletionKind::Delete;
 }
 
-std::optional<mlir::PromotableSlotView>
-fir::DeclareOp::getPromotableSlotView() {
+void fir::DeclareOp::getPromotableSlotAliases(
+    mlir::OpOperand &aliasedSlotPointerOperand,
+    const mlir::MemorySlot & /*parentSlot*/,
+    llvm::SmallVectorImpl<mlir::MemorySlot> &newMemorySlots) {
+  if (aliasedSlotPointerOperand.get() != getMemref())
+    return;
   // fir.declare is a transparent alias of its memref operand at the same
   // element type.
   mlir::Type aliasElemType = fir::dyn_cast_ptrEleTy(getResult().getType());
   if (!aliasElemType)
-    return std::nullopt;
-  return mlir::PromotableSlotView{getMemref(),
-                                  mlir::MemorySlot{getResult(), aliasElemType}};
+    return;
+  newMemorySlots.push_back(mlir::MemorySlot{getResult(), aliasElemType});
 }
 
 bool fir::DeclareOp::requiresReplacedValues() { return true; }
