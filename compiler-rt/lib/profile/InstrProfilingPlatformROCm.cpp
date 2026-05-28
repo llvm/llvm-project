@@ -24,6 +24,7 @@ extern "C" {
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #else
+#include <dlfcn.h>
 #include <pthread.h>
 #endif
 
@@ -878,6 +879,12 @@ INTERCEPTOR(int, hipModuleUnload, void *module) {
 }
 
 __attribute__((constructor)) static void installHipModuleInterceptors() {
+  /* Skip when the HIP runtime is not loaded. INTERCEPT_FUNCTION uses the
+   * sanitizer interception framework, which can perturb dlsym/PLT state for
+   * the rest of the process even when the target symbol is absent; non-HIP
+   * programs linked with libclang_rt.profile.a must see zero side effects. */
+  if (!dlsym(RTLD_DEFAULT, "hipModuleLoad"))
+    return;
   if (!INTERCEPT_FUNCTION(hipModuleLoad))
     return;
   if (isVerboseMode())
