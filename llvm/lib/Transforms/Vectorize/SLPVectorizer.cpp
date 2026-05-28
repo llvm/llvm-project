@@ -16407,14 +16407,13 @@ uint64_t BoUpSLP::getScaleToLoopIterations(const TreeEntry &TE, Value *Scalar,
     // encountered user determines the scale.
     // When the PHI is outside all loops (a true loop-exit phi) the extract
     // is materialised at the phi's location and scale = 1 remains correct,
-    // so we only apply this adjustment when PhiLoop is non-null.
+    // so we only apply this adjustment when PHI is contained in the loop.
     if (auto *PHI = dyn_cast<PHINode>(U); PHI && Scalar) {
-      const Loop *PhiLoop = LI->getLoopFor(PHI->getParent());
-      if (PhiLoop) {
+      if (LI->getLoopFor(PHI->getParent())) {
         // Use the deepest incoming block among all slots where Scalar
         // appears, to be conservative when the same value appears in
         // multiple predecessors.
-        for (unsigned I = 0, E = PHI->getNumIncomingValues(); I != E; ++I) {
+        for (unsigned I : seq<unsigned>(PHI->getNumIncomingValues())) {
           if (PHI->getIncomingValue(I) != Scalar)
             continue;
           BasicBlock *InBB = PHI->getIncomingBlock(I);
