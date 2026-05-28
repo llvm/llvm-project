@@ -2136,9 +2136,9 @@ RegionStoreManager::getConstantValFromInitializer(const FieldRegion *R,
   const VarDecl *VD = VR->getDecl();
   QualType LeafTy = R->getDecl()->getType();
 
-  bool TrustInit = (VD->getType().isConstQualified() ||
-                    LeafTy.isConstQualified() ||
-                    (IsMainAnalysis && VD->hasGlobalStorage()));
+  bool TrustInit =
+      (VD->getType().isConstQualified() || LeafTy.isConstQualified() ||
+       (IsMainAnalysis && VD->hasGlobalStorage()));
   if (!TrustInit)
     return std::nullopt;
 
