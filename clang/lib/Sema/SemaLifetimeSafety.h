@@ -64,10 +64,46 @@ inline StringRef formatExpr(const Expr *E) {
   return "";
 }
 
+inline bool shouldShowInAliasingChain(const Expr *CurrExpr,
+                                      const Expr *LastExpr) {
+  if (isa<ImplicitCastExpr>(CurrExpr))
+    return false;
+  if (isa<ParenExpr>(CurrExpr))
+    return false;
+  if (isa<CastExpr>(CurrExpr))
+    return false;
+  if (CurrExpr->getSourceRange().isInvalid())
+    return false;
+
+  if (LastExpr && CurrExpr->getSourceRange() == LastExpr->getSourceRange())
+    return false;
+
+  return true;
+}
+
 class LifetimeSafetySemaHelperImpl : public LifetimeSafetySemaHelper {
 
 public:
   LifetimeSafetySemaHelperImpl(Sema &S) : S(S) {}
+
+  void
+  reportAliasingChain(llvm::ArrayRef<const Expr *> OriginExprChain) override {
+    StringRef IssueStr;
+    const Expr *LastExpr = nullptr;
+    for (const Expr *CurrExpr : reverse(OriginExprChain)) {
+      if (IssueStr.empty()) {
+        IssueStr = formatExpr(CurrExpr);
+        continue;
+      }
+
+      if (shouldShowInAliasingChain(CurrExpr, LastExpr)) {
+        S.Diag(CurrExpr->getBeginLoc(),
+               diag::note_lifetime_safety_note_alias_chain)
+            << CurrExpr->getSourceRange() << formatExpr(CurrExpr) << IssueStr;
+        LastExpr = CurrExpr;
+      }
+    }
+  }
 
   void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
                            const Expr *MovedExpr,
@@ -84,17 +120,7 @@ public:
           << MovedExpr->getSourceRange();
     S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
 
-    StringRef IssueStr;
-    for (const Expr *CurrExpr : reverse(OriginExprChain)) {
-      if (IssueStr.empty()) {
-        IssueStr = formatExpr(CurrExpr);
-        continue;
-      }
-
-      S.Diag(CurrExpr->getBeginLoc(),
-             diag::note_lifetime_safety_aliases_storage)
-          << CurrExpr->getSourceRange() << formatExpr(CurrExpr) << IssueStr;
-    }
+    reportAliasingChain(OriginExprChain);
 
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();

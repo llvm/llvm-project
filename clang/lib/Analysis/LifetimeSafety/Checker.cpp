@@ -506,40 +506,18 @@ public:
     }
   }
 
-  /// Retrieve a list of reliable expressions from OriginIFlowChain that
-  /// can be used for Sema warnings.
+  /// Extract expressions from the origin flow chain for diagnostic purposes.
   ///
-  /// Although the AST node corresponding to Origin can be either a
-  /// `const Expr *` or a `const ValueDecl *`, `buildOriginFlowChain` only
-  /// collects Origins from RHS expressions. Therefore, we do not need to
-  /// handle non-expression cases here.
+  /// Given a chain of origins that shows how a loan propagates, this function
+  /// extracts the corresponding expressions for each origin. Origins that refer
+  /// to declarations (rather than expressions) are skipped.
   llvm::SmallVector<const Expr *>
   buildExprOrDeclChain(llvm::ArrayRef<OriginID> OriginFlowChain) {
     llvm::SmallVector<const Expr *> rs;
-    const SourceManager &SM = AST.getSourceManager();
-
-    auto InsertOrReplace = [&rs, &SM](const Expr *NewNode) {
-      if (!NewNode)
-        return;
-      SourceLocation NewLocation = NewNode->getExprLoc();
-      if (NewLocation.isInvalid())
-        return;
-
-      const Expr *LastNode = rs.back();
-      SourceLocation LastLocation = LastNode->getExprLoc();
-      if (SM.getSpellingLineNumber(LastLocation) ==
-          SM.getSpellingLineNumber(NewLocation))
-        rs.back() = NewNode;
-      else
-        rs.push_back(NewNode);
-    };
-
     for (const OriginID CurrOID : OriginFlowChain)
-      if (!rs.empty())
-        InsertOrReplace(FactMgr.getOriginMgr().getOrigin(CurrOID).getExpr());
-      else
-        rs.push_back(FactMgr.getOriginMgr().getOrigin(CurrOID).getExpr());
-
+      if (const Expr *CurrExpr =
+              FactMgr.getOriginMgr().getOrigin(CurrOID).getExpr())
+        rs.push_back(CurrExpr);
     return rs;
   }
 };
