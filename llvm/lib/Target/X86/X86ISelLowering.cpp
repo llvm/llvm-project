@@ -53280,6 +53280,16 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, const SDLoc &DL,
   return SDValue();
 }
 
+/// GF2P8AFFINEQB computes each output bit from one row of the
+/// 8x8 affine matrix, then xors the corresponding immediate bit.
+/// OR-ing the result with a constant byte splat forces selected output
+/// bits to 1, so the original affine result for those bits is irrelevant.
+///
+/// Fold:
+///   gf2p8affineqb(X, Matrix, Imm) | Mask
+/// into:
+///   gf2p8affineqb(X, NewMatrix, Imm | Mask)
+///
 static SDValue combineOrWithGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
                                           SelectionDAG &DAG, EVT VT) {
   using namespace SDPatternMatch;
@@ -53317,17 +53327,21 @@ static SDValue combineOrWithGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
 
   uint8_t Mask8 = SplatVal.getZExtValue() & 0xFF;
   uint8_t NewImm = Imm.getZExtValue() | Mask8;
-  SmallVector<SDValue, 64> MaskOps;
+  // For each output bit selected by Mask, clear the corresponding matrix row
+  // and set the same bit in the immediate. Rows are encoded in reverse bit
+  // order within each byte: output bit B corresponds to row 7 - B.
+  SmallVector<SDValue, 64> NewMatrixOps;
   for (unsigned I = 0, E = VT.getVectorNumElements(); I != E; ++I) {
     unsigned OutBit = 7 - (I & 7);
-    uint8_t Keep = ((Mask8 >> OutBit) & 1) ? 0x00 : 0xFF;
-    MaskOps.push_back(DAG.getConstant(Keep, DL, MVT::i8));
+    uint8_t OldRow = OldMatrix[I].getZExtValue();
+    uint8_t NewRow = ((Mask8 >> OutBit) & 1) ? 0x00 : OldRow;
+    NewMatrixOps.push_back(DAG.getConstant(NewRow, DL, MVT::i8));
   }
 
-  SDValue KeepMask = DAG.getBuildVector(VT, DL, MaskOps);
-  SDValue NewMatrix = DAG.getNode(ISD::AND, DL, VT, Matrix, KeepMask);
-  return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, X, NewMatrix,
-                     DAG.getTargetConstant(NewImm, DL, MVT::i8));
+  SDValue NewMatrix = DAG.getBuildVector(VT, DL, NewMatrixOps);
+  SDValue NewGF = DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, X, NewMatrix,
+                              DAG.getTargetConstant(NewImm, DL, MVT::i8));
+  return NewGF;
 }
 
 static SDValue combineOrXorWithSETCC(unsigned Opc, const SDLoc &DL, EVT VT,
