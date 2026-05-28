@@ -5304,6 +5304,17 @@ public:
     /// The ValueType for the operand value.
     MVT ConstraintVT = MVT::Other;
 
+    /// The register may be folded. This is used if the constraint has register
+    /// and memory constraints where we prefer using a register, but can fall
+    /// back to a memory slot under register pressure.
+    bool MayFoldRegister = false;
+
+    /// The index to the last matched constraint code.
+    long ConstraintIndex = -1;
+
+    /// The constraint was successfully assigned to the operand.
+    bool Finalized = false;
+
     /// Copy constructor for copying from a ConstraintInfo.
     AsmOperandInfo(InlineAsm::ConstraintInfo Info)
         : InlineAsm::ConstraintInfo(std::move(Info)) {}
@@ -5315,6 +5326,11 @@ public:
     /// If this is an input matching constraint, this method returns the output
     /// operand it matches.
     LLVM_ABI unsigned getMatchedOperand() const;
+
+    /// Return true if there are no more constraints to try.
+    bool atFinalConstraint() const {
+      return ConstraintIndex >= static_cast<long>(Codes.size() - 1);
+    }
   };
 
   using AsmOperandInfoVector = std::vector<AsmOperandInfo>;

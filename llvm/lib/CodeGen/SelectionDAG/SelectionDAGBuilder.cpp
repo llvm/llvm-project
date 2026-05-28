@@ -1033,7 +1033,8 @@ void RegsForValue::getCopyToRegs(SDValue Val, SelectionDAG &DAG,
 }
 
 void RegsForValue::AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
-                                        unsigned MatchingIdx, const SDLoc &dl,
+                                        unsigned MatchingIdx,
+                                        bool MayFoldRegister, const SDLoc &dl,
                                         SelectionDAG &DAG,
                                         std::vector<SDValue> &Ops) const {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -1050,6 +1051,7 @@ void RegsForValue::AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
     const MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
     const TargetRegisterClass *RC = MRI.getRegClass(Regs.front());
     Flag.setRegClass(RC->getID());
+    Flag.setRegMayBeFolded(MayFoldRegister);
   }
 
   SDValue Res = DAG.getTargetConstant(Flag, dl, MVT::i32);
@@ -10198,6 +10200,8 @@ static bool isFunction(SDValue Op) {
 
 namespace {
 
+/// ConstraintDecisionInfo - A struct that holds information while determining
+/// which constraint to use for an inline asm operand.
 struct ConstraintDecisionInfo {
   SmallVector<SDISelAsmOperandInfo, 16> ConstraintOperands;
   std::vector<SDValue> AsmNodeOperands;
@@ -10209,6 +10213,15 @@ struct ConstraintDecisionInfo {
   raw_svector_ostream ErrorMsg;
 
   ConstraintDecisionInfo() : ErrorMsg(Buffer) {}
+
+  void reset() {
+    ConstraintOperands.clear();
+    AsmNodeOperands.clear();
+    Buffer.clear();
+    Glue = SDValue();
+    Chain = SDValue();
+    BeginLabel = nullptr;
+  }
 };
 
 } // end anonymous namespace
@@ -10232,15 +10245,19 @@ constructOperandInfo(ConstraintDecisionInfo &Info,
     // Determine if this InlineAsm MayLoad or MayStore based on the constraints.
     // FIXME: Could we compute this on OpInfo rather than T?
 
-    // Compute the constraint code and ConstraintType to use.
-    TLI.ComputeConstraintToUse(T, SDValue());
+    // Compute the constraint code and ConstraintType to use. Skip finalized
+    // operands — their constraint was validated in a previous attempt and must
+    // not advance to the next alternative.
+    if (!T.Finalized)
+      TLI.ComputeConstraintToUse(T, SDValue());
 
     if (T.ConstraintType == TargetLowering::C_Immediate && OpInfo.CallOperand &&
         !isa<ConstantSDNode>(OpInfo.CallOperand)) {
       // We've delayed emitting a diagnostic like the "n" constraint because
       // inlining could cause an integer showing up.
-      Info.ErrorMsg << "constraint '" << T.ConstraintCode
-                    << "' expects an integer constant expression";
+      if (OpInfo.atFinalConstraint())
+        Info.ErrorMsg << "constraint '" << T.ConstraintCode
+                      << "' expects an integer constant expression";
       return true;
     }
 
@@ -10313,9 +10330,9 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
     // need to provide an address for the memory input.
     if (OpInfo.ConstraintType == TargetLowering::C_Memory &&
         !OpInfo.isIndirect) {
-      assert((OpInfo.isMultipleAlternative ||
-              (OpInfo.Type == InlineAsm::isInput)) &&
-             "Can only indirectify direct input operands!");
+      assert(
+          (OpInfo.isMultipleAlternative || OpInfo.Type == InlineAsm::isInput) &&
+          "Can only indirectify direct input operands!");
 
       // Memory operands really want the address of the value.
       Info.Chain = getAddressForMemoryInput(Info.Chain, Builder.getCurSDLoc(),
@@ -10337,6 +10354,15 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
                                     SelectionDAGBuilder &Builder,
                                     const TargetLowering &TLI,
                                     SelectionDAG &DAG) {
+  // Registers before tied operands can't be folded, because the tied operand
+  // will move, which the back-end isn't able to properly account for.
+  bool Clear = false;
+  for (SDISelAsmOperandInfo &OpInfo : llvm::reverse(Info.ConstraintOperands)) {
+    Clear |= OpInfo.isMatchingInputConstraint();
+    if (Clear)
+      OpInfo.MayFoldRegister = false;
+  }
+
   SDLoc DL = Builder.getCurSDLoc();
   for (SDISelAsmOperandInfo &OpInfo : Info.ConstraintOperands) {
     // Assign Registers.
@@ -10346,12 +10372,14 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
             : OpInfo;
     const auto RegError = getRegistersForValue(DAG, DL, OpInfo, RefOpInfo);
     if (RegError) {
-      const MachineFunction &MF = DAG.getMachineFunction();
-      const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-      const char *RegName = TRI.getName(*RegError);
-      Info.ErrorMsg << "register '" << RegName << "' allocated for constraint '"
-                    << OpInfo.ConstraintCode
-                    << "' does not match required type";
+      if (OpInfo.atFinalConstraint()) {
+        const MachineFunction &MF = DAG.getMachineFunction();
+        const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+        const char *RegName = TRI.getName(*RegError);
+        Info.ErrorMsg << "register '" << RegName
+                      << "' allocated for constraint '" << OpInfo.ConstraintCode
+                      << "' does not match required type";
+      }
       return true;
     }
 
@@ -10361,8 +10389,10 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
 
       for (Register Reg : OpInfo.AssignedRegs.Regs) {
         if (Reg.isPhysical() && TRI.isInlineAsmReadOnlyReg(MF, Reg)) {
-          Info.ErrorMsg << "write to reserved register '"
-                        << TRI.getRegAsmName(Reg) << "'";
+          if (OpInfo.atFinalConstraint()) {
+            StringRef RegName = TRI.getRegAsmName(Reg);
+            Info.ErrorMsg << "write to reserved register '" << RegName << "'";
+          }
           return true;
         }
       }
@@ -10393,8 +10423,9 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
         // C_RegisterClass, and a target-defined fashion for
         // C_Immediate/C_Other). Find a register that we can use.
         if (OpInfo.AssignedRegs.Regs.empty()) {
-          Info.ErrorMsg << "could not allocate output register for "
-                        << "constraint '" << OpInfo.ConstraintCode << "'";
+          if (OpInfo.atFinalConstraint())
+            Info.ErrorMsg << "could not allocate output register for "
+                          << "constraint '" << OpInfo.ConstraintCode << "'";
           return true;
         }
 
@@ -10406,7 +10437,7 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
         OpInfo.AssignedRegs.AddInlineAsmOperands(
             OpInfo.isEarlyClobber ? InlineAsm::Kind::RegDefEarlyClobber
                                   : InlineAsm::Kind::RegDef,
-            false, 0, DL, DAG, Info.AsmNodeOperands);
+            false, 0, OpInfo.MayFoldRegister, DL, DAG, Info.AsmNodeOperands);
       }
       break;
 
@@ -10423,8 +10454,9 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
         if (Flag.isRegDefKind() || Flag.isRegDefEarlyClobberKind()) {
           if (OpInfo.isIndirect) {
             // This happens on gcc/testsuite/gcc.dg/pr8788-1.c
-            Info.ErrorMsg << "inline asm not supported yet: cannot handle "
-                          << "tied indirect register inputs";
+            if (OpInfo.atFinalConstraint())
+              Info.ErrorMsg << "inline asm not supported yet: cannot handle "
+                            << "tied indirect register inputs";
             return true;
           }
 
@@ -10447,9 +10479,9 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
           // Use the produced MatchedRegs object to
           MatchedRegs.getCopyToRegs(InOperandVal, DAG, DL, Info.Chain,
                                     &Info.Glue, &Call);
-          MatchedRegs.AddInlineAsmOperands(InlineAsm::Kind::RegUse, true,
-                                           OpInfo.getMatchedOperand(), DL, DAG,
-                                           Info.AsmNodeOperands);
+          MatchedRegs.AddInlineAsmOperands(
+              InlineAsm::Kind::RegUse, true, OpInfo.getMatchedOperand(),
+              OpInfo.MayFoldRegister, DL, DAG, Info.AsmNodeOperands);
           break;
         }
 
@@ -10572,8 +10604,9 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
 
       OpInfo.AssignedRegs.getCopyToRegs(InOperandVal, DAG, DL, Info.Chain,
                                         &Info.Glue, &Call);
-      OpInfo.AssignedRegs.AddInlineAsmOperands(
-          InlineAsm::Kind::RegUse, false, 0, DL, DAG, Info.AsmNodeOperands);
+      OpInfo.AssignedRegs.AddInlineAsmOperands(InlineAsm::Kind::RegUse, false,
+                                               0, OpInfo.MayFoldRegister, DL,
+                                               DAG, Info.AsmNodeOperands);
       break;
     }
 
@@ -10581,16 +10614,29 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
       // Add the clobbered value to the operand list, so that the register
       // allocator is aware that the physreg got clobbered.
       if (!OpInfo.AssignedRegs.Regs.empty())
-        OpInfo.AssignedRegs.AddInlineAsmOperands(
-            InlineAsm::Kind::Clobber, false, 0, DL, DAG, Info.AsmNodeOperands);
+        OpInfo.AssignedRegs.AddInlineAsmOperands(InlineAsm::Kind::Clobber,
+                                                 false, 0, false, DL, DAG,
+                                                 Info.AsmNodeOperands);
       break;
     }
+
+    OpInfo.Finalized = true;
   }
 
   return false;
 }
 
-/// DetermineConstraints - Find the constraints to use for inline asm operands.
+/// determineConstraints - ASM operands may have more than one constraint. We
+/// want to choose the "best" constraint for each operand to avoid horrible
+/// code generation---e.g., for "rm" we would like to use "r". This function
+/// tries different constraints in order from best to worst. If a given
+/// constraint isn't possible, e.g., because no registers are available, then
+/// the function returns 'true' and is rerun on the next constraint.
+///
+/// Each operand which has a suitable constraint is marked as "finalized". This
+/// helps reduce the number of times we need to run this function, keeping the
+/// complexity at O(n), where 'n' is the total number of constraints on inputs
+/// and outputs (i.e., for "rm", n == 2).
 static bool
 determineConstraints(ConstraintDecisionInfo &Info,
                      TargetLowering::AsmOperandInfoVector &TargetConstraints,
@@ -10641,7 +10687,16 @@ determineConstraints(ConstraintDecisionInfo &Info,
                             TLI.getPointerTy(DAG.getDataLayout())));
 
   // Third pass: Prepare DAG-level operands
-  return prepareDAGLevelOperands(Info, Call, Builder, TLI, DAG);
+  bool Result = prepareDAGLevelOperands(Info, Call, Builder, TLI, DAG);
+
+  // Write back the Finalized state to TargetConstraints. On a non-fatal retry,
+  // operands that were successfully assigned a constraint keep their selection
+  // instead of advancing to the next alternative in constructOperandInfo.
+  for (size_t I = 0, N = Info.ConstraintOperands.size(); I != N; ++I)
+    if (Info.ConstraintOperands[I].Finalized)
+      TargetConstraints[I].Finalized = true;
+
+  return Result;
 }
 
 /// visitInlineAsm - Handle a call to an InlineAsm object.
@@ -10655,9 +10710,12 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
          "InvokeInst must have an EHPadBB");
 
   ConstraintDecisionInfo Info;
-  if (determineConstraints(Info, TargetConstraints, Call, *this, TLI, TM, DAG,
-                           EHPadBB))
-    return emitInlineAsmError(Call, Info.ErrorMsg.str());
+  while (determineConstraints(Info, TargetConstraints, Call, *this, TLI, TM,
+                              DAG, EHPadBB)) {
+    if (!Info.ErrorMsg.buffer().empty())
+      return emitInlineAsmError(Call, Info.ErrorMsg.str());
+    Info.reset();
+  }
 
   SDValue Glue = Info.Glue;
   SDValue Chain = Info.Chain;
@@ -10720,46 +10778,49 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
 
   // Deal with output operands.
   for (SDISelAsmOperandInfo &OpInfo : Info.ConstraintOperands) {
-    if (OpInfo.Type == InlineAsm::isOutput) {
-      SDValue Val;
-      // Skip trivial output operands.
-      if (OpInfo.AssignedRegs.Regs.empty())
-        continue;
+    if (OpInfo.Type != InlineAsm::isOutput)
+      continue;
 
-      switch (OpInfo.ConstraintType) {
-      case TargetLowering::C_Register:
-      case TargetLowering::C_RegisterClass:
-        Val = OpInfo.AssignedRegs.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(),
-                                                  Chain, &Glue, &Call);
-        break;
-      case TargetLowering::C_Immediate:
-      case TargetLowering::C_Other:
-        Val = TLI.LowerAsmOutputForConstraint(Chain, Glue, getCurSDLoc(),
-                                              OpInfo, DAG);
-        break;
-      case TargetLowering::C_Memory:
-        break; // Already handled.
-      case TargetLowering::C_Address:
-        break; // Silence warning.
-      case TargetLowering::C_Unknown:
-        assert(false && "Unexpected unknown constraint");
-      }
+    SDValue Val;
 
-      // Indirect output manifest as stores. Record output chains.
-      if (OpInfo.isIndirect) {
-        const Value *Ptr = OpInfo.CallOperandVal;
-        assert(Ptr && "Expected value CallOperandVal for indirect asm operand");
-        SDValue Store = DAG.getStore(Chain, getCurSDLoc(), Val, getValue(Ptr),
-                                     MachinePointerInfo(Ptr));
-        OutChains.push_back(Store);
+    // Skip trivial output operands.
+    if (OpInfo.AssignedRegs.Regs.empty())
+      continue;
+
+    switch (OpInfo.ConstraintType) {
+    case TargetLowering::C_Register:
+    case TargetLowering::C_RegisterClass:
+      Val = OpInfo.AssignedRegs.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(),
+                                                Chain, &Glue, &Call);
+      break;
+    case TargetLowering::C_Immediate:
+    case TargetLowering::C_Other:
+      Val = TLI.LowerAsmOutputForConstraint(Chain, Glue, getCurSDLoc(), OpInfo,
+                                            DAG);
+      break;
+    case TargetLowering::C_Memory:
+      break; // Already handled.
+    case TargetLowering::C_Address:
+      break; // Silence warning.
+    case TargetLowering::C_Unknown:
+      assert(false && "Unexpected unknown constraint");
+    }
+
+    // Indirect output manifest as stores. Record output chains.
+    if (OpInfo.isIndirect) {
+      const Value *Ptr = OpInfo.CallOperandVal;
+      assert(Ptr && "Expected value CallOperandVal for indirect asm operand");
+      SDValue Store = DAG.getStore(Chain, getCurSDLoc(), Val, getValue(Ptr),
+                                   MachinePointerInfo(Ptr));
+      OutChains.push_back(Store);
+    } else {
+      // generate CopyFromRegs to associated registers.
+      assert(!Call.getType()->isVoidTy() && "Bad inline asm!");
+      if (Val.getOpcode() == ISD::MERGE_VALUES) {
+        for (const SDValue &V : Val->op_values())
+          handleRegAssign(V);
       } else {
-        // generate CopyFromRegs to associated registers.
-        assert(!Call.getType()->isVoidTy() && "Bad inline asm!");
-        if (Val.getOpcode() == ISD::MERGE_VALUES) {
-          for (const SDValue &V : Val->op_values())
-            handleRegAssign(V);
-        } else
-          handleRegAssign(Val);
+        handleRegAssign(Val);
       }
     }
   }

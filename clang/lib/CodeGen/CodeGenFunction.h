@@ -5551,17 +5551,22 @@ private:
     bool ReadOnly = true;
     bool ReadNone = true;
 
+    // Prefer using registers over memory.
+    bool PreferRegs = false;
+
     AsmConstraintsInfo(
         SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos,
-        SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos)
+        SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos,
+        bool PreferRegs)
         : OutputConstraintInfos(OutputConstraintInfos),
-          InputConstraintInfos(InputConstraintInfos) {}
+          InputConstraintInfos(InputConstraintInfos), PreferRegs(PreferRegs) {}
   };
 
   void EmitAsmStmt(
       const AsmStmt &S,
       SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos,
-      SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos);
+      SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos,
+      bool PreferRegs);
   void EmitAsmStores(const AsmStmt &S,
                      const llvm::ArrayRef<llvm::Value *> RegResults,
                      const AsmConstraintsInfo &AsmInfo);

@@ -50,6 +50,7 @@
 ; SPIRV-O0-NEXT:    SPIRV emit intrinsics
 ; SPIRV-O0-NEXT:    FunctionPass Manager
 ; SPIRV-O0-NEXT:      SPIRV legalize pointer cast pass
+; SPIRV-O0-NEXT:      Dominator Tree Construction
 ; SPIRV-O0-NEXT:      Prepare inline asm insts
 ; SPIRV-O0-NEXT:      Safe Stack instrumentation pass
 ; SPIRV-O0-NEXT:      Insert stack protectors
@@ -63,7 +64,6 @@
 ; SPIRV-O0-NEXT:      Legalizer
 ; SPIRV-O0-NEXT:      SPIRV post legalizer
 ; SPIRV-O0-NEXT:      Analysis for ComputingKnownBits
-; SPIRV-O0-NEXT:      Dominator Tree Construction
 ; SPIRV-O0-NEXT:      Natural Loop Information
 ; SPIRV-O0-NEXT:      Lazy Branch Probability Analysis
 ; SPIRV-O0-NEXT:      Lazy Block Frequency Analysis
@@ -164,11 +164,11 @@
 ; SPIRV-Opt-NEXT:    SPIRV emit intrinsics
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      SPIRV legalize pointer cast pass
+; SPIRV-Opt-NEXT:      Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Prepare inline asm insts
 ; SPIRV-Opt-NEXT:      Safe Stack instrumentation pass
 ; SPIRV-Opt-NEXT:      Insert stack protectors
 ; SPIRV-Opt-NEXT:      Analysis containing CSE Info
-; SPIRV-Opt-NEXT:      Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Natural Loop Information
 ; SPIRV-Opt-NEXT:      Post-Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Branch Probability Analysis

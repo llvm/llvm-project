@@ -3584,6 +3584,25 @@ void Verifier::visitCallBrInst(CallBrInst &CBI) {
             "Callbr amdgcn_kill indirect dest needs to be unreachable");
       break;
     }
+    case Intrinsic::asm_constraint_br: {
+      Check(CBI.getNumIndirectDests() == 1,
+            "Callbr asm_constraint_br only supports one indirect dest");
+      Check(CBI.getDefaultDest()->hasNPredecessors(1),
+            "Callbr asm_constraint_br default dest must have only one "
+            "predecessor");
+      Check(isa<CallBrInst>(CBI.getDefaultDest()->getTerminator()) ||
+                CBI.getDefaultDest()->getSingleSuccessor(),
+            "Callbr asm_constraint_br default dest must have only "
+            "one successor");
+      Check(CBI.getIndirectDest(0)->hasNPredecessors(1),
+            "Callbr asm_constraint_br indirect dest must have only one "
+            "predecessor");
+      Check(isa<CallBrInst>(CBI.getIndirectDest(0)->getTerminator()) ||
+                CBI.getIndirectDest(0)->getSingleSuccessor(),
+            "Callbr asm_constraint_br indirect dest must have only "
+            "one successor");
+      break;
+    }
     default:
       CheckFailed(
           "Callbr currently only supports asm-goto and selected intrinsics");
@@ -7364,7 +7383,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "llvm.sponentry must return a pointer to the stack", &Call);
     break;
   }
-  };
+  case Intrinsic::asm_constraint_br: {
+    Check(isa<CallBrInst>(Call),
+          "llvm.asm.constraint.br must be called only by callbr", &Call);
+    break;
+  }
+  }
 
   // Verify that there aren't any unmediated control transfers between funclets.
   if (IntrinsicInst::mayLowerToFunctionCall(ID)) {

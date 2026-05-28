@@ -2859,13 +2859,21 @@ void CodeGenFunction::HandleOutputConstraints(const AsmStmt &S,
     if (!AsmInfo.Constraints.empty())
       AsmInfo.Constraints += ',';
 
-    // If this is a register output, then make the inline asm return it
-    // by-value.  If this is a memory result, return the value by-reference.
+    // - If this is a register output, then make the inline asm return it
+    //   by-value.
+    // - If this is a memory output, return the value by reference.
+    // - If this is a register and memory output, treat it like a register
+    //   output at -O[1-3]. This allows the optimizing register allocators to
+    //   choose a register, while the fast register allocator defaults to
+    //   memory.
     QualType QTy = OutExpr->getType();
     const bool IsScalarOrAggregate =
         hasScalarEvaluationKind(QTy) || hasAggregateEvaluationKind(QTy);
+    const bool RegisterMemoryConstraints =
+        AsmInfo.PreferRegs && Info.allowsRegister() && Info.allowsMemory();
 
-    if (!Info.allowsMemory() && IsScalarOrAggregate) {
+    if (IsScalarOrAggregate &&
+        (!Info.allowsMemory() || RegisterMemoryConstraints)) {
       AsmInfo.Constraints += "=" + OutputConstraint;
       AsmInfo.ResultRegQualTys.push_back(QTy);
       AsmInfo.ResultRegDests.push_back(Dest);
@@ -3177,11 +3185,13 @@ bool CodeGenFunction::HandleClobbers(const AsmStmt &S,
 void CodeGenFunction::EmitAsmStmt(
     const AsmStmt &S,
     SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos,
-    SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos) {
+    SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos,
+    bool PreferRegs) {
   // Assemble the final asm string.
   std::string AsmString = S.generateAsmString(getContext());
 
-  AsmConstraintsInfo AsmInfo(OutputConstraintInfos, InputConstraintInfos);
+  AsmConstraintsInfo AsmInfo(OutputConstraintInfos, InputConstraintInfos,
+                             PreferRegs);
 
   // Handle output constraints.
   HandleOutputConstraints(S, AsmInfo);
@@ -3309,7 +3319,50 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
                                     InputConstraintInfos))
     return EmitHipStdParUnsupportedAsm(this, S);
 
-  EmitAsmStmt(S, OutputConstraintInfos, InputConstraintInfos);
+  // If any *output* constraints allow for both register and memory options, we
+  // need to delay choosing which to prefer until ISel, where the
+  // 'llvm.asm.constraint.br' intrinsic is resolved. Input-only "rm"
+  // constraints don't need this: PreferRegs only affects output emission, so
+  // both paths would be identical for pure inputs.
+  bool HasRegMemConstraints =
+      llvm::all_of(llvm::concat<TargetInfo::ConstraintInfo>(
+                       OutputConstraintInfos, InputConstraintInfos),
+                   [](const TargetInfo::ConstraintInfo &Info) {
+                     // FIXME: Should we allow for alternative constraints?
+                     return !StringRef(Info.getConstraintStr()).contains(",");
+                   }) &&
+      llvm::any_of(OutputConstraintInfos,
+                   [](const TargetInfo::ConstraintInfo &Info) {
+                     return Info.allowsRegister() && Info.allowsMemory();
+                   });
+
+  llvm::BasicBlock *PrefRegBlock = nullptr;
+  llvm::BasicBlock *PrefMemBlock = nullptr;
+
+  if (HasRegMemConstraints) {
+    PrefRegBlock = createBasicBlock("asm.pref.reg");
+    PrefMemBlock = createBasicBlock("asm.pref.mem");
+    CurFn->insert(CurFn->end(), PrefRegBlock);
+    CurFn->insert(CurFn->end(), PrefMemBlock);
+
+    Builder.CreateCallBr(CGM.getIntrinsic(llvm::Intrinsic::asm_constraint_br),
+                         PrefRegBlock, PrefMemBlock);
+    Builder.SetInsertPoint(PrefMemBlock);
+  }
+
+  EmitAsmStmt(S, OutputConstraintInfos, InputConstraintInfos, false);
+
+  if (HasRegMemConstraints) {
+    llvm::BasicBlock *MergeBlock = createBasicBlock("asm.merge");
+    CurFn->insert(CurFn->end(), MergeBlock);
+    Builder.CreateBr(MergeBlock);
+
+    Builder.SetInsertPoint(PrefRegBlock);
+    EmitAsmStmt(S, OutputConstraintInfos, InputConstraintInfos, true);
+    Builder.CreateBr(MergeBlock);
+
+    Builder.SetInsertPoint(MergeBlock);
+  }
 }
 
 LValue CodeGenFunction::InitCapturedStruct(const CapturedStmt &S) {

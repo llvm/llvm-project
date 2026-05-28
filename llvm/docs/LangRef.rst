@@ -16332,6 +16332,57 @@ Example:
         call void @llvm.call.preallocated.teardown(token %cs)
         ret void
 
+.. _int_asm_constraint_br:
+
+'``llvm.asm.constraint.br``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.asm.constraint.br()
+
+Overview:
+"""""""""
+
+The '``llvm.asm.constraint.br``' intrinsic is used when an inline asm
+constraint allows for either register or memory, e.g., '``"rm"``'.
+
+Semantics:
+""""""""""
+
+The '``llvm.asm.constraint.br``' allows the back-end to choose the best
+constraint rather than restricting the preferred constraint to one that may
+produce substandard code or cannot be handled by the register allocators.
+
+
+It can be called only by the '``callbr``' instruction. The default destination
+of the ``callbr`` contains a call to the preferred inline asm, while the single
+indirect destination contains a call to the pessimal inline asm.
+
+Example:
+""""""""
+
+.. code-block:: llvm
+
+      %out = alloca i64, align 8
+      callbr void @llvm.asm.constraint.br()
+              to label %asm.pref.reg [label %asm.pref.mem]
+
+    asm.pref.reg:
+      %0 = tail call i64 asm sideeffect "pushf ; pop $0", "=rm,~{dirflag},~{fpsr},~{flags}"()
+      br label %asm.merge
+
+    asm.pref.mem:
+      call void asm sideeffect "pushf ; pop $0", "=*rm,~{dirflag},~{fpsr},~{flags}"(ptr nonnull elementtype(i64) %out)
+      %.pre = load i64, ptr %out, align 8, !tbaa !9
+      br label %asm.merge
+
+    asm.merge:
+      %1 = phi i64 [ %0, %asm.pref.reg ], [ %.pre, %asm.pref.mem ]
+
 Standard C/C++ Library Intrinsics
 ---------------------------------
 

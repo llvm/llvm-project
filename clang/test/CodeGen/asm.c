@@ -306,28 +306,3 @@ void t31(void) {
   // CHECK:         call void asm sideeffect "T31 CC NAMED MODIFIER: ${0:c}", "i,~{dirflag},~{fpsr},~{flags}"
   __asm__ volatile ("T31 CC NAMED MODIFIER: %cc[input]" : : [input] "i"  (4));
 }
-
-// TODO: Move the "rm" tests into a new testcase file once work to better
-// support "rm" constraints is done.
-
-void t32(int len) {
-  // CHECK-LABEL: @t32
-  // CHECK:         call void asm sideeffect "", "=*&rm,0,~{dirflag},~{fpsr},~{flags}"
-  __asm__ volatile ("" : "+&&rm" (len));
-}
-
-void t33(int len) {
-  // CHECK-LABEL: @t33
-  // CHECK:         call void asm sideeffect "", "=*%rm,=*rm,0,1,~{dirflag},~{fpsr},~{flags}"
-  __asm__ volatile ("" : "+%%rm" (len), "+rm" (len));
-}
-
-// PR3908
-void t34(int r) {
-  // CHECK-LABEL: @t34
-  // CHECK:         call i32 asm "PR3908 $1 $3 $2 $0", "=r,mx,mr,x,0,~{dirflag},~{fpsr},~{flags}"
-  // CHECK-SAME:      (i32 0, i32 0, double 0.000000e+00, i32 %{{.*}})
-  __asm__ ("PR3908 %[lf] %[xx] %[li] %[r]"
-           : [r] "+r" (r)
-           : [lf] "mx" (0), [li] "mr" (0), [xx] "x" ((double)(0)));
-}

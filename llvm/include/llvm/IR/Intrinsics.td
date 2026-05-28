@@ -2020,6 +2020,19 @@ def int_stepvector : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
 def int_reloc_none : DefaultAttrsIntrinsic<[], [llvm_metadata_ty],
   [IntrNoMem, IntrHasSideEffects]>;
 
+// Intrinsic to select which version of an inline asm with reg-mem constraints
+// to use. The intrinsic must be called by the 'callbr' instruction with only
+// the normal destination and one indirect destination, both of which have only
+// one parent. The destinations are as follows:
+//
+//   - normal dest: the version favoring registers over memory (for '-O[1-3]')
+//   - indirect dest: the version favoring memory over registers (for '-O0')
+//
+// Once code-gen picks which block to take, the other block and the 'callbr'
+// instruction are dead and should be DCE'd. The destination block should then
+// be merged to its parent block.
+def int_asm_constraint_br : DefaultAttrsIntrinsic<[], [], [IntrNoMem]>;
+
 //===---------------- Vector Predication Intrinsics --------------===//
 // Memory Intrinsics
 def int_vp_store : DefaultAttrsIntrinsic<[],
