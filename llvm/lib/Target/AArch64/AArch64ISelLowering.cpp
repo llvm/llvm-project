@@ -6586,9 +6586,10 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   switch (IntNo) {
   default:
     return SDValue(); // Don't custom lower most intrinsics.
+  case Intrinsic::aarch64_svc:
   case Intrinsic::aarch64_hvc: {
-    // The MSVC __hvc intrinsic takes the 16-bit instruction immediate as its
-    // first operand and four further operands passed in X0-X3 (an unused
+    // The MSVC __svc/__hvc intrinsic takes the 16-bit instruction immediate as
+    // their first operand and four further operands passed in X0-X3 (an unused
     // argument is passed as poison) and returns the value left in X0.  Matching
     // MSVC, the instruction is not treated as clobbering the caller-saved
     // registers; only X0 (the result) is defined.
@@ -6616,8 +6617,10 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     if (Glue.getNode())
       Ops.push_back(Glue);
 
-    SDValue Node = DAG.getNode(AArch64ISD::HVC, DL,
-                               DAG.getVTList(MVT::Other, MVT::Glue), Ops);
+    unsigned Opc =
+        IntNo == Intrinsic::aarch64_svc ? AArch64ISD::SVC : AArch64ISD::HVC;
+    SDValue Node =
+        DAG.getNode(Opc, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
     Chain = Node.getValue(0);
     Glue = Node.getValue(1);
 

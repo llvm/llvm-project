@@ -81,6 +81,10 @@ def int_aarch64_hvc : Intrinsic<[llvm_i64_ty],
     [llvm_i32_ty, llvm_i64_ty, llvm_i64_ty, llvm_i64_ty, llvm_i64_ty],
     [IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
 
+def int_aarch64_svc : Intrinsic<[llvm_i64_ty],
+    [llvm_i32_ty, llvm_i64_ty, llvm_i64_ty, llvm_i64_ty, llvm_i64_ty],
+    [IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+
 def int_aarch64_prefetch : Intrinsic<[],
     [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
     [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, ReadOnly<ArgIndex<0>>,
