@@ -8,6 +8,8 @@
 
 #include "DXILDebugInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -68,14 +70,103 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
   DebugInfoFinder DIF;
   DIF.processModule(M);
 
-  for (auto &F : M) {
-    for (auto &BB : F) {
-      for (auto &I : make_early_inc_range(reverse(BB))) {
+  Function *DVDecl = nullptr;
+
+  for (Function &F : M) {
+    bool IsEntryBlock = true;
+    for (BasicBlock &BB : F) {
+      DenseMap<DILocalVariable *, std::pair<Instruction *, DbgValueInst *>>
+          DbgValues;
+      DenseMap<std::pair<DILocalVariable *, DIExpression *>,
+               std::pair<Instruction *, DbgValueInst *>>
+          DbgValueFragments;
+      Instruction *NextNonDebugInst = nullptr;
+      for (Instruction &I : make_early_inc_range(reverse(BB))) {
+        I.eraseMetadataIf([](unsigned KindID, MDNode *) {
+          return KindID == LLVMContext::MD_DIAssignID;
+        });
+        if (!isa<DbgInfoIntrinsic>(I)) {
+          NextNonDebugInst = &I;
+          continue;
+        }
         if (auto *DL = dyn_cast<DbgLabelInst>(&I)) {
           DL->eraseFromParent();
           continue;
         }
+        // Process both llvm.dbg.value and llvm.dbg.assign here. We convert
+        // llvm.dbg.assign to llvm.dbg.value by dropping the last arguments, and
+        // remove redundant llvm.dbg.values.
+        if (auto *DV = dyn_cast<DbgValueInst>(&I)) {
+          // Keep track of the last location where we saw any debug value for a
+          // variable.
+          DILocalVariable *V = DV->getVariable();
+          DIExpression *E = DV->getExpression();
+          std::pair<Instruction *, DbgValueInst *> &DbgValue = DbgValues[V];
+          std::pair<Instruction *, DbgValueInst *> &DbgValueFragment =
+              DbgValueFragments[{V, E}];
+          if (DbgValue.second) {
+            // If there is a later value of the same fragment at the same
+            // location, this value is redundant.
+            if (DbgValueFragment.first == NextNonDebugInst) {
+              DV->eraseFromParent();
+              continue;
+            }
+            // If there is a later identical value of the same fragment at a
+            // later point, and there have been no intervening values of
+            // different possibly overlapping fragments, that later value is
+            // redundant.
+            if (DbgValueFragment.second &&
+                DbgValueFragment.second == DbgValue.second &&
+                DbgValueFragment.second->getValue() == DV->getValue()) {
+              DbgValue.second->eraseFromParent();
+            }
+          }
+          // If this is already an llvm.dbg.value instruction, just keep it,
+          // otherwise convert it.
+          DbgValueInst *NewDV;
+          if (DV->getIntrinsicID() == Intrinsic::dbg_value) {
+            NewDV = DV;
+          } else {
+            if (!DVDecl) {
+              DVDecl =
+                  Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_value);
+              AttributeMask AM;
+              for (Attribute A : DVDecl->getAttributes().getFnAttrs())
+                if (A.isStringAttribute() ||
+                    (A.getKindAsEnum() != Attribute::NoUnwind &&
+                     A.getKindAsEnum() != Attribute::Memory))
+                  AM.addAttribute(A);
+              DVDecl->removeFnAttrs(AM);
+            }
+            NewDV = cast<DbgValueInst>(
+                CallInst::Create(DVDecl,
+                                 {DV->getArgOperand(0), DV->getArgOperand(1),
+                                  DV->getArgOperand(2)},
+                                 {}, "", std::next(DV->getIterator())));
+            NewDV->setTailCall();
+            NewDV->setDebugLoc(DV->getDebugLoc());
+            DV->eraseFromParent();
+          }
+          DbgValue = DbgValueFragment = {NextNonDebugInst, NewDV};
+          continue;
+        }
       }
+      // If this is the entry block, if the first value we see for each debug
+      // value is undef, it is redundant.
+      if (IsEntryBlock) {
+        DenseSet<DILocalVariable *> Seen;
+        for (Instruction &I : make_early_inc_range(BB)) {
+          auto *DV = dyn_cast<DbgValueInst>(&I);
+          if (!DV || Seen.contains(DV->getVariable()))
+            continue;
+          if (isa<UndefValue>(DV->getValue())) {
+            DV->eraseFromParent();
+            continue;
+          }
+          Seen.insert(DV->getVariable());
+        }
+      }
+      IsEntryBlock = false;
     }
   }
 
@@ -177,10 +268,11 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
     if (auto *SR = dyn_cast<DISubrangeType>(T)) {
       DIType *BT = SR->getBaseType();
       if (!BT)
-        BT = DIBasicType::get(
-            SR->getContext(), dwarf::DW_TAG_base_type, SR->getName(),
-            SR->getSizeInBits(), SR->getAlignInBits(), dwarf::DW_ATE_unsigned,
-            SR->getNumExtraInhabitants(), /*DataSizeInBits=*/0, SR->getFlags());
+        BT = DIBasicType::get(SR->getContext(), dwarf::DW_TAG_base_type,
+                              SR->getName(), SR->getSizeInBits(),
+                              SR->getAlignInBits(), dwarf::DW_ATE_unsigned,
+                              SR->getNumExtraInhabitants(),
+                              /*DataSizeInBits=*/0, SR->getFlags());
       Res.MDReplace.insert({T, BT});
     }
   }
