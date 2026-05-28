@@ -170,7 +170,7 @@ def warn_c2y_compat_generic_with_type_arg : Warning<
   "passing a type argument as the first operand to '_Generic' is incompatible "
   "with C standards before C2y">, InGroup<CPre2yCompat>, DefaultIgnore;
 def warn_c2y_compat_decl_statement : Warning<
-  "%select{if|switch}0 declaration statements are incompatible with "
+  "'%select{if|switch}0' declaration statements are incompatible with "
   "C standards before C2y">, DefaultIgnore, InGroup<CPre2yCompat>;
 def ext_c2y_decl_statement : ExtWarn<
   "'%select{if|switch}0' declaration statements are a C2y extension">,
@@ -731,7 +731,7 @@ def ext_init_statement : ExtWarn<
   "'%select{if|switch}0' initialization statements are a C++17 extension">,
   InGroup<CXX17>;
 def warn_cxx14_compat_init_statement : Warning<
-  "'%select{if|switch}0' initialization statements are incompatible with "
+  "%select{if|switch}0 initialization statements are incompatible with "
   "C++ standards before C++17">, DefaultIgnore, InGroup<CXXPre17Compat>;
 def ext_for_range_init_stmt : ExtWarn<
   "range-based for loop initialization statements are a C++20 extension">,
