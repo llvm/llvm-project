@@ -400,8 +400,8 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
     if (auto *SplatValue = getSplatValue(II.getArgOperand(0))) {
       if (maskContainsAllOneOrUndef(ConstMask)) {
         Align Alignment = II.getParamAlign(1).valueOrOne();
-        StoreInst *S =
-            new StoreInst(SplatValue, SplatPtr, /*IsVolatile=*/false, Alignment);
+        StoreInst *S = new StoreInst(SplatValue, SplatPtr, /*IsVolatile=*/false,
+                                     Alignment);
         S->copyMetadata(II);
         return S;
       }
