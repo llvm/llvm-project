@@ -49,7 +49,11 @@ exit:
 }
 
 ; --- Case 2: i64 indirect-load gather is NOT chosen on znver5 ------------
+; The positive CHECK on vector.body distinguishes "vectorized without a
+; gather" from "did not vectorize at all" -- without it, a future regression
+; that fails to vectorize the loop entirely would pass CHECK-NOT vacuously.
 ; CHECK-LABEL: define i64 @i64_indirect_gather_avoided
+; CHECK:       vector.body
 ; CHECK-NOT:   call <{{[0-9]+}} x i64> @llvm.masked.gather.v{{[0-9]+}}i64
 define i64 @i64_indirect_gather_avoided(ptr noundef readonly %data, ptr noundef readonly %idx, i32 noundef %n) {
 entry:
@@ -74,7 +78,10 @@ exit:
 }
 
 ; --- Case 3: unit-stride load must NOT become a gather (#91370 guard) -----
+; Same vector.body anchor as Case 2: ensures the loop did vectorize (to a
+; wide load) rather than failing to vectorize entirely.
 ; CHECK-LABEL: define void @unit_stride_no_gather
+; CHECK:       vector.body
 ; CHECK-NOT:   call <{{[0-9]+}} x double> @llvm.masked.gather
 define void @unit_stride_no_gather(ptr noundef writeonly %out, ptr noundef readonly %in, i32 noundef %n) {
 entry:

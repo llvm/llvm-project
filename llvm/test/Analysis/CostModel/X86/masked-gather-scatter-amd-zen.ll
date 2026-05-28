@@ -554,10 +554,39 @@ define void @scatter_v8f64(<8 x double> %src, <8 x ptr> %ptrs, <8 x i1> %mask) {
 
 ; Coverage for the v16 entries that are only reachable when the index can be
 ; reduced to i32 (no SplitFactor in getGSVectorCost). Without this stanza, the
-; <16 x ptr>-form scatter splits into two <8 x ...> scatters and the v16 row of
-; the cost table is never consulted, masking any divergence between i32 and f32
-; scatter costs at VF=16 (vpscatterdd vs vscatterdps -- same physical store on
-; Zen, same expected cost).
+; <16 x ptr>-form gather/scatter splits into two <8 x ...> operations and the
+; v16 row of the cost table is never consulted, masking any divergence between
+; i32 and f32 costs at VF=16 (vpgatherdd/vpscatterdd vs vgatherdps/vscatterdps
+; -- same physical load/store on Zen, same expected cost). The scatter pair
+; below pins the scatter v16 row; gather_v16i32_gep does the same for the
+; gather v16 row (the code path that does the GEP-index reducibility check is
+; shared between gather and scatter, so one gather case suffices).
+
+define <16 x i32> @gather_v16i32_gep(ptr %base, <16 x i32> %idx, <16 x i1> %mask) {
+; ZNVER4-LABEL: 'gather_v16i32_gep'
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr i32, ptr %base, <16 x i32> %idx
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> undef)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %v
+;
+; ZNVER5-LABEL: 'gather_v16i32_gep'
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr i32, ptr %base, <16 x i32> %idx
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> undef)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %v
+;
+; ZNVER3-LABEL: 'gather_v16i32_gep'
+; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr i32, ptr %base, <16 x i32> %idx
+; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 55 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> undef)
+; ZNVER3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %v
+;
+; SKX-LABEL: 'gather_v16i32_gep'
+; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr i32, ptr %base, <16 x i32> %idx
+; SKX-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %v
+;
+  %ptrs = getelementptr i32, ptr %base, <16 x i32> %idx
+  %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> undef)
+  ret <16 x i32> %v
+}
 
 define void @scatter_v16f32_gep(ptr %base, <16 x i32> %idx, <16 x float> %val, <16 x i1> %mask) {
 ; ZNVER4-LABEL: 'scatter_v16f32_gep'
