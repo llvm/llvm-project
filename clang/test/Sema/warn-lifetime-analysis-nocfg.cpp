@@ -75,7 +75,7 @@ struct Y {
 };
 
 void dangligGslPtrFromTemporary() {
-  MyIntPointer p = Y{}.a; // cfg-warning {{object whose reference is captured does not live long enough}} \
+  MyIntPointer p = Y{}.a; // cfg-warning {{local temporary object does not live long enough}} \
                           // cfg-note {{destroyed here}}
   (void)p;                // cfg-note {{later used here}}
 }
@@ -98,7 +98,7 @@ struct DanglingGslPtrField {
 MyIntPointer danglingGslPtrFromLocal() {
   int j;
   // Detected only by CFG analysis.
-  return &j; // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+  return &j; // cfg-warning {{stack memory associated with local variable 'j' is returned}} cfg-note {{returned here}}
 }
 
 MyIntPointer returningLocalPointer() {
@@ -109,30 +109,30 @@ MyIntPointer returningLocalPointer() {
 MyIntPointer daglingGslPtrFromLocalOwner() {
   MyIntOwner localOwner;
   return localOwner; // expected-warning {{address of stack memory associated with local variable 'localOwner' returned}} \
-                     // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                     // cfg-warning {{stack memory associated with local variable 'localOwner' is returned}} cfg-note {{returned here}}
 }
 
 MyLongPointerFromConversion daglingGslPtrFromLocalOwnerConv() {
   MyLongOwnerWithConversion localOwner;
   return localOwner; // expected-warning {{address of stack memory associated with local variable 'localOwner' returned}} \
-                     // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                     // cfg-warning {{stack memory associated with local variable 'localOwner' is returned}} cfg-note {{returned here}}
 }
 
 MyIntPointer danglingGslPtrFromTemporary() {
   return MyIntOwner{}; // expected-warning {{returning address of local temporary object}} \
-                       // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                       // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 MyIntOwner makeTempOwner();
 
 MyIntPointer danglingGslPtrFromTemporary2() {
   return makeTempOwner(); // expected-warning {{returning address of local temporary object}} \
-                          // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                          // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 MyLongPointerFromConversion danglingGslPtrFromTemporaryConv() {
   return MyLongOwnerWithConversion{}; // expected-warning {{returning address of local temporary object}} \
-                                      // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                                      // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 int *noFalsePositive(MyIntOwner &o) {
@@ -145,32 +145,32 @@ MyLongPointerFromConversion global2;
 
 void initLocalGslPtrWithTempOwner() {
   MyIntPointer p = MyIntOwner{}; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                 // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                 // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(p);                        // cfg-note {{later used here}}
 
   MyIntPointer pp = p = MyIntOwner{}; // expected-warning {{object backing the pointer 'p' will be}} \
-                                      // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                      // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(p, pp);                         // cfg-note {{later used here}}
 
   p = MyIntOwner{}; // expected-warning {{object backing the pointer 'p' }} \
-                    // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                    // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(p);           // cfg-note {{later used here}}
 
   pp = p; // no warning
   use(p, pp);
 
   global = MyIntOwner{}; // expected-warning {{object backing the pointer 'global' }} \
-                         // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                         // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(global);           // cfg-note {{later used here}}
 
   MyLongPointerFromConversion p2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                                                // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                                                // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(p2);                                                      // cfg-note {{later used here}}
 
   p2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer 'p2' }} \
-                                    // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                    // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   global2 = MyLongOwnerWithConversion{};  // expected-warning {{object backing the pointer 'global2' }} \
-                                          // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                          // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(global2, p2);                       // cfg-note 2 {{later used here}}
 }
 
@@ -180,7 +180,7 @@ struct LifetimeBoundCtor {
 };
 
 auto lifetimebound_make_unique_single_param() {
-  return std::make_unique<LifetimeBoundCtor>(MyIntOwner{}); // tu-warning {{address of stack memory is returned later}} tu-note {{returned here}}
+  return std::make_unique<LifetimeBoundCtor>(MyIntOwner{}); // tu-warning {{stack memory associated with local temporary object is returned}} tu-note {{returned here}}
 }
 
 
@@ -193,23 +193,23 @@ struct Unannotated {
 
 void modelIterators() {
   std::vector<int>::iterator it = std::vector<int>().begin(); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                                              // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                                              // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   (void)it; // cfg-note {{later used here}}
 }
 
 std::vector<int>::iterator modelIteratorReturn() {
   return std::vector<int>().begin(); // expected-warning {{returning address of local temporary object}} \
-                                     // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                                     // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 const int *modelFreeFunctions() {
   return std::data(std::vector<int>()); // expected-warning {{returning address of local temporary object}} \
-                                        // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                                        // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 int &modelAnyCast() {
   return std::any_cast<int&>(std::any{}); // expected-warning {{returning reference to local temporary object}} \
-                                          // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                                          // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 int modelAnyCast2() {
@@ -223,29 +223,29 @@ int modelAnyCast3() {
 const char *danglingRawPtrFromLocal() {
   std::basic_string<char> s;
   return s.c_str(); // expected-warning {{address of stack memory associated with local variable 's' returned}} \
-                    // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                    // cfg-warning {{stack memory associated with local variable 's' is returned}} cfg-note {{returned here}}
 }
 
 int &danglingRawPtrFromLocal2() {
   std::optional<int> o;
   return o.value(); // expected-warning {{reference to stack memory associated with local variable 'o' returned}} \
-                    // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                    // cfg-warning {{stack memory associated with local variable 'o' is returned}} cfg-note {{returned here}}
 }
 
 int &danglingRawPtrFromLocal3() {
   std::optional<int> o;
   return *o; // expected-warning {{reference to stack memory associated with local variable 'o' returned}} \
-             // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+             // cfg-warning {{stack memory associated with local variable 'o' is returned}} cfg-note {{returned here}}
 }
 
 // GH100384
 std::string_view containerWithAnnotatedElements() {
   std::string_view c1 = std::vector<std::string>().at(0); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                                          // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                                          // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(c1);                                                // cfg-note {{later used here}}
 
   c1 = std::vector<std::string>().at(0); // expected-warning {{object backing the pointer}} \
-                                         // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                         // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(c1);                               // cfg-note {{later used here}}
 
   // no warning on constructing from gsl-pointer
@@ -254,14 +254,14 @@ std::string_view containerWithAnnotatedElements() {
 
   std::vector<std::string> local;
   return local.at(0); // expected-warning {{address of stack memory associated with local variable}} \
-                      // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                      // cfg-warning {{stack memory associated with local variable 'local' is returned}} cfg-note {{returned here}}
 }
 
 std::string_view localUniquePtr(int i) {
   std::unique_ptr<std::string> c1;
   if (i)
     return *c1; // expected-warning {{address of stack memory associated with local variable}} \
-                // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                // cfg-warning {{stack memory associated with local variable 'c1' is returned}} cfg-note {{returned here}}
   std::unique_ptr<std::string_view> c2;
   return *c2; // expect no-warning.
 }
@@ -270,59 +270,59 @@ std::string_view localOptional(int i) {
   std::optional<std::string> o;
   if (i)
     return o.value(); // expected-warning {{address of stack memory associated with local variable}} \
-                      // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                      // cfg-warning {{stack memory associated with local variable 'o' is returned}} cfg-note {{returned here}}
   std::optional<std::string_view> abc;
   return abc.value(); // expect no warning
 }
 
 const char *danglingRawPtrFromTemp() {
   return std::basic_string<char>().c_str(); // expected-warning {{returning address of local temporary object}} \
-                                            // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                                            // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 std::unique_ptr<int> getUniquePtr();
 
 int *danglingUniquePtrFromTemp() {
   return getUniquePtr().get(); // expected-warning {{returning address of local temporary object}} \
-                               // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                               // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 int *danglingUniquePtrFromTemp2() {
   return std::unique_ptr<int>().get(); // expected-warning {{returning address of local temporary object}} \
-                                       // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                                       // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 const int& danglingRefToOptionalFromTemp3() {
   return std::optional<int>().value(); // expected-warning {{returning reference to local temporary object}} \
-                                       // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                                       // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 std::optional<std::string> getTempOptStr();
 
 std::string_view danglingRefToOptionalFromTemp4() {
   return getTempOptStr().value(); // expected-warning {{returning address of local temporary object}} \
-                                  // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                                  // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 void danglingReferenceFromTempOwner() {
   int &&r = *std::optional<int>();          // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                            // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                            // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   // https://github.com/llvm/llvm-project/issues/175893
   int &&r2 = *std::optional<int>(5);        // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                              // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                              // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
 
   // https://github.com/llvm/llvm-project/issues/175893
   int &&r3 = std::optional<int>(5).value(); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                              // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                              // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
 
   const int &r4 = std::vector<int>().at(3); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                            // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                            // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   int &&r5 = std::vector<int>().at(3);      // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                            // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                            // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(r, r2, r3, r4, r5);                   // cfg-note 5 {{later used here}}
 
   std::string_view sv = *getTempOptStr();  // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                           // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                           // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(sv);                                 // cfg-note {{later used here}}
 }
 
@@ -333,7 +333,7 @@ void testLoops() {
   for (auto i : getTempVec()) // ok
     ;
   for (auto i : *getTempOptVec()) // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                  // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}} cfg-note {{later used here}}
+                                  // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} cfg-note {{later used here}}
     ;
 }
 
@@ -346,14 +346,14 @@ int &usedToBeFalsePositive(std::vector<int> &v) {
 int &doNotFollowReferencesForLocalOwner() {
 // Warning caught by CFG analysis.
   std::unique_ptr<int> localOwner;
-  int &p = *localOwner // cfg-warning {{address of stack memory is returned later}}
+  int &p = *localOwner // cfg-warning {{stack memory associated with local variable 'localOwner' is returned}}
             .get();
   return p; // cfg-note {{returned here}}
 }
 
 const char *trackThroughMultiplePointer() {
   return std::basic_string_view<char>(std::basic_string<char>()).begin(); // expected-warning {{returning address of local temporary object}} \
-         // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+         // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 struct X {
@@ -395,18 +395,18 @@ void handleGslPtrInitsThroughReference2() {
 void handleTernaryOperator(bool cond) {
     std::basic_string<char> def;
     std::basic_string_view<char> v = cond ? def : ""; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                                      // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                                      // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
     use(v); // cfg-note {{later used here}}
 }
 
 std::string operator+(std::string_view s1, std::string_view s2);
 void danglingStringviewAssignment(std::string_view a1, std::string_view a2) {
   a1 = std::string(); // expected-warning {{object backing}} \
-                      // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                      // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(a1);            // cfg-note {{later used here}}
 
   a2 = a1 + a1; // expected-warning {{object backing}} \
-                // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(a2);      // cfg-note {{later used here}}
 }
 
@@ -447,11 +447,11 @@ std::vector<std::string_view> GetTemporaryView();
 
 std::string_view test_str_local() {
   std::vector<std::string> v;
-  return *std::find(v.begin(), // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+  return *std::find(v.begin(), // cfg-warning {{stack memory associated with local variable 'v' is returned}} cfg-note {{returned here}}
                     v.end(), "42");
 }
 std::string_view test_str_temporary() {
-  return *std::find(GetTemporaryString().begin(), // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+  return *std::find(GetTemporaryString().begin(), // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
                     GetTemporaryString().end(), "42");
 }
 std::string_view test_view() {
@@ -566,7 +566,7 @@ struct [[gsl::Pointer]] S {
 
 S test(std::vector<int> a) {
   return S(a);  // expected-warning {{address of stack memory associated with}} \
-                // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                // cfg-warning {{stack memory associated with parameter 'a' is returned}} cfg-note {{returned here}}
 }
 
 // FIXME: Detect this using the CFG-based lifetime analysis (global initialisation).
@@ -586,10 +586,10 @@ struct FooView {
 FooView test3(int i, std::optional<Foo> a) {
   if (i)
     return *a; // expected-warning {{address of stack memory}} \
-               // cfg-warning {{address of stack memory is returned later}} \
+               // cfg-warning {{stack memory associated with parameter 'a' is returned}} \
                // cfg-note {{returned here}}
   return a.value(); // expected-warning {{address of stack memory}} \
-                    // cfg-warning {{address of stack memory is returned later}} \
+                    // cfg-warning {{stack memory associated with parameter 'a' is returned}} \
                     // cfg-note {{returned here}}
 }
 } // namespace GH93386
@@ -601,7 +601,7 @@ struct UrlAnalyzed {
 std::string StrCat(std::string_view, std::string_view);
 void test1() {
   UrlAnalyzed url(StrCat("abc", "bcd")); // expected-warning {{object backing the pointer will be destroyed}} \
-                                         // cfg-warning {{object whose reference is captured does not live long enough}} \
+                                         // cfg-warning {{local temporary object does not live long enough}} \
                                          // cfg-note {{destroyed here}}
   use(url);                              // cfg-note {{later used here}}
 }
@@ -610,7 +610,7 @@ std::string_view ReturnStringView(std::string_view abc [[clang::lifetimebound]])
 
 void test() {
   std::string_view svjkk1 = ReturnStringView(StrCat("bar", "x")); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                                                  // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                                                  // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(svjkk1);                                                    // cfg-note {{later used here}}
 }
 } // namespace GH100549
@@ -649,7 +649,7 @@ std::string_view test2() {
   std::string_view bad = StatusOr<Wrapper2<std::string_view>>().value(); // expected-warning {{temporary whose address is used as value of}}
   
   return k.value(); // expected-warning {{address of stack memory associated}} \
-                    // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                    // cfg-warning {{stack memory associated with local variable 'k' is returned}} cfg-note {{returned here}}
 }
 } // namespace GH108272
 
@@ -781,7 +781,7 @@ Span<int*> test6(std::vector<int*> v) {
   Span<int *> dangling = std::vector<int*>(); // expected-warning {{object backing the pointer}}
   dangling = std::vector<int*>(); // expected-warning {{object backing the pointer}}
   return v; // expected-warning {{address of stack memory}} \
-            // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+            // cfg-warning {{stack memory associated with parameter 'v' is returned}} cfg-note {{returned here}}
 }
 
 /////// From Owner<Owner<Pointer>> ///////
@@ -801,7 +801,7 @@ std::vector<int*> test8(StatusOr<std::vector<int*>> aa) {
 // Pointer<Pointer> from Owner<Owner<Pointer>>
 Span<int*> test9(StatusOr<std::vector<int*>> aa) {
   return aa.valueLB(); // expected-warning {{address of stack memory associated}} \
-                       // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                       // cfg-warning {{stack memory associated with parameter 'aa' is returned}} cfg-note {{returned here}}
   return aa.valueNoLB(); // OK.
 }
 
@@ -810,7 +810,7 @@ Span<int*> test9(StatusOr<std::vector<int*>> aa) {
 // Pointer<Owner>> from Owner<Owner>
 Span<std::string> test10(StatusOr<std::vector<std::string>> aa) {
   return aa.valueLB(); // expected-warning {{address of stack memory}} \
-                       // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                       // cfg-warning {{stack memory associated with parameter 'aa' is returned}} cfg-note {{returned here}}
   return aa.valueNoLB(); // OK.
 }
 
@@ -825,7 +825,7 @@ Span<std::string> test11(StatusOr<Span<std::string>> aa) {
 // Lifetimebound and gsl::Pointer.
 const int& test12(Span<int> a) {
   return a.getFieldLB(); // expected-warning {{reference to stack memory associated}} \
-                         // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                         // cfg-warning {{stack memory associated with parameter 'a' is returned}} cfg-note {{returned here}}
   return a.getFieldNoLB(); // OK.
 }
 
@@ -844,7 +844,7 @@ namespace GH118064{
 
 void test() {
   auto y = std::set<int>{}.begin(); // expected-warning {{object backing the pointer}} \
-  // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(y); // cfg-note {{later used here}}
 }
 } // namespace GH118064
@@ -859,36 +859,36 @@ std::string_view TakeStr(std::string abc [[clang::lifetimebound]]);
 
 std::string_view test1_1() {
   std::string_view t1 = Ref(std::string()); // expected-warning {{object backing}} \
-                                            // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                            // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(t1);                                  // cfg-note {{later used here}}
   t1 = Ref(std::string()); // expected-warning {{object backing}} \
-                           // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                           // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(t1);                 // cfg-note {{later used here}}
   return Ref(std::string()); // expected-warning {{returning address}} \
-                             // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                             // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 std::string_view test1_2() {
   std::string_view t2 = TakeSv(std::string()); // expected-warning {{object backing}} \
-                                            // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                            // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(t2);                                  // cfg-note {{later used here}}
   t2 = TakeSv(std::string()); // expected-warning {{object backing}} \
-                              // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                              // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(t2);                    // cfg-note {{later used here}}
 
   return TakeSv(std::string()); // expected-warning {{returning address}} \
-                                // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                                // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 std::string_view test1_3() {
   std::string_view t3 = TakeStrRef(std::string()); // expected-warning {{temporary}} \
-                                                   // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                                   // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(t3);                                         // cfg-note {{later used here}}
   t3 = TakeStrRef(std::string()); // expected-warning {{object backing}} \
-                                  // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                  // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(t3);                        // cfg-note {{later used here}}
   return TakeStrRef(std::string()); // expected-warning {{returning address}} \
-                                    // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                                    // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 std::string_view test1_4() {
@@ -907,13 +907,13 @@ struct Foo {
 };
 std::string_view test2_1(Foo<std::string> r1, Foo<std::string_view> r2) {
   std::string_view t1 = Foo<std::string>().get(); // expected-warning {{object backing}} \
-                                                  // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                                  // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(t1);                                        // cfg-note {{later used here}}
   t1 = Foo<std::string>().get(); // expected-warning {{object backing}} \
-                                 // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                 // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(t1);                       // cfg-note {{later used here}}
   return r1.get(); // expected-warning {{address of stack}} \
-                   // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                   // cfg-warning {{stack memory associated with parameter 'r1' is returned}} cfg-note {{returned here}}
 }
 std::string_view test2_2(Foo<std::string> r1, Foo<std::string_view> r2) {
   std::string_view t2 = Foo<std::string_view>().get();
@@ -939,11 +939,11 @@ struct [[gsl::Pointer]] Pointer {
   Pointer(const Bar & bar [[clang::lifetimebound]]);
 };
 Pointer test3(Bar bar) {
-  Pointer p = Pointer(Bar()); // expected-warning {{temporary}} cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  Pointer p = Pointer(Bar()); // expected-warning {{temporary}} cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(p);                     // cfg-note {{later used here}}
-  p = Pointer(Bar());         // expected-warning {{object backing}} cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  p = Pointer(Bar());         // expected-warning {{object backing}} cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(p);                     // cfg-note {{later used here}}
-  return bar;                 // expected-warning {{address of stack}} cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+  return bar;                 // expected-warning {{address of stack}} cfg-warning {{stack memory associated with parameter 'bar' is returned}} cfg-note {{returned here}}
 }
 
 template<typename T>
@@ -980,14 +980,14 @@ void test4() {
 
 namespace range_based_for_loop_variables {
 std::string_view test_view_loop_var(std::vector<std::string> strings) {
-  for (std::string_view s : strings) {  // cfg-warning {{address of stack memory is returned later}} 
+  for (std::string_view s : strings) {  // cfg-warning {{stack memory associated with parameter 'strings' is returned}}
     return s; //cfg-note {{returned here}}
   }
   return "";
 }
 
 const char* test_view_loop_var_with_data(std::vector<std::string> strings) {
-  for (std::string_view s : strings) {  // cfg-warning {{address of stack memory is returned later}} 
+  for (std::string_view s : strings) {  // cfg-warning {{stack memory associated with parameter 'strings' is returned}}
     return s.data(); //cfg-note {{returned here}}
   }
   return "";
@@ -1001,14 +1001,14 @@ std::string_view test_no_error_for_views(std::vector<std::string_view> views) {
 }
 
 std::string_view test_string_ref_var(std::vector<std::string> strings) {
-  for (const std::string& s : strings) {  // cfg-warning {{address of stack memory is returned later}} 
+  for (const std::string& s : strings) {  // cfg-warning {{stack memory associated with parameter 'strings' is returned}}
     return s; //cfg-note {{returned here}}
   }
   return "";
 }
 
 std::string_view test_opt_strings(std::optional<std::vector<std::string>> strings_or) {
-  for (const std::string& s : *strings_or) {  // cfg-warning {{address of stack memory is returned later}} 
+  for (const std::string& s : *strings_or) {  // cfg-warning {{stack memory associated with parameter 'strings_or' is returned}}
     return s; //cfg-note {{returned here}}
   }
   return "";
@@ -1018,7 +1018,7 @@ std::string_view test_opt_strings(std::optional<std::vector<std::string>> string
 namespace iterator_arrow {
 std::string_view test() {
   std::vector<std::string> strings;
-  return strings.begin()->data(); // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+  return strings.begin()->data(); // cfg-warning {{stack memory associated with local variable 'strings' is returned}} cfg-note {{returned here}}
 }
 
 void operator_star_arrow_reference() {
@@ -1028,9 +1028,9 @@ void operator_star_arrow_reference() {
   const std::string& r = *v.begin();
 
   auto temporary = []() { return std::vector<std::string>{{"1"}}; };
-  const char* x = temporary().begin()->data();    // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
-  const char* y = (*temporary().begin()).data();  // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
-  const std::string& z = (*temporary().begin());  // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  const char* x = temporary().begin()->data();    // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
+  const char* y = (*temporary().begin()).data();  // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
+  const std::string& z = (*temporary().begin());  // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
 
   use(p, q, r, x, y, z); // cfg-note 3 {{later used here}}
 }
@@ -1042,9 +1042,9 @@ void operator_star_arrow_of_iterators_false_positive_no_cfg_analysis() {
   const std::string& r = (*v.begin()).second;
 
   auto temporary = []() { return std::vector<std::pair<int, std::string>>{{1, "1"}}; };
-  const char* x = temporary().begin()->second.data();   // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
-  const char* y = (*temporary().begin()).second.data(); // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
-  const std::string& z = (*temporary().begin()).second; // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  const char* x = temporary().begin()->second.data();   // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
+  const char* y = (*temporary().begin()).second.data(); // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
+  const std::string& z = (*temporary().begin()).second; // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
 
   use(p, q, r, x, y, z); // cfg-note 3 {{later used here}}
 }
@@ -1094,17 +1094,17 @@ std::string_view foo(std::string_view sv [[clang::lifetimebound]]);
 void test1() {
   std::string_view k1 = S().sv; // OK
   std::string_view k2 = S().s; // expected-warning {{object backing the pointer will}} \
-                               // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                               // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
 
   std::string_view k3 = Q().get()->sv; // OK
   std::string_view k4  = Q().get()->s; // expected-warning {{object backing the pointer will}} \
-                                       // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                       // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
 
 
   std::string_view lb1 = foo(S().s); // expected-warning {{object backing the pointer will}} \
-                                     // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                     // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   std::string_view lb2 = foo(Q().get()->s); // expected-warning {{object backing the pointer will}} \
-                                            // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+                                            // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
 
   use(k1, k2, k3, k4, lb1, lb2);  // cfg-note 4 {{later used here}}
 }
@@ -1143,7 +1143,7 @@ struct StatusOr {
 const char* foo() {
   StatusOr<std::string> s;
   return s->data(); // expected-warning {{address of stack memory associated with local variable}} \
-                    // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                    // cfg-warning {{stack memory associated with local variable 's' is returned}} cfg-note {{returned here}}
 
   StatusOr<std::string_view> s2;
   return s2->data();

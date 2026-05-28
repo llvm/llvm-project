@@ -543,15 +543,18 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
   NamedMDNode *Node = M.getNamedMetadata("spirv.ExecutionMode");
   if (Node) {
     for (unsigned i = 0; i < Node->getNumOperands(); i++) {
+      const auto EM =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>((Node->getOperand(i))->getOperand(1))
+                  ->getValue())
+              ->getZExtValue();
+      // Skip ArithmeticPoisonKHR to avoid a duplicate.
+      if (EM == SPIRV::ExecutionMode::ArithmeticPoisonKHR)
+        continue;
       // If SPV_KHR_float_controls2 is enabled and we find any of
       // FPFastMathDefault, ContractionOff or SignedZeroInfNanPreserve execution
       // modes, skip it, it'll be done somewhere else.
       if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
-        const auto EM =
-            cast<ConstantInt>(
-                cast<ConstantAsMetadata>((Node->getOperand(i))->getOperand(1))
-                    ->getValue())
-                ->getZExtValue();
         if (EM == SPIRV::ExecutionMode::FPFastMathDefault ||
             EM == SPIRV::ExecutionMode::ContractionOff ||
             EM == SPIRV::ExecutionMode::SignedZeroInfNanPreserve)
@@ -618,6 +621,18 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       Inst.addOperand(MCOperand::createImm(EM));
       unsigned TypeCode = encodeVecTypeHint(getMDOperandAsType(Node, 0));
       Inst.addOperand(MCOperand::createImm(TypeCode));
+      outputMCInst(Inst);
+    }
+    // Per SPV_KHR_poison_freeze description of PoisonFreezeKHR "If declared,
+    // all entry points must use the ArithmeticPoisonKHR execution mode".
+    if (llvm::is_contained(MAI->Reqs.getMinimalCapabilities(),
+                           SPIRV::Capability::PoisonFreezeKHR)) {
+      MCInst Inst;
+      Inst.setOpcode(SPIRV::OpExecutionMode);
+      Inst.addOperand(MCOperand::createReg(FReg));
+      unsigned EM =
+          static_cast<unsigned>(SPIRV::ExecutionMode::ArithmeticPoisonKHR);
+      Inst.addOperand(MCOperand::createImm(EM));
       outputMCInst(Inst);
     }
     if (ST->isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&

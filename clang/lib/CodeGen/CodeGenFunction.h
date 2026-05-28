@@ -2960,13 +2960,10 @@ public:
   /// aggregate type.
   AggValueSlot CreateAggTemp(QualType T, const Twine &Name = "tmp",
                              RawAddress *Alloca = nullptr) {
-    RawAddress Addr = CreateMemTempWithoutCast(T, Name);
-    if (Alloca)
-      *Alloca = Addr;
     return AggValueSlot::forAddr(
-        Addr, T.getQualifiers(), AggValueSlot::IsNotDestructed,
-        AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
-        AggValueSlot::DoesNotOverlap);
+        CreateMemTemp(T.getUnqualifiedType(), Name, Alloca), T.getQualifiers(),
+        AggValueSlot::IsNotDestructed, AggValueSlot::DoesNotNeedGCBarriers,
+        AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap);
   }
 
   /// EvaluateExprAsBool - Perform the usual unary conversions on the specified
@@ -5448,11 +5445,11 @@ public:
   void maybeAttachRangeForLoad(llvm::LoadInst *Load, QualType Ty,
                                SourceLocation Loc);
 
-private:
   // Emits a convergence_loop instruction for the given |BB|, with |ParentToken|
   // as it's parent convergence instr.
   llvm::ConvergenceControlInst *emitConvergenceLoopToken(llvm::BasicBlock *BB);
 
+private:
   // Adds a convergence_ctrl token with |ParentToken| as parent convergence
   // instr to the call |Input|.
   llvm::CallBase *addConvergenceControlToken(llvm::CallBase *Input);
