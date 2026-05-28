@@ -636,18 +636,19 @@ private:
 
 static HTTPResult handleGetRemarksRelational(CoreClient &Client,
                                              StringRef SnapID) {
-  SmallVector<std::string, 1> Caps{"llvm.remarks.relational"};
-  Expected<json::Array> Query = Client.querySnapshot(SnapID, Caps);
-  if (!Query)
-    return makeJSONError(400, Query.takeError());
+  SmallVector<UnitRecord, 64> Units =
+      Client.storage().metadata().listUnits(SnapID);
+  if (Units.empty())
+    return makeJSONErrorStr(404, "snapshot has no captured units");
 
+  const SmallVector<std::string, 1> Caps{"llvm.remarks.relational"};
   RelationalMerger Merger;
-  for (const json::Value &UnitValue : *Query) {
-    const json::Object *UnitObj = UnitValue.getAsObject();
-    const json::Array *Results =
-        UnitObj ? UnitObj->getArray("results") : nullptr;
-    if (!Results)
+  for (const UnitRecord &Unit : Units) {
+    Expected<json::Array> Results = Client.queryUnit(Unit.ID, Caps);
+    if (!Results) {
+      consumeError(Results.takeError());
       continue;
+    }
     for (const json::Value &ResultValue : *Results) {
       const json::Object *ResultObj = ResultValue.getAsObject();
       if (!ResultObj)
