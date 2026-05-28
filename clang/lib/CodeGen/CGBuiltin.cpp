@@ -315,6 +315,9 @@ Value *MakeBinaryAtomicValue(
 
   llvm::Value *Result =
       CGF.Builder.CreateAtomicRMW(Kind, DestAddr, Val, Ordering);
+  // Consider atomics to be volatile in MS kernel mode.
+  if (CGF.CGM.getLangOpts().Kernel)
+    cast<llvm::AtomicRMWInst>(Result)->setVolatile(true);
   return EmitFromInt(CGF, Result, T, ValueType);
 }
 
