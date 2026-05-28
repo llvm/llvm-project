@@ -4869,7 +4869,6 @@ add_entrypoint_object(
     libc.src.__support.math.bf16fmal
 )
 
-
 add_entrypoint_object(
   lgammabf16
   SRCS
@@ -4878,7 +4877,6 @@ add_entrypoint_object(
     ../lgammabf16.h
   DEPENDS
     libc.src.__support.math.lgammabf16
-    libc.src.__support.FPUtil.bfloat16
 )
 
 add_entrypoint_object(

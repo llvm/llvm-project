@@ -56,7 +56,7 @@ add_header_library(
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.PolyEval  
+    libc.src.__support.FPUtil.polyeval  
     libc.src.__support.FPUtil.multiply_add 
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
