@@ -2116,7 +2116,7 @@ Value *BlockAddress::handleOperandChangeImpl(Value *From, Value *To) {
 
   getBasicBlock()->setHasAddressTaken(false);
 
-  // Erase before insert; backward-shift deletion may relocate buckets.
+  // erase invalidates iterators/references, hence the duplicate NewBB lookup.
   getContext().pImpl->BlockAddresses.erase(getBasicBlock());
   getContext().pImpl->BlockAddresses[NewBB] = this;
   setOperand(0, NewBB);
@@ -2171,7 +2171,7 @@ Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
           getContext().pImpl->DSOLocalEquivalents.lookup(Func))
     return llvm::ConstantExpr::getBitCast(NewEquiv, getType());
 
-  // Erase before insert; backward-shift deletion may relocate buckets.
+  // erase invalidates iterators/references, hence the duplicate Func lookup.
   getContext().pImpl->DSOLocalEquivalents.erase(getGlobalValue());
   getContext().pImpl->DSOLocalEquivalents[Func] = this;
   setOperand(0, Func);
@@ -2214,7 +2214,7 @@ Value *NoCFIValue::handleOperandChangeImpl(Value *From, Value *To) {
   if (NoCFIValue *NewNC = getContext().pImpl->NoCFIValues.lookup(GV))
     return llvm::ConstantExpr::getBitCast(NewNC, getType());
 
-  // Erase before insert; backward-shift deletion may relocate buckets.
+  // erase invalidates iterators/references, hence the duplicate GV lookup.
   getContext().pImpl->NoCFIValues.erase(getGlobalValue());
   getContext().pImpl->NoCFIValues[GV] = this;
   setOperand(0, GV);
