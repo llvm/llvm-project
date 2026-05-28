@@ -2807,6 +2807,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
       return res;
     }
 
+    TentativeParsingAction TPA(*this);
     // Parse the type declarator.
     DeclSpec DS(AttrFactory);
     ParseSpecifierQualifierList(DS);
@@ -2820,6 +2821,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
     if (!DeclaratorInfo.isInvalidType() && Tok.is(tok::identifier) &&
         !InMessageExpression && getLangOpts().ObjC &&
         (NextToken().is(tok::colon) || NextToken().is(tok::r_square))) {
+      TPA.Commit();
       TypeResult Ty;
       {
         InMessageExpressionRAIIObject InMessage(*this, false);
@@ -2830,9 +2832,17 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
                                               Ty.get(), nullptr);
     } else {
       // Match the ')'.
-      T.consumeClose();
+      bool MissingCloseParen = T.consumeClose();
       ColonProtection.restore();
       RParenLoc = T.getCloseLocation();
+
+      if (MissingCloseParen && DS.getTypeSpecType() == DeclSpec::TST_struct) {
+        TPA.Revert();
+        return ExprError();
+      }
+
+      TPA.Commit();
+
       if (ParenBehavior == ParenExprKind::Unknown && Tok.is(tok::l_brace)) {
         ExprType = ParenParseOption::CompoundLiteral;
         TypeResult Ty;
