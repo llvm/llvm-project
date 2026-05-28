@@ -529,21 +529,19 @@ unsigned DXILBitcodeWriter::getEncodedBinaryOpcode(unsigned Opcode) {
 }
 
 unsigned DXILBitcodeWriter::getTypeID(Type *T, const Value *V) {
-  if (!T->isPointerTy() &&
-      // For Constant, always check PointerMap to make sure OpaquePointer in
-      // things like constant struct/array works.
-      (!V || !isa<Constant>(V)))
+  // For Constant, always check PointerMap to make sure OpaquePointer in
+  // things like constant struct/array works.
+  if (!T->isPointerTy() && !isa_and_nonnull<Constant>(V))
     return VE.getTypeID(T);
   auto It = PointerMap.find(V);
   if (It != PointerMap.end())
     return VE.getTypeID(It->second);
-  // For Constant, return T when cannot find in PointerMap.
-  // FIXME: support ConstantPointerNull which could map to more than one
-  // TypedPointerType.
+  // FIXME: support ConstantPointerNull and UndefValue which could map to more
+  // than one TypedPointerType.
   // See https://github.com/llvm/llvm-project/issues/57942.
-  if (V && isa<Constant>(V) && !isa<ConstantPointerNull>(V))
-    return VE.getTypeID(T);
-  return VE.getTypeID(I8PtrTy);
+  if (T->isPointerTy())
+    return VE.getTypeID(I8PtrTy);
+  return VE.getTypeID(T);
 }
 
 unsigned DXILBitcodeWriter::getGlobalObjectValueTypeID(Type *T,
