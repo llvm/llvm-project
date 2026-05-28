@@ -8,7 +8,6 @@
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::replaceSymbolicStrides
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::simplifyRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::removeDeadRecipes
-; CHECK: VPlan for loop in 'foo' after VPlanTransforms::addCanonicalIVRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::handleEarlyExits
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::addMiddleCheck
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createLoopRegions

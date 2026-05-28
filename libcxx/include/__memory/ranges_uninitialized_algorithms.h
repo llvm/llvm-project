@@ -170,9 +170,8 @@ struct __uninitialized_copy {
     using _ValueType = remove_reference_t<iter_reference_t<_OutputIterator>>;
 
     auto __stop_copying = [&__olast](auto&& __out_iter) -> bool { return __out_iter == __olast; };
-    auto __result       = std::__uninitialized_copy<_ValueType>(
+    return std::__uninitialized_copy<_ValueType>(
         std::move(__ifirst), std::move(__ilast), std::move(__ofirst), __stop_copying);
-    return {std::move(__result.first), std::move(__result.second)};
   }
 
   template <input_range _InputRange, __nothrow_forward_range _OutputRange>
@@ -206,9 +205,7 @@ struct __uninitialized_copy_n {
              _Sentinel __olast) const {
     using _ValueType    = remove_reference_t<iter_reference_t<_OutputIterator>>;
     auto __stop_copying = [&__olast](auto&& __out_iter) -> bool { return __out_iter == __olast; };
-    auto __result =
-        std::__uninitialized_copy_n<_ValueType>(std::move(__ifirst), __n, std::move(__ofirst), __stop_copying);
-    return {std::move(__result.first), std::move(__result.second)};
+    return std::__uninitialized_copy_n<_ValueType>(std::move(__ifirst), __n, std::move(__ofirst), __stop_copying);
   }
 };
 
@@ -232,9 +229,8 @@ struct __uninitialized_move {
     using _ValueType   = remove_reference_t<iter_reference_t<_OutputIterator>>;
     auto __iter_move   = [](auto&& __iter) -> decltype(auto) { return ranges::iter_move(__iter); };
     auto __stop_moving = [&__olast](auto&& __out_iter) -> bool { return __out_iter == __olast; };
-    auto __result      = std::__uninitialized_move<_ValueType>(
+    return std::__uninitialized_move<_ValueType>(
         std::move(__ifirst), std::move(__ilast), std::move(__ofirst), __stop_moving, __iter_move);
-    return {std::move(__result.first), std::move(__result.second)};
   }
 
   template <input_range _InputRange, __nothrow_forward_range _OutputRange>
@@ -269,9 +265,8 @@ struct __uninitialized_move_n {
     using _ValueType   = remove_reference_t<iter_reference_t<_OutputIterator>>;
     auto __iter_move   = [](auto&& __iter) -> decltype(auto) { return ranges::iter_move(__iter); };
     auto __stop_moving = [&__olast](auto&& __out_iter) -> bool { return __out_iter == __olast; };
-    auto __result      = std::__uninitialized_move_n<_ValueType>(
+    return std::__uninitialized_move_n<_ValueType>(
         std::move(__ifirst), __n, std::move(__ofirst), __stop_moving, __iter_move);
-    return {std::move(__result.first), std::move(__result.second)};
   }
 };
 
