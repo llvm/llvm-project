@@ -22,7 +22,6 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 ; CHECK: Cost of 1 for VF 2: induction instruction   %inc = add nuw nsw i32 %i.016, 1
 ; CHECK: Cost of 0 for VF 2: induction instruction   %i.016 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
 ; CHECK: Cost of 1 for VF 2: exit condition instruction   %exitcond.not = icmp eq i32 %inc, %n
-; CHECK: Cost of 0 for VF 2: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 0 for VF 2: vp<{{.+}}> = SCALAR-STEPS vp<{{.+}}>, ir<1>
 ; CHECK: Cost of 0 for VF 2: CLONE ir<%arrayidx> = getelementptr inbounds ir<%s>, vp<{{.+}}>
 ; CHECK: Cost of 0 for VF 2: vp<{{.+}}> = vector-pointer inbounds ir<%arrayidx>
@@ -39,7 +38,6 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 ; CHECK: Cost of 1 for VF 4: induction instruction   %inc = add nuw nsw i32 %i.016, 1
 ; CHECK: Cost of 0 for VF 4: induction instruction   %i.016 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
 ; CHECK: Cost of 1 for VF 4: exit condition instruction   %exitcond.not = icmp eq i32 %inc, %n
-; CHECK: Cost of 0 for VF 4: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 0 for VF 4: vp<{{.+}}> = SCALAR-STEPS vp<{{.+}}>, ir<1>
 ; CHECK: Cost of 0 for VF 4: CLONE ir<%arrayidx> = getelementptr inbounds ir<%s>, vp<{{.+}}>
 ; CHECK: Cost of 0 for VF 4: vp<{{.+}}> = vector-pointer inbounds ir<%arrayidx>
@@ -56,7 +54,6 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 ; CHECK: Cost of 1 for VF 8: induction instruction   %inc = add nuw nsw i32 %i.016, 1
 ; CHECK: Cost of 0 for VF 8: induction instruction   %i.016 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
 ; CHECK: Cost of 1 for VF 8: exit condition instruction   %exitcond.not = icmp eq i32 %inc, %n
-; CHECK: Cost of 0 for VF 8: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 0 for VF 8: vp<{{.+}}> = SCALAR-STEPS vp<{{.+}}>, ir<1>
 ; CHECK: Cost of 0 for VF 8: CLONE ir<%arrayidx> = getelementptr inbounds ir<%s>, vp<{{.+}}>
 ; CHECK: Cost of 0 for VF 8: vp<{{.+}}> = vector-pointer inbounds ir<%arrayidx>
@@ -76,15 +73,15 @@ entry:
   %cmp15 = icmp sgt i32 %n, 0
   br i1 %cmp15, label %for.body.lr.ph, label %for.cond.cleanup
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   %conv1 = zext i16 %m to i32
   %0 = trunc i32 %n to i16
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.inc, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.inc
+for.body:
   %i.016 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
   %arrayidx = getelementptr inbounds i16, ptr %s, i32 %i.016
   %1 = load i16, ptr %arrayidx, align 2
@@ -92,13 +89,13 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %cmp2 = icmp sgt i32 %conv, %conv1
   br i1 %cmp2, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %conv6 = add i16 %1, %0
   %arrayidx7 = getelementptr inbounds i16, ptr %d, i32 %i.016
   store i16 %conv6, ptr %arrayidx7, align 2
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %inc = add nuw nsw i32 %i.016, 1
   %exitcond.not = icmp eq i32 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
@@ -135,8 +132,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: Cost of 0 for VF 2: induction instruction   %incdec.ptr2 = getelementptr inbounds i8, ptr %pSrcB.addr.09, i32 1
 ; CHECK: Cost of 0 for VF 2: induction instruction   %pSrcB.addr.09 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrcB, %while.body.preheader ]
 ; CHECK: Cost of 1 for VF 2: exit condition instruction   %cmp.not = icmp eq i32 %dec, 0
-; CHECK: Cost of 0 for VF 2: EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK: Cost of 0 for VF 2: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK: Cost of 0 for VF 2: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV:%.+]]>, ir<1>
 ; CHECK: Cost of 0 for VF 2: EMIT vp<%next.gep> = ptradd ir<%pSrcA>, vp<[[STEPS1]]>
 ; CHECK: Cost of 0 for VF 2: vp<[[STEPS2:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK: Cost of 0 for VF 2: EMIT vp<%next.gep>.1 = ptradd ir<%pDst>, vp<[[STEPS2]]>
@@ -167,8 +163,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: Cost of 0 for VF 4: induction instruction   %incdec.ptr2 = getelementptr inbounds i8, ptr %pSrcB.addr.09, i32 1
 ; CHECK: Cost of 0 for VF 4: induction instruction   %pSrcB.addr.09 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrcB, %while.body.preheader ]
 ; CHECK: Cost of 1 for VF 4: exit condition instruction   %cmp.not = icmp eq i32 %dec, 0
-; CHECK: Cost of 0 for VF 4: EMIT vp<[[CAN_IV:%.]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK: Cost of 0 for VF 4: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK: Cost of 0 for VF 4: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV:%.+]]>, ir<1>
 ; CHECK: Cost of 0 for VF 4: EMIT vp<%next.gep> = ptradd ir<%pSrcA>, vp<[[STEPS1]]>
 ; CHECK: Cost of 0 for VF 4: vp<[[STEPS2:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK: Cost of 0 for VF 4: EMIT vp<%next.gep>.1 = ptradd ir<%pDst>, vp<[[STEPS2]]>
@@ -199,8 +194,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: Cost of 0 for VF 8: induction instruction   %incdec.ptr2 = getelementptr inbounds i8, ptr %pSrcB.addr.09, i32 1
 ; CHECK: Cost of 0 for VF 8: induction instruction   %pSrcB.addr.09 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrcB, %while.body.preheader ]
 ; CHECK: Cost of 1 for VF 8: exit condition instruction   %cmp.not = icmp eq i32 %dec, 0
-; CHECK: Cost of 0 for VF 8: EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK: Cost of 0 for VF 8: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK: Cost of 0 for VF 8: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV:%.+]]>, ir<1>
 ; CHECK: Cost of 0 for VF 8: EMIT vp<%next.gep> = ptradd ir<%pSrcA>, vp<[[STEPS1]]>
 ; CHECK: Cost of 0 for VF 8: vp<[[STEPS2:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK: Cost of 0 for VF 8: EMIT vp<%next.gep>.1 = ptradd ir<%pDst>, vp<[[STEPS2]]>
@@ -231,8 +225,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: Cost of 0 for VF 16: induction instruction   %incdec.ptr2 = getelementptr inbounds i8, ptr %pSrcB.addr.09, i32 1
 ; CHECK: Cost of 0 for VF 16: induction instruction   %pSrcB.addr.09 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrcB, %while.body.preheader ]
 ; CHECK: Cost of 1 for VF 16: exit condition instruction   %cmp.not = icmp eq i32 %dec, 0
-; CHECK: Cost of 0 for VF 16: EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK: Cost of 0 for VF 16: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK: Cost of 0 for VF 16: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV:%.+]]>, ir<1>
 ; CHECK: Cost of 0 for VF 16: EMIT vp<%next.gep> = ptradd ir<%pSrcA>, vp<[[STEPS1]]>
 ; CHECK: Cost of 0 for VF 16: vp<[[STEPS2:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK: Cost of 0 for VF 16: EMIT vp<%next.gep>.1 = ptradd ir<%pDst>, vp<[[STEPS2]]>
@@ -260,10 +253,10 @@ entry:
   %cmp.not8 = icmp eq i32 %blockSize, 0
   br i1 %cmp.not8, label %while.end, label %while.body.preheader
 
-while.body.preheader:                             ; preds = %entry
+while.body.preheader:
   br label %while.body
 
-while.body:                                       ; preds = %while.body.preheader, %while.body
+while.body:
   %blkCnt.012 = phi i32 [ %dec, %while.body ], [ %blockSize, %while.body.preheader ]
   %pSrcA.addr.011 = phi ptr [ %incdec.ptr, %while.body ], [ %pSrcA, %while.body.preheader ]
   %pDst.addr.010 = phi ptr [ %incdec.ptr5, %while.body ], [ %pDst, %while.body.preheader ]
@@ -285,10 +278,10 @@ while.body:                                       ; preds = %while.body.preheade
   %cmp.not = icmp eq i32 %dec, 0
   br i1 %cmp.not, label %while.end.loopexit, label %while.body
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   br label %while.end
 
-while.end:                                        ; preds = %while.end.loopexit, %entry
+while.end:
   ret void
 }
 
@@ -300,7 +293,7 @@ entry:
   %cmp.not7 = icmp eq i32 %blockSize, 0
   br i1 %cmp.not7, label %while.end, label %while.body
 
-while.body:                                       ; preds = %entry, %while.body
+while.body:
   %pSrc.addr.010 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrc, %entry ]
   %blockSize.addr.09 = phi i32 [ %dec, %while.body ], [ %blockSize, %entry ]
   %pDst.addr.08 = phi ptr [ %incdec.ptr, %while.body ], [ %pDst, %entry ]
@@ -315,7 +308,7 @@ while.body:                                       ; preds = %entry, %while.body
   %cmp.not = icmp eq i32 %dec, 0
   br i1 %cmp.not, label %while.end, label %while.body
 
-while.end:                                        ; preds = %while.body, %entry
+while.end:
   ret void
 }
 

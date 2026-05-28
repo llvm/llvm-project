@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../assembly.h"
-#include "endian.h"
+#include "crt_endian.h"
 
   .syntax unified
   .text
@@ -65,7 +65,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_d2iz)
   // Construct a word containing the top 32 bits of the mantissa. We do this in
   // such a way that the initial ORRS also sets the N flag based on the sign
   // bit in xh, so that we can use that for a conditional negation later.
-  orrs    r2, xh, #1 << 20      // put on the leading 1 and test sign
+  orrs    r2, xh, #(1 << 20)    // put on the leading 1 and test sign
   lsl     r2, r2, #11           // shift mantissa part of xh up to top of word
   orr     r2, r2, xl, lsr #21   // the top 11 mantissa bits from xl
 
@@ -112,7 +112,7 @@ LOCAL_LABEL(uncommon):
 
   // Now check for NaNs.
   lsls    r2, xh, #1              // shift exponent of x to top of word
-  cmn     r2, #1 << 21            // set HI if xh proves it's a NaN by itself
+  cmn     r2, #(1 << 21)          // set HI if xh proves it's a NaN by itself
   cmpeq   xl, #0                  // now HI is set if it's a NaN
   bhi     LOCAL_LABEL(nan)
 

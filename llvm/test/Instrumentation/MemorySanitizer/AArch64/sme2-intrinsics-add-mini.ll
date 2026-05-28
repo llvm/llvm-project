@@ -18,7 +18,7 @@ define void @multi_vector_add_za_vg1x4_f32_tuple(i64 %stride, ptr %ptr) sanitize
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld1.pn.x4.nxv4f32(target("aarch64.svcount") [[TMP2]], ptr [[PTR:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld1.pn.x4.nxv4f32.p0(target("aarch64.svcount") [[TMP2]], ptr [[PTR:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %1 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()

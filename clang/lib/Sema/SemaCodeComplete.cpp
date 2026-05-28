@@ -407,6 +407,7 @@ public:
   bool IsNamespaceOrAlias(const NamedDecl *ND) const;
   bool IsType(const NamedDecl *ND) const;
   bool IsMember(const NamedDecl *ND) const;
+  bool IsOffsetofField(const NamedDecl *ND) const;
   bool IsObjCIvar(const NamedDecl *ND) const;
   bool IsObjCMessageReceiver(const NamedDecl *ND) const;
   bool IsObjCMessageReceiverOrLambdaCapture(const NamedDecl *ND) const;
@@ -445,8 +446,12 @@ void PreferredTypeBuilder::enterVariableInit(SourceLocation Tok, Decl *D) {
   ExpectedLoc = Tok;
 }
 
-static QualType getDesignatedType(QualType BaseType, const Designation &Desig,
-                                  HeuristicResolver &Resolver);
+static const FieldDecl *lookupDirectField(RecordDecl *RD, const Designator &D);
+static QualType getDesignatedType(
+    ASTContext &Context, QualType BaseType, const Designation &Desig,
+    HeuristicResolver &Resolver,
+    llvm::function_ref<const FieldDecl *(RecordDecl *, const Designator &)>
+        LookupField);
 
 void PreferredTypeBuilder::enterDesignatedInitializer(SourceLocation Tok,
                                                       QualType BaseType,
@@ -455,7 +460,7 @@ void PreferredTypeBuilder::enterDesignatedInitializer(SourceLocation Tok,
     return;
   ComputeType = nullptr;
   HeuristicResolver Resolver(*Ctx);
-  Type = getDesignatedType(BaseType, D, Resolver);
+  Type = getDesignatedType(*Ctx, BaseType, D, Resolver, lookupDirectField);
   ExpectedLoc = Tok;
 }
 
@@ -1668,6 +1673,17 @@ bool ResultBuilder::IsMember(const NamedDecl *ND) const {
   ND = ND->getUnderlyingDecl();
   return isa<ValueDecl>(ND) || isa<FunctionTemplateDecl>(ND) ||
          isa<ObjCPropertyDecl>(ND);
+}
+
+/// Determines whether the given declaration is a member that
+/// __builtin_offsetof can name: a (direct or indirect) non-bit-field.
+bool ResultBuilder::IsOffsetofField(const NamedDecl *ND) const {
+  ND = ND->getUnderlyingDecl();
+  if (const auto *FD = dyn_cast<FieldDecl>(ND))
+    return !FD->isBitField();
+  if (const auto *IFD = dyn_cast<IndirectFieldDecl>(ND))
+    return !IFD->getAnonField()->isBitField();
+  return false;
 }
 
 static bool isObjCReceiverType(ASTContext &C, QualType T) {
@@ -4513,18 +4529,16 @@ static void AddMacroResults(Preprocessor &PP, ResultBuilder &Results,
 
   Results.EnterNewScope();
 
-  for (Preprocessor::macro_iterator M = PP.macro_begin(LoadExternal),
-                                    MEnd = PP.macro_end(LoadExternal);
-       M != MEnd; ++M) {
-    auto MD = PP.getMacroDefinition(M->first);
+  for (const auto &M : PP.macros(LoadExternal)) {
+    auto MD = PP.getMacroDefinition(M.first);
     if (IncludeUndefined || MD) {
       MacroInfo *MI = MD.getMacroInfo();
       if (MI && MI->isUsedForHeaderGuard())
         continue;
 
       Results.AddResult(
-          Result(M->first, MI,
-                 getMacroUsagePriority(M->first->getName(), PP.getLangOpts(),
+          Result(M.first, MI,
+                 getMacroUsagePriority(M.first->getName(), PP.getLangOpts(),
                                        TargetTypeIsPointer)));
     }
   }
@@ -4711,7 +4725,7 @@ void SemaCodeCompletion::CodeCompleteModuleImport(SourceLocation ImportLoc,
         /*IsInclusionDirective=*/false);
     // Enumerate submodules.
     if (Mod) {
-      for (auto *Submodule : Mod->submodules()) {
+      for (Module *Submodule : Mod->submodules()) {
         Builder.AddTypedTextChunk(
             Builder.getAllocator().CopyString(Submodule->Name));
         Results.AddResult(Result(
@@ -6731,35 +6745,63 @@ QualType SemaCodeCompletion::ProduceTemplateArgumentSignatureHelp(
                               /*Braced=*/false);
 }
 
-static QualType getDesignatedType(QualType BaseType, const Designation &Desig,
-                                  HeuristicResolver &Resolver) {
+// Direct member lookup, used by designated initializers: only fields declared
+// in `RD` itself (including indirect fields from anonymous members) are valid.
+static const FieldDecl *lookupDirectField(RecordDecl *RD, const Designator &D) {
+  for (const auto *Member : RD->lookup(D.getFieldDecl())) {
+    if (const auto *FD = llvm::dyn_cast<FieldDecl>(Member))
+      return FD;
+    if (const auto *IFD = llvm::dyn_cast<IndirectFieldDecl>(Member))
+      return IFD->getAnonField();
+  }
+  return nullptr;
+}
+
+static QualType getDesignatedType(
+    ASTContext &Context, QualType BaseType, const Designation &Desig,
+    HeuristicResolver &Resolver,
+    llvm::function_ref<const FieldDecl *(RecordDecl *, const Designator &)>
+        LookupField) {
   for (unsigned I = 0; I < Desig.getNumDesignators(); ++I) {
     if (BaseType.isNull())
       break;
-    QualType NextType;
+
     const auto &D = Desig.getDesignator(I);
     if (D.isArrayDesignator() || D.isArrayRangeDesignator()) {
-      if (BaseType->isArrayType())
-        NextType = BaseType->getAsArrayTypeUnsafe()->getElementType();
-    } else {
-      assert(D.isFieldDesignator());
-      auto *RD = getAsRecordDecl(BaseType, Resolver);
-      if (RD && RD->isCompleteDefinition()) {
-        for (const auto *Member : RD->lookup(D.getFieldDecl()))
-          if (const FieldDecl *FD = llvm::dyn_cast<FieldDecl>(Member)) {
-            NextType = FD->getType();
-            break;
-          }
+      if (BaseType->isDependentType()) {
+        BaseType = Context.DependentTy;
+        continue;
       }
+      const ArrayType *AT = Context.getAsArrayType(BaseType);
+      if (!AT)
+        return QualType();
+      BaseType = AT->getElementType();
+      continue;
     }
-    BaseType = NextType;
+
+    assert(D.isFieldDesignator());
+    if (BaseType->isDependentType()) {
+      BaseType = Context.DependentTy;
+      continue;
+    }
+
+    RecordDecl *RD = getAsRecordDecl(BaseType, Resolver);
+    if (!RD || !RD->isCompleteDefinition())
+      return QualType();
+
+    const FieldDecl *MemberDecl = LookupField(RD, D);
+    if (!MemberDecl)
+      return QualType();
+
+    BaseType = MemberDecl->getType().getNonReferenceType();
   }
   return BaseType;
 }
 
 void SemaCodeCompletion::CodeCompleteDesignator(
     QualType BaseType, llvm::ArrayRef<Expr *> InitExprs, const Designation &D) {
-  BaseType = getDesignatedType(BaseType, D, Resolver);
+  BaseType = getDesignatedType(SemaRef.Context, BaseType, D, Resolver,
+                               lookupDirectField);
   if (BaseType.isNull())
     return;
   const auto *RD = getAsRecordDecl(BaseType, Resolver);
@@ -6787,6 +6829,57 @@ void SemaCodeCompletion::CodeCompleteDesignator(
     Results.AddResult(Result, SemaRef.CurContext, /*Hiding=*/nullptr);
   }
   Results.ExitScope();
+  HandleCodeCompleteResults(&SemaRef, CodeCompleter,
+                            Results.getCompletionContext(), Results.data(),
+                            Results.size());
+}
+
+void SemaCodeCompletion::CodeCompleteOffsetOfDesignator(QualType BaseType,
+                                                        const Designation &D) {
+  // offsetof allows inherited fields and follows normal qualified name lookup,
+  // not the direct-member iteration used by designated initializers.
+  auto LookupQualified = [&](RecordDecl *RD,
+                             const Designator &Des) -> const FieldDecl * {
+    LookupResult R(SemaRef, Des.getFieldDecl(), Des.getFieldLoc(),
+                   Sema::LookupMemberName);
+    SemaRef.LookupQualifiedName(R, RD);
+    // Peel via getUnderlyingDecl so a field exposed by `using Base::f;`
+    // resolves through its UsingShadowDecl.
+    for (NamedDecl *ND : R) {
+      ND = ND->getUnderlyingDecl();
+      if (auto *FD = dyn_cast<FieldDecl>(ND))
+        return FD;
+      if (auto *IFD = dyn_cast<IndirectFieldDecl>(ND))
+        return IFD->getAnonField();
+    }
+    return nullptr;
+  };
+  BaseType = getDesignatedType(SemaRef.Context, BaseType, D, Resolver,
+                               LookupQualified);
+  if (BaseType.isNull())
+    return;
+
+  RecordDecl *RD = getAsRecordDecl(BaseType, Resolver);
+  if (!RD)
+    return;
+
+  CodeCompletionContext CCC(CodeCompletionContext::CCC_DotMemberAccess,
+                            BaseType);
+  ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
+                        CodeCompleter->getCodeCompletionTUInfo(), CCC,
+                        &ResultBuilder::IsOffsetofField);
+
+  Results.EnterNewScope();
+  CodeCompletionDeclConsumer Consumer(Results, RD, BaseType);
+  // LookupVisibleDecls traverses base classes (required for inherited fields)
+  // and dependent bases (best-effort for templates). Globals are skipped:
+  // offsetof designators name only members of the surrounding type.
+  SemaRef.LookupVisibleDecls(RD, Sema::LookupMemberName, Consumer,
+                             /*IncludeGlobalScope=*/false,
+                             /*IncludeDependentBases=*/true,
+                             CodeCompleter->loadExternal());
+  Results.ExitScope();
+
   HandleCodeCompleteResults(&SemaRef, CodeCompleter,
                             Results.getCompletionContext(), Results.data(),
                             Results.size());
@@ -10365,11 +10458,9 @@ void SemaCodeCompletion::CodeCompletePreprocessorMacroName(bool IsDefinition) {
     CodeCompletionBuilder Builder(Results.getAllocator(),
                                   Results.getCodeCompletionTUInfo());
     Results.EnterNewScope();
-    for (Preprocessor::macro_iterator M = SemaRef.PP.macro_begin(),
-                                      MEnd = SemaRef.PP.macro_end();
-         M != MEnd; ++M) {
+    for (const auto &M : SemaRef.PP.macros()) {
       Builder.AddTypedTextChunk(
-          Builder.getAllocator().CopyString(M->first->getName()));
+          Builder.getAllocator().CopyString(M.first->getName()));
       Results.AddResult(CodeCompletionResult(
           Builder.TakeString(), CCP_CodePattern, CXCursor_MacroDefinition));
     }

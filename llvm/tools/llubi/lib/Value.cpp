@@ -31,8 +31,12 @@ void Pointer::print(raw_ostream &OS) const {
   OS << "]";
 }
 
-AnyValue Pointer::null(unsigned BitWidth) {
-  return AnyValue(Pointer(nullptr, APInt::getZero(BitWidth)));
+AnyValue Pointer::null(unsigned AS, const DataLayout &DL) {
+  return AnyValue(Pointer(nullptr, DL.getNullPtrValue(AS)));
+}
+
+bool Pointer::isNullPtr(unsigned AS, const DataLayout &DL) const {
+  return Address == DL.getNullPtrValue(AS);
 }
 
 void AnyValue::print(raw_ostream &OS) const {
@@ -250,8 +254,7 @@ AnyValue AnyValue::getNullValue(Context &Ctx, Type *Ty) {
   if (Ty->isFloatingPointTy())
     return AnyValue(APFloat::getZero(Ty->getFltSemantics()));
   if (Ty->isPointerTy())
-    return Pointer::null(
-        Ctx.getDataLayout().getPointerSizeInBits(Ty->getPointerAddressSpace()));
+    return Pointer::null(Ty->getPointerAddressSpace(), Ctx.getDataLayout());
   if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
     uint32_t NumElements = Ctx.getEVL(VecTy->getElementCount());
     return AnyValue(std::vector<AnyValue>(

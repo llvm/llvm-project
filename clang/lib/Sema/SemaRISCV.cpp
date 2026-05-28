@@ -137,9 +137,24 @@ static QualType RVVType2Qual(ASTContext &Context, const RVVType *Type) {
     QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), false);
     break;
   case ScalarTypeKind::FloatE4M3:
-  case ScalarTypeKind::FloatE5M2:
-    QT = Context.getIntTypeForBitwidth(8, false);
-    break;
+  case ScalarTypeKind::FloatE5M2: {
+    // TODO: This is a workaround code to only support OP8 RVV types without
+    // supporting scalar OFP8 types. We need to refactor after scalar types are
+    // supported.
+    assert(Type->isVector() && "Only support vector of OFP8 types.");
+    bool IsE5M2 = Type->getScalarType() == ScalarTypeKind::FloatE5M2;
+    unsigned Scale = *Type->getScale();
+#define RVV_VECTOR_TYPE_OFP8(Name, Id, SingletonId, NumEls, E5m2)              \
+  if (IsE5M2 == E5m2 && Scale == NumEls)                                       \
+    QT = Context.SingletonId;
+#include "clang/Basic/RISCVVTypes.def"
+    assert(!QT.isNull() && "Unsupported OFP8 vector type");
+    if (Type->isConstant())
+      QT = Context.getConstType(QT);
+    if (Type->isPointer())
+      QT = Context.getPointerType(QT);
+    return QT;
+  }
   case ScalarTypeKind::BFloat:
     QT = Context.BFloat16Ty;
     break;
@@ -1513,10 +1528,22 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
 
 void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
                                     const llvm::StringMap<bool> &FeatureMap) {
+  const BuiltinType *BT = Ty->castAs<BuiltinType>();
   ASTContext::BuiltinVectorTypeInfo Info =
-      SemaRef.Context.getBuiltinVectorTypeInfo(Ty->castAs<BuiltinType>());
+      SemaRef.Context.getBuiltinVectorTypeInfo(BT);
   unsigned EltSize = SemaRef.Context.getTypeSize(Info.ElementType);
   unsigned MinElts = Info.EC.getKnownMinValue();
+
+  auto IsOFP8Type = [](const BuiltinType *BT) {
+    switch (BT->getKind()) {
+#define RVV_VECTOR_TYPE_OFP8(Name, Id, SingletonId, NumEls, E5m2)              \
+  case BuiltinType::Id:
+#include "clang/Basic/RISCVVTypes.def"
+      return true;
+    default:
+      return false;
+    }
+  };
 
   if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Double) &&
       !FeatureMap.lookup("zve64d"))
@@ -1554,6 +1581,8 @@ void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
   // if we don't have at least zve32x supported, then we need to emit error.
   else if (!FeatureMap.lookup("zve32x"))
     Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zve32x";
+  else if (IsOFP8Type(BT) && !FeatureMap.lookup("experimental-zvfofp8min"))
+    Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zvfofp8min";
 }
 
 /// Are the two types RVV-bitcast-compatible types? I.e. is bitcasting from the

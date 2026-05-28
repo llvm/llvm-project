@@ -117,7 +117,7 @@ class test_env:
 config.substitutions.append(
     (
         "%sycl_options",
-        " -lsycl"
+        " -lLLVMSYCL"
         + " -isystem "
         + config.libsycl_include
         + " -isystem "
@@ -205,7 +205,7 @@ try:
     import psutil
 
     # Set timeout for a single test
-    lit_config.maxIndividualTestTime = 600
+    config.maxIndividualTestTime = 600
 
 except ImportError:
     pass

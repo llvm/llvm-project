@@ -122,6 +122,8 @@ if(TARGET cxxabi_shared)
   add_dependencies(omptest cxxabi_shared)
 endif()
 
+openmp_register_meta_dep(omptest)
+
 # Add common include directories.
 target_include_directories(omptest PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

@@ -1,0 +1,13 @@
+RUN: not %dexter_regression_test_run --binary %s --use-script -- %s 2>&1 | FileCheck %s
+
+This is a test that when the script document starts part-way through a file, any syntax errors are reported with the
+correct line number.
+
+CHECK:      No valid Dexter script found in file
+CHECK-NEXT: Script starting line 10
+CHECK-NEXT: Error with node: Where(file=main.cpp): unexpected attributes bees
+
+---
+!where {file: "main.cpp", bees: nose}:
+    !value x: 5
+...

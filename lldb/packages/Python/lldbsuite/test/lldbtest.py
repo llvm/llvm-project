@@ -44,6 +44,7 @@ import signal
 from subprocess import *
 import sys
 import time
+import datetime
 import traceback
 from typing import Optional, Union
 
@@ -433,6 +434,16 @@ class _LocalProcess(_BaseProcess):
 
         stdout = kwargs.pop("stdout", DEVNULL if not self._trace_on else None)
         stderr = kwargs.pop("stderr", None)
+        # This works around a bug in the macOS job control code where
+        # a supurious SIGHUP is sent to the the process group of our
+        # spawned subprocess when it is shutting down.
+        # While this SIGHUP doesn't cause any issues for our subprocess,
+        # it does reach the LIT process and stops the test suite run
+        # early.
+        # This parameter forces the spawned process into a new process
+        # group which prevents the supurious SIGHUP from reaching LIT.
+        # We don't
+        kwargs.setdefault("start_new_session", True)
 
         self._proc = Popen(
             [executable] + args,
@@ -731,9 +742,7 @@ class Base(unittest.TestCase):
         remote_test_dir = configuration.lldb_platform_working_dir
         for c in components:
             remote_test_dir = lldbutil.join_remote_paths(remote_test_dir, c)
-            error = lldb.remote_platform.MakeDirectory(
-                remote_test_dir, 448
-            )  # 448 = 0o700
+            error = lldb.remote_platform.MakeDirectory(remote_test_dir, 0o700)
             if error.Fail():
                 raise Exception(
                     "making remote directory '%s': %s" % (remote_test_dir, error)
@@ -774,13 +783,28 @@ class Base(unittest.TestCase):
         """Create the test-specific working directory, optionally deleting any
         previous contents."""
         bdir = self.getBuildDir()
+        if sys.platform == "win32" and len(bdir) > 256:
+            import warnings
+
+            warnings.warn(
+                "Test build directory path exceeds 256 characters (Windows "
+                "MAX_PATH limit): {}".format(bdir)
+            )
         if os.path.isdir(bdir) and not self.SHARED_BUILD_TESTCASE:
             shutil.rmtree(bdir)
         lldbutil.mkdir_p(bdir)
 
     def getBuildArtifact(self, name="a.out"):
         """Return absolute path to an artifact in the test's build directory."""
-        return os.path.join(self.getBuildDir(), name)
+        artifact_path = os.path.join(self.getBuildDir(), name)
+        if sys.platform == "win32" and len(artifact_path) > 256:
+            import warnings
+
+            warnings.warn(
+                "Test artifact path exceeds 256 characters (Windows "
+                "MAX_PATH limit): {}".format(artifact_path)
+            )
+        return artifact_path
 
     def getSourcePath(self, name):
         """Return absolute path to a file in the test's source directory."""
@@ -817,11 +841,12 @@ class Base(unittest.TestCase):
             "settings set use-color false",
             # Disable the statusline by default.
             "settings set show-statusline false",
+            "settings set target.check-vo-ownership true",
         ]
 
         # Set any user-overridden settings.
         for setting, value in configuration.settings:
-            commands.append("setting set %s %s" % (setting, value))
+            commands.append("setting set -- %s %s" % (setting, value))
 
         # Make sure that a sanitizer LLDB's environment doesn't get passed on.
         if (
@@ -965,6 +990,9 @@ class Base(unittest.TestCase):
                 self.framework_dir = os.path.dirname(framework)
                 self.lib_lldb = lib
                 self.darwinWithFramework = self.platformIsDarwin()
+
+        # As the last operation, mark the setup completed for dumpSessionInfo.
+        self.__setup_done__ = True
 
     def setAsync(self, value):
         """Sets async mode to True/False and ensures it is reset after the testcase completes."""
@@ -1247,16 +1275,18 @@ class Base(unittest.TestCase):
         Dump the debugger interactions leading to a test error/failure.  This
         allows for more convenient postmortem analysis.
 
-        See also LLDBTestResult (dotest.py) which is a singlton class derived
+        See also LLDBTestResult (dotest.py) which is a singleton class derived
         from TextTestResult and overwrites addError, addFailure, and
         addExpectedFailure methods to allow us to to mark the test instance as
         such.
         """
+        # Ensure 'setUp' has completed.
+        if not getattr(self, "__setup_done__", False):
+            return
 
-        # We are here because self.tearDown() detected that this test instance
-        # either errored or failed.  The lldb.test_result singleton contains
-        # two lists (errors and failures) which get populated by the unittest
-        # framework.  Look over there for stack trace information.
+        # The lldb.test_result singleton contains two lists (errors and
+        # failures) which get populated by the unittest framework.  Look over
+        # there for stack trace information.
         #
         # The lists contain 2-tuples of TestCase instances and strings holding
         # formatted tracebacks.
@@ -1286,15 +1316,14 @@ class Base(unittest.TestCase):
 
         session_file = self.getLogBasenameForCurrentTest() + ".log"
 
+        lldbutil.mkdir_p(os.path.dirname(session_file))
         # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
-        session = encoded_file.open(session_file, "utf-8", mode="w")
+        session = encoded_file.open(session_file, "utf-8", mode="a")
 
         if not self.__unexpected__ and not self.__skipped__:
             for test, traceback in pairs:
                 if test is self:
                     print(traceback, file=session)
-
-        import datetime
 
         print(
             "Session info generated @",
@@ -1307,8 +1336,12 @@ class Base(unittest.TestCase):
         # process the log files
         if prefix != "Success" or lldbtest_config.log_success:
             # keep all log files, rename them to include prefix
+            # e.g. .../TestDAP_module/Incomplete.log > Failure_<test-name>.log
             src_log_basename = self.getLogBasenameForCurrentTest()
-            dst_log_basename = self.getLogBasenameForCurrentTest(prefix)
+            dst_log_basename = (
+                f"{self.getLogBasenameForCurrentTest(prefix)}_{self.testMethodName}"
+            )
+            files = []
             for src in self.log_files:
                 if os.path.isfile(src):
                     dst = src.replace(src_log_basename, dst_log_basename)
@@ -1323,6 +1356,12 @@ class Base(unittest.TestCase):
 
                     lldbutil.mkdir_p(os.path.dirname(dst))
                     os.rename(src, dst)
+                    files.append(dst)
+            if files:
+                print(
+                    "Log Files:\n - %s" % ("\n - ".join(files)),
+                    file=sys.stderr,
+                )
         else:
             # success!  (and we don't want log files) delete log files
             for log_file in self.log_files:
@@ -1970,9 +2009,6 @@ class LLDBTestCaseFactory(type):
         if original_testcase.NO_DEBUG_INFO_TESTCASE and not has_variant_tests:
             return original_testcase
 
-        if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
-            original_testcase.SHARED_BUILD_TESTCASE = False
-
         # Default implementation for skip/xfail reason based on the debug category,
         # where "None" means to run the test as usual.
         def no_reason(*args, **kwargs):
@@ -2051,6 +2087,10 @@ class LLDBTestCaseFactory(type):
 
             else:
                 newattrs[attrname] = attrvalue
+
+        if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
+            newattrs["SHARED_BUILD_TESTCASE"] = False
+
         return super(LLDBTestCaseFactory, cls).__new__(cls, name, bases, newattrs)
 
 
@@ -2215,6 +2255,8 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                 # Make sure we found the local shared library in the above code
                 self.assertTrue(os.path.exists(local_shlib_path))
 
+            if lldb.remote_platform:
+                local_shlib_path = os.path.realpath(local_shlib_path)
             # Add the shared library to our target
             shlib_module = target.AddModule(local_shlib_path, None, None, None)
             if lldb.remote_platform:
@@ -2234,6 +2276,16 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                 dirs.append(dir_to_add)
 
         env_value = self.platformContext.shlib_path_separator.join(dirs)
+        # On Windows the shlib env var is PATH. `SetEnvironmentEntries` with
+        # append=True replaces any matching key, so simply returning
+        # "PATH=<test-build-dir>" would wipe out the inherited PATH and break
+        # DLL resolution. Prepend our dirs to the inherited PATH instead.
+        if sys.platform == "win32" and shlib_environment_var == "PATH":
+            existing = os.environ.get("PATH", None)
+            if existing is not None:
+                env_value = (
+                    env_value + self.platformContext.shlib_path_separator + existing
+                )
         return ["%s=%s" % (shlib_environment_var, env_value)]
 
     def registerSanitizerLibrariesWithTarget(self, target):
@@ -2535,7 +2587,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                 )
 
     def filecheck(
-        self, command, check_file, filecheck_options="", expect_cmd_failure=False
+        self, command, check_file, filecheck_options=None, expect_cmd_failure=False
     ):
         # Run the command.
         self.runCmd(
@@ -2562,7 +2614,10 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
             self.assertTrue(False, "No valid FileCheck executable specified")
         filecheck_args = [filecheck_bin, check_file_abs]
         if filecheck_options:
-            filecheck_args.append(filecheck_options)
+            if isinstance(filecheck_options, list):
+                filecheck_args.extend(filecheck_options)
+            else:
+                filecheck_args.append(str(filecheck_options))
         subproc = Popen(
             filecheck_args,
             stdin=PIPE,
@@ -2594,14 +2649,16 @@ FileCheck output:
 
         self.assertEqual(cmd_status, 0)
 
-    def filecheck_log(
-        self, log_file, check_file, filecheck_options="", expect_cmd_failure=False
-    ):
+    def filecheck_log(self, log_file, check_file, filecheck_options=None):
+        input_option = f"-input-file={log_file}"
+        if filecheck_options:
+            filecheck_options = [filecheck_options, input_option]
+        else:
+            filecheck_options = input_option
         return self.filecheck(
-            f"platform shell -h -- cat {log_file}",
+            "script None",
             check_file,
             filecheck_options,
-            expect_cmd_failure,
         )
 
     def expect(

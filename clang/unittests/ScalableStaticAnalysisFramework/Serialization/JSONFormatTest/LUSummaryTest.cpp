@@ -816,7 +816,7 @@ TEST_P(LUSummaryTest, NamespaceElementMissingName) {
 }
 
 // ============================================================================
-// JSONFormat::entityNameFromJSON() Error Tests
+// JSONFormat::luEntityNameFromJSON() Error Tests
 // ============================================================================
 
 TEST_P(LUSummaryTest, EntityNameMissingUSR) {
@@ -944,7 +944,7 @@ TEST_P(LUSummaryTest, EntityNameMissingNamespace) {
 }
 
 // ============================================================================
-// JSONFormat::entityIdTableEntryFromJSON() Error Tests
+// JSONFormat::luEntityIdTableEntryFromJSON() Error Tests
 // ============================================================================
 
 TEST_P(LUSummaryTest, IDTableEntryMissingID) {
@@ -1056,7 +1056,7 @@ TEST_P(LUSummaryTest, IDTableEntryIDNotUInt64) {
 }
 
 // ============================================================================
-// JSONFormat::entityIdTableFromJSON() Error Tests
+// JSONFormat::luEntityIdTableFromJSON() Error Tests
 // ============================================================================
 
 TEST_P(LUSummaryTest, IDTableNotArray) {

@@ -3,10 +3,12 @@ Test calling a function, stopping in the call, continue and gather the result on
 """
 
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class ExprCommandCallStopContinueTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().

@@ -10,11 +10,11 @@
 
 stshh keep
 // CHECK-INST: stshh keep
-// CHECK-ENCODING: encoding: [0x1f,0x96,0x01,0xd5]
+// CHECK-ENCODING: encoding: [0x1f,0x26,0x03,0xd5]
 
 stshh strm
 // CHECK-INST: stshh strm
-// CHECK-ENCODING: encoding: [0x3f,0x96,0x01,0xd5]
+// CHECK-ENCODING: encoding: [0x3f,0x26,0x03,0xd5]
 
 prfm ir, [x0]
 // CHECK-INST: prfm ir, [x0]

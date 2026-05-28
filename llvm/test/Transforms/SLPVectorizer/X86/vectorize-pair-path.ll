@@ -26,9 +26,9 @@ define double @root_selection(double %a, double %b, double %c, double %d) local_
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> [[TMP8]], double [[D:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x double> [[TMP9]], <4 x double> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP12:%.*]] = fsub <4 x double> [[TMP11]], <double 0.000000e+00, double 0.000000e+00, double undef, double 1.100000e+01>
-; CHECK-NEXT:    [[TMP13:%.*]] = fmul <4 x double> [[TMP12]], <double 1.000000e+00, double 1.000000e+00, double 4.000000e+00, double 1.200000e+01>
-; CHECK-NEXT:    [[TMP14:%.*]] = fdiv <4 x double> [[TMP13]], <double 1.000000e+00, double 1.000000e+00, double 1.400000e+00, double 1.400000e+00>
+; CHECK-NEXT:    [[TMP12:%.*]] = fsub reassoc nsz arcp contract afn <4 x double> [[TMP11]], <double 0.000000e+00, double 0.000000e+00, double undef, double 1.100000e+01>
+; CHECK-NEXT:    [[TMP13:%.*]] = fmul reassoc nsz arcp contract afn <4 x double> [[TMP12]], <double 1.000000e+00, double 1.000000e+00, double 4.000000e+00, double 1.200000e+01>
+; CHECK-NEXT:    [[TMP14:%.*]] = fdiv reassoc nsz arcp contract afn <4 x double> [[TMP13]], <double 1.000000e+00, double 1.000000e+00, double 1.400000e+00, double 1.400000e+00>
 ; CHECK-NEXT:    [[TMP15:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP14]])
 ; CHECK-NEXT:    [[I18:%.*]] = fadd fast double [[TMP15]], undef
 ; CHECK-NEXT:    ret double [[I18]]

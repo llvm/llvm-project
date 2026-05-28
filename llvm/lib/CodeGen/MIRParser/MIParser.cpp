@@ -486,6 +486,7 @@ public:
   bool parseDILocation(MDNode *&Expr);
   bool parseMetadataOperand(MachineOperand &Dest);
   bool parseCFIOffset(int &Offset);
+  bool parseCFIUnsigned(unsigned &Value);
   bool parseCFIRegister(unsigned &Reg);
   bool parseCFIAddressSpace(unsigned &AddressSpace);
   bool parseCFIEscapeValues(std::string& Values);
@@ -2115,26 +2116,35 @@ static bool verifyAddrSpace(uint64_t AddrSpace) {
 }
 
 bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
-  if (Token.range().front() == 's' || Token.range().front() == 'p') {
-    StringRef SizeStr = Token.range().drop_front();
-    if (SizeStr.size() == 0 || !llvm::all_of(SizeStr, isdigit))
-      return error("expected integers after 's'/'p' type character");
+  StringRef TypeDigits = Token.range();
+  if (TypeDigits.consume_front("s") || TypeDigits.consume_front("i") ||
+      TypeDigits.consume_front("f") || TypeDigits.consume_front("p") ||
+      TypeDigits.consume_front("bf")) {
+    if (TypeDigits.empty() || !llvm::all_of(TypeDigits, isdigit))
+      return error(
+          "expected integers after 's'/'i'/'f'/'bf'/'p' type identifier");
   }
 
-  if (Token.range().front() == 's') {
-    auto ScalarSize = APSInt(Token.range().drop_front()).getZExtValue();
-    if (ScalarSize) {
-      if (!verifyScalarSize(ScalarSize))
-        return error("invalid size for scalar type");
-      Ty = LLT::scalar(ScalarSize);
-    } else {
+  bool Scalar = Token.range().starts_with("s");
+  if (Scalar || Token.range().starts_with("i")) {
+    auto ScalarSize = APSInt(TypeDigits).getZExtValue();
+    if (!ScalarSize) {
       Ty = LLT::token();
+      lex();
+      return false;
     }
+
+    if (!verifyScalarSize(ScalarSize))
+      return error("invalid size for scalar type");
+
+    Ty = Scalar ? LLT::scalar(ScalarSize) : LLT::integer(ScalarSize);
     lex();
     return false;
-  } else if (Token.range().front() == 'p') {
+  }
+
+  if (Token.range().starts_with("p")) {
     const DataLayout &DL = MF.getDataLayout();
-    uint64_t AS = APSInt(Token.range().drop_front()).getZExtValue();
+    uint64_t AS = APSInt(TypeDigits).getZExtValue();
     if (!verifyAddrSpace(AS))
       return error("invalid address space number");
 
@@ -2143,10 +2153,25 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
     return false;
   }
 
+  if (Token.range().starts_with("f") || Token.range().starts_with("bf")) {
+    auto ScalarSize = APSInt(TypeDigits).getZExtValue();
+    if (!ScalarSize || !verifyScalarSize(ScalarSize))
+      return error("invalid size for scalar type");
+
+    if (Token.range().starts_with("bf") && ScalarSize != 16)
+      return error("invalid size for bfloat");
+
+    Ty = Token.range().starts_with("bf") ? LLT::bfloat16()
+                                         : LLT::floatIEEE(ScalarSize);
+    lex();
+    return false;
+  }
+
   // Now we're looking for a vector.
   if (Token.isNot(MIToken::less))
-    return error(Loc, "expected sN, pA, <M x sN>, <M x pA>, <vscale x M x sN>, "
-                      "or <vscale x M x pA> for GlobalISel type");
+    return error(Loc, "expected tN, pA, <M x tN>, <M x pA>, <vscale x M x tN>, "
+                      "or <vscale x M x pA> for GlobalISel type, "
+                      "where t = {'s', 'i', 'f', 'bf'}");
   lex();
 
   bool HasVScale =
@@ -2154,15 +2179,17 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
   if (HasVScale) {
     lex();
     if (Token.isNot(MIToken::Identifier) || Token.stringValue() != "x")
-      return error("expected <vscale x M x sN> or <vscale x M x pA>");
+      return error(
+          "expected <vscale x M x tN>, where t = {'s', 'i', 'f', 'bf', 'p'}");
     lex();
   }
 
   auto GetError = [this, &HasVScale, Loc]() {
     if (HasVScale)
-      return error(
-          Loc, "expected <vscale x M x sN> or <vscale M x pA> for vector type");
-    return error(Loc, "expected <M x sN> or <M x pA> for vector type");
+      return error(Loc, "expected <vscale x M x tN> for vector type, where t = "
+                        "{'s', 'i', 'f', 'bf', 'p'}");
+    return error(Loc, "expected <M x tN> for vector type, where t = {'s', 'i', "
+                      "'f', 'bf', 'p'}");
   };
 
   if (Token.isNot(MIToken::IntegerLiteral))
@@ -2177,25 +2204,40 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
     return GetError();
   lex();
 
-  if (Token.range().front() != 's' && Token.range().front() != 'p')
+  StringRef VectorTyDigits = Token.range();
+  if (!VectorTyDigits.consume_front("s") &&
+      !VectorTyDigits.consume_front("i") &&
+      !VectorTyDigits.consume_front("f") &&
+      !VectorTyDigits.consume_front("p") && !VectorTyDigits.consume_front("bf"))
     return GetError();
 
-  StringRef SizeStr = Token.range().drop_front();
-  if (SizeStr.size() == 0 || !llvm::all_of(SizeStr, isdigit))
-    return error("expected integers after 's'/'p' type character");
+  if (VectorTyDigits.empty() || !llvm::all_of(VectorTyDigits, isdigit))
+    return error(
+        "expected integers after 's'/'i'/'f'/'bf'/'p' type identifier");
 
-  if (Token.range().front() == 's') {
-    auto ScalarSize = APSInt(Token.range().drop_front()).getZExtValue();
+  Scalar = Token.range().starts_with("s");
+  if (Scalar || Token.range().starts_with("i")) {
+    auto ScalarSize = APSInt(VectorTyDigits).getZExtValue();
     if (!verifyScalarSize(ScalarSize))
       return error("invalid size for scalar element in vector");
-    Ty = LLT::scalar(ScalarSize);
-  } else if (Token.range().front() == 'p') {
+    Ty = Scalar ? LLT::scalar(ScalarSize) : LLT::integer(ScalarSize);
+  } else if (Token.range().starts_with("p")) {
     const DataLayout &DL = MF.getDataLayout();
-    uint64_t AS = APSInt(Token.range().drop_front()).getZExtValue();
+    uint64_t AS = APSInt(VectorTyDigits).getZExtValue();
     if (!verifyAddrSpace(AS))
       return error("invalid address space number");
 
     Ty = LLT::pointer(AS, DL.getPointerSizeInBits(AS));
+  } else if (Token.range().starts_with("f")) {
+    auto ScalarSize = APSInt(VectorTyDigits).getZExtValue();
+    if (!verifyScalarSize(ScalarSize))
+      return error("invalid size for float element in vector");
+    Ty = LLT::floatIEEE(ScalarSize);
+  } else if (Token.range().starts_with("bf")) {
+    auto ScalarSize = APSInt(VectorTyDigits).getZExtValue();
+    if (!verifyScalarSize(ScalarSize))
+      return error("invalid size for bfloat element in vector");
+    Ty = LLT::bfloat16();
   } else {
     return GetError();
   }
@@ -2212,14 +2254,15 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
 
 bool MIParser::parseTypedImmediateOperand(MachineOperand &Dest) {
   assert(Token.is(MIToken::Identifier));
-  StringRef TypeStr = Token.range();
-  if (TypeStr.front() != 'i' && TypeStr.front() != 's' &&
-      TypeStr.front() != 'p')
+  StringRef TypeDigits = Token.range();
+  if (!TypeDigits.consume_front("i") && !TypeDigits.consume_front("s") &&
+      !TypeDigits.consume_front("p") && !TypeDigits.consume_front("f") &&
+      !TypeDigits.consume_front("bf"))
+    return error("a typed immediate operand should start with one of 'i', "
+                 "'s', 'f', 'bf', or 'p'");
+  if (TypeDigits.empty() || !llvm::all_of(TypeDigits, isdigit))
     return error(
-        "a typed immediate operand should start with one of 'i', 's', or 'p'");
-  StringRef SizeStr = Token.range().drop_front();
-  if (SizeStr.size() == 0 || !llvm::all_of(SizeStr, isdigit))
-    return error("expected integers after 'i'/'s'/'p' type character");
+        "expected integers after 'i'/'s'/'f'/'bf'/'p' type identifier");
 
   auto Loc = Token.location();
   lex();
@@ -2666,6 +2709,13 @@ bool MIParser::parseCFIOffset(int &Offset) {
   return false;
 }
 
+bool MIParser::parseCFIUnsigned(unsigned &Value) {
+  if (getUnsigned(Value))
+    return true;
+  lex();
+  return false;
+}
+
 bool MIParser::parseCFIRegister(unsigned &Reg) {
   if (Token.isNot(MIToken::NamedRegister))
     return error("expected a cfi register");
@@ -2803,6 +2853,69 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex =
         MF.addFrameInst(MCCFIInstruction::createNegateRAStateWithPC(nullptr));
     break;
+  case MIToken::kw_cfi_llvm_register_pair: {
+    unsigned Reg, R1, R2;
+    unsigned R1Size, R2Size;
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
+        parseCFIRegister(R1) || expectAndConsume(MIToken::comma) ||
+        parseCFIUnsigned(R1Size) || expectAndConsume(MIToken::comma) ||
+        parseCFIRegister(R2) || expectAndConsume(MIToken::comma) ||
+        parseCFIUnsigned(R2Size))
+      return true;
+
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMRegisterPair(
+        nullptr, Reg, R1, R1Size, R2, R2Size));
+    break;
+  }
+  case MIToken::kw_cfi_llvm_vector_registers: {
+    std::vector<MCCFIInstruction::VectorRegisterWithLane> VectorRegisters;
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma))
+      return true;
+    do {
+      unsigned VR;
+      unsigned Lane, Size;
+      if (parseCFIRegister(VR) || expectAndConsume(MIToken::comma) ||
+          parseCFIUnsigned(Lane) || expectAndConsume(MIToken::comma) ||
+          parseCFIUnsigned(Size))
+        return true;
+      VectorRegisters.push_back({VR, Lane, Size});
+    } while (consumeIfPresent(MIToken::comma));
+
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMVectorRegisters(
+        nullptr, Reg, std::move(VectorRegisters)));
+    break;
+  }
+  case MIToken::kw_cfi_llvm_vector_offset: {
+    unsigned Reg, MaskReg;
+    unsigned RegSize, MaskRegSize;
+    int Offset = 0;
+
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
+        parseCFIUnsigned(RegSize) || expectAndConsume(MIToken::comma) ||
+        parseCFIRegister(MaskReg) || expectAndConsume(MIToken::comma) ||
+        parseCFIUnsigned(MaskRegSize) || expectAndConsume(MIToken::comma) ||
+        parseCFIOffset(Offset))
+      return true;
+
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMVectorOffset(
+        nullptr, Reg, RegSize, MaskReg, MaskRegSize, Offset));
+    break;
+  }
+  case MIToken::kw_cfi_llvm_vector_register_mask: {
+    unsigned Reg, SpillReg, MaskReg;
+    unsigned SpillRegLaneSize, MaskRegSize;
+
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
+        parseCFIRegister(SpillReg) || expectAndConsume(MIToken::comma) ||
+        parseCFIUnsigned(SpillRegLaneSize) ||
+        expectAndConsume(MIToken::comma) || parseCFIRegister(MaskReg) ||
+        expectAndConsume(MIToken::comma) || parseCFIUnsigned(MaskRegSize))
+      return true;
+
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMVectorRegisterMask(
+        nullptr, Reg, SpillReg, SpillRegLaneSize, MaskReg, MaskRegSize));
+    break;
+  }
   case MIToken::kw_cfi_escape: {
     std::string Values;
     if (parseCFIEscapeValues(Values))
@@ -3185,6 +3298,10 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
   case MIToken::kw_cfi_window_save:
   case MIToken::kw_cfi_aarch64_negate_ra_sign_state:
   case MIToken::kw_cfi_aarch64_negate_ra_sign_state_with_pc:
+  case MIToken::kw_cfi_llvm_register_pair:
+  case MIToken::kw_cfi_llvm_vector_registers:
+  case MIToken::kw_cfi_llvm_vector_offset:
+  case MIToken::kw_cfi_llvm_vector_register_mask:
     return parseCFIOperand(Dest);
   case MIToken::kw_blockaddress:
     return parseBlockAddressOperand(Dest);

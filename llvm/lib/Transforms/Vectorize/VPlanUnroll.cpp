@@ -23,6 +23,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Intrinsics.h"
 
 using namespace llvm;
@@ -79,7 +80,7 @@ public:
   void unrollBlock(VPBlockBase *VPB);
 
   VPValue *getValueForPart(VPValue *V, unsigned Part) {
-    if (Part == 0 || isa<VPIRValue, VPSymbolicValue>(V))
+    if (Part == 0 || isa<VPIRValue, VPSymbolicValue, VPRegionValue>(V))
       return V;
     assert((VPV2Parts.contains(V) && VPV2Parts[V].size() >= Part) &&
            "accessed value does not exist");
@@ -160,8 +161,8 @@ void UnrollState::unrollReplicateRegionByUF(VPRegionBlock *VPR) {
     auto PartI = vp_depth_first_shallow(Copy->getEntry());
     auto Part0 = vp_depth_first_shallow(VPR->getEntry());
     for (const auto &[PartIVPBB, Part0VPBB] :
-         zip(VPBlockUtils::blocksOnly<VPBasicBlock>(PartI),
-             VPBlockUtils::blocksOnly<VPBasicBlock>(Part0))) {
+         zip(VPBlockUtils::blocksAs<VPBasicBlock>(PartI),
+             VPBlockUtils::blocksAs<VPBasicBlock>(Part0))) {
       for (const auto &[PartIR, Part0R] : zip(*PartIVPBB, *Part0VPBB)) {
         remapOperands(&PartIR, Part);
         if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&PartIR))
@@ -179,17 +180,22 @@ void UnrollState::unrollWidenInductionByUF(
       IV->getParent()->getEnclosingLoopRegion()->getSinglePredecessor());
   Type *IVTy = TypeInfo.inferScalarType(IV);
   auto &ID = IV->getInductionDescriptor();
-  VPIRFlags Flags;
-  if (isa_and_present<FPMathOperator>(ID.getInductionBinOp()))
-    Flags = ID.getInductionBinOp()->getFastMathFlags();
+  FastMathFlags FMF;
+  VPIRFlags::WrapFlagsTy WrapFlags(false, false);
+  if (auto *IntOrFPInd = dyn_cast<VPWidenIntOrFpInductionRecipe>(IV)) {
+    if (IntOrFPInd->hasFastMathFlags())
+      FMF = IntOrFPInd->getFastMathFlags();
+    if (IntOrFPInd->hasNoWrapFlags())
+      WrapFlags = IntOrFPInd->getNoWrapFlags();
+  }
 
   VPValue *ScalarStep = IV->getStepValue();
   VPBuilder Builder(PH);
   Type *VectorStepTy =
       IVTy->isPointerTy() ? TypeInfo.inferScalarType(ScalarStep) : IVTy;
   VPInstruction *VectorStep = Builder.createNaryOp(
-      VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, VectorStepTy,
-      Flags, IV->getDebugLoc());
+      VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, VectorStepTy, FMF,
+      IV->getDebugLoc());
 
   ToSkip.insert(VectorStep);
 
@@ -214,10 +220,10 @@ void UnrollState::unrollWidenInductionByUF(
     AddFlags = GEPNoWrapFlags::none();
   } else if (IVTy->isFloatingPointTy()) {
     AddOpc = ID.getInductionOpcode();
-    AddFlags = Flags; // FMF flags
+    AddFlags = FMF;
   } else {
     AddOpc = Instruction::Add;
-    AddFlags = VPIRFlags::getDefaultFlags(AddOpc);
+    AddFlags = WrapFlags;
     if (cast<VPWidenIntOrFpInductionRecipe>(IV)->isCanonical())
       AddFlags = VPIRFlags::WrapFlagsTy(/*NUW=*/true, /*NSW=*/false);
   }
@@ -335,18 +341,20 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       Copy->setOperand(1, getValueForPart(Op, Part));
       continue;
     }
-    if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(&R)) {
-      VPBuilder Builder(VPR);
+    if (isa<VPVectorPointerRecipe, VPWidenCanonicalIVRecipe>(R)) {
+      VPBuilder Builder(&R);
       const DataLayout &DL = Plan.getDataLayout();
-      Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(VPR));
-      Type *VFTy = TypeInfo.inferScalarType(&Plan.getVF());
+      Type *IndexTy =
+          isa<VPWidenCanonicalIVRecipe>(R)
+              ? Plan.getVectorLoopRegion()->getCanonicalIVType()
+              : DL.getIndexType(TypeInfo.inferScalarType(R.getVPSingleValue()));
+      Type *VFTy = Plan.getVF().getType();
       VPValue *VF = Builder.createScalarZExtOrTrunc(
           &Plan.getVF(), IndexTy, VFTy, DebugLoc::getUnknown());
       // VFxUF does not wrap, so VF * Part also cannot wrap.
       VPValue *VFxPart = Builder.createOverflowingOp(
           Instruction::Mul, {VF, Plan.getConstantInt(IndexTy, Part)},
           {true, true});
-      Copy->setOperand(0, VPR->getOperand(0));
       Copy->addOperand(VFxPart);
       continue;
     }
@@ -375,11 +383,6 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     if (auto *ScalarIVSteps = dyn_cast<VPScalarIVStepsRecipe>(Copy))
       addStartIndexForScalarSteps(ScalarIVSteps, Part, Plan, TypeInfo);
 
-    // Add operand indicating the part to generate code for, to recipes still
-    // requiring it.
-    if (isa<VPWidenCanonicalIVRecipe>(Copy))
-      Copy->addOperand(getConstantInt(Part));
-
     if (match(Copy,
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>())) {
       VPBuilder Builder(Copy);
@@ -391,6 +394,10 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
   if (auto *VEPR = dyn_cast<VPVectorEndPointerRecipe>(&R)) {
     // Materialize Part0 offset for VectorEndPointer.
     VEPR->materializeOffset();
+  }
+  if (auto *WideCanIV = dyn_cast<VPWidenCanonicalIVRecipe>(&R)) {
+    // Set Part0 step for WidenCanonicalIV.
+    WideCanIV->addOperand(getConstantInt(0));
   }
 }
 
@@ -417,13 +424,12 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
 
     // Add all VPValues for all parts to AnyOf, FirstActiveLaneMask and
-    // Compute*Result which combine all parts to compute the final value.
+    // ComputeReductionResult which combine all parts to compute the final
+    // value.
     VPValue *Op1;
     if (match(&R, m_VPInstruction<VPInstruction::AnyOf>(m_VPValue(Op1))) ||
         match(&R, m_FirstActiveLane(m_VPValue(Op1))) ||
         match(&R, m_LastActiveLane(m_VPValue(Op1))) ||
-        match(&R,
-              m_ComputeAnyOfResult(m_VPValue(), m_VPValue(), m_VPValue(Op1))) ||
         match(&R, m_ComputeReductionResult(m_VPValue(Op1)))) {
       addUniformForAllParts(cast<VPInstruction>(&R));
       for (unsigned Part = 1; Part != UF; ++Part)
@@ -660,12 +666,263 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
   return New;
 }
 
-void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
-  if (Plan.hasScalarVFOnly())
-    return;
+/// Convert recipes in region blocks to operate on a single lane 0.
+/// VPReplicateRecipes are converted to single-scalar ones, branch-on-mask is
+/// converted into BranchOnCond, PredInstPhi recipes are replaced by scalar phi
+/// recipes with an additional poison operand, and extracts are created as
+/// needed.
+static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
+                                                       VPBlockBase *Entry,
+                                                       ElementCount VF) {
+  VPValue *Idx0 = Plan.getZero(IdxTy);
+  VPTypeAnalysis TypeInfo(Plan);
+  for (VPBlockBase *VPB : vp_depth_first_shallow(Entry)) {
+    for (VPRecipeBase &OldR : make_early_inc_range(cast<VPBasicBlock>(*VPB))) {
+      assert(
+          !isa<VPWidenPHIRecipe>(&OldR) &&
+          !match(&OldR,
+                 m_CombineOr(
+                     m_InsertElement(m_VPValue(), m_VPValue(), m_VPValue()),
+                     m_ExtractElement(m_VPValue(), m_VPValue()))) &&
+          "must not contain wide phis, inserts or extracts before conversion");
 
+      VPBuilder Builder(&OldR);
+      DebugLoc OldDL = OldR.getDebugLoc();
+      // For scalar VF, operands are already scalar; no extraction needed.
+      if (!VF.isScalar()) {
+        for (const auto &[I, Op] : enumerate(OldR.operands())) {
+          // Skip operands that don't need extraction: values defined in the
+          // same block (already scalar), or values that are already single
+          // scalars.
+          // TODO: Support isSingleScalar for VPScalarIVStepsRecipe.
+          auto *DefR = Op->getDefiningRecipe();
+          if ((isa_and_present<VPScalarIVStepsRecipe>(DefR) &&
+               DefR->getParent() == VPB) ||
+              vputils::isSingleScalar(Op))
+            continue;
+
+          // Extract lane zero from values defined outside the region.
+          VPValue *Extract = Builder.createNaryOp(Instruction::ExtractElement,
+                                                  {Op, Idx0}, OldDL);
+          OldR.setOperand(I, Extract);
+        }
+      }
+
+      if (auto *RepR = dyn_cast<VPReplicateRecipe>(&OldR)) {
+        auto *NewR = new VPReplicateRecipe(
+            RepR->getUnderlyingInstr(), RepR->operands(),
+            /* IsSingleScalar=*/true, /*Mask=*/nullptr, *RepR, *RepR, OldDL);
+        NewR->insertBefore(RepR);
+        RepR->replaceAllUsesWith(NewR);
+        RepR->eraseFromParent();
+      } else if (auto *BranchOnMask = dyn_cast<VPBranchOnMaskRecipe>(&OldR)) {
+        Builder.createNaryOp(VPInstruction::BranchOnCond,
+                             {BranchOnMask->getOperand(0)}, OldDL);
+        BranchOnMask->eraseFromParent();
+      } else if (auto *PredPhi = dyn_cast<VPPredInstPHIRecipe>(&OldR)) {
+        VPValue *PredOp = PredPhi->getOperand(0);
+        Type *PredTy = TypeInfo.inferScalarType(PredOp);
+        VPValue *Poison = Plan.getOrAddLiveIn(PoisonValue::get(PredTy));
+        VPPhi *NewPhi = Builder.createScalarPhi({Poison, PredOp}, OldDL);
+        PredPhi->replaceAllUsesWith(NewPhi);
+        PredPhi->eraseFromParent();
+      } else {
+        // TODO: Support isSingleScalar for VPScalarIVStepsRecipe.
+        assert((isa<VPScalarIVStepsRecipe>(OldR) ||
+                (isa<VPInstruction>(OldR) &&
+                 vputils::isSingleScalar(OldR.getVPSingleValue()))) &&
+               "unexpected unhandled recipe");
+      }
+    }
+  }
+}
+
+/// Update recipes in the cloned blocks rooted at \p NewEntry to match \p Lane,
+/// using the original blocks rooted at \p OldEntry as reference.
+static void processLaneForReplicateRegion(VPlan &Plan, Type *IdxTy,
+                                          unsigned Lane, VPBasicBlock *OldEntry,
+                                          VPBasicBlock *NewEntry) {
+  DenseMap<VPValue *, VPValue *> Old2NewVPValues;
+  VPValue *IdxLane = Plan.getConstantInt(IdxTy, Lane);
+  for (const auto &[OldBB, NewBB] :
+       zip_equal(vp_depth_first_shallow(OldEntry),
+                 vp_depth_first_shallow(NewEntry))) {
+    for (auto &&[OldR, NewR] :
+         zip_equal(*cast<VPBasicBlock>(OldBB), *cast<VPBasicBlock>(NewBB))) {
+      for (const auto &[OldV, NewV] :
+           zip_equal(OldR.definedValues(), NewR.definedValues()))
+        Old2NewVPValues[OldV] = NewV;
+
+      // Remap operands to use lane-specific values.
+      for (const auto &[I, OldOp] : enumerate(NewR.operands())) {
+        // Use cloned value if operand was defined in the region.
+        if (auto *NewOp = Old2NewVPValues.lookup(OldOp))
+          NewR.setOperand(I, NewOp);
+      }
+
+      if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&NewR)) {
+        addLaneToStartIndex(Steps, Lane, Plan, Steps);
+      } else if (match(&NewR, m_ExtractElement(m_VPValue(), m_VPValue()))) {
+        assert(match(NewR.getOperand(1), m_ZeroInt()) &&
+               "extract indices must be zero");
+        NewR.setOperand(1, IdxLane);
+      } else if (auto *NewPhi = dyn_cast<VPPhi>(&NewR)) {
+        auto *OldPhi = cast<VPPhi>(&OldR);
+        assert(vputils::onlyFirstLaneUsed(OldPhi) &&
+               "VPPhis expected to have only first lane used");
+        auto *BVUser = dyn_cast_or_null<VPInstruction>(OldPhi->getSingleUser());
+        if (BVUser && match(BVUser, m_CombineOr(m_BuildVector(),
+                                                m_BuildStructVector()))) {
+          assert(BVUser->getOperand(0) == OldPhi &&
+                 "Unexpected first operand of build vector user");
+          BVUser->setOperand(Lane, NewPhi);
+        }
+      }
+    }
+  }
+}
+
+/// Dissolve a single replicate region by replicating its blocks for each lane
+/// of \p VF. The region is disconnected, its blocks are reparented, cloned for
+/// each lane, and reconnected in sequence.
+static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
+                                    VPlan &Plan, Type *IdxTy) {
+  auto *FirstLaneEntry = cast<VPBasicBlock>(Region->getEntry());
+  auto *FirstLaneExiting = cast<VPBasicBlock>(Region->getExiting());
+
+  // Disconnect and dissolve the region.
+  VPBlockBase *Predecessor = Region->getSinglePredecessor();
+  assert(Predecessor && "Replicate region must have a single predecessor");
+  auto *Successor = cast<VPBasicBlock>(Region->getSingleSuccessor());
+  VPBlockUtils::disconnectBlocks(Predecessor, Region);
+  VPBlockUtils::disconnectBlocks(Region, Successor);
+
+  VPRegionBlock *ParentRegion = Region->getParent();
+  for (VPBlockBase *VPB : vp_depth_first_shallow(FirstLaneEntry))
+    VPB->setParent(ParentRegion);
+
+  // Process the original blocks for lane 0: converting their recipes to
+  // single-scalar.
+  convertRecipesInRegionBlocksToSingleScalar(Plan, IdxTy, FirstLaneEntry, VF);
+
+  // For scalar VF, just wire the blocks and return; no cloning or packing
+  // needed.
+  if (VF.isScalar()) {
+    VPBlockUtils::connectBlocks(Predecessor, FirstLaneEntry);
+    VPBlockUtils::connectBlocks(FirstLaneExiting, Successor);
+    return;
+  }
+
+  // Create a BuildVector or BuildStructVector in successor block for every
+  // VPPhi in (first lane's) exiting block having vector uses. All their
+  // operands are initialized to poison and will be replaced when processing
+  // each clone, except for the operand of the first lane which set here.
+  // BuildVectors are recorded to be replaced later by chains of insert-element
+  // and widen phi's.
+  unsigned NumLanes = VF.getFixedValue();
+  VPTypeAnalysis TypeInfo(Plan);
+  SmallVector<VPInstruction *> BuildVectors;
+  for (auto &R : FirstLaneExiting->phis()) {
+    auto *Phi = cast<VPPhi>(&R);
+    if (vputils::onlyFirstLaneUsed(Phi))
+      continue;
+
+    Type *ScalarTy = TypeInfo.inferScalarType(Phi);
+    bool IsStruct = isa<StructType>(ScalarTy);
+    VPValue *Poison = Plan.getOrAddLiveIn(PoisonValue::get(ScalarTy));
+    SmallVector<VPValue *> BVOps(NumLanes, Poison);
+    auto *BV = new VPInstruction(IsStruct ? VPInstruction::BuildStructVector
+                                          : VPInstruction::BuildVector,
+                                 BVOps);
+    if (!IsStruct)
+      BuildVectors.push_back(BV);
+    Phi->replaceAllUsesWith(BV);
+    BV->setOperand(0, Phi);
+    BV->insertBefore(*Successor, Successor->getFirstNonPhi());
+  }
+
+  // Clone converted blocks for remaining lanes and process each in reverse
+  // order, connecting each lane's Exiting block to the subsequent lane's entry.
+  VPBlockBase *NextLaneEntry = Successor;
+  for (int Lane = NumLanes - 1; Lane > 0; --Lane) {
+    const auto &[CurrentLaneEntry, CurrentLaneExiting] =
+        VPBlockUtils::cloneFrom(FirstLaneEntry);
+    for (VPBlockBase *VPB : vp_depth_first_shallow(CurrentLaneEntry))
+      VPB->setParent(ParentRegion);
+    processLaneForReplicateRegion(Plan, IdxTy, Lane,
+                                  cast<VPBasicBlock>(FirstLaneEntry),
+                                  cast<VPBasicBlock>(CurrentLaneEntry));
+    VPBlockUtils::connectBlocks(CurrentLaneExiting, NextLaneEntry);
+    NextLaneEntry = CurrentLaneEntry;
+  }
+
+  // Connect Predecessor to FirstLaneEntry, and FirstLaneRegionExit to
+  // NextLaneEntry which is the second lane region entry. The latter is
+  // done last so that earlier clonings from FirstLaneEntry stop at
+  // FirstLaneExiting.
+  VPBlockUtils::connectBlocks(Predecessor, FirstLaneEntry);
+  VPBlockUtils::connectBlocks(FirstLaneExiting, NextLaneEntry);
+
+  // Fold BuildVector fed by scalar phis into VPWidenPHIRecipes with
+  // InsertElement per lane.
+  // TODO: check if this folding should be dropped.
+  for (VPInstruction *BV : BuildVectors) {
+    assert(BV->getNumOperands() == NumLanes &&
+           "BuildVector must have one operand per lane");
+    for (const auto &[Idx, Op] : enumerate(BV->operands())) {
+      auto *ScalarPhi = cast<VPPhi>(Op);
+      auto DL = ScalarPhi->getDebugLoc();
+      auto *PredOp = cast<VPSingleDefRecipe>(ScalarPhi->getOperand(1));
+      VPValue *Poison = ScalarPhi->getOperand(0);
+      VPValue *PrevVal = Idx == 0 ? Poison : BV->getOperand(Idx - 1);
+      auto Builder = VPBuilder::getToInsertAfter(PredOp->getDefiningRecipe());
+      auto *Insert = Builder.createNaryOp(
+          Instruction::InsertElement,
+          {PrevVal, PredOp, Plan.getConstantInt(64, Idx)}, DL);
+      Builder.setInsertPoint(ScalarPhi);
+      auto *NewPhi = Builder.createWidenPhi({PrevVal, Insert}, DL);
+      ScalarPhi->replaceAllUsesWith(NewPhi);
+      ScalarPhi->eraseFromParent();
+    }
+    BV->replaceAllUsesWith(BV->getOperand(NumLanes - 1));
+    BV->eraseFromParent();
+  }
+}
+
+/// Collect and dissolve all replicate regions in the vector loop, replicating
+/// their blocks and recipes for each lane of \p VF.
+static void replicateReplicateRegionsByVF(VPlan &Plan, ElementCount VF,
+                                          Type *IdxTy) {
+  // Collect all replicate regions before modifying the CFG.
+  SmallVector<VPRegionBlock *> ReplicateRegions;
+  for (VPRegionBlock *Region : VPBlockUtils::blocksOnly<VPRegionBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    if (Region->isReplicator())
+      ReplicateRegions.push_back(Region);
+  }
+
+  assert((ReplicateRegions.empty() || !VF.isScalable()) &&
+         "cannot replicate across scalable VFs");
+
+  // Dissolve replicate regions by replicating their blocks for each lane.
+  // Traversing regions in reverse ensures that the successor of every region
+  // being processed is a basic-block, rather than another region.
+  for (VPRegionBlock *Region : reverse(ReplicateRegions))
+    dissolveReplicateRegion(Region, VF, Plan, IdxTy);
+
+  VPlanTransforms::mergeBlocksIntoPredecessors(Plan);
+}
+
+void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
   Type *IdxTy = IntegerType::get(
       Plan.getScalarHeader()->getIRBasicBlock()->getContext(), 32);
+
+  if (Plan.hasScalarVFOnly()) {
+    // When Plan is only unrolled by UF, replicating by VF amounts to dissolving
+    // replicate regions.
+    replicateReplicateRegionsByVF(Plan, VF, IdxTy);
+    return;
+  }
 
   // Visit all VPBBs outside the loop region and directly inside the top-level
   // loop region.
@@ -733,4 +990,6 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
   }
   for (auto *R : reverse(ToRemove))
     R->eraseFromParent();
+
+  replicateReplicateRegionsByVF(Plan, VF, IdxTy);
 }

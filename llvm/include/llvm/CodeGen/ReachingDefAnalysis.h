@@ -325,7 +325,8 @@ public:
 };
 
 /// Printer pass for the \c ReachingDefInfo results.
-class ReachingDefPrinterPass : public PassInfoMixin<ReachingDefPrinterPass> {
+class ReachingDefPrinterPass
+    : public RequiredPassInfoMixin<ReachingDefPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -333,8 +334,6 @@ public:
 
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
-
-  static bool isRequired() { return true; }
 };
 
 class ReachingDefInfoWrapperPass : public MachineFunctionPass {

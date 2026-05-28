@@ -28,6 +28,7 @@
 #include "llvm/Frontend/OpenMP/DirectiveNameParser.h"
 #include "llvm/Frontend/OpenMP/OMPAssume.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
+#include <climits>
 #include <optional>
 
 using namespace clang;
@@ -2387,6 +2388,8 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
     ImplicitClauseAllowed = false;
     Actions.OpenMP().StartOpenMPClause(CKind);
     HasImplicitClause = false;
+    SourceLocation ClauseLoc = Tok.getLocation();
+
     OMPClause *Clause =
         ParseOpenMPClause(DKind, CKind, !SeenClauses[unsigned(CKind)]);
     SeenClauses[unsigned(CKind)] = true;
@@ -2397,6 +2400,13 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
     if (Tok.is(tok::comma))
       ConsumeToken();
     Actions.OpenMP().EndOpenMPClause();
+
+    // If ParseOpenMPClause returned without consuming any tokens, skip
+    // to end to avoid an infinite loop.
+    if (Tok.getLocation() == ClauseLoc) {
+      skipUntilPragmaOpenMPEnd(DKind);
+      break;
+    }
   }
   // End location of the directive.
   EndLoc = Tok.getLocation();
@@ -2423,6 +2433,10 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
       !SeenClauses[unsigned(OMPC_sizes)]) {
     Diag(Loc, diag::err_omp_required_clause)
         << getOpenMPDirectiveName(DKind, OMPVersion) << "sizes";
+  }
+  if (DKind == OMPD_split && !SeenClauses[unsigned(OMPC_counts)]) {
+    Diag(Loc, diag::err_omp_required_clause)
+        << getOpenMPDirectiveName(DKind, OMPVersion) << "counts";
   }
 
   StmtResult AssociatedStmt;
@@ -2986,6 +3000,51 @@ OMPClause *Parser::ParseOpenMPSizesClause() {
                                                  OpenLoc, CloseLoc);
 }
 
+OMPClause *Parser::ParseOpenMPCountsClause() {
+  SourceLocation ClauseNameLoc, OpenLoc, CloseLoc;
+  SmallVector<Expr *, 4> ValExprs;
+  std::optional<unsigned> FillIdx;
+  unsigned FillCount = 0;
+  SourceLocation FillLoc;
+
+  assert(getOpenMPClauseName(OMPC_counts) == PP.getSpelling(Tok) &&
+         "Expected parsing to start at clause name");
+  ClauseNameLoc = ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
+  if (T.consumeOpen()) {
+    Diag(Tok, diag::err_expected) << tok::l_paren;
+    return nullptr;
+  }
+
+  do {
+    if (Tok.is(tok::identifier) &&
+        Tok.getIdentifierInfo()->getName() == "omp_fill") {
+      if (FillCount == 0)
+        FillIdx = ValExprs.size();
+      ++FillCount;
+      FillLoc = Tok.getLocation();
+      ConsumeToken();
+      ValExprs.push_back(nullptr);
+    } else {
+      ExprResult Val = ParseConstantExpression();
+      if (!Val.isUsable()) {
+        T.skipToEnd();
+        return nullptr;
+      }
+      ValExprs.push_back(Val.get());
+    }
+  } while (TryConsumeToken(tok::comma));
+
+  if (T.consumeClose())
+    return nullptr;
+  OpenLoc = T.getOpenLocation();
+  CloseLoc = T.getCloseLocation();
+
+  return Actions.OpenMP().ActOnOpenMPCountsClause(
+      ValExprs, ClauseNameLoc, OpenLoc, CloseLoc, FillIdx, FillLoc, FillCount);
+}
+
 OMPClause *Parser::ParseOpenMPLoopRangeClause() {
   SourceLocation ClauseNameLoc = ConsumeToken();
   SourceLocation FirstLoc, CountLoc;
@@ -3075,12 +3134,10 @@ OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
       ConsumeToken();
 
       CXXScopeSpec SS;
-      Token Replacement;
       ExprResult AllocatorExpr =
           getLangOpts().CPlusPlus
               ? ParseCXXIdExpression()
-              : tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false,
-                                        Replacement);
+              : tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false);
 
       if (AllocatorExpr.isInvalid()) {
         SkipUntil(
@@ -3109,12 +3166,10 @@ OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
 
     // Parse 'Allocator(expr)' for <5.2
     CXXScopeSpec SS;
-    Token Replacement;
     ExprResult Allocator =
         getLangOpts().CPlusPlus
             ? ParseCXXIdExpression()
-            : tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false,
-                                      Replacement);
+            : tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false);
     if (Allocator.isInvalid()) {
       SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
                 StopBeforeMatch);
@@ -3431,6 +3486,15 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
       ErrorFound = true;
     }
     Clause = ParseOpenMPPermutationClause();
+    break;
+  case OMPC_counts:
+    if (!FirstClause) {
+      Diag(Tok, diag::err_omp_more_one_clause)
+          << getOpenMPDirectiveName(DKind, OMPVersion)
+          << getOpenMPClauseName(CKind) << 0;
+      ErrorFound = true;
+    }
+    Clause = ParseOpenMPCountsClause();
     break;
   case OMPC_uses_allocators:
     Clause = ParseOpenMPUsesAllocatorClause(DKind);
@@ -3791,12 +3855,13 @@ OMPClause *Parser::ParseOpenMPOMPXAttributesClause(bool ParseOnly) {
       continue;
     case ParsedAttr::AT_CUDALaunchBounds:
       if (!PA.checkAtLeastNumArgs(Actions, 1) ||
-          !PA.checkAtMostNumArgs(Actions, 2))
+          !PA.checkAtMostNumArgs(Actions, 3))
         continue;
       if (auto *A = Actions.CreateLaunchBoundsAttr(
               PA, PA.getArgAsExpr(0),
               PA.getNumArgs() > 1 ? PA.getArgAsExpr(1) : nullptr,
-              PA.getNumArgs() > 2 ? PA.getArgAsExpr(2) : nullptr))
+              PA.getNumArgs() > 2 ? PA.getArgAsExpr(2) : nullptr,
+              /*IgnoreArch=*/true))
         Attrs.push_back(A);
       continue;
     default:

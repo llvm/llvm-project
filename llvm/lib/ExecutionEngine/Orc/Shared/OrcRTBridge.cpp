@@ -83,12 +83,22 @@ const char *RunAsVoidFunctionWrapperName =
 const char *RunAsIntFunctionWrapperName =
     "__llvm_orc_bootstrap_run_as_int_function_wrapper";
 
+const SimpleExecutorMemoryManagerSymbolNames
+    orc_rt_SimpleNativeMemoryMapSPSSymbols = {
+        "orc_rt_ci_SimpleNativeMemoryMap_Instance",
+        "orc_rt_ci_sps_SimpleNativeMemoryMap_reserve",
+        "orc_rt_ci_sps_SimpleNativeMemoryMap_initialize",
+        "orc_rt_ci_sps_SimpleNativeMemoryMap_deinitializeMultiple",
+        "orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple",
+};
+
 } // end namespace rt
 namespace rt_alt {
 const char *UnwindInfoManagerRegisterActionName =
     "orc_rt_alt_UnwindInfoManager_register";
 const char *UnwindInfoManagerDeregisterActionName =
     "orc_rt_alt_UnwindInfoManager_deregister";
+
 } // end namespace rt_alt
 } // end namespace orc
 } // end namespace llvm

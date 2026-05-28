@@ -52,6 +52,12 @@ static const MachineMemOperand::Flags MOLastUse =
 static const MachineMemOperand::Flags MOCooperative =
     MachineMemOperand::MOTargetFlag3;
 
+struct V2PhysSCopyInfo {
+  // Operands that need to replaced by waterfall
+  SmallVector<MachineOperand *> MOs;
+  // Target physical registers replacing the MOs
+  SmallVector<Register> SGPRs;
+};
 /// Mark the MMO of accesses to memory locations that are
 /// never written to by other threads.
 static const MachineMemOperand::Flags MOThreadPrivate =
@@ -305,6 +311,19 @@ public:
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
                     Register SrcReg, int Value)  const;
 
+private:
+  void storeRegToStackSlotImpl(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator MI, Register SrcReg,
+                               bool isKill, int FrameIndex,
+                               const TargetRegisterClass *RC, Register VReg,
+                               MachineInstr::MIFlag Flags, bool NeedsCFI) const;
+
+public:
+  void storeRegToStackSlotCFI(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI, Register SrcReg,
+                              bool isKill, int FrameIndex,
+                              const TargetRegisterClass *RC) const;
+
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
 
@@ -313,7 +332,8 @@ public:
   unsigned getVectorRegSpillSaveOpcode(Register Reg,
                                        const TargetRegisterClass *RC,
                                        unsigned Size,
-                                       const SIMachineFunctionInfo &MFI) const;
+                                       const SIMachineFunctionInfo &MFI,
+                                       bool NeedsCFI) const;
   unsigned
   getVectorRegSpillRestoreOpcode(Register Reg, const TargetRegisterClass *RC,
                                  unsigned Size,
@@ -495,6 +515,9 @@ public:
     return isMUBUF(Opcode) || isMTBUF(Opcode) || isImage(Opcode) ||
            isFLAT(Opcode);
   }
+
+  /// True if MI implicitly drains XCNT.
+  static bool isXcntDrain(const MachineInstr &MI);
 
   static bool isSOP1(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::SOP1;
@@ -726,6 +749,7 @@ public:
   static bool isBlockLoadStore(uint32_t Opcode) {
     switch (Opcode) {
     case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
+    case AMDGPU::SI_BLOCK_SPILL_V1024_CFI_SAVE:
     case AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE:
     case AMDGPU::SCRATCH_STORE_BLOCK_SADDR:
     case AMDGPU::SCRATCH_LOAD_BLOCK_SADDR:
@@ -934,6 +958,24 @@ public:
 
   bool isVOP3P(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::VOP3P;
+  }
+
+  bool isVOP3PMix(const MachineInstr &MI) const {
+    return isVOP3PMix(MI.getOpcode());
+  }
+
+  bool isVOP3PMix(uint16_t Opcode) const {
+    switch (Opcode) {
+    case AMDGPU::V_FMA_MIXHI_F16:
+    case AMDGPU::V_FMA_MIXLO_F16:
+    case AMDGPU::V_FMA_MIX_F32:
+    case AMDGPU::V_MAD_MIXHI_F16:
+    case AMDGPU::V_MAD_MIXLO_F16:
+    case AMDGPU::V_MAD_MIX_F32:
+      return true;
+    default:
+      return false;
+    }
   }
 
   static bool isVINTRP(const MachineInstr &MI) {
@@ -1502,8 +1544,17 @@ public:
   /// updated.
   void moveToVALU(SIInstrWorklist &Worklist, MachineDominatorTree *MDT) const;
 
-  void moveToVALUImpl(SIInstrWorklist &Worklist, MachineDominatorTree *MDT,
-                      MachineInstr &Inst) const;
+  void
+  moveToVALUImpl(SIInstrWorklist &Worklist, MachineDominatorTree *MDT,
+                 MachineInstr &Inst,
+                 DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
+                 DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const;
+  /// Wrapper function for generating waterfall for instruction \p MI
+  /// This function take into consideration of related pre & succ instructions
+  /// (e.g. calling process) into consideratioin
+  void createWaterFallForSiCall(MachineInstr *MI, MachineDominatorTree *MDT,
+                                ArrayRef<MachineOperand *> ScalarOps,
+                                ArrayRef<Register> PhySGPRs = {}) const;
 
   void insertNoop(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MI) const override;
@@ -1579,8 +1630,10 @@ public:
   Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
                               TypeSize &MemBytes) const override;
 
-  unsigned getInstBundleSize(const MachineInstr &MI) const;
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
+
+  InstSizeVerifyMode
+  getInstSizeVerifyMode(const MachineInstr &MI) const override;
 
   bool mayAccessFlatAddressSpace(const MachineInstr &MI) const;
 
@@ -1628,6 +1681,11 @@ public:
                                     Register Dst) const override;
 
   bool isWave32() const;
+
+  bool isVOPDAntidependencyAllowed(const MachineInstr &MI) const;
+
+  bool hasRAWDependency(const MachineInstr &FirstMI,
+                        const MachineInstr &SecondMI) const;
 
   /// Return a partially built integer add instruction without carry.
   /// Caller must add source operands.
@@ -1680,9 +1738,8 @@ public:
   void fixImplicitOperands(MachineInstr &MI) const;
 
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                                      ArrayRef<unsigned> Ops,
-                                      MachineBasicBlock::iterator InsertPt,
-                                      int FrameIndex,
+                                      ArrayRef<unsigned> Ops, int FrameIndex,
+                                      MachineInstr *&CopyMI,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
 
@@ -1692,17 +1749,25 @@ public:
 
   const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
 
-  InstructionUniformity
-  getInstructionUniformity(const MachineInstr &MI) const final;
+  ValueUniformity getValueUniformity(const MachineInstr &MI) const final;
 
-  InstructionUniformity
-  getGenericInstructionUniformity(const MachineInstr &MI) const;
+  ValueUniformity getGenericValueUniformity(const MachineInstr &MI) const;
 
   const MIRFormatter *getMIRFormatter() const override;
 
   static unsigned getDSShaderTypeValue(const MachineFunction &MF);
 
   const TargetSchedModel &getSchedModel() const { return SchedModel; }
+
+  void createReadFirstLaneFromCopyToPhysReg(MachineRegisterInfo &MRI,
+                                            Register DstReg,
+                                            MachineInstr &Inst) const;
+
+  void handleCopyToPhysHelper(
+      SIInstrWorklist &Worklist, Register DstReg, MachineInstr &Inst,
+      MachineRegisterInfo &MRI,
+      DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
+      DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const;
 
   // FIXME: This should be removed
   // Enforce operand's \p OpName even alignment if required by target.

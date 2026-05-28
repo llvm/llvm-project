@@ -15,7 +15,6 @@
 #define LLVM_EXECUTIONENGINE_ORC_SELFEXECUTORPROCESSCONTROL_H
 
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
-#include "llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h"
 
 #include <memory>
 
@@ -24,10 +23,9 @@ namespace llvm::orc {
 /// A ExecutorProcessControl implementation targeting the current process.
 class LLVM_ABI SelfExecutorProcessControl : public ExecutorProcessControl {
 public:
-  SelfExecutorProcessControl(
-      std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,
-      Triple TargetTriple, unsigned PageSize,
-      std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr);
+  SelfExecutorProcessControl(std::shared_ptr<SymbolStringPool> SSP,
+                             std::unique_ptr<TaskDispatcher> D,
+                             Triple TargetTriple, unsigned PageSize);
 
   /// Create a SelfExecutorProcessControl with the given symbol string pool and
   /// memory manager.
@@ -36,8 +34,7 @@ public:
   /// be created and used by default.
   static Expected<std::unique_ptr<SelfExecutorProcessControl>>
   Create(std::shared_ptr<SymbolStringPool> SSP = nullptr,
-         std::unique_ptr<TaskDispatcher> D = nullptr,
-         std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr = nullptr);
+         std::unique_ptr<TaskDispatcher> D = nullptr);
 
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override;
@@ -50,32 +47,25 @@ public:
                         IncomingWFRHandler OnComplete,
                         ArrayRef<char> ArgBuffer) override;
 
+  Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+  createDefaultMemoryManager() override;
+
   Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() override;
+
+  Expected<std::unique_ptr<MemoryAccess>> createDefaultMemoryAccess() override;
 
   Error disconnect() override;
 
 private:
-  class InProcessDylibManager : public DylibManager {
-  public:
-    InProcessDylibManager(char GlobalManglingPrefix);
-    Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
-    void
-    lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
-                       DylibManager::SymbolLookupCompleteFn Complete) override;
-
-  private:
-    char GlobalManglingPrefix;
-  };
+  class InProcessDylibManager;
 
   static shared::CWrapperFunctionBuffer
   jitDispatchViaWrapperFunctionManager(void *Ctx, const void *FnTag,
                                        const char *Data, size_t Size);
 
-  std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
 #ifdef __APPLE__
   std::unique_ptr<UnwindInfoManager> UnwindInfoMgr;
 #endif // __APPLE__
-  InProcessMemoryAccess IPMA;
 };
 
 } // namespace llvm::orc

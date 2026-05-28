@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../assembly.h"
-#include "endian.h"
+#include "crt_endian.h"
 
 // The basic strategy of this division code is to use Newton-Raphson iteration
 // to calculate an approximation to 1/y, then multiply it by x. This procedure
@@ -106,7 +106,7 @@ LOCAL_LABEL(ddiv_normalised): // denormal handler will come back to here
   // Shift both mantissas up to the top of their 64-bit register pair, and OR
   // in the leading 1 bit, which will occupy the high bit of the high word in
   // each case.
-  mov     r5, #1<<31              // high bit for ORing in to both mantissas
+  mov     r5, #(1 << 31)          // high bit for ORing in to both mantissas
   orr     xh, r5, xh, lsl #11     // shift up xh and OR in the high bit
   orr     yh, r5, yh, lsl #11     // same for yh
   orr     xh, xh, xl, lsr #21     // OR in the bits shifted out of xl into xh
@@ -147,7 +147,32 @@ LOCAL_LABEL(ddiv_normalised): // denormal handler will come back to here
   // lookup table entries, not 256. The 8-bit value we load also has its top
   // bit set.
   lsr     r5, yh, #24           // r5 is the table index plus 0x80
-  adr     r6, LOCAL_LABEL(reciptbl)-128      // so subtract 0x80 from the table address
+
+  // Get the address of reciptbl, in various ways depending on position-
+  // independence and Arm/Thumb state.
+  //
+  // Since the table index calculated above in r5 includes the high mantissa
+  // bit, an index of 0x80 refers to the first table entry and 0xFF the last.
+  // So we subtract 0x80 from the table address to compensate.
+#if defined __pic__ || defined __PIC__ || defined __ARM_ROPI
+  // In PIC or ROPI modes, we must construct the address in a pc-relative
+  // manner, by making a literal containing the offset from the current code.
+  // The reference point for that offset is the value of pc as read by the add
+  // instruction at get_reciptbl below, which will be 4 or 8 bytes after it in
+  // Thumb or Arm state respectively.
+#if __thumb__
+  ldr     r6, =(LOCAL_LABEL(reciptbl)-0x80) - (LOCAL_LABEL(get_reciptbl)+4)
+#else
+  ldr     r6, =(LOCAL_LABEL(reciptbl)-0x80) - (LOCAL_LABEL(get_reciptbl)+8)
+#endif
+LOCAL_LABEL(get_reciptbl):
+  add     r6, r6, pc
+#else
+  // If we're not building for position independence, we can just load the
+  // target address directly.
+  ldr     r6, =(LOCAL_LABEL(reciptbl)-0x80)
+#endif
+
   ldrb    r6, [r6, r5]          // and load the approximation into r6
 
   // First Newton-Raphson iteration, which expands that 8-bit approximation to
@@ -160,7 +185,7 @@ LOCAL_LABEL(ddiv_normalised): // denormal handler will come back to here
   // fixed point), so the 2 becomes 2^24.
   lsr     r5, yh, #16           // get top halfword of y
   mul     r7, r6, r5            // multiply it by the input value r
-  rsb     r7, r7, #1<<24        // subtract from 2 (scaled up appropriately)
+  rsb     r7, r7, #(1 << 24)    // subtract from 2 (scaled up appropriately)
   mul     r7, r6, r7            // multiply again to make r(2-yr)
   lsr     r7, r7, #14           // shift down to keep only 17 bits of it
 
@@ -177,12 +202,12 @@ LOCAL_LABEL(ddiv_normalised): // denormal handler will come back to here
   umull   r6, r8, r7, r12       // r8:r6 = yr
   rsbs    r6, r6, #0            // low half of subtraction from 2
   umull   r12, lr, r7, r6       // multiply r by the low half of 2-yr
-#if !__thumb__
-  rsc     r8, r8, #1<<16        // high half of subtraction from 2
-#else
+#if __thumb__
   // Thumb has no RSC, so simulate it by bitwise inversion and then ADC
   mvn     r8, r8
-  adc     r8, r8, #1<<16
+  adc     r8, r8, #(1 << 16)
+#else
+  rsc     r8, r8, #(1 << 16)    // high half of subtraction from 2
 #endif
   mla     r6, r7, r8, lr        // multiply r by the high half of 2-yr
 
@@ -256,7 +281,7 @@ LOCAL_LABEL(ddiv_normalised): // denormal handler will come back to here
   // renormalised here. The correction path for quotients too close to a
   // rounding boundary will need to recover that information.
   adds    lr, r5, #0x40000000  // set V flag if bit 62 of high word set
-  subvc   r4, r4, #1<<16       // if not, correct the exponent by 1,
+  subvc   r4, r4, #(1 << 16)   // if not, correct the exponent by 1,
   lslsvc  r6, r6, #1           // shift the low word of the quotient left
   adcvc   r5, r5, r5           // and shift its top bit into the high word
 
@@ -275,7 +300,7 @@ LOCAL_LABEL(ddiv_normalised): // denormal handler will come back to here
   //
   // We keep the original version of r6, containing the ten rounding bits, so
   // that we can test it to see if we need the slow path.
-  adds    r7, r6, #1<<9        // add half a ULP, copying low word into r7
+  adds    r7, r6, #(1 << 9)    // add half a ULP, copying low word into r7
   adc     r5, r5, #0           // propagate carry into high word
   lsr     r7, r7, #10          // shift low word right
   orr     r7, r7, r5, lsl #22  // combine with bits shifted out of high word
@@ -312,7 +337,7 @@ LOCAL_LABEL(ddiv_normalised): // denormal handler will come back to here
   // test by an ASR#31 (copying the top bit of r4 into all of it) and negating.
   // That way, the output value is zero on underflow, matching the flags from
   // the other check.
-  sub     r6, r6, #(1<<9)-64
+  sub     r6, r6, #(1 << 9)-64
   tst     r6, #0x3C0              // now EQ means we must go to the slow path
   mvnsne  r12, r4, asr #31        // also set EQ if underflow has happened
   beq     LOCAL_LABEL(ddiv_correction)         // branch out of line to do the hard bit
@@ -345,7 +370,7 @@ LOCAL_LABEL(ddiv_corrected):
   // 0x7f0 isn't the maximum possible known-safe exponent, but it's the largest
   // one that fits in the immediate field of CMP. We deal with the remaining
   // cases in the next few instructions.
-  cmp     r12, #0x7f0 << 16
+  cmp     r12, #(0x7f0 << 16)
   popls   {r4,r5,r6,r7,r8,pc}
 
   // Now check the remaining cases more carefully.
@@ -354,7 +379,7 @@ LOCAL_LABEL(ddiv_corrected):
   // by seeing if the _final_ output exponent (in the output register xh) is
   // 0x7ff or more, by incrementing it and seeing if the sign is opposite from
   // the intended output sign.
-  add     lr, xh, #1<<20          // increment the output exponent field
+  add     lr, xh, #(1 << 20)      // increment the output exponent field
   teq     lr, r4, lsl #31         // set N if the sign now doesn't match r4[0]
   tstpl   r12, r12                // otherwise, set N if underflow
   poppl   {r4,r5,r6,r7,r8,pc}     // if neither, we've finished
@@ -596,7 +621,10 @@ LOCAL_LABEL(ddiv_ivo):
   mov     xl, #0
   bx      lr
 
+END_COMPILERRT_FUNCTION(__aeabi_ddiv)
+
   // Table of approximate reciprocals.
+CONST_SECTION
 LOCAL_LABEL(reciptbl):
   .byte 0xFF,0xFD,0xFB,0xF9,0xF7,0xF5,0xF4,0xF2
   .byte 0xF0,0xEE,0xED,0xEB,0xE9,0xE8,0xE6,0xE4
@@ -614,7 +642,5 @@ LOCAL_LABEL(reciptbl):
   .byte 0x8D,0x8C,0x8C,0x8B,0x8B,0x8A,0x89,0x89
   .byte 0x88,0x88,0x87,0x87,0x86,0x85,0x85,0x84
   .byte 0x84,0x83,0x83,0x82,0x82,0x81,0x81,0x80
-
-END_COMPILERRT_FUNCTION(__aeabi_ddiv)
 
 NO_EXEC_STACK_DIRECTIVE

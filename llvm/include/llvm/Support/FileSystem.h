@@ -1333,9 +1333,10 @@ private:
   LLVM_ABI void unmapImpl();
   LLVM_ABI void dontNeedImpl();
   LLVM_ABI void willNeedImpl();
+  LLVM_ABI void randomAccessImpl();
 
   LLVM_ABI std::error_code init(sys::fs::file_t FD, uint64_t Offset,
-                                mapmode Mode);
+                                mapmode Mode, const char *Name);
 
 public:
   mapped_file_region() = default;
@@ -1351,7 +1352,8 @@ public:
 
   /// \param fd An open file descriptor to map. Does not take ownership of fd.
   LLVM_ABI mapped_file_region(sys::fs::file_t fd, mapmode mode, size_t length,
-                              uint64_t offset, std::error_code &ec);
+                              uint64_t offset, std::error_code &ec,
+                              const char *name = nullptr);
 
   ~mapped_file_region() { unmapImpl(); }
 
@@ -1365,6 +1367,7 @@ public:
   }
   void dontNeed() { dontNeedImpl(); }
   void willNeed() { willNeedImpl(); }
+  void randomAccess() { randomAccessImpl(); }
 
   LLVM_ABI size_t size() const;
   LLVM_ABI char *data() const;

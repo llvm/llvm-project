@@ -62,7 +62,7 @@ For instance, two different comparisons one under SEW=64, LMUL=2 and the other u
 Representation in LLVM IR
 =========================
 
-Vector instructions can be represented in three main ways in LLVM IR:
+Vector instructions can be represented in two main ways in LLVM IR:
 
 1. Regular instructions on both scalable and fixed-length vector types
 
@@ -101,34 +101,11 @@ Vector instructions can be represented in three main ways in LLVM IR:
 
    The only valid types are scalable vector types.
 
-3. :ref:`Vector predication (VP) intrinsics <int_vp>`
+For operations that access memory, trap or otherwise have behaviour which depends on what elements are enabled, the target agnostic :ref:`llvm.masked.* <int_mload_mstore>` and :ref:`llvm.vp.* <int_vp>` intrinsics can be used to control the mask and AVL respectively.
 
-   .. code-block:: llvm
+.. note::
 
-       %c = call @llvm.vp.add.nxv4i32(
-	      <vscale x 4 x i32> %a,
-	      <vscale x 4 x i32> %b,
-	      <vscale x 4 x i1> %m
-	      i32 %evl
-	    )
-
-   Unlike RISC-V intrinsics, VP intrinsics are target agnostic so they can be emitted from other optimisation passes in the middle-end (like the loop vectorizer). They also support fixed-length vector types.
-
-   VP intrinsics also don't have passthru operands, but tail/mask undisturbed behaviour can be emulated by using the output in a ``@llvm.vp.merge``.
-   It will get lowered as a ``vmerge``, but will be merged back into the underlying instruction's mask via ``RISCVDAGToDAGISel::performCombineVMergeAndVOps``.
-
-
-The different properties of the above representations are summarized below:
-
-+----------------------+--------------+-----------------+----------+------------------+----------------------+-----------------+
-|                      | AVL          | Masking         | Passthru | Scalable vectors | Fixed-length vectors | Target agnostic |
-+======================+==============+=================+==========+==================+======================+=================+
-| LLVM IR instructions | Always VLMAX | No              | None     | Yes              | Yes                  | Yes             |
-+----------------------+--------------+-----------------+----------+------------------+----------------------+-----------------+
-| RVV intrinsics       | Yes          | Yes             | Yes      | Yes              | No                   | No              |
-+----------------------+--------------+-----------------+----------+------------------+----------------------+-----------------+
-| VP intrinsics        | Yes (EVL)    | Yes             | No       | Yes              | Yes                  | Yes             |
-+----------------------+--------------+-----------------+----------+------------------+----------------------+-----------------+
+   Middle-end passes typically do not need to worry about controlling the AVL for most instructions, as :ref:`RISCVVLOptimizer` will automatically take care of reducing the AVL to avoid vsetvli toggles. Using regular LLVM IR instructions allows more generic combines and optimisations to be taken advantage of. For instructions that may access memory or trap etc., passes should use the ``llvm.vp.*`` intrinsics to set the AVL where required.
 
 SelectionDAG lowering
 =====================
@@ -256,6 +233,27 @@ The patterns in ``RISCVInstrInfoVVLPatterns.td`` only match masked pseudos to re
 .. note::
 
    Any ``vmset.m`` can be treated as an all ones mask since the tail elements past AVL are ``undef`` and can be replaced with ones.
+
+.. _RISCVVLOptimizer:
+
+RISCVVLOptimizer
+================
+
+After instruction selection, ``RISCVVLOptimizer.cpp`` will reduce the AVL of vector pseudos to only what is demanded from its users. This helps performance on microarchitectures which have performance characteristics dependent on ``vl``, and also avoids unnecessary ``vsetvli`` toggles.
+
+.. code-block::
+
+   %x:vr = PseudoVADD_VV_M1 undef, %a:vr, %b:vr, -1 /*avl*/, 5 /*sew*/, 3 /*policy*/
+   %y:vr = PseudoVADD_VV_M1 undef, %%y:vr, %x:vr, -1 /*avl*/, 5 /*sew*/, 3 /*policy*/
+   PseudoVSE32_V_M1 %y, %addr, 4 /*avl*/, 5 /*sew*/
+
+   // gets optimized to:
+
+   %x:vr = PseudoVADD_VV_M1 undef, %a:vr, %b:vr, 5 /*avl*/, 5 /*sew*/, 3 /*policy*/
+   %y:vr = PseudoVADD_VV_M1 undef, %%y:vr, %x:vr, 5 /*avl*/, 5 /*sew*/, 3 /*policy*/
+   PseudoVSE32_V_M1 %y, %addr, 4 /*avl*/, 5 /*sew*/
+
+For a vector pseudo to be considered for AVL optimisation, its underlying instruction must specify that its output doesn't depend on ``vl`` in the ``ElementsDependOn`` TSFlag. The default for this flag is conservatively set to depending on ``vl``, so AVL optimisation will be off by default.
 
 VMV0 elimination
 =================

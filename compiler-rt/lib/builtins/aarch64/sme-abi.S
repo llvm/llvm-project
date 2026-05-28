@@ -53,9 +53,11 @@ DEFINE_COMPILERRT_PRIVATE_FUNCTION(do_abort)
   .cfi_endproc
 END_COMPILERRT_FUNCTION(do_abort)
 
+// Note: It is the responsibility of the baremetal runtime/libc to implement
+// __arm_sme_state.
+#if !defined(TARGET_BAREMETAL_AARCH64)
 // __arm_sme_state fills the result registers based on a local
 // that is set as part of the compiler-rt startup code.
-//   __aarch64_has_sme_and_tpidr2_el0
 DEFINE_COMPILERRT_FUNCTION(__arm_sme_state)
   .variant_pcs __arm_sme_state
   BTI_C
@@ -73,6 +75,7 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sme_state)
 1:
   ret
 END_COMPILERRT_FUNCTION(__arm_sme_state)
+#endif // !defined(TARGET_BAREMETAL_AARCH64)
 
 DEFINE_COMPILERRT_FUNCTION(__arm_tpidr2_restore)
   .variant_pcs __arm_tpidr2_restore

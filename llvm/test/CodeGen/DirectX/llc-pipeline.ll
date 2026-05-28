@@ -14,6 +14,8 @@
 ; CHECK-OBJ-NEXT: Create Garbage Collector Module Metadata
 
 ; CHECK-NEXT: ModulePass Manager
+; CHECK-NEXT:   FunctionPass Manager
+; CHECK-NEXT:     Strip convergence intrinsics and operand bundles
 ; CHECK-NEXT:   DXIL Finalize Linkage
 ; CHECK-NEXT:   Dead Global Elimination
 ; CHECK-NEXT:   DXIL Memory Intrinsic Elimination

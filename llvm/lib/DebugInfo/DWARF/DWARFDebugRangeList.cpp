@@ -10,6 +10,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cinttypes>
 #include <cstdint>
@@ -68,20 +69,20 @@ void DWARFDebugRangeList::dump(raw_ostream &OS) const {
   const char *AddrFmt;
   switch (AddressSize) {
   case 2:
-    AddrFmt = "%08" PRIx64 " %04" PRIx64 " %04" PRIx64 "\n";
+    AddrFmt = "{0:x-8} {1:x-4} {2:x-4}\n";
     break;
   case 4:
-    AddrFmt = "%08" PRIx64 " %08" PRIx64 " %08" PRIx64 "\n";
+    AddrFmt = "{0:x-8} {1:x-8} {2:x-8}\n";
     break;
   case 8:
-    AddrFmt = "%08" PRIx64 " %016" PRIx64 " %016" PRIx64 "\n";
+    AddrFmt = "{0:x-8} {1:x-16} {2:x-16}\n";
     break;
   default:
     llvm_unreachable("unsupported address size");
   }
   for (const RangeListEntry &RLE : Entries)
-    OS << format(AddrFmt, Offset, RLE.StartAddress, RLE.EndAddress);
-  OS << format("%08" PRIx64 " <End of list>\n", Offset);
+    OS << formatv(AddrFmt, Offset, RLE.StartAddress, RLE.EndAddress);
+  OS << formatv("{0:x-8} <End of list>\n", Offset);
 }
 
 DWARFAddressRangesVector DWARFDebugRangeList::getAbsoluteRanges(

@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: !stdlib=libc++ && (c++03 || c++11 || c++14)
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // <string_view>
 //   ... manipulating sequences of any non-array trivial standard-layout types.
 
@@ -46,7 +44,7 @@ int main(int, char**) {
     typedef char C[3];
     static_assert(std::is_array<C>::value, "");
     std::basic_string_view<C, test_traits<C> > sv;
-    //  expected-error-re@string_view:* {{static assertion failed{{.*}}Character type of basic_string_view must not be an array}}
+    //  expected-error-re@*:* {{static assertion failed{{.*}}Character type of basic_string_view must not be an array}}
   }
 
   {
@@ -60,14 +58,14 @@ int main(int, char**) {
     //  not trivially default constructible
     static_assert(!std::is_trivially_default_constructible<NotTriviallyDefaultConstructible>::value, "");
     std::basic_string_view<NotTriviallyDefaultConstructible, test_traits<NotTriviallyDefaultConstructible> > sv;
-    //  expected-error-re@string_view:* {{static assertion failed{{.*}}Character type of basic_string_view must be trivially default constructible}}
+    //  expected-error-re@*:* {{static assertion failed{{.*}}Character type of basic_string_view must be trivially default constructible}}
   }
 
   {
     //  not standard layout
     static_assert(!std::is_standard_layout<NotStandardLayout>::value, "");
     std::basic_string_view<NotStandardLayout, test_traits<NotStandardLayout> > sv;
-    //  expected-error-re@string_view:* {{static assertion failed{{.*}}Character type of basic_string_view must be standard-layout}}
+    //  expected-error-re@*:* {{static assertion failed{{.*}}Character type of basic_string_view must be standard-layout}}
   }
 
   return 0;

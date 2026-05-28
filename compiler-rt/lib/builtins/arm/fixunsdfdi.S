@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../assembly.h"
-#include "endian.h"
+#include "crt_endian.h"
 
   .syntax unified
   .text
@@ -57,7 +57,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_d2ulz)
   // imagine that their leading mantissa bit was set.)
   lsl     r3, xh, #11           // shift top word left to discard sign+exponent
   orr     r3, r3, xl, lsr #21   // combine with bits from bottom word
-  orr     r3, r3, #1<<31        // set the leading bit
+  orr     r3, r3, #(1 << 31)    // set the leading bit
   lsl     r12, xl, #11          // shift bottom word left
 
   // Convert the mantissa into a right shift count, indicating how many bits we
@@ -87,7 +87,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_d2ulz)
   sub     r2, r2, #0x340        // first stage: r2 is negative for underflow
   bic     r2, r2, r2, asr #31   // if so, saturate by clearing all bits of r2
   rsbs    r2, r2, #0xfe         // second step: r2 is now the right shift count
-  blt     LOCAL_LABEL(uncommon)        // if it was negative, overflow
+  blt     LOCAL_LABEL(uncommon) // if it was negative, overflow
 
   // Make the top word of the result, which is the easy part: it's a
   // shifted-right version of the top word of the mantissa, which will be zero
@@ -101,13 +101,13 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_d2ulz)
   // nothing to the output, so we just need mh >> (n-32).
   lsr     xl, r12, r2           // start by setting it to ml >> n
   rsbs    r2, r2, #32           // compute 32-n, and find which case we're in
-#if !__thumb__
-  orrhi   xl, xl, r3, lsl r2    // shift count < 32, so OR in ml << (32-n)
-#else
+#if __thumb__
   // In Thumb we must separate the register-controlled shift and the OR into
   // two instructions.
   lslhi   r3, r3, r2
   orrhi   xl, xl, r3
+#else
+  orrhi   xl, xl, r3, lsl r2    // shift count < 32, so OR in ml << (32-n)
 #endif
   rsbls   r2, r2, #0            // shift count > 32, so compute n-32
   lsrls   xl, r3, r2            // replace xl with mh >> (n-32)
@@ -147,7 +147,7 @@ LOCAL_LABEL(positive_invalid):
   // it's a NaN, we return zero; otherwise we return UINT_MAX.
   cmp     xl, #1                  // set C if any bit of xl is nonzero
   adc     r2, xh, xh              // shift that bit into xh, discarding sign
-  cmn     r2, #1 << 21            // then greater than 0xFFE00000 means NaN
+  cmn     r2, #(1 << 21)          // then greater than 0xFFE00000 means NaN
   bhi     LOCAL_LABEL(return_zero)       // so we go back to the case above
 
   mov     xh, #0xFFFFFFFF

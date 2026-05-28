@@ -1411,6 +1411,25 @@ def TosaToSCFPass : Pass<"tosa-to-scf"> {
 }
 
 //===----------------------------------------------------------------------===//
+// TOSA to SPIR-V Graph/TOSA
+//===----------------------------------------------------------------------===//
+
+def TosaToSPIRVTosa : Pass<"tosa-to-spirv-tosa"> {
+  let summary = "Lower TOSA IR to SPIR-V Graph/TOSA operations";
+  let dependentDialects = [
+    "spirv::SPIRVDialect",
+  ];
+  let description = [{
+    Converts TOSA programs to the SPIR-V Graph/TOSA representation by
+    wrapping converted functions in `spirv.module` and `spirv.ARM.Graph`,
+    and rewriting TOSA tensor and shape types to the corresponding SPIR-V ARM
+    tensor types.
+  }];
+
+  let constructor = "tosa::createTosaToSPIRVTosa()";
+}
+
+//===----------------------------------------------------------------------===//
 // TosaToTensor
 //===----------------------------------------------------------------------===//
 
@@ -1688,6 +1707,10 @@ def ConvertXeGPUToXeVMPass : Pass<"convert-xegpu-to-xevm"> {
                            "memref::MemRefDialect", "arith::ArithDialect",
                            "LLVM::LLVMDialect", "index::IndexDialect",
                            "gpu::GPUDialect", "scf::SCFDialect"];
+  let options = [Option<"use64bitIndex", "use-64bit-index", "bool",
+                        /*default=*/"true",
+                        "Use 64-bit integers to convert index types">,
+  ];
 }
 
 #endif // MLIR_CONVERSION_PASSES

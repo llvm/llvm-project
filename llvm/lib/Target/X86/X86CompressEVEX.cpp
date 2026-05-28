@@ -237,6 +237,9 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
       Opc != X86::VPMOVB2MZ128kr && Opc != X86::VPMOVB2MZ256kr)
     return false;
 
+  if (usesExtendedRegister(MI))
+    return false;
+
   Register MaskReg = MI.getOperand(0).getReg();
   Register SrcVecReg = MI.getOperand(1).getReg();
 
@@ -268,12 +271,6 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
 
   for (MachineInstr &CurMI : llvm::make_range(
            std::next(MachineBasicBlock::iterator(MI)), MBB.end())) {
-    if (CurMI.modifiesRegister(MaskReg, TRI)) {
-      if (!KMovMI)
-        return false; // Mask clobbered before use
-      break;
-    }
-
     if (CurMI.readsRegister(MaskReg, TRI)) {
       if (KMovMI)
         return false; // Fail: Mask has MULTIPLE uses
@@ -290,6 +287,12 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
       } else {
         return false;
       }
+    }
+
+    if (CurMI.modifiesRegister(MaskReg, TRI)) {
+      if (!KMovMI)
+        return false; // Mask clobbered before use
+      break;
     }
 
     if (!KMovMI && CurMI.modifiesRegister(SrcVecReg, TRI)) {
@@ -447,6 +450,10 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
 
   if (!NewOpc)
     return false;
+  // NF (No Flags) instructions cannot compress to VEX/legacy encoding.
+  // NF_ND can still compress to NF (both remain EVEX).
+  assert((IsND || !(TSFlags & X86II::EVEX_NF)) &&
+         "Unexpected to compress NF instructions without ND.");
 
   const MCInstrDesc &NewDesc = ST.getInstrInfo()->get(NewOpc);
   MI.setDesc(NewDesc);

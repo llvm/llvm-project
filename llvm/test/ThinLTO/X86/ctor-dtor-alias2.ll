@@ -26,8 +26,8 @@
 ;; Although D0/D2 in b.bc is non-prevailing, keep D1/D2 as definitions, otherwise
 ;; the output may have an undefined and unsatisfied D1.
 ; CHECK: @_ZN1AIiED1Ev = weak_odr unnamed_addr alias void (ptr), ptr @_ZN1AIiED2Ev
-; CHECK: define weak_odr void @_ZN1AIiED2Ev(ptr noundef nonnull %this) unnamed_addr comdat($_ZN1AIiED5Ev) {
-; CHECK: define available_externally void @_ZN1AIiED0Ev(ptr noundef nonnull %this) unnamed_addr {
+; CHECK: define weak_odr void @_ZN1AIiED2Ev(ptr noundef nonnull %this) unnamed_addr comdat($_ZN1AIiED5Ev)
+; CHECK: define available_externally void @_ZN1AIiED0Ev(ptr noundef nonnull %this) unnamed_addr
 
 ;--- a.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

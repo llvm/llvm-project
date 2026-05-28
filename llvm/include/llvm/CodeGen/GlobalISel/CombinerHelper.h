@@ -44,6 +44,7 @@ class LegalizerInfo;
 struct LegalityQuery;
 class RegisterBank;
 class RegisterBankInfo;
+class TargetInstrInfo;
 class TargetLowering;
 class TargetRegisterInfo;
 
@@ -120,6 +121,7 @@ protected:
   MachineDominatorTree *MDT;
   bool IsPreLegalize;
   const LegalizerInfo *LI;
+  const TargetInstrInfo *TII;
   const RegisterBankInfo *RBI;
   const TargetRegisterInfo *TRI;
 
@@ -134,6 +136,12 @@ public:
   MachineIRBuilder &getBuilder() const {
     return Builder;
   }
+
+  const TargetInstrInfo &getTII() const { return *TII; }
+
+  const TargetRegisterInfo &getTRI() const { return *TRI; }
+
+  const RegisterBankInfo &getRBI() const { return *RBI; }
 
   const TargetLowering &getTargetLowering() const;
 
@@ -282,6 +290,13 @@ public:
   /// Replace \p MI with a build_vector.
   void applyCombineShuffleToBuildVector(MachineInstr &MI) const;
 
+  /// Combine G_BUILD_VECTOR(G_UNMERGE(G_BITCAST), Undef) to
+  /// G_BITCAST(G_BUILD_VECTOR(..))
+  bool matchCombineBuildVectorOfBitcast(MachineInstr &MI,
+                                        SmallVector<Register> &Ops) const;
+  void applyCombineBuildVectorOfBitcast(MachineInstr &MI,
+                                        SmallVector<Register> &Ops) const;
+
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
   /// Returns true if MI changed.
   ///
@@ -409,6 +424,12 @@ public:
   void applyCombineConstantFoldFpUnary(MachineInstr &MI,
                                        const ConstantFP *Cst) const;
 
+  /// Constant fold a unary integer op (G_CTLZ, G_CTTZ, G_CTPOP and their
+  /// _ZERO_POISON variants, G_ABS, G_BSWAP, G_BITREVERSE) when the operand is
+  /// a scalar constant or a G_BUILD_VECTOR of constants.
+  bool matchConstantFoldUnaryIntOp(MachineInstr &MI,
+                                   BuildFnTy &MatchInfo) const;
+
   /// Transform IntToPtr(PtrToInt(x)) to x if cast is in the same address space.
   bool matchCombineI2PToP2I(MachineInstr &MI, Register &Reg) const;
   void applyCombineI2PToP2I(MachineInstr &MI, Register &Reg) const;
@@ -525,9 +546,11 @@ public:
   /// Check if operand \p OpIdx is undef.
   bool matchOperandIsUndef(MachineInstr &MI, unsigned OpIdx) const;
 
-  /// Check if operand \p OpIdx is known to be a power of 2.
-  bool matchOperandIsKnownToBeAPowerOfTwo(MachineInstr &MI,
-                                          unsigned OpIdx) const;
+  /// Check if operand \p MO is known to be a power of 2. When \p OrNegative
+  /// is true, also match operands whose negation is a power of 2 (i.e. whose
+  /// absolute value is a power of 2).
+  bool matchOperandIsKnownToBeAPowerOfTwo(const MachineOperand &MO,
+                                          bool OrNegative = false) const;
 
   /// Erase \p MI
   void eraseInst(MachineInstr &MI) const;
@@ -745,6 +768,9 @@ public:
   /// Given an G_UDIV \p MI expressing an unsigned divided by a pow2 constant,
   /// return expressions that implements it by shifting.
   void applyUDivByPow2(MachineInstr &MI) const;
+
+  /// Combine G_SREM x, (+/-2^k) to a bias-and-mask sequence.
+  void applySimplifySRemByPow2(MachineInstr &MI) const;
 
   // G_UMULH x, (1 << c)) -> x >> (bitwidth - c)
   bool matchUMulHToLShr(MachineInstr &MI) const;
@@ -1053,6 +1079,9 @@ public:
   // (ctlz (xor x, (sra x, bitwidth-1))) -> (add (ctls x), 1) or
   // (ctlz (or (shl (xor x, (sra x, bitwidth-1)), 1), 1) -> (ctls x)
   bool matchCtls(MachineInstr &CtlzMI, BuildFnTy &MatchInfo) const;
+
+  bool matchAVG(MachineInstr &MI, MachineRegisterInfo &MRI, Register X,
+                Register Y, unsigned TargetOpc) const;
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.

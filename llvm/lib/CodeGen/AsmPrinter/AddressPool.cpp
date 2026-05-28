@@ -22,7 +22,7 @@ unsigned AddressPool::getIndex(const MCSymbol *Sym, bool TLS) {
 }
 
 MCSymbol *AddressPool::emitHeader(AsmPrinter &Asm, MCSection *Section) {
-  static const uint8_t AddrSize = Asm.MAI->getCodePointerSize();
+  static const uint8_t AddrSize = Asm.MAI.getCodePointerSize();
 
   MCSymbol *EndLabel =
       Asm.emitDwarfUnitLength("debug_addr", "Length of contribution");
@@ -63,7 +63,7 @@ void AddressPool::emit(AsmPrinter &Asm, MCSection *AddrSection) {
             : MCSymbolRefExpr::create(I.first, Asm.OutContext);
 
   for (const MCExpr *Entry : Entries)
-    Asm.OutStreamer->emitValue(Entry, Asm.MAI->getCodePointerSize());
+    Asm.OutStreamer->emitValue(Entry, Asm.MAI.getCodePointerSize());
 
   if (EndLabel)
     Asm.OutStreamer->emitLabel(EndLabel);

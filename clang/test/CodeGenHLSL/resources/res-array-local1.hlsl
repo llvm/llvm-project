@@ -14,6 +14,7 @@ RWStructuredBuffer<float> Out : register(u0);
 
 // CHECK: define internal void @_Z4mainv()
 // CHECK-NEXT: entry:
+// CHECK-NEXT:  %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 [numthreads(4,1,1)]
 void main() {
 // CHECK-NEXT:  %First = alloca [3 x %"class.hlsl::RWBuffer"], align 4
@@ -35,6 +36,7 @@ void main() {
 // CHECK-NEXT: br label %[[ArrayInitLoop:.*]]
 // CHECK: [[ArrayInitLoop]]:
 // CHECK-NEXT: %[[ArrayCurPtr:.*]] = phi ptr [ %[[ArrayBeginPtr]], %entry ], [ %[[ArrayNextPtr:.*]], %[[ArrayInitLoop]] ]
+// CHECK-NEXT: %[[#C_LOOP:]] = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %[[#C_ENTRY]]) ]
 // CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1Ev(ptr {{.*}} %[[ArrayCurPtr]])
 // CHECK-NEXT: %[[ArrayNextPtr]] = getelementptr inbounds %"class.hlsl::RWBuffer", ptr %[[ArrayCurPtr]], i32 1
 // CHECK-NEXT: %[[ArrayInitDone:.*]] = icmp eq ptr %[[ArrayNextPtr]], %[[ArrayEndPtr]]
@@ -46,16 +48,16 @@ void main() {
 // CHECK: call {{.*}} @_ZN4hlsl8RWBufferIfEaSERKS1_(ptr {{.*}} %[[Ptr3]], ptr {{.*}} @_ZL1C)
   Second[2] = C;
 
-  // NOTE: _ZN4hlsl8RWBufferIfEixEj is the subscript operator for RWBuffer<float>
+  // NOTE: _ZNK4hlsl8RWBufferIfEixEj is the subscript operator for RWBuffer<float>
 
 // get First[1][0] value
 // CHECK: %[[First_1_Ptr:.*]] = getelementptr inbounds [3 x %"class.hlsl::RWBuffer"], ptr %First, i32 0, i32 1
-// CHECK: %[[BufPtr1:.*]] = call {{.*}} ptr @_ZN4hlsl8RWBufferIfEixEj(ptr {{.*}} %[[First_1_Ptr]], i32 noundef 0)
+// CHECK: %[[BufPtr1:.*]] = call {{.*}} ptr @_ZNK4hlsl8RWBufferIfEixEj(ptr {{.*}} %[[First_1_Ptr]], i32 noundef 0)
 // CHECK: %[[Value1:.*]] = load float, ptr %[[BufPtr1]], align 4
 
 // get Second[2][0] value
 // CHECK: %[[Second_2_Ptr:.*]] = getelementptr inbounds [4 x %"class.hlsl::RWBuffer"], ptr %Second, i32 0, i32 2
-// CHECK: %[[BufPtr2:.*]] = call {{.*}} ptr @_ZN4hlsl8RWBufferIfEixEj(ptr {{.*}} %[[Second_2_Ptr]], i32 noundef 0)
+// CHECK: %[[BufPtr2:.*]] = call {{.*}} ptr @_ZNK4hlsl8RWBufferIfEixEj(ptr {{.*}} %[[Second_2_Ptr]], i32 noundef 0)
 // CHECK: %[[Value2:.*]] = load float, ptr %[[BufPtr2]], align 4
 
 // add them

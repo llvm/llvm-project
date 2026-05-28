@@ -50,6 +50,7 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   Listener.cpp
   Log.cpp
   NameMatches.cpp
+  Policy.cpp
   ProcessInfo.cpp
   RealpathPrefixes.cpp
   RegisterValue.cpp
@@ -75,7 +76,6 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   UserID.cpp
   UserIDResolver.cpp
   VASprintf.cpp
-  VMRange.cpp
   VirtualDataExtractor.cpp
   XcodeSDK.cpp
   ZipFile.cpp

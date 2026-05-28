@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../assembly.h"
-#include "endian.h"
+#include "crt_endian.h"
 
   .syntax unified
   .text
@@ -56,7 +56,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_d2lz)
   // imagine that their leading mantissa bit was set.)
   lsl     r3, xh, #11           // shift top word left to discard sign+exponent
   orr     r3, r3, xl, lsr #21   // combine with bits from bottom word
-  orr     r3, r3, #1<<31        // set the leading bit
+  orr     r3, r3, #(1 << 31)    // set the leading bit
   lsl     r12, xl, #11          // shift bottom word left
 
   // Branch out of line for negative cases, using the N flag set by the ASRS at
@@ -95,7 +95,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_d2lz)
   sub     r2, r2, #0x340        // first stage: r2 is negative for underflow
   bic     r2, r2, r2, asr #31   // if so, saturate by clearing all bits of r2
   rsbs    r2, r2, #0xfe         // second step: r2 is now the right shift count
-  ble     LOCAL_LABEL(invalid)          // if it was negative or zero, overflow
+  ble     LOCAL_LABEL(invalid)  // if it was negative or zero, overflow
 
   // Make the top word of the result, which is the easy part: it's a
   // shifted-right version of the top word of the mantissa, which will be zero
@@ -109,13 +109,13 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_d2lz)
   // nothing to the output, so we just need mh >> (n-32).
   lsr     xl, r12, r2           // start by setting it to ml >> n
   rsbs    r2, r2, #32           // compute 32-n, and find which case we're in
-#if !__thumb__
-  orrhi   xl, xl, r3, lsl r2    // shift count < 32, so OR in ml << (32-n)
-#else
+#if __thumb__
   // In Thumb we must separate the register-controlled shift and the OR into
   // two instructions.
   lslhi   r3, r3, r2
   orrhi   xl, xl, r3
+#else
+  orrhi   xl, xl, r3, lsl r2    // shift count < 32, so OR in ml << (32-n)
 #endif
   rsbls   r2, r2, #0            // shift count > 32, so compute n-32
   lsrls   xl, r3, r2            // replace xl with mh >> (n-32)
@@ -142,13 +142,13 @@ LOCAL_LABEL(neg):
   lsrs    xh, r3, r2            // make high word of mantissa
   lsr     xl, r12, r2           // initially set low word to ml >> n
   rsbs    r2, r2, #32           // compute 32-n, and find which case we're in
-#if !__thumb__
-  orrhi   xl, xl, r3, lsl r2    // shift count < 32, so OR in ml << (32-n)
-#else
+#if __thumb__
   // In Thumb we must separate the register-controlled shift and the OR into
   // two instructions.
   lslhi   r3, r3, r2
   orrhi   xl, xl, r3
+#else
+  orrhi   xl, xl, r3, lsl r2    // shift count < 32, so OR in ml << (32-n)
 #endif
   rsbls   r2, r2, #0            // shift count > 32, so compute n-32
   lsrls   xl, r3, r2            // and replace xl with mh >> that
@@ -156,12 +156,12 @@ LOCAL_LABEL(neg):
   // All of that was almost exactly the same as the positive code path, but now
   // we must negate the answer before returning it.
   rsbs    xl, xl, #0            // negate low word, setting carry flag
-#if !__thumb__
-  rsc     xh, xh, #0            // negate high word
-#else
-  // Thumb has no RSC, so substitute MVN + ADC.
+#if __thumb__
+  // Negate the high word. Thumb has no RSC, so substitute MVN + ADC.
   mvn     xh, xh
   adc     xh, xh, #0
+#else
+  rsc     xh, xh, #0
 #endif
 
   // We're done.
@@ -189,7 +189,7 @@ LOCAL_LABEL(invalid):
   // Check for NaNs and branch out of line.
   cmp     xl, #1                  // set C if any bit of xl is nonzero
   adc     r2, xh, xh              // shift that bit into xh, discarding sign
-  cmn     r2, #1 << 21            // then greater than 0xFFE00000 means NaN
+  cmn     r2, #(1 << 21)          // then greater than 0xFFE00000 means NaN
   bhi     LOCAL_LABEL(nan)
 
   // The remaining case is a too-large exponent. Return either INT_MAX or

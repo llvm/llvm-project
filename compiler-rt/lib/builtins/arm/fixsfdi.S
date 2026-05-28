@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../assembly.h"
-#include "endian.h"
+#include "crt_endian.h"
 
   .syntax unified
   .text
@@ -47,7 +47,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_f2lz)
 
   // Shift the mantissa to the top of the word, and put on the leading 1 bit.
   mov     r3, r0, lsl #8
-  orrne   r3, r3, #1 << 31
+  orrne   r3, r3, #(1 << 31)
 
   // If the value was negative, branch out of line to handle that.
   bmi     LOCAL_LABEL(negative)
@@ -91,12 +91,13 @@ LOCAL_LABEL(negative):
 
   // Finally, negate the answer.
   rsbs    xl, xl, #0           // negate bottom word
-#if !__thumb__
-  rsc     xh, xh, #0           // negate top word
-#else
-  // Thumb has no RSC, so simulate it by bitwise inversion and then ADC
+#if __thumb__
+  // Negate top word. Thumb has no RSC, so simulate it by bitwise
+  // inversion and then ADC.
   mvn     xh, xh
   adc     xh, xh, #0
+#else
+  rsc     xh, xh, #0
 #endif
 
   bx      lr
@@ -120,11 +121,11 @@ LOCAL_LABEL(invalid):
   // return 0x8000000000000000, and it doesn't matter that one is the right
   // answer and the other a best-effort error response.
   mov     r1, #0xFF000000
-  cmp     r1, r0, lsl #1         // 0xFF000000 < (input << 1) means a NaN
-  blo     LOCAL_LABEL(return_zero)       // so branch out of line to return zero
-  mov     r2, #0x7FFFFFFF        // set up to return INT_MAX
-  eor     xh, r2, r0, asr #31    // flip top half to 80000000 if input < 0
-  mvn     xl, r0, asr #31        // and bottom half is FFFFFFFF or 00000000
+  cmp     r1, r0, lsl #1           // 0xFF000000 < (input << 1) means a NaN
+  blo     LOCAL_LABEL(return_zero) // so branch out of line to return zero
+  mov     r2, #0x7FFFFFFF          // set up to return INT_MAX
+  eor     xh, r2, r0, asr #31      // flip top half to 80000000 if input < 0
+  mvn     xl, r0, asr #31          // and bottom half is FFFFFFFF or 00000000
   bx      lr
 
 LOCAL_LABEL(return_zero):
