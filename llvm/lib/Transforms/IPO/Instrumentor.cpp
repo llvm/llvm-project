@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -45,6 +46,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Transforms/IPO/InstrumentorUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <cassert>
@@ -95,7 +97,9 @@ template <typename IRBuilderTy> void ensureDbgLoc(IRBuilderTy &IRB) {
     IRB.SetCurrentDebugLocation(DILocation::get(BB->getContext(), 0, 0, SP));
 }
 
-/// Attempt to cast \p V to type \p Ty.
+/// Attempt to cast \p V to type \p Ty using only bit-preserving casts.
+/// This ensures that floating-point values are converted via bitcast (not
+/// fptosi/fptoui) to preserve their exact bit representation.
 template <typename IRBTy>
 Value *tryToCast(IRBTy &IRB, Value *V, Type *Ty, const DataLayout &DL,
                  bool AllowTruncate = false) {
@@ -111,18 +115,35 @@ Value *tryToCast(IRBTy &IRB, Value *V, Type *Ty, const DataLayout &DL,
   bool ShouldTruncate = RequestedSize < ValueSize;
   if (ShouldTruncate && !AllowTruncate)
     return V;
-  if (ShouldTruncate && AllowTruncate)
+  if (ShouldTruncate && AllowTruncate) {
+    // First convert to integer of the same size if needed.
+    Value *IntV = V;
+    if (VTy->isFloatingPointTy())
+      IntV = IRB.CreateBitCast(V, IRB.getIntNTy(ValueSize));
     return tryToCast(IRB,
-                     IRB.CreateIntCast(V, IRB.getIntNTy(RequestedSize),
+                     IRB.CreateIntCast(IntV, IRB.getIntNTy(RequestedSize),
                                        /*IsSigned=*/false),
                      Ty, DL, AllowTruncate);
+  }
   if (VTy->isPointerTy() && Ty->isPointerTy())
     return IRB.CreatePointerBitCastOrAddrSpaceCast(V, Ty);
   if (VTy->isIntegerTy() && Ty->isIntegerTy())
     return IRB.CreateIntCast(V, Ty, /*IsSigned=*/false);
+  // Use bit-preserving casts for floating-point values: convert float to int
+  // of the same size via bitcast, then extend/truncate the integer if needed.
   if (VTy->isFloatingPointTy() && Ty->isIntOrPtrTy()) {
     return tryToCast(IRB, IRB.CreateBitCast(V, IRB.getIntNTy(ValueSize)), Ty,
                      DL, AllowTruncate);
+  }
+  // When converting int to float, never use sitofp/uitofp as they perform value
+  // conversion, not bit-preserving cast.
+  if (VTy->isIntegerTy() && Ty->isFloatingPointTy()) {
+    if (ValueSize == RequestedSize)
+      return IRB.CreateBitCast(V, Ty);
+    return tryToCast(
+        IRB,
+        IRB.CreateIntCast(V, IRB.getIntNTy(RequestedSize), /*IsSigned=*/false),
+        Ty, DL, AllowTruncate);
   }
   return IRB.CreateBitOrPointerCast(V, Ty);
 }
@@ -159,6 +180,7 @@ private:
 
   /// Indicate if the function \p Fn should be instrumented.
   bool shouldInstrumentFunction(Function &Fn);
+  bool shouldInstrumentGlobalVariable(GlobalVariable &GV);
 
   /// Instrument instruction \p I if needed, and use the argument caches in \p
   /// ICaches.
@@ -166,6 +188,7 @@ private:
 
   /// Instrument function \p Fn.
   bool instrumentFunction(Function &Fn);
+  bool instrumentModule();
 
   /// The instrumentation opportunities for instructions indexed by
   /// their opcode.
@@ -227,6 +250,11 @@ bool InstrumentorImpl::shouldInstrumentFunction(Function &Fn) {
          Fn.hasFnAttribute("instrument");
 }
 
+bool InstrumentorImpl::shouldInstrumentGlobalVariable(GlobalVariable &GV) {
+  return !GV.getName().starts_with("llvm.") &&
+         !GV.getName().starts_with(IConf.getRTName());
+}
+
 bool InstrumentorImpl::instrumentInstruction(Instruction &I,
                                              InstrumentationCaches &ICaches) {
   bool Changed = false;
@@ -242,13 +270,13 @@ bool InstrumentorImpl::instrumentInstruction(Instruction &I,
   if (auto *IO = InstChoicesPRE.lookup(I.getOpcode())) {
     IIRB.IRB.SetInsertPoint(&I);
     ensureDbgLoc(IIRB.IRB);
-    Changed |= bool(IO->instrument(IPtr, IConf, IIRB, ICaches));
+    IO->instrument(IPtr, Changed, IConf, IIRB, ICaches);
   }
 
   if (auto *IO = InstChoicesPOST.lookup(I.getOpcode())) {
     IIRB.IRB.SetInsertPoint(I.getNextNode());
     ensureDbgLoc(IIRB.IRB);
-    Changed |= bool(IO->instrument(IPtr, IConf, IIRB, ICaches));
+    IO->instrument(IPtr, Changed, IConf, IIRB, ICaches);
   }
   IIRB.returnAllocas();
 
@@ -281,9 +309,9 @@ bool InstrumentorImpl::instrumentFunction(Function &Fn) {
     ++IIRB.Epoch;
 
     IIRB.IRB.SetInsertPoint(
-        cast<Function>(FPtr)->getEntryBlock().getFirstInsertionPt());
+        cast<Function>(FPtr)->getEntryBlock().getFirstNonPHIOrDbgOrAlloca());
     ensureDbgLoc(IIRB.IRB);
-    Changed |= bool(IO->instrument(FPtr, IConf, IIRB, ICaches));
+    IO->instrument(FPtr, Changed, IConf, IIRB, ICaches);
     IIRB.returnAllocas();
   }
 
@@ -297,10 +325,101 @@ bool InstrumentorImpl::instrumentFunction(Function &Fn) {
     for (Instruction *FinalTI : FinalTIs) {
       IIRB.IRB.SetInsertPoint(FinalTI);
       ensureDbgLoc(IIRB.IRB);
-      Changed |= bool(IO->instrument(FPtr, IConf, IIRB, ICaches));
+      IO->instrument(FPtr, Changed, IConf, IIRB, ICaches);
       IIRB.returnAllocas();
     }
   }
+  return Changed;
+}
+
+bool InstrumentorImpl::instrumentModule() {
+  SmallVector<GlobalVariable *> Globals;
+  Globals.reserve(M.global_size());
+  for (GlobalVariable &GV : M.globals()) {
+    // llvm.metadata contains globals such as llvm.used.
+    if (GV.getSection() == "llvm.metadata" ||
+        GV.getName() == "llvm.global_dtors" ||
+        GV.getName() == "llvm.global_ctors")
+      continue;
+    Globals.push_back(&GV);
+  }
+
+  auto CreateYtor = [&](bool Ctor) {
+    Function *YtorFn = Function::Create(
+        FunctionType::get(IIRB.VoidTy, false), GlobalValue::PrivateLinkage,
+        IConf.getRTName(Ctor ? "ctor" : "dtor", ""), M);
+
+    auto *EntryBB = BasicBlock::Create(IIRB.Ctx, "entry", YtorFn);
+    IIRB.IRB.SetInsertPoint(EntryBB, EntryBB->begin());
+    ensureDbgLoc(IIRB.IRB);
+    IIRB.IRB.CreateRetVoid();
+
+    if (Ctor)
+      appendToGlobalCtors(M, YtorFn, 1000);
+    else
+      appendToGlobalDtors(M, YtorFn, 1000);
+    return YtorFn;
+  };
+
+  InstrumentationCaches ICaches;
+
+  Function *CtorFn = nullptr, *DtorFn = nullptr;
+  bool Changed = false;
+  for (auto Loc : {InstrumentationLocation::MODULE_PRE,
+                   InstrumentationLocation::MODULE_POST}) {
+    bool IsPRE = InstrumentationLocation::isPRE(Loc);
+    Function *&YtorFn = IsPRE ? CtorFn : DtorFn;
+    for (auto &ChoiceIt : IConf.IChoices[Loc]) {
+      auto *IO = ChoiceIt.second;
+      if (!IO->Enabled)
+        continue;
+      if (!YtorFn) {
+        YtorFn = CreateYtor(IsPRE);
+        Changed = true;
+      }
+      IIRB.IRB.SetInsertPointPastAllocas(YtorFn);
+      ensureDbgLoc(IIRB.IRB);
+      Value *YtorPtr = YtorFn;
+
+      // Count epochs eagerly.
+      ++IIRB.Epoch;
+
+      IO->instrument(YtorPtr, Changed, IConf, IIRB, ICaches);
+      IIRB.returnAllocas();
+    }
+  }
+
+  for (auto Loc : {InstrumentationLocation::GLOBAL_PRE,
+                   InstrumentationLocation::GLOBAL_POST}) {
+    bool IsPRE = InstrumentationLocation::isPRE(Loc);
+    Function *&YtorFn = IsPRE ? CtorFn : DtorFn;
+    for (auto &ChoiceIt : IConf.IChoices[Loc]) {
+      auto *IO = ChoiceIt.second;
+      if (!IO->Enabled)
+        continue;
+      if (!YtorFn) {
+        YtorFn = CreateYtor(IsPRE);
+        Changed = true;
+      }
+      for (GlobalVariable *GV : Globals) {
+        if (!shouldInstrumentGlobalVariable(*GV))
+          continue;
+        if (IsPRE)
+          IIRB.IRB.SetInsertPoint(YtorFn->getEntryBlock().getTerminator());
+        else
+          IIRB.IRB.SetInsertPointPastAllocas(YtorFn);
+        ensureDbgLoc(IIRB.IRB);
+        Value *GVPtr = GV;
+
+        // Count epochs eagerly.
+        ++IIRB.Epoch;
+
+        IO->instrument(GVPtr, Changed, IConf, IIRB, ICaches);
+        IIRB.returnAllocas();
+      }
+    }
+  }
+
   return Changed;
 }
 
@@ -312,14 +431,24 @@ bool InstrumentorImpl::instrument() {
   StringRef FunctionRegexStr = IConf.FunctionRegex->getString();
   ParsedFunctionRegex = createRegex(FunctionRegexStr, "function", IIRB.Ctx);
 
+  // Helper to register an IO for all its opcodes.
+  auto RegisterForAllOpcodes = [](auto &InstChoices,
+                                  InstrumentationOpportunity *IO) {
+    ArrayRef<unsigned> Opcodes = IO->getAllOpcodes();
+    // Register for all opcodes.
+    for (unsigned Opcode : Opcodes)
+      InstChoices[Opcode] = IO;
+  };
+
   for (auto &[Name, IO] :
        IConf.IChoices[InstrumentationLocation::INSTRUCTION_PRE])
     if (IO->Enabled)
-      InstChoicesPRE[IO->getOpcode()] = IO;
+      RegisterForAllOpcodes(InstChoicesPRE, IO);
   for (auto &[Name, IO] :
        IConf.IChoices[InstrumentationLocation::INSTRUCTION_POST])
     if (IO->Enabled)
-      InstChoicesPOST[IO->getOpcode()] = IO;
+      RegisterForAllOpcodes(InstChoicesPOST, IO);
+  Changed |= instrumentModule();
 
   for (Function &Fn : M)
     Changed |= instrumentFunction(Fn);
@@ -417,11 +546,15 @@ BaseConfigurationOption::createStringOption(InstrumentationConfig &IConf,
 
 void InstrumentationConfig::populate(InstrumentorIRBuilderTy &IIRB) {
   /// List of all instrumentation opportunities.
+  BasePointerIO::populate(*this, IIRB);
+  ModuleIO::populate(*this, IIRB);
+  GlobalVarIO::populate(*this, IIRB);
   FunctionIO::populate(*this, IIRB);
   AllocaIO::populate(*this, IIRB);
   UnreachableIO::populate(*this, IIRB);
   LoadIO::populate(*this, IIRB);
   StoreIO::populate(*this, IIRB);
+  CastIO::populate(*this, IIRB);
 }
 
 void InstrumentationConfig::addChoice(InstrumentationOpportunity &IO,
@@ -435,6 +568,63 @@ void InstrumentationConfig::addChoice(InstrumentationOpportunity &IO,
         DS_Warning));
   }
   ICPtr = &IO;
+}
+
+Value *
+InstrumentationConfig::getBasePointerInfo(Value &V,
+                                          InstrumentorIRBuilderTy &IIRB) {
+  Function *Fn = IIRB.IRB.GetInsertBlock()->getParent();
+
+  Value *Obj;
+  {
+    Value *&UnderlyingObj = UnderlyingObjsMap[&V];
+    if (!UnderlyingObj)
+      UnderlyingObj = const_cast<Value *>(getUnderlyingObjectAggressive(&V));
+    Obj = UnderlyingObj;
+  }
+
+  Value *&BPI = BasePointerInfoMap[{Obj, Fn}];
+  if (BPI)
+    return BPI;
+
+  auto *BPIO =
+      IChoices[InstrumentationLocation::SPECIAL_VALUE]["base_pointer_info"];
+  if (!BPIO || !BPIO->Enabled) {
+    IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(
+        "Base pointer info disabled but required, passing nullptr.",
+        DS_Warning));
+    return BPI = Constant::getNullValue(BPIO->getRetTy(IIRB.Ctx));
+  }
+
+  IRBuilderBase::InsertPointGuard IP(IIRB.IRB);
+  if (auto *BasePtrI = dyn_cast<Instruction>(Obj)) {
+    std::optional<BasicBlock::iterator> IP =
+        BasePtrI->getInsertionPointAfterDef();
+    if (IP) {
+      IIRB.IRB.SetInsertPoint(*IP);
+    } else {
+      IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(
+          "Base pointer info could not be placed, passing nullptr.",
+          DS_Warning));
+      return BPI = Constant::getNullValue(BPIO->getRetTy(IIRB.Ctx));
+    }
+  } else if (isa<Constant>(Obj) || isa<Argument>(Obj)) {
+    IIRB.IRB.SetInsertPointPastAllocas(IIRB.IRB.GetInsertBlock()->getParent());
+  } else {
+    LLVM_DEBUG(Obj->dump());
+    llvm_unreachable("Unexpected base pointer!");
+  }
+  ensureDbgLoc(IIRB.IRB);
+
+  // Use fresh caches for safety, as this function may be called from
+  // another instrumentation opportunity.
+  bool Changed;
+  InstrumentationCaches ICaches;
+  BPI = BPIO->instrument(Obj, Changed, *this, IIRB, ICaches);
+  IIRB.returnAllocas();
+  if (!BPI)
+    BPI = Constant::getNullValue(BPIO->getRetTy(IIRB.Ctx));
+  return BPI;
 }
 
 Value *InstrumentationOpportunity::getIdPre(Value &V, Type &Ty,
@@ -906,6 +1096,11 @@ void StoreIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
                              "The address space of the accessed pointer.",
                              IRTArg::NONE, getPointerAS));
   }
+  if (Config.has(PassBasePointerInfo)) {
+    IRTArgs.push_back(IRTArg(IIRB.PtrTy, "base_pointer_info",
+                             "The runtime provided base pointer info.",
+                             IRTArg::NONE, getBasePointerInfo));
+  }
   if (Config.has(PassStoredValue)) {
     IRTArgs.push_back(
         IRTArg(getValueType(IIRB), "value", "The stored value.",
@@ -968,6 +1163,13 @@ Value *StoreIO::getPointerAS(Value &V, Type &Ty, InstrumentationConfig &IConf,
   return getCI(&Ty, SI.getPointerAddressSpace());
 }
 
+Value *StoreIO::getBasePointerInfo(Value &V, Type &Ty,
+                                   InstrumentationConfig &IConf,
+                                   InstrumentorIRBuilderTy &IIRB) {
+  auto &SI = cast<StoreInst>(V);
+  return IConf.getBasePointerInfo(*SI.getPointerOperand(), IIRB);
+}
+
 Value *StoreIO::getValue(Value &V, Type &Ty, InstrumentationConfig &IConf,
                          InstrumentorIRBuilderTy &IIRB) {
   auto &SI = cast<StoreInst>(V);
@@ -1028,6 +1230,11 @@ void LoadIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
     IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "pointer_as",
                              "The address space of the accessed pointer.",
                              IRTArg::NONE, getPointerAS));
+  }
+  if (Config.has(PassBasePointerInfo)) {
+    IRTArgs.push_back(IRTArg(IIRB.PtrTy, "base_pointer_info",
+                             "The runtime provided base pointer info.",
+                             IRTArg::NONE, getBasePointerInfo));
   }
   if (!IsPRE && Config.has(PassValue)) {
     IRTArgs.push_back(
@@ -1093,6 +1300,13 @@ Value *LoadIO::getPointerAS(Value &V, Type &Ty, InstrumentationConfig &IConf,
   return getCI(&Ty, LI.getPointerAddressSpace());
 }
 
+Value *LoadIO::getBasePointerInfo(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB) {
+  auto &LI = cast<LoadInst>(V);
+  return IConf.getBasePointerInfo(*LI.getPointerOperand(), IIRB);
+}
+
 Value *LoadIO::getValue(Value &V, Type &Ty, InstrumentationConfig &IConf,
                         InstrumentorIRBuilderTy &IIRB) {
   return &V;
@@ -1135,3 +1349,331 @@ Value *LoadIO::isVolatile(Value &V, Type &Ty, InstrumentationConfig &IConf,
   auto &LI = cast<LoadInst>(V);
   return getCI(&Ty, LI.isVolatile());
 }
+
+void BasePointerIO::init(InstrumentationConfig &IConf,
+                         InstrumentorIRBuilderTy &IIRB, ConfigTy *UserConfig) {
+  if (UserConfig)
+    Config = *UserConfig;
+  if (Config.has(PassPointer))
+    IRTArgs.push_back(IRTArg(IIRB.PtrTy, "base_pointer",
+                             "The base pointer in question.",
+                             IRTArg::REPLACABLE, getValue, setValueNoop));
+  if (Config.has(PassPointerKind))
+    IRTArgs.push_back(IRTArg(
+        IIRB.Int32Ty, "base_pointer_kind",
+        "The base pointer kind (argument, global, instruction, unknown).",
+        IRTArg::NONE, getPointerKind));
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  IConf.addChoice(*this, IIRB.Ctx);
+}
+
+Value *BasePointerIO::getPointerKind(Value &V, Type &Ty,
+                                     InstrumentationConfig &IConf,
+                                     InstrumentorIRBuilderTy &IIRB) {
+  if (isa<Argument>(V))
+    return getCI(&Ty, 0);
+  if (isa<GlobalValue>(V))
+    return getCI(&Ty, 1);
+  if (isa<Instruction>(V))
+    return getCI(&Ty, 2);
+  return getCI(&Ty, 3);
+}
+
+void ModuleIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
+                    ConfigTy *UserConfig) {
+  if (UserConfig)
+    Config = *UserConfig;
+
+  if (Config.has(PassName))
+    IRTArgs.push_back(IRTArg(IIRB.PtrTy, "module_name",
+                             "The module/translation unit name.",
+                             IRTArg::STRING, getModuleName));
+  if (Config.has(PassTargetTriple))
+    IRTArgs.push_back(IRTArg(IIRB.PtrTy, "target_triple", "The target triple.",
+                             IRTArg::STRING, getTargetTriple));
+
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  IConf.addChoice(*this, IIRB.Ctx);
+}
+Value *ModuleIO::getModuleName(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                               InstrumentorIRBuilderTy &IIRB) {
+  // V is a constructor or destructor of the module we can place code in.
+  auto &Fn = cast<Function>(V);
+  return IConf.getGlobalString(Fn.getParent()->getName(), IIRB);
+}
+Value *ModuleIO::getTargetTriple(Value &V, Type &Ty,
+                                 InstrumentationConfig &IConf,
+                                 InstrumentorIRBuilderTy &IIRB) {
+  // V is a constructor or destructor of the module we can place code in.
+  auto &Fn = cast<Function>(V);
+  return IConf.getGlobalString(Fn.getParent()->getTargetTriple().getTriple(),
+                               IIRB);
+}
+
+void GlobalVarIO::init(InstrumentationConfig &IConf,
+                       InstrumentorIRBuilderTy &IIRB, ConfigTy *UserConfig) {
+  if (UserConfig)
+    Config = *UserConfig;
+  bool IsPRE = InstrumentationLocation::isPRE(getLocationKind());
+  if (Config.has(PassAddress))
+    IRTArgs.push_back(IRTArg(
+        IIRB.PtrTy, "address",
+        "The address of the global (replaceable for definitions).",
+        IsPRE && Config.has(ReplaceAddress) ? IRTArg::REPLACABLE : IRTArg::NONE,
+        getAddress, setAddress));
+  if (Config.has(PassAS))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "address_space",
+                             "The address space of the global.", IRTArg::NONE,
+                             getAS));
+  if (Config.has(PassDeclaredSize))
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "declared_size",
+                             "The size of the declared type of the global.",
+                             IRTArg::NONE, getDeclaredSize));
+  if (Config.has(PassAlignment))
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "alignment",
+                             "The allocation alignment.", IRTArg::NONE,
+                             getAlignment));
+  if (Config.has(PassName))
+    IRTArgs.push_back(IRTArg(IIRB.PtrTy, "name", "The name of the global.",
+                             IRTArg::STRING, getSymbolName));
+  if (Config.has(PassInitialValue))
+    IRTArgs.push_back(IRTArg(
+        IIRB.Int64Ty, "initial_value", "The initial value of the global.",
+        IRTArg::POTENTIALLY_INDIRECT | IRTArg::INDIRECT_HAS_SIZE,
+        getInitialValue));
+  if (Config.has(PassIsConstant))
+    IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "is_constant",
+                             "Flag to indicate constant globals.", IRTArg::NONE,
+                             isConstant));
+  if (Config.has(PassIsDefinition))
+    IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "is_definition",
+                             "Flag to indicate global definitions.",
+                             IRTArg::NONE, isDefinition));
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  IConf.addChoice(*this, IIRB.Ctx);
+}
+Value *GlobalVarIO::getAddress(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                               InstrumentorIRBuilderTy &IIRB) {
+  GlobalVariable &GV = cast<GlobalVariable>(V);
+  if (GV.getAddressSpace())
+    return ConstantExpr::getAddrSpaceCast(&GV, IIRB.PtrTy);
+  return &GV;
+}
+Value *GlobalVarIO::setAddress(Value &V, Value &NewV,
+                               InstrumentationConfig &IConf,
+                               InstrumentorIRBuilderTy &IIRB) {
+  GlobalVariable &GV = cast<GlobalVariable>(V);
+
+  GlobalVariable *ShadowGV = nullptr;
+  auto ShadowName = IConf.getRTName("shadow.", GV.getName());
+  auto &DL = GV.getDataLayout();
+  if (GV.isDeclaration()) {
+    ShadowGV = new GlobalVariable(*GV.getParent(), GV.getType(), false,
+                                  GlobalVariable::WeakODRLinkage, &GV,
+                                  ShadowName, &GV, GV.getThreadLocalMode(),
+                                  DL.getDefaultGlobalsAddressSpace());
+  } else {
+    ShadowGV = new GlobalVariable(
+        *GV.getParent(), NewV.getType(), false, GV.getLinkage(),
+        PoisonValue::get(NewV.getType()), ShadowName, &GV);
+    IIRB.IRB.CreateStore(&NewV, ShadowGV);
+  }
+
+  SmallVector<Use *> Worklist(make_pointer_range(GV.uses()));
+  SmallPtrSet<Use *, 32> Done;
+  DenseMap<std::pair<Value *, Function *>, Instruction *> VMap;
+  DenseMap<Value *, Instruction *> ConstToInstMap;
+  DenseMap<Function *, Instruction *> ReloadMap;
+
+  auto MakeInstForConst = [&](Use &U) {
+    Instruction *&I = ConstToInstMap[U];
+    if (I)
+      return;
+    if (U == &GV) {
+    } else if (auto *CE = dyn_cast<ConstantExpr>(U)) {
+      I = CE->getAsInstruction();
+    }
+  };
+
+  auto InsertConsts = [&](Instruction *UserI, Use &UserU) {
+    SmallVector<std::pair<Instruction *, Use *>> Worklist;
+    auto *&Reload = ReloadMap[UserI->getFunction()];
+    if (!Reload) {
+      Reload = new LoadInst(
+          GV.getType(), ShadowGV, GV.getName() + ".shadow_load",
+          UserI->getFunction()->getEntryBlock().getFirstNonPHIOrDbgOrAlloca());
+      IIRB.NewInsts.insert({Reload, IIRB.Epoch});
+    }
+    Worklist.push_back({UserI, &UserU});
+    while (!Worklist.empty()) {
+      auto [I, U] = Worklist.pop_back_val();
+      if (*U == &GV) {
+        U->set(ReloadMap[I->getFunction()]);
+        continue;
+      }
+      if (auto *CI = ConstToInstMap[*U]) {
+        auto *CIClone = CI->clone();
+        IIRB.NewInsts.insert({CIClone, IIRB.Epoch});
+        if (auto *PHI = dyn_cast<PHINode>(I)) {
+          auto *BB = PHI->getIncomingBlock(U->getOperandNo());
+          CIClone->insertBefore(BB->getTerminator()->getIterator());
+        } else {
+          CIClone->insertBefore(I->getIterator());
+        }
+        U->set(CIClone);
+        for (auto &CICUse : CIClone->operands()) {
+          Worklist.push_back({CIClone, &CICUse});
+        }
+      }
+    }
+  };
+
+  SmallPtrSet<Use *, 8> Visited;
+  while (!Worklist.empty()) {
+    Use *U = Worklist.pop_back_val();
+    if (!Done.insert(U).second)
+      continue;
+    MakeInstForConst(*U);
+    auto *I = dyn_cast<Instruction>(U->getUser());
+    if (!I) {
+      append_range(Worklist, make_pointer_range(U->getUser()->uses()));
+      continue;
+    }
+    if (IIRB.NewInsts.lookup(I) == IIRB.Epoch)
+      continue;
+    if (isa<LandingPadInst>(I))
+      continue;
+    if (auto *II = dyn_cast<IntrinsicInst>(I))
+      if (II->getIntrinsicID() == Intrinsic::eh_typeid_for)
+        continue;
+    if (I->getParent())
+      InsertConsts(I, *U);
+  }
+
+  for (auto &It : ConstToInstMap)
+    if (It.second)
+      It.second->deleteValue();
+
+  return &V;
+}
+Value *GlobalVarIO::getAS(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                          InstrumentorIRBuilderTy &IIRB) {
+  GlobalVariable &GV = cast<GlobalVariable>(V);
+  return getCI(&Ty, GV.getAddressSpace());
+}
+Value *GlobalVarIO::getAlignment(Value &V, Type &Ty,
+                                 InstrumentationConfig &IConf,
+                                 InstrumentorIRBuilderTy &IIRB) {
+  GlobalVariable &GV = cast<GlobalVariable>(V);
+  return getCI(&Ty, GV.getAlignment());
+}
+Value *GlobalVarIO::getDeclaredSize(Value &V, Type &Ty,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB) {
+  GlobalVariable &GV = cast<GlobalVariable>(V);
+  auto &DL = GV.getDataLayout();
+  return getCI(&Ty, DL.getTypeAllocSize(GV.getValueType()));
+}
+Value *GlobalVarIO::getSymbolName(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB) {
+  GlobalVariable &GV = cast<GlobalVariable>(V);
+  return IConf.getGlobalString(GV.getName(), IIRB);
+}
+Value *GlobalVarIO::getInitialValue(Value &V, Type &Ty,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB) {
+  GlobalVariable &GV = cast<GlobalVariable>(V);
+  return GV.hasInitializer() ? GV.getInitializer()
+                             : Constant::getNullValue(&Ty);
+}
+Value *GlobalVarIO::isConstant(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                               InstrumentorIRBuilderTy &IIRB) {
+  GlobalVariable &GV = cast<GlobalVariable>(V);
+  return getCI(&Ty, GV.isConstant());
+}
+Value *GlobalVarIO::isDefinition(Value &V, Type &Ty,
+                                 InstrumentationConfig &IConf,
+                                 InstrumentorIRBuilderTy &IIRB) {
+  GlobalVariable &GV = cast<GlobalVariable>(V);
+  return getCI(&Ty, !GV.isDeclaration());
+}
+
+/// CastIO
+/// {
+void CastIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
+                  ConfigTy *UserConfig) {
+  if (UserConfig)
+    Config = *UserConfig;
+  bool IsPRE = getLocationKind() == InstrumentationLocation::INSTRUCTION_PRE;
+  if (Config.has(PassInput))
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "input", "Input value of the cast.",
+                             IRTArg::POTENTIALLY_INDIRECT, getInput));
+  if (Config.has(PassInputTypeId))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "input_type_id",
+                             "The type id of the input value.", IRTArg::NONE,
+                             getInputTypeId));
+  if (Config.has(PassInputSize))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "input_size",
+                             "The size of the input value.", IRTArg::NONE,
+                             getInputSize));
+  if (!IsPRE && Config.has(PassResult))
+    IRTArgs.push_back(
+        IRTArg(IIRB.Int64Ty, "result", "Result of the cast.",
+               IRTArg::REPLACABLE | IRTArg::POTENTIALLY_INDIRECT, getValue,
+               Config.has(ReplaceResult) ? replaceValue : nullptr));
+  if (Config.has(PassResultTypeId))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "result_type_id",
+                             "The type id of the result value.", IRTArg::NONE,
+                             getResultTypeId));
+  if (Config.has(PassResultSize))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "result_size",
+                             "The size of the result value.", IRTArg::NONE,
+                             getResultSize));
+  if (Config.has(PassOpcode))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "opcode",
+                             "The opcode of the cast instruction.",
+                             IRTArg::NONE, getOpcode));
+
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  IConf.addChoice(*this, IIRB.Ctx);
+}
+
+Value *CastIO::getInput(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                        InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CastInst>(V);
+  return CI.getOperand(0);
+}
+
+Value *CastIO::getInputTypeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                              InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CastInst>(V);
+  return getCI(&Ty, CI.getSrcTy()->getTypeID());
+}
+
+Value *CastIO::getInputSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                            InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CastInst>(V);
+  auto &DL = CI.getDataLayout();
+  return getCI(&Ty, DL.getTypeStoreSize(CI.getSrcTy()));
+}
+
+Value *CastIO::getResultTypeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                               InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CastInst>(V);
+  return getCI(&Ty, CI.getDestTy()->getTypeID());
+}
+
+Value *CastIO::getResultSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                             InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CastInst>(V);
+  auto &DL = CI.getDataLayout();
+  return getCI(&Ty, DL.getTypeStoreSize(CI.getDestTy()));
+}
+
+Value *CastIO::getOpcode(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                         InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  return getCI(&Ty, I.getOpcode());
+}
+///}

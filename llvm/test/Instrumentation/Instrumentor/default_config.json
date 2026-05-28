@@ -15,9 +15,88 @@
     "gpu_enabled": true,
     "gpu_enabled.description": "Instrument GPU targets"
   },
+  "module_pre": {
+    "module": {
+      "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
+      "module_name": true,
+      "module_name.description": "The module/translation unit name.",
+      "target_triple": true,
+      "target_triple.description": "The target triple.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    }
+  },
+  "module_post": {
+    "module": {
+      "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
+      "module_name": true,
+      "module_name.description": "The module/translation unit name.",
+      "target_triple": true,
+      "target_triple.description": "The target triple.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    }
+  },
+  "global_pre": {
+    "global": {
+      "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
+      "address": true,
+      "address.replace": true,
+      "address.description": "The address of the global (replaceable for definitions).",
+      "address_space": true,
+      "address_space.description": "The address space of the global.",
+      "declared_size": true,
+      "declared_size.description": "The size of the declared type of the global.",
+      "alignment": true,
+      "alignment.description": "The allocation alignment.",
+      "name": true,
+      "name.description": "The name of the global.",
+      "initial_value": true,
+      "initial_value.description": "The initial value of the global.",
+      "is_constant": true,
+      "is_constant.description": "Flag to indicate constant globals.",
+      "is_definition": true,
+      "is_definition.description": "Flag to indicate global definitions.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    }
+  },
+  "global_post": {
+    "global": {
+      "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
+      "address": true,
+      "address.description": "The address of the global (replaceable for definitions).",
+      "address_space": true,
+      "address_space.description": "The address space of the global.",
+      "declared_size": true,
+      "declared_size.description": "The size of the declared type of the global.",
+      "alignment": true,
+      "alignment.description": "The allocation alignment.",
+      "name": true,
+      "name.description": "The name of the global.",
+      "initial_value": true,
+      "initial_value.description": "The initial value of the global.",
+      "is_constant": true,
+      "is_constant.description": "Flag to indicate constant globals.",
+      "is_definition": true,
+      "is_definition.description": "Flag to indicate global definitions.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    }
+  },
   "function_pre": {
     "function": {
       "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
       "address": true,
       "address.description": "The function address.",
       "name": true,
@@ -36,6 +115,8 @@
   "function_post": {
     "function": {
       "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
       "address": true,
       "address.description": "The function address.",
       "name": true,
@@ -51,18 +132,36 @@
     }
   },
   "instruction_pre": {
+    "alloca": {
+      "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
+      "size": true,
+      "size.replace": true,
+      "size.description": "The allocation size.",
+      "alignment": true,
+      "alignment.description": "The allocation alignment.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    },
     "unreachable": {
       "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
       "id": true,
       "id.description": "A unique ID associated with the given instrumentor call"
     },
     "load": {
       "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
       "pointer": true,
       "pointer.replace": true,
       "pointer.description": "The accessed pointer.",
       "pointer_as": true,
       "pointer_as.description": "The address space of the accessed pointer.",
+      "base_pointer_info": true,
+      "base_pointer_info.description": "The runtime provided base pointer info.",
       "value_size": true,
       "value_size.description": "The size of the loaded value.",
       "alignment": true,
@@ -78,23 +177,17 @@
       "id": true,
       "id.description": "A unique ID associated with the given instrumentor call"
     },
-    "alloca": {
-      "enabled": true,
-      "size": true,
-      "size.replace": true,
-      "size.description": "The allocation size.",
-      "alignment": true,
-      "alignment.description": "The allocation alignment.",
-      "id": true,
-      "id.description": "A unique ID associated with the given instrumentor call"
-    },
     "store": {
       "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
       "pointer": true,
       "pointer.replace": true,
       "pointer.description": "The accessed pointer.",
       "pointer_as": true,
       "pointer_as.description": "The address space of the accessed pointer.",
+      "base_pointer_info": true,
+      "base_pointer_info.description": "The runtime provided base pointer info.",
       "value": true,
       "value.description": "The stored value.",
       "value_size": true,
@@ -111,15 +204,52 @@
       "is_volatile.description": "Flag indicating a volatile store.",
       "id": true,
       "id.description": "A unique ID associated with the given instrumentor call"
+    },
+    "cast": {
+      "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
+      "input": true,
+      "input.description": "Input value of the cast.",
+      "input_type_id": true,
+      "input_type_id.description": "The type id of the input value.",
+      "input_size": true,
+      "input_size.description": "The size of the input value.",
+      "result_type_id": true,
+      "result_type_id.description": "The type id of the result value.",
+      "result_size": true,
+      "result_size.description": "The size of the result value.",
+      "opcode": true,
+      "opcode.description": "The opcode of the cast instruction.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
     }
   },
   "instruction_post": {
+    "alloca": {
+      "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
+      "address": true,
+      "address.replace": true,
+      "address.description": "The allocated memory address.",
+      "size": true,
+      "size.description": "The allocation size.",
+      "alignment": true,
+      "alignment.description": "The allocation alignment.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    },
     "load": {
       "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
       "pointer": true,
       "pointer.description": "The accessed pointer.",
       "pointer_as": true,
       "pointer_as.description": "The address space of the accessed pointer.",
+      "base_pointer_info": true,
+      "base_pointer_info.description": "The runtime provided base pointer info.",
       "value": true,
       "value.replace": true,
       "value.description": "The loaded value.",
@@ -138,24 +268,16 @@
       "id": true,
       "id.description": "A unique ID associated with the given instrumentor call"
     },
-    "alloca": {
-      "enabled": true,
-      "address": true,
-      "address.replace": true,
-      "address.description": "The allocated memory address.",
-      "size": true,
-      "size.description": "The allocation size.",
-      "alignment": true,
-      "alignment.description": "The allocation alignment.",
-      "id": true,
-      "id.description": "A unique ID associated with the given instrumentor call"
-    },
     "store": {
       "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
       "pointer": true,
       "pointer.description": "The accessed pointer.",
       "pointer_as": true,
       "pointer_as.description": "The address space of the accessed pointer.",
+      "base_pointer_info": true,
+      "base_pointer_info.description": "The runtime provided base pointer info.",
       "value": true,
       "value.description": "The stored value.",
       "value_size": true,
@@ -170,6 +292,42 @@
       "sync_scope_id.description": "The sync scope id of the store.",
       "is_volatile": true,
       "is_volatile.description": "Flag indicating a volatile store.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    },
+    "cast": {
+      "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
+      "input": true,
+      "input.description": "Input value of the cast.",
+      "input_type_id": true,
+      "input_type_id.description": "The type id of the input value.",
+      "input_size": true,
+      "input_size.description": "The size of the input value.",
+      "result": true,
+      "result.replace": true,
+      "result.description": "Result of the cast.",
+      "result_type_id": true,
+      "result_type_id.description": "The type id of the result value.",
+      "result_size": true,
+      "result_size.description": "The size of the result value.",
+      "opcode": true,
+      "opcode.description": "The opcode of the cast instruction.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    }
+  },
+  "special_value": {
+    "base_pointer_info": {
+      "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
+      "base_pointer": true,
+      "base_pointer.replace": true,
+      "base_pointer.description": "The base pointer in question.",
+      "base_pointer_kind": true,
+      "base_pointer_kind.description": "The base pointer kind (argument, global, instruction, unknown).",
       "id": true,
       "id.description": "A unique ID associated with the given instrumentor call"
     }

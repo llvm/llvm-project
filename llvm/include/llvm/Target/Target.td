@@ -551,7 +551,7 @@ class SubtargetFeature<string n, string f, string v, string d,
   // Implies - Features that this feature implies are present. If one of those
   // features isn't set, then this one shouldn't be set either.
   //
-  list<SubtargetFeature> Implies = i;
+  list<SubtargetFeature> Implies = !sort(f, i, f.Name);
 }
 
 /// Specifies a Subtarget feature that this instruction is deprecated on.

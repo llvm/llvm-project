@@ -21,8 +21,8 @@ namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 namespace x86 {
 
-LIBC_INLINE void normalize(int &exponent,
-                           FPBits<long double>::StorageType &mantissa) {
+LIBC_INLINE constexpr void
+normalize(int &exponent, FPBits<long double>::StorageType &mantissa) {
   const unsigned int shift = static_cast<unsigned int>(
       static_cast<size_t>(cpp::countl_zero(static_cast<uint64_t>(mantissa))) -
       (8 * sizeof(uint64_t) - 1 - FPBits<long double>::FRACTION_LEN));
@@ -32,16 +32,16 @@ LIBC_INLINE void normalize(int &exponent,
 
 // if constexpr statement in sqrt.h still requires x86::sqrt to be declared
 // even when it's not used.
-LIBC_INLINE long double sqrt(long double x);
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT long double sqrt(long double x);
 
 // Correctly rounded SQRT for all rounding modes.
 // Shift-and-add algorithm.
 #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
-LIBC_INLINE long double sqrt(long double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT long double sqrt(long double x) {
   using LDBits = FPBits<long double>;
   using StorageType = typename LDBits::StorageType;
   constexpr StorageType ONE = StorageType(1) << int(LDBits::FRACTION_LEN);
-  LIBC_CONSTEXPR auto LDNAN = LDBits::quiet_nan().get_val();
+  LIBC_BIT_CAST_CONSTEXPR_VAR auto LDNAN = LDBits::quiet_nan().get_val();
 
   LDBits bits(x);
 

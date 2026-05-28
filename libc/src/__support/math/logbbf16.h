@@ -18,9 +18,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR bfloat16 logbbf16(bfloat16 x) {
-  return fputil::logb(x);
-}
+LIBC_INLINE constexpr bfloat16 logbbf16(bfloat16 x) { return fputil::logb(x); }
 
 } // namespace math
 

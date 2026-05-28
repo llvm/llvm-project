@@ -1,0 +1,90 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs -run-pass=si-fix-sgpr-copies -o - %s | FileCheck %s
+
+# Regression for the gfx90a waterfall lane reader: when an inreg call
+# argument's source virtual register lives in an AV_* class (which
+# allows AGPR), emitLoadScalarOpsFromVGPRLoop must legalize the
+# ScalarOp into a class compatible with V_READFIRSTLANE_B32 by
+# inserting a COPY to the common subclass (e.g. VGPR_32). Without the
+# COPY, the loop emits `V_READFIRSTLANE_B32 %vreg:av_32`, and
+# `-verify-machineinstrs` fails with:
+#   *** Bad machine code: Illegal virtual register for instruction ***
+#   Expected a VGPR_32 register, but got a AV_32 register
+
+# AV_32 ScalarOp: a COPY to VGPR_32 must be inserted in the loop header
+# before V_READFIRSTLANE_B32 reads the lane, so the readfirstlane
+# source is a pure VGPR class.
+
+---
+name:            waterfall_si_call_inreg_av32
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack: true
+  hasCalls: true
+machineFunctionInfo:
+  scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy: 8
+body:             |
+  ; CHECK-LABEL: name: waterfall_si_call_inreg_av32
+  ; CHECK: bb.0:
+  ; CHECK:   [[SRC:%[0-9]+]]:av_32 = COPY $vgpr0
+  ; CHECK:   [[DEST:%[0-9]+]]:sreg_64_xexec = COPY $sgpr4_sgpr5
+  ; CHECK: bb.1:
+  ; CHECK:   [[VCOPY:%[0-9]+]]:vgpr_32 = COPY [[SRC]]
+  ; CHECK:   [[LANE:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[VCOPY]], implicit $exec
+  ; CHECK:   {{.*}}:sreg_64_xexec = V_CMP_EQ_U32_e64 [[LANE]], [[VCOPY]], implicit $exec
+  ; CHECK:   {{.*}}:sreg_64_xexec = S_AND_SAVEEXEC_B64
+  ; CHECK: bb.2:
+  ; CHECK:   ADJCALLSTACKUP
+  ; CHECK:   $sgpr16 = COPY [[LANE]]
+  ; CHECK:   SI_CALL_ISEL [[DEST]], 0, csr_amdgpu_gfx90ainsts, implicit killed $sgpr16
+  ; CHECK:   ADJCALLSTACKDOWN
+  ; CHECK:   SI_WATERFALL_LOOP %bb.1
+  bb.0:
+    liveins: $vgpr0, $sgpr4_sgpr5
+
+    %0:av_32 = COPY $vgpr0
+    %1:sreg_64_xexec = COPY $sgpr4_sgpr5
+
+    ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
+    $sgpr16 = COPY %0
+    SI_CALL_ISEL killed %1, 0, csr_amdgpu_gfx90ainsts, implicit $sgpr16
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
+    S_ENDPGM 0
+...
+
+# Baseline: a VGPR_32 ScalarOp is already a legal V_READFIRSTLANE_B32
+# source, so no extra COPY should appear in the loop header and
+# V_READFIRSTLANE_B32 should read the original VGPR directly.
+
+---
+name:            waterfall_si_call_inreg_vgpr32
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack: true
+  hasCalls: true
+machineFunctionInfo:
+  scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy: 8
+body:             |
+  ; CHECK-LABEL: name: waterfall_si_call_inreg_vgpr32
+  ; CHECK: bb.0:
+  ; CHECK:   [[SRC:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; CHECK:   [[DEST:%[0-9]+]]:sreg_64_xexec = COPY $sgpr4_sgpr5
+  ; CHECK: bb.1:
+  ; CHECK-NOT: vgpr_32 = COPY [[SRC]]
+  ; CHECK:   [[LANE:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[SRC]], implicit $exec
+  ; CHECK:   {{.*}}:sreg_64_xexec = V_CMP_EQ_U32_e64 [[LANE]], [[SRC]], implicit $exec
+  bb.0:
+    liveins: $vgpr0, $sgpr4_sgpr5
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:sreg_64_xexec = COPY $sgpr4_sgpr5
+
+    ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
+    $sgpr16 = COPY %0
+    SI_CALL_ISEL killed %1, 0, csr_amdgpu_gfx90ainsts, implicit $sgpr16
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
+    S_ENDPGM 0
+...

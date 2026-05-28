@@ -19,7 +19,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR float128 modff128(float128 x, float128 *iptr) {
+LIBC_INLINE constexpr float128 modff128(float128 x, float128 *iptr) {
   return fputil::modf(x, *iptr);
 }
 

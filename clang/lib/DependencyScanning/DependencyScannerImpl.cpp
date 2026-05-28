@@ -10,6 +10,7 @@
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSerialization.h"
 #include "clang/DependencyScanning/DependencyActionController.h"
+#include "clang/DependencyScanning/DependencyConsumer.h"
 #include "clang/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/DependencyScanning/DependencyScanningService.h"
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
@@ -449,6 +450,10 @@ std::shared_ptr<CompilerInvocation> dependencies::createScanCompilerInvocation(
       true;
   ScanInvocation->getHeaderSearchOpts().ModulesForceValidateUserHeaders = false;
 
+  // Application extension only affects the handling of availability attributes,
+  // which cannot change the dependencies.
+  ScanInvocation->getLangOpts().AppExt = false;
+
   // Ensure that the scanner does not create new dependency collectors,
   // and thus won't write out the extra '.d' files to disk.
   ScanInvocation->getDependencyOutputOpts() = {};
@@ -508,13 +513,13 @@ std::shared_ptr<ModuleDepCollector>
 dependencies::initializeScanInstanceDependencyCollector(
     CompilerInstance &ScanInstance,
     std::unique_ptr<DependencyOutputOptions> DepOutputOpts,
-    DependencyConsumer &Consumer, DependencyScanningService &Service,
-    CompilerInvocation &Inv, DependencyActionController &Controller,
+    DependencyScanningService &Service, CompilerInvocation &Inv,
+    DependencyActionController &Controller,
     PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
     SmallVector<StringRef> &StableDirs) {
   auto MDC = std::make_shared<ModuleDepCollector>(
-      Service, std::move(DepOutputOpts), ScanInstance, Consumer, Controller,
-      Inv, std::move(PrebuiltModulesASTMap), StableDirs);
+      Service, std::move(DepOutputOpts), ScanInstance, Controller, Inv,
+      std::move(PrebuiltModulesASTMap), StableDirs);
   ScanInstance.addDependencyCollector(MDC);
   return MDC;
 }
@@ -768,8 +773,8 @@ bool DependencyScanningAction::runInvocation(
   auto DepOutputOpts = createDependencyOutputOptions(*OriginalInvocation);
 
   MDC = initializeScanInstanceDependencyCollector(
-      ScanInstance, std::move(DepOutputOpts), Consumer, Service,
-      *OriginalInvocation, Controller, *MaybePrebuiltModulesASTMap, StableDirs);
+      ScanInstance, std::move(DepOutputOpts), Service, *OriginalInvocation,
+      Controller, *MaybePrebuiltModulesASTMap, StableDirs);
 
   if (ScanInstance.getDiagnostics().hasErrorOccurred())
     return false;
@@ -781,8 +786,10 @@ bool DependencyScanningAction::runInvocation(
   const bool Result = ScanInstance.ExecuteAction(Action);
 
   if (Result) {
-    if (MDC)
+    if (MDC) {
+      MDC->run(Consumer);
       MDC->applyDiscoveredDependencies(*OriginalInvocation);
+    }
 
     if (!Controller.finalize(ScanInstance, *OriginalInvocation))
       return false;

@@ -17,7 +17,6 @@ namespace llvm {
 
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
-class TargetLibraryInfo;
 struct HistogramInfo;
 struct VFRange;
 
@@ -25,9 +24,6 @@ struct VFRange;
 class VPRecipeBuilder {
   /// The VPlan new recipes are added to.
   VPlan &Plan;
-
-  /// Target Library Info.
-  const TargetLibraryInfo *TLI;
 
   /// The legality analysis.
   LoopVectorizationLegality *Legal;
@@ -47,21 +43,15 @@ class VPRecipeBuilder {
   VPWidenIntOrFpInductionRecipe *
   tryToOptimizeInductionTruncate(VPInstruction *VPI, VFRange &Range);
 
-  /// Handle call instructions. If \p VPI can be widened for \p Range.Start,
-  /// return a new VPWidenCallRecipe or VPWidenIntrinsicRecipe. Range.End may be
-  /// decreased to ensure same decision from \p Range.Start to \p Range.End.
-  VPSingleDefRecipe *tryToWidenCall(VPInstruction *VPI, VFRange &Range);
-
   /// Check if \p VPI has an opcode that can be widened and return a
   /// widened recipe if it can. The function should only be called if the
   /// cost-model indicates that widening should be performed.
   VPRecipeWithIRFlags *tryToWiden(VPInstruction *VPI);
 
 public:
-  VPRecipeBuilder(VPlan &Plan, const TargetLibraryInfo *TLI,
-                  LoopVectorizationLegality *Legal,
+  VPRecipeBuilder(VPlan &Plan, LoopVectorizationLegality *Legal,
                   LoopVectorizationCostModel &CM, VPBuilder &Builder)
-      : Plan(Plan), TLI(TLI), Legal(Legal), CM(CM), Builder(Builder) {}
+      : Plan(Plan), Legal(Legal), CM(CM), Builder(Builder) {}
 
   /// Create and return a widened recipe for a non-phi recipe \p R if one can be
   /// created within the given VF \p Range.
