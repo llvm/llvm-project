@@ -191,3 +191,22 @@ reachable.bb:
 r1.bb:
   br label %u2.bb
 }
+
+
+; issue 199348
+
+define void @phi_of_vector_fp_zero() {
+; CHECK-LABEL: @phi_of_vector_fp_zero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BB4:%.*]]
+; CHECK:       bb4:
+; CHECK-NEXT:    br label [[BB4]]
+;
+entry:
+  br label %bb4
+
+bb4:
+  %phi = phi <4 x float> [ zeroinitializer, %entry ], [ %add, %bb4 ]
+  %add = fadd <4 x float> %phi, zeroinitializer
+  br label %bb4
+}

@@ -1291,6 +1291,10 @@ const Expression *NewGVN::createVariableOrConstant(Value *V) const {
 }
 
 const ConstantExpression *NewGVN::createConstantExpression(Constant *C) const {
+  // Convert vector ConstantFP splat 0.0 to ConstantAggregateZero,
+  // so that they are compared as equal.
+  if (C->isNullValue())
+    C = Constant::getNullValue(C->getType());
   auto *E = new (ExpressionAllocator) ConstantExpression(C);
   E->setOpcode(C->getValueID());
   return E;
