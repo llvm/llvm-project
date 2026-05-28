@@ -98,16 +98,11 @@ PseudoConsole::~PseudoConsole() {
 }
 
 llvm::Error PseudoConsole::OpenPseudoConsole() {
-  assert(m_mode == Mode::None &&
-         "Attempted to open a PseudoConsole in a different mode than None");
+  Reset();
 
   if (!kernel32.IsConPTYAvailable())
     return llvm::make_error<llvm::StringError>("ConPTY is not available",
                                                llvm::errc::io_error);
-
-  assert(m_conpty_handle == INVALID_HANDLE_VALUE &&
-         "ConPTY has already been opened");
-
   // A 4096 bytes buffer should be large enough for the majority of console
   // burst outputs.
   wchar_t pipe_name[MAX_PATH];
@@ -223,8 +218,7 @@ void PseudoConsole::Reset() {
 }
 
 llvm::Error PseudoConsole::OpenAnonymousPipes() {
-  assert(m_mode == Mode::None &&
-         "Attempted to open a AnonymousPipes in a different mode than None");
+  Reset();
 
   SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES), NULL, TRUE};
   HANDLE hStdinRead = INVALID_HANDLE_VALUE;

@@ -233,8 +233,6 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
 
   if (!m_pty)
     m_pty = std::make_shared<PTY>();
-  else
-    m_pty->Reset();
 
   bool stdin_free = GetFileActionForFD(STDIN_FILENO) == nullptr;
   bool stdout_free = GetFileActionForFD(STDOUT_FILENO) == nullptr;
@@ -272,8 +270,6 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
 llvm::Error ProcessLaunchInfo::SetUpPipeRedirection() {
   if (!m_pty)
     m_pty = std::make_shared<PTY>();
-  else
-    m_pty->Reset();
   return m_pty->OpenAnonymousPipes();
 }
 #endif

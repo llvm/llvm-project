@@ -65,6 +65,7 @@ void PseudoTerminal::Reset() {
 }
 
 llvm::Error PseudoTerminal::OpenFirstAvailablePrimary(int oflag) {
+  Reset();
 #if LLDB_ENABLE_POSIX
   // Open the primary side of a pseudo terminal
   m_primary_fd = ::posix_openpt(oflag);
