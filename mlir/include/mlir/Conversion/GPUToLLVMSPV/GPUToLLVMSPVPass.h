@@ -22,7 +22,8 @@ class TypeConverter;
 #include "mlir/Conversion/Passes.h.inc"
 
 void populateGpuToLLVMSPVConversionPatterns(const LLVMTypeConverter &converter,
-                                            RewritePatternSet &patterns);
+                                            RewritePatternSet &patterns,
+                                            bool convertMathToOCL = false);
 
 /// Populates memory space attribute conversion rules for lowering
 /// gpu.address_space to integer values.

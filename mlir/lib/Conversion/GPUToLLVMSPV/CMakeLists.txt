@@ -9,5 +9,6 @@ add_mlir_conversion_library(MLIRGPUToLLVMSPV
   MLIRGPUToGPURuntimeTransforms
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
+  MLIRMathToXeVM
   MLIRSPIRVAttrToLLVMConversion
 )

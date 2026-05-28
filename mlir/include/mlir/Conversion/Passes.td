@@ -640,6 +640,9 @@ def ConvertGpuOpsToLLVMSPVOps : Pass<"convert-gpu-to-llvm-spv", "gpu::GPUModuleO
     Option<"use64bitIndex", "use-64bit-index",
            "bool", /*default=*/"false",
            "Use 64-bit integers to convert index types">,
+    Option<"convertMathToOCL", "convert-math-to-ocl",
+           "bool", /*default=*/"false",
+           "Convert supported Math ops to OCL intrinsics.">
   ];
 }
 
@@ -839,28 +842,6 @@ def ConvertMathToLLVMPass : Pass<"convert-math-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
-// MathToLLVMSPV
-//===----------------------------------------------------------------------===//
-
-def ConvertMathToLLVMSPV : Pass<"convert-math-to-llvm-spv", "ModuleOp"> {
-  let summary = "Convert Math dialect to LLVM SPV builtin calls";
-  let description = [{
-    This pass converts supported Math ops to function calls for SPIR-V
-    math intrinsics.
-
-    The extensionSetName option specifies the instruction set chosen for
-    math op lowerings.  
-  }];
-  let dependentDialects = [
-    "func::FuncDialect",
-    "LLVM::LLVMDialect",
-    "vector::VectorDialect"];
-  let options = [Option<"extensionSetName", "extension-set-name", "std::string",
-                        /*default=*/"\"\"",
-                        "SPIR-V Extension set to use for math lowering">];
-}
-
-//===----------------------------------------------------------------------===//
 // MathToLibm
 //===----------------------------------------------------------------------===//
 
@@ -920,11 +901,15 @@ def ConvertMathToXeVM : Pass<"convert-math-to-xevm"> {
     are typically mapped directly to native device instructions, often resulting
     in better performance. However, the precision/error of these intrinsics
     are implementation-defined, and thus math ops are only converted when they
-    have the `afn` fastmath flag enabled.
+    have the `afn` fastmath flag enabled. However, if the `convertToOCL` flag is
+    set then all supported math ops would be lowered to OpenCL math intrinsics.
   }];
-  let options = [Option<
-      "convertArith", "convert-arith", "bool", /*default=*/"true",
-      "Convert supported Arith ops (e.g. arith.divf) as well.">];
+  let options = [
+    Option<"convertArith", "convert-arith", "bool", /*default=*/"true",
+      "Convert supported Arith ops (e.g. arith.divf) as well.">,
+    Option<"convertToOCL", "convert-to-ocl", "bool", /*default=*/"false",
+      "Convert supported Math ops to OCL intrinsics.">
+  ];
   let dependentDialects = [
     "arith::ArithDialect",
     "xevm::XeVMDialect",
