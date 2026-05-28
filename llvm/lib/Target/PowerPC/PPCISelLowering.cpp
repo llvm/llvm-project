@@ -1381,6 +1381,16 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     if (Subtarget.hasP10Vector()) {
       setOperationAction(ISD::SELECT_CC, MVT::f128, Custom);
     }
+
+    setOperationAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v16i32, Custom);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v4i32, MVT::v8i16,
+                              Legal);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v4i32, MVT::v8i16,
+                              Legal);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v4i32, MVT::v16i8,
+                              Legal);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v4i32, MVT::v16i8,
+                              Legal);
   }
 
   if (Subtarget.pairedVectorMemops()) {
@@ -8864,8 +8874,10 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
 
     MachineFunction &MF = DAG.getMachineFunction();
     if (canReuseLoadAddress(SINT, MVT::i64, RLI, DAG)) {
+      // Drop range metadata, as this metadata becomes invalid for f64 bit
+      // reinterpretation of i64 values.
       Bits = DAG.getLoad(MVT::f64, dl, RLI.Chain, RLI.Ptr, RLI.MPI,
-                         RLI.Alignment, RLI.MMOFlags(), RLI.AAInfo, RLI.Ranges);
+                         RLI.Alignment, RLI.MMOFlags(), RLI.AAInfo, nullptr);
       if (RLI.ResChain)
         DAG.makeEquivalentMemoryOrdering(RLI.ResChain, Bits.getValue(1));
     } else if (Subtarget.hasLFIWAX() &&
@@ -9663,6 +9675,10 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       return DAG.getBitcast(Op.getValueType(), SplatNode);
     }
   }
+
+  if (SDValue V =
+          LowerVecSplatSmallFP(Op, DAG, BVNIsConstantSplat, SplatBitSize))
+    return V;
 
   bool IsSplat64 = false;
   uint64_t SplatBits = 0;
@@ -11971,6 +11987,29 @@ SDValue PPCTargetLowering::LowerVP_STORE(SDValue Op, SelectionDAG &DAG) const {
   return VPS;
 }
 
+SDValue PPCTargetLowering::LowerPartialReduce(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDValue Acc = Op.getOperand(0);
+  SDValue Op1 = Op.getOperand(1);
+  SDValue Op2 = Op.getOperand(2);
+
+  assert(Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA &&
+         "Unexpected partial reduction");
+
+  if (Acc.getValueType() != MVT::v4i32)
+    return SDValue();
+  if (Op1.getValueType() != MVT::v16i32 || Op1.getOpcode() != ISD::SIGN_EXTEND)
+    return SDValue();
+  SDValue Op1Input = Op1.getOperand(0);
+  if (Op1Input.getValueType() != MVT::v16i8 || !llvm::isOneOrOneSplat(Op2))
+    return SDValue();
+
+  SDLoc dl(Op);
+  SDValue Ones = DAG.getConstant(1, dl, MVT::v16i8);
+  return DAG.getNode(ISD::PARTIAL_REDUCE_SUMLA, dl, MVT::v4i32, Acc, Op1Input,
+                     Ones);
+}
+
 SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -12863,6 +12902,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerVP_LOAD(Op, DAG);
   case ISD::VP_STORE:
     return LowerVP_STORE(Op, DAG);
+  case ISD::PARTIAL_REDUCE_UMLA:
+    return LowerPartialReduce(Op, DAG);
   }
 }
 
@@ -20987,4 +21028,45 @@ SDValue PPCTargetLowering::GenerateVBPERM(SelectionDAG &DAG, SDLoc dl,
       ISD::INTRINSIC_WO_CHAIN, dl, MVT::v16i8,
       DAG.getConstant(Intrinsic::ppc_altivec_vbpermq, dl, MVT::i32),
       DAG.getBitcast(MVT::v16i8, Src), VRB);
+}
+
+// For Power8/9, optimize vec splats of small FP values that can be
+// represented as integers. Use vspltisw + xvcvsxwdp/xvcvsxwsp instead of
+// loading from constant pool.
+SDValue PPCTargetLowering::LowerVecSplatSmallFP(SDValue Op, SelectionDAG &DAG,
+                                                bool BVNIsConstantSplat,
+                                                unsigned SplatBitSize) const {
+
+  if (!BVNIsConstantSplat || !Subtarget.hasVSX() || !Subtarget.hasP8Vector() ||
+      Subtarget.hasP10Vector())
+    return SDValue();
+
+  EVT VT = Op->getValueType(0);
+  if (!((SplatBitSize == 64 && VT == MVT::v2f64) ||
+        (SplatBitSize == 32 && VT == MVT::v4f32)))
+    return SDValue();
+
+  auto *CN = dyn_cast<ConstantFPSDNode>(Op.getOperand(0));
+  if (!CN)
+    return SDValue();
+
+  APFloat APFloatVal = CN->getValueAPF();
+  bool IsExact;
+  APSInt IntResult(16, false);
+  APFloatVal.convertToInteger(IntResult, APFloat::rmTowardZero, &IsExact);
+
+  if (!(IsExact && IntResult <= 15 && IntResult >= -16 && !APFloatVal.isZero()))
+    return SDValue();
+
+  int64_t IntVal = IntResult.getSExtValue();
+
+  SDLoc dl(Op);
+  SDValue IntSplat = getCanonicalConstSplat(IntVal, 4, MVT::v4i32, DAG, dl);
+
+  if (SplatBitSize == 64)
+    return DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, dl, MVT::v2f64,
+        DAG.getConstant(Intrinsic::ppc_vsx_xvcvsxwdp, dl, MVT::i32), IntSplat);
+
+  return DAG.getNode(PPCISD::XVCVSXWSP, dl, MVT::v4f32, IntSplat);
 }

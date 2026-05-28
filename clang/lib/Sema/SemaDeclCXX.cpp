@@ -1405,6 +1405,9 @@ static bool checkTupleLikeDecomposition(Sema &S,
                         /*TInfo=*/nullptr, Src->getStorageClass());
     BindingVD->setLexicalDeclContext(Src->getLexicalDeclContext());
     BindingVD->setTSCSpec(Src->getTSCSpec());
+    BindingVD->setConstexpr(Src->isConstexpr());
+    if (const auto *CIAttr = Src->getAttr<ConstInitAttr>())
+      BindingVD->addAttr(CIAttr->clone(S.Context));
     BindingVD->setImplicit();
     if (Src->isInlineSpecified())
       BindingVD->setInlineSpecified();
@@ -18095,13 +18098,12 @@ DeclResult Sema::ActOnTemplatedFriendTag(
                                 Name, NameLoc, Attr, TemplateParams, AS_public,
                                 /*ModulePrivateLoc=*/SourceLocation(),
                                 FriendLoc, TempParamLists.size() - 1,
-                                TempParamLists.data())
+                                TempParamLists.data(), IsMemberSpecialization)
           .get();
     } else {
       // The "template<>" header is extraneous.
       Diag(TemplateParams->getTemplateLoc(), diag::err_template_tag_noparams)
-        << TypeWithKeyword::getTagTypeKindName(Kind) << Name;
-      IsMemberSpecialization = true;
+          << TypeWithKeyword::getTagTypeKindName(Kind) << Name;
     }
   }
 

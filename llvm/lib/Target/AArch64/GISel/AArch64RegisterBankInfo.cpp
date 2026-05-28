@@ -739,6 +739,7 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
   case TargetOpcode::G_FCMP:
   case TargetOpcode::G_LROUND:
   case TargetOpcode::G_LLROUND:
+  case TargetOpcode::G_CLMUL:
   case AArch64::G_PMULL:
   case AArch64::G_SLI:
   case AArch64::G_SRI:
