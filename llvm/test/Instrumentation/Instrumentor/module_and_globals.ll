@@ -32,7 +32,7 @@ entry:
 ;.
 ; CHECK-LABEL: define i32 @foo() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @__instrumentor_pre_function(ptr @foo, ptr @__instrumentor_.str.5, i32 0, ptr null, i8 0, i32 12) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    call void @__instrumentor_pre_function(ptr @foo, ptr @__instrumentor_.str.5, i32 0, ptr null, i8 0, i32 14) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[Z_SHADOW_LOAD:%.*]] = load ptr, ptr @__instrumentor_shadow.Z, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__instrumentor_post_base_pointer_info(ptr [[Z_SHADOW_LOAD]], i32 2, i32 -11) #[[ATTR0]]
 ; CHECK-NEXT:    [[Y_SHADOW_LOAD:%.*]] = load ptr, ptr @__instrumentor_shadow.Y, align 8
@@ -45,18 +45,30 @@ entry:
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @__instrumentor_post_load(ptr [[X_SHADOW_LOAD]], i32 0, ptr [[TMP2]], i64 [[TMP12]], i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 -9) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i32
 ; CHECK-NEXT:    [[TMP8:%.*]] = call ptr @__instrumentor_pre_load(ptr [[Y_SHADOW_LOAD]], i32 0, ptr [[TMP1]], i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 10) #[[ATTR0]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP8]], align 4
-; CHECK-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP9]] to i64
-; CHECK-NEXT:    [[TMP19:%.*]] = call i64 @__instrumentor_post_load(ptr [[Y_SHADOW_LOAD]], i32 0, ptr [[TMP1]], i64 [[TMP18]], i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 -10) #[[ATTR0]]
-; CHECK-NEXT:    [[TMP20:%.*]] = trunc i64 [[TMP19]] to i32
-; CHECK-NEXT:    [[TMP21:%.*]] = call ptr @__instrumentor_pre_load(ptr [[Z_SHADOW_LOAD]], i32 0, ptr [[TMP0]], i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 11) #[[ATTR0]]
-; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
-; CHECK-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP22]] to i64
-; CHECK-NEXT:    [[TMP16:%.*]] = call i64 @__instrumentor_post_load(ptr [[Z_SHADOW_LOAD]], i32 0, ptr [[TMP0]], i64 [[TMP15]], i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 -11) #[[ATTR0]]
-; CHECK-NEXT:    [[TMP17:%.*]] = trunc i64 [[TMP16]] to i32
-; CHECK-NEXT:    [[ADD1:%.*]] = add nsw i32 [[TMP14]], [[TMP20]]
-; CHECK-NEXT:    [[ADD2:%.*]] = add nsw i32 [[ADD1]], [[TMP17]]
-; CHECK-NEXT:    call void @__instrumentor_post_function(ptr @foo, ptr @__instrumentor_.str.5, i32 0, ptr null, i8 0, i32 -13) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP21:%.*]] = call i64 @__instrumentor_post_load(ptr [[Y_SHADOW_LOAD]], i32 0, ptr [[TMP1]], i64 [[TMP15]], i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 -10) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP25:%.*]] = trunc i64 [[TMP21]] to i32
+; CHECK-NEXT:    [[TMP26:%.*]] = call ptr @__instrumentor_pre_load(ptr [[Z_SHADOW_LOAD]], i32 0, ptr [[TMP0]], i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 11) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP26]], align 4
+; CHECK-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP9]] to i64
+; CHECK-NEXT:    [[TMP27:%.*]] = call i64 @__instrumentor_post_load(ptr [[Z_SHADOW_LOAD]], i32 0, ptr [[TMP0]], i64 [[TMP16]], i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 -11) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[TMP27]] to i32
+; CHECK-NEXT:    [[TMP29:%.*]] = zext i32 [[TMP14]] to i64
+; CHECK-NEXT:    [[TMP30:%.*]] = zext i32 [[TMP25]] to i64
+; CHECK-NEXT:    call void @__instrumentor_pre_operation(i64 12, i32 4, i32 14, i64 [[TMP29]], i64 [[TMP30]], i32 12) #[[ATTR0]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP14]], [[TMP25]]
+; CHECK-NEXT:    [[TMP17:%.*]] = zext i32 [[ADD]] to i64
+; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @__instrumentor_post_operation(i64 12, i32 4, i32 14, i64 [[TMP29]], i64 [[TMP30]], i64 [[TMP17]], i32 -12) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP18]] to i32
+; CHECK-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP19]] to i64
+; CHECK-NEXT:    [[TMP24:%.*]] = zext i32 [[TMP28]] to i64
+; CHECK-NEXT:    call void @__instrumentor_pre_operation(i64 12, i32 4, i32 14, i64 [[TMP20]], i64 [[TMP24]], i32 13) #[[ATTR0]]
+; CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP19]], [[TMP28]]
+; CHECK-NEXT:    [[TMP22:%.*]] = zext i32 [[ADD3]] to i64
+; CHECK-NEXT:    [[TMP23:%.*]] = call i64 @__instrumentor_post_operation(i64 12, i32 4, i32 14, i64 [[TMP20]], i64 [[TMP24]], i64 [[TMP22]], i32 -13) #[[ATTR0]]
+; CHECK-NEXT:    [[ADD2:%.*]] = trunc i64 [[TMP23]] to i32
+; CHECK-NEXT:    call void @__instrumentor_post_function(ptr @foo, ptr @__instrumentor_.str.5, i32 0, ptr null, i8 0, i32 -15) #[[ATTR0]]
 ; CHECK-NEXT:    ret i32 [[ADD2]]
 ;
 ;

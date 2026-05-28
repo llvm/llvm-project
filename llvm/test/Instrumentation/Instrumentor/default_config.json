@@ -223,6 +223,23 @@
       "opcode.description": "The opcode of the cast instruction.",
       "id": true,
       "id.description": "A unique ID associated with the given instrumentor call"
+    },
+    "operation": {
+      "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
+      "type_id": true,
+      "type_id.description": "The operation's type id.",
+      "size": true,
+      "size.description": "The operation's type size.",
+      "opcode": true,
+      "opcode.description": "The instruction opcode.",
+      "left": true,
+      "left.description": "The operation's left operand.",
+      "right": true,
+      "right.description": "The operation's right operand. This value is poison for unary operations.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
     }
   },
   "instruction_post": {
@@ -314,6 +331,26 @@
       "result_size.description": "The size of the result value.",
       "opcode": true,
       "opcode.description": "The opcode of the cast instruction.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    },
+    "operation": {
+      "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
+      "type_id": true,
+      "type_id.description": "The operation's type id.",
+      "size": true,
+      "size.description": "The operation's type size.",
+      "opcode": true,
+      "opcode.description": "The instruction opcode.",
+      "left": true,
+      "left.description": "The operation's left operand.",
+      "right": true,
+      "right.description": "The operation's right operand. This value is poison for unary operations.",
+      "result": true,
+      "result.replace": true,
+      "result.description": "Result of the operation.",
       "id": true,
       "id.description": "A unique ID associated with the given instrumentor call"
     }
