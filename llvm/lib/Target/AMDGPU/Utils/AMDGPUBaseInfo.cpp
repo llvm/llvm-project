@@ -3114,6 +3114,10 @@ bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi) {
          Val == 0x3E22;   // 1.0 / (2.0 * pi)
 }
 
+bool isInlinableLiteralI16(int32_t Literal, bool HasInv2Pi) {
+  return isInlinableLiteral32(Literal, HasInv2Pi);
+}
+
 bool isInlinableLiteralFP16(int16_t Literal, bool HasInv2Pi) {
   if (!HasInv2Pi)
     return false;
@@ -3129,10 +3133,6 @@ bool isInlinableLiteralFP16(int16_t Literal, bool HasInv2Pi) {
          Val == 0x4400 || // 4.0
          Val == 0xC400 || // -4.0
          Val == 0x3118;   // 1/2pi
-}
-
-bool isInlinableLiteralI16(int32_t Literal, bool HasInv2Pi) {
-  return isInlinableLiteralFP16(Literal, HasInv2Pi);
 }
 
 std::optional<unsigned> getInlineEncodingV216(bool IsFloat, uint32_t Literal) {
