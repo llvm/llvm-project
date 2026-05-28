@@ -598,3 +598,26 @@ static_assert(MutabilityAlias<Constant::alias>);
 static_assert(MutabilityAlias<Mutable::alias>);
 
 }
+
+
+namespace GH199569 {
+
+template<typename F, typename... A>
+concept callable = requires(F f, A... a) {
+	f(a...);
+};
+
+struct S {
+	void operator()(auto);
+};
+
+template<int> struct B {};
+
+template<int... N> requires(... and callable<S, B<N>>)
+struct X {};
+
+static_assert(callable<S, B<0>>);
+static_assert(callable<S, B<1>>);
+
+X<0> x;
+}

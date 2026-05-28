@@ -642,6 +642,7 @@ Bug Fixes to C++ Support
 - Concepts appearing in the require-clause of a member function no longer have access to non-public members of that class,
   or to a current class object. (#GH115838) (#GH194803) (#GH197067)
 - We no longer caches invalid variable specializations. (#GH132592)
+- Fix a regression in the checking of constraints involving fold expressions. (#GH199569)
 - Fixed an incorrect template argument deduction when matching packs of template
   template parameters when one of its parameters is also a pack. (#GH181166)
 - Clang no longer errors on overloads with different ref-qualifiers and constraints. (#GH120812)

@@ -672,10 +672,10 @@ public:
   /// routine.
   ///
   /// Returns true if an error occurred.
-  bool TransformTemplateArguments(const TemplateArgumentLoc *Inputs,
-                                  unsigned NumInputs,
-                                  TemplateArgumentListInfo &Outputs,
-                                  bool Uneval = false) {
+  bool TransformTemplateArguments(
+      const TemplateArgumentLoc *Inputs, unsigned NumInputs,
+      TemplateArgumentListInfo &Outputs, bool Uneval = false,
+      UnsignedOrNone ExpansionIndex = std::nullopt) {
     return TransformTemplateArguments(Inputs, Inputs + NumInputs, Outputs,
                                       Uneval);
   }
@@ -694,11 +694,11 @@ public:
   /// routine.
   ///
   /// Returns true if an error occurred.
-  template<typename InputIterator>
-  bool TransformTemplateArguments(InputIterator First,
-                                  InputIterator Last,
+  template <typename InputIterator>
+  bool TransformTemplateArguments(InputIterator First, InputIterator Last,
                                   TemplateArgumentListInfo &Outputs,
-                                  bool Uneval = false);
+                                  bool Uneval = false,
+                                  UnsignedOrNone ExpansionIndex = std::nullopt);
 
   template <typename InputIterator>
   bool TransformConceptTemplateArguments(InputIterator First,
@@ -5174,11 +5174,11 @@ public:
   }
 };
 
-template<typename Derived>
-template<typename InputIterator>
+template <typename Derived>
+template <typename InputIterator>
 bool TreeTransform<Derived>::TransformTemplateArguments(
     InputIterator First, InputIterator Last, TemplateArgumentListInfo &Outputs,
-    bool Uneval) {
+    bool Uneval, UnsignedOrNone ExpansionIndex) {
   for (TemplateArgumentLoc In : llvm::make_range(First, Last)) {
     TemplateArgumentLoc Out;
     if (In.getArgument().getKind() == TemplateArgument::Pack) {
@@ -5218,7 +5218,17 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
       std::optional<ForgetSubstitutionRAII> ForgetSubst;
       if (Info.ExpandUnderForgetSubstitions)
         ForgetSubst.emplace(getDerived());
-      for (unsigned I = 0; I != *Info.NumExpansions; ++I) {
+
+      unsigned Start, End;
+      if (ExpansionIndex.has_value()) {
+        Start = *ExpansionIndex;
+        End = Start + 1;
+      } else {
+        Start = 0U;
+        End = *Info.NumExpansions;
+      }
+
+      for (unsigned I = Start; I != End; ++I) {
         Sema::ArgPackSubstIndexRAII SubstIndex(getSema(), I);
 
         TemplateArgumentLoc Out;

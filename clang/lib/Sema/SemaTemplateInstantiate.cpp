@@ -4397,11 +4397,12 @@ bool Sema::SubstTemplateArguments(
 bool Sema::SubstTemplateArgumentsInParameterMapping(
     ArrayRef<TemplateArgumentLoc> Args, SourceLocation BaseLoc,
     const MultiLevelTemplateArgumentList &TemplateArgs,
-    TemplateArgumentListInfo &Out) {
+    TemplateArgumentListInfo &Out, UnsignedOrNone ExpandedIndex) {
   TemplateInstantiator Instantiator(
       TemplateInstantiator::ForParameterMappingSubstitution, *this, BaseLoc,
       TemplateArgs);
-  return Instantiator.TransformTemplateArguments(Args.begin(), Args.end(), Out);
+  return Instantiator.TransformTemplateArguments(Args.begin(), Args.end(), Out,
+                                                 /*Uneval=*/false);
 }
 
 ExprResult

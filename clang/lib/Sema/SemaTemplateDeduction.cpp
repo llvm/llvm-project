@@ -5173,8 +5173,8 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
   EnterExpressionEvaluationContext EECtx(
       S, Sema::ExpressionEvaluationContext::Unevaluated,
       ImplicitConceptSpecializationDecl::Create(
-          S.getASTContext(), Concept->getDeclContext(), Concept->getLocation(),
-          CTAI.SugaredConverted));
+          S.getASTContext(), Concept->getDeclContext(),
+          TypeLoc.getConceptNameLoc(), CTAI.SugaredConverted));
   if (S.CheckConstraintSatisfaction(
           Concept, AssociatedConstraint(Concept->getConstraintExpr()), MLTAL,
           TypeLoc.getLocalSourceRange(), Satisfaction))

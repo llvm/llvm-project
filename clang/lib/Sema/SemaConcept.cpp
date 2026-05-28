@@ -481,6 +481,7 @@ class ConstraintSatisfactionChecker {
   UnsignedOrNone PackSubstitutionIndex;
   ConstraintSatisfaction &Satisfaction;
   bool BuildExpression;
+  bool RemovePacksForFoldExpr = false;
 
   // The closest concept declaration when evaluating atomic constraints.
   ConceptDecl *ParentConcept = nullptr;
@@ -538,10 +539,12 @@ public:
                                 SourceLocation TemplateNameLoc,
                                 UnsignedOrNone PackSubstitutionIndex,
                                 ConstraintSatisfaction &Satisfaction,
-                                bool BuildExpression)
+                                bool BuildExpression,
+                                bool RemovePacksForFoldExpr)
       : S(SemaRef), Template(Template), TemplateNameLoc(TemplateNameLoc),
         PackSubstitutionIndex(PackSubstitutionIndex),
-        Satisfaction(Satisfaction), BuildExpression(BuildExpression) {}
+        Satisfaction(Satisfaction), BuildExpression(BuildExpression),
+        RemovePacksForFoldExpr(RemovePacksForFoldExpr) {}
 
   ExprResult Evaluate(const NormalizedConstraint &Constraint,
                       const MultiLevelTemplateArgumentList &MLTAL);
@@ -669,7 +672,8 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
 
   if (S.SubstTemplateArgumentsInParameterMapping(
           Constraint.getParameterMapping(), Constraint.getBeginLoc(), MLTAL,
-          SubstArgs)) {
+          SubstArgs,
+          RemovePacksForFoldExpr ? PackSubstitutionIndex : std::nullopt)) {
     Satisfaction.IsSatisfied = false;
     return std::nullopt;
   }
@@ -897,13 +901,15 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
   }
 
   for (unsigned I = 0; I < *NumExpansions; I++) {
-    Sema::ArgPackSubstIndexRAII SubstIndex(S, I);
+
     Satisfaction.IsSatisfied = false;
     Satisfaction.ContainsErrors = false;
+
     ExprResult Expr =
         ConstraintSatisfactionChecker(S, Template, TemplateNameLoc,
                                       UnsignedOrNone(I), Satisfaction,
-                                      /*BuildExpression=*/false)
+                                      /*BuildExpression=*/false,
+                                      /*RemovePacksForFoldExpr=*/true)
             .Evaluate(Constraint.getNormalizedPattern(), *SubstitutedArgs);
     if (BuildExpression) {
       if (Out.isUnset() || !Expr.isUsable())
@@ -1230,7 +1236,8 @@ static bool CheckConstraintSatisfaction(
   ExprResult Res = ConstraintSatisfactionChecker(
                        S, Template, TemplateIDRange.getBegin(),
                        S.ArgPackSubstIndex, Satisfaction,
-                       /*BuildExpression=*/ConvertedExpr != nullptr)
+                       /*BuildExpression=*/ConvertedExpr != nullptr,
+                       /*RemovePacksForFoldExpr=*/false)
                        .Evaluate(*C, TemplateArgsLists);
 
   if (Res.isInvalid())
@@ -2186,8 +2193,9 @@ bool SubstituteParameterMappings::substitute(
   TemplateArgumentListInfo SubstArgs;
   llvm::SaveAndRestore<decltype(SemaRef.CurrentCachedTemplateArgs)>
       DoNotCacheDependentArgs(SemaRef.CurrentCachedTemplateArgs, nullptr);
-  if (SemaRef.SubstTemplateArgumentsInParameterMapping(
-          N.getParameterMapping(), N.getBeginLoc(), *MLTAL, SubstArgs))
+  if (SemaRef.SubstTemplateArgumentsInParameterMapping(N.getParameterMapping(),
+                                                       N.getBeginLoc(), *MLTAL,
+                                                       SubstArgs, std::nullopt))
     return true;
   Sema::CheckTemplateArgumentInfo CTAI;
   auto *TD =
@@ -2259,7 +2267,8 @@ bool SubstituteParameterMappings::substitute(ConceptIdConstraint &CC) {
   const ASTTemplateArgumentListInfo *ArgsAsWritten =
       CSE->getTemplateArgsAsWritten();
   if (SemaRef.SubstTemplateArgumentsInParameterMapping(
-          ArgsAsWritten->arguments(), CC.getBeginLoc(), *MLTAL, Out))
+          ArgsAsWritten->arguments(), CC.getBeginLoc(), *MLTAL, Out,
+          std::nullopt))
     return true;
   Sema::CheckTemplateArgumentInfo CTAI;
   if (SemaRef.CheckTemplateArgumentList(CSE->getNamedConcept(),
