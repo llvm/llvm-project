@@ -129,20 +129,13 @@ extern cl::opt<opts::ProfileFormatKind> ProfileFormat;
 extern cl::opt<bool> ProfileWritePseudoProbes;
 extern cl::opt<std::string> SaveProfile;
 
-cl::opt<bool> ReadPreAggregated(
+cl::opt<bool> ReadPreAggOrPerfScript(
     "pa", cl::desc("skip perf and read data from a pre-aggregated file format"),
     cl::cat(AggregatorCategory));
 
-cl::opt<bool> ReadPerfTextProfile(
-    "perf-script",
-    cl::desc("skip perf event collection by reading a "
-             "pre-parsed perf-script output in a textual format"),
-    cl::Hidden, cl::cat(AggregatorCategory));
-
-cl::opt<bool> GeneratePerfTextProfile(
-    "generate-perf-script",
-    cl::desc("Dump perf-script jobs' output into a file"), cl::Hidden,
-    cl::cat(AggregatorCategory));
+static cl::alias ReadPerfScript("ps",
+                                cl::desc("read pre-parsed perf script output"),
+                                cl::NotHidden, cl::aliasopt(ReadPreAggOrPerfScript));
 
 static cl::opt<bool>
 TimeAggregator("time-aggr",
@@ -159,6 +152,7 @@ const char TimerGroupName[] = "aggregator";
 const char TimerGroupDesc[] = "Aggregator";
 
 constexpr const StringLiteral PerfTextMagicStr = "PERFTEXT";
+constexpr const StringLiteral PerfDataMagicStr = "PERFILE";
 
 std::vector<SectionNameAndRange> getTextSections(const BinaryContext *BC) {
   std::vector<SectionNameAndRange> sections;
@@ -262,7 +256,7 @@ void DataAggregator::start() {
 
   // Don't launch perf for pre-aggregated files or when perf input is specified
   // by the user.
-  if (opts::ReadPreAggregated || opts::ReadPerfTextProfile)
+  if (opts::ReadPreAggOrPerfScript)
     return;
 
   findPerfExecutable();
@@ -306,7 +300,7 @@ void DataAggregator::start() {
 }
 
 void DataAggregator::abort() {
-  if (opts::ReadPreAggregated)
+  if (opts::ReadPreAggOrPerfScript)
     return;
 
   std::string Error;
@@ -404,29 +398,34 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
 }
 
 bool DataAggregator::checkPerfDataMagic(StringRef FileName) {
-  if (opts::ReadPreAggregated || opts::ReadPerfTextProfile)
+  if (opts::ReadPreAggOrPerfScript)
     return true;
 
+  return DataAggregator::checkInputFileMagic(FileName, PerfDataMagicStr);
+}
+
+bool DataAggregator::checkInputFileMagic(StringRef FileName, StringLiteral MagicStr) {
   Expected<sys::fs::file_t> FD = sys::fs::openNativeFileForRead(FileName);
   if (!FD) {
     consumeError(FD.takeError());
     return false;
   }
-
-  char Buf[7] = {0, 0, 0, 0, 0, 0, 0};
+  const size_t MagicStrSize = MagicStr.size();
+  char Buf[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+  assert(MagicStr.size() <= 8 && "Size must be maximum 8");
 
   llvm::scope_exit Close([&] { sys::fs::closeFile(*FD); });
   Expected<size_t> BytesRead = sys::fs::readNativeFileSlice(
-      *FD, MutableArrayRef(Buf, sizeof(Buf)), 0);
+      *FD, MutableArrayRef(Buf, MagicStrSize), 0);
   if (!BytesRead) {
     consumeError(BytesRead.takeError());
     return false;
   }
 
-  if (*BytesRead != 7)
+  if (*BytesRead != MagicStrSize)
     return false;
 
-  if (strncmp(Buf, "PERFILE", 7) == 0)
+  if (strncmp(Buf, MagicStr.data(), MagicStrSize) == 0)
     return true;
   return false;
 }
@@ -466,83 +465,84 @@ void DataAggregator::parsePreAggregated() {
   }
 }
 
-std::error_code DataAggregator::parsePerfTextFileHeader() {
-  size_t LineEnd = ParsingBuf.find_first_of("\n");
-  if (LineEnd == StringRef::npos) {
+std::error_code DataAggregator::parsePerfScriptFileHeader() {
+  size_t HeaderLineEndPos = ParsingBuf.find_first_of("\n");
+  if (HeaderLineEndPos == StringRef::npos) {
     reportError("expected rest of line");
     Diag << "Found: " << ParsingBuf << "\n";
     return make_error_code(llvm::errc::io_error);
   }
-  StringRef HeaderLine = ParsingBuf.substr(0, LineEnd);
-  size_t HeaderLineSize = HeaderLine.size() + 1;
 
-  if (!HeaderLine.consume_front(PerfTextMagicStr)) {
+  ErrorOr<StringRef> PSMagicStrRes = parseString(';');
+  if (std::error_code EC = PSMagicStrRes.getError())
+    return EC;
+  StringRef PSMagicStr = PSMagicStrRes.get();
+  if (PSMagicStr != PerfTextMagicStr) {
     reportError("expected 'PERFTEXT' magic string");
-    Diag << "Found: " << HeaderLine << "\n";
-    return make_error_code(llvm::errc::io_error);
-  }
-  Col += PerfTextMagicStr.size();
-
-  SmallVector<StringRef, 5> Events;
-  HeaderLine.trim().split(Events, ";", -1, false);
-
-  if (Events.empty()) {
-    reportError("missing events=sizes content");
-    Diag << "Found: " << HeaderLine << "\n";
+    Diag << "Found: " << PSMagicStr << "\n";
     return make_error_code(llvm::errc::io_error);
   }
 
-  uint64_t Offset = HeaderLineSize;
+  uint64_t Offset = HeaderLineEndPos + 1;
   uint64_t Length = 0;
-  for (StringRef EV : Events) {
-    StringRef EventStr, LengthStr;
-    std::tie(EventStr, LengthStr) = EV.split("=");
+  while (ParsingBuf.size() > 0 && ParsingBuf[0] != '\n') {
+    ErrorOr<StringRef> TypeLengthPairStrRes = parseString(';');
+    if (std::error_code EC = TypeLengthPairStrRes.getError())
+      return EC;
+    StringRef TypeLengthPairStr = TypeLengthPairStrRes.get();
+
+    // Parse 'PPIType=Length' pairs
+    const auto KV = TypeLengthPairStr.split("=");
+    if (KV.second.empty()) {
+      reportError("expected type=length content");
+      Diag << "Found: " << TypeLengthPairStr << "\n";
+      return make_error_code(llvm::errc::io_error);
+    }
 
     PerfProcessInfo *PPI =
-        StringSwitch<PerfProcessInfo *>(EventStr)
-            .Case(PerfProcessInfo::EventNamesStr[PerfProcessType::BUILDIDS],
+        StringSwitch<PerfProcessInfo *>(KV.first)
+            .Case(PerfProcessInfo::PerfProcessTypeNames[PerfProcessType::BUILDIDS],
                   &BuildIDProcessInfo)
-            .Case(PerfProcessInfo::EventNamesStr[PerfProcessType::MAIN_EVENTS],
+            .Case(PerfProcessInfo::PerfProcessTypeNames[PerfProcessType::MAIN_EVENTS],
                   &MainEventsPPI)
-            .Case(PerfProcessInfo::EventNamesStr[PerfProcessType::MEM_EVENTS],
+            .Case(PerfProcessInfo::PerfProcessTypeNames[PerfProcessType::MEM_EVENTS],
                   &MemEventsPPI)
-            .Case(PerfProcessInfo::EventNamesStr[PerfProcessType::MMAP_EVENTS],
+            .Case(PerfProcessInfo::PerfProcessTypeNames[PerfProcessType::MMAP_EVENTS],
                   &MMapEventsPPI)
-            .Case(PerfProcessInfo::EventNamesStr[PerfProcessType::TASK_EVENTS],
+            .Case(PerfProcessInfo::PerfProcessTypeNames[PerfProcessType::TASK_EVENTS],
                   &TaskEventsPPI)
             .Default(nullptr);
 
     if (!PPI) {
-      reportError("malformed text profile");
-      Diag << "Found: " << EventStr << " in " << HeaderLine << "\n";
+      reportError("supported types: BUILDID, MAIN, MMAP, TASK, MEM");
+      Diag << "Found: " << KV.first << " in " << TypeLengthPairStr << "\n";
       return make_error_code(llvm::errc::io_error);
     }
 
-    if (LengthStr.getAsInteger(16, Length)) {
+    if (KV.second.getAsInteger(16, Length)) {
       reportError("expected hexadecimal number");
-      Diag << "Found: " << LengthStr << " in " << HeaderLine << "\n";
+      Diag << "Found: " << KV.second << " in " << TypeLengthPairStr << "\n";
       return make_error_code(llvm::errc::io_error);
     }
     PPI->Offset = Offset;
     PPI->Length = Length;
     Offset = Offset + Length;
-    Col += EV.size();
   }
 
   ErrorOr<uint64_t> FsRes = getFileSize(Filename);
   if (std::error_code EC = FsRes.getError())
     return EC;
   if (*FsRes != Offset) {
-    reportError("corrupted perf text profile");
+    reportError("corrupted perfscript profile");
     Diag << "Found: " << *FsRes << " != " << Offset << "\n";
     return make_error_code(llvm::errc::io_error);
   }
   return std::error_code();
 }
 
-void DataAggregator::parsePerfTextData(BinaryContext &BC) {
+void DataAggregator::parsePerfScriptData() {
   outs() << "PERF2BOLT: parsing a textual perf-script events...\n";
-  NamedRegionTimer T("parsePerfTextData", "Parsing perf-script events",
+  NamedRegionTimer T("parsePerfScript", "Parsing perf-script events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
   if (!Filename.empty()) {
     // Load only the file header
@@ -557,16 +557,16 @@ void DataAggregator::parsePerfTextData(BinaryContext &BC) {
     ParsingBuf = (*MB)->getBuffer();
     Col = 0;
     Line = 1;
-    if (std::error_code EC = parsePerfTextFileHeader()) {
+    if (std::error_code EC = parsePerfScriptFileHeader()) {
       errs() << "PERF2BOLT-ERROR: failed to parse text header" << EC.message()
              << "\n";
       exit(1);
     }
   }
-  parsePerfData(BC);
+  parsePerfData();
 }
 
-Error DataAggregator::generatePerfTextData() {
+Error DataAggregator::generatePerfScriptData() {
   std::error_code EC;
   raw_fd_ostream OutFile(opts::OutputFilename, EC, sys::fs::OpenFlags::OF_None);
   if (EC) {
@@ -654,7 +654,7 @@ void DataAggregator::filterBinaryMMapInfo() {
 
 int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
                                    PerfProcessErrorCallbackTy Callback) {
-  if (opts::ReadPerfTextProfile) {
+  if (opts::ReadPreAggOrPerfScript) {
     // No profile, ParsingBuf is set directly in unittests.
     if (Filename.empty())
       return 0;
@@ -853,12 +853,11 @@ void DataAggregator::imputeFallThroughs() {
 
 void DataAggregator::parseInput() {
   start();
-
-  if (opts::ReadPreAggregated)
+  if (opts::ReadPreAggOrPerfScript && checkInputFileMagic(Filename, PerfTextMagicStr)) {
+    parsePerfScriptData();
+  } else if (opts::ReadPreAggOrPerfScript) {
     parsePreAggregated();
-  } else if (opts::ReadPerfTextData) {
-    parsePerfTextData(BC);
-  else {
+  } else {
     parsePerfData();
   }
 }
@@ -870,9 +869,9 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
 
   this->BC = &BC;
 
-  if (opts::GeneratePerfTextProfile) {
+  if (opts::ProfileFormat == opts::ProfileFormatKind::PF_PerfScript) {
     start();
-    if (Error E = generatePerfTextData()) {
+    if (Error E = generatePerfScriptData()) {
       deleteTempFiles();
       exit(1);
     }
