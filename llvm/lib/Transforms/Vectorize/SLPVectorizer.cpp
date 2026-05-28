@@ -322,6 +322,8 @@ static Type *getValueType(Value *V, bool LookThroughCmp = false) {
   if (!SLPReVec)
     if (auto *IE = dyn_cast<InsertElementInst>(V))
       return IE->getOperand(1)->getType();
+  if (auto *IV = dyn_cast<InsertValueInst>(V))
+    return IV->getOperand(1)->getType();
   return V->getType();
 }
 
@@ -508,18 +510,21 @@ static bool isConstant(Value *V) {
 /// insertelement/extractelement with constant indices for fixed vector type or
 /// extractvalue instruction.
 static bool isVectorLikeInstWithConstOps(Value *V) {
-  if (!isa<InsertElementInst, ExtractElementInst>(V) &&
+  if (!isa<InsertElementInst, InsertValueInst, ExtractElementInst>(V) &&
       !isa<ExtractValueInst, UndefValue>(V))
     return false;
   auto *I = dyn_cast<Instruction>(V);
   if (!I || isa<ExtractValueInst>(I))
     return true;
-  if (!isa<FixedVectorType>(I->getOperand(0)->getType()))
-    return false;
   if (isa<ExtractElementInst>(I))
     return isConstant(I->getOperand(1));
-  assert(isa<InsertElementInst>(V) && "Expected only insertelement.");
-  return isConstant(I->getOperand(2));
+  if (isa<InsertElementInst>(V)) {
+    if (!isa<FixedVectorType>(I->getOperand(0)->getType()))
+      return false;
+    return isConstant(I->getOperand(2));
+  }
+  assert(isa<InsertValueInst>(I) && "Expected InsertValueInst");
+  return true;
 }
 
 /// Returns power-of-2 number of elements in a single register (part), given the
@@ -2418,6 +2423,11 @@ public:
   ///
   /// \returns number of elements in vector if isomorphism exists, 0 otherwise.
   unsigned canMapToVector(Type *T) const;
+
+  /// \returns true if the vectorized insertvalue result can be stored directly
+  /// as a vector, i.e. every insertvalue with an external user is consumed by a
+  /// single store only.
+  bool canVectorStoreInsertValue(const TreeEntry *E) const;
 
   /// \returns True if the VectorizableTree is both tiny and not fully
   /// vectorizable. We do not vectorize such trees.
@@ -8385,7 +8395,8 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
         TE.State == TreeEntry::StridedVectorize ||
         TE.State == TreeEntry::CompressVectorize) &&
        (isa<LoadInst, ExtractElementInst, ExtractValueInst>(TE.getMainOp()) ||
-        (TopToBottom && isa<StoreInst, InsertElementInst>(TE.getMainOp()))))) {
+        (TopToBottom && isa<StoreInst, InsertElementInst, InsertValueInst>(
+                            TE.getMainOp()))))) {
     assert((TE.State == TreeEntry::SplitVectorize || !TE.isAltShuffle()) &&
            "Alternate instructions are only supported by "
            "BinaryOperator and CastInst.");
@@ -8826,6 +8837,7 @@ void BoUpSLP::reorderTopToBottom() {
   const bool IgnoreReorder =
       !UserIgnoreList && VectorizableTree.front()->hasState() &&
       (VectorizableTree.front()->getOpcode() == Instruction::InsertElement ||
+       VectorizableTree.front()->getOpcode() == Instruction::InsertValue ||
        VectorizableTree.front()->getOpcode() == Instruction::Store);
   // Find all reorderable nodes with the given VF.
   // Currently the are vectorized stores,loads,extracts + some gathering of
@@ -9062,7 +9074,7 @@ void BoUpSLP::reorderTopToBottom() {
             TE->State == TreeEntry::StridedVectorize ||
             TE->State == TreeEntry::CompressVectorize) &&
            (isa<ExtractElementInst, ExtractValueInst, LoadInst, StoreInst,
-                InsertElementInst>(TE->getMainOp()) ||
+                InsertElementInst, InsertValueInst>(TE->getMainOp()) ||
             (SLPReVec && isa<ShuffleVectorInst>(TE->getMainOp()))))) {
         assert(
             (!TE->isAltShuffle() || (TE->State == TreeEntry::SplitVectorize &&
@@ -9072,7 +9084,7 @@ void BoUpSLP::reorderTopToBottom() {
         // Build correct orders for extract{element,value}, loads,
         // stores and alternate (split) nodes.
         reorderOrder(TE->ReorderIndices, Mask);
-        if (isa<InsertElementInst, StoreInst>(TE->getMainOp()))
+        if (isa<InsertElementInst, InsertValueInst, StoreInst>(TE->getMainOp()))
           TE->reorderOperands(Mask);
       } else {
         // Reorder the node and its operands.
@@ -9117,7 +9129,9 @@ void BoUpSLP::buildReorderableOperands(
       if (UserTE->getOpcode() == Instruction::ExtractElement ||
           UserTE->getOpcode() == Instruction::ExtractValue)
         continue;
-      if (UserTE->getOpcode() == Instruction::InsertElement && I == 0)
+      if ((UserTE->getOpcode() == Instruction::InsertElement ||
+           UserTE->getOpcode() == Instruction::InsertValue) &&
+          I == 0)
         continue;
       if (UserTE->getOpcode() == Instruction::Store && I == 1 &&
           (UserTE->State == TreeEntry::Vectorize ||
@@ -9541,7 +9555,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
               Data.first->getMainOp()) ||
           IsNotProfitableAltCodeNode(*Data.first))
         Data.first->reorderOperands(Mask);
-      if (!isa<InsertElementInst, StoreInst>(Data.first->getMainOp()) ||
+      if (!isa<InsertElementInst, InsertValueInst, StoreInst>(
+              Data.first->getMainOp()) ||
           IsNotProfitableAltCodeNode(*Data.first) ||
           Data.first->State == TreeEntry::CompressVectorize) {
         reorderScalars(Data.first->Scalars, Mask);
@@ -10780,13 +10795,30 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     LLVM_DEBUG(dbgs() << "SLP: Gather extract sequence.\n");
     return TreeEntry::NeedToGather;
   }
+  case Instruction::InsertValue:
+    // Handle only simple insertvalue with one index and non-vector.
+    // TODO: Support more complex insertvalues.
+    if (any_of(VL,
+               [](Value *V) {
+                 auto *IV = dyn_cast<InsertValueInst>(V);
+                 return IV && (IV->getNumIndices() != 1 ||
+                               IV->getOperand(1)->getType()->isVectorTy());
+               }) ||
+        none_of(VL, [](Value *V) {
+          auto *IV = dyn_cast<InsertValueInst>(V);
+          return IV && isa<UndefValue>(IV->getAggregateOperand());
+        }))
+      return TreeEntry::NeedToGather;
+    [[fallthrough]];
   case Instruction::InsertElement: {
     // Check that we have a buildvector and not a shuffle of 2 or more
     // different vectors.
     ValueSet SourceVectors;
     for (Value *V : VL) {
       if (isa<PoisonValue>(V)) {
-        LLVM_DEBUG(dbgs() << "SLP: Gather of insertelement/poison vector.\n");
+        LLVM_DEBUG(
+            dbgs()
+            << "SLP: Gather of insertelement/insertvalue/poison vector.\n");
         return TreeEntry::NeedToGather;
       }
       SourceVectors.insert(cast<Instruction>(V)->getOperand(0));
@@ -10798,18 +10830,21 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
           return !SourceVectors.contains(V);
         }) >= 2) {
       // Found 2nd source vector - cancel.
-      LLVM_DEBUG(dbgs() << "SLP: Gather of insertelement vectors with "
-                           "different source vectors.\n");
+      LLVM_DEBUG(
+          dbgs() << "SLP: Gather of insertelement/insertvalue vectors with "
+                    "different source vectors.\n");
       return TreeEntry::NeedToGather;
     }
 
     if (any_of(VL, [&SourceVectors](Value *V) {
-          // The last InsertElement can have multiple uses.
+          // The last InsertElement/InsertValue can have multiple uses.
           return SourceVectors.contains(V) && !V->hasOneUse();
         })) {
-      assert(SLPReVec && "Only supported by REVEC.");
-      LLVM_DEBUG(dbgs() << "SLP: Gather of insertelement vectors with "
-                           "multiple uses.\n");
+      assert((SLPReVec || ShuffleOrOp == Instruction::InsertValue) &&
+             "Only supported by REVEC or InsertValue.");
+      LLVM_DEBUG(
+          dbgs() << "SLP: Gather of insertelement/insertvalue vectors with "
+                    "multiple uses.\n");
       return TreeEntry::NeedToGather;
     }
 
@@ -11855,6 +11890,14 @@ class InstructionsCompatibilityAnalysis {
       // This is a special case, as it does not gather, but at the same time
       // we are not extending buildTree_rec() towards the operands.
       Operands.assign(1, {VL.size(), VL0->getOperand(0)});
+      return;
+    case Instruction::InsertValue:
+      Operands.assign(2, {VL.size(), nullptr});
+      for (auto [Idx, V] : enumerate(VL)) {
+        auto *IE = cast<InsertValueInst>(V);
+        for (auto [OpIdx, Ops] : enumerate(Operands))
+          Ops[Idx] = IE->getOperand(OpIdx);
+      }
       return;
     case Instruction::InsertElement:
       Operands.assign(2, {VL.size(), nullptr});
@@ -13034,6 +13077,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       }
       return;
     }
+    case Instruction::InsertValue:
     case Instruction::InsertElement: {
       assert(ReuseShuffleIndices.empty() && "All inserts should be unique");
 
@@ -13423,6 +13467,38 @@ unsigned BoUpSLP::canMapToVector(Type *T) const {
   return N;
 }
 
+bool BoUpSLP::canVectorStoreInsertValue(const TreeEntry *E) const {
+  if (E->getOpcode() != Instruction::InsertValue ||
+      E->State != TreeEntry::Vectorize)
+    return false;
+
+  bool HasStore = false;
+  for (Value *V : E->Scalars) {
+    auto *IV = dyn_cast<InsertValueInst>(V);
+    if (!IV || isDeleted(IV))
+      return false;
+
+    bool HasExternalUser = false;
+    for (User *U : IV->users()) {
+      if (auto *UI = dyn_cast<Instruction>(U); UI && isDeleted(UI))
+        continue;
+      if (is_contained(E->Scalars, U))
+        continue;
+      HasExternalUser = true;
+      // Only a plain (non-volatile, non-atomic) store may consume the vector
+      // directly. Volatile/atomic stores must keep their original aggregate
+      // type and access semantics, so fall back to the store + load roundtrip.
+      auto *SI = dyn_cast<StoreInst>(U);
+      if (!SI || !SI->isSimple())
+        return false;
+      HasStore = true;
+    }
+    if (HasExternalUser && !IV->hasOneUse())
+      return false;
+  }
+  return HasStore;
+}
+
 bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL,
                               SmallVectorImpl<unsigned> &CurrentOrder,
                               bool ResizeAllowed) const {
@@ -13651,6 +13727,15 @@ unsigned BoUpSLP::getNumVectorInsts() const {
     if (TE.getOpcode() == Instruction::InsertElement ||
         TE.getOpcode() == Instruction::ExtractElement)
       continue;
+    if (TE.getOpcode() == Instruction::InsertValue) {
+      // InsertValue materializes via store + load unless it is stored directly
+      // as a vector.
+      if (!canVectorStoreInsertValue(&TE))
+        Count += 2;
+      if (!TE.ReorderIndices.empty() || !TE.ReuseShuffleIndices.empty())
+        ++Count;
+      continue;
+    }
     if (TE.State == TreeEntry::SplitVectorize)
       Count += 2;
     else
@@ -16581,7 +16666,9 @@ BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, Type *ScalarTy,
     for (unsigned Idx : seq<unsigned>(E->getNumOperands())) {
       // InsertElement operand 0 is the vector being inserted into, which is
       // built incrementally and does not occupy an extra register.
-      if (E->getOpcode() == Instruction::InsertElement && Idx == 0)
+      if ((E->getOpcode() == Instruction::InsertElement ||
+           E->getOpcode() == Instruction::InsertValue) &&
+          Idx == 0)
         continue;
       ArrayRef<Value *> Ops = E->getOperand(Idx);
       if (Ops.empty() || allConstant(Ops) || isSplat(Ops))
@@ -16698,7 +16785,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   if (E->isGather() || TransformedToGatherNodes.contains(E)) {
     if (allConstant(VL))
       return 0;
-    if (isa<InsertElementInst>(VL[0]))
+    if (isa<InsertElementInst, InsertValueInst>(VL[0]))
       return InstructionCost::getInvalid();
     return SpillsReloads +
            processBuildVector<ShuffleCostEstimator, InstructionCost>(
@@ -16989,11 +17076,25 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
+  case Instruction::InsertValue:
   case Instruction::InsertElement: {
     assert(E->ReuseShuffleIndices.empty() &&
            "Unique insertelements only are expected.");
-    auto *SrcVecTy = cast<FixedVectorType>(VL0->getType());
-    unsigned const NumElts = SrcVecTy->getNumElements();
+    FixedVectorType *SrcVecTy = nullptr;
+    if (ShuffleOrOp == Instruction::InsertElement) {
+      SrcVecTy = cast<FixedVectorType>(VL0->getType());
+    } else {
+      unsigned MaxIdx = VL.size() - 1;
+      for (Value *V : VL) {
+        auto *I = dyn_cast<InsertValueInst>(V);
+        if (!I)
+          continue;
+        MaxIdx = std::max(MaxIdx, I->getIndices().front());
+      }
+      SrcVecTy =
+          cast<FixedVectorType>(getWidenedType(getValueType(VL0), MaxIdx + 1));
+    }
+    unsigned const NumElts = getNumElements(SrcVecTy);
     unsigned const NumScalars = VL.size();
 
     unsigned NumOfParts =
@@ -17095,6 +17196,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         Cost +=
             ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, InsertVecTy, Mask);
       }
+    }
+    if (ShuffleOrOp == Instruction::InsertValue &&
+        !canVectorStoreInsertValue(E)) {
+      Align VecAlign = DL->getPrefTypeAlign(VecTy);
+      Cost += TTI->getMemoryOpCost(Instruction::Store, SrcVecTy, VecAlign,
+                                   /*AddressSpace=*/0, CostKind) +
+              TTI->getMemoryOpCost(Instruction::Load, VL0->getType(), VecAlign,
+                                   /*AddressSpace=*/0, CostKind);
     }
     return Cost + SpillsReloads;
   }
@@ -19023,6 +19132,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       GatheredLoadsNodes.insert(&TE);
     if (!TE.isGather() && TE.State != TreeEntry::SplitVectorize &&
         !(TE.Idx == 0 && (TE.getOpcode() == Instruction::InsertElement ||
+                          TE.getOpcode() == Instruction::InsertValue ||
                           TE.getOpcode() == Instruction::Store)) &&
         !isa<StructType>(getValueType(TE.Scalars.front()))) {
       // Calculate costs of external uses.
@@ -19492,6 +19602,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
 
   if (any_of(ExternalUses, [](const ExternalUser &EU) {
         return isa<StructType>(EU.Scalar->getType()) &&
+               (EU.E.Idx != 0 || EU.E.State != TreeEntry::Vectorize ||
+                EU.E.getOpcode() != Instruction::InsertValue) &&
                !isa_and_nonnull<ExtractValueInst>(EU.User);
       }))
     return InstructionCost::getInvalid();
@@ -19582,6 +19694,9 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
 
     // No extract cost for vector "scalar" if REVEC is disabled
     if (!SLPReVec && isa<FixedVectorType>(EU.Scalar->getType()))
+      continue;
+
+    if (isa<InsertValueInst>(EU.Scalar))
       continue;
 
     // If found user is an insertelement, do not calculate extract cost but try
@@ -23087,6 +23202,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       E->VectorizedValue = NewV;
       return NewV;
     }
+    case Instruction::InsertValue:
     case Instruction::InsertElement: {
       assert(E->ReuseShuffleIndices.empty() && "All inserts should be unique");
       if (const TreeEntry *OpE = getOperandEntry(E, 1);
@@ -23114,9 +23230,22 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       auto *FirstInsert = cast<Instruction>(*find_if(E->Scalars, [E](Value *V) {
         return !is_contained(E->Scalars, cast<Instruction>(V)->getOperand(0));
       }));
-      const unsigned NumElts =
-          cast<FixedVectorType>(FirstInsert->getType())->getNumElements();
       const unsigned NumScalars = E->Scalars.size();
+      FixedVectorType *SrcVecTy = nullptr;
+      if (ShuffleOrOp == Instruction::InsertElement) {
+        SrcVecTy = cast<FixedVectorType>(VL0->getType());
+      } else {
+        unsigned MaxIdx = NumScalars - 1;
+        for (Value *V : E->Scalars) {
+          auto *I = dyn_cast<InsertValueInst>(V);
+          if (!I)
+            continue;
+          MaxIdx = std::max(MaxIdx, I->getIndices().front());
+        }
+        SrcVecTy = cast<FixedVectorType>(
+            getWidenedType(getValueType(VL0), MaxIdx + 1));
+      }
+      const unsigned NumElts = getNumElements(SrcVecTy);
 
       unsigned Offset = *getElementIndex(VL0);
       assert(Offset < NumElts && "Failed to find vector index offset");
@@ -23148,7 +23277,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         if (NumElts != NumScalars && Offset == 0) {
           // Follow all insert element instructions from the current buildvector
           // sequence.
-          InsertElementInst *Ins = cast<InsertElementInst>(VL0);
+          Instruction *Ins = VL0;
           do {
             std::optional<unsigned> InsertIdx = getElementIndex(Ins);
             if (!InsertIdx)
@@ -23157,8 +23286,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
               InsertMask[*InsertIdx] = *InsertIdx;
             if (!Ins->hasOneUse())
               break;
-            Ins = dyn_cast_or_null<InsertElementInst>(
-                Ins->getUniqueUndroppableUser());
+            Ins =
+                dyn_cast_or_null<Instruction>(Ins->getUniqueUndroppableUser());
           } while (Ins);
           SmallBitVector UseMask =
               buildUseMask(NumElts, InsertMask, UseMask::UndefsAsMask);
@@ -23250,6 +23379,25 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       }
 
       ++NumVectorInstructions;
+      if (ShuffleOrOp == Instruction::InsertValue &&
+          !canVectorStoreInsertValue(E)) {
+        Type *AggTy = E->getMainOp()->getType();
+        Align SlotAlign = std::max(DL->getPrefTypeAlign(V->getType()),
+                                   DL->getPrefTypeAlign(AggTy));
+        AllocaInst *Slot;
+        {
+          // Keep the alloca in the function entry block so it is not executed
+          // (and does not grow the stack) on every iteration of a loop.
+          IRBuilderBase::InsertPointGuard Guard(Builder);
+          Builder.SetInsertPointPastAllocas(F);
+          Slot = Builder.CreateAlloca(AggTy, /*ArraySize=*/nullptr,
+                                      "vec2struct.slot");
+          Slot->setAlignment(SlotAlign);
+        }
+        (void)Builder.CreateAlignedStore(V, Slot, SlotAlign);
+        V = Builder.CreateAlignedLoad(AggTy, Slot, SlotAlign, "vec2struct");
+        NumVectorInstructions += 2;
+      }
       E->VectorizedValue = V;
       return V;
     }
@@ -24255,6 +24403,8 @@ Value *BoUpSLP::vectorizeTree(
 
     Value *Lane = Builder.getInt32(ExternalUse.Lane);
     auto ExtractAndExtendIfNeeded = [&](Value *Vec) {
+      if (isa<InsertValueInst>(Scalar))
+        return Vec;
       if (Scalar->getType() != Vec->getType()) {
         Value *Ex = nullptr;
         Value *ExV = nullptr;
@@ -26738,7 +26888,8 @@ void BoUpSLP::computeMinimumValueSizes() {
   bool IsStoreOrInsertElt =
       VectorizableTree.front()->hasState() &&
       (VectorizableTree.front()->getOpcode() == Instruction::Store ||
-       VectorizableTree.front()->getOpcode() == Instruction::InsertElement);
+       VectorizableTree.front()->getOpcode() == Instruction::InsertElement ||
+       VectorizableTree.front()->getOpcode() == Instruction::InsertValue);
   if ((IsStoreOrInsertElt || UserIgnoreList) &&
       ExtraBitWidthNodes.size() <= 1 &&
       (!CastMaxMinBWSizes || CastMaxMinBWSizes->second == 0 ||
@@ -28114,7 +28265,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   // determining vectorization factor for scalar instructions.
   for (Value *V : VL) {
     Type *Ty = V->getType();
-    if (!isa<InsertElementInst>(V) && !isValidElementType(Ty)) {
+    if (!isa<InsertElementInst, InsertValueInst>(V) &&
+        !isValidElementType(Ty)) {
       // NOTE: the following will give user internal llvm type name, which may
       // not be useful.
       R.getORE()->emit([&]() {
@@ -28193,7 +28345,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         continue;
       if (R.isProfitableToReorder()) {
         R.reorderTopToBottom();
-        R.reorderBottomToTop(!isa<InsertElementInst>(Ops.front()));
+        R.reorderBottomToTop(
+            !isa<InsertElementInst, InsertValueInst>(Ops.front()));
       }
       R.transformNodes();
       R.computeMinimumValueSizes();
@@ -31150,6 +31303,14 @@ bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
   }
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IVI << "\n");
   // Aggregate value is unlikely to be processed in vector register.
+  Type *BVType = BuildVectorInsts.front()->getType();
+  ArrayRef<Type *> ContainedTypes = getContainedTypes(BVType);
+  if (ContainedTypes.size() == BuildVectorInsts.size() &&
+      all_of(ContainedTypes, [&](Type *Ty) {
+        return Ty == ContainedTypes.front() && isValidElementType(Ty);
+      }))
+    if (tryToVectorizeList(BuildVectorInsts, R, MaxVFOnly))
+      return true;
   return tryToVectorizeList(BuildVectorOpds, R, MaxVFOnly);
 }
 
