@@ -2225,7 +2225,7 @@ define amdgpu_gfx void @test_call_external_void_func_f16_imm() #0 {
 ; GFX11-TRUE16-NEXT:    s_add_i32 s32, s32, 16
 ; GFX11-TRUE16-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX11-TRUE16-NEXT:    v_writelane_b32 v40, s31, 1
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 4.0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0x4400
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s1, external_void_func_f16@abs32@hi
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, external_void_func_f16@abs32@lo
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
