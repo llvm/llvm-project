@@ -63,7 +63,6 @@ add_header_library(
     libc.src.__support.math.log
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.__support.math.log
 )
 
 add_header_library(
