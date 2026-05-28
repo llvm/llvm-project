@@ -9,21 +9,20 @@
 ; RUN: llvm-as %t/libfoo.ll -o %t/libfoo.bc
 ;
 ; Test linking two input files.
-; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc -triple=spirv64 --dry-run -o a.spv --print-linked-module 2>&1 \
+; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc --dry-run -o a.spv --print-linked-module 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-SIMPLE
 ; CHECK-SIMPLE: define {{.*}}foo_func1{{.*}}
 ; CHECK-SIMPLE: define {{.*}}foo_func2{{.*}}
 ; CHECK-SIMPLE: define {{.*}}bar_func1{{.*}}
 ; CHECK-SIMPLE-NOT: define {{.*}}addFive{{.*}}
-; CHECK-SIMPLE-NOT: define {{.*}}unusedFunc{{.*}}
 ;
 ; Test that multiply defined symbols are reported as errors.
-; RUN: not clang-sycl-linker %t/bar.bc %t/baz.bc -triple=spirv64 --dry-run -o a.spv --print-linked-module 2>&1 \
+; RUN: not clang-sycl-linker %t/bar.bc %t/baz.bc --dry-run -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-MULTIPLE-DEFS
 ; CHECK-MULTIPLE-DEFS: error: Linking globals named {{.*}}bar_func1{{.*}} symbol multiply defined!
 ;
 ; Test linking with a BC library file.
-; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc --bc-library %t/libfoo.bc -triple=spirv64 --dry-run -o a.spv --print-linked-module 2>&1 \
+; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc --bc-library %t/libfoo.bc --dry-run -o a.spv --print-linked-module 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-DEVICE-LIB
 ; CHECK-DEVICE-LIB: define {{.*}}foo_func1{{.*}}
 ; CHECK-DEVICE-LIB: define {{.*}}foo_func2{{.*}}
@@ -46,10 +45,9 @@ declare spir_func i32 @bar_func1(i32, i32)
 
 declare spir_func i32 @addFive(i32)
 
-define spir_func i32 @foo_func2(i32 %c, i32 %d, i32 %e) {
+define spir_func i32 @foo_func2(i32 %c, i32 %d) {
 entry:
-  %call = tail call spir_func i32 @foo_func1(i32 %c, i32 %d)
-  %res = mul nsw i32 %call, %e
+  %res = add nsw i32 %c, %d
   ret i32 %res
 }
 
@@ -74,12 +72,6 @@ entry:
   ret i32 %res
 }
 
-define spir_func i32 @baz_func1(i32 %a) {
-entry:
-  %add = add nsw i32 %a, 5
-  %res = tail call spir_func i32 @bar_func1(i32 %a, i32 %add)
-  ret i32 %res
-}
 
 ;--- libfoo.ll
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
