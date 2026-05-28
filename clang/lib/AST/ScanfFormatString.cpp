@@ -128,8 +128,8 @@ static ScanfSpecifierResult ParseScanfSpecifier(
 
   // Look for the field width (if any).  Unlike printf, this is either
   // a fixed integer or isn't present.
-  const OptionalAmount &Amt =
-      clang::analyze_format_string::ParseAmount(I, E, FormatStrConverter);
+  const OptionalAmount &Amt = clang::analyze_format_string::ParseAmount(
+      I, E, FormatStrConverter);
   if (Amt.getHowSpecified() != OptionalAmount::NotSpecified) {
     assert(Amt.getHowSpecified() == OptionalAmount::Constant);
     FS.setFieldWidth(Amt);
@@ -266,8 +266,8 @@ static ScanfSpecifierResult ParseScanfSpecifier(
       FS.setConversionSpecifier(CS);
     }
     // Assume the conversion takes one argument.
-    return !H.HandleInvalidScanfConversionSpecifier(FS, Beg, Len,
-                                                    FormatStrConverter);
+    return !H.HandleInvalidScanfConversionSpecifier(
+        FS, Beg, Len, FormatStrConverter);
   }
   return ScanfSpecifierResult(Start, FS);
 }

@@ -60,7 +60,8 @@ ParseObjCFlags(FormatStringHandler &H, PrintfSpecifier &FS, const char *FlagBeg,
                const llvm::TextEncodingConverter &FormatStrConverter) {
   StringRef Flag(FlagBeg, E - FlagBeg);
   // Currently there is only one flag.
-  if (Flag.size() == 2 && FormatStrConverter.convert(FlagBeg[0]) == 't' &&
+  if (Flag.size() == 2 &&
+      FormatStrConverter.convert(FlagBeg[0]) == 't' &&
       FormatStrConverter.convert(FlagBeg[1]) == 't') {
     FS.setHasObjCTechnicalTerm(FlagBeg);
     return false;
@@ -287,7 +288,8 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
     return true;
 
   // Look for the length modifier.
-  if (ParseLengthModifier(FS, I, E, LO, FormatStrConverter) && I == E) {
+  if (ParseLengthModifier(FS, I, E, LO, FormatStrConverter) &&
+      I == E) {
     // No more characters left?
     if (Warn)
       H.HandleIncompleteSpecifier(Start, E - Start);
@@ -314,7 +316,8 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
       }
       // Did we find the closing ']'?
       if (FormatStrConverter.convert(*I) == ']') {
-        if (ParseObjCFlags(H, FS, flagStart, I, Warn, FormatStrConverter))
+        if (ParseObjCFlags(H, FS, flagStart, I, Warn,
+                           FormatStrConverter))
           return true;
         ++I;
         break;
@@ -497,8 +500,8 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
       FS.setConversionSpecifier(CS);
     }
     // Assume the conversion takes one argument.
-    return !H.HandleInvalidPrintfConversionSpecifier(FS, Start, Len,
-                                                     FormatStrConverter);
+    return !H.HandleInvalidPrintfConversionSpecifier(
+        FS, Start, Len, FormatStrConverter);
   }
   return PrintfSpecifierResult(Start, FS);
 }
