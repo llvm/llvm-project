@@ -633,10 +633,10 @@ void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
 
 void FactsGenerator::handlePlacementNew(const CXXNewExpr *NE,
                                         OriginList *NewList) {
-  // Check if we have a placement new where the second argument is void*, to
-  // avoid flowing from non-pointer parameters, such as std::nothrow.
-  // And that the placement parameter num is 1,
-  // that is to mostly limit to standard library placement new.
+  // Model only the standard single-argument placement new form, where the
+  // placement argument corresponds to a void* allocation-function parameter.
+  // Other placement forms, such as std::nothrow, are not modeled as providing
+  // storage for the returned pointer.
   if (NE->getNumPlacementArgs() != 1)
     return;
 
