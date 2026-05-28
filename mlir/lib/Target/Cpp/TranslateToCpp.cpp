@@ -909,14 +909,28 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::CallOp callOp) {
   return printCallOperation(emitter, operation, callee);
 }
 
-static LogicalResult printOperation(CppEmitter &emitter,
-                                    emitc::CallOpaqueOp callOpaqueOp) {
+static LogicalResult
+printOpaqueCallCommon(CppEmitter &emitter, Operation &op, StringRef callee,
+                      std::optional<ArrayAttr> templateArgs,
+                      std::optional<ArrayAttr> args, bool isMemberCall,
+                      Value receiver = nullptr) {
   raw_ostream &os = emitter.ostream();
-  Operation &op = *callOpaqueOp.getOperation();
 
   if (failed(emitter.emitAssignPrefix(op)))
     return failure();
-  os << callOpaqueOp.getCallee();
+
+  if (isMemberCall) {
+    assert(receiver && "Expected receiver for member call");
+    if (failed(emitter.emitOperand(receiver)))
+      return failure();
+
+    if (llvm::isa<emitc::PointerType>(receiver.getType()))
+      os << "->";
+    else
+      os << ".";
+  }
+
+  os << callee;
 
   // Template arguments can't refer to SSA values and as such the template
   // arguments which are supplied in form of attributes can be emitted as is. We
@@ -926,69 +940,9 @@ static LogicalResult printOperation(CppEmitter &emitter,
     return emitter.emitAttribute(op.getLoc(), attr);
   };
 
-  if (callOpaqueOp.getTemplateArgs()) {
+  if (templateArgs) {
     os << "<";
-    if (failed(interleaveCommaWithError(*callOpaqueOp.getTemplateArgs(), os,
-                                        emitTemplateArgs)))
-      return failure();
-    os << ">";
-  }
-
-  auto emitArgs = [&](Attribute attr) -> LogicalResult {
-    if (auto t = dyn_cast<IntegerAttr>(attr)) {
-      // Index attributes are treated specially as operand index.
-      if (t.getType().isIndex()) {
-        int64_t idx = t.getInt();
-        Value operand = op.getOperand(idx);
-        return emitter.emitOperand(operand);
-      }
-    }
-    if (failed(emitter.emitAttribute(op.getLoc(), attr)))
-      return failure();
-
-    return success();
-  };
-
-  os << "(";
-
-  LogicalResult emittedArgs =
-      callOpaqueOp.getArgs()
-          ? interleaveCommaWithError(*callOpaqueOp.getArgs(), os, emitArgs)
-          : emitter.emitOperands(op);
-  if (failed(emittedArgs))
-    return failure();
-  os << ")";
-  return success();
-}
-
-static LogicalResult
-printOperation(CppEmitter &emitter,
-               emitc::MemberCallOpaqueOp memberCallOpaqueOp) {
-  raw_ostream &os = emitter.ostream();
-  Operation &op = *memberCallOpaqueOp.getOperation();
-
-  if (failed(emitter.emitAssignPrefix(op)))
-    return failure();
-
-  Value receiver = memberCallOpaqueOp.getReceiver();
-  if (failed(emitter.emitOperand(receiver)))
-    return failure();
-
-  if (llvm::isa<emitc::PointerType>(receiver.getType()))
-    os << "->";
-  else
-    os << ".";
-
-  os << memberCallOpaqueOp.getCallee();
-
-  auto emitTemplateArgs = [&](Attribute attr) -> LogicalResult {
-    return emitter.emitAttribute(op.getLoc(), attr);
-  };
-
-  if (memberCallOpaqueOp.getTemplateArgs()) {
-    os << "<";
-    if (failed(interleaveCommaWithError(*memberCallOpaqueOp.getTemplateArgs(),
-                                        os, emitTemplateArgs)))
+    if (failed(interleaveCommaWithError(*templateArgs, os, emitTemplateArgs)))
       return failure();
     os << ">";
   }
@@ -997,8 +951,9 @@ printOperation(CppEmitter &emitter,
     if (auto t = dyn_cast<IntegerAttr>(attr)) {
       if (t.getType().isIndex()) {
         int64_t idx = t.getInt();
-        Value operand = op.getOperand(idx + 1);
-        return emitter.emitOperand(operand, /*isInBrackets=*/true);
+        // Shift index by 1 for member calls to skip the receiver operand.
+        Value operand = op.getOperand(isMemberCall ? idx + 1 : idx);
+        return emitter.emitOperand(operand, /*isInBrackets=*/false);
       }
     }
     if (failed(emitter.emitAttribute(op.getLoc(), attr)))
@@ -1010,20 +965,39 @@ printOperation(CppEmitter &emitter,
   os << "(";
 
   LogicalResult emittedArgs = success();
-  if (memberCallOpaqueOp.getArgs()) {
-    emittedArgs =
-        interleaveCommaWithError(*memberCallOpaqueOp.getArgs(), os, emitArgs);
+  if (args) {
+    emittedArgs = interleaveCommaWithError(*args, os, emitArgs);
   } else {
-    auto operands = op.getOperands().drop_front(1);
+    auto operands = op.getOperands();
+    if (isMemberCall)
+      operands = operands.drop_front(1);
+
     emittedArgs = interleaveCommaWithError(operands, os, [&](Value operand) {
       return emitter.emitOperand(operand, /*isInBrackets=*/true);
     });
   }
-
   if (failed(emittedArgs))
     return failure();
   os << ")";
   return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::CallOpaqueOp callOpaqueOp) {
+  return printOpaqueCallCommon(
+      emitter, *callOpaqueOp.getOperation(), callOpaqueOp.getCallee(),
+      callOpaqueOp.getTemplateArgs(), callOpaqueOp.getArgs(),
+      /*isMemberCall=*/false);
+}
+
+static LogicalResult
+printOperation(CppEmitter &emitter,
+               emitc::MemberCallOpaqueOp memberCallOpaqueOp) {
+  return printOpaqueCallCommon(
+      emitter, *memberCallOpaqueOp.getOperation(),
+      memberCallOpaqueOp.getCallee(), memberCallOpaqueOp.getTemplateArgs(),
+      memberCallOpaqueOp.getArgs(),
+      /*isMemberCall=*/true, memberCallOpaqueOp.getReceiver());
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
