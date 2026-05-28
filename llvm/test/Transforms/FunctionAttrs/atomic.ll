@@ -47,10 +47,10 @@ define i32 @load_seq_cst(ptr %x) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
 ; CHECK-LABEL: define i32 @load_seq_cst(
 ; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[R:%.*]] = load atomic i32, ptr [[X]] acquire, align 4
+; CHECK-NEXT:    [[R:%.*]] = load atomic i32, ptr [[X]] seq_cst, align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %r = load atomic i32, ptr %x acquire, align 4
+  %r = load atomic i32, ptr %x seq_cst, align 4
   ret i32 %r
 }
 
