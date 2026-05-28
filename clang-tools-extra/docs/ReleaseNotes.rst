@@ -443,7 +443,7 @@ Changes in existing checks
 
 - Improved :doc:`cert-err33-c
   <clang-tidy/checks/cert/err33-c>` check by not inheriting
-  ``CheckedReturnTypes`` from :doc:`bugprone-unused-return-value
+  `CheckedReturnTypes` option from :doc:`bugprone-unused-return-value
   <clang-tidy/checks/bugprone/unused-return-value>`, which caused false
   positives on functions returning ``std::error_code`` or similar types.
 
