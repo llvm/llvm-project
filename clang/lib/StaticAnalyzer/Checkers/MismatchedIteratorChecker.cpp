@@ -193,8 +193,8 @@ void MismatchedIteratorChecker::checkPreStmt(const BinaryOperator *BO,
     return;
 
   ProgramStateRef State = C.getState();
-  SVal LVal = State->getSVal(BO->getLHS(), C.getLocationContext());
-  SVal RVal = State->getSVal(BO->getRHS(), C.getLocationContext());
+  SVal LVal = State->getSVal(BO->getLHS(), C.getStackFrame());
+  SVal RVal = State->getSVal(BO->getRHS(), C.getStackFrame());
   verifyMatch(C, LVal, RVal);
 }
 
