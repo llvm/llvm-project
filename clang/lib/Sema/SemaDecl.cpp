@@ -9265,12 +9265,9 @@ bool Sema::AddOverriddenMethods(CXXRecordDecl *DC, CXXMethodDecl *MD) {
         continue;
       if (Overridden.insert(BaseMD).second) {
         MD->addOverriddenMethod(BaseMD);
-        bool Invalid = false;
-        Invalid |= CheckOverridingFunctionReturnType(MD, BaseMD);
-        Invalid |= CheckOverridingFunctionAttributes(MD, BaseMD);
-        Invalid |= CheckOverridingFunctionExceptionSpec(MD, BaseMD);
-        if (Invalid)
-          MD->setInvalidDecl();
+        CheckOverridingFunctionReturnType(MD, BaseMD);
+        CheckOverridingFunctionAttributes(MD, BaseMD);
+        CheckOverridingFunctionExceptionSpec(MD, BaseMD);
         CheckIfOverriddenFunctionIsMarkedFinal(MD, BaseMD);
       }
 
