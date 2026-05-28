@@ -337,10 +337,11 @@ static void prettyPrint(raw_ostream &OS, Module &M, const DXILResourceMap &DRM,
 
   ModuleSlotTracker::MachineMDNodeListType MDNodes;
   MST.collectMDNodes(MDNodes, NextMetadataSlot, ~0u);
-  std::sort(
-      MDNodes.begin(), MDNodes.end(),
-      [](std::pair<unsigned, const MDNode *> &A,
-         std::pair<unsigned, const MDNode *> &B) { return A.first < B.first; });
+  std::sort(MDNodes.begin(), MDNodes.end(),
+            [](const std::pair<unsigned, const MDNode *> &A,
+               const std::pair<unsigned, const MDNode *> &B) {
+              return A.first < B.first;
+            });
   for (auto [_, MDNode] : MDNodes) {
     DAAW.emitMDNodeAnnot(MDNode, FOS);
     MDNode->print(FOS, MST);
