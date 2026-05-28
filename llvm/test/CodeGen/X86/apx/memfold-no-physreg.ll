@@ -268,3 +268,7 @@ loop_exit:                                   ; preds = %compute_path
   %cmp_exit = icmp eq i64 %and1, %and2
   br i1 %cmp_exit, label %loop_outer, label %exit
 }
+
+; EGPR requires V3 unwind info on Windows x64.
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"winx64-eh-unwind", i32 3}

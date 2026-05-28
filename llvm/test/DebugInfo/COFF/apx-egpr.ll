@@ -22,7 +22,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!2, !3}
+!llvm.module.flags = !{!2, !3, !11}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
 !1 = !DIFile(filename: "test.c", directory: ".")
@@ -35,3 +35,4 @@ entry:
 !8 = !DILocalVariable(name: "x", scope: !4, file: !1, line: 2, type: !9)
 !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !10 = !DILocation(line: 0, scope: !4)
+!11 = !{i32 1, !"winx64-eh-unwind", i32 3}
