@@ -2926,7 +2926,9 @@ bool AArch64LoadStoreOpt::tryToMergeLdStUpdate
   // Do not form post-inc addressing mode for volatile accesses. Instructions
   // performing register writeback do not set a valid instruction syndrome,
   // making it impossible to handle MMIO in protected hypervisors.
-  if (MBBI->hasOrderedMemoryRef())
+  // Exclude accesses based on the stack pointer, as these can't be MMIO.
+  if (MBBI->hasOrderedMemoryRef() &&
+      AArch64InstrInfo::getLdStBaseOp(MI).getReg() != AArch64::SP)
     return false;
 
   // Look forward to try to form a post-index instruction. For example,

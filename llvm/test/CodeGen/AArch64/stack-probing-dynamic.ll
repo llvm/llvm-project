@@ -58,14 +58,13 @@ define void @dynamic_fixed(i64 %size, ptr %out1, ptr %out2) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    sub sp, sp, #64
+; CHECK-NEXT:    ldr xzr, [sp, #-64]!
 ; CHECK-NEXT:    add x9, x0, #15
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    ldr xzr, [sp]
-; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
 ; CHECK-NEXT:    sub x10, x29, #64
-; CHECK-NEXT:    sub x8, x8, x9
+; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
 ; CHECK-NEXT:    str x10, [x1]
+; CHECK-NEXT:    sub x8, x8, x9
 ; CHECK-NEXT:  .LBB1_1: // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
 ; CHECK-NEXT:    cmp sp, x8
