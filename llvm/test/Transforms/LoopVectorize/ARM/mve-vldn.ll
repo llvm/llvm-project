@@ -11,7 +11,10 @@ target triple = "thumbv8.1m.main-none-none-eabi"
 ; CHECK-2:         %{{.*}} = load <16 x half>, ptr
 ; CHECK-2:         store <16 x half> {{.*}}, ptr
 ;
-; CHECK-NO2-NOT: vector.body:
+; CHECK-NO2:     vector.body:
+; CHECK-NO2-COUNT-8:     pred.store.if{{.*}}:
+; CHECK-NO2:       load half, ptr
+; CHECK-NO2:       store half
 define void @vld2(ptr nocapture readonly %pIn, ptr nocapture %pOut, i32 %numRows, i32 %numCols, i32 %scale.coerce) #0 {
 entry:
   %tmp.0.extract.trunc = trunc i32 %scale.coerce to i16
@@ -48,7 +51,10 @@ while.end:
 ; CHECK-4:         %{{.*}} = load <32 x half>, ptr
 ; CHECK-4:         store <32 x half> {{.*}}, ptr
 ;
-; CHECK-NO4-NOT: vector.body:
+; CHECK-NO4:     vector.body:
+; CHECK-NO2-COUNT-8:     pred.store.if{{.*}}:
+; CHECK-NO4:       load half, ptr
+; CHECK-NO4:       store half
 define void @vld4(ptr nocapture readonly %pIn, ptr nocapture %pOut, i32 %numRows, i32 %numCols, i32 %scale.coerce) #0 {
 entry:
   %tmp.0.extract.trunc = trunc i32 %scale.coerce to i16

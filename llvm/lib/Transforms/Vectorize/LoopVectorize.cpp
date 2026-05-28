@@ -2499,12 +2499,7 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
     LoopVectorizationCostModel::InstWidening WidenKind =
         getWideningDecision(I, VF);
     assert(WidenKind != CM_Unknown);
-    // TODO: This should just be "return WidenKind == CM_Scalarize;"
-    // This represents an inconsistency in the (legacy) cost model for
-    // predicated instructions: we might have chosen CM_Scalarize because it's
-    // thought to have lower costs, but isScalarForPredication ignores that and
-    // might consider that no scalarization will happen.
-    return WidenKind == CM_Scalarize && !Config.isLegalGatherOrScatter(I, VF);
+    return WidenKind == CM_Scalarize;
   }
   case Instruction::UDiv:
   case Instruction::SDiv:
