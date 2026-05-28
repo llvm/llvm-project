@@ -1238,19 +1238,22 @@ TEST_F(VPRecipeTest, CastVPInterleaveRecipeToVPUser) {
 TEST_F(VPRecipeTest, CastVPReplicateRecipeToVPUser) {
   VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
+  FunctionType *FTy = FunctionType::get(Int32, false);
+  Function *Fn = Function::Create(FTy, GlobalValue::ExternalLinkage, 0);
+  auto *Call = CallInst::Create(FTy, Fn);
   VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+  VPValue *CalledFn = Plan.getOrAddLiveIn(Call->getCalledFunction());
   SmallVector<VPValue *, 4> Args;
   Args.push_back(Op1);
   Args.push_back(Op2);
-
-  FunctionType *FTy = FunctionType::get(Int32, false);
-  auto *Call = CallInst::Create(FTy, PoisonValue::get(FTy));
+  Args.push_back(CalledFn);
   VPReplicateRecipe Recipe(Call, make_range(Args.begin(), Args.end()), true);
 
   checkVPRecipeCastImpl<VPReplicateRecipe, VPUser, VPIRMetadata>(&Recipe);
 
   delete Call;
+  delete Fn;
 }
 
 TEST_F(VPRecipeTest, CastVPBranchOnMaskRecipeToVPUser) {

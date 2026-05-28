@@ -141,4 +141,4 @@ bextrl	%esi, (%rdi), %eax
 # ALL:                [0]    [1]    [2]    [3]
 # ALL-NEXT:     0.     1     1.0    1.0    0.0       addl	%edi, %esi
 # ALL-NEXT:     1.     1     1.0    0.0    0.0       bextrl	%esi, (%rdi), %eax
-# ALL-NEXT:            1     1.0    0.5    0.0       <total>
+# ALL-NEXT:        2     1.0    0.5    0.0       <total>
