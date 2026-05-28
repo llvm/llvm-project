@@ -29,13 +29,13 @@
 ; Test -L short form (joined) and --bc-library= joined form.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L%t/libs --bc-library=lib1.bc -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS-SHORT
-; DEVLIBS-SHORT: link: inputs: {{.*}}.bc  libfiles: {{.*}}libs/lib1.bc  output: {{.*}}.bc
+; DEVLIBS-SHORT: link: inputs: {{.*}}.bc  libfiles: {{.*}}libs{{[/\\]}}lib1.bc  output: {{.*}}.bc
 ;
 ; Test that search continues past the first -L when the library is not found there. lib1.bc exists only in %t/libs (the second -L).
 ; RUN: mkdir -p %t/empty
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L %t/empty -L %t/libs --bc-library lib1.bc -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS-FALLTHROUGH
-; DEVLIBS-FALLTHROUGH: link: inputs: {{.*}}.bc  libfiles: {{.*}}libs/lib1.bc  output: {{.*}}.bc
+; DEVLIBS-FALLTHROUGH: link: inputs: {{.*}}.bc  libfiles: {{.*}}libs{{[/\\]}}lib1.bc  output: {{.*}}.bc
 ;
 ; Test that -L paths are searched in order: when the same name exists in multiple -L dirs, the first one wins.
 ; RUN: mkdir -p %t/libs2
