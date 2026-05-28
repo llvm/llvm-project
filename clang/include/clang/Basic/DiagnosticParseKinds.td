@@ -172,7 +172,7 @@ def warn_c2y_compat_generic_with_type_arg : Warning<
 def warn_c2y_compat_decl_statement : Warning<
   "'%select{if|switch}0' declaration statements are incompatible with "
   "C standards before C2y">, DefaultIgnore, InGroup<CPre2yCompat>;
-def ext_c2y_decl_statement : ExtWarn<
+def ext_c2y_decl_statement : Extension<
   "'%select{if|switch}0' declaration statements are a C2y extension">,
   InGroup<C2y>;
 
