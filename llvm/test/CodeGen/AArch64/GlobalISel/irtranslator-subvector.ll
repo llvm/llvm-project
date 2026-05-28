@@ -49,8 +49,8 @@ define float @extract_v4float_vector_insert_const(<4 x float> %a, <2 x float> %b
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $d1, $q0, $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<2 x i64>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<4 x i32>)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i32>) = COPY $d1
   ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x f32>) = G_BITCAST [[COPY1]](<2 x i32>)
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $w0

@@ -554,10 +554,10 @@ declare <4 x iXLen> @llvm.lrint.v4iXLen.v4f32(<4 x float>)
 define <8 x iXLen> @lrint_v8f32(<8 x float> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v8f32:
 ; CHECK-i32:       // %bb.0:
-; CHECK-i32-NEXT:    ptrue p0.d, vl2
+; CHECK-i32-NEXT:    ptrue p0.s, vl4
 ; CHECK-i32-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-i32-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-i32-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-i32-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-i32-NEXT:    ptrue p0.s, vl8
 ; CHECK-i32-NEXT:    movprfx z2, z0
 ; CHECK-i32-NEXT:    frintx z2.s, p0/m, z0.s
@@ -619,13 +619,13 @@ declare <8 x iXLen> @llvm.lrint.v8iXLen.v8f32(<8 x float>)
 define <16 x iXLen> @lrint_v16f32(<16 x float> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v16f32:
 ; CHECK-i32:       // %bb.0:
-; CHECK-i32-NEXT:    ptrue p0.d, vl2
+; CHECK-i32-NEXT:    ptrue p0.s, vl4
 ; CHECK-i32-NEXT:    // kill: def $q2 killed $q2 def $z2
 ; CHECK-i32-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-i32-NEXT:    // kill: def $q3 killed $q3 def $z3
 ; CHECK-i32-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-i32-NEXT:    splice z2.d, p0, z2.d, z3.d
-; CHECK-i32-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-i32-NEXT:    splice z2.s, p0, z2.s, z3.s
+; CHECK-i32-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-i32-NEXT:    ptrue p0.s, vl8
 ; CHECK-i32-NEXT:    movprfx z4, z2
 ; CHECK-i32-NEXT:    frintx z4.s, p0/m, z2.s
@@ -735,7 +735,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x float> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v32f32:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    str x19, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-i32-NEXT:    ptrue p1.d, vl2
+; CHECK-i32-NEXT:    ptrue p1.s, vl4
 ; CHECK-i32-NEXT:    // kill: def $q6 killed $q6 def $z6
 ; CHECK-i32-NEXT:    // kill: def $q7 killed $q7 def $z7
 ; CHECK-i32-NEXT:    // kill: def $q4 killed $q4 def $z4
@@ -745,10 +745,10 @@ define <32 x iXLen> @lrint_v32f32(<32 x float> %x) nounwind {
 ; CHECK-i32-NEXT:    // kill: def $q3 killed $q3 def $z3
 ; CHECK-i32-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-i32-NEXT:    ptrue p0.s, vl8
-; CHECK-i32-NEXT:    splice z6.d, p1, z6.d, z7.d
-; CHECK-i32-NEXT:    splice z4.d, p1, z4.d, z5.d
-; CHECK-i32-NEXT:    splice z2.d, p1, z2.d, z3.d
-; CHECK-i32-NEXT:    splice z0.d, p1, z0.d, z1.d
+; CHECK-i32-NEXT:    splice z6.s, p1, z6.s, z7.s
+; CHECK-i32-NEXT:    splice z4.s, p1, z4.s, z5.s
+; CHECK-i32-NEXT:    splice z2.s, p1, z2.s, z3.s
+; CHECK-i32-NEXT:    splice z0.s, p1, z0.s, z1.s
 ; CHECK-i32-NEXT:    movprfx z16, z6
 ; CHECK-i32-NEXT:    frintx z16.s, p0/m, z6.s
 ; CHECK-i32-NEXT:    movprfx z17, z4
