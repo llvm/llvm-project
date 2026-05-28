@@ -1882,6 +1882,8 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
 
   ParsedAttributes attrs(AttrFactory);
   bool ParsedAttrs = MaybeParseCXX11Attributes(attrs);
+  if (!getLangOpts().CPlusPlus)
+    ParsedAttrs = MaybeParseGNUAttributes(attrs) || ParsedAttrs;
 
   const auto WarnOnInit = [this, &CK] {
     if (getLangOpts().CPlusPlus)
@@ -2007,6 +2009,13 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
   // type-specifier-seq
   DeclSpec DS(AttrFactory);
   ParseSpecifierQualifierList(DS, AS_none, DeclSpecContext::DSC_condition);
+
+  // The Declarator's DeclarationAttrs only accepts [[]] and keyword attributes;
+  // move any GNU attributes onto the DeclSpec instead.
+  if (!getLangOpts().CPlusPlus)
+    for (ParsedAttr &AL : attrs)
+      if (AL.isGNUAttribute())
+        DS.getAttributes().takeOneFrom(attrs, &AL);
 
   // declarator
   Declarator DeclaratorInfo(DS, attrs, DeclaratorContext::Condition);

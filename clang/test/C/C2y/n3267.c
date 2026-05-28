@@ -13,6 +13,14 @@ bool test_if() {
   if (static_assert(true); true) {}
   if ([[clang::assume(1 > 0)]]; true) {}
   if ([[]]; true) {}
+  if (__attribute__((assume(1 > 0))); true) {}
+  if (__attribute__(()); true) {}
+  if (__attribute__((deprecated)) auto x = 3) {}
+  if (auto x __attribute__((deprecated)) = 3) {}
+  if (__attribute__((deprecated)) auto x = 3) {x += 1;} /* expected-warning {{'x' is deprecated}}
+                                                           expected-note {{'x' has been explicitly marked deprecated here}} */
+  if (int x __attribute__((deprecated)) = 3; x) {} /* expected-warning {{'x' is deprecated}}
+                                                      expected-note {{'x' has been explicitly marked deprecated here}} */
   if (auto x = 3) {}
   if (auto x = 3; x == 3) {}
   int y = 1;
@@ -32,6 +40,14 @@ int test_switch() {
 
   switch (int x [[maybe_unused]] = 1) {}
   switch ([[maybe_unused]] int x = 1) {}
+  switch (__attribute__((assume(1 > 0))); 1) {default:}
+  switch (__attribute__(()); 1) {default:}
+  switch (__attribute__((deprecated)) auto x = 3) {default:}
+  switch (auto x __attribute__((deprecated)) = 3) {default:}
+  switch (__attribute__((deprecated)) auto x = 3) {default: x += 1;} /* expected-warning {{'x' is deprecated}}
+                                                                        expected-note {{'x' has been explicitly marked deprecated here}} */
+  switch (int x __attribute__((deprecated)) = 3; x) {default:} /* expected-warning {{'x' is deprecated}}
+                                                                  expected-note {{'x' has been explicitly marked deprecated here}} */
 
   switch (struct A { int x;} a = {.x = 1}; a.x) {}
   switch (int arr[] = {1,2,3}; arr[1]) {}
