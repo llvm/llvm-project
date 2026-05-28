@@ -9678,6 +9678,11 @@ def warn_atomic_stripped_in_enum : Warning<
   "'_Atomic' qualifier ignored; operations involving the enumeration type will "
   "be non-atomic">,
   InGroup<DiagGroup<"underlying-atomic-qualifier-ignored">>, DefaultError;
+def err_clear_padding_needs_trivial_copy : Error<
+  "argument to __builtin_clear_padding must be a pointer to a "
+  "trivially-copyable type (%0 invalid)">;
+def err_clear_padding_no_flexible_array : Error<
+  "%0 has flexible array member, which is unsupported by __builtin_clear_padding">;
 
 def err_overflow_builtin_must_be_int : Error<
   "operand argument to %select{overflow builtin|checked integer operation}0 "
@@ -10959,27 +10964,26 @@ def warn_dangling_reference_captured_by_unknown : Warning<
 
 // Diagnostics based on the Lifetime safety analysis.
 def warn_lifetime_safety_use_after_scope : Warning<
-   "object whose reference is captured does not live long enough">,
+   "%0 does not live long enough">,
    InGroup<LifetimeSafetyUseAfterScope>, DefaultIgnore;
 def warn_lifetime_safety_use_after_scope_moved : Warning<
-   "object whose reference is captured may not live long enough. "
-   "This could be false positive as the storage may have been moved later">,
+   "%0 may not live long enough. "
+   "This could be a false positive as the storage may have been moved later">,
    InGroup<LifetimeSafetyUseAfterScopeMoved>, DefaultIgnore;
 
 def warn_lifetime_safety_use_after_free : Warning<
     "%select{allocated object|parameter}0 does not live long enough">,
     InGroup<LifetimeSafetyUseAfterFree>, DefaultIgnore;
 
-def warn_lifetime_safety_return_stack_addr
-    : Warning<"address of stack memory is returned later">,
-      InGroup<LifetimeSafetyReturnStackAddr>,
-      DefaultIgnore;
-def warn_lifetime_safety_return_stack_addr_moved
-    : Warning<"address of stack memory may be returned later. "
-      "This could be false positive as the storage may have been moved. "
-      "Consider moving first and then aliasing later to resolve the issue">,
-      InGroup<LifetimeSafetyReturnStackAddrMoved>,
-      DefaultIgnore;
+def warn_lifetime_safety_return_stack_addr : Warning<
+  "stack memory associated with %0 is returned">,
+  InGroup<LifetimeSafetyReturnStackAddr>, DefaultIgnore;
+
+def warn_lifetime_safety_return_stack_addr_moved : Warning<
+  "stack memory associated with %0 may be returned later. "
+  "This could be a false positive as the storage may have been moved. "
+  "Consider moving first and then aliasing later to resolve the issue">,
+  InGroup<LifetimeSafetyReturnStackAddrMoved>, DefaultIgnore;
 
 def warn_lifetime_safety_invalidation
     : Warning<"%select{object whose reference is captured|parameter}0 is later invalidated">,
@@ -14232,7 +14236,7 @@ def note_amdgcn_unguarded_builtin_silence
   : Note<"enclose %0 in a __builtin_amdgcn_is_invocable check to silence "
          "this warning">;
 
-def err_amdgcn_coop_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
+def err_amdgcn_global_or_flat_pointer_required : Error<"builtin requires a global or generic pointer">;
 
 def err_amdgcn_dmask_has_too_many_bits_set
     : Error<"dmask argument cannot have more bits set than there are elements "

@@ -481,6 +481,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswprint
     libc.src.wctype.iswctype
     libc.src.wctype.wctype
+    libc.src.wctype.towlower
+    libc.src.wctype.towupper
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev

@@ -28,6 +28,7 @@
 #include "../buffer.h"
 #include "../counted.h"
 #include "../overload_compare_iterator.h"
+#include "copy_move_types.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 
@@ -41,6 +42,55 @@ static_assert(std::is_invocable_v<decltype(std::ranges::uninitialized_copy), int
 struct NotConvertibleFromInt {};
 static_assert(!std::is_invocable_v<decltype(std::ranges::uninitialized_copy), int*, int*, NotConvertibleFromInt*,
                                    NotConvertibleFromInt*>);
+
+TEST_CONSTEXPR_CXX26 bool test() {
+  constexpr int n       = 3;
+  const ConstCopy in[n] = {ConstCopy(1), ConstCopy(2), ConstCopy(3)};
+  std::allocator<ConstCopy> alloc;
+
+  // (iter, sentinel) overload.
+  {
+    ConstCopy* out = alloc.allocate(n);
+    auto result    = std::ranges::uninitialized_copy(in, in + n, out, out + n);
+    assert(result.in == in + n);
+    assert(result.out == out + n);
+    for (int i = 0; i != n; ++i)
+      assert(out[i].val == in[i].val);
+
+    std::destroy(out, out + n);
+    alloc.deallocate(out, n);
+  }
+
+  // (range) overload.
+  {
+    ConstCopy* out = alloc.allocate(n);
+    auto out_range = std::ranges::subrange(out, out + n);
+    auto result    = std::ranges::uninitialized_copy(in, out_range);
+    assert(result.in == in + n);
+    assert(result.out == out + n);
+    for (int i = 0; i != n; ++i)
+      assert(out[i].val == in[i].val);
+
+    std::destroy(out, out + n);
+    alloc.deallocate(out, n);
+  }
+
+  // Destination range is shorter than the source range.
+  {
+    constexpr int m = 2;
+    ConstCopy* out  = alloc.allocate(m);
+    auto result     = std::ranges::uninitialized_copy(in, in + n, out, out + m);
+    assert(result.in == in + m);
+    assert(result.out == out + m);
+    for (int i = 0; i != m; ++i)
+      assert(out[i].val == in[i].val);
+
+    std::destroy(out, out + m);
+    alloc.deallocate(out, m);
+  }
+
+  return true;
+}
 
 int main(int, char**) {
   // An empty range -- no default constructors should be invoked.
@@ -394,6 +444,11 @@ int main(int, char**) {
       }
     }
   }
+
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }
