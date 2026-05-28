@@ -13,18 +13,15 @@
 define i16 @load_2_bytes_high_masked(ptr %p) {
 ; LE-LABEL: load_2_bytes_high_masked:
 ; LE:       ; %bb.0:
-; LE-NEXT:    ldrb w8, [x0]
-; LE-NEXT:    ldrb w9, [x0, #1]
-; LE-NEXT:    bfi w8, w9, #8, #2
-; LE-NEXT:    mov w0, w8
+; LE-NEXT:    ldrh w8, [x0]
+; LE-NEXT:    and w0, w8, #0x3ff
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: load_2_bytes_high_masked:
 ; BE:       // %bb.0:
-; BE-NEXT:    ldrb w8, [x0]
-; BE-NEXT:    ldrb w9, [x0, #1]
-; BE-NEXT:    bfi w8, w9, #8, #2
-; BE-NEXT:    mov w0, w8
+; BE-NEXT:    ldrh w8, [x0]
+; BE-NEXT:    rev w8, w8
+; BE-NEXT:    ubfx w0, w8, #16, #10
 ; BE-NEXT:    ret
   %p1 = getelementptr inbounds i8, ptr %p, i64 1
   %lo = load i8, ptr %p, align 1
@@ -41,18 +38,16 @@ define i16 @load_2_bytes_high_masked(ptr %p) {
 define i16 @load_2_bytes_low_masked(ptr %p) {
 ; LE-LABEL: load_2_bytes_low_masked:
 ; LE:       ; %bb.0:
-; LE-NEXT:    ldrb w8, [x0]
-; LE-NEXT:    ldrb w9, [x0, #1]
-; LE-NEXT:    and w8, w8, #0x3f
-; LE-NEXT:    orr w0, w8, w9, lsl #8
+; LE-NEXT:    ldrh w8, [x0]
+; LE-NEXT:    and w0, w8, #0xffffff3f
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: load_2_bytes_low_masked:
 ; BE:       // %bb.0:
-; BE-NEXT:    ldrb w8, [x0]
-; BE-NEXT:    ldrb w9, [x0, #1]
-; BE-NEXT:    and w8, w8, #0x3f
-; BE-NEXT:    orr w0, w8, w9, lsl #8
+; BE-NEXT:    ldrh w8, [x0]
+; BE-NEXT:    rev w8, w8
+; BE-NEXT:    lsr w8, w8, #16
+; BE-NEXT:    and w0, w8, #0xffffff3f
 ; BE-NEXT:    ret
   %p1 = getelementptr inbounds i8, ptr %p, i64 1
   %lo = load i8, ptr %p, align 1
@@ -97,21 +92,15 @@ define i16 @load_2_bytes_both_masked(ptr %p) {
 define i32 @load_4_bytes_last_masked(ptr %p) {
 ; LE-LABEL: load_4_bytes_last_masked:
 ; LE:       ; %bb.0:
-; LE-NEXT:    ldrb w8, [x0, #2]
-; LE-NEXT:    ldrh w9, [x0]
-; LE-NEXT:    ldrb w10, [x0, #3]
-; LE-NEXT:    orr w0, w9, w8, lsl #16
-; LE-NEXT:    bfi w0, w10, #24, #6
+; LE-NEXT:    ldr w8, [x0]
+; LE-NEXT:    and w0, w8, #0x3fffffff
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: load_4_bytes_last_masked:
 ; BE:       // %bb.0:
-; BE-NEXT:    ldrh w8, [x0]
-; BE-NEXT:    ldrb w9, [x0, #2]
-; BE-NEXT:    ldrb w10, [x0, #3]
+; BE-NEXT:    ldr w8, [x0]
 ; BE-NEXT:    rev w8, w8
-; BE-NEXT:    extr w0, w9, w8, #16
-; BE-NEXT:    bfi w0, w10, #24, #6
+; BE-NEXT:    and w0, w8, #0x3fffffff
 ; BE-NEXT:    ret
   %p1 = getelementptr i8, ptr %p, i64 1
   %p2 = getelementptr i8, ptr %p, i64 2
@@ -139,18 +128,16 @@ define i32 @load_4_bytes_last_masked(ptr %p) {
 define i16 @load_2_bytes_bswap_masked(ptr %p) {
 ; LE-LABEL: load_2_bytes_bswap_masked:
 ; LE:       ; %bb.0:
-; LE-NEXT:    ldrb w8, [x0, #1]
-; LE-NEXT:    ldrb w9, [x0]
-; LE-NEXT:    and w8, w8, #0x3
-; LE-NEXT:    orr w0, w8, w9, lsl #8
+; LE-NEXT:    ldrh w8, [x0]
+; LE-NEXT:    rev w8, w8
+; LE-NEXT:    lsr w8, w8, #16
+; LE-NEXT:    and w0, w8, #0xffffff03
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: load_2_bytes_bswap_masked:
 ; BE:       // %bb.0:
-; BE-NEXT:    ldrb w8, [x0, #1]
-; BE-NEXT:    ldrb w9, [x0]
-; BE-NEXT:    and w8, w8, #0x3
-; BE-NEXT:    orr w0, w8, w9, lsl #8
+; BE-NEXT:    ldrh w8, [x0]
+; BE-NEXT:    and w0, w8, #0xffffff03
 ; BE-NEXT:    ret
   %p1 = getelementptr inbounds i8, ptr %p, i64 1
   %lo = load i8, ptr %p, align 1

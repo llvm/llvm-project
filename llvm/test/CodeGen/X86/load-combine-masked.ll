@@ -12,11 +12,8 @@
 define i16 @load_2_bytes_high_masked(ptr %p) {
 ; CHECK-LABEL: load_2_bytes_high_masked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl (%rdi), %ecx
-; CHECK-NEXT:    movzbl 1(%rdi), %eax
-; CHECK-NEXT:    andl $3, %eax
-; CHECK-NEXT:    shll $8, %eax
-; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    andl $1023, %eax # imm = 0x3FF
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %p1 = getelementptr inbounds i8, ptr %p, i64 1
@@ -34,11 +31,8 @@ define i16 @load_2_bytes_high_masked(ptr %p) {
 define i16 @load_2_bytes_low_masked(ptr %p) {
 ; CHECK-LABEL: load_2_bytes_low_masked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl (%rdi), %ecx
-; CHECK-NEXT:    andl $63, %ecx
-; CHECK-NEXT:    movzbl 1(%rdi), %eax
-; CHECK-NEXT:    shll $8, %eax
-; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    andl $65343, %eax # imm = 0xFF3F
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %p1 = getelementptr inbounds i8, ptr %p, i64 1
@@ -56,12 +50,8 @@ define i16 @load_2_bytes_low_masked(ptr %p) {
 define i16 @load_2_bytes_both_masked(ptr %p) {
 ; CHECK-LABEL: load_2_bytes_both_masked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl (%rdi), %ecx
-; CHECK-NEXT:    movzbl 1(%rdi), %eax
-; CHECK-NEXT:    andl $15, %ecx
-; CHECK-NEXT:    andl $3, %eax
-; CHECK-NEXT:    shll $8, %eax
-; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    andl $783, %eax # imm = 0x30F
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %p1 = getelementptr inbounds i8, ptr %p, i64 1
@@ -80,14 +70,8 @@ define i16 @load_2_bytes_both_masked(ptr %p) {
 define i32 @load_4_bytes_last_masked(ptr %p) {
 ; CHECK-LABEL: load_4_bytes_last_masked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl 2(%rdi), %ecx
-; CHECK-NEXT:    movzbl 3(%rdi), %edx
-; CHECK-NEXT:    andl $63, %edx
-; CHECK-NEXT:    shll $16, %ecx
-; CHECK-NEXT:    shll $24, %edx
-; CHECK-NEXT:    movzwl (%rdi), %eax
-; CHECK-NEXT:    orl %ecx, %eax
-; CHECK-NEXT:    orl %edx, %eax
+; CHECK-NEXT:    movl $1073741823, %eax # imm = 0x3FFFFFFF
+; CHECK-NEXT:    andl (%rdi), %eax
 ; CHECK-NEXT:    retq
   %p1 = getelementptr i8, ptr %p, i64 1
   %p2 = getelementptr i8, ptr %p, i64 2
@@ -114,17 +98,9 @@ define i32 @load_4_bytes_last_masked(ptr %p) {
 define i32 @load_4_bytes_bswap_masked(ptr %p) {
 ; CHECK-LABEL: load_4_bytes_bswap_masked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl 1(%rdi), %ecx
-; CHECK-NEXT:    movzbl 2(%rdi), %eax
-; CHECK-NEXT:    movzbl 3(%rdi), %edx
-; CHECK-NEXT:    andl $63, %edx
-; CHECK-NEXT:    movzbl (%rdi), %esi
-; CHECK-NEXT:    shll $24, %esi
-; CHECK-NEXT:    shll $16, %ecx
-; CHECK-NEXT:    orl %esi, %ecx
-; CHECK-NEXT:    shll $8, %eax
-; CHECK-NEXT:    orl %ecx, %eax
-; CHECK-NEXT:    orl %edx, %eax
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    andl $-193, %eax
 ; CHECK-NEXT:    retq
   %p1 = getelementptr i8, ptr %p, i64 1
   %p2 = getelementptr i8, ptr %p, i64 2
