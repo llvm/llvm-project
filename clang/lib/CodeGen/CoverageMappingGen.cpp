@@ -13,11 +13,15 @@
 #include "CoverageMappingGen.h"
 #include "CodeGenFunction.h"
 #include "CodeGenPGO.h"
+#include "clang/AST/ParentMap.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Analysis/CFG.h"
+#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
@@ -948,6 +952,30 @@ struct CounterCoverageMappingBuilder
   /// Gap region counter after terminate statement.
   Counter GapRegionCounter;
 
+  enum class FunctionSinkState : uint8_t {
+    Unknown,
+    Computing,
+    Sinking,
+    NotSinking
+  };
+
+  /// Cache whether a function body can ever reach a normal exit.
+  llvm::DenseMap<const FunctionDecl *, FunctionSinkState> FunctionSinkCache;
+
+  /// The current function-like declaration being mapped.
+  const Decl *CurrentDecl = nullptr;
+
+  /// The current function-like body used to build statement sink analysis.
+  const Stmt *CurrentBody = nullptr;
+
+  /// Lazily built CFG state for statement sink analysis in the current body.
+  std::unique_ptr<CFG> CurrentCFG;
+  std::optional<ParentMap> CurrentParentMap;
+  std::optional<CFGStmtMap> CurrentCFGStmtMap;
+
+  /// Cache whether a statement has no path to a normal exit.
+  llvm::DenseMap<const Stmt *, bool> StatementSinkCache;
+
   /// Return a counter for the subtraction of \c RHS from \c LHS
   Counter subtractCounters(Counter LHS, Counter RHS, bool Simplify = true) {
     assert(!llvm::EnableSingleByteCoverage &&
@@ -1622,6 +1650,13 @@ struct CounterCoverageMappingBuilder
       }
     }
 
+    CurrentDecl = D;
+    CurrentBody = Body;
+    CurrentCFG.reset();
+    CurrentParentMap.reset();
+    CurrentCFGStmtMap.reset();
+    StatementSinkCache.clear();
+
     propagateCounts(BodyCounter, Body,
                     /*VisitChildren=*/!Defaulted);
     assert(RegionStack.empty() && "Regions entered but never exited");
@@ -1684,13 +1719,155 @@ struct CounterCoverageMappingBuilder
     terminateRegion(S);
   }
 
+  bool isFunctionInevitablySinking(const FunctionDecl *Callee) {
+    const FunctionDecl *Definition = nullptr;
+    if (!Callee || !Callee->hasBody(Definition) || !Definition)
+      return false;
+
+    const FunctionDecl *Key = Definition->getCanonicalDecl();
+    FunctionSinkState &State = FunctionSinkCache[Key];
+    if (State == FunctionSinkState::Sinking)
+      return true;
+    if (State == FunctionSinkState::NotSinking ||
+        State == FunctionSinkState::Computing)
+      return false;
+
+    State = FunctionSinkState::Computing;
+
+    auto blockIsImmediateSink = [&](const CFGBlock *Block) {
+      if (Block->hasNoReturnElement())
+        return true;
+
+      for (const CFGElement &Element : *Block) {
+        std::optional<CFGStmt> StmtElement = Element.getAs<CFGStmt>();
+        if (!StmtElement)
+          continue;
+
+        const Stmt *Stmt = StmtElement->getStmt();
+        if (isa<CXXThrowExpr>(Stmt))
+          return true;
+
+        if (const auto *Call = dyn_cast<CallExpr>(Stmt)) {
+          QualType CalleeType = Call->getCallee()->getType();
+          if (getFunctionExtInfo(*CalleeType).getNoReturn() ||
+              isDirectCalleeInevitablySinking(Call))
+            return true;
+        }
+      }
+
+      return false;
+    };
+
+    CFG::BuildOptions Options;
+    std::unique_ptr<CFG> CalleeCFG = CFG::buildCFG(
+        Definition, Definition->getBody(), &Definition->getASTContext(),
+        Options);
+
+    bool IsSinking = false;
+    if (CalleeCFG) {
+      const CFG &Cfg = *CalleeCFG;
+      llvm::SmallVector<const CFGBlock *, 32> DFSWorkList;
+      llvm::SmallPtrSet<const CFGBlock *, 32> Visited;
+
+      const CFGBlock *StartBlock = &Cfg.getEntry();
+      if (blockIsImmediateSink(StartBlock)) {
+        IsSinking = true;
+      } else {
+        DFSWorkList.push_back(StartBlock);
+        while (!DFSWorkList.empty()) {
+          const CFGBlock *Block = DFSWorkList.pop_back_val();
+          if (!Visited.insert(Block).second)
+            continue;
+
+          if (Block == &Cfg.getExit()) {
+            IsSinking = false;
+            break;
+          }
+
+          for (const auto &Succ : Block->succs()) {
+            const CFGBlock *SuccBlock = Succ.getReachableBlock();
+            if (!SuccBlock || blockIsImmediateSink(SuccBlock))
+              continue;
+            DFSWorkList.push_back(SuccBlock);
+          }
+        }
+
+        if (!Visited.contains(&Cfg.getExit()))
+          IsSinking = true;
+      }
+    }
+
+    State = IsSinking ? FunctionSinkState::Sinking
+                      : FunctionSinkState::NotSinking;
+    return IsSinking;
+  }
+
+  bool isDirectCalleeInevitablySinking(const CallExpr *E) {
+    const auto *Callee = E->getDirectCallee();
+    if (!Callee)
+      return false;
+
+    // The static method body is not enough proof when runtime dispatch may
+    // target an override that returns normally.
+    if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(E))
+      if (const auto *ME =
+              dyn_cast<MemberExpr>(MCE->getCallee()->IgnoreParenImpCasts()))
+        if (const auto *Method = MCE->getMethodDecl();
+            Method && Method->isVirtual() &&
+            ME->performsVirtualDispatch(LangOpts))
+          return false;
+
+    return isFunctionInevitablySinking(Callee);
+  }
+
+  bool ensureCurrentParentMap() {
+    if (!CurrentParentMap && CurrentBody)
+      CurrentParentMap.emplace(const_cast<Stmt *>(CurrentBody));
+    return CurrentParentMap.has_value();
+  }
+
+  bool isCallInevitablySinking(const CallExpr *E) {
+    QualType CalleeType = E->getCallee()->getType();
+    return getFunctionExtInfo(*CalleeType).getNoReturn() ||
+           isDirectCalleeInevitablySinking(E);
+  }
+
+  bool buildCurrentStmtSinkAnalysis() {
+    if (CurrentCFGStmtMap)
+      return true;
+    if (!CurrentDecl || !CurrentBody)
+      return false;
+
+    CFG::BuildOptions Options;
+    CurrentCFG = CFG::buildCFG(CurrentDecl, const_cast<Stmt *>(CurrentBody),
+                               &CurrentDecl->getASTContext(), Options);
+    if (!CurrentCFG)
+      return false;
+
+    ensureCurrentParentMap();
+    CurrentCFGStmtMap.emplace(*CurrentCFG, *CurrentParentMap);
+    return true;
+  }
+
+  bool isStmtInevitablySinking(const Stmt *S) {
+    auto [It, Inserted] = StatementSinkCache.try_emplace(S, false);
+    if (!Inserted)
+      return It->second;
+
+    if (!buildCurrentStmtSinkAnalysis())
+      return false;
+
+    if (const CFGBlock *Block = CurrentCFGStmtMap->getBlock(S))
+      It->second = Block->isInevitablySinking();
+    return It->second;
+  }
+
   void VisitCallExpr(const CallExpr *E) {
     VisitStmt(E);
 
     // Terminate the region when we hit a noreturn function.
     // (This is helpful dealing with switch statements.)
-    QualType CalleeType = E->getCallee()->getType();
-    if (getFunctionExtInfo(*CalleeType).getNoReturn())
+    if (isCallInevitablySinking(E))
       terminateRegion(E);
   }
 
@@ -1699,6 +1876,7 @@ struct CounterCoverageMappingBuilder
 
     Counter ParentCount = getRegion().getCounter();
     Counter BodyCount = getRegionCounter(S);
+    bool LoopIsSink = isStmtInevitablySinking(S);
 
     // Handle the body first so that we can get the backedge count.
     BreakContinueStack.push_back(BreakContinue());
@@ -1706,7 +1884,6 @@ struct CounterCoverageMappingBuilder
     Counter BackedgeCount = propagateCounts(BodyCount, S->getBody());
     BreakContinue BC = BreakContinueStack.pop_back_val();
 
-    bool BodyHasTerminateStmt = HasTerminateStmt;
     HasTerminateStmt = false;
 
     // Go back to handle the condition.
@@ -1724,15 +1901,18 @@ struct CounterCoverageMappingBuilder
       fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), BodyCount);
 
     Counter OutCount = addCounters(BC.BreakCount, BranchCount.Skipped);
-    if (!IsCounterEqual(OutCount, ParentCount)) {
+    if (!LoopIsSink && !IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
       GapRegionCounter = OutCount;
-      if (BodyHasTerminateStmt)
-        HasTerminateStmt = true;
+      HasTerminateStmt = true;
     }
 
     // Create Branch Region around condition.
     createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
+    if (LoopIsSink) {
+      GapRegionCounter = Counter::getZero();
+      terminateRegion(S);
+    }
   }
 
   void VisitDoStmt(const DoStmt *S) {
@@ -1740,6 +1920,7 @@ struct CounterCoverageMappingBuilder
 
     Counter ParentCount = getRegion().getCounter();
     Counter BodyCount = getRegionCounter(S);
+    bool LoopIsSink = isStmtInevitablySinking(S);
 
     BreakContinueStack.push_back(BreakContinue());
     extendRegion(S->getBody());
@@ -1749,7 +1930,6 @@ struct CounterCoverageMappingBuilder
 
     BreakContinue BC = BreakContinueStack.pop_back_val();
 
-    bool BodyHasTerminateStmt = HasTerminateStmt;
     HasTerminateStmt = false;
 
     Counter CondCount = addCounters(BackedgeCount, BC.ContinueCount);
@@ -1759,15 +1939,18 @@ struct CounterCoverageMappingBuilder
     propagateCounts(CondCount, S->getCond());
 
     Counter OutCount = addCounters(BC.BreakCount, BranchCount.Skipped);
-    if (!IsCounterEqual(OutCount, ParentCount)) {
+    if (!LoopIsSink && !IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
       GapRegionCounter = OutCount;
-      if (BodyHasTerminateStmt)
-        HasTerminateStmt = true;
+      HasTerminateStmt = true;
     }
 
     // Create Branch Region around condition.
     createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
+    if (LoopIsSink) {
+      GapRegionCounter = Counter::getZero();
+      terminateRegion(S);
+    }
   }
 
   void VisitForStmt(const ForStmt *S) {
@@ -1777,6 +1960,7 @@ struct CounterCoverageMappingBuilder
 
     Counter ParentCount = getRegion().getCounter();
     Counter BodyCount = getRegionCounter(S);
+    bool LoopIsSink = isStmtInevitablySinking(S);
 
     // The loop increment may contain a break or continue.
     if (S->getInc())
@@ -1788,7 +1972,6 @@ struct CounterCoverageMappingBuilder
     Counter BackedgeCount = propagateCounts(BodyCount, S->getBody());
     BreakContinue BodyBC = BreakContinueStack.pop_back_val();
 
-    bool BodyHasTerminateStmt = HasTerminateStmt;
     HasTerminateStmt = false;
 
     // The increment is essentially part of the body but it needs to include
@@ -1798,6 +1981,11 @@ struct CounterCoverageMappingBuilder
       propagateCounts(addCounters(BackedgeCount, BodyBC.ContinueCount), Inc);
       IncrementBC = BreakContinueStack.pop_back_val();
     }
+
+    // `for (;;)` has no normal exit edge unless some path breaks out.
+    if (!S->getCond() && BodyBC.BreakCount.isZero() &&
+        IncrementBC.BreakCount.isZero())
+      LoopIsSink = true;
 
     // Go back to handle the condition.
     Counter CondCount = addCounters(
@@ -1818,15 +2006,18 @@ struct CounterCoverageMappingBuilder
 
     Counter OutCount = addCounters(BodyBC.BreakCount, IncrementBC.BreakCount,
                                    BranchCount.Skipped);
-    if (!IsCounterEqual(OutCount, ParentCount)) {
+    if (!LoopIsSink && !IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
       GapRegionCounter = OutCount;
-      if (BodyHasTerminateStmt)
-        HasTerminateStmt = true;
+      HasTerminateStmt = true;
     }
 
     // Create Branch Region around condition.
     createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
+    if (LoopIsSink) {
+      GapRegionCounter = Counter::getZero();
+      terminateRegion(S);
+    }
   }
 
   void VisitCXXForRangeStmt(const CXXForRangeStmt *S) {
@@ -1838,13 +2029,13 @@ struct CounterCoverageMappingBuilder
 
     Counter ParentCount = getRegion().getCounter();
     Counter BodyCount = getRegionCounter(S);
+    bool LoopIsSink = isStmtInevitablySinking(S);
 
     BreakContinueStack.push_back(BreakContinue());
     extendRegion(S->getBody());
     Counter BackedgeCount = propagateCounts(BodyCount, S->getBody());
     BreakContinue BC = BreakContinueStack.pop_back_val();
 
-    bool BodyHasTerminateStmt = HasTerminateStmt;
     HasTerminateStmt = false;
 
     // The body count applies to the area immediately after the range.
@@ -1858,15 +2049,18 @@ struct CounterCoverageMappingBuilder
     assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount);
 
     Counter OutCount = addCounters(BC.BreakCount, BranchCount.Skipped);
-    if (!IsCounterEqual(OutCount, ParentCount)) {
+    if (!LoopIsSink && !IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
       GapRegionCounter = OutCount;
-      if (BodyHasTerminateStmt)
-        HasTerminateStmt = true;
+      HasTerminateStmt = true;
     }
 
     // Create Branch Region around condition.
     createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
+    if (LoopIsSink) {
+      GapRegionCounter = Counter::getZero();
+      terminateRegion(S);
+    }
   }
 
   void VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S) {
@@ -1875,6 +2069,7 @@ struct CounterCoverageMappingBuilder
 
     Counter ParentCount = getRegion().getCounter();
     Counter BodyCount = getRegionCounter(S);
+    bool LoopIsSink = isStmtInevitablySinking(S);
 
     BreakContinueStack.push_back(BreakContinue());
     extendRegion(S->getBody());
@@ -1891,9 +2086,14 @@ struct CounterCoverageMappingBuilder
     auto BranchCount = getBranchCounterPair(S, LoopCount);
     assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount);
     Counter OutCount = addCounters(BC.BreakCount, BranchCount.Skipped);
-    if (!IsCounterEqual(OutCount, ParentCount)) {
+    if (!LoopIsSink && !IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
       GapRegionCounter = OutCount;
+      HasTerminateStmt = true;
+    }
+    if (LoopIsSink) {
+      GapRegionCounter = Counter::getZero();
+      terminateRegion(S);
     }
   }
 

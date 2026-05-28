@@ -352,6 +352,67 @@ int statementexprnoret(bool crash) {
   return rc;                             // CHECK-NOT: Gap
 }
 
+void sink();
+
+// CHECK-LABEL: _Z2nrv:
+void nr() {
+  __builtin_trap();
+}
+
+// CHECK-LABEL: _Z15directcallnoretv:
+int directcallnoret() {
+  nr();      // CHECK: Gap,File 0, [[@LINE]]:8 -> [[@LINE+1]]:3 = 0
+  sink();    // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:11 = 0
+  return 0;
+}
+
+// CHECK-LABEL: _Z3nr2v:
+void nr2() {
+  nr();
+}
+
+// CHECK-LABEL: _Z15nestedcallnoretv:
+int nestedcallnoret() {
+  nr2();     // CHECK: Gap,File 0, [[@LINE]]:9 -> [[@LINE+1]]:3 = 0
+  sink();    // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:11 = 0
+  return 0;
+}
+
+// CHECK-LABEL: _Z18infinitewhilenoretv:
+int infinitewhilenoret() {
+  while (true) { // CHECK: Branch,File 0, [[@LINE]]:10 -> [[@LINE]]:14 = #1, 0
+  }              // CHECK: Gap,File 0, [[@LINE]]:4 -> [[@LINE+1]]:3 = 0
+  sink();        // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:11 = 0
+  return 0;
+}
+
+// CHECK-LABEL: _Z16infinitefornoretv:
+int infinitefornoret() {
+  for (;;) {
+  }              // CHECK: Gap,File 0, [[@LINE]]:4 -> [[@LINE+1]]:3 = 0
+  sink();        // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:11 = 0
+  return 0;
+}
+
+struct Base {
+  virtual void nr();
+};
+
+void Base::nr() {
+  __builtin_trap();
+}
+
+struct Derived : Base {
+  void nr() override {}
+};
+
+// CHECK-LABEL: _Z16virtualcallnoretR4Base:
+int virtualcallnoret(Base &b) { // CHECK: File 0, [[@LINE]]:31 -> [[@LINE+4]]:2 = #0
+  b.nr();                       // CHECK-NOT: Gap,File 0, [[@LINE]]
+  sink();
+  return 0;
+}
+
 // CHECK-LABEL: _Z13do_with_breaki:
 int do_with_break(int n) {
   do {
@@ -385,6 +446,10 @@ int main() {
   abstractcondnoret();
   elsecondnoret();
   statementexprnoret(false);
+  directcallnoret();
+  nestedcallnoret();
+  infinitewhilenoret();
+  infinitefornoret();
   do_with_break(0);
   return 0;
 }
