@@ -364,25 +364,25 @@ static auto isStatusPtrReturningCall() {
 }
 
 static auto ofClassReturnIfErrorAdaptor() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return ofClass(
       hasName("::absl::status_macro_internal::ReturnIfErrorAdaptor"));
 }
 
 static auto returnIfErrorAdaptorClass() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxRecordDecl(
       hasName("::absl::status_macro_internal::ReturnIfErrorAdaptor"));
 }
 
 static auto returnIfErrorAdaptorType() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return hasUnqualifiedDesugaredType(
       recordType(hasDeclaration(returnIfErrorAdaptorClass())));
 }
 
 static auto isReturnIfErrorAdaptorOperatorBoolCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxMemberCallExpr(
       on(expr(unless(cxxThisExpr()))),
       callee(cxxMethodDecl(hasName("operator bool"),
@@ -390,7 +390,7 @@ static auto isReturnIfErrorAdaptorOperatorBoolCall() {
 }
 
 static auto isMacroAdaptorCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return callExpr(callee(
       functionDecl(hasName("::absl::status_macro_internal::MacroAdaptor"),
                    returns(returnIfErrorAdaptorType()))));
