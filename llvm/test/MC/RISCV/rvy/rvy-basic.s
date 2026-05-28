@@ -2,11 +2,11 @@
 // RUN: llvm-mc --triple=riscv32 -mattr=+experimental-y --riscv-no-aliases --show-encoding --show-inst --defsym=XLEN=32 < %s \
 // RUN:   | FileCheck --check-prefixes=CHECK,CHECK-ASM,CHECK-ASM-32,CHECK-32 %s
 // RUN: llvm-mc --filetype=obj --triple=riscv32 --mattr=+experimental-y --defsym=XLEN=32 --riscv-add-build-attributes < %s \
-// RUN:   | llvm-objdump --mattr=+experimental-y -M no-aliases -d --no-print-imm-hex - | FileCheck %s --check-prefixes=CHECK,CHECK-32
+// RUN:   | llvm-objdump -M no-aliases -d --no-print-imm-hex - | FileCheck %s --check-prefixes=CHECK,CHECK-32
 // RUN: llvm-mc --triple=riscv64 --mattr=+experimental-y --riscv-no-aliases --show-encoding --show-inst --defsym=XLEN=64 < %s \
 // RUN:   | FileCheck --check-prefixes=CHECK,CHECK-ASM,CHECK-ASM-64,CHECK-64 %s
 // RUN: llvm-mc --filetype=obj --triple=riscv64 --mattr=+experimental-y --defsym=XLEN=64 --riscv-add-build-attributes < %s \
-// RUN:   | llvm-objdump --mattr=+experimental-y -M no-aliases -d --no-print-imm-hex - | FileCheck %s --check-prefixes=CHECK,CHECK-64
+// RUN:   | llvm-objdump -M no-aliases -d --no-print-imm-hex - | FileCheck %s --check-prefixes=CHECK,CHECK-64
 
 yadd a0, a0, a1
 // CHECK: yadd	a0, a0, a1

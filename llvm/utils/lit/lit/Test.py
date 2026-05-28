@@ -25,7 +25,7 @@ class ResultCode:
     def __new__(cls, name, label, isFailure):
         res = cls._instances.get(name)
         if res is None:
-            cls._instances[name] = res = super(ResultCode, cls).__new__(cls)
+            cls._instances[name] = res = super().__new__(cls)
         return res
 
     def __getnewargs__(self):

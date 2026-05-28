@@ -244,5 +244,7 @@ AnalysisRegistry::Add<UnsafeBufferReachableAnalysis>
 
 } // namespace
 
+namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int UnsafeBufferUsageAnalysisAnchorSource = 0;
+} // namespace clang::ssaf
