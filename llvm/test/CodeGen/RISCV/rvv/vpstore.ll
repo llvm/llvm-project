@@ -462,3 +462,83 @@ define void @vpstore_all_active_nxv8i8(<vscale x 8 x i8> %val, ptr %ptr) {
   call void @llvm.vp.store.nxv8i8.p0(<vscale x 8 x i8> %val, ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret void
 }
+
+define void @vpstore_nxv1i1(<vscale x 1 x i1> %val, ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpstore_nxv1i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
+; CHECK-NEXT:    vsm.v v0, (a0)
+; CHECK-NEXT:    ret
+  call void @llvm.vp.store.nxv1i1.p0(<vscale x 1 x i1> %val, ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %evl)
+  ret void
+}
+
+define void @vpstore_nxv2i1(<vscale x 2 x i1> %val, ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpstore_nxv2i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
+; CHECK-NEXT:    vsm.v v0, (a0)
+; CHECK-NEXT:    ret
+  call void @llvm.vp.store.nxv2i1.p0(<vscale x 2 x i1> %val, ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  ret void
+}
+
+define void @vpstore_nxv4i1(<vscale x 4 x i1> %val, ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpstore_nxv4i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
+; CHECK-NEXT:    vsm.v v0, (a0)
+; CHECK-NEXT:    ret
+  call void @llvm.vp.store.nxv4i1.p0(<vscale x 4 x i1> %val, ptr %ptr, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  ret void
+}
+
+define void @vpstore_nxv8i1(<vscale x 8 x i1> %val, ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpstore_nxv8i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; CHECK-NEXT:    vsm.v v0, (a0)
+; CHECK-NEXT:    ret
+  call void @llvm.vp.store.nxv8i1.p0(<vscale x 8 x i1> %val, ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %evl)
+  ret void
+}
+
+define void @vpstore_nxv16i1(<vscale x 16 x i1> %val, ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpstore_nxv16i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; CHECK-NEXT:    vsm.v v0, (a0)
+; CHECK-NEXT:    ret
+  call void @llvm.vp.store.nxv16i1.p0(<vscale x 16 x i1> %val, ptr %ptr, <vscale x 16 x i1> splat (i1 true), i32 %evl)
+  ret void
+}
+
+define void @vpstore_nxv32i1(<vscale x 32 x i1> %val, ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpstore_nxv32i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
+; CHECK-NEXT:    vsm.v v0, (a0)
+; CHECK-NEXT:    ret
+  call void @llvm.vp.store.nxv32i1.p0(<vscale x 32 x i1> %val, ptr %ptr, <vscale x 32 x i1> splat (i1 true), i32 %evl)
+  ret void
+}
+
+define void @vpstore_nxv64i1(<vscale x 64 x i1> %val, ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpstore_nxv64i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; CHECK-NEXT:    vsm.v v0, (a0)
+; CHECK-NEXT:    ret
+  call void @llvm.vp.store.nxv64i1.p0(<vscale x 64 x i1> %val, ptr %ptr, <vscale x 64 x i1> splat (i1 true), i32 %evl)
+  ret void
+}
+
+define void @vpstore_nxv16i1_masked(<vscale x 16 x i1> %val, ptr %ptr, <vscale x 16 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpstore_nxv16i1_masked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; CHECK-NEXT:    vsm.v v0, (a0)
+; CHECK-NEXT:    ret
+  call void @llvm.vp.store.nxv16i1.p0(<vscale x 16 x i1> %val, ptr %ptr, <vscale x 16 x i1> %m, i32 %evl)
+  ret void
+}

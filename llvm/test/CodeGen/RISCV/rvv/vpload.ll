@@ -560,3 +560,83 @@ define <vscale x 8 x i8> @vpload_all_active_nxv8i8(ptr %ptr) {
   %load = call <vscale x 8 x i8> @llvm.vp.load.nxv8i8.p0(ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i8> %load
 }
+
+define <vscale x 1 x i1> @vpload_nxv1i1(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpload_nxv1i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
+; CHECK-NEXT:    vlm.v v0, (a0)
+; CHECK-NEXT:    ret
+  %load = call <vscale x 1 x i1> @llvm.vp.load.nxv1i1.p0(ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 1 x i1> %load
+}
+
+define <vscale x 2 x i1> @vpload_nxv2i1(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpload_nxv2i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
+; CHECK-NEXT:    vlm.v v0, (a0)
+; CHECK-NEXT:    ret
+  %load = call <vscale x 2 x i1> @llvm.vp.load.nxv2i1.p0(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 2 x i1> %load
+}
+
+define <vscale x 4 x i1> @vpload_nxv4i1(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpload_nxv4i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
+; CHECK-NEXT:    vlm.v v0, (a0)
+; CHECK-NEXT:    ret
+  %load = call <vscale x 4 x i1> @llvm.vp.load.nxv4i1.p0(ptr %ptr, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 4 x i1> %load
+}
+
+define <vscale x 8 x i1> @vpload_nxv8i1(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpload_nxv8i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; CHECK-NEXT:    vlm.v v0, (a0)
+; CHECK-NEXT:    ret
+  %load = call <vscale x 8 x i1> @llvm.vp.load.nxv8i1.p0(ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 8 x i1> %load
+}
+
+define <vscale x 16 x i1> @vpload_nxv16i1(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpload_nxv16i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; CHECK-NEXT:    vlm.v v0, (a0)
+; CHECK-NEXT:    ret
+  %load = call <vscale x 16 x i1> @llvm.vp.load.nxv16i1.p0(ptr %ptr, <vscale x 16 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 16 x i1> %load
+}
+
+define <vscale x 32 x i1> @vpload_nxv32i1(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpload_nxv32i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
+; CHECK-NEXT:    vlm.v v0, (a0)
+; CHECK-NEXT:    ret
+  %load = call <vscale x 32 x i1> @llvm.vp.load.nxv32i1.p0(ptr %ptr, <vscale x 32 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 32 x i1> %load
+}
+
+define <vscale x 64 x i1> @vpload_nxv64i1(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpload_nxv64i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; CHECK-NEXT:    vlm.v v0, (a0)
+; CHECK-NEXT:    ret
+  %load = call <vscale x 64 x i1> @llvm.vp.load.nxv64i1.p0(ptr %ptr, <vscale x 64 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 64 x i1> %load
+}
+
+define <vscale x 16 x i1> @vpload_nxv16i1_masked(ptr %ptr, <vscale x 16 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpload_nxv16i1_masked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; CHECK-NEXT:    vlm.v v0, (a0)
+; CHECK-NEXT:    ret
+  %load = call <vscale x 16 x i1> @llvm.vp.load.nxv16i1.p0(ptr %ptr, <vscale x 16 x i1> %m, i32 %evl)
+  ret <vscale x 16 x i1> %load
+}

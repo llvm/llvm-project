@@ -979,6 +979,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          Expand);
       setOperationAction(ISD::VP_MERGE, VT, Custom);
 
+      setOperationAction({ISD::VP_LOAD, ISD::VP_STORE}, VT, Custom);
+
       setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON,
                           ISD::VP_CTTZ_ELTS, ISD::VP_CTTZ_ELTS_ZERO_POISON},
                          VT, Custom);
@@ -13762,6 +13764,21 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
 
   MVT XLenVT = Subtarget.getXLenVT();
 
+  // VP_LOAD of a mask vector lowers directly to vlm.v on the mask register.
+  if (VT.getVectorElementType() == MVT::i1) {
+    assert(isa<VPLoadSDNode>(Op) &&
+           "MaskedLoad of i1 vector should not reach here");
+    if (!VL)
+      VL = getDefaultVLOps(VT, VT, DL, DAG, Subtarget).second;
+    SDValue IntID = DAG.getTargetConstant(Intrinsic::riscv_vlm, DL, XLenVT);
+    SDValue Ops[] = {Chain, IntID, BasePtr, VL};
+    SDVTList VTs = DAG.getVTList({VT, MVT::Other});
+    SDValue Result =
+        DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops, MemVT,
+                                MMO);
+    return DAG.getMergeValues({Result, Result.getValue(1)}, DL);
+  }
+
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector()) {
     ContainerVT = getContainerForFixedLengthVector(VT);
@@ -13908,6 +13925,19 @@ SDValue RISCVTargetLowering::lowerMaskedStore(SDValue Op,
 
   MVT VT = Val.getSimpleValueType();
   MVT XLenVT = Subtarget.getXLenVT();
+
+  // VP_STORE of a mask vector lowers directly to vsm.v on the mask register.
+  if (VT.getVectorElementType() == MVT::i1) {
+    assert(isa<VPStoreSDNode>(Op) &&
+           "MaskedStore of i1 vector should not reach here");
+    if (!VL)
+      VL = getDefaultVLOps(VT, VT, DL, DAG, Subtarget).second;
+    SDValue IntID = DAG.getTargetConstant(Intrinsic::riscv_vsm, DL, XLenVT);
+    return DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL,
+                                   DAG.getVTList(MVT::Other),
+                                   {Chain, IntID, Val, BasePtr, VL}, MemVT,
+                                   MMO);
+  }
 
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector()) {
