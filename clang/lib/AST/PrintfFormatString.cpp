@@ -38,14 +38,14 @@ using analyze_format_string::ParseNonPositionAmount;
 static bool
 ParsePrecision(FormatStringHandler &H, PrintfSpecifier &FS, const char *Start,
                const char *&Beg, const char *E, unsigned *argIndex,
-               const llvm::TextEncodingConverter &FormatStrConverter) {
+               const llvm::TextEncodingConverter &FromSystemEncodingConverter) {
   if (argIndex) {
     FS.setPrecision(
-        ParseNonPositionAmount(Beg, E, *argIndex, FormatStrConverter));
+        ParseNonPositionAmount(Beg, E, *argIndex, FromSystemEncodingConverter));
   } else {
     const OptionalAmount Amt = ParsePositionAmount(
         H, Start, Beg, E, analyze_format_string::PrecisionPos,
-        FormatStrConverter);
+        FromSystemEncodingConverter);
     if (Amt.isInvalid())
       return true;
     FS.setPrecision(Amt);
@@ -56,11 +56,12 @@ ParsePrecision(FormatStringHandler &H, PrintfSpecifier &FS, const char *Start,
 static bool
 ParseObjCFlags(FormatStringHandler &H, PrintfSpecifier &FS, const char *FlagBeg,
                const char *E, bool Warn,
-               const llvm::TextEncodingConverter &FormatStrConverter) {
+               const llvm::TextEncodingConverter &FromSystemEncodingConverter) {
   StringRef Flag(FlagBeg, E - FlagBeg);
   // Currently there is only one flag.
-  if (Flag.size() == 2 && FormatStrConverter.convert(FlagBeg[0]) == 't' &&
-      FormatStrConverter.convert(FlagBeg[1]) == 't') {
+  if (Flag.size() == 2 &&
+      FromSystemEncodingConverter.convert(FlagBeg[0]) == 't' &&
+      FromSystemEncodingConverter.convert(FlagBeg[1]) == 't') {
     FS.setHasObjCTechnicalTerm(FlagBeg);
     return false;
   }
@@ -87,8 +88,8 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
   const char *Start = nullptr;
   UpdateOnReturn<const char *> UpdateBeg(Beg, I);
 
-  const llvm::TextEncodingConverter &FormatStrConverter =
-      *Target.FormatStrConverter;
+  const llvm::TextEncodingConverter &FromSystemEncodingConverter =
+      *Target.FromSystemEncodingConverter;
   // Look for a '%' character that indicates the start of a format specifier.
   for (; I != E; ++I) {
     char c = *I;
@@ -97,7 +98,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
       H.HandleNullChar(I);
       return true;
     }
-    if (FormatStrConverter.convert(c) == '%') {
+    if (FromSystemEncodingConverter.convert(c) == '%') {
       Start = I++; // Record the start of the format specifier.
       break;
     }
@@ -115,7 +116,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
   }
 
   PrintfSpecifier FS;
-  if (ParseArgPosition(H, FS, Start, I, E, FormatStrConverter))
+  if (ParseArgPosition(H, FS, Start, I, E, FromSystemEncodingConverter))
     return true;
 
   if (I == E) {
@@ -125,7 +126,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
     return true;
   }
 
-  if (FormatStrConverter.convert(*I) == '{') {
+  if (FromSystemEncodingConverter.convert(*I) == '{') {
     ++I;
     unsigned char PrivacyFlags = 0;
     StringRef MatchedStr;
@@ -134,7 +135,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
       const char *II;
       std::string S(I, E - I);
       for (unsigned long i = 0; i < S.length(); ++i)
-        S[i] = FormatStrConverter.convert(S[i]);
+        S[i] = FromSystemEncodingConverter.convert(S[i]);
       StringRef Str(S);
       std::string Match = "^[[:space:]]*"
                           "(private|public|sensitive|mask\\.[^[:space:],}]*)"
@@ -147,7 +148,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
         II = I;
         I += Matches[0].size();
 
-        while (FormatStrConverter.convert(*II) == ' ')
+        while (FromSystemEncodingConverter.convert(*II) == ' ')
           ++II;
 
         // Set the privacy flag if the privacy annotation in the
@@ -190,7 +191,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
         I += CommaOrBracePos + 1;
       }
       // Continue until the closing brace is found.
-    } while (FormatStrConverter.convert(*(I - 1)) == ',');
+    } while (FromSystemEncodingConverter.convert(*(I - 1)) == ',');
 
     // Set the privacy flag.
     switch (PrivacyFlags) {
@@ -213,7 +214,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
   // Look for flags (if any).
   bool hasMore = true;
   for (; I != E; ++I) {
-    switch (FormatStrConverter.convert(*I)) {
+    switch (FromSystemEncodingConverter.convert(*I)) {
     default:
       hasMore = false;
       break;
@@ -251,7 +252,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
   // Look for the field width (if any).
   if (ParseFieldWidth(H, FS, Start, I, E,
                       FS.usesPositionalArg() ? nullptr : &argIndex,
-                      FormatStrConverter))
+                      FromSystemEncodingConverter))
     return true;
 
   if (I == E) {
@@ -262,7 +263,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
   }
 
   // Look for the precision (if any).
-  if (FormatStrConverter.convert(*I) == '.') {
+  if (FromSystemEncodingConverter.convert(*I) == '.') {
     ++I;
     if (I == E) {
       if (Warn)
@@ -272,7 +273,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
 
     if (ParsePrecision(H, FS, Start, I, E,
                        FS.usesPositionalArg() ? nullptr : &argIndex,
-                       FormatStrConverter))
+                       FromSystemEncodingConverter))
       return true;
 
     if (I == E) {
@@ -283,11 +284,12 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
     }
   }
 
-  if (ParseVectorModifier(H, FS, I, E, LO, FormatStrConverter))
+  if (ParseVectorModifier(H, FS, I, E, LO, FromSystemEncodingConverter))
     return true;
 
   // Look for the length modifier.
-  if (ParseLengthModifier(FS, I, E, LO, FormatStrConverter) && I == E) {
+  if (ParseLengthModifier(FS, I, E, LO, FromSystemEncodingConverter) &&
+      I == E) {
     // No more characters left?
     if (Warn)
       H.HandleIncompleteSpecifier(Start, E - Start);
@@ -301,7 +303,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
   // enables better recovery, and we don't know if
   // these flags are applicable until later.
   const char *ObjCModifierFlagsStart = nullptr, *ObjCModifierFlagsEnd = nullptr;
-  if (FormatStrConverter.convert(*I) == '[') {
+  if (FromSystemEncodingConverter.convert(*I) == '[') {
     ObjCModifierFlagsStart = I;
     ++I;
     auto flagStart = I;
@@ -313,8 +315,9 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
         return true;
       }
       // Did we find the closing ']'?
-      if (FormatStrConverter.convert(*I) == ']') {
-        if (ParseObjCFlags(H, FS, flagStart, I, Warn, FormatStrConverter))
+      if (FromSystemEncodingConverter.convert(*I) == ']') {
+        if (ParseObjCFlags(H, FS, flagStart, I, Warn,
+                           FromSystemEncodingConverter))
           return true;
         ++I;
         break;
@@ -334,7 +337,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
   // Finally, look for the conversion specifier.
   const char *conversionPosition = I++;
   ConversionSpecifier::Kind k = ConversionSpecifier::InvalidSpecifier;
-  switch (FormatStrConverter.convert(*conversionPosition)) {
+  switch (FromSystemEncodingConverter.convert(*conversionPosition)) {
   default:
     break;
   // C99: 7.19.6.1 (section 8).
@@ -497,8 +500,8 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
       FS.setConversionSpecifier(CS);
     }
     // Assume the conversion takes one argument.
-    return !H.HandleInvalidPrintfConversionSpecifier(FS, Start, Len,
-                                                     FormatStrConverter);
+    return !H.HandleInvalidPrintfConversionSpecifier(
+        FS, Start, Len, FromSystemEncodingConverter);
   }
   return PrintfSpecifierResult(Start, FS);
 }

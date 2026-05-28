@@ -199,7 +199,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
 
   MaxBitIntWidth.reset();
 
-  FromSystemEncodingConverter = new llvm::TextEncodingConverter(
+  FromSystemEncodingConverter = std::make_unique<llvm::TextEncodingConverter>(
       std::move(*llvm::TextEncodingConverter::createNoopConverter()));
 }
 

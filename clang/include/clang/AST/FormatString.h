@@ -766,7 +766,7 @@ public:
   virtual bool HandleInvalidPrintfConversionSpecifier(
       const analyze_printf::PrintfSpecifier &FS, const char *startSpecifier,
       unsigned specifierLen,
-      const llvm::TextEncodingConverter &FormatStrConverter) {
+      const llvm::TextEncodingConverter &FromSystemEncodingConverter) {
     return true;
   }
 
@@ -785,7 +785,7 @@ public:
   virtual bool HandleInvalidScanfConversionSpecifier(
       const analyze_scanf::ScanfSpecifier &FS, const char *startSpecifier,
       unsigned specifierLen,
-      const llvm::TextEncodingConverter &FormatStrConverter) {
+      const llvm::TextEncodingConverter &FromSystemEncodingConverter) {
     return true;
   }
 

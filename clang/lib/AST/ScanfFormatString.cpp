@@ -81,8 +81,8 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   const char *I = Beg;
   const char *Start = nullptr;
   UpdateOnReturn<const char *> UpdateBeg(Beg, I);
-  const llvm::TextEncodingConverter &FormatStrConverter =
-      *Target.FormatStrConverter;
+  const llvm::TextEncodingConverter &FromSystemEncodingConverter =
+      *Target.FromSystemEncodingConverter;
   // Look for a '%' character that indicates the start of a format specifier.
   for (; I != E; ++I) {
     char c = *I;
@@ -92,7 +92,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
       return true;
     }
     SmallString<1> ConvertedChar;
-    FormatStrConverter.convert(StringRef(&c, 1), ConvertedChar);
+    FromSystemEncodingConverter.convert(StringRef(&c, 1), ConvertedChar);
     if (ConvertedChar[0] == '%') {
       Start = I++; // Record the start of the format specifier.
       break;
@@ -110,7 +110,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   }
 
   ScanfSpecifier FS;
-  if (ParseArgPosition(H, FS, Start, I, E, FormatStrConverter))
+  if (ParseArgPosition(H, FS, Start, I, E, FromSystemEncodingConverter))
     return true;
 
   if (I == E) {
@@ -120,7 +120,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   }
 
   // Look for '*' flag if it is present.
-  if (FormatStrConverter.convert(*I) == '*') {
+  if (FromSystemEncodingConverter.convert(*I) == '*') {
     FS.setSuppressAssignment(I);
     if (++I == E) {
       H.HandleIncompleteSpecifier(Start, E - Start);
@@ -130,8 +130,8 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
 
   // Look for the field width (if any).  Unlike printf, this is either
   // a fixed integer or isn't present.
-  const OptionalAmount &Amt =
-      clang::analyze_format_string::ParseAmount(I, E, FormatStrConverter);
+  const OptionalAmount &Amt = clang::analyze_format_string::ParseAmount(
+      I, E, FromSystemEncodingConverter);
   if (Amt.getHowSpecified() != OptionalAmount::NotSpecified) {
     assert(Amt.getHowSpecified() == OptionalAmount::Constant);
     FS.setFieldWidth(Amt);
@@ -144,7 +144,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   }
 
   // Look for the length modifier.
-  if (ParseLengthModifier(FS, I, E, LO, FormatStrConverter,
+  if (ParseLengthModifier(FS, I, E, LO, FromSystemEncodingConverter,
                           /*IsScanf=*/true) &&
       I == E) {
     // No more characters left?
@@ -161,7 +161,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   // Finally, look for the conversion specifier.
   const char *conversionPosition = I++;
   ScanfConversionSpecifier::Kind k = ScanfConversionSpecifier::InvalidSpecifier;
-  switch (FormatStrConverter.convert(*conversionPosition)) {
+  switch (FromSystemEncodingConverter.convert(*conversionPosition)) {
   default:
     break;
   case '%':
@@ -268,8 +268,8 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
       FS.setConversionSpecifier(CS);
     }
     // Assume the conversion takes one argument.
-    return !H.HandleInvalidScanfConversionSpecifier(FS, Beg, Len,
-                                                    FormatStrConverter);
+    return !H.HandleInvalidScanfConversionSpecifier(
+        FS, Beg, Len, FromSystemEncodingConverter);
   }
   return ScanfSpecifierResult(Start, FS);
 }

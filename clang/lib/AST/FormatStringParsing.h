@@ -37,41 +37,43 @@ namespace analyze_format_string {
 
 OptionalAmount
 ParseAmount(const char *&Beg, const char *E,
-            const llvm::TextEncodingConverter &FormatStrConverter);
+            const llvm::TextEncodingConverter &FromSystemEncodingConverter);
 
-OptionalAmount
-ParseNonPositionAmount(const char *&Beg, const char *E, unsigned &argIndex,
-                       const llvm::TextEncodingConverter &FormatStrConverter);
+OptionalAmount ParseNonPositionAmount(
+    const char *&Beg, const char *E, unsigned &argIndex,
+    const llvm::TextEncodingConverter &FromSystemEncodingConverter);
 
-OptionalAmount
-ParsePositionAmount(FormatStringHandler &H, const char *Start, const char *&Beg,
-                    const char *E, PositionContext p,
-                    const llvm::TextEncodingConverter &FormatStrConverter);
+OptionalAmount ParsePositionAmount(
+    FormatStringHandler &H, const char *Start, const char *&Beg, const char *E,
+    PositionContext p,
+    const llvm::TextEncodingConverter &FromSystemEncodingConverter);
 
-OptionalAmount
-ParsePositionAmount(FormatStringHandler &H, const char *Start, const char *&Beg,
-                    const char *E, PositionContext p,
-                    const llvm::TextEncodingConverter &FormatStrConverter);
+OptionalAmount ParsePositionAmount(
+    FormatStringHandler &H, const char *Start, const char *&Beg, const char *E,
+    PositionContext p,
+    const llvm::TextEncodingConverter &FromSystemEncodingConverter);
 
-bool ParseFieldWidth(FormatStringHandler &H, FormatSpecifier &CS,
-                     const char *Start, const char *&Beg, const char *E,
-                     unsigned *argIndex,
-                     const llvm::TextEncodingConverter &FormatStrConverter);
+bool ParseFieldWidth(
+    FormatStringHandler &H, FormatSpecifier &CS, const char *Start,
+    const char *&Beg, const char *E, unsigned *argIndex,
+    const llvm::TextEncodingConverter &FromSystemEncodingConverter);
 
-bool ParseArgPosition(FormatStringHandler &H, FormatSpecifier &CS,
-                      const char *Start, const char *&Beg, const char *E,
-                      const llvm::TextEncodingConverter &FormatStrConverter);
+bool ParseArgPosition(
+    FormatStringHandler &H, FormatSpecifier &CS, const char *Start,
+    const char *&Beg, const char *E,
+    const llvm::TextEncodingConverter &FromSystemEncodingConverter);
 
-bool ParseVectorModifier(FormatStringHandler &H, FormatSpecifier &FS,
-                         const char *&Beg, const char *E, const LangOptions &LO,
-                         const llvm::TextEncodingConverter &FormatStrConverter);
+bool ParseVectorModifier(
+    FormatStringHandler &H, FormatSpecifier &FS, const char *&Beg,
+    const char *E, const LangOptions &LO,
+    const llvm::TextEncodingConverter &FromSystemEncodingConverter);
 
 /// Returns true if a LengthModifier was parsed and installed in the
 /// FormatSpecifier& argument, and false otherwise.
-bool ParseLengthModifier(FormatSpecifier &FS, const char *&Beg, const char *E,
-                         const LangOptions &LO,
-                         const llvm::TextEncodingConverter &FormatStrConverter,
-                         bool IsScanf = false);
+bool ParseLengthModifier(
+    FormatSpecifier &FS, const char *&Beg, const char *E, const LangOptions &LO,
+    const llvm::TextEncodingConverter &FromSystemEncodingConverter,
+    bool IsScanf = false);
 
 /// Returns true if the invalid specifier in \p SpecifierBegin is a UTF-8
 /// string; check that it won't go further than \p FmtStrEnd and write
