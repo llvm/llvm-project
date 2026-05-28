@@ -2617,9 +2617,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       if (AttrOnCallSite && Fn->isReplaceableGlobalAllocationFunction()) {
         // A sane operator new returns a non-aliasing pointer and does not
         // read or write accessible memory.
-        auto Kind = Fn->getDeclName().getCXXOverloadedOperator();
         if (getCodeGenOpts().AssumeSaneOperatorNew &&
-            (Kind == OO_New || Kind == OO_Array_New)) {
+            Fn->getDeclName().isAnyOperatorNew()) {
           RetAttrs.addAttribute(llvm::Attribute::NoAlias);
           // FIXME: inaccessiblemem could cause issues if LTO makes the
           // previously inaccessible memory accessible after linking.
