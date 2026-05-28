@@ -326,10 +326,8 @@ bool AMDGPUDAGToDAGISel::matchLoadD16FromBuildVector(SDNode *N) const {
 }
 
 bool AMDGPUDAGToDAGISel::preprocessZeroExtend(SDNode *N) const {
-  // This is special case for common pattern of compare + select if it can be
+  // This is special case for zext from setcc if it can be
   // selected to SALU. The pattern will be directly selected to `s_cselect`, to
-  // This is special case for the common pattern of compare + select if it can
-  // be selected to SALU. The pattern will be directly selected to `s_cselect`,
   // to avoid an intermediate i1 virtual register which will be interpreted as a
   // lane mask.
   if (N->isDivergent())
@@ -360,10 +358,11 @@ bool AMDGPUDAGToDAGISel::preprocessZeroExtend(SDNode *N) const {
       CurDAG->getRegister(AMDGPU::SCC, MVT::i1), // Explicitly state SCC is read
       CopyToSCC.getValue(1)                      // Glue
   };
-  bool IsInt32 = ResType == MVT::i32;
-  unsigned SelectCode = IsInt32 ? AMDGPU::S_CSELECT_B32 : AMDGPU::S_CSELECT_B64;
-  MachineSDNode *CSelectNode = CurDAG->getMachineNode(
-      SelectCode, DL, CurDAG->getVTList(IsInt32 ? MVT::i32 : MVT::i64), Ops);
+
+  unsigned SelectCode =
+      ResType == MVT::i32 ? AMDGPU::S_CSELECT_B32 : AMDGPU::S_CSELECT_B64;
+  MachineSDNode *CSelectNode =
+      CurDAG->getMachineNode(SelectCode, DL, CurDAG->getVTList(ResType), Ops);
   CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), SDValue(CSelectNode, 0));
 
   return true;
