@@ -518,7 +518,7 @@ std::string StableString;
 
 // FIXME: Distinguish owner-borrow from interior-borrow.
 struct SinkOwnerBorrow {
-  std::string *dest_; // expected-note {{field 'dest_' dangles}}
+  std::string *dest_; // expected-note {{this field dangles}}
 
   SinkOwnerBorrow(std::string *dest, int n) : dest_(dest) { // expected-warning {{parameter which escapes to a field is later invalidated}}
     if (n > 0)
@@ -527,7 +527,7 @@ struct SinkOwnerBorrow {
 };
 
 struct SinkInteriorBorrow {
-  const char *dest_; // expected-note {{field 'dest_' dangles}}
+  const char *dest_; // expected-note {{this field dangles}}
 
   SinkInteriorBorrow(std::string *dest, int n) : dest_(dest->data()) { // expected-warning {{parameter which escapes to a field is later invalidated}}
     if (n > 0)
@@ -536,13 +536,13 @@ struct SinkInteriorBorrow {
 };
 
 struct S {
-  std::string_view FieldFromLocalVector; // expected-note {{field 'FieldFromLocalVector' dangles}}
-  std::string_view FieldFromByValueParamVector; // expected-note {{field 'FieldFromByValueParamVector' dangles}}
-  std::string_view FieldFromLocalString; // expected-note {{field 'FieldFromLocalString' dangles}}
-  std::string_view FieldFromByValueParamString; // expected-note {{field 'FieldFromByValueParamString' dangles}}
-  std::string_view FieldFromRefParamString; // expected-note {{field 'FieldFromRefParamString' dangles}}
-  int *FieldFromNew; // expected-note {{field 'FieldFromNew' dangles}}
-  int *FieldFromPointerParam; // expected-note {{field 'FieldFromPointerParam' dangles}}
+  std::string_view FieldFromLocalVector; // expected-note {{this field dangles}}
+  std::string_view FieldFromByValueParamVector; // expected-note {{this field dangles}}
+  std::string_view FieldFromLocalString; // expected-note {{this field dangles}}
+  std::string_view FieldFromByValueParamString; // expected-note {{this field dangles}}
+  std::string_view FieldFromRefParamString; // expected-note {{this field dangles}}
+  int *FieldFromNew; // expected-note {{this field dangles}}
+  int *FieldFromPointerParam; // expected-note {{this field dangles}}
   std::string_view FieldReassigned;
 
   void InvalidatedFieldLocalVector() {
@@ -594,15 +594,15 @@ struct S {
 
 namespace InvalidatedGlobal {
 std::string StableString;
-std::string_view GlobalFromLocalVector; // expected-note {{global variable 'GlobalFromLocalVector' dangles}}
-std::string_view GlobalFromByValueParamString; // expected-note {{global variable 'GlobalFromByValueParamString' dangles}}
-std::string_view GlobalFromRefParamString; // expected-note {{global variable 'GlobalFromRefParamString' dangles}}
-int *GlobalFromNew; // expected-note {{global variable 'GlobalFromNew' dangles}}
-int *GlobalFromPointerParam; // expected-note {{global variable 'GlobalFromPointerParam' dangles}}
+std::string_view GlobalFromLocalVector; // expected-note {{this global dangles}}
+std::string_view GlobalFromByValueParamString; // expected-note {{this global dangles}}
+std::string_view GlobalFromRefParamString; // expected-note {{this global dangles}}
+int *GlobalFromNew; // expected-note {{this global dangles}}
+int *GlobalFromPointerParam; // expected-note {{this global dangles}}
 std::string_view GlobalReassigned;
 
 struct S {
-  static std::string_view StaticMember; // expected-note {{static variable 'StaticMember' dangles}}
+  static std::string_view StaticMember; // expected-note {{this static storage dangles}}
 };
 
 void InvalidatedGlobalLocalVector() {
@@ -633,7 +633,7 @@ void InvalidatedGlobalDeleteParam(int *p) { // expected-warning {{parameter whic
 }
 
 void InvalidatedStaticLocalString() {
-  static std::string_view StaticFromLocalString; // expected-note {{static variable 'StaticFromLocalString' dangles}}
+  static std::string_view StaticFromLocalString; // expected-note {{this static storage dangles}}
   std::string s;
   StaticFromLocalString = s; // expected-warning {{object whose reference escapes to global or static storage is later invalidated}}
   s.clear(); // expected-note {{invalidated here}}

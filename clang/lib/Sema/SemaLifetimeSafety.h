@@ -100,13 +100,14 @@ public:
                           : diag::warn_lifetime_safety_dangling_field;
 
     S.Diag(IssueExpr->getExprLoc(), DiagID)
-        << getDiagSubjectDescription(IssueExpr) << IssueExpr->getSourceRange();
+        << getDiagSubjectDescription(IssueExpr)
+        << getDiagSubjectDescription(DanglingField)
+        << IssueExpr->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
     S.Diag(DanglingField->getLocation(),
-           diag::note_lifetime_safety_dangles_here)
-        << getDiagSubjectDescription(DanglingField)
+           diag::note_lifetime_safety_dangling_field_here)
         << DanglingField->getEndLoc();
   }
 
@@ -119,14 +120,20 @@ public:
                           : diag::warn_lifetime_safety_dangling_global;
 
     S.Diag(IssueExpr->getExprLoc(), DiagID)
-        << getDiagSubjectDescription(IssueExpr) << IssueExpr->getSourceRange();
+        << getDiagSubjectDescription(IssueExpr)
+        << getDiagSubjectDescription(DanglingGlobal)
+        << IssueExpr->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
-    S.Diag(DanglingGlobal->getLocation(),
-           diag::note_lifetime_safety_dangles_here)
-        << getDiagSubjectDescription(DanglingGlobal)
-        << DanglingGlobal->getEndLoc();
+    if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
+      S.Diag(DanglingGlobal->getLocation(),
+             diag::note_lifetime_safety_dangling_static_here)
+          << DanglingGlobal->getEndLoc();
+    else
+      S.Diag(DanglingGlobal->getLocation(),
+             diag::note_lifetime_safety_dangling_global_here)
+          << DanglingGlobal->getEndLoc();
   }
 
   void reportUseAfterInvalidation(const Expr *IssueExpr, const Expr *UseExpr,
@@ -174,8 +181,7 @@ public:
     S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
         << InvalidationExpr->getSourceRange();
     S.Diag(DanglingField->getLocation(),
-           diag::note_lifetime_safety_dangles_here)
-        << getDiagSubjectDescription(DanglingField)
+           diag::note_lifetime_safety_dangling_field_here)
         << DanglingField->getEndLoc();
   }
 
@@ -191,8 +197,7 @@ public:
     S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
         << InvalidationExpr->getSourceRange();
     S.Diag(DanglingField->getLocation(),
-           diag::note_lifetime_safety_dangles_here)
-        << getDiagSubjectDescription(DanglingField)
+           diag::note_lifetime_safety_dangling_field_here)
         << DanglingField->getEndLoc();
   }
 
@@ -207,10 +212,14 @@ public:
         << false << IssueExpr->getSourceRange();
     S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
         << InvalidationExpr->getSourceRange();
-    S.Diag(DanglingGlobal->getLocation(),
-           diag::note_lifetime_safety_dangles_here)
-        << getDiagSubjectDescription(DanglingGlobal)
-        << DanglingGlobal->getEndLoc();
+    if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
+      S.Diag(DanglingGlobal->getLocation(),
+             diag::note_lifetime_safety_dangling_static_here)
+          << DanglingGlobal->getEndLoc();
+    else
+      S.Diag(DanglingGlobal->getLocation(),
+             diag::note_lifetime_safety_dangling_global_here)
+          << DanglingGlobal->getEndLoc();
   }
 
   void reportInvalidatedGlobal(const ParmVarDecl *PVD,
@@ -224,10 +233,14 @@ public:
         << true << PVD->getSourceRange();
     S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
         << InvalidationExpr->getSourceRange();
-    S.Diag(DanglingGlobal->getLocation(),
-           diag::note_lifetime_safety_dangles_here)
-        << getDiagSubjectDescription(DanglingGlobal)
-        << DanglingGlobal->getEndLoc();
+    if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
+      S.Diag(DanglingGlobal->getLocation(),
+             diag::note_lifetime_safety_dangling_static_here)
+          << DanglingGlobal->getEndLoc();
+    else
+      S.Diag(DanglingGlobal->getLocation(),
+             diag::note_lifetime_safety_dangling_global_here)
+          << DanglingGlobal->getEndLoc();
   }
 
   void suggestLifetimeboundToParmVar(WarningScope Scope,
@@ -262,8 +275,7 @@ public:
           << EscapeExpr->getSourceRange();
     else if (const auto *EscapeField = Target.dyn_cast<const FieldDecl *>())
       S.Diag(EscapeField->getLocation(),
-             diag::note_lifetime_safety_escapes_here)
-          << getDiagSubjectDescription(EscapeField)
+             diag::note_lifetime_safety_escapes_to_field_here)
           << EscapeField->getSourceRange();
   }
 
@@ -370,8 +382,9 @@ public:
            diag::warn_lifetime_safety_noescape_escapes)
         << ParmWithNoescape->getSourceRange();
 
-    S.Diag(EscapeField->getLocation(), diag::note_lifetime_safety_escapes_here)
-        << getDiagSubjectDescription(EscapeField) << EscapeField->getEndLoc();
+    S.Diag(EscapeField->getLocation(),
+           diag::note_lifetime_safety_escapes_to_field_here)
+        << EscapeField->getEndLoc();
   }
 
   void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
@@ -379,8 +392,14 @@ public:
     S.Diag(ParmWithNoescape->getBeginLoc(),
            diag::warn_lifetime_safety_noescape_escapes)
         << ParmWithNoescape->getSourceRange();
-    S.Diag(EscapeGlobal->getLocation(), diag::note_lifetime_safety_escapes_here)
-        << getDiagSubjectDescription(EscapeGlobal) << EscapeGlobal->getEndLoc();
+    if (EscapeGlobal->isStaticLocal() || EscapeGlobal->isStaticDataMember())
+      S.Diag(EscapeGlobal->getLocation(),
+             diag::note_lifetime_safety_escapes_to_static_storage_here)
+          << EscapeGlobal->getEndLoc();
+    else
+      S.Diag(EscapeGlobal->getLocation(),
+             diag::note_lifetime_safety_escapes_to_global_here)
+          << EscapeGlobal->getEndLoc();
   }
 
   void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) override {

@@ -2447,8 +2447,8 @@ void from_template_instantiation() {
 }
 
 struct FieldInitFromLifetimebound {
-  S value; // expected-note {{field 'value' dangles}}
-  FieldInitFromLifetimebound() : value(getS(std::string("temp"))) {} // expected-warning {{stack memory associated with local temporary object escapes to a field which will dangle}}
+  S value; // expected-note {{this field dangles}}
+  FieldInitFromLifetimebound() : value(getS(std::string("temp"))) {} // expected-warning {{stack memory associated with local temporary object escapes to a field 'value' which will dangle}}
 };
 
 S S::return_self_after_registration() const {
@@ -2637,13 +2637,13 @@ void nested_local_pointer() {
 }
 
 struct PFieldFromParam {
-  Pointer<Bar> value;                      // expected-note {{field 'value' dangles}}
-  PFieldFromParam(Bar bar) : value(bar) {} // expected-warning {{stack memory associated with parameter 'bar' escapes to a field which will dangle}}
+  Pointer<Bar> value;                      // expected-note {{this field dangles}}
+  PFieldFromParam(Bar bar) : value(bar) {} // expected-warning {{stack memory associated with parameter 'bar' escapes to a field 'value' which will dangle}}
 };
 
 struct PFieldFromTemp {
-  Pointer<Bar> value;                // expected-note {{field 'value' dangles}}
-  PFieldFromTemp() : value(Bar{}) {} // expected-warning {{stack memory associated with local temporary object escapes to a field which will dangle}}
+  Pointer<Bar> value;                // expected-note {{this field dangles}}
+  PFieldFromTemp() : value(Bar{}) {} // expected-warning {{stack memory associated with local temporary object escapes to a field 'value' which will dangle}}
 };
 
 } // namespace gslpointer_construction_from_lifetimebound
@@ -3198,19 +3198,19 @@ struct S2 : S {
 
 namespace CXXDefaultInitExprTests {
 struct Holder {
-  std::string_view view = std::string("temporary"); // expected-warning {{stack memory associated with local temporary object escapes to a field which will dangle}} expected-note {{field 'view' dangles}}
+  std::string_view view = std::string("temporary"); // expected-warning {{stack memory associated with local temporary object escapes to a field 'view' which will dangle}} expected-note {{this field dangles}}
   Holder() {}
 };
 } // namespace CXXDefaultInitExprTests
 
 namespace base_class_fields {
-struct X { int* x; }; // expected-note {{field 'x' dangles}}
+struct X { int* x; }; // expected-note {{this field dangles}}
 struct Y : X {
   int* y;
   void bar() {
     {
       int a;
-      x = &a; // expected-warning {{stack memory associated with local variable 'a' escapes to a field which will dangle}}
+      x = &a; // expected-warning {{stack memory associated with local variable 'a' escapes to a field 'x' which will dangle}}
     }
     (void)x;
   }
