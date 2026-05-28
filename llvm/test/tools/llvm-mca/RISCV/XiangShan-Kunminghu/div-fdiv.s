@@ -17,13 +17,13 @@ fsqrt.d fa0, fa1
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      12
-# CHECK-NEXT: Total Cycles:      163
+# CHECK-NEXT: Total Cycles:      123
 # CHECK-NEXT: Total uOps:        12
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    0.07
-# CHECK-NEXT: IPC:               0.07
-# CHECK-NEXT: Block RThroughput: 160.0
+# CHECK-NEXT: uOps Per Cycle:    0.10
+# CHECK-NEXT: IPC:               0.10
+# CHECK-NEXT: Block RThroughput: 120.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -34,18 +34,18 @@ fsqrt.d fa0, fa1
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      20    20.00                       div	a0, a1, a2
-# CHECK-NEXT:  1      20    20.00                       divu	a0, a1, a2
-# CHECK-NEXT:  1      20    20.00                       divw	a0, a1, a2
-# CHECK-NEXT:  1      20    20.00                       divuw	a0, a1, a2
-# CHECK-NEXT:  1      20    20.00                       rem	a0, a1, a2
-# CHECK-NEXT:  1      20    20.00                       remu	a0, a1, a2
-# CHECK-NEXT:  1      20    20.00                       remw	a0, a1, a2
-# CHECK-NEXT:  1      20    20.00                       remuw	a0, a1, a2
-# CHECK-NEXT:  1      10    0.50                        fdiv.s	fa0, fa1, fa2
-# CHECK-NEXT:  1      15    0.50                        fdiv.d	fa0, fa1, fa2
-# CHECK-NEXT:  1      10    0.50                        fsqrt.s	fa0, fa1
-# CHECK-NEXT:  1      15    0.50                        fsqrt.d	fa0, fa1
+# CHECK-NEXT:  1      19    19.00                       div	a0, a1, a2
+# CHECK-NEXT:  1      19    19.00                       divu	a0, a1, a2
+# CHECK-NEXT:  1      11    11.00                       divw	a0, a1, a2
+# CHECK-NEXT:  1      11    11.00                       divuw	a0, a1, a2
+# CHECK-NEXT:  1      19    19.00                       rem	a0, a1, a2
+# CHECK-NEXT:  1      19    19.00                       remu	a0, a1, a2
+# CHECK-NEXT:  1      11    11.00                       remw	a0, a1, a2
+# CHECK-NEXT:  1      11    11.00                       remuw	a0, a1, a2
+# CHECK-NEXT:  1      9     4.50                        fdiv.s	fa0, fa1, fa2
+# CHECK-NEXT:  1      14    7.00                        fdiv.d	fa0, fa1, fa2
+# CHECK-NEXT:  1      10    5.00                        fsqrt.s	fa0, fa1
+# CHECK-NEXT:  1      16    8.00                        fsqrt.d	fa0, fa1
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - XSPipeALU0
@@ -71,30 +71,31 @@ fsqrt.d fa0, fa1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13.0] [13.1] [13.2] [14.0] [14.1] [15.0] [15.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -     160.00  -     2.00    -     2.00    -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -     120.00  -     30.00   -     19.00   -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13.0] [13.1] [13.2] [14.0] [14.1] [15.0] [15.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -     20.00   -      -      -      -      -      -      -      -      -      -      -      -     div	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -      -      -      -     20.00   -      -      -      -      -      -      -      -      -      -      -      -     divu	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -      -      -      -     20.00   -      -      -      -      -      -      -      -      -      -      -      -     divw	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -      -      -      -     20.00   -      -      -      -      -      -      -      -      -      -      -      -     divuw	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -      -      -      -     20.00   -      -      -      -      -      -      -      -      -      -      -      -     rem	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -      -      -      -     20.00   -      -      -      -      -      -      -      -      -      -      -      -     remu	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -      -      -      -     20.00   -      -      -      -      -      -      -      -      -      -      -      -     remw	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -      -      -      -     20.00   -      -      -      -      -      -      -      -      -      -      -      -     remuw	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -     fdiv.s	fa0, fa1, fa2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -     fdiv.d	fa0, fa1, fa2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -     fsqrt.s	fa0, fa1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -     fsqrt.d	fa0, fa1
+# CHECK-NEXT:  -      -      -      -      -      -      -     19.00   -      -      -      -      -      -      -      -      -      -      -      -     div	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -      -     19.00   -      -      -      -      -      -      -      -      -      -      -      -     divu	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -      -      -      -      -      -     divw	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -      -      -      -      -      -     divuw	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -      -     19.00   -      -      -      -      -      -      -      -      -      -      -      -     rem	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -      -     19.00   -      -      -      -      -      -      -      -      -      -      -      -     remu	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -      -      -      -      -      -     remw	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -      -      -      -      -      -     remuw	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -      -     fdiv.s	fa0, fa1, fa2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     14.00   -      -      -      -      -      -      -      -      -      -     fdiv.d	fa0, fa1, fa2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -      -     fsqrt.s	fa0, fa1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     16.00   -      -      -      -      -      -      -      -      -      -     fsqrt.d	fa0, fa1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          0123456789          012
 
-# CHECK:      [0,0]     DeeeeeeeeeeeeeeeeeeeeER  .    .    .    .    .    .    .    . .   div	a0, a1, a2
-# CHECK-NEXT: [0,1]     D====================eeeeeeeeeeeeeeeeeeeeER  .    .    .    . .   divu	a0, a1, a2
-# CHECK-NEXT: [0,2]     D========================================eeeeeeeeeeeeeeeeeeeeER   divw	a0, a1, a2
+# CHECK:      [0,0]     DeeeeeeeeeeeeeeeeeeeER   .    .    .    .    .    .    .    . .   div	a0, a1, a2
+# CHECK-NEXT: [0,1]     D===================eeeeeeeeeeeeeeeeeeeER    .    .    .    . .   divu	a0, a1, a2
+# CHECK-NEXT: [0,2]     D======================================eeeeeeeeeeeER   .    . .   divw	a0, a1, a2
+# CHECK-NEXT: [0,3]     D=================================================eeeeeeeeeeeER   divuw	a0, a1, a2
 # CHECK-NEXT: Truncated display due to cycle limit
 
 # CHECK:      Average Wait times (based on the timeline view):
@@ -105,15 +106,15 @@ fsqrt.d fa0, fa1
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       div	a0, a1, a2
-# CHECK-NEXT: 1.     1     21.0   21.0   0.0       divu	a0, a1, a2
-# CHECK-NEXT: 2.     1     41.0   41.0   0.0       divw	a0, a1, a2
-# CHECK-NEXT: 3.     1     61.0   61.0   0.0       divuw	a0, a1, a2
-# CHECK-NEXT: 4.     1     81.0   81.0   0.0       rem	a0, a1, a2
-# CHECK-NEXT: 5.     1     101.0  101.0  0.0       remu	a0, a1, a2
-# CHECK-NEXT: 6.     1     120.0  120.0  0.0       remw	a0, a1, a2
-# CHECK-NEXT: 7.     1     140.0  140.0  0.0       remuw	a0, a1, a2
-# CHECK-NEXT: 8.     1     1.0    1.0    149.0     fdiv.s	fa0, fa1, fa2
-# CHECK-NEXT: 9.     1     1.0    1.0    144.0     fdiv.d	fa0, fa1, fa2
-# CHECK-NEXT: 10.    1     2.0    2.0    148.0     fsqrt.s	fa0, fa1
-# CHECK-NEXT: 11.    1     2.0    2.0    143.0     fsqrt.d	fa0, fa1
-# CHECK-NEXT:        1     47.7   47.7   48.7      <total>
+# CHECK-NEXT: 1.     1     20.0   20.0   0.0       divu	a0, a1, a2
+# CHECK-NEXT: 2.     1     39.0   39.0   0.0       divw	a0, a1, a2
+# CHECK-NEXT: 3.     1     50.0   50.0   0.0       divuw	a0, a1, a2
+# CHECK-NEXT: 4.     1     61.0   61.0   0.0       rem	a0, a1, a2
+# CHECK-NEXT: 5.     1     80.0   80.0   0.0       remu	a0, a1, a2
+# CHECK-NEXT: 6.     1     98.0   98.0   0.0       remw	a0, a1, a2
+# CHECK-NEXT: 7.     1     109.0  109.0  0.0       remuw	a0, a1, a2
+# CHECK-NEXT: 8.     1     1.0    1.0    110.0     fdiv.s	fa0, fa1, fa2
+# CHECK-NEXT: 9.     1     1.0    1.0    105.0     fdiv.d	fa0, fa1, fa2
+# CHECK-NEXT: 10.    1     10.0   10.0   100.0     fsqrt.s	fa0, fa1
+# CHECK-NEXT: 11.    1     15.0   15.0   89.0      fsqrt.d	fa0, fa1
+# CHECK-NEXT:        1     40.4   40.4   33.7      <total>

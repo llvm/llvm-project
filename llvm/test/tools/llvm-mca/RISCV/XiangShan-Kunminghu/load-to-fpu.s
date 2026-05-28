@@ -6,12 +6,12 @@ fadd.s fa2, fa1, fa3
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      2
-# CHECK-NEXT: Total Cycles:      10
+# CHECK-NEXT: Total Cycles:      8
 # CHECK-NEXT: Total uOps:        2
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    0.20
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    0.25
+# CHECK-NEXT: IPC:               0.25
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -23,7 +23,7 @@ fadd.s fa2, fa1, fa3
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      6     0.33    *                   fld	fa1, 0(a0)
+# CHECK-NEXT:  1      4     0.33    *                   fld	fa1, 0(a0)
 # CHECK-NEXT:  1      1     0.33                        fadd.s	fa2, fa1, fa3
 
 # CHECK:      Resources:
@@ -58,10 +58,10 @@ fadd.s fa2, fa1, fa3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     fadd.s	fa2, fa1, fa3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: Index     01234567
 
-# CHECK:      [0,0]     DeeeeeeER.   fld	fa1, 0(a0)
-# CHECK-NEXT: [0,1]     D======eER   fadd.s	fa2, fa1, fa3
+# CHECK:      [0,0]     DeeeeER.   fld	fa1, 0(a0)
+# CHECK-NEXT: [0,1]     D====eER   fadd.s	fa2, fa1, fa3
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -71,5 +71,5 @@ fadd.s fa2, fa1, fa3
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       fld	fa1, 0(a0)
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       fadd.s	fa2, fa1, fa3
-# CHECK-NEXT:        1     4.0    0.5    0.0       <total>
+# CHECK-NEXT: 1.     1     5.0    0.0    0.0       fadd.s	fa2, fa1, fa3
+# CHECK-NEXT:        1     3.0    0.5    0.0       <total>

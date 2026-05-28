@@ -6,12 +6,12 @@ addi a2, a1, 1
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      2
-# CHECK-NEXT: Total Cycles:      9
+# CHECK-NEXT: Total Cycles:      7
 # CHECK-NEXT: Total uOps:        2
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    0.22
-# CHECK-NEXT: IPC:               0.22
+# CHECK-NEXT: uOps Per Cycle:    0.29
+# CHECK-NEXT: IPC:               0.29
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -23,7 +23,7 @@ addi a2, a1, 1
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      6     0.33    *                   ld	a1, 0(a0)
+# CHECK-NEXT:  1      4     0.33    *                   ld	a1, 0(a0)
 # CHECK-NEXT:  1      1     0.25                        addi	a2, a1, 1
 
 # CHECK:      Resources:
@@ -58,10 +58,10 @@ addi a2, a1, 1
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     addi	a2, a1, 1
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: Index     0123456
 
-# CHECK:      [0,0]     DeeeeeeER   ld	a1, 0(a0)
-# CHECK-NEXT: [0,1]     D====eE-R   addi	a2, a1, 1
+# CHECK:      [0,0]     DeeeeER   ld	a1, 0(a0)
+# CHECK-NEXT: [0,1]     D==eE-R   addi	a2, a1, 1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -71,5 +71,5 @@ addi a2, a1, 1
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld	a1, 0(a0)
-# CHECK-NEXT: 1.     1     5.0    0.0    1.0       addi	a2, a1, 1
-# CHECK-NEXT:        1     3.0    0.5    0.5       <total>
+# CHECK-NEXT: 1.     1     3.0    0.0    1.0       addi	a2, a1, 1
+# CHECK-NEXT:        1     2.0    0.5    0.5       <total>

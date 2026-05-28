@@ -5,12 +5,12 @@ fmadd.s fa0, fa1, fa2, fa0
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      100
-# CHECK-NEXT: Total Cycles:      303
+# CHECK-NEXT: Total Cycles:      403
 # CHECK-NEXT: Total uOps:        100
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    0.33
-# CHECK-NEXT: IPC:               0.33
+# CHECK-NEXT: uOps Per Cycle:    0.25
+# CHECK-NEXT: IPC:               0.25
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -22,7 +22,7 @@ fmadd.s fa0, fa1, fa2, fa0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      3     0.33                        fmadd.s	fa0, fa1, fa2, fa0
+# CHECK-NEXT:  1      4     0.33                        fmadd.s	fa0, fa1, fa2, fa0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - XSPipeALU0
