@@ -9,6 +9,12 @@
 #ifndef LLVM_LIBC_MACROS_FLOAT_MACROS_H
 #define LLVM_LIBC_MACROS_FLOAT_MACROS_H
 
+// __has_builtin is a Clang extension; GCC < 10 doesn't define it, which
+// turns a bare `#if __has_builtin(...)` into a preprocessor syntax error.
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+
 #ifndef FLT_RADIX
 #define FLT_RADIX __FLT_RADIX__
 #endif // FLT_RADIX
