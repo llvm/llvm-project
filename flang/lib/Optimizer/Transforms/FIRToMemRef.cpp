@@ -737,8 +737,7 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   //     Projected complex %re/%im on a bare ref uses the shapeVec path with
   //     strides scaled by two scalar slots per complex.
   const bool boxNeedsDescriptorStrides =
-      firMemrefIsBox &&
-      (!firMemrefIsEmbox || sliceInfo.hasProjectedSlice);
+      firMemrefIsBox && (!firMemrefIsEmbox || sliceInfo.hasProjectedSlice);
   const bool descriptorOwnsLayout =
       shapeVec.empty() || boxNeedsDescriptorStrides;
   if (descriptorOwnsLayout) {
@@ -783,7 +782,8 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
         stride = arith::MulIOp::create(rewriter, loc, shapeVec[j], stride);
       if (complexPartIdx)
         stride = arith::MulIOp::create(
-            rewriter, loc, stride, arith::ConstantIndexOp::create(rewriter, loc, 2));
+            rewriter, loc, stride,
+            arith::ConstantIndexOp::create(rewriter, loc, 2));
       strides.push_back(castTypeToIndexType(stride, rewriter));
     }
 
