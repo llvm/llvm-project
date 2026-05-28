@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/stdint_proxy.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/stdlib/str_to_util.h"
+#include "src/__support/str_to_integer.h"
 
 #include "StrtolTest.h"
 #include "test/UnitTest/Test.h"
@@ -17,12 +18,26 @@ namespace LIBC_NAMESPACE_DECL {
 
 int32_t strtoint32(const char *__restrict str, char **__restrict str_end,
                    int base) {
-  return internal::str_to_helper<int32_t>(str, str_end, base);
+  auto result = internal::strtointeger<int32_t>(str, base);
+  if (result.has_error())
+    libc_errno = result.error;
+
+  if (str_end != nullptr)
+    *str_end = const_cast<char *>(str + result.parsed_len);
+
+  return result;
 }
 
 uint32_t strtouint32(const char *__restrict str, char **__restrict str_end,
                      int base) {
-  return internal::str_to_helper<uint32_t>(str, str_end, base);
+  auto result = internal::strtointeger<uint32_t>(str, base);
+  if (result.has_error())
+    libc_errno = result.error;
+
+  if (str_end != nullptr)
+    *str_end = const_cast<char *>(str + result.parsed_len);
+
+  return result;
 }
 } // namespace LIBC_NAMESPACE_DECL
 

@@ -7,13 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/atoll.h"
+#include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/stdlib/str_to_util.h"
+#include "src/__support/str_to_integer.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long long, atoll, (const char *str)) {
-  return internal::str_to_helper<long long, char>(str, nullptr, 10);
+  auto result = internal::strtointeger<long long>(str, 10);
+  if (result.has_error())
+    libc_errno = result.error;
+
+  return result;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

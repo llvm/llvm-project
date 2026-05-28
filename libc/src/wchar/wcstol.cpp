@@ -7,15 +7,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/wchar/wcstol.h"
+#include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/stdlib/str_to_util.h"
+#include "src/__support/str_to_integer.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long, wcstol,
                    (const wchar_t *__restrict str, wchar_t **__restrict str_end,
                     int base)) {
-  return internal::str_to_helper<long>(str, str_end, base);
+  auto result = internal::strtointeger<long>(str, base);
+  if (result.has_error())
+    libc_errno = result.error;
+
+  if (str_end != nullptr)
+    *str_end = const_cast<wchar_t *>(str + result.parsed_len);
+
+  return result;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
