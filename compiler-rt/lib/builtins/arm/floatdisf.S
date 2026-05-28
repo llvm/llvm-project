@@ -70,7 +70,7 @@ LOCAL_LABEL(normalise):
   // answer is because 0x4e800000 can't be represented in the immediate field
   // of an AArch32 data-processing instruction, so we can't avoid using two
   // instructions.
-  add     r2, r2, #30 << 23
+  add     r2, r2, #(30 << 23)
 
   // Start setting up r3 to be the exponent adjustment, and set xh to be the
   // highest _nonzero_ word of the input. If xh = 0, set r3 = 0 and copy xl
