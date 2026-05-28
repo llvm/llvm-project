@@ -365,14 +365,12 @@ static auto isStatusPtrReturningCall() {
 
 static auto ofClassReturnIfErrorAdaptor() {
   using namespace ::clang::ast_matchers; // NOLINT: Too many names
-  // TODO: b/517587184 - remove absl version once supported upstream.
   return ofClass(
       hasName("::absl::status_macro_internal::ReturnIfErrorAdaptor"));
 }
 
 static auto returnIfErrorAdaptorClass() {
   using namespace ::clang::ast_matchers; // NOLINT: Too many names
-  // TODO: b/517587184 - remove absl version once supported upstream.
   return cxxRecordDecl(
       hasName("::absl::status_macro_internal::ReturnIfErrorAdaptor"));
 }
@@ -393,7 +391,6 @@ static auto isReturnIfErrorAdaptorOperatorBoolCall() {
 
 static auto isMacroAdaptorCall() {
   using namespace ::clang::ast_matchers; // NOLINT: Too many names
-  // TODO: b/517587184 - remove absl version once supported upstream.
   return callExpr(callee(
       functionDecl(hasName("::absl::status_macro_internal::MacroAdaptor"),
                    returns(returnIfErrorAdaptorType()))));
@@ -509,7 +506,6 @@ static bool isStatusIsMatcherType(QualType Type) {
 }
 
 static bool IsMacroAdaptorType(clang::QualType type) {
-  // TODO: b/517587184 - remove absl version once supported upstream.
   return isTypeNamed(type, {"absl", "status_macro_internal"},
                      "ReturnIfErrorAdaptor");
 }
