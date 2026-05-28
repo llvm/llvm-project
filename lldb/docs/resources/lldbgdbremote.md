@@ -1330,7 +1330,13 @@ send packet: $qsProcessInfo#00
 read packet: $pid:59992;ppid:192;uid:7746;gid:11;euid:7746;egid:11;name:6d64776f726b6572;triple:x86_64-apple-macosx;#00
 send packet: $qsProcessInfo#00
 read packet: $E04#00
+send packet: $qfProcessInfo:name_match:contains;name:616263;all_users:0;triple:arm64-unknown-linux-gnu;#da
+read packet: $E03#a8
 ```
+
+Note that triples in this packet are normal strings, but triples
+received in response are hex encoded strings.  This difference was
+unintentional but cannot be changed at this point.
 
 **Priority To Implement:** Required
 
