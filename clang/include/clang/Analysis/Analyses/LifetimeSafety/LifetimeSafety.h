@@ -62,9 +62,6 @@ public:
   virtual ~LifetimeSafetySemaHelper() = default;
 
   virtual void
-  reportAliasingChain(llvm::ArrayRef<const Expr *> OriginExprChain) {}
-
-  virtual void
   reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
                       const Expr *MovedExpr, SourceLocation FreeLoc,
                       llvm::ArrayRef<const Expr *> OriginExprChain) {}

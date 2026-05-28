@@ -599,7 +599,8 @@ void uaf_via_inferred_lifetimebound() {
   std::function<void()> f = []() {};
   {
     int local;
-    f = return_lambda_capturing_param(local); // expected-warning {{local variable 'local' does not live long enough}}
+    f = return_lambda_capturing_param(local); // expected-warning {{local variable 'local' does not live long enough}} \
+                                              // expected-note {{local temporary object aliases the storage of local variable 'local'}}
   } // expected-note {{destroyed here}}
   (void)f; // expected-note {{later used here}}
 }
@@ -622,7 +623,8 @@ void test_inference() {
   std::unique_ptr<LifetimeBoundCtor> ptr;
   {
     MyObj obj;
-    ptr = create_target(obj); // expected-warning {{local variable 'obj' does not live long enough}}
+    ptr = create_target(obj); // expected-warning {{local variable 'obj' does not live long enough}} \
+                              // expected-note {{local temporary object aliases the storage of local variable 'obj'}}
   } // expected-note {{destroyed here}}
   (void)ptr; // expected-note {{later used here}}
 }

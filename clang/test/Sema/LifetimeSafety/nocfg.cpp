@@ -245,7 +245,8 @@ std::string_view containerWithAnnotatedElements() {
   use(c1);                                                // cfg-note {{later used here}}
 
   c1 = std::vector<std::string>().at(0); // expected-warning {{object backing the pointer}} \
-                                         // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
+                                         // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                         // cfg-note {{local temporary object aliases the storage of local temporary object}}
   use(c1);                               // cfg-note {{later used here}}
 
   // no warning on constructing from gsl-pointer
@@ -862,7 +863,8 @@ std::string_view test1_1() {
                                             // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(t1);                                  // cfg-note {{later used here}}
   t1 = Ref(std::string()); // expected-warning {{object backing}} \
-                           // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
+                           // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                           // cfg-note {{local temporary object aliases the storage of local temporary object}}
   use(t1);                 // cfg-note {{later used here}}
   return Ref(std::string()); // expected-warning {{returning address}} \
                              // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
@@ -873,7 +875,8 @@ std::string_view test1_2() {
                                             // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(t2);                                  // cfg-note {{later used here}}
   t2 = TakeSv(std::string()); // expected-warning {{object backing}} \
-                              // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
+                              // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                              // cfg-note {{local temporary object aliases the storage of local temporary object}}
   use(t2);                    // cfg-note {{later used here}}
 
   return TakeSv(std::string()); // expected-warning {{returning address}} \
@@ -885,7 +888,8 @@ std::string_view test1_3() {
                                                    // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(t3);                                         // cfg-note {{later used here}}
   t3 = TakeStrRef(std::string()); // expected-warning {{object backing}} \
-                                  // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
+                                  // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                  // cfg-note {{local temporary object aliases the storage of local temporary object}}
   use(t3);                        // cfg-note {{later used here}}
   return TakeStrRef(std::string()); // expected-warning {{returning address}} \
                                     // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
@@ -910,7 +914,8 @@ std::string_view test2_1(Foo<std::string> r1, Foo<std::string_view> r2) {
                                                   // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(t1);                                        // cfg-note {{later used here}}
   t1 = Foo<std::string>().get(); // expected-warning {{object backing}} \
-                                 // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
+                                 // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                 // cfg-note {{local temporary object aliases the storage of local temporary object}}
   use(t1);                       // cfg-note {{later used here}}
   return r1.get(); // expected-warning {{address of stack}} \
                    // cfg-warning {{stack memory associated with parameter 'r1' is returned}} cfg-note {{returned here}}
@@ -941,7 +946,7 @@ struct [[gsl::Pointer]] Pointer {
 Pointer test3(Bar bar) {
   Pointer p = Pointer(Bar()); // expected-warning {{temporary}} cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(p);                     // cfg-note {{later used here}}
-  p = Pointer(Bar());         // expected-warning {{object backing}} cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
+  p = Pointer(Bar());         // expected-warning {{object backing}} cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} cfg-note {{local temporary object aliases the storage of local temporary object}}
   use(p);                     // cfg-note {{later used here}}
   return bar;                 // expected-warning {{address of stack}} cfg-warning {{stack memory associated with parameter 'bar' is returned}} cfg-note {{returned here}}
 }
@@ -1028,9 +1033,12 @@ void operator_star_arrow_reference() {
   const std::string& r = *v.begin();
 
   auto temporary = []() { return std::vector<std::string>{{"1"}}; };
-  const char* x = temporary().begin()->data();    // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
-  const char* y = (*temporary().begin()).data();  // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
-  const std::string& z = (*temporary().begin());  // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
+  const char* x = temporary().begin()->data();    // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                                  // cfg-note {{local temporary object aliases the storage of local temporary object}}
+  const char* y = (*temporary().begin()).data();  // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                                  // cfg-note {{local temporary object aliases the storage of local temporary object}}
+  const std::string& z = (*temporary().begin());  // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                                  // cfg-note {{local temporary object aliases the storage of local temporary object}}
 
   use(p, q, r, x, y, z); // cfg-note 3 {{later used here}}
 }
@@ -1042,9 +1050,9 @@ void operator_star_arrow_of_iterators_false_positive_no_cfg_analysis() {
   const std::string& r = (*v.begin()).second;
 
   auto temporary = []() { return std::vector<std::pair<int, std::string>>{{1, "1"}}; };
-  const char* x = temporary().begin()->second.data();   // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
-  const char* y = (*temporary().begin()).second.data(); // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
-  const std::string& z = (*temporary().begin()).second; // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
+  const char* x = temporary().begin()->second.data();   // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} cfg-note {{local temporary object aliases the storage of local temporary object}}
+  const char* y = (*temporary().begin()).second.data(); // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} cfg-note {{local temporary object aliases the storage of local temporary object}}
+  const std::string& z = (*temporary().begin()).second; // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} cfg-note {{local temporary object aliases the storage of local temporary object}}
 
   use(p, q, r, x, y, z); // cfg-note 3 {{later used here}}
 }

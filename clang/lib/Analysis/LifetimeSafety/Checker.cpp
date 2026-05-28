@@ -271,9 +271,11 @@ public:
           for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
                Cur = Cur->peelOuterOrigin())
             if (LoanPropagation.getLoans(Cur->getOuterOriginID(), UF)
-                    .contains(LID))
+                    .contains(LID)) {
               OriginFlowChain = LoanPropagation.buildOriginFlowChain(
                   FactMgr, UF, Cur->getOuterOriginID(), LID);
+              break;
+            }
 
           const llvm::SmallVector<const Expr *> OriginExprChain =
               buildExprOrDeclChain(OriginFlowChain);
