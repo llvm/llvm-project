@@ -67,22 +67,12 @@ static cl::opt<IntrinsicCostStrategy> IntrinsicCost(
             "type-based-intrinsic-cost",
             "Calculate the intrinsic cost based only on argument types")));
 
-cl::opt<unsigned> IntrinsicNumResults(
-    "intrinsic-num-results", cl::init(1), cl::Hidden,
-    cl::desc("Number of results that the result of this intrinsic will be "
-             "split into"));
-
 #define CM_NAME "cost-model"
 #define DEBUG_TYPE CM_NAME
 
 static InstructionCost getCost(Instruction &Inst, TTI::TargetCostKind CostKind,
                                TargetTransformInfo &TTI) {
   auto *II = dyn_cast<IntrinsicInst>(&Inst);
-  if (II && II->getIntrinsicID() == Intrinsic::get_active_lane_mask)
-    return TTI.getActiveLaneMaskCost(
-        II->getType(), II->getArgOperand(0)->getType(), FastMathFlags(),
-        CostKind, IntrinsicNumResults);
-
   if (II && IntrinsicCost != IntrinsicCostStrategy::InstructionCost) {
     IntrinsicCostAttributes ICA(
         II->getIntrinsicID(), *II, InstructionCost::getInvalid(),

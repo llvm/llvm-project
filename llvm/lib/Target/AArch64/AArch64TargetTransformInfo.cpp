@@ -5679,33 +5679,16 @@ InstructionCost AArch64TTIImpl::getActiveLaneMaskCost(
 
   EVT RetVT = getTLI()->getValueType(DL, ResTy);
   EVT OpVT = getTLI()->getValueType(DL, ArgTy);
-  if (ST->hasSVE2p1() || ST->hasSME2())
-    NumResults = (NumResults + 1) / 2;
 
   if (getTLI()->shouldExpandGetActiveLaneMask(RetVT, OpVT))
     return BaseT::getActiveLaneMaskCost(ResTy, ArgTy, FMF, CostKind,
                                         NumResults);
 
-  InstructionCost ExtractCost = 0;
-  if (NumResults > 1) {
-    auto ResSubTy = VectorType::getOneNthElementsVectorType(
-        cast<VectorType>(ResTy), NumResults);
-    RetVT = getTLI()->getValueType(DL, ResSubTy);
-    if (ResSubTy->getElementCount() == ElementCount::getScalable(1))
-      return InstructionCost::getInvalid();
-
-    if (!ST->hasSVE2p1() && !ST->hasSME2())
-      ExtractCost = getTLI()->isTypeLegal(RetVT)
-                        ? 1 * NumResults
-                        : getTypeLegalizationCost(ResSubTy).first * NumResults;
-  }
-
   if (ResTy->isScalableTy()) {
     if (TLI->getTypeAction(ResTy->getContext(), RetVT) !=
         TargetLowering::TypeSplitVector)
       return BaseT::getActiveLaneMaskCost(ResTy, ArgTy, FMF, CostKind,
-                                          NumResults) +
-             ExtractCost;
+                                          NumResults);
 
     auto LT = getTypeLegalizationCost(ResTy);
     InstructionCost Cost = LT.first;
@@ -5716,7 +5699,7 @@ InstructionCost AArch64TTIImpl::getActiveLaneMaskCost(
     if (ST->hasSVE2p1() || ST->hasSME2()) {
       Cost /= 2;
       if (Cost == 1)
-        return Cost + ExtractCost;
+        return Cost * NumResults;
     }
 
     // If more than one whilelo intrinsic is required, include the extra cost
@@ -5728,7 +5711,7 @@ InstructionCost AArch64TTIImpl::getActiveLaneMaskCost(
     Type *CondTy = ArgTy->getWithNewBitWidth(1);
     SplitCost += getCmpSelInstrCost(Instruction::Select, ArgTy, CondTy,
                                     CmpInst::ICMP_UGT, CostKind);
-    return (Cost + (SplitCost * (Cost - 1))) + ExtractCost;
+    return (Cost + (SplitCost * (Cost - 1))) * NumResults;
   } else if (!getTLI()->isTypeLegal(RetVT)) {
     // We don't have enough context at this point to determine if the mask
     // is going to be kept live after the block, which will force the vXi1
@@ -5739,12 +5722,10 @@ InstructionCost AArch64TTIImpl::getActiveLaneMaskCost(
     // NOTE: getScalarizationOverhead returns a cost that's far too
     // pessimistic for the actual generated codegen. In reality there are
     // two instructions generated per lane.
-    return (cast<FixedVectorType>(ResTy)->getNumElements() * 2) + ExtractCost;
+    return (cast<FixedVectorType>(ResTy)->getNumElements() * 2) * NumResults;
   }
 
-  IntrinsicCostAttributes Attrs(Intrinsic::get_active_lane_mask, ResTy, {ArgTy},
-                                FMF);
-  return BaseT::getIntrinsicInstrCost(Attrs, CostKind) + ExtractCost;
+  return BaseT::getActiveLaneMaskCost(ResTy, ArgTy, FMF, CostKind, NumResults);
 }
 
 InstructionCost AArch64TTIImpl::getArithmeticReductionCostSVE(

@@ -2151,11 +2151,8 @@ RISCVTTIImpl::getActiveLaneMaskCost(Type *RetTy, Type *ArgTy, FastMathFlags FMF,
     return BaseT::getActiveLaneMaskCost(RetTy, ArgTy, FMF, CostKind,
                                         NumResults);
 
-  auto ResSubTy = VectorType::getOneNthElementsVectorType(
-      cast<VectorType>(RetTy), NumResults);
-
   Type *ExpRetTy =
-      VectorType::get(ArgTy, cast<VectorType>(ResSubTy)->getElementCount());
+      VectorType::get(ArgTy, cast<VectorType>(RetTy)->getElementCount());
   auto LT = getTypeLegalizationCost(ExpRetTy);
 
   // vid.v   v8  // considered hoisted

@@ -1330,9 +1330,7 @@ InstructionCost TargetTransformInfo::getMinMaxReductionCost(
 InstructionCost TargetTransformInfo::getActiveLaneMaskCost(
     Type *ResTy, Type *ArgTy, FastMathFlags FMF, TTI::TargetCostKind CostKind,
     unsigned NumResults) const {
-  // Return Invalid if ResTy cannot be split into the number of parts requested.
-  if (!cast<VectorType>(ResTy)->getElementCount().isKnownMultipleOf(NumResults))
-    return InstructionCost::getInvalid();
+  assert(NumResults == 1 && "NumResults > 1 is not yet supported.");
 
   InstructionCost Cost =
       TTIImpl->getActiveLaneMaskCost(ResTy, ArgTy, FMF, CostKind, NumResults);

@@ -3420,9 +3420,7 @@ public:
                                         FastMathFlags FMF,
                                         TTI::TargetCostKind CostKind,
                                         unsigned NumResults) const override {
-    auto ResSubTy = VectorType::getOneNthElementsVectorType(
-        cast<VectorType>(ResTy), NumResults);
-    EVT ResVT = getTLI()->getValueType(DL, ResSubTy, true);
+    EVT ResVT = getTLI()->getValueType(DL, ResTy, true);
     EVT ArgVT = getTLI()->getValueType(DL, ArgTy, true);
 
     // If we're not expanding the intrinsic then we assume this is cheap
