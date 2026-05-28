@@ -25,8 +25,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace flat_tlsf {
 
-// We could use cpp::byte, but that definition currently have strict aliasing
-// violation, hence we fallback to unsigned char directly.
+// We could use cpp::byte, but that definition currently has a strict aliasing
+// violation, hence we fall back to unsigned char directly.
 namespace bit_utils {
 
 LIBC_INLINE constexpr size_t ilog2(size_t n) {

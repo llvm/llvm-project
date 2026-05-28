@@ -40,7 +40,7 @@ struct Binning {
   /// # Behavior by size
   /// - `0..=(CHUNK_UNIT*LIN_DIVS*LIN_EXT_MULTI)` : Bins sizes into
   /// one-bin-per-chunk-size
-  /// - `(CHUNK_UNIT*LIN_DIVS*LIN_EXT_MULTI)..`   : Binds sizes by
+  /// - `(CHUNK_UNIT*LIN_DIVS*LIN_EXT_MULTI)..`   : Bins sizes by
   /// linearly-subdivided exponential levels.
   ///
   /// # Parameters
@@ -97,7 +97,7 @@ struct Binning {
     //  Subdiv 0: 256       ; bin 0 + LIN_DIVS * LIN_EXT_MULTI
     //  Subdiv 1: 256 +  64 ; bin 1 + LIN_DIVS * LIN_EXT_MULTI
     //  Subdiv 2: 256 + 128 ; bin 2 + LIN_DIVS * LIN_EXT_MULTI
-    //  Subdiv 3: 256 + 196 ; bin 3 + LIN_DIVS * LIN_EXT_MULTI
+    //  Subdiv 3: 256 + 192 ; bin 3 + LIN_DIVS * LIN_EXT_MULTI
     // Exponential level 1:  512 ;  512/LIN_DIVS = 128
     //  Subdiv 0: 512       ; bin 4 + LIN_DIVS * LIN_EXT_MULTI
     //  Subdiv 1: 512 + 128 ; bin 5 + LIN_DIVS * LIN_EXT_MULTI

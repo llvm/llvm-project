@@ -13,7 +13,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-static LIBC_CONSTINIT FreeListHeap freelist_heap_symbols;
+LIBC_CONSTINIT FreeListHeap freelist_heap_symbols;
 FreeListHeap *freelist_heap = &freelist_heap_symbols;
 
 } // namespace LIBC_NAMESPACE_DECL

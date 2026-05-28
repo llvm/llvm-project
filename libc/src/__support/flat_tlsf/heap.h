@@ -46,7 +46,7 @@ class Heap {
   LIBC_INLINE cpp::optional<SearchResult>
   full_search_bin(uint32_t bin, size_t required_size, size_t align_mask) {
     for (Node *node = gap_list[bin]; node != nullptr; node = node->next) {
-      size_t size = chunk::read_word<size_t>(chunk::gap_node_to_size(node));
+      size_t size = chunk::read_big_endian<size_t>(chunk::gap_node_to_size(node));
 
       Byte *base = chunk::gap_node_to_base(node);
       Byte *end = base + size;
@@ -79,8 +79,8 @@ class Heap {
 
     chunk::gap_base_to_node(base)->link_at(Node{*bin_ptr, bin_ptr});
     chunk::write_word(chunk::gap_base_to_bin(base), bin);
-    chunk::write_word(chunk::gap_base_to_size(base), size);
-    chunk::write_word(chunk::gap_end_to_size_and_flag(end), size);
+    chunk::write_big_endian(chunk::gap_base_to_size(base), size);
+    chunk::write_big_endian(chunk::gap_end_to_size_and_flag(end), size);
 
     LIBC_ASSERT(*bin_ptr != nullptr);
   }
@@ -166,6 +166,8 @@ public:
   }
 
   LIBC_INLINE Byte *allocate(size_t required_size, size_t required_align) {
+    if (required_size > cpp::numeric_limits<size_t>::max() - CHUNK_UNIT)
+      return nullptr;
     size_t required_chunk_size = chunk::required_chunk_size(required_size);
     Byte *base = nullptr;
     Byte *chunk_end = nullptr;
@@ -203,7 +205,7 @@ public:
       if (required_align <= CHUNK_UNIT) {
         Node *node_ptr = gap_list[bit];
         size_t size =
-            chunk::read_word<size_t>(chunk::gap_node_to_size(node_ptr));
+            chunk::read_big_endian<size_t>(chunk::gap_node_to_size(node_ptr));
 
         LIBC_ASSERT(size >= required_chunk_size);
         base = chunk::gap_node_to_base(node_ptr);
@@ -217,7 +219,7 @@ public:
         while (true) {
           for (Node *node = gap_list[bit]; node != nullptr; node = node->next) {
             size_t size =
-                chunk::read_word<size_t>(chunk::gap_node_to_size(node));
+                chunk::read_big_endian<size_t>(chunk::gap_node_to_size(node));
             Byte *b = chunk::gap_node_to_base(node);
             Byte *end = b + size;
             Byte *aligned_base = bit_utils::align_up_by_mask(b, align_mask);
@@ -248,7 +250,7 @@ public:
           for (Node *node = gap_list[bin - 1]; node != nullptr;
                node = node->next) {
             size_t size =
-                chunk::read_word<size_t>(chunk::gap_node_to_size(node));
+                chunk::read_big_endian<size_t>(chunk::gap_node_to_size(node));
             Byte *b = chunk::gap_node_to_base(node);
             Byte *end = b + size;
             Byte *aligned_base = bit_utils::align_up_by_mask(b, align_mask);
@@ -297,7 +299,7 @@ public:
     Byte *below_tag_ptr = chunk::end_to_tag(chunk_base);
     if (!tag::is_allocated(chunk::read_word<Byte>(below_tag_ptr))) {
       size_t below_size =
-          chunk::read_word<size_t>(chunk::gap_end_to_size_and_flag(chunk_base));
+          chunk::read_big_endian<size_t>(chunk::gap_end_to_size_and_flag(chunk_base));
 
       Byte *below_base = chunk_base - below_size;
       deregister_gap(below_base, below_size);
@@ -312,7 +314,7 @@ public:
     if (tag::is_above_free(tag)) {
       LIBC_ASSERT(!tag::is_heap_end(tag));
       size_t above_size =
-          chunk::read_word<size_t>(chunk::gap_base_to_size(chunk_end));
+          chunk::read_big_endian<size_t>(chunk::gap_base_to_size(chunk_end));
       deregister_gap(chunk_end, above_size);
       chunk_end += above_size;
     }
@@ -335,7 +337,7 @@ public:
 
     if (tag::is_above_free(old_tag)) {
       size_t above_size =
-          chunk::read_word<size_t>(chunk::gap_base_to_size(old_end));
+          chunk::read_big_endian<size_t>(chunk::gap_base_to_size(old_end));
       Byte *above_end = old_end + above_size;
 
       if (new_end <= above_end) {
@@ -371,7 +373,7 @@ public:
 
       if (tag::is_above_free(old_tag)) {
         size_t above_size =
-            chunk::read_word<size_t>(chunk::gap_base_to_size(chunk_end));
+            chunk::read_big_endian<size_t>(chunk::gap_base_to_size(chunk_end));
         deregister_gap(chunk_end, above_size);
         chunk_end += above_size;
       }
@@ -428,6 +430,8 @@ public:
     if (shift_exponent > SHIFT_MASK)
       return nullptr;
 
+    if (size > cpp::numeric_limits<size_t>::max() - shift - CHUNK_UNIT)
+      return nullptr;
     size_t allocated_size = size + shift;
 
     Byte *base_ptr = allocate(allocated_size, allocated_align);
@@ -486,6 +490,8 @@ public:
 
     Byte *base_ptr = user_ptr - shift;
 
+    if (new_size > cpp::numeric_limits<size_t>::max() - shift - CHUNK_UNIT)
+      return nullptr;
     size_t new_allocated_size = new_size + shift;
     size_t new_chunk_size = chunk::required_chunk_size(new_allocated_size);
 

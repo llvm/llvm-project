@@ -75,6 +75,7 @@ add_header_library(
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
     libc.src.string.memory_utils.inline_memcpy
+    libc.src.__support.common
 )
 
 add_header_library(

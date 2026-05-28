@@ -20,6 +20,7 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
+#include "src/__support/endian_internal.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace flat_tlsf {
@@ -51,6 +52,13 @@ LIBC_INLINE size_t *gap_base_to_size(Byte *base) {
   return reinterpret_cast<size_t *>(base + GAP_LOW_SIZE_OFFSET);
 }
 
+// Note: The highest-addressed byte of this size word (at `end - 1`) overlaps
+// with the tag byte of the next chunk (retrieved via `end_to_tag(end)`).
+// To prevent any tag/flag corruption or endianness issues, the size word is
+// always stored and read in Big-Endian format. This guarantees that the LSB
+// of the size word is always at the highest address (`end - 1`). Since all
+// gap sizes are CHUNK_UNIT aligned, the lower bits of the LSB at `end - 1` are
+// naturally 0, keeping the tag/flag status bits safely at 0 (free gap).
 LIBC_INLINE size_t *gap_end_to_size_and_flag(Byte *end) {
   return reinterpret_cast<size_t *>(end - GAP_HIGH_SIZE_OFFSET);
 }
@@ -82,6 +90,14 @@ template <class T> LIBC_INLINE T read_word(const void *ptr) {
 
 template <class T> LIBC_INLINE void write_word(void *ptr, T value) {
   inline_memcpy(ptr, &value, sizeof(T));
+}
+
+template <class T> LIBC_INLINE T read_big_endian(const void *ptr) {
+  return Endian::to_big_endian(read_word<T>(ptr));
+}
+
+template <class T> LIBC_INLINE void write_big_endian(void *ptr, T value) {
+  write_word<T>(ptr, Endian::to_big_endian(value));
 }
 
 } // namespace chunk

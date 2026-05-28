@@ -92,13 +92,13 @@ TEST(LlvmLibcFlatTlsfHeapTest, VerifyGapProperties) {
   ASSERT_EQ(gap_bin,
             chunk::read_word<uint32_t>(chunk::gap_base_to_bin(gap_base)));
   ASSERT_EQ(gap_size,
-            chunk::read_word<size_t>(chunk::gap_base_to_size(gap_base)));
+            chunk::read_big_endian<size_t>(chunk::gap_base_to_size(gap_base)));
 
-  ASSERT_EQ(chunk::read_word<size_t>(chunk::gap_base_to_size(gap_base)),
+  ASSERT_EQ(chunk::read_big_endian<size_t>(chunk::gap_base_to_size(gap_base)),
             gap_size);
   ASSERT_EQ(chunk::gap_end_to_size_and_flag(gap_end),
             reinterpret_cast<size_t *>(gap_end - sizeof(size_t)));
-  ASSERT_EQ(chunk::read_word<size_t>(chunk::gap_end_to_size_and_flag(gap_end)),
+  ASSERT_EQ(chunk::read_big_endian<size_t>(chunk::gap_end_to_size_and_flag(gap_end)),
             gap_size);
 
   heap.test_deregister_gap(gap_base, gap_size);
@@ -133,6 +133,23 @@ TEST(LlvmLibcFlatTlsfHeapTest, AllocFailTest) {
   size_t large_size = 1234 + CHUNK_UNIT;
   Byte *a2 = heap.allocate(large_size, 8);
   ASSERT_EQ(a2, static_cast<Byte *>(nullptr));
+}
+
+TEST(LlvmLibcFlatTlsfHeapTest, AllocOverflowTest) {
+  alignas(64) Byte arena[5000] = {};
+  Heap heap;
+  ASSERT_NE(heap.claim(arena, 5000), static_cast<Byte *>(nullptr));
+
+  // Test malloc overflow
+  ASSERT_EQ(heap.malloc(numeric_limits<size_t>::max()), static_cast<void *>(nullptr));
+
+  // Test aligned_alloc overflow
+  ASSERT_EQ(heap.aligned_alloc(8, numeric_limits<size_t>::max() - 100), static_cast<void *>(nullptr));
+
+  // Test realloc overflow
+  void *ptr = heap.malloc(10);
+  ASSERT_NE(ptr, static_cast<void *>(nullptr));
+  ASSERT_EQ(heap.realloc(ptr, numeric_limits<size_t>::max()), static_cast<void *>(nullptr));
 }
 
 TEST(LlvmLibcFlatTlsfHeapTest, ClaimHeapThatsTooSmall) {
