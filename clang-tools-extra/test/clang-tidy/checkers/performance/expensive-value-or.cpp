@@ -1,0 +1,110 @@
+// RUN: %check_clang_tidy -std=c++11-or-later %s performance-expensive-value-or %t
+
+#include <string>
+#include <utility>
+
+namespace std {
+template <typename T> class optional {
+  T val;
+  bool has;
+
+public:
+  optional();
+  optional(const optional &);
+  optional(optional &&);
+  ~optional();
+  T value_or(T default_value) const;
+};
+} // namespace std
+
+void positiveNonTriviallyCopyable(std::optional<std::string> opt) {
+  auto val = opt.value_or("default");
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+}
+
+struct LargeStruct {
+  char data[128];
+};
+
+void positiveLargeStruct(std::optional<LargeStruct> opt) {
+  auto val = opt.value_or(LargeStruct{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'LargeStruct'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+}
+
+struct SmallNonTrivial {
+  int x;
+  SmallNonTrivial(int x) : x(x) {}
+  SmallNonTrivial(const SmallNonTrivial &o) : x(o.x) {}
+};
+
+void positiveSmallNonTrivial(std::optional<SmallNonTrivial> opt) {
+  auto val = opt.value_or(SmallNonTrivial{42});
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'SmallNonTrivial'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+}
+
+void consume(std::string s);
+void positiveDirectUse(std::optional<std::string> opt) {
+  consume(opt.value_or("fallback"));
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+}
+
+template <typename T> void positiveTemplate(std::optional<T> opt) {
+  auto val = opt.value_or(T{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+}
+void instantiate() {
+  positiveTemplate(std::optional<std::string>{});
+}
+
+using OptString = std::optional<std::string>;
+void positiveTypeAlias(OptString opt) {
+  auto val = opt.value_or("default");
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+}
+
+void positiveNested(std::optional<std::optional<std::string>> opt) {
+  auto val = opt.value_or(std::optional<std::string>{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::optional<std::basic_string<char>>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+}
+
+void positiveMoveResult(std::optional<std::string> opt) {
+  auto val = std::move(opt.value_or("default"));
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+}
+
+void negativeInt(std::optional<int> opt) {
+  auto val = opt.value_or(0);
+}
+
+struct SmallPOD {
+  char x;
+  char y;
+};
+
+void negativeSmallPOD(std::optional<SmallPOD> opt) {
+  auto val = opt.value_or(SmallPOD{0, 0});
+}
+
+struct EightBytes {
+  char d[8];
+};
+
+void negativeBoundary(std::optional<EightBytes> opt) {
+  auto val = opt.value_or(EightBytes{});
+}
+
+std::optional<std::string> getOpt();
+void negativeRvalueOptional() {
+  auto val = getOpt().value_or("default");
+}
+
+namespace absl {
+template <typename T> class optional {
+public:
+  T value_or(T default_value) const;
+};
+} // namespace absl
+
+void negativeAbslNoConfig(absl::optional<std::string> opt) {
+  auto val = opt.value_or("default");
+}
