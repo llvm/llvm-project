@@ -244,15 +244,16 @@ struct ConvertDealloc final : public OpConversionPattern<memref::DeallocOp> {
   matchAndRewrite(memref::DeallocOp deallocOp, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = deallocOp.getLoc();
-    // Deliberately narrow since EmitC lowering needs to recover an actual heap
-    // pointer value to pass to free().
+    // `free` can only be emitted when the dealloc operand is recoverable as an
+    // `emitc.ptr<T>`. In the current conversion, that happens via an
+    // unrealized_conversion_cast from the pointer-backed EmitC form.
     Value strippedPtr = stripPointerUnrealizedCast(operands.getMemref());
     if (!strippedPtr) {
       return rewriter.notifyMatchFailure(
           loc, "expected pointer-backed memref for EmitC deallocation");
     }
 
-    // The allocation APIs used by this conversion return `void *`, and `free`
+    // The allocation APIs used by MemRefToEmitC return `void *`, and `free`
     // expects that same pointer type. Deallocation therefore only needs the
     // recovered base pointer cast back to `void *` before calling `free`.
     Type opaqueVoidPtrType = emitc::PointerType::get(
