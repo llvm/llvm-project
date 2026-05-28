@@ -1605,10 +1605,6 @@ static void fixupNamedModuleCommandLines(Compilation &C,
     const bool IsStdModule =
         Job.getInputInfos().front().getType() == types::TY_CXXStdModule;
     if (IsStdModule) {
-      const auto &OutputFilenames = Job.getOutputFilenames();
-      if (OutputFilenames.empty())
-        continue;
-
       StringRef ModuleOutputPath = Job.getOutputFilenames().front();
       propagateModuleFileMappingArg(C, *Node, ModuleOutputPath);
       continue;
