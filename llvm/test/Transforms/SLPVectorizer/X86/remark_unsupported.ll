@@ -9,7 +9,7 @@ define i1 @test(ptr %i1, ptr %i2, i1 %arg) {
 ; CHECK-NEXT:    [[I1_0:%.*]] = load x86_fp80, ptr [[I1:%.*]], align 16
 ; CHECK-NEXT:    [[I1_GEP1:%.*]] = getelementptr x86_fp80, ptr [[I1]], i64 1
 ; CHECK-NEXT:    [[I1_1:%.*]] = load x86_fp80, ptr [[I1_GEP1]], align 16
-; CHECK-NEXT:    br i1 %arg, label [[THEN:%.*]], label [[END:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[THEN:%.*]], label [[END:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[I2_0:%.*]] = load x86_fp80, ptr [[I2:%.*]], align 16
 ; CHECK-NEXT:    [[I2_GEP1:%.*]] = getelementptr inbounds x86_fp80, ptr [[I2]], i64 1

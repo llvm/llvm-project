@@ -5631,45 +5631,96 @@ InstructionCost
 X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                        std::optional<FastMathFlags> FMF,
                                        TTI::TargetCostKind CostKind) const {
-  if (TTI::requiresOrderedReduction(FMF))
-    return BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
+  // We use llvm-mca across all supported CPUs to measure the cost stats.
 
-  // We use the Intel Architecture Code Analyzer(IACA) to measure the throughput
-  // and make it as the cost.
-
-  static const CostTblEntry SLMCostTbl[] = {
-    { ISD::FADD,  MVT::v2f64,   3 },
-    { ISD::ADD,   MVT::v2i64,   5 },
+  static const CostKindTblEntry SLMCostTbl[] = {
+    { ISD::FADD,  MVT::v2f64,   { 3, 3, 3, 3 } },
+    { ISD::ADD,   MVT::v2i64,   { 5, 5, 5, 5 } },
   };
 
-  static const CostTblEntry SSE2CostTbl[] = {
-    { ISD::FADD,  MVT::v2f64,   2 },
-    { ISD::FADD,  MVT::v2f32,   2 },
-    { ISD::FADD,  MVT::v4f32,   4 },
-    { ISD::ADD,   MVT::v2i64,   2 },      // The data reported by the IACA tool is "1.6".
-    { ISD::ADD,   MVT::v2i32,   2 }, // FIXME: chosen to be less than v4i32
-    { ISD::ADD,   MVT::v4i32,   3 },      // The data reported by the IACA tool is "3.3".
-    { ISD::ADD,   MVT::v2i16,   2 },      // The data reported by the IACA tool is "4.3".
-    { ISD::ADD,   MVT::v4i16,   3 },      // The data reported by the IACA tool is "4.3".
-    { ISD::ADD,   MVT::v8i16,   4 },      // The data reported by the IACA tool is "4.3".
-    { ISD::ADD,   MVT::v2i8,    2 },
-    { ISD::ADD,   MVT::v4i8,    2 },
-    { ISD::ADD,   MVT::v8i8,    2 },
-    { ISD::ADD,   MVT::v16i8,   3 },
+  static const CostKindTblEntry SSE2CostTbl[] = {
+    { ISD::STRICT_FADD, MVT::v2f64, { 2, 8, 3, 3 } },
+    { ISD::STRICT_FADD, MVT::v2f32, { 2, 8, 3, 3 } },
+    { ISD::STRICT_FADD, MVT::v4f32, { 5,16, 9, 9 } },
+
+    { ISD::FADD,  MVT::v2f64,   { 2, 5, 4, 4 } },
+    { ISD::FADD,  MVT::v2f32,   { 2, 5, 4, 4 } },
+    { ISD::FADD,  MVT::v4f32,   { 4,10, 7, 7 } },
+    { ISD::ADD,   MVT::v2i64,   { 2, 2, 3, 3 } }, 
+    { ISD::ADD,   MVT::v2i32,   { 2, 2, 2, 2 } }, 
+    { ISD::ADD,   MVT::v4i32,   { 2, 4, 5, 5 } }, 
+    { ISD::ADD,   MVT::v2i16,   { 2, 2, 2, 2 } }, 
+    { ISD::ADD,   MVT::v4i16,   { 3, 3, 3, 3 } }, 
+    { ISD::ADD,   MVT::v8i16,   { 3, 6, 8, 8 } }, 
+    { ISD::ADD,   MVT::v2i8,    { 2, 2, 2, 2 } },
+    { ISD::ADD,   MVT::v4i8,    { 2, 2, 2, 2 } },
+    { ISD::ADD,   MVT::v8i8,    { 2, 2, 2, 2 } },
+    { ISD::ADD,   MVT::v16i8,   { 3, 7, 5, 5 } },
   };
 
-  static const CostTblEntry AVX1CostTbl[] = {
-    { ISD::FADD,  MVT::v4f64,   3 },
-    { ISD::FADD,  MVT::v4f32,   3 },
-    { ISD::FADD,  MVT::v8f32,   4 },
-    { ISD::ADD,   MVT::v2i64,   1 },      // The data reported by the IACA tool is "1.5".
-    { ISD::ADD,   MVT::v4i64,   3 },
-    { ISD::ADD,   MVT::v8i32,   5 },
-    { ISD::ADD,   MVT::v16i16,  5 },
-    { ISD::ADD,   MVT::v32i8,   4 },
+  static const CostKindTblEntry SSE42CostTbl[] = {
+    { ISD::STRICT_FADD, MVT::v4f32, { 4,16, 8, 8 } },
+
+    { ISD::FADD,  MVT::v2f32,   { 2, 5, 3, 3 } },
+    { ISD::FADD,  MVT::v4f32,   { 3,10, 6, 6 } },
   };
 
-  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+  // TODO: Add hasFastHorizontalOps variants
+  static const CostKindTblEntry AVX1CostTbl[] = {
+    { ISD::STRICT_FADD, MVT::v4f64, { 4,16, 7, 7 } },
+    { ISD::STRICT_FADD, MVT::v2f64, { 2, 8, 3, 3 } },
+    { ISD::STRICT_FADD, MVT::v4f32, { 4,16, 7, 7 } },
+    { ISD::STRICT_FADD, MVT::v8f32, { 8,32,15,15 } },
+
+    { ISD::FADD,  MVT::v2f64,   { 2, 5, 3, 3 } },
+    { ISD::FADD,  MVT::v4f64,   { 3,12, 5, 5 } },
+    { ISD::FADD,  MVT::v4f32,   { 3,10, 5, 5 } },
+    { ISD::FADD,  MVT::v8f32,   { 4,17, 7, 7 } },
+    { ISD::ADD,   MVT::v4i64,   { 3, 7, 5, 5 } },
+    { ISD::ADD,   MVT::v8i32,   { 3, 9, 7, 7 } },
+    { ISD::ADD,   MVT::v8i16,   { 3, 6, 7, 7 } }, 
+    { ISD::ADD,   MVT::v16i16,  { 3,11, 9, 9 } },
+    { ISD::ADD,   MVT::v32i8,   { 4,11, 7, 7 } },
+  };
+
+  static const CostKindTblEntry AVX2CostTbl[] = {
+    { ISD::ADD,   MVT::v2i64,   { 1, 2, 3, 3 } },
+    { ISD::ADD,   MVT::v4i64,   { 2, 7, 5, 5 } },
+    { ISD::ADD,   MVT::v8i16,   { 2, 6, 7, 7 } },
+    { ISD::ADD,   MVT::v16i8,   { 2, 7, 5, 5 } },
+    { ISD::ADD,   MVT::v32i8,   { 3,11, 7, 7 } },
+  };
+
+  static const CostKindTblEntry AVX512FCostTbl[] = {
+    { ISD::STRICT_FADD, MVT::v4f64, { 3,16, 7, 7 } },
+    { ISD::STRICT_FADD, MVT::v8f64, { 7,32,15,15 } },
+    { ISD::STRICT_FADD, MVT::v8f32, { 7,32,15,15 } },
+    { ISD::STRICT_FADD, MVT::v16f32,{15,64,31,31 } },
+
+    { ISD::FADD,  MVT::v4f64,   { 2,12, 5, 5 } },
+    { ISD::FADD,  MVT::v8f64,   { 3,19, 7, 7 } },
+    { ISD::FADD,  MVT::v2f32,   { 2, 5, 3, 3 } },
+    { ISD::FADD,  MVT::v8f32,   { 3,17, 7, 7 } },
+    { ISD::FADD,  MVT::v16f32,  { 4,24, 9, 9 } },
+    { ISD::ADD,   MVT::v8i64,   { 3,10, 7, 7 } },
+    { ISD::ADD,   MVT::v16i32,  { 4,12, 9, 9 } },
+  };
+
+  static const CostKindTblEntry AVX512BWCostTbl[] = {
+    { ISD::ADD,   MVT::v32i16,  { 4,14,11,11 } },
+    { ISD::ADD,   MVT::v16i8,   { 2, 5, 5, 5 } },
+    { ISD::ADD,   MVT::v32i8,   { 3,10, 7, 7 } },
+    { ISD::ADD,   MVT::v64i8,   { 4,13, 9, 9 } },
+  };
+
+  int ISD = 0;
+  if (TTI::requiresOrderedReduction(FMF)) {
+    if (Opcode != Instruction::FAdd)
+      return BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
+    ISD = ISD::STRICT_FADD;
+  } else {
+    ISD = TLI->InstructionOpcodeToISD(Opcode);
+  }
   assert(ISD && "Invalid opcode");
 
   // Before legalizing the type, give a chance to look up illegal narrow types
@@ -5680,16 +5731,42 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     MVT MTy = VT.getSimpleVT();
     if (ST->useSLMArithCosts())
       if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+            return *KindCost;
+
+    if (ST->hasBWI())
+      if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
+
+    if (ST->hasAVX512())
+      if (const auto *Entry = CostTableLookup(AVX512FCostTbl, ISD, MTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
+
+    if (ST->hasAVX2())
+      if (const auto *Entry = CostTableLookup(AVX2CostTbl, ISD, MTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
 
     if (ST->hasAVX())
       if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
+
+    if (ST->hasSSE42())
+      if (const auto *Entry = CostTableLookup(SSE42CostTbl, ISD, MTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
 
     if (ST->hasSSE2())
       if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
   }
+
+  if (TTI::requiresOrderedReduction(FMF))
+    return BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
 
@@ -5719,15 +5796,38 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
   if (ST->useSLMArithCosts())
     if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
-      return ArithmeticCost + Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
+
+  if (ST->hasBWI())
+    if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
+
+  if (ST->hasAVX512())
+    if (const auto *Entry = CostTableLookup(AVX512FCostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
+
+  if (ST->hasAVX2())
+    if (const auto *Entry = CostTableLookup(AVX2CostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
 
   if (ST->hasAVX())
     if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
-      return ArithmeticCost + Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
+
+  if (ST->hasSSE42())
+    if (const auto *Entry = CostTableLookup(SSE42CostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
 
   if (ST->hasSSE2())
     if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
-      return ArithmeticCost + Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
 
   // FIXME: These assume a naive kshift+binop lowering, which is probably
   // conservative in most cases.

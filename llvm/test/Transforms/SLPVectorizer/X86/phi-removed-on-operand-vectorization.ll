@@ -5,17 +5,16 @@ define i32 @test(double %mul321.i) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: double [[MUL321_I:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[MUL321_I]], i32 0
 ; CHECK-NEXT:    br label %[[DO_BODY220_I:.*]]
 ; CHECK:       [[DO_BODY220_I]]:
-; CHECK-NEXT:    [[C1_2_I:%.*]] = phi double [ [[MUL321_I]], %[[DO_BODY221_I:.*]] ], [ 0.000000e+00, %[[ENTRY]] ]
-; CHECK-NEXT:    [[S1_1_I:%.*]] = phi double [ [[ADD318_I:%.*]], %[[DO_BODY221_I]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x double> [ [[TMP5:%.*]], %[[DO_BODY221_I:.*]] ], [ zeroinitializer, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[DO_BODY221_I]]
 ; CHECK:       [[DO_BODY221_I]]:
-; CHECK-NEXT:    [[SUB311_I1:%.*]] = fadd double [[C1_2_I]], 0.000000e+00
-; CHECK-NEXT:    [[ADD315_I:%.*]] = fadd double [[S1_1_I]], 0.000000e+00
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul double [[SUB311_I1]], 0.000000e+00
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul double [[ADD315_I]], 0.000000e+00
-; CHECK-NEXT:    [[ADD318_I]] = fadd double [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = call double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP3]])
+; CHECK-NEXT:    [[TMP5]] = insertelement <2 x double> [[TMP0]], double [[TMP4]], i32 1
 ; CHECK-NEXT:    br label %[[DO_BODY220_I]]
 ;
 entry:

@@ -13,9 +13,7 @@ define void @test(double %v) {
 ; CHECK-NEXT:    [[T50_02:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP8:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP10:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd double [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP4]])
 ; CHECK-NEXT:    [[TMP8]] = fadd double [[TMP7]], [[V]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x double> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    [[TMP10]] = fadd <2 x double> zeroinitializer, [[TMP9]]

@@ -214,12 +214,11 @@ define <4 x double> @test_v4f64(<4 x double> %a, <4 x double> %b) {
 ; PR50392
 define <4 x double> @test_v4f64_partial_swizzle(<4 x double> %a, <4 x double> %b) {
 ; SSE-LABEL: @test_v4f64_partial_swizzle(
-; SSE-NEXT:    [[B2:%.*]] = extractelement <4 x double> [[B:%.*]], i32 2
-; SSE-NEXT:    [[B3:%.*]] = extractelement <4 x double> [[B]], i32 3
-; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B]], <2 x i32> <i32 0, i32 4>
+; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B:%.*]], <2 x i32> <i32 0, i32 4>
 ; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <2 x i32> <i32 1, i32 5>
 ; SSE-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
-; SSE-NEXT:    [[R3:%.*]] = fadd double [[B2]], [[B3]]
+; SSE-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[B]], <4 x double> poison, <2 x i32> <i32 2, i32 3>
+; SSE-NEXT:    [[R3:%.*]] = call double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP5]])
 ; SSE-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 poison, i32 1, i32 poison>
 ; SSE-NEXT:    [[R021:%.*]] = shufflevector <4 x double> zeroinitializer, <4 x double> [[TMP4]], <4 x i32> <i32 4, i32 1, i32 6, i32 3>
 ; SSE-NEXT:    [[R03:%.*]] = insertelement <4 x double> [[R021]], double [[R3]], i32 3
