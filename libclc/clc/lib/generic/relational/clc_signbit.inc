@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_RELATIONAL_CLC_SIGNBIT_H__
-#define __CLC_RELATIONAL_CLC_SIGNBIT_H__
+#if __CLC_VECSIZE_OR_1 == 1
+#define __CLC_RETTYPE __CLC_INTN
+#else
+#define __CLC_RETTYPE __CLC_S_GENTYPE
+#endif
 
-#include "clc/internal/clc.h"
+_CLC_OVERLOAD _CLC_DEF __CLC_RETTYPE __clc_signbit(__CLC_GENTYPE x) {
+#if __CLC_VECSIZE_OR_1 == 1
+  return (__CLC_INTN)(__CLC_AS_U_GENTYPE(x) >> (__CLC_FPSIZE - 1));
+#else
+  return __CLC_AS_S_GENTYPE(x) >> (__CLC_FPSIZE - 1);
+#endif
+}
 
-#define __CLC_FUNCTION __clc_signbit
-#define __CLC_BODY "clc/relational/unary_decl.inc"
-
-#include "clc/math/gentype.inc"
-
-#undef __CLC_FUNCTION
-
-#endif // __CLC_RELATIONAL_CLC_SIGNBIT_H__
+#undef __CLC_RETTYPE
