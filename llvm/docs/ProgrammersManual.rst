@@ -498,7 +498,7 @@ Format provider options
 
     string_options :: [length]
 
-  where ``length`` is an optional integer specifying the maximum number of 
+  Where ``length`` is an optional integer specifying the maximum number of 
   characters in the string to print.  If ``length`` is omitted, the string is
   printed up to the null terminator.
 
@@ -583,7 +583,7 @@ Format provider options
     delimeted_expr    ::= "[" expr "]" | "(" expr ")" | "<" expr ">"
     expr              ::= <any string not containing delimeter>
  
-  where the ``separator`` expression is the string to insert between consecutive
+  Where the ``separator`` expression is the string to insert between consecutive
   items in the range and the ``element_style`` expression is the style 
   specification to be used when formatting the underlying type.  The default 
   separator if unspecified is ", ".  The syntax of the argument expression 
