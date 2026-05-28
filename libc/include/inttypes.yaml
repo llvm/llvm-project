@@ -313,6 +313,7 @@ macros:
     macro_header: inttypes-macros.h
 types:
   - type_name: imaxdiv_t
+  - type_name: wchar_t
 enums: []
 objects: []
 functions:
@@ -344,4 +345,20 @@ functions:
     arguments:
       - type: const char *__restrict
       - type: char * *__restrict
+      - type: int
+  - name: wcstoimax
+    standards:
+      - stdc
+    return_type: intmax_t
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t * *__restrict
+      - type: int
+  - name: wcstoumax
+    standards:
+      - stdc
+    return_type: uintmax_t
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t * *__restrict
       - type: int
