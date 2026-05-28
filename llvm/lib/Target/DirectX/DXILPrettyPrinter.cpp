@@ -272,6 +272,15 @@ public:
                                const DXILDebugInfoMap &DI)
       : MST(MST), STS(STS), DI(DI) {}
 
+  void emitInstructionAnnot(const Instruction *OrigI,
+                            formatted_raw_ostream &os) override {
+    if (const Instruction *I = &DI.getDXILInstruction(*OrigI); I != OrigI) {
+      os << "; DXIL: to be replaced with: ";
+      I->print(os, MST);
+      os << "\n";
+    }
+  }
+
   void emitMDNodeAnnot(const MDNode *N, formatted_raw_ostream &os) override {
     if (const Metadata *NewMD = DI.MDReplace.lookup(N)) {
       if (const auto *NewN = dyn_cast<MDNode>(NewMD))
