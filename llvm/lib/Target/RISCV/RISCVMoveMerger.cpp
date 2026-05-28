@@ -100,10 +100,10 @@ bool RISCVMoveMerge::isGPRPairCopyCandidate(const DestSourcePair &RegPair,
 
   unsigned SubIdx = EvenRegPair ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
 
-  Register SrcPair = TRI->getMatchingSuperReg(Source, SubIdx,
-                                              &RISCV::GPRPairRegClass);
-  Register DestPair = TRI->getMatchingSuperReg(Destination, SubIdx,
-                                               &RISCV::GPRPairRegClass);
+  Register SrcPair =
+      TRI->getMatchingSuperReg(Source, SubIdx, &RISCV::GPRPairRegClass);
+  Register DestPair =
+      TRI->getMatchingSuperReg(Destination, SubIdx, &RISCV::GPRPairRegClass);
 
   return SrcPair.isValid() && DestPair.isValid();
 }
