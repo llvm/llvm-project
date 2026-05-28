@@ -40,7 +40,6 @@ COMMON_LIBS = [
     "libLLVMOrcJIT.a", "libLLVMOrcShared.a", "libLLVMJITLink.a",
     "libLLVMRemarks.a", "libLLVMOption.a", "libLLVMMCDisassembler.a",
     "libLLVMIRPrinter.a",
-    "libLLVMMCParser.a", "libLLVMCGData.a",
     "libLLVMOrcTargetProcess.a", "libLLVMRuntimeDyld.a", "libLLVMBitWriter.a",
     "libLLVMGlobalISel.a",
 ]
@@ -279,7 +278,42 @@ def doit_gc_merge(args):
     after_mb = os.path.getsize(merged_o) / (1024 * 1024)
     print(f"       {before_mb:.0f} MB -> {after_mb:.0f} MB (gc-sections)")
 
-    # ── 2b. Remove .group (COMDAT metadata, not needed after partial link) ──
+    # ── 2b. Strip ARM $x/$d mapping symbols (metadata, not needed after link) ──
+    # Must run before .group removal; objcopy needs intact COMDAT group info.
+    nostrip_o = os.path.join(work, "_nostrip.o")
+    # Use llvm-objcopy if available, else fall back to system objcopy
+    objcopy_tool = os.path.join(args.build_dir, "bin", "llvm-objcopy")
+    if not os.path.exists(objcopy_tool):
+        objcopy_tool = "objcopy"
+    r = sp.run([objcopy_tool, "-w", "-N", "$x", "-N", "$d",
+                merged_o, nostrip_o], capture_output=True, text=True)
+    if r.returncode == 0 and os.path.exists(nostrip_o):
+        before_syms = len(sp.run(["nm", merged_o], capture_output=True, text=True).stdout.splitlines())
+        after_syms = len(sp.run(["nm", nostrip_o], capture_output=True, text=True).stdout.splitlines())
+        stripped = before_syms - after_syms
+        if stripped > 0:
+            print(f"       stripped {stripped} $x/$d mapping symbols")
+            merged_o = nostrip_o
+        else:
+            os.unlink(nostrip_o)
+    else:
+        # objcopy failed (e.g. cross-arch), try aarch64-linux-gnu-objcopy
+        cross_objcopy = "aarch64-linux-gnu-objcopy"
+        r = sp.run([cross_objcopy, "-w", "-N", "$x", "-N", "$d",
+                    merged_o, nostrip_o], capture_output=True, text=True)
+        if r.returncode == 0 and os.path.exists(nostrip_o):
+            before_syms = len(sp.run(["nm", merged_o], capture_output=True, text=True).stdout.splitlines())
+            after_syms = len(sp.run(["nm", nostrip_o], capture_output=True, text=True).stdout.splitlines())
+            stripped = before_syms - after_syms
+            if stripped > 0:
+                print(f"       stripped {stripped} $x/$d mapping symbols (cross-objcopy)")
+                merged_o = nostrip_o
+            else:
+                os.unlink(nostrip_o)
+        else:
+            print(f"       note: objcopy cannot strip $x/$d (non-fatal)")
+
+    # ── 2c. Remove .group (COMDAT metadata, not needed after partial link) ──
     nogroup_o = os.path.join(work, "_nogroup.o")
     sp.run(["objcopy", "--remove-section=.group", merged_o, nogroup_o],
            capture_output=True)

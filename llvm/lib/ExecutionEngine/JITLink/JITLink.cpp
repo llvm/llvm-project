@@ -10,14 +10,18 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
+#ifndef EJIT_BARE_METAL
 #include "llvm/ExecutionEngine/JITLink/COFF.h"
-#include "llvm/ExecutionEngine/JITLink/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/XCOFF.h"
+#endif
+#include "llvm/ExecutionEngine/JITLink/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
+#ifndef EJIT_BARE_METAL
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
 #include "llvm/ExecutionEngine/JITLink/x86.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
+#endif
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -469,6 +473,7 @@ AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT) {
   switch (TT.getArch()) {
   case Triple::aarch64:
     return aarch64::createAnonymousPointer;
+#ifndef EJIT_BARE_METAL
   case Triple::x86_64:
     return x86_64::createAnonymousPointer;
   case Triple::x86:
@@ -476,6 +481,7 @@ AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT) {
   case Triple::loongarch32:
   case Triple::loongarch64:
     return loongarch::createAnonymousPointer;
+#endif
   default:
     return nullptr;
   }
@@ -485,6 +491,7 @@ PointerJumpStubCreator getPointerJumpStubCreator(const Triple &TT) {
   switch (TT.getArch()) {
   case Triple::aarch64:
     return aarch64::createAnonymousPointerJumpStub;
+#ifndef EJIT_BARE_METAL
   case Triple::x86_64:
     return x86_64::createAnonymousPointerJumpStub;
   case Triple::x86:
@@ -492,6 +499,7 @@ PointerJumpStubCreator getPointerJumpStubCreator(const Triple &TT) {
   case Triple::loongarch32:
   case Triple::loongarch64:
     return loongarch::createAnonymousPointerJumpStub;
+#endif
   default:
     return nullptr;
   }
@@ -502,14 +510,18 @@ createLinkGraphFromObject(MemoryBufferRef ObjectBuffer,
                           std::shared_ptr<orc::SymbolStringPool> SSP) {
   auto Magic = identify_magic(ObjectBuffer.getBuffer());
   switch (Magic) {
+#ifndef EJIT_BARE_METAL
   case file_magic::macho_object:
     return createLinkGraphFromMachOObject(ObjectBuffer, std::move(SSP));
+#endif
   case file_magic::elf_relocatable:
     return createLinkGraphFromELFObject(ObjectBuffer, std::move(SSP));
+#ifndef EJIT_BARE_METAL
   case file_magic::coff_object:
     return createLinkGraphFromCOFFObject(ObjectBuffer, std::move(SSP));
   case file_magic::xcoff_object_64:
     return createLinkGraphFromXCOFFObject(ObjectBuffer, std::move(SSP));
+#endif
   default:
     return make_error<JITLinkError>("Unsupported file format");
   };
@@ -535,14 +547,18 @@ absoluteSymbolsLinkGraph(Triple TT, std::shared_ptr<orc::SymbolStringPool> SSP,
 
 void link(std::unique_ptr<LinkGraph> G, std::unique_ptr<JITLinkContext> Ctx) {
   switch (G->getTargetTriple().getObjectFormat()) {
+#ifndef EJIT_BARE_METAL
   case Triple::MachO:
     return link_MachO(std::move(G), std::move(Ctx));
+#endif
   case Triple::ELF:
     return link_ELF(std::move(G), std::move(Ctx));
+#ifndef EJIT_BARE_METAL
   case Triple::COFF:
     return link_COFF(std::move(G), std::move(Ctx));
   case Triple::XCOFF:
     return link_XCOFF(std::move(G), std::move(Ctx));
+#endif
   default:
     Ctx->notifyFailed(make_error<JITLinkError>("Unsupported object format"));
   };

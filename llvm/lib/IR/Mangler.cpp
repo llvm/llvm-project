@@ -304,6 +304,7 @@ std::optional<std::string> llvm::getArm64ECMangledFunctionName(StringRef Name) {
   if (Name.contains("$$h"))
     return std::nullopt;
 
+#ifndef EJIT_BARE_METAL
   // Ask the demangler where we should insert "$$h".
   auto InsertIdx = getArm64ECInsertionPointInMangledName(Name);
   if (!InsertIdx)
@@ -311,6 +312,9 @@ std::optional<std::string> llvm::getArm64ECMangledFunctionName(StringRef Name) {
 
   return std::optional<std::string>(
       (Name.substr(0, *InsertIdx) + "$$h" + Name.substr(*InsertIdx)).str());
+#else
+  return std::nullopt;
+#endif
 }
 
 std::optional<std::string>

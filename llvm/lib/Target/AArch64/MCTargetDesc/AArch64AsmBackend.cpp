@@ -561,6 +561,7 @@ enum CompactUnwindEncodings {
 } // end CU namespace
 
 // FIXME: This should be in a separate file.
+#ifndef EJIT_BARE_METAL
 class DarwinAArch64AsmBackend : public AArch64AsmBackend {
   const MCRegisterInfo &MRI;
 
@@ -745,6 +746,8 @@ public:
 
 namespace {
 
+#endif // EJIT_BARE_METAL (DarwinAArch64AsmBackend)
+
 class ELFAArch64AsmBackend : public AArch64AsmBackend {
 public:
   uint8_t OSABI;
@@ -764,6 +767,7 @@ public:
 }
 
 namespace {
+#ifndef EJIT_BARE_METAL
 class COFFAArch64AsmBackend : public AArch64AsmBackend {
 public:
   COFFAArch64AsmBackend(const Target &T, const Triple &TheTriple)
@@ -774,6 +778,7 @@ public:
     return createAArch64WinCOFFObjectWriter(TheTriple);
   }
 };
+#endif // EJIT_BARE_METAL
 }
 
 MCAsmBackend *llvm::createAArch64leAsmBackend(const Target &T,
@@ -781,12 +786,14 @@ MCAsmBackend *llvm::createAArch64leAsmBackend(const Target &T,
                                               const MCRegisterInfo &MRI,
                                               const MCTargetOptions &Options) {
   const Triple &TheTriple = STI.getTargetTriple();
+#ifndef EJIT_BARE_METAL
   if (TheTriple.isOSBinFormatMachO()) {
     return new DarwinAArch64AsmBackend(T, TheTriple, MRI);
   }
 
   if (TheTriple.isOSBinFormatCOFF())
     return new COFFAArch64AsmBackend(T, TheTriple);
+#endif
 
   assert(TheTriple.isOSBinFormatELF() && "Invalid target");
 

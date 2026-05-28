@@ -1236,7 +1236,11 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
     OS << '[';
     ListSeparator LS;
     for (auto &Op : Expr->expr_ops()) {
+#ifndef EJIT_BARE_METAL
       OS << LS << dwarf::OperationEncodingString(Op.getOp());
+#else
+      OS << LS << "DW_OP_" << (unsigned)Op.getOp();
+#endif
       for (unsigned I = 0; I < Op.getNumArgs(); ++I)
         OS << ' ' << Op.getArg(I);
     }

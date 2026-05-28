@@ -31,6 +31,7 @@ MCStreamer *Target::createMCObjectStreamer(
   switch (T.getObjectFormat()) {
   case Triple::UnknownObjectFormat:
     llvm_unreachable("Unknown object format");
+#ifndef EJIT_BARE_METAL
   case Triple::COFF:
     assert((T.isOSWindows() || T.isUEFI()) &&
            "only Windows and UEFI COFF are supported");
@@ -45,6 +46,7 @@ MCStreamer *Target::createMCObjectStreamer(
       S = createMachOStreamer(Ctx, std::move(TAB), std::move(OW),
                               std::move(Emitter), false);
     break;
+#endif
   case Triple::ELF:
     if (ELFStreamerCtorFn)
       S = ELFStreamerCtorFn(T, Ctx, std::move(TAB), std::move(OW),
@@ -53,6 +55,7 @@ MCStreamer *Target::createMCObjectStreamer(
       S = createELFStreamer(Ctx, std::move(TAB), std::move(OW),
                             std::move(Emitter));
     break;
+#ifndef EJIT_BARE_METAL
   case Triple::Wasm:
     S = createWasmStreamer(Ctx, std::move(TAB), std::move(OW),
                            std::move(Emitter));
@@ -73,6 +76,7 @@ MCStreamer *Target::createMCObjectStreamer(
     S = createDXContainerStreamer(Ctx, std::move(TAB), std::move(OW),
                                   std::move(Emitter));
     break;
+#endif
   }
   if (ObjectTargetStreamerCtorFn)
     ObjectTargetStreamerCtorFn(*S, STI);

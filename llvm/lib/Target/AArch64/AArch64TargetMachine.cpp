@@ -422,8 +422,10 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
   }
 #endif
 
+#ifndef EJIT_BARE_METAL
   // AArch64 supports the MachineOutliner.
   setMachineOutliner(true);
+#endif
 
   // AArch64 supports default outlining behaviour.
   setSupportsDefaultOutlining(true);

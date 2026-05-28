@@ -1,17 +1,9 @@
-add_llvm_component_library(LLVMMC
+set(MCSOURCES
   ConstantPools.cpp
-  DXContainerPSVInfo.cpp
-  DXContainerRootSignature.cpp
   ELFObjectWriter.cpp
-  GOFFObjectWriter.cpp
   MCAsmBackend.cpp
   MCAsmInfo.cpp
-  MCAsmInfoCOFF.cpp
-  MCAsmInfoDarwin.cpp
   MCAsmInfoELF.cpp
-  MCAsmInfoGOFF.cpp
-  MCAsmInfoWasm.cpp
-  MCAsmInfoXCOFF.cpp
   MCAsmMacro.cpp
   MCAsmStreamer.cpp
   MCAssembler.cpp
@@ -19,13 +11,10 @@ add_llvm_component_library(LLVMMC
   MCCodeView.cpp
   MCContext.cpp
   MCDwarf.cpp
-  MCDXContainerStreamer.cpp
-  MCDXContainerWriter.cpp
   MCELFObjectTargetWriter.cpp
   MCELFStreamer.cpp
   MCExpr.cpp
   MCFragment.cpp
-  MCGOFFStreamer.cpp
   MCInst.cpp
   MCInstPrinter.cpp
   MCInstrAnalysis.cpp
@@ -33,8 +22,6 @@ add_llvm_component_library(LLVMMC
   MCInstrInfo.cpp
   MCLabel.cpp
   MCLinkerOptimizationHint.cpp
-  MCMachOStreamer.cpp
-  MCMachObjectTargetWriter.cpp
   MCNullStreamer.cpp
   MCObjectFileInfo.cpp
   MCObjectStreamer.cpp
@@ -43,22 +30,41 @@ add_llvm_component_library(LLVMMC
   MCRegisterInfo.cpp
   MCSchedule.cpp
   MCSection.cpp
+  MCSectionELF.cpp
+  MCStreamer.cpp
+  MCSubtargetInfo.cpp
+  MCSymbol.cpp
+  MCSymbolELF.cpp
+  MCTargetOptions.cpp
+  MCTargetOptionsCommandFlags.cpp
+  MCValue.cpp
+  StringTableBuilder.cpp
+  TargetRegistry.cpp
+  )
+
+# OS/format-specific sources not needed for bare-metal EJIT
+set(MCSOURCES_OPT
+  DXContainerPSVInfo.cpp
+  DXContainerRootSignature.cpp
+  GOFFObjectWriter.cpp
+  MCAsmInfoCOFF.cpp
+  MCAsmInfoDarwin.cpp
+  MCAsmInfoGOFF.cpp
+  MCAsmInfoWasm.cpp
+  MCAsmInfoXCOFF.cpp
+  MCDXContainerStreamer.cpp
+  MCDXContainerWriter.cpp
+  MCGOFFStreamer.cpp
+  MCMachOStreamer.cpp
+  MCMachObjectTargetWriter.cpp
   MCSectionCOFF.cpp
   MCSectionDXContainer.cpp
-  MCSectionELF.cpp
   MCSectionGOFF.cpp
   MCSectionMachO.cpp
   MCSectionWasm.cpp
   MCSectionXCOFF.cpp
-  MCStreamer.cpp
   MCSPIRVStreamer.cpp
-  MCSubtargetInfo.cpp
-  MCSymbol.cpp
-  MCSymbolELF.cpp
   MCSymbolXCOFF.cpp
-  MCTargetOptions.cpp
-  MCTargetOptionsCommandFlags.cpp
-  MCValue.cpp
   MCWasmObjectTargetWriter.cpp
   MCWasmStreamer.cpp
   MCWin64EH.cpp
@@ -68,11 +74,19 @@ add_llvm_component_library(LLVMMC
   MCXCOFFStreamer.cpp
   MachObjectWriter.cpp
   SPIRVObjectWriter.cpp
-  StringTableBuilder.cpp
-  TargetRegistry.cpp
   WasmObjectWriter.cpp
   WinCOFFObjectWriter.cpp
   XCOFFObjectWriter.cpp
+  )
+
+if(NOT EJIT_BARE_METAL)
+  list(APPEND MCSOURCES ${MCSOURCES_OPT})
+endif()
+
+add_llvm_component_library(LLVMMC
+  ${MCSOURCES}
+
+  PARTIAL_SOURCES_INTENDED
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/MC

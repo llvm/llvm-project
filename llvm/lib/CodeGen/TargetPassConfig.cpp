@@ -893,8 +893,10 @@ void TargetPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None && !DisableSelectOptimize)
     addPass(createSelectOptimizePass());
 
+#ifndef EJIT_BARE_METAL
   if (EnableGlobalMergeFunc)
     addPass(createGlobalMergeFuncPass());
+#endif
 
   if (TM->getTargetTriple().isOSWindows())
     addPass(createWindowsSecureHotPatchingPass());
@@ -1225,6 +1227,7 @@ void TargetPassConfig::addMachinePasses() {
   addPass(&LiveDebugValuesID);
   addPass(&MachineSanitizerBinaryMetadataID);
 
+#ifndef EJIT_BARE_METAL
   if (TM->Options.EnableMachineOutliner &&
       getOptLevel() != CodeGenOptLevel::None &&
       EnableMachineOutliner != RunOutliner::NeverOutline) {
@@ -1235,6 +1238,7 @@ void TargetPassConfig::addMachinePasses() {
     if (AddOutliner)
       addPass(createMachineOutlinerPass(RunOnAllFunctions));
   }
+#endif
 
   if (GCEmptyBlocks)
     addPass(llvm::createGCEmptyBasicBlocksPass());

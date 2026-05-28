@@ -14,10 +14,12 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/Binary.h"
+#ifndef EJIT_BARE_METAL
 #include "llvm/Object/COFF.h"
-#include "llvm/Object/Error.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/Wasm.h"
+#endif
+#include "llvm/Object/Error.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
@@ -123,6 +125,7 @@ Triple ObjectFile::makeTriple() const {
 
   // TheTriple defaults to ELF, and COFF doesn't have an environment:
   // something we can do here is indicate that it is mach-o.
+#ifndef EJIT_BARE_METAL
   if (isMachO()) {
     TheTriple.setObjectFormat(Triple::MachO);
   } else if (isCOFF()) {
@@ -136,7 +139,9 @@ Triple ObjectFile::makeTriple() const {
   } else if (isGOFF()) {
     TheTriple.setOS(Triple::ZOS);
     TheTriple.setObjectFormat(Triple::GOFF);
-  } else if (TheTriple.isAMDGPU()) {
+  } else
+#endif
+  if (TheTriple.isAMDGPU()) {
     TheTriple.setVendor(Triple::AMD);
   } else if (TheTriple.isNVPTX()) {
     TheTriple.setVendor(Triple::NVIDIA);
@@ -178,6 +183,7 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type,
   case file_magic::elf_shared_object:
   case file_magic::elf_core:
     return createELFObjectFile(Object, InitContent);
+#ifndef EJIT_BARE_METAL
   case file_magic::macho_object:
   case file_magic::macho_executable:
   case file_magic::macho_fixed_virtual_memory_shared_lib:
@@ -201,6 +207,7 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type,
     return createXCOFFObjectFile(Object, Binary::ID_XCOFF64);
   case file_magic::wasm_object:
     return createWasmObjectFile(Object);
+#endif
   }
   llvm_unreachable("Unexpected Object File Type");
 }

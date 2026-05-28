@@ -15,12 +15,14 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Error.h"
+#ifndef EJIT_BARE_METAL
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/Minidump.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Object/TapiUniversal.h"
 #include "llvm/Object/WindowsResource.h"
+#endif
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
@@ -76,10 +78,12 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
   case file_magic::xcoff_object_64:
   case file_magic::wasm_object:
     return ObjectFile::createSymbolicFile(Buffer, Type, Context, InitContent);
+#ifndef EJIT_BARE_METAL
   case file_magic::macho_universal_binary:
     return MachOUniversalBinary::create(Buffer);
   case file_magic::windows_resource:
     return WindowsResource::createWindowsResource(Buffer);
+#endif
   case file_magic::pdb:
     // PDB does not support the Binary interface.
     return errorCodeToError(object_error::invalid_file_type);
@@ -93,12 +97,14 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
   case file_magic::spirv_object:
     // Unrecognized object file format.
     return errorCodeToError(object_error::invalid_file_type);
+#ifndef EJIT_BARE_METAL
   case file_magic::offload_binary:
     return OffloadBinary::create(Buffer);
   case file_magic::minidump:
     return MinidumpFile::create(Buffer);
   case file_magic::tapi_file:
     return TapiUniversal::create(Buffer);
+#endif
   }
   llvm_unreachable("Unexpected Binary File Type");
 }

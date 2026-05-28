@@ -90,7 +90,9 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMachineLoopInfoWrapperPassPass(Registry);
   initializeMachineModuleInfoWrapperPassPass(Registry);
   initializeMachineOptimizationRemarkEmitterPassPass(Registry);
+#ifndef EJIT_BARE_METAL
   initializeMachineOutlinerPass(Registry);
+#endif
   initializeMachinePipelinerPass(Registry);
   initializeMachineSanitizerBinaryMetadataLegacyPass(Registry);
   initializeModuloScheduleTestPass(Registry);
@@ -147,7 +149,9 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeUnreachableMachineBlockElimLegacyPass(Registry);
   initializeVirtRegMapWrapperLegacyPass(Registry);
   initializeVirtRegRewriterLegacyPass(Registry);
+#ifndef EJIT_BARE_METAL
   initializeWasmEHPreparePass(Registry);
   initializeWinEHPreparePass(Registry);
+#endif
   initializeXRayInstrumentationLegacyPass(Registry);
 }

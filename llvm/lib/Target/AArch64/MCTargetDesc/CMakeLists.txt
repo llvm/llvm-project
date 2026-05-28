@@ -1,4 +1,4 @@
-add_llvm_component_library(LLVMAArch64Desc
+set(AARCH64DESC_SOURCES
   AArch64AsmBackend.cpp
   AArch64ELFObjectWriter.cpp
   AArch64ELFStreamer.cpp
@@ -7,10 +7,23 @@ add_llvm_component_library(LLVMAArch64Desc
   AArch64MCCodeEmitter.cpp
   AArch64MCExpr.cpp
   AArch64MCTargetDesc.cpp
-  AArch64MachObjectWriter.cpp
   AArch64TargetStreamer.cpp
+  )
+
+set(AARCH64DESC_OPT_SOURCES
+  AArch64MachObjectWriter.cpp
   AArch64WinCOFFObjectWriter.cpp
   AArch64WinCOFFStreamer.cpp
+  )
+
+if(NOT EJIT_BARE_METAL)
+  list(APPEND AARCH64DESC_SOURCES ${AARCH64DESC_OPT_SOURCES})
+endif()
+
+add_llvm_component_library(LLVMAArch64Desc
+  ${AARCH64DESC_SOURCES}
+
+  PARTIAL_SOURCES_INTENDED
 
   LINK_COMPONENTS
   AArch64Info
