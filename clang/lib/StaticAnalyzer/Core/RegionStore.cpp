@@ -3002,7 +3002,7 @@ void RemoveDeadBindingsWorker::VisitAddedToCluster(const MemRegion *baseR,
     return;
   }
 
-  // CXXThisRegion in the current or parent location context is live.
+  // CXXThisRegion in the current or parent stack frame is live.
   if (const CXXThisRegion *TR = dyn_cast<CXXThisRegion>(baseR)) {
     const auto *StackReg =
         cast<StackArgumentsSpaceRegion>(TR->getSuperRegion());

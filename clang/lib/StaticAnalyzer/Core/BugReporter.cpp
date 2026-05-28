@@ -175,7 +175,7 @@ public:
     return getParentMap().getParent(S);
   }
 
-  void updateLocCtxMap(const PathPieces *Path, const StackFrame *SF) {
+  void updateStackFrameMap(const PathPieces *Path, const StackFrame *SF) {
     assert(Path && SF);
     SFM[Path] = SF;
   }
@@ -186,7 +186,9 @@ public:
     return SFM.find(Path)->getSecond();
   }
 
-  bool isInLocCtxMap(const PathPieces *Path) const { return SFM.count(Path); }
+  bool isInStackFrameMap(const PathPieces *Path) const {
+    return SFM.count(Path);
+  }
 
   PathPieces &getActivePath() { return PD->getActivePath(); }
   PathPieces &getMutablePieces() { return PD->getMutablePieces(); }
@@ -1187,17 +1189,17 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
 
       // Since we just transferred the path over to the call piece, reset the
       // mapping of the active path to the current stack frame.
-      assert(C.isInLocCtxMap(&C.getActivePath()) &&
+      assert(C.isInStackFrameMap(&C.getActivePath()) &&
              "When we ascend to a previously unvisited call, the active path's "
              "address shouldn't change, but rather should be compacted into "
              "a single CallEvent!");
-      C.updateLocCtxMap(&C.getActivePath(), C.getCurrStackFrame());
+      C.updateStackFrameMap(&C.getActivePath(), C.getCurrStackFrame());
 
       // Record the stack frame mapping for the path within the call.
-      assert(!C.isInLocCtxMap(&Call->path) &&
+      assert(!C.isInStackFrameMap(&Call->path) &&
              "When we ascend to a previously unvisited call, this must be the "
              "first time we encounter the caller stack frame!");
-      C.updateLocCtxMap(&Call->path, CE->getCalleeStackFrame());
+      C.updateStackFrameMap(&Call->path, CE->getCalleeStackFrame());
     }
     Call->setCallee(*CE, SM);
 
@@ -1222,10 +1224,10 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
     // a new call piece to contain the path pieces for that call.
     auto Call = PathDiagnosticCallPiece::construct(*CE, SM);
     // Record the mapping from call piece to StackFrame.
-    assert(!C.isInLocCtxMap(&Call->path) &&
+    assert(!C.isInStackFrameMap(&Call->path) &&
            "We just entered a call, this must've been the first time we "
            "encounter its stack frame!");
-    C.updateLocCtxMap(&Call->path, CE->getCalleeStackFrame());
+    C.updateStackFrameMap(&Call->path, CE->getCalleeStackFrame());
 
     if (C.shouldAddPathEdges()) {
       // Add the edge to the return site.

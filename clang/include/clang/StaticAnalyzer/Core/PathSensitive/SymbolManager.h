@@ -585,12 +585,11 @@ class SymbolReaper {
 
 public:
   /// Construct a reaper object, which removes everything which is not
-  /// live before we execute statement s in the given location context.
+  /// live before we execute statements in the given stack frame.
   ///
-  /// If the statement is NULL, everything is this and parent contexts is
+  /// If the statement is NULL, everything in this and parent stack frames are
   /// considered live.
-  /// If the stack frame context is NULL, everything on stack is considered
-  /// dead.
+  /// If the stack frame is NULL, everything on stack is considered dead.
   SymbolReaper(const StackFrame *SF, const Stmt *s, SymbolManager &symmgr,
                StoreManager &storeMgr)
       : SF(SF), Loc(s), SymMgr(symmgr), reapedStore(nullptr, storeMgr) {}

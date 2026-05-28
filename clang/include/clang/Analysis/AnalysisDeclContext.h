@@ -318,7 +318,7 @@ public:
 class StackFrameManager {
   llvm::FoldingSet<StackFrame> Frames;
 
-  // ID used for generating a new location context.
+  // ID used for generating a new stack frame.
   int64_t NewID = 0;
 
 public:

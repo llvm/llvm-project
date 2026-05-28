@@ -625,7 +625,7 @@ private:
 };
 
 /// Represents a point when we begin processing an inlined call.
-/// CallEnter uses the caller's location context.
+/// CallEnter uses the caller's stack frame.
 class CallEnter : public ProgramPoint {
 public:
   CallEnter(const Stmt *stmt, const StackFrame *CalleeSF,
@@ -666,7 +666,7 @@ private:
 /// - CallExitEnd
 class CallExitBegin : public ProgramPoint {
 public:
-  // CallExitBegin uses the callee's location context.
+  // CallExitBegin uses the callee's stack frame.
   CallExitBegin(const StackFrame *SF, const ReturnStmt *RS)
       : ProgramPoint(RS, CallExitBeginKind, SF, nullptr) {}
 
@@ -686,7 +686,7 @@ private:
 /// \sa CallExitBegin
 class CallExitEnd : public ProgramPoint {
 public:
-  // CallExitEnd uses the caller's location context.
+  // CallExitEnd uses the caller's stack frame.
   CallExitEnd(const StackFrame *CalleeSF, const StackFrame *CallerSF)
       : ProgramPoint(CalleeSF, CallExitEndKind, CallerSF, nullptr) {}
 

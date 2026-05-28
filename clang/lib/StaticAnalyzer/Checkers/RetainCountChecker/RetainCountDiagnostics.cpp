@@ -514,9 +514,8 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
         DeallocSent = true;
       }
     } else if (const ObjCMessageExpr *ME = dyn_cast<ObjCMessageExpr>(S)) {
-      if (const Expr *receiver = ME->getInstanceReceiver()) {
-        if (CurrSt->getSValAsScalarOrLoc(receiver, SF).getAsLocSymbol() ==
-            Sym) {
+      if (const Expr *R = ME->getInstanceReceiver()) {
+        if (CurrSt->getSValAsScalarOrLoc(R, SF).getAsLocSymbol() == Sym) {
           // The symbol we are tracking is the receiver.
           DeallocSent = true;
         }
@@ -616,7 +615,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
   const MemRegion *FirstBinding = nullptr;
   const StackFrame *LeakStackFrame = N->getStackFrame();
 
-  // The location context of the init method called on the leaked object, if
+  // The stack frame of the init method called on the leaked object, if
   // available.
   const StackFrame *InitMethodStackFrame = nullptr;
 
@@ -654,7 +653,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
       AllocationNodeInCurrentOrParentContext = N;
 
     // Find the last init that was called on the given symbol and store the
-    // init method's location context.
+    // init method's stack frame.
     if (!InitMethodStackFrame)
       if (auto CEP = N->getLocation().getAs<CallEnter>()) {
         const Stmt *CE = CEP->getCallExpr();
