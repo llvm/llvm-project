@@ -34,8 +34,8 @@
 ;
 ; Test to see if device library related errors are emitted.
 ; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc --library-path=%t/libs --bc-library lib1.bc --bc-library lib2.bc --bc-library lib3.bc -o a.spv 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=DEVLIBSERR2
-; DEVLIBSERR2: '{{.*}}lib3.bc' library file not found
+; RUN:   | FileCheck %s --check-prefix=DEVLIBSERR
+; DEVLIBSERR: '{{.*}}lib3.bc' library file not found
 ;
 ; Test AOT compilation for an Intel GPU.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none -arch=bmg_g21 %t/input1.bc %t/input2.bc -o %t/aot-gpu.out 2>&1 \
