@@ -1919,8 +1919,11 @@ static bool InstrBreaksNonThrowing(Instruction &I, const SCCNodeSet &SCCNodes) {
 /// Helper for NoFree inference predicate InstrBreaksAttribute.
 static bool InstrBreaksNoFree(Instruction &I, const SCCNodeSet &SCCNodes) {
   CallBase *CB = dyn_cast<CallBase>(&I);
-  if (!CB)
-    return false;
+  if (!CB) {
+    // Synchronization may establish happens-before with a free on another
+    // thread.
+    return I.maySynchronize();
+  }
 
   if (CB->hasFnAttr(Attribute::NoFree))
     return false;

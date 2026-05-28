@@ -516,6 +516,9 @@ public:
            isFLAT(Opcode);
   }
 
+  /// True if MI implicitly drains XCNT.
+  static bool isXcntDrain(const MachineInstr &MI);
+
   static bool isSOP1(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::SOP1;
   }
