@@ -774,8 +774,12 @@ protected:
                 }
               }
               if (!found_recognized) {
-                if (const auto *error_cstr = error.AsCString(nullptr))
-                  result.AppendError(error_cstr);
+                // Check only the `error` argument, because doing
+                // `valobj_sp->GetError()` will update the value and potentially
+                // return a new error that happens during the update, even if
+                // `GetValueForVariableExpressionPath` reported no errors.
+                if (error.Fail())
+                  result.SetError(error.takeError());
                 else
                   result.AppendErrorWithFormat(
                       "unable to find any variable expression path that "
