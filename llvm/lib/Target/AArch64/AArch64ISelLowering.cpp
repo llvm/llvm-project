@@ -29720,7 +29720,6 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::MUL:
     return performMulCombine(N, DAG, DCI, Subtarget);
   case ISD::SINT_TO_FP:
-    return performIntToFpCombine(N, DAG, DCI, Subtarget);
   case ISD::UINT_TO_FP:
     return performIntToFpCombine(N, DAG, DCI, Subtarget);
   case ISD::FP_TO_SINT:
