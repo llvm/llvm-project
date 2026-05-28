@@ -4522,7 +4522,10 @@ LegalizerHelper::bitcast(MachineInstr &MI, unsigned TypeIdx, LLT CastTy) {
     if (TypeIdx != 0)
       return UnableToLegalize;
 
-    if (MRI.getType(MI.getOperand(1).getReg()).isVector()) {
+    if (MRI.getType(MI.getOperand(1).getReg()).isVector() &&
+        (!CastTy.isVector() ||
+         MRI.getType(MI.getOperand(1).getReg()).getElementCount() !=
+             CastTy.getElementCount())) {
       LLVM_DEBUG(
           dbgs() << "bitcast action not implemented for vector select\n");
       return UnableToLegalize;
@@ -6847,6 +6850,25 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
           DstTy.getElementCount() != MoreTy.getElementCount())
         return UnableToLegalize;
 
+      if (CondTy.getSizeInBits() != 1) {
+        unsigned ScalarExt = MIRBuilder.getBoolExtOp(/*IsVec=*/false, false);
+        unsigned VectorExt = MIRBuilder.getBoolExtOp(/*IsVec=*/true, false);
+        if (ScalarExt != VectorExt) {
+          switch (VectorExt) {
+          case TargetOpcode::G_SEXT:
+            CondReg = MIRBuilder.buildSExtInReg(CondTy, CondReg, 1).getReg(0);
+            break;
+          case TargetOpcode::G_ZEXT:
+            CondReg = MIRBuilder.buildZExtInReg(CondTy, CondReg, 1).getReg(0);
+            break;
+          case TargetOpcode::G_ANYEXT:
+            break;
+          default:
+            llvm_unreachable("Unexpected BooleanContent type");
+          }
+        }
+      }
+
       // This is turning a scalar select of vectors into a vector
       // select. Broadcast the select condition.
       auto ShufSplat = MIRBuilder.buildShuffleSplat(MoreTy, CondReg);
@@ -6856,10 +6878,12 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
       return Legalized;
     }
 
-    if (CondTy.isVector())
-      return UnableToLegalize;
-
     Observer.changingInstr(MI);
+    if (CondTy.isVector()) {
+      assert(DstTy.getElementCount() == CondTy.getElementCount());
+      LLT MoreCondTy = MoreTy.changeElementType(CondTy.getScalarType());
+      moreElementsVectorSrc(MI, MoreCondTy, 1);
+    }
     moreElementsVectorSrc(MI, MoreTy, 2);
     moreElementsVectorSrc(MI, MoreTy, 3);
     moreElementsVectorDst(MI, MoreTy, 0);

@@ -1067,13 +1067,39 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_BRINDIRECT).legalFor({p0});
 
   getActionDefinitionsBuilder(G_SELECT)
-      .legalFor({{s32, s32}, {s64, s32}, {p0, s32}})
+      .legalFor({{s32, s32},
+                 {s64, s32},
+                 {p0, s32},
+                 {v8s8, v8s8},
+                 {v4s16, v4s16},
+                 {v2s32, v2s32},
+                 {v16s8, v16s8},
+                 {v8s16, v8s16},
+                 {v4s32, v4s32},
+                 {v2s64, v2s64}})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
-      .clampScalar(1, s32, s32)
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
-      .minScalarEltSameAsIf(all(isVector(0), isVector(1)), 1, 0)
-      .lowerIf(isVector(0));
+      .moreElementsToNextPow2(0)
+      .minScalarEltSameAsIf(all(isVector(0), isScalar(1)), 1, 0)
+      .moreElementsIf(all(isVector(0), isScalar(1)),
+                      [=](const LegalityQuery &Query) {
+                        return std::pair(1, Query.Types[0].changeElementType(
+                                                Query.Types[1]));
+                      })
+      .clampScalar(1, s32, s32)
+      .minScalarEltSameAsIf(isVector(0), 1, 0)
+      .maxScalarEltSameAsIf(isVector(0), 1, 0)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampMaxNumElements(0, s64, 2)
+      .clampMaxNumElements(0, p0, 2)
+      .bitcastIf(isPointerVector(0), [=](const LegalityQuery &Query) {
+        // Bitcast pointers vector to i64.
+        const LLT DstTy = Query.Types[0];
+        return std::pair(0, DstTy.changeElementType(LLT::integer(64)));
+      });
 
   // Pointer-handling
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});

@@ -528,6 +528,7 @@ def G_SELECT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$tst, type0:$src1, type0:$src2);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Generic pointer offset.

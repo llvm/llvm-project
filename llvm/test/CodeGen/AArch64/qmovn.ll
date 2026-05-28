@@ -648,7 +648,7 @@ define <4 x i16> @sminsmax_range_unsigned_i64_to_i16(<2 x i16> %x, <2 x i64> %y)
 ; CHECK-GI-NEXT:    cmgt v3.2d, v1.2d, #0
 ; CHECK-GI-NEXT:    movi v2.2d, #0x0000000000ffff
 ; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    and v1.16b, v3.16b, v1.16b
 ; CHECK-GI-NEXT:    cmgt v3.2d, v2.2d, v1.2d
 ; CHECK-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
 ; CHECK-GI-NEXT:    xtn v1.2s, v1.2d

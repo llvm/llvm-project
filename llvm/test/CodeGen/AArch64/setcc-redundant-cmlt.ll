@@ -165,8 +165,8 @@ define <4 x i32> @setcc_ne0(<4 x i32> %a, <4 x i32> %b, <4 x i32> %x, <4 x i32> 
 ; CHECK-GI-LABEL: setcc_ne0:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    cmgt v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    cmtst v0.4s, v0.4s, v0.4s
-; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-GI-NEXT:    bsl v0.16b, v3.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
   %cmp = icmp slt <4 x i32> %a, %b
   %sext = sext <4 x i1> %cmp to <4 x i32>

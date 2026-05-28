@@ -79,24 +79,19 @@ define <4 x i8> @any_of_select_v4i8(<4 x i32> %mask, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK-GI-NEXT:    and w9, w10, #0x1
 ; CHECK-GI-NEXT:    orr w8, w11, w8, lsl #2
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #3
-; CHECK-GI-NEXT:    mov w9, #255 // =0xff
-; CHECK-GI-NEXT:    fmov s3, w9
 ; CHECK-GI-NEXT:    strb w8, [sp, #15]
 ; CHECK-GI-NEXT:    and w8, w8, #0xff
 ; CHECK-GI-NEXT:    tst w8, #0xf
 ; CHECK-GI-NEXT:    cset w8, eq
-; CHECK-GI-NEXT:    mov v3.h[1], w9
-; CHECK-GI-NEXT:    sbfx w8, w8, #0, #1
+; CHECK-GI-NEXT:    lsl w8, w8, #7
+; CHECK-GI-NEXT:    sbfx w8, w8, #7, #1
 ; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov v3.h[2], w9
 ; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    mov v3.h[3], w9
 ; CHECK-GI-NEXT:    dup v0.8b, v0.b[0]
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v2.8b, v2.8b, v0.8b
+; CHECK-GI-NEXT:    bsl v0.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    eor v3.8b, v0.8b, v3.8b
-; CHECK-GI-NEXT:    and v0.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    and v1.8b, v2.8b, v3.8b
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    add sp, sp, #16
 ; CHECK-GI-NEXT:    ret
   %cmp = icmp slt <4 x i32> %mask, zeroinitializer

@@ -6260,6 +6260,24 @@ def : Pat<(AArch64bsp (v4i32 V128:$Rd), V128:$Rn, V128:$Rm),
 def : Pat<(AArch64bsp (v2i64 V128:$Rd), V128:$Rn, V128:$Rm),
           (BSPv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
 
+def : Pat<(v8i8 (select (v8i8 V64:$Rd), V64:$Rn, V64:$Rm)),
+          (BSPv8i8 V64:$Rd, V64:$Rn, V64:$Rm)>;
+def : Pat<(v4i16 (select (v4i16 V64:$Rd), V64:$Rn, V64:$Rm)),
+          (BSPv8i8 V64:$Rd, V64:$Rn, V64:$Rm)>;
+def : Pat<(v2i32 (select (v2i32 V64:$Rd), V64:$Rn, V64:$Rm)),
+          (BSPv8i8 V64:$Rd, V64:$Rn, V64:$Rm)>;
+def : Pat<(v1i64 (select (v1i64 V64:$Rd), V64:$Rn, V64:$Rm)),
+          (BSPv8i8 V64:$Rd, V64:$Rn, V64:$Rm)>;
+
+def : Pat<(v16i8 (select (v16i8 V128:$Rd), V128:$Rn, V128:$Rm)),
+          (BSPv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
+def : Pat<(v8i16 (select (v8i16 V128:$Rd), V128:$Rn, V128:$Rm)),
+          (BSPv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
+def : Pat<(v4i32 (select (v4i32 V128:$Rd), V128:$Rn, V128:$Rm)),
+          (BSPv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
+def : Pat<(v2i64 (select (v2i64 V128:$Rd), V128:$Rn, V128:$Rm)),
+          (BSPv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
+
 // The following SetCC patterns are used for GlobalISel only
 multiclass SelectSetCC<PatFrags InFrag, string INST> {
   def : Pat<(v8i8 (InFrag (v8i8 V64:$Rn), (v8i8 V64:$Rm))),
