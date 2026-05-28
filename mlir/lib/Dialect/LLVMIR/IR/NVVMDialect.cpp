@@ -25,7 +25,6 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Types.h"
@@ -2925,29 +2924,6 @@ LogicalResult NVVM::SetMaxRegisterOp::verify() {
   if (getRegCount() < 24 || getRegCount() > 256)
     return emitOpError("new register size must be in between 24 to 256");
   return success();
-}
-
-/// Check the PTX 0..15 range for barrier ids that are present as integer
-/// constants.
-template <typename BarrierLikeOp>
-static LogicalResult verifyBarrierIdRange(BarrierLikeOp op) {
-  Value id = op.getBarrierId();
-  if (!id)
-    return success();
-  APInt cst;
-  if (!matchPattern(id, m_ConstantInt(&cst)))
-    return success();
-  uint64_t value = cst.getZExtValue();
-  if (value > 15)
-    return op.emitOpError("barrier id must be in the range [0, 15], got ")
-           << value;
-  return success();
-}
-
-LogicalResult NVVM::BarrierOp::verify() { return verifyBarrierIdRange(*this); }
-
-LogicalResult NVVM::BarrierReductionOp::verify() {
-  return verifyBarrierIdRange(*this);
 }
 
 LogicalResult NVVM::Tcgen05CpOp::verify() {

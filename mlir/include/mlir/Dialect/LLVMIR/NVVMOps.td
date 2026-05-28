@@ -1168,8 +1168,6 @@ def NVVM_BarrierOp : NVVM_VoidIntrinsicOp<"barrier",
   let builders = [OpBuilder<(ins), [{
       return build($_builder, $_state, Value{}, Value{});
     }]>];
-
-  let hasVerifier = 1;
 }
 
 def NVVM_BarrierReductionOp :
@@ -1210,8 +1208,6 @@ def NVVM_BarrierReductionOp :
     $res = builder.CreateZExt(createIntrinsicCall(builder, id, args),
                               builder.getInt32Ty());
   }];
-
-  let hasVerifier = 1;
 }
 
 def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive"> 

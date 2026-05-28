@@ -2133,21 +2133,3 @@ func.func @nvvm_read_sreg_clock64_wrong_type() {
   %0 = nvvm.read.ptx.sreg.clock64 : i32
   return
 }
-
-// -----
-
-func.func @nvvm_barrier_id_out_of_range() {
-  %c16 = llvm.mlir.constant(16 : i32) : i32
-  // expected-error@+1 {{'nvvm.barrier' op barrier id must be in the range [0, 15], got 16}}
-  nvvm.barrier id = %c16
-  return
-}
-
-// -----
-
-func.func @nvvm_barrier_reduction_id_out_of_range(%pred : i32) {
-  %c42 = llvm.mlir.constant(42 : i32) : i32
-  // expected-error@+1 {{'nvvm.barrier.reduction' op barrier id must be in the range [0, 15], got 42}}
-  %0 = nvvm.barrier.reduction #nvvm.reduction<and> %pred id = %c42 -> i32
-  return
-}
