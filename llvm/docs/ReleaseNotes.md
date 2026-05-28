@@ -94,6 +94,13 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Fast math flags are now permitted on `uitofp` and `sitofp`.
 
+* The `llvm.structured.gep` intrinsic has gained an extra `flags` argument,
+  allowing the in-bounds nature of array indices, their signedness, and their
+  non-negativity to be provided on a per-index basis, removing the old
+  `[0 x T]` element type that conflated an array having unknown extent with
+  potentially in-bounds indexing. The default interpretation of indices has been
+  updated to be signed, matching GEP.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
