@@ -15811,36 +15811,22 @@ static SDValue tryLowerToBSL(SDValue N, SelectionDAG &DAG) {
   // Match the trunc-hoisted shape that hides BSP from the cases below:
   //   (or (trunc (and A B)) (and C (xor (trunc A) -1))) => BSP(trunc A, trunc B, C)
   if (VT.isFixedLengthVector() && Subtarget.isNeonAvailable()) {
-    for (unsigned Side = 0; Side != 2; ++Side) {
-      SDValue TruncSide = N->getOperand(Side);
-      SDValue AndSide = N->getOperand(1 - Side);
-      if (TruncSide.getOpcode() != ISD::TRUNCATE || !TruncSide.hasOneUse() ||
-          AndSide.getOpcode() != ISD::AND)
-        continue;
-      SDValue InnerAnd = TruncSide.getOperand(0);
-      if (InnerAnd.getOpcode() != ISD::AND || !InnerAnd.hasOneUse())
-        continue;
-
-      for (unsigned I = 0; I != 2; ++I) {
-        SDValue NotOp = AndSide.getOperand(I);
-        if (!isBitwiseNot(NotOp))
+    using namespace SDPatternMatch;
+    SDValue InnerLHS, InnerRHS, NotOp, C;
+    if (sd_match(N, m_Or(m_OneUse(m_Trunc(m_OneUse(m_And(
+                             m_Value(InnerLHS), m_Value(InnerRHS))))),
+                         m_And(m_Value(NotOp), m_Value(C))))) {
+      for (unsigned Swap = 0; Swap != 2; ++Swap, std::swap(NotOp, C)) {
+        if (!isBitwiseNot(NotOp) ||
+            NotOp.getOperand(0).getOpcode() != ISD::TRUNCATE)
           continue;
-        SDValue MaskTrunc = NotOp.getOperand(0);
-        if (MaskTrunc.getOpcode() != ISD::TRUNCATE)
+        SDValue MaskWide = NotOp.getOperand(0).getOperand(0);
+        if (MaskWide != InnerLHS && MaskWide != InnerRHS)
           continue;
-        SDValue WideA = MaskTrunc.getOperand(0);
-        SDValue WideB;
-        if (InnerAnd.getOperand(0) == WideA)
-          WideB = InnerAnd.getOperand(1);
-        else if (InnerAnd.getOperand(1) == WideA)
-          WideB = InnerAnd.getOperand(0);
-        else
-          continue;
-
+        SDValue WideB = MaskWide == InnerLHS ? InnerRHS : InnerLHS;
         return DAG.getNode(AArch64ISD::BSP, DL, VT,
-                           DAG.getNode(ISD::TRUNCATE, DL, VT, WideA),
-                           DAG.getNode(ISD::TRUNCATE, DL, VT, WideB),
-                           AndSide.getOperand(1 - I));
+                           DAG.getNode(ISD::TRUNCATE, DL, VT, MaskWide),
+                           DAG.getNode(ISD::TRUNCATE, DL, VT, WideB), C);
       }
     }
   }
