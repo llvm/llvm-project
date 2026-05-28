@@ -173,7 +173,7 @@ if (LLDB_ENABLE_LZMA)
   list(APPEND EXTRA_LIBS ${LIBLZMA_LIBRARIES})
 endif()
 if (WIN32)
-  list(APPEND LLDB_SYSTEM_LIBS psapi)
+  list(APPEND LLDB_SYSTEM_LIBS psapi shell32)
 endif()
 
 if (LLDB_ENABLE_LIBEDIT)
