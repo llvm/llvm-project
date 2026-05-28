@@ -21,6 +21,9 @@
 namespace llvm {
 
 namespace AMDGPU {
+namespace DefaultBufferSizes {
+constexpr unsigned DS = 16;
+} // namespace DefaultBufferSizes
 
 /// AMDGPU-specific scheduling decision reasons. These provide more granularity
 /// than the generic CandReason enum for debugging purposes.
@@ -66,6 +69,8 @@ private:
   SmallSetVector<SUnit *, 16> PrioritySUs;
   /// All the SUs in the region that consume this resource.
   SmallSetVector<SUnit *, 16> AllSUs;
+  /// All the SUs for this HardwareUnit that have already been scheduled.
+  SmallVector<SUnit *, 16> ScheduledSUs;
   /// The total number of busy cycles for this HardwareUnit for a given region.
   unsigned TotalCycles = 0;
   /// InstructionFlavor mapping.
@@ -75,6 +80,11 @@ private:
   /// / MFMA instructions may take multiple cycles, which may be overlapped with
   /// instructions on other HardwareUnits.
   bool ProducesCoexecWindow = false;
+  /// How many instructons can be held simultaneously for this HardwareUnit.
+  /// A value of 0 or 1 means that there is no buffer.
+  unsigned BufferSize = 0;
+  /// How many cycles it takes for an instruction to clear the buffer.
+  unsigned BufferCycles = 0;
 
 public:
   HardwareUnitInfo() {}
@@ -95,6 +105,24 @@ public:
   void setProducesCoexecWindow(bool Val) { ProducesCoexecWindow = Val; }
 
   bool contains(SUnit *SU) const { return AllSUs.contains(SU); }
+
+  void setBufferSize(unsigned Size) { BufferSize = Size; }
+
+  unsigned getBufferSize() { return BufferSize; }
+
+  /// \returns the next cycle where there is space in the buffer.
+  unsigned getBufferAvailableCycle(unsigned CurrCycle) {
+    // There is no buffer.
+    if (BufferSize <= 1)
+      return CurrCycle;
+
+    // Buffer is available now.
+    if (ScheduledSUs.size() < BufferSize)
+      return CurrCycle;
+
+    return BufferCycles +
+           ScheduledSUs[ScheduledSUs.size() - BufferSize]->TopReadyCycle;
+  }
 
   /// \returns the SUnit with higher priority or nullptr if they are the same.
   /// This method looks through the PrioritySUs to determine if one SU is more
@@ -117,6 +145,8 @@ public:
     TotalCycles = 0;
     Type = AMDGPU::InstructionFlavor::Other;
     ProducesCoexecWindow = false;
+    BufferSize = 0;
+    BufferCycles = 0;
   }
 
   /// \returns the next SU in PrioritySUs that is not ready. If \p LookDeep is
@@ -136,6 +166,11 @@ public:
   /// and reducing its \p BlockingCycles from the TotalCycles. This maintains
   /// the list of PrioritySUs.
   void markScheduled(SUnit *SU, unsigned BlockingCycles);
+  /// After we've collected all the region pressure for this HWUI, correct for
+  /// any specifics of the behavior of this resource. For example, if we the
+  /// HardwareUnit can hold N instructions simultaneously, then there is no
+  /// penalty for scheduling N instructions back to back.
+  void finalizeCycles();
 };
 
 //===----------------------------------------------------------------------===//
@@ -160,10 +195,6 @@ protected:
   /// SU.
   unsigned getHWUICyclesForInst(SUnit *SU);
 
-  /// Given a \p Flavor , find the corresponding HardwareUnit. \returns the
-  /// mapped HardwareUnit.
-  HardwareUnitInfo *getHWUIFromFlavor(AMDGPU::InstructionFlavor Flavor);
-
 public:
   CandidateHeuristics() = default;
 
@@ -173,7 +204,11 @@ public:
   /// Update the state to reflect that \p SU is going to be scheduled.
   void updateForScheduling(SUnit *SU);
 
-  /// Sort the HWUInfo vector. After sorting, the HardwareUnits that are highest
+  /// Given a \p Flavor , find the corresponding HardwareUnit. \returns the
+  /// mapped HardwareUnit.
+  HardwareUnitInfo *getHWUIFromFlavor(AMDGPU::InstructionFlavor Flavor);
+
+  /// Sort the HardwarUnitInfo vector. After sorting, the HWUI that are highest
   /// priority are first. Priority is determined by maximizing coexecution and
   /// keeping the critical HardwareUnit busy.
   void sortHWUIResources();
@@ -202,7 +237,7 @@ public:
 class AMDGPUCoExecSchedStrategy final : public GCNSchedStrategy {
 protected:
   bool tryEffectiveStall(SchedCandidate &Cand, SchedCandidate &TryCand,
-                         SchedBoundary &Zone) const;
+                         SchedBoundary &Zone);
   AMDGPU::AMDGPUSchedReason LastAMDGPUReason = AMDGPU::AMDGPUSchedReason::None;
   CandidateHeuristics Heurs;
 
