@@ -2017,9 +2017,8 @@ void AsmPrinter::emitPrefetchTargetSymbol(const UniqueBBID &BBID,
   // If the function is weak-linkage it may be replaced by a strong
   // version, in which case the prefetch targets should also be replaced.
   bool IsWeak = MF->getFunction().isWeakForLinker();
-  OutStreamer->emitSymbolAttribute(
-      PrefetchTargetSymbol,
-      IsWeak ? MCSA_Weak : MCSA_Global);
+  OutStreamer->emitSymbolAttribute(PrefetchTargetSymbol,
+                                   IsWeak ? MCSA_Weak : MCSA_Global);
   if (IsWeak) {
     // Weak prefetch target symbols must have hidden visibility to avoid
     // relocation error in shared libraries.
