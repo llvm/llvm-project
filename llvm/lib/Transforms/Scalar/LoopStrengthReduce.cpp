@@ -1419,6 +1419,11 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
       return;
     }
 
+    // If this addrec already exists as a phi in the current loop, reusing it
+    // costs no new register.
+    if (isExistingPhi(AR, *SE) && !(AMK & TTI::AMK_PostIndexed))
+      return;
+
     unsigned LoopCost = 1;
     if (TTI->isIndexedLoadLegal(TTI->MIM_PostInc, AR->getType()) ||
         TTI->isIndexedStoreLegal(TTI->MIM_PostInc, AR->getType())) {
