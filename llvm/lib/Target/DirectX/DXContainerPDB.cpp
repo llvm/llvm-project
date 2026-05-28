@@ -23,12 +23,10 @@ using namespace llvm;
 namespace {
 
 class DXContainerPDB : public ModulePass, MCDXContainerBaseWriter {
-  StringRef BitcodeSectionForPDB;
   Module *M = nullptr;
   SmallVector<MCDXContainerPart> Parts;
 
   void reset() {
-    BitcodeSectionForPDB = "";
     M = nullptr;
     Parts.clear();
   }
@@ -57,14 +55,9 @@ bool DXContainerPDB::shouldSkipSection(StringRef SectionName,
     return true;
 
   // Skip sections that are irrelevant for debug info.
-  static const StringSet<> DebugSections{"DXIL", "ILDB", "ILDN", "HASH", "PDBI",
+  static const StringSet<> DebugSections{"ILDB", "ILDN", "HASH", "PDBI",
                                          "SRCI", "STAT", "RDAT", "VERS"};
-  if (!DebugSections.contains(SectionName))
-    return true;
-
-  // Emit either DXIL or ILDB, but not both of them.
-  return dxbc::isProgramPart(SectionName) &&
-         SectionName != BitcodeSectionForPDB;
+  return !DebugSections.contains(SectionName);
 }
 
 static StringRef getGlobalData(const GlobalVariable &GV) {
@@ -96,7 +89,6 @@ bool DXContainerPDB::runOnModule(Module &M) {
 
   StringRef DebugFileName;
   ArrayRef<char> ModuleHash;
-  const GlobalVariable *DXIL = nullptr;
   const GlobalVariable *ILDB = nullptr;
   for (const GlobalVariable &GV : M.globals()) {
     if (GV.getSection() == PdbFileNameSectionName) {
@@ -109,25 +101,14 @@ bool DXContainerPDB::runOnModule(Module &M) {
     } else if (GV.getSection() == "ILDB") {
       assert(!ILDB && "Duplicate ILDB section");
       ILDB = &GV;
-    } else if (GV.getSection() == "DXIL") {
-      assert(!DXIL && "Duplicate DXIL section");
-      DXIL = &GV;
     }
   }
 
   // PDB emission was not requested.
   if (DebugFileName.empty())
     return false;
-  if (!DXIL && !ILDB)
-    report_fatal_error(
-        "Neither DXIL nor ILDB part was found for emitting PDB file");
   if (ModuleHash.empty())
     report_fatal_error("Module hash for PDB not found");
-
-  BitcodeSectionForPDB = DXIL ? DXIL->getSection() : "";
-  // Prioritize ILDB part over DXIL part.
-  if (ILDB)
-    BitcodeSectionForPDB = ILDB->getSection();
 
   BumpPtrAllocator Allocator;
   pdb::PDBFileBuilder Builder(Allocator);
