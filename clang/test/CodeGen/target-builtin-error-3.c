@@ -17,7 +17,7 @@ typedef __attribute__ ((ext_vector_type(16),__aligned__( 64))) float float16;
 static inline half8 __attribute__((__overloadable__)) convert_half( float8 a ) {
   return __extension__ ({ __m256 __a = (a); (__m128i)__builtin_ia32_vcvtps2ph256((__v8sf)__a, (0x00)); }); // expected-error {{'__builtin_ia32_vcvtps2ph256' needs target feature f16c}}
 }
-// expected-warning@+1 {{AVX vector argument of type 'float16' (vector of 16 'float' values) without 'avx512f' enabled changes the ABI}}
+// Internal definitions do not warn.
 static inline half16 __attribute__((__overloadable__)) convert_half( float16 a ) {
   half16 r;
   r.lo = convert_half(a.lo);
