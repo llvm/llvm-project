@@ -44,7 +44,7 @@ Options
 
    Semicolon-separated list of fully-qualified names of optional-like class
    templates to check. The check matches calls to ``value_or`` on
-   specializations of these templates. Default is ``::std::optional``.
+   specializations of these templates. Default is `::std::optional`.
 
    Example configuration to also check ``absl::optional``:
 
