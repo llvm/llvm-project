@@ -3762,7 +3762,8 @@ def HLT   : ExceptionGeneration<0b010, 0b00, "hlt",
 def HVC   : ExceptionGeneration<0b000, 0b10, "hvc",
                                 [(int_aarch64_hvc timm32_0_65535:$imm)]>;
 def SMC   : ExceptionGeneration<0b000, 0b11, "smc">, Requires<[HasEL3]>;
-def SVC   : ExceptionGeneration<0b000, 0b01, "svc">;
+def SVC   : ExceptionGeneration<0b000, 0b01, "svc",
+                                [(int_aarch64_svc timm32_0_65535:$imm)]>;
 
 // DCPSn defaults to an immediate operand of zero if unspecified.
 def : InstAlias<"dcps1", (DCPS1 0)>;
