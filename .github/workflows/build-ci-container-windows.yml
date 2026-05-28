@@ -42,13 +42,13 @@ jobs:
         env:
           CONTAINER_NAME_TAG: ${{ steps.vars.outputs.container-name-tag }}
         run: |
-          docker build -t $Env:CONTAINER_NAME_TAG .
+          docker build -t $env:CONTAINER_NAME_TAG .
       - name: Save container image
         env:
           CONTAINER_NAME_TAG: ${{ steps.vars.outputs.container-name-tag }}
           CONTAINER_FILENAME: ${{ steps.vars.outputs.container-filename }}
         run: |
-          docker save  $Env:CONTAINER_NAME_TAG > $Env:CONTAINER_FILENAME
+          docker save  $env:CONTAINER_NAME_TAG > $env:CONTAINER_FILENAME
       - name: Upload container image
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
