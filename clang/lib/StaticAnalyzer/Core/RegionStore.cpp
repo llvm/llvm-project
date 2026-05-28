@@ -1819,7 +1819,8 @@ getElementRegionOffsetsWithBase(const ElementRegion *ER) {
 ///
 /// \example:
 ///   const int arr[10][20][30] = {}; // ArrayExtents { 10, 20, 30 }
-///   int x1 = arr[4][5][6]; // DstOffsets { 4, 5, 6 }, returns std::nullopt
+///   int x1 = arr[4][5][6]; // SrcOffsets { NonLoc(6), NonLoc(5), NonLoc(4) }
+///                          // DstOffsets { 4, 5, 6 }, returns std::nullopt
 ///   int x2 = arr[0][0][35]; // DstOffsets { 0, 1, 5 }, returns std::nullopt
 ///   int x3 = arr[0][25][-5]; // DstOffsets { 1, 4, 25 }, returns std::nullopt
 ///   int x4 = arr[10][0][0]; // returns UndefinedVal (flat offset >= total)
