@@ -117,4 +117,4 @@ fsqrt.d fa0, fa1
 # CHECK-NEXT: 9.     1     1.0    1.0    105.0     fdiv.d	fa0, fa1, fa2
 # CHECK-NEXT: 10.    1     10.0   10.0   100.0     fsqrt.s	fa0, fa1
 # CHECK-NEXT: 11.    1     15.0   15.0   89.0      fsqrt.d	fa0, fa1
-# CHECK-NEXT:        1     40.4   40.4   33.7      <total>
+# CHECK-NEXT:        12    40.4   40.4   33.7      <total>
