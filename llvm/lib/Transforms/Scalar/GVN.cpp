@@ -3343,12 +3343,7 @@ void GVNPass::assignValNumForDeadCode() {
   }
 }
 
-/// Return true if no instruction in the loop may write the load's
-/// memory location after the load executes. The transform memoizes the
-/// load's value across iterations, so any post-load mod in any loop
-/// block becomes a backedge clobber that invalidates the memoization.
-/// Scan every loop block; on the load's own block start from the next
-/// instruction, otherwise from the block's start.
+/// Same-iteration AA walk over L's blocks. See canMemoizeLoadAcrossLoop.
 static bool canHoistLoadWithAA(Loop *L, LoadInst *Load, AAResults *AA) {
   MemoryLocation Loc = MemoryLocation::get(Load);
   for (BasicBlock *BB : L->blocks()) {
@@ -3367,6 +3362,56 @@ static bool canHoistLoadWithAA(Loop *L, LoadInst *Load, AAResults *AA) {
     }
   }
   return true;
+}
+
+/// Return true if Load can be safely memoized across iterations of L.
+///
+/// Single source of truth for the load-hoist correctness in the min-finding
+/// select rewrite. Three concerns:
+///  - RAUW safety: the rewrite replaces Load with a memoizing PHI, so an
+///    extra in-loop use of Load would observe an inconsistent value.
+///  - Load characteristics: memoization is unsound for any non-simple
+///    (volatile or atomic) load because it drops per-iteration freshness;
+///    loads from constant memory or with !invariant.load are always safe.
+///  - Aliasing: no instruction in L may write Load's location, including
+///    across the back-edge. With MSSA, this is canHoistLoad(IsSink=true),
+///    which walks every in-loop MemoryDef with phi translation. Without
+///    MSSA, fall back to a same-iteration AA walk (FIXME: not phi-aware;
+///    a follow-up commit will replace this with a MemoryDependenceResults
+///    query).
+static bool canMemoizeLoadAcrossLoop(LoadInst &Load, Loop *L, AAResults *AA,
+                                     DominatorTree *DT, MemorySSAUpdater *MSSAU,
+                                     OptimizationRemarkEmitter *ORE) {
+  if (!Load.hasOneUse()) {
+    LLVM_DEBUG(dbgs() << "GVN (minindx): hoistable load has extra uses.\n");
+    return false;
+  }
+
+  if (!Load.isSimple()) {
+    LLVM_DEBUG(dbgs() << "GVN (minindx): atomic/volatile hoistable load.\n");
+    return false;
+  }
+
+  // Always-safe shortcuts: loads from constant memory and invariant loads
+  // need no aliasing walk.
+  if (!isModSet(AA->getModRefInfoMask(Load.getPointerOperand())))
+    return true;
+  if (Load.hasMetadata(LLVMContext::MD_invariant_load))
+    return true;
+
+  if (MSSAU) {
+    MemorySSA &MSSA = *MSSAU->getMemorySSA();
+    SinkAndHoistLICMFlags Flags(/*IsSink=*/true, *L, MSSA);
+    if (canHoistLoad(Load, AA, DT, L, MSSA,
+                     /*TargetExecutesOncePerLoop=*/true, Flags, ORE))
+      return true;
+  } else if (canHoistLoadWithAA(L, &Load, AA)) {
+    return true;
+  }
+
+  LLVM_DEBUG(dbgs() << "GVN (minindx): Cannot hoist - may be clobbered by "
+                       "some instruction in the loop.\n");
+  return false;
 }
 
 /// Hoist the chain of operations for the second load to preheader.
@@ -3426,26 +3471,10 @@ bool GVNPass::transformMinFindingSelectPattern(
   Value *LHS = Comparison->getOperand(0);
   Value *LoadVal = Comparison->getOperand(1);
 
-  // The transform memoizes the hoistable load's value across iterations, so
-  // any in-loop store or call that may write the load's location is a
-  // backedge clobber that invalidates the cache. With MSSA, use sink-mode
-  // invalidation (walks every MemoryDef in the loop with phi-translation).
-  // Without MSSA, walk the loop's instructions with AA.
   auto *HoistableLoad = cast<LoadInst>(LoadVal);
-  bool CanHoist;
-  if (MSSAU) {
-    MemorySSA &MSSA = *MSSAU->getMemorySSA();
-    SinkAndHoistLICMFlags Flags(/*IsSink=*/true, *L, MSSA);
-    CanHoist = canHoistLoad(*HoistableLoad, VN.getAliasAnalysis(), DT, L, MSSA,
-                            /*TargetExecutesOncePerLoop=*/true, Flags, ORE);
-  } else {
-    CanHoist = canHoistLoadWithAA(L, HoistableLoad, VN.getAliasAnalysis());
-  }
-  if (!CanHoist) {
-    LLVM_DEBUG(dbgs() << "GVN: Cannot hoist - may be clobbered by some "
-                         "instruction in the loop.\n");
+  if (!canMemoizeLoadAcrossLoop(*HoistableLoad, L, VN.getAliasAnalysis(), DT,
+                                MSSAU, ORE))
     return false;
-  }
 
   IRBuilder<> Builder(Preheader->getTerminator());
   Value *InitialMinIndex = IndexValPhi->getIncomingValueForBlock(Preheader);
@@ -3590,13 +3619,6 @@ bool GVNPass::recognizeMinFindingSelectPattern(SelectInst *Select) {
         dbgs() << "GVN (minindx): Not both loads are of the same type.\n");
     return false;
   }
-  // The transform memoizes the hoistable load's value across iterations,
-  // dropping per-iteration freshness against concurrent writes. That is
-  // unsound for any non-simple (atomic or volatile) load.
-  if (!cast<LoadInst>(Op0)->isSimple() || !cast<LoadInst>(Op1)->isSimple()) {
-    LLVM_DEBUG(dbgs() << "GVN (minindx): atomic/volatile load operand.\n");
-    return false;
-  }
   Type *LoadType = Op0->getType();
 
   // Phase 2: Match the hoistable (RHS) load and canonicalize the compare.
@@ -3647,14 +3669,6 @@ bool GVNPass::recognizeMinFindingSelectPattern(SelectInst *Select) {
     Comparison->swapOperands();
   }
   Value *Base = TypedGEP->getPointerOperand();
-
-  // RAUW with the hoisted value would corrupt any extra in-loop use of
-  // the per-iteration load; require the load to feed only the compare.
-  auto *HoistableLoad = cast<LoadInst>(Comparison->getOperand(1));
-  if (!HoistableLoad->hasOneUse()) {
-    LLVM_DEBUG(dbgs() << "GVN (minindx): hoistable load has extra uses.\n");
-    return false;
-  }
 
   // The transform builds a preheader GEP from Base; Base must dominate
   // the preheader (i.e. be loop-invariant) for the result to verify.
