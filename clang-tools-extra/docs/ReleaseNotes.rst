@@ -204,10 +204,6 @@ Improvements to clang-tidy
   checks are `clang-diagnostic-*` ones. This allows using
   :program:`clang-tidy` purely as a frontend to Clang's builtin warnings.
 
-- :program:`clang-tidy` will suggest literal suffixes like ``ll`` for literals
-  instead of `static_cast<>` for
-  bugprone-implicit-widening-of-multiplication-result-int.
-
 New checks
 ^^^^^^^^^^
 
@@ -365,6 +361,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/inc-dec-in-conditions>` check by fixing a false
   positive when increment/decrement operators appear inside lambda bodies that
   are part of a condition expression.
+
+- Improved :doc:`bugprone-implicit-widening-of-multiplication-result
+  <clang-tidy/checks/bugprone/implicit-widening-of-multiplication-result>` check
+  by suggesting literal suffixes (e.g. ``ll``) instead of ``static_cast<>`` for
+  integer literals.
 
 - Improved :doc:`bugprone-incorrect-enable-if
   <clang-tidy/checks/bugprone/incorrect-enable-if>` check to not

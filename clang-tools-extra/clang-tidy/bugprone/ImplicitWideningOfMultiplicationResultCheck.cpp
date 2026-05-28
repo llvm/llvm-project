@@ -71,10 +71,10 @@ static std::optional<FixItHint> getIntegerLiteralWideningFixIt(
   if (LiteralText.empty())
     return std::nullopt;
 
-  NumericLiteralParser LiteralParser(LiteralText, Literal->getLocation(),
-                                     *R.SourceManager, R.Context->getLangOpts(),
-                                     R.Context->getTargetInfo(),
-                                     R.Context->getDiagnostics());
+  const NumericLiteralParser LiteralParser(
+      LiteralText, Literal->getLocation(), *R.SourceManager,
+      R.Context->getLangOpts(), R.Context->getTargetInfo(),
+      R.Context->getDiagnostics());
   // Only rewrite plain unsuffixed integer literals. If the literal already
   // carries a builtin integer suffix such as u/l/ll, fall back to the cast
   // fix-it instead of trying to rewrite the existing suffix.
