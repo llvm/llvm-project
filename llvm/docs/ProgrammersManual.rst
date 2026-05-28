@@ -480,7 +480,7 @@ Format provider options
   +-----------------+--------------------------+----------------+----------------+
 
   The default precision is the number of nibbles in a machine word, and in all
-  cases indicates the minimum number of nibbles to print.
+  cases the precision indicates the minimum number of nibbles to print.
 
   .. Keep in sync with FormatVariadicTest.DocsPointer
 
