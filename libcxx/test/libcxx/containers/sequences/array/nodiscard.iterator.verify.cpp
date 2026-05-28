@@ -36,9 +36,4 @@ void test() {
 
   // expected-warning-re@+1 {{{{(ignoring return value of function declared with 'nodiscard' attribute|expression result unused)}}}}
   it - it;
-
-#if defined(_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY)
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::pointer_traits<Container::iterator>::to_address(it);
-#endif
 }

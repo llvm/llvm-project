@@ -307,7 +307,7 @@ struct pointer_traits<__static_bounded_iter<_Iterator, _Size> > {
   using element_type    = typename pointer_traits<_Iterator>::element_type;
   using difference_type = typename pointer_traits<_Iterator>::difference_type;
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static element_type* to_address(pointer __it) _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static element_type* to_address(pointer __it) _NOEXCEPT {
     return std::__to_address(__it.__current());
   }
 };
