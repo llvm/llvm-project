@@ -5,7 +5,7 @@
 ; we generally can't ignore synchronizing operations on allocas and should not
 ; infer readnone here. Non-escaping cases will typically be optimized by SROA.
 define i32 @test1(i32 %x) uwtable ssp {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind ssp willreturn uwtable
+; CHECK: Function Attrs: mustprogress norecurse nounwind ssp willreturn uwtable
 ; CHECK-LABEL: define i32 @test1(
 ; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -22,7 +22,7 @@ entry:
 }
 
 define i32 @load_monotonic(ptr %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CHECK: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define i32 @load_monotonic(
 ; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[R:%.*]] = load atomic i32, ptr [[X]] monotonic, align 4
@@ -33,7 +33,7 @@ define i32 @load_monotonic(ptr %x) {
 }
 
 define i32 @load_acquire(ptr %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; CHECK: Function Attrs: mustprogress norecurse nounwind willreturn
 ; CHECK-LABEL: define i32 @load_acquire(
 ; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[R:%.*]] = load atomic i32, ptr [[X]] acquire, align 4
@@ -44,7 +44,7 @@ define i32 @load_acquire(ptr %x) {
 }
 
 define i32 @load_seq_cst(ptr %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; CHECK: Function Attrs: mustprogress norecurse nounwind willreturn
 ; CHECK-LABEL: define i32 @load_seq_cst(
 ; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[R:%.*]] = load atomic i32, ptr [[X]] seq_cst, align 4
@@ -55,7 +55,7 @@ define i32 @load_seq_cst(ptr %x) {
 }
 
 define void @store_monotonic(ptr %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CHECK: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @store_monotonic(
 ; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    store atomic i32 0, ptr [[X]] monotonic, align 4
@@ -66,7 +66,7 @@ define void @store_monotonic(ptr %x) {
 }
 
 define void @store_release(ptr %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; CHECK: Function Attrs: mustprogress norecurse nounwind willreturn
 ; CHECK-LABEL: define void @store_release(
 ; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    store atomic i32 0, ptr [[X]] release, align 4
@@ -77,7 +77,7 @@ define void @store_release(ptr %x) {
 }
 
 define void @store_seq_cst(ptr %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; CHECK: Function Attrs: mustprogress norecurse nounwind willreturn
 ; CHECK-LABEL: define void @store_seq_cst(
 ; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    store atomic i32 0, ptr [[X]] seq_cst, align 4
@@ -88,7 +88,7 @@ define void @store_seq_cst(ptr %x) {
 }
 
 define void @atomicrmw_monotonic_arg(ptr %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CHECK: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @atomicrmw_monotonic_arg(
 ; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[X]], i32 1 monotonic, align 4
@@ -99,7 +99,7 @@ define void @atomicrmw_monotonic_arg(ptr %x) {
 }
 
 define void @atomicrmw_acq_rel_arg(ptr %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; CHECK: Function Attrs: mustprogress norecurse nounwind willreturn
 ; CHECK-LABEL: define void @atomicrmw_acq_rel_arg(
 ; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[X]], i32 1 acq_rel, align 4
@@ -110,7 +110,7 @@ define void @atomicrmw_acq_rel_arg(ptr %x) {
 }
 
 define void @atomicrmw_monotonic_volatile_arg(ptr %x) {
-; CHECK: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
+; CHECK: Function Attrs: norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CHECK-LABEL: define void @atomicrmw_monotonic_volatile_arg(
 ; CHECK-SAME: ptr [[X:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw volatile add ptr [[X]], i32 1 monotonic, align 4
@@ -121,7 +121,7 @@ define void @atomicrmw_monotonic_volatile_arg(ptr %x) {
 }
 
 define void @cmpxchg_monotonic_arg(ptr %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CHECK: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @cmpxchg_monotonic_arg(
 ; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[X]], i32 0, i32 1 monotonic monotonic, align 4
@@ -132,7 +132,7 @@ define void @cmpxchg_monotonic_arg(ptr %x) {
 }
 
 define void @cmpxchg_acq_rel_arg(ptr %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; CHECK: Function Attrs: mustprogress norecurse nounwind willreturn
 ; CHECK-LABEL: define void @cmpxchg_acq_rel_arg(
 ; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[X]], i32 0, i32 1 acq_rel monotonic, align 4
@@ -143,7 +143,7 @@ define void @cmpxchg_acq_rel_arg(ptr %x) {
 }
 
 define void @cmpxchg_monotonic_volatile_arg(ptr %x) {
-; CHECK: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
+; CHECK: Function Attrs: norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CHECK-LABEL: define void @cmpxchg_monotonic_volatile_arg(
 ; CHECK-SAME: ptr [[X:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg volatile ptr [[X]], i32 0, i32 1 monotonic monotonic, align 4

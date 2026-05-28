@@ -452,19 +452,38 @@ bool SemaAMDGPU::checkAtomicOrderingCABIArg(Expr *E, bool MayLoad,
   return false;
 }
 
-bool SemaAMDGPU::checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore) {
-  bool Fail = false;
-
-  // First argument is a global or generic pointer.
+// Check that the first argument to TheCall is a global or generic pointer.
+static bool checkGlobalOrFlatPointerArg(SemaAMDGPU &S, CallExpr *TheCall) {
   Expr *PtrArg = TheCall->getArg(0);
   QualType PtrTy = PtrArg->getType()->getPointeeType();
-  unsigned AS = getASTContext().getTargetAddressSpace(PtrTy.getAddressSpace());
+  unsigned AS =
+      S.getASTContext().getTargetAddressSpace(PtrTy.getAddressSpace());
   if (AS != llvm::AMDGPUAS::FLAT_ADDRESS &&
       AS != llvm::AMDGPUAS::GLOBAL_ADDRESS) {
-    Fail = true;
-    Diag(TheCall->getBeginLoc(), diag::err_amdgcn_coop_atomic_invalid_as)
-        << PtrArg->getSourceRange();
+    return S.Diag(TheCall->getBeginLoc(),
+                  diag::err_amdgcn_global_or_flat_pointer_required)
+           << PtrArg->getSourceRange();
   }
+  return false;
+}
+
+static bool checkScopeAsInt(SemaAMDGPU &S, Expr *Scope) {
+  if (Scope->isValueDependent())
+    return false;
+  auto ScopeModel = AtomicScopeModel::create(AtomicScopeModelKind::Generic);
+  if (std::optional<llvm::APSInt> Result =
+          Scope->getIntegerConstantExpr(S.SemaRef.Context)) {
+    if (!ScopeModel->isValid(Result->getZExtValue())) {
+      return S.Diag(Scope->getBeginLoc(),
+                    diag::err_atomic_op_has_invalid_sync_scope)
+             << Scope->getSourceRange();
+    }
+  }
+  return false;
+}
+
+bool SemaAMDGPU::checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore) {
+  bool Fail = checkGlobalOrFlatPointerArg(*this, TheCall);
 
   Expr *AO = TheCall->getArg(IsStore ? 2 : 1);
   Expr *Scope = TheCall->getArg(TheCall->getNumArgs() - 1);
@@ -488,27 +507,15 @@ bool SemaAMDGPU::checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore) {
 }
 
 bool SemaAMDGPU::checkAtomicMonitorLoad(CallExpr *TheCall) {
-  bool Fail = false;
-
   Expr *AO = TheCall->getArg(1);
   Expr *Scope = TheCall->getArg(TheCall->getNumArgs() - 1);
 
   if (AO->isValueDependent() || Scope->isValueDependent())
     return false;
 
-  Fail |= checkAtomicOrderingCABIArg(TheCall->getArg(1), /*MayLoad=*/true,
-                                     /*MayStore=*/false);
-
-  auto ScopeModel = AtomicScopeModel::create(AtomicScopeModelKind::Generic);
-  if (std::optional<llvm::APSInt> Result =
-          Scope->getIntegerConstantExpr(SemaRef.Context)) {
-    if (!ScopeModel->isValid(Result->getZExtValue())) {
-      Diag(Scope->getBeginLoc(), diag::err_atomic_op_has_invalid_sync_scope)
-          << Scope->getSourceRange();
-      Fail = true;
-    }
-  }
-
+  bool Fail = checkAtomicOrderingCABIArg(AO, /*MayLoad=*/true,
+                                         /*MayStore=*/false);
+  Fail |= checkScopeAsInt(*this, Scope);
   return Fail;
 }
 
