@@ -30,6 +30,45 @@ function at-exit {
   cp "${MONOREPO_ROOT}"/*.log artifacts/ || :
   cp "${BUILD_DIR}"/test-results.*.xml artifacts/ || :
 
+  # Collect lldb per-test session and host logs (from `--channel "lldb event"`)
+  # so we can post-mortem Windows DLL-load resolution in containers.
+  # Wrapped in `set +e ... set -e` because a failure here must not skip the
+  # GitHub Actions reporting block below.
+  set +e
+  shopt -s globstar nullglob
+  lldb_test_log_root="${BUILD_DIR}/lldb-test-build.noindex"
+  debug_log="artifacts/at-exit-debug.txt"
+  {
+    echo "=== at-exit lldb-test-logs collection ==="
+    echo "PWD: $(pwd)"
+    echo "BUILD_DIR: ${BUILD_DIR}"
+    echo "lldb_test_log_root: ${lldb_test_log_root}"
+    echo "exists: $([[ -d "${lldb_test_log_root}" ]] && echo yes || echo no)"
+  } > "${debug_log}" 2>&1
+
+  if [[ -d "${lldb_test_log_root}" ]]; then
+    mkdir -p artifacts/lldb-test-logs
+    # Use bash globstar instead of `find` because on the Windows GH Actions
+    # runner, PATH resolves `find` to C:\Windows\System32\find.exe (DOS
+    # string-search utility), which silently fails for filesystem traversal.
+    matched=0
+    for f in \
+      "${lldb_test_log_root}"/**/Failure_*.log \
+      "${lldb_test_log_root}"/**/*-host.log \
+      "${lldb_test_log_root}"/**/ExpectedFailure_*.log \
+      "${lldb_test_log_root}"/**/UnexpectedSuccess_*.log; do
+      [[ -f "${f}" ]] || continue
+      rel="${f#${lldb_test_log_root}/}"
+      mkdir -p "artifacts/lldb-test-logs/$(dirname "${rel}")" 2>/dev/null
+      cp "${f}" "artifacts/lldb-test-logs/${rel}" 2>/dev/null
+      matched=$((matched + 1))
+    done
+    echo "matched=${matched}" >> "${debug_log}"
+    echo "artifacts/lldb-test-logs file count: $(/usr/bin/find artifacts/lldb-test-logs -type f 2>/dev/null | wc -l)" >> "${debug_log}"
+  fi
+  shopt -u globstar nullglob
+  set -e
+
   # If building fails there will be no results files.
   shopt -s nullglob
 

@@ -159,7 +159,9 @@ jobs:
 
           # DIAGNOSTIC (revert before merge): force lldb-only check-lldb on
           # Windows so this branch's CI runs the failing test fast, without
-          # waiting on the rest of llvm/clang/lld/etc.
+          # waiting on the rest of llvm/clang/lld/etc. lld stays in the
+          # project list because the lldb test driver links test binaries
+          # with `-fuse-ld=lld`.
           echo "windows-projects=clang;lld;lldb;llvm" >> $GITHUB_OUTPUT
           echo "windows-check-targets=check-lldb" >> $GITHUB_OUTPUT
           echo "windows-runtimes=" >> $GITHUB_OUTPUT
