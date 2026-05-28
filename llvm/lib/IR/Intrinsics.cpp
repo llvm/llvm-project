@@ -1032,8 +1032,8 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::Overloaded: {
     unsigned OIdx = D.getOverloadIndex();
     if (D.getOverloadKind() == IITDescriptor::AK_MatchType) {
-      // This is a dependent type instance, check it similar to other dependent
-      // types.
+      // This is a dependent type instance, check it similarly to other
+      // dependent types.
       if (OIdx >= OverloadTys.size())
         return IsDeferredCheck || DeferCheck(Ty);
 
