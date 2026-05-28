@@ -1590,11 +1590,32 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Warning, "import-call-optimization",
                               1);
 
-  // Enable unwind v2 (epilog).
-  if (CodeGenOpts.getWinX64EHUnwindV2() != llvm::WinX64EHUnwindV2Mode::Disabled)
-    getModule().addModuleFlag(
-        llvm::Module::Warning, "winx64-eh-unwindv2",
-        static_cast<unsigned>(CodeGenOpts.getWinX64EHUnwindV2()));
+  // Enable unwind v2/v3.
+  // EGPR (R16-R31) requires V3 unwind because V1/V2 cannot encode extended
+  // register numbers. Auto-promote to V3 when no explicit mode was requested.
+
+  auto UnwindMode = CodeGenOpts.getWinX64EHUnwind();
+  bool HasEGPR = T.isOSWindows() && T.isX86_64() &&
+                 Context.getTargetInfo().hasFeature("egpr");
+
+  // Check for EGPR incompatibility with explicitly requested V1 or V2
+  if (HasEGPR && UnwindMode != llvm::WinX64EHUnwindMode::Default &&
+      UnwindMode != llvm::WinX64EHUnwindMode::V3) {
+    unsigned DiagID =
+        Diags.getCustomDiagID(DiagnosticsEngine::Error,
+                              "EGPR target feature requires unwind version 3");
+    Diags.Report(DiagID);
+  }
+
+  if (UnwindMode == llvm::WinX64EHUnwindMode::Default) {
+    if (HasEGPR)
+      UnwindMode = llvm::WinX64EHUnwindMode::V3;
+    else
+      UnwindMode = llvm::WinX64EHUnwindMode::V1;
+  }
+  if (UnwindMode != llvm::WinX64EHUnwindMode::V1)
+    getModule().addModuleFlag(llvm::Module::Warning, "winx64-eh-unwind",
+                              static_cast<unsigned>(UnwindMode));
 
   // Indicate whether this Module was compiled with -fopenmp
   if (getLangOpts().OpenMP && !getLangOpts().OpenMPSimd)

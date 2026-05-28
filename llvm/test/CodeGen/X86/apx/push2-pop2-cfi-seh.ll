@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+push2pop2,+ppx | FileCheck %s --check-prefix=LIN-PPX
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=diamondrapids | FileCheck %s --check-prefix=LIN-PPX
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc | FileCheck %s --check-prefix=WIN-REF
-; RUN: llc < %s -mtriple=x86_64-windows-msvc -mcpu=diamondrapids | FileCheck %s --check-prefix=WIN-REF
+; RUN: llc < %s -mtriple=x86_64-windows-msvc -mcpu=diamondrapids -mattr=-egpr | FileCheck %s --check-prefix=WIN-REF
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc -mattr=+push2pop2 | FileCheck %s --check-prefix=WIN
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc -mattr=+push2pop2,+ppx | FileCheck %s --check-prefix=WIN-PPX
 

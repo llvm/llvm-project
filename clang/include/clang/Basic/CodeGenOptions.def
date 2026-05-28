@@ -520,10 +520,9 @@ CODEGENOPT(ResMayAlias, 1, 0, Benign)
 /// Assume that all resources are bound if enabled
 CODEGENOPT(AllResourcesBound, 1, 0, Benign)
 
-/// Controls how unwind v2 (epilog) information should be generated for x64
-/// Windows.
-ENUM_CODEGENOPT(WinX64EHUnwindV2, WinX64EHUnwindV2Mode,
-                2, WinX64EHUnwindV2Mode::Disabled, Benign)
+/// Controls the x64 Windows unwind info version.
+ENUM_CODEGENOPT(WinX64EHUnwind, WinX64EHUnwindMode, 3,
+                WinX64EHUnwindMode::Default, Benign)
 
 /// Controls the mechanism used for Control Flow Guard (CFG) on Windows.
 ENUM_CODEGENOPT(WinControlFlowGuardMechanism, ControlFlowGuardMechanism,

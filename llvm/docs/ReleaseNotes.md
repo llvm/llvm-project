@@ -241,6 +241,12 @@ Makes programs 10x faster by doing Special New Thing.
   in use. This matches the behaviour of Intel syntax and aids with
   compatibility when changing the default Clang syntax to the Intel syntax.
 
+* Added ``.seh_push2regs`` assembly directive for explicitly encoding a
+  two-register push in Windows x64 V3 unwind info. The directive takes two
+  register operands: ``.seh_push2regs %r12, %r13``.
+* EGPR (R16-R31) now requires V3 unwind info on Windows x64. Using EGPR
+  without V3 unwind produces a fatal error.
+
 ### Changes to the OCaml bindings
 
 ### Changes to the Python bindings

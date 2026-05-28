@@ -791,6 +791,10 @@ Windows Support
 - ``-fmacro-prefix-map=`` (``-ffile-prefix-map=``) now affects an anonymous namespace hash generation
   for the MSVC targets and allows deterministic symbol mangling for reproducible builds.
 
+- When targeting Windows x64 with EGPR (`-mapx-features=egpr`), Clang now
+  automatically enables V3 unwind info (`-fwinx64-eh-unwind=v3`) if no
+  explicit unwind version was specified.
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 

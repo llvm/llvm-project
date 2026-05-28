@@ -1084,9 +1084,8 @@ public:
   /// Returns target-abi from MDString, null if target-abi is absent.
   StringRef getTargetABIFromMD();
 
-  /// Get how unwind v2 (epilog) information should be generated for x64
-  /// Windows.
-  WinX64EHUnwindV2Mode getWinX64EHUnwindV2Mode() const;
+  /// Get how unwind information should be generated for x64 Windows.
+  WinX64EHUnwindMode getWinX64EHUnwindMode() const;
 
   /// Gets the Control Flow Guard mode.
   ControlFlowGuardMode getControlFlowGuardMode() const;
