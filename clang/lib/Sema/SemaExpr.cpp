@@ -1282,10 +1282,9 @@ static QualType handleFloatConversion(Sema &S, ExprResult &LHS,
                                     /*ConvertInt=*/!IsCompAssign);
 }
 
- /// Returns true if the conversion between LHSType and RHSType is not supported. 
- /// This includes conversions between fixed point types and BitInt types, 
- /// which would otherwise cause an assertion failure later.
- /// Helper function of UsualArithmeticConversions().
+/// Returns true if the conversion between LHSType and RHSType is not supported. 
+/// This includes conversions between fixed point types and BitInt types.
+/// Helper function of UsualArithmeticConversions().
 static bool unsupportedTypeConversion(const Sema &S, QualType LHSType,
                                       QualType RHSType) {
   if ((LHSType->isFixedPointType() && RHSType->isBitIntType()) ||
