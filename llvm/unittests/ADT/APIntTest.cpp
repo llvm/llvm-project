@@ -4038,24 +4038,26 @@ TEST(APIntTest, compressBits) {
   EXPECT_EQ(
       APIntOps::compressBits(APInt(8, 0xFFU), APInt(8, 0xAAU)).getZExtValue(),
       15U);
-  EXPECT_EQ(
-      APIntOps::compressBits(APInt(8, 0xFFU), APInt(8, 0)).getZExtValue(), 0U);
-  EXPECT_EQ(APIntOps::compressBits(APInt(4, 0xFU), APInt(4, 0xAU)).getZExtValue(),
-            3U);
-  EXPECT_EQ(APIntOps::compressBits(APInt(4, 0xAU), APInt(4, 0xAU)).getZExtValue(),
-            3U);
-  EXPECT_EQ(APIntOps::compressBits(APInt(4, 0x5U), APInt(4, 0xAU)).getZExtValue(),
+  EXPECT_EQ(APIntOps::compressBits(APInt(8, 0xFFU), APInt(8, 0)).getZExtValue(),
             0U);
+  EXPECT_EQ(
+      APIntOps::compressBits(APInt(4, 0xFU), APInt(4, 0xAU)).getZExtValue(),
+      3U);
+  EXPECT_EQ(
+      APIntOps::compressBits(APInt(4, 0xAU), APInt(4, 0xAU)).getZExtValue(),
+      3U);
+  EXPECT_EQ(
+      APIntOps::compressBits(APInt(4, 0x5U), APInt(4, 0xAU)).getZExtValue(),
+      0U);
 }
 
 TEST(APIntTest, expandBits) {
   EXPECT_EQ(APIntOps::expandBits(APInt(8, 0), APInt(8, 0xAAU)).getZExtValue(),
             0U);
-  EXPECT_EQ(
-      APIntOps::expandBits(APInt(8, 15U), APInt(8, 0xAAU)).getZExtValue(),
-      0xAAU);
-  EXPECT_EQ(
-      APIntOps::expandBits(APInt(8, 0xFFU), APInt(8, 0)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::expandBits(APInt(8, 15U), APInt(8, 0xAAU)).getZExtValue(),
+            0xAAU);
+  EXPECT_EQ(APIntOps::expandBits(APInt(8, 0xFFU), APInt(8, 0)).getZExtValue(),
+            0U);
   EXPECT_EQ(APIntOps::expandBits(APInt(4, 3U), APInt(4, 0xAU)).getZExtValue(),
             0xAU);
   EXPECT_EQ(APIntOps::expandBits(APInt(4, 1U), APInt(4, 0xAU)).getZExtValue(),

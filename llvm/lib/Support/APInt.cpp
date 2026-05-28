@@ -3272,7 +3272,8 @@ APInt llvm::APIntOps::bitwiseParity(const APInt &V) {
 }
 
 APInt llvm::APIntOps::compressBits(const APInt &Val, const APInt &Mask) {
-  // See also Hacker's Delight 2nd Edition, §7–4 Compress, or Generalized Extract
+  // See also Hacker's Delight 2nd Edition,
+  // §7–4 Compress, or Generalized Extract
   unsigned BW = Val.getBitWidth();
   assert(BW == Mask.getBitWidth() && "Operand mismatch");
   APInt V = Val & Mask;
@@ -3290,7 +3291,8 @@ APInt llvm::APIntOps::compressBits(const APInt &Val, const APInt &Mask) {
 }
 
 APInt llvm::APIntOps::expandBits(const APInt &Val, const APInt &Mask) {
-  // See also Hacker's Delight 2nd Edition, §7–5 Expand, or Generalized Insert
+  // See also Hacker's Delight 2nd Edition,
+  // §7–5 Expand, or Generalized Insert
   unsigned BW = Val.getBitWidth();
   assert(BW == Mask.getBitWidth() && "Operand mismatch");
   SmallVector<APInt> MoveArray;
