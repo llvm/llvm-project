@@ -5,6 +5,7 @@
 // CHECK-LABEL: define hidden noundef <6 x i32> @_Z22elementwise_type_cast0u11matrix_typeILm3ELm2EfE(
 // CHECK-SAME: <6 x float> noundef nofpclass(nan inf) [[F32:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:  %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // ROW-CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca [3 x <2 x float>], align 4
 // ROW-CHECK-NEXT:    [[I32:%.*]] = alloca [3 x <2 x i32>], align 4
 // COL-CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca [2 x <3 x float>], align 4
@@ -24,6 +25,7 @@ int3x2 elementwise_type_cast0(float3x2 f32) {
 // CHECK-LABEL: define hidden noundef <6 x i32> @_Z22elementwise_type_cast1u11matrix_typeILm3ELm2EsE(
 // CHECK-SAME: <6 x i16> noundef [[I16_32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:  %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // ROW-CHECK-NEXT:    [[I16_32_ADDR:%.*]] = alloca [3 x <2 x i16>], align 2
 // ROW-CHECK-NEXT:    [[I32:%.*]] = alloca [3 x <2 x i32>], align 4
 // COL-CHECK-NEXT:    [[I16_32_ADDR:%.*]] = alloca [2 x <3 x i16>], align 2
@@ -43,6 +45,7 @@ int3x2 elementwise_type_cast1(int16_t3x2 i16_32) {
 // CHECK-LABEL: define hidden noundef <6 x i32> @_Z22elementwise_type_cast2u11matrix_typeILm3ELm2ElE(
 // CHECK-SAME: <6 x i64> noundef [[I64_32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:  %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // ROW-CHECK-NEXT:    [[I64_32_ADDR:%.*]] = alloca [3 x <2 x i64>], align 8
 // ROW-CHECK-NEXT:    [[I32:%.*]] = alloca [3 x <2 x i32>], align 4
 // COL-CHECK-NEXT:    [[I64_32_ADDR:%.*]] = alloca [2 x <3 x i64>], align 8
@@ -62,6 +65,7 @@ int3x2 elementwise_type_cast2(int64_t3x2 i64_32) {
 // CHECK-LABEL: define hidden noundef <6 x i16> @_Z22elementwise_type_cast3u11matrix_typeILm2ELm3EDhE(
 // CHECK-SAME: <6 x half> noundef nofpclass(nan inf) [[H23:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:  %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // ROW-CHECK-NEXT:    [[H23_ADDR:%.*]] = alloca [2 x <3 x half>], align 2
 // ROW-CHECK-NEXT:    [[I23:%.*]] = alloca [2 x <3 x i16>], align 2
 // COL-CHECK-NEXT:    [[H23_ADDR:%.*]] = alloca [3 x <2 x half>], align 2
@@ -81,6 +85,7 @@ int16_t2x3 elementwise_type_cast3(half2x3 h23) {
 // CHECK-LABEL: define hidden noundef <6 x i32> @_Z22elementwise_type_cast4u11matrix_typeILm3ELm2EdE(
 // CHECK-SAME: <6 x double> noundef nofpclass(nan inf) [[D32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:  %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // ROW-CHECK-NEXT:    [[D32_ADDR:%.*]] = alloca [3 x <2 x double>], align 8
 // ROW-CHECK-NEXT:    [[I32:%.*]] = alloca [3 x <2 x i32>], align 4
 // COL-CHECK-NEXT:    [[D32_ADDR:%.*]] = alloca [2 x <3 x double>], align 8
@@ -100,6 +105,7 @@ int3x2 elementwise_type_cast4(double3x2 d32) {
 // CHECK-LABEL: define hidden void @_Z5call2v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A:%.*]] = alloca [2 x [1 x i32]], align 4
 // ROW-CHECK-NEXT:    [[B:%.*]] = alloca [2 x <1 x i32>], align 4
 // COL-CHECK-NEXT:    [[B:%.*]] = alloca [1 x <2 x i32>], align 4
@@ -130,6 +136,7 @@ struct S {
 // CHECK-LABEL: define hidden void @_Z5call3v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_S:%.*]], align 1
 // ROW-CHECK-NEXT:    [[A:%.*]] = alloca [2 x <1 x i32>], align 4
 // COL-CHECK-NEXT:    [[A:%.*]] = alloca [1 x <2 x i32>], align 4
@@ -167,6 +174,7 @@ struct Derived : BFields {
 // CHECK-LABEL: define hidden void @_Z5call47Derived(
 // CHECK-SAME: ptr noundef byval([[STRUCT_DERIVED:%.*]]) align 1 [[D:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A:%.*]] = alloca [2 x <2 x i32>], align 4
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [[STRUCT_DERIVED]], align 1
 // CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <4 x i32>, align 4
@@ -202,6 +210,7 @@ void call4(Derived D) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <4 x float> @_Z5call5Dv4_f(
 // CHECK-SAME: <4 x float> noundef nofpclass(nan inf) [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x float>, align 4
 // CHECK-NEXT:    [[M:%.*]] = alloca [2 x <2 x float>], align 4
 // CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca <4 x float>, align 4

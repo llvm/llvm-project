@@ -11,6 +11,6 @@ define void @main() {
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   call void @callee(i32 poison) at @main
+; CHECK-NEXT: #0   call void @callee(i32 poison) at @main <stdin>:9
 ; CHECK-NEXT: Immediate UB detected: The value poison violates noundef attribute.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

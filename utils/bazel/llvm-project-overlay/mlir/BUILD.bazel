@@ -3918,6 +3918,7 @@ cc_library(
         ":Pass",
         ":SCFDialect",
         ":SCFTransforms",
+        ":SideEffectInterfaces",
         ":Support",
         ":TransformUtils",
         ":VectorDialect",
@@ -4611,6 +4612,7 @@ cc_library(
     deps = [
         ":IR",
         ":MemorySlotInterfacesIncGen",
+        "//llvm:Support",
     ],
 )
 
@@ -14757,6 +14759,7 @@ cc_library(
         ":Pass",
         ":SCFDialect",
         ":SCFTransforms",
+        ":SideEffectInterfaces",
         ":Support",
         ":TransformUtils",
         ":VectorDialect",

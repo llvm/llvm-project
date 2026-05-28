@@ -113,6 +113,10 @@ Turn on time profiler. Generates clang-doc-tracing.json)"),
                                       llvm::cl::init(false),
                                       llvm::cl::cat(ClangDocCategory));
 
+static llvm::cl::opt<bool>
+    Pretty("pretty-json", llvm::cl::desc("Serialize JSON with whitespace."),
+           llvm::cl::cat(ClangDocCategory));
+
 static llvm::cl::opt<OutputFormatTy> FormatEnum(
     "format", llvm::cl::desc("Format for outputted docs."),
     llvm::cl::values(clEnumValN(OutputFormatTy::yaml, "yaml",
@@ -309,7 +313,7 @@ Example usage for a project using a compile commands database:
         Executor->getExecutionContext(), ProjectName, PublicOnly, OutDirectory,
         SourceRoot, RepositoryUrl, RepositoryCodeLinePrefix, BaseDirectory,
         {UserStylesheets.begin(), UserStylesheets.end()}, Diags, FormatEnum,
-        FTimeTrace);
+        FTimeTrace, Pretty);
 
     if (Format == "html")
       ExitOnErr(getHtmlFiles(argv[0], CDCtx));

@@ -2184,7 +2184,8 @@ public:
   /// Calculates the cost of the subtrees, trims non-profitable ones and returns
   /// final cost.
   InstructionCost
-  calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals = {});
+  calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals = {},
+                                        Instruction *RdxRoot = nullptr);
 
   /// \returns the vectorization cost of the subtree that starts at \p VL.
   /// A negative number means that this is profitable.
@@ -4004,7 +4005,8 @@ private:
   /// LICM hoisting that optimizeGatherSequence() performs after vectorization
   /// for inserts with loop-invariant operands. Falls back to the whole-entry
   /// scale when per-lane information is unavailable or the feature is off.
-  uint64_t getGatherNodeEffectiveScale(const TreeEntry &TE);
+  uint64_t getGatherNodeEffectiveScale(const TreeEntry &TE,
+                                       Instruction *U = nullptr);
 
   /// Get the loop nest for the given loop \p L.
   ArrayRef<const Loop *> getLoopNest(const Loop *L);
@@ -10053,8 +10055,8 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
     SmallVector<std::pair<ArrayRef<Value *>, LoadsState>> Results;
     unsigned StartIdx = 0;
     SmallVector<int> CandidateVFs;
-    if (isAllowedNonPowerOf2VF(
-            MaxVF, isa<FixedVectorType>(Loads.front()->getType()))) {
+    const bool IsVectorElement = isa<FixedVectorType>(Loads.front()->getType());
+    if (isAllowedNonPowerOf2VF(MaxVF, IsVectorElement)) {
       const unsigned FullVectorNumElements = getFullVectorNumberOfElements(
           *TTI, Loads.front()->getType(), MaxVF - 1);
       if (MaxVF >= SmallestNonPowerOf2 && FullVectorNumElements != MaxVF - 1)
@@ -10065,7 +10067,11 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
          NumElts > 1; NumElts = getFloorFullVectorNumberOfElements(
                           *TTI, Loads.front()->getType(), NumElts - 1)) {
       CandidateVFs.push_back(NumElts);
-      if (VectorizeNonPowerOf2 && NumElts > 2)
+      // Gate the NumElts - 1 non-power-of-2 candidate through the unified
+      // isAllowedNonPowerOf2VF policy: otherwise widths such as 9 (when
+      // NumElts == 10) would be probed even though every other path rejects
+      // them, wasting compile time without ever producing a profitable tree.
+      if (NumElts > 2 && isAllowedNonPowerOf2VF(NumElts - 1, IsVectorElement))
         CandidateVFs.push_back(NumElts - 1);
     }
 
@@ -16474,14 +16480,15 @@ uint64_t BoUpSLP::getLoopNestScale(const Loop *L) {
   return std::max<uint64_t>(1, Scale);
 }
 
-uint64_t BoUpSLP::getGatherNodeEffectiveScale(const TreeEntry &TE) {
+uint64_t BoUpSLP::getGatherNodeEffectiveScale(const TreeEntry &TE,
+                                              Instruction *U) {
   // Only meaningful for gather/buildvector-like entries; the per-lane
   // insertelements that make up such an entry are LICM-hoistable by
   // optimizeGatherSequence() when their operand is loop-invariant.
   assert((TE.isGather() || TE.State == TreeEntry::SplitVectorize) &&
          "Expected gather/split tree entry.");
 
-  uint64_t BaseScale = getScaleToLoopIterations(TE);
+  uint64_t BaseScale = getScaleToLoopIterations(TE, nullptr, U);
   if (!PerLaneGatherScale || LoopAwareTripCount == 0 || BaseScale <= 1)
     return BaseScale;
 
@@ -16506,7 +16513,8 @@ uint64_t BoUpSLP::getGatherNodeEffectiveScale(const TreeEntry &TE) {
     if (isConstant(V))
       continue;
     ++N;
-    uint64_t LaneScale = std::min(getScaleToLoopIterations(TE, V), BaseScale);
+    uint64_t LaneScale =
+        std::min(getScaleToLoopIterations(TE, V, U), BaseScale);
     Sum = SaturatingAdd(Sum, LaneScale, &Overflow);
     if (Overflow)
       return BaseScale;
@@ -16650,6 +16658,31 @@ BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, Type *ScalarTy,
     SpillsReloads += SingleRegSpillReload * SpillCount;
   }
   return SpillsReloads;
+}
+
+/// Calculates a VectorInstrContext from the values in \p VL at indices in
+/// \p DemandedElts.
+static TTI::VectorInstrContext
+getVectorInstrContextHint(ArrayRef<Value *> VL, const APInt &DemandedElts) {
+  TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None;
+  for (unsigned I : seq(VL.size())) {
+    if (!DemandedElts[I])
+      continue;
+    Value *V = VL[I];
+    if (isa<UndefValue>(V))
+      continue;
+    auto *Inst = dyn_cast<Instruction>(V);
+    if (!Inst)
+      return TTI::VectorInstrContext::None;
+    TTI::VectorInstrContext IVIC = TTI::getVectorInstrContextHint(Inst);
+    if (VIC == TTI::VectorInstrContext::None) {
+      VIC = IVIC;
+      continue;
+    }
+    if (VIC != IVIC)
+      return TTI::VectorInstrContext::None;
+  }
+  return VIC;
 }
 
 InstructionCost
@@ -17033,20 +17066,18 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     }
     bool IsIdentity = true;
     SmallVector<int> PrevMask(InsertVecSz, PoisonMaskElem);
+    SmallVector<Value *> AdjustedVL(NumElts, PoisonValue::get(ScalarTy));
     Mask.swap(PrevMask);
     for (unsigned I = 0; I < NumScalars; ++I) {
       unsigned InsertIdx = *getElementIndex(VL[PrevMask[I]]);
       DemandedElts.setBit(InsertIdx);
+      AdjustedVL[InsertIdx] = VL[PrevMask[I]];
       IsIdentity &= InsertIdx - OffsetBeg == I;
       Mask[InsertIdx - OffsetBeg] = I;
     }
     assert(Offset < NumElts && "Failed to find vector index offset");
 
     InstructionCost Cost = 0;
-    Cost -=
-        getScalarizationOverhead(*TTI, ScalarTy, SrcVecTy, DemandedElts,
-                                 /*Insert*/ true, /*Extract*/ false, CostKind);
-
     // First cost - resize to actual vector size if not identity shuffle or
     // need to shift the vector.
     // Do not calculate the cost if the actual size is the register size and
@@ -17065,6 +17096,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     SmallBitVector InMask =
         isUndefVector(FirstInsert->getOperand(0),
                       buildUseMask(NumElts, InsertMask, UseMask::UndefsAsMask));
+    Cost -= getScalarizationOverhead(
+        *TTI, ScalarTy, SrcVecTy, DemandedElts,
+        /*Insert=*/true, /*Extract=*/false, CostKind, InMask.all(), AdjustedVL,
+        getVectorInstrContextHint(AdjustedVL, DemandedElts));
     if (!InMask.all() && NumScalars != NumElts && !IsWholeSubvector) {
       if (InsertVecSz != VecSz) {
         auto *ActualVecTy = cast<VectorType>(getWidenedType(ScalarTy, VecSz));
@@ -17654,13 +17689,22 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // We know that we can merge the stores. Calculate the cost.
       InstructionCost VecStCost;
       if (E->State == TreeEntry::StridedVectorize) {
+        const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
+        FixedVectorType *StridedStoreTy = SPtrInfo.Ty;
+        assert(StridedStoreTy && "Missing StridedPointerInfo for tree entry.");
         Align CommonAlignment =
             computeCommonAlignment<StoreInst>(UniqueValues.getArrayRef());
         VecStCost = TTI->getMemIntrinsicInstrCost(
             MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_store,
-                                       VecTy, BaseSI->getPointerOperand(),
+                                       StridedStoreTy,
+                                       BaseSI->getPointerOperand(),
                                        /*VariableMask=*/false, CommonAlignment),
             CostKind);
+        if (StridedStoreTy != VecTy)
+          VecStCost +=
+              TTI->getCastInstrCost(Instruction::BitCast, VecTy, StridedStoreTy,
+                                    getCastContextHint(*E), CostKind);
+
       } else {
         assert(E->State == TreeEntry::Vectorize &&
                "Expected either strided or consecutive stores.");
@@ -18858,8 +18902,9 @@ static T *performExtractsShuffleAction(
   return Prev;
 }
 
-InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
-    ArrayRef<Value *> VectorizedVals) {
+InstructionCost
+BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
+                                               Instruction *RdxRoot) {
   // FIXME: support buildvector of the gather nodes with struct types.
   if (any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
         return TE->isGather() &&
@@ -18979,8 +19024,10 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
       }
     }
     if (!CostIsFree && !Scale) {
-      Scale = IsGatherLike ? getGatherNodeEffectiveScale(TE)
-                           : getScaleToLoopIterations(TE);
+      Scale =
+          IsGatherLike
+              ? getGatherNodeEffectiveScale(TE, TE.Idx == 0 ? RdxRoot : nullptr)
+              : getScaleToLoopIterations(TE);
       C *= Scale;
       EntryToScale.try_emplace(&TE, Scale);
       if (!TE.isGather() && TE.hasState()) {
@@ -19423,7 +19470,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // shuffles, inserts, and extracts.
   // FIXME: remove this as soon as correct fractional model is landed for all
   // targets.
-  if (SLPInstCountCheck && VectorizableTree.front()->getVectorFactor() == 2 &&
+  if (SLPInstCountCheck && TTI->preferSLPInstCountCheck() &&
+      VectorizableTree.front()->getVectorFactor() == 2 &&
       SLPCostThreshold == 0 &&
       (!SLPReVec ||
        !isa<VectorType>(
@@ -19711,6 +19759,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
             return !EE->hasOneUse() || !MustGather.contains(EE);
           return true;
         }
+        if (isa<StructType>(V->getType()))
+          return false;
         return ValueToExtUses->contains(V);
       };
       bool CanBeUsedAsScalar = all_of(Inst->operands(), OperandIsScalar);
@@ -23617,6 +23667,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         Type *StrideTy = DL->getIndexType(SI->getPointerOperandType());
 
         const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
+        FixedVectorType *StridedStoreTy = SPtrInfo.Ty;
+        assert(StridedStoreTy && "Missing StridedPointerInfo for tree entry.");
+        unsigned StridedStoreEC = getNumElements(StridedStoreTy);
         Value *Stride = SPtrInfo.StrideVal;
         assert(Stride && "Missing StridedPointerInfo for tree entry.");
         Value *StrideVal =
@@ -23626,13 +23679,14 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             StrideVal,
             ConstantInt::getSigned(
                 StrideTy, static_cast<int>(DL->getTypeAllocSize(ScalarTy))));
+        if (StridedStoreTy != VecTy)
+          VecValue = Builder.CreateBitOrPointerCast(VecValue, StridedStoreTy);
         auto *Inst = Builder.CreateIntrinsic(
             Intrinsic::experimental_vp_strided_store,
-            {VecTy, Ptr->getType(), StrideTy},
+            {StridedStoreTy, Ptr->getType(), StrideTy},
             {VecValue, Ptr, StrideVal,
-             Builder.getAllOnesMask(
-                 ElementCount::getFixed(getNumElements(VecTy))),
-             Builder.getInt32(E->Scalars.size())});
+             Builder.getAllOnesMask(ElementCount::getFixed(StridedStoreEC)),
+             Builder.getInt32(StridedStoreEC)});
         Inst->addParamAttr(
             /*ArgNo=*/1,
             Attribute::getWithAlignment(Inst->getContext(), CommonAlignment));
@@ -26200,6 +26254,22 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
     if (Level > RecursionMaxDepth)
       continue;
 
+    // Can we propagate widths through a call instruction
+    // We can for simple intrinsics
+    auto IsCompatibleIntrinsic = [](const Instruction *I) -> bool {
+      const auto *CI = dyn_cast<IntrinsicInst>(I);
+      if (!CI)
+        return false;
+      switch (CI->getIntrinsicID()) {
+      case Intrinsic::abs:
+      case Intrinsic::fabs:
+      case Intrinsic::fma:
+      case Intrinsic::fmuladd:
+        return true;
+      default:
+        return false;
+      }
+    };
     // If the current instruction is a load, update MaxWidth to reflect the
     // width of the loaded value.
     if (isa<LoadInst, ExtractElementInst, ExtractValueInst>(I))
@@ -26210,7 +26280,8 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
     // instruction we haven't yet visited and from the same basic block as the
     // user or the use is a PHI node, we add it to the worklist.
     else if (isa<PHINode, CastInst, GetElementPtrInst, CmpInst, SelectInst,
-                 BinaryOperator, UnaryOperator>(I)) {
+                 BinaryOperator, UnaryOperator>(I) ||
+             IsCompatibleIntrinsic(I)) {
       for (Use &U : I->operands()) {
         if (auto *J = dyn_cast<Instruction>(U.get()))
           if (Visited.insert(J).second &&
@@ -27169,8 +27240,11 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
           VF) ||
       VF < 2 || VF < MinVF) {
     // Check if vectorizing with a non-power-of-2 VF should be considered; see
-    // isAllowedNonPowerOf2VF for supported widths.
-    if (!VectorizeNonPowerOf2 || VF < MinVF)
+    // isAllowedNonPowerOf2VF for supported widths. Preserve the original
+    // VF + 1 == MinVF exception (chain length is one less than the
+    // power-of-two MinVF) so that near-power-of-two non-power-of-2 chains
+    // remain reachable, matching main behavior.
+    if (!VectorizeNonPowerOf2 || (VF < MinVF && VF + 1 != MinVF))
       return false;
   }
 
@@ -27424,8 +27498,6 @@ bool StoreChainContext::initializeContext(
     BoUpSLP &R, const DataLayout &DL, const TargetTransformInfo &TTI,
     DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>> &Visited,
     bool SingleContext) {
-  assert((Stride == 1 || !SLPReVec) &&
-         "Strided stores not supported for revectorization");
   if (!Visited
            .insert({Operands.front(),
                     cast<StoreInst>(Operands.front())->getValueOperand(),
@@ -29942,7 +30014,8 @@ public:
 
       V.transformNodes();
       V.computeMinimumValueSizes();
-      InstructionCost TreeCost = V.calculateTreeCostAndTrimNonProfitable(VL);
+      InstructionCost TreeCost =
+          V.calculateTreeCostAndTrimNonProfitable(VL, RdxRootInst);
       V.buildExternalUses(LocalExternallyUsedValues);
 
       InstructionCost ReductionCost =
@@ -29989,7 +30062,11 @@ public:
     // try front-anchored [0, W) then back-anchored [N-W, N).
     unsigned N = Candidates.size();
     ReduxWidth = N;
-    if (!VectorizeNonPowerOf2 || !has_single_bit(ReduxWidth + 1))
+    // Mirror the associative reduction width policy: keep the original width
+    // when it is a supported non-power-of-2 VF (3, 5, 6, 7, 10..14, ...) so
+    // that ordered reductions do not floor widths the associative path keeps.
+    if (!isAllowedNonPowerOf2VF(
+            ReduxWidth, isa<FixedVectorType>(Candidates.front()->getType())))
       ReduxWidth = GetVectorFactor(ReduxWidth);
     ReduxWidth = std::min(ReduxWidth, MaxElts);
 
@@ -31136,7 +31213,8 @@ bool SLPVectorizerPass::tryToVectorize(
     return HorRdx.tryToReduce(R, *DL, &TTI, *TLI, AC, *DT) != nullptr;
   };
   if (Candidates.size() == 1)
-    return TryToReduce(I, {Op0, Op1}) || tryToVectorizeList({Op0, Op1}, R);
+    return TryToReduce(I, {Op0, Op1}) ||
+           (!AllowFMACandidates && tryToVectorizeList({Op0, Op1}, R));
 
   // We have multiple options. Try to pick the single best.
   std::optional<int> BestCandidate = R.findBestRootPair(Candidates).first;
@@ -31145,9 +31223,10 @@ bool SLPVectorizerPass::tryToVectorize(
   return (*BestCandidate == 0 &&
           TryToReduce(I, {Candidates[*BestCandidate].first,
                           Candidates[*BestCandidate].second})) ||
-         tryToVectorizeList({Candidates[*BestCandidate].first,
-                             Candidates[*BestCandidate].second},
-                            R);
+         (!AllowFMACandidates &&
+          tryToVectorizeList({Candidates[*BestCandidate].first,
+                              Candidates[*BestCandidate].second},
+                             R));
 }
 
 bool SLPVectorizerPass::vectorizeRootInstruction(

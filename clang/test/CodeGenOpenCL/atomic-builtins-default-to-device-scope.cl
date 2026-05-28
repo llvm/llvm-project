@@ -5,26 +5,26 @@
 // RUN:   | FileCheck %s --check-prefix=SPIRV
 
 // AMDGCN-LABEL: define dso_local i32 @load(
-// AMDGCN-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// AMDGCN-SAME: ptr noundef captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
 // AMDGCN-NEXT:    [[TMP0:%.*]] = load atomic i32, ptr [[P]] syncscope("agent") seq_cst, align 4
 // AMDGCN-NEXT:    ret i32 [[TMP0]]
 //
 // SPIRV-LABEL: define spir_func i32 @load(
-// SPIRV-SAME: ptr addrspace(4) noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// SPIRV-SAME: ptr addrspace(4) noundef captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // SPIRV-NEXT:  [[ENTRY:.*:]]
 // SPIRV-NEXT:    [[TMP0:%.*]] = load atomic i32, ptr addrspace(4) [[P]] syncscope("device") seq_cst, align 4
 // SPIRV-NEXT:    ret i32 [[TMP0]]
 //
 int load(int *p) { return __atomic_load_n(p, __ATOMIC_SEQ_CST); }
 // AMDGCN-LABEL: define dso_local void @store(
-// AMDGCN-SAME: ptr noundef writeonly captures(none) [[P:%.*]], i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AMDGCN-SAME: ptr noundef captures(none) [[P:%.*]], i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
 // AMDGCN-NEXT:    store atomic i32 [[X]], ptr [[P]] syncscope("agent") seq_cst, align 4
 // AMDGCN-NEXT:    ret void
 //
 // SPIRV-LABEL: define spir_func void @store(
-// SPIRV-SAME: ptr addrspace(4) noundef writeonly captures(none) [[P:%.*]], i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// SPIRV-SAME: ptr addrspace(4) noundef captures(none) [[P:%.*]], i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPIRV-NEXT:  [[ENTRY:.*:]]
 // SPIRV-NEXT:    store atomic i32 [[X]], ptr addrspace(4) [[P]] syncscope("device") seq_cst, align 4
 // SPIRV-NEXT:    ret void
@@ -33,7 +33,7 @@ void store(int *p, int x) { return __atomic_store_n(p, x, __ATOMIC_SEQ_CST); }
 // AMDGCN-LABEL: define dso_local i32 @add(
 // AMDGCN-SAME: ptr noundef captures(none) [[P:%.*]], i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr [[P]], i32 [[X]] syncscope("agent") seq_cst, align 4
+// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr [[P]], i32 [[X]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META7:![0-9]+]], !amdgpu.no.remote.memory [[META7]]
 // AMDGCN-NEXT:    ret i32 [[TMP0]]
 //
 // SPIRV-LABEL: define spir_func i32 @add(
@@ -46,7 +46,7 @@ int add(int *p, int x) { return __atomic_fetch_add(p, x, __ATOMIC_SEQ_CST); }
 // AMDGCN-LABEL: define dso_local float @fadd(
 // AMDGCN-SAME: ptr noundef captures(none) [[P:%.*]], float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr [[P]], float [[X]] syncscope("agent") seq_cst, align 4
+// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr [[P]], float [[X]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META7]], !amdgpu.no.remote.memory [[META7]]
 // AMDGCN-NEXT:    ret float [[TMP0]]
 //
 // SPIRV-LABEL: define spir_func float @fadd(
@@ -59,7 +59,7 @@ float fadd(float *p, float x) { return __atomic_fetch_add(p, x, __ATOMIC_SEQ_CST
 // AMDGCN-LABEL: define dso_local i32 @sub(
 // AMDGCN-SAME: ptr noundef captures(none) [[P:%.*]], i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw sub ptr [[P]], i32 [[X]] syncscope("agent") seq_cst, align 4
+// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw sub ptr [[P]], i32 [[X]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META7]], !amdgpu.no.remote.memory [[META7]]
 // AMDGCN-NEXT:    ret i32 [[TMP0]]
 //
 // SPIRV-LABEL: define spir_func i32 @sub(
@@ -72,7 +72,7 @@ int sub(int *p, int x) { return __atomic_fetch_sub(p, x, __ATOMIC_SEQ_CST); }
 // AMDGCN-LABEL: define dso_local float @fsub(
 // AMDGCN-SAME: ptr noundef captures(none) [[P:%.*]], float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr [[P]], float [[X]] syncscope("agent") seq_cst, align 4
+// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr [[P]], float [[X]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META7]], !amdgpu.no.remote.memory [[META7]]
 // AMDGCN-NEXT:    ret float [[TMP0]]
 //
 // SPIRV-LABEL: define spir_func float @fsub(
@@ -85,7 +85,7 @@ float fsub(float *p, float x) { return __atomic_fetch_sub(p, x, __ATOMIC_SEQ_CST
 // AMDGCN-LABEL: define dso_local i32 @and(
 // AMDGCN-SAME: ptr noundef captures(none) [[P:%.*]], i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw and ptr [[P]], i32 [[X]] syncscope("agent") seq_cst, align 4
+// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw and ptr [[P]], i32 [[X]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META7]], !amdgpu.no.remote.memory [[META7]]
 // AMDGCN-NEXT:    ret i32 [[TMP0]]
 //
 // SPIRV-LABEL: define spir_func i32 @and(
@@ -98,7 +98,7 @@ int and(int *p, int x) { return __atomic_fetch_and(p, x, __ATOMIC_SEQ_CST); }
 // AMDGCN-LABEL: define dso_local i32 @nand(
 // AMDGCN-SAME: ptr noundef captures(none) [[P:%.*]], i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw nand ptr [[P]], i32 [[X]] syncscope("agent") seq_cst, align 4
+// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw nand ptr [[P]], i32 [[X]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META7]], !amdgpu.no.remote.memory [[META7]]
 // AMDGCN-NEXT:    ret i32 [[TMP0]]
 //
 // SPIRV-LABEL: define spir_func i32 @nand(
@@ -111,7 +111,7 @@ int nand(int *p, int x) { return __atomic_fetch_nand(p, x, __ATOMIC_SEQ_CST); }
 // AMDGCN-LABEL: define dso_local i32 @or(
 // AMDGCN-SAME: ptr noundef captures(none) [[P:%.*]], i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw or ptr [[P]], i32 [[X]] syncscope("agent") seq_cst, align 4
+// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw or ptr [[P]], i32 [[X]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META7]], !amdgpu.no.remote.memory [[META7]]
 // AMDGCN-NEXT:    ret i32 [[TMP0]]
 //
 // SPIRV-LABEL: define spir_func i32 @or(
@@ -124,7 +124,7 @@ int or(int *p, int x) { return __atomic_fetch_or(p, x, __ATOMIC_SEQ_CST); }
 // AMDGCN-LABEL: define dso_local i32 @xor(
 // AMDGCN-SAME: ptr noundef captures(none) [[P:%.*]], i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw xor ptr [[P]], i32 [[X]] syncscope("agent") seq_cst, align 4
+// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw xor ptr [[P]], i32 [[X]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META7]], !amdgpu.no.remote.memory [[META7]]
 // AMDGCN-NEXT:    ret i32 [[TMP0]]
 //
 // SPIRV-LABEL: define spir_func i32 @xor(
@@ -137,7 +137,7 @@ int xor(int *p, int x) { return __atomic_fetch_xor(p, x, __ATOMIC_SEQ_CST); }
 // AMDGCN-LABEL: define dso_local i32 @min(
 // AMDGCN-SAME: ptr noundef captures(none) [[P:%.*]], i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw min ptr [[P]], i32 [[X]] syncscope("agent") seq_cst, align 4
+// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw min ptr [[P]], i32 [[X]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META7]], !amdgpu.no.remote.memory [[META7]]
 // AMDGCN-NEXT:    ret i32 [[TMP0]]
 //
 // SPIRV-LABEL: define spir_func i32 @min(
@@ -150,7 +150,7 @@ int min(int *p, int x) { return __atomic_fetch_min(p, x, __ATOMIC_SEQ_CST); }
 // AMDGCN-LABEL: define dso_local float @fmin(
 // AMDGCN-SAME: ptr noundef captures(none) [[P:%.*]], float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw fmin ptr [[P]], float [[X]] syncscope("agent") seq_cst, align 4
+// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw fmin ptr [[P]], float [[X]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META7]], !amdgpu.no.remote.memory [[META7]]
 // AMDGCN-NEXT:    ret float [[TMP0]]
 //
 // SPIRV-LABEL: define spir_func float @fmin(
@@ -163,7 +163,7 @@ float fmin(float *p, float x) { return __atomic_fetch_min(p, x, __ATOMIC_SEQ_CST
 // AMDGCN-LABEL: define dso_local i32 @max(
 // AMDGCN-SAME: ptr noundef captures(none) [[P:%.*]], i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw max ptr [[P]], i32 [[X]] syncscope("agent") seq_cst, align 4
+// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw max ptr [[P]], i32 [[X]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META7]], !amdgpu.no.remote.memory [[META7]]
 // AMDGCN-NEXT:    ret i32 [[TMP0]]
 //
 // SPIRV-LABEL: define spir_func i32 @max(
@@ -176,7 +176,7 @@ int max(int *p, int x) { return __atomic_fetch_max(p, x, __ATOMIC_SEQ_CST); }
 // AMDGCN-LABEL: define dso_local float @fmax(
 // AMDGCN-SAME: ptr noundef captures(none) [[P:%.*]], float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw fmax ptr [[P]], float [[X]] syncscope("agent") seq_cst, align 4
+// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw fmax ptr [[P]], float [[X]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META7]], !amdgpu.no.remote.memory [[META7]]
 // AMDGCN-NEXT:    ret float [[TMP0]]
 //
 // SPIRV-LABEL: define spir_func float @fmax(
@@ -189,7 +189,7 @@ float fmax(float *p, float x) { return __atomic_fetch_max(p, x, __ATOMIC_SEQ_CST
 // AMDGCN-LABEL: define dso_local i32 @xchg(
 // AMDGCN-SAME: ptr noundef captures(none) [[P:%.*]], i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw xchg ptr [[P]], i32 [[X]] syncscope("agent") seq_cst, align 4
+// AMDGCN-NEXT:    [[TMP0:%.*]] = atomicrmw xchg ptr [[P]], i32 [[X]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META7]], !amdgpu.no.remote.memory [[META7]]
 // AMDGCN-NEXT:    ret i32 [[TMP0]]
 //
 // SPIRV-LABEL: define spir_func i32 @xchg(
@@ -233,3 +233,6 @@ int cmpxchg(int *p, int x, int y) { return __atomic_compare_exchange(p, &x, &y, 
 // SPIRV-NEXT:    ret i32 [[CONV]]
 //
 int cmpxchg_weak(int *p, int x, int y) { return __atomic_compare_exchange(p, &x, &y, 1, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST); }
+//.
+// AMDGCN: [[META7]] = !{}
+//.

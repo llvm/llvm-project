@@ -2382,7 +2382,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
                                                        : Intrinsic::arm_strexd);
     llvm::Type *STy = llvm::StructType::get(Int32Ty, Int32Ty);
 
-    Address Tmp = CreateMemTempWithoutCast(E->getArg(0)->getType());
+    Address Tmp = CreateMemTemp(E->getArg(0)->getType());
     Value *Val = EmitScalarExpr(E->getArg(0));
     Builder.CreateStore(Val, Tmp);
 
@@ -4768,7 +4768,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                              : Intrinsic::aarch64_stxp);
     llvm::Type *STy = llvm::StructType::get(Int64Ty, Int64Ty);
 
-    Address Tmp = CreateMemTempWithoutCast(E->getArg(0)->getType());
+    Address Tmp = CreateMemTemp(E->getArg(0)->getType());
     EmitAnyExprToMem(E->getArg(0), Tmp, Qualifiers(), /*init*/ true);
 
     Tmp = Tmp.withElementType(STy);
@@ -4914,8 +4914,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     if (MTEIntrinsicID == Intrinsic::aarch64_irg) {
       Value *Pointer = EmitScalarExpr(E->getArg(0));
       Value *Mask = EmitScalarExpr(E->getArg(1));
-
-      Mask = Builder.CreateZExt(Mask, Int64Ty);
+      assert(Mask->getType()->getScalarSizeInBits() == 64 &&
+             "SemaARM::BuiltinARMMemoryTaggingCall() enforces this");
       return Builder.CreateCall(CGM.getIntrinsic(MTEIntrinsicID),
                                 {Pointer, Mask});
     }
@@ -4930,10 +4930,10 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     if (MTEIntrinsicID == Intrinsic::aarch64_gmi) {
       Value *Pointer = EmitScalarExpr(E->getArg(0));
       Value *ExcludedMask = EmitScalarExpr(E->getArg(1));
-
-      ExcludedMask = Builder.CreateZExt(ExcludedMask, Int64Ty);
-      return Builder.CreateCall(
-                       CGM.getIntrinsic(MTEIntrinsicID), {Pointer, ExcludedMask});
+      assert(ExcludedMask->getType()->getScalarSizeInBits() == 64 &&
+             "SemaARM::BuiltinARMMemoryTaggingCall() enforces this");
+      return Builder.CreateCall(CGM.getIntrinsic(MTEIntrinsicID),
+                                {Pointer, ExcludedMask});
     }
     // Although it is possible to supply a different return
     // address (first arg) to this intrinsic, for now we set
