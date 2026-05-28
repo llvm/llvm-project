@@ -3207,7 +3207,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   }
 
   if (const FunctionDecl *Fn = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
-    if (Fn->isReplaceableGlobalAllocationFunction() &&
+    if (getCodeGenOpts().AssumeSaneOperatorNew &&
+        Fn->isReplaceableGlobalAllocationFunction() &&
         Fn->getDeclName().isAnyOperatorDelete()) {
       auto [IRArg, NumIRArgs] = IRFunctionArgs.getIRArgs(0);
       assert(NumIRArgs == 1 && "Pointer should be a single argument");
