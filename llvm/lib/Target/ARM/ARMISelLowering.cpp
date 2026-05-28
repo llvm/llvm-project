@@ -4498,6 +4498,18 @@ static bool isCMN(SDValue Op, ISD::CondCode CC, SelectionDAG &DAG) {
           (isSignedIntSetCC(CC) && isSafeSignedCMN(Op, DAG)));
 }
 
+static bool shouldBeAdjustedToZero(SDValue LHS, uint32_t C, ISD::CondCode &CC) {
+  if (!LHS.hasOneUse())
+    return false;
+
+  if (C == 0xffffffff && (CC == ISD::SETLE || CC == ISD::SETGT)) {
+    CC = (CC == ISD::SETLE) ? ISD::SETLT : ISD::SETGE;
+    return true;
+  }
+
+  return false;
+}
+
 /// Returns appropriate ARM CMP (cmp) and corresponding condition code for
 /// the given operands.
 SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
@@ -4505,7 +4517,11 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                                      const SDLoc &dl) const {
   if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS.getNode())) {
     unsigned C = RHSC->getZExtValue();
-    if (!isLegalICmpImmediate((int32_t)C)) {
+    if (shouldBeAdjustedToZero(LHS, C, CC)) {
+      // Adjust the constant to zero.
+      // CC has already been adjusted.
+      RHS = DAG.getConstant(0, dl, MVT::i32);
+    } else if (!isLegalICmpImmediate((int32_t)C)) {
       // Constant does not fit, try adjusting it by one.
       switch (CC) {
       default: break;
@@ -19743,13 +19759,14 @@ bool ARMTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
 /// immediate into a register.
 bool ARMTargetLowering::isLegalAddImmediate(int64_t Imm) const {
   // Same encoding for add/sub, just flip the sign.
-  uint64_t AbsImm = AbsoluteValue(Imm);
-  if (!Subtarget->isThumb())
-    return ARM_AM::getSOImmVal(AbsImm) != -1;
   if (Subtarget->isThumb2())
-    return ARM_AM::getT2SOImmVal(AbsImm) != -1;
+    return ARM_AM::getT2SOImmVal((uint32_t)Imm) != -1 ||
+           ARM_AM::getT2SOImmVal(-(uint32_t)Imm) != -1;
+  if (!Subtarget->isThumb())
+    return ARM_AM::getSOImmVal((uint32_t)Imm) != -1 ||
+           ARM_AM::getSOImmVal(-(uint32_t)Imm) != -1;
   // Thumb1 only has 8-bit unsigned immediate.
-  return AbsImm <= 255;
+  return AbsoluteValue(Imm) <= 255;
 }
 
 // Return false to prevent folding

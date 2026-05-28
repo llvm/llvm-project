@@ -22,7 +22,7 @@
 ; CHECK-DEFAULT: ldr{{.*}}, #4]
 ; CHECK-DEFAULT: str{{.*}}, #4]
 ; CHECK-DEFAULT: ldr{{.*}}, #8]!
-; CHECK-DEAFULT: ldr{{.*}}, #8]!
+; CHECK-DEFAULT: ldr{{.*}}, #8]!
 ; CHECK-DEFAULT: str{{.*}}, #8]!
 
 ; CHECK-COMPLEX: ldr{{.*}}, #8]!
@@ -71,21 +71,19 @@ exit:
 
 ; CHECK: @ %loop
 
-; CHECK-DEFAULT: ldr{{.*}},
-; CHECK-DEFAULT: ldr{{.*}},
-; CHECK-DEFAULT: str{{.*}},
-; CHECK-DEFAULT: ldr{{.*}}, #-4]
-; CHECK-DEFAULT: ldr{{.*}}, #-4]
-; CHECK-DEFAULT: sub{{.*}}, #8
-; CHECK-DEFAULT: str{{.*}}, #-4]
-; CHECK-DEFAULT: sub{{.*}}, #8
+; CHECK-DEFAULT: ldr{{.*}}, #4]
+; CHECK-DEFAULT: ldr{{.*}}, #4]
+; CHECK-DEFAULT: str{{.*}}, #4]
+; CHECK-DEFAULT: ldr{{.*}}], #-8
+; CHECK-DEFAULT: ldr{{.*}}], #-8
+; CHECK-DEFAULT: str{{.*}}], #-8
 
-; CHECK-COMPLEX: ldr{{.*}} lsl #2]
-; CHECK-COMPLEX: ldr{{.*}} lsl #2]
-; CHECK-COMPLEX: str{{.*}} lsl #2]
-; CHECK-COMPLEX: ldr{{.*}} lsl #2]
-; CHECK-COMPLEX: ldr{{.*}} lsl #2]
-; CHECK-COMPLEX: str{{.*}} lsl #2]
+; CHECK-COMPLEX: ldr{{.*lsl #2}}
+; CHECK-COMPLEX: ldr{{.*lsl #2}}
+; CHECK-COMPLEX: str{{.*lsl #2}}
+; CHECK-COMPLEX: ldr{{.*}}, #-4
+; CHECK-COMPLEX: ldr{{.*}}, #-4
+; CHECK-COMPLEX: str{{.*}}, #-4
 
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!

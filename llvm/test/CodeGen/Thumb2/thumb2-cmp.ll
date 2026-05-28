@@ -88,8 +88,7 @@ define i32 @f6(i32 %a) {
 ; CHECK-NEXT:    ite le
 ; CHECK-NEXT:    movle r0, #0
 ; CHECK-NEXT:    movgt r0, #2
-; CHECK-NOT:    cmp.w {{.*}}, #-2147483648
-; CHECK:       bx lr
+; CHECK-NEXT:    bx lr
     %tmp = icmp sgt i32 %a, 2147483647
     br i1 %tmp, label %true, label %false
 true:
@@ -246,11 +245,10 @@ false:
 define i32 @slt_neg_soimm(i32 %a) {
 ; CHECK-LABEL: slt_neg_soimm:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    mvn r1, #7929856
-; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    ite gt
-; CHECK-NEXT:    movgt r0, #2
-; CHECK-NEXT:    movle r0, #1
+; CHECK-NEXT:    cmn.w r0, #7929856
+; CHECK-NEXT:    ite ge
+; CHECK-NEXT:    movge r0, #2
+; CHECK-NEXT:    movlt r0, #1
 ; CHECK-NEXT:    bx lr
   %b = icmp slt i32 %a, -7929856
   br i1 %b, label %true, label %false
@@ -301,12 +299,10 @@ false:
 define i32 @sgt_neg_soimm(i32 %a) {
 ; CHECK-LABEL: sgt_neg_soimm:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    movs r1, #1
-; CHECK-NEXT:    movt r1, #65415
-; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    ite lt
-; CHECK-NEXT:    movlt r0, #2
-; CHECK-NEXT:    movge r0, #1
+; CHECK-NEXT:    cmn.w r0, #7929856
+; CHECK-NEXT:    ite le
+; CHECK-NEXT:    movle r0, #2
+; CHECK-NEXT:    movgt r0, #1
 ; CHECK-NEXT:    bx lr
   %b = icmp sgt i32 %a, -7929856
   br i1 %b, label %true, label %false
