@@ -543,15 +543,18 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
   NamedMDNode *Node = M.getNamedMetadata("spirv.ExecutionMode");
   if (Node) {
     for (unsigned i = 0; i < Node->getNumOperands(); i++) {
+      const auto EM =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>((Node->getOperand(i))->getOperand(1))
+                  ->getValue())
+              ->getZExtValue();
+      // Skip ArithmeticPoisonKHR to avoid a duplicate.
+      if (EM == SPIRV::ExecutionMode::ArithmeticPoisonKHR)
+        continue;
       // If SPV_KHR_float_controls2 is enabled and we find any of
       // FPFastMathDefault, ContractionOff or SignedZeroInfNanPreserve execution
       // modes, skip it, it'll be done somewhere else.
       if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
-        const auto EM =
-            cast<ConstantInt>(
-                cast<ConstantAsMetadata>((Node->getOperand(i))->getOperand(1))
-                    ->getValue())
-                ->getZExtValue();
         if (EM == SPIRV::ExecutionMode::FPFastMathDefault ||
             EM == SPIRV::ExecutionMode::ContractionOff ||
             EM == SPIRV::ExecutionMode::SignedZeroInfNanPreserve)
