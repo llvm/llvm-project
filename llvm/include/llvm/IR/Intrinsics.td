@@ -2750,6 +2750,11 @@ def int_load_relative: DefaultAttrsIntrinsic<[llvm_ptr_ty],
 def int_asan_check_memaccess :
   Intrinsic<[],[llvm_ptr_ty, llvm_i32_ty], [ImmArg<ArgIndex<1>>]>;
 
+// KMSAN intrinsics to delimit regions of interest and update the context.
+def int_kmsan_instrumentation_begin : Intrinsic<[], [], []>;
+def int_kmsan_instrumentation_end : Intrinsic<[], [], []>;
+def int_kmsan_instrumentation_update_context : Intrinsic<[], [], []>;
+
 // Spin in an infinite loop (using instructions specified by the target) iff the
 // argument is true. Used to implement efficient conditional traps.
 def int_cond_loop : Intrinsic<[], [llvm_i1_ty],

@@ -32982,3 +32982,33 @@ taken. A late optimization pass will convert this intrinsic to either
 ``llvm.cond.loop(true)`` or ``llvm.cond.loop(pred)``, where ``pred``
 is a predicate for a conditional branch leading to the intrinsic call,
 if possible.
+
+.. _llvm.kmsan.instrumentation:
+
+'``llvm.kmsan.instrumentation.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.kmsan.instrumentation.begin()
+      declare void @llvm.kmsan.instrumentation.update.context()
+      declare void @llvm.kmsan.instrumentation.end()
+
+Overview:
+"""""""""
+
+The '``llvm.kmsan.instrumentation.*``' intrinsics allow selectively enabling MemorySanitizer instrumentation within a specific region of an otherwise uninstrumented function (e.g., one marked with the ``disable_sanitizer_instrumentation`` attribute).
+
+Semantics:
+""""""""""
+
+These intrinsics are used by KernelMemorySanitizer to mark a region of code where instrumentation is enabled within an otherwise uninstrumented function.
+
+- ``llvm.kmsan.instrumentation.begin`` marks the start of the instrumented region.
+- ``llvm.kmsan.instrumentation.update.context`` updates the shadow context for parameter passing/returning.
+- ``llvm.kmsan.instrumentation.end`` marks the end of the instrumented region.
+
+When the function is marked with ``disable_sanitizer_instrumentation``, the standard MemorySanitizer function-level ABI prologue is skipped. Instead, the intrinsic ``llvm.kmsan.instrumentation.begin`` indicates the start of the code region that should be instrumented, and ``llvm.kmsan.instrumentation.end`` marks the end of the region. State propagation is only performed on instructions within this region. ``llvm.kmsan.instrumentation.update.context`` can be used to re-initialize the MSan context state within the region if needed.

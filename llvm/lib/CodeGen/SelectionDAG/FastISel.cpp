@@ -1385,6 +1385,9 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
   case Intrinsic::lifetime_end:
   // The donothing intrinsic does, well, nothing.
   case Intrinsic::donothing:
+  case Intrinsic::kmsan_instrumentation_begin:
+  case Intrinsic::kmsan_instrumentation_update_context:
+  case Intrinsic::kmsan_instrumentation_end:
   // Neither does the sideeffect intrinsic.
   case Intrinsic::sideeffect:
   // Neither does the assume intrinsic; it's also OK not to codegen its operand.

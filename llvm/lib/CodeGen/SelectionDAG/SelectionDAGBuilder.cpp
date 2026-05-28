@@ -3420,6 +3420,9 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
       llvm_unreachable("Cannot invoke this intrinsic");
     case Intrinsic::donothing:
       // Ignore invokes to @llvm.donothing: jump directly to the next BB.
+    case Intrinsic::kmsan_instrumentation_begin:
+    case Intrinsic::kmsan_instrumentation_update_context:
+    case Intrinsic::kmsan_instrumentation_end:
     case Intrinsic::seh_try_begin:
     case Intrinsic::seh_scope_begin:
     case Intrinsic::seh_try_end:
@@ -7842,6 +7845,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::donothing:
+  case Intrinsic::kmsan_instrumentation_begin:
+  case Intrinsic::kmsan_instrumentation_update_context:
+  case Intrinsic::kmsan_instrumentation_end:
   case Intrinsic::seh_try_begin:
   case Intrinsic::seh_scope_begin:
   case Intrinsic::seh_try_end:
