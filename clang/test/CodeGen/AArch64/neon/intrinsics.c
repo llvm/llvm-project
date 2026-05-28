@@ -61,8 +61,80 @@ float64_t test_vmaxnmvq_f64(float64x2_t a) {
 
 //===------------------------------------------------------===//
 // 2.1.3.2.7  Vector saturating rounding shift right and narrow
-// TODO: Implement SISD variants
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#vector-saturating-rounding-shift-right-and-narrow
 //===------------------------------------------------------===//
+
+// LLVM-LABEL: define dso_local i8 @test_vqrshrunh_n_s16(
+uint8_t test_vqrshrunh_n_s16(int16_t a) {
+  // CIR:  {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrun"
+
+  // LLVM-SAME: i16 {{.*}} [[A:%.*]])
+  // LLVM:    [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 [[A]], i64 0
+  // LLVM:    [[VQRSHRUNH_N_S16:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqrshrun.v8i8(<8 x i16> [[TMP0]], i32 8)
+  // LLVM:    [[TMP1:%.*]] = extractelement <8 x i8> [[VQRSHRUNH_N_S16]], i64 0
+  // LLVM:    ret i8 [[TMP1]]
+  return (uint8_t)vqrshrunh_n_s16(a, 8);
+}
+
+// LLVM-LABEL: define dso_local i16 @test_vqrshruns_n_s32(
+uint16_t test_vqrshruns_n_s32(int32_t a) {
+  // CIR:  {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrun"
+
+  // LLVM-SAME: i32 {{.*}} [[A:%.*]])
+  // LLVM:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
+  // LLVM:    [[VQRSHRUNS_N_S32:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrshrun.v4i16(<4 x i32> [[TMP0]], i32 16)
+  // LLVM:    [[TMP1:%.*]] = extractelement <4 x i16> [[VQRSHRUNS_N_S32]], i64 0
+  // LLVM:    ret i16 [[TMP1]]
+  return (uint16_t)vqrshruns_n_s32(a, 16);
+}
+
+// LLVM-LABEL: define dso_local i8 @test_vqrshrnh_n_s16(
+int8_t test_vqrshrnh_n_s16(int16_t a) {
+  // CIR:  {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrn"
+
+  // LLVM-SAME: i16 {{.*}} [[A:%.*]])
+  // LLVM:    [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 [[A]], i64 0
+  // LLVM:    [[VQRSHRNH_N_S16:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqrshrn.v8i8(<8 x i16> [[TMP0]], i32 8)
+  // LLVM:    [[TMP1:%.*]] = extractelement <8 x i8> [[VQRSHRNH_N_S16]], i64 0
+  // LLVM:    ret i8 [[TMP1]]
+  return (int8_t)vqrshrnh_n_s16(a, 8);
+}
+
+// LLVM-LABEL: define dso_local i16 @test_vqrshrns_n_s32(
+int16_t test_vqrshrns_n_s32(int32_t a) {
+  // CIR:  {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrn"
+
+  // LLVM-SAME: i32 {{.*}} [[A:%.*]])
+  // LLVM:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
+  // LLVM:    [[VQRSHRNS_N_S32:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrshrn.v4i16(<4 x i32> [[TMP0]], i32 16)
+  // LLVM:    [[TMP1:%.*]] = extractelement <4 x i16> [[VQRSHRNS_N_S32]], i64 0
+  // LLVM:    ret i16 [[TMP1]]
+  return (int16_t)vqrshrns_n_s32(a, 16);
+}
+
+// LLVM-LABEL: define dso_local i8 @test_vqrshrnh_n_u16(
+uint8_t test_vqrshrnh_n_u16(uint16_t a) {
+  // CIR:  {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqrshrn"
+
+  // LLVM-SAME: i16 {{.*}} [[A:%.*]])
+  // LLVM:    [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 [[A]], i64 0
+  // LLVM:    [[VQRSHRNH_N_U16:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqrshrn.v8i8(<8 x i16> [[TMP0]], i32 8)
+  // LLVM:    [[TMP1:%.*]] = extractelement <8 x i8> [[VQRSHRNH_N_U16]], i64 0
+  // LLVM:    ret i8 [[TMP1]]
+  return (uint8_t)vqrshrnh_n_u16(a, 8);
+}
+
+// LLVM-LABEL: define dso_local i16 @test_vqrshrns_n_u32(
+uint16_t test_vqrshrns_n_u32(uint32_t a) {
+  // CIR:  {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqrshrn"
+
+  // LLVM-SAME: i32 {{.*}} [[A:%.*]])
+  // LLVM:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
+  // LLVM:    [[VQRSHRNS_N_U32:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqrshrn.v4i16(<4 x i32> [[TMP0]], i32 16)
+  // LLVM:    [[TMP1:%.*]] = extractelement <4 x i16> [[VQRSHRNS_N_U32]], i64 0
+  // LLVM:    ret i16 [[TMP1]]
+  return (uint16_t)vqrshrns_n_u32(a, 16);
+}
 
 // ALL-LABEL: @test_vqrshrun_n_s16(
 uint8x8_t test_vqrshrun_n_s16(int16x8_t a) {
