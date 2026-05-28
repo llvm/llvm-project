@@ -1746,6 +1746,7 @@ cc_library(
         ":BinaryFormat",
         ":Core",
         ":Demangle",
+        ":FrontendOffloading",
         ":MC",
         ":ProfileData",
         ":Scalar",
