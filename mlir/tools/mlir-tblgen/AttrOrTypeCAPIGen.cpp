@@ -415,7 +415,9 @@ static void emitAccessorDeclsOrDefs(const AttrOrTypeDef &def,
     std::string paramName = param.getName().str();
     os << "MLIR_CAPI_EXPORTED ";
     const AttrOrTypeOrBuilderParam aotob_param = AttrOrTypeOrBuilderParam(param);
-    os << mapParamTypeToCAPI(&aotob_param,true) << " " << cppNamespaceToPrefix(def.getDialect().getCppNamespace()) << def.getCppClassName()
+    std::string return_type_string = mapParamTypeToCAPI(&aotob_param,true);
+    StringRef return_type = StringRef(return_type_string);
+    os << return_type << " " << cppNamespaceToPrefix(def.getDialect().getCppNamespace()) << def.getCppClassName()
        << "Get" << withCapitalFirstLetter(param.getName().str());
     if (isAttrGenerator)
       os << "(MlirAttribute attr";
@@ -424,16 +426,16 @@ static void emitAccessorDeclsOrDefs(const AttrOrTypeDef &def,
     if (isDeclGenerator) {
       os << ");\n";
      } else {
-      bool isEnumGenerator = isEnumParam(param);
+      bool wrapReturn = !isEnumParam(param) && !return_type.starts_with("uint") && !return_type.starts_with("int");
       os << ") {\n";
-      if (!isEnumGenerator) {
+      if (wrapReturn) {
         os << "\treturn wrap(";
       } else {
         // Enums are enums not objects
         os << "\treturn (" << mapParamTypeToCAPI(&aotob_param,false) << ")";
       }
       os << "llvm::cast<" << getDefCppType(def) << ">(unwrap(attr)).get" << withCapitalFirstLetter(param.getName().str()) << "()";
-      if (!isEnumGenerator) {
+      if (wrapReturn) {
         // close the wrap
         os << ")";
       }
