@@ -19,7 +19,7 @@
 
 # EXTRACT-FIRST: first
 # EXTRACT-SECOND: second
-# EXTRACT-NOT-FOUND: error: 'foo.txt' was not found
+# EXTRACT-NOT-FOUND: error: 'Foo.txt' was not found
 
 # RUN: llvm-ar rc delete-count.a a/foo.txt b/FOO.TXT
 # RUN: llvm-ar dN 2 delete-count.a Foo.txt
