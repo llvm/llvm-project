@@ -57,7 +57,7 @@ cmake -G Ninja ^
     -DCMAKE_BUILD_TYPE=%BUILD_TYPE% ^
     -DCMAKE_INSTALL_PREFIX=..\\llvm-install\\base ^
     -DCMAKE_TOOLCHAIN_FILE=C:\\vcpkg\\scripts\\buildsystems\\vcpkg.cmake ^
-    -DLLVM_ENABLE_PROJECTS="clang;lldb" ^
+    -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" ^
     -DLLVM_ENABLE_ASSERTIONS=ON ^
     -DLLVM_ENABLE_LIBEDIT=OFF ^
     -DLLVM_OPTIMIZED_TABLEGEN=ON ^

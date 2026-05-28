@@ -405,7 +405,6 @@ struct VOPDComponentInfo {
   uint16_t BaseVOP;
   uint16_t VOPDOp;
   bool CanBeVOPDX;
-  bool CanBeVOPD3X;
 };
 
 struct VOPDInfo {
@@ -419,6 +418,12 @@ struct VOPDInfo {
 struct VOPTrue16Info {
   uint32_t Opcode;
   bool IsTrue16;
+};
+
+struct VOPDXYInfo {
+  uint16_t VOPDOp;
+  uint16_t Subtarget;
+  bool VOPD3;
 };
 
 #define GET_FP4FP8DstByteSelTable_DECL
@@ -461,6 +466,10 @@ struct FP4FP8DstByteSelInfo {
 #define GET_VOPDComponentTable_IMPL
 #define GET_VOPDPairs_DECL
 #define GET_VOPDPairs_IMPL
+#define GET_VOPDXTable_DECL
+#define GET_VOPDXTable_IMPL
+#define GET_VOPDYTable_DECL
+#define GET_VOPDYTable_IMPL
 #define GET_VOPTrue16Table_DECL
 #define GET_VOPTrue16Table_IMPL
 #define GET_True16D16Table_IMPL
@@ -657,28 +666,19 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
 CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(Opc) : 0;
   Opc = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : Opc;
+  // Normalize through VOPDComponentTable so that e32, e64 and e64_dpp variants
+  // of the same logical opcode all share a single entry.
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
-  if (Info) {
-    // Check that Opc can be used as VOPDY for this encoding. V_MOV_B32 as a
-    // VOPDX is just a placeholder here, it is supported on all encodings.
-    // TODO: This can be optimized by creating tables of supported VOPDY
-    // opcodes per encoding.
-    unsigned VOPDMov = AMDGPU::getVOPDOpcode(AMDGPU::V_MOV_B32_e32, VOPD3);
-    bool CanBeVOPDX;
-    if (VOPD3) {
-      CanBeVOPDX = getVOPDFull(AMDGPU::getVOPDOpcode(Opc, VOPD3), VOPDMov,
-                               EncodingFamily, VOPD3) != -1;
-    } else {
-      // The list of VOPDX opcodes is currently the same in all encoding
-      // families, so we do not need a family-specific check.
-      CanBeVOPDX = Info->CanBeVOPDX;
-    }
-    bool CanBeVOPDY = getVOPDFull(VOPDMov, AMDGPU::getVOPDOpcode(Opc, VOPD3),
-                                  EncodingFamily, VOPD3) != -1;
-    return {CanBeVOPDX, CanBeVOPDY};
+  if (!Info)
+    return {false, false};
+  if (VOPD3) {
+    return {canBeVOPDX(Info->VOPDOp, EncodingFamily, true) != nullptr,
+            canBeVOPDY(Info->VOPDOp, EncodingFamily, true) != nullptr};
   }
-
-  return {false, false};
+  // VOPDX eligibility is encoding-family-independent for non-VOPD3, so re-use
+  // information in Info.
+  return {Info->CanBeVOPDX,
+          canBeVOPDY(Info->VOPDOp, EncodingFamily, false) != nullptr};
 }
 
 unsigned getVOPDOpcode(unsigned Opc, bool VOPD3) {
@@ -3114,6 +3114,10 @@ bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi) {
          Val == 0x3E22;   // 1.0 / (2.0 * pi)
 }
 
+bool isInlinableLiteralI16(int32_t Literal, bool HasInv2Pi) {
+  return isInlinableLiteral32(Literal, HasInv2Pi);
+}
+
 bool isInlinableLiteralFP16(int16_t Literal, bool HasInv2Pi) {
   if (!HasInv2Pi)
     return false;
@@ -3129,10 +3133,6 @@ bool isInlinableLiteralFP16(int16_t Literal, bool HasInv2Pi) {
          Val == 0x4400 || // 4.0
          Val == 0xC400 || // -4.0
          Val == 0x3118;   // 1/2pi
-}
-
-bool isInlinableLiteralI16(int32_t Literal, bool HasInv2Pi) {
-  return isInlinableLiteralFP16(Literal, HasInv2Pi);
 }
 
 std::optional<unsigned> getInlineEncodingV216(bool IsFloat, uint32_t Literal) {
