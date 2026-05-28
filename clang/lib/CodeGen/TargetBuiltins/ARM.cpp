@@ -5264,7 +5264,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return ConstantInt::get(Builder.getInt32Ty(), 0);
   }
 
-  if (BuiltinID == AArch64::BI__hvc) {
+  if (BuiltinID == AArch64::BI__hvc || BuiltinID == AArch64::BI__svc) {
+    unsigned IID = BuiltinID == AArch64::BI__svc ? Intrinsic::aarch64_svc
+                                                 : Intrinsic::aarch64_hvc;
     // The first argument is the instruction immediate; it must be a constant
     // (ImmArg on the intrinsic, encoded in the instruction).  The remaining
     // arguments (at most four, enforced by Sema) are passed in X0-X3, widened
@@ -5291,8 +5293,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     }
     while (Args.size() < 5)
       Args.push_back(llvm::PoisonValue::get(Int64Ty));
-    Value *Call =
-        Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_hvc), Args);
+    Value *Call = Builder.CreateCall(CGM.getIntrinsic(IID), Args);
     // MSVC returns unsigned int, i.e. the low 32 bits of the X0 result.
     return Builder.CreateTrunc(Call, Int32Ty);
   }

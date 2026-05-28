@@ -160,6 +160,19 @@ unsigned int check__hvc(unsigned int a, unsigned int b) {
 // CHECK-MSVC: trunc i64 [[HVC_R]] to i32
 // CHECK-LINUX: error: call to undeclared function '__hvc'
 
+unsigned int check__svc(unsigned int a, unsigned int b) {
+  __svc(0);
+  return __svc(1, a, b);
+}
+
+// CHECK-MSVC-LABEL: define {{.*}} i32 @check__svc(
+// CHECK-MSVC: call i64 @llvm.aarch64.svc(i32 0, i64 poison, i64 poison, i64 poison, i64 poison)
+// CHECK-MSVC: [[SVC_A:%.*]] = zext i32 {{.*}} to i64
+// CHECK-MSVC: [[SVC_B:%.*]] = zext i32 {{.*}} to i64
+// CHECK-MSVC: [[SVC_R:%.*]] = call i64 @llvm.aarch64.svc(i32 1, i64 [[SVC_A]], i64 [[SVC_B]], i64 poison, i64 poison)
+// CHECK-MSVC: trunc i64 [[SVC_R]] to i32
+// CHECK-LINUX: error: call to undeclared function '__svc'
+
 unsigned __int64 check__getReg(void) {
   unsigned volatile __int64 reg;
   reg = __getReg(18);

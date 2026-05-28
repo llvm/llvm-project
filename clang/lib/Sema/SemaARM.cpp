@@ -1193,7 +1193,7 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   if (BuiltinID == AArch64::BI__hlt)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0xffff);
 
-  if (BuiltinID == AArch64::BI__hvc) {
+  if (BuiltinID == AArch64::BI__hvc || BuiltinID == AArch64::BI__svc) {
     // The immediate is the instruction number; the remaining arguments (at most
     // four) are passed in X0-X3, so the call takes at most five arguments.
     if (SemaRef.checkArgCountAtMost(TheCall, 5) ||

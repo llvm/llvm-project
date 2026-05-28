@@ -26,6 +26,16 @@ void check__hvc(unsigned int x, double d, void *p, struct NonScalar s) {
   __hvc(1, s); // expected-error {{2nd argument to '__hvc' must have integer, floating-point, or pointer type}}
 }
 
+void check__svc(unsigned int x, double d, void *p, struct NonScalar s) {
+  __svc(-1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __svc(65536); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __svc(x); // expected-error {{argument to '__svc' must be a constant integer}}
+  __svc(1, 2, 3, 4, 5); // no-error: immediate plus four register arguments
+  __svc(1, 2, 3, 4, 5, 6); // expected-error {{too many arguments to function call, expected at most 5, have 6}}
+  __svc(1, d, p, x); // no-error: floating-point, pointer and integer arguments
+  __svc(1, s); // expected-error {{2nd argument to '__svc' must have integer, floating-point, or pointer type}}
+}
+
 void check__getReg(void) {
   __getReg(-1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __getReg(32); // expected-error-re {{argument value {{.*}} is outside the valid range}}
