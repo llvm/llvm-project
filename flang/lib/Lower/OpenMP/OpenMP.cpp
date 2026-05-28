@@ -30,6 +30,7 @@
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
+#include "flang/Lower/Support/PrivateReductionUtils.h"
 #include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
@@ -84,6 +85,80 @@ makeObjects(llvm::ArrayRef<const semantics::Symbol *> syms) {
       });
   return objects;
 }
+
+/// Structure holding the information needed to create and bind entry block
+/// arguments associated to a single clause during OpenMP lowering.
+struct ObjectEntryBlockArgsEntry {
+  llvm::SmallVector<Object> objects;
+  llvm::ArrayRef<mlir::Value> vars;
+
+  bool isValid() const { return objects.size() <= vars.size(); }
+
+  llvm::SmallVector<const semantics::Symbol *> getSyms() const {
+    llvm::SmallVector<const semantics::Symbol *> syms;
+    syms.reserve(objects.size());
+    llvm::transform(objects, std::back_inserter(syms),
+                    [](const Object &object) { return object.sym(); });
+    return syms;
+  }
+};
+
+struct ObjectEntryBlockArgs {
+  ObjectEntryBlockArgsEntry hasDeviceAddr;
+  llvm::ArrayRef<mlir::Value> hostEvalVars;
+  ObjectEntryBlockArgsEntry inReduction;
+  ObjectEntryBlockArgsEntry map;
+  ObjectEntryBlockArgsEntry priv;
+  ObjectEntryBlockArgsEntry reduction;
+  ObjectEntryBlockArgsEntry taskReduction;
+  ObjectEntryBlockArgsEntry useDeviceAddr;
+  ObjectEntryBlockArgsEntry useDevicePtr;
+
+  bool isValid() const {
+    return hasDeviceAddr.isValid() && inReduction.isValid() && map.isValid() &&
+           priv.isValid() && reduction.isValid() && taskReduction.isValid() &&
+           useDeviceAddr.isValid() && useDevicePtr.isValid();
+  }
+
+  llvm::SmallVector<const semantics::Symbol *> getSyms() const {
+    llvm::SmallVector<const semantics::Symbol *> syms;
+    auto appendSyms = [&syms](const ObjectEntryBlockArgsEntry &entry) {
+      syms.reserve(syms.size() + entry.objects.size());
+      llvm::transform(entry.objects, std::back_inserter(syms),
+                      [](const Object &object) { return object.sym(); });
+    };
+    appendSyms(hasDeviceAddr);
+    appendSyms(inReduction);
+    appendSyms(map);
+    appendSyms(priv);
+    appendSyms(reduction);
+    appendSyms(taskReduction);
+    appendSyms(useDeviceAddr);
+    appendSyms(useDevicePtr);
+    return syms;
+  }
+
+  auto getVars() const {
+    return llvm::concat<const mlir::Value>(
+        hasDeviceAddr.vars, hostEvalVars, inReduction.vars, map.vars, priv.vars,
+        reduction.vars, taskReduction.vars, useDeviceAddr.vars,
+        useDevicePtr.vars);
+  }
+
+  Fortran::common::openmp::EntryBlockArgs asEntryBlockArgs() const {
+    Fortran::common::openmp::EntryBlockArgs args;
+    args.hasDeviceAddrVars = hasDeviceAddr.vars;
+    args.hostEvalVars = hostEvalVars;
+    args.inReductionVars = inReduction.vars;
+    args.mapVars = map.vars;
+    args.privVars = priv.vars;
+    args.reductionVars = reduction.vars;
+    args.taskReductionVars = taskReduction.vars;
+    args.useDeviceAddrVars = useDeviceAddr.vars;
+    args.useDevicePtrVars = useDevicePtr.vars;
+    return args;
+  }
+};
 
 namespace {
 /// Structure holding information that is needed to pass host-evaluated
@@ -272,7 +347,7 @@ getSectionsConstructStackTop(lower::AbstractConverter &converter) {
 ///                         operation.
 static void bindEntryBlockArgs(lower::AbstractConverter &converter,
                                mlir::omp::BlockArgOpenMPOpInterface op,
-                               const EntryBlockArgs &args) {
+                               const ObjectEntryBlockArgs &args) {
   assert(op != nullptr && "invalid block argument-defining operation");
   assert(args.isValid() && "invalid args");
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -881,12 +956,12 @@ getDeclareTargetFunctionDevice(
 /// \param [in]        args - symbols of induction variables.
 /// \param [in] wrapperArgs - list of parent loop wrappers and their associated
 ///                           entry block arguments.
-static void genLoopVars(
-    mlir::Operation *op, lower::AbstractConverter &converter,
-    mlir::Location &loc, llvm::ArrayRef<const semantics::Symbol *> args,
-    llvm::ArrayRef<
-        std::pair<mlir::omp::BlockArgOpenMPOpInterface, const EntryBlockArgs &>>
-        wrapperArgs = {}) {
+static void
+genLoopVars(mlir::Operation *op, lower::AbstractConverter &converter,
+            mlir::Location &loc, llvm::ArrayRef<const semantics::Symbol *> args,
+            llvm::ArrayRef<std::pair<mlir::omp::BlockArgOpenMPOpInterface,
+                                     const ObjectEntryBlockArgs &>>
+                wrapperArgs = {}) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   auto &region = op->getRegion(0);
 
@@ -1135,7 +1210,7 @@ struct OpWithBodyGenInfo {
     return *this;
   }
 
-  OpWithBodyGenInfo &setEntryBlockArgs(const EntryBlockArgs *value) {
+  OpWithBodyGenInfo &setEntryBlockArgs(const ObjectEntryBlockArgs *value) {
     blockArgs = value;
     return *this;
   }
@@ -1174,7 +1249,7 @@ struct OpWithBodyGenInfo {
   /// [in] if provided, it is used to create the op's region entry block. It is
   /// overriden when a \see genRegionEntryCB is provided. This is only valid for
   /// operations implementing the \see mlir::omp::BlockArgOpenMPOpInterface.
-  const EntryBlockArgs *blockArgs = nullptr;
+  const ObjectEntryBlockArgs *blockArgs = nullptr;
   /// [in] if provided, it overrides the default op's region entry block
   /// creation.
   GenOMPRegionEntryCBFn genRegionEntryCB = nullptr;
@@ -1218,7 +1293,8 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
       return info.genRegionEntryCB(&op);
 
     if (info.blockArgs) {
-      genEntryBlock(firOpBuilder, *info.blockArgs, op.getRegion(0));
+      genEntryBlock(firOpBuilder, info.blockArgs->asEntryBlockArgs(),
+                    op.getRegion(0));
       bindEntryBlockArgs(info.converter,
                          llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(op),
                          *info.blockArgs);
@@ -1360,12 +1436,12 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
 static void genBodyOfTargetDataOp(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-    mlir::omp::TargetDataOp &dataOp, const EntryBlockArgs &args,
+    mlir::omp::TargetDataOp &dataOp, const ObjectEntryBlockArgs &args,
     const mlir::Location &currentLocation, const ConstructQueue &queue,
     ConstructQueue::const_iterator item) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  genEntryBlock(firOpBuilder, args, dataOp.getRegion());
+  genEntryBlock(firOpBuilder, args.asEntryBlockArgs(), dataOp.getRegion());
   bindEntryBlockArgs(converter, dataOp, args);
 
   // Insert dummy instruction to remember the insertion position. The
@@ -1435,14 +1511,14 @@ static void genIntermediateCommonBlockAccessors(
 static void genBodyOfTargetOp(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-    mlir::omp::TargetOp &targetOp, const EntryBlockArgs &args,
+    mlir::omp::TargetOp &targetOp, const ObjectEntryBlockArgs &args,
     const mlir::Location &currentLocation, const ConstructQueue &queue,
     ConstructQueue::const_iterator item, DataSharingProcessor &dsp) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   auto argIface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*targetOp);
 
   mlir::Region &region = targetOp.getRegion();
-  genEntryBlock(firOpBuilder, args, region);
+  genEntryBlock(firOpBuilder, args.asEntryBlockArgs(), region);
   bindEntryBlockArgs(converter, targetOp, args);
   if (HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter))
     hostEvalInfo->bindOperands(argIface.getHostEvalBlockArgs());
@@ -1508,7 +1584,7 @@ static OpTy genOpWithBody(const OpWithBodyGenInfo &info,
 template <typename OpTy, typename ClauseOpsTy>
 static OpTy genWrapperOp(lower::AbstractConverter &converter,
                          mlir::Location loc, const ClauseOpsTy &clauseOps,
-                         const EntryBlockArgs &args) {
+                         const ObjectEntryBlockArgs &args) {
   static_assert(
       OpTy::template hasTrait<mlir::omp::LoopWrapperInterface::Trait>(),
       "expected a loop wrapper");
@@ -1518,7 +1594,7 @@ static OpTy genWrapperOp(lower::AbstractConverter &converter,
   auto op = OpTy::create(firOpBuilder, loc, clauseOps);
 
   // Create entry block with arguments.
-  genEntryBlock(firOpBuilder, args, op.getRegion());
+  genEntryBlock(firOpBuilder, args.asEntryBlockArgs(), op.getRegion());
 
   return op;
 }
@@ -2085,16 +2161,17 @@ genFlushOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                                     operandRange);
 }
 
-static mlir::omp::LoopNestOp genLoopNestOp(
-    lower::AbstractConverter &converter, lower::SymMap &symTable,
-    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-    mlir::Location loc, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item, mlir::omp::LoopNestOperands &clauseOps,
-    llvm::ArrayRef<const semantics::Symbol *> iv,
-    llvm::ArrayRef<
-        std::pair<mlir::omp::BlockArgOpenMPOpInterface, const EntryBlockArgs &>>
-        wrapperArgs,
-    llvm::omp::Directive directive, DataSharingProcessor &dsp) {
+static mlir::omp::LoopNestOp
+genLoopNestOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
+              semantics::SemanticsContext &semaCtx,
+              lower::pft::Evaluation &eval, mlir::Location loc,
+              const ConstructQueue &queue, ConstructQueue::const_iterator item,
+              mlir::omp::LoopNestOperands &clauseOps,
+              llvm::ArrayRef<const semantics::Symbol *> iv,
+              llvm::ArrayRef<std::pair<mlir::omp::BlockArgOpenMPOpInterface,
+                                       const ObjectEntryBlockArgs &>>
+                  wrapperArgs,
+              llvm::omp::Directive directive, DataSharingProcessor &dsp) {
   auto ivCallback = [&](mlir::Operation *op) {
     genLoopVars(op, converter, loc, iv, wrapperArgs);
     return llvm::SmallVector<const semantics::Symbol *>(iv);
@@ -2132,7 +2209,7 @@ genLoopOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   genLoopNestClauses(converter, semaCtx, eval, item->clauses, loc,
                      loopNestClauseOps, iv);
 
-  EntryBlockArgs loopArgs;
+  ObjectEntryBlockArgs loopArgs;
   loopArgs.priv.objects = makeObjects(dsp.getDelayedPrivSymbols());
   loopArgs.priv.vars = loopClauseOps.privateVars;
   loopArgs.reduction.objects = loopReductionObjects;
@@ -2539,7 +2616,7 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               lower::pft::Evaluation &eval, mlir::Location loc,
               const ConstructQueue &queue, ConstructQueue::const_iterator item,
               mlir::omp::ParallelOperands &clauseOps,
-              const EntryBlockArgs &args, DataSharingProcessor *dsp,
+              const ObjectEntryBlockArgs &args, DataSharingProcessor *dsp,
               bool isComposite = false) {
   assert((!enableDelayedPrivatization || dsp) &&
          "expected valid DataSharingProcessor");
@@ -2618,12 +2695,12 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   auto sectionsOp = mlir::omp::SectionsOp::create(builder, loc, clauseOps);
 
   // Create entry block with reduction variables as arguments.
-  EntryBlockArgs args;
+  ObjectEntryBlockArgs args;
   // TODO: Add private syms and vars.
   args.reduction.objects = reductionObjects;
   args.reduction.vars = clauseOps.reductionVars;
 
-  genEntryBlock(builder, args, sectionsOp.getRegion());
+  genEntryBlock(builder, args.asEntryBlockArgs(), sectionsOp.getRegion());
   mlir::Operation *terminator =
       lower::genOpenMPTerminator(builder, sectionsOp, loc);
 
@@ -2715,7 +2792,7 @@ genScopeOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     dsp->processStep1(&clauseOps);
   }
 
-  EntryBlockArgs args;
+  ObjectEntryBlockArgs args;
   if (dsp)
     args.priv.objects = makeObjects(dsp->getDelayedPrivSymbols());
   args.priv.vars = clauseOps.privateVars;
@@ -3040,7 +3117,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   extractMappedBaseValues(clauseOps.hasDeviceAddrVars, hasDeviceAddrBaseValues);
   extractMappedBaseValues(clauseOps.mapVars, mapBaseValues);
 
-  EntryBlockArgs args;
+  ObjectEntryBlockArgs args;
   args.hasDeviceAddr.objects = hasDeviceAddrObjects;
   args.hasDeviceAddr.vars = hasDeviceAddrBaseValues;
   args.hostEvalVars = clauseOps.hostEvalVars;
@@ -3077,7 +3154,7 @@ static mlir::omp::TargetDataOp genTargetDataOp(
   extractMappedBaseValues(clauseOps.useDeviceAddrVars, useDeviceAddrBaseValues);
   extractMappedBaseValues(clauseOps.useDevicePtrVars, useDevicePtrBaseValues);
 
-  EntryBlockArgs args;
+  ObjectEntryBlockArgs args;
   args.useDeviceAddr.objects = useDeviceAddrObjects;
   args.useDeviceAddr.vars = useDeviceAddrBaseValues;
   args.useDevicePtr.objects = useDevicePtrObjects;
@@ -3138,7 +3215,7 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                            /*useDelayedPrivatization=*/true, symTable);
   dsp.processStep1(&clauseOps);
 
-  EntryBlockArgs taskArgs;
+  ObjectEntryBlockArgs taskArgs;
   taskArgs.priv.objects = makeObjects(dsp.getDelayedPrivSymbols());
   taskArgs.priv.vars = clauseOps.privateVars;
   taskArgs.inReduction.objects = inReductionObjects;
@@ -3164,7 +3241,7 @@ genTaskgroupOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   genTaskgroupClauses(converter, semaCtx, item->clauses, loc, clauseOps,
                       taskReductionObjects);
 
-  EntryBlockArgs taskgroupArgs;
+  ObjectEntryBlockArgs taskgroupArgs;
   taskgroupArgs.taskReduction.objects = taskReductionObjects;
   taskgroupArgs.taskReduction.vars = clauseOps.taskReductionVars;
 
@@ -3225,7 +3302,7 @@ genTeamsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   genTeamsClauses(converter, semaCtx, stmtCtx, item->clauses, loc, clauseOps,
                   reductionObjects);
 
-  EntryBlockArgs args;
+  ObjectEntryBlockArgs args;
   // TODO: Add private syms and vars.
   args.reduction.objects = reductionObjects;
   args.reduction.vars = clauseOps.reductionVars;
@@ -3272,7 +3349,7 @@ static mlir::omp::DistributeOp genStandaloneDistribute(
   genLoopNestClauses(converter, semaCtx, eval, item->clauses, loc,
                      loopNestClauseOps, iv);
 
-  EntryBlockArgs distributeArgs;
+  ObjectEntryBlockArgs distributeArgs;
   distributeArgs.priv.objects = makeObjects(dsp.getDelayedPrivSymbols());
   distributeArgs.priv.vars = distributeClauseOps.privateVars;
   auto distributeOp = genWrapperOp<mlir::omp::DistributeOp>(
@@ -3304,7 +3381,7 @@ static mlir::omp::WsloopOp genStandaloneDo(
   genLoopNestClauses(converter, semaCtx, eval, item->clauses, loc,
                      loopNestClauseOps, iv);
 
-  EntryBlockArgs wsloopArgs;
+  ObjectEntryBlockArgs wsloopArgs;
   wsloopArgs.priv.objects = makeObjects(dsp.getDelayedPrivSymbols());
   wsloopArgs.priv.vars = wsloopClauseOps.privateVars;
   wsloopArgs.reduction.objects = wsloopReductionObjects;
@@ -3337,7 +3414,7 @@ static mlir::omp::ParallelOp genStandaloneParallel(
     dsp->processStep1(&parallelClauseOps);
   }
 
-  EntryBlockArgs parallelArgs;
+  ObjectEntryBlockArgs parallelArgs;
   if (dsp)
     parallelArgs.priv.objects = makeObjects(dsp->getDelayedPrivSymbols());
   parallelArgs.priv.vars = parallelClauseOps.privateVars;
@@ -3371,7 +3448,7 @@ genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
   genSimdImplicitLinear(converter, semaCtx, simdClauseOps, loopNestClauseOps,
                         iv);
 
-  EntryBlockArgs simdArgs;
+  ObjectEntryBlockArgs simdArgs;
   simdArgs.priv.objects = makeObjects(dsp.getDelayedPrivSymbols());
   simdArgs.priv.vars = simdClauseOps.privateVars;
   simdArgs.reduction.objects = simdReductionObjects;
@@ -3405,7 +3482,7 @@ static mlir::omp::TaskloopContextOp genStandaloneTaskloop(
   genLoopNestClauses(converter, semaCtx, eval, item->clauses, loc,
                      loopNestClauseOps, iv);
 
-  EntryBlockArgs taskloopArgs;
+  ObjectEntryBlockArgs taskloopArgs;
   taskloopArgs.priv.objects = makeObjects(dsp.getDelayedPrivSymbols());
   taskloopArgs.priv.vars = taskloopClauseOps.privateVars;
   taskloopArgs.reduction.objects = reductionObjects;
@@ -3417,12 +3494,13 @@ static mlir::omp::TaskloopContextOp genStandaloneTaskloop(
   auto taskLoopContextOp = mlir::omp::TaskloopContextOp::create(
       firOpBuilder, loc, taskloopClauseOps);
   // Create entry block with arguments.
-  genEntryBlock(firOpBuilder, taskloopArgs, taskLoopContextOp.getRegion());
+  genEntryBlock(firOpBuilder, taskloopArgs.asEntryBlockArgs(),
+                taskLoopContextOp.getRegion());
 
   mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
   firOpBuilder.setInsertionPointToStart(&taskLoopContextOp.getRegion().front());
   mlir::omp::TaskloopWrapperOperands wrapperClauseOps;
-  EntryBlockArgs wrapperEntryBlockArgs;
+  ObjectEntryBlockArgs wrapperEntryBlockArgs;
   auto taskLoopWrapperOp = genWrapperOp<mlir::omp::TaskloopWrapperOp>(
       converter, loc, wrapperClauseOps, wrapperEntryBlockArgs);
 
@@ -3460,7 +3538,7 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
                            /*useDelayedPrivatization=*/true, symTable);
   dsp.processStep1(&parallelClauseOps);
 
-  EntryBlockArgs parallelArgs;
+  ObjectEntryBlockArgs parallelArgs;
   parallelArgs.priv.objects = makeObjects(dsp.getDelayedPrivSymbols());
   parallelArgs.priv.vars = parallelClauseOps.privateVars;
   parallelArgs.reduction.objects = parallelReductionObjects;
@@ -3484,13 +3562,13 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
                      loopNestClauseOps, iv);
 
   // Operation creation.
-  EntryBlockArgs distributeArgs;
+  ObjectEntryBlockArgs distributeArgs;
   // TODO: Add private syms and vars.
   auto distributeOp = genWrapperOp<mlir::omp::DistributeOp>(
       converter, loc, distributeClauseOps, distributeArgs);
   distributeOp.setComposite(/*val=*/true);
 
-  EntryBlockArgs wsloopArgs;
+  ObjectEntryBlockArgs wsloopArgs;
   // TODO: Add private syms and vars.
   wsloopArgs.reduction.objects = wsloopReductionObjects;
   wsloopArgs.reduction.vars = wsloopClauseOps.reductionVars;
@@ -3528,7 +3606,7 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
       /*useDelayedPrivatization=*/true, symTable);
   parallelItemDSP.processStep1(&parallelClauseOps);
 
-  EntryBlockArgs parallelArgs;
+  ObjectEntryBlockArgs parallelArgs;
   parallelArgs.priv.objects =
       makeObjects(parallelItemDSP.getDelayedPrivSymbols());
   parallelArgs.priv.vars = parallelClauseOps.privateVars;
@@ -3581,13 +3659,13 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
                         iv);
 
   // Operation creation.
-  EntryBlockArgs distributeArgs;
+  ObjectEntryBlockArgs distributeArgs;
   // TODO: Add private syms and vars.
   auto distributeOp = genWrapperOp<mlir::omp::DistributeOp>(
       converter, loc, distributeClauseOps, distributeArgs);
   distributeOp.setComposite(/*val=*/true);
 
-  EntryBlockArgs wsloopArgs;
+  ObjectEntryBlockArgs wsloopArgs;
   // TODO: Add private syms and vars.
   wsloopArgs.reduction.objects = wsloopReductionObjects;
   wsloopArgs.reduction.vars = wsloopClauseOps.reductionVars;
@@ -3595,7 +3673,7 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
       converter, loc, wsloopClauseOps, wsloopArgs);
   wsloopOp.setComposite(/*val=*/true);
 
-  EntryBlockArgs simdArgs;
+  ObjectEntryBlockArgs simdArgs;
   simdArgs.priv.objects = makeObjects(simdItemDSP.getDelayedPrivSymbols());
   simdArgs.priv.vars = simdClauseOps.privateVars;
   simdArgs.reduction.objects = simdReductionObjects;
@@ -3654,7 +3732,7 @@ static mlir::omp::DistributeOp genCompositeDistributeSimd(
                         iv);
 
   // Operation creation.
-  EntryBlockArgs distributeArgs;
+  ObjectEntryBlockArgs distributeArgs;
   distributeArgs.priv.objects =
       makeObjects(distributeItemDSP.getDelayedPrivSymbols());
   distributeArgs.priv.vars = distributeClauseOps.privateVars;
@@ -3662,7 +3740,7 @@ static mlir::omp::DistributeOp genCompositeDistributeSimd(
       converter, loc, distributeClauseOps, distributeArgs);
   distributeOp.setComposite(/*val=*/true);
 
-  EntryBlockArgs simdArgs;
+  ObjectEntryBlockArgs simdArgs;
   simdArgs.priv.objects = makeObjects(simdItemDSP.getDelayedPrivSymbols());
   simdArgs.priv.vars = simdClauseOps.privateVars;
   simdArgs.reduction.objects = simdReductionObjects;
@@ -3738,7 +3816,7 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
                         iv);
 
   // Operation creation.
-  EntryBlockArgs wsloopArgs;
+  ObjectEntryBlockArgs wsloopArgs;
   wsloopArgs.priv.objects = makeObjects(wsloopItemDSP.getDelayedPrivSymbols());
   wsloopArgs.priv.vars = wsloopClauseOps.privateVars;
   wsloopArgs.reduction.objects = wsloopReductionObjects;
@@ -3747,7 +3825,7 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
       converter, loc, wsloopClauseOps, wsloopArgs);
   wsloopOp.setComposite(/*val=*/true);
 
-  EntryBlockArgs simdArgs;
+  ObjectEntryBlockArgs simdArgs;
   simdArgs.priv.objects = makeObjects(simdItemDSP.getDelayedPrivSymbols());
   simdArgs.priv.vars = simdClauseOps.privateVars;
   simdArgs.reduction.objects = simdReductionObjects;
@@ -4174,18 +4252,24 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
   return genCombinerCB;
 }
 
-// Checks that the reduction type is either a trivial type or a derived type of
-// trivial types.
+// Checks that the reduction type is either a trivial type, a fixed-length
+// character type, or a derived type composed of such types.
 static bool isSimpleReductionType(mlir::Type reductionType) {
   if (fir::isa_trivial(reductionType))
     return true;
+  // Fixed-length CHARACTER is not trivial but can be zero-initialized.
+  // Reject dynamic-length CHARACTER (len == unknownLen()).
+  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(reductionType))
+    return charTy.getLen() != fir::CharacterType::unknownLen();
   if (auto recordTy = mlir::dyn_cast<fir::RecordType>(reductionType)) {
     for (auto [_, fieldType] : recordTy.getTypeList()) {
-      if (!fir::isa_trivial(fieldType))
+      if (!isSimpleReductionType(fieldType))
         return false;
     }
+    return true;
   }
-  return true;
+  // Reject array and descriptor-based types.
+  return false;
 }
 
 // Getting the type from a symbol compared to a DeclSpec is simpler since we do
@@ -4208,8 +4292,8 @@ getReductionType(lower::AbstractConverter &converter,
 
   if (!isSimpleReductionType(reductionType))
     TODO(converter.getCurrentLocation(),
-         "declare reduction currently only supports trival types or derived "
-         "types containing trivial types");
+         "declare reduction currently only supports trivial types, "
+         "fixed-length CHARACTER, or derived types containing them");
   return reductionType;
 }
 
@@ -4322,22 +4406,16 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     ReductionProcessor::GenCombinerCBTy genCombinerCB =
         processReductionCombiner(converter, symTable, semaCtx, combiner,
                                  parserInst);
-    ReductionProcessor::GenInitValueCBTy genInitValueCB;
-    ClauseProcessor cp(converter, semaCtx, clauses);
     const parser::OmpStylizedInstance *parserInitInst = nullptr;
     if (initExpr) {
       assert(parserInitInstIt != initExpr->v.end() &&
              "Mismatched initializer instance count");
       parserInitInst = &*parserInitInstIt++;
     }
-    cp.processInitializer(symTable, genInitValueCB, parserInitInst);
-    mlir::Type redType =
-        isByRef
-            ? static_cast<mlir::Type>(fir::ReferenceType::get(reductionType))
-            : reductionType;
 
-    // Get the omp_out symbol from the combiner for finalization checks
-    // in populateByRefInitAndCleanupRegions.
+    // Get the omp_out symbol from the combiner. Used for finalization checks
+    // in populateByRefInitAndCleanupRegions and for generating default
+    // initialization via genScalarDefaultInitializerValue.
     const semantics::Symbol *reductionSym = nullptr;
     const auto &declList =
         std::get<std::list<parser::OmpStylizedDeclaration>>(parserInst.t);
@@ -4348,6 +4426,57 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         break;
       }
     }
+
+    ReductionProcessor::GenInitValueCBTy genInitValueCB;
+    ClauseProcessor cp(converter, semaCtx, clauses);
+    if (!cp.processInitializer(symTable, genInitValueCB, parserInitInst)) {
+      // No initializer clause provided. Per OpenMP, initialize as
+      // default-initialized using the shared inline init helper.
+      const semantics::DerivedTypeSpec *derivedTypeSpec = nullptr;
+      if (const semantics::DeclTypeSpec *declTypeSpec = typeSpec.declTypeSpec)
+        derivedTypeSpec = declTypeSpec->AsDerived();
+
+      mlir::Type unwrappedType = fir::unwrapRefType(reductionType);
+      if (fir::isa_trivial(unwrappedType)) {
+        // Trivial types return the zero value directly (by-value init).
+        genInitValueCB = [](fir::FirOpBuilder &builder, mlir::Location loc,
+                            mlir::Type type, mlir::Value,
+                            mlir::Value) -> mlir::Value {
+          mlir::Type ty = fir::unwrapRefType(type);
+          if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
+            ty = seqTy.getEleTy();
+          else if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty)) {
+            auto eleTy = fir::unwrapRefType(boxTy.getEleTy());
+            if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(eleTy))
+              ty = seqTy.getEleTy();
+            else
+              ty = eleTy;
+          }
+          return fir::ZeroOp::create(builder, loc, ty);
+        };
+      } else if (mlir::isa<fir::CharacterType>(unwrappedType) ||
+                 fir::isa_derived(unwrappedType)) {
+        // CHARACTER and derived types use by-ref init via the shared helper.
+        genInitValueCB = [&converter, derivedTypeSpec, reductionSym](
+                             fir::FirOpBuilder &builder, mlir::Location loc,
+                             mlir::Type type, mlir::Value,
+                             mlir::Value) -> mlir::Value {
+          mlir::Block *initBlock = builder.getInsertionBlock();
+          mlir::Value privVar = initBlock->getArgument(1);
+          lower::genInlineTypeDefaultInit(converter, builder, loc, type,
+                                          privVar, derivedTypeSpec,
+                                          reductionSym);
+          return mlir::Value{};
+        };
+      } else {
+        llvm_unreachable(
+            "unhandled type in declare reduction without initializer");
+      }
+    }
+    mlir::Type redType =
+        isByRef
+            ? static_cast<mlir::Type>(fir::ReferenceType::get(reductionType))
+            : reductionType;
 
     ReductionProcessor::createDeclareReductionHelper<
         mlir::omp::DeclareReductionOp>(

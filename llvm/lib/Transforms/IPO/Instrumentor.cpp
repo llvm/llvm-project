@@ -250,13 +250,13 @@ bool InstrumentorImpl::instrumentInstruction(Instruction &I,
   if (auto *IO = InstChoicesPRE.lookup(I.getOpcode())) {
     IIRB.IRB.SetInsertPoint(&I);
     ensureDbgLoc(IIRB.IRB);
-    Changed |= bool(IO->instrument(IPtr, IConf, IIRB, ICaches));
+    IO->instrument(IPtr, Changed, IConf, IIRB, ICaches);
   }
 
   if (auto *IO = InstChoicesPOST.lookup(I.getOpcode())) {
     IIRB.IRB.SetInsertPoint(I.getNextNode());
     ensureDbgLoc(IIRB.IRB);
-    Changed |= bool(IO->instrument(IPtr, IConf, IIRB, ICaches));
+    IO->instrument(IPtr, Changed, IConf, IIRB, ICaches);
   }
   IIRB.returnAllocas();
 
@@ -291,7 +291,7 @@ bool InstrumentorImpl::instrumentFunction(Function &Fn) {
     IIRB.IRB.SetInsertPoint(
         cast<Function>(FPtr)->getEntryBlock().getFirstInsertionPt());
     ensureDbgLoc(IIRB.IRB);
-    Changed |= bool(IO->instrument(FPtr, IConf, IIRB, ICaches));
+    IO->instrument(FPtr, Changed, IConf, IIRB, ICaches);
     IIRB.returnAllocas();
   }
 
@@ -305,7 +305,7 @@ bool InstrumentorImpl::instrumentFunction(Function &Fn) {
     for (Instruction *FinalTI : FinalTIs) {
       IIRB.IRB.SetInsertPoint(FinalTI);
       ensureDbgLoc(IIRB.IRB);
-      Changed |= bool(IO->instrument(FPtr, IConf, IIRB, ICaches));
+      IO->instrument(FPtr, Changed, IConf, IIRB, ICaches);
       IIRB.returnAllocas();
     }
   }
@@ -353,8 +353,10 @@ bool InstrumentorImpl::instrumentModule() {
       auto *IO = ChoiceIt.second;
       if (!IO->Enabled)
         continue;
-      if (!YtorFn)
+      if (!YtorFn) {
         YtorFn = CreateYtor(IsPRE);
+        Changed = true;
+      }
       IIRB.IRB.SetInsertPointPastAllocas(YtorFn);
       ensureDbgLoc(IIRB.IRB);
       Value *YtorPtr = YtorFn;
@@ -362,7 +364,7 @@ bool InstrumentorImpl::instrumentModule() {
       // Count epochs eagerly.
       ++IIRB.Epoch;
 
-      Changed |= bool(IO->instrument(YtorPtr, IConf, IIRB, ICaches));
+      IO->instrument(YtorPtr, Changed, IConf, IIRB, ICaches);
       IIRB.returnAllocas();
     }
   }
@@ -375,8 +377,10 @@ bool InstrumentorImpl::instrumentModule() {
       auto *IO = ChoiceIt.second;
       if (!IO->Enabled)
         continue;
-      if (!YtorFn)
+      if (!YtorFn) {
         YtorFn = CreateYtor(IsPRE);
+        Changed = true;
+      }
       for (GlobalVariable *GV : Globals) {
         if (!shouldInstrumentGlobalVariable(*GV))
           continue;
@@ -390,7 +394,7 @@ bool InstrumentorImpl::instrumentModule() {
         // Count epochs eagerly.
         ++IIRB.Epoch;
 
-        Changed |= bool(IO->instrument(GVPtr, IConf, IIRB, ICaches));
+        IO->instrument(GVPtr, Changed, IConf, IIRB, ICaches);
         IIRB.returnAllocas();
       }
     }
@@ -415,6 +419,7 @@ bool InstrumentorImpl::instrument() {
        IConf.IChoices[InstrumentationLocation::INSTRUCTION_POST])
     if (IO->Enabled)
       InstChoicesPOST[IO->getOpcode()] = IO;
+
   Changed |= instrumentModule();
 
   for (Function &Fn : M)

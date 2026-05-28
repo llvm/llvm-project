@@ -4612,6 +4612,32 @@ LogicalResult AtomicCaptureOp::verifyRegions() {
 }
 
 //===----------------------------------------------------------------------===//
+// AtomicCompareOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AtomicCompareOp::verify() {
+  if (verifyCommon().failed())
+    return mlir::failure();
+  return verifySynchronizationHint(*this, getHint());
+}
+
+LogicalResult AtomicCompareOp::verifyRegions() {
+  if (verifyRegionsCommon().failed())
+    return mlir::failure();
+
+  if (verifyOperator().failed())
+    return mlir::failure();
+
+  Block &block = getRegion().front();
+
+  Operation *terminator = block.getTerminator();
+  if (!terminator || !isa<YieldOp>(terminator))
+    return emitOpError("region must be terminated with omp.yield");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // CancelOp
 //===----------------------------------------------------------------------===//
 

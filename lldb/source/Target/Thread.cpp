@@ -1435,12 +1435,10 @@ ThreadPlanSP Thread::QueueThreadPlanForStepUntil(
 }
 
 lldb::ThreadPlanSP Thread::QueueThreadPlanForStepScripted(
-    bool abort_other_plans, const char *class_name,
-    StructuredData::ObjectSP extra_args_sp, bool stop_other_threads,
-    Status &status) {
+    bool abort_other_plans, const ScriptedMetadata &scripted_metadata,
+    bool stop_other_threads, Status &status) {
 
-  ThreadPlanSP thread_plan_sp(new ScriptedThreadPlan(
-      *this, class_name, StructuredDataImpl(extra_args_sp)));
+  ThreadPlanSP thread_plan_sp(new ScriptedThreadPlan(*this, scripted_metadata));
   thread_plan_sp->SetStopOthers(stop_other_threads);
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;

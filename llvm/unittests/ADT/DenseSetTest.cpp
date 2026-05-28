@@ -65,6 +65,22 @@ TEST(SmallDenseSetTest, InsertRange) {
   EXPECT_THAT(set, ::testing::UnorderedElementsAre(7, 8, 9));
 }
 
+TEST(DenseSetTest, RemoveIf) {
+  llvm::DenseSet<unsigned> set;
+  for (unsigned I = 0; I < 100; ++I)
+    set.insert(I);
+
+  EXPECT_TRUE(set.remove_if([](unsigned V) { return V % 2 == 0; }));
+  EXPECT_EQ(set.size(), 50u);
+  for (unsigned I = 0; I < 100; ++I)
+    EXPECT_EQ(set.contains(I), I % 2 == 1);
+
+  EXPECT_FALSE(set.remove_if([](unsigned) { return false; }));
+  EXPECT_EQ(set.size(), 50u);
+  EXPECT_TRUE(set.remove_if([](unsigned) { return true; }));
+  EXPECT_TRUE(set.empty());
+}
+
 struct TestDenseSetInfo {
   static inline unsigned getEmptyKey() { return ~0; }
   static inline unsigned getTombstoneKey() { return ~0U - 1; }
@@ -265,4 +281,15 @@ TEST(DenseSetCustomTest, ConstTest) {
   EXPECT_TRUE(Map.contains(B));
   EXPECT_TRUE(Map.contains(C));
 }
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+TEST(DenseSetCustomTest, EraseInvalidatesIterators) {
+  DenseSet<int> Set;
+  Set.insert(1);
+  Set.insert(2);
+  auto It = Set.find(1);
+  Set.erase(2);
+  EXPECT_DEATH((void)*It, "invalid iterator access");
+}
+#endif
 }

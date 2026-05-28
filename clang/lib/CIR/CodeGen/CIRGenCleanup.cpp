@@ -131,9 +131,12 @@ static void hoistAllocaOutOfCleanupScope(CIRGenFunction &cgf, Address addr,
   if (!alloca)
     return;
 
-  // If the alloca is not contained within the cleanup scope's body region,
-  // we don't need to hoist it.
-  if (!scope.getBodyRegion().isAncestor(alloca->getParentRegion()))
+  // If the alloca is not contained within the cleanup scope we're currently
+  // proccessing we don't need to hoist it.
+  auto cur = alloca->getParentOfType<cir::CleanupScopeOp>();
+  while (cur && cur != scope)
+    cur = cur->getParentOfType<cir::CleanupScopeOp>();
+  if (cur != scope)
     return;
 
   // Place the alloca at the canonical alloca insertion point of the block

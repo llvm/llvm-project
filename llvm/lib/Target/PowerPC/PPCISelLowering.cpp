@@ -1381,6 +1381,16 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     if (Subtarget.hasP10Vector()) {
       setOperationAction(ISD::SELECT_CC, MVT::f128, Custom);
     }
+
+    setOperationAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v16i32, Custom);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v4i32, MVT::v8i16,
+                              Legal);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v4i32, MVT::v8i16,
+                              Legal);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v4i32, MVT::v16i8,
+                              Legal);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v4i32, MVT::v16i8,
+                              Legal);
   }
 
   if (Subtarget.pairedVectorMemops()) {
@@ -8864,8 +8874,10 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
 
     MachineFunction &MF = DAG.getMachineFunction();
     if (canReuseLoadAddress(SINT, MVT::i64, RLI, DAG)) {
+      // Drop range metadata, as this metadata becomes invalid for f64 bit
+      // reinterpretation of i64 values.
       Bits = DAG.getLoad(MVT::f64, dl, RLI.Chain, RLI.Ptr, RLI.MPI,
-                         RLI.Alignment, RLI.MMOFlags(), RLI.AAInfo, RLI.Ranges);
+                         RLI.Alignment, RLI.MMOFlags(), RLI.AAInfo, nullptr);
       if (RLI.ResChain)
         DAG.makeEquivalentMemoryOrdering(RLI.ResChain, Bits.getValue(1));
     } else if (Subtarget.hasLFIWAX() &&
@@ -11971,6 +11983,29 @@ SDValue PPCTargetLowering::LowerVP_STORE(SDValue Op, SelectionDAG &DAG) const {
   return VPS;
 }
 
+SDValue PPCTargetLowering::LowerPartialReduce(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDValue Acc = Op.getOperand(0);
+  SDValue Op1 = Op.getOperand(1);
+  SDValue Op2 = Op.getOperand(2);
+
+  assert(Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA &&
+         "Unexpected partial reduction");
+
+  if (Acc.getValueType() != MVT::v4i32)
+    return SDValue();
+  if (Op1.getValueType() != MVT::v16i32 || Op1.getOpcode() != ISD::SIGN_EXTEND)
+    return SDValue();
+  SDValue Op1Input = Op1.getOperand(0);
+  if (Op1Input.getValueType() != MVT::v16i8 || !llvm::isOneOrOneSplat(Op2))
+    return SDValue();
+
+  SDLoc dl(Op);
+  SDValue Ones = DAG.getConstant(1, dl, MVT::v16i8);
+  return DAG.getNode(ISD::PARTIAL_REDUCE_SUMLA, dl, MVT::v4i32, Acc, Op1Input,
+                     Ones);
+}
+
 SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -12863,6 +12898,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerVP_LOAD(Op, DAG);
   case ISD::VP_STORE:
     return LowerVP_STORE(Op, DAG);
+  case ISD::PARTIAL_REDUCE_UMLA:
+    return LowerPartialReduce(Op, DAG);
   }
 }
 

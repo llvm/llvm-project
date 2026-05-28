@@ -101,6 +101,10 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
   case llvm::Triple::loongarch32:
   case llvm::Triple::loongarch64:
   case llvm::Triple::m68k:
+  case llvm::Triple::mips64:
+  case llvm::Triple::mips64el:
+  case llvm::Triple::mips:
+  case llvm::Triple::mipsel:
     return !clang::driver::tools::areOptimizationsEnabled(Args);
   default:
     break;
@@ -117,10 +121,6 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
     case llvm::Triple::armeb:
     case llvm::Triple::thumb:
     case llvm::Triple::thumbeb:
-    case llvm::Triple::mips64:
-    case llvm::Triple::mips64el:
-    case llvm::Triple::mips:
-    case llvm::Triple::mipsel:
     case llvm::Triple::systemz:
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
@@ -1882,12 +1882,14 @@ const char *tools::SplitDebugName(const JobAction &JA, const ArgList &Args,
   if (const Arg *A = Args.getLastArg(options::OPT_dumpdir)) {
     T = A->getValue();
   } else {
-    Arg *FinalOutput = Args.getLastArg(options::OPT_o, options::OPT__SLASH_o);
-    if (FinalOutput && Args.hasArg(options::OPT_c)) {
-      T = FinalOutput->getValue();
+    if (Args.hasArg(options::OPT_o, options::OPT__SLASH_o,
+                    options::OPT__SLASH_Fo) &&
+        Args.hasArg(options::OPT_c) && Output.isFilename()) {
+      // The driver has resolved /Fo<dir>/ into a concrete obj path in Output.
+      StringRef Obj = Output.getFilename();
+      T = Obj;
       llvm::sys::path::remove_filename(T);
-      llvm::sys::path::append(T,
-                              llvm::sys::path::stem(FinalOutput->getValue()));
+      llvm::sys::path::append(T, llvm::sys::path::stem(Obj));
       AddPostfix(T);
       return Args.MakeArgString(T);
     }
