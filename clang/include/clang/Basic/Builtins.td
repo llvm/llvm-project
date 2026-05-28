@@ -35,8 +35,8 @@ class IntBitUtilTemplate : Template<
     ["_uc", "_us", "_ui", "_ul", "_ull"]>;
 
 class MemReverse8Template : Template<
-    ["unsigned char", "unsigned short", "uint32_t", "uint64_t"],
-    ["u8",            "u16",            "u32",      "u64"]>;
+    ["uint8_t", "uint16_t", "uint32_t", "uint64_t"],
+    ["u8",      "u16",      "u32",      "u64"]>;
 
 class MSInt8_16_32Template : Template<["char", "short", "msint32_t"],
                                       ["8",    "16",    ""]>;
