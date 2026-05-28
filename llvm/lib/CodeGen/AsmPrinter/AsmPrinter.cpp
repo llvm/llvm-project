@@ -11,13 +11,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/AsmPrinter.h"
+#ifndef EJIT_BARE_METAL
 #include "CodeViewDebug.h"
+#endif
+#ifndef EJIT_BARE_METAL
 #include "DwarfDebug.h"
 #include "DwarfException.h"
+#else
+#include "EHStreamer.h"
+#endif
 #include "PseudoProbePrinter.h"
+#ifndef EJIT_BARE_METAL
 #include "WasmException.h"
 #include "WinCFGuard.h"
 #include "WinException.h"
+#endif
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
@@ -435,6 +443,7 @@ void AsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
 }
 
 void AsmPrinter::emitInitialRawDwarfLocDirective(const MachineFunction &MF) {
+#ifndef EJIT_BARE_METAL
   if (DD) {
     assert(OutStreamer->hasRawTextSupport() &&
            "Expected assembly output mode.");
@@ -445,6 +454,7 @@ void AsmPrinter::emitInitialRawDwarfLocDirective(const MachineFunction &MF) {
       return;
     (void)DD->emitInitialLocDirective(MF, /*CUID=*/0);
   }
+#endif
 }
 
 /// getCurrentSection() - Return the current section we are emitting to.
@@ -564,19 +574,24 @@ bool AsmPrinter::doInitialization(Module &M) {
   }
 
   if (MAI->doesSupportDebugInformation()) {
+#ifndef EJIT_BARE_METAL
     bool EmitCodeView = M.getCodeViewFlag();
     // On Windows targets, emit minimal CodeView compiler info even when debug
-    // info is disabled.
+    // info is disabled.  EJIT bare-metal builds skip CodeView support entirely
+    // since it is never used on embedded targets.
     if ((TM.getTargetTriple().isOSWindows() &&
          M.getNamedMetadata("llvm.dbg.cu")) ||
         (TM.getTargetTriple().isUEFI() && EmitCodeView))
       Handlers.push_back(std::make_unique<CodeViewDebug>(this));
+#endif
+#ifndef EJIT_BARE_METAL
     if (!EmitCodeView || M.getDwarfVersion()) {
       if (hasDebugInfo()) {
         DD = new DwarfDebug(this);
         Handlers.push_back(std::unique_ptr<DwarfDebug>(DD));
       }
     }
+#endif
   }
 
   if (M.getNamedMetadata(PseudoProbeDescMetadataName))
@@ -610,38 +625,50 @@ bool AsmPrinter::doInitialization(Module &M) {
     if (!usesCFIWithoutEH())
       break;
     [[fallthrough]];
+#ifndef EJIT_BARE_METAL
   case ExceptionHandling::SjLj:
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ZOS:
     ES = new DwarfCFIException(this);
     break;
+#endif
+#ifndef EJIT_BARE_METAL
   case ExceptionHandling::ARM:
     ES = new ARMException(this);
     break;
+#endif
   case ExceptionHandling::WinEH:
     switch (MAI->getWinEHEncodingType()) {
     default: llvm_unreachable("unsupported unwinding information encoding");
     case WinEH::EncodingType::Invalid:
       break;
+#ifndef EJIT_BARE_METAL
     case WinEH::EncodingType::X86:
     case WinEH::EncodingType::Itanium:
       ES = new WinException(this);
       break;
+#endif
     }
     break;
+#ifndef EJIT_BARE_METAL
   case ExceptionHandling::Wasm:
     ES = new WasmException(this);
     break;
+#endif
+#ifndef EJIT_BARE_METAL
   case ExceptionHandling::AIX:
     ES = new AIXException(this);
     break;
+#endif
   }
   if (ES)
     Handlers.push_back(std::unique_ptr<EHStreamer>(ES));
 
+#ifndef EJIT_BARE_METAL
   // Emit tables for any value of cfguard flag (i.e. cfguard=1 or cfguard=2).
   if (mdconst::extract_or_null<ConstantInt>(M.getModuleFlag("cfguard")))
     EHHandlers.push_back(std::make_unique<WinCFGuard>(this));
+#endif
 
   for (auto &Handler : Handlers)
     Handler->beginModule(&M);

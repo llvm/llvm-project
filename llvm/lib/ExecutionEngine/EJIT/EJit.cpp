@@ -40,9 +40,13 @@ EJit::EJit(const Config &config) : config_(config) {
   for (auto &sv : data.staticVars)
     reg.registerStaticVar(sv.varName, sv.varAddr);
 
-  // Create sync JIT engine (target must be initialized first)
-  InitializeNativeTarget();
-  InitializeNativeTargetAsmPrinter();
+  // Create sync JIT engine (target must be initialized first).
+  // Use InitializeAll* instead of InitializeNative* so that cross-compiled
+  // builds (e.g. AArch64 target built on x86 host) also work correctly.
+  InitializeAllTargetInfos();
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmPrinters();
   auto engine = EJitOrcEngine::Create(config, reg, *runtimeState_);
   if (engine) {
     // Forward auto-registered user symbols to the engine.

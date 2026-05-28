@@ -71,47 +71,59 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   RegisterTargetMachine<X86TargetMachine> Y(getTheX86_64Target());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+#ifndef EJIT_BARE_METAL
   initializeX86LowerAMXIntrinsicsLegacyPassPass(PR);
   initializeX86LowerAMXTypeLegacyPassPass(PR);
   initializeX86PreTileConfigPass(PR);
-#ifndef EJIT_BARE_METAL
   initializeGlobalISel(PR);
-#endif
   initializeWinEHStatePassPass(PR);
+#endif
   initializeFixupBWInstPassPass(PR);
+#ifndef EJIT_BARE_METAL
   initializeCompressEVEXPassPass(PR);
+#endif
   initializeFixupLEAPassPass(PR);
   initializeFPSPass(PR);
   initializeX86FixupSetCCPassPass(PR);
   initializeX86CallFrameOptimizationPass(PR);
+#ifndef EJIT_BARE_METAL
   initializeX86CmovConverterPassPass(PR);
   initializeX86TileConfigPass(PR);
   initializeX86FastPreTileConfigPass(PR);
   initializeX86FastTileConfigPass(PR);
   initializeKCFIPass(PR);
   initializeX86LowerTileCopyPass(PR);
+#endif
   initializeX86ExpandPseudoPass(PR);
   initializeX86ExecutionDomainFixPass(PR);
+#ifndef EJIT_BARE_METAL
   initializeX86DomainReassignmentPass(PR);
   initializeX86AvoidSFBPassPass(PR);
   initializeX86AvoidTrailingCallPassPass(PR);
   initializeX86SpeculativeLoadHardeningPassPass(PR);
   initializeX86SpeculativeExecutionSideEffectSuppressionPass(PR);
+#endif
   initializeX86FlagsCopyLoweringPassPass(PR);
+#ifndef EJIT_BARE_METAL
   initializeX86LoadValueInjectionLoadHardeningPassPass(PR);
   initializeX86LoadValueInjectionRetHardeningPassPass(PR);
   initializeX86OptimizeLEAPassPass(PR);
   initializeX86PartialReductionPass(PR);
   initializePseudoProbeInserterPass(PR);
   initializeX86ReturnThunksPass(PR);
+#endif
   initializeX86DAGToDAGISelLegacyPass(PR);
   initializeX86ArgumentStackSlotPassPass(PR);
   initializeX86AsmPrinterPass(PR);
+#ifndef EJIT_BARE_METAL
   initializeX86FixupInstTuningPassPass(PR);
   initializeX86FixupVectorConstantsPassPass(PR);
+#endif
   initializeX86DynAllocaExpanderPass(PR);
+#ifndef EJIT_BARE_METAL
   initializeX86SuppressAPXForRelocationPassPass(PR);
   initializeX86WinEHUnwindV2Pass(PR);
+#endif
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -474,8 +486,10 @@ void X86PassConfig::addIRPasses() {
 
   // We add both pass anyway and when these two passes run, we skip the pass
   // based on the option level and option attribute.
+#ifndef EJIT_BARE_METAL
   addPass(createX86LowerAMXIntrinsicsPass());
   addPass(createX86LowerAMXTypePass());
+#endif
 
   TargetPassConfig::addIRPasses();
 
@@ -518,28 +532,41 @@ bool X86PassConfig::addInstSelector() {
 }
 
 bool X86PassConfig::addIRTranslator() {
+#ifdef EJIT_BARE_METAL
+  return false;
+#else
   addPass(new IRTranslator(getOptLevel()));
   return false;
+#endif
 }
 
 bool X86PassConfig::addLegalizeMachineIR() {
+#ifdef EJIT_BARE_METAL
+  return false;
+#else
   addPass(new Legalizer());
   return false;
+#endif
 }
 
 bool X86PassConfig::addRegBankSelect() {
+#ifdef EJIT_BARE_METAL
+  return false;
+#else
   addPass(new RegBankSelect());
   return false;
+#endif
 }
 
 bool X86PassConfig::addGlobalInstructionSelect() {
-#ifndef EJIT_BARE_METAL
+#ifdef EJIT_BARE_METAL
+  return false;
+#else
   addPass(new InstructionSelect(getOptLevel()));
-  // Add GlobalBaseReg in case there is no SelectionDAG passes afterwards
   if (isGlobalISelAbortEnabled())
     addPass(createX86GlobalBaseRegPass());
-#endif
   return false;
+#endif
 }
 
 bool X86PassConfig::addILPOpts() {
@@ -562,42 +589,53 @@ void X86PassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(&LiveRangeShrinkID);
     addPass(createX86FixupSetCC());
+#ifndef EJIT_BARE_METAL
     addPass(createX86OptimizeLEAs());
+#endif
     addPass(createX86CallFrameOptimization());
+#ifndef EJIT_BARE_METAL
     addPass(createX86AvoidStoreForwardingBlocks());
+#endif
   }
 
+#ifndef EJIT_BARE_METAL
   addPass(createX86SuppressAPXForRelocationPass());
-
   addPass(createX86SpeculativeLoadHardeningPass());
+#endif
   addPass(createX86FlagsCopyLoweringPass());
   addPass(createX86DynAllocaExpander());
 
+#ifndef EJIT_BARE_METAL
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createX86PreTileConfigPass());
   else
     addPass(createX86FastPreTileConfigPass());
+#endif
 }
 
 void X86PassConfig::addMachineSSAOptimization() {
+#ifndef EJIT_BARE_METAL
   addPass(createX86DomainReassignmentPass());
+#endif
   TargetPassConfig::addMachineSSAOptimization();
 }
 
 void X86PassConfig::addPostRegAlloc() {
+#ifndef EJIT_BARE_METAL
   addPass(createX86LowerTileCopyPass());
+#endif
   addPass(createX86FloatingPointStackifierPass());
-  // When -O0 is enabled, the Load Value Injection Hardening pass will fall back
-  // to using the Speculative Execution Side Effect Suppression pass for
-  // mitigation. This is to prevent slow downs due to
-  // analyses needed by the LVIHardening pass when compiling at -O0.
+#ifndef EJIT_BARE_METAL
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createX86LoadValueInjectionLoadHardeningPass());
+#endif
 }
 
 void X86PassConfig::addPreSched2() {
   addPass(createX86ExpandPseudoPass());
+#ifndef EJIT_BARE_METAL
   addPass(createKCFIPass());
+#endif
 }
 
 void X86PassConfig::addPreEmitPass() {
@@ -606,20 +644,28 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createBreakFalseDeps());
   }
 
+#ifndef EJIT_BARE_METAL
   addPass(createX86IndirectBranchTrackingPass());
+#endif
 
   addPass(createX86IssueVZeroUpperPass());
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createX86FixupBWInsts());
+#ifndef EJIT_BARE_METAL
     addPass(createX86PadShortFunctions());
+#endif
     addPass(createX86FixupLEAs());
+#ifndef EJIT_BARE_METAL
     addPass(createX86FixupInstTuning());
     addPass(createX86FixupVectorConstants());
+#endif
   }
+#ifndef EJIT_BARE_METAL
   addPass(createX86CompressEVEXPass());
   addPass(createX86DiscriminateMemOpsPass());
   addPass(createX86InsertPrefetchPass());
+#endif
   addPass(createX86InsertX87waitPass());
 }
 
@@ -627,42 +673,28 @@ void X86PassConfig::addPreEmitPass2() {
   const Triple &TT = TM->getTargetTriple();
   const MCAsmInfo *MAI = TM->getMCAsmInfo();
 
-  // The X86 Speculative Execution Pass must run after all control
-  // flow graph modifying passes. As a result it was listed to run right before
-  // the X86 Retpoline Thunks pass. The reason it must run after control flow
-  // graph modifications is that the model of LFENCE in LLVM has to be updated
-  // (FIXME: https://bugs.llvm.org/show_bug.cgi?id=45167). Currently the
-  // placement of this pass was hand checked to ensure that the subsequent
-  // passes don't move the code around the LFENCEs in a way that will hurt the
-  // correctness of this pass. This placement has been shown to work based on
-  // hand inspection of the codegen output.
+#ifndef EJIT_BARE_METAL
   addPass(createX86SpeculativeExecutionSideEffectSuppression());
   addPass(createX86IndirectThunksPass());
   addPass(createX86ReturnThunksPass());
 
-  // Insert extra int3 instructions after trailing call instructions to avoid
-  // issues in the unwinder.
   if (TT.isOSWindows() && TT.getArch() == Triple::x86_64)
     addPass(createX86AvoidTrailingCallPass());
+#endif
 
-  // Verify basic block incoming and outgoing cfa offset and register values and
-  // correct CFA calculation rule where needed by inserting appropriate CFI
-  // instructions.
   if (!TT.isOSDarwin() &&
       (!TT.isOSWindows() ||
        MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
     addPass(createCFIInstrInserter());
 
+#ifndef EJIT_BARE_METAL
   if (TT.isOSWindows()) {
-    // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
-    // Identify valid eh continuation targets for Windows EHCont Guard.
     addPass(createEHContGuardTargetsPass());
   }
   addPass(createX86LoadValueInjectionRetHardeningPass());
-
-  // Insert pseudo probe annotation for callsite profiling
   addPass(createPseudoProbeInserter());
+#endif
 
   // KCFI indirect call checks are lowered to a bundle, and on Darwin platforms,
   // also CALL_RVMARKER.
@@ -689,7 +721,11 @@ bool X86PassConfig::addPostFastRegAllocRewrite() {
 }
 
 std::unique_ptr<CSEConfigBase> X86PassConfig::getCSEConfig() const {
+#ifndef EJIT_BARE_METAL
   return getStandardCSEConfigForOpt(TM->getOptLevel());
+#else
+  return nullptr;
+#endif
 }
 
 static bool onlyAllocateTileRegisters(const TargetRegisterInfo &TRI,

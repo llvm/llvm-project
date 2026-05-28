@@ -9,6 +9,7 @@ tablegen(LLVM AArch64GenCallingConv.inc -gen-callingconv)
 tablegen(LLVM AArch64GenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM AArch64GenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM AArch64GenFastISel.inc -gen-fast-isel)
+if(NOT EJIT_BARE_METAL)
 tablegen(LLVM AArch64GenGlobalISel.inc -gen-global-isel)
 tablegen(LLVM AArch64GenO0PreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="AArch64O0PreLegalizerCombiner")
@@ -18,10 +19,11 @@ tablegen(LLVM AArch64GenPostLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="AArch64PostLegalizerCombiner")
 tablegen(LLVM AArch64GenPostLegalizeGILowering.inc -gen-global-isel-combiner
               -combiners="AArch64PostLegalizerLowering")
+tablegen(LLVM AArch64GenRegisterBank.inc -gen-register-bank)
+endif()
 tablegen(LLVM AArch64GenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM AArch64GenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM AArch64GenMCPseudoLowering.inc -gen-pseudo-lowering)
-tablegen(LLVM AArch64GenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM AArch64GenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM AArch64GenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM AArch64GenSubtargetInfo.inc -gen-subtarget)
@@ -30,20 +32,9 @@ tablegen(LLVM AArch64GenExegesis.inc -gen-exegesis)
 
 add_public_tablegen_target(AArch64CommonTableGen)
 
-add_llvm_target(AArch64CodeGen
-  GISel/AArch64CallLowering.cpp
-  GISel/AArch64GlobalISelUtils.cpp
-  GISel/AArch64InstructionSelector.cpp
-  GISel/AArch64LegalizerInfo.cpp
-  GISel/AArch64O0PreLegalizerCombiner.cpp
-  GISel/AArch64PreLegalizerCombiner.cpp
-  GISel/AArch64PostLegalizerCombiner.cpp
-  GISel/AArch64PostLegalizerLowering.cpp
-  GISel/AArch64PostSelectOptimize.cpp
-  GISel/AArch64RegisterBankInfo.cpp
+set(AARCH64_CODEGEN_SOURCES
   AArch64A57FPLoadBalancing.cpp
   AArch64AdvSIMDScalarPass.cpp
-  AArch64Arm64ECCallLowering.cpp
   AArch64AsmPrinter.cpp
   AArch64BranchTargets.cpp
   AArch64CallingConvention.cpp
@@ -90,11 +81,25 @@ add_llvm_target(AArch64CodeGen
   SMEPeepholeOpt.cpp
   SVEIntrinsicOpts.cpp
   AArch64SIMDInstrOpt.cpp
+  )
 
-  DEPENDS
-  intrinsics_gen
+if(NOT EJIT_BARE_METAL)
+  list(APPEND AARCH64_CODEGEN_SOURCES
+    GISel/AArch64CallLowering.cpp
+    GISel/AArch64GlobalISelUtils.cpp
+    GISel/AArch64InstructionSelector.cpp
+    GISel/AArch64LegalizerInfo.cpp
+    GISel/AArch64O0PreLegalizerCombiner.cpp
+    GISel/AArch64PreLegalizerCombiner.cpp
+    GISel/AArch64PostLegalizerCombiner.cpp
+    GISel/AArch64PostLegalizerLowering.cpp
+    GISel/AArch64PostSelectOptimize.cpp
+    GISel/AArch64RegisterBankInfo.cpp
+    AArch64Arm64ECCallLowering.cpp
+    )
+endif()
 
-  LINK_COMPONENTS
+set(AARCH64_CODEGEN_LINK
   AArch64Desc
   AArch64Info
   AArch64Utils
@@ -104,7 +109,6 @@ add_llvm_target(AArch64CodeGen
   CodeGen
   CodeGenTypes
   Core
-  GlobalISel
   MC
   Scalar
   SelectionDAG
@@ -113,6 +117,21 @@ add_llvm_target(AArch64CodeGen
   TargetParser
   TransformUtils
   Vectorize
+  )
+if(NOT EJIT_BARE_METAL)
+  list(APPEND AARCH64_CODEGEN_LINK GlobalISel)
+endif()
+
+add_llvm_target(AArch64CodeGen
+  ${AARCH64_CODEGEN_SOURCES}
+
+  PARTIAL_SOURCES_INTENDED
+
+  DEPENDS
+  intrinsics_gen
+
+  LINK_COMPONENTS
+  ${AARCH64_CODEGEN_LINK}
 
   ADD_TO_COMPONENT
   AArch64

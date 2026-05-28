@@ -47,7 +47,9 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
+#ifndef EJIT_BARE_METAL
 #include "llvm/Transforms/ObjCARC.h"
+#endif
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include <cassert>
@@ -959,8 +961,10 @@ void TargetPassConfig::addISelPrepare() {
   if (requiresCodeGenSCCOrder())
     addPass(new DummyCGSCCPass);
 
+#ifndef EJIT_BARE_METAL
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createObjCARCContractPass());
+#endif
 
   addPass(createCallBrPass());
 

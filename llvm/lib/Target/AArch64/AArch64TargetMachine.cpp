@@ -159,10 +159,12 @@ static cl::opt<bool>
                            cl::desc("Enable the loop data prefetch pass"),
                            cl::init(true));
 
+#ifndef EJIT_BARE_METAL
 static cl::opt<int> EnableGlobalISelAtO(
     "aarch64-enable-global-isel-at-O", cl::Hidden,
     cl::desc("Enable GlobalISel at or below an opt level (-1 to disable)"),
     cl::init(0));
+#endif
 
 static cl::opt<bool>
     EnableSVEIntrinsicOpts("aarch64-enable-sve-intrinsic-opts", cl::Hidden,
@@ -206,6 +208,7 @@ static cl::opt<bool> ForceStreamingCompatible(
 
 extern cl::opt<bool> EnableHomogeneousPrologEpilog;
 
+#ifndef EJIT_BARE_METAL
 static cl::opt<bool> EnableGISelLoadStoreOptPreLegal(
     "aarch64-enable-gisel-ldst-prelegal",
     cl::desc("Enable GlobalISel's pre-legalizer load/store optimization pass"),
@@ -215,6 +218,7 @@ static cl::opt<bool> EnableGISelLoadStoreOptPostLegal(
     "aarch64-enable-gisel-ldst-postlegal",
     cl::desc("Enable GlobalISel's post-legalizer load/store optimization pass"),
     cl::init(false), cl::Hidden);
+#endif
 
 static cl::opt<bool>
     EnableSinkFold("aarch64-enable-sink-fold",
@@ -237,9 +241,20 @@ LLVMInitializeAArch64Target() {
   auto &PR = *PassRegistry::getPassRegistry();
 #ifndef EJIT_BARE_METAL
   initializeGlobalISel(PR);
-#endif
   initializeAArch64A53Fix835769Pass(PR);
   initializeAArch64A57FPLoadBalancingPass(PR);
+  initializeFalkorHWPFFixPass(PR);
+  initializeFalkorMarkStridedAccessesLegacyPass(PR);
+  initializeAArch64PointerAuthPass(PR);
+  initializeKCFIPass(PR);
+  initializeSMEABIPass(PR);
+  initializeSMEPeepholeOptPass(PR);
+  initializeSVEIntrinsicOptsPass(PR);
+  initializeAArch64SpeculationHardeningPass(PR);
+  initializeAArch64SLSHardeningPass(PR);
+  initializeAArch64StackTaggingPass(PR);
+  initializeAArch64StackTaggingPreRAPass(PR);
+#endif
   initializeAArch64AdvSIMDScalarPass(PR);
   initializeAArch64AsmPrinterPass(PR);
   initializeAArch64BranchTargetsPass(PR);
@@ -252,31 +267,26 @@ LLVMInitializeAArch64Target() {
   initializeAArch64LoadStoreOptPass(PR);
   initializeAArch64MIPeepholeOptPass(PR);
   initializeAArch64SIMDInstrOptPass(PR);
+#ifndef EJIT_BARE_METAL
   initializeAArch64O0PreLegalizerCombinerPass(PR);
   initializeAArch64PreLegalizerCombinerPass(PR);
-  initializeAArch64PointerAuthPass(PR);
+#endif
   initializeAArch64PostCoalescerPass(PR);
+#ifndef EJIT_BARE_METAL
   initializeAArch64PostLegalizerCombinerPass(PR);
   initializeAArch64PostLegalizerLoweringPass(PR);
+#endif
   initializeAArch64PostSelectOptimizePass(PR);
   initializeAArch64PromoteConstantPass(PR);
   initializeAArch64RedundantCopyEliminationPass(PR);
   initializeAArch64StorePairSuppressPass(PR);
-  initializeFalkorHWPFFixPass(PR);
-  initializeFalkorMarkStridedAccessesLegacyPass(PR);
   initializeLDTLSCleanupPass(PR);
-  initializeKCFIPass(PR);
-  initializeSMEABIPass(PR);
-  initializeSMEPeepholeOptPass(PR);
-  initializeSVEIntrinsicOptsPass(PR);
-  initializeAArch64SpeculationHardeningPass(PR);
-  initializeAArch64SLSHardeningPass(PR);
-  initializeAArch64StackTaggingPass(PR);
-  initializeAArch64StackTaggingPreRAPass(PR);
   initializeAArch64LowerHomogeneousPrologEpilogPass(PR);
   initializeAArch64DAGToDAGISelLegacyPass(PR);
   initializeAArch64CondBrTuningPass(PR);
+#ifndef EJIT_BARE_METAL
   initializeAArch64Arm64ECCallLoweringPass(PR);
+#endif
 }
 
 void AArch64TargetMachine::reset() { SubtargetMap.clear(); }
@@ -400,6 +410,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     // for the tiny code model, the maximum TLS size is 1MiB (< 16MiB)
     this->Options.TLSSize = 24;
 
+#ifndef EJIT_BARE_METAL
   // Enable GlobalISel at or below EnableGlobalISelAt0, unless this is
   // MachO/CodeModel::Large, which GlobalISel does not support.
   if (static_cast<int>(getOptLevel()) <= EnableGlobalISelAtO &&
@@ -409,6 +420,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     setGlobalISel(true);
     setGlobalISelAbort(GlobalISelAbortMode::Disable);
   }
+#endif
 
   // AArch64 supports the MachineOutliner.
   setMachineOutliner(true);
@@ -605,7 +617,11 @@ TargetPassConfig *AArch64TargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 std::unique_ptr<CSEConfigBase> AArch64PassConfig::getCSEConfig() const {
+#ifndef EJIT_BARE_METAL
   return getStandardCSEConfigForOpt(TM->getOptLevel());
+#else
+  return nullptr;
+#endif
 }
 
 void AArch64PassConfig::addIRPasses() {
@@ -742,11 +758,18 @@ bool AArch64PassConfig::addInstSelector() {
 }
 
 bool AArch64PassConfig::addIRTranslator() {
+#ifdef EJIT_BARE_METAL
+  return false;
+#else
   addPass(new IRTranslator(getOptLevel()));
   return false;
+#endif
 }
 
 void AArch64PassConfig::addPreLegalizeMachineIR() {
+#ifdef EJIT_BARE_METAL
+  return;
+#else
   if (getOptLevel() == CodeGenOptLevel::None) {
     addPass(createAArch64O0PreLegalizerCombiner());
     addPass(new Localizer());
@@ -756,14 +779,22 @@ void AArch64PassConfig::addPreLegalizeMachineIR() {
     if (EnableGISelLoadStoreOptPreLegal)
       addPass(new LoadStoreOpt());
   }
+#endif
 }
 
 bool AArch64PassConfig::addLegalizeMachineIR() {
+#ifdef EJIT_BARE_METAL
+  return false;
+#else
   addPass(new Legalizer());
   return false;
+#endif
 }
 
 void AArch64PassConfig::addPreRegBankSelect() {
+#ifdef EJIT_BARE_METAL
+  return;
+#else
   bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
   if (!IsOptNone) {
     addPass(createAArch64PostLegalizerCombiner(IsOptNone));
@@ -771,18 +802,27 @@ void AArch64PassConfig::addPreRegBankSelect() {
       addPass(new LoadStoreOpt());
   }
   addPass(createAArch64PostLegalizerLowering());
+#endif
 }
 
 bool AArch64PassConfig::addRegBankSelect() {
+#ifdef EJIT_BARE_METAL
+  return false;
+#else
   addPass(new RegBankSelect());
   return false;
+#endif
 }
 
 bool AArch64PassConfig::addGlobalInstructionSelect() {
+#ifdef EJIT_BARE_METAL
+  return false;
+#else
   addPass(new InstructionSelect(getOptLevel()));
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createAArch64PostSelectOptimize());
   return false;
+#endif
 }
 
 void AArch64PassConfig::addMachineSSAOptimization() {

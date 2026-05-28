@@ -10,10 +10,9 @@ if(EJIT_DEFAULT_TARGET_TRIPLE)
 endif()
 
 #===-- Bare-metal configuration -------------------------------------------===#
-option(EJIT_BARE_METAL "Build EJIT for bare-metal (no OS, no threads)" ON)
+# EJIT_BARE_METAL option is defined in top-level llvm/CMakeLists.txt.
 if(EJIT_BARE_METAL)
   message(STATUS "EmbeddedJIT: bare-metal mode enabled")
-  add_definitions(-DEJIT_BARE_METAL)
 endif()
 
 option(EJIT_BARE_METAL_MUTEX

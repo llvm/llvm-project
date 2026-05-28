@@ -26,7 +26,9 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeBranchRelaxationLegacyPass(Registry);
   initializeBreakFalseDepsPass(Registry);
   initializeCallBrPreparePass(Registry);
+#ifndef EJIT_BARE_METAL
   initializeCFGuardLongjmpPass(Registry);
+#endif
   initializeCFIFixupPass(Registry);
   initializeCFIInstrInserterPass(Registry);
   initializeCheckDebugMachineModulePass(Registry);
@@ -99,7 +101,9 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMachineUniformityAnalysisPassPass(Registry);
   initializeMachineUniformityInfoPrinterPassPass(Registry);
   initializeMachineVerifierLegacyPassPass(Registry);
+#ifndef EJIT_BARE_METAL
   initializeObjCARCContractLegacyPassPass(Registry);
+#endif
   initializeOptimizePHIsLegacyPass(Registry);
   initializePEILegacyPass(Registry);
   initializePHIEliminationPass(Registry);

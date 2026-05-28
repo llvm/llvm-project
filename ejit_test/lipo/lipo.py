@@ -39,11 +39,10 @@ COMMON_LIBS = [
     "libLLVMObject.a", "libLLVMProfileData.a", "libLLVMExecutionEngine.a",
     "libLLVMOrcJIT.a", "libLLVMOrcShared.a", "libLLVMJITLink.a",
     "libLLVMRemarks.a", "libLLVMOption.a", "libLLVMMCDisassembler.a",
-    "libLLVMIRPrinter.a", "libLLVMCFGuard.a",
-    "libLLVMInstrumentation.a", "libLLVMDebugInfoCodeView.a",
-    "libLLVMDebugInfoDWARF.a", "libLLVMDebugInfoDWARFLowLevel.a",
-    "libLLVMMCParser.a", "libLLVMCGData.a", "libLLVMObjCARCOpts.a",
+    "libLLVMIRPrinter.a",
+    "libLLVMMCParser.a", "libLLVMCGData.a",
     "libLLVMOrcTargetProcess.a", "libLLVMRuntimeDyld.a", "libLLVMBitWriter.a",
+    "libLLVMGlobalISel.a",
 ]
 
 
@@ -96,8 +95,9 @@ def doit_extract(args):
     work = os.path.join(os.path.dirname(output), f".lipo_work_{arch}")
     os.makedirs(work, exist_ok=True)
 
-    CXX = cxx(build_dir)
-    LD = ld(build_dir)
+    CXX = args.cxx or cxx(build_dir)
+    LD = args.ld or ld(build_dir)
+    custom_ld = args.ld is not None
 
     # Quick test object to drive the link
     test_o = os.path.join(work, "_test_main.o")
@@ -115,9 +115,16 @@ def doit_extract(args):
 
     # ── 2. Generate linker map (successful link) ──────────────────────────
     print("[2/4] Generating linker map ...", flush=True)
-    r = sp.run([
-        CXX, f"-fuse-ld={LD}", "-Os", "-Wl,--gc-sections",
+    if custom_ld:
+        ld_dir = os.path.dirname(LD)
+        fuse_ld_flag = f"-fuse-ld=lld"
+        link_cmd = [CXX, f"-B{ld_dir}", fuse_ld_flag, "-L/tmp"]
+    else:
+        link_cmd = [CXX, f"-fuse-ld={LD}"]
+    r = sp.run(link_cmd + [
+        "-Os", "-Wl,--gc-sections",
         "-Wl,--print-map",
+        "-Wl,--allow-multiple-definition",
         f"-Wl,--whole-archive", ejit_a, f"-Wl,--no-whole-archive",
         *all_a.split(), "-lz", "-lpthread", "-ldl", test_o,
         "-o", os.path.join(work, "_ref")
@@ -203,6 +210,9 @@ def doit_extract(args):
     print(f"[4/4] Building {output} ...", flush=True)
     o_files = [os.path.join(work, f) for f in sorted(os.listdir(work))
                if f.endswith(".o")]
+    # Remove old archive to avoid stale members (ar crs only replaces, not deletes)
+    if os.path.exists(output):
+        os.unlink(output)
     sp.run(["ar", "crs", output, *o_files], capture_output=True)
 
     sz_mb = os.path.getsize(output) / (1024 * 1024)
@@ -225,7 +235,7 @@ def doit_gc_merge(args):
             os.unlink(os.path.join(work, f))
     os.makedirs(work, exist_ok=True)
 
-    LD = ld(args.build_dir)
+    LD = args.ld or ld(args.build_dir)
     CXX = cxx(args.build_dir)
 
     # ── 1. Extract .o from input .a ───────────────────────────────────────
@@ -300,7 +310,7 @@ def doit_merge(args):
         sys.exit(1)
 
     output = args.output or os.path.join(script_dir, "ejit.o")
-    LD = ld(build_dir)
+    LD = args.ld or ld(build_dir)
 
     print(f"[merge] ld -r -T merge.ld -> {output} ...", flush=True)
     r = sp.run([
@@ -328,17 +338,21 @@ def main():
     e.add_argument("--arch", required=True, choices=["x86", "aarch64"])
     e.add_argument("--build-dir", required=True, help="LLVM build directory")
     e.add_argument("--output", help="Output .a path")
+    e.add_argument("--cxx", help="Override C++ compiler (default: build-dir/bin/clang++)")
+    e.add_argument("--ld", help="Override linker (default: build-dir/bin/ld.lld)")
     e.add_argument("--exclude", action="append", default=[],
                    help="Exclude .o files matching this substring (repeatable)")
 
     g = sub.add_parser("gc-merge", help="gc-merge an existing lipo .a")
     g.add_argument("--input", required=True, help="Input .a from extract step")
     g.add_argument("--build-dir", required=True, help="LLVM build directory")
+    g.add_argument("--ld", help="Override linker (default: build-dir/bin/ld.lld)")
     g.add_argument("--output", help="Output .a path")
 
     m = sub.add_parser("merge", help="ld -r merge into single ejit.o")
     m.add_argument("--input", required=True, help="Input .a from gc-merge step")
     m.add_argument("--build-dir", required=True, help="LLVM build directory")
+    m.add_argument("--ld", help="Override linker (default: build-dir/bin/ld.lld)")
     m.add_argument("--output", help="Output .o path (default: ejit.o alongside lipo.py)")
 
     args = p.parse_args()
