@@ -6399,17 +6399,16 @@ int X86TTIImpl::getGatherOverhead(Type *SrcVTy) const {
     // lookup -- corresponding rows are omitted to make the live set
     // explicit. Adding rows for them would have no observable effect.
     static const CostTblEntry ZenGatherCostTable[] = {
-        {ISD::LOAD, MVT::v4i32,  7}, {ISD::LOAD, MVT::v8i32, 17},
-        {ISD::LOAD, MVT::v16i32, 14},
-        {ISD::LOAD, MVT::v4f32,  7}, {ISD::LOAD, MVT::v8f32, 17},
-        {ISD::LOAD, MVT::v16f32, 14},
-        {ISD::LOAD, MVT::v4f64,  7}, {ISD::LOAD, MVT::v8f64, 17},
-        {ISD::LOAD, MVT::v4i64, 10}, {ISD::LOAD, MVT::v8i64, 22},
+        {ISD::LOAD, MVT::v4i32, 7},   {ISD::LOAD, MVT::v8i32, 17},
+        {ISD::LOAD, MVT::v16i32, 14}, {ISD::LOAD, MVT::v4f32, 7},
+        {ISD::LOAD, MVT::v8f32, 17},  {ISD::LOAD, MVT::v16f32, 14},
+        {ISD::LOAD, MVT::v4f64, 7},   {ISD::LOAD, MVT::v8f64, 17},
+        {ISD::LOAD, MVT::v4i64, 10},  {ISD::LOAD, MVT::v8i64, 22},
     };
     EVT VT = TLI->getValueType(DL, SrcVTy);
     if (VT.isSimple())
-      if (const auto *E = CostTableLookup(ZenGatherCostTable, ISD::LOAD,
-                                          VT.getSimpleVT()))
+      if (const auto *E =
+              CostTableLookup(ZenGatherCostTable, ISD::LOAD, VT.getSimpleVT()))
         return E->Cost;
   }
 
@@ -6438,10 +6437,9 @@ int X86TTIImpl::getScatterOverhead(Type *SrcVTy) const {
     // split via type legalisation, so those rows are omitted.
     static const CostTblEntry ZenScatterCostTable[] = {
         {ISD::STORE, MVT::v4i32, 12}, {ISD::STORE, MVT::v8i32, 14},
-        {ISD::STORE, MVT::v16i32, 6},
-        {ISD::STORE, MVT::v4f32, 12}, {ISD::STORE, MVT::v8f32, 14},
-        {ISD::STORE, MVT::v16f32, 6},
-        {ISD::STORE, MVT::v4f64,  5}, {ISD::STORE, MVT::v8f64, 15},
+        {ISD::STORE, MVT::v16i32, 6}, {ISD::STORE, MVT::v4f32, 12},
+        {ISD::STORE, MVT::v8f32, 14}, {ISD::STORE, MVT::v16f32, 6},
+        {ISD::STORE, MVT::v4f64, 5},  {ISD::STORE, MVT::v8f64, 15},
         {ISD::STORE, MVT::v4i64, 10}, {ISD::STORE, MVT::v8i64, 22},
     };
     EVT VT = TLI->getValueType(DL, SrcVTy);
