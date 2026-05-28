@@ -8,15 +8,6 @@
 ;; DW_AT_LLVM_language_dialect is only emitted when
 ;; DW_LLVM_LANG_DIALECT_simt or DW_LLVM_LANG_DIALECT_tile is explicitly
 ;; specified.
-;;
-;; The "unknown dialect" warning path in
-;; NVPTXDwarfDebug::finishTargetUnitAttributes is not exercised here: a .ll
-;; file cannot reach it because the assembly parser, verifier, and bitcode
-;; reader all reject dialect values outside dwarf::DW_LLVM_LANG_DIALECT_max
-;; before llc ever sees the IR. That warning code is kept as a defensive
-;; safety net for programmatic IR construction and future dialect-enum
-;; expansion. The DWARF RUN line below uses --implicit-check-not to assert
-;; the happy path stays silent.
 
 ;; --- IR round-trip ---
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s --check-prefix=IR
@@ -31,8 +22,7 @@
 ; IR: !{{[0-9]+}} = distinct !DICompileUnit({{.*}}dialect: DW_LLVM_LANG_DIALECT_simt{{.*}})
 ; IR: !{{[0-9]+}} = distinct !DICompileUnit({{.*}}dialect: DW_LLVM_LANG_DIALECT_tile{{.*}})
 
-; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda 2>&1 | FileCheck %s --check-prefix=DWARF \
-; RUN:     --implicit-check-not "warning: unknown NVPTX language dialect"
+; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s --check-prefix=DWARF
 
 ;; The default CU has no dialect attribute; only explicit CUs emit it.
 ;; NVPTX emits DW_AT_LLVM_language_dialect as enum values.

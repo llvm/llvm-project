@@ -17,7 +17,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -284,33 +283,11 @@ void NVPTXDwarfDebug::addTargetVariableAttributes(
 void NVPTXDwarfDebug::finishTargetUnitAttributes(const DICompileUnit &DIUnit,
                                                  DwarfCompileUnit &NewCU) {
   uint16_t Dialect = DIUnit.getSourceLanguage().getDialect();
-  // A zero dialect means "no dialect specified"; nothing to emit.
+  // A zero dialect means "no dialect specified"; nothing to emit. This field
+  // should have already been range-checked by the assembly parser, IR verifier,
+  // and bitcode reader.
   if (Dialect == 0)
     return;
-
-  const bool IsKnownDialect = Dialect == dwarf::DW_LLVM_LANG_DIALECT_simt ||
-                              Dialect == dwarf::DW_LLVM_LANG_DIALECT_tile;
-  if (!IsKnownDialect) {
-    // WarnedDialectCUs only dedups the diagnostic per CU; it does not gate
-    // policy (we always suppress emission of unknown dialects below).
-    if (WarnedDialectCUs.insert(&DIUnit).second) {
-      StringRef DialectName = dwarf::LanguageDialectString(Dialect);
-      std::string DialectString =
-          DialectName.empty() ? Twine(Dialect).str() : DialectName.str();
-      DIUnit.getContext().diagnose(DiagnosticInfoGeneric(
-          Twine("unknown NVPTX language dialect '") + DialectString +
-              "' on DICompileUnit; expected '" +
-              dwarf::LanguageDialectString(dwarf::DW_LLVM_LANG_DIALECT_simt) +
-              "' or '" +
-              dwarf::LanguageDialectString(dwarf::DW_LLVM_LANG_DIALECT_tile) +
-              "'",
-          DS_Warning));
-    }
-    // Do not emit DW_AT_LLVM_language_dialect for unknown dialect values.
-    // This also avoids DW_FORM_data1 truncation when a value happens to
-    // exceed one byte.
-    return;
-  }
 
   NewCU.addUInt(NewCU.getUnitDie(), dwarf::DW_AT_LLVM_language_dialect,
                 dwarf::DW_FORM_data1, Dialect);
