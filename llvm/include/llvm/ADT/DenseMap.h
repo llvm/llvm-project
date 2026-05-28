@@ -53,6 +53,10 @@ struct DenseMapPair : std::pair<KeyT, ValueT> {
 
 } // end namespace detail
 
+// Befriended below so DenseMapBase can expose its bucket-relocation callback
+// erase to ValueHandleBase, the only caller that caches bucket pointers.
+class ValueHandleBase;
+
 template <typename KeyT, typename ValueT,
           typename KeyInfoT = DenseMapInfo<KeyT>,
           typename Bucket = llvm::detail::DenseMapPair<KeyT, ValueT>,
@@ -325,41 +329,6 @@ public:
     eraseFromFilledBucket(TheBucket, [](BucketT &) {});
   }
 
-  /// Erase the entry at \p TheBucket and close the resulting hole via Knuth
-  /// TAOCP 6.4 Algorithm R. For callers that cache pointers into the bucket
-  /// array, call \p OnMoved per shifted bucket.
-  template <typename OnMovedT>
-  void eraseFromFilledBucket(BucketT *TheBucket, OnMovedT &&OnMoved) {
-    incrementEpoch();
-    TheBucket->getSecond().~ValueT();
-    decrementNumEntries();
-
-    BucketT *BucketsPtr = getBuckets();
-    const unsigned NumBuckets = getNumBuckets();
-    const unsigned Mask = NumBuckets - 1;
-    const KeyT EmptyKey = KeyInfoT::getEmptyKey();
-    unsigned I = static_cast<unsigned>(TheBucket - BucketsPtr);
-    unsigned J = I;
-    while (true) {
-      J = (J + 1) & Mask;
-      BucketT &BJ = BucketsPtr[J];
-      if (KeyInfoT::isEqual(BJ.getFirst(), EmptyKey))
-        break;
-      auto Ideal = KeyInfoT::getHashValue(BJ.getFirst());
-      // If the hole (I) lies on the linear-probe chain from the home bucket
-      // (Ideal) to J, shift J into the hole and make J the new hole.
-      if (((I - Ideal) & Mask) < ((J - Ideal) & Mask)) {
-        BucketT &BI = BucketsPtr[I];
-        BI.getFirst() = std::move(BJ.getFirst());
-        ::new (&BI.getSecond()) ValueT(std::move(BJ.getSecond()));
-        BJ.getSecond().~ValueT();
-        OnMoved(BI);
-        I = J;
-      }
-    }
-    BucketsPtr[I].getFirst() = EmptyKey;
-  }
-
   bool erase(const KeyT &Val) {
     BucketT *TheBucket = doFind(Val);
     if (!TheBucket)
@@ -369,20 +338,6 @@ public:
     return true;
   }
   void erase(iterator I) { eraseFromFilledBucket(&*I); }
-
-  /// Erase \p Val and close the resulting hole by potentially shifting other
-  /// entries into it. For callers that cache pointers into the bucket array,
-  /// call \p OnMoved per shifted bucket.
-  template <typename OnMovedT> bool erase(const KeyT &Val, OnMovedT &&OnMoved) {
-    BucketT *TheBucket = doFind(Val);
-    if (!TheBucket)
-      return false;
-    eraseFromFilledBucket(TheBucket, std::forward<OnMovedT>(OnMoved));
-    return true;
-  }
-  template <typename OnMovedT> void erase(iterator I, OnMovedT &&OnMoved) {
-    eraseFromFilledBucket(&*I, std::forward<OnMovedT>(OnMoved));
-  }
 
   /// Remove entries that match the given predicate. \p Pred is invoked
   /// with a reference to each live bucket and must not access the map being
@@ -547,6 +502,57 @@ protected:
   }
 
 private:
+  // ValueHandleBase caches pointers into the bucket array, so it needs the
+  // callback erase below to fix them up as entries shift. It is the only
+  // intended caller; do not add new ones.
+  friend class ValueHandleBase;
+
+  /// Erase the entry at \p TheBucket and close the resulting hole via Knuth
+  /// TAOCP 6.4 Algorithm R. For callers that cache pointers into the bucket
+  /// array, call \p OnMoved per shifted bucket.
+  template <typename OnMovedT>
+  void eraseFromFilledBucket(BucketT *TheBucket, OnMovedT &&OnMoved) {
+    incrementEpoch();
+    TheBucket->getSecond().~ValueT();
+    decrementNumEntries();
+
+    BucketT *BucketsPtr = getBuckets();
+    const unsigned NumBuckets = getNumBuckets();
+    const unsigned Mask = NumBuckets - 1;
+    const KeyT EmptyKey = KeyInfoT::getEmptyKey();
+    unsigned I = static_cast<unsigned>(TheBucket - BucketsPtr);
+    unsigned J = I;
+    while (true) {
+      J = (J + 1) & Mask;
+      BucketT &BJ = BucketsPtr[J];
+      if (KeyInfoT::isEqual(BJ.getFirst(), EmptyKey))
+        break;
+      auto Ideal = KeyInfoT::getHashValue(BJ.getFirst());
+      // If the hole (I) lies on the linear-probe chain from the home bucket
+      // (Ideal) to J, shift J into the hole and make J the new hole.
+      if (((I - Ideal) & Mask) < ((J - Ideal) & Mask)) {
+        BucketT &BI = BucketsPtr[I];
+        BI.getFirst() = std::move(BJ.getFirst());
+        ::new (&BI.getSecond()) ValueT(std::move(BJ.getSecond()));
+        BJ.getSecond().~ValueT();
+        OnMoved(BI);
+        I = J;
+      }
+    }
+    BucketsPtr[I].getFirst() = EmptyKey;
+  }
+
+  /// Erase \p Val and close the resulting hole by potentially shifting other
+  /// entries into it. For callers that cache pointers into the bucket array,
+  /// call \p OnMoved per shifted bucket.
+  template <typename OnMovedT> bool erase(const KeyT &Val, OnMovedT &&OnMoved) {
+    BucketT *TheBucket = doFind(Val);
+    if (!TheBucket)
+      return false;
+    eraseFromFilledBucket(TheBucket, std::forward<OnMovedT>(OnMoved));
+    return true;
+  }
+
   DerivedT &derived() { return *static_cast<DerivedT *>(this); }
   const DerivedT &derived() const {
     return *static_cast<const DerivedT *>(this);
