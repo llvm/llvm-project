@@ -45,6 +45,8 @@
 namespace clang {
 namespace clangd {
 
+enum class ReferenceTag;
+
 enum class ErrorCode {
   // Defined by JSON RPC.
   ParseError = -32700,
@@ -239,6 +241,16 @@ struct ReferenceLocation : Location {
 llvm::json::Value toJSON(const ReferenceLocation &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ReferenceLocation &);
 
+/// LSP 3.18 reference item used by textDocument/references when supported.
+struct Reference {
+  /// The location of this reference.
+  Location location;
+
+  /// Optional, one or more tags describing this reference.
+  std::vector<ReferenceTag> referenceTags;
+};
+llvm::json::Value toJSON(const Reference &);
+
 using ChangeAnnotationIdentifier = std::string;
 // A combination of a LSP standard TextEdit and AnnotatedTextEdit.
 struct TextEdit {
@@ -418,6 +430,13 @@ enum class SymbolKind {
   Operator = 25,
   TypeParameter = 26
 };
+
+/// Tags describing the reference kind.
+enum class ReferenceTag {
+  Read = 1,
+  Write = 2,
+};
+
 bool fromJSON(const llvm::json::Value &, SymbolKind &, llvm::json::Path);
 constexpr auto SymbolKindMin = static_cast<size_t>(SymbolKind::File);
 constexpr auto SymbolKindMax = static_cast<size_t>(SymbolKind::TypeParameter);
@@ -585,6 +604,21 @@ struct ClientCapabilities {
   /// notification. This is a clangd extension.
   /// textDocument.inactiveRegionsCapabilities.inactiveRegions
   bool InactiveRegions = false;
+
+  /// Determines whether the client supports reference tags on call hierarchy
+  /// items. If the value is missing, the server assumes that the client does
+  /// not support reference tags.
+  /// textDocument.callHierarchy.referenceTagsSupport
+  /// @since 3.18.0
+  bool ReferenceTagsSupport = false;
+
+  /// Determines whether the client supports and prefers Reference items instead
+  /// of Location items. If this value is missing, the server assumes that the
+  /// client accepts Location items as defined in earlier versions of the
+  /// protocol.
+  /// textDocument.references.referenceItemsSupport
+  /// @since 3.18.0
+  bool ReferenceItemsSupport = false;
 };
 bool fromJSON(const llvm::json::Value &, ClientCapabilities &,
               llvm::json::Path);
@@ -1642,6 +1676,9 @@ struct CallHierarchyItem {
 
   /// Tags for this item.
   std::vector<SymbolTag> tags;
+
+  /// The tags describing reference kinds of this item.
+  std::vector<ReferenceTag> referenceTags;
 
   /// More detaill for this item, e.g. the signature of a function.
   std::string detail;

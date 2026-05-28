@@ -172,6 +172,13 @@ llvm::json::Value toJSON(const ReferenceLocation &P) {
   return Result;
 }
 
+llvm::json::Value toJSON(const Reference &R) {
+  llvm::json::Object Result{{"location", R.location}};
+  if (!R.referenceTags.empty())
+    Result["referenceTags"] = R.referenceTags;
+  return Result;
+}
+
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                               const ReferenceLocation &L) {
   return OS << L.range << '@' << L.uri << " (container: " << L.containerName
@@ -217,7 +224,7 @@ bool fromJSON(const llvm::json::Value &Params, ChangeAnnotation &R,
          O.map("needsConfirmation", R.needsConfirmation) &&
          O.mapOptional("description", R.description);
 }
-llvm::json::Value toJSON(const ChangeAnnotation & CA) {
+llvm::json::Value toJSON(const ChangeAnnotation &CA) {
   llvm::json::Object Result{{"label", CA.label}};
   if (CA.needsConfirmation)
     Result["needsConfirmation"] = *CA.needsConfirmation;
@@ -406,9 +413,16 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
       if (auto RelatedInfo = Diagnostics->getBoolean("relatedInformation"))
         R.DiagnosticRelatedInformation = *RelatedInfo;
     }
-    if (auto *References = TextDocument->getObject("references"))
+    if (auto *References = TextDocument->getObject("references")) {
       if (auto ContainerSupport = References->getBoolean("container"))
         R.ReferenceContainer = *ContainerSupport;
+      if (auto ItemsSupport = References->getBoolean("referenceItemsSupport"))
+        R.ReferenceItemsSupport = *ItemsSupport;
+    }
+    if (auto *CallHierarchy = TextDocument->getObject("callHierarchy")) {
+      if (auto TagsSupport = CallHierarchy->getBoolean("referenceTagsSupport"))
+        R.ReferenceTagsSupport = *TagsSupport;
+    }
     if (auto *Completion = TextDocument->getObject("completion")) {
       if (auto *Item = Completion->getObject("completionItem")) {
         if (auto SnippetSupport = Item->getBoolean("snippetSupport"))
@@ -1499,6 +1513,10 @@ llvm::json::Value toJSON(SymbolTag Tag) {
   return llvm::json::Value(static_cast<int>(Tag));
 }
 
+llvm::json::Value toJSON(ReferenceTag Tag) {
+  return llvm::json::Value(static_cast<int>(Tag));
+}
+
 llvm::json::Value toJSON(const CallHierarchyItem &I) {
   llvm::json::Object Result{{"name", I.name},
                             {"kind", static_cast<int>(I.kind)},
@@ -1511,6 +1529,9 @@ llvm::json::Value toJSON(const CallHierarchyItem &I) {
     Result["detail"] = I.detail;
   if (!I.data.empty())
     Result["data"] = I.data;
+  if (!I.referenceTags.empty())
+    Result["referenceTags"] = I.referenceTags;
+
   return std::move(Result);
 }
 

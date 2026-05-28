@@ -89,6 +89,7 @@ struct ReferencesResult {
   };
   struct Reference {
     ReferenceLocation Loc;
+    std::vector<ReferenceTag> ReferenceTags;
     unsigned Attributes = 0;
   };
   std::vector<Reference> References;
@@ -115,6 +116,12 @@ std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos,
 ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
                                 const SymbolIndex *Index = nullptr,
                                 bool AddContext = false);
+
+/// Returns references and optionally computes read/write tags for main-file
+/// references when \p ComputeReferenceTags is true.
+ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
+                                const SymbolIndex *Index, bool AddContext,
+                                bool ComputeReferenceTags);
 
 /// Get info about symbols at \p Pos.
 std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos);
@@ -148,12 +155,16 @@ std::vector<CallHierarchyItem>
 prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath);
 
 std::vector<CallHierarchyIncomingCall>
-incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index);
+incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
+              ParsedAST &AST, bool ComputeReferenceTags = true);
 
+/// \p AST may be null when \p ComputeReferenceTags is false, in which case
+/// only index-based function call edges are returned.
 std::vector<CallHierarchyOutgoingCall>
-outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index);
+outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
+              ParsedAST *AST, bool ComputeReferenceTags = false);
 
-/// Returns all decls that are referenced in the \p FD except local symbols.
+/// Returns all decls that are referenced in \p FD except local symbols.
 llvm::DenseSet<const Decl *> getNonLocalDeclRefs(ParsedAST &AST,
                                                  const FunctionDecl *FD);
 } // namespace clangd

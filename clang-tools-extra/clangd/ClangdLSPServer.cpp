@@ -536,6 +536,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   SupportsHierarchicalDocumentSymbol =
       Params.capabilities.HierarchicalDocumentSymbol;
   SupportsReferenceContainer = Params.capabilities.ReferenceContainer;
+  SupportsReferenceTags = Params.capabilities.ReferenceTagsSupport;
+  SupportsReferenceItems = Params.capabilities.ReferenceItemsSupport;
   SupportFileStatus = Params.initializationOptions.FileStatus;
   SupportsDocumentChanges = Params.capabilities.DocumentChanges;
   SupportsChangeAnnotation = Params.capabilities.ChangeAnnotation;
@@ -1388,7 +1390,8 @@ void ClangdLSPServer::onPrepareCallHierarchy(
 void ClangdLSPServer::onCallHierarchyIncomingCalls(
     const CallHierarchyIncomingCallsParams &Params,
     Callback<std::vector<CallHierarchyIncomingCall>> Reply) {
-  Server->incomingCalls(Params.item, std::move(Reply));
+  Server->incomingCalls(Params.item.uri.file(), Params.item,
+                        SupportsReferenceTags, std::move(Reply));
 }
 
 void ClangdLSPServer::onClangdInlayHints(const InlayHintsParams &Params,
@@ -1433,7 +1436,8 @@ void ClangdLSPServer::onInlayHint(const InlayHintsParams &Params,
 void ClangdLSPServer::onCallHierarchyOutgoingCalls(
     const CallHierarchyOutgoingCallsParams &Params,
     Callback<std::vector<CallHierarchyOutgoingCall>> Reply) {
-  Server->outgoingCalls(Params.item, std::move(Reply));
+  Server->outgoingCalls(Params.item.uri.file(), Params.item,
+                        SupportsReferenceTags, std::move(Reply));
 }
 
 void ClangdLSPServer::applyConfiguration(
@@ -1478,27 +1482,41 @@ void ClangdLSPServer::onChangeConfiguration(
   applyConfiguration(Params.settings);
 }
 
-void ClangdLSPServer::onReference(
-    const ReferenceParams &Params,
-    Callback<std::vector<ReferenceLocation>> Reply) {
-  Server->findReferences(Params.textDocument.uri.file(), Params.position,
-                         Opts.ReferencesLimit, SupportsReferenceContainer,
-                         [Reply = std::move(Reply),
-                          IncludeDecl(Params.context.includeDeclaration)](
-                             llvm::Expected<ReferencesResult> Refs) mutable {
-                           if (!Refs)
-                             return Reply(Refs.takeError());
-                           // Filter out declarations if the client asked.
-                           std::vector<ReferenceLocation> Result;
-                           Result.reserve(Refs->References.size());
-                           for (auto &Ref : Refs->References) {
-                             bool IsDecl =
-                                 Ref.Attributes & ReferencesResult::Declaration;
-                             if (IncludeDecl || !IsDecl)
-                               Result.push_back(std::move(Ref.Loc));
-                           }
-                           return Reply(std::move(Result));
-                         });
+void ClangdLSPServer::onReference(const ReferenceParams &Params,
+                                  Callback<llvm::json::Value> Reply) {
+  Server->findReferences(
+      Params.textDocument.uri.file(), Params.position, Opts.ReferencesLimit,
+      SupportsReferenceContainer,
+      /*ComputeReferenceTags=*/SupportsReferenceItems,
+      [Reply = std::move(Reply), IncludeDecl(Params.context.includeDeclaration),
+       ReturnReferenceItems(SupportsReferenceItems)](
+          llvm::Expected<ReferencesResult> Refs) mutable {
+        if (!Refs)
+          return Reply(Refs.takeError());
+        // Filter out declarations if the client asked.
+        if (ReturnReferenceItems) {
+          std::vector<Reference> Result;
+          Result.reserve(Refs->References.size());
+          for (auto &Ref : Refs->References) {
+            bool IsDecl = Ref.Attributes & ReferencesResult::Declaration;
+            if (!(IncludeDecl || !IsDecl))
+              continue;
+            Reference Item;
+            Item.location = std::move(Ref.Loc);
+            Item.referenceTags = std::move(Ref.ReferenceTags);
+            Result.push_back(std::move(Item));
+          }
+          return Reply(std::move(Result));
+        }
+        std::vector<ReferenceLocation> Result;
+        Result.reserve(Refs->References.size());
+        for (auto &Ref : Refs->References) {
+          bool IsDecl = Ref.Attributes & ReferencesResult::Declaration;
+          if (IncludeDecl || !IsDecl)
+            Result.push_back(std::move(Ref.Loc));
+        }
+        return Reply(std::move(Result));
+      });
 }
 
 void ClangdLSPServer::onGoToType(const TextDocumentPositionParams &Params,

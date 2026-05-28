@@ -302,11 +302,13 @@ public:
                             Callback<std::vector<CallHierarchyItem>> CB);
 
   /// Resolve incoming calls for a given call hierarchy item.
-  void incomingCalls(const CallHierarchyItem &Item,
+  void incomingCalls(PathRef File, const CallHierarchyItem &Item,
+                     bool ComputeReferenceTags,
                      Callback<std::vector<CallHierarchyIncomingCall>>);
 
   /// Resolve outgoing calls for a given call hierarchy item.
-  void outgoingCalls(const CallHierarchyItem &Item,
+  void outgoingCalls(PathRef File, const CallHierarchyItem &Item,
+                     bool ComputeReferenceTags,
                      Callback<std::vector<CallHierarchyOutgoingCall>>);
 
   /// Resolve inlay hints for a given document.
@@ -334,7 +336,8 @@ public:
 
   /// Retrieve locations for symbol references.
   void findReferences(PathRef File, Position Pos, uint32_t Limit,
-                      bool AddContainer, Callback<ReferencesResult> CB);
+                      bool AddContainer, bool ComputeReferenceTags,
+                      Callback<ReferencesResult> CB);
 
   /// Run formatting for the \p File with content \p Code.
   /// If \p Rng is non-empty, formats only those regions.

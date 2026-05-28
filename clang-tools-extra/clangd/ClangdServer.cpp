@@ -912,12 +912,15 @@ void ClangdServer::prepareCallHierarchy(
 }
 
 void ClangdServer::incomingCalls(
-    const CallHierarchyItem &Item,
+    PathRef File, const CallHierarchyItem &Item, bool ComputeReferenceTags,
     Callback<std::vector<CallHierarchyIncomingCall>> CB) {
-  WorkScheduler->run("Incoming Calls", "",
-                     [CB = std::move(CB), Item, this]() mutable {
-                       CB(clangd::incomingCalls(Item, Index));
-                     });
+  auto Action = [Item, ComputeReferenceTags, CB = std::move(CB),
+                 this](llvm::Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::incomingCalls(Item, Index, InpAST->AST, ComputeReferenceTags));
+  };
+  WorkScheduler->runWithAST("Incoming Calls", File, std::move(Action));
 }
 
 void ClangdServer::inlayHints(PathRef File, std::optional<Range> RestrictRange,
@@ -932,12 +935,27 @@ void ClangdServer::inlayHints(PathRef File, std::optional<Range> RestrictRange,
 }
 
 void ClangdServer::outgoingCalls(
-    const CallHierarchyItem &Item,
+    PathRef File, const CallHierarchyItem &Item, bool ComputeReferenceTags,
     Callback<std::vector<CallHierarchyOutgoingCall>> CB) {
-  WorkScheduler->run("Outgoing Calls", "",
-                     [CB = std::move(CB), Item, this]() mutable {
-                       CB(clangd::outgoingCalls(Item, Index));
-                     });
+  if (!ComputeReferenceTags) {
+    // Fast path: reference tags are not requested, so no AST is needed.
+    // Dispatch as an index-only task to avoid unnecessary parse latency.
+    WorkScheduler->run(
+        "Outgoing Calls", "", [Item, CB = std::move(CB), this]() mutable {
+          CB(clangd::outgoingCalls(Item, Index,
+                                   /*AST=*/nullptr,
+                                   /*ComputeReferenceTags=*/false));
+        });
+    return;
+  }
+  auto Action = [Item, CB = std::move(CB),
+                 this](llvm::Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::outgoingCalls(Item, Index, &InpAST->AST,
+                             /*ComputeReferenceTags=*/true));
+  };
+  WorkScheduler->runWithAST("Outgoing Calls", File, std::move(Action));
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
@@ -1008,13 +1026,15 @@ void ClangdServer::findImplementations(
 }
 
 void ClangdServer::findReferences(PathRef File, Position Pos, uint32_t Limit,
-                                  bool AddContainer,
+                                  bool AddContainer, bool ComputeReferenceTags,
                                   Callback<ReferencesResult> CB) {
-  auto Action = [Pos, Limit, AddContainer, CB = std::move(CB),
+  auto Action = [Pos, Limit, AddContainer, ComputeReferenceTags,
+                 CB = std::move(CB),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
-    CB(clangd::findReferences(InpAST->AST, Pos, Limit, Index, AddContainer));
+    CB(clangd::findReferences(InpAST->AST, Pos, Limit, Index, AddContainer,
+                              ComputeReferenceTags));
   };
 
   WorkScheduler->runWithAST("References", File, std::move(Action));
