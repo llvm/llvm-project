@@ -9664,10 +9664,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       // SPIR-V linker. `spirv-link` isn't called in LTO mode so restrict these
       // flags to normal compilation.
       // SPIR-V for AMD doesn't use spirv-link and therefore doesn't need these
-      // flags.
+      // flags. SYCL uses clang-sycl-linker instead of spirv-link, so skip it.
       if (TC->getTriple().isSPIRV() &&
           TC->getTriple().getVendor() != llvm::Triple::VendorType::AMD &&
-          !C.getDriver().isUsingLTO() && !C.getDriver().isUsingOffloadLTO()) {
+          Kind != Action::OFK_SYCL && !C.getDriver().isUsingLTO() &&
+          !C.getDriver().isUsingOffloadLTO()) {
         // For SPIR-V some functions will be defined by the runtime so allow
         // unresolved symbols in `spirv-link`.
         LinkerArgs.emplace_back("--allow-partial-linkage");
