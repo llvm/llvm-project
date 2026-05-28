@@ -135,6 +135,15 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
         Res = CallInst::Create(Fn->getFunctionType(), Fn, {Op0, Op1});
         break;
       }
+      case Intrinsic::abs: {
+        Value *Arg = EvaluateInDifferentTypeImpl(II->getArgOperand(0), Ty,
+                                                 isSigned, IC, Processed);
+        Function *Fn = Intrinsic::getOrInsertDeclaration(
+            I->getModule(), II->getIntrinsicID(), {Ty});
+        Res = CallInst::Create(Fn->getFunctionType(), Fn,
+                               {Arg, ConstantInt::getFalse(I->getContext())});
+        break;
+      }
       }
     }
     break;
@@ -621,6 +630,12 @@ bool TypeEvaluationHelper::canEvaluateTruncatedPred(Value *V, Type *Ty,
            canEvaluateTruncatedImpl(I->getOperand(1), Ty, IC, CxtI);
 
   case Instruction::Call: {
+    Value *AbsOp;
+    if (match(I, m_Intrinsic<Intrinsic::abs>(m_Value(AbsOp), m_Value()))) {
+      if (IC.ComputeMaxSignificantBits(AbsOp, CxtI) > Ty->getScalarSizeInBits())
+        return false;
+      return canEvaluateTruncatedImpl(AbsOp, Ty, IC, CxtI);
+    }
     auto *MM = dyn_cast<MinMaxIntrinsic>(I);
     if (!MM)
       return false;

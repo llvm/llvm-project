@@ -425,16 +425,14 @@ static void instructionCountersPass(ModulePassManager &MPM,
   if (AreStatisticsEnabled()) {
     MPM.addPass(
         createModuleToFunctionPassAdaptor(InstCountPass(IsPreOptimization)));
+    MPM.addPass(createModuleToFunctionPassAdaptor(
+        FunctionPropertiesStatisticsPass(IsPreOptimization)));
   }
 }
 
 // Helper to add AnnotationRemarksPass.
 static void addAnnotationRemarksPass(ModulePassManager &MPM) {
   MPM.addPass(createModuleToFunctionPassAdaptor(AnnotationRemarksPass()));
-  if (AreStatisticsEnabled()) {
-    MPM.addPass(
-        createModuleToFunctionPassAdaptor(FunctionPropertiesStatisticsPass()));
-  }
 }
 
 // Helper to check if the current compilation phase is preparing for LTO

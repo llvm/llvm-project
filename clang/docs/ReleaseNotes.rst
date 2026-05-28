@@ -107,6 +107,12 @@ ABI Changes in This Version
 - Clang now uses MSVC-compatible manglings for supported AArch64 SVE builtin
   types when targeting the Microsoft ABI. This changes symbol names for
   affected declarations compared to previous Clang releases. (#GH196170)
+- The resume and destroy functions of C++20 coroutines now use the platform C
+  calling convention instead of LLVM's internal ``fastcc``. This makes the
+  coroutine ABI stable across LLVM versions and interoperable with other
+  compilers. On most targets this is not a breaking change because ``fastcc``
+  and the platform C calling convention agree for ``void(ptr)``. It is an ABI
+  break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -675,6 +681,7 @@ Bug Fixes to C++ Support
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
+- Fixed crash instantiating class member specializations.
 - Fix a problem where a substitution failure when evaluating a type requirement
   could directly make the program ill-formed.
 - Fix a problem where pack index expressions where incorrectly being regarded as equivalent.
