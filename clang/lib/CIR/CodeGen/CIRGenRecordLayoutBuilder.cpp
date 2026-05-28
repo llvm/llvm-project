@@ -712,7 +712,7 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
       std::string baseIdentifier = getRecordTypeName(rd, ".base");
       baseTy = builder.getCompleteNamedRecordType(
           baseLowering.fieldTypes, baseLowering.packed, baseLowering.padded,
-          baseLowering.unionPadding, baseIdentifier);
+          baseIdentifier);
       // TODO(cir): add something like addRecordTypeName
 
       // BaseTy and Ty must agree on their packedness for getCIRFieldNo to work

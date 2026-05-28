@@ -847,8 +847,7 @@ class CIRABITypeConverter : public mlir::TypeConverter {
         if (mlir::Type pad = u.getPadding())
           loweredPadding = convertType(pad);
         return cir::UnionType::get(type.getContext(), converted,
-                                   type.getPacked(), type.getPadded(),
-                                   loweredPadding);
+                                   type.getPacked(), loweredPadding);
       }
       auto s = mlir::cast<cir::StructType>(type);
       return cir::StructType::get(type.getContext(), converted,

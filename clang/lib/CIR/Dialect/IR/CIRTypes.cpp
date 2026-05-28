@@ -192,12 +192,12 @@ Type StructType::parse(mlir::AsmParser &parser) {
     type = StructType::getChecked(eLoc, context, name, is_class);
   } else if (!name && !incomplete) {
     type = StructType::getChecked(eLoc, context, membersRef, packed, padded,
-                                  is_class, mlir::Type{});
+                                  is_class);
     if (!type)
       return {};
   } else if (!incomplete) {
     type = StructType::getChecked(eLoc, context, membersRef, name, packed,
-                                  padded, is_class, mlir::Type{});
+                                  padded, is_class);
     if (!type)
       return {};
     if (auto structTy = mlir::dyn_cast<StructType>(type))
@@ -247,12 +247,9 @@ void StructType::print(mlir::AsmPrinter &printer) const {
 mlir::LogicalResult
 StructType::verify(function_ref<mlir::InFlightDiagnostic()> emitError,
                    llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name,
-                   bool incomplete, bool packed, bool padded, bool is_class,
-                   mlir::Type padding) {
+                   bool incomplete, bool packed, bool padded, bool is_class) {
   if (name && name.getValue().empty())
     return emitError() << "identified records cannot have an empty name";
-  if (padding)
-    return emitError() << "padding is not supported on struct/class types";
   return mlir::success();
 }
 
@@ -267,7 +264,6 @@ bool StructType::getIncomplete() const { return getImpl()->incomplete; }
 bool StructType::getPacked() const { return getImpl()->packed; }
 bool StructType::getPadded() const { return getImpl()->padded; }
 bool StructType::getIsClass() const { return getImpl()->is_class; }
-mlir::Type StructType::getPadding() const { return getImpl()->padding; }
 
 bool StructType::isABIConvertedRecord() const {
   return getName() && getName().getValue().starts_with(abi_conversion_prefix);
@@ -287,10 +283,9 @@ void StructType::removeABIConversionNamePrefix() {
         recordName.getType());
 }
 
-void StructType::complete(ArrayRef<Type> members, bool packed, bool padded,
-                          mlir::Type padding) {
+void StructType::complete(ArrayRef<Type> members, bool packed, bool padded) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
-  if (mutate(members, packed, padded, padding).failed())
+  if (mutate(members, packed, padded, /*padding=*/mlir::Type{}).failed())
     llvm_unreachable("failed to complete struct");
 }
 
@@ -311,7 +306,6 @@ Type UnionType::parse(mlir::AsmParser &parser) {
   const llvm::SMLoc loc = parser.getCurrentLocation();
   const mlir::Location eLoc = parser.getEncodedSourceLoc(loc);
   bool packed = false;
-  bool padded = false;
   mlir::Type padding;
   mlir::MLIRContext *context = parser.getContext();
 
@@ -344,8 +338,8 @@ Type UnionType::parse(mlir::AsmParser &parser) {
   if (parser.parseOptionalKeyword("packed").succeeded())
     packed = true;
 
-  if (parser.parseOptionalKeyword("padded").succeeded())
-    padded = true;
+  // "padded" is accepted for backward compatibility but derived from padding.
+  (void)parser.parseOptionalKeyword("padded");
 
   bool incomplete = true;
   llvm::SmallVector<mlir::Type> members;
@@ -381,18 +375,17 @@ Type UnionType::parse(mlir::AsmParser &parser) {
   if (name && incomplete) {
     type = UnionType::getChecked(eLoc, context, name);
   } else if (!name && !incomplete) {
-    type = UnionType::getChecked(eLoc, context, membersRef, packed, padded,
-                                 padding);
+    type = UnionType::getChecked(eLoc, context, membersRef, packed, padding);
     if (!type)
       return {};
   } else if (!incomplete) {
-    type = UnionType::getChecked(eLoc, context, membersRef, name, packed,
-                                 padded, padding);
+    type =
+        UnionType::getChecked(eLoc, context, membersRef, name, packed, padding);
     if (!type)
       return {};
     if (auto unionTy = mlir::dyn_cast<UnionType>(type))
       if (unionTy.isIncomplete())
-        unionTy.complete(membersRef, packed, padded, padding);
+        unionTy.complete(membersRef, packed, padding);
     assert(!cir::MissingFeatures::astRecordDeclAttr());
   } else {
     parser.emitError(loc, "anonymous records must be complete");
@@ -439,14 +432,9 @@ void UnionType::print(mlir::AsmPrinter &printer) const {
 mlir::LogicalResult
 UnionType::verify(function_ref<mlir::InFlightDiagnostic()> emitError,
                   llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name,
-                  bool incomplete, bool packed, bool padded,
-                  mlir::Type padding) {
+                  bool incomplete, bool packed, mlir::Type padding) {
   if (name && name.getValue().empty())
     return emitError() << "identified records cannot have an empty name";
-  if (padding && !padded)
-    return emitError() << "padded keyword required when padding is set";
-  if (padded && !padding)
-    return emitError() << "padded unions must specify a padding type";
   return mlir::success();
 }
 
@@ -458,7 +446,7 @@ mlir::StringAttr UnionType::getName() const { return getImpl()->name; }
 bool UnionType::isIncomplete() const { return getImpl()->incomplete; }
 bool UnionType::getIncomplete() const { return getImpl()->incomplete; }
 bool UnionType::getPacked() const { return getImpl()->packed; }
-bool UnionType::getPadded() const { return getImpl()->padded; }
+bool UnionType::getPadded() const { return !!getPadding(); }
 mlir::Type UnionType::getPadding() const { return getImpl()->padding; }
 
 bool UnionType::isABIConvertedRecord() const {
@@ -479,10 +467,10 @@ void UnionType::removeABIConversionNamePrefix() {
         recordName.getType());
 }
 
-void UnionType::complete(ArrayRef<Type> members, bool packed, bool padded,
+void UnionType::complete(ArrayRef<Type> members, bool packed,
                          mlir::Type padding) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
-  if (mutate(members, packed, padded, padding).failed())
+  if (mutate(members, packed, /*padded=*/!!padding, padding).failed())
     llvm_unreachable("failed to complete union");
 }
 
@@ -504,7 +492,8 @@ UnionType::getUnionStorageType(const mlir::DataLayout &dataLayout) const {
 bool UnionType::isLayoutIdentical(const UnionType &other) {
   if (getImpl() == other.getImpl())
     return true;
-  return getMembers() == other.getMembers();
+  return getMembers() == other.getMembers() &&
+         getPadding() == other.getPadding();
 }
 
 //===----------------------------------------------------------------------===//
@@ -557,9 +546,8 @@ std::string RecordType::getPrefixedName() const {
 void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded,
                           mlir::Type padding) {
   if (auto s = mlir::dyn_cast<StructType>(*this))
-    return s.complete(members, packed, padded, padding);
-  return mlir::cast<UnionType>(*this).complete(members, packed, padded,
-                                               padding);
+    return s.complete(members, packed, padded);
+  return mlir::cast<UnionType>(*this).complete(members, packed, padding);
 }
 uint64_t RecordType::getElementOffset(const mlir::DataLayout &dataLayout,
                                       unsigned idx) const {

@@ -134,7 +134,7 @@ void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
               // here, we just need to find eltSize that is greater then the
               // required offset. The same is true for the similar union type
               // check below
-              if (!mlir::isa<cir::UnionType>(recordTy))
+              if (!recordTy.isUnion())
                 pos = (pos + alignMask) & ~alignMask;
               assert(offset >= 0);
               if (offset < pos + eltSize) {
@@ -143,7 +143,7 @@ void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
                 return elts[i];
               }
               // No need to update pos here, see the comment above.
-              if (!mlir::isa<cir::UnionType>(recordTy))
+              if (!recordTy.isUnion())
                 pos += eltSize;
             }
             llvm_unreachable("offset was not found within the record");
@@ -194,8 +194,7 @@ cir::RecordType clang::CIRGen::CIRGenBuilderTy::getCompleteRecordType(
   if (name.empty())
     return getAnonRecordTy(members, packed, padded);
 
-  return getCompleteNamedRecordType(members, packed, padded, mlir::Type{},
-                                    name);
+  return getCompleteNamedRecordType(members, packed, padded, name);
 }
 
 mlir::Attribute clang::CIRGen::CIRGenBuilderTy::getConstRecordOrZeroAttr(

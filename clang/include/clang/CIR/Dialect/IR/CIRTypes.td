@@ -665,8 +665,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
     "bool":$incomplete,
     "bool":$packed,
     "bool":$padded,
-    "bool":$is_class,
-    OptionalParameter<"mlir::Type">:$padding
+    "bool":$is_class
   );
 
   // StorageClass is defined in C++ for mutability.
@@ -683,11 +682,10 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
       "mlir::StringAttr":$name,
       "bool":$packed,
       "bool":$padded,
-      "bool":$is_class,
-      CArg<"mlir::Type", "{}">:$padding
+      "bool":$is_class
     ), [{
       return $_get($_ctxt, members, name, /*incomplete=*/false, packed, padded,
-                   is_class, padding);
+                   is_class, /*padding=*/mlir::Type{});
     }]>,
 
     // Create an identified and incomplete struct/class type.
@@ -705,11 +703,10 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
       "llvm::ArrayRef<mlir::Type>":$members,
       "bool":$packed,
       "bool":$padded,
-      "bool":$is_class,
-      CArg<"mlir::Type", "{}">:$padding
+      "bool":$is_class
     ), [{
       return $_get($_ctxt, members, mlir::StringAttr{}, /*incomplete=*/false,
-                   packed, padded, is_class, padding);
+                   packed, padded, is_class, /*padding=*/mlir::Type{});
     }]>
   ];
 
@@ -733,7 +730,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
     }
 
     void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
-                  bool isPadded, mlir::Type padding = {});
+                  bool isPadded);
 
     uint64_t getElementOffset(const mlir::DataLayout &dataLayout,
                               unsigned idx) const;
@@ -810,7 +807,6 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
     OptionalParameter<"mlir::StringAttr">:$name,
     "bool":$incomplete,
     "bool":$packed,
-    "bool":$padded,
     OptionalParameter<"mlir::Type">:$padding
   );
 
@@ -827,11 +823,10 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
       "llvm::ArrayRef<mlir::Type>":$members,
       "mlir::StringAttr":$name,
       "bool":$packed,
-      "bool":$padded,
       CArg<"mlir::Type", "{}">:$padding
     ), [{
-      return $_get($_ctxt, members, name, /*incomplete=*/false, packed, padded,
-                   /*is_class=*/false, padding);
+      return $_get($_ctxt, members, name, /*incomplete=*/false, packed,
+                   /*padded=*/!!padding, /*is_class=*/false, padding);
     }]>,
 
     // Create an identified and incomplete union type.
@@ -845,11 +840,10 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
     TypeBuilder<(ins
       "llvm::ArrayRef<mlir::Type>":$members,
       "bool":$packed,
-      "bool":$padded,
       CArg<"mlir::Type", "{}">:$padding
     ), [{
       return $_get($_ctxt, members, mlir::StringAttr{}, /*incomplete=*/false,
-                   packed, padded, /*is_class=*/false, padding);
+                   packed, /*padded=*/!!padding, /*is_class=*/false, padding);
     }]>
   ];
 
@@ -859,6 +853,10 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
     bool isUnion() const { return true; }
     bool isComplete() const { return !isIncomplete(); }
     bool isIncomplete() const;
+
+    /// Returns true when this union carries a tail-padding type.
+    /// Derived from getPadding() — a union is padded iff it has a padding type.
+    bool getPadded() const;
 
     size_t getNumElements() const { return getMembers().size(); }
     std::string getKindAsStr() const { return "union"; }
@@ -875,7 +873,7 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
     mlir::Type getUnionStorageType(const mlir::DataLayout &dataLayout) const;
 
     void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
-                  bool isPadded, mlir::Type padding = {});
+                  mlir::Type padding = {});
 
     uint64_t getElementOffset(const mlir::DataLayout &, unsigned) const {
       return 0;
