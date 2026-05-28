@@ -1194,15 +1194,12 @@ static void transferMacroAdaptorCall(const clang::CallExpr *Expr,
     return;
 
   copyRecord(*StatusAdaptorLoc,
-             locForStatus(clang::cast<RecordStorageLocation>(
-                 State.Env.getResultObjectLocation(*Expr))),
-             State.Env);
+             locForStatus(State.Env.getResultObjectLocation(*Expr)), State.Env);
 }
 
 static void transferReturnIfErrorAdaptorOperatorBoolCall(
     const clang::CXXMemberCallExpr *Expr, const MatchFinder::MatchResult &,
     LatticeTransferState &State) {
-  // TODO(sgatev): Add tests with pointer receivers.
   RecordStorageLocation *StatusAdaptorLoc =
       getImplicitObjectLocation(*Expr, State.Env);
   if (StatusAdaptorLoc == nullptr)
