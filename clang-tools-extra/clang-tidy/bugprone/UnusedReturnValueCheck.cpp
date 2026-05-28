@@ -145,7 +145,7 @@ UnusedReturnValueCheck::UnusedReturnValueCheck(StringRef Name,
                                             "^::std::errc$;"
                                             "^::std::expected$;"
                                             "^::boost::system::error_code$"))),
-      AllowCastToVoid(Options.get("AllowCastToVoid", false)) {}
+      AllowCastToVoid(Options.get("AllowCastToVoid", true)) {}
 
 UnusedReturnValueCheck::UnusedReturnValueCheck(
     StringRef Name, ClangTidyContext *Context,

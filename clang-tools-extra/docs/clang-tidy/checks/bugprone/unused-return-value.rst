@@ -63,7 +63,7 @@ Options
 
 .. option:: AllowCastToVoid
 
-   Controls whether casting return values to ``void`` is permitted. Default: `false`.
+   Controls whether casting return values to ``void`` is permitted. Default: `true`.
 
 :doc:`cert-err33-c <../cert/err33-c>` is an alias of this check that checks a
 fixed and large set of standard library functions.

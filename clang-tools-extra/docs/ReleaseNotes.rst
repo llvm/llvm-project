@@ -423,6 +423,10 @@ Changes in existing checks
   ``std::get_temporary_buffer`` to the default list of unsafe functions. (This
   function is unsafe, useless, deprecated in C++17 and removed in C++20).
 
+- Improved :doc:`bugprone-unused-return-value
+  <clang-tidy/checks/bugprone/unused-return-value>` check by changing the
+  default of the ``AllowCastToVoid`` option from `false` to `true`.
+
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check:
 
