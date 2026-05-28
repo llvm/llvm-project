@@ -1039,8 +1039,8 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
 
       if (Ty == OverloadTys[OIdx])
         return false;
-      OS << Position << " type (MatchType<" << OIdx << ">) expected "
-         << *OverloadTys[OIdx] << ", but got " << *Ty;
+      OS << Position << " type (matching overload type " << OIdx
+         << ") expected " << *OverloadTys[OIdx] << ", but got " << *Ty;
       return true;
     }
 

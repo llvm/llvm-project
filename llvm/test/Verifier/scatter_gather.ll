@@ -50,7 +50,7 @@ define <8 x float> @gather8(<16 x ptr> %ptrs, <8 x i1> %mask, <8 x float> %passt
 declare <8 x float> @llvm.masked.gather.v8f32.v16p0(<16 x ptr>, <8 x i1>, <8 x float>)
 
 ; Passthru type doesn't match return type
-; CHECK: intrinsic argument 2 type (MatchType<0>) expected <16 x i32>, but got <8 x i32>
+; CHECK: intrinsic argument 2 type (matching overload type 0) expected <16 x i32>, but got <8 x i32>
 ; CHECK-NEXT: ptr @llvm.masked.gather.v16i32.v16p0
 define <16 x i32> @gather9(<16 x ptr> %ptrs, <16 x i1> %mask, <8 x i32> %passthru) {
   %res = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> %ptrs, <16 x i1> %mask, <8 x i32> %passthru)
