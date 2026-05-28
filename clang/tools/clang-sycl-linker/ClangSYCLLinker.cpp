@@ -227,6 +227,8 @@ std::optional<std::string> findFile(StringRef Dir, const Twine &Name) {
 
 std::optional<std::string> searchLibrary(StringRef Name,
                                          ArrayRef<StringRef> SearchPaths) {
+  if (sys::fs::exists(Name))
+    return Name.str();
   for (StringRef Dir : SearchPaths)
     if (std::optional<std::string> File = findFile(Dir, Name))
       return File;
