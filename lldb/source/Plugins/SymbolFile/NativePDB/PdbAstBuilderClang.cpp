@@ -360,8 +360,9 @@ PdbAstBuilderClang::CreateDeclInfoForUndecoratedName(llvm::StringRef name) {
   return {context, std::string(uname)};
 }
 
-std::pair<clang::DeclContext *, std::string>
-PdbAstBuilderClang::CreateDeclInfoForCompilandSymbol(PdbCompilandSymId uid) {
+clang::DeclContext *
+PdbAstBuilderClang::GetOrCreateDeclContextForCompilandSymbol(
+    PdbCompilandSymId uid) {
   SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
       m_clang.GetSymbolFile()->GetBackingSymbolFile());
   PdbIndex &index = pdb->GetIndex();
@@ -371,7 +372,7 @@ PdbAstBuilderClang::CreateDeclInfoForCompilandSymbol(PdbCompilandSymId uid) {
 
   std::optional<PdbTypeSymId> func_id = GetFunctionType(sym);
   if (!func_id || !symbol_name.contains("::"))
-    return CreateDeclInfoForUndecoratedName(symbol_name);
+    return CreateDeclInfoForUndecoratedName(symbol_name).first;
 
   // Try to get the context from class type of an LF_MFUNCTION.
   // For some types, we might not find a class type.
@@ -421,16 +422,9 @@ PdbAstBuilderClang::CreateDeclInfoForCompilandSymbol(PdbCompilandSymId uid) {
 
   clang::DeclContext *context = get_member_fn_context();
   if (!context)
-    return CreateDeclInfoForUndecoratedName(symbol_name);
+    return CreateDeclInfoForUndecoratedName(symbol_name).first;
 
-  MSVCUndecoratedNameParser parser(symbol_name);
-  llvm::ArrayRef<MSVCUndecoratedNameSpecifier> specifiers =
-      parser.GetSpecifiers();
-  if (specifiers.size() < 2) {
-    assert(false && "Member function name with less than two scopes");
-    return CreateDeclInfoForUndecoratedName(symbol_name);
-  }
-  return {context, std::string(specifiers.back().GetFullName())};
+  return context;
 }
 
 clang::DeclContext *
@@ -447,7 +441,7 @@ PdbAstBuilderClang::GetParentClangDeclContext(PdbSymUid uid) {
     if (scope)
       return GetOrCreateClangDeclContextForUid(*scope);
 
-    return CreateDeclInfoForCompilandSymbol(uid.asCompilandSym()).first;
+    return GetOrCreateDeclContextForCompilandSymbol(uid.asCompilandSym());
   }
   case PdbSymUidKind::Type: {
     // It could be a namespace, class, or global.  We don't support nested
