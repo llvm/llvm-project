@@ -46,7 +46,7 @@ static_assert(NumBuiltins ==
 #include "llvm/TargetParser/AArch64TargetParserDef.inc"
 
 #define DECLARE_AARCH64_EXTENSION_FEATURE_LOCALS()                             \
-  AARCH64_DECLARE_EXTENSION_FEATURE_LOCALS(hasExtension)
+  AARCH64_DECLARE_EXTENSION_FEATURE_LOCALS(EnabledExtensions.test)
 
 namespace clang {
 namespace AArch64 {
@@ -261,7 +261,7 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
                                                  StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
   if (!llvm::ARM::parseBranchProtection(
-          Spec, PBP, Err, hasExtension(llvm::AArch64::AEK_PAUTHLR)))
+          Spec, PBP, Err, EnabledExtensions.test(llvm::AArch64::AEK_PAUTHLR)))
     return false;
 
   // GCS is currently untested with ptrauth-returns, but enabling this could be
@@ -960,16 +960,6 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
   return HasFeatureLookup.contains(Feature);
 }
 
-bool AArch64TargetInfo::hasExtension(llvm::AArch64::ArchExtKind Ext) const {
-  return EnabledExtensions.test(Ext);
-}
-
-bool AArch64TargetInfo::hasFP16Arithmetic() const {
-  return hasExtension(llvm::AArch64::AEK_FP16) ||
-         hasExtension(llvm::AArch64::AEK_SVEAES) ||
-         hasExtension(llvm::AArch64::AEK_SVEBITPERM);
-}
-
 // Find the most specific explicit architecture feature in a target-feature
 // list, e.g. "+v8.6a +v9.2a +sve2" would return the ArchInfo for v9.2a.
 static std::optional<llvm::AArch64::ArchInfo>
@@ -989,16 +979,6 @@ findExplicitBaseArchForTargetFeatures(ArrayRef<std::string> Features) {
   return BaseArch;
 }
 
-static std::optional<llvm::AArch64::ExtensionInfo>
-lookupExtensionForTargetFeature(StringRef Feature) {
-  if (auto ExtInfo = llvm::AArch64::targetFeatureToExtension(Feature))
-    return ExtInfo;
-
-  if (!Feature.consume_front("+") && !Feature.consume_front("-"))
-    return {};
-  return llvm::AArch64::parseArchExtension(Feature);
-}
-
 // Synchronize the frontend's cached booleans and FPU mode bits from the
 // expanded extension bitset, then reapply Clang-specific compatibility rules
 // that are not represented directly in the extension graph
@@ -1006,8 +986,9 @@ void AArch64TargetInfo::setFeatureStateFromEnabledExtensions(
     const llvm::AArch64::ExtensionBitset &Exts) {
 
   EnabledExtensions = Exts;
-  const bool HasSVEAES = hasExtension(llvm::AArch64::AEK_SVEAES);
-  const bool HasSVEBitPerm = hasExtension(llvm::AArch64::AEK_SVEBITPERM);
+  const bool HasSVEAES = EnabledExtensions.test(llvm::AArch64::AEK_SVEAES);
+  const bool HasSVEBitPerm =
+      EnabledExtensions.test(llvm::AArch64::AEK_SVEBITPERM);
 
   // clear the cached FPU mode bits (FPUMode, NeonMode, SveMode)
   FPU &= ~(FPUMode | NeonMode | SveMode);
@@ -1020,16 +1001,31 @@ void AArch64TargetInfo::setFeatureStateFromEnabledExtensions(
   if (EnabledExtensions.test(llvm::AArch64::AEK_SVE))
     FPU |= SveMode;
 
+  if (EnabledExtensions.test(llvm::AArch64::AEK_SIMD))
+    FPU |= NeonMode;
+
   // Frontend FPU mode historically treats SVE as also enabling AdvSIMD, even
   // though that dependency is not modeled as an architecture extension.
   if (FPU & SveMode)
     FPU |= NeonMode;
 
-  // Keep the frontend's historical FPU compatibility for explicit feature
-  // strings such as +aes, +jscvt and +fullfp16 that are not pure ext-bit logic.
+  // Keep the frontend's historical FPU compatibility for legacy feature
+  // spellings that do not enable the AdvSIMD extension.
   FPU |= ExplicitFPUCompat & (NeonMode | SveMode);
   if (HasSVEAES || HasSVEBitPerm)
     FPU |= NeonMode;
+
+  if (HasNoFP) {
+    FPU &= ~FPUMode;
+    FPU &= ~NeonMode;
+    FPU &= ~SveMode;
+  }
+  if (HasNoNeon) {
+    FPU &= ~NeonMode;
+    FPU &= ~SveMode;
+  }
+  if (HasNoSVE)
+    FPU &= ~SveMode;
 }
 
 void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
@@ -1038,7 +1034,11 @@ void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
 
   if (Enabled) {
     std::string TargetFeature = ("+" + Name).str();
-    if (auto ExtInfo = lookupExtensionForTargetFeature(TargetFeature)) {
+    auto ExtInfo = llvm::AArch64::targetFeatureToExtension(TargetFeature);
+    if (!ExtInfo)
+      ExtInfo = llvm::AArch64::parseArchExtension(Name);
+
+    if (ExtInfo) {
       llvm::AArch64::ExtensionSet FeatureBits;
       FeatureBits.enable(ExtInfo->ID);
 
@@ -1048,6 +1048,8 @@ void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
         Features["sve"] = true;
       if (FeatureBits.Enabled.test(llvm::AArch64::AEK_SME))
         Features["sme"] = true;
+      if (FeatureBits.Enabled.test(llvm::AArch64::AEK_SME2))
+        Features["sme2"] = true;
       return;
     }
   }
@@ -1097,32 +1099,32 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   ExpandedFeatures.reserve(Features.size());
 
   for (const std::string &Feature : Features) {
-    // Direct feature spellings that historically force Clang's NEON-facing FPU
-    // state.
     if (llvm::StringSwitch<bool>(Feature)
-            .Cases({"+neon", "+simd", "+fp-armv8", "+jscvt", "+jsconv"}, true)
-            .Cases({"+fcma", "+fullfp16", "+dotprod", "+fp16fml"}, true)
-            .Cases({"+aes", "+sha2", "+sha3", "+sm4", "+rdm"}, true)
+            .Cases({"+fp-armv8", "+jscvt", "+jsconv", "+fullfp16"}, true)
             .Default(false))
       ExplicitFPUCompat |= NeonMode;
 
-    if (auto ExtInfo = lookupExtensionForTargetFeature(Feature)) {
-      if (!Feature.empty() && Feature[0] == '+')
+    StringRef ExtensionName = Feature;
+    bool Enable = ExtensionName.consume_front("+");
+    bool Disable = !Enable && ExtensionName.consume_front("-");
+    if (Enable || Disable) {
+      auto ExtInfo = llvm::AArch64::targetFeatureToExtension(Feature);
+      if (!ExtInfo)
+        ExtInfo = llvm::AArch64::parseArchExtension(ExtensionName);
+      if (!ExtInfo) {
+        ExpandedFeatures.push_back(Feature);
+        continue;
+      }
+
+      if (Enable)
         FeatureBits.enable(ExtInfo->ID);
-      else if (!Feature.empty() && Feature[0] == '-') {
-        switch (ExtInfo->ID) {
-        case llvm::AArch64::AEK_FP:
+      else {
+        if (ExtInfo->ID == llvm::AArch64::AEK_FP)
           HasNoFP = true;
-          break;
-        case llvm::AArch64::AEK_SIMD:
+        if (ExtInfo->ID == llvm::AArch64::AEK_SIMD)
           HasNoNeon = true;
-          break;
-        case llvm::AArch64::AEK_SVE:
+        if (ExtInfo->ID == llvm::AArch64::AEK_SVE)
           HasNoSVE = true;
-          break;
-        default:
-          break;
-        }
         FeatureBits.disable(ExtInfo->ID);
       }
       continue;
@@ -1204,18 +1206,6 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   setFeatureStateFromEnabledExtensions(FeatureBits.Enabled);
 
   resetDataLayout();
-
-  if (HasNoFP) {
-    FPU &= ~FPUMode;
-    FPU &= ~NeonMode;
-    FPU &= ~SveMode;
-  }
-  if (HasNoNeon) {
-    FPU &= ~NeonMode;
-    FPU &= ~SveMode;
-  }
-  if (HasNoSVE)
-    FPU &= ~SveMode;
 
   computeFeatureLookup();
   return true;
@@ -1577,7 +1567,7 @@ bool AArch64TargetInfo::validateConstraintModifier(
     return true;
   case 'z':
   case 'r': {
-    const bool HasLS64 = hasExtension(llvm::AArch64::AEK_LS64);
+    const bool HasLS64 = EnabledExtensions.test(llvm::AArch64::AEK_LS64);
     switch (Modifier) {
     case 'x':
     case 'w':

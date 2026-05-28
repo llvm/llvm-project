@@ -81,8 +81,11 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   AArch64FeatureSet HasFeatureLookup;
 
   void computeFeatureLookup();
-  bool hasExtension(llvm::AArch64::ArchExtKind Ext) const;
-  bool hasFP16Arithmetic() const;
+  bool hasFP16Arithmetic() const {
+    return EnabledExtensions.test(llvm::AArch64::AEK_FP16) ||
+           EnabledExtensions.test(llvm::AArch64::AEK_SVEAES) ||
+           EnabledExtensions.test(llvm::AArch64::AEK_SVEBITPERM);
+  }
   void setFeatureStateFromEnabledExtensions(
       const llvm::AArch64::ExtensionBitset &EnabledExtensions);
 
