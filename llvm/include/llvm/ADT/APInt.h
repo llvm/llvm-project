@@ -2489,6 +2489,33 @@ LLVM_ABI APInt clmulr(const APInt &LHS, const APInt &RHS);
 /// clmulh(a, b) = clmulr(a, b) >> 1
 LLVM_ABI APInt clmulh(const APInt &LHS, const APInt &RHS);
 
+/// Compute the parity (inclusive prefix XOR) for each bit in V.
+/// This is equivalent to clmul(V, ~0).
+///
+/// Example:
+/// bitwiseParity(i4 0b1010) = 0b0110
+LLVM_ABI APInt bitwiseParity(const APInt &V);
+
+/// Perform a "compress" operation, also known as pext or bext.
+///
+/// Selects the bits from Val at the positions where Mask has a 1-bit, and
+/// packs them contiguously into the least significant bits of the result.
+///
+/// Examples:
+/// (1) compressBits(i8 0b1010'1010, i8 0b1100'1100) = 0b0000'1010
+/// (2) compressBits(i8 0b1111'1111, i8 0b1010'1010) = 0b0000'1111
+LLVM_ABI APInt compressBits(const APInt &Val, const APInt &Mask);
+
+/// Perform an "expand" operation, also known as pdep or bdep.
+///
+/// Places the least significant bits of Val at the positions where Mask has a
+/// 1-bit, and zeros the remaining bits.
+///
+/// Examples:
+/// (1) expandBits(i8 0b0000'1010, i8 0b1100'1100) = 0b1000'1000
+/// (2) expandBits(i8 0b0000'1111, i8 0b1010'1010) = 0b1010'1010
+LLVM_ABI APInt expandBits(const APInt &Val, const APInt &Mask);
+
 } // namespace APIntOps
 
 // See friend declaration above. This additional declaration is required in

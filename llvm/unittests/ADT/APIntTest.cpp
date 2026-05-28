@@ -4017,4 +4017,62 @@ TEST(APIntTest, sqrt) {
   EXPECT_EQ(APInt::getMaxValue(256).sqrt(),
             APInt(256, "340282366920938463463374607431768211456", 10));
 }
+
+TEST(APIntTest, bitwiseParity) {
+  EXPECT_EQ(APIntOps::bitwiseParity(APInt(8, 0)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::bitwiseParity(APInt(8, 1)).getZExtValue(), 0xFFU);
+  EXPECT_EQ(APIntOps::bitwiseParity(APInt(4, 0xAU)).getZExtValue(), 6U);
+  EXPECT_EQ(APIntOps::bitwiseParity(APInt(4, 0xFU)).getZExtValue(), 5U);
+  EXPECT_EQ(APIntOps::bitwiseParity(APInt(8, 0xAAU)).getZExtValue(), 0x66U);
+}
+
+TEST(APIntTest, compressBits) {
+  EXPECT_EQ(APIntOps::compressBits(APInt(8, 0), APInt(8, 0xAAU)).getZExtValue(),
+            0U);
+  EXPECT_EQ(
+      APIntOps::compressBits(APInt(8, 0x55U), APInt(8, 0xAAU)).getZExtValue(),
+      0U);
+  EXPECT_EQ(
+      APIntOps::compressBits(APInt(8, 0xAAU), APInt(8, 0xAAU)).getZExtValue(),
+      15U);
+  EXPECT_EQ(
+      APIntOps::compressBits(APInt(8, 0xFFU), APInt(8, 0xAAU)).getZExtValue(),
+      15U);
+  EXPECT_EQ(
+      APIntOps::compressBits(APInt(8, 0xFFU), APInt(8, 0)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::compressBits(APInt(4, 0xFU), APInt(4, 0xAU)).getZExtValue(),
+            3U);
+  EXPECT_EQ(APIntOps::compressBits(APInt(4, 0xAU), APInt(4, 0xAU)).getZExtValue(),
+            3U);
+  EXPECT_EQ(APIntOps::compressBits(APInt(4, 0x5U), APInt(4, 0xAU)).getZExtValue(),
+            0U);
+}
+
+TEST(APIntTest, expandBits) {
+  EXPECT_EQ(APIntOps::expandBits(APInt(8, 0), APInt(8, 0xAAU)).getZExtValue(),
+            0U);
+  EXPECT_EQ(
+      APIntOps::expandBits(APInt(8, 15U), APInt(8, 0xAAU)).getZExtValue(),
+      0xAAU);
+  EXPECT_EQ(
+      APIntOps::expandBits(APInt(8, 0xFFU), APInt(8, 0)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::expandBits(APInt(4, 3U), APInt(4, 0xAU)).getZExtValue(),
+            0xAU);
+  EXPECT_EQ(APIntOps::expandBits(APInt(4, 1U), APInt(4, 0xAU)).getZExtValue(),
+            2U);
+  APInt X(8, 0b10110100U);
+  APInt M(8, 0b11001110U);
+  EXPECT_EQ(APIntOps::expandBits(APIntOps::compressBits(X, M), M), X & M);
+}
+
+TEST(APIntTest, compressExpandBitsExhaustive) {
+  for (unsigned V = 0; V < 256; ++V) {
+    for (unsigned Mask = 0; Mask < 256; ++Mask) {
+      APInt Val(8, V), APMask(8, Mask);
+      APInt Compressed = APIntOps::compressBits(Val, APMask);
+      APInt RoundTrip = APIntOps::expandBits(Compressed, APMask);
+      EXPECT_EQ(RoundTrip, Val & APMask);
+    }
+  }
+}
 } // end anonymous namespace
