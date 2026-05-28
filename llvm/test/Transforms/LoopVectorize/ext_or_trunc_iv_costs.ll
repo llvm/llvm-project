@@ -1,0 +1,66 @@
+; REQUIRES: asserts
+; RUN: opt -p loop-vectorize -S -disable-output -debug-only=loop-vectorize %s 2>&1 | FileCheck %s
+
+define void @trunc_store(ptr %dst) {
+; CHECK-LABEL: Checking a loop in 'trunc_store'
+; CHECK: Cost of 0 for VF 2: EMIT-SCALAR vp{{.*}} = trunc {{.*}} to i8
+; CHECK: Cost of 0 for VF 4: EMIT-SCALAR vp{{.*}} = trunc {{.*}} to i8
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.trunc = trunc i64 %iv to i8
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 %iv.trunc, ptr %gep, align 1
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 7
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define i32 @sext_reduc(i32 %x, i32 %y) {
+; CHECK-LABEL: Checking a loop in 'sext_reduc'
+; CHECK: Cost of 0 for VF 2: EMIT-SCALAR vp{{.*}}  = sext vp{{.*}}  to i32
+; CHECK: Cost of 0 for VF 4: EMIT-SCALAR vp{{.*}}  = sext vp{{.*}}  to i32
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i32 [ %x, %entry ], [ %iv.next, %for.body ]
+  %red = phi i32 [ %y, %entry ], [ %red.next, %for.body ]
+  %t0 = and i32 %red, 1
+  %red.next = add i32 %t0, -1
+  %iv.next = add nsw i32 %iv, 1
+  %cond = icmp sgt i32 %iv, 77
+  br i1 %cond, label %for.end, label %for.body
+
+for.end:
+  ret i32 %red.next
+}
+
+define i8 @reduc_add_trunc(ptr %A) {
+; CHECK-LABEL: Checking a loop in 'reduc_add_trunc'
+; CHECK: Cost of 0 for VF 2: EMIT-SCALAR vp{{.*}} = zext vp{{.*}} to i32
+; CHECK: Cost of 0 for VF 4: EMIT-SCALAR vp{{.*}} = zext vp{{.*}} to i32
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %iv.next, %loop ], [ 0, %entry ]
+  %red = phi i32 [ %red.next, %loop ], [ 255, %entry ]
+  %red.trunc = and i32 %red, 255
+  %gep = getelementptr inbounds i8, ptr %A, i32 %iv
+  %load = load i8, ptr %gep, align 4
+  %zext = zext i8 %load to i32
+  %red.next = add i32 %red.trunc, %zext
+  %iv.next = add i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, 256
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  %ret = trunc i32 %red.next to i8
+  ret i8 %ret
+}
