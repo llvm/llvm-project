@@ -159,3 +159,13 @@ void memcpy_multidim_crossing_subarray(void *dst) {
   f = f + 2001; // crosses into b[1][801]
   memcpy(dst, f, sizeof(long)); // no-warning
 }
+
+const long b[1][4][1200][1] = {0};
+extern void *dst[];
+void memcpy_multidim_crossing_multiple_dimensions() {
+  const long *f = &b[0][0][0][0];
+  for (unsigned long i = 0; i < 2; i++) {
+    memcpy(dst[i], f, sizeof(long)); // no-warning
+    f = f + 2001;
+  }
+}
