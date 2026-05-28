@@ -61,9 +61,9 @@ body: |
   ; CHECK-NEXT:   [[ENTER_STRICT_WQM:%[0-9]+]]:sreg_32 = ENTER_STRICT_WQM -1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT:   [[DS_PARAM_LOAD:%[0-9]+]]:vgpr_32 = DS_PARAM_LOAD 0, 0, 0, 1, implicit $m0, implicit $exec
   ; CHECK-NEXT:   $exec_lo = EXIT_STRICT_WQM [[ENTER_STRICT_WQM]]
+  ; CHECK-NEXT:   DBG_VALUE $noreg, $noreg
+  ; CHECK-NEXT:   DBG_VALUE $noreg, $noreg
   ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32 = S_AND_SAVEEXEC_B32 [[COPY]], implicit-def $exec, implicit-def $scc, implicit $exec
-  ; CHECK-NEXT:   DBG_VALUE $noreg, $noreg
-  ; CHECK-NEXT:   DBG_VALUE $noreg, $noreg
   ; CHECK-NEXT:   BUFFER_STORE_DWORD_OFFSET_exact [[DS_PARAM_LOAD]], [[DEF1]], [[DEF2]], 0, 0, 0, implicit $exec
   ; CHECK-NEXT:   $exec_lo = COPY [[S_AND_SAVEEXEC_B32_]]
   ; CHECK-NEXT:   undef [[COPY3:%[0-9]+]].sub0:vreg_64 = COPY [[DS_PARAM_LOAD]]
