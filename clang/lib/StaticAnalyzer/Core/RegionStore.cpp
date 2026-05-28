@@ -2136,9 +2136,10 @@ RegionStoreManager::getConstantValFromInitializer(const FieldRegion *R,
   const VarDecl *VD = VR->getDecl();
   QualType LeafTy = R->getDecl()->getType();
 
-  // We trust initializers of constants and globals when analyzing main().
-  if (!VD->getType().isConstQualified() && !LeafTy.isConstQualified() &&
-      (!IsMainAnalysis || !VD->hasGlobalStorage()))
+  bool TrustInit = (VD->getType().isConstQualified() ||
+                    LeafTy.isConstQualified() ||
+                    (IsMainAnalysis && VD->hasGlobalStorage()));
+  if (!TrustInit)
     return std::nullopt;
 
   const Expr *Init = VD->getAnyInitializer();
