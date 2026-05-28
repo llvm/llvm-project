@@ -32,7 +32,7 @@ void test() {
 }
 } // namespace badref1
 
-// Check reference kernel arguments witin structs or lambdas;
+// Check reference kernel parameters witin structs or lambdas;
 namespace badref2 {
 struct S { // expected-note 2{{within field of type 'S' declared here}}
   int a;
@@ -58,7 +58,7 @@ void test() {
 }
 } // namespace badref2
 
-// Check references within array kernel arguments.
+// Check references within array kernel parameters.
 namespace badref3 {
 struct S { // expected-note {{within field of type 'S' declared here}}
   int a;

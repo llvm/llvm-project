@@ -666,7 +666,7 @@ OutlinedFunctionDecl *BuildSYCLKernelEntryPointOutline(Sema &SemaRef,
   return OFD;
 }
 
-class KernelArgsChecker : public ConstSubobjectVisitor<KernelArgsChecker> {
+class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
   SemaSYCL &SemaSYCLRef;
   bool IsValid = true;
   using ObjectAccess =
@@ -694,8 +694,8 @@ class KernelArgsChecker : public ConstSubobjectVisitor<KernelArgsChecker> {
   }
 
 public:
-  KernelArgsChecker(SemaSYCL &SR, SourceLocation Loc)
-      : ConstSubobjectVisitor<KernelArgsChecker>(SR.getASTContext()),
+  KernelParamsChecker(SemaSYCL &SR, SourceLocation Loc)
+      : ConstSubobjectVisitor<KernelParamsChecker>(SR.getASTContext()),
         SemaSYCLRef(SR) {}
 
   void checkParameter(const ParmVarDecl *PVD) {
@@ -726,8 +726,8 @@ public:
       auto DirectParent = ObjectAccessPath.back();
       // Reference cannot be a base, so just assume we came via a FieldDecl.
       if (isa<const ParmVarDecl *>(DirectParent)) {
-        // If reference is a kernel argument, there is nothing to do. We allow
-        // references in direct kernel arguments for better performance of the
+        // If reference is a kernel parameter, there is nothing to do. We allow
+        // references in direct kernel parameters for better performance of the
         // host code and we eliminate them when building actual kernel.
         return true;
       }
@@ -752,8 +752,8 @@ public:
   bool isInvalid() { return !IsValid; }
 };
 
-bool verifyKernelArguments(FunctionDecl *FD, SemaSYCL &SemaSYCLRef) {
-  KernelArgsChecker KAC(SemaSYCLRef, FD->getLocation());
+bool verifyKernelParams(FunctionDecl *FD, SemaSYCL &SemaSYCLRef) {
+  KernelParamsChecker KAC(SemaSYCLRef, FD->getLocation());
   for (auto Param : FD->parameters())
     KAC.checkParameter(Param);
   return KAC.isInvalid();
@@ -784,7 +784,7 @@ StmtResult SemaSYCL::BuildSYCLKernelCallStmt(FunctionDecl *FD,
       getASTContext().getSYCLKernelInfo(SKEPAttr->getKernelName());
   assert(declaresSameEntity(SKI.getKernelEntryPointDecl(), FD) &&
          "SYCL kernel name conflict");
-  if (verifyKernelArguments(FD, *this))
+  if (verifyKernelParams(FD, *this))
     return StmtError();
 
   // Build the outline of the synthesized device entry point function.
