@@ -899,16 +899,14 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
 VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
   if (isa<SCEVConstant, SCEVUnknown>(S))
     return nullptr;
-  BasicBlock *PH =
-      cast<VPIRBasicBlock>(Builder.getPlan().getEntry())->getIRBasicBlock();
+  VPlan &Plan = Builder.getPlan();
+  BasicBlock *PH = cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock();
   for (Value *V : SE.getSCEVValues(S)) {
-    if (V->getType() != S->getType())
-      continue;
     // Only reuse instructions in the plan's entry block, as instructions in
     // sibling branches may not dominate the entry block.
     auto *I = dyn_cast<Instruction>(V);
     if (!I)
-      return Builder.getPlan().getOrAddLiveIn(V);
+      return Plan.getOrAddLiveIn(V);
     if (I->getParent() != PH)
       continue;
     SmallVector<Instruction *> DropPoisonGeneratingInsts;
@@ -916,7 +914,7 @@ VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
       continue;
     for (Instruction *DropI : DropPoisonGeneratingInsts)
       SCEVExpander::dropPoisonGeneratingAnnotationsAndReinfer(SE, DropI);
-    return Builder.getPlan().getOrAddLiveIn(V);
+    return Plan.getOrAddLiveIn(V);
   }
   return nullptr;
 }

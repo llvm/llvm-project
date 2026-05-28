@@ -5283,7 +5283,7 @@ void VPlanTransforms::materializeAliasMaskCheckBlock(
 
 void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
                                                   ScalarEvolution &SE) {
-  auto *Entry = cast<VPIRBasicBlock>(Plan.getEntry());
+  auto *Entry = Plan.getEntry();
   VPBuilder Builder(Entry, Entry->begin());
   VPSCEVExpander Expander(Builder, SE);
 

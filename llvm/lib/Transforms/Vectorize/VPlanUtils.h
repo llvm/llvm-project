@@ -195,8 +195,7 @@ class VPSCEVExpander {
   VPValue *tryToReuseIRValue(const SCEV *S);
 
 public:
-  VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE,
-                 DebugLoc DL = DebugLoc())
+  VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL = {})
       : Builder(Builder), SE(SE), DL(DL) {}
 
   /// Try to expand \p S into recipes and live-ins using the builder. Returns
