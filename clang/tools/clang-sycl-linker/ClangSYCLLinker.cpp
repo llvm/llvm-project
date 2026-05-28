@@ -184,7 +184,7 @@ Error executeCommands(StringRef ExecutablePath, ArrayRef<StringRef> Args) {
 }
 
 Expected<SmallVector<std::string>> getInput(const ArgList &Args) {
-  // Collect all input bitcode files to be passed to the device linking stage.
+  // Collect all input bitcode files to be passed to the linking stage.
   SmallVector<std::string> BitcodeFiles;
   for (const opt::Arg *Arg : Args.filtered(OPT_INPUT)) {
     std::optional<std::string> Filename = std::string(Arg->getValue());
@@ -217,28 +217,39 @@ Expected<std::unique_ptr<Module>> getBitcodeModule(StringRef File,
   return createStringError(Err.getMessage());
 }
 
-/// Gather all device library files.
-/// The list of files and its location are passed from driver.
-Expected<SmallVector<std::string>> getDeviceLibs(const ArgList &Args) {
-  SmallVector<std::string> DeviceLibFiles;
-  StringRef LibraryPath;
-  if (Arg *A = Args.getLastArg(OPT_library_path_EQ))
-    LibraryPath = A->getValue();
-  if (Arg *A = Args.getLastArg(OPT_device_libs_EQ)) {
-    if (A->getValues().size() == 0)
-      return createStringError(
-          "Number of device library files cannot be zero.");
-    for (StringRef Val : A->getValues()) {
-      SmallString<128> LibName(LibraryPath);
-      llvm::sys::path::append(LibName, Val);
-      if (llvm::sys::fs::exists(LibName))
-        DeviceLibFiles.push_back(std::string(LibName));
-      else
-        return createStringError("'" + LibName +
-                                 "' device library file is not found.");
-    }
+std::optional<std::string> findFile(StringRef Dir, const Twine &Name) {
+  SmallString<128> Path(Dir);
+  llvm::sys::path::append(Path, Name);
+  if (sys::fs::exists(Path))
+    return static_cast<std::string>(Path);
+  return std::nullopt;
+}
+
+std::optional<std::string> searchLibrary(StringRef Name,
+                                         ArrayRef<StringRef> SearchPaths) {
+  for (StringRef Dir : SearchPaths)
+    if (std::optional<std::string> File = findFile(Dir, Name))
+      return File;
+  return std::nullopt;
+}
+
+/// Gather all library files. The list of files and its location are passed from
+/// driver.
+Expected<SmallVector<std::string>> getBCLibraryNames(const ArgList &Args) {
+  SmallVector<StringRef> LibraryPaths;
+  for (const opt::Arg *Arg : Args.filtered(OPT_library_path))
+    LibraryPaths.push_back(Arg->getValue());
+
+  SmallVector<std::string> LibraryFiles;
+  for (const opt::Arg *Arg : Args.filtered(OPT_bc_library_S)) {
+    std::optional<std::string> LibName =
+        searchLibrary(Arg->getValue(), LibraryPaths);
+    if (!LibName)
+      return createStringError("'%s' library file not found.", Arg->getValue());
+    LibraryFiles.push_back(std::move(*LibName));
   }
-  return DeviceLibFiles;
+
+  return LibraryFiles;
 }
 
 struct LinkResult {
@@ -252,7 +263,7 @@ struct LinkResult {
 /// first input that supplies a triple as canonical. Issue an error if any
 /// triple inputs disagree.
 /// 2. Link all input bitcode images into one image using the linkInModule API.
-/// 3. Gather all device library bitcode images.
+/// 3. Gather all library bitcode images.
 /// 4. Link all the images gathered in Step 3 with the output of Step 2 using
 /// linkInModule API. LinkOnlyNeeded flag is used.
 Expected<LinkResult> link(ArrayRef<std::string> InputFiles, const ArgList &Args,
@@ -261,10 +272,10 @@ Expected<LinkResult> link(ArrayRef<std::string> InputFiles, const ArgList &Args,
 
   assert(InputFiles.size() && "No inputs to link");
 
-  // Get all device library files, if any.
-  Expected<SmallVector<std::string>> DeviceLibFiles = getDeviceLibs(Args);
-  if (!DeviceLibFiles)
-    return DeviceLibFiles.takeError();
+  // Get all library files.
+  Expected<SmallVector<std::string>> BCLibFiles = getBCLibraryNames(Args);
+  if (!BCLibFiles)
+    return BCLibFiles.takeError();
 
   // Create a new file to write the linked file to.
   auto BitcodeOutput =
@@ -275,7 +286,7 @@ Expected<LinkResult> link(ArrayRef<std::string> InputFiles, const ArgList &Args,
   if (Verbose || DryRun) {
     std::string Inputs = llvm::join(InputFiles.begin(), InputFiles.end(), ", ");
     std::string LibInputs =
-        llvm::join((*DeviceLibFiles).begin(), (*DeviceLibFiles).end(), ", ");
+        llvm::join((*BCLibFiles).begin(), (*BCLibFiles).end(), ", ");
     errs() << formatv("link: inputs: {0} libfiles: {1} output: {2}\n", Inputs,
                       LibInputs, *BitcodeOutput);
   }
@@ -311,8 +322,8 @@ Expected<LinkResult> link(ArrayRef<std::string> InputFiles, const ArgList &Args,
     return createStringError(
         "Target triple must be specified or inferable from inputs");
 
-  // Link in device library files.
-  for (auto &File : *DeviceLibFiles) {
+  // Link in library files.
+  for (auto &File : *BCLibFiles) {
     auto LibMod = getBitcodeModule(File, C);
     if (!LibMod)
       return LibMod.takeError();
@@ -645,19 +656,19 @@ static bool canSkipModuleSplit(IRSplitMode Mode, const Module &M,
 }
 
 /// Performs the following steps:
-/// 1. Link all input bitcode files together with device library files.
+/// 1. Link all input bitcode files together with library files.
 /// 2. Optionally split the linked module according to the requested
 ///    IRSplitMode.
 /// 3. Run SPIR-V code generation on each (split) module.
-/// 4. Optionally run AOT compilation when targeting an Intel offload arch.
+/// 4. Optionally run AOT compilation when targeting an Intel HW arch.
 /// 5. Pack the resulting images into a single OffloadBinary written to the
 ///    output file.
 Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
-  llvm::TimeTraceScope TimeScope("SYCL device linking");
+  llvm::TimeTraceScope TimeScope("SYCL linking");
 
   LLVMContext C;
 
-  // Link all input bitcode files and device library files, if any.
+  // Link all input bitcode files and library files.
   Expected<LinkResult> LinkedOrErr = link(Files, Args, C);
   if (!LinkedOrErr)
     return LinkedOrErr.takeError();

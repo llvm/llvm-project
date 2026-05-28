@@ -21,7 +21,7 @@
 ; RUN: mkdir -p %t/libs
 ; RUN: touch %t/libs/lib1.bc
 ; RUN: touch %t/libs/lib2.bc
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc --library-path=%t/libs --device-libs=lib1.bc,lib2.bc -o a.spv 2>&1 \
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc --library-path=%t/libs --bc-library lib1.bc --bc-library lib2.bc -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS
 ; DEVLIBS:      link: inputs: {{.*}}.bc  libfiles: {{.*}}lib1.bc, {{.*}}lib2.bc  output: [[LLVMLINKOUT:.*]].bc
 ; DEVLIBS-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: a_0.spv
@@ -33,12 +33,9 @@
 ; FILETYPEERROR: Unsupported file type
 ;
 ; Test to see if device library related errors are emitted.
-; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc --library-path=%t/libs --device-libs= -o a.spv 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=DEVLIBSERR1
-; DEVLIBSERR1: Number of device library files cannot be zero
-; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc --library-path=%t/libs --device-libs=lib1.bc,lib2.bc,lib3.bc -o a.spv 2>&1 \
+; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc --library-path=%t/libs --bc-library lib1.bc --bc-library lib2.bc --bc-library lib3.bc -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBSERR2
-; DEVLIBSERR2: '{{.*}}lib3.bc' device library file is not found
+; DEVLIBSERR2: '{{.*}}lib3.bc' library file not found
 ;
 ; Test AOT compilation for an Intel GPU.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none -arch=bmg_g21 %t/input1.bc %t/input2.bc -o %t/aot-gpu.out 2>&1 \
