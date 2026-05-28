@@ -244,21 +244,9 @@ public:
         (Scope == WarningScope::CrossTU)
             ? diag::warn_lifetime_safety_cross_tu_param_suggestion
             : diag::warn_lifetime_safety_intra_tu_param_suggestion;
-    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
-        ParmToAnnotate->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
-    StringRef FixItText = " [[clang::lifetimebound]]";
-    if (!ParmToAnnotate->getIdentifier()) {
-      // For unnamed parameters, placing attributes after the type would be
-      // parsed as a type attribute, not a parameter attribute.
-      InsertionPoint = ParmToAnnotate->getBeginLoc();
-      FixItText = "[[clang::lifetimebound]] ";
-    } else if (ParmToAnnotate->hasDefaultArg()) {
-      // If the parameter has a default argument, place the attribute after the
-      // named argument.
-      InsertionPoint =
-          Lexer::getLocForEndOfToken(ParmToAnnotate->getLocation(), 0,
-                                     S.getSourceManager(), S.getLangOpts());
-    }
+
+    auto [InsertionPoint, FixItText] = getLifetimeBoundFixIt(ParmToAnnotate);
+
     S.Diag(ParmToAnnotate->getBeginLoc(), DiagID)
         << ParmToAnnotate->getSourceRange()
         << FixItHint::CreateInsertion(InsertionPoint, FixItText);
@@ -302,9 +290,18 @@ public:
         Scope == WarningScope::CrossTU
             ? diag::warn_lifetime_safety_cross_tu_misplaced_lifetimebound
             : diag::warn_lifetime_safety_intra_tu_misplaced_lifetimebound;
-    S.Diag(Lexer::getLocForEndOfToken(FDecl->getEndLoc(), 0,
-                                      S.getSourceManager(), S.getLangOpts()),
-           DiagID);
+
+    auto [InsertionPoint, FixItText] = getLifetimeBoundFixIt(FDecl);
+
+    // Do not emit fix-its in macros or at invalid locations.
+    bool IsMacro =
+        FDecl->getBeginLoc().isMacroID() || InsertionPoint.isMacroID();
+
+    if (IsMacro || InsertionPoint.isInvalid())
+      S.Diag(FDecl->getLocation(), DiagID);
+    else
+      S.Diag(InsertionPoint, DiagID)
+          << FixItHint::CreateInsertion(InsertionPoint, FixItText);
 
     S.Diag(Attr->getLocation(), diag::note_lifetime_safety_lifetimebound_here)
         << Attr->getRange();
@@ -320,7 +317,19 @@ public:
         Scope == WarningScope::CrossTU
             ? diag::warn_lifetime_safety_cross_tu_misplaced_lifetimebound
             : diag::warn_lifetime_safety_intra_tu_misplaced_lifetimebound;
-    S.Diag(PVDDecl->getBeginLoc(), DiagID) << PVDDecl->getSourceRange();
+
+    auto [InsertionPoint, FixItText] = getLifetimeBoundFixIt(PVDDecl);
+
+    // Do not emit fix-its in macros or at invalid locations.
+    bool IsMacro =
+        PVDDecl->getBeginLoc().isMacroID() || InsertionPoint.isMacroID();
+
+    if (IsMacro || InsertionPoint.isInvalid())
+      S.Diag(PVDDecl->getBeginLoc(), DiagID) << PVDDecl->getSourceRange();
+    else
+      S.Diag(PVDDecl->getBeginLoc(), DiagID)
+          << PVDDecl->getSourceRange()
+          << FixItHint::CreateInsertion(InsertionPoint, FixItText);
 
     S.Diag(Attr->getLocation(), diag::note_lifetime_safety_lifetimebound_here)
         << Attr->getRange();
@@ -332,28 +341,13 @@ public:
     unsigned DiagID = (Scope == WarningScope::CrossTU)
                           ? diag::warn_lifetime_safety_cross_tu_this_suggestion
                           : diag::warn_lifetime_safety_intra_tu_this_suggestion;
-    const auto MDL = MD->getTypeSourceInfo()->getTypeLoc();
-    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
-        MDL.getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
-    if (const auto *FPT = MD->getType()->getAs<FunctionProtoType>();
-        FPT && FPT->hasTrailingReturn()) {
-      // For trailing return types, 'getEndLoc()' includes the return type
-      // after '->', placing the attribute in an invalid position.
-      // Instead use 'getLocalRangeEnd()' which gives the '->' location
-      // for trailing returns, so find the last token before it.
-      const auto FTL = MDL.getAs<FunctionTypeLoc>();
-      assert(FTL);
-      InsertionPoint = Lexer::getLocForEndOfToken(
-          Lexer::findPreviousToken(FTL.getLocalRangeEnd(), S.getSourceManager(),
-                                   S.getLangOpts(),
-                                   /*IncludeComments=*/false)
-              ->getLocation(),
-          0, S.getSourceManager(), S.getLangOpts());
-    }
+
+    auto [InsertionPoint, FixItText] = getLifetimeBoundFixIt(MD);
+
     S.Diag(InsertionPoint, DiagID)
         << MD->getNameInfo().getSourceRange()
-        << FixItHint::CreateInsertion(InsertionPoint,
-                                      " [[clang::lifetimebound]]");
+        << FixItHint::CreateInsertion(InsertionPoint, FixItText);
+
     S.Diag(EscapeExpr->getBeginLoc(),
            diag::note_lifetime_safety_suggestion_returned_here)
         << EscapeExpr->getSourceRange();
@@ -401,6 +395,50 @@ public:
   }
 
 private:
+  std::pair<SourceLocation, StringRef>
+  getLifetimeBoundFixIt(const ParmVarDecl *Decl) {
+    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
+        Decl->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+    StringRef FixItText = " [[clang::lifetimebound]]";
+
+    if (!Decl->getIdentifier()) {
+      // For unnamed parameters, placing attributes after the type would be
+      // parsed as a type attribute, not a parameter attribute.
+      InsertionPoint = Decl->getBeginLoc();
+      FixItText = "[[clang::lifetimebound]] ";
+    } else if (Decl->hasDefaultArg()) {
+      // If the parameter has a default argument, place the attribute after the
+      // named argument.
+      InsertionPoint = Lexer::getLocForEndOfToken(
+          Decl->getLocation(), 0, S.getSourceManager(), S.getLangOpts());
+    }
+    return {InsertionPoint, FixItText};
+  }
+
+  std::pair<SourceLocation, StringRef>
+  getLifetimeBoundFixIt(const CXXMethodDecl *MD) {
+    const auto MDL = MD->getTypeSourceInfo()->getTypeLoc();
+    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
+        MDL.getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+
+    if (const auto *FPT = MD->getType()->getAs<FunctionProtoType>();
+        FPT && FPT->hasTrailingReturn()) {
+      // For trailing return types, 'getEndLoc()' includes the return type
+      // after '->', placing the attribute in an invalid position.
+      // Instead use 'getLocalRangeEnd()' which gives the '->' location
+      // for trailing returns, so find the last token before it.
+      const auto FTL = MDL.getAs<FunctionTypeLoc>();
+      assert(FTL);
+      InsertionPoint = Lexer::getLocForEndOfToken(
+          Lexer::findPreviousToken(FTL.getLocalRangeEnd(), S.getSourceManager(),
+                                   S.getLangOpts(),
+                                   /*IncludeComments=*/false)
+              ->getLocation(),
+          0, S.getSourceManager(), S.getLangOpts());
+    }
+    return {InsertionPoint, " [[clang::lifetimebound]]"};
+  }
+
   std::string getDiagSubjectDescription(const ValueDecl *VD) {
     std::string Res;
     llvm::raw_string_ostream OS(Res);
