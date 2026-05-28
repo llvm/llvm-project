@@ -9,6 +9,8 @@
 
 // RUN: not %crash_opt %clang -c %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=NOTAR
 
+// RUN: not %crash_opt %clang -fcrash-diagnostics-tar=%t/nonexistent/repro.tar -c %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=INVALID
+
 #pragma clang __debug parser_crash
 
 // TAR: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
@@ -20,6 +22,8 @@
 // NOTAR: .c
 // NOTAR: .sh
 // NOTAR-NOT: .tar
+
+// INVALID: Error creating reproducer tarball:
 
 // SH: # Crash reproducer for
 // C: # 1 "
