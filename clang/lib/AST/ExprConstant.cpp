@@ -10975,7 +10975,7 @@ public:
 bool ReflectionEvaluator::VisitCXXReflectExpr(const CXXReflectExpr *E) {
   switch (E->getKind()) {
     case ReflectionKind::Null: {
-      APValue Result(ReflectionKind::Null, nullptr);
+      APValue Result(ReflectionKind::Null, /*Operand=*/nullptr);
       return Success(Result, E);
     }
     case ReflectionKind::Type: {
