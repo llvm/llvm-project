@@ -99,8 +99,8 @@ define i32 @and32_0xfffff000(i32 %x) {
 ;
 ; RV64I-LABEL: and32_0xfffff000:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srliw a0, a0, 12
-; RV64I-NEXT:    slli a0, a0, 12
+; RV64I-NEXT:    lui a1, 1048575
+; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    ret
   %a = and i32 %x, -4096
   ret i32 %a
@@ -114,10 +114,7 @@ define i32 @and32_0xfffffa00(i32 %x) {
 ;
 ; RV64I-LABEL: and32_0xfffffa00:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, 1
-; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    addi a1, a1, -1536
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    andi a0, a0, -1536
 ; RV64I-NEXT:    ret
   %a = and i32 %x, -1536
   ret i32 %a

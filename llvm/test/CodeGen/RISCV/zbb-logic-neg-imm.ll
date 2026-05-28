@@ -9,26 +9,11 @@
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64,ZBS,ZBS64
 
 define i32 @and0xabcdefff(i32 %x) {
-; RV32-LABEL: and0xabcdefff:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, 344865
-; RV32-NEXT:    andn a0, a0, a1
-; RV32-NEXT:    ret
-;
-; NOZBS64-LABEL: and0xabcdefff:
-; NOZBS64:       # %bb.0:
-; NOZBS64-NEXT:    lui a1, 1048404
-; NOZBS64-NEXT:    addi a1, a1, 801
-; NOZBS64-NEXT:    slli a1, a1, 12
-; NOZBS64-NEXT:    andn a0, a0, a1
-; NOZBS64-NEXT:    ret
-;
-; ZBS64-LABEL: and0xabcdefff:
-; ZBS64:       # %bb.0:
-; ZBS64-NEXT:    lui a1, 869153
-; ZBS64-NEXT:    bclri a1, a1, 31
-; ZBS64-NEXT:    andn a0, a0, a1
-; ZBS64-NEXT:    ret
+; CHECK-LABEL: and0xabcdefff:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 344865
+; CHECK-NEXT:    andn a0, a0, a1
+; CHECK-NEXT:    ret
   %and = and i32 %x, -1412567041
   ret i32 %and
 }
