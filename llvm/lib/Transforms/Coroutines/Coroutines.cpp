@@ -279,6 +279,9 @@ void coro::Shape::analyze(Function &F,
       case Intrinsic::coro_is_in_ramp:
         CoroIsInRampInsts.push_back(cast<CoroIsInRampInst>(II));
         break;
+      case Intrinsic::coro_outside_frame:
+        OutsideFrames.push_back(cast<CoroOutsideFrameInst>(II));
+        break;
       }
     }
   }

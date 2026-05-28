@@ -31,7 +31,7 @@ int f() {
   // CHECK: %[[RetVal:.+]] = alloca i32
   // CHECK-NEXT: %[[GroActive:.+]] = alloca i1
   // CHECK-NEXT: %[[Promise:.+]] = alloca %"struct.std::coroutine_traits<int>::promise_type", align 1
-  // CHECK-NEXT: %[[CoroGro:.+]] = alloca %struct.GroType, {{.*}} !coro.outside.frame ![[OutFrameMetadata:.+]]
+  // CHECK-NEXT: %[[CoroGro:.+]] = alloca %struct.GroType
 
   // CHECK: %[[Size:.+]] = call i64 @llvm.coro.size.i64()
   // CHECK-NEXT: call noalias noundef nonnull ptr @_Znwm(i64 noundef %[[Size]])
@@ -40,6 +40,7 @@ int f() {
   // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr %[[Promise]])
   // CHECK-NEXT: call void @_ZNSt16coroutine_traitsIiJEE12promise_typeC1Ev(
   // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr %[[CoroGro]])
+  // CHECK-NEXT: call void @llvm.coro.outside.frame(ptr %[[CoroGro]])
   // CHECK-NEXT: call void @_ZNSt16coroutine_traitsIiJEE12promise_type17get_return_objectEv({{.*}} %[[CoroGro]]
   // CHECK-NEXT: store i1 true, ptr %[[GroActive]]
 
@@ -154,4 +155,3 @@ const Task example() {
 }
 
 } // namespace gh148953
-// CHECK: ![[OutFrameMetadata]] = !{}

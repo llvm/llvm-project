@@ -271,6 +271,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the Metadata Info
 
+* The `coro.outside.frame` metadata has been replaced by [an intrinsic with the
+  same name](coro.outside.frame). The old metadata still works but may stop
+  working in a future release.
+
 ### Changes to the Debug Info
 
 ### Changes to the LLVM tools
