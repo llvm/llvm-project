@@ -27,7 +27,7 @@ void g() {
 }
 
 // Block-scope function declarations behave identically without extern
-// (C11 6.2.2p5, C++ [dcl.stc]p5).
+// (C11 6.2.2p5, C++ [dcl.meaning.general]/3.5).
 static void h();
 // CHECK: FunctionDecl {{.*}} h 'void ()' static internal-linkage
 void g2() {
