@@ -26,6 +26,24 @@
 ; DEVLIBS:      link: inputs: {{.*}}.bc  libfiles: {{.*}}lib1.bc, {{.*}}lib2.bc  output: [[LLVMLINKOUT:.*]].bc
 ; DEVLIBS-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: a_0.spv
 ;
+; Test -L short form (joined) and --bc-library= joined form.
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L%t/libs --bc-library=lib1.bc -o a.spv 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=DEVLIBS-SHORT
+; DEVLIBS-SHORT: link: inputs: {{.*}}.bc  libfiles: {{.*}}libs/lib1.bc  output: {{.*}}.bc
+;
+; Test that search continues past the first -L when the library is not found there. lib1.bc exists only in %t/libs (the second -L).
+; RUN: mkdir -p %t/empty
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L %t/empty -L %t/libs --bc-library lib1.bc -o a.spv 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=DEVLIBS-FALLTHROUGH
+; DEVLIBS-FALLTHROUGH: link: inputs: {{.*}}.bc  libfiles: {{.*}}libs/lib1.bc  output: {{.*}}.bc
+;
+; Test that -L paths are searched in order: when the same name exists in multiple -L dirs, the first one wins.
+; RUN: mkdir -p %t/libs2
+; RUN: touch %t/libs/shadow.bc %t/libs2/shadow.bc
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L %t/libs2 -L %t/libs --bc-library shadow.bc -o a.spv 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=DEVLIBS-ORDER
+; DEVLIBS-ORDER: link: inputs: {{.*}}.bc  libfiles: {{.*}}libs2/shadow.bc  output: {{.*}}.bc
+;
 ; Test a simple case with a random file (not bitcode) as input.
 ; RUN: touch %t/dummy.o
 ; RUN: not clang-sycl-linker %t/dummy.o -o a.spv 2>&1 \
