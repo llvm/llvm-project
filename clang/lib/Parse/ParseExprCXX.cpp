@@ -1891,13 +1891,14 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
           << (CK == Sema::ConditionKind::Switch);
     else
       Diag(Tok.getLocation(), getLangOpts().C2y
-                                  ? diag::warn_c2y_compat_init_statement
-                                  : diag::ext_c2y_init_statement)
+                                  ? diag::warn_c2y_compat_decl_statement
+                                  : diag::ext_c2y_decl_statement)
           << (CK == Sema::ConditionKind::Switch);
   };
 
   if (!getLangOpts().CPlusPlus) {
-    if (Tok.isOneOf(tok::kw_static_assert, tok::kw__Static_assert)) {
+    if (isDeclarationStatement() && !isCXXSimpleDeclaration(false)) {
+      // Accept a C2y declaration, *only* if it's not a simple declaration.
       WarnOnInit();
       DeclGroupPtrTy DG;
       SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
@@ -1905,7 +1906,12 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
       // C2y replaces the init-statement in C++17 to be a declaration instead.
       DG = ParseDeclaration(DeclaratorContext::SelectionInit, DeclEnd, attrs,
                             DeclSpecAttrs);
-      *InitStmt = Actions.ActOnDeclStmt(DG, DeclStart, DeclEnd);
+      StmtResult DeclStmt = Actions.ActOnDeclStmt(DG, DeclStart, DeclEnd);
+      if (InitStmt == nullptr)
+        Diag(DeclStmt.get()->getBeginLoc(), diag::err_expected_expression)
+            << DeclStmt.get()->getSourceRange();
+      else
+        *InitStmt = DeclStmt;
       return ParseCondition(nullptr, Loc, CK, MissingOK);
     }
 

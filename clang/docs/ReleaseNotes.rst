@@ -219,7 +219,10 @@ C Language Changes
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
-- Clang now supports C2y's new syntax for if and switch statements with initializer and condition variables, as specified in `N3356 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3356.htm>`_. For example:
+- Clang now supports C2y's new syntax for ``if`` and ``switch`` statements with
+  initializer and condition variables, as specified in
+  `N3356 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3356.htm>`_. For
+  example:
 
   .. code-block:: c
 
