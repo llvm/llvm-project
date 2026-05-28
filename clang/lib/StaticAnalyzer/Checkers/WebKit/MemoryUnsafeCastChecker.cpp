@@ -123,10 +123,15 @@ void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
             unless(anyOf(hasSourceExpression(hasDescendant(cxxThisExpr())),
                          hasType(templateTypeParmDecl()))));
   auto MatchExprPtrVoidCast = cxxStaticCastExpr(
-      hasSourceExpression(cxxStaticCastExpr(
-          hasType(pointerType(pointee(voidType()))),
-          hasSourceExpression(ignoringImpCasts(
-              hasTypePointingTo(cxxRecordDecl().bind(BaseNode)))))),
+      anyOf(
+          hasSourceExpression(cxxStaticCastExpr(
+              hasType(pointerType(pointee(voidType()))),
+              hasSourceExpression(ignoringImpCasts(
+                  hasTypePointingTo(cxxRecordDecl().bind(BaseNode)))))),
+          hasSourceExpression(callExpr(
+              hasType(pointerType(pointee(voidType()))),
+              hasAnyArgument(ignoringImpCasts(
+                  hasTypePointingTo(cxxRecordDecl().bind(BaseNode))))))),
       hasTypePointingTo(cxxRecordDecl(isDerivedFrom(equalsBoundNode(BaseNode)))
                             .bind(DerivedNode)));
 
@@ -139,6 +144,22 @@ void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
   auto Matches =
       match(stmt(forEachDescendant(Cast)), *D->getBody(), AM.getASTContext());
   for (BoundNodes Match : Matches)
+    emitDiagnostics(Match, BR, ADC, this, BT);
+
+  // Match calls returning derived type where an argument is static_cast<void*>(Base*)
+  auto MatchCallPtrVoidArgCast = callExpr(
+      hasAnyArgument(
+          cxxStaticCastExpr(
+              hasType(pointerType(pointee(voidType()))),
+              hasSourceExpression(ignoringImpCasts(
+                  hasTypePointingTo(cxxRecordDecl().bind(BaseNode)))))
+              .bind(WarnRecordDecl)),
+      hasTypePointingTo(
+          cxxRecordDecl(isDerivedFrom(equalsBoundNode(BaseNode))).bind(DerivedNode)));
+  auto CallArgCast = stmt(MatchCallPtrVoidArgCast);
+  auto MatchesCallArgCast =
+      match(stmt(forEachDescendant(CallArgCast)), *D->getBody(), AM.getASTContext());
+  for (BoundNodes Match : MatchesCallArgCast)
     emitDiagnostics(Match, BR, ADC, this, BT);
 
   // Match casts between unrelated types and warn

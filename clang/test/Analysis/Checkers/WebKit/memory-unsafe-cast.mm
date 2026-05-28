@@ -61,10 +61,23 @@ void testUnrelated(Class1 *c1) {
 struct Base : RefCountable { virtual ~Base() {} };
 struct Derived : Base { int extra; };
 
+void* returnCast(Base* base) {
+  return static_cast<void *>(base);
+}
+
+Derived* fnArgCast(void* base) {
+  return static_cast<Derived*>(base);
+}
+
 void fn_cast_01(Base* base) {
   auto* d1 = static_cast<Derived*>(base);
   // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
-
   auto* d2 = static_cast<Derived*>(static_cast<void*>(base));
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  auto* d3 = static_cast<Derived*>(returnCast(base));
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  auto* d4 = fnArgCast(static_cast<void*>(base));
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  fnArgCast(static_cast<void*>(base));
   // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
 }
