@@ -20,18 +20,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-bool ClassDescriptorV2::Read_objc_class(
-    Process *process, std::unique_ptr<objc_class_t> &objc_class) const {
-  objc_class = std::make_unique<objc_class_t>();
-
-  bool ret = objc_class->Read(process, m_objc_class_ptr);
-
-  if (!ret)
-    objc_class.reset();
-
-  return ret;
-}
-
 static lldb::addr_t GetClassDataMask(Process *process) {
   switch (process->GetAddressByteSize()) {
   case 4:
@@ -45,8 +33,8 @@ static lldb::addr_t GetClassDataMask(Process *process) {
   return LLDB_INVALID_ADDRESS;
 }
 
-bool ClassDescriptorV2::objc_class_t::Read(Process *process,
-                                           lldb::addr_t addr) {
+llvm::Expected<ClassDescriptorV2::objc_class_t>
+ClassDescriptorV2::objc_class_t::Read(Process *process, lldb::addr_t addr) {
   size_t ptr_size = process->GetAddressByteSize();
 
   size_t objc_class_size = ptr_size    // uintptr_t isa;
@@ -59,9 +47,8 @@ bool ClassDescriptorV2::objc_class_t::Read(Process *process,
   Status error;
 
   process->ReadMemory(addr, objc_class_buf.GetBytes(), objc_class_size, error);
-  if (error.Fail()) {
-    return false;
-  }
+  if (error.Fail())
+    return error.takeError();
 
   DataExtractor extractor(objc_class_buf.GetBytes(), objc_class_size,
                           process->GetByteOrder(),
@@ -69,22 +56,26 @@ bool ClassDescriptorV2::objc_class_t::Read(Process *process,
 
   lldb::offset_t cursor = 0;
 
-  m_isa = extractor.GetAddress_unchecked(&cursor);        // uintptr_t isa;
-  m_superclass = extractor.GetAddress_unchecked(&cursor); // Class superclass;
-  m_cache_ptr = extractor.GetAddress_unchecked(&cursor);  // void *cache;
-  m_vtable_ptr = extractor.GetAddress_unchecked(&cursor); // IMP *vtable;
+  ObjCLanguageRuntime::ObjCISA isa =
+      extractor.GetAddress_unchecked(&cursor); // uintptr_t isa;
+  ObjCLanguageRuntime::ObjCISA superclass =
+      extractor.GetAddress_unchecked(&cursor); // Class superclass;
+  lldb::addr_t cache_ptr =
+      extractor.GetAddress_unchecked(&cursor); // void *cache;
+  lldb::addr_t vtable_ptr =
+      extractor.GetAddress_unchecked(&cursor); // IMP *vtable;
   lldb::addr_t data_NEVER_USE =
       extractor.GetAddress_unchecked(&cursor); // uintptr_t data_NEVER_USE;
 
-  m_flags = (uint8_t)(data_NEVER_USE & (lldb::addr_t)3);
-  m_data_ptr = data_NEVER_USE & GetClassDataMask(process);
+  uint8_t flags = (uint8_t)(data_NEVER_USE & (lldb::addr_t)3);
+  lldb::addr_t data_ptr = data_NEVER_USE & GetClassDataMask(process);
 
   if (ABISP abi_sp = process->GetABI()) {
-    m_isa = abi_sp->FixCodeAddress(m_isa);
-    m_superclass = abi_sp->FixCodeAddress(m_superclass);
-    m_data_ptr = abi_sp->FixCodeAddress(m_data_ptr);
+    isa = abi_sp->FixCodeAddress(isa);
+    superclass = abi_sp->FixCodeAddress(superclass);
+    data_ptr = abi_sp->FixCodeAddress(data_ptr);
   }
-  return true;
+  return objc_class_t{isa, superclass, cache_ptr, vtable_ptr, data_ptr, flags};
 }
 
 bool ClassDescriptorV2::class_rw_t::Read(Process *process, lldb::addr_t addr) {
@@ -577,12 +568,14 @@ bool ClassDescriptorV2::Describe(
                        uint64_t)> const &ivar_func) const {
   lldb_private::Process *process = m_runtime.GetProcess();
 
-  std::unique_ptr<objc_class_t> objc_class;
   std::unique_ptr<class_ro_t> class_ro;
   std::unique_ptr<class_rw_t> class_rw;
 
-  if (!Read_objc_class(process, objc_class))
+  auto objc_class = objc_class_t::Read(process, m_objc_class_ptr);
+  if (!objc_class) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), objc_class.takeError(), "{0}");
     return false;
+  }
   if (!Read_class_row(process, *objc_class, class_ro, class_rw))
     return false;
 
@@ -655,12 +648,14 @@ ConstString ClassDescriptorV2::GetClassName() {
     lldb_private::Process *process = m_runtime.GetProcess();
 
     if (process) {
-      std::unique_ptr<objc_class_t> objc_class;
       std::unique_ptr<class_ro_t> class_ro;
       std::unique_ptr<class_rw_t> class_rw;
 
-      if (!Read_objc_class(process, objc_class))
+      auto objc_class = objc_class_t::Read(process, m_objc_class_ptr);
+      if (!objc_class) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Types), objc_class.takeError(), "{0}");
         return m_name;
+      }
       if (!Read_class_row(process, *objc_class, class_ro, class_rw))
         return m_name;
 
@@ -676,10 +671,11 @@ ObjCLanguageRuntime::ClassDescriptorSP ClassDescriptorV2::GetSuperclass() {
   if (!process)
     return ObjCLanguageRuntime::ClassDescriptorSP();
 
-  std::unique_ptr<objc_class_t> objc_class;
-
-  if (!Read_objc_class(process, objc_class))
+  auto objc_class = objc_class_t::Read(process, m_objc_class_ptr);
+  if (!objc_class) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), objc_class.takeError(), "{0}");
     return ObjCLanguageRuntime::ClassDescriptorSP();
+  }
 
   return m_runtime.ObjCLanguageRuntime::GetClassDescriptorFromISA(
       objc_class->m_superclass);
@@ -691,10 +687,11 @@ ObjCLanguageRuntime::ClassDescriptorSP ClassDescriptorV2::GetMetaclass() const {
   if (!process)
     return ObjCLanguageRuntime::ClassDescriptorSP();
 
-  std::unique_ptr<objc_class_t> objc_class;
-
-  if (!Read_objc_class(process, objc_class))
+  auto objc_class = objc_class_t::Read(process, m_objc_class_ptr);
+  if (!objc_class) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), objc_class.takeError(), "{0}");
     return ObjCLanguageRuntime::ClassDescriptorSP();
+  }
 
   lldb::addr_t candidate_isa = m_runtime.GetPointerISA(objc_class->m_isa);
 
@@ -706,12 +703,14 @@ uint64_t ClassDescriptorV2::GetInstanceSize() {
   lldb_private::Process *process = m_runtime.GetProcess();
 
   if (process) {
-    std::unique_ptr<objc_class_t> objc_class;
     std::unique_ptr<class_ro_t> class_ro;
     std::unique_ptr<class_rw_t> class_rw;
 
-    if (!Read_objc_class(process, objc_class))
+    auto objc_class = objc_class_t::Read(process, m_objc_class_ptr);
+    if (!objc_class) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), objc_class.takeError(), "{0}");
       return 0;
+    }
     if (!Read_class_row(process, *objc_class, class_ro, class_rw))
       return 0;
 
@@ -725,12 +724,15 @@ uint64_t ClassDescriptorV2::GetInstanceSize() {
 static uint8_t IS_SWIFT_STABLE = 1U << 1;
 
 LanguageType ClassDescriptorV2::GetImplementationLanguage() const {
-  std::unique_ptr<objc_class_t> objc_class;
-  if (auto *process = m_runtime.GetProcess())
-    if (Read_objc_class(process, objc_class))
+  if (auto *process = m_runtime.GetProcess()) {
+    auto objc_class = objc_class_t::Read(process, m_objc_class_ptr);
+    if (objc_class) {
       if (objc_class->m_flags & IS_SWIFT_STABLE)
         return lldb::eLanguageTypeSwift;
-
+    } else {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), objc_class.takeError(), "{0}");
+    }
+  }
   return lldb::eLanguageTypeObjC;
 }
 

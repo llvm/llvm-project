@@ -87,18 +87,8 @@ private:
     lldb::addr_t m_data_ptr = 0;
     uint8_t m_flags = 0;
 
-    objc_class_t() = default;
-
-    void Clear() {
-      m_isa = 0;
-      m_superclass = 0;
-      m_cache_ptr = 0;
-      m_vtable_ptr = 0;
-      m_data_ptr = 0;
-      m_flags = 0;
-    }
-
-    bool Read(Process *process, lldb::addr_t addr);
+    static llvm::Expected<objc_class_t> Read(Process *process,
+                                             lldb::addr_t addr);
   };
 
   struct class_ro_t {
@@ -257,9 +247,6 @@ private:
       : m_runtime(runtime), m_objc_class_ptr(isa), m_name(name),
         m_ivars_storage(), m_image_to_method_lists(), m_last_version_updated() {
   }
-
-  bool Read_objc_class(Process *process,
-                       std::unique_ptr<objc_class_t> &objc_class) const;
 
   bool Read_class_row(Process *process, const objc_class_t &objc_class,
                       std::unique_ptr<class_ro_t> &class_ro,
