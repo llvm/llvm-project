@@ -29,9 +29,6 @@
 
 using namespace llvm;
 
-static constexpr uint16_t SimtDialect = dwarf::DW_LLVM_LANG_DIALECT_simt;
-static constexpr uint16_t TileDialect = dwarf::DW_LLVM_LANG_DIALECT_tile;
-
 // Command line option to control inlined_at enhancement to lineinfo support.
 // Valid only when debuginfo emissionkind is DebugDirectivesOnly or
 // LineTablesOnly.
@@ -291,7 +288,8 @@ void NVPTXDwarfDebug::finishTargetUnitAttributes(const DICompileUnit &DIUnit,
   if (Dialect == 0)
     return;
 
-  const bool IsKnownDialect = Dialect == SimtDialect || Dialect == TileDialect;
+  const bool IsKnownDialect = Dialect == dwarf::DW_LLVM_LANG_DIALECT_simt ||
+                              Dialect == dwarf::DW_LLVM_LANG_DIALECT_tile;
   if (!IsKnownDialect) {
     // WarnedDialectCUs only dedups the diagnostic per CU; it does not gate
     // policy (we always suppress emission of unknown dialects below).
@@ -302,8 +300,10 @@ void NVPTXDwarfDebug::finishTargetUnitAttributes(const DICompileUnit &DIUnit,
       DIUnit.getContext().diagnose(DiagnosticInfoGeneric(
           Twine("unknown NVPTX language dialect '") + DialectString +
               "' on DICompileUnit; expected '" +
-              dwarf::LanguageDialectString(SimtDialect) + "' or '" +
-              dwarf::LanguageDialectString(TileDialect) + "'",
+              dwarf::LanguageDialectString(dwarf::DW_LLVM_LANG_DIALECT_simt) +
+              "' or '" +
+              dwarf::LanguageDialectString(dwarf::DW_LLVM_LANG_DIALECT_tile) +
+              "'",
           DS_Warning));
     }
     // Do not emit DW_AT_LLVM_language_dialect for unknown dialect values.
