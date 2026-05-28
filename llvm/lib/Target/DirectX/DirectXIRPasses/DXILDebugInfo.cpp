@@ -68,6 +68,31 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
   DebugInfoFinder DIF;
   DIF.processModule(M);
 
+  for (auto &F : M) {
+    for (auto &BB : F) {
+      for (auto &I : make_early_inc_range(reverse(BB))) {
+        if (auto *DL = dyn_cast<DbgLabelInst>(&I)) {
+          DL->eraseFromParent();
+          continue;
+        }
+      }
+    }
+  }
+
+  for (DISubprogram *SP : DIF.subprograms()) {
+    if (MDTuple *RN = cast_or_null<MDTuple>(SP->getRawRetainedNodes())) {
+      SmallVector<Metadata *> MDs(RN->operands());
+      MDs.erase(std::remove_if(MDs.begin(), MDs.end(),
+                               [](Metadata *M) { return isa<DILabel>(M); }),
+                MDs.end());
+      SP->replaceRetainedNodes(MDTuple::get(M.getContext(), MDs));
+    }
+  }
+
+  // Re-scan the module to account for removed metadata.
+  DIF.reset();
+  DIF.processModule(M);
+
   // Replace llvm.dbg.value with equivalent DXIL intrinsics.
   replaceDbgValue(M, Res);
 
