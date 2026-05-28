@@ -3096,15 +3096,13 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
         // If the maximum VF cannot produce 1 vector iteration + 1 scalar
         // iteration, step down VF's to find one that can. The result should
         // also eliminate any loops.
-        //
-        // Forced interleaving is considered when seeing if
-        // OneScalarIterationRemainder is produced. It may produced more than
-        // one vector iteration, but only one scalar iteration.
         for (unsigned MaxVF = MaxFactors.FixedVF.getFixedValue(); MaxVF >= 2;
              MaxVF /= 2) {
+          // OneScalarIterationRemainder takes account of any forced
+          // interleaving.
           if (HasOneScalarIterationRemainder(ExactTC, MaxVF)) {
             LLVM_DEBUG(dbgs() << "LV: Picking VF=" << MaxVF
-                              << " with 1 scalar iteration remainder.\n");
+                              << " with 1 scalar iteration remaining.\n");
             MaxFactors.FixedVF = ElementCount::getFixed(MaxVF);
             MaxFactors.ScalableVF = ElementCount::getScalable(0);
             return MaxFactors;

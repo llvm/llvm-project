@@ -57,7 +57,7 @@ exit:
 }
 
 ; TC=5, VF=4: TC == VF + 1 (5 == 4 + 1).
-; The natural fixed-width VF for i16 is 8 on AArch64, so this also checks that
+; VF=8 is a natural fixed-width for i16 types on AArch64, so this also checks that
 ; the low-trip-count path steps down to a smaller profitable VF.
 define void @tc5_vf4_vectorize_i16(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-LABEL: define void @tc5_vf4_vectorize_i16(
@@ -107,7 +107,7 @@ exit:
 }
 
 ; TC=5, VF=4: TC == VF + 1 (5 == 4 + 1).
-; The natural fixed-width VF for i8 is 16 on AArch64, so this checks that the
+; VF=16 is a natural fixed-width for i8 types on AArch64, so this checks that the
 ; search can step down more than once before accepting VF=4.
 define void @tc5_vf4_vectorize_i8(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-LABEL: define void @tc5_vf4_vectorize_i8(
@@ -264,9 +264,9 @@ exit:
   ret void
 }
 
-; ExactTC is unknown here because the loop trip count is the runtime value %n,
-; but the guard proves the maximum trip count is 5. it must not use the VF+1
-; escape because getSmallConstantTripCount returns 0.
+; In this case the vectoriser shouldn't optimise for a single vector iteration
+; + single scalar iteration, because there is no guarantee we will enter the vector
+; loop.
 define void @unknown_exact_tc_max5(ptr noalias %a, ptr noalias %b, i64 %n) #0 {
 ; CHECK-LABEL: define void @unknown_exact_tc_max5(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
