@@ -314,6 +314,9 @@ Non-comprehensive list of changes in this release
 
 - Updated support for Unicode from 15.1 to 18.0.
 
+- Linux and Windows toolchains now support Clang multilib support
+  ``-fmultilib-flag=``.
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
