@@ -461,6 +461,8 @@ private:
   /// Match an any extend from a 32-bit value to 64-bit.
   Register matchAnyExtendFromS32(Register Reg) const;
 
+  bool selectS16MergeToS32(MachineInstr &MI) const;
+
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;
   const AMDGPURegisterBankInfo &RBI;
