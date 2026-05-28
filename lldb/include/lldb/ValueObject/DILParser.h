@@ -35,6 +35,9 @@ enum class ErrorCode : unsigned char {
   kUnknown,
 };
 
+CompilerType ResolveTypeByName(const std::string &name,
+                               ExecutionContextScope &ctx_scope);
+
 // The following is modeled on class OptionParseError.
 class DILDiagnosticError
     : public llvm::ErrorInfo<DILDiagnosticError, DiagnosticError> {

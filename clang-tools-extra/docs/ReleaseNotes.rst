@@ -728,6 +728,11 @@ Changes in existing checks
   `IgnoreMacros` option to suppress warnings when the initializer involves
   macros that may expand differently in other configurations.
 
+- Improved :doc:`readability-redundant-parentheses
+  <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a
+  false positive for parentheses present around an overloaded operator in the
+  context of a binary operation.
+
 - Improved :doc:`readability-redundant-preprocessor
   <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a
   false positive for nested ``#if`` directives using different builtin
