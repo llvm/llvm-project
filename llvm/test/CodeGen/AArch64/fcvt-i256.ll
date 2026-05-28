@@ -103,16 +103,24 @@ define float @s256_to_f32(i256 %val) {
 ; CHECK-NEXT:    lsr x11, x10, #2
 ; CHECK-NEXT:    lsr x12, x10, #3
 ; CHECK-NEXT:    tst w10, #0x4000000
-; CHECK-NEXT:    csel w8, w8, w9, eq
+; CHECK-NEXT:    csel w9, w8, w9, eq
 ; CHECK-NEXT:    csel w10, w11, w12, eq
 ; CHECK-NEXT:  .LBB0_6: // %itofp-if-end26
-; CHECK-NEXT:    lsr x9, x3, #32
-; CHECK-NEXT:    mov w11, #1065353216 // =0x3f800000
-; CHECK-NEXT:    add w8, w11, w8, lsl #23
-; CHECK-NEXT:    and w9, w9, #0x80000000
-; CHECK-NEXT:    bfxil w9, w10, #0, #23
-; CHECK-NEXT:    orr w8, w9, w8
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    lsr x11, x3, #32
+; CHECK-NEXT:    mov w12, #1065353216 // =0x3f800000
+; CHECK-NEXT:    mov w13, #2139095040 // =0x7f800000
+; CHECK-NEXT:    mov w14, #-8388608 // =0xff800000
+; CHECK-NEXT:    add w9, w12, w9, lsl #23
+; CHECK-NEXT:    fmov s0, w13
+; CHECK-NEXT:    and w11, w11, #0x80000000
+; CHECK-NEXT:    fmov s1, w14
+; CHECK-NEXT:    cmp x3, #0
+; CHECK-NEXT:    bfxil w11, w10, #0, #23
+; CHECK-NEXT:    orr w9, w11, w9
+; CHECK-NEXT:    fcsel s0, s1, s0, mi
+; CHECK-NEXT:    cmp w8, #127
+; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    fcsel s0, s0, s1, hi
 ; CHECK-NEXT:    add sp, sp, #192
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_7:
@@ -130,6 +138,7 @@ define float @s256_to_f32(i256 %val) {
 ; CHECK-NEXT:    sub x10, x10, x11
 ; CHECK-NEXT:    ldr x10, [x10]
 ; CHECK-NEXT:    lsl x10, x10, x9
+; CHECK-NEXT:    mov w9, w8
 ; CHECK-NEXT:    b .LBB0_6
 ; CHECK-NEXT:  .LBB0_9: // %itofp-sw-bb
 ; CHECK-NEXT:    lsl x10, x10, #1
@@ -226,13 +235,17 @@ define float @u256_to_f32(i256 %val) {
 ; CHECK-NEXT:    lsr x11, x10, #2
 ; CHECK-NEXT:    lsr x12, x10, #3
 ; CHECK-NEXT:    tst w10, #0x4000000
-; CHECK-NEXT:    csel w8, w8, w9, eq
+; CHECK-NEXT:    csel w9, w8, w9, eq
 ; CHECK-NEXT:    csel w10, w11, w12, eq
 ; CHECK-NEXT:  .LBB1_6: // %itofp-if-end26
-; CHECK-NEXT:    bfi w10, w8, #23, #9
-; CHECK-NEXT:    mov w8, #1065353216 // =0x3f800000
-; CHECK-NEXT:    add w8, w10, w8
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    bfi w10, w9, #23, #9
+; CHECK-NEXT:    mov w9, #1065353216 // =0x3f800000
+; CHECK-NEXT:    cmp w8, #127
+; CHECK-NEXT:    add w9, w10, w9
+; CHECK-NEXT:    mov w10, #2139095040 // =0x7f800000
+; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    fmov s1, w10
+; CHECK-NEXT:    fcsel s0, s1, s0, hi
 ; CHECK-NEXT:    add sp, sp, #192
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_7:
@@ -250,6 +263,7 @@ define float @u256_to_f32(i256 %val) {
 ; CHECK-NEXT:    sub x10, x11, x10
 ; CHECK-NEXT:    ldr x10, [x10]
 ; CHECK-NEXT:    lsl x10, x10, x9
+; CHECK-NEXT:    mov w9, w8
 ; CHECK-NEXT:    b .LBB1_6
 ; CHECK-NEXT:  .LBB1_9: // %itofp-sw-bb
 ; CHECK-NEXT:    lsl x0, x0, #1

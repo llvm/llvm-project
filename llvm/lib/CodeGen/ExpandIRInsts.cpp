@@ -1170,6 +1170,27 @@ static void expandIToFP(Instruction *IToFP) {
     A4 = Builder.CreateFPTrunc(A40, IToFP->getType());
   } else // float type
     A4 = Builder.CreateBitCast(Or35, IToFP->getType());
+
+  // The exponent arithmetic above can overflow the exponent field, wrapping to
+  // garbage instead of inf when the value doesn't fit in the target type.
+  // Saturate to a correctly-signed infinity once the unbiased exponent reaches
+  // 1 << (ExponentWidth - 1). Skip the check when the integer is too narrow to
+  // ever reach it.
+  unsigned ExponentWidth = FloatWidth - FPMantissaWidth - 1;
+  uint64_t MinInfExp = 1ULL << (ExponentWidth - 1);
+  if (BitWidth - 1 >= MinInfExp) {
+    Value *MinInfExpVal = Builder.getIntN(BitWidthNew, MinInfExp);
+    Value *Overflow = Builder.CreateICmpUGE(Sub2, MinInfExpVal);
+    Value *Inf = ConstantFP::getInfinity(IToFP->getType(), /*Negative=*/false);
+    if (IsSigned) {
+      Value *NegInf =
+          ConstantFP::getInfinity(IToFP->getType(), /*Negative=*/true);
+      Value *IsNeg =
+          Builder.CreateICmpSLT(IntVal, ConstantInt::getNullValue(IntTy));
+      Inf = Builder.CreateSelect(IsNeg, NegInf, Inf);
+    }
+    A4 = Builder.CreateSelect(Overflow, Inf, A4);
+  }
   Builder.CreateBr(End);
 
   // return:
