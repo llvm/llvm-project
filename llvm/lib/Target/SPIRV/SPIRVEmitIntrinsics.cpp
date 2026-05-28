@@ -1012,7 +1012,11 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       Ty = BestTy;
   } else if (auto *Ref = dyn_cast<SelectInst>(I)) {
     for (Value *Op : {Ref->getTrueValue(), Ref->getFalseValue()}) {
-      Ty = deduceElementTypeByUsersDeep(Op, Visited, UnknownElemTypeI8);
+      // A function pointer operand carries its function type directly. Other
+      // operands are deduced from their uses.
+      Ty = isa<Function>(Op)
+               ? deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8)
+               : deduceElementTypeByUsersDeep(Op, Visited, UnknownElemTypeI8);
       if (Ty)
         break;
     }

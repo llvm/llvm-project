@@ -79,6 +79,12 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // Maps composite values to deduced types where untyped pointers are replaced
   // with typed ones.
   DenseMap<Value *, Type *> DeducedNestedTys;
+
+  // Element type for each untyped-pointer register, which
+  // OpTypeUntypedPointerKHR omits but OpUntypedVariableKHR needs as a Data
+  // Type.
+  DenseMap<std::pair<const MachineFunction *, Register>, SPIRVTypeInst>
+      UntypedPointerElementTypes;
   // Maps values to "assign type" calls, thus being a registry of created
   // Intrinsic::spv_assign_ptr_type instructions.
   DenseMap<Value *, CallInst *> AssignPtrTypeInstr;
@@ -207,6 +213,16 @@ public:
   Type *findDeducedCompositeType(const Value *Val) {
     auto It = DeducedNestedTys.find(Val);
     return It == DeducedNestedTys.end() ? nullptr : It->second;
+  }
+
+  // Store the element type associated with an untyped-pointer register.
+  void setUntypedPtrElementType(Register Reg, SPIRVTypeInst ElemType) {
+    UntypedPointerElementTypes[{CurMF, Reg}] = ElemType;
+  }
+  // Get the element type associated with an untyped-pointer register.
+  SPIRVTypeInst getUntypedPtrElementType(Register Reg) const {
+    auto It = UntypedPointerElementTypes.find({CurMF, Reg});
+    return It == UntypedPointerElementTypes.end() ? nullptr : It->second;
   }
   // - Find a type of the given Global value
   Type *getDeducedGlobalValueType(const GlobalValue *Global) {
@@ -404,6 +420,20 @@ public:
   // argument. Otherwise returns 0.
   unsigned getNumScalarOrVectorTotalBitWidth(SPIRVTypeInst Type) const;
 
+  // Size in bytes of the LLVM type for the given SPIR-V type, or 0 if unknown.
+  unsigned getSPIRVTypeByteSize(SPIRVTypeInst Type) const;
+
+  // True if a pointer to this element type must stay typed rather than become
+  // OpTypeUntypedPointerKHR (an opaque builtin type like an image or sampler).
+  bool isSpecialOpaqueElementType(SPIRVTypeInst ElemType) const;
+
+  // Byte size of a pointer value's IR-deduced element type, or 0 if unknown.
+  unsigned getDeducedPointeeByteSize(const Value *PtrVal) {
+    if (Type *ElemTy = findDeducedElementType(PtrVal))
+      return DL.getTypeStoreSize(ElemTy).getFixedValue();
+    return 0;
+  }
+
   // Returns either pointer to integer type, that may be a type of vector
   // elements or an original type, or nullptr if the argument is niether
   // an integer scalar, nor an integer vector
@@ -504,10 +534,12 @@ private:
   // storage class. It is the responsibility of the caller to make sure the
   // decorations on the base type are valid for the given storage class. For
   // example, it has the correct offset and stride decorations.
-  SPIRVTypeInst
-  getOrCreateSPIRVPointerTypeInternal(SPIRVTypeInst BaseType,
-                                      MachineIRBuilder &MIRBuilder,
-                                      SPIRV::StorageClass::StorageClass SC);
+  // ForceTyped keeps an OpTypePointer even when untyped pointers are available,
+  // for cases where the pointee type must be preserved (e.g. a byval/byref/sret
+  // aggregate argument).
+  SPIRVTypeInst getOrCreateSPIRVPointerTypeInternal(
+      SPIRVTypeInst BaseType, MachineIRBuilder &MIRBuilder,
+      SPIRV::StorageClass::StorageClass SC, bool ForceTyped = false);
 
   void addStructOffsetDecorations(Register Reg, StructType *Ty,
                                   MachineIRBuilder &MIRBuilder);
@@ -606,13 +638,14 @@ public:
   // Returns a pointer to a SPIR-V pointer type with the given base type and
   // storage class. The base type will be translated to a SPIR-V type, and the
   // appropriate layout decorations will be added to the base type.
-  SPIRVTypeInst
-  getOrCreateSPIRVPointerType(const Type *BaseType,
-                              MachineIRBuilder &MIRBuilder,
-                              SPIRV::StorageClass::StorageClass SC);
+  // See getOrCreateSPIRVPointerTypeInternal for ForceTyped.
+  SPIRVTypeInst getOrCreateSPIRVPointerType(
+      const Type *BaseType, MachineIRBuilder &MIRBuilder,
+      SPIRV::StorageClass::StorageClass SC, bool ForceTyped = false);
   SPIRVTypeInst
   getOrCreateSPIRVPointerType(const Type *BaseType, MachineInstr &I,
-                              SPIRV::StorageClass::StorageClass SC);
+                              SPIRV::StorageClass::StorageClass SC,
+                              bool ForceTyped = false);
 
   // Returns a pointer to a SPIR-V pointer type with the given base type and
   // storage class. It is the responsibility of the caller to make sure the
@@ -630,6 +663,11 @@ public:
   SPIRVTypeInst changePointerStorageClass(SPIRVTypeInst PtrType,
                                           SPIRV::StorageClass::StorageClass SC,
                                           MachineInstr &I);
+
+  // Returns OpTypeUntypedPointerKHR for the given storage class.
+  SPIRVTypeInst
+  getOrCreateSPIRVUntypedPointerType(SPIRV::StorageClass::StorageClass SC,
+                                     MachineIRBuilder &MIRBuilder);
 
   SPIRVTypeInst
   getOrCreateVulkanBufferType(MachineIRBuilder &MIRBuilder, Type *ElemType,

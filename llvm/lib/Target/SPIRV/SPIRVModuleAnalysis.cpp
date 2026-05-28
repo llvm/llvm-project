@@ -334,6 +334,7 @@ bool SPIRVModuleAnalysis::isDeclSection(const MachineRegisterInfo &MRI,
     // omit now, collect later
     return false;
   case SPIRV::OpVariable:
+  case SPIRV::OpUntypedVariableKHR:
     return static_cast<SPIRV::StorageClass::StorageClass>(
                MI.getOperand(2).getImm()) != SPIRV::StorageClass::Function;
   case SPIRV::OpFunction:
@@ -456,7 +457,8 @@ void SPIRVModuleAnalysis::visitDecl(
   } else if (TII->isTypeDeclInstr(MI) || TII->isConstantInstr(MI) ||
              TII->isInlineAsmDefInstr(MI)) {
     GReg = handleTypeDeclOrConstant(MI, SignatureToGReg);
-  } else if (Opcode == SPIRV::OpVariable) {
+  } else if (Opcode == SPIRV::OpVariable ||
+             Opcode == SPIRV::OpUntypedVariableKHR) {
     GReg = handleVariable(MF, MI, GlobalToGReg);
   } else {
     LLVM_DEBUG({
@@ -2429,6 +2431,25 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpCopyMemorySized: {
     Reqs.addCapability(SPIRV::Capability::Addresses);
     // TODO: Add UntypedPointersKHR when implemented.
+    break;
+  }
+  case SPIRV::OpTypeUntypedPointerKHR:
+    Reqs.getAndAddRequirements(SPIRV::OperandCategory::StorageClassOperand,
+                               MI.getOperand(1).getImm(), ST);
+    [[fallthrough]];
+  case SPIRV::OpUntypedVariableKHR:
+  case SPIRV::OpUntypedAccessChainKHR:
+  case SPIRV::OpUntypedInBoundsAccessChainKHR:
+  case SPIRV::OpUntypedPtrAccessChainKHR:
+  case SPIRV::OpUntypedInBoundsPtrAccessChainKHR:
+  case SPIRV::OpUntypedPrefetchKHR:
+  case SPIRV::OpUntypedGroupAsyncCopyKHR: {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers))
+      report_fatal_error("Untyped pointer instructions require the following "
+                         "SPIR-V extension: SPV_KHR_untyped_pointers",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_untyped_pointers);
+    Reqs.addCapability(SPIRV::Capability::UntypedPointersKHR);
     break;
   }
   case SPIRV::OpPredicatedLoadINTEL:

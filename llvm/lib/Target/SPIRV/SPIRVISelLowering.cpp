@@ -614,13 +614,17 @@ bool SPIRVTargetLowering::enforcePtrTypeCompatibility(
     MachineInstr &I, unsigned int PtrOpIdx, unsigned int OpIdx) const {
   SPIRVGlobalRegistry &GR = *STI.getSPIRVGlobalRegistry();
   SPIRVTypeInst PtrType = GR.getResultType(I.getOperand(PtrOpIdx).getReg());
+
+  if (PtrType && PtrType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR)
+    return true;
+
   SPIRVTypeInst PointeeType = GR.getPointeeType(PtrType);
   SPIRVTypeInst OpType = GR.getResultType(I.getOperand(OpIdx).getReg());
 
   if (PointeeType == OpType)
     return true;
 
-  if (typesLogicallyMatch(PointeeType, OpType, GR)) {
+  if (PointeeType && OpType && typesLogicallyMatch(PointeeType, OpType, GR)) {
     // Apply OpCopyLogical to OpIdx.
     if (I.getOperand(OpIdx).isDef() &&
         insertLogicalCopyOnResult(I, PointeeType)) {

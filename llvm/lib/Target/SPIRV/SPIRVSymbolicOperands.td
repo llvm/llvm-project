@@ -404,6 +404,7 @@ defm SPV_AMD_weak_linkage : ExtensionOperand<137, [EnvOpenCL]>;
 // Message Type, which is not yet implemented.
 defm SPV_KHR_abort : ExtensionOperand<138, [EnvOpenCL]>;
 defm SPV_KHR_poison_freeze : ExtensionOperand<139, [EnvVulkan, EnvOpenCL]>;
+defm SPV_KHR_untyped_pointers : ExtensionOperand<140, [EnvVulkan, EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -642,6 +643,7 @@ defm ArbitraryPrecisionFixedPointALTERA : CapabilityOperand<5922, 0, 0, [SPV_ALT
 defm ArbitraryPrecisionFloatingPointALTERA : CapabilityOperand<5845, 0, 0,[SPV_ALTERA_arbitrary_precision_floating_point], []>;
 defm UnstructuredLoopControlsINTEL : CapabilityOperand<5886, 0, 0, [SPV_INTEL_unstructured_loop_controls], []>;
 defm PoisonFreezeKHR : CapabilityOperand<5156, 0, 0, [SPV_KHR_poison_freeze], []>;
+defm UntypedPointersKHR : CapabilityOperand<4473, 0, 0, [SPV_KHR_untyped_pointers], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
