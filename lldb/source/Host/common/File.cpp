@@ -272,28 +272,29 @@ FILE *NativeFileBase::GetStream() {
     return m_stream;
 
   auto mode = GetStreamOpenModeFromOptions(m_options);
-  if (!mode)
+  if (!mode) {
     llvm::consumeError(mode.takeError());
-  else {
-    if (!m_own_descriptor) {
-      // We must duplicate the file descriptor if we don't own it because
-      // when you call fdopen, the stream will own the fd.
-      m_descriptor = Dup(m_descriptor);
-      m_own_descriptor = true;
-    }
-
-    m_stream = llvm::sys::RetryAfterSignal(nullptr, ::fdopen, m_descriptor,
-                                           mode.get());
-
-    // If we got a stream, then we own the stream and should no longer own
-    // the descriptor because fclose() will close it for us
-
-    if (m_stream) {
-      m_own_stream = true;
-      m_own_descriptor = false;
-      OnStreamOpened();
-    }
+    return m_stream;
   }
+
+  if (!m_own_descriptor) {
+    // We must duplicate the file descriptor if we don't own it because
+    // when you call fdopen, the stream will own the fd.
+    m_descriptor = Dup(m_descriptor);
+    m_own_descriptor = true;
+  }
+
+  m_stream =
+      llvm::sys::RetryAfterSignal(nullptr, ::fdopen, m_descriptor, mode.get());
+
+  // If we got a stream, then we own the stream and should no longer own
+  // the descriptor because fclose() will close it for us
+  if (m_stream) {
+    m_own_stream = true;
+    m_own_descriptor = false;
+    OnStreamOpened();
+  }
+
   return m_stream;
 }
 
