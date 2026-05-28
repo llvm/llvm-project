@@ -8365,10 +8365,12 @@ bool CheckFormatHandler::HandleInvalidConversionSpecifier(
   // The csStart points to a character that has already been converted to the
   // exec charset, so we have to reverse the conversion to allow diagnostic
   // message to match an expected value when using -verify option,
-  std::string RS(csStart, csLen);
-  for (unsigned int i = 0; i < RS.size(); ++i)
-    RS[i] = FormatStrConverter.convert(RS[i]);
-  StringRef Specifier(RS);
+  SmallString<4> RS;
+  auto EC = FormatStrConverter.convert(StringRef(csStart, csLen), RS);
+  if (EC) {
+    keepGoing = false;
+  }
+  llvm::StringRef Specifier(RS);
 
   // If the specifier in non-printable, it could be the first byte of a UTF-8
   // sequence. In that case, print the UTF-8 code point. If not, print the byte
