@@ -395,9 +395,41 @@ static bool shouldMerge(const WasmSegment &seg) {
   return true;
 }
 
+// True if `name` is a custom section the linker synthesizes or otherwise owns,
+// rather than user payload that should be propagated to the output.
+// Mirrors the filter in Writer::createCustomSections.
+static bool isLinkerOwnedCustomSection(StringRef name) {
+  return name == "linking" || name == "name" || name == "producers" ||
+         name == "target_features" || name.starts_with("reloc.") ||
+         name == ".llvmbc" || name == ".llvmcmd" ||
+         name.starts_with(".debug_") || name.starts_with("dylink");
+}
+
 void ObjFile::parseLazy() {
   LLVM_DEBUG(dbgs() << "ObjFile::parseLazy: " << toString(this) << " "
                     << wasmObj.get() << "\n");
+
+  // If this object contains any user-defined wasm custom sections (e.g.
+  // wasm-bindgen / wit-bindgen / coverage / sanitizer metadata, or
+  // __llvm_prf_*), force-extract it. Custom sections have no symbol table
+  // entries by construction, so symbol-driven archive extraction cannot reach
+  // them, and the section is silently dropped along with its archive member.
+  // The only place this content can be anchored is the archive member itself,
+  // so we extract eagerly here.
+  for (const SectionRef &secRef : wasmObj->sections()) {
+    const WasmSection &sec = wasmObj->getWasmSection(secRef);
+    if (sec.Type != WASM_SEC_CUSTOM)
+      continue;
+    if (isLinkerOwnedCustomSection(sec.Name))
+      continue;
+    LLVM_DEBUG(dbgs() << "  forcing extract for custom section: " << sec.Name
+                      << "\n");
+    lazy = false;
+    markLive();
+    symtab->addFile(this, /*symName=*/{});
+    return;
+  }
+
   for (const SymbolRef &sym : wasmObj->symbols()) {
     const WasmSymbol &wasmSym = wasmObj->getWasmSymbol(sym.getRawDataRefImpl());
     if (wasmSym.isUndefined() || wasmSym.isBindingLocal())
