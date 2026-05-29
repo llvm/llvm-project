@@ -28,14 +28,16 @@ int main() {
 
   if (first != 136 || second != 1720) {
     std::fprintf(stderr,
-                 "FAIL lexical pointer shared taskloop replay first=%d second=%d expected=136/1720\n",
+                 "FAIL lexical pointer shared taskloop replay first=%d "
+                 "second=%d expected=136/1720\n",
                  first, second);
     return 1;
   }
 
-  std::fprintf(stderr,
-               "PASS lexical pointer shared taskloop replay first=%d second=%d\n",
-               first, second);
+  std::fprintf(
+      stderr,
+      "PASS lexical pointer shared taskloop replay first=%d second=%d\n", first,
+      second);
   return 0;
 }
 
