@@ -46,7 +46,7 @@ jobs:
           # If there are multiple /cherry-pick commands they will all be included in the output.
           # This is fine since the github-automation.py script can handle multiple cherry-pick commands.
           validated_comment=$(\
-            grep -o -e '/cherry-pick \(https://github.com/llvm/llvm-project/commit/\)\?[a-f0-9]\+' <<< $COMMENT_BODY \
+            grep -o -e '/cherry-pick \(https://github.com/llvm/llvm-project/commit/\)\?[a-f0-9 ]\+' <<< $COMMENT_BODY \
           )
           echo "Validated Comment is:"
           echo ${validated_comment}
@@ -81,6 +81,7 @@ jobs:
       - name: Backport Commits
         env:
           COMMENT_BODY: ${{ needs.backport-commits-validate-input.outputs.comment-body }}
+          REQUESTED_BY: ${{ (github.event.action == 'opened' && github.event.issue.user.login) || github.event.comment.user.login }}
         run: |
           printf "%s" "$COMMENT_BODY" |
           ./llvm/utils/git/github-automation.py \
@@ -89,5 +90,5 @@ jobs:
           release-workflow \
           --branch-repo-token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
           --issue-number ${{ github.event.issue.number }} \
-          --requested-by ${{ (github.event.action == 'opened' && github.event.issue.user.login) || github.event.comment.user.login }} \
+          --requested-by "$REQUESTED_BY" \
           auto

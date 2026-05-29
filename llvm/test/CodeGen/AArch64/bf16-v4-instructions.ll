@@ -38,8 +38,6 @@
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_log
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_log10
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_log2
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fabs
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fneg
 ;
 ; CHECK-BF16-GI:       warning: Instruction selection used fallback path for test_frem
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_i8
@@ -75,8 +73,6 @@
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_log
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_log10
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_log2
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fabs
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fneg
 
 define <4 x bfloat> @test_build(<4 x bfloat> %a) {
 ; CHECK-CVT-SD-LABEL: test_build:
@@ -3605,10 +3601,27 @@ define <4 x bfloat> @test_fma(<4 x bfloat> %a, <4 x bfloat> %b, <4 x bfloat> %c)
 }
 
 define <4 x bfloat> @test_fabs(<4 x bfloat> %a) #0 {
-; CHECK-LABEL: test_fabs:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic v0.4h, #128, lsl #8
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fabs:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    bic v0.4h, #128, lsl #8
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fabs:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    bic v0.4h, #128, lsl #8
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fabs:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    mvni v1.4h, #128, lsl #8
+; CHECK-CVT-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fabs:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    mvni v1.4h, #128, lsl #8
+; CHECK-BF16-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-BF16-GI-NEXT:    ret
   %r = call <4 x bfloat> @llvm.fabs.v4bf16(<4 x bfloat> %a)
   ret <4 x bfloat> %r
 }

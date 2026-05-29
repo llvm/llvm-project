@@ -3453,6 +3453,9 @@ protected:
       const char *object_name = module->GetObjectName().GetCString();
       if (object_name)
         strm.Printf("(%s)", object_name);
+      std::optional<addr_t> memory_addr = module->GetMemoryModuleAddress();
+      if (memory_addr.has_value())
+        strm.Printf("(0x%" PRIx64 ")", memory_addr.value());
     }
     strm.EOL();
   }

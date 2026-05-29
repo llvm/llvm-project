@@ -1804,15 +1804,16 @@ public:
   VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands,
                 const VPIRFlags &Flags = {}, const VPIRMetadata &Metadata = {},
                 DebugLoc DL = {})
-      : VPRecipeWithIRFlags(VPRecipeBase::VPWidenSC, Operands, Flags, DL),
-        VPIRMetadata(Metadata), Opcode(I.getOpcode()) {
+      : VPWidenRecipe(I.getOpcode(), Operands, Flags, Metadata, DL) {
     setUnderlyingValue(&I);
   }
 
   VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
                 const VPIRFlags &Flags = {}, const VPIRMetadata &Metadata = {},
                 DebugLoc DL = {})
-      : VPRecipeWithIRFlags(VPRecipeBase::VPWidenSC, Operands, Flags, DL),
+      : VPRecipeWithIRFlags(VPRecipeBase::VPWidenSC, Operands,
+                            computeScalarTypeForInstruction(Opcode, Operands),
+                            Flags, DL),
         VPIRMetadata(Metadata), Opcode(Opcode) {}
 
   ~VPWidenRecipe() override = default;
@@ -1855,6 +1856,8 @@ protected:
 };
 
 /// VPWidenCastRecipe is a recipe to create vector cast instructions.
+/// TODO: Merge with VPWidenRecipe now that type is associated to every
+/// VPRecipeValue.
 class VPWidenCastRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   /// Cast instruction opcode.
   Instruction::CastOps Opcode;
@@ -2194,24 +2197,27 @@ class LLVM_ABI_FOR_TEST VPWidenGEPRecipe : public VPRecipeWithIRFlags {
   }
 
 public:
-  VPWidenGEPRecipe(GetElementPtrInst *GEP, ArrayRef<VPValue *> Operands,
+  VPWidenGEPRecipe(Type *SourceElementTy, ArrayRef<VPValue *> Operands,
                    const VPIRFlags &Flags = {},
-                   DebugLoc DL = DebugLoc::getUnknown())
+                   DebugLoc DL = DebugLoc::getUnknown(),
+                   GetElementPtrInst *UV = nullptr)
       : VPRecipeWithIRFlags(VPRecipeBase::VPWidenGEPSC, Operands,
                             getScalarTypeOrInfer(Operands[0]), Flags, DL),
-        SourceElementTy(GEP->getSourceElementType()) {
-    setUnderlyingValue(GEP);
-    SmallVector<std::pair<unsigned, MDNode *>> Metadata;
-    (void)Metadata;
-    getMetadataToPropagate(GEP, Metadata);
-    assert(Metadata.empty() && "unexpected metadata on GEP");
+        SourceElementTy(SourceElementTy) {
+    if (UV) {
+      setUnderlyingValue(UV);
+      [[maybe_unused]] SmallVector<std::pair<unsigned, MDNode *>> Metadata;
+      getMetadataToPropagate(UV, Metadata);
+      assert(Metadata.empty() && "unexpected metadata on GEP");
+    }
   }
 
   ~VPWidenGEPRecipe() override = default;
 
   VPWidenGEPRecipe *clone() override {
-    return new VPWidenGEPRecipe(cast<GetElementPtrInst>(getUnderlyingInstr()),
-                                operands(), *this, getDebugLoc());
+    return new VPWidenGEPRecipe(
+        getSourceElementType(), operands(), *this, getDebugLoc(),
+        cast_or_null<GetElementPtrInst>(getUnderlyingValue()));
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenGEPSC)
@@ -3323,7 +3329,8 @@ public:
                     bool IsSingleScalar, VPValue *Mask = nullptr,
                     const VPIRFlags &Flags = {}, VPIRMetadata Metadata = {},
                     DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeWithIRFlags(VPRecipeBase::VPReplicateSC, Operands, Flags, DL),
+      : VPRecipeWithIRFlags(VPRecipeBase::VPReplicateSC, Operands,
+                            computeScalarType(I, Operands), Flags, DL),
         VPIRMetadata(Metadata), IsSingleScalar(IsSingleScalar),
         IsPredicated(Mask) {
     setUnderlyingValue(I);
@@ -3332,6 +3339,11 @@ public:
   }
 
   ~VPReplicateRecipe() override = default;
+
+  /// Compute the scalar result type for a VPReplicateRecipe wrapping \p I with
+  /// \p Operands (excluding any predicate mask).
+  static Type *computeScalarType(const Instruction *I,
+                                 ArrayRef<VPValue *> Operands);
 
   VPReplicateRecipe *clone() override { return cloneWithOperands(operands()); }
 
