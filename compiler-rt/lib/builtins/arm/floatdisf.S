@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the __floatdisf and __floatunsdisf functions (64-bit
+// This file implements the __floatdisf and __floatundisf functions (64-bit
 // signed and unsigned integer to single precision floating point conversion),
 // with the IEEE-754 default rounding (to nearest, ties to even), for the Arm
 // and Thumb2 ISAs.
@@ -180,13 +180,13 @@ LOCAL_LABEL(normalise):
 END_COMPILERRT_FUNCTION(__aeabi_l2f)
 
 #if __ARM_PCS_VFP
-DEFINE_COMPILERRT_FUNCTION(__floatunsdisf)
+DEFINE_COMPILERRT_FUNCTION(__floatundisf)
   push {r4, lr}
   bl __aeabi_ul2f
   vmov s0, r0
   pop {r4, pc}
 #else
-DEFINE_COMPILERRT_FUNCTION_ALIAS(__floatunsdisf, __aeabi_ul2f)
+DEFINE_COMPILERRT_FUNCTION_ALIAS(__floatundisf, __aeabi_ul2f)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_ul2f)
@@ -199,7 +199,7 @@ END_COMPILERRT_FUNCTION(__aeabi_ul2f)
 
 #if defined(__MINGW32__)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__i64tos, __floatdisf)
-DEFINE_COMPILERRT_FUNCTION_ALIAS(__u64tos, __floatunsdisf)
+DEFINE_COMPILERRT_FUNCTION_ALIAS(__u64tos, __floatundisf)
 #endif
 
 NO_EXEC_STACK_DIRECTIVE

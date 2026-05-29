@@ -1,4 +1,4 @@
-//===-- floatunssidf.S - 32-bit unsigned int to double-precision FP conversion//
+//===-- floatunsidf.S - 32-bit unsigned int to double-precision FP conversion=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the __floatunssidf function (32-bit unsigned integer to
+// This file implements the __floatunsidf function (32-bit unsigned integer to
 // double precision floating point conversion), with the IEEE-754 default
 // rounding (to nearest, ties to even), for the Arm and Thumb2 ISAs.
 //
@@ -20,13 +20,13 @@
   .p2align 2
 
 #if __ARM_PCS_VFP
-DEFINE_COMPILERRT_FUNCTION(__floatunssidf)
+DEFINE_COMPILERRT_FUNCTION(__floatunsidf)
   push {r4, lr}
   bl __aeabi_ui2d
   VMOV_TO_DOUBLE(d0, r0, r1)
   pop {r4, pc}
 #else
-DEFINE_COMPILERRT_FUNCTION_ALIAS(__floatunssidf, __aeabi_ui2d)
+DEFINE_COMPILERRT_FUNCTION_ALIAS(__floatunsidf, __aeabi_ui2d)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_ui2d)

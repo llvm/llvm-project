@@ -1,4 +1,4 @@
-//===-- floatunsdidf.S - 64-bit unsigned int to double-precision FP conversion//
+//===-- floatundidf.S - 64-bit unsigned int to double-precision FP conversion=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the __floatunsdidf function (64-bit unsigned integer to
+// This file implements the __floatundidf function (64-bit unsigned integer to
 // double precision floating point conversion), with the IEEE-754 default
 // rounding (to nearest, ties to even), for the Arm and Thumb2 ISAs.
 //
@@ -20,13 +20,13 @@
   .p2align 2
 
 #if __ARM_PCS_VFP
-DEFINE_COMPILERRT_FUNCTION(__floatunsdidf)
+DEFINE_COMPILERRT_FUNCTION(__floatundidf)
   push {r4, lr}
   bl __aeabi_ul2d
   VMOV_TO_DOUBLE(d0, r0, r1)
   pop {r4, pc}
 #else
-DEFINE_COMPILERRT_FUNCTION_ALIAS(__floatunsdidf, __aeabi_ul2d)
+DEFINE_COMPILERRT_FUNCTION_ALIAS(__floatundidf, __aeabi_ul2d)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_ul2d)
@@ -178,7 +178,7 @@ LOCAL_LABEL(shiftdown):
 END_COMPILERRT_FUNCTION(__aeabi_ul2d)
 
 #if defined(__MINGW32__)
-DEFINE_COMPILERRT_FUNCTION_ALIAS(__u64tod, __floatunsdidf)
+DEFINE_COMPILERRT_FUNCTION_ALIAS(__u64tod, __floatundidf)
 #endif
 
 NO_EXEC_STACK_DIRECTIVE
