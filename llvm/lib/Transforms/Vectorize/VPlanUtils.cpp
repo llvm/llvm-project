@@ -16,6 +16,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
@@ -47,7 +48,11 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   if (U && !isa<Instruction>(U->getValue()))
     return Plan.getOrAddLiveIn(U->getValue());
   auto *Expanded = new VPExpandSCEVRecipe(Expr);
-  Plan.getEntry()->appendRecipe(Expanded);
+  VPBasicBlock *EntryVPBB = Plan.getEntry();
+  auto Iter = EntryVPBB->getFirstNonPhi();
+  while (Iter != EntryVPBB->end() && isa<VPIRInstruction>(*Iter))
+    ++Iter;
+  EntryVPBB->insert(Expanded, Iter);
   return Expanded;
 }
 
@@ -80,8 +85,12 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
   }
 
   auto MaskMatch = m_ICmp(m_VPValue(A), m_VPValue(B));
-  return (match(V, m_CombineOr(MaskMatch, m_Reverse(MaskMatch)))) &&
-         match(A, m_WideCanonicalIV) && B == Plan.getBackedgeTakenCount();
+  if (match(V, m_CombineOr(MaskMatch, m_Reverse(MaskMatch))))
+    return match(A, m_WideCanonicalIV) && B == Plan.getBackedgeTakenCount();
+
+  return match(
+      V, m_c_BinaryAnd(m_VPValue(),
+                       m_VPInstruction<VPInstruction::IncomingAliasMask>()));
 }
 
 /// Returns true if \p R propagates poison from any operand to its result.
@@ -189,7 +198,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
         return SE.getCouldNotCompute();
       SCEVOps.push_back(S);
     }
-    return CreateFn(SCEVOps);
+    return PSE.getPredicatedSCEV(CreateFn(SCEVOps));
   };
 
   VPValue *LHSVal, *RHSVal;
@@ -211,10 +220,13 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getMulExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
     });
-  if (match(V,
-            m_Binary<Instruction::UDiv>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+  if (match(V, m_UDiv(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getUDivExpr(Ops[0], Ops[1]);
+    });
+  if (match(V, m_URem(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
+      return SE.getURemExpr(Ops[0], Ops[1]);
     });
   // Handle AND with constant mask: x & (2^n - 1) can be represented as x % 2^n.
   const APInt *Mask;
@@ -289,10 +301,9 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   ArrayRef<VPValue *> Ops;
   Type *SourceElementType;
   if (match(V, m_GetElementPtr(SourceElementType, Ops))) {
-    const SCEV *GEPExpr = CreateSCEV(Ops, [&](ArrayRef<SCEVUse> Ops) {
+    return CreateSCEV(Ops, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getGEPExpr(Ops.front(), Ops.drop_front(), SourceElementType);
     });
-    return PSE.getPredicatedSCEV(GEPExpr);
   }
 
   // TODO: Support constructing SCEVs for more recipes as needed.
@@ -624,6 +635,13 @@ vputils::getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
 }
 
 VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
+  if (VPValue *AliasMask = findIncomingAliasMask(Plan)) {
+    assert(match(AliasMask->getSingleUser(),
+                 m_c_BinaryAnd(m_VPValue(), m_Specific(AliasMask))) &&
+           "AliasMask must only be used with the original header mask");
+    return cast<VPSingleDefRecipe>(AliasMask->getSingleUser());
+  }
+
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   SmallVector<VPValue *> WideCanonicalIVs;
   auto *WideCanonicalIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(
@@ -658,6 +676,15 @@ VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
       HeaderMask = VPI;
     }
   }
+
+  for (VPRecipeBase &R : LoopRegion->getEntryBasicBlock()->phis()) {
+    auto *Def = cast<VPSingleDefRecipe>(&R);
+    if (vputils::isHeaderMask(Def, Plan)) {
+      assert(!HeaderMask && "Multiple header masks found?");
+      HeaderMask = Def;
+    }
+  }
+
   return HeaderMask;
 }
 
@@ -680,6 +707,13 @@ VPBlockUtils::blocksInSingleSuccessorChainBetween(VPBasicBlock *FirstBB,
          "LastBB unreachable from FirstBB in depth-first traversal");
   Blocks.erase(std::next(LastIt), Blocks.end());
   return Blocks;
+}
+
+VPValue *vputils::findIncomingAliasMask(const VPlan &Plan) {
+  for (VPRecipeBase &R : *Plan.getVectorPreheader())
+    if (match(&R, m_VPInstruction<VPInstruction::IncomingAliasMask>()))
+      return cast<VPInstruction>(&R);
+  return nullptr;
 }
 
 bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
@@ -753,6 +787,11 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
              match(Step, m_c_Mul(m_Specific(&Plan.getUF()),
                                  m_VPInstruction<VPInstruction::VScale>()));
 
+    // Alias masking: step is number of active lanes of a dependence mask.
+    if (match(Step, m_ZExtOrTruncOrSelf(
+                        m_VPInstruction<VPInstruction::NumActiveLanes>())))
+      return true;
+
     unsigned ConcreteUF = Plan.getConcreteUF();
     // Fixed VF: step is just the concrete UF.
     if (match(Step, m_SpecificInt(ConcreteUF)))
@@ -767,9 +806,8 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
     // mul(VScale, ConcreteUF) may have been simplified to
     // shl(VScale, log2(ConcreteUF)) when ConcreteUF is a power of 2.
     return isPowerOf2_32(ConcreteUF) &&
-           match(Step, m_Binary<Instruction::Shl>(
-                           m_VPInstruction<VPInstruction::VScale>(),
-                           m_SpecificInt(Log2_32(ConcreteUF))));
+           match(Step, m_Shl(m_VPInstruction<VPInstruction::VScale>(),
+                             m_SpecificInt(Log2_32(ConcreteUF))));
   };
 
   VPInstruction *Increment = nullptr;
@@ -859,7 +897,36 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
   return false;
 }
 
-VPValue *VPBuilder::VPSCEVExpander::tryToExpand(const SCEV *S) {
+/// Try to find a loop-invariant IR value for \p S in the plan's entry block
+/// that can be reused. Returns the corresponding live-in VPValue, or nullptr
+/// if no reusable IR value is found.
+VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
+  if (isa<SCEVConstant, SCEVUnknown>(S))
+    return nullptr;
+  VPlan &Plan = Builder.getPlan();
+  BasicBlock *PH = cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock();
+  for (Value *V : SE.getSCEVValues(S)) {
+    // Only reuse instructions in the plan's entry block, as instructions in
+    // sibling branches may not dominate the entry block.
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I)
+      return Plan.getOrAddLiveIn(V);
+    if (I->getParent() != PH)
+      continue;
+    SmallVector<Instruction *> DropPoisonGeneratingInsts;
+    if (!SE.canReuseInstruction(S, I, DropPoisonGeneratingInsts))
+      continue;
+    for (Instruction *DropI : DropPoisonGeneratingInsts)
+      SCEVExpander::dropPoisonGeneratingAnnotationsAndReinfer(SE, DropI);
+    return Plan.getOrAddLiveIn(V);
+  }
+  return nullptr;
+}
+
+VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
+  if (VPValue *V = tryToReuseIRValue(S))
+    return V;
+
   switch (S->getSCEVType()) {
   case scConstant:
     return Builder.getPlan().getOrAddLiveIn(cast<SCEVConstant>(S)->getValue());

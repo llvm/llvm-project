@@ -170,12 +170,38 @@ VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 
 /// Collect the header mask with the pattern:
 /// (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
+/// Note: If alias masking is enabled this will find:
+/// (AND, HeaderMask, AliasMask)
 /// TODO: Introduce explicit recipe for header-mask instead of searching
 /// the header-mask pattern manually.
 VPSingleDefRecipe *findHeaderMask(VPlan &Plan);
 
+/// Finds the incoming alias-mask within the vector preheader.
+VPValue *findIncomingAliasMask(const VPlan &Plan);
+
 } // namespace vputils
 
+/// Lightweight SCEV-to-VPlan expander. Converts SCEV expressions into
+/// VPInstructions where possible, and returning nullptr for unsupported
+/// expressions (like adds, casts, min/max).
+class VPSCEVExpander {
+  VPBuilder &Builder;
+  ScalarEvolution &SE;
+  DebugLoc DL;
+
+  /// Try to find a loop-invariant IR value in the plan's entry block whose
+  /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
+  /// if none is found.
+  VPValue *tryToReuseIRValue(const SCEV *S);
+
+public:
+  VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL = {})
+      : Builder(Builder), SE(SE), DL(DL) {}
+
+  /// Try to expand \p S into recipes and live-ins using the builder. Returns
+  /// nullptr if \p S cannot be expanded yet.
+  VPValue *tryToExpand(const SCEV *S);
+};
 //===----------------------------------------------------------------------===//
 // Utilities for modifying predecessors and successors of VPlan blocks.
 //===----------------------------------------------------------------------===//

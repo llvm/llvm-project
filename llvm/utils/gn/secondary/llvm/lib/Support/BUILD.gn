@@ -32,6 +32,7 @@ static_library("Support") {
     "Unix",
     "Windows",
     "//third-party/siphash/include",
+    "//libc",
   ]
   sources = [
     "AArch64AttributeParser.cpp",
@@ -176,6 +177,7 @@ static_library("Support") {
     "VirtualOutputConfig.cpp",
     "VirtualOutputError.cpp",
     "VirtualOutputFile.cpp",
+    "Win64EH.cpp",
     "WithColor.cpp",
     "YAMLParser.cpp",
     "YAMLTraits.cpp",
