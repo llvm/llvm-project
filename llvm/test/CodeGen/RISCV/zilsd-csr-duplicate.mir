@@ -38,7 +38,7 @@ hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false
 debugInstrRef:   false
-failsVerification: true
+failsVerification: false
 tracksDebugUserValues: true
 registers:       []
 liveins:
@@ -88,22 +88,16 @@ body:             |
     ; CHECK-LABEL: name: zilsd_dup_csr
     ; CHECK: liveins: $x10, $x11, $x1, $x18_x19
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: frame-setup CM_PUSH 4, 32, implicit-def $x2, implicit $x2, implicit $x1
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 48
+    ; CHECK-NEXT: frame-setup CM_PUSH 4, 16, implicit-def $x2, implicit $x2, implicit $x1
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 32
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x1, -4
-    ; CHECK-NEXT: frame-setup SD_RV32 killed $x8_x9, $x2, 24 :: (store (s64) into %stack.1)
-    ; CHECK-NEXT: frame-setup SD_RV32 killed $x18_x19, $x2, 16 :: (store (s64) into %stack.2)
-    ; CHECK-NEXT: frame-setup SD_RV32 killed $x8_x9, $x2, 8 :: (store (s64) into %stack.3)
-    ; CHECK-NEXT: frame-setup SD_RV32 killed $x18_x19, $x2, 0 :: (store (s64) into %stack.4)
+    ; CHECK-NEXT: frame-setup SD_RV32 killed $x8_x9, $x2, 8 :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: frame-setup SD_RV32 killed $x18_x19, $x2, 0 :: (store (s64) into %stack.2)
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -24
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x9, -20
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x18, -32
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x19, -28
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -40
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x9, -36
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x18, -48
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x19, -44
-    ; CHECK-NEXT: $x8 = frame-setup ADDI $x2, 48
+    ; CHECK-NEXT: $x8 = frame-setup ADDI $x2, 32
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $x8, 0
     ; CHECK-NEXT: renamable $x9 = COPY $x11
     ; CHECK-NEXT: renamable $x18 = COPY $x10
@@ -113,21 +107,15 @@ body:             |
     ; CHECK-NEXT: renamable $x10 = SUB $x2, killed renamable $x9
     ; CHECK-NEXT: $x2 = COPY renamable $x10
     ; CHECK-NEXT: SW killed renamable $x10, killed renamable $x18, 0 :: (store (s32) into %ir.p, align 8)
-    ; CHECK-NEXT: $x2 = frame-destroy ADDI $x8, -48
-    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $x2, 48
-    ; CHECK-NEXT: $x8_x9 = frame-destroy LD_RV32 $x2, 24 :: (load (s64) from %stack.1)
-    ; CHECK-NEXT: $x18_x19 = frame-destroy LD_RV32 $x2, 16 :: (load (s64) from %stack.2)
-    ; CHECK-NEXT: $x8_x9 = frame-destroy LD_RV32 $x2, 8 :: (load (s64) from %stack.3)
-    ; CHECK-NEXT: $x18_x19 = frame-destroy LD_RV32 $x2, 0 :: (load (s64) from %stack.4)
+    ; CHECK-NEXT: $x2 = frame-destroy ADDI $x8, -32
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $x2, 32
+    ; CHECK-NEXT: $x8_x9 = frame-destroy LD_RV32 $x2, 8 :: (load (s64) from %stack.1)
+    ; CHECK-NEXT: $x18_x19 = frame-destroy LD_RV32 $x2, 0 :: (load (s64) from %stack.2)
     ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
     ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $x9
     ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $x18
     ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $x19
-    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
-    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $x9
-    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $x18
-    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $x19
-    ; CHECK-NEXT: frame-destroy CM_POP 4, 32, implicit-def $x2, implicit $x2, implicit-def $x1
+    ; CHECK-NEXT: frame-destroy CM_POP 4, 16, implicit-def $x2, implicit $x2, implicit-def $x1
     ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
     ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
     ; CHECK-NEXT: PseudoTAIL target-flags(riscv-call) @bar, csr_ilp32_lp64, implicit $x2
