@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/MemProfUse.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -30,7 +31,9 @@
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/HashBuilder.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/Utils/LongestCommonSequence.h"
 #include <map>
@@ -45,6 +48,7 @@ namespace llvm {
 extern cl::opt<bool> PGOWarnMissing;
 extern cl::opt<bool> NoPGOWarnMismatch;
 extern cl::opt<bool> NoPGOWarnMismatchComdatWeak;
+extern cl::opt<bool> AnnotateStringLiteralSectionPrefix;
 } // namespace llvm
 
 // By default disable matching of allocation profiles onto operator new that
@@ -231,6 +235,21 @@ static void HandleUnsupportedAnnotationKinds(GlobalVariable &GVar,
   }
   LLVM_DEBUG(dbgs() << "Skip annotation for " << GVar.getName() << " due to "
                     << Reason << ".\n");
+}
+
+// Computes the LLVM version of MD5 hash for the content of a string
+// literal.
+static std::optional<uint64_t>
+getStringContentHash(const GlobalVariable &GVar) {
+  auto *Initializer = GVar.getInitializer();
+  if (!Initializer)
+    return std::nullopt;
+  if (auto *C = dyn_cast<ConstantDataSequential>(Initializer))
+    if (C->isString()) {
+      // Note the hash computed for the literal would include the null byte.
+      return llvm::MD5Hash(C->getAsString());
+    }
+  return std::nullopt;
 }
 
 // Structure for tracking info about matched allocation contexts for use with
@@ -587,11 +606,15 @@ static void handleCallSite(Instruction &I, const Function *CalledFunction,
           append_range(CallStack, InlinedCallStack);
           MatchedCallSites.insert(std::move(CallStack));
         }
-        ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemProfUse", &I)
-                 << ore::NV("CallSite", &I) << " in function "
-                 << ore::NV("Caller", I.getFunction())
-                 << " matched callsite with frame count "
-                 << ore::NV("Frames", InlinedCallStack.size()));
+        OptimizationRemark Remark(DEBUG_TYPE, "MemProfUse", &I);
+        Remark << ore::NV("CallSite", &I) << " in function "
+               << ore::NV("Caller", I.getFunction())
+               << " matched callsite with frame count "
+               << ore::NV("Frames", InlinedCallStack.size())
+               << " and stack ids";
+        for (uint64_t StackId : InlinedCallStack)
+          Remark << " " << ore::NV("StackId", StackId);
+        ORE.emit(Remark);
 
         // If this is a direct call, we're done.
         if (CalledFunction)
@@ -610,13 +633,64 @@ static void handleCallSite(Instruction &I, const Function *CalledFunction,
   addVPMetadata(M, I, CalleeGuids.getArrayRef());
 }
 
+// Dump inline call stack for debugging purposes.
+static void dumpInlineCallStack(Instruction &I, CallBase *CI,
+                                OptimizationRemarkEmitter &ORE,
+                                DenseSet<uint64_t> &SeenFrames,
+                                DenseSet<uint64_t> &SeenStacks,
+                                bool ProfileHasColumns) {
+  auto GetOffset = [](const DILocation *DIL) {
+    return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
+           0xffff;
+  };
+
+  // Dump frame info.  Frames are deduplicated using FrameID.
+  std::string CallStack;
+  raw_string_ostream CallStackOS(CallStack);
+  bool First = true;
+  for (const DILocation *DIL = I.getDebugLoc(); DIL;
+       DIL = DIL->getInlinedAt()) {
+    StringRef Name = DIL->getScope()->getSubprogram()->getLinkageName();
+    if (Name.empty())
+      Name = DIL->getScope()->getSubprogram()->getName();
+    auto CalleeGUID = Function::getGUIDAssumingExternalLinkage(Name);
+    uint64_t FrameID = computeStackId(CalleeGUID, GetOffset(DIL),
+                                      ProfileHasColumns ? DIL->getColumn() : 0);
+    if (SeenFrames.insert(FrameID).second) {
+      std::string DictMsg;
+      raw_string_ostream DictOS(DictMsg);
+      DictOS << "frame: " << FrameID << " " << Name << ":" << GetOffset(DIL)
+             << ":" << (ProfileHasColumns ? DIL->getColumn() : 0);
+      ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "MemProfUse", CI)
+               << DictOS.str());
+    }
+
+    if (First)
+      First = false;
+    else
+      CallStackOS << ",";
+    CallStackOS << FrameID;
+  }
+
+  // Dump inline call stack info.  Stacks are deduplicated using StackHash.
+  uint64_t StackHash = llvm::MD5Hash(CallStack);
+  if (SeenStacks.insert(StackHash).second) {
+    std::string Msg;
+    raw_string_ostream OS(Msg);
+    OS << "inline call stack: " << CallStack;
+    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "MemProfUse", CI)
+             << OS.str());
+  }
+}
+
 static void
 readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
             const TargetLibraryInfo &TLI,
             std::map<uint64_t, AllocMatchInfo> &FullStackIdToAllocMatchInfo,
             std::set<std::vector<uint64_t>> &MatchedCallSites,
             DenseMap<uint64_t, LocToLocMap> &UndriftMaps,
-            OptimizationRemarkEmitter &ORE, uint64_t MaxColdSize) {
+            OptimizationRemarkEmitter &ORE, uint64_t MaxColdSize,
+            DenseSet<uint64_t> &SeenStacks, DenseSet<uint64_t> &SeenFrames) {
   auto &Ctx = M.getContext();
   // Previously we used getIRPGOFuncName() here. If F is local linkage,
   // getIRPGOFuncName() returns FuncName with prefix 'FileName;'. But
@@ -738,6 +812,11 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
       auto *CalledFunction = CI->getCalledFunction();
       if (CalledFunction && CalledFunction->isIntrinsic())
         continue;
+
+      if (ORE.allowExtraAnalysis(DEBUG_TYPE))
+        dumpInlineCallStack(I, CI, ORE, SeenFrames, SeenStacks,
+                            ProfileHasColumns);
+
       // List of call stack ids computed from the location hashes on debug
       // locations (leaf to inlined at root).
       SmallVector<uint64_t, 8> InlinedCallStack;
@@ -860,6 +939,9 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
   // call stack.
   std::set<std::vector<uint64_t>> MatchedCallSites;
 
+  DenseSet<uint64_t> SeenStacks;
+  DenseSet<uint64_t> SeenFrames;
+
   uint64_t MaxColdSize = 0;
   if (auto *MemProfSum = MemProfReader->getMemProfSummary())
     MaxColdSize = MemProfSum->getMaxColdTotalSize();
@@ -871,7 +953,8 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
     const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
     readMemprof(M, F, MemProfReader.get(), TLI, FullStackIdToAllocMatchInfo,
-                MatchedCallSites, UndriftMaps, ORE, MaxColdSize);
+                MatchedCallSites, UndriftMaps, ORE, MaxColdSize, SeenStacks,
+                SeenFrames);
   }
 
   if (ClPrintMemProfMatchInfo) {
@@ -910,11 +993,8 @@ bool MemProfUsePass::annotateGlobalVariables(
 
   if (!DataAccessProf) {
     M.addModuleFlag(Module::Warning, "EnableDataAccessProf", 0U);
-    M.getContext().diagnose(DiagnosticInfoPGOProfile(
-        MemoryProfileFileName.data(),
-        StringRef("Data access profiles not found in memprof. Ignore "
-                  "-memprof-annotate-static-data-prefix."),
-        DS_Warning));
+    // FIXME: Add a diagnostic message without failing the compilation when
+    // data access profile payload is not available.
     return false;
   }
   M.addModuleFlag(Module::Warning, "EnableDataAccessProf", 1U);
@@ -935,19 +1015,27 @@ bool MemProfUsePass::annotateGlobalVariables(
     }
 
     StringRef Name = GVar.getName();
+    SymbolHandleRef Handle = SymbolHandleRef(Name);
     // Skip string literals as their mangled names don't stay stable across
     // binary releases.
-    // TODO: Track string content hash in the profiles and compute it inside the
-    // compiler to categeorize the hotness string literals.
+    if (!AnnotateStringLiteralSectionPrefix)
+      if (Name.starts_with(".str"))
+        continue;
+
     if (Name.starts_with(".str")) {
-      LLVM_DEBUG(dbgs() << "Skip annotating string literal " << Name << "\n");
-      continue;
+      std::optional<uint64_t> Hash = getStringContentHash(GVar);
+      if (!Hash) {
+        LLVM_DEBUG(dbgs() << "Cannot compute content hash for string literal "
+                          << Name << "\n");
+        continue;
+      }
+      Handle = SymbolHandleRef(Hash.value());
     }
 
     // DataAccessProfRecord's get* methods will canonicalize the name under the
     // hood before looking it up, so optimizer doesn't need to do it.
     std::optional<DataAccessProfRecord> Record =
-        DataAccessProf->getProfileRecord(Name);
+        DataAccessProf->getProfileRecord(Handle);
     // Annotate a global variable as hot if it has non-zero sampled count, and
     // annotate it as cold if it's seen in the profiled binary
     // file but doesn't have any access sample.
@@ -959,7 +1047,7 @@ bool MemProfUsePass::annotateGlobalVariables(
       Changed |= GVar.setSectionPrefix("hot");
       LLVM_DEBUG(dbgs() << "Global variable " << Name
                         << " is annotated as hot\n");
-    } else if (DataAccessProf->isKnownColdSymbol(Name)) {
+    } else if (DataAccessProf->isKnownColdSymbol(Handle)) {
       ++NumOfMemProfColdGlobalVars;
       Changed |= GVar.setSectionPrefix("unlikely");
       Changed = true;

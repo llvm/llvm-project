@@ -9,6 +9,8 @@
 #include "llvm/Object/DXContainer.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/MC/DXContainerInfo.h"
+#include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/Error.h"
@@ -60,6 +62,15 @@ TEST(DXCFile, ParseHeader) {
                      "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 16) == 0);
   EXPECT_EQ(C.getHeader().Version.Major, 1u);
   EXPECT_EQ(C.getHeader().Version.Minor, 0u);
+}
+
+TEST(DXCFile, MissingHeaderMagic) {
+  uint8_t Buffer[] = {0xFF, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00,
+                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+                      0x70, 0x0D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  EXPECT_THAT_EXPECTED(DXContainer::create(getMemoryBuffer<32>(Buffer)),
+                       FailedWithMessage("Missing DXBC header magic"));
 }
 
 TEST(DXCFile, ParsePartMissingOffsets) {
@@ -209,7 +220,7 @@ TEST(DXCFile, ParseDXILPart) {
   DXContainer C =
       llvm::cantFail(DXContainer::create(getMemoryBuffer<116>(Buffer)));
   EXPECT_EQ(C.getHeader().PartCount, 1u);
-  const std::optional<object::DXContainer::DXILData> &DXIL = C.getDXIL();
+  const std::optional<object::DXContainer::DXILData> &DXIL = C.getDXIL(false);
   EXPECT_TRUE(DXIL.has_value());
   dxbc::ProgramHeader Header = DXIL->first;
   EXPECT_EQ(Header.getMajorVersion(), 6u);
@@ -218,6 +229,136 @@ TEST(DXCFile, ParseDXILPart) {
   EXPECT_EQ(Header.Size, 8u);
   EXPECT_EQ(Header.Bitcode.MajorVersion, 1u);
   EXPECT_EQ(Header.Bitcode.MinorVersion, 5u);
+}
+
+// This test verifies that ILDB part is correctly parsed.
+// This test is based on the binary output constructed from this yaml.
+// --- !dxcontainer
+// Header:
+//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+//                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+//   Version:
+//     Major:           1
+//     Minor:           0
+//   PartCount:       1
+// Parts:
+//   - Name:            ILDB
+//     Size:            28
+//     Program:
+//       MajorVersion:    6
+//       MinorVersion:    5
+//       ShaderKind:      5
+//       Size:            8
+//       DXILMajorVersion: 1
+//       DXILMinorVersion: 5
+//       DXILSize:        4
+//       DXIL:            [ 0x42, 0x43, 0xC0, 0xDE, ]
+// ...
+TEST(DXCFile, ParseILDBPart) {
+  uint8_t Buffer[] = {
+      0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x48, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+      0x49, 0x4c, 0x44, 0x42, 0x1c, 0x00, 0x00, 0x00, 0x65, 0x00, 0x05, 0x00,
+      0x08, 0x00, 0x00, 0x00, 0x44, 0x58, 0x49, 0x4c, 0x05, 0x01, 0x00, 0x00,
+      0x10, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x42, 0x43, 0xc0, 0xde};
+  DXContainer C =
+      llvm::cantFail(DXContainer::create(getMemoryBuffer<116>(Buffer)));
+  EXPECT_EQ(C.getHeader().PartCount, 1u);
+  const std::optional<object::DXContainer::DXILData> &DXIL = C.getDXIL(true);
+  EXPECT_TRUE(DXIL.has_value());
+  dxbc::ProgramHeader Header = DXIL->first;
+  EXPECT_EQ(Header.getMajorVersion(), 6u);
+  EXPECT_EQ(Header.getMinorVersion(), 5u);
+  EXPECT_EQ(Header.ShaderKind, 5u);
+  EXPECT_EQ(Header.Size, 8u);
+  EXPECT_EQ(Header.Bitcode.MajorVersion, 1u);
+  EXPECT_EQ(Header.Bitcode.MinorVersion, 5u);
+  EXPECT_TRUE(memcmp(DXIL->second, "\x42\x43\xc0\xde", 4) == 0);
+}
+
+// This test verifies that ILDN part is correctly parsed.
+// This test is based on the binary output constructed from this yaml.
+// --- !dxcontainer
+// Header:
+//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+//                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+//   Version:
+//     Major:           1
+//     Minor:           0
+//   PartCount:       1
+// Parts:
+//   - Name:            ILDN
+//     Size:            12
+//     DebugName:
+//      Flags:           0
+//      NameLength:      7
+//      DebugName:       abc.pdb
+// ...
+TEST(DXCFile, ParseILDNPart) {
+  uint8_t Buffer[] = {
+      0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x38, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+      0x49, 0x4C, 0x44, 0x4E, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00,
+      0x61, 0x62, 0x63, 0x2E, 0x70, 0x64, 0x62, 0x00};
+  DXContainer C =
+      llvm::cantFail(DXContainer::create(getMemoryBuffer<116>(Buffer)));
+  EXPECT_EQ(C.getHeader().PartCount, 1u);
+  const std::optional<mcdxbc::DebugName> &ILDN = C.getDebugName();
+  EXPECT_TRUE(ILDN.has_value());
+  dxbc::DebugNameHeader Header = ILDN->Parameters;
+  EXPECT_EQ(Header.Flags, 0u);
+  EXPECT_EQ(Header.NameLength, 7u);
+  EXPECT_EQ(ILDN->Filename, "abc.pdb");
+}
+
+// This test verifies that VERS part is correctly parsed.
+// This test is based on the binary output constructed from this yaml.
+// --- !dxcontainer
+// Header:
+//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+//                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+//   Version:
+//     Major:           1
+//     Minor:           0
+//   PartCount:       1
+// Parts:
+//   - Name:            VERS
+//     Size:            40
+//     DebugName:
+//      Major:           1
+//      Minor:           10
+//      IsDebugBuild:    true
+//      IsValidated:     false
+//      CommitCount:     5267
+//      ContentSizeInBytes: 21
+//      CommitSha:       21f060b7
+//      CustomVersionString: 1.9.0.15267
+// ...
+TEST(DXCFile, ParseVERSPart) {
+  uint8_t Buffer[] = {
+      0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x54, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+      0x56, 0x45, 0x52, 0x53, 0x28, 0x00, 0x00, 0x00, 0x01, 0x00, 0x0A, 0x00,
+      0x01, 0x00, 0x00, 0x00, 0x93, 0x14, 0x00, 0x00, 0x15, 0x00, 0x00, 0x00,
+      0x32, 0x31, 0x66, 0x30, 0x36, 0x30, 0x62, 0x37, 0x00, 0x31, 0x2E, 0x39,
+      0x2E, 0x30, 0x2E, 0x31, 0x35, 0x32, 0x36, 0x37, 0x00, 0x00, 0x00, 0x00};
+  DXContainer C =
+      llvm::cantFail(DXContainer::create(getMemoryBuffer<84>(Buffer)));
+  EXPECT_EQ(C.getHeader().PartCount, 1u);
+  const std::optional<mcdxbc::CompilerVersion> &VERS =
+      C.getCompilerVersionInfo();
+  EXPECT_TRUE(VERS.has_value());
+  dxbc::CompilerVersionHeader Header = VERS->Parameters;
+  EXPECT_EQ(Header.Major, 1u);
+  EXPECT_EQ(Header.Minor, 10u);
+  EXPECT_EQ(Header.Flags, dxbc::CompilerVersionFlags::Debug);
+  EXPECT_EQ(Header.CommitCount, 5267u);
+  EXPECT_EQ(Header.ContentSizeInBytes, 21u);
+  EXPECT_EQ(VERS->CommitSha, "21f060b7");
+  EXPECT_EQ(VERS->CustomVersionString, "1.9.0.15267");
 }
 
 static Expected<DXContainer>
@@ -1248,4 +1389,50 @@ TEST(RootSignature, ParseStaticSamplers) {
     ASSERT_EQ(Sampler.ShaderVisibility, 7U);
     ASSERT_EQ(Sampler.Flags, 1U);
   }
+}
+
+// PSVInfo:
+//   Version:         2
+//   ShaderStage:     5
+//   MinimumWaveLaneCount: 0
+//   MaximumWaveLaneCount: 4294967295
+//   NumThreadsX:     8
+//   NumThreadsY:     1
+//   NumThreadsZ:     1
+//   EntryName:       CSMain  <--- not serialized for version < 3
+//   ResourceStride:  0
+//   Resources:       []
+TEST(DXCFile, PSVv2EntryNameNotInStringTable) {
+  // Verify that when EntryName is set but PSV version is < 3,
+  // the entry name does not appear in the serialized string table.
+  mcdxbc::PSVRuntimeInfo PSV;
+  PSV.BaseData.ShaderStage =
+      static_cast<uint8_t>(Triple::EnvironmentType::Compute - Triple::Pixel);
+  PSV.BaseData.MinimumWaveLaneCount = 0;
+  PSV.BaseData.MaximumWaveLaneCount = 0xFFFFFFFF;
+  PSV.BaseData.NumThreadsX = 8;
+  PSV.BaseData.NumThreadsY = 1;
+  PSV.BaseData.NumThreadsZ = 1;
+  PSV.EntryName = "CSMain";
+
+  PSV.finalize(Triple::EnvironmentType::Compute, 2);
+
+  SmallVector<char> Buffer;
+  raw_svector_ostream OS(Buffer);
+  PSV.write(OS, 2);
+
+  // The serialized PSV data should not contain the entry name string.
+  StringRef Data(Buffer.data(), Buffer.size());
+  EXPECT_FALSE(Data.contains("CSMain"));
+
+  // Deserialize and verify the string table contains only null bytes
+  // (size 4 = one null byte padded to 4-byte alignment).
+  DirectX::PSVRuntimeInfo ParsedPSV(Data);
+  ASSERT_THAT_ERROR(ParsedPSV.parse(static_cast<uint16_t>(
+                        Triple::EnvironmentType::Compute - Triple::Pixel)),
+                    Succeeded());
+  EXPECT_EQ(ParsedPSV.getVersion(), 2u);
+  StringRef StrTab = ParsedPSV.getStringTable();
+  EXPECT_EQ(StrTab.size(), 4u);
+  EXPECT_TRUE(llvm::all_of(StrTab, [](char C) { return C == '\0'; }));
 }

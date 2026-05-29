@@ -20,7 +20,6 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MCA/CustomBehaviour.h"
-#include "llvm/TargetParser/TargetParser.h"
 
 namespace llvm {
 namespace mca {
@@ -68,9 +67,9 @@ class AMDGPUCustomBehaviour : public CustomBehaviour {
   bool hasModifiersSet(const std::unique_ptr<Instruction> &Inst,
                        AMDGPU::OpName OpName) const;
   /// Helper function used in generateWaitCntInfo()
-  bool isGWS(uint16_t Opcode) const;
+  bool isGWS(uint32_t Opcode) const;
   /// Helper function used in generateWaitCntInfo()
-  bool isAlwaysGDS(uint16_t Opcode) const;
+  bool isAlwaysGDS(uint32_t Opcode) const;
   /// Helper function used in generateWaitCntInfo()
   bool isVMEM(const MCInstrDesc &MCID);
   /// This method gets called from checkCustomHazard when mca is attempting to

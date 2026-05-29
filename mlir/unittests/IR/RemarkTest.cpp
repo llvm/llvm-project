@@ -230,25 +230,43 @@ TEST(Remark, TestOutputOptimizationRemarkDiagnostic) {
     int tripBad = 4;
     int threshold = 256;
 
-    remark::missed(loc, {"", categoryUnroll, "unroller2", ""})
+    remark::missed(loc, remark::RemarkOpts::name("")
+                            .category(categoryUnroll)
+                            .subCategory("unroller2"))
         << remark::reason("tripCount={0} < threshold={1}", tripBad, threshold);
 
-    remark::missed(loc, {"", categoryUnroll, "", ""})
+    remark::missed(loc, remark::RemarkOpts::name("").category(categoryUnroll))
         << remark::reason("tripCount={0} < threshold={1}", tripBad, threshold)
         << remark::suggest("increase unroll to {0}", target);
 
     // FAILURE: action attempted but failed
-    remark::failed(loc, {"", categoryUnroll, "", ""})
+    remark::failed(loc, remark::RemarkOpts::name("").category(categoryUnroll))
         << remark::reason("failed due to unsupported pattern");
   }
   // clang-format off
+  // Remarks now include RemarkId=N, so use substring checks.
   unsigned long expectedSize = 5;
   ASSERT_EQ(seenMsg.size(), expectedSize);
-  EXPECT_EQ(seenMsg[0], "[Passed] pass1 | Category:Vectorizer:myPass1 | Function=foo | Remark=\"vectorized loop\", tripCount=128");
-  EXPECT_EQ(seenMsg[1], "[Analysis] Analysis1 | Category:Register | Function=foo | Remark=\"Kernel uses 168 registers\"");
-  EXPECT_EQ(seenMsg[2], "[Missed]  | Category:Unroll:unroller2 | Reason=\"tripCount=4 < threshold=256\"");
-  EXPECT_EQ(seenMsg[3], "[Missed]  | Category:Unroll | Reason=\"tripCount=4 < threshold=256\", Suggestion=\"increase unroll to 128\"");
-  EXPECT_EQ(seenMsg[4], "[Failure]  | Category:Unroll | Reason=\"failed due to unsupported pattern\"");
+  EXPECT_THAT(seenMsg[0], HasSubstr("[Passed]"));
+  EXPECT_THAT(seenMsg[0], HasSubstr("pass1 | Category:Vectorizer:myPass1 | Function=foo |"));
+  EXPECT_THAT(seenMsg[0], HasSubstr("Remark=\"vectorized loop\""));
+  EXPECT_THAT(seenMsg[0], HasSubstr("tripCount=128"));
+
+  EXPECT_THAT(seenMsg[1], HasSubstr("[Analysis]"));
+  EXPECT_THAT(seenMsg[1], HasSubstr("Analysis1 | Category:Register | Function=foo |"));
+  EXPECT_THAT(seenMsg[1], HasSubstr("Remark=\"Kernel uses 168 registers\""));
+
+  EXPECT_THAT(seenMsg[2], HasSubstr("[Missed]"));
+  EXPECT_THAT(seenMsg[2], HasSubstr("Category:Unroll:unroller2"));
+  EXPECT_THAT(seenMsg[2], HasSubstr("Reason=\"tripCount=4 < threshold=256\""));
+
+  EXPECT_THAT(seenMsg[3], HasSubstr("[Missed]"));
+  EXPECT_THAT(seenMsg[3], HasSubstr("Category:Unroll |"));
+  EXPECT_THAT(seenMsg[3], HasSubstr("Suggestion=\"increase unroll to 128\""));
+
+  EXPECT_THAT(seenMsg[4], HasSubstr("[Failure]"));
+  EXPECT_THAT(seenMsg[4], HasSubstr("Category:Unroll |"));
+  EXPECT_THAT(seenMsg[4], HasSubstr("Reason=\"failed due to unsupported pattern\""));
   // clang-format on
 }
 
@@ -294,12 +312,20 @@ TEST(Remark, TestCustomOptimizationRemarkDiagnostic) {
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
     // Remark 1: pass, category LoopUnroll
-    remark::passed(loc, {"", categoryLoopunroll, myPassname1, ""}) << pass1Msg;
+    remark::passed(loc, remark::RemarkOpts::name("")
+                            .category(categoryLoopunroll)
+                            .subCategory(myPassname1))
+        << pass1Msg;
     // Remark 2: failure, category LoopUnroll
-    remark::failed(loc, {"", categoryLoopunroll, myPassname2, ""})
+    remark::failed(loc, remark::RemarkOpts::name("")
+                            .category(categoryLoopunroll)
+                            .subCategory(myPassname2))
         << remark::reason(pass2Msg);
     // Remark 3: pass, category Inline (should not be printed)
-    remark::passed(loc, {"", categoryInline, myPassname1, ""}) << pass3Msg;
+    remark::passed(loc, remark::RemarkOpts::name("")
+                            .category(categoryInline)
+                            .subCategory(myPassname1))
+        << pass3Msg;
   }
 
   llvm::errs().flush();
@@ -372,11 +398,14 @@ TEST(Remark, TestRemarkFinal) {
   llvm::errs().flush();
   std::string errOut = ::testing::internal::GetCapturedStderr();
 
-  // Containment checks for messages.
-  EXPECT_EQ(errOut.find(pass1Msg), std::string::npos); // dropped
-  EXPECT_EQ(errOut.find(pass2Msg), std::string::npos); // dropped
-  EXPECT_NE(errOut.find(pass3Msg), std::string::npos); // shown
-  EXPECT_NE(errOut.find(pass4Msg), std::string::npos); // shown
+  // PolicyFinal deduplicates by (location, name, category, kind).
+  // Remarks 1 (failed), 2 (missed), 3 (passed) have different kinds, so all
+  // survive. Remark 4 (passed) has a different location, so it also survives.
+  EXPECT_NE(errOut.find(pass1Msg), std::string::npos); // shown (failed)
+  EXPECT_NE(errOut.find(pass2Msg), std::string::npos); // shown (missed)
+  EXPECT_NE(errOut.find(pass3Msg), std::string::npos); // shown (passed)
+  EXPECT_NE(errOut.find(pass4Msg),
+            std::string::npos); // shown (passed, diff loc)
 }
 
 TEST(Remark, TestArgWithAttribute) {
@@ -409,4 +438,141 @@ TEST(Remark, TestArgWithAttribute) {
   EXPECT_FALSE(argWithoutAttr.getAttribute()); // Returns null Attribute
   EXPECT_EQ(argWithoutAttr.val, "Value");
 }
+
+// Test that Remark correctly owns its string data and doesn't have
+// use-after-free issues when the original strings go out of scope.
+// This is particularly important for RemarkEmittingPolicyFinal which
+// stores remarks and emits them later during finalize().
+TEST(Remark, TestRemarkOwnsStringData) {
+  testing::internal::CaptureStderr();
+
+  // These are the expected values we'll check for in the output.
+  // They must match what we create in the inner scope below.
+  const char *expectedCategory = "DynamicCategory";
+  const char *expectedName = "DynamicRemarkName";
+  const char *expectedFunction = "dynamicFunction";
+  const char *expectedMessage = "Dynamic message content";
+
+  {
+    MLIRContext context;
+    Location loc = FileLineColLoc::get(&context, "test.cpp", 42, 10);
+
+    // Setup with RemarkEmittingPolicyFinal - this stores remarks and emits
+    // them only when the engine is destroyed (during finalize).
+    // Note: The 'passed' filter must be set for remark::passed() to emit.
+    mlir::remark::RemarkCategories cats{
+        /*all=*/std::nullopt,
+        /*passed=*/expectedCategory, // Enable passed remarks for this category
+        /*missed=*/std::nullopt,
+        /*analysis=*/std::nullopt,
+        /*failed=*/std::nullopt};
+
+    std::unique_ptr<remark::RemarkEmittingPolicyFinal> policy =
+        std::make_unique<remark::RemarkEmittingPolicyFinal>();
+    LogicalResult isEnabled = remark::enableOptimizationRemarks(
+        context, std::make_unique<MyCustomStreamer>(), std::move(policy), cats,
+        /*printAsEmitRemarks=*/true);
+    ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
+
+    // Create dynamic strings in an inner scope that will go out of scope
+    // BEFORE the RemarkEngine is destroyed and finalize() is called.
+    {
+      std::string dynamicCategory(expectedCategory);
+      std::string dynamicName(expectedName);
+      std::string dynamicFunction(expectedFunction);
+      std::string dynamicSubCategory("DynamicSubCategory");
+      std::string dynamicMessage(expectedMessage);
+
+      // Emit a remark with all dynamic strings
+      remark::passed(loc, remark::RemarkOpts::name(dynamicName)
+                              .category(dynamicCategory)
+                              .subCategory(dynamicSubCategory)
+                              .function(dynamicFunction))
+          << dynamicMessage;
+
+      // dynamicCategory, dynamicName, dynamicFunction, dynamicSubCategory,
+      // and dynamicMessage all go out of scope here!
+    }
+
+    // At this point, all the dynamic strings have been destroyed.
+    // The Remark stored in RemarkEmittingPolicyFinal must have its own
+    // copies of the string data, otherwise we'd have dangling pointers.
+
+    // Context destruction triggers RemarkEngine destruction, which calls
+    // finalize() on the policy, which then emits the stored remarks.
+    // If Remark doesn't own its strings, this would crash or produce garbage.
+  }
+
+  llvm::errs().flush();
+  std::string errOut = ::testing::internal::GetCapturedStderr();
+
+  // Verify the output contains our expected strings - this proves the
+  // Remark correctly copied and owns the string data.
+  EXPECT_NE(errOut.find(expectedCategory), std::string::npos)
+      << "Expected category not found in output. Got: " << errOut;
+  EXPECT_NE(errOut.find(expectedName), std::string::npos)
+      << "Expected name not found in output. Got: " << errOut;
+  EXPECT_NE(errOut.find(expectedFunction), std::string::npos)
+      << "Expected function not found in output. Got: " << errOut;
+  EXPECT_NE(errOut.find(expectedMessage), std::string::npos)
+      << "Expected message not found in output. Got: " << errOut;
+}
+
+// Test that remarks can be linked together using RemarkId.
+TEST(Remark, TestRemarkLinking) {
+  testing::internal::CaptureStderr();
+
+  std::string categoryOpt("Optimizer");
+
+  {
+    MLIRContext context;
+    Location loc = FileLineColLoc::get(&context, "test.cpp", 10, 5);
+
+    // Setup the remark engine
+    mlir::remark::RemarkCategories cats{/*all=*/std::nullopt,
+                                        /*passed=*/categoryOpt,
+                                        /*missed=*/std::nullopt,
+                                        /*analysis=*/categoryOpt,
+                                        /*failed=*/std::nullopt};
+
+    std::unique_ptr<remark::RemarkEmittingPolicyAll> policy =
+        std::make_unique<remark::RemarkEmittingPolicyAll>();
+    LogicalResult isEnabled = remark::enableOptimizationRemarks(
+        context, std::make_unique<MyCustomStreamer>(), std::move(policy), cats,
+        /*printAsEmitRemarks=*/true);
+    ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
+
+    // Emit an analysis remark and capture its ID.
+    auto analysisRemark = remark::analysis(
+        loc, remark::RemarkOpts::name("LoopAnalysis").category(categoryOpt));
+    analysisRemark << "analyzed loop with trip count 128";
+    remark::RemarkId analysisId = analysisRemark.getId();
+
+    // Verify we got a valid ID.
+    EXPECT_TRUE(static_cast<bool>(analysisId));
+    EXPECT_GT(analysisId.getValue(), 0u);
+
+    // Emit a passed remark that links to the analysis via RemarkOpts.
+    remark::passed(loc, remark::RemarkOpts::name("LoopOptimized")
+                            .category(categoryOpt)
+                            .relatedTo(analysisId))
+        << "vectorized loop";
+  }
+
+  llvm::errs().flush();
+  std::string errOut = ::testing::internal::GetCapturedStderr();
+
+  // Verify the analysis remark has an ID.
+  EXPECT_THAT(errOut, HasSubstr("RemarkId="));
+
+  // Verify the passed remark links to the analysis remark.
+  EXPECT_THAT(errOut, HasSubstr("RelatedTo="));
+
+  // Verify both remarks are present.
+  EXPECT_THAT(errOut, HasSubstr("LoopAnalysis"));
+  EXPECT_THAT(errOut, HasSubstr("LoopOptimized"));
+  EXPECT_THAT(errOut, HasSubstr("analyzed loop"));
+  EXPECT_THAT(errOut, HasSubstr("vectorized loop"));
+}
+
 } // namespace

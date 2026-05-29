@@ -12,17 +12,11 @@
 #include <__atomic/atomic_waitable_traits.h>
 #include <__atomic/contention_t.h>
 #include <__atomic/memory_order.h>
-#include <__atomic/to_gcc_order.h>
 #include <__chrono/duration.h>
 #include <__config>
 #include <__memory/addressof.h>
 #include <__thread/poll_with_backoff.h>
-#include <__type_traits/conjunction.h>
 #include <__type_traits/decay.h>
-#include <__type_traits/invoke.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/void_t.h>
-#include <__utility/declval.h>
 #include <cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -33,6 +27,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
 #  if _LIBCPP_HAS_THREADS
+
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #    if !_LIBCPP_AVAILABILITY_HAS_NEW_SYNC
 
@@ -78,6 +74,8 @@ _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_one
 // notify all waiters waiting on the address directly with the native platform wait
 template <std::size_t _Size>
 _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_all_native(const void*) _NOEXCEPT;
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 #    if _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
 

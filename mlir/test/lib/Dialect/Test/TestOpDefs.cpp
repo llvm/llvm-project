@@ -13,6 +13,7 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 using namespace mlir;
 using namespace test;
@@ -34,6 +35,7 @@ static StringLiteral getVisibilityString(SymbolTable::Visibility visibility) {
   case SymbolTable::Visibility::Public:
     return "public";
   }
+  llvm_unreachable("Unknown SymbolTable::Visibility");
 }
 
 void OverriddenSymbolVisibilityOp::setVisibility(
@@ -254,7 +256,7 @@ OpFoldResult TestOpInPlaceFold::fold(FoldAdaptor adaptor) {
 
 LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
     MLIRContext *, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   if (operands[0].getType() != operands[1].getType()) {
     return emitOptionalError(location, "operand type mismatch ",
@@ -271,8 +273,8 @@ LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
 
 LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
     MLIRContext *context, std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, PropertyRef properties,
+    RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   // Create return type consisting of the last element of the first operand.
   auto operandType = operands.front().getType();
@@ -308,10 +310,10 @@ LogicalResult OpWithResultShapeInterfaceOp::reifyReturnTypeShapes(
   shapes.reserve(operands.size());
   for (Value operand : llvm::reverse(operands)) {
     auto rank = cast<RankedTensorType>(operand.getType()).getRank();
-    auto currShape = llvm::to_vector<4>(
-        llvm::map_range(llvm::seq<int64_t>(0, rank), [&](int64_t dim) -> Value {
+    auto currShape = llvm::map_to_vector<4>(
+        llvm::seq<int64_t>(0, rank), [&](int64_t dim) -> Value {
           return builder.createOrFold<tensor::DimOp>(loc, operand, dim);
-        }));
+        });
     shapes.push_back(tensor::FromElementsOp::create(
         builder, getLoc(),
         RankedTensorType::get({rank}, builder.getIndexType()), currShape));
@@ -329,7 +331,7 @@ LogicalResult ReifyShapedTypeUsingReifyResultShapesOp::reifyResultShapes(
   shapes.reserve(getNumOperands());
   for (Value operand : llvm::reverse(getOperands())) {
     auto tensorType = cast<RankedTensorType>(operand.getType());
-    auto currShape = llvm::to_vector<4>(llvm::map_range(
+    auto currShape = llvm::map_to_vector<4>(
         llvm::seq<int64_t>(0, tensorType.getRank()),
         [&](int64_t dim) -> OpFoldResult {
           return tensorType.isDynamicDim(dim)
@@ -338,7 +340,7 @@ LogicalResult ReifyShapedTypeUsingReifyResultShapesOp::reifyResultShapes(
                                                                dim))
                      : static_cast<OpFoldResult>(
                            builder.getIndexAttr(tensorType.getDimSize(dim)));
-        }));
+        });
     shapes.emplace_back(std::move(currShape));
   }
   return success();
@@ -450,7 +452,7 @@ namespace {
 struct TestResource : public SideEffects::Resource::Base<TestResource> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestResource)
 
-  StringRef getName() final { return "<Test>"; }
+  StringRef getName() const final { return "<Test>"; }
 };
 } // namespace
 
@@ -477,6 +479,12 @@ void SideEffectOp::getEffects(
     SideEffects::Resource *resource = SideEffects::DefaultResource::get();
     if (effectElement.get("test_resource"))
       resource = TestResource::get();
+    else if (effectElement.get("test_nonaddressable_resource"))
+      resource = TestNonAddressableResource::get();
+    else if (effectElement.get("test_nonaddressable_resource_a"))
+      resource = TestNonAddressableResourceA::get();
+    else if (effectElement.get("test_nonaddressable_resource_b"))
+      resource = TestNonAddressableResourceB::get();
 
     // Check for a result to affect.
     if (effectElement.get("on_result"))
@@ -491,6 +499,22 @@ void SideEffectOp::getEffects(
 void SideEffectOp::getEffects(
     SmallVectorImpl<TestEffects::EffectInstance> &effects) {
   testSideEffectOpGetEffect(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
+// ConditionalSideEffectOp
+//===----------------------------------------------------------------------===//
+
+void ConditionalSideEffectOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  if (!getHasEffects())
+    return;
+
+  SideEffects::Resource *resource = SideEffects::DefaultResource::get();
+  effects.emplace_back(MemoryEffects::Read::get(), resource);
+  effects.emplace_back(MemoryEffects::Write::get(), resource);
+  effects.emplace_back(MemoryEffects::Free::get(), resource);
+  effects.emplace_back(MemoryEffects::Allocate::get(), resource);
 }
 
 void SideEffectWithRegionOp::getEffects(
@@ -516,6 +540,12 @@ void SideEffectWithRegionOp::getEffects(
     SideEffects::Resource *resource = SideEffects::DefaultResource::get();
     if (effectElement.get("test_resource"))
       resource = TestResource::get();
+    else if (effectElement.get("test_nonaddressable_resource"))
+      resource = TestNonAddressableResource::get();
+    else if (effectElement.get("test_nonaddressable_resource_a"))
+      resource = TestNonAddressableResourceA::get();
+    else if (effectElement.get("test_nonaddressable_resource_b"))
+      resource = TestNonAddressableResourceB::get();
 
     // Check for a result to affect.
     if (effectElement.get("on_result"))
@@ -874,6 +904,20 @@ LogicalResult TestVerifiersOp::verifyRegions() {
 // TestWithBoundsOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult TestWithBoundsOp::verify() {
+  Type type = getElementTypeOrSelf(getResult().getType());
+  unsigned expectedWidth = 0;
+  if (type.isIndex())
+    expectedWidth = IndexType::kInternalStorageBitWidth;
+  else if (auto intTy = llvm::dyn_cast<IntegerType>(type))
+    expectedWidth = intTy.getWidth();
+  if (expectedWidth != 0 && getUmin().getBitWidth() != expectedWidth)
+    return emitOpError("bound attribute width (")
+           << getUmin().getBitWidth() << ") does not match result type width ("
+           << expectedWidth << ")";
+  return success();
+}
+
 void TestWithBoundsOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                          SetIntRangeFn setResultRanges) {
   setResultRanges(getResult(), {getUmin(), getUmax(), getSmin(), getSmax()});
@@ -1012,14 +1056,21 @@ mlir::presburger::BoundType ReifyBoundOp::getBoundType() {
 }
 
 LogicalResult ReifyBoundOp::verify() {
+  if (getType() != "EQ" && getType() != "LB" && getType() != "UB")
+    return emitOpError("invalid bound type '")
+           << getType() << "', expected 'EQ', 'LB', or 'UB'";
   if (isa<ShapedType>(getVar().getType())) {
     if (!getDim().has_value())
       return emitOpError("expected 'dim' attribute for shaped type variable");
-  } else if (getVar().getType().isIndex()) {
+  } else if (getVar().getType().isIndex() || getVar().getType().isInteger()) {
+    if (getVar().getType().isInteger() && !getAllowIntegerType())
+      return emitOpError("integer variable requires 'allow_integer_type'");
     if (getDim().has_value())
-      return emitOpError("unexpected 'dim' attribute for index variable");
+      return emitOpError(
+          "unexpected 'dim' attribute for index/integer variable");
   } else {
-    return emitOpError("expected index-typed variable or shape type variable");
+    return emitOpError(
+        "expected index-typed/integer-typed variable or shape type variable");
   }
   if (getConstant() && getScalable())
     return emitOpError("'scalable' and 'constant' are mutually exlusive");
@@ -1147,7 +1198,7 @@ LogicalResult OpWithInferTypeAdaptorInterfaceOp::inferReturnTypes(
 // refineReturnType, currently only refineReturnType can be omitted.
 LogicalResult OpWithRefineTypeInterfaceOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &returnTypes) {
   returnTypes.clear();
   return OpWithRefineTypeInterfaceOp::refineReturnTypes(
@@ -1157,7 +1208,7 @@ LogicalResult OpWithRefineTypeInterfaceOp::inferReturnTypes(
 
 LogicalResult OpWithRefineTypeInterfaceOp::refineReturnTypes(
     MLIRContext *, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &returnTypes) {
   if (operands[0].getType() != operands[1].getType()) {
     return emitOptionalError(location, "operand type mismatch ",
@@ -1239,7 +1290,7 @@ OpWithShapedTypeInferTypeAdaptorInterfaceOp::reifyReturnTypeShapes(
 
 LogicalResult TestOpWithPropertiesAndInferredType::inferReturnTypes(
     MLIRContext *context, std::optional<Location>, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
 
   Adaptor adaptor(operands, attributes, properties, regions);
@@ -1280,6 +1331,33 @@ LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionSuccessor successor) {
   if (successor.isParent())
     return getExitArgMutable();
   return getNextIterArgMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// TestCrashingReturnOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult TestCrashingReturnOp::verify() {
+  if (!getValid())
+    return emitOpError("requires 'valid' unit attribute");
+  return success();
+}
+
+MutableOperandRange
+TestCrashingReturnOp::getMutableSuccessorOperands(RegionSuccessor successor) {
+  if (!getValid())
+    llvm::report_fatal_error("getMutableSuccessorOperands called on unverified "
+                             "test.crashing_return");
+  return getArgsMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// TestReturnWithIgnoredValueOp
+//===----------------------------------------------------------------------===//
+
+MutableOperandRange TestReturnWithIgnoredValueOp::getMutableSuccessorOperands(
+    RegionSuccessor /*successor*/) {
+  return getValuesMutable();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1394,6 +1472,106 @@ ValueRange
 TestStoreWithALoopRegion::getSuccessorInputs(RegionSuccessor successor) {
   return successor.isParent() ? ValueRange(getOperation()->getResults())
                               : ValueRange(getBody().front().getArguments());
+}
+
+//===----------------------------------------------------------------------===//
+// TestRegionTypesCompatOp
+//===----------------------------------------------------------------------===//
+
+void TestRegionTypesCompatOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent())
+    regions.emplace_back(&getBody());
+  else
+    regions.push_back(RegionSuccessor::parent());
+}
+
+OperandRange
+TestRegionTypesCompatOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return getEntries();
+}
+
+ValueRange
+TestRegionTypesCompatOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  return getBody().getArguments();
+}
+
+bool TestRegionTypesCompatOp::areTypesCompatible(Type lhs, Type rhs) {
+  return lhs == rhs || (isa<IntegerType>(lhs) && isa<IntegerType>(rhs));
+}
+
+//===----------------------------------------------------------------------===//
+// TestLoopTypesCompatOp
+//===----------------------------------------------------------------------===//
+
+void TestLoopTypesCompatOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  regions.emplace_back(&getBody());
+  if (!point.isParent())
+    regions.push_back(RegionSuccessor::parent());
+}
+
+OperandRange TestLoopTypesCompatOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return getInitArgs();
+}
+
+ValueRange
+TestLoopTypesCompatOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  return getBody().getArguments();
+}
+
+MutableArrayRef<OpOperand> TestLoopTypesCompatOp::getInitsMutable() {
+  return getInitArgsMutable();
+}
+
+Block::BlockArgListType TestLoopTypesCompatOp::getRegionIterArgs() {
+  return getBody().getArguments();
+}
+
+std::optional<MutableArrayRef<OpOperand>>
+TestLoopTypesCompatOp::getYieldedValuesMutable() {
+  return cast<TestTypesCompatYieldOp>(getBody().front().getTerminator())
+      .getArgsMutable();
+}
+
+std::optional<ResultRange> TestLoopTypesCompatOp::getLoopResults() {
+  return getResults();
+}
+
+SmallVector<Region *> TestLoopTypesCompatOp::getLoopRegions() {
+  return {&getBody()};
+}
+
+bool TestLoopTypesCompatOp::areTypesCompatible(Type lhs, Type rhs) {
+  return lhs == rhs || (isa<IntegerType>(lhs) && isa<IntegerType>(rhs));
+}
+
+void TestRegionTypeChangerOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent())
+    regions.emplace_back(&getBody());
+  else
+    regions.push_back(RegionSuccessor::parent());
+}
+
+OperandRange
+TestRegionTypeChangerOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return getEntries();
+}
+
+ValueRange
+TestRegionTypeChangerOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  return getBody().getArguments();
+}
+
+bool TestRegionTypeChangerOp::areTypesCompatible(Type lhs, Type rhs) {
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1591,6 +1769,187 @@ TestMultiSlotAlloca::handleDestructuringComplete(
   return createNewMultiAllocaWithoutSlot(slot, builder, *this);
 }
 
+//===----------------------------------------------------------------------===//
+// TestTransparentAlias
+//===----------------------------------------------------------------------===//
+
+void TestTransparentAlias::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot & /*parentSlot*/,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  if (aliasedSlotPointerOperand.get() != getSource())
+    return;
+  Type elemType = cast<MemRefType>(getResult().getType()).getElementType();
+  newMemorySlots.push_back(MemorySlot{getResult(), elemType});
+}
+
+bool TestTransparentAlias::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  for (OpOperand &use : getResult().getUses())
+    newBlockingUses.push_back(&use);
+  return true;
+}
+
+DeletionKind TestTransparentAlias::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+//===----------------------------------------------------------------------===//
+// TestTransparentCastAlias
+//===----------------------------------------------------------------------===//
+
+void TestTransparentCastAlias::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot & /*parentSlot*/,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  if (aliasedSlotPointerOperand.get() != getSource())
+    return;
+  Type elemType = cast<MemRefType>(getResult().getType()).getElementType();
+  newMemorySlots.push_back(MemorySlot{getResult(), elemType});
+}
+
+bool TestTransparentCastAlias::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  for (OpOperand &use : getResult().getUses())
+    newBlockingUses.push_back(&use);
+  return true;
+}
+
+DeletionKind TestTransparentCastAlias::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+Value TestTransparentCastAlias::projectSlotValueToAliasValue(
+    OpOperand & /*aliasedSlotPointerOperand*/,
+    const MemorySlot & /*parentSlot*/, const MemorySlot &aliasSlot,
+    Value slotValue, OpBuilder &builder) {
+  if (slotValue.getType() == aliasSlot.elemType)
+    return slotValue;
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            aliasSlot.elemType, slotValue)
+      .getResult(0);
+}
+
+Value TestTransparentCastAlias::projectAliasValueToSlotValue(
+    OpOperand & /*aliasedSlotPointerOperand*/, const MemorySlot &parentSlot,
+    const MemorySlot & /*aliasSlot*/, Value aliasValue, Value /*reachingDef*/,
+    OpBuilder &builder) {
+  if (aliasValue.getType() == parentSlot.elemType)
+    return aliasValue;
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            parentSlot.elemType, aliasValue)
+      .getResult(0);
+}
+
+//===----------------------------------------------------------------------===//
+// TestTransparentDualAlias
+//===----------------------------------------------------------------------===//
+
+void TestTransparentDualAlias::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot & /*parentSlot*/,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  if (aliasedSlotPointerOperand.get() != getSource())
+    return;
+  // Expose both results as aliases of the same parent at their own
+  // signedness (same bit width as the parent's signless i32).
+  newMemorySlots.push_back(MemorySlot{
+      getResultSigned(),
+      cast<MemRefType>(getResultSigned().getType()).getElementType()});
+  newMemorySlots.push_back(MemorySlot{
+      getResultUnsigned(),
+      cast<MemRefType>(getResultUnsigned().getType()).getElementType()});
+}
+
+bool TestTransparentDualAlias::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  for (Value result : getResults())
+    for (OpOperand &use : result.getUses())
+      newBlockingUses.push_back(&use);
+  return true;
+}
+
+DeletionKind TestTransparentDualAlias::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+Value TestTransparentDualAlias::projectSlotValueToAliasValue(
+    OpOperand & /*aliasedSlotPointerOperand*/,
+    const MemorySlot & /*parentSlot*/, const MemorySlot &aliasSlot,
+    Value slotValue, OpBuilder &builder) {
+  if (slotValue.getType() == aliasSlot.elemType)
+    return slotValue;
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            aliasSlot.elemType, slotValue)
+      .getResult(0);
+}
+
+Value TestTransparentDualAlias::projectAliasValueToSlotValue(
+    OpOperand & /*aliasedSlotPointerOperand*/, const MemorySlot &parentSlot,
+    const MemorySlot & /*aliasSlot*/, Value aliasValue, Value /*reachingDef*/,
+    OpBuilder &builder) {
+  if (aliasValue.getType() == parentSlot.elemType)
+    return aliasValue;
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            parentSlot.elemType, aliasValue)
+      .getResult(0);
+}
+
+//===----------------------------------------------------------------------===//
+// TestPartialAlias
+//===----------------------------------------------------------------------===//
+
+void TestPartialAlias::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot & /*parentSlot*/,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  if (aliasedSlotPointerOperand.get() != getSource())
+    return;
+  newMemorySlots.push_back(MemorySlot{
+      getResult(), cast<MemRefType>(getResult().getType()).getElementType()});
+}
+
+bool TestPartialAlias::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  for (OpOperand &use : getResult().getUses())
+    newBlockingUses.push_back(&use);
+  return true;
+}
+
+DeletionKind TestPartialAlias::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+Value TestPartialAlias::projectSlotValueToAliasValue(
+    OpOperand & /*aliasedSlotPointerOperand*/,
+    const MemorySlot & /*parentSlot*/, const MemorySlot &aliasSlot,
+    Value slotValue, OpBuilder &builder) {
+  // Sub-value extraction: 1-input cast.
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            aliasSlot.elemType, slotValue)
+      .getResult(0);
+}
+
+Value TestPartialAlias::projectAliasValueToSlotValue(
+    OpOperand & /*aliasedSlotPointerOperand*/, const MemorySlot &parentSlot,
+    const MemorySlot & /*aliasSlot*/, Value aliasValue, Value reachingDef,
+    OpBuilder &builder) {
+  // Sub-value insertion into the current reaching definition: emit a 2-input
+  // cast taking both the new alias value and the existing parent value.
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            parentSlot.elemType,
+                                            ValueRange{aliasValue, reachingDef})
+      .getResult(0);
+}
+
 namespace {
 /// Returns test dialect's memref layout for test dialect's tensor encoding when
 /// applicable.
@@ -1644,6 +2003,19 @@ convertTensorToBuffer(mlir::Operation *op,
                                                      dummyMemrefOp.getResult());
 
   return mlir::success();
+}
+
+mlir::FailureOr<mlir::bufferization::BufferLikeType>
+test::TestDummyTensorOp::getBufferType(
+    mlir::Value value, const mlir::bufferization::BufferizationOptions &,
+    const mlir::bufferization::BufferizationState &,
+    llvm::SmallVector<::mlir::Value> &) {
+  const auto type = dyn_cast<test::TestTensorType>(value.getType());
+  if (type == nullptr)
+    return failure();
+
+  return cast<mlir::bufferization::BufferLikeType>(test::TestMemrefType::get(
+      getContext(), type.getShape(), type.getElementType(), nullptr));
 }
 
 ::mlir::LogicalResult test::TestCreateTensorOp::bufferize(

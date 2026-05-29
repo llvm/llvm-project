@@ -46,6 +46,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "l_square";
   case Kind::minus:
     return "minus";
+  case Token::percent:
+    return "percent";
   case Kind::period:
     return "period";
   case Kind::plus:
@@ -54,6 +56,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "r_paren";
   case Kind::r_square:
     return "r_square";
+  case Token::slash:
+    return "slash";
   case Token::star:
     return "star";
   }
@@ -111,12 +115,41 @@ static std::optional<llvm::StringRef> IsNumber(llvm::StringRef &remainder,
   return std::nullopt;
 }
 
-llvm::Expected<DILLexer> DILLexer::Create(llvm::StringRef expr) {
+static llvm::Error IsNotAllowedByMode(llvm::StringRef expr, Token token,
+                                      lldb::DILMode mode) {
+  switch (mode) {
+  case lldb::eDILModeSimple:
+    if (!token.IsOneOf({Token::identifier, Token::period, Token::eof})) {
+      return llvm::make_error<DILDiagnosticError>(
+          expr, llvm::formatv("{0} is not allowed in DIL simple mode", token),
+          token.GetLocation());
+    }
+    break;
+  case lldb::eDILModeLegacy:
+    if (!token.IsOneOf({Token::identifier, Token::integer_constant,
+                        Token::period, Token::arrow, Token::star, Token::amp,
+                        Token::l_square, Token::r_square, Token::eof})) {
+      return llvm::make_error<DILDiagnosticError>(
+          expr, llvm::formatv("{0} is not allowed in DIL legacy mode", token),
+          token.GetLocation());
+    }
+    break;
+  case lldb::eDILModeFull:
+    break;
+  }
+  return llvm::Error::success();
+}
+
+llvm::Expected<DILLexer> DILLexer::Create(llvm::StringRef expr,
+                                          lldb::DILMode mode) {
   std::vector<Token> tokens;
   llvm::StringRef remainder = expr;
   do {
     if (llvm::Expected<Token> t = Lex(expr, remainder)) {
-      tokens.push_back(std::move(*t));
+      Token token = *t;
+      if (llvm::Error error = IsNotAllowedByMode(expr, token, mode))
+        return error;
+      tokens.push_back(std::move(token));
     } else {
       return t.takeError();
     }
@@ -152,10 +185,11 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
   }
 
   constexpr std::pair<Token::Kind, const char *> operators[] = {
-      {Token::amp, "&"},     {Token::arrow, "->"},   {Token::coloncolon, "::"},
-      {Token::colon, ":"},   {Token::l_paren, "("},  {Token::l_square, "["},
-      {Token::minus, "-"},   {Token::period, "."},   {Token::plus, "+"},
-      {Token::r_paren, ")"}, {Token::r_square, "]"}, {Token::star, "*"},
+      {Token::amp, "&"},   {Token::arrow, "->"},  {Token::coloncolon, "::"},
+      {Token::colon, ":"}, {Token::l_paren, "("}, {Token::l_square, "["},
+      {Token::minus, "-"}, {Token::percent, "%"}, {Token::period, "."},
+      {Token::plus, "+"},  {Token::r_paren, ")"}, {Token::r_square, "]"},
+      {Token::slash, "/"}, {Token::star, "*"},
   };
   for (auto [kind, str] : operators) {
     if (remainder.consume_front(str))

@@ -37,7 +37,7 @@ class Module;
 // all the COMDAT variables before linking. So we have this pass
 // always run before linking for CSPGO.
 class PGOInstrumentationGenCreateVar
-    : public PassInfoMixin<PGOInstrumentationGenCreateVar> {
+    : public OptionalPassInfoMixin<PGOInstrumentationGenCreateVar> {
 public:
   PGOInstrumentationGenCreateVar(std::string CSInstrName = "",
                                  bool Sampling = false)
@@ -51,7 +51,8 @@ private:
 
 enum class PGOInstrumentationType { Invalid = 0, FDO, CSFDO, CTXPROF };
 /// The instrumentation (profile-instr-gen) pass for IR based PGO.
-class PGOInstrumentationGen : public PassInfoMixin<PGOInstrumentationGen> {
+class PGOInstrumentationGen
+    : public OptionalPassInfoMixin<PGOInstrumentationGen> {
 public:
   PGOInstrumentationGen(
       PGOInstrumentationType InstrumentationType = PGOInstrumentationType ::FDO)
@@ -64,7 +65,8 @@ private:
 };
 
 /// The profile annotation (profile-instr-use) pass for IR based PGO.
-class PGOInstrumentationUse : public PassInfoMixin<PGOInstrumentationUse> {
+class PGOInstrumentationUse
+    : public OptionalPassInfoMixin<PGOInstrumentationUse> {
 public:
   LLVM_ABI
   PGOInstrumentationUse(std::string Filename = "",
@@ -82,7 +84,8 @@ private:
 };
 
 /// The indirect function call promotion pass.
-class PGOIndirectCallPromotion : public PassInfoMixin<PGOIndirectCallPromotion> {
+class PGOIndirectCallPromotion
+    : public OptionalPassInfoMixin<PGOIndirectCallPromotion> {
 public:
   PGOIndirectCallPromotion(bool IsInLTO = false, bool SamplePGO = false)
       : InLTO(IsInLTO), SamplePGO(SamplePGO) {}
@@ -95,7 +98,7 @@ private:
 };
 
 /// The profile size based optimization pass for memory intrinsics.
-class PGOMemOPSizeOpt : public PassInfoMixin<PGOMemOPSizeOpt> {
+class PGOMemOPSizeOpt : public OptionalPassInfoMixin<PGOMemOPSizeOpt> {
 public:
   PGOMemOPSizeOpt() = default;
 

@@ -1,0 +1,196 @@
+// RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.record<struct "S" {!s32i}>
+
+module {
+
+cir.func private @dtor(!cir.ptr<!rec_S>) attributes {nothrow}
+cir.func private @may_throw()
+cir.func private @side_effect()
+
+// EH cleanup with trivial body and trivial cleanup is erased (trivially dead).
+cir.func @eh_both_trivial_erased() {
+  cir.cleanup.scope {
+    cir.yield
+  } cleanup eh {
+    cir.yield
+  }
+  cir.return
+}
+// CHECK-LABEL: @eh_both_trivial_erased
+// CHECK-NEXT:   cir.return
+
+// EH cleanup with trivial body and non-trivial cleanup is erased: the body
+// has no throwing operations so the EH cleanup can never fire.
+cir.func @eh_empty_body_nontrivial_cleanup(%arg0: !cir.ptr<!rec_S>) {
+  cir.cleanup.scope {
+    cir.yield
+  } cleanup eh {
+    cir.call @dtor(%arg0) nothrow : (!cir.ptr<!rec_S>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+// CHECK-LABEL: @eh_empty_body_nontrivial_cleanup
+// CHECK-NEXT:   cir.return
+
+// EH cleanup with non-empty body should NOT be erased.
+cir.func @eh_nonempty_body_kept(%arg0: !cir.ptr<!rec_S>) {
+  cir.cleanup.scope {
+    cir.call @may_throw() : () -> ()
+    cir.yield
+  } cleanup eh {
+    cir.call @dtor(%arg0) nothrow : (!cir.ptr<!rec_S>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+// CHECK-LABEL: @eh_nonempty_body_kept
+// CHECK:        cir.cleanup.scope {
+// CHECK:          cir.call @may_throw()
+// CHECK:          cir.yield
+// CHECK:        } cleanup eh {
+// CHECK:          cir.call @dtor
+// CHECK:          cir.yield
+// CHECK:        }
+// CHECK:        cir.return
+
+// All cleanup with non-trivial cleanup should NOT be erased.
+cir.func @all_nonempty_cleanup_kept(%arg0: !cir.ptr<!rec_S>) {
+  cir.cleanup.scope {
+    cir.yield
+  } cleanup all {
+    cir.call @dtor(%arg0) nothrow : (!cir.ptr<!rec_S>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+// CHECK-LABEL: @all_nonempty_cleanup_kept
+// CHECK:        cir.cleanup.scope {
+// CHECK:          cir.yield
+// CHECK:        } cleanup all {
+// CHECK:          cir.call @dtor
+// CHECK:          cir.yield
+// CHECK:        }
+// CHECK:        cir.return
+
+// Normal cleanup with non-trivial cleanup should NOT be erased.
+cir.func @normal_nonempty_cleanup_kept(%arg0: !cir.ptr<!rec_S>) {
+  cir.cleanup.scope {
+    cir.yield
+  } cleanup normal {
+    cir.call @dtor(%arg0) nothrow : (!cir.ptr<!rec_S>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+// CHECK-LABEL: @normal_nonempty_cleanup_kept
+// CHECK:        cir.cleanup.scope {
+// CHECK:          cir.yield
+// CHECK:        } cleanup normal {
+// CHECK:          cir.call @dtor
+// CHECK:          cir.yield
+// CHECK:        }
+// CHECK:        cir.return
+
+// Trivial cleanup region: body is inlined and scope is erased.
+cir.func @trivial_cleanup_body_inlined() {
+  cir.cleanup.scope {
+    cir.call @side_effect() : () -> ()
+    cir.yield
+  } cleanup all {
+    cir.yield
+  }
+  cir.return
+}
+// CHECK-LABEL: @trivial_cleanup_body_inlined
+// CHECK-NEXT:   cir.call @side_effect()
+// CHECK-NEXT:   cir.return
+
+// Trivial cleanup region with normal kind: body inlined.
+cir.func @normal_trivial_cleanup_inlined() {
+  cir.cleanup.scope {
+    cir.call @side_effect() : () -> ()
+    cir.yield
+  } cleanup normal {
+    cir.yield
+  }
+  cir.return
+}
+// CHECK-LABEL: @normal_trivial_cleanup_inlined
+// CHECK-NEXT:   cir.call @side_effect()
+// CHECK-NEXT:   cir.return
+
+// Trivial cleanup with multiple body ops: all inlined in order.
+cir.func @trivial_cleanup_multi_ops(%arg0: !cir.ptr<!rec_S>) {
+  cir.cleanup.scope {
+    cir.call @may_throw() : () -> ()
+    cir.call @dtor(%arg0) nothrow : (!cir.ptr<!rec_S>) -> ()
+    cir.yield
+  } cleanup all {
+    cir.yield
+  }
+  cir.return
+}
+// CHECK-LABEL: @trivial_cleanup_multi_ops
+// CHECK-NEXT:   cir.call @may_throw()
+// CHECK-NEXT:   cir.call @dtor
+// CHECK-NEXT:   cir.return
+
+// Nested: inner EH with empty body erased, outer kept.
+cir.func @nested_inner_eh_erased(%arg0: !cir.ptr<!rec_S>) {
+  cir.cleanup.scope {
+    cir.call @may_throw() : () -> ()
+    cir.cleanup.scope {
+      cir.yield
+    } cleanup eh {
+      cir.call @dtor(%arg0) nothrow : (!cir.ptr<!rec_S>) -> ()
+      cir.yield
+    }
+    cir.yield
+  } cleanup eh {
+    cir.call @dtor(%arg0) nothrow : (!cir.ptr<!rec_S>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+// CHECK-LABEL: @nested_inner_eh_erased
+// CHECK:        cir.cleanup.scope {
+// CHECK:          cir.call @may_throw()
+// CHECK-NOT:      cir.cleanup.scope
+// CHECK:          cir.yield
+// CHECK:        } cleanup eh {
+// CHECK:          cir.call @dtor
+// CHECK:          cir.yield
+// CHECK:        }
+// CHECK:        cir.return
+
+// Nested: inner has trivial cleanup, outer does not. Inner body inlined
+// into outer body; outer remains.
+cir.func @nested_trivial_cleanup_inlined(%arg0: !cir.ptr<!rec_S>) {
+  cir.cleanup.scope {
+    cir.cleanup.scope {
+      cir.call @may_throw() : () -> ()
+      cir.yield
+    } cleanup eh {
+      cir.yield
+    }
+    cir.yield
+  } cleanup all {
+    cir.call @dtor(%arg0) nothrow : (!cir.ptr<!rec_S>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+// CHECK-LABEL: @nested_trivial_cleanup_inlined
+// CHECK:        cir.cleanup.scope {
+// CHECK-NEXT:     cir.call @may_throw()
+// CHECK-NEXT:     cir.yield
+// CHECK-NEXT:   } cleanup all {
+// CHECK:          cir.call @dtor
+// CHECK:          cir.yield
+// CHECK:        }
+// CHECK:        cir.return
+
+}

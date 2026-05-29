@@ -8,10 +8,10 @@
 ; LINE-NEXT: ; source_lines_test():
 ; LINE-NEXT: ; {{.*}}source-lines.cl:1
 ; Kernel.
-; LINE: v_mov_b32_e32 v{{[0-9]+}}, 0x777
 ; LINE: ; {{.*}}source-lines.cl:2
-; LINE: v_mov_b32_e32 v{{[0-9]+}}, 0x888
+; LINE: v_mov_b32_e32 v{{[0-9]+}}, 0x777
 ; LINE: ; {{.*}}source-lines.cl:3
+; LINE: v_mov_b32_e32 v{{[0-9]+}}, 0x888
 ; LINE: ; {{.*}}source-lines.cl:4
 ; LINE: v_add_u32_e64
 ; LINE: ; {{.*}}source-lines.cl:5
@@ -24,10 +24,10 @@
 ; SOURCE:      source_lines_test{{>?}}:
 ; SOURCE-NEXT: ; kernel void source_lines_test(global int *Out) {
 ; Kernel.
-; SOURCE: v_mov_b32_e32 v{{[0-9]+}}, 0x777
 ; SOURCE: ; int var0 = 0x777;
-; SOURCE: v_mov_b32_e32 v{{[0-9]+}}, 0x888
+; SOURCE: v_mov_b32_e32 v{{[0-9]+}}, 0x777
 ; SOURCE: ; int var1 = 0x888;
+; SOURCE: v_mov_b32_e32 v{{[0-9]+}}, 0x888
 ; SOURCE: ; int var2 = var0 + var1;
 ; SOURCE: v_add_u32_e64
 ; SOURCE: ; *Out = var2;

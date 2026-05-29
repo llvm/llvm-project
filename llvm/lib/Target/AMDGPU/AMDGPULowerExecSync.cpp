@@ -26,6 +26,7 @@
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <algorithm>
 
@@ -97,27 +98,27 @@ static bool lowerExecSyncGlobalVariables(
   // The 1st round: give module-absolute assignments
   int NumAbsolutes = 0;
   SmallVector<GlobalVariable *> OrderedGVs;
-  for (auto &K : LDSToKernelsThatNeedToAccessItIndirectly) {
+  LDSToKernelsThatNeedToAccessItIndirectly.remove_if([&](auto &K) {
     GlobalVariable *GV = K.first;
     if (!isNamedBarrier(*GV))
-      continue;
+      return false;
     // give a module-absolute assignment if it is indirectly accessed by
     // multiple kernels. This is not precise, but we don't want to duplicate
     // a function when it is called by multiple kernels.
-    if (LDSToKernelsThatNeedToAccessItIndirectly[GV].size() > 1) {
+    if (K.second.size() > 1) {
       OrderedGVs.push_back(GV);
     } else {
       // leave it to the 2nd round, which will give a kernel-relative
       // assignment if it is only indirectly accessed by one kernel
       LDSUsesInfo.direct_access[*K.second.begin()].insert(GV);
     }
-    LDSToKernelsThatNeedToAccessItIndirectly.erase(GV);
-  }
+    return true;
+  });
   OrderedGVs = sortByName(std::move(OrderedGVs));
   for (GlobalVariable *GV : OrderedGVs) {
     unsigned BarrierScope = AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
     unsigned BarId = NumAbsolutes + 1;
-    unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+    unsigned BarCnt = GV->getGlobalSize(DL) / 16;
     NumAbsolutes += BarCnt;
 
     // 4 bits for alignment, 5 bits for the barrier num,
@@ -140,7 +141,7 @@ static bool lowerExecSyncGlobalVariables(
 
   DenseMap<Function *, uint32_t> Kernel2BarId;
   for (Function *F : OrderedKernels) {
-    for (GlobalVariable *GV : LDSUsesInfo.direct_access[F]) {
+    for (GlobalVariable *GV : llvm::to_vector(LDSUsesInfo.direct_access[F])) {
       if (!isNamedBarrier(*GV))
         continue;
 
@@ -160,7 +161,7 @@ static bool lowerExecSyncGlobalVariables(
       unsigned BarrierScope = AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
       unsigned BarId = Kernel2BarId[F];
       BarId += NumAbsolutes + 1;
-      unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+      unsigned BarCnt = GV->getGlobalSize(DL) / 16;
       Kernel2BarId[F] += BarCnt;
       unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
       recordLDSAbsoluteAddress(&M, NewGV, Offset);
@@ -170,15 +171,55 @@ static bool lowerExecSyncGlobalVariables(
   // Also erase those special LDS variables from indirect_access.
   for (auto &K : LDSUsesInfo.indirect_access) {
     assert(isKernel(*K.first));
-    for (GlobalVariable *GV : K.second) {
-      if (isNamedBarrier(*GV))
-        K.second.erase(GV);
-    }
+    K.second.remove_if([](GlobalVariable *GV) { return isNamedBarrier(*GV); });
   }
   return Changed;
 }
 
+// With object linking, barrier ID assignment is deferred to the linker.
+// Externalize named barrier globals and emit self-contained metadata so the
+// AsmPrinter can generate the callgraph entries the linker needs.
+static bool handleNamedBarriersForObjectLinking(Module &M) {
+  DenseMap<GlobalVariable *, DenseSet<Function *>> BarrierToFuncs;
+  for (GlobalVariable &GV : M.globals()) {
+    if (!isNamedBarrier(GV) || GV.use_empty())
+      continue;
+    for (User *U : GV.users()) {
+      if (auto *I = dyn_cast<Instruction>(U))
+        BarrierToFuncs[&GV].insert(I->getFunction());
+    }
+  }
+  if (BarrierToFuncs.empty())
+    return false;
+
+  LLVMContext &Ctx = M.getContext();
+  NamedMDNode *BarMD = M.getOrInsertNamedMetadata("amdgpu.named_barrier.uses");
+
+  std::string ModuleId;
+  ModuleId = getUniqueModuleId(&M);
+  assert(!ModuleId.empty() &&
+         "modules with named barriers should have a unique ID");
+  for (auto &[V, Funcs] : BarrierToFuncs) {
+    if (V->hasLocalLinkage())
+      V->setName("__amdgpu_named_barrier." + V->getName() + ModuleId);
+    else if (!V->getName().starts_with("__amdgpu_named_barrier"))
+      V->setName("__amdgpu_named_barrier." + V->getName());
+    V->setInitializer(nullptr);
+    V->setLinkage(GlobalValue::ExternalLinkage);
+
+    SmallVector<Metadata *, 4> Ops;
+    Ops.push_back(ValueAsMetadata::get(V));
+    for (Function *F : Funcs)
+      Ops.push_back(ValueAsMetadata::get(F));
+    BarMD->addOperand(MDNode::get(Ctx, Ops));
+  }
+  return true;
+}
+
 static bool runLowerExecSyncGlobals(Module &M) {
+  if (AMDGPUTargetMachine::EnableObjectLinking)
+    return handleNamedBarriersForObjectLinking(M);
+
   CallGraph CG = CallGraph(M);
   bool Changed = false;
   Changed |= eliminateConstantExprUsesOfLDSFromAllInstructions(M);

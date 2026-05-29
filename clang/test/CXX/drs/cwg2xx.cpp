@@ -1,15 +1,12 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98,cxx98-11,cxx98-14,cxx98-17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,since-cxx11,cxx98-11,cxx98-14,cxx98-17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,since-cxx11,since-cxx14,cxx98-14,cxx98-17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,cxx98-17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98,cxx98-11,cxx98-14,cxx98-17
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,cxx98-11,cxx98-14,cxx98-17
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,cxx98-14,cxx98-17
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx17,cxx98-17
+// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20
+// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20
+// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20
 
-// FIXME: diagnostic above is emitted only on Windows platforms
-// PR13819 -- __SIZE_TYPE__ is incompatible.
-typedef __SIZE_TYPE__ size_t;
-// cxx98-error@-1 0-1 {{'long long' is a C++11 extension}}
+typedef __decltype(sizeof(0)) size_t;
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -684,15 +681,15 @@ namespace cwg241 { // cwg241: 9
     A::g<3>(b);
     C::f<3>(b);
     // expected-error@-1 {{no matching function for call to 'f'}}
-    //   expected-note@#cwg241-C-f {{candidate template ignored: invalid explicitly-specified argument for template parameter 'T'}}
+    //   expected-note@#cwg241-C-f {{candidate template ignored: template argument for template type parameter must be a type for template parameter 'T'}}
     C::g<3>(b);
     // expected-error@-1 {{no matching function for call to 'g'}}
-    //   expected-note@#cwg241-C-g {{candidate template ignored: invalid explicitly-specified argument for template parameter 'T'}}
+    //   expected-note@#cwg241-C-g {{candidate template ignored: template argument for template type parameter must be a type for template parameter 'T'}}
     using C::f;
     using C::g;
     f<3>(b);
     // expected-error@-1 {{no matching function for call to 'f'}}
-    //   expected-note@#cwg241-C-f {{candidate template ignored: invalid explicitly-specified argument for template parameter 'T'}}
+    //   expected-note@#cwg241-C-f {{candidate template ignored: template argument for template type parameter must be a type for template parameter 'T'}}
     //   expected-note@#cwg241-A-f {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
     g<3>(b);
   }
@@ -986,7 +983,7 @@ namespace cwg258 { // cwg258: 2.8
   int &w = b.f(0);
   int &x = b.g<int>(0);
   // expected-error@-1 {{no matching member function for call to 'g'}}
-  //   expected-note@#cwg258-B-g {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
+  //   expected-note@#cwg258-B-g {{candidate template ignored: template argument for non-type template parameter must be an expression for 1st template parameter}}
   int &y = b.h();
   float &z = const_cast<const B&>(b).h();
 

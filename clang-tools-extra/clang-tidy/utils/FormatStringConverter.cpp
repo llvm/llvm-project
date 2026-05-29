@@ -32,10 +32,10 @@ using clang::analyze_format_string::ConversionSpecifier;
 
 /// Is the passed type the actual "char" type, whether that be signed or
 /// unsigned, rather than explicit signed char or unsigned char types.
-static bool isRealCharType(const clang::QualType &Ty) {
+static bool isRealCharType(const QualType &Ty) {
   using namespace clang;
   const Type *DesugaredType = Ty->getUnqualifiedDesugaredType();
-  if (const auto *BT = llvm::dyn_cast<BuiltinType>(DesugaredType))
+  if (const auto *BT = dyn_cast<BuiltinType>(DesugaredType))
     return (BT->getKind() == BuiltinType::Char_U ||
             BT->getKind() == BuiltinType::Char_S);
   return false;
@@ -45,10 +45,10 @@ static bool isRealCharType(const clang::QualType &Ty) {
 /// passed integer type. If the passed type is already signed then its name is
 /// just returned. Only supports BuiltinTypes.
 static std::optional<std::string>
-getCorrespondingSignedTypeName(const clang::QualType &QT) {
+getCorrespondingSignedTypeName(const QualType &QT) {
   using namespace clang;
   const auto UQT = QT.getUnqualifiedType();
-  if (const auto *BT = llvm::dyn_cast<BuiltinType>(UQT)) {
+  if (const auto *BT = dyn_cast<BuiltinType>(UQT)) {
     switch (BT->getKind()) {
     case BuiltinType::UChar:
     case BuiltinType::Char_U:
@@ -97,10 +97,10 @@ getCorrespondingSignedTypeName(const clang::QualType &QT) {
 /// the passed integer type. If the passed type is already unsigned then its
 /// name is just returned. Only supports BuiltinTypes.
 static std::optional<std::string>
-getCorrespondingUnsignedTypeName(const clang::QualType &QT) {
+getCorrespondingUnsignedTypeName(const QualType &QT) {
   using namespace clang;
   const auto UQT = QT.getUnqualifiedType();
-  if (const auto *BT = llvm::dyn_cast<BuiltinType>(UQT)) {
+  if (const auto *BT = dyn_cast<BuiltinType>(UQT)) {
     switch (BT->getKind()) {
     case BuiltinType::SChar:
     case BuiltinType::Char_S:
@@ -148,16 +148,15 @@ getCorrespondingUnsignedTypeName(const clang::QualType &QT) {
 }
 
 static std::optional<std::string>
-castTypeForArgument(ConversionSpecifier::Kind ArgKind,
-                    const clang::QualType &QT) {
+castTypeForArgument(ConversionSpecifier::Kind ArgKind, const QualType &QT) {
   if (ArgKind == ConversionSpecifier::Kind::uArg)
     return getCorrespondingUnsignedTypeName(QT);
   return getCorrespondingSignedTypeName(QT);
 }
 
 static bool isMatchingSignedness(ConversionSpecifier::Kind ArgKind,
-                                 const clang::QualType &ArgType) {
-  if (const auto *BT = llvm::dyn_cast<BuiltinType>(ArgType)) {
+                                 const QualType &ArgType) {
+  if (const auto *BT = dyn_cast<BuiltinType>(ArgType)) {
     // Unadorned char never matches any expected signedness since it
     // could be signed or unsigned.
     const auto ArgTypeKind = BT->getKind();
@@ -172,9 +171,7 @@ static bool isMatchingSignedness(ConversionSpecifier::Kind ArgKind,
 }
 
 namespace {
-AST_MATCHER(clang::QualType, isRealChar) {
-  return clang::tidy::utils::isRealCharType(Node);
-}
+AST_MATCHER(QualType, isRealChar) { return utils::isRealCharType(Node); }
 } // namespace
 
 static bool castMismatchedIntegerTypes(const CallExpr *Call, bool StrictMode) {
@@ -207,7 +204,7 @@ FormatStringConverter::FormatStringConverter(
       Args(Call->getArgs()), NumArgs(Call->getNumArgs()),
       ArgsOffset(FormatArgOffset + 1), LangOpts(LO) {
   assert(ArgsOffset <= NumArgs);
-  FormatExpr = llvm::dyn_cast<StringLiteral>(
+  FormatExpr = dyn_cast<StringLiteral>(
       Args[FormatArgOffset]->IgnoreUnlessSpelledInSource());
 
   assert(FormatExpr && FormatExpr->isOrdinary());
@@ -436,9 +433,9 @@ void FormatStringConverter::emitStringArgument(unsigned ArgIndex,
   }
 
   auto CStrMatches = match(*StringCStrCallExprMatcher, *Arg, *Context);
-  if (CStrMatches.size() == 1)
+  if (CStrMatches.size() == 1) {
     ArgCStrRemovals.push_back(CStrMatches.front());
-  else if (Arg->getType()->isPointerType()) {
+  } else if (Arg->getType()->isPointerType()) {
     const QualType Pointee = Arg->getType()->getPointeeType();
     // printf is happy to print signed char and unsigned char strings, but
     // std::format only likes char strings.
@@ -450,7 +447,7 @@ void FormatStringConverter::emitStringArgument(unsigned ArgIndex,
 bool FormatStringConverter::emitIntegerArgument(
     ConversionSpecifier::Kind ArgKind, const Expr *Arg, unsigned ArgIndex,
     std::string &FormatSpec) {
-  const clang::QualType &ArgType = Arg->getType();
+  const QualType &ArgType = Arg->getType();
   if (ArgType->isBooleanType()) {
     // std::format will print bool as either "true" or "false" by default,
     // but printf prints them as "0" or "1". Be compatible with printf by
@@ -521,7 +518,7 @@ bool FormatStringConverter::emitType(const PrintfSpecifier &FS, const Expr *Arg,
       return false;
     break;
   case ConversionSpecifier::Kind::pArg: {
-    const clang::QualType &ArgType = Arg->getType();
+    const QualType &ArgType = Arg->getType();
     // std::format knows how to format void pointers and nullptrs
     if (!ArgType->isNullPtrType() && !ArgType->isVoidPointerType())
       ArgFixes.emplace_back(FS.getArgIndex() + ArgsOffset,
@@ -702,25 +699,25 @@ void FormatStringConverter::finalizeFormatText() {
 void FormatStringConverter::appendFormatText(const StringRef Text) {
   for (const char Ch : Text) {
     const auto UCh = static_cast<unsigned char>(Ch);
-    if (Ch == '\a')
+    if (Ch == '\a') {
       StandardFormatString += "\\a";
-    else if (Ch == '\b')
+    } else if (Ch == '\b') {
       StandardFormatString += "\\b";
-    else if (Ch == '\f')
+    } else if (Ch == '\f') {
       StandardFormatString += "\\f";
-    else if (Ch == '\n')
+    } else if (Ch == '\n') {
       StandardFormatString += "\\n";
-    else if (Ch == '\r')
+    } else if (Ch == '\r') {
       StandardFormatString += "\\r";
-    else if (Ch == '\t')
+    } else if (Ch == '\t') {
       StandardFormatString += "\\t";
-    else if (Ch == '\v')
+    } else if (Ch == '\v') {
       StandardFormatString += "\\v";
-    else if (Ch == '\"')
+    } else if (Ch == '\"') {
       StandardFormatString += "\\\"";
-    else if (Ch == '\\')
+    } else if (Ch == '\\') {
       StandardFormatString += "\\\\";
-    else if (Ch == '{') {
+    } else if (Ch == '{') {
       StandardFormatString += "{{";
       FormatStringNeededRewriting = true;
     } else if (Ch == '}') {
@@ -730,8 +727,9 @@ void FormatStringConverter::appendFormatText(const StringRef Text) {
       StandardFormatString += "\\x";
       StandardFormatString += llvm::hexdigit(UCh >> 4, true);
       StandardFormatString += llvm::hexdigit(UCh & 0xf, true);
-    } else
+    } else {
       StandardFormatString += Ch;
+    }
   }
 }
 
@@ -762,14 +760,14 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
     // First move the value argument to the right place. But if there's a
     // pending c_str() removal then we must do that at the same time.
     if (const auto CStrRemovalMatch =
-            std::find_if(ArgCStrRemovals.cbegin(), ArgCStrRemovals.cend(),
-                         [ArgStartPos = Args[ValueArgIndex]->getBeginLoc()](
-                             const BoundNodes &Match) {
-                           // This c_str() removal corresponds to the argument
-                           // being moved if they start at the same location.
-                           const Expr *CStrArg = Match.getNodeAs<Expr>("arg");
-                           return ArgStartPos == CStrArg->getBeginLoc();
-                         });
+            llvm::find_if(ArgCStrRemovals,
+                          [ArgStartPos = Args[ValueArgIndex]->getBeginLoc()](
+                              const BoundNodes &Match) {
+                            // This c_str() removal corresponds to the argument
+                            // being moved if they start at the same location.
+                            const Expr *CStrArg = Match.getNodeAs<Expr>("arg");
+                            return ArgStartPos == CStrArg->getBeginLoc();
+                          });
         CStrRemovalMatch != ArgCStrRemovals.end()) {
       const std::string ArgText =
           withoutCStrReplacement(*CStrRemovalMatch, *Context);
@@ -780,9 +778,10 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
 
       // That c_str() removal is now dealt with, so we don't need to do it again
       ArgCStrRemovals.erase(CStrRemovalMatch);
-    } else
+    } else {
       Diag << tooling::fixit::createReplacement(*Args[ValueArgIndex - ArgCount],
                                                 *Args[ValueArgIndex], *Context);
+    }
 
     // Now shift down the field width and precision (if either are present) to
     // accommodate it.
@@ -800,10 +799,12 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
   }
 
   for (const auto &[ArgIndex, Replacement] : ArgFixes) {
-    const SourceLocation AfterOtherSide =
+    const std::optional<Token> NextToken =
         utils::lexer::findNextTokenSkippingComments(Args[ArgIndex]->getEndLoc(),
-                                                    SM, LangOpts)
-            ->getLocation();
+                                                    SM, LangOpts);
+    if (!NextToken)
+      continue;
+    const SourceLocation AfterOtherSide = NextToken->getLocation();
 
     Diag << FixItHint::CreateInsertion(Args[ArgIndex]->getBeginLoc(),
                                        Replacement, true)

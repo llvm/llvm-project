@@ -470,7 +470,7 @@ def github_cmd():
 def github_find_unlinked(labels):
     """Find issues not linked to the Conformance project."""
     query = f'is:issue -project:llvm/{LIBCXX_CONFORMANCE_PROJECT} label:libc++ label:{",".join(labels)}'
-    cli = ['gh', 'issue', 'list', '--search', query, '--limit', '1000']
+    cli = ['gh', 'issue', 'list', '--search', query, '--state', 'all', '--limit', '1000']
     subprocess.check_call(cli)
 
 

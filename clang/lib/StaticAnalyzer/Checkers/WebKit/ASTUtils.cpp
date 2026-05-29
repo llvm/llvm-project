@@ -108,9 +108,14 @@ bool tryToFindPtrOrigin(
         if (auto *decl = memberCall->getMethodDecl()) {
           std::optional<bool> IsGetterOfRefCt = isGetterOfSafePtr(decl);
           if (IsGetterOfRefCt && *IsGetterOfRefCt) {
-            E = memberCall->getImplicitObjectArgument();
-            if (StopAtFirstRefCountedObj) {
-              return callback(E, true);
+            E = memberCall->getImplicitObjectArgument()->IgnoreParenCasts();
+            if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+              if (auto *Decl = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
+                if (Decl->isLocalVarDeclOrParm()) {
+                  if (StopAtFirstRefCountedObj)
+                    return callback(E, true);
+                }
+              }
             }
             continue;
           }
@@ -239,10 +244,19 @@ bool tryToFindPtrOrigin(
 
 bool isASafeCallArg(const Expr *E) {
   assert(E);
+  auto IsCheckedLocalVarOrParam = [](const VarDecl *Decl) {
+    auto Ty = Decl->getType();
+    const CXXRecordDecl *CXXRD = Ty->getAsCXXRecordDecl();
+    if (!CXXRD)
+      CXXRD = Ty->getPointeeCXXRecordDecl();
+    if (CXXRD && isWeakPtr(CXXRD))
+      return false;
+    return Decl->isLocalVarDeclOrParm();
+  };
   if (auto *Ref = dyn_cast<DeclRefExpr>(E)) {
     auto *FoundDecl = Ref->getFoundDecl();
     if (auto *D = dyn_cast_or_null<VarDecl>(FoundDecl)) {
-      if (isa<ParmVarDecl>(D) || D->isLocalVarDecl())
+      if (IsCheckedLocalVarOrParam(D))
         return true;
       if (auto *ImplicitP = dyn_cast<ImplicitParamDecl>(D)) {
         auto Kind = ImplicitP->getParameterKind();
@@ -253,9 +267,10 @@ bool isASafeCallArg(const Expr *E) {
           return true;
       }
     } else if (auto *BD = dyn_cast_or_null<BindingDecl>(FoundDecl)) {
-      VarDecl *VD = BD->getHoldingVar();
-      if (VD && (isa<ParmVarDecl>(VD) || VD->isLocalVarDecl()))
-        return true;
+      if (VarDecl *VD = BD->getHoldingVar()) {
+        if (IsCheckedLocalVarOrParam(VD))
+          return true;
+      }
     }
   }
   if (isa<CXXTemporaryObjectExpr>(E))
@@ -337,8 +352,13 @@ bool isAllocInit(const Expr *E, const Expr **InnerExpr) {
   auto NameForFirstSlot = Selector.getNameForSlot(0);
   if (NameForFirstSlot.starts_with("alloc") ||
       NameForFirstSlot.starts_with("copy") ||
-      NameForFirstSlot.starts_with("mutableCopy"))
+      NameForFirstSlot.starts_with("mutableCopy")) {
+    if (auto *MD = ObjCMsgExpr->getMethodDecl()) {
+      if (MD->getReturnType()->isVoidType())
+        return false;
+    }
     return true;
+  }
   if (!NameForFirstSlot.starts_with("init") &&
       !NameForFirstSlot.starts_with("_init"))
     return false;

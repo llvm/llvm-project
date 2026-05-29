@@ -13,17 +13,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/MathToXeVM/MathToXeVM.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Conversion/XeGPUToXeVM/XeGPUToXeVM.h"
 #include "mlir/Conversion/XeVMToLLVM/XeVMToLLVM.h"
+#include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Pipelines/Passes.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
+#include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
@@ -60,40 +63,73 @@ void buildPreGPUCommonPassPipeline(
 //===----------------------------------------------------------------------===//
 void buildGPUPassPipeline(OpPassManager &pm,
                           const mlir::gpu::GPUToXeVMPipelineOptions &options) {
+  xegpu::XeGPUPropagateLayoutOptions laneLayoutOptions;
+  laneLayoutOptions.indexBitWidth = options.use64bitIndex ? 64 : 32;
+  laneLayoutOptions.layoutKind = "lane";
+  pm.addNestedPass<ModuleOp>(createCSEPass());
   if (options.xegpuOpLevel == "workgroup") {
+    xegpu::XeGPUPropagateLayoutOptions sgLayoutOptions;
+    sgLayoutOptions.layoutKind = "subgroup";
+    pm.addNestedPass<gpu::GPUModuleOp>(
+        xegpu::createXeGPUPropagateLayout(sgLayoutOptions));
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUWgToSgDistribute());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
-    xegpu::XeGPUPropagateLayoutOptions layoutOptions;
-    layoutOptions.layoutKind = "inst";
+    pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());
+    pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
+    xegpu::XeGPUPropagateLayoutOptions instDataOptions;
+    instDataOptions.layoutKind = "inst";
     pm.addNestedPass<gpu::GPUModuleOp>(
-        xegpu::createXeGPUPropagateLayout(layoutOptions));
+        xegpu::createXeGPUPropagateLayout(instDataOptions));
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUBlocking());
-    pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   }
   if (options.xegpuOpLevel == "subgroup" ||
       options.xegpuOpLevel == "workgroup") {
-    xegpu::XeGPUPropagateLayoutOptions layoutOptions;
-    layoutOptions.layoutKind = "lane";
     pm.addNestedPass<gpu::GPUModuleOp>(
-        xegpu::createXeGPUPropagateLayout(layoutOptions));
+        xegpu::createXeGPUPropagateLayout(laneLayoutOptions));
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUPeepHoleOptimizer());
+    pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
     pm.addNestedPass<gpu::GPUModuleOp>(
-        xegpu::createXeGPUPropagateLayout(layoutOptions));
-    pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUSubgroupDistribute());
+        xegpu::createXeGPUPropagateLayout(laneLayoutOptions));
+    pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUSgToLaneDistribute());
     pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createLoopInvariantCodeMotionPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUVectorLinearize());
+    pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
+    pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   }
   pm.addNestedPass<gpu::GPUModuleOp>(createConvertMathToXeVM());
-  pm.addNestedPass<gpu::GPUModuleOp>(createConvertXeGPUToXeVMPass());
+  ConvertXeGPUToXeVMPassOptions xegpuToXeVMOptions;
+  xegpuToXeVMOptions.use64bitIndex = options.use64bitIndex;
+  pm.addNestedPass<gpu::GPUModuleOp>(
+      createConvertXeGPUToXeVMPass(xegpuToXeVMOptions));
   {
     ConvertGpuOpsToLLVMSPVOpsOptions gpuToLLVMSPVOptions;
     gpuToLLVMSPVOptions.use64bitIndex = options.use64bitIndex;
     pm.addNestedPass<gpu::GPUModuleOp>(
         createConvertGpuOpsToLLVMSPVOps(gpuToLLVMSPVOptions));
+  }
+  // Legalize math/arith ops on floating-point types that the XeVM target
+  // cannot handle natively (e.g. bf16) by wrapping them with extf/truncf
+  // around a supported type (defaulting to f32).
+  {
+    math::MathExtendToSupportedTypesOptions mathExtendOptions;
+    mathExtendOptions.extraTypeStrs.assign(options.mathExtendExtraTypes.begin(),
+                                           options.mathExtendExtraTypes.end());
+    mathExtendOptions.targetTypeStr = options.supportedTargetTypes;
+    pm.addNestedPass<gpu::GPUModuleOp>(
+        math::createMathExtendToSupportedTypes(mathExtendOptions));
+  }
+  {
+    arith::ArithEmulateUnsupportedFloatsOptions arithEmulateOptions;
+    arithEmulateOptions.sourceTypeStrs.assign(
+        options.unsupportedSourceTypes.begin(),
+        options.unsupportedSourceTypes.end());
+    arithEmulateOptions.targetTypeStr = options.supportedTargetTypes;
+    pm.addNestedPass<gpu::GPUModuleOp>(
+        arith::createArithEmulateUnsupportedFloats(arithEmulateOptions));
   }
   pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createReconcileUnrealizedCastsPass());
@@ -119,6 +155,8 @@ void buildPostGPUCommonPassPipeline(
   pm.addPass(createReconcileUnrealizedCastsPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
+  // XeVM-to-LLVM must be the last pass before gpu-module-to-binary.
+  pm.addNestedPass<gpu::GPUModuleOp>(createConvertXeVMToLLVMPass());
   // gpu-module-to-binary
   {
     GpuModuleToBinaryPassOptions gpuToModuleBinOptions;

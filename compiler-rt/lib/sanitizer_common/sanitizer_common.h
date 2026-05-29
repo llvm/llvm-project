@@ -387,8 +387,8 @@ void ReportDeadlySignal(const SignalContext &sig, u32 tid,
                         const void *unwind_context);
 
 // Alternative signal stack (POSIX-only).
-void SetAlternateSignalStack();
-void UnsetAlternateSignalStack();
+void* SetAlternateSignalStack();
+void UnsetAlternateSignalStack(void* altstack_base);
 
 bool IsSignalHandlerFromSanitizer(int signum);
 bool SetSignalHandlerFromSanitizer(int signum, bool new_state);
@@ -906,7 +906,14 @@ class LoadedModule {
 class ListOfModules {
  public:
   ListOfModules() : initialized(false) {}
-  ~ListOfModules() { clear(); }
+  ~ListOfModules() {
+    clear();
+    if (initialized)
+      modules_.Destroy();
+  }
+  ListOfModules(const ListOfModules&) = delete;
+  ListOfModules& operator=(const ListOfModules&) = delete;
+
   void init();
   void fallbackInit();  // Uses fallback init if available, otherwise clears
   const LoadedModule *begin() const { return modules_.begin(); }
@@ -1099,6 +1106,12 @@ inline u32 GetNumberOfCPUsCached() {
     NumberOfCPUsCached = GetNumberOfCPUs();
   return NumberOfCPUsCached;
 }
+
+inline u32 Rand(u32* state) {  // ANSI C linear congruential PRNG.
+  return (*state = *state * 1103515245 + 12345) >> 16;
+}
+
+inline u32 RandN(u32* state, u32 n) { return Rand(state) % n; }  // [0, n)
 
 }  // namespace __sanitizer
 

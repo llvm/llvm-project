@@ -27,6 +27,11 @@
 #endif
 #pragma OPENCL EXTENSION __cl_clang_variadic_functions : enable
 
+#ifndef __cl_clang_function_scope_local_variables
+#error "Missing __cl_clang_function_scope_local_variables define"
+#endif
+#pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : enable
+
 #ifndef cl_khr_fp16
 #error "Missing cl_khr_fp16 define"
 #endif
@@ -343,7 +348,7 @@
 #endif
 #pragma OPENCL EXTENSION cl_khr_depth_images : enable
 
-#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 100)
+#if (defined(__OPENCL_CPP_VERSION__) || defined(__OPENCL_C_VERSION__))
 #ifndef cl_intel_bfloat16_conversions
 #error "Missing cl_intel_bfloat16_conversions define"
 #endif
@@ -355,7 +360,7 @@
 // expected-warning@+1{{OpenCL extension 'cl_intel_bfloat16_conversions' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION cl_intel_bfloat16_conversions : enable
 
-#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+#if (defined(__OPENCL_CPP_VERSION__) || defined(__OPENCL_C_VERSION__))
 #ifndef cl_intel_required_subgroup_size
 #error "Missing cl_intel_required_subgroup_size define"
 #endif
@@ -367,7 +372,19 @@
 // expected-warning@+1{{OpenCL extension 'cl_intel_required_subgroup_size' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION cl_intel_required_subgroup_size : enable
 
-#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 120)
+#if (defined(__OPENCL_CPP_VERSION__) || defined(__OPENCL_C_VERSION__))
+#ifndef cl_intel_split_work_group_barrier
+#error "Missing cl_intel_split_work_group_barrier define"
+#endif
+#else
+#ifdef cl_intel_split_work_group_barrier
+#error "Incorrect cl_intel_split_work_group_barrier define"
+#endif
+#endif
+// expected-warning@+1{{OpenCL extension 'cl_intel_split_work_group_barrier' unknown or does not require pragma - ignoring}}
+#pragma OPENCL EXTENSION cl_intel_split_work_group_barrier : enable
+
+#if (defined(__OPENCL_CPP_VERSION__) || defined(__OPENCL_C_VERSION__))
 #ifndef cl_intel_subgroups
 #error "Missing cl_intel_subgroups define"
 #endif
@@ -379,7 +396,7 @@
 #endif
 #pragma OPENCL EXTENSION cl_intel_subgroups : enable
 
-#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 120)
+#if (defined(__OPENCL_CPP_VERSION__) || defined(__OPENCL_C_VERSION__))
 #ifndef cl_intel_subgroups_char
 #error "Missing cl_intel_subgroups_char define"
 #endif
@@ -391,7 +408,7 @@
 #endif
 #pragma OPENCL EXTENSION cl_intel_subgroups_char : enable
 
-#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 120)
+#if (defined(__OPENCL_CPP_VERSION__) || defined(__OPENCL_C_VERSION__))
 #ifndef cl_intel_subgroups_long
 #error "Missing cl_intel_subgroups_long define"
 #endif
@@ -403,7 +420,7 @@
 #endif
 #pragma OPENCL EXTENSION cl_intel_subgroups_long : enable
 
-#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 120)
+#if (defined(__OPENCL_CPP_VERSION__) || defined(__OPENCL_C_VERSION__))
 #ifndef cl_intel_subgroups_short
 #error "Missing cl_intel_subgroups_short define"
 #endif
@@ -415,7 +432,7 @@
 #endif
 #pragma OPENCL EXTENSION cl_intel_subgroups_short : enable
 
-#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 120)
+#if (defined(__OPENCL_CPP_VERSION__) || defined(__OPENCL_C_VERSION__))
 #ifndef cl_intel_subgroup_buffer_prefetch
 #error "Missing cl_intel_subgroup_buffer_prefetch define"
 #endif
@@ -427,7 +444,7 @@
 // expected-warning@+1{{OpenCL extension 'cl_intel_subgroup_buffer_prefetch' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION cl_intel_subgroup_buffer_prefetch : enable
 
-#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 120)
+#if (defined(__OPENCL_CPP_VERSION__) || defined(__OPENCL_C_VERSION__))
 #ifndef cl_intel_subgroup_local_block_io
 #error "Missing cl_intel_subgroup_local_block_io define"
 #endif
@@ -439,7 +456,7 @@
 // expected-warning@+1{{OpenCL extension 'cl_intel_subgroup_local_block_io' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION cl_intel_subgroup_local_block_io : enable
 
-#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 120)
+#if (defined(__OPENCL_CPP_VERSION__) || defined(__OPENCL_C_VERSION__))
 #ifndef cl_intel_device_side_avc_motion_estimation
 #error "Missing cl_intel_device_side_avc_motion_estimation define"
 #endif

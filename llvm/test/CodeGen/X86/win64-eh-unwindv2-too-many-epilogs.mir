@@ -3,10 +3,17 @@
 # RUN:    -x86-wineh-unwindv2-unwind-codes-threshold=8 \
 # RUN:    -run-pass=x86-wineh-unwindv2 | FileCheck %s \
 # RUN:    -check-prefixes=ALLOWLESS,CHECK
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %s \
+# RUN:    -x86-wineh-unwindv2-unwind-codes-threshold=8 \
+# RUN:    -passes=x86-wineh-unwindv2 | FileCheck %s \
+# RUN:    -check-prefixes=ALLOWLESS,CHECK
 
 # Allow the default number of unwind codes (255)
 # RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %s \
 # RUN:    -run-pass=x86-wineh-unwindv2 | FileCheck %s \
+# RUN:    -check-prefixes=ALLOWMORE,CHECK
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %s \
+# RUN:    -passes=x86-wineh-unwindv2 | FileCheck %s \
 # RUN:    -check-prefixes=ALLOWMORE,CHECK
 
 # CHECK-LABEL: too_many_epilogs
@@ -15,9 +22,8 @@
 
 # If we restricted the number of unwind codes, then we expect to use chained
 # infos.
-# ALLOWLESS:      SEH_SplitChained
-# ALLOWLESS-NEXT: SEH_EndPrologue
-# ALLOWMORE-NOT:  SEH_SplitChained
+# ALLOWLESS:      SEH_SplitChainedAtEndOfBlock
+# ALLOWMORE-NOT:  SEH_SplitChainedAtEndOfBlock
 
 --- |
   define dso_local void @too_many_epilogs() local_unnamed_addr !dbg !9 {

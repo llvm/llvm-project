@@ -291,6 +291,22 @@ TEST_F(DefinitionBlockSeparatorTest, Always) {
                "struct E {};",
                Style);
 
+  constexpr StringRef Code("// NOLINTBEGIN\n"
+                           "int x = 1;\n"
+                           "int y = 2;\n"
+                           "// NOLINTEND\n"
+                           "\n"
+                           "void some_function() {}");
+  verifyFormat(Code, Style, Code);
+
+  constexpr StringRef Code2("int x = 0;\n"
+                            "int y = 0;\n"
+                            "// trailing comment 1\n"
+                            "// trailing comment 2\n"
+                            "\n"
+                            "void some_function() {}");
+  verifyFormat(Code2, Style, Code2);
+
   std::string Prefix = "namespace {\n";
   std::string Infix = "\n"
                       "// Enum test1\n"
@@ -540,7 +556,7 @@ TEST_F(DefinitionBlockSeparatorTest, Leave) {
 TEST_F(DefinitionBlockSeparatorTest, CSharp) {
   FormatStyle Style = getLLVMStyle(FormatStyle::LK_CSharp);
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::ShortFunctionStyle();
   Style.AllowShortEnumsOnASingleLine = false;
   verifyFormat("namespace {\r\n"
                "public class SomeTinyClass {\r\n"
@@ -586,7 +602,7 @@ TEST_F(DefinitionBlockSeparatorTest, CSharp) {
 TEST_F(DefinitionBlockSeparatorTest, JavaScript) {
   FormatStyle Style = getLLVMStyle(FormatStyle::LK_JavaScript);
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::ShortFunctionStyle();
   Style.AllowShortEnumsOnASingleLine = false;
   verifyFormat("export const enum Foo {\n"
                "  A = 1,\n"

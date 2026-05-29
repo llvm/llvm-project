@@ -18,6 +18,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 namespace llvm::mca {
 
@@ -322,13 +323,13 @@ bool AMDGPUCustomBehaviour::hasModifiersSet(
 }
 
 // taken from SIInstrInfo::isGWS()
-bool AMDGPUCustomBehaviour::isGWS(uint16_t Opcode) const {
+bool AMDGPUCustomBehaviour::isGWS(uint32_t Opcode) const {
   const MCInstrDesc &MCID = MCII.get(Opcode);
   return MCID.TSFlags & SIInstrFlags::GWS;
 }
 
 // taken from SIInstrInfo::isAlwaysGDS()
-bool AMDGPUCustomBehaviour::isAlwaysGDS(uint16_t Opcode) const {
+bool AMDGPUCustomBehaviour::isAlwaysGDS(uint32_t Opcode) const {
   return Opcode == AMDGPU::DS_ORDERED_COUNT ||
          Opcode == AMDGPU::DS_ADD_GS_REG_RTN ||
          Opcode == AMDGPU::DS_SUB_GS_REG_RTN || isGWS(Opcode);

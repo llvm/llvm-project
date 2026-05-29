@@ -233,5 +233,59 @@ TYPED_TEST(LlvmLibcBitTest, CountOnes, UnsignedTypes) {
         cpp::numeric_limits<T>::digits - i);
 }
 
+TEST(LlvmLibcBitTest, Byteswap) {
+  // 8-bit: identity
+  EXPECT_EQ(byteswap(uint8_t(0x00)), uint8_t(0x00));
+  EXPECT_EQ(byteswap(uint8_t(0xAB)), uint8_t(0xAB));
+  EXPECT_EQ(byteswap(uint8_t(0xFF)), uint8_t(0xFF));
+
+  // 16-bit
+  EXPECT_EQ(byteswap(uint16_t(0x0000)), uint16_t(0x0000));
+  EXPECT_EQ(byteswap(uint16_t(0x1234)), uint16_t(0x3412));
+  EXPECT_EQ(byteswap(uint16_t(0xAABB)), uint16_t(0xBBAA));
+  EXPECT_EQ(byteswap(uint16_t(0xFFFF)), uint16_t(0xFFFF));
+
+  // 32-bit
+  EXPECT_EQ(byteswap(uint32_t(0x00000000)), uint32_t(0x00000000));
+  EXPECT_EQ(byteswap(uint32_t(0x12345678)), uint32_t(0x78563412));
+  EXPECT_EQ(byteswap(uint32_t(0xDEADBEEF)), uint32_t(0xEFBEADDE));
+  EXPECT_EQ(byteswap(uint32_t(0xFFFFFFFF)), uint32_t(0xFFFFFFFF));
+
+  // 64-bit
+  EXPECT_EQ(byteswap(uint64_t(0x0000000000000000)),
+            uint64_t(0x0000000000000000));
+  EXPECT_EQ(byteswap(uint64_t(0x0123456789ABCDEF)),
+            uint64_t(0xEFCDAB8967452301));
+  EXPECT_EQ(byteswap(uint64_t(0xFFFFFFFFFFFFFFFF)),
+            uint64_t(0xFFFFFFFFFFFFFFFF));
+}
+
+TEST(LlvmLibcBitTest, ByteswapSigned) {
+  // Signed 16-bit
+  EXPECT_EQ(byteswap(int16_t(0x1234)), int16_t(0x3412));
+
+  // Signed 32-bit
+  EXPECT_EQ(byteswap(int32_t(0x12345678)), int32_t(0x78563412));
+
+  // Signed 64-bit
+  EXPECT_EQ(byteswap(int64_t(0x0123456789ABCDEF)), int64_t(0xEFCDAB8967452301));
+}
+
+using ByteswapTypes = testing::TypeList<
+#if defined(LIBC_TYPES_HAS_INT128)
+    __uint128_t,
+#endif
+    unsigned char, unsigned short, unsigned int, unsigned long,
+    unsigned long long, signed char, short, int, long, long long>;
+
+TYPED_TEST(LlvmLibcBitTest, ByteswapInvolution, ByteswapTypes) {
+  // Byteswap is its own inverse: byteswap(byteswap(x)) == x.
+  EXPECT_EQ(byteswap(byteswap(T(0))), T(0));
+  EXPECT_EQ(byteswap(byteswap(T(1))), T(1));
+  EXPECT_EQ(byteswap(byteswap(T(~0))), T(~0));
+  EXPECT_EQ(byteswap(byteswap(T(0x0123456789ABCDEF & T(~0)))),
+            T(0x0123456789ABCDEF & T(~0)));
+}
+
 } // namespace cpp
 } // namespace LIBC_NAMESPACE_DECL

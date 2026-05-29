@@ -21,9 +21,11 @@ RUN:   -Wl,--save-temps,--lto-partitions=2
 # Show that the FullLTO modules have been prepared for distribution, this is
 # not optimal but has no functional impact.
 RUN: FileCheck %s --input-file=a.out.resolution.txt
-CHECK: archive.a(one.o at {{.*}}).1.[[PID:[a-zA-Z0-9_]+]].o
-CHECK: archive.a(two.o at {{.*}}).2.[[PID]].o
-CHECK: archive.a(three.o at {{.*}}).3.[[PID]].o
+
+# Filename composition: <archive>(<member> at <offset>).<task>.<pid>.o.
+CHECK: archive.a(one.o at [[#ONE_OFFSET:]]).1.[[#%X,HEXPID:]].o
+CHECK: archive.a(two.o at [[#TWO_OFFSET:]]).2.[[#%X,HEXPID]].o
+CHECK: archive.a(three.o at [[#THREE_OFFSET:]]).3.[[#%X,HEXPID]].o
 
 #--- one.c
 __attribute__((retain)) void one() {}

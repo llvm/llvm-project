@@ -50,15 +50,20 @@ static cl::opt<unsigned>
                      cl::init(5000));
 
 TargetRegisterInfo::TargetRegisterInfo(
-    const TargetRegisterInfoDesc *ID, regclass_iterator RCB,
-    regclass_iterator RCE, const char *const *SRINames,
-    const SubRegCoveredBits *SubIdxRanges, const LaneBitmask *SRILaneMasks,
-    LaneBitmask SRICoveringLanes, const RegClassInfo *const RCIs,
+    const TargetRegisterInfoDesc *ID,
+    ArrayRef<const TargetRegisterClass *> RegisterClasses,
+    const char *SubRegIndexStrings, ArrayRef<uint32_t> SubRegIndexNameOffsets,
+    const SubRegCoveredBits *SubRegIdxRanges,
+    const LaneBitmask *SubRegIndexLaneMasks, LaneBitmask CoveringLanes,
+    const RegClassInfo *const RCInfos,
     const MVT::SimpleValueType *const RCVTLists, unsigned Mode)
-    : InfoDesc(ID), SubRegIndexNames(SRINames), SubRegIdxRanges(SubIdxRanges),
-      SubRegIndexLaneMasks(SRILaneMasks), RegClassBegin(RCB), RegClassEnd(RCE),
-      CoveringLanes(SRICoveringLanes), RCInfos(RCIs), RCVTLists(RCVTLists),
-      HwMode(Mode) {}
+    : InfoDesc(ID), SubRegIndexStrings(SubRegIndexStrings),
+      SubRegIndexNameOffsets(SubRegIndexNameOffsets),
+      SubRegIdxRanges(SubRegIdxRanges),
+      SubRegIndexLaneMasks(SubRegIndexLaneMasks),
+      RegClassBegin(RegisterClasses.begin()),
+      RegClassEnd(RegisterClasses.end()), CoveringLanes(CoveringLanes),
+      RCInfos(RCInfos), RCVTLists(RCVTLists), HwMode(Mode) {}
 
 TargetRegisterInfo::~TargetRegisterInfo() = default;
 
@@ -212,6 +217,11 @@ getMinimalPhysRegClass(const TargetRegisterInfo *TRI, MCRegister Reg,
     else
       return !Ty.isValid();
   }();
+
+  if (IsDefault) {
+    if (const TargetRegisterClass *RC = TRI->getDefaultMinimalPhysRegClass(Reg))
+      return RC;
+  }
 
   // Pick the most sub register class of the right type that contains
   // this physreg.
@@ -555,7 +565,7 @@ bool TargetRegisterInfo::getCoveringSubRegIndexes(
 
   for (unsigned Idx = 1, E = getNumSubRegIndices(); Idx < E; ++Idx) {
     // Is this index even compatible with the given class?
-    if (getSubClassWithSubReg(RC, Idx) != RC)
+    if (!isSubRegValidForRegClass(RC, Idx))
       continue;
     LaneBitmask SubRegMask = getSubRegIndexLaneMask(Idx);
     // Early exit if we found a perfect match.
@@ -621,6 +631,27 @@ bool TargetRegisterInfo::getCoveringSubRegIndexes(
   return BestIdx;
 }
 
+bool TargetRegisterInfo::checkSubRegInterference(Register RegA, unsigned SubA,
+                                                 Register RegB,
+                                                 unsigned SubB) const {
+  if (RegA == RegB && SubA == SubB)
+    return true;
+  if (RegA.isVirtual() && RegB.isVirtual()) {
+    if (RegA != RegB)
+      return false;
+    LaneBitmask LA = getSubRegIndexLaneMask(SubA);
+    LaneBitmask LB = getSubRegIndexLaneMask(SubB);
+    return (LA & LB).any();
+  }
+  if (RegA.isPhysical() && RegB.isPhysical()) {
+    MCRegister MCRegA = SubA ? getSubReg(RegA, SubA) : RegA.asMCReg();
+    MCRegister MCRegB = SubB ? getSubReg(RegB, SubB) : RegB.asMCReg();
+    assert(MCRegB.isValid() && MCRegA.isValid() && "invalid subregister");
+    return MCRegisterInfo::regsOverlap(MCRegA, MCRegB);
+  }
+  llvm_unreachable("mixed virtual and physical registers");
+}
+
 unsigned TargetRegisterInfo::getSubRegIdxSize(unsigned Idx) const {
   assert(Idx && Idx < getNumSubRegIndices() &&
          "This is not a subregister index");
@@ -646,7 +677,7 @@ TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
       CopySrcReg = MI->getOperand(1).getReg();
     else {
       assert(MI->isSubregToReg() && "Bad opcode for lookThruCopyLike");
-      CopySrcReg = MI->getOperand(2).getReg();
+      CopySrcReg = MI->getOperand(1).getReg();
     }
 
     if (!CopySrcReg.isVirtual())
@@ -669,7 +700,7 @@ Register TargetRegisterInfo::lookThruSingleUseCopyChain(
       CopySrcReg = MI->getOperand(1).getReg();
     else {
       assert(MI->isSubregToReg() && "Bad opcode for lookThruCopyLike");
-      CopySrcReg = MI->getOperand(2).getReg();
+      CopySrcReg = MI->getOperand(1).getReg();
     }
 
     // Continue only if the next definition in the chain is for a virtual

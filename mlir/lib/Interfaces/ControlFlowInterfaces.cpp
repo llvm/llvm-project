@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <map>
 #include <utility>
 
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
@@ -442,6 +444,24 @@ RegionBranchOpInterface::getSuccessorOperands(RegionBranchPoint src,
   return src.getTerminatorPredecessorOrNull().getSuccessorOperands(dest);
 }
 
+SmallVector<Value>
+RegionBranchOpInterface::getNonSuccessorInputs(RegionSuccessor successor) {
+  SmallVector<Value> results = llvm::to_vector(
+      successor.isParent()
+          ? ValueRange(getOperation()->getResults())
+          : ValueRange(successor.getSuccessor()->getArguments()));
+  ValueRange successorInputs = getSuccessorInputs(successor);
+  if (!successorInputs.empty()) {
+    unsigned inputBegin =
+        successor.isParent()
+            ? cast<OpResult>(successorInputs.front()).getResultNumber()
+            : cast<BlockArgument>(successorInputs.front()).getArgNumber();
+    results.erase(results.begin() + inputBegin,
+                  results.begin() + inputBegin + successorInputs.size());
+  }
+  return results;
+}
+
 static MutableArrayRef<OpOperand> operandsToOpOperands(OperandRange &operands) {
   return MutableArrayRef<OpOperand>(operands.getBase(), operands.size());
 }
@@ -611,6 +631,16 @@ static bool isDefinedBefore(Operation *regionBranchOp, Value a, Value b) {
 /// Compute all non-successor-input values that a successor input could have
 /// based on the given successor input to successor operand mapping.
 ///
+/// Starting with the given value, trace back all predecessor values (i.e.,
+/// preceding successor operands) and add them to the set of reachable values.
+/// If the successor operand is again a successor input, do not add it to the
+/// result set, but instead continue the traversal.
+///
+/// If `maxReachableValues` is set, the traversal is aborted early and
+/// `failure` is returned as soon as the number of reachable values exceeds
+/// the limit. Otherwise, `success` is returned and the result set contains
+/// all reachable values.
+///
 /// Example 1:
 /// %r = scf.if ... {
 ///   scf.yield %a : ...
@@ -633,14 +663,11 @@ static bool isDefinedBefore(Operation *regionBranchOp, Value a, Value b) {
 /// }
 /// reachableValues(%arg0) = {%0, %1}
 /// reachableValues(%r) = {%0, %1}
-static llvm::SmallDenseSet<Value> computeReachableValuesFromSuccessorInput(
-    Value value, const RegionBranchInverseSuccessorMapping &inputToOperands) {
+static LogicalResult computeReachableValuesFromSuccessorInput(
+    llvm::SmallDenseSet<Value> &result, Value value,
+    const RegionBranchInverseSuccessorMapping &inputToOperands,
+    std::optional<unsigned> maxReachableValues = std::nullopt) {
   assert(inputToOperands.contains(value) && "value must be a successor input");
-  // Starting with the given value, trace back all predecessor values (i.e.,
-  // preceding successor operands) and add them to the set of reachable values.
-  // If the successor operand is again a successor input, do not add it to
-  // result set, but instead continue the traversal.
-  llvm::SmallDenseSet<Value> reachableValues;
   llvm::SmallDenseSet<Value> visited;
   SmallVector<Value> worklist;
   worklist.push_back(value);
@@ -648,7 +675,9 @@ static llvm::SmallDenseSet<Value> computeReachableValuesFromSuccessorInput(
     Value next = worklist.pop_back_val();
     auto it = inputToOperands.find(next);
     if (it == inputToOperands.end()) {
-      reachableValues.insert(next);
+      result.insert(next);
+      if (maxReachableValues && result.size() > *maxReachableValues)
+        return failure();
       continue;
     }
     for (OpOperand *operand : it->second)
@@ -657,7 +686,7 @@ static llvm::SmallDenseSet<Value> computeReachableValuesFromSuccessorInput(
   }
   // Note: The result does not contain any successor inputs. (Therefore,
   // `value` is also guaranteed to be excluded.)
-  return reachableValues;
+  return success();
 }
 
 namespace {
@@ -709,9 +738,11 @@ struct MakeRegionBranchOpSuccessorInputsDead : public RewritePattern {
         continue;
       // Nothing to do for successor inputs that may have multiple reachable
       // values.
-      llvm::SmallDenseSet<Value> reachableValues =
-          computeReachableValuesFromSuccessorInput(value, inputToOperands);
-      if (reachableValues.size() != 1)
+      llvm::SmallDenseSet<Value> reachableValues;
+      if (failed(computeReachableValuesFromSuccessorInput(
+              reachableValues, value, inputToOperands,
+              /*maxReachableValues=*/1)) ||
+          reachableValues.empty())
         continue;
       assert(*reachableValues.begin() != value &&
              "successor inputs are supposed to be excluded");
@@ -911,18 +942,12 @@ struct RemoveDeadRegionBranchOpSuccessorInputs : public RewritePattern {
   }
 };
 
-/// Return "true" if the two values are owned by the same operation or block.
-static bool haveSameOwner(Value a, Value b) {
-  void *aOwner, *bOwner;
-  if (auto arg = dyn_cast<BlockArgument>(a))
-    aOwner = arg.getOwner();
-  else
-    aOwner = a.getDefiningOp();
-  if (auto arg = dyn_cast<BlockArgument>(b))
-    bOwner = arg.getOwner();
-  else
-    bOwner = b.getDefiningOp();
-  return aOwner == bOwner;
+/// Return the "owner" of a value: the parent block for block arguments, the
+/// defining op for op results.
+static void *getOwnerOfValue(Value value) {
+  if (auto arg = dyn_cast<BlockArgument>(value))
+    return arg.getOwner();
+  return value.getDefiningOp();
 }
 
 /// Get the block argument or op result number of the given value.
@@ -987,43 +1012,286 @@ struct RemoveDuplicateSuccessorInputUses : public RewritePattern {
       return getArgOrResultNumber(a) < getArgOrResultNumber(b);
     });
 
-    // Check every distinct pair of successor inputs for duplicates. Replace
-    // `input2` with `input1` if they are duplicates.
+    // Group inputs by their operand "signature" to find duplicates. Two
+    // successor inputs are duplicates if each predecessor (region branch point)
+    // forwards the same value for both. Let n = number of successor inputs and
+    // k = number of predecessors per input. Instead of comparing every pair of
+    // inputs (O(n² * k)), we build a signature for each input and group them
+    // via a std::map.
+    //
+    // A signature is a sorted list of (predecessor, forwarded value) pairs.
+    // Within each group, all but the first (canonical) input are replaced with
+    // the canonical one.
+    using SigEntry = std::pair<Operation *, Value>;
+    using Signature = SmallVector<SigEntry>;
+    auto sigEntryLess = [](const SigEntry &a, const SigEntry &b) {
+      if (a.first != b.first)
+        return a.first < b.first;
+      return a.second.getAsOpaquePointer() < b.second.getAsOpaquePointer();
+    };
+    // The map key is (signature, owner). Two inputs are duplicates only if they
+    // have the same signature AND the same owner (block or defining op). This
+    // ensures we track one canonical per owner group.
+    using MapKey = std::pair<Signature, void *>;
+    auto mapKeyLess = [&](const MapKey &a, const MapKey &b) {
+      if (a.second != b.second)
+        return a.second < b.second;
+      return std::lexicographical_compare(a.first.begin(), a.first.end(),
+                                          b.first.begin(), b.first.end(),
+                                          sigEntryLess);
+    };
+    std::map<MapKey, Value, decltype(mapKeyLess)> signatureToCanonical(
+        mapKeyLess);
     bool changed = false;
-    unsigned numInputs = inputs.size();
-    for (auto i : llvm::seq<unsigned>(0, numInputs)) {
-      Value input1 = inputs[i];
-      for (auto j : llvm::seq<unsigned>(i + 1, numInputs)) {
-        Value input2 = inputs[j];
-        // Nothing to do if input2 is already dead.
-        if (input2.use_empty())
-          continue;
-        // Replace only values that belong to the same block / operation.
-        // This implies that the two values are either both block arguments or
-        // both op results.
-        if (!haveSameOwner(input1, input2))
-          continue;
+    // Total complexity: O(n * k * max(log k, log n)). For each input, sorting
+    // the signature costs O(k log k) and the std::map lookup costs O(k log n).
+    for (Value input : inputs) {
+      // Gather the predecessor value for each predecessor (region branch
+      // point) and sort them to form this input's signature.
+      Signature sig;
+      for (OpOperand *operand : inputsToOperands[input])
+        sig.emplace_back(operand->getOwner(), operand->get());
+      llvm::sort(sig, sigEntryLess);
 
-        // Gather the predecessor value for each predecessor (region branch
-        // point). The two inputs are duplicates if each predecessor forwards
-        // the same value.
-        llvm::SmallDenseMap<Operation *, Value> operands1, operands2;
-        for (OpOperand *operand : inputsToOperands[input1]) {
-          assert(!operands1.contains(operand->getOwner()));
-          operands1[operand->getOwner()] = operand->get();
-        }
-        for (OpOperand *operand : inputsToOperands[input2]) {
-          assert(!operands2.contains(operand->getOwner()));
-          operands2[operand->getOwner()] = operand->get();
-        }
-        if (operands1 == operands2) {
-          rewriter.replaceAllUsesWith(input2, input1);
-          changed = true;
-        }
+      void *owner = getOwnerOfValue(input);
+
+      auto [it, inserted] = signatureToCanonical.try_emplace(
+          MapKey{std::move(sig), owner}, input);
+      if (!inserted) {
+        Value canonical = it->second;
+        // Nothing to do if input is already dead.
+        if (input.use_empty())
+          continue;
+        rewriter.replaceAllUsesWith(input, canonical);
+        changed = true;
       }
     }
     return success(changed);
   }
+};
+
+/// Given a range of values, return a vector of attributes of the same size,
+/// where the i-th attribute is the constant value of the i-th value. If a
+/// value is not constant, the corresponding attribute is null.
+static SmallVector<Attribute> extractConstants(ValueRange values) {
+  return llvm::map_to_vector(values, [](Value value) {
+    Attribute attr;
+    matchPattern(value, m_Constant(&attr));
+    return attr;
+  });
+}
+
+/// Return all successor regions when branching from the given region branch
+/// point. This helper functions extracts all constant operand values and
+/// passes them to the `RegionBranchOpInterface`.
+static SmallVector<RegionSuccessor>
+getSuccessorRegionsWithAttrs(RegionBranchOpInterface op,
+                             RegionBranchPoint point) {
+  SmallVector<RegionSuccessor> successors;
+  if (point.isParent()) {
+    op.getEntrySuccessorRegions(extractConstants(op->getOperands()),
+                                successors);
+    return successors;
+  }
+  RegionBranchTerminatorOpInterface terminator =
+      point.getTerminatorPredecessorOrNull();
+  terminator.getSuccessorRegions(extractConstants(terminator->getOperands()),
+                                 successors);
+  return successors;
+}
+
+/// Find the single acyclic path through the given region branch op. Return an
+/// empty vector if no such path or multiple such paths exist.
+///
+/// Example: "scf.if %true" has a single path: parent => then_region => parent
+///
+/// Example: "scf.if ???" has multiple paths:
+///          (1) parent => then_region => parent
+///          (2) parent => else_region => parent
+///
+/// Example: "scf.while with scf.condition(%false)" has a single path:
+///          parent => before_region => parent
+///
+/// Example: "scf.for with 0 iterations" has a single path: parent => parent
+///
+/// Note: Each path starts and ends with "parent". The "parent" at the beginning
+/// of the path is omitted from the result.
+///
+/// Note: This function also returns an "empty" path when a region with multiple
+/// blocks was found.
+static SmallVector<RegionSuccessor>
+computeSingleAcyclicRegionBranchPath(RegionBranchOpInterface op) {
+  llvm::SmallDenseSet<Region *> visited;
+  SmallVector<RegionSuccessor> path;
+
+  // Path starts with "parent".
+  RegionBranchPoint next = RegionBranchPoint::parent();
+  do {
+    SmallVector<RegionSuccessor> successors =
+        getSuccessorRegionsWithAttrs(op, next);
+    if (successors.size() != 1) {
+      // There are multiple region successors. I.e., there are multiple paths
+      // through the region branch op.
+      return {};
+    }
+    path.push_back(successors.front());
+    if (successors.front().isParent()) {
+      // Found path that ends with "parent".
+      return path;
+    }
+    Region *region = successors.front().getSuccessor();
+    if (!region->hasOneBlock()) {
+      // Entering a region with multiple blocks. Such regions are not supported
+      // at the moment.
+      return {};
+    }
+    if (!visited.insert(region).second) {
+      // We have already visited this region. I.e., we have found a cycle.
+      return {};
+    }
+    auto terminator =
+        dyn_cast<RegionBranchTerminatorOpInterface>(&region->front().back());
+    if (!terminator) {
+      // Region has no RegionBranchTerminatorOpInterface terminator. E.g., the
+      // terminator could be a "ub.unreachable" op. Such IR is not supported.
+      return {};
+    }
+    next = RegionBranchPoint(terminator);
+  } while (true);
+  llvm_unreachable("expected to return from loop");
+}
+
+/// Inline the body of the matched region branch op into the enclosing block if
+/// there is exactly one acyclic path through the region branch op, starting
+/// from "parent", and if that path ends with "parent".
+///
+/// Example: This pattern can inline "scf.for" operations that are guaranteed to
+/// have a single iteration, as indicated by the region branch path "parent =>
+/// region => parent". "scf.for" operations have a non-successor-input: the loop
+/// induction variable. Non-successor-input values have op-specific semantics
+/// and cannot be reasoned about through the `RegionBranchOpInterface`. A
+/// replacement value for non-successor-inputs is injected by the user-specified
+/// lambda: in the case of the loop induction variable of an "scf.for", the
+/// lower bound of the loop is used as a replacement value.
+///
+/// Before pattern application:
+/// %r = scf.for %iv = %c5 to %c6 step %c1 iter_args(%arg0 = %0) {
+///   %1 = "producer"(%arg0, %iv)
+///   scf.yield %1
+/// }
+/// "user"(%r)
+///
+/// After pattern application:
+/// %1 = "producer"(%0, %c5)
+/// "user"(%1)
+///
+/// This pattern is limited to the following cases:
+/// - Only regions with a single block are supported. This could be generalized.
+/// - Region branch ops with side effects are not supported. (Recursive side
+///   effects are fine.)
+///
+/// Note: This pattern queries the region dataflow from the
+/// `RegionBranchOpInterface`. Replacement values are for block arguments / op
+/// results are determined based on region dataflow. In case of
+/// non-successor-inputs (whose values are not modeled by the
+/// `RegionBranchOpInterface`), a user-specified lambda is queried.
+struct InlineRegionBranchOp : public RewritePattern {
+  InlineRegionBranchOp(MLIRContext *context, StringRef name,
+                       NonSuccessorInputReplacementBuilderFn replBuilderFn,
+                       PatternMatcherFn matcherFn, PatternBenefit benefit = 1)
+      : RewritePattern(name, benefit, context), replBuilderFn(replBuilderFn),
+        matcherFn(matcherFn) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    // Check if the pattern is applicable to the given operation.
+    if (failed(matcherFn(op)))
+      return rewriter.notifyMatchFailure(op, "pattern not applicable");
+
+    // Patterns without recursive memory effects could have side effects, so
+    // it is not safe to fold such ops away.
+    if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
+      return rewriter.notifyMatchFailure(
+          op, "pattern not applicable to ops without recursive memory effects");
+
+    // Find the single acyclic path through the region branch op.
+    auto regionBranchOp = cast<RegionBranchOpInterface>(op);
+    SmallVector<RegionSuccessor> path =
+        computeSingleAcyclicRegionBranchPath(regionBranchOp);
+    if (path.empty())
+      return rewriter.notifyMatchFailure(
+          op, "failed to find acyclic region branch path");
+
+    // Inline all regions on the path into the enclosing block.
+    rewriter.setInsertionPoint(op);
+    ArrayRef remainingPath = path;
+    SmallVector<Value> successorOperands = llvm::to_vector(
+        regionBranchOp.getEntrySuccessorOperands(remainingPath.front()));
+    while (!remainingPath.empty()) {
+      RegionSuccessor nextSuccessor = remainingPath.consume_front();
+      ValueRange successorInputs =
+          regionBranchOp.getSuccessorInputs(nextSuccessor);
+      assert(successorInputs.size() == successorOperands.size() &&
+             "size mismatch");
+      // Find the index of the first block argument / op result that is a
+      // succesor input.
+      unsigned firstSuccessorInputIdx = 0;
+      if (!successorInputs.empty())
+        firstSuccessorInputIdx =
+            nextSuccessor.isParent()
+                ? cast<OpResult>(successorInputs.front()).getResultNumber()
+                : cast<BlockArgument>(successorInputs.front()).getArgNumber();
+      // Query the total number of block arguments / op results.
+      unsigned numValues =
+          nextSuccessor.isParent()
+              ? op->getNumResults()
+              : nextSuccessor.getSuccessor()->getNumArguments();
+      // Compute replacement values for all block arguments / op results.
+      SmallVector<Value> replacements;
+      // Helper function to get the i-th block argument / op result.
+      auto getValue = [&](unsigned idx) {
+        return nextSuccessor.isParent()
+                   ? Value(op->getResult(idx))
+                   : Value(nextSuccessor.getSuccessor()->getArgument(idx));
+      };
+      // Compute replacement values for all non-successor-input values that
+      // precede the first successor input.
+      for (unsigned i = 0; i < firstSuccessorInputIdx; ++i)
+        replacements.push_back(
+            replBuilderFn(rewriter, op->getLoc(), getValue(i)));
+      // Use the successor operands of the predecessor as replacement values for
+      // the successor inputs.
+      llvm::append_range(replacements, successorOperands);
+      // Compute replacement values for all block arguments / op results that
+      // succeed the first successor input.
+      for (unsigned i = replacements.size(); i < numValues; ++i)
+        replacements.push_back(
+            replBuilderFn(rewriter, op->getLoc(), getValue(i)));
+      if (nextSuccessor.isParent()) {
+        // The path ends with "parent". Replace the region branch op with the
+        // computed replacement values.
+        assert(remainingPath.empty() && "expected that the path ended");
+        rewriter.replaceOp(op, replacements);
+        return success();
+      }
+      // We are inside of a region: query the successor operands from the
+      // terminator, inline the region into the enclosing block, and erase the
+      // terminator.
+      auto terminator = cast<RegionBranchTerminatorOpInterface>(
+          &nextSuccessor.getSuccessor()->front().back());
+      rewriter.inlineBlockBefore(&nextSuccessor.getSuccessor()->front(),
+                                 op->getBlock(), op->getIterator(),
+                                 replacements);
+      successorOperands = llvm::to_vector(
+          terminator.getSuccessorOperands(remainingPath.front()));
+      rewriter.eraseOp(terminator);
+    }
+
+    llvm_unreachable("expected that paths ends with parent");
+  }
+
+  NonSuccessorInputReplacementBuilderFn replBuilderFn;
+  PatternMatcherFn matcherFn;
 };
 } // namespace
 
@@ -1033,4 +1301,12 @@ void mlir::populateRegionBranchOpInterfaceCanonicalizationPatterns(
                RemoveDuplicateSuccessorInputUses,
                RemoveDeadRegionBranchOpSuccessorInputs>(patterns.getContext(),
                                                         opName, benefit);
+}
+
+void mlir::populateRegionBranchOpInterfaceInliningPattern(
+    RewritePatternSet &patterns, StringRef opName,
+    NonSuccessorInputReplacementBuilderFn replBuilderFn,
+    PatternMatcherFn matcherFn, PatternBenefit benefit) {
+  patterns.add<InlineRegionBranchOp>(patterns.getContext(), opName,
+                                     replBuilderFn, matcherFn, benefit);
 }

@@ -50,7 +50,7 @@ static CommandRegistration Unused(&Dump, []() -> Error {
       EC);
   sys::fs::closeFile(*FDOrErr);
 
-  DataExtractor DE(StringRef(MappedFile.data(), MappedFile.size()), true, 8);
+  DataExtractor DE(StringRef(MappedFile.data(), MappedFile.size()), true);
   uint64_t OffsetPtr = 0;
 
   auto FileHeaderOrError = readBinaryFormatHeader(DE, OffsetPtr);
