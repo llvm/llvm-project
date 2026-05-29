@@ -280,7 +280,6 @@ struct MissingFeatures {
   static bool pgoUse() { return false; }
   static bool pointerAuthentication() { return false; }
   static bool preservedAccessIndexRegion() { return false; }
-  static bool loopSpecificCleanupHandling() { return false; }
   static bool returnValueSlotFeatures() { return false; }
   static bool runCleanupsScope() { return false; }
   static bool sanitizers() { return false; }
