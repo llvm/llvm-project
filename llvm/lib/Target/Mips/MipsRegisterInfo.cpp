@@ -85,8 +85,7 @@ bool isGPUsedAsGlobalRegister(const MachineFunction &MF) {
     for (const auto *Op : NamedRegs->operands()) {
       const MDString *RegStr = cast<MDString>(Op->getOperand(0));
       StringRef RegName = RegStr->getString();
-      return RegName == "$28" || RegName == "$28_64" || RegName == "$gp" ||
-             RegName == "$gp_64";
+      return RegName == "$28" || RegName == "$gp";
     }
   } else if (Module->getNamedMetadata("llvm.named.register.$28"))
     return true;
