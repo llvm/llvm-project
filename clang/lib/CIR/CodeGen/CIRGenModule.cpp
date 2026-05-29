@@ -2277,8 +2277,82 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   // Otherwise, a member data pointer.
   auto ty = mlir::cast<cir::DataMemberType>(convertType(e->getType()));
   const auto *fieldDecl = cast<FieldDecl>(decl);
-  return cir::ConstantOp::create(
-      builder, loc, builder.getDataMemberAttr(ty, fieldDecl->getFieldIndex()));
+  const auto *mpt = e->getType()->castAs<MemberPointerType>();
+  const auto *destClass = mpt->getMostRecentCXXRecordDecl();
+  std::optional<llvm::SmallVector<int32_t>> path =
+      buildMemberPath(destClass, fieldDecl);
+  if (!path)
+    return {};
+  return cir::ConstantOp::create(builder, loc,
+                                 builder.getDataMemberAttr(ty, *path));
+}
+
+std::optional<llvm::SmallVector<int32_t>>
+CIRGenModule::buildMemberPath(const CXXRecordDecl *destClass,
+                              const FieldDecl *field) {
+  const auto *fieldParent = cast<CXXRecordDecl>(field->getParent());
+
+  const CIRGenRecordLayout &layout =
+      getTypes().getCIRGenRecordLayout(fieldParent);
+  int32_t fieldIdx;
+  if (fieldParent->isUnion()) {
+    // For unions, getCIRFieldNo always returns 0 for every union member (all
+    // members share offset 0 in the CIR record).  Use the declaration-order
+    // index to distinguish members with the same type at the same offset.
+    if (!layout.isZeroInitializable()) {
+      errorNYI(field->getLocation(),
+               "data member pointer for non-zero-initializable union");
+      return std::nullopt;
+    }
+    fieldIdx = static_cast<int32_t>(field->getFieldIndex());
+  } else {
+    fieldIdx = static_cast<int32_t>(layout.getCIRFieldNo(field));
+  }
+
+  llvm::SmallVector<int32_t> path;
+  if (fieldParent == destClass) {
+    path.push_back(fieldIdx);
+    return path;
+  }
+
+  // Field is declared in a base class — find the subobject chain.
+  // findBaseSubobjectPath accumulates in leaf-to-root order; reverse before
+  // appending fieldIdx to produce the root-to-leaf path.
+  if (!findBaseSubobjectPath(destClass, fieldParent, path))
+    return std::nullopt;
+  std::reverse(path.begin(), path.end());
+  path.push_back(fieldIdx);
+  return path;
+}
+
+bool CIRGenModule::findBaseSubobjectPath(const CXXRecordDecl *currentClass,
+                                         const CXXRecordDecl *targetClass,
+                                         llvm::SmallVectorImpl<int32_t> &path) {
+  const CIRGenRecordLayout &layout =
+      getTypes().getCIRGenRecordLayout(currentClass);
+
+  for (const CXXBaseSpecifier &base : currentClass->bases()) {
+    if (base.isVirtual()) {
+      errorNYI(base.getBeginLoc(), "data member pointer through virtual base");
+      return false;
+    }
+
+    const auto *baseDecl =
+        cast<CXXRecordDecl>(base.getType()->getAsRecordDecl());
+    auto baseFieldIdx =
+        static_cast<int32_t>(layout.getNonVirtualBaseCIRFieldNo(baseDecl));
+
+    if (baseDecl == targetClass) {
+      path.push_back(baseFieldIdx);
+      return true;
+    }
+
+    if (findBaseSubobjectPath(baseDecl, targetClass, path)) {
+      path.push_back(baseFieldIdx);
+      return true;
+    }
+  }
+  return false;
 }
 
 void CIRGenModule::emitDeclContext(const DeclContext *dc) {

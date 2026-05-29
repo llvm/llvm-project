@@ -509,29 +509,84 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
 LogicalResult
 DataMemberAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                        cir::DataMemberType ty,
-                       std::optional<unsigned> memberIndex) {
-  // DataMemberAttr without a given index represents a null value.
-  if (!memberIndex.has_value())
-    return success();
+                       mlir::DenseI32ArrayAttr memberPath) {
+  if (!memberPath)
+    return success(); // null pointer — always valid
 
-  cir::RecordType recTy = ty.getClassTy();
-  if (recTy.isIncomplete())
-    return emitError()
-           << "incomplete 'cir.record' cannot be used to build a non-null "
-              "data member pointer";
+  if (memberPath.empty())
+    return emitError() << "#cir.data_member path must not be empty";
 
-  unsigned memberIndexValue = memberIndex.value();
-  if (memberIndexValue >= recTy.getNumElements())
-    return emitError()
-           << "member index of a #cir.data_member attribute is out of range";
+  mlir::Type currentTy = ty.getClassTy();
+  for (auto [step, idx] : llvm::enumerate(memberPath.asArrayRef())) {
+    auto recTy = mlir::dyn_cast<cir::RecordType>(currentTy);
+    if (!recTy)
+      return emitError() << "#cir.data_member path step " << step
+                         << " reaches a non-record type";
 
-  mlir::Type memberTy = recTy.getMembers()[memberIndexValue];
-  if (memberTy != ty.getMemberTy())
+    if (recTy.isIncomplete())
+      return success(); // cannot validate further; trust the builder
+
+    if (idx < 0 || static_cast<unsigned>(idx) >= recTy.getNumElements())
+      return emitError() << "#cir.data_member path index " << idx << " at step "
+                         << step << " is out of range";
+
+    currentTy = recTy.getMembers()[idx];
+  }
+
+  if (currentTy != ty.getMemberTy())
     return emitError()
-           << "member type of a #cir.data_member attribute must match the "
-              "attribute type";
+           << "member type of a #cir.data_member attribute must match "
+              "the attribute type";
 
   return success();
+}
+
+mlir::Attribute DataMemberAttr::parse(mlir::AsmParser &parser,
+                                      mlir::Type type) {
+  auto mdt = mlir::cast<cir::DataMemberType>(type);
+  if (parser.parseLess())
+    return {};
+
+  auto emitError = [&]() {
+    return parser.emitError(parser.getCurrentLocation());
+  };
+
+  // null pointer-to-data-member.
+  if (succeeded(parser.parseOptionalKeyword("null"))) {
+    if (parser.parseGreater())
+      return {};
+    return getChecked(emitError, parser.getContext(), mdt,
+                      mlir::DenseI32ArrayAttr{});
+  }
+
+  // Non-null: parse a dense int32 array, e.g. [2] or [0, 1].
+  mlir::MLIRContext *ctx = parser.getContext();
+  llvm::SmallVector<int32_t> path;
+  if (parser.parseCommaSeparatedList(mlir::AsmParser::Delimiter::Square,
+                                     [&]() -> mlir::ParseResult {
+                                       int32_t idx;
+                                       if (parser.parseInteger(idx))
+                                         return mlir::failure();
+                                       path.push_back(idx);
+                                       return mlir::success();
+                                     }))
+    return {};
+  if (parser.parseGreater())
+    return {};
+  auto pathAttr = mlir::DenseI32ArrayAttr::get(ctx, path);
+  return getChecked(emitError, ctx, mdt, pathAttr);
+}
+
+void DataMemberAttr::print(mlir::AsmPrinter &p) const {
+  p << "<";
+  if (isNullPtr()) {
+    p << "null";
+  } else {
+    p << "[";
+    llvm::interleaveComma(getPath(), p);
+    p << "]";
+  }
+  p << ">";
 }
 
 //===----------------------------------------------------------------------===//
