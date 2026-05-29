@@ -10,7 +10,8 @@ define void @PR91005(ptr %0) minsize {
 ; CHECK-NEXT:    movl $31744, %eax # imm = 0x7C00
 ; CHECK-NEXT:    vmovd %eax, %xmm0
 ; CHECK-NEXT:    vpcmpeqw %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; CHECK-NEXT:    movzwl {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %eax
+; CHECK-NEXT:    vmovd %eax, %xmm1
 ; CHECK-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1

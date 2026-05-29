@@ -714,8 +714,10 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
   if (Depth >= SelectionDAG::MaxRecursionDepth)
     return SDValue();
 
-  // Ignore UNDEFs.
-  if (Op.isUndef())
+  // Ignore undef/poison, including frozen undef/poison. Replacing a freeze of
+  // undef/poison with another undef node is unnecessary and can fight with
+  // freeze sinking.
+  if (peekThroughFreeze(Op).isUndef())
     return SDValue();
 
   // Not demanding any bits/elts from Op.
@@ -1181,7 +1183,7 @@ bool TargetLowering::SimplifyDemandedBits(
   SDLoc dl(Op);
 
   // Undef operand.
-  if (Op.isUndef())
+  if (peekThroughFreeze(Op).isUndef())
     return false;
 
   // We can't simplify target constants.
@@ -3233,6 +3235,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     KnownUndef.setAllBits();
     return false;
   }
+  if (peekThroughFreeze(Op).isUndef())
+    return false;
 
   // If Op has other users, assume that all elements are needed.
   if (!AssumeSingleUse && !Op.getNode()->hasOneUse())
@@ -3407,7 +3411,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
         SmallVector<SDValue, 32> Ops(Op->ops());
         bool Updated = false;
         for (unsigned i = 0; i != NumElts; ++i) {
-          if (!DemandedElts[i] && !Ops[i].isUndef()) {
+          if (!DemandedElts[i] && !peekThroughFreeze(Ops[i]).isUndef()) {
             Ops[i] = TLO.DAG.getUNDEF(Ops[0].getValueType());
             KnownUndef.setBit(i);
             Updated = true;
@@ -3484,7 +3488,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       return true;
 
     // If none of the src operand elements are demanded, replace it with undef.
-    if (!DemandedSrcElts && !Src.isUndef())
+    if (!DemandedSrcElts && !peekThroughFreeze(Src).isUndef())
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
                                                TLO.DAG.getUNDEF(VT), Sub,
                                                Op.getOperand(2)));
@@ -3629,8 +3633,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     // If either side isn't demanded, replace it by UNDEF. We handle this
     // explicitly here to also simplify in case of multiple uses (on the
     // contrary to the SimplifyDemandedVectorElts calls below).
-    bool FoldLHS = !DemandedLHS && !LHS.isUndef();
-    bool FoldRHS = !DemandedRHS && !RHS.isUndef();
+    bool FoldLHS = !DemandedLHS && !peekThroughFreeze(LHS).isUndef();
+    bool FoldRHS = !DemandedRHS && !peekThroughFreeze(RHS).isUndef();
     if (FoldLHS || FoldRHS) {
       LHS = FoldLHS ? TLO.DAG.getUNDEF(LHS.getValueType()) : LHS;
       RHS = FoldRHS ? TLO.DAG.getUNDEF(RHS.getValueType()) : RHS;
