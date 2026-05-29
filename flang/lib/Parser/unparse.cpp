@@ -427,10 +427,8 @@ public:
   }
   void Unparse(const EnumerationTypeStmt &x) { // F2023 R767
     Word("ENUMERATION TYPE");
-    Walk(", ", std::get<std::optional<AccessSpec>>(x.t), " :: ");
-    if (!std::get<std::optional<AccessSpec>>(x.t)) {
-      Word(" :: ");
-    }
+    Walk(", ", std::get<std::optional<AccessSpec>>(x.t));
+    Word(" :: ");
     Walk(std::get<Name>(x.t));
     Indent();
   }
