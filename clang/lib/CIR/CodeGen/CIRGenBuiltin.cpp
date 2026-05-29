@@ -2089,7 +2089,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__sync_lock_release_4:
   case Builtin::BI__sync_lock_release_8:
   case Builtin::BI__sync_lock_release_16:
-  case Builtin::BI__sync_synchronize:
   case Builtin::BI__builtin_nontemporal_load:
   case Builtin::BI__builtin_nontemporal_store:
   case Builtin::BI__c11_atomic_is_lock_free:
@@ -2105,6 +2104,14 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__atomic_signal_fence:
   case Builtin::BI__c11_atomic_signal_fence: {
     emitAtomicFenceOp(*this, e, cir::SyncScopeKind::SingleThread);
+    return RValue::get(nullptr);
+  }
+  case Builtin::BI__sync_synchronize: {
+    cir::AtomicFenceOp::create(
+        builder, getLoc(e->getSourceRange()),
+        cir::MemOrder::SequentiallyConsistent,
+        cir::SyncScopeKindAttr::get(&getMLIRContext(),
+                                    cir::SyncScopeKind::System));
     return RValue::get(nullptr);
   }
   case Builtin::BI__scoped_atomic_thread_fence:
