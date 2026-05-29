@@ -76,6 +76,9 @@ extern int kmp_c_debug;
 extern int kmp_d_debug;
 extern int kmp_e_debug;
 extern int kmp_f_debug;
+#if OMP_TASKGRAPH_EXPERIMENTAL
+extern int kmp_g_debug;
+#endif
 extern int kmp_diag;
 
 #define KA_TRACE(d, x)                                                         \
@@ -102,6 +105,12 @@ extern int kmp_diag;
   if (kmp_f_debug >= d) {                                                      \
     __kmp_debug_printf x;                                                      \
   }
+#if OMP_TASKGRAPH_EXPERIMENTAL
+#define KG_TRACE(d, x)                                                         \
+  if (kmp_g_debug >= d) {                                                      \
+    __kmp_debug_printf x;                                                      \
+  }
+#endif
 #define K_DIAG(d, x)                                                           \
   {                                                                            \
     if (kmp_diag == d) {                                                       \
@@ -151,6 +160,15 @@ extern int kmp_diag;
     (x);                                                                       \
     __kmp_enable(ks);                                                          \
   }
+#if OMP_TASKGRAPH_EXPERIMENTAL
+#define KG_DUMP(d, x)                                                          \
+  if (kmp_g_debug >= d) {                                                      \
+    int ks;                                                                    \
+    __kmp_disable(&ks);                                                        \
+    (x);                                                                       \
+    __kmp_enable(ks);                                                          \
+  }
+#endif
 
 #else
 
@@ -160,6 +178,9 @@ extern int kmp_diag;
 #define KD_TRACE(d, x) /* nothing to do */
 #define KE_TRACE(d, x) /* nothing to do */
 #define KF_TRACE(d, x) /* nothing to do */
+#if OMP_TASKGRAPH_EXPERIMENTAL
+#define KG_TRACE(d, x) /* nothing to do */
+#endif
 #define K_DIAG(d, x)                                                           \
   {} /* nothing to do */
 
@@ -169,6 +190,9 @@ extern int kmp_diag;
 #define KD_DUMP(d, x) /* nothing to do */
 #define KE_DUMP(d, x) /* nothing to do */
 #define KF_DUMP(d, x) /* nothing to do */
+#if OMP_TASKGRAPH_EXPERIMENTAL
+#define KG_DUMP(d, x) /* nothing to do */
+#endif
 
 #endif // KMP_DEBUG
 

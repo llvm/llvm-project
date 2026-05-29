@@ -123,6 +123,7 @@ struct OMPTaskDataTy final {
   bool IsWorksharingReduction = false;
   bool HasNowaitClause = false;
   bool HasModifier = false;
+  const Expr *ReplayableCond = nullptr;
 };
 
 /// Class intended to support codegen of all kind of the reduction clauses.
@@ -582,7 +583,9 @@ protected:
   TaskResultTy emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
                             const OMPExecutableDirective &D,
                             llvm::Function *TaskFunction, QualType SharedsTy,
-                            Address Shareds, const OMPTaskDataTy &Data);
+                            Address Shareds, const OMPTaskDataTy &Data,
+                            bool ForTaskgraph,
+                            std::array<llvm::Value *, 3> &TaskAllocArgs);
 
   /// Emit update for lastprivate conditional data.
   void emitLastprivateConditionalUpdate(CodeGenFunction &CGF, LValue IVLVal,
@@ -1175,6 +1178,7 @@ public:
                             const OMPExecutableDirective &D,
                             llvm::Function *TaskFunction, QualType SharedsTy,
                             Address Shareds, const Expr *IfCond,
+                            const Expr *ReplayableCond,
                             const OMPTaskDataTy &Data);
 
   /// Emit task region for the taskloop directive. The taskloop region is
@@ -1210,7 +1214,8 @@ public:
                                 const OMPLoopDirective &D,
                                 llvm::Function *TaskFunction,
                                 QualType SharedsTy, Address Shareds,
-                                const Expr *IfCond, const OMPTaskDataTy &Data);
+                                const Expr *IfCond, const Expr *ReplayableCond,
+                                const OMPTaskDataTy &Data);
 
   /// Emit code for the directive that does not require outlining.
   ///
@@ -1378,7 +1383,13 @@ public:
 
   /// Emit code for 'taskwait' directive.
   virtual void emitTaskwaitCall(CodeGenFunction &CGF, SourceLocation Loc,
+                                const Expr *ReplayableCond,
                                 const OMPTaskDataTy &Data);
+
+  /// Emit code for 'taskgraph' directive.
+  virtual void emitTaskgraphCall(CodeGenFunction &CGF, SourceLocation Loc,
+                                 const OMPExecutableDirective &D,
+                                 const Expr *IfCond);
 
   /// Emit code for 'cancellation point' construct.
   /// \param CancelRegion Region kind for which the cancellation point must be
@@ -2052,6 +2063,7 @@ public:
                     const OMPExecutableDirective &D,
                     llvm::Function *TaskFunction, QualType SharedsTy,
                     Address Shareds, const Expr *IfCond,
+                    const Expr *ReplayableCond,
                     const OMPTaskDataTy &Data) override;
 
   /// Emit task region for the taskloop directive. The taskloop region is
@@ -2086,6 +2098,7 @@ public:
   void emitTaskLoopCall(CodeGenFunction &CGF, SourceLocation Loc,
                         const OMPLoopDirective &D, llvm::Function *TaskFunction,
                         QualType SharedsTy, Address Shareds, const Expr *IfCond,
+                        const Expr *ReplayableCond,
                         const OMPTaskDataTy &Data) override;
 
   /// Emit a code for reduction clause. Next code should be emitted for
@@ -2206,7 +2219,16 @@ public:
 
   /// Emit code for 'taskwait' directive.
   void emitTaskwaitCall(CodeGenFunction &CGF, SourceLocation Loc,
+                        const Expr *ReplayableCond,
                         const OMPTaskDataTy &Data) override;
+
+  /// Emit code for 'taskgraph' directive.
+  /// \param IfCond Expression evaluated in if clause associated with the
+  // taskgraph.
+  /// \param D Directive to emit.
+  void emitTaskgraphCall(CodeGenFunction &CGF, SourceLocation Loc,
+                         const OMPExecutableDirective &D,
+                         const Expr *IfCond) override;
 
   /// Emit code for 'cancellation point' construct.
   /// \param CancelRegion Region kind for which the cancellation point must be
