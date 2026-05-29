@@ -128,8 +128,10 @@ static void populateOCLExtSetOpPatterns(const LLVMTypeConverter &converter,
                                         RewritePatternSet &patterns,
                                         PatternBenefit benefit,
                                         StringRef opName) {
-  std::string mangledName =
-      "_Z" + std::to_string(12 + opName.size()) + "__spirv_ocl_" + opName.str();
+  std::string prefix = "__spirv_ocl_";
+  std::string mangledName = "_Z" +
+                            std::to_string(prefix.size() + opName.size()) +
+                            prefix + opName.str();
 
   patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter, benefit);
   patterns.add<OpToFuncCallLowering<OpTy>>(
