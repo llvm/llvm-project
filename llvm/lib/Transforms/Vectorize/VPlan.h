@@ -1317,6 +1317,9 @@ public:
     LastActiveLane,
     // Returns a reversed vector for the operand.
     Reverse,
+    // Broadcast lane N of operand 1 across all VF lanes. Operand 0 is a
+    // constant i32 lane index. Operand order matches ExtractLane.
+    BroadcastLane,
     /// Start vector for reductions with 3 operands: the original start value,
     /// the identity value for the reduction and an integer indicating the
     /// scaling factor.
