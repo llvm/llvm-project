@@ -5654,6 +5654,47 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   case ISD::UNDEF:
     return !includesUndef(Kind);
 
+  case ISD::BITCAST: {
+    if (!DemandedElts)
+      return true;
+
+    SDValue Src = Op.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    EVT DstVT = Op.getValueType();
+
+    if (!SrcVT.isFixedLengthVector() || !DstVT.isFixedLengthVector())
+      return isGuaranteedNotToBeUndefOrPoison(Src, Kind, Depth + 1);
+
+    unsigned SrcEltBits = SrcVT.getScalarSizeInBits();
+    unsigned DstEltBits = DstVT.getScalarSizeInBits();
+    unsigned NumSrcElts = SrcVT.getVectorNumElements();
+    unsigned NumDstElts = DstVT.getVectorNumElements();
+
+    if (SrcEltBits == DstEltBits)
+      return isGuaranteedNotToBeUndefOrPoison(Src, DemandedElts, Kind,
+                                              Depth + 1);
+
+    if (SrcEltBits < DstEltBits) {
+      if (DstEltBits % SrcEltBits != 0)
+        return isGuaranteedNotToBeUndefOrPoison(Src, Kind, Depth + 1);
+
+      assert(NumSrcElts == NumDstElts * (DstEltBits / SrcEltBits) &&
+             "Unexpected fixed-width vector bitcast");
+      APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
+      return isGuaranteedNotToBeUndefOrPoison(Src, DemandedSrcElts, Kind,
+                                              Depth + 1);
+    }
+
+    if (SrcEltBits % DstEltBits != 0)
+      return isGuaranteedNotToBeUndefOrPoison(Src, Kind, Depth + 1);
+
+    assert(NumDstElts == NumSrcElts * (SrcEltBits / DstEltBits) &&
+           "Unexpected fixed-width vector bitcast");
+    APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
+    return isGuaranteedNotToBeUndefOrPoison(Src, DemandedSrcElts, Kind,
+                                            Depth + 1);
+  }
+
   case ISD::BUILD_VECTOR:
     // NOTE: BUILD_VECTOR has implicit truncation of wider scalar elements -
     // this shouldn't affect the result.
