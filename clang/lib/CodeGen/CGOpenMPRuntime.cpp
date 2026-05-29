@@ -2309,7 +2309,7 @@ void CGOpenMPRuntime::emitTaskgraphCall(CodeGenFunction &CGF,
       GraphReset,
       NoGroup,
       CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(OutlinedFn,
-          CGM.VoidPtrTy),
+                                                      CGM.VoidPtrTy),
       CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
           CapStruct.getPointer(OutlinedCGF), CGM.VoidPtrTy)};
 
