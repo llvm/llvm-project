@@ -320,14 +320,13 @@ MCRegister SPIRVNonSemanticDebugHandler::emitExtInst(
 MCRegister SPIRVNonSemanticDebugHandler::getOrEmitDebugTypeFunction(
     ArrayRef<MCRegister> Ops, MCRegister VoidTypeReg, MCRegister ExtInstSetReg,
     SPIRV::ModuleAnalysisInfo &MAI) {
-  auto [It, Inserted] = DebugTypeFunctionCache.try_emplace(
-      SmallVector<MCRegister, 8>(Ops));
+  auto [It, Inserted] =
+      DebugTypeFunctionCache.try_emplace(SmallVector<MCRegister, 8>(Ops));
   if (!Inserted)
     return It->second;
 
-  MCRegister Reg = emitExtInst(
-      SPIRV::NonSemanticExtInst::DebugTypeFunction, VoidTypeReg, ExtInstSetReg,
-      Ops, MAI);
+  MCRegister Reg = emitExtInst(SPIRV::NonSemanticExtInst::DebugTypeFunction,
+                               VoidTypeReg, ExtInstSetReg, Ops, MAI);
   It->second = Reg;
   return Reg;
 }
