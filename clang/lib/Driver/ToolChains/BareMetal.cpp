@@ -605,6 +605,7 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                   D.getLTOMode() == LTOK_Thin);
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
+  TC.addProfileRTLibs(Args, CmdArgs);
 
   if (TC.ShouldLinkCXXStdlib(Args)) {
     bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
@@ -648,12 +649,15 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 // BareMetal toolchain allows all sanitizers where the compiler generates valid
 // code, ignoring all runtime library support issues on the assumption that
 // baremetal targets typically implement their own runtime support.
-SanitizerMask BareMetal::getSupportedSanitizers() const {
+SanitizerMask
+BareMetal::getSupportedSanitizers(StringRef BoundArch,
+                                  Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64 ||
                          getTriple().getArch() == llvm::Triple::aarch64_be;
   const bool IsRISCV64 = getTriple().isRISCV64();
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::KernelAddress;
   Res |= SanitizerKind::PointerCompare;

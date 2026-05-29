@@ -14,6 +14,8 @@
 !3 = !DIFile(filename: "a", directory: "")
 !4 = !{!5}
 !5 = distinct !DICompositeType(tag: DW_TAG_class_type, scope: !6, file: !3, identifier: "patatino")
-!6 = distinct !DISubprogram(name: "b", scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !2)
+!6 = distinct !DISubprogram(name: "b", scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !2, type: !10)
 !7 = !{!0}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
+!9 = !{null}
+!10 = !DISubroutineType(types: !9)

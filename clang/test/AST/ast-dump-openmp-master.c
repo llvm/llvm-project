@@ -6,7 +6,7 @@ void test(void) {
 }
 
 // CHECK: TranslationUnitDecl {{.*}} <<invalid sloc>> <invalid sloc>
-// CHECK: `-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-master.c:3:1, line:6:1> line:3:6 test 'void (void)'
+// CHECK: `-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-master.c:3:1, line:6:1> line:3:6 test 'void (void)' external-linkage
 // CHECK-NEXT:   `-CompoundStmt {{.*}} <col:17, line:6:1>
 // CHECK-NEXT:     `-OMPMasterDirective {{.*}} <line:4:1, col:19>
 // CHECK-NEXT:       `-NullStmt {{.*}} <line:5:3>

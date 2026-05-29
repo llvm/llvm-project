@@ -357,19 +357,18 @@ void Preprocessor::PrintStats() {
                << llvm::capacity_in_bytes(CommentHandlers) << "\n";
 }
 
-Preprocessor::macro_iterator
-Preprocessor::macro_begin(bool IncludeExternalMacros) const {
+llvm::iterator_range<Preprocessor::macro_iterator>
+Preprocessor::macros(bool IncludeExternalMacros) const {
   if (IncludeExternalMacros && ExternalSource &&
       !ReadMacrosFromExternalSource) {
     ReadMacrosFromExternalSource = true;
     ExternalSource->ReadDefinedMacros();
   }
-
   // Make sure we cover all macros in visible modules.
   for (const ModuleMacro &Macro : ModuleMacros)
     CurSubmoduleState->Macros.try_emplace(Macro.II);
 
-  return CurSubmoduleState->Macros.begin();
+  return CurSubmoduleState->Macros;
 }
 
 size_t Preprocessor::getTotalMemory() const {
@@ -384,17 +383,6 @@ size_t Preprocessor::getTotalMemory() const {
     + llvm::capacity_in_bytes(CommentHandlers);
 }
 
-Preprocessor::macro_iterator
-Preprocessor::macro_end(bool IncludeExternalMacros) const {
-  if (IncludeExternalMacros && ExternalSource &&
-      !ReadMacrosFromExternalSource) {
-    ReadMacrosFromExternalSource = true;
-    ExternalSource->ReadDefinedMacros();
-  }
-
-  return CurSubmoduleState->Macros.end();
-}
-
 /// Compares macro tokens with a specified token value sequence.
 static bool MacroDefinitionEquals(const MacroInfo *MI,
                                   ArrayRef<TokenValue> Tokens) {
@@ -407,10 +395,9 @@ StringRef Preprocessor::getLastMacroWithSpelling(
                                     ArrayRef<TokenValue> Tokens) const {
   SourceLocation BestLocation;
   StringRef BestSpelling;
-  for (Preprocessor::macro_iterator I = macro_begin(), E = macro_end();
-       I != E; ++I) {
-    const MacroDirective::DefInfo
-      Def = I->second.findDirectiveAtLoc(Loc, SourceMgr);
+  for (const auto &M : macros()) {
+    const MacroDirective::DefInfo Def =
+        M.second.findDirectiveAtLoc(Loc, SourceMgr);
     if (!Def || !Def.getMacroInfo())
       continue;
     if (!Def.getMacroInfo()->isObjectLike())
@@ -423,7 +410,7 @@ StringRef Preprocessor::getLastMacroWithSpelling(
         (Location.isValid() &&
          SourceMgr.isBeforeInTranslationUnit(BestLocation, Location))) {
       BestLocation = Location;
-      BestSpelling = I->first->getName();
+      BestSpelling = M.first->getName();
     }
   }
   return BestSpelling;
@@ -1449,7 +1436,7 @@ void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc,
 
   // Add this module to the imports list of the currently-built submodule.
   if (!BuildingSubmoduleStack.empty() && M != BuildingSubmoduleStack.back().M)
-    BuildingSubmoduleStack.back().M->Imports.insert(M);
+    BuildingSubmoduleStack.back().M->Imports.push_back(M);
 }
 
 bool Preprocessor::FinishLexStringLiteral(Token &Result, std::string &String,
@@ -1740,6 +1727,17 @@ void Preprocessor::createPreprocessingRecord() {
 
   Record = new PreprocessingRecord(getSourceManager());
   addPPCallbacks(std::unique_ptr<PPCallbacks>(Record));
+}
+
+void Preprocessor::removePPCallbacks() {
+  auto IsPreserved = [&](PPCallbacks *C) {
+    return C == Record || C == DirTracer;
+  };
+  SmallVector<PPCallbacks *, 2> Released;
+  PPCallbacks::releaseIfPreserved(Callbacks, IsPreserved, Released);
+  Callbacks.reset();
+  for (auto *P : Released)
+    addPPCallbacks(std::unique_ptr<PPCallbacks>(P));
 }
 
 const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {

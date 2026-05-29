@@ -61,13 +61,14 @@ let FunctionMapper = "AArch64_AM::getShiftType" in {
 // Generic predicates.
 
 // Check for ZR in a register operand.
-foreach I = {1-3} in {
+foreach I = {0-3} in {
   def CheckIsReg#I#Zero : CheckAll<
                             [CheckIsRegOperand<I>,
                              CheckAny<
                                [CheckRegOperand<I, WZR>,
                                 CheckRegOperand<I, XZR>]>]>;
 }
+def IsReg0ZeroPred  : MCSchedPredicate<CheckIsReg0Zero>;
 def IsReg1ZeroPred  : MCSchedPredicate<CheckIsReg1Zero>;
 def IsReg2ZeroPred  : MCSchedPredicate<CheckIsReg2Zero>;
 def IsReg3ZeroPred  : MCSchedPredicate<CheckIsReg3Zero>;
@@ -240,6 +241,12 @@ def RegExtendedFn     : TIIPredicate<"hasExtendedReg",
                                            CheckNot<CheckZeroOperand<3>>>>],
                                        MCReturnStatement<FalsePred>>>;
 def RegExtendedPred   : MCSchedPredicate<RegExtendedFn>;
+def IsExtWorXPred     : MCSchedPredicate<
+                          CheckAny<
+                            [CheckExtUXTW,
+                             CheckExtSXTW,
+                             CheckExtUXTX,
+                             CheckExtSXTX]>>;
 
 // Identify arithmetic and logic instructions with a shifted register.
 def RegShiftedFn      : TIIPredicate<"hasShiftedReg",
@@ -344,6 +351,45 @@ def IsRORImmIdiomPred : MCSchedPredicate< // EXTR Rd, Rs, Rs, #Imm
                           CheckAll<[CheckOpcode<[EXTRWrri, EXTRXrri]>,
                                     CheckSameRegOperand<1, 2>]>>;
 
+// LSL Rd, Rn, #s alias of UBFM Rd, Rn, #(N-s), #(N-s-1)
+class IsUBFMLSLImm<Instruction Opc, int Width> : CheckAll<[
+       CheckOpcode<[Opc]>,
+       CheckAny<!foreach(Shift, !range(1, Width),
+         CheckAll<[CheckImmOperand<2, !sub(Width, Shift)>,
+                   CheckImmOperand<3, !sub(!sub(Width, Shift), 1)>]>)>]>;
+
+// LSR Rd, Rn, #s alias of UBFM Rd, Rn, #s, #(N-1)
+class IsUBFMLSRImm<Instruction Opc, int Width> : CheckAll<[
+       CheckOpcode<[Opc]>,
+       CheckImmOperandRange<2, 0, !sub(Width, 1)>,
+       CheckImmOperand<3, !sub(Width, 1)>]>;
+
+// UXTB Wd, Wn alias of UBFM Wd, Wn, #0, #7
+class IsUBFMUXTBImm<Instruction Opc> : CheckAll<[
+       CheckOpcode<[Opc]>,
+       CheckImmOperand<2, 0>,
+       CheckImmOperand<3, 7>]>;
+
+// ASR Rd, Rn, #s alias of SBFM Rd, Rn, #s, #(N-1)
+class IsSBFMASRImm<Instruction Opc, int Width> : CheckAll<[
+       CheckOpcode<[Opc]>,
+       CheckImmOperandRange<2, 0, !sub(Width, 1)>,
+       CheckImmOperand<3, !sub(Width, 1)>]>;
+
+// Identify UBFM as the alias for LSL/LSR/UXTB (immediate).
+def IsFastUBFMImmPred : MCSchedPredicate<CheckAny<[
+       IsUBFMLSLImm<UBFMWri, 32>,
+       IsUBFMLSLImm<UBFMXri, 64>,
+       IsUBFMLSRImm<UBFMWri, 32>,
+       IsUBFMLSRImm<UBFMXri, 64>,
+       IsUBFMUXTBImm<UBFMWri>,
+       IsUBFMUXTBImm<UBFMXri> ]>>;
+
+// Identify SBFM as the alias for ASR (immediate).
+def IsFastSBFMImmPred : MCSchedPredicate<CheckAny<[
+       IsSBFMASRImm<SBFMWri, 32>,
+       IsSBFMASRImm<SBFMXri, 64> ]>>;
+
 // Identify whether destination operand is a W-form register.
 def CheckIsWRegOp0 : CheckAll<[
   CheckIsRegOperand<0>,
@@ -408,6 +454,10 @@ def CheckIsZRegOp0 : CheckAll<[
 def SameZRegDstSrcPred : MCSchedPredicate<
   CheckAll<[CheckSameRegOperand<0, 1>, CheckIsZRegOp0]>
 >;
+
+// Identify predicate-dest instructions that reuse the same predicate as a
+// source (e.g. Pd == Pg for PPz* forms).
+def IsPredDestSameAsPgPred : MCSchedPredicate<CheckSameRegOperand<0, 1>>;
 
 // Identify LDR/STR Q-form scaled (and potentially extended) FP instructions
 def FPIsQForm : MCSchedPredicate<

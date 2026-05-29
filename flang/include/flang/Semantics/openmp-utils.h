@@ -86,15 +86,10 @@ SourcedActionStmt GetActionStmt(const parser::Block &block);
 std::string ThisVersion(unsigned version);
 std::string TryVersion(unsigned version);
 
-const parser::Designator *GetDesignatorFromObj(const parser::OmpObject &object);
-const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object);
-const parser::ArrayElement *GetArrayElementFromObj(
-    const parser::OmpObject &object);
-const Symbol *GetObjectSymbol(const parser::OmpObject &object);
-std::optional<parser::CharBlock> GetObjectSource(
-    const parser::OmpObject &object);
-const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument);
-const parser::OmpObject *GetArgumentObject(const parser::OmpArgument &argument);
+const Symbol *GetObjectSymbol(
+    const parser::OmpObject &object, bool ultimate = false);
+const Symbol *GetArgumentSymbol(
+    const parser::OmpArgument &argument, bool ultimate = false);
 
 bool IsCommonBlock(const Symbol &sym);
 bool IsExtendedListItem(const Symbol &sym);
@@ -105,6 +100,8 @@ bool IsPrivatizable(const Symbol &sym);
 bool IsVarOrFunctionRef(const MaybeExpr &expr);
 
 bool IsWholeAssumedSizeArray(const parser::OmpObject &object);
+
+const Symbol *GetHostSymbol(const Symbol &sym);
 
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);
@@ -143,6 +140,8 @@ bool IsPointerAssignment(const evaluate::Assignment &x);
 MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
 
 bool IsLoopTransforming(llvm::omp::Directive dir);
+bool HasDataEnvironment(llvm::omp::Directive dir);
+
 bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec);
 
 inline bool IsDoConcurrentLegal(unsigned version) {
@@ -157,7 +156,7 @@ struct LoopControl {
   LoopControl(const parser::LoopControl::Bounds &x);
   LoopControl(const parser::ConcurrentControl &x);
 
-  const Symbol *iv{nullptr};
+  const parser::Name &iv;
   WithSource<MaybeExpr> lbound, ubound, step;
 
 private:
@@ -241,6 +240,15 @@ std::optional<int64_t> GetMinimumSequenceCount(
     std::optional<int64_t> first, std::optional<int64_t> count);
 std::optional<int64_t> GetMinimumSequenceCount(
     std::optional<std::pair<int64_t, int64_t>> range);
+
+/// Collect the set of DO loops present in the source code that are directly
+/// affected by the given loop construct. This does not include any DO loops
+/// that are affected by any construct nested in `x`.
+/// Returns std::nullopt if `x` or code nested in `x` was malformed in a
+/// way that prevented the function from returning an accurate result.
+std::optional<std::vector<const parser::DoConstruct *>> CollectAffectedDoLoops(
+    const parser::OpenMPLoopConstruct &x, unsigned version,
+    SemanticsContext *semaCtx = nullptr);
 
 struct LoopSequence {
   LoopSequence(const parser::ExecutionPartConstruct &root, unsigned version,

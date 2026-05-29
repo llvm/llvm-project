@@ -1,3 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "LLVM"
+dynamic = ["version"]
+requires-python = ">=3.8"
+
+[tool.hatch.version]
+source = "code"
+path = "llvm/utils/lit/lit/__init__.py"
+expression = "__version__"
+
+[tool.uv]
+package = false
+
 [tool.black]
 extend-exclude = '''
 (
@@ -8,4 +25,9 @@ extend-exclude = '''
 [tool.pyright]
 executionEnvironments = [
   { root = "lldb/packages/Python", pythonVersion = "3.8" }
+]
+
+[dependency-groups]
+dev = [
+    "psutil>=7.2.2",
 ]

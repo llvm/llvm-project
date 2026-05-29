@@ -138,10 +138,8 @@ private:
 
   MCInst::iterator getAnnotationInstOp(MCInst &Inst) const {
     for (MCInst::iterator Iter = Inst.begin(); Iter != Inst.end(); ++Iter) {
-      if (Iter->isInst()) {
-        assert(Iter->getInst() == nullptr && "Empty instruction expected.");
+      if (MCPlus::isAnnotationSentinel(*Iter))
         return Iter;
-      }
     }
     return Inst.end();
   }
@@ -863,12 +861,7 @@ public:
     return false;
   }
 
-  virtual bool isLDRWl(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
-
-  virtual bool isLDRXl(const MCInst &Inst) const {
+  virtual bool isLoadLiteralGPR(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }

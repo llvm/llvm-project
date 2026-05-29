@@ -2181,7 +2181,8 @@ llvm::Value *CodeGenFunction::EmitSEHAbnormalTermination() {
 
 void CodeGenFunction::pushSEHCleanup(CleanupKind Kind,
                                      llvm::Function *FinallyFunc) {
-  EHStack.pushCleanup<PerformSEHFinally>(Kind, FinallyFunc);
+  EHStack.pushCleanup<PerformSEHFinally>(
+      static_cast<CleanupKind>(Kind | SEHFinallyCleanup), FinallyFunc);
 }
 
 void CodeGenFunction::EnterSEHTryStmt(const SEHTryStmt &S) {
@@ -2193,7 +2194,8 @@ void CodeGenFunction::EnterSEHTryStmt(const SEHTryStmt &S) {
         HelperCGF.GenerateSEHFinallyFunction(*this, *Finally);
 
     // Push a cleanup for __finally blocks.
-    EHStack.pushCleanup<PerformSEHFinally>(NormalAndEHCleanup, FinallyFunc);
+    EHStack.pushCleanup<PerformSEHFinally>(NormalAndEHSEHFinallyCleanup,
+                                           FinallyFunc);
     return;
   }
 
@@ -2245,6 +2247,17 @@ void CodeGenFunction::ExitSEHTryStmt(const SEHTryStmt &S) {
   // TODO: Model unwind edges from instructions, either with iload / istore or
   // a try body function.
   if (!CatchScope.hasEHBranches()) {
+    // Even though we skip emitting the __except body, diagnose variables
+    // with non-trivial destructors that would normally be caught by
+    // EmitAutoVarCleanups.
+    if (getLangOpts().CXXExceptions && currentFunctionUsesSEHTry())
+      for (const Stmt *S : Except->getBlock()->body())
+        if (const auto *DS = dyn_cast<DeclStmt>(S))
+          for (const Decl *D : DS->decls())
+            if (const auto *VD = dyn_cast<VarDecl>(D))
+              if (VD->needsDestruction(getContext()))
+                getContext().getDiagnostics().Report(
+                    VD->getLocation(), diag::err_seh_object_unwinding);
     CatchScope.clearHandlerBlocks();
     EHStack.popCatch();
     SEHCodeSlotStack.pop_back();

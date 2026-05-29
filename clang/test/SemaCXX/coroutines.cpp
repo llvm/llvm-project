@@ -1,8 +1,8 @@
 // This file contains references to sections of the Coroutines TS, which can be
 // found at http://wg21.link/coroutines.
 
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s -fcxx-exceptions -fexceptions -Wunused-result
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s -fcxx-exceptions -fexceptions -Wunused-result
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s -fcxx-exceptions -fexceptions -Wunused-result -Wno-coroutines-unsupported-target
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s -fcxx-exceptions -fexceptions -Wunused-result -Wno-coroutines-unsupported-target
 
 // Run without -verify to check the order of errors we show.
 // RUN: not %clang_cc1 -std=c++20 -fsyntax-only %s -fcxx-exceptions -fexceptions -Wunused-result 2>&1 | FileCheck %s

@@ -26,7 +26,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <cstdint>
 #include <utility>
 
@@ -452,19 +452,38 @@ bool SemaAMDGPU::checkAtomicOrderingCABIArg(Expr *E, bool MayLoad,
   return false;
 }
 
-bool SemaAMDGPU::checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore) {
-  bool Fail = false;
-
-  // First argument is a global or generic pointer.
+// Check that the first argument to TheCall is a global or generic pointer.
+static bool checkGlobalOrFlatPointerArg(SemaAMDGPU &S, CallExpr *TheCall) {
   Expr *PtrArg = TheCall->getArg(0);
   QualType PtrTy = PtrArg->getType()->getPointeeType();
-  unsigned AS = getASTContext().getTargetAddressSpace(PtrTy.getAddressSpace());
+  unsigned AS =
+      S.getASTContext().getTargetAddressSpace(PtrTy.getAddressSpace());
   if (AS != llvm::AMDGPUAS::FLAT_ADDRESS &&
       AS != llvm::AMDGPUAS::GLOBAL_ADDRESS) {
-    Fail = true;
-    Diag(TheCall->getBeginLoc(), diag::err_amdgcn_coop_atomic_invalid_as)
-        << PtrArg->getSourceRange();
+    return S.Diag(TheCall->getBeginLoc(),
+                  diag::err_amdgcn_global_or_flat_pointer_required)
+           << PtrArg->getSourceRange();
   }
+  return false;
+}
+
+static bool checkScopeAsInt(SemaAMDGPU &S, Expr *Scope) {
+  if (Scope->isValueDependent())
+    return false;
+  auto ScopeModel = AtomicScopeModel::create(AtomicScopeModelKind::Generic);
+  if (std::optional<llvm::APSInt> Result =
+          Scope->getIntegerConstantExpr(S.SemaRef.Context)) {
+    if (!ScopeModel->isValid(Result->getZExtValue())) {
+      return S.Diag(Scope->getBeginLoc(),
+                    diag::err_atomic_op_has_invalid_sync_scope)
+             << Scope->getSourceRange();
+    }
+  }
+  return false;
+}
+
+bool SemaAMDGPU::checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore) {
+  bool Fail = checkGlobalOrFlatPointerArg(*this, TheCall);
 
   Expr *AO = TheCall->getArg(IsStore ? 2 : 1);
   Expr *Scope = TheCall->getArg(TheCall->getNumArgs() - 1);
@@ -488,27 +507,15 @@ bool SemaAMDGPU::checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore) {
 }
 
 bool SemaAMDGPU::checkAtomicMonitorLoad(CallExpr *TheCall) {
-  bool Fail = false;
-
   Expr *AO = TheCall->getArg(1);
   Expr *Scope = TheCall->getArg(TheCall->getNumArgs() - 1);
 
   if (AO->isValueDependent() || Scope->isValueDependent())
     return false;
 
-  Fail |= checkAtomicOrderingCABIArg(TheCall->getArg(1), /*MayLoad=*/true,
-                                     /*MayStore=*/false);
-
-  auto ScopeModel = AtomicScopeModel::create(AtomicScopeModelKind::Generic);
-  if (std::optional<llvm::APSInt> Result =
-          Scope->getIntegerConstantExpr(SemaRef.Context)) {
-    if (!ScopeModel->isValid(Result->getZExtValue())) {
-      Diag(Scope->getBeginLoc(), diag::err_atomic_op_has_invalid_sync_scope)
-          << Scope->getSourceRange();
-      Fail = true;
-    }
-  }
-
+  bool Fail = checkAtomicOrderingCABIArg(AO, /*MayLoad=*/true,
+                                         /*MayStore=*/false);
+  Fail |= checkScopeAsInt(*this, Scope);
   return Fail;
 }
 
@@ -670,6 +677,8 @@ void SemaAMDGPU::handleAMDGPUWavesPerEUAttr(Decl *D, const ParsedAttr &AL) {
 }
 
 void SemaAMDGPU::handleAMDGPUNumSGPRAttr(Decl *D, const ParsedAttr &AL) {
+  Diag(AL.getLoc(), diag::warn_amdgpu_num_reg_attr_deprecated) << AL;
+
   uint32_t NumSGPR = 0;
   Expr *NumSGPRExpr = AL.getArgAsExpr(0);
   if (!SemaRef.checkUInt32Argument(AL, NumSGPRExpr, NumSGPR))
@@ -680,6 +689,8 @@ void SemaAMDGPU::handleAMDGPUNumSGPRAttr(Decl *D, const ParsedAttr &AL) {
 }
 
 void SemaAMDGPU::handleAMDGPUNumVGPRAttr(Decl *D, const ParsedAttr &AL) {
+  Diag(AL.getLoc(), diag::warn_amdgpu_num_reg_attr_deprecated) << AL;
+
   uint32_t NumVGPR = 0;
   Expr *NumVGPRExpr = AL.getArgAsExpr(0);
   if (!SemaRef.checkUInt32Argument(AL, NumVGPRExpr, NumVGPR))
@@ -756,13 +767,11 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBuiltIn(Expr *E) {
   CallExpr *CE = cast<CallExpr>(E->IgnoreParens());
   ASTContext &Ctx = getASTContext();
   QualType BoolTy = Ctx.getLogicalOperationType();
-  llvm::APInt False = llvm::APInt::getZero(Ctx.getIntWidth(BoolTy));
-  llvm::APInt True = llvm::APInt::getAllOnes(Ctx.getIntWidth(BoolTy));
   SourceLocation Loc = CE->getExprLoc();
 
   if (!CE->getBuiltinCallee())
     return *ExpandedPredicates
-                .insert(IntegerLiteral::Create(Ctx, False, BoolTy, Loc))
+                .insert(SemaRef.BuildBoolLiteral(Loc, false).get())
                 .first;
 
   bool P = false;
@@ -820,9 +829,7 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBuiltIn(Expr *E) {
     P = Builtin::evaluateRequiredTargetFeatures(RF, CF);
   }
 
-  return *ExpandedPredicates
-              .insert(
-                  IntegerLiteral::Create(Ctx, P ? True : False, BoolTy, Loc))
+  return *ExpandedPredicates.insert(SemaRef.BuildBoolLiteral(Loc, P).get())
               .first;
 }
 
@@ -1020,7 +1027,9 @@ bool DiagnoseUnguardedBuiltins::VisitCallExpr(CallExpr *CE) {
       for (auto &&F : llvm::split(BInfo.getRequiredFeatures(GID), ','))
         FeatureMap[F] = true;
   } else {
-    static const llvm::Triple AMDGCN("amdgcn-amd-amdhsa");
+    static const llvm::Triple AMDGCN(llvm::Triple::amdgcn,
+                                     llvm::Triple::NoSubArch, llvm::Triple::AMD,
+                                     llvm::Triple::AMDHSA);
     llvm::AMDGPU::fillAMDGPUFeatureMap(CurrentGFXIP.back().second, AMDGCN,
                                        FeatureMap);
   }

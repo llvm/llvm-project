@@ -1356,8 +1356,7 @@ template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
 }
 
 // Get the number of unique symbols with CUDA device attribute.
-int GetNbOfUniqueCUDADeviceSymbols(
-    const std::vector<SymbolVector> &symbolVectors);
+int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr);
 
 // Get the number of distinct symbols with CUDA managed or unified
 // attribute in the expression.
@@ -1594,6 +1593,8 @@ inline bool IsAlternateEntry(const Symbol *symbol) {
 bool IsVariableName(const Symbol &);
 bool IsPureProcedure(const Symbol &);
 bool IsPureProcedure(const Scope &);
+bool IsSimpleProcedure(const Symbol &);
+bool IsSimpleProcedure(const Scope &);
 bool IsExplicitlyImpureProcedure(const Symbol &);
 bool IsElementalProcedure(const Symbol &);
 bool IsFunction(const Symbol &);

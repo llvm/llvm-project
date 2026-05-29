@@ -43,7 +43,7 @@ public:
   template <typename DataT> [[nodiscard]] bool contains() const {
     static_assert(std::is_base_of_v<SummaryData, DataT>,
                   "DataT must derive from SummaryData");
-    static_assert(HasSummaryName<DataT>::value,
+    static_assert(HasSummaryName_v<DataT>,
                   "DataT must have a static summaryName() method");
 
     return contains(DataT::summaryName());
@@ -54,7 +54,7 @@ public:
   template <typename DataT> [[nodiscard]] llvm::Expected<DataT &> get() {
     static_assert(std::is_base_of_v<SummaryData, DataT>,
                   "DataT must derive from SummaryData");
-    static_assert(HasSummaryName<DataT>::value,
+    static_assert(HasSummaryName_v<DataT>,
                   "DataT must have a static summaryName() method");
 
     auto Result = get(DataT::summaryName());
@@ -83,7 +83,7 @@ public:
   [[nodiscard]] llvm::Expected<std::unique_ptr<DataT>> take() {
     static_assert(std::is_base_of_v<SummaryData, DataT>,
                   "DataT must derive from SummaryData");
-    static_assert(HasSummaryName<DataT>::value,
+    static_assert(HasSummaryName_v<DataT>,
                   "DataT must have a static summaryName() method");
 
     auto Result = take(DataT::summaryName());

@@ -19,8 +19,6 @@ define amdgpu_kernel void @local_wavefront_unordered_load(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr6 killed $sgpr4
-; GFX6-NEXT:    ; kill: def $sgpr6 killed $sgpr5
 ; GFX6-NEXT:    s_mov_b32 m0, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s5
@@ -245,8 +243,6 @@ define amdgpu_kernel void @local_wavefront_monotonic_load(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr6 killed $sgpr4
-; GFX6-NEXT:    ; kill: def $sgpr6 killed $sgpr5
 ; GFX6-NEXT:    s_mov_b32 m0, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s5
@@ -471,8 +467,6 @@ define amdgpu_kernel void @local_wavefront_acquire_load(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr6 killed $sgpr4
-; GFX6-NEXT:    ; kill: def $sgpr6 killed $sgpr5
 ; GFX6-NEXT:    s_mov_b32 m0, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s5
@@ -697,8 +691,6 @@ define amdgpu_kernel void @local_wavefront_seq_cst_load(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr6 killed $sgpr4
-; GFX6-NEXT:    ; kill: def $sgpr6 killed $sgpr5
 ; GFX6-NEXT:    s_mov_b32 m0, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s5
@@ -923,7 +915,6 @@ define amdgpu_kernel void @local_wavefront_unordered_store(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -1128,7 +1119,6 @@ define amdgpu_kernel void @local_wavefront_monotonic_store(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -1333,7 +1323,6 @@ define amdgpu_kernel void @local_wavefront_release_store(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -1538,7 +1527,6 @@ define amdgpu_kernel void @local_wavefront_seq_cst_store(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -1743,7 +1731,6 @@ define amdgpu_kernel void @local_wavefront_monotonic_atomicrmw(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -1948,7 +1935,6 @@ define amdgpu_kernel void @local_wavefront_acquire_atomicrmw(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -2153,7 +2139,6 @@ define amdgpu_kernel void @local_wavefront_release_atomicrmw(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -2358,7 +2343,6 @@ define amdgpu_kernel void @local_wavefront_acq_rel_atomicrmw(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -2563,7 +2547,6 @@ define amdgpu_kernel void @local_wavefront_seq_cst_atomicrmw(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -2768,7 +2751,6 @@ define amdgpu_kernel void @local_wavefront_acquire_ret_atomicrmw(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -3019,7 +3001,6 @@ define amdgpu_kernel void @local_wavefront_acq_rel_ret_atomicrmw(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -3270,7 +3251,6 @@ define amdgpu_kernel void @local_wavefront_seq_cst_ret_atomicrmw(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -3523,7 +3503,6 @@ define amdgpu_kernel void @local_wavefront_monotonic_monotonic_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -3785,7 +3764,6 @@ define amdgpu_kernel void @local_wavefront_acquire_monotonic_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -4047,7 +4025,6 @@ define amdgpu_kernel void @local_wavefront_release_monotonic_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -4309,7 +4286,6 @@ define amdgpu_kernel void @local_wavefront_acq_rel_monotonic_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -4571,7 +4547,6 @@ define amdgpu_kernel void @local_wavefront_seq_cst_monotonic_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -4833,7 +4808,6 @@ define amdgpu_kernel void @local_wavefront_monotonic_acquire_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -5095,7 +5069,6 @@ define amdgpu_kernel void @local_wavefront_acquire_acquire_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -5357,7 +5330,6 @@ define amdgpu_kernel void @local_wavefront_release_acquire_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -5619,7 +5591,6 @@ define amdgpu_kernel void @local_wavefront_acq_rel_acquire_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -5881,7 +5852,6 @@ define amdgpu_kernel void @local_wavefront_seq_cst_acquire_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -6143,7 +6113,6 @@ define amdgpu_kernel void @local_wavefront_monotonic_seq_cst_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -6405,7 +6374,6 @@ define amdgpu_kernel void @local_wavefront_acquire_seq_cst_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -6667,7 +6635,6 @@ define amdgpu_kernel void @local_wavefront_release_seq_cst_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -6929,7 +6896,6 @@ define amdgpu_kernel void @local_wavefront_acq_rel_seq_cst_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -7191,7 +7157,6 @@ define amdgpu_kernel void @local_wavefront_seq_cst_seq_cst_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -7453,7 +7418,6 @@ define amdgpu_kernel void @local_wavefront_monotonic_monotonic_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -7762,7 +7726,6 @@ define amdgpu_kernel void @local_wavefront_acquire_monotonic_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -8071,7 +8034,6 @@ define amdgpu_kernel void @local_wavefront_release_monotonic_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -8380,7 +8342,6 @@ define amdgpu_kernel void @local_wavefront_acq_rel_monotonic_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -8689,7 +8650,6 @@ define amdgpu_kernel void @local_wavefront_seq_cst_monotonic_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -8998,7 +8958,6 @@ define amdgpu_kernel void @local_wavefront_monotonic_acquire_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -9307,7 +9266,6 @@ define amdgpu_kernel void @local_wavefront_acquire_acquire_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -9616,7 +9574,6 @@ define amdgpu_kernel void @local_wavefront_release_acquire_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -9925,7 +9882,6 @@ define amdgpu_kernel void @local_wavefront_acq_rel_acquire_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -10234,7 +10190,6 @@ define amdgpu_kernel void @local_wavefront_seq_cst_acquire_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -10543,7 +10498,6 @@ define amdgpu_kernel void @local_wavefront_monotonic_seq_cst_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -10852,7 +10806,6 @@ define amdgpu_kernel void @local_wavefront_acquire_seq_cst_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -11161,7 +11114,6 @@ define amdgpu_kernel void @local_wavefront_release_seq_cst_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -11470,7 +11422,6 @@ define amdgpu_kernel void @local_wavefront_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -11779,7 +11730,6 @@ define amdgpu_kernel void @local_wavefront_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -12086,8 +12036,6 @@ define amdgpu_kernel void @local_wavefront_one_as_unordered_load(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr6 killed $sgpr4
-; GFX6-NEXT:    ; kill: def $sgpr6 killed $sgpr5
 ; GFX6-NEXT:    s_mov_b32 m0, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s5
@@ -12312,8 +12260,6 @@ define amdgpu_kernel void @local_wavefront_one_as_monotonic_load(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr6 killed $sgpr4
-; GFX6-NEXT:    ; kill: def $sgpr6 killed $sgpr5
 ; GFX6-NEXT:    s_mov_b32 m0, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s5
@@ -12538,8 +12484,6 @@ define amdgpu_kernel void @local_wavefront_one_as_acquire_load(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr6 killed $sgpr4
-; GFX6-NEXT:    ; kill: def $sgpr6 killed $sgpr5
 ; GFX6-NEXT:    s_mov_b32 m0, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s5
@@ -12764,8 +12708,6 @@ define amdgpu_kernel void @local_wavefront_one_as_seq_cst_load(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr6 killed $sgpr4
-; GFX6-NEXT:    ; kill: def $sgpr6 killed $sgpr5
 ; GFX6-NEXT:    s_mov_b32 m0, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s5
@@ -12990,7 +12932,6 @@ define amdgpu_kernel void @local_wavefront_one_as_unordered_store(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -13195,7 +13136,6 @@ define amdgpu_kernel void @local_wavefront_one_as_monotonic_store(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -13400,7 +13340,6 @@ define amdgpu_kernel void @local_wavefront_one_as_release_store(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -13605,7 +13544,6 @@ define amdgpu_kernel void @local_wavefront_one_as_seq_cst_store(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -13810,7 +13748,6 @@ define amdgpu_kernel void @local_wavefront_one_as_monotonic_atomicrmw(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -14015,7 +13952,6 @@ define amdgpu_kernel void @local_wavefront_one_as_acquire_atomicrmw(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -14220,7 +14156,6 @@ define amdgpu_kernel void @local_wavefront_one_as_release_atomicrmw(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -14425,7 +14360,6 @@ define amdgpu_kernel void @local_wavefront_one_as_acq_rel_atomicrmw(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -14630,7 +14564,6 @@ define amdgpu_kernel void @local_wavefront_one_as_seq_cst_atomicrmw(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -14835,7 +14768,6 @@ define amdgpu_kernel void @local_wavefront_one_as_acquire_ret_atomicrmw(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -15086,7 +15018,6 @@ define amdgpu_kernel void @local_wavefront_one_as_acq_rel_ret_atomicrmw(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -15337,7 +15268,6 @@ define amdgpu_kernel void @local_wavefront_one_as_seq_cst_ret_atomicrmw(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_mov_b32 m0, -1
@@ -15590,7 +15520,6 @@ define amdgpu_kernel void @local_wavefront_one_as_monotonic_monotonic_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -15852,7 +15781,6 @@ define amdgpu_kernel void @local_wavefront_one_as_acquire_monotonic_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -16114,7 +16042,6 @@ define amdgpu_kernel void @local_wavefront_one_as_release_monotonic_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -16376,7 +16303,6 @@ define amdgpu_kernel void @local_wavefront_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -16638,7 +16564,6 @@ define amdgpu_kernel void @local_wavefront_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -16900,7 +16825,6 @@ define amdgpu_kernel void @local_wavefront_one_as_monotonic_acquire_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -17162,7 +17086,6 @@ define amdgpu_kernel void @local_wavefront_one_as_acquire_acquire_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -17424,7 +17347,6 @@ define amdgpu_kernel void @local_wavefront_one_as_release_acquire_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -17686,7 +17608,6 @@ define amdgpu_kernel void @local_wavefront_one_as_acq_rel_acquire_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -17948,7 +17869,6 @@ define amdgpu_kernel void @local_wavefront_one_as_seq_cst_acquire_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -18210,7 +18130,6 @@ define amdgpu_kernel void @local_wavefront_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -18472,7 +18391,6 @@ define amdgpu_kernel void @local_wavefront_one_as_acquire_seq_cst_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -18734,7 +18652,6 @@ define amdgpu_kernel void @local_wavefront_one_as_release_seq_cst_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -18996,7 +18913,6 @@ define amdgpu_kernel void @local_wavefront_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -19258,7 +19174,6 @@ define amdgpu_kernel void @local_wavefront_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr6
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -19520,7 +19435,6 @@ define amdgpu_kernel void @local_wavefront_one_as_monotonic_monotonic_ret_cmpxch
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -19829,7 +19743,6 @@ define amdgpu_kernel void @local_wavefront_one_as_acquire_monotonic_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -20138,7 +20051,6 @@ define amdgpu_kernel void @local_wavefront_one_as_release_monotonic_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -20447,7 +20359,6 @@ define amdgpu_kernel void @local_wavefront_one_as_acq_rel_monotonic_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -20756,7 +20667,6 @@ define amdgpu_kernel void @local_wavefront_one_as_seq_cst_monotonic_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -21065,7 +20975,6 @@ define amdgpu_kernel void @local_wavefront_one_as_monotonic_acquire_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -21374,7 +21283,6 @@ define amdgpu_kernel void @local_wavefront_one_as_acquire_acquire_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -21683,7 +21591,6 @@ define amdgpu_kernel void @local_wavefront_one_as_release_acquire_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -21992,7 +21899,6 @@ define amdgpu_kernel void @local_wavefront_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -22301,7 +22207,6 @@ define amdgpu_kernel void @local_wavefront_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -22610,7 +22515,6 @@ define amdgpu_kernel void @local_wavefront_one_as_monotonic_seq_cst_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -22919,7 +22823,6 @@ define amdgpu_kernel void @local_wavefront_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -23228,7 +23131,6 @@ define amdgpu_kernel void @local_wavefront_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -23537,7 +23439,6 @@ define amdgpu_kernel void @local_wavefront_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
@@ -23846,7 +23747,6 @@ define amdgpu_kernel void @local_wavefront_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr5 killed $sgpr4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x1
 ; GFX6-NEXT:    s_load_dword s6, s[8:9], 0x2
