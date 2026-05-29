@@ -3549,9 +3549,15 @@ bool Compiler<Emitter>::VisitCXXDynamicCastExpr(const CXXDynamicCastExpr *E) {
   if (!Ctx.getLangOpts().CPlusPlus20) {
     if (!this->emitInvalidCast(CastKind::Dynamic, /*Fatal=*/false, E))
       return false;
+    return this->VisitCastExpr(E);
   }
 
-  return this->VisitCastExpr(E);
+  if (!this->visit(E->getSubExpr()))
+    return false;
+  if (!this->emitCheckDynamicCast(E))
+    return false;
+
+  return true;
 }
 
 template <class Emitter>
