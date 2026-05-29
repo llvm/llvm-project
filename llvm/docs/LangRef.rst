@@ -10596,6 +10596,88 @@ Example:
 
 .. _binaryops:
 
+Byte Operations
+-----------------
+
+Instructions for bit manipulation for bytes.
+
+.. _i_bitextract:
+
+'``bitextract``' Instruction
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      <result> = bitextract <ty>, <tx> <source>, i32 <offset>
+
+Overview:
+"""""""""
+
+The '``bitextract``' extracts a value from a byte.
+
+Arguments:
+""""""""""
+The '``bitextract``' instruction takes any first-class type ty (the
+return type), a Byte value source, and an offset.
+
+Semantics:
+""""""""""
+
+The '``bitextract``' instruction returns a value of the specified type.
+The returned value is first extracted from the source, starting at the
+bit specified by the offset, and then bitcasted to the return type.
+If the range offset+ty.bitwidth exceeds the source width, it returns
+poison.
+
+Example:
+""""""""
+
+.. code-block:: text
+
+      %result = bitextract i8, b32 %src, i32 24 ; Extract the last 8 bits from %src and return an 8-bit integer
+
+.. _i_bitinsert:
+
+'``bitinsert``' Instruction
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      <result> = bitinsert <tx> <base>, <ty> <val>, i32 <offset>
+
+Overview:
+"""""""""
+
+This instruction '``bitinsert``' inserts a value into a specific
+position within a byte.
+
+Arguments:
+""""""""""
+The first argument (base) of '``bitinsert``' must be of a byte type.
+The second operand (val) must be an arbitrary type.
+
+Semantics:
+""""""""""
+
+The returned value is of the same byte type as the first argument.
+It returns the first argument where the bits in the range
+[offset, offset + ty.bitlength - 1] have been replaced with val. 
+If the range (offset + ty.bitwidth) is greater than the bitwidth of
+the first argument, it returns poison.
+
+Example:
+""""""""
+
+.. code-block:: text
+
+      %result = bitinsert b32 %x, i8 %y, i32 3 ; Inserts the %y bits into %x with an offset of 3
+
 Binary Operations
 -----------------
 

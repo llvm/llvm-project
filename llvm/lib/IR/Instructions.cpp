@@ -2600,6 +2600,55 @@ Type *ExtractValueInst::getIndexedType(Type *Agg,
 }
 
 //===----------------------------------------------------------------------===//
+//                             BitInsert Class
+//===----------------------------------------------------------------------===//
+BitInsertInst::BitInsertInst(Value *Base, Value *Val, Value *Offset,
+                             const Twine &Name, InsertPosition InsertBef)
+    : Instruction(Base->getType(), BitInsert, AllocMarker, InsertBef) {
+  assert(isValidOperands(Base, Val, Offset) &&
+         "Invalid bitinsert instruction operands!");
+  Op<0>() = Base;
+  Op<1>() = Val;
+  Op<2>() = Offset;
+  setName(Name);
+}
+
+bool BitInsertInst::isValidOperands(const Value *Base, const Value *Val,
+                                    const Value *Offset) {
+  if (!Base->getType()->isByteTy())
+    return false; // First operand of bitinsert must be byte type.
+  if (!Val->getType()->isFirstClassType())
+    return false; // Second operand of bitinsert must be a first-class type.
+  if (!Offset->getType()->isIntegerTy(32))
+    return false; // Third operand of bitinsert must be i32.
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
+//                             BitExtract Class
+//===----------------------------------------------------------------------===//
+BitExtractInst::BitExtractInst(Type *Ty, Value *Src, Value *Offset,
+                               const Twine &Name, InsertPosition InsertBef)
+    : Instruction(Ty, BitExtract, AllocMarker, InsertBef) {
+  assert(isValidOperands(Ty, Src, Offset) &&
+         "Invalid bitextract instruction operands!");
+  Op<0>() = Src;
+  Op<1>() = Offset;
+  setName(Name);
+}
+
+bool BitExtractInst::isValidOperands(const Type *Ty, const Value *Src,
+                                     const Value *Offset) {
+  if (!Ty->isFirstClassType())
+    return false; // First operand of bitextract must be a first-class type.
+  if (!Src->getType()->isByteTy())
+    return false; // Second operand of bitextract must be a byte type.
+  if (!Offset->getType()->isIntegerTy(32))
+    return false; // Third operand of bitextract must be i32.
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
 //                             UnaryOperator Class
 //===----------------------------------------------------------------------===//
 
@@ -4531,6 +4580,14 @@ ExtractElementInst *ExtractElementInst::cloneImpl() const {
 
 InsertElementInst *InsertElementInst::cloneImpl() const {
   return InsertElementInst::Create(getOperand(0), getOperand(1), getOperand(2));
+}
+
+BitInsertInst *BitInsertInst::cloneImpl() const {
+  return BitInsertInst::Create(getOperand(0), getOperand(1), getOperand(2));
+}
+
+BitExtractInst *BitExtractInst::cloneImpl() const {
+  return BitExtractInst::Create(getType(), getOperand(0), getOperand(1));
 }
 
 ShuffleVectorInst *ShuffleVectorInst::cloneImpl() const {

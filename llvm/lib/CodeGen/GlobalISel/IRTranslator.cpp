@@ -3524,6 +3524,76 @@ bool IRTranslator::translateShuffleVector(const User &U,
   return true;
 }
 
+bool IRTranslator::translateBitInsert(const User &U,
+                                      MachineIRBuilder &MIRBuilder) {
+  Register Res    = getOrCreateVReg(U);
+  Register Base   = getOrCreateVReg(*U.getOperand(0));
+  Register Val    = getOrCreateVReg(*U.getOperand(1));
+  Register Offset = getOrCreateVReg(*U.getOperand(2));
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  LLT BaseTy = MRI.getType(Base);
+  LLT ValTy  = MRI.getType(Val);
+
+  // Convert Offset to BaseTy
+  Register LegalOffset = MIRBuilder.buildZExtOrTrunc(BaseTy, Offset).getReg(0);
+
+  // RotateAmount = Offset + width(Val)
+  unsigned ValBitWidth = ValTy.getSizeInBits();
+  Register ValWidth = MIRBuilder.buildConstant(BaseTy, ValBitWidth).getReg(0);
+  Register RotateAmount = MIRBuilder.buildAdd(BaseTy, LegalOffset, ValWidth).getReg(0);
+
+  Register RotatedBase = MIRBuilder.buildRotateLeft(BaseTy, Base, RotateAmount).getReg(0);
+
+  // Truncate or extend Val to BaseTy so only the inserted bit range remains.
+  Register ExtVal = MIRBuilder.buildZExtOrTrunc(BaseTy, Val).getReg(0);
+
+  // Clear the low ValBitWidth bits of the rotated base and insert Val there.
+  unsigned BaseBitWidth = BaseTy.getSizeInBits();
+  APInt ClearMask =
+      APInt::getHighBitsSet(BaseBitWidth, BaseBitWidth - ValBitWidth);
+  Register MaskConst = MIRBuilder.buildConstant(BaseTy, ClearMask).getReg(0);
+  Register ClearedBase =
+      MIRBuilder.buildAnd(BaseTy, RotatedBase, MaskConst).getReg(0);
+  Register Inserted = MIRBuilder.buildOr(BaseTy, ClearedBase, ExtVal).getReg(0);
+
+  // Restore bit positions
+  MIRBuilder.buildRotateRight(Res, Inserted, RotateAmount);
+  return true;
+}
+
+bool IRTranslator::translateBitExtract(const User &U,
+                                       MachineIRBuilder &MIRBuilder) {
+  Register Res    = getOrCreateVReg(U);
+  Register Src    = getOrCreateVReg(*U.getOperand(0));
+  Register Offset = getOrCreateVReg(*U.getOperand(1));
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  LLT SrcTy = MRI.getType(Src);
+  LLT ResTy = MRI.getType(Res);
+
+  if (ResTy.getSizeInBits() > SrcTy.getSizeInBits())
+    llvm_unreachable(
+        "bitextract result wider than source should be rejected by verifier");
+
+  // Convert Offset to SrcTy
+  Register LegalOffset = MIRBuilder.buildZExtOrTrunc(SrcTy, Offset).getReg(0);
+
+  // RotateAmount = Offset + width
+  unsigned ResultBitWidth = ResTy.getSizeInBits();
+  Register ResultWidth = MIRBuilder.buildConstant(SrcTy, ResultBitWidth).getReg(0);
+  Register RotateAmount = MIRBuilder.buildAdd(SrcTy, LegalOffset, ResultWidth).getReg(0);
+
+  // Rotate left by (Offset + ResultWidth)
+  Register Rotated = MIRBuilder.buildRotateLeft(SrcTy, Src, RotateAmount).getReg(0);
+
+  // Truncating to ResTy discards the high bits for free
+  if (SrcTy == ResTy)
+    MIRBuilder.buildCopy(Res, Rotated);
+  else
+    MIRBuilder.buildTrunc(Res, Rotated);
+
+  return true;
+}
+
 bool IRTranslator::translatePHI(const User &U, MachineIRBuilder &MIRBuilder) {
   const PHINode &PI = cast<PHINode>(U);
 

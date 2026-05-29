@@ -4790,9 +4790,9 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       Out << ' ';
       TypePrinter.print(GEP->getSourceElementType(), Out);
       Out << ',';
-    } else if (const auto *LI = dyn_cast<LoadInst>(&I)) {
+    } else if (isa<BitExtractInst>(I) || isa<LoadInst>(I)) {
       Out << ' ';
-      TypePrinter.print(LI->getType(), Out);
+      TypePrinter.print(I.getType(), Out);
       Out << ',';
     }
 

@@ -5415,6 +5415,87 @@ public:
   }
 };
 
+//===----------------------------------------------------------------------===//
+//                              BitInsert Class
+//===----------------------------------------------------------------------===//
+class BitInsertInst : public Instruction {
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{3};
+  LLVM_ABI explicit BitInsertInst(Value *Base, Value *Val, Value *Offset,
+                                  const Twine &NameStr = "",
+                                  InsertPosition InsertBefore = nullptr);
+
+protected:
+  // Note: Instruction needs to be a friend here to call cloneImpl.
+  friend class Instruction;
+  /// Clone an identical FreezeInst
+  LLVM_ABI BitInsertInst *cloneImpl() const;
+
+public:
+  static BitInsertInst *Create(Value *Base, Value *Val, Value *Offset,
+                               const Twine &NameStr = "",
+                               InsertPosition InsertBefore = nullptr) {
+    return new (AllocMarker)
+        BitInsertInst(Base, Val, Offset, NameStr, InsertBefore);
+  }
+  /// Transparently provide more efficient getOperand methods.
+  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+  /// Return true if an bitinsert instruction can be
+  /// formed with the specified operands.
+  LLVM_ABI static bool isValidOperands(const Value *Base, const Value *Val,
+                                       const Value *Offset);
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static inline bool classof(const Instruction *I) {
+    return I->getOpcode() == BitInsert;
+  }
+  static inline bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+template <>
+struct OperandTraits<BitInsertInst>
+    : public FixedNumOperandTraits<BitInsertInst, 3> {};
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BitInsertInst, Value)
+
+//===----------------------------------------------------------------------===//
+//                              BitExtract Class
+//===----------------------------------------------------------------------===//
+class BitExtractInst : public Instruction {
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{2};
+  LLVM_ABI BitExtractInst(Type *Ty, Value *Src, Value *Offset,
+                          const Twine &NameStr = "",
+                          InsertPosition InsertBefore = nullptr);
+
+protected:
+  // Note: Instruction needs to be a friend here to call cloneImpl.
+  friend class Instruction;
+  /// Clone an identical FreezeInst
+  LLVM_ABI BitExtractInst *cloneImpl() const;
+
+public:
+  static BitExtractInst *Create(Type *Ty, Value *Src, Value *Offset,
+                                const Twine &NameStr = "",
+                                InsertPosition InsertBefore = nullptr) {
+    return new (AllocMarker)
+        BitExtractInst(Ty, Src, Offset, NameStr, InsertBefore);
+  }
+  /// Transparently provide more efficient getOperand methods.
+  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+  /// Return true if an bitextract instruction can be
+  /// formed with the specified operands.
+  LLVM_ABI static bool isValidOperands(const Type *Ty, const Value *Val,
+                                       const Value *Offset);
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static inline bool classof(const Instruction *I) {
+    return I->getOpcode() == BitExtract;
+  }
+  static inline bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+template <>
+struct OperandTraits<BitExtractInst>
+    : public FixedNumOperandTraits<BitExtractInst, 2> {};
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BitExtractInst, Value)
 } // end namespace llvm
 
 #endif // LLVM_IR_INSTRUCTIONS_H
