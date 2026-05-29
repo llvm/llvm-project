@@ -9,7 +9,7 @@
 ; Test the dry run of a simple case to link two input files.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc -o %t/spirv.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=SIMPLE-FO
-; SIMPLE-FO:      sycl-device-link: inputs: {{.*}}.bc, {{.*}}.bc  libfiles:  output: [[LLVMLINKOUT:.*]].bc
+; SIMPLE-FO:      link: inputs: {{.*}}.bc, {{.*}}.bc  libfiles:  output: [[LLVMLINKOUT:.*]].bc
 ; SIMPLE-FO-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}_0.spv
 ; SIMPLE-FO-NOT:  {{.+}}
 ;
@@ -21,10 +21,28 @@
 ; RUN: mkdir -p %t/libs
 ; RUN: touch %t/libs/lib1.bc
 ; RUN: touch %t/libs/lib2.bc
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc --library-path=%t/libs --device-libs=lib1.bc,lib2.bc -o a.spv 2>&1 \
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc --library-path=%t/libs --bc-library lib1.bc --bc-library lib2.bc -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS
-; DEVLIBS:      sycl-device-link: inputs: {{.*}}.bc  libfiles: {{.*}}lib1.bc, {{.*}}lib2.bc  output: [[LLVMLINKOUT:.*]].bc
+; DEVLIBS:      link: inputs: {{.*}}.bc  libfiles: {{.*}}lib1.bc, {{.*}}lib2.bc  output: [[LLVMLINKOUT:.*]].bc
 ; DEVLIBS-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: a_0.spv
+;
+; Test -L short form (joined) and --bc-library= joined form.
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L%t/libs --bc-library=lib1.bc -o a.spv 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=DEVLIBS-SHORT
+; DEVLIBS-SHORT: link: inputs: {{.*}}.bc  libfiles: {{.*}}libs{{[/\\]}}lib1.bc  output: {{.*}}.bc
+;
+; Test that search continues past the first -L when the library is not found there. lib1.bc exists only in %t/libs (the second -L).
+; RUN: mkdir -p %t/empty
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L %t/empty -L %t/libs --bc-library lib1.bc -o a.spv 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=DEVLIBS-FALLTHROUGH
+; DEVLIBS-FALLTHROUGH: link: inputs: {{.*}}.bc  libfiles: {{.*}}libs{{[/\\]}}lib1.bc  output: {{.*}}.bc
+;
+; Test that -L paths are searched in order: when the same name exists in multiple -L dirs, the first one wins.
+; RUN: mkdir -p %t/libs2
+; RUN: touch %t/libs/shadow.bc %t/libs2/shadow.bc
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L %t/libs2 -L %t/libs --bc-library shadow.bc -o a.spv 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=DEVLIBS-ORDER
+; DEVLIBS-ORDER: link: inputs: {{.*}}.bc  libfiles: {{.*}}libs2{{[/\\]}}shadow.bc  output: {{.*}}.bc
 ;
 ; Test a simple case with a random file (not bitcode) as input.
 ; RUN: touch %t/dummy.o
@@ -33,18 +51,28 @@
 ; FILETYPEERROR: Unsupported file type
 ;
 ; Test to see if device library related errors are emitted.
-; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc --library-path=%t/libs --device-libs= -o a.spv 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=DEVLIBSERR1
-; DEVLIBSERR1: Number of device library files cannot be zero
-; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc --library-path=%t/libs --device-libs=lib1.bc,lib2.bc,lib3.bc -o a.spv 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=DEVLIBSERR2
-; DEVLIBSERR2: '{{.*}}lib3.bc' SYCL device library file is not found
+; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc --library-path=%t/libs --bc-library lib1.bc --bc-library lib2.bc --bc-library lib3.bc -o a.spv 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=DEVLIBSERR
+; DEVLIBSERR: '{{.*}}lib3.bc' library file not found
+;
+; Test that there is no implicit CWD search: a bare bitcode name without any -L
+; must fail to resolve, even if a same-named file exists in the CWD.
+; RUN: cd %t && not clang-sycl-linker --dry-run input1.bc --bc-library input1.bc -o a.spv 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=NO-CWD-SEARCH
+; NO-CWD-SEARCH: 'input1.bc' library file not found
+;
+; Test that a directory matching the requested name is not accepted as a library:
+; %t/libs is a directory created above; resolving --bc-library libs against -L %t
+; would otherwise pick it up and fail later with a confusing bitcode-reader error.
+; RUN: not clang-sycl-linker --dry-run %t/input1.bc -L %t --bc-library libs -o a.spv 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=NO-DIR-AS-LIB
+; NO-DIR-AS-LIB: 'libs' library file not found
 ;
 ; Test AOT compilation for an Intel GPU.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none -arch=bmg_g21 %t/input1.bc %t/input2.bc -o %t/aot-gpu.out 2>&1 \
 ; RUN:     --ocloc-options="-a -b" \
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-GPU
-; AOT-INTEL-GPU:      sycl-device-link: inputs: {{.*}}.bc, {{.*}}.bc libfiles: output: [[LLVMLINKOUT:.*]].bc
+; AOT-INTEL-GPU:      link: inputs: {{.*}}.bc, {{.*}}.bc libfiles: output: [[LLVMLINKOUT:.*]].bc
 ; AOT-INTEL-GPU-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]]_0.spv
 ; AOT-INTEL-GPU-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-device bmg_g21 -a -b {{.*}}-output [[SPIRVTRANSLATIONOUT]]_0.out -file [[SPIRVTRANSLATIONOUT]]_0.spv
 ;
@@ -56,7 +84,7 @@
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none -arch=graniterapids %t/input1.bc %t/input2.bc -o %t/aot-cpu.out 2>&1 \
 ; RUN:     --opencl-aot-options="-a -b" \
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-CPU
-; AOT-INTEL-CPU:      sycl-device-link: inputs: {{.*}}.bc, {{.*}}.bc libfiles: output: [[LLVMLINKOUT:.*]].bc
+; AOT-INTEL-CPU:      link: inputs: {{.*}}.bc, {{.*}}.bc libfiles: output: [[LLVMLINKOUT:.*]].bc
 ; AOT-INTEL-CPU-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]]_0.spv
 ; AOT-INTEL-CPU-NEXT: "{{.*}}opencl-aot{{.*}}" {{.*}}--device=cpu -a -b {{.*}}-o [[SPIRVTRANSLATIONOUT]]_0.out [[SPIRVTRANSLATIONOUT]]_0.spv
 ;
