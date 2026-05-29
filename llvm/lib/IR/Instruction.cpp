@@ -714,6 +714,12 @@ FastMathFlags Instruction::getFastMathFlags() const {
   return cast<FPMathOperator>(this)->getFastMathFlags();
 }
 
+FastMathFlags Instruction::getFastMathFlagsOrNone() const {
+  if (!isa<FPMathOperator>(this))
+    return {};
+  return cast<FPMathOperator>(this)->getFastMathFlags();
+}
+
 void Instruction::copyFastMathFlags(const Instruction *I) {
   copyFastMathFlags(I->getFastMathFlags());
 }

@@ -4151,10 +4151,7 @@ public:
                         DebugLoc DL = DebugLoc::getUnknown())
       : VPScalarIVStepsRecipe(
             IV, Step, VF, IndDesc.getInductionOpcode(),
-            dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp())
-                ? IndDesc.getInductionBinOp()->getFastMathFlags()
-                : FastMathFlags(),
-            DL) {}
+            IndDesc.getInductionBinOp()->getFastMathFlagsOrNone(), DL) {}
 
   ~VPScalarIVStepsRecipe() override = default;
 
