@@ -5208,10 +5208,10 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
   auto Flags = TLI.getAtomicMemOperandFlags(I, DAG.getDataLayout());
 
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      DAG.getEVTAlign(MemVT), AAMDNodes(), nullptr, SSID, SuccessOrdering,
-      FailureOrdering);
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(MachinePointerInfo(I.getPointerOperand()), Flags,
+                              MemVT.getStoreSize(), I.getAlign(), AAMDNodes(),
+                              nullptr, SSID, SuccessOrdering, FailureOrdering);
 
   SDValue L = DAG.getAtomicCmpSwap(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS,
                                    dl, MemVT, VTs, InChain,
@@ -5282,7 +5282,7 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      DAG.getEVTAlign(MemVT), AAMDNodes(), nullptr, SSID, Ordering);
+      I.getAlign(), AAMDNodes(), nullptr, SSID, Ordering);
 
   SDValue L =
     DAG.getAtomic(NT, dl, MemVT, InChain,
