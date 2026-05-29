@@ -5665,6 +5665,29 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     }
     return true;
 
+  case ISD::CONCAT_VECTORS: {
+    EVT VT = Op.getValueType();
+    if (!VT.isFixedLengthVector())
+      return all_of(Op->ops(), [&](SDValue V) {
+        return isGuaranteedNotToBeUndefOrPoison(V, Kind, Depth + 1);
+      });
+
+    assert(DemandedElts.getBitWidth() == VT.getVectorNumElements() &&
+           "Unexpected demanded element mask width");
+
+    EVT SubVT = Op.getOperand(0).getValueType();
+    unsigned NumSubElts = SubVT.getVectorNumElements();
+    for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
+      APInt DemandedSubElts =
+          DemandedElts.extractBits(NumSubElts, i * NumSubElts);
+      if (!!DemandedSubElts &&
+          !isGuaranteedNotToBeUndefOrPoison(Op.getOperand(i), DemandedSubElts,
+                                            Kind, Depth + 1))
+        return false;
+    }
+    return true;
+  }
+
   case ISD::EXTRACT_SUBVECTOR: {
     SDValue Src = Op.getOperand(0);
     if (Src.getValueType().isScalableVector())
