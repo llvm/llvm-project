@@ -177,6 +177,7 @@ static_library("Support") {
     "VirtualOutputConfig.cpp",
     "VirtualOutputError.cpp",
     "VirtualOutputFile.cpp",
+    "Win64EH.cpp",
     "WithColor.cpp",
     "YAMLParser.cpp",
     "YAMLTraits.cpp",

@@ -14325,7 +14325,8 @@ void Sema::CheckForIntOverflow (const Expr *E) {
     const Expr *OriginalE = Exprs.pop_back_val();
     const Expr *E = OriginalE->IgnoreParenCasts();
 
-    if (isa<BinaryOperator, UnaryOperator>(E)) {
+    if (isa<BinaryOperator>(E) ||
+        (isa<UnaryOperator>(E) && cast<UnaryOperator>(E)->canOverflow())) {
       E->EvaluateForOverflow(Context);
       continue;
     }

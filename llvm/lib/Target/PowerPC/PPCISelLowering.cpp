@@ -9629,7 +9629,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   }
   // Check if this is a splat of a constant value.
   APInt APSplatBits, APSplatUndef;
-  unsigned SplatBitSize;
+  unsigned SplatBitSize = 0;
   bool HasAnyUndefs;
   bool BVNIsConstantSplat =
       BVN->isConstantSplat(APSplatBits, APSplatUndef, SplatBitSize,
@@ -9675,6 +9675,10 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       return DAG.getBitcast(Op.getValueType(), SplatNode);
     }
   }
+
+  if (SDValue V =
+          LowerVecSplatSmallFP(Op, DAG, BVNIsConstantSplat, SplatBitSize))
+    return V;
 
   bool IsSplat64 = false;
   uint64_t SplatBits = 0;
@@ -21024,4 +21028,45 @@ SDValue PPCTargetLowering::GenerateVBPERM(SelectionDAG &DAG, SDLoc dl,
       ISD::INTRINSIC_WO_CHAIN, dl, MVT::v16i8,
       DAG.getConstant(Intrinsic::ppc_altivec_vbpermq, dl, MVT::i32),
       DAG.getBitcast(MVT::v16i8, Src), VRB);
+}
+
+// For Power8/9, optimize vec splats of small FP values that can be
+// represented as integers. Use vspltisw + xvcvsxwdp/xvcvsxwsp instead of
+// loading from constant pool.
+SDValue PPCTargetLowering::LowerVecSplatSmallFP(SDValue Op, SelectionDAG &DAG,
+                                                bool BVNIsConstantSplat,
+                                                unsigned SplatBitSize) const {
+
+  if (!BVNIsConstantSplat || !Subtarget.hasVSX() || !Subtarget.hasP8Vector() ||
+      Subtarget.hasP10Vector())
+    return SDValue();
+
+  EVT VT = Op->getValueType(0);
+  if (!((SplatBitSize == 64 && VT == MVT::v2f64) ||
+        (SplatBitSize == 32 && VT == MVT::v4f32)))
+    return SDValue();
+
+  auto *CN = dyn_cast<ConstantFPSDNode>(Op.getOperand(0));
+  if (!CN)
+    return SDValue();
+
+  APFloat APFloatVal = CN->getValueAPF();
+  bool IsExact;
+  APSInt IntResult(16, false);
+  APFloatVal.convertToInteger(IntResult, APFloat::rmTowardZero, &IsExact);
+
+  if (!(IsExact && IntResult <= 15 && IntResult >= -16 && !APFloatVal.isZero()))
+    return SDValue();
+
+  int64_t IntVal = IntResult.getSExtValue();
+
+  SDLoc dl(Op);
+  SDValue IntSplat = getCanonicalConstSplat(IntVal, 4, MVT::v4i32, DAG, dl);
+
+  if (SplatBitSize == 64)
+    return DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, dl, MVT::v2f64,
+        DAG.getConstant(Intrinsic::ppc_vsx_xvcvsxwdp, dl, MVT::i32), IntSplat);
+
+  return DAG.getNode(PPCISD::XVCVSXWSP, dl, MVT::v4f32, IntSplat);
 }
