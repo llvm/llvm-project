@@ -36,6 +36,9 @@ public:
     /// @returns The inner size of blocks in the list containing this node.
     LIBC_INLINE size_t size() const { return block()->inner_size(); }
 
+    LIBC_INLINE Node *next_node() const { return next; }
+    LIBC_INLINE Node *prev_node() const { return prev; }
+
   private:
     // Circularly linked pointers to adjacent nodes.
     Node *prev;
