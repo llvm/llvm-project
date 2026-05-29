@@ -24,6 +24,7 @@ config.target_arch = "@LIBOMP_ARCH@"
 config.compiler_frontend_variant = "@CMAKE_C_COMPILER_FRONTEND_VARIANT@"
 config.compiler_simulate_id = "@CMAKE_C_SIMULATE_ID@"
 config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
+config.libomp_debug = @DEBUG_BUILD@ or @RELWITHDEBINFO_BUILD@
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
