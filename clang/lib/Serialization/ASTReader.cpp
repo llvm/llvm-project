@@ -12196,6 +12196,9 @@ void OMPClauseReader::VisitOMPPrivateClause(OMPPrivateClause *C) {
 void OMPClauseReader::VisitOMPFirstprivateClause(OMPFirstprivateClause *C) {
   VisitOMPClauseWithPreInit(C);
   C->setLParenLoc(Record.readSourceLocation());
+  C->setKind(Record.readEnum<OpenMPFirstprivateModifier>());
+  C->setKindLoc(Record.readSourceLocation());
+  C->setColonLoc(Record.readSourceLocation());
   unsigned NumVars = C->varlist_size();
   SmallVector<Expr *, 16> Vars;
   Vars.reserve(NumVars);

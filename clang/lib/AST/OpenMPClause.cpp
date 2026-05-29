@@ -493,14 +493,14 @@ void OMPFirstprivateClause::setInits(ArrayRef<Expr *> VL) {
   llvm::copy(VL, getPrivateCopies().end());
 }
 
-OMPFirstprivateClause *
-OMPFirstprivateClause::Create(const ASTContext &C, SourceLocation StartLoc,
-                              SourceLocation LParenLoc, SourceLocation EndLoc,
-                              ArrayRef<Expr *> VL, ArrayRef<Expr *> PrivateVL,
-                              ArrayRef<Expr *> InitVL, Stmt *PreInit) {
+OMPFirstprivateClause *OMPFirstprivateClause::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+    SourceLocation EndLoc, ArrayRef<Expr *> VL, ArrayRef<Expr *> PrivateVL,
+    ArrayRef<Expr *> InitVL, OpenMPFirstprivateModifier FPKind,
+    SourceLocation FPKindLoc, SourceLocation ColonLoc, Stmt *PreInit) {
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(3 * VL.size()));
-  OMPFirstprivateClause *Clause =
-      new (Mem) OMPFirstprivateClause(StartLoc, LParenLoc, EndLoc, VL.size());
+  OMPFirstprivateClause *Clause = new (Mem) OMPFirstprivateClause(
+      StartLoc, LParenLoc, EndLoc, FPKind, FPKindLoc, ColonLoc, VL.size());
   Clause->setVarRefs(VL);
   Clause->setPrivateCopies(PrivateVL);
   Clause->setInits(InitVL);
@@ -2563,7 +2563,13 @@ void OMPClausePrinter::VisitOMPPrivateClause(OMPPrivateClause *Node) {
 void OMPClausePrinter::VisitOMPFirstprivateClause(OMPFirstprivateClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "firstprivate";
-    VisitOMPClauseList(Node, '(');
+    OpenMPFirstprivateModifier FPKind = Node->getKind();
+    if (FPKind != OMPC_FIRSTPRIVATE_unknown) {
+      OS << "("
+         << getOpenMPSimpleClauseTypeName(OMPC_firstprivate, Node->getKind())
+         << ":";
+    }
+    VisitOMPClauseList(Node, FPKind == OMPC_FIRSTPRIVATE_unknown ? '(' : ' ');
     OS << ")";
   }
 }

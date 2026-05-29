@@ -4939,6 +4939,19 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
             << "linear-modifier(list)" << getOpenMPClauseName(Kind)
             << "linear(list: [linear-modifier,] step(step-size))";
     }
+  } else if (Kind == OMPC_firstprivate) {
+    // Try to parse modifier if any.
+    Data.ExtraModifier = OMPC_FIRSTPRIVATE_unknown;
+    // The 'saved' modifier is OpenMP 6.0+ only.
+    if (getLangOpts().OpenMP >= 60 && Tok.is(tok::identifier) &&
+        PP.LookAhead(0).is(tok::colon)) {
+      Data.ExtraModifier =
+          getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok), getLangOpts());
+      Data.ExtraModifierLoc = Tok.getLocation();
+      ConsumeToken();
+      assert(Tok.is(tok::colon) && "Expected colon.");
+      Data.ColonLoc = ConsumeToken();
+    }
   } else if (Kind == OMPC_lastprivate) {
     // Try to parse modifier if any.
     Data.ExtraModifier = OMPC_LASTPRIVATE_unknown;

@@ -3690,17 +3690,31 @@ class OMPFirstprivateClause final
   friend OMPVarListClause;
   friend TrailingObjects;
 
+  /// Optional firstprivate modifier (e.g. 'saved'), if specified by the user.
+  OpenMPFirstprivateModifier FPKind = OMPC_FIRSTPRIVATE_unknown;
+  /// Optional location of the firstprivate modifier, if specified.
+  SourceLocation FPKindLoc;
+  /// Optional location of the ':' separating the modifier from the list.
+  SourceLocation ColonLoc;
+
   /// Build clause with number of variables \a N.
   ///
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
+  /// \param FPKind Firstprivate modifier (e.g. 'saved').
+  /// \param FPKindLoc Location of the firstprivate modifier, if any.
+  /// \param ColonLoc Location of the ':' symbol, if a modifier is used.
   /// \param N Number of the variables in the clause.
   OMPFirstprivateClause(SourceLocation StartLoc, SourceLocation LParenLoc,
-                        SourceLocation EndLoc, unsigned N)
+                        SourceLocation EndLoc,
+                        OpenMPFirstprivateModifier FPKind,
+                        SourceLocation FPKindLoc, SourceLocation ColonLoc,
+                        unsigned N)
       : OMPVarListClause<OMPFirstprivateClause>(llvm::omp::OMPC_firstprivate,
                                                 StartLoc, LParenLoc, EndLoc, N),
-        OMPClauseWithPreInit(this) {}
+        OMPClauseWithPreInit(this), FPKind(FPKind), FPKindLoc(FPKindLoc),
+        ColonLoc(ColonLoc) {}
 
   /// Build an empty clause.
   ///
@@ -3710,6 +3724,13 @@ class OMPFirstprivateClause final
             llvm::omp::OMPC_firstprivate, SourceLocation(), SourceLocation(),
             SourceLocation(), N),
         OMPClauseWithPreInit(this) {}
+
+  /// Sets the firstprivate modifier kind.
+  void setKind(OpenMPFirstprivateModifier Kind) { FPKind = Kind; }
+  /// Sets the location of the firstprivate modifier.
+  void setKindLoc(SourceLocation Loc) { FPKindLoc = Loc; }
+  /// Sets the location of the ':' separator.
+  void setColonLoc(SourceLocation Loc) { ColonLoc = Loc; }
 
   /// Sets the list of references to private copies with initializers for
   /// new private variables.
@@ -3751,18 +3772,29 @@ public:
   /// \param InitVL List of references to auto generated variables used for
   /// initialization of a single array element. Used if firstprivate variable is
   /// of array type.
+  /// \param FPKind Firstprivate modifier, e.g. 'saved'.
+  /// \param FPKindLoc Location of the firstprivate modifier, if any.
+  /// \param ColonLoc Location of the ':' symbol, if a modifier is used.
   /// \param PreInit Statement that must be executed before entering the OpenMP
   /// region with this clause.
   static OMPFirstprivateClause *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
          SourceLocation EndLoc, ArrayRef<Expr *> VL, ArrayRef<Expr *> PrivateVL,
-         ArrayRef<Expr *> InitVL, Stmt *PreInit);
+         ArrayRef<Expr *> InitVL, OpenMPFirstprivateModifier FPKind,
+         SourceLocation FPKindLoc, SourceLocation ColonLoc, Stmt *PreInit);
 
   /// Creates an empty clause with the place for \a N variables.
   ///
   /// \param C AST context.
   /// \param N The number of variables.
   static OMPFirstprivateClause *CreateEmpty(const ASTContext &C, unsigned N);
+
+  /// Firstprivate modifier (e.g. 'saved' if specified, otherwise 'unknown').
+  OpenMPFirstprivateModifier getKind() const { return FPKind; }
+  /// Returns the location of the firstprivate modifier, if any.
+  SourceLocation getKindLoc() const { return FPKindLoc; }
+  /// Returns the location of the ':' symbol, if any.
+  SourceLocation getColonLoc() const { return ColonLoc; }
 
   using private_copies_iterator = MutableArrayRef<Expr *>::iterator;
   using private_copies_const_iterator = ArrayRef<const Expr *>::iterator;
