@@ -50,3 +50,15 @@ struct T {
   void explicit_this1(this T& self, const int &x [[clang::lifetime_capture_by(self)]]);
   void explicit_this2(this T& self, const int &x [[clang::lifetime_capture_by(this)]]); // expected-error {{argument references unavailable implicit 'this'}}
 };
+
+struct GNUCaptureBy {
+  const int *x;
+  void captureParam(const int &v __attribute__((lifetime_capture_by(this)))) {
+    x = &v;
+  }
+  void captureThis() __attribute__((lifetime_capture_by(global)));
+};
+
+struct GNUCaptureByInvalid {
+  void member_bad() __attribute__((lifetime_capture_by())); // expected-error {{'lifetime_capture_by' attribute specifies no capturing entity}}
+};

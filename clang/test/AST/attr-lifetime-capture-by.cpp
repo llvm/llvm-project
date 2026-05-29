@@ -8,6 +8,12 @@ struct S {
 
 // CHECK: CXXMethodDecl {{.*}}clang::lifetime_capture_by(a, b, global)
 
+struct GNUCaptureBy {
+  void capture_this() __attribute__((lifetime_capture_by(global)));
+};
+
+// CHECK: CXXMethodDecl {{.*}}capture_this 'void () {{\[\[}}clang::lifetime_capture_by(global){{\]\]}}'
+
 // ****************************************************************************
 // Infer annotation for STL container methods.
 // ****************************************************************************

@@ -30,6 +30,16 @@ namespace usage_invalid {
   int (X::*member_func_ptr)(int) [[clang::lifetimebound]]; // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
 }
 
+namespace usage_invalid_gnu {
+  int *not_class_member() __attribute__((lifetimebound)); // expected-error {{non-member function has no implicit object parameter}}
+  struct A {
+    A() __attribute__((lifetimebound)); // expected-error {{cannot be applied to a constructor}}
+    ~A() __attribute__((lifetimebound)); // expected-error {{cannot be applied to a destructor}}
+    static int *static_class_member() __attribute__((lifetimebound)); // expected-error {{static member function has no implicit object parameter}}
+    void void_return_member() __attribute__((lifetimebound)); // expected-error {{'lifetimebound' attribute cannot be applied to an implicit object parameter of a function that returns void; did you mean 'lifetime_capture_by(X)'}}
+  };
+}
+
 namespace usage_ok {
   struct IntRef { int *target; };
 
@@ -96,6 +106,18 @@ namespace usage_ok {
     t = {C().method()};     // expected-warning {{object backing the pointer 't' will be destroyed at the end of the full-expression}}
   }
 
+  struct D {
+    int *method() __attribute__((lifetimebound));
+    int i;
+  };
+
+  int *D::method() { return &i; }
+
+  void test_lifetimebound_on_implicit_this_gnu() {
+    int *t = D().method();  // expected-warning {{temporary whose address is used as value of local variable 't' will be destroyed at the end of the full-expression}}
+    t = {D().method()};     // expected-warning {{object backing the pointer 't' will be destroyed at the end of the full-expression}}
+  }
+
   struct FieldCheck {
     struct Set {
       int a;
@@ -120,6 +142,10 @@ namespace usage_ok {
     const int& d = FieldCheck{x}.getNoLB()->c.a;
     const int* e = FieldCheck{x}.getR().d;
   }
+
+  const int &gnu_crefparam(const int &param __attribute__((lifetimebound)));
+  const int &gnu_crefparam(const int &param) { return param; }
+  const int &gnu_s = gnu_crefparam(2); // expected-warning {{temporary bound to local reference 'gnu_s' will be destroyed at the end of the full-expression}}
 }
 
 namespace std {

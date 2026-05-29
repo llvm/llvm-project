@@ -660,6 +660,8 @@ Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a behavioral discrepancy between deleted functions and private members when checking the ``enable_if`` attribute. (#GH175895)
 - Fixed ``init_priority`` attribute by delaying type checks until after the type is deduced.
+- Fixed GNU spellings of ``lifetimebound`` and ``lifetime_capture_by`` on member function declarators to match the
+  corresponding ``[[clang::...]]`` spellings on implicit object parameters. (#GH121905)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^

@@ -734,6 +734,13 @@ static void distributeTypeAttrsFromDeclarator(TypeProcessingState &state,
       continue;
 
     switch (attr.getKind()) {
+    case ParsedAttr::AT_LifetimeBound:
+    case ParsedAttr::AT_LifetimeCaptureBy:
+      if (state.getDeclarator().isDeclarationOfFunction())
+        distributeFunctionTypeAttrFromDeclarator(state, attr, declSpecType,
+                                                 CFT);
+      break;
+
     OBJC_POINTER_TYPE_ATTRS_CASELIST:
       distributeObjCPointerTypeAttrFromDeclarator(state, attr, declSpecType);
       break;
@@ -9174,12 +9181,23 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       attr.setUsedAsTypeAttr();
       break;
     case ParsedAttr::AT_LifetimeBound:
-      if (TAL == TAL_DeclChunk)
+      if (TAL == TAL_DeclChunk) {
         HandleLifetimeBoundAttr(state, type, attr);
+        // This GNU spelling has already been consumed as a type attribute.
+        // Remove it so the later decl pass does not re-diagnose the enclosing
+        // method as subject.
+        if (!attr.isStandardAttributeSyntax() &&
+            !attr.isRegularKeywordAttribute())
+          state.getCurrentAttributes().remove(&attr);
+      }
       break;
     case ParsedAttr::AT_LifetimeCaptureBy:
-      if (TAL == TAL_DeclChunk)
+      if (TAL == TAL_DeclChunk) {
         HandleLifetimeCaptureByAttr(state, type, attr);
+        if (!attr.isStandardAttributeSyntax() &&
+            !attr.isRegularKeywordAttribute())
+          state.getCurrentAttributes().remove(&attr);
+      }
       break;
     case ParsedAttr::AT_OverflowBehavior:
       HandleOverflowBehaviorAttr(type, attr, state);
