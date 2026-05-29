@@ -705,8 +705,8 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
             variant = GetArgumentSymbol(arg);
             CheckProcedureSymbol(variant, arg.source);
             const Scope &containingScope{context_.FindScope(x.source)};
-            if (const Symbol *
-                host{GetProgramUnitContaining(containingScope).symbol()}) {
+            if (const Symbol *host{
+                    GetProgramUnitContaining(containingScope).symbol()}) {
               base = host;
             }
           },
