@@ -1,5 +1,7 @@
+// clang-format off
 // REQUIRES: omp_taskgraph_experimental
 // RUN: %clangXX %flags %openmp_flags -fopenmp-version=60 %s -o %t && %libomp-run
+// clang-format on
 #include <iostream>
 #include <cassert>
 #define NT 100
