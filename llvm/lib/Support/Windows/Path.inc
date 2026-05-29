@@ -1443,7 +1443,7 @@ Expected<file_t> openNativeFile(const Twine &Name, CreationDisposition Disp,
   DWORD NativeDisp = nativeDisposition(Disp, Flags);
   DWORD NativeAccess = nativeAccess(Access, Flags);
   DWORD NativeFlags = FILE_ATTRIBUTE_NORMAL;
-  if (Flags & OF_UpdateAttributes)
+  if (Flags & OF_OpenDirectory)
     NativeFlags |= FILE_FLAG_BACKUP_SEMANTICS;
 
   bool Inherit = false;
@@ -1453,7 +1453,7 @@ Expected<file_t> openNativeFile(const Twine &Name, CreationDisposition Disp,
   file_t Result;
   std::error_code EC = openNativeFileInternal(
       Name, Result, NativeDisp, NativeAccess, NativeFlags, Inherit,
-      /*AllowDirectory=*/Flags & OF_UpdateAttributes);
+      /*AllowDirectory=*/Flags & OF_OpenDirectory);
   if (EC)
     return errorCodeToError(EC);
 

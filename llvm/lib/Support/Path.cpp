@@ -1190,8 +1190,8 @@ std::error_code setLastAccessAndModificationTime(const Twine &Path,
                                                  TimePoint<> AccessTime,
                                                  TimePoint<> ModificationTime) {
   int FD;
-  if (std::error_code EC =
-          openFile(Path, FD, CD_OpenExisting, FA_Read, OF_UpdateAttributes))
+  if (std::error_code EC = openFile(Path, FD, CD_OpenExisting, FA_Read,
+                                    OF_UpdateAttributes | OF_OpenDirectory))
     return EC;
   std::error_code EC =
       setLastAccessAndModificationTime(FD, AccessTime, ModificationTime);

@@ -818,11 +818,15 @@ enum OpenFlags : unsigned {
   /// Windows.
   OF_UpdateAtime = 32,
 
-  /// Open the file with sufficient access to update its metadata, and allow
-  /// directories to be opened. Only makes a difference on Windows, where it
-  /// adds FILE_WRITE_ATTRIBUTES to the access mask and
-  /// FILE_FLAG_BACKUP_SEMANTICS to the open flags.
+  /// Open the file with sufficient access to update its metadata. Only makes
+  /// a difference on Windows, where it adds FILE_WRITE_ATTRIBUTES to the
+  /// access mask.
   OF_UpdateAttributes = 64,
+
+  /// Allow opening a directory. Only makes a difference on Windows, where it
+  /// adds FILE_FLAG_BACKUP_SEMANTICS to the open flags so a handle to a
+  /// directory can be obtained.
+  OF_OpenDirectory = 128,
 };
 
 /// Create a potentially unique file name but does not create it.
