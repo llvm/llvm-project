@@ -311,6 +311,11 @@ public:
   LLVM_ABI bool isSafeToExpandAt(const SCEV *S,
                                  const Instruction *InsertionPoint) const;
 
+  /// Drop poison-generating flags from \p I, then try re-infer via SCEV.
+  LLVM_ABI static void
+  dropPoisonGeneratingAnnotationsAndReinfer(ScalarEvolution &SE,
+                                            Instruction *I);
+
   /// Insert code to directly compute the specified SCEV expression into the
   /// program.  The code is inserted into the specified block.
   LLVM_ABI Value *expandCodeFor(SCEVUse SH, Type *Ty, BasicBlock::iterator I);

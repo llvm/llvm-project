@@ -497,7 +497,7 @@ ConvertNtDevicePathToDosPath(llvm::ArrayRef<wchar_t> nt_path) {
              ::GetLastError());
     return std::nullopt;
   }
-  auto close_iter = llvm::make_scope_exit([&] { ::FindVolumeClose(vol_iter); });
+  llvm::scope_exit close_iter([&] { ::FindVolumeClose(vol_iter); });
 
   do {
     // FindFirstVolumeW yields "\\?\Volume{GUID}\".

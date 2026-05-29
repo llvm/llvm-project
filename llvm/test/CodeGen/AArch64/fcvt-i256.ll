@@ -1292,7 +1292,7 @@ define i256 @f32_to_s256_sat(float %val) {
 ; CHECK-SD-NEXT:    mov x3, x0
 ; CHECK-SD-NEXT:    b.vs .LBB8_7
 ; CHECK-SD-NEXT:  // %bb.2: // %fp-to-i-if-check.saturate
-; CHECK-SD-NEXT:    cmp w10, #382
+; CHECK-SD-NEXT:    cmp w10, #255
 ; CHECK-SD-NEXT:    b.hs .LBB8_8
 ; CHECK-SD-NEXT:  // %bb.3: // %fp-to-i-if-check.exp.size
 ; CHECK-SD-NEXT:    sbfx x9, x8, #31, #1
@@ -1405,8 +1405,8 @@ define i256 @f32_to_s256_sat(float %val) {
 ; CHECK-GI-NEXT:    fcmp s0, s0
 ; CHECK-GI-NEXT:    b.vs .LBB8_5
 ; CHECK-GI-NEXT:  // %bb.2: // %fp-to-i-if-check.saturate
-; CHECK-GI-NEXT:    mov w10, #1 // =0x1
-; CHECK-GI-NEXT:    tbz w10, #0, .LBB8_7
+; CHECK-GI-NEXT:    cmp w11, #255
+; CHECK-GI-NEXT:    b.hs .LBB8_7
 ; CHECK-GI-NEXT:  // %bb.3: // %fp-to-i-if-check.exp.size
 ; CHECK-GI-NEXT:    sbfx x10, x9, #0, #1
 ; CHECK-GI-NEXT:    and w12, w8, #0x7fffff
@@ -1572,7 +1572,7 @@ define i256 @f32_to_u256_sat(float %val) {
 ; CHECK-SD-NEXT:    mov x3, x0
 ; CHECK-SD-NEXT:    tbnz w9, #31, .LBB9_8
 ; CHECK-SD-NEXT:  // %bb.3: // %fp-to-i-if-check.saturate
-; CHECK-SD-NEXT:    cmp w8, #382
+; CHECK-SD-NEXT:    cmp w8, #254
 ; CHECK-SD-NEXT:    b.hi .LBB9_9
 ; CHECK-SD-NEXT:  // %bb.4: // %fp-to-i-if-check.exp.size
 ; CHECK-SD-NEXT:    mov w10, #8388608 // =0x800000
@@ -1641,21 +1641,24 @@ define i256 @f32_to_u256_sat(float %val) {
 ; CHECK-GI-NEXT:    mov x0, xzr
 ; CHECK-GI-NEXT:    ubfx w9, w8, #23, #8
 ; CHECK-GI-NEXT:    cmp w9, #127
-; CHECK-GI-NEXT:    b.lo .LBB9_7
+; CHECK-GI-NEXT:    b.lo .LBB9_6
 ; CHECK-GI-NEXT:  // %bb.1: // %fp-to-i-entry
 ; CHECK-GI-NEXT:    fcmp s0, s0
-; CHECK-GI-NEXT:    b.vs .LBB9_7
+; CHECK-GI-NEXT:    b.vs .LBB9_6
 ; CHECK-GI-NEXT:  // %bb.2: // %fp-to-i-entry
 ; CHECK-GI-NEXT:    mov x1, x0
 ; CHECK-GI-NEXT:    mov x2, x0
 ; CHECK-GI-NEXT:    mov x3, x0
-; CHECK-GI-NEXT:    tbnz w8, #31, .LBB9_6
-; CHECK-GI-NEXT:  // %bb.3: // %fp-to-i-if-check.exp.size
+; CHECK-GI-NEXT:    tbnz w8, #31, .LBB9_8
+; CHECK-GI-NEXT:  // %bb.3: // %fp-to-i-if-check.saturate
+; CHECK-GI-NEXT:    cmp w9, #255
+; CHECK-GI-NEXT:    b.hs .LBB9_9
+; CHECK-GI-NEXT:  // %bb.4: // %fp-to-i-if-check.exp.size
 ; CHECK-GI-NEXT:    and w8, w8, #0x7fffff
 ; CHECK-GI-NEXT:    cmp w9, #150
 ; CHECK-GI-NEXT:    orr w8, w8, #0x800000
-; CHECK-GI-NEXT:    b.hs .LBB9_5
-; CHECK-GI-NEXT:  // %bb.4: // %fp-to-i-if-exp.small
+; CHECK-GI-NEXT:    b.hs .LBB9_7
+; CHECK-GI-NEXT:  // %bb.5: // %fp-to-i-if-exp.small
 ; CHECK-GI-NEXT:    mov w10, #150 // =0x96
 ; CHECK-GI-NEXT:    mov x1, xzr
 ; CHECK-GI-NEXT:    mov x2, xzr
@@ -1663,7 +1666,12 @@ define i256 @f32_to_u256_sat(float %val) {
 ; CHECK-GI-NEXT:    mov x3, xzr
 ; CHECK-GI-NEXT:    lsr w0, w8, w9
 ; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:  .LBB9_5: // %fp-to-i-if-exp.large
+; CHECK-GI-NEXT:  .LBB9_6:
+; CHECK-GI-NEXT:    mov x1, x0
+; CHECK-GI-NEXT:    mov x2, x0
+; CHECK-GI-NEXT:    mov x3, x0
+; CHECK-GI-NEXT:    ret
+; CHECK-GI-NEXT:  .LBB9_7: // %fp-to-i-if-exp.large
 ; CHECK-GI-NEXT:    sub w9, w9, #150
 ; CHECK-GI-NEXT:    mov w11, #64 // =0x40
 ; CHECK-GI-NEXT:    mov w10, #128 // =0x80
@@ -1702,12 +1710,13 @@ define i256 @f32_to_u256_sat(float %val) {
 ; CHECK-GI-NEXT:    cmp x9, #0
 ; CHECK-GI-NEXT:    csel x2, xzr, x8, eq
 ; CHECK-GI-NEXT:    csel x3, xzr, x10, eq
-; CHECK-GI-NEXT:  .LBB9_6: // %fp-to-i-cleanup
+; CHECK-GI-NEXT:  .LBB9_8: // %fp-to-i-cleanup
 ; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:  .LBB9_7:
-; CHECK-GI-NEXT:    mov x1, x0
-; CHECK-GI-NEXT:    mov x2, x0
-; CHECK-GI-NEXT:    mov x3, x0
+; CHECK-GI-NEXT:  .LBB9_9:
+; CHECK-GI-NEXT:    mov x0, #-1 // =0xffffffffffffffff
+; CHECK-GI-NEXT:    mov x1, #-1 // =0xffffffffffffffff
+; CHECK-GI-NEXT:    mov x2, #-1 // =0xffffffffffffffff
+; CHECK-GI-NEXT:    mov x3, #-1 // =0xffffffffffffffff
 ; CHECK-GI-NEXT:    ret
   %result = call i256 @llvm.fptoui.sat(float %val)
   ret i256 %result

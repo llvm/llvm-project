@@ -694,22 +694,26 @@ static void expandFPToI(Instruction *FPToI, bool IsSaturating, bool IsSigned) {
       ZeroResultCond = Builder.CreateOr(ZeroResultCond, IsNeg);
     }
   }
-  Value *CondBr = Builder.CreateCondBr(
+  Instruction *CondBr = Builder.CreateCondBr(
       ZeroResultCond, End, IsSaturating ? CheckSaturateBB : CheckExpSizeBB);
   // We do not have any information on the value of the exponent, so mark the
   // branch weights as unkown.
-  if (auto *CondBrInstruction = dyn_cast<Instruction>(CondBr))
-    setExplicitlyUnknownBranchWeightsIfProfiled(*CondBrInstruction, DEBUG_TYPE,
-                                                F);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE, F);
 
   Value *Saturated;
   if (IsSaturating) {
     // check.saturate:
     Builder.SetInsertPoint(CheckSaturateBB);
+    uint64_t SaturatingBiasedExp =
+        static_cast<uint64_t>(ExponentBias) + BitWidth - IsSigned;
+    // Clamp to the all-ones (inf/NaN) exponent. Without this, when the integer
+    // is wide enough to hold every finite float the threshold exceeds any
+    // possible biased exponent, so +/-inf would never saturate.
+    uint64_t MaxBiasedExp = (1ULL << ExponentWidth) - 1;
+    if (SaturatingBiasedExp > MaxBiasedExp)
+      SaturatingBiasedExp = MaxBiasedExp;
     Value *Cmp3 = Builder.CreateICmpUGE(
-        BiasedExp, ConstantInt::getSigned(
-                       FloatIntTy, static_cast<int64_t>(ExponentBias +
-                                                        BitWidth - IsSigned)));
+        BiasedExp, ConstantInt::get(FloatIntTy, SaturatingBiasedExp));
     Value *CondBrSat = Builder.CreateCondBr(Cmp3, SaturateBB, CheckExpSizeBB);
     // Saturation is considered an unlikely event.
     applyProfMetadataIfEnabled(CondBrSat, [&](Instruction *Inst) {

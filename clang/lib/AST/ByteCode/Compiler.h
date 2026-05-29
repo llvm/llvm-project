@@ -429,6 +429,7 @@ private:
 
   bool emitHLSLAggregateSplat(PrimType SrcT, unsigned SrcOffset,
                               QualType DestType, const Expr *E);
+  bool emitVectorConversion(const Expr *Src, const Expr *E);
 
   /// A scalar element extracted during HLSL aggregate flattening.
   struct HLSLFlatElement {

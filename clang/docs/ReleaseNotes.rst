@@ -459,6 +459,9 @@ Improvements to Clang's diagnostics
 - Fixed bug in ``-Wdocumentation`` so that it correctly handles explicit
   function template instantiations (#64087).
 
+- Fixed concept template parameters not being recognized in ``-Wdocumentation``
+  when mentioned in tparam comments. (#GH64087)
+
 - ``-Wunused-but-set-variable`` now diagnoses file-scope variables with
   internal linkage (``static`` storage class) that are assigned but never used.
   This new coverage is added under the subgroup ``-Wunused-but-set-global``,
