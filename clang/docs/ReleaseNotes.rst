@@ -414,7 +414,7 @@ Attribute Changes in Clang
 
 - The ``[[clang::unsafe_buffer_usage]]`` attribute is now supported in API
   notes. For example:
-  
+
   .. code-block:: yaml
 
     Functions:
@@ -648,6 +648,7 @@ Bug Fixes in This Version
   an array via an element-at-a-time copy loop (#GH192026)
 - Fixed an issue where certain designated initializers would be rejected for constexpr variables. (#GH193373)
 - Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
+- Fixed a crash when checking scalar type with excess braces. (#GH69213, #GH137845, #GH198767)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -862,10 +863,10 @@ clang-format
 ------------
 - Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the
   '-'/'+' and the return type in Objective-C method declarations
-- Deprecate the ``BinPackParameters`` and ``BinPackArguments`` options and replace 
-  them with the ``PackParameters`` and ``PackArguments`` structs (respectively) to 
-  unify packing behavior. Add the ``BreakAfter`` option to the structs, allowing 
-  parameter and argument lists to be formatted with one parameter/argument on each 
+- Deprecate the ``BinPackParameters`` and ``BinPackArguments`` options and replace
+  them with the ``PackParameters`` and ``PackArguments`` structs (respectively) to
+  unify packing behavior. Add the ``BreakAfter`` option to the structs, allowing
+  parameter and argument lists to be formatted with one parameter/argument on each
   line if they exceed the specified count.
 - Add ``AfterComma`` value to ``BreakConstructorInitializers`` to allow breaking
   constructor initializers after commas, keeping the colon on the same line.
