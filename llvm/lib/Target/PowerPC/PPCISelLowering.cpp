@@ -13154,7 +13154,8 @@ MachineBasicBlock *PPCTargetLowering::EmitAtomicBinary(MachineInstr &MI,
   Register dest = MI.getOperand(0).getReg();
   Register ptrA = MI.getOperand(1).getReg();
   Register ptrB = MI.getOperand(2).getReg();
-  Register incr = MI.getOperand(4).isReg() ? MI.getOperand(4).getReg() : PPC::ZERO;
+  Register incr =
+      MI.getOperand(4).isReg() ? MI.getOperand(4).getReg() : PPC::ZERO;
   int64_t imm = MI.getOperand(4).isImm() ? MI.getOperand(4).getImm() : 0;
   DebugLoc dl = MI.getDebugLoc();
 
@@ -13188,9 +13189,10 @@ MachineBasicBlock *PPCTargetLowering::EmitAtomicBinary(MachineInstr &MI,
   exitMBB->transferSuccessorsAndUpdatePHIs(BB);
 
   MachineRegisterInfo &RegInfo = F->getRegInfo();
-  Register TmpReg = (!BinOpcode) ? incr :
-    RegInfo.createVirtualRegister( AtomicSizeLog == 3 ? &PPC::G8RCRegClass
-                                           : &PPC::GPRCRegClass);
+  Register TmpReg = (!BinOpcode) ? incr
+                                 : RegInfo.createVirtualRegister(
+                                       AtomicSizeLog == 3 ? &PPC::G8RCRegClass
+                                                          : &PPC::GPRCRegClass);
 
   //  thisMBB:
   //   ...
@@ -13215,8 +13217,7 @@ MachineBasicBlock *PPCTargetLowering::EmitAtomicBinary(MachineInstr &MI,
   //   fallthrough --> exitMBB
 
   BB = loopMBB;
-  BuildMI(BB, dl, TII->get(LoadMnemonic), dest)
-    .addReg(ptrA).addReg(ptrB);
+  BuildMI(BB, dl, TII->get(LoadMnemonic), dest).addReg(ptrA).addReg(ptrB);
   if (BinOpcode) {
     if (imm)
       BuildMI(BB, dl, TII->get(BinOpcode), TmpReg).addReg(dest).addImm(imm);
@@ -13229,7 +13230,8 @@ MachineBasicBlock *PPCTargetLowering::EmitAtomicBinary(MachineInstr &MI,
     if (CmpOpcode == PPC::CMPW && AtomicSizeLog < 2) {
       Register ExtReg = RegInfo.createVirtualRegister(&PPC::GPRCRegClass);
       BuildMI(BB, dl, TII->get(AtomicSizeLog == 0 ? PPC::EXTSB : PPC::EXTSH),
-              ExtReg).addReg(dest);
+              ExtReg)
+          .addReg(dest);
       BuildMI(BB, dl, TII->get(CmpOpcode), CrReg).addReg(ExtReg).addReg(incr);
     } else
       BuildMI(BB, dl, TII->get(CmpOpcode), CrReg).addReg(dest).addReg(incr);
