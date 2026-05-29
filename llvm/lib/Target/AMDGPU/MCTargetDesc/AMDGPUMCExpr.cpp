@@ -499,7 +499,7 @@ static void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
     KnownBits KB = KBM[AGVK->getSubExpr(0)];
     for (const MCExpr *Arg : AGVK->getArgs()) {
       knownBitsMapHelper(Arg, KBM, Depth + 1);
-      KB = KnownBits::umax(KB, KBM[Arg]);
+      KB = KnownBits::smax(KB, KBM[Arg]);
     }
     KBM[Expr] = std::move(KB);
     return;
@@ -509,7 +509,7 @@ static void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
     KnownBits KB = KBM[AGVK->getSubExpr(0)];
     for (const MCExpr *Arg : AGVK->getArgs()) {
       knownBitsMapHelper(Arg, KBM, Depth + 1);
-      KB = KnownBits::umin(KB, KBM[Arg]);
+      KB = KnownBits::smin(KB, KBM[Arg]);
     }
     KBM[Expr] = std::move(KB);
     return;
