@@ -558,13 +558,12 @@ static std::optional<std::string> GetFileNameByLoadAddress(HANDLE hProcess,
   // Fallback: ask the kernel for the file backing the mapping at this address.
   std::vector<wchar_t> mapped_filename(MAX_PATH + 1);
   DWORD mapped_len = 0;
-  while (true) {
+  while (mapped_filename.size() <= PATHCCH_MAX_CCH) {
     mapped_len = ::GetMappedFileNameW(
         hProcess, base_addr, mapped_filename.data(), mapped_filename.size());
-    if (mapped_len > 0)
+    if (mapped_len < mapped_filename.size())
       break;
-    if (::GetLastError() != ERROR_INSUFFICIENT_BUFFER ||
-        mapped_filename.size() >= PATHCCH_MAX_CCH)
+    if (::GetLastError() != ERROR_INSUFFICIENT_BUFFER)
       return std::nullopt;
     mapped_filename.resize(mapped_filename.size() * 2);
   }
