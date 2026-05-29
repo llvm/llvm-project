@@ -21,7 +21,7 @@
 
 template <class Mapping>
 constexpr void test_construction() {
-  using Extents = typename Mapping::extents_type;
+  using Extents = Mapping::extents_type;
 
   ASSERT_NOEXCEPT(Mapping{});
   Mapping mapping;

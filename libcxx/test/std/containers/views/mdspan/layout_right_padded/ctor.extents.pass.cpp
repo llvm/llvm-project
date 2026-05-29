@@ -21,7 +21,7 @@
 template <size_t PaddingValue, class Extents>
 constexpr void
 test_construction(Extents extents, std::array<typename Extents::index_type, Extents::rank()> expected_strides) {
-  using Mapping = typename std::layout_right_padded<PaddingValue>::template mapping<Extents>;
+  using Mapping = std::layout_right_padded<PaddingValue>::template mapping<Extents>;
   static_assert(Mapping::padding_value == PaddingValue);
 
   Mapping mapping(extents);
