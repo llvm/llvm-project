@@ -51,14 +51,19 @@ Two predicates are provided in `CommonTypeConstraints.td`:
 Example:
 
 ```tablegen
-def MyProduceOp : MyDialect_Op<"produce", [TokenProducerTrait]> {
+def MyProduceOp : MyDialect_Op<"produce"> {
   let results = (outs Token:$token);
 }
 
-def MyConsumeOp : MyDialect_Op<"consume", [TokenConsumerTrait]> {
+def MyConsumeOp : MyDialect_Op<"consume"> {
   let arguments = (ins Token:$scope, AnyType:$value);
 }
 ```
+
+ODS automatically adds `TokenProducerTrait` when an op declares a `Token`-typed
+result, and `TokenConsumerTrait` when it declares a `Token`-typed operand. The
+traits must be listed manually when tokens appear as entry block arguments and
+for ops that are not defined in ODS.
 
 Region entry block arguments of `token` type are also token producers and
 require the parent operation to define `TokenProducerTrait`. Token block

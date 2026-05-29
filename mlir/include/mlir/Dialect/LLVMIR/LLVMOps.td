@@ -2135,7 +2135,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
 }
 
 def LLVM_NoneTokenOp
-    : LLVM_Op<"mlir.none", [Pure, TokenProducerTrait]> {
+    : LLVM_Op<"mlir.none", [Pure]> {
   let summary = "Defines a value containing an empty token to LLVM type.";
   let description = [{
     MLIR does not have a way to spell the LLVM IR `none` token literal. This

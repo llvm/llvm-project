@@ -115,29 +115,36 @@ def SignlessLikeVariadic : TEST_Op<"signless_like_variadic"> {
 //===----------------------------------------------------------------------===//
 
 // Produce a builtin `!token` value.
-def TestTokenProduceOp : TEST_Op<"token.produce", [TokenProducerTrait]> {
+def TestTokenProduceOp : TEST_Op<"token.produce"> {
   let results = (outs Token:$token);
   let assemblyFormat = "attr-dict";
 }
 
-// Produce a builtin `!token` value without the required producer trait.
+// Produce a builtin `!token` value via an opt-in result type without the
+// producer trait. ODS only auto-derives the trait when the declared type is
+// statically `Token`, so this op (whose result type accepts any type
+// including tokens) exercises the runtime trait check.
 def TestTokenProduceWithoutTraitOp
     : TEST_Op<"token.produce_without_trait"> {
-  let results = (outs Token:$token);
-  let assemblyFormat = "attr-dict";
+  let results = (outs Type<CPred<"true">>:$token);
+  let assemblyFormat = "attr-dict `:` type($token)";
 }
 
-// Consume a builtin `!token` value (token-only operand).
-def TestTokenConsumeOp : TEST_Op<"token.consume", [TokenConsumerTrait]> {
+// Consume a builtin `!token` value (token-only operand). The consumer trait
+// is auto-derived by ODS from the statically-typed `Token` operand.
+def TestTokenConsumeOp : TEST_Op<"token.consume"> {
   let arguments = (ins Token:$token);
   let assemblyFormat = "$token attr-dict";
 }
 
-// Consume a builtin `!token` value without the required consumer trait.
+// Consume a builtin `!token` value via an opt-in operand type without the
+// consumer trait. ODS only auto-derives the trait when the declared type is
+// statically `Token`, so this op (whose operand type accepts any type
+// including tokens) exercises the runtime trait check.
 def TestTokenConsumeWithoutTraitOp
     : TEST_Op<"token.consume_without_trait"> {
-  let arguments = (ins Token:$token);
-  let assemblyFormat = "$token attr-dict";
+  let arguments = (ins Type<CPred<"true">>:$token);
+  let assemblyFormat = "$token attr-dict `:` type($token)";
 }
 
 // Op that uses the default `AnyType` predicate. Tokens are excluded by

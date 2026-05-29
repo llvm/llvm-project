@@ -186,8 +186,8 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   // Allocate async token/values that we will return from a ramp function.
   // ------------------------------------------------------------------------ //
 
-  // We treat async::TokenType as state update marker to represent
-  // side-effects of async computations
+  // We treat TokenType as state update marker to represent side-effects of
+  // async computations
   bool isStateful = isa<async::TokenType>(func.getResultTypes().front());
 
   std::optional<Value> retToken;
