@@ -194,7 +194,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
         return SE.getCouldNotCompute();
       SCEVOps.push_back(S);
     }
-    return CreateFn(SCEVOps);
+    return PSE.getPredicatedSCEV(CreateFn(SCEVOps));
   };
 
   VPValue *LHSVal, *RHSVal;
@@ -216,10 +216,13 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getMulExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
     });
-  if (match(V,
-            m_Binary<Instruction::UDiv>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+  if (match(V, m_UDiv(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getUDivExpr(Ops[0], Ops[1]);
+    });
+  if (match(V, m_URem(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
+      return SE.getURemExpr(Ops[0], Ops[1]);
     });
   // Handle AND with constant mask: x & (2^n - 1) can be represented as x % 2^n.
   const APInt *Mask;
@@ -294,10 +297,9 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   ArrayRef<VPValue *> Ops;
   Type *SourceElementType;
   if (match(V, m_GetElementPtr(SourceElementType, Ops))) {
-    const SCEV *GEPExpr = CreateSCEV(Ops, [&](ArrayRef<SCEVUse> Ops) {
+    return CreateSCEV(Ops, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getGEPExpr(Ops.front(), Ops.drop_front(), SourceElementType);
     });
-    return PSE.getPredicatedSCEV(GEPExpr);
   }
 
   // TODO: Support constructing SCEVs for more recipes as needed.
