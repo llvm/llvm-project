@@ -46,7 +46,9 @@
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Mutex.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
@@ -59,6 +61,10 @@ using namespace clang;
 using namespace llvm;
 
 #define DEBUG_TYPE "codegenaction"
+
+namespace {
+llvm::ManagedStatic<llvm::sys::SmartMutex<true>> TimePassesMutex;
+}
 
 namespace clang {
 class BackendConsumer;
@@ -122,8 +128,9 @@ BackendConsumer::BackendConsumer(CompilerInstance &CI, BackendAction Action,
       Gen(CreateLLVMCodeGen(CI, InFile, C, CoverageInfo)),
       LinkModules(std::move(LinkModules)), CurLinkModule(CurLinkModule) {
   TimerIsEnabled = CodeGenOpts.TimePasses;
-  if (CodeGenOpts.TimePasses) {
-    llvm::TimePassesIsEnabled = true;
+  {
+    llvm::sys::SmartScopedLock<true> Lock(*TimePassesMutex);
+    llvm::TimePassesIsEnabled = CodeGenOpts.TimePasses;
     llvm::TimePassesPerRun = CodeGenOpts.TimePassesPerRun;
   }
   if (CodeGenOpts.TimePasses)
