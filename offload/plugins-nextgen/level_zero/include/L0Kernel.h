@@ -39,14 +39,18 @@ struct KernelPropertiesTy {
 
 struct L0LaunchEnvTy {
   ze_group_count_t GroupCounts = {0, 0, 0};
+  ze_group_size_t GroupSizes = {0, 0, 0};
   KernelPropertiesTy &KernelPR;
   bool HalfNumThreads = false;
   bool IsTeamsNDRange = false;
   bool IsCooperative = false;
+  bool IsPtrArg = false;
+  void **ArgPtrs = nullptr;
   std::unique_lock<std::mutex> Lock;
 
-  L0LaunchEnvTy(KernelPropertiesTy &KernelPR, bool IsCooperative = false)
-      : KernelPR(KernelPR), IsCooperative(IsCooperative),
+  L0LaunchEnvTy(KernelPropertiesTy &KernelPR, KernelArgsTy &KernelArgs)
+      : KernelPR(KernelPR), IsCooperative(KernelArgs.Flags.Cooperative),
+        IsPtrArg(KernelArgs.Flags.IsPtrArgs), ArgPtrs(KernelArgs.ArgPtrs),
         Lock(KernelPR.Mtx, std::defer_lock) {}
 };
 
@@ -59,8 +63,9 @@ class L0KernelTy : public GenericKernelTy {
   Error buildKernel(L0ProgramTy &Program);
   Error readKernelProperties(L0ProgramTy &Program);
 
-  Error setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
-                        uint32_t NumThreads[3], uint32_t NumBlocks[3]) const;
+  ze_group_size_t createKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
+                                     uint32_t NumThreads[3],
+                                     uint32_t NumBlocks[3]) const;
   Error setIndirectFlags(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv) const;
 
 public:

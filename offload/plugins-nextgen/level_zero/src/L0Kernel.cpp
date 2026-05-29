@@ -15,8 +15,6 @@
 #include "L0Plugin.h"
 #include "L0Program.h"
 
-#include "llvm/ADT/ScopeExit.h"
-
 namespace llvm::omp::target::plugin {
 
 Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
@@ -85,35 +83,32 @@ Error L0KernelTy::initImpl(GenericDeviceTy &GenericDevice,
   return Plugin::success();
 }
 
-Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
-                                  uint32_t NumThreads[3],
-                                  uint32_t NumBlocks[3]) const {
+ze_group_size_t L0KernelTy::createKernelGroups(L0DeviceTy &l0Device,
+                                               L0LaunchEnvTy &KEnv,
+                                               uint32_t NumThreads[3],
+                                               uint32_t NumBlocks[3]) const {
   assert(NumThreads[0] > 0 && NumThreads[1] > 0 && NumThreads[2] > 0 &&
          "Pre-computed ThreadLimit values must be non-zero");
   assert(NumBlocks[0] > 0 && NumBlocks[1] > 0 && NumBlocks[2] > 0 &&
          "Pre-computed NumTeams values must be non-zero");
 
-  uint32_t GroupSizes[3];
   KEnv.GroupCounts = {NumBlocks[0], NumBlocks[1], NumBlocks[2]};
   // Respect max group size attribute in the kernel.
   uint32_t MaxGroupSize = KEnv.KernelPR.MaxThreadGroupSize;
-  GroupSizes[0] = std::min<uint32_t>(MaxGroupSize, NumThreads[0]);
-  GroupSizes[1] = std::min<uint32_t>(MaxGroupSize, NumThreads[1]);
-  GroupSizes[2] = std::min<uint32_t>(MaxGroupSize, NumThreads[2]);
+  KEnv.GroupSizes.groupSizeX = std::min<uint32_t>(MaxGroupSize, NumThreads[0]);
+  KEnv.GroupSizes.groupSizeY = std::min<uint32_t>(MaxGroupSize, NumThreads[1]);
+  KEnv.GroupSizes.groupSizeZ = std::min<uint32_t>(MaxGroupSize, NumThreads[2]);
 
   auto DeviceId = l0Device.getDeviceId();
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Team sizes = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n", GroupSizes[0],
-       GroupSizes[1], GroupSizes[2]);
+       "Team sizes = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n",
+       KEnv.GroupSizes.groupSizeX, KEnv.GroupSizes.groupSizeY, KEnv.GroupSizes.groupSizeZ);
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Number of teams = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n",
        KEnv.GroupCounts.groupCountX, KEnv.GroupCounts.groupCountY,
        KEnv.GroupCounts.groupCountZ);
 
-  CALL_ZE_RET_ERROR(zeKernelSetGroupSize, getZeKernel(), GroupSizes[0],
-                    GroupSizes[1], GroupSizes[2]);
-
-  return Plugin::success();
+  return KEnv.GroupSizes;
 }
 
 Error L0KernelTy::setIndirectFlags(L0DeviceTy &l0Device,
@@ -167,13 +162,13 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   auto *Queue = *QueueOrErr;
   auto &KernelPR = getProperties();
 
-  L0LaunchEnvTy KEnv(KernelPR, IsCooperative);
+  L0LaunchEnvTy KEnv(KernelPR, KernelArgs);
 
   // Protect from kernel preparation to submission as kernels are shared.
   KEnv.Lock.lock();
 
-  if (auto Err = setKernelGroups(l0Device, KEnv, NumThreads, NumBlocks))
-    return Err;
+  ze_group_size_t GroupSizes =
+      createKernelGroups(l0Device, KEnv, NumThreads, NumBlocks);
 
   // Validate cooperative kernel launch constraints
   if (IsCooperative) {
@@ -199,25 +194,41 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
          TotalGroupCount, MaxCooperativeGroupCount);
   }
 
-  // Set kernel arguments.
-  uint32_t NumKernelArgs = KernelPR.NumKernelArgs;
-  if (NumKernelArgs > 0) {
-    if (!KernelPR.ArgSizes)
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "level zero plugin requires kernel argument sizes.");
-    // Use sizes from kernel properties.
-    // TODO: This is temporary workaround it will not work if there is
-    // padding/alignment between arguments.
-    char *Arg = static_cast<char *>(LaunchParams.Data);
-    for (uint32_t I = 0; I < NumKernelArgs; I++) {
-      uint32_t ArgSize = KernelPR.ArgSizes[I];
-      CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, zeKernel, I, ArgSize, Arg);
+  // With pointer-array arguments, zeCommandListAppendLaunchKernelWithArguments
+  // folds group-size, per-argument set, and launch into a single call.
+  const bool IsPtrArgs = KernelArgs.Flags.IsPtrArgs;
+  if (IsPtrArgs) {
+    if (KernelArgs.NumArgs != KernelPR.NumKernelArgs)
+      return Plugin::error(
+          ErrorCode::INVALID_ARGUMENT,
+          "Number of arguments (%u) does not match the number of arguments "
+          "expected by the kernel (%u)",
+          KernelArgs.NumArgs, KernelPR.NumKernelArgs);
+  } else {
+    CALL_ZE_RET_ERROR(zeKernelSetGroupSize, zeKernel, GroupSizes.groupSizeX,
+                      GroupSizes.groupSizeY, GroupSizes.groupSizeZ);
 
-      INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-           "Kernel Pointer argument %" PRIu32 " (value: " DPxMOD
-           ") was set successfully for device %s.\n",
-           I, DPxPTR(Arg), IdStr);
-      Arg += ArgSize;
+    // Set kernel arguments.
+    uint32_t NumKernelArgs = KernelPR.NumKernelArgs;
+    if (NumKernelArgs > 0) {
+      if (!KernelPR.ArgSizes)
+        return Plugin::error(
+            ErrorCode::INVALID_ARGUMENT,
+            "level zero plugin requires kernel argument sizes.");
+      // Use sizes from kernel properties.
+      // TODO: This is temporary workaround it will not work if there is
+      // padding/alignment between arguments.
+      char *Arg = static_cast<char *>(LaunchParams.Data);
+      for (uint32_t I = 0; I < NumKernelArgs; I++) {
+        uint32_t ArgSize = KernelPR.ArgSizes[I];
+        CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, zeKernel, I, ArgSize, Arg);
+
+        INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+             "Kernel Pointer argument %" PRIu32 " (value: " DPxMOD
+             ") was set successfully for device %s.\n",
+             I, DPxPTR(Arg), IdStr);
+        Arg += ArgSize;
+      }
     }
   }
 

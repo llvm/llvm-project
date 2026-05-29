@@ -14,6 +14,7 @@
 #include "L0Device.h"
 #include "L0Kernel.h"
 #include "L0Plugin.h"
+#include "llvm/ADT/ScopeExit.h"
 
 namespace llvm::omp::target::plugin {
 
@@ -38,6 +39,22 @@ Error AsyncQueueTy::deinit() {
 
   CmdList = nullptr;
   return Plugin::success();
+}
+
+Error AsyncQueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
+                                         L0LaunchEnvTy &KEnv,
+                                         ze_event_handle_t SignalEvent,
+                                         uint32_t NumWaitEvents,
+                                         ze_event_handle_t *WaitEvents) {
+  // Unlock KEnv lock after launching the kernel.
+  llvm::scope_exit UnlockGuard([&KEnv]() { KEnv.Lock.unlock(); });
+  if (KEnv.IsPtrArg)
+    return CmdList->appendLaunchKernelWithArgs(
+        Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent, NumWaitEvents,
+        WaitEvents, KEnv.IsCooperative);
+
+  return CmdList->appendLaunchKernel(Kernel, &KEnv.GroupCounts, SignalEvent,
+                                     NumWaitEvents, WaitEvents, KEnv.IsCooperative);
 }
 
 // L0AsyncQueueTy implementation.
@@ -212,10 +229,8 @@ Error L0AsyncQueueTy::launchKernelImpl(ze_kernel_handle_t Kernel,
   auto [NumWaitEvents, WaitEventsPtr] = getLaunchKernelEvents();
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, Device.getDeviceId(),
        "Kernel depends on %zu data copying events.\n", NumWaitEvents);
-  Error AllErrors = CmdList->appendLaunchKernel(
-      Kernel, &KEnv.GroupCounts, SignalEvent, NumWaitEvents, WaitEventsPtr,
-      KEnv.IsCooperative);
-  KEnv.Lock.unlock();
+  Error AllErrors = dispatchLaunchKernel(Kernel, KEnv, SignalEvent,
+                                         NumWaitEvents, WaitEventsPtr);
   if (AllErrors) {
     if (auto Err = Device.releaseEvent(SignalEvent))
       AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
@@ -297,10 +312,7 @@ Error L0InorderQueueTy::memoryCopyImpl(void *Dst, const void *Src,
 
 Error L0InorderQueueTy::launchKernelImpl(ze_kernel_handle_t Kernel,
                                          L0LaunchEnvTy &KEnv) {
-  Error Err = CmdList->appendLaunchKernel(Kernel, &KEnv.GroupCounts, nullptr, 0,
-                                          nullptr, KEnv.IsCooperative);
-  KEnv.Lock.unlock();
-  return Err;
+  return dispatchLaunchKernel(Kernel, KEnv);
 }
 
 // L0SyncQueueTy implementation.

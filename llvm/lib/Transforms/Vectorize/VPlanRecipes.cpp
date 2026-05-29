@@ -437,10 +437,129 @@ VPExpandSCEVRecipe::VPExpandSCEVRecipe(const SCEV *Expr)
     : VPSingleDefRecipe(VPRecipeBase::VPExpandSCEVSC, {}, Expr->getType()),
       Expr(Expr) {}
 
+/// For call VPInstruction operands, return the operand index of the called
+/// function. The function is either the last operand (for unmasked calls) or
+/// the second-to-last operand (for masked calls).
+static unsigned getCalledFnOperandIndex(ArrayRef<VPValue *> Operands) {
+  unsigned NumOps = Operands.size();
+  auto *LastOp = dyn_cast<VPIRValue>(Operands[NumOps - 1]);
+  if (LastOp && isa<Function>(LastOp->getValue()))
+    return NumOps - 1;
+  assert(isa<Function>(cast<VPIRValue>(Operands[NumOps - 2])->getValue()) &&
+         "expected function operand");
+  return NumOps - 2;
+}
+
+/// For call VPInstruction operands, return the called function.
+static Function *getCalledFunction(ArrayRef<VPValue *> Operands) {
+  unsigned Idx = getCalledFnOperandIndex(Operands);
+  return cast<Function>(cast<VPIRValue>(Operands[Idx])->getValue());
+}
+
+Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
+                                            ArrayRef<VPValue *> Operands) {
+  assert(!Operands.empty() &&
+         "zero-operand VPInstruction opcodes must pass explicit ResultTy");
+  // Assert operand \p Idx (if present and typed) has type \p ExpectedTy.
+  [[maybe_unused]] auto AssertOperandType = [&Operands](unsigned Idx,
+                                                        Type *ExpectedTy) {
+    if (!ExpectedTy || Operands.size() <= Idx)
+      return;
+    [[maybe_unused]] Type *OpTy = getScalarTypeOrInfer(Operands[Idx]);
+    assert((!OpTy || OpTy == ExpectedTy) &&
+           "different types inferred for different operands");
+  };
+
+  Type *Op0Ty = getScalarTypeOrInfer(Operands[0]);
+  LLVMContext &Ctx = Op0Ty->getContext();
+  switch (Opcode) {
+  case VPInstruction::BranchOnCond:
+  case VPInstruction::BranchOnTwoConds:
+  case VPInstruction::BranchOnCount:
+  case Instruction::Store:
+  case Instruction::Switch:
+    return Type::getVoidTy(Ctx);
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+  case VPInstruction::ActiveLaneMask:
+    AssertOperandType(1, Op0Ty);
+    return IntegerType::get(Ctx, 1);
+  case VPInstruction::LogicalAnd:
+  case VPInstruction::LogicalOr:
+  case VPInstruction::MaskedCond:
+    assert((!Op0Ty || Op0Ty->isIntegerTy(1)) && "expected bool operand");
+    AssertOperandType(1, Op0Ty);
+    return IntegerType::get(Ctx, 1);
+  case VPInstruction::ExplicitVectorLength:
+    return IntegerType::get(Ctx, 32);
+  case Instruction::Select: {
+    Type *Op1Ty = getScalarTypeOrInfer(Operands[1]);
+    AssertOperandType(2, Op1Ty);
+    return Op1Ty;
+  }
+  case VPInstruction::ExtractLane: {
+    assert(Operands.size() >= 2 && "ExtractLane requires a lane operand and "
+                                   "at least one source vector operand");
+    Type *Op1Ty = getScalarTypeOrInfer(Operands[1]);
+    for (unsigned Idx = 2; Idx != Operands.size(); ++Idx)
+      AssertOperandType(Idx, Op1Ty);
+    return Op1Ty;
+  }
+  case Instruction::ExtractValue: {
+    assert(Operands.size() == 2 && "expected single level extractvalue");
+    auto *StructTy = cast<StructType>(Op0Ty);
+    return StructTy->getTypeAtIndex(
+        cast<VPConstantInt>(Operands[1])->getZExtValue());
+  }
+  case VPInstruction::FirstActiveLane:
+  case VPInstruction::LastActiveLane:
+  case VPInstruction::NumActiveLanes:
+  case VPInstruction::IncomingAliasMask:
+  case Instruction::Load:
+  case Instruction::Alloca:
+    llvm_unreachable("type must be passed explicitly");
+  case Instruction::Call:
+    return getCalledFunction(Operands)->getReturnType();
+  default:
+    break;
+  }
+
+  // Opcodes that require all operands to share the same scalar type as the
+  // result.
+  bool AllOperandsSameType =
+      Instruction::isBinaryOp(Opcode) ||
+      is_contained({VPInstruction::FirstOrderRecurrenceSplice,
+                    VPInstruction::CalculateTripCountMinusVF,
+                    VPInstruction::CanonicalIVIncrementForPart,
+                    VPInstruction::AnyOf, VPInstruction::BuildVector,
+                    VPInstruction::BuildStructVector},
+                   Opcode);
+  if (AllOperandsSameType)
+    for (unsigned Idx = 1; Idx != Operands.size(); ++Idx)
+      AssertOperandType(Idx, Op0Ty);
+
+  return Op0Ty;
+}
+
+Type *VPReplicateRecipe::computeScalarType(const Instruction *I,
+                                           ArrayRef<VPValue *> Operands) {
+  unsigned Opcode = I->getOpcode();
+  if (Instruction::isCast(Opcode) ||
+      is_contained(ArrayRef<unsigned>({Instruction::ExtractValue,
+                                       Instruction::Load, Instruction::Alloca}),
+                   Opcode))
+    return I->getType();
+  return computeScalarTypeForInstruction(Opcode, Operands);
+}
+
 VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                              const VPIRFlags &Flags, const VPIRMetadata &MD,
-                             DebugLoc DL, const Twine &Name)
-    : VPRecipeWithIRFlags(VPRecipeBase::VPInstructionSC, Operands, Flags, DL),
+                             DebugLoc DL, const Twine &Name, Type *ResultTy)
+    : VPRecipeWithIRFlags(
+          VPRecipeBase::VPInstructionSC, Operands,
+          ResultTy ? ResultTy
+                   : computeScalarTypeForInstruction(Opcode, Operands),
+          Flags, DL),
       VPIRMetadata(MD), Opcode(Opcode), Name(Name.str()) {
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
@@ -450,27 +569,6 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
           getNumOperandsForOpcode() == getNumOperands() ||
           (isMasked() && getNumOperandsForOpcode() + 1 == getNumOperands())) &&
          "number of operands does not match opcode");
-}
-
-/// For call VPInstructions, return the operand index of the called function.
-/// The function is either the last operand (for unmasked calls) or the
-/// second-to-last operand (for masked calls).
-static unsigned getCalledFnOperandIndex(const VPInstruction &VPI) {
-  assert(VPI.getOpcode() == Instruction::Call && "must be a call");
-  unsigned NumOps = VPI.getNumOperands();
-  auto *LastOp = dyn_cast<VPIRValue>(VPI.getOperand(NumOps - 1));
-  if (LastOp && isa<Function>(LastOp->getValue()))
-    return NumOps - 1;
-  assert(
-      isa<Function>(cast<VPIRValue>(VPI.getOperand(NumOps - 2))->getValue()) &&
-      "expected function operand");
-  return NumOps - 2;
-}
-
-/// For call VPInstructions, return the called function.
-static Function *getCalledFunction(const VPInstruction &VPI) {
-  unsigned Idx = getCalledFnOperandIndex(VPI);
-  return cast<Function>(cast<VPIRValue>(VPI.getOperand(Idx))->getValue());
 }
 
 unsigned VPInstruction::getNumOperandsForOpcode() const {
@@ -483,6 +581,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   switch (Opcode) {
   case VPInstruction::StepVector:
   case VPInstruction::VScale:
+  case VPInstruction::IncomingAliasMask:
     return 0;
   case Instruction::Alloca:
   case Instruction::ExtractValue:
@@ -500,6 +599,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::Reverse:
   case VPInstruction::Unpack:
+  case VPInstruction::NumActiveLanes:
     return 1;
   case Instruction::ICmp:
   case Instruction::FCmp:
@@ -521,7 +621,8 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::ReductionStartVector:
     return 3;
   case Instruction::Call:
-    return getCalledFnOperandIndex(*this) + 1;
+    return getCalledFnOperandIndex(ArrayRef<VPValue *>(op_begin(), op_end())) +
+           1;
   case Instruction::GetElementPtr:
   case Instruction::PHI:
   case Instruction::Switch:
@@ -653,6 +754,19 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
                                    {PredTy, ScalarTC->getType()},
                                    {VIVElem0, ScalarTC}, nullptr, Name);
+  }
+  case VPInstruction::NumActiveLanes: {
+    Value *Op = State.get(getOperand(0));
+    auto *VecTy = cast<VectorType>(Op->getType());
+    assert(VecTy->getScalarSizeInBits() == 1 &&
+           "NumActiveLanes only implemented for i1 vectors");
+
+    Type *Ty = State.TypeAnalysis.inferScalarType(this);
+    Value *ZExt = Builder.CreateCast(
+        Instruction::ZExt, Op, VectorType::get(Ty, VecTy->getElementCount()));
+    Value *NumActive =
+        Builder.CreateUnaryIntrinsic(Intrinsic::vector_reduce_add, ZExt);
+    return NumActive;
   }
   case VPInstruction::FirstOrderRecurrenceSplice: {
     // Generate code to combine the previous and current values in vector v3.
@@ -1324,7 +1438,8 @@ bool VPInstruction::isVectorToScalar() const {
          getOpcode() == VPInstruction::LastActiveLane ||
          getOpcode() == VPInstruction::ExtractLastActive ||
          getOpcode() == VPInstruction::ComputeReductionResult ||
-         getOpcode() == VPInstruction::AnyOf;
+         getOpcode() == VPInstruction::AnyOf ||
+         getOpcode() == VPInstruction::NumActiveLanes;
 }
 
 bool VPInstruction::isSingleScalar() const {
@@ -1400,6 +1515,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ExtractLastPart:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::ActiveLaneMask:
+  case VPInstruction::IncomingAliasMask:
   case VPInstruction::ExitingIVValue:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::FirstActiveLane:
@@ -1420,7 +1536,8 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::Unpack:
     return false;
   case Instruction::Call:
-    return !getCalledFunction(*this)->doesNotAccessMemory();
+    return !getCalledFunction(ArrayRef<VPValue *>(op_begin(), op_end()))
+                ->doesNotAccessMemory();
   default:
     return true;
   }
@@ -1520,6 +1637,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
   case VPInstruction::ActiveLaneMask:
     O << "active lane mask";
     break;
+  case VPInstruction::IncomingAliasMask:
+    O << "incoming-alias-mask";
+    break;
   case VPInstruction::ExplicitVectorLength:
     O << "EXPLICIT-VECTOR-LENGTH";
     break;
@@ -1607,6 +1727,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
   case VPInstruction::ExtractLastActive:
     O << "extract-last-active";
     break;
+  case VPInstruction::NumActiveLanes:
+    O << "num-active-lanes";
+    break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
   }
@@ -1617,6 +1740,7 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPInstructionWithType::execute(VPTransformState &State) {
+  Type *ResultTy = getResultType();
   if (Instruction::isCast(getOpcode())) {
     Value *Op = State.get(getOperand(0), VPLane(0));
     Value *Cast = State.Builder.CreateCast(Instruction::CastOps(getOpcode()),
@@ -1653,6 +1777,7 @@ void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = ";
 
+  Type *ResultTy = getResultType();
   switch (getOpcode()) {
   case VPInstruction::WideIVStep:
     O << "wide-iv-step ";
@@ -1678,8 +1803,7 @@ void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPPhi::execute(VPTransformState &State) {
-  PHINode *NewPhi = State.Builder.CreatePHI(
-      State.TypeAnalysis.inferScalarType(this), 2, getName());
+  PHINode *NewPhi = State.Builder.CreatePHI(getScalarType(), 2, getName());
   unsigned NumIncoming = getNumIncoming();
   // Detect header phis: the parent block dominates its second incoming block
   // (the latch). Those IR incoming values have not been generated yet and need
@@ -3117,7 +3241,8 @@ VPExpressionRecipe::VPExpressionRecipe(
       if (Def && ExpressionRecipesAsSetOfUsers.contains(Def))
         continue;
       addOperand(Op);
-      LiveInPlaceholders.push_back(new VPSymbolicValue(nullptr));
+      LiveInPlaceholders.push_back(
+          new VPSymbolicValue(getScalarTypeOrInfer(Op)));
     }
   }
 
@@ -3176,8 +3301,16 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
                                           Ctx.CostKind);
 
   case ExpressionTypes::ExtNegatedMulAccReduction:
-    assert(Opcode == Instruction::Add && "Unexpected opcode");
-    Opcode = Instruction::Sub;
+    switch (Opcode) {
+    case Instruction::Add:
+      Opcode = Instruction::Sub;
+      break;
+    case Instruction::FAdd:
+      Opcode = Instruction::FSub;
+      break;
+    default:
+      llvm_unreachable("Unsupported opcode for ExtNegatedMulAccReduction");
+    }
     [[fallthrough]];
   case ExpressionTypes::ExtMulAccReduction: {
     auto *RedR = cast<VPReductionRecipe>(ExpressionRecipes.back());
@@ -3196,6 +3329,7 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
           RedTy->isFloatingPointTy() ? std::optional{RedR->getFastMathFlags()}
                                      : std::nullopt);
     }
+    assert(Opcode != Instruction::FSub && "Only integer types are supported");
     return Ctx.TTI.getMulAccReductionCost(
         cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
             Instruction::ZExt,
@@ -3219,9 +3353,7 @@ bool VPExpressionRecipe::mayHaveSideEffects() const {
   return false;
 }
 
-bool VPExpressionRecipe::isSingleScalar() const {
-  // Cannot use vputils::isSingleScalar(), because all external operands
-  // of the expression will be live-ins while bundled.
+bool VPExpressionRecipe::isVectorToScalar() const {
   auto *RR = dyn_cast<VPReductionRecipe>(ExpressionRecipes.back());
   return RR && !RR->isPartialReduction();
 }
@@ -3367,7 +3499,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
          "VPReplicateRecipes must be unrolled before ::execute");
   auto *Instr = getUnderlyingInstr();
   Instruction *Cloned = Instr->clone();
-  Type *ResultTy = State.TypeAnalysis.inferScalarType(this);
+  Type *ResultTy = getScalarType();
   if (!ResultTy->isVoidTy()) {
     Cloned->setName(Instr->getName() + ".cloned");
     // The operands of the replicate recipe may have been narrowed, resulting in
@@ -3413,13 +3545,14 @@ static const SCEV *getAddressAccessSCEV(const VPValue *Ptr,
   return vputils::isAddressSCEVForCost(Addr, *PSE.getSE(), L) ? Addr : nullptr;
 }
 
-/// Return true if \p R is a predicated load/store with a loop-invariant address
+/// Return true if \p R is a predicated store with a loop-invariant address
 /// only masked by the header mask.
 static bool isPredicatedUniformMemOpAfterTailFolding(const VPReplicateRecipe &R,
                                                      const SCEV *PtrSCEV,
                                                      VPCostContext &Ctx) {
   const VPRegionBlock *ParentRegion = R.getRegion();
-  if (!ParentRegion || !ParentRegion->isReplicator() || !PtrSCEV ||
+  if (R.getOpcode() != Instruction::Store || !ParentRegion ||
+      !ParentRegion->isReplicator() || !PtrSCEV ||
       !Ctx.PSE.getSE()->isLoopInvariant(PtrSCEV, Ctx.L))
     return false;
   auto *BOM =
@@ -3536,20 +3669,14 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo,
         UsedByLoadStoreAddress ? UI : nullptr);
 
-    // Check if this is a predicated load/store with a loop-invariant address
-    // only masked by the header mask. If so, return the uniform mem op cost.
+    // Check if this is a predicated store with a loop-invariant address only
+    // masked by the header mask. If so, return the uniform mem op cost.
     if (isPredicatedUniformMemOpAfterTailFolding(*this, PtrSCEV, Ctx)) {
       InstructionCost UniformCost =
           ScalarMemOpCost +
           Ctx.TTI.getAddressComputationCost(ScalarPtrTy, /*SE=*/nullptr,
                                             /*Ptr=*/nullptr, Ctx.CostKind);
       auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
-      if (IsLoad) {
-        return UniformCost +
-               Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast,
-                                      VectorTy, VectorTy, {}, Ctx.CostKind);
-      }
-
       VPValue *StoredVal = getOperand(0);
       if (!StoredVal->isDefinedOutsideLoopRegions())
         UniformCost += Ctx.TTI.getIndexedVectorInstrCostFromEnd(
@@ -3735,12 +3862,13 @@ void VPPredInstPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
                                                  VPCostContext &Ctx) const {
   const VPRecipeBase *R = getAsRecipe();
-  Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
+  bool IsLoad = isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(R);
+  Type *ScalarTy = IsLoad ? cast<VPSingleDefRecipe>(R)->getScalarType()
+                          : Ctx.Types.inferScalarType(R->getOperand(1));
+  Type *Ty = toVectorTy(ScalarTy, VF);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
-  unsigned Opcode = isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(R)
-                        ? Instruction::Load
-                        : Instruction::Store;
+  unsigned Opcode = IsLoad ? Instruction::Load : Instruction::Store;
 
   if (!Consecutive) {
     // TODO: Using the original IR may not be accurate.
@@ -3758,8 +3886,8 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     };
     assert(!IsReverseMask() &&
            "Inconsecutive memory access should not have reverse order");
-    const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
-    Type *PtrTy = Ptr->getType();
+    Type *PtrTy = Ctx.Types.inferScalarType(getAddr());
+    const Value *Ptr = getAddr()->getUnderlyingValue();
 
     // If the address value is uniform across all lanes, then the address can be
     // calculated with scalar type and broadcast.
@@ -3795,7 +3923,7 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 }
 
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
-  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
+  Type *ScalarDataTy = getScalarType();
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
   bool CreateGather = !isConsecutive();
 
@@ -3831,7 +3959,7 @@ void VPWidenLoadRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
-  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
+  Type *ScalarDataTy = getScalarType();
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
   bool CreateGather = !isConsecutive();
 
@@ -3870,7 +3998,7 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   // legacy model, it will always calculate the cost of mask.
   // TODO: Using getMemoryOpCost() instead of getMemIntrinsicInstrCost  when we
   // don't need to compare to the legacy cost model.
-  Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
+  Type *Ty = toVectorTy(getScalarType(), VF);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
   return Ctx.TTI.getMemIntrinsicInstrCost(
@@ -3958,7 +4086,7 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   // legacy model, it will always calculate the cost of mask.
   // TODO: Using getMemoryOpCost() instead of getMemIntrinsicInstrCost when we
   // don't need to compare to the legacy cost model.
-  Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
+  Type *Ty = toVectorTy(Ctx.Types.inferScalarType(getStoredValue()), VF);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
   return Ctx.TTI.getMemIntrinsicInstrCost(

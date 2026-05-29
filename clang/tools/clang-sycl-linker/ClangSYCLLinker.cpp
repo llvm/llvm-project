@@ -8,7 +8,7 @@
 //
 // This tool executes a sequence of steps required to link device code in SYCL
 // device images. SYCL device code linking requires a complex sequence of steps
-// that include linking of llvm bitcode files, linking device library files
+// that include linking of llvm bitcode files, linking bitcode library files
 // with the fully linked source bitcode file(s), running several SYCL specific
 // post-link steps on the fully linked bitcode file(s), and finally generating
 // target-specific device code.
@@ -184,7 +184,7 @@ Error executeCommands(StringRef ExecutablePath, ArrayRef<StringRef> Args) {
 }
 
 Expected<SmallVector<std::string>> getInput(const ArgList &Args) {
-  // Collect all input bitcode files to be passed to the device linking stage.
+  // Collect all input bitcode files to be passed to the linking stage.
   SmallVector<std::string> BitcodeFiles;
   for (const opt::Arg *Arg : Args.filtered(OPT_INPUT)) {
     std::optional<std::string> Filename = std::string(Arg->getValue());
@@ -217,29 +217,47 @@ Expected<std::unique_ptr<Module>> getBitcodeModule(StringRef File,
   return createStringError(Err.getMessage());
 }
 
-/// Gather all SYCL device library files that will be linked with input device
-/// files.
-/// The list of files and its location are passed from driver.
-Expected<SmallVector<std::string>> getSYCLDeviceLibs(const ArgList &Args) {
-  SmallVector<std::string> DeviceLibFiles;
-  StringRef LibraryPath;
-  if (Arg *A = Args.getLastArg(OPT_library_path_EQ))
-    LibraryPath = A->getValue();
-  if (Arg *A = Args.getLastArg(OPT_device_libs_EQ)) {
-    if (A->getValues().size() == 0)
-      return createStringError(
-          "Number of device library files cannot be zero.");
-    for (StringRef Val : A->getValues()) {
-      SmallString<128> LibName(LibraryPath);
-      llvm::sys::path::append(LibName, Val);
-      if (llvm::sys::fs::exists(LibName))
-        DeviceLibFiles.push_back(std::string(LibName));
-      else
-        return createStringError("'" + LibName +
-                                 "' SYCL device library file is not found.");
-    }
+std::optional<std::string> findFile(StringRef Dir, const Twine &Name) {
+  SmallString<128> Path(Dir);
+  llvm::sys::path::append(Path, Name);
+  if (sys::fs::exists(Path) && !sys::fs::is_directory(Path))
+    return std::string(Path);
+  return std::nullopt;
+}
+
+std::optional<std::string> searchLibrary(StringRef Name,
+                                         ArrayRef<StringRef> SearchPaths) {
+  // An absolute path is taken as-is; -L paths are only consulted for relative
+  // names.
+  if (sys::path::is_absolute(Name)) {
+    if (sys::fs::exists(Name) && !sys::fs::is_directory(Name))
+      return std::string(Name);
+    return std::nullopt;
   }
-  return DeviceLibFiles;
+  for (StringRef Dir : SearchPaths)
+    if (std::optional<std::string> File = findFile(Dir, Name))
+      return File;
+  return std::nullopt;
+}
+
+/// Gather all library files. The list of files and its location are passed from
+/// driver.
+Expected<SmallVector<std::string>> getBCLibraryNames(const ArgList &Args) {
+  SmallVector<StringRef> LibraryPaths;
+  for (const opt::Arg *Arg : Args.filtered(OPT_library_path))
+    LibraryPaths.push_back(Arg->getValue());
+
+  SmallVector<std::string> LibraryFiles;
+  for (const opt::Arg *Arg : Args.filtered(OPT_bc_library)) {
+    std::optional<std::string> LibName =
+        searchLibrary(Arg->getValue(), LibraryPaths);
+    if (!LibName)
+      return createStringError("'" + Twine(Arg->getValue()) +
+                               "' library file not found");
+    LibraryFiles.push_back(std::move(*LibName));
+  }
+
+  return LibraryFiles;
 }
 
 struct LinkResult {
@@ -248,32 +266,26 @@ struct LinkResult {
   llvm::Triple TargetTriple;
 };
 
-/// TODO: There is nothing SYCL specific in linkDeviceCode function. Remove:
-///   1. Mentions of SYCL.
-///   2. "fat" file formats. This linker shouldn't refer to input files as
-///   "device code"/"device libraries".
-
 /// Following tasks are performed:
 /// 1. Resolve the target triple: use --triple= when given, otherwise take the
 /// first input that supplies a triple as canonical. Issue an error if any
 /// triple inputs disagree.
-/// 2. Link all SYCL device bitcode images into one image. Device linking is
-/// performed using the linkInModule API.
-/// 3. Gather all SYCL device library bitcode images.
+/// 2. Link all input bitcode images into one image using the linkInModule API.
+/// 3. Gather all library bitcode images.
 /// 4. Link all the images gathered in Step 3 with the output of Step 2 using
 /// linkInModule API. LinkOnlyNeeded flag is used.
-Expected<LinkResult> linkDeviceCode(ArrayRef<std::string> InputFiles,
-                                    const ArgList &Args, LLVMContext &C) {
-  llvm::TimeTraceScope TimeScope("SYCL link device code");
+Expected<LinkResult> linkInputs(ArrayRef<std::string> InputFiles,
+                                const ArgList &Args, LLVMContext &C) {
+  llvm::TimeTraceScope TimeScope("Link code");
 
   assert(InputFiles.size() && "No inputs to link");
 
-  // Get all SYCL device library files, if any.
-  auto SYCLDeviceLibFiles = getSYCLDeviceLibs(Args);
-  if (!SYCLDeviceLibFiles)
-    return SYCLDeviceLibFiles.takeError();
+  // Get all library files.
+  Expected<SmallVector<std::string>> BCLibFiles = getBCLibraryNames(Args);
+  if (!BCLibFiles)
+    return BCLibFiles.takeError();
 
-  // Create a new file to write the linked device file to.
+  // Create a new file to write the linked file to.
   auto BitcodeOutput =
       createTempFile(Args, sys::path::filename(OutputFile), "bc");
   if (!BitcodeOutput)
@@ -281,17 +293,16 @@ Expected<LinkResult> linkDeviceCode(ArrayRef<std::string> InputFiles,
 
   if (Verbose || DryRun) {
     std::string Inputs = llvm::join(InputFiles.begin(), InputFiles.end(), ", ");
-    std::string LibInputs = llvm::join((*SYCLDeviceLibFiles).begin(),
-                                       (*SYCLDeviceLibFiles).end(), ", ");
-    errs() << formatv(
-        "sycl-device-link: inputs: {0} libfiles: {1} output: {2}\n", Inputs,
-        LibInputs, *BitcodeOutput);
+    std::string LibInputs =
+        llvm::join((*BCLibFiles).begin(), (*BCLibFiles).end(), ", ");
+    errs() << formatv("link: inputs: {0} libfiles: {1} output: {2}\n", Inputs,
+                      LibInputs, *BitcodeOutput);
   }
 
-  // Link SYCL device input files. Resolve the target triple.
+  // Link input files. Resolve the target triple.
   llvm::Triple TargetTriple(Args.getLastArgValue(OPT_triple_EQ));
   StringRef TripleSource = TargetTriple.empty() ? "" : "--triple=";
-  auto LinkerOutput = std::make_unique<Module>("sycl-device-link", C);
+  auto LinkerOutput = std::make_unique<Module>("linker-output", C);
   Linker L(*LinkerOutput);
 
   for (auto &File : InputFiles) {
@@ -319,8 +330,8 @@ Expected<LinkResult> linkDeviceCode(ArrayRef<std::string> InputFiles,
     return createStringError(
         "Target triple must be specified or inferable from inputs");
 
-  // Link in SYCL device library files.
-  for (auto &File : *SYCLDeviceLibFiles) {
+  // Link in library files.
+  for (auto &File : *BCLibFiles) {
     auto LibMod = getBitcodeModule(File, C);
     if (!LibMod)
       return LibMod.takeError();
@@ -417,7 +428,7 @@ static Error runCodeGen(StringRef File, const llvm::Triple &TargetTriple,
 /// \param OutputFile The output file name.
 /// \param Args Encompasses all arguments required for linking and wrapping
 /// device code and will be parsed to generate options required to be passed
-/// into the SYCL AOT compilation step.
+/// into the AOT compilation step.
 static Error runAOTCompileIntelCPU(StringRef InputFile, StringRef OutputFile,
                                    const ArgList &Args) {
   SmallVector<StringRef, 8> CmdArgs;
@@ -445,7 +456,7 @@ static Error runAOTCompileIntelCPU(StringRef InputFile, StringRef OutputFile,
 /// \param OutputFile The output file name.
 /// \param Args Encompasses all arguments required for linking and wrapping
 /// device code and will be parsed to generate options required to be passed
-/// into the SYCL AOT compilation step.
+/// into the AOT compilation step.
 static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
                                    const ArgList &Args) {
   SmallVector<StringRef, 8> CmdArgs;
@@ -481,7 +492,7 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
 /// \param OutputFile The output file name.
 /// \param Args Encompasses all arguments required for linking and wrapping
 /// device code and will be parsed to generate options required to be passed
-/// into the SYCL AOT compilation step.
+/// into the AOT compilation step.
 static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
                            const ArgList &Args) {
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
@@ -653,15 +664,20 @@ static bool canSkipModuleSplit(IRSplitMode Mode, const Module &M,
 }
 
 /// Performs the following steps:
-/// 1. Link input device code (user code and SYCL device library code).
-/// 2. Run SPIR-V code generation.
+/// 1. Link all input bitcode files together with library files.
+/// 2. Optionally split the linked module according to the requested
+///    IRSplitMode.
+/// 3. Run SPIR-V code generation on each (split) module.
+/// 4. Optionally run AOT compilation when targeting an Intel HW arch.
+/// 5. Pack the resulting images into a single OffloadBinary written to the
+///    output file.
 Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
-  llvm::TimeTraceScope TimeScope("SYCL device linking");
+  llvm::TimeTraceScope TimeScope("SYCL linking");
 
   LLVMContext C;
 
-  // Link all input bitcode files and SYCL device library files, if any.
-  Expected<LinkResult> LinkedOrErr = linkDeviceCode(Files, Args, C);
+  // Link all input bitcode files and library files.
+  Expected<LinkResult> LinkedOrErr = linkInputs(Files, Args, C);
   if (!LinkedOrErr)
     return LinkedOrErr.takeError();
   LinkResult &Result = *LinkedOrErr;
@@ -777,11 +793,10 @@ int main(int argc, char **argv) {
 
   if (Args.hasArg(OPT_help) || Args.hasArg(OPT_help_hidden)) {
     Tbl.printHelp(
-        outs(), "clang-sycl-linker [options] <options to sycl link steps>",
-        "A utility that wraps around several steps required to link SYCL "
-        "device files.\n"
+        outs(), "clang-sycl-linker [options] <input bitcode files>",
+        "A utility that wraps around the SYCL device code linking process.\n"
         "This enables LLVM IR linking, post-linking and code generation for "
-        "SYCL targets.",
+        "SPIR-V JIT and AOT targets.",
         Args.hasArg(OPT_help_hidden), Args.hasArg(OPT_help_hidden));
     return EXIT_SUCCESS;
   }

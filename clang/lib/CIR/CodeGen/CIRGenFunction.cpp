@@ -778,6 +778,10 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
 
     // Emit the standard function prologue.
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
+    if (funcDecl->UsesFPIntrin() || funcDecl->hasAttr<StrictFPAttr>()) {
+      cgm.errorNYI(loc, "STDC FENV_ACCESS");
+      return fn;
+    }
 
     // Save parameters for coroutine function.
     if (body && isa_and_nonnull<CoroutineBodyStmt>(body))
@@ -1652,7 +1656,7 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
           // Always zexting here would be wrong if it weren't
           // undefined behavior to have a negative bound.
           // FIXME: What about when size's type is larger than size_t?
-          entry = builder.createIntCast(size, sizeTy);
+          entry = builder.createBoolIntToIntCast(size, sizeTy);
         }
       }
       type = vat->getElementType();

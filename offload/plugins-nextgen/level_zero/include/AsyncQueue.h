@@ -73,6 +73,10 @@ struct AsyncQueueTy {
     return memoryFillImpl(Ptr, Pattern, PatternSize, Size);
   }
 
+  Error dispatchLaunchKernel(ze_kernel_handle_t Kernel, L0LaunchEnvTy &KEnv,
+                             ze_event_handle_t SignalEvent = nullptr,
+                             uint32_t NumWaitEvents = 0,
+                             ze_event_handle_t *WaitEvents = nullptr);
   Error launchKernel(ze_kernel_handle_t Kernel, L0LaunchEnvTy &KEnv) {
     return launchKernelImpl(Kernel, KEnv);
   }

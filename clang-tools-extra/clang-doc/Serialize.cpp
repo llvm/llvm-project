@@ -26,7 +26,6 @@ namespace clang {
 namespace doc {
 namespace serialize {
 
-namespace {
 static StringRef exprToString(const clang::Expr *E) {
   clang::LangOptions Opts;
   clang::PrintingPolicy Policy(Opts);
@@ -35,7 +34,6 @@ static StringRef exprToString(const clang::Expr *E) {
   E->printPretty(OS, nullptr, Policy);
   return internString(Result);
 }
-} // namespace
 
 SymbolID hashUSR(llvm::StringRef USR) {
   return llvm::SHA1::hash(arrayRefFromStringRef(USR));
