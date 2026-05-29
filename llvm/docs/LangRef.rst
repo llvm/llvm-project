@@ -15324,22 +15324,21 @@ Aliasing rules:
 Common :ref:`aliasing rules <pointeraliasing>` apply to pointers returned
 by this intrinsic, as well as the following additional rules:
 
-A pointer returned by `@llvm.structured.gep` is considered not to alias a
-pointer returned by another `@llvm.structured.gep` with the same base pointer
-unless the index sequence of one is a prefix of the other.
+The pointer returned by '``@llvm.structured.gep``' can only be used to access
+memory that is part of the indexed subobject, otherwise the behavior is
+undefined.
 
 .. code-block:: llvm
+   %S = { i32, i32 } ; assuming these are laid out next to each other
+                     ; and sizeof(i32) < sizeof(64).
 
-   %S = { i32, i32 }
    %ptr0 = call ptr @llvm.structured.gep(ptr elementtype(%S) %src, i32 0)
-   %ptr1 = call ptr @llvm.structured.gep(ptr elementtype(%S) %src, i32 1)
+   %field0 = load i64, ptr %ptr0 ; undefined behavior, because the access
+                                 ; crosses into the second field.
 
-   %field0 = load i64, ptr %ptr0
-   %field1 = load i32, ptr %ptr1
-
-Here, `%field0` is not expected to load the second `i32` of the struct `%S`.
-The loaded value is implementation defined, and optimizations are free
-to assume there is no overlap in the memory loaded by the 2 loads.
+This implies that two '``llvm.structured.gep``' calls with the same pointer
+and element type do not alias unless the index sequence of one if a prefix
+of the other.
 
 Example:
 """"""""
