@@ -1,4 +1,5 @@
 // REQUIRES: x86-registered-target
+// REQUIRES: reproducer-reduction
 //
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: split-file %s %t
