@@ -69,9 +69,10 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
     list(APPEND compile_options "-ffixed-point")
   elseif(${feature} STREQUAL "stdc_fenv_access")
     if (MSVC)
-      list(APPEND compile_options "/Wx")
-    else
+      list(APPEND compile_options "/WX")
+    else()
       list(APPEND compile_options "-Wall -Werror")
+    endif()
   elseif(${feature} MATCHES "^builtin_" OR
          ${feature} STREQUAL "float16_conversion")
     set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
@@ -163,3 +164,4 @@ check_cxx_compiler_flag("-nostdlibinc" LIBC_CC_SUPPORTS_NOSTDLIBINC)
 
 # clang-all, gcc-8+
 check_cxx_compiler_flag("-Wextra-semi" LIBC_CC_SUPPORTS_EXTRA_SEMI)
+
