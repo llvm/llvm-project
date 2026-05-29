@@ -17,6 +17,10 @@ void foo2() {
   [bar doWork];
 }
 
+void foo3() {
+  SomeObj *bar = provide();
+}
+
 void bar() {
   CFMutableArrayRef array = CFArrayCreateMutable(kCFAllocatorDefault, 10);
   // expected-warning@-1{{Local variable 'array' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
