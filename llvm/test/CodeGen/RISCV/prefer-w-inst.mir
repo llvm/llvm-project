@@ -249,8 +249,8 @@ body:             |
     ; PREFER-W-INST-NEXT: {{  $}}
     ; PREFER-W-INST-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; PREFER-W-INST-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; PREFER-W-INST-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (volatile load (s64))
-    ; PREFER-W-INST-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[LW]], 1
+    ; PREFER-W-INST-NEXT: [[LD:%[0-9]+]]:gpr = LD [[COPY]], 0 :: (volatile load (s64))
+    ; PREFER-W-INST-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[LD]], 1
     ; PREFER-W-INST-NEXT: $x10 = COPY [[ADDIW]]
     ; PREFER-W-INST-NEXT: PseudoRET
     %1:gpr = COPY $x10

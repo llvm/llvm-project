@@ -1678,7 +1678,8 @@ bb7:                                              ; preds = %bb2
 define signext i32 @test_volatile_ld(ptr %p) {
 ; CHECK-LABEL: test_volatile_ld:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lw a0, 0(a0)
+; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: test_volatile_ld:
