@@ -108,7 +108,7 @@ private:
 
     std::string m_name;
 
-    bool Read(Process *process, lldb::addr_t addr);
+    static llvm::Expected<class_ro_t> Read(Process *process, lldb::addr_t addr);
   };
 
   struct class_rw_t {
@@ -123,7 +123,7 @@ private:
     lldb::addr_t m_properties_ptr;
     lldb::addr_t m_protocols_ptr;
 
-    bool Read(Process *process, lldb::addr_t addr);
+    static llvm::Expected<class_rw_t> Read(Process *process, lldb::addr_t addr);
   };
 
   struct method_list_t {
@@ -248,9 +248,8 @@ private:
         m_ivars_storage(), m_image_to_method_lists(), m_last_version_updated() {
   }
 
-  bool Read_class_row(Process *process, const objc_class_t &objc_class,
-                      std::unique_ptr<class_ro_t> &class_ro,
-                      std::unique_ptr<class_rw_t> &class_rw) const;
+  static llvm::Expected<class_ro_t>
+  Read_class_row(Process *process, const objc_class_t &objc_class);
 
   void ProcessMethodList(std::function<bool(const char *, const char *)> const
                              &instance_method_func,

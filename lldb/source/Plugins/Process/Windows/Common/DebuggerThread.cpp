@@ -32,6 +32,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <optional>
+#include <pathcch.h>
 #include <psapi.h>
 
 #ifndef STATUS_WX86_BREAKPOINT
@@ -555,11 +556,20 @@ static std::optional<std::string> GetFileNameByLoadAddress(HANDLE hProcess,
   }
 
   // Fallback: ask the kernel for the file backing the mapping at this address.
-  std::array<wchar_t, MAX_PATH + 1> mapped_filename;
-  if (!::GetMappedFileNameW(hProcess, base_addr, mapped_filename.data(),
-                            mapped_filename.size()))
-    return std::nullopt;
-  return ConvertNtDevicePathToDosPath(mapped_filename);
+  std::vector<wchar_t> mapped_filename(MAX_PATH + 1);
+  DWORD mapped_len = 0;
+  while (mapped_filename.size() <= PATHCCH_MAX_CCH) {
+    mapped_len = ::GetMappedFileNameW(
+        hProcess, base_addr, mapped_filename.data(), mapped_filename.size());
+    if (mapped_len < mapped_filename.size())
+      break;
+    if (::GetLastError() != ERROR_INSUFFICIENT_BUFFER)
+      return std::nullopt;
+    mapped_filename.resize(mapped_filename.size() * 2);
+  }
+  std::optional<std::string> dos_path = ConvertNtDevicePathToDosPath(
+      llvm::ArrayRef<wchar_t>(mapped_filename.data(), mapped_len + 1));
+  return dos_path;
 }
 
 // Resolve the LOAD_DLL_DEBUG_INFO::lpImageName field.

@@ -1912,6 +1912,21 @@ static bool getDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
   return DynamicDecl != nullptr;
 }
 
+bool CheckDynamicCast(InterpState &S, CodePtr OpPC) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+
+  if (!Ptr.isConstexprUnknown())
+    return true;
+
+  QualType T = Ptr.getType();
+  const Expr *E = S.Current->getExpr(OpPC);
+  APValue V = Ptr.toAPValue(S.getASTContext());
+  QualType TT = S.getASTContext().getLValueReferenceType(T);
+  S.FFDiag(E, diag::note_constexpr_polymorphic_unknown_dynamic_type)
+      << AK_DynamicCast << V.getAsString(S.getASTContext(), TT);
+  return false;
+}
+
 bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
               uint32_t VarArgSize) {
   assert(Func->hasThisPointer());
