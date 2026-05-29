@@ -50,10 +50,12 @@
  * and the address test at the call site would fold to true.
  * Windows: __declspec(selectany) is data-only, and the ROCm interceptor path
  * is not used there, so keep the original strong extern. */
+#if COMPILER_RT_BUILD_PROFILE_ROCM
 #if defined(_WIN32)
 extern int __llvm_profile_hip_collect_device_data(void);
 #else
 __attribute__((weak)) int __llvm_profile_hip_collect_device_data(void);
+#endif
 #endif
 
 /* From where is profile name specified.
@@ -1217,11 +1219,13 @@ int __llvm_profile_write_file(void) {
    * InstrProfilingPlatformROCm.o is in the link, which happens when the program
    * references other ROCm-runtime symbols (HIP-with-PGO). Warning on failure is
    * handled inside the callee. */
+#if COMPILER_RT_BUILD_PROFILE_ROCM
 #if defined(_WIN32)
   (void)__llvm_profile_hip_collect_device_data();
 #else
   if (&__llvm_profile_hip_collect_device_data)
     (void)__llvm_profile_hip_collect_device_data();
+#endif
 #endif
 
   // Restore SIGKILL.
