@@ -175,7 +175,7 @@ static bool mergeConstants(Module &M) {
       if (GV.isWeakForLinker())
         continue;
 
-      // Don't touch globals with metadata other then !dbg.
+      // Don't touch globals with metadata other than !dbg or !guid.
       if (GV.hasMetadataOtherThanDebugLocAndGuid())
         continue;
 

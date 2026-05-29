@@ -729,13 +729,14 @@ bool GlobalMergeImpl::run(Module &M) {
     if (GV.isTagged())
       continue;
 
-    // Don't merge globals with metadata other than !dbg, as this is essentially
-    // equivalent to adding metadata to an existing global, which is not
-    // necessarily a correct transformation depending on the specific metadata's
-    // semantics. We will later use copyMetadata() to copy metadata from
-    // component globals to the combined global, which only knows how to do this
-    // correctly for !dbg (and !type, but by this point LowerTypeTests will have
-    // already run).
+    // Don't merge globals with metadata other than !dbg or !guid, as this is
+    // essentially equivalent to adding metadata to an existing global, which is
+    // not necessarily a correct transformation depending on the specific
+    // metadata's semantics. We will later use copyMetadata() to copy metadata
+    // from component globals to the combined global, which only knows how to do
+    // this correctly for !dbg (and !type, but by this point LowerTypeTests will
+    // have already run).
+    // Note that a new !guid will be created as part of doMerge
     if (GV.hasMetadataOtherThanDebugLocAndGuid())
       continue;
 
