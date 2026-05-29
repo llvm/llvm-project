@@ -549,6 +549,11 @@ public:
   /// in which case fetch the debug location of the next non-debug node.
   LLVM_ABI const DebugLoc &getStableDebugLoc() const;
 
+  /// Clear the optional flags contained in this instruction.
+  void clearSubclassOptionalData() {
+    SubclassOptionalData = 0;
+  }
+
   /// Set or clear the nuw flag on this instruction, which must be an operator
   /// which supports this flag. See LangRef.html for the meaning of this flag.
   LLVM_ABI void setHasNoUnsignedWrap(bool b = true);
