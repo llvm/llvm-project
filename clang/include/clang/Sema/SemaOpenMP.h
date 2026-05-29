@@ -29,6 +29,8 @@
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <optional>
@@ -1180,6 +1182,11 @@ public:
                                       SourceLocation LParenLoc,
                                       SourceLocation EndLoc);
 
+  /// Called on well-formed 'ompx_name' clause.
+  OMPClause *ActOnOpenMPOmpxNameClause(Expr *Name, SourceLocation StartLoc,
+                                       SourceLocation LParenLoc,
+                                       SourceLocation EndLoc);
+
   /// Data used for processing a list of variables in OpenMP clauses.
   struct OpenMPVarListDataTy final {
     Expr *DepModOrTailExpr = nullptr;
@@ -1500,6 +1507,14 @@ public:
 
 private:
   void *VarDataSharingAttributesStack;
+
+  /// User-provided target kernel names from 'ompx_name' clauses in this
+  /// translation unit, keyed to their first source location.
+  llvm::StringMap<SourceLocation> OMPKernelNames;
+
+  /// Source locations for duplicate kernel names that have already been
+  /// diagnosed. This prevents repeated diagnostics during template transforms.
+  llvm::DenseSet<unsigned> DiagnosedOMPKernelNameLocs;
 
   /// Number of nested '#pragma omp declare target' directives.
   SmallVector<DeclareTargetContextInfo, 4> DeclareTargetNesting;

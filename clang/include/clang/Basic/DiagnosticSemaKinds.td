@@ -12044,6 +12044,12 @@ let CategoryName = "OpenMP Issue" in {
 // OpenMP support.
 def err_omp_expected_var_arg : Error<
   "%0 is not a global variable, static local variable or static data member">;
+def err_ompx_name_argument_not_string : Error<
+  "argument to 'ompx_name' clause must be a string literal">;
+def err_ompx_name_duplicate : Error<
+  "OpenMP target kernel name '%0' is used more than once in this translation unit">;
+def note_ompx_name_previous : Note<
+  "previous use of this kernel name is here">;
 def err_omp_expected_var_arg_suggest : Error<
   "%0 is not a global variable, static local variable or static data member; "
   "did you mean %1">;

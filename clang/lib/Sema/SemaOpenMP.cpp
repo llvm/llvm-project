@@ -16923,6 +16923,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
   case OMPC_message:
     Res = ActOnOpenMPMessageClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
+  case OMPC_ompx_name:
+    Res = ActOnOpenMPOmpxNameClause(Expr, StartLoc, LParenLoc, EndLoc);
+    break;
   case OMPC_align:
     Res = ActOnOpenMPAlignClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
@@ -18028,6 +18031,39 @@ OMPClause *SemaOpenMP::ActOnOpenMPMessageClause(Expr *ME,
 
   return new (getASTContext()) OMPMessageClause(
       ME, HelperValStmt, CaptureRegion, StartLoc, LParenLoc, EndLoc);
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPOmpxNameClause(Expr *Name,
+                                                 SourceLocation StartLoc,
+                                                 SourceLocation LParenLoc,
+                                                 SourceLocation EndLoc) {
+  if (!Name) {
+    Diag(StartLoc, diag::err_ompx_name_argument_not_string);
+    return nullptr;
+  }
+
+  if (!Name->isTypeDependent() && !Name->isValueDependent()) {
+    if (auto *PE = dyn_cast<PredefinedExpr>(Name->IgnoreParenCasts()))
+      Name = PE->getFunctionName();
+    auto *SL = dyn_cast<StringLiteral>(Name->IgnoreParenCasts());
+    if (!SL) {
+      Diag(Name->getExprLoc(), diag::err_ompx_name_argument_not_string);
+      return nullptr;
+    }
+
+    StringRef KernelName = SL->getString();
+    SourceLocation NameLoc = SL->getBeginLoc();
+    auto It = OMPKernelNames.find(KernelName);
+    if (It == OMPKernelNames.end()) {
+      OMPKernelNames[KernelName] = NameLoc;
+    } else if (DiagnosedOMPKernelNameLocs.insert(NameLoc.getRawEncoding())
+                   .second) {
+      Diag(NameLoc, diag::err_ompx_name_duplicate) << KernelName;
+      Diag(It->second, diag::note_ompx_name_previous);
+    }
+  }
+  return new (getASTContext())
+      OMPXNameClause(Name, StartLoc, LParenLoc, EndLoc);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPOrderClause(

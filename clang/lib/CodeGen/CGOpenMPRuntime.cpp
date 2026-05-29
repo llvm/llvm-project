@@ -6388,6 +6388,9 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
 
   llvm::TargetRegionEntryInfo EntryInfo =
       getEntryInfoFromPresumedLoc(CGM, OMPBuilder, D.getBeginLoc(), ParentName);
+  if (auto *C = D.getSingleClause<OMPXNameClause>())
+    if (auto *S = dyn_cast<StringLiteral>(C->getName()->IgnoreParenImpCasts()))
+      EntryInfo.UserProvidedName = S->getString().str();
 
   CodeGenFunction CGF(CGM, true);
   llvm::OpenMPIRBuilder::FunctionGenCallback &&GenerateOutlinedFunction =

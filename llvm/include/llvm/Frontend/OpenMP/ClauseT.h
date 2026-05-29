@@ -1039,6 +1039,11 @@ struct OmpxBareT {
 };
 
 template <typename T, typename I, typename E> //
+struct OmpxNameT {
+  using EmptyTrait = std::true_type;
+};
+
+template <typename T, typename I, typename E> //
 struct OmpxDynCgroupMemT {
   using WrapperTrait = std::true_type;
   E v;
@@ -1389,7 +1394,7 @@ struct WriteT {
 template <typename T, typename I, typename E>
 using ExtensionClausesT =
     std::variant<OmpxAttributeT<T, I, E>, OmpxBareT<T, I, E>,
-                 OmpxDynCgroupMemT<T, I, E>>;
+                 OmpxDynCgroupMemT<T, I, E>, OmpxNameT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using EmptyClausesT = std::variant<

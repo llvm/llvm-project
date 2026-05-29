@@ -239,22 +239,25 @@ struct TargetRegionEntryInfo {
   unsigned FileID;
   unsigned Line;
   unsigned Count;
+  std::string UserProvidedName;
 
   TargetRegionEntryInfo() : DeviceID(0), FileID(0), Line(0), Count(0) {}
   TargetRegionEntryInfo(StringRef ParentName, unsigned DeviceID,
-                        unsigned FileID, unsigned Line, unsigned Count = 0)
+                        unsigned FileID, unsigned Line, unsigned Count = 0,
+                        StringRef UserProvidedName = "")
       : ParentName(ParentName), DeviceID(DeviceID), FileID(FileID), Line(Line),
-        Count(Count) {}
+        Count(Count), UserProvidedName(UserProvidedName) {}
 
   LLVM_ABI static void
   getTargetRegionEntryFnName(SmallVectorImpl<char> &Name, StringRef ParentName,
                              unsigned DeviceID, unsigned FileID, unsigned Line,
-                             unsigned Count);
+                             unsigned Count, StringRef UserProvidedName = "");
 
   bool operator<(const TargetRegionEntryInfo &RHS) const {
-    return std::make_tuple(ParentName, DeviceID, FileID, Line, Count) <
+    return std::make_tuple(ParentName, DeviceID, FileID, Line, Count,
+                           UserProvidedName) <
            std::make_tuple(RHS.ParentName, RHS.DeviceID, RHS.FileID, RHS.Line,
-                           RHS.Count);
+                           RHS.Count, RHS.UserProvidedName);
   }
 };
 

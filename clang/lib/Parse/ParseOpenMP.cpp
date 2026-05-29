@@ -3251,6 +3251,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_align:
   case OMPC_message:
   case OMPC_ompx_dyn_cgroup_mem:
+  case OMPC_ompx_name:
   case OMPC_dyn_groupprivate:
   case OMPC_transparent:
     // OpenMP [2.5, Restrictions]
