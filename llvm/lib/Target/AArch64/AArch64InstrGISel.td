@@ -355,6 +355,8 @@ def : GINodeEquiv<G_AARCH64_RANGE_PREFETCH, AArch64RangePrefetch>;
 
 def : GINodeEquiv<G_FPTRUNC_ODD, AArch64fcvtxn_n>;
 
+def : GINodeEquiv<G_CTLS, ctls>;
+
 // These are patterns that we only use for GlobalISel via the importer.
 def : Pat<(f32 (fadd (vector_extract (v2f32 FPR64:$Rn), (i64 0)),
                      (vector_extract (v2f32 FPR64:$Rn), (i64 1)))),

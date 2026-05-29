@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -global-isel -global-isel-abort=2 2>&1 | FileCheck %s
 
 define <8 x i8> @cls_8b(ptr %A) nounwind {
 ;CHECK-LABEL: cls_8b:
