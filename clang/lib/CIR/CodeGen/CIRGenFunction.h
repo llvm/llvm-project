@@ -56,12 +56,26 @@ class CIRGenFunction : public CIRGenTypeCache {
 public:
   CIRGenModule &cgm;
 
+  /// Loop bounds and metadata passed from emitOMPForDirective to emitForStmt
+  /// to emit an omp.loop_nest instead of a regular cir.for loop.
+  struct OMPLoopArguments {
+    mlir::Value lowerBound;
+    mlir::Value upperBound;
+    mlir::Value step;
+    mlir::Type inductionVarType;
+    const VarDecl *inductionVar;
+    bool inclusive;
+  };
+
+  std::optional<OMPLoopArguments> ompLoopArgs;
+
 private:
   friend class ::ScalarExprEmitter;
   /// The builder is a helper class to create IR inside a function. The
   /// builder is stateful, in particular it keeps an "insertion point": this
   /// is where the next operations will be introduced.
   CIRGenBuilderTy &builder;
+
 
 public:
   /// The GlobalDecl for the current function being compiled or the global
