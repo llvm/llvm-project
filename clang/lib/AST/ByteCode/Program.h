@@ -208,7 +208,7 @@ private:
     Block *block() { return &B; }
     const Block *block() const { return &B; }
 
-  private:
+  public:
     Block B;
   };
 

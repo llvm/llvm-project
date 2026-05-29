@@ -81,7 +81,14 @@ unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
 
 Pointer Program::getPtrGlobal(unsigned Idx) const {
   assert(Idx < Globals.size());
-  return Pointer(Globals[Idx]->block());
+
+  // Force de-serialization of a redeclaration that might initialize this
+  // global.
+  if (const VarDecl *VD = Globals[Idx]->block()->getDescriptor()->asVarDecl())
+    VD->getMostRecentDecl();
+
+  Block *B = Globals[Idx]->block();
+  return Pointer(B);
 }
 
 UnsignedOrNone Program::getGlobal(const ValueDecl *VD) {
@@ -195,8 +202,7 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init,
 
   Global *NewGlobal = Globals[*Idx];
   // Note that this loop has one iteration where Redecl == VD.
-  for (const Decl *Redecl : VD->redecls()) {
-
+  for (const Decl *Redecl = VD; Redecl; Redecl = Redecl->getPreviousDecl()) {
     // If this redecl was registered as a dummy variable, it is now a proper
     // global variable and points to the block we just created.
     if (auto DummyIt = DummyVariables.find(Redecl);
@@ -224,7 +230,6 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init,
       // global.
       if (RedeclBlock != NewGlobal->block())
         RedeclBlock->movePointersTo(NewGlobal->block());
-
       Globals[Iter->second] = NewGlobal;
     }
     Iter->second = *Idx;

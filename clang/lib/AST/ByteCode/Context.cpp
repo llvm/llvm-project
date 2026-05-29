@@ -161,6 +161,13 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   return true;
 }
 
+void Context::registerRedecl(const VarDecl *VD, const APValue &V) {
+  Expr::EvalStatus Status;
+  Compiler<EvalEmitter> C(*this, *P, Status, Stk);
+
+  C.registerRedecl(VD, V);
+}
+
 template <typename ResultT>
 bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
                                  const Expr *PtrExpr, ResultT &Result) {

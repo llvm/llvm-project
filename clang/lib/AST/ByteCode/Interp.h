@@ -1687,6 +1687,8 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Block *B = S.P.getGlobal(I);
 
+  // B->getDescriptor()->asVarDecl()->getMostRecentDecl();
+
   if (!CheckGlobalLoad(S, OpPC, B))
     return false;
 

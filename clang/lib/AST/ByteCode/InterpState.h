@@ -37,6 +37,8 @@ class InterpState final : public State, public SourceMapper {
 public:
   InterpState(const State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
               SourceMapper *M = nullptr);
+  InterpState(Expr::EvalStatus &Status, Program &P, InterpStack &Stk,
+              Context &Ctx, SourceMapper *M = nullptr);
   InterpState(const State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
               const Function *Func);
 
