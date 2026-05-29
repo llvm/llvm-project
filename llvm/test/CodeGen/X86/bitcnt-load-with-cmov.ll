@@ -128,8 +128,8 @@ define i32 @lzcnt32_no_fold_var_cmp(ptr %p0, i32 %a1, i32 %a2) {
   ret i32 %res
 }
 
-define i32 @nofold_load_with_intervening_store(ptr %p1, ptr %p2) {
-; CHECK-LABEL: nofold_load_with_intervening_store:
+define i32 @nofold_load_with_intervening_store_1(ptr %p1, ptr %p2) {
+; CHECK-LABEL: nofold_load_with_intervening_store_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %rax
 ; CHECK-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
@@ -155,4 +155,20 @@ ret:
 taken:
   store i64 0, ptr %p1
   ret i32 1
+}
+
+define i64 @nofold_load_with_intervening_store_2(ptr %p, i64 %fallback) {
+; CHECK-LABEL: nofold_load_with_intervening_store_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq (%rdi), %rax
+; CHECK-NEXT:    movq $-1, (%rdi)
+; CHECK-NEXT:    popcntq %rax, %rax
+; CHECK-NEXT:    cmoveq %rsi, %rax
+; CHECK-NEXT:    retq
+  %v = load i64, ptr %p
+  store i64 -1, ptr %p
+  %cnt = tail call i64 @llvm.ctpop.i64(i64 %v)
+  %iszero = icmp eq i64 %v, 0
+  %res = select i1 %iszero, i64 %fallback, i64 %cnt
+  ret i64 %res
 }
