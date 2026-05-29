@@ -208,7 +208,7 @@ LOCAL_LABEL(shiftdown):
 END_COMPILERRT_FUNCTION(__aeabi_l2d)
 
 #if defined(__MINGW32__)
-DEFINE_COMPILERRT_FUNCTION_ALIAS(__floatdidf, __i64tod)
+DEFINE_COMPILERRT_FUNCTION_ALIAS(__i64tod, __floatdidf)
 #endif
 
 NO_EXEC_STACK_DIRECTIVE
