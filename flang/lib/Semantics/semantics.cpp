@@ -626,20 +626,31 @@ void SemanticsContext::UsePPCBuiltinTypesModule() {
   }
 }
 
-const Scope &SemanticsContext::GetCUDABuiltinsScope() {
-  if (!cudaBuiltinsScope_) {
-    cudaBuiltinsScope_ = GetBuiltinModule("__cuda_builtins");
-    CHECK(cudaBuiltinsScope_.value() != nullptr);
-  }
-  return **cudaBuiltinsScope_;
+static void SayMissingCUDAIntrinsicModule(
+    SemanticsContext &context, const char *moduleName) {
+  context.messages().Say(context.location().value_or(parser::CharBlock{}),
+      "Cannot read required CUDA intrinsic module '%s'; check -fintrinsic-modules-path or rebuild the Fortran intrinsic modules"_err_en_US,
+      moduleName);
 }
 
-const Scope &SemanticsContext::GetCUDADeviceScope() {
+const Scope *SemanticsContext::GetCUDABuiltinsScope() {
+  if (!cudaBuiltinsScope_) {
+    cudaBuiltinsScope_ = GetBuiltinModule("__cuda_builtins");
+    if (cudaBuiltinsScope_.value() == nullptr) {
+      SayMissingCUDAIntrinsicModule(*this, "__cuda_builtins");
+    }
+  }
+  return cudaBuiltinsScope_.value();
+}
+
+const Scope *SemanticsContext::GetCUDADeviceScope() {
   if (!cudaDeviceScope_) {
     cudaDeviceScope_ = GetBuiltinModule("cudadevice");
-    CHECK(cudaDeviceScope_.value() != nullptr);
+    if (cudaDeviceScope_.value() == nullptr) {
+      SayMissingCUDAIntrinsicModule(*this, "cudadevice");
+    }
   }
-  return **cudaDeviceScope_;
+  return cudaDeviceScope_.value();
 }
 
 void SemanticsContext::UsePPCBuiltinsModule() {
