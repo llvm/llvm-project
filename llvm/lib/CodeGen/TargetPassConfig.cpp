@@ -852,6 +852,7 @@ void TargetPassConfig::addIRPasses() {
     addPass(createExpandMemCmpLegacyPass());
   }
 
+#ifndef EJIT_BARE_METAL
   // Run GC lowering passes for builtin collectors
   // TODO: add a pass insertion point here
   addPass(&GCLoweringID);
@@ -862,6 +863,27 @@ void TargetPassConfig::addIRPasses() {
   if (TM->getTargetTriple().isOSBinFormatMachO() &&
       !DisableAtExitBasedGlobalDtorLowering)
     addPass(createLowerGlobalDtorsLegacyPass());
+
+  // Instrument function entry after all inlining.
+  addPass(createPostInlineEntryExitInstrumenterPass());
+
+  // Add scalarization of target's unsupported masked memory intrinsics pass.
+  addPass(createScalarizeMaskedMemIntrinLegacyPass());
+
+  // Expand reduction intrinsics into shuffle sequences if the target wants to.
+  if (!DisableExpandReductions)
+    addPass(createExpandReductionsPass());
+
+  // Convert conditional moves to conditional jumps when profitable.
+  if (getOptLevel() != CodeGenOptLevel::None && !DisableSelectOptimize)
+    addPass(createSelectOptimizePass());
+
+  if (EnableGlobalMergeFunc)
+    addPass(createGlobalMergeFuncPass());
+
+  if (TM->getTargetTriple().isOSWindows())
+    addPass(createWindowsSecureHotPatchingPass());
+#endif
 
   // Make sure that no unreachable blocks are instruction selected.
   addPass(createUnreachableBlockEliminationPass());
@@ -875,31 +897,6 @@ void TargetPassConfig::addIRPasses() {
 
   if (getOptLevel() != CodeGenOptLevel::None && !DisablePartialLibcallInlining)
     addPass(createPartiallyInlineLibCallsPass());
-
-  // Instrument function entry after all inlining.
-  addPass(createPostInlineEntryExitInstrumenterPass());
-
-  // Add scalarization of target's unsupported masked memory intrinsics pass.
-  // the unsupported intrinsic will be replaced with a chain of basic blocks,
-  // that stores/loads element one-by-one if the appropriate mask bit is set.
-  addPass(createScalarizeMaskedMemIntrinLegacyPass());
-
-  // Expand reduction intrinsics into shuffle sequences if the target wants to.
-  // Allow disabling it for testing purposes.
-  if (!DisableExpandReductions)
-    addPass(createExpandReductionsPass());
-
-  // Convert conditional moves to conditional jumps when profitable.
-  if (getOptLevel() != CodeGenOptLevel::None && !DisableSelectOptimize)
-    addPass(createSelectOptimizePass());
-
-#ifndef EJIT_BARE_METAL
-  if (EnableGlobalMergeFunc)
-    addPass(createGlobalMergeFuncPass());
-#endif
-
-  if (TM->getTargetTriple().isOSWindows())
-    addPass(createWindowsSecureHotPatchingPass());
 }
 
 /// Turn exception handling constructs into something the code generators can
@@ -908,13 +905,8 @@ void TargetPassConfig::addPassesToHandleExceptions() {
   const MCAsmInfo *MCAI = TM->getMCAsmInfo();
   assert(MCAI && "No MCAsmInfo");
   switch (MCAI->getExceptionHandlingType()) {
+#ifndef EJIT_BARE_METAL
   case ExceptionHandling::SjLj:
-    // SjLj piggy-backs on dwarf for this bit. The cleanups done apply to both
-    // Dwarf EH prepare needs to be run after SjLj prepare. Otherwise,
-    // catch info can get misplaced when a selector ends up more than one block
-    // removed from the parent invoke(s). This could happen when a landing
-    // pad is shared by multiple invokes and is also a target of a normal
-    // edge from elsewhere.
     addPass(createSjLjEHPreparePass(TM));
     [[fallthrough]];
   case ExceptionHandling::DwarfCFI:
@@ -924,24 +916,16 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     addPass(createDwarfEHPass(getOptLevel()));
     break;
   case ExceptionHandling::WinEH:
-    // We support using both GCC-style and MSVC-style exceptions on Windows, so
-    // add both preparation passes. Each pass will only actually run if it
-    // recognizes the personality function.
     addPass(createWinEHPass());
     addPass(createDwarfEHPass(getOptLevel()));
     break;
   case ExceptionHandling::Wasm:
-    // Wasm EH uses Windows EH instructions, but it does not need to demote PHIs
-    // on catchpads and cleanuppads because it does not outline them into
-    // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
-    // should remove PHIs there.
     addPass(createWinEHPass(/*DemoteCatchSwitchPHIOnly=*/true));
     addPass(createWasmEHPass());
     break;
+#endif
   case ExceptionHandling::None:
     addPass(createLowerInvokePass());
-
-    // The lower invoke pass may create unreachable code. Remove it.
     addPass(createUnreachableBlockEliminationPass());
     break;
   }
@@ -1205,27 +1189,25 @@ void TargetPassConfig::addMachinePasses() {
   if (getOptLevel() != CodeGenOptLevel::None)
     addBlockPlacement();
 
+#ifndef EJIT_BARE_METAL
   // Insert before XRay Instrumentation.
   addPass(&FEntryInserterID);
-
   addPass(&XRayInstrumentationID);
   addPass(&PatchableFunctionID);
+#endif
 
   addPreEmitPass();
 
+#ifndef EJIT_BARE_METAL
   if (TM->Options.EnableIPRA)
-    // Collect register usage information and produce a register mask of
-    // clobbered registers, to be used to optimize call sites.
     addPass(createRegUsageInfoCollector());
 
-  // FIXME: Some backends are incompatible with running the verifier after
-  // addPreEmitPass.  Maybe only pass "false" here for those targets?
   addPass(&FuncletLayoutID);
-
   addPass(&RemoveLoadsIntoFakeUsesID);
   addPass(&StackMapLivenessID);
   addPass(&LiveDebugValuesID);
   addPass(&MachineSanitizerBinaryMetadataID);
+#endif
 
 #ifndef EJIT_BARE_METAL
   if (TM->Options.EnableMachineOutliner &&
@@ -1240,6 +1222,7 @@ void TargetPassConfig::addMachinePasses() {
   }
 #endif
 
+#ifndef EJIT_BARE_METAL
   if (GCEmptyBlocks)
     addPass(llvm::createGCEmptyBasicBlocksPass());
 
@@ -1257,8 +1240,6 @@ void TargetPassConfig::addMachinePasses() {
             ProfileFile, getFSRemappingFile(TM),
             sampleprof::FSDiscriminatorPass::PassLast, nullptr));
       } else {
-        // Sample profile is given, but FSDiscriminator is not
-        // enabled, this may result in performance regression.
         WithColor::warning()
             << "Using AutoFDO without FSDiscriminator for MFS may regress "
                "performance.\n";
@@ -1266,24 +1247,14 @@ void TargetPassConfig::addMachinePasses() {
     }
   }
 
-  // Machine function splitter uses the basic block sections feature.
-  // When used along with `-basic-block-sections=`, the basic-block-sections
-  // feature takes precedence. This means functions eligible for
-  // basic-block-sections optimizations (`=all`, or `=list=` with function
-  // included in the list profile) will get that optimization instead.
   if (TM->Options.EnableMachineFunctionSplitter ||
       EnableMachineFunctionSplitter)
     addPass(createMachineFunctionSplitterPass());
 
   if (SplitStaticData || TM->Options.EnableStaticDataPartitioning) {
-    // The static data splitter pass is a machine function pass. and
-    // static data annotator pass is a module-wide pass. See the file comment
-    // in StaticDataAnnotator.cpp for the motivation.
     addPass(createStaticDataSplitterPass());
     addPass(createStaticDataAnnotatorPass());
   }
-  // We run the BasicBlockSections pass if either we need BB sections or BB
-  // address map (or both).
   if (TM->getBBSectionsType() != llvm::BasicBlockSection::None ||
       TM->Options.BBAddrMap) {
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
@@ -1293,6 +1264,7 @@ void TargetPassConfig::addMachinePasses() {
     }
     addPass(llvm::createBasicBlockSectionsPass());
   }
+#endif
 
   addPostBBSections();
 
