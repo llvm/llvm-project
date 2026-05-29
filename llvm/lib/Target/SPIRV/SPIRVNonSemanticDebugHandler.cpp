@@ -54,18 +54,20 @@ enum : uint32_t {
   NSDIFlagIsPublic = NSDIFlagIsPrivate | NSDIFlagIsProtected,
   NSDIFlagIsLocal = 1u << 2,
   NSDIFlagIsDefinition = 1u << 3,
-  NSDIFlagIsFwdDecl = 1u << 4,
-  NSDIFlagIsArtificial = 1u << 5,
-  NSDIFlagIsExplicit = 1u << 6,
-  NSDIFlagIsPrototyped = 1u << 7,
-  NSDIFlagIsObjectPointer = 1u << 8,
-  NSDIFlagIsStaticMember = 1u << 9,
-  NSDIFlagIsLValueReference = 1u << 11,
-  NSDIFlagIsRValueReference = 1u << 12,
+  NSDIFlagFwdDecl = 1u << 4,
+  NSDIFlagArtificial = 1u << 5,
+  NSDIFlagExplicit = 1u << 6,
+  NSDIFlagPrototyped = 1u << 7,
+  NSDIFlagObjectPointer = 1u << 8,
+  NSDIFlagStaticMember = 1u << 9,
+  NSDIFlagIndirectVariable = 1u << 10,
+  NSDIFlagLValueReference = 1u << 11,
+  NSDIFlagRValueReference = 1u << 12,
   NSDIFlagIsOptimized = 1u << 13,
   NSDIFlagIsEnumClass = 1u << 14,
   NSDIFlagTypePassByValue = 1u << 15,
   NSDIFlagTypePassByReference = 1u << 16,
+  NSDIFlagUnknownPhysicalLayout = 1u << 17,
 };
 
 static uint32_t mapDIFlagsToNonSemantic(DINode::DIFlags DFlags) {
@@ -77,21 +79,21 @@ static uint32_t mapDIFlagsToNonSemantic(DINode::DIFlags DFlags) {
   if ((DFlags & DINode::FlagAccessibility) == DINode::FlagPrivate)
     Flags |= NSDIFlagIsPrivate;
   if (DFlags & DINode::FlagFwdDecl)
-    Flags |= NSDIFlagIsFwdDecl;
+    Flags |= NSDIFlagFwdDecl;
   if (DFlags & DINode::FlagArtificial)
-    Flags |= NSDIFlagIsArtificial;
+    Flags |= NSDIFlagArtificial;
   if (DFlags & DINode::FlagExplicit)
-    Flags |= NSDIFlagIsExplicit;
+    Flags |= NSDIFlagExplicit;
   if (DFlags & DINode::FlagPrototyped)
-    Flags |= NSDIFlagIsPrototyped;
+    Flags |= NSDIFlagPrototyped;
   if (DFlags & DINode::FlagObjectPointer)
-    Flags |= NSDIFlagIsObjectPointer;
+    Flags |= NSDIFlagObjectPointer;
   if (DFlags & DINode::FlagStaticMember)
-    Flags |= NSDIFlagIsStaticMember;
+    Flags |= NSDIFlagStaticMember;
   if (DFlags & DINode::FlagLValueReference)
-    Flags |= NSDIFlagIsLValueReference;
+    Flags |= NSDIFlagLValueReference;
   if (DFlags & DINode::FlagRValueReference)
-    Flags |= NSDIFlagIsRValueReference;
+    Flags |= NSDIFlagRValueReference;
   if (DFlags & DINode::FlagTypePassByValue)
     Flags |= NSDIFlagTypePassByValue;
   if (DFlags & DINode::FlagTypePassByReference)
@@ -119,9 +121,9 @@ static uint32_t transDebugFlags(const DINode *DN) {
     Flags |= mapDIFlagsToNonSemantic(SP->getFlags());
   }
   if (DN->getTag() == dwarf::DW_TAG_reference_type)
-    Flags |= NSDIFlagIsLValueReference;
+    Flags |= NSDIFlagLValueReference;
   if (DN->getTag() == dwarf::DW_TAG_rvalue_reference_type)
-    Flags |= NSDIFlagIsRValueReference;
+    Flags |= NSDIFlagRValueReference;
   if (const auto *Ty = dyn_cast<DIType>(DN))
     Flags |= mapDIFlagsToNonSemantic(Ty->getFlags());
   if (const auto *LV = dyn_cast<DILocalVariable>(DN))
