@@ -1171,11 +1171,14 @@ static void expandIToFP(Instruction *IToFP) {
   } else // float type
     A4 = Builder.CreateBitCast(Or35, IToFP->getType());
 
-  // The exponent arithmetic above can overflow the exponent field, wrapping to
-  // garbage instead of inf when the value doesn't fit in the target type.
-  // Saturate to a correctly-signed infinity once the unbiased exponent reaches
-  // 1 << (ExponentWidth - 1). Skip the check when the integer is too narrow to
-  // ever reach it.
+  // Sub2 is the unbiased exponent (the index of the top set bit in the input).
+  // The exponent arithmetic above wraps to garbage instead of inf once it
+  // overflows the exponent field, so saturate to a correctly-signed infinity
+  // when Sub2 reaches 1 << (ExponentWidth - 1). Sub2 is at most BitWidth - 1,
+  // so skip the check entirely when even that can't reach the threshold.
+  // (Values that round *up* into inf, e.g. 2^n - 1, keep Sub2 = BitWidth - 1;
+  // these are handled by the conversion's own rounding, not by this
+  // saturation.)
   unsigned ExponentWidth = FloatWidth - FPMantissaWidth - 1;
   uint64_t MinInfExp = 1ULL << (ExponentWidth - 1);
   if (BitWidth - 1 >= MinInfExp) {
