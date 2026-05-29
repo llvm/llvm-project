@@ -355,7 +355,7 @@ def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", [CExpressionInterface]> {
   ];
 
   let assemblyFormat = [{
-    $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
+    $callee `(` $operands `)` prop-dict attr-dict `:` functional-type($operands, results)
   }];
   let hasVerifier = 1;
 }
@@ -388,7 +388,7 @@ def EmitC_MemberCallOpaqueOp : EmitC_Op<"member_call_opaque", [CExpressionInterf
   let results = (outs Variadic<EmitCType>);
 
   let assemblyFormat = [{
-    $receiver $callee `(` $args_operands `)` attr-dict `:` type($receiver) `,` functional-type($args_operands, results)
+    $receiver $callee `(` $args_operands `)` prop-dict attr-dict `:` type($receiver) `,` functional-type($args_operands, results)
   }];
   let hasVerifier = 1;
 }
