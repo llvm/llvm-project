@@ -375,6 +375,10 @@ struct VPlanTransforms {
   /// Perform common-subexpression-elimination on \p Plan.
   static void cse(VPlan &Plan);
 
+  /// CSE masked VPWidenLoadRecipes with identical operands inside a basic
+  /// block, ignoring candidates across an intervening write. No AA needed.
+  static void cseUniformMemoryReads(VPlan &Plan);
+
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken
   /// one step backwards.

@@ -42,6 +42,11 @@ class VPRecipeBuilder {
   /// Range. The function should not be called for memory instructions or calls.
   bool shouldWiden(Instruction *I, VFRange &Range) const;
 
+  /// Lower a CM_CondInvar \p Load to: single-lane masked-load + broadcast.
+  /// \p Mask is the non-null block mask. Returns the BroadcastLane recipe.
+  VPInstruction *tryToWidenCondInvarLoad(LoadInst *Load, VPValue *Ptr,
+                                         VPValue *Mask, VPInstruction *VPI);
+
   /// Optimize the special case where the operand of \p VPI is a constant
   /// integer induction variable.
   VPWidenIntOrFpInductionRecipe *

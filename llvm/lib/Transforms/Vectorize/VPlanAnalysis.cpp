@@ -123,6 +123,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::Unpack:
     return SetResultTyFromOp();
   case VPInstruction::ExtractLane:
+  case VPInstruction::BroadcastLane:
     return inferScalarType(R->getOperand(1));
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:

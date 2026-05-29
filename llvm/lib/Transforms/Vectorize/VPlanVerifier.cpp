@@ -42,6 +42,10 @@ class VPlanVerifier {
   /// Verify that \p LastActiveLane's operand is guaranteed to be a prefix-mask.
   bool verifyLastActiveLaneRecipe(const VPInstruction &LastActiveLane) const;
 
+  /// Operand 0 of \p BroadcastLane must be a live-in constant integer
+  /// (shufflevector masks are constant-only).
+  bool verifyBroadcastLaneRecipe(const VPInstruction &BroadcastLane) const;
+
   bool verifyVPBasicBlock(const VPBasicBlock *VPBB);
 
   bool verifyBlock(const VPBlockBase *VPB);
@@ -199,6 +203,28 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
   return true;
 }
 
+bool VPlanVerifier::verifyBroadcastLaneRecipe(
+    const VPInstruction &BroadcastLane) const {
+  assert(BroadcastLane.getOpcode() == VPInstruction::BroadcastLane &&
+         "must be called with VPInstruction::BroadcastLane");
+
+  if (BroadcastLane.getNumOperands() != 2) {
+    errs() << "BroadcastLane must have exactly two operands "
+              "(lane index, vector)\n";
+    return false;
+  }
+
+  const VPValue *LaneIdx = BroadcastLane.getOperand(0);
+  Value *LiveInIdx = LaneIdx->getLiveInIRValue();
+  if (!LiveInIdx || !isa<ConstantInt>(LiveInIdx)) {
+    errs() << "BroadcastLane operand 0 must be a constant integer lane "
+              "index (live-in ConstantInt)\n";
+    return false;
+  }
+
+  return true;
+}
+
 bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
   if (!verifyPhiRecipes(VPBB))
     return false;
@@ -305,6 +331,10 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
       switch (VPI->getOpcode()) {
       case VPInstruction::LastActiveLane:
         if (!verifyLastActiveLaneRecipe(*VPI))
+          return false;
+        break;
+      case VPInstruction::BroadcastLane:
+        if (!verifyBroadcastLaneRecipe(*VPI))
           return false;
         break;
       default:

@@ -516,6 +516,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::Store:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnTwoConds:
+  case VPInstruction::BroadcastLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::LogicalOr:
@@ -576,6 +577,38 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   default:
     return false;
   }
+}
+
+/// Broadcast lane \p LaneNo of \p Vec across the result vector.
+///   - Fixed              : shufflevector with mask <i32 N, ...>.
+///   - Scalable, lane 0   : shufflevector with zeroinitializer mask.
+///   - Scalable, lane k>0 : extractelement + CreateVectorSplat
+///                          (non-zero scalable shuffle masks are rejected
+///                          by the verifier today; see
+///                          ShuffleVectorInst::isValidOperands).
+static Value *generateBroadcastLane(IRBuilderBase &Builder, Value *Vec,
+                                    unsigned LaneNo) {
+  auto *VecTy = cast<VectorType>(Vec->getType());
+  Value *Poison = PoisonValue::get(Vec->getType());
+
+  if (isa<ScalableVectorType>(VecTy)) {
+    if (LaneNo == 0) {
+      Type *I32Ty = Type::getInt32Ty(VecTy->getContext());
+      auto *MaskTy = VectorType::get(I32Ty, VecTy->getElementCount());
+      return Builder.CreateShuffleVector(Vec, Poison,
+                                         Constant::getNullValue(MaskTy),
+                                         "broadcast.lane");
+    }
+    Value *Scalar =
+        Builder.CreateExtractElement(Vec, Builder.getInt32(LaneNo));
+    return Builder.CreateVectorSplat(VecTy->getElementCount(), Scalar,
+                                     "broadcast.lane");
+  }
+
+  auto *FVT = cast<FixedVectorType>(VecTy);
+  SmallVector<int, 16> ShufMask(FVT->getNumElements(),
+                                static_cast<int>(LaneNo));
+  return Builder.CreateShuffleVector(Vec, Poison, ShufMask, "broadcast.lane");
 }
 
 Value *VPInstruction::generate(VPTransformState &State) {
@@ -926,6 +959,12 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return State.get(getOperand(0), true);
   case VPInstruction::Reverse:
     return Builder.CreateVectorReverse(State.get(getOperand(0)), "reverse");
+  case VPInstruction::BroadcastLane: {
+    Value *Idx = State.get(getOperand(0), /*IsScalar*/ true);
+    Value *Vec = State.get(getOperand(1));
+    unsigned LaneNo = cast<ConstantInt>(Idx)->getZExtValue();
+    return generateBroadcastLane(Builder, Vec, LaneNo);
+  }
   case VPInstruction::ExtractLastActive: {
     Value *Result = State.get(getOperand(0), /*IsScalar=*/true);
     for (unsigned Idx = 1; Idx < getNumOperands(); Idx += 2) {
@@ -1280,6 +1319,19 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                   VectorTy, /*Mask=*/{}, Ctx.CostKind,
                                   /*Index=*/0);
   }
+  case VPInstruction::BroadcastLane: {
+    assert(VF.isVector() && "BroadcastLane requires a vector VF");
+    Type *EltTy = Ctx.Types.inferScalarType(this);
+    auto *VectorTy = cast<VectorType>(toVectorTy(EltTy, VF));
+    // Forward the constant lane index so targets can specialise lane-0.
+    unsigned LaneIdx = 0;
+    if (auto *LiveInIdx = getOperand(0)->getLiveInIRValue())
+      if (auto *CI = dyn_cast<ConstantInt>(LiveInIdx))
+        LaneIdx = CI->getZExtValue();
+    return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VectorTy,
+                                  VectorTy, /*Mask=*/{}, Ctx.CostKind,
+                                  /*Index=*/LaneIdx);
+  }
   case VPInstruction::ExtractLastLane: {
     // Add on the cost of extracting the element.
     auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
@@ -1466,6 +1518,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     return false;
   case VPInstruction::ExitingIVValue:
   case VPInstruction::ExtractLane:
+  case VPInstruction::BroadcastLane:
     return Op == getOperand(0);
   };
   llvm_unreachable("switch should return");
@@ -1594,6 +1647,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::Reverse:
     O << "reverse";
+    break;
+  case VPInstruction::BroadcastLane:
+    O << "broadcast-lane";
     break;
   case VPInstruction::Unpack:
     O << "unpack";

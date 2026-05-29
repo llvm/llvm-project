@@ -2421,6 +2421,42 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
 };
 } // end anonymous namespace
 
+/// CSE duplicate masked VPWidenLoadRecipes (which are not VPSingleDefRecipes
+/// and so are missed by the generic cse()). Reset on any write within the
+/// block; unmasked loads are left to downstream EarlyCSE/GVN.
+void VPlanTransforms::cseUniformMemoryReads(VPlan &Plan) {
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    SmallVector<VPWidenLoadRecipe *, 4> Candidates;
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      if (R.mayWriteToMemory()) {
+        Candidates.clear();
+        continue;
+      }
+      auto *Load = dyn_cast<VPWidenLoadRecipe>(&R);
+      if (!Load || !Load->isMasked())
+        continue;
+      VPWidenLoadRecipe *Match = nullptr;
+      for (VPWidenLoadRecipe *C : Candidates) {
+        if (!equal(C->operands(), Load->operands()))
+          continue;
+        // Same ingredient => same alignment/metadata/type.
+        if (&C->getIngredient() != &Load->getIngredient())
+          continue;
+        Match = C;
+        break;
+      }
+      if (Match) {
+        Load->getVPSingleValue()->replaceAllUsesWith(Match->getVPSingleValue());
+        Load->eraseFromParent();
+        continue;
+      }
+      Candidates.push_back(Load);
+    }
+  }
+}
+
 /// Perform a common-subexpression-elimination of VPSingleDefRecipes on the \p
 /// Plan.
 void VPlanTransforms::cse(VPlan &Plan) {
