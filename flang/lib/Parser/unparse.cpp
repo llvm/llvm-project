@@ -2895,6 +2895,9 @@ public:
     case ReductionOperator::Operator::Plus:
       Word("+");
       break;
+    case ReductionOperator::Operator::Minus:
+      Word("-");
+      break;
     case ReductionOperator::Operator::Multiply:
       Word("*");
       break;

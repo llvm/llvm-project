@@ -41,6 +41,8 @@ These extensions require no flag.
 * The OpenACC specification disallows a variable from appearing multiple times
   in clauses of `!$acc declare` directives for a function, subroutine, program,
   or module, but Flang permits it with a warning when the same clause is used.
+* The REDUCTION clause accepts a MINUS "-" operator which is not permitted in
+  the OpenACC specification. A warning is issued for this use. 
 
 ## Extensions enabled by flag
 
