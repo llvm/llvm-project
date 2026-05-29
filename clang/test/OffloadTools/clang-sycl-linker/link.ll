@@ -22,14 +22,18 @@
 ; RUN:   | FileCheck %s --check-prefix=CHECK-MULTIPLE-DEFS
 ; CHECK-MULTIPLE-DEFS: error: Linking globals named {{.*}}bar_func1{{.*}} symbol multiply defined!
 ;
-; Test linking with a BC library file.
-; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc --bc-library %t/libfoo.bc -L "" --dry-run -o a.spv --print-linked-module 2>&1 \
+; Test linking with a BC library file resolved through -L.
+; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc --bc-library libfoo.bc -L %t --dry-run -o a.spv --print-linked-module 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-DEVICE-LIB
 ; CHECK-DEVICE-LIB: define {{.*}}foo_func1{{.*}}
 ; CHECK-DEVICE-LIB: define {{.*}}foo_func2{{.*}}
 ; CHECK-DEVICE-LIB: define {{.*}}bar_func1{{.*}}
 ; CHECK-DEVICE-LIB: define {{.*}}addFive{{.*}}
 ; CHECK-DEVICE-LIB-NOT: define {{.*}}unusedFunc{{.*}}
+;
+; Test that an absolute path to --bc-library is taken as-is, with no -L required.
+; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc --bc-library %t/libfoo.bc --dry-run -o a.spv --print-linked-module 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CHECK-DEVICE-LIB
 
 ;--- foo.ll
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"

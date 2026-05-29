@@ -50,7 +50,7 @@ be passed down to downstream AOT compilation tools like 'ocloc' and 'opencl-aot'
     -help-hidden                  Display all available options
     -help                         Display available options (--help-hidden for more)
     -L <dir>                      Add <dir> to the library search path
-    --bc-library <name>           Search for LLVM bitcode library <name> (provided with extension, e.g. --bc-library foo.bc)
+    --bc-library <name>           Add LLVM bitcode library <name> (with extension) to the link. A relative <name> is resolved against -L paths; an absolute path is taken as-is.
     --module-split-mode=<mode>    Module split mode: 'source' (default), 'kernel', or 'none'
     --ocloc-options=<value>       Options passed to ocloc for Intel GPU AOT compilation
     --opencl-aot-options=<value>  Options passed to opencl-aot for Intel CPU AOT compilation

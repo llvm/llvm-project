@@ -25,7 +25,9 @@ def library_path_EQ : Joined<["--", "-"], "library-path=">, Flags<[HelpHidden]>,
   Alias<library_path>;
 
 def bc_library : Separate<["--", "-"], "bc-library">, MetaVarName<"<name>">,
-  HelpText<"Search for LLVM bitcode library <name>. Library name is provided with extension, e.g. --bc-library foo.bc">;
+  HelpText<"Add LLVM bitcode library <name> (with extension) to the link. A "
+          "relative <name> is resolved against -L paths; an absolute path is "
+          "taken as-is.">;
 def bc_library_EQ : Joined<["--", "-"], "bc-library=">, Flags<[HelpHidden]>,
   Alias<bc_library>;
 

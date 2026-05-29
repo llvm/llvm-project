@@ -227,6 +227,13 @@ std::optional<std::string> findFile(StringRef Dir, const Twine &Name) {
 
 std::optional<std::string> searchLibrary(StringRef Name,
                                          ArrayRef<StringRef> SearchPaths) {
+  // An absolute path is taken as-is; -L paths are only consulted for relative
+  // names.
+  if (sys::path::is_absolute(Name)) {
+    if (sys::fs::exists(Name) && !sys::fs::is_directory(Name))
+      return std::string(Name);
+    return std::nullopt;
+  }
   for (StringRef Dir : SearchPaths)
     if (std::optional<std::string> File = findFile(Dir, Name))
       return File;
