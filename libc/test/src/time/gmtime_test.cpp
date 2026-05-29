@@ -39,6 +39,22 @@ TEST_F(LlvmLibcGmTime, OutOfRange) {
   ASSERT_ERRNO_EQ(EOVERFLOW);
 }
 
+TEST_F(LlvmLibcGmTime, OverflowYear) {
+  if (sizeof(time_t) < sizeof(int64_t))
+    return;
+
+  // Test for year close to INT_MAX that would overflow tm_year (int)
+  // after adding the 100-year offset.
+  constexpr int64_t SECONDS_PER_AVERAGE_YEAR = 31556952;
+  time_t seconds =
+      LIBC_NAMESPACE::time_constants::SECONDS_UNTIL2000_MARCH_FIRST +
+      (static_cast<int64_t>(INT_MAX) - 50) * SECONDS_PER_AVERAGE_YEAR;
+
+  struct tm *tm_data = LIBC_NAMESPACE::gmtime(&seconds);
+  EXPECT_TRUE(tm_data == nullptr);
+  ASSERT_ERRNO_EQ(EOVERFLOW);
+}
+
 TEST_F(LlvmLibcGmTime, InvalidSeconds) {
   time_t seconds = 0;
   struct tm *tm_data = nullptr;

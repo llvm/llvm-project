@@ -27,3 +27,28 @@ TEST_F(LlvmLibcSelectTest, SelectInvalidFD) {
   ASSERT_THAT(LIBC_NAMESPACE::select(-1, &set, nullptr, nullptr, &timeout),
               Fails(EINVAL));
 }
+
+TEST_F(LlvmLibcSelectTest, SelectAcceptsLargeMicroseconds) {
+  int pipe_fds[2];
+  ASSERT_EQ(0, ::pipe(pipe_fds));
+
+  fd_set read_set;
+  FD_ZERO(&read_set);
+  FD_SET(pipe_fds[0], &read_set);
+
+  struct timeval timeout{
+      0, 1000000 // 1 second (will be normalized)
+  };
+
+  // Write to pipe so select returns immediately.
+  ASSERT_EQ(1, static_cast<int>(::write(pipe_fds[1], "a", 1)));
+
+  // select should return 1 (ready) immediately, not fail with EINVAL.
+  int ret = LIBC_NAMESPACE::select(pipe_fds[0] + 1, &read_set, nullptr, nullptr,
+                                   &timeout);
+  ASSERT_EQ(1, ret);
+
+  // Cleanup
+  ::close(pipe_fds[0]);
+  ::close(pipe_fds[1]);
+}

@@ -217,7 +217,8 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
     years++;
   }
 
-  if (years > INT_MAX || years < INT_MIN)
+  constexpr int64_t YEAR_OFFSET = 2000 - time_constants::TIME_YEAR_BASE; // 100
+  if (years > INT_MAX - YEAR_OFFSET || years < INT_MIN - YEAR_OFFSET)
     return time_utils::out_of_range();
 
   // All the data (years, month and remaining days) was calculated from
