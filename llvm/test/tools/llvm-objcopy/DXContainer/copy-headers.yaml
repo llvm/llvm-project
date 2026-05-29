@@ -12,9 +12,7 @@ Header:
   Version:
     Major:           1
     Minor:           0
-  FileSize:        2036
   PartCount:       8
-  PartOffsets:     [ 64, 80, 96, 112, 240, 1936, 1964, 2000 ]
 Parts:
   - Name:            FKE0
     Size:            8
