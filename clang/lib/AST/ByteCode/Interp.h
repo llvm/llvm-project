@@ -361,12 +361,18 @@ static bool AddSubNonNumber(InterpState &S, CodePtr OpPC, T LHS, T RHS) {
   typename T::ReprT Offset;
   IntegralKind Kind;
   if (LHS.isNumber()) {
+    if (RHS.getKind() == IntegralKind::AddrLabelDiff)
+      return Invalid(S, OpPC);
+
     Number = static_cast<typename T::ReprT>(LHS);
     Ptr = RHS.getPtr();
     Offset = RHS.getOffset();
     Kind = RHS.getKind();
   } else {
     assert(RHS.isNumber());
+    if (LHS.getKind() == IntegralKind::AddrLabelDiff)
+      return Invalid(S, OpPC);
+
     Number = static_cast<typename T::ReprT>(RHS);
     Ptr = LHS.getPtr();
     Offset = LHS.getOffset();
