@@ -5937,6 +5937,16 @@ void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
   record = *record_p;
   kmp_taskgraph_record_t *reuse_record = nullptr;
   if (record && graph_reset) {
+    kmp_taskgraph_status_t old_status = KMP_ATOMIC_LD_ACQ(&record->status);
+    // Sanity check: if the graph is not ready, it means another thread is
+    // already performing a record operation for this taskgraph/graph_id.
+    // That's likely a bug, so tell the user and assert.
+    if (old_status != KMP_TDG_READY) {
+      KG_TRACE(1, ("*** Multiple threads attempting to re-record taskgraph "
+                   "concurrently: T#%d loc=%p taskgraph=%p graph_id=%d\n",
+                   gtid, loc_ref, header, graph_id));
+      KMP_DEBUG_ASSERT(old_status == KMP_TDG_READY);
+    }
     // Move the existing record to the header's expiring list
     *record_p = record->next;
     record->next = header->expiring;
