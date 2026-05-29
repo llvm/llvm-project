@@ -489,7 +489,7 @@ void JSONGenerator::serializeClassSpecializations(SymbolID ClassUSR,
                                                   Object &ReferenceObj) {
   if (!Infos)
     return;
-  auto ClassIt = Infos->find(toStringRef(toHex(ClassUSR)));
+  auto ClassIt = Infos->find(toHex(ClassUSR));
   if (ClassIt == Infos->end())
     return;
   Info *Class = ClassIt->second;
