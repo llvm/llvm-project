@@ -166,9 +166,9 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
   // Create the loop latch and annotate it as such.
   CondBrInst *B = Builder.CreateCondBr(LoopCondition, HeaderBB, ExitBB);
 
-  // Emit vectorize.enable=false only for explicit user disable (LoopVectDisabled).
-  // For dist=1 FP loops (SkipVectorizeEnableMetadata), omit the annotation and let
-  // the Loop Vectorizer decide.
+  // Emit vectorize.enable=false only for explicit user disable
+  // (LoopVectDisabled). For dist=1 FP loops (SkipVectorizeEnableMetadata), omit
+  // the annotation and let the Loop Vectorizer decide.
   if (Annotator) {
     std::optional<bool> EnableVectorizeMetadata;
     if (LoopVectDisabled)

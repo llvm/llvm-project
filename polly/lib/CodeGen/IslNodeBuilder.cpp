@@ -451,7 +451,8 @@ static bool hasLoopCarriedDependence(isl::ast_node_for For,
     return false;
 
   // dist=1: suppress forced vectorization if the body has FP operations.
-  for (isl::set StmtSet : IslAstInfo::getSchedule(For).domain().get_set_list()) {
+  for (isl::set StmtSet :
+       IslAstInfo::getSchedule(For).domain().get_set_list()) {
     auto *Stmt = static_cast<ScopStmt *>(StmtSet.get_tuple_id().get_user());
     for (Instruction *Inst : Stmt->getInstructions()) {
       if (Inst->getType()->isFloatingPointTy() ||
