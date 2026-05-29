@@ -38,6 +38,8 @@ spirv::TargetEnvAttr constructTargetEnvAttrWithCapExtDefaults(
 void populateTosaToSPIRVTosaConversionPatterns(
     SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns,
     spirv::TargetEnvAttr targetAttr);
+void populateTosaToSPIRVTosaOpsConversionPatterns(
+    SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns);
 
 } // namespace tosa
 } // namespace mlir

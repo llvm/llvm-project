@@ -464,6 +464,16 @@ static mlir::Value genDefaultInitializerValue(
   return initialValue;
 }
 
+mlir::Value Fortran::lower::genScalarDefaultInitializerValue(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::semantics::Symbol &sym, mlir::Type symTy) {
+  Fortran::lower::StatementContext stmtCtx;
+  mlir::Value result =
+      genDefaultInitializerValue(converter, loc, sym, symTy, stmtCtx);
+  stmtCtx.finalizeAndPop();
+  return result;
+}
+
 /// Does this global already have an initializer ?
 static bool globalIsInitialized(fir::GlobalOp global) {
   return !global.getRegion().empty() || global.getInitVal();

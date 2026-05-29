@@ -45,6 +45,8 @@ let TargetPrefix = "spv" in {
   def int_spv_alloca : Intrinsic<[llvm_any_ty], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
   def int_spv_alloca_array : Intrinsic<[llvm_any_ty], [llvm_anyint_ty, llvm_i32_ty], [ImmArg<ArgIndex<1>>]>;
   def int_spv_undef : Intrinsic<[llvm_i32_ty], []>;
+  def int_spv_poison : Intrinsic<[llvm_any_ty], [], [IntrNoMem]>;
+  def int_spv_freeze : Intrinsic<[llvm_any_ty], [LLVMMatchType<0>]>;
   def int_spv_inline_asm : Intrinsic<[], [llvm_metadata_ty, llvm_metadata_ty, llvm_vararg_ty]>;
   def int_spv_named_boolean_spec_constant
       : Intrinsic<[llvm_i1_ty], [llvm_i32_ty, llvm_i1_ty, llvm_metadata_ty],
