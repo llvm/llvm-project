@@ -831,12 +831,24 @@ always define a pointer to their "content" type because they describe a
 region of memory, and all :ref:`allocated object<allocatedobjects>` in LLVM are
 accessed through pointers.
 
-Global variables can be marked with ``unnamed_addr`` which indicates
-that the address is not significant, only the content. Constants marked
-like this can be merged with other constants if they have the same
-initializer. Note that a constant with significant address *can* be
-merged with a ``unnamed_addr`` constant, the result being a constant
-whose address is significant.
+Global variables can be marked with ``unnamed_addr`` which indicates that
+the address is not significant, only the content. Constants marked like
+this can be merged with other constants if they have the same initializer,
+and can also be duplicated. Note that a constant with significant address
+*can* be merged with a ``unnamed_addr`` constant, the result being a
+constant whose address is significant.
+
+.. warning::
+
+    Constant duplication currently makes it unsound to compare pointers
+    if either may be ``unnamed_addr``, because each reference to the
+    global in the IR may return a different pointer, and optimization
+    passes may create additional references. Optimization passes can also
+    create pointer comparisons with the expectation that the comparison
+    will return true if the object is the same, which theoretically can
+    make any usage of ``unnamed_addr`` unsound, but in practice it is
+    unlikely that input IR that does not explicitly compare pointers
+    will be affected by this issue.
 
 If the ``local_unnamed_addr`` attribute is given, the address is known to
 not be significant within the module.
@@ -7856,6 +7868,81 @@ result in undefined behavior.
 The ``!captures`` attribute makes no statement about other uses of ``%x``, or
 uses of the stored-to memory location after it has been overwritten with a
 different value.
+
+'``mem.cache_hint``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``!mem.cache_hint`` metadata may be attached to any instruction that reads
+or writes memory, except non-intrinsic calls. Cache hints are not permitted on
+function calls because their memory behavior depends on attributes, which may
+change independently.
+
+The ``!mem.cache_hint`` metadata provides target-specific cache control hints
+for the memory operation. This metadata is purely a performance hint: dropping
+or ignoring it must not change the observable behavior of the program
+(particularly, cache hints do not affect memory model semantics).
+
+The ``!mem.cache_hint`` node must contain an even number of entries,
+alternating between ``i32`` operand numbers and metadata hint nodes.
+
+Each operand number identifies the pointer operand to which the following hint
+node applies. For non-call instructions, the operand number is the IR operand
+index. For intrinsic calls, the operand number is the call argument index.
+Operand numbers must be unique and appear in increasing order within a
+``!mem.cache_hint`` node and must refer to a pointer-typed operand.
+
+For example, for a ``load``, the pointer is operand 0. For a ``store``, the
+value is operand 0 and the pointer is operand 1. For intrinsic calls such as
+``llvm.memcpy``, operand numbers correspond to argument positions: e.g.,
+destination is argument 0 and source is argument 1.
+
+Each hint node is a metadata node containing target-prefixed key/value pairs.
+Keys must be strings, and values must be either strings or integer constants.
+Keys within a single hint node must be unique.
+
+The hint node keys are prefixed with a target identifier (e.g., ``nvvm.``) and
+their interpretation is target-dependent. Each hint must describe a property of
+the individual memory access through the corresponding pointer operand. The IR
+verifier enforces only the structural rules above; validation of target-specific
+keys and values is performed by the corresponding backend. Unsupported
+properties may be silently ignored during code generation.
+
+The following examples use ``nvvm.`` prefixed keys for NVIDIA GPU targets.
+Other targets may define their own prefixed keys.
+
+Example: load with cache hints:
+
+.. code-block:: llvm
+
+    %v = load i32, ptr addrspace(1) %p, align 4, !mem.cache_hint !0
+
+    !0 = !{ i32 0, !1 }
+    !1 = !{ !"nvvm.l1_eviction", !"first",
+            !"nvvm.l2_eviction", !"first",
+            !"nvvm.l2_prefetch_size", !"128B" }
+
+Example: store with cache hints:
+
+.. code-block:: llvm
+
+    store i32 %v, ptr addrspace(1) %p, align 4, !mem.cache_hint !0
+
+    !0 = !{ i32 1, !1 }
+    !1 = !{ !"nvvm.l1_eviction", !"last",
+            !"nvvm.l2_eviction", !"last" }
+
+Example: memcpy with per-operand hints:
+
+.. code-block:: llvm
+
+    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %d,
+                                      ptr addrspace(1) %s, i64 16, i1 false),
+                                      !mem.cache_hint !0
+
+    !0 = !{ i32 0, !1, i32 1, !2 }
+    !1 = !{ !"nvvm.l1_eviction", !"last" }
+    !2 = !{ !"nvvm.l1_eviction", !"first",
+            !"nvvm.l2_prefetch_size", !"128B" }
 
 .. _llvm.loop:
 

@@ -84,11 +84,10 @@ TEST_P(olLaunchHostFunctionKernelTest, SuccessBlocking) {
       },
       const_cast<bool *>(&Block)));
 
-  struct {
-    void *Mem;
-  } Args{Mem};
-  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
-                                &LaunchArgs, nullptr));
+  void *ArgPtrs[] = {&Mem};
+  size_t ArgSizes[] = {sizeof(Mem)};
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &LaunchArgs, nullptr, 1,
+                                ArgPtrs, ArgSizes));
 
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
   for (uint32_t i = 0; i < 64; i++) {

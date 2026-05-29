@@ -100,22 +100,6 @@ class VPBuilder {
   VPBasicBlock *BB = nullptr;
   VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
 
-  /// Lightweight SCEV-to-VPlan expander. Converts SCEVConstant, SCEVUnknown,
-  /// SCEVVScale and SCEVMulExpr into VPInstructions. Other SCEV expressions are
-  /// not yet supported.
-  class VPSCEVExpander {
-    VPBuilder &Builder;
-    DebugLoc DL;
-
-  public:
-    VPSCEVExpander(VPBuilder &Builder, DebugLoc DL)
-        : Builder(Builder), DL(DL) {}
-
-    /// Try to expand \p S into recipes and live-ins using the builder. Returns
-    /// nullptr if \p S cannot be expanded yet.
-    VPValue *tryToExpand(const SCEV *S);
-  };
-
   /// Insert \p VPI in BB at InsertPt if BB is set.
   template <typename T> T *tryInsertInstruction(T *R) {
     if (BB)
@@ -131,12 +115,12 @@ class VPBuilder {
         new VPInstruction(Opcode, Operands, {}, MD, DL, Name));
   }
 
+public:
   VPlan &getPlan() const {
     assert(getInsertBlock() && "Insert block must be set");
     return *getInsertBlock()->getPlan();
   }
 
-public:
   VPBuilder() = default;
   VPBuilder(VPBasicBlock *InsertBB) { setInsertPoint(InsertBB); }
   VPBuilder(VPRecipeBase *InsertPt) { setInsertPoint(InsertPt); }
@@ -493,12 +477,6 @@ public:
     return tryInsertInstruction(new VPScalarIVStepsRecipe(
         IV, Step, VF, InductionOpcode,
         FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags(), DL));
-  }
-
-  /// Try to expand \p Expr using VPSCEVExpander. Returns nullptr if \p Expr
-  /// cannot be expanded yet.
-  VPValue *expandSCEV(const SCEV *Expr, DebugLoc DL) {
-    return VPSCEVExpander(*this, DL).tryToExpand(Expr);
   }
 
   VPExpandSCEVRecipe *createExpandSCEV(const SCEV *Expr) {
