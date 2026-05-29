@@ -3431,7 +3431,7 @@ void use_after_free_capture_by() {
   View res;
   {
     MyObj a;      
-    setCaptureBy(res, a); // expected-warning {{object whose reference is captured does not live long enough}}
+    setCaptureBy(res, a); // expected-warning {{local variable 'a' does not live long enough}}
   }               // expected-note {{destroyed here}}
   (void)res;      // expected-note {{later used here}}      
 }
@@ -3439,7 +3439,7 @@ void use_after_free_capture_by() {
 View use_after_return_capture_by() {
   MyObj a;
   View res;
-  setCaptureBy(res, a);   // expected-warning {{address of stack memory is returned later}}
+  setCaptureBy(res, a);   // expected-warning {{stack memory associated with local variable 'a' is returned}}
   return res;     // expected-note {{returned here}}  
                    
 }
@@ -3448,7 +3448,7 @@ void transitive_capture() {
   View v1, v2;
   {
     MyObj local;
-    setCaptureBy(v1, local); // expected-warning {{object whose reference is captured does not live long enough}}
+    setCaptureBy(v1, local); // expected-warning {{local variable 'local' does not live long enough}}
     setCaptureBy(v2, v1);   
   }                 // expected-note {{destroyed here}}
   (void)v2;         // expected-note {{later used here}}   
@@ -3460,7 +3460,7 @@ void test_reference_to_view() {
   View v;
   {
     MyObj local;
-    set1(v, local);   // expected-warning {{object whose reference is captured does not live long enough}}
+    set1(v, local);   // expected-warning {{local variable 'local' does not live long enough}}
   }                   // expected-note {{destroyed here}}
   (void)v;            // expected-note {{later used here}} 
 }
@@ -3491,7 +3491,7 @@ void test_reference_to_pointer() {
   MyObj *ptr = nullptr;
   {
     MyObj local;
-    set3(ptr, local);   // expected-warning {{object whose reference is captured does not live long enough}}
+    set3(ptr, local);   // expected-warning {{local variable 'local' does not live long enough}}
   }                     // expected-note {{destroyed here}}
   (void)ptr;            // expected-note {{later used here}} 
 }
@@ -3505,7 +3505,7 @@ void member_capture() {
   MyContainer c;
   {
     MyObj local;
-    c.set(local);   // expected-warning {{object whose reference is captured does not live long enough}}
+    c.set(local);   // expected-warning {{local variable 'local' does not live long enough}}
   }                 // expected-note {{destroyed here}}
   (void)c.stored;   // expected-note {{later used here}}
 }
@@ -3534,7 +3534,7 @@ void multiple_captures() {
   MyObj val1;
   {
     MyObj val2;
-    captureTwo(res, val1, val2); // expected-warning {{object whose reference is captured does not live long enough}}
+    captureTwo(res, val1, val2); // expected-warning {{local variable 'val2' does not live long enough}}
   }                              // expected-note {{destroyed here}}
   (void)res;                     // expected-note {{later used here}}              
 }
@@ -3544,7 +3544,7 @@ void multiple_local_captures() {
   {
     MyObj val1;
     MyObj val2;
-    captureTwo(res, val1, val2); // expected-warning 2 {{object whose reference is captured does not live long enough}}
+    captureTwo(res, val1, val2); // expected-warning {{local variable 'val1' does not live long enough}} // expected-warning {{local variable 'val2' does not live long enough}}
   }                              // expected-note 2 {{destroyed here}}
   (void)res;                     // expected-note 2 {{later used here}}              
 }

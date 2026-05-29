@@ -920,7 +920,7 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
           CapturedByIdx == LifetimeCaptureByAttr::Unknown ||
           CapturedByIdx == LifetimeCaptureByAttr::Invalid)
         continue;
-      ArrayRef<const Expr *> CallArgs = IsInstance ? Args.slice(1) : Args;
+      ArrayRef<const Expr *> CallArgs = IsInstance ? Args.drop_front() : Args;
       const Expr *CapturedByArg = (CapturedByIdx == LifetimeCaptureByAttr::This)
                                       ? Args[0]
                                       : CallArgs[CapturedByIdx];
