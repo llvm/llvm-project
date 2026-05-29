@@ -3065,10 +3065,6 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   }
 
   auto ExpectedTC = getSmallBestKnownTC(PSE, TheLoop);
-  auto HasOneScalarIterationRemainder =
-      [EffectiveIC](ElementCount &ExactTC, unsigned int MaxVF) -> bool {
-    return ExactTC.getFixedValue() == 1 + (MaxVF * EffectiveIC);
-  };
   if (ExpectedTC && ExpectedTC->isFixed() &&
       ExpectedTC->getFixedValue() <=
           TTI.getMinTripCountTailFoldingThreshold()) {
@@ -3092,18 +3088,15 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       // straight-line code as the both iteration counts are statically known.
       ElementCount ExactTC = getSmallConstantTripCount(PSE.getSE(), TheLoop);
       if (EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
-          ExactTC.getFixedValue() != 0) {
-        // If the maximum VF cannot produce 1 vector iteration + 1 scalar
-        // iteration, step down VF's to find one that can. The result should
-        // also eliminate any loops.
-        for (unsigned MaxVF = MaxFactors.FixedVF.getFixedValue(); MaxVF >= 2;
-             MaxVF /= 2) {
-          // OneScalarIterationRemainder takes account of any forced
-          // interleaving.
-          if (HasOneScalarIterationRemainder(ExactTC, MaxVF)) {
-            LLVM_DEBUG(dbgs() << "LV: Picking VF=" << MaxVF
+          ExactTC.getFixedValue() > 1) {
+        unsigned TC = ExactTC.getFixedValue();
+        unsigned MaxFixedVF = MaxFactors.FixedVF.getFixedValue();
+        if ((TC - 1) % EffectiveIC == 0) {
+          unsigned VF = (TC - 1) / EffectiveIC;
+          if (VF >= 2 && VF <= MaxFixedVF && isPowerOf2_32(VF)) {
+            LLVM_DEBUG(dbgs() << "LV: Picking VF=" << VF
                               << " with 1 scalar iteration remaining.\n");
-            MaxFactors.FixedVF = ElementCount::getFixed(MaxVF);
+            MaxFactors.FixedVF = ElementCount::getFixed(VF);
             MaxFactors.ScalableVF = ElementCount::getScalable(0);
             return MaxFactors;
           }
@@ -5924,7 +5917,7 @@ LoopVectorizationPlanner::computeBestVF() {
 
         unsigned EstimatedWidth = estimateElementCount(
             CurrentFactor.Width, Config.getVScaleForTuning());
-        if (TC % EstimatedWidth != 1)
+        if (TC != EstimatedWidth + 1)
           return false;
 
         InstructionCost VectorCost =
