@@ -160,7 +160,7 @@ entry:
   tail call void asm sideeffect "", "~{rbp},~{r15},~{r14},~{r13},~{r12},~{rbx},~{dirflag},~{fpsr},~{flags}"()
   %a = alloca [3 x ptr], align 8
   %b = call ptr (...) null()
-  ret i32 undef
+  ret i32 poison
 }
 
 !llvm.module.flags = !{!0}
