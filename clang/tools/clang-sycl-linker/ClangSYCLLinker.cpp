@@ -220,7 +220,7 @@ Expected<std::unique_ptr<Module>> getBitcodeModule(StringRef File,
 std::optional<std::string> findFile(StringRef Dir, const Twine &Name) {
   SmallString<128> Path(Dir);
   llvm::sys::path::append(Path, Name);
-  if (sys::fs::exists(Path))
+  if (sys::fs::exists(Path) && !sys::fs::is_directory(Path))
     return static_cast<std::string>(Path);
   return std::nullopt;
 }

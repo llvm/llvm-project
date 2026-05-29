@@ -61,6 +61,13 @@
 ; RUN:   | FileCheck %s --check-prefix=NO-CWD-SEARCH
 ; NO-CWD-SEARCH: 'input1.bc' library file not found
 ;
+; Test that a directory matching the requested name is not accepted as a library:
+; %t/libs is a directory created above; resolving --bc-library libs against -L %t
+; would otherwise pick it up and fail later with a confusing bitcode-reader error.
+; RUN: not clang-sycl-linker --dry-run %t/input1.bc -L %t --bc-library libs -o a.spv 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=NO-DIR-AS-LIB
+; NO-DIR-AS-LIB: 'libs' library file not found
+;
 ; Test AOT compilation for an Intel GPU.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none -arch=bmg_g21 %t/input1.bc %t/input2.bc -o %t/aot-gpu.out 2>&1 \
 ; RUN:     --ocloc-options="-a -b" \
