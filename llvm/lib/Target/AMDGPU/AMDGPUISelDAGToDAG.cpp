@@ -1865,23 +1865,22 @@ static MemSDNode* findMemSDNode(SDNode *N) {
   llvm_unreachable("cannot find MemSDNode in the pattern!");
 }
 
-bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(
-    SDNode *N, SDValue Addr, SDValue &VAddr, SDValue &Offset,
-    AMDGPU::FlatVariant FlatVariant) const {
-  using AMDGPU::FlatVariant;
+bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(SDNode *N, SDValue Addr,
+                                              SDValue &VAddr, SDValue &Offset,
+                                              uint64_t FlatVariant) const {
   int64_t OffsetVal = 0;
 
   unsigned AS = findMemSDNode(N)->getAddressSpace();
 
   bool CanHaveFlatSegmentOffsetBug =
       Subtarget->hasFlatSegmentOffsetBug() &&
-      FlatVariant == FlatVariant::FLAT &&
+      FlatVariant == SIInstrFlags::FLAT &&
       (AS == AMDGPUAS::FLAT_ADDRESS || AS == AMDGPUAS::GLOBAL_ADDRESS);
 
   if (Subtarget->hasFlatInstOffsets() && !CanHaveFlatSegmentOffsetBug) {
     SDValue N0, N1;
     if (isBaseWithConstantOffset64(Addr, N0, N1) &&
-        (FlatVariant != FlatVariant::FlatScratch ||
+        (FlatVariant != SIInstrFlags::FlatScratch ||
          isFlatScratchBaseLegal(Addr))) {
       int64_t COffsetVal = cast<ConstantSDNode>(N1)->getSExtValue();
 
@@ -1890,7 +1889,7 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(
       // only fold offsets from inbounds GEPs into FLAT instructions.
       bool IsInBounds =
           Addr.getOpcode() == ISD::PTRADD && Addr->getFlags().hasInBounds();
-      if (COffsetVal == 0 || FlatVariant != FlatVariant::FLAT || IsInBounds) {
+      if (COffsetVal == 0 || FlatVariant != SIInstrFlags::FLAT || IsInBounds) {
         const SIInstrInfo *TII = Subtarget->getInstrInfo();
         if (TII->isLegalFLATOffset(COffsetVal, AS, FlatVariant)) {
           Addr = N0;
@@ -1975,22 +1974,20 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(
 bool AMDGPUDAGToDAGISel::SelectFlatOffset(SDNode *N, SDValue Addr,
                                           SDValue &VAddr,
                                           SDValue &Offset) const {
-  return SelectFlatOffsetImpl(N, Addr, VAddr, Offset,
-                              AMDGPU::FlatVariant::FLAT);
+  return SelectFlatOffsetImpl(N, Addr, VAddr, Offset, SIInstrFlags::FLAT);
 }
 
 bool AMDGPUDAGToDAGISel::SelectGlobalOffset(SDNode *N, SDValue Addr,
                                             SDValue &VAddr,
                                             SDValue &Offset) const {
-  return SelectFlatOffsetImpl(N, Addr, VAddr, Offset,
-                              AMDGPU::FlatVariant::FlatGlobal);
+  return SelectFlatOffsetImpl(N, Addr, VAddr, Offset, SIInstrFlags::FlatGlobal);
 }
 
 bool AMDGPUDAGToDAGISel::SelectScratchOffset(SDNode *N, SDValue Addr,
                                              SDValue &VAddr,
                                              SDValue &Offset) const {
   return SelectFlatOffsetImpl(N, Addr, VAddr, Offset,
-                              AMDGPU::FlatVariant::FlatScratch);
+                              SIInstrFlags::FlatScratch);
 }
 
 // If this matches *_extend i32:x, return x
@@ -2016,7 +2013,6 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
                                            SDValue &SAddr, SDValue &VOffset,
                                            SDValue &Offset, bool &ScaleOffset,
                                            bool NeedIOffset) const {
-  using AMDGPU::FlatVariant;
   int64_t ImmOffset = 0;
   ScaleOffset = false;
 
@@ -2030,7 +2026,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
 
     if (NeedIOffset &&
         TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::GLOBAL_ADDRESS,
-                               FlatVariant::FlatGlobal)) {
+                               SIInstrFlags::FlatGlobal)) {
       Addr = LHS;
       ImmOffset = COffsetVal;
     } else if (!LHS->isDivergent()) {
@@ -2042,7 +2038,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
         int64_t SplitImmOffset = 0, RemainderOffset = COffsetVal;
         if (NeedIOffset) {
           std::tie(SplitImmOffset, RemainderOffset) = TII->splitFlatOffset(
-              COffsetVal, AMDGPUAS::GLOBAL_ADDRESS, FlatVariant::FlatGlobal);
+              COffsetVal, AMDGPUAS::GLOBAL_ADDRESS, SIInstrFlags::FlatGlobal);
         }
 
         if (Subtarget->hasSignedGVSOffset() ? isInt<32>(RemainderOffset)
@@ -2255,7 +2251,6 @@ static SDValue SelectSAddrFI(SelectionDAG *CurDAG, SDValue SAddr) {
 bool AMDGPUDAGToDAGISel::SelectScratchSAddr(SDNode *Parent, SDValue Addr,
                                             SDValue &SAddr,
                                             SDValue &Offset) const {
-  using AMDGPU::FlatVariant;
   if (Addr->isDivergent())
     return false;
 
@@ -2275,10 +2270,10 @@ bool AMDGPUDAGToDAGISel::SelectScratchSAddr(SDNode *Parent, SDValue Addr,
   const SIInstrInfo *TII = Subtarget->getInstrInfo();
 
   if (!TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS,
-                              FlatVariant::FlatScratch)) {
+                              SIInstrFlags::FlatScratch)) {
     int64_t SplitImmOffset, RemainderOffset;
     std::tie(SplitImmOffset, RemainderOffset) = TII->splitFlatOffset(
-        COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, FlatVariant::FlatScratch);
+        COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, SIInstrFlags::FlatScratch);
 
     COffsetVal = SplitImmOffset;
 
@@ -2328,7 +2323,7 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
     const SIInstrInfo *TII = Subtarget->getInstrInfo();
 
     if (TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS,
-                               AMDGPU::FlatVariant::FlatScratch)) {
+                               SIInstrFlags::FlatScratch)) {
       Addr = LHS;
       ImmOffset = COffsetVal;
     } else if (!LHS->isDivergent() && COffsetVal > 0) {
@@ -2336,9 +2331,8 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
       // saddr + large_offset -> saddr + (vaddr = large_offset & ~MaxOffset) +
       //                         (large_offset & MaxOffset);
       int64_t SplitImmOffset, RemainderOffset;
-      std::tie(SplitImmOffset, RemainderOffset) =
-          TII->splitFlatOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS,
-                               AMDGPU::FlatVariant::FlatScratch);
+      std::tie(SplitImmOffset, RemainderOffset) = TII->splitFlatOffset(
+          COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, SIInstrFlags::FlatScratch);
 
       if (isUInt<32>(RemainderOffset)) {
         SDNode *VMov = CurDAG->getMachineNode(
