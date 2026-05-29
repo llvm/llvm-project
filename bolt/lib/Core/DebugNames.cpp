@@ -74,13 +74,13 @@ void DWARF5AcceleratorTable::preAllocateUnits(DWARFContext &DwCtx) {
     if (!DWOId)
       continue;
 
-    const DWARFDie UnitDIE = CU->getUnitDIE();
-    if (!UnitDIE.find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}))
-      continue;
-
     uint32_t Idx = CUList.size();
     CUList.push_back(BADCUOFFSET);
     CUOffsetsToPatch[*DWOId] = Idx;
+
+    const DWARFDie UnitDIE = CU->getUnitDIE();
+    if (!UnitDIE.find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}))
+      continue;
 
     std::optional<DWARFUnit *> DWOCU = BC.getDWOCU(*DWOId);
     if (!DWOCU || !*DWOCU)
