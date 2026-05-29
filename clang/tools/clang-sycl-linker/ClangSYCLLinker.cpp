@@ -267,8 +267,8 @@ struct LinkResult {
 /// 3. Gather all library bitcode images.
 /// 4. Link all the images gathered in Step 3 with the output of Step 2 using
 /// linkInModule API. LinkOnlyNeeded flag is used.
-Expected<LinkResult> link(ArrayRef<std::string> InputFiles, const ArgList &Args,
-                          LLVMContext &C) {
+Expected<LinkResult> linkInputs(ArrayRef<std::string> InputFiles,
+                                const ArgList &Args, LLVMContext &C) {
   llvm::TimeTraceScope TimeScope("Link code");
 
   assert(InputFiles.size() && "No inputs to link");
@@ -670,7 +670,7 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   LLVMContext C;
 
   // Link all input bitcode files and library files.
-  Expected<LinkResult> LinkedOrErr = link(Files, Args, C);
+  Expected<LinkResult> LinkedOrErr = linkInputs(Files, Args, C);
   if (!LinkedOrErr)
     return LinkedOrErr.takeError();
   LinkResult &Result = *LinkedOrErr;
