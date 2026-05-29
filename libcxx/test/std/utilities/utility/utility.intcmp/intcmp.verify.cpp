@@ -130,10 +130,10 @@ void test_cv() {
   std::cmp_less<const int, int>(0, 0);          // expected-error {{no matching function for call to 'cmp_less'}}
   std::cmp_less<int, volatile int>(0, 0);       // expected-error {{no matching function for call to 'cmp_less'}}
   std::cmp_less_equal<volatile int, int>(0, 0); // expected-error {{no matching function for call to 'cmp_less_equal'}}
-  std::cmp_greater<const volatile int, const int>(
-      0, 0); // expected-error {{no matching function for call to 'cmp_greater'}}
-  std::cmp_greater_equal<const int, const int>(
-      0, 0);                             // expected-error {{no matching function for call to 'cmp_greater_equal'}}
+  // expected-error@+1 {{no matching function for call to 'cmp_greater'}}
+  std::cmp_greater<const volatile int, const int>(0, 0);
+  // expected-error@+1 {{no matching function for call to 'cmp_greater_equal'}}
+  std::cmp_greater_equal<const int, const int>(0, 0);
   std::in_range<const int>(0);           // expected-error {{no matching function for call to 'in_range'}}
   std::in_range<volatile int>(0);        // expected-error {{no matching function for call to 'in_range'}}
   std::in_range<const bool>(0);          // expected-error {{no matching function for call to 'in_range'}}
