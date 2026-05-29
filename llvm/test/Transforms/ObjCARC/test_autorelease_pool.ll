@@ -36,16 +36,17 @@ define void @test_autorelease_to_release() {
   ret void
 }
 
-; Pool with autoreleases should not be optimized
+; Autoreleases are converted to releases before the pool pop.
+; Pool is kept because use_object may autorelease.
 define void @test_multiple_autoreleases() {
 ; CHECK-LABEL: define void @test_multiple_autoreleases() {
 ; CHECK-NEXT:    [[OBJ1:%.*]] = call ptr @create_object()
 ; CHECK-NEXT:    [[OBJ2:%.*]] = call ptr @create_object()
 ; CHECK-NEXT:    [[POOL:%.*]] = call ptr @llvm.objc.autoreleasePoolPush() #[[ATTR0]]
 ; CHECK-NEXT:    call void @use_object(ptr [[OBJ1]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.autorelease(ptr [[OBJ1]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @use_object(ptr [[OBJ2]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @llvm.objc.autorelease(ptr [[OBJ2]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ1]]) #[[ATTR0]], !clang.imprecise_release [[META0]]
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ2]]) #[[ATTR0]], !clang.imprecise_release [[META0]]
 ; CHECK-NEXT:    call void @llvm.objc.autoreleasePoolPop(ptr [[POOL]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
@@ -212,9 +213,7 @@ define void @test_complex_shadowing() {
 ; CHECK-NEXT:    [[OBJ3:%.*]] = call ptr @create_object()
 ; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ1]]) #[[ATTR0]], !clang.imprecise_release [[META0]]
 ; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ2]]) #[[ATTR0]], !clang.imprecise_release [[META0]]
-; CHECK-NEXT:    [[INNER2_POOL:%.*]] = call ptr @llvm.objc.autoreleasePoolPush() #[[ATTR0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.autorelease(ptr [[OBJ3]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @llvm.objc.autoreleasePoolPop(ptr [[INNER2_POOL]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ3]]) #[[ATTR0]], !clang.imprecise_release [[META0]]
 ; CHECK-NEXT:    ret void
 ;
   %obj1 = call ptr @create_object()
@@ -222,7 +221,8 @@ define void @test_complex_shadowing() {
   %obj3 = call ptr @create_object()
   %outer_pool = call ptr @llvm.objc.autoreleasePoolPush()
 
-  ; This autorelease is outside inner pools - prevents optimization
+  ; This autorelease is outside inner pools, but is converted to a release
+  ; before the outer pool pop, so the outer pool can still be optimized.
   call ptr @llvm.objc.autorelease(ptr %obj1)
 
   ; Inner pool 1 with shadowed autorelease
@@ -333,11 +333,9 @@ define void @test_cross_function_inner_pool_caller() {
 define void @test_autoreleaseRV_optimization(ptr %obj) {
 ; CHECK-LABEL: define void @test_autoreleaseRV_optimization(
 ; CHECK-SAME: ptr [[OBJ:%.*]]) {
-; CHECK-NEXT:    [[POOL:%.*]] = call ptr @llvm.objc.autoreleasePoolPush() #[[ATTR0]]
 ; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ]]) #[[ATTR0]], !clang.imprecise_release [[META0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.autorelease(ptr [[OBJ]]) #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @llvm.objc.autorelease(ptr [[OBJ]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @llvm.objc.autoreleasePoolPop(ptr [[POOL]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ]]) #[[ATTR0]], !clang.imprecise_release [[META0]]
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ]]) #[[ATTR0]], !clang.imprecise_release [[META0]]
 ; CHECK-NEXT:    ret void
 ;
   %pool = call ptr @llvm.objc.autoreleasePoolPush()
@@ -362,6 +360,41 @@ define void @test_cross_function_inner_pool_callee() {
   %obj = call ptr @create_object()
   %ar = call ptr @llvm.objc.autorelease(ptr %obj)
   call void @llvm.objc.autoreleasePoolPop(ptr %inner_pool)
+  ret void
+}
+
+; Use of autoreleased object between autorelease and pool pop is safe because
+; the release is moved to just before the pool pop, not converted in place.
+define void @test_use_after_autorelease_prevents_optimization(ptr %obj) {
+; CHECK-LABEL: define void @test_use_after_autorelease_prevents_optimization(
+; CHECK-SAME: ptr [[OBJ:%.*]]) {
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[OBJ]], align 4
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ]]) #[[ATTR0]], !clang.imprecise_release [[META0]]
+; CHECK-NEXT:    ret void
+;
+  %pool = call ptr @llvm.objc.autoreleasePoolPush()
+  call ptr @llvm.objc.autorelease(ptr %obj)
+  ; This load uses %obj - safe because the release is placed before the pool pop,
+  ; after this load.
+  %val = load i32, ptr %obj
+  call void @llvm.objc.autoreleasePoolPop(ptr %pool)
+  ret void
+}
+
+; Use of a DIFFERENT object between autorelease and pool pop should still
+; allow the optimization.
+define void @test_use_of_different_ptr_allows_optimization(ptr %obj1, ptr %obj2) {
+; CHECK-LABEL: define void @test_use_of_different_ptr_allows_optimization(
+; CHECK-SAME: ptr [[OBJ1:%.*]], ptr [[OBJ2:%.*]]) {
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ1]]) #[[ATTR0]], !clang.imprecise_release [[META0]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[OBJ2]], align 4
+; CHECK-NEXT:    ret void
+;
+  %pool = call ptr @llvm.objc.autoreleasePoolPush()
+  call ptr @llvm.objc.autorelease(ptr %obj1)
+  ; This load uses %obj2, not %obj1, so it's safe to convert the autorelease.
+  %val = load i32, ptr %obj2
+  call void @llvm.objc.autoreleasePoolPop(ptr %pool)
   ret void
 }
 
