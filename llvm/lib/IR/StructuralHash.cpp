@@ -13,6 +13,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -79,6 +81,13 @@ public:
 
   static stable_hash hashAPFloat(const APFloat &F) {
     return hashAPInt(F.bitcastToAPInt());
+  }
+
+  static stable_hash hashAttributeList(AttributeList Attrs) {
+    std::string AttrString;
+    raw_string_ostream OS(AttrString);
+    Attrs.print(OS);
+    return stable_hash_name(OS.str());
   }
 
   static stable_hash hashGlobalVariable(const GlobalVariable &GVar) {
@@ -219,11 +228,52 @@ public:
       return stable_hash_combine(Hashes);
 
     Hashes.emplace_back(hashType(Inst.getType()));
+    Hashes.emplace_back(Inst.getRawSubclassOptionalData());
+    if (const auto *FPO = dyn_cast<FPMathOperator>(&Inst))
+      Hashes.emplace_back(FPO->getFastMathFlags().getRawFlags());
 
     // Handle additional properties of specific instructions that cause
     // semantic differences in the IR.
     if (const auto *ComparisonInstruction = dyn_cast<CmpInst>(&Inst))
       Hashes.emplace_back(ComparisonInstruction->getPredicate());
+
+    if (const auto *LI = dyn_cast<LoadInst>(&Inst)) {
+      Hashes.emplace_back(LI->isVolatile());
+      Hashes.emplace_back(LI->getAlign().value());
+      Hashes.emplace_back(static_cast<unsigned>(LI->getOrdering()));
+      Hashes.emplace_back(LI->getSyncScopeID());
+    }
+    if (const auto *SI = dyn_cast<StoreInst>(&Inst)) {
+      Hashes.emplace_back(SI->isVolatile());
+      Hashes.emplace_back(SI->getAlign().value());
+      Hashes.emplace_back(static_cast<unsigned>(SI->getOrdering()));
+      Hashes.emplace_back(SI->getSyncScopeID());
+    }
+    if (const auto *FI = dyn_cast<FenceInst>(&Inst)) {
+      Hashes.emplace_back(static_cast<unsigned>(FI->getOrdering()));
+      Hashes.emplace_back(FI->getSyncScopeID());
+    }
+    if (const auto *CXI = dyn_cast<AtomicCmpXchgInst>(&Inst)) {
+      Hashes.emplace_back(CXI->isVolatile());
+      Hashes.emplace_back(CXI->isWeak());
+      Hashes.emplace_back(CXI->getAlign().value());
+      Hashes.emplace_back(static_cast<unsigned>(CXI->getSuccessOrdering()));
+      Hashes.emplace_back(static_cast<unsigned>(CXI->getFailureOrdering()));
+      Hashes.emplace_back(CXI->getSyncScopeID());
+    }
+    if (const auto *RMWI = dyn_cast<AtomicRMWInst>(&Inst)) {
+      Hashes.emplace_back(RMWI->isVolatile());
+      Hashes.emplace_back(RMWI->getOperation());
+      Hashes.emplace_back(RMWI->getAlign().value());
+      Hashes.emplace_back(static_cast<unsigned>(RMWI->getOrdering()));
+      Hashes.emplace_back(RMWI->getSyncScopeID());
+    }
+    if (const auto *CB = dyn_cast<CallBase>(&Inst)) {
+      Hashes.emplace_back(CB->getCallingConv());
+      Hashes.emplace_back(hashAttributeList(CB->getAttributes()));
+      if (const auto *CI = dyn_cast<CallInst>(CB))
+        Hashes.emplace_back(CI->getTailCallKind());
+    }
 
     unsigned InstIdx = 0;
     if (IndexInstruction) {
@@ -273,6 +323,10 @@ public:
 
     Hashes.emplace_back(F.isVarArg());
     Hashes.emplace_back(F.arg_size());
+    if (DetailedHash) {
+      Hashes.emplace_back(F.getCallingConv());
+      Hashes.emplace_back(hashAttributeList(F.getAttributes()));
+    }
 
     SmallVector<const BasicBlock *, 8> BBs;
     SmallPtrSet<const BasicBlock *, 16> VisitedBBs;

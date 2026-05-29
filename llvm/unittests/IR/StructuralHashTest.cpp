@@ -203,6 +203,124 @@ TEST(StructuralHashTest, ComparisonInstructionPredicate) {
   EXPECT_NE(StructuralHash(*M1, true), StructuralHash(*M2, true));
 }
 
+TEST(StructuralHashTest, InstructionFlags) {
+  LLVMContext Ctx;
+
+  auto FunctionHash = [&](const char *IR) {
+    return StructuralHash(*parseIR(Ctx, IR)->getFunction("f"),
+                          /*DetailedHash=*/true);
+  };
+
+  EXPECT_NE(FunctionHash("define i32 @f(i32 %a, i32 %b) {\n"
+                         "  %r = add i32 %a, %b\n"
+                         "  ret i32 %r\n"
+                         "}\n"),
+            FunctionHash("define i32 @f(i32 %a, i32 %b) {\n"
+                         "  %r = add nsw i32 %a, %b\n"
+                         "  ret i32 %r\n"
+                         "}\n"));
+  EXPECT_NE(FunctionHash("define i32 @f(i32 %a, i32 %b) {\n"
+                         "  %r = udiv i32 %a, %b\n"
+                         "  ret i32 %r\n"
+                         "}\n"),
+            FunctionHash("define i32 @f(i32 %a, i32 %b) {\n"
+                         "  %r = udiv exact i32 %a, %b\n"
+                         "  ret i32 %r\n"
+                         "}\n"));
+  EXPECT_NE(FunctionHash("define i1 @f(i32 %a, i32 %b) {\n"
+                         "  %r = icmp slt i32 %a, %b\n"
+                         "  ret i1 %r\n"
+                         "}\n"),
+            FunctionHash("define i1 @f(i32 %a, i32 %b) {\n"
+                         "  %r = icmp samesign slt i32 %a, %b\n"
+                         "  ret i1 %r\n"
+                         "}\n"));
+  EXPECT_NE(FunctionHash("define float @f(float %a, float %b) {\n"
+                         "  %r = fadd float %a, %b\n"
+                         "  ret float %r\n"
+                         "}\n"),
+            FunctionHash("define float @f(float %a, float %b) {\n"
+                         "  %r = fadd fast float %a, %b\n"
+                         "  ret float %r\n"
+                         "}\n"));
+}
+
+TEST(StructuralHashTest, MemoryInstructionProperties) {
+  LLVMContext Ctx;
+
+  auto FunctionHash = [&](const char *IR) {
+    return StructuralHash(*parseIR(Ctx, IR)->getFunction("f"),
+                          /*DetailedHash=*/true);
+  };
+
+  EXPECT_NE(FunctionHash("define i32 @f(ptr %p) {\n"
+                         " %r = load i32, ptr %p, align 4\n"
+                         " ret i32 %r\n"
+                         "}\n"),
+            FunctionHash("define i32 @f(ptr %p) {\n"
+                         " %r = load i32, ptr %p, align 8\n"
+                         " ret i32 %r\n"
+                         "}\n"));
+  EXPECT_NE(FunctionHash("define i32 @f(ptr %p) {\n"
+                         " %r = load i32, ptr %p\n"
+                         " ret i32 %r\n"
+                         "}\n"),
+            FunctionHash("define i32 @f(ptr %p) {\n"
+                         " %r = load volatile i32, ptr %p\n"
+                         " ret i32 %r\n"
+                         "}\n"));
+  EXPECT_NE(FunctionHash("define i32 @f(ptr %p) {\n"
+                         " %r = load atomic i32, ptr %p monotonic, align 4\n"
+                         " ret i32 %r\n"
+                         "}\n"),
+            FunctionHash("define i32 @f(ptr %p) {\n"
+                         " %r = load atomic i32, ptr %p acquire, align 4\n"
+                         " ret i32 %r\n"
+                         "}\n"));
+  EXPECT_NE(FunctionHash("define void @f(ptr %p, i32 %v) {\n"
+                         " store i32 %v, ptr %p\n"
+                         " ret void\n"
+                         "}\n"),
+            FunctionHash("define void @f(ptr %p, i32 %v) {\n"
+                         " store volatile i32 %v, ptr %p\n"
+                         " ret void\n"
+                         "}\n"));
+  EXPECT_NE(FunctionHash("define void @f(ptr %p, i32 %v) {\n"
+                         " store atomic i32 %v, ptr %p monotonic, align 4\n"
+                         " ret void\n"
+                         "}\n"),
+            FunctionHash("define void @f(ptr %p, i32 %v) {\n"
+                         " store atomic i32 %v, ptr %p release, align 4\n"
+                         " ret void\n"
+                         "}\n"));
+}
+
+TEST(StructuralHashTest, CallAndFunctionAttributes) {
+  LLVMContext Ctx;
+
+  auto FunctionHash = [&](const char *IR) {
+    return StructuralHash(*parseIR(Ctx, IR)->getFunction("f"),
+                          /*DetailedHash=*/true);
+  };
+
+  EXPECT_NE(FunctionHash("declare i32 @callee(i32)\n"
+                         "define i32 @f(i32 %v) {\n"
+                         " %r = call i32 @callee(i32 %v)\n"
+                         " ret i32 %r\n"
+                         "}\n"),
+            FunctionHash("declare i32 @callee(i32)\n"
+                         "define i32 @f(i32 %v) {\n"
+                         " %r = tail call i32 @callee(i32 %v)\n"
+                         " ret i32 %r\n"
+                         "}\n"));
+  EXPECT_NE(FunctionHash("define i32 @f(i32 %v) {\n"
+                         " ret i32 %v\n"
+                         "}\n"),
+            FunctionHash("define i32 @f(i32 %v) nounwind {\n"
+                         " ret i32 %v\n"
+                         "}\n"));
+}
+
 TEST(StructuralHashTest, IntrinsicInstruction) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M1 =
