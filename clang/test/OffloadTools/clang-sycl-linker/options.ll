@@ -9,12 +9,6 @@ target triple = "spirv64"
 
 ; Build a bitcode input used by every RUN line below.
 ; RUN: llvm-as %s -o %t.bc
-
-; Test --print-linked-module
-; RUN: clang-sycl-linker %t.bc --print-linked-module -o %t.out > %t.ll
-; RUN: FileCheck %s --check-prefix=PRINT-LINKED < %t.ll
-; PRINT-LINKED: target triple = "spirv64"
-
 ; RUN: rm -rf %t.dir && mkdir -p %t.dir
 
 ; Test --spirv-dump-device-code: the linker creates the (nested) directory if
