@@ -46,6 +46,7 @@ enum {
   S_TPREL_LO,
   S_CALL_PLT,
   S_GOT_HI,
+  S_REGREL_LO,
   // Vendor-specific relocation types might conflict across vendors.
   // Refer to them using Specifier constants.
   S_QC_ABS20,

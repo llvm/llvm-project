@@ -42,6 +42,7 @@ public:
   bool foldShiftedOffset(MachineInstr &Hi, MachineInstr &Lo,
                          MachineInstr &TailShXAdd, Register GSReg);
 
+  bool foldGPIntoMemoryOps(MachineInstr &Hi, MachineInstr &Lo);
   bool foldIntoMemoryOps(MachineInstr &Hi, MachineInstr &Lo);
   bool foldShxaddIntoScaledMemory(MachineInstr &Hi, MachineInstr &Lo);
 
@@ -770,6 +771,260 @@ bool RISCVMergeBaseOffsetOpt::foldShxaddIntoScaledMemory(MachineInstr &Hi,
   return true;
 }
 
+static bool isShxadd(MachineInstr &MI) {
+  if (MI.getOpcode() == RISCV::SH1ADD || MI.getOpcode() == RISCV::SH2ADD ||
+      MI.getOpcode() == RISCV::SH3ADD || MI.getOpcode() == RISCV::SH1ADD_UW ||
+      MI.getOpcode() == RISCV::SH2ADD_UW || MI.getOpcode() == RISCV::SH3ADD_UW)
+    return true;
+  return false;
+}
+
+// Returns the shift amount from a SHXADD instruction. Returns 0 if the
+// instruction is not a SHXADD.
+static unsigned getSHXADDShiftAmount(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return 0;
+  case RISCV::SH1ADD:
+  case RISCV::SH1ADD_UW:
+    return 1;
+  case RISCV::SH2ADD:
+  case RISCV::SH2ADD_UW:
+    return 2;
+  case RISCV::SH3ADD:
+  case RISCV::SH3ADD_UW:
+    return 3;
+  }
+}
+
+static unsigned getTargetFlagsAndPattern(MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case RISCV::ADD:
+    return RISCV::PseudoAddREGRel;
+  case RISCV::ADD_UW:
+    return RISCV::PseudoAddUWREGRel;
+  case RISCV::SH1ADD:
+    return RISCV::PseudoSh1AddREGRel;
+  case RISCV::SH2ADD:
+    return RISCV::PseudoSh2AddREGRel;
+  case RISCV::SH3ADD:
+    return RISCV::PseudoSh3AddREGRel;
+  case RISCV::SH1ADD_UW:
+    return RISCV::PseudoSh1AddUWREGRel;
+  case RISCV::SH2ADD_UW:
+    return RISCV::PseudoSh2AddUWREGRel;
+  case RISCV::SH3ADD_UW:
+    return RISCV::PseudoSh3AddUWREGRel;
+  default:
+    llvm_unreachable("Unexpected ADD or SHXADD Opcode");
+  }
+}
+
+// Use add or shxadd instruction to store the offset in a register.
+//                     Base address lowering is of the form:
+//                       Hi:  lui   vr1, %hi(s)
+//                       Lo:  addi  vr2, vreg1, %lo(s)
+//                       /                              \
+//                      /                                \
+//                     /                                  \
+//                    /                                    \
+//   vrx(voff): add vr3, vr2, vrx                   Shxadd vr3, vrx, vr2
+//                    \                                    /
+//                     \                                  /
+//                      \                                /
+//                       \                              /
+//                           MemOps  vr4, voff(vr3)
+//
+// If the add/shxadd of uses are MemOps with the same offset, we can transform:
+// -------------------    Format after Transform  --------------------
+//
+//                           Hi:  lui   vr1, %hi(s+voff)
+//                       /                                  \
+//                      /                                    \
+//                     /                                      \
+//                    /                                        \
+//              Add the %regrel_add/%regrel_lo used as a linker
+//  add vr3,vr2,vrx,%regrel_add(s+voff)  shxadd vr3,vrx,vr2,%regrel_add(s+voff)
+//                    \                                        /
+//                     \                                      /
+//                      \                                    /
+//                       \                                  /
+//                        MemOps vr4, %regrel_lo(s+voff)(vr3)
+//
+// If the global variable is placed in the gp addressable range, We can complete
+// the operation with fewer instructions
+//
+bool RISCVMergeBaseOffsetOpt::foldGPIntoMemoryOps(MachineInstr &Hi,
+                                                  MachineInstr &Lo) {
+  Register LoDstReg = Lo.getOperand(0).getReg();
+
+  // Can't fold if the register has more than one use
+  if (!LoDstReg.isVirtual() || !MRI->hasOneUse(LoDstReg))
+    return false;
+
+  MachineInstr &AddMI = *MRI->use_instr_begin(LoDstReg);
+  if (isShxadd(AddMI) && LoDstReg != AddMI.getOperand(2).getReg())
+    return false;
+
+  // get the addressing register of MemOps
+  Register AddDstReg;
+  if (AddMI.getOpcode() == RISCV::ADD || AddMI.getOpcode() == RISCV::ADD_UW ||
+      isShxadd(AddMI))
+    AddDstReg = AddMI.getOperand(0).getReg();
+
+  if (!AddDstReg)
+    return false;
+
+  std::optional<int64_t> CommonOffset;
+  for (const MachineInstr &UseMI : MRI->use_instructions(AddDstReg)) {
+    switch (UseMI.getOpcode()) {
+    default:
+      LLVM_DEBUG(dbgs() << "Not a load or store instruction: " << UseMI);
+      return false;
+    case RISCV::LB:
+    case RISCV::LH:
+    case RISCV::LW:
+    case RISCV::LBU:
+    case RISCV::LHU:
+    case RISCV::LWU:
+    case RISCV::LD:
+    case RISCV::FLH:
+    case RISCV::FLW:
+    case RISCV::FLD:
+    case RISCV::SB:
+    case RISCV::SH:
+    case RISCV::SW:
+    case RISCV::SD:
+    case RISCV::FSH:
+    case RISCV::FSW:
+    case RISCV::FSD: {
+      if (UseMI.getOperand(1).isFI())
+        return false;
+      // Register defined by Lo should not be the value register.
+      if (AddDstReg == UseMI.getOperand(0).getReg())
+        return false;
+      assert(AddDstReg == UseMI.getOperand(1).getReg() &&
+             "Expected base address use");
+      // All load/store instructions must use the same offset.
+      int64_t Offset = UseMI.getOperand(2).getImm();
+      if (CommonOffset && Offset != CommonOffset)
+        return false;
+      CommonOffset = Offset;
+      break;
+    }
+    }
+  }
+
+  // We found a common offset.
+  // Update the offsets in global address lowering.
+  // We may have already folded some arithmetic so we need to add to any
+  // existing offset.
+  int64_t NewOffset = Hi.getOperand(1).getOffset() + *CommonOffset;
+  // RV32 ignores the upper 32 bits.
+  if (!ST->is64Bit())
+    NewOffset = SignExtend64<32>(NewOffset);
+  // We can only fold simm32 offsets.
+  if (!isInt<32>(NewOffset))
+    return false;
+
+  // Remove of the addi from add or shxadd, as:
+  // addi   vrx, vr0, offAddi
+  // lui    vr1, %hi(s)
+  // addi   vr1, vr1, %lo(s)
+  // add    vr2, vrxx, vr1
+  // memops vr3, off(vr2)
+  // ----Transform----
+  // lui    vr1, %hi(s+off+offAddi)
+  // add    vr2, vr0, vr1, %regrel_add(s+off+offAddi)
+  // memops vr3, %regrel_lo(s+off+offAddi)(vr2)
+  int64_t OffAddi = 0;
+  bool AddiToRemove = false;
+  if (AddMI.getOpcode() == RISCV::ADD || AddMI.getOpcode() == RISCV::ADD_UW ||
+      isShxadd(AddMI)) {
+    Register Rs = AddMI.getOperand(1).getReg();
+    Register Rt = AddMI.getOperand(2).getReg();
+    Register Reg = Rs == LoDstReg ? Rt : Rs;
+    MachineInstr &AddiOfAdd = *MRI->getVRegDef(Reg);
+    if (MRI->hasOneUse(Reg) && Reg.isVirtual() &&
+        (AddiOfAdd.getOpcode() == RISCV::ADDI ||
+         AddiOfAdd.getOpcode() == RISCV::ADDIW) &&
+        AddiOfAdd.getOperand(2).isImm() && AddiOfAdd.getOperand(1).isReg()) {
+      OffAddi = AddiOfAdd.getOperand(2).getImm();
+      if (!ST->is64Bit())
+        OffAddi = SignExtend64<32>(OffAddi);
+      // We can only fold simm32 offsets.
+      assert(isInt<12>(OffAddi) && "Unexpected offset");
+      unsigned ShiftAmt = getSHXADDShiftAmount(AddMI.getOpcode());
+      OffAddi <<= ShiftAmt;
+      // Only NewOffset + OffAddi < sim12, that we can remove the Addi
+      if (isInt<32>(NewOffset + OffAddi)) {
+        NewOffset += OffAddi;
+        AddiToRemove = true;
+      }
+    }
+
+    // Update the Offsets of the symbol of the %hi
+    Hi.getOperand(1).setOffset(NewOffset);
+    // Expand PseudoMovAddr into LUI
+    if (Hi.getOpcode() == RISCV::PseudoMovAddr) {
+      auto *TII = ST->getInstrInfo();
+      Hi.setDesc(TII->get(RISCV::LUI));
+      Hi.removeOperand(2);
+    }
+    // Update the Offsets of the symbol of the %lo, which will be lowring the
+    // MemOps
+    MachineOperand &ImmOp = Lo.getOperand(1);
+    ImmOp.setOffset(NewOffset);
+
+    if (AddiToRemove) {
+      LLVM_DEBUG(dbgs() << "To remove the Inst is: " << AddiOfAdd);
+      MRI->replaceRegWith(AddiOfAdd.getOperand(0).getReg(),
+                          AddiOfAdd.getOperand(1).getReg());
+      AddiOfAdd.eraseFromParent();
+    }
+
+    // ADD/SHXADD instruction add the fourth operand used to facilitate the
+    // use to emit a relocation on a symbol relating to this instruction
+    for (MachineInstr &UseMI :
+         llvm::make_early_inc_range(MRI->use_instructions(LoDstReg))) {
+      unsigned Res = getTargetFlagsAndPattern(UseMI);
+      // Considering the implementation of gcc, the assembly output is unified
+      // here to adapt to GNU LD and LLD implementations.
+      Register Rt = UseMI.getOperand(1).getReg();
+      if (Rt == LoDstReg && !isShxadd(UseMI)) {
+        MachineOperand UseOp1 = UseMI.getOperand(1);
+        MachineOperand UseOp2 = UseMI.getOperand(2);
+        UseMI.removeOperand(2);
+        UseMI.removeOperand(1);
+        UseMI.addOperand(UseOp2);
+        UseMI.addOperand(UseOp1);
+      }
+      UseMI.addOperand(ImmOp);
+      MachineOperand &MO = UseMI.getOperand(3);
+      MO.ChangeToGA(ImmOp.getGlobal(), ImmOp.getOffset(), RISCVII::MO_REGREL_ADD);
+      auto *TII = ST->getInstrInfo();
+      UseMI.setDesc(TII->get(Res));
+    }
+
+    // Update the immediate in the load/store instructions to add the
+    // offset.
+    for (MachineInstr &UseMI :
+         llvm::make_early_inc_range(MRI->use_instructions(AddDstReg))) {
+      MachineOperand &MO = UseMI.getOperand(2);
+      MO.ChangeToGA(ImmOp.getGlobal(), ImmOp.getOffset(), RISCVII::MO_REGREL_LO);
+    }
+  }
+
+  // Prevent Lo (originally PseudoMovAddr, which is also pointed by Hi) from
+  // being erased
+  if (&Lo == &Hi)
+    return true;
+
+  MRI->replaceRegWith(Lo.getOperand(0).getReg(), Hi.getOperand(0).getReg());
+  Lo.eraseFromParent();
+  return true;
+}
+
 bool RISCVMergeBaseOffsetOpt::runOnMachineFunction(MachineFunction &Fn) {
   if (skipFunction(Fn.getFunction()))
     return false;
@@ -787,6 +1042,10 @@ bool RISCVMergeBaseOffsetOpt::runOnMachineFunction(MachineFunction &Fn) {
       MadeChange |= detectAndFoldOffset(Hi, *Lo);
       MadeChange |= foldIntoMemoryOps(Hi, *Lo);
       MadeChange |= foldShxaddIntoScaledMemory(Hi, *Lo);
+      // Non-constant addressing of global array subscripts, which can be
+      // increase the optimization scenarios of gp-relax
+      if (Hi.getOpcode() != RISCV::AUIPC && Hi.getOperand(1).isGlobal() && Lo)
+        MadeChange |= foldGPIntoMemoryOps(Hi, *Lo);
     }
   }
 

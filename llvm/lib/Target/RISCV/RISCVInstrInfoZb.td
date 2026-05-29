@@ -258,6 +258,23 @@ class RVBShift_ri<bits<5> imm11_7, bits<3> funct3, RISCVOpcode opcode,
                    (ins GPR:$rs1, uimmlog2xlen:$shamt), opcodestr,
                    "$rd, $rs1, $shamt">;
 
+// This is a special case of the SH1ADD/SH2ADD/SH3ADD instruction used to
+// facilitate the use of a fourth operand to emit a relocation on a symbol
+// relating to this instruction. The relocation does not affect any bits of the
+// instruction itself but is used as a hint to the linker.
+let Predicates = [HasStdExtZba] in {
+  def PseudoSh1AddREGRel : PseudoREGRel<"sh1add">;
+  def PseudoSh2AddREGRel : PseudoREGRel<"sh2add">;
+  def PseudoSh3AddREGRel : PseudoREGRel<"sh3add">;
+}
+
+let Predicates = [HasStdExtZba, IsRV64] in {
+  def PseudoAddUWREGRel : PseudoREGRel<"add.uw">;
+  def PseudoSh1AddUWREGRel : PseudoREGRel<"sh1add.uw">;
+  def PseudoSh2AddUWREGRel : PseudoREGRel<"sh2add.uw">;
+  def PseudoSh3AddUWREGRel : PseudoREGRel<"sh3add.uw">;
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//

@@ -14,9 +14,8 @@ define void @indirctbr(i32 %i, ptr %p) {
 ; RV32-NEXT:    lpad 0
 ; RV32-NEXT:    slli a0, a0, 2
 ; RV32-NEXT:    lui a2, %hi(.L__const.indirctbr.addr)
-; RV32-NEXT:    addi a2, a2, %lo(.L__const.indirctbr.addr)
-; RV32-NEXT:    add a0, a2, a0
-; RV32-NEXT:    lw a0, 0(a0)
+; RV32-NEXT:    add a0, a0, a2, %regrel_add(.L__const.indirctbr.addr)
+; RV32-NEXT:    lw a0, %regrel_lo(.L__const.indirctbr.addr)(a0)
 ; RV32-NEXT:    jr a0
 ; RV32-NEXT:    .p2align 2
 ; RV32-NEXT:  .Ltmp3: # Block address taken
@@ -38,9 +37,8 @@ define void @indirctbr(i32 %i, ptr %p) {
 ; RV64-NEXT:    sext.w a0, a0
 ; RV64-NEXT:    slli a0, a0, 3
 ; RV64-NEXT:    lui a2, %hi(.L__const.indirctbr.addr)
-; RV64-NEXT:    addi a2, a2, %lo(.L__const.indirctbr.addr)
-; RV64-NEXT:    add a0, a2, a0
-; RV64-NEXT:    ld a0, 0(a0)
+; RV64-NEXT:    add a0, a0, a2, %regrel_add(.L__const.indirctbr.addr)
+; RV64-NEXT:    ld a0, %regrel_lo(.L__const.indirctbr.addr)(a0)
 ; RV64-NEXT:    jr a0
 ; RV64-NEXT:    .p2align 2
 ; RV64-NEXT:  .Ltmp3: # Block address taken
@@ -61,9 +59,8 @@ define void @indirctbr(i32 %i, ptr %p) {
 ; FIXED-ONE-RV32-NEXT:    lpad 1
 ; FIXED-ONE-RV32-NEXT:    slli a0, a0, 2
 ; FIXED-ONE-RV32-NEXT:    lui a2, %hi(.L__const.indirctbr.addr)
-; FIXED-ONE-RV32-NEXT:    addi a2, a2, %lo(.L__const.indirctbr.addr)
-; FIXED-ONE-RV32-NEXT:    add a0, a2, a0
-; FIXED-ONE-RV32-NEXT:    lw a0, 0(a0)
+; FIXED-ONE-RV32-NEXT:    add a0, a0, a2, %regrel_add(.L__const.indirctbr.addr)
+; FIXED-ONE-RV32-NEXT:    lw a0, %regrel_lo(.L__const.indirctbr.addr)(a0)
 ; FIXED-ONE-RV32-NEXT:    lui t2, 1
 ; FIXED-ONE-RV32-NEXT:    jr a0
 ; FIXED-ONE-RV32-NEXT:    .p2align 2
@@ -86,9 +83,8 @@ define void @indirctbr(i32 %i, ptr %p) {
 ; FIXED-ONE-RV64-NEXT:    sext.w a0, a0
 ; FIXED-ONE-RV64-NEXT:    slli a0, a0, 3
 ; FIXED-ONE-RV64-NEXT:    lui a2, %hi(.L__const.indirctbr.addr)
-; FIXED-ONE-RV64-NEXT:    addi a2, a2, %lo(.L__const.indirctbr.addr)
-; FIXED-ONE-RV64-NEXT:    add a0, a2, a0
-; FIXED-ONE-RV64-NEXT:    ld a0, 0(a0)
+; FIXED-ONE-RV64-NEXT:    add a0, a0, a2, %regrel_add(.L__const.indirctbr.addr)
+; FIXED-ONE-RV64-NEXT:    ld a0, %regrel_lo(.L__const.indirctbr.addr)(a0)
 ; FIXED-ONE-RV64-NEXT:    lui t2, 1
 ; FIXED-ONE-RV64-NEXT:    jr a0
 ; FIXED-ONE-RV64-NEXT:    .p2align 2

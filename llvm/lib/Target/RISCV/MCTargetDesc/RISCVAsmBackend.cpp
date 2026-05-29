@@ -77,6 +77,9 @@ MCFixupKindInfo RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_lo12_i", 20, 12, 0},
       {"fixup_riscv_12_i", 20, 12, 0},
       {"fixup_riscv_lo12_s", 0, 32, 0},
+      {"fixup_riscv_regrel_lo12_i", 20, 12, 0},
+      {"fixup_riscv_regrel_lo12_s", 0, 32, 0},
+      {"fixup_riscv_regrel_add", 0, 0, 0},
       {"fixup_riscv_pcrel_hi20", 12, 20, 0},
       {"fixup_riscv_pcrel_lo12_i", 20, 12, 0},
       {"fixup_riscv_pcrel_lo12_s", 0, 32, 0},
@@ -512,6 +515,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case FK_Data_leb128:
     return Value;
   case RISCV::fixup_riscv_lo12_i:
+  case RISCV::fixup_riscv_regrel_lo12_i:
   case RISCV::fixup_riscv_pcrel_lo12_i:
     return Value & 0xfff;
   case RISCV::fixup_riscv_12_i:
@@ -521,6 +525,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     }
     return Value & 0xfff;
   case RISCV::fixup_riscv_lo12_s:
+  case RISCV::fixup_riscv_regrel_lo12_s:
   case RISCV::fixup_riscv_pcrel_lo12_s:
     return (((Value >> 5) & 0x7f) << 25) | ((Value & 0x1f) << 7);
   case RISCV::fixup_riscv_hi20:

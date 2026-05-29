@@ -476,6 +476,19 @@ def tprel_add_symbol : Operand<XLenVT> {
   let ParserMatchClass = TPRelAddSymbol;
 }
 
+def REGRelAddSymbol : AsmOperandClass {
+  let Name = "REGRelAddSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidREGRelAddSymbol";
+  let DiagnosticString = "operand must be a symbol with %regrel_add specifier";
+  let ParserMethod = "parseOperandWithSpecifier";
+}
+
+// A symbol with the %regrel_add variant.
+def regrel_add_symbol : Operand<XLenVT> {
+  let ParserMatchClass = REGRelAddSymbol;
+}
+
 def CSRSystemRegister : AsmOperandClass {
   let Name = "CSRSystemRegister";
   let ParserMethod = "parseCSRSystemRegister";
@@ -1537,6 +1550,12 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0 in
 def PseudoAddTPRel : Pseudo<(outs GPR:$rd),
                             (ins GPR:$rs1, GPR:$rs2, tprel_add_symbol:$src), [],
                             "add", "$rd, $rs1, $rs2, $src">;
+
+// This is a special case of the ADD instruction used to facilitate the use of a
+// fourth operand to emit a relocation on a symbol relating to this instruction.
+// The relocation does not affect any bits of the instruction itself but is used
+// as a hint to the linker.
+def PseudoAddREGRel : PseudoREGRel<"add">;
 
 /// FrameIndex calculations
 
