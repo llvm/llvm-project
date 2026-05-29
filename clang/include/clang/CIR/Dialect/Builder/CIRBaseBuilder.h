@@ -513,6 +513,15 @@ public:
     return createCast(src.getLoc(), kind, src, newTy);
   }
 
+  // Creates a cast from bool or int to an integer type.
+  mlir::Value createBoolIntToIntCast(mlir::Value src, mlir::Type newTy) {
+    if (newTy == src.getType())
+      return src;
+    if (src.getType() == getBoolTy())
+      return createBoolToInt(src, newTy);
+    return createIntCast(src, newTy);
+  }
+
   mlir::Value createIntCast(mlir::Value src, mlir::Type newTy) {
     return createCast(cir::CastKind::integral, src, newTy);
   }
