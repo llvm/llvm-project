@@ -404,7 +404,6 @@ struct VOP3CDPPAsmOnlyInfo {
 struct VOPDComponentInfo {
   uint16_t BaseVOP;
   uint16_t VOPDOp;
-  bool CanBeVOPDX;
 };
 
 struct VOPDInfo {
@@ -663,22 +662,37 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
   llvm_unreachable("Subtarget generation does not support VOPD!");
 }
 
+static constexpr unsigned getVOPDXYKey(unsigned VOPDOp, unsigned Subtarget,
+                                       bool VOPD3) {
+  return (VOPDOp << 5) | (Subtarget << 1) | (VOPD3 ? 1u : 0u);
+}
+
+// TODO: Ideally, the table should be emitted by the TableGen backend, however
+// this is currently not supported, so the direct lookup table is generated
+// manually here.
+constexpr unsigned VOPDXYKeyBits = 11;
+static constexpr std::array<CanBeVOPD, 1 << VOPDXYKeyBits> buildVOPDXYLookup() {
+  std::array<CanBeVOPD, 1 << VOPDXYKeyBits> Table{};
+  for (auto &E : Table)
+    E = {false, false};
+  for (const auto &E : VOPDXTable)
+    Table[getVOPDXYKey(E.VOPDOp, E.Subtarget, E.VOPD3)].X = true;
+  for (const auto &E : VOPDYTable)
+    Table[getVOPDXYKey(E.VOPDOp, E.Subtarget, E.VOPD3)].Y = true;
+  return Table;
+}
+
+constexpr auto VOPDXYLookup = buildVOPDXYLookup();
+
 CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(Opc) : 0;
   Opc = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : Opc;
-  // Normalize through VOPDComponentTable so that e32, e64 and e64_dpp variants
+  // Normalize through VOPDComponentTable so that e32 and e64 variants
   // of the same logical opcode all share a single entry.
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   if (!Info)
     return {false, false};
-  if (VOPD3) {
-    return {canBeVOPDX(Info->VOPDOp, EncodingFamily, true) != nullptr,
-            canBeVOPDY(Info->VOPDOp, EncodingFamily, true) != nullptr};
-  }
-  // VOPDX eligibility is encoding-family-independent for non-VOPD3, so re-use
-  // information in Info.
-  return {Info->CanBeVOPDX,
-          canBeVOPDY(Info->VOPDOp, EncodingFamily, false) != nullptr};
+  return VOPDXYLookup[getVOPDXYKey(Info->VOPDOp, EncodingFamily, VOPD3)];
 }
 
 unsigned getVOPDOpcode(unsigned Opc, bool VOPD3) {
