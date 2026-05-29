@@ -19,7 +19,8 @@ void test() {
   int p = 0;
   double q = 0;
   float s = 0;
-  kernel_single_task<class KN<1>>( // expected-note {{requested here}}
+  // expected-note-re@+1 {{in instantiation of function template specialization 'kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+  kernel_single_task<class KN<1>>(
       [ // expected-note2{{within field of type}}
           // expected-error@+1 {{'int &' cannot be used as the type of a kernel parameter}}
           &p, q,
@@ -44,13 +45,15 @@ void test() {
   auto L = [&]() { (void)p;}; // expected-error {{'int &' cannot be used as the type of a kernel parameter}}
                                // expected-note@-1 {{within field of type}}
   S Str {p, p};
-  kernel_single_task<class KN<2>>( // expected-note {{requested here}}
+  // expected-note-re@+1 {{in instantiation of function template specialization 'kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+  kernel_single_task<class KN<2>>(
       [=] { // expected-note 2{{within field of type}}
         (void)L;
         (void)Str;
       });
 
-  kernel_single_task<class KN<3>>( // expected-note {{requested here}}
+  // expected-note-re@+1 {{in instantiation of function template specialization 'kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+  kernel_single_task<class KN<3>>(
      [=] { // // expected-note {{within field of type}}
        (void)Str;
      });
@@ -72,17 +75,20 @@ void test(int AS) {
   int p = 0;
   S Str {p, p};
   S arr[2] = {Str, Str};
-  kernel_single_task<class KN<4>>( // expected-note {{requested here}}
+  // expected-note-re@+1 {{in instantiation of function template specialization 'kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+  kernel_single_task<class KN<4>>(
       [=] { // expected-note {{within field of type}}
         (void)arr;
       });
   int arr1[AS];
-  kernel_single_task<class KN<5>>( // expected-note {{requested here}}
+  // expected-note-re@+1 {{in instantiation of function template specialization 'kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+  kernel_single_task<class KN<5>>(
       [&] { // expected-note {{within field of type}}
         (void)arr1; // expected-error {{'int (&)[AS]' cannot be used as the type of a kernel parameter}}
       });
   int arrayints[5] = {0};
-  kernel_single_task<class KN<7>>( // expected-note {{requested here}}
+  // expected-note-re@+1 {{in instantiation of function template specialization 'kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+  kernel_single_task<class KN<7>>(
       [&] { // expected-note {{within field of type}}
         fooarr(arrayints); // expected-error {{'int (&)[5]' cannot be used as the type of a kernel parameter}}
       });
@@ -113,10 +119,13 @@ public:
 
 void test(int AS) {
   int p = 0;
-  kernel_single_task<class KN<8>>(Callable<int&>{p}); // expected-note {{requested here}}
+  kernel_single_task<class KN<8>>(Callable<int&>{p});
+  // expected-note-re@-1 {{in instantiation of function template specialization 'kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
   kernel_single_task<class KN<9>>(Callable<int>{p});
-  kernel_single_task<class KN<10>>(Derived1{p, p}); // expected-note {{requested here}}
-  kernel_single_task<class KN<11>>(Derived2{p, p}); // expected-note {{requested here}}
+  kernel_single_task<class KN<10>>(Derived1{p, p});
+  // expected-note-re@-1 {{in instantiation of function template specialization 'kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+  kernel_single_task<class KN<11>>(Derived2{p, p});
+  // expected-note-re@-1 {{in instantiation of function template specialization 'kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
 }
 
 } // namespace badref4
@@ -139,7 +148,8 @@ public:
 
 void test() {
   int p = 0;
-  kernel_single_task<class KN<12>>(Derived{p}); // expected-note {{requested here}}
+  kernel_single_task<class KN<12>>(Derived{p});
+  // expected-note-re@-1 {{in instantiation of function template specialization 'kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
 }
 } // namespace badref5
 
@@ -154,7 +164,7 @@ void test() {
   S s {a};
   kernel_single_task<class KN<13>>([&] { (void)s; });
   // expected-error@-1 {{'S &' cannot be used as the type of a kernel parameter}}
-  // expected-note-re@-2 {{in instantiation of function template specialization 'kernel_single_task<KN<13>, (lambda at {{.*}} requested here}}
+  // expected-note-re@-2 {{in instantiation of function template specialization 'kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
   // expected-note-re@-3 {{within field of type '(lambda at {{.*}} declared here}}
 }
 
