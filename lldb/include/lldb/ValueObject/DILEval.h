@@ -24,7 +24,7 @@ namespace lldb_private::dil {
 /// the relevant information about that object (for DIL parsing and
 /// evaluating).
 lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
-                                     std::shared_ptr<StackFrame> frame_sp,
+                                     StackFrame &frame_sp,
                                      lldb::DynamicValueType use_dynamic);
 
 /// Given the name of an identifier, check to see if it matches the name of a
@@ -32,7 +32,7 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
 /// create and return an IdentifierInfo object containing all the relevant
 /// information about it.
 lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
-                                           std::shared_ptr<StackFrame> frame_sp,
+                                           StackFrame &frame_sp,
                                            lldb::TargetSP target_sp,
                                            lldb::DynamicValueType use_dynamic);
 
@@ -127,8 +127,7 @@ private:
   EvaluateBinaryRemainder(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                           uint32_t location);
   llvm::Expected<CompilerType>
-  PickIntegerType(lldb::TypeSystemSP type_system,
-                  std::shared_ptr<ExecutionContextScope> ctx,
+  PickIntegerType(lldb::TypeSystemSP type_system, ExecutionContextScope &ctx,
                   const IntegerLiteralNode &literal);
 
   llvm::Expected<lldb::ValueObjectSP>
