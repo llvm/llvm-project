@@ -1324,10 +1324,10 @@ documentation.
 
 Sample packet/response:
 ```
-send packet: $qfProcessInfo#00
-read packet: $pid:60001;ppid:59948;uid:7746;gid:11;euid:7746;egid:11;name:6c6c6462;triple:x86_64-apple-macosx;#00
-send packet: $qsProcessInfo#00
-read packet: $pid:59992;ppid:192;uid:7746;gid:11;euid:7746;egid:11;name:6d64776f726b6572;triple:x86_64-apple-macosx;#00
+send packet: $qfProcessInfo:name_match:contains;name:656d616373;all_users:0;#21
+read packet: $pid:4086;ppid:2681;uid:1000;gid:1000;euid:1000;egid:1000;name:2f7573722f62696e2f656d6163732d67746b;args:656d616373-2d2d6461656d6f6e;triple:7838365f36342d2d6c696e75782d676e75;#07
+send packet: $qsProcessInfo#4f
+read packet: $pid:146456;ppid:1;uid:1000;gid:1000;euid:1000;egid:1000;name:2f7573722f62696e2f656d6163732d67746b;args:2f7573722f62696e2f656d616373;triple:7838365f36342d2d6c696e75782d676e75;#e2
 send packet: $qsProcessInfo#00
 read packet: $E04#00
 send packet: $qfProcessInfo:name_match:contains;name:616263;all_users:0;triple:arm64-unknown-linux-gnu;#da
