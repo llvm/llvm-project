@@ -2174,6 +2174,29 @@ public:
                                                         LParenLoc, EndLoc);
   }
 
+  /// Build a new OpenMP 'graph_id' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPGraphIdClause(Expr *Condition, SourceLocation StartLoc,
+                                     SourceLocation LParenLoc,
+                                     SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPGraphIdClause(Condition, StartLoc,
+                                                       LParenLoc, EndLoc);
+  }
+
+  /// Build a new OpenMP 'graph_reset' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPGraphResetClause(Expr *Condition,
+                                        SourceLocation StartLoc,
+                                        SourceLocation LParenLoc,
+                                        SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPGraphResetClause(Condition, StartLoc,
+                                                          LParenLoc, EndLoc);
+  }
+
   /// Build a new OpenMP 'grainsize' clause.
   ///
   /// By default, performs semantic analysis to build the new statement.
@@ -11608,6 +11631,26 @@ TreeTransform<Derived>::TransformOMPPriorityClause(OMPPriorityClause *C) {
     return nullptr;
   return getDerived().RebuildOMPPriorityClause(
       E.get(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPGraphIdClause(OMPGraphIdClause *C) {
+  ExprResult Cond = getDerived().TransformExpr(C->getId());
+  if (Cond.isInvalid())
+    return nullptr;
+  return getDerived().RebuildOMPGraphIdClause(
+      Cond.get(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPGraphResetClause(OMPGraphResetClause *C) {
+  ExprResult Cond = getDerived().TransformExpr(C->getCondition());
+  if (Cond.isInvalid())
+    return nullptr;
+  return getDerived().RebuildOMPGraphResetClause(
+      Cond.get(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
