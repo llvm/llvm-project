@@ -121,13 +121,8 @@ if (LLVM_INCLUDE_EXAMPLES)
 endif ()
 
 if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT FLANG_STANDALONE_BUILD)
-  # For intrinsic module files (in flang-rt/)
-  list(APPEND FLANG_TEST_DEPENDS "flang-rt-mod")
-
-  if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
-    # For omplib.mod and omplib_kinds.mod (in openmp/)
-    list(APPEND FLANG_TEST_DEPENDS "libomp-mod")
-  endif ()
+  # Flang tests need runtimes module files (flang-rt-mod, libomp-mod, etc.).
+  set_property(GLOBAL APPEND PROPERTY LLVM_TEST_DEPENDS_ON_RUNTIMES check-flang)
 endif ()
 
 add_custom_target(flang-test-depends DEPENDS ${FLANG_TEST_DEPENDS})
