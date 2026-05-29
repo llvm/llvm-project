@@ -682,6 +682,11 @@ int main(int argc, char **argv, char * const *envp) {
     // Run static destructors.
     EE->runStaticConstructorsDestructors(true);
 
+    // Normally, the streams are flushed by `exti()`. In rare cases, we fail to
+    // find the correct instance of it, and the printed but not yet flushed
+    // content is lost. Flush the streams in advance, just in case.
+    fflush(nullptr);
+
     // If the program didn't call exit explicitly, we should call it now.
     // This ensures that any atexit handlers get called correctly.
     if (Function *ExitF =
