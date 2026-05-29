@@ -1200,7 +1200,9 @@ ConstantFP::ConstantFP(Type *Ty, const APFloat &V)
     : ConstantData(Ty, ConstantFPVal), Val(V) {
   assert(&V.getSemantics() == &Ty->getScalarType()->getFltSemantics() &&
          "FP type Mismatch");
-  if (V.isExactlyValue(+0.0))
+  // ppc_fp128 determine isZero using high order double only
+  // so check the bitwise value to make sure all bits are zero.
+  if (V.bitcastToAPInt().isZero())
     SubclassOptionalData = IsNullValue;
 }
 
