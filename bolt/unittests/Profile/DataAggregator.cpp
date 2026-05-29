@@ -48,8 +48,8 @@ protected:
     DataAggregator DA("<pseudo input>");
     DA.BC = BC.get();
     DA.setParsingBuffer(Input);
-    std::error_code EC = DA.parsePreAggregatedLBRSamples();
-    ASSERT_FALSE(EC);
+    Error E = DA.parsePreAggregatedLBRSamples();
+    ASSERT_FALSE(E) << toString(std::move(E));
     Result = std::move(DA.Traces);
   }
 
