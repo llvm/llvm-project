@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// The XiangShan is a high-performance open-source RISC-V processor project 
-// initiated by the Institute of Computing Technology(ICT), 
-// Chinese Academy of Sciences(CAS). 
-// The KunMingHu architecture is its third-generation derivative, 
-// developed by the Institute of Computing Technology(ICT), 
-// Chinese Academy of Sciences(CAS) 
-// and the Beijing Institute of Open Source Chip (BOSC), 
+// The XiangShan is a high-performance open-source RISC-V processor project
+// initiated by the Institute of Computing Technology(ICT),
+// Chinese Academy of Sciences(CAS).
+// The KunMingHu architecture is its third-generation derivative,
+// developed by the Institute of Computing Technology(ICT),
+// Chinese Academy of Sciences(CAS)
+// and the Beijing Institute of Open Source Chip (BOSC),
 // with a focus on achieving higher performance.
 // Source: https://github.com/OpenXiangShan/XiangShan
 // Documentation: https://docs.xiangshan.cc/projects/design/en/latest/
@@ -27,7 +27,7 @@ def XiangShanKunMingHuModel : SchedMachineModel {
   let LoadLatency = 4;
   let MispredictPenalty = 13; // Based on estimate of pipeline depth.
   let CompleteModel = 0;
-  let UnsupportedFeatures = [HasStdExtZcmt, HasStdExtZkr, 
+  let UnsupportedFeatures = [HasStdExtZcmt, HasStdExtZkr,
                              HasVInstructions,
                              HasVInstructionsI64];
 }
@@ -43,22 +43,22 @@ def XSPipeALU3 : ProcResource<1>; // ALU
 
 def XSPipeBJU0 : ProcResource<1>; // BRU, JMP
 def XSPipeBJU1 : ProcResource<1>; // BRU, JMP
-def XSPipeBJU2 : ProcResource<1>; // BRU, JMP, I2F, I2V, VSet
+def XSPipeBJU2 : ProcResource<1>; // BRU, JMP, I2F, VSet
 def XSPipeBJU3 : ProcResource<1>; // CSR, Fence, DIV
 
 // Floating-point execution units
-def XSPipeFEX0 : ProcResource<1>; // FALU, FMA, FCVT, F2V
+def XSPipeFEX0 : ProcResource<1>; // FALU, FMA, FCVT
 def XSPipeFEX1 : ProcResource<1>; // FDIV
 def XSPipeFEX2 : ProcResource<1>; // FALU, FMA
 def XSPipeFEX3 : ProcResource<1>; // FDIV
 def XSPipeFEX4 : ProcResource<1>; // FALU, FMA
 
 // Parent groups containing all resources to satisfy TableGen overlap rules
-def XSPipeGroupInt : ProcResGroup<[XSPipeALU0, XSPipeALU1, 
+def XSPipeGroupInt : ProcResGroup<[XSPipeALU0, XSPipeALU1,
                                    XSPipeALU2, XSPipeALU3,
-                                   XSPipeBJU0, XSPipeBJU1, 
+                                   XSPipeBJU0, XSPipeBJU1,
                                    XSPipeBJU2, XSPipeBJU3]>;
-def XSPipeGroupFP  : ProcResGroup<[XSPipeFEX0, XSPipeFEX1, 
+def XSPipeGroupFP  : ProcResGroup<[XSPipeFEX0, XSPipeFEX1,
                                    XSPipeFEX2, XSPipeFEX3, XSPipeFEX4]>;
 
 // Issue Queue groups with BufferSize for llvm-mca buffer tracking
@@ -87,7 +87,7 @@ let BufferSize = 16 in
 def XSPipeMemIQ : ProcResGroup<[XSPipeLDU, XSPipeSTA, XSPipeSTD]>;
 
 // Instruction dispatch groups for scheduling
-def XSPipeGroupALU : ProcResGroup<[XSPipeALU0, XSPipeALU1, XSPipeALU2, 
+def XSPipeGroupALU : ProcResGroup<[XSPipeALU0, XSPipeALU1, XSPipeALU2,
                                    XSPipeALU3]>;
 def XSPipeGroupMUL : ProcResGroup<[XSPipeALU0, XSPipeALU1]>;
 def XSPipeGroupBKU : ProcResGroup<[XSPipeALU0, XSPipeALU1]>;
@@ -227,7 +227,7 @@ let Latency = 3 in {
   def : WriteRes<WriteFCvtF32ToF64, [XSPipeFEX0]>;
   def : WriteRes<WriteFCvtF64ToF16, [XSPipeFEX0]>;
   def : WriteRes<WriteFCvtF64ToF32, [XSPipeFEX0]>;
-  
+
   // FCVT (I2F)
   def : WriteRes<WriteFCvtI32ToF16, [XSPipeBJU2]>;
   def : WriteRes<WriteFCvtI32ToF32, [XSPipeBJU2]>;
