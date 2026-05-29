@@ -1914,10 +1914,11 @@ bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM,
     return AM.BaseOffs == 0 && AM.Scale == 0;
   }
 
-  decltype(SIInstrFlags::FLAT) FlatVariant =
-      AddrSpace == AMDGPUAS::GLOBAL_ADDRESS    ? SIInstrFlags::FlatGlobal
-      : AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ? SIInstrFlags::FlatScratch
-                                               : SIInstrFlags::FLAT;
+  using AMDGPU::FlatVariant;
+  FlatVariant FlatVariant =
+      AddrSpace == AMDGPUAS::GLOBAL_ADDRESS    ? FlatVariant::FlatGlobal
+      : AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ? FlatVariant::FlatScratch
+                                               : FlatVariant::FLAT;
 
   return AM.Scale == 0 &&
          (AM.BaseOffs == 0 || Subtarget->getInstrInfo()->isLegalFLATOffset(
