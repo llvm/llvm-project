@@ -135,4 +135,8 @@ LOCAL_LABEL(return_zero):
 
 END_COMPILERRT_FUNCTION(__aeabi_f2lz)
 
+#if defined(__MINGW32__)
+DEFINE_COMPILERRT_FUNCTION_ALIAS(__stoi64, __fixsfdi)
+#endif
+
 NO_EXEC_STACK_DIRECTIVE
