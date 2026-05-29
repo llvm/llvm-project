@@ -25,9 +25,9 @@ void tmpl(T t) {}
   // CHECK-DAG: [[LOC:%[a-zA-Z0-9]+]] = alloca ptr addrspace(3)
   __attribute__((sycl_private)) int *PRIV;
   // CHECK-DAG: [[PRIV:%[a-zA-Z0-9]+]] = alloca ptr
-  __attribute__((opencl_global_device)) int *GLOBDEVICE;
+  __attribute__((sycl_global_device)) int *GLOBDEVICE;
   // CHECK-DAG: [[GLOB_DEVICE:%[a-zA-Z0-9]+]] = alloca ptr addrspace(5)
-  __attribute__((opencl_global_host)) int *GLOBHOST;
+  __attribute__((sycl_global_host)) int *GLOBHOST;
   // CHECK-DAG: [[GLOB_HOST:%[a-zA-Z0-9]+]] = alloca ptr addrspace(6)
 
   // CHECK-DAG: [[NoAS]].ascast = addrspacecast ptr [[NoAS]] to ptr addrspace(4)
@@ -66,7 +66,7 @@ void tmpl(T t) {}
   // CHECK-DAG: [[NoAS_CAST:%[a-zA-Z0-9]+]] = addrspacecast ptr addrspace(4) [[NoAS_LOAD]] to ptr
   // CHECK-DAG: store ptr [[NoAS_CAST]], ptr addrspace(4) [[PRIV]].ascast
   PRIV = (__attribute__((sycl_private)) int *)NoAS;
-  // From opencl_global_[host/device] address spaces to sycl_global
+  // From sycl_global_[host/device] address spaces to sycl_global
   // CHECK-DAG: [[GLOBDEVICE_LOAD:%[a-zA-Z0-9]+]] = load ptr addrspace(5), ptr addrspace(4) [[GLOB_DEVICE]].ascast
   // CHECK-DAG: [[GLOBDEVICE_CAST:%[a-zA-Z0-9]+]] = addrspacecast ptr addrspace(5) [[GLOBDEVICE_LOAD]] to ptr addrspace(1)
   // CHECK-DAG: store ptr addrspace(1) [[GLOBDEVICE_CAST]], ptr addrspace(4) [[GLOB]].ascast
