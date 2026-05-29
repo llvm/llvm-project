@@ -27,6 +27,7 @@
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaRISCV.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include <set>
@@ -3375,6 +3376,170 @@ void CastOperation::CheckCStyleCast() {
     checkCastAlign();
 }
 
+namespace {
+class BitCastBitClassifier {
+  const ASTContext &Ctx;
+
+  static void setRange(llvm::BitVector &BV, uint64_t Start, uint64_t Len) {
+    if (Len != 0)
+      BV.set(Start, Start + Len);
+  }
+
+public:
+  /// Bits in the value representation.
+  llvm::BitVector Value;
+  /// Bits enclosed by a union.
+  llvm::BitVector Union;
+  /// Bits enclosed by ``std::byte`` or unsigned ordinary character type.
+  llvm::BitVector ByteLike;
+
+  explicit BitCastBitClassifier(const ASTContext &Ctx) : Ctx(Ctx) {}
+
+  /// Classify the bits of \p T. Returns ``false`` if the type contains
+  /// constructs that this analysis does not model precisely (e.g.  bit-fields),
+  /// in which case the result is unusable.
+  [[nodiscard]] bool classify(QualType T) {
+    // TODO: Implement classification on big endian.
+    if (Ctx.getTargetInfo().isBigEndian())
+      return false;
+
+    uint64_t Bits = Ctx.getTypeSize(T);
+    Value.resize(Bits, false);
+    Union.resize(Bits, false);
+    ByteLike.resize(Bits, false);
+    return visit(T, 0);
+  }
+
+private:
+  [[nodiscard]] bool visit(QualType T, uint64_t StartBit) {
+    if (T.isNull() || T->isDependentType() || T->isFunctionType() ||
+        T->isReferenceType())
+      return false;
+
+    T = T.getCanonicalType().getUnqualifiedType();
+    uint64_t Bits = Ctx.getTypeSize(T);
+
+    // [bit.cast] permits casting padding to ``std::byte`` and to an unsigned
+    // ordinary character type.
+    {
+      QualType U = T;
+      bool IsByteLike = U->isStdByteType();
+      if (const auto *BT = U->getAs<BuiltinType>())
+        IsByteLike = BT->getKind() == BuiltinType::UChar ||
+                     BT->getKind() == BuiltinType::Char_U;
+      if (IsByteLike) {
+        setRange(Value, StartBit, Bits);
+        setRange(ByteLike, StartBit, Bits);
+        return true;
+      }
+    }
+
+    if (const auto *AT = T->getAs<AtomicType>())
+      return visit(AT->getValueType(), StartBit);
+
+    if (const auto *CAT = Ctx.getAsConstantArrayType(T)) {
+      QualType Elem = CAT->getElementType();
+      uint64_t ElemBits = Ctx.getTypeSize(Elem);
+      uint64_t N = CAT->getSize().getZExtValue();
+      for (uint64_t I = 0; I < N; ++I)
+        if (!visit(Elem, StartBit + I * ElemBits))
+          return false;
+      return true;
+    }
+
+    if (const auto *CT = T->getAs<ComplexType>()) {
+      QualType Elem = CT->getElementType();
+      uint64_t ElemBits = Ctx.getTypeSize(Elem);
+      return visit(Elem, StartBit) && visit(Elem, StartBit + ElemBits);
+    }
+
+    if (const auto *VT = T->getAs<VectorType>()) {
+      // Packed bool vectors store one bit per element, followd by padding.
+      if (T->isPackedVectorBoolType(Ctx)) {
+        setRange(Value, StartBit, Bits);
+        return true;
+      }
+      // Otherwise treat vectors as arrays of their element type.
+      QualType Elem = VT->getElementType();
+      uint64_t ElemBits = Ctx.getTypeSize(Elem);
+      for (unsigned I = 0; I < VT->getNumElements(); ++I)
+        if (!visit(Elem, StartBit + I * ElemBits))
+          return false;
+      return true;
+    }
+
+    if (const auto *RT = T->getAs<RecordType>()) {
+      const RecordDecl *RD = RT->getDecl();
+      if (!RD || !RD->getDefinition() || RD->isInvalidDecl())
+        return false;
+      RD = RD->getDefinition();
+
+      if (RD->isUnion()) {
+        setRange(Union, StartBit, Bits);
+        return true;
+      }
+
+      const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
+      if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+        for (const CXXBaseSpecifier &BS : CXXRD->bases()) {
+          const CXXRecordDecl *BD = BS.getType()->getAsCXXRecordDecl();
+          if (!BD)
+            return false;
+          uint64_t Off = Ctx.toBits(Layout.getBaseClassOffset(BD));
+          if (!visit(BS.getType(), StartBit + Off))
+            return false;
+        }
+      }
+
+      unsigned Idx = 0;
+      for (const FieldDecl *FD : RD->fields()) {
+        if (FD->isBitField())
+          // The value representation of a bit-field is a strict subset of
+          // its storage unit; skip rather than risk false positives.
+          return false;
+        uint64_t Off = Layout.getFieldOffset(Idx++);
+        if (!visit(FD->getType(), StartBit + Off))
+          return false;
+      }
+      return true;
+    }
+
+    if (const auto *BIT = T->getAs<BitIntType>())
+      setRange(Value, StartBit, BIT->getNumBits());
+    else if (T->isFloatingType())
+      setRange(Value, StartBit,
+               llvm::APFloat::getSizeInBits(Ctx.getFloatTypeSemantics(T)));
+    else
+      // We assume that any other scalar type is made entirely of value bits.
+      setRange(Value, StartBit, Bits);
+    return true;
+  }
+};
+
+/// Returns true if every input to a ``__builtin_bit_cast`` from \p SrcType to
+/// \p DestType maps at least one source padding bit onto a destination value
+/// bit.
+static bool IsDegenerateBitCast(const ASTContext &Ctx, QualType SrcType,
+                                QualType DestType) {
+  assert(SrcType.isTriviallyCopyableType(Ctx) &&
+         DestType.isTriviallyCopyableType(Ctx));
+
+  BitCastBitClassifier Src(Ctx);
+  BitCastBitClassifier Dst(Ctx);
+  if (!Src.classify(SrcType) || !Dst.classify(DestType))
+    return false;
+  assert(Src.Value.size() == Dst.Value.size() &&
+         "type sizes already checked to match");
+
+  for (unsigned I = 0; I < Src.Value.size(); ++I)
+    if (!Src.Value[I] && !Src.Union[I] && Dst.Value[I] && !Dst.Union[I] &&
+        !Dst.ByteLike[I])
+      return true;
+  return false;
+}
+
+} // namespace
+
 void CastOperation::CheckBuiltinBitCast() {
   QualType SrcType = SrcExpr.get()->getType();
 
@@ -3413,6 +3578,10 @@ void CastOperation::CheckBuiltinBitCast() {
     SrcExpr = ExprError();
     return;
   }
+
+  if (IsDegenerateBitCast(Self.Context, SrcType, DestType))
+    Self.Diag(OpRange.getBegin(), diag::warn_bit_cast_unconditional_padding_ub)
+        << SrcType << DestType;
 
   Kind = CK_LValueToRValueBitCast;
 }

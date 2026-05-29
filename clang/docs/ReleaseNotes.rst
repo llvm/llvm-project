@@ -456,6 +456,11 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Added ``-Wbit-cast-padding`` to diagnose uses of ``__builtin_bit_cast`` (and
+  therefore ``std::bit_cast``) where padding bits in the source map to
+  non-padding bits in the destination. Such a cast has undefined behavior for
+  every possible argument.
+
 - Fixed bug in ``-Wdocumentation`` so that it correctly handles explicit
   function template instantiations (#64087).
 

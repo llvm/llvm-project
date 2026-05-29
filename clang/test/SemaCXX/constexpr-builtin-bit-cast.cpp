@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -triple x86_64-apple-macosx10.14.0 %s
-// RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -triple x86_64-apple-macosx10.14.0 %s -fno-signed-char
-// RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -triple aarch64_be-linux-gnu %s
+// RUN: %clang_cc1 -verify=expected,le -std=c++2a -fsyntax-only -triple x86_64-apple-macosx10.14.0 %s
+// RUN: %clang_cc1 -verify=expected,le -std=c++2a -fsyntax-only -triple x86_64-apple-macosx10.14.0 %s -fno-signed-char
+// RUN: %clang_cc1 -verify=expected -std=c++2a -fsyntax-only -triple aarch64_be-linux-gnu %s
 
-// RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -triple x86_64-apple-macosx10.14.0 %s -fexperimental-new-constant-interpreter -DBYTECODE
-// RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -triple x86_64-apple-macosx10.14.0 %s -fno-signed-char -fexperimental-new-constant-interpreter -DBYTECODE
-// RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -triple aarch64_be-linux-gnu %s -fexperimental-new-constant-interpreter -DBYTECODE
+// RUN: %clang_cc1 -verify=expected,le -std=c++2a -fsyntax-only -triple x86_64-apple-macosx10.14.0 %s -fexperimental-new-constant-interpreter -DBYTECODE
+// RUN: %clang_cc1 -verify=expected,le -std=c++2a -fsyntax-only -triple x86_64-apple-macosx10.14.0 %s -fno-signed-char -fexperimental-new-constant-interpreter -DBYTECODE
+// RUN: %clang_cc1 -verify=expected -std=c++2a -fsyntax-only -triple aarch64_be-linux-gnu %s -fexperimental-new-constant-interpreter -DBYTECODE
 
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
@@ -28,9 +28,11 @@ static_assert(sizeof(long long) == 8);
 template <class To, class From>
 constexpr To bit_cast(const From &from) {
   static_assert(sizeof(To) == sizeof(From));
-  // expected-note@+9 {{cannot be represented in type 'bool'}}
+  // expected-note@+11 {{cannot be represented in type 'bool'}}
 #ifdef __x86_64
-  // expected-note@+7 {{or 'std::byte'; '__int128' is invalid}}
+  // expected-note@+9 {{or 'std::byte'; '__int128' is invalid}}
+  // expected-warning@+8 {{from 'const long double' to '__int128' is always undefined because it unconditionally maps a padding bit onto a non-padding bit}}
+  // expected-warning@+7 {{from 'const pad' to 'no_pad' is always undefined because it unconditionally maps a padding bit onto a non-padding bit}}
 #endif
 #ifdef __CHAR_UNSIGNED__
   // expected-note@+4 2 {{indeterminate value can only initialize an object of type 'unsigned char', 'char', or 'std::byte'; 'signed char' is invalid}}
@@ -125,6 +127,9 @@ void test_partially_initialized() {
   static_assert(sizeof(pad) == sizeof(no_pad));
 
   constexpr pad pir{4, 4};
+#ifdef __x86_64
+  // expected-note@+4 {{in instantiation of function template specialization 'bit_cast<no_pad, pad>' requested here}}
+#endif
   // expected-error@+2 {{constexpr variable 'piw' must be initialized by a constant expression}}
   // expected-note@+1 {{in call to 'bit_cast<no_pad, pad>(pir)'}}
   constexpr int piw = bit_cast<no_pad>(pir).x;
@@ -378,15 +383,17 @@ constexpr int ok_byte = (__builtin_bit_cast(std::byte[8], pad{1, 2}), 0);
 constexpr int ok_uchar = (__builtin_bit_cast(unsigned char[8], pad{1, 2}), 0);
 
 #ifdef __CHAR_UNSIGNED__
-// expected-note@+5 {{indeterminate value can only initialize an object of type 'unsigned char', 'char', or 'std::byte'; 'my_byte' is invalid}}}}
+// expected-note@+6 {{indeterminate value can only initialize an object of type 'unsigned char', 'char', or 'std::byte'; 'my_byte' is invalid}}}}
 #else
-// expected-note@+3 {{indeterminate value can only initialize an object of type 'unsigned char' or 'std::byte'; 'my_byte' is invalid}}
+// expected-note@+4 {{indeterminate value can only initialize an object of type 'unsigned char' or 'std::byte'; 'my_byte' is invalid}}
 #endif
-// expected-error@+1 {{constexpr variable 'bad_my_byte' must be initialized by a constant expression}}
+// expected-error@+2 {{constexpr variable 'bad_my_byte' must be initialized by a constant expression}}
+// le-warning@+1 {{is always undefined because it unconditionally maps a padding bit onto a non-padding bit}}
 constexpr int bad_my_byte = (__builtin_bit_cast(my_byte[8], pad{1, 2}), 0);
 #ifndef __CHAR_UNSIGNED__
-// expected-error@+3 {{constexpr variable 'bad_char' must be initialized by a constant expression}}
-// expected-note@+2 {{indeterminate value can only initialize an object of type 'unsigned char' or 'std::byte'; 'char' is invalid}}
+// expected-error@+4 {{constexpr variable 'bad_char' must be initialized by a constant expression}}
+// expected-note@+3 {{indeterminate value can only initialize an object of type 'unsigned char' or 'std::byte'; 'char' is invalid}}
+// le-warning@+2 {{is always undefined because it unconditionally maps a padding bit onto a non-padding bit}}
 #endif
 constexpr int bad_char =  (__builtin_bit_cast(char[8], pad{1, 2}), 0);
 
@@ -429,7 +436,9 @@ static_assert(round_trip<bool>((char)1), "");
 
 namespace test_long_double {
 #ifdef __x86_64
-constexpr __int128_t test_cast_to_int128 = bit_cast<__int128_t>((long double)0); // expected-error{{must be initialized by a constant expression}} expected-note{{in call}}
+constexpr __int128_t test_cast_to_int128 = bit_cast<__int128_t>((long double)0); // expected-error{{must be initialized by a constant expression}} \
+                                                                                 // expected-note{{in call}} \
+                                                                                 // expected-note{{in instantiation}}
 
 constexpr long double ld = 3.1425926539;
 

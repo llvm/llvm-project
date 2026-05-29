@@ -13417,6 +13417,10 @@ def err_bit_cast_non_trivially_copyable : Error<
   "'__builtin_bit_cast' %select{source|destination}0 type must be trivially copyable">;
 def err_bit_cast_type_size_mismatch : Error<
   "size of '__builtin_bit_cast' source type %0 does not match destination type %1 (%2 vs %3 bytes)">;
+def warn_bit_cast_unconditional_padding_ub : Warning<
+  "'__builtin_bit_cast' from %0 to %1 is always undefined "
+  "because it unconditionally maps a padding bit onto a non-padding bit">,
+  InGroup<DiagGroup<"bit-cast-padding">>;
 
 def err_get_vtable_pointer_incorrect_type
     : Error<"__builtin_get_vtable_pointer requires an argument of%select{| "

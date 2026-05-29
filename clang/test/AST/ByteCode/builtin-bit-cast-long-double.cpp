@@ -23,6 +23,7 @@ constexpr To bit_cast(const From &from) {
   return __builtin_bit_cast(To, from);
 #if __x86_64
   // both-note@-2 {{indeterminate value can only initialize an object of type}}
+  // both-warning@-3 {{is always undefined because it unconditionally maps a padding bit onto a non-padding bit}}
 #endif
 }
 
@@ -42,7 +43,8 @@ constexpr Init round_trip(const Init &init) {
 namespace test_long_double {
 #if __x86_64
 constexpr __int128_t test_cast_to_int128 = bit_cast<__int128_t>((long double)0); // both-error{{must be initialized by a constant expression}}\
-                                                                                 // both-note{{in call}}
+                                                                                 // both-note{{in call}}\
+                                                                                 // both-note{{in instantiation}}
 constexpr long double ld = 3.1425926539;
 
 struct bytes {
