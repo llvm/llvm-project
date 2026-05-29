@@ -4740,7 +4740,7 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
                                      const Loop *L) {
   static_assert(Opcode == Instruction::Load || Opcode == Instruction::Store,
                 "Only Load and Store opcodes supported");
-  constexpr bool IsLoad = (Opcode == Instruction::Load);
+  [[maybe_unused]] constexpr bool IsLoad = (Opcode == Instruction::Load);
 
   // For each address, collect operations with the same or complementary masks.
   SmallVector<SmallVector<VPReplicateRecipe *, 4>> AllGroups;
