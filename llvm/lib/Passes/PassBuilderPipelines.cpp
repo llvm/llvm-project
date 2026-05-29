@@ -2351,9 +2351,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
                /*AllowSpeculation=*/true),
       /*USeMemorySSA=*/true));
 
-  // Catch trivial redundancies
-  LateFPM.addPass(EarlyCSEPass(true /* Enable mem-ssa. */));
-
   // LoopSink pass sinks instructions hoisted by LICM, which serves as a
   // canonicalization pass that enables other optimizations. As a result,
   // LoopSink pass needs to be a very late IR pass to avoid undoing LICM
