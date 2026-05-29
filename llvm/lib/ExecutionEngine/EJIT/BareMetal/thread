@@ -1,0 +1,52 @@
+// Bare-metal <thread> — no-op for single-threaded environments.
+
+#ifndef BAREMETAL_THREAD_H
+#define BAREMETAL_THREAD_H
+
+#include <functional>
+#include <chrono>
+
+namespace std {
+
+class thread {
+public:
+  class id {
+  public:
+    id() = default;
+    bool operator==(id) const { return true; }
+    bool operator!=(id) const { return false; }
+  };
+
+  thread() = default;
+
+  template <typename Callable, typename... Args>
+  explicit thread(Callable &&, Args &&...) {
+    // no-op: bare-metal is single-threaded, never actually start a thread
+  }
+
+  ~thread() {}  // no-op: don't join or detach
+
+  thread(thread &&) = default;
+  thread &operator=(thread &&) = default;
+  thread(const thread &) = delete;
+  thread &operator=(const thread &) = delete;
+
+  bool joinable() const { return false; }
+  void join() {}
+  void detach() {}
+
+  id get_id() const { return id(); }
+
+  static unsigned hardware_concurrency() { return 1; }
+};
+
+namespace this_thread {
+
+inline void sleep_for(const chrono::microseconds &) {}
+inline void yield() {}
+inline thread::id get_id() { return thread::id(); }
+
+} // namespace this_thread
+} // namespace std
+
+#endif

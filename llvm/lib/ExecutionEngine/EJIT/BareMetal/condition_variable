@@ -1,0 +1,40 @@
+// Bare-metal <condition_variable> — no-op for single-threaded environments.
+
+#ifndef BAREMETAL_CONDITION_VARIABLE_H
+#define BAREMETAL_CONDITION_VARIABLE_H
+
+#include <chrono>
+#include <mutex>
+
+namespace std {
+
+class condition_variable {
+public:
+  condition_variable() = default;
+  condition_variable(const condition_variable &) = delete;
+  condition_variable &operator=(const condition_variable &) = delete;
+
+  void notify_one() {}
+  void notify_all() {}
+
+  template <typename Lock>
+  void wait(Lock &) {}
+
+  template <typename Lock, typename Predicate>
+  void wait(Lock &lock, Predicate) {}
+
+  template <typename Lock, typename Rep, typename Period>
+  std::cv_status wait_for(Lock &, const std::chrono::duration<Rep, Period> &) {
+    return std::cv_status::no_timeout;
+  }
+
+  template <typename Lock, typename Rep, typename Period, typename Predicate>
+  bool wait_for(Lock &lock, const std::chrono::duration<Rep, Period> &, Predicate p) {
+    return p();
+  }
+};
+
+enum class cv_status { no_timeout, timeout };
+
+} // namespace std
+#endif

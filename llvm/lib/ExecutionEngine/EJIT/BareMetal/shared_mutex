@@ -1,0 +1,55 @@
+// Bare-metal <shared_mutex> — no-op for single-threaded environments.
+// Injected via -isystem to override the toolchain's <shared_mutex>.
+
+#ifndef BAREMETAL_SHARED_MUTEX_H
+#define BAREMETAL_SHARED_MUTEX_H
+
+#include <mutex>
+
+namespace std {
+
+class shared_mutex {
+public:
+  shared_mutex() = default;
+  shared_mutex(const shared_mutex &) = delete;
+  shared_mutex &operator=(const shared_mutex &) = delete;
+  void lock() {}
+  void unlock() {}
+  bool try_lock() { return true; }
+  void lock_shared() {}
+  void unlock_shared() {}
+  bool try_lock_shared() { return true; }
+};
+
+template <typename Mutex>
+class shared_lock {
+public:
+  using mutex_type = Mutex;
+  shared_lock() : m_(nullptr), owns_(false) {}
+  explicit shared_lock(mutex_type &m) : m_(&m), owns_(true) { m_->lock_shared(); }
+  shared_lock(mutex_type &m, defer_lock_t) : m_(&m), owns_(false) {}
+  shared_lock(mutex_type &m, try_to_lock_t) : m_(&m), owns_(m.try_lock_shared()) {}
+  shared_lock(mutex_type &m, adopt_lock_t) : m_(&m), owns_(true) {}
+  ~shared_lock() { if (owns_) m_->unlock_shared(); }
+  shared_lock(shared_lock &&o) noexcept : m_(o.m_), owns_(o.owns_) { o.m_ = nullptr; o.owns_ = false; }
+  shared_lock &operator=(shared_lock &&o) noexcept {
+    if (owns_) m_->unlock_shared();
+    m_ = o.m_; owns_ = o.owns_; o.m_ = nullptr; o.owns_ = false;
+    return *this;
+  }
+  shared_lock(const shared_lock &) = delete;
+  shared_lock &operator=(const shared_lock &) = delete;
+  void lock() { m_->lock_shared(); owns_ = true; }
+  void unlock() { m_->unlock_shared(); owns_ = false; }
+  bool try_lock() { owns_ = m_->try_lock_shared(); return owns_; }
+  bool owns_lock() const { return owns_; }
+  explicit operator bool() const { return owns_; }
+  mutex_type *mutex() const { return m_; }
+  mutex_type *release() { auto *r = m_; m_ = nullptr; owns_ = false; return r; }
+private:
+  mutex_type *m_;
+  bool owns_;
+};
+
+} // namespace std
+#endif

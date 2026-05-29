@@ -1,0 +1,107 @@
+// Bare-metal <mutex> — no-op implementations for single-threaded environments.
+// Injected via -isystem to override the toolchain's <mutex> when unavailable.
+//
+// Provides: std::mutex, std::lock_guard, std::unique_lock, defer_lock_t & friends
+
+#ifndef BAREMETAL_MUTEX_H
+#define BAREMETAL_MUTEX_H
+
+#include <cstddef>
+
+namespace std {
+
+class mutex {
+public:
+  mutex() = default;
+  mutex(const mutex &) = delete;
+  mutex &operator=(const mutex &) = delete;
+
+  void lock() {}
+  void unlock() {}
+  bool try_lock() { return true; }
+
+  using native_handle_type = int;
+  native_handle_type native_handle() { return 0; }
+};
+
+// tag types (must come before lock_guard / unique_lock)
+struct defer_lock_t  { explicit defer_lock_t() = default; };
+struct try_to_lock_t { explicit try_to_lock_t() = default; };
+struct adopt_lock_t  { explicit adopt_lock_t() = default; };
+inline constexpr defer_lock_t  defer_lock{};
+inline constexpr try_to_lock_t try_to_lock{};
+inline constexpr adopt_lock_t  adopt_lock{};
+
+template <typename Mutex>
+class lock_guard {
+public:
+  using mutex_type = Mutex;
+  explicit lock_guard(mutex_type &m) : m_(m) { m_.lock(); }
+  lock_guard(mutex_type &m, adopt_lock_t) : m_(m) {}
+  ~lock_guard() { m_.unlock(); }
+  lock_guard(const lock_guard &) = delete;
+  lock_guard &operator=(const lock_guard &) = delete;
+private:
+  mutex_type &m_;
+};
+
+template <typename Mutex>
+class unique_lock {
+public:
+  using mutex_type = Mutex;
+  unique_lock() : m_(nullptr), owns_(false) {}
+  explicit unique_lock(mutex_type &m) : m_(&m), owns_(true) { m_->lock(); }
+  unique_lock(mutex_type &m, defer_lock_t) : m_(&m), owns_(false) {}
+  unique_lock(mutex_type &m, try_to_lock_t) : m_(&m), owns_(m.try_lock()) {}
+  unique_lock(mutex_type &m, adopt_lock_t) : m_(&m), owns_(true) {}
+  ~unique_lock() { if (owns_) m_->unlock(); }
+  unique_lock(unique_lock &&o) noexcept : m_(o.m_), owns_(o.owns_) { o.m_ = nullptr; o.owns_ = false; }
+  unique_lock &operator=(unique_lock &&o) noexcept {
+    if (owns_) m_->unlock();
+    m_ = o.m_; owns_ = o.owns_; o.m_ = nullptr; o.owns_ = false;
+    return *this;
+  }
+  unique_lock(const unique_lock &) = delete;
+  unique_lock &operator=(const unique_lock &) = delete;
+  void lock() { m_->lock(); owns_ = true; }
+  void unlock() { m_->unlock(); owns_ = false; }
+  bool try_lock() { owns_ = m_->try_lock(); return owns_; }
+  bool owns_lock() const { return owns_; }
+  explicit operator bool() const { return owns_; }
+  mutex_type *mutex() const { return m_; }
+  mutex_type *release() { auto *r = m_; m_ = nullptr; owns_ = false; return r; }
+private:
+  mutex_type *m_;
+  bool owns_;
+};
+
+// ── recursive_mutex ────────────────────────────────────────────────────────
+
+class recursive_mutex {
+public:
+  recursive_mutex() = default;
+  recursive_mutex(const recursive_mutex &) = delete;
+  recursive_mutex &operator=(const recursive_mutex &) = delete;
+  void lock() {}
+  void unlock() {}
+  bool try_lock() { return true; }
+};
+
+// ── once_flag / call_once ──────────────────────────────────────────────────
+
+struct once_flag {
+  constexpr once_flag() = default;
+  once_flag(const once_flag &) = delete;
+  once_flag &operator=(const once_flag &) = delete;
+
+  template <typename Callable, typename... Args>
+  friend void call_once(once_flag &flag, Callable &&f, Args &&...args);
+};
+
+template <typename Callable, typename... Args>
+void call_once(once_flag &, Callable &&f, Args &&...args) {
+  f(std::forward<Args>(args)...);
+}
+
+} // namespace std
+#endif
