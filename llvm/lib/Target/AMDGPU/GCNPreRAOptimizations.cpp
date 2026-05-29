@@ -265,13 +265,13 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
     struct MFMAInfo {
       SmallVector<Register, 4> Regs;
       unsigned InstrCount;
-      unsigned MFMALatency;
-      unsigned CumulativeLatencySinceThisMFMA;
+      unsigned FinishedOnCycle;
     };
 
     for (const MachineBasicBlock &MBB : MF) {
       SmallVector<MFMAInfo, 16> RecentMFMAs;
       unsigned InstrCount = 0;
+      unsigned CurrentCycle = 0;
 
       for (const MachineInstr &MI : MBB) {
         if (MI.isMetaInstruction())
@@ -306,9 +306,10 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
           // Collect destination and source C (accumulator) registers
           collectNamedOperand(AMDGPU::OpName::vdst, "vdst");
           collectNamedOperand(AMDGPU::OpName::src2, "src2");
+
           if (!MFMARegisters.empty()) {
-            RecentMFMAs.push_back(
-                {std::move(MFMARegisters), InstrCount, InstrLatency, 0u});
+            RecentMFMAs.push_back({std::move(MFMARegisters), InstrCount,
+                                   CurrentCycle + InstrLatency});
             // Maintain the lookback window
             while (!RecentMFMAs.empty() &&
                    (InstrCount - RecentMFMAs.front().InstrCount) >
@@ -324,8 +325,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
         // Skip non-relevant instructions, or skip until at least one MFMA is
         // encountered
         if (!ShouldCheckReuse || RecentMFMAs.empty()) {
-          for (MFMAInfo &M : RecentMFMAs)
-            M.CumulativeLatencySinceThisMFMA += InstrLatency;
+          CurrentCycle += InstrLatency;
           continue;
         }
 
@@ -349,9 +349,9 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
           LLVM_DEBUG(dbgs() << "\nAdding antihints for instruction: " << MI);
 
           for (MFMAInfo &MFMA : reverse(RecentMFMAs)) {
-            // To minimize anti-hint pressure we only add anti-hints if the
-            // cumulative latency since this MFMA is less than the MFMA latency
-            if (MFMA.CumulativeLatencySinceThisMFMA >= MFMA.MFMALatency)
+            // To minimize anti-hint pressure we add anti-hints while this
+            // MFMA is still in its latency window.
+            if (CurrentCycle >= MFMA.FinishedOnCycle)
               continue;
 
             // If the previous check has not triggered (e.g., consecutive
@@ -375,9 +375,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
             }
           }
         }
-        // Update cumulative latency
-        for (MFMAInfo &M : RecentMFMAs)
-          M.CumulativeLatencySinceThisMFMA += InstrLatency;
+        CurrentCycle += InstrLatency;
       }
     }
   }
