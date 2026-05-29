@@ -11,8 +11,12 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux-gnu %t/input.s -o %t.o
 # RUN: %clang %cflags -fPIC -pie %t.o -o %t.exe -nostdlib \
 # RUN:   -fuse-ld=lld -Wl,-q -Wl,-T,%t/linker-script -Wl,--fix-cortex-a53-843419
-# RUN: llvm-bolt %t.exe -o %t.bolt
+# RUN: not llvm-bolt %t.exe -o %t.noflag.bolt 2>&1 | FileCheck %s --check-prefix=NOFLAG
+# RUN: llvm-bolt %t.exe -o %t.bolt --drop-cortex-a53-843419-veneers
 # RUN: llvm-objdump -d %t.bolt | FileCheck %t/input.s
+
+# NOFLAG: BOLT-ERROR: binary contains Cortex-A53 erratum 843419 workaround veneers
+# NOFLAG: --drop-cortex-a53-843419-veneers
 
 #--- linker-script
 SECTIONS {

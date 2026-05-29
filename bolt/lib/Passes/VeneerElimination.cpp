@@ -24,6 +24,12 @@ static llvm::cl::opt<bool>
     EliminateVeneers("elim-link-veneers",
                      cl::desc("run veneer elimination pass"), cl::init(true),
                      cl::Hidden, cl::cat(BoltOptCategory));
+
+static llvm::cl::opt<bool> DropCortexA53843419Veneers(
+    "drop-cortex-a53-843419-veneers",
+    cl::desc("inline and drop Cortex-A53 erratum 843419 linker veneers; only "
+             "use if the BOLTed binary will not run on Cortex-A53"),
+    cl::init(false), cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace llvm {
@@ -48,6 +54,15 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
     // branch site instead of redirecting, so LongJmp do not introduce
     // code that clobbers registers (e.g. x16) used by the caller.
     if (BC.MIB->matchE843419Veneer(BF)) {
+      if (!opts::DropCortexA53843419Veneers) {
+        BC.errs() << "BOLT-ERROR: binary contains Cortex-A53 erratum 843419 "
+                     "workaround veneers; pass "
+                     "--drop-cortex-a53-843419-veneers only if the BOLTed "
+                     "binary will not run on Cortex-A53, or relink without "
+                     "--fix-cortex-a53-843419\n";
+        exit(1);
+      }
+
       const MCInst &VeneerFirstInstr = BF.front().getInstructionAtIndex(0);
       const MCSymbol *ReturnTargetSym =
           BC.MIB->getTargetSymbol(BF.front().getInstructionAtIndex(1));
