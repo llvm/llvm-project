@@ -91,11 +91,7 @@ llvm::Error PseudoConsole::CreateOverlappedPipePair(HANDLE &out_read,
   return llvm::Error::success();
 }
 
-PseudoConsole::~PseudoConsole() {
-  Close();
-  ClosePseudoConsolePipes();
-  CloseAnonymousPipes();
-}
+PseudoConsole::~PseudoConsole() { Reset(); }
 
 llvm::Error PseudoConsole::OpenPseudoConsole() {
   Reset();
