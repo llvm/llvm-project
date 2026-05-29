@@ -2466,13 +2466,13 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   DebugLoc DL = MI.getDebugLoc();
 
   if (MI.getOpcode() == AArch64::STACK_GUARD_UNMIX) {
-    // Expand STACK_GUARD_UNMIX to: sub Rd, sp, Rs
-    // This computes SP - stored_mixed_value to unmix the cookie
+    // Expand STACK_GUARD_UNMIX to: sub Rd, fp, Rs
+    // This computes FP - stored_mixed_value to unmix the cookie
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(1).getReg();
 
     BuildMI(MBB, MI, DL, get(AArch64::SUBXrx64), DstReg)
-        .addReg(AArch64::SP)
+        .addReg(AArch64::FP)
         .addReg(SrcReg)
         .addImm(AArch64_AM::getArithExtendImm(AArch64_AM::UXTX, 0));
 
@@ -2636,10 +2636,10 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   // To match MSVC. Unlike x86_64 which uses xor instruction to mix the cookie,
   // we use sub instruction to mix the cookie on aarch64.
   // The mixing happens here in expandPostRAPseudo (after RA) to ensure we use
-  // the final stack pointer value.
+  // the final frame pointer value.
   if (Subtarget.getTargetTriple().isOSMSVCRT())
     BuildMI(MBB, MI, DL, get(AArch64::SUBXrx64), Reg)
-        .addReg(AArch64::SP)
+        .addReg(AArch64::FP)
         .addReg(Reg, RegState::Kill)
         .addImm(AArch64_AM::getArithExtendImm(AArch64_AM::UXTX, 0));
 

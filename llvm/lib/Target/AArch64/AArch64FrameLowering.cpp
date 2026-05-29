@@ -570,6 +570,16 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // funclets.
   if (MF.hasEHFunclets())
     return true;
+
+  // Force FP for functions with stack guards on MSVCRT.
+  // The cookie mixing uses FP to ensure consistent addressing even with
+  // dynamic stack allocation (e.g., _alloca).
+  if (MFI.hasStackProtectorIndex()) {
+    const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+    if (Subtarget.getTargetTriple().isOSMSVCRT())
+      return true;
+  }
+
   // Retain behavior of always omitting the FP for leaf functions when possible.
   if (MF.getTarget().Options.DisableFramePointerElim(MF))
     return true;
