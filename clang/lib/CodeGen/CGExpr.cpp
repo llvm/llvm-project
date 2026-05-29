@@ -286,7 +286,7 @@ RValue CodeGenFunction::EmitAnyExpr(const Expr *E,
     return RValue::getComplex(EmitComplexExpr(E, ignoreResult, ignoreResult));
   case TEK_Aggregate:
     if (!ignoreResult && aggSlot.isIgnored())
-      aggSlot = CreateAggTemp(E->getType(), "agg-temp");
+      aggSlot = CreateAggTemp(E->getType().getUnqualifiedType(), "agg-temp");
     EmitAggExpr(E, aggSlot);
     return aggSlot.asRValue();
   }
@@ -492,18 +492,15 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
         CharUnits alignment = CGF.getContext().getTypeAlignInChars(Ty);
         GV->setAlignment(alignment.getAsAlign());
         llvm::Constant *C = GV;
-        if (AS != LangAS::Default)
+        if (AS != Ty.getAddressSpace())
           C = CGF.CGM.performAddrSpaceCast(
-              GV, llvm::PointerType::get(
-                      CGF.getLLVMContext(),
-                      CGF.getContext().getTargetAddressSpace(LangAS::Default)));
+              GV, llvm::PointerType::get(CGF.getLLVMContext(),
+                                         CGF.getContext().getTargetAddressSpace(
+                                             Ty.getAddressSpace())));
         // FIXME: Should we put the new global into a COMDAT?
         return RawAddress(C, GV->getValueType(), alignment);
       }
-    RawAddress Addr = CGF.CreateMemTempWithoutCast(Ty, "ref.tmp");
-    if (Alloca)
-      *Alloca = Addr;
-    return Addr;
+    return CGF.CreateMemTemp(Ty, "ref.tmp", Alloca);
   }
   case SD_Thread:
   case SD_Static:
@@ -1630,7 +1627,7 @@ RValue CodeGenFunction::GetUndefRValue(QualType Ty) {
   // identifiable address.  Just because the contents of the value are undefined
   // doesn't mean that the address can't be taken and compared.
   case TEK_Aggregate: {
-    Address DestPtr = CreateMemTempWithoutCast(Ty, "undef.agg.tmp");
+    Address DestPtr = CreateMemTemp(Ty, "undef.agg.tmp");
     return RValue::getAggregate(DestPtr);
   }
 

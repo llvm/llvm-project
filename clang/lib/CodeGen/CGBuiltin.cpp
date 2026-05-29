@@ -7141,7 +7141,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // always just emit into it.
   TypeEvaluationKind EvalKind = getEvaluationKind(E->getType());
   if (EvalKind == TEK_Aggregate && ReturnValue.isNull()) {
-    Address DestPtr = CreateMemTempWithoutCast(E->getType(), "agg.tmp");
+    Address DestPtr = CreateMemTemp(E->getType(), "agg.tmp");
     ReturnValue = ReturnValueSlot(DestPtr, false);
   }
 
