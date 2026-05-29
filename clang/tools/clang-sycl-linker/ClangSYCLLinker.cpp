@@ -186,19 +186,21 @@ Error executeCommands(StringRef ExecutablePath, ArrayRef<StringRef> Args) {
 Expected<SmallVector<std::string>> getInput(const ArgList &Args) {
   // Collect all input bitcode files to be passed to the linking stage.
   SmallVector<std::string> BitcodeFiles;
-  for (const opt::Arg *Arg : Args.filtered(OPT_INPUT)) {
-    std::optional<std::string> Filename = std::string(Arg->getValue());
-    if (!Filename || !sys::fs::exists(*Filename) ||
-        sys::fs::is_directory(*Filename))
-      continue;
+  auto Inputs = Args.filtered(OPT_INPUT);
+  if (Inputs.empty())
+    return createStringError("No input files provided");
+  for (const opt::Arg *Arg : Inputs) {
+    StringRef Filename = Arg->getValue();
+    if (!sys::fs::exists(Filename) || sys::fs::is_directory(Filename))
+      return createStringError("Input file '" + Filename + "' does not exist");
     file_magic Magic;
-    if (auto EC = identify_magic(*Filename, Magic))
-      return createStringError("Failed to open file " + *Filename);
+    if (auto EC = identify_magic(Filename, Magic))
+      return createStringError("Failed to open file " + Filename);
     // TODO: Current use case involves LLVM IR bitcode files as input.
     // This will be extended to support SPIR-V IR files.
     if (Magic != file_magic::bitcode)
-      return createStringError("Unsupported file type");
-    BitcodeFiles.push_back(*Filename);
+      return createStringError("Unsupported file type for '" + Filename + "'");
+    BitcodeFiles.push_back(std::string(Filename));
   }
   return BitcodeFiles;
 }
@@ -728,6 +730,13 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
                                Result.TargetTriple, Args, CodeGenFile, C))
       return Err;
 
+    if (!SPIRVDumpDir.empty() && !DryRun) {
+      SmallString<128> DumpFile(SPIRVDumpDir);
+      sys::path::append(DumpFile, sys::path::filename(CodeGenFile));
+      if (std::error_code EC = sys::fs::copy_file(CodeGenFile, DumpFile))
+        return createFileError(DumpFile, EC);
+    }
+
     SplitModules[I].ModuleFilePath = CodeGenFile;
     if (IsAOTCompileNeeded) {
       std::string AOTFile = (Stem + "_" + Twine(I) + ".out").str();
@@ -801,8 +810,10 @@ int main(int argc, char **argv) {
     return EXIT_SUCCESS;
   }
 
-  if (Args.hasArg(OPT_version))
+  if (Args.hasArg(OPT_version)) {
     printVersion(outs());
+    return EXIT_SUCCESS;
+  }
 
   Verbose = Args.hasArg(OPT_verbose);
   DryRun = Args.hasArg(OPT_dry_run);
@@ -811,21 +822,26 @@ int main(int argc, char **argv) {
     reportError(createStringError("Output file must be specified"));
   OutputFile = Args.getLastArgValue(OPT_o);
 
-  if (Args.hasArg(OPT_spirv_dump_device_code_EQ)) {
-    Arg *A = Args.getLastArg(OPT_spirv_dump_device_code_EQ);
-    SmallString<128> Dir(A->getValue());
-    if (Dir.empty())
-      llvm::sys::path::native(Dir = "./");
-    else
-      Dir.append(llvm::sys::path::get_separator());
-
-    SPIRVDumpDir = Dir;
-  }
-
   // Get the input files to pass to the linking stage.
   auto FilesOrErr = getInput(Args);
   if (!FilesOrErr)
     reportError(FilesOrErr.takeError());
+
+  if (auto *A = Args.getLastArg(OPT_spirv_dump_device_code_EQ)) {
+    StringRef V = A->getValue();
+    if (V.empty())
+      reportError(createStringError(
+          std::make_error_code(std::errc::invalid_argument),
+          "--spirv-dump-device-code= requires a non-empty path"));
+    SPIRVDumpDir = V;
+    // The directory is shared across all split modules, which use the
+    // "<output-stem>_<index>.spv" naming scheme. Concurrent invocations
+    // sharing a dump dir may overwrite each other's files.
+    if (!DryRun)
+      if (std::error_code EC = sys::fs::create_directories(SPIRVDumpDir))
+        reportError(createStringError(
+            EC, "cannot create SPIR-V dump directory '" + SPIRVDumpDir + "'"));
+  }
 
   // Run SYCL linking process on the generated inputs.
   if (Error Err = runSYCLLink(*FilesOrErr, Args))

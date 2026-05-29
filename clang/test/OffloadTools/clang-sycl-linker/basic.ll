@@ -6,6 +6,24 @@
 ; RUN: llvm-as %t/input1.ll -o %t/input1.bc
 ; RUN: llvm-as %t/input2.ll -o %t/input2.bc
 ;
+; Test --help
+; RUN: clang-sycl-linker --help | FileCheck %s --check-prefix=HELP
+; HELP: OVERVIEW: A utility that wraps around the SYCL device code linking process.
+; HELP: USAGE: clang-sycl-linker [options] <input bitcode files>
+; HELP: OPTIONS:
+;
+; Test --version
+; RUN: clang-sycl-linker --version | FileCheck %s --check-prefix=VERSION
+; VERSION: clang-sycl-linker version
+;
+; Test missing input files
+; RUN: not clang-sycl-linker -o %t.out 2>&1 | FileCheck %s --check-prefix=NO-INPUT
+; NO-INPUT: No input files provided
+;
+; Test non-existent input file
+; RUN: not clang-sycl-linker %t-missing.bc -o %t.out 2>&1 | FileCheck %s --check-prefix=MISSING
+; MISSING: Input file '{{.*}}-missing.bc' does not exist
+;
 ; Test the dry run of a simple case to link two input files.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc -o %t/spirv.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=SIMPLE-FO
