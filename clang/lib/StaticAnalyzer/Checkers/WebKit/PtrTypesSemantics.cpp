@@ -706,8 +706,20 @@ public:
 
   bool VisitReturnStmt(const ReturnStmt *RS) {
     // A return statement is allowed as long as the return value is trivial.
-    if (auto *RV = RS->getRetValue())
+    if (auto *RV = RS->getRetValue()) {
+      if (auto *ExprWithClean = dyn_cast<ExprWithCleanups>(RV)) {
+        if (ExprWithClean->isPRValue())
+          RV = ExprWithClean->getSubExpr();
+      }
+      if (auto *SubE = RV->IgnoreParenCasts()) {
+        if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(SubE)) {
+          // Ignore the destructor of BTE if copy elision is in effect.
+          if (RV->getType() == BTE->getType())
+            return Visit(BTE->getSubExpr());
+        }
+      }
       return Visit(RV);
+    }
     return true;
   }
 

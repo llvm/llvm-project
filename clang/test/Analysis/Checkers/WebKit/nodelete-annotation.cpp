@@ -316,8 +316,17 @@ public:
 };
 
 struct Data {
-  static Ref<Data> create() {
+  static Ref<Data> [[clang::annotate_type("webkit.nodelete")]] create() {
     return adoptRef(*new Data);
+  }
+
+  static Ref<Data> [[clang::annotate_type("webkit.nodelete")]] create(double) {
+    return adoptRef(*new Data(RefCountable::create()->next()));
+    // expected-warning@-1{{A function 'create' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+  static Data* [[clang::annotate_type("webkit.nodelete")]] create(int) {
+    return adoptRef(new Data); // expected-warning{{A function 'create' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
   }
 
   void ref() {
@@ -338,6 +347,7 @@ struct Data {
   
 protected:
   Data() = default;
+  Data(RefCountable*) { }
 
 private:
   unsigned refCount { 0 };
