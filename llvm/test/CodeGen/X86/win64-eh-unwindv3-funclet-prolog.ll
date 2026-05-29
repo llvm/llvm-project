@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=x86_64-unknown-windows-msvc -o - %s | FileCheck %s
 
 ; Test that the V3 pass correctly handles funclets. Each funclet gets its own
-; UNWIND_INFO, so V3 capacity limits (≤31 prolog ops, ≤7 epilogs) apply per
+; UNWIND_INFO, so V3 capacity limits (<=31 prolog ops, <=7 epilogs) apply per
 ; funclet, not summed across the entire function.
 ;
 ; This function has 15 cleanup funclets, each with its own prolog/epilog.

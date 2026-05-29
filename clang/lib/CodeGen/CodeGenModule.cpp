@@ -1591,24 +1591,16 @@ void CodeGenModule::Release() {
                               1);
 
   // Enable unwind v2/v3.
-  // EGPR (R16-R31) requires V3 unwind because V1/V2 cannot encode extended
-  // register numbers. Auto-promote to V3 when no explicit mode was requested.
+  // Set the module flag here based on the user's requested mode (or auto-
+  // promote to V3 when EGPR is enabled module-wide, since V1/V2 cannot encode
+  // R16-R31). The per-function EGPR compatibility check is performed in
+  // EmitGlobalFunctionDefinition so that `__attribute__((target("egpr")))`
+  // and `nounwind` are respected.
 
   auto UnwindMode = CodeGenOpts.getWinX64EHUnwind();
-  bool HasEGPR = T.isOSWindows() && T.isX86_64() &&
-                 Context.getTargetInfo().hasFeature("egpr");
-
-  // Check for EGPR incompatibility with explicitly requested V1 or V2
-  if (HasEGPR && UnwindMode != llvm::WinX64EHUnwindMode::Default &&
-      UnwindMode != llvm::WinX64EHUnwindMode::V3) {
-    unsigned DiagID =
-        Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                              "EGPR target feature requires unwind version 3");
-    Diags.Report(DiagID);
-  }
-
   if (UnwindMode == llvm::WinX64EHUnwindMode::Default) {
-    if (HasEGPR)
+    if (T.isOSWindows() && T.isX86_64() &&
+        Context.getTargetInfo().hasFeature("egpr"))
       UnwindMode = llvm::WinX64EHUnwindMode::V3;
     else
       UnwindMode = llvm::WinX64EHUnwindMode::V1;
@@ -6937,6 +6929,38 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   }
 
   SetLLVMFunctionAttributesForDefinition(D, Fn);
+
+  // EGPR (R16-R31) requires V3 unwind info on Windows x64 because V1/V2 cannot
+  // encode extended register numbers. Check per-function so that `target`
+  // attribute and `nounwind`/no-unwind-table functions are respected.
+  if (getTriple().isOSWindows() && getTriple().isX86_64()) {
+    auto UnwindMode = CodeGenOpts.getWinX64EHUnwind();
+    if (UnwindMode != llvm::WinX64EHUnwindMode::Default &&
+        UnwindMode != llvm::WinX64EHUnwindMode::V3 &&
+        Fn->needsUnwindTableEntry()) {
+      bool HasEGPR = false;
+      if (Fn->hasFnAttribute("target-features")) {
+        StringRef Feats =
+            Fn->getFnAttribute("target-features").getValueAsString();
+        SmallVector<StringRef, 16> Tokens;
+        Feats.split(Tokens, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+        for (StringRef Tok : Tokens) {
+          if (Tok == "+egpr")
+            HasEGPR = true;
+          else if (Tok == "-egpr")
+            HasEGPR = false;
+        }
+      } else {
+        HasEGPR = Context.getTargetInfo().hasFeature("egpr");
+      }
+      if (HasEGPR) {
+        unsigned DiagID = Diags.getCustomDiagID(
+            DiagnosticsEngine::Error,
+            "EGPR target feature requires unwind version 3");
+        Diags.Report(D->getLocation(), DiagID);
+      }
+    }
+  }
 
   auto GetPriority = [this](const auto *Attr) -> int {
     Expr *E = Attr->getPriority();

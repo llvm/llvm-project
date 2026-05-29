@@ -146,8 +146,13 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
       MF.getFunction().getParent()->getWinX64EHUnwindMode();
 
   // EGPR (R16-R31) requires V3 unwind info because V1/V2 cannot encode
-  // registers beyond R15.
+  // registers beyond R15. Only enforce this for functions that actually
+  // emit SEH unwind info — `nounwind` functions and targets that don't
+  // require unwind tables (e.g. cross-compilation host defaults) can use
+  // EGPR with any unwind mode since no SEH metadata is generated.
   if (Mode != WinX64EHUnwindMode::V3) {
+    if (!MF.getFunction().needsUnwindTableEntry())
+      return false;
     const auto &STI = MF.getSubtarget<X86Subtarget>();
     if (STI.hasEGPR())
       report_fatal_error(
