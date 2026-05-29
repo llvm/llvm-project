@@ -1764,7 +1764,8 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
   if (!TSI) {
     if (!InstantiatingVarTemplate)
       return nullptr;
-    TSI = D->getTypeSourceInfo();
+    TSI = SemaRef.Context.getTrivialTypeSourceInfo(SemaRef.Context.IntTy,
+                                                   D->getLocation());
     Invalid = true;
   } else if (TSI->getType()->isFunctionType()) {
     SemaRef.Diag(D->getLocation(), diag::err_variable_instantiates_to_function)
@@ -2541,15 +2542,12 @@ Decl *TemplateDeclInstantiator::VisitVarTemplatePartialSpecializationDecl(
 
   VarTemplateDecl *VarTemplate = D->getSpecializedTemplate();
 
-  // Lookup the already-instantiated declaration in the instantiation
-  // of the class template and return that.
+  // Lookup the already-instantiated declaration and return that.
   DeclContext::lookup_result Found = Owner->lookup(VarTemplate->getDeclName());
-  if (Found.empty())
-    return nullptr;
+  assert(!Found.empty() && "Instantiation found nothing?");
 
   VarTemplateDecl *InstVarTemplate = dyn_cast<VarTemplateDecl>(Found.front());
-  if (!InstVarTemplate)
-    return nullptr;
+  assert(InstVarTemplate && "Instantiation did not find a variable template?");
 
   if (VarTemplatePartialSpecializationDecl *Result =
           InstVarTemplate->findPartialSpecInstantiatedFromMember(D))
