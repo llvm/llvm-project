@@ -2040,6 +2040,75 @@ public:
   }
 };
 
+/// This represents a 'replayable' clause in the '#pragma omp target',
+// '#pragma omp target enter data', '#pragma omp target exit data',
+// '#pragma omp target update', '#pragma omp task', '#pragma omp taskloop' or
+// '#pragma omp taskwait' directive.
+///
+/// \code
+/// #pragma omp task replayable(1)
+/// \endcode
+/// In this example directive '#pragma omp task' has the 'replayable' clause.
+class OMPReplayableClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Condition of the 'replayable' clause.
+  Stmt *Condition = nullptr;
+
+public:
+  /// Build 'replayable' clause.
+  ///
+  /// \param Cond Condition of the clause.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPReplayableClause(Expr *Cond, SourceLocation StartLoc,
+                      SourceLocation LParenLoc, SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_replayable, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Condition(Cond) {}
+
+  /// Build an empty clause.
+  OMPReplayableClause()
+      : OMPClause(llvm::omp::OMPC_replayable, SourceLocation(),
+                  SourceLocation()) {}
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Set condition.
+  void setCondition(Expr *Cond) { Condition = Cond; }
+
+  /// Returns condition.
+  Expr *getCondition() const { return cast_or_null<Expr>(Condition); }
+
+  child_range children() {
+    if (Condition)
+      return child_range(&Condition, &Condition + 1);
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    if (Condition)
+      return const_child_range(&Condition, &Condition + 1);
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children();
+  const_child_range used_children() const {
+    return const_cast<OMPReplayableClause *>(this)->used_children();
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_replayable;
+  }
+};
+
 /// This represents 'at' clause in the '#pragma omp error' directive
 ///
 /// \code

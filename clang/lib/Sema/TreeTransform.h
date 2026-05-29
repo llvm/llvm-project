@@ -1903,6 +1903,18 @@ public:
                                                       LParenLoc, Condition);
   }
 
+  /// Build a new OpenMP 'replayable' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPReplayableClause(Expr *Condition,
+                                        SourceLocation StartLoc,
+                                        SourceLocation LParenLoc,
+                                        SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPReplayableClause(StartLoc, EndLoc,
+                                                          LParenLoc, Condition);
+  }
+
   /// Build a new OpenMP 'private' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
@@ -10864,6 +10876,19 @@ TreeTransform<Derived>::TransformOMPNowaitClause(OMPNowaitClause *C) {
   }
   return getDerived().RebuildOMPNowaitClause(Cond.get(), C->getBeginLoc(),
                                              C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPReplayableClause(OMPReplayableClause *C) {
+  ExprResult Cond;
+  if (auto *Condition = C->getCondition()) {
+    Cond = getDerived().TransformExpr(Condition);
+    if (Cond.isInvalid())
+      return nullptr;
+  }
+  return getDerived().RebuildOMPReplayableClause(
+      Cond.get(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
