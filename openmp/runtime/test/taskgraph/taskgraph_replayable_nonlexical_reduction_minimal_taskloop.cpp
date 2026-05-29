@@ -35,8 +35,8 @@
 static volatile int Sum = 0;
 
 __attribute__((noinline)) static void emit_reduction_taskloop(int seed) {
-#pragma omp taskloop replayable num_tasks(8)                                   \
-    reduction(+ : Sum) firstprivate(saved : seed)
+#pragma omp taskloop replayable num_tasks(8) reduction(+ : Sum)                \
+    firstprivate(saved : seed)
   for (int i = 0; i < 16; ++i)
     Sum += seed + i;
 }
@@ -73,8 +73,7 @@ int main() {
       recorded = run_taskgraph(Seeds[0]);
       const int exp0 = expected_result(Seeds[0]);
       if (recorded != exp0) {
-        std::fprintf(stderr,
-                     "FAIL initial record got=%d expected=%d\n",
+        std::fprintf(stderr, "FAIL initial record got=%d expected=%d\n",
                      recorded, exp0);
         failed = true;
       }
@@ -86,9 +85,8 @@ int main() {
       for (int i = 1; i < NumRuns; ++i) {
         const int replayed = run_taskgraph(Seeds[i]);
         if (replayed != recorded) {
-          std::fprintf(stderr,
-                       "FAIL replay %d seed=%d got=%d recorded=%d\n",
-                       i, Seeds[i], replayed, recorded);
+          std::fprintf(stderr, "FAIL replay %d seed=%d got=%d recorded=%d\n", i,
+                       Seeds[i], replayed, recorded);
           failed = true;
         }
       }
