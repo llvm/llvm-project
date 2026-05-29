@@ -39,6 +39,12 @@ extra_substitutions = extra_substitutions = (
 )
 config.test_format = lit.formats.ShTest(not use_lit_shell, extra_substitutions)
 
+# --param fn=NAMES narrows compilation to the named functions and their
+# transitive dependencies. See lit.llvm.fn_param.install for dispatch details.
+from lit.llvm import fn_param
+
+fn_param.install(config, lit_config)
+
 # suffixes: A list of file extensions to treat as test files. This is overriden
 # by individual lit.local.cfg files in the test subdirectories.
 config.suffixes = [".ll", ".c", ".test", ".txt", ".s", ".mir", ".yaml", ".spv"]
