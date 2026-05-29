@@ -120,3 +120,42 @@ void test(int AS) {
 }
 
 } // namespace badref4
+
+// Test virtual bases.
+// FIXME: explicitly diagnose virtual bases within kernel parameters.
+namespace badref5 {
+
+class Base { // expected-note {{within field of type 'Base' declared here}}}
+  int &data; // expected-error {{'int &' cannot be used as the type of a kernel parameter}}
+public:
+  Base(int &a) : data(a) {}
+};
+
+class Derived : virtual Base { // expected-note {{within base of type 'Base' declared here}}
+public:
+  Derived(int &a) : Base(a) {}
+
+};
+
+void test() {
+  int p = 0;
+  kernel_single_task<class KN<12>>(Derived{p}); // expected-note {{requested here}}
+}
+} // namespace badref5
+
+// Check that a struct that hold a reference and captured by reference by lambda
+// kernel object is diagnosed correctly.
+namespace badref6 {
+void test() {
+  int a;
+  struct S {
+    int &dm;
+  };
+  S s {a};
+  kernel_single_task<class KN<13>>([&] { (void)s; });
+  // expected-error@-1 {{'S &' cannot be used as the type of a kernel parameter}}
+  // expected-note-re@-2 {{in instantiation of function template specialization 'kernel_single_task<KN<13>, (lambda at {{.*}} requested here}}
+  // expected-note-re@-3 {{within field of type '(lambda at {{.*}} declared here}}
+}
+
+} // namespace badref7
