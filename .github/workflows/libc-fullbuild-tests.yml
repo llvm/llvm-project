@@ -130,13 +130,6 @@ jobs:
         key: libc_fullbuild_v3_${{ matrix.target }}_${{ matrix.build_type }}_${{ matrix.c_compiler }}
         variant: sccache
 
-    - name: Set reusable strings
-      id: strings
-      shell: bash
-      run: |
-        echo "build-output-dir=/__w/llvm-project/llvm-project/build" >> "$GITHUB_OUTPUT"
-        echo "build-install-dir=/__w/llvm-project/llvm-project/install" >> "$GITHUB_OUTPUT"
-    
     # Configure libc fullbuild with scudo.
     - name: Configure CMake
       run: |
@@ -145,14 +138,14 @@ jobs:
         export CMAKE_FLAGS="
           -G Ninja
           -S /__w/llvm-project/llvm-project/runtimes
-          -B ${{ steps.strings.outputs.build-output-dir }}
+          -B build
           -DCMAKE_ASM_COMPILER=${{ matrix.c_compiler }}
           -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DCMAKE_C_COMPILER_LAUNCHER=sccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
-          -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }}
+          -DCMAKE_INSTALL_PREFIX=/__w/llvm-project/llvm-project/install
           -DLIBC_COMPILE_OPTIONS_NATIVE=''
           -DLIBC_TEST_SKIP_DEATH_TESTS=ON
           -DLIBC_TEST_SKIP_SHARED_TESTS=ON
@@ -192,22 +185,22 @@ jobs:
         fi
 
         cmake \
-          --build ${{ steps.strings.outputs.build-output-dir }} \
+          --build build \
           --parallel \
           --target $TARGETS
 
     - name: Build Test
       if: ${{ matrix.testing != "SKIP" }}
-      run: |
+      run: >
         cmake 
-        --build ${{ steps.strings.outputs.build-output-dir }} 
+        --build build 
         --parallel
         --target check-libc-build
 
     - name: Run Test
-      if: ${{ matrix.testing != "SKIP" || matrix.testing != null }}
+      if: ${{ matrix.testing != "SKIP" && matrix.testing != "BUILD" }}
       run: >
         cmake 
-        --build ${{ steps.strings.outputs.build-output-dir }} 
+        --build build 
         --parallel
         --target check-libc
