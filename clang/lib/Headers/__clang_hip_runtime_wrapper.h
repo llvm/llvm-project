@@ -144,8 +144,26 @@ typedef __SIZE_TYPE__ size_t;
 #if defined(__HIPCC_RTC__)
 #include <__clang_hip_cmath.h>
 #else
+// MSVC STL Update 202604L introduces constexpr math comparison functions. On
+// HIP, constexpr implies __host__ and __device__. Our __device__ overloads
+// clash with these definitions. The functions are: isunordered, isgreater,
+// isgreaterequal, isless, islessequal, islessgreater.
+//
+// This assumes that the constexpr version provided in the STL doesn't call
+// __host__ helpers.
+#if defined(__HIP__) && __has_include(<version>)
+// The <version> header is fairly recent. Since the problem is
+// only present in recent versions of the STL we can safely ignore the
+// workaround for older versions.
+#include <version>
+#if (defined(_MSVC_STL_UPDATE) && _MSVC_STL_UPDATE >= 202604L)
+#define __HAS_CONSTEXPR_MATH_CMP2_FUNCTIONS 1
+#endif
+#endif
+
 #include <__clang_cuda_math_forward_declares.h>
 #include <__clang_hip_cmath.h>
+#undef __HAS_CONSTEXPR_MATH_CMP2_FUNCTIONS
 #include <__clang_cuda_complex_builtins.h>
 #include <algorithm>
 #include <complex>

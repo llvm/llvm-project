@@ -104,6 +104,7 @@ __DEVICE__ __CONSTEXPR__ bool isnan(double __x) { return ::__isnan(__x); }
 #pragma omp end declare variant
 #endif // defined(__OPENMP_AMDGCN__)
 
+#if !__HAS_CONSTEXPR_MATH_CMP2_FUNCTIONS
 __DEVICE__ __CONSTEXPR__ bool isgreater(float __x, float __y) {
   return __builtin_isgreater(__x, __y);
 }
@@ -146,6 +147,7 @@ __DEVICE__ __CONSTEXPR__ bool isunordered(float __x, float __y) {
 __DEVICE__ __CONSTEXPR__ bool isunordered(double __x, double __y) {
   return __builtin_isunordered(__x, __y);
 }
+#endif
 __DEVICE__ __CONSTEXPR__ float modf(float __x, float *__iptr) {
   return ::modff(__x, __iptr);
 }

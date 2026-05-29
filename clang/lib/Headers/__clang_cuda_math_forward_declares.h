@@ -94,21 +94,25 @@ __DEVICE__ bool isfinite(long double);
 #endif
 __DEVICE__ bool isfinite(double);
 __DEVICE__ bool isfinite(float);
+#ifndef __HAS_CONSTEXPR_MATH_CMP2_FUNCTIONS
 __DEVICE__ bool isgreater(double, double);
 __DEVICE__ bool isgreaterequal(double, double);
 __DEVICE__ bool isgreaterequal(float, float);
 __DEVICE__ bool isgreater(float, float);
+#endif
 #ifdef _MSC_VER
 __DEVICE__ bool isinf(long double);
 #endif
 __DEVICE__ bool isinf(double);
 __DEVICE__ bool isinf(float);
+#ifndef __HAS_CONSTEXPR_MATH_CMP2_FUNCTIONS
 __DEVICE__ bool isless(double, double);
 __DEVICE__ bool islessequal(double, double);
 __DEVICE__ bool islessequal(float, float);
 __DEVICE__ bool isless(float, float);
 __DEVICE__ bool islessgreater(double, double);
 __DEVICE__ bool islessgreater(float, float);
+#endif
 #ifdef _MSC_VER
 __DEVICE__ bool isnan(long double);
 #endif
@@ -116,8 +120,10 @@ __DEVICE__ bool isnan(double);
 __DEVICE__ bool isnan(float);
 __DEVICE__ bool isnormal(double);
 __DEVICE__ bool isnormal(float);
+#ifndef __HAS_CONSTEXPR_MATH_CMP2_FUNCTIONS
 __DEVICE__ bool isunordered(double, double);
 __DEVICE__ bool isunordered(float, float);
+#endif
 __DEVICE__ long labs(long);
 __DEVICE__ double ldexp(double, int);
 __DEVICE__ float ldexp(float, int);
