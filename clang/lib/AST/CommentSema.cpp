@@ -319,7 +319,6 @@ void Sema::actOnTParamCommandParamNameArg(TParamCommandComment *Command,
 
   const TemplateParameterList *TemplateParameters =
       ThisDeclInfo->TemplateParameters;
-
   SmallVector<unsigned, 2> Position;
   if (resolveTParamReference(Arg, TemplateParameters, &Position)) {
     Command->setPosition(copyArray(ArrayRef(Position)));

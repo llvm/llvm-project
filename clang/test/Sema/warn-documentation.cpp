@@ -1547,7 +1547,7 @@ void foo(){}
 
 #if __cplusplus >= 202002L
 /// @tparam T Derived class.
-/// @tparam TBase Base CRTP class.
+/// @tparam TBase Base class.
 template <typename T, typename TBase>
 concept bar = true;
 #endif
