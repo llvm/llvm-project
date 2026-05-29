@@ -10060,12 +10060,13 @@ def SentinelDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
 The ``sentinel`` attribute can be applied to variadic functions and pointers to
-variadic functions, to diagnose each function call that do not pass a sentinel
-value (a null pointer constant) in the argument list, at the end by default.
-The attribute accepts 2 optional parameters: the first parameter is the
-position of the expected sentinel value, starting from the last parameter which
-defaults to 0, and the second parameter describes whether the last fixed
-parameter is treated as a valid sentinel value when set to 1 (defaults to 0).
+variadic functions, to diagnose each function call that does not pass a
+sentinel value (a null pointer constant) as the last argument to the function
+call. The attribute accepts two optional arguments: the first argument is the
+position of the expected sentinel value, starting from the last parameter. The
+second argument describes whether the last fixed parameter is treated as a
+valid sentinel value when set to '1'.
+All arguments described above defaults to '0' when elided.
 The attribute is also supported with blocks and in Objective-C.
 
 .. code-block:: c
