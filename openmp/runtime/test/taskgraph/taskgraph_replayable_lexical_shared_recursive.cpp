@@ -6,7 +6,8 @@
 
 #include <cstdio>
 
-__attribute__((noinline)) static int run_taskgraph_recursive(int depth, int seed) {
+__attribute__((noinline)) static int run_taskgraph_recursive(int depth,
+                                                             int seed) {
   int x = seed;
   int out = -1;
 
@@ -30,9 +31,10 @@ int main() {
   const int second = run_taskgraph_recursive(3, 100);
 
   if (first != 74 || second != 470) {
-    std::fprintf(stderr,
-                 "FAIL lexical recursive replay first=%d second=%d expected=74/470\n",
-                 first, second);
+    std::fprintf(
+        stderr,
+        "FAIL lexical recursive replay first=%d second=%d expected=74/470\n",
+        first, second);
     return 1;
   }
 

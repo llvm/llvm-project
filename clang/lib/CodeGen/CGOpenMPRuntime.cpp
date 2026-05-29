@@ -2472,7 +2472,7 @@ void CGOpenMPRuntime::emitTaskgraphCall(CodeGenFunction &CGF,
       GraphReset,
       NoGroup,
       CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(OutlinedFn,
-          CGM.VoidPtrTy),
+                                                      CGM.VoidPtrTy),
       CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
           CapStruct.getPointer(OutlinedCGF), CGM.VoidPtrTy)};
 
@@ -4981,10 +4981,9 @@ void CGOpenMPRuntime::emitTaskCall(
     const auto *CS = cast<CapturedStmt>(D.getAssociatedStmt());
     llvm::Function *RelocFn =
         emitTaskRelocationFunction(CGM, Loc, *CS, CGF.CapturedStmtInfo, Data);
-    TGTaskArgs[8] = RelocFn
-                        ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-                              RelocFn, CGM.VoidPtrTy)
-                        : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+    TGTaskArgs[8] = RelocFn ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+                                  RelocFn, CGM.VoidPtrTy)
+                            : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
     CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                             CGM.getModule(), OMPRTL___kmpc_taskgraph_task),
                         TGTaskArgs);
