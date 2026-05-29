@@ -87,6 +87,11 @@ Makes programs 10x faster by doing Special New Thing.
   and `ccc` agree for `void(ptr)` (x86_64, AArch64, RISC-V, ...) but is an ABI
   break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
 
+* Assume bundles now only accept attributes that are actually handled.
+  Specifically, they are ``align``, ``cold``, ``dereferenceable``,
+  ``dereferenceable_or_null``, ``nonnull``, ``noundef`` and
+  ``separate_storage``.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
@@ -130,7 +135,7 @@ Makes programs 10x faster by doing Special New Thing.
   ([#177046](https://github.com/llvm/llvm-project/pull/125687)). Note that
   there are still issues with invalid compiler reasoning about some functions
   in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
-  distributed ThinLTO. 
+  distributed ThinLTO.
 
 * ``ConstantFP`` now supports vector types and is the canonical form returned by
   ``ConstantVector::getSplat(C)`` when ``C`` is a scalar ``ConstantFP``.

@@ -3120,6 +3120,16 @@ assumptions, such as that a :ref:`parameter attribute <paramattrs>` or a
 location. Operand bundles enable assumptions that are either hard or impossible
 to represent as a boolean argument of an :ref:`llvm.assume <int_assume>`.
 
+The following attributes are currently accepted:
+* ``align``
+* ``cold``
+* ``dereferenceable``
+* ``dereferenceable_or_null``
+* ``ignore``
+* ``nonnull``
+* ``noundef``
+* ``separate_storage``
+
 Assumes with operand bundles must have ``i1 true`` as the condition operand.
 
 An assume operand bundle has the form:
@@ -8055,7 +8065,7 @@ Together these two attributes provide a four-way classification:
 
 - ``body`` only: main vectorized loop body
 - ``epilogue`` only: scalar epilogue loop after vectorization
-- Both ``body`` and ``epilogue``: vectorized epilogue 
+- Both ``body`` and ``epilogue``: vectorized epilogue
   (a remainder loop that was itself vectorized during epilogue
   vectorization)
 - Neither: a plain loop not produced by the vectorizer
@@ -8684,7 +8694,7 @@ is executed, followed by ``uint64_t`` value and execution count pairs.
 The value profiling kind is 0 for indirect call targets and 1 for memory
 operations. For indirect call targets, each profile value is a hash
 of the callee function name, and for memory operations each value is the
-byte length. It is illegal to have duplicate profile values (e.g., 
+byte length. It is illegal to have duplicate profile values (e.g.,
 duplicate function hashes for indirect calls or byte lengths for memory
 operations).
 

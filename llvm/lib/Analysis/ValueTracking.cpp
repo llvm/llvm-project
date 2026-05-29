@@ -835,6 +835,7 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
         switch (getBundleAttrFromOBU(OBU)) {
         case BundleAttr::Dereferenceable: {
           auto [Ptr, Count] = getAssumeDereferenceableInfo(OBU);
+          assert(Ptr == V);
           if (NullPointerIsDefined(Q.CxtI->getFunction(),
                                    V->getType()->getPointerAddressSpace()))
             return false;
@@ -844,6 +845,7 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
         }
 
         case BundleAttr::NonNull:
+          assert(getAssumeNonNullInfo(OBU).Ptr == V);
           return true;
 
         default:
