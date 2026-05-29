@@ -838,7 +838,7 @@ unsigned SystemZTargetLowering::getVectorTypeBreakdownForCallingConv(
     LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
     unsigned &NumIntermediates, MVT &RegisterVT) const {
   // Pass fp16 vectors in VR(s).
-  if (Subtarget.hasVector() && VT.isVector() && VT.getScalarType() == MVT::f16) {
+  if (Subtarget.hasVector() && VT.isVectorOf(MVT::f16)) {
     IntermediateVT = RegisterVT = MVT::v8f16;
     return NumIntermediates =
                divideCeil(VT.getVectorNumElements(), SystemZ::VectorBytes / 2);
@@ -856,7 +856,7 @@ MVT SystemZTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
       VT.getVectorNumElements() == 1)
     return MVT::v16i8;
   // Pass fp16 vectors in VR(s).
-  if (Subtarget.hasVector() && VT.isVector() && VT.getScalarType() == MVT::f16)
+  if (Subtarget.hasVector() && VT.isVectorOf(MVT::f16))
     return MVT::v8f16;
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
@@ -864,7 +864,7 @@ MVT SystemZTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
 unsigned SystemZTargetLowering::getNumRegistersForCallingConv(
     LLVMContext &Context, CallingConv::ID CC, EVT VT) const {
   // Pass fp16 vectors in VR(s).
-  if (Subtarget.hasVector() && VT.isVector() && VT.getScalarType() == MVT::f16)
+  if (Subtarget.hasVector() && VT.isVectorOf(MVT::f16))
     return divideCeil(VT.getVectorNumElements(), SystemZ::VectorBytes / 2);
   return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
 }
@@ -8887,7 +8887,7 @@ static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask,
       auto Result = Op0APVal & Op1APVal;
       bool AllOnes = Result == Op1APVal;
       bool AllZeros = Result == 0;
-      bool IsLeftMostBitSet = Result[Op1APVal.getActiveBits()] != 0;
+      bool IsLeftMostBitSet = Result[Op1APVal.getActiveBits() - 1] != 0;
       return AllZeros ? 0 : AllOnes ? 3 : IsLeftMostBitSet ? 2 : 1;
     };
     SDValue Op0 = CCNode->getOperand(0);
