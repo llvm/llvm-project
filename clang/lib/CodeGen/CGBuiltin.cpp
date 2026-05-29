@@ -4841,6 +4841,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         PassThru, "masked_load");
     } else {
       Function *F = CGM.getIntrinsic(Intrinsic::masked_expandload, {RetTy});
+      int PtrArgIdx = 0;
+      llvm::Type *PtrArgTy = F->getArg(PtrArgIdx)->getType();
+      if (PtrArgTy != Ptr->getType())
+        Ptr = Builder.CreateAddrSpaceCast(Ptr, PtrArgTy);
       Result =
           Builder.CreateCall(F, {Ptr, Mask, PassThru}, "masked_expand_load");
     }
@@ -4885,6 +4889,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     } else {
       llvm::Function *F =
           CGM.getIntrinsic(llvm::Intrinsic::masked_compressstore, {ValLLTy});
+      int PtrArgIdx = 1;
+      llvm::Type *PtrArgTy = F->getArg(PtrArgIdx)->getType();
+      if (PtrArgTy != Ptr->getType())
+        Ptr = Builder.CreateAddrSpaceCast(Ptr, PtrArgTy);
       Builder.CreateCall(F, {Val, Ptr, Mask});
     }
     return RValue::get(nullptr);
