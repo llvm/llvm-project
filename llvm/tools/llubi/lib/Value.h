@@ -104,11 +104,12 @@ enum class StorageKind {
 /// Tri-state boolean value.
 enum class BooleanKind { False, True, Poison };
 
-/// Components of a pointer excluding address.
+/// Components of a pointer excluding address. They are shared between pointer
+/// values, as most of operations don't change the provenance.
 /// Each node will be assigned a unique, pointer-sized tag, which is used to
 /// represent the pointer in the memory.
 class Provenance : public RefCountedBase<Provenance> {
-  // TODO: store reference to the components of the pointer it is derived from
+  // TODO: store reference to the provenance of the pointer it is derived from
 
   // The underlying memory object. It can be null for invalid or dangling
   // pointers.
@@ -139,7 +140,7 @@ public:
 };
 
 class Pointer {
-  // Components of a pointer excluding address.
+  // The provenance of the pointer.
   IntrusiveRefCntPtr<Provenance> Prov;
   // The address of the pointer. The bit width is determined by
   // DataLayout::getPointerSizeInBits.
