@@ -111,9 +111,8 @@ protected:
         : time_point(std::move(tp)), callback(std::move(cb)), sequence(seq) {}
 
     bool operator<(const CallbackEntry &other) const {
-      if (time_point != other.time_point)
-        return time_point > other.time_point;
-      return sequence > other.sequence;
+      return std::tie(time_point, sequence) >
+             std::tie(other.time_point, other.sequence);
     }
 
   private:
