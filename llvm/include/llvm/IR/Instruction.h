@@ -550,9 +550,7 @@ public:
   LLVM_ABI const DebugLoc &getStableDebugLoc() const;
 
   /// Clear the optional flags contained in this instruction.
-  void clearSubclassOptionalData() {
-    SubclassOptionalData = 0;
-  }
+  void clearSubclassOptionalData() { SubclassOptionalData = 0; }
 
   /// Set or clear the nuw flag on this instruction, which must be an operator
   /// which supports this flag. See LangRef.html for the meaning of this flag.
