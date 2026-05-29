@@ -5856,6 +5856,22 @@ bool VectorCombine::foldBitcastOfVPLoad(Instruction &I) {
         NewVecCnt.hasKnownScalarFactor(OrigVecCnt)))
     return false;
 
+  InstructionCost OldCost =
+      TTI.getMemIntrinsicInstrCost({Intrinsic::vp_load, OrigVecTy,
+                                    II->getMemoryPointerParam(), false,
+                                    OrigAlign},
+                                   CostKind) +
+      TTI.getCastInstrCost(Instruction::BitCast, Cast->getType(), OrigVecTy,
+                           TTI::CastContextHint::None, CostKind);
+  InstructionCost NewCost = TTI.getMemIntrinsicInstrCost(
+      {Intrinsic::vp_load, NewVecTy, II->getMemoryPointerParam(), false,
+       OrigAlign},
+      CostKind);
+  LLVM_DEBUG(dbgs() << "foldBitcastOfVPLoad: OldCost=" << OldCost
+                    << " NewCost=" << NewCost << "\n");
+  if (NewCost > OldCost || !NewCost.isValid())
+    return false;
+
   unsigned Factor = NewVecCnt.getKnownScalarFactor(OrigVecCnt);
   Value *NewEVL = Builder.CreateNUWMul(EVL, Builder.getInt32(Factor));
   Value *NewMask = Builder.CreateVectorSplat(NewVecCnt, Builder.getTrue());

@@ -76,7 +76,8 @@ define <vscale x 8 x i16> @negative_bitcast_vp_load_scalable_mask(ptr %p, <vscal
 define <vscale x 32 x i1> @bitcast_vp_load_i1(ptr %p) {
 ; CHECK-LABEL: define <vscale x 32 x i1> @bitcast_vp_load_i1(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 32 x i1> @llvm.vp.load.nxv32i1.p0(ptr align 4 [[P]], <vscale x 32 x i1> splat (i1 true), i32 16)
+; CHECK-NEXT:    [[L:%.*]] = call <vscale x 4 x i8> @llvm.vp.load.nxv4i8.p0(ptr [[P]], <vscale x 4 x i1> splat (i1 true), i32 2)
+; CHECK-NEXT:    [[R:%.*]] = bitcast <vscale x 4 x i8> [[L]] to <vscale x 32 x i1>
 ; CHECK-NEXT:    ret <vscale x 32 x i1> [[R]]
 ;
   %l = call <vscale x 4 x i8> @llvm.vp.load(ptr %p, <vscale x 4 x i1> splat (i1 true), i32 2)
