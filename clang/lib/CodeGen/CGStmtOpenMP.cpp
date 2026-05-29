@@ -5859,6 +5859,10 @@ void CodeGenFunction::EmitOMPTaskDirective(const OMPTaskDirective &S) {
           SourceLocation());
     }
   }
+  // Propagate the replayable signal into Data so that reduction init can
+  // route to the taskgraph-aware runtime entry point when the task may
+  // participate in taskgraph replay.
+  Data.ReplayableCond = ReplayableCond;
   auto &&BodyGen = [CS](CodeGenFunction &CGF, PrePostActionTy &) {
     CGF.EmitStmt(CS->getCapturedStmt());
   };
@@ -8282,6 +8286,10 @@ void CodeGenFunction::EmitOMPTaskLoopBasedDirective(const OMPLoopDirective &S) {
   Data.Nogroup = S.getSingleClause<OMPNogroupClause>();
   // TODO: Check if we should emit tied or untied task.
   Data.Tied = true;
+  // Propagate the replayable signal into Data so that reduction init can
+  // route to the taskgraph-aware runtime entry point when the taskloop may
+  // participate in taskgraph replay.
+  Data.ReplayableCond = ReplayableCond;
   // Set scheduling for taskloop
   if (const auto *Clause = S.getSingleClause<OMPGrainsizeClause>()) {
     // grainsize clause
