@@ -1170,6 +1170,30 @@ static void expandIToFP(Instruction *IToFP) {
     A4 = Builder.CreateFPTrunc(A40, IToFP->getType());
   } else // float type
     A4 = Builder.CreateBitCast(Or35, IToFP->getType());
+
+  // Sub2 is the unbiased exponent (the index of the top set bit in the input).
+  // The exponent arithmetic above wraps to garbage instead of inf once it
+  // overflows the exponent field, so saturate to a correctly-signed infinity
+  // when Sub2 reaches 1 << (ExponentWidth - 1). Sub2 is at most BitWidth - 1,
+  // so skip the check entirely when even that can't reach the threshold.
+  // (Values that round *up* into inf, e.g. 2^n - 1, keep Sub2 = BitWidth - 1;
+  // these are handled by the conversion's own rounding, not by this
+  // saturation.)
+  unsigned ExponentWidth = FloatWidth - FPMantissaWidth - 1;
+  uint64_t MinInfExp = 1ULL << (ExponentWidth - 1);
+  if (BitWidth - 1 >= MinInfExp) {
+    Value *MinInfExpVal = Builder.getIntN(BitWidthNew, MinInfExp);
+    Value *Overflow = Builder.CreateICmpUGE(Sub2, MinInfExpVal);
+    Value *Inf = ConstantFP::getInfinity(IToFP->getType(), /*Negative=*/false);
+    if (IsSigned) {
+      Value *NegInf =
+          ConstantFP::getInfinity(IToFP->getType(), /*Negative=*/true);
+      Value *IsNeg =
+          Builder.CreateICmpSLT(IntVal, ConstantInt::getNullValue(IntTy));
+      Inf = Builder.CreateSelect(IsNeg, NegInf, Inf);
+    }
+    A4 = Builder.CreateSelect(Overflow, Inf, A4);
+  }
   Builder.CreateBr(End);
 
   // return:
