@@ -352,7 +352,7 @@ end
   constant-folds an array section of a named constant into a fresh constant array
   containing only the selected elements, and that fresh array is trivially
   contiguous.  When `-pedantic` is enabled, Flang emits the
-  `-Wconstant-is-contiguous` warningat each such call.  For example:
+  `-Wconstant-is-contiguous` warning at each such call.  For example:
 ```fortran
 integer, parameter :: a(5) = [1,2,3,4,5]
 print *, is_contiguous(a(::2))                   ! prints T in Flang
