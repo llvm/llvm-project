@@ -555,6 +555,7 @@ void InstrumentationConfig::populate(InstrumentorIRBuilderTy &IIRB) {
   LoadIO::populate(*this, IIRB);
   StoreIO::populate(*this, IIRB);
   CastIO::populate(*this, IIRB);
+  NumericIO::populate(*this, IIRB);
 }
 
 void InstrumentationConfig::addChoice(InstrumentationOpportunity &IO,
@@ -999,7 +1000,23 @@ Value *FunctionIO::isMainFunction(Value &V, Type &Ty,
   return getCI(&Ty, Fn.getName() == "main");
 }
 
-///}
+static Value *getOpcode(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                        InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  return getCI(&Ty, I.getOpcode());
+}
+
+static Value *getTypeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                        InstrumentorIRBuilderTy &IIRB) {
+  return getCI(&Ty, V.getType()->getTypeID());
+}
+
+static Value *getSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                      InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  auto &DL = I.getDataLayout();
+  return getCI(&Ty, DL.getTypeStoreSize(V.getType()));
+}
 
 /// UnreachableIO
 ///{
@@ -1671,10 +1688,55 @@ Value *CastIO::getResultSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
   auto &DL = CI.getDataLayout();
   return getCI(&Ty, DL.getTypeStoreSize(CI.getDestTy()));
 }
-
-Value *CastIO::getOpcode(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                         InstrumentorIRBuilderTy &IIRB) {
-  auto &I = cast<Instruction>(V);
-  return getCI(&Ty, I.getOpcode());
-}
 ///}
+
+Value *NumericIO::getLeft(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                          InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  return I.getOperand(0);
+}
+
+Value *NumericIO::getRight(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                           InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  if (I.getNumOperands() > 1)
+    return I.getOperand(1);
+  else
+    return PoisonValue::get(&Ty);
+}
+
+void NumericIO::init(InstrumentationConfig &IConf,
+                     InstrumentorIRBuilderTy &IIRB, ConfigTy *UserConfig) {
+  if (UserConfig)
+    Config = UserConfig;
+  bool IsPRE = getLocationKind() == InstrumentationLocation::INSTRUCTION_PRE;
+  const auto ValArgOpts =
+      IRTArg::POTENTIALLY_INDIRECT |
+      (Config.has(PassSize) ? IRTArg::INDIRECT_HAS_SIZE : IRTArg::NONE);
+  if (Config.has(PassTypeId))
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "type_id",
+                             "The operation's type id.", IRTArg::NONE,
+                             getTypeId));
+  if (Config.has(PassSize))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "size", "The operation's type size.",
+                             IRTArg::NONE, getSize));
+  if (Config.has(PassOpcode))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "opcode", "The instruction opcode.",
+                             IRTArg::NONE, getOpcode));
+  if (Config.has(PassLeft))
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "left",
+                             "The operation's left operand.", ValArgOpts,
+                             getLeft));
+  if (Config.has(PassRight))
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "right",
+                             "The operation's right operand. This value is "
+                             "poison for unary operations.",
+                             ValArgOpts, getRight));
+  if (!IsPRE && Config.has(PassResult))
+    IRTArgs.push_back(
+        IRTArg(IIRB.Int64Ty, "result", "Result of the operation.",
+               IRTArg::REPLACABLE | ValArgOpts, getValue,
+               Config.has(ReplaceResult) ? replaceValue : nullptr));
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  IConf.addChoice(*this, IIRB.Ctx);
+}
