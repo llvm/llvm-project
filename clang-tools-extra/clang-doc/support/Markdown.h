@@ -11,6 +11,22 @@
 /// ecosystem. The parser takes plain text and returns a tree of typed nodes
 /// with no knowledge of comments, Doxygen, or Clang-Doc internals.
 ///
+/// This is a simple Markdown parser for use inside Clang-Doc's comment
+/// pipeline. You give it a paragraph of text and an arena allocator, and it
+/// gives back a list of typed nodes describing the Markdown structure it found.
+///
+/// The main entry point is parseMarkdown(). If the text has no Markdown in it,
+/// you get back an empty list and can fall back to plain-text output. If it
+/// does, you get a tree of MDNode structs where each node has a kind, optional
+/// content (like the language tag on a code fence), and optional children.
+///
+/// All nodes are allocated in the arena you pass in. You own the arena and are
+/// responsible for keeping it alive as long as you use the nodes.
+///
+/// The parser handles fenced code blocks, pipe tables, and unordered lists.
+/// Anything it does not recognize comes back as a plain text node. It will
+/// never crash on bad input.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_MARKDOWN_H
