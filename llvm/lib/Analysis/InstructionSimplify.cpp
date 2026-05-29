@@ -7251,13 +7251,9 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
     return simplifyUnaryIntrinsic(IID, Args[0], Call->getFastMathFlagsOrNone(),
                                   Q);
 
-  if (NumOperands == 2) {
-    FastMathFlags FMF;
-    if (auto *FPMO = dyn_cast<FPMathOperator>(Call))
-      FMF = FPMO->getFastMathFlags();
+  if (NumOperands == 2)
     return simplifyBinaryIntrinsic(IID, F->getReturnType(), Args[0], Args[1],
-                                   FMF, Q.getWithInstruction(Call));
-  }
+                                   Call->getFastMathFlagsOrNone(), Q);
 
   // Handle intrinsics with 3 or more arguments.
   switch (IID) {
