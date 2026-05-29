@@ -80,13 +80,7 @@ entry:
 define <2 x float> @complex_add_v2f32_no_CAZ(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: complex_add_v2f32_no_CAZ:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    dup v2.2s, v0.s[1]
-; CHECK-NEXT:    dup v3.2s, v1.s[1]
-; CHECK-NEXT:    fsub v1.2s, v1.2s, v2.2s
-; CHECK-NEXT:    fadd v0.2s, v3.2s, v0.2s
-; CHECK-NEXT:    zip1 v0.2s, v1.2s, v0.2s
+; CHECK-NEXT:    fcadd v0.2s, v1.2s, v0.2s, #90
 ; CHECK-NEXT:    ret
 entry:
   %a.real = shufflevector <2 x float> %a, <2 x float> splat (float +0.0), <1 x i32> <i32 0>
