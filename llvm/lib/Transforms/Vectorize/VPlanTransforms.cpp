@@ -7031,12 +7031,21 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       VPBuilder Builder(LoadR);
       // Create the base pointer of strided access.
       VPValue *StartVPV = vputils::getOrCreateVPValueForSCEVExpr(Plan, Start);
-      VPValue *StrideInBytes =
-          Plan.getConstantInt(VectorLoop->getCanonicalIVType(),
-                              Step->getSExtValue(), /*IsSigned=*/true);
       auto *AddRecPtr = cast<SCEVAddRecExpr>(PtrSCEV);
+      // Use the pointer index type if the stride doesn't fit in the canonical
+      // IV type.
+      Type *CanIVTy = VectorLoop->getCanonicalIVType();
+      Type *OffsetTy =
+          Step->getSignificantBits() <= CanIVTy->getIntegerBitWidth()
+              ? CanIVTy
+              : Plan.getDataLayout().getIndexType(Plan.getContext(), 0);
+      VPValue *StrideInBytes = Plan.getConstantInt(
+          OffsetTy, Step->getSExtValue(), /*IsSigned=*/true);
+      VPValue *IV = Builder.createScalarZExtOrTrunc(
+          VectorLoop->getCanonicalIV(), OffsetTy, CanIVTy,
+          DebugLoc::getUnknown());
       auto *Offset = Builder.createOverflowingOp(
-          Instruction::Mul, {VectorLoop->getCanonicalIV(), StrideInBytes},
+          Instruction::Mul, {IV, StrideInBytes},
           {AddRecPtr->hasNoUnsignedWrap(), AddRecPtr->hasNoSignedWrap()});
       auto *BasePtr = Builder.createNoWrapPtrAdd(
           StartVPV, Offset,
