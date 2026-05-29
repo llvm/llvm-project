@@ -6288,15 +6288,22 @@ llvm::Value *CGOpenMPRuntime::emitTaskReductionInit(
       llvm::ConstantInt::get(CGM.IntTy, Size, /*isSigned=*/true),
       CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(TaskRedInput.getPointer(),
                                                       CGM.VoidPtrTy)};
-  if (CGF.getOMPWithinTaskgraph())
+  // A task/taskloop participates in taskgraph replay either when it is
+  // lexically nested inside a #pragma omp taskgraph region or when it carries
+  // a `replayable` clause (which may also fire dynamically inside a taskgraph
+  // recording).  In both cases route through the taskgraph-aware entry point
+  // so the runtime can stash the reduction input for later replay.  The
+  // taskgraph entry point degrades to the regular init when no taskgraph
+  // recording is active, so this is safe even when `replayable(false)` at
+  // runtime.
+  if (CGF.getOMPWithinTaskgraph() || Data.ReplayableCond)
     return CGF.EmitRuntimeCall(
         OMPBuilder.getOrCreateRuntimeFunction(
             CGM.getModule(), OMPRTL___kmpc_taskgraph_taskred_init),
         Args);
-  else
-    return CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                                   CGM.getModule(), OMPRTL___kmpc_taskred_init),
-                               Args);
+  return CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                                 CGM.getModule(), OMPRTL___kmpc_taskred_init),
+                             Args);
 }
 
 void CGOpenMPRuntime::emitTaskReductionFini(CodeGenFunction &CGF,
