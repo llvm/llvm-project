@@ -1709,7 +1709,7 @@ The key value pairs in the response are:
 * `euid` - `integer` - A string value containing the decimal effective user ID
 * `egid` - `integer` - A string value containing the decimal effective group ID
 * `name` - `ascii-hex` - An ASCII hex string that contains the name of the process
-* `triple` - `string` - A hex encoded target triple (for example, hex encodings of `x86_64-apple-macosx`, `armv7-apple-ios`)
+* `triple` - `ascii-hex` - An ASCII hex string that contains the target triple (for example, `x86_64-apple-macosx`, `armv7-apple-ios`)
 
 Sample packet/response:
 ```
