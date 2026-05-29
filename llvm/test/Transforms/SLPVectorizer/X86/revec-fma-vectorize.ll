@@ -4,14 +4,10 @@
 define dso_local <2 x float> @fma_f32(ptr %A, float %B) {
 ; CHECK-LABEL: @fma_f32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[REAL:%.*]] = load float, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
-; CHECK-NEXT:    [[IMAG:%.*]] = load float, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[MUL_R:%.*]] = fmul reassoc nsz contract float [[REAL]], 2.000000e+00
-; CHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nsz contract float [[IMAG]], 2.000000e+00
-; CHECK-NEXT:    [[ADD_R:%.*]] = fadd reassoc nsz contract float [[MUL_R]], [[B:%.*]]
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x float> poison, float [[ADD_R]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[V0]], float [[MUL_I]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz contract <2 x float> [[TMP0]], splat (float 2.000000e+00)
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> <float poison, float -0.000000e+00>, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd reassoc nsz contract <2 x float> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x float> [[TMP3]]
 ;
 entry:
