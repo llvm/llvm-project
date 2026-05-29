@@ -33,6 +33,12 @@
 // CHECK-DAG: !rec_P2 = !cir.struct<"P2" padded {!u8i, !u16i, !u32i}>
 // CHECK-DAG: !rec_P3 = !cir.struct<"P3" packed padded {!u8i, !u16i, !u32i}>
 
+!rec_U1 = !cir.union<"U1" {!s32i, !u8i}, padding = {!u8i}>
+!rec_U2 = !cir.union<"U2" packed {!s32i}, padding = {!cir.array<!u8i x 4>}>
+
+// CHECK-DAG: !rec_U1 = !cir.union<"U1" {!s32i, !u8i}, padding = {!u8i}>
+// CHECK-DAG: !rec_U2 = !cir.union<"U2" packed {!s32i}, padding = {!cir.array<!u8i x 4>}>
+
 
 // Complete a previously incomplete record
 !rec_A = !cir.struct<class "A" incomplete>
@@ -63,7 +69,9 @@ module  {
                      %arg4: !rec_Ac,
                      %arg5: !rec_P1,
                      %arg6: !rec_P2,
-                     %arg7: !rec_P3) {
+                     %arg7: !rec_P3,
+                     %arg8: !rec_U1,
+                     %arg9: !rec_U2) {
     cir.return
   }
 

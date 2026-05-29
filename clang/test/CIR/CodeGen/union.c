@@ -31,7 +31,7 @@ union U3 {
   int i;
 } __attribute__((packed));
 
-// CIR:  !rec_U3 = !cir.union<"U3" packed padded {!cir.array<!s8i x 5>, !s32i}, padding = {!u8i}>
+// CIR:  !rec_U3 = !cir.union<"U3" packed {!cir.array<!s8i x 5>, !s32i}, padding = {!u8i}>
 // LLVM: %union.U3 = type <{ i32, i8 }>
 // OGCG: %union.U3 = type <{ i32, i8 }>
 
@@ -40,7 +40,7 @@ union U4 {
   int i;
 };
 
-// CIR:  !rec_U4 = !cir.union<"U4" padded {!cir.array<!s8i x 5>, !s32i}, padding = {!cir.array<!u8i x 4>}>
+// CIR:  !rec_U4 = !cir.union<"U4" {!cir.array<!s8i x 5>, !s32i}, padding = {!cir.array<!u8i x 4>}>
 // LLVM: %union.U4 = type { i32, [4 x i8] }
 // OGCG: %union.U4 = type { i32, [4 x i8] }
 

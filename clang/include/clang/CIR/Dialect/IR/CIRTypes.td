@@ -798,7 +798,7 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
         !u_complete   = !cir.union<"U" {!s32i, !u8i}>
         !u_incomplete = !cir.union<"U" incomplete>
         !u_anonymous  = !cir.union<{!s32i, !u8i}>
-        !u_padded     = !cir.union<"U" padded {!s32i, !u8i}, padding = {!u8i}>
+        !u_padded     = !cir.union<"U" {!s32i, !u8i}, padding = {!u8i}>
     ```
   }];
 
@@ -826,7 +826,7 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
       CArg<"mlir::Type", "{}">:$padding
     ), [{
       return $_get($_ctxt, members, name, /*incomplete=*/false, packed,
-                   /*padded=*/!!padding, /*is_class=*/false, padding);
+                   /*padded=*/false, /*is_class=*/false, padding);
     }]>,
 
     // Create an identified and incomplete union type.
@@ -843,7 +843,7 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
       CArg<"mlir::Type", "{}">:$padding
     ), [{
       return $_get($_ctxt, members, mlir::StringAttr{}, /*incomplete=*/false,
-                   packed, /*padded=*/!!padding, /*is_class=*/false, padding);
+                   packed, /*padded=*/false, /*is_class=*/false, padding);
     }]>
   ];
 
@@ -855,7 +855,8 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
     bool isIncomplete() const;
 
     /// Returns true when this union carries a tail-padding type.
-    /// Derived from getPadding() — a union is padded iff it has a padding type.
+    /// Derived from getPadding(): a union is padded iff it has a non-null
+    /// padding type.
     bool getPadded() const;
 
     size_t getNumElements() const { return getMembers().size(); }

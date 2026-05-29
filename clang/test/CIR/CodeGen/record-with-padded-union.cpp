@@ -15,7 +15,7 @@ struct SSO {
 };
 
 // Inner union's tail padding must not bleed into the outer record.
-// CIR: !rec_anon{{.*}} = !cir.union<"anon{{.*}}" padded {!cir.array<!s8i x 16>, !u64i}, padding = {!cir.array<!u8i x 8>}>
+// CIR: !rec_anon{{.*}} = !cir.union<"anon{{.*}}" {!cir.array<!s8i x 16>, !u64i}, padding = {!cir.array<!u8i x 8>}>
 // CIR: !rec_SSO = !cir.struct<"SSO" {!cir.ptr<!s8i>, !u64i, !rec_anon{{.*}}}>
 
 // LLVM: %struct.SSO = type { ptr, i64, %union.anon{{.*}} }

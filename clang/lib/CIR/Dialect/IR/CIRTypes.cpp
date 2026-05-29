@@ -365,9 +365,6 @@ Type UnionType::parse(mlir::AsmParser &parser) {
   if (parser.parseOptionalKeyword("packed").succeeded())
     packed = true;
 
-  // "padded" is accepted for backward compatibility but derived from padding.
-  (void)parser.parseOptionalKeyword("padded");
-
   bool incomplete = true;
   llvm::SmallVector<mlir::Type> members;
   if (parseRecordBody(parser, incomplete, members).failed())
@@ -417,7 +414,7 @@ Type UnionType::parse(mlir::AsmParser &parser) {
 
 void UnionType::print(mlir::AsmPrinter &printer) const {
   printRecordBody(printer, *this, getName(), /*hasClassPrefix=*/false,
-                  getPacked(), getPadded(), isIncomplete(), getMembers(),
+                  getPacked(), /*isPadded=*/false, isIncomplete(), getMembers(),
                   getPadding());
 }
 
@@ -438,7 +435,7 @@ mlir::StringAttr UnionType::getName() const { return getImpl()->name; }
 bool UnionType::isIncomplete() const { return getImpl()->incomplete; }
 bool UnionType::getIncomplete() const { return getImpl()->incomplete; }
 bool UnionType::getPacked() const { return getImpl()->packed; }
-bool UnionType::getPadded() const { return !!getPadding(); }
+bool UnionType::getPadded() const { return static_cast<bool>(getPadding()); }
 mlir::Type UnionType::getPadding() const { return getImpl()->padding; }
 
 bool UnionType::isABIConvertedRecord() const {
@@ -462,7 +459,7 @@ void UnionType::removeABIConversionNamePrefix() {
 void UnionType::complete(ArrayRef<Type> members, bool packed,
                          mlir::Type padding) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
-  if (mutate(members, packed, /*padded=*/!!padding, padding).failed())
+  if (mutate(members, packed, /*padded=*/false, padding).failed())
     llvm_unreachable("failed to complete union");
 }
 
@@ -539,6 +536,8 @@ void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded,
                           mlir::Type padding) {
   if (auto s = mlir::dyn_cast<StructType>(*this))
     return s.complete(members, packed, padded);
+  // For unions, padded is derived from padding; assert the caller is consistent.
+  assert((!padded || padding) && "padded=true requires a non-null padding type");
   return mlir::cast<UnionType>(*this).complete(members, packed, padding);
 }
 uint64_t RecordType::getElementOffset(const mlir::DataLayout &dataLayout,

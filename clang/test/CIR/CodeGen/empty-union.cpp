@@ -5,13 +5,13 @@
 // Padding-only union: CIR has no storage member and stores size in padding
 // field, so getUnionStorageType() is null and getABIAlignment returns 1.
 union Empty {};
-// CIR: !rec_Empty = !cir.union<"Empty" padded {}, padding = {!u8i}>
+// CIR: !rec_Empty = !cir.union<"Empty" {}, padding = {!u8i}>
 // LLVM-DAG: %union.Empty = type { i8 }
 // OGCG-DAG: %union.Empty = type { i8 }
 
 // Aligned empty union (should have aligned integer member in CIR)
 union alignas(16) EmptyAligned {};
-// CIR: !rec_EmptyAligned = !cir.union<"EmptyAligned" padded {}, padding = {!cir.array<!u8i x 16>}>
+// CIR: !rec_EmptyAligned = !cir.union<"EmptyAligned" {}, padding = {!cir.array<!u8i x 16>}>
 // LLVM-DAG: %union.EmptyAligned = type { [16 x i8] }
 // OGCG-DAG: %union.EmptyAligned = type { [16 x i8] }
 
