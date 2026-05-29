@@ -2760,7 +2760,7 @@ typedef struct kmp_taskgraph_region {
 typedef struct kmp_taskgraph_record {
   std::atomic<kmp_taskgraph_status_t> status = KMP_TDG_NONE;
   kmp_int32 gtid = 0;
-  kmp_int32 graph_id = 0;
+  uintptr_t graph_id = 0;
   // A lock that protects the record_map and num_tasks fields from being
   // modified by multiple threads.
   // For now, we also use this whilst the taskgraph is being replayed.
@@ -4502,7 +4502,7 @@ KMP_EXPORT void __kmpc_init_nest_lock_with_hint(ident_t *loc, kmp_int32 gtid,
 #if OMP_TASKGRAPH_EXPERIMENTAL
 KMP_EXPORT void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
                                  std::atomic<void *> *tdg_handle,
-                                 kmp_uint32 graph_id, kmp_int32 graph_reset,
+                                 uintptr_t graph_id, kmp_int32 graph_reset,
                                  kmp_int32 nogroup, void (*entry)(void *),
                                  void *args);
 KMP_EXPORT kmp_uint32 __kmpc_taskgraph_task(

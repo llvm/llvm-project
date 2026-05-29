@@ -2269,13 +2269,13 @@ void CGOpenMPRuntime::emitTaskgraphCall(CodeGenFunction &CGF,
     GraphReset = CGF.Builder.getInt32(0);
   }
 
-  llvm::Value *GraphId = CGF.Builder.getInt32(0);
+  llvm::Value *GraphId = llvm::ConstantInt::get(CGM.IntPtrTy, 0);
   const OMPGraphIdClause *GraphIdClause = D.getSingleClause<OMPGraphIdClause>();
   if (GraphIdClause) {
     const auto *E = GraphIdClause->getId();
     auto *GraphIdVal = CGF.EmitScalarExpr(E);
     GraphId =
-        CGF.Builder.CreateIntCast(GraphIdVal, CGM.Int32Ty, /*isSigned=*/false);
+        CGF.Builder.CreateIntCast(GraphIdVal, CGM.IntPtrTy, /*isSigned=*/false);
   }
 
   CodeGenFunction OutlinedCGF(CGM, /*suppressNewContext=*/true);

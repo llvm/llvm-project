@@ -5906,7 +5906,7 @@ __kmp_expire_taskgraph_records(kmp_int32 gtid,
 // entry:       Pointer to the entry function
 // args:        Pointer to the function arguments
 void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
-                      std::atomic<void *> *tdg_handle, kmp_uint32 graph_id,
+                      std::atomic<void *> *tdg_handle, uintptr_t graph_id,
                       kmp_int32 graph_reset, kmp_int32 nogroup,
                       void (*entry)(void *), void *args) {
   kmp_taskgraph_header_t *header =
