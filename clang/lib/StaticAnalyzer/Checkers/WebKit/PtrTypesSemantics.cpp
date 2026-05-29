@@ -713,9 +713,8 @@ public:
   }
 
   bool VisitReturnStmt(const ReturnStmt *RS) {
-    // A return statement is allowed as long as the return value is trivial.
     if (auto *RV = RS->getRetValue())
-      return Visit(RV);
+      return VisitIgnoringTempWithoutDestruction(RV);
     return true;
   }
 
@@ -895,15 +894,35 @@ public:
 
   bool checkArguments(const CallExpr *CE) {
     for (const Expr *Arg : CE->arguments()) {
-      if (Arg && !Visit(Arg))
+      if (Arg && !VisitIgnoringTempWithoutDestruction(Arg))
         return false;
     }
     return true;
   }
 
+  bool VisitIgnoringTempWithoutDestruction(const Expr *Arg) {
+    QualType OriginalQT = Arg->getType();
+    auto *Type = OriginalQT.getTypePtrOrNull();
+    if (!Type)
+      return Visit(Arg);
+    auto *CXXRD = Type->getAsCXXRecordDecl();
+    if (!CXXRD || !isSmartPtrClass(safeGetName(CXXRD)))
+      return Visit(Arg);
+    Arg = Arg->IgnoreParenCasts();
+    if (!Arg->isPRValue())
+      return Visit(Arg);
+    if (auto *ExprWithClean = dyn_cast<ExprWithCleanups>(Arg))
+      Arg = ExprWithClean->getSubExpr()->IgnoreParenCasts();
+    if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Arg)) {
+      if (OriginalQT == BTE->getType())
+        return Visit(BTE->getSubExpr());
+    }
+    return Visit(Arg);
+  }
+
   bool VisitCXXConstructExpr(const CXXConstructExpr *CE) {
     for (const Expr *Arg : CE->arguments()) {
-      if (Arg && !Visit(Arg))
+      if (Arg && !VisitIgnoringTempWithoutDestruction(Arg))
         return false;
     }
 

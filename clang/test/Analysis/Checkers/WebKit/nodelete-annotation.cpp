@@ -316,8 +316,21 @@ public:
 };
 
 struct Data {
-  static Ref<Data> create() {
+  static Ref<Data> [[clang::annotate_type("webkit.nodelete")]] create() {
     return adoptRef(*new Data);
+  }
+
+  static Ref<Data> [[clang::annotate_type("webkit.nodelete")]] create(double) {
+    return adoptRef(*new Data(RefCountable::create()->next()));
+    // expected-warning@-1{{A function 'create' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+  static Data* [[clang::annotate_type("webkit.nodelete")]] create(int) {
+    return adoptRef(new Data); // expected-warning{{A function 'create' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+  static Ref<Data> create(const char*) {
+    return std::move(adoptRef(*new Data));
   }
 
   void ref() {
@@ -338,6 +351,7 @@ struct Data {
   
 protected:
   Data() = default;
+  Data(RefCountable*) { }
 
 private:
   unsigned refCount { 0 };
@@ -562,3 +576,69 @@ private:
   RefPtr<SomeObject> m_someObject;
   Vector<Ref<SomeObject>> m_objects;
 };
+
+namespace copy_elision_edge_cases {
+
+// These cases all inhibit NRVO/copy elision (so a real move or copy constructor runs into the return slot),
+// but none of them perform any local destruction:
+//   - Moved-from operands are emptied; their dtors are no-ops at the caller.
+//   - Globals/statics are not destructed here at all.
+//   - The return-slot temporary is destructed by the caller, not by us.
+// All the mock Ref<T> copy/move ctors only manipulate pointers and a
+// refcount, so the trivial-ctor analysis correctly classifies these as
+// safe. The tests below document that the checker accepts each shape.
+
+Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnStdMoved(Ref<RefCountable>&& obj) {
+  return std::move(obj);
+}
+
+Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnFromBranches(bool b, Ref<RefCountable>&& a, Ref<RefCountable>&& c) {
+  if (b)
+    return std::move(a);
+  return std::move(c);
+}
+
+Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnDerefedParam(Ref<RefCountable>* param) {
+  return *param;
+}
+
+// Returning a by-value parameter also requires a real copy/move construction.
+// The function is still flagged here because of unsafe-parameter diagnostic that fires for the parameter declaration.
+Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnByValueParam(Ref<RefCountable> param) {
+  // expected-warning@-1{{A function 'returnByValueParam' has [[clang::annotate_type("webkit.nodelete")]] but it contains a parameter 'param' which could destruct an object}}
+  return param;
+}
+
+extern Ref<RefCountable> g_ref;
+Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnGlobal() {
+  return g_ref;
+}
+
+struct StaticHolder {
+  static Ref<RefCountable> s_ref;
+};
+Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnClassStatic() {
+  return StaticHolder::s_ref;
+}
+
+} // namespace copy_elision_edge_cases
+
+namespace temp_object_typecheck {
+
+struct Tracked {
+  Tracked();
+  ~Tracked();
+};
+
+Tracked [[clang::annotate_type("webkit.nodelete")]] makeTracked();
+
+struct Box {
+  Box(const Tracked&) {}
+};
+
+Box [[clang::annotate_type("webkit.nodelete")]] makeBox() {
+  return Box(makeTracked());
+  // expected-warning@-1{{A function 'makeBox' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+} // namespace temp_object_typecheck
