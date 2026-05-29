@@ -6692,6 +6692,35 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                             RegName, getValue(RegValue)));
     return;
   }
+  case Intrinsic::write_volatile_register: {
+    Value *Reg = I.getArgOperand(0);
+    Value *RegValue = I.getArgOperand(1);
+    SDValue Chain = getRoot();
+    const MDNode *MD = cast<MDNode>(cast<MetadataAsValue>(Reg)->getMetadata());
+    SDValue RegName = DAG.getMDNode(MD);
+    EVT VT = TLI.getValueType(DAG.getDataLayout(), RegValue->getType());
+    SDValue WriteChain = DAG.getNode(ISD::WRITE_REGISTER, sdl, MVT::Other,
+                                     Chain, RegName, getValue(RegValue));
+    // FAKE_USE of the physical register marks it live after the WRITE_REGISTER,
+    // preventing the backend from dead-eliminating the write.  This is
+    // preferred over READ_REGISTER, which would emit extra register copies
+    // (e.g. fmov xN, dN for FP/SIMD registers).
+    const MDString *RegStr = cast<MDString>(MD->getOperand(0));
+    LLT Ty = VT.isSimple() ? getLLTForMVT(VT.getSimpleVT()) : LLT();
+    const MachineFunction &MF = DAG.getMachineFunction();
+    Register PhysReg =
+        TLI.getRegisterByName(RegStr->getString().data(), Ty, MF);
+    if (PhysReg.isValid()) {
+      const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(PhysReg);
+      MVT RegVT = *TRI->legalclasstypes_begin(*RC);
+      DAG.setRoot(DAG.getNode(ISD::FAKE_USE, sdl, MVT::Other,
+                              {WriteChain, DAG.getRegister(PhysReg, RegVT)}));
+    } else {
+      DAG.setRoot(WriteChain);
+    }
+    return;
+  }
   case Intrinsic::memcpy:
   case Intrinsic::memcpy_inline: {
     const auto &MCI = cast<MemCpyInst>(I);

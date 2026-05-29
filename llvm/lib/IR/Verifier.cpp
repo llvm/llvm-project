@@ -7442,6 +7442,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "llvm.sponentry must return a pointer to the stack", &Call);
     break;
   }
+  case Intrinsic::write_volatile_register: {
+    auto *MD = cast<MDNode>(
+        cast<MetadataAsValue>(Call.getArgOperand(0))->getMetadata());
+    Check(MD->getNumOperands() == 1 && isa<MDString>(MD->getOperand(0)),
+          "llvm.write_volatile_register metadata must be a single MDString",
+          &Call);
+    break;
+  }
   };
 
   // Verify that there aren't any unmediated control transfers between funclets.
