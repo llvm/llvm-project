@@ -465,6 +465,9 @@ struct in_place_t {};
 
 constexpr in_place_t in_place;
 
+template<class T> struct remove_const { typedef T type; };
+template<class T> struct remove_const<const T> { typedef T type; };
+
 } // namespace std
 
 #endif // STD_TYPE_TRAITS_H
@@ -1717,7 +1720,108 @@ bool operator==(const StatusOr<T> &lhs, const StatusOr<T> &rhs);
 template <typename T>
 bool operator!=(const StatusOr<T> &lhs, const StatusOr<T> &rhs);
 
+using StatusBuilder = Status;
+namespace status_macro_internal {
+class ReturnIfErrorAdaptor {
+ public:
+  explicit ReturnIfErrorAdaptor(
+      const absl::Status& status,
+      absl::SourceLocation loc = absl::SourceLocation::current());
+
+  explicit ReturnIfErrorAdaptor(
+      absl::Status&& status,
+      absl::SourceLocation loc = absl::SourceLocation::current());
+
+  ~ReturnIfErrorAdaptor();
+
+  explicit operator bool() const;
+  StatusBuilder Consume();
+};
+
+ReturnIfErrorAdaptor MacroAdaptor(const absl::Status& s,
+                                         absl::SourceLocation loc);
+ReturnIfErrorAdaptor MacroAdaptor(absl::Status&& s,
+                                         absl::SourceLocation loc);
+
+}  // namespace status_macro_internal
+
 } // namespace absl
+
+#define ABSL_INTERNAL_STATUS_MACROS_IMPL_ELSE_BLOCKER_ \
+  switch (0)                                           \
+  case 0:                                              \
+  default:  // NOLINT
+
+#define ABSL_INTERNAL_STATUS_MACROS_RETURN_IF_ERROR_IMPL_(return_keyword, \
+                                                          expr)           \
+  ABSL_INTERNAL_STATUS_MACROS_IMPL_ELSE_BLOCKER_                          \
+  if (auto status_macro_internal_adaptor =                                \
+          absl::status_macro_internal::MacroAdaptor(                      \
+              (expr), absl::SourceLocation::current())) {                 \
+  } else /* NOLINT */                                                     \
+    return_keyword status_macro_internal_adaptor.Consume()
+
+#define ABSL_RETURN_IF_ERROR(expr) \
+  ABSL_INTERNAL_STATUS_MACROS_RETURN_IF_ERROR_IMPL_(return, expr)
+
+#define ABSL_INTERNAL_STATUS_MACROS_IMPL_CONCAT_INNER_(x, y) x##y
+
+#define ABSL_INTERNAL_STATUS_MACROS_IMPL_CONCAT_(x, y) \
+  ABSL_INTERNAL_STATUS_MACROS_IMPL_CONCAT_INNER_(x, y)
+
+#define ABSL_INTERNAL_STATUS_MACROS_IMPL_UNPARENTHESIZE_IF_PARENTHESIZED(...) \
+  __VA_ARGS__
+
+#define ABSL_ASSIGN_OR_RETURN(...) \
+  ABSL_INTERNAL_STATUS_MACROS_ASSIGN_OR_RETURN_IMPL_(return, __VA_ARGS__)
+
+#define ABSL_INTERNAL_STATUS_MACROS_ASSIGN_OR_RETURN_IMPL_(return_keyword, \
+                                                           ...)            \
+  ABSL_INTERNAL_STATUS_MACROS_IMPL_GET_VARIADIC_(                          \
+      (return_keyword, __VA_ARGS__,                                        \
+       ABSL_INTERNAL_STATUS_MACROS_IMPL_ASSIGN_OR_RETURN_3_,               \
+       ABSL_INTERNAL_STATUS_MACROS_IMPL_ASSIGN_OR_RETURN_2_))              \
+  (return_keyword, __VA_ARGS__)
+
+#define ABSL_INTERNAL_STATUS_MACROS_IMPL_GET_VARIADIC_HELPER_(_1, _2, _3, _4, \
+                                                              NAME, ...)      \
+  NAME
+#define ABSL_INTERNAL_STATUS_MACROS_IMPL_GET_VARIADIC_(args) \
+  /* NOLINTNEXTLINE(clang-diagnostic-pre-c++20-compat) */    \
+  ABSL_INTERNAL_STATUS_MACROS_IMPL_GET_VARIADIC_HELPER_ args
+
+#define ABSL_INTERNAL_STATUS_MACROS_IMPL_ASSIGN_OR_RETURN_2_(return_keyword,   \
+                                                             lhs, rexpr)       \
+  ABSL_INTERNAL_STATUS_MACROS_IMPL_ASSIGN_OR_RETURN_(                          \
+      ABSL_INTERNAL_STATUS_MACROS_IMPL_CONCAT_(_status_or_value, __LINE__),    \
+      lhs, rexpr,                                                              \
+      return_keyword absl::Status(                                             \
+          std::move(ABSL_INTERNAL_STATUS_MACROS_IMPL_CONCAT_(_status_or_value, \
+                                                             __LINE__))        \
+              .status(),                                                       \
+          absl::SourceLocation::current()))
+
+#define ABSL_INTERNAL_STATUS_MACROS_IMPL_ASSIGN_OR_RETURN_3_(                  \
+    return_keyword, lhs, rexpr, error_expression)                              \
+  ABSL_INTERNAL_STATUS_MACROS_IMPL_ASSIGN_OR_RETURN_(                          \
+      ABSL_INTERNAL_STATUS_MACROS_IMPL_CONCAT_(_status_or_value, __LINE__),    \
+      lhs, rexpr, /* NOLINTNEXTLINE(misc-const-correctness) */                 \
+      absl::StatusBuilder _(                                                   \
+          std::move(ABSL_INTERNAL_STATUS_MACROS_IMPL_CONCAT_(_status_or_value, \
+                                                             __LINE__))        \
+              .status(),                                                       \
+          absl::SourceLocation::current());                                    \
+      (void)_; /* error_expression is allowed to not use this variable */      \
+      return_keyword(error_expression))
+
+#define ABSL_INTERNAL_STATUS_MACROS_IMPL_ASSIGN_OR_RETURN_(                 \
+    statusor, lhs, rexpr, error_expression)                                 \
+  auto statusor = (rexpr);                                                  \
+  if (!statusor.ok()) {                                                     \
+    error_expression;                                                       \
+  }                                                                         \
+  ABSL_INTERNAL_STATUS_MACROS_IMPL_UNPARENTHESIZE_IF_PARENTHESIZED(lhs) =   \
+      (*std::move(statusor))
 
 #endif // STATUSOR_H_
 )cc";
