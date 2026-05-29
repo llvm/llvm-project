@@ -177,7 +177,9 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   I32ConstantCache.clear();
   DebugTypeFunctionCache.clear();
   GlobalDIEmitted = false;
+#ifndef NDEBUG
   NonSemanticOpStringsSectionEmitted = false;
+#endif
   CachedDebugInfoNoneReg = MCRegister();
   CachedOpTypeVoidReg = MCRegister();
   CachedOpTypeInt32Reg = MCRegister();
@@ -256,8 +258,10 @@ SPIRVNonSemanticDebugHandler::emitOpString(StringRef S,
 
 MCRegister SPIRVNonSemanticDebugHandler::emitOpStringIfNew(
     StringRef S, SPIRV::ModuleAnalysisInfo &MAI) {
+#ifndef NDEBUG
   assert(!NonSemanticOpStringsSectionEmitted &&
          "emitOpStringIfNew is only valid while emitting SPIR-V section 7");
+#endif
   auto [It, Inserted] = OpStringContentCache.try_emplace(S, MCRegister());
   if (!Inserted)
     return It->second;
@@ -268,8 +272,10 @@ MCRegister SPIRVNonSemanticDebugHandler::emitOpStringIfNew(
 }
 
 MCRegister SPIRVNonSemanticDebugHandler::getCachedOpStringReg(StringRef S) {
+#ifndef NDEBUG
   assert(NonSemanticOpStringsSectionEmitted &&
          "getCachedOpStringReg requires emitNonSemanticDebugStrings() first");
+#endif
   auto It = OpStringContentCache.find(S);
   assert(It != OpStringContentCache.end() &&
          "NSDI OpString missing from cache; emitNonSemanticDebugStrings must "
@@ -474,7 +480,9 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
   for (const DIBasicType *BT : BasicTypes)
     (void)emitOpStringIfNew(BT->getName(), MAI);
 
+#ifndef NDEBUG
   NonSemanticOpStringsSectionEmitted = true;
+#endif
 }
 
 void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
@@ -490,9 +498,11 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   if (!ExtInstSetReg.isValid())
     return; // Extension not available.
 
+#ifndef NDEBUG
   assert(NonSemanticOpStringsSectionEmitted &&
          "emitNonSemanticDebugStrings() must run before "
          "emitNonSemanticGlobalDebugInfo()");
+#endif
 
   MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
   MCRegister I32TypeReg = getOrEmitOpTypeInt32Reg(MAI);
