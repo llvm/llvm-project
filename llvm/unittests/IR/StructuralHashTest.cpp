@@ -206,6 +206,48 @@ TEST(StructuralHashTest, ComparisonInstructionPredicate) {
   EXPECT_NE(StructuralHash(*M1, true), StructuralHash(*M2, true));
 }
 
+TEST(StructuralHashTest, InstructionFlags) {
+  LLVMContext Ctx;
+
+  auto FunctionHash = [&](const char *IR) {
+    return StructuralHash(*parseIR(Ctx, IR)->getFunction("f"),
+                          /*DetailedHash=*/true);
+  };
+
+  EXPECT_NE(FunctionHash("define i32 @f(i32 %a, i32 %b) {\n"
+                         "  %r = add i32 %a, %b\n"
+                         "  ret i32 %r\n"
+                         "}\n"),
+            FunctionHash("define i32 @f(i32 %a, i32 %b) {\n"
+                         "  %r = add nsw i32 %a, %b\n"
+                         "  ret i32 %r\n"
+                         "}\n"));
+  EXPECT_NE(FunctionHash("define i32 @f(i32 %a, i32 %b) {\n"
+                         "  %r = udiv i32 %a, %b\n"
+                         "  ret i32 %r\n"
+                         "}\n"),
+            FunctionHash("define i32 @f(i32 %a, i32 %b) {\n"
+                         "  %r = udiv exact i32 %a, %b\n"
+                         "  ret i32 %r\n"
+                         "}\n"));
+  EXPECT_NE(FunctionHash("define i1 @f(i32 %a, i32 %b) {\n"
+                         "  %r = icmp slt i32 %a, %b\n"
+                         "  ret i1 %r\n"
+                         "}\n"),
+            FunctionHash("define i1 @f(i32 %a, i32 %b) {\n"
+                         "  %r = icmp samesign slt i32 %a, %b\n"
+                         "  ret i1 %r\n"
+                         "}\n"));
+  EXPECT_NE(FunctionHash("define float @f(float %a, float %b) {\n"
+                         "  %r = fadd float %a, %b\n"
+                         "  ret float %r\n"
+                         "}\n"),
+            FunctionHash("define float @f(float %a, float %b) {\n"
+                         "  %r = fadd fast float %a, %b\n"
+                         "  ret float %r\n"
+                         "}\n"));
+}
+
 TEST(StructuralHashTest, IntrinsicInstruction) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M1 =
