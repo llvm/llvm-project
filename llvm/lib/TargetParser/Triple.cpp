@@ -106,6 +106,8 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
     return "riscv32be";
   case riscv64be:
     return "riscv64be";
+  case sh:
+    return "sh";
   case shave:
     return "shave";
   case sparc:
@@ -1229,6 +1231,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::riscv64:
   case Triple::riscv32be:
   case Triple::riscv64be:
+  case Triple::sh:
   case Triple::shave:
   case Triple::sparc:
   case Triple::sparcel:
@@ -1992,6 +1995,7 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::renderscript32:
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv32be:
+  case llvm::Triple::sh:
   case llvm::Triple::shave:
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
@@ -2103,6 +2107,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::renderscript32:
   case Triple::riscv32:
   case Triple::riscv32be:
+  case Triple::sh:
   case Triple::shave:
   case Triple::sparc:
   case Triple::sparcel:
@@ -2195,6 +2200,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::m68k:
   case Triple::msp430:
   case Triple::r600:
+  case Triple::sh:
   case Triple::shave:
   case Triple::sparcel:
   case Triple::tce:
