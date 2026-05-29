@@ -23,7 +23,6 @@ add_flang_library(FortranSemantics
   check-omp-atomic.cpp
   check-omp-loop.cpp
   check-omp-metadirective.cpp
-  check-omp-declare-variant.cpp
   check-omp-structure.cpp
   check-purity.cpp
   check-return.cpp

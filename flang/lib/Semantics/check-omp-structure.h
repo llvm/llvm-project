@@ -127,9 +127,6 @@ public:
 
   void Enter(const parser::OmpDeclareVariantDirective &);
   void Leave(const parser::OmpDeclareVariantDirective &);
-  void CheckOmpDeclareVariantDirective(
-      const parser::OmpDeclareVariantDirective &);
-  void CheckDeclareVariantUserConditions(const parser::OmpContextSelector &);
   void Enter(const parser::OmpDeclareSimdDirective &);
   void Leave(const parser::OmpDeclareSimdDirective &);
   void Enter(const parser::OmpAllocateDirective &);
@@ -262,6 +259,9 @@ private:
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
 
   // check-omp-metadirective.cpp
+  void CheckOmpDeclareVariantDirective(
+      const parser::OmpDeclareVariantDirective &);
+  void CheckDeclareVariantUserConditions(const parser::OmpContextSelector &);
   const std::list<parser::OmpTraitProperty> &GetTraitPropertyList(
       const parser::OmpTraitSelector &);
   std::optional<llvm::omp::Clause> GetClauseFromProperty(
