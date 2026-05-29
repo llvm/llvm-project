@@ -69,8 +69,8 @@ static bool ParseWidthModifier(const char *&I, const char *E,
   if (W.getAsInteger(10, BitWidth))
     return false;
 
-  for (const char *End = W.end(); I != End; ++I)
-    ++ModifierLength;
+  I = W.end();
+  ModifierLength += W.size();
 
   return true;
 }
