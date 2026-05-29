@@ -1428,8 +1428,7 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCRoutineConstruct &x) {
               common::LanguageFeature::OpenACCMultipleNamesInRoutine)) {
         context_.Warn(common::LanguageFeature::OpenACCMultipleNamesInRoutine,
             verbatim.source,
-            "OpenACC ROUTINE directive permits only a single name; "
-            "multiple names accepted as an extension"_warn_en_US);
+            "OpenACC ROUTINE directive permits only a single name; multiple names accepted as an extension"_warn_en_US);
         if (llvm::any_of(std::get<parser::AccClauseList>(x.t).v,
                 [](const parser::AccClause &c) {
                   return std::holds_alternative<parser::AccClause::Bind>(c.u);
