@@ -632,19 +632,38 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
                            const InductionDescriptor &IndDesc, VPlan &Plan,
                            PredicatedScalarEvolution &PSE, Loop &OrigLoop,
                            DebugLoc DL) {
-  [[maybe_unused]] ScalarEvolution &SE = *PSE.getSE();
+  ScalarEvolution &SE = *PSE.getSE();
   assert(SE.isLoopInvariant(IndDesc.getStep(), &OrigLoop) &&
          "step must be loop invariant");
   assert((Plan.getLiveIn(IndDesc.getStartValue()) == Start ||
           (SE.isSCEVable(IndDesc.getStartValue()->getType()) &&
-           SE.getSCEV(IndDesc.getStartValue()) ==
+           PSE.getSCEV(IndDesc.getStartValue()) ==
                vputils::getSCEVExprForVPValue(Start, PSE))) &&
          "Start VPValue must match IndDesc's start value");
 
-  VPValue *Step =
-      vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
-
   VPValue *BackedgeVal = PhiR->getOperand(1);
+  // Try to get the versioned step from the induction increment directly.
+  auto GetStep = [&]() -> VPValue * {
+    VPValue *Step;
+    if (match(BackedgeVal, m_Add(m_Specific(PhiR), m_VPValue(Step))))
+      return Step;
+
+    // Pointer induction: scale the GEP index by the source element size.
+    Type *GEPSrcElemTy;
+    ArrayRef<VPValue *> GEPOps;
+    if (match(BackedgeVal, m_GetElementPtr(GEPSrcElemTy, GEPOps)) &&
+        GEPOps.size() == 2 && GEPOps[0] == PhiR) {
+      Type *StepTy = IndDesc.getStep()->getType();
+      const SCEV *Idx = vputils::getSCEVExprForVPValue(GEPOps[1], PSE);
+      if (!isa<SCEVCouldNotCompute>(Idx))
+        return vputils::getOrCreateVPValueForSCEVExpr(
+            Plan, SE.getMulExpr(SE.getTruncateOrSignExtend(Idx, StepTy),
+                                SE.getSizeOfExpr(StepTy, GEPSrcElemTy)));
+    }
+    return vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
+  };
+  VPValue *Step = GetStep();
+
   // Replace live-out extracts of WideIV's backedge value by ExitingIVValue
   // recipes. optimizeInductionLiveOutUsers will later compute the proper
   // DerivedIV.
@@ -679,12 +698,6 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   assert((IndDesc.getKind() == InductionDescriptor::IK_IntInduction ||
           IndDesc.getKind() == InductionDescriptor::IK_FpInduction) &&
          "must have an integer or float induction at this point");
-
-  // Update wide induction increments to use the same step as the corresponding
-  // wide induction. This enables detecting induction increments directly in
-  // VPlan and removes redundant splats.
-  if (match(BackedgeVal, m_Add(m_Specific(PhiR), m_VPValue())))
-    BackedgeVal->getDefiningRecipe()->setOperand(1, Step);
 
   // It is always safe to copy over the NoWrap and FastMath flags. In
   // particular, when folding tail by masking, the masked-off lanes are never
@@ -871,17 +884,20 @@ static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
       Previous = PrevPhi->getBackedgeValue()->getDefiningRecipe();
     }
 
-    assert(Previous && "Previous must be a recipe");
-    // Sink FOR users after Previous or hoist Previous before FOR users.
-    if (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT) &&
-        !hoistPreviousBeforeFORUsers(FOR, Previous, VPDT))
-      return false;
+    VPBasicBlock *InsertBlock = FOR->getParent();
+    VPBasicBlock::iterator InsertPt = InsertBlock->getFirstNonPhi();
+    if (Previous) {
+      // Sink FOR users after Previous or hoist Previous before FOR users.
+      if (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT) &&
+          !hoistPreviousBeforeFORUsers(FOR, Previous, VPDT))
+        return false;
+      InsertBlock = Previous->getParent();
+      InsertPt = isa<VPHeaderPHIRecipe>(Previous)
+                     ? InsertBlock->getFirstNonPhi()
+                     : std::next(Previous->getIterator());
+    }
 
     // Create FirstOrderRecurrenceSplice and replace FOR uses.
-    VPBasicBlock *InsertBlock = Previous->getParent();
-    auto InsertPt = isa<VPHeaderPHIRecipe>(Previous)
-                        ? InsertBlock->getFirstNonPhi()
-                        : std::next(Previous->getIterator());
     VPBuilder LoopBuilder(InsertBlock, InsertPt);
     auto *RecurSplice =
         LoopBuilder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
@@ -948,6 +964,7 @@ bool VPlanTransforms::createHeaderPhiRecipes(
         RdxDesc.hasUsesOutsideReductionChain());
   };
 
+  SmallVector<VPValue *> BackedgeVals;
   for (VPRecipeBase &R : make_early_inc_range(HeaderVPBB->phis())) {
     auto *PhiR = cast<VPPhi>(&R);
     VPHeaderPHIRecipe *HeaderPhiR = CreateHeaderPhiRecipe(PhiR);
@@ -959,6 +976,9 @@ bool VPlanTransforms::createHeaderPhiRecipes(
   if (!tryToSinkOrHoistRecurrenceUsers(HeaderVPBB, VPDT))
     return false;
 
+  if (range_size(HeaderVPBB->phis()) !=
+      range_size(Plan.getScalarPreheader()->phis()))
+    return true;
   for (const auto &[HeaderPhiR, ScalarPhiR] :
        zip_equal(HeaderVPBB->phis(), Plan.getScalarPreheader()->phis())) {
     auto *ResumePhiR = cast<VPPhi>(&ScalarPhiR);
