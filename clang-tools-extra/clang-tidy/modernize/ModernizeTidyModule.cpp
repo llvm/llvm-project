@@ -14,6 +14,7 @@
 #include "AvoidSetjmpLongjmpCheck.h"
 #include "AvoidVariadicFunctionsCheck.h"
 #include "ConcatNestedNamespacesCheck.h"
+#include "DefaultArgBracedInitCheck.h"
 #include "DeprecatedHeadersCheck.h"
 #include "DeprecatedIosBaseAliasesCheck.h"
 #include "LoopConvertCheck.h"
@@ -77,6 +78,8 @@ public:
         "modernize-avoid-variadic-functions");
     CheckFactories.registerCheck<ConcatNestedNamespacesCheck>(
         "modernize-concat-nested-namespaces");
+    CheckFactories.registerCheck<DefaultArgBracedInitCheck>(
+        "modernize-default-arg-braced-init");
     CheckFactories.registerCheck<DeprecatedHeadersCheck>(
         "modernize-deprecated-headers");
     CheckFactories.registerCheck<DeprecatedIosBaseAliasesCheck>(
