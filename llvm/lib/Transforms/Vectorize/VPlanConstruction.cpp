@@ -225,8 +225,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       // Phi node's operands may not have been visited at this point. We create
       // an empty VPInstruction that we will fix once the whole plain CFG has
       // been built.
-      NewR =
-          VPIRBuilder.createScalarPhi({}, Phi->getDebugLoc(), "vec.phi", *Phi);
+      NewR = VPIRBuilder.createScalarPhi({}, Phi->getDebugLoc(), "vec.phi",
+                                         *Phi, Phi->getType());
       NewR->setUnderlyingValue(Phi);
       if (isHeaderBB(Phi->getParent(), LI->getLoopFor(Phi->getParent()))) {
         // Header phis need to be fixed after the VPBB for the latch has been
@@ -275,9 +275,9 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       } else {
         // Build VPInstruction for any arbitrary Instruction without specific
         // representation in VPlan.
-        NewR =
-            VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst,
-                                     VPIRFlags(*Inst), MD, Inst->getDebugLoc());
+        NewR = VPIRBuilder.createNaryOp(
+            Inst->getOpcode(), VPOperands, Inst, VPIRFlags(*Inst), MD,
+            Inst->getDebugLoc(), "", Inst->getType());
       }
     }
 
@@ -1412,13 +1412,19 @@ static void addBypassBranch(VPlan &Plan, VPBasicBlock *CheckBlockVPBB,
   }
 }
 
+void VPlanTransforms::attachVPCheckBlock(VPlan &Plan, VPValue *Cond,
+                                         VPBasicBlock *CheckBlock,
+                                         bool AddBranchWeights) {
+  insertCheckBlockBeforeVectorLoop(Plan, CheckBlock);
+  addBypassBranch(Plan, CheckBlock, Cond, AddBranchWeights);
+}
+
 void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
                                        BasicBlock *CheckBlock,
                                        bool AddBranchWeights) {
   VPValue *CondVPV = Plan.getOrAddLiveIn(Cond);
   VPBasicBlock *CheckBlockVPBB = Plan.createVPIRBasicBlock(CheckBlock);
-  insertCheckBlockBeforeVectorLoop(Plan, CheckBlockVPBB);
-  addBypassBranch(Plan, CheckBlockVPBB, CondVPV, AddBranchWeights);
+  attachVPCheckBlock(Plan, CondVPV, CheckBlockVPBB, AddBranchWeights);
 }
 
 void VPlanTransforms::addMinimumIterationCheck(

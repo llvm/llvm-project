@@ -1617,6 +1617,9 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
   CheckDI((N.getEmissionKind() <= DICompileUnit::LastEmissionKind),
           "invalid emission kind", &N);
 
+  CheckDI(N.getSourceLanguage().getDialect() <= dwarf::DW_LLVM_LANG_DIALECT_max,
+          "invalid language dialect", &N);
+
   if (auto *Array = N.getRawEnumTypes()) {
     CheckDI(isa<MDTuple>(Array), "invalid enum list", &N, Array);
     for (Metadata *Op : N.getEnumTypes()->operands()) {
@@ -7359,6 +7362,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     const Type *RetTy = Call.getFunctionType()->getReturnType();
     Check(RetTy->getPointerAddressSpace() == StackAS,
           "llvm.sponentry must return a pointer to the stack", &Call);
+    break;
+  }
+  case Intrinsic::write_volatile_register: {
+    auto *MD = cast<MDNode>(
+        cast<MetadataAsValue>(Call.getArgOperand(0))->getMetadata());
+    Check(MD->getNumOperands() == 1 && isa<MDString>(MD->getOperand(0)),
+          "llvm.write_volatile_register metadata must be a single MDString",
+          &Call);
     break;
   }
   };

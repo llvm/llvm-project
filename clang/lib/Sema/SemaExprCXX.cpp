@@ -479,7 +479,11 @@ ParsedType Sema::getDestructorTypeForDecltype(const DeclSpec &DS,
     return nullptr;
   }
 
-  return ParsedType::make(T);
+  TypeLocBuilder TLB;
+  DecltypeTypeLoc DecltypeTL = TLB.push<DecltypeTypeLoc>(T);
+  DecltypeTL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
+  DecltypeTL.setRParenLoc(DS.getTypeofParensRange().getEnd());
+  return CreateParsedType(T, TLB.getTypeSourceInfo(Context, T));
 }
 
 bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
@@ -1429,7 +1433,7 @@ bool Sema::CheckCXXThisType(SourceLocation Loc, QualType Type) {
   const auto *Method = dyn_cast<CXXMethodDecl>(DC);
   if (Method && Method->isExplicitObjectMemberFunction()) {
     Diag(Loc, diag::err_invalid_this_use) << 1;
-  } else if (Method && isLambdaCallWithExplicitObjectParameter(CurContext)) {
+  } else if (Method && isLambdaCallWithExplicitObjectParameter(DC)) {
     Diag(Loc, diag::err_invalid_this_use) << 1;
   } else {
     Diag(Loc, diag::err_invalid_this_use) << 0;
