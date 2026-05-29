@@ -279,11 +279,13 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
 
   KernelLaunchParamsTy LaunchParams;
 
-  // Kernel languages don't use indirection.
+  // Kernel languages (.IsCUDA) don't use indirection, whereas dispatching with
+  // an array of kernel argument pointers (.IsPtrArgs) uses KernelArgs.ArgPtrs
+  // and KernelArgs.ArgSizes directly.
   if (KernelArgs.Flags.IsCUDA) {
     LaunchParams =
         *reinterpret_cast<KernelLaunchParamsTy *>(KernelArgs.ArgPtrs);
-  } else {
+  } else if (!KernelArgs.Flags.IsPtrArgs) {
     LaunchParams =
         prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs,
                     Args, Ptrs, *KernelLaunchEnvOrErr, KernelArgs.Version);

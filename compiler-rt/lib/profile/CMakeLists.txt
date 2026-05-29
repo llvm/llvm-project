@@ -89,11 +89,13 @@ if (NOT COMPILER_RT_PROFILE_BAREMETAL)
   list(APPEND PROFILE_SOURCES
     GCDAProfiling.c
     InstrProfilingFile.c
-    InstrProfilingPlatformROCm.cpp
     InstrProfilingRuntime.cpp
     InstrProfilingUtil.c
     InstrProfilingValue.c
     )
+  if(COMPILER_RT_BUILD_PROFILE_ROCM)
+    list(APPEND PROFILE_SOURCES InstrProfilingPlatformROCm.cpp)
+  endif()
 endif()
 
 set(PROFILE_HEADERS
@@ -156,8 +158,24 @@ if(COMPILER_RT_PROFILE_BAREMETAL)
      -DCOMPILER_RT_PROFILE_BAREMETAL=1)
 endif()
 
+if(COMPILER_RT_BUILD_PROFILE_ROCM)
+  set(EXTRA_FLAGS
+      ${EXTRA_FLAGS}
+      -DCOMPILER_RT_BUILD_PROFILE_ROCM=1)
+endif()
+
+# The HIP host interceptor in InstrProfilingPlatformROCm.cpp pulls in
+# RTInterception + sanitizer_common object libs. Those targets are only created
+# when COMPILER_RT_BUILD_SANITIZERS / _MEMPROF / _XRAY / _CTX_PROFILE is enabled
+# (see lib/CMakeLists.txt). In a profile-only build the targets do not exist;
+# skip both the object-lib merge and the ROCm source file so the static archive
+# remains self-contained.
 set(PROFILE_OBJECT_LIBS)
-if(COMPILER_RT_HAS_INTERCEPTION AND NOT COMPILER_RT_PROFILE_BAREMETAL)
+set(PROFILE_HAS_HIP_INTERCEPTOR FALSE)
+if(COMPILER_RT_HAS_INTERCEPTION AND NOT COMPILER_RT_PROFILE_BAREMETAL
+   AND TARGET RTInterception.${COMPILER_RT_DEFAULT_TARGET_ARCH}
+   AND TARGET RTSanitizerCommon.${COMPILER_RT_DEFAULT_TARGET_ARCH}
+   AND TARGET RTSanitizerCommonLibc.${COMPILER_RT_DEFAULT_TARGET_ARCH})
   # RTInterception references __sanitizer_internal_{memcpy,memset,memmove} and other
   # sanitizer_common symbols; merge the same object libs as clang_rt.cfi (without
   # coverage/symbolizer) so -fprofile-instr-generate links stay self-contained.
@@ -165,6 +183,11 @@ if(COMPILER_RT_HAS_INTERCEPTION AND NOT COMPILER_RT_PROFILE_BAREMETAL)
     RTInterception
     RTSanitizerCommon
     RTSanitizerCommonLibc)
+  set(PROFILE_HAS_HIP_INTERCEPTOR TRUE)
+endif()
+
+if(NOT PROFILE_HAS_HIP_INTERCEPTOR)
+  list(REMOVE_ITEM PROFILE_SOURCES InstrProfilingPlatformROCm.cpp)
 endif()
 
 if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
@@ -185,7 +208,7 @@ if(MSVC)
   # built with MultiThreadedDLL (/MD) — see interception/CMakeLists.txt and
   # sanitizer_common/CMakeLists.txt. Mixing /MD objects into a /MT libclang_rt.profile
   # yields LNK2019 (__imp__stricmp from interception_win.cpp) and LNK4098 in Profile-*.
-  if(COMPILER_RT_HAS_INTERCEPTION AND NOT COMPILER_RT_PROFILE_BAREMETAL)
+  if(PROFILE_HAS_HIP_INTERCEPTOR)
     set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
   else()
     set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
