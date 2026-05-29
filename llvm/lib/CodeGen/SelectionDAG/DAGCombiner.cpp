@@ -17702,6 +17702,29 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   if (N0.getOpcode() == ISD::BITCAST)
     return DAG.getBitcast(VT, N0.getOperand(0));
 
+  // fold (bitcast (extract_subvector vNi1, 0) -> iK)
+  //   -> (truncate (bitcast vNi1 -> iN) -> iK)
+  // This canonicalises the AVX512DQ mask-narrowing path into the same
+  // trunc+bitcast form used without AVX512DQ, allowing the existing
+  // (zext (and (trunc x) C)) -> (and x C) fold to fire.
+  // Only apply after type legalization so that vNi1 types are only seen
+  // when they are genuinely legal (e.g. AVX512 k-registers), not as
+  // temporary pre-legalization nodes on non-AVX512 targets.
+  if (LegalTypes && N0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      N0.getConstantOperandVal(1) == 0 && VT.isInteger() && !VT.isVector()) {
+    EVT SrcVT = N0.getOperand(0).getValueType();
+    if (SrcVT.isVector() &&
+        SrcVT.getVectorElementType() == MVT::i1 &&
+        VT.getSizeInBits() <= SrcVT.getSizeInBits()) {
+      SDLoc DL(N);
+      EVT WideIntVT =
+          EVT::getIntegerVT(*DAG.getContext(), SrcVT.getSizeInBits());
+      SDValue WideBitcast =
+          DAG.getNode(ISD::BITCAST, DL, WideIntVT, N0.getOperand(0));
+      return DAG.getNode(ISD::TRUNCATE, DL, VT, WideBitcast);
+    }
+  }
+
   // fold (conv (logicop (conv x), (c))) -> (logicop x, (conv c))
   // iff the current bitwise logicop type isn't legal
   if (ISD::isBitwiseLogicOp(N0.getOpcode()) && VT.isInteger() &&
