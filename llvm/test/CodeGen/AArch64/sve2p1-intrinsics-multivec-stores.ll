@@ -19,6 +19,33 @@ define void @st2q_ss_i8(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale 
   ret void
 }
 
+define void @st2q_ss_i8_qpred(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 1 x i1> %pred, ptr %addr, i64 %offset) {
+; CHECK-LABEL: st2q_ss_i8_qpred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, x1, lsl #4]
+; CHECK-NEXT:    ret
+  %1 = getelementptr i128, ptr %addr, i64 %offset
+  call void @llvm.aarch64.sve.st2q.qpred.nxv16i8(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1 ,
+                                           <vscale x 1 x i1> %pred,
+                                           ptr %1)
+  ret void
+}
+
+define void @st2q_ss_i8_qpred_true(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, ptr %addr, i64 %offset) {
+; CHECK-LABEL: st2q_ss_i8_qpred_true:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, x1, lsl #4]
+; CHECK-NEXT:    ret
+  %1 = getelementptr i128, ptr %addr, i64 %offset
+  %pred.elem = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv16i1(<vscale x 16 x i1> splat (i1 true))
+  %pred = call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> %pred.elem)
+  call void @llvm.aarch64.sve.st2q.qpred.nxv16i8(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1 ,
+                                           <vscale x 1 x i1> %pred,
+                                           ptr %1)
+  ret void
+}
+
 define void @st2q_ss_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale x 8 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st2q_ss_i16:
 ; CHECK:       // %bb.0:
@@ -28,6 +55,22 @@ define void @st2q_ss_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale
   call void @llvm.aarch64.sve.st2q.nxv8i16(<vscale x 8 x i16> %v0,
                                           <vscale x 8 x i16> %v1,
                                           <vscale x 8 x i1> %pred,
+                                          ptr %1)
+  ret void
+}
+
+define void @st2q_ss_i16_qpred_true(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, ptr %addr, i64 %offset) {
+; CHECK-LABEL: st2q_ss_i16_qpred_true:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, x1, lsl #4]
+; CHECK-NEXT:    ret
+  %1 = getelementptr i128, ptr %addr, i64 %offset
+  %pred.elem = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> splat (i1 true))
+  %pred = call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> %pred.elem)
+  call void @llvm.aarch64.sve.st2q.qpred.nxv8i16(<vscale x 8 x i16> %v0,
+                                          <vscale x 8 x i16> %v1,
+                                          <vscale x 1 x i1> %pred,
                                           ptr %1)
   ret void
 }
@@ -45,6 +88,22 @@ define void @st2q_ss_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale
   ret void
 }
 
+define void @st2q_ss_i32_qpred_true(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, ptr %addr, i64 %offset) {
+; CHECK-LABEL: st2q_ss_i32_qpred_true:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, x1, lsl #4]
+; CHECK-NEXT:    ret
+  %1 = getelementptr i128, ptr %addr, i64 %offset
+  %pred.elem = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> splat (i1 true))
+  %pred = call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> %pred.elem)
+  call void @llvm.aarch64.sve.st2q.qpred.nxv4i32(<vscale x 4 x i32> %v0,
+                                          <vscale x 4 x i32> %v1,
+                                          <vscale x 1 x i1> %pred,
+                                          ptr %1)
+  ret void
+}
+
 define void @st2q_ss_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, <vscale x 2 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st2q_ss_i64:
 ; CHECK:       // %bb.0:
@@ -54,6 +113,22 @@ define void @st2q_ss_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, <vscale
   call void @llvm.aarch64.sve.st2q.nxv2i64(<vscale x 2 x i64> %v0,
                                           <vscale x 2 x i64> %v1,
                                           <vscale x 2 x i1> %pred,
+                                          ptr %1)
+  ret void
+}
+
+define void @st2q_ss_i64_qpred_true(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, ptr %addr, i64 %offset) {
+; CHECK-LABEL: st2q_ss_i64_qpred_true:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, x1, lsl #4]
+; CHECK-NEXT:    ret
+  %1 = getelementptr i128, ptr %addr, i64 %offset
+  %pred.elem = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> splat (i1 true))
+  %pred = call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> %pred.elem)
+  call void @llvm.aarch64.sve.st2q.qpred.nxv2i64(<vscale x 2 x i64> %v0,
+                                          <vscale x 2 x i64> %v1,
+                                          <vscale x 1 x i1> %pred,
                                           ptr %1)
   ret void
 }
@@ -242,6 +317,20 @@ define void @st3q_ss_i8(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale 
                                            <vscale x 16 x i8> %v1,
                                            <vscale x 16 x i8> %v2,
                                            <vscale x 16 x i1> %pred,
+                                           ptr %1)
+  ret void
+}
+
+define void @st3q_ss_i8_qpred(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i8> %v2, <vscale x 1 x i1> %pred, ptr %addr, i64 %offset) {
+; CHECK-LABEL: st3q_ss_i8_qpred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, x1, lsl #4]
+; CHECK-NEXT:    ret
+  %1 = getelementptr i128, ptr %addr, i64 %offset
+  call void @llvm.aarch64.sve.st3q.qpred.nxv16i8(<vscale x 16 x i8>%v0,
+                                           <vscale x 16 x i8> %v1,
+                                           <vscale x 16 x i8> %v2,
+                                           <vscale x 1 x i1> %pred,
                                            ptr %1)
   ret void
 }
@@ -484,6 +573,21 @@ define void @st4q_ss_i8(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale 
                                            <vscale x 16 x i8> %v2,
                                            <vscale x 16 x i8> %v3,
                                            <vscale x 16 x i1> %pred,
+                                           ptr %1)
+  ret void
+}
+
+define void @st4q_ss_i8_qpred(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i8> %v2,<vscale x 16 x i8> %v3, <vscale x 1 x i1> %pred, ptr %addr, i64 %offset) {
+; CHECK-LABEL: st4q_ss_i8_qpred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, x1, lsl #4]
+; CHECK-NEXT:    ret
+  %1 = getelementptr i128, ptr %addr, i64 %offset
+  call void @llvm.aarch64.sve.st4q.qpred.nxv16i8(<vscale x 16 x i8>%v0,
+                                           <vscale x 16 x i8> %v1,
+                                           <vscale x 16 x i8> %v2,
+                                           <vscale x 16 x i8> %v3,
+                                           <vscale x 1 x i1> %pred,
                                            ptr %1)
   ret void
 }

@@ -1068,16 +1068,29 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
                 [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyptr_ty],
                 [IntrReadMem, IntrArgMemOnly]>;
+  class AdvSIMD_2Vec_PredLoadQ_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
+                [llvm_nxv1i1_ty, llvm_ptr_ty],
+                [IntrReadMem, IntrArgMemOnly]>;
 
   class AdvSIMD_3Vec_PredLoad_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>],
                 [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyptr_ty],
+                [IntrReadMem, IntrArgMemOnly]>;
+  class AdvSIMD_3Vec_PredLoadQ_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>],
+                [llvm_nxv1i1_ty, llvm_ptr_ty],
                 [IntrReadMem, IntrArgMemOnly]>;
 
   class AdvSIMD_4Vec_PredLoad_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>,
                  LLVMMatchType<0>],
                 [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyptr_ty],
+                [IntrReadMem, IntrArgMemOnly]>;
+  class AdvSIMD_4Vec_PredLoadQ_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>,
+                 LLVMMatchType<0>],
+                [llvm_nxv1i1_ty, llvm_ptr_ty],
                 [IntrReadMem, IntrArgMemOnly]>;
 
   class AdvSIMD_1Vec_PredLoad_WriteFFR_Intrinsic
@@ -1096,11 +1109,21 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                   [llvm_anyvector_ty, LLVMMatchType<0>,
                    LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyptr_ty],
                   [IntrArgMemOnly, NoCapture<ArgIndex<3>>]>;
+  class AdvSIMD_2Vec_PredStoreQ_Intrinsic
+      : DefaultAttrsIntrinsic<[],
+                  [llvm_anyvector_ty, LLVMMatchType<0>,
+                   llvm_nxv1i1_ty, llvm_ptr_ty],
+                  [IntrArgMemOnly, NoCapture<ArgIndex<3>>]>;
 
   class AdvSIMD_3Vec_PredStore_Intrinsic
       : DefaultAttrsIntrinsic<[],
                   [llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>,
                    LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyptr_ty],
+                  [IntrArgMemOnly, NoCapture<ArgIndex<4>>]>;
+  class AdvSIMD_3Vec_PredStoreQ_Intrinsic
+      : DefaultAttrsIntrinsic<[],
+                  [llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>,
+                   llvm_nxv1i1_ty, llvm_ptr_ty],
                   [IntrArgMemOnly, NoCapture<ArgIndex<4>>]>;
 
   class AdvSIMD_4Vec_PredStore_Intrinsic
@@ -1108,6 +1131,12 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                   [llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>,
                    LLVMMatchType<0>,
                    LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyptr_ty],
+                  [IntrArgMemOnly, NoCapture<ArgIndex<5>>]>;
+  class AdvSIMD_4Vec_PredStoreQ_Intrinsic
+      : DefaultAttrsIntrinsic<[],
+                  [llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>,
+                   LLVMMatchType<0>,
+                   llvm_nxv1i1_ty, llvm_ptr_ty],
                   [IntrArgMemOnly, NoCapture<ArgIndex<5>>]>;
 
   class AdvSIMD_SVE_Index_Intrinsic<list<IntrinsicProperty> Attrs = []>
@@ -2915,9 +2944,19 @@ def int_aarch64_sve_ld2q_sret : AdvSIMD_2Vec_PredLoad_Intrinsic;
 def int_aarch64_sve_ld3q_sret : AdvSIMD_3Vec_PredLoad_Intrinsic;
 def int_aarch64_sve_ld4q_sret : AdvSIMD_4Vec_PredLoad_Intrinsic;
 
+// TODO: Remove old intrinsics that take a wrong predicate type.
+def int_aarch64_sve_ld2q_qpred : AdvSIMD_2Vec_PredLoadQ_Intrinsic;
+def int_aarch64_sve_ld3q_qpred : AdvSIMD_3Vec_PredLoadQ_Intrinsic;
+def int_aarch64_sve_ld4q_qpred : AdvSIMD_4Vec_PredLoadQ_Intrinsic;
+
 def int_aarch64_sve_st2q : AdvSIMD_2Vec_PredStore_Intrinsic;
 def int_aarch64_sve_st3q : AdvSIMD_3Vec_PredStore_Intrinsic;
 def int_aarch64_sve_st4q : AdvSIMD_4Vec_PredStore_Intrinsic;
+
+// TODO: Remove old intrinsics that take a wrong predicate type.
+def int_aarch64_sve_st2q_qpred : AdvSIMD_2Vec_PredStoreQ_Intrinsic;
+def int_aarch64_sve_st3q_qpred : AdvSIMD_3Vec_PredStoreQ_Intrinsic;
+def int_aarch64_sve_st4q_qpred : AdvSIMD_4Vec_PredStoreQ_Intrinsic;
 
 //
 // SVE2.1 - Contiguous stores to multiple consecutive vectors

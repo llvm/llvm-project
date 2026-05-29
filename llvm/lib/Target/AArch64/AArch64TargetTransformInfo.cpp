@@ -1717,10 +1717,13 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_ld1uwq:
   case Intrinsic::aarch64_sve_ld2_sret:
   case Intrinsic::aarch64_sve_ld2q_sret:
+  case Intrinsic::aarch64_sve_ld2q_qpred:
   case Intrinsic::aarch64_sve_ld3_sret:
   case Intrinsic::aarch64_sve_ld3q_sret:
+  case Intrinsic::aarch64_sve_ld3q_qpred:
   case Intrinsic::aarch64_sve_ld4_sret:
   case Intrinsic::aarch64_sve_ld4q_sret:
+  case Intrinsic::aarch64_sve_ld4q_qpred:
   case Intrinsic::aarch64_sve_ldff1:
   case Intrinsic::aarch64_sve_ldff1_gather:
   case Intrinsic::aarch64_sve_ldff1_gather_index:
@@ -1775,12 +1778,15 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
     return SVEIntrinsicInfo::defaultVoidOp(1);
   case Intrinsic::aarch64_sve_st2:
   case Intrinsic::aarch64_sve_st2q:
+  case Intrinsic::aarch64_sve_st2q_qpred:
     return SVEIntrinsicInfo::defaultVoidOp(2);
   case Intrinsic::aarch64_sve_st3:
   case Intrinsic::aarch64_sve_st3q:
+  case Intrinsic::aarch64_sve_st3q_qpred:
     return SVEIntrinsicInfo::defaultVoidOp(3);
   case Intrinsic::aarch64_sve_st4:
   case Intrinsic::aarch64_sve_st4q:
+  case Intrinsic::aarch64_sve_st4q_qpred:
     return SVEIntrinsicInfo::defaultVoidOp(4);
   }
 

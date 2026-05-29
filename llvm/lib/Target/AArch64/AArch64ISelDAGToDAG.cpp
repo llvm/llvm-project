@@ -5496,15 +5496,18 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::aarch64_ld64b:
       SelectLoad(Node, 8, AArch64::LD64B, AArch64::x8sub_0);
       return;
-    case Intrinsic::aarch64_sve_ld2q_sret: {
+    case Intrinsic::aarch64_sve_ld2q_sret:
+    case Intrinsic::aarch64_sve_ld2q_qpred: {
       SelectPredicatedLoad(Node, 2, 4, AArch64::LD2Q_IMM, AArch64::LD2Q, true);
       return;
     }
-    case Intrinsic::aarch64_sve_ld3q_sret: {
+    case Intrinsic::aarch64_sve_ld3q_sret:
+    case Intrinsic::aarch64_sve_ld3q_qpred: {
       SelectPredicatedLoad(Node, 3, 4, AArch64::LD3Q_IMM, AArch64::LD3Q, true);
       return;
     }
-    case Intrinsic::aarch64_sve_ld4q_sret: {
+    case Intrinsic::aarch64_sve_ld4q_sret:
+    case Intrinsic::aarch64_sve_ld4q_qpred: {
       SelectPredicatedLoad(Node, 4, 4, AArch64::LD4Q_IMM, AArch64::LD4Q, true);
       return;
     }
@@ -7021,15 +7024,18 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       }
       break;
     }
-    case Intrinsic::aarch64_sve_st2q: {
+    case Intrinsic::aarch64_sve_st2q:
+    case Intrinsic::aarch64_sve_st2q_qpred: {
       SelectPredicatedStore(Node, 2, 4, AArch64::ST2Q, AArch64::ST2Q_IMM);
       return;
     }
-    case Intrinsic::aarch64_sve_st3q: {
+    case Intrinsic::aarch64_sve_st3q:
+    case Intrinsic::aarch64_sve_st3q_qpred: {
       SelectPredicatedStore(Node, 3, 4, AArch64::ST3Q, AArch64::ST3Q_IMM);
       return;
     }
-    case Intrinsic::aarch64_sve_st4q: {
+    case Intrinsic::aarch64_sve_st4q:
+    case Intrinsic::aarch64_sve_st4q_qpred: {
       SelectPredicatedStore(Node, 4, 4, AArch64::ST4Q, AArch64::ST4Q_IMM);
       return;
     }
@@ -7704,7 +7710,7 @@ static EVT getPackedVectorTypeFromPredicateType(LLVMContext &Ctx, EVT PredVT,
     return EVT();
 
   if (PredVT != MVT::nxv16i1 && PredVT != MVT::nxv8i1 &&
-      PredVT != MVT::nxv4i1 && PredVT != MVT::nxv2i1)
+      PredVT != MVT::nxv4i1 && PredVT != MVT::nxv2i1 && PredVT != MVT::nxv1i1)
     return EVT();
 
   ElementCount EC = PredVT.getVectorElementCount();
@@ -7770,23 +7776,29 @@ static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
         Ctx, Root->getOperand(2)->getValueType(0), /*NumVec=*/1);
   case Intrinsic::aarch64_sve_ld2_sret:
   case Intrinsic::aarch64_sve_ld2q_sret:
+  case Intrinsic::aarch64_sve_ld2q_qpred:
     return getPackedVectorTypeFromPredicateType(
         Ctx, Root->getOperand(2)->getValueType(0), /*NumVec=*/2);
   case Intrinsic::aarch64_sve_st2q:
+  case Intrinsic::aarch64_sve_st2q_qpred:
     return getPackedVectorTypeFromPredicateType(
         Ctx, Root->getOperand(4)->getValueType(0), /*NumVec=*/2);
   case Intrinsic::aarch64_sve_ld3_sret:
   case Intrinsic::aarch64_sve_ld3q_sret:
+  case Intrinsic::aarch64_sve_ld3q_qpred:
     return getPackedVectorTypeFromPredicateType(
         Ctx, Root->getOperand(2)->getValueType(0), /*NumVec=*/3);
   case Intrinsic::aarch64_sve_st3q:
+  case Intrinsic::aarch64_sve_st3q_qpred:
     return getPackedVectorTypeFromPredicateType(
         Ctx, Root->getOperand(5)->getValueType(0), /*NumVec=*/3);
   case Intrinsic::aarch64_sve_ld4_sret:
   case Intrinsic::aarch64_sve_ld4q_sret:
+  case Intrinsic::aarch64_sve_ld4q_qpred:
     return getPackedVectorTypeFromPredicateType(
         Ctx, Root->getOperand(2)->getValueType(0), /*NumVec=*/4);
   case Intrinsic::aarch64_sve_st4q:
+  case Intrinsic::aarch64_sve_st4q_qpred:
     return getPackedVectorTypeFromPredicateType(
         Ctx, Root->getOperand(6)->getValueType(0), /*NumVec=*/4);
   case Intrinsic::aarch64_sve_ld1udq:

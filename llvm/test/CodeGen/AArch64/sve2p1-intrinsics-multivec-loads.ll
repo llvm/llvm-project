@@ -17,6 +17,31 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ld2q_si_i8_off16(<vscale x 16
   ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
+define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ld2q_si_i8_off16_qpred(<vscale x 1 x i1> %pg, ptr %addr ) {
+; CHECK-LABEL: ld2q_si_i8_off16_qpred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld2q { z0.q, z1.q }, p0/z, [x0, #-16, mul vl]
+; CHECK-NEXT:    ret
+  %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 -16
+  %base_ptr = bitcast ptr %base to ptr
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2q.qpred.nxv16i8(<vscale x 1 x i1> %pg, ptr %base_ptr);
+  ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
+}
+
+define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ld2q_si_i8_off16_qpred_true(ptr %addr ) {
+; CHECK-LABEL: ld2q_si_i8_off16_qpred_true:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ld2q { z0.q, z1.q }, p0/z, [x0, #-16, mul vl]
+; CHECK-NEXT:    ret
+  %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 -16
+  %base_ptr = bitcast ptr %base to ptr
+  %pred.elem = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv16i1(<vscale x 16 x i1> splat (i1 true))
+  %pred = call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> %pred.elem)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2q.qpred.nxv16i8(<vscale x 1 x i1> %pred, ptr %base_ptr);
+  ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
+}
+
 define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ld2q_si_i8_off14(<vscale x 16 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld2q_si_i8_off14:
 ; CHECK:       // %bb.0:
@@ -58,6 +83,20 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16> } @ld2q_si_i16(<vscale x 8 x i1>
   ret { <vscale x 8 x i16>, <vscale x 8 x i16> } %res
 }
 
+define { <vscale x 8 x i16>, <vscale x 8 x i16> } @ld2q_si_i16_qpred_true(ptr %addr) {
+; CHECK-LABEL: ld2q_si_i16_qpred_true:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ld2q { z0.q, z1.q }, p0/z, [x0, #-16, mul vl]
+; CHECK-NEXT:    ret
+  %base = getelementptr <vscale x 8 x i16>, ptr %addr, i64 -16
+  %base_ptr = bitcast ptr %base to ptr
+  %pred.elem = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> splat (i1 true))
+  %pred = call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> %pred.elem)
+  %res = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld2q.qpred.nxv8i16(<vscale x 1 x i1> %pred, ptr %base_ptr);
+  ret { <vscale x 8 x i16>, <vscale x 8 x i16> } %res
+}
+
 define { <vscale x 8 x i16>, <vscale x 8 x i16> } @ld2q_ss_i16(<vscale x 8 x i1> %pg,  ptr %addr, i64 %a) {
 ; CHECK-LABEL: ld2q_ss_i16:
 ; CHECK:       // %bb.0:
@@ -84,6 +123,19 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32> } @ld2q_si_i32(<vscale x 4 x i1>
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 4 x i32>,  ptr %addr, i64 -16
   %res = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld2q.sret.nxv4i32(<vscale x 4 x i1> %pg, ptr %base);
+  ret { <vscale x 4 x i32>, <vscale x 4 x i32> } %res
+}
+
+define { <vscale x 4 x i32>, <vscale x 4 x i32> } @ld2q_si_i32_qpred_true(ptr %addr ) {
+; CHECK-LABEL: ld2q_si_i32_qpred_true:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld2q { z0.q, z1.q }, p0/z, [x0, #-16, mul vl]
+; CHECK-NEXT:    ret
+  %base = getelementptr <vscale x 4 x i32>,  ptr %addr, i64 -16
+  %pred.elem = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> splat (i1 true))
+  %pred = call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> %pred.elem)
+  %res = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld2q.qpred.nxv4i32(<vscale x 1 x i1> %pred, ptr %base);
   ret { <vscale x 4 x i32>, <vscale x 4 x i32> } %res
 }
 
@@ -114,6 +166,20 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64> } @ld2q_si_i64(<vscale x 2 x i1>
   %base = getelementptr <vscale x 2 x i64>, ptr %addr, i64 -16
   %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld2q.sret.nxv2i64(<vscale x 2 x i1> %pg, ptr %base_ptr);
+  ret { <vscale x 2 x i64>, <vscale x 2 x i64> } %res
+}
+
+define { <vscale x 2 x i64>, <vscale x 2 x i64> } @ld2q_si_i64_qpred_true(ptr %addr ) {
+; CHECK-LABEL: ld2q_si_i64_qpred_true:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld2q { z0.q, z1.q }, p0/z, [x0, #-16, mul vl]
+; CHECK-NEXT:    ret
+  %base = getelementptr <vscale x 2 x i64>, ptr %addr, i64 -16
+  %base_ptr = bitcast ptr %base to ptr
+  %pred.elem = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> splat (i1 true))
+  %pred = call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> %pred.elem)
+  %res = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld2q.qpred.nxv2i64(<vscale x 1 x i1> %pred, ptr %base_ptr);
   ret { <vscale x 2 x i64>, <vscale x 2 x i64> } %res
 }
 
@@ -265,6 +331,17 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3q_si_i
   %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 -24
   %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3q.sret.nxv16i8(<vscale x 16 x i1> %pg, ptr %base_ptr);
+  ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
+}
+
+define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3q_si_i8_off24_qpred(<vscale x 1 x i1> %pg, ptr %addr ) {
+; CHECK-LABEL: ld3q_si_i8_off24_qpred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld3q { z0.q - z2.q }, p0/z, [x0, #-24, mul vl]
+; CHECK-NEXT:    ret
+  %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 -24
+  %base_ptr = bitcast ptr %base to ptr
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3q.qpred.nxv16i8(<vscale x 1 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -516,6 +593,17 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
   %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 -32
   %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4q.sret.nxv16i8(<vscale x 16 x i1> %pg, ptr %base_ptr);
+  ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
+}
+
+define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld4q_si_i8_off32_qpred(<vscale x 1 x i1> %pg, ptr %addr ) {
+; CHECK-LABEL: ld4q_si_i8_off32_qpred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld4q { z0.q - z3.q }, p0/z, [x0, #-32, mul vl]
+; CHECK-NEXT:    ret
+  %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 -32
+  %base_ptr = bitcast ptr %base to ptr
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4q.qpred.nxv16i8(<vscale x 1 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
