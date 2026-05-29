@@ -15,7 +15,57 @@
 #include "sanitizer_common.h"
 #include "sanitizer_platform.h"
 #if SANITIZER_APPLE
-#include "sanitizer_posix.h"
+#  include <stddef.h>
+#  include <stdint.h>
+
+#  include "sanitizer_posix.h"
+
+// macOS sanitizer report format for Crash Reporting
+
+#  define LLVM_SANITIZER_V1_CATEGORY_MAXLEN 32
+#  define LLVM_SANITIZER_V1_TYPE_MAXLEN 32
+#  define LLVM_SANITIZER_V1_STACK_DESCRIPTION_MAXLEN 128
+#  define LLVM_SANITIZER_V1_MAXSTACKS 4
+
+#  define LLVM_SANITIZER_V1_STACK_TYPE_OTHER 0
+#  define LLVM_SANITIZER_V1_STACK_TYPE_ALLOCATION 1
+#  define LLVM_SANITIZER_V1_STACK_TYPE_DEALLOCATION 2
+
+typedef struct {
+  uint64_t thread_id;
+  uint64_t time;
+  uint32_t num_frames;
+  uintptr_t frames[64];
+} sanitizers_stack_trace_t;
+
+// Structs for the global format shared between the LLVM compiler-rt
+// runtimes, and ReportCrash.
+typedef struct {
+  uint32_t type;
+  char description[LLVM_SANITIZER_V1_STACK_DESCRIPTION_MAXLEN];
+  sanitizers_stack_trace_t stack;
+} llvm_sanitizer_report_payload_stack_v1;
+
+typedef struct {
+  char category[LLVM_SANITIZER_V1_CATEGORY_MAXLEN];
+  char type[LLVM_SANITIZER_V1_TYPE_MAXLEN];
+
+  // These three fields may be NULL for non-heap errors
+  uintptr_t fault_address;
+  uintptr_t allocation_address;
+  size_t allocation_size;
+
+  // Number of backtraces (up to LLVM_SANITIZER_V1_MAXSTACKS) that follow
+  uint16_t nstacks;
+  llvm_sanitizer_report_payload_stack_v1 stacks[LLVM_SANITIZER_V1_MAXSTACKS];
+} llvm_sanitizer_report_payload_v1;
+
+typedef struct __attribute__((packed)) {
+  uint16_t vers;
+  union {
+    llvm_sanitizer_report_payload_v1 v1;
+  };
+} llvm_sanitizer_report_payload;
 
 namespace __sanitizer {
 
@@ -80,6 +130,16 @@ struct ThreadEventCallbacks {
 };
 
 void InstallPthreadIntrospectionHook(const ThreadEventCallbacks &callbacks);
+
+void GetDarwinStack(
+    InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks, int tid,
+    const StackTrace* s, uint16_t type, const char* description,
+    bool includeThreadName = true);
+
+void SetCrashReporterGlobalForReport(
+    const char* error_name, uptr fault_addr, uptr allocation_addr,
+    uptr allocation_size,
+    const InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks);
 
 }  // namespace __sanitizer
 

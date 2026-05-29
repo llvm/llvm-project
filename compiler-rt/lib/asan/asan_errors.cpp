@@ -60,6 +60,16 @@ void ErrorDoubleFree::Print() {
   ReportErrorSummary(scariness.GetDescription(), &stack);
 }
 
+#if SANITIZER_APPLE
+void ErrorDoubleFree::GetDarwinStacks(
+    InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks) {
+  GetDarwinStack(stacks, GetThreadContextByTidLocked(tid)->unique_id,
+                 second_free_stack, LLVM_SANITIZER_V1_STACK_TYPE_OTHER,
+                 "Second free");
+  addr_description.GetDarwinStacks(stacks);
+}
+#endif
+
 void ErrorNewDeleteTypeMismatch::Print() {
   Decorator d;
   Printf("%s", d.Error());
@@ -99,6 +109,16 @@ void ErrorNewDeleteTypeMismatch::Print() {
       "HINT: if you don't care about these errors you may set "
       "ASAN_OPTIONS=new_delete_type_mismatch=0\n");
 }
+
+#if SANITIZER_APPLE
+void ErrorNewDeleteTypeMismatch::GetDarwinStacks(
+    InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks) {
+  GetDarwinStack(stacks, GetThreadContextByTidLocked(tid)->unique_id,
+                 free_stack, LLVM_SANITIZER_V1_STACK_TYPE_DEALLOCATION,
+                 "Mismatched delete");
+  addr_description.GetDarwinStacks(stacks);
+}
+#endif
 
 void ErrorFreeSizeMismatch::Print() {
   Decorator d;
@@ -141,6 +161,16 @@ void ErrorFreeSizeMismatch::Print() {
       "ASAN_OPTIONS=free_size_mismatch=0\n");
 }
 
+#if SANITIZER_APPLE
+void ErrorFreeSizeMismatch::GetDarwinStacks(
+    InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks) {
+  GetDarwinStack(stacks, GetThreadContextByTidLocked(tid)->unique_id,
+                 free_stack, LLVM_SANITIZER_V1_STACK_TYPE_DEALLOCATION,
+                 isFreeAlignedSized() ? "free_aligned_sized" : "free_sized");
+  addr_description.GetDarwinStacks(stacks);
+}
+#endif
+
 void ErrorFreeNotMalloced::Print() {
   Decorator d;
   Printf("%s", d.Error());
@@ -156,6 +186,15 @@ void ErrorFreeNotMalloced::Print() {
   addr_description.Print();
   ReportErrorSummary(scariness.GetDescription(), &stack);
 }
+
+#if SANITIZER_APPLE
+void ErrorFreeNotMalloced::GetDarwinStacks(
+    InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks) {
+  GetDarwinStack(stacks, GetThreadContextByTidLocked(tid)->unique_id,
+                 free_stack, LLVM_SANITIZER_V1_STACK_TYPE_DEALLOCATION, "Free");
+  addr_description.GetDarwinStacks(stacks);
+}
+#endif
 
 void ErrorAllocTypeMismatch::Print() {
   static const char *alloc_names[] = {"INVALID", "malloc", "operator new",
@@ -180,6 +219,16 @@ void ErrorAllocTypeMismatch::Print() {
       "ASAN_OPTIONS=alloc_dealloc_mismatch=0\n");
 }
 
+#if SANITIZER_APPLE
+void ErrorAllocTypeMismatch::GetDarwinStacks(
+    InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks) {
+  GetDarwinStack(stacks, GetThreadContextByTidLocked(tid)->unique_id,
+                 dealloc_stack, LLVM_SANITIZER_V1_STACK_TYPE_DEALLOCATION,
+                 "Deallocation");
+  addr_description.GetDarwinStacks(stacks);
+}
+#endif
+
 void ErrorMallocUsableSizeNotOwned::Print() {
   Decorator d;
   Printf("%s", d.Error());
@@ -193,6 +242,15 @@ void ErrorMallocUsableSizeNotOwned::Print() {
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
+#if SANITIZER_APPLE
+void ErrorMallocUsableSizeNotOwned::GetDarwinStacks(
+    InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks) {
+  GetDarwinStack(stacks, GetThreadContextByTidLocked(tid)->unique_id, stack,
+                 LLVM_SANITIZER_V1_STACK_TYPE_OTHER, "malloc_usable_size");
+  addr_description.GetDarwinStacks(stacks);
+}
+#endif
+
 void ErrorSanitizerGetAllocatedSizeNotOwned::Print() {
   Decorator d;
   Printf("%s", d.Error());
@@ -205,6 +263,16 @@ void ErrorSanitizerGetAllocatedSizeNotOwned::Print() {
   addr_description.Print();
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
+
+#if SANITIZER_APPLE
+void ErrorSanitizerGetAllocatedSizeNotOwned::GetDarwinStacks(
+    InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks) {
+  GetDarwinStack(stacks, GetThreadContextByTidLocked(tid)->unique_id, stack,
+                 LLVM_SANITIZER_V1_STACK_TYPE_OTHER,
+                 "__sanitizer_get_allocated_size");
+  addr_description.GetDarwinStacks(stacks);
+}
+#endif
 
 void ErrorCallocOverflow::Print() {
   Decorator d;
@@ -349,6 +417,16 @@ void ErrorStringFunctionMemoryRangesOverlap::Print() {
   ReportErrorSummary(bug_type, stack);
 }
 
+#if SANITIZER_APPLE
+void ErrorStringFunctionMemoryRangesOverlap::GetDarwinStacks(
+    InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks) {
+  GetDarwinStack(stacks, GetThreadContextByTidLocked(tid)->unique_id, stack,
+                 LLVM_SANITIZER_V1_STACK_TYPE_OTHER, function);
+  addr1_description.GetDarwinStacks(stacks);
+  addr2_description.GetDarwinStacks(stacks);
+}
+#endif
+
 void ErrorStringFunctionSizeOverflow::Print() {
   Decorator d;
   Printf("%s", d.Error());
@@ -360,6 +438,15 @@ void ErrorStringFunctionSizeOverflow::Print() {
   addr_description.Print();
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
+
+#if SANITIZER_APPLE
+void ErrorStringFunctionSizeOverflow::GetDarwinStacks(
+    InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks) {
+  GetDarwinStack(stacks, GetThreadContextByTidLocked(tid)->unique_id, stack,
+                 LLVM_SANITIZER_V1_STACK_TYPE_OTHER, "String function");
+  addr_description.GetDarwinStacks(stacks);
+}
+#endif
 
 void ErrorBadParamsToAnnotateContiguousContainer::Print() {
   Report(
@@ -448,6 +535,14 @@ void ErrorInvalidPointerPair::Print() {
   addr2_description.Print();
   ReportErrorSummary(scariness.GetDescription(), &stack);
 }
+
+#if SANITIZER_APPLE
+void ErrorInvalidPointerPair::GetDarwinStacks(
+    InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks) {
+  addr1_description.GetDarwinStacks(stacks);
+  addr2_description.GetDarwinStacks(stacks);
+}
+#endif
 
 static bool AdjacentShadowValuesAreFullyPoisoned(u8 *s) {
   return s[-1] > 127 && s[1] > 127;
@@ -709,5 +804,12 @@ void ErrorGeneric::Print() {
     CheckPoisonRecords(addr);
   }
 }
+
+#if SANITIZER_APPLE
+void ErrorGeneric::GetDarwinStacks(
+    InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks) {
+  addr_description.GetDarwinStacks(stacks);
+}
+#endif
 
 }  // namespace __asan

@@ -124,6 +124,13 @@ struct HeapAddressDescription {
   ChunkAccess chunk_access;
 
   void Print() const;
+
+#if SANITIZER_APPLE
+  // Writes up to 2 stack traces in the Darwin sanitizer stack format.
+  // Return value is the number of stacks written
+  void GetDarwinStacks(
+      InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks) const;
+#endif
 };
 
 bool GetHeapAddressInformation(uptr addr, uptr access_size,
@@ -139,6 +146,13 @@ struct StackAddressDescription {
   const char *frame_descr;
 
   void Print() const;
+
+#if SANITIZER_APPLE
+  // Writes a single stack trace in the Darwin sanitizer stack format
+  // describing the frame where the alloca occurred.
+  void GetDarwinStacks(
+      InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks) const;
+#endif
 };
 
 bool GetStackAddressInformation(uptr addr, uptr access_size,
@@ -245,6 +259,24 @@ class AddressDescription {
     }
     UNREACHABLE("AddressInformation kind is invalid");
   }
+
+#if SANITIZER_APPLE
+  void GetDarwinStacks(
+      InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks)
+      const {
+    switch (data.kind) {
+      case kAddressKindHeap:
+        return data.heap.GetDarwinStacks(stacks);
+      case kAddressKindStack:
+        return data.stack.GetDarwinStacks(stacks);
+      case kAddressKindWild:
+      case kAddressKindShadow:
+      case kAddressKindGlobal:
+        return;
+    }
+    UNREACHABLE("AddressInformation kind is invalid");
+  }
+#endif
 
   void StoreTo(AddressDescriptionData *dst) const { *dst = data; }
 

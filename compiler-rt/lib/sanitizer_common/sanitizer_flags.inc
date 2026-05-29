@@ -258,6 +258,11 @@ COMMON_FLAG(
     bool, abort_on_error, (bool)SANITIZER_ANDROID || (bool)SANITIZER_APPLE,
     "If set, the tool calls abort() instead of _exit() after printing the "
     "error report.")
+#if SANITIZER_APPLE
+COMMON_FLAG(bool, crashreporter_global, (bool)SANITIZER_APPLE,
+            "Uses a global to communicate sanitizer report information to the "
+            "Darwin crash reporting system")
+#endif
 COMMON_FLAG(bool, suppress_equal_pcs, true,
             "Deduplicate multiple reports for single source location in "
             "halt_on_error=false mode (asan only).")

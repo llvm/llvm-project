@@ -132,6 +132,7 @@ static ReportStack *SymbolizeStack(StackTrace trace) {
 
   auto *stack = New<ReportStack>();
   stack->frames = top;
+  stack->raw = trace;
   return stack;
 }
 

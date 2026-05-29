@@ -34,6 +34,11 @@ struct ErrorBase {
     scariness.Clear();
     scariness.Scare(initial_score, reason);
   }
+#if SANITIZER_APPLE
+  // By default, errors do not report any stacks
+  void GetDarwinStacks(
+      InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks) {}
+#endif
 };
 
 struct ErrorDeadlySignal : ErrorBase {
@@ -76,6 +81,11 @@ struct ErrorDoubleFree : ErrorBase {
     GetHeapAddressInformation(addr, 1, &addr_description);
   }
   void Print();
+
+#if SANITIZER_APPLE
+  void GetDarwinStacks(
+      InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks);
+#endif
 };
 
 struct ErrorNewDeleteTypeMismatch : ErrorBase {
@@ -94,6 +104,11 @@ struct ErrorNewDeleteTypeMismatch : ErrorBase {
     GetHeapAddressInformation(addr, 1, &addr_description);
   }
   void Print();
+
+#if SANITIZER_APPLE
+  void GetDarwinStacks(
+      InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks);
+#endif
 };
 
 struct ErrorFreeSizeMismatch : ErrorBase {
@@ -113,6 +128,11 @@ struct ErrorFreeSizeMismatch : ErrorBase {
   }
   void Print();
   bool isFreeAlignedSized() const { return delete_alignment != 0; }
+
+#if SANITIZER_APPLE
+  void GetDarwinStacks(
+      InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks);
+#endif
 };
 
 struct ErrorFreeNotMalloced : ErrorBase {
@@ -125,6 +145,11 @@ struct ErrorFreeNotMalloced : ErrorBase {
         free_stack(stack),
         addr_description(addr, /*shouldLockThreadRegistry=*/false) {}
   void Print();
+
+#if SANITIZER_APPLE
+  void GetDarwinStacks(
+      InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks);
+#endif
 };
 
 struct ErrorAllocTypeMismatch : ErrorBase {
@@ -141,6 +166,11 @@ struct ErrorAllocTypeMismatch : ErrorBase {
         dealloc_type(dealloc_type_),
         addr_description(addr, 1, false) {}
   void Print();
+
+#if SANITIZER_APPLE
+  void GetDarwinStacks(
+      InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks);
+#endif
 };
 
 struct ErrorMallocUsableSizeNotOwned : ErrorBase {
@@ -153,6 +183,11 @@ struct ErrorMallocUsableSizeNotOwned : ErrorBase {
         stack(stack_),
         addr_description(addr, /*shouldLockThreadRegistry=*/false) {}
   void Print();
+
+#if SANITIZER_APPLE
+  void GetDarwinStacks(
+      InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks);
+#endif
 };
 
 struct ErrorSanitizerGetAllocatedSizeNotOwned : ErrorBase {
@@ -166,6 +201,11 @@ struct ErrorSanitizerGetAllocatedSizeNotOwned : ErrorBase {
         stack(stack_),
         addr_description(addr, /*shouldLockThreadRegistry=*/false) {}
   void Print();
+
+#if SANITIZER_APPLE
+  void GetDarwinStacks(
+      InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks);
+#endif
 };
 
 struct ErrorCallocOverflow : ErrorBase {
@@ -314,6 +354,11 @@ struct ErrorStringFunctionMemoryRangesOverlap : ErrorBase {
     scariness.Scare(10, bug_type);
   }
   void Print();
+
+#if SANITIZER_APPLE
+  void GetDarwinStacks(
+      InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks);
+#endif
 };
 
 struct ErrorStringFunctionSizeOverflow : ErrorBase {
@@ -331,6 +376,11 @@ struct ErrorStringFunctionSizeOverflow : ErrorBase {
         size(size),
         is_write(is_write) {}
   void Print();
+
+#if SANITIZER_APPLE
+  void GetDarwinStacks(
+      InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks);
+#endif
 };
 
 struct ErrorBadParamsToAnnotateContiguousContainer : ErrorBase {
@@ -422,6 +472,11 @@ struct ErrorInvalidPointerPair : ErrorBase {
         addr1_description(p1, 1, /*shouldLockThreadRegistry=*/false),
         addr2_description(p2, 1, /*shouldLockThreadRegistry=*/false) {}
   void Print();
+
+#if SANITIZER_APPLE
+  void GetDarwinStacks(
+      InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks);
+#endif
 };
 
 struct ErrorGeneric : ErrorBase {
@@ -436,6 +491,8 @@ struct ErrorGeneric : ErrorBase {
   ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr, bool is_write_,
                uptr access_size_);
   void Print();
+  void GetDarwinStacks(
+      InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks);
 };
 
 // clang-format off
@@ -509,7 +566,6 @@ struct ErrorDescription {
   }
 };
 
-#undef ASAN_FOR_EACH_ERROR_KIND
 #undef ASAN_DEFINE_ERROR_KIND
 #undef ASAN_ERROR_DESCRIPTION_MEMBER
 #undef ASAN_ERROR_DESCRIPTION_CONSTRUCTOR

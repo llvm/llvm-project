@@ -36,6 +36,7 @@
 #  include "sanitizer_platform_limits_posix.h"
 #  include "sanitizer_procmaps.h"
 #  include "sanitizer_ptrauth.h"
+#  include "sanitizer_stacktrace.h"
 
 #  if !SANITIZER_IOS
 #    include <crt_externs.h>  // for _NSGetEnviron
@@ -112,6 +113,8 @@ extern "C" {
 SANITIZER_WEAK_ATTRIBUTE extern void __tsan_set_in_internal_write_call(
     bool value) {}
 #  endif
+
+llvm_sanitizer_report_payload llvm_sanitizer_report_global;
 
 namespace __sanitizer {
 
@@ -1604,6 +1607,50 @@ void InstallPthreadIntrospectionHook(const ThreadEventCallbacks &callbacks) {
   thread_event_callbacks = callbacks;
   prev_pthread_introspection_hook =
       pthread_introspection_hook_install(&sanitizer_pthread_introspection_hook);
+}
+
+void GetDarwinStack(
+    InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks, int tid,
+    const StackTrace* s, uint16_t type, const char* description,
+    bool includeThreadName) {
+  stacks.resize(stacks.size() + 1);
+  llvm_sanitizer_report_payload_stack_v1& res = stacks.back();
+  res.type = type;
+  res.stack.thread_id = tid;
+  res.stack.time = 0;
+  res.stack.num_frames = Min(
+      (size_t)s->size, sizeof(res.stack.frames) / sizeof(res.stack.frames[0]));
+  for (size_t i = 0; i < res.stack.num_frames; i++) {
+    res.stack.frames[i] = s->trace[res.stack.num_frames - i - 1];
+  }
+  if (includeThreadName) {
+    internal_snprintf(res.description, sizeof(res.description),
+                      "%s by thread %d", description, tid);
+  } else {
+    internal_strncpy(res.description, description, sizeof(res.description));
+  }
+}
+
+void SetCrashReporterGlobalForReport(
+    const char* error_name, uptr fault_addr, uptr allocation_addr,
+    uptr allocation_size,
+    const InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks) {
+  llvm_sanitizer_report_global.vers = 1;
+  internal_strncpy(llvm_sanitizer_report_global.v1.category, SanitizerToolName,
+                   LLVM_SANITIZER_V1_CATEGORY_MAXLEN);
+  llvm_sanitizer_report_global.v1.fault_address = fault_addr;
+  llvm_sanitizer_report_global.v1.allocation_address = allocation_addr;
+  llvm_sanitizer_report_global.v1.allocation_size = allocation_size;
+
+  internal_strncpy(llvm_sanitizer_report_global.v1.type, error_name,
+                   LLVM_SANITIZER_V1_TYPE_MAXLEN);
+  llvm_sanitizer_report_global.v1.type[LLVM_SANITIZER_V1_TYPE_MAXLEN - 1] = 0;
+
+  llvm_sanitizer_report_global.v1.nstacks =
+      Min(stacks.size(), (size_t)LLVM_SANITIZER_V1_MAXSTACKS);
+  internal_memcpy(llvm_sanitizer_report_global.v1.stacks, stacks.data(),
+                  llvm_sanitizer_report_global.v1.nstacks *
+                      sizeof(llvm_sanitizer_report_payload_stack_v1));
 }
 
 }  // namespace __sanitizer

@@ -42,6 +42,7 @@ enum ReportType {
 
 struct ReportStack {
   SymbolizedStack *frames = nullptr;
+  StackTrace raw;
   bool suppressable = false;
 };
 

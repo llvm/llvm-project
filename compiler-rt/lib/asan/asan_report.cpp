@@ -211,6 +211,45 @@ class ScopedInErrorReport {
       SetAbortMessage(buffer_copy.data());
     }
 
+#if SANITIZER_APPLE
+    if (common_flags()->crashreporter_global) {
+      asanThreadRegistry().Lock();
+      InternalMmapVector<llvm_sanitizer_report_payload_stack_v1> stacks;
+      stacks.reserve(4);
+      const char* error_name = "<unknown>";
+
+#  define ASAN_ERROR_DARWIN_STACKS(name)           \
+    case kErrorKind##name:                         \
+      current_error_.name.GetDarwinStacks(stacks); \
+      error_name = "" #name;                       \
+      break;
+
+      switch (current_error_.kind) {
+        ASAN_FOR_EACH_ERROR_KIND(ASAN_ERROR_DARWIN_STACKS)
+        default:
+          break;
+      }
+
+      uptr fault_address = 0;
+      const HeapAddressDescription* heap = NULL;
+      switch (current_error_.kind) {
+        case kErrorKindGeneric: {
+          error_name = current_error_.Generic.bug_descr;
+          fault_address = current_error_.Generic.addr_description.Address();
+          heap = current_error_.Generic.addr_description.AsHeap();
+          break;
+        }
+        default:
+          break;
+      }
+
+      SetCrashReporterGlobalForReport(
+          error_name, fault_address, heap ? heap->chunk_access.chunk_begin : 0,
+          heap ? heap->chunk_access.chunk_size : 0, stacks);
+      asanThreadRegistry().Unlock();
+    }
+#endif
+
     // In halt_on_error = false mode, reset the current error object (before
     // unlocking).
     if (!halt_on_error_)

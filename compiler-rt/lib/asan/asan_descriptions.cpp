@@ -444,6 +444,36 @@ void HeapAddressDescription::Print() const {
   DescribeThread(alloc_thread);
 }
 
+#if SANITIZER_APPLE
+void HeapAddressDescription::GetDarwinStacks(
+    InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks) const {
+  asanThreadRegistry().CheckLocked();
+  AsanThreadContext* alloc_thread = GetThreadContextByTidLocked(alloc_tid);
+  StackTrace alloc_stack = GetStackTraceFromId(alloc_stack_id);
+
+  GetDarwinStack(stacks, alloc_thread->unique_id, &alloc_stack,
+                 LLVM_SANITIZER_V1_STACK_TYPE_ALLOCATION, "Allocated");
+
+  if (free_tid != kInvalidTid) {
+    AsanThreadContext* free_thread = GetThreadContextByTidLocked(free_tid);
+    StackTrace free_stack = GetStackTraceFromId(free_stack_id);
+    GetDarwinStack(stacks, free_thread->unique_id, &free_stack,
+                   LLVM_SANITIZER_V1_STACK_TYPE_DEALLOCATION, "Freed");
+  }
+}
+
+void StackAddressDescription::GetDarwinStacks(
+    InternalMmapVector<llvm_sanitizer_report_payload_stack_v1>& stacks) const {
+  if (!frame_descr)
+    return;
+  asanThreadRegistry().CheckLocked();
+  AsanThreadContext* stack_thread = GetThreadContextByTidLocked(tid);
+  StackTrace alloca_stack(&frame_pc, 1);
+  GetDarwinStack(stacks, stack_thread->unique_id, &alloca_stack,
+                 LLVM_SANITIZER_V1_STACK_TYPE_ALLOCATION, "Allocated on stack");
+}
+#endif
+
 AddressDescription::AddressDescription(uptr addr, uptr access_size,
                                        bool shouldLockThreadRegistry) {
   if (GetShadowAddressInformation(addr, &data.shadow)) {

@@ -139,71 +139,100 @@ static const char *ExternalMopDesc(bool first, bool write) {
                : (write ? "Previous modifying" : "Previous read-only");
 }
 
-static void PrintMop(const ReportMop *mop, bool first) {
+#  define Output(...)                                            \
+    if (out) {                                                   \
+      int written = internal_snprintf(out, outlen, __VA_ARGS__); \
+      out += written;                                            \
+      outlen -= written;                                         \
+    } else {                                                     \
+      Printf(__VA_ARGS__);                                       \
+    }
+
+static void PrintMop(const ReportMop* mop, bool first, char* out = NULL,
+                     size_t outlen = 0) {
   Decorator d;
   char thrbuf[kThreadBufSize];
-  Printf("%s", d.Access());
+
+  if (!out)
+    Printf("%s", d.Access());
+
   if (mop->external_tag == kExternalTagNone) {
-    Printf("  %s of size %d at %p by %s",
-           MopDesc(first, mop->write, mop->atomic), mop->size,
-           (void *)mop->addr, thread_name(thrbuf, mop->tid));
+    Output("  %s of size %d at %p by %s",
+           MopDesc(first, mop->write, mop->atomic), mop->size, (void*)mop->addr,
+           thread_name(thrbuf, mop->tid));
   } else {
     const char *object_type = GetObjectTypeFromTag(mop->external_tag);
     if (object_type == nullptr)
         object_type = "external object";
-    Printf("  %s access of %s at %p by %s",
-           ExternalMopDesc(first, mop->write), object_type,
-           (void *)mop->addr, thread_name(thrbuf, mop->tid));
+    Output("  %s access of %s at %p by %s", ExternalMopDesc(first, mop->write),
+           object_type, (void*)mop->addr, thread_name(thrbuf, mop->tid));
   }
-  PrintMutexSet(mop->mset);
-  Printf(":\n");
-  Printf("%s", d.Default());
-  PrintStack(mop->stack);
+
+  if (!out) {
+    PrintMutexSet(mop->mset);
+    Printf(":\n");
+    Printf("%s", d.Default());
+    PrintStack(mop->stack);
+  }
 }
 
-static void PrintLocation(const ReportLocation *loc) {
+static bool PrintLocation(const ReportLocation* loc, char* out = NULL,
+                          size_t outlen = 0) {
   Decorator d;
   char thrbuf[kThreadBufSize];
   bool print_stack = false;
-  Printf("%s", d.Location());
+
+  if (!out)
+    Printf("%s", d.Location());
+
   if (loc->type == ReportLocationGlobal) {
     const DataInfo &global = loc->global;
-    if (global.size != 0)
-      Printf("  Location is global '%s' of size %zu at %p (%s+0x%zx)\n\n",
-             global.name, global.size, reinterpret_cast<void *>(global.start),
+    if (global.size != 0) {
+      Output("  Location is global '%s' of size %zu at %p (%s+0x%zx)\n\n",
+             global.name, global.size, reinterpret_cast<void*>(global.start),
              StripModuleName(global.module), global.module_offset);
-    else
-      Printf("  Location is global '%s' at %p (%s+0x%zx)\n\n", global.name,
-             reinterpret_cast<void *>(global.start),
+    } else {
+      Output("  Location is global '%s' at %p (%s+0x%zx)\n\n", global.name,
+             reinterpret_cast<void*>(global.start),
              StripModuleName(global.module), global.module_offset);
+    }
   } else if (loc->type == ReportLocationHeap) {
     char thrbuf[kThreadBufSize];
     const char *object_type = GetObjectTypeFromTag(loc->external_tag);
     if (!object_type) {
-      Printf("  Location is heap block of size %zu at %p allocated by %s:\n",
+      Output("  Location is heap block of size %zu at %p allocated by %s",
              loc->heap_chunk_size,
-             reinterpret_cast<void *>(loc->heap_chunk_start),
+             reinterpret_cast<void*>(loc->heap_chunk_start),
              thread_name(thrbuf, loc->tid));
     } else {
-      Printf("  Location is %s of size %zu at %p allocated by %s:\n",
-             object_type, loc->heap_chunk_size,
-             reinterpret_cast<void *>(loc->heap_chunk_start),
+      Output("  Location is %s of size %zu at %p allocated by %s", object_type,
+             loc->heap_chunk_size,
+             reinterpret_cast<void*>(loc->heap_chunk_start),
              thread_name(thrbuf, loc->tid));
     }
+    if (!out)
+      Printf(":\n");
     print_stack = true;
   } else if (loc->type == ReportLocationStack) {
-    Printf("  Location is stack of %s.\n\n", thread_name(thrbuf, loc->tid));
+    Output("  Location is stack of %s.\n\n", thread_name(thrbuf, loc->tid));
   } else if (loc->type == ReportLocationTLS) {
-    Printf("  Location is TLS of %s.\n\n", thread_name(thrbuf, loc->tid));
+    Output("  Location is TLS of %s.\n\n", thread_name(thrbuf, loc->tid));
   } else if (loc->type == ReportLocationFD) {
-    Printf("  Location is file descriptor %d %s by %s at:\n", loc->fd,
+    Output("  Location is file descriptor %d %s by %s at:", loc->fd,
            loc->fd_closed ? "destroyed" : "created",
            thread_name(thrbuf, loc->tid));
+    if (!out)
+      Printf(":\n");
     print_stack = true;
   }
-  Printf("%s", d.Default());
-  if (print_stack)
-    PrintStack(loc->stack);
+
+  if (!out) {
+    Output("%s", d.Default());
+    if (print_stack)
+      PrintStack(loc->stack);
+  }
+
+  return print_stack;
 }
 
 static void PrintMutexShort(const ReportMutex *rm, const char *after) {
@@ -218,39 +247,53 @@ static void PrintMutexShortWithAddress(const ReportMutex *rm,
          reinterpret_cast<void *>(rm->addr), d.Default(), after);
 }
 
-static void PrintMutex(const ReportMutex *rm) {
+static void PrintMutex(const ReportMutex* rm, char* out = NULL,
+                       size_t outlen = 0) {
   Decorator d;
-  Printf("%s", d.Mutex());
-  Printf("  Mutex M%u (%p) created at:\n", rm->id,
-         reinterpret_cast<void *>(rm->addr));
-  Printf("%s", d.Default());
-  PrintStack(rm->stack);
+  if (!out)
+    Printf("%s", d.Mutex());
+  Output("  Mutex M%u (%p) created at", rm->id,
+         reinterpret_cast<void*>(rm->addr));
+  if (!out) {
+    Printf(":\n");
+    Printf("%s", d.Default());
+    PrintStack(rm->stack);
+  }
 }
 
-static void PrintThread(const ReportThread *rt) {
+// Returns whether the stack is important enough to be printed
+static bool PrintThread(const ReportThread* rt, char* out = NULL,
+                        size_t outlen = 0) {
   Decorator d;
   if (rt->id == kMainTid)  // Little sense in describing the main thread.
-    return;
-  Printf("%s", d.ThreadDescription());
-  Printf("  Thread T%d", rt->id);
-  if (rt->name && rt->name[0] != '\0')
-    Printf(" '%s'", rt->name);
+    return false;
+  if (!out)
+    Printf("%s", d.ThreadDescription());
+  Output("  Thread T%d", rt->id);
+  if (rt->name && rt->name[0] != '\0') {
+    Output(" '%s'", rt->name);
+  }
   char thrbuf[kThreadBufSize];
   const char *thread_status = rt->running ? "running" : "finished";
   if (rt->thread_type == ThreadType::Worker) {
-    Printf(" (tid=%llu, %s) is a GCD worker thread\n", rt->os_id,
-           thread_status);
+    Output(" (tid=%llu, %s) is a GCD worker thread", rt->os_id, thread_status);
+    if (!out) {
+      Printf("\n");
+      Printf("\n");
+      Printf("%s", d.Default());
+    }
+    return false;
+  }
+  Output(" (tid=%llu, %s) created by %s", rt->os_id, thread_status,
+         thread_name(thrbuf, rt->parent_tid));
+  if (!out) {
+    if (rt->stack)
+      Printf(" at:");
     Printf("\n");
     Printf("%s", d.Default());
-    return;
+    PrintStack(rt->stack);
   }
-  Printf(" (tid=%llu, %s) created by %s", rt->os_id, thread_status,
-         thread_name(thrbuf, rt->parent_tid));
-  if (rt->stack)
-    Printf(" at:");
-  Printf("\n");
-  Printf("%s", d.Default());
-  PrintStack(rt->stack);
+  return true;
 }
 
 static void PrintSleep(const ReportStack *s) {
@@ -359,6 +402,60 @@ void PrintReport(const ReportDesc *rep) {
     DumpProcessMap();
 
   Printf("==================\n");
+#  if SANITIZER_APPLE
+  if (common_flags()->crashreporter_global) {
+    InternalMmapVector<llvm_sanitizer_report_payload_stack_v1> stacks;
+    InternalMmapVector<char> descbuf(
+        LLVM_SANITIZER_V1_STACK_DESCRIPTION_MAXLEN);
+    stacks.reserve(4);
+    uptr fault_address = 0, allocation_addr = 0, allocation_size = 0;
+
+    for (uptr i = 0; i < rep->mops.Size(); i++) {
+      auto mop = rep->mops[i];
+      PrintMop(mop, i == 0, descbuf.data(), descbuf.size());
+      GetDarwinStack(stacks, mop->tid, &mop->stack_trace,
+                     LLVM_SANITIZER_V1_STACK_TYPE_OTHER, descbuf.data(),
+                     /* includeThreadName */ false);
+      fault_address = mop->addr;
+    }
+
+    for (uptr i = 0; i < rep->locs.Size(); i++) {
+      auto loc = rep->locs[i];
+      bool print_stack = PrintLocation(loc, descbuf.data(), descbuf.size());
+      if (print_stack && loc->stack)
+        GetDarwinStack(stacks, loc->tid, &loc->stack->raw,
+                       LLVM_SANITIZER_V1_STACK_TYPE_OTHER, descbuf.data(),
+                       /* includeThreadName */ false);
+
+      if (loc->type == ReportLocationHeap) {
+        allocation_addr = loc->heap_chunk_start;
+        allocation_size = loc->heap_chunk_size;
+      }
+    }
+
+    for (uptr i = 0; i < rep->threads.Size(); i++) {
+      ReportThread* rt = rep->threads[i];
+      bool print_stack = PrintThread(rt, descbuf.data(), descbuf.size());
+      if (print_stack && rt->stack)
+        GetDarwinStack(stacks, rt->parent_tid, &rt->stack->raw,
+                       LLVM_SANITIZER_V1_STACK_TYPE_OTHER, descbuf.data(),
+                       /* includeThreadName */ false);
+    }
+
+    for (uptr i = 0; i < rep->mutexes.Size(); i++) {
+      ReportMutex* rm = rep->mutexes[i];
+      if (!rm->stack)
+        continue;
+      PrintMutex(rm, descbuf.data(), descbuf.size());
+      GetDarwinStack(stacks, kInvalidTid, &rm->stack->raw,
+                     LLVM_SANITIZER_V1_STACK_TYPE_OTHER, descbuf.data(),
+                     /* includeThreadName */ false);
+    }
+
+    SetCrashReporterGlobalForReport(rep_typ_str, fault_address, allocation_addr,
+                                    allocation_size, stacks);
+  }
+#  endif /* SANITIZER_APPLE */
 }
 
 #else  // #if !SANITIZER_GO
