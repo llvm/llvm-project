@@ -477,9 +477,13 @@ static LogicalResult printOperation(CppEmitter &emitter,
 
 static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::MemberOp memberOp) {
-  if (!emitter.isPartOfCurrentExpression(memberOp.getOperation()))
-    return success();
-
+  if (memberOp.alwaysInline()) {
+    if (!emitter.isPartOfCurrentExpression(memberOp.getOperation()))
+      return success();
+  } else {
+    if (failed(emitter.emitAssignPrefix(*memberOp.getOperation())))
+      return failure();
+  }
   if (failed(emitter.emitOperand(memberOp.getOperand())))
     return failure();
   emitter.ostream() << "." << memberOp.getMember();

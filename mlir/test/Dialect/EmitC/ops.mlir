@@ -323,6 +323,8 @@ func.func @member_access(%arg0: !emitc.lvalue<!emitc.opaque<"mystruct">>, %arg1:
   %3 = "emitc.member_of_ptr" (%arg1) {member = "b"} : (!emitc.lvalue<!emitc.opaque<"mystruct_ptr">>) -> !emitc.array<2xi32>
   %4 = "emitc.member_of_ptr" (%arg2) {member = "a"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32>
   %5 = "emitc.member_of_ptr" (%arg2) {member = "b"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.array<2xi32>
+  %6 = emitc.load %arg0 : !emitc.lvalue<!emitc.opaque<"mystruct">>
+  %7 = "emitc.member" (%6) {member = "a"} : (!emitc.opaque<"mystruct">) -> i32
   return
 }
 

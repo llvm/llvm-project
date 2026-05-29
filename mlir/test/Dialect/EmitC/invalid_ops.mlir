@@ -596,8 +596,24 @@ func.func @use_global() {
 // -----
 
 func.func @member(%arg0: !emitc.lvalue<i32>) {
-  // expected-error @+1 {{'emitc.member' op operand #0 must be emitc.lvalue of EmitC opaque type values, but got '!emitc.lvalue<i32>'}}
+  // expected-error @+1 {{'emitc.member' op operand #0 must be EmitC opaque type or emitc.lvalue of EmitC opaque type values, but got '!emitc.lvalue<i32>'}}
   %0 = "emitc.member" (%arg0) {member = "a"} : (!emitc.lvalue<i32>) -> !emitc.lvalue<i32>
+  return
+}
+
+// -----
+
+func.func @member_of_value_as_lvalue(%arg0: !emitc.opaque<"mystruct">) {
+  // expected-error @+1 {{'emitc.member' op non-lvalues cannot return lvalues or arrays}}
+  %1 = "emitc.member" (%arg0) {member = "a"} : (!emitc.opaque<"mystruct">) -> !emitc.lvalue<i32>
+  return
+}
+
+// -----
+
+func.func @member_of_value_array(%arg0: !emitc.opaque<"mystruct">) {
+  // expected-error @+1 {{'emitc.member' op non-lvalues cannot return lvalues or arrays}}
+  %1 = "emitc.member" (%arg0) {member = "a"} : (!emitc.opaque<"mystruct">) -> !emitc.array<2xi32>
   return
 }
 

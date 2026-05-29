@@ -1088,6 +1088,25 @@ LogicalResult emitc::LiteralOp::verify() {
     return emitOpError() << "value must not be empty";
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// MemberOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MemberOp::verify() {
+  Type operandType = getOperand().getType();
+  Type resultType = getResult().getType();
+  bool resultIsWritable = isa<emitc::LValueType, emitc::ArrayType>(resultType);
+
+  if (isa<emitc::LValueType>(operandType) && !resultIsWritable)
+    return emitOpError("lvalues must return lvalues or arrays");
+
+  if (!isa<emitc::LValueType>(operandType) && resultIsWritable)
+    return emitOpError("non-lvalues cannot return lvalues or arrays");
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // SubOp
 //===----------------------------------------------------------------------===//

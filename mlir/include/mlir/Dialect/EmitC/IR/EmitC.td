@@ -1187,16 +1187,18 @@ def EmitC_MemberOp : EmitC_Op<"member", [CExpressionInterface]> {
 
   let arguments = (ins
     Arg<StrAttr, "the member to access">:$member,
-    EmitC_LValueOf<[EmitC_OpaqueType]>:$operand
+    AnyTypeOf<[EmitC_OpaqueType, EmitC_LValueOf<[EmitC_OpaqueType]>]>:$operand
   );
-  let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>);
+  let results = (outs AnyTypeOf<[EmitCType, EmitC_LValueType]>);
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
       return false;
     }
     bool alwaysInline() {
-      return true; // C doesn't support references.
+      // C doesn't support references.
+      return isa<emitc::LValueType, emitc::ArrayType>(getResult().getType());
     }
   }];
 }
