@@ -12,9 +12,12 @@ jobs:
   build:
     if: github.repository_owner == 'llvm'
     timeout-minutes: 60
+    name: libc-fullbuild on ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     container:
-      image: ${{ (startsWith(matrix.os, 'ubuntu-24.04-arm') && 'ghcr.io/llvm/arm64v8/libc-ubuntu-24.04') || 'ghcr.io/llvm/libc-ubuntu-24.04'}}
+      image: ${{ (startsWith(matrix.os, 'ubuntu-24.04-arm') && 
+        'ghcr.io/llvm/arm64v8/libc-ubuntu-24.04:latest@sha256:138636a45bb70f7b51a858b282e66291cb3c5c85371afee09032a5e09b263395') ||
+        'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:a902fb53bdad5e4a4bb6c11b6584e717a7b3d6e886f1ea58e11f95e46226249c'}}
       # We need to enable privileged containers so that certain libc tests
       # have the necessary permissions (like SYS_TIME). There are no security
       # implications as we are already running in an isolated VM.
@@ -26,83 +29,86 @@ jobs:
         # Build basic linux configuration with Debug/Release/MinSizeRel and all
         # other configurations in Debug only.
         include:
-          - os: ubuntu-24.04
+          - name: linux-x86_64-Debug
+            os: ubuntu-24.04
             build_type: Debug
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
-            build_fuzzing_tests: OFF
-          - os: ubuntu-24.04
+            testing: BUILD
+          - name: linux-x86_64-Release
+            os: ubuntu-24.04
             build_type: Release
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
             build_fuzzing_tests: ON
-          - os: ubuntu-24.04
+          - name: linux-x86_64-MinSizeRel
+            os: ubuntu-24.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
-            build_fuzzing_tests: OFF
-          - os: ubuntu-24.04-arm
-            build_type: Debug
+            testing: BUILD
+          - name: linux-aarch64-clang
+            os: ubuntu-24.04-arm
+            build_type: Release
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: aarch64-unknown-linux-llvm
             include_scudo: ON
-            build_fuzzing_tests: ON
-          - os: ubuntu-24.04
-            build_type: Debug
+          - name: uefi-x86_64-clang
+            os: ubuntu-24.04
+            build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: x86_64-unknown-uefi-llvm
-            include_scudo: OFF
-            build_fuzzing_tests: OFF
-          - os: ubuntu-24.04
+            testing: BUILD
+          - name: baremetal-armv6m
+            os: ubuntu-24.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv6m-none-eabi
-            include_scudo: OFF
-            build_fuzzing_tests: OFF
-          - os: ubuntu-24.04
+            testing: BUILD
+          - name: baremetal-armv7m
+            os: ubuntu-24.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv7m-none-eabi
-            include_scudo: OFF
-            build_fuzzing_tests: OFF
-          - os: ubuntu-24.04
+            testing: BUILD
+          - name: baremetal-armv7em
+            os: ubuntu-24.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv7em-none-eabi
-            include_scudo: OFF
-            build_fuzzing_tests: OFF
-          - os: ubuntu-24.04
+            testing: BUILD
+          - name: baremetal-armv8m
+            os: ubuntu-24.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv8m.main-none-eabi
-            include_scudo: OFF
-            build_fuzzing_tests: OFF
-          - os: ubuntu-24.04
+            testing: BUILD
+          - name: baremetal-armv8.1m
+            os: ubuntu-24.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv8.1m.main-none-eabi
-            include_scudo: OFF
-            build_fuzzing_tests: OFF
-          - os: ubuntu-24.04
+            testing: BUILD
+          - name: baremetal-riscv32
+            os: ubuntu-24.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: riscv32-unknown-elf
-            include_scudo: OFF
-            build_fuzzing_tests: OFF
+            testing: BUILD
           # TODO: add back gcc build when it is fixed
           # - c_compiler: gcc
           #   cpp_compiler: g++
@@ -147,7 +153,10 @@ jobs:
           -DCMAKE_C_COMPILER_LAUNCHER=sccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }}
-          -DLIBC_COMPILE_OPTIONS_NATIVE=''"
+          -DLIBC_COMPILE_OPTIONS_NATIVE=''
+          -DLIBC_TEST_SKIP_DEATH_TESTS=ON
+          -DLIBC_TEST_SKIP_SHARED_TESTS=ON
+        "
 
         if [[ "${{ matrix.include_scudo }}" == "ON" || "${{ matrix.build_fuzzing_tests }}" == "ON" ]]; then
           export RUNTIMES="$RUNTIMES;compiler-rt"
@@ -187,13 +196,16 @@ jobs:
           --parallel \
           --target $TARGETS
 
-    - name: Test
-      # Skip UEFI and baremetal tests until we have testing set up.
-      if: ${{
-          !endsWith(matrix.target, '-uefi-llvm') &&
-          !endsWith(matrix.target, '-none-eabi') &&
-          matrix.target != 'riscv32-unknown-elf'
-        }}
+    - name: Build Test
+      if: ${{ matrix.testing != "SKIP" }}
+      run: |
+        cmake 
+        --build ${{ steps.strings.outputs.build-output-dir }} 
+        --parallel
+        --target check-libc-build
+
+    - name: Run Test
+      if: ${{ matrix.testing != "SKIP" || matrix.testing != null }}
       run: >
         cmake 
         --build ${{ steps.strings.outputs.build-output-dir }} 
