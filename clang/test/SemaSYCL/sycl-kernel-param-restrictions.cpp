@@ -47,7 +47,7 @@ void test() {
   kernel_single_task<class KN<2>>( // expected-note {{requested here}}
       [=] { // expected-note 2{{within field of type}}
         (void)L;
-        (void)Str; // no error because fail for L already
+        (void)Str;
       });
 
   kernel_single_task<class KN<3>>( // expected-note {{requested here}}

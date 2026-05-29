@@ -738,6 +738,10 @@ public:
           << DirectFieldParent->getType();
       emitObjectAccessPathNotes();
 
+      // Don't visit the type of the reference since any further invalid
+      // kernel parameter types contained within the referenced type
+      // might not be relevant once the programmer addresses the
+      // invalid use of a reference.
       IsValid = false;
       return false;
     }
