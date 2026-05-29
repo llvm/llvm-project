@@ -171,7 +171,13 @@ static bool runIndirectBranchTracking(MachineFunction &MF) {
           break;
         }
       }
-    } else if (MBB.isEHPad()){
+    } else if (MBB.isEHFuncletEntry()) {
+      // WinEH catch/cleanup funclet entries are indirect call targets of the
+      // EH runtime's dispatcher. They carry no EH_LABEL, so the isEHPad()
+      // handling below would miss them; emit ENDBR at the funclet entry so a
+      // CET-IBT-enforcing CPU does not #CP-fault when an exception is thrown.
+      Changed |= addENDBR(MBB, MBB.begin());
+    } else if (MBB.isEHPad()) {
       for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
         if (!I->isEHLabel())
           continue;
