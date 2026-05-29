@@ -27,14 +27,14 @@ configure_lit_site_cfg(
 )
 
 add_custom_target(check-libc-build)
-add_lit_testsuite(check-libc-lit
+add_lit_testsuite(check-libc
   "Running libc tests via lit"
   ${LIBC_BUILD_DIR}/test
 )
-add_dependencies(check-libc-lit check-libc-build)
+add_dependencies(check-libc check-libc-build)
 
 if (TARGET check-hdrgen)
-  add_dependencies(check-libc-lit check-hdrgen)
+  add_dependencies(check-libc check-hdrgen)
 endif()
 
 if(LIBC_ENABLE_UNITTESTS AND NOT LIBC_TEST_HERMETIC_TEST_ONLY)
@@ -42,14 +42,6 @@ if(LIBC_ENABLE_UNITTESTS AND NOT LIBC_TEST_HERMETIC_TEST_ONLY)
 endif()
 if(LIBC_ENABLE_HERMETIC_TESTS AND NOT LIBC_TEST_UNIT_TEST_ONLY)
   add_dependencies(check-libc-build libc-hermetic-tests-build)
-endif()
-
-add_custom_target(check-libc)
-if(LIBC_TEST_CHECK_LIBC_BUILD_ONLY)
-  message(STATUS "check-libc target will now only build all the tests.  Use ninja check-libc-lit to run all the tests.")
-  add_dependencies(check-libc check-libc-build)
-else()
-  add_dependencies(check-libc check-libc-lit)
 endif()
 
 add_subdirectory(UnitTest)
