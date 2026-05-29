@@ -135,7 +135,7 @@ LogicalResult OperationVerifier::verifyTokenValue(
 
     return user->emitOpError()
            << "consumes token operand #" << use.getOperandNumber()
-           << " but does not define the TokenConsumerTrait";
+           << " but does not have the TokenConsumerTrait";
   }
 
   return success();
@@ -148,7 +148,7 @@ LogicalResult OperationVerifier::verifyTokenValues(Operation &op) {
     if (failed(verifyTokenValue(op, result, [&]() {
           return op.emitOpError()
                  << "produces token result #" << idx
-                 << " but does not define the TokenProducerTrait";
+                 << " but does not have the TokenProducerTrait";
         })))
       return failure();
   }
@@ -163,7 +163,7 @@ LogicalResult OperationVerifier::verifyTokenValues(Operation &op) {
       BlockArgument arg = argIt.value();
       if (failed(verifyTokenValue(op, arg, [&]() {
             return emitError(arg.getLoc(), "token entry block argument #")
-                   << idx << " requires the parent operation to define the "
+                   << idx << " requires the parent operation to have the "
                    << "TokenProducerTrait";
           })))
         return failure();

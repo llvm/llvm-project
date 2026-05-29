@@ -173,11 +173,6 @@ def IsTokenTypePred : CPred<"::llvm::isa<::mlir::TokenType>($_self)">;
 // results, since a token must not be value-forwarded.
 def AnyType : Type<Neg<IsTokenTypePred>, "any non-token type">;
 
-// Any type, including the builtin `TokenType`. Use this as an explicit
-// opt-in for ops that legitimately need to handle arbitrary types,
-// including tokens (e.g. `builtin.unrealized_conversion_cast`).
-def AnyTypeOrToken : Type<CPred<"true">, "any type (including token)">;
-
 // The builtin token type.
 def Token : Type<IsTokenTypePred, "token", "::mlir::TokenType">,
             BuildableType<"$_builder.getType<::mlir::TokenType>()">;

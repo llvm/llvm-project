@@ -708,7 +708,7 @@ def LLVM_CoroIdOp : LLVM_IntrOp<"coro.id", [], [], [TokenProducerTrait], 1> {
 }
 
 def LLVM_CoroBeginOp
-    : LLVM_IntrOp<"coro.begin", [], [], [TokenConsumerTrait], 1> {
+    : LLVM_IntrOp<"coro.begin", [], [], [], 1> {
   let arguments = (ins Token:$token,
                        LLVM_AnyPointer:$mem);
   let assemblyFormat = "$token `,` $mem attr-dict `:` functional-type(operands, results)";
@@ -729,14 +729,14 @@ def LLVM_CoroSaveOp
 }
 
 def LLVM_CoroSuspendOp
-    : LLVM_IntrOp<"coro.suspend", [], [], [TokenConsumerTrait], 1> {
+    : LLVM_IntrOp<"coro.suspend", [], [], [], 1> {
   let arguments = (ins Token:$save,
                        I1:$final);
   let assemblyFormat = "$save `,` $final attr-dict `:` type($res)";
 }
 
 def LLVM_CoroEndOp
-    : LLVM_IntrOp<"coro.end", [], [], [TokenConsumerTrait], 1> {
+    : LLVM_IntrOp<"coro.end", [], [], [], 1> {
   let arguments = (ins LLVM_AnyPointer:$handle,
                        I1:$unwind,
                        Token:$retvals);
@@ -744,7 +744,7 @@ def LLVM_CoroEndOp
 }
 
 def LLVM_CoroFreeOp
-    : LLVM_IntrOp<"coro.free", [], [], [TokenConsumerTrait], 1> {
+    : LLVM_IntrOp<"coro.free", [], [], [], 1> {
   let arguments = (ins Token:$id,
                        LLVM_AnyPointer:$handle);
   let assemblyFormat = "$id `,` $handle attr-dict `:` functional-type(operands, results)";
