@@ -342,7 +342,7 @@ bool AMDGPUDAGToDAGISel::preprocessZeroExtend(SDNode *N) const {
     return false;
 
   // TODO: To support the operand type is int64 if s_cmp_i64 is supported on
-  // some targets
+  // TODO: Support i64 if s_cmp_i64 is available
   if (CondNode->getOperand(0).getValueType() != MVT::i32)
     return false;
 
