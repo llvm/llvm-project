@@ -5869,9 +5869,8 @@ AMDGPUInstructionSelector::selectSmrdSgprImm(MachineOperand &Root) const {
            [=](MachineInstrBuilder &MIB) { MIB.addImm(CPol); }}};
 }
 
-std::pair<Register, int>
-AMDGPUInstructionSelector::selectFlatOffsetImpl(MachineOperand &Root,
-                                                uint64_t FlatVariant) const {
+std::pair<Register, int> AMDGPUInstructionSelector::selectFlatOffsetImpl(
+    MachineOperand &Root, AMDGPU::FlatVariant FlatVariant) const {
   MachineInstr *MI = Root.getParent();
 
   auto Default = std::pair(Root.getReg(), 0);
@@ -5890,9 +5889,9 @@ AMDGPUInstructionSelector::selectFlatOffsetImpl(MachineOperand &Root,
   // Therefore we can only fold offsets from inbounds GEPs into FLAT
   // instructions.
   if (ConstOffset == 0 ||
-      (FlatVariant == SIInstrFlags::FlatScratch &&
+      (FlatVariant == AMDGPU::FlatVariant::FlatScratch &&
        !isFlatScratchBaseLegal(Root.getReg())) ||
-      (FlatVariant == SIInstrFlags::FLAT && !IsInBounds))
+      (FlatVariant == AMDGPU::FlatVariant::FLAT && !IsInBounds))
     return Default;
 
   unsigned AddrSpace = (*MI->memoperands_begin())->getAddrSpace();
@@ -5904,7 +5903,7 @@ AMDGPUInstructionSelector::selectFlatOffsetImpl(MachineOperand &Root,
 
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectFlatOffset(MachineOperand &Root) const {
-  auto PtrWithOffset = selectFlatOffsetImpl(Root, SIInstrFlags::FLAT);
+  auto PtrWithOffset = selectFlatOffsetImpl(Root, AMDGPU::FlatVariant::FLAT);
 
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addReg(PtrWithOffset.first); },
@@ -5914,7 +5913,8 @@ AMDGPUInstructionSelector::selectFlatOffset(MachineOperand &Root) const {
 
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectGlobalOffset(MachineOperand &Root) const {
-  auto PtrWithOffset = selectFlatOffsetImpl(Root, SIInstrFlags::FlatGlobal);
+  auto PtrWithOffset =
+      selectFlatOffsetImpl(Root, AMDGPU::FlatVariant::FlatGlobal);
 
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addReg(PtrWithOffset.first); },
@@ -5924,7 +5924,8 @@ AMDGPUInstructionSelector::selectGlobalOffset(MachineOperand &Root) const {
 
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectScratchOffset(MachineOperand &Root) const {
-  auto PtrWithOffset = selectFlatOffsetImpl(Root, SIInstrFlags::FlatScratch);
+  auto PtrWithOffset =
+      selectFlatOffsetImpl(Root, AMDGPU::FlatVariant::FlatScratch);
 
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addReg(PtrWithOffset.first); },
@@ -5950,7 +5951,7 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
   if (ConstOffset != 0) {
     if (NeedIOffset &&
         TII.isLegalFLATOffset(ConstOffset, AMDGPUAS::GLOBAL_ADDRESS,
-                              SIInstrFlags::FlatGlobal)) {
+                              AMDGPU::FlatVariant::FlatGlobal)) {
       Addr = PtrBase;
       ImmOffset = ConstOffset;
     } else {
@@ -5966,7 +5967,7 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
           if (NeedIOffset) {
             std::tie(SplitImmOffset, RemainderOffset) =
                 TII.splitFlatOffset(ConstOffset, AMDGPUAS::GLOBAL_ADDRESS,
-                                    SIInstrFlags::FlatGlobal);
+                                    AMDGPU::FlatVariant::FlatGlobal);
           }
 
           if (Subtarget->hasSignedGVSOffset() ? isInt<32>(RemainderOffset)
@@ -6154,7 +6155,7 @@ AMDGPUInstructionSelector::selectScratchSAddr(MachineOperand &Root) const {
 
   if (ConstOffset != 0 && isFlatScratchBaseLegal(Addr) &&
       TII.isLegalFLATOffset(ConstOffset, AMDGPUAS::PRIVATE_ADDRESS,
-                            SIInstrFlags::FlatScratch)) {
+                            AMDGPU::FlatVariant::FlatScratch)) {
     Addr = PtrBase;
     ImmOffset = ConstOffset;
   }
@@ -6232,7 +6233,7 @@ AMDGPUInstructionSelector::selectScratchSVAddr(MachineOperand &Root) const {
   Register OrigAddr = Addr;
   if (ConstOffset != 0 &&
       TII.isLegalFLATOffset(ConstOffset, AMDGPUAS::PRIVATE_ADDRESS,
-                            SIInstrFlags::FlatScratch)) {
+                            AMDGPU::FlatVariant::FlatScratch)) {
     Addr = PtrBase;
     ImmOffset = ConstOffset;
   }

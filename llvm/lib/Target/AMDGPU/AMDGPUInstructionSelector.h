@@ -247,8 +247,9 @@ private:
   InstructionSelector::ComplexRendererFns
   selectSmrdSgprImm(MachineOperand &Root) const;
 
-  std::pair<Register, int> selectFlatOffsetImpl(MachineOperand &Root,
-                                                uint64_t FlatVariant) const;
+  std::pair<Register, int>
+  selectFlatOffsetImpl(MachineOperand &Root,
+                       AMDGPU::FlatVariant FlatVariant) const;
 
   InstructionSelector::ComplexRendererFns
   selectFlatOffset(MachineOperand &Root) const;
