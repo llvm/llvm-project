@@ -3548,3 +3548,35 @@ void multiple_local_captures() {
   }                              // expected-note 2 {{destroyed here}}
   (void)res;                     // expected-note 2 {{later used here}}              
 }
+
+void captureIntoTwo(View& v1, View& v2, 
+                    View s [[clang::lifetime_capture_by(v1, v2)]]);
+
+void captured_by_multiple_params() {
+   View v1, v2;
+  {
+    MyObj local;
+    captureIntoTwo(v1, v2, local);  // expected-warning {{local variable 'local' does not live long enough}}
+  }                                 // expected-note {{destroyed here}}                                  
+  (void)v1;                         // expected-note {{later used here}}                     
+}
+
+void captured_by_multiple_params_2() {
+   View v1, v2;
+  {
+    MyObj local;
+    captureIntoTwo(v1, v2, local);  // expected-warning {{local variable 'local' does not live long enough}}
+  }                                 // expected-note {{destroyed here}}                                  
+  (void)v2;                         // expected-note {{later used here}}                     
+}
+
+void capturing_multiple_locals() {
+    View v;
+    {
+        MyObj local1;
+        setCaptureBy(v, local1);    // expected-warning{{local variable 'local1' does not live long enough}}
+        MyObj local2;   
+        setCaptureBy(v, local2);    // expected-warning{{local variable 'local2' does not live long enough}}
+    }                               // expected-note 2 {{destroyed here}} 
+    (void)v;                        // expected-note 2 {{later used here}}
+}

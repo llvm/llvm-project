@@ -908,28 +908,29 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
     OriginList *CapturedOriginList = getOriginsList(*Args[I]);
     if (!CapturedOriginList)
       continue;
-    if (isGslPointerType(Args[I]->getType())) {
-      assert(!Args[I]->isGLValue() || CapturedOriginList->getLength() >= 2);
-      CapturedOriginList = getRValueOrigins(Args[I], CapturedOriginList);
-    }
     if (!CapturedOriginList)
       continue;
-    for (int CapturedByIdx : Attr->params()) {
+    for (int CapturingArgIdx : Attr->params()) {
       // FIXME: Add support for capturing to Global/unknown.
-      if (CapturedByIdx == LifetimeCaptureByAttr::Global ||
-          CapturedByIdx == LifetimeCaptureByAttr::Unknown ||
-          CapturedByIdx == LifetimeCaptureByAttr::Invalid)
+      if (CapturingArgIdx == LifetimeCaptureByAttr::Global ||
+          CapturingArgIdx == LifetimeCaptureByAttr::Unknown ||
+          CapturingArgIdx == LifetimeCaptureByAttr::Invalid)
         continue;
       ArrayRef<const Expr *> CallArgs = IsInstance ? Args.drop_front() : Args;
-      const Expr *CapturedByArg = (CapturedByIdx == LifetimeCaptureByAttr::This)
-                                      ? Args[0]
-                                      : CallArgs[CapturedByIdx];
+      const Expr *CapturedByArg =
+          (CapturingArgIdx == LifetimeCaptureByAttr::This)
+              ? Args[0]
+              : CallArgs[CapturingArgIdx];
       assert(CapturedByArg && "Capturer expression must be valid");
 
-      OriginList *CapturedByOriginList = getOriginsList(*CapturedByArg);
-      OriginList *Dest = getRValueOrigins(CapturedByArg, CapturedByOriginList);
+      OriginList *CapturingOriginList = getOriginsList(*CapturedByArg);
+      OriginList *Dest = getRValueOrigins(CapturedByArg, CapturingOriginList);
       if (!Dest)
         continue;
+      // KillDest=false because we cannot know if previous captures are being
+      // replaced or accumulated. Multiple successive captures into the same
+      // destination must all be tracked, so captured lifetimes are always
+      // merged.
       CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
           Dest->getOuterOriginID(), CapturedOriginList->getOuterOriginID(),
           /*KillDest=*/false));
