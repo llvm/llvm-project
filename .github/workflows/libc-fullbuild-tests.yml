@@ -9,7 +9,7 @@ on:
       - '.github/workflows/libc-fullbuild-tests.yml'
 
 jobs:
-  build:
+  libc-fullbuild:
     if: github.repository_owner == 'llvm'
     timeout-minutes: 60
     name: libc-fullbuild on ${{ matrix.name }}
