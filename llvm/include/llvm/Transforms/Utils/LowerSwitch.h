@@ -18,8 +18,8 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
-struct LowerSwitchPass : public PassInfoMixin<LowerSwitchPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+struct LowerSwitchPass : public OptionalPassInfoMixin<LowerSwitchPass> {
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 } // namespace llvm
 

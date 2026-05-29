@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --output=%t --format=html --executor=standalone %s
+// RUN: clang-doc --pretty-json --output=%t --format=html --executor=standalone %s
 // RUN: FileCheck %s < %t/json/GlobalNamespace/index.json
 // RUN: FileCheck %s < %t/html/GlobalNamespace/index.html -check-prefix=HTML-CHECK
 
@@ -58,8 +58,8 @@ typedef int MyTypedef;
 // CHECK-NEXT:       "Name": "myFunction",
 // CHECK-NEXT:       "Params": [
 // CHECK-NEXT:         {
-// CHECK-NEXT:           "End": true,
 // CHECK-NEXT:           "Name": "Param",
+// CHECK-NEXT:           "ParamEnd": true,
 // CHECK-NEXT:           "Type": {
 // CHECK-NEXT:             "Name": "int",
 // CHECK-NEXT:             "QualName": "int",
@@ -74,7 +74,8 @@ typedef int MyTypedef;
 // CHECK-NEXT:         "QualName": "void",
 // CHECK-NEXT:         "USR": "0000000000000000000000000000000000000000"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "USR": "{{[0-9A-F]*}}"
+// CHECK-NEXT:       "USR": "{{[0-9A-F]*}}",
+// CHECK-NEXT:       "VerticalDisplay": false
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "HasEnums": true,
@@ -124,7 +125,6 @@ typedef int MyTypedef;
 // CHECK-NEXT:        }
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
-// CHECK-NEXT:    "USR": "0000000000000000000000000000000000000000"
 // CHECK-NEXT:   "Variables": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "End": true,

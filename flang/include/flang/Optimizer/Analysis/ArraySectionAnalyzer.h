@@ -11,6 +11,7 @@
 
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 
 namespace mlir {
 class Operation;
@@ -38,13 +39,28 @@ public:
     EitherIdenticalOrDisjoint
   };
 
+  /// Optional callback used to teach the analyzer that two SSA values, even
+  /// though they are not the same SSA value, are known by the caller to
+  /// evaluate to the same value at runtime.
+  /// The callback may be called with null values, in which case it must
+  /// return false.
+  using ValueEquivalenceCallback =
+      llvm::function_ref<bool(mlir::Value, mlir::Value)>;
+
   // Analyzes two hlfir.designate results and returns the overlap kind.
   // The callers may use this method when the alias analysis reports
   // an alias of some kind, so that we can run Fortran specific analysis
   // on the array slices to see if they are identical or disjoint.
   // Note that the alias analysis are not able to give such an answer
   // about the references.
-  static SlicesOverlapKind analyze(mlir::Value ref1, mlir::Value ref2);
+  //
+  // \p areKnownEquivalent is an optional callback that the analyzer may use
+  // to recognize section subscripts that have the same value even when they
+  // are not the same SSA value (e.g., subscripts that are loads of the same
+  // Fortran variable from two different regions of the same WHERE construct).
+  static SlicesOverlapKind
+  analyze(mlir::Value ref1, mlir::Value ref2,
+          ValueEquivalenceCallback areKnownEquivalent = nullptr);
 
   static bool isDesignatingArrayInOrder(hlfir::DesignateOp designate,
                                         hlfir::ElementalOpInterface elemental);
@@ -108,8 +124,13 @@ private:
   // These sections are identical, from the point of which array
   // elements are being addresses, even though the shape
   // of the array slices might be different.
-  static bool areIdenticalSections(const SectionDesc &desc1,
-                                   const SectionDesc &desc2);
+  //
+  // When \p areKnownEquivalent is provided, it is used to compare the
+  // individual section components (lower bound, upper bound and stride)
+  // when they are not the same SSA value.
+  static bool
+  areIdenticalSections(const SectionDesc &desc1, const SectionDesc &desc2,
+                       ValueEquivalenceCallback areKnownEquivalent = nullptr);
 
   // Return true, if v1 is known to be less than v2.
   static bool isLess(mlir::Value v1, mlir::Value v2);

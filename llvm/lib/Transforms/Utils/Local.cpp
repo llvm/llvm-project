@@ -138,9 +138,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
   IRBuilder<> Builder(T);
 
   // Branch - See if we are conditional jumping on constant
-  if (auto *BI = dyn_cast<BranchInst>(T)) {
-    if (BI->isUnconditional()) return false;  // Can't optimize uncond branch
-
+  if (auto *BI = dyn_cast<CondBrInst>(T)) {
     BasicBlock *Dest1 = BI->getSuccessor(0);
     BasicBlock *Dest2 = BI->getSuccessor(1);
 
@@ -154,7 +152,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       Dest1->removePredecessor(BI->getParent());
 
       // Replace the conditional branch with an unconditional one.
-      BranchInst *NewBI = Builder.CreateBr(Dest1);
+      UncondBrInst *NewBI = Builder.CreateBr(Dest1);
 
       // Transfer the metadata to the new branch instruction.
       NewBI->copyMetadata(*BI, {LLVMContext::MD_loop, LLVMContext::MD_dbg,
@@ -178,7 +176,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       OldDest->removePredecessor(BB);
 
       // Replace the conditional branch with an unconditional one.
-      BranchInst *NewBI = Builder.CreateBr(Destination);
+      UncondBrInst *NewBI = Builder.CreateBr(Destination);
 
       // Transfer the metadata to the new branch instruction.
       NewBI->copyMetadata(*BI, {LLVMContext::MD_loop, LLVMContext::MD_dbg,
@@ -317,9 +315,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
           FirstCase.getCaseValue(), "cond");
 
       // Insert the new branch.
-      BranchInst *NewBr = Builder.CreateCondBr(Cond,
-                                               FirstCase.getCaseSuccessor(),
-                                               SI->getDefaultDest());
+      CondBrInst *NewBr = Builder.CreateCondBr(
+          Cond, FirstCase.getCaseSuccessor(), SI->getDefaultDest());
       SmallVector<uint32_t> Weights;
       if (extractBranchWeights(*SI, Weights) && Weights.size() == 2) {
         uint32_t DefWeight = Weights[0];
@@ -1161,7 +1158,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
          "TryToSimplifyUncondBranchFromEmptyBlock called on entry block!");
 
   // We can't simplify infinite loops.
-  BasicBlock *Succ = cast<BranchInst>(BB->getTerminator())->getSuccessor(0);
+  BasicBlock *Succ = cast<UncondBrInst>(BB->getTerminator())->getSuccessor(0);
   if (BB == Succ)
     return false;
 
@@ -1280,10 +1277,10 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   // |       v
   // |    for.body <---- (md2)
   // |_______|  |______|
-  if (Instruction *TI = BB->getTerminator())
+  if (Instruction *TI = BB->getTerminatorOrNull())
     if (TI->hasNonDebugLocLoopMetadata())
       for (BasicBlock *Pred : predecessors(BB))
-        if (Instruction *PredTI = Pred->getTerminator())
+        if (Instruction *PredTI = Pred->getTerminatorOrNull())
           if (PredTI->hasNonDebugLocLoopMetadata())
             return false;
 
@@ -1351,7 +1348,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   // If the unconditional branch we replaced contains non-debug llvm.loop
   // metadata, we add the metadata to the branch instructions in the
   // predecessors.
-  if (Instruction *TI = BB->getTerminator())
+  if (Instruction *TI = BB->getTerminatorOrNull())
     if (TI->hasNonDebugLocLoopMetadata()) {
       MDNode *LoopMD = TI->getMetadata(LLVMContext::MD_loop);
       for (BasicBlock *Pred : predecessors(BB))
@@ -1366,7 +1363,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
       Succ->takeName(BB);
 
     // Clear the successor list of BB to match updates applying to DTU later.
-    if (BB->getTerminator())
+    if (BB->hasTerminator())
       BB->back().eraseFromParent();
 
     new UnreachableInst(BB->getContext(), BB);
@@ -1766,16 +1763,39 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, LoadInst *LI,
   LI->getParent()->insertDbgRecordAfter(DV, LI);
 }
 
-/// Determine whether this alloca is either a VLA or an array.
-static bool isArray(AllocaInst *AI) {
-  return AI->isArrayAllocation() ||
-         (AI->getAllocatedType() && AI->getAllocatedType()->isArrayTy());
+/// Determine whether this debug variable is a not a basic type.
+/// We strip through DIDerivedType modifiers (typedefs, const, etc.)
+/// to find the underlying type to decide if it seems perhaps worthwhile to
+/// do LowerDbgDeclare.
+static bool isCompositeType(DbgVariableRecord *DVR) {
+  DIType *Ty = DVR->getVariable()->getType();
+  if (Ty == nullptr)
+    return true;
+  // Strip through modifier types to find the underlying type.
+  while (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
+    switch (DTy->getTag()) {
+    case dwarf::DW_TAG_pointer_type:
+    case dwarf::DW_TAG_reference_type:
+    case dwarf::DW_TAG_rvalue_reference_type:
+    case dwarf::DW_TAG_ptr_to_member_type:
+    case dwarf::DW_TAG_LLVM_ptrauth_type:
+      return false;
+    case dwarf::DW_TAG_typedef:
+    case dwarf::DW_TAG_const_type:
+    case dwarf::DW_TAG_volatile_type:
+    case dwarf::DW_TAG_restrict_type:
+    case dwarf::DW_TAG_atomic_type:
+    case dwarf::DW_TAG_immutable_type:
+      Ty = DTy->getBaseType();
+      continue;
+    default:
+      break;
+    }
+    break;
+  }
+  return !isa<DIBasicType>(Ty);
 }
 
-/// Determine whether this alloca is a structure.
-static bool isStructure(AllocaInst *AI) {
-  return AI->getAllocatedType() && AI->getAllocatedType()->isStructTy();
-}
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, PHINode *APN,
                                            DIBuilder &Builder) {
   auto *DIVar = DVR->getVariable();
@@ -1838,10 +1858,13 @@ bool llvm::LowerDbgDeclare(Function &F) {
     // stored on the stack, while the dbg.declare can only describe
     // the stack slot (and at a lexical-scope granularity). Later
     // passes will attempt to elide the stack slot.
-    if (!AI || isArray(AI) || isStructure(AI))
+    // Skip VLAs (dynamic allocas) and composite types (arrays/structs) since
+    // they can't be represented as a single dbg.value.
+    if (!AI || !isa<Constant>(AI->getArraySize()) || isCompositeType(DDI))
       return;
 
     // A volatile load/store means that the alloca can't be elided anyway.
+    // Just look at direct uses however, and ignore any other instructions.
     if (llvm::any_of(AI->users(), [](User *U) -> bool {
           if (LoadInst *LI = dyn_cast<LoadInst>(U))
             return LI->isVolatile();
@@ -2602,7 +2625,7 @@ CallInst *llvm::changeToCall(InvokeInst *II, DomTreeUpdater *DTU) {
 
   // Follow the call by a branch to the normal destination.
   BasicBlock *NormalDestBB = II->getNormalDest();
-  auto *BI = BranchInst::Create(NormalDestBB, II->getIterator());
+  auto *BI = UncondBrInst::Create(NormalDestBB, II->getIterator());
   // Although it takes place after the call itself, the new branch is still
   // performing part of the control-flow functionality of the invoke, so we use
   // II's DebugLoc.
@@ -2661,13 +2684,12 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
   return Split;
 }
 
-static bool markAliveBlocks(Function &F,
-                            SmallPtrSetImpl<BasicBlock *> &Reachable,
+static bool markAliveBlocks(Function &F, SmallVectorImpl<bool> &Reachable,
                             DomTreeUpdater *DTU = nullptr) {
   SmallVector<BasicBlock*, 128> Worklist;
   BasicBlock *BB = &F.front();
   Worklist.push_back(BB);
-  Reachable.insert(BB);
+  Reachable[BB->getNumber()] = true;
   bool Changed = false;
   do {
     BB = Worklist.pop_back_val();
@@ -2773,6 +2795,7 @@ static bool markAliveBlocks(Function &F,
           BasicBlock *UnreachableNormalDest = BasicBlock::Create(
               Ctx, OrigNormalDest->getName() + ".unreachable",
               II->getFunction(), OrigNormalDest);
+          Reachable.resize(II->getFunction()->getMaxBlockNumber());
           auto *UI = new UnreachableInst(Ctx, UnreachableNormalDest);
           UI->setDebugLoc(DebugLoc::getTemporary());
           II->setNormalDest(UnreachableNormalDest);
@@ -2787,7 +2810,7 @@ static bool markAliveBlocks(Function &F,
             // jump to the normal destination branch.
             BasicBlock *NormalDestBB = II->getNormalDest();
             BasicBlock *UnwindDestBB = II->getUnwindDest();
-            BranchInst::Create(NormalDestBB, II->getIterator());
+            UncondBrInst::Create(NormalDestBB, II->getIterator());
             UnwindDestBB->removePredecessor(II->getParent());
             II->eraseFromParent();
             if (DTU)
@@ -2853,9 +2876,12 @@ static bool markAliveBlocks(Function &F,
     }
 
     Changed |= ConstantFoldTerminator(BB, true, nullptr, DTU);
-    for (BasicBlock *Successor : successors(BB))
-      if (Reachable.insert(Successor).second)
+    for (BasicBlock *Successor : successors(BB)) {
+      if (!Reachable[Successor->getNumber()]) {
         Worklist.push_back(Successor);
+        Reachable[Successor->getNumber()] = true;
+      }
+    }
   } while (!Worklist.empty());
   return Changed;
 }
@@ -2900,20 +2926,14 @@ Instruction *llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
 /// otherwise.
 bool llvm::removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
                                    MemorySSAUpdater *MSSAU) {
-  SmallPtrSet<BasicBlock *, 16> Reachable;
+  SmallVector<bool, 16> Reachable(F.getMaxBlockNumber());
   bool Changed = markAliveBlocks(F, Reachable, DTU);
-
-  // If there are unreachable blocks in the CFG...
-  if (Reachable.size() == F.size())
-    return Changed;
-
-  assert(Reachable.size() < F.size());
 
   // Are there any blocks left to actually delete?
   SmallSetVector<BasicBlock *, 8> BlocksToRemove;
   for (BasicBlock &BB : F) {
     // Skip reachable basic blocks
-    if (Reachable.count(&BB))
+    if (Reachable[BB.getNumber()])
       continue;
     // Skip already-deleted blocks
     if (DTU && DTU->isBBPendingDeletion(&BB))
@@ -3913,12 +3933,6 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   // instructions.
   if (Op->isSwiftError())
     return false;
-
-  // Protected pointer field loads/stores should be paired with the intrinsic
-  // to avoid unnecessary address escapes.
-  if (auto *II = dyn_cast<IntrinsicInst>(Op))
-    if (II->getIntrinsicID() == Intrinsic::protected_field_ptr)
-      return false;
 
   // Cannot replace alloca argument with phi/select.
   if (I->isLifetimeStartOrEnd())

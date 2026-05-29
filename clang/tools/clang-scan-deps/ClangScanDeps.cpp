@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/JSON.h"
@@ -80,6 +81,22 @@ enum ResourceDirRecipeKind {
   RDRK_InvokeCompiler,
 };
 
+/// The format that is output by the dependency scanner.
+enum class ScanningOutputFormat {
+  /// This is the Makefile compatible dep format. This will include all of the
+  /// deps necessary for an implicit modules build, but won't include any
+  /// intermodule dependency information.
+  Make,
+
+  /// This outputs the full clang module dependency graph suitable for use for
+  /// explicitly building modules.
+  Full,
+
+  /// This outputs the dependency graph for standard c++ modules in P1689R5
+  /// format.
+  P1689,
+};
+
 static std::string OutputFileName = "-";
 static ScanningMode ScanMode = ScanningMode::DependencyDirectivesScan;
 static ScanningOutputFormat Format = ScanningOutputFormat::Make;
@@ -91,7 +108,6 @@ static std::string CompilationDB;
 static std::optional<std::string> ModuleNames;
 static std::vector<std::string> ModuleDepTargets;
 static std::string TranslationUnitFile;
-static bool DeprecatedDriverCommand;
 static ResourceDirRecipeKind ResourceDirRecipe;
 static bool Verbose;
 static bool AsyncScanModules;
@@ -108,6 +124,7 @@ static constexpr bool DoRoundTripDefault = false;
 #endif
 
 static bool RoundTripArgs = DoRoundTripDefault;
+static bool NoFlushModuleCache = false;
 static bool VerbatimArgs = false;
 
 static void ParseArgs(int argc, char **argv) {
@@ -216,8 +233,6 @@ static void ParseArgs(int argc, char **argv) {
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_tu_buffer_path_EQ))
     TranslationUnitFile = A->getValue();
 
-  DeprecatedDriverCommand = Args.hasArg(OPT_deprecated_driver_command);
-
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_resource_dir_recipe_EQ)) {
     auto Kind =
         llvm::StringSwitch<std::optional<ResourceDirRecipeKind>>(A->getValue())
@@ -243,6 +258,8 @@ static void ParseArgs(int argc, char **argv) {
   AsyncScanModules = Args.hasArg(OPT_async_scan_modules);
 
   RoundTripArgs = Args.hasArg(OPT_round_trip_args);
+
+  NoFlushModuleCache = Args.hasArg(OPT_no_flush_module_cache);
 
   VerbatimArgs = Args.hasArg(OPT_verbatim_args);
 
@@ -1009,8 +1026,8 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
       // Run the tool on it.
       if (Format == ScanningOutputFormat::Make) {
-        auto MaybeFile =
-            WorkerTool.getDependencyFile(Input->CommandLine, CWD, DiagConsumer);
+        auto MaybeFile = WorkerTool.getDependencyFile(
+            Input->CommandLine, CWD, LookupOutput, DiagConsumer);
         handleDiagnostics(Filename, S, Errs);
         if (MaybeFile)
           DependencyOS.applyLocked([&](raw_ostream &OS) { OS << *MaybeFile; });
@@ -1034,6 +1051,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
         if (!MakeformatOutputPath.empty() && !MakeformatOutput.empty() &&
             !HadErrors) {
+          llvm::SmallString<256> FullDepPath;
           static std::mutex Lock;
           // With compilation database, we may open different files
           // concurrently or we may write the same file concurrently. So we
@@ -1042,16 +1060,37 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           static llvm::StringMap<llvm::raw_fd_ostream> OSs;
           std::unique_lock<std::mutex> LockGuard(Lock);
 
-          auto OSIter = OSs.find(MakeformatOutputPath);
+          if (llvm::sys::path::is_absolute(MakeformatOutputPath))
+            FullDepPath = MakeformatOutputPath;
+          else
+            llvm::sys::path::append(FullDepPath, CWD, MakeformatOutputPath);
+
+          if (llvm::StringRef Parent =
+                  llvm::sys::path::parent_path(FullDepPath);
+              !Parent.empty()) {
+            if (std::error_code DirEC =
+                    llvm::sys::fs::create_directories(Parent)) {
+              llvm::errs() << "Failed to create directory \"" << Parent
+                           << "\" for P1689 make format output: "
+                           << DirEC.message() << "\n";
+              HadErrors = true;
+              continue;
+            }
+          }
+
+          auto OSIter = OSs.find(FullDepPath);
           if (OSIter == OSs.end()) {
             std::error_code EC;
-            OSIter = OSs.try_emplace(MakeformatOutputPath, MakeformatOutputPath,
-                                     EC, llvm::sys::fs::OF_Text)
-                         .first;
-            if (EC)
+            auto Emplaced = OSs.try_emplace(FullDepPath.str(), FullDepPath, EC,
+                                            llvm::sys::fs::OF_Text);
+            OSIter = Emplaced.first;
+            if (EC) {
+              OSs.erase(OSIter);
               llvm::errs() << "Failed to open P1689 make format output file \""
-                           << MakeformatOutputPath << "\" for " << EC.message()
-                           << "\n";
+                           << FullDepPath << "\" for " << EC.message() << "\n";
+              HadErrors = true;
+              continue;
+            }
           }
 
           SharedStream MakeformatOS(OSIter->second);
@@ -1063,17 +1102,19 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
         SmallVector<StringRef> Names;
         ModuleNameRef.split(Names, ',');
 
+        CallbackActionController Controller(LookupOutput);
+
         if (Names.size() == 1) {
           auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
               Names[0], Input->CommandLine, CWD, AlreadySeenModules,
-              LookupOutput);
+              Controller);
           if (handleModuleResult(Names[0], MaybeModuleDepsGraph, *FD,
                                  LocalIndex, DependencyOS, Errs))
             HadErrors = true;
         } else {
-          if (llvm::Error Err =
-                  WorkerTool.initializeCompilerInstanceWithContextOrError(
-                      CWD, Input->CommandLine)) {
+          auto CIWithCtx = CompilerInstanceWithContext::initializeOrError(
+              WorkerTool, CWD, Input->CommandLine, Controller);
+          if (llvm::Error Err = CIWithCtx.takeError()) {
             handleErrorWithInfoString(
                 "Compiler instance with context setup error", std::move(Err),
                 DependencyOS, Errs);
@@ -1083,20 +1124,12 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
           for (auto N : Names) {
             auto MaybeModuleDepsGraph =
-                WorkerTool.computeDependenciesByNameWithContextOrError(
-                    N, AlreadySeenModules, LookupOutput);
+                CIWithCtx->computeDependenciesByNameOrError(
+                    N, AlreadySeenModules, Controller);
             if (handleModuleResult(N, MaybeModuleDepsGraph, *FD, LocalIndex,
                                    DependencyOS, Errs)) {
               HadErrors = true;
             }
-          }
-
-          if (llvm::Error Err =
-                  WorkerTool.finalizeCompilerInstanceWithContextOrError()) {
-            handleErrorWithInfoString(
-                "Compiler instance with context finialization error",
-                std::move(Err), DependencyOS, Errs);
-            HadErrors = true;
           }
         }
       } else {
@@ -1126,40 +1159,54 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       }
     }
 
-    WorkerTool.getWorkerVFS().visit([&](llvm::vfs::FileSystem &VFS) {
-      if (auto *T = dyn_cast_or_null<llvm::vfs::TracingFileSystem>(&VFS)) {
-        NumStatusCalls += T->NumStatusCalls;
-        NumOpenFileForReadCalls += T->NumOpenFileForReadCalls;
-        NumDirBeginCalls += T->NumDirBeginCalls;
-        NumGetRealPathCalls += T->NumGetRealPathCalls;
-        NumExistsCalls += T->NumExistsCalls;
-        NumIsLocalCalls += T->NumIsLocalCalls;
-      }
-    });
+    if (auto *T = WorkerTool.getWorkerTracingVFS()) {
+      NumStatusCalls += T->NumStatusCalls;
+      NumOpenFileForReadCalls += T->NumOpenFileForReadCalls;
+      NumDirBeginCalls += T->NumDirBeginCalls;
+      NumGetRealPathCalls += T->NumGetRealPathCalls;
+      NumExistsCalls += T->NumExistsCalls;
+      NumIsLocalCalls += T->NumIsLocalCalls;
+    }
   };
 
-  DependencyScanningService Service(ScanMode, Format, OptimizeArgs,
-                                    EagerLoadModules, /*TraceVFS=*/Verbose,
-                                    AsyncScanModules);
+  DependencyScanningServiceOptions Opts;
+  Opts.Mode = ScanMode;
+  Opts.OptimizeArgs = OptimizeArgs;
+  // The scanner currently ignores `#pragma clang diagnostic ...` and emits
+  // unexpected diagnostics. Work around this for now by disabling warnings
+  // entirely, at least for P1689 where people hit this most often.
+  Opts.EmitWarnings = Format != ScanningOutputFormat::P1689;
+  // Within P1689 format, we don't want all the paths to be absolute path
+  // since it may violate the traditional make style dependencies info.
+  Opts.ReportAbsolutePaths = Format != ScanningOutputFormat::P1689;
+  Opts.ReportVisibleModules = EmitVisibleModules;
+  Opts.EagerLoadModules = EagerLoadModules;
+  Opts.TraceVFS = Verbose;
+  Opts.AsyncScanModules = AsyncScanModules;
+  Opts.FlushModuleCache = !NoFlushModuleCache;
 
   llvm::Timer T;
   T.startTimer();
 
-  if (Inputs.size() == 1) {
-    ScanningTask(Service);
-  } else {
-    llvm::DefaultThreadPool Pool(llvm::hardware_concurrency(NumThreads));
+  {
+    DependencyScanningService Service(std::move(Opts));
 
-    if (Verbose) {
-      llvm::outs() << "Running clang-scan-deps on " << Inputs.size()
-                   << " files using " << Pool.getMaxConcurrency()
-                   << " workers\n";
+    if (Inputs.size() == 1) {
+      ScanningTask(Service);
+    } else {
+      llvm::DefaultThreadPool Pool(llvm::hardware_concurrency(NumThreads));
+
+      if (Verbose) {
+        llvm::outs() << "Running clang-scan-deps on " << Inputs.size()
+                     << " files using " << Pool.getMaxConcurrency()
+                     << " workers\n";
+      }
+
+      for (unsigned I = 0; I < Pool.getMaxConcurrency(); ++I)
+        Pool.async([ScanningTask, &Service]() { ScanningTask(Service); });
+
+      Pool.wait();
     }
-
-    for (unsigned I = 0; I < Pool.getMaxConcurrency(); ++I)
-      Pool.async([ScanningTask, &Service]() { ScanningTask(Service); });
-
-    Pool.wait();
   }
 
   T.stopTimer();

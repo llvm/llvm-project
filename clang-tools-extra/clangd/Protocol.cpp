@@ -202,6 +202,14 @@ llvm::json::Value toJSON(const TextEdit &P) {
   return Result;
 }
 
+llvm::json::Value toJSON(const InsertReplaceEdit &P) {
+  return llvm::json::Object{
+      {"newText", P.newText},
+      {"insert", P.insert},
+      {"replace", P.replace},
+  };
+}
+
 bool fromJSON(const llvm::json::Value &Params, ChangeAnnotation &R,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
@@ -295,8 +303,8 @@ SymbolKind adjustKindToCapability(SymbolKind Kind,
   }
 }
 
-SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind) {
-  switch (Kind) {
+SymbolKind indexSymbolKindToSymbolKind(const index::SymbolInfo &Info) {
+  switch (Info.Kind) {
   // FIXME: for backwards compatibility, the include directive kind is treated
   // the same as Unknown
   case index::SymbolKind::IncludeDirective:
@@ -322,8 +330,16 @@ SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind) {
     return SymbolKind::Interface;
   case index::SymbolKind::Union:
     return SymbolKind::Class;
-  case index::SymbolKind::TypeAlias:
-    return SymbolKind::Class;
+  case index::SymbolKind::TypeAlias: {
+    switch (Info.SubKind) {
+    case index::SymbolSubKind::UsingStruct:
+      return SymbolKind::Struct;
+    case index::SymbolSubKind::UsingClass:
+      return SymbolKind::Class;
+    default:
+      return SymbolKind::Class;
+    }
+  }
   case index::SymbolKind::Function:
     return SymbolKind::Function;
   case index::SymbolKind::Variable:
@@ -406,6 +422,8 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
               break;
           }
         }
+        if (auto IRSupport = Item->getBoolean("insertReplaceSupport"))
+          R.InsertReplace = *IRSupport;
       }
       if (auto *ItemKind = Completion->getObject("completionItemKind")) {
         if (auto *ValueSet = ItemKind->get("valueSet")) {
@@ -1176,7 +1194,8 @@ llvm::json::Value toJSON(const CompletionItem &CI) {
   if (CI.insertTextFormat != InsertTextFormat::Missing)
     Result["insertTextFormat"] = static_cast<int>(CI.insertTextFormat);
   if (CI.textEdit)
-    Result["textEdit"] = *CI.textEdit;
+    Result["textEdit"] = std::visit(
+        [](const auto &V) { return llvm::json::Value(V); }, *CI.textEdit);
   if (!CI.additionalTextEdits.empty())
     Result["additionalTextEdits"] = llvm::json::Array(CI.additionalTextEdits);
   if (CI.deprecated)

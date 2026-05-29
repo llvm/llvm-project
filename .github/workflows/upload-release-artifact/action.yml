@@ -14,12 +14,6 @@ inputs:
       but no atteastion will be generated and the artifact won't be uploaded
       to the release.
     default: true
-  user-token:
-    description: >-
-      Token with premissions to read llvm teams that is used to ensure that
-      the person who triggred the action has permission to upload artifacts.
-      This is required if upload is true.
-    required: false
   attestation-name:
     description: >-
       This will be used for the artifact name that is attached to the workflow and
@@ -35,12 +29,25 @@ inputs:
     description: >-
       sha256 digest to verify the authenticity of the files being uploaded.
     required: true
+  LLVM_TOKEN_GENERATOR_CLIENT_ID:
+    description: >-
+      Client ID for our GitHub App we use for generating access tokens.
+    required: true
+  LLVM_TOKEN_GENERATOR_PRIVATE_KEY:
+    description: >-
+      Private key for our GitHub App we use for generating access tokens.
+    required: true
 
 runs:
   using: "composite"
   steps:
+    - name: Validate Input
+      uses: ./.github/workflows/validate-release-version
+      with:
+        release-version: ${{ inputs.release-version }}
+
     - name: Download Artifact
-      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       id: download-artifact
       with:
         artifact-ids: ${{ inputs.artifact-id }}
@@ -55,14 +62,17 @@ runs:
       shell: bash
       env:
         INPUTS_DIGEST: ${{ inputs.digest }}
+        DOWNLOAD_PATH: ${{ steps.download-artifact.outputs.download-path }}
       run: |
         digest_file="sha256"
         echo "$INPUTS_DIGEST -" > $digest_file
-        cat ${{ steps.download-artifact.outputs.download-path }}/* | sha256sum -c $digest_file
+        cat $DOWNLOAD_PATH/* | sha256sum -c $digest_file
 
     - name: Attest Build Provenance
       id: provenance
-      uses: actions/attest-build-provenance@00014ed6ed5efc5b1ab7f7f34a39eb55d41aa4f8 # v3.1.0
+      # TODO(boomanaiden154): This is now a thin wrapper around actions/attest.
+      # We should eventually move over to that.
+      uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
       with:
         subject-path: ${{ steps.download-artifact.outputs.download-path }}/*
 
@@ -70,13 +80,16 @@ runs:
     # the files.
     - name: Rename attestation file
       shell: bash
+      env:
+        DOWNLOAD_PATH: ${{ steps.download-artifact.outputs.download-path }}
+        BUNDLE_PATH: ${{ steps.provenance.outputs.bundle-path }}
       run: |
-        for f in ${{ steps.download-artifact.outputs.download-path }}/*; do
-          cp ${{ steps.provenance.outputs.bundle-path }} $(basename $f).jsonl
+        for f in $DOWNLOAD_PATH/*; do
+          cp $BUNDLE_PATH $(basename $f).jsonl
         done
 
     - name: Upload Build Provenance
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ inputs.attestation-name }}
         path: |
@@ -89,19 +102,21 @@ runs:
         pip install --require-hashes -r ./llvm/utils/git/requirements.txt
 
     - name: Check Permissions
-      if: inputs.upload == 'true'
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-        USER_TOKEN: ${{ inputs.user-token }}
-      shell: bash
-      run: |
-        ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" check-permissions
+      uses: ./.github/workflows/require-team-membership
+      with:
+        team-slug: llvm-release-managers
+        LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+        LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+
     - name: Upload Release
       shell: bash
       if: inputs.upload == 'true'
+      env:
+        INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
+        DOWNLOAD_PATH: ${{ steps.download-artifact.outputs.download-path }}
       run: |
         ./llvm/utils/release/github-upload-release.py \
         --token ${{ github.token }} \
-        --release ${{ inputs.release-version }} \
+        --release "$INPUTS_RELEASE_VERSION" \
         upload \
-        --files ${{ steps.download-artifact.outputs.download-path }}/* *.jsonl
+        --files $DOWNLOAD_PATH/* *.jsonl

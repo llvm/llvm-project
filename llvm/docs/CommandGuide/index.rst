@@ -28,6 +28,7 @@ Basic Commands
    llvm-dis
    llvm-dwarfdump
    llvm-dwarfutil
+   llvm-extract-bundle-entry
    llvm-ir2vec
    llvm-lib
    llvm-libtool-darwin
@@ -69,9 +70,9 @@ Debugging Tools
 .. toctree::
    :maxdepth: 1
 
-   bugpoint
    llvm-extract
    llvm-bcanalyzer
+   llvm-reduce
 
 Developer Tools
 ~~~~~~~~~~~~~~~

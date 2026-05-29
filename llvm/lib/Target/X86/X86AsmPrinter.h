@@ -12,6 +12,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/FaultMaps.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/Passes/CodeGenPassBuilder.h"
 
 // Implemented in X86MCInstLower.cpp
 namespace {
@@ -199,6 +200,28 @@ public:
   bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const override {
     return ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags;
   }
+
+  std::function<ProfileSummaryInfo *(Module &)> GetPSI;
+  std::function<StaticDataProfileInfo *(Module &)> GetSDPI;
+};
+
+class X86AsmPrinterBeginPass
+    : public OptionalPassInfoMixin<X86AsmPrinterBeginPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+class X86AsmPrinterPass : public RequiredPassInfoMixin<X86AsmPrinterPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  // AsmPrinter needs to run regardless of optimization level.
+};
+
+class X86AsmPrinterEndPass
+    : public OptionalPassInfoMixin<X86AsmPrinterEndPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 } // end namespace llvm

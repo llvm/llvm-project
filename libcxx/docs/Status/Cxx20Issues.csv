@@ -171,7 +171,7 @@
 "`LWG3222 <https://wg21.link/LWG3222>`__","P0574R1 introduced preconditions on non-existent parameters","2019-11 (Belfast)","","","`#100259 <https://github.com/llvm/llvm-project/issues/100259>`__",""
 "`LWG3221 <https://wg21.link/LWG3221>`__","Result of ``year_month``\  arithmetic with ``months``\  is ambiguous","2019-11 (Belfast)","|Complete|","8","`#103870 <https://github.com/llvm/llvm-project/issues/103870>`__",""
 "`LWG3235 <https://wg21.link/LWG3235>`__","``parse``\  manipulator without abbreviation is not callable","2019-11 (Belfast)","","","`#100262 <https://github.com/llvm/llvm-project/issues/100262>`__",""
-"`LWG3246 <https://wg21.link/LWG3246>`__","LWG3246: What are the constraints on the template parameter of `basic_format_arg`?","2019-11 (Belfast)","|Nothing To Do|","","`#100263 <https://github.com/llvm/llvm-project/issues/100263>`__",""
+"`LWG3246 <https://wg21.link/LWG3246>`__","LWG3246: What are the constraints on the template parameter of ``basic_format_arg``?","2019-11 (Belfast)","|Nothing To Do|","","`#100263 <https://github.com/llvm/llvm-project/issues/100263>`__",""
 "`LWG3253 <https://wg21.link/LWG3253>`__","``basic_syncbuf::basic_syncbuf()``\  should not be explicit","2019-11 (Belfast)","|Complete|","20","`#100264 <https://github.com/llvm/llvm-project/issues/100264>`__",""
 "`LWG3245 <https://wg21.link/LWG3245>`__","Unnecessary restriction on ``'%p'``\  parse specifier","2019-11 (Belfast)","","","`#100265 <https://github.com/llvm/llvm-project/issues/100265>`__",""
 "`LWG3244 <https://wg21.link/LWG3244>`__","Constraints for ``Source``\  in |sect|\ [fs.path.req] insufficiently constrainty","2019-11 (Belfast)","","","`#100266 <https://github.com/llvm/llvm-project/issues/100266>`__",""

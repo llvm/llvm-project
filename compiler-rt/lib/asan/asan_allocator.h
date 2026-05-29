@@ -215,6 +215,11 @@ typedef VeryDenseSizeClassMap SizeClassMap;
 #    elif defined(__sparc__)
 const uptr kAllocatorSize = 0x20000000000ULL;  // 2T.
 typedef DefaultSizeClassMap SizeClassMap;
+#    elif SANITIZER_ALPHA
+// Alpha has a 42-bit user VAS (TASK_SIZE = 0x40000000000).  Use 512G so the
+// allocator fits comfortably within the 2.5T HighMem region.
+const uptr kAllocatorSize = 0x8000000000ULL;  // 512G.
+typedef DefaultSizeClassMap SizeClassMap;
 #    elif SANITIZER_WINDOWS
 const uptr kAllocatorSize  =  0x8000000000ULL;  // 500G
 typedef DefaultSizeClassMap SizeClassMap;
@@ -277,6 +282,9 @@ struct AsanThreadLocalMallocStorage {
 
 void *asan_memalign(uptr alignment, uptr size, BufferedStackTrace *stack);
 void asan_free(void *ptr, BufferedStackTrace *stack);
+void asan_free_sized(void* ptr, uptr size, BufferedStackTrace* stack);
+void asan_free_aligned_sized(void* ptr, uptr alignment, uptr size,
+                             BufferedStackTrace* stack);
 
 void *asan_malloc(uptr size, BufferedStackTrace *stack);
 void *asan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack);

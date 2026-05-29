@@ -2,6 +2,8 @@
 ; RUN:    FileCheck --check-prefix=ATOM %s
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -mcpu=core2 | \
 ; RUN:    FileCheck --check-prefix=CORE2 %s
+; RUN: llc < %s -mtriple=x86_64-linux-gnu -mattr=slow-indirect-call | \
+; RUN:    FileCheck --check-prefix=ATOM %s
 ; ATOM: callq *{{%[a-z]+[0-9]*}}
 ; CORE2: callq *funcp
 ;

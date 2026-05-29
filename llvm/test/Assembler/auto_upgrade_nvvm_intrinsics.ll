@@ -126,14 +126,10 @@ define void @simple_upgrade(i32 %a, i64 %b, i16 %c) {
 
 ; CHECK-LABEL: @abs
 define void @abs(i32 %a, i64 %b) {
-; CHECK-DAG: [[negi:%[a-zA-Z0-9.]+]] = sub i32 0, %a
-; CHECK-DAG: [[cmpi:%[a-zA-Z0-9.]+]] = icmp sge i32 %a, 0
-; CHECK: select i1 [[cmpi]], i32 %a, i32 [[negi]]
+; CHECK: call i32 @llvm.abs.i32(i32 %a, i1 true)
   %r1 = call i32 @llvm.nvvm.abs.i(i32 %a)
 
-; CHECK-DAG: [[negll:%[a-zA-Z0-9.]+]] = sub i64 0, %b
-; CHECK-DAG: [[cmpll:%[a-zA-Z0-9.]+]] = icmp sge i64 %b, 0
-; CHECK: select i1 [[cmpll]], i64 %b, i64 [[negll]]
+; CHECK: call i64 @llvm.abs.i64(i64 %b, i1 true)
   %r2 = call i64 @llvm.nvvm.abs.ll(i64 %b)
 
   ret void
@@ -284,10 +280,10 @@ define void @ldg(ptr %p0, ptr addrspace(1) %p1) {
 
 ; CHECK-LABEL: @atomics
 define i32 @atomics(ptr %p0, i32 %a, float %b, double %c) {
-; CHECK: %1 = atomicrmw uinc_wrap ptr %p0, i32 %a seq_cst
-; CHECK: %2 = atomicrmw udec_wrap ptr %p0, i32 %a seq_cst
-; CHECK: %3 = atomicrmw fadd ptr %p0, float %b seq_cst
-; CHECK: %4 = atomicrmw fadd ptr %p0, double %c seq_cst
+; CHECK: %1 = atomicrmw uinc_wrap ptr %p0, i32 %a syncscope("device") monotonic
+; CHECK: %2 = atomicrmw udec_wrap ptr %p0, i32 %a syncscope("device") monotonic
+; CHECK: %3 = atomicrmw fadd ptr %p0, float %b syncscope("device") monotonic
+; CHECK: %4 = atomicrmw fadd ptr %p0, double %c syncscope("device") monotonic
 
   %r1 = call i32 @llvm.nvvm.atomic.load.inc.32.p0(ptr %p0, i32 %a)
   %r2 = call i32 @llvm.nvvm.atomic.load.dec.32.p0(ptr %p0, i32 %a)

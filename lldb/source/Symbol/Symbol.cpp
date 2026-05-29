@@ -208,7 +208,7 @@ bool Symbol::SetReExportedSymbolSharedLibrary(const FileSpec &fspec) {
     // For eSymbolTypeReExported, the "const char *" from a ConstString is used
     // as the offset in the address range base address.
     m_addr_range.SetByteSize(
-        (uintptr_t)ConstString(fspec.GetPath().c_str()).GetCString());
+        (uintptr_t)ConstString(fspec.GetPath()).GetCString());
     return true;
   }
   return false;

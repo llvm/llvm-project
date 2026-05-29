@@ -101,3 +101,16 @@ __attribute((noreturn)) Attrs2::Attrs2() = default;
 
 // Extra semicolon
 namespace N {};
+
+// Test C keywords supported in all language modes.
+// https://clang.llvm.org/docs/LanguageExtensions.html#c-keywords-supported-in-all-language-modes
+
+_Alignas(16) int aligned_var;
+int align = _Alignof(double);
+_Atomic int atomic_var = 0;
+_Complex double complex_val = 1.0 + 2.0i;
+_Float16 f = 1.5; // expected-error 0-1{{_Float16 is not supported on this target}}
+_Thread_local int counter = 0;
+_Static_assert(sizeof(int) == 4, "int must be 4 bytes");
+_Imaginary float i = 2.0f; // expected-error {{imaginary types are not supported}}
+_Noreturn void noreturn_func() { while (true) {} }

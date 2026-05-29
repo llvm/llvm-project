@@ -22,6 +22,7 @@
 
 #include "mlir/ExecutionEngine/SparseTensor/MapRef.h"
 #include "mlir/ExecutionEngine/SparseTensor/Storage.h"
+#include "mlir/Support/Complex.h"
 
 #include <fstream>
 
@@ -35,6 +36,9 @@ struct is_complex final : public std::false_type {};
 
 template <typename T>
 struct is_complex<std::complex<T>> final : public std::true_type {};
+
+template <typename T>
+struct is_complex<mlir::NonFloatComplex<T>> final : public std::true_type {};
 
 /// Returns an element-value of non-complex type.  If `IsPattern` is true,
 /// then returns an arbitrary value.  If `IsPattern` is false, then
@@ -195,16 +199,16 @@ public:
 
   /// Allocates a new sparse-tensor storage object with the given encoding,
   /// initializes it by reading all the elements from the file, and then
-  /// closes the file. Templated on P, I, and V.
-  template <typename P, typename I, typename V>
-  SparseTensorStorage<P, I, V> *
+  /// closes the file. Templated on P, C, and V.
+  template <typename P, typename C, typename V>
+  SparseTensorStorage<P, C, V> *
   readSparseTensor(uint64_t lvlRank, const uint64_t *lvlSizes,
                    const LevelType *lvlTypes, const uint64_t *dim2lvl,
                    const uint64_t *lvl2dim) {
     const uint64_t dimRank = getRank();
     MapRef map(dimRank, lvlRank, dim2lvl, lvl2dim);
     auto *lvlCOO = readCOO<V>(map, lvlSizes);
-    auto *tensor = SparseTensorStorage<P, I, V>::newFromCOO(
+    auto *tensor = SparseTensorStorage<P, C, V>::newFromCOO(
         dimRank, getDimSizes(), lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim,
         lvlCOO);
     delete lvlCOO;

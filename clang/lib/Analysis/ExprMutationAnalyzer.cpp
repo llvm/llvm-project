@@ -145,9 +145,21 @@ class ExprPointeeResolve {
       // explicit cast will be checked in `findPointeeToNonConst`
       const CastKind kind = ICE->getCastKind();
       if (kind == CK_LValueToRValue || kind == CK_DerivedToBase ||
-          kind == CK_UncheckedDerivedToBase ||
-          (kind == CK_NoOp && (ICE->getType() == ICE->getSubExpr()->getType())))
+          kind == CK_UncheckedDerivedToBase)
         return resolveExpr(ICE->getSubExpr());
+      if (kind == CK_NoOp) {
+        // Binding `T *` to `T *const &` only adds top-level qualifiers to the
+        // pointer object, so this `CK_NoOp` still refers to the same pointer.
+        const auto GetLocallyUnqualifiedCanonicalType = [](QualType Type) {
+          return Type.getLocalUnqualifiedType().getCanonicalType();
+        };
+        const QualType CastType =
+            GetLocallyUnqualifiedCanonicalType(ICE->getType());
+        const QualType SubExprType =
+            GetLocallyUnqualifiedCanonicalType(ICE->getSubExpr()->getType());
+        if (CastType == SubExprType)
+          return resolveExpr(ICE->getSubExpr());
+      }
       return false;
     }
 
@@ -225,6 +237,12 @@ findFirst(const ast_matchers::internal::Matcher<T> &Matcher) {
 const auto nonConstReferenceType = [] {
   return hasUnqualifiedDesugaredType(
       referenceType(pointee(unless(isConstQualified()))));
+};
+
+const auto constReferenceToPointerWithNonConstPointeeType = [] {
+  return hasUnqualifiedDesugaredType(referenceType(pointee(qualType(
+      isConstQualified(), hasUnqualifiedDesugaredType(pointerType(
+                              pointee(unless(isConstQualified()))))))));
 };
 
 const auto nonConstPointerType = [] {
@@ -404,7 +422,12 @@ ExprMutationAnalyzer::Analyzer::findDirectMutation(const Expr *Exp) {
   const auto NonConstMethod = cxxMethodDecl(unless(isConst()));
 
   const auto AsNonConstThis = expr(anyOf(
-      cxxMemberCallExpr(on(canResolveToExpr(Exp)), unless(isConstCallee())),
+      // For member calls through a pointer, the pointer variable
+      // itself is not mutated but only the pointee is mutated.
+      cxxMemberCallExpr(
+          on(canResolveToExpr(Exp)),
+          unless(anyOf(isConstCallee(), thisPointerType(pointerType())))),
+
       cxxOperatorCallExpr(callee(NonConstMethod),
                           hasArgument(0, canResolveToExpr(Exp))),
       // In case of a templated type, calling overloaded operators is not
@@ -766,8 +789,9 @@ ExprMutationAnalyzer::Analyzer::findPointeeMemberMutation(const Expr *Exp) {
 
 const Stmt *
 ExprMutationAnalyzer::Analyzer::findPointeeToNonConst(const Expr *Exp) {
-  const auto NonConstPointerOrNonConstRefOrDependentType = type(
-      anyOf(nonConstPointerType(), nonConstReferenceType(), isDependentType()));
+  const auto NonConstPointerOrNonConstRefOrDependentType = type(anyOf(
+      nonConstPointerType(), nonConstReferenceType(),
+      constReferenceToPointerWithNonConstPointeeType(), isDependentType()));
 
   // assign
   const auto InitToNonConst =
@@ -787,6 +811,8 @@ ExprMutationAnalyzer::Analyzer::findPointeeToNonConst(const Expr *Exp) {
       anyOf(ArgOfNonConstParameter, ArgOfInstantiationDependent);
   const auto PassAsNonConstArg =
       expr(anyOf(cxxUnresolvedConstructExpr(ArgOfInstantiationDependent),
+                 cxxNewExpr(hasAnyPlacementArg(
+                     ignoringParenImpCasts(canResolveToExprPointee(Exp)))),
                  cxxConstructExpr(CallLikeMatcher), callExpr(CallLikeMatcher),
                  parenListExpr(has(canResolveToExprPointee(Exp))),
                  initListExpr(hasAnyInit(canResolveToExprPointee(Exp)))));

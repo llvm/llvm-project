@@ -12,7 +12,6 @@
 
 #include <cassert>
 #include <cstddef>
-#include <ffi.h>
 #include <string>
 #include <unordered_map>
 
@@ -21,6 +20,7 @@
 #include "Utils/ELF.h"
 
 #include "GlobalHandler.h"
+#include "OffloadAPI.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginInterface.h"
 #include "omptarget.h"
@@ -65,8 +65,7 @@ using namespace error;
 /// Class implementing kernel functionalities for GenELF64.
 struct GenELF64KernelTy : public GenericKernelTy {
   /// Construct the kernel with a name and an execution mode.
-  GenELF64KernelTy(const char *Name, bool SupportsFFI)
-      : GenericKernelTy(Name), Func(nullptr), SupportsFFI(SupportsFFI) {}
+  GenELF64KernelTy(const char *Name) : GenericKernelTy(Name), Func(nullptr) {}
 
   /// Initialize the kernel.
   Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
@@ -84,7 +83,7 @@ struct GenELF64KernelTy : public GenericKernelTy {
                            "invalid function for kernel %s", getName());
 
     // Save the function pointer.
-    Func = (void (*)())Global.getPtr();
+    Func = reinterpret_cast<KernelTy *>(Global.getPtr());
 
     KernelEnvironment.Configuration.ExecMode = OMP_TGT_EXEC_MODE_GENERIC;
     KernelEnvironment.Configuration.MayUseNestedParallelism = /*Unknown=*/2;
@@ -95,30 +94,21 @@ struct GenELF64KernelTy : public GenericKernelTy {
     return Plugin::success();
   }
 
-  /// Launch the kernel using the libffi.
+  /// Launch the kernel using the arguments.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
-                   uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
-                   KernelLaunchParamsTy LaunchParams,
+                   uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
+                   KernelArgsTy &KernelArgs, KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
-    if (!SupportsFFI)
+    if (KernelArgs.Version < OMP_KERNEL_ARG_VERSION)
       return Plugin::error(ErrorCode::UNSUPPORTED,
-                           "libffi is not available, cannot launch kernel");
-    // Create a vector of ffi_types, one per argument.
-    SmallVector<ffi_type *, 16> ArgTypes(KernelArgs.NumArgs, &ffi_type_pointer);
-    ffi_type **ArgTypesPtr = (ArgTypes.size()) ? &ArgTypes[0] : nullptr;
-
-    // Prepare the cif structure before running the kernel function.
-    ffi_cif Cif;
-    ffi_status Status = ffi_prep_cif(&Cif, FFI_DEFAULT_ABI, KernelArgs.NumArgs,
-                                     &ffi_type_void, ArgTypesPtr);
-    if (Status != FFI_OK)
-      return Plugin::error(ErrorCode::UNKNOWN, "error in ffi_prep_cif: %d",
-                           Status);
-
-    // Call the kernel function through libffi.
-    long Return;
-    ffi_call(&Cif, Func, &Return, (void **)LaunchParams.Ptrs);
-
+                           "Incompatible kernel argument version for plugin");
+    // Cooperative kernel launch is not supported for host
+    if (KernelArgs.Flags.Cooperative)
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "cooperative kernel launch not supported for host");
+    // TODO: The data will need to be copied locally if we ever support
+    //       asynchronous kernel launches in the host interface.
+    Func(LaunchParams.Data);
     return Plugin::success();
   }
 
@@ -131,10 +121,10 @@ struct GenELF64KernelTy : public GenericKernelTy {
   }
 
 private:
+  /// Host kernel arguments are defined as a single, contiguous buffer.
+  using KernelTy = void(void *);
   /// The kernel function to execute.
-  void (*Func)(void);
-  /// Whether this kernel supports FFI-based launch.
-  bool SupportsFFI;
+  KernelTy *Func;
 };
 
 /// Class implementing the GenELF64 device images properties.
@@ -157,9 +147,8 @@ private:
 struct GenELF64DeviceTy : public GenericDeviceTy {
   /// Create the device with a specific id.
   GenELF64DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
-                   int32_t NumDevices, bool SupportsFFI)
-      : GenericDeviceTy(Plugin, DeviceId, NumDevices, GenELF64GridValues),
-        SupportsFFI(SupportsFFI) {}
+                   int32_t NumDevices)
+      : GenericDeviceTy(Plugin, DeviceId, NumDevices, GenELF64GridValues) {}
 
   ~GenELF64DeviceTy() {}
 
@@ -191,7 +180,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
       return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                            "failed to allocate memory for GenELF64 kernel");
 
-    new (GenELF64Kernel) GenELF64KernelTy(Name, SupportsFFI);
+    new (GenELF64Kernel) GenELF64KernelTy(Name);
 
     return *GenELF64Kernel;
   }
@@ -301,10 +290,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstGenericDevice,
                          void *DstPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    // This function should never be called because the function
-    // GenELF64PluginTy::isDataExchangable() returns false.
-    return Plugin::error(ErrorCode::UNSUPPORTED,
-                         "dataExchangeImpl not supported");
+    std::memcpy(DstPtr, SrcPtr, Size);
+    return Plugin::success();
   }
 
   /// Insert a data fence between previous data operations and the following
@@ -347,8 +334,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
 
   /// This plugin does not support interoperability
   Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    return Plugin::error(ErrorCode::UNSUPPORTED,
-                         "initAsyncInfoImpl not supported");
+    return Plugin::success();
   }
 
   Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
@@ -358,13 +344,15 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   };
 
   /// This plugin does not support the event API. Do nothing without failing.
-  Error createEventImpl(void **EventPtrStorage) override {
+  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override {
     *EventPtrStorage = nullptr;
     return Plugin::success();
   }
-  Error destroyEventImpl(void *EventPtr) override { return Plugin::success(); }
-  Error recordEventImpl(void *EventPtr,
-                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override {
+    return Plugin::success();
+  }
+  Error recordEventImpl(void *EventPtr, AsyncInfoWrapperTy &AsyncInfoWrapper,
+                        bool EnableProfiling) override {
     return Plugin::success();
   }
   Error waitEventImpl(void *EventPtr,
@@ -379,12 +367,76 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return true;
   }
   Error syncEventImpl(void *EventPtr) override { return Plugin::success(); }
+  Expected<float> getEventElapsedTimeImpl(void *StartEventPtr,
+                                          void *EndEventPtr) override {
+    return 0.0f;
+  }
 
   /// Print information about the device.
   Expected<InfoTreeNode> obtainInfoImpl() override {
+    constexpr auto uint32_max = std::numeric_limits<uint32_t>::max();
     InfoTreeNode Info;
     Info.add("Device Type", "Generic-elf-64bit");
+    Info.add("Product Name", "Host", "", DeviceInfo::PRODUCT_NAME);
+    Info.add("Vendor", "Unknown", "", DeviceInfo::VENDOR);
+    Info.add("Vendor ID", 1, "", DeviceInfo::VENDOR_ID);
+    Info.add("Device Name", "Host Offload Device", "", DeviceInfo::NAME);
+    Info.add("Driver Version", "Unknown", "", DeviceInfo::DRIVER_VERSION);
+    Info.add("Number of total EUs", 1, "", DeviceInfo::NUM_COMPUTE_UNITS);
+    Info.add("Max memory clock frequency (MHz)",
+             std::numeric_limits<uintptr_t>::digits, "",
+             DeviceInfo::MEMORY_CLOCK_RATE);
+    Info.add("Max clock frequency (MHz)",
+             std::numeric_limits<uintptr_t>::digits, "",
+             DeviceInfo::MAX_CLOCK_FREQUENCY);
+    Info.add("Memory Address Size", std::numeric_limits<uintptr_t>::digits,
+             "bits", DeviceInfo::ADDRESS_BITS);
+    Info.add("Local memory size (bytes)", 1, "",
+             DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
+    Info.add("Global memory size (bytes)", 1, "", DeviceInfo::GLOBAL_MEM_SIZE);
+    Info.add("Max Memory Allocation Size (bytes)", 1, "",
+             DeviceInfo::MAX_MEM_ALLOC_SIZE);
+    Info.add("Max Group size", 1, "", DeviceInfo::MAX_WORK_GROUP_SIZE);
+    auto &MaxGroupSize =
+        *Info.add("Workgroup Max Size per Dimension", std::monostate{}, "",
+                  DeviceInfo::MAX_WORK_GROUP_SIZE_PER_DIMENSION);
+    MaxGroupSize.add("x", 1);
+    MaxGroupSize.add("y", 1);
+    MaxGroupSize.add("z", 1);
+    Info.add("Maximum Grid Dimensions", uint32_max, "",
+             DeviceInfo::MAX_WORK_SIZE);
+    auto &MaxSize = *Info.add("Grid Size per Dimension", std::monostate{}, "",
+                              DeviceInfo::MAX_WORK_SIZE_PER_DIMENSION);
+    MaxSize.add("x", uint32_max);
+    MaxSize.add("y", uint32_max);
+    MaxSize.add("z", uint32_max);
+
+    ol_device_fp_capability_flags_t FPFlags =
+        OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT |
+        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST |
+        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO |
+        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF |
+        OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN |
+        OL_DEVICE_FP_CAPABILITY_FLAG_DENORM | OL_DEVICE_FP_CAPABILITY_FLAG_FMA;
+
+    Info.add("Single FP Support", true, "", DeviceInfo::SINGLE_FP_SUPPORT);
+    Info.add("Single FP Capabilities", FPFlags, "",
+             DeviceInfo::SINGLE_FP_CONFIG);
+
+    Info.add("Double FP Support", true, "", DeviceInfo::DOUBLE_FP_SUPPORT);
+    Info.add("Double FP Capabilities", FPFlags, "",
+             DeviceInfo::DOUBLE_FP_CONFIG);
+
+    Info.add("Half FP Support", false, "", DeviceInfo::HALF_FP_SUPPORT);
+    Info.add("Half FP Capabilities", ol_device_fp_capability_flags_t{0}, "",
+             DeviceInfo::HALF_FP_CONFIG);
+
     return Info;
+  }
+
+  Error getDeviceMemorySize(uint64_t &DSize) override {
+    DSize = 1;
+    return Plugin::success();
   }
 
   /// Getters and setters for stack size and heap size not relevant.
@@ -407,9 +459,6 @@ private:
       1, // GV_Max_WG_Size
       1, // GV_Default_WG_Size
   };
-
-  /// Whether this device supports FFI-based launch.
-  bool SupportsFFI;
 };
 
 class GenELF64GlobalHandlerTy final : public GenericGlobalHandlerTy {
@@ -448,13 +497,6 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   GenELF64PluginTy(GenELF64PluginTy &&) = delete;
   /// Initialize the plugin and return the number of devices.
   Expected<int32_t> initImpl() override {
-#ifdef USES_DYNAMIC_FFI
-    SupportsFFI = ffi_init() == FFI_OK ? true : false;
-    if (!SupportsFFI)
-      ODBG(OLDT_Init)
-          << "libffi is not available, kernels will not be launched "
-             "through libffi, and some features may be unavailable";
-#endif
     ODBG(OLDT_Init) << "GenELF64 plugin detected " << ODBG_IF_LEVEL(2)
                     << NUM_DEVICES << " " << ODBG_RESET_LEVEL() << "devices";
 
@@ -467,7 +509,7 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   /// Creates a generic ELF device.
   GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
                                 int32_t NumDevices) override {
-    return new GenELF64DeviceTy(Plugin, DeviceId, NumDevices, SupportsFFI);
+    return new GenELF64DeviceTy(Plugin, DeviceId, NumDevices);
   }
 
   /// Creates a generic global handler.
@@ -482,7 +524,7 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 
   /// This plugin does not support exchanging data between two devices.
   bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) override {
-    return false;
+    return true;
   }
 
   /// All images (ELF-compatible) should be compatible with this plugin.
@@ -522,10 +564,6 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   }
 
   const char *getName() const override { return GETNAME(TARGET_NAME); }
-
-private:
-  /// Whether this plugin supports FFI-based launch.
-  bool SupportsFFI = true;
 };
 
 template <typename... ArgsTy>

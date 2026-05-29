@@ -16,7 +16,7 @@ entry:
 ; CHECK-LABEL: f:
 ; WIN32: nop
 ; WIN64: nop
-; LINUX-NOT: nop
+; LINUX-NOT: {{^[[:space:]]+}}nop
 ; LINUX-NOT: ud2
 
 }

@@ -158,6 +158,7 @@ set(files
   __algorithm/ranges_set_symmetric_difference.h
   __algorithm/ranges_set_union.h
   __algorithm/ranges_shift_left.h
+  __algorithm/ranges_shift_right.h
   __algorithm/ranges_shuffle.h
   __algorithm/ranges_sort.h
   __algorithm/ranges_sort_heap.h
@@ -322,6 +323,8 @@ set(files
   __concepts/invocable.h
   __concepts/movable.h
   __concepts/predicate.h
+  __concepts/primary_template.h
+  __concepts/referenceable.h
   __concepts/regular.h
   __concepts/relation.h
   __concepts/same_as.h
@@ -334,10 +337,13 @@ set(files
   __configuration/attributes.h
   __configuration/availability.h
   __configuration/compiler.h
+  __configuration/diagnostic_suppression.h
   __configuration/experimental.h
   __configuration/hardening.h
   __configuration/language.h
+  __configuration/namespace.h
   __configuration/platform.h
+  __configuration/utility.h
   __coroutine/coroutine_handle.h
   __coroutine/coroutine_traits.h
   __coroutine/noop_coroutine_handle.h
@@ -403,6 +409,7 @@ set(files
   __format/format_to_n_result.h
   __format/formatter.h
   __format/formatter_bool.h
+  __format/formatter_bool_impl.h
   __format/formatter_char.h
   __format/formatter_floating_point.h
   __format/formatter_integer.h
@@ -527,7 +534,6 @@ set(files
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
   __locale_dir/locale_base_api/ibm.h
-  __locale_dir/locale_base_api/openbsd.h
   __locale_dir/messages.h
   __locale_dir/money.h
   __locale_dir/num.h
@@ -539,10 +545,14 @@ set(files
   __locale_dir/support/freebsd.h
   __locale_dir/support/fuchsia.h
   __locale_dir/support/linux.h
+  __locale_dir/support/llvm_libc.h
   __locale_dir/support/netbsd.h
   __locale_dir/support/newlib.h
   __locale_dir/support/no_locale/characters.h
+  __locale_dir/support/no_locale/conversions.h
+  __locale_dir/support/no_locale/formatting.h
   __locale_dir/support/no_locale/strtonum.h
+  __locale_dir/support/openbsd.h
   __locale_dir/support/windows.h
   __locale_dir/time.h
   __locale_dir/wbuffer_convert.h
@@ -727,6 +737,7 @@ set(files
   __ranges/empty_view.h
   __ranges/enable_borrowed_range.h
   __ranges/enable_view.h
+  __ranges/enumerate_view.h
   __ranges/filter_view.h
   __ranges/from_range.h
   __ranges/iota_view.h
@@ -746,6 +757,7 @@ set(files
   __ranges/single_view.h
   __ranges/size.h
   __ranges/split_view.h
+  __ranges/stride_view.h
   __ranges/subrange.h
   __ranges/take_view.h
   __ranges/take_while_view.h
@@ -770,9 +782,7 @@ set(files
   __support/ibm/gettod_zos.h
   __support/ibm/locale_mgmt_zos.h
   __support/ibm/nanosleep.h
-  __support/xlocale/__nop_locale_mgmt.h
   __support/xlocale/__posix_l_fallback.h
-  __support/xlocale/__strtonum_fallback.h
   __system_error/errc.h
   __system_error/error_category.h
   __system_error/error_code.h
@@ -866,10 +876,8 @@ set(files
   __type_traits/is_pod.h
   __type_traits/is_pointer.h
   __type_traits/is_polymorphic.h
-  __type_traits/is_primary_template.h
   __type_traits/is_reference.h
   __type_traits/is_reference_wrapper.h
-  __type_traits/is_referenceable.h
   __type_traits/is_same.h
   __type_traits/is_scalar.h
   __type_traits/is_signed.h
@@ -886,7 +894,6 @@ set(files
   __type_traits/is_union.h
   __type_traits/is_unqualified.h
   __type_traits/is_unsigned.h
-  __type_traits/is_valid_expansion.h
   __type_traits/is_void.h
   __type_traits/is_volatile.h
   __type_traits/is_within_lifetime.h
@@ -924,6 +931,7 @@ set(files
   __utility/as_lvalue.h
   __utility/auto_cast.h
   __utility/cmp.h
+  __utility/constant_wrapper.h
   __utility/convert_to_integral.h
   __utility/declval.h
   __utility/default_three_way_comparator.h
@@ -1000,7 +1008,6 @@ set(files
   cstring
   ctgmath
   ctime
-  ctype.h
   cuchar
   cwchar
   cwctype
@@ -1027,7 +1034,6 @@ set(files
   ext/__hash
   ext/hash_map
   ext/hash_set
-  fenv.h
   filesystem
   flat_map
   flat_set
@@ -1037,7 +1043,6 @@ set(files
   functional
   future
   initializer_list
-  inttypes.h
   iomanip
   ios
   iosfwd

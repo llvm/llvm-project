@@ -1807,6 +1807,32 @@ struct Bar {};
 static_assert(is_incomplete_v<Foo>, "Foo is incomplete");
 static_assert(!is_incomplete_v<Bar>, "Bar is defined");
 
+TEST(STLExtrasTest, HasEqualityComparison) {
+  struct NoEqualityComparison {};
+  static_assert(!has_equality_comparison_v<NoEqualityComparison>);
+
+  // Mutating equality comparison doesn't count.
+  struct MutatingEqualityComparison {
+    bool operator==(MutatingEqualityComparison &Other) { return false; }
+  };
+  static_assert(!has_equality_comparison_v<MutatingEqualityComparison>);
+
+  struct PublicEqualityComparison {
+    bool operator==(const PublicEqualityComparison &Other) const {
+      return false;
+    }
+  };
+  static_assert(has_equality_comparison_v<PublicEqualityComparison>);
+
+  struct StructA {};
+  struct StructB {
+    bool operator==(const StructA &Other) const { return false; }
+  };
+  static_assert(has_equality_comparison_v<StructB, StructA>);
+
+  SUCCEED();
+}
+
 TEST(STLExtrasTest, Search) {
   // Test finding a subsequence in the middle.
   std::vector<int> Haystack = {1, 2, 3, 4, 5, 6, 7, 8};
@@ -1963,5 +1989,15 @@ TEST(STLExtrasTest, AdjacentFind) {
   EXPECT_EQ(*It13, 3);
   EXPECT_EQ(*std::next(It13), 3);
 }
+
+// Compile-time tests for llvm::is_sorted_constexpr
+// Check to ensure range based functions as expected
+static constexpr std::array<int, 5> CSorted{{1, 2, 2, 3, 5}};
+static_assert(llvm::is_sorted_constexpr(CSorted),
+              "Non-descending order with duplicates should be sorted");
+static_assert(llvm::is_sorted_constexpr(CSorted, std::less<>()),
+              "Explicit std::less non-descending order should be sorted");
+static_assert(!llvm::is_sorted_constexpr(CSorted, std::greater<>()),
+              "Non-descending order should not be sorted by std::greater");
 
 } // namespace

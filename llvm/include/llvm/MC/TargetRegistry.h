@@ -21,6 +21,7 @@
 #include "llvm-c/DisassemblerTypes.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -46,6 +47,7 @@ class MCDisassembler;
 class MCInstPrinter;
 class MCInstrAnalysis;
 class MCInstrInfo;
+class MCLFIRewriter;
 class MCObjectWriter;
 class MCRegisterInfo;
 class MCRelocationInfo;
@@ -174,9 +176,9 @@ public:
                                                const MCSubtargetInfo &STI,
                                                const MCRegisterInfo &MRI,
                                                const MCTargetOptions &Options);
-  using MCAsmParserCtorTy = MCTargetAsmParser *(*)(
-      const MCSubtargetInfo &STI, MCAsmParser &P, const MCInstrInfo &MII,
-      const MCTargetOptions &Options);
+  using MCAsmParserCtorTy = MCTargetAsmParser *(*)(const MCSubtargetInfo &STI,
+                                                   MCAsmParser &P,
+                                                   const MCInstrInfo &MII);
   using MCDisassemblerCtorTy = MCDisassembler *(*)(const Target &T,
                                                    const MCSubtargetInfo &STI,
                                                    MCContext &Ctx);
@@ -236,6 +238,11 @@ public:
   using InstrumentManagerCtorTy =
       mca::InstrumentManager *(*)(const MCSubtargetInfo &STI,
                                   const MCInstrInfo &MCII);
+
+  using MCLFIRewriterCtorTy =
+      MCLFIRewriter *(*)(MCContext & Ctx,
+                         std::unique_ptr<MCRegisterInfo> &&RegInfo,
+                         std::unique_ptr<MCInstrInfo> &&InstInfo);
 
 private:
   /// Next - The next registered target in the linked list, maintained by the
@@ -351,6 +358,10 @@ private:
   /// InstrumentManager, if registered (default = nullptr).
   InstrumentManagerCtorTy InstrumentManagerCtorFn = nullptr;
 
+  // MCLFIRewriterCtorFn - Construction function for this target's
+  // MCLFIRewriter, if registered (default = nullptr).
+  MCLFIRewriterCtorTy MCLFIRewriterCtorFn = nullptr;
+
 public:
   Target() = default;
 
@@ -452,6 +463,8 @@ public:
                                          StringRef Features) const {
     if (!MCSubtargetInfoCtorFn)
       return nullptr;
+    if (!isValidFeatureListFormat(Features))
+      return nullptr;
     return MCSubtargetInfoCtorFn(TheTriple, CPU, Features);
   }
 
@@ -488,11 +501,10 @@ public:
   /// parsing and lexing.
   MCTargetAsmParser *createMCAsmParser(const MCSubtargetInfo &STI,
                                        MCAsmParser &Parser,
-                                       const MCInstrInfo &MII,
-                                       const MCTargetOptions &Options) const {
+                                       const MCInstrInfo &MII) const {
     if (!MCAsmParserCtorFn)
       return nullptr;
-    return MCAsmParserCtorFn(STI, Parser, MII, Options);
+    return MCAsmParserCtorFn(STI, Parser, MII);
   }
 
   /// createAsmPrinter - Create a target specific assembly printer pass.  This
@@ -566,6 +578,14 @@ public:
     return nullptr;
   }
 
+  MCLFIRewriter *
+  createMCLFIRewriter(MCContext &Ctx, std::unique_ptr<MCRegisterInfo> &&RegInfo,
+                      std::unique_ptr<MCInstrInfo> &&InstInfo) const {
+    if (MCLFIRewriterCtorFn)
+      return MCLFIRewriterCtorFn(Ctx, std::move(RegInfo), std::move(InstInfo));
+    return nullptr;
+  }
+
   /// createMCRelocationInfo - Create a target specific MCRelocationInfo.
   ///
   /// \param TT The target triple.
@@ -630,6 +650,20 @@ public:
     return nullptr;
   }
 
+  /// isValidFeatureListFormat - check that FeatureString
+  /// has the format:
+  ///   "+attr1,+attr2,-attr3,...,+attrN"
+  /// A comma separates each feature from the next (all lowercase).
+  /// Each of the remaining features is prefixed with '+' or '-' indicating
+  /// whether that feature should be enabled or disabled contrary to the cpu
+  /// specification.
+  /// The string must match exactly that format otherwise
+  /// MCSubtargetInfo::ApplyFeatureFlag will fail.
+  /// For example feature string "+a,+m,c" is accepted, and results in feature
+  /// list {"+a", "+m", "c"}. Later in ApplyFeatureFlag, it asserts
+  /// that all features must start with '+' or '-' and assert is failed.
+  static bool isValidFeatureListFormat(StringRef FeaturesString);
+
   /// @}
 };
 
@@ -688,17 +722,6 @@ struct TargetRegistry {
   /// @{
 
   LLVM_ABI static iterator_range<iterator> targets();
-
-  /// lookupTarget - Lookup a target based on a target triple.
-  ///
-  /// \param TripleStr - The triple to use for finding a target.
-  /// \param Error - On failure, an error string describing why no target was
-  /// found.
-  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
-  [[deprecated("Use overload accepting Triple instead")]]
-  static const Target *lookupTarget(StringRef TripleStr, std::string &Error) {
-    return lookupTarget(Triple(TripleStr), Error);
-  }
 
   /// lookupTarget - Lookup a target based on a target triple.
   ///
@@ -1021,6 +1044,10 @@ struct TargetRegistry {
     T.InstrumentManagerCtorFn = Fn;
   }
 
+  static void RegisterMCLFIRewriter(Target &T, Target::MCLFIRewriterCtorTy Fn) {
+    T.MCLFIRewriterCtorFn = Fn;
+  }
+
   /// @}
 };
 
@@ -1307,9 +1334,8 @@ template <class MCAsmParserImpl> struct RegisterMCAsmParser {
 
 private:
   static MCTargetAsmParser *Allocator(const MCSubtargetInfo &STI,
-                                      MCAsmParser &P, const MCInstrInfo &MII,
-                                      const MCTargetOptions &Options) {
-    return new MCAsmParserImpl(STI, P, MII, Options);
+                                      MCAsmParser &P, const MCInstrInfo &MII) {
+    return new MCAsmParserImpl(STI, P, MII);
   }
 };
 

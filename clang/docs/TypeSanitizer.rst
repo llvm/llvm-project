@@ -93,7 +93,7 @@ to print the full trace. To get nicer stack traces in error messages add ``-fno-
     }
 
     # Compile and link
-    % clang++ -g -fsanitize=type example_AliasViolation.cc
+    % clang++ -g -fsanitize=type example_AliasViolation.c
 
 The program will print an error message to ``stderr`` each time a strict aliasing violation is detected. 
 The program won't terminate, which will allow you to detect many strict aliasing violations in one 
@@ -114,7 +114,7 @@ Error terminology
 ------------------
 
 There are some terms that may appear in TypeSanitizer errors that are derived from 
-`TBAA Metadata <https://llvm.org/docs/LangRef.html#tbaa-metadata>`. This section hopes to provide a 
+`TBAA Metadata <https://llvm.org/docs/LangRef.html#tbaa-metadata>`_. This section hopes to provide a
 brief dictionary of these terms.
 
 * ``omnipotent char``: This is a special type which can alias with anything. Its name comes from the C/C++ 
@@ -180,6 +180,18 @@ violation reports in the specified source files or functions. Like
 with other methods of ignoring instrumentation, this can result in false 
 positives/ false-negatives.
 
+Runtime Options
+---------------
+
+Similar to other sanitizers, you can modify TypeSanitizers runtime behaviour by 
+using an environment variable. These flags should be provided as a colon separated 
+list. For example, ``TYSAN_OPTIONS=print_stacktrace=1:halt_on_error=1``
+
+* ``print_stacktrace`` when true will tell the sanitizer to emit more lengthy 
+  and detailed stack traces on error.
+* ``halt_on_error`` when true will make the instrumented program abort after 
+  the first type violation detected.
+
 Limitations
 -----------
 
@@ -195,7 +207,7 @@ Limitations
   does at least mean that TypeSanitizer will catch any aliasing violations that  
   would cause bugs when compiling with Clang & LLVM.
 * TypeSanitizer cannot currently be run alongside other sanitizers such as 
-  AddressSanitizer, ThreadSanitizer or UndefinedBehaviourSanitizer.
+  AddressSanitizer or ThreadSanitizer.
 
 Current Status
 --------------

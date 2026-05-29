@@ -13,7 +13,7 @@ func.func @matmul_16x8x4xf32_global(
 // CHECK-SAME:                                        %[[VAL_1:.*]]: memref<4x8xf32>,
 // CHECK-SAME:                                        %[[VAL_2:.*]]: memref<16x8xf32>) {
 
-// CHECK:           %[[TIDX:.*]] = gpu.thread_id  x
+// CHECK:           %[[TIDX:.*]] = gpu.thread_id x
 // CHECK:           %[[VAL_4:.*]] = affine.apply #[[$div4]]()[%[[TIDX]]]
 // CHECK:           %[[VAL_5:.*]] = affine.apply #[[$mod4]]()[%[[TIDX]]]
 // CHECK:           %[[VAL_6:.*]] = memref.load %[[VAL_0]][%[[VAL_4]], %[[VAL_5]]] : memref<16x4xf32>

@@ -21,7 +21,8 @@ mlir::Value CIRGenBuilderTy::maybeBuildArrayDecay(mlir::Location loc,
   const auto arrayTy = mlir::dyn_cast<cir::ArrayType>(arrayPtrTy.getPointee());
 
   if (arrayTy) {
-    const cir::PointerType flatPtrTy = getPointerTo(arrayTy.getElementType());
+    const cir::PointerType flatPtrTy =
+        getPointerTo(arrayTy.getElementType(), arrayPtrTy.getAddrSpace());
     return cir::CastOp::create(*this, loc, flatPtrTy,
                                cir::CastKind::array_to_ptrdecay, arrayPtr);
   }
@@ -40,6 +41,10 @@ mlir::Value CIRGenBuilderTy::getArrayElement(mlir::Location arrayLocBegin,
   assert(arrayPtrTy && "expected pointer type");
   // If the array pointer is not decayed, emit a GetElementOp.
   auto arrayTy = mlir::dyn_cast<cir::ArrayType>(arrayPtrTy.getPointee());
+
+  assert(mlir::isa<cir::IntType>(idx.getType()) &&
+         cir::isValidFundamentalIntWidth(
+             mlir::cast<cir::IntType>(idx.getType()).getWidth()));
 
   if (shouldDecay && arrayTy && arrayTy == eltTy) {
     auto eltPtrTy =
@@ -90,12 +95,19 @@ void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
   if (!offset)
     return;
 
+  // Compute floor-division and a non-negative remainder. A negative flat
+  // offset (e.g. from a pointer one element before the start of an array)
+  // must translate to a negative array index with a non-negative remainder
+  // so that the recursive call can descend into the element type without
+  // a negative offset flowing into the record case below.
   auto getIndexAndNewOffset =
       [](int64_t offset, int64_t eltSize) -> std::pair<int64_t, int64_t> {
     int64_t divRet = offset / eltSize;
-    if (divRet < 0)
-      divRet -= 1; // make sure offset is positive
-    int64_t modRet = offset - (divRet * eltSize);
+    int64_t modRet = offset % eltSize;
+    if (modRet < 0) {
+      divRet -= 1;
+      modRet += eltSize;
+    }
     return {divRet, modRet};
   };
 
@@ -145,6 +157,28 @@ void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
 
   assert(subType);
   computeGlobalViewIndicesFromFlatOffset(offset, subType, layout, indices);
+}
+
+uint64_t CIRGenBuilderTy::computeOffsetFromGlobalViewIndices(
+    const cir::CIRDataLayout &layout, mlir::Type ty,
+    llvm::ArrayRef<int64_t> indices) {
+  int64_t offset = 0;
+  for (int64_t idx : indices) {
+    if (auto recordTy = dyn_cast<cir::RecordType>(ty)) {
+      offset += recordTy.getElementOffset(layout.layout, idx);
+      const llvm::Align tyAlign = llvm::Align(
+          recordTy.getPacked() ? 1 : layout.layout.getTypeABIAlignment(ty));
+      offset = llvm::alignTo(offset, tyAlign);
+      assert(idx < (int64_t)recordTy.getMembers().size());
+      ty = recordTy.getMembers()[idx];
+    } else if (auto arrayTy = dyn_cast<cir::ArrayType>(ty)) {
+      ty = arrayTy.getElementType();
+      offset += layout.getTypeAllocSize(ty) * idx;
+    } else {
+      llvm_unreachable("unexpected type");
+    }
+  }
+  return offset;
 }
 
 cir::RecordType clang::CIRGen::CIRGenBuilderTy::getCompleteRecordType(

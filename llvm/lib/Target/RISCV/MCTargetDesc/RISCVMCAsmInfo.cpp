@@ -20,14 +20,14 @@ using namespace llvm;
 
 void RISCVMCAsmInfo::anchor() {}
 
-RISCVMCAsmInfo::RISCVMCAsmInfo(const Triple &TT) {
+RISCVMCAsmInfo::RISCVMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   IsLittleEndian = TT.isLittleEndian();
   CodePointerSize = CalleeSaveStackSlotSize = TT.isArch64Bit() ? 8 : 4;
   CommentString = "#";
   AlignmentIsInBytes = false;
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::DwarfCFI;
-  UseAtForSpecifier = false;
   Data16bitsDirective = "\t.half\t";
   Data32bitsDirective = "\t.word\t";
 }
@@ -59,9 +59,10 @@ void RISCVMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
     OS << ')';
 }
 
-RISCVMCAsmInfoDarwin::RISCVMCAsmInfoDarwin() {
+RISCVMCAsmInfoDarwin::RISCVMCAsmInfoDarwin(const MCTargetOptions &Options)
+    : MCAsmInfoDarwin(Options) {
   CodePointerSize = 4;
-  PrivateGlobalPrefix = "L";
+  InternalSymbolPrefix = "L";
   PrivateLabelPrefix = "L";
   SeparatorString = "%%";
   CommentString = ";";

@@ -30,9 +30,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32sp = COPY [[COPY]].sub_32
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
-    %0(s64) = COPY $x0
-    %1(s32) = G_TRUNC %0
-    $w0 = COPY %1(s32)
+    %0(i64) = COPY $x0
+    %1(i32) = G_TRUNC %0
+    $w0 = COPY %1(i32)
 ...
 
 ---
@@ -55,10 +55,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]].sub_32
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32all = COPY [[COPY1]]
     ; CHECK-NEXT: $w0 = COPY [[COPY2]]
-    %0(s64) = COPY $x0
-    %1(s8) = G_TRUNC %0
-    %2:gpr(s32) = G_ANYEXT %1
-    $w0 = COPY %2(s32)
+    %0(i64) = COPY $x0
+    %1(i8) = G_TRUNC %0
+    %2:gpr(i32) = G_ANYEXT %1
+    $w0 = COPY %2(i32)
 ...
 
 ---
@@ -80,10 +80,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[COPY]]
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
-    %0(s32) = COPY $w0
-    %1(s8) = G_TRUNC %0
-    %2:gpr(s32) = G_ANYEXT %1
-    $w0 = COPY %2(s32)
+    %0(i32) = COPY $w0
+    %1(i8) = G_TRUNC %0
+    %2:gpr(i32) = G_ANYEXT %1
+    $w0 = COPY %2(i32)
 ...
 
 ---
@@ -105,8 +105,8 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY [[COPY]].dsub
     ; CHECK-NEXT: $x0 = COPY [[COPY1]]
     %0(s128) = COPY $q0
-    %1(s64) = G_TRUNC %0
-    $x0 = COPY %1(s64)
+    %1(i64) = G_TRUNC %0
+    $x0 = COPY %1(i64)
 ...
 
 ---
@@ -128,6 +128,6 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY [[COPY]].ssub
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
     %0(s128) = COPY $q0
-    %1(s32) = G_TRUNC %0
-    $w0 = COPY %1(s32)
+    %1(i32) = G_TRUNC %0
+    $w0 = COPY %1(i32)
 ...

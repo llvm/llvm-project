@@ -91,12 +91,12 @@ bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
   Register DotReg, CondZeroReg;
   CmpInst::Predicate Pred;
   if (!mi_match(CondReg, MRI,
-                m_GFCmp(m_Pred(Pred), m_Reg(DotReg), m_Reg(CondZeroReg))) ||
-      !(Pred == CmpInst::FCMP_OLT || Pred == CmpInst::FCMP_ULT)) {
-    if (!(Pred == CmpInst::FCMP_OGT || Pred == CmpInst::FCMP_UGT))
-      return false;
+                m_GFCmp(m_Pred(Pred), m_Reg(DotReg), m_Reg(CondZeroReg))))
+    return false;
+  if (Pred == CmpInst::FCMP_OGT || Pred == CmpInst::FCMP_UGT)
     std::swap(DotReg, CondZeroReg);
-  }
+  else if (!(Pred == CmpInst::FCMP_OLT || Pred == CmpInst::FCMP_ULT))
+    return false;
 
   // Check if FCMP is a comparison between a dot product and 0.
   MachineInstr *DotInstr = MRI.getVRegDef(DotReg);
@@ -397,6 +397,9 @@ void SPIRVCombinerHelper::applyMatrixMultiply(MachineInstr &MI) const {
   SmallVector<Register, 16> ResultScalars =
       computeDotProducts(RowsA, ColsB, SpvVecType, GR);
 
-  Builder.buildBuildVector(ResReg, ResultScalars);
+  if (ResultScalars.size() == 1)
+    Builder.buildCopy(ResReg, ResultScalars[0]);
+  else
+    Builder.buildBuildVector(ResReg, ResultScalars);
   MI.eraseFromParent();
 }

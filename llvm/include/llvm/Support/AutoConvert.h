@@ -55,6 +55,16 @@ ErrorOr<__ccsid_t> getzOSFileTag(const Twine &FileName, const int FD = -1);
  */
 ErrorOr<bool> needzOSConversion(const Twine &FileName, const int FD = -1);
 
+/** Copy the tag attributes from \a source to \a destination.
+ *
+ * @param Source The name of the source file.
+ * @param Destination The file descriptor of the destination file.
+ * @returns errc::success if the tag attributes were copied successfully,
+ *          otherwise returns a specific error_code.
+ */
+std::error_code copyFileTagAttributes(const std::string &Source,
+                                      const int DestinationFD);
+
 #endif /* __MVS__*/
 
 inline std::error_code disableAutoConversion(int FD) {

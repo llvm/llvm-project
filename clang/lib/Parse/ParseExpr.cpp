@@ -15,8 +15,8 @@
 /// In the C99 grammar, these unary operators bind tightest and are represented
 /// as the 'cast-expression' production.  Everything else is either a binary
 /// operator (e.g. '/') or a ternary operator ("?:").  The unary leaves are
-/// handled by ParseCastExpression, the higher level pieces are handled by
-/// ParseBinaryExpression.
+/// handled by ParseCastExpression, the higher level pieces are handled
+/// elsewhere.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -481,7 +481,9 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
     else
       RHS = ParseCastExpression(CastParseKind::AnyCastExpr);
 
-    if (RHS.isInvalid()) {
+    // We preserve the LHS only if we hit a clear statement boundary (tok::semi)
+    // to avoid additional bogus diagnostics.
+    if (RHS.isInvalid() && Tok.isNot(tok::semi)) {
       LHS = ExprError();
     }
 
@@ -513,7 +515,7 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
                             static_cast<prec::Level>(ThisPrec + !isRightAssoc));
       RHSIsInitList = false;
 
-      if (RHS.isInvalid()) {
+      if (RHS.isInvalid() && Tok.isNot(tok::semi)) {
         LHS = ExprError();
       }
 
@@ -540,7 +542,11 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
 
     if (!LHS.isInvalid()) {
       // Combine the LHS and RHS into the LHS (e.g. build AST).
-      if (TernaryMiddle.isInvalid()) {
+      if (RHS.isInvalid()) {
+        LHS = Actions.CreateRecoveryExpr(LHS.get()->getBeginLoc(),
+                                         PrevTokLocation,
+                                         {LHS.get()});
+      } else if (TernaryMiddle.isInvalid()) {
         // If we're using '>>' as an operator within a template
         // argument list (in C++98), suggest the addition of
         // parentheses so that the code remains well-formed in C++0x.
@@ -857,8 +863,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
   case tok::annot_non_type_dependent:
   case tok::annot_non_type_undeclared: {
     CXXScopeSpec SS;
-    Token Replacement;
-    Res = tryParseCXXIdExpression(SS, isAddressOfOperand, Replacement);
+    Res = tryParseCXXIdExpression(SS, isAddressOfOperand);
     assert(!Res.isUnset() &&
            "should not perform typo correction on annotation token");
     break;
@@ -923,7 +928,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
                Next.isOneOf(tok::coloncolon, tok::less, tok::l_paren,
                             tok::l_brace)) {
         // If TryAnnotateTypeOrScopeToken annotates the token, tail recurse.
-        if (TryAnnotateTypeOrScopeToken())
+        if (TryAnnotateTypeOrScopeToken(isAddressOfOperand))
           return ExprError();
         if (!Tok.is(tok::identifier))
           return ParseCastExpression(ParseKind, isAddressOfOperand, NotCastExpr,
@@ -1023,7 +1028,6 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
     UnqualifiedId Name;
     CXXScopeSpec ScopeSpec;
     SourceLocation TemplateKWLoc;
-    Token Replacement;
     CastExpressionIdValidator Validator(Tok, CorrectionBehavior);
     Validator.IsAddressOfOperand = isAddressOfOperand;
     if (Tok.isOneOf(tok::periodstar, tok::arrowstar)) {
@@ -1033,17 +1037,10 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
       Validator.WantRemainingKeywords = Tok.isNot(tok::r_paren);
     }
     Name.setIdentifier(&II, ILoc);
-    Res = Actions.ActOnIdExpression(
-        getCurScope(), ScopeSpec, TemplateKWLoc, Name, Tok.is(tok::l_paren),
-        isAddressOfOperand, &Validator,
-        /*IsInlineAsmIdentifier=*/false,
-        Tok.is(tok::r_paren) ? nullptr : &Replacement);
-    if (!Res.isInvalid() && Res.isUnset()) {
-      UnconsumeToken(Replacement);
-      return ParseCastExpression(
-          ParseKind, isAddressOfOperand, NotCastExpr, CorrectionBehavior,
-          /*isVectorLiteral=*/false, NotPrimaryExpression);
-    }
+    Res = Actions.ActOnIdExpression(getCurScope(), ScopeSpec, TemplateKWLoc,
+                                    Name, Tok.is(tok::l_paren),
+                                    isAddressOfOperand, &Validator,
+                                    /*IsInlineAsmIdentifier=*/false);
     Res = tryParseCXXPackIndexingExpression(Res);
     if (!Res.isInvalid() && Tok.is(tok::less))
       checkPotentialAngleBracket(Res);
@@ -1560,7 +1557,8 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
   case tok::code_completion: {
     cutOffParsing();
     Actions.CodeCompletion().CodeCompleteExpression(
-        getCurScope(), PreferredType.get(Tok.getLocation()));
+        getCurScope(), PreferredType.get(Tok.getLocation()),
+        /*IsParenthesized=*/false, /*IsAddressOfOperand=*/isAddressOfOperand);
     return ExprError();
   }
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
@@ -2409,7 +2407,18 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
       return ExprError();
     }
 
+    auto TriggerCompletion = [&](const Designation &D) {
+      cutOffParsing();
+      Actions.CodeCompletion().CodeCompleteOffsetOfDesignator(
+          Actions.GetTypeFromParser(Ty.get()), D);
+    };
+
     // We must have at least one identifier here.
+    Designation D;
+    if (Tok.is(tok::code_completion)) {
+      TriggerCompletion(D);
+      return ExprError();
+    }
     if (Tok.isNot(tok::identifier)) {
       Diag(Tok, diag::err_expected) << tok::identifier;
       SkipUntil(tok::r_paren, StopAtSemi);
@@ -2417,12 +2426,18 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
     }
 
     // Keep track of the various subcomponents we see.
+    // FIXME: Comps and D below carry the same designator chain in two
+    // different shapes. ActOnBuiltinOffsetOf should be taught to accept a
+    // Designation directly so this duplication can go away.
     SmallVector<Sema::OffsetOfComponent, 4> Comps;
 
     Comps.push_back(Sema::OffsetOfComponent());
     Comps.back().isBrackets = false;
     Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
-    Comps.back().LocStart = Comps.back().LocEnd = ConsumeToken();
+    Comps.back().LocStart = Comps.back().LocEnd = Tok.getLocation();
+    D.AddDesignator(Designator::CreateFieldDesignator(
+        Tok.getIdentifierInfo(), SourceLocation(), Tok.getLocation()));
+    ConsumeToken();
 
     // FIXME: This loop leaks the index expressions on error.
     while (true) {
@@ -2432,13 +2447,20 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
         Comps.back().isBrackets = false;
         Comps.back().LocStart = ConsumeToken();
 
+        if (Tok.is(tok::code_completion)) {
+          TriggerCompletion(D);
+          return ExprError();
+        }
         if (Tok.isNot(tok::identifier)) {
           Diag(Tok, diag::err_expected) << tok::identifier;
           SkipUntil(tok::r_paren, StopAtSemi);
           return ExprError();
         }
         Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
-        Comps.back().LocEnd = ConsumeToken();
+        Comps.back().LocEnd = Tok.getLocation();
+        D.AddDesignator(Designator::CreateFieldDesignator(
+            Tok.getIdentifierInfo(), Comps.back().LocStart, Tok.getLocation()));
+        ConsumeToken();
       } else if (Tok.is(tok::l_square)) {
         if (CheckProhibitedCXX11Attribute())
           return ExprError();
@@ -2458,7 +2480,19 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
 
         ST.consumeClose();
         Comps.back().LocEnd = ST.getCloseLocation();
+        Designator ArrayD =
+            Designator::CreateArrayDesignator(Res.get(), Comps.back().LocStart);
+        ArrayD.setRBracketLoc(Comps.back().LocEnd);
+        D.AddDesignator(ArrayD);
       } else {
+        // A code-completion token here (e.g. cursor right after `]`) is past
+        // the point where a field can be applied without a leading `.`. Drop
+        // it on the floor rather than leak into outer-scope completion or
+        // emit field suggestions that wouldn't compose.
+        if (Tok.is(tok::code_completion)) {
+          cutOffParsing();
+          return ExprError();
+        }
         if (Tok.isNot(tok::r_paren)) {
           PT.consumeClose();
           Res = ExprError();
@@ -3463,6 +3497,15 @@ std::optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
       Diag(PlatformIdentifier->getLoc(),
            diag::err_avail_query_unrecognized_platform_name)
           << GivenPlatform;
+      return std::nullopt;
+    }
+
+    // Validate anyAppleOS version; reject versions older than 26.0.
+    if (Platform == "anyappleos" &&
+        !AvailabilitySpec::validateAnyAppleOSVersion(Version)) {
+      Diag(VersionRange.getBegin(),
+           diag::err_avail_query_anyappleos_min_version)
+          << Version.getAsString();
       return std::nullopt;
     }
 

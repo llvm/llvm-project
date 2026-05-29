@@ -8,6 +8,7 @@
 
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/ADT/GenericUniformityImpl.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -29,27 +30,6 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::markDefsDivergent(
   return markDivergent(cast<Value>(&Instr));
 }
 
-template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
-  for (auto &I : instructions(F)) {
-    InstructionUniformity IU = TTI->getInstructionUniformity(&I);
-    switch (IU) {
-    case InstructionUniformity::AlwaysUniform:
-      addUniformOverride(I);
-      continue;
-    case InstructionUniformity::NeverUniform:
-      markDivergent(I);
-      continue;
-    case InstructionUniformity::Default:
-      break;
-    }
-  }
-  for (auto &Arg : F.args()) {
-    if (TTI->getInstructionUniformity(&Arg) ==
-        InstructionUniformity::NeverUniform)
-      markDivergent(&Arg);
-  }
-}
-
 template <>
 void llvm::GenericUniformityAnalysisImpl<SSAContext>::pushUsers(
     const Value *V) {
@@ -67,6 +47,64 @@ void llvm::GenericUniformityAnalysisImpl<SSAContext>::pushUsers(
   if (Instr.isTerminator())
     return;
   pushUsers(cast<Value>(&Instr));
+}
+
+template <>
+bool llvm::GenericUniformityAnalysisImpl<SSAContext>::printDivergentArgs(
+    raw_ostream &OS) const {
+  bool HaveDivergentArgs = false;
+  for (const auto &Arg : F.args()) {
+    if (isDivergent(&Arg)) {
+      if (!HaveDivergentArgs) {
+        OS << "DIVERGENT ARGUMENTS:\n";
+        HaveDivergentArgs = true;
+      }
+      OS << "  DIVERGENT: " << Context.print(&Arg) << '\n';
+    }
+  }
+  return HaveDivergentArgs;
+}
+
+template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
+  // Pre-populate UniformValues with uniform values, then seed divergence.
+  // NeverUniform values are not inserted -- they are divergent by definition
+  // and will be reported as such by isDivergent() (not in UniformValues).
+  SmallVector<const Value *, 4> DivergentArgs;
+  for (auto &Arg : F.args()) {
+    if (TTI->getValueUniformity(&Arg) == ValueUniformity::NeverUniform)
+      DivergentArgs.push_back(&Arg);
+    else
+      UniformValues.insert(&Arg);
+  }
+  for (auto &I : instructions(F)) {
+    ValueUniformity IU = TTI->getValueUniformity(&I);
+    switch (IU) {
+    case ValueUniformity::AlwaysUniform:
+      UniformValues.insert(&I);
+      addUniformOverride(I);
+      continue;
+    case ValueUniformity::NeverUniform:
+      // Skip inserting -- divergent by definition. Add to Worklist directly
+      // so compute() propagates divergence to users.
+      if (I.isTerminator())
+        DivergentTermBlocks.insert(I.getParent());
+      Worklist.push_back(&I);
+      continue;
+    case ValueUniformity::Custom:
+      UniformValues.insert(&I);
+      addCustomUniformityCandidate(&I);
+      continue;
+    case ValueUniformity::Default:
+      UniformValues.insert(&I);
+      break;
+    }
+  }
+  // Arguments are not instructions and cannot go on the Worklist, so we
+  // propagate their divergence to users explicitly here. This must happen
+  // after all instructions are in UniformValues so markDivergent (called
+  // inside pushUsers) can successfully erase user instructions from the set.
+  for (const Value *Arg : DivergentArgs)
+    pushUsers(Arg);
 }
 
 template <>
@@ -108,6 +146,15 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::isDivergentUse(
   return false;
 }
 
+template <>
+bool GenericUniformityAnalysisImpl<SSAContext>::isCustomUniform(
+    const Instruction &I) const {
+  SmallBitVector UniformArgs(I.getNumOperands());
+  for (auto [Idx, Use] : enumerate(I.operands()))
+    UniformArgs[Idx] = !isDivergentUse(Use);
+  return TTI->isUniform(&I, UniformArgs);
+}
+
 // This ensures explicit instantiation of
 // GenericUniformityAnalysisImpl::ImplDeleter::operator()
 template class llvm::GenericUniformityInfo<SSAContext>;
@@ -120,14 +167,13 @@ template struct llvm::GenericUniformityAnalysisImplDeleter<
 
 llvm::UniformityInfo UniformityInfoAnalysis::run(Function &F,
                                                  FunctionAnalysisManager &FAM) {
-  auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
-  auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
-  auto &CI = FAM.getResult<CycleAnalysis>(F);
+  TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
+  if (!TTI.hasBranchDivergence(&F))
+    return UniformityInfo{};
+  DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+  CycleInfo &CI = FAM.getResult<CycleAnalysis>(F);
   UniformityInfo UI{DT, CI, &TTI};
-  // Skip computation if we can assume everything is uniform.
-  if (TTI.hasBranchDivergence(&F))
-    UI.compute();
-
+  UI.compute();
   return UI;
 }
 
@@ -168,27 +214,29 @@ void UniformityInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool UniformityInfoWrapperPass::runOnFunction(Function &F) {
-  auto &cycleInfo = getAnalysis<CycleInfoWrapperPass>().getResult();
-  auto &domTree = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &targetTransformInfo =
+  TargetTransformInfo &TTI =
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
-  m_function = &F;
-  m_uniformityInfo = UniformityInfo{domTree, cycleInfo, &targetTransformInfo};
+  Fn = &F;
 
-  // Skip computation if we can assume everything is uniform.
-  if (targetTransformInfo.hasBranchDivergence(m_function))
-    m_uniformityInfo.compute();
+  if (!TTI.hasBranchDivergence(Fn)) {
+    UI = UniformityInfo{};
+    return false;
+  }
 
+  CycleInfo &CI = getAnalysis<CycleInfoWrapperPass>().getResult();
+  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  UI = UniformityInfo{DT, CI, &TTI};
+  UI.compute();
   return false;
 }
 
 void UniformityInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
-  OS << "UniformityInfo for function '" << m_function->getName() << "':\n";
-  m_uniformityInfo.print(OS);
+  OS << "UniformityInfo for function '" << Fn->getName() << "':\n";
+  UI.print(OS);
 }
 
 void UniformityInfoWrapperPass::releaseMemory() {
-  m_uniformityInfo = UniformityInfo{};
-  m_function = nullptr;
+  UI = UniformityInfo{};
+  Fn = nullptr;
 }

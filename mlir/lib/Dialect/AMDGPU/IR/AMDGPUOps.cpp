@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 
+#include "mlir/Dialect/AMDGPU/Utils/MemorySpaceUtils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
@@ -37,6 +38,19 @@
 
 using namespace mlir;
 using namespace mlir::amdgpu;
+
+/// Verifies that the number of indices matches the rank of the indexed memref,
+/// emitting an op error mentioning `indexName` on mismatch.
+template <typename OpTy>
+static LogicalResult verifyIndexCount(OpTy op, StringRef indexName,
+                                      MemRefType memrefType,
+                                      int64_t numIndices) {
+  int64_t rank = memrefType.getRank();
+  if (rank != numIndices)
+    return op.emitOpError("expected ")
+           << rank << " " << indexName << " indices, got " << numIndices;
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // 8-bit float ops
@@ -103,7 +117,7 @@ static FailureOr<MemRefType> getFatRawBufferTypeLike(MemRefType source,
 
 LogicalResult FatRawBufferCastOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   Adaptor adaptor(operands, attributes, properties, regions);
   auto sourceType =
@@ -137,54 +151,22 @@ LogicalResult FatRawBufferCastOp::verify() {
   return success();
 }
 
-static bool hasGlobalMemorySpace(Attribute memorySpace) {
-  if (!memorySpace)
-    return true;
-  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
-    return intMemorySpace.getInt() == 0 || intMemorySpace.getInt() == 1;
-  if (auto gpuMemorySpace = dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
-    return gpuMemorySpace.getValue() == gpu::AddressSpace::Global;
-  return false;
-}
-
-static bool hasWorkgroupMemorySpace(Attribute memorySpace) {
-  if (!memorySpace)
-    return false;
-  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
-    return intMemorySpace.getInt() == 3;
-  if (auto gpuMemorySpace = dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
-    return gpuMemorySpace.getValue() == gpu::AddressSpace::Workgroup;
-  return false;
-}
-
-static bool hasFatRawBufferMemorySpace(Attribute memorySpace) {
-  if (!memorySpace)
-    return false;
-  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
-    return intMemorySpace.getInt() == 7;
-  if (auto gpuMemorySpace = dyn_cast<amdgpu::AddressSpaceAttr>(memorySpace))
-    return gpuMemorySpace.getValue() == amdgpu::AddressSpace::FatRawBuffer;
-  return false;
-}
-
 //===----------------------------------------------------------------------===//
 // RawBuffer*Op
 //===----------------------------------------------------------------------===//
 template <typename T>
 static LogicalResult verifyRawBufferOp(T &op) {
   MemRefType bufferType = llvm::cast<MemRefType>(op.getMemref().getType());
-  bool isGlobal = hasGlobalMemorySpace(bufferType.getMemorySpace());
+  bool isGlobal =
+      isGlobalMemorySpace(bufferType.getMemorySpace(), /*allowFlat=*/true);
 
   if (!isGlobal)
     return op.emitOpError(
-        "Buffer ops must operate on a memref in global memory");
+        "buffer ops must operate on a memref in global memory");
   if (!bufferType.hasRank())
     return op.emitOpError(
-        "Cannot meaningfully buffer_store to an unranked memref");
-  if (static_cast<int64_t>(op.getIndices().size()) != bufferType.getRank())
-    return op.emitOpError("Expected " + Twine(bufferType.getRank()) +
-                          " indices to memref");
-  return success();
+        "cannot meaningfully buffer_store to an unranked memref");
+  return verifyIndexCount(op, "buffer", bufferType, op.getIndices().size());
 }
 
 LogicalResult RawBufferLoadOp::verify() { return verifyRawBufferOp(*this); }
@@ -627,32 +609,51 @@ LogicalResult SparseMFMAOp::verify() {
     return emitOpError(
         "expected source operands to have the same element type");
 
-  // When CBSZ == 0, ABID selects the index set within the sparse index VGPR.
-  // When CBSZ != 0, the first index set is always used (ABID ignored).
+  // Classify the sparse MFMA variant. The three flavors differ in CBSZ/ABID
+  // handling and in the sparse-index layout:
+  //   - gfx942 16-bit:              max ABID = 3, sparse idx = vector<4xi8>
+  //   - gfx950 16-bit / gfx942 8-bit: max ABID = 1, sparse idx = vector<2xi16>
+  //   - gfx950 8-bit:  CBSZ/ABID ignored by hw,   sparse idx = i32
+  uint32_t m = getM(), k = getK();
   bool is8BitSource = sparseElem.isFloat(8) || sparseElem.isInteger(8);
-  // 8-bit source: ABID selects one of two 16-bit index sets.
-  if (getCbsz() == 0 && is8BitSource && getAbid() > 1)
-    return emitOpError("ABID must be 0 or 1 for 8-bit source data");
-  // 16-bit source: ABID selects one of four 8-bit index sets (0-3 all valid).
-  if (getCbsz() == 0 && !is8BitSource && getAbid() > 3)
-    return emitOpError("ABID must be between 0 and 3 for 16-bit source data");
+  bool is16BitGfx942 =
+      !is8BitSource && ((m == 16 && k == 32) || (m == 32 && k == 16));
+  bool is8BitGfx950 =
+      is8BitSource && ((m == 16 && k == 128) || (m == 32 && k == 64));
 
-  // Validate sparseIdx type matches source element type.
-  auto sparseIdxType = cast<VectorType>(getSparseIdx().getType());
-  if (is8BitSource) {
-    // 8-bit source data requires vector<2xi16> sparse indices.
-    if (sparseIdxType.getNumElements() != 2 ||
-        !sparseIdxType.getElementType().isInteger(16))
-      return emitOpError("expected vector<2xi16> sparse indices for 8-bit "
-                         "source data, but got ")
-             << getSparseIdx().getType();
+  // CBSZ/ABID range check. On gfx950 8-bit the hardware always uses the first
+  // set and ignores these fields, so require zeros in IR. Otherwise ABID is
+  // only meaningful when CBSZ == 0 (when CBSZ != 0 the first set is always
+  // used and ABID is irrelevant, so the verifier accepts any value).
+  if (is8BitGfx950) {
+    if (getCbsz() != 0)
+      return emitOpError(
+          "CBSZ must be 0 for this variant (field is ignored by hardware)");
+    if (getAbid() != 0)
+      return emitOpError(
+          "ABID must be 0 for this variant (field is ignored by hardware)");
+  } else if (getCbsz() == 0) {
+    unsigned maxAbid = is16BitGfx942 ? 3u : 1u;
+    if (getAbid() > maxAbid)
+      return emitOpError("ABID must be in [0, ")
+             << maxAbid << "] for this variant";
+  }
+
+  Type sparseIdxType = getSparseIdx().getType();
+  if (is8BitGfx950) {
+    if (!sparseIdxType.isInteger(32))
+      return emitOpError("expected i32 sparse indices for this variant "
+                         "(no internal set structure), but got ")
+             << sparseIdxType;
   } else {
-    // 16-bit source data requires vector<4xi8> sparse indices.
-    if (sparseIdxType.getNumElements() != 4 ||
-        !sparseIdxType.getElementType().isInteger(8))
-      return emitOpError("expected vector<4xi8> sparse indices for 16-bit "
-                         "source data, but got ")
-             << getSparseIdx().getType();
+    unsigned expectedIdxElems = is16BitGfx942 ? 4 : 2;
+    unsigned expectedIdxBits = is16BitGfx942 ? 8 : 16;
+    auto vecType = dyn_cast<VectorType>(sparseIdxType);
+    if (!vecType || vecType.getNumElements() != expectedIdxElems ||
+        !vecType.getElementType().isInteger(expectedIdxBits))
+      return emitOpError("expected vector<")
+             << expectedIdxElems << "xi" << expectedIdxBits
+             << "> sparse indices for this variant, but got " << sparseIdxType;
   }
 
   int64_t expectedSourceElems = (getM() * getK()) / waveSize;
@@ -666,6 +667,127 @@ LogicalResult SparseMFMAOp::verify() {
     return emitOpError("expected " + Twine(expectedDestElems) +
                        " result values for this operation but got " +
                        Twine(destLen));
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// SparseWMMAOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SparseWMMAOp::verify() {
+  auto sparseType = cast<VectorType>(getSourceA().getType());
+  auto denseType = cast<VectorType>(getSourceB().getType());
+  auto destType = cast<VectorType>(getDestC().getType());
+
+  Type sparseElem = sparseType.getElementType();
+  Type denseElem = denseType.getElementType();
+  Type destElem = destType.getElementType();
+  int64_t sparseLen = sparseType.getNumElements();
+  int64_t denseLen = denseType.getNumElements();
+  int64_t destLen = destType.getNumElements();
+
+  uint32_t m = getM(), n = getN(), k = getK();
+  if ((m != 16) || (n != 16))
+    return emitOpError("expected MxN to be exactly 16x16");
+
+  const bool isWavesize64 = getWave64();
+  const bool isInt4Input = sparseElem.isInteger(4) && denseElem.isInteger(4);
+  const bool isEqualLengthAllowed = isWavesize64 && isInt4Input && k == 32;
+
+  if ((denseLen != 2 * sparseLen) && !isEqualLengthAllowed)
+    return emitOpError("expected dense source operand to have exactly double "
+                       "the number of elements of the sparse source operand");
+
+  if (isEqualLengthAllowed && (denseLen != sparseLen))
+    return emitOpError("expected dense source operand to have exactly the "
+                       "same the number of elements");
+
+  if (destElem.isInteger()) {
+    if (!(sparseElem.isInteger() && denseElem.isInteger())) {
+      return emitOpError("source operand and destination operands must all be "
+                         "either integer or float types");
+    }
+  }
+
+  if (destElem.isFloat()) {
+    if (!(sparseElem.isFloat() && denseElem.isFloat())) {
+      return emitOpError("source operand and destination operands must all be "
+                         "either integer or float types");
+    }
+  }
+
+  // Check that source element types are compatible.
+  // For fp8/bf8 mixed operations, element types can differ (e.g., fp8 * bf8).
+  // For other types, element types must match exactly.
+  bool bothFloat8 = sparseElem.isFloat(8) && denseElem.isFloat(8);
+  if (!bothFloat8 && sparseElem != denseElem)
+    return emitOpError(
+        "expected source operands to have the same element type");
+
+  const int64_t waveSize = isWavesize64 ? 64 : 32;
+
+  int64_t expectedSourceElems = (getM() * getK()) / waveSize;
+  if (denseLen != expectedSourceElems)
+    return emitOpError("expected " + Twine(expectedSourceElems) +
+                       " source values for this operation but got " +
+                       Twine(denseLen));
+
+  int64_t expectedDestElems = (getM() * getN()) / waveSize;
+  if (destLen != expectedDestElems)
+    return emitOpError("expected " + Twine(expectedDestElems) +
+                       " result values for this operation but got " +
+                       Twine(destLen));
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DotOp
+//===----------------------------------------------------------------------===//
+LogicalResult DotOp::verify() {
+  Type aElem = cast<VectorType>(getSourceA().getType()).getElementType();
+  Type bElem = cast<VectorType>(getSourceB().getType()).getElementType();
+  Type dest = getDestC().getType();
+
+  bool aIsFloat8 = aElem.isFloat(8);
+  bool bIsFloat8 = bElem.isFloat(8);
+  bool aIsInteger = isa<IntegerType>(aElem);
+
+  bool bothFloat8 = aIsFloat8 && bIsFloat8;
+  if (!bothFloat8 && aElem != bElem)
+    return emitOpError(
+        "expected source operands to have the same element type");
+
+  if (aElem.isF16()) {
+    if (!dest.isF32() && !dest.isF16())
+      return emitOpError("expected f32 or f16 accumulator for f16 sources");
+  } else if (aElem.isBF16()) {
+    if (!dest.isF32() && !dest.isBF16())
+      return emitOpError("expected f32 or bf16 accumulator for bf16 sources");
+  } else if (aIsInteger) {
+    if (!dest.isInteger(32))
+      return emitOpError("expected i32 accumulator for integer sources");
+  } else if (aIsFloat8) {
+    if (!dest.isF32())
+      return emitOpError("expected f32 accumulator for fp8 sources");
+  }
+
+  if ((getUnsignedA() || getUnsignedB()) && !aIsInteger)
+    return emitOpError(
+        "unsignedA/unsignedB are only valid for integer source types");
+
+  if (aElem.isInteger(16) && getUnsignedA() != getUnsignedB())
+    return emitOpError(
+        "mixed-sign dot is not supported for 16-bit integer sources");
+
+  if (getClamp()) {
+    bool noClamp = (aElem.isF16() && dest.isF16()) ||
+                   (aElem.isBF16() && dest.isBF16()) || aIsFloat8;
+    if (noClamp)
+      return emitOpError(
+          "clamp is not supported for this (source, accumulator) combination");
+  }
 
   return success();
 }
@@ -808,6 +930,12 @@ LogicalResult GatherToLDSOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
   MemRefType dstType = cast<MemRefType>(getDst().getType());
 
+  if (failed(
+          verifyIndexCount(*this, "source", srcType, getSrcIndices().size())) ||
+      failed(verifyIndexCount(*this, "destination", dstType,
+                              getDstIndices().size())))
+    return failure();
+
   if (dstType.getRank() > 0 && !dstType.areTrailingDimsContiguous(1))
     return emitOpError("destination type inner most dim must be contiguous");
 
@@ -829,12 +957,12 @@ LogicalResult GatherToLDSOp::verify() {
     return emitOpError(
         "Transfering type size must be 8, 16, 32, 96 or 128 bits");
 
-  if (!hasGlobalMemorySpace(srcType.getMemorySpace()) &&
-      !hasFatRawBufferMemorySpace(srcType.getMemorySpace()))
+  if (!isGlobalMemorySpace(srcType.getMemorySpace(), /*allowFlat=*/true) &&
+      !isFatRawBufferMemorySpace(srcType.getMemorySpace()))
     return emitOpError(
         "source memory address space must be global or fat raw buffer");
 
-  if (!hasWorkgroupMemorySpace(dstType.getMemorySpace()))
+  if (!isWorkgroupMemorySpace(dstType.getMemorySpace()))
     return emitOpError("destination memory address space must be Workgroup");
 
   return success();
@@ -873,13 +1001,79 @@ void GatherToLDSOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalLoadAsyncToLDSOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GlobalLoadAsyncToLDSOp::verify() {
+  MemRefType srcType = cast<MemRefType>(getSrc().getType());
+  MemRefType dstType = cast<MemRefType>(getDst().getType());
+
+  if (failed(
+          verifyIndexCount(*this, "source", srcType, getSrcIndices().size())) ||
+      failed(verifyIndexCount(*this, "destination", dstType,
+                              getDstIndices().size())))
+    return failure();
+
+  if (srcType.getElementType() != dstType.getElementType())
+    return emitOpError("source and destination element types must match");
+
+  Type transferType = getTransferType();
+  int transferSize;
+  if (auto vectorTransfer = dyn_cast<VectorType>(transferType)) {
+    transferSize = vectorTransfer.getNumElements() *
+                   vectorTransfer.getElementTypeBitWidth();
+  } else {
+    transferSize = transferType.getIntOrFloatBitWidth();
+  }
+  if (!llvm::is_contained({8, 32, 64, 128}, transferSize))
+    return emitOpError("transfer type size must be 8, 32, 64, or 128 bits");
+
+  if (!isGlobalMemorySpace(srcType.getMemorySpace(), /*allowFlat=*/false))
+    return emitOpError("source memory address space must be global");
+
+  if (!isWorkgroupMemorySpace(dstType.getMemorySpace()))
+    return emitOpError("destination memory address space must be Workgroup");
+
+  return success();
+}
+
+static LogicalResult
+foldGlobalLoadAsyncToLDSConstantMask(GlobalLoadAsyncToLDSOp op,
+                                     PatternRewriter &rewriter) {
+  Value mask = op.getMask();
+  if (!mask)
+    return failure();
+
+  APInt maskValue;
+  if (!matchPattern(mask, m_ConstantInt(&maskValue)))
+    return failure();
+
+  if (maskValue.isZero()) {
+    rewriter.eraseOp(op);
+    return success();
+  }
+
+  rewriter.modifyOpInPlace(op, [&]() { op.getMaskMutable().clear(); });
+  return success();
+}
+
+void GlobalLoadAsyncToLDSOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add(foldGlobalLoadAsyncToLDSConstantMask);
+}
+
+//===----------------------------------------------------------------------===//
 // TransposeLoadOp
 //===----------------------------------------------------------------------===//
 
 LogicalResult TransposeLoadOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
 
-  if (!hasWorkgroupMemorySpace(srcType.getMemorySpace()))
+  if (failed(
+          verifyIndexCount(*this, "source", srcType, getSrcIndices().size())))
+    return failure();
+
+  if (!isWorkgroupMemorySpace(srcType.getMemorySpace()))
     return emitOpError("source memory address space must be Workgroup");
 
   auto transferType = cast<VectorType>(getType());
@@ -887,22 +1081,70 @@ LogicalResult TransposeLoadOp::verify() {
   size_t elementTypeSize =
       transferType.getElementType().getIntOrFloatBitWidth();
 
-  // ElementSize -> NumElements
-  const llvm::SmallDenseMap<size_t, size_t> kValidLoadSizeMap = {
-      {4, 16},
-      {6, 16},
-      {8, 8},
-      {16, 4},
+  auto emitNumElementsError = [&](StringRef expected) {
+    return emitOpError(
+               "Transferring type size mismatch: expected num of elements: ")
+           << expected;
+  };
+
+  switch (elementTypeSize) {
+  case 4:
+  case 6:
+    if (numElements != 16)
+      return emitNumElementsError("16");
+    break;
+  case 8:
+    if (numElements != 8)
+      return emitNumElementsError("8");
+    break;
+  case 16:
+    if (numElements != 4 && numElements != 8)
+      return emitNumElementsError("4 or 8");
+    break;
+  default:
+    return emitOpError("Unsupported element type size for transpose load: ")
+           << elementTypeSize << " bits";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalTransposeLoadOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GlobalTransposeLoadOp::verify() {
+  MemRefType srcType = cast<MemRefType>(getSrc().getType());
+
+  if (failed(
+          verifyIndexCount(*this, "source", srcType, getSrcIndices().size())))
+    return failure();
+
+  if (!isGlobalMemorySpace(srcType.getMemorySpace(), /*allowFlat=*/false))
+    return emitOpError("source memory address space must be Global");
+
+  auto resultType = cast<VectorType>(getType());
+  size_t numElements = resultType.getNumElements();
+  size_t elementTypeSize = resultType.getElementType().getIntOrFloatBitWidth();
+
+  // ElementSize -> NumElements. Chipset gating (gfx1200 vs gfx1250) is
+  // enforced in the lowering.
+  static const llvm::SmallDenseMap<size_t, size_t> kValidLoadSizeMap = {
+      {4, 16}, // global_load_tr4_b64  (gfx1250+)
+      {6, 16}, // global_load_tr6_b96  (gfx1250+)
+      {8, 8},  // global_load_tr_b64   (gfx1200+)
+      {16, 8}, // global_load_tr_b128  (gfx1200+)
   };
 
   auto validNumElems = kValidLoadSizeMap.find(elementTypeSize);
   if (validNumElems == kValidLoadSizeMap.end())
-    return emitOpError("Unsupported element type size for transpose load: ")
+    return emitOpError(
+               "unsupported element type size for global transpose load: ")
            << elementTypeSize << " bits";
 
   if (numElements != validNumElems->second)
     return emitOpError(
-               "Transferring type size mismatch: expected num of elements: ")
+               "transferring type size mismatch: expected num of elements: ")
            << validNumElems->second;
 
   return success();
@@ -916,10 +1158,15 @@ template <typename BaseOp>
 static LogicalResult verifyBase(BaseOp op) {
   auto ldsType = cast<MemRefType>(op.getLds().getType());
   auto globalType = cast<MemRefType>(op.getGlobal().getType());
-  if (!hasWorkgroupMemorySpace(ldsType.getMemorySpace()))
+  if (failed(verifyIndexCount(op, "global", globalType,
+                              op.getGlobalIndices().size())) ||
+      failed(verifyIndexCount(op, "lds", ldsType, op.getLdsIndices().size())))
+    return failure();
+
+  if (!isWorkgroupMemorySpace(ldsType.getMemorySpace()))
     return op.emitOpError(
         "lds memref must have workgroup address space attribute.");
-  if (!hasGlobalMemorySpace(globalType.getMemorySpace()))
+  if (!isGlobalMemorySpace(globalType.getMemorySpace(), /*allowFlat=*/false))
     return op.emitOpError(
         "global memref must have global address space attribute.");
 
@@ -988,11 +1235,19 @@ static LogicalResult verifyDescriptorOp(DescriptorOp op) {
                "element type width must be 1, 2, 4 or 8 bytes, but was ")
            << elementTypeWidth << " bits long";
 
+  if (!op.getAtomicBarrierAddress() && !op.getAtomicBarrierIndices().empty())
+    return op.emitOpError(
+        "atomic barrier indices require an atomic barrier address");
+
   if (Value atomicBarrierAddress = op.getAtomicBarrierAddress()) {
     auto atomicBarrierAddressType =
         cast<MemRefType>(atomicBarrierAddress.getType());
+    if (failed(verifyIndexCount(op, "atomic barrier", atomicBarrierAddressType,
+                                op.getAtomicBarrierIndices().size())))
+      return failure();
+
     bool barrierInLDS =
-        hasWorkgroupMemorySpace(atomicBarrierAddressType.getMemorySpace());
+        isWorkgroupMemorySpace(atomicBarrierAddressType.getMemorySpace());
     if (!barrierInLDS)
       return op.emitOpError("atomic barrier address must be in LDS.");
   }
@@ -1145,9 +1400,9 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
       }
 
       int64_t numElements = scaleSrcType.getNumElements();
-      if (numElements <= 4) {
+      if (numElements < 4) {
         return rewriter.notifyMatchFailure(
-            op, "no packing if # of scales less than four");
+            op, "do not pack if # of scales less than four");
       }
 
       // Find a linearized idx using the size and offsets of the extract op.
@@ -1209,7 +1464,11 @@ void ScaledMFMAOp::getCanonicalizationPatterns(RewritePatternSet &results,
 template <typename T>
 static LogicalResult verifyDsBarrierOpCommon(T &op) {
   MemRefType memrefType = llvm::cast<MemRefType>(op.getBase().getType());
-  if (!hasWorkgroupMemorySpace(memrefType.getMemorySpace()))
+  if (failed(
+          verifyIndexCount(op, "barrier", memrefType, op.getIndices().size())))
+    return failure();
+
+  if (!isWorkgroupMemorySpace(memrefType.getMemorySpace()))
     return op.emitOpError("barrier must be in workgroup (LDS) memory");
 
   return success();
@@ -1229,6 +1488,50 @@ LogicalResult DsAsyncBarrierArriveOp::verify() {
 
 LogicalResult DsBarrierArriveOp::verify() {
   return verifyDsBarrierOpCommon(*this);
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalPrefetchOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GlobalPrefetchOp::verify() {
+  auto src = cast<MemRefType>(getSrc().getType());
+
+  if (failed(verifyIndexCount(*this, "source", src, getIndices().size())))
+    return failure();
+
+  Attribute memSpace = src.getMemorySpace();
+  if (!memSpace)
+    return this->emitOpError("the source must have address space attribute");
+  if (!isGlobalMemorySpace(memSpace, /*allowFlat=*/false))
+    return this->emitOpError("the source must reside in global address space");
+
+  const LoadTemporalHint temporalHint = getTemporalHint();
+  const Scope scope = getCacheScope();
+  const bool isSpeculative = getSpeculative();
+
+  // See GFX1250 SPG for a detail explanation
+  if (isSpeculative && scope == Scope::WGP)
+    return this->emitOpError(
+        "does not support speculative prefetch in WGP scope");
+
+  // Note that temporal hints are shared between load, store,
+  // prefetch, etc. instructions. However, some instructions
+  // operate only with a subset of hints according to the ISA
+  // documentation. In case of global prefetch, non-temporal (NT)
+  // and last-use (LU) hints are not used. The extra bits of encoding
+  // are used to encode speculative or non-speculative instruction behavior
+  if (llvm::is_contained({LoadTemporalHint::NT, LoadTemporalHint::LU},
+                         temporalHint))
+    return this->emitOpError("does not support NT and LU modes");
+
+  if (llvm::is_contained({LoadTemporalHint::NT_RT, LoadTemporalHint::RT_NT,
+                          LoadTemporalHint::NT_HT},
+                         temporalHint) &&
+      !isSpeculative) {
+    return this->emitOpError("operates only in the speculative mode");
+  }
+  return success();
 }
 
 #define GET_OP_CLASSES
