@@ -259,6 +259,7 @@ protected:
 
   bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
                           bool ConstantContext) override;
+  bool visitDtorCall(const VarDecl *VD, const APValue &Value) override;
 
 protected:
   /// Emits scope cleanup instructions.

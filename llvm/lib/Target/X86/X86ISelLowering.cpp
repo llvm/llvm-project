@@ -33741,8 +33741,7 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
     Res = DAG.getNode(ISD::BITREVERSE, DL, ByteVT, Res);
     return DAG.getBitcast(VT, Res);
   }
-  assert(VT.isVector() && VT.getScalarType() == MVT::i8 &&
-         "Only byte vector BITREVERSE supported");
+  assert(VT.isVectorOf(MVT::i8) && "Only byte vector BITREVERSE supported");
 
   unsigned NumElts = VT.getVectorNumElements();
 
@@ -46684,10 +46683,8 @@ static SDValue combineCastedMaskArithmetic(SDNode *N, SelectionDAG &DAG,
   EVT SrcVT = Op.getValueType();
 
   // Make sure we have a bitcast between mask registers and a scalar type.
-  if (!(SrcVT.isVector() && SrcVT.getVectorElementType() == MVT::i1 &&
-        DstVT.isScalarInteger()) &&
-      !(DstVT.isVector() && DstVT.getVectorElementType() == MVT::i1 &&
-        SrcVT.isScalarInteger()))
+  if (!(SrcVT.isVectorOf(MVT::i1) && DstVT.isScalarInteger()) &&
+      !(DstVT.isVectorOf(MVT::i1) && SrcVT.isScalarInteger()))
     return SDValue();
 
   SDValue LHS, RHS;
@@ -46946,8 +46943,8 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
   } else if (DCI.isAfterLegalizeDAG()) {
     // If we're bitcasting from iX to vXi1, see if the integer originally
     // began as a vXi1 and whether we can remove the bitcast entirely.
-    if (VT.isVector() && VT.getScalarType() == MVT::i1 &&
-        SrcVT.isScalarInteger() && TLI.isTypeLegal(VT)) {
+    if (VT.isVectorOf(MVT::i1) && SrcVT.isScalarInteger() &&
+        TLI.isTypeLegal(VT)) {
       if (SDValue V =
               combineBitcastToBoolVector(VT, N0, SDLoc(N), DAG, Subtarget))
         return V;
@@ -47076,7 +47073,7 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
   // Try to remove a bitcast of constant vXi1 vector. We have to legalize
   // most of these to scalar anyway.
   if (Subtarget.hasAVX512() && VT.isScalarInteger() &&
-      SrcVT.isVector() && SrcVT.getVectorElementType() == MVT::i1 &&
+      SrcVT.isVectorOf(MVT::i1) &&
       ISD::isBuildVectorOfConstantSDNodes(N0.getNode())) {
     return combinevXi1ConstantToInteger(N0, DAG);
   }
@@ -47095,8 +47092,7 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
   // Turn it into a sign bit compare that produces a k-register. This avoids
   // a trip through a GPR.
   if (Subtarget.hasAVX512() && SrcVT.isScalarInteger() &&
-      VT.isVector() && VT.getVectorElementType() == MVT::i1 &&
-      isPowerOf2_32(VT.getVectorNumElements())) {
+      VT.isVectorOf(MVT::i1) && isPowerOf2_32(VT.getVectorNumElements())) {
     unsigned NumElts = VT.getVectorNumElements();
     SDValue Src = N0;
 
@@ -50607,7 +50603,7 @@ static SDValue combineMulToPMADDWD(SDNode *N, const SDLoc &DL,
   EVT VT = N->getValueType(0);
 
   // Only support vXi32 vectors.
-  if (!VT.isVector() || VT.getVectorElementType() != MVT::i32)
+  if (!VT.isVectorOf(MVT::i32))
     return SDValue();
 
   // Make sure the type is legal or can split/widen to a legal type.
@@ -50714,8 +50710,7 @@ static SDValue combineMulToPMULDQ(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
 
   // Only support vXi64 vectors.
-  if (!VT.isVector() || VT.getVectorElementType() != MVT::i64 ||
-      VT.getVectorNumElements() < 2 ||
+  if (!VT.isVectorOf(MVT::i64) || VT.getVectorNumElements() < 2 ||
       !isPowerOf2_32(VT.getVectorNumElements()))
     return SDValue();
 
@@ -52545,8 +52540,7 @@ static SDValue combineScalarAndWithMaskSetcc(SDNode *N, SelectionDAG &DAG,
   EVT SrcVT = Src.getValueType();
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!SrcVT.isVector() || SrcVT.getVectorElementType() != MVT::i1 ||
-      !TLI.isTypeLegal(SrcVT))
+  if (!SrcVT.isVectorOf(MVT::i1) || !TLI.isTypeLegal(SrcVT))
     return SDValue();
 
   if (Src.getOpcode() != ISD::CONCAT_VECTORS)
@@ -55727,7 +55721,7 @@ static SDValue combinePMULH(SDValue Src, EVT VT, const SDLoc &DL,
 
   // Only handle vXi16 types that are at least 128-bits unless they will be
   // widened.
-  if (!VT.isVector() || VT.getVectorElementType() != MVT::i16)
+  if (!VT.isVectorOf(MVT::i16))
     return SDValue();
 
   // Input type should be at least vXi32.
@@ -56615,7 +56609,7 @@ static SDValue combineBITREVERSE(SDNode *N, SelectionDAG &DAG,
   if (VT.isInteger() && N0.getOpcode() == ISD::BITCAST && N0.hasOneUse()) {
     SDValue Src = N0.getOperand(0);
     EVT SrcVT = Src.getValueType();
-    if (SrcVT.isVector() && SrcVT.getScalarType() == MVT::i1 &&
+    if (SrcVT.isVectorOf(MVT::i1) &&
         (DCI.isBeforeLegalize() ||
          DAG.getTargetLoweringInfo().isTypeLegal(SrcVT)) &&
         Subtarget.hasSSSE3()) {
@@ -57960,7 +57954,7 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
       return V;
   }
 
-  if (VT.isVector() && VT.getVectorElementType() == MVT::i1 &&
+  if (VT.isVectorOf(MVT::i1) &&
       (CC == ISD::SETNE || CC == ISD::SETEQ || ISD::isSignedIntSetCC(CC))) {
     // Using temporaries to avoid messing up operand ordering for later
     // transformations if this doesn't work.
@@ -59324,8 +59318,7 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
   if (!Subtarget.hasSSE2())
     return SDValue();
 
-  if (!VT.isVector() || VT.getVectorElementType() != MVT::i32 ||
-      VT.getVectorNumElements() < 4 ||
+  if (!VT.isVectorOf(MVT::i32) || VT.getVectorNumElements() < 4 ||
       !isPowerOf2_32(VT.getVectorNumElements()))
     return SDValue();
 
@@ -59457,8 +59450,7 @@ static SDValue matchPMADDWD_2(SelectionDAG &DAG, SDNode *N,
   if (!Subtarget.hasSSE2())
     return SDValue();
 
-  if (!VT.isVector() || VT.getVectorElementType() != MVT::i32 ||
-      VT.getVectorNumElements() < 4 ||
+  if (!VT.isVectorOf(MVT::i32) || VT.getVectorNumElements() < 4 ||
       !isPowerOf2_32(VT.getVectorNumElements()))
     return SDValue();
 
@@ -62448,7 +62440,7 @@ static SDValue combineFP_EXTEND(SDNode *N, SelectionDAG &DAG,
   if (Subtarget.hasFP16())
     return SDValue();
 
-  if (!SrcVT.isVector() || SrcVT.getVectorElementType() != MVT::f16)
+  if (!SrcVT.isVectorOf(MVT::f16))
     return SDValue();
 
   if (VT.getVectorElementType() != MVT::f32 &&
@@ -62562,8 +62554,7 @@ static SDValue combineFP_ROUND(SDNode *N, SelectionDAG &DAG,
 
   EVT SrcVT = Src.getValueType();
 
-  if (!VT.isVector() || VT.getVectorElementType() != MVT::f16 ||
-      SrcVT.getVectorElementType() != MVT::f32)
+  if (!VT.isVectorOf(MVT::f16) || SrcVT.getVectorElementType() != MVT::f32)
     return SDValue();
 
   SDValue Cvt, Chain;
@@ -63026,7 +63017,7 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
     return false;
 
   // There are no vXi8 shifts.
-  if (Opc == ISD::SHL && VT.isVector() && VT.getVectorElementType() == MVT::i8)
+  if (Opc == ISD::SHL && VT.isVectorOf(MVT::i8))
     return false;
 
   // TODO: Almost no 8-bit ops are desirable because they have no actual
