@@ -1,4 +1,4 @@
-//===--- AggressiveRDFCopy.h ------------------------------------*- C++ -*-===//
+//===--- HexagonAggressiveRDFCopy.h -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_HEXAGON_AGGRESSIVE_RDFCOPY_H
-#define LLVM_LIB_TARGET_HEXAGON_AGGRESSIVE_RDFCOPY_H
+#ifndef LLVM_LIB_TARGET_HEXAGON_HEXAGON_AGGRESSIVE_RDFCOPY_H
+#define LLVM_LIB_TARGET_HEXAGON_HEXAGON_AGGRESSIVE_RDFCOPY_H
 
 #include "HexagonSubtarget.h"
 #include "RDFCopyBase.h"
@@ -59,4 +59,4 @@ private:
 } // end namespace rdf
 } // end namespace llvm
 
-#endif // LLVM_LIB_TARGET_HEXAGON_AGGRESSIVE_RDFCOPY_H
+#endif // LLVM_LIB_TARGET_HEXAGON_HEXAGON_AGGRESSIVE_RDFCOPY_H

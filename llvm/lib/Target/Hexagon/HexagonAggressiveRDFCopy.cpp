@@ -1,4 +1,4 @@
-//===--- AggressiveRDFCopy.cpp --------------------------------------------===//
+//===--- HexagonAggressiveRDFCopy.cpp -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -45,7 +45,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AggressiveRDFCopy.h"
+#include "HexagonAggressiveRDFCopy.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -262,7 +262,7 @@ void AggressiveCopyPropagation::scanBlock(MachineBasicBlock *B) {
 }
 
 bool AggressiveCopyPropagation::run() {
-  scanBlock(&DFG.getMF().front());
+  scanBlock(MDT.getRootNode()->getBlock());
 
   if (trace()) {
     dbgs() << "Copies:\n";

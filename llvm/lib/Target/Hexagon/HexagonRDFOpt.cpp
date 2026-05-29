@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AggressiveRDFCopy.h"
 #include "Hexagon.h"
+#include "HexagonAggressiveRDFCopy.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
