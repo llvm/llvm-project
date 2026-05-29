@@ -12612,24 +12612,27 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       break;
     case 'B':
       // This modifier represents int8 type (byte-width).
-      assert(!IsSpecial && "Can't use two 'N', 'W', 'Z', 'O', 'B', or 'T' modifiers!");
+      assert(!IsSpecial &&
+             "Can't use two 'N', 'W', 'Z', 'O', 'B', or 'T' modifiers!");
       assert(HowLong == 0 && "Can't use both 'L' and 'B' modifiers!");
-      #ifndef NDEBUG
+#ifndef NDEBUG
       IsSpecial = true;
-      #endif
+#endif
       IsChar = true;
       break;
     case 'T':
       // This modifier represents int16 type (short-width).
-      assert(!IsSpecial && "Can't use two 'N', 'W', 'Z', 'O', 'B', or 'T' modifiers!");
+      assert(!IsSpecial &&
+             "Can't use two 'N', 'W', 'Z', 'O', 'B', or 'T' modifiers!");
       assert(HowLong == 0 && "Can't use both 'L' and 'T' modifiers!");
-      #ifndef NDEBUG
+#ifndef NDEBUG
       IsSpecial = true;
-      #endif
+#endif
       IsShort = true;
       break;
     case 'L':
-      assert(!IsSpecial && "Can't use 'L' with 'W', 'N', 'Z', 'O', 'B', or 'T' modifiers");
+      assert(!IsSpecial &&
+             "Can't use 'L' with 'W', 'N', 'Z', 'O', 'B', or 'T' modifiers");
       assert(HowLong <= 2 && "Can't have LLLL modifier");
       ++HowLong;
       break;
