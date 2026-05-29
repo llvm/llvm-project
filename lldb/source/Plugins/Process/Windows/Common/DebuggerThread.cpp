@@ -556,11 +556,18 @@ static std::optional<std::string> GetFileNameByLoadAddress(HANDLE hProcess,
   }
 
   // Fallback: ask the kernel for the file backing the mapping at this address.
-  std::vector<wchar_t> mapped_filename(PATHCCH_MAX_CCH);
-  DWORD mapped_len = ::GetMappedFileNameW(
-      hProcess, base_addr, mapped_filename.data(), mapped_filename.size());
-  if (!mapped_len)
-    return std::nullopt;
+  std::vector<wchar_t> mapped_filename(MAX_PATH + 1);
+  DWORD mapped_len = 0;
+  while (true) {
+    mapped_len = ::GetMappedFileNameW(
+        hProcess, base_addr, mapped_filename.data(), mapped_filename.size());
+    if (SUCCESS(mapped_len))
+      break;
+    if (::GetLastError() != ERROR_MORE_DATA ||
+        mapped_filename.size() >= PATHCCH_MAX_CCH)
+      return std::nullopt;
+    mapped_filename.resize(mapped_filename.size() * 2);
+  }
   std::optional<std::string> dos_path = ConvertNtDevicePathToDosPath(
       llvm::ArrayRef<wchar_t>(mapped_filename.data(), mapped_len + 1));
   return dos_path;
