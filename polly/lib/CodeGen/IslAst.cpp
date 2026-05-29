@@ -81,6 +81,8 @@ static cl::opt<bool> DetectParallel("polly-ast-detect-parallel",
                                     cl::desc("Detect parallelism"), cl::Hidden,
                                     cl::cat(PollyCategory));
 
+extern cl::opt<bool> PollyVectorizeMetadata;
+
 static cl::opt<bool>
     PollyPrintAst("polly-print-ast",
                   cl::desc("Print the ISL abstract syntax tree"),
@@ -501,7 +503,8 @@ IslAst::IslAst(IslAst &&O)
 
 void IslAst::init(const Dependences &D) {
   bool PerformParallelTest = PollyParallel || DetectParallel ||
-                             PollyVectorizerChoice != VECTORIZER_NONE;
+                             PollyVectorizerChoice != VECTORIZER_NONE ||
+                             PollyVectorizeMetadata;
   auto ScheduleTree = S.getScheduleTree();
 
   // Skip AST and code generation if there was no benefit achieved.
