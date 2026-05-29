@@ -276,19 +276,19 @@ View return_view_field(const ViewProvider& v) {    // expected-warning {{paramet
 }
 
 void test_get_on_temporary_pointer() {
-  const ReturnsSelf* s_ref = &ReturnsSelf().get(); // expected-warning {{object whose reference is captured does not live long enough}}.
+  const ReturnsSelf* s_ref = &ReturnsSelf().get(); // expected-warning {{local temporary object does not live long enough}}.
                                                    // expected-note@-1 {{destroyed here}}
   (void)s_ref;                                     // expected-note {{later used here}}
 }
 
 void test_get_on_temporary_ref() {
-  const ReturnsSelf& s_ref = ReturnsSelf().get();  // expected-warning {{object whose reference is captured does not live long enough}}.
+  const ReturnsSelf& s_ref = ReturnsSelf().get();  // expected-warning {{local temporary object does not live long enough}}.
                                                    // expected-note@-1 {{destroyed here}}
   (void)s_ref;                                     // expected-note {{later used here}}
 }
 
 void test_getView_on_temporary() {
-  View sv = ViewProvider{1}.getView();      // expected-warning {{object whose reference is captured does not live long enough}}.
+  View sv = ViewProvider{1}.getView();      // expected-warning {{local temporary object does not live long enough}}.
                                             // expected-note@-1 {{destroyed here}}
   (void)sv;                                 // expected-note {{later used here}}
 }
@@ -599,7 +599,7 @@ void uaf_via_inferred_lifetimebound() {
   std::function<void()> f = []() {};
   {
     int local;
-    f = return_lambda_capturing_param(local); // expected-warning {{object whose reference is captured does not live long enough}}
+    f = return_lambda_capturing_param(local); // expected-warning {{local variable 'local' does not live long enough}}
   } // expected-note {{destroyed here}}
   (void)f; // expected-note {{later used here}}
 }
@@ -622,7 +622,7 @@ void test_inference() {
   std::unique_ptr<LifetimeBoundCtor> ptr;
   {
     MyObj obj;
-    ptr = create_target(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+    ptr = create_target(obj); // expected-warning {{local variable 'obj' does not live long enough}}
   } // expected-note {{destroyed here}}
   (void)ptr; // expected-note {{later used here}}
 }
@@ -635,7 +635,7 @@ View* MakeView(const MyObj& in) { // expected-warning {{parameter in intra-TU fu
 }
 
 void test_new_allocation() {
-  View* v = MakeView(MyObj{}); // expected-warning {{object whose reference is captured does not live long enough}} \
+  View* v = MakeView(MyObj{}); // expected-warning {{local temporary object does not live long enough}} \
                                // expected-note {{destroyed here}}
   (void)v;                     // expected-note {{later used here}}
 }
@@ -665,7 +665,7 @@ struct HasSetterField {
   }
   void reset() {
     MyObj obj;
-    field = new LifetimeBoundCtor(obj); // expected-warning {{address of stack memory escapes to a field}}
+    field = new LifetimeBoundCtor(obj); // expected-warning {{stack memory associated with local variable 'obj' escapes to the field 'field' which will dangle}}
   }
 };
 

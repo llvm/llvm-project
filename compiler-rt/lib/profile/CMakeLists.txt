@@ -89,11 +89,13 @@ if (NOT COMPILER_RT_PROFILE_BAREMETAL)
   list(APPEND PROFILE_SOURCES
     GCDAProfiling.c
     InstrProfilingFile.c
-    InstrProfilingPlatformROCm.cpp
     InstrProfilingRuntime.cpp
     InstrProfilingUtil.c
     InstrProfilingValue.c
     )
+  if(COMPILER_RT_BUILD_PROFILE_ROCM)
+    list(APPEND PROFILE_SOURCES InstrProfilingPlatformROCm.cpp)
+  endif()
 endif()
 
 set(PROFILE_HEADERS
@@ -154,6 +156,12 @@ if(COMPILER_RT_PROFILE_BAREMETAL)
  set(EXTRA_FLAGS
      ${EXTRA_FLAGS}
      -DCOMPILER_RT_PROFILE_BAREMETAL=1)
+endif()
+
+if(COMPILER_RT_BUILD_PROFILE_ROCM)
+  set(EXTRA_FLAGS
+      ${EXTRA_FLAGS}
+      -DCOMPILER_RT_BUILD_PROFILE_ROCM=1)
 endif()
 
 set(PROFILE_OBJECT_LIBS)
