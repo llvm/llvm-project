@@ -5864,6 +5864,13 @@ void Verifier::visitInstruction(Instruction &I) {
     Check(MD->getNumOperands() == 0, "nonnull metadata must be empty", &I);
   }
 
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_nsz)) {
+    Check(isa<LoadInst>(I), "nsz is only for loads", &I);
+    Check(FPMathOperator::isSupportedFloatingPointType(I.getType()),
+          "nsz only applies to floating-point typed loads", &I);
+    Check(MD->getNumOperands() == 0, "nsz metadata must be empty", &I);
+  }
+
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_dereferenceable))
     visitDereferenceableMetadata(I, MD);
 
