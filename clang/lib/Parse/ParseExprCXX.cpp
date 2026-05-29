@@ -1880,6 +1880,20 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
     return Sema::ConditionError();
   }
 
+  // In C, the first clause of a condition may be a declaration used as an
+  // init-statement (C2y), and that declaration may be prefixed by one or more
+  // __extension__ markers. Consume them up front -- mirroring block-statement
+  // parsing -- so the disambiguation below sees the real start of the
+  // declaration. The markers also silence extension diagnostics for the rest of
+  // the condition, including the diagnostic for the init-statement extension
+  // itself.
+  std::optional<ExtensionRAIIObject> ExtensionGuard;
+  if (!getLangOpts().CPlusPlus && Tok.is(tok::kw___extension__)) {
+    ExtensionGuard.emplace(Diags);
+    while (TryConsumeToken(tok::kw___extension__))
+      ;
+  }
+
   ParsedAttributes attrs(AttrFactory);
   bool ParsedAttrs = MaybeParseCXX11Attributes(attrs);
   if (!getLangOpts().CPlusPlus)
