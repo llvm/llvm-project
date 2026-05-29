@@ -5677,13 +5677,6 @@ static uint64_t getIdentityValueForWaveReduction(unsigned Opc) {
   }
 }
 
-static bool is16bitWaveReduction(unsigned Opc) {
-  return Opc == AMDGPU::WAVE_REDUCE_UMAX_PSEUDO_U16 ||
-         Opc == AMDGPU::WAVE_REDUCE_MAX_PSEUDO_I16 ||
-         Opc == AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U16 ||
-         Opc == AMDGPU::WAVE_REDUCE_MIN_PSEUDO_I16;
-}
-
 static bool is32bitWaveReduceOperation(unsigned Opc) {
   return Opc == AMDGPU::S_MIN_U32 || Opc == AMDGPU::S_MIN_I32 ||
          Opc == AMDGPU::S_MAX_U32 || Opc == AMDGPU::S_MAX_I32 ||
@@ -6054,12 +6047,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     MachineBasicBlock::iterator I = BB.end();
     Register SrcReg = MI.getOperand(1).getReg();
     bool is32BitOpc = is32bitWaveReduceOperation(Opc);
-    bool is16BitReduction = is16bitWaveReduction(MI.getOpcode());
     bool isFPOp = isFloatingPointWaveReduceOperation(Opc);
     bool NeedsMovDPP = !is32BitOpc;
-    bool needsSignExtension =
-        MI.getOpcode() == AMDGPU::WAVE_REDUCE_MAX_PSEUDO_I16 ||
-        MI.getOpcode() == AMDGPU::WAVE_REDUCE_MIN_PSEUDO_I16;
     // Create virtual registers required for lowering.
     const TargetRegisterClass *WaveMaskRegClass = TRI->getWaveMaskRegClass();
     const TargetRegisterClass *DstRegClass = MRI.getRegClass(DstReg);
@@ -6101,20 +6090,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
                                   : AMDGPU::S_MOV_B64_IMM_PSEUDO),
               IdentityValReg)
           .addImm(IdentityValue);
-      if (is16BitReduction) {
-        // Promote 16-bit values to 32-bit to use SALU operations for the
-        // reduction.
-        Register PromotedSrc =
-            MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-        BuildMI(BB, I, DL,
-                TII->get(needsSignExtension ? AMDGPU::V_BFE_I32_e64
-                                            : AMDGPU::V_BFE_U32_e64),
-                PromotedSrc)
-            .addReg(SrcReg)
-            .addImm(0)   // offset
-            .addImm(16); // width
-        SrcReg = PromotedSrc;
-      }
       // clang-format off
       BuildMI(BB, I, DL, TII->get(AMDGPU::S_BRANCH))
           .addMBB(ComputeLoop);
@@ -6712,12 +6687,10 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   const DebugLoc &DL = MI.getDebugLoc();
 
   switch (MI.getOpcode()) {
-  case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U16:
   case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MIN_U32);
   case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U64:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::V_CMP_LT_U64_e64);
-  case AMDGPU::WAVE_REDUCE_MIN_PSEUDO_I16:
   case AMDGPU::WAVE_REDUCE_MIN_PSEUDO_I32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MIN_I32);
   case AMDGPU::WAVE_REDUCE_MIN_PSEUDO_I64:
@@ -6729,12 +6702,10 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                            ST.getGeneration() >= AMDGPUSubtarget::GFX12
                                ? AMDGPU::V_MIN_NUM_F64_e64
                                : AMDGPU::V_MIN_F64_e64);
-  case AMDGPU::WAVE_REDUCE_UMAX_PSEUDO_U16:
   case AMDGPU::WAVE_REDUCE_UMAX_PSEUDO_U32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MAX_U32);
   case AMDGPU::WAVE_REDUCE_UMAX_PSEUDO_U64:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::V_CMP_GT_U64_e64);
-  case AMDGPU::WAVE_REDUCE_MAX_PSEUDO_I16:
   case AMDGPU::WAVE_REDUCE_MAX_PSEUDO_I32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MAX_I32);
   case AMDGPU::WAVE_REDUCE_MAX_PSEUDO_I64:
@@ -10625,6 +10596,23 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   // TODO: Should this propagate fast-math-flags?
 
   switch (IntrinsicID) {
+  case Intrinsic::amdgcn_wave_reduce_min:
+  case Intrinsic::amdgcn_wave_reduce_umin:
+  case Intrinsic::amdgcn_wave_reduce_max:
+  case Intrinsic::amdgcn_wave_reduce_umax: {
+    EVT SrcVT = Op.getOperand(1).getValueType();
+    if (SrcVT == MVT::i16) {
+      bool NeedsSignExt = IntrinsicID == Intrinsic::amdgcn_wave_reduce_min ||
+                          IntrinsicID == Intrinsic::amdgcn_wave_reduce_max;
+      unsigned ExtOpc = NeedsSignExt ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+      SDValue ExtendedSrc = DAG.getNode(ExtOpc, DL, MVT::i32, Op.getOperand(1));
+      SDValue Strategy = Op.getOperand(2);
+      SDValue Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                                   Op.getOperand(0), ExtendedSrc, Strategy);
+      return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Result);
+    }
+    return SDValue();
+  }
   case Intrinsic::amdgcn_implicit_buffer_ptr: {
     if (getSubtarget()->isAmdHsaOrMesa(MF.getFunction()))
       return emitNonHSAIntrinsicError(DAG, DL, VT);

@@ -1458,7 +1458,6 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr16:
   case Vgpr16:
   case UniInVgprS16:
-  case Sgpr16ToVgprDst:
     return LLT::scalar(16);
   case Sgpr32:
   case Sgpr32_WF:
@@ -1711,7 +1710,6 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case Vgpr32AExt:
   case Vgpr32SExt:
   case Vgpr32ZExt:
-  case Sgpr16ToVgprDst:
   case Sgpr32ToVgprDst:
   case Sgpr64ToVgprDst:
     return VgprRB;
@@ -1872,7 +1870,6 @@ bool RegBankLegalizeHelper::applyMappingDst(
         B.buildTrunc(Reg, NewDst);
       break;
     }
-    case Sgpr16ToVgprDst:
     case Sgpr32ToVgprDst:
     case Sgpr64ToVgprDst: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));

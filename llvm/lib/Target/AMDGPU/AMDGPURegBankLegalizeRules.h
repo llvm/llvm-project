@@ -234,7 +234,6 @@ enum RegBankLLTMappingApplyID {
   // Dst only modifiers: dst was assigned VGPR by RegBankSelect but the
   // instruction result must be in SGPR. Replace dst with SGPR, then copy the
   // result back to the original VGPR.
-  Sgpr16ToVgprDst,
   Sgpr32ToVgprDst,
   Sgpr64ToVgprDst,
 
