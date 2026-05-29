@@ -254,6 +254,8 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_thread_limit:
   case OMPC_priority:
   case OMPC_grainsize:
+  case OMPC_graph_id:
+  case OMPC_graph_reset:
   case OMPC_nogroup:
   case OMPC_num_tasks:
   case OMPC_hint:
@@ -322,10 +324,22 @@ OMPClause::child_range OMPNowaitClause::used_children() {
   return children();
 }
 
+OMPClause::child_range OMPReplayableClause::used_children() {
+  if (Condition)
+    return child_range(&Condition, &Condition + 1);
+  return children();
+}
+
 OMPClause::child_range OMPGrainsizeClause::used_children() {
   if (Stmt **C = getAddrOfExprAsWritten(getPreInitStmt()))
     return child_range(C, C + 1);
   return child_range(&Grainsize, &Grainsize + 1);
+}
+
+OMPClause::child_range OMPGraphResetClause::used_children() {
+  if (Condition)
+    return child_range(&Condition, &Condition + 1);
+  return children();
 }
 
 OMPClause::child_range OMPNumTasksClause::used_children() {
@@ -479,14 +493,14 @@ void OMPFirstprivateClause::setInits(ArrayRef<Expr *> VL) {
   llvm::copy(VL, getPrivateCopies().end());
 }
 
-OMPFirstprivateClause *
-OMPFirstprivateClause::Create(const ASTContext &C, SourceLocation StartLoc,
-                              SourceLocation LParenLoc, SourceLocation EndLoc,
-                              ArrayRef<Expr *> VL, ArrayRef<Expr *> PrivateVL,
-                              ArrayRef<Expr *> InitVL, Stmt *PreInit) {
+OMPFirstprivateClause *OMPFirstprivateClause::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+    SourceLocation EndLoc, ArrayRef<Expr *> VL, ArrayRef<Expr *> PrivateVL,
+    ArrayRef<Expr *> InitVL, OpenMPFirstprivateModifier FPKind,
+    SourceLocation FPKindLoc, SourceLocation ColonLoc, Stmt *PreInit) {
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(3 * VL.size()));
-  OMPFirstprivateClause *Clause =
-      new (Mem) OMPFirstprivateClause(StartLoc, LParenLoc, EndLoc, VL.size());
+  OMPFirstprivateClause *Clause = new (Mem) OMPFirstprivateClause(
+      StartLoc, LParenLoc, EndLoc, FPKind, FPKindLoc, ColonLoc, VL.size());
   Clause->setVarRefs(VL);
   Clause->setPrivateCopies(PrivateVL);
   Clause->setInits(InitVL);
@@ -2193,6 +2207,15 @@ void OMPClausePrinter::VisitOMPNowaitClause(OMPNowaitClause *Node) {
   }
 }
 
+void OMPClausePrinter::VisitOMPReplayableClause(OMPReplayableClause *Node) {
+  OS << "replayable";
+  if (auto *Cond = Node->getCondition()) {
+    OS << "(";
+    Cond->printPretty(OS, nullptr, Policy, 0);
+    OS << ")";
+  }
+}
+
 void OMPClausePrinter::VisitOMPUntiedClause(OMPUntiedClause *) {
   OS << "untied";
 }
@@ -2369,6 +2392,24 @@ void OMPClausePrinter::VisitOMPGrainsizeClause(OMPGrainsizeClause *Node) {
   OS << ")";
 }
 
+void OMPClausePrinter::VisitOMPGraphIdClause(OMPGraphIdClause *Node) {
+  OS << "graph_id";
+  if (Expr *E = Node->getId()) {
+    OS << "(";
+    E->printPretty(OS, nullptr, Policy, 0);
+    OS << ")";
+  }
+}
+
+void OMPClausePrinter::VisitOMPGraphResetClause(OMPGraphResetClause *Node) {
+  OS << "graph_reset";
+  if (Expr *E = Node->getCondition()) {
+    OS << "(";
+    E->printPretty(OS, nullptr, Policy, 0);
+    OS << ")";
+  }
+}
+
 void OMPClausePrinter::VisitOMPNumTasksClause(OMPNumTasksClause *Node) {
   OS << "num_tasks(";
   OpenMPNumTasksClauseModifier Modifier = Node->getModifier();
@@ -2522,7 +2563,13 @@ void OMPClausePrinter::VisitOMPPrivateClause(OMPPrivateClause *Node) {
 void OMPClausePrinter::VisitOMPFirstprivateClause(OMPFirstprivateClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "firstprivate";
-    VisitOMPClauseList(Node, '(');
+    OpenMPFirstprivateModifier FPKind = Node->getKind();
+    if (FPKind != OMPC_FIRSTPRIVATE_unknown) {
+      OS << "("
+         << getOpenMPSimpleClauseTypeName(OMPC_firstprivate, Node->getKind())
+         << ":";
+    }
+    VisitOMPClauseList(Node, FPKind == OMPC_FIRSTPRIVATE_unknown ? '(' : ' ');
     OS << ")";
   }
 }
