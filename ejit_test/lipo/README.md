@@ -22,10 +22,48 @@ cmake -S llvm -B build_release_aarch64 -G Ninja \
 
 ninja -C build_release_aarch64 LLVMEJIT
 
-# 2. 生成 ejit_aarch64.o
+# 2. 生成 ejit_aarch64.o（一步脚本）
 ./ejit_test/lipo/run_aarch64_pipeline.sh
 
 # 输出: ejit_test/lipo/ejit_aarch64.o (~30 MB)
+```
+
+### 手动三步命令
+
+`run_aarch64_pipeline.sh` 等价于：
+
+```bash
+# Step 1: extract — 从 44 个 .a 中提取 658 个 .o
+python3 ejit_test/lipo/lipo.py extract \
+  --arch=aarch64 --build-dir=build_release_aarch64 \
+  --cxx=aarch64-linux-gnu-g++ --ld=build_release_x86/bin/ld.lld \
+  --exclude=InstrProfCorrelator \
+  --exclude=WinEHPrepare --exclude=WindowScheduler \
+  ... (完整列表见 run_aarch64_pipeline.sh)
+
+# Step 2: gc-merge — ld -r --gc-sections 死代码消除
+python3 ejit_test/lipo/lipo.py gc-merge \
+  --input=ejit_test/lipo/libejit_lipo_aarch64.a \
+  --build-dir=build_release_aarch64 --ld=build_release_x86/bin/ld.lld
+
+# Step 3: merge — ld -r -T merge.ld 段合并
+python3 ejit_test/lipo/lipo.py merge \
+  --input=ejit_test/lipo/libejit_lipo_aarch64_gc.a \
+  --build-dir=build_release_aarch64 --ld=build_release_x86/bin/ld.lld \
+  --output=ejit_test/lipo/ejit_aarch64.o
+```
+
+### 原始版本（不裁剪，对比用）
+
+```bash
+python3 ejit_test/lipo/lipo.py extract  --arch=aarch64 --build-dir=build_release_aarch64 \
+  --cxx=aarch64-linux-gnu-g++ --ld=build_release_x86/bin/ld.lld
+python3 ejit_test/lipo/lipo.py gc-merge --input=ejit_test/lipo/libejit_lipo_aarch64.a \
+  --build-dir=build_release_aarch64 --ld=build_release_x86/bin/ld.lld
+python3 ejit_test/lipo/lipo.py merge    --input=ejit_test/lipo/libejit_lipo_aarch64_gc.a \
+  --build-dir=build_release_aarch64 --ld=build_release_x86/bin/ld.lld \
+  --output=ejit_test/lipo/ejit_aarch64_orig.o
+# 输出: ~42 MB (1053 .o)
 ```
 
 ## 裁剪原理
