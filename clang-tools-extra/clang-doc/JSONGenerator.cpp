@@ -81,7 +81,9 @@ class JSONGenerator : public Generator {
   }
 
   llvm::DenseMap<const Info *, SmallVector<Context, 4>> ContextsMap;
+  llvm::StringMap<doc::Info *> *Infos = nullptr;
   const ClangDocContext *CDCtx;
+
   bool Markdown;
 
 public:
@@ -490,7 +492,7 @@ void JSONGenerator::serializeClassSpecializations(SymbolID ClassUSR,
   auto ClassIt = Infos->find(toStringRef(toHex(ClassUSR)));
   if (ClassIt == Infos->end())
     return;
-  Info *Class = ClassIt->second.get();
+  Info *Class = ClassIt->second;
   if (!Class || Class->IT != InfoType::IT_record)
     return;
   RecordInfo *ClassInfo = static_cast<RecordInfo *>(Class);
