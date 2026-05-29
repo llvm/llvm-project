@@ -52445,8 +52445,8 @@ static SDValue combineMaskBitOp(SDNode *N, const SDLoc &DL, SelectionDAG &DAG) {
   }
 
   // Attempt to match expanded ANDNOT pattern (if AND is legal then ANDNP is).
-  if (sd_match(N,
-               m_And(m_Not(m_Trunc(m_Value(Src0))), m_Trunc(m_Value(Src1))))) {
+  if (sd_match(N, m_And(m_OneUse(m_Not(m_Trunc(m_Value(Src0)))),
+                        m_Trunc(m_Value(Src1))))) {
     EVT SrcVT = Src0.getValueType();
     if (SrcVT == Src1.getValueType() && TLI.isOperationLegal(ISD::AND, SrcVT)) {
       return DAG.getNode(ISD::TRUNCATE, DL, VT,
