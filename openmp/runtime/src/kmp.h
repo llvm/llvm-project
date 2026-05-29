@@ -4511,7 +4511,7 @@ KMP_EXPORT void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
 KMP_EXPORT kmp_uint32 __kmpc_taskgraph_task(
     ident_t *loc_ref, kmp_int32 gtid, kmp_task_t *new_task, kmp_int32 flags,
     size_t sizeof_kmp_task_t, size_t sizeof_shareds, kmp_int32 ndeps,
-    kmp_depend_info_t *dep_list, kmp_task_relocate_t reloc);
+    kmp_depend_info_t *dep_list, kmp_task_relocate_t reloc, void *task_clone);
 KMP_EXPORT kmp_uint32 __kmpc_taskgraph_taskloop(
     ident_t *loc_ref, kmp_int32 gtid, kmp_task_t *new_task, kmp_int32 flags,
     kmp_int32 if_val, kmp_uint64 *lb, kmp_uint64 *ub, kmp_int64 st,

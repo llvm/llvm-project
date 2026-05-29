@@ -557,6 +557,10 @@ protected:
     LValue TDBase;
     const RecordDecl *KmpTaskTQTyRD = nullptr;
     llvm::Value *TaskDupFn = nullptr;
+    /// Compiler-emitted helper that re-initializes any non-trivially-copyable
+    /// firstprivate fields after the runtime bitwise-clones a task into a
+    /// taskgraph record. Null when no such helper is required.
+    llvm::Value *TaskCloneFn = nullptr;
   };
   /// Emit task region for the task directive. The task region is emitted in
   /// several steps:

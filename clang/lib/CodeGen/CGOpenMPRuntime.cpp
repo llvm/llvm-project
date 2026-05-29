@@ -3679,14 +3679,34 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
 }
 
 /// Emit initialization for private variables in task-based directives.
+/// Selects where \c emitPrivatesInit should read the initial value of each
+/// non-trivial firstprivate copy from.
+enum class PrivatesInitMode {
+  /// Initialize using the captured original lvalues in the caller IR (i.e.
+  /// at task-allocation time).
+  Normal,
+  /// Reading from the source task's \c shareds region. Used by the taskloop
+  /// task-dup function to seed sibling tasks.
+  ForDup,
+  /// Reading from the source task's \c .kmp_privates.t region (the field at
+  /// the same index as the destination). Used by the taskgraph clone
+  /// function to seed the persistent clone from the original task's
+  /// already-initialized snapshot. Works uniformly for captured and
+  /// static-storage firstprivates because no capture lookup is needed.
+  ForClone,
+};
+
 static void emitPrivatesInit(CodeGenFunction &CGF,
                              const OMPExecutableDirective &D,
                              Address KmpTaskSharedsPtr, LValue TDBase,
                              const RecordDecl *KmpTaskTWithPrivatesQTyRD,
                              QualType SharedsTy, QualType SharedsPtrTy,
                              const OMPTaskDataTy &Data,
-                             ArrayRef<PrivateDataTy> Privates, bool ForDup) {
+                             ArrayRef<PrivateDataTy> Privates,
+                             PrivatesInitMode Mode, LValue SrcPrivatesBase) {
   ASTContext &C = CGF.getContext();
+  const bool ForDup = Mode == PrivatesInitMode::ForDup;
+  const bool ForClone = Mode == PrivatesInitMode::ForClone;
   auto FI = std::next(KmpTaskTWithPrivatesQTyRD->field_begin());
   LValue PrivatesBase = CGF.EmitLValueForField(TDBase, *FI);
   OpenMPDirectiveKind Kind = isOpenMPTaskLoopDirective(D.getDirectiveKind())
@@ -3718,8 +3738,11 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
     }
     const VarDecl *VD = Pair.second.PrivateCopy;
     const Expr *Init = VD->getAnyInitializer();
-    if (Init && (!ForDup || (isa<CXXConstructExpr>(Init) &&
-                             !CGF.isTrivialInitializer(Init)))) {
+    // ForDup and ForClone only re-initialize non-trivial firstprivates; the
+    // surrounding runtime memcpy is sufficient for trivially-copyable ones.
+    const bool NonTrivialOnly = ForDup || ForClone;
+    if (Init && (!NonTrivialOnly || (isa<CXXConstructExpr>(Init) &&
+                                     !CGF.isTrivialInitializer(Init)))) {
       LValue PrivateLValue = CGF.EmitLValueForField(PrivatesBase, *FI);
       if (const VarDecl *Elem = Pair.second.PrivateElemInit) {
         const VarDecl *OriginalVD = Pair.second.Original;
@@ -3739,6 +3762,9 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
                  "Expected artificial target data variable.");
           SharedRefLValue =
               CGF.MakeAddrLValue(CGF.GetAddrOfLocalVar(OriginalVD), Type);
+        } else if (ForClone) {
+          // Source is the same field on the origin task's privates record.
+          SharedRefLValue = CGF.EmitLValueForField(SrcPrivatesBase, *FI);
         } else if (ForDup) {
           SharedRefLValue = CGF.EmitLValueForField(SrcBase, SharedField);
           SharedRefLValue = CGF.MakeAddrLValue(
@@ -3889,9 +3915,72 @@ emitTaskDupFunction(CodeGenModule &CGM, SourceLocation Loc,
         CGF.Int8Ty, CGM.getNaturalTypeAlignment(SharedsTy));
   }
   emitPrivatesInit(CGF, D, KmpTaskSharedsPtr, TDBase, KmpTaskTWithPrivatesQTyRD,
-                   SharedsTy, SharedsPtrTy, Data, Privates, /*ForDup=*/true);
+                   SharedsTy, SharedsPtrTy, Data, Privates,
+                   PrivatesInitMode::ForDup, /*SrcPrivatesBase=*/LValue());
   CGF.FinishFunction();
   return TaskDup;
+}
+
+/// Emit task_clone function (for re-initializing non-trivially-copyable
+/// firstprivate copies when cloning a task into a taskgraph record).
+/// \code
+/// void __omp_task_clone(kmp_task_t *task_dst, const kmp_task_t *task_src,
+///                       int /*unused*/) {
+///   // copy-construct each non-trivial firstprivate from
+///   // task_src->.kmp_privates.t into task_dst->.kmp_privates.t.
+/// }
+/// \endcode
+/// The (unused) third parameter is present so that the function shares the
+/// same calling convention as the existing taskloop \c task_dup callback
+/// (\c p_task_dup_t in the runtime), letting the runtime invoke either via
+/// a single function-pointer type.
+static llvm::Value *emitTaskCloneFunction(
+    CodeGenModule &CGM, SourceLocation Loc, const OMPExecutableDirective &D,
+    QualType KmpTaskTWithPrivatesPtrQTy,
+    const RecordDecl *KmpTaskTWithPrivatesQTyRD, QualType SharedsTy,
+    QualType SharedsPtrTy, const OMPTaskDataTy &Data,
+    ArrayRef<PrivateDataTy> Privates) {
+  ASTContext &C = CGM.getContext();
+  auto *DstArg = ImplicitParamDecl::Create(
+      C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, KmpTaskTWithPrivatesPtrQTy,
+      ImplicitParamKind::Other);
+  auto *SrcArg = ImplicitParamDecl::Create(
+      C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, KmpTaskTWithPrivatesPtrQTy,
+      ImplicitParamKind::Other);
+  auto *UnusedArg =
+      ImplicitParamDecl::Create(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, C.IntTy,
+                                ImplicitParamKind::Other);
+  FunctionArgList Args{DstArg, SrcArg, UnusedArg};
+  const auto &FnInfo =
+      CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
+  llvm::FunctionType *FnTy = CGM.getTypes().GetFunctionType(FnInfo);
+  std::string Name = CGM.getOpenMPRuntime().getName({"omp_task_clone", ""});
+  auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
+                                    Name, &CGM.getModule());
+  CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
+  Fn->setDoesNotRecurse();
+  CodeGenFunction CGF(CGM);
+  CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args, Loc, Loc);
+
+  LValue DstBase = CGF.EmitLoadOfPointerLValue(
+      CGF.GetAddrOfLocalVar(DstArg),
+      KmpTaskTWithPrivatesPtrQTy->castAs<PointerType>());
+  LValue SrcBase = CGF.EmitLoadOfPointerLValue(
+      CGF.GetAddrOfLocalVar(SrcArg),
+      KmpTaskTWithPrivatesPtrQTy->castAs<PointerType>());
+  // Address the .kmp_privates.t sub-record of the source task; the
+  // destination's privates record is located via DstBase inside
+  // emitPrivatesInit.
+  auto PrivatesFI = std::next(KmpTaskTWithPrivatesQTyRD->field_begin());
+  LValue SrcPrivatesBase = CGF.EmitLValueForField(SrcBase, *PrivatesFI);
+
+  emitPrivatesInit(CGF, D, /*KmpTaskSharedsPtr=*/Address::invalid(), DstBase,
+                   KmpTaskTWithPrivatesQTyRD, SharedsTy, SharedsPtrTy, Data,
+                   Privates, PrivatesInitMode::ForClone, SrcPrivatesBase);
+  CGF.FinishFunction();
+  return Fn;
 }
 
 /// Checks if destructor function is required to be generated.
@@ -4395,13 +4484,23 @@ CGOpenMPRuntime::TaskResultTy CGOpenMPRuntime::emitTaskInit(
   if (!Privates.empty()) {
     emitPrivatesInit(CGF, D, KmpTaskSharedsPtr, Base, KmpTaskTWithPrivatesQTyRD,
                      SharedsTy, SharedsPtrTy, Data, Privates,
-                     /*ForDup=*/false);
+                     PrivatesInitMode::Normal, /*SrcPrivatesBase=*/LValue());
     if (isOpenMPTaskLoopDirective(D.getDirectiveKind()) &&
         (!Data.LastprivateVars.empty() || checkInitIsRequired(CGF, Privates))) {
       Result.TaskDupFn = emitTaskDupFunction(
           CGM, Loc, D, KmpTaskTWithPrivatesPtrQTy, KmpTaskTWithPrivatesQTyRD,
           KmpTaskTQTyRD, SharedsTy, SharedsPtrTy, Data, Privates,
           /*WithLastIter=*/!Data.LastprivateVars.empty());
+    }
+    // For plain tasks (not taskloops) that have at least one non-trivially
+    // copyable firstprivate, emit a clone function so that the runtime can
+    // re-initialize those fields when the task is recorded into a taskgraph.
+    // Taskloops already cover the same need via their TaskDupFn.
+    if (!isOpenMPTaskLoopDirective(D.getDirectiveKind()) &&
+        checkInitIsRequired(CGF, Privates)) {
+      Result.TaskCloneFn = emitTaskCloneFunction(
+          CGM, Loc, D, KmpTaskTWithPrivatesPtrQTy, KmpTaskTWithPrivatesQTyRD,
+          SharedsTy, SharedsPtrTy, Data, Privates);
     }
   }
   // Fields of union "kmp_cmplrdata_t" for destructors and priority.
@@ -4950,7 +5049,7 @@ void CGOpenMPRuntime::emitTaskCall(
                                                   PrePostActionTy &) {
     llvm::Value *ThreadId = getThreadID(CGF, Loc);
     llvm::Value *UpLoc = emitUpdateLocation(CGF, Loc);
-    std::array<llvm::Value *, 9> TGTaskArgs;
+    std::array<llvm::Value *, 10> TGTaskArgs;
     std::array<llvm::Value *, 3> TaskAllocArgs;
     TaskResultTy Result = emitTaskInit(CGF, Loc, D, TaskFunction, SharedsTy,
                                        Shareds, Data, true, TaskAllocArgs);
@@ -4984,6 +5083,10 @@ void CGOpenMPRuntime::emitTaskCall(
     TGTaskArgs[8] = RelocFn ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
                                   RelocFn, CGM.VoidPtrTy)
                             : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+    TGTaskArgs[9] = Result.TaskCloneFn
+                        ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+                              Result.TaskCloneFn, CGF.VoidPtrTy)
+                        : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
     CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                             CGM.getModule(), OMPRTL___kmpc_taskgraph_task),
                         TGTaskArgs);
