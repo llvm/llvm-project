@@ -943,7 +943,7 @@ OpenMP Support
   OpenMP >= 60.
 
 SYCL Support
---------------
+------------
 - Clang now assumes default target for SYCL device compilation is 64-bit SPIR-V
   and it now diagnoses if a non-supporting target is specified via command line.
   (#GH167358)
