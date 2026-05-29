@@ -90,7 +90,7 @@ public:
                 std::unique_ptr<MCCodeEmitter> emitter,
                 std::unique_ptr<MCAsmBackend> asmbackend)
       : MCAsmBaseStreamer(Context), OSOwner(std::move(os)), OS(*OSOwner),
-        MAI(Context.getAsmInfo()), InstPrinter(std::move(printer)),
+        MAI(&Context.getAsmInfo()), InstPrinter(std::move(printer)),
         Assembler(std::make_unique<MCAssembler>(
             Context, std::move(asmbackend), std::move(emitter),
             (asmbackend) ? asmbackend->createObjectWriter(NullStream)
@@ -102,12 +102,12 @@ public:
 
     Context.setUseNamesOnTempLabels(true);
 
-    auto *TO = Context.getTargetOptions();
-    IsVerboseAsm = TO->AsmVerbose;
+    const MCTargetOptions &TO = Context.getTargetOptions();
+    IsVerboseAsm = TO.AsmVerbose;
     if (IsVerboseAsm)
       InstPrinter->setCommentStream(CommentStream);
-    ShowInst = TO->ShowMCInst;
-    switch (TO->MCUseDwarfDirectory) {
+    ShowInst = TO.ShowMCInst;
+    switch (TO.MCUseDwarfDirectory) {
     case MCTargetOptions::DisableDwarfDirectory:
       UseDwarfDirectory = false;
       break;
@@ -116,7 +116,7 @@ public:
       break;
     case MCTargetOptions::DefaultDwarfDirectory:
       UseDwarfDirectory =
-          Context.getAsmInfo()->enableDwarfFileDirectoryDefault();
+          Context.getAsmInfo().enableDwarfFileDirectoryDefault();
       break;
     }
   }
@@ -397,6 +397,20 @@ public:
   void emitCFINegateRAState(SMLoc Loc) override;
   void emitCFINegateRAStateWithPC(SMLoc Loc) override;
   void emitCFIReturnColumn(int64_t Register) override;
+  void emitCFILLVMRegisterPair(int64_t Register, int64_t R1, int64_t R1Size,
+                               int64_t R2, int64_t R2Size, SMLoc Loc) override;
+  void emitCFILLVMVectorRegisters(
+      int64_t Register, ArrayRef<MCCFIInstruction::VectorRegisterWithLane> VRs,
+      SMLoc Loc) override;
+  void emitCFILLVMVectorOffset(int64_t Register, int64_t RegisterSize,
+                               int64_t MaskRegister, int64_t MaskRegisterSize,
+                               int64_t Offset, SMLoc Loc) override;
+  void emitCFILLVMVectorRegisterMask(int64_t Register, int64_t SpillRegister,
+                                     int64_t SpillRegisterLaneSizeInBits,
+                                     int64_t MaskRegister,
+                                     int64_t MaskRegisterSizeInBits,
+                                     SMLoc Loc) override;
+
   void emitCFILabelDirective(SMLoc Loc, StringRef Name) override;
   void emitCFIValOffset(int64_t Register, int64_t Offset, SMLoc Loc) override;
 
@@ -2188,6 +2202,67 @@ void MCAsmStreamer::emitCFIRegister(int64_t Register1, int64_t Register2,
   EmitEOL();
 }
 
+void MCAsmStreamer::emitCFILLVMRegisterPair(int64_t Register, int64_t R1,
+                                            int64_t R1Size, int64_t R2,
+                                            int64_t R2Size, SMLoc Loc) {
+  MCStreamer::emitCFILLVMRegisterPair(Register, R1, R1Size, R2, R2Size, Loc);
+
+  OS << "\t.cfi_llvm_register_pair ";
+  EmitRegisterName(Register);
+  OS << ", ";
+  EmitRegisterName(R1);
+  OS << ", " << R1Size << ", ";
+  EmitRegisterName(R2);
+  OS << ", " << R2Size;
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILLVMVectorRegisters(
+    int64_t Register, ArrayRef<MCCFIInstruction::VectorRegisterWithLane> VRs,
+    SMLoc Loc) {
+  MCStreamer::emitCFILLVMVectorRegisters(Register, VRs, Loc);
+
+  OS << "\t.cfi_llvm_vector_registers ";
+  EmitRegisterName(Register);
+  for (auto [Reg, Lane, Size] : VRs)
+    OS << ", " << Reg << ", " << Lane << ", " << Size;
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILLVMVectorOffset(int64_t Register,
+                                            int64_t RegisterSize,
+                                            int64_t MaskRegister,
+                                            int64_t MaskRegisterSize,
+                                            int64_t Offset, SMLoc Loc) {
+  MCStreamer::emitCFILLVMVectorOffset(Register, RegisterSize, MaskRegister,
+                                      MaskRegisterSize, Offset, Loc);
+
+  OS << "\t.cfi_llvm_vector_offset ";
+  EmitRegisterName(Register);
+  OS << ", " << RegisterSize << ", ";
+  EmitRegisterName(MaskRegister);
+  OS << ", " << MaskRegisterSize << ", " << Offset;
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILLVMVectorRegisterMask(
+    int64_t Register, int64_t SpillRegister,
+    int64_t SpillRegisterLaneSizeInBits, int64_t MaskRegister,
+    int64_t MaskRegisterSizeInBits, SMLoc Loc) {
+  MCStreamer::emitCFILLVMVectorRegisterMask(
+      Register, SpillRegister, SpillRegisterLaneSizeInBits, MaskRegister,
+      MaskRegisterSizeInBits, Loc);
+
+  OS << "\t.cfi_llvm_vector_register_mask ";
+  EmitRegisterName(Register);
+  OS << ", ";
+  EmitRegisterName(SpillRegister);
+  OS << ", " << SpillRegisterLaneSizeInBits << ", ";
+  EmitRegisterName(MaskRegister);
+  OS << ", " << MaskRegisterSizeInBits;
+  EmitEOL();
+}
+
 void MCAsmStreamer::emitCFIWindowSave(SMLoc Loc) {
   MCStreamer::emitCFIWindowSave(Loc);
   OS << "\t.cfi_window_save";
@@ -2703,9 +2778,9 @@ void MCAsmStreamer::emitDwarfLineEndEntry(MCSection *Section,
 
   if (!EndLabel)
     EndLabel = TextSection->getEndSymbol(Ctx);
-  const MCAsmInfo *AsmInfo = Ctx.getAsmInfo();
+  const MCAsmInfo &AsmInfo = Ctx.getAsmInfo();
   emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, EndLabel,
-                           AsmInfo->getCodePointerSize());
+                           AsmInfo.getCodePointerSize());
 }
 
 // Generate DWARF line sections for assembly mode without .loc/.file

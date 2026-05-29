@@ -13,18 +13,19 @@
 
 namespace llvm {
 
-class LiveDebugValuesPass : public PassInfoMixin<LiveDebugValuesPass> {
+class LiveDebugValuesPass : public OptionalPassInfoMixin<LiveDebugValuesPass> {
   const bool ShouldEmitDebugEntryValues;
 
 public:
   LiveDebugValuesPass(bool ShouldEmitDebugEntryValues)
       : ShouldEmitDebugEntryValues(ShouldEmitDebugEntryValues) {}
 
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 } // namespace llvm

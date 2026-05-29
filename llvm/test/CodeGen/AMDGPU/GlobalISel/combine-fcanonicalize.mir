@@ -243,14 +243,14 @@ body: |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: %two:_(s16) = G_FCONSTANT half 0xH4000
+    ; CHECK-NEXT: %two:_(s16) = G_FCONSTANT half 2.000000e+00
     ; CHECK-NEXT: %two_s32:_(s32) = G_ANYEXT %two(s16)
     ; CHECK-NEXT: %two_splat:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %two_s32(s32), %two_s32(s32)
-    ; CHECK-NEXT: %zero:_(s16) = G_FCONSTANT half 0xH0000
+    ; CHECK-NEXT: %zero:_(s16) = G_FCONSTANT half 0.000000e+00
     ; CHECK-NEXT: %zero_s32:_(s32) = G_ANYEXT %zero(s16)
     ; CHECK-NEXT: %undef:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: %zero_undef:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %zero_s32(s32), %undef(s32)
-    ; CHECK-NEXT: %one:_(s16) = G_FCONSTANT half 0xH3C00
+    ; CHECK-NEXT: %one:_(s16) = G_FCONSTANT half 1.000000e+00
     ; CHECK-NEXT: %one_s32:_(s32) = G_ANYEXT %one(s16)
     ; CHECK-NEXT: %one_undef:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %one_s32(s32), %undef(s32)
     ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(<2 x s16>) = G_FMUL [[COPY]], %two_splat
@@ -293,14 +293,14 @@ body: |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: %two:_(s16) = G_FCONSTANT half 0xH4000
+    ; CHECK-NEXT: %two:_(s16) = G_FCONSTANT half 2.000000e+00
     ; CHECK-NEXT: %two_s32:_(s32) = G_ANYEXT %two(s16)
     ; CHECK-NEXT: %two_splat:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %two_s32(s32), %two_s32(s32)
-    ; CHECK-NEXT: %snan:_(s16) = G_FCONSTANT half 0xH7C01
+    ; CHECK-NEXT: %snan:_(s16) = G_FCONSTANT half +snan(0x1)
     ; CHECK-NEXT: %snan_s32:_(s32) = G_ANYEXT %snan(s16)
     ; CHECK-NEXT: %undef:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: %snan_undef:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %snan_s32(s32), %undef(s32)
-    ; CHECK-NEXT: %qnan:_(s16) = G_FCONSTANT half 0xH7E01
+    ; CHECK-NEXT: %qnan:_(s16) = G_FCONSTANT half +nan(0x1)
     ; CHECK-NEXT: %qnan_s32:_(s32) = G_ANYEXT %qnan(s16)
     ; CHECK-NEXT: %qnan_undef:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %qnan_s32(s32), %undef(s32)
     ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(<2 x s16>) = G_FMUL [[COPY]], %two_splat

@@ -36,6 +36,7 @@
 #include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
+#include "llvm/CodeGen/GCEmptyBasicBlocks.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
@@ -131,21 +132,21 @@ namespace llvm {
 // FIXME: Dummy target independent passes definitions that have not yet been
 // ported to new pass manager. Once they do, remove these.
 #define DUMMY_FUNCTION_PASS(NAME, PASS_NAME)                                   \
-  struct PASS_NAME : public PassInfoMixin<PASS_NAME> {                         \
+  struct PASS_NAME : public OptionalPassInfoMixin<PASS_NAME> {                 \
     template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
     PreservedAnalyses run(Function &, FunctionAnalysisManager &) {             \
       return PreservedAnalyses::all();                                         \
     }                                                                          \
   };
 #define DUMMY_MACHINE_MODULE_PASS(NAME, PASS_NAME)                             \
-  struct PASS_NAME : public PassInfoMixin<PASS_NAME> {                         \
+  struct PASS_NAME : public OptionalPassInfoMixin<PASS_NAME> {                 \
     template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
     PreservedAnalyses run(Module &, ModuleAnalysisManager &) {                 \
       return PreservedAnalyses::all();                                         \
     }                                                                          \
   };
 #define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME)                           \
-  struct PASS_NAME : public PassInfoMixin<PASS_NAME> {                         \
+  struct PASS_NAME : public OptionalPassInfoMixin<PASS_NAME> {                 \
     template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
     PreservedAnalyses run(MachineFunction &,                                   \
                           MachineFunctionAnalysisManager &) {                  \
@@ -791,9 +792,8 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
 template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addPassesToHandleExceptions(
     PassManagerWrapper &PMW) const {
-  const MCAsmInfo *MCAI = TM.getMCAsmInfo();
-  assert(MCAI && "No MCAsmInfo");
-  switch (MCAI->getExceptionHandlingType()) {
+  const MCAsmInfo &MCAI = TM.getMCAsmInfo();
+  switch (MCAI.getExceptionHandlingType()) {
   case ExceptionHandling::SjLj:
     // SjLj piggy-backs on dwarf for this bit. The cleanups done apply to both
     // Dwarf EH prepare needs to be run after SjLj prepare. Otherwise,
@@ -1076,6 +1076,9 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
       addModulePass(MachineOutlinerPass(Opt.EnableMachineOutliner), PMW);
     }
   }
+
+  if (Opt.EnableGCEmptyBlocks)
+    addMachineFunctionPass(GCEmptyBasicBlocksPass(), PMW);
 
   derived().addPostBBSections(PMW);
 

@@ -21,40 +21,41 @@ using namespace llvm;
 
 #define DEBUG_TYPE "instcount"
 
-STATISTIC(TotalInstsPreOptimization,
-          "Number of instructions of all types (before optimizations)");
 STATISTIC(TotalInsts, "Number of instructions of all types");
-STATISTIC(TotalBlocksPreOptimization,
-          "Number of basic blocks (before optimizations)");
 STATISTIC(TotalBlocks, "Number of basic blocks");
-STATISTIC(TotalFuncsPreOptimization,
-          "Number of non-external functions (before optimizations)");
 STATISTIC(TotalFuncs, "Number of non-external functions");
-STATISTIC(LargestFunctionSizePreOptimization,
-          "Largest number of instructions in a single function (before "
-          "optimizations)");
+
 STATISTIC(LargestFunctionSize,
           "Largest number of instructions in a single function");
-STATISTIC(LargestFunctionBBCountPreOptimization,
-          "Largest number of basic blocks in a single function (before "
-          "optimizations)");
 STATISTIC(LargestFunctionBBCount,
           "Largest number of basic blocks in a single function");
 
+STATISTIC(TotalInstsPreOptimization,
+          "Number of instructions of all types (before optimizations)");
+STATISTIC(TotalBlocksPreOptimization,
+          "Number of basic blocks (before optimizations)");
+STATISTIC(TotalFuncsPreOptimization,
+          "Number of non-external functions (before optimizations)");
+
+STATISTIC(LargestFunctionSizePreOptimization,
+          "Largest number of instructions in a single function (before "
+          "optimizations)");
+STATISTIC(LargestFunctionBBCountPreOptimization,
+          "Largest number of basic blocks in a single function (before "
+          "optimizations)");
+
 #define HANDLE_INST(N, OPCODE, CLASS)                                          \
+  STATISTIC(Num##OPCODE##Inst, "Number of " #OPCODE " insts");                 \
   STATISTIC(Num##OPCODE##InstPreOptimization,                                  \
-            "Number of " #OPCODE " insts (before optimizations)");             \
-  STATISTIC(Num##OPCODE##Inst, "Number of " #OPCODE " insts");
+            "Number of " #OPCODE " insts (before optimizations)");
 
 #include "llvm/IR/Instruction.def"
 
 namespace {
 class InstCount : public InstVisitor<InstCount> {
   friend class InstVisitor<InstCount>;
-  bool IsPreOptimization;
 
-public:
-  InstCount(bool IsPreOptimization) : IsPreOptimization(IsPreOptimization) {}
+  bool IsPreOptimization;
 
   void visitFunction(Function &F) {
     if (IsPreOptimization) {
@@ -92,6 +93,10 @@ public:
     errs() << "Instruction Count does not know about " << I;
     llvm_unreachable(nullptr);
   }
+
+public:
+  InstCount(bool IsPreOptimization = false)
+      : IsPreOptimization(IsPreOptimization) {}
 };
 } // namespace
 

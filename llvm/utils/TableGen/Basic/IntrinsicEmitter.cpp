@@ -61,6 +61,8 @@ public:
                                 raw_ostream &OS);
   void EmitIntrinsicToOverloadTable(const CodeGenIntrinsicTable &Ints,
                                     raw_ostream &OS);
+  void EmitIntrinsicToScalarizableTable(const CodeGenIntrinsicTable &Ints,
+                                        raw_ostream &OS);
   void EmitIntrinsicToPrettyPrintTable(const CodeGenIntrinsicTable &Ints,
                                        raw_ostream &OS);
   void EmitIntrinsicBitTable(
@@ -111,6 +113,9 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
 
     // Emit the intrinsic ID -> overload table.
     EmitIntrinsicToOverloadTable(Ints, OS);
+
+    // Emit the intrinsic ID -> trivially scalarizable table.
+    EmitIntrinsicToScalarizableTable(Ints, OS);
 
     // Emit the intrinsic declaration generator.
     EmitGenerator(Ints, OS);
@@ -307,6 +312,14 @@ void IntrinsicEmitter::EmitIntrinsicToOverloadTable(
       Ints, OS, "GET_INTRINSIC_OVERLOAD_TABLE", "OTable",
       "Intrinsic ID to overload bitset.",
       [](const CodeGenIntrinsic &Int) { return Int.isOverloaded; });
+}
+
+void IntrinsicEmitter::EmitIntrinsicToScalarizableTable(
+    const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
+  EmitIntrinsicBitTable(
+      Ints, OS, "GET_INTRINSIC_SCALARIZABLE_TABLE", "STable",
+      "Intrinsic ID to trivially scalarizable bitset.",
+      [](const CodeGenIntrinsic &Int) { return Int.isTriviallyScalarizable; });
 }
 
 using TypeSigTy = SmallVector<unsigned char>;

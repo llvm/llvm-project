@@ -8,7 +8,7 @@
 //
 // This file is a part of AddressSanitizer, an address sanity checker.
 //
-// Linux-specific malloc interception.
+// Linux-specific (and Unix/Unix-like) malloc interception.
 // We simply define functions like malloc, free, realloc, etc.
 // They will replace the corresponding libc functions automagically.
 //===----------------------------------------------------------------------===//

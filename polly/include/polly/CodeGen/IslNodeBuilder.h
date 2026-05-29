@@ -282,8 +282,8 @@ protected:
   /// Preload the memory access at @p AccessRange with @p Build.
   ///
   /// @returns The preloaded value casted to type @p Ty
-  Value *preloadUnconditionally(__isl_take isl_set *AccessRange,
-                                isl_ast_build *Build, Instruction *AccInst);
+  Value *preloadUnconditionally(isl::set AccessRange, isl::ast_build Build,
+                                Instruction *AccInst);
 
   /// Preload the memory load access @p MA.
   ///

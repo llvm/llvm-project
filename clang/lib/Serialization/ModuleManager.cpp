@@ -41,6 +41,29 @@
 using namespace clang;
 using namespace serialization;
 
+std::optional<ModuleFileKey>
+ModuleManager::makeKey(const ModuleFileName &Name) const {
+  if (unsigned SuffixLen = Name.getImplicitModuleSuffixLength()) {
+    StringRef ModuleCachePath = StringRef(Name).drop_back(SuffixLen);
+    StringRef ImplicitModuleSuffix = StringRef(Name).take_back(SuffixLen);
+    if (auto *ModuleCacheDir = ModCache.getDirectoryPtr(ModuleCachePath))
+      return ModuleFileKey(ModuleCacheDir, ImplicitModuleSuffix);
+  } else if (Name.isInMemory()) {
+    off_t Size;
+    time_t ModTime;
+    if (auto *Buf =
+            ModCache.getInMemoryModuleCache().lookupPCM(Name, Size, ModTime))
+      return ModuleFileKey(Buf);
+  } else {
+    if (auto ModuleFile = FileMgr.getOptionalFileRef(Name, /*OpenFile=*/true,
+                                                     /*CacheFailure=*/false,
+                                                     /*IsText=*/false))
+      return ModuleFileKey(*ModuleFile);
+  }
+
+  return std::nullopt;
+}
+
 ModuleFile *ModuleManager::lookupByModuleName(StringRef Name) const {
   if (const Module *Mod = HeaderSearchInfo.getModuleMap().findModule(Name))
     if (const ModuleFileName *FileName = Mod->getASTFileName())
@@ -50,24 +73,12 @@ ModuleFile *ModuleManager::lookupByModuleName(StringRef Name) const {
 }
 
 ModuleFile *ModuleManager::lookupByFileName(ModuleFileName Name) const {
-  std::optional<ModuleFileKey> Key = Name.makeKey(FileMgr);
+  std::optional<ModuleFileKey> Key = makeKey(Name);
   return Key ? lookup(*Key) : nullptr;
 }
 
 ModuleFile *ModuleManager::lookup(ModuleFileKey Key) const {
   return Modules.lookup(Key);
-}
-
-std::unique_ptr<llvm::MemoryBuffer>
-ModuleManager::lookupBuffer(StringRef Name, off_t &Size, time_t &ModTime) {
-  auto Entry = FileMgr.getOptionalFileRef(Name, /*OpenFile=*/false,
-                                          /*CacheFailure=*/false,
-                                          /*IsText=*/false);
-  if (!Entry)
-    return nullptr;
-  Size = Entry->getSize();
-  ModTime = Entry->getModificationTime();
-  return std::move(InMemoryBuffers[*Entry]);
 }
 
 bool ModuleManager::isModuleFileOutOfDate(off_t Size, time_t ModTime,
@@ -134,7 +145,7 @@ AddModuleResult ModuleManager::addModule(
     ExpectedModTime = 0;
   }
 
-  std::optional<ModuleFileKey> FileKey = FileName.makeKey(FileMgr);
+  std::optional<ModuleFileKey> FileKey = makeKey(FileName);
   if (!FileKey) {
     Result.K = AddModuleResult::Missing;
     return Result;
@@ -168,14 +179,9 @@ AddModuleResult ModuleManager::addModule(
   time_t ModTime = ExpectedModTime;
   llvm::MemoryBuffer *ModuleBuffer = nullptr;
   std::unique_ptr<llvm::MemoryBuffer> NewFileBuffer = nullptr;
-  if (std::unique_ptr<llvm::MemoryBuffer> Buffer =
-          lookupBuffer(FileName, Size, ModTime)) {
-    // The buffer was already provided for us.
-    ModuleBuffer = &getModuleCache().getInMemoryModuleCache().addBuiltPCM(
-        FileName, std::move(Buffer), Size, ModTime);
-  } else if (llvm::MemoryBuffer *Buffer =
-                 getModuleCache().getInMemoryModuleCache().lookupPCM(
-                     FileName, Size, ModTime)) {
+  if (llvm::MemoryBuffer *Buffer =
+          getModuleCache().getInMemoryModuleCache().lookupPCM(FileName, Size,
+                                                              ModTime)) {
     ModuleBuffer = Buffer;
   } else if (getModuleCache().getInMemoryModuleCache().shouldBuildPCM(
                  FileName)) {
@@ -188,6 +194,8 @@ AddModuleResult ModuleManager::addModule(
     return Result;
   } else {
     auto Buf = [&]() -> Expected<std::unique_ptr<llvm::MemoryBuffer>> {
+      assert(!FileName.isInMemory() && "In-memory module not found");
+
       // Implicit modules live in the module cache.
       if (FileName.getImplicitModuleSuffixLength())
         return ModCache.read(FileName, Size, ModTime);
@@ -307,14 +315,6 @@ void ModuleManager::removeModules(ModuleIterator First) {
     Modules.erase(victim->FileKey);
 
   Chain.erase(Chain.begin() + (First - begin()), Chain.end());
-}
-
-void
-ModuleManager::addInMemoryBuffer(StringRef FileName,
-                                 std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-  FileEntryRef Entry =
-      FileMgr.getVirtualFileRef(FileName, Buffer->getBufferSize(), 0);
-  InMemoryBuffers[Entry] = std::move(Buffer);
 }
 
 std::unique_ptr<ModuleManager::VisitState> ModuleManager::allocateVisitState() {

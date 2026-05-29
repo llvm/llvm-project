@@ -38,10 +38,10 @@ define float @v_max3_maxnum_tree8_f32(float %a, float %b, float %c, float %d,
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_max3_f32 v0, v0, v1, v2
-; GFX9-NEXT:    v_max_f32_e32 v1, v3, v3
-; GFX9-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GFX9-NEXT:    v_max3_f32 v1, v4, v5, v6
-; GFX9-NEXT:    v_max3_f32 v0, v0, v1, v7
+; GFX9-NEXT:    v_max3_f32 v0, v0, v3, v1
+; GFX9-NEXT:    v_max_f32_e32 v1, v7, v7
+; GFX9-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: v_max3_maxnum_tree8_f32:
@@ -49,11 +49,11 @@ define float @v_max3_maxnum_tree8_f32(float %a, float %b, float %c, float %d,
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_max3_num_f32 v0, v0, v1, v2
-; GFX1250-NEXT:    v_max_num_f32_e32 v1, v3, v3
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_max_num_f32_e32 v0, v0, v1
 ; GFX1250-NEXT:    v_max3_num_f32 v1, v4, v5, v6
-; GFX1250-NEXT:    v_max3_num_f32 v0, v0, v1, v7
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_max3_num_f32 v0, v0, v3, v1
+; GFX1250-NEXT:    v_max_num_f32_e32 v1, v7, v7
+; GFX1250-NEXT:    v_max_num_f32_e32 v0, v0, v1
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
                                       float %e, float %f, float %g, float %h) {
   %ab = call float @llvm.maxnum.f32(float %a, float %b)
@@ -132,9 +132,9 @@ define float @v_maximum3_tree8_f32(float %a, float %b, float %c, float %d,
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_maximum3_f32 v0, v0, v1, v2
 ; GFX1250-NEXT:    v_maximum3_f32 v1, v4, v5, v6
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_maximum_f32 v0, v0, v3
-; GFX1250-NEXT:    v_maximum3_f32 v0, v0, v1, v7
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_maximum3_f32 v0, v0, v3, v1
+; GFX1250-NEXT:    v_maximum_f32 v0, v0, v7
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
                                     float %e, float %f, float %g, float %h) {
   %ab = call float @llvm.maximum.f32(float %a, float %b)
@@ -261,17 +261,15 @@ define float @v_maximum3_tree16_f32(float %a, float %b, float %c, float %d,
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_maximum3_f32 v0, v0, v1, v2
-; GFX1250-NEXT:    v_maximum3_f32 v1, v8, v9, v10
-; GFX1250-NEXT:    v_maximum3_f32 v2, v4, v5, v6
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-NEXT:    v_maximum_f32 v0, v0, v3
-; GFX1250-NEXT:    v_maximum_f32 v1, v1, v11
-; GFX1250-NEXT:    v_maximum3_f32 v3, v12, v13, v14
+; GFX1250-NEXT:    v_maximum3_f32 v1, v4, v5, v6
+; GFX1250-NEXT:    v_maximum3_f32 v2, v8, v9, v10
+; GFX1250-NEXT:    v_maximum3_f32 v4, v12, v13, v14
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-NEXT:    v_maximum3_f32 v0, v0, v2, v7
-; GFX1250-NEXT:    v_maximum3_f32 v1, v1, v3, v15
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_maximum_f32 v0, v0, v1
+; GFX1250-NEXT:    v_maximum3_f32 v0, v0, v3, v1
+; GFX1250-NEXT:    v_maximum3_f32 v1, v2, v11, v4
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_maximum3_f32 v0, v0, v7, v1
+; GFX1250-NEXT:    v_maximum_f32 v0, v0, v15
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
                                      float %e, float %f, float %g, float %h,
                                      float %i, float %j, float %k, float %l,
@@ -318,9 +316,10 @@ define float @v_maximum3_tree_unbalanced_f32(float %a, float %b, float %c, float
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_maximum3_f32 v0, v0, v1, v2
+; GFX1250-NEXT:    v_maximum_f32 v0, v0, v1
+; GFX1250-NEXT:    v_maximum_f32 v1, v2, v3
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_maximum3_f32 v0, v0, v3, v4
+; GFX1250-NEXT:    v_maximum3_f32 v0, v0, v1, v4
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %ab = call float @llvm.maximum.f32(float %a, float %b)
   %cd = call float @llvm.maximum.f32(float %c, float %d)
@@ -397,11 +396,12 @@ define float @v_maximum3_tree8_asymmetric_use(float %a, float %b, float %c, floa
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_maximum3_f32 v4, v4, v5, v6
+; GFX1250-NEXT:    v_maximum_f32 v0, v0, v1
+; GFX1250-NEXT:    v_maximum_f32 v1, v2, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_maximum_f32 v2, v4, v7
 ; GFX1250-NEXT:    v_maximum3_f32 v0, v0, v1, v2
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_maximum_f32 v1, v4, v7
-; GFX1250-NEXT:    v_maximum3_f32 v0, v0, v3, v1
-; GFX1250-NEXT:    global_store_b32 v[8:9], v1, off
+; GFX1250-NEXT:    global_store_b32 v[8:9], v2, off
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
                                                float %e, float %f, float %g, float %h,
                                                ptr addrspace(1) %out) {
@@ -540,6 +540,222 @@ define bfloat @v_no_max3_maxnum_tree4_bf16(bfloat %a, bfloat %b, bfloat %c, bflo
   ret bfloat %result
 }
 
+; Two-level ternary tree
+define float @v_max3_maxnum_ternary_2level_f32(
+; GFX9-LABEL: v_max3_maxnum_ternary_2level_f32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_max3_f32 v0, v0, v1, v2
+; GFX9-NEXT:    v_max3_f32 v1, v3, v4, v5
+; GFX9-NEXT:    v_max3_f32 v2, v6, v7, v8
+; GFX9-NEXT:    v_max3_f32 v0, v0, v1, v2
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: v_max3_maxnum_ternary_2level_f32:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_max3_num_f32 v0, v0, v1, v2
+; GFX1250-NEXT:    v_max3_num_f32 v1, v3, v4, v5
+; GFX1250-NEXT:    v_max3_num_f32 v2, v6, v7, v8
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_max3_num_f32 v0, v0, v1, v2
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+    float %a, float %b, float %c,
+    float %d, float %e, float %f,
+    float %g, float %h, float %i) {
+  %ab = call float @llvm.maxnum.f32(float %a,  float %b)
+  %A  = call float @llvm.maxnum.f32(float %ab, float %c)
+  %de = call float @llvm.maxnum.f32(float %d,  float %e)
+  %B  = call float @llvm.maxnum.f32(float %de, float %f)
+  %gh = call float @llvm.maxnum.f32(float %g,  float %h)
+  %C  = call float @llvm.maxnum.f32(float %gh, float %i)
+  %AB = call float @llvm.maxnum.f32(float %A,  float %B)
+  %R  = call float @llvm.maxnum.f32(float %AB, float %C)
+  ret float %R
+}
+
+; Mixed ternary + binary: one operand is a 3-leaf ternary tree, the other is
+; a 4-leaf binary tree.
+define float @v_max3_maxnum_mixed_ternary_binary_f32(
+; GFX9-LABEL: v_max3_maxnum_mixed_ternary_binary_f32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_max3_f32 v0, v0, v1, v2
+; GFX9-NEXT:    v_max3_f32 v1, v3, v4, v5
+; GFX9-NEXT:    v_max3_f32 v0, v0, v1, v6
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: v_max3_maxnum_mixed_ternary_binary_f32:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_max3_num_f32 v0, v0, v1, v2
+; GFX1250-NEXT:    v_max3_num_f32 v1, v3, v4, v5
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_max3_num_f32 v0, v0, v1, v6
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+    float %a, float %b, float %c,
+    float %d, float %e, float %f, float %g) {
+  %ab = call float @llvm.maxnum.f32(float %a,  float %b)
+  %A  = call float @llvm.maxnum.f32(float %ab, float %c)
+  %de = call float @llvm.maxnum.f32(float %d,  float %e)
+  %fg = call float @llvm.maxnum.f32(float %f,  float %g)
+  %B  = call float @llvm.maxnum.f32(float %de, float %fg)
+  %R  = call float @llvm.maxnum.f32(float %A,  float %B)
+  ret float %R
+}
+
+; 4-value balanced binary tree on <2 x float>
+define <2 x float> @v_max3_maxnum_tree4_v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, <2 x float> %d) {
+; GFX9-LABEL: v_max3_maxnum_tree4_v2f32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_max3_f32 v0, v0, v2, v4
+; GFX9-NEXT:    v_max_f32_e32 v2, v6, v6
+; GFX9-NEXT:    v_max_f32_e32 v0, v0, v2
+; GFX9-NEXT:    v_max3_f32 v1, v1, v3, v5
+; GFX9-NEXT:    v_max_f32_e32 v2, v7, v7
+; GFX9-NEXT:    v_max_f32_e32 v1, v1, v2
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: v_max3_maxnum_tree4_v2f32:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_max3_num_f32 v0, v0, v2, v4
+; GFX1250-NEXT:    v_max_num_f32_e32 v2, v6, v6
+; GFX1250-NEXT:    v_max3_num_f32 v1, v1, v3, v5
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_dual_max_num_f32 v3, v7, v7 :: v_dual_max_num_f32 v0, v0, v2
+; GFX1250-NEXT:    v_max_num_f32_e32 v1, v1, v3
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %max.ab = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %a, <2 x float> %b)
+  %max.cd = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %c, <2 x float> %d)
+  %result = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %max.ab, <2 x float> %max.cd)
+  ret <2 x float> %result
+}
+
+; 2-level ternary tree on <2 x float>
+define <2 x float> @v_max3_maxnum_ternary_2level_v2f32(
+; GFX9-LABEL: v_max3_maxnum_ternary_2level_v2f32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_max3_f32 v1, v1, v3, v5
+; GFX9-NEXT:    v_max3_f32 v0, v0, v2, v4
+; GFX9-NEXT:    v_max3_f32 v2, v7, v9, v11
+; GFX9-NEXT:    v_max3_f32 v3, v6, v8, v10
+; GFX9-NEXT:    v_max3_f32 v4, v13, v15, v17
+; GFX9-NEXT:    v_max3_f32 v5, v12, v14, v16
+; GFX9-NEXT:    v_max3_f32 v0, v0, v3, v5
+; GFX9-NEXT:    v_max3_f32 v1, v1, v2, v4
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: v_max3_maxnum_ternary_2level_v2f32:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_max3_num_f32 v1, v1, v3, v5
+; GFX1250-NEXT:    v_max3_num_f32 v0, v0, v2, v4
+; GFX1250-NEXT:    v_max3_num_f32 v2, v7, v9, v11
+; GFX1250-NEXT:    v_max3_num_f32 v3, v6, v8, v10
+; GFX1250-NEXT:    v_max3_num_f32 v4, v12, v14, v16
+; GFX1250-NEXT:    v_max3_num_f32 v5, v13, v15, v17
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_max3_num_f32 v0, v0, v3, v4
+; GFX1250-NEXT:    v_max3_num_f32 v1, v1, v2, v5
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+    <2 x float> %a, <2 x float> %b, <2 x float> %c,
+    <2 x float> %d, <2 x float> %e, <2 x float> %f,
+    <2 x float> %g, <2 x float> %h, <2 x float> %i) {
+  %ab = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %a,  <2 x float> %b)
+  %A  = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %ab, <2 x float> %c)
+  %de = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %d,  <2 x float> %e)
+  %B  = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %de, <2 x float> %f)
+  %gh = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %g,  <2 x float> %h)
+  %C  = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %gh, <2 x float> %i)
+  %AB = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %A,  <2 x float> %B)
+  %R  = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %AB, <2 x float> %C)
+  ret <2 x float> %R
+}
+
+; 4-value balanced binary tree on <2 x half>
+define <2 x half> @v_max3_maxnum_tree4_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <2 x half> %d) {
+; GFX9-LABEL: v_max3_maxnum_tree4_v2f16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX9-NEXT:    v_pk_max_f16 v1, v3, v3
+; GFX9-NEXT:    v_pk_max_f16 v2, v2, v2
+; GFX9-NEXT:    v_pk_max_f16 v1, v2, v1
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: v_max3_maxnum_tree4_v2f16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_max3_num_f16 v0, v0, v1, v2
+; GFX1250-NEXT:    v_pk_max_num_f16 v1, v3, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_pk_max_num_f16 v0, v0, v1
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %max.ab = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> %b)
+  %max.cd = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %c, <2 x half> %d)
+  %result = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %max.ab, <2 x half> %max.cd)
+  ret <2 x half> %result
+}
+
+; 2-level ternary tree on <2 x half>
+define <2 x half> @v_max3_maxnum_ternary_2level_v2f16(
+; GFX9-LABEL: v_max3_maxnum_ternary_2level_v2f16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX9-NEXT:    v_pk_max_f16 v1, v2, v2
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX9-NEXT:    v_pk_max_f16 v1, v4, v4
+; GFX9-NEXT:    v_pk_max_f16 v2, v3, v3
+; GFX9-NEXT:    v_pk_max_f16 v1, v2, v1
+; GFX9-NEXT:    v_pk_max_f16 v2, v5, v5
+; GFX9-NEXT:    v_pk_max_f16 v1, v1, v2
+; GFX9-NEXT:    v_pk_max_f16 v2, v7, v7
+; GFX9-NEXT:    v_pk_max_f16 v3, v6, v6
+; GFX9-NEXT:    v_pk_max_f16 v2, v3, v2
+; GFX9-NEXT:    v_pk_max_f16 v3, v8, v8
+; GFX9-NEXT:    v_pk_max_f16 v2, v2, v3
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: v_max3_maxnum_ternary_2level_v2f16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_max3_num_f16 v0, v0, v1, v2
+; GFX1250-NEXT:    v_pk_max3_num_f16 v1, v3, v4, v5
+; GFX1250-NEXT:    v_pk_max3_num_f16 v2, v6, v7, v8
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_pk_max3_num_f16 v0, v0, v1, v2
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+    <2 x half> %a, <2 x half> %b, <2 x half> %c,
+    <2 x half> %d, <2 x half> %e, <2 x half> %f,
+    <2 x half> %g, <2 x half> %h, <2 x half> %i) {
+  %ab = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a,  <2 x half> %b)
+  %A  = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %ab, <2 x half> %c)
+  %de = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %d,  <2 x half> %e)
+  %B  = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %de, <2 x half> %f)
+  %gh = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %g,  <2 x half> %h)
+  %C  = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %gh, <2 x half> %i)
+  %AB = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %A,  <2 x half> %B)
+  %R  = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %AB, <2 x half> %C)
+  ret <2 x half> %R
+}
+
 declare float @llvm.maxnum.f32(float, float)
 declare float @llvm.minnum.f32(float, float)
 declare float @llvm.maximum.f32(float, float)
@@ -547,3 +763,5 @@ declare float @llvm.minimum.f32(float, float)
 declare half @llvm.maxnum.f16(half, half)
 declare double @llvm.maxnum.f64(double, double)
 declare bfloat @llvm.maxnum.bf16(bfloat, bfloat)
+declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>)
+declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>)

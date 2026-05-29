@@ -2337,13 +2337,13 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
     TIMESCOPE_WITH_DETAILS_AND_IDENT(
         "Kernel Target",
         "NumArguments=" + std::to_string(KernelArgs.NumArgs) +
-            ";NumTeams=" + std::to_string(KernelArgs.NumTeams[0]) +
+            ";NumTeams=" + std::to_string(KernelArgs.UserNumBlocks[0]) +
             ";TripCount=" + std::to_string(KernelArgs.Tripcount),
         Loc);
 
 #ifdef OMPT_SUPPORT
     /// RAII to establish tool anchors before and after kernel launch
-    int32_t NumTeams = KernelArgs.NumTeams[0];
+    int32_t NumTeams = KernelArgs.UserNumBlocks[0];
     // No need to guard this with OMPT_IF_BUILT
     InterfaceRAII TargetSubmitRAII(
         RegionInterface.getCallbacks<ompt_callback_target_submit>(), NumTeams);
@@ -2391,6 +2391,7 @@ int target_activate_rr(DeviceTy &Device, uint64_t MemorySize, void *VAddr,
 /// configuration.
 int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                   void *DeviceMemory, int64_t DeviceMemorySize,
+                  void *ReuseDeviceAlloc,
                   const llvm::offloading::EntryTy *Globals, int32_t NumGlobals,
                   void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
                   int32_t NumTeams, int32_t ThreadLimit,
@@ -2448,12 +2449,19 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
     }
   }
 
-  void *TgtPtr = Device.allocData(DeviceMemorySize, /*HstPtr=*/nullptr,
-                                  TARGET_ALLOC_DEFAULT);
+  // Reuse a previous device allocation or allocate a new device buffer.
+  void *&TgtPtr = ReuseDeviceAlloc;
+  if (!TgtPtr)
+    TgtPtr = Device.allocData(DeviceMemorySize, /*HstPtr=*/nullptr,
+                              TARGET_ALLOC_DEFAULT);
   if (!TgtPtr) {
     REPORT() << "Failed to allocate device memory.";
     return OFFLOAD_FAIL;
   }
+
+  // Save the device allocation for future replays of the same kernel.
+  if (ReplayOutcome)
+    ReplayOutcome->ReplayDeviceAlloc = TgtPtr;
 
   int Ret =
       Device.submitData(TgtPtr, DeviceMemory, DeviceMemorySize, AsyncInfo);
@@ -2466,12 +2474,12 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   KernelArgs.Version = OMP_KERNEL_ARG_VERSION;
   KernelArgs.NumArgs = NumArgs;
   KernelArgs.Tripcount = LoopTripCount;
-  KernelArgs.NumTeams[0] = NumTeams;
-  KernelArgs.NumTeams[1] = 1;
-  KernelArgs.NumTeams[2] = 1;
-  KernelArgs.ThreadLimit[0] = ThreadLimit;
-  KernelArgs.ThreadLimit[1] = 1;
-  KernelArgs.ThreadLimit[2] = 1;
+  KernelArgs.UserNumBlocks[0] = NumTeams;
+  KernelArgs.UserNumBlocks[1] = 1;
+  KernelArgs.UserNumBlocks[2] = 1;
+  KernelArgs.UserThreadLimit[0] = ThreadLimit;
+  KernelArgs.UserThreadLimit[1] = 1;
+  KernelArgs.UserThreadLimit[2] = 1;
   KernelArgs.DynCGroupMem = SharedMemorySize;
 
   KernelExtraArgsTy KernelExtraArgs{};

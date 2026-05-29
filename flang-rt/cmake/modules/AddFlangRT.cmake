@@ -94,6 +94,10 @@ function (add_flangrt_library name)
     set(build_object ON)
   elseif (build_static AND build_shared)
     set(build_object ON)
+  elseif (NOT build_static AND NOT build_shared)
+    # If not building a library, still build the object files
+    # Needed to generate the .mod files as byproduct
+    set(build_object ON)
   endif ()
 
   # srctargets: targets that contain source files
@@ -123,9 +127,7 @@ function (add_flangrt_library name)
   endif ()
 
   # Include the RPC utilities from the `libc` project.
-  if (TARGET llvm-libc-common-utilities)
-    set(extra_deps llvm-libc-common-utilities)
-  endif()
+  set(extra_deps llvm-libc-common-utilities)
 
   # Also add header files to IDEs to list as part of the library.
   set_source_files_properties(${ARG_ADDITIONAL_HEADERS} PROPERTIES HEADER_FILE_ONLY ON)
@@ -174,14 +176,18 @@ function (add_flangrt_library name)
     if (BUILD_SHARED_LIBS)
       if (build_shared)
         set(default_target "${name_shared}")
-      else ()
+      elseif (build_static)
         set(default_target "${name_static}")
+      else ()
+        set(default_target "${name_object}")
       endif ()
     else ()
       if (build_static)
         set(default_target "${name_static}")
-      else ()
+      elseif (build_shared)
         set(default_target "${name_shared}")
+      else ()
+        set(default_target "${name_object}")
       endif ()
     endif ()
     add_library(${name}.default ALIAS "${default_target}")
@@ -195,6 +201,15 @@ function (add_flangrt_library name)
       add_dependencies(${name} ${libtargets})
     endif ()
   endif ()
+
+  # An alias for the target that compiles the sources. When building a shared
+  # and static library at the same time, the sources are compiled in an object
+  # library, so there can be only one.
+  # Can be used to introspect and change the real target's properties, like:
+  #
+  # get_target_property(compile_target ${name}.compile ALIASED_TARGET)
+  # target_sources(${compile_target} more_sources.c)
+  add_library(${name}.compile ALIAS "${srctargets}")
 
   foreach (tgtname IN LISTS libtargets)
     if (NOT WIN32)
@@ -225,11 +240,25 @@ function (add_flangrt_library name)
     # Minimum required C++ version for Flang-RT, even if CMAKE_CXX_STANDARD is defined to something else.
     target_compile_features(${tgtname} PRIVATE cxx_std_17)
 
+    if (CMAKE_Fortran_COMPILER_ID MATCHES "LLVM")
+      target_compile_options(${tgtname} PRIVATE
+        # Always enable preprocessor regardless of file extension
+        "$<$<COMPILE_LANGUAGE:Fortran>:-cpp>"
+
+        # Missing type descriptors are expected for intrinsic modules
+        "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-mmlir;SHELL:-ignore-missing-type-desc>"
+      )
+    endif ()
+
     # When building the flang runtime if LTO is enabled the archive file
     # contains LLVM IR rather than object code. Currently flang is not
     # LTO aware so cannot link this file to compiled Fortran code.
     if (FLANG_RT_HAS_FNO_LTO_FLAG)
       target_compile_options(${tgtname} PRIVATE -fno-lto)
+    endif ()
+
+    if (FORTRAN_SUPPORTS_REAL16)
+      target_compile_definitions(${tgtname} PRIVATE FLANG_SUPPORT_R16=1)
     endif ()
 
     # Use compiler-specific options to disable exceptions and RTTI.
@@ -345,6 +374,20 @@ function (add_flangrt_library name)
     # directory. Otherwise it is part of testing and is not installed at all.
     # TODO: Consider multi-configuration builds (MSVC_IDE, "Ninja Multi-Config")
     if (ARG_INSTALL_WITH_TOOLCHAIN)
+      # FIXME: RUNTIMES_OUTPUT_RESOURCE_LIB_DIR is not a good location for
+      #        shared libraries because it is not a ld.so default search path.
+      #        Also, the machine where the executable is eventually executed may
+      #        not be one where the compiler is installed, so even RPATH/RUNPATH
+      #        will not help. The most appropriate location for shared libraries
+      #        is /usr/lib/<triple>/lib<name>.so, like e.g. libgcc_s.so.
+      #        Flang-RT also would require a library versioning scheme so
+      #        executables compiled with different versions of Flang either use
+      #        matching versions of Flang-RT, or use a newer backward-compatible
+      #        version. Currently, Flang-RT has no ABI backwards-compatibility
+      #        policy.
+      #        Currently, we just emit it into RUNTIMES_OUTPUT_RESOURCE_LIB_DIR
+      #        like the static library, which is already in the driver's and
+      #        linker's search path.
       set_target_properties(${tgtname}
         PROPERTIES
           ARCHIVE_OUTPUT_DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_LIB_DIR}"

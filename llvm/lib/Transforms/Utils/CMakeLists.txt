@@ -2,6 +2,7 @@ add_llvm_component_library(LLVMTransformUtils
   AddDiscriminators.cpp
   AMDGPUEmitPrintf.cpp
   ASanStackFrameLayout.cpp
+  AssignGUID.cpp
   AssumeBundleBuilder.cpp
   BasicBlockUtils.cpp
   BreakCriticalEdges.cpp
@@ -40,6 +41,7 @@ add_llvm_component_library(LLVMTransformUtils
   Instrumentation.cpp
   IntegerDivision.cpp
   IRNormalizer.cpp
+  KCFIHash.cpp
   LCSSA.cpp
   LibCallsShrinkWrap.cpp
   Local.cpp

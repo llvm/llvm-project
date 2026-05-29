@@ -77,4 +77,22 @@ func.func @barrier_constant_only() {
   gpu.barrier memfence [#gpu.address_space<constant>]
   func.return
 }
+
+// CHECK-LABEL: func @barrier_subgroup_scope
+func.func @barrier_subgroup_scope() {
+  // CHECK-NEXT: llvm.fence syncscope("wavefront") release
+  // CHECK-NEXT: rocdl.wave.barrier
+  // CHECK-NEXT: llvm.fence syncscope("wavefront") acquire
+  gpu.barrier scope <subgroup>
+  func.return
+}
+
+// CHECK-LABEL: func @barrier_subgroup_scope_no_fence
+func.func @barrier_subgroup_scope_no_fence() {
+  // CHECK-NEXT: rocdl.wave.barrier
+  // CHECK-NOT: llvm.fence
+  gpu.barrier scope <subgroup> memfence []
+  func.return
+}
+
 }

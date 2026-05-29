@@ -111,7 +111,7 @@ protected:
       FormatT, llvm::function_ref<SerRet(const AnalysisResult &, SerArgs...)>,
       llvm::function_ref<DesRet(DesArgs...)>> {
 
-    using DeserializerFn = llvm::function_ref<DesRet(DesArgs...)>;
+    using DeserializerFn = DesRet (*)(DesArgs...);
 
   public:
     /// Abstract base type stored in \c llvm::Registry<Codec>.
@@ -130,8 +130,10 @@ protected:
     };
 
     template <class AnalysisResultT> struct Add {
-      using TypedSerializerFn =
-          llvm::function_ref<SerRet(const AnalysisResultT &, SerArgs...)>;
+      using TypedSerializerFn = SerRet (*)(const AnalysisResultT &, SerArgs...);
+
+      static inline TypedSerializerFn SavedSerialize;
+      static inline DeserializerFn SavedDeserialize;
 
       /// Takes the plugin's typed serializer and the deserializer, and
       /// inserts them into \c llvm::Registry<Codec>.
@@ -147,15 +149,19 @@ protected:
         Registered = true;
 
         /// The plugin's serializer and deserializer are captured in
-        /// function-local statics so that the \c ConcreteCodec default
-        /// constructor (required by \c llvm::Registry) can read them.
-        /// They are stored as instance members of \c ConcreteCodec rather
-        /// than \c static \c inline class members to avoid symbol
-        /// visibility issues across shared library boundaries on Linux
-        /// (where \c dlopen with \c RTLD_LOCAL can give the host and
-        /// plugin separate copies of \c static \c inline members).
-        static TypedSerializerFn SavedSerialize = TypedSerialize;
-        static DeserializerFn SavedDeserialize = Deserialize;
+        /// static inline members of the Add template so that the
+        /// \c ConcreteCodec default constructor (required by \c llvm::Registry)
+        /// can read them. They use raw function pointers to prevent dangling
+        /// references to temporary stack variables during registration.
+        ///
+        /// Once read by the constructor, they are stored as instance members
+        /// of \c ConcreteCodec rather than directly executed from the \c static
+        /// \c inline class members. This prevents symbol visibility issues
+        /// across shared library boundaries on Linux (where \c dlopen with \c
+        /// RTLD_LOCAL can give the host and plugin separate copies of \c static
+        /// \c inline members).
+        SavedSerialize = TypedSerialize;
+        SavedDeserialize = Deserialize;
 
         /// Concrete subclass of \c Codec for \c AnalysisResultT.
         /// The \c serialize() override performs the downcast from

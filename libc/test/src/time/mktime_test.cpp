@@ -104,8 +104,9 @@ TEST(LlvmLibcMkTime, InvalidMinutes) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data),
-                Succeeds(-LIBC_NAMESPACE::time_constants::SECONDS_PER_MIN));
+    EXPECT_THAT(
+        LIBC_NAMESPACE::mktime(&tm_data),
+        Succeeds<time_t>(-LIBC_NAMESPACE::time_constants::SECONDS_PER_MIN));
     EXPECT_TM_EQ((tm{.tm_sec = 0,
                      .tm_min = 59,
                      .tm_hour = 23,
@@ -129,8 +130,9 @@ TEST(LlvmLibcMkTime, InvalidMinutes) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data),
-                Succeeds(60 * LIBC_NAMESPACE::time_constants::SECONDS_PER_MIN));
+    EXPECT_THAT(
+        LIBC_NAMESPACE::mktime(&tm_data),
+        Succeeds<time_t>(60 * LIBC_NAMESPACE::time_constants::SECONDS_PER_MIN));
     EXPECT_TM_EQ((tm{.tm_sec = 0,
                      .tm_min = 0,
                      .tm_hour = 1,
@@ -156,8 +158,9 @@ TEST(LlvmLibcMkTime, InvalidHours) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data),
-                Succeeds(-LIBC_NAMESPACE::time_constants::SECONDS_PER_HOUR));
+    EXPECT_THAT(
+        LIBC_NAMESPACE::mktime(&tm_data),
+        Succeeds<time_t>(-LIBC_NAMESPACE::time_constants::SECONDS_PER_HOUR));
     EXPECT_TM_EQ((tm{.tm_sec = 0,
                      .tm_min = 0,
                      .tm_hour = 23,
@@ -181,9 +184,9 @@ TEST(LlvmLibcMkTime, InvalidHours) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(
-        LIBC_NAMESPACE::mktime(&tm_data),
-        Succeeds(24 * LIBC_NAMESPACE::time_constants::SECONDS_PER_HOUR));
+    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data),
+                Succeeds<time_t>(
+                    24 * LIBC_NAMESPACE::time_constants::SECONDS_PER_HOUR));
     EXPECT_TM_EQ((tm{.tm_sec = 0,
                      .tm_min = 0,
                      .tm_hour = 0,
@@ -208,8 +211,9 @@ TEST(LlvmLibcMkTime, InvalidYear) {
                     .tm_wday = 0,
                     .tm_yday = 0,
                     .tm_isdst = 0};
-  EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data),
-              Succeeds(-LIBC_NAMESPACE::time_constants::DAYS_PER_NON_LEAP_YEAR *
+  EXPECT_THAT(
+      LIBC_NAMESPACE::mktime(&tm_data),
+      Succeeds<time_t>(-LIBC_NAMESPACE::time_constants::DAYS_PER_NON_LEAP_YEAR *
                        LIBC_NAMESPACE::time_constants::SECONDS_PER_DAY));
   EXPECT_TM_EQ((tm{.tm_sec = 0,
                    .tm_min = 0,
@@ -237,7 +241,7 @@ TEST(LlvmLibcMkTime, InvalidEndOf32BitEpochYear) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails(EOVERFLOW));
+    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails<time_t>(EOVERFLOW));
   }
 
   {
@@ -251,7 +255,7 @@ TEST(LlvmLibcMkTime, InvalidEndOf32BitEpochYear) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails(EOVERFLOW));
+    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails<time_t>(EOVERFLOW));
   }
 
   {
@@ -265,7 +269,7 @@ TEST(LlvmLibcMkTime, InvalidEndOf32BitEpochYear) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails(EOVERFLOW));
+    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails<time_t>(EOVERFLOW));
   }
 
   {
@@ -279,7 +283,7 @@ TEST(LlvmLibcMkTime, InvalidEndOf32BitEpochYear) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails(EOVERFLOW));
+    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails<time_t>(EOVERFLOW));
   }
 
   {
@@ -293,7 +297,7 @@ TEST(LlvmLibcMkTime, InvalidEndOf32BitEpochYear) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails(EOVERFLOW));
+    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails<time_t>(EOVERFLOW));
   }
 
   {
@@ -307,7 +311,7 @@ TEST(LlvmLibcMkTime, InvalidEndOf32BitEpochYear) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails(EOVERFLOW));
+    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails<time_t>(EOVERFLOW));
   }
 }
 
@@ -323,9 +327,9 @@ TEST(LlvmLibcMkTime, InvalidMonths) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(
-        LIBC_NAMESPACE::mktime(&tm_data),
-        Succeeds(-32 * LIBC_NAMESPACE::time_constants::SECONDS_PER_DAY));
+    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data),
+                Succeeds<time_t>(
+                    -32 * LIBC_NAMESPACE::time_constants::SECONDS_PER_DAY));
     EXPECT_TM_EQ((tm{.tm_sec = 0,
                      .tm_min = 0,
                      .tm_hour = 0,
@@ -349,10 +353,10 @@ TEST(LlvmLibcMkTime, InvalidMonths) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(
-        LIBC_NAMESPACE::mktime(&tm_data),
-        Succeeds(LIBC_NAMESPACE::time_constants::DAYS_PER_NON_LEAP_YEAR *
-                 LIBC_NAMESPACE::time_constants::SECONDS_PER_DAY));
+    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data),
+                Succeeds<time_t>(
+                    LIBC_NAMESPACE::time_constants::DAYS_PER_NON_LEAP_YEAR *
+                    LIBC_NAMESPACE::time_constants::SECONDS_PER_DAY));
     EXPECT_TM_EQ((tm{.tm_sec = 0,
                      .tm_min = 0,
                      .tm_hour = 0,
@@ -378,8 +382,9 @@ TEST(LlvmLibcMkTime, InvalidDays) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data),
-                Succeeds(-1 * LIBC_NAMESPACE::time_constants::SECONDS_PER_DAY));
+    EXPECT_THAT(
+        LIBC_NAMESPACE::mktime(&tm_data),
+        Succeeds<time_t>(-1 * LIBC_NAMESPACE::time_constants::SECONDS_PER_DAY));
     EXPECT_TM_EQ((tm{.tm_sec = 0,
                      .tm_min = 0,
                      .tm_hour = 0,
@@ -403,8 +408,9 @@ TEST(LlvmLibcMkTime, InvalidDays) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data),
-                Succeeds(31 * LIBC_NAMESPACE::time_constants::SECONDS_PER_DAY));
+    EXPECT_THAT(
+        LIBC_NAMESPACE::mktime(&tm_data),
+        Succeeds<time_t>(31 * LIBC_NAMESPACE::time_constants::SECONDS_PER_DAY));
     EXPECT_TM_EQ((tm{.tm_sec = 0,
                      .tm_min = 0,
                      .tm_hour = 0,
@@ -428,8 +434,9 @@ TEST(LlvmLibcMkTime, InvalidDays) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data),
-                Succeeds(59 * LIBC_NAMESPACE::time_constants::SECONDS_PER_DAY));
+    EXPECT_THAT(
+        LIBC_NAMESPACE::mktime(&tm_data),
+        Succeeds<time_t>(59 * LIBC_NAMESPACE::time_constants::SECONDS_PER_DAY));
     EXPECT_TM_EQ((tm{.tm_sec = 0,
                      .tm_min = 0,
                      .tm_hour = 0,
@@ -455,9 +462,10 @@ TEST(LlvmLibcMkTime, InvalidDays) {
                       .tm_isdst = 0};
     EXPECT_THAT(
         LIBC_NAMESPACE::mktime(&tm_data),
-        Succeeds(((2 * LIBC_NAMESPACE::time_constants::DAYS_PER_NON_LEAP_YEAR) +
-                  60) *
-                 LIBC_NAMESPACE::time_constants::SECONDS_PER_DAY));
+        Succeeds<time_t>(
+            ((2 * LIBC_NAMESPACE::time_constants::DAYS_PER_NON_LEAP_YEAR) +
+             60) *
+            LIBC_NAMESPACE::time_constants::SECONDS_PER_DAY));
     EXPECT_TM_EQ((tm{.tm_sec = 0,
                      .tm_min = 0,
                      .tm_hour = 0,
@@ -484,7 +492,7 @@ TEST(LlvmLibcMkTime, EndOf32BitEpochYear) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Succeeds(0x7FFFFFFF));
+    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Succeeds<time_t>(0x7FFFFFFF));
     EXPECT_TM_EQ((tm{.tm_sec = 7,
                      .tm_min = 14,
                      .tm_hour = 3,
@@ -510,7 +518,8 @@ TEST(LlvmLibcMkTime, EndOf32BitEpochYear) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Succeeds(0x7FFFFFFF - 8));
+    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data),
+                Succeeds<time_t>(0x7FFFFFFF - 8));
     EXPECT_TM_EQ((tm{.tm_sec = 59,
                      .tm_min = 13,
                      .tm_hour = 3,
@@ -535,8 +544,9 @@ TEST(LlvmLibcMkTime, EndOf32BitEpochYear) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data),
-                Succeeds(0x7FFFFFFF - 8 -
+    EXPECT_THAT(
+        LIBC_NAMESPACE::mktime(&tm_data),
+        Succeeds<time_t>(0x7FFFFFFF - 8 -
                          14 * LIBC_NAMESPACE::time_constants::SECONDS_PER_MIN));
     EXPECT_TM_EQ((tm{.tm_sec = 59,
                      .tm_min = 59,
@@ -562,8 +572,9 @@ TEST(LlvmLibcMkTime, EndOf32BitEpochYear) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data),
-                Succeeds(0x7FFFFFFF - 8 -
+    EXPECT_THAT(
+        LIBC_NAMESPACE::mktime(&tm_data),
+        Succeeds<time_t>(0x7FFFFFFF - 8 -
                          14 * LIBC_NAMESPACE::time_constants::SECONDS_PER_MIN -
                          3 * LIBC_NAMESPACE::time_constants::SECONDS_PER_HOUR));
     EXPECT_TM_EQ((tm{.tm_sec = 59,
@@ -590,8 +601,9 @@ TEST(LlvmLibcMkTime, EndOf32BitEpochYear) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data),
-                Succeeds(0x7FFFFFFF - 8 -
+    EXPECT_THAT(
+        LIBC_NAMESPACE::mktime(&tm_data),
+        Succeeds<time_t>(0x7FFFFFFF - 8 -
                          14 * LIBC_NAMESPACE::time_constants::SECONDS_PER_MIN -
                          3 * LIBC_NAMESPACE::time_constants::SECONDS_PER_HOUR -
                          18 * LIBC_NAMESPACE::time_constants::SECONDS_PER_DAY));

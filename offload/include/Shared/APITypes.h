@@ -104,12 +104,13 @@ struct KernelArgsTy {
     uint64_t NoWait : 1; // Was this kernel spawned with a `nowait` clause.
     uint64_t IsCUDA : 1; // Was this kernel spawned via CUDA.
     uint64_t DynCGroupMemFallback : 2; // The fallback for dynamic cgroup mem.
-    uint64_t Unused : 60;
-  } Flags = {0, 0, 0, 0};
-  // The number of teams (for x,y,z dimension).
-  uint32_t NumTeams[3] = {0, 0, 0};
-  // The number of threads (for x,y,z dimension).
-  uint32_t ThreadLimit[3] = {0, 0, 0};
+    uint64_t Cooperative : 1; // Was this kernel spawned as cooperative.
+    uint64_t Unused : 59;
+  } Flags = {0, 0, 0, 0, 0};
+  // User-requested number of blocks (for x,y,z dimension).
+  uint32_t UserNumBlocks[3] = {0, 0, 0};
+  // User-requested number of threads (for x,y,z dimension).
+  uint32_t UserThreadLimit[3] = {0, 0, 0};
   uint32_t DynCGroupMem = 0; // Amount of dynamic cgroup memory requested.
 };
 static_assert(sizeof(KernelArgsTy().Flags) == sizeof(uint64_t),
@@ -134,6 +135,12 @@ struct KernelReplayOutcomeTy {
   /// The path to the file that stores the output memory snapshot after the
   /// kernel has been replayed.
   llvm::SmallString<128> OutputFilepath;
+  /// The execution time of the kernel replay in nanoseconds. This time includes
+  /// the the kernel launch and synchronization time. Replay I/O is excluded.
+  uint64_t KernelReplayTimeNs = 0;
+  /// The pointer to the device memory allocation used to replay. This can be
+  /// reused for future replays of the same kernel.
+  void *ReplayDeviceAlloc = nullptr;
 };
 
 /// Extra kernel arguments managed by the runtime components. Notice these

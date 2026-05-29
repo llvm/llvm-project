@@ -274,7 +274,7 @@ define ptr @test11(ptr) local_unnamed_addr {
 ; FNATTRS-NEXT:    ret ptr [[TMP6]]
 ;
 ; ATTRIBUTOR-LABEL: define nonnull ptr @test11(
-; ATTRIBUTOR-SAME: ptr [[TMP0:%.*]]) local_unnamed_addr {
+; ATTRIBUTOR-SAME: ptr nofree [[TMP0:%.*]]) local_unnamed_addr {
 ; ATTRIBUTOR-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
 ; ATTRIBUTOR-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
 ; ATTRIBUTOR:       3:
@@ -852,20 +852,14 @@ f:
 }
 
 ; The callsite must execute in order for the attribute to transfer to the parent.
-; The volatile load can't trap, so we can guarantee that we'll get to the call.
+; The volatile load can trap, so we can't guarantee that we'll get to the call.
 
 define i8 @parent6(ptr %a, ptr %b) {
-; FNATTRS-LABEL: define i8 @parent6(
-; FNATTRS-SAME: ptr nonnull [[A:%.*]], ptr [[B:%.*]]) {
-; FNATTRS-NEXT:    [[C:%.*]] = load volatile i8, ptr [[B]], align 1
-; FNATTRS-NEXT:    call void @use1nonnull(ptr [[A]])
-; FNATTRS-NEXT:    ret i8 [[C]]
-;
-; ATTRIBUTOR-LABEL: define i8 @parent6(
-; ATTRIBUTOR-SAME: ptr nonnull [[A:%.*]], ptr nofree [[B:%.*]]) {
-; ATTRIBUTOR-NEXT:    [[C:%.*]] = load volatile i8, ptr [[B]], align 1
-; ATTRIBUTOR-NEXT:    call void @use1nonnull(ptr nonnull [[A]])
-; ATTRIBUTOR-NEXT:    ret i8 [[C]]
+; COMMON-LABEL: define i8 @parent6(
+; COMMON-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) {
+; COMMON-NEXT:    [[C:%.*]] = load volatile i8, ptr [[B]], align 1
+; COMMON-NEXT:    call void @use1nonnull(ptr [[A]])
+; COMMON-NEXT:    ret i8 [[C]]
 ;
 
   %c = load volatile i8, ptr %b

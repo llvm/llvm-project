@@ -156,8 +156,15 @@ insertPrefetchHints(MachineFunction &MF,
           // __llvm_prefetch_target_foo_x_y:
           MCSymbolELF *WeakFallbackSym = static_cast<MCSymbolELF *>(
               MF.getContext().getOrCreateSymbol(TargetSymbolName));
-          WeakFallbackSym->setBinding(ELF::STB_WEAK);
-          PrefetchInstr->setPostInstrSymbol(MF, WeakFallbackSym);
+          // The fallback symbol may have been defined via another prefetch
+          // instruction in the same module, in which case we should not emit it
+          // here. Ideally, getOrCreateSymbol should tell us if the symbol
+          // existed, but we use `isBindingSet()` since that API is not
+          // available.
+          if (!WeakFallbackSym->isBindingSet()) {
+            WeakFallbackSym->setBinding(ELF::STB_WEAK);
+            PrefetchInstr->setPostInstrSymbol(MF, WeakFallbackSym);
+          }
         }
         PrefetchInserted = true;
         ++HintIt;

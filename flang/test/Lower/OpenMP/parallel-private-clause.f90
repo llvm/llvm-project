@@ -1,7 +1,7 @@
 ! This test checks lowering of OpenMP parallel Directive with
 ! `PRIVATE` clause present.
 
-! RUN: bbc --use-desc-for-alloc=false -fopenmp -emit-hlfir %s -o - \
+! RUN: bbc -fopenmp -emit-hlfir %s -o - \
 ! RUN: | FileCheck %s --check-prefix=FIRDialect
 
 ! FIRDialect: omp.private {type = private} @_QFsimd_loop_1Er_private_box_heap_f32 : !fir.box<!fir.heap<f32>> init {

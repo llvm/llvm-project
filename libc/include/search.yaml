@@ -21,13 +21,15 @@ functions:
     arguments:
       - type: size_t
   - name: hcreate_r
-    standards: gnu
+    standards:
+      - gnu
     return_type: int
     arguments:
       - type: size_t
       - type: struct hsearch_data *
   - name: hdestroy
-    standards: gnu
+    standards:
+      - gnu
     return_type: void
     arguments: []
   - name: hdestroy_r
@@ -44,7 +46,8 @@ functions:
       - type: ENTRY
       - type: ACTION
   - name: hsearch_r
-    standards: gnu
+    standards:
+      - gnu
     return_type: int
     arguments:
       - type: ENTRY
@@ -116,14 +119,16 @@ functions:
       - type: const posix_tnode *
       - type: __action_fn_t
   - name: twalk_r
-    standards: gnu
+    standards:
+      - gnu
     return_type: void
     arguments:
       - type: const posix_tnode *
       - type: __action_closure_fn_t
       - type: void *
   - name: tdestroy
-    standards: gnu
+    standards:
+      - gnu
     return_type: void
     arguments:
       - type: posix_tnode *

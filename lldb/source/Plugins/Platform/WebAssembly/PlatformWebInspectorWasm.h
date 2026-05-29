@@ -45,7 +45,7 @@ public:
 private:
   static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
 
-  PlatformWebInspectorWasm() = default;
+  PlatformWebInspectorWasm();
 
   llvm::Error LaunchPlatformServer();
   llvm::Error EnsureConnected();

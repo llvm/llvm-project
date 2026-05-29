@@ -13,18 +13,26 @@
 #include "ubsan_platform.h"
 #if CAN_SANITIZE_UB
 #include "ubsan_diag.h"
-#include "ubsan_init.h"
 #include "ubsan_flags.h"
+#include "ubsan_init.h"
 #include "ubsan_monitor.h"
+
+#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_stacktrace_printer.h"
 #include "sanitizer_common/sanitizer_suppressions.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
+
 #include <stdio.h>
 
 using namespace __ubsan;
+
+// Can be overriden in frontend.
+SANITIZER_INTERFACE_WEAK_DEF(const char *, __ubsan_default_suppressions, void) {
+  return "";
+}
 
 // UBSan is combined with runtimes that already provide this functionality
 // (e.g., ASan) as well as runtimes that lack it (e.g., scudo). Tried to use
@@ -417,6 +425,7 @@ void __ubsan::InitializeSuppressions() {
   suppression_ctx = new (suppression_placeholder)
       SuppressionContext(kSuppressionTypes, ARRAY_SIZE(kSuppressionTypes));
   suppression_ctx->ParseFromFile(flags()->suppressions);
+  suppression_ctx->Parse(__ubsan_default_suppressions());
 }
 
 bool __ubsan::IsVptrCheckSuppressed(const char *TypeName) {

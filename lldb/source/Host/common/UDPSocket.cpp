@@ -34,7 +34,7 @@ UDPSocket::UDPSocket(NativeSocket socket)
 
 UDPSocket::UDPSocket(bool should_close) : Socket(ProtocolUdp, should_close) {}
 
-size_t UDPSocket::Send(const void *buf, const size_t num_bytes) {
+ssize_t UDPSocket::Send(const void *buf, const size_t num_bytes) {
   return ::sendto(m_socket, static_cast<const char *>(buf), num_bytes, 0,
                   m_sockaddr, m_sockaddr.GetLength());
 }

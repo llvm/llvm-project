@@ -49,20 +49,6 @@ template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
 /// Match an arbitrary VPValue and ignore it.
 inline auto m_VPValue() { return m_Isa<VPValue>(); }
 
-template <typename Class> struct bind_ty {
-  Class *&VR;
-
-  bind_ty(Class *&V) : VR(V) {}
-
-  template <typename ITy> bool match(ITy *V) const {
-    if (auto *CV = dyn_cast<Class>(V)) {
-      VR = CV;
-      return true;
-    }
-    return false;
-  }
-};
-
 /// Match a specified VPValue.
 struct specificval_ty {
   const VPValue *Val;
@@ -74,23 +60,13 @@ struct specificval_ty {
 
 inline specificval_ty m_Specific(const VPValue *VPV) { return VPV; }
 
-/// Stores a reference to the VPValue *, not the VPValue * itself,
-/// thus can be used in commutative matchers.
-struct deferredval_ty {
-  VPValue *const &Val;
-
-  deferredval_ty(VPValue *const &V) : Val(V) {}
-
-  bool match(const VPValue *const V) const { return V == Val; }
-};
-
 /// Like m_Specific(), but works if the specific value to match is determined
 /// as part of the same match() expression. For example:
 /// m_Mul(m_VPValue(X), m_Specific(X)) is incorrect, because m_Specific() will
 /// bind X before the pattern match starts.
 /// m_Mul(m_VPValue(X), m_Deferred(X)) is correct, and will check against
 /// whichever value m_VPValue(X) populated.
-inline deferredval_ty m_Deferred(VPValue *const &V) { return V; }
+inline match_deferred<VPValue> m_Deferred(VPValue *const &V) { return V; }
 
 /// Match an integer constant if Pred::isValue returns true for the APInt. \p
 /// BitWidth optionally specifies the bitwidth the matched constant must have.
@@ -224,18 +200,21 @@ inline match_poison m_Poison() { return match_poison(); }
 inline bind_const_int m_ConstantInt(uint64_t &C) { return C; }
 
 /// Match a VPValue, capturing it if we match.
-inline bind_ty<VPValue> m_VPValue(VPValue *&V) { return V; }
+inline match_bind<VPValue> m_VPValue(VPValue *&V) { return V; }
 
 /// Match a VPIRValue.
-inline bind_ty<VPIRValue> m_VPIRValue(VPIRValue *&V) { return V; }
+inline match_bind<VPIRValue> m_VPIRValue(VPIRValue *&V) { return V; }
 
 /// Match a VPSingleDefRecipe, capturing if we match.
-inline bind_ty<VPSingleDefRecipe> m_VPSingleDefRecipe(VPSingleDefRecipe *&V) {
+inline match_bind<VPSingleDefRecipe>
+m_VPSingleDefRecipe(VPSingleDefRecipe *&V) {
   return V;
 }
 
 /// Match a VPInstruction, capturing if we match.
-inline bind_ty<VPInstruction> m_VPInstruction(VPInstruction *&V) { return V; }
+inline match_bind<VPInstruction> m_VPInstruction(VPInstruction *&V) {
+  return V;
+}
 
 template <typename Ops_t, unsigned Opcode, bool Commutative,
           typename... RecipeTys>
@@ -316,7 +295,8 @@ private:
   /// Helper to check if predicate \p P holds on all tuple elements in Ops using
   /// the provided index sequence.
   template <typename Fn, std::size_t... Is>
-  bool all_of_tuple_elements(std::index_sequence<Is...>, Fn P) const {
+  bool all_of_tuple_elements(std::index_sequence<Is...>,
+                             [[maybe_unused]] Fn P) const {
     return (P(std::get<Is>(Ops), Is) && ...);
   }
 };
@@ -357,6 +337,13 @@ m_c_VPInstruction(const Op0_t &Op0, const Op1_t &Op1) {
 /// number of operands is not fixed.
 inline VPInstruction_match<VPInstruction::BuildVector> m_BuildVector() {
   return m_VPInstruction<VPInstruction::BuildVector>();
+}
+
+/// BuildStructVector matches only its opcode, w/o matching its operands as the
+/// number of operands is not fixed.
+inline VPInstruction_match<VPInstruction::BuildStructVector>
+m_BuildStructVector() {
+  return m_VPInstruction<VPInstruction::BuildStructVector>();
 }
 
 template <typename Op0_t>
@@ -408,6 +395,12 @@ template <typename Op0_t, typename Op1_t>
 inline VPInstruction_match<Instruction::ExtractElement, Op0_t, Op1_t>
 m_ExtractElement(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<Instruction::ExtractElement>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+inline VPInstruction_match<Instruction::InsertElement, Op0_t, Op1_t, Op2_t>
+m_InsertElement(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return m_VPInstruction<Instruction::InsertElement>(Op0, Op1, Op2);
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -546,6 +539,11 @@ inline AllRecipe_match<Instruction::FPExt, Op0_t> m_FPExt(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
+inline AllRecipe_match<Instruction::FNeg, Op0_t> m_FNeg(const Op0_t &Op0) {
+  return m_Unary<Instruction::FNeg, Op0_t>(Op0);
+}
+
+template <typename Op0_t>
 inline match_combine_or<AllRecipe_match<Instruction::ZExt, Op0_t>,
                         AllRecipe_match<Instruction::SExt, Op0_t>>
 m_ZExtOrSExt(const Op0_t &Op0) {
@@ -609,6 +607,12 @@ m_c_Mul(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::Shl, Op0_t, Op1_t> m_Shl(const Op0_t &Op0,
+                                                             const Op1_t &Op1) {
+  return m_Binary<Instruction::Shl, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
 inline AllRecipe_match<Instruction::FMul, Op0_t, Op1_t>
 m_FMul(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::FMul, Op0_t, Op1_t>(Op0, Op1);
@@ -630,6 +634,12 @@ template <typename Op0_t, typename Op1_t>
 inline AllRecipe_match<Instruction::UDiv, Op0_t, Op1_t>
 m_UDiv(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::UDiv, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::URem, Op0_t, Op1_t>
+m_URem(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::URem, Op0_t, Op1_t>(Op0, Op1);
 }
 
 /// Match a binary AND operation.
@@ -806,9 +816,39 @@ inline auto m_c_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_c_Select(Op0, m_True(), Op1);
 }
 
-inline auto m_CanonicalIV() {
-  // TODO: Don't assume all region values are canonical IVs.
-  return m_Isa<VPRegionValue>();
+/// Match the canonical induction variable (IV) of any loop region.
+struct canonical_iv_match {
+  template <typename ArgTy> bool match(const ArgTy *V) const {
+    const auto *RV = dyn_cast<VPRegionValue>(V);
+    return RV && RV->getDefiningRegion()->getCanonicalIV() == RV;
+  }
+};
+
+inline canonical_iv_match m_CanonicalIV() { return {}; }
+
+/// Match a canonical VPWidenIntOrFpInductionRecipe optionally capturing it.
+struct canonical_widen_iv_match {
+  VPWidenIntOrFpInductionRecipe **Capture = nullptr;
+
+  canonical_widen_iv_match() = default;
+  canonical_widen_iv_match(VPWidenIntOrFpInductionRecipe *&V) : Capture(&V) {}
+
+  template <typename ArgTy> bool match(ArgTy *V) const {
+    auto *WidenIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(V);
+    if (!WidenIV || !WidenIV->isCanonical())
+      return false;
+    if (Capture)
+      *Capture = WidenIV;
+    return true;
+  }
+};
+
+inline canonical_widen_iv_match m_CanonicalWidenIV() { return {}; }
+
+/// Match a canonical VPWidenIntOrFpInductionRecipe, capturing it.
+inline canonical_widen_iv_match
+m_CanonicalWidenIV(VPWidenIntOrFpInductionRecipe *&V) {
+  return canonical_widen_iv_match(V);
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
@@ -1073,7 +1113,8 @@ template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
   return SubPattern;
 }
 
-inline bind_ty<VPReductionPHIRecipe> m_ReductionPhi(VPReductionPHIRecipe *&V) {
+inline match_bind<VPReductionPHIRecipe>
+m_ReductionPhi(VPReductionPHIRecipe *&V) {
   return V;
 }
 
