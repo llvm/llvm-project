@@ -294,4 +294,15 @@ add_header_library(
     libc.src.__support.macros.properties.types
 )
 
+add_header_library(
+  float128
+  HDRS
+    float128.h
+  DEPENDS
+    .fp_bits
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.bit
+    libc.src.__support.uint128
+)
+
 add_subdirectory(generic)
