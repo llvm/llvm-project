@@ -75,7 +75,8 @@ LIBC_INLINE double acosh_log1p_dd(double u_hi, double u_lo) {
   fputil::DoubleDouble v_dd_red = fputil::exact_add(v_hi_p, v_lo_p.hi);
   v_dd_red.lo += v_lo_p.lo;
 
-  // Fast polynomial evaluation (same as log1p's fast path).
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  // Fast path: polynomial only (no correct-rounding guarantee).
   double hi = fputil::multiply_add(e_x, LOG_2_HI, LOG_R1_DD[idx].hi);
   double lo = fputil::multiply_add(e_x, LOG_2_LO, LOG_R1_DD[idx].lo);
   fputil::DoubleDouble r1 = fputil::exact_add(hi, v_dd_red.hi);
@@ -84,16 +85,12 @@ LIBC_INLINE double acosh_log1p_dd(double u_hi, double u_lo) {
   double p1 = fputil::multiply_add(v_dd_red.hi, P_COEFFS[3], P_COEFFS[2]);
   double p2 = fputil::multiply_add(v_dd_red.hi, P_COEFFS[5], P_COEFFS[4]);
   double p = fputil::polyeval(v_sq, (v_dd_red.lo + r1.lo) + lo, p0, p1, p2);
-
-#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   return r1.hi + p;
 #else
-  constexpr double ERR_HI[2] = {0x1.0p-85, 0.0};
-  double err = fputil::multiply_add(v_sq, P_ERR, ERR_HI[hi == 0.0]);
-  double left = r1.hi + (p - err);
-  double right = r1.hi + (p + err);
-  if (LIBC_LIKELY(left == right))
-    return left;
+  // Always use the Float128 accurate path for correct rounding.
+  // The Ziv fast-path is not used here because for some large-x inputs
+  // err << ULP(result), so the Ziv test always passes even when the
+  // polynomial is 1 ULP off.
   return log1p_accurate(x_e, idx, v_dd_red);
 #endif
 }
