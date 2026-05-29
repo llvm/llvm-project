@@ -10,7 +10,7 @@
 !u64i = !cir.int<u, 64>
 
 module {
-  cir.func @cStyleCasts(%arg0: !u32i, %arg1: !s32i, %arg2: !cir.float, %arg3: !cir.double, %arg4: !cir.vector<2 x !s32i>) -> !s32i {
+  cir.func @cStyleCasts(%arg0: !u32i, %arg1: !s32i, %arg2: !cir.float, %arg3: !cir.double) -> !s32i {
   // CHECK: llvm.func @cStyleCasts
     %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["x1", init] {alignment = 4 : i64}
     %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x2", init] {alignment = 4 : i64}
@@ -93,9 +93,11 @@ module {
     cir.return
   }
 
-  cir.func @vectorCasts(%arg0:!cir.vector<2 x !s32i>) {
+  cir.func @vectorCasts(%arg0: !cir.vector<2 x !s32i>, %arg1: !cir.vector<4 x !cir.float>) {
     %i_2_f = cir.cast int_to_float %arg0 : !cir.vector<2 x !s32i> -> !cir.vector<2 x !cir.float>
     // CHECK: %{{.+}} = llvm.sitofp %{{.+}} : vector<2xi32> to vector<2xf32>
+    %f_2_1 = cir.cast float_to_int %arg1 : !cir.vector<4 x !cir.float> -> !cir.vector<4 x !s32i>
+    // CHECK: %{{.+}} = llvm.fptosi %{{.+}} : vector<4xf32> to vector<4xi32>
     %bitcast = cir.cast bitcast %arg0 : !cir.vector<2 x !s32i> -> !cir.vector<1 x !cir.double>
     // CHECK: %{{.+}} = llvm.bitcast %{{.+}} : vector<2xi32> to vector<1xf64>
 

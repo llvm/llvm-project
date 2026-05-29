@@ -526,7 +526,7 @@ LogicalResult cir::CastOp::verify() {
                               "address space of the operand";
     }
 
-  auto kind = getKind();
+  cir::CastKind kind = getKind();
   auto srcVTy = mlir::dyn_cast<cir::VectorType>(srcType);
   auto resVTy = mlir::dyn_cast<cir::VectorType>(resType);
   if (srcVTy && resVTy) {
