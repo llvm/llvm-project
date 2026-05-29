@@ -1118,8 +1118,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // Custom lowering for tcgen05.st vector operands
   setOperationAction(ISD::INTRINSIC_VOID,
-                     {MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
-                      MVT::v32i32, MVT::v64i32, MVT::v128i32, MVT::Other},
+                     {MVT::i8, MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
+                      MVT::v32i32, MVT::v64i32, MVT::v128i32, MVT::v2i64,
+                      MVT::Other},
                      Custom);
 
   // Enable custom lowering for the following:
@@ -2640,6 +2641,130 @@ static SDValue lowerBSWAP(SDValue Op, SelectionDAG &DAG) {
   }
 }
 
+static SDValue lowerStAsyncWithMbarrier(SDValue Op, SelectionDAG &DAG) {
+  const Function &Fn = DAG.getMachineFunction().getFunction();
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+  Intrinsic::ID IntrinsicID = N->getConstantOperandVal(1);
+  SDValue DestAddr = N->getOperand(2);
+  SDValue Value = N->getOperand(3);
+  SDValue MbarAddr = N->getOperand(4);
+
+  MVT ValueVT = Value.getSimpleValueType();
+
+  if (ValueVT.getSizeInBits() > 128) {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        Fn, "total bit-width of the value to be stored must be <= 128",
+        DiagnosticLocation(DL.getDebugLoc())));
+    return Op.getOperand(0); // Return only the chain
+  }
+
+  auto OpCode = [&]() -> std::optional<unsigned> {
+    switch (ValueVT.SimpleTy) {
+    case MVT::i32:
+      return NVPTXISD::ST_ASYNC_MBARRIER_B32;
+    case MVT::i64:
+      return NVPTXISD::ST_ASYNC_MBARRIER_B64;
+    case MVT::v2i32:
+      return NVPTXISD::ST_ASYNC_MBARRIER_V2B32;
+    case MVT::v2i64:
+      return NVPTXISD::ST_ASYNC_MBARRIER_V2B64;
+    case MVT::v4i32:
+      return NVPTXISD::ST_ASYNC_MBARRIER_V4B32;
+    default:
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+          Fn,
+          Twine("unsupported argument type ") +
+              llvm::EVT(ValueVT).getEVTString() + " for " +
+              llvm::Intrinsic::getName(IntrinsicID) + " intrinsic",
+          DiagnosticLocation(DL.getDebugLoc())));
+      return {};
+    }
+  }();
+
+  if (!OpCode)
+    return Op.getOperand(0); // Return only the chain
+
+  SmallVector<SDValue, 6> Ops;
+
+  Ops.push_back(N->getOperand(0)); // Chain
+  Ops.push_back(DestAddr);
+  if (ValueVT.isVector()) {
+    for (unsigned i = 0; i < ValueVT.getVectorNumElements(); ++i) {
+      Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
+                                ValueVT.getVectorElementType(), Value,
+                                DAG.getIntPtrConstant(i, DL)));
+    }
+  } else {
+    Ops.push_back(Value);
+  }
+  Ops.push_back(MbarAddr);
+
+  return DAG.getNode(OpCode.value(), DL, MVT::Other, Ops);
+}
+
+static SDValue lowerStAsyncRelease(SDValue Op, SelectionDAG &DAG) {
+  const Function &Fn = DAG.getMachineFunction().getFunction();
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+  Intrinsic::ID IntrinsicID = N->getConstantOperandVal(1);
+  SDValue DestAddr = N->getOperand(2);
+  SDValue Value = N->getOperand(3);
+
+  MVT ValueVT = Value.getSimpleValueType();
+
+  auto OpCode = [&]() -> std::optional<unsigned> {
+    switch (IntrinsicID) {
+    case Intrinsic::nvvm_st_async_scope_sys_space_global:
+      switch (ValueVT.SimpleTy) {
+      case MVT::i8:  return NVPTXISD::ST_ASYNC_SYS_B8;
+      case MVT::i16: return NVPTXISD::ST_ASYNC_SYS_B16;
+      case MVT::i32: return NVPTXISD::ST_ASYNC_SYS_B32;
+      case MVT::i64: return NVPTXISD::ST_ASYNC_SYS_B64;
+      default: break;
+      }
+      break;
+    case Intrinsic::nvvm_st_async_scope_gpu_space_global:
+      switch (ValueVT.SimpleTy) {
+      case MVT::i8:  return NVPTXISD::ST_ASYNC_GPU_B8;
+      case MVT::i16: return NVPTXISD::ST_ASYNC_GPU_B16;
+      case MVT::i32: return NVPTXISD::ST_ASYNC_GPU_B32;
+      case MVT::i64: return NVPTXISD::ST_ASYNC_GPU_B64;
+      default: break;
+      }
+      break;
+    case Intrinsic::nvvm_st_async_mmio_scope_sys_space_global:
+      switch (ValueVT.SimpleTy) {
+      case MVT::i8:  return NVPTXISD::ST_ASYNC_MMIO_SYS_B8;
+      case MVT::i16: return NVPTXISD::ST_ASYNC_MMIO_SYS_B16;
+      case MVT::i32: return NVPTXISD::ST_ASYNC_MMIO_SYS_B32;
+      case MVT::i64: return NVPTXISD::ST_ASYNC_MMIO_SYS_B64;
+      default: break;
+      }
+      break;
+    }
+    return std::nullopt;
+  }();
+
+  if (!OpCode) {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        Fn,
+        Twine("unsupported argument type ") +
+            llvm::EVT(ValueVT).getEVTString() + " for " +
+            llvm::Intrinsic::getName(IntrinsicID) + " intrinsic",
+        DiagnosticLocation(DL.getDebugLoc())));
+    return Op.getOperand(0); // Return only the chain
+  }
+
+  // NVPTX has no i8 register class; widen i8 to i16. The selected ST_ASYNC_*_B8
+  // node still emits the `.b8` qualifier in PTX.
+  if (ValueVT == MVT::i8)
+    Value = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Value);
+
+  SDValue Ops[] = {N->getOperand(0), DestAddr, Value};
+  return DAG.getNode(OpCode.value(), DL, MVT::Other, Ops);
+}
+
 static unsigned getTcgen05MMADisableOutputLane(unsigned IID) {
   switch (IID) {
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
@@ -2834,6 +2959,12 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   switch (IntrinNo) {
   default:
     break;
+  case Intrinsic::nvvm_st_async_space_cluster:
+    return lowerStAsyncWithMbarrier(Op, DAG);
+  case Intrinsic::nvvm_st_async_scope_sys_space_global:
+  case Intrinsic::nvvm_st_async_scope_gpu_space_global:
+  case Intrinsic::nvvm_st_async_mmio_scope_sys_space_global:
+    return lowerStAsyncRelease(Op, DAG);
   case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x4:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x8:

@@ -6084,6 +6084,124 @@ let Predicates = [hasSM<100>, hasPTX<86>] in {
 }
 
 //
+// Asynchronous store instructions
+//
+
+def SDTAsyncStoreMbarrier : SDTypeProfile<0, 3, 
+  [SDTCisPtrTy<0>, SDTCisPtrTy<2>]>;
+def SDTAsyncStoreMbarrierV2 : SDTypeProfile<0, 4,
+  [SDTCisPtrTy<0>, SDTCisPtrTy<3>]>;
+def SDTAsyncStoreMbarrierV4 : SDTypeProfile<0, 6,
+  [SDTCisPtrTy<0>, SDTCisPtrTy<5>]>;
+
+class StAsyncMbarrierNode<string vec, string type> :
+  SDNode<"NVPTXISD::ST_ASYNC_MBARRIER_" # vec # type, 
+         !cast<SDTypeProfile>("SDTAsyncStoreMbarrier" # vec), 
+         [SDNPHasChain, SDNPMayStore]>;
+
+
+class ST_ASYNC_MBARRIER<string type, NVPTXRegClass reg> :
+  NVPTXInst<(outs),
+            (ins ADDR:$dest_addr, reg:$value, ADDR:$mbar),
+    "st.async.shared::cluster.mbarrier::complete_tx::bytes." # type # "\t [$dest_addr], $value, [$mbar];">;
+
+class ST_ASYNC_MBARRIER_V2<string type, NVPTXRegClass reg> :
+  NVPTXInst<(outs),
+            (ins ADDR:$dest_addr, reg:$value1, reg:$value2, ADDR:$mbar),
+    "st.async.shared::cluster.mbarrier::complete_tx::bytes.v2." # type # "\t [$dest_addr], {{$value1, $value2}}, [$mbar];">;
+
+class ST_ASYNC_MBARRIER_V4<string type, NVPTXRegClass reg> :
+  NVPTXInst<(outs),
+            (ins ADDR:$dest_addr, reg:$value1, reg:$value2, reg:$value3, 
+               reg:$value4, ADDR:$mbar),
+    "st.async.shared::cluster.mbarrier::complete_tx::bytes.v4." # type # "\t [$dest_addr], {{$value1, $value2, $value3, $value4}}, [$mbar];">;
+
+
+let Predicates = [hasSM<90>, hasPTX<81>] in {
+  foreach size = ["32", "64"] in {
+    defvar valueType = !cast<ValueType>("i" # size);
+    defvar reg = !cast<NVPTXRegClass>("B" # size);
+    defvar type_str = "B" # size;
+
+    def : Pat<(StAsyncMbarrierNode<"", type_str> 
+                 addr:$dest_addr, valueType:$value, addr:$mbar), 
+              (ST_ASYNC_MBARRIER<!tolower(type_str), reg> 
+                 addr:$dest_addr, valueType:$value, addr:$mbar)>;
+    def : Pat<(StAsyncMbarrierNode<"V2", type_str> 
+                 addr:$dest_addr, valueType:$value1, valueType:$value2, 
+                 addr:$mbar), 
+              (ST_ASYNC_MBARRIER_V2<!tolower(type_str), reg> 
+                 addr:$dest_addr, valueType:$value1, valueType:$value2, 
+                 addr:$mbar)>;
+  }
+
+  def : Pat<(StAsyncMbarrierNode<"V4", "B32"> 
+                 addr:$dest_addr, i32:$value1, i32:$value2, 
+                 i32:$value3, i32:$value4, addr:$mbar), 
+              (ST_ASYNC_MBARRIER_V4<"b32", B32> 
+                 addr:$dest_addr, i32:$value1, i32:$value2, 
+                 i32:$value3, i32:$value4, addr:$mbar)>;
+}
+
+def SDTAsyncStoreRelease : SDTypeProfile<0, 2, [SDTCisPtrTy<0>]>;
+
+class StAsyncReleaseNode<string variant, string type> :
+  SDNode<"NVPTXISD::ST_ASYNC_" # variant # "_" # type,
+         SDTAsyncStoreRelease,
+         [SDNPHasChain, SDNPMayStore]>;
+
+class ST_ASYNC_RELEASE_BODY<string instr_prefix, string type> {
+  string body = !if(!eq(type, "b8"),
+    // The minimum supported register size to pass in arguments is 16-bits, so 
+    // the 8-bit value is passed in using a 16-bit register and truncated to 
+    // 8-bits with a cvt instruction.
+    "{{ \n\t"
+    ".reg .b8 \t%st_async_val; \n\t"
+    "cvt.u8.u16 \t%st_async_val, $value; \n\t" #
+    instr_prefix # ".b8\t [$dest_addr], %st_async_val; \n\t"
+    "}}",
+    instr_prefix # "." # type # "\t [$dest_addr], $value;");
+}
+
+class ST_ASYNC_SYS<string type, NVPTXRegClass reg> :
+  NVPTXInst<(outs),
+            (ins ADDR:$dest_addr, reg:$value),
+    ST_ASYNC_RELEASE_BODY<"st.async.release.sys.global", type>.body>;
+
+class ST_ASYNC_GPU<string type, NVPTXRegClass reg> :
+  NVPTXInst<(outs),
+            (ins ADDR:$dest_addr, reg:$value),
+    ST_ASYNC_RELEASE_BODY<"st.async.release.gpu.global", type>.body>;
+
+class ST_ASYNC_MMIO_SYS<string type, NVPTXRegClass reg> :
+  NVPTXInst<(outs),
+            (ins ADDR:$dest_addr, reg:$value),
+    ST_ASYNC_RELEASE_BODY<"st.async.mmio.release.sys.global", type>.body>;
+
+
+let Predicates = [hasSM<100>, hasPTX<87>] in {
+  foreach i = !range(4) in {
+    defvar size      = ["8", "16", "32", "64"][i];
+    defvar reg       = [B16,  B16,  B32,  B64 ][i];
+    defvar valueType = [i16,  i16,  i32,  i64 ][i];
+    defvar width = "b" # size;
+
+    def : Pat<(StAsyncReleaseNode<"SYS", !toupper(width)>
+                 addr:$dest_addr, valueType:$value),
+              (ST_ASYNC_SYS<width, reg>
+                 addr:$dest_addr, valueType:$value)>;
+    def : Pat<(StAsyncReleaseNode<"GPU", !toupper(width)>
+                 addr:$dest_addr, valueType:$value),
+              (ST_ASYNC_GPU<width, reg>
+                 addr:$dest_addr, valueType:$value)>;
+    def : Pat<(StAsyncReleaseNode<"MMIO_SYS", !toupper(width)>
+                 addr:$dest_addr, valueType:$value),
+              (ST_ASYNC_MMIO_SYS<width, reg>
+                 addr:$dest_addr, valueType:$value)>;
+  }
+}
+
+//
 // clusterlaunchcontorl Instructions
 //
 

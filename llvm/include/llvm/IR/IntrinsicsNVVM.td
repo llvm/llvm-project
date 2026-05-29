@@ -3273,6 +3273,26 @@ let IntrProperties = [IntrArgMemOnly, IntrWriteMem, WriteOnly<ArgIndex<0>>,
 }
 
 //
+// Asynchronous store intrinsics
+//
+
+def int_nvvm_st_async_space_cluster :
+  DefaultAttrsIntrinsic<[],
+    [llvm_shared_cluster_ptr_ty, llvm_anyint_ty, llvm_shared_cluster_ptr_ty],
+    [WriteOnly<ArgIndex<0>>]>;
+
+foreach scope = ["_sys", "_gpu"] in {
+  def int_nvvm_st_async_scope # scope # _space_global :
+    DefaultAttrsIntrinsic<[],
+      [llvm_global_ptr_ty, llvm_anyint_ty],
+      [WriteOnly<ArgIndex<0>>]>;
+}
+
+def int_nvvm_st_async_mmio_scope_sys_space_global :
+  DefaultAttrsIntrinsic<[],
+    [llvm_global_ptr_ty, llvm_anyint_ty], [WriteOnly<ArgIndex<0>>]>;
+
+//
 // clusterlaunchcontorl Intrinsics
 //
 
