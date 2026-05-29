@@ -5151,7 +5151,7 @@ void CGOpenMPRuntime::emitTaskLoopCall(
                                                      PrePostActionTy &) {
     llvm::Value *ThreadId = getThreadID(CGF, Loc);
     llvm::Value *UpLoc = emitUpdateLocation(CGF, Loc);
-    std::array<llvm::Value *, 16> TGTaskLoopArgs;
+    std::array<llvm::Value *, 14> TGTaskLoopArgs;
 
     // This is all copy/pasted from below. Refactor!
     LValue LBLVal = CGF.EmitLValueForField(
@@ -5196,30 +5196,34 @@ void CGOpenMPRuntime::emitTaskLoopCall(
     TGTaskLoopArgs[1] = ThreadId;
     TGTaskLoopArgs[2] = TaskInitResult.NewTask;
     TGTaskLoopArgs[3] = TaskAllocArgs[0]; // TaskFlags
-    TGTaskLoopArgs[4] = TaskAllocArgs[1]; // KmpTaskTWithPrivatesTySize
-    TGTaskLoopArgs[5] = Shareds.emitRawPointer(CGF);
-    TGTaskLoopArgs[6] = TaskAllocArgs[2]; // SharedsSize
-    TGTaskLoopArgs[7] = IfVal;
-    TGTaskLoopArgs[8] = LBLVal.getPointer(CGF);
-    TGTaskLoopArgs[9] = UBLVal.getPointer(CGF);
-    TGTaskLoopArgs[10] = CGF.EmitLoadOfScalar(StLVal, Loc);
-    TGTaskLoopArgs[11] =
+    TGTaskLoopArgs[4] = IfVal;
+    TGTaskLoopArgs[5] = LBLVal.getPointer(CGF);
+    TGTaskLoopArgs[6] = UBLVal.getPointer(CGF);
+    TGTaskLoopArgs[7] = CGF.EmitLoadOfScalar(StLVal, Loc);
+    TGTaskLoopArgs[8] =
         llvm::ConstantInt::getSigned(CGF.IntTy, Data.Nogroup ? 1 : 0);
-    TGTaskLoopArgs[12] = llvm::ConstantInt::getSigned(
+    TGTaskLoopArgs[9] = llvm::ConstantInt::getSigned(
         CGF.IntTy, Data.Schedule.getPointer()
                        ? Data.Schedule.getInt() ? NumTasks : Grainsize
                        : NoSchedule);
-    TGTaskLoopArgs[13] =
+    TGTaskLoopArgs[10] =
         Data.Schedule.getPointer()
             ? CGF.Builder.CreateIntCast(Data.Schedule.getPointer(), CGF.Int64Ty,
                                         /*isSigned=*/false)
             : llvm::ConstantInt::get(CGF.Int64Ty, /*V=*/0);
-    TGTaskLoopArgs[14] =
+    TGTaskLoopArgs[11] =
         llvm::ConstantInt::getSigned(CGF.IntTy, Data.HasModifier ? 1 : 0);
-    TGTaskLoopArgs[15] = TaskInitResult.TaskDupFn
+    TGTaskLoopArgs[12] = TaskInitResult.TaskDupFn
                              ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
                                    TaskInitResult.TaskDupFn, CGF.VoidPtrTy)
                              : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+    const auto *CS = cast<CapturedStmt>(D.getAssociatedStmt());
+    llvm::Function *RelocFn =
+        emitTaskRelocationFunction(CGM, Loc, *CS, CGF.CapturedStmtInfo, Data);
+    TGTaskLoopArgs[13] =
+        RelocFn ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(RelocFn,
+                                                                  CGM.VoidPtrTy)
+                : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
     CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                             CGM.getModule(), OMPRTL___kmpc_taskgraph_taskloop),
                         TGTaskLoopArgs);
