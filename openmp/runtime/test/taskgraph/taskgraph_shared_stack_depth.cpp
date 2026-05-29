@@ -31,15 +31,17 @@ __attribute__((noinline)) static void clobber_stack(int base) {
 }
 
 __attribute__((noinline)) static int run_taskgraph(int seed) {
-  Payload payload{{seed + 1, seed + 3, seed + 5, seed + 7, seed + 11,
-                   seed + 13},
-                  seed * 17 + 19};
+  Payload payload{
+      {seed + 1, seed + 3, seed + 5, seed + 7, seed + 11, seed + 13},
+      seed * 17 + 19};
   int result = -1;
 
 #pragma omp taskgraph graph_id(92)
   {
 #pragma omp task firstprivate(payload, seed) shared(result)
-    { result = evaluate_payload(payload, seed); }
+    {
+      result = evaluate_payload(payload, seed);
+    }
   }
 
   return result;
@@ -59,9 +61,9 @@ __attribute__((noinline)) static int call_with_depth(int seed, int depth) {
 }
 
 __attribute__((noinline)) static int expected_result(int seed) {
-  Payload payload{{seed + 1, seed + 3, seed + 5, seed + 7, seed + 11,
-                   seed + 13},
-                  seed * 17 + 19};
+  Payload payload{
+      {seed + 1, seed + 3, seed + 5, seed + 7, seed + 11, seed + 13},
+      seed * 17 + 19};
   return evaluate_payload(payload, seed);
 }
 
@@ -79,14 +81,13 @@ int main() {
   clobber_stack(ReplaySeed * 1000);
   const int replayed = call_with_depth(ReplaySeed, 3);
   if (replayed != recorded) {
-    std::fprintf(stderr,
-                 "BUG shared stack replay depth=%d seed=%d got=%d expected=%d\n",
-                 3, ReplaySeed, replayed, recorded);
+    std::fprintf(
+        stderr, "BUG shared stack replay depth=%d seed=%d got=%d expected=%d\n",
+        3, ReplaySeed, replayed, recorded);
     return 1;
   }
 
-  std::fprintf(stderr, "PASS shared stack replay=%d\n",
-               replayed);
+  std::fprintf(stderr, "PASS shared stack replay=%d\n", replayed);
   return 0;
 }
 

@@ -27,14 +27,15 @@ int main() {
   const int second = run_taskgraph_lexical(100);
 
   if (first != 6 || second != 105) {
-    std::fprintf(stderr,
-                 "FAIL lexical shared replay first=%d second=%d expected=6/105\n",
-                 first, second);
+    std::fprintf(
+        stderr,
+        "FAIL lexical shared replay first=%d second=%d expected=6/105\n", first,
+        second);
     return 1;
   }
 
-  std::fprintf(stderr, "PASS lexical shared replay first=%d second=%d\n",
-               first, second);
+  std::fprintf(stderr, "PASS lexical shared replay first=%d second=%d\n", first,
+               second);
   return 0;
 }
 
