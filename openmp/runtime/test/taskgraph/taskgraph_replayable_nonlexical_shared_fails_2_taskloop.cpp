@@ -45,15 +45,18 @@ int main() {
 
   if (recorded == replayed) {
     std::fprintf(stderr,
-                 "UNEXPECTED SUCCESS nonlexical taskloop replay recorded=%d replayed=%d\n",
+                 "UNEXPECTED SUCCESS nonlexical taskloop replay recorded=%d "
+                 "replayed=%d\n",
                  recorded, replayed);
     return 0;
   }
 
-  std::fprintf(stderr,
-               "EXPECTED FAILURE nonlexical taskloop replay recorded=%d replayed=%d\n",
-               recorded, replayed);
+  std::fprintf(
+      stderr,
+      "EXPECTED FAILURE nonlexical taskloop replay recorded=%d replayed=%d\n",
+      recorded, replayed);
   return 1;
 }
 
-// CHECK: OMP: Error #302: Cannot locate captured shared variable reference for taskgraph replay
+// CHECK: OMP: Error #302: Cannot locate captured shared variable reference for
+// taskgraph replay

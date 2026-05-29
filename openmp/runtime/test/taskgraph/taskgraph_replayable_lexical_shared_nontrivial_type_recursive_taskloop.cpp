@@ -29,15 +29,16 @@ __attribute__((noinline)) static int expected_recursive(int depth, int seed,
   return local + expected_recursive(depth - 1, seed + 9, run_tag);
 }
 
-__attribute__((noinline)) static int run_recursive_nontrivial(int depth, int seed,
-                                                              int run_tag) {
+__attribute__((noinline)) static int
+run_recursive_nontrivial(int depth, int seed, int run_tag) {
   Tracker Obj(seed);
   int res = 0;
 
   int gid = 620 + depth;
 #pragma omp taskgraph graph_id(gid)
   {
-#pragma omp taskloop replayable num_tasks(8) shared(Obj, depth, run_tag) reduction(+ : res)
+#pragma omp taskloop replayable num_tasks(8) shared(Obj, depth, run_tag)       \
+    reduction(+ : res)
     for (int i = 0; i < 16; ++i) {
       res += Obj.Value + (depth + 1) * 5 + run_tag + i;
     }
@@ -59,9 +60,10 @@ int main() {
     const int expected = expected_recursive(depth, seed, run);
 
     if (actual != expected) {
-      std::fprintf(stderr,
-                   "FAIL recursive nontrivial taskloop run=%d actual=%d expected=%d\n",
-                   run, actual, expected);
+      std::fprintf(
+          stderr,
+          "FAIL recursive nontrivial taskloop run=%d actual=%d expected=%d\n",
+          run, actual, expected);
       return 1;
     }
 
@@ -71,13 +73,15 @@ int main() {
 
   if (Tracker::Ctors != Tracker::Dtors || Tracker::Ctors < 12) {
     std::fprintf(stderr,
-                 "FAIL recursive nontrivial taskloop lifetime ctors=%d dtors=%d total=%d expected=%d\n",
+                 "FAIL recursive nontrivial taskloop lifetime ctors=%d "
+                 "dtors=%d total=%d expected=%d\n",
                  Tracker::Ctors, Tracker::Dtors, total_actual, total_expected);
     return 1;
   }
 
   std::fprintf(stderr,
-               "PASS recursive nontrivial taskloop total=%d expected=%d ctors=%d dtors=%d\n",
+               "PASS recursive nontrivial taskloop total=%d expected=%d "
+               "ctors=%d dtors=%d\n",
                total_actual, total_expected, Tracker::Ctors, Tracker::Dtors);
   return 0;
 }

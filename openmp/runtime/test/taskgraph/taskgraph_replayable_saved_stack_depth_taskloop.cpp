@@ -39,9 +39,9 @@ __attribute__((noinline)) static void clobber_stack(int base) {
 // nothing to refresh at replay since the saved snapshots are sourced from
 // '.kmp_privates.t', not the shareds slots.
 __attribute__((noinline)) static void emit_replayable_taskloop(int seed) {
-  Payload payload{{seed + 1, seed + 3, seed + 5, seed + 7, seed + 11,
-                   seed + 13},
-                  seed * 17 + 19};
+  Payload payload{
+      {seed + 1, seed + 3, seed + 5, seed + 7, seed + 11, seed + 13},
+      seed * 17 + 19};
 
 #pragma omp taskloop replayable num_tasks(8) firstprivate(saved : payload, seed)
   for (int i = 0; i < 16; ++i) {
@@ -55,7 +55,9 @@ __attribute__((noinline)) static int run_taskgraph(int seed) {
   Aggregate = 0;
 
 #pragma omp taskgraph graph_id(633)
-  { emit_replayable_taskloop(seed); }
+  {
+    emit_replayable_taskloop(seed);
+  }
 
   return Aggregate;
 }
@@ -74,9 +76,9 @@ __attribute__((noinline)) static int call_with_depth(int seed, int depth) {
 }
 
 __attribute__((noinline)) static int expected_result(int seed) {
-  Payload payload{{seed + 1, seed + 3, seed + 5, seed + 7, seed + 11,
-                   seed + 13},
-                  seed * 17 + 19};
+  Payload payload{
+      {seed + 1, seed + 3, seed + 5, seed + 7, seed + 11, seed + 13},
+      seed * 17 + 19};
   int sum = 0;
   for (int i = 0; i < 16; ++i)
     sum += evaluate_payload(payload, seed + i);
@@ -107,9 +109,10 @@ int main() {
         clobber_stack(Seeds[i] * 1000);
         const int replayed = call_with_depth(Seeds[i], Depths[i]);
         if (replayed != recorded) {
-          std::fprintf(stderr,
-                       "FAIL taskloop replay %d depth=%d seed=%d got=%d expected=%d\n",
-                       i, Depths[i], Seeds[i], replayed, recorded);
+          std::fprintf(
+              stderr,
+              "FAIL taskloop replay %d depth=%d seed=%d got=%d expected=%d\n",
+              i, Depths[i], Seeds[i], replayed, recorded);
           failed = true;
         }
       }
@@ -119,7 +122,8 @@ int main() {
   if (failed)
     return 1;
 
-  std::fprintf(stderr, "PASS replayable taskloop saved stack result=%d\n", recorded);
+  std::fprintf(stderr, "PASS replayable taskloop saved stack result=%d\n",
+               recorded);
   return 0;
 }
 
