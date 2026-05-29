@@ -252,7 +252,7 @@ makeValidForAction(std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
   // The individual sub-operations (read/write/update) inside the capture
   // will have their orderings handled separately.
   if (isCapture)
-     return memOrder;
+    return memOrder;
 
   // Avaliable orderings: acquire, acq_rel, relaxed, release, seq_cst
 
