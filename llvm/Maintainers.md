@@ -104,7 +104,7 @@ kasuga.ryotaro@fujitsu.com, krkr9893@gmail.com (email), [kasuga-fj](https://gith
 #### LoopInterchange
 
 Madhur Amilkanthwar \
-madhura@nvidia.com (email), [madhur13490](https://github.com/madhur13490) (GitHub)
+madhura@nvidia.com (email), [madhur13490](https://github.com/madhur13490) (GitHub) \
 Ryotaro Kasuga \
 kasuga.ryotaro@fujitsu.com, krkr9893@gmail.com (email), [kasuga-fj](https://github.com/kasuga-fj) (GitHub)
 
