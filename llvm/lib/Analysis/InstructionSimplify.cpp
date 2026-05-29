@@ -7465,6 +7465,22 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
       return Vec;
     return nullptr;
   }
+  case Intrinsic::ct_select: {
+    // Only fold on a literal IR-constant condition or identical arms. Folding
+    // through ValueTracking-derived known bits would defeat the constant-time
+    // contract on conditions the user wants kept opaque.
+    Value *Cond = Args[0], *TrueVal = Args[1], *FalseVal = Args[2];
+    if (auto *CI = dyn_cast<ConstantInt>(Cond)) {
+      if (CI->isOne())
+        return TrueVal;
+      if (CI->isZero())
+        return FalseVal;
+    }
+    // ct.select C, X, X -> X: the condition is unused, so no secret is exposed.
+    if (TrueVal == FalseVal)
+      return TrueVal;
+    return nullptr;
+  }
   default:
     return nullptr;
   }

@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -4329,6 +4330,159 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
     Results.push_back(Tmp1);
     break;
+  case ISD::CT_SELECT: {
+    // Constant-time select: F ^ ((T ^ F) & Mask), Mask = 0 - (cond & 1).
+    // Bitwise-only — no select/cmov SDNode is constructed, so the CT property
+    // holds against any combiner that targets those opcodes. FP types operate
+    // on the same-size integer; vectors build the mask as a scalar then splat
+    // (avoids illegal vNi1).
+    //
+    // The masked-diff is routed through a virtual register (CopyToReg /
+    // CopyFromReg) below as a forward-looking DAGCombine barrier. This is
+    // *not* required for correctness against any combiner in tree today —
+    // DAGCombiner has no rewrite that recognizes XOR/AND/XOR-with-sext-mask
+    // and reconstructs a SELECT. The chain edge is defense-in-depth against
+    // a hypothetical future fold of that form: the dependency partitions the
+    // bitwise sequence into a region the combiner can't see through. Cost is
+    // at most a coalesce-able MOV per call. Swap for ARITH_FENCE when its
+    // int/vector extension lands.
+    Tmp1 = Node->getOperand(0); // cond
+    Tmp2 = Node->getOperand(1); // T
+    Tmp3 = Node->getOperand(2); // F
+    EVT VT = Tmp2.getValueType();
+
+    // Memory-blend for FP scalars whose same-size integer isn't legal (f64 on
+    // i386 no-SSE, x86_fp80, fp128). The bitcast-to-int expansion below can't
+    // run since LegalizeDAG is the last legalization stage. Spill T/F, blend
+    // chunk-by-chunk at a legal int width, reload as the FP type. Fixed and
+    // scalable FP vectors fall through to the unified path below.
+    if (VT.isFloatingPoint() && !VT.isVector() &&
+        !TLI.isTypeLegal(VT.changeTypeToInteger())) {
+      const DataLayout &DL = DAG.getDataLayout();
+      Type *VTTy = VT.getTypeForEVT(*DAG.getContext());
+      unsigned StorageBytes = DL.getTypeStoreSize(VTTy);
+      assert(StorageBytes > 0 && "FP type with zero storage size");
+
+      // Pick the largest legal scalar integer chunk that divides StorageBytes
+      // evenly. i8 is the universal fallback (legal on every target).
+      MVT ChunkVT = MVT::i8;
+      for (MVT MV : {MVT::i64, MVT::i32, MVT::i16}) {
+        unsigned MVBytes = MV.getSizeInBits() / 8;
+        if (TLI.isTypeLegal(MV) && MVBytes <= StorageBytes &&
+            StorageBytes % MVBytes == 0) {
+          ChunkVT = MV;
+          break;
+        }
+      }
+      unsigned ChunkBytes = ChunkVT.getSizeInBits() / 8;
+      unsigned NumChunks = StorageBytes / ChunkBytes;
+
+      MachineFunction &MF = DAG.getMachineFunction();
+      SDValue StackT = DAG.CreateStackTemporary(VT);
+      SDValue StackF = DAG.CreateStackTemporary(VT);
+      SDValue StackR = DAG.CreateStackTemporary(VT);
+      int FIT = cast<FrameIndexSDNode>(StackT.getNode())->getIndex();
+      int FIF = cast<FrameIndexSDNode>(StackF.getNode())->getIndex();
+      int FIR = cast<FrameIndexSDNode>(StackR.getNode())->getIndex();
+      MachinePointerInfo PIT = MachinePointerInfo::getFixedStack(MF, FIT);
+      MachinePointerInfo PIF = MachinePointerInfo::getFixedStack(MF, FIF);
+      MachinePointerInfo PIR = MachinePointerInfo::getFixedStack(MF, FIR);
+
+      SDValue Chain = DAG.getEntryNode();
+      Chain = DAG.getStore(Chain, dl, Tmp2, StackT, PIT);
+      Chain = DAG.getStore(Chain, dl, Tmp3, StackF, PIF);
+
+      for (unsigned i = 0; i < NumChunks; ++i) {
+        TypeSize Off = TypeSize::getFixed(i * ChunkBytes);
+        SDValue TPtr = DAG.getMemBasePlusOffset(StackT, Off, dl);
+        SDValue FPtr = DAG.getMemBasePlusOffset(StackF, Off, dl);
+        SDValue RPtr = DAG.getMemBasePlusOffset(StackR, Off, dl);
+
+        SDValue Ti = DAG.getLoad(ChunkVT, dl, Chain, TPtr,
+                                 PIT.getWithOffset(i * ChunkBytes));
+        Chain = Ti.getValue(1);
+        SDValue Fi = DAG.getLoad(ChunkVT, dl, Chain, FPtr,
+                                 PIF.getWithOffset(i * ChunkBytes));
+        Chain = Fi.getValue(1);
+
+        // Blend this chunk via CT_SELECT on a legal integer type. The
+        // recursive node will be Expand'd by the scalar-int branch below.
+        SDValue Ri =
+            DAG.getCTSelect(dl, ChunkVT, Tmp1, Ti, Fi, Node->getFlags());
+
+        Chain = DAG.getStore(Chain, dl, Ri, RPtr,
+                             PIR.getWithOffset(i * ChunkBytes));
+      }
+
+      Tmp1 = DAG.getLoad(VT, dl, Chain, StackR, PIR);
+      Tmp1->setFlags(Node->getFlags());
+      Results.push_back(Tmp1);
+      break;
+    }
+
+    SDValue WorkingT = Tmp2;
+    SDValue WorkingF = Tmp3;
+    EVT WorkingVT = VT;
+
+    bool IsFP = VT.isVector() ? VT.getVectorElementType().isFloatingPoint()
+                              : VT.isFloatingPoint();
+    if (IsFP) {
+      if (VT.isVector())
+        WorkingVT = EVT::getVectorVT(
+            *DAG.getContext(),
+            EVT::getIntegerVT(*DAG.getContext(), VT.getScalarSizeInBits()),
+            VT.getVectorElementCount());
+      else
+        WorkingVT = VT.changeTypeToInteger();
+      WorkingT = DAG.getBitcast(WorkingVT, Tmp2);
+      WorkingF = DAG.getBitcast(WorkingVT, Tmp3);
+    }
+
+    // Compute the all-ones/all-zeros mask as a scalar, then splat for vectors.
+    EVT MaskEltVT =
+        WorkingVT.isVector() ? WorkingVT.getVectorElementType() : WorkingVT;
+    SDValue ScalarCond = Tmp1;
+    if (ScalarCond.getValueType() != MaskEltVT)
+      ScalarCond = DAG.getAnyExtOrTrunc(ScalarCond, dl, MaskEltVT);
+    SDValue ScalarMask =
+        DAG.getNode(ISD::SUB, dl, MaskEltVT, DAG.getConstant(0, dl, MaskEltVT),
+                    DAG.getNode(ISD::AND, dl, MaskEltVT, ScalarCond,
+                                DAG.getConstant(1, dl, MaskEltVT)));
+    SDValue Mask = WorkingVT.isVector()
+                       ? DAG.getSplat(WorkingVT, dl, ScalarMask)
+                       : ScalarMask;
+
+    // F ^ ((T ^ F) & Mask)
+    SDValue XorTF = DAG.getNode(ISD::XOR, dl, WorkingVT, WorkingT, WorkingF);
+    SDValue TM = DAG.getNode(ISD::AND, dl, WorkingVT, XorTF, Mask);
+
+    // Forward-looking DAGCombine barrier (see header): route the masked-diff
+    // through a vreg so the chain edge partitions it from the surrounding
+    // bitwise ops, guarding against a future combiner that might fold
+    // XOR/AND/XOR-with-sext-mask back to SELECT. Skipped where no register
+    // class is available (scalable vectors, non-simple or illegal types, or
+    // a legal type the target has no register class for).
+    if (WorkingVT.isSimple() && !WorkingVT.isScalableVector() &&
+        TLI.isTypeLegal(WorkingVT.getSimpleVT())) {
+      if (const TargetRegisterClass *RC =
+              TLI.getRegClassFor(WorkingVT.getSimpleVT())) {
+        MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
+        Register TMReg = MRI.createVirtualRegister(RC);
+        SDValue Chain = DAG.getEntryNode();
+        Chain = DAG.getCopyToReg(Chain, dl, TMReg, TM);
+        TM = DAG.getCopyFromReg(Chain, dl, TMReg, WorkingVT);
+      }
+    }
+
+    Tmp1 = DAG.getNode(ISD::XOR, dl, WorkingVT, WorkingF, TM);
+
+    if (WorkingVT != VT)
+      Tmp1 = DAG.getBitcast(VT, Tmp1);
+
+    Tmp1->setFlags(Node->getFlags());
+    Results.push_back(Tmp1);
+    break;
+  }
   case ISD::BR_JT: {
     SDValue Chain = Node->getOperand(0);
     SDValue Table = Node->getOperand(1);
@@ -5691,7 +5845,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp2));
     break;
   }
-  case ISD::SELECT: {
+  case ISD::SELECT:
+  case ISD::CT_SELECT: {
     unsigned ExtOp, TruncOp;
     if (Node->getValueType(0).isVector() ||
         Node->getValueType(0).getSizeInBits() == NVT.getSizeInBits()) {
@@ -5709,7 +5864,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Tmp2 = DAG.getNode(ExtOp, dl, NVT, Node->getOperand(1));
     Tmp3 = DAG.getNode(ExtOp, dl, NVT, Node->getOperand(2));
     // Perform the larger operation, then round down.
-    Tmp1 = DAG.getSelect(dl, NVT, Tmp1, Tmp2, Tmp3);
+    Tmp1 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Tmp2, Tmp3);
+    Tmp1->setFlags(Node->getFlags());
     if (TruncOp != ISD::FP_ROUND)
       Tmp1 = DAG.getNode(TruncOp, dl, Node->getValueType(0), Tmp1);
     else
