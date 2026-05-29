@@ -1,5 +1,6 @@
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -relocation-model=pic | FileCheck %s
 ; RUN: llc < %s -mtriple=thumbv7-linux-gnueabi -relocation-model=pic | FileCheck %s
+; RUN: llc < %s -O0 -fast-isel-abort=2 -mtriple=armv7-linux-gnueabi -relocation-model=pic | FileCheck %s
 
 ; Hidden weak function with dso_local must still use GOT indirection
 ; in PIC mode on ARM. The assembler eagerly resolves PC-relative
