@@ -29,6 +29,9 @@ struct S {
 static_assert(((delete[] (new int[true])), true));
 static_assert(((delete[] (new S[true])), true));
 
+static_assert((new int[]{})[0] == 0); // both-error {{not an integral constant expression}} \
+                                      // both-note {{read of dereferenced one-past-the-end pointer}}
+
 constexpr int a() {
   new int(12); // both-note {{allocation performed here was not deallocated}}
   return 1;
