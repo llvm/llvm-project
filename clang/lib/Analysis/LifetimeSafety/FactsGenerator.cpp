@@ -882,7 +882,7 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
                           IsInstance](unsigned I) -> LifetimeCaptureByAttr * {
     const ParmVarDecl *PVD = nullptr;
     if (IsInstance) {
-      // FIXME: Add support for capture_by on function declarations
+      // FIXME: Add support for I == 0 i.e. capture_by on function declarations
       if (I > 0 && I - 1 < FD->getNumParams())
         PVD = FD->getParamDecl(I - 1);
     } else {

@@ -3433,6 +3433,14 @@ void test_pointer_to_pointer() {
   (void)ptr;
 }
 
+void test_pointer_to_pointer_2(MyObj **ptr) {
+  {
+    MyObj local;
+    set2(ptr, local);
+  }
+  (void)ptr;
+}
+
 void set3(MyObj*& res, const MyObj& in [[clang::lifetime_capture_by(res)]]);
 
 void test_reference_to_pointer() {
