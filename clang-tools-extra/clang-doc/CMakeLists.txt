@@ -12,7 +12,6 @@ add_clang_library(clangDoc STATIC
   Generators.cpp
   HTMLGenerator.cpp
   Mapper.cpp
-  Markdown.cpp
   MDGenerator.cpp
   Representation.cpp
   Serialize.cpp
