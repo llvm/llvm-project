@@ -102,6 +102,7 @@ private:
   bool selectG_AMDGPU_MAD_64_32(MachineInstr &I) const;
   bool selectG_EXTRACT(MachineInstr &I) const;
   bool selectG_FMA_FMAD(MachineInstr &I) const;
+  bool selectS16MergeToS32(MachineInstr &MI) const;
   bool selectG_MERGE_VALUES(MachineInstr &I) const;
   bool selectG_UNMERGE_VALUES(MachineInstr &I) const;
   bool selectG_BUILD_VECTOR(MachineInstr &I) const;
@@ -460,8 +461,6 @@ private:
   Register matchExtendFromS32OrS32(Register Reg, bool IsSigned) const;
   /// Match an any extend from a 32-bit value to 64-bit.
   Register matchAnyExtendFromS32(Register Reg) const;
-
-  bool selectS16MergeToS32(MachineInstr &MI) const;
 
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;
