@@ -1,0 +1,33 @@
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Content: C0035FD6 # ret
+Symbols:
+  - Name: main
+    Type: STT_FUNC
+    Section: .text
+    Value: 0x1000
+    Size: 4
+    Binding: STB_GLOBAL
+  - Name: local_address
+    Type: STT_NOTYPE
+    Section: .text
+    Value: 0x1004
+  - Name: local_value
+    Type: STT_NOTYPE
+    Index: SHN_ABS
+    Value: 0xabcd
+  - Name: global_value
+    Type: STT_NOTYPE
+    Index: SHN_ABS
+    Value: 0x1234
+    Binding: STB_GLOBAL
+...
