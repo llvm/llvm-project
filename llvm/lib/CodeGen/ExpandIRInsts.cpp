@@ -694,13 +694,11 @@ static void expandFPToI(Instruction *FPToI, bool IsSaturating, bool IsSigned) {
       ZeroResultCond = Builder.CreateOr(ZeroResultCond, IsNeg);
     }
   }
-  Value *CondBr = Builder.CreateCondBr(
+  Instruction *CondBr = Builder.CreateCondBr(
       ZeroResultCond, End, IsSaturating ? CheckSaturateBB : CheckExpSizeBB);
   // We do not have any information on the value of the exponent, so mark the
   // branch weights as unkown.
-  if (auto *CondBrInstruction = dyn_cast<Instruction>(CondBr))
-    setExplicitlyUnknownBranchWeightsIfProfiled(*CondBrInstruction, DEBUG_TYPE,
-                                                F);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE, F);
 
   Value *Saturated;
   if (IsSaturating) {
