@@ -2173,15 +2173,12 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
       FirstAnswer = MRI.getType(R).getScalarSizeInBits();
       break;
     }
-
-    Register Src1 = MI.getOperand(1).getReg();
     unsigned Src1NumSignBits =
-        computeNumSignBits(Src1, DemandedElts, Depth + 1);
+        computeNumSignBits(Op0, DemandedElts, Depth + 1);
 
     if (Src1NumSignBits != 1) {
-      Register Src2 = MI.getOperand(2).getReg();
       unsigned Src2NumSignBits =
-          computeNumSignBits(Src2, DemandedElts, Depth + 1);
+          computeNumSignBits(Op1, DemandedElts, Depth + 1);
 
       FirstAnswer = std::min(Src1NumSignBits, Src2NumSignBits);
     }
