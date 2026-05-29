@@ -183,6 +183,28 @@ func.func @ctlz_vector2(%val: vector<2xi32>) -> vector<2xi32> {
   return %0 : vector<2xi32>
 }
 
+// CHECK-LABEL: @cttz_scalar
+//  CHECK-SAME: (%[[VAL:.+]]: i32)
+func.func @cttz_scalar(%val: i32) -> i32 {
+  // CHECK-DAG: %[[V0:.+]] = spirv.Constant 0 : i32
+  // CHECK-DAG: %[[V32:.+]] = spirv.Constant 32 : i32
+  // CHECK: %[[LSB:.+]] = spirv.GL.FindILsb %[[VAL]] : i32
+  // CHECK: %[[CMP:.+]] = spirv.IEqual %[[VAL]], %[[V0]] : i32
+  // CHECK: %[[R:.+]] = spirv.Select %[[CMP]], %[[V32]], %[[LSB]] : i1, i32
+  // CHECK: return %[[R]]
+  %0 = math.cttz %val : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @cttz_vector
+func.func @cttz_vector(%val: vector<2xi32>) -> vector<2xi32> {
+  // CHECK: spirv.GL.FindILsb
+  // CHECK: spirv.IEqual
+  // CHECK: spirv.Select
+  %0 = math.cttz %val : vector<2xi32>
+  return %0 : vector<2xi32>
+}
+
 // Dynamic exponent: exp(y * log(x)); yields NaN for x<0.
 // CHECK-LABEL: @powf_scalar
 //  CHECK-SAME: (%[[LHS:.+]]: f32, %[[RHS:.+]]: f32)
