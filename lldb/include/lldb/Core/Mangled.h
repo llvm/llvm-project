@@ -279,7 +279,7 @@ public:
   void Encode(DataEncoder &encoder, ConstStringTable &strtab) const;
 
   /// Retrieve \c DemangledNameInfo of the demangled name held by this object.
-  const std::optional<DemangledNameInfo> &GetDemangledInfo() const;
+  const DemangledNameInfo *GetDemangledInfo() const;
 
   /// Compute the base name (without namespace/class qualifiers) from the
   /// demangled name.
@@ -308,7 +308,7 @@ private:
 
   /// If available, holds information about where in \c m_demangled certain
   /// parts of the name (e.g., basename, arguments, etc.) begin and end.
-  mutable std::optional<DemangledNameInfo> m_demangled_info = std::nullopt;
+  mutable std::shared_ptr<DemangledNameInfo> m_demangled_info;
 };
 
 Stream &operator<<(Stream &s, const Mangled &obj);
