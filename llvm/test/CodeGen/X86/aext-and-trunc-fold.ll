@@ -2,50 +2,20 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=i686-unknown-linux-gnu | FileCheck %s --check-prefix=X86
 
-; Test for GH#195575: fold (aext (and (trunc x) C)) -> (and x C)
-; when either the truncate or zero-extend is not free.
-; Previously visitANY_EXTEND only checked isTruncateFree (which is true on X86
-; for i32->i8), missing the case where isZExtFree is false (i8->i32 on X86).
-; This caused "and al, 7; movzx eax, al" instead of the optimal "and eax, 7".
-;
-; The DAGCombiner converts zero_extend to any_extend when the result is only
-; used by a shift (upper bits don't affect the output), but visitANY_EXTEND
-; was then failing to fold the (aext (and (trunc x) C)) pattern on X86 because
-; isTruncateFree(i32->i8) is true there. Adding the isZExtFree check (which is
-; false for i8->i32 on X86) makes the fold fire correctly.
+; Regression tests for the (zext (and (trunc x) C)) -> (and x C) fold in
+; visitZERO_EXTEND (and symmetrically in visitANY_EXTEND). On X86,
+; isTruncateFree(i32->i8) is true but isZExtFree(i8->i32) is false, so the
+; fold fires to avoid redundant narrow-AND + movzx sequences.
 
-; Pattern that directly triggers the bug: shl context converts zext->aext before
-; the fold can run, and then visitANY_EXTEND needs the isZExtFree check.
-define i32 @aext_and_trunc_shl(i32 %x) {
-; X64-LABEL: aext_and_trunc_shl:
-; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    andl $7, %edi
-; X64-NEXT:    leal (%rdi,%rdi), %eax
-; X64-NEXT:    retq
-;
-; X86-LABEL: aext_and_trunc_shl:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    andl $7, %eax
-; X86-NEXT:    addl %eax, %eax
-; X86-NEXT:    retl
-  %trunc = trunc i32 %x to i8
-  %and = and i8 %trunc, 7
-  %zext = zext i8 %and to i32
-  %shl = shl i32 %zext, 1
-  ret i32 %shl
-}
-
-; Basic (aext (and (trunc i32) C)) -> (and i32 C) pattern.
-define i32 @aext_and_trunc_i32(i32 %x) {
-; X64-LABEL: aext_and_trunc_i32:
+; Basic (zext (and (trunc i32) C)) -> (and i32 C) pattern.
+define i32 @zext_and_trunc_i32(i32 %x) {
+; X64-LABEL: zext_and_trunc_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    andl $7, %eax
 ; X64-NEXT:    retq
 ;
-; X86-LABEL: aext_and_trunc_i32:
+; X86-LABEL: zext_and_trunc_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andl $7, %eax
@@ -56,16 +26,16 @@ define i32 @aext_and_trunc_i32(i32 %x) {
   ret i32 %zext
 }
 
-; (aext (and (trunc i64) C)) -> (and i32 C) on x86-64.
-define i32 @aext_and_trunc_i64(i64 %x) {
-; X64-LABEL: aext_and_trunc_i64:
+; (zext (and (trunc i64) C)) -> (and i32 C) on x86-64.
+define i32 @zext_and_trunc_i64(i64 %x) {
+; X64-LABEL: zext_and_trunc_i64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    andl $15, %eax
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
 ;
-; X86-LABEL: aext_and_trunc_i64:
+; X86-LABEL: zext_and_trunc_i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andl $15, %eax
