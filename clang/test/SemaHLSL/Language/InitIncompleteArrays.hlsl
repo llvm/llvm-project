@@ -14,7 +14,7 @@ struct is_same<T, T> {
 
 template<typename T>
 struct remove_addrspace {
-  using type = __decltype((T)0);
+  using type = __typeof_unqual__(T);
 };
 
 template <typename T, typename V>

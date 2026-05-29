@@ -648,6 +648,8 @@ Bug Fixes in This Version
   an array via an element-at-a-time copy loop (#GH192026)
 - Fixed an issue where certain designated initializers would be rejected for constexpr variables. (#GH193373)
 - Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
+- Fixed mishandling of cv-qualified array types in ``__reference_constructs_from_temporary`` and
+  ``__reference_converts_from_temporary`` builtins. (#GH198580)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

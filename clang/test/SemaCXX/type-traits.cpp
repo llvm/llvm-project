@@ -3310,6 +3310,44 @@ void reference_constructs_from_temporary_checks() {
   // For scalar types, cv-qualifications are dropped first for prvalues.
   static_assert(__reference_constructs_from_temporary(int&&, const int));
   static_assert(__reference_constructs_from_temporary(int&&, volatile int));
+  // For array types, cv-qualifications are *kept* for prvalues.
+  // Uses with type aliases need to be verified, see https://llvm.org/PR198580.
+  static_assert(!__reference_constructs_from_temporary(const int(&)[10], volatile int[10]));
+  static_assert(!__reference_constructs_from_temporary(const IntAr&, volatile int[10]));
+  static_assert(!__reference_constructs_from_temporary(const int(&)[10], volatile IntAr));
+  static_assert(!__reference_constructs_from_temporary(const IntAr&, volatile IntAr));
+  static_assert(!__reference_constructs_from_temporary(int(&&)[10], volatile int[10]));
+  static_assert(!__reference_constructs_from_temporary(IntAr&&, volatile int[10]));
+  static_assert(!__reference_constructs_from_temporary(int(&&)[10], volatile IntAr));
+  static_assert(!__reference_constructs_from_temporary(IntAr&&, volatile IntAr));
+  static_assert(__reference_constructs_from_temporary(volatile int(&&)[10], volatile int[10]));
+  static_assert(__reference_constructs_from_temporary(volatile IntAr&&, volatile int[10]));
+  static_assert(__reference_constructs_from_temporary(volatile int(&&)[10], volatile IntAr));
+  static_assert(__reference_constructs_from_temporary(volatile IntAr&&, volatile IntAr));
+  static_assert(!__reference_constructs_from_temporary(int*&&, volatile int[10]));
+  static_assert(!__reference_constructs_from_temporary(int*&&, volatile IntAr));
+  static_assert(!__reference_constructs_from_temporary(int* const&, volatile int[10]));
+  static_assert(!__reference_constructs_from_temporary(int* const&, volatile IntAr));
+  static_assert(__reference_constructs_from_temporary(volatile int*&&, volatile int[10]));
+  static_assert(__reference_constructs_from_temporary(volatile int*&&, volatile IntAr));
+  static_assert(!__reference_constructs_from_temporary(const Empty(&)[10], volatile Empty[10]));
+  static_assert(!__reference_constructs_from_temporary(const EmptyAr&, volatile Empty[10]));
+  static_assert(!__reference_constructs_from_temporary(const Empty(&)[10], volatile Empty));
+  static_assert(!__reference_constructs_from_temporary(const EmptyAr&, volatile Empty));
+  static_assert(!__reference_constructs_from_temporary(Empty(&&)[10], volatile Empty[10]));
+  static_assert(!__reference_constructs_from_temporary(EmptyAr&&, volatile int[10]));
+  static_assert(!__reference_constructs_from_temporary(Empty(&&)[10], volatile EmptyAr));
+  static_assert(!__reference_constructs_from_temporary(EmptyAr&&, volatile EmptyAr));
+  static_assert(__reference_constructs_from_temporary(volatile Empty(&&)[10], volatile Empty[10]));
+  static_assert(__reference_constructs_from_temporary(volatile EmptyAr&&, volatile Empty[10]));
+  static_assert(__reference_constructs_from_temporary(volatile Empty(&&)[10], volatile EmptyAr));
+  static_assert(__reference_constructs_from_temporary(volatile EmptyAr&&, volatile EmptyAr));
+  static_assert(!__reference_constructs_from_temporary(Empty*&&, volatile Empty[10]));
+  static_assert(!__reference_constructs_from_temporary(Empty*&&, volatile EmptyAr));
+  static_assert(!__reference_constructs_from_temporary(Empty* const&, volatile Empty[10]));
+  static_assert(!__reference_constructs_from_temporary(Empty* const&, volatile EmptyAr));
+  static_assert(__reference_constructs_from_temporary(volatile Empty*&&, volatile Empty[10]));
+  static_assert(__reference_constructs_from_temporary(volatile Empty*&&, volatile EmptyAr));
 
   // Additional checks
   static_assert(__reference_constructs_from_temporary(POD const&, Derives));
@@ -3377,6 +3415,44 @@ void reference_converts_from_temporary_checks() {
   // For scalar types, cv-qualifications are dropped first for prvalues.
   static_assert(__reference_converts_from_temporary(int&&, const int));
   static_assert(__reference_converts_from_temporary(int&&, volatile int));
+  // For array types, cv-qualifications are *kept* for prvalues.
+  // Uses with type aliases need to be verified, see https://llvm.org/PR198580.
+  static_assert(!__reference_converts_from_temporary(const int(&)[10], volatile int[10]));
+  static_assert(!__reference_converts_from_temporary(const IntAr&, volatile int[10]));
+  static_assert(!__reference_converts_from_temporary(const int(&)[10], volatile IntAr));
+  static_assert(!__reference_converts_from_temporary(const IntAr&, volatile IntAr));
+  static_assert(!__reference_converts_from_temporary(int(&&)[10], volatile int[10]));
+  static_assert(!__reference_converts_from_temporary(IntAr&&, volatile int[10]));
+  static_assert(!__reference_converts_from_temporary(int(&&)[10], volatile IntAr));
+  static_assert(!__reference_converts_from_temporary(IntAr&&, volatile IntAr));
+  static_assert(__reference_converts_from_temporary(volatile int(&&)[10], volatile int[10]));
+  static_assert(__reference_converts_from_temporary(volatile IntAr&&, volatile int[10]));
+  static_assert(__reference_converts_from_temporary(volatile int(&&)[10], volatile IntAr));
+  static_assert(__reference_converts_from_temporary(volatile IntAr&&, volatile IntAr));
+  static_assert(!__reference_converts_from_temporary(int*&&, volatile int[10]));
+  static_assert(!__reference_converts_from_temporary(int*&&, volatile IntAr));
+  static_assert(!__reference_converts_from_temporary(int* const&, volatile int[10]));
+  static_assert(!__reference_converts_from_temporary(int* const&, volatile IntAr));
+  static_assert(__reference_converts_from_temporary(volatile int*&&, volatile int[10]));
+  static_assert(__reference_converts_from_temporary(volatile int*&&, volatile IntAr));
+  static_assert(!__reference_converts_from_temporary(const Empty(&)[10], volatile Empty[10]));
+  static_assert(!__reference_converts_from_temporary(const EmptyAr&, volatile Empty[10]));
+  static_assert(!__reference_converts_from_temporary(const Empty(&)[10], volatile Empty));
+  static_assert(!__reference_converts_from_temporary(const EmptyAr&, volatile Empty));
+  static_assert(!__reference_converts_from_temporary(Empty(&&)[10], volatile Empty[10]));
+  static_assert(!__reference_converts_from_temporary(EmptyAr&&, volatile int[10]));
+  static_assert(!__reference_converts_from_temporary(Empty(&&)[10], volatile EmptyAr));
+  static_assert(!__reference_converts_from_temporary(EmptyAr&&, volatile EmptyAr));
+  static_assert(__reference_converts_from_temporary(volatile Empty(&&)[10], volatile Empty[10]));
+  static_assert(__reference_converts_from_temporary(volatile EmptyAr&&, volatile Empty[10]));
+  static_assert(__reference_converts_from_temporary(volatile Empty(&&)[10], volatile EmptyAr));
+  static_assert(__reference_converts_from_temporary(volatile EmptyAr&&, volatile EmptyAr));
+  static_assert(!__reference_converts_from_temporary(Empty*&&, volatile Empty[10]));
+  static_assert(!__reference_converts_from_temporary(Empty*&&, volatile EmptyAr));
+  static_assert(!__reference_converts_from_temporary(Empty* const&, volatile Empty[10]));
+  static_assert(!__reference_converts_from_temporary(Empty* const&, volatile EmptyAr));
+  static_assert(__reference_converts_from_temporary(volatile Empty*&&, volatile Empty[10]));
+  static_assert(__reference_converts_from_temporary(volatile Empty*&&, volatile EmptyAr));
 
   // Additional checks
   static_assert(__reference_converts_from_temporary(POD const&, Derives));
