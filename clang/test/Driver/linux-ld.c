@@ -1789,6 +1789,28 @@
 // CHECK-LD-AMI: "-lc"
 // CHECK-LD-AMI: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 
+
+// Check that Azure Linux GCC is found via fallback triple detection (x86_64).
+// The sysroot has GCC installed under x86_64-azurelinux-linux, but we target
+// the generic x86_64-unknown-linux-gnu to exercise the fallback triple list.
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=x86_64-unknown-linux-gnu -rtlib=libgcc --unwindlib=platform \
+// RUN:     --sysroot=%S/Inputs/azurelinux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD-AZURELINUX %s
+// CHECK-LD-AZURELINUX: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-LD-AZURELINUX: "{{.*}}/usr/lib/gcc/x86_64-azurelinux-linux/11{{/|\\\\}}crtbegin.o"
+// CHECK-LD-AZURELINUX: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-azurelinux-linux/11"
+// CHECK-LD-AZURELINUX: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-azurelinux-linux/11/../../../../lib64"
+
+// Check that Azure Linux GCC is found via fallback triple detection (aarch64).
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=aarch64-unknown-linux-gnu -rtlib=libgcc --unwindlib=platform \
+// RUN:     --sysroot=%S/Inputs/azurelinux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD-AZURELINUX-AARCH64 %s
+// CHECK-LD-AZURELINUX-AARCH64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-LD-AZURELINUX-AARCH64: "{{.*}}/usr/lib/gcc/aarch64-azurelinux-linux/11{{/|\\\\}}crtbegin.o"
+// CHECK-LD-AZURELINUX-AARCH64: "-L[[SYSROOT]]/usr/lib/gcc/aarch64-azurelinux-linux/11"
+// CHECK-LD-AZURELINUX-AARCH64: "-L[[SYSROOT]]/usr/lib/gcc/aarch64-azurelinux-linux/11/../../../../lib64"
 // Check whether the OpenEmbedded ARM libs are added correctly.
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm-oe-linux-gnueabi -rtlib=libgcc --unwindlib=platform \
