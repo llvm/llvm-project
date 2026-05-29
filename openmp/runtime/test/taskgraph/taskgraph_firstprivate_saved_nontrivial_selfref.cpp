@@ -44,7 +44,7 @@ __attribute__((noinline)) static void run_taskgraph_selfref(int seed) {
 
 #pragma omp taskgraph graph_id(3142)
   {
-#pragma omp task firstprivate(saved: Local)                                   \
+#pragma omp task firstprivate(saved : Local)                                   \
     shared(observed_via_self, observed_value)
     {
       // Read through the self pointer.  This is exactly the operation that

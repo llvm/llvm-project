@@ -24,7 +24,8 @@ __attribute__((noinline)) static int expected_recursive(int depth, int seed) {
   return local + expected_recursive(depth - 1, seed + 10);
 }
 
-__attribute__((noinline)) static int run_taskgraph_recursive(int depth, int seed) {
+__attribute__((noinline)) static int run_taskgraph_recursive(int depth,
+                                                             int seed) {
   int x = seed;
   int *ptr = &x;
   int sum_delta = 0;
@@ -32,7 +33,8 @@ __attribute__((noinline)) static int run_taskgraph_recursive(int depth, int seed
 
 #pragma omp taskgraph graph_id(gid)
   {
-#pragma omp taskloop replayable num_tasks(8) shared(ptr, depth) reduction(+ : sum_delta)
+#pragma omp taskloop replayable num_tasks(8) shared(ptr, depth)                \
+    reduction(+ : sum_delta)
     for (int i = 0; i < 16; ++i) {
       int delta = depth + i + 1;
       __atomic_fetch_add(ptr, delta, __ATOMIC_RELAXED);
@@ -56,13 +58,15 @@ int main() {
 
   if (first == expected_first && second == expected_second) {
     std::fprintf(stderr,
-                 "UNEXPECTED SUCCESS lexical recursive taskloop replay first=%d second=%d expected=%d/%d\n",
+                 "UNEXPECTED SUCCESS lexical recursive taskloop replay "
+                 "first=%d second=%d expected=%d/%d\n",
                  first, second, expected_first, expected_second);
     return 0;
   }
 
   std::fprintf(stderr,
-               "EXPECTED FAILURE lexical recursive taskloop replay first=%d second=%d expected=%d/%d\n",
+               "EXPECTED FAILURE lexical recursive taskloop replay first=%d "
+               "second=%d expected=%d/%d\n",
                first, second, expected_first, expected_second);
   return 1;
 }

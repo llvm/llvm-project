@@ -57,9 +57,10 @@ int main() {
     int actual = run_recursive_frameid(depth, seed, run);
     int expected = expected_recursive(depth, seed, run);
     if (actual != expected) {
-      std::fprintf(stderr,
-                   "FAIL recursive pointer frameid run=%d actual=%d expected=%d\n",
-                   run, actual, expected);
+      std::fprintf(
+          stderr,
+          "FAIL recursive pointer frameid run=%d actual=%d expected=%d\n", run,
+          actual, expected);
       return 1;
     }
     actual_sum += actual;

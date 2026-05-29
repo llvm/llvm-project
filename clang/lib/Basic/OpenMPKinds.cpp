@@ -486,8 +486,8 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
     case OMPC_FIRSTPRIVATE_unknown:
       return "unknown";
 #define OPENMP_FIRSTPRIVATE_KIND(Name)                                         \
-    case OMPC_FIRSTPRIVATE_##Name:                                             \
-      return #Name;
+  case OMPC_FIRSTPRIVATE_##Name:                                               \
+    return #Name;
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'firstprivate' clause type");

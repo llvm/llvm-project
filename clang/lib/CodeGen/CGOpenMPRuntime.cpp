@@ -2472,7 +2472,7 @@ void CGOpenMPRuntime::emitTaskgraphCall(CodeGenFunction &CGF,
       GraphReset,
       NoGroup,
       CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(OutlinedFn,
-          CGM.VoidPtrTy),
+                                                      CGM.VoidPtrTy),
       CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
           CapStruct.getPointer(OutlinedCGF), CGM.VoidPtrTy)};
 
@@ -3934,14 +3934,12 @@ emitTaskDupFunction(CodeGenModule &CGM, SourceLocation Loc,
 /// same calling convention as the existing taskloop \c task_dup callback
 /// (\c p_task_dup_t in the runtime), letting the runtime invoke either via
 /// a single function-pointer type.
-static llvm::Value *
-emitTaskCloneFunction(CodeGenModule &CGM, SourceLocation Loc,
-                      const OMPExecutableDirective &D,
-                      QualType KmpTaskTWithPrivatesPtrQTy,
-                      const RecordDecl *KmpTaskTWithPrivatesQTyRD,
-                      QualType SharedsTy, QualType SharedsPtrTy,
-                      const OMPTaskDataTy &Data,
-                      ArrayRef<PrivateDataTy> Privates) {
+static llvm::Value *emitTaskCloneFunction(
+    CodeGenModule &CGM, SourceLocation Loc, const OMPExecutableDirective &D,
+    QualType KmpTaskTWithPrivatesPtrQTy,
+    const RecordDecl *KmpTaskTWithPrivatesQTyRD, QualType SharedsTy,
+    QualType SharedsPtrTy, const OMPTaskDataTy &Data,
+    ArrayRef<PrivateDataTy> Privates) {
   ASTContext &C = CGM.getContext();
   auto *DstArg = ImplicitParamDecl::Create(
       C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, KmpTaskTWithPrivatesPtrQTy,
@@ -5082,10 +5080,9 @@ void CGOpenMPRuntime::emitTaskCall(
     const auto *CS = cast<CapturedStmt>(D.getAssociatedStmt());
     llvm::Function *RelocFn =
         emitTaskRelocationFunction(CGM, Loc, *CS, CGF.CapturedStmtInfo, Data);
-    TGTaskArgs[8] = RelocFn
-                        ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-                              RelocFn, CGM.VoidPtrTy)
-                        : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+    TGTaskArgs[8] = RelocFn ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+                                  RelocFn, CGM.VoidPtrTy)
+                            : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
     TGTaskArgs[9] = Result.TaskCloneFn
                         ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
                               Result.TaskCloneFn, CGF.VoidPtrTy)
@@ -5326,10 +5323,10 @@ void CGOpenMPRuntime::emitTaskLoopCall(
     const auto *CS = cast<CapturedStmt>(D.getAssociatedStmt());
     llvm::Function *RelocFn =
         emitTaskRelocationFunction(CGM, Loc, *CS, CGF.CapturedStmtInfo, Data);
-    TGTaskLoopArgs[13] = RelocFn
-                             ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-                                   RelocFn, CGM.VoidPtrTy)
-                             : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+    TGTaskLoopArgs[13] =
+        RelocFn ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(RelocFn,
+                                                                  CGM.VoidPtrTy)
+                : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
     CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                             CGM.getModule(), OMPRTL___kmpc_taskgraph_taskloop),
                         TGTaskLoopArgs);

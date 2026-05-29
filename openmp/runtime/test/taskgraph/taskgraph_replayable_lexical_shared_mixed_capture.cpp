@@ -14,7 +14,8 @@ __attribute__((noinline)) static int run_taskgraph_mixed_capture(int seed) {
 
 #pragma omp taskgraph graph_id(401)
   {
-#pragma omp task replayable(1) shared(x, y, out) firstprivate(fp) depend(inout : x, y)
+#pragma omp task replayable(1) shared(x, y, out) firstprivate(fp)              \
+    depend(inout : x, y)
     {
       x += fp;
       y += x;
@@ -31,7 +32,8 @@ int main() {
 
   if (first != 17 || second != 314) {
     std::fprintf(stderr,
-                 "FAIL lexical mixed capture replay first=%d second=%d expected=17/314\n",
+                 "FAIL lexical mixed capture replay first=%d second=%d "
+                 "expected=17/314\n",
                  first, second);
     return 1;
   }

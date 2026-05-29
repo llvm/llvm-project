@@ -43,13 +43,15 @@ int main() {
   if (first != 136 || second != 1720 || Tracker::Ctors < 2 ||
       Tracker::Dtors < 2 || Tracker::Ctors != Tracker::Dtors) {
     std::fprintf(stderr,
-                 "FAIL lexical nontrivial taskloop replay first=%d second=%d ctors=%d dtors=%d\n",
+                 "FAIL lexical nontrivial taskloop replay first=%d second=%d "
+                 "ctors=%d dtors=%d\n",
                  first, second, Tracker::Ctors, Tracker::Dtors);
     return 1;
   }
 
   std::fprintf(stderr,
-               "PASS lexical nontrivial taskloop replay first=%d second=%d ctors=%d dtors=%d\n",
+               "PASS lexical nontrivial taskloop replay first=%d second=%d "
+               "ctors=%d dtors=%d\n",
                first, second, Tracker::Ctors, Tracker::Dtors);
   return 0;
 }

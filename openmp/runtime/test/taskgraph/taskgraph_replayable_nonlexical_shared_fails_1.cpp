@@ -21,7 +21,9 @@ __attribute__((noinline)) static int run_taskgraph_nonlexical(int seed) {
   int out = -1;
 
 #pragma omp taskgraph graph_id(312)
-  { emit_nonlexical_task(x, out); }
+  {
+    emit_nonlexical_task(x, out);
+  }
 
   return out;
 }
@@ -33,8 +35,10 @@ int main() {
   // The "non-lexical" replayable task is emitted in a helper function outside
   // the taskgraph lexical scope.  We expect this to raise a runtime error.
   if (recorded == replayed) {
-    std::fprintf(stderr, "UNEXPECTED SUCCESS nonlexical replay recorded=%d replayed=%d\n",
-                 recorded, replayed);
+    std::fprintf(
+        stderr,
+        "UNEXPECTED SUCCESS nonlexical replay recorded=%d replayed=%d\n",
+        recorded, replayed);
     return 0;
   }
 
@@ -44,4 +48,5 @@ int main() {
   return 1;
 }
 
-// CHECK: OMP: Error #302: Cannot locate captured shared variable reference for taskgraph replay
+// CHECK: OMP: Error #302: Cannot locate captured shared variable reference for
+// taskgraph replay

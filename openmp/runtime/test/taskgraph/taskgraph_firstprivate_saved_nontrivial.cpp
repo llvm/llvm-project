@@ -55,7 +55,7 @@ __attribute__((noinline)) static void run_taskgraph_nontrivial(int seed) {
 
 #pragma omp taskgraph graph_id(927)
   {
-#pragma omp task firstprivate(saved: Local) shared(observed)
+#pragma omp task firstprivate(saved : Local) shared(observed)
     {
       // Each replay must observe the value captured at recording time
       // (which was 11).  If the per-replay destructor deferral were
