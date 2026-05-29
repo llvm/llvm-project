@@ -2380,10 +2380,10 @@ static void __kmp_omp_tg_task(kmp_int32 gtid, kmp_taskgraph_node_t *node,
     KMP_ATOMIC_INC(&parent_taskdata->td_allocated_child_tasks);
 
   if (node->relocate) {
-    // Call the task's relocation function with the incoming args from the owning
-    // taskgraph.  This rewrites capture-by-reference variables to point to the
-    // correct location on the replayed taskgraph's stack (which may not be the
-    // same as the location from the initial recorded taskgraph).
+    // Call the task's relocation function with the incoming args from the
+    // owning taskgraph.  This rewrites capture-by-reference variables to point
+    // to the correct location on the replayed taskgraph's stack (which may not
+    // be the same as the location from the initial recorded taskgraph).
     node->relocate(task, taskdata->owning_taskgraph->taskgraph_args);
   } else if (task->shareds != NULL) {
     // A missing relocation callback is only fatal when there is a non-empty
@@ -5878,7 +5878,7 @@ static kmp_task_t *__kmp_taskgraph_clone_task(kmp_info_t *thread,
   kmp_task_t *copy_task = KMP_TASKDATA_TO_TASK(copy_td);
   if (orig->shareds) {
     // New task's shared data has now moved.  Update the pointer.
-    copy_task->shareds = (void*) ((char*) copy_td + shareds_offset);
+    copy_task->shareds = (void *)((char *)copy_td + shareds_offset);
   }
   KMP_ATOMIC_ST_RLX(&copy_td->td_incomplete_child_tasks, 0);
   return KMP_TASKDATA_TO_TASK(copy_td);
