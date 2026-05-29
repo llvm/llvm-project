@@ -563,7 +563,7 @@ static std::optional<std::string> GetFileNameByLoadAddress(HANDLE hProcess,
         hProcess, base_addr, mapped_filename.data(), mapped_filename.size());
     if (SUCCESS(mapped_len))
       break;
-    if (::GetLastError() != ERROR_MORE_DATA ||
+    if (::GetLastError() != ERROR_INSUFFICIENT_BUFFER ||
         mapped_filename.size() >= PATHCCH_MAX_CCH)
       return std::nullopt;
     mapped_filename.resize(mapped_filename.size() * 2);
