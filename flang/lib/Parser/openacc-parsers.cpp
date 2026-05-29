@@ -177,14 +177,13 @@ TYPE_PARSER(construct<OpenACCLoopConstruct>(
 
 // 2.15.1 Routine directive
 // The name list is optional: empty list = unnamed/implicit form; 1+ names = named form.
-// Empty parentheses are not valid; localRecovery emits a specific diagnostic and
-// consumes the "()" so that clause parsing continues normally.
 TYPE_PARSER(sourced(construct<OpenACCRoutineConstruct>(verbatim("ROUTINE"_tok),
-    defaulted(localRecovery(
-        "empty parentheses in ROUTINE directive; "
-        "omit parentheses for the unnamed form"_err_en_US,
-        parenthesized(nonemptyList(name)),
-        attempt(parenthesized(ok)))),
+    defaulted(
+        localRecovery(
+            "empty parentheses in ROUTINE directive; "
+            "omit parentheses for the unnamed form"_err_en_US,
+            !parenthesized(ok) >> parenthesized(nonemptyList(name)),
+            parenthesized(ok))),
     Parser<AccClauseList>{})))
 
 // 2.10 Cache directive
