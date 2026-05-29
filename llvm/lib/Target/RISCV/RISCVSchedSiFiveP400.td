@@ -108,7 +108,7 @@ def SiFiveP400IntProcResources : SiFive8IntProcResources {
   let I2F = SiFiveP400IEXQ2;
   let Branch = SiFiveP400IEXQ0;
   let SYS = SiFiveP400IEXQ1;
-  let VSet = SiFiveP400IEXQ1;
+  let VSet = SiFiveP400IEXQ0;
   let CMOV = SiFiveP400IEXQ1;
   let Div = [SiFiveP400IEXQ2, SiFiveP400Div];
 }

@@ -6474,12 +6474,7 @@ X86TTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
     return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
   assert(SrcVTy->isVectorTy() && "Unexpected data type for Gather/Scatter");
-  PointerType *PtrTy = dyn_cast<PointerType>(Ptr->getType());
-  if (!PtrTy && Ptr->getType()->isVectorTy())
-    PtrTy = dyn_cast<PointerType>(
-        cast<VectorType>(Ptr->getType())->getElementType());
-  assert(PtrTy && "Unexpected type for Ptr argument");
-  unsigned AddressSpace = PtrTy->getAddressSpace();
+  unsigned AddressSpace = MICA.getAddressSpace();
   return getGSVectorCost(Opcode, CostKind, SrcVTy, Ptr, Alignment,
                          AddressSpace);
 }
