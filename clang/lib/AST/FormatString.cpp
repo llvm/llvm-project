@@ -16,7 +16,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
-#include <limits>
 #include <optional>
 
 using clang::analyze_format_string::ArgType;
@@ -68,7 +67,7 @@ static bool ParseWidthModifier(const char *&I, const char *E,
     return false;
 
   if (W.getAsInteger(10, BitWidth))
-    BitWidth = std::numeric_limits<unsigned>::max();
+    return false;
 
   for (const char *End = W.end(); I != End; ++I)
     ++ModifierLength;

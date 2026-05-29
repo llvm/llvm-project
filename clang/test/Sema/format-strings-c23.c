@@ -22,6 +22,7 @@ void t1(int32_t i32, uint32_t u32, int_fast32_t if32, uint_fast32_t uf32, int32_
   printf("%w32u", 1.0);  // expected-warning{{format specifies type 'uint32_t' (aka 'unsigned int') but the argument has type 'double'}}
   printf("%wf32d", 1.0); // expected-warning{{format specifies type 'int_fast32_t' (aka 'int') but the argument has type 'double'}}
   printf("%wf32u", 1.0); // expected-warning{{format specifies type 'uint_fast32_t' (aka 'unsigned int') but the argument has type 'double'}}
+  printf("%w18446744073709551616d", i32); // expected-warning{{invalid conversion specifier '1'}}
 
   printf("%w32n", i_ptr);
   printf("%wf32n", if_ptr);
