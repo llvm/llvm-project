@@ -27,8 +27,6 @@ namespace gi {
 class Matcher;
 class MatchTable;
 
-//===- Helper functions ---------------------------------------------------===//
-
 void emitEncodingMacrosDef(raw_ostream &OS);
 void emitEncodingMacrosUndef(raw_ostream &OS);
 
