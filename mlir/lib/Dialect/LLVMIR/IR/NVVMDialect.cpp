@@ -4792,36 +4792,36 @@ NVVM::IDArgPair ConvertF8x2ToBF16x2Op::getIntrinsicIDAndArgs(
   bool hasScale = static_cast<bool>(curOp.getScaleFactor());
   bool hasSatfinite = curOp.getSat() == NVVM::SaturationMode::SATFINITE;
   bool hasRelu = curOp.getRelu();
-  
+
   static constexpr llvm::Intrinsic::ID E4M3Ids[] = {
-    llvm::Intrinsic::nvvm_e4m3x2_to_bf16x2_rn_scale_n2_ue8m0,
-    llvm::Intrinsic::nvvm_e4m3x2_to_bf16x2_rn_relu_scale_n2_ue8m0,
-    llvm::Intrinsic::nvvm_e4m3x2_to_bf16x2_rn_satfinite_scale_n2_ue8m0,
-    llvm::Intrinsic::nvvm_e4m3x2_to_bf16x2_rn_relu_satfinite_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e4m3x2_to_bf16x2_rn_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e4m3x2_to_bf16x2_rn_relu_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e4m3x2_to_bf16x2_rn_satfinite_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e4m3x2_to_bf16x2_rn_relu_satfinite_scale_n2_ue8m0,
   };
 
   static constexpr llvm::Intrinsic::ID E5M2Ids[] = {
-    llvm::Intrinsic::nvvm_e5m2x2_to_bf16x2_rn_scale_n2_ue8m0,
-    llvm::Intrinsic::nvvm_e5m2x2_to_bf16x2_rn_relu_scale_n2_ue8m0,
-    llvm::Intrinsic::nvvm_e5m2x2_to_bf16x2_rn_satfinite_scale_n2_ue8m0,
-    llvm::Intrinsic::nvvm_e5m2x2_to_bf16x2_rn_relu_satfinite_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e5m2x2_to_bf16x2_rn_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e5m2x2_to_bf16x2_rn_relu_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e5m2x2_to_bf16x2_rn_satfinite_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e5m2x2_to_bf16x2_rn_relu_satfinite_scale_n2_ue8m0,
   };
 
   llvm::Intrinsic::ID intId =
-    llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(curOp.getSrcType())
-      .Case([&](Float8E8M0FNUType type) {
-        return llvm::Intrinsic::nvvm_ue8m0x2_to_bf16x2;
-      })
-      .Case([&](Float8E4M3FNType type) {
-        return E4M3Ids[hasSatfinite << 1 | hasRelu];
-      })
-      .Case([&](Float8E5M2Type type) {
-        return E5M2Ids[hasSatfinite << 1 | hasRelu];
-      })
-      .Default([](mlir::Type type) {
-        llvm_unreachable("Invalid type for ConvertF8x2ToBF16x2Op");
-        return llvm::Intrinsic::not_intrinsic;
-      });
+      llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(curOp.getSrcType())
+          .Case([&](Float8E8M0FNUType type) {
+            return llvm::Intrinsic::nvvm_ue8m0x2_to_bf16x2;
+          })
+          .Case([&](Float8E4M3FNType type) {
+            return E4M3Ids[hasSatfinite << 1 | hasRelu];
+          })
+          .Case([&](Float8E5M2Type type) {
+            return E5M2Ids[hasSatfinite << 1 | hasRelu];
+          })
+          .Default([](mlir::Type type) {
+            llvm_unreachable("Invalid type for ConvertF8x2ToBF16x2Op");
+            return llvm::Intrinsic::not_intrinsic;
+          });
   llvm::Value *packedI16 =
       builder.CreateBitCast(mt.lookupValue(curOp.getSrc()),
                             llvm::Type::getInt16Ty(builder.getContext()));
