@@ -619,9 +619,9 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   if (!Is64Bit || !MF.getSubtarget<X86Subtarget>().hasEGPR())
     Reserved.set(X86::R16, X86::R31WH + 1);
 
-  // There is a problem with allocation R30/R31 registers in Win64 APX ABI
-  // functions that have setjmp as unwinder won't be able to restore them:
-  // https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170#setjmplongjmp
+  // Due to specifics of setjmp unwinding in Win64 APX ABI, the unwinder
+  // cannot restore R30/R31. Reserve them to prevent register allocation.
+  // https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention#setjmplongjmp
   if (MF.exposesReturnsTwice()) {
     unsigned NumReservedCSRs = 0;
     for (const MCPhysReg &Reg : CSR_Win64_EGPR_SaveList)
