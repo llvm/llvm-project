@@ -291,5 +291,3 @@ inline const T *getValueAs(const void *pack_ptr, uint32_t num_elements,
 #endif // __cplusplus
 
 #endif // INSTRUMENTOR_RUNTIME_H
-
-// Generated with runtime prefix: __instrumentor_
