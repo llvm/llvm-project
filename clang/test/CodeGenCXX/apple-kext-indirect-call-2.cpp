@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fapple-kext -fno-rtti -emit-llvm -o - %s | FileCheck %s
 
-// CHECK: @_ZTV1A ={{.*}} unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr null, ptr @_ZNK1A3abcEv, ptr null] }
-// CHECK: @_ZTV4Base ={{.*}} unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr null, ptr @_ZNK4Base3abcEv, ptr null] }
-// CHECK: @_ZTV8Derived2 ={{.*}} unnamed_addr constant { [5 x ptr] } { [5 x ptr] [ptr null, ptr null, ptr null, ptr @_ZNK8Derived23efgEv, ptr null] }
-// CHECK: @_ZTV2D2 ={{.*}} unnamed_addr constant { [5 x ptr] } { [5 x ptr] [ptr null, ptr null, ptr null, ptr @_ZNK2D23abcEv, ptr null] }
+// CHECK: @_ZTV1A ={{.*}}constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr null, ptr @_ZNK1A3abcEv, ptr null] }
+// CHECK: @_ZTV4Base ={{.*}}constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr null, ptr @_ZNK4Base3abcEv, ptr null] }
+// CHECK: @_ZTV8Derived2 ={{.*}}constant { [5 x ptr] } { [5 x ptr] [ptr null, ptr null, ptr null, ptr @_ZNK8Derived23efgEv, ptr null] }
+// CHECK: @_ZTV2D2 ={{.*}}constant { [5 x ptr] } { [5 x ptr] [ptr null, ptr null, ptr null, ptr @_ZNK2D23abcEv, ptr null] }
 
 struct A {
   virtual const char* abc(void) const;

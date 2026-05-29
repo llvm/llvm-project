@@ -105,6 +105,10 @@ public:
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const;
 
+  unsigned getYBNDSWImmOpValue(const MCInst &MI, unsigned OpNo,
+                               SmallVectorImpl<MCFixup> &Fixups,
+                               const MCSubtargetInfo &STI) const;
+
   unsigned getVMaskReg(const MCInst &MI, unsigned OpNo,
                        SmallVectorImpl<MCFixup> &Fixups,
                        const MCSubtargetInfo &STI) const;
@@ -756,6 +760,35 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   ++MCNumFixups;
 
   return 0;
+}
+
+unsigned
+RISCVMCCodeEmitter::getYBNDSWImmOpValue(const MCInst &MI, unsigned OpNo,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
+  unsigned Imm = getImmOpValue(MI, OpNo, Fixups, STI);
+  assert(RISCV::isValidYBNDSWImm(Imm) && "Should have been checked before");
+  // YBNDSWI decodes to the requested length result as follows:
+  // If imm[8:0] == 0, result is 4096.
+  if (Imm == 4096)
+    return 0;
+  // If imm[8] == 0 and imm[7:0] != 0, result is imm[7:0] (1, 2, ..., 255).
+  if (Imm > 0 && Imm <= 255)
+    return Imm;
+  // If imm[8] == 1 and imm[7:5] == 0, result is
+  //   `256 | (imm[3:0] << 4) | (imm[4] << 3)` (256, 264, ..., 504).
+  if (Imm >= 256 && Imm <= 504 && (Imm % 8) == 0) {
+    // Encode the multiples of 8 in this range in odd-even buckets, setting bit
+    // 4 of the immediate to 1 for odd multiples of 8.
+    unsigned MultipleOf8 = (Imm - 256) >> 3;
+    unsigned OddMultiple = MultipleOf8 & 1;
+    unsigned Bits3To0 = MultipleOf8 >> 1;
+    return 256 | (OddMultiple << 4) | Bits3To0;
+  }
+  // Otherwise, result is imm[7:0] << 4 (512, 528, ... 4080).
+  if (Imm >= 512 && Imm <= 4080 && (Imm % 16) == 0)
+    return 256 | (Imm >> 4);
+  llvm_unreachable("Invalid immediate for YBNDSWI");
 }
 
 unsigned RISCVMCCodeEmitter::getVMaskReg(const MCInst &MI, unsigned OpNo,

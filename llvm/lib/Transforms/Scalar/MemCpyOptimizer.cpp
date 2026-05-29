@@ -1292,6 +1292,9 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   if (!BAA.isMustAlias(MemSet->getDest(), MemCpy->getDest()))
     return false;
 
+  if (MemSet->isVolatile())
+    return false;
+
   // Don't perform the transform if src_size may be zero. In that case, the
   // transform is essentially a complex no-op and may lead to an infinite
   // loop if BasicAA is smart enough to understand that dst and dst + src_size

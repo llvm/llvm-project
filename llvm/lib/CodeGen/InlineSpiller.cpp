@@ -1105,9 +1105,29 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   if (CopyMI) {
     SlotIndex CopyIdx = LIS.InsertMachineInstrInMaps(*CopyMI).getRegSlot();
     if (!MRI.isSSA()) {
-      LiveInterval &LI = LIS.getInterval(CopyMI->getOperand(0).getReg());
+      Register CopyDstReg = CopyMI->getOperand(0).getReg();
+      LiveInterval &LI = LIS.getInterval(CopyDstReg);
+
+      // The addSegment below extends CopyDstReg's LiveInterval with a new
+      // segment for the copy. If CopyDstReg is already assigned in the
+      // LiveRegMatrix, we must unassign before the modification and reassign
+      // after, so the matrix stays consistent with the updated interval.
+      // This can happen when the fold target creates a copy
+      // to preserve a source operand, defining a vreg that was already
+      // allocated to a physreg.
+      bool NeedMatrixReassign =
+          Matrix && CopyDstReg.isVirtual() && VRM.hasPhys(CopyDstReg);
+      MCRegister PhysReg;
+      if (NeedMatrixReassign) {
+        PhysReg = VRM.getPhys(CopyDstReg);
+        Matrix->unassign(LI);
+      }
+
       VNInfo *VNI = LI.getNextValue(CopyIdx, LIS.getVNInfoAllocator());
       LI.addSegment(LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
+
+      if (NeedMatrixReassign)
+        Matrix->assign(LI, PhysReg);
     }
   }
   // Update the call info.

@@ -80,7 +80,7 @@ InstructionFlavor llvm::AMDGPU::classifyFlavor(const MachineInstr &MI,
 }
 
 SUnit *HardwareUnitInfo::getNextTargetSU(bool LookDeep) const {
-  for (auto *PrioritySU : PrioritySUs) {
+  for (SUnit *PrioritySU : PrioritySUs) {
     if (!PrioritySU->isTopReady())
       return PrioritySU;
   }
@@ -106,12 +106,8 @@ SUnit *HardwareUnitInfo::getNextTargetSU(bool LookDeep) const {
 }
 
 void HardwareUnitInfo::insert(SUnit *SU, unsigned BlockingCycles) {
-#ifndef NDEBUG
-  bool Inserted = AllSUs.insert(SU);
-  assert(Inserted);
-#else
-  AllSUs.insert(SU);
-#endif
+  if (!AllSUs.insert(SU))
+    llvm_unreachable("HardwareUnit already contains SU!");
 
   TotalCycles += BlockingCycles;
 
@@ -173,7 +169,7 @@ void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
 
 HardwareUnitInfo *
 CandidateHeuristics::getHWUIFromFlavor(InstructionFlavor Flavor) {
-  for (auto &HWUICand : HWUInfo) {
+  for (HardwareUnitInfo &HWUICand : HWUInfo) {
     if (HWUICand.getType() == Flavor) {
       return &HWUICand;
     }
@@ -269,7 +265,8 @@ void CandidateHeuristics::sortHWUIResources() {
       return A.size() < B.size();
 
     // Default to Flavor order
-    return (unsigned)A.getType() < (unsigned)B.getType();
+    return static_cast<unsigned>(A.getType()) <
+           static_cast<unsigned>(B.getType());
   });
 }
 

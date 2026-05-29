@@ -283,7 +283,8 @@ void renderGlobalISelOptions(const Driver &D, const llvm::opt::ArgList &Args,
                              const llvm::Triple &Triple);
 
 void renderCommonIntegerOverflowOptions(const llvm::opt::ArgList &Args,
-                                        llvm::opt::ArgStringList &CmdArgs);
+                                        llvm::opt::ArgStringList &CmdArgs,
+                                        bool IsMSVCCompat);
 
 bool shouldEnableVectorizerAtOLevel(const llvm::opt::ArgList &Args,
                                     bool isSlpVec);

@@ -2727,7 +2727,9 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsInstAlias<"bal $offset", (BGEZAL ZERO, brtarget:$offset), 1>,
         ISA_MIPS1_NOT_32R6_64R6;
 
-  def : MipsInstAlias<"j $rs", (JR GPR32Opnd:$rs), 0>, ISA_MIPS1;
+  def : MipsInstAlias<"j $rs", (JR GPR32Opnd:$rs), 0>, ISA_MIPS1_NOT_32R6_64R6;
+
+  def : MipsInstAlias<"j $rs", (JALR RA, GPR32Opnd:$rs), 0>, ISA_MIPS32R6;
 
   def : MipsInstAlias<"jalr $rs", (JALR RA, GPR32Opnd:$rs), 0>;
 

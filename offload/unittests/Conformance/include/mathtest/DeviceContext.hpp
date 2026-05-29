@@ -103,16 +103,22 @@ public:
                   "device");
 
     if constexpr (sizeof...(Args) == 0) {
-      launchKernelImpl(Kernel.Handle, NumGroups, GroupSize, nullptr, 0);
+      launchKernelImpl(Kernel.Handle, NumGroups, GroupSize, 0, nullptr,
+                       nullptr);
     } else {
-      auto KernelArgs = makeKernelArgsPack(std::forward<ArgTypes>(Args)...);
-
       static_assert(
           (std::is_trivially_copyable_v<std::decay_t<ArgTypes>> && ...),
           "Argument types provided to launchKernel must be trivially copyable");
 
-      launchKernelImpl(Kernel.Handle, NumGroups, GroupSize, &KernelArgs,
-                       sizeof(KernelArgs));
+      ProvidedTypes ArgsTuple(std::forward<ArgTypes>(Args)...);
+      std::apply(
+          [&](auto &...A) {
+            void *ArgPtrs[] = {static_cast<void *>(&A)...};
+            size_t ArgSizes[] = {sizeof(A)...};
+            launchKernelImpl(Kernel.Handle, NumGroups, GroupSize,
+                             sizeof...(Args), ArgPtrs, ArgSizes);
+          },
+          ArgsTuple);
     }
   }
 
@@ -126,8 +132,8 @@ private:
                   llvm::StringRef KernelName) const noexcept;
 
   void launchKernelImpl(ol_symbol_handle_t KernelHandle, uint32_t NumGroups,
-                        uint32_t GroupSize, const void *KernelArgs,
-                        std::size_t KernelArgsSize) const noexcept;
+                        uint32_t GroupSize, size_t NumArgs, void **ArgPtrs,
+                        const size_t *ArgSizes) const noexcept;
 
   std::size_t GlobalDeviceId;
   ol_device_handle_t DeviceHandle;

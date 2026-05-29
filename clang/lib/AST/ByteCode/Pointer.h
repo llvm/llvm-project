@@ -843,7 +843,8 @@ public:
   /// Compute an integer that can be used to compare this pointer to
   /// another one. This is usually NOT the same as the pointer offset
   /// regarding the AST record layout.
-  size_t computeOffsetForComparison(const ASTContext &ASTCtx) const;
+  std::optional<size_t>
+  computeOffsetForComparison(const ASTContext &ASTCtx) const;
 
 private:
   friend class Block;

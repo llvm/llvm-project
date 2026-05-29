@@ -49,6 +49,47 @@ void f0(int len) {
 // OGCG:   %[[STACK_RESTORE_PTR:.*]] = load ptr, ptr %[[SAVED_STACK]]
 // OGCG:   call void @llvm.stackrestore.p0(ptr %[[STACK_RESTORE_PTR]])
 
+void vla_bool_size(_Bool len) {
+  int arr[len];
+}
+
+// CIR-LABEL: cir.func {{.*}}@vla_bool_size
+// CIR:   %[[LEN_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["len", init]
+// CIR:   %[[SAVED_STACK:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
+// CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
+// CIR:   %[[LEN_SIZE_T:.*]] = cir.cast bool_to_int %[[LEN]] : !cir.bool -> !u64i
+// CIR:   %[[STACK_PTR:.*]] = cir.stacksave
+// CIR:   cir.store{{.*}} %[[STACK_PTR]], %[[SAVED_STACK]]
+// CIR:   %[[ARR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, %[[LEN_SIZE_T]] : !u64i, ["arr"]
+// CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
+// CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
+//
+// LLVM-LABEL: define {{.*}}@vla_bool_size
+// LLVM:   %[[LEN_ADDR:.*]] = alloca i8
+// LLVM:   %[[SAVED_STACK:.*]] = alloca ptr
+// LLVM:   %[[LEN:.*]] = load i8, ptr %[[LEN_ADDR]]
+// LLVM:   %[[LEN_TRUNC:.*]] = trunc i8 %[[LEN]] to i1
+// LLVM:   %[[LEN_SIZE_T:.*]] = zext i1 %[[LEN_TRUNC]] to i64
+// LLVM:   %[[STACK_PTR:.*]] = call ptr @llvm.stacksave.p0()
+// LLVM:   store ptr %[[STACK_PTR]], ptr %[[SAVED_STACK]]
+// LLVM:   %[[ARR:.*]] = alloca i32, i64 %[[LEN_SIZE_T]]
+// LLVM:   %[[STACK_RESTORE_PTR:.*]] = load ptr, ptr %[[SAVED_STACK]]
+// LLVM:   call void @llvm.stackrestore.p0(ptr %[[STACK_RESTORE_PTR]])
+
+// OGCG-LABEL: define {{.*}}@vla_bool_size
+// OGCG:   %[[LEN_ADDR:.*]] = alloca i8
+// OGCG:   %[[SAVED_STACK:.*]] = alloca ptr
+// OGCG:   %[[VLA_EXPR0:.*]] = alloca i64
+// OGCG:   %[[LEN:.*]] = load i8, ptr %[[LEN_ADDR]]
+// OGCG:   %[[LEN_CMP:.*]] = icmp ne i8 %[[LEN]]
+// OGCG:   %[[LEN_SIZE_T:.*]] = zext i1 %[[LEN_CMP]] to i64
+// OGCG:   %[[STACK_PTR:.*]] = call ptr @llvm.stacksave.p0()
+// OGCG:   store ptr %[[STACK_PTR]], ptr %[[SAVED_STACK]]
+// OGCG:   %[[ARR:.*]] = alloca i32, i64 %[[LEN_SIZE_T]]
+// OGCG:   store i64 %[[LEN_SIZE_T]], ptr %[[VLA_EXPR0]]
+// OGCG:   %[[STACK_RESTORE_PTR:.*]] = load ptr, ptr %[[SAVED_STACK]]
+// OGCG:   call void @llvm.stackrestore.p0(ptr %[[STACK_RESTORE_PTR]])
+
 void f1(int len) {
   int arr[16][len];
 }

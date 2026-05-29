@@ -2598,7 +2598,7 @@ void HvxSelector::selectShuffle(SDNode *N) {
   });
   MVT ResTy = N->getValueType(0).getSimpleVT();
   // Assume that vector shuffles operate on vectors of bytes.
-  assert(ResTy.isVector() && ResTy.getVectorElementType() == MVT::i8);
+  assert(ResTy.isVectorOf(MVT::i8));
 
   auto *SN = cast<ShuffleVectorSDNode>(N);
   std::vector<int> Mask(SN->getMask().begin(), SN->getMask().end());

@@ -605,6 +605,9 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
     if (MDNode *Node = F.getMetadata("work_group_size_hint"))
       outputExecutionModeFromMDNode(FReg, Node,
                                     SPIRV::ExecutionMode::LocalSizeHint, 3, 1);
+    if (MDNode *Node = F.getMetadata("reqd_sub_group_size"))
+      outputExecutionModeFromMDNode(FReg, Node,
+                                    SPIRV::ExecutionMode::SubgroupSize, 0, 0);
     if (MDNode *Node = F.getMetadata("intel_reqd_sub_group_size"))
       outputExecutionModeFromMDNode(FReg, Node,
                                     SPIRV::ExecutionMode::SubgroupSize, 0, 0);

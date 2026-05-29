@@ -156,4 +156,8 @@ LOCAL_LABEL(positive_invalid):
 
 END_COMPILERRT_FUNCTION(__aeabi_d2ulz)
 
+#if defined(__MINGW32__)
+DEFINE_COMPILERRT_FUNCTION_ALIAS(__dtou64, __fixunsdfdi)
+#endif
+
 NO_EXEC_STACK_DIRECTIVE

@@ -670,6 +670,113 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT(MachineInstr &I) const {
   return true;
 }
 
+bool AMDGPUInstructionSelector::selectS16MergeToS32(MachineInstr &MI) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src0 = MI.getOperand(1).getReg();
+  Register Src1 = MI.getOperand(2).getReg();
+
+  LLT Src0Ty = MRI->getType(Src0);
+  LLT Src1Ty = MRI->getType(Src1);
+
+  const RegisterBank *DstBank = RBI.getRegBank(Dst, *MRI, TRI);
+  const RegisterBank *Src0Bank = RBI.getRegBank(Src0, *MRI, TRI);
+  const RegisterBank *Src1Bank = RBI.getRegBank(Src1, *MRI, TRI);
+  const bool IsVector = DstBank->getID() == AMDGPU::VGPRRegBankID;
+
+  Register ShiftSrc0;
+  Register ShiftSrc1;
+
+  const DebugLoc &DL = MI.getDebugLoc();
+  MachineBasicBlock *BB = MI.getParent();
+
+  // VGPR case
+  if (IsVector) {
+    // If source are both VGPR16, use REG_SEQUENCE with lo16/hi16 subregisters
+    if (Src0Bank->getID() == AMDGPU::VGPRRegBankID &&
+        Src1Bank->getID() == AMDGPU::VGPRRegBankID &&
+        Src0Ty == LLT::scalar(16) && Src1Ty == LLT::scalar(16)) {
+      BuildMI(*BB, MI, DL, TII.get(TargetOpcode::REG_SEQUENCE), Dst)
+          .addReg(Src0)
+          .addImm(AMDGPU::lo16)
+          .addReg(Src1)
+          .addImm(AMDGPU::hi16);
+
+      if (!RBI.constrainGenericRegister(Dst, AMDGPU::VGPR_32RegClass, *MRI))
+        return false;
+
+      MI.eraseFromParent();
+      return true;
+    }
+
+    // Otherwise, use V_LSHL_OR_B32_e64
+    Register TmpReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    auto MIB = BuildMI(*BB, MI, DL, TII.get(AMDGPU::V_AND_B32_e32), TmpReg)
+                   .addImm(0xFFFF)
+                   .addReg(Src0);
+    constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+
+    MIB = BuildMI(*BB, MI, DL, TII.get(AMDGPU::V_LSHL_OR_B32_e64), Dst)
+              .addReg(Src1)
+              .addImm(16)
+              .addReg(TmpReg);
+    constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+
+    MI.eraseFromParent();
+    return true;
+  }
+
+  // SGPR case -> S_PACK_*_B32_B16
+  // With multiple uses of the shift, this will duplicate the shift and
+  // increase register pressure.
+  //
+  // (merge (lshr_oneuse $src0, 16), (lshr_oneuse $src1, 16)
+  //  => (S_PACK_HH_B32_B16 $src0, $src1)
+  // (merge (lshr_oneuse SReg_32:$src0, 16), $src1)
+  //  => (S_PACK_HL_B32_B16 $src0, $src1)
+  // (merge $src0, (lshr_oneuse SReg_32:$src1, 16))
+  //  => (S_PACK_LH_B32_B16 $src0, $src1)
+  // (merge $src0, $src1)
+  //  => (S_PACK_LL_B32_B16 $src0, $src1)
+
+  bool Shift0 = mi_match(
+      Src0, *MRI, m_OneUse(m_GLShr(m_Reg(ShiftSrc0), m_SpecificICst(16))));
+
+  bool Shift1 = mi_match(
+      Src1, *MRI, m_OneUse(m_GLShr(m_Reg(ShiftSrc1), m_SpecificICst(16))));
+
+  unsigned Opc = AMDGPU::S_PACK_LL_B32_B16;
+  if (Shift0 && Shift1) {
+    Opc = AMDGPU::S_PACK_HH_B32_B16;
+    MI.getOperand(1).setReg(ShiftSrc0);
+    MI.getOperand(2).setReg(ShiftSrc1);
+  } else if (Shift1) {
+    Opc = AMDGPU::S_PACK_LH_B32_B16;
+    MI.getOperand(2).setReg(ShiftSrc1);
+  } else if (Shift0) {
+    auto ConstSrc1 =
+        getAnyConstantVRegValWithLookThrough(Src1, *MRI, true, true);
+    if (ConstSrc1 && ConstSrc1->Value == 0) {
+      // build_vector_trunc (lshr $src0, 16), 0 -> s_lshr_b32 $src0, 16
+      auto MIB = BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_LSHR_B32), Dst)
+                     .addReg(ShiftSrc0)
+                     .addImm(16)
+                     .setOperandDead(3); // Dead scc
+
+      MI.eraseFromParent();
+      constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+      return true;
+    }
+    if (STI.hasSPackHL()) {
+      Opc = AMDGPU::S_PACK_HL_B32_B16;
+      MI.getOperand(1).setReg(ShiftSrc0);
+    }
+  }
+
+  MI.setDesc(TII.get(Opc));
+  constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+  return true;
+}
+
 bool AMDGPUInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
   MachineBasicBlock *BB = MI.getParent();
   Register DstReg = MI.getOperand(0).getReg();
@@ -677,8 +784,14 @@ bool AMDGPUInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
   LLT SrcTy = MRI->getType(MI.getOperand(1).getReg());
 
   const unsigned SrcSize = SrcTy.getSizeInBits();
-  if (SrcSize < 32)
+  if (SrcSize < 32) {
+    // Handle s32 <- G_MERGE_VALUES s16, s16
+    if (SrcSize == 16 && DstTy.getSizeInBits() == 32 &&
+        MI.getNumOperands() == 3) {
+      return selectS16MergeToS32(MI);
+    }
     return selectImpl(MI, *CoverageInfo);
+  }
 
   const DebugLoc &DL = MI.getDebugLoc();
   const RegisterBank *DstBank = RBI.getRegBank(DstReg, *MRI, TRI);
@@ -839,76 +952,7 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR(MachineInstr &MI) const {
            RBI.constrainGenericRegister(Src0, RC, *MRI);
   }
 
-  // TODO: Can be improved?
-  if (IsVector) {
-    Register TmpReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    auto MIB = BuildMI(*BB, MI, DL, TII.get(AMDGPU::V_AND_B32_e32), TmpReg)
-                   .addImm(0xFFFF)
-                   .addReg(Src0);
-    constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
-
-    MIB = BuildMI(*BB, MI, DL, TII.get(AMDGPU::V_LSHL_OR_B32_e64), Dst)
-              .addReg(Src1)
-              .addImm(16)
-              .addReg(TmpReg);
-    constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
-
-    MI.eraseFromParent();
-    return true;
-  }
-
-  Register ShiftSrc0;
-  Register ShiftSrc1;
-
-  // With multiple uses of the shift, this will duplicate the shift and
-  // increase register pressure.
-  //
-  // (build_vector (lshr_oneuse $src0, 16), (lshr_oneuse $src1, 16)
-  //  => (S_PACK_HH_B32_B16 $src0, $src1)
-  // (build_vector (lshr_oneuse SReg_32:$src0, 16), $src1)
-  //  => (S_PACK_HL_B32_B16 $src0, $src1)
-  // (build_vector $src0, (lshr_oneuse SReg_32:$src1, 16))
-  //  => (S_PACK_LH_B32_B16 $src0, $src1)
-  // (build_vector $src0, $src1)
-  //  => (S_PACK_LL_B32_B16 $src0, $src1)
-
-  bool Shift0 = mi_match(
-      Src0, *MRI, m_OneUse(m_GLShr(m_Reg(ShiftSrc0), m_SpecificICst(16))));
-
-  bool Shift1 = mi_match(
-      Src1, *MRI, m_OneUse(m_GLShr(m_Reg(ShiftSrc1), m_SpecificICst(16))));
-
-  unsigned Opc = AMDGPU::S_PACK_LL_B32_B16;
-  if (Shift0 && Shift1) {
-    Opc = AMDGPU::S_PACK_HH_B32_B16;
-    MI.getOperand(1).setReg(ShiftSrc0);
-    MI.getOperand(2).setReg(ShiftSrc1);
-  } else if (Shift1) {
-    Opc = AMDGPU::S_PACK_LH_B32_B16;
-    MI.getOperand(2).setReg(ShiftSrc1);
-  } else if (Shift0) {
-    auto ConstSrc1 =
-        getAnyConstantVRegValWithLookThrough(Src1, *MRI, true, true);
-    if (ConstSrc1 && ConstSrc1->Value == 0) {
-      // build_vector_trunc (lshr $src0, 16), 0 -> s_lshr_b32 $src0, 16
-      auto MIB = BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_LSHR_B32), Dst)
-                     .addReg(ShiftSrc0)
-                     .addImm(16)
-                     .setOperandDead(3); // Dead scc
-
-      MI.eraseFromParent();
-      constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
-      return true;
-    }
-    if (STI.hasSPackHL()) {
-      Opc = AMDGPU::S_PACK_HL_B32_B16;
-      MI.getOperand(1).setReg(ShiftSrc0);
-    }
-  }
-
-  MI.setDesc(TII.get(Opc));
-  constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
-  return true;
+  return selectS16MergeToS32(MI);
 }
 
 bool AMDGPUInstructionSelector::selectG_IMPLICIT_DEF(MachineInstr &I) const {

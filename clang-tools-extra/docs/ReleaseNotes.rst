@@ -506,6 +506,10 @@ Changes in existing checks
   - Fixed false positive where a pointer used with placement new was
     incorrectly diagnosed as allowing the pointee to be made ``const``.
 
+  - Fixed false positive where calling a non-const member function on a
+    pointer was incorrectly treated as mutating the pointer, when it only
+    mutates the pointee.
+
   - Fixed false positives when pointers were later passed or bound through
     ``const``-qualified pointer references.
 

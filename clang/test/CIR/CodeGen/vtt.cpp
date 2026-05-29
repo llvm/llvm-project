@@ -94,7 +94,7 @@ void D::y() {}
 // LLVM-RTTI-SAME:      [4 x ptr] [ptr null, ptr inttoptr (i64 -40 to ptr), ptr @_ZTI1D, ptr @_ZN1A1vEv]
 // LLVM-COMMON-SAME:  }, align 8
 
-// OGCG-COMMON:       @_ZTV1D = unnamed_addr constant { [5 x ptr], [4 x ptr], [4 x ptr] } {
+// OGCG-COMMON:       @_ZTV1D = constant { [5 x ptr], [4 x ptr], [4 x ptr] } {
 // OGCG-NO-RTTI-SAME:   [5 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr null, ptr @_ZN1B1wEv, ptr @_ZN1D1yEv],
 // OGCG-RTTI-SAME:      [5 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr @_ZTI1D, ptr @_ZN1B1wEv, ptr @_ZN1D1yEv],
 // OGCG-NO-RTTI-SAME:   [4 x ptr] [ptr inttoptr (i64 24 to ptr), ptr inttoptr (i64 -16 to ptr), ptr null, ptr @_ZN1C1xEv],
@@ -161,7 +161,7 @@ void D::y() {}
 // LLVM-RTTI-SAME:    [4 x ptr] [ptr null, ptr inttoptr (i64 -40 to ptr), ptr @_ZTI1B, ptr @_ZN1A1vEv]
 // LLVM-COMMON-SAME:  }, align 8
 
-// OGCG-COMMON:       @_ZTC1D0_1B = unnamed_addr constant { [4 x ptr], [4 x ptr] } {
+// OGCG-COMMON:       @_ZTC1D0_1B = constant { [4 x ptr], [4 x ptr] } {
 // OGCG-NO-RTTI-SAME:   [4 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr null, ptr @_ZN1B1wEv],
 // OGCG-RTTI-SAME:      [4 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr @_ZTI1B, ptr @_ZN1B1wEv],
 // OGCG-NO-RTTI-SAME:   [4 x ptr] [ptr null, ptr inttoptr (i64 -40 to ptr), ptr null, ptr @_ZN1A1vEv]
@@ -199,7 +199,7 @@ void D::y() {}
 // LLVM-RTTI-SAME:      [4 x ptr] [ptr null, ptr inttoptr (i64 -24 to ptr), ptr @_ZTI1C, ptr @_ZN1A1vEv]
 // LLVM-COMMON-SAME:  }, align 8
 
-// OGCG-COMMON:        @_ZTC1D16_1C = unnamed_addr constant { [4 x ptr], [4 x ptr] } {
+// OGCG-COMMON:        @_ZTC1D16_1C = constant { [4 x ptr], [4 x ptr] } {
 // OGCG-NO-RTTI-SAME:   [4 x ptr] [ptr inttoptr (i64 24 to ptr), ptr null, ptr null, ptr @_ZN1C1xEv],
 // OGCG-RTTI-SAME:      [4 x ptr] [ptr inttoptr (i64 24 to ptr), ptr null, ptr @_ZTI1C, ptr @_ZN1C1xEv],
 // OGCG-NO-RTTI-SAME:   [4 x ptr] [ptr null, ptr inttoptr (i64 -24 to ptr), ptr null, ptr @_ZN1A1vEv]
@@ -236,7 +236,7 @@ void D::y() {}
 
 // OGCG-RTTI: @_ZTVN10__cxxabiv121__vmi_class_type_infoE = external global [0 x ptr]
 // OGCG-RTTI: @_ZTS1D = constant [3 x i8] c"1D\00", align 1
-// OGCG-RTTI: @_ZTV1A = external unnamed_addr constant { [3 x ptr] }, align 8
+// OGCG-RTTI: @_ZTV1A = external constant { [3 x ptr] }, align 8
 
 D::D() {}
 

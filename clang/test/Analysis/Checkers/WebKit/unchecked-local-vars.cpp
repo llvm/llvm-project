@@ -7,11 +7,16 @@ void someFunction();
 
 namespace raw_ptr {
 void foo() {
-  CheckedObj *bar;
-  // FIXME: later on we might warn on uninitialized vars too
+  CheckedObj *bar; // A local variable in a trivial context is ignored.
 }
 
 void bar(CheckedObj *) {}
+
+void baz() {
+  CheckedObj *bar;
+  // expected-warning@-1{{Local variable 'bar' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+  someFunction();
+}
 } // namespace raw_ptr
 
 namespace reference {

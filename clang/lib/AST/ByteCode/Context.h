@@ -68,6 +68,9 @@ public:
   bool evaluateAsInitializer(State &Parent, const VarDecl *VD, const Expr *Init,
                              APValue &Result);
 
+  /// Evaluates the destruction of a variable.
+  bool evaluateDestruction(State &Parent, const VarDecl *VD, APValue Value);
+
   bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
                          const Expr *PtrExpr, APValue &Result);
   bool evaluateCharRange(State &Parent, const Expr *SizeExpr,

@@ -250,6 +250,10 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   EXPECT_TRUE(N0->preds(DAG).empty());
   EXPECT_THAT(N1->preds(DAG), testing::ElementsAre(N0));
 
+  // Check succs().
+  EXPECT_THAT(N0->succs(DAG), testing::ElementsAre(N1));
+  EXPECT_TRUE(N1->succs(DAG).empty());
+
   // Check memPreds().
   EXPECT_TRUE(N0->memPreds().empty());
   EXPECT_THAT(N1->memPreds(), testing::ElementsAre(N0));
@@ -347,6 +351,13 @@ define i8 @foo(i8 %v0, i8 %v1) {
               testing::UnorderedElementsAre(CallN, CallN, AddN2));
   EXPECT_THAT(RetN->preds(DAG), testing::ElementsAre(AddN2));
 
+  // Check succs().
+  EXPECT_THAT(AddN0->succs(DAG), testing::ElementsAre(AddN2));
+  EXPECT_THAT(AddN1->succs(DAG), testing::UnorderedElementsAre(AddN2, CallN));
+  EXPECT_THAT(AddN2->succs(DAG), testing::UnorderedElementsAre(StN, RetN));
+  EXPECT_THAT(CallN->succs(DAG), testing::ElementsAre(StN, StN));
+  EXPECT_THAT(RetN->succs(DAG), testing::ElementsAre());
+
   // Check UnscheduledSuccs.
   EXPECT_EQ(AddN0->getNumUnscheduledSuccs(), 1u); // AddN2
   EXPECT_EQ(AddN1->getNumUnscheduledSuccs(), 2u); // AddN2, CallN
@@ -387,6 +398,39 @@ define void @foo(ptr %ptr, i8 %val) {
   // Check preds().
   for (auto *PredN : S0N->preds(DAG))
     EXPECT_NE(PredN, nullptr);
+}
+
+// Make sure we don't get null successors even if they are outside the DAG.
+TEST_F(DependencyGraphTest, NonNullSuccs) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %val) {
+  %gep = getelementptr i8, ptr %ptr, i32 0
+  store i8 %val, ptr %gep
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *GEP = cast<sandboxir::GetElementPtrInst>(&*It++);
+  [[maybe_unused]] auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  // The DAG doesn't include S0.
+  DAG.extend({GEP, GEP});
+
+  auto *GEPN = DAG.getNode(GEP);
+  // GEPN has one user (S0) that is outside the DAG and no memory
+  // successors. So succs_begin() should be == succs_end().
+  auto SuccIt = GEPN->succs_begin(DAG);
+  auto SuccItE = GEPN->succs_end(DAG);
+  EXPECT_EQ(SuccIt, SuccItE);
+  // Check succs().
+  for (auto *SuccN : GEPN->succs(DAG))
+    EXPECT_NE(SuccN, nullptr);
 }
 
 TEST_F(DependencyGraphTest, MemDGNode_getPrevNode_getNextNode) {
@@ -523,6 +567,9 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   EXPECT_TRUE(Store0N->memPreds().empty());
   EXPECT_THAT(Store1N->memPreds(), testing::ElementsAre(Store0N));
   EXPECT_TRUE(RetN->preds(DAG).empty());
+  EXPECT_THAT(Store0N->memSuccs(), testing::ElementsAre(Store1N));
+  EXPECT_TRUE(Store1N->memSuccs().empty());
+  EXPECT_THAT(Store0N->succs(DAG), testing::ElementsAre(Store1N));
 }
 
 TEST_F(DependencyGraphTest, NonAliasingStores) {
@@ -549,6 +596,8 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %v0, i8 %v1) {
   EXPECT_TRUE(Store0N->memPreds().empty());
   EXPECT_TRUE(Store1N->memPreds().empty());
   EXPECT_TRUE(RetN->preds(DAG).empty());
+  EXPECT_TRUE(Store1N->memSuccs().empty());
+  EXPECT_TRUE(Store0N->succs(DAG).empty());
 }
 
 TEST_F(DependencyGraphTest, VolatileLoads) {
@@ -573,7 +622,9 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   auto *RetN = DAG.getNode(cast<sandboxir::ReturnInst>(&*It++));
   EXPECT_TRUE(Ld0N->memPreds().empty());
   EXPECT_THAT(Ld1N->memPreds(), testing::ElementsAre(Ld0N));
+  EXPECT_THAT(Ld0N->memSuccs(), testing::ElementsAre(Ld1N));
   EXPECT_TRUE(RetN->preds(DAG).empty());
+  EXPECT_THAT(Ld0N->succs(DAG), testing::ElementsAre(Ld1N));
 }
 
 TEST_F(DependencyGraphTest, VolatileStores) {
@@ -599,6 +650,8 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %v) {
   EXPECT_TRUE(Store0N->memPreds().empty());
   EXPECT_THAT(Store1N->memPreds(), testing::ElementsAre(Store0N));
   EXPECT_TRUE(RetN->preds(DAG).empty());
+  EXPECT_THAT(Store0N->memSuccs(), testing::ElementsAre(Store1N));
+  EXPECT_THAT(Store0N->succs(DAG), testing::ElementsAre(Store1N));
 }
 
 TEST_F(DependencyGraphTest, Call) {
@@ -629,6 +682,10 @@ define void @foo(float %v1, float %v2) {
   EXPECT_THAT(Call1N->memPreds(), testing::ElementsAre());
   EXPECT_THAT(AddN->preds(DAG), testing::ElementsAre());
   EXPECT_THAT(Call2N->memPreds(), testing::ElementsAre(Call1N));
+
+  EXPECT_THAT(Call1N->memSuccs(), testing::ElementsAre(Call2N));
+  EXPECT_THAT(Call1N->succs(DAG), testing::ElementsAre(Call2N));
+  EXPECT_THAT(Call2N->succs(DAG), testing::ElementsAre());
 }
 
 // Check that there is a dependency: stacksave -> alloca -> stackrestore.
@@ -978,6 +1035,7 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %arg) {
   EXPECT_TRUE(DeletedN == nullptr);
   // Check that dependencies are maintained.
   EXPECT_THAT(S3MemN->preds(DAG), testing::UnorderedElementsAre(S1MemN));
+  EXPECT_THAT(S1MemN->succs(DAG), testing::UnorderedElementsAre(S3MemN));
   // Also check that UnscheduledSuccs was updated for S1.
   EXPECT_EQ(S1MemN->getNumUnscheduledSuccs(), 1u);
 

@@ -300,6 +300,9 @@ class VOPDX<bits<6> Op, int Sub, bit IsVOPD3> : VOPDXY<Op, Sub, IsVOPD3>;
 class VOPDY<bits<6> Op, int Sub, bit IsVOPD3> : VOPDXY<Op, Sub, IsVOPD3>;
 
 foreach Gen = [GFX11GenD, GFX1170GenD, GFX12GenD, GFX1250GenD, GFX13GenD] in {
+  foreach p = Gen.VOPDXPseudos in
+    def "VOPDX_" # p # Gen.Suffix :
+        VOPDX<!cast<VOPD_Component>(p).VOPDOp, Gen.Subtarget, 0>;
   foreach p = Gen.VOPDYPseudos in
     def "VOPDY_" # p # Gen.Suffix :
         VOPDY<!cast<VOPD_Component>(p).VOPDOp, Gen.Subtarget, 0>;

@@ -27,7 +27,7 @@ name:            test-wcg-attributes-noexpert
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test-wcg-attributes-noexpert
-    ; CHECK: S_WAIT_LOADCNT_DSCNT 0
+    ; CHECK: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; CHECK-NEXT: S_WAIT_EXPCNT 0
     ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
     ; CHECK-NEXT: S_WAIT_BVHCNT 0
@@ -46,7 +46,7 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: test-wcg-attributes-expert
     ; CHECK: S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
-    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT 0
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; CHECK-NEXT: S_WAIT_EXPCNT 0
     ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
     ; CHECK-NEXT: S_WAIT_BVHCNT 0
@@ -79,7 +79,7 @@ name:            test-wcg-attributes-gfx1200
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test-wcg-attributes-gfx1200
-    ; CHECK: S_WAIT_LOADCNT_DSCNT 0
+    ; CHECK: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; CHECK-NEXT: S_WAIT_EXPCNT 0
     ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
     ; CHECK-NEXT: S_WAIT_BVHCNT 0

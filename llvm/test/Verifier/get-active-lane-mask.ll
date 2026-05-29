@@ -13,7 +13,7 @@ define <4 x i32> @t1(i32 %IV, i32 %TC) {
 declare i32 @llvm.get.active.lane.mask.i32.i32(i32, i32)
 
 define i32 @t2(i32 %IV, i32 %TC) {
-; CHECK:      intrinsic has incorrect return type!
+; CHECK:      intrinsic return type (overload type 0) expected any vector type, but got i32
 ; CHECK-NEXT: ptr @llvm.get.active.lane.mask.i32.i32
 
   %res = call i32 @llvm.get.active.lane.mask.i32.i32(i32 %IV, i32 %TC)

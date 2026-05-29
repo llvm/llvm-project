@@ -69,6 +69,7 @@ include(GetToolchainDirs)
 include(FlangCommon)
 include(HandleCompilerRT)
 include(ExtendPath)
+include(FlangRTIntrospection)
 
 
 ############################
@@ -112,6 +113,11 @@ else ()
   option(FLANG_RT_ENABLE_SHARED "Build Flang-RT as a shared library." OFF)
 endif ()
 
+# Enable building Fortran modules if Fortran is enabled
+option(FLANG_RT_FORTRAN_MODULES "Build Flang-RT modules" "${RUNTIMES_FORTRAN_MODULES}")
+if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED AND NOT FLANG_RT_FORTRAN_MODULES)
+  message(WARNING "LLVM_ENABLE_RUNTIMES=flang-rt, but not building anything")
+endif ()
 
 # TODO: Support tests for the GPU target.
 set(FLANG_RT_INCLUDE_TESTS_default ${LLVM_INCLUDE_TESTS})
@@ -181,6 +187,10 @@ check_cxx_source_compiles(
   "
   HAVE_DECL_STRERROR_S)
 
+# Look for support of REAL(16), if not already defined via command
+# line via -DFORTRAN_SUPPORTS_REAL16=YES/NO
+check_fortran_quadmath_support()
+
 # Search for clang_rt.builtins library. Need in addition to msvcrt.
 if (WIN32)
   find_compiler_rt_library(builtins FLANG_RT_BUILTINS_LIBRARY)
@@ -194,7 +204,7 @@ if (UNIX AND CMAKE_SYSTEM_NAME MATCHES "AIX")
 endif ()
 
 # Indicates REAL(16) support via an external library (e.g. libquadmath).
-add_compile_definitions(FLANG_RT_SUPPORTS_REAL16=$<BOOL:${FLANG_RUNTIME_F128_MATH_LIB}>)
+add_compile_definitions(FLANG_RT_SUPPORTS_REAL16=$<BOOL:${FORTRAN_SUPPORTS_REAL16}>)
 
 # Check whether the compiler can undefine a macro using the "-Wp,-U" flag.
 # Aternatively, we could use

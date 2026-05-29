@@ -280,6 +280,22 @@ TEST(ExprMutationAnalyzerTest, ConstMemberFunc) {
   EXPECT_FALSE(isMutated(Results, AST.get()));
 }
 
+TEST(ExprMutationAnalyzerTest, NonConstMemberFuncOnPointer) {
+  const auto AST = buildASTFromCode(
+      "void f() { struct Foo { void mf(); }; Foo *p; p->mf(); }");
+  const auto Results =
+      match(withEnclosingCompound(declRefTo("p")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, ConstMemberFuncOnPointer) {
+  const auto AST = buildASTFromCode(
+      "void f() { struct Foo { void mf() const; }; Foo *p; p->mf(); }");
+  const auto Results =
+      match(withEnclosingCompound(declRefTo("p")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+}
+
 TEST(ExprMutationAnalyzerTest, TypeDependentMemberCall) {
   const auto AST = buildASTFromCodeWithArgs(
       "template <class T> class vector { void push_back(T); }; "

@@ -43,6 +43,11 @@ static cl::opt<unsigned> BPFMinimumJumpTableEntries(
     "bpf-min-jump-table-entries", cl::init(13), cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on BPF"));
 
+static cl::opt<bool> BPFAllowsLibcalls(
+    "bpf-allows-libcalls", cl::Hidden, cl::init(false),
+    cl::desc("Allow libcalls instead of rejecting unsupported built-in "
+             "functions"));
+
 static void fail(const SDLoc &DL, SelectionDAG &DAG, const Twine &Msg,
                  SDValue Val = {}) {
   std::string Str;
@@ -601,9 +606,10 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   } else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee)) {
     Callee = DAG.getTargetExternalSymbol(E->getSymbol(), PtrVT, 0);
     StringRef Sym = E->getSymbol();
-    if (Sym != BPF_TRAP && Sym != "__multi3" && Sym != "__divti3" &&
-        Sym != "__modti3" && Sym != "__udivti3" && Sym != "__umodti3" &&
-        Sym != "memcpy" && Sym != "memset" && Sym != "memmove")
+    if (!BPFAllowsLibcalls && Sym != BPF_TRAP && Sym != "__multi3" &&
+        Sym != "__divti3" && Sym != "__modti3" && Sym != "__udivti3" &&
+        Sym != "__umodti3" && Sym != "memcpy" && Sym != "memset" &&
+        Sym != "memmove")
       fail(
           CLI.DL, DAG,
           Twine("A call to built-in function '" + Sym + "' is not supported."));

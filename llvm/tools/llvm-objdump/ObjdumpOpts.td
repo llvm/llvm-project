@@ -76,6 +76,11 @@ def disassemble_symbols_EQ : Joined<["--"], "disassemble-symbols=">,
            "Accept demangled names when --demangle is "
            "specified, otherwise accept mangled names">;
 
+def disassemble_EQ : Joined<["--"], "disassemble=">,
+  HelpText<"Specify a symbol name to diasassemble. "
+           "Accept demangled names when --demangle is "
+           "specified, otherwise accept mangled names">;
+
 def disassemble_zeroes : Flag<["--"], "disassemble-zeroes">,
   HelpText<"Do not skip blocks of zeroes when disassembling">;
 def : Flag<["-"], "z">, Alias<disassemble_zeroes>,

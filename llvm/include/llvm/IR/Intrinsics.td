@@ -913,6 +913,8 @@ def int_read_register  : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_metadata_
                                    [IntrReadMem], "llvm.read_register">;
 def int_write_register : Intrinsic<[], [llvm_metadata_ty, llvm_anyint_ty],
                                    [IntrNoCallback], "llvm.write_register">;
+def int_write_volatile_register : Intrinsic<[], [llvm_metadata_ty, llvm_anyint_ty],
+                                            [], "llvm.write_volatile_register">;
 def int_read_volatile_register  : Intrinsic<[llvm_anyint_ty], [llvm_metadata_ty],
                                             [IntrHasSideEffects],
                                              "llvm.read_volatile_register">;

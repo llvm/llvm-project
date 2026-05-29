@@ -40,6 +40,20 @@ void LoongArchTargetELFStreamer::emitDirectiveOptionPop() {}
 void LoongArchTargetELFStreamer::emitDirectiveOptionRelax() {}
 void LoongArchTargetELFStreamer::emitDirectiveOptionNoRelax() {}
 
+void LoongArchTargetELFStreamer::emitDTPRel32Value(const MCExpr *Value) {
+  auto &S = getStreamer();
+  S.ensureHeadroom(4);
+  S.addFixup(Value, LoongArch::fixup_loongarch_dtprel32);
+  S.appendContents(4, 0);
+}
+
+void LoongArchTargetELFStreamer::emitDTPRel64Value(const MCExpr *Value) {
+  auto &S = getStreamer();
+  S.ensureHeadroom(8);
+  S.addFixup(Value, LoongArch::fixup_loongarch_dtprel64);
+  S.appendContents(8, 0);
+}
+
 void LoongArchTargetELFStreamer::finish() {
   LoongArchTargetStreamer::finish();
   ELFObjectWriter &W = getStreamer().getWriter();

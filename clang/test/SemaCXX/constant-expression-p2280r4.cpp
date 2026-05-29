@@ -273,13 +273,11 @@ namespace dropped_note {
 namespace dynamic {
   struct A {virtual ~A();};
   struct B : A {};
-  void f(A& a) { // interpreter-note 2{{declared here}}
+  void f(A& a) {
     constexpr B* b = dynamic_cast<B*>(&a); // expected-error {{must be initialized by a constant expression}} \
-                                           // nointerpreter-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}} \
-                                           // interpreter-note {{pointer to 'a' is not a constant expression}}
+                                           // expected-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}}
     constexpr void* b2 = dynamic_cast<void*>(&a); // expected-error {{must be initialized by a constant expression}} \
-                                                  // nointerpreter-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}} \
-                                                  // interpreter-note {{pointer to 'a' is not a constant expression}}
+                                                  // expected-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}}
   }
 }
 

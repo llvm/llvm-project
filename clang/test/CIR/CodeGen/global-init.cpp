@@ -263,7 +263,7 @@ ArrayDtor arrDtor[16];
 
 // Common init function for all globals with default priority
 
-// CIR: cir.func private @_GLOBAL__sub_I_[[FILENAME:.*]]() {
+// CIR: cir.func internal private @_GLOBAL__sub_I_[[FILENAME:.*]]() {
 // CIR:   cir.call @__cxx_global_var_init() : () -> ()
 // CIR:   cir.call @__cxx_global_var_init.1() : () -> ()
 // CIR:   cir.call @__cxx_global_var_init.2() : () -> ()
@@ -271,7 +271,7 @@ ArrayDtor arrDtor[16];
 // CIR:   cir.call @__cxx_global_var_init.4() : () -> ()
 // CIR:   cir.call @__cxx_global_var_init.5() : () -> ()
 
-// LLVM: define void @_GLOBAL__sub_I_[[FILENAME]]()
+// LLVM: define internal void @_GLOBAL__sub_I_[[FILENAME]]()
 // LLVM:   call void @__cxx_global_var_init()
 // LLVM:   call void @__cxx_global_var_init.1()
 // LLVM:   call void @__cxx_global_var_init.2()

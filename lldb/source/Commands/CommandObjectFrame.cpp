@@ -642,10 +642,21 @@ protected:
     if (sym_ctx.function && sym_ctx.function->IsTopLevelFunction())
       m_option_variable.show_globals = true;
 
-    if (variable_list) {
-      const Format format = m_option_format.GetFormat();
-      options.SetFormat(format);
+    ValueObjectListSP recognized_arg_list;
+    if (m_option_variable.show_recognized_args)
+      if (auto recognized_frame = frame->GetRecognizedFrame())
+        recognized_arg_list = recognized_frame->GetRecognizedArguments();
 
+    const Format format = m_option_format.GetFormat();
+    options.SetFormat(format);
+
+    auto print_value = [&result, options](ValueObjectSP valobj_sp) {
+      result.GetValueObjectList().Append(valobj_sp);
+      if (auto error = valobj_sp->Dump(result.GetOutputStream(), options))
+        result.AppendError(toString(std::move(error)));
+    };
+
+    if (variable_list) {
       if (!command.empty()) {
         VariableList regex_var_list;
 
@@ -659,9 +670,19 @@ protected:
               std::optional<llvm::ArrayRef<VariableSP>> results =
                   findUniqueRegexMatches(regex, regex_var_list, *variable_list);
               if (!results) {
-                result.AppendErrorWithFormat(
-                    "no variables matched the regular expression '%s'",
-                    entry.c_str());
+                // No variables matched. Try recognized args as fallback.
+                bool found_recognized = false;
+                if (recognized_arg_list)
+                  for (auto &rec_value_sp : recognized_arg_list->GetObjects())
+                    if (regex.Execute(rec_value_sp->GetName())) {
+                      found_recognized = true;
+                      print_value(rec_value_sp);
+                    }
+                if (!found_recognized) {
+                  result.AppendErrorWithFormat(
+                      "no variables matched the regular expression '%s'",
+                      entry.c_str());
+                }
                 continue;
               }
               for (const VariableSP &var_sp : *results) {
@@ -710,7 +731,7 @@ protected:
             valobj_sp = frame->GetValueForVariableExpressionPath(
                 entry.ref(), m_varobj_options.use_dynamic, expr_path_options,
                 var_sp, error);
-            if (valobj_sp) {
+            if (valobj_sp && error.Success()) {
               result.GetValueObjectList().Append(valobj_sp);
 
               std::string scope_string;
@@ -732,29 +753,35 @@ protected:
               Stream &output_stream = result.GetOutputStream();
               options.SetRootValueObjectName(
                   valobj_sp->GetParent() ? entry.c_str() : nullptr);
-              // Check only the `error` argument, because doing
-              // `valobj_sp->GetError()` will update the value and potentially
-              // return a new error that happens during the update, even if
-              // `GetValueForVariableExpressionPath` reported no errors.
-              if (error.Fail()) {
-                result.SetStatus(eReturnStatusFailed);
-                result.SetError(error.takeError());
-              } else {
-                // If there is an error while updating the value, it will be
-                // printed here as the contents of the value, e.g.
-                // `(int) *((int*)0) = <parent is NULL>`
-                if (llvm::Error error = valobj_sp->Dump(output_stream, options))
-                  result.AppendError(toString(std::move(error)));
-              }
 
+              // If there is an error while updating the value, it will be
+              // printed here as the contents of the value, e.g.
+              // `(int) *((int*)0) = <parent is NULL>`
+              if (llvm::Error error = valobj_sp->Dump(output_stream, options))
+                result.AppendError(toString(std::move(error)));
             } else {
-              if (auto error_cstr = error.AsCString(nullptr))
-                result.AppendError(error_cstr);
-              else
-                result.AppendErrorWithFormat(
-                    "unable to find any variable expression path that matches "
-                    "'%s'",
-                    entry.c_str());
+              // Variable lookup failed. Check recognized args as a fallback.
+              bool found_recognized = false;
+              if (recognized_arg_list)
+                for (auto &obj_sp : recognized_arg_list->GetObjects())
+                  if (obj_sp->GetName() == entry.ref()) {
+                    found_recognized = true;
+                    print_value(obj_sp);
+                    break;
+                  }
+              if (!found_recognized) {
+                // Check only the `error` argument, because doing
+                // `valobj_sp->GetError()` will update the value and potentially
+                // return a new error that happens during the update, even if
+                // `GetValueForVariableExpressionPath` reported no errors.
+                if (error.Fail())
+                  result.SetError(error.takeError());
+                else
+                  result.AppendErrorWithFormat(
+                      "unable to find any variable expression path that "
+                      "matches '%s'",
+                      entry.c_str());
+              }
             }
           }
         }
@@ -811,26 +838,9 @@ protected:
         result.SetStatus(eReturnStatusSuccessFinishResult);
     }
 
-    if (m_option_variable.show_recognized_args) {
-      auto recognized_frame = frame->GetRecognizedFrame();
-      if (recognized_frame) {
-        ValueObjectListSP recognized_arg_list =
-            recognized_frame->GetRecognizedArguments();
-        if (recognized_arg_list) {
-          for (auto &rec_value_sp : recognized_arg_list->GetObjects()) {
-            result.GetValueObjectList().Append(rec_value_sp);
-            options.SetFormat(m_option_format.GetFormat());
-            options.SetVariableFormatDisplayLanguage(
-                rec_value_sp->GetPreferredDisplayLanguage());
-            options.SetRootValueObjectName(
-                rec_value_sp->GetName().AsCString(nullptr));
-            if (llvm::Error error =
-                    rec_value_sp->Dump(result.GetOutputStream(), options))
-              result.AppendError(toString(std::move(error)));
-          }
-        }
-      }
-    }
+    if (recognized_arg_list && (command.empty() || !variable_list))
+      for (auto &rec_value_sp : recognized_arg_list->GetObjects())
+        print_value(rec_value_sp);
 
     m_interpreter.PrintWarningsIfNecessary(result.GetOutputStream(),
                                            m_cmd_name);

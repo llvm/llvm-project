@@ -1883,10 +1883,11 @@ def phint_op : Operand<i32> {
 class STSHHI
     : SimpleSystemI<0, (ins phint_op:$policy), "stshh", "\t$policy", []>,
       Sched<[WriteHint]> {
-  bits<3> policy;
+  bits<1> policy;
   let Inst{20-12} = 0b000110010;
   let Inst{11-8} = 0b0110;
-  let Inst{7-5} = policy;
+  let Inst{7-6} = 0b00;
+  let Inst{5} = policy;
 }
 
 // System instructions taking a single literal operand which encodes into

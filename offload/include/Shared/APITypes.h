@@ -105,8 +105,9 @@ struct KernelArgsTy {
     uint64_t IsCUDA : 1; // Was this kernel spawned via CUDA.
     uint64_t DynCGroupMemFallback : 2; // The fallback for dynamic cgroup mem.
     uint64_t Cooperative : 1; // Was this kernel spawned as cooperative.
-    uint64_t Unused : 59;
-  } Flags = {0, 0, 0, 0, 0};
+    uint64_t IsPtrArgs : 1;   // Arguments are laid out as an array of pointers.
+    uint64_t Unused : 58;
+  } Flags = {0, 0, 0, 0, 0, 0};
   // User-requested number of blocks (for x,y,z dimension).
   uint32_t UserNumBlocks[3] = {0, 0, 0};
   // User-requested number of threads (for x,y,z dimension).

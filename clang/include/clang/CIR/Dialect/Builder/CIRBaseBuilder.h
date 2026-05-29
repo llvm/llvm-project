@@ -127,9 +127,12 @@ public:
       return getNullDataMemberAttr(dataMemberTy);
     if (auto methodTy = mlir::dyn_cast<cir::MethodType>(ty))
       return getNullMethodAttr(methodTy);
+    if (auto vptrTy = mlir::dyn_cast<cir::VPtrType>(ty))
+      return cir::ZeroAttr::get(vptrTy);
     if (mlir::isa<cir::BoolType>(ty)) {
       return getFalseAttr();
     }
+
     llvm_unreachable("Zero initializer for given type is NYI");
   }
 
@@ -511,6 +514,15 @@ public:
     if (newTy == src.getType())
       return src;
     return createCast(src.getLoc(), kind, src, newTy);
+  }
+
+  // Creates a cast from bool or int to an integer type.
+  mlir::Value createBoolIntToIntCast(mlir::Value src, mlir::Type newTy) {
+    if (newTy == src.getType())
+      return src;
+    if (src.getType() == getBoolTy())
+      return createBoolToInt(src, newTy);
+    return createIntCast(src, newTy);
   }
 
   mlir::Value createIntCast(mlir::Value src, mlir::Type newTy) {

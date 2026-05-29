@@ -45,9 +45,9 @@ int main() {
 // CHECK: $_ZTVN5NSP_28CBaseTwoE = comdat any
 // CHECK: $_ZTV8CDerived = comdat any
 
-// CHECK: @_ZTVN5NSP_18CBaseOneE = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[BASE_ONE_VTABLE_VAR:![0-9]*]]
-// CHECK: @_ZTVN5NSP_28CBaseTwoE = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[BASE_TWO_VTABLE_VAR:![0-9]*]]
-// CHECK: @_ZTV8CDerived = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[DERIVED_VTABLE_VAR:![0-9]*]]
+// CHECK: @_ZTVN5NSP_18CBaseOneE = linkonce_odr {{.*}}constant {{.*}}, comdat, align 8, !dbg [[BASE_ONE_VTABLE_VAR:![0-9]*]]
+// CHECK: @_ZTVN5NSP_28CBaseTwoE = linkonce_odr {{.*}}constant {{.*}}, comdat, align 8, !dbg [[BASE_TWO_VTABLE_VAR:![0-9]*]]
+// CHECK: @_ZTV8CDerived = linkonce_odr {{.*}}constant {{.*}}, comdat, align 8, !dbg [[DERIVED_VTABLE_VAR:![0-9]*]]
 
 // CHECK: [[BASE_ONE_VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[BASE_ONE_VTABLE:![0-9]*]], expr: !DIExpression())
 // CHECK-NEXT: [[BASE_ONE_VTABLE]] = distinct !DIGlobalVariable(name: "__clang_vtable", linkageName: "_ZTVN5NSP_18CBaseOneE"

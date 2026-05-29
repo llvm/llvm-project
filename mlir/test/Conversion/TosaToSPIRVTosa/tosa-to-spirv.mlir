@@ -1,6 +1,32 @@
 // RUN: mlir-opt --split-input-file --tosa-to-spirv-tosa %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
+// spirv.TOSA.ArgMax
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @argmax_int
+func.func @argmax_int(%arg0: tensor<2x3x4xi8>) -> tensor<2x4xi32> {
+  // CHECK: %[[ARGMAX:.*]] = spirv.Tosa.ArgMax axis = 1, nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<2x3x4xi8> -> !spirv.arm.tensor<2x4xi32>
+  %res = tosa.argmax %arg0 {axis = 1 : i32, nan_mode = PROPAGATE} : (tensor<2x3x4xi8>) -> tensor<2x4xi32>
+  return %res : tensor<2x4xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Clamp
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @clamp_int
+func.func @clamp_int(%arg0: tensor<4x8xi8>) -> tensor<4x8xi8> {
+  // CHECK: %[[CLAMP:.*]] = spirv.Tosa.Clamp min_val = -2 : i8, max_val = 3 : i8, nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<4x8xi8> -> !spirv.arm.tensor<4x8xi8>
+  %res = tosa.clamp %arg0 {min_val = -2 : i8, max_val = 3 : i8, nan_mode = PROPAGATE} : (tensor<4x8xi8>) -> tensor<4x8xi8>
+  return %res : tensor<4x8xi8>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.TOSA.Erf
 //===----------------------------------------------------------------------===//
 
@@ -48,6 +74,19 @@ func.func @add_int(%arg0: tensor<4x7x3x10xi32>, %arg1: tensor<4x7x3x1xi32>) -> t
   // CHECK: %[[ADD:.*]] = spirv.Tosa.Add  %arg0, %arg1 : !spirv.arm.tensor<4x7x3x10xi32>, !spirv.arm.tensor<4x7x3x1xi32> -> !spirv.arm.tensor<4x7x3x10xi32>
   %res = tosa.add %arg0, %arg1  : (tensor<4x7x3x10xi32>, tensor<4x7x3x1xi32>) -> tensor<4x7x3x10xi32>
   return %res : tensor<4x7x3x10xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.ArithmeticRightShift
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @arithmetic_right_shift_int
+func.func @arithmetic_right_shift_int(%arg0: tensor<1x4xi16>, %arg1: tensor<3x4xi16>) -> tensor<3x4xi16> {
+  // CHECK: %[[SHIFT:.*]] = spirv.Tosa.ArithmeticRightShift round = true, %arg0, %arg1 : !spirv.arm.tensor<1x4xi16>, !spirv.arm.tensor<3x4xi16> -> !spirv.arm.tensor<3x4xi16>
+  %res = tosa.arithmetic_right_shift %arg0, %arg1 {round = true} : (tensor<1x4xi16>, tensor<3x4xi16>) -> tensor<3x4xi16>
+  return %res : tensor<3x4xi16>
 }
 
 // -----
@@ -196,6 +235,19 @@ func.func @minimum_int(%arg0: tensor<15x2x10x11xi32>, %arg1: tensor<15x1x10x11xi
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.TOSA.Mul
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @mul_int
+func.func @mul_int(%arg0: tensor<2x4xi32>, %arg1: tensor<2x1xi32>, %arg2: tensor<1xi8>) -> tensor<2x4xi32> {
+  // CHECK: %[[MUL:.*]] = spirv.Tosa.Mul  %arg0, %arg1, %arg2 : !spirv.arm.tensor<2x4xi32>, !spirv.arm.tensor<2x1xi32>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<2x4xi32>
+  %res = tosa.mul %arg0, %arg1, %arg2 : (tensor<2x4xi32>, tensor<2x1xi32>, tensor<1xi8>) -> tensor<2x4xi32>
+  return %res : tensor<2x4xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.TOSA.Pow
 //===----------------------------------------------------------------------===//
 
@@ -217,6 +269,19 @@ func.func @sub_int(%arg0: tensor<6x10x6x6xi32>, %arg1: tensor<1x10x6x6xi32>) -> 
   // CHECK: %[[SUB:.*]] = spirv.Tosa.Sub  %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi32>, !spirv.arm.tensor<1x10x6x6xi32> -> !spirv.arm.tensor<6x10x6x6xi32>
   %res = tosa.sub %arg0, %arg1  : (tensor<6x10x6x6xi32>, tensor<1x10x6x6xi32>) -> tensor<6x10x6x6xi32>
   return %res : tensor<6x10x6x6xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Table
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @table_int
+func.func @table_int(%arg0: tensor<3x2xi8>, %arg1: tensor<256xi8>) -> tensor<3x2xi8> {
+  // CHECK: %[[TABLE:.*]] = spirv.Tosa.Table  %arg0, %arg1 : !spirv.arm.tensor<3x2xi8>, !spirv.arm.tensor<256xi8> -> !spirv.arm.tensor<3x2xi8>
+  %res = tosa.table %arg0, %arg1 : (tensor<3x2xi8>, tensor<256xi8>) -> tensor<3x2xi8>
+  return %res : tensor<3x2xi8>
 }
 
 // -----
@@ -339,6 +404,19 @@ func.func @logicalnot_any(%arg0: tensor<54x26x10xi1>) -> tensor<54x26x10xi1> {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.TOSA.Negate
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @negate_int
+func.func @negate_int(%arg0: tensor<2x3xi8>, %arg1: tensor<1xi8>, %arg2: tensor<1xi8>) -> tensor<2x3xi8> {
+  // CHECK: %[[NEGATE:.*]] = spirv.Tosa.Negate  %arg0, %arg1, %arg2 : !spirv.arm.tensor<2x3xi8>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<2x3xi8>
+  %res = tosa.negate %arg0, %arg1, %arg2 : (tensor<2x3xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2x3xi8>
+  return %res : tensor<2x3xi8>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.TOSA.Reciprocal
 //===----------------------------------------------------------------------===//
 
@@ -373,6 +451,19 @@ func.func @sin_fp(%arg0: tensor<49x38x58xf16>) -> tensor<49x38x58xf16> {
   // CHECK: %[[SIN:.*]] = spirv.Tosa.Sin  %arg0 : !spirv.arm.tensor<49x38x58xf16> -> !spirv.arm.tensor<49x38x58xf16>
   %res = tosa.sin %arg0  : (tensor<49x38x58xf16>) -> tensor<49x38x58xf16>
   return %res : tensor<49x38x58xf16>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Select
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @select_int
+func.func @select_int(%arg0: tensor<2x1xi1>, %arg1: tensor<2x4xi8>, %arg2: tensor<2x4xi8>) -> tensor<2x4xi8> {
+  // CHECK: %[[SELECT:.*]] = spirv.Tosa.Select  %arg0, %arg1, %arg2 : !spirv.arm.tensor<2x1xi1>, !spirv.arm.tensor<2x4xi8>, !spirv.arm.tensor<2x4xi8> -> !spirv.arm.tensor<2x4xi8>
+  %res = tosa.select %arg0, %arg1, %arg2 : (tensor<2x1xi1>, tensor<2x4xi8>, tensor<2x4xi8>) -> tensor<2x4xi8>
+  return %res : tensor<2x4xi8>
 }
 
 // -----
@@ -414,3 +505,211 @@ func.func @greaterequal_int(%arg0: tensor<10x17x7x1xi32>, %arg1: tensor<10x17x7x
   return %res : tensor<10x17x7x16xi1>
 }
 
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.ReduceAll
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @reduce_all
+func.func @reduce_all(%arg0: tensor<2x3x4xi1>) -> tensor<2x1x4xi1> {
+  // CHECK: %[[REDUCE:.*]] = spirv.Tosa.ReduceAll axis = 1, %arg0 : !spirv.arm.tensor<2x3x4xi1> -> !spirv.arm.tensor<2x1x4xi1>
+  %res = tosa.reduce_all %arg0 {axis = 1 : i32} : (tensor<2x3x4xi1>) -> tensor<2x1x4xi1>
+  return %res : tensor<2x1x4xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.ReduceAny
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @reduce_any
+func.func @reduce_any(%arg0: tensor<2x3x4xi1>) -> tensor<2x1x4xi1> {
+  // CHECK: %[[REDUCE:.*]] = spirv.Tosa.ReduceAny axis = 1, %arg0 : !spirv.arm.tensor<2x3x4xi1> -> !spirv.arm.tensor<2x1x4xi1>
+  %res = tosa.reduce_any %arg0 {axis = 1 : i32} : (tensor<2x3x4xi1>) -> tensor<2x1x4xi1>
+  return %res : tensor<2x1x4xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.ReduceMax
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @reduce_max_int
+func.func @reduce_max_int(%arg0: tensor<2x3x4xi8>) -> tensor<2x1x4xi8> {
+  // CHECK: %[[REDUCE:.*]] = spirv.Tosa.ReduceMax axis = 1, nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<2x3x4xi8> -> !spirv.arm.tensor<2x1x4xi8>
+  %res = tosa.reduce_max %arg0 {axis = 1 : i32, nan_mode = PROPAGATE} : (tensor<2x3x4xi8>) -> tensor<2x1x4xi8>
+  return %res : tensor<2x1x4xi8>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.ReduceMin
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @reduce_min_int
+func.func @reduce_min_int(%arg0: tensor<2x3x4xi8>) -> tensor<2x1x4xi8> {
+  // CHECK: %[[REDUCE:.*]] = spirv.Tosa.ReduceMin axis = 1, nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<2x3x4xi8> -> !spirv.arm.tensor<2x1x4xi8>
+  %res = tosa.reduce_min %arg0 {axis = 1 : i32, nan_mode = PROPAGATE} : (tensor<2x3x4xi8>) -> tensor<2x1x4xi8>
+  return %res : tensor<2x1x4xi8>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.ReduceProduct
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @reduce_product_fp
+func.func @reduce_product_fp(%arg0: tensor<2x3x4xf32>) -> tensor<2x1x4xf32> {
+  // CHECK: %[[REDUCE:.*]] = spirv.Tosa.ReduceProduct axis = 1, %arg0 : !spirv.arm.tensor<2x3x4xf32> -> !spirv.arm.tensor<2x1x4xf32>
+  %res = tosa.reduce_product %arg0 {axis = 1 : i32} : (tensor<2x3x4xf32>) -> tensor<2x1x4xf32>
+  return %res : tensor<2x1x4xf32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.ReduceSum
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @reduce_sum_int
+func.func @reduce_sum_int(%arg0: tensor<2x3x4xi32>) -> tensor<2x1x4xi32> {
+  // CHECK: %[[REDUCE:.*]] = spirv.Tosa.ReduceSum axis = 1, %arg0 : !spirv.arm.tensor<2x3x4xi32> -> !spirv.arm.tensor<2x1x4xi32>
+  %res = tosa.reduce_sum %arg0 {axis = 1 : i32} : (tensor<2x3x4xi32>) -> tensor<2x1x4xi32>
+  return %res : tensor<2x1x4xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Reshape
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @reshape_int
+func.func @reshape_int(%arg0: tensor<25x6x29x35xi16>) -> tensor<125x6x7x29xi16> {
+  %shape = "tosa.const_shape"() <{values = dense<[125, 6, 7, 29]> : tensor<4xindex>}> : () -> !tosa.shape<4>
+  // CHECK: %[[SHAPE:.*]] = spirv.Constant dense<[125, 6, 7, 29]> : !spirv.arm.tensor<4xi32>
+  // CHECK: %[[RESHAPE:.*]] = spirv.Tosa.Reshape  %arg0, %[[SHAPE]] : !spirv.arm.tensor<25x6x29x35xi16>, !spirv.arm.tensor<4xi32> -> !spirv.arm.tensor<125x6x7x29xi16>
+  %res = tosa.reshape %arg0, %shape : (tensor<25x6x29x35xi16>, !tosa.shape<4>) -> tensor<125x6x7x29xi16>
+  return %res : tensor<125x6x7x29xi16>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Reverse
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @reverse_int
+func.func @reverse_int(%arg0: tensor<20x5x28x31xi32>) -> tensor<20x5x28x31xi32> {
+  // CHECK: %[[REVERSE:.*]] = spirv.Tosa.Reverse axis = 2, %arg0 : !spirv.arm.tensor<20x5x28x31xi32> -> !spirv.arm.tensor<20x5x28x31xi32>
+  %res = tosa.reverse %arg0 {axis = 2 : i32} : (tensor<20x5x28x31xi32>) -> tensor<20x5x28x31xi32>
+  return %res : tensor<20x5x28x31xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Slice
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @slice_int
+func.func @slice_int(%arg0: tensor<32x19x41xi8>) -> tensor<21x5x2xi8> {
+  %start = "tosa.const_shape"() <{values = dense<[8, 11, 39]> : tensor<3xindex>}> : () -> !tosa.shape<3>
+  %size = "tosa.const_shape"() <{values = dense<[21, 5, 2]> : tensor<3xindex>}> : () -> !tosa.shape<3>
+  // CHECK: %[[START:.*]] = spirv.Constant dense<[8, 11, 39]> : !spirv.arm.tensor<3xi32>
+  // CHECK: %[[SIZE:.*]] = spirv.Constant dense<[21, 5, 2]> : !spirv.arm.tensor<3xi32>
+  // CHECK: %[[SLICE:.*]] = spirv.Tosa.Slice  %arg0, %[[START]], %[[SIZE]] : !spirv.arm.tensor<32x19x41xi8>, !spirv.arm.tensor<3xi32>, !spirv.arm.tensor<3xi32> -> !spirv.arm.tensor<21x5x2xi8>
+  %res = tosa.slice %arg0, %start, %size : (tensor<32x19x41xi8>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<21x5x2xi8>
+  return %res : tensor<21x5x2xi8>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Tile
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @tile_int
+func.func @tile_int(%arg0: tensor<10x28x21xi16>) -> tensor<10x28x63xi16> {
+  %multiples = "tosa.const_shape"() <{values = dense<[1, 1, 3]> : tensor<3xindex>}> : () -> !tosa.shape<3>
+  // CHECK: %[[MULTIPLES:.*]] = spirv.Constant dense<[1, 1, 3]> : !spirv.arm.tensor<3xi32>
+  // CHECK: %[[TILE:.*]] = spirv.Tosa.Tile  %arg0, %[[MULTIPLES]] : !spirv.arm.tensor<10x28x21xi16>, !spirv.arm.tensor<3xi32> -> !spirv.arm.tensor<10x28x63xi16>
+  %res = tosa.tile %arg0, %multiples : (tensor<10x28x21xi16>, !tosa.shape<3>) -> tensor<10x28x63xi16>
+  return %res : tensor<10x28x63xi16>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Transpose
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @transpose_int
+func.func @transpose_int(%arg0: tensor<14x28x1x61xi16>) -> tensor<1x14x28x61xi16> {
+  // CHECK: %[[TRANSPOSE:.*]] = spirv.Tosa.Transpose perms = [2, 0, 1, 3], %arg0 : !spirv.arm.tensor<14x28x1x61xi16> -> !spirv.arm.tensor<1x14x28x61xi16>
+  %res = tosa.transpose %arg0 {perms = array<i32: 2, 0, 1, 3>} : (tensor<14x28x1x61xi16>) -> tensor<1x14x28x61xi16>
+  return %res : tensor<1x14x28x61xi16>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Gather
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @gather_int
+func.func @gather_int(%arg0: tensor<31x11x45xi32>, %arg1: tensor<31x15xi32>) -> tensor<31x15x45xi32> {
+  // CHECK: %[[GATHER:.*]] = spirv.Tosa.Gather  %arg0, %arg1 : !spirv.arm.tensor<31x11x45xi32>, !spirv.arm.tensor<31x15xi32> -> !spirv.arm.tensor<31x15x45xi32>
+  %res = tosa.gather %arg0, %arg1 : (tensor<31x11x45xi32>, tensor<31x15xi32>) -> tensor<31x15x45xi32>
+  return %res : tensor<31x15x45xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Scatter
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @scatter_int
+func.func @scatter_int(%arg0: tensor<34x28x54xi32>, %arg1: tensor<34x18xi32>, %arg2: tensor<34x18x54xi32>) -> tensor<34x28x54xi32> {
+  // CHECK: %[[SCATTER:.*]] = spirv.Tosa.Scatter  %arg0, %arg1, %arg2 : !spirv.arm.tensor<34x28x54xi32>, !spirv.arm.tensor<34x18xi32>, !spirv.arm.tensor<34x18x54xi32> -> !spirv.arm.tensor<34x28x54xi32>
+  %res = tosa.scatter %arg0, %arg1, %arg2 : (tensor<34x28x54xi32>, tensor<34x18xi32>, tensor<34x18x54xi32>) -> tensor<34x28x54xi32>
+  return %res : tensor<34x28x54xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Resize
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @resize_int
+func.func @resize_int(%arg0: tensor<1x1x31x55xi8>) -> tensor<1x1x278x55xi8> {
+  %scale = "tosa.const_shape"() <{values = dense<[16, 1, 9, 1]> : tensor<4xindex>}> : () -> !tosa.shape<4>
+  %offset = "tosa.const_shape"() <{values = dense<0> : tensor<2xindex>}> : () -> !tosa.shape<2>
+  %border = "tosa.const_shape"() <{values = dense<[0, 7]> : tensor<2xindex>}> : () -> !tosa.shape<2>
+  // CHECK: %[[SCALE:.*]] = spirv.Constant dense<[16, 1, 9, 1]> : !spirv.arm.tensor<4xi32>
+  // CHECK: %[[OFFSET:.*]] = spirv.Constant dense<0> : !spirv.arm.tensor<2xi32>
+  // CHECK: %[[BORDER:.*]] = spirv.Constant dense<[0, 7]> : !spirv.arm.tensor<2xi32>
+  // CHECK: %[[RESIZE:.*]] = spirv.Tosa.Resize mode = <NearestNeighbor>, %arg0, %[[SCALE]], %[[OFFSET]], %[[BORDER]] : !spirv.arm.tensor<1x1x31x55xi8>, !spirv.arm.tensor<4xi32>, !spirv.arm.tensor<2xi32>, !spirv.arm.tensor<2xi32> -> !spirv.arm.tensor<1x1x278x55xi8>
+  %res = tosa.resize %arg0, %scale, %offset, %border {mode = NEAREST_NEIGHBOR} : (tensor<1x1x31x55xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x1x278x55xi8>
+  return %res : tensor<1x1x278x55xi8>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Cast
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: spirv.ARM.Graph @cast_int
+func.func @cast_int(%arg0: tensor<2x3xi8>) -> tensor<2x3xi32> {
+  // CHECK: %[[CAST:.*]] = spirv.Tosa.Cast  %arg0 : !spirv.arm.tensor<2x3xi8> -> !spirv.arm.tensor<2x3xi32>
+  %res = tosa.cast %arg0 : (tensor<2x3xi8>) -> tensor<2x3xi32>
+  return %res : tensor<2x3xi32>
+}

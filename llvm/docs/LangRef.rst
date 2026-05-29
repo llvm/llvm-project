@@ -831,12 +831,24 @@ always define a pointer to their "content" type because they describe a
 region of memory, and all :ref:`allocated object<allocatedobjects>` in LLVM are
 accessed through pointers.
 
-Global variables can be marked with ``unnamed_addr`` which indicates
-that the address is not significant, only the content. Constants marked
-like this can be merged with other constants if they have the same
-initializer. Note that a constant with significant address *can* be
-merged with a ``unnamed_addr`` constant, the result being a constant
-whose address is significant.
+Global variables can be marked with ``unnamed_addr`` which indicates that
+the address is not significant, only the content. Constants marked like
+this can be merged with other constants if they have the same initializer,
+and can also be duplicated. Note that a constant with significant address
+*can* be merged with a ``unnamed_addr`` constant, the result being a
+constant whose address is significant.
+
+.. warning::
+
+    Constant duplication currently makes it unsound to compare pointers
+    if either may be ``unnamed_addr``, because each reference to the
+    global in the IR may return a different pointer, and optimization
+    passes may create additional references. Optimization passes can also
+    create pointer comparisons with the expectation that the comparison
+    will return true if the object is the same, which theoretically can
+    make any usage of ``unnamed_addr`` unsound, but in practice it is
+    unlikely that input IR that does not explicitly compare pointers
+    will be affected by this issue.
 
 If the ``local_unnamed_addr`` attribute is given, the address is known to
 not be significant within the module.
@@ -15281,9 +15293,10 @@ called).
 .. _int_read_register:
 .. _int_read_volatile_register:
 .. _int_write_register:
+.. _int_write_volatile_register:
 
-'``llvm.read_register``', '``llvm.read_volatile_register``', and '``llvm.write_register``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.read_register``', '``llvm.read_volatile_register``', '``llvm.write_register``', and '``llvm.write_volatile_register``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -15296,26 +15309,30 @@ Syntax:
       declare i64 @llvm.read_volatile_register.i64(metadata)
       declare void @llvm.write_register.i32(metadata, i32 @value)
       declare void @llvm.write_register.i64(metadata, i64 @value)
+      declare void @llvm.write_volatile_register.i32(metadata, i32 @value)
+      declare void @llvm.write_volatile_register.i64(metadata, i64 @value)
       !0 = !{!"sp\00"}
 
 Overview:
 """""""""
 
-The '``llvm.read_register``', '``llvm.read_volatile_register``', and
-'``llvm.write_register``' intrinsics provide access to the named register.
-The register must be valid on the architecture being compiled to. The type
-needs to be compatible with the register being read.
+The '``llvm.read_register``', '``llvm.read_volatile_register``',
+'``llvm.write_register``', and '``llvm.write_volatile_register``' intrinsics
+provide access to the named register. The register must be valid on the
+architecture being compiled to. The type needs to be compatible with the
+register being accessed.
 
 Semantics:
 """"""""""
 
 The '``llvm.read_register``' and '``llvm.read_volatile_register``' intrinsics
 return the current value of the register, where possible. The
-'``llvm.write_register``' intrinsic sets the current value of the register,
-where possible.
+'``llvm.write_register``' and '``llvm.write_volatile_register``' intrinsics
+set the current value of the register, where possible.
 
-A call to '``llvm.read_volatile_register``' is assumed to have side-effects
-and possibly return a different value each time (e.g., for a timer register).
+A call to '``llvm.read_volatile_register``' or
+'``llvm.write_volatile_register``' is assumed to have side-effects and will
+not be reordered or eliminated by the optimizer.
 
 This is useful to implement named register global variables that need
 to always be mapped to a specific register, as is common practice on
@@ -15323,12 +15340,22 @@ bare-metal programs including OS kernels.
 
 The compiler doesn't check for register availability or use of the used
 register in surrounding code, including inline assembly. Because of that,
-allocatable registers are not supported.
+allocatable registers are not supported by '``llvm.read_register``',
+'``llvm.read_volatile_register``', or '``llvm.write_register``'.
 
-Warning: So far it only works with the stack pointer on selected
-architectures (ARM, AArch64, PowerPC and x86_64). Significant amount of
-work is needed to support other registers and even more so, allocatable
-registers.
+'``llvm.write_volatile_register``' supports allocatable registers. Writing
+to an allocatable register means the value is copied into that physical
+register at the point of the call; the register may subsequently be
+reused by the register allocator for other purposes. The backend emits a
+``FAKE_USE`` of the physical register after the write to prevent the store
+from being dead-eliminated before register allocation.
+
+Warning: Register support is target-specific. The IR-level verifier does
+not validate register names; an unsupported name results in a fatal error
+during code generation. Supported registers vary by target and can be
+found in each target's ``getRegisterByName`` implementation.
+'``llvm.write_volatile_register``' support for allocatable registers is
+currently only implemented on AArch64.
 
 .. _int_stacksave:
 

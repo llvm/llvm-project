@@ -143,4 +143,9 @@ Status NativeFileWindows::Write(const void *buf, size_t &num_bytes,
   return error;
 }
 
+void NativeFileWindows::OnStreamOpened() {
+  if ((m_options & OpenOptionsModeMask) == eOpenOptionReadOnly)
+    setvbuf(m_stream, nullptr, _IONBF, 0);
+}
+
 char NativeFileWindows::ID = 0;

@@ -311,7 +311,8 @@ bool WebAssemblyLateEHPrepare::addCatchRefsAndThrowRefs(MachineFunction &MF) {
   // caught exception is rethrown. And convert RETHROWs to THROW_REFs.
   for (auto &[EHPad, Rethrows] : EHPadToRethrows) {
     auto *Catch = WebAssembly::findCatch(EHPad);
-    auto *InsertPos = Catch->getIterator()->getNextNode();
+    assert(Catch && "CATCH not found in EHPad");
+    auto InsertPos = std::next(Catch->getIterator());
     auto ExnReg = MRI.createVirtualRegister(&WebAssembly::EXNREFRegClass);
     if (Catch->getOpcode() == WebAssembly::CATCH) {
       MachineInstrBuilder MIB = BuildMI(*EHPad, InsertPos, Catch->getDebugLoc(),
