@@ -945,7 +945,7 @@ OpenMP Support
 
 SYCL Support
 ------------
-- Initial SYCL offload compilation support has been added to the driver. The
+- Initial SYCL offload compilation support has been added to Clang. The
   new ``-fsycl`` flag enables SYCL offloading, producing a SPIR-V device image
   packaged into the host object. ``-fsycl-device-only`` and
   ``-fsycl-host-only`` restrict compilation to the device or host side
