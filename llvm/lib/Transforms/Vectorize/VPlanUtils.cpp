@@ -802,9 +802,8 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
     // mul(VScale, ConcreteUF) may have been simplified to
     // shl(VScale, log2(ConcreteUF)) when ConcreteUF is a power of 2.
     return isPowerOf2_32(ConcreteUF) &&
-           match(Step, m_Binary<Instruction::Shl>(
-                           m_VPInstruction<VPInstruction::VScale>(),
-                           m_SpecificInt(Log2_32(ConcreteUF))));
+           match(Step, m_Shl(m_VPInstruction<VPInstruction::VScale>(),
+                             m_SpecificInt(Log2_32(ConcreteUF))));
   };
 
   VPInstruction *Increment = nullptr;
