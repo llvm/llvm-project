@@ -40,7 +40,8 @@ class WritableBinaryStream;
 }
 
 PDBFileBuilder::PDBFileBuilder(BumpPtrAllocator &Allocator)
-    : Allocator(Allocator), InjectedSourceTable(2) {}
+    : Allocator(Allocator), InjectedSourceHashTraits(Strings),
+      InjectedSourceTable(2) {}
 
 PDBFileBuilder::~PDBFileBuilder() = default;
 
@@ -79,23 +80,13 @@ TpiStreamBuilder &PDBFileBuilder::getIpiBuilder() {
 }
 
 PDBStringTableBuilder &PDBFileBuilder::getStringTableBuilder() {
-  if (!Strings) {
-    Strings = std::make_unique<PDBStringTableBuilder>();
-    InjectedSourceHashTraits = StringTableHashTraits(*Strings);
-  }
-  return *Strings;
+  return Strings;
 }
 
 GSIStreamBuilder &PDBFileBuilder::getGsiBuilder() {
   if (!Gsi)
     Gsi = std::make_unique<GSIStreamBuilder>(*Msf);
   return *Gsi;
-}
-
-std::unique_ptr<SmallVector<char>> &PDBFileBuilder::getDXContainerData() {
-  if (!Dxc)
-    Dxc = std::make_unique<SmallVector<char>>();
-  return Dxc;
 }
 
 Expected<uint32_t> PDBFileBuilder::allocateNamedStream(StringRef Name,
@@ -149,14 +140,11 @@ Error PDBFileBuilder::finalizeMsfLayout() {
     Info.addFeature(PdbRaw_FeatureSig::VC140);
   }
 
-  if (Dxc) {
-    if (auto EC = Msf->setStreamSize(StreamDXContainer, Dxc->size()))
-      return EC;
-  } else {
-    Expected<uint32_t> SN = allocateNamedStream("/LinkInfo", 0);
-    if (!SN)
-      return SN.takeError();
-  }
+  uint32_t StringsLen = Strings.calculateSerializedSize();
+
+  Expected<uint32_t> SN = allocateNamedStream("/LinkInfo", 0);
+  if (!SN)
+    return SN.takeError();
 
   if (Gsi) {
     if (auto EC = Gsi->finalizeMsfLayout())
@@ -175,12 +163,10 @@ Error PDBFileBuilder::finalizeMsfLayout() {
     if (auto EC = Dbi->finalizeMsfLayout())
       return EC;
   }
-  if (Strings) {
-    uint32_t StringsLen = Strings->calculateSerializedSize();
-    Expected<uint32_t> SN = allocateNamedStream("/names", StringsLen);
-    if (!SN)
-      return SN.takeError();
-  }
+  SN = allocateNamedStream("/names", StringsLen);
+  if (!SN)
+    return SN.takeError();
+
   if (Ipi) {
     if (auto EC = Ipi->finalizeMsfLayout())
       return EC;
@@ -217,8 +203,7 @@ Error PDBFileBuilder::finalizeMsfLayout() {
     uint32_t SrcHeaderBlockSize =
         sizeof(SrcHeaderBlockHeader) +
         InjectedSourceTable.calculateSerializedLength();
-    Expected<uint32_t> SN =
-        allocateNamedStream("/src/headerblock", SrcHeaderBlockSize);
+    SN = allocateNamedStream("/src/headerblock", SrcHeaderBlockSize);
     if (!SN)
       return SN.takeError();
     for (const auto &IS : InjectedSources) {
@@ -297,17 +282,16 @@ Error PDBFileBuilder::commit(StringRef Filename, codeview::GUID *Guid) {
     return ExpectedMsfBuffer.takeError();
   FileBufferByteStream Buffer = std::move(*ExpectedMsfBuffer);
 
-  if (Strings) {
-    auto ExpectedSN = getNamedStreamIndex("/names");
-    if (!ExpectedSN)
-      return ExpectedSN.takeError();
+  auto ExpectedSN = getNamedStreamIndex("/names");
+  if (!ExpectedSN)
+    return ExpectedSN.takeError();
 
-    auto NS = WritableMappedBlockStream::createIndexedStream(
-        Layout, Buffer, *ExpectedSN, Allocator);
-    BinaryStreamWriter NSWriter(*NS);
-    if (auto EC = Strings->commit(NSWriter))
-      return EC;
-  }
+  auto NS = WritableMappedBlockStream::createIndexedStream(
+      Layout, Buffer, *ExpectedSN, Allocator);
+  BinaryStreamWriter NSWriter(*NS);
+  if (auto EC = Strings.commit(NSWriter))
+    return EC;
+
   {
     llvm::TimeTraceScope timeScope("Named stream data");
     for (const auto &NSE : NamedStreamData) {
@@ -344,17 +328,6 @@ Error PDBFileBuilder::commit(StringRef Filename, codeview::GUID *Guid) {
 
   if (Gsi) {
     if (auto EC = Gsi->commit(Layout, Buffer))
-      return EC;
-  }
-
-  if (Dxc) {
-    llvm::TimeTraceScope timeScope("DXContainer stream");
-    auto DxcS = WritableMappedBlockStream::createIndexedStream(
-        Layout, Buffer, StreamDXContainer, Allocator);
-    BinaryStreamWriter Writer(*DxcS);
-    llvm::ArrayRef<uint8_t> DataRef(reinterpret_cast<uint8_t *>(Dxc->data()),
-                                    Dxc->size());
-    if (auto EC = Writer.writeBytes(DataRef))
       return EC;
   }
 
