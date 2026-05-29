@@ -100,6 +100,12 @@ Error DumpOutputStyle::dump() {
     P.NewLine();
   }
 
+  if (opts::dump::DumpDXContainer) {
+    if (auto EC = dumpDXContainer())
+      return EC;
+    P.NewLine();
+  }
+
   if (opts::dump::DumpSymbolStats) {
     ExitOnError Err("Unexpected error processing module stats: ");
     Err(dumpSymbolStats());
@@ -1893,6 +1899,37 @@ Error DumpOutputStyle::dumpSectionMap() {
                      P.getIndentLevel() + 13,
                      static_cast<OMFSegDescFlags>(uint16_t(M.Flags))));
     ++I;
+  }
+  return Error::success();
+}
+
+Error DumpOutputStyle::dumpDXContainer() {
+  printHeader(P, "DirectX Container");
+  AutoIndent Indent(P);
+  auto Dxc = getPdb().getDXContainerStream();
+  if (!Dxc) {
+    P.formatLine("Not present in file");
+    consumeError(Dxc.takeError());
+    return Error::success();
+  }
+
+  auto Header = Dxc->getHeader();
+  P.formatLine("Hash: ");
+  P << format_bytes(Header.FileHash.Digest, std::nullopt,
+                    sizeof(Header.FileHash), sizeof(Header.FileHash), 0, true);
+  P.formatLine("Version:");
+  {
+    AutoIndent Indent(P);
+    P.formatLine("Major: {0}", Header.Version.Major);
+    P.formatLine("Minor: {0}", Header.Version.Minor);
+  }
+  P.formatLine("FileSize: {0}", Header.FileSize);
+  P.formatLine("PartCount: {0}", Header.PartCount);
+  P.formatLine("Parts:");
+  for (auto &part : *Dxc) {
+    AutoIndent Indent(P);
+    P.formatLine("{0} | offset = {1}, size = {2}", part.Part.getName(),
+                 part.Offset, part.Part.Size);
   }
   return Error::success();
 }

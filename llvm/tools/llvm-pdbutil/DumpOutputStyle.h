@@ -99,6 +99,7 @@ private:
   Error dumpSectionHeaders();
   Error dumpSectionContribs();
   Error dumpSectionMap();
+  Error dumpDXContainer();
 
   void dumpSectionHeaders(StringRef Label, DbgHeaderType Type);
 
