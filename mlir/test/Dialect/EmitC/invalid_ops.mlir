@@ -34,7 +34,7 @@ func.func @empty_constant() {
 
 func.func @index_args_out_of_range_1() {
     // expected-error @+1 {{'emitc.call_opaque' op index argument is out of range}}
-    emitc.call_opaque "test" () {args = [0 : index]} : () -> ()
+    emitc.call_opaque "test" () <{args = [0 : index]}> : () -> ()
     return
 }
 
@@ -42,7 +42,7 @@ func.func @index_args_out_of_range_1() {
 
 func.func @index_args_out_of_range_2(%arg : i32) {
     // expected-error @+1 {{'emitc.call_opaque' op index argument is out of range}}
-    emitc.call_opaque "test" (%arg, %arg) {args = [2 : index]} : (i32, i32) -> ()
+    emitc.call_opaque "test" (%arg, %arg) <{args = [2 : index]}> : (i32, i32) -> ()
     return
 }
 
@@ -58,7 +58,7 @@ func.func @empty_callee() {
 
 func.func @nonetype_arg(%arg : i32) {
     // expected-error @+1 {{'emitc.call_opaque' op array argument has no type}}
-    emitc.call_opaque "nonetype_arg"(%arg) {args = [0 : index, [0, 1, 2]]} : (i32) -> i32
+    emitc.call_opaque "nonetype_arg"(%arg) <{args = [0 : index, [0, 1, 2]]}> : (i32) -> i32
     return
 }
 
@@ -66,7 +66,7 @@ func.func @nonetype_arg(%arg : i32) {
 
 func.func @array_template_arg(%arg : i32) {
     // expected-error @+1 {{'emitc.call_opaque' op template argument has invalid type}}
-    emitc.call_opaque "nonetype_template_arg"(%arg) {template_args = [[0, 1, 2]]} : (i32) -> i32
+    emitc.call_opaque "nonetype_template_arg"(%arg) <{template_args = [[0, 1, 2]]}> : (i32) -> i32
     return
 }
 
@@ -74,7 +74,7 @@ func.func @array_template_arg(%arg : i32) {
 
 func.func @dense_template_argument(%arg : i32) {
     // expected-error @+1 {{'emitc.call_opaque' op template argument has invalid type}}
-    emitc.call_opaque "dense_template_argument"(%arg) {template_args = [dense<[1.0, 1.0]> : tensor<2xf32>]} : (i32) -> i32
+    emitc.call_opaque "dense_template_argument"(%arg) <{template_args = [dense<[1.0, 1.0]> : tensor<2xf32>]}> : (i32) -> i32
     return
 }
 
@@ -98,7 +98,7 @@ func.func @member_call_empty_callee(%arg0 : !emitc.opaque<"MyClass">) {
 
 func.func @member_call_index_out_of_range(%arg0 : !emitc.opaque<"MyClass">) {
     // expected-error @+1 {{'emitc.member_call_opaque' op index argument is out of range}}
-    emitc.member_call_opaque %arg0 "test" () {args = [1 : index]} : !emitc.opaque<"MyClass">, () -> ()
+    emitc.member_call_opaque %arg0 "test" () <{args = [1 : index]}> : !emitc.opaque<"MyClass">, () -> ()
     return
 }
 
@@ -114,7 +114,7 @@ func.func @member_call_array_result(%arg0 : !emitc.opaque<"MyClass">) {
 
 func.func @member_call_nonetype_template_arg(%arg0 : !emitc.opaque<"MyClass">) {
     // expected-error @+1 {{'emitc.member_call_opaque' op template argument has invalid type}}
-    emitc.member_call_opaque %arg0 "nonetype_template_arg"() {template_args = [[0, 1, 2]]} : !emitc.opaque<"MyClass">, () -> ()
+    emitc.member_call_opaque %arg0 "nonetype_template_arg"() <{template_args = [[0, 1, 2]]}> : !emitc.opaque<"MyClass">, () -> ()
     return
 }
 
@@ -122,7 +122,7 @@ func.func @member_call_nonetype_template_arg(%arg0 : !emitc.opaque<"MyClass">) {
 
 func.func @member_call_dense_template_argument(%arg0 : !emitc.opaque<"MyClass">) {
     // expected-error @+1 {{'emitc.member_call_opaque' op template argument has invalid type}}
-    emitc.member_call_opaque %arg0 "dense_template_argument"() {template_args = [dense<[1.0, 1.0]> : tensor<2xf32>]} : !emitc.opaque<"MyClass">, () -> ()
+    emitc.member_call_opaque %arg0 "dense_template_argument"() <{template_args = [dense<[1.0, 1.0]> : tensor<2xf32>]}> : !emitc.opaque<"MyClass">, () -> ()
     return
 }
 
