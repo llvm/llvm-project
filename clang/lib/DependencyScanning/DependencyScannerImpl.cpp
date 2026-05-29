@@ -624,7 +624,7 @@ struct AsyncModuleCompile : PPCallbacks {
     // We should build the PCM.
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
         llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
-            Service.getSharedCache(), Service.getOpts().MakeVFS());
+            Service, Service.getOpts().MakeVFS());
     VFS = createVFSFromCompilerInvocation(CI.getInvocation(),
                                           CI.getDiagnostics(), std::move(VFS));
     auto DC = std::make_unique<DiagnosticConsumer>();
