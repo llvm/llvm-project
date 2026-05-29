@@ -19648,6 +19648,20 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(
     return nullptr;
   }
 
+  // OpenMP 6.0 [7.2]: the 'saved' modifier has effect only on a clause
+  // that appears on a replayable construct.  Per [14.6] the directives
+  // that admit a 'replayable' clause and that also admit 'firstprivate'
+  // are 'task', 'taskloop', and 'target' (the other replayable-eligible
+  // directives -- 'target_enter_data' etc. -- do not admit
+  // 'firstprivate' at all).  Reject 'saved' on any other directive, as
+  // it can never become a replayable construct.
+  OpenMPDirectiveKind CurDir = DSAStack->getCurrentDirective();
+  if (FPKind == OMPC_FIRSTPRIVATE_saved && !isOpenMPTaskingDirective(CurDir) &&
+      !isOpenMPTargetExecutionDirective(CurDir)) {
+    Diag(FPKindLoc, diag::err_omp_firstprivate_saved_wrong_directive);
+    return nullptr;
+  }
+
   SmallVector<Expr *, 8> Vars;
   SmallVector<Expr *, 8> PrivateCopies;
   SmallVector<Expr *, 8> Inits;
