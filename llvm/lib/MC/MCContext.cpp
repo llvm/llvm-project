@@ -25,6 +25,7 @@
 #include "llvm/MC/MCLabel.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionDXContainer.h"
+#include "llvm/MC/MCSectionMetalLib.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSectionMachO.h"
@@ -109,6 +110,9 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo &mai,
   case Triple::DXContainer:
     Env = IsDXContainer;
     break;
+  case Triple::MetalLib:
+    Env = IsMetalLib;
+    break;
   case Triple::SPIRV:
     Env = IsSPIRV;
     break;
@@ -148,6 +152,7 @@ void MCContext::reset() {
   // Call the destructors so the fragments are freed
   COFFAllocator.DestroyAll();
   DXCAllocator.DestroyAll();
+  MetalLibAllocator.DestroyAll();
   ELFAllocator.DestroyAll();
   GOFFAllocator.DestroyAll();
   MachOAllocator.DestroyAll();
@@ -180,6 +185,7 @@ void MCContext::reset() {
   WasmUniquingMap.clear();
   XCOFFUniquingMap.clear();
   DXCUniquingMap.clear();
+  MetalLibUniquingMap.clear();
 
   RelSecNames.clear();
   MacroMap.clear();
@@ -303,6 +309,8 @@ MCSymbol *MCContext::createSymbolImpl(const MCSymbolTableEntry *Name,
   case MCContext::IsXCOFF:
     return createXCOFFSymbolImpl(Name, IsTemporary);
   case MCContext::IsDXContainer:
+    break;
+  case MCContext::IsMetalLib:
     break;
   case MCContext::IsSPIRV:
     return new (Name, *this) MCSymbol(Name, IsTemporary);
@@ -945,6 +953,24 @@ MCSectionDXContainer *MCContext::getDXContainerSection(StringRef Section,
       new (DXCAllocator.Allocate()) MCSectionDXContainer(Name, K, nullptr);
 
   // The first fragment will store the header
+  return MapIt->second;
+}
+
+MCSectionMetalLib *MCContext::getMetalLibSection(StringRef Section,
+                                                 SectionKind K) {
+  // Do the lookup, if we have a hit, return it.
+  auto ItInsertedPair = MetalLibUniquingMap.try_emplace(Section);
+  if (!ItInsertedPair.second)
+    return ItInsertedPair.first->second;
+
+  auto MapIt = ItInsertedPair.first;
+  // Grab the name from the StringMap. Since the Section is going to keep a
+  // copy of this StringRef we need to make sure the underlying string stays
+  // alive as long as we need it.
+  StringRef Name = MapIt->first();
+  MapIt->second =
+      new (MetalLibAllocator.Allocate()) MCSectionMetalLib(Name, K, nullptr);
+
   return MapIt->second;
 }
 

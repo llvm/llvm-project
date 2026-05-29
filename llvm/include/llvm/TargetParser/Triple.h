@@ -116,7 +116,8 @@ public:
     renderscript64, // 64-bit RenderScript
     ve,             // NEC SX-Aurora Vector Engine
     agx,            // AGX: Apple GPUs (G13 and later)
-    LastArchType = agx
+    air,            // Apple Intermediate Representation (Metal) bytecode
+    LastArchType = air
   };
   enum SubArchType {
     NoSubArch,
@@ -427,6 +428,7 @@ public:
     ELF,
     GOFF,
     MachO,
+    MetalLib,
     SPIRV,
     Wasm,
     XCOFF,
@@ -950,6 +952,9 @@ public:
 
   /// Tests whether the target is DXIL.
   bool isDXIL() const { return getArch() == Triple::dxil; }
+
+  /// Tests whether the target is Metal/AIR.
+  bool isMetal() const { return getArch() == Triple::air; }
 
   bool isShaderModelOS() const { return getOS() == Triple::ShaderModel; }
 

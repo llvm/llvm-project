@@ -55,6 +55,7 @@ class MCSection;
 class MCSectionCOFF;
 class MCSectionDXContainer;
 class MCSectionELF;
+class MCSectionMetalLib;
 class MCSectionMachO;
 class MCSectionSPIRV;
 class MCSectionWasm;
@@ -94,7 +95,8 @@ public:
     IsSPIRV,
     IsWasm,
     IsXCOFF,
-    IsDXContainer
+    IsDXContainer,
+    IsMetalLib
   };
 
 private:
@@ -141,6 +143,7 @@ private:
 
   SpecificBumpPtrAllocator<MCSectionCOFF> COFFAllocator;
   SpecificBumpPtrAllocator<MCSectionDXContainer> DXCAllocator;
+  SpecificBumpPtrAllocator<MCSectionMetalLib> MetalLibAllocator;
   SpecificBumpPtrAllocator<MCSectionELF> ELFAllocator;
   SpecificBumpPtrAllocator<MCSectionMachO> MachOAllocator;
   SpecificBumpPtrAllocator<MCSectionGOFF> GOFFAllocator;
@@ -319,6 +322,7 @@ private:
   std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
   std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
   StringMap<MCSectionDXContainer *> DXCUniquingMap;
+  StringMap<MCSectionMetalLib *> MetalLibUniquingMap;
   StringMap<bool> RelSecNames;
 
   SpecificBumpPtrAllocator<MCSubtargetInfo> MCSubtargetAllocator;
@@ -652,6 +656,10 @@ public:
   /// Get the section for the provided Section name
   LLVM_ABI MCSectionDXContainer *getDXContainerSection(StringRef Section,
                                                        SectionKind K);
+
+  /// Get the section for the provided MetalLib Section name.
+  LLVM_ABI MCSectionMetalLib *getMetalLibSection(StringRef Section,
+                                                 SectionKind K);
 
   LLVM_ABI bool hasXCOFFSection(StringRef Section,
                                 XCOFF::CsectProperties CsectProp) const;

@@ -585,6 +585,27 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(VersionTuple(1, 9), T.getDXILVersion());
 
+  // Metal / AIR target. The arch has no subarch enumeration yet (see the
+  // "Apple-spec-blocked" note in llvm/lib/Target/Metal/UPSTREAM_GAPS.md) so
+  // we only verify the arch/object-format wiring, not version subarches.
+  T = Triple("air");
+  EXPECT_EQ(Triple::air, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+  EXPECT_EQ(Triple::MetalLib, T.getObjectFormat());
+
+  T = Triple("air-apple-macosx");
+  EXPECT_EQ(Triple::air, T.getArch());
+  EXPECT_EQ(Triple::Apple, T.getVendor());
+  EXPECT_EQ(Triple::MacOSX, T.getOS());
+  EXPECT_EQ(Triple::MetalLib, T.getObjectFormat());
+
+  // The MetalLib object-format string is recognised as a triple suffix.
+  T = Triple("air-apple-macosx-metallib");
+  EXPECT_EQ(Triple::air, T.getArch());
+  EXPECT_EQ(Triple::MetalLib, T.getObjectFormat());
+
   T = Triple("x86_64-unknown-fuchsia");
   EXPECT_EQ(Triple::x86_64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
