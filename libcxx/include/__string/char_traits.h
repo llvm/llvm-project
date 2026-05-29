@@ -462,12 +462,29 @@ __str_rfind(const _CharT* __p, _SizeT __sz, const _CharT* __s, _SizeT __pos, _Si
   return static_cast<_SizeT>(__r - __p);
 }
 
+template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI void __build_char_lookup_table(const _CharT* __s, size_t __n, bool (&__table)[256]) {
+  __builtin_memset(__table, 0, sizeof(__table));
+  for (size_t __i = 0; __i < __n; ++__i)
+    __table[static_cast<unsigned char>(__s[__i])] = true;
+}
+
 // __str_find_first_of
 template <class _CharT, class _SizeT, class _Traits, _SizeT __npos>
 inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_find_first_of(const _CharT* __p, _SizeT __sz, const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT {
   if (__pos >= __sz || __n == 0)
     return __npos;
+  if _LIBCPP_CONSTEXPR (sizeof(_CharT) == 1) {
+    if (!__libcpp_is_constant_evaluated()) {
+      bool __table[256];
+      std::__build_char_lookup_table(__s, __n, __table);
+      for (_SizeT __i = __pos; __i < __sz; ++__i)
+        if (__table[static_cast<unsigned char>(__p[__i])])
+          return __i;
+      return __npos;
+    }
+  }
   const _CharT* __r = std::__find_first_of_ce(__p + __pos, __p + __sz, __s, __s + __n, _Traits::eq);
   if (__r == __p + __sz)
     return __npos;
@@ -478,16 +495,27 @@ __str_find_first_of(const _CharT* __p, _SizeT __sz, const _CharT* __s, _SizeT __
 template <class _CharT, class _SizeT, class _Traits, _SizeT __npos>
 inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_find_last_of(const _CharT* __p, _SizeT __sz, const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT {
-  if (__n != 0) {
-    if (__pos < __sz)
-      ++__pos;
-    else
-      __pos = __sz;
-    for (const _CharT* __ps = __p + __pos; __ps != __p;) {
-      const _CharT* __r = _Traits::find(__s, __n, *--__ps);
-      if (__r)
-        return static_cast<_SizeT>(__ps - __p);
+  if (__n == 0)
+    return __npos;
+  if _LIBCPP_CONSTEXPR (sizeof(_CharT) == 1) {
+    if (!__libcpp_is_constant_evaluated()) {
+      bool __table[256];
+      std::__build_char_lookup_table(__s, __n, __table);
+      _SizeT __end = (__pos < __sz) ? __pos + 1 : __sz;
+      for (_SizeT __i = __end; __i > 0; --__i)
+        if (__table[static_cast<unsigned char>(__p[__i - 1])])
+          return __i - 1;
+      return __npos;
     }
+  }
+  if (__pos < __sz)
+    ++__pos;
+  else
+    __pos = __sz;
+  for (const _CharT* __ps = __p + __pos; __ps != __p;) {
+    const _CharT* __r = _Traits::find(__s, __n, *--__ps);
+    if (__r)
+      return static_cast<_SizeT>(__ps - __p);
   }
   return __npos;
 }
@@ -496,12 +524,22 @@ __str_find_last_of(const _CharT* __p, _SizeT __sz, const _CharT* __s, _SizeT __p
 template <class _CharT, class _SizeT, class _Traits, _SizeT __npos>
 inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_find_first_not_of(const _CharT* __p, _SizeT __sz, const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT {
-  if (__pos < __sz) {
-    const _CharT* __pe = __p + __sz;
-    for (const _CharT* __ps = __p + __pos; __ps != __pe; ++__ps)
-      if (_Traits::find(__s, __n, *__ps) == nullptr)
-        return static_cast<_SizeT>(__ps - __p);
+  if (__pos >= __sz)
+    return __npos;
+  if _LIBCPP_CONSTEXPR (sizeof(_CharT) == 1) {
+    if (!__libcpp_is_constant_evaluated()) {
+      bool __table[256];
+      std::__build_char_lookup_table(__s, __n, __table);
+      for (_SizeT __i = __pos; __i < __sz; ++__i)
+        if (!__table[static_cast<unsigned char>(__p[__i])])
+          return __i;
+      return __npos;
+    }
   }
+  const _CharT* __pe = __p + __sz;
+  for (const _CharT* __ps = __p + __pos; __ps != __pe; ++__ps)
+    if (_Traits::find(__s, __n, *__ps) == nullptr)
+      return static_cast<_SizeT>(__ps - __p);
   return __npos;
 }
 
@@ -521,6 +559,17 @@ __str_find_first_not_of(const _CharT* __p, _SizeT __sz, _CharT __c, _SizeT __pos
 template <class _CharT, class _SizeT, class _Traits, _SizeT __npos>
 inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_find_last_not_of(const _CharT* __p, _SizeT __sz, const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT {
+  if _LIBCPP_CONSTEXPR (sizeof(_CharT) == 1) {
+    if (!__libcpp_is_constant_evaluated()) {
+      bool __table[256];
+      std::__build_char_lookup_table(__s, __n, __table);
+      _SizeT __end = (__pos < __sz) ? __pos + 1 : __sz;
+      for (_SizeT __i = __end; __i > 0; --__i)
+        if (!__table[static_cast<unsigned char>(__p[__i - 1])])
+          return __i - 1;
+      return __npos;
+    }
+  }
   if (__pos < __sz)
     ++__pos;
   else
