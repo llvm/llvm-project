@@ -75,6 +75,7 @@
 #include "clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h" // IWYU pragma: keep
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -666,7 +667,9 @@ static llvm::Triple computeTargetTriple(const Driver &D,
     return Target;
 
   // On AIX, the env OBJECT_MODE may affect the resulting arch variant.
-  if (Target.isOSAIX()) {
+  // However, if --target was explicitly specified, it takes precedence.
+#ifdef _AIX
+  if (!Args.hasArg(options::OPT_target)) {
     if (std::optional<std::string> ObjectModeValue =
             llvm::sys::Process::GetEnv("OBJECT_MODE")) {
       StringRef ObjectMode = *ObjectModeValue;
@@ -684,6 +687,7 @@ static llvm::Triple computeTargetTriple(const Driver &D,
         Target.setArch(AT);
     }
   }
+#endif
 
   // Currently the only architecture supported by *-uefi triples are x86_64.
   if (Target.isUEFI() && Target.getArch() != llvm::Triple::x86_64)
@@ -1837,6 +1841,8 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   if (UseModulesDriver) {
     Diags.Report(diag::remark_performing_driver_managed_module_build);
 
+    modules::diagnoseModulesDriverArgs(C->getArgs(), Diags);
+
     // Read the Standard library module manifest and, if available, add all
     // discovered modules to this Compilation. Jobs for modules specified in
     // the manifest that are not required by any command-line input are pruned
@@ -2124,8 +2130,8 @@ void Driver::generateCompilationDiagnostics(
     return;
   }
 
-  // Don't attempt to generate preprocessed files if multiple -arch options are
-  // used, unless they're all duplicates.
+  // If there are multiple -arch options, build a reproducer only for the bound
+  // arch that crashed.
   llvm::StringSet<> ArchNames;
   for (const Arg *A : C.getArgs()) {
     if (A->getOption().matches(options::OPT_arch)) {
@@ -2134,10 +2140,17 @@ void Driver::generateCompilationDiagnostics(
     }
   }
   if (ArchNames.size() > 1) {
-    Diag(clang::diag::note_drv_command_failed_diag_msg)
-        << "Error generating preprocessed source(s) - cannot generate "
-           "preprocessed source with multiple -arch options.";
-    return;
+    // Build a reproducer only for the bound arch that crashed.
+    StringRef FailingArch = Cmd.getBoundArch();
+    if (FailingArch.empty()) {
+      Diag(clang::diag::note_drv_command_failed_diag_msg)
+          << "Error generating preprocessed source(s) - cannot generate "
+             "preprocessed source with multiple -arch options.";
+      return;
+    }
+    C.getArgs().eraseArg(options::OPT_arch);
+    C.getArgs().AddJoinedArg(nullptr, getOpts().getOption(options::OPT_arch),
+                             FailingArch);
   }
 
   // If we only have IR inputs there's no need for preprocessing.
@@ -4877,7 +4890,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
           auto GPUsOrErr = TC.getSystemGPUArchs(Args);
           if (!GPUsOrErr) {
             TC.getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
-                << llvm::Triple::getArchTypeName(TC.getArch())
+                << TC.getTriple().getArchName()
                 << llvm::toString(GPUsOrErr.takeError()) << "--offload-arch";
             continue;
           }
@@ -4920,7 +4933,9 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
   // Fill in the default architectures if not provided explicitly.
   if (Archs.empty()) {
     if (Kind == Action::OFK_Cuda) {
-      Archs.insert(OffloadArchToString(OffloadArch::CudaDefault));
+      Archs.insert(OffloadArchToString(TC.getTriple().isSPIRV()
+                                           ? OffloadArch::Unused
+                                           : OffloadArch::CudaDefault));
     } else if (Kind == Action::OFK_HIP) {
       Archs.insert(OffloadArchToString(TC.getTriple().isSPIRV()
                                            ? OffloadArch::Generic
@@ -4936,8 +4951,8 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
         auto ArchsOrErr = TC.getSystemGPUArchs(Args);
         if (!ArchsOrErr) {
           TC.getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
-              << llvm::Triple::getArchTypeName(TC.getArch())
-              << llvm::toString(ArchsOrErr.takeError()) << "--offload-arch";
+              << TC.getArchName() << llvm::toString(ArchsOrErr.takeError())
+              << "--offload-arch";
         } else if (!ArchsOrErr->empty()) {
           for (auto Arch : *ArchsOrErr)
             Archs.insert(Args.MakeArgStringRef(Arch));
@@ -5260,6 +5275,13 @@ Action *Driver::ConstructPhaseAction(
     if (Args.hasArg(options::OPT_extract_api))
       return C.MakeAction<ExtractAPIJobAction>(Input, types::TY_API_INFO);
 
+    // Standard library modules always precompile in -fmodules-driver mode,
+    // even when -fsyntax-only is specified.
+    if (Input->getType() == types::TY_CXXStdModule ||
+        Input->getType() == types::TY_PP_CXXStdModule)
+      return C.MakeAction<PrecompileJobAction>(
+          Input, getPrecompiledType(Input->getType()));
+
     // With 'fmodules-reduced-bmi', we don't want to run the
     // precompile phase unless the user specified '--precompile' or
     // '--precompile-reduced-bmi'. If '--precompile' is specified, we will try
@@ -5454,6 +5476,14 @@ void Driver::BuildJobs(Compilation &C) const {
       // The actions below do not increase the number of outputs.
       if (A->getKind() == clang::driver::Action::BinaryAnalyzeJobClass ||
           A->getKind() == clang::driver::Action::BinaryTranslatorJobClass)
+        continue;
+
+      // With -fmodules-driver, Standard library modules should not count toward
+      // the number of outputs, since they are implicitly added to the input
+      // list.
+      if (isa<PrecompileJobAction>(A) && !A->getInputs().empty() &&
+          (A->getInputs().front()->getType() == types::TY_CXXStdModule ||
+           A->getInputs().front()->getType() == types::TY_PP_CXXStdModule))
         continue;
 
       if (A->getType() != types::TY_Nothing &&
@@ -6027,6 +6057,7 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
       Path = DumpDir->getValue();
       Path += llvm::sys::path::stem(BaseInput);
       Path += OffloadingPrefix;
+      Path += ".json";
     } else if (!OffloadingPrefix.empty()) {
       // For offloading, derive path from -o output directory combined with
       // the input filename and offload prefix.
@@ -6035,10 +6066,11 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
       if (Arg *FinalOutput = Args.getLastArg(options::OPT_o))
         Path = llvm::sys::path::parent_path(FinalOutput->getValue());
       llvm::sys::path::append(Path, TraceName);
+      Path += ".json";
     } else {
       Path = Result.getFilename();
+      llvm::sys::path::replace_extension(Path, "json");
     }
-    llvm::sys::path::replace_extension(Path, "json");
   }
   const char *ResultFile = C.getArgs().MakeArgString(Path);
   C.addTimeTraceFile(ResultFile, JA);
@@ -6052,6 +6084,13 @@ InputInfoList Driver::BuildJobsForActionNoCache(
         &CachedResults,
     Action::OffloadKind TargetDeviceOffloadKind) const {
   llvm::PrettyStackTraceString CrashInfo("Building compilation jobs");
+
+  // Track the bound arch for commands constructed in this scope so
+  // generateCompilationDiagnostics can identify the crashing arch.
+  StringRef SavedBoundArch = C.getCurrentBoundArch();
+  C.setCurrentBoundArch(BoundArch);
+  auto RestoreBoundArch =
+      llvm::scope_exit([&] { C.setCurrentBoundArch(SavedBoundArch); });
 
   InputInfoList OffloadDependencesInputInfo;
   bool BuildingForOffloadDevice = TargetDeviceOffloadKind != Action::OFK_None;
@@ -6220,11 +6259,12 @@ InputInfoList Driver::BuildJobsForActionNoCache(
   const ArgList &Args =
       C.getArgsForToolChain(TC, BoundArch, A->getOffloadingDeviceKind());
   if (InputInfos.size() != 1) {
-    EffectiveTriple = llvm::Triple(ToolTC.ComputeEffectiveClangTriple(Args));
+    EffectiveTriple =
+        llvm::Triple(ToolTC.ComputeEffectiveClangTriple(Args, BoundArch));
   } else {
     // Pass along the input type if it can be unambiguously determined.
-    EffectiveTriple = llvm::Triple(
-        ToolTC.ComputeEffectiveClangTriple(Args, InputInfos[0].getType()));
+    EffectiveTriple = llvm::Triple(ToolTC.ComputeEffectiveClangTriple(
+        Args, BoundArch, InputInfos[0].getType()));
   }
   RegisterEffectiveTriple TripleRAII(ToolTC, EffectiveTriple);
 
@@ -6300,8 +6340,8 @@ InputInfoList Driver::BuildJobsForActionNoCache(
   }
 
   if (CCCPrintBindings && !CCGenDiagnostics) {
-    llvm::errs() << "# \"" << T->getToolChain().getTripleString() << '"'
-                 << " - \"" << T->getName() << "\", inputs: [";
+    llvm::errs() << "# \"" << T->getToolChain().getEffectiveTriple().str()
+                 << '"' << " - \"" << T->getName() << "\", inputs: [";
     for (unsigned i = 0, e = InputInfos.size(); i != e; ++i) {
       llvm::errs() << InputInfos[i].getAsString();
       if (i + 1 != e)
@@ -6447,6 +6487,31 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
   std::string BoundArch = sanitizeTargetIDInFileName(OrigBoundArch);
 
   llvm::PrettyStackTraceString CrashInfo("Computing output path");
+
+  auto CreateTempOutputPath = [&](StringRef Prefix) {
+    const char *Suffix =
+        types::getTypeTempSuffix(JA.getType(), IsCLMode() || IsDXCMode());
+    // The non-offloading toolchain on Darwin requires deterministic input
+    // file name for binaries to be deterministic, therefore it needs unique
+    // directory.
+    const llvm::Triple Triple(C.getDriver().getTargetTriple());
+    const bool NeedUniqueDirectory =
+        (JA.getOffloadingDeviceKind() == Action::OFK_None ||
+         JA.getOffloadingDeviceKind() == Action::OFK_Host) &&
+        Triple.isOSDarwin();
+    return CreateTempFile(C, Prefix, Suffix, MultipleArchs, BoundArch,
+                          NeedUniqueDirectory);
+  };
+
+  // Standard library output in -fmodules-driver?
+  if (isa<PrecompileJobAction>(JA) && !JA.getInputs().empty() &&
+      (JA.getInputs().front()->getType() == types::TY_CXXStdModule ||
+       JA.getInputs().front()->getType() == types::TY_PP_CXXStdModule)) {
+    StringRef Filename = llvm::sys::path::filename(BaseInput);
+    StringRef Stem = llvm::sys::path::stem(Filename);
+    return CreateTempOutputPath(Stem);
+  }
+
   // Output to a user requested destination?
   if (AtTopLevel && !isa<DsymutilJobAction>(JA) && !isa<VerifyJobAction>(JA)) {
     if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o))
@@ -6545,19 +6610,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
        !C.getArgs().hasArg(options::OPT__SLASH_Fo)) ||
       CCGenDiagnostics) {
     StringRef Name = llvm::sys::path::filename(BaseInput);
-    std::pair<StringRef, StringRef> Split = Name.split('.');
-    const char *Suffix =
-        types::getTypeTempSuffix(JA.getType(), IsCLMode() || IsDXCMode());
-    // The non-offloading toolchain on Darwin requires deterministic input
-    // file name for binaries to be deterministic, therefore it needs unique
-    // directory.
-    llvm::Triple Triple(C.getDriver().getTargetTriple());
-    bool NeedUniqueDirectory =
-        (JA.getOffloadingDeviceKind() == Action::OFK_None ||
-         JA.getOffloadingDeviceKind() == Action::OFK_Host) &&
-        Triple.isOSDarwin();
-    return CreateTempFile(C, Split.first, Suffix, MultipleArchs, BoundArch,
-                          NeedUniqueDirectory);
+    return CreateTempOutputPath(Name.split('.').first);
   }
 
   SmallString<128> BasePath(BaseInput);
@@ -6759,6 +6812,17 @@ std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
   llvm::sys::path::append(P, Name);
   if (llvm::sys::fs::exists(Twine(P)))
     return std::string(P);
+
+  // With Flang, also look for intrinsic modules
+  if (IsFlangMode()) {
+    if (std::optional<std::string> IntrPath =
+            TC.getDefaultIntrinsicModuleDir()) {
+      SmallString<128> P(*IntrPath);
+      llvm::sys::path::append(P, Name);
+      if (llvm::sys::fs::exists(P))
+        return std::string(P);
+    }
+  }
 
   SmallString<128> D(Dir);
   llvm::sys::path::append(D, "..", Name);
@@ -7156,7 +7220,12 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       break;
     case llvm::Triple::Vulkan:
     case llvm::Triple::ShaderModel:
-      TC = std::make_unique<toolchains::HLSLToolChain>(*this, Target, Args);
+      if ((Target.getArch() == llvm::Triple::spirv32 ||
+           Target.getArch() == llvm::Triple::spirv64) &&
+          !usesInput(Args, types::isHLSL))
+        TC = std::make_unique<toolchains::SPIRVToolChain>(*this, Target, Args);
+      else
+        TC = std::make_unique<toolchains::HLSLToolChain>(*this, Target, Args);
       break;
     case llvm::Triple::ChipStar:
       TC = std::make_unique<toolchains::HIPSPVToolChain>(*this, Target, Args);

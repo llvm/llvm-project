@@ -38,6 +38,8 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/RealpathPrefixes.h"
+#include "lldb/Utility/ScriptedMetadata.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
@@ -450,6 +452,10 @@ public:
 
   void SetTrapExceptions(bool b) { m_trap_exceptions = b; }
 
+  bool GetStopOnFork() const { return m_stop_on_fork; }
+
+  void SetStopOnFork(bool b) { m_stop_on_fork = b; }
+
   bool GetREPLEnabled() const { return m_repl; }
 
   void SetREPLEnabled(bool b) { m_repl = b; }
@@ -534,6 +540,7 @@ private:
   bool m_stop_others = true;
   bool m_debug = false;
   bool m_trap_exceptions = true;
+  bool m_stop_on_fork = false;
   bool m_repl = false;
   bool m_generate_debug_info = false;
   bool m_ansi_color_errors = false;
@@ -992,6 +999,79 @@ public:
 
   /// Resets the hit count of all breakpoints.
   void ResetBreakpointHitCounts();
+
+  // This callout implements the "Resolver Override".  When we have determined
+  // the Resolver for a given breakpoint, we pass each of the registered
+  // overrides the "natural" resolver, and then we will use whatever resolver
+  // we get back from it if it is non-null.
+  // We keep a list of overrides ordered by ID - and we search through the list
+  // by ID order, and the first override that returns a non-null Resolver will
+  // be the one we use.  If no overrides return an override resolver, we'll use
+  // the original one.
+
+  // This is the abstract version of the override.  Particular implementations
+  // e.g. the scripted override will derive from this.
+  class BreakpointResolverOverride;
+  using BreakpointResolverOverrideUP =
+      std::unique_ptr<BreakpointResolverOverride>;
+
+  class BreakpointResolverOverride {
+  public:
+    BreakpointResolverOverride(Target &target, const std::string &description)
+        : m_target(target), m_desc(description) {}
+
+    virtual BreakpointResolverOverrideUP CopyIntoNewTarget(Target &target) = 0;
+
+    virtual ~BreakpointResolverOverride() {}
+    virtual lldb::BreakpointResolverSP
+    CheckForOverride(Target &target, lldb::BreakpointResolverSP initial_sp) = 0;
+    // Return whether constructing this resolver was successful.
+    virtual llvm::Error Validate() = 0;
+    const std::string &GetDescription() { return m_desc; }
+
+  protected:
+    Target &m_target;
+    std::string m_desc;
+  };
+
+  /// Add a breakpoint override resolver.  This version can't fail.
+  lldb::user_id_t
+  AddBreakpointResolverOverride(BreakpointResolverOverrideUP override_up) {
+    lldb::user_id_t id_used = m_override_id;
+    m_breakpoint_overrides.emplace(m_override_id, std::move(override_up));
+    m_override_id++;
+    return id_used;
+  }
+
+  /// Add a breakpoint override resolver.  Return the ID or an error:
+  llvm::Expected<lldb::user_id_t>
+  AddBreakpointResolverOverride(llvm::StringRef class_name,
+                                StructuredData::DictionarySP args_data_sp,
+                                llvm::StringRef description);
+
+  bool RemoveBreakpointResolverOverride(lldb::user_id_t override_id) {
+    size_t removed = m_breakpoint_overrides.erase(override_id);
+    return removed == 1;
+  }
+
+  void ClearBreakpointResolverOverrides() { m_breakpoint_overrides.clear(); }
+
+  lldb::BreakpointResolverSP
+  CheckBreakpointOverrides(lldb::BreakpointResolverSP original_sp) {
+    for (auto const &elem : m_breakpoint_overrides) {
+      if (lldb::BreakpointResolverSP overriden_sp =
+              elem.second->CheckForOverride(*this, original_sp))
+        return overriden_sp;
+    }
+    return {};
+  }
+
+  /// Describe the breakpoint overrides.  If ixds is empty, list all.  Otherwise
+  /// list the overrides whose ids match the ones given in idxs.  The matched
+  /// elements are removed from the list, so any elements remaining in idxs are
+  /// indexes that are not breakpoint override indexes.
+  void DescribeBreakpointOverrides(Stream &stream,
+                                   std::vector<lldb::user_id_t> &idxs);
 
   // The flag 'end_to_end', default to true, signifies that the operation is
   // performed end to end, for both the debugger and the debuggee.
@@ -1601,17 +1681,14 @@ public:
     StopHookResult HandleStop(ExecutionContext &exc_ctx,
                               lldb::StreamSP output) override;
 
-    Status SetScriptCallback(std::string class_name,
-                             StructuredData::ObjectSP extra_args_sp);
+    Status SetScriptCallback(const ScriptedMetadata &scripted_metadata);
 
     void GetSubclassDescription(Stream &s,
                                 lldb::DescriptionLevel level) const override;
 
   private:
-    std::string m_class_name;
-    /// This holds the dictionary of keys & values that can be used to
-    /// parametrize any given callback's behavior.
-    StructuredDataImpl m_extra_args;
+    llvm::StringRef GetScriptClassName() const;
+
     lldb::ScriptedStopHookInterfaceSP m_interface_sp;
 
     /// Use CreateStopHook to make a new empty stop hook. Use SetScriptCallback
@@ -1660,6 +1737,200 @@ public:
   void RegisterInternalStopHooks();
 
   typedef std::shared_ptr<StopHook> StopHookSP;
+
+  // Target Hooks
+  //
+  // Hooks fire on target lifecycle events. There are two flows:
+  //
+  // Command-based hooks: the user specifies which triggers the hook responds
+  //   to (--on-load, --on-unload, --on-stop) and provides a list of commands.
+  //   All commands run for every trigger the hook is signed up for.
+  //
+  // Python class hooks: the user provides a Python class name and optional
+  //   extra_args that will be passed to the hook init method (-k key -v value).
+  //   The class controls which events it handles by implementing the
+  //   corresponding callback methods (handle_module_loaded,
+  //   handle_module_unloaded, handle_stop). Triggers are set automatically
+  //   based on which methods exist.
+  class Hook : public UserID {
+  public:
+    Hook(const Hook &rhs);
+    virtual ~Hook() = default;
+
+    enum class HookKind : uint32_t { CommandBased = 0, ScriptBased };
+
+    HookKind GetHookKind() const { return m_kind; }
+
+    /// Individual trigger bits. Combine with bitwise OR to form a trigger mask.
+    // FIXME: Add kProcessExit, kProcessDetach, etc. as needed.
+    enum TriggerBit : uint32_t {
+      kModulesLoaded = (1u << 0),
+      kModulesUnloaded = (1u << 1),
+      kProcessStop = (1u << 2),
+    };
+
+    lldb::TargetSP &GetTarget() { return m_target_sp; }
+
+    bool IsEnabled() { return m_enabled; }
+    void SetIsEnabled(bool enabled) { m_enabled = enabled; }
+
+    /// Return the bitmask of triggers this hook responds to.
+    /// Each bit corresponds to a TriggerBit value.
+    uint32_t GetTriggerMask() const { return m_trigger_mask; }
+
+    /// Return true if this hook fires on the given trigger.
+    bool FiresOn(uint32_t trigger) const { return m_trigger_mask & trigger; }
+
+    // Filter fields
+
+    /// Set the symbol context specifier. The hook takes ownership.
+    void SetSCSpecifier(SymbolContextSpecifier *specifier);
+    SymbolContextSpecifier *GetSCSpecifier() { return m_sc_specifier_sp.get(); }
+
+    /// Check if the execution context passes the specifier and thread spec
+    /// filters. Always returns true if no filters are set.
+    bool ExecutionContextPasses(const ExecutionContext &exe_ctx);
+
+    /// Set the thread specifier. The hook takes ownership.
+    void SetThreadSpecifier(ThreadSpec *specifier);
+    ThreadSpec *GetThreadSpecifier() { return m_thread_spec_up.get(); }
+
+    void SetRunAtInitialStop(bool at_initial_stop) {
+      m_at_initial_stop = at_initial_stop;
+    }
+    bool GetRunAtInitialStop() const { return m_at_initial_stop; }
+
+    // Reaction settings
+
+    void SetAutoContinue(bool auto_continue) {
+      m_auto_continue = auto_continue;
+    }
+    bool GetAutoContinue() const { return m_auto_continue; }
+
+    void SetSuppressOutput(bool suppress_output) {
+      m_suppress_output = suppress_output;
+    }
+    bool GetSuppressOutput() const { return m_suppress_output; }
+
+    // Event handler methods (default no-ops)
+
+    virtual void HandleModuleLoaded(lldb::StreamSP output) {}
+    virtual void HandleModuleUnloaded(lldb::StreamSP output) {}
+
+    /// Called when the process stops. Returns a StopHookResult indicating
+    /// whether the process should remain stopped or continue.
+    virtual StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
+                                                lldb::StreamSP output) {
+      return StopHook::StopHookResult::NoPreference;
+    }
+
+    virtual void GetDescription(Stream &s, lldb::DescriptionLevel level) const;
+
+  protected:
+    /// Print the filter portion of the description (AutoContinue, Specifier,
+    /// ThreadSpec). Called by subclass GetDescription after printing the
+    /// hook-specific content (commands or class).
+    void GetFilterDescription(Stream &s, lldb::DescriptionLevel level) const;
+    lldb::TargetSP m_target_sp;
+    HookKind m_kind;
+    bool m_enabled = true;
+    uint32_t m_trigger_mask = 0; // No default, triggers must be explicit.
+
+    // Filters
+    lldb::SymbolContextSpecifierSP m_sc_specifier_sp;
+    std::unique_ptr<ThreadSpec> m_thread_spec_up;
+    bool m_at_initial_stop = true;
+
+    // Reaction settings
+    bool m_auto_continue = false;
+    bool m_suppress_output = false;
+
+    Hook(lldb::TargetSP target_sp, lldb::user_id_t uid, HookKind kind);
+  };
+
+  class HookCommandLine : public Hook {
+  public:
+    ~HookCommandLine() override = default;
+
+    /// Replace the trigger mask. \a mask is a bitwise OR of TriggerBit values.
+    void SetTriggerMask(uint32_t mask) { m_trigger_mask = mask; }
+
+    /// Add a trigger to the mask. \a trigger is a single TriggerBit value.
+    void AddTrigger(uint32_t trigger) { m_trigger_mask |= trigger; }
+
+    /// Remove a trigger from the mask. \a trigger is a single TriggerBit value.
+    void RemoveTrigger(uint32_t trigger) { m_trigger_mask &= ~trigger; }
+
+    /// Return the list of commands that this hook runs.
+    StringList &GetCommands() { return m_commands; }
+
+    /// Populate the command list by splitting a single string on newlines.
+    void SetActionFromString(const std::string &string);
+
+    /// Populate the command list from a vector of individual command strings.
+    void SetActionFromStrings(const std::vector<std::string> &strings);
+
+    void GetDescription(Stream &s, lldb::DescriptionLevel level) const override;
+    void HandleModuleLoaded(lldb::StreamSP output) override;
+    void HandleModuleUnloaded(lldb::StreamSP output) override;
+    StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
+                                        lldb::StreamSP output) override;
+
+  private:
+    StringList m_commands;
+
+    HookCommandLine(lldb::TargetSP target_sp, lldb::user_id_t uid)
+        : Hook(target_sp, uid, HookKind::CommandBased) {}
+    friend class Target;
+  };
+
+  class HookScripted : public Hook {
+  public:
+    ~HookScripted() override = default;
+
+    void GetDescription(Stream &s, lldb::DescriptionLevel level) const override;
+
+    void HandleModuleLoaded(lldb::StreamSP output) override;
+    void HandleModuleUnloaded(lldb::StreamSP output) override;
+    StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
+                                        lldb::StreamSP output) override;
+
+    Status SetScriptCallback(const ScriptedMetadata &scripted_metadata);
+
+  private:
+    llvm::StringRef GetScriptClassName() const;
+
+    lldb::ScriptedHookInterfaceSP m_interface_sp;
+
+    HookScripted(lldb::TargetSP target_sp, lldb::user_id_t uid)
+        : Hook(target_sp, uid, HookKind::ScriptBased) {}
+    friend class Target;
+  };
+
+  typedef std::shared_ptr<Hook> HookSP;
+
+  HookSP CreateHook(Hook::HookKind kind);
+
+  /// Removes the most recently created hook. Used to roll back a
+  /// hook creation when an error occurs (e.g., invalid script class name
+  /// or empty interactive input).
+  void UndoCreateHook(lldb::user_id_t uid);
+
+  bool RemoveHookByID(lldb::user_id_t uid);
+
+  void RemoveAllHooks();
+
+  HookSP GetHookByID(lldb::user_id_t uid);
+
+  bool SetHookEnabledStateByID(lldb::user_id_t uid, bool enabled);
+
+  void SetAllHooksEnabledState(bool enabled);
+
+  size_t GetNumHooks() const { return m_hooks.size(); }
+
+  HookSP GetHookAtIndex(size_t index);
+
+  void RunModuleHooks(bool is_load);
 
   /// Add an empty stop hook to the Target's stop hook list, and returns a
   /// shared pointer to the new hook.
@@ -1820,6 +2091,12 @@ protected:
       std::map<ConstString, std::unique_ptr<BreakpointName>>;
   BreakpointNameList m_breakpoint_names;
 
+  std::map<lldb::user_id_t, BreakpointResolverOverrideUP>
+      m_breakpoint_overrides;
+  /// This is the ID that will be handed out for the next added breakpoint
+  /// override resolver for this target.
+  lldb::user_id_t m_override_id = 0;
+
   lldb::BreakpointSP m_last_created_breakpoint;
   WatchpointList m_watchpoint_list;
   lldb::WatchpointSP m_last_created_watchpoint;
@@ -1854,6 +2131,10 @@ protected:
   bool m_valid;
   bool m_suppress_stop_hooks; /// Used to not run stop hooks for expressions
   bool m_is_dummy_target;
+
+  typedef std::map<lldb::user_id_t, HookSP> HookCollection;
+  HookCollection m_hooks;
+  lldb::user_id_t m_hook_next_id = 0;
   unsigned m_next_persistent_variable_index = 0;
   lldb::user_id_t m_target_unique_id =
       LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID; ///< The globally unique ID

@@ -156,6 +156,11 @@ public:
 
   GlobalDecl curSEHParent;
 
+  /// If a ParmVarDecl had the pass_object_size attribute, this will contain a
+  /// mapping from said ParmVarDecl to its implicit "object_size" parameter.
+  llvm::SmallDenseMap<const ParmVarDecl *, const ImplicitParamDecl *>
+      sizeArguments;
+
   /// A mapping from NRVO variables to the flags used to indicate
   /// when the NRVO has been applied to this variable.
   llvm::DenseMap<const VarDecl *, mlir::Value> nrvoFlags;
@@ -545,6 +550,12 @@ public:
   };
 
   bool isLValueSuitableForInlineAtomic(LValue lv);
+
+  RValue emitAtomicLoad(LValue lvalue, SourceLocation loc,
+                        AggValueSlot slot = AggValueSlot::ignored());
+  RValue emitAtomicLoad(LValue lvalue, SourceLocation loc, cir::MemOrder order,
+                        bool isVolatile = false,
+                        AggValueSlot slot = AggValueSlot::ignored());
 
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
@@ -1024,10 +1035,10 @@ public:
                                                 const CXXRecordDecl *baseRD,
                                                 bool isVirtual);
 
+  /// Return a CIR constant for an undefined value of \p cirTy.
+  mlir::Value getUndefConstant(mlir::Location loc, mlir::Type cirTy);
+
   /// Get an appropriate 'undef' rvalue for the given type.
-  /// TODO: What's the equivalent for MLIR? Currently we're only using this for
-  /// void types so it just returns RValue::get(nullptr) but it'll need
-  /// addressed later.
   RValue getUndefRValue(clang::QualType ty);
 
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
@@ -1557,6 +1568,8 @@ public:
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
                                     mlir::OpBuilder::InsertPoint ip = {});
 
+  RValue emitPseudoObjectRValue(const PseudoObjectExpr *e,
+                                AggValueSlot slot = AggValueSlot::ignored());
   LValue emitPseudoObjectLValue(const PseudoObjectExpr *E);
 
   /// Emit code and set up symbol table for a variable declaration with auto,
@@ -1611,6 +1624,25 @@ public:
   int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
 
   void instantiateIndirectGotoBlock();
+
+  /// Emit a simple LLVM intrinsic that takes N scalar arguments and whose
+  /// return type matches the type of the first argument. The intrinsic name is
+  /// used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be baked
+  /// into \p intrinName by the caller.
+  template <unsigned N>
+  [[maybe_unused]] RValue
+  emitBuiltinWithOneOverloadedType(const CallExpr *e,
+                                   llvm::StringRef intrinName) {
+    static_assert(N, "expect non-empty argument");
+    mlir::Type cirTy = convertType(e->getArg(0)->getType());
+    SmallVector<mlir::Value, N> args;
+    for (unsigned i = 0; i < N; ++i)
+      args.push_back(emitScalarExpr(e->getArg(i)));
+    const auto call = cir::LLVMIntrinsicCallOp::create(
+        builder, getLoc(e->getExprLoc()), builder.getStringAttr(intrinName),
+        cirTy, args);
+    return RValue::get(call->getResult(0));
+  }
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
@@ -1700,8 +1732,8 @@ public:
   void emitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
                                   mlir::Value numElements, Address arrayBase,
                                   const CXXConstructExpr *e,
-                                  bool newPointerIsChecked,
-                                  bool zeroInitialize);
+                                  bool newPointerIsChecked, bool zeroInitialize,
+                                  Address endOfInit);
   void emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
                               clang::CXXCtorType type, bool forVirtualBase,
                               bool delegating, AggValueSlot thisAVS,
@@ -1791,6 +1823,8 @@ public:
     virtual mlir::LogicalResult operator()(CIRGenFunction &cgf) = 0;
     virtual ~cxxTryBodyEmitter() = default;
   };
+
+  void emitBeginCatch(const CXXCatchStmt *catchStmt, mlir::Value ehToken);
 
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s,
                                      cxxTryBodyEmitter &bodyCallback);
@@ -2010,6 +2044,13 @@ public:
   std::optional<mlir::Value> emitAMDGPUBuiltinExpr(unsigned builtinID,
                                                    const CallExpr *expr);
 
+  /// Emit a call to an NVPTX builtin function.
+  std::optional<mlir::Value> emitNVPTXBuiltinExpr(unsigned builtinID,
+                                                  const CallExpr *expr);
+
+  /// Emit a device-side printf call for NVPTX targets.
+  mlir::Value emitNVPTXDevicePrintfCallExpr(const CallExpr *expr);
+
   LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
 
   LValue emitConditionalOperatorLValue(const AbstractConditionalOperator *expr);
@@ -2050,8 +2091,7 @@ public:
 
   void emitStaticVarDecl(const VarDecl &d, cir::GlobalLinkageKind linkage);
 
-  /// Emit a guarded initializer for a static local variable or a static
-  /// data member of a class template instantiation.
+  /// Emit a guarded initializer for a static local variable.
   void emitCXXGuardedInit(const VarDecl &varDecl, cir::GlobalOp globalOp,
                           bool performInit);
 
@@ -2063,9 +2103,11 @@ public:
                          bool isInit = false, bool isNontemporal = false);
   void emitStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
 
+  void emitStoreThroughExtVectorComponentLValue(RValue src, LValue dst);
+
   /// Store the specified rvalue into the specified
-  /// lvalue, where both are guaranteed to the have the same type, and that type
-  /// is 'Ty'.
+  /// lvalue, where both are guaranteed to the have the same type, and that
+  /// type is 'Ty'.
   void emitStoreThroughLValue(RValue src, LValue dst, bool isInit = false);
 
   mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
@@ -2263,11 +2305,22 @@ public:
                            mlir::Value arraySize = nullptr,
                            Address *alloca = nullptr,
                            mlir::OpBuilder::InsertPoint ip = {});
+  Address createTempAlloca(mlir::Type ty,
+                           mlir::ptr::MemorySpaceAttrInterface destAddrSpace,
+                           CharUnits align, mlir::Location loc,
+                           const Twine &name = "tmp",
+                           mlir::Value arraySize = nullptr,
+                           Address *alloca = nullptr,
+                           mlir::OpBuilder::InsertPoint ip = {});
   Address createTempAllocaWithoutCast(mlir::Type ty, CharUnits align,
                                       mlir::Location loc,
                                       const Twine &name = "tmp",
                                       mlir::Value arraySize = nullptr,
                                       mlir::OpBuilder::InsertPoint ip = {});
+  Address
+  maybeCastStackAddressSpace(Address alloca,
+                             mlir::ptr::MemorySpaceAttrInterface destAddrSpace,
+                             mlir::Value arraySize);
   Address createDefaultAlignTempAlloca(mlir::Type ty, mlir::Location loc,
                                        const Twine &name);
 
@@ -2280,6 +2333,8 @@ public:
   Address createMemTemp(QualType t, CharUnits align, mlir::Location loc,
                         const Twine &name = "tmp", Address *alloca = nullptr,
                         mlir::OpBuilder::InsertPoint ip = {});
+  Address createMemTempWithoutCast(QualType t, mlir::Location loc,
+                                   const Twine &name = "tmp");
 
   mlir::Value performAddrSpaceCast(mlir::Value v, mlir::Type destTy) const {
     if (cir::GlobalOp globalOp = v.getDefiningOp<cir::GlobalOp>())

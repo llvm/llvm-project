@@ -113,7 +113,7 @@
 ; CHECK-O23-NEXT: Running analysis: LazyValueAnalysis
 ; CHECK-O23-NEXT: Running pass: CorrelatedValuePropagationPass
 ; CHECK-O23-NEXT: Invalidating analysis: LazyValueAnalysis
-; CHECK-O23SZ-NEXT: Running pass: JumpTableToSwitchPass
+; CHECK-O23-NEXT: Running pass: JumpTableToSwitchPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running analysis: LastRunTrackingAnalysis
@@ -187,10 +187,11 @@
 ; CHECK-O-NEXT: Running pass: AnnotationRemarksPass on foo
 ; CHECK-O-NEXT: Running pass: CanonicalizeAliasesPass
 ; CHECK-O-NEXT: Running pass: NameAnonGlobalPass
+; CHECK-O-NEXT: Running pass: AssignGUIDPass
 ; CHECK-O-NEXT: Running pass: PrintModulePass
 
 ; Make sure we get the IR back out without changes when we print the module.
-; CHECK-O-LABEL: define void @foo(i32 %n) local_unnamed_addr {
+; CHECK-O-LABEL: define void @foo(i32 %n) local_unnamed_addr
 ; CHECK-O-NEXT: entry:
 ; CHECK-O-NEXT:   br label %loop
 ; CHECK-O:      loop:

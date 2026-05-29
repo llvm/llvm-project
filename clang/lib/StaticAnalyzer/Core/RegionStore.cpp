@@ -550,9 +550,9 @@ public:
 
   /// Creates the Store that correctly represents memory contents before
   /// the beginning of the analysis of the given top-level stack frame.
-  StoreRef getInitialStore(const LocationContext *InitLoc) override {
+  StoreRef getInitialStore(const StackFrame *SF) override {
     bool IsMainAnalysis = false;
-    if (const auto *FD = dyn_cast<FunctionDecl>(InitLoc->getDecl()))
+    if (const auto *FD = dyn_cast<FunctionDecl>(SF->getDecl()))
       IsMainAnalysis = FD->isMain() && !Ctx.getLangOpts().CPlusPlus;
     return StoreRef(RegionBindingsRef(RegionBindingsRef::ParentTy(
                                           RBFactory.getEmptyMap(), RBFactory),
@@ -564,14 +564,15 @@ public:
   //===-------------------------------------------------------------------===//
   // Binding values to regions.
   //===-------------------------------------------------------------------===//
-  RegionBindingsRef
-  invalidateGlobalRegion(MemRegion::Kind K, ConstCFGElementRef Elem,
-                         unsigned Count, const LocationContext *LCtx,
-                         RegionBindingsRef B, InvalidatedRegions *Invalidated);
+  RegionBindingsRef invalidateGlobalRegion(MemRegion::Kind K,
+                                           ConstCFGElementRef Elem,
+                                           unsigned Count, const StackFrame *SF,
+                                           RegionBindingsRef B,
+                                           InvalidatedRegions *Invalidated);
 
   StoreRef invalidateRegions(Store store, ArrayRef<SVal> Values,
                              ConstCFGElementRef Elem, unsigned Count,
-                             const LocationContext *LCtx, const CallEvent *Call,
+                             const StackFrame *SF, const CallEvent *Call,
                              InvalidatedSymbols &IS,
                              RegionAndSymbolInvalidationTraits &ITraits,
                              InvalidatedRegions *Invalidated,
@@ -786,8 +787,8 @@ public: // Part of public interface to class.
 
   /// removeDeadBindings - Scans the RegionStore of 'state' for dead values.
   ///  It returns a new Store with these values removed.
-  StoreRef removeDeadBindings(Store store, const StackFrameContext *LCtx,
-                              SymbolReaper& SymReaper) override;
+  StoreRef removeDeadBindings(Store store, const StackFrame *SF,
+                              SymbolReaper &SymReaper) override;
 
   //===------------------------------------------------------------------===//
   // Utility methods.
@@ -1145,7 +1146,7 @@ class InvalidateRegionsWorker : public ClusterAnalysis<InvalidateRegionsWorker>
 {
   ConstCFGElementRef Elem;
   unsigned Count;
-  const LocationContext *LCtx;
+  const StackFrame *SF;
   InvalidatedSymbols &IS;
   RegionAndSymbolInvalidationTraits &ITraits;
   StoreManager::InvalidatedRegions *Regions;
@@ -1153,13 +1154,13 @@ class InvalidateRegionsWorker : public ClusterAnalysis<InvalidateRegionsWorker>
 public:
   InvalidateRegionsWorker(RegionStoreManager &rm, ProgramStateManager &stateMgr,
                           RegionBindingsRef b, ConstCFGElementRef elem,
-                          unsigned count, const LocationContext *lctx,
+                          unsigned count, const StackFrame *SF,
                           InvalidatedSymbols &is,
                           RegionAndSymbolInvalidationTraits &ITraitsIn,
                           StoreManager::InvalidatedRegions *r,
                           GlobalsFilterKind GFK)
       : ClusterAnalysis<InvalidateRegionsWorker>(rm, stateMgr, b), Elem(elem),
-        Count(count), LCtx(lctx), IS(is), ITraits(ITraitsIn), Regions(r),
+        Count(count), SF(SF), IS(is), ITraits(ITraitsIn), Regions(r),
         GlobalsFilter(GFK) {}
 
   void VisitCluster(const MemRegion *baseR, const ClusterBindings *C);
@@ -1245,7 +1246,7 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
         for (BoundNodes &Match : Matches) {
           auto *VD = Match.getNodeAs<VarDecl>(DeclBind);
           const VarRegion *ToInvalidate =
-              RM.getRegionManager().getVarRegion(VD, LCtx);
+              RM.getRegionManager().getVarRegion(VD, SF);
           AddToWorkList(ToInvalidate);
         }
       }
@@ -1293,7 +1294,7 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
     // Invalidate the region by setting its default value to
     // conjured symbol. The type of the symbol is irrelevant.
     DefinedOrUnknownSVal V =
-        svalBuilder.conjureSymbolVal(baseR, Elem, LCtx, Ctx.IntTy, Count);
+        svalBuilder.conjureSymbolVal(baseR, Elem, SF, Ctx.IntTy, Count);
     B = B.addBinding(baseR, BindingKey::Default, V);
     return;
   }
@@ -1315,7 +1316,7 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
     // Invalidate the region by setting its default value to
     // conjured symbol. The type of the symbol is irrelevant.
     DefinedOrUnknownSVal V =
-        svalBuilder.conjureSymbolVal(baseR, Elem, LCtx, Ctx.IntTy, Count);
+        svalBuilder.conjureSymbolVal(baseR, Elem, SF, Ctx.IntTy, Count);
     B = B.addBinding(baseR, BindingKey::Default, V);
     return;
   }
@@ -1383,13 +1384,13 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
   conjure_default:
       // Set the default value of the array to conjured symbol.
       DefinedOrUnknownSVal V = svalBuilder.conjureSymbolVal(
-          baseR, Elem, LCtx, AT->getElementType(), Count);
+          baseR, Elem, SF, AT->getElementType(), Count);
       B = B.addBinding(baseR, BindingKey::Default, V);
       return;
   }
 
   DefinedOrUnknownSVal V =
-      svalBuilder.conjureSymbolVal(baseR, Elem, LCtx, T, Count);
+      svalBuilder.conjureSymbolVal(baseR, Elem, SF, T, Count);
   assert(SymbolManager::canSymbolicate(T) || V.isUnknown());
   B = B.addBinding(baseR, BindingKey::Direct, V);
 }
@@ -1419,13 +1420,13 @@ bool InvalidateRegionsWorker::includeEntireMemorySpace(const MemRegion *Base) {
 
 RegionBindingsRef RegionStoreManager::invalidateGlobalRegion(
     MemRegion::Kind K, ConstCFGElementRef Elem, unsigned Count,
-    const LocationContext *LCtx, RegionBindingsRef B,
+    const StackFrame *SF, RegionBindingsRef B,
     InvalidatedRegions *Invalidated) {
   // Bind the globals memory space to a new symbol that we will use to derive
   // the bindings for all globals.
   const GlobalsSpaceRegion *GS = MRMgr.getGlobalsRegion(K);
   SVal V = svalBuilder.conjureSymbolVal(
-      /* symbolTag = */ (const void *)GS, Elem, LCtx,
+      /* symbolTag = */ (const void *)GS, Elem, SF,
       /* type does not matter */ Ctx.IntTy, Count);
 
   B = B.removeBinding(GS)
@@ -1462,7 +1463,7 @@ void RegionStoreManager::populateWorkList(InvalidateRegionsWorker &W,
 
 StoreRef RegionStoreManager::invalidateRegions(
     Store store, ArrayRef<SVal> Values, ConstCFGElementRef Elem, unsigned Count,
-    const LocationContext *LCtx, const CallEvent *Call, InvalidatedSymbols &IS,
+    const StackFrame *SF, const CallEvent *Call, InvalidatedSymbols &IS,
     RegionAndSymbolInvalidationTraits &ITraits,
     InvalidatedRegions *TopLevelRegions, InvalidatedRegions *Invalidated) {
   GlobalsFilterKind GlobalsFilter;
@@ -1476,7 +1477,7 @@ StoreRef RegionStoreManager::invalidateRegions(
   }
 
   RegionBindingsRef B = getRegionBindings(store);
-  InvalidateRegionsWorker W(*this, StateMgr, B, Elem, Count, LCtx, IS, ITraits,
+  InvalidateRegionsWorker W(*this, StateMgr, B, Elem, Count, SF, IS, ITraits,
                             Invalidated, GlobalsFilter);
 
   // Scan the bindings and generate the clusters.
@@ -1497,11 +1498,11 @@ StoreRef RegionStoreManager::invalidateRegions(
   switch (GlobalsFilter) {
   case GFK_All:
     B = invalidateGlobalRegion(MemRegion::GlobalInternalSpaceRegionKind, Elem,
-                               Count, LCtx, B, Invalidated);
+                               Count, SF, B, Invalidated);
     [[fallthrough]];
   case GFK_SystemOnly:
     B = invalidateGlobalRegion(MemRegion::GlobalSystemSpaceRegionKind, Elem,
-                               Count, LCtx, B, Invalidated);
+                               Count, SF, B, Invalidated);
     [[fallthrough]];
   case GFK_None:
     break;
@@ -2949,15 +2950,14 @@ class RemoveDeadBindingsWorker
     : public ClusterAnalysis<RemoveDeadBindingsWorker> {
   SmallVector<const SymbolicRegion *, 12> Postponed;
   SymbolReaper &SymReaper;
-  const StackFrameContext *CurrentLCtx;
+  const StackFrame *CurrentSF;
 
 public:
   RemoveDeadBindingsWorker(RegionStoreManager &rm,
-                           ProgramStateManager &stateMgr,
-                           RegionBindingsRef b, SymbolReaper &symReaper,
-                           const StackFrameContext *LCtx)
-    : ClusterAnalysis<RemoveDeadBindingsWorker>(rm, stateMgr, b),
-      SymReaper(symReaper), CurrentLCtx(LCtx) {}
+                           ProgramStateManager &stateMgr, RegionBindingsRef b,
+                           SymbolReaper &symReaper, const StackFrame *SF)
+      : ClusterAnalysis<RemoveDeadBindingsWorker>(rm, stateMgr, b),
+        SymReaper(symReaper), CurrentSF(SF) {}
 
   // Called by ClusterAnalysis.
   void VisitAddedToCluster(const MemRegion *baseR, const ClusterBindings &C);
@@ -3002,13 +3002,12 @@ void RemoveDeadBindingsWorker::VisitAddedToCluster(const MemRegion *baseR,
     return;
   }
 
-  // CXXThisRegion in the current or parent location context is live.
+  // CXXThisRegion in the current or parent stack frame is live.
   if (const CXXThisRegion *TR = dyn_cast<CXXThisRegion>(baseR)) {
     const auto *StackReg =
         cast<StackArgumentsSpaceRegion>(TR->getSuperRegion());
-    const StackFrameContext *RegCtx = StackReg->getStackFrame();
-    if (CurrentLCtx &&
-        (RegCtx == CurrentLCtx || RegCtx->isParentOf(CurrentLCtx)))
+    const StackFrame *RegSF = StackReg->getStackFrame();
+    if (CurrentSF && (RegSF == CurrentSF || RegSF->isParentOf(CurrentSF)))
       AddToWorkList(TR, &C);
   }
 }
@@ -3081,10 +3080,10 @@ bool RemoveDeadBindingsWorker::UpdatePostponed() {
 }
 
 StoreRef RegionStoreManager::removeDeadBindings(Store store,
-                                                const StackFrameContext *LCtx,
-                                                SymbolReaper& SymReaper) {
+                                                const StackFrame *SF,
+                                                SymbolReaper &SymReaper) {
   RegionBindingsRef B = getRegionBindings(store);
-  RemoveDeadBindingsWorker W(*this, StateMgr, B, SymReaper, LCtx);
+  RemoveDeadBindingsWorker W(*this, StateMgr, B, SymReaper, SF);
   W.GenerateClusters();
 
   // Enqueue the region roots onto the worklist.

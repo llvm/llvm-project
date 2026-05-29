@@ -37,6 +37,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include <cassert>
 #include <numeric>
 #include <optional>
 
@@ -427,7 +428,7 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE_INT(SREM_I);
   case TargetOpcode::G_UREM:
     RTLIBCASE_INT(UREM_I);
-  case TargetOpcode::G_CTLZ_ZERO_UNDEF:
+  case TargetOpcode::G_CTLZ_ZERO_POISON:
     RTLIBCASE_INT(CTLZ_I);
   case TargetOpcode::G_FADD:
     RTLIBCASE(ADD_F);
@@ -1318,7 +1319,7 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_UDIV:
   case TargetOpcode::G_SREM:
   case TargetOpcode::G_UREM:
-  case TargetOpcode::G_CTLZ_ZERO_UNDEF: {
+  case TargetOpcode::G_CTLZ_ZERO_POISON: {
     LLT LLTy = MRI.getType(MI.getOperand(0).getReg());
     unsigned Size = LLTy.getSizeInBits();
     Type *HLTy = IntegerType::get(Ctx, Size);
@@ -1685,7 +1686,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     return reduceLoadStoreWidth(LoadMI, TypeIdx, NarrowTy);
   }
   case TargetOpcode::G_ZEXTLOAD:
-  case TargetOpcode::G_SEXTLOAD: {
+  case TargetOpcode::G_SEXTLOAD:
+  case TargetOpcode::G_FPEXTLOAD: {
     auto &LoadMI = cast<GExtLoad>(MI);
     Register DstReg = LoadMI.getDstReg();
     Register PtrReg = LoadMI.getPointerReg();
@@ -1705,8 +1707,10 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
     if (isa<GZExtLoad>(LoadMI))
       MIRBuilder.buildZExt(DstReg, TmpReg);
-    else
+    else if (isa<GSExtLoad>(LoadMI))
       MIRBuilder.buildSExt(DstReg, TmpReg);
+    else
+      MIRBuilder.buildFPExt(DstReg, TmpReg);
 
     LoadMI.eraseFromParent();
     return Legalized;
@@ -1735,6 +1739,28 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
     return reduceLoadStoreWidth(StoreMI, 0, NarrowTy);
   }
+  case TargetOpcode::G_FPTRUNCSTORE: {
+    auto &StoreMI = cast<GFPTruncStore>(MI);
+    Register SrcReg = StoreMI.getValueReg();
+    Register PtrReg = StoreMI.getPointerReg();
+
+    auto &MMO = StoreMI.getMMO();
+    unsigned MemSize = MMO.getSizeInBits().getValue();
+    if (MemSize > NarrowSize) {
+      return UnableToLegalize;
+    }
+
+    auto TmpReg = MIRBuilder.buildFPTrunc(NarrowTy, SrcReg);
+    if (MemSize == NarrowSize) {
+      MIRBuilder.buildStore(TmpReg, PtrReg, MMO);
+    } else if (MemSize < NarrowSize) {
+      MIRBuilder.buildStoreInstr(TargetOpcode::G_FPTRUNCSTORE, TmpReg, PtrReg,
+                                 MMO);
+    }
+
+    StoreMI.eraseFromParent();
+    return Legalized;
+  }
   case TargetOpcode::G_SELECT:
     return narrowScalarSelect(MI, TypeIdx, NarrowTy);
   case TargetOpcode::G_AND:
@@ -1756,18 +1782,18 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   case TargetOpcode::G_ASHR:
     return narrowScalarShift(MI, TypeIdx, NarrowTy);
   case TargetOpcode::G_CTLZ:
-  case TargetOpcode::G_CTLZ_ZERO_UNDEF:
+  case TargetOpcode::G_CTLZ_ZERO_POISON:
   case TargetOpcode::G_CTTZ:
-  case TargetOpcode::G_CTTZ_ZERO_UNDEF:
+  case TargetOpcode::G_CTTZ_ZERO_POISON:
   case TargetOpcode::G_CTLS:
   case TargetOpcode::G_CTPOP:
     if (TypeIdx == 1)
       switch (MI.getOpcode()) {
       case TargetOpcode::G_CTLZ:
-      case TargetOpcode::G_CTLZ_ZERO_UNDEF:
+      case TargetOpcode::G_CTLZ_ZERO_POISON:
         return narrowScalarCTLZ(MI, TypeIdx, NarrowTy);
       case TargetOpcode::G_CTTZ:
-      case TargetOpcode::G_CTTZ_ZERO_UNDEF:
+      case TargetOpcode::G_CTTZ_ZERO_POISON:
         return narrowScalarCTTZ(MI, TypeIdx, NarrowTy);
       case TargetOpcode::G_CTPOP:
         return narrowScalarCTPOP(MI, TypeIdx, NarrowTy);
@@ -2797,9 +2823,9 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_USHLSAT:
     return widenScalarAddSubShlSat(MI, TypeIdx, WideTy);
   case TargetOpcode::G_CTTZ:
-  case TargetOpcode::G_CTTZ_ZERO_UNDEF:
+  case TargetOpcode::G_CTTZ_ZERO_POISON:
   case TargetOpcode::G_CTLZ:
-  case TargetOpcode::G_CTLZ_ZERO_UNDEF:
+  case TargetOpcode::G_CTLZ_ZERO_POISON:
   case TargetOpcode::G_CTLS:
   case TargetOpcode::G_CTPOP: {
     if (TypeIdx == 0) {
@@ -2815,8 +2841,8 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     unsigned ExtOpc;
     switch (Opcode) {
     case TargetOpcode::G_CTTZ:
-    case TargetOpcode::G_CTTZ_ZERO_UNDEF:
-    case TargetOpcode::G_CTLZ_ZERO_UNDEF: // undef bits shifted out below
+    case TargetOpcode::G_CTTZ_ZERO_POISON:
+    case TargetOpcode::G_CTLZ_ZERO_POISON: // poison shifted out below
       ExtOpc = TargetOpcode::G_ANYEXT;
       break;
     case TargetOpcode::G_CTLS:
@@ -2838,13 +2864,13 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
       MIBSrc = MIRBuilder.buildOr(
         WideTy, MIBSrc, MIRBuilder.buildConstant(WideTy, TopBit));
       // Now we know the operand is non-zero, use the more relaxed opcode.
-      NewOpc = TargetOpcode::G_CTTZ_ZERO_UNDEF;
+      NewOpc = TargetOpcode::G_CTTZ_ZERO_POISON;
     }
 
     unsigned SizeDiff =
         WideTy.getScalarSizeInBits() - CurTy.getScalarSizeInBits();
 
-    if (Opcode == TargetOpcode::G_CTLZ_ZERO_UNDEF) {
+    if (Opcode == TargetOpcode::G_CTLZ_ZERO_POISON) {
       // An optimization where the result is the CTLZ after the left shift by
       // (Difference in widety and current ty), that is,
       // MIBSrc = MIBSrc << (sizeinbits(WideTy) - sizeinbits(CurTy))
@@ -3165,6 +3191,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD:
+  case TargetOpcode::G_FPEXTLOAD:
     Observer.changingInstr(MI);
     widenScalarDst(MI, WideTy);
     Observer.changedInstr(MI);
@@ -3198,6 +3225,13 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_FPTRUNCSTORE:
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+    Observer.changingInstr(MI);
+    widenScalarSrc(MI, WideTy, 0, TargetOpcode::G_FPEXT);
+    Observer.changedInstr(MI);
+    return Legalized;
   case TargetOpcode::G_CONSTANT: {
     MachineOperand &SrcMO = MI.getOperand(1);
     LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
@@ -4694,8 +4728,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerLoad(cast<GAnyLoad>(MI));
   case TargetOpcode::G_STORE:
     return lowerStore(cast<GStore>(MI));
-  case TargetOpcode::G_CTLZ_ZERO_UNDEF:
-  case TargetOpcode::G_CTTZ_ZERO_UNDEF:
+  case TargetOpcode::G_CTLZ_ZERO_POISON:
+  case TargetOpcode::G_CTTZ_ZERO_POISON:
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTTZ:
   case TargetOpcode::G_CTPOP:
@@ -4790,6 +4824,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_FPTOUI_SAT:
   case G_FPTOSI_SAT:
     return lowerFPTOINT_SAT(MI);
+  case G_FPEXT:
+    return lowerFPExtAndTruncMem(MI);
   case G_FPTRUNC:
     return lowerFPTRUNC(MI);
   case G_FPOWI:
@@ -4933,6 +4969,9 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     MI.eraseFromParent();
     return Legalized;
   }
+  case G_SMULFIX:
+  case G_UMULFIX:
+    return lowerMulfix(MI);
   }
 }
 
@@ -5647,9 +5686,9 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_SSHLSAT:
   case G_USHLSAT:
   case G_CTLZ:
-  case G_CTLZ_ZERO_UNDEF:
+  case G_CTLZ_ZERO_POISON:
   case G_CTTZ:
-  case G_CTTZ_ZERO_UNDEF:
+  case G_CTTZ_ZERO_POISON:
   case G_CTPOP:
   case G_CTLS:
   case G_FCOPYSIGN:
@@ -7078,19 +7117,23 @@ void LegalizerHelper::multiplyRegisters(SmallVectorImpl<Register> &DstRegs,
   SmallVector<Register, 4> Factors;
 
   for (DstIdx = 1; DstIdx < DstParts; DstIdx++) {
-    // Collect low parts of muls for DstIdx.
-    for (unsigned i = DstIdx + 1 < SrcParts ? 0 : DstIdx - SrcParts + 1;
-         i <= std::min(DstIdx, SrcParts - 1); ++i) {
-      MachineInstrBuilder Mul =
-          B.buildMul(NarrowTy, Src1Regs[DstIdx - i], Src2Regs[i]);
-      Factors.push_back(Mul.getReg(0));
-    }
     // Collect high parts of muls from previous DstIdx.
     for (unsigned i = DstIdx < SrcParts ? 0 : DstIdx - SrcParts;
          i <= std::min(DstIdx - 1, SrcParts - 1); ++i) {
       MachineInstrBuilder Umulh =
           B.buildUMulH(NarrowTy, Src1Regs[DstIdx - 1 - i], Src2Regs[i]);
       Factors.push_back(Umulh.getReg(0));
+    }
+    // Collect low parts of muls for DstIdx. Visit the diagonal starting with
+    // the low Src1 part, so multiply-add selectors can use it as the first
+    // accumulated cross product.
+    unsigned LowStart = DstIdx + 1 < SrcParts ? 0 : DstIdx - SrcParts + 1;
+    unsigned LowEnd = std::min(DstIdx, SrcParts - 1);
+    for (unsigned RevI = LowEnd + 1; RevI != LowStart; --RevI) {
+      unsigned i = RevI - 1;
+      MachineInstrBuilder Mul =
+          B.buildMul(NarrowTy, Src1Regs[DstIdx - i], Src2Regs[i]);
+      Factors.push_back(Mul.getReg(0));
     }
     // Add CarrySum from additions calculated for previous DstIdx.
     if (DstIdx != 1) {
@@ -7542,7 +7585,7 @@ LegalizerHelper::narrowScalarCTLZ(MachineInstr &MI, unsigned TypeIdx,
   unsigned NarrowSize = NarrowTy.getSizeInBits();
 
   if (SrcTy.isScalar() && SrcTy.getSizeInBits() == 2 * NarrowSize) {
-    const bool IsUndef = MI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_UNDEF;
+    const bool IsUndef = MI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_POISON;
 
     MachineIRBuilder &B = MIRBuilder;
     auto UnmergeSrc = B.buildUnmerge(NarrowTy, SrcReg);
@@ -7550,12 +7593,11 @@ LegalizerHelper::narrowScalarCTLZ(MachineInstr &MI, unsigned TypeIdx,
     auto C_0 = B.buildConstant(NarrowTy, 0);
     auto HiIsZero = B.buildICmp(CmpInst::ICMP_EQ, LLT::integer(1),
                                 UnmergeSrc.getReg(1), C_0);
-    auto LoCTLZ = IsUndef ?
-      B.buildCTLZ_ZERO_UNDEF(DstTy, UnmergeSrc.getReg(0)) :
-      B.buildCTLZ(DstTy, UnmergeSrc.getReg(0));
+    auto LoCTLZ = IsUndef ? B.buildCTLZ_ZERO_POISON(DstTy, UnmergeSrc.getReg(0))
+                          : B.buildCTLZ(DstTy, UnmergeSrc.getReg(0));
     auto C_NarrowSize = B.buildConstant(DstTy, NarrowSize);
     auto HiIsZeroCTLZ = B.buildAdd(DstTy, LoCTLZ, C_NarrowSize);
-    auto HiCTLZ = B.buildCTLZ_ZERO_UNDEF(DstTy, UnmergeSrc.getReg(1));
+    auto HiCTLZ = B.buildCTLZ_ZERO_POISON(DstTy, UnmergeSrc.getReg(1));
     B.buildSelect(DstReg, HiIsZero, HiIsZeroCTLZ, HiCTLZ);
 
     MI.eraseFromParent();
@@ -7575,7 +7617,7 @@ LegalizerHelper::narrowScalarCTTZ(MachineInstr &MI, unsigned TypeIdx,
   unsigned NarrowSize = NarrowTy.getSizeInBits();
 
   if (SrcTy.isScalar() && SrcTy.getSizeInBits() == 2 * NarrowSize) {
-    const bool IsUndef = MI.getOpcode() == TargetOpcode::G_CTTZ_ZERO_UNDEF;
+    const bool IsUndef = MI.getOpcode() == TargetOpcode::G_CTTZ_ZERO_POISON;
 
     MachineIRBuilder &B = MIRBuilder;
     auto UnmergeSrc = B.buildUnmerge(NarrowTy, SrcReg);
@@ -7583,12 +7625,11 @@ LegalizerHelper::narrowScalarCTTZ(MachineInstr &MI, unsigned TypeIdx,
     auto C_0 = B.buildConstant(NarrowTy, 0);
     auto LoIsZero = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1),
                                 UnmergeSrc.getReg(0), C_0);
-    auto HiCTTZ = IsUndef ?
-      B.buildCTTZ_ZERO_UNDEF(DstTy, UnmergeSrc.getReg(1)) :
-      B.buildCTTZ(DstTy, UnmergeSrc.getReg(1));
+    auto HiCTTZ = IsUndef ? B.buildCTTZ_ZERO_POISON(DstTy, UnmergeSrc.getReg(1))
+                          : B.buildCTTZ(DstTy, UnmergeSrc.getReg(1));
     auto C_NarrowSize = B.buildConstant(DstTy, NarrowSize);
     auto LoIsZeroCTTZ = B.buildAdd(DstTy, HiCTTZ, C_NarrowSize);
-    auto LoCTTZ = B.buildCTTZ_ZERO_UNDEF(DstTy, UnmergeSrc.getReg(0));
+    auto LoCTTZ = B.buildCTTZ_ZERO_POISON(DstTy, UnmergeSrc.getReg(0));
     B.buildSelect(DstReg, LoIsZero, LoIsZeroCTTZ, LoCTTZ);
 
     MI.eraseFromParent();
@@ -7699,7 +7740,7 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
   switch (Opc) {
   default:
     return UnableToLegalize;
-  case TargetOpcode::G_CTLZ_ZERO_UNDEF: {
+  case TargetOpcode::G_CTLZ_ZERO_POISON: {
     // This trivially expands to CTLZ.
     Observer.changingInstr(MI);
     MI.setDesc(TII.get(TargetOpcode::G_CTLZ));
@@ -7710,9 +7751,9 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
     auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
     unsigned Len = SrcTy.getScalarSizeInBits();
 
-    if (isSupported({TargetOpcode::G_CTLZ_ZERO_UNDEF, {DstTy, SrcTy}})) {
-      // If CTLZ_ZERO_UNDEF is supported, emit that and a select for zero.
-      auto CtlzZU = MIRBuilder.buildCTLZ_ZERO_UNDEF(DstTy, SrcReg);
+    if (isSupported({TargetOpcode::G_CTLZ_ZERO_POISON, {DstTy, SrcTy}})) {
+      // If CTLZ_ZERO_POISON is supported, emit that and a select for zero.
+      auto CtlzZU = MIRBuilder.buildCTLZ_ZERO_POISON(DstTy, SrcReg);
       auto ZeroSrc = MIRBuilder.buildConstant(SrcTy, 0);
       auto ICmp = MIRBuilder.buildICmp(
           CmpInst::ICMP_EQ, SrcTy.changeElementSize(1), SrcReg, ZeroSrc);
@@ -7746,7 +7787,7 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
     MI.eraseFromParent();
     return Legalized;
   }
-  case TargetOpcode::G_CTTZ_ZERO_UNDEF: {
+  case TargetOpcode::G_CTTZ_ZERO_POISON: {
     // This trivially expands to CTTZ.
     Observer.changingInstr(MI);
     MI.setDesc(TII.get(TargetOpcode::G_CTTZ));
@@ -7757,10 +7798,10 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
     auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
 
     unsigned Len = SrcTy.getScalarSizeInBits();
-    if (isSupported({TargetOpcode::G_CTTZ_ZERO_UNDEF, {DstTy, SrcTy}})) {
-      // If CTTZ_ZERO_UNDEF is legal or custom, emit that and a select with
+    if (isSupported({TargetOpcode::G_CTTZ_ZERO_POISON, {DstTy, SrcTy}})) {
+      // If CTTZ_ZERO_POISON is legal or custom, emit that and a select with
       // zero.
-      auto CttzZU = MIRBuilder.buildCTTZ_ZERO_UNDEF(DstTy, SrcReg);
+      auto CttzZU = MIRBuilder.buildCTTZ_ZERO_POISON(DstTy, SrcReg);
       auto Zero = MIRBuilder.buildConstant(SrcTy, 0);
       auto ICmp = MIRBuilder.buildICmp(
           CmpInst::ICMP_EQ, DstTy.changeElementSize(1), SrcReg, Zero);
@@ -8226,7 +8267,7 @@ LegalizerHelper::lowerU64ToF32BitOps(MachineInstr &MI) {
   auto Zero32 = MIRBuilder.buildConstant(S32, 0);
   auto Zero64 = MIRBuilder.buildConstant(S64, 0);
 
-  auto LZ = MIRBuilder.buildCTLZ_ZERO_UNDEF(S32, Src);
+  auto LZ = MIRBuilder.buildCTLZ_ZERO_POISON(S32, Src);
 
   auto K = MIRBuilder.buildConstant(S32, 127U + 63U);
   auto Sub = MIRBuilder.buildSub(S32, K, LZ);
@@ -8627,6 +8668,45 @@ LegalizerHelper::lowerFPTOINT_SAT(MachineInstr &MI) {
   return Legalized;
 }
 
+// Floating-point conversions using truncating and extending loads and stores.
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFPExtAndTruncMem(MachineInstr &MI) {
+  assert((MI.getOpcode() == TargetOpcode::G_FPEXT ||
+          MI.getOpcode() == TargetOpcode::G_FPTRUNC) &&
+         "Only G_FPEXT and G_FPTRUNC are expected");
+
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  MachinePointerInfo PtrInfo;
+  unsigned StoreOpc;
+  unsigned LoadOpc;
+  LLT StackTy;
+  if (MI.getOpcode() == TargetOpcode::G_FPEXT) {
+    StackTy = SrcTy;
+    StoreOpc = TargetOpcode::G_STORE;
+    LoadOpc = TargetOpcode::G_FPEXTLOAD;
+  } else {
+    StackTy = DstTy;
+    StoreOpc = TargetOpcode::G_FPTRUNCSTORE;
+    LoadOpc = TargetOpcode::G_LOAD;
+  }
+
+  Align StackTyAlign = getStackTemporaryAlignment(StackTy);
+  auto StackTemp =
+      createStackTemporary(StackTy.getSizeInBytes(), StackTyAlign, PtrInfo);
+
+  MachineFunction &MF = MIRBuilder.getMF();
+  auto *StoreMMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
+                                           StackTy, StackTyAlign);
+  MIRBuilder.buildStoreInstr(StoreOpc, SrcReg, StackTemp, *StoreMMO);
+
+  auto *LoadMMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad,
+                                          StackTy, StackTyAlign);
+  MIRBuilder.buildLoadInstr(LoadOpc, DstReg, StackTemp, *LoadMMO);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
 // f64 -> f16 conversion using round-to-nearest-even rounding mode.
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
@@ -8634,8 +8714,8 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   const LLT S32 = LLT::scalar(32);
 
   auto [Dst, Src] = MI.getFirst2Regs();
-  assert(MRI.getType(Dst).getScalarType() == LLT::scalar(16) &&
-         MRI.getType(Src).getScalarType() == LLT::scalar(64));
+  assert(MRI.getType(Dst).getScalarType() == LLT::float16() &&
+         MRI.getType(Src).getScalarType() == LLT::float64());
 
   if (MRI.getType(Src).isVector()) // TODO: Handle vectors directly.
     return UnableToLegalize;
@@ -8743,16 +8823,57 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   return Legalized;
 }
 
+// f32 -> bf16 conversion using round-to-nearest-even rounding mode.
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFPTRUNC_F32_TO_BF16(MachineInstr &MI) {
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  assert(DstTy.getScalarType() == LLT::bfloat16() &&
+         SrcTy.getScalarType() == LLT::float32());
+
+  LLT I1Ty = SrcTy.changeElementType(LLT::integer(1));
+  LLT I16Ty = SrcTy.changeElementType(LLT::integer(16));
+  LLT I32Ty = SrcTy.changeElementType(LLT::integer(32));
+
+  auto IsNaN = MIRBuilder.buildFCmp(CmpInst::FCMP_UNO, I1Ty, SrcReg,
+                                    MIRBuilder.buildFConstant(SrcTy, 0));
+  auto SrcI = MIRBuilder.buildBitcast(I32Ty, SrcReg);
+
+  // Conversions should set NaN's quiet bit. This also prevents NaNs from
+  // turning into infinities.
+  auto NaN = MIRBuilder.buildOr(I32Ty, SrcI,
+                                MIRBuilder.buildConstant(I32Ty, 0x400000));
+
+  // Factor in the contribution of the low 16 bits.
+  auto Lsb =
+      MIRBuilder.buildLShr(I32Ty, SrcI, MIRBuilder.buildConstant(I32Ty, 16));
+  Lsb = MIRBuilder.buildAnd(I32Ty, Lsb, MIRBuilder.buildConstant(I32Ty, 1));
+  auto RoundingBias =
+      MIRBuilder.buildAdd(I32Ty, Lsb, MIRBuilder.buildConstant(I32Ty, 0x7fff));
+  auto Add = MIRBuilder.buildAdd(I32Ty, SrcI, RoundingBias);
+
+  // Don't round if we had a NaN, we don't want to turn 0x7fffffff into
+  // 0x80000000.
+  auto Sel = MIRBuilder.buildSelect(I32Ty, IsNaN, NaN, Add);
+
+  // Now that we have rounded, shift the bits into position.
+  auto Srl =
+      MIRBuilder.buildLShr(I32Ty, Sel, MIRBuilder.buildConstant(I32Ty, 16));
+  auto Trunc = MIRBuilder.buildTrunc(I16Ty, Srl);
+  MIRBuilder.buildBitcast(DstReg, Trunc);
+  MI.eraseFromParent();
+  return Legalized;
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFPTRUNC(MachineInstr &MI) {
   auto [DstTy, SrcTy] = MI.getFirst2LLTs();
-  const LLT S64 = LLT::scalar(64);
-  const LLT S16 = LLT::scalar(16);
-
-  if (DstTy.getScalarType() == S16 && SrcTy.getScalarType() == S64)
+  if (DstTy.getScalarType().isFloat16() && SrcTy.getScalarType().isFloat64())
     return lowerFPTRUNC_F64_TO_F16(MI);
 
-  return UnableToLegalize;
+  if (DstTy.getScalarType().isBFloat16() && SrcTy.getScalarType().isFloat32())
+    return lowerFPTRUNC_F32_TO_BF16(MI);
+
+  return lowerFPExtAndTruncMem(MI);
 }
 
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerFPOWI(MachineInstr &MI) {
@@ -10536,6 +10657,45 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
   MachineMemOperand *EltLoadMMO = MF.getMachineMemOperand(
       MachinePointerInfo(), MachineMemOperand::MOLoad, LLTTy, EltAlignment);
   MIRBuilder.buildLoad(Dst, VAList, *EltLoadMMO);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerMulfix(MachineInstr &MI) {
+  [[maybe_unused]] unsigned OpCode = MI.getOpcode();
+  assert((OpCode == TargetOpcode::G_SMULFIX ||
+          OpCode == TargetOpcode::G_UMULFIX) &&
+         "Operator must be either G_SMULFIX or G_UMULFIX!");
+  auto [Dst, LHS, RHS] = MI.getFirst3Regs();
+  LLT Ty = MRI.getType(Dst);
+  unsigned Scale = MI.getOperand(3).getImm();
+
+  if (Scale == 0) {
+    MIRBuilder.buildMul(Dst, LHS, RHS);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
+  // TODO: Port other lowerng paths from SelectionDAG.
+  LLT WideTy = Ty.changeElementSize(Ty.getScalarSizeInBits() * 2);
+  auto ShiftAmt = MIRBuilder.buildConstant(WideTy, Scale);
+  MachineInstrBuilder ExtLHS{}, ExtRHS{}, Shift{};
+  if (MI.getOpcode() == TargetOpcode::G_SMULFIX) {
+    ExtLHS = MIRBuilder.buildSExt(WideTy, LHS);
+    ExtRHS = MIRBuilder.buildSExt(WideTy, RHS);
+  } else {
+    ExtLHS = MIRBuilder.buildZExt(WideTy, LHS);
+    ExtRHS = MIRBuilder.buildZExt(WideTy, RHS);
+  }
+
+  auto Mul = MIRBuilder.buildMul(WideTy, ExtLHS, ExtRHS);
+  if (MI.getOpcode() == TargetOpcode::G_SMULFIX)
+    Shift = MIRBuilder.buildAShr(WideTy, Mul, ShiftAmt);
+  else
+    Shift = MIRBuilder.buildLShr(WideTy, Mul, ShiftAmt);
+
+  MIRBuilder.buildTrunc(Dst, Shift);
 
   MI.eraseFromParent();
   return Legalized;

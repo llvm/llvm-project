@@ -96,12 +96,10 @@ namespace CallScope {
   constexpr Q *out_of_lifetime(Q q) { return &q; } // both-warning {{address of stack}} \
                                                    // both-note 2{{declared here}}
   constexpr int k3 = out_of_lifetime({})->n; // both-error {{must be initialized by a constant expression}} \
-                                             // expected-note {{read of object outside its lifetime}} \
-                                             // ref-note {{read of object outside its lifetime}}
+                                             // both-note {{read of object outside its lifetime}}
 
   constexpr int k4 = out_of_lifetime({})->f(); // both-error {{must be initialized by a constant expression}} \
-                                               // expected-note {{member call on object outside its lifetime}} \
-                                               // ref-note {{member call on object outside its lifetime}}
+                                               // both-note {{member call on object outside its lifetime}}
 }
 
 namespace ExprDoubleDestroy {
@@ -114,4 +112,13 @@ namespace ExprDoubleDestroy {
   struct S { int x; };
   constexpr bool t = test<S>(); // both-error {{must be initialized by a constant expression}} \
                                 // both-note {{in call to}}
+}
+
+namespace CompositeArrayRootAssertion {
+  class C {
+  public:
+    bool B[2][2];
+    constexpr ~C() {}
+  };
+  void foo(int i) { C c; }
 }

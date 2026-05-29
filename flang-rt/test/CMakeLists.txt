@@ -10,10 +10,12 @@
 # for use by Lit, and delegates to LLVM's lit test handlers.
 
 llvm_canonicalize_cmake_booleans(
+  FLANG_RT_FORTRAN_MODULES
   FLANG_STANDALONE_BUILD
   LLVM_BUILD_EXAMPLES
   LLVM_BYE_LINK_INTO_TOOLS
   LLVM_ENABLE_PLUGINS
+  LLVM_TREE_AVAILABLE
 )
 
 configure_lit_site_cfg(

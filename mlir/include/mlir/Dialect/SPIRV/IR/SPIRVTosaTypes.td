@@ -115,6 +115,16 @@ def SPIRV_I32_1DTensorArmOfLength3Attr : ConfinedAttr<RankedI32ElementsAttr<[3]>
 def SPIRV_I32_1DTensorArmOfLength4Attr : ConfinedAttr<RankedI32ElementsAttr<[4]>, [SPIRV_DenseElementAttrsWithTensorArmType]>;
 def SPIRV_I32_1DTensorArmOfLength5Attr : ConfinedAttr<RankedI32ElementsAttr<[5]>, [SPIRV_DenseElementAttrsWithTensorArmType]>;
 def SPIRV_I32_1DTensorArmOfLength6Attr : ConfinedAttr<RankedI32ElementsAttr<[6]>, [SPIRV_DenseElementAttrsWithTensorArmType]>;
+class IntElementsAttrAllValuesAtLeast<int minValue> : AttrConstraint<
+  CPred<"::llvm::all_of(::llvm::cast<::mlir::DenseElementsAttr>($_self).getValues<::llvm::APInt>(), "
+        "[](const ::llvm::APInt &value) { return value.getSExtValue() >= " #
+        minValue # "; })">,
+  "all values must be >= " # minValue>;
+
+def SPIRV_PositiveI32_1DTensorArmOfLength2Attr : ConfinedAttr<RankedI32ElementsAttr<[2]>, [SPIRV_DenseElementAttrsWithTensorArmType, IntElementsAttrAllValuesAtLeast<1>]>;
+def SPIRV_PositiveI32_1DTensorArmOfLength3Attr : ConfinedAttr<RankedI32ElementsAttr<[3]>, [SPIRV_DenseElementAttrsWithTensorArmType, IntElementsAttrAllValuesAtLeast<1>]>;
+def SPIRV_NonNegativeI32_1DTensorArmOfLength4Attr : ConfinedAttr<RankedI32ElementsAttr<[4]>, [SPIRV_DenseElementAttrsWithTensorArmType, IntElementsAttrAllValuesAtLeast<0>]>;
+def SPIRV_NonNegativeI32_1DTensorArmOfLength6Attr : ConfinedAttr<RankedI32ElementsAttr<[6]>, [SPIRV_DenseElementAttrsWithTensorArmType, IntElementsAttrAllValuesAtLeast<0>]>;
 
 class Is1DTensorArmAttrOfLength<list<int> allowedLengths> :
   AttrConstraint<And<[CPred<[{::llvm::cast<::mlir::spirv::TensorArmType>(::llvm::cast<::mlir::DenseElementsAttr>($_self).getType()).getShape().size() == 1 }]>,
@@ -176,6 +186,100 @@ PredOpTrait<output # " rank must be equal to max(1, rank(" # input # "))",
       And<[CPred<HasRank<input>.result>, CPred<HasRank<input>.result>]>,
       [CPred<"std::max(int64_t(1), " # Rank<input>.result # " - int64_t(1)) == " # Rank<output>.result>]>>;
 
+class DimOfType<string type, int dim> :
+  StrFunc<type # ".getDimSize(" # dim # ")">;
+
+class ShapedTypeOf<string input> :
+  StrFunc<"::llvm::cast<::mlir::ShapedType>($" # input # ".getType())">;
+
+class DimOf<string input, int dim> :
+  DimOfType<ShapedTypeOf<input>.result, dim>;
+
+class DimIsDynamic<string input, int dim> :
+  CPred<"::mlir::ShapedType::isDynamic(" # DimOf<input, dim>.result # ")">;
+
+class DimOfTypeIsDynamic<string type, int dim> :
+  CPred<"::mlir::ShapedType::isDynamic(" #
+        DimOfType<type, dim>.result # ")">;
+
+class DimIsOne<string input, int dim> :
+  CPred<DimOf<input, dim>.result # " == 1">;
+
+class DimsMatch<string lhs, int lhsDim, string rhs, int rhsDim> :
+  CPred<DimOf<lhs, lhsDim>.result # " == " # DimOf<rhs, rhsDim>.result>;
+
+class DimsOfTypeMatch<string lhsType, int lhsDim, string rhsType,
+                      int rhsDim> :
+  CPred<DimOfType<lhsType, lhsDim>.result # " == " #
+        DimOfType<rhsType, rhsDim>.result>;
+
+class ProductDimsMatch<string lhs, int lhsDim, string rhs, int rhsDim,
+                       string output, int outputDim> :
+  CPred<DimOf<lhs, lhsDim>.result # " * " # DimOf<rhs, rhsDim>.result #
+        " == " # DimOf<output, outputDim>.result>;
+
+class SameDimsOrDynamicPred<string lhs, int lhsDim, string rhs, int rhsDim> :
+  Or<[
+    DimIsDynamic<lhs, lhsDim>,
+    DimIsDynamic<rhs, rhsDim>,
+    DimsMatch<lhs, lhsDim, rhs, rhsDim>
+  ]>;
+
+class SameDimsOrOneOrDynamicPred<string lhs, int lhsDim, string rhs, int rhsDim> :
+  Or<[
+    SameDimsOrDynamicPred<lhs, lhsDim, rhs, rhsDim>,
+    DimIsOne<lhs, lhsDim>
+  ]>;
+
+class ProductDimOrOneOrDynamicPred<string lhs, int lhsDim, string rhs,
+                                   int rhsDim, string output, int outputDim> :
+  Or<[
+    DimIsDynamic<lhs, lhsDim>,
+    DimIsDynamic<rhs, rhsDim>,
+    DimIsDynamic<output, outputDim>,
+    ProductDimsMatch<lhs, lhsDim, rhs, rhsDim, output, outputDim>,
+    DimIsOne<output, outputDim>
+  ]>;
+
+class AttrIsFloat<string attr> :
+  CPred<"::llvm::isa<::mlir::FloatAttr>(get" #
+        snakeCaseToCamelCase<attr>.ret # "())">;
+
+class AttrIsInteger<string attr> :
+  CPred<"::llvm::isa<::mlir::IntegerAttr>(get" #
+        snakeCaseToCamelCase<attr>.ret # "())">;
+
+class IntegerAttrValue<string attr> :
+  StrFunc<"::llvm::cast<::mlir::IntegerAttr>(get" #
+          snakeCaseToCamelCase<attr>.ret # "()).getValue()">;
+
+class FloatAttrValue<string attr> :
+  StrFunc<"::llvm::cast<::mlir::FloatAttr>(get" #
+          snakeCaseToCamelCase<attr>.ret # "()).getValue()">;
+
+class FloatAttrIsNaN<string attr> :
+  And<[AttrIsFloat<attr>,
+       CPred<FloatAttrValue<attr>.result # ".isNaN()">]>;
+
+class ReductionDimMatchPred<string input, string output, int dim> :
+  Or<[
+    DimIsDynamic<input, dim>,
+    DimIsDynamic<output, dim>,
+    And<[CPred<"getAxis() == " # dim>, DimIsOne<output, dim>]>,
+    And<[CPred<"getAxis() != " # dim>, DimsMatch<input, dim, output, dim>]>
+  ]>;
+
+class ReductionOutputShapeMatchesInputAndAxis<string input, string output>:
+PredOpTrait<"shape of " # output # " must match the shape of " # input #
+                " with the dimension at axis replaced by 1",
+  And<!foreach(dim, [0, 1, 2, 3, 4, 5],
+               Implies<
+                 And<[CPred<HasRank<input>.result>,
+                      CPred<HasRank<output>.result>,
+                      CPred<Rank<input>.result # " == " # Rank<output>.result>,
+                      CPred<Rank<input>.result # " > " # dim>]>,
+                 [ReductionDimMatchPred<input, output, dim>]>)>>;
+
 class AccTypeIn<list<string> allowedValues> :
   CPred<"llvm::is_contained({" # !interleave(!foreach(value, allowedValues, "::mlir::spirv::TosaExtAccType::" # value), ",") # "}, getAccType())">;
 
@@ -196,16 +300,6 @@ class MatchBroadcastableShapes<string input1, string input2, string output>:
     "})">]>
   >;
 
-class SameDimsOrDynamicPred<string lhs, int lhsDim, string rhs, int rhsDim> :
-  CPred<"[](::mlir::ShapedType lhsType, ::mlir::ShapedType rhsType) { "
-        "  int64_t lhsSize = lhsType.getDimSize(" # lhsDim # "); "
-        "  int64_t rhsSize = rhsType.getDimSize(" # rhsDim # "); "
-        "  return ::mlir::ShapedType::isDynamic(lhsSize) || "
-        "         ::mlir::ShapedType::isDynamic(rhsSize) || lhsSize == rhsSize; "
-        "}("
-        "::llvm::cast<::mlir::ShapedType>($" # lhs # ".getType()), "
-        "::llvm::cast<::mlir::ShapedType>($" # rhs # ".getType()))">;
-
 class ValuesIndicesShapesMatch<string values, string indices, string tensor>:
   PredOpTrait<"shapes of " # values # ", " # indices # ", and " # tensor #
                   " must satisfy [N,K,C], [N,W], [N,W,C]",
@@ -216,6 +310,143 @@ class ValuesIndicesShapesMatch<string values, string indices, string tensor>:
       SameDimsOrDynamicPred<indices, 1, tensor, 1>,
       SameDimsOrDynamicPred<values, 2, tensor, 2>
     ]>>;
+
+// The tensor shapes are [N,H,W,C] where N,H,W,C are the dimension values.
+class NHWCInputOutputShapeMatch<string input, string output>:
+  PredOpTrait<"shapes of " # input # " and " # output #
+                  " must satisfy [N,*,*,C] and [N,*,*,C]",
+    And<[
+      SameDimsOrDynamicPred<input, 0, output, 0>,
+      SameDimsOrDynamicPred<input, 3, output, 3>
+    ]>>;
+
+
+class Conv2DShapeMatch<string input, string weight, string bias, string output>:
+  PredOpTrait<"shapes of " # input # ", " # weight # ", " # bias # ", and " #
+                  output # " must satisfy [N,IH,IW,IC], [OC,KH,KW,IC], "
+                  "[OC/1], [N,OH,OW,OC]",
+    And<[
+      SameDimsOrDynamicPred<input, 0, output, 0>,
+      SameDimsOrDynamicPred<input, 3, weight, 3>,
+      SameDimsOrDynamicPred<weight, 0, output, 3>,
+      SameDimsOrOneOrDynamicPred<bias, 0, output, 3>
+    ]>>;
+
+class Conv3DShapeMatch<string input, string weight, string bias, string output>:
+  PredOpTrait<"shapes of " # input # ", " # weight # ", " # bias # ", and " #
+                  output # " must satisfy [N,ID,IH,IW,IC], [OC,KD,KH,KW,IC], "
+                  "[OC/1], [N,OD,OH,OW,OC]",
+    And<[
+      SameDimsOrDynamicPred<input, 0, output, 0>,
+      SameDimsOrDynamicPred<input, 4, weight, 4>,
+      SameDimsOrDynamicPred<weight, 0, output, 4>,
+      SameDimsOrOneOrDynamicPred<bias, 0, output, 4>
+    ]>>;
+
+class DepthwiseConv2DShapeMatch<string input, string weight, string bias,
+                                string output>:
+  PredOpTrait<"shapes of " # input # ", " # weight # ", " # bias # ", and " #
+                  output # " must satisfy [N,IH,IW,IC], [KH,KW,IC,M], "
+                  "[IC*M/1], [N,OH,OW,IC*M]",
+    And<[
+      SameDimsOrDynamicPred<input, 0, output, 0>,
+      SameDimsOrDynamicPred<input, 3, weight, 2>,
+      ProductDimOrOneOrDynamicPred<input, 3, weight, 3, output, 3>,
+      SameDimsOrOneOrDynamicPred<bias, 0, output, 3>
+    ]>>;
+
+class FetchNthIntElementsAttr<string attrName, int idx> :
+  StrFunc<"get" # snakeCaseToCamelCase<attrName>.ret # "().getValues<APInt>()[" # idx # "].getSExtValue()">;
+
+class ElementsAttrValueLessThan<string leftAttrName, int leftIdx,string rightAttrName, int rightIdx> :
+   CPred<FetchNthIntElementsAttr<leftAttrName, leftIdx>.result # " < " # FetchNthIntElementsAttr<rightAttrName, rightIdx>.result>;
+
+class Pool2DPadValuesLessThanKernel<string padAttr, string kernelAttr> :
+    PredOpTrait<"op pad values must satisfy pad_top/pad_bottom < kernel_y and pad_left/pad_right < kernel_x",
+    And<[ElementsAttrValueLessThan<padAttr, 0, kernelAttr, 0>,
+         ElementsAttrValueLessThan<padAttr, 1, kernelAttr, 0>,
+         ElementsAttrValueLessThan<padAttr, 2, kernelAttr, 1>,
+         ElementsAttrValueLessThan<padAttr, 3, kernelAttr, 1>]
+    >>;
+
+class MatMulShapesMatch<string lhs, string rhs, string output> : PredOpTrait<
+  "shapes of " # lhs # ", " # rhs # ", and " # output #
+      " must satisfy [N,H,C], [N,C,W], [N,H,W]",
+  And<[
+    SameDimsOrDynamicPred<lhs, 0, rhs, 0>,
+    SameDimsOrDynamicPred<lhs, 0, output, 0>,
+    SameDimsOrDynamicPred<lhs, 1, output, 1>,
+    SameDimsOrDynamicPred<lhs, 2, rhs, 1>,
+    SameDimsOrDynamicPred<rhs, 2, output, 2>
+  ]>>;
+
+class DimsOfTypeAllMatchOrDynamic<string lhsType, string rhsType,
+                                  string otherType, int dim> :
+  Or<[
+    DimOfTypeIsDynamic<lhsType, dim>,
+    DimOfTypeIsDynamic<rhsType, dim>,
+    DimOfTypeIsDynamic<otherType, dim>,
+    And<[DimsOfTypeMatch<lhsType, dim, rhsType, dim>,
+         DimsOfTypeMatch<lhsType, dim, otherType, dim>]>
+  ]>;
+
+class DimOfTypeMatchesHalfPlusOne<string inputType, int inputDim,
+                                  string outputType, int outputDim> :
+  Or<[
+    DimOfTypeIsDynamic<inputType, inputDim>,
+    DimOfTypeIsDynamic<outputType, outputDim>,
+    CPred<DimOfType<outputType, outputDim>.result # " == " #
+          DimOfType<inputType, inputDim>.result # " / 2 + 1">
+  ]>;
+
+class Struct2TensorArmShapesMatchInput<string input> : PredOpTrait<
+  "shapes of output_real and output_imag must match the shape of " # input,
+  And<!foreach(dim, [0, 1, 2],
+               DimsOfTypeAllMatchOrDynamic<
+                 ShapedTypeOf<input>.result,
+                 "getResultRealType()", "getResultImagType()", dim>)>>;
+
+class Struct2TensorArmRFFT2DShapesMatchInput<string input> : PredOpTrait<
+  "shapes of output_real and output_imag must satisfy [N,H,W/2 + 1] when " #
+      input # " has shape [N,H,W]",
+  And<[
+    DimsOfTypeAllMatchOrDynamic<ShapedTypeOf<input>.result,
+      "getResultRealType()", "getResultImagType()", 0>,
+    DimsOfTypeAllMatchOrDynamic<ShapedTypeOf<input>.result,
+      "getResultRealType()", "getResultImagType()", 1>,
+    DimOfTypeMatchesHalfPlusOne<ShapedTypeOf<input>.result,
+      2, "getResultRealType()", 2>,
+    DimOfTypeMatchesHalfPlusOne<ShapedTypeOf<input>.result,
+      2, "getResultImagType()", 2>
+  ]>>;
+
+class DimIsPowerOfTwo<string input, int dim> :
+  Or<[DimIsDynamic<input, dim>,
+      CPred<"llvm::isPowerOf2_64(static_cast<uint64_t>(" # DimOf<input, dim>.result # "))">]>;
+
+class TensorDimsArePowerOfTwo<string input, list<int> dims> : PredOpTrait<
+  "dimensions " # !interleave(dims, ", ") # " of " # input # " must be powers of two",
+  And<!foreach(dim, dims, DimIsPowerOfTwo<input, dim>)>>;
+
+class ClampBoundsAreNotNaN<string minVal, string maxVal>:
+  PredOpTrait<minVal # " and " # maxVal # " must not be NaN",
+    Neg<Or<[FloatAttrIsNaN<minVal>, FloatAttrIsNaN<maxVal>]>>>;
+
+class IntegerAttrLessThanOrEqual<string minVal, string maxVal> :
+  Implies<AttrIsInteger<minVal>,
+          [CPred<IntegerAttrValue<minVal>.result # ".sle(" #
+                 IntegerAttrValue<maxVal>.result # ")">]>;
+
+class FloatAttrLessThanOrEqual<string minVal, string maxVal> :
+  Implies<AttrIsFloat<minVal>,
+          [CPred<FloatAttrValue<minVal>.result # ".compare(" #
+                 FloatAttrValue<maxVal>.result #
+                 ") != ::llvm::APFloat::cmpGreaterThan">]>;
+
+class ClampMinValLessThanOrEqualToMaxVal<string minVal, string maxVal>:
+  PredOpTrait<minVal # " must be <= " # maxVal,
+    And<[IntegerAttrLessThanOrEqual<minVal, maxVal>,
+         FloatAttrLessThanOrEqual<minVal, maxVal>]>>;
 
 class TableSizeConstraint<string input, Type type, int size>:
   PredOpTrait<"table must have size " # size # " if " # input # " has element type " # type.summary,

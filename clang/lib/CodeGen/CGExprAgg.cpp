@@ -246,7 +246,7 @@ public:
 /// represents a value lvalue, this method emits the address of the lvalue,
 /// then loads the result into DestPtr.
 void AggExprEmitter::EmitAggLoadOfLValue(const Expr *E) {
-  LValue LV = CGF.EmitLValue(E);
+  LValue LV = CGF.EmitCheckedLValue(E, CodeGenFunction::TCK_Load);
 
   // If the type of the l-value is atomic, then do an atomic load.
   if (LV.getType()->isAtomicType() || CGF.LValueIsSuitableForInlineAtomic(LV)) {
@@ -652,9 +652,15 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   auto Emit = [&](Expr *Init, uint64_t ArrayIndex) {
     llvm::Value *element = begin;
     if (ArrayIndex > 0) {
-      element = Builder.CreateInBoundsGEP(
-          llvmElementType, begin,
-          llvm::ConstantInt::get(CGF.SizeTy, ArrayIndex), "arrayinit.element");
+      if (CGF.getLangOpts().EmitLogicalPointer)
+        element = Builder.CreateStructuredGEP(
+            AType, begin, llvm::ConstantInt::get(CGF.SizeTy, ArrayIndex),
+            "arrayinit.element");
+      else
+        element = Builder.CreateInBoundsGEP(
+            llvmElementType, begin,
+            llvm::ConstantInt::get(CGF.SizeTy, ArrayIndex),
+            "arrayinit.element");
 
       // Tell the cleanup that it needs to destroy up to this
       // element.  TODO: some of these stores can be trivially
@@ -720,6 +726,9 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
         Builder.CreatePHI(element->getType(), 2, "arrayinit.cur");
     currentElement->addIncoming(element, entryBB);
 
+    if (CGF.CGM.shouldEmitConvergenceTokens())
+      CGF.ConvergenceTokenStack.push_back(CGF.emitConvergenceLoopToken(bodyBB));
+
     // Emit the actual filler expression.
     {
       // C++1z [class.temporary]p5:
@@ -750,6 +759,9 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
     llvm::BasicBlock *endBB = CGF.createBasicBlock("arrayinit.end");
     Builder.CreateCondBr(done, endBB, bodyBB);
     currentElement->addIncoming(nextElement, Builder.GetInsertBlock());
+
+    if (CGF.CGM.shouldEmitConvergenceTokens())
+      CGF.ConvergenceTokenStack.pop_back();
 
     CGF.EmitBlock(endBB);
   }
@@ -960,6 +972,10 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     [[fallthrough]];
 
   case CK_HLSLArrayRValue:
+    if (CGF.getLangOpts().HLSL &&
+        E->getSubExpr()->getType()->isHLSLResourceRecordArray())
+      if (CGF.CGM.getHLSLRuntime().emitGlobalResourceArray(CGF, E, Dest))
+        break;
     Visit(E->getSubExpr());
     break;
   case CK_HLSLAggregateSplatCast: {
@@ -1342,7 +1358,7 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     return;
   }
 
-  LValue LHS = CGF.EmitLValue(E->getLHS());
+  LValue LHS = CGF.EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
 
   // If we have an atomic type, evaluate into the destination and then
   // do an atomic copy.
@@ -1992,6 +2008,9 @@ void AggExprEmitter::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E,
   llvm::Value *element =
       Builder.CreateInBoundsGEP(llvmElementType, begin, index);
 
+  if (CGF.CGM.shouldEmitConvergenceTokens())
+    CGF.ConvergenceTokenStack.push_back(CGF.emitConvergenceLoopToken(bodyBB));
+
   // Prepare for a cleanup.
   QualType::DestructionKind dtorKind = elementType.isDestructedType();
   EHScopeStack::stable_iterator cleanup;
@@ -2038,6 +2057,9 @@ void AggExprEmitter::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E,
       "arrayinit.done");
   llvm::BasicBlock *endBB = CGF.createBasicBlock("arrayinit.end");
   Builder.CreateCondBr(done, endBB, bodyBB);
+
+  if (CGF.CGM.shouldEmitConvergenceTokens())
+    CGF.ConvergenceTokenStack.pop_back();
 
   CGF.EmitBlock(endBB);
 

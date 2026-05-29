@@ -1161,6 +1161,47 @@ static MemoryAccess *getClobberingMemoryAccess(MemorySSA &MSSA,
   return Source;
 }
 
+bool llvm::canHoistLoad(LoadInst &LI, AAResults *AA, DominatorTree *DT,
+                        Loop *CurLoop, MemorySSA &MSSA,
+                        bool TargetExecutesOncePerLoop,
+                        SinkAndHoistLICMFlags &Flags,
+                        OptimizationRemarkEmitter *ORE) {
+  if (!LI.isUnordered())
+    return false; // Don't sink/hoist volatile or ordered atomic loads!
+
+  // Loads from constant memory are always safe to move, even if they end up
+  // in the same alias set as something that ends up being modified.
+  if (!isModSet(AA->getModRefInfoMask(LI.getOperand(0))))
+    return true;
+  if (LI.hasMetadata(LLVMContext::MD_invariant_load))
+    return true;
+
+  if (LI.isAtomic() && !TargetExecutesOncePerLoop)
+    return false; // Don't risk duplicating unordered loads
+
+  // This checks for an invariant.start dominating the load.
+  if (isLoadInvariantInLoop(&LI, DT, CurLoop))
+    return true;
+
+  auto *MU = cast<MemoryUse>(MSSA.getMemoryAccess(&LI));
+
+  bool InvariantGroup = LI.hasMetadata(LLVMContext::MD_invariant_group);
+
+  bool Invalidated =
+      pointerInvalidatedByLoop(&MSSA, MU, CurLoop, LI, Flags, InvariantGroup);
+  // Check loop-invariant address because this may also be a sinkable load
+  // whose address is not necessarily loop-invariant.
+  if (ORE && Invalidated && CurLoop->isLoopInvariant(LI.getPointerOperand()))
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(
+                 DEBUG_TYPE, "LoadWithLoopInvariantAddressInvalidated", &LI)
+             << "failed to move load with loop-invariant address "
+                "because the loop may invalidate its value";
+    });
+
+  return !Invalidated;
+}
+
 bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                               Loop *CurLoop, MemorySSAUpdater &MSSAU,
                               bool TargetExecutesOncePerLoop,
@@ -1173,40 +1214,8 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
   MemorySSA *MSSA = MSSAU.getMemorySSA();
   // Loads have extra constraints we have to verify before we can hoist them.
   if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
-    if (!LI->isUnordered())
-      return false; // Don't sink/hoist volatile or ordered atomic loads!
-
-    // Loads from constant memory are always safe to move, even if they end up
-    // in the same alias set as something that ends up being modified.
-    if (!isModSet(AA->getModRefInfoMask(LI->getOperand(0))))
-      return true;
-    if (LI->hasMetadata(LLVMContext::MD_invariant_load))
-      return true;
-
-    if (LI->isAtomic() && !TargetExecutesOncePerLoop)
-      return false; // Don't risk duplicating unordered loads
-
-    // This checks for an invariant.start dominating the load.
-    if (isLoadInvariantInLoop(LI, DT, CurLoop))
-      return true;
-
-    auto MU = cast<MemoryUse>(MSSA->getMemoryAccess(LI));
-
-    bool InvariantGroup = LI->hasMetadata(LLVMContext::MD_invariant_group);
-
-    bool Invalidated = pointerInvalidatedByLoop(
-        MSSA, MU, CurLoop, I, Flags, InvariantGroup);
-    // Check loop-invariant address because this may also be a sinkable load
-    // whose address is not necessarily loop-invariant.
-    if (ORE && Invalidated && CurLoop->isLoopInvariant(LI->getPointerOperand()))
-      ORE->emit([&]() {
-        return OptimizationRemarkMissed(
-                   DEBUG_TYPE, "LoadWithLoopInvariantAddressInvalidated", LI)
-               << "failed to move load with loop-invariant address "
-                  "because the loop may invalidate its value";
-      });
-
-    return !Invalidated;
+    return canHoistLoad(*LI, AA, DT, CurLoop, *MSSA, TargetExecutesOncePerLoop,
+                        Flags, ORE);
   } else if (CallInst *CI = dyn_cast<CallInst>(&I)) {
     // Don't sink calls which can throw.
     if (CI->mayThrow())
@@ -2319,48 +2328,26 @@ static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
   if (!MSSA->isLiveOnEntryDef(Source) && CurLoop->contains(Source->getBlock()))
     return false;
 
-  // If there are interfering Uses (i.e. their defining access is in the
-  // loop), or ordered loads (stored as Defs!), don't move this store.
-  // Could do better here, but this is conservatively correct.
+  // If there are interfering Uses don't move this store.
   // TODO: Cache set of Uses on the first walk in runOnLoop, update when
   // moving accesses. Can also extend to dominating uses.
   for (auto *BB : CurLoop->getBlocks()) {
     auto *Accesses = MSSA->getBlockAccesses(BB);
     if (!Accesses)
       continue;
-    for (const auto &MA : *Accesses)
-      if (const auto *MU = dyn_cast<MemoryUse>(&MA)) {
-        auto *MD = getClobberingMemoryAccess(*MSSA, BAA, Flags,
-                                             const_cast<MemoryUse *>(MU));
-        if (!MSSA->isLiveOnEntryDef(MD) && CurLoop->contains(MD->getBlock()))
-          return false;
-      } else if (const auto *MD = dyn_cast<MemoryDef>(&MA)) {
-        if (auto *LI = dyn_cast<LoadInst>(MD->getMemoryInst())) {
-          (void)LI; // Silence warning.
-          assert(!LI->isUnordered() && "Expected unordered load");
-          return false;
-        }
-        // Any call, while it may not be clobbering I, it may be a use.
-        if (auto *CI = dyn_cast<CallInst>(MD->getMemoryInst())) {
-          // Check if the call may read from the memory location written
-          // to by I. Check CI's attributes and arguments; the number of
-          // such checks performed is limited above by NoOfMemAccTooLarge.
-          if (auto *SI = dyn_cast<StoreInst>(I)) {
-            ModRefInfo MRI = BAA.getModRefInfo(CI, MemoryLocation::get(SI));
-            if (isModOrRefSet(MRI))
-              return false;
-          } else {
-            auto *SCI = cast<CallInst>(I);
-            // If the instruction we are wanting to hoist is also a call
-            // instruction then we need not check mod/ref info with itself
-            if (SCI == CI)
-              continue;
-            ModRefInfo MRI = BAA.getModRefInfo(CI, SCI);
-            if (isModOrRefSet(MRI))
-              return false;
-          }
-        }
+    for (const auto &MA : *Accesses) {
+      // Accesses are ordered. If we find one that I dominates we can stop.
+      if (!Flags.getIsSink() && MSSA->dominates(IMD, &MA))
+        break;
+
+      if (const auto *MemUseOrDef = dyn_cast<MemoryUseOrDef>(&MA)) {
+        // Skip unrelated accesses.
+        if (isNoModRef(BAA.getModRefInfo(MemUseOrDef->getMemoryInst(), I)))
+          continue;
+
+        return false;
       }
+    }
   }
   return true;
 }

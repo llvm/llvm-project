@@ -240,8 +240,9 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator, Pure]> {
 def TeamsOp : OpenMP_Op<"teams", traits = [
     AttrSizedOperandSegments, RecursiveMemoryEffects, OutlineableOpenMPOpInterface
   ], clauses = [
-    OpenMP_AllocateClause, OpenMP_IfClause, OpenMP_NumTeamsClause,
-    OpenMP_PrivateClause, OpenMP_ReductionClause, OpenMP_ThreadLimitClause
+    OpenMP_AllocateClause, OpenMP_DynGroupprivateClause, OpenMP_IfClause,
+    OpenMP_NumTeamsClause, OpenMP_PrivateClause, OpenMP_ReductionClause,
+    OpenMP_ThreadLimitClause
   ], singleRegion = true> {
   let summary = "teams construct";
   let description = [{
@@ -352,6 +353,36 @@ def SingleOp : OpenMP_Op<"single", traits = [
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<PrivateRegion>($region, $private_vars, type($private_vars),
         $private_syms, $private_needs_barrier) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Scope Construct (OpenMP 5.1)
+//===----------------------------------------------------------------------===//
+
+def ScopeOp
+    : OpenMP_Op<"scope", traits = [AttrSizedOperandSegments],
+                clauses = [OpenMP_AllocateClause, OpenMP_NowaitClause,
+                           OpenMP_PrivateClause, OpenMP_ReductionClause],
+                singleRegion = true> {
+  let summary = "scope directive";
+  let description = [{
+    The scope construct defines a structured block that is executed by all
+    threads in the current team, providing a lexical scope for
+    privatization. An implicit barrier occurs at the end of the region
+    unless the `nowait` clause is present.
+
+    Introduced in OpenMP 5.1.
+  }]#clausesDescription;
+
+  let builders = [OpBuilder<(ins CArg<"const ScopeOperands &">:$clauses)>];
+
+  let assemblyFormat = clausesAssemblyFormat#[{
+    custom<PrivateReductionRegion>($region, $private_vars, type($private_vars),
+        $private_syms, $private_needs_barrier, $reduction_mod, $reduction_vars,
+        type($reduction_vars), $reduction_byref, $reduction_syms) attr-dict
   }];
 
   let hasVerifier = 1;
@@ -845,11 +876,12 @@ def SimdOp : OpenMP_Op<"simd", traits = [
   let hasRegionVerifier = 1;
 }
 
+
 def YieldOp
     : OpenMP_Op<"yield", [Pure, ReturnLike, Terminator,
-                          ParentOneOf<["AtomicUpdateOp", "DeclareReductionOp",
-                                       "LoopNestOp", "PrivateClauseOp",
-                                       "IteratorOp"]>]> {
+                          ParentOneOf<["AtomicUpdateOp", "AtomicCompareOp",
+                                       "DeclareReductionOp", "LoopNestOp",
+                                       "PrivateClauseOp", "IteratorOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "omp.yield" yields SSA values from the OpenMP dialect op region and
@@ -1293,10 +1325,11 @@ def MapBoundsOp : OpenMP_Op<"map.bounds",
 
 def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
   let arguments = (ins OpenMP_PointerLikeType:$var_ptr,
-                       TypeAttr:$var_type,
+                       TypeAttr:$var_ptr_type,
                        ClauseMapFlagsAttr:$map_type,
                        VariableCaptureKindAttr:$map_capture_type,
                        Optional<OpenMP_PointerLikeType>:$var_ptr_ptr,
+                       OptionalAttr<TypeAttr>:$var_ptr_ptr_type,
                        Variadic<OpenMP_PointerLikeType>:$members,
                        OptionalAttr<IndexListArrayAttr>:$members_index,
                        Variadic<OpenMP_MapBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
@@ -1329,20 +1362,25 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
     ```
     =>
     ```mlir
-    omp.map.info var_ptr(%index_ssa) map_type(to) map_capture_type(ByRef)
+    omp.map.info var_ptr(%index_ssa : ref<i32>, i32) map_type(to) map_capture_type(ByRef)
       name(index)
     ```
 
     Description of arguments:
     - `var_ptr`: The address of variable to copy.
-    - `var_type`: The type of the variable to copy.
+    - `var_ptr_type`: The type of the variable (`var_ptr`) to copy.
     - 'map_type': OpenMP map type for this map capture, for example: from, to and
        always. It's a bitfield composed of the OpenMP runtime flags stored in
        OpenMPOffloadMappingFlags.
     - 'map_capture_type': Capture type for the variable e.g. this, byref, byvalue, byvla
        this can affect how the variable is lowered.
-    - `var_ptr_ptr`: Used when the variable copied is a member of a class, structure
-      or derived type and refers to the originating struct.
+    - `var_ptr_ptr`: Used when the variable being copied is a fortran, C or C++ pointer,
+       with this field referring to the base address of the pointer. If the `var_ptr_ptr`
+       field is present, a corresponding `var_ptr_ptr_type` must also be present.
+    - `var_ptr_ptr_type`: Used when the variable being copied is a fortran, C or
+       C++ pointer, with this field referring to the underlying type of the pointed
+       to data. If the `var_ptr_ptr_type` field is present, a corresponding `var_ptr_ptr`
+       must also be present.
     - `members`: Used to indicate mapped child members for the current MapInfoOp,
        represented as other MapInfoOp's, utilised in cases where a parent structure
        type and members of the structure type are being mapped at the same time.
@@ -1363,11 +1401,11 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
   }];
 
   let assemblyFormat = [{
-    `var_ptr` `(` $var_ptr `:` type($var_ptr) `,` $var_type `)`
+    `var_ptr` `(` $var_ptr `:` type($var_ptr) `,` $var_ptr_type `)`
     `map_clauses` `(` custom<MapClause>($map_type) `)`
     `capture` `(` custom<CaptureType>($map_capture_type) `)`
     oilist(
-        `var_ptr_ptr` `(` $var_ptr_ptr `:` type($var_ptr_ptr) `)`
+        `var_ptr_ptr` `(` $var_ptr_ptr `:` type($var_ptr_ptr) `,` $var_ptr_ptr_type`)`
       | `mapper` `(` $mapper_id `)`
       | `members` `(` $members `:` custom<MembersIndex>($members_index) `:` type($members) `)`
       | `bounds` `(` $bounds `)`
@@ -1549,7 +1587,8 @@ def TargetOp : OpenMP_Op<"target", traits = [
   ], clauses = [
     // TODO: Complete clause list (defaultmap, uses_allocators).
     OpenMP_AllocateClause, OpenMP_BareClause, OpenMP_DependClause,
-    OpenMP_DeviceClause, OpenMP_HasDeviceAddrClause, OpenMP_HostEvalClause,
+    OpenMP_DeviceClause, OpenMP_DynGroupprivateClause,
+    OpenMP_HasDeviceAddrClause, OpenMP_HostEvalClause,
     OpenMP_IfClause, OpenMP_InReductionClause, OpenMP_IsDevicePtrClause,
     OpenMP_MapClauseSkip<assemblyFormat = true>, OpenMP_NowaitClause,
     OpenMP_PrivateClause, OpenMP_ThreadLimitClause
@@ -1605,13 +1644,17 @@ def TargetOp : OpenMP_Op<"target", traits = [
     /// operations, the top level one will be the one captured.
     Operation *getInnermostCapturedOmpOp();
 
-    /// Infers the kernel type (Generic, SPMD or Generic-SPMD) based on the
-    /// contents of the target region.
+    /// Infers the kernel type (Bare, Generic or SPMD) based on the contents of
+    /// the target region.
     ///
     /// \param capturedOp result of a still valid (no modifications made to any
     /// nested operations) previous call to `getInnermostCapturedOmpOp()`.
-    static ::mlir::omp::TargetRegionFlags
-    getKernelExecFlags(Operation *capturedOp);
+    /// \param hostEvalTripCount output argument to store whether this kernel
+    /// wraps a loop whose bounds must be evaluated on the host prior to
+    /// launching it.
+    static ::mlir::omp::TargetExecMode
+    getKernelExecFlags(Operation *capturedOp,
+                       bool *hostEvalTripCount = nullptr);
   }] # clausesExtraClassDeclaration;
 
   let assemblyFormat = clausesAssemblyFormat # [{
@@ -1907,6 +1950,51 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture", traits = [
 
   let hasRegionVerifier = 1;
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// [5.1] 2.17.7 atomic Directive - compare clause
+//===----------------------------------------------------------------------===//
+
+def AtomicCompareOp : OpenMP_Op<"atomic.compare", traits = [
+    AtomicCompareOpInterface, RecursiveMemoryEffects,
+    SingleBlockImplicitTerminator<"YieldOp">
+  ], clauses = [
+    OpenMP_HintClause, OpenMP_MemoryOrderClause
+  ], singleRegion = 1> {
+  let summary = "performs an atomic compare";
+  let description = [{
+    This operation performs an atomic compare-and-swap.
+
+    The `atomic compare` construct implements atomic conditional update
+    semantics. The operand `x` is the address of the variable that is being
+    compared and potentially updated. The region describes the comparison
+    and update logic.
+
+    The region has the following structure:
+    ```
+      omp.atomic.compare {
+        if (x == d) x = e
+        omp.yield
+      }
+    ```
+  }] # clausesDescription;
+
+  let arguments = !con(
+      (ins Arg<OpenMP_PointerLikeType,
+               "Address of variable to be compared/updated", [MemRead, MemWrite]>:$x,
+           UnitAttr:$weak),
+      clausesArgs);
+
+  // Override region definition.
+  let regions = (region SizedRegion<1>:$region);
+
+  // Override clause-based assemblyFormat.
+  let assemblyFormat = clausesAssemblyFormat #
+    "$x `:` type($x) $region attr-dict";
+
+  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2243,59 +2331,45 @@ def AllocateFreeOp : OpenMP_Op<"allocate_free", [AttrSizedOperandSegments],
 // TargetAllocMemOp
 //===----------------------------------------------------------------------===//
 
-def TargetAllocMemOp : OpenMP_Op<"target_allocmem",
-    [MemoryEffects<[MemAlloc<DefaultResource>]>, AttrSizedOperandSegments]> {
+def TargetAllocMemOp : OpenMP_Op<"target_allocmem", traits = [
+    AttrSizedOperandSegments
+  ], clauses = [
+    OpenMP_HeapAllocClause
+  ]> {
   let summary = "allocate storage on an openmp device for an object of a given type";
 
   let description = [{
-    Allocates memory on the specified OpenMP device for an object of the given type.
-    Returns an integer value representing the device pointer to the allocated memory.
-    The memory is uninitialized after allocation. Operations must be paired with 
-    `omp.target_freemem` to avoid memory leaks.
+    Allocates memory on the specified OpenMP device for an object of the given
+    type. Returns an integer value representing the device pointer to the
+    allocated memory. The memory is uninitialized after allocation. Operations
+    must be paired with  `omp.target_freemem` to avoid memory leaks.
 
-    * `$device`: The integer ID of the OpenMP device where the memory will be allocated.
-    * `$in_type`: The type of the object for which memory is being allocated. 
-      For arrays, this can be a static or dynamic array type.
-    * `$uniq_name`: An optional unique name for the allocated memory.
-    * `$bindc_name`: An optional name used for C interoperability.
-    * `$typeparams`: Runtime type parameters for polymorphic or parameterized types. 
-      These are typically integer values that define aspects of a type not fixed at compile time.
-    * `$shape`: Runtime shape operands for dynamic arrays. 
-      Each operand is an integer value representing the extent of a specific dimension. 
+    ```mlir
+      // Allocate a static 3x3 integer vector on device 0
+      %device_0 = arith.constant 0 : i32
+      %ptr_static = omp.target_allocmem %device_0 : i32, vector<3x3xi32>
+      // ... use %ptr_static ...
+      omp.target_freemem %device_0, %ptr_static : i32, i64
 
-  ```mlir
-    // Allocate a static 3x3 integer vector on device 0
-    %device_0 = arith.constant 0 : i32
-    %ptr_static = omp.target_allocmem %device_0 : i32, vector<3x3xi32>
-    // ... use %ptr_static ...
-    omp.target_freemem %device_0, %ptr_static : i32, i64
+      // Allocate a dynamic 2D Fortran array (fir.array) on device 1
+      %device_1 = arith.constant 1 : i32
+      %rows = arith.constant 10 : index
+      %cols = arith.constant 20 : index
+      %ptr_dynamic = omp.target_allocmem %device_1 : i32, !fir.array<?x?xf32>, %rows, %cols : index, index
+      // ... use %ptr_dynamic ...
+      omp.target_freemem %device_1, %ptr_dynamic : i32, i64
+    ```
 
-    // Allocate a dynamic 2D Fortran array (fir.array) on device 1
-    %device_1 = arith.constant 1 : i32
-    %rows = arith.constant 10 : index
-    %cols = arith.constant 20 : index
-    %ptr_dynamic = omp.target_allocmem %device_1 : i32, !fir.array<?x?xf32>, %rows, %cols : index, index
-    // ... use %ptr_dynamic ...
-    omp.target_freemem %device_1, %ptr_dynamic : i32, i64
-  ```
-  }];
+    The `device` is an integer ID of the OpenMP device where the memory will be
+    allocated.
+  }] # clausesDescription;
 
-  let arguments = (ins
-    Arg<AnyInteger>:$device,
-    TypeAttr:$in_type,
-    OptionalAttr<StrAttr>:$uniq_name,
-    OptionalAttr<StrAttr>:$bindc_name,
-    Variadic<IntLikeType>:$typeparams,
-    Variadic<IntLikeType>:$shape
-  );
+  let arguments = !con((ins Arg<AnyInteger>:$device), clausesArgs);
   let results = (outs I64);
 
-  let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    mlir::Type getAllocatedType();
-  }];
+  // Override inherited assembly format to include `device`.
+  let assemblyFormat = " $device `:` type($device) `,` "
+                     # clausesReqAssemblyFormat # " attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2331,6 +2405,76 @@ def TargetFreeMemOp : OpenMP_Op<"target_freemem",
   Arg<I64, "", [MemFree]>:$heapref
   );
   let assemblyFormat = "$device `,` $heapref attr-dict `:` type($device) `,` qualified(type($heapref))";
+}
+
+//===----------------------------------------------------------------------===//
+// AllocSharedMemOp
+//===----------------------------------------------------------------------===//
+
+def AllocSharedMemOp : OpenMP_Op<"alloc_shared_mem", traits = [
+    MemoryEffects<[MemAlloc<DefaultResource>]>
+  ], clauses = [
+    OpenMP_MemAllocationSizeClause
+  ]> {
+  let summary = "allocate storage on shared memory for objects of a given type";
+
+  let description = [{
+    Allocates memory shared across threads of a team for an object of the given
+    type. Returns a pointer representing the allocated memory. The memory is
+    uninitialized after allocation. Operations must be paired with
+    `omp.free_shared` to avoid memory leaks.
+
+    ```mlir
+      // Allocate an i32 vector with %size elements and aligned to 8 bytes.
+      %ptr_shared = omp.alloc_shared_mem %size x i32 : (i64) align(8) -> !llvm.ptr
+      // ...
+      omp.free_shared_mem [%size x i32 : (i64) align(8)] %ptr_shared : !llvm.ptr
+    ```
+  }] # clausesDescription;
+
+  let results = (outs OpenMP_PointerLikeType);
+  let assemblyFormat = clausesReqAssemblyFormat # " oilist(" #
+    clausesOptAssemblyFormat # ") `->` type(results) attr-dict";
+
+  let extraClassDeclaration = [{
+    mlir::Type getAllocatedType() { return getMemElemTypeAttr().getValue(); }
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// FreeSharedMemOp
+//===----------------------------------------------------------------------===//
+
+def FreeSharedMemOp : OpenMP_Op<"free_shared_mem", traits = [
+    MemoryEffects<[MemFree]>
+  ], clauses = [
+    OpenMP_MemAllocationSizeClause
+  ]> {
+  let summary = "free shared memory";
+
+  let description = [{
+    Deallocates shared memory that was previously allocated by an
+    `omp.alloc_shared_mem` operation. After this operation, the deallocated
+    memory is in an undefined state and should not be accessed.
+
+    ```mlir
+      // Example of allocating and freeing shared memory.
+      %ptr_shared = omp.alloc_shared_mem %size x i32 : (i64) -> !llvm.ptr
+      // ...
+      omp.free_shared_mem [%size x i32 : (i64)] %ptr_shared : !llvm.ptr
+    ```
+
+    The `heapref` operand represents the pointer to shared memory to be
+    deallocated, previously returned by `omp.alloc_shared_mem`.
+  }] # clausesDescription;
+
+  let arguments = !con(clausesArgs, (ins
+    Arg<OpenMP_PointerLikeType, "", [MemFree]>:$heapref
+  ));
+  let assemblyFormat = "` ` `[`" # clausesReqAssemblyFormat # " oilist(" #
+    clausesOptAssemblyFormat # ") `]` $heapref `:` type($heapref) attr-dict";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2439,6 +2583,35 @@ def IteratorOp : OpenMP_Op<"iterator",
   }];
 
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// [6.0] groupprivate Directive
+//===----------------------------------------------------------------------===//
+
+def GroupprivateOp : OpenMP_Op<"groupprivate",
+    [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "groupprivate directive";
+  let description = [{
+    The groupprivate directive specifies that variables are replicated, with
+    each group having its own copy.
+
+    This operation takes a symbol reference to a global variable and returns
+    the address of its groupprivate copy. The referenced symbol must exist and
+    must not be a function.
+
+    The optional `device_type` attribute specifies where the groupprivate
+    storage should be allocated (host, nohost, or any).
+  }];
+
+  let arguments = (ins
+    FlatSymbolRefAttr:$sym_name,
+    OptionalAttr<DeclareTargetDeviceTypeAttr>:$device_type
+  );
+  let results = (outs OpenMP_PointerLikeType:$gp_addr);
+  let assemblyFormat = [{
+    $sym_name (`device_type` $device_type^)? `:` type($gp_addr) attr-dict
+  }];
 }
 
 #endif // OPENMP_OPS

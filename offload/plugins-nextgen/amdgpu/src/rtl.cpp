@@ -31,6 +31,7 @@
 #include "Utils/ELF.h"
 
 #include "GlobalHandler.h"
+#include "OffloadAPI.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginInterface.h"
 #include "UtilitiesRTL.h"
@@ -1687,12 +1688,22 @@ public:
 
   const AMDGPUQueueTy *getQueue() const { return Queue; }
 
-  /// Record an event by enqueuing a barrier marker packet on the stream.
+  /// Record an event on the stream. If \p EnableProfiling is true, a barrier
+  /// marker packet is enqueued to record timestamps.
   Error recordEvent(AMDGPUEventTy &Event,
-                    AMDGPUSignalTy *ReusedSignal = nullptr);
+                    AMDGPUSignalTy *ReusedSignal = nullptr,
+                    bool EnableProfiling = false);
 
   /// Make the stream wait on an event.
   Error waitEvent(const AMDGPUEventTy &Event);
+
+private:
+  /// Lightweight sync-only recording.
+  Error recordEventSyncOnly(AMDGPUEventTy &Event, AMDGPUSignalTy *ReusedSignal);
+
+  /// Full profiling recording.
+  Error recordEventWithProfiling(AMDGPUEventTy &Event,
+                                 AMDGPUSignalTy *ReusedSignal);
 
   friend struct AMDGPUStreamManagerTy;
 };
@@ -1719,7 +1730,7 @@ struct AMDGPUEventTy {
   }
 
   /// Record the current stream point on the event.
-  Error record(AMDGPUStreamTy &Stream) {
+  Error record(AMDGPUStreamTy &Stream, bool EnableProfiling = false) {
     std::lock_guard<std::mutex> Lock(Mutex);
 
     // Discard the previous recording and retained timing state, reusing the
@@ -1730,7 +1741,7 @@ struct AMDGPUEventTy {
 
     RecordedStream = &Stream;
 
-    if (auto Err = Stream.recordEvent(*this, Signal)) {
+    if (auto Err = Stream.recordEvent(*this, Signal, EnableProfiling)) {
       if (auto ResetErr = resetState())
         return joinErrors(std::move(Err), std::move(ResetErr));
       return Err;
@@ -1804,11 +1815,43 @@ protected:
 };
 
 Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event,
-                                  AMDGPUSignalTy *ReusedSignal) {
+                                  AMDGPUSignalTy *ReusedSignal,
+                                  bool EnableProfiling) {
   if (Queue == nullptr)
     return Plugin::error(ErrorCode::INVALID_NULL_POINTER,
                          "target queue was nullptr");
 
+  if (EnableProfiling)
+    return recordEventWithProfiling(Event, ReusedSignal);
+  return recordEventSyncOnly(Event, ReusedSignal);
+}
+
+Error AMDGPUStreamTy::recordEventSyncOnly(AMDGPUEventTy &Event,
+                                          AMDGPUSignalTy *ReusedSignal) {
+  std::lock_guard<std::mutex> StreamLock(Mutex);
+
+  if (size() > 0) {
+    // Record the synchronize identifier (to detect stale recordings) and
+    // the last valid stream's operation.
+    Event.RecordedSyncCycle = SyncCycle;
+    Event.RecordedSlot = last();
+
+    assert(Event.RecordedSyncCycle >= 0 && "Invalid recorded sync cycle");
+    assert(Event.RecordedSlot >= 0 && "Invalid recorded slot");
+  } else {
+    // The stream is empty, everything already completed, record nothing.
+    Event.RecordedSyncCycle = -1;
+    Event.RecordedSlot = -1;
+  }
+
+  // Return the unused reusable signal back to the manager.
+  if (ReusedSignal)
+    return SignalManager.returnResource(ReusedSignal);
+  return Plugin::success();
+}
+
+Error AMDGPUStreamTy::recordEventWithProfiling(AMDGPUEventTy &Event,
+                                               AMDGPUSignalTy *ReusedSignal) {
   // One use for the stream slot and one for the event timing signal.
   const uint32_t OutputSignalUses = 2;
 
@@ -2343,7 +2386,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // Transparently round up to a multiple of the page size.
     auto *Pool = CoarseGrainedMemoryPools[0];
-    Size = utils::roundUp(Size, (uint64_t)Pool->getGranule());
+    Size = llvm::alignTo(Size, (uint64_t)Pool->getGranule());
 
     // Reserve the virtual address range.
     hsa_status_t Status =
@@ -3014,7 +3057,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   };
 
   /// Create an event.
-  Error createEventImpl(void **EventPtrStorage) override {
+  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override {
     AMDGPUEventTy **Event = reinterpret_cast<AMDGPUEventTy **>(EventPtrStorage);
     if (auto Err = AMDGPUEventManager.getResource(*Event))
       return Err;
@@ -3022,7 +3065,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Destroy a previously created event.
-  Error destroyEventImpl(void *EventPtr) override {
+  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override {
     AMDGPUEventTy *Event = reinterpret_cast<AMDGPUEventTy *>(EventPtr);
     assert(Event && "Invalid event");
 
@@ -3033,8 +3076,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Record the event.
-  Error recordEventImpl(void *EventPtr,
-                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+  Error recordEventImpl(void *EventPtr, AsyncInfoWrapperTy &AsyncInfoWrapper,
+                        bool EnableProfiling) override {
     AMDGPUEventTy *Event = reinterpret_cast<AMDGPUEventTy *>(EventPtr);
     assert(Event && "Invalid event");
 
@@ -3042,7 +3085,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (auto Err = getStream(AsyncInfoWrapper, Stream))
       return Err;
 
-    return Event->record(*Stream);
+    return Event->record(*Stream, EnableProfiling);
   }
 
   /// Make the stream wait on the event.
@@ -3321,6 +3364,27 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (Err)
       consumeError(std::move(Err));
 
+    ol_device_fp_capability_flags_t FPFlags =
+        OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT |
+        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST |
+        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO |
+        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF |
+        OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN |
+        OL_DEVICE_FP_CAPABILITY_FLAG_DENORM | OL_DEVICE_FP_CAPABILITY_FLAG_FMA;
+
+    Info.add("Single FP Support", true, "", DeviceInfo::SINGLE_FP_SUPPORT);
+    Info.add("Single FP Capabilities", FPFlags, "",
+             DeviceInfo::SINGLE_FP_CONFIG);
+
+    Info.add("Double FP Support", true, "", DeviceInfo::DOUBLE_FP_SUPPORT);
+    Info.add("Double FP Capabilities", FPFlags, "",
+             DeviceInfo::DOUBLE_FP_CONFIG);
+
+    // TODO: Use HSA_AGENT_INFO_FAST_F16_OPERATION to detect FP16 support.
+    Info.add("Half FP Support", false, "", DeviceInfo::HALF_FP_SUPPORT);
+    Info.add("Half FP Capabilities", ol_device_fp_capability_flags_t{0}, "",
+             DeviceInfo::HALF_FP_CONFIG);
+
     return Info;
   }
 
@@ -3442,36 +3506,28 @@ private:
 
     KernelArgsTy KernelArgs = {};
     uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
-    if (auto Err = AMDGPUKernel.launchImpl(
-            *this, NumBlocksAndThreads, NumBlocksAndThreads, 0, KernelArgs,
-            KernelLaunchParamsTy{}, AsyncInfoWrapper))
-      return Err;
+    auto Err = AMDGPUKernel.launchImpl(
+        *this, NumBlocksAndThreads, NumBlocksAndThreads, 0, KernelArgs,
+        KernelLaunchParamsTy{}, AsyncInfoWrapper);
 
-    Error Err = Plugin::success();
     AsyncInfoWrapper.finalize(Err);
-
     return Err;
   }
 
   /// Detect if current architecture is an APU.
   Error checkIfAPU() {
-    // TODO: replace with ROCr API once it becomes available.
-    llvm::StringRef StrGfxName(ComputeUnitKind);
-    bool MayBeAPU = llvm::StringSwitch<bool>(StrGfxName)
-                        .Case("gfx942", true)
-                        .Default(false);
-    if (!MayBeAPU)
-      return Plugin::success();
-
-    // can be MI300A or MI300X
-    uint32_t ChipID = 0;
-    if (auto Err = getDeviceAttr(HSA_AMD_AGENT_INFO_CHIP_ID, ChipID))
-      return Err;
-
-    if (!(ChipID & 0x1)) {
-      IsAPU = true;
+    uint8_t MemoryProperties[8];
+    if (auto Err = getDeviceAttr(HSA_AMD_AGENT_INFO_MEMORY_PROPERTIES,
+                                 MemoryProperties)) {
+      IsAPU = false;
+      ODBG(OLDT_Init) << "HSA_AMD_AGENT_INFO_MEMORY_PROPERTIES is unavailable, "
+                         "assuming not APU";
       return Plugin::success();
     }
+
+    IsAPU = hsa_flag_isset64(MemoryProperties,
+                             HSA_AMD_MEMORY_PROPERTY_AGENT_IS_APU);
+
     return Plugin::success();
   }
 
@@ -4117,6 +4173,11 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  KernelArgsTy &KernelArgs,
                                  KernelLaunchParamsTy LaunchParams,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) const {
+  // Cooperative kernel launch is not yet supported for AMDGPU
+  if (KernelArgs.Flags.Cooperative)
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "cooperative kernel launch not supported for AMDGPU");
+
   AMDGPUPluginTy &AMDGPUPlugin =
       static_cast<AMDGPUPluginTy &>(GenericDevice.Plugin);
   AMDHostDeviceTy &HostDevice = AMDGPUPlugin.getHostDevice();
@@ -4142,7 +4203,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = AMDGPUDevice.getStream(AsyncInfoWrapper, Stream))
     return Err;
 
-  uint64_t ImplArgsOffset = utils::roundUp(
+  uint64_t ImplArgsOffset = llvm::alignTo(
       LaunchParams.Size, alignof(hsa_utils::AMDGPUImplicitArgsTy));
   if (ArgsSize > ImplArgsOffset) {
     hsa_utils::AMDGPUImplicitArgsTy *ImplArgs =

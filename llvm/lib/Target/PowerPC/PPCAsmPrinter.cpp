@@ -283,7 +283,7 @@ public:
 
   PPCAIXAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
       : PPCAsmPrinter(TM, std::move(Streamer), ID) {
-    if (MAI->isLittleEndian())
+    if (MAI.isLittleEndian())
       report_fatal_error(
           "cannot create AIX PPC Assembly Printer for a little-endian target");
   }
@@ -952,10 +952,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     assert(!Subtarget->isAIXABI() &&
            "AIX does not support patchable function entry!");
     const Function &F = MF->getFunction();
-    unsigned Num = 0;
-    (void)F.getFnAttribute("patchable-function-entry")
-        .getValueAsString()
-        .getAsInteger(10, Num);
+    unsigned Num = F.getFnAttributeAsParsedInteger("patchable-function-entry");
     if (!Num)
       return;
     emitNops(Num);
@@ -1817,12 +1814,9 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // of instructions change.
     // XRAY is only supported on PPC Linux little endian.
     const Function &F = MF->getFunction();
-    unsigned Num = 0;
-    (void)F.getFnAttribute("patchable-function-entry")
-        .getValueAsString()
-        .getAsInteger(10, Num);
+    unsigned Num = F.getFnAttributeAsParsedInteger("patchable-function-entry");
 
-    if (!MAI->isLittleEndian() || Num)
+    if (!MAI.isLittleEndian() || Num)
       break;
     MCSymbol *BeginOfSled = OutContext.createTempSymbol();
     MCSymbol *EndOfSled = OutContext.createTempSymbol();
@@ -2064,7 +2058,7 @@ void PPCLinuxAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (static_cast<const PPCTargetMachine &>(TM).hasGlibcHWCAPAccess())
     OutStreamer->emitSymbolValue(
         GetExternalSymbolSymbol("__parse_hwcap_and_convert_at_platform"),
-        MAI->getCodePointerSize());
+        MAI.getCodePointerSize());
   emitGNUAttributes(M);
 
   if (!TOC.empty()) {
@@ -2286,13 +2280,13 @@ void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
     // TODO: "internal" Visibility needs to go here.
     case GlobalValue::DefaultVisibility:
       if (GV->hasDLLExportStorageClass())
-        VisibilityAttr = MAI->getExportedVisibilityAttr();
+        VisibilityAttr = MAI.getExportedVisibilityAttr();
       break;
     case GlobalValue::HiddenVisibility:
-      VisibilityAttr = MAI->getHiddenVisibilityAttr();
+      VisibilityAttr = MAI.getHiddenVisibilityAttr();
       break;
     case GlobalValue::ProtectedVisibility:
-      VisibilityAttr = MAI->getProtectedVisibilityAttr();
+      VisibilityAttr = MAI.getProtectedVisibilityAttr();
       break;
     }
   }
@@ -3241,7 +3235,11 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::BL8:
   case PPC::BL:
   case PPC::BL8_NOP:
-  case PPC::BL_NOP: {
+  case PPC::BL_NOP:
+  case PPC::BL_LWZinto_toc:
+  case PPC::BL_LWZinto_toc_RM:
+  case PPC::BL8_LDinto_toc:
+  case PPC::BL8_LDinto_toc_RM: {
     const MachineOperand &MO = MI->getOperand(0);
     if (MO.isSymbol()) {
       auto *S = static_cast<MCSymbolXCOFF *>(

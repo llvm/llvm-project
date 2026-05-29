@@ -733,8 +733,11 @@ private:
                           DIExpression *Expr, const DebugLoc &dl,
                           unsigned DbgSDNodeOrder);
 
+public:
   SDValue lowerStartEH(SDValue Chain, const BasicBlock *EHPadBB,
                        MCSymbol *&BeginLabel);
+
+private:
   SDValue lowerEndEH(SDValue Chain, const InvokeInst *II,
                      const BasicBlock *EHPadBB, MCSymbol *BeginLabel);
 

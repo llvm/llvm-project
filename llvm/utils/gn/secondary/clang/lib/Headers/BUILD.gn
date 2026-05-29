@@ -173,6 +173,7 @@ copy("Headers") {
     "amxmovrsintrin.h",
     "amxtf32intrin.h",
     "andes_vector.h",
+    "arm64_neon.h",
     "arm64intr.h",
     "arm_acle.h",
     "arm_cmse.h",

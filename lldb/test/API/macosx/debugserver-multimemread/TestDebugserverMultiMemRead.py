@@ -11,22 +11,12 @@ from lldbsuite.test import lldbutil
 @skipUnlessDarwin
 @skipIfOutOfTreeDebugserver
 class TestCase(TestBase):
-    def send_process_packet(self, packet_str):
-        self.runCmd(f"proc plugin packet send {packet_str}", check=False)
-        # The output is of the form:
-        #  packet: <packet_str>
-        #  response: <response>
-        reply = self.res.GetOutput().split("\n")
-        packet = reply[0].strip()
-        response = reply[1].strip()
-
-        self.assertTrue(packet.startswith("packet: "))
-        self.assertTrue(response.startswith("response: "))
-        return response[len("response: ") :]
-
     def check_invalid_packet(self, packet_str):
-        reply = self.send_process_packet("packet_str")
+        reply = lldbutil.send_packet_get_reply(self, "packet_str")
         self.assertEqual(reply, "E03")
+
+    def send_process_packet(self, packet_str):
+        return lldbutil.send_packet_get_reply(self, packet_str)
 
     def test_packets(self):
         self.build()
@@ -35,8 +25,8 @@ class TestCase(TestBase):
             self, "break here", source_file
         )
 
-        reply = self.send_process_packet("qSupported")
-        self.assertIn("MultiMemRead+", reply)
+        capabilities = lldbutil.get_qsupported_capabilities(self)
+        self.assertIn("MultiMemRead+", capabilities)
 
         mem_address_var = thread.frames[0].FindVariable("memory")
         self.assertTrue(mem_address_var)

@@ -15,6 +15,9 @@ from lit.llvm.subst import FindTool
 
 # Configuration file for the 'lit' test runner.
 
+if lit.util.pythonize_bool(lit_config.params.get("use_normalized_slashes")):
+    config.available_features.add("windows-prefer-forward-slash")
+
 # name: The name of this test suite.
 config.name = "Clang"
 
@@ -146,7 +149,7 @@ tools = [
 ]
 
 if config.clang_enable_cir:
-    tools.append("clang-cir")
+    tools.append("cir-opt")
 
 if config.clang_examples:
     config.available_features.add("examples")
@@ -228,8 +231,16 @@ def have_host_clang_repl_cuda():
 
     return False
 
-if have_host_jit_feature_support('jit'):
-    config.available_features.add('host-supports-jit')
+
+skip_clang_repl_checks = lit.util.pythonize_bool(
+    lit_config.params.get(
+        "clang_skip_clang_repl_checks",
+        os.environ.get("CLANG_LIT_SKIP_CLANG_REPL_CHECKS", "0"),
+    )
+)
+
+if not skip_clang_repl_checks and have_host_jit_feature_support("jit"):
+    config.available_features.add("host-supports-jit")
 
     if have_host_clang_repl_cuda():
         config.available_features.add('host-supports-cuda')

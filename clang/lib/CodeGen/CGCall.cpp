@@ -22,6 +22,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "CodeGenPGO.h"
+#include "QualTypeMapper.h"
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
@@ -32,6 +33,10 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
+#include "llvm/ABI/FunctionInfo.h"
+#include "llvm/ABI/IRTypeMapper.h"
+#include "llvm/ABI/TargetInfo.h"
+#include "llvm/ABI/Types.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -824,8 +829,69 @@ const CGFunctionInfo &CodeGenTypes::arrangeCall(const CGFunctionInfo &signature,
 namespace clang {
 namespace CodeGen {
 void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
-}
+} // namespace CodeGen
 } // namespace clang
+
+void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
+  SmallVector<const llvm::abi::Type *> MappedArgTypes;
+  MappedArgTypes.reserve(FI.arg_size());
+  for (const auto &Arg : FI.arguments())
+    MappedArgTypes.push_back(AbiMapper->convertType(Arg.type));
+
+  std::optional<unsigned> NumRequired;
+  RequiredArgs Required = FI.getRequiredArgs();
+  if (Required.allowsOptionalArgs())
+    NumRequired = Required.getNumRequiredArgs();
+
+  auto AbiFI = llvm::abi::FunctionInfo::create(
+      FI.getCallingConvention(), AbiMapper->convertType(FI.getReturnType()),
+      MappedArgTypes, NumRequired);
+
+  getLLVMABITargetInfo(AbiMapper->getTypeBuilder()).computeInfo(*AbiFI);
+
+  FI.getReturnInfo() =
+      convertABIArgInfo(AbiFI->getReturnInfo(), FI.getReturnType());
+
+  for (auto [CGArg, AbiArg] :
+       llvm::zip_equal(FI.arguments(), AbiFI->arguments()))
+    CGArg.info = convertABIArgInfo(AbiArg.Info, CGArg.type);
+}
+
+ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
+                                            QualType Type) {
+  switch (AbiInfo.getKind()) {
+  case llvm::abi::ArgInfo::Direct: {
+    llvm::Type *CoercedType = nullptr;
+    if (AbiInfo.getCoerceToType())
+      CoercedType = AbiReverseMapper->convertType(AbiInfo.getCoerceToType());
+    if (!CoercedType)
+      CoercedType = getTypes().ConvertType(Type);
+    return ABIArgInfo::getDirect(CoercedType, AbiInfo.getDirectOffset());
+  }
+  case llvm::abi::ArgInfo::Extend: {
+    llvm::Type *CoercedType = nullptr;
+    if (AbiInfo.getCoerceToType())
+      CoercedType = AbiReverseMapper->convertType(AbiInfo.getCoerceToType());
+    if (!CoercedType)
+      CoercedType = getTypes().ConvertType(Type);
+    if (AbiInfo.isSignExt())
+      return ABIArgInfo::getSignExtend(Type, CoercedType);
+    if (AbiInfo.isZeroExt())
+      return ABIArgInfo::getZeroExtend(Type, CoercedType);
+    return ABIArgInfo::getExtend(Type, CoercedType);
+  }
+  case llvm::abi::ArgInfo::Indirect: {
+    CharUnits Alignment =
+        CharUnits::fromQuantity(AbiInfo.getIndirectAlign().value());
+    return ABIArgInfo::getIndirect(Alignment, AbiInfo.getIndirectAddrSpace(),
+                                   AbiInfo.getIndirectByVal(),
+                                   AbiInfo.getIndirectRealign());
+  }
+  case llvm::abi::ArgInfo::Ignore:
+    return ABIArgInfo::getIgnore();
+  }
+  llvm_unreachable("Unexpected llvm::abi::ArgInfo kind");
+}
 
 /// Arrange the argument and result information for an abstract value
 /// of a given function type.  This is the method which all of the
@@ -876,6 +942,8 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
     computeSPIRKernelABIInfo(CGM, *FI);
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
+  } else if (CGM.shouldUseLLVMABILowering()) {
+    CGM.computeABIInfoUsingLib(*FI);
   } else {
     CGM.getABIInfo().computeInfo(*FI);
   }
@@ -2819,11 +2887,13 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   }
 
   bool hasUsedSRet = false;
-  SmallVector<llvm::AttributeSet, 4> ArgAttrs(IRFunctionArgs.totalIRArgs());
+  SmallVector<llvm::AttrBuilder, 4> ArgAttrs;
+  for (unsigned I = 0; I < IRFunctionArgs.totalIRArgs(); ++I)
+    ArgAttrs.emplace_back(getLLVMContext());
 
   // Attach attributes to sret.
   if (IRFunctionArgs.hasSRetArg()) {
-    llvm::AttrBuilder SRETAttrs(getLLVMContext());
+    llvm::AttrBuilder &SRETAttrs = ArgAttrs[IRFunctionArgs.getSRetArgNo()];
     SRETAttrs.addStructRetAttr(getTypes().ConvertTypeForMem(RetTy));
     SRETAttrs.addAttribute(llvm::Attribute::Writable);
     SRETAttrs.addAttribute(llvm::Attribute::DeadOnUnwind);
@@ -2831,16 +2901,12 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     if (RetAI.getInReg())
       SRETAttrs.addAttribute(llvm::Attribute::InReg);
     SRETAttrs.addAlignmentAttr(RetAI.getIndirectAlign().getQuantity());
-    ArgAttrs[IRFunctionArgs.getSRetArgNo()] =
-        llvm::AttributeSet::get(getLLVMContext(), SRETAttrs);
   }
 
   // Attach attributes to inalloca argument.
   if (IRFunctionArgs.hasInallocaArg()) {
-    llvm::AttrBuilder Attrs(getLLVMContext());
-    Attrs.addInAllocaAttr(FI.getArgStruct());
-    ArgAttrs[IRFunctionArgs.getInallocaArgNo()] =
-        llvm::AttributeSet::get(getLLVMContext(), Attrs);
+    ArgAttrs[IRFunctionArgs.getInallocaArgNo()].addInAllocaAttr(
+        FI.getArgStruct());
   }
 
   // Apply `nonnull`, `dereferenceable(N)` and `align N` to the `this` argument,
@@ -2853,7 +2919,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     assert(IRArgs.second == 1 && "Expected only a single `this` pointer.");
 
-    llvm::AttrBuilder Attrs(getLLVMContext());
+    llvm::AttrBuilder &Attrs = ArgAttrs[IRArgs.first];
 
     QualType ThisTy = FI.arg_begin()->type.getTypePtr()->getPointeeType();
 
@@ -2901,8 +2967,6 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         Attrs.addDeadOnReturnAttr(llvm::DeadOnReturnInfo(
             Context.getASTRecordLayout(ClassDecl).getDataSize().getQuantity()));
     }
-
-    ArgAttrs[IRArgs.first] = llvm::AttributeSet::get(getLLVMContext(), Attrs);
   }
 
   unsigned ArgNo = 0;
@@ -2915,10 +2979,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     // Add attribute for padding argument, if necessary.
     if (IRFunctionArgs.hasPaddingArg(ArgNo)) {
       if (AI.getPaddingInReg()) {
-        ArgAttrs[IRFunctionArgs.getPaddingArgNo(ArgNo)] =
-            llvm::AttributeSet::get(getLLVMContext(),
-                                    llvm::AttrBuilder(getLLVMContext())
-                                        .addAttribute(llvm::Attribute::InReg));
+        ArgAttrs[IRFunctionArgs.getPaddingArgNo(ArgNo)].addAttribute(
+            llvm::Attribute::InReg);
       }
     }
 
@@ -3101,14 +3163,14 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     }
 
     if (FI.getExtParameterInfo(ArgNo).isNoEscape())
-      Attrs.addCapturesAttr(llvm::CaptureInfo::none());
+      Attrs.addCapturesAttr(
+          llvm::CaptureInfo(llvm::CaptureComponents::Address));
 
     if (Attrs.hasAttributes()) {
       unsigned FirstIRArg, NumIRArgs;
       std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
       for (unsigned i = 0; i < NumIRArgs; i++)
-        ArgAttrs[FirstIRArg + i] = ArgAttrs[FirstIRArg + i].addAttributes(
-            getLLVMContext(), llvm::AttributeSet::get(getLLVMContext(), Attrs));
+        ArgAttrs[FirstIRArg + i].merge(Attrs);
     }
   }
   assert(ArgNo == FI.arg_size());
@@ -3137,17 +3199,20 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
           // in a way that can be called from here.
           if (i < FunctionType->getNumParams() &&
               FunctionType->getParamType(i)->isPointerTy()) {
-            ArgAttrs[i] =
-                ArgAttrs[i].addAttribute(getLLVMContext(), *MemAttrForPtrArgs);
+            ArgAttrs[i].addAttribute(*MemAttrForPtrArgs);
           }
         }
       }
     }
   }
 
+  SmallVector<llvm::AttributeSet, 4> ArgAttrSets;
+  for (const llvm::AttrBuilder &Attrs : ArgAttrs)
+    ArgAttrSets.push_back(llvm::AttributeSet::get(getLLVMContext(), Attrs));
+
   AttrList = llvm::AttributeList::get(
       getLLVMContext(), llvm::AttributeSet::get(getLLVMContext(), FuncAttrs),
-      llvm::AttributeSet::get(getLLVMContext(), RetAttrs), ArgAttrs);
+      llvm::AttributeSet::get(getLLVMContext(), RetAttrs), ArgAttrSets);
 }
 
 /// An argument came in as a promoted argument; demote it back to its
@@ -5170,6 +5235,30 @@ llvm::CallInst *CodeGenFunction::EmitRuntimeCall(llvm::FunctionCallee callee,
   if (CGM.shouldEmitConvergenceTokens() && call->isConvergent())
     return cast<llvm::CallInst>(addConvergenceControlToken(call));
   return call;
+}
+
+llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
+                                                   const llvm::Twine &Name) {
+  return EmitIntrinsicCall(ID, {}, {}, Name);
+}
+
+llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
+                                                   ArrayRef<llvm::Value *> Args,
+                                                   const llvm::Twine &Name) {
+  return EmitIntrinsicCall(ID, {}, Args, Name);
+}
+
+llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
+                                                   ArrayRef<llvm::Type *> Types,
+                                                   ArrayRef<llvm::Value *> Args,
+                                                   const llvm::Twine &Name) {
+  llvm::Function *F =
+      llvm::Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID, Types);
+  llvm::CallInst *Call =
+      Builder.CreateCall(F, Args, getBundlesForFunclet(F), Name);
+  if (CGM.shouldEmitConvergenceTokens() && Call->isConvergent())
+    return cast<llvm::CallInst>(addConvergenceControlToken(Call));
+  return Call;
 }
 
 /// Emits a call or invoke to the given noreturn runtime function.

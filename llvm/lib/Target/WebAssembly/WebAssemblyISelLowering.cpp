@@ -245,8 +245,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
                    MVT::v2f64})
       setOperationAction(ISD::BUILD_VECTOR, T, Custom);
 
-    if (Subtarget->hasFP16())
+    if (Subtarget->hasFP16()) {
       setOperationAction(ISD::BUILD_VECTOR, MVT::f16, Custom);
+      setOperationAction(ISD::FP_ROUND, MVT::v4f16, Custom);
+    }
 
     // We have custom shuffle lowering to expose the shuffle mask
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
@@ -1050,9 +1052,7 @@ bool WebAssemblyTargetLowering::isIntDivCheap(EVT VT,
 
 bool WebAssemblyTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   EVT ExtT = ExtVal.getValueType();
-  SDValue N0 = ExtVal->getOperand(0);
-  if (N0.getOpcode() == ISD::FREEZE)
-    N0 = N0.getOperand(0);
+  SDValue N0 = peekThroughFreeze(ExtVal->getOperand(0));
   auto *Load = dyn_cast<LoadSDNode>(N0);
   if (!Load)
     return false;
@@ -1719,6 +1719,15 @@ void WebAssemblyTargetLowering::ReplaceNodeResults(
     // Do not add any results, signifying that N should not be custom lowered.
     // EXTEND_VECTOR_INREG is implemented for some vectors, but not all.
     break;
+  case ISD::FP_ROUND: {
+    EVT VT = N->getValueType(0);
+    SDValue Src = N->getOperand(0);
+    if (VT == MVT::v4f16 && Src.getValueType() == MVT::v4f32) {
+      Results.push_back(
+          DAG.getNode(WebAssemblyISD::DEMOTE_ZERO, SDLoc(N), MVT::v8f16, Src));
+    }
+    break;
+  }
   case ISD::ADD:
   case ISD::SUB:
     Results.push_back(Replace128Op(N, DAG));
@@ -2078,17 +2087,11 @@ WebAssemblyTargetLowering::LowerGlobalTLSAddress(SDValue Op,
       model == GlobalValue::LocalDynamicTLSModel ||
       (model == GlobalValue::GeneralDynamicTLSModel &&
        getTargetMachine().shouldAssumeDSOLocal(GV))) {
-    // For DSO-local TLS variables we use offset from __tls_base
+    // For DSO-local TLS variables we use offset from __tls_base, or
+    // __wasm_get_tls_base() if using libcall thread context.
 
     MVT PtrVT = getPointerTy(DAG.getDataLayout());
-    auto GlobalGet = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
-                                       : WebAssembly::GLOBAL_GET_I32;
-    const char *BaseName = MF.createExternalSymbolName("__tls_base");
-
-    SDValue BaseAddr(
-        DAG.getMachineNode(GlobalGet, DL, PtrVT,
-                           DAG.getTargetExternalSymbol(BaseName, PtrVT)),
-        0);
+    SDValue BaseAddr(WebAssembly::getTLSBase(DAG, DL, Subtarget), 0);
 
     SDValue TLSOffset = DAG.getTargetGlobalAddress(
         GV, DL, PtrVT, GA->getOffset(), WebAssemblyII::MO_TLS_BASE_REL);
@@ -2274,14 +2277,7 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
   }
 
   case Intrinsic::thread_pointer: {
-    MVT PtrVT = getPointerTy(DAG.getDataLayout());
-    auto GlobalGet = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
-                                       : WebAssembly::GLOBAL_GET_I32;
-    const char *TlsBase = MF.createExternalSymbolName("__tls_base");
-    return SDValue(
-        DAG.getMachineNode(GlobalGet, DL, PtrVT,
-                           DAG.getTargetExternalSymbol(TlsBase, PtrVT)),
-        0);
+    return SDValue(WebAssembly::getTLSBase(DAG, DL, Subtarget), 0);
   }
   }
 }
@@ -3142,9 +3138,10 @@ performVectorTruncZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     //
     // Or this:
     //
-    //   (concat_vectors (v2f32 (fp_round (v2f64 $x))), (v2f32 (splat 0)))
+    //   (concat_vectors ({v2f32, v4f16} (fp_round ({v2f64, v4f32} $x))),
+    //                     ({v2f32, v4f16} (splat 0)))
     //
-    // into (f32x4.demote_zero_f64x2 $x).
+    // into ({f32x4, f16x8}.demote_zero_{f64x2, f32x4} $x).
     EVT ResVT;
     EVT ExpectedConversionType;
     auto Conversion = N->getOperand(0);
@@ -3156,8 +3153,15 @@ performVectorTruncZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
       ExpectedConversionType = MVT::v2i32;
       break;
     case ISD::FP_ROUND:
-      ResVT = MVT::v4f32;
-      ExpectedConversionType = MVT::v2f32;
+      if (Conversion.getValueType() == MVT::v2f32) {
+        ResVT = MVT::v4f32;
+        ExpectedConversionType = MVT::v2f32;
+      } else if (Conversion.getValueType() == MVT::v4f16) {
+        ResVT = MVT::v8f16;
+        ExpectedConversionType = MVT::v4f16;
+      } else {
+        return SDValue();
+      }
       break;
     default:
       return SDValue();
@@ -3170,7 +3174,9 @@ performVectorTruncZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
       return SDValue();
 
     auto Source = Conversion.getOperand(0);
-    if (Source.getValueType() != MVT::v2f64)
+    if (!((Source.getValueType() == MVT::v2f64 && ResVT == MVT::v4f32) ||
+          (Source.getValueType() == MVT::v2f64 && ResVT == MVT::v4i32) ||
+          (Source.getValueType() == MVT::v4f32 && ResVT == MVT::v8f16)))
       return SDValue();
 
     if (!IsZeroSplat(N->getOperand(1)) ||
@@ -3189,9 +3195,10 @@ performVectorTruncZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   //
   // Or this:
   //
-  //   (v4f32 (fp_round (concat_vectors $x, (v2f64 (splat 0)))))
+  //   ({v4f32, v8f16} (fp_round (concat_vectors $x,
+  //                               ({v2f64, v4f32} (splat 0)))))
   //
-  // into (f32x4.demote_zero_f64x2 $x).
+  // into ({f32x4, f16x8}.demote_zero_{f64x2, f32x4} $x).
   EVT ResVT;
   auto ConversionOp = N->getOpcode();
   switch (ConversionOp) {
@@ -3200,7 +3207,7 @@ performVectorTruncZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     ResVT = MVT::v4i32;
     break;
   case ISD::FP_ROUND:
-    ResVT = MVT::v4f32;
+    ResVT = N->getValueType(0);
     break;
   default:
     llvm_unreachable("unexpected op");
@@ -3210,19 +3217,28 @@ performVectorTruncZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     return SDValue();
 
   auto Concat = N->getOperand(0);
-  if (Concat.getValueType() != MVT::v4f64)
+  if (Concat.getOpcode() != ISD::CONCAT_VECTORS)
+    return SDValue();
+  EVT ConcatVT = Concat.getValueType();
+  EVT SourceVT = Concat.getOperand(0).getValueType();
+
+  if (!IsZeroSplat(Concat.getOperand(1)))
     return SDValue();
 
-  auto Source = Concat.getOperand(0);
-  if (Source.getValueType() != MVT::v2f64)
-    return SDValue();
-
-  if (!IsZeroSplat(Concat.getOperand(1)) ||
-      Concat.getOperand(1).getValueType() != MVT::v2f64)
-    return SDValue();
+  if (ConversionOp == ISD::FP_ROUND) {
+    bool IsF64ToF32 =
+        ConcatVT == MVT::v4f64 && SourceVT == MVT::v2f64 && ResVT == MVT::v4f32;
+    bool IsF32ToF16 =
+        ConcatVT == MVT::v8f32 && SourceVT == MVT::v4f32 && ResVT == MVT::v8f16;
+    if (!(IsF64ToF32 || IsF32ToF16))
+      return SDValue();
+  } else {
+    if (ConcatVT != MVT::v4f64 || SourceVT != MVT::v2f64 || ResVT != MVT::v4i32)
+      return SDValue();
+  }
 
   unsigned Op = GetWasmConversionOp(ConversionOp);
-  return DAG.getNode(Op, SDLoc(N), ResVT, Source);
+  return DAG.getNode(Op, SDLoc(N), ResVT, Concat.getOperand(0));
 }
 
 // Helper to extract VectorWidth bits from Vec, starting from IdxVal.
@@ -3343,7 +3359,7 @@ static SDValue performBitcastCombine(SDNode *N,
   EVT SrcVT = Src.getValueType();
 
   if (!(DCI.isBeforeLegalize() && VT.isScalarInteger() &&
-        SrcVT.isFixedLengthVector() && SrcVT.getScalarType() == MVT::i1))
+        SrcVT.isFixedLengthVectorOf(MVT::i1)))
     return SDValue();
 
   unsigned NumElts = SrcVT.getVectorNumElements();
@@ -3592,7 +3608,7 @@ static SDValue performSETCCCombine(SDNode *N,
     return SDValue();
 
   EVT FromVT = LHS->getOperand(0).getValueType();
-  if (!FromVT.isFixedLengthVector() || FromVT.getVectorElementType() != MVT::i1)
+  if (!FromVT.isFixedLengthVectorOf(MVT::i1))
     return SDValue();
 
   unsigned NumElts = FromVT.getVectorNumElements();

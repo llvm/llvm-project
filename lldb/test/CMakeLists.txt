@@ -12,7 +12,7 @@ endif()
 if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS)
   message(STATUS "Enforcing strict test requirements for LLDB")
   # Lit uses psutil to do per-test timeouts.
-  set(useful_python_modules psutil packaging)
+  set(useful_python_modules psutil packaging cryptography)
 
   if(NOT WIN32)
     # We no longer vendor pexpect and it is not used on Windows.
@@ -255,6 +255,7 @@ if (LLDB_ENABLE_ARM64E_DEBUGSERVER OR LLDB_USE_SYSTEM_DEBUGSERVER)
 endif()
 
 set(LLDB_TEST_SHELL_DISABLE_REMOTE OFF CACHE BOOL "Disable remote Shell tests execution")
+set(LLDB_TEST_USE_LLDB_SERVER OFF CACHE BOOL "If ON, run the test suites against the lldb-server backend on Windows")
 
 # These values are not canonicalized within LLVM.
 llvm_canonicalize_cmake_booleans(
@@ -268,6 +269,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_DIA_SDK
   LLDB_HAS_LIBCXX
   LLDB_TEST_SHELL_DISABLE_REMOTE
+  LLDB_TEST_USE_LLDB_SERVER
   LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
   LLDB_IS_64_BITS

@@ -68,18 +68,17 @@ class TestThreadBacktracePage(TestBase):
         lines = result.GetOutput().splitlines()
         self.assertEqual(len(lines), 11, "Got the right number of lines")
         # First frame is stop_here:
-        self.assertNotEqual(lines[1].find("stop_here"), -1, "Found Stop Here")
+        self.assertIn("stop_here", lines[1], "Found Stop Here")
         for line in lines[2:10]:
-            self.assertNotEqual(
-                line.find(func_name),
-                -1,
+            self.assertIn(
+                func_name,
+                line,
                 "Name {0} not found in line: {1}".format(func_name, line),
             )
         # The last entry should be 43:
-        self.assertNotEqual(lines[10].find("count=43"), -1, "First show ends at 43")
+        self.assertIn("count=43", lines[10], "First show ends at 43")
 
         # Now try a repeat, and make sure we get 10 more on this thread:
-        # import pdb; pdb.set_trace()
         interp.HandleCommand("", result, True)
         self.assertTrue(
             result.Succeeded(), "repeat command failed: {0}".format(result.GetError())
@@ -88,8 +87,8 @@ class TestThreadBacktracePage(TestBase):
         self.assertEqual(len(lines), 11, "Repeat got 11 lines")
         # Every line should now be the recurse function:
         for line in lines[1:10]:
-            self.assertNotEqual(line.find(func_name), -1, "Name in every line")
-        self.assertNotEqual(lines[10].find("count=33"), -1, "Last one is now 33")
+            self.assertIn(func_name, line, "Name in every line")
+        self.assertIn("count=33", lines[10], "Last one is now 33")
 
     def check_two_threads(
         self, result_str, thread_id_1, name_1, thread_id_2, name_2, start_idx, end_idx

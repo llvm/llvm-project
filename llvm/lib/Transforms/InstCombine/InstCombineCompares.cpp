@@ -693,7 +693,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
   }
 
   if (GEPLHS->isInBounds() && ICmpInst::isEquality(Cond) &&
-      isa<Constant>(RHS) && cast<Constant>(RHS)->isNullValue() &&
+      isa<ConstantPointerNull>(RHS) &&
       !NullPointerIsDefined(I.getFunction(),
                             RHS->getType()->getPointerAddressSpace())) {
     // For most address spaces, an allocation can't be placed at null, but null
@@ -4327,12 +4327,16 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
 
   switch (LHSI->getOpcode()) {
   case Instruction::IntToPtr:
-    // icmp pred inttoptr(X), null -> icmp pred X, 0
-    if (RHSC->isNullValue() &&
-        DL.getIntPtrType(RHSC->getType()) == LHSI->getOperand(0)->getType())
-      return new ICmpInst(
-          I.getPredicate(), LHSI->getOperand(0),
-          Constant::getNullValue(LHSI->getOperand(0)->getType()));
+    // icmp pred inttoptr(X), null -> icmp pred X, null pointer value
+    if (isa<ConstantPointerNull>(RHSC)) {
+      Type *IntPtrTy = DL.getIntPtrType(RHSC->getType());
+      if (IntPtrTy == LHSI->getOperand(0)->getType()) {
+        APInt NullPtrValue =
+            DL.getNullPtrValue(RHSC->getType()->getPointerAddressSpace());
+        return new ICmpInst(I.getPredicate(), LHSI->getOperand(0),
+                            Constant::getIntegerValue(IntPtrTy, NullPtrValue));
+      }
+    }
     break;
 
   case Instruction::Load:
@@ -7708,6 +7712,34 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
     }
   }
 
+  // icmp (shl nsw/nuw X, L), (add nsw/nuw (shl nsw/nuw Y, L), K)
+  //   -> icmp X, (add nsw/nuw Y, K >> L)
+  // We use AShr for nsw and LShr for nuw to safely peel off the shift.
+  Value *X;
+  uint64_t ShAmt;
+  if (match(Op0, m_NUWShl(m_Value(X), m_ConstantInt(ShAmt))) &&
+      !CxtI.isSigned()) {
+    if (ShAmt >= X->getType()->getScalarSizeInBits())
+      return nullptr;
+    if (canEvaluateShifted(Op1, ShAmt, /*IsLeftShift=*/false,
+                           ShiftSemantics::Unsigned, &CxtI)) {
+      Value *NewOp1 = getShiftedValue(Op1, ShAmt, /*IsLeftShift=*/false,
+                                      ShiftSemantics::Unsigned);
+      return new ICmpInst(Pred, X, NewOp1);
+    }
+  }
+
+  if (match(Op0, m_NSWShl(m_Value(X), m_ConstantInt(ShAmt))) &&
+      !CxtI.isUnsigned()) {
+    if (ShAmt >= X->getType()->getScalarSizeInBits())
+      return nullptr;
+    if (canEvaluateShifted(Op1, ShAmt, /*IsLeftShift=*/false,
+                           ShiftSemantics::Signed, &CxtI)) {
+      Value *NewOp1 = getShiftedValue(Op1, ShAmt, /*IsLeftShift=*/false,
+                                      ShiftSemantics::Signed);
+      return new ICmpInst(Pred, X, NewOp1);
+    }
+  }
   return nullptr;
 }
 
@@ -9125,6 +9157,7 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   // fcmp oeq/une (bitcast X), 0.0 --> (and X, SignMaskC) ==/!= 0
   if (match(Op1, m_PosZeroFP()) &&
       match(Op0, m_OneUse(m_ElementWiseBitCast(m_Value(X)))) &&
+      X->getType()->isIntOrIntVectorTy() &&
       !F.getDenormalMode(Op1->getType()->getScalarType()->getFltSemantics())
            .inputsMayBeZero()) {
     ICmpInst::Predicate IntPred = ICmpInst::BAD_ICMP_PREDICATE;

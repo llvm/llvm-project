@@ -562,6 +562,10 @@ public:
     return {};
   }
 
+  virtual lldb::ScriptedHookInterfaceSP CreateScriptedHookInterface() {
+    return {};
+  }
+
   virtual lldb::ScriptedBreakpointInterfaceSP
   CreateScriptedBreakpointInterface() {
     return {};
@@ -656,6 +660,8 @@ public:
 
   lldb::ValueObjectSP
   GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const;
+
+  lldb::TargetSP GetOpaqueTypeFromSBTarget(const lldb::SBTarget &target) const;
 
 protected:
   Debugger &m_debugger;

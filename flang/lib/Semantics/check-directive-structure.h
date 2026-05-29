@@ -231,10 +231,7 @@ protected:
     std::list<C> actualClauses;
     std::list<C> endDirectiveClauses;
     std::list<C> crtGroup;
-    Symbol *loopIV{nullptr};
   };
-
-  void SetLoopIv(Symbol *symbol) { GetContext().loopIV = symbol; }
 
   // back() is the top of the stack
   DirectiveContext &GetContext() {
@@ -260,7 +257,6 @@ protected:
     GetContext().allowedExclusiveClauses = {};
     GetContext().requiredClauses = {};
     GetContext().clauseInfo = {};
-    GetContext().loopIV = {nullptr};
   }
 
   void SetContextDirectiveSource(const parser::CharBlock &directive) {

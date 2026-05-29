@@ -112,6 +112,9 @@ ResourceLimitsAttr getDefaultResourceLimits(MLIRContext *context);
 /// Returns the attribute name for specifying loop control.
 StringRef getLoopControlAttrName();
 
+/// Returns the attribute name for specifying selection control.
+StringRef getSelectionControlAttrName();
+
 /// Returns the attribute name for specifying SPIR-V target environment.
 StringRef getTargetEnvAttrName();
 

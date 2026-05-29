@@ -36,22 +36,33 @@ func.func @nvvm_rcp(%arg0: f32) -> f32 {
   llvm.return %0 : f32
 }
 
-// CHECK-LABEL: @llvm_nvvm_barrier0
-func.func @llvm_nvvm_barrier0() {
-  // CHECK: nvvm.barrier0
-  nvvm.barrier0
-  llvm.return
-}
-
 // CHECK-LABEL: @llvm_nvvm_barrier
 // CHECK-SAME: (%[[barId:.*]]: i32, %[[numberOfThreads:.*]]: i32)
 llvm.func @llvm_nvvm_barrier(%barId : i32, %numberOfThreads : i32) {
-  // CHECK: nvvm.barrier 
-  nvvm.barrier 
+  // CHECK: nvvm.barrier
+  // CHECK-NOT: id =
+  // CHECK-NOT: number_of_threads
+  nvvm.barrier
   // CHECK: nvvm.barrier id = %[[barId]]
   nvvm.barrier id = %barId
   // CHECK: nvvm.barrier id = %[[barId]] number_of_threads = %[[numberOfThreads]]
   nvvm.barrier id = %barId number_of_threads = %numberOfThreads
+  // CHECK: nvvm.barrier number_of_threads = %[[numberOfThreads]]
+  nvvm.barrier number_of_threads = %numberOfThreads
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_barrier_reduction
+// CHECK-SAME: (%[[barId:.*]]: i32, %[[pred:.*]]: i32)
+llvm.func @llvm_nvvm_barrier_reduction(%barId : i32, %pred : i32) {
+  // CHECK: nvvm.barrier.reduction #nvvm.reduction<and> %[[pred]] -> i32
+  %0 = nvvm.barrier.reduction #nvvm.reduction<and> %pred -> i32
+  // CHECK: nvvm.barrier.reduction #nvvm.reduction<or> %[[pred]] -> i32
+  %1 = nvvm.barrier.reduction #nvvm.reduction<or> %pred -> i32
+  // CHECK: nvvm.barrier.reduction #nvvm.reduction<popc> %[[pred]] -> i32
+  %2 = nvvm.barrier.reduction #nvvm.reduction<popc> %pred -> i32
+  // CHECK: nvvm.barrier.reduction #nvvm.reduction<and> %[[pred]] id = %[[barId]] -> i32
+  %3 = nvvm.barrier.reduction #nvvm.reduction<and> %pred id = %barId -> i32
   llvm.return
 }
 
@@ -131,6 +142,14 @@ func.func @nvvm_vote(%arg0 : i32, %arg1 : i1) -> i32 {
   // CHECK: nvvm.vote.sync uni %{{.*}}, %{{.*}} -> i1
   %3 = nvvm.vote.sync uni %arg0, %arg1 -> i1
   llvm.return %0 : i32
+}
+
+// CHECK-LABEL: @nvvm_movmatrix
+func.func @nvvm_movmatrix(%src : i32) -> i32 {
+  // CHECK: nvvm.movmatrix %{{.*}} {eltType = #nvvm.ld_st_matrix_elt_type<b16>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>} : i32
+  %dst = nvvm.movmatrix %src {shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>,
+                              eltType = #nvvm.ld_st_matrix_elt_type<b16>} : i32
+  llvm.return %dst : i32
 }
 
 // CHECK-LABEL: @llvm_nvvm_bar_warp_sync

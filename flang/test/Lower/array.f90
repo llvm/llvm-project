@@ -151,23 +151,23 @@ block data
 end
 
 ! c1 data
-! CHECK: fir.global internal @_QFrangeEc1(dense<(0.000000e+00,0.000000e+00)> : tensor<3x2xcomplex<f32>>) : !fir.array<2x3xcomplex<f32>>
+! CHECK: fir.global internal @_QFrangeEc1(dense<(0.000000e+00,0.000000e+00)> : tensor<3x2xcomplex<f32>>) {alignment = 64 : i64} : !fir.array<2x3xcomplex<f32>>
 
 ! a0 array constructor
-! CHECK: fir.global internal @_QQro.10xi4.{{.*}}(dense<[1, 2, 3, 3, 3, 3, 3, 3, 3, 3]> : tensor<10xi32>) constant : !fir.array<10xi32>
+! CHECK: fir.global internal @_QQro.10xi4.{{.*}}(dense<[1, 2, 3, 3, 3, 3, 3, 3, 3, 3]> : tensor<10xi32>) {alignment = 64 : i64} constant : !fir.array<10xi32>
 
 ! a1 array constructor
-! CHECK: fir.global internal @_QQro.2x3xr4.{{.*}}(dense<3.500000e+00> : tensor<3x2xf32>) constant : !fir.array<2x3xf32>
+! CHECK: fir.global internal @_QQro.2x3xr4.{{.*}}(dense<3.500000e+00> : tensor<3x2xf32>) {alignment = 64 : i64} constant : !fir.array<2x3xf32>
 
 ! a2 array constructor
-! CHECK: fir.global internal @_QQro.3x4xi4.{{.*}}(dense<{{\[\[1, 3, 3], \[5, 3, 3], \[3, 3, 9], \[9, 9, 8]]}}> : tensor<4x3xi32>) constant : !fir.array<3x4xi32>
+! CHECK: fir.global internal @_QQro.3x4xi4.{{.*}}(dense<{{\[\[1, 3, 3], \[5, 3, 3], \[3, 3, 9], \[9, 9, 8]]}}> : tensor<4x3xi32>) {alignment = 64 : i64} constant : !fir.array<3x4xi32>
 
 ! a3 array constructor
-! CHECK: fir.global internal @_QQro.2x3x4xi4.{{.*}}(dense<{{\[\[\[1, 1], \[2, 2], \[3, 3]], \[\[4, 4], \[5, 5], \[6, 6]], \[\[7, 7], \[8, 8], \[9, 9]], \[\[10, 10], \[11, 11], \[12, 12]]]}}> : tensor<4x3x2xi32>) constant : !fir.array<2x3x4xi32>
+! CHECK: fir.global internal @_QQro.2x3x4xi4.{{.*}}(dense<{{\[\[\[1, 1], \[2, 2], \[3, 3]], \[\[4, 4], \[5, 5], \[6, 6]], \[\[7, 7], \[8, 8], \[9, 9]], \[\[10, 10], \[11, 11], \[12, 12]]]}}> : tensor<4x3x2xi32>) {alignment = 64 : i64} constant : !fir.array<2x3x4xi32>
 
 ! c0 array constructor
-! CHECK: fir.global internal @_QQro.2x3xz4.{{.*}}(dense<{{\[}}[(1.000000e+00,1.500000e+00), (2.000000e+00,2.500000e+00)], [(3.000000e+00,3.500000e+00), (4.000000e+00,4.500000e+00)], [(5.000000e+00,5.500000e+00), (6.000000e+00,6.500000e+00)]]> : tensor<3x2xcomplex<f32>>) constant : !fir.array<2x3xcomplex<f32>>
+! CHECK: fir.global internal @_QQro.2x3xz4.{{.*}}(dense<{{\[}}[(1.000000e+00,1.500000e+00), (2.000000e+00,2.500000e+00)], [(3.000000e+00,3.500000e+00), (4.000000e+00,4.500000e+00)], [(5.000000e+00,5.500000e+00), (6.000000e+00,6.500000e+00)]]> : tensor<3x2xcomplex<f32>>) {alignment = 64 : i64} constant : !fir.array<2x3xcomplex<f32>>
 
-! CHECK: fir.global internal @_QFrangeglobal{{.*}}(dense<[1, 1, 2, 2, 3, 3]> : tensor<6xi32>) : !fir.array<6xi32>
+! CHECK: fir.global internal @_QFrangeglobal{{.*}}(dense<[1, 1, 2, 2, 3, 3]> : tensor<6xi32>) {alignment = 64 : i64} : !fir.array<6xi32>
 
-! CHECK: fir.global internal @_QQro.500x500xi4.{{.*}}(dense<{{.*}}> : tensor<500x500xi32>) constant : !fir.array<500x500xi32>
+! CHECK: fir.global internal @_QQro.500x500xi4.{{.*}}(dense<{{.*}}> : tensor<500x500xi32>) {alignment = 64 : i64} constant : !fir.array<500x500xi32>
