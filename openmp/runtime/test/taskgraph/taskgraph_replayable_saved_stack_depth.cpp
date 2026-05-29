@@ -34,19 +34,24 @@ __attribute__((noinline)) static void clobber_stack(int base) {
 // helper function called inside the taskgraph region, and needs closure-like
 // capture of that helper's stack locals.
 __attribute__((noinline)) static void emit_replayable_task(int seed) {
-  Payload payload{{seed + 1, seed + 3, seed + 5, seed + 7, seed + 11,
-                   seed + 13},
-                  seed * 17 + 19};
+  Payload payload{
+      {seed + 1, seed + 3, seed + 5, seed + 7, seed + 11, seed + 13},
+      seed * 17 + 19};
 
-#pragma omp task replayable(1) firstprivate(saved : payload, seed) shared(ReplayResult)
-  { ReplayResult = evaluate_payload(payload, seed); }
+#pragma omp task replayable(1) firstprivate(saved : payload, seed)             \
+    shared(ReplayResult)
+  {
+    ReplayResult = evaluate_payload(payload, seed);
+  }
 }
 
 __attribute__((noinline)) static int run_taskgraph(int seed) {
   ReplayResult = -1;
 
 #pragma omp taskgraph graph_id(93)
-  { emit_replayable_task(seed); }
+  {
+    emit_replayable_task(seed);
+  }
 
   return ReplayResult;
 }
@@ -65,9 +70,9 @@ __attribute__((noinline)) static int call_with_depth(int seed, int depth) {
 }
 
 __attribute__((noinline)) static int expected_result(int seed) {
-  Payload payload{{seed + 1, seed + 3, seed + 5, seed + 7, seed + 11,
-                   seed + 13},
-                  seed * 17 + 19};
+  Payload payload{
+      {seed + 1, seed + 3, seed + 5, seed + 7, seed + 11, seed + 13},
+      seed * 17 + 19};
   return evaluate_payload(payload, seed);
 }
 
@@ -85,8 +90,7 @@ int main() {
     {
       recorded = call_with_depth(Seeds[0], Depths[0]);
       if (recorded != expected_result(Seeds[0])) {
-        std::fprintf(stderr,
-                     "FAIL initial record got=%d expected=%d\n",
+        std::fprintf(stderr, "FAIL initial record got=%d expected=%d\n",
                      recorded, expected_result(Seeds[0]));
         failed = true;
       }

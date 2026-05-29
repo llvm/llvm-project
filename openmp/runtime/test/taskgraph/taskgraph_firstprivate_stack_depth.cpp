@@ -8,8 +8,8 @@
 static volatile int StackSink = 0;
 // Keep the observable result in stable storage so this test isolates
 // firstprivate replay across different stack depths. There is a separate bug
-// test for replayed tasks writing through a stack-local shared pointer cached at
-// record time.
+// test for replayed tasks writing through a stack-local shared pointer cached
+// at record time.
 static volatile int ReplayResult = -1;
 
 struct Payload {
@@ -34,15 +34,17 @@ __attribute__((noinline)) static void clobber_stack(int base) {
 }
 
 __attribute__((noinline)) static int run_taskgraph(int seed) {
-  Payload payload{{seed + 1, seed + 3, seed + 5, seed + 7, seed + 11,
-                   seed + 13},
-                  seed * 17 + 19};
+  Payload payload{
+      {seed + 1, seed + 3, seed + 5, seed + 7, seed + 11, seed + 13},
+      seed * 17 + 19};
   ReplayResult = -1;
 
 #pragma omp taskgraph graph_id(91)
   {
 #pragma omp task firstprivate(payload, seed) shared(ReplayResult)
-    { ReplayResult = evaluate_payload(payload, seed); }
+    {
+      ReplayResult = evaluate_payload(payload, seed);
+    }
   }
 
   return ReplayResult;
@@ -62,9 +64,9 @@ __attribute__((noinline)) static int call_with_depth(int seed, int depth) {
 }
 
 __attribute__((noinline)) static int expected_result(int seed) {
-  Payload payload{{seed + 1, seed + 3, seed + 5, seed + 7, seed + 11,
-                   seed + 13},
-                  seed * 17 + 19};
+  Payload payload{
+      {seed + 1, seed + 3, seed + 5, seed + 7, seed + 11, seed + 13},
+      seed * 17 + 19};
   return evaluate_payload(payload, seed);
 }
 
@@ -82,8 +84,7 @@ int main() {
     {
       recorded = call_with_depth(Seeds[0], Depths[0]);
       if (recorded != expected_result(Seeds[0])) {
-        std::fprintf(stderr,
-                     "FAIL initial record got=%d expected=%d\n",
+        std::fprintf(stderr, "FAIL initial record got=%d expected=%d\n",
                      recorded, expected_result(Seeds[0]));
         failed = true;
       }

@@ -36,12 +36,11 @@ run_taskgraph_saved_static(int *out_fs, int *out_fsc, int *out_local,
 
 #pragma omp taskgraph graph_id(811)
   {
-#pragma omp task firstprivate(saved: FileScopeStaticInt,                       \
-                              FileScopeConstStaticInt, LocalStaticInt,         \
-                              WithStaticMember::StaticMember,                  \
-                              WithStaticMember::StaticConstMember)             \
-                 shared(out_fs, out_fsc, out_local, out_member,                \
-                        out_member_const)
+#pragma omp task firstprivate(saved : FileScopeStaticInt,                      \
+                                  FileScopeConstStaticInt, LocalStaticInt,     \
+                                  WithStaticMember::StaticMember,              \
+                                  WithStaticMember::StaticConstMember)         \
+    shared(out_fs, out_fsc, out_local, out_member, out_member_const)
     {
       *out_fs = FileScopeStaticInt;
       *out_fsc = FileScopeConstStaticInt;
@@ -93,7 +92,8 @@ int main() {
   if (failed)
     return 1;
 
-  std::fprintf(stderr, "PASS firstprivate(saved) statics persist across replays\n");
+  std::fprintf(stderr,
+               "PASS firstprivate(saved) statics persist across replays\n");
   return 0;
 }
 
