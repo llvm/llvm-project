@@ -843,7 +843,7 @@ Interpreter::EvaluateBinaryShift(BinaryOpKind kind, lldb::ValueObjectSP lhs,
   // Operations {'>>', '<<'} work for:
   //  {integer,unscoped_enum} <-> {integer,unscoped_enum}
   CompilerType orig_lhs_type = lhs->GetCompilerType();
-  auto orig_rhs_type = rhs->GetCompilerType();
+  CompilerType orig_rhs_type = rhs->GetCompilerType();
   auto lhs_or_err = UnaryConversion(lhs, location);
   if (!lhs_or_err)
     return lhs_or_err.takeError();
