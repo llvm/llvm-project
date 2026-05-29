@@ -1,6 +1,5 @@
 ; Tests command-line options of clang-sycl-linker that exercise the SPIR-V
-; backend (--print-linked-module, --spirv-dump-device-code, --save-temps).
-; CLI-only tests that do not need the SPIR-V backend live in cli.test.
+; backend (--spirv-dump-device-code, --save-temps).
 ;
 ; REQUIRES: spirv-registered-target
 
