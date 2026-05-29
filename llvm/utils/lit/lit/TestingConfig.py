@@ -138,10 +138,10 @@ class TestingConfig:
 
         # Load the config script data.
         data = None
-        f = open(path)
         try:
-            data = f.read()
-        except:
+            with open(path) as f:
+                data = f.read()
+        except OSError:
             litConfig.fatal("unable to load config file: %r" % (path,))
         f.close()
 

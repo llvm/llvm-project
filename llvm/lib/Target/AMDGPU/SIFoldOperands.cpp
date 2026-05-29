@@ -2184,7 +2184,7 @@ bool SIFoldOperandsImpl::tryFoldClamp(MachineInstr &MI) {
       MRI->getVRegDef(DefSrcReg.isVirtual() ? DefSrcReg : ClampSrc->getReg());
 
   // The type of clamp must be compatible.
-  if (TII->getClampMask(*Def) != TII->getClampMask(MI))
+  if (!SIInstrInfo::hasSameClamp(*Def, MI))
     return false;
 
   if (Def->mayRaiseFPException())

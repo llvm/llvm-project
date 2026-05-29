@@ -3066,6 +3066,11 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     int64_t Imm = TII.getNamedOperand(Inst, AMDGPU::OpName::waitexp)->getImm();
     ScoreBrackets->applyWaitcnt(AMDGPU::EXP_CNT, Imm);
   }
+
+  // Set XCNT to zero in the bracket for instructions that implicitly drain
+  // XCNT.
+  if (ST.hasWaitXcnt() && SIInstrInfo::isXcntDrain(Inst))
+    ScoreBrackets->applyWaitcnt(AMDGPU::X_CNT, 0);
 }
 
 bool WaitcntBrackets::mergeScore(const MergeInfo &M, unsigned &Score,

@@ -385,6 +385,19 @@ void baz() {
 
 } // namespace local_assignment_basic
 
+namespace local_assignment_to_guardian_parameter {
+
+RefCountable *provide_ref_cntbl();
+
+void foo(RefPtr<RefCountable>& arg) {
+  RefCountable* ptr = arg.get();
+  // expected-warning@-1{{Local variable 'ptr' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  arg = nullptr;
+  ptr->method();
+}
+
+} // namespace local_assignment_to_guardian
+
 namespace local_assignment_to_parameter {
 
 RefCountable *provide_ref_cntbl();
