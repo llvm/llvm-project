@@ -19,7 +19,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, __sched_getcpuisset,
-                   (int cpu, const size_t cpuset_size, cpu_set_t *set)) {
+                   (int cpu, const size_t cpuset_size, const cpu_set_t *set)) {
   LIBC_CRASH_ON_NULLPTR(set);
 
   if (static_cast<size_t>(cpu) / 8 < cpuset_size) {

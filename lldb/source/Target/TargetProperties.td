@@ -169,6 +169,9 @@ let Definition = "target", Path = "target" in {
   def UseHexImmediates: Property<"use-hex-immediates", "Boolean">,
     DefaultTrue,
     Desc<"Show immediates in disassembly as hexadecimal.">;
+  def CheckValueObjectOwnership: Property<"check-vo-ownership", "Boolean">,
+    DefaultFalse,
+    Desc<"Check that ValueObject children are managed by their parents.">;
   def HexImmediateStyle: Property<"hex-immediate-style", "Enum">,
     DefaultEnumValue<"Disassembler::eHexStyleC">,
     EnumValues<"OptionEnumValues(g_hex_immediate_style_values)">,
@@ -222,6 +225,12 @@ let Definition = "target", Path = "target" in {
   def ParallelModuleLoad: Property<"parallel-module-load", "Boolean">,
     DefaultTrue,
     Desc<"Enable loading of modules in parallel for the dynamic loader.">;
+  def AutoLoadScriptsForModules
+      : Property<"auto-load-scripts-for-modules", "Dictionary">,
+        ElementType<"Enum">,
+        EnumValues<"OptionEnumValues(g_load_script_from_sym_file_values)">,
+        Desc<"A list of module/image names and whether LLDB should auto-load scripting "
+             "resources for it from safe paths.">;
 }
 
 let Definition = "process_experimental", Path = "target.process.experimental" in {
@@ -254,7 +263,6 @@ let Definition = "process", Path = "target.process" in {
     DefaultFalse,
     Desc<"If true, stop when a shared library is loaded or unloaded.">;
   def DisableLangRuntimeUnwindPlans: Property<"disable-language-runtime-unwindplans", "Boolean">,
-    Global,
     DefaultFalse,
     Desc<"If true, language runtime augmented/overridden backtraces will not be used when printing a stack trace.">;
   def DetachKeepsStopped: Property<"detach-keeps-stopped", "Boolean">,
@@ -304,6 +312,17 @@ let Definition = "process", Path = "target.process" in {
   def TrackMemoryCacheChanges: Property<"track-memory-cache-changes", "Boolean">,
     DefaultTrue,
     Desc<"If true, memory cache modifications (which happen often during expressions evaluation) will bump process state ID (and invalidate all synthetic children). Disabling this option helps to avoid synthetic children reevaluation when pretty printers heavily use expressions. The downside of disabled setting is that convenience variables won't reevaluate synthetic children automatically.">;
+  def AlwaysRunThreadNames
+      : Property<"always-run-thread-names", "Array">,
+        ElementType<"String">,
+        Desc<"A list of thread names. Threads with any of these names will "
+             "always be resumed when the process resumes, even when other "
+             "threads are suspended during single-stepping operations.">;
+  def UseDelayedBreakpoints
+      : Property<"use-delayed-breakpoints", "Boolean">,
+        DefaultTrue,
+        Desc<"Specify whether updating breakpoints may be delayed until the "
+             "process is about to resume.">;
 }
 
 let Definition = "platform", Path = "platform" in {

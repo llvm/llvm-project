@@ -12,7 +12,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 
 namespace llvm {
-class SIFixVGPRCopiesPass : public PassInfoMixin<SIFixVGPRCopiesPass> {
+class SIFixVGPRCopiesPass : public OptionalPassInfoMixin<SIFixVGPRCopiesPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

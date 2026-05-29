@@ -41,7 +41,7 @@
 /// Operations implementing LoopWrapperInterface.
 #define OMP_LOOP_WRAPPER_OPS                                                   \
   mlir::omp::WorkshareLoopWrapperOp, mlir::omp::LoopOp, mlir::omp::WsloopOp,   \
-      mlir::omp::SimdOp, mlir::omp::DistributeOp, mlir::omp::TaskloopOp
+      mlir::omp::SimdOp, mlir::omp::DistributeOp, mlir::omp::TaskloopWrapperOp
 
 /// Operations implementing OutlineableOpenMPOpInterface.
 #define OMP_OUTLINEABLE_OPS                                                    \

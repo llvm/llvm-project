@@ -2213,7 +2213,15 @@ Value *ScalarExprEmitter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   if (CGF.SanOpts.has(SanitizerKind::ArrayBounds))
     CGF.EmitBoundsCheck(E, E->getBase(), Idx, IdxTy, /*Accessed*/true);
 
-  return Builder.CreateExtractElement(Base, Idx, "vecext");
+  Value *Ret = Builder.CreateExtractElement(Base, Idx, "vecext");
+
+  // Even being a scalar the `__mfp8` type corresponds to `<1 x i8>` in LLVM IR.
+  if (E->getType()->isMFloat8Type())
+    Ret = Builder.CreateInsertElement(
+        llvm::PoisonValue::get(llvm::FixedVectorType::get(CGF.Int8Ty, 1)), Ret,
+        uint64_t(0), "mfp8ext");
+
+  return Ret;
 }
 
 Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
@@ -4230,7 +4238,7 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
   if (CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow) &&
       Ops.Ty->hasSignedIntegerRepresentation() &&
       !IsWidenedIntegerOp(CGF.getContext(), BO->getLHS()) &&
-      Ops.mayHaveIntegerOverflow() && !Ops.Ty.isWrapType() &&
+      Ops.mayHaveIntegerOverflow() &&
       !CGF.getContext().isTypeIgnoredBySanitizer(
           SanitizerKind::SignedIntegerOverflow, Ops.Ty)) {
     llvm::IntegerType *Ty = cast<llvm::IntegerType>(Zero->getType());
@@ -5320,7 +5328,7 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
 
     // If this is a vector comparison, sign extend the result to the appropriate
     // vector integer type and return it (don't convert to bool).
-    if (LHSTy->isVectorType())
+    if (LHSTy->isVectorType() || LHSTy->isSveVLSBuiltinType())
       return Builder.CreateSExt(Result, ConvertType(E->getType()), "sext");
 
   } else {

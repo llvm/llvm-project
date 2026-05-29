@@ -5,7 +5,7 @@
 # RUN: yaml2obj %s --docnum=1 -o %t1
 # RUN: not llvm-objcopy %t1 %t1.out 2>&1 | FileCheck %s -DFILE=%t1 --check-prefix=ERROR1
 
-# ERROR1: error: '[[FILE]]': More than one DXIL part is present in the file
+# ERROR1: error: '[[FILE]]': more than one DXIL part is present in the file
 
 --- !dxcontainer
 Header:

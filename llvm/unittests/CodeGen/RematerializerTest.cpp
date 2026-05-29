@@ -7,96 +7,32 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/Rematerializer.h"
-#include "llvm/Analysis/CGSCCPassManager.h"
-#include "llvm/Analysis/LoopAnalysisManager.h"
-#include "llvm/CodeGen/MIRParser/MIRParser.h"
-#include "llvm/CodeGen/MachineDomTreeUpdater.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/MachinePassManager.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/CodeGen/MachineScheduler.h"
-#include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/IR/Module.h"
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Passes/PassBuilder.h"
-#include "llvm/Support/SourceMgr.h"
+#include "CodeGenTestBase.h"
+#include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetMachine.h"
-#include "gtest/gtest.h"
-#include <memory>
 
 using namespace llvm;
 using RegisterIdx = Rematerializer::RegisterIdx;
 
-class RematerializerTest : public testing::Test {
+class RematerializerTest : public CodeGenTestBase {
 public:
-  LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM;
-  std::unique_ptr<Module> M;
-  std::unique_ptr<MachineModuleInfo> MMI;
-
-  std::unique_ptr<MIRParser> MIR;
   std::unique_ptr<SmallVector<Rematerializer::RegionBoundaries>> Regions;
   std::unique_ptr<Rematerializer> Remater;
   MachineFunction *MF;
-
-  LoopAnalysisManager LAM;
-  MachineFunctionAnalysisManager MFAM;
-  FunctionAnalysisManager FAM;
-  CGSCCAnalysisManager CGAM;
-
-  ModulePassManager MPM;
-  FunctionPassManager FPM;
-  MachineFunctionPassManager MFPM;
-  ModuleAnalysisManager MAM;
 
   static void SetUpTestCase() {
     InitializeAllTargets();
     InitializeAllTargetMCs();
   }
 
-  void SetUp() override {
-    Triple TargetTriple("amdgcn--");
-    std::string Error;
-    const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
-    if (!T)
-      GTEST_SKIP();
-    TargetOptions Options;
-    TM = std::unique_ptr<TargetMachine>(T->createTargetMachine(
-        TargetTriple, "gfx950", "", Options, std::nullopt));
-    if (!TM)
-      GTEST_SKIP();
-    MMI = std::make_unique<MachineModuleInfo>(TM.get());
-
-    PassBuilder PB(TM.get());
-    PB.registerModuleAnalyses(MAM);
-    PB.registerCGSCCAnalyses(CGAM);
-    PB.registerFunctionAnalyses(FAM);
-    PB.registerLoopAnalyses(LAM);
-    PB.registerMachineFunctionAnalyses(MFAM);
-    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
-    MAM.registerPass([&] { return MachineModuleAnalysis(*MMI); });
-  }
+  void SetUp() override { setUpImpl("amdgcn--", "gfx950", ""); }
 
   bool parseMIRAndInit(StringRef MIRCode, StringRef FunName) {
-    SMDiagnostic Diagnostic;
-    std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
-    MIR = createMIRParser(std::move(MBuffer), Context);
-    if (!MIR)
+    if (!parseMIR(MIRCode))
       return false;
 
-    M = MIR->parseIRModule();
-    M->setDataLayout(TM->createDataLayout());
-
-    if (MIR->parseMachineFunctions(*M, MAM)) {
-      M.reset();
-      return false;
-    }
-
-    MF = &FAM.getResult<MachineFunctionAnalysis>(*M->getFunction(FunName))
-              .getMF();
+    MF = &CodeGenTestBase::getMF(FunName);
     LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(*MF);
 
     // Create regions for the rematerializer. Both MBBs and terminator MIs
@@ -314,6 +250,44 @@ body:             |
   }
 
   // This time don't rollback.
+  Remater.updateLiveIntervals();
+  EXPECT_TRUE(getMF().verify());
+}
+
+/// To rematerialize %3 along with all its dependencies before its only use in
+/// bb.1, we must first rematerialize %0 and %1 (in any order), then %2, and
+/// finally %3. The rematerializer had a rematerialization order bug wherein,
+/// because %0 is also used directly in the MI defining %3, it was
+/// rematerialized after %2, breaking the invariant that dependencies of a
+/// register must always be rematerialized before the register itself.
+TEST_F(RematerializerTest, MultiplePathsRematOrder) {
+  StringRef MIR = R"(
+name:            MultiplePathsRematOrder
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
+    %2:vgpr_32 = V_ADD_U32_e32 %0, %1, implicit $exec
+    %3:vgpr_32 = V_ADD_U32_e32 %0, %2, implicit $exec
+  
+  bb.1:
+    S_NOP 0, implicit %3
+    S_ENDPGM 0
+...
+)";
+  ASSERT_TRUE(parseMIRAndInit(MIR, "MultiplePathsRematOrder"));
+  Rematerializer &Remater = getRematerializer();
+  Rematerializer::DependencyReuseInfo DRI;
+
+  const unsigned MBB1 = 1;
+  const RegisterIdx Add02 = 3;
+
+  // This call would previously fail.
+  Remater.rematerializeToRegion(Add02, MBB1, DRI);
+
   Remater.updateLiveIntervals();
   EXPECT_TRUE(getMF().verify());
 }
@@ -587,6 +561,77 @@ body:             |
                /*NumUsers=*/1);
 
   Remater.updateLiveIntervals();
+  EXPECT_TRUE(getMF().verify());
+}
+
+/// The rematerializer had a bug where re-creating the interval of a
+/// non-rematerializable super-register defined over multiple MIs, some of which
+/// defining entirely dead subregisters, could cause a crash when changing the
+/// order of sub-definitions (for example during scheduling) because the
+/// re-created interval could end up with multiple connected components, which
+/// is illegal. The solution is to split separate components of the interval in
+/// such cases.
+TEST_F(RematerializerTest, SplitSubRegDeadDef) {
+  StringRef MIR = R"(
+name:            SplitSubRegDeadDef
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    undef %0.sub0:vreg_64 = IMPLICIT_DEF
+    %0.sub1:vreg_64 = IMPLICIT_DEF
+    %1:vgpr_32 = V_ADD_U32_e32 %0.sub0, %0.sub0, implicit $exec
+    
+  bb.1:
+    S_NOP 0, implicit %1
+    S_ENDPGM 0
+...
+)";
+  ASSERT_TRUE(parseMIRAndInit(MIR, "SplitSubRegDeadDef"));
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(*MF);
+
+  // Replicates the scheduler's effect on LIS on an intra-block move of MI.
+  auto MoveMIAndAdjustLiveness = [&](MachineInstr &MI) {
+    LIS.handleMove(MI);
+    const MachineRegisterInfo &MRI = MF->getRegInfo();
+    const TargetRegisterInfo &TRI = *MF->getSubtarget().getRegisterInfo();
+    RegisterOperands RegOpers;
+    RegOpers.collect(MI, TRI, MRI, true, /*IgnoreDead=*/false);
+    SlotIndex Sub1Slot = LIS.getInstructionIndex(MI).getRegSlot();
+    RegOpers.adjustLaneLiveness(LIS, MRI, Sub1Slot, &MI);
+  };
+
+  MachineBasicBlock &MBB0 = *MF->getBlockNumbered(0);
+  MachineInstr &Sub0Def = *MBB0.begin();
+  MachineInstr &Sub1Def = *MBB0.begin()->getNextNode();
+
+  // Flip %0's subdefinition order. After the move, the definitions look like:
+  // undef %0.sub1:vreg_64 = IMPLICIT_DEF
+  // undef %0.sub0:vreg_64 = IMPLICIT_DEF
+  MBB0.splice(Sub0Def.getIterator(), &MBB0, Sub1Def.getIterator());
+  MoveMIAndAdjustLiveness(Sub1Def);
+
+  // Rematerialize %1 to bb.1. This triggers a live-interval update of %0 when
+  // calling Remater.updateLiveIntervals(), during which its interval is split.
+  Rematerializer &Remater = getRematerializer();
+  Rematerializer::DependencyReuseInfo DRI;
+  const unsigned MBB1 = 1;
+  const RegisterIdx Add = 0;
+  Remater.rematerializeToRegion(Add, MBB1, DRI);
+  Remater.updateLiveIntervals();
+
+  // If we didn't split %0 before, its definitions would now look like:
+  // dead undef %0.sub1:vreg_64 = IMPLICIT_DEF
+  // undef %0.sub0:vreg_64 = IMPLICIT_DEF
+  //
+  // Trying to flip back %0's definition order then triggers an
+  // error in LIS.handleMove because its live interval is made up of multiple
+  // connected components.
+  ASSERT_NE(Sub0Def.getOperand(0).getReg(), Sub1Def.getOperand(0).getReg());
+  MBB0.splice(MBB0.end(), &MBB0, Sub1Def.getIterator());
+  MoveMIAndAdjustLiveness(Sub1Def);
+
   EXPECT_TRUE(getMF().verify());
 }
 

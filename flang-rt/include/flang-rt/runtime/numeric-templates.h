@@ -67,7 +67,7 @@ struct MaxOrMinIdentity<TypeCategory::Real, 16, IS_MAXVAL,
     // Create a buffer to store binary representation of __float128 constant.
     constexpr std::size_t alignment =
         std::max(alignof(Type), alignof(std::uint64_t));
-    alignas(alignment) char data[sizeof(Type)];
+    alignas(alignment) char data[sizeof(Type)]{};
 
     // First, verify that our interpretation of __float128 format is correct,
     // e.g. by checking at least one known constant.
@@ -104,7 +104,7 @@ template <> struct MinValue<113, CppTypeFor<TypeCategory::Real, 16>> {
     // Create a buffer to store binary representation of __float128 constant.
     constexpr std::size_t alignment =
         std::max(alignof(Type), alignof(std::uint64_t));
-    alignas(alignment) char data[sizeof(Type)];
+    alignas(alignment) char data[sizeof(Type)]{};
 
     // First, verify that our interpretation of __float128 format is correct,
     // e.g. by checking at least one known constant.

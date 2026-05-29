@@ -71,6 +71,7 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
       ${CMAKE_THREAD_LIBS_INIT}
       LLVMOffload
       LLVMObject
+      LLVMSupport
   )
 
   set_target_properties(${LIB_TARGET_NAME}
@@ -85,6 +86,7 @@ endfunction(add_sycl_rt_library)
 
 set(LIBSYCL_SOURCES
     "context.cpp"
+    "event.cpp"
     "exception.cpp"
     "exception_list.cpp"
     "device.cpp"
@@ -93,6 +95,8 @@ set(LIBSYCL_SOURCES
     "queue.cpp"
     "usm_functions.cpp"
     "detail/context_impl.cpp"
+    "detail/event_impl.cpp"
+    "detail/device_image_wrapper.cpp"
     "detail/device_impl.cpp"
     "detail/global_objects.cpp"
     "detail/platform_impl.cpp"
@@ -109,6 +113,6 @@ add_sycl_rt_library(${LIBSYCL_LIB_NAME}
     ${LIBSYCL_SOURCES})
 
 install(TARGETS ${LIBSYCL_RT_LIBS}
-  ARCHIVE DESTINATION "lib${LLVM_LIBDIR_SUFFIX}" COMPONENT libsycl
-  LIBRARY DESTINATION "lib${LLVM_LIBDIR_SUFFIX}" COMPONENT libsycl
+  ARCHIVE DESTINATION ${LIBSYCL_INSTALL_LIBRARY_DIR} COMPONENT libsycl
+  LIBRARY DESTINATION ${LIBSYCL_INSTALL_LIBRARY_DIR} COMPONENT libsycl
   RUNTIME DESTINATION "bin" COMPONENT libsycl)

@@ -1,6 +1,7 @@
 ; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_bfloat16 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_16bit_atomics,+SPV_KHR_bfloat16 %s -o - | FileCheck %s
+; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_16bit_atomics,+SPV_KHR_bfloat16 %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-ERROR: LLVM ERROR: The atomic bfloat16 instruction requires the following SPIR-V extension: SPV_INTEL_16bit_atomics
 
@@ -15,14 +16,13 @@
 ; CHECK-DAG: %[[#Const0:]] = OpConstantNull %[[#TyBF16]]
 ; CHECK-DAG: %[[#ScopeDevice:]] = OpConstant %[[#TyInt32]] 1{{$}}
 ; CHECK-DAG: %[[#ScopeAllSvmDevices:]] = OpConstantNull %[[#TyInt32]]
-; CHECK-DAG: %[[#MemSemAcqRel:]] = OpConstant %[[#TyInt32]] 528{{$}}
-; CHECK-DAG: %[[#MemSeqCst:]] = OpConstant %[[#TyInt32]] 16{{$}}
+; CHECK-DAG: %[[#MemSem528:]] = OpConstant %[[#TyInt32]] 528{{$}}
 
 ; CHECK-DAG: %[[#Val:]] = OpVariable %[[#TyBF16Ptr]] CrossWorkgroup %[[#Const0]]
 
-; CHECK: OpAtomicLoad %[[#TyBF16]] %[[#Val]] %[[#ScopeDevice]] %[[#MemSemAcqRel]]
-; CHECK: OpAtomicStore %[[#Val]] %[[#ScopeDevice]] %[[#MemSemAcqRel]] %[[#Const42]]
-; CHECK: OpAtomicExchange %[[#TyBF16]] %[[#Val]] %[[#ScopeAllSvmDevices]] %[[#MemSeqCst]] %[[#Const42]]
+; CHECK: OpAtomicLoad %[[#TyBF16]] %[[#Val]] %[[#ScopeDevice]] %[[#MemSem528]]
+; CHECK: OpAtomicStore %[[#Val]] %[[#ScopeDevice]] %[[#MemSem528]] %[[#Const42]]
+; CHECK: OpAtomicExchange %[[#TyBF16]] %[[#Val]] %[[#ScopeAllSvmDevices]] %[[#MemSem528]] %[[#Const42]]
 
 
 @val = private addrspace(1) global bfloat 0.000000e+00

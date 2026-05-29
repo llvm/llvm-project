@@ -212,14 +212,6 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-m");
     CmdArgs.push_back("elf64lriscv");
     break;
-  case llvm::Triple::riscv32be:
-    CmdArgs.push_back("-m");
-    CmdArgs.push_back("elf32briscv");
-    break;
-  case llvm::Triple::riscv64be:
-    CmdArgs.push_back("-m");
-    CmdArgs.push_back("elf64briscv");
-    break;
   case llvm::Triple::loongarch64:
     CmdArgs.push_back("-m");
     CmdArgs.push_back("elf64loongarch");
@@ -485,12 +477,15 @@ bool FreeBSD::isPIEDefault(const llvm::opt::ArgList &Args) const {
   return getSanitizerArgs(Args).requiresPIE();
 }
 
-SanitizerMask FreeBSD::getSupportedSanitizers() const {
+SanitizerMask
+FreeBSD::getSupportedSanitizers(StringRef BoundArch,
+                                Action::OffloadKind DeviceOffloadKind) const {
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64;
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   const bool IsMIPS64 = getTriple().isMIPS64();
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;

@@ -57,8 +57,8 @@ struct test_never_constant {
   // expected-error@+3 {{non-constexpr declaration of 'operator()' follows constexpr declaration}}
   // expected-error@+3 {{non-constexpr declaration of 'operator()' follows constexpr declaration}}
   #endif
-  friend auto decltype(never_constant_1)::operator()() const;
-  friend int decltype(never_constant_2)::operator()() const;
+  friend auto decltype(never_constant_1)::operator()() const; // expected-error {{a member of a lambda should not be the target of a friend declaration}}
+  friend int decltype(never_constant_2)::operator()() const; // expected-error {{a member of a lambda should not be the target of a friend declaration}}
 };
 
 } // end ns test_constexpr_checking

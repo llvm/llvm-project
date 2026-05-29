@@ -210,23 +210,23 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
     case Intrinsic::nvvm_fma_rn_bf16x2:
       return {Intrinsic::fma, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmax_d:
-      return {Intrinsic::maxnum, FTZ_Any};
+      return {Intrinsic::maximumnum, FTZ_Any};
     case Intrinsic::nvvm_fmax_f:
-      return {Intrinsic::maxnum, FTZ_MustBeOff};
+      return {Intrinsic::maximumnum, FTZ_MustBeOff};
     case Intrinsic::nvvm_fmax_ftz_f:
-      return {Intrinsic::maxnum, FTZ_MustBeOn};
+      return {Intrinsic::maximumnum, FTZ_MustBeOn};
     case Intrinsic::nvvm_fmax_nan_f:
       return {Intrinsic::maximum, FTZ_MustBeOff};
     case Intrinsic::nvvm_fmax_ftz_nan_f:
       return {Intrinsic::maximum, FTZ_MustBeOn};
     case Intrinsic::nvvm_fmax_f16:
-      return {Intrinsic::maxnum, FTZ_MustBeOff, true};
+      return {Intrinsic::maximumnum, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmax_ftz_f16:
-      return {Intrinsic::maxnum, FTZ_MustBeOn, true};
+      return {Intrinsic::maximumnum, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmax_f16x2:
-      return {Intrinsic::maxnum, FTZ_MustBeOff, true};
+      return {Intrinsic::maximumnum, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmax_ftz_f16x2:
-      return {Intrinsic::maxnum, FTZ_MustBeOn, true};
+      return {Intrinsic::maximumnum, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmax_nan_f16:
       return {Intrinsic::maximum, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmax_ftz_nan_f16:
@@ -236,23 +236,23 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
     case Intrinsic::nvvm_fmax_ftz_nan_f16x2:
       return {Intrinsic::maximum, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmin_d:
-      return {Intrinsic::minnum, FTZ_Any};
+      return {Intrinsic::minimumnum, FTZ_Any};
     case Intrinsic::nvvm_fmin_f:
-      return {Intrinsic::minnum, FTZ_MustBeOff};
+      return {Intrinsic::minimumnum, FTZ_MustBeOff};
     case Intrinsic::nvvm_fmin_ftz_f:
-      return {Intrinsic::minnum, FTZ_MustBeOn};
+      return {Intrinsic::minimumnum, FTZ_MustBeOn};
     case Intrinsic::nvvm_fmin_nan_f:
       return {Intrinsic::minimum, FTZ_MustBeOff};
     case Intrinsic::nvvm_fmin_ftz_nan_f:
       return {Intrinsic::minimum, FTZ_MustBeOn};
     case Intrinsic::nvvm_fmin_f16:
-      return {Intrinsic::minnum, FTZ_MustBeOff, true};
+      return {Intrinsic::minimumnum, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmin_ftz_f16:
-      return {Intrinsic::minnum, FTZ_MustBeOn, true};
+      return {Intrinsic::minimumnum, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmin_f16x2:
-      return {Intrinsic::minnum, FTZ_MustBeOff, true};
+      return {Intrinsic::minimumnum, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmin_ftz_f16x2:
-      return {Intrinsic::minnum, FTZ_MustBeOn, true};
+      return {Intrinsic::minimumnum, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmin_nan_f16:
       return {Intrinsic::minimum, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmin_ftz_nan_f16:

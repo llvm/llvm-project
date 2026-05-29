@@ -235,6 +235,15 @@ func.func private @image_parameters_nocomma_5(!spirv.image<f32, Dim1D, NoDepth, 
 // -----
 
 //===----------------------------------------------------------------------===//
+// SamplerType
+//===----------------------------------------------------------------------===//
+
+// CHECK: func private @sampler_type(!spirv.sampler)
+func.func private @sampler_type(!spirv.sampler) -> ()
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // SampledImageType
 //===----------------------------------------------------------------------===//
 
@@ -477,6 +486,18 @@ func.func private @coop_matrix_types(!spirv.coopmatrix<8x16xi32, Subgroup, Matri
                                      !spirv.coopmatrix<8x8xf32, Workgroup, MatrixB>,
                                      !spirv.coopmatrix<4x8xf32, Workgroup, MatrixAcc>) -> ()
 
+// CHECK-LABEL: func private @coop_matrix_types_f8E4M3FN
+// CHECK-SAME:    !spirv.coopmatrix<8x16xf8E4M3FN, Subgroup, MatrixA>
+func.func private @coop_matrix_types_f8E4M3FN(!spirv.coopmatrix<8x16xf8E4M3FN, Subgroup, MatrixA>) -> ()
+
+// CHECK-LABEL: func private @coop_matrix_types_f8E5M2
+// CHECK-SAME:    !spirv.coopmatrix<8x16xf8E5M2, Subgroup, MatrixA>
+func.func private @coop_matrix_types_f8E5M2(!spirv.coopmatrix<8x16xf8E5M2, Subgroup, MatrixA>) -> ()
+
+// CHECK-LABEL: func private @coop_matrix_types_bf16
+// CHECK-SAME:    !spirv.coopmatrix<8x16xbf16, Subgroup, MatrixA>
+func.func private @coop_matrix_types_bf16(!spirv.coopmatrix<8x16xbf16, Subgroup, MatrixA>) -> ()
+
 // -----
 
 // expected-error @+1 {{expected valid keyword}}
@@ -598,6 +619,24 @@ func.func private @matrix_size_type(!spirv.matrix<2.0 x vector<3xi32>>) -> ()
 // -----
 
 //===----------------------------------------------------------------------===//
+// Float8_EXT
+//===----------------------------------------------------------------------===//
+
+// CHECK: func private @type_f8E4M3FN(f8E4M3FN)
+func.func private @type_f8E4M3FN(f8E4M3FN) -> ()
+
+// CHECK: func private @vector_type_f8E4M3FN(vector<4xf8E4M3FN>)
+func.func private @vector_type_f8E4M3FN(vector<4xf8E4M3FN>) -> ()
+
+// CHECK: func private @type_f8E5M2(f8E5M2)
+func.func private @type_f8E5M2(f8E5M2) -> ()
+
+// CHECK: func private @vector_type_f8E5M2(vector<4xf8E5M2>)
+func.func private @vector_type_f8E5M2(vector<4xf8E5M2>) -> ()
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // TensorArm
 //===----------------------------------------------------------------------===//
 
@@ -650,12 +689,15 @@ func.func private @arm_tensor_type_zero_dim(!spirv.arm.tensor<0xi32>) -> ()
 
 // -----
 
-//===----------------------------------------------------------------------===//
-// Float8_EXT
-//===----------------------------------------------------------------------===//
+// CHECK: func private @arm_tensor_type_bf16(!spirv.arm.tensor<2x3xbf16>)
+func.func private @arm_tensor_type_bf16(!spirv.arm.tensor<2x3xbf16>) -> ()
 
-// CHECK: func private @type_f8E4M3FN(f8E4M3FN)
-func.func private @type_f8E4M3FN(f8E4M3FN) -> ()
+// -----
 
-// CHECK: func private @type_f8E5M2(f8E5M2)
-func.func private @type_f8E5M2(f8E5M2) -> ()
+// CHECK: func private @arm_tensor_type_fp8e4m3fn(!spirv.arm.tensor<2x3xf8E4M3FN>)
+func.func private @arm_tensor_type_fp8e4m3fn(!spirv.arm.tensor<2x3xf8E4M3FN>) -> ()
+
+// -----
+
+// CHECK: func private @arm_tensor_type_fp8e5m2(!spirv.arm.tensor<2x3xf8E5M2>)
+func.func private @arm_tensor_type_fp8e5m2(!spirv.arm.tensor<2x3xf8E5M2>) -> ()

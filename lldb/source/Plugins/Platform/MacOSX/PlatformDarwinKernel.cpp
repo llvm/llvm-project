@@ -625,7 +625,7 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
       kext_bundle_filepath.GetFileNameStrippingExtension();
   std::string deep_bundle_str =
       kext_bundle_filepath.GetPath() + "/Contents/MacOS/";
-  deep_bundle_str += executable_name.AsCString();
+  deep_bundle_str += executable_name.GetStringRef();
   deep_bundle_str += ".dSYM";
   dsym_fspec.SetFile(deep_bundle_str, FileSpec::Style::native);
   FileSystem::Instance().Resolve(dsym_fspec);
@@ -636,7 +636,7 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
   // look for a shallow bundle format
   //
   std::string shallow_bundle_str = kext_bundle_filepath.GetPath() + "/";
-  shallow_bundle_str += executable_name.AsCString();
+  shallow_bundle_str += executable_name.GetStringRef();
   shallow_bundle_str += ".dSYM";
   dsym_fspec.SetFile(shallow_bundle_str, FileSpec::Style::native);
   FileSystem::Instance().Resolve(dsym_fspec);
@@ -759,7 +759,7 @@ Status PlatformDarwinKernel::GetSharedModuleKext(
 
   // Treat the file's path as a kext bundle ID (e.g.
   // "com.apple.driver.AppleIRController") and search our kext index.
-  ConstString kext_bundle(platform_file.GetPath().c_str());
+  ConstString kext_bundle(platform_file.GetPath());
   // First look through the kext bundles that had a dsym next to them
   if (m_name_to_kext_path_map_with_dsyms.count(kext_bundle) > 0) {
     for (BundleIDToKextIterator it = m_name_to_kext_path_map_with_dsyms.begin();

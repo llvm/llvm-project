@@ -9,6 +9,8 @@
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSerialization.h"
+#include "clang/DependencyScanning/DependencyActionController.h"
+#include "clang/DependencyScanning/DependencyConsumer.h"
 #include "clang/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/DependencyScanning/DependencyScanningService.h"
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
@@ -26,32 +28,6 @@
 
 using namespace clang;
 using namespace dependencies;
-
-namespace {
-/// Forwards the gatherered dependencies to the consumer.
-class DependencyConsumerForwarder : public DependencyFileGenerator {
-public:
-  DependencyConsumerForwarder(std::unique_ptr<DependencyOutputOptions> Opts,
-                              StringRef WorkingDirectory, DependencyConsumer &C)
-      : DependencyFileGenerator(*Opts), WorkingDirectory(WorkingDirectory),
-        Opts(std::move(Opts)), C(C) {}
-
-  void finishedMainFile(DiagnosticsEngine &Diags) override {
-    C.handleDependencyOutputOpts(*Opts);
-    llvm::SmallString<256> CanonPath;
-    for (const auto &File : getDependencies()) {
-      CanonPath = File;
-      llvm::sys::path::remove_dots(CanonPath, /*remove_dot_dot=*/true);
-      llvm::sys::path::make_absolute(WorkingDirectory, CanonPath);
-      C.handleFileDependency(CanonPath);
-    }
-  }
-
-private:
-  StringRef WorkingDirectory;
-  std::unique_ptr<DependencyOutputOptions> Opts;
-  DependencyConsumer &C;
-};
 
 static bool checkHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
                                    const HeaderSearchOptions &ExistingHSOpts,
@@ -76,6 +52,8 @@ static bool checkHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
   }
   return false;
 }
+
+namespace {
 
 using PrebuiltModuleFilesT = decltype(HeaderSearchOptions::PrebuiltModuleFiles);
 
@@ -135,8 +113,8 @@ public:
   }
 
   /// Update which module that is being actively traversed.
-  void visitModuleFile(ModuleFileName Filename,
-                       serialization::ModuleKind Kind) override {
+  void visitModuleFile(ModuleFileName Filename, serialization::ModuleKind Kind,
+                       bool DirectlyImported) override {
     // If the CurrentFile is not
     // considered stable, update any of it's transitive dependents.
     auto PrebuiltEntryIt = PrebuiltModulesASTMap.find(CurrentFile);
@@ -207,7 +185,8 @@ static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
                                   Diags, StableDirs);
 
   Listener.visitModuleFile(ModuleFileName::makeExplicit(PrebuiltModuleFilename),
-                           serialization::MK_ExplicitModule);
+                           serialization::MK_ExplicitModule,
+                           /*DirectlyImported=*/true);
   if (ASTReader::readASTFileControlBlock(
           PrebuiltModuleFilename, CI.getFileManager(), CI.getModuleCache(),
           CI.getPCHContainerReader(),
@@ -222,7 +201,8 @@ static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
     // change the values of HeaderSearchOptions::PrebuiltModuleFiles from plain
     // paths to ModuleFileName.
     Listener.visitModuleFile(ModuleFileName::makeExplicit(Worklist.back()),
-                             serialization::MK_ExplicitModule);
+                             serialization::MK_ExplicitModule,
+                             /*DirectlyImported=*/false);
     if (ASTReader::readASTFileControlBlock(
             Worklist.pop_back_val(), CI.getFileManager(), CI.getModuleCache(),
             CI.getPCHContainerReader(),
@@ -418,25 +398,16 @@ void dependencies::initializeScanCompilerInstance(
   ScanInstance.setBuildingModule(false);
   ScanInstance.createVirtualFileSystem(FS, DiagConsumer);
   ScanInstance.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
-  if (Service.getOpts().Format == ScanningOutputFormat::P1689)
+  if (!Service.getOpts().EmitWarnings)
     ScanInstance.getDiagnostics().setIgnoreAllWarnings(true);
   ScanInstance.createFileManager();
   ScanInstance.createSourceManager();
 
   // Use DepFS for getting the dependency directives if requested to do so.
-  if (Service.getOpts().Mode == ScanningMode::DependencyDirectivesScan) {
-    DepFS->resetBypassedPathPrefix();
-    SmallString<256> ModulesCachePath;
-    normalizeModuleCachePath(ScanInstance.getFileManager(),
-                             ScanInstance.getHeaderSearchOpts().ModuleCachePath,
-                             ModulesCachePath);
-    if (!ModulesCachePath.empty())
-      DepFS->setBypassedPathPrefix(ModulesCachePath);
-
+  if (Service.getOpts().Mode == ScanningMode::DependencyDirectivesScan)
     ScanInstance.setDependencyDirectivesGetter(
         std::make_unique<ScanningDependencyDirectivesGetter>(
             ScanInstance.getFileManager()));
-  }
 }
 
 std::shared_ptr<CompilerInvocation> dependencies::createScanCompilerInvocation(
@@ -478,6 +449,10 @@ std::shared_ptr<CompilerInvocation> dependencies::createScanCompilerInvocation(
   ScanInvocation->getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings =
       true;
   ScanInvocation->getHeaderSearchOpts().ModulesForceValidateUserHeaders = false;
+
+  // Application extension only affects the handling of availability attributes,
+  // which cannot change the dependencies.
+  ScanInvocation->getLangOpts().AppExt = false;
 
   // Ensure that the scanner does not create new dependency collectors,
   // and thus won't write out the extra '.d' files to disk.
@@ -538,27 +513,14 @@ std::shared_ptr<ModuleDepCollector>
 dependencies::initializeScanInstanceDependencyCollector(
     CompilerInstance &ScanInstance,
     std::unique_ptr<DependencyOutputOptions> DepOutputOpts,
-    StringRef WorkingDirectory, DependencyConsumer &Consumer,
     DependencyScanningService &Service, CompilerInvocation &Inv,
     DependencyActionController &Controller,
     PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
-    llvm::SmallVector<StringRef> &StableDirs) {
-  std::shared_ptr<ModuleDepCollector> MDC;
-  switch (Service.getOpts().Format) {
-  case ScanningOutputFormat::Make:
-    ScanInstance.addDependencyCollector(
-        std::make_shared<DependencyConsumerForwarder>(
-            std::move(DepOutputOpts), WorkingDirectory, Consumer));
-    break;
-  case ScanningOutputFormat::P1689:
-  case ScanningOutputFormat::Full:
-    MDC = std::make_shared<ModuleDepCollector>(
-        Service, std::move(DepOutputOpts), ScanInstance, Consumer, Controller,
-        Inv, std::move(PrebuiltModulesASTMap), StableDirs);
-    ScanInstance.addDependencyCollector(MDC);
-    break;
-  }
-
+    SmallVector<StringRef> &StableDirs) {
+  auto MDC = std::make_shared<ModuleDepCollector>(
+      Service, std::move(DepOutputOpts), ScanInstance, Controller, Inv,
+      std::move(PrebuiltModulesASTMap), StableDirs);
+  ScanInstance.addDependencyCollector(MDC);
   return MDC;
 }
 
@@ -811,9 +773,8 @@ bool DependencyScanningAction::runInvocation(
   auto DepOutputOpts = createDependencyOutputOptions(*OriginalInvocation);
 
   MDC = initializeScanInstanceDependencyCollector(
-      ScanInstance, std::move(DepOutputOpts), WorkingDirectory, Consumer,
-      Service, *OriginalInvocation, Controller, *MaybePrebuiltModulesASTMap,
-      StableDirs);
+      ScanInstance, std::move(DepOutputOpts), Service, *OriginalInvocation,
+      Controller, *MaybePrebuiltModulesASTMap, StableDirs);
 
   if (ScanInstance.getDiagnostics().hasErrorOccurred())
     return false;
@@ -825,8 +786,10 @@ bool DependencyScanningAction::runInvocation(
   const bool Result = ScanInstance.ExecuteAction(Action);
 
   if (Result) {
-    if (MDC)
+    if (MDC) {
+      MDC->run(Consumer);
       MDC->applyDiscoveredDependencies(*OriginalInvocation);
+    }
 
     if (!Controller.finalize(ScanInstance, *OriginalInvocation))
       return false;

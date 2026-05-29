@@ -18,7 +18,7 @@ define float @test_constant_fold_rcp_f32_poison() nounwind {
 
 define float @test_constant_fold_rcp_f32_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_undef(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %val = call float @llvm.amdgcn.rcp.f32(float undef) nounwind readnone
   ret float %val
@@ -58,7 +58,7 @@ define double @test_constant_fold_rcp_f64_half() nounwind {
 
 define float @test_constant_fold_rcp_f32_43() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_43(
-; CHECK-NEXT:    ret float 0x3F97D05F40000000
+; CHECK-NEXT:    ret float f0x3CBE82FA
 ;
   %val = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) nounwind readnone
   ret float %val
@@ -66,7 +66,7 @@ define float @test_constant_fold_rcp_f32_43() nounwind {
 
 define double @test_constant_fold_rcp_f64_43() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f64_43(
-; CHECK-NEXT:    ret double 0x3F97D05F417D05F4
+; CHECK-NEXT:    ret double f0x3F97D05F417D05F4
 ;
   %val = call double @llvm.amdgcn.rcp.f64(double 4.300000e+01) nounwind readnone
   ret double %val
@@ -99,7 +99,7 @@ define half @test_constant_fold_sqrt_f16_poison() nounwind {
 
 define half @test_constant_fold_sqrt_f16_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f16_undef(
-; CHECK-NEXT:    ret half 0xH7E00
+; CHECK-NEXT:    ret half +qnan
 ;
   %val = call half @llvm.amdgcn.sqrt.f16(half undef) nounwind readnone
   ret half %val
@@ -115,7 +115,7 @@ define float @test_constant_fold_sqrt_f32_poison() nounwind {
 
 define float @test_constant_fold_sqrt_f32_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f32_undef(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %val = call float @llvm.amdgcn.sqrt.f32(float undef) nounwind readnone
   ret float %val
@@ -123,7 +123,7 @@ define float @test_constant_fold_sqrt_f32_undef() nounwind {
 
 define double @test_constant_fold_sqrt_f64_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f64_undef(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double +qnan
 ;
   %val = call double @llvm.amdgcn.sqrt.f64(double undef) nounwind readnone
   ret double %val
@@ -131,7 +131,7 @@ define double @test_constant_fold_sqrt_f64_undef() nounwind {
 
 define half @test_constant_fold_sqrt_f16_0() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f16_0(
-; CHECK-NEXT:    ret half 0xH0000
+; CHECK-NEXT:    ret half 0.000000e+00
 ;
   %val = call half @llvm.amdgcn.sqrt.f16(half 0.0) nounwind readnone
   ret half %val
@@ -157,7 +157,7 @@ define double @test_constant_fold_sqrt_f64_0() nounwind {
 
 define half @test_constant_fold_sqrt_f16_neg0() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f16_neg0(
-; CHECK-NEXT:    ret half 0xH8000
+; CHECK-NEXT:    ret half -0.000000e+00
 ;
   %val = call half @llvm.amdgcn.sqrt.f16(half -0.0) nounwind readnone
   ret half %val
@@ -183,7 +183,7 @@ define double @test_constant_fold_sqrt_f64_neg0() nounwind {
 
 define double @test_constant_fold_sqrt_snan_f64() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_snan_f64(
-; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double 0x7FF0000000000001)
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double +snan(0x1))
 ; CHECK-NEXT:    ret double [[VAL]]
 ;
   %val = call double @llvm.amdgcn.sqrt.f64(double 0x7FF0000000000001)
@@ -192,7 +192,7 @@ define double @test_constant_fold_sqrt_snan_f64() nounwind {
 
 define double @test_constant_fold_sqrt_qnan_f64() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_qnan_f64(
-; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double 0x7FF8000000000000)
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double +qnan)
 ; CHECK-NEXT:    ret double [[VAL]]
 ;
   %val = call double @llvm.amdgcn.sqrt.f64(double 0x7FF8000000000000)
@@ -260,7 +260,7 @@ define float @test_constant_fold_rsq_f32_poison() nounwind {
 
 define float @test_constant_fold_rsq_f32_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rsq_f32_undef(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %val = call float @llvm.amdgcn.rsq.f32(float undef) nounwind readnone
   ret float %val
@@ -364,7 +364,7 @@ define double @test_constant_fold_frexp_mant_f64_n1() nounwind {
 
 define float @test_constant_fold_frexp_mant_f32_nan() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f32_nan(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %val = call float @llvm.amdgcn.frexp.mant.f32(float 0x7FF8000000000000)
   ret float %val
@@ -372,7 +372,7 @@ define float @test_constant_fold_frexp_mant_f32_nan() nounwind {
 
 define double @test_constant_fold_frexp_mant_f64_nan() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f64_nan(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double +qnan
 ;
   %val = call double @llvm.amdgcn.frexp.mant.f64(double 0x7FF8000000000000)
   ret double %val
@@ -380,7 +380,7 @@ define double @test_constant_fold_frexp_mant_f64_nan() nounwind {
 
 define float @test_constant_fold_frexp_mant_f32_inf() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f32_inf(
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float +inf
 ;
   %val = call float @llvm.amdgcn.frexp.mant.f32(float 0x7FF0000000000000)
   ret float %val
@@ -388,7 +388,7 @@ define float @test_constant_fold_frexp_mant_f32_inf() nounwind {
 
 define double @test_constant_fold_frexp_mant_f64_inf() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f64_inf(
-; CHECK-NEXT:    ret double 0x7FF0000000000000
+; CHECK-NEXT:    ret double +inf
 ;
   %val = call double @llvm.amdgcn.frexp.mant.f64(double 0x7FF0000000000000)
   ret double %val
@@ -396,7 +396,7 @@ define double @test_constant_fold_frexp_mant_f64_inf() nounwind {
 
 define float @test_constant_fold_frexp_mant_f32_ninf() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f32_ninf(
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float -inf
 ;
   %val = call float @llvm.amdgcn.frexp.mant.f32(float 0xFFF0000000000000)
   ret float %val
@@ -404,7 +404,7 @@ define float @test_constant_fold_frexp_mant_f32_ninf() nounwind {
 
 define double @test_constant_fold_frexp_mant_f64_ninf() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f64_ninf(
-; CHECK-NEXT:    ret double 0xFFF0000000000000
+; CHECK-NEXT:    ret double -inf
 ;
   %val = call double @llvm.amdgcn.frexp.mant.f64(double 0xFFF0000000000000)
   ret double %val
@@ -412,7 +412,7 @@ define double @test_constant_fold_frexp_mant_f64_ninf() nounwind {
 
 define float @test_constant_fold_frexp_mant_f32_max_num() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f32_max_num(
-; CHECK-NEXT:    ret float 0x3FEFFFFFE0000000
+; CHECK-NEXT:    ret float f0x3F7FFFFF
 ;
   %val = call float @llvm.amdgcn.frexp.mant.f32(float 0x47EFFFFFE0000000)
   ret float %val
@@ -420,7 +420,7 @@ define float @test_constant_fold_frexp_mant_f32_max_num() nounwind {
 
 define double @test_constant_fold_frexp_mant_f64_max_num() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f64_max_num(
-; CHECK-NEXT:    ret double 0x3FEFFFFFFFFFFFFF
+; CHECK-NEXT:    ret double f0x3FEFFFFFFFFFFFFF
 ;
   %val = call double @llvm.amdgcn.frexp.mant.f64(double 0x7FEFFFFFFFFFFFFF)
   ret double %val
@@ -1194,7 +1194,7 @@ define <2 x half> @constant_splat0_cvt_pkrtz() {
 
 define <2 x half> @constant_cvt_pkrtz() {
 ; CHECK-LABEL: @constant_cvt_pkrtz(
-; CHECK-NEXT:    ret <2 x half> <half 0xH4000, half 0xH4400>
+; CHECK-NEXT:    ret <2 x half> <half 2.000000e+00, half 4.000000e+00>
 ;
   %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 2.0, float 4.0)
   ret <2 x half> %cvt
@@ -1203,7 +1203,7 @@ define <2 x half> @constant_cvt_pkrtz() {
 ; Test constant values where rtz changes result
 define <2 x half> @constant_rtz_pkrtz() {
 ; CHECK-LABEL: @constant_rtz_pkrtz(
-; CHECK-NEXT:    ret <2 x half> splat (half 0xH7BFF)
+; CHECK-NEXT:    ret <2 x half> splat (half 6.550400e+04)
 ;
   %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 65535.0, float 65535.0)
   ret <2 x half> %cvt
@@ -1211,7 +1211,7 @@ define <2 x half> @constant_rtz_pkrtz() {
 
 define <2 x half> @fpext_const_cvt_pkrtz(half %x) {
 ; CHECK-LABEL: @fpext_const_cvt_pkrtz(
-; CHECK-NEXT:    [[CVT:%.*]] = insertelement <2 x half> <half poison, half 0xH4200>, half [[X:%.*]], i64 0
+; CHECK-NEXT:    [[CVT:%.*]] = insertelement <2 x half> <half poison, half 3.000000e+00>, half [[X:%.*]], i64 0
 ; CHECK-NEXT:    ret <2 x half> [[CVT]]
 ;
   %ext = fpext half %x to float
@@ -1221,7 +1221,7 @@ define <2 x half> @fpext_const_cvt_pkrtz(half %x) {
 
 define <2 x half> @const_fpext_cvt_pkrtz(half %y) {
 ; CHECK-LABEL: @const_fpext_cvt_pkrtz(
-; CHECK-NEXT:    [[CVT:%.*]] = insertelement <2 x half> <half 0xH4500, half poison>, half [[Y:%.*]], i64 1
+; CHECK-NEXT:    [[CVT:%.*]] = insertelement <2 x half> <half 5.000000e+00, half poison>, half [[Y:%.*]], i64 1
 ; CHECK-NEXT:    ret <2 x half> [[CVT]]
 ;
   %ext = fpext half %y to float
@@ -1231,8 +1231,8 @@ define <2 x half> @const_fpext_cvt_pkrtz(half %y) {
 
 define <2 x half> @const_fpext_multi_cvt_pkrtz(half %y) {
 ; CHECK-LABEL: @const_fpext_multi_cvt_pkrtz(
-; CHECK-NEXT:    [[CVT1:%.*]] = insertelement <2 x half> <half 0xH4500, half poison>, half [[Y:%.*]], i64 1
-; CHECK-NEXT:    [[CVT2:%.*]] = insertelement <2 x half> <half 0xH4200, half poison>, half [[Y]], i64 1
+; CHECK-NEXT:    [[CVT1:%.*]] = insertelement <2 x half> <half 5.000000e+00, half poison>, half [[Y:%.*]], i64 1
+; CHECK-NEXT:    [[CVT2:%.*]] = insertelement <2 x half> <half 3.000000e+00, half poison>, half [[Y]], i64 1
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd <2 x half> [[CVT1]], [[CVT2]]
 ; CHECK-NEXT:    ret <2 x half> [[ADD]]
 ;
@@ -1825,9 +1825,9 @@ declare void @llvm.amdgcn.exp.compr.v2f16(i32 immarg, i32 immarg, <2 x half>, <2
 define void @exp_compr_disabled_inputs_to_undef(<2 x half> %xy, <2 x half> %zw) {
 ; CHECK-LABEL: @exp_compr_disabled_inputs_to_undef(
 ; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> poison, <2 x half> poison, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> poison, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> poison, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> <half 1.000000e+00, half 2.000000e+00>, <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> <half 1.000000e+00, half 2.000000e+00>, <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> <half 1.000000e+00, half 2.000000e+00>, <2 x half> poison, i1 true, i1 false)
 ; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> poison, <2 x half> poison, i1 true, i1 false)
 ; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> [[XY:%.*]], <2 x half> poison, i1 true, i1 false)
 ; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> [[XY]], <2 x half> poison, i1 true, i1 false)
@@ -3920,7 +3920,7 @@ define amdgpu_kernel void @image_sample_a16_c_d_o_2darray_V2(ptr addrspace(1) %o
 
 define amdgpu_kernel void @image_sample_a16_c_d_o_2darray_const(ptr addrspace(1) %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %slice) {
 ; CHECK-LABEL: @image_sample_a16_c_d_o_2darray_const(
-; CHECK-NEXT:    [[RES:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f16.f16.v8i32.v4i32(i32 6, i32 [[OFFSET:%.*]], float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half 0xH3400, half [[SLICE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f16.f16.v8i32.v4i32(i32 6, i32 [[OFFSET:%.*]], float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half 2.500000e-01, half [[SLICE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    store <2 x float> [[RES]], ptr addrspace(1) [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -5655,7 +5655,7 @@ define double @trig_preop_constfold_variable_int(i32 %arg) {
 
 define double @trig_preop_qnan(i32 %arg) {
 ; CHECK-LABEL: @trig_preop_qnan(
-; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 0x7FF8000000000000, i32 [[ARG:%.*]])
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double +qnan, i32 [[ARG:%.*]])
 ; CHECK-NEXT:    ret double [[VAL]]
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7FF8000000000000, i32 %arg)
@@ -5664,7 +5664,7 @@ define double @trig_preop_qnan(i32 %arg) {
 
 define double @trig_preop_snan(i32 %arg) {
 ; CHECK-LABEL: @trig_preop_snan(
-; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 0x7FF0000000000001, i32 [[ARG:%.*]])
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double +snan(0x1), i32 [[ARG:%.*]])
 ; CHECK-NEXT:    ret double [[VAL]]
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7FF0000000000001, i32 %arg)
@@ -5673,7 +5673,7 @@ define double @trig_preop_snan(i32 %arg) {
 
 define double @trig_preop_inf_0() {
 ; CHECK-LABEL: @trig_preop_inf_0(
-; CHECK-NEXT:    ret double 0xB43DD63F5F2F8BD
+; CHECK-NEXT:    ret double f0x0B43DD63F5F2F8BD
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7FF0000000000000, i32 0)
   ret double %val
@@ -5681,7 +5681,7 @@ define double @trig_preop_inf_0() {
 
 define double @trig_preop_ninf_0() {
 ; CHECK-LABEL: @trig_preop_ninf_0(
-; CHECK-NEXT:    ret double 0xB43DD63F5F2F8BD
+; CHECK-NEXT:    ret double f0x0B43DD63F5F2F8BD
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0xFFF0000000000000, i32 0)
   ret double %val
@@ -5707,7 +5707,7 @@ define double @trig_preop_variable_args(double %arg0, i32 %arg1) {
 
 define double @trig_preop_constfold() {
 ; CHECK-LABEL: @trig_preop_constfold(
-; CHECK-NEXT:    ret double 0x394A6EE06DB14ACC
+; CHECK-NEXT:    ret double f0x394A6EE06DB14ACC
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 3.454350e+02, i32 2)
   ret double %val
@@ -5734,7 +5734,7 @@ define double @trig_preop_constfold_neg1_segment() {
 ; Only use src1[4:0], so segment is actually 0 for -32.
 define double @trig_preop_constfold_neg32_segment() {
 ; CHECK-LABEL: @trig_preop_constfold_neg32_segment(
-; CHECK-NEXT:    ret double 0x3FE45F306DC9C882
+; CHECK-NEXT:    ret double f0x3FE45F306DC9C882
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 3.454350e+02, i32 -32)
   ret double %val
@@ -5751,7 +5751,7 @@ define double @trig_preop_constfold_strictfp() strictfp {
 
 define double @trig_preop_constfold_exponent0_mantissa0__segment0() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent0_mantissa0__segment0(
-; CHECK-NEXT:    ret double 0x3FE45F306DC9C882
+; CHECK-NEXT:    ret double f0x3FE45F306DC9C882
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0.0, i32 0)
   ret double %val
@@ -5759,7 +5759,7 @@ define double @trig_preop_constfold_exponent0_mantissa0__segment0() {
 
 define double @trig_preop_constfold_exponent0_mantissa1__segment0() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent0_mantissa1__segment0(
-; CHECK-NEXT:    ret double 0x3FE45F306DC9C882
+; CHECK-NEXT:    ret double f0x3FE45F306DC9C882
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x000FFFFFFFFFFFFF, i32 0)
   ret double %val
@@ -5767,7 +5767,7 @@ define double @trig_preop_constfold_exponent0_mantissa1__segment0() {
 
 define double @trig_preop_constfold_exponent0_mantissaX__segment0() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent0_mantissaX__segment0(
-; CHECK-NEXT:    ret double 0x3FE45F306DC9C882
+; CHECK-NEXT:    ret double f0x3FE45F306DC9C882
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x0004A7F09D5F47D4, i32 0)
   ret double %val
@@ -5775,7 +5775,7 @@ define double @trig_preop_constfold_exponent0_mantissaX__segment0() {
 
 define double @trig_preop_constfold_exponent0_mantissa0__segment2() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent0_mantissa0__segment2(
-; CHECK-NEXT:    ret double 0x394A6EE06DB14ACC
+; CHECK-NEXT:    ret double f0x394A6EE06DB14ACC
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0.0, i32 2)
   ret double %val
@@ -5783,7 +5783,7 @@ define double @trig_preop_constfold_exponent0_mantissa0__segment2() {
 
 define double @trig_preop_constfold_exponent0_mantissa1__segment2() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent0_mantissa1__segment2(
-; CHECK-NEXT:    ret double 0x394A6EE06DB14ACC
+; CHECK-NEXT:    ret double f0x394A6EE06DB14ACC
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x000FFFFFFFFFFFFF, i32 2)
   ret double %val
@@ -5791,7 +5791,7 @@ define double @trig_preop_constfold_exponent0_mantissa1__segment2() {
 
 define double @trig_preop_constfold_exponent0_mantissaX__segment2() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent0_mantissaX__segment2(
-; CHECK-NEXT:    ret double 0x394A6EE06DB14ACC
+; CHECK-NEXT:    ret double f0x394A6EE06DB14ACC
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x00094A6EE06DB14A, i32 2)
   ret double %val
@@ -5827,7 +5827,7 @@ define double @trig_preop_constfold_exponent0_mantissaX__outbound_segment() {
 ; 1607 = 1077 + 10 * 53
 define double @trig_preop_constfold_exponent1607_mantissa0__segment0() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent1607_mantissa0__segment0(
-; CHECK-NEXT:    ret double 0x1EC8135A2FBF209C
+; CHECK-NEXT:    ret double f0x1EC8135A2FBF209C
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x6470000000000000, i32 0)
   ret double %val
@@ -5836,7 +5836,7 @@ define double @trig_preop_constfold_exponent1607_mantissa0__segment0() {
 ; 1607 = 1077 + 10 * 53
 define double @trig_preop_constfold_exponent1607_mantissa1__segment1() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent1607_mantissa1__segment1(
-; CHECK-NEXT:    ret double 0x1EC8135A2FBF209C
+; CHECK-NEXT:    ret double f0x1EC8135A2FBF209C
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x647FFFFFFFFFFFFF, i32 0)
   ret double %val
@@ -5845,7 +5845,7 @@ define double @trig_preop_constfold_exponent1607_mantissa1__segment1() {
 ; 1607 = 1077 + 10 * 53
 define double @trig_preop_constfold_exponent1607_mantissaX__segment1() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent1607_mantissaX__segment1(
-; CHECK-NEXT:    ret double 0x1EC8135A2FBF209C
+; CHECK-NEXT:    ret double f0x1EC8135A2FBF209C
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x6471B791D6398353, i32 0)
   ret double %val
@@ -5854,7 +5854,7 @@ define double @trig_preop_constfold_exponent1607_mantissaX__segment1() {
 ; 1607 = 1077 + 10 * 53
 define double @trig_preop_constfold_exponent1607_mantissa0__segment2() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent1607_mantissa0__segment2(
-; CHECK-NEXT:    ret double 0x181272117E2EF7E4
+; CHECK-NEXT:    ret double f0x181272117E2EF7E4
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x6470000000000000, i32 2)
   ret double %val
@@ -5863,7 +5863,7 @@ define double @trig_preop_constfold_exponent1607_mantissa0__segment2() {
 ; 1607 = 1077 + 10 * 53
 define double @trig_preop_constfold_exponent1607_mantissa1__segment2() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent1607_mantissa1__segment2(
-; CHECK-NEXT:    ret double 0x181272117E2EF7E4
+; CHECK-NEXT:    ret double f0x181272117E2EF7E4
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x647FFFFFFFFFFFFF, i32 2)
   ret double %val
@@ -5872,7 +5872,7 @@ define double @trig_preop_constfold_exponent1607_mantissa1__segment2() {
 ; 1607 = 1077 + 10 * 53
 define double @trig_preop_constfold_exponent1607_mantissaX__segment2() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent1607_mantissaX__segment2(
-; CHECK-NEXT:    ret double 0x181272117E2EF7E4
+; CHECK-NEXT:    ret double f0x181272117E2EF7E4
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x647272117E2EF7E4, i32 2)
   ret double %val
@@ -5907,7 +5907,7 @@ define double @trig_preop_constfold_exponent1607_mantissaX__outbound_segment() {
 
 define double @trig_preop_constfold_exponent1968_mantissa0__segment0() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent1968_mantissa0__segment0(
-; CHECK-NEXT:    ret double 0x10374F463F669E5F
+; CHECK-NEXT:    ret double f0x10374F463F669E5F
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7B00000000000000, i32 0)
   ret double %val
@@ -5915,7 +5915,7 @@ define double @trig_preop_constfold_exponent1968_mantissa0__segment0() {
 
 define double @trig_preop_constfold_exponent1968_mantissa1__segment0() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent1968_mantissa1__segment0(
-; CHECK-NEXT:    ret double 0x10374F463F669E5F
+; CHECK-NEXT:    ret double f0x10374F463F669E5F
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7B0FFFFFFFFFFFFF, i32 0)
   ret double %val
@@ -5923,7 +5923,7 @@ define double @trig_preop_constfold_exponent1968_mantissa1__segment0() {
 
 define double @trig_preop_constfold_exponent1968_mantissax__segment0() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent1968_mantissax__segment0(
-; CHECK-NEXT:    ret double 0x10374F463F669E5F
+; CHECK-NEXT:    ret double f0x10374F463F669E5F
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7B074F463F669E5F, i32 0)
   ret double %val
@@ -5931,7 +5931,7 @@ define double @trig_preop_constfold_exponent1968_mantissax__segment0() {
 
 define double @trig_preop_constfold_exponent1968_mantissa0__segment2() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent1968_mantissa0__segment2(
-; CHECK-NEXT:    ret double 0x98F2F8BD9E839CE
+; CHECK-NEXT:    ret double f0x098F2F8BD9E839CE
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7B00000000000000, i32 2)
   ret double %val
@@ -5939,7 +5939,7 @@ define double @trig_preop_constfold_exponent1968_mantissa0__segment2() {
 
 define double @trig_preop_constfold_exponent1968_mantissa1__segment2() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent1968_mantissa1__segment2(
-; CHECK-NEXT:    ret double 0x98F2F8BD9E839CE
+; CHECK-NEXT:    ret double f0x098F2F8BD9E839CE
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7B0FFFFFFFFFFFFF, i32 2)
   ret double %val
@@ -5947,7 +5947,7 @@ define double @trig_preop_constfold_exponent1968_mantissa1__segment2() {
 
 define double @trig_preop_constfold_exponent1968_mantissaX__segment2() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent1968_mantissaX__segment2(
-; CHECK-NEXT:    ret double 0x98F2F8BD9E839CE
+; CHECK-NEXT:    ret double f0x098F2F8BD9E839CE
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7B0A2F8BD9E839CE, i32 2)
   ret double %val
@@ -6053,7 +6053,7 @@ declare half @llvm.amdgcn.log.f16(half) nounwind readnone
 
 define float @test_constant_fold_log_f32_undef() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_undef(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %val = call float @llvm.amdgcn.log.f32(float undef)
   ret float %val
@@ -6069,7 +6069,7 @@ define float @test_constant_fold_log_f32_poison() {
 
 define float @test_constant_fold_log_f32_p0() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_p0(
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float -inf
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0.0)
   ret float %val
@@ -6077,7 +6077,7 @@ define float @test_constant_fold_log_f32_p0() {
 
 define float @test_constant_fold_log_f32_n0() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_n0(
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float -inf
 ;
   %val = call float @llvm.amdgcn.log.f32(float -0.0)
   ret float %val
@@ -6085,7 +6085,7 @@ define float @test_constant_fold_log_f32_n0() {
 
 define float @test_constant_fold_log_f32_subnormal() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_subnormal(
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float -inf
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0x380FFFFFC0000000)
   ret float %val
@@ -6093,7 +6093,7 @@ define float @test_constant_fold_log_f32_subnormal() {
 
 define float @test_constant_fold_log_f32_negsubnormal() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_negsubnormal(
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float -inf
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0xB80FFFFFC0000000)
   ret float %val
@@ -6101,7 +6101,7 @@ define float @test_constant_fold_log_f32_negsubnormal() {
 
 define float @test_constant_fold_log_f32_pinf() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_pinf(
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float +inf
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0x7FF0000000000000)
   ret float %val
@@ -6109,7 +6109,7 @@ define float @test_constant_fold_log_f32_pinf() {
 
 define float @test_constant_fold_log_f32_ninf() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_ninf(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0xFFF0000000000000)
   ret float %val
@@ -6135,7 +6135,7 @@ define float @test_constant_fold_log_f32_p10() {
 
 define float @test_constant_fold_log_f32_neg10() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_neg10(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %val = call float @llvm.amdgcn.log.f32(float -10.0)
   ret float %val
@@ -6143,7 +6143,7 @@ define float @test_constant_fold_log_f32_neg10() {
 
 define float @test_constant_fold_log_f32_qnan() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_qnan(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0x7FF8000000000000)
   ret float %val
@@ -6151,7 +6151,7 @@ define float @test_constant_fold_log_f32_qnan() {
 
 define float @test_constant_fold_log_f32_snan() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_snan(
-; CHECK-NEXT:    ret float 0x7FF8000020000000
+; CHECK-NEXT:    ret float +nan(0x1)
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0x7FF0000020000000)
   ret float %val
@@ -6159,7 +6159,7 @@ define float @test_constant_fold_log_f32_snan() {
 
 define half @test_constant_fold_log_f16_p0() {
 ; CHECK-LABEL: @test_constant_fold_log_f16_p0(
-; CHECK-NEXT:    ret half 0xHFC00
+; CHECK-NEXT:    ret half -inf
 ;
   %val = call half @llvm.amdgcn.log.f16(half 0.0)
   ret half %val
@@ -6167,7 +6167,7 @@ define half @test_constant_fold_log_f16_p0() {
 
 define half @test_constant_fold_log_f16_neg10() {
 ; CHECK-LABEL: @test_constant_fold_log_f16_neg10(
-; CHECK-NEXT:    ret half 0xH7E00
+; CHECK-NEXT:    ret half +qnan
 ;
   %val = call half @llvm.amdgcn.log.f16(half -10.0)
   ret half %val
@@ -6175,7 +6175,7 @@ define half @test_constant_fold_log_f16_neg10() {
 
 define float @test_constant_fold_log_f32_qnan_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_log_f32_qnan_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float 0x7FF8000000000000) #[[ATTR20]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float +qnan) #[[ATTR20]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0x7FF8000000000000) strictfp
@@ -6211,7 +6211,7 @@ define float @test_constant_fold_log_f32_neg_strictfp() strictfp {
 
 define float @test_constant_fold_log_f32_pinf_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_log_f32_pinf_strictfp(
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float +inf
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0x7FF0000000000000) strictfp
   ret float %val
@@ -6219,7 +6219,7 @@ define float @test_constant_fold_log_f32_pinf_strictfp() strictfp {
 
 define float @test_constant_fold_log_f32_ninf_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_log_f32_ninf_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float 0xFFF0000000000000) #[[ATTR20]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float -inf) #[[ATTR20]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0xFFF0000000000000) strictfp
@@ -6228,7 +6228,7 @@ define float @test_constant_fold_log_f32_ninf_strictfp() strictfp {
 
 define half @test_constant_fold_log_f16_denorm() {
 ; CHECK-LABEL: @test_constant_fold_log_f16_denorm(
-; CHECK-NEXT:    [[VAL:%.*]] = call half @llvm.amdgcn.log.f16(half 0xH03FF)
+; CHECK-NEXT:    [[VAL:%.*]] = call half @llvm.amdgcn.log.f16(half 6.097560e-05)
 ; CHECK-NEXT:    ret half [[VAL]]
 ;
   %val = call half @llvm.amdgcn.log.f16(half 0xH03ff)
@@ -6237,7 +6237,7 @@ define half @test_constant_fold_log_f16_denorm() {
 
 define half @test_constant_fold_log_f16_neg_denorm() {
 ; CHECK-LABEL: @test_constant_fold_log_f16_neg_denorm(
-; CHECK-NEXT:    ret half 0xH7E00
+; CHECK-NEXT:    ret half +qnan
 ;
   %val = call half @llvm.amdgcn.log.f16(half 0xH83ff)
   ret half %val
@@ -6252,7 +6252,7 @@ declare half @llvm.amdgcn.exp2.f16(half) nounwind readnone
 
 define float @test_constant_fold_exp2_f32_undef() {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_undef(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %val = call float @llvm.amdgcn.exp2.f32(float undef)
   ret float %val
@@ -6354,7 +6354,7 @@ define float @test_constant_fold_exp2_f32_negsubnormal() {
 
 define float @test_constant_fold_exp2_f32_pinf() {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_pinf(
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float +inf
 ;
   %val = call float @llvm.amdgcn.exp2.f32(float 0x7FF0000000000000)
   ret float %val
@@ -6388,7 +6388,7 @@ define float @test_constant_fold_exp2_f32_neg10() {
 
 define float @test_constant_fold_exp2_f32_qnan() {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_qnan(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %val = call float @llvm.amdgcn.exp2.f32(float 0x7FF8000000000000)
   ret float %val
@@ -6396,7 +6396,7 @@ define float @test_constant_fold_exp2_f32_qnan() {
 
 define float @test_constant_fold_exp2_f32_snan() {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_snan(
-; CHECK-NEXT:    ret float 0x7FF8000020000000
+; CHECK-NEXT:    ret float +nan(0x1)
 ;
   %val = call float @llvm.amdgcn.exp2.f32(float 0x7FF0000020000000)
   ret float %val
@@ -6404,7 +6404,7 @@ define float @test_constant_fold_exp2_f32_snan() {
 
 define half @test_constant_fold_exp2_f16_p0() {
 ; CHECK-LABEL: @test_constant_fold_exp2_f16_p0(
-; CHECK-NEXT:    ret half 0xH3C00
+; CHECK-NEXT:    ret half 1.000000e+00
 ;
   %val = call half @llvm.amdgcn.exp2.f16(half 0.0)
   ret half %val
@@ -6412,7 +6412,7 @@ define half @test_constant_fold_exp2_f16_p0() {
 
 define half @test_constant_fold_exp2_f16_neg10() {
 ; CHECK-LABEL: @test_constant_fold_exp2_f16_neg10(
-; CHECK-NEXT:    [[VAL:%.*]] = call half @llvm.amdgcn.exp2.f16(half 0xHC900)
+; CHECK-NEXT:    [[VAL:%.*]] = call half @llvm.amdgcn.exp2.f16(half -1.000000e+01)
 ; CHECK-NEXT:    ret half [[VAL]]
 ;
   %val = call half @llvm.amdgcn.exp2.f16(half -10.0)
@@ -6421,7 +6421,7 @@ define half @test_constant_fold_exp2_f16_neg10() {
 
 define float @test_constant_fold_exp2_f32_qnan_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_qnan_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float 0x7FF8000000000000) #[[ATTR20]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float +qnan) #[[ATTR20]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.exp2.f32(float 0x7FF8000000000000) strictfp
@@ -6493,7 +6493,7 @@ define float @test_constant_fold_exp2_f32_neg_strictfp() strictfp {
 
 define float @test_constant_fold_exp2_f32_pinf_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_pinf_strictfp(
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float +inf
 ;
   %val = call float @llvm.amdgcn.exp2.f32(float 0x7FF0000000000000) strictfp
   ret float %val
@@ -6509,7 +6509,7 @@ define float @test_constant_fold_exp2_f32_ninf_strictfp() strictfp {
 
 define half @test_constant_fold_exp2_f16_denorm() {
 ; CHECK-LABEL: @test_constant_fold_exp2_f16_denorm(
-; CHECK-NEXT:    [[VAL:%.*]] = call half @llvm.amdgcn.exp2.f16(half 0xH03FF)
+; CHECK-NEXT:    [[VAL:%.*]] = call half @llvm.amdgcn.exp2.f16(half 6.097560e-05)
 ; CHECK-NEXT:    ret half [[VAL]]
 ;
   %val = call half @llvm.amdgcn.exp2.f16(half 0xH03ff)
@@ -6518,7 +6518,7 @@ define half @test_constant_fold_exp2_f16_denorm() {
 
 define half @test_constant_fold_exp2_f16_neg_denorm() {
 ; CHECK-LABEL: @test_constant_fold_exp2_f16_neg_denorm(
-; CHECK-NEXT:    [[VAL:%.*]] = call half @llvm.amdgcn.exp2.f16(half 0xH83FF)
+; CHECK-NEXT:    [[VAL:%.*]] = call half @llvm.amdgcn.exp2.f16(half -6.097560e-05)
 ; CHECK-NEXT:    ret half [[VAL]]
 ;
   %val = call half @llvm.amdgcn.exp2.f16(half 0xH83ff)

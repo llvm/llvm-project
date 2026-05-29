@@ -37,7 +37,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Support/Debug.h"
 
 #define GET_GICOMBINER_DEPS
@@ -114,7 +113,7 @@ void applyExtractVecEltPairwiseAdd(
   // We want to generate two extracts of elements 0 and 1, and add them.
   LLT Ty = std::get<1>(MatchInfo);
   Register Src = std::get<2>(MatchInfo);
-  LLT s64 = LLT::scalar(64);
+  LLT s64 = LLT::integer(64);
   B.setInstrAndDebugLoc(MI);
   auto Elt0 = B.buildExtractVectorElement(Ty, Src, B.buildConstant(s64, 0));
   auto Elt1 = B.buildExtractVectorElement(Ty, Src, B.buildConstant(s64, 1));
@@ -223,7 +222,7 @@ bool matchAArch64MulConstCombine(
     return false;
 
   ApplyFn = [=](MachineIRBuilder &B, Register DstReg) {
-    auto Shift = B.buildConstant(LLT::scalar(64), ShiftAmt);
+    auto Shift = B.buildConstant(LLT::integer(64), ShiftAmt);
     auto ShiftedVal = B.buildShl(Ty, LHS, Shift);
 
     Register AddSubLHS = ShiftValUseIsLHS ? ShiftedVal.getReg(0) : LHS;
@@ -238,7 +237,8 @@ bool matchAArch64MulConstCombine(
     }
     // Shift the result.
     if (TrailingZeroes) {
-      B.buildShl(DstReg, Res, B.buildConstant(LLT::scalar(64), TrailingZeroes));
+      B.buildShl(DstReg, Res,
+                 B.buildConstant(LLT::integer(64), TrailingZeroes));
       return;
     }
     B.buildCopy(DstReg, Res.getReg(0));
@@ -329,11 +329,11 @@ void applySplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI,
   GStore &Store = cast<GStore>(MI);
   assert(MRI.getType(Store.getValueReg()).isVector() &&
          "Expected a vector store value");
-  LLT NewTy = LLT::scalar(64);
+  LLT NewTy = LLT::integer(64);
   Register PtrReg = Store.getPointerReg();
   auto Zero = B.buildConstant(NewTy, 0);
-  auto HighPtr = B.buildPtrAdd(MRI.getType(PtrReg), PtrReg,
-                               B.buildConstant(LLT::scalar(64), 8));
+  auto HighPtr =
+      B.buildPtrAdd(MRI.getType(PtrReg), PtrReg, B.buildConstant(NewTy, 8));
   auto &MF = *MI.getMF();
   auto *LowMMO = MF.getMachineMemOperand(&Store.getMMO(), 0, NewTy);
   auto *HighMMO = MF.getMachineMemOperand(&Store.getMMO(), 8, NewTy);
@@ -667,7 +667,6 @@ private:
 } // end anonymous namespace
 
 void AArch64PostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
@@ -691,7 +690,6 @@ bool AArch64PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   if (MF.getProperties().hasFailedISel())
     return false;
   assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
-  auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
   bool EnableOpt =
       MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
@@ -706,7 +704,8 @@ bool AArch64PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
                 : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   GISelCSEAnalysisWrapper &Wrapper =
       getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-  auto *CSEInfo = &Wrapper.get(TPC->getCSEConfig());
+  auto *CSEInfo =
+      &Wrapper.get(getStandardCSEConfigForOpt(MF.getTarget().getOptLevel()));
 
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(),
@@ -752,7 +751,8 @@ bool AArch64PostLegalizerCombiner::tryOptimizeConsecStores(
   for (auto &SInfo : Stores) {
     // Compute a new pointer with the new base ptr and adjusted offset.
     MIB.setInstrAndDebugLoc(*SInfo.St);
-    auto NewOff = MIB.buildConstant(LLT::scalar(64), SInfo.Offset - BaseOffset);
+    auto NewOff =
+        MIB.buildConstant(LLT::integer(64), SInfo.Offset - BaseOffset);
     auto NewPtr = MIB.buildPtrAdd(MRI.getType(SInfo.St->getPointerReg()),
                                   NewBase, NewOff);
     if (MIB.getObserver())
@@ -914,7 +914,6 @@ char AArch64PostLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(AArch64PostLegalizerCombiner, DEBUG_TYPE,
                       "Combine AArch64 MachineInstrs after legalization", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(AArch64PostLegalizerCombiner, DEBUG_TYPE,
                     "Combine AArch64 MachineInstrs after legalization", false,

@@ -205,6 +205,16 @@ static bool isSpecifier(Token T) {
                    tok::kw_static, tok::kw_friend, tok::kw_virtual);
 }
 
+namespace {
+
+struct ClassifiedToken {
+  Token T;
+  bool IsQualifier;
+  bool IsSpecifier;
+};
+
+} // namespace
+
 static std::optional<ClassifiedToken>
 classifyToken(const FunctionDecl &F, Preprocessor &PP, Token Tok) {
   ClassifiedToken CT;
@@ -218,7 +228,7 @@ classifyToken(const FunctionDecl &F, Preprocessor &PP, Token Tok) {
   Token End;
   End.startToken();
   End.setKind(tok::eof);
-  const SmallVector<Token, 2> Stream{Tok, End};
+  const std::array<Token, 2> Stream{Tok, End};
 
   // FIXME: do not report these token to Preprocessor.TokenWatcher.
   PP.EnterTokenStream(Stream, false, /*IsReinject=*/false);

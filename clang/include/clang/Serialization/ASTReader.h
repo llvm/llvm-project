@@ -224,7 +224,8 @@ public:
 
   /// This is called for each AST file loaded.
   virtual void visitModuleFile(ModuleFileName Filename,
-                               serialization::ModuleKind Kind) {}
+                               serialization::ModuleKind Kind,
+                               bool DirectlyImported) {}
 
   /// Returns true if this \c ASTReaderListener wants to receive the
   /// input files of the AST file via \c visitInputFile, false otherwise.
@@ -313,8 +314,8 @@ public:
   void ReadCounter(const serialization::ModuleFile &M, uint32_t Value) override;
   bool needsInputFileVisitation() override;
   bool needsSystemInputFileVisitation() override;
-  void visitModuleFile(ModuleFileName Filename,
-                       serialization::ModuleKind Kind) override;
+  void visitModuleFile(ModuleFileName Filename, serialization::ModuleKind Kind,
+                       bool DirectlyImported) override;
   bool visitInputFile(StringRef Filename, bool isSystem,
                       bool isOverridden, bool isExplicitModule) override;
   void readModuleFileExtension(
@@ -417,14 +418,13 @@ struct LookupBlockOffsets : VisibleLookupBlockOffsets {
 /// The AST reader provides lazy de-serialization of declarations, as
 /// required when traversing the AST. Only those AST nodes that are
 /// actually required will be de-serialized.
-class ASTReader
-  : public ExternalPreprocessorSource,
-    public ExternalPreprocessingRecordSource,
-    public ExternalHeaderFileInfoSource,
-    public ExternalSemaSource,
-    public IdentifierInfoLookup,
-    public ExternalSLocEntrySource
-{
+class ASTReader : public ExternalPreprocessorSource,
+                  public ExternalPreprocessingRecordSource,
+                  public ExternalHeaderFileInfoSource,
+                  public ExternalSemaSource,
+                  public IdentifierInfoLookup,
+                  public ExternalSLocEntrySource,
+                  public ExternalSubmoduleSource {
 public:
   /// Types of AST files.
   friend class ASTDeclMerger;
@@ -818,32 +818,6 @@ private:
   /// A mapping from each of the hidden submodules to the deserialized
   /// declarations in that submodule that could be made visible.
   HiddenNamesMapType HiddenNamesMap;
-
-  /// A module import, export, or conflict that hasn't yet been resolved.
-  struct UnresolvedModuleRef {
-    /// The file in which this module resides.
-    ModuleFile *File;
-
-    /// The module that is importing or exporting.
-    Module *Mod;
-
-    /// The kind of module reference.
-    enum { Import, Export, Conflict, Affecting } Kind;
-
-    /// The local ID of the module that is being exported.
-    unsigned ID;
-
-    /// Whether this is a wildcard export.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned IsWildcard : 1;
-
-    /// String data.
-    StringRef String;
-  };
-
-  /// The set of module imports and exports that still need to be
-  /// resolved.
-  SmallVector<UnresolvedModuleRef, 2> UnresolvedModuleRefs;
 
   /// A vector containing selectors that have already been loaded.
   ///
@@ -1611,8 +1585,6 @@ private:
   ASTReadResult ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
                                        const ModuleFile *ImportedBy,
                                        unsigned ClientLoadCapabilities);
-  llvm::Error ReadSubmoduleBlock(ModuleFile &F,
-                                 unsigned ClientLoadCapabilities);
   static bool ParseLanguageOptions(const RecordData &Record,
                                    StringRef ModuleFilename, bool Complain,
                                    ASTReaderListener &Listener,
@@ -1993,12 +1965,6 @@ public:
 
   /// Update the state of Sema after loading some additional modules.
   void UpdateSema();
-
-  /// Add in-memory (virtual file) buffer.
-  void addInMemoryBuffer(StringRef &FileName,
-                         std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-    ModuleMgr.addInMemoryBuffer(FileName, std::move(Buffer));
-  }
 
   /// Finalizes the AST reader's state before writing an AST file to
   /// disk.
@@ -2443,8 +2409,7 @@ public:
                                                   unsigned LocalID) const;
 
   /// Retrieve the submodule that corresponds to a global submodule ID.
-  ///
-  Module *getSubmodule(serialization::SubmoduleID GlobalID);
+  Module *getSubmodule(uint32_t GlobalID) override;
 
   /// Retrieve the module that corresponds to the given module ID.
   ///

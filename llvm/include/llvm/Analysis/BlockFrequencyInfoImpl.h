@@ -52,11 +52,11 @@
 #define DEBUG_TYPE "block-freq"
 
 namespace llvm {
-extern llvm::cl::opt<bool> CheckBFIUnknownBlockQueries;
+extern LLVM_ABI llvm::cl::opt<bool> CheckBFIUnknownBlockQueries;
 
-extern llvm::cl::opt<bool> UseIterativeBFIInference;
-extern llvm::cl::opt<unsigned> IterativeBFIMaxIterationsPerBlock;
-extern llvm::cl::opt<double> IterativeBFIPrecision;
+extern LLVM_ABI llvm::cl::opt<bool> UseIterativeBFIInference;
+extern LLVM_ABI llvm::cl::opt<unsigned> IterativeBFIMaxIterationsPerBlock;
+extern LLVM_ABI llvm::cl::opt<double> IterativeBFIPrecision;
 
 class BranchProbabilityInfo;
 class Function;
@@ -141,10 +141,10 @@ public:
   ///
   /// Convert to \a ScaledNumber.  \a isFull() gives 1.0, while \a isEmpty()
   /// gives slightly above 0.0.
-  ScaledNumber<uint64_t> toScaled() const;
+  LLVM_ABI ScaledNumber<uint64_t> toScaled() const;
 
-  void dump() const;
-  raw_ostream &print(raw_ostream &OS) const;
+  LLVM_ABI void dump() const;
+  LLVM_ABI raw_ostream &print(raw_ostream &OS) const;
 };
 
 inline BlockMass operator+(BlockMass L, BlockMass R) {
@@ -174,7 +174,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, BlockMass X) {
 ///
 /// Nevertheless, the majority of the overall algorithm documentation lives with
 /// BlockFrequencyInfoImpl.  See there for details.
-class BlockFrequencyInfoImplBase {
+class LLVM_ABI BlockFrequencyInfoImplBase {
 public:
   using Scaled64 = ScaledNumber<uint64_t>;
   using BlockMass = bfi_detail::BlockMass;
@@ -409,10 +409,11 @@ public:
     /// cases, adjacent edge weights are combined by sorting WeightList and
     /// combining adjacent weights.  However, for very large edge lists an
     /// auxiliary hash table is used.
-    void normalize();
+    LLVM_ABI void normalize();
 
   private:
-    void add(const BlockNode &Node, uint64_t Amount, Weight::DistType Type);
+    LLVM_ABI void add(const BlockNode &Node, uint64_t Amount,
+                      Weight::DistType Type);
   };
 
   /// Data about each block.  This is used downstream.
@@ -631,20 +632,20 @@ struct IrreducibleGraph {
   template <class BlockEdgesAdder>
   void initialize(const BFIBase::LoopData *OuterLoop,
                   BlockEdgesAdder addBlockEdges);
-  void addNodesInLoop(const BFIBase::LoopData &OuterLoop);
-  void addNodesInFunction();
+  LLVM_ABI void addNodesInLoop(const BFIBase::LoopData &OuterLoop);
+  LLVM_ABI void addNodesInFunction();
 
   void addNode(const BlockNode &Node) {
     Nodes.emplace_back(Node);
     BFI.Working[Node.Index].getMass() = BlockMass::getEmpty();
   }
 
-  void indexNodes();
+  LLVM_ABI void indexNodes();
   template <class BlockEdgesAdder>
   void addEdges(const BlockNode &Node, const BFIBase::LoopData *OuterLoop,
                 BlockEdgesAdder addBlockEdges);
-  void addEdge(IrrNode &Irr, const BlockNode &Succ,
-               const BFIBase::LoopData *OuterLoop);
+  LLVM_ABI void addEdge(IrrNode &Irr, const BlockNode &Succ,
+                        const BFIBase::LoopData *OuterLoop);
 };
 
 template <class BlockEdgesAdder>
@@ -1464,12 +1465,12 @@ void BlockFrequencyInfoImpl<BT>::findReachableBlocks(
   while (!Queue.empty()) {
     const BlockT *SrcBB = Queue.front();
     Queue.pop();
-    for (const BlockT *DstBB : children<const BlockT *>(SrcBB)) {
-      auto EP = BPI->getEdgeProbability(SrcBB, DstBB);
+    for (auto It : enumerate(children<const BlockT *>(SrcBB))) {
+      auto EP = BPI->getEdgeProbability(SrcBB, It.index());
       if (EP.isZero())
         continue;
-      if (Reachable.insert(DstBB).second)
-        Queue.push(DstBB);
+      if (Reachable.insert(It.value()).second)
+        Queue.push(It.value());
     }
   }
 
@@ -1518,7 +1519,8 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
   for (size_t Src = 0; Src < NumBlocks; Src++) {
     const BlockT *BB = Blocks[Src];
     SmallPtrSet<const BlockT *, 2> UniqueSuccs;
-    for (const auto SI : children<const BlockT *>(BB)) {
+    for (auto It : enumerate(children<const BlockT *>(BB))) {
+      const BlockT *SI = It.value();
       // Ignore cold blocks
       auto BlockIndexIt = BlockIndex.find(SI);
       if (BlockIndexIt == BlockIndex.end())
@@ -1527,7 +1529,7 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
       if (!UniqueSuccs.insert(SI).second)
         continue;
       // Ignore jumps with zero probability
-      auto EP = BPI->getEdgeProbability(BB, SI);
+      auto EP = BPI->getEdgeProbability(BB, It.index());
       if (EP.isZero())
         continue;
 
@@ -1626,12 +1628,10 @@ BlockFrequencyInfoImpl<BT>::propagateMassToSuccessors(LoopData *OuterLoop,
       return false;
   } else {
     const BlockT *BB = getBlock(Node);
-    for (auto SI = GraphTraits<const BlockT *>::child_begin(BB),
-              SE = GraphTraits<const BlockT *>::child_end(BB);
-         SI != SE; ++SI)
+    for (auto It : enumerate(children<const BlockT *>(BB)))
       if (!addToDist(
-              Dist, OuterLoop, Node, getNode(*SI),
-              getWeightFromBranchProb(BPI->getEdgeProbability(BB, SI))))
+              Dist, OuterLoop, Node, getNode(It.value()),
+              getWeightFromBranchProb(BPI->getEdgeProbability(BB, It.index()))))
         // Irreducible backedge.
         return false;
   }
@@ -1670,7 +1670,8 @@ template <class BT>
 void BlockFrequencyInfoImpl<BT>::verifyMatch(
     BlockFrequencyInfoImpl<BT> &Other) const {
   bool Match = true;
-  // Gather blocks for numbers so that we can print names.
+  // Gather blocks for numbers so that we can print names and determine whether
+  // they still exist.
   SmallVector<const BlockT *> Blocks;
   Blocks.resize(GraphTraits<const FunctionT *>::getMaxNumber(F));
   for (const auto &BB : *F)
@@ -1678,6 +1679,8 @@ void BlockFrequencyInfoImpl<BT>::verifyMatch(
 
   size_t MinSize = std::min(Nodes.size(), Other.Nodes.size());
   for (size_t i = 0; i < MinSize; ++i) {
+    if (!Blocks[i])
+      continue; // Block got deleted in the mean time, ignore.
     if (Nodes[i].isValid() != Other.Nodes[i].isValid()) {
       Match = false;
       dbgs() << "Block " << bfi_detail::getBlockName(Blocks[i])
@@ -1805,7 +1808,8 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
     if (!BPI)
       return Str;
 
-    BranchProbability BP = BPI->getEdgeProbability(Node, EI);
+    unsigned SuccIdx = std::distance(succ_begin(Node), EI);
+    BranchProbability BP = BPI->getEdgeProbability(Node, SuccIdx);
     uint32_t N = BP.getNumerator();
     uint32_t D = BP.getDenominator();
     double Percent = 100.0 * N / D;

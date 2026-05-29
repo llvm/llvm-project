@@ -519,6 +519,17 @@
 // CHECK351-NOT:  "-pie"
 
 // -----------------------------------------------------------------------------
+// Test that -pie is not set by default
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK357 %s
+// CHECK357:      "-cc1"
+// CHECK357:      {{hexagon-link|ld}}
+// CHECK357-NOT:  "-pie"
+
+// -----------------------------------------------------------------------------
 // Test Assembler related args
 // -----------------------------------------------------------------------------
 // RUN: %clang -### --target=hexagon-unknown-elf -fno-integrated-as    \
@@ -533,14 +544,50 @@
 // CHECK360:      {{hexagon-link|ld}}
 
 // -----------------------------------------------------------------------------
-// ffixed-r19
+// ffixed-r16 through ffixed-r28
 // -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r16 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R16 %s
+// CHECK-R16: "-target-feature" "+reserved-r16"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r17 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R17 %s
+// CHECK-R17: "-target-feature" "+reserved-r17"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r18 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R18 %s
+// CHECK-R18: "-target-feature" "+reserved-r18"
 // RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r19 %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK370 %s
 // CHECK370: "-target-feature" "+reserved-r19"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r20 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R20 %s
+// CHECK-R20: "-target-feature" "+reserved-r20"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r21 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R21 %s
+// CHECK-R21: "-target-feature" "+reserved-r21"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r22 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R22 %s
+// CHECK-R22: "-target-feature" "+reserved-r22"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r23 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R23 %s
+// CHECK-R23: "-target-feature" "+reserved-r23"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r24 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R24 %s
+// CHECK-R24: "-target-feature" "+reserved-r24"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r25 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R25 %s
+// CHECK-R25: "-target-feature" "+reserved-r25"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r26 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R26 %s
+// CHECK-R26: "-target-feature" "+reserved-r26"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r27 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R27 %s
+// CHECK-R27: "-target-feature" "+reserved-r27"
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r28 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R28 %s
+// CHECK-R28: "-target-feature" "+reserved-r28"
 // RUN: %clang -### --target=hexagon-unknown-elf %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK371 %s
-// CHECK371-NOT: "+reserved-r19"
+// CHECK371-NOT: "+reserved-r{{(1[6-9]|2[0-8])}}"
 
 // -----------------------------------------------------------------------------
 // mcabac
@@ -598,3 +645,15 @@
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 %s 2>&1 | FileCheck -check-prefix=CHECK384 %s
 // CHECK384:          "-fno-use-init-array"
+// -----------------------------------------------------------------------------
+// ThinLTO passes LTO options to the linker
+// -----------------------------------------------------------------------------
+// RUN: touch %t.o
+// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   -flto=thin -fenable-matrix \
+// RUN:   %t.o 2>&1 | FileCheck -check-prefix=CHECK-LTO %s
+// CHECK-LTO: "-plugin-opt=thinlto"
+// CHECK-LTO: "-plugin-opt=-enable-matrix"

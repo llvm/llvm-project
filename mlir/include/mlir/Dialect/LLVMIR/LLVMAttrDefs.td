@@ -335,7 +335,7 @@ def LLVM_DIEncodingParameter : LLVM_DIParameter<
 >;
 
 def LLVM_DILanguageParameter : LLVM_DIParameter<
-  "language", /*default=*/"", "Language", /*errorCase=*/"0"
+  "language", /*default=*/"0", "Language", /*errorCase=*/"0"
 >;
 
 def LLVM_DITagParameter : LLVM_DIParameter<
@@ -417,14 +417,19 @@ def LLVM_DIBasicTypeAttr : LLVM_Attr<"DIBasicType", "di_basic_type",
 //===----------------------------------------------------------------------===//
 
 def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
-                                       /*traits=*/[], "DIScopeAttr"> {
+                                       [LLVM_DIRecursiveTypeAttrInterface],
+                                       "DIScopeAttr"> {
   let parameters = (ins
-    "DistinctAttr":$id,
+    // DIRecursiveTypeAttrInterface specific parameters.
+    OptionalParameter<"DistinctAttr">:$recId,
+    OptionalParameter<"bool">:$isRecSelf,
+    // DICompileUnitAttr specific parameters.
+    OptionalParameter<"DistinctAttr">:$id,
     LLVM_DILanguageParameter:$sourceLanguage,
-    "DIFileAttr":$file,
+    OptionalParameter<"DIFileAttr">:$file,
     OptionalParameter<"StringAttr">:$producer,
-    "bool":$isOptimized,
-    "DIEmissionKind":$emissionKind,
+    OptionalParameter<"bool">:$isOptimized,
+    OptionalParameter<"DIEmissionKind">:$emissionKind,
     OptionalParameter<"bool">:$isDebugInfoForProfiling,
     OptionalParameter<"DINameTableKind">:$nameTableKind,
     OptionalParameter<"StringAttr">:$splitDebugFilename,
@@ -440,12 +445,25 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
       CArg<"StringAttr", "{}">:$splitDebugFilename,
       CArg<"ArrayRef<DINodeAttr>", "{}">:$importedEntities
     ), [{
-      return $_get(id.getContext(), id, sourceLanguage, file, producer,
-                   isOptimized, emissionKind, isDebugInfoForProfiling,
-                   nameTableKind, splitDebugFilename, importedEntities);
+      return $_get(id.getContext(), /*recId=*/nullptr, /*isRecSelf=*/false, id,
+                   sourceLanguage, file, producer, isOptimized, emissionKind,
+                   isDebugInfoForProfiling, nameTableKind, splitDebugFilename,
+                   importedEntities);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
+  let extraClassDeclaration = [{
+    /// Requirements of DIRecursiveTypeAttrInterface.
+    /// @{
+
+    /// Get a copy of this attr but with the recursive ID set to `recId`.
+    DIRecursiveTypeAttrInterface withRecId(DistinctAttr recId);
+
+    /// Build a rec-self instance using the provided `recId`.
+    static DIRecursiveTypeAttrInterface getRecSelf(DistinctAttr recId);
+
+    /// @}
+  }];
 
   // Generate mnemonic alias for the attribute.
   let genMnemonicAlias = 1;
@@ -476,6 +494,8 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
     OptionalParameter<"DIExpressionAttr">:$rank,
     OptionalParameter<"DIExpressionAttr">:$allocated,
     OptionalParameter<"DIExpressionAttr">:$associated,
+    OptionalParameter<"StringAttr">:$identifier,
+    OptionalParameter<"DIDerivedTypeAttr">:$discriminator,
     OptionalArrayRefParameter<"DINodeAttr">:$elements
   );
   let builders = [
@@ -485,12 +505,13 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
       "DIFlags":$flags, "uint64_t":$sizeInBits, "uint64_t":$alignInBits,
       "DIExpressionAttr":$dataLocation, "DIExpressionAttr":$rank,
       "DIExpressionAttr":$allocated, "DIExpressionAttr":$associated,
+      "StringAttr":$identifier, "DIDerivedTypeAttr":$discriminator,
       "ArrayRef<DINodeAttr>":$elements
     ), [{
-      return $_get($_ctxt, /*recId=*/nullptr, /*isRecSelf=*/nullptr,
+      return $_get($_ctxt, /*recId=*/nullptr, /*isRecSelf=*/false,
                    tag, name, file, line, scope, baseType, flags, sizeInBits,
                    alignInBits, dataLocation, rank, allocated,
-                   associated, elements);
+                   associated, identifier, discriminator, elements);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
@@ -529,9 +550,10 @@ def LLVM_DIDerivedTypeAttr : LLVM_Attr<"DIDerivedType", "di_derived_type",
     OptionalParameter<"uint64_t">:$offsetInBits,
     OptionalParameter<"std::optional<unsigned>">:$dwarfAddressSpace,
     OptionalParameter<"DIFlags", "DIFlags::Zero">:$flags,
-    OptionalParameter<"DINodeAttr">:$extraData
+    OptionalParameter<"Attribute">:$extraData
   );
   let assemblyFormat = "`<` struct(params) `>`";
+  let genVerifyDecl = 1;
 
   // Generate mnemonic alias for the attribute.
   let genMnemonicAlias = 1;

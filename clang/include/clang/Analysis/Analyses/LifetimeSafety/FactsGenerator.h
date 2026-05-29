@@ -36,11 +36,12 @@ public:
   void VisitDeclStmt(const DeclStmt *DS);
   void VisitDeclRefExpr(const DeclRefExpr *DRE);
   void VisitCXXConstructExpr(const CXXConstructExpr *CCE);
+  void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE);
   void VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE);
   void VisitMemberExpr(const MemberExpr *ME);
   void VisitCallExpr(const CallExpr *CE);
   void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *N);
-  void VisitImplicitCastExpr(const ImplicitCastExpr *ICE);
+  void VisitCastExpr(const CastExpr *CE);
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitReturnStmt(const ReturnStmt *RS);
   void VisitBinaryOperator(const BinaryOperator *BO);
@@ -52,6 +53,8 @@ public:
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
   void VisitLambdaExpr(const LambdaExpr *LE);
   void VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE);
+  void VisitCXXNewExpr(const CXXNewExpr *NE);
+  void VisitCXXDeleteExpr(const CXXDeleteExpr *DE);
 
 private:
   OriginList *getOriginsList(const ValueDecl &D);
@@ -62,9 +65,18 @@ private:
 
   void flow(OriginList *Dst, OriginList *Src, bool Kill);
 
-  void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
+  /// Handles assignment for both BinaryOperator and CXXOperatorCallExpr.
+  ///
+  /// LHSExpr is the destination whose stored loans are replaced by RHSExpr's
+  /// loans. TargetExpr is the assignment expression itself; it receives
+  /// LHSExpr's origins so chained assignments like `a = b = c` can propagate
+  /// through the result of `b = c`.
+  void handleAssignment(const Expr *TargetExpr, const Expr *LHSExpr,
+                        const Expr *RHSExpr);
 
   void handlePointerArithmetic(const BinaryOperator *BO);
+
+  void handlePlacementNew(const CXXNewExpr *NE, OriginList *NewList);
 
   void handleCXXCtorInitializer(const CXXCtorInitializer *CII);
 
@@ -73,6 +85,10 @@ private:
   void handleFullExprCleanup(const CFGFullExprCleanup &FullExprCleanup);
 
   void handleExitBlock();
+
+  /// Mark all fields of the implicit object as used for an instance method
+  /// call, since the callee may access any part of the object.
+  void handleImplicitObjectFieldUses(const Expr *Call, const FunctionDecl *FD);
 
   void handleGSLPointerConstruction(const CXXConstructExpr *CCE);
 
@@ -92,10 +108,14 @@ private:
                           ArrayRef<const Expr *> Args,
                           bool IsGslConstruction = false);
 
-  // Detect container methods that invalidate iterators/references.
+  // Detect methods that invalidate iterators/references/pointees.
   // For instance methods, Args[0] is the implicit 'this' pointer.
   void handleInvalidatingCall(const Expr *Call, const FunctionDecl *FD,
                               ArrayRef<const Expr *> Args);
+
+  // Detect explicit destructor calls/`std::destroy_at`
+  void handleDestructiveCall(const Expr *Call, const FunctionDecl *FD,
+                             ArrayRef<const Expr *> Args);
 
   template <typename Destination, typename Source>
   void flowOrigin(const Destination &D, const Source &S) {
@@ -134,6 +154,7 @@ private:
   // corresponding to the left-hand side is updated to be a "write", thereby
   // exempting it from the check.
   llvm::DenseMap<const Expr *, UseFact *> UseFacts;
+  const CFGBlock *CurrentBlock;
 };
 
 } // namespace clang::lifetimes::internal
