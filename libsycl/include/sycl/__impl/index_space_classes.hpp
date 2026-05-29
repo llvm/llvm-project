@@ -105,6 +105,9 @@ public:
 protected:
   size_t MArray[Dimensions];
 };
+
+template <typename N, typename T>
+using IntegralType = std::enable_if_t<std::is_integral_v<N>, T>;
 } // namespace detail
 
 /// SYCL 2020 4.9.1.1. range class.
@@ -157,7 +160,124 @@ public:
     return size;
   }
 
-  // TODO: operators to be added
+  // OP is: +, -, *, /, %, <<, >>, &, |, ^, &&, ||, <, >, <=, >=
+
+#define _LIBSYCL_GEN_OPT(op)                                                   \
+  friend range<Dimensions> operator op(                                        \
+      const range<Dimensions> &lhs, const range<Dimensions> &rhs) noexcept {   \
+    range<Dimensions> result(lhs);                                             \
+    for (int i = 0; i < Dimensions; ++i) {                                     \
+      result.MArray[i] = lhs.MArray[i] op rhs.MArray[i];                       \
+    }                                                                          \
+    return result;                                                             \
+  }                                                                            \
+                                                                               \
+  template <typename T>                                                        \
+  friend detail::IntegralType<T, range<Dimensions>> operator op(               \
+      const range<Dimensions> &lhs, const T &rhs) noexcept {                   \
+    range<Dimensions> result(lhs);                                             \
+    for (int i = 0; i < Dimensions; ++i) {                                     \
+      result.MArray[i] = lhs.MArray[i] op rhs;                                 \
+    }                                                                          \
+    return result;                                                             \
+  }                                                                            \
+                                                                               \
+  template <typename T>                                                        \
+  friend detail::IntegralType<T, range<Dimensions>> operator op(               \
+      const T &lhs, const range<Dimensions> &rhs) noexcept {                   \
+    range<Dimensions> result(rhs);                                             \
+    for (int i = 0; i < Dimensions; ++i) {                                     \
+      result.MArray[i] = lhs op rhs.MArray[i];                                 \
+    }                                                                          \
+    return result;                                                             \
+  }
+
+  _LIBSYCL_GEN_OPT(+)
+  _LIBSYCL_GEN_OPT(-)
+  _LIBSYCL_GEN_OPT(*)
+  _LIBSYCL_GEN_OPT(/)
+  _LIBSYCL_GEN_OPT(%)
+  _LIBSYCL_GEN_OPT(<<)
+  _LIBSYCL_GEN_OPT(>>)
+  _LIBSYCL_GEN_OPT(&)
+  _LIBSYCL_GEN_OPT(|)
+  _LIBSYCL_GEN_OPT(^)
+  _LIBSYCL_GEN_OPT(&&)
+  _LIBSYCL_GEN_OPT(||)
+  _LIBSYCL_GEN_OPT(<)
+  _LIBSYCL_GEN_OPT(>)
+  _LIBSYCL_GEN_OPT(<=)
+  _LIBSYCL_GEN_OPT(>=)
+
+#undef _LIBSYCL_GEN_OPT
+
+// OP is: +=, -=, *=, /=, %=, <<=, >>=, &=, |=, ^=
+#define _LIBSYCL_GEN_OPT(op)                                                   \
+  friend range<Dimensions> &operator op(                                       \
+      range<Dimensions> &lhs, const range<Dimensions> &rhs) noexcept {         \
+    for (int i = 0; i < Dimensions; ++i) {                                     \
+      lhs.MArray[i] op rhs[i];                                                 \
+    }                                                                          \
+    return lhs;                                                                \
+  }                                                                            \
+  template <typename T>                                                        \
+  friend detail::IntegralType<T, range<Dimensions>> &operator op(              \
+      range<Dimensions> &lhs, const T &rhs) noexcept {                         \
+    for (int i = 0; i < Dimensions; ++i) {                                     \
+      lhs.MArray[i] op rhs;                                                    \
+    }                                                                          \
+    return lhs;                                                                \
+  }
+
+  _LIBSYCL_GEN_OPT(+=)
+  _LIBSYCL_GEN_OPT(-=)
+  _LIBSYCL_GEN_OPT(*=)
+  _LIBSYCL_GEN_OPT(/=)
+  _LIBSYCL_GEN_OPT(%=)
+  _LIBSYCL_GEN_OPT(<<=)
+  _LIBSYCL_GEN_OPT(>>=)
+  _LIBSYCL_GEN_OPT(&=)
+  _LIBSYCL_GEN_OPT(|=)
+  _LIBSYCL_GEN_OPT(^=)
+
+#undef _LIBSYCL_GEN_OPT
+
+// OP is unary +, -
+#define _LIBSYCL_GEN_OPT(op)                                                   \
+  friend range<Dimensions> operator op(                                        \
+      const range<Dimensions> &rhs) noexcept {                                 \
+    range<Dimensions> result(rhs);                                             \
+    for (int i = 0; i < Dimensions; ++i) {                                     \
+      result.MArray[i] = (op rhs.MArray[i]);                                   \
+    }                                                                          \
+    return result;                                                             \
+  }
+
+  _LIBSYCL_GEN_OPT(+)
+  _LIBSYCL_GEN_OPT(-)
+
+#undef _LIBSYCL_GEN_OPT
+
+// OP is prefix ++, --
+#define _LIBSYCL_GEN_OPT(op)                                                   \
+  friend range<Dimensions> &operator op(range<Dimensions> &rhs) noexcept {     \
+    for (int i = 0; i < Dimensions; ++i) {                                     \
+      op rhs.MArray[i];                                                        \
+    }                                                                          \
+    return rhs;                                                                \
+  }                                                                            \
+  friend range<Dimensions> operator op(range<Dimensions> &lhs, int) noexcept { \
+    range<Dimensions> old_lhs(lhs);                                            \
+    for (int i = 0; i < Dimensions; ++i) {                                     \
+      op lhs.MArray[i];                                                        \
+    }                                                                          \
+    return old_lhs;                                                            \
+  }
+
+  _LIBSYCL_GEN_OPT(++)
+  _LIBSYCL_GEN_OPT(--)
+
+#undef _LIBSYCL_GEN_OPT
 };
 
 /// c++ deduction guides.
@@ -262,7 +382,157 @@ public:
     return Base::get(0);
   }
 
-  // TODO: operators to be added
+//    These operators are not a part of SYCL 2020 spec but are needed to avoid
+//    ambiguity in case of implicit conversion  id<1> vs size_t. Template
+//    operators take precedence than type conversion. In the case of
+//    non-template operators, ambiguity appears: "id op size_t" may refer
+//    "size_t op size_t" and "id op size_t". In case of template operators it
+//    will be "id op size_t".
+#define _LIBSYCL_GEN_OPT(op)                                                   \
+  template <typename T, int N = Dimensions,                                    \
+            std::enable_if_t<N == 1, bool> = true>                             \
+  detail::IntegralType<T, bool> operator op(const T &rhs) const noexcept {     \
+    if (this->MArray[0] != rhs)                                                \
+      return false op true;                                                    \
+    return true op true;                                                       \
+  }                                                                            \
+  template <typename T, int N = Dimensions,                                    \
+            std::enable_if_t<N == 1, bool> = true>                             \
+  friend detail::IntegralType<T, bool> operator op(                            \
+      const T &lhs, const id<dimensions> &rhs) noexcept {                      \
+    if (lhs != rhs.MArray[0])                                                  \
+      return false op true;                                                    \
+    return true op true;                                                       \
+  }
+
+  _LIBSYCL_GEN_OPT(==)
+  _LIBSYCL_GEN_OPT(!=)
+
+#undef _LIBSYCL_GEN_OPT
+
+// OP is: +, -, *, /, %, <<, >>, &, |, ^, &&, ||, <, >, <=, >=
+#define _LIBSYCL_GEN_OPT(op)                                                   \
+  friend id<Dimensions> operator op(const id<Dimensions> &lhs,                 \
+                                    const id<Dimensions> &rhs) noexcept {      \
+    id<Dimensions> result;                                                     \
+    for (int i = 0; i < Dimensions; ++i) {                                     \
+      result.MArray[i] = lhs.MArray[i] op rhs.MArray[i];                       \
+    }                                                                          \
+    return result;                                                             \
+  }                                                                            \
+  template <typename T>                                                        \
+  friend detail::IntegralType<T, id<Dimensions>> operator op(                  \
+      const id<Dimensions> &lhs, const T &rhs) noexcept {                      \
+    id<Dimensions> result;                                                     \
+    for (int i = 0; i < Dimensions; ++i) {                                     \
+      result.MArray[i] = lhs.MArray[i] op rhs;                                 \
+    }                                                                          \
+    return result;                                                             \
+  }                                                                            \
+  template <typename T>                                                        \
+  friend detail::IntegralType<T, id<Dimensions>> operator op(                  \
+      const T &lhs, const id<Dimensions> &rhs) noexcept {                      \
+    id<Dimensions> result;                                                     \
+    for (int i = 0; i < Dimensions; ++i) {                                     \
+      result.MArray[i] = lhs op rhs.MArray[i];                                 \
+    }                                                                          \
+    return result;                                                             \
+  }
+
+  _LIBSYCL_GEN_OPT(+)
+  _LIBSYCL_GEN_OPT(-)
+  _LIBSYCL_GEN_OPT(*)
+  _LIBSYCL_GEN_OPT(/)
+  _LIBSYCL_GEN_OPT(%)
+  _LIBSYCL_GEN_OPT(<<)
+  _LIBSYCL_GEN_OPT(>>)
+  _LIBSYCL_GEN_OPT(&)
+  _LIBSYCL_GEN_OPT(|)
+  _LIBSYCL_GEN_OPT(^)
+  _LIBSYCL_GEN_OPT(&&)
+  _LIBSYCL_GEN_OPT(||)
+  _LIBSYCL_GEN_OPT(<)
+  _LIBSYCL_GEN_OPT(>)
+  _LIBSYCL_GEN_OPT(<=)
+  _LIBSYCL_GEN_OPT(>=)
+
+#undef _LIBSYCL_GEN_OPT
+
+// OP is: +=, -=, *=, /=, %=, <<=, >>=, &=, |=, ^=
+#define _LIBSYCL_GEN_OPT(op)                                                   \
+  friend id<Dimensions> &operator op(id<Dimensions> &lhs,                      \
+                                     const id<Dimensions> &rhs) noexcept {     \
+    for (int i = 0; i < Dimensions; ++i) {                                     \
+      lhs.MArray[i] op rhs.MArray[i];                                          \
+    }                                                                          \
+    return lhs;                                                                \
+  }                                                                            \
+  template <typename T>                                                        \
+  friend detail::IntegralType<T, id<Dimensions>> &operator op(                 \
+      id<Dimensions> &lhs, const T &rhs) noexcept {                            \
+    for (int i = 0; i < Dimensions; ++i) {                                     \
+      lhs.MArray[i] op rhs;                                                    \
+    }                                                                          \
+    return lhs;                                                                \
+  }
+
+  _LIBSYCL_GEN_OPT(+=)
+  _LIBSYCL_GEN_OPT(-=)
+  _LIBSYCL_GEN_OPT(*=)
+  _LIBSYCL_GEN_OPT(/=)
+  _LIBSYCL_GEN_OPT(%=)
+  _LIBSYCL_GEN_OPT(<<=)
+  _LIBSYCL_GEN_OPT(>>=)
+  _LIBSYCL_GEN_OPT(&=)
+  _LIBSYCL_GEN_OPT(|=)
+  _LIBSYCL_GEN_OPT(^=)
+
+#undef _LIBSYCL_GEN_OPT
+
+// OP is unary +, -
+#define _LIBSYCL_GEN_OPT(op)                                                   \
+  friend id<Dimensions> operator op(const id<Dimensions> &rhs) noexcept {      \
+    id<Dimensions> result;                                                     \
+    for (int i = 0; i < Dimensions; ++i) {                                     \
+      result.MArray[i] = (op rhs.MArray[i]);                                   \
+    }                                                                          \
+    return result;                                                             \
+  }
+
+  _LIBSYCL_GEN_OPT(+)
+  _LIBSYCL_GEN_OPT(-)
+
+#undef _LIBSYCL_GEN_OPT
+
+// OP is prefix ++, --
+#define _LIBSYCL_GEN_OPT(op)                                                   \
+  friend id<Dimensions> &operator op(id<Dimensions> &rhs) noexcept {           \
+    for (int i = 0; i < Dimensions; ++i) {                                     \
+      op rhs.MArray[i];                                                        \
+    }                                                                          \
+    return rhs;                                                                \
+  }
+
+  _LIBSYCL_GEN_OPT(++)
+  _LIBSYCL_GEN_OPT(--)
+
+#undef _LIBSYCL_GEN_OPT
+
+// OP is postfix ++, --
+#define _LIBSYCL_GEN_OPT(op)                                                   \
+  friend id<Dimensions> operator op(id<Dimensions> &lhs, int) noexcept {       \
+    id<Dimensions> old_lhs;                                                    \
+    for (int i = 0; i < Dimensions; ++i) {                                     \
+      old_lhs.MArray[i] = lhs.MArray[i];                                       \
+      op lhs.MArray[i];                                                        \
+    }                                                                          \
+    return old_lhs;                                                            \
+  }
+
+  _LIBSYCL_GEN_OPT(++)
+  _LIBSYCL_GEN_OPT(--)
+
+#undef _LIBSYCL_GEN_OPT
 };
 
 /// c++ deduction guides.
