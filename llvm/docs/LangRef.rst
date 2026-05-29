@@ -15281,9 +15281,10 @@ called).
 .. _int_read_register:
 .. _int_read_volatile_register:
 .. _int_write_register:
+.. _int_write_volatile_register:
 
-'``llvm.read_register``', '``llvm.read_volatile_register``', and '``llvm.write_register``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.read_register``', '``llvm.read_volatile_register``', '``llvm.write_register``', and '``llvm.write_volatile_register``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -15296,26 +15297,30 @@ Syntax:
       declare i64 @llvm.read_volatile_register.i64(metadata)
       declare void @llvm.write_register.i32(metadata, i32 @value)
       declare void @llvm.write_register.i64(metadata, i64 @value)
+      declare void @llvm.write_volatile_register.i32(metadata, i32 @value)
+      declare void @llvm.write_volatile_register.i64(metadata, i64 @value)
       !0 = !{!"sp\00"}
 
 Overview:
 """""""""
 
-The '``llvm.read_register``', '``llvm.read_volatile_register``', and
-'``llvm.write_register``' intrinsics provide access to the named register.
-The register must be valid on the architecture being compiled to. The type
-needs to be compatible with the register being read.
+The '``llvm.read_register``', '``llvm.read_volatile_register``',
+'``llvm.write_register``', and '``llvm.write_volatile_register``' intrinsics
+provide access to the named register. The register must be valid on the
+architecture being compiled to. The type needs to be compatible with the
+register being accessed.
 
 Semantics:
 """"""""""
 
 The '``llvm.read_register``' and '``llvm.read_volatile_register``' intrinsics
 return the current value of the register, where possible. The
-'``llvm.write_register``' intrinsic sets the current value of the register,
-where possible.
+'``llvm.write_register``' and '``llvm.write_volatile_register``' intrinsics
+set the current value of the register, where possible.
 
-A call to '``llvm.read_volatile_register``' is assumed to have side-effects
-and possibly return a different value each time (e.g., for a timer register).
+A call to '``llvm.read_volatile_register``' or
+'``llvm.write_volatile_register``' is assumed to have side-effects and will
+not be reordered or eliminated by the optimizer.
 
 This is useful to implement named register global variables that need
 to always be mapped to a specific register, as is common practice on
@@ -15323,12 +15328,22 @@ bare-metal programs including OS kernels.
 
 The compiler doesn't check for register availability or use of the used
 register in surrounding code, including inline assembly. Because of that,
-allocatable registers are not supported.
+allocatable registers are not supported by '``llvm.read_register``',
+'``llvm.read_volatile_register``', or '``llvm.write_register``'.
 
-Warning: So far it only works with the stack pointer on selected
-architectures (ARM, AArch64, PowerPC and x86_64). Significant amount of
-work is needed to support other registers and even more so, allocatable
-registers.
+'``llvm.write_volatile_register``' supports allocatable registers. Writing
+to an allocatable register means the value is copied into that physical
+register at the point of the call; the register may subsequently be
+reused by the register allocator for other purposes. The backend emits a
+``FAKE_USE`` of the physical register after the write to prevent the store
+from being dead-eliminated before register allocation.
+
+Warning: Register support is target-specific. The IR-level verifier does
+not validate register names; an unsupported name results in a fatal error
+during code generation. Supported registers vary by target and can be
+found in each target's ``getRegisterByName`` implementation.
+'``llvm.write_volatile_register``' support for allocatable registers is
+currently only implemented on AArch64.
 
 .. _int_stacksave:
 
