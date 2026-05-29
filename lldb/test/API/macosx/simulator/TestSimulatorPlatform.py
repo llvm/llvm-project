@@ -119,6 +119,7 @@ class TestSimulatorPlatformLaunching(TestBase):
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
     @apple_simulator_test("iphone")
+    @skipIf(archs=["arm64e"])  # Simulators do not support arm64e
     def test_ios(self):
         """Test running an iOS simulator binary"""
         self.run_with(
@@ -134,6 +135,7 @@ class TestSimulatorPlatformLaunching(TestBase):
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
     @apple_simulator_test("appletv")
+    @skipIf(archs=["arm64e"])  # Simulators do not support arm64e
     def test_tvos(self):
         """Test running an tvOS simulator binary"""
         self.run_with(
@@ -166,6 +168,7 @@ class TestSimulatorPlatformLaunching(TestBase):
     @apple_simulator_test("watch")
     @skipIfDarwin  # rdar://problem/64552748
     @skipIf(archs=["i386", "x86_64"])
+    @skipIf(archs=["arm64e"])  # Simulators do not support arm64e
     def test_watchos_armv7k(self):
         """Test running a 32-bit watchOS simulator binary"""
         self.run_with(
@@ -235,6 +238,7 @@ class TestSimulatorPlatformLaunching(TestBase):
     @skipIfDarwinEmbedded
     @apple_simulator_test("iphone")
     @skipIf(archs=["i386", "x86_64"])
+    @skipIf(archs=["arm64e"])  # Simulators do not support arm64e
     def test_ios_backdeploy_apple_silicon(self):
         """Test running a back-deploying iOS simulator binary"""
         self.run_with(
@@ -266,6 +270,7 @@ class TestSimulatorPlatformLaunching(TestBase):
     @skipIfDarwinEmbedded
     @apple_simulator_test("appletv")
     @skipIf(archs=["i386", "x86_64"])
+    @skipIf(archs=["arm64e"])  # Simulators do not support arm64e
     def test_tvos_backdeploy_apple_silicon(self):
         """Test running a back-deploying tvOS simulator binary"""
         self.run_with(
