@@ -732,95 +732,69 @@ func.func @muli_vector(%a : vector<3xi64>, %b : vector<3xi64>) -> vector<3xi64> 
     return %m : vector<3xi64>
 }
 
-// CHECK-LABEL:   func.func @shli_scalar(
-// CHECK-SAME:      %[[ARG0:.*]]: vector<2xi32>,
-// CHECK-SAME:      %[[ARG1:.*]]: vector<2xi32>) -> vector<2xi32> {
-// CHECK:           %[[EXTRACT_0:.*]] = vector.extract %[[ARG0]][0] : i32 from vector<2xi32>
-// CHECK:           %[[EXTRACT_1:.*]] = vector.extract %[[ARG0]][1] : i32 from vector<2xi32>
-// CHECK:           %[[EXTRACT_2:.*]] = vector.extract %[[ARG1]][0] : i32 from vector<2xi32>
-// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
-// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1 : i32
-// CHECK:           %[[SHLI_0:.*]] = arith.shli %[[EXTRACT_0]], %[[EXTRACT_2]] : i32
-// CHECK:           %[[SHLI_1:.*]] = arith.shli %[[EXTRACT_1]], %[[EXTRACT_2]] : i32
-// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 31 : i32
-// CHECK:           %[[SUBI_0:.*]] = arith.subi %[[CONSTANT_2]], %[[EXTRACT_2]] : i32
-// CHECK:           %[[SHRUI_0:.*]] = arith.shrui %[[EXTRACT_0]], %[[CONSTANT_1]] : i32
-// CHECK:           %[[SHRUI_1:.*]] = arith.shrui %[[SHRUI_0]], %[[SUBI_0]] : i32
-// CHECK:           %[[ORI_0:.*]] = arith.ori %[[SHLI_1]], %[[SHRUI_1]] : i32
-// CHECK:           %[[CONSTANT_3:.*]] = arith.constant 32 : i32
-// CHECK:           %[[SUBI_1:.*]] = arith.subi %[[EXTRACT_2]], %[[CONSTANT_3]] : i32
-// CHECK:           %[[SHLI_2:.*]] = arith.shli %[[EXTRACT_0]], %[[SUBI_1]] : i32
-// CHECK:           %[[CMPI_0:.*]] = arith.cmpi slt, %[[SUBI_1]], %[[CONSTANT_0]] : i32
-// CHECK:           %[[SELECT_0:.*]] = arith.select %[[CMPI_0]], %[[SHLI_0]], %[[CONSTANT_0]] : i32
-// CHECK:           %[[SELECT_1:.*]] = arith.select %[[CMPI_0]], %[[ORI_0]], %[[SHLI_2]] : i32
-// CHECK:           %[[CONSTANT_4:.*]] = arith.constant dense<0> : vector<2xi32>
-// CHECK:           %[[INSERT_0:.*]] = vector.insert %[[SELECT_0]], %[[CONSTANT_4]] [0] : i32 into vector<2xi32>
-// CHECK:           %[[INSERT_1:.*]] = vector.insert %[[SELECT_1]], %[[INSERT_0]] [1] : i32 into vector<2xi32>
-// CHECK:           return %[[INSERT_1]] : vector<2xi32>
-// CHECK:         }
+// CHECK-LABEL: func.func @shli_scalar
+// CHECK-SAME:    ([[ARG0:%.+]]: vector<2xi32>, [[ARG1:%.+]]: vector<2xi32>) -> vector<2xi32>
+// CHECK-NEXT:    [[LOW0:%.+]]     = vector.extract [[ARG0]][0] : i32 from vector<2xi32>
+// CHECK-NEXT:    [[HIGH0:%.+]]    = vector.extract [[ARG0]][1] : i32 from vector<2xi32>
+// CHECK-NEXT:    [[LOW1:%.+]]     = vector.extract [[ARG1]][0] : i32 from vector<2xi32>
+// CHECK-NEXT:    [[CST0:%.+]]     = arith.constant 0 : i32
+// CHECK-NEXT:    [[CST32:%.+]]    = arith.constant 32 : i32
+// CHECK-NEXT:    [[OOB:%.+]]      = arith.cmpi uge, [[LOW1]], [[CST32]] : i32
+// CHECK-NEXT:    [[SHLOW0:%.+]]   = arith.shli [[LOW0]], [[LOW1]] : i32
+// CHECK-NEXT:    [[RES0:%.+]]     = arith.select [[OOB]], [[CST0]], [[SHLOW0]] : i32
+// CHECK-NEXT:    [[SHAMT:%.+]]    = arith.select [[OOB]], [[CST32]], [[LOW1]] : i32
+// CHECK-NEXT:    [[RSHAMT:%.+]]   = arith.subi [[CST32]], [[SHAMT]] : i32
+// CHECK-NEXT:    [[SHRHIGH0:%.+]] = arith.shrui [[LOW0]], [[RSHAMT]] : i32
+// CHECK-NEXT:    [[LSHAMT:%.+]]   = arith.subi [[LOW1]], [[CST32]] : i32
+// CHECK-NEXT:    [[SHLHIGH0:%.+]] = arith.shli [[LOW0]], [[LSHAMT]] : i32
+// CHECK-NEXT:    [[SHLHIGH1:%.+]] = arith.shli [[HIGH0]], [[LOW1]] : i32
+// CHECK-NEXT:    [[RES1HIGH:%.+]] = arith.select [[OOB]], [[CST0]], [[SHLHIGH1]] : i32
+// CHECK-NEXT:    [[RES1LOW:%.+]]  = arith.select [[OOB]], [[SHLHIGH0]], [[SHRHIGH0]] : i32
+// CHECK-NEXT:    [[RES1:%.+]]     = arith.ori [[RES1LOW]], [[RES1HIGH]] : i32
+// CHECK-NEXT:    [[VZ:%.+]]       = arith.constant dense<0> : vector<2xi32>
+// CHECK-NEXT:    [[INS0:%.+]]     = vector.insert [[RES0]], [[VZ]] [0] : i32 into vector<2xi32>
+// CHECK-NEXT:    [[INS1:%.+]]     = vector.insert [[RES1]], [[INS0]] [1] : i32 into vector<2xi32>
+// CHECK-NEXT:    return [[INS1]] : vector<2xi32>
 func.func @shli_scalar(%a : i64, %b : i64) -> i64 {
     %c = arith.shli %a, %b : i64
     return %c : i64
 }
 
-// CHECK-LABEL:   func.func @shli_vector(
-// CHECK-SAME:      %[[ARG0:.*]]: vector<3x2xi32>,
-// CHECK-SAME:      %[[ARG1:.*]]: vector<3x2xi32>) -> vector<3x2xi32> {
-// CHECK:           %[[EXTRACT_STRIDED_SLICE_0:.*]] = vector.extract_strided_slice %[[ARG0]] {offsets = [0, 0], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
-// CHECK:           %[[EXTRACT_STRIDED_SLICE_1:.*]] = vector.extract_strided_slice %[[ARG0]] {offsets = [0, 1], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
-// CHECK:           %[[EXTRACT_STRIDED_SLICE_2:.*]] = vector.extract_strided_slice %[[ARG1]] {offsets = [0, 0], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
-// CHECK:           %[[CONSTANT_0:.*]] = arith.constant dense<0> : vector<3x1xi32>
-// CHECK:           %[[CONSTANT_1:.*]] = arith.constant dense<1> : vector<3x1xi32>
-// CHECK:           %[[SHLI_0:.*]] = arith.shli %[[EXTRACT_STRIDED_SLICE_0]], %[[EXTRACT_STRIDED_SLICE_2]] : vector<3x1xi32>
-// CHECK:           %[[SHLI_1:.*]] = arith.shli %[[EXTRACT_STRIDED_SLICE_1]], %[[EXTRACT_STRIDED_SLICE_2]] : vector<3x1xi32>
-// CHECK:           %[[CONSTANT_2:.*]] = arith.constant dense<31> : vector<3x1xi32>
-// CHECK:           %[[SUBI_0:.*]] = arith.subi %[[CONSTANT_2]], %[[EXTRACT_STRIDED_SLICE_2]] : vector<3x1xi32>
-// CHECK:           %[[SHRUI_0:.*]] = arith.shrui %[[EXTRACT_STRIDED_SLICE_0]], %[[CONSTANT_1]] : vector<3x1xi32>
-// CHECK:           %[[SHRUI_1:.*]] = arith.shrui %[[SHRUI_0]], %[[SUBI_0]] : vector<3x1xi32>
-// CHECK:           %[[ORI_0:.*]] = arith.ori %[[SHLI_1]], %[[SHRUI_1]] : vector<3x1xi32>
-// CHECK:           %[[CONSTANT_3:.*]] = arith.constant dense<32> : vector<3x1xi32>
-// CHECK:           %[[SUBI_1:.*]] = arith.subi %[[EXTRACT_STRIDED_SLICE_2]], %[[CONSTANT_3]] : vector<3x1xi32>
-// CHECK:           %[[SHLI_2:.*]] = arith.shli %[[EXTRACT_STRIDED_SLICE_0]], %[[SUBI_1]] : vector<3x1xi32>
-// CHECK:           %[[CMPI_0:.*]] = arith.cmpi slt, %[[SUBI_1]], %[[CONSTANT_0]] : vector<3x1xi32>
-// CHECK:           %[[SELECT_0:.*]] = arith.select %[[CMPI_0]], %[[SHLI_0]], %[[CONSTANT_0]] : vector<3x1xi1>, vector<3x1xi32>
-// CHECK:           %[[SELECT_1:.*]] = arith.select %[[CMPI_0]], %[[ORI_0]], %[[SHLI_2]] : vector<3x1xi1>, vector<3x1xi32>
-// CHECK:           %[[CONSTANT_4:.*]] = arith.constant dense<0> : vector<3x2xi32>
-// CHECK:           %[[INSERT_STRIDED_SLICE_0:.*]] = vector.insert_strided_slice %[[SELECT_0]], %[[CONSTANT_4]] {offsets = [0, 0], strides = [1, 1]} : vector<3x1xi32> into vector<3x2xi32>
-// CHECK:           %[[INSERT_STRIDED_SLICE_1:.*]] = vector.insert_strided_slice %[[SELECT_1]], %[[INSERT_STRIDED_SLICE_0]] {offsets = [0, 1], strides = [1, 1]} : vector<3x1xi32> into vector<3x2xi32>
-// CHECK:           return %[[INSERT_STRIDED_SLICE_1]] : vector<3x2xi32>
-// CHECK:         }
+// CHECK-LABEL: func.func @shli_vector
+// CHECK-SAME:    ({{%.+}}: vector<3x2xi32>, {{%.+}}: vector<3x2xi32>) -> vector<3x2xi32>
+// CHECK:         {{%.+}} = arith.shli {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         {{%.+}} = arith.shrui {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         {{%.+}} = arith.shli {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         {{%.+}} = arith.shli {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:       return {{%.+}} : vector<3x2xi32>
 func.func @shli_vector(%a : vector<3xi64>, %b : vector<3xi64>) -> vector<3xi64> {
     %m = arith.shli %a, %b : vector<3xi64>
     return %m : vector<3xi64>
 }
 
-// CHECK-LABEL:   func.func @shrui_scalar(
-// CHECK-SAME:      %[[ARG0:.*]]: vector<2xi32>,
-// CHECK-SAME:      %[[ARG1:.*]]: vector<2xi32>) -> vector<2xi32> {
-// CHECK:           %[[EXTRACT_0:.*]] = vector.extract %[[ARG0]][0] : i32 from vector<2xi32>
-// CHECK:           %[[EXTRACT_1:.*]] = vector.extract %[[ARG0]][1] : i32 from vector<2xi32>
-// CHECK:           %[[EXTRACT_2:.*]] = vector.extract %[[ARG1]][0] : i32 from vector<2xi32>
-// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
-// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1 : i32
-// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 31 : i32
-// CHECK:           %[[SUBI_0:.*]] = arith.subi %[[CONSTANT_2]], %[[EXTRACT_2]] : i32
-// CHECK:           %[[SHRUI_0:.*]] = arith.shrui %[[EXTRACT_0]], %[[EXTRACT_2]] : i32
-// CHECK:           %[[SHLI_0:.*]] = arith.shli %[[EXTRACT_1]], %[[CONSTANT_1]] : i32
-// CHECK:           %[[SHLI_1:.*]] = arith.shli %[[SHLI_0]], %[[SUBI_0]] : i32
-// CHECK:           %[[ORI_0:.*]] = arith.ori %[[SHRUI_0]], %[[SHLI_1]] : i32
-// CHECK:           %[[CONSTANT_3:.*]] = arith.constant 32 : i32
-// CHECK:           %[[SUBI_1:.*]] = arith.subi %[[EXTRACT_2]], %[[CONSTANT_3]] : i32
-// CHECK:           %[[SHRUI_1:.*]] = arith.shrui %[[EXTRACT_0]], %[[SUBI_1]] : i32
-// CHECK:           %[[SHRUI_2:.*]] = arith.shrui %[[EXTRACT_1]], %[[EXTRACT_2]] : i32
-// CHECK:           %[[CMPI_0:.*]] = arith.cmpi slt, %[[SUBI_1]], %[[CONSTANT_0]] : i32
-// CHECK:           %[[SELECT_0:.*]] = arith.select %[[CMPI_0]], %[[ORI_0]], %[[SHRUI_1]] : i32
-// CHECK:           %[[SELECT_1:.*]] = arith.select %[[CMPI_0]], %[[SHRUI_2]], %[[CONSTANT_0]] : i32
-// CHECK:           %[[CONSTANT_4:.*]] = arith.constant dense<0> : vector<2xi32>
-// CHECK:           %[[INSERT_0:.*]] = vector.insert %[[SELECT_0]], %[[CONSTANT_4]] [0] : i32 into vector<2xi32>
-// CHECK:           %[[INSERT_1:.*]] = vector.insert %[[SELECT_1]], %[[INSERT_0]] [1] : i32 into vector<2xi32>
-// CHECK:           return %[[INSERT_1]] : vector<2xi32>
-// CHECK:         }
-
+// CHECK-LABEL: func.func @shrui_scalar
+// CHECK-SAME:    ([[ARG0:%.+]]: vector<2xi32>, [[ARG1:%.+]]: vector<2xi32>) -> vector<2xi32>
+// CHECK-NEXT:    [[LOW0:%.+]]     = vector.extract [[ARG0]][0] : i32 from vector<2xi32>
+// CHECK-NEXT:    [[HIGH0:%.+]]    = vector.extract [[ARG0]][1] : i32 from vector<2xi32>
+// CHECK-NEXT:    [[LOW1:%.+]]     = vector.extract [[ARG1]][0] : i32 from vector<2xi32>
+// CHECK-NEXT:    [[CST0:%.+]]     = arith.constant 0 : i32
+// CHECK-NEXT:    [[CST32:%.+]]    = arith.constant 32 : i32
+// CHECK-DAG:     [[OOB:%.+]]      = arith.cmpi uge, [[LOW1]], [[CST32]] : i32
+// CHECK-DAG:     [[SHLOW0:%.+]]   = arith.shrui [[LOW0]], [[LOW1]] : i32
+// CHECK-NEXT:    [[RES0LOW:%.+]]  = arith.select [[OOB]], [[CST0]], [[SHLOW0]] : i32
+// CHECK-NEXT:    [[SHRHIGH0:%.+]] = arith.shrui [[HIGH0]], [[LOW1]] : i32
+// CHECK-NEXT:    [[RESLOW1:%.+]]  = arith.select [[OOB]], [[CST0]], [[SHRHIGH0]] : i32
+// CHECK-NEXT:    [[SHAMT:%.+]]    = arith.select [[OOB]], [[CST32]], [[LOW1]] : i32
+// CHECK-NEXT:    [[LSHAMT:%.+]]   = arith.subi [[CST32]], [[SHAMT]] : i32
+// CHECK-NEXT:    [[SHLHIGH0:%.+]] = arith.shli [[HIGH0]], [[LSHAMT]] : i32
+// CHECK-NEXT:    [[RSHAMT:%.+]]   = arith.subi [[LOW1]], [[CST32]] : i32
+// CHECK-NEXT:    [[SHRHIGH0:%.+]] = arith.shrui [[HIGH0]], [[RSHAMT]] : i32
+// CHECK-NEXT:    [[RES0HIGH:%.+]] = arith.select [[OOB]], [[SHRHIGH0]], [[SHLHIGH0]] : i32
+// CHECK-NEXT:    [[RES0:%.+]]     = arith.ori [[RES0LOW]], [[RES0HIGH]] : i32
+// CHECK-NEXT:    [[VZ:%.+]]       = arith.constant dense<0> : vector<2xi32>
+// CHECK-NEXT:    [[INS0:%.+]]     = vector.insert [[RES0]], [[VZ]] [0] : i32 into vector<2xi32>
+// CHECK-NEXT:    [[INS1:%.+]]     = vector.insert [[RESLOW1]], [[INS0]] [1] : i32 into vector<2xi32>
+// CHECK-NEXT:    return [[INS1]] : vector<2xi32>
 func.func @shrui_scalar(%a : i64, %b : i64) -> i64 {
     %c = arith.shrui %a, %b : i64
     return %c : i64
@@ -844,97 +818,52 @@ func.func @shrui_scalar_cst_36(%a : i64) -> i64 {
     return %c : i64
 }
 
-// CHECK-LABEL:   func.func @shrui_vector(
-// CHECK-SAME:      %[[ARG0:.*]]: vector<3x2xi32>,
-// CHECK-SAME:      %[[ARG1:.*]]: vector<3x2xi32>) -> vector<3x2xi32> {
-// CHECK:           %[[EXTRACT_STRIDED_SLICE_0:.*]] = vector.extract_strided_slice %[[ARG0]] {offsets = [0, 0], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
-// CHECK:           %[[EXTRACT_STRIDED_SLICE_1:.*]] = vector.extract_strided_slice %[[ARG0]] {offsets = [0, 1], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
-// CHECK:           %[[EXTRACT_STRIDED_SLICE_2:.*]] = vector.extract_strided_slice %[[ARG1]] {offsets = [0, 0], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
-// CHECK:           %[[CONSTANT_0:.*]] = arith.constant dense<0> : vector<3x1xi32>
-// CHECK:           %[[CONSTANT_1:.*]] = arith.constant dense<1> : vector<3x1xi32>
-// CHECK:           %[[CONSTANT_2:.*]] = arith.constant dense<31> : vector<3x1xi32>
-// CHECK:           %[[SUBI_0:.*]] = arith.subi %[[CONSTANT_2]], %[[EXTRACT_STRIDED_SLICE_2]] : vector<3x1xi32>
-// CHECK:           %[[SHRUI_0:.*]] = arith.shrui %[[EXTRACT_STRIDED_SLICE_0]], %[[EXTRACT_STRIDED_SLICE_2]] : vector<3x1xi32>
-// CHECK:           %[[SHLI_0:.*]] = arith.shli %[[EXTRACT_STRIDED_SLICE_1]], %[[CONSTANT_1]] : vector<3x1xi32>
-// CHECK:           %[[SHLI_1:.*]] = arith.shli %[[SHLI_0]], %[[SUBI_0]] : vector<3x1xi32>
-// CHECK:           %[[ORI_0:.*]] = arith.ori %[[SHRUI_0]], %[[SHLI_1]] : vector<3x1xi32>
-// CHECK:           %[[CONSTANT_3:.*]] = arith.constant dense<32> : vector<3x1xi32>
-// CHECK:           %[[SUBI_1:.*]] = arith.subi %[[EXTRACT_STRIDED_SLICE_2]], %[[CONSTANT_3]] : vector<3x1xi32>
-// CHECK:           %[[SHRUI_1:.*]] = arith.shrui %[[EXTRACT_STRIDED_SLICE_0]], %[[SUBI_1]] : vector<3x1xi32>
-// CHECK:           %[[SHRUI_2:.*]] = arith.shrui %[[EXTRACT_STRIDED_SLICE_1]], %[[EXTRACT_STRIDED_SLICE_2]] : vector<3x1xi32>
-// CHECK:           %[[CMPI_0:.*]] = arith.cmpi slt, %[[SUBI_1]], %[[CONSTANT_0]] : vector<3x1xi32>
-// CHECK:           %[[SELECT_0:.*]] = arith.select %[[CMPI_0]], %[[ORI_0]], %[[SHRUI_1]] : vector<3x1xi1>, vector<3x1xi32>
-// CHECK:           %[[SELECT_1:.*]] = arith.select %[[CMPI_0]], %[[SHRUI_2]], %[[CONSTANT_0]] : vector<3x1xi1>, vector<3x1xi32>
-// CHECK:           %[[CONSTANT_4:.*]] = arith.constant dense<0> : vector<3x2xi32>
-// CHECK:           %[[INSERT_STRIDED_SLICE_0:.*]] = vector.insert_strided_slice %[[SELECT_0]], %[[CONSTANT_4]] {offsets = [0, 0], strides = [1, 1]} : vector<3x1xi32> into vector<3x2xi32>
-// CHECK:           %[[INSERT_STRIDED_SLICE_1:.*]] = vector.insert_strided_slice %[[SELECT_1]], %[[INSERT_STRIDED_SLICE_0]] {offsets = [0, 1], strides = [1, 1]} : vector<3x1xi32> into vector<3x2xi32>
-// CHECK:           return %[[INSERT_STRIDED_SLICE_1]] : vector<3x2xi32>
-// CHECK:         }
+// CHECK-LABEL: func.func @shrui_vector
+// CHECK-SAME:    ({{%.+}}: vector<3x2xi32>, {{%.+}}: vector<3x2xi32>) -> vector<3x2xi32>
+// CHECK:         {{%.+}} = arith.shrui {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         {{%.+}} = arith.shrui {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         {{%.+}} = arith.shli {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         {{%.+}} = arith.shrui {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:       return {{%.+}} : vector<3x2xi32>
 func.func @shrui_vector(%a : vector<3xi64>, %b : vector<3xi64>) -> vector<3xi64> {
     %m = arith.shrui %a, %b : vector<3xi64>
     return %m : vector<3xi64>
 }
 
-// CHECK-LABEL:   func.func @shrsi_scalar(
-// CHECK-SAME:      %[[ARG0:.*]]: vector<2xi32>,
-// CHECK-SAME:      %[[ARG1:.*]]: vector<2xi32>) -> vector<2xi32> {
-// CHECK:           %[[EXTRACT_0:.*]] = vector.extract %[[ARG0]][0] : i32 from vector<2xi32>
-// CHECK:           %[[EXTRACT_1:.*]] = vector.extract %[[ARG0]][1] : i32 from vector<2xi32>
-// CHECK:           %[[EXTRACT_2:.*]] = vector.extract %[[ARG1]][0] : i32 from vector<2xi32>
-// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
-// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1 : i32
-// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 31 : i32
-// CHECK:           %[[SUBI_0:.*]] = arith.subi %[[CONSTANT_2]], %[[EXTRACT_2]] : i32
-// CHECK:           %[[SHRUI_0:.*]] = arith.shrui %[[EXTRACT_0]], %[[EXTRACT_2]] : i32
-// CHECK:           %[[SHLI_0:.*]] = arith.shli %[[EXTRACT_1]], %[[CONSTANT_1]] : i32
-// CHECK:           %[[SHLI_1:.*]] = arith.shli %[[SHLI_0]], %[[SUBI_0]] : i32
-// CHECK:           %[[ORI_0:.*]] = arith.ori %[[SHRUI_0]], %[[SHLI_1]] : i32
-// CHECK:           %[[CONSTANT_3:.*]] = arith.constant 32 : i32
-// CHECK:           %[[SUBI_1:.*]] = arith.subi %[[EXTRACT_2]], %[[CONSTANT_3]] : i32
-// CHECK:           %[[SHRSI_0:.*]] = arith.shrsi %[[EXTRACT_0]], %[[SUBI_1]] : i32
-// CHECK:           %[[SHRSI_1:.*]] = arith.shrsi %[[EXTRACT_1]], %[[EXTRACT_2]] : i32
-// CHECK:           %[[SHRSI_2:.*]] = arith.shrsi %[[EXTRACT_1]], %[[CONSTANT_2]] : i32
-// CHECK:           %[[CMPI_0:.*]] = arith.cmpi slt, %[[SUBI_1]], %[[CONSTANT_0]] : i32
-// CHECK:           %[[SELECT_0:.*]] = arith.select %[[CMPI_0]], %[[ORI_0]], %[[SHRSI_0]] : i32
-// CHECK:           %[[SELECT_1:.*]] = arith.select %[[CMPI_0]], %[[SHRSI_1]], %[[SHRSI_2]] : i32
-// CHECK:           %[[CONSTANT_4:.*]] = arith.constant dense<0> : vector<2xi32>
-// CHECK:           %[[INSERT_0:.*]] = vector.insert %[[SELECT_0]], %[[CONSTANT_4]] [0] : i32 into vector<2xi32>
-// CHECK:           %[[INSERT_1:.*]] = vector.insert %[[SELECT_1]], %[[INSERT_0]] [1] : i32 into vector<2xi32>
-// CHECK:           return %[[INSERT_1]] : vector<2xi32>
-// CHECK:         }
+// CHECK-LABEL: func.func @shrsi_scalar
+// CHECK-SAME:    ([[ARG0:%.+]]: vector<2xi32>, [[ARG1:%.+]]: vector<2xi32>) -> vector<2xi32>
+// CHECK-NEXT:    [[HIGH0:%.+]]    = vector.extract [[ARG0]][1] : i32 from vector<2xi32>
+// CHECK-NEXT:    [[LOW1:%.+]]     = vector.extract [[ARG1]][0] : i32 from vector<2xi32>
+// CHECK-NEXT:    [[CST0:%.+]]     = arith.constant 0 : i32
+// CHECK-NEXT:    [[NEG:%.+]]      = arith.cmpi slt, [[HIGH0]], [[CST0]] : i32
+// CHECK-NEXT:    [[NEGEXT:%.+]]   = arith.extsi [[NEG]] : i1 to i32
+// CHECK:         [[CST64:%.+]]    = arith.constant 64 : i32
+// CHECK-NEXT:    [[SIGNBITS:%.+]] = arith.subi [[CST64]], [[LOW1]] : i32
+// CHECK:         arith.shli
+// CHECK:         arith.shrui
+// CHECK:         arith.shli
+// CHECK:         arith.shli
+// CHECK:         arith.shrui
+// CHECK:         arith.shrui
+// CHECK:         arith.shli
+// CHECK:         arith.shrui
+// CHECK:         return {{%.+}} : vector<2xi32>
 func.func @shrsi_scalar(%a : i64, %b : i64) -> i64 {
     %c = arith.shrsi %a, %b : i64
     return %c : i64
 }
 
-
-// CHECK-LABEL:   func.func @shrsi_vector(
-// CHECK-SAME:      %[[ARG0:.*]]: vector<3x2xi32>,
-// CHECK-SAME:      %[[ARG1:.*]]: vector<3x2xi32>) -> vector<3x2xi32> {
-// CHECK:           %[[EXTRACT_STRIDED_SLICE_0:.*]] = vector.extract_strided_slice %[[ARG0]] {offsets = [0, 0], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
-// CHECK:           %[[EXTRACT_STRIDED_SLICE_1:.*]] = vector.extract_strided_slice %[[ARG0]] {offsets = [0, 1], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
-// CHECK:           %[[EXTRACT_STRIDED_SLICE_2:.*]] = vector.extract_strided_slice %[[ARG1]] {offsets = [0, 0], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
-// CHECK:           %[[CONSTANT_0:.*]] = arith.constant dense<0> : vector<3x1xi32>
-// CHECK:           %[[CONSTANT_1:.*]] = arith.constant dense<1> : vector<3x1xi32>
-// CHECK:           %[[CONSTANT_2:.*]] = arith.constant dense<31> : vector<3x1xi32>
-// CHECK:           %[[SUBI_0:.*]] = arith.subi %[[CONSTANT_2]], %[[EXTRACT_STRIDED_SLICE_2]] : vector<3x1xi32>
-// CHECK:           %[[SHRUI_0:.*]] = arith.shrui %[[EXTRACT_STRIDED_SLICE_0]], %[[EXTRACT_STRIDED_SLICE_2]] : vector<3x1xi32>
-// CHECK:           %[[SHLI_0:.*]] = arith.shli %[[EXTRACT_STRIDED_SLICE_1]], %[[CONSTANT_1]] : vector<3x1xi32>
-// CHECK:           %[[SHLI_1:.*]] = arith.shli %[[SHLI_0]], %[[SUBI_0]] : vector<3x1xi32>
-// CHECK:           %[[ORI_0:.*]] = arith.ori %[[SHRUI_0]], %[[SHLI_1]] : vector<3x1xi32>
-// CHECK:           %[[CONSTANT_3:.*]] = arith.constant dense<32> : vector<3x1xi32>
-// CHECK:           %[[SUBI_1:.*]] = arith.subi %[[EXTRACT_STRIDED_SLICE_2]], %[[CONSTANT_3]] : vector<3x1xi32>
-// CHECK:           %[[SHRSI_0:.*]] = arith.shrsi %[[EXTRACT_STRIDED_SLICE_0]], %[[SUBI_1]] : vector<3x1xi32>
-// CHECK:           %[[SHRSI_1:.*]] = arith.shrsi %[[EXTRACT_STRIDED_SLICE_1]], %[[EXTRACT_STRIDED_SLICE_2]] : vector<3x1xi32>
-// CHECK:           %[[SHRSI_2:.*]] = arith.shrsi %[[EXTRACT_STRIDED_SLICE_1]], %[[CONSTANT_2]] : vector<3x1xi32>
-// CHECK:           %[[CMPI_0:.*]] = arith.cmpi slt, %[[SUBI_1]], %[[CONSTANT_0]] : vector<3x1xi32>
-// CHECK:           %[[SELECT_0:.*]] = arith.select %[[CMPI_0]], %[[ORI_0]], %[[SHRSI_0]] : vector<3x1xi1>, vector<3x1xi32>
-// CHECK:           %[[SELECT_1:.*]] = arith.select %[[CMPI_0]], %[[SHRSI_1]], %[[SHRSI_2]] : vector<3x1xi1>, vector<3x1xi32>
-// CHECK:           %[[CONSTANT_4:.*]] = arith.constant dense<0> : vector<3x2xi32>
-// CHECK:           %[[INSERT_STRIDED_SLICE_0:.*]] = vector.insert_strided_slice %[[SELECT_0]], %[[CONSTANT_4]] {offsets = [0, 0], strides = [1, 1]} : vector<3x1xi32> into vector<3x2xi32>
-// CHECK:           %[[INSERT_STRIDED_SLICE_1:.*]] = vector.insert_strided_slice %[[SELECT_1]], %[[INSERT_STRIDED_SLICE_0]] {offsets = [0, 1], strides = [1, 1]} : vector<3x1xi32> into vector<3x2xi32>
-// CHECK:           return %[[INSERT_STRIDED_SLICE_1]] : vector<3x2xi32>
-// CHECK:         }
+// CHECK-LABEL: func.func @shrsi_vector
+// CHECK-SAME:    ({{%.+}}: vector<3x2xi32>, {{%.+}}: vector<3x2xi32>) -> vector<3x2xi32>
+// CHECK:         arith.shli {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         arith.shrui {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         arith.shli {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         arith.shli {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         arith.shrui {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         arith.shrui {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         arith.shli {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         arith.shrui {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         return {{%.+}} : vector<3x2xi32>
 func.func @shrsi_vector(%a : vector<3xi64>, %b : vector<3xi64>) -> vector<3xi64> {
     %m = arith.shrsi %a, %b : vector<3xi64>
     return %m : vector<3xi64>
