@@ -26,8 +26,6 @@ public:
     return LangOpts.CPlusPlus17;
   }
 
-private:
-  bool lambdaBodyIsArrayDelete(const LambdaExpr *Lambda) const;
 };
 
 } // namespace clang::tidy::modernize

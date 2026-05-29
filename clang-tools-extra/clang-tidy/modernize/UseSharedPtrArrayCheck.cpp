@@ -19,13 +19,50 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+AST_MATCHER(FunctionDecl, funcHasSingleArrayDeleteBody) {
+  if (Node.getNumParams() != 1 || !Node.hasBody())
+    return false;
+  const ParmVarDecl *Param = Node.getParamDecl(0);
+  const auto *CS = dyn_cast<CompoundStmt>(Node.getBody());
+  if (!CS || CS->size() != 1)
+    return false;
+  const auto *E = dyn_cast<Expr>(CS->body_front());
+  if (!E)
+    return false;
+  const auto *DE = dyn_cast<CXXDeleteExpr>(E->IgnoreParenImpCasts());
+  if (!DE || !DE->isArrayForm())
+    return false;
+  const auto *DRE = dyn_cast<DeclRefExpr>(
+      DE->getArgument()->IgnoreParenImpCasts());
+  return DRE && DRE->getDecl() == Param;
+}
+
+AST_MATCHER(LambdaExpr, lambdaHasSingleArrayDeleteBody) {
+  if (Node.capture_size() != 0)
+    return false;
+  const CXXMethodDecl *CallOp = Node.getCallOperator();
+  if (!CallOp || CallOp->getNumParams() != 1)
+    return false;
+  const ParmVarDecl *Param = CallOp->getParamDecl(0);
+  const auto *CS = dyn_cast<CompoundStmt>(Node.getBody());
+  if (!CS || CS->size() != 1)
+    return false;
+  const auto *E = dyn_cast<Expr>(CS->body_front());
+  if (!E)
+    return false;
+  const auto *DE = dyn_cast<CXXDeleteExpr>(E->IgnoreParenImpCasts());
+  if (!DE || !DE->isArrayForm())
+    return false;
+  const auto *DRE = dyn_cast<DeclRefExpr>(
+      DE->getArgument()->IgnoreParenImpCasts());
+  return DRE && DRE->getDecl() == Param;
+}
+
 void UseSharedPtrArrayCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxConstructExpr(
-          hasType(qualType(hasDeclaration(
-              classTemplateSpecializationDecl(
-                hasName("::std::shared_ptr"),
-                  templateArgumentCountIs(1))))),
+          hasType(qualType(hasDeclaration(classTemplateSpecializationDecl(
+              hasName("::std::shared_ptr"), templateArgumentCountIs(1))))),
 
           argumentCountIs(2),
 
@@ -33,46 +70,22 @@ void UseSharedPtrArrayCheck::registerMatchers(MatchFinder *Finder) {
               0, ignoringParenImpCasts(cxxNewExpr(isArray()).bind("newExpr"))),
 
           hasArgument(
-              1, ignoringImplicit(anyOf(
+              1,
+              ignoringImplicit(anyOf(
 
-                     cxxConstructExpr(
-                         hasType(qualType(hasCanonicalType(
-                             hasDeclaration(classTemplateSpecializationDecl(
-                                 hasName("::std::default_delete")))))))
-                         .bind("defaultDelete"),
+                  cxxConstructExpr(
+                      hasType(qualType(hasCanonicalType(
+                          hasDeclaration(classTemplateSpecializationDecl(
+                              hasName("::std::default_delete")))))))
+                      .bind("defaultDelete"),
 
-                     lambdaExpr().bind("lambdaDeleter"),
+                  lambdaExpr(lambdaHasSingleArrayDeleteBody()).bind("lambdaDeleter"),
 
-                     declRefExpr(to(functionDecl().bind("deleterFunction")))))))
-                     
+                  declRefExpr(to(functionDecl(funcHasSingleArrayDeleteBody())
+                                     .bind("deleterFunction")))))))
+
           .bind("sharedPtrCtor"),
       this);
-}
-
-// Verifies that a callable body consists of exactly delete[] param; with only
-// one parameter. Used for both lambdas and free functions.
-static bool bodyIsArrayDeleteOfParam(const Stmt *Body,
-                                     const ParmVarDecl *Param) {
-  const auto *Compound = dyn_cast_or_null<CompoundStmt>(Body);
-  if (!Compound || Compound->size() != 1)
-    return false;
-
-  const auto *OnlyExpr = dyn_cast<Expr>(Compound->body_front());
-  if (!OnlyExpr)
-    return false;
-
-  OnlyExpr = OnlyExpr->IgnoreParenImpCasts();
-
-  const auto *DelExpr = dyn_cast<CXXDeleteExpr>(OnlyExpr);
-  if (!DelExpr || !DelExpr->isArrayForm())
-    return false;
-
-  const auto *DRE =
-      dyn_cast<DeclRefExpr>(DelExpr->getArgument()->IgnoreParenImpCasts());
-  if (!DRE)
-    return false;
-
-  return DRE->getDecl() == Param;
 }
 
 // Manual parent walk rather than a matcher because implicit
@@ -128,17 +141,6 @@ static StringRef extractWrittenElementType(const TypeSourceInfo *TSI,
   return Lexer::getSourceText(R, SM, LO);
 }
 
-bool UseSharedPtrArrayCheck::lambdaBodyIsArrayDelete(
-    const LambdaExpr *Lambda) const {
-  if (Lambda->capture_size() != 0)
-    return false;
-
-  const CXXMethodDecl *CallOp = Lambda->getCallOperator();
-  if (!CallOp || CallOp->getNumParams() != 1)
-    return false;
-
-  return bodyIsArrayDeleteOfParam(Lambda->getBody(), CallOp->getParamDecl(0));
-}
 
 // Returns the QualType of the deleter's pointee, or null if the
 // deleter shape is not recognised.
@@ -358,10 +360,12 @@ void UseSharedPtrArrayCheck::check(const MatchFinder::MatchResult &Result) {
 
   const auto *CTSD = cast<ClassTemplateSpecializationDecl>(
       Ctor->getType()->getAsCXXRecordDecl());
-  assert(CTSD->getTemplateArgs().size() == 1 && "shared_ptr must have exactly one template argument");
+  assert(CTSD->getTemplateArgs().size() == 1 &&
+         "shared_ptr must have exactly one template argument");
 
   const TemplateArgument &TyArg = CTSD->getTemplateArgs()[0];
-  assert(TyArg.getKind() == TemplateArgument::Type && "shared_ptr template argument must be a type");
+  assert(TyArg.getKind() == TemplateArgument::Type &&
+         "shared_ptr template argument must be a type");
 
   QualType ElemTy = TyArg.getAsType();
   if (ElemTy->isArrayType() || ElemTy->isDependentType())
@@ -387,17 +391,6 @@ void UseSharedPtrArrayCheck::check(const MatchFinder::MatchResult &Result) {
   if (!clang::ASTContext::hasSameType(
           DelPointee.getCanonicalType().getUnqualifiedType(), SharedElem))
     return;
-
-  if (const auto *Lambda =
-          Result.Nodes.getNodeAs<LambdaExpr>("lambdaDeleter")) {
-    if (!lambdaBodyIsArrayDelete(Lambda))
-      return;
-  }
-  if (const auto *Func =
-          Result.Nodes.getNodeAs<FunctionDecl>("deleterFunction"))
-    if (Func->getNumParams() != 1 || !Func->hasBody() ||
-        !bodyIsArrayDeleteOfParam(Func->getBody(), Func->getParamDecl(0)))
-      return;
 
   if (Ctor->getArg(0)->getBeginLoc().isMacroID() ||
       Ctor->getArg(1)->getEndLoc().isMacroID())
@@ -439,7 +432,7 @@ void UseSharedPtrArrayCheck::check(const MatchFinder::MatchResult &Result) {
     if (!VDParents.empty())
       if (const auto *DS = VDParents[0].get<DeclStmt>())
         if (!DS->isSingleDecl()) {
-          warn();
+          Warn();
           return;
         }
   }
@@ -447,7 +440,7 @@ void UseSharedPtrArrayCheck::check(const MatchFinder::MatchResult &Result) {
   // Assignment targets may not have a rewritable written type at the
   // declaration site. Warn only.
   if (isInsideAssignment(Ctx, Ctor)) {
-    warn();
+    Warn();
     return;
   }
 
@@ -465,7 +458,7 @@ void UseSharedPtrArrayCheck::check(const MatchFinder::MatchResult &Result) {
   if (!RemoveDeleter)
     return;
 
-  auto Diag = warn();
+  auto Diag = Warn();
   if (RAngleLoc.isInvalid() || RAngleLoc.isMacroID())
     return;
 
