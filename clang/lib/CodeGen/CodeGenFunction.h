@@ -812,6 +812,21 @@ public:
     }
   };
 
+  bool OMPWithinTaskgraph = false;
+
+  bool getOMPWithinTaskgraph() { return OMPWithinTaskgraph; }
+  void setOMPWithinTaskgraph(bool In) { OMPWithinTaskgraph = In; }
+
+  class OMPWithinTaskgraphRAII {
+    CodeGenFunction &CGF;
+
+  public:
+    OMPWithinTaskgraphRAII(CodeGenFunction &CGF_) : CGF(CGF_) {
+      CGF.setOMPWithinTaskgraph(true);
+    }
+    ~OMPWithinTaskgraphRAII() { CGF.setOMPWithinTaskgraph(false); }
+  };
+
   template <class T>
   typename DominatingValue<T>::saved_type saveValueInCond(T value) {
     return DominatingValue<T>::save(*this, value);
