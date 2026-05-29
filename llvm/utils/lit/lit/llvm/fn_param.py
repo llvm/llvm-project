@@ -41,6 +41,6 @@ def install(config, lit_config):
         # fn_selection.install(config, lit_config)
         pass
     else:
-        # from lit.llvm import fn_extract
-        # fn_extract.install(config, lit_config)
-        pass
+        from lit.llvm import fn_extract
+
+        fn_extract.install(config, lit_config)
