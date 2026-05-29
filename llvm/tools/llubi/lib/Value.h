@@ -107,7 +107,7 @@ enum class BooleanKind { False, True, Poison };
 /// Components of a pointer excluding address.
 /// Each node will be assigned a unique, pointer-sized tag, which is used to
 /// represent the pointer in the memory.
-class PointerComponents : public RefCountedBase<PointerComponents> {
+class Provenance : public RefCountedBase<Provenance> {
   // TODO: store reference to the components of the pointer it is derived from
 
   // The underlying memory object. It can be null for invalid or dangling
@@ -133,36 +133,34 @@ class PointerComponents : public RefCountedBase<PointerComponents> {
   friend class Context;
 
 public:
-  PointerComponents(IntrusiveRefCntPtr<MemoryObject> Obj)
-      : Obj(std::move(Obj)) {}
-  static IntrusiveRefCntPtr<PointerComponents> nullary();
+  Provenance(IntrusiveRefCntPtr<MemoryObject> Obj) : Obj(std::move(Obj)) {}
+  static IntrusiveRefCntPtr<Provenance> nullary();
   MemoryObject *getMemoryObject() const { return Obj.get(); }
 };
 
 class Pointer {
   // Components of a pointer excluding address.
-  IntrusiveRefCntPtr<PointerComponents> Metadata;
+  IntrusiveRefCntPtr<Provenance> Prov;
   // The address of the pointer. The bit width is determined by
   // DataLayout::getPointerSizeInBits.
   APInt Address;
 
 public:
   explicit Pointer(const APInt &Address)
-      : Metadata(PointerComponents::nullary()), Address(Address) {}
-  explicit Pointer(IntrusiveRefCntPtr<PointerComponents> Metadata,
-                   const APInt &Address)
-      : Metadata(std::move(Metadata)), Address(Address) {
-    assert(this->Metadata && "Invalid pointer components.");
+      : Prov(Provenance::nullary()), Address(Address) {}
+  explicit Pointer(IntrusiveRefCntPtr<Provenance> Prov, const APInt &Address)
+      : Prov(std::move(Prov)), Address(Address) {
+    assert(this->Prov && "Invalid provenance.");
   }
   Pointer getWithNewAddr(const APInt &NewAddr) const {
-    return Pointer(Metadata, NewAddr);
+    return Pointer(Prov, NewAddr);
   }
   static AnyValue null(unsigned AS, const DataLayout &DL);
   bool isNullPtr(unsigned AS, const DataLayout &DL) const;
   void print(raw_ostream &OS) const;
   const APInt &address() const { return Address; }
-  PointerComponents &components() const { return *Metadata; }
-  MemoryObject *getMemoryObject() const { return Metadata->getMemoryObject(); }
+  Provenance &provenance() const { return *Prov; }
+  MemoryObject *getMemoryObject() const { return Prov->getMemoryObject(); }
 };
 
 // Value representation for actual values of LLVM values.

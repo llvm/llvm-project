@@ -108,7 +108,7 @@ class MemoryObject : public RefCountedBase<MemoryObject> {
   MemAllocKind AllocKind;
   bool IsConstant = false;
 
-  // Tagged pointer components related to this memory object.
+  // Tagged provenances related to this memory object.
   // It is used to erasing the tags after the memory object is freed.
   SmallVector<APInt> AssociatedTags;
 
@@ -229,15 +229,14 @@ class Context {
   uint64_t AllocationBase = 8;
   // All live memory objects.
   DenseMap<uint64_t, IntrusiveRefCntPtr<MemoryObject>> MemoryObjects;
-  // Mapping from tags to pointer components. Tags are lazily generated when a
+  // Mapping from tags to provenances. Tags are lazily generated when a
   // pointer is captured by memory.
-  DenseMap<APInt, IntrusiveRefCntPtr<PointerComponents>>
-      TaggedPointerComponents;
+  DenseMap<APInt, IntrusiveRefCntPtr<Provenance>> TaggedProvenances;
   // TODO: Maintains a global list of 'exposed' provenances. This is used to
   // convert an address back to a pointer with a previously exposed provenance.
 
-  /// Get the tag for the given pointer metadata.
-  APInt getTag(uint32_t BitWidth, PointerComponents &Comp);
+  /// Get the tag for the given pointer provenance.
+  APInt getTag(uint32_t BitWidth, Provenance &Prov);
   AnyValue fromBytes(ConstBytesView Bytes, Type *Ty, uint32_t OffsetInBits,
                      bool CheckPaddingBits, bool *ContainsUndefinedBits);
   void toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,

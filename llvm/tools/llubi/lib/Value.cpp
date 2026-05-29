@@ -16,9 +16,9 @@
 
 namespace llvm::ubi {
 
-IntrusiveRefCntPtr<PointerComponents> PointerComponents::nullary() {
-  static IntrusiveRefCntPtr<PointerComponents> Instance =
-      makeIntrusiveRefCnt<PointerComponents>(nullptr);
+IntrusiveRefCntPtr<Provenance> Provenance::nullary() {
+  static IntrusiveRefCntPtr<Provenance> Instance =
+      makeIntrusiveRefCnt<Provenance>(nullptr);
   return Instance;
 }
 
@@ -40,8 +40,7 @@ void Pointer::print(raw_ostream &OS) const {
 }
 
 AnyValue Pointer::null(unsigned AS, const DataLayout &DL) {
-  return AnyValue(
-      Pointer(PointerComponents::nullary(), DL.getNullPtrValue(AS)));
+  return AnyValue(Pointer(Provenance::nullary(), DL.getNullPtrValue(AS)));
 }
 
 bool Pointer::isNullPtr(unsigned AS, const DataLayout &DL) const {

@@ -110,21 +110,21 @@ const AnyValue &Context::getConstantValue(Constant *C) {
   return ConstCache.emplace(C, getConstantValueImpl(C)).first->second;
 }
 
-APInt Context::getTag(uint32_t BitWidth, PointerComponents &Comp) {
+APInt Context::getTag(uint32_t BitWidth, Provenance &Prov) {
   // Nullary provenance.
-  if (!Comp.getMemoryObject())
+  if (!Prov.getMemoryObject())
     return APInt::getZero(BitWidth);
   // The tag is already initialized.
-  if (!Comp.getTag().isZero())
-    return Comp.getTag();
+  if (!Prov.getTag().isZero())
+    return Prov.getTag();
 
   // FIXME: This doesn't work when the address space is too small.
   while (true) {
     APInt Tag = generateRandomAPInt(BitWidth);
-    if (Tag.isZero() || !TaggedPointerComponents.try_emplace(Tag, &Comp).second)
+    if (Tag.isZero() || !TaggedProvenances.try_emplace(Tag, &Prov).second)
       continue;
-    Comp.setTag(Tag);
-    Comp.getMemoryObject()->AssociatedTags.push_back(Tag);
+    Prov.setTag(Tag);
+    Prov.getMemoryObject()->AssociatedTags.push_back(Tag);
     return Tag;
   }
 }
@@ -216,8 +216,8 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
   // Try to recover provenance from the tag.
   if (IsTagValid) {
     APInt Tag(NumBitsToExtract, RawTagBits);
-    if (auto Comp = TaggedPointerComponents.lookup(Tag))
-      return Pointer(std::move(Comp), Bits);
+    if (auto Prov = TaggedProvenances.lookup(Tag))
+      return Pointer(std::move(Prov), Bits);
   }
   return Pointer(Bits);
 }
@@ -351,7 +351,7 @@ void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
               /*TagBits=*/nullptr);
   } else if (Ty->isPointerTy()) {
     auto &AddressBits = Val.asPointer().address();
-    APInt Tag = getTag(AddressBits.getBitWidth(), Val.asPointer().components());
+    APInt Tag = getTag(AddressBits.getBitWidth(), Val.asPointer().provenance());
     if (NeedsPadding)
       Tag = Tag.zext(NewOffsetInBits - OffsetInBits);
     WriteBits(NeedsPadding ? AddressBits.zext(NewOffsetInBits - OffsetInBits)
@@ -548,7 +548,7 @@ bool Context::free(const MemoryObject &Obj) {
   MutableObj.State = MemoryObjectState::Freed;
   MutableObj.Bytes.clear();
   for (const APInt &Tag : MutableObj.AssociatedTags)
-    TaggedPointerComponents.erase(Tag);
+    TaggedProvenances.erase(Tag);
   MutableObj.AssociatedTags.clear();
 
   MemoryObjects.erase(It);
@@ -557,7 +557,7 @@ bool Context::free(const MemoryObject &Obj) {
 
 Pointer Context::deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj) {
   assert(Obj && "Cannot determine the address space of a null memory object");
-  return Pointer(makeIntrusiveRefCnt<PointerComponents>(Obj),
+  return Pointer(makeIntrusiveRefCnt<Provenance>(Obj),
                  APInt(DL.getPointerSizeInBits(Obj->getAddressSpace()),
                        Obj->getAddress()));
 }
