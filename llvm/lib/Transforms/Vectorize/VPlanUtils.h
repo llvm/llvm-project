@@ -170,9 +170,14 @@ VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 
 /// Collect the header mask with the pattern:
 /// (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
+/// Note: If alias masking is enabled this will find:
+/// (AND, HeaderMask, AliasMask)
 /// TODO: Introduce explicit recipe for header-mask instead of searching
 /// the header-mask pattern manually.
 VPSingleDefRecipe *findHeaderMask(VPlan &Plan);
+
+/// Finds the incoming alias-mask within the vector preheader.
+VPValue *findIncomingAliasMask(const VPlan &Plan);
 
 } // namespace vputils
 
@@ -344,6 +349,15 @@ public:
 
   /// Returns true if \p VPB is a loop latch, using isHeader().
   static bool isLatch(const VPBlockBase *VPB, const VPDominatorTree &VPDT);
+
+  /// Returns the header and latch of the outermost loop of \p Plan in plain
+  /// CFG form (before regions are formed).
+  static std::pair<VPBasicBlock *, VPBasicBlock *>
+  getPlainCFGHeaderAndLatch(const VPlan &Plan);
+
+  /// Returns the middle block of \p Plan in plain CFG form (before regions
+  /// are formed).
+  static VPBasicBlock *getPlainCFGMiddleBlock(const VPlan &Plan);
 };
 
 } // namespace llvm

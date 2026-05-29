@@ -397,7 +397,8 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
 
   const auto *VD = Ptr.getDeclDesc()->asValueDecl();
-  diagnoseNonConstVariable(S, OpPC, VD);
+  if (!Ptr.isConstexprUnknown() || !S.checkingPotentialConstantExpression())
+    diagnoseNonConstVariable(S, OpPC, VD);
   return false;
 }
 
@@ -1574,15 +1575,18 @@ bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
     return true;
   }
 
-  if (!CheckSubobject(S, OpPC, Ptr, CSK_Derived))
-    return false;
-  if (!CheckDowncast(S, OpPC, Ptr, Off))
+  if (isConstexprUnknown(Ptr))
     return false;
 
   if (!Ptr.getFieldDesc()->isRecord()) {
     S.Stk.push<Pointer>(Ptr);
     return true;
   }
+
+  if (!CheckSubobject(S, OpPC, Ptr, CSK_Derived))
+    return false;
+  if (!CheckDowncast(S, OpPC, Ptr, Off))
+    return false;
 
   const Record *TargetRecord = Ptr.atFieldSub(Off).getRecord();
   assert(TargetRecord);
@@ -1715,7 +1719,6 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
     S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
         << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
-    return false;
   }
   return true;
 }
@@ -2433,6 +2436,16 @@ bool GetTypeidPtr(InterpState &S, CodePtr OpPC, const Type *TypeInfoType) {
 
   if (!P.isBlockPointer())
     return false;
+
+  if (P.isConstexprUnknown()) {
+    QualType DynamicType = P.getType();
+    const Expr *E = S.Current->getExpr(OpPC);
+    APValue V = P.toAPValue(S.getASTContext());
+    QualType TT = S.getASTContext().getLValueReferenceType(DynamicType);
+    S.FFDiag(E, diag::note_constexpr_polymorphic_unknown_dynamic_type)
+        << AK_TypeId << V.getAsString(S.getASTContext(), TT);
+    return false;
+  }
 
   // Pick the most-derived type.
   CanQualType T = P.getDeclPtr().getType()->getCanonicalTypeUnqualified();

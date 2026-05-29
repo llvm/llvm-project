@@ -49,6 +49,10 @@ Major New Features
 Potentially Breaking Changes
 ----------------------------
 
+- The :doc:`modernize-use-using <clang-tidy/checks/modernize/use-using>` check
+  now sets the `IgnoreExternC` option to `true` by default. The check will
+  no longer transform ``typedef``\ s within ``extern "C"`` blocks.
+
 - Deprecated the :program:`clang-tidy` check :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>`. It has been renamed to
   :doc:`performance-prefer-single-char-overloads
@@ -164,6 +168,9 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- A new tweak "Create function body out-of-line" was added that creates
+  an implementation for a function declaration.
+
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -229,7 +236,8 @@ New checks
 
   Points out uses of ``cast<>``, ``dyn_cast<>`` and their ``or_null`` variants
   that are unnecessary because the argument already is of the target type, or a
-  derived type thereof.
+  derived type thereof. Also does similar analysis for calls to ``isa<>`` that
+  always return ``true``.
 
 - New :doc:`llvm-type-switch-case-types
   <clang-tidy/checks/llvm/type-switch-case-types>` check.
@@ -439,6 +447,11 @@ Changes in existing checks
   lambda coroutines using C++23 deducing ``this`` (explicit object parameter)
   are not flagged.
 
+- Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
+  <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>`
+  check by adding the `IgnoreMacros` option. When enabled, non-const global
+  variables defined in macros are ignored.
+
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
   member pointers are correctly flagged as uninitialized.
@@ -576,6 +589,8 @@ Changes in existing checks
 
   - Preserve inline comment blocks that appear between the ``typedef``'s parts.
 
+  - The `IgnoreExternC` option is now set to `true` by default.
+
 - Improved :doc:`performance-enum-size
   <clang-tidy/checks/performance/enum-size>` check:
 
@@ -712,6 +727,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-member-init>` check by adding an
   `IgnoreMacros` option to suppress warnings when the initializer involves
   macros that may expand differently in other configurations.
+
+- Improved :doc:`readability-redundant-parentheses
+  <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a
+  false positive for parentheses present around an overloaded operator in the
+  context of a binary operation.
 
 - Improved :doc:`readability-redundant-preprocessor
   <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a

@@ -1019,7 +1019,8 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
   assignIntegral(S, CarryOutPtr, CarryOutT, CarryOut);
-  CarryOutPtr.initialize();
+  if (CarryOutPtr.canBeInitialized())
+    CarryOutPtr.initialize();
 
   assert(Call->getType() == Call->getArg(0)->getType());
   pushInteger(S, Result, Call->getType());
@@ -5532,6 +5533,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pclmulqdq256:
   case clang::X86::BI__builtin_ia32_pclmulqdq512:
     return interp__builtin_ia32_pclmulqdq(S, OpPC, Call);
+  case Builtin::BI__builtin_elementwise_clmul:
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::clmul);
 
   case Builtin::BI__builtin_elementwise_fma:
     return interp__builtin_elementwise_triop_fp(
@@ -6704,6 +6708,8 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
   assert(!DestDesc->isPrimitive() && !SrcDesc->isPrimitive());
 
   if (DestDesc->isPrimitiveArray()) {
+    if (!SrcDesc->isPrimitiveArray())
+      return false;
     assert(SrcDesc->isPrimitiveArray());
     assert(SrcDesc->getNumElems() == DestDesc->getNumElems());
     PrimType ET = DestDesc->getPrimType();
@@ -6718,6 +6724,8 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
   }
 
   if (DestDesc->isCompositeArray()) {
+    if (!SrcDesc->isCompositeArray())
+      return false;
     assert(SrcDesc->isCompositeArray());
     assert(SrcDesc->getNumElems() == DestDesc->getNumElems());
     for (unsigned I = 0, N = DestDesc->getNumElems(); I != N; ++I) {
@@ -6729,8 +6737,11 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
     return true;
   }
 
-  if (DestDesc->isRecord())
+  if (DestDesc->isRecord()) {
+    if (!SrcDesc->isRecord())
+      return false;
     return copyRecord(S, OpPC, Src, Dest, Activate);
+  }
   return Invalid(S, OpPC);
 }
 

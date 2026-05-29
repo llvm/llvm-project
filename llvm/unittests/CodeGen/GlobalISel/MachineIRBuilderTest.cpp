@@ -500,11 +500,15 @@ TEST_F(AArch64GISelMITest, BuildExtractSubvector) {
   auto SBigVec = B.buildUndef(SVec4x32);
   B.buildExtractSubvector(SVec2x32, SBigVec, 0);
 
+  // Mixed: extract fixed-length <2 x s32> from scalable <vscale x 4 x s32>.
+  B.buildExtractSubvector(Vec2x32, SBigVec, 0);
+
   auto CheckStr = R"(
   ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
   ; CHECK: [[EXTRACT:%[0-9]+]]:_(<2 x s32>) = G_EXTRACT_SUBVECTOR [[DEF]]:_(<4 x s32>), 0
   ; CHECK: [[SDEF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
   ; CHECK: [[SEXTRACT:%[0-9]+]]:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR [[SDEF]]:_(<vscale x 4 x s32>), 0
+  ; CHECK: [[MIXEDEXTRACT:%[0-9]+]]:_(<2 x s32>) = G_EXTRACT_SUBVECTOR [[SDEF]]:_(<vscale x 4 x s32>), 0
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -555,6 +559,9 @@ TEST_F(AArch64GISelMITest, BuildInsertSubvector) {
   auto SSubVec = B.buildUndef(SVec2x32);
   B.buildInsertSubvector(SVec4x32, SBigVec, SSubVec, 0);
 
+  // Mixed: insert fixed-length <2 x s32> into scalable <vscale x 4 x s32>.
+  B.buildInsertSubvector(SVec4x32, SBigVec, SubVec, 0);
+
   auto CheckStr = R"(
   ; CHECK: [[DEF0:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
   ; CHECK: [[DEF1:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
@@ -563,6 +570,7 @@ TEST_F(AArch64GISelMITest, BuildInsertSubvector) {
   ; CHECK: [[SDEF0:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
   ; CHECK: [[SDEF1:%[0-9]+]]:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
   ; CHECK: {{%[0-9]+}}:_(<vscale x 4 x s32>) = G_INSERT_SUBVECTOR [[SDEF0]]:_, [[SDEF1]]:_(<vscale x 2 x s32>), 0
+  ; CHECK: {{%[0-9]+}}:_(<vscale x 4 x s32>) = G_INSERT_SUBVECTOR [[SDEF0]]:_, [[DEF1]]:_(<2 x s32>), 0
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;

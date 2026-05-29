@@ -1323,7 +1323,6 @@ void LayoutInfoPropagation::visitLoadMatrixOp(
   }
 }
 
-// Store matrix is a flavor of scattered store for 2D shapes.
 void LayoutInfoPropagation::visitStoreMatrixOp(
     xegpu::StoreMatrixOp storeMatrix, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
@@ -1567,6 +1566,26 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
   if (consumerLayout.isEqualTo(producerLayout))
     return success();
 
+  // If the producer is trivially rematerializable (e.g. `vector.step`, splat
+  // `arith.constant`), clone it and stamp the consumer's expected layout on
+  // the clone instead of inserting a `xegpu.convert_layout`. The convert
+  // would otherwise lower to a cross-subgroup data movement through SLM at
+  // WG-to-SG distribution time, which is more expensive than
+  // recomputing a pure value generator.
+  if (auto *producerOp = vectorValue.getDefiningOp();
+      producerOp && producerOp->getNumResults() == 1 &&
+      isa<OpResult>(vectorValue) &&
+      xegpu::isTriviallyRematerializable(producerOp)) {
+    builder.setInsertionPointAfter(producerOp);
+    Operation *clone = builder.clone(*producerOp);
+    OpResult cloneResult = clone->getResult(0);
+    // Drop the inherited producer layout so the new layout takes effect
+    xegpu::removeLayoutAttr(cloneResult);
+    xegpu::setDistributeLayoutAttr(cloneResult, consumerLayout);
+    operand.set(cloneResult);
+    return success();
+  }
+
   // Insert a convert_layout op to resolve the conflict.
   builder.setInsertionPointAfterValue(vectorValue);
   auto convertOp = xegpu::ConvertLayoutOp::create(
@@ -1696,8 +1715,6 @@ updateControlFlowOps(mlir::OpBuilder &builder,
       // We only need to operate on tensor descriptor or vector types.
       if (!isa<xegpu::TensorDescType, VectorType>(inputType))
         continue;
-      xegpu::DistributeLayoutAttr successorInputLayout =
-          getLayoutOfValue(successorInput);
       xegpu::DistributeLayoutAttr successorOperandLayout =
           getLayoutOfValue(successorOperand->get());
 
@@ -1706,15 +1723,6 @@ updateControlFlowOps(mlir::OpBuilder &builder,
         LLVM_DEBUG(DBGS() << "No layout assigned for forwarded operand in "
                              "branch terminator: "
                           << successorOperand->get() << "\n");
-        return failure();
-      }
-      // We expect the layouts to match.
-      if (successorInputLayout &&
-          successorInputLayout != successorOperandLayout) {
-        LLVM_DEBUG(DBGS() << "Conflicting layouts for region argument and "
-                             "operand forwarded as the argument: "
-                          << successorInputLayout << " vs "
-                          << successorOperandLayout << "\n");
         return failure();
       }
       // Get tensor descriptor type with the layout.
@@ -1795,7 +1803,8 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
     return success();
   }
   // Helper to convert LayoutInfo to xegpu::LayoutAttr.
-  auto getXeGPULayoutForValue = [&](Value val) -> xegpu::DistributeLayoutAttr {
+  auto getLayoutFromPropagation =
+      [&](Value val) -> xegpu::DistributeLayoutAttr {
     LayoutInfo layout = analysis.getLayoutInfo(val);
     if (auto opResult = dyn_cast<OpResult>(val)) {
       Operation *defOp = opResult.getDefiningOp();
@@ -1826,14 +1835,18 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
       TypeSwitch<Operation *>(&op)
           .Case([&](mlir::RegionBranchTerminatorOpInterface branchTermOp) {
             r = updateControlFlowOps(builder, branchTermOp,
-                                     getXeGPULayoutForValue);
+                                     getLayoutFromPropagation);
+          })
+          .Case([&](mlir::RegionBranchOpInterface branchOp) {
+            r = xegpu::propagateRegionArgsToInits(branchOp,
+                                                  getLayoutFromPropagation);
           })
           .Case([&](mlir::FunctionOpInterface funcOp) {
             r = updateFunctionOpInterface(builder, funcOp,
-                                          getXeGPULayoutForValue);
+                                          getLayoutFromPropagation);
           })
           .Default([&](Operation *op) {
-            r = updateOp(builder, op, getXeGPULayoutForValue);
+            r = updateOp(builder, op, getLayoutFromPropagation);
           });
       if (failed(r)) {
         op.emitError("Failed to update operation with the layout.");
