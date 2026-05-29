@@ -321,6 +321,10 @@
 #  define SANITIZER_AMDGPU 0
 #endif
 
+#ifndef SANITIZER_AMDHSA
+#  define SANITIZER_AMDHSA 0
+#endif
+
 #if defined(__NVPTX__)
 #  define SANITIZER_NVPTX 1
 #else
