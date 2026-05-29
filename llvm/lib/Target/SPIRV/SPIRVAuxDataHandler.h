@@ -33,6 +33,16 @@ class GlobalObject;
 class Module;
 class SPIRVSubtarget;
 
+// Khronos NonSemantic.AuxData opcodes (int64_t to drop casts at MCOperand
+// boundaries).
+enum AuxDataOpcode : int64_t {
+  FunctionMetadataOpcode = 0,
+  FunctionAttributeOpcode = 1,
+  GlobalVariableMetadataOpcode = 2,
+  GlobalVariableAttributeOpcode = 3,
+  LinkageOpcode = 4,
+};
+
 class SPIRVAuxDataHandler {
 public:
   SPIRVAuxDataHandler(AsmPrinter &AP, const Module &M);
@@ -51,7 +61,7 @@ public:
 
 private:
   struct ExtInstRecord {
-    uint32_t Opcode;
+    AuxDataOpcode Opcode;
     SmallVector<MCRegister, 4> Operands;
   };
 
@@ -82,7 +92,7 @@ private:
   MCRegister findOrEmitOpTypeInt32(SPIRV::ModuleAnalysisInfo &MAI);
   MCRegister emitOpConstantI32(uint32_t Value, MCRegister I32TypeReg,
                                SPIRV::ModuleAnalysisInfo &MAI);
-  void emitAuxDataExtInst(uint32_t Opcode, MCRegister VoidTypeReg,
+  void emitAuxDataExtInst(AuxDataOpcode Opcode, MCRegister VoidTypeReg,
                           MCRegister ExtSetReg, ArrayRef<MCRegister> Operands,
                           SPIRV::ModuleAnalysisInfo &MAI);
 };

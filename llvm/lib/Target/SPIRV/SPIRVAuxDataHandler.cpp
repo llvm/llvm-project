@@ -21,6 +21,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -32,15 +33,6 @@ static cl::opt<bool> SPVPreserveAuxData(
     cl::Optional, cl::Hidden, cl::init(false));
 
 namespace {
-// Khronos NonSemantic.AuxData opcodes.
-enum AuxDataOpcode : uint32_t {
-  FunctionMetadata = 0,
-  FunctionAttribute = 1,
-  GlobalVariableMetadata = 2,
-  GlobalVariableAttribute = 3,
-  Linkage = 4,
-};
-
 enum AuxDataLinkageType : uint32_t {
   AvailableExternally = 0,
 };
@@ -70,8 +62,12 @@ void SPIRVAuxDataHandler::prepareModuleOutput(const SPIRVSubtarget &ST,
                                               SPIRV::ModuleAnalysisInfo &MAI) {
   if (!hasWork())
     return;
-  if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_non_semantic_info))
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_non_semantic_info)) {
+    if (SPVPreserveAuxData)
+      report_fatal_error("-spirv-preserve-auxdata requires the "
+                         "SPV_KHR_non_semantic_info extension to be enabled.");
     return;
+  }
   MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
   if (!MAI.ExtInstSetMap.count(NonSemanticAuxDataSet))
     MAI.ExtInstSetMap[NonSemanticAuxDataSet] = MAI.getNextIDRegister();
@@ -96,8 +92,8 @@ SPIRVAuxDataHandler::getOrEmitString(StringRef S,
 void SPIRVAuxDataHandler::collectAttributesFor(
     const GlobalObject *GO, function_ref<MCRegister()> GetNameReg,
     SPIRV::ModuleAnalysisInfo &MAI) {
-  uint32_t Opcode =
-      isa<Function>(GO) ? FunctionAttribute : GlobalVariableAttribute;
+  AuxDataOpcode Opcode = isa<Function>(GO) ? FunctionAttributeOpcode
+                                           : GlobalVariableAttributeOpcode;
   for (const Attribute &A : getGOAttrs(GO)) {
     if (A.isStringAttribute() &&
         A.getKindAsString() == SPIRV_WAS_AVAILABLE_EXTERNALLY_ATTR)
@@ -125,8 +121,8 @@ void SPIRVAuxDataHandler::collectMetadataFor(
   GO->getAllMetadata(AllMD);
   if (AllMD.empty())
     return;
-  uint32_t Opcode =
-      isa<Function>(GO) ? FunctionMetadata : GlobalVariableMetadata;
+  AuxDataOpcode Opcode =
+      isa<Function>(GO) ? FunctionMetadataOpcode : GlobalVariableMetadataOpcode;
   // Skip non-MDString operands: emitting them would require a full value
   // translation we can't safely drive from here.
   auto CollectStrings =
@@ -201,12 +197,12 @@ void SPIRVAuxDataHandler::emitAuxData(SPIRV::ModuleAnalysisInfo &MAI) {
       continue;
     if (!AEConstReg.isValid())
       AEConstReg = emitOpConstantI32(AvailableExternally, I32TypeReg, MAI);
-    emitAuxDataExtInst(Linkage, VoidTypeReg, ExtSetReg, {FnReg, AEConstReg},
-                       MAI);
+    emitAuxDataExtInst(LinkageOpcode, VoidTypeReg, ExtSetReg,
+                       {FnReg, AEConstReg}, MAI);
   }
 }
 
-void SPIRVAuxDataHandler::emitAuxDataExtInst(uint32_t Opcode,
+void SPIRVAuxDataHandler::emitAuxDataExtInst(AuxDataOpcode Opcode,
                                              MCRegister VoidTypeReg,
                                              MCRegister ExtSetReg,
                                              ArrayRef<MCRegister> Operands,
@@ -216,7 +212,7 @@ void SPIRVAuxDataHandler::emitAuxDataExtInst(uint32_t Opcode,
   Inst.addOperand(MCOperand::createReg(MAI.getNextIDRegister()));
   Inst.addOperand(MCOperand::createReg(VoidTypeReg));
   Inst.addOperand(MCOperand::createReg(ExtSetReg));
-  Inst.addOperand(MCOperand::createImm(static_cast<int64_t>(Opcode)));
+  Inst.addOperand(MCOperand::createImm(Opcode));
   for (MCRegister R : Operands)
     Inst.addOperand(MCOperand::createReg(R));
   emitMCInst(Inst);
@@ -241,6 +237,8 @@ SPIRVAuxDataHandler::findOrEmitOpTypeVoid(SPIRV::ModuleAnalysisInfo &MAI) {
 
 MCRegister
 SPIRVAuxDataHandler::findOrEmitOpTypeInt32(SPIRV::ModuleAnalysisInfo &MAI) {
+  // SPIR-V OpTypeInt: <width>, <signedness>. Signedness 0 = unsigned, 1 =
+  // signed (we want unsigned i32).
   constexpr int64_t Int32BitWidth = 32;
   constexpr int64_t UnsignedSignedness = 0;
   for (const MachineInstr *MI : MAI.getMSInstrs(SPIRV::MB_TypeConstVars))
