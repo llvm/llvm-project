@@ -254,6 +254,8 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_thread_limit:
   case OMPC_priority:
   case OMPC_grainsize:
+  case OMPC_graph_id:
+  case OMPC_graph_reset:
   case OMPC_nogroup:
   case OMPC_num_tasks:
   case OMPC_hint:
@@ -322,10 +324,22 @@ OMPClause::child_range OMPNowaitClause::used_children() {
   return children();
 }
 
+OMPClause::child_range OMPReplayableClause::used_children() {
+  if (Condition)
+    return child_range(&Condition, &Condition + 1);
+  return children();
+}
+
 OMPClause::child_range OMPGrainsizeClause::used_children() {
   if (Stmt **C = getAddrOfExprAsWritten(getPreInitStmt()))
     return child_range(C, C + 1);
   return child_range(&Grainsize, &Grainsize + 1);
+}
+
+OMPClause::child_range OMPGraphResetClause::used_children() {
+  if (Condition)
+    return child_range(&Condition, &Condition + 1);
+  return children();
 }
 
 OMPClause::child_range OMPNumTasksClause::used_children() {
@@ -2193,6 +2207,15 @@ void OMPClausePrinter::VisitOMPNowaitClause(OMPNowaitClause *Node) {
   }
 }
 
+void OMPClausePrinter::VisitOMPReplayableClause(OMPReplayableClause *Node) {
+  OS << "replayable";
+  if (auto *Cond = Node->getCondition()) {
+    OS << "(";
+    Cond->printPretty(OS, nullptr, Policy, 0);
+    OS << ")";
+  }
+}
+
 void OMPClausePrinter::VisitOMPUntiedClause(OMPUntiedClause *) {
   OS << "untied";
 }
@@ -2367,6 +2390,24 @@ void OMPClausePrinter::VisitOMPGrainsizeClause(OMPGrainsizeClause *Node) {
   }
   Node->getGrainsize()->printPretty(OS, nullptr, Policy, 0);
   OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPGraphIdClause(OMPGraphIdClause *Node) {
+  OS << "graph_id";
+  if (Expr *E = Node->getId()) {
+    OS << "(";
+    E->printPretty(OS, nullptr, Policy, 0);
+    OS << ")";
+  }
+}
+
+void OMPClausePrinter::VisitOMPGraphResetClause(OMPGraphResetClause *Node) {
+  OS << "graph_reset";
+  if (Expr *E = Node->getCondition()) {
+    OS << "(";
+    E->printPretty(OS, nullptr, Policy, 0);
+    OS << ")";
+  }
 }
 
 void OMPClausePrinter::VisitOMPNumTasksClause(OMPNumTasksClause *Node) {
