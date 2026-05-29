@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/math/clc_fma.h"
+#include "clc/internal/math/clc_runtime_has_hw_fma32.h"
 
-#define __CLC_FUNCTION fma
-#define __CLC_BODY "clc/shared/ternary_def.inc"
-
-#include "clc/math/gentype.inc"
+bool __attribute__((noinline)) __clc_runtime_has_hw_fma32(void) {
+  return false;
+}

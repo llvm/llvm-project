@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/math/clc_fma.h"
-
-#define __CLC_FUNCTION fma
-#define __CLC_BODY "clc/shared/ternary_def.inc"
-
-#include "clc/math/gentype.inc"
+_CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_fma(__CLC_GENTYPE a, __CLC_GENTYPE b,
+                                               __CLC_GENTYPE c) {
+#if __CLC_FPSIZE == 32
+  if (!__clc_runtime_has_hw_fma32())
+    return __clc_sw_fma(a, b, c);
+#endif
+  return __builtin_elementwise_fma(a, b, c);
+}
