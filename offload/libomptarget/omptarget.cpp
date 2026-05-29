@@ -2337,13 +2337,13 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
     TIMESCOPE_WITH_DETAILS_AND_IDENT(
         "Kernel Target",
         "NumArguments=" + std::to_string(KernelArgs.NumArgs) +
-            ";NumTeams=" + std::to_string(KernelArgs.NumTeams[0]) +
+            ";NumTeams=" + std::to_string(KernelArgs.UserNumBlocks[0]) +
             ";TripCount=" + std::to_string(KernelArgs.Tripcount),
         Loc);
 
 #ifdef OMPT_SUPPORT
     /// RAII to establish tool anchors before and after kernel launch
-    int32_t NumTeams = KernelArgs.NumTeams[0];
+    int32_t NumTeams = KernelArgs.UserNumBlocks[0];
     // No need to guard this with OMPT_IF_BUILT
     InterfaceRAII TargetSubmitRAII(
         RegionInterface.getCallbacks<ompt_callback_target_submit>(), NumTeams);
@@ -2474,12 +2474,12 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   KernelArgs.Version = OMP_KERNEL_ARG_VERSION;
   KernelArgs.NumArgs = NumArgs;
   KernelArgs.Tripcount = LoopTripCount;
-  KernelArgs.NumTeams[0] = NumTeams;
-  KernelArgs.NumTeams[1] = 1;
-  KernelArgs.NumTeams[2] = 1;
-  KernelArgs.ThreadLimit[0] = ThreadLimit;
-  KernelArgs.ThreadLimit[1] = 1;
-  KernelArgs.ThreadLimit[2] = 1;
+  KernelArgs.UserNumBlocks[0] = NumTeams;
+  KernelArgs.UserNumBlocks[1] = 1;
+  KernelArgs.UserNumBlocks[2] = 1;
+  KernelArgs.UserThreadLimit[0] = ThreadLimit;
+  KernelArgs.UserThreadLimit[1] = 1;
+  KernelArgs.UserThreadLimit[2] = 1;
   KernelArgs.DynCGroupMem = SharedMemorySize;
 
   KernelExtraArgsTy KernelExtraArgs{};

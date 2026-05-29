@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -sparsification-and-bufferization | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -sparsification-and-bufferization -verify-diagnostics | FileCheck %s
 
 // Tests that mlir-opt does not crash when parsing sparse tensor encodings with symbols.
 
@@ -23,4 +23,33 @@ func.func @tensor_add(%arg0: tensor<8x8xf32, #Sparse>) -> tensor<8x8xf32> {
 
   // CHECK: return %{{.*}} : memref<8x8xf32>
   return %result : tensor<8x8xf32>
+}
+
+// -----
+
+// This section makes sure that using the following encoding does not result in
+// an assertion error, but instead the expected error. Ultimately, we want to
+// make this section pass without any expected errors.
+
+#Sparse = #sparse_tensor.encoding<{
+  map = [c](i, j) -> (c * 3 * i : dense, i : dense, j : compressed)
+}>
+
+func.func @tensor_convert() -> memref<?xindex> {
+  %I = tensor.generate {
+  ^bb0(%i: index, %j: index):
+    %is_diag = arith.cmpi eq, %i, %j : index
+    %f0 = arith.constant 0.0 : f32
+    %f1 = arith.constant 1.0 : f32
+    %val = arith.select %is_diag, %f1, %f0 : f32
+    tensor.yield %val : f32
+  } : tensor<32x32xf32>
+
+  // expected-error@+1 {{Level size mismatch between source/dest tensors}}
+  %J = sparse_tensor.convert %I : tensor<32x32xf32> to tensor<32x32xf32, #Sparse>
+
+  %result = sparse_tensor.positions %J { level = 0 : index }
+    : tensor<32x32xf32, #Sparse> to memref<?xindex>
+
+  return %result : memref<?xindex>
 }

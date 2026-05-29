@@ -157,10 +157,6 @@ define void @redundant_branch_and_blends_without_mask(ptr %A) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 3
-; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <4 x ptr> poison, ptr [[A]], i32 0
-; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <4 x ptr> [[TMP35]], ptr [[TMP6]], i32 1
-; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <4 x ptr> [[TMP36]], ptr [[TMP7]], i32 2
-; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <4 x ptr> [[TMP37]], ptr [[TMP8]], i32 3
 ; CHECK-NEXT:    br i1 true, label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[A]], align 4

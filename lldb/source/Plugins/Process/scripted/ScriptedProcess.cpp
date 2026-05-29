@@ -108,9 +108,8 @@ ScriptedProcess::ScriptedProcess(lldb::TargetSP target_sp,
   ExecutionContext exe_ctx(target_sp, /*get_process=*/false);
 
   // Create process script object
-  auto obj_or_err = GetInterface().CreatePluginObject(
-      m_scripted_metadata.GetClassName(), exe_ctx,
-      m_scripted_metadata.GetArgsSP());
+  auto obj_or_err =
+      GetInterface().CreatePluginObject(m_scripted_metadata, exe_ctx);
 
   if (!obj_or_err) {
     llvm::consumeError(obj_or_err.takeError());
@@ -265,7 +264,7 @@ size_t ScriptedProcess::DoWriteMemory(lldb::addr_t vm_addr, const void *buf,
 Status ScriptedProcess::EnableBreakpointSite(BreakpointSite *bp_site) {
   assert(bp_site != nullptr);
 
-  if (IsBreakpointSiteEnabled(*bp_site)) {
+  if (IsBreakpointSitePhysicallyEnabled(*bp_site)) {
     return {};
   }
 

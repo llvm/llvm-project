@@ -123,8 +123,10 @@
 #include "llvm/CodeGen/MachineBlockHashInfo.h"
 #include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineCFGPrinter.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
+#include "llvm/CodeGen/MachineDebugify.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
@@ -230,6 +232,7 @@
 #include "llvm/Transforms/IPO/HotColdSplitting.h"
 #include "llvm/Transforms/IPO/IROutliner.h"
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
+#include "llvm/Transforms/IPO/Instrumentor.h"
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/IPO/LoopExtractor.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
@@ -349,6 +352,7 @@
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BreakCriticalEdges.h"
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
@@ -405,9 +409,23 @@ AnalysisKey NoOpLoopAnalysis::Key;
 
 namespace {
 
+bool applyMIRDebugify(DIBuilder &DIB, Function &F, ModuleAnalysisManager &AM) {
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
+          .getManager();
+
+  return applyDebugifyMetadataToMachineFunction(
+      DIB, F, [&](Function &Func) -> MachineFunction * {
+        MachineFunctionAnalysis::Result *MFA =
+            FAM.getCachedResult<MachineFunctionAnalysis>(Func);
+        return MFA ? &MFA->getMF() : nullptr;
+      });
+}
+
 // Passes for testing crashes.
 // DO NOT USE THIS EXCEPT FOR TESTING!
-class TriggerCrashModulePass : public PassInfoMixin<TriggerCrashModulePass> {
+class TriggerCrashModulePass
+    : public OptionalPassInfoMixin<TriggerCrashModulePass> {
 public:
   PreservedAnalyses run(Module &, ModuleAnalysisManager &) {
     abort();
@@ -417,7 +435,7 @@ public:
 };
 
 class TriggerCrashFunctionPass
-    : public PassInfoMixin<TriggerCrashFunctionPass> {
+    : public OptionalPassInfoMixin<TriggerCrashFunctionPass> {
 public:
   PreservedAnalyses run(Function &, FunctionAnalysisManager &) {
     abort();
@@ -429,7 +447,7 @@ public:
 // A pass for testing message reporting of -verify-each failures.
 // DO NOT USE THIS EXCEPT FOR TESTING!
 class TriggerVerifierErrorPass
-    : public PassInfoMixin<TriggerVerifierErrorPass> {
+    : public OptionalPassInfoMixin<TriggerVerifierErrorPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
     // Intentionally break the Module by creating an alias without setting the
@@ -463,7 +481,7 @@ public:
 // A pass requires all MachineFunctionProperties.
 // DO NOT USE THIS EXCEPT FOR TESTING!
 class RequireAllMachineFunctionPropertiesPass
-    : public PassInfoMixin<RequireAllMachineFunctionPropertiesPass> {
+    : public OptionalPassInfoMixin<RequireAllMachineFunctionPropertiesPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &) {
     MFPropsModifier _(*this, MF);
@@ -1347,8 +1365,8 @@ Expected<GVNOptions> parseGVNOptions(StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
 
     bool Enable = !ParamName.consume_front("no-");
-    if (ParamName == "pre") {
-      Result.setPRE(Enable);
+    if (ParamName == "scalar-pre") {
+      Result.setScalarPRE(Enable);
     } else if (ParamName == "load-pre") {
       Result.setLoadPRE(Enable);
     } else if (ParamName == "split-backedge-load-pre") {

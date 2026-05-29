@@ -66,7 +66,8 @@ namespace dwarf {
 enum Tag : uint16_t;
 }
 
-/// Wrapper structure that holds a language name and its version.
+/// Wrapper structure that holds source language identity metadata that includes
+/// language name, optional language version, and an optional language dialect.
 ///
 /// Some debug-info formats, particularly DWARF, distniguish between
 /// language codes that include the version name and codes that don't.
@@ -86,6 +87,14 @@ class DISourceLanguageName {
   /// If \c true, then \ref Version is interpretable and \ref Name
   /// is a version independent name.
   bool HasVersion;
+
+  /// Optional target-specific language dialect for DWARF that can be used to
+  /// indicate the programming/execution model.
+  ///
+  /// This is intentionally not modeled as a DICompileUnit operand. Code that
+  /// introspects DICompileUnit through getNumOperands()/getOperand(i) will not
+  /// see this field.
+  uint16_t Dialect = 0;
 
 public:
   bool hasVersionedName() const { return HasVersion; }
@@ -109,10 +118,12 @@ public:
     return Version;
   }
 
-  DISourceLanguageName(uint16_t Lang, uint32_t Version)
-      : Version(Version), Name(Lang), HasVersion(true) {};
-  DISourceLanguageName(uint16_t Lang)
-      : Version(0), Name(Lang), HasVersion(false) {};
+  uint16_t getDialect() const { return Dialect; }
+
+  DISourceLanguageName(uint16_t Lang, uint32_t Version, uint16_t Dialect = 0)
+      : Version(Version), Name(Lang), HasVersion(true), Dialect(Dialect) {}
+  DISourceLanguageName(uint16_t Lang, uint16_t Dialect = 0)
+      : Version(0), Name(Lang), HasVersion(false), Dialect(Dialect) {}
 };
 
 class DbgVariableRecord;
@@ -2156,6 +2167,8 @@ public:
   DebugEmissionKind getEmissionKind() const {
     return (DebugEmissionKind)EmissionKind;
   }
+  // Return true if this CU was compiled with debug info disabled
+  bool isNoDebug() const { return EmissionKind == NoDebug; }
   bool isDebugDirectivesOnly() const {
     return EmissionKind == DebugDirectivesOnly;
   }
@@ -2190,6 +2203,8 @@ public:
   }
   StringRef getSysRoot() const { return getStringOperand(9); }
   StringRef getSDK() const { return getStringOperand(10); }
+  /// Target-specific language dialect for DWARF.
+  uint16_t getDialect() const { return SourceLanguage.getDialect(); }
 
   MDString *getRawProducer() const { return getOperandAs<MDString>(1); }
   MDString *getRawFlags() const { return getOperandAs<MDString>(2); }
@@ -2203,7 +2218,6 @@ public:
   Metadata *getRawMacros() const { return getOperand(8); }
   MDString *getRawSysRoot() const { return getOperandAs<MDString>(9); }
   MDString *getRawSDK() const { return getOperandAs<MDString>(10); }
-
   /// Replace arrays.
   ///
   /// If this \a isUniqued() and not \a isResolved(), it will be RAUW'ed and

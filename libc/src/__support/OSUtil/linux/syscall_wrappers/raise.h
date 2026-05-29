@@ -12,6 +12,7 @@
 #include "hdr/signal_macros.h"
 #include "hdr/types/sigset_t.h"
 #include "src/__support/OSUtil/linux/syscall.h" // syscall_impl
+#include "src/__support/OSUtil/linux/syscall_wrappers/rt_sigprocmask.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
@@ -27,16 +28,14 @@ LIBC_INLINE ErrorOr<int> raise(int sig) {
   public:
     LIBC_INLINE SigMaskGuard(ErrorOr<int> &status) : old_set{}, status(status) {
       sigset_t full_set = sigset_t{{-1UL}};
-      status = syscall_impl<int>(SYS_rt_sigprocmask, SIG_BLOCK, &full_set,
-                                 &old_set, sizeof(sigset_t));
+      status = linux_syscalls::rt_sigprocmask(SIG_BLOCK, &full_set, &old_set);
     }
     LIBC_INLINE ~SigMaskGuard() {
       if (status.has_value()) {
-        int restore_result =
-            syscall_impl<int>(SYS_rt_sigprocmask, SIG_SETMASK, &old_set,
-                              nullptr, sizeof(sigset_t));
-        if (restore_result < 0)
-          status = Error(-restore_result);
+        auto restore_result =
+            linux_syscalls::rt_sigprocmask(SIG_SETMASK, &old_set, nullptr);
+        if (!restore_result.has_value())
+          status = restore_result.error();
       }
     }
   };

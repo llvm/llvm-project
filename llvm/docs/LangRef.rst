@@ -1543,8 +1543,20 @@ Currently, only the following parameter attributes are defined:
       is null is captured in some other way.
 
 ``nofree``
-    This indicates that the callee does not free the pointer argument. This is not
-    a valid attribute for return values.
+    This indicates that a pointer based on this argument cannot be freed during
+    the execution of the function.
+
+    More formally, a ``nofree`` argument provides the callee with a new pointer
+    with the same address and a derived provenance, where the derived
+    provenance has the same permissions as the original, except that the
+    underlying object cannot be freed until the function returns (or unwinds),
+    otherwise the behavior is undefined. This includes frees of the pointer on
+    other threads if the free *happens-before* the function return.
+
+    Notably, it is still possible to free the underlying object through a
+    pointer that is not based on the argument.
+
+    This is not a valid attribute for return values.
 
 .. _nest:
 
@@ -2326,22 +2338,21 @@ For example:
     internal linkage and only has one call site, so the original
     call is dead after inlining.
 ``nofree``
-    This function attribute indicates that the function does not, directly or
-    transitively, call a memory-deallocation function (``free``, for example)
-    on a memory allocation which existed before the call.
+    This function attribute indicates that the function does not free any memory
+    allocation which existed before the call, either through direct calls to
+    a memory-deallocation function like ``free``, or through synchronization.
+    Freeing through synchronization here means that a deallocation
+    *happens-before* the function exit but does not *happens-before* the
+    function entry.
 
-    As a result, uncaptured pointers that are known to be dereferenceable
-    prior to a call to a function with the ``nofree`` attribute are still
-    known to be dereferenceable after the call. The capturing condition is
-    necessary in environments where the function might communicate the
-    pointer to another thread which then deallocates the memory.  Alternatively,
-    ``nosync`` would ensure such communication cannot happen and even captured
-    pointers cannot be freed by the function.
+    As a result, pointers that are known to be dereferenceable prior to a call
+    to a function with the ``nofree`` attribute are still known to be
+    dereferenceable after the call.
 
     A ``nofree`` function is explicitly allowed to free memory which it
-    allocated or (if not ``nosync``) arrange for another thread to free
-    memory on its behalf.  As a result, perhaps surprisingly, a ``nofree``
-    function can return a pointer to a previously deallocated
+    allocated or arrange for another thread to free such memory on its behalf.
+    As a result, perhaps surprisingly, a ``nofree`` function can return a
+    pointer to a previously deallocated
     :ref:`allocated object<allocatedobjects>`.
 ``noimplicitfloat``
     Disallows implicit floating-point code. This inhibits optimizations that
@@ -2414,11 +2425,12 @@ For example:
     If an invocation of an annotated function does not return control back
     to a point in the call stack, the behavior is undefined.
 ``nosync``
-    This function attribute indicates that the function does not communicate
-    (synchronize) with another thread through memory or other well-defined means.
-    Synchronization is considered possible in the presence of `atomic` accesses
-    that enforce an order, thus not "unordered" and "monotonic", `volatile` accesses,
-    as well as `convergent` function calls.
+    This function attribute indicates that the function does not introduce any
+    *synchronizes-with* edges in the sense of the memory model.
+
+    In particular, synchronization is considered possible in the presence of
+    `atomic` accesses that enforce an order, thus not "unordered" and
+    "monotonic", as well as `convergent` function calls.
 
     Note that `convergent` operations can involve communication that is
     considered to be not through memory and does not necessarily imply an
@@ -2501,6 +2513,17 @@ For example:
     This attribute by itself does not imply restrictions on
     inter-procedural optimizations.  All of the semantic effects the
     patching may have to be separately conveyed via the linkage type.
+``"patchable-function-prefix"``
+    This attribute specifies the number of target-specific NOP instructions
+    emitted before the function entry label.
+``"patchable-function-entry"``
+    This attribute specifies the number of target-specific NOP instructions
+    emitted after the function entry label.  These NOPs are emitted before the
+    function prologue.
+``"patchable-function-entry-section"``
+    This attribute specifies the section used to record the start of the
+    patchable function entry area when such a section is emitted.  If omitted,
+    the default section name is ``__patchable_function_entries``.
 ``"probe-stack"``
     This attribute indicates that the function will trigger a guard region
     in the end of the stack. It ensures that accesses to the stack must be
@@ -3151,7 +3174,7 @@ the behavior is undefined, unless one of the following exceptions applies:
 
 * ``"align"`` operand bundles may specify a non-power-of-two alignment
   (including a zero alignment). If this is the case, then the pointer value
-  must be a null pointer, otherwise the behavior is undefined.
+  must be an all-zero pointer, otherwise the behavior is undefined.
 
 * ``dereferenceable(<n>)`` operand bundles only guarantee the pointer is
   dereferenceable at the point of the assumption. The pointer may not be
@@ -3395,12 +3418,15 @@ as follows:
     The optional ``<flags>`` are used to specify properties of pointers in this
     address space: the character ``u`` marks pointers as having an unstable
     representation, and ``e`` marks pointers having external state. See
-    :ref:`Non-Integral Pointer Types <nointptrtype>`. The ``<name>`` is an
+    :ref:`Non-Integral Pointer Types <nointptrtype>`. Additionally, the
+    null pointer bit representation can be specified: ``z`` indicates it is
+    all-zeros, and ``o`` indicates it is all-ones. At most one of ``z`` or
+    ``o`` may be specified. If neither ``z`` nor ``o`` is specified, the null
+    pointer bit representation defaults to all-zeros. The ``<name>`` is an
     optional name of that address space, surrounded by ``(`` and ``)``. If the
     name is specified, it must be unique to that address space and cannot be
     ``A``, ``G``, or ``P`` which are pre-defined names used to denote alloca,
     global, and program address space respectively.
-
 ``i<size>:<abi>[:<pref>]``
     This specifies the alignment for an integer type of a given bit
     ``<size>``. The value of ``<size>`` must be in the range [1,2^24).
@@ -3683,9 +3709,64 @@ memory before the call, the call may capture two components of the pointer:
     rules <pointeraliasing>`. We further distinguish whether only read accesses
     are allowed, or both reads and writes.
 
+These two cases are discussed in more detail in the following.
+
+Provenance capture
+^^^^^^^^^^^^^^^^^^
+
+If an argument does not capture the provenance of the pointer, accesses that are
+based on the argument and are performed after the function returns (or unwinds)
+cause undefined behavior. In the case where only read provenance is captured,
+only stores cause undefined behavior.
+
+More formally, an argument that does not capture provenance effectively provides
+the callee a new pointer with the same address and a derived provenance, where
+the derived provenance initially has the same permissions as the original, but
+all access permissions are removed once the function returns (or unwinds). Or
+in the case of only capturing read provenance, the permissions are changed to
+only allow read accesses.
+
+This means that the following code is well-defined in isolation:
+
+.. code-block:: llvm
+
+    define void @f(ptr captures(address) %a, ptr %b) {
+      store ptr %a, ptr %b
+      ret void
+    }
+
+Even though the pointer is stored in another location that persists past the
+return of the function, this does not cause undefined behavior by itself. It
+depends on whether/how the pointer will be used in the future.
+
+.. code-block:: llvm
+
+    call void @f(ptr captures(address) %a, ptr %b)
+    %a2 = load ptr, ptr %b ; This is still well-defined
+    load i64, ptr %a2 ; This causes undefined behavior
+
+In this example, the persisted pointer is accessed after the return of the
+function, which causes undefined behavior.
+
+.. code-block:: llvm
+
+    call void @f(ptr captures(address, read_provenance) %a, ptr %b)
+    %a2 = load ptr, ptr %b
+    load i64, ptr %a2 ; This is still well-defined
+    store i64 0, ptr %a2 ; This causes undefined behavior
+
+In this example, we additionally declare that ``read_provenance`` is captured.
+This means that the ``load`` after the function return is still well-defined,
+while the store causes undefined behavior.
+
+Address capture
+^^^^^^^^^^^^^^^
+
+The address of the pointer is considered to be captured if the function can
+exhibit different observable behavior based on the address of the pointer.
+
 For example, the following function captures the address of ``%a``, because
-it is compared to a pointer, leaking information about the identity of the
-pointer:
+it will return a different value if the address has a specific value:
 
 .. code-block:: llvm
 
@@ -3697,33 +3778,28 @@ pointer:
     }
 
 The function does not capture the provenance of the pointer, because the
-``icmp`` instruction only operates on the pointer address. The following
-function captures both the address and provenance of the pointer, as both
-may be read from ``@glb`` after the function returns:
+``icmp`` instruction only operates on the pointer address.
+
+Even if the function contains a comparison on the pointer address, this does
+not necessarily mean that it captures the address:
 
 .. code-block:: llvm
 
-    @glb = global ptr null
+    define void @my_memmove(
+        ptr captures(none) %dst, ptr captures(none) %src, i64 %size
+    ) {
+      %cmp = icmp ult ptr %dst, %src
+      br i1 %cmp, label %perform_forward_copy, label %perform_backward_copy
 
-    define void @f(ptr %a) {
-      store ptr %a, ptr @glb
-      ret void
+      ; ...
     }
 
-The following function captures *neither* the address nor the provenance of
-the pointer:
+While the implementation differs based on the addresses of the arguments, the
+observable behavior stays the same in both branches. A common case where this
+occurs are runtime aliasing checks for loop versioning.
 
-.. code-block:: llvm
-
-    define i32 @f(ptr %a) {
-      %v = load i32, ptr %a
-      ret i32
-    }
-
-While address capture includes uses of the address within the body of the
-function, provenance capture refers exclusively to the ability to perform
-accesses *after* the function returns. Memory accesses within the function
-itself are not considered pointer captures.
+Location specific capture
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 We can further say that the capture only occurs through a specific location.
 In the following example, the pointer (both address and provenance) is captured
@@ -3755,71 +3831,26 @@ ultimately only contributes to the return value:
 This definition is chosen to allow capture analysis to continue with the return
 value in the usual fashion.
 
-The following describes possible ways to capture a pointer in more detail,
-where unqualified uses of the word "capture" refer to capturing both address
-and provenance.
+Inference
+^^^^^^^^^
 
-1. The call stores any bit of the pointer carrying information into a place,
-   and the stored bits can be read from the place by the caller after this call
-   exits.
+The definitions given above are permissive to facilitate frontend-driven
+annotations based on language semantics. As inference generally cannot know
+how pointers will be used after the function returns, it needs to make
+conservative assumptions. Here is an example set of rules that could be used
+to infer ``captures``:
 
-.. code-block:: llvm
-
-    @glb  = global ptr null
-    @glb2 = global ptr null
-    @glb3 = global ptr null
-    @glbi = global i32 0
-
-    define ptr @f(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) {
-      store ptr %a, ptr @glb ; %a is captured by this call
-
-      store ptr %b,   ptr @glb2 ; %b isn't captured because the stored value is overwritten by the store below
-      store ptr null, ptr @glb2
-
-      store ptr %c,   ptr @glb3
-      call void @g() ; If @g makes a copy of %c that outlives this call (@f), %c is captured
-      store ptr null, ptr @glb3
-
-      %i = ptrtoint ptr %d to i64
-      %j = trunc i64 %i to i32
-      store i32 %j, ptr @glbi ; %d is captured
-
-      ret ptr %e ; %e is captured
-    }
-
-2. The call stores any bit of the pointer carrying information into a place,
-   and the stored bits can be safely read from the place by another thread via
-   synchronization.
-
-.. code-block:: llvm
-
-    @lock = global i1 true
-
-    define void @f(ptr %a) {
-      store ptr %a, ptr @glb
-      store atomic i1 false, ptr @lock release ; %a is captured because another thread can safely read @glb
-      store ptr null, ptr @glb
-      ret void
-    }
-
-3. The call's behavior depends on any bit of the pointer carrying information
-   (address capture only).
-
-.. code-block:: llvm
-
-    @glb = global i8 0
-
-    define void @f(ptr %a) {
-      %c = icmp eq ptr %a, @glb
-      br i1 %c, label %BB_EXIT, label %BB_CONTINUE ; captures address of %a only
-    BB_EXIT:
-      call void @exit()
-      unreachable
-    BB_CONTINUE:
-      ret void
-    }
-
-4. The pointer is used as the pointer operand of a volatile access.
+ * Volatile memory accesses capture the address of the pointer.
+ * getelementptr, bitcast, addrspacecast, select, phi: Do not capture anything.
+ * load, va_arg: Do not capture anything (unless volatile).
+ * icmp, ptrtoaddr: Captures only address.
+ * ptrtoint: Captures address and provenance.
+ * call/invoke: Depends on ``captures`` on arguments. The callee is never
+   captured.
+ * store, atomicrmw, cmpxchg: Capture the address and provenance of the value
+   operand. Do not capture the pointer operand (unless volatile).
+ * Other (including insertvalue and insertelement): Conservatively assume
+   address and provenance are captured.
 
 .. _volatile:
 
@@ -4024,17 +4055,21 @@ For a simpler introduction to the ordering constraints, see the
 .. _syncscope:
 
 If an atomic operation is marked ``syncscope("singlethread")``, it only
-*synchronizes with* and only participates in the seq\_cst total orderings of
-other operations running in the same thread (for example, in signal handlers).
+*synchronizes with* other operations running in the same thread (for
+example, in signal handlers) and it is related in the seq\_cst order and
+the monotonic modification order with other operations in the same
+thread.
 
 If an atomic operation is marked ``syncscope("<target-scope>")``, where
-``<target-scope>`` is a target-specific synchronization scope, then it is target
-dependent if it *synchronizes with* and participates in the seq\_cst total
-orderings of other operations.
+``<target-scope>`` is a target-specific synchronization scope, then it
+is target-dependent if it *synchronizes with* other operations and
+if it is related with other operations in the seq\_cst order and the
+monotonic modification order.
 
-Otherwise, an atomic operation that is not marked ``syncscope("singlethread")``
-or ``syncscope("<target-scope>")`` *synchronizes with* and participates in the
-seq\_cst total orderings of other operations that are not marked
+Otherwise, an atomic operation that is not marked
+``syncscope("singlethread")`` or ``syncscope("<target-scope>")``
+*synchronizes with* and is related in the seq\_cst order and the
+monotonic modification order with other operations that are not marked
 ``syncscope("singlethread")`` or ``syncscope("<target-scope>")``.
 
 .. _floatenv:
@@ -6564,6 +6599,24 @@ more-accurate debug info for profiling results.
                         enums: !2, retainedTypes: !3, globals: !4, imports: !5,
                         macros: !6, dwoId: 0x0abcd)
 
+The optional ``dialect:`` field encodes the source-language *dialect* of the
+compile unit as an enum. It corresponds to the ``DW_AT_LLVM_language_dialect``
+attribute emitted on ``DW_TAG_compile_unit`` and is intended for language
+dialects that represent different execution models. When specified, the field
+must name one of the known dialects, either symbolically or with the matching
+numeric value; see :ref:`llvm_language_dialect` for the list of supported
+values.
+
+Omitting the ``dialect:`` field is the only way to express "no dialect" in
+textual IR.
+
+.. code-block:: text
+
+    !0 = !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang",
+                        isOptimized: false, runtimeVersion: 0,
+                        emissionKind: FullDebug,
+                        dialect: DW_LLVM_LANG_DIALECT_simt)
+
 Compile unit descriptors provide the root scope for objects declared in a
 specific compilation unit. File descriptors are defined using this scope.  These
 descriptors are collected by a named metadata node ``!llvm.dbg.cu``. They keep
@@ -7449,9 +7502,13 @@ does not carry useful data and need not be preserved.
 noalias memory-access sets. This means that some collection of memory access
 instructions (loads, stores, memory-accessing calls, etc.) that carry
 ``noalias`` metadata can specifically be specified not to alias with some other
-collection of memory access instructions that carry ``alias.scope`` metadata. If
-accesses from different collections alias, the behavior is undefined. Each type
-of metadata specifies a list of scopes where each scope has an id and a domain.
+collection of memory access instructions that carry ``alias.scope`` metadata.
+These metadata kinds may also be attached to ``fence`` instructions to indicate
+which scoped memory regions the fence does (or does not) concern; this allows
+alias analysis to prove that a fence cannot affect a particular memory location.
+If accesses from different collections alias, the behavior is undefined. Each
+type of metadata specifies a list of scopes where each scope has an id and a
+domain.
 
 When evaluating an aliasing query, if for some domain, the set
 of scopes with that domain in one instruction's ``alias.scope`` list is a
@@ -7968,6 +8025,48 @@ iterations that do not fill a complete set of vector lanes. See
 Attributes in the metadata will be added to both the vectorized and
 epilogue loop.
 See :ref:`Transformation Metadata <transformation-metadata>` for details.
+
+'``llvm.loop.vectorize.body``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata is automatically added by the loop vectorizer to the
+vectorized loop body. It is used by subsequent optimization passes
+(such as the loop unroller and ``WarnMissedTransforms``) to emit more
+precise optimization remarks that identify the loop as a vector loop.
+
+The first operand is the string
+``llvm.loop.vectorize.body`` and the second operand is an
+integer. A value of 1 indicates this is a vectorized loop body:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.vectorize.body", i32 1}
+
+'``llvm.loop.vectorize.epilogue``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata is automatically added by the loop vectorizer to the
+scalar remainder (epilogue) loop to identify it as such. It is used by
+subsequent optimization passes (such as the loop unroller and
+``WarnMissedTransforms``) to emit more precise optimization remarks
+that distinguish between the vectorized loop and its scalar remainder.
+
+Together these two attributes provide a four-way classification:
+
+- ``body`` only: main vectorized loop body
+- ``epilogue`` only: scalar epilogue loop after vectorization
+- Both ``body`` and ``epilogue``: vectorized epilogue 
+  (a remainder loop that was itself vectorized during epilogue
+  vectorization)
+- Neither: a plain loop not produced by the vectorizer
+
+The first operand is the string
+``llvm.loop.vectorize.epilogue`` and the second operand is
+an integer. A value of 1 indicates the loop is a remainder loop:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.vectorize.epilogue", i32 1}
 
 '``llvm.loop.unroll``'
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -8585,7 +8684,9 @@ is executed, followed by ``uint64_t`` value and execution count pairs.
 The value profiling kind is 0 for indirect call targets and 1 for memory
 operations. For indirect call targets, each profile value is a hash
 of the callee function name, and for memory operations each value is the
-byte length.
+byte length. It is illegal to have duplicate profile values (e.g., 
+duplicate function hashes for indirect calls or byte lengths for memory
+operations).
 
 Note that the value counts do not need to add up to the total count
 listed in the third operand (in practice only the top hottest values
@@ -9202,6 +9303,16 @@ flags metadata, using the following key-value pairs:
          call to the checker function and then one to the target.
        * 2 --- CFG uses the "dispatch" mechanism. This calls a dispatcher
          function which both checks and then calls the target.
+
+Other Module Flags
+------------------
+
+``require-logical-pointer``
+    This flag indicates this module must only use logical pointer intrinsics
+    such as :ref:`@llvm.structured.gep <i_structured_gep>` or
+    :ref:`@llvm.structured.alloca <i_structured_alloca>`.
+    Using a normal :ref:`getelementptr <i_getelementptr>` or
+    :ref:`alloca <i_alloca>` is illegal.
 
 Embedded Objects Names Metadata
 ===============================
@@ -12199,7 +12310,7 @@ Syntax:
 
 ::
 
-      atomicrmw [volatile] <operation> ptr <pointer>, <ty> <value> [syncscope("<target-scope>")] <ordering>[, align <alignment>]  ; yields ty
+      atomicrmw [volatile] [elementwise] <operation> ptr <pointer>, <ty> <value> [syncscope("<target-scope>")] <ordering>[, align <alignment>]  ; yields ty
 
 Overview:
 """""""""
@@ -12237,14 +12348,12 @@ operation. The operation must be one of the following keywords:
 -  usub_cond
 -  usub_sat
 
-For most of these operations, the type of '<value>' must be an integer
-type whose bit width is a power of two greater than or equal to eight.
-For xchg, this
-may also be a floating point or a pointer type with the same size constraints
-as integers.  For fadd/fsub/fmax/fmin/fmaximum/fminimum/fmaximumnum/fminimumnum, this must be a floating-point
-or fixed vector of floating-point type.  The type of the '``<pointer>``'
-operand must be a pointer to that type. If the ``atomicrmw`` is marked
-as ``volatile``, then the optimizer is not allowed to modify the
+For all of these operations, the type of '<value>' must be a type whose bit width is a power of two greater than or equal to eight.
+For add/sub/and/nand/or/xor/max/min/umax/umin/uinc_wrap/udec_wrap/usub_cond/usub_sat, this must be an integer type, or, if the ``elementwise`` modifier is present, a fixed vector of integer type.
+For fadd/fsub/fmax/fmin/fmaximum/fminimum/fmaximumnum/fminimumnum, this must be a floating-point or fixed vector of floating-point type.
+For xchg, this must be an integer type, floating-point type, or pointer type, or, if the ``elementwise`` modifier is present, a fixed vector of integer type, floating-point type, or pointer type.
+The type of the '<pointer>' operand must be a pointer to the type of '<value>'.
+If the ``atomicrmw`` is marked as ``volatile``, then the optimizer is not allowed to modify the
 number or order of execution of this ``atomicrmw`` with other
 :ref:`volatile operations <volatile>`.
 
@@ -12260,6 +12369,10 @@ isn't specified.
 
 An ``atomicrmw`` instruction can also take an optional
 ":ref:`syncscope <syncscope>`" argument.
+
+If the ``elementwise`` modifier is present, the instruction has per-element vector
+atomic semantics. It behaves as if it were expanded into one scalar ``atomicrmw`` per element, that are not ordered with respect to each other.
+Without ``elementwise``, vector ``atomicrmw`` keeps whole-value atomic semantics.
 
 Semantics:
 """"""""""
@@ -13947,8 +14060,8 @@ Example:
 llvm treats calls to some functions with names and arguments that match
 the standard C99 library as being the C99 library functions, and may
 perform optimizations or generate code for them under that assumption.
-This is something we'd like to change in the future to provide better
-support for freestanding environments and non-C-based languages.
+This implies that undefined behavior in C standard library functions recognized
+by LLVM is also undefined behavior at the IR level.
 
 .. _i_va_arg:
 
@@ -16723,7 +16836,7 @@ Arguments:
 """"""""""
 
 The first argument is a pointer to the destination to fill, the second
-is the byte value with which to fill it, the third argument is a constant
+is the byte value with which to fill it, the third argument is an
 integer argument specifying the number of bytes to fill, and the fourth
 is a boolean indicating a volatile access.
 
@@ -21018,11 +21131,12 @@ matches the element-type of the vector input.
 This instruction has the same comparison and ``nsz`` semantics as the
 '``llvm.maxnum.*``' intrinsic.
 
-If any of the vector elements is a signaling NaN, the intrinsic will
-non-deterministically either:
+The reduction is performed in a non-deterministic order. This is only observable
+if one of the inputs is a signaling NaN.
 
- * Return a :ref:`NaN <floatnan>`.
- * Treat the signaling NaN as a quiet NaN.
+For example, if a reduction is performed over ``<sNaN, 0.0, 1.0>``, then all of
+:ref:`NaN <floatnan>`, ``0.0`` and ``1.0`` are possible results, depending on
+which order is picked.
 
 Arguments:
 """"""""""
@@ -21052,11 +21166,12 @@ matches the element-type of the vector input.
 This instruction has the same comparison and ``nsz`` semantics as the
 '``llvm.minnum.*``' intrinsic.
 
-If any of the vector elements is a signaling NaN, the intrinsic will
-non-deterministically either:
+The reduction is performed in a non-deterministic order. This is only observable
+if one of the inputs is a signaling NaN.
 
- * Return a :ref:`NaN <floatnan>`.
- * Treat the signaling NaN as a quiet NaN.
+For example, if a reduction is performed over ``<sNaN, 0.0, 1.0>``, then all of
+:ref:`NaN <floatnan>`, ``0.0`` and ``1.0`` are possible results, depending on
+which order is picked.
 
 Arguments:
 """"""""""

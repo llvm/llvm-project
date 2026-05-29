@@ -254,6 +254,7 @@ public:
 
 protected:
   void writePerModuleGlobalValueSummary();
+  void writeGUIDList();
 
 private:
   void writePerModuleFunctionSummaryRecord(
@@ -690,41 +691,84 @@ static unsigned getEncodedBinaryOpcode(unsigned Opcode) {
   }
 }
 
-static unsigned getEncodedRMWOperation(AtomicRMWInst::BinOp Op) {
-  switch (Op) {
+static unsigned getEncodedRMWOperation(const AtomicRMWInst &I) {
+  unsigned Encoding = 0;
+  switch (I.getOperation()) {
   default: llvm_unreachable("Unknown RMW operation!");
-  case AtomicRMWInst::Xchg: return bitc::RMW_XCHG;
-  case AtomicRMWInst::Add: return bitc::RMW_ADD;
-  case AtomicRMWInst::Sub: return bitc::RMW_SUB;
-  case AtomicRMWInst::And: return bitc::RMW_AND;
-  case AtomicRMWInst::Nand: return bitc::RMW_NAND;
-  case AtomicRMWInst::Or: return bitc::RMW_OR;
-  case AtomicRMWInst::Xor: return bitc::RMW_XOR;
-  case AtomicRMWInst::Max: return bitc::RMW_MAX;
-  case AtomicRMWInst::Min: return bitc::RMW_MIN;
-  case AtomicRMWInst::UMax: return bitc::RMW_UMAX;
-  case AtomicRMWInst::UMin: return bitc::RMW_UMIN;
-  case AtomicRMWInst::FAdd: return bitc::RMW_FADD;
-  case AtomicRMWInst::FSub: return bitc::RMW_FSUB;
-  case AtomicRMWInst::FMax: return bitc::RMW_FMAX;
-  case AtomicRMWInst::FMin: return bitc::RMW_FMIN;
+  case AtomicRMWInst::Xchg:
+    Encoding = bitc::RMW_XCHG;
+    break;
+  case AtomicRMWInst::Add:
+    Encoding = bitc::RMW_ADD;
+    break;
+  case AtomicRMWInst::Sub:
+    Encoding = bitc::RMW_SUB;
+    break;
+  case AtomicRMWInst::And:
+    Encoding = bitc::RMW_AND;
+    break;
+  case AtomicRMWInst::Nand:
+    Encoding = bitc::RMW_NAND;
+    break;
+  case AtomicRMWInst::Or:
+    Encoding = bitc::RMW_OR;
+    break;
+  case AtomicRMWInst::Xor:
+    Encoding = bitc::RMW_XOR;
+    break;
+  case AtomicRMWInst::Max:
+    Encoding = bitc::RMW_MAX;
+    break;
+  case AtomicRMWInst::Min:
+    Encoding = bitc::RMW_MIN;
+    break;
+  case AtomicRMWInst::UMax:
+    Encoding = bitc::RMW_UMAX;
+    break;
+  case AtomicRMWInst::UMin:
+    Encoding = bitc::RMW_UMIN;
+    break;
+  case AtomicRMWInst::FAdd:
+    Encoding = bitc::RMW_FADD;
+    break;
+  case AtomicRMWInst::FSub:
+    Encoding = bitc::RMW_FSUB;
+    break;
+  case AtomicRMWInst::FMax:
+    Encoding = bitc::RMW_FMAX;
+    break;
+  case AtomicRMWInst::FMin:
+    Encoding = bitc::RMW_FMIN;
+    break;
   case AtomicRMWInst::FMaximum:
-    return bitc::RMW_FMAXIMUM;
+    Encoding = bitc::RMW_FMAXIMUM;
+    break;
   case AtomicRMWInst::FMinimum:
-    return bitc::RMW_FMINIMUM;
+    Encoding = bitc::RMW_FMINIMUM;
+    break;
   case AtomicRMWInst::FMaximumNum:
-    return bitc::RMW_FMAXIMUMNUM;
+    Encoding = bitc::RMW_FMAXIMUMNUM;
+    break;
   case AtomicRMWInst::FMinimumNum:
-    return bitc::RMW_FMINIMUMNUM;
+    Encoding = bitc::RMW_FMINIMUMNUM;
+    break;
   case AtomicRMWInst::UIncWrap:
-    return bitc::RMW_UINC_WRAP;
+    Encoding = bitc::RMW_UINC_WRAP;
+    break;
   case AtomicRMWInst::UDecWrap:
-    return bitc::RMW_UDEC_WRAP;
+    Encoding = bitc::RMW_UDEC_WRAP;
+    break;
   case AtomicRMWInst::USubCond:
-    return bitc::RMW_USUB_COND;
+    Encoding = bitc::RMW_USUB_COND;
+    break;
   case AtomicRMWInst::USubSat:
-    return bitc::RMW_USUB_SAT;
+    Encoding = bitc::RMW_USUB_SAT;
+    break;
   }
+
+  if (I.isElementwise())
+    Encoding |= bitc::RMW_ELEMENTWISE_FLAG;
+  return Encoding;
 }
 
 static unsigned getEncodedOrdering(AtomicOrdering Ordering) {
@@ -1604,6 +1648,8 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     Vals.clear();
   }
 
+  writeGUIDList();
+
   // Emit the global variable information.
   for (const GlobalVariable &GV : M.globals()) {
     unsigned AbbrevToUse = 0;
@@ -2160,6 +2206,7 @@ void ModuleBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
   Record.push_back(VE.getMetadataOrNullID(N->getRawSysRoot()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawSDK()));
   Record.push_back(Lang.hasVersionedName() ? Lang.getVersion() : 0);
+  Record.push_back(Lang.getDialect());
 
   Stream.EmitRecord(bitc::METADATA_COMPILE_UNIT, Record, Abbrev);
   Record.clear();
@@ -3554,8 +3601,7 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     Code = bitc::FUNC_CODE_INST_ATOMICRMW;
     pushValueAndType(I.getOperand(0), InstID, Vals); // ptrty + ptr
     pushValueAndType(I.getOperand(1), InstID, Vals); // valty + val
-    Vals.push_back(
-        getEncodedRMWOperation(cast<AtomicRMWInst>(I).getOperation()));
+    Vals.push_back(getEncodedRMWOperation(cast<AtomicRMWInst>(I)));
     Vals.push_back(cast<AtomicRMWInst>(I).isVolatile());
     Vals.push_back(getEncodedOrdering(cast<AtomicRMWInst>(I).getOrdering()));
     Vals.push_back(
@@ -4631,7 +4677,11 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
 void ModuleBitcodeWriterBase::writeModuleLevelReferences(
     const GlobalVariable &V, SmallVector<uint64_t, 64> &NameVals,
     unsigned FSModRefsAbbrev, unsigned FSModVTableRefsAbbrev) {
-  auto VI = Index->getValueInfo(V.getGUID());
+  // Be a little lenient here, to accomodate older files without GUIDs
+  // already computed and assigned as metadata.
+  GlobalValue::GUID GUID = V.getGUIDOrFallback();
+
+  auto VI = Index->getValueInfo(GUID);
   if (!VI || VI.getSummaryList().empty()) {
     // Only declarations should not have a summary (a declaration might however
     // have a summary if the def was in module level asm).
@@ -4844,7 +4894,11 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     if (!F.hasName())
       report_fatal_error("Unexpected anonymous function when writing summary");
 
-    ValueInfo VI = Index->getValueInfo(F.getGUID());
+    // Be a little lenient here, to accomodate older files without GUIDs
+    // already computed and assigned as metadata.
+    GlobalValue::GUID GUID = F.getGUIDOrFallback();
+
+    ValueInfo VI = Index->getValueInfo(GUID);
     if (!VI || VI.getSummaryList().empty()) {
       // Only declarations should not have a summary (a declaration might
       // however have a summary if the def was in module level asm).
@@ -4876,7 +4930,9 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     if (!F.hasName())
       report_fatal_error("Unexpected anonymous function when writing summary");
 
-    ValueInfo VI = Index->getValueInfo(F.getGUID());
+    GlobalValue::GUID GUID = F.getGUIDOrFallback();
+
+    ValueInfo VI = Index->getValueInfo(GUID);
     if (!VI || VI.getSummaryList().empty()) {
       // Only declarations should not have a summary (a declaration might
       // however have a summary if the def was in module level asm).
@@ -4926,6 +4982,37 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
                       ArrayRef<uint64_t>{Index->getBlockCount()});
 
   Stream.ExitBlock();
+}
+
+void ModuleBitcodeWriterBase::writeGUIDList() {
+  const ValueEnumerator::ValueList &Vals = VE.getValues();
+  const size_t Max = Vals.size();
+
+  std::vector<GlobalValue::GUID> GUIDs(Max, 0);
+  for (const GlobalValue &GV : M.global_values()) {
+    auto MaybeGUID = GV.getGUIDIfAssigned();
+    if (!MaybeGUID)
+      continue;
+    auto GUID = *MaybeGUID;
+
+    const auto ValueID = VE.getValueID(&GV);
+    GUIDs[ValueID] = GUID;
+  }
+
+  auto Abbv = std::make_shared<BitCodeAbbrev>();
+  Abbv->Add(BitCodeAbbrevOp(bitc::MODULE_CODE_GUIDLIST));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+  unsigned GUIDListAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+
+  SmallVector<uint32_t> RecordVals;
+  RecordVals.reserve(Max * 2);
+  for (auto GUID : GUIDs) {
+    RecordVals.push_back(static_cast<uint32_t>(GUID >> 32));
+    RecordVals.push_back(static_cast<uint32_t>(GUID));
+  }
+
+  Stream.EmitRecord(bitc::MODULE_CODE_GUIDLIST, RecordVals, GUIDListAbbrev);
 }
 
 /// Emit the combined summary section into the combined index file.
@@ -5719,6 +5806,8 @@ void ThinLinkBitcodeWriter::writeSimplifiedModuleInfo() {
     Stream.EmitRecord(bitc::MODULE_CODE_SOURCE_FILENAME, Vals, FilenameAbbrev);
     Vals.clear();
   }
+
+  writeGUIDList();
 
   // Emit the global variable information.
   for (const GlobalVariable &GV : M.globals()) {

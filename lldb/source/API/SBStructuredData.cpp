@@ -77,6 +77,10 @@ operator=(const lldb::SBStructuredData &rhs) {
   return *this;
 }
 
+void SBStructuredData::CopyImpl(lldb_private::StructuredDataImpl &new_impl) {
+  new_impl.SetObjectSP(m_impl_up->GetObjectSP());
+}
+
 lldb::SBError SBStructuredData::SetFromJSON(lldb::SBStream &stream) {
   LLDB_INSTRUMENT_VA(this, stream);
 

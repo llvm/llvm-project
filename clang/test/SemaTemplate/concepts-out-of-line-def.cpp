@@ -228,9 +228,7 @@ namespace constrained_member_sfinae {
 
 template<int N> struct S {
   template<class T>
-  static constexpr int constrained_method() requires (sizeof(int[N * 1073741824 + 4]) == 16) { // expected-warning {{variable length arrays in C++ are a Clang extension}} \
-                                                                                                  expected-note {{value 4294967296 is outside the range of representable values of type 'int'}} \
-                                                                                                  expected-note {{while calculating associated constraint of template 'constrained_method' here}}
+  static constexpr int constrained_method() requires (sizeof(int[N * 1073741824 + 4]) == 16) {
     return CONSTRAINED_METHOD_1;
   }
 
@@ -838,11 +836,11 @@ auto TplClass<int>::buggy() -> void {}
 
 }
 
-namespace PackIndexExpr {
+namespace PackIndexExpr1 {
 template <int... T>
 concept C = true;
 
-template <typename...> struct TplClass { // #TplClassDef
+template <typename...> struct TplClass { // #PackIndexExpr1-TplClassDef
   template <int... Ts>
   requires C<Ts...[0]>
   static auto buggy() -> void;
@@ -854,9 +852,84 @@ requires C<Ts...[0]>
 auto TplClass<int>::buggy() -> void {}
 // FIXME: These shouldn't diagnose, but are a result of a revert: #193558
 // expected-error@-2{{does not match any declaration in}}
-// expected-note@#TplClassDef{{TplClass defined here}}
-//
-}
+// expected-note@#PackIndexExpr1-TplClassDef{{TplClass defined here}}
+} // namespace PackIndexExpr1
+
+namespace PackIndexExpr2 {
+  template <int... T> concept C = true;
+
+  namespace t1 {
+    template <int...> struct TplClass { // expected-note {{defined here}}
+      template <int... Ts, int... Us>
+      requires C<Ts...[0]>
+      static auto buggy() -> void;
+    };
+
+    template <>
+    template <int... Ts, int... Us>
+    requires C<Us...[0]>
+    auto TplClass<0>::buggy() -> void {}
+    // expected-error@-1 {{out-of-line definition of 'buggy' does not match any declaration}}
+  } // namespace t1
+  namespace t2 {
+    template <int...> struct TplClass { // expected-note {{defined here}}
+      template <int... Ts>
+      requires C<Ts...[0]>
+      static auto buggy() -> void;
+    };
+
+    template <>
+    template <int... Ts>
+    requires C<Ts...[1]>
+    auto TplClass<0>::buggy() -> void {}
+    // expected-error@-1 {{out-of-line definition of 'buggy' does not match any declaration}}
+  } // namespace t2
+  namespace t3 {
+    template <int... Us> struct TplClass { // expected-note {{defined here}}
+      template <int... Ts>
+      requires C<Us...[0]>
+      static auto buggy() -> void;
+    };
+
+    template <>
+    template <int... Ts>
+    requires C<Ts...[0]>
+    auto TplClass<0>::buggy() -> void {}
+    // expected-error@-1 {{out-of-line definition of 'buggy' does not match any declaration}}
+  } // namespace t3
+} // namespace PackIndexExpr2
+
+namespace FuncTemplateInClass {
+  template <int T> concept C = true;
+
+  namespace t1 {
+    template <int> struct TplClass { // expected-note {{defined here}}
+      template <int Ts>
+      requires C<Ts>
+      static auto buggy() -> void;
+    };
+
+    // FIXME: This should be accepted.
+    template <>
+    template <int Ts>
+    requires C<Ts>
+    auto TplClass<0>::buggy() -> void {}
+    // expected-error@-1 {{out-of-line definition of 'buggy' does not match any declaration}}
+  } //namespace t1
+  namespace t2 {
+    template <int> struct TplClass { // expected-note {{defined here}}
+      template <int Ts, int Us>
+      requires C<Ts>
+      static auto buggy() -> void;
+    };
+
+    template <>
+    template <int Ts, int Us>
+    requires C<Us>
+    auto TplClass<0>::buggy() -> void {}
+    // expected-error@-1 {{out-of-line definition of 'buggy' does not match any declaration}}
+  } //namespace t2
+} // namespace FuncTemplateInClass
 
 namespace GH139476 {
 
@@ -897,3 +970,23 @@ template<typename Q> requires is_valid<Q>
 class Inner2 {};
 
 }
+
+namespace NoDiagnosticsInNormalization {
+  template<class T> struct S {
+    template<class> void f() requires (T::v > 0) {}
+    template<class> void f() requires (sizeof(T) > 1);
+  };
+  template<>
+  template<class>
+  void S<int>::f() requires (sizeof(int) > 1) {}
+} // namespace NoDiagnosticsInNormalization
+
+namespace GH193558 {
+  template<class T> class A;
+  template<class T> struct A<T*> {
+    template<class> requires (T()) void f();
+  };
+  template<class T> template<class>
+    requires (T())
+    void A<T*>::f() {}
+} // namespace GH193558

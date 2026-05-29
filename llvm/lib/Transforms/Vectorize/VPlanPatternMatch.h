@@ -295,7 +295,8 @@ private:
   /// Helper to check if predicate \p P holds on all tuple elements in Ops using
   /// the provided index sequence.
   template <typename Fn, std::size_t... Is>
-  bool all_of_tuple_elements(std::index_sequence<Is...>, Fn P) const {
+  bool all_of_tuple_elements(std::index_sequence<Is...>,
+                             [[maybe_unused]] Fn P) const {
     return (P(std::get<Is>(Ops), Is) && ...);
   }
 };
@@ -336,6 +337,13 @@ m_c_VPInstruction(const Op0_t &Op0, const Op1_t &Op1) {
 /// number of operands is not fixed.
 inline VPInstruction_match<VPInstruction::BuildVector> m_BuildVector() {
   return m_VPInstruction<VPInstruction::BuildVector>();
+}
+
+/// BuildStructVector matches only its opcode, w/o matching its operands as the
+/// number of operands is not fixed.
+inline VPInstruction_match<VPInstruction::BuildStructVector>
+m_BuildStructVector() {
+  return m_VPInstruction<VPInstruction::BuildStructVector>();
 }
 
 template <typename Op0_t>
@@ -387,6 +395,12 @@ template <typename Op0_t, typename Op1_t>
 inline VPInstruction_match<Instruction::ExtractElement, Op0_t, Op1_t>
 m_ExtractElement(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<Instruction::ExtractElement>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+inline VPInstruction_match<Instruction::InsertElement, Op0_t, Op1_t, Op2_t>
+m_InsertElement(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return m_VPInstruction<Instruction::InsertElement>(Op0, Op1, Op2);
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -525,6 +539,11 @@ inline AllRecipe_match<Instruction::FPExt, Op0_t> m_FPExt(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
+inline AllRecipe_match<Instruction::FNeg, Op0_t> m_FNeg(const Op0_t &Op0) {
+  return m_Unary<Instruction::FNeg, Op0_t>(Op0);
+}
+
+template <typename Op0_t>
 inline match_combine_or<AllRecipe_match<Instruction::ZExt, Op0_t>,
                         AllRecipe_match<Instruction::SExt, Op0_t>>
 m_ZExtOrSExt(const Op0_t &Op0) {
@@ -588,6 +607,12 @@ m_c_Mul(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::Shl, Op0_t, Op1_t> m_Shl(const Op0_t &Op0,
+                                                             const Op1_t &Op1) {
+  return m_Binary<Instruction::Shl, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
 inline AllRecipe_match<Instruction::FMul, Op0_t, Op1_t>
 m_FMul(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::FMul, Op0_t, Op1_t>(Op0, Op1);
@@ -609,6 +634,12 @@ template <typename Op0_t, typename Op1_t>
 inline AllRecipe_match<Instruction::UDiv, Op0_t, Op1_t>
 m_UDiv(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::UDiv, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::URem, Op0_t, Op1_t>
+m_URem(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::URem, Op0_t, Op1_t>(Op0, Op1);
 }
 
 /// Match a binary AND operation.
@@ -794,6 +825,31 @@ struct canonical_iv_match {
 };
 
 inline canonical_iv_match m_CanonicalIV() { return {}; }
+
+/// Match a canonical VPWidenIntOrFpInductionRecipe optionally capturing it.
+struct canonical_widen_iv_match {
+  VPWidenIntOrFpInductionRecipe **Capture = nullptr;
+
+  canonical_widen_iv_match() = default;
+  canonical_widen_iv_match(VPWidenIntOrFpInductionRecipe *&V) : Capture(&V) {}
+
+  template <typename ArgTy> bool match(ArgTy *V) const {
+    auto *WidenIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(V);
+    if (!WidenIV || !WidenIV->isCanonical())
+      return false;
+    if (Capture)
+      *Capture = WidenIV;
+    return true;
+  }
+};
+
+inline canonical_widen_iv_match m_CanonicalWidenIV() { return {}; }
+
+/// Match a canonical VPWidenIntOrFpInductionRecipe, capturing it.
+inline canonical_widen_iv_match
+m_CanonicalWidenIV(VPWidenIntOrFpInductionRecipe *&V) {
+  return canonical_widen_iv_match(V);
+}
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
 inline auto m_ScalarIVSteps(const Op0_t &Op0, const Op1_t &Op1,

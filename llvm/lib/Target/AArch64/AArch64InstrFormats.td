@@ -1556,11 +1556,11 @@ def fpimm8 : Operand<i32> {
 }
 
 def fpimm0 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(+0.0);
+  return Imm.isPosZero();
 }]>;
 
 def fpimm_minus0 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(-0.0);
+  return Imm.isNegZero();
 }]>;
 
 def fpimm_half : FPImmLeaf<fAny, [{
@@ -1883,10 +1883,11 @@ def phint_op : Operand<i32> {
 class STSHHI
     : SimpleSystemI<0, (ins phint_op:$policy), "stshh", "\t$policy", []>,
       Sched<[WriteHint]> {
-  bits<3> policy;
+  bits<1> policy;
   let Inst{20-12} = 0b000110010;
   let Inst{11-8} = 0b0110;
-  let Inst{7-5} = policy;
+  let Inst{7-6} = 0b00;
+  let Inst{5} = policy;
 }
 
 // System instructions taking a single literal operand which encodes into
@@ -2023,8 +2024,9 @@ def TIndexhint_op : Operand<i32> {
 
 class MRSI : RtSystemI<1, (outs GPR64:$Rt), (ins mrs_sysreg_op:$systemreg),
                        "mrs", "\t$Rt, $systemreg"> {
-  bits<16> systemreg;
-  let Inst{20-5} = systemreg;
+  bits<15> systemreg;
+  let Inst{20}= 0b1;
+  let Inst{19-5} = systemreg;
   let DecoderNamespace = "Fallback";
   // The MRS is set as a NZCV setting instruction. Not all MRS instructions
   // require doing this. The alternative was to explicitly model each one, but
@@ -2038,8 +2040,9 @@ class MRSI : RtSystemI<1, (outs GPR64:$Rt), (ins mrs_sysreg_op:$systemreg),
 // would do it, but feels like overkill at this point.
 class MSRI : RtSystemI<0, (outs), (ins msr_sysreg_op:$systemreg, GPR64:$Rt),
                        "msr", "\t$systemreg, $Rt"> {
-  bits<16> systemreg;
-  let Inst{20-5} = systemreg;
+  bits<15> systemreg;
+  let Inst{20} = 0b1;
+  let Inst{19-5} = systemreg;
   let DecoderNamespace = "Fallback";
 }
 
@@ -12782,6 +12785,16 @@ class LoadStore64B<bits<3> opc, string asm_inst, dag iops, dag oops,
                       list<dag> pat = []>
     : LoadStore64B_base<opc, asm_inst, "\t$Rt, [$Rn]", iops, oops, pat> {
   let Inst{20-16} = 0b11111;
+}
+
+multiclass LoadStore64B<bits<3> opc, string asm_inst,
+                        bit may_load, bit may_store,
+                        dag iops, dag oops,
+                        list<dag> pat = []> {
+  let mayLoad = may_load, mayStore = may_store in
+  def "" : LoadStore64B<opc, asm_inst, iops, oops, pat>;
+  def : InstAlias<asm_inst # "\t$Rt, [$Rn, #0]",
+                  (!cast<Instruction>(NAME) GPR64x8:$Rt, GPR64sp:$Rn)>;
 }
 
 class Store64BV<bits<3> opc, string asm_inst, list<dag> pat = []>

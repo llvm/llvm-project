@@ -46,6 +46,8 @@
 
 using namespace clang;
 
+static constexpr llvm::StringRef kPrivateModuleSuffix = "_Private";
+
 void ModuleMapCallbacks::anchor() {}
 
 void ModuleMap::resolveLinkAsDependencies(Module *Mod) {
@@ -178,8 +180,7 @@ OptionalFileEntryRef ModuleMap::findHeader(
   SmallString<128> FullPathName(Directory->getName());
 
   auto GetFile = [&](StringRef Filename) -> OptionalFileEntryRef {
-    auto File =
-        expectedToOptional(SourceMgr.getFileManager().getFileRef(Filename));
+    auto File = SourceMgr.getFileManager().getOptionalFileRef(Filename);
     if (!File || (Header.Size && File->getSize() != *Header.Size) ||
         (Header.ModTime && File->getModificationTime() != *Header.ModTime))
       return std::nullopt;
@@ -498,10 +499,31 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
 
   // No errors for indirect modules. This may be a bit of a problem for modules
   // with no source files.
-  if (getTopLevelOrNull(RequestingModule) != getTopLevelOrNull(SourceModule))
-    return;
+  Module *TopLevelRequestingModule = getTopLevelOrNull(RequestingModule);
+  Module *TopLevelSourceModule = getTopLevelOrNull(SourceModule);
+  bool IsPublicForMainPrivateModule = false;
+  if (TopLevelRequestingModule != TopLevelSourceModule) {
+    // Suppose we have a pair of files foo.cpp / foo.h.
+    // Our build system may want to verify that foo.cpp only uses things
+    // declared in the implementation_deps of foo, while foo.h only uses things
+    // declared in interface_deps. This requires them to be two seperate
+    // modules, foo_Private and foo. This check is required to ensure that foo.h
+    // is still checked. Otherwise, foo.h would never be checked, since it will
+    // never be the top-level module.
+    if (TopLevelRequestingModule && TopLevelSourceModule &&
+        llvm::StringRef(TopLevelSourceModule->Name)
+            .ends_with(kPrivateModuleSuffix) &&
+        llvm::StringRef(TopLevelSourceModule->Name)
+                .drop_back(kPrivateModuleSuffix.size()) ==
+            TopLevelRequestingModule->Name) {
+      IsPublicForMainPrivateModule = true;
+    } else {
+      return;
+    }
+  }
 
   bool Excluded = false;
+  bool UsedByPrivateModule = false;
   Module *Private = nullptr;
   Module *NotUsed = nullptr;
 
@@ -524,6 +546,9 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
       if (RequestingModule && LangOpts.ModulesDeclUse &&
           !RequestingModule->directlyUses(Header.getModule())) {
         NotUsed = Header.getModule();
+        if (IsPublicForMainPrivateModule) {
+          UsedByPrivateModule = SourceModule->directlyUses(Header.getModule());
+        }
         continue;
       }
 
@@ -543,9 +568,15 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
 
   // We have found a module, but we don't use it.
   if (NotUsed) {
-    Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module_indirect)
-        << RequestingModule->getTopLevelModule()->Name << Filename
-        << NotUsed->Name;
+    if (UsedByPrivateModule) {
+      Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module_private)
+          << RequestingModule->getTopLevelModule()->Name << Filename
+          << NotUsed->Name;
+    } else {
+      Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module_indirect)
+          << RequestingModule->getTopLevelModule()->Name << Filename
+          << NotUsed->Name;
+    }
     return;
   }
 
@@ -938,7 +969,8 @@ Module *ModuleMap::lookupModuleUnqualified(StringRef Name,
   return findModule(Name);
 }
 
-Module *ModuleMap::lookupModuleQualified(StringRef Name, Module *Context) const{
+ModuleRef ModuleMap::lookupModuleQualified(StringRef Name,
+                                           Module *Context) const {
   if (!Context)
     return findModule(Name);
 
@@ -950,8 +982,8 @@ std::pair<Module *, bool> ModuleMap::findOrCreateModule(StringRef Name,
                                                         bool IsFramework,
                                                         bool IsExplicit) {
   // Try to find an existing module with this name.
-  if (Module *Sub = lookupModuleQualified(Name, Parent))
-    return std::make_pair(Sub, false);
+  if (ModuleRef Sub = lookupModuleQualified(Name, Parent); Sub.getExisting())
+    return std::make_pair(Sub.getExisting(), false);
 
   // Create a new module with this name.
   Module *M = createModule(Name, Parent, IsFramework, IsExplicit);
@@ -960,7 +992,7 @@ std::pair<Module *, bool> ModuleMap::findOrCreateModule(StringRef Name,
 
 Module *ModuleMap::createModule(StringRef Name, Module *Parent,
                                 bool IsFramework, bool IsExplicit) {
-  assert(lookupModuleQualified(Name, Parent) == nullptr &&
+  assert(!lookupModuleQualified(Name, Parent).getExisting() &&
          "Creating duplicate submodule");
 
   Module *Result = new (ModulesAlloc.Allocate())

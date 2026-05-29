@@ -882,7 +882,7 @@ define i32 @two_calls() {
 ; TUNIT: attributes #[[ATTR8]] = { nosync }
 ; TUNIT: attributes #[[ATTR9]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none) }
 ; TUNIT: attributes #[[ATTR10]] = { mustprogress nofree norecurse nosync nounwind willreturn }
-; TUNIT: attributes #[[ATTR11:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; TUNIT: attributes #[[ATTR11:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR12]] = { nosync nounwind memory(write) }
 ; TUNIT: attributes #[[ATTR13]] = { nofree norecurse nosync nounwind willreturn }
 ;.
@@ -898,7 +898,7 @@ define i32 @two_calls() {
 ; CGSCC: attributes #[[ATTR9]] = { mustprogress nofree norecurse nosync nounwind willreturn }
 ; CGSCC: attributes #[[ATTR10]] = { mustprogress nofree nosync nounwind willreturn memory(readwrite, argmem: none) }
 ; CGSCC: attributes #[[ATTR11]] = { mustprogress nofree nosync nounwind willreturn }
-; CGSCC: attributes #[[ATTR12:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; CGSCC: attributes #[[ATTR12:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR13]] = { nounwind memory(write) }
 ; CGSCC: attributes #[[ATTR14]] = { nofree nounwind willreturn }
 ;.

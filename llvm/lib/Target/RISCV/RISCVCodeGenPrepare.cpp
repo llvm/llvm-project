@@ -264,9 +264,31 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
   return true;
 }
 
-// Partially expand a vector_reduce_mul wider than M1 to reduce the
-// number of vsetvlis required when VLEN is exactly known, and
-// reducing register pressure in all cases.
+// Extract pieces of size PieceEC from Vec, then build a binary tree of
+// element-wise multiplies reducing to a single piece.
+static Value *buildMulTree(IRBuilder<> &Builder, ElementCount PieceEC,
+                           Value *Vec) {
+  auto *VecTy = cast<VectorType>(Vec->getType());
+  auto *PieceTy = VectorType::get(VecTy->getElementType(), PieceEC);
+  unsigned PieceElts = PieceEC.getKnownMinValue();
+  unsigned NumPieces = VecTy->getElementCount().getKnownMinValue() / PieceElts;
+  assert(isPowerOf2_32(NumPieces));
+
+  SmallVector<Value *, 8> Pieces(NumPieces);
+  for (unsigned i = 0; i < NumPieces; i++)
+    Pieces[i] = Builder.CreateExtractVector(PieceTy, Vec, i * PieceElts);
+
+  while (Pieces.size() > 1) {
+    for (unsigned i = 0; i < Pieces.size() / 2; i++)
+      Pieces[i] =
+          Builder.CreateMul(Pieces[i * 2], Pieces[i * 2 + 1], "bin.rdx");
+    Pieces.truncate(Pieces.size() / 2);
+  }
+  return Pieces[0];
+}
+
+// Partially expand a vector_reduce_mul wider than M1 to reduce
+// register pressure and the number of vsetvlis required.
 bool RISCVCodeGenPrepare::expandMulReduction(IntrinsicInst &II) {
   if (II.getIntrinsicID() != Intrinsic::vector_reduce_mul)
     return false;
@@ -275,12 +297,44 @@ bool RISCVCodeGenPrepare::expandMulReduction(IntrinsicInst &II) {
     return false;
 
   Value *TmpVec = II.getArgOperand(0);
-  auto *VecTy = dyn_cast<FixedVectorType>(TmpVec->getType());
-  if (!VecTy)
-    return false;
-
+  auto *VecTy = cast<VectorType>(TmpVec->getType());
   unsigned EltSize = VecTy->getScalarSizeInBits();
-  unsigned VF = VecTy->getNumElements();
+
+  if (auto *ScalTy = dyn_cast<ScalableVectorType>(VecTy)) {
+    unsigned MinElts = ScalTy->getMinNumElements();
+
+    if (auto VLen = ST->getRealVLen()) {
+      // If VLEN is exactly known, convert to a fixed vector reduction and
+      // recurse to let the fixed path handle it (shuffle reduction instead
+      // of a scalar loop).
+      unsigned VScale = *VLen / RISCV::RVVBitsPerBlock;
+      auto *FixedTy =
+          FixedVectorType::get(VecTy->getElementType(), MinElts * VScale);
+      IRBuilder<> Builder(&II);
+      Value *Fixed = Builder.CreateExtractVector(FixedTy, TmpVec, (uint64_t)0);
+      auto *FixedRdx = cast<IntrinsicInst>(Builder.CreateIntrinsic(
+          Intrinsic::vector_reduce_mul, {FixedTy}, {Fixed}));
+      II.replaceAllUsesWith(FixedRdx);
+      II.eraseFromParent();
+      expandMulReduction(*FixedRdx);
+      return true;
+    }
+
+    unsigned M1MinElts = RISCV::RVVBitsPerBlock / EltSize;
+    if (MinElts <= M1MinElts || !isPowerOf2_32(MinElts / M1MinElts))
+      return false;
+
+    IRBuilder<> Builder(&II);
+    auto M1EC = ElementCount::getScalable(M1MinElts);
+    Value *Reduced = buildMulTree(Builder, M1EC, TmpVec);
+    Value *Rdx = Builder.CreateIntrinsic(Intrinsic::vector_reduce_mul,
+                                         {Reduced->getType()}, {Reduced});
+    II.replaceAllUsesWith(Rdx);
+    II.eraseFromParent();
+    return true;
+  }
+
+  unsigned VF = cast<FixedVectorType>(VecTy)->getNumElements();
   unsigned MinVLen = ST->getRealMinVLen();
   unsigned M1VF = MinVLen / EltSize;
 
@@ -288,31 +342,19 @@ bool RISCVCodeGenPrepare::expandMulReduction(IntrinsicInst &II) {
     return false;
 
   IRBuilder<> Builder(&II);
-  auto *M1Ty = FixedVectorType::get(VecTy->getElementType(), M1VF);
+  auto M1EC = ElementCount::getFixed(M1VF);
+  auto *M1Ty = VectorType::get(VecTy->getElementType(), M1EC);
 
   // When VLEN is exactly known, extract m1 pieces and build a mul tree.
   // This greatly reduces register pressure during the reduction, and
   // avoids all but one vsetvli (the one from original LMUL to m1).
   // TODO: Generalize to handle the splitting case.
   if (MinVLen == ST->getRealMaxVLen() && VF <= 8 * M1VF) {
-    unsigned NumM1 = VF / M1VF;
-    assert(isPowerOf2_32(NumM1) && NumM1 <= 8);
-    SmallVector<Value *, 8> Pieces(NumM1);
-    for (unsigned i = 0; i < NumM1; i++)
-      Pieces[i] =
-          Builder.CreateExtractVector(M1Ty, TmpVec, (uint64_t)(i * M1VF));
-
-    while (Pieces.size() > 1) {
-      for (unsigned i = 0; i < Pieces.size() / 2; i++)
-        Pieces[i] =
-            Builder.CreateMul(Pieces[i * 2], Pieces[i * 2 + 1], "bin.rdx");
-      Pieces.truncate(Pieces.size() / 2);
-    }
-    TmpVec = Pieces[0];
+    TmpVec = buildMulTree(Builder, M1EC, TmpVec);
   } else {
     // For non-exact VLEN, shuffle-reduce at the original vector width down to
     // m1, then extract.  This prioritizes reducing the number of vsetvli
-    // over maximual reduction of LMUL for the intermediate states.
+    // over maximal reduction of LMUL for the intermediate states.
     SmallVector<int, 32> ShuffleMask(VF);
     for (unsigned LiveElts = VF; LiveElts > M1VF; LiveElts /= 2) {
       unsigned Half = LiveElts / 2;
