@@ -16,7 +16,6 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
@@ -33,6 +32,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/Debugify.h"
 
 using namespace llvm;
 
@@ -112,103 +112,11 @@ static bool isIgnored(StringRef PassID) {
                         "PrintMIRPreparePass"});
 }
 
-//===----------------------------------------------------------------------===//
-// Auto-synthesis of missing DILocations.
-//
-// Purpose: give every instruction a stable identifier that survives
-// pass-driven cloning, moving, and rewriting, so the recorder can
-// associate instructions that originate from the same source point across
-// passes. The recorder uses an instruction's DILocation as that
-// identifier -- when a later pass copies or rewrites an instruction, the
-// resulting instruction's DILocation tells us which original instruction
-// it descends from. Inputs without -g (bitcode, clang JIT, lld embedding,
-// hand-written .ll) have no DILocations on most instructions, so the
-// recorder loses identity across passes. This function fills the gaps
-// with synthesized ordinal IDs on first sight per module.
-//
-// What it adds: for each function that lacks a DISubprogram, one synthetic
-// DISubprogram whose file is "<ir-tracker-synthetic>"; and for each
-// instruction that lacks a DebugLoc, a DILocation(line=N, column=0,
-// scope=that DISubprogram) where N is a module-wide running counter.
-// Real DI is never overwritten -- functions that already have a
-// DISubprogram and instructions that already have a DebugLoc are skipped.
-//
-// Example. Input without debug info:
-//
-//   define i32 @add(i32 %a, i32 %b) {
-//     %s = add i32 %a, %b
-//     ret i32 %s
-//   }
-//
-// After synthesizeMissingInstructionLocs:
-//
-//   define i32 @add(i32 %a, i32 %b) !dbg !2 {
-//     %s = add i32 %a, %b, !dbg !3
-//     ret i32 %s, !dbg !4
-//   }
-//   !1 = !DIFile(filename: "<ir-tracker-synthetic>", directory: ".")
-//   !2 = distinct !DISubprogram(name: "add", scope: !0, file: !1, line: 1,
-//                               ...)
-//   !3 = !DILocation(line: 1, column: 0, scope: !2)
-//   !4 = !DILocation(line: 2, column: 0, scope: !2)
-//
-// The line numbers are arbitrary running ordinals; they do not refer to
-// anything in the original source. They only need to be stable across
-// passes so the recorder can match a later pass's DILocation against an
-// earlier one and conclude "same logical instruction".
-//
-// No-op when the module already has llvm.dbg.cu (a real -g build), or
-// when the module has no functions.
-//===----------------------------------------------------------------------===//
-
 static void synthesizeMissingInstructionLocs(Module &M) {
-  // Skip if the module already has real debug info; we never want to
-  // override real DI.
   if (M.getNamedMetadata("llvm.dbg.cu"))
     return;
-  // Skip empty modules (no functions to attach locs to).
-  if (M.empty())
-    return;
-
-  if (!M.getModuleFlag("Debug Info Version"))
-    M.addModuleFlag(Module::Warning, "Debug Info Version",
-                    DEBUG_METADATA_VERSION);
-
-  DIBuilder DIB(M);
-  LLVMContext &Ctx = M.getContext();
-  DIFile *File = DIB.createFile("<ir-tracker-synthetic>", ".");
-  DICompileUnit *CU =
-      DIB.createCompileUnit(dwarf::DW_LANG_C, File, "ir-tracker",
-                            /*isOptimized=*/true, "", /*RV=*/0,
-                            /*SplitName=*/"", DICompileUnit::FullDebug);
-  auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
-  unsigned NextOrdinal = 1;
-
-  for (Function &F : M) {
-    if (F.isDeclaration())
-      continue;
-    if (F.getSubprogram())
-      continue;
-    unsigned FuncLine = NextOrdinal;
-    DISubprogram::DISPFlags SPFlags =
-        DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized;
-    if (F.hasPrivateLinkage() || F.hasInternalLinkage())
-      SPFlags |= DISubprogram::SPFlagLocalToUnit;
-    DISubprogram *SP =
-        DIB.createFunction(CU, F.getName(), F.getName(), File, FuncLine, SPType,
-                           FuncLine, DINode::FlagZero, SPFlags);
-    F.setSubprogram(SP);
-
-    for (BasicBlock &BB : F) {
-      for (Instruction &I : BB) {
-        if (I.getDebugLoc())
-          continue;
-        I.setDebugLoc(DILocation::get(Ctx, NextOrdinal, 0, SP));
-        ++NextOrdinal;
-      }
-    }
-  }
-  DIB.finalize();
+  applyDebugifyMetadata(M, M.functions(), "IR tracker: ",
+                        /*ApplyToMF=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//
