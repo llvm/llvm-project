@@ -6196,16 +6196,16 @@ unsigned SIInstrInfo::getVALUOp(unsigned Opc) const {
   case AMDGPU::S_FMAAK_F32: return AMDGPU::V_FMAAK_F32;
   case AMDGPU::S_CMP_LT_F32: return AMDGPU::V_CMP_LT_F32_e64;
   case AMDGPU::S_CMP_EQ_F32: return AMDGPU::V_CMP_EQ_F32_e64;
-  case AMDGPU::S_CMP_LE_F32: return AMDGPU::V_CMP_LE_F32_e64;
-  case AMDGPU::S_CMP_GT_F32: return AMDGPU::V_CMP_GT_F32_e64;
+  case AMDGPU::S_CMP_LE_F32: {abort(); return AMDGPU::V_CMP_LE_F32_e64;}
+  case AMDGPU::S_CMP_GT_F32: {abort(); return AMDGPU::V_CMP_GT_F32_e64;}
   case AMDGPU::S_CMP_LG_F32: return AMDGPU::V_CMP_LG_F32_e64;
   case AMDGPU::S_CMP_GE_F32: return AMDGPU::V_CMP_GE_F32_e64;
   case AMDGPU::S_CMP_O_F32: return AMDGPU::V_CMP_O_F32_e64;
   case AMDGPU::S_CMP_U_F32: return AMDGPU::V_CMP_U_F32_e64;
   case AMDGPU::S_CMP_NGE_F32: return AMDGPU::V_CMP_NGE_F32_e64;
-  case AMDGPU::S_CMP_NLG_F32: return AMDGPU::V_CMP_NLG_F32_e64;
+  case AMDGPU::S_CMP_NLG_F32: {abort(); return AMDGPU::V_CMP_NLG_F32_e64;}
   case AMDGPU::S_CMP_NGT_F32: return AMDGPU::V_CMP_NGT_F32_e64;
-  case AMDGPU::S_CMP_NLE_F32: return AMDGPU::V_CMP_NLE_F32_e64;
+  case AMDGPU::S_CMP_NLE_F32: {abort(); return AMDGPU::V_CMP_NLE_F32_e64;}
   case AMDGPU::S_CMP_NEQ_F32: return AMDGPU::V_CMP_NEQ_F32_e64;
   case AMDGPU::S_CMP_NLT_F32: return AMDGPU::V_CMP_NLT_F32_e64;
   case AMDGPU::S_CMP_LT_F16:
