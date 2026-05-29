@@ -609,7 +609,6 @@ Improvements to Coverage Mapping
 
 Bug Fixes in This Version
 -------------------------
-
 - Fixed atomic boolean compound assignment; the conversion back to atomic bool would be miscompiled. (#GH33210)
 - Correctly handle default template argument when establishing subsumption. (#GH188640)
 - Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
@@ -648,6 +647,9 @@ Bug Fixes in This Version
   an array via an element-at-a-time copy loop (#GH192026)
 - Fixed an issue where certain designated initializers would be rejected for constexpr variables. (#GH193373)
 - Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
+- ``static constexpr`` variables defined in ``consteval`` functions now
+  correctly preserve their initializers even if leaked out of the parent
+  function. (#GH82994)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
