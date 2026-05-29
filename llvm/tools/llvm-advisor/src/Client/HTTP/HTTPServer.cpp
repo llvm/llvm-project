@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Analysis/IR/RemarksRelationalSchema.h"
 #include "Client/HTTP/HTTPServer.h"
 #include "Client/HTTP/Handlers/StaticHandler.h"
 #include "Utils/JSON.h"
@@ -495,35 +496,6 @@ static HTTPResult handleGetSummary(CoreClient &Client, StringRef SnapID) {
 
 namespace {
 
-class StringTable {
-public:
-  unsigned getOrAdd(StringRef S) {
-    auto [It, Inserted] = Index.try_emplace(S, Strings.size());
-    if (Inserted)
-      Strings.emplace_back(S.str());
-    return It->second;
-  }
-
-  json::Array toJSON() const {
-    json::Array Out;
-    Out.reserve(Strings.size());
-    for (const std::string &S : Strings)
-      Out.push_back(S);
-    return Out;
-  }
-
-  void writeJSON(json::OStream &JOS) const {
-    JOS.arrayBegin();
-    for (const std::string &S : Strings)
-      JOS.value(S);
-    JOS.arrayEnd();
-  }
-
-private:
-  std::vector<std::string> Strings;
-  StringMap<unsigned> Index;
-};
-
 class RelationalMerger {
 public:
 
@@ -591,15 +563,15 @@ public:
 
     JOS.attributeBegin("columns");
     JOS.objectBegin();
-    writeIntColumn(JOS, "unit",     UnitColG);
-    writeIntColumn(JOS, "pass",     PassColG);
-    writeIntColumn(JOS, "name",     NameColG);
-    writeIntColumn(JOS, "type",     TypeColG);
-    writeIntColumn(JOS, "function", FuncColG);
-    writeIntColumn(JOS, "file",     FileColG);
-    writeIntColumn(JOS, "line",     LineColG);
-    writeIntColumn(JOS, "column",   ColumnColG);
-    writeIntColumn(JOS, "hotness",  HotnessColG);
+    writeInt64Column(JOS, "unit",     UnitColG);
+    writeInt64Column(JOS, "pass",     PassColG);
+    writeInt64Column(JOS, "name",     NameColG);
+    writeInt64Column(JOS, "type",     TypeColG);
+    writeInt64Column(JOS, "function", FuncColG);
+    writeInt64Column(JOS, "file",     FileColG);
+    writeInt64Column(JOS, "line",     LineColG);
+    writeInt64Column(JOS, "column",   ColumnColG);
+    writeInt64Column(JOS, "hotness",  HotnessColG);
     JOS.objectEnd();
     JOS.attributeEnd();
 
@@ -609,7 +581,7 @@ public:
 private:
 
   static std::vector<int64_t> remapStrings(const json::Object *Strs,
-                                           StringRef Field, StringTable &Dst) {
+                                           StringRef Field, RelationalStringTable &Dst) {
     std::vector<int64_t> Map;
     const json::Array *Arr = Strs->getArray(Field);
     if (!Arr)
@@ -633,25 +605,7 @@ private:
     return Map[Local];
   }
 
-  static json::Array toArray(ArrayRef<int64_t> Vs) {
-    json::Array Out;
-    Out.reserve(Vs.size());
-    for (int64_t V : Vs)
-      Out.push_back(V);
-    return Out;
-  }
-
-  static void writeIntColumn(json::OStream &JOS, StringRef Name,
-                             ArrayRef<int64_t> Vs) {
-    JOS.attributeBegin(Name);
-    JOS.arrayBegin();
-    for (int64_t V : Vs)
-      JOS.value(V);
-    JOS.arrayEnd();
-    JOS.attributeEnd();
-  }
-
-  StringTable Unit, Pass, Name, Function, File;
+  RelationalStringTable Unit, Pass, Name, Function, File;
   std::vector<int64_t> UnitColG, PassColG, NameColG, TypeColG, FuncColG,
       FileColG, LineColG, ColumnColG, HotnessColG;
 };

@@ -1,34 +1,12 @@
 
 #include "Analysis/IR/RemarksRelationalAnalyzer.h"
+#include "Analysis/IR/RemarksRelationalSchema.h"
 #include "Analysis/RemarksAnalysisUtils.h"
-#include "llvm/ADT/StringMap.h"
 
 using namespace llvm;
 using namespace llvm::advisor;
 
 namespace {
-
-class StringTable {
-public:
-  unsigned getOrAdd(StringRef S) {
-    auto [It, Inserted] = Index.try_emplace(S, Strings.size());
-    if (Inserted)
-      Strings.emplace_back(S.str());
-    return It->second;
-  }
-
-  json::Array toJSON() const {
-    json::Array Out;
-    Out.reserve(Strings.size());
-    for (const std::string &S : Strings)
-      Out.push_back(S);
-    return Out;
-  }
-
-private:
-  std::vector<std::string> Strings;
-  StringMap<unsigned> Index;
-};
 
 class RelationalBuilder {
 public:
@@ -90,7 +68,7 @@ private:
     return Out;
   }
 
-  StringTable Pass, Name, Function, File;
+  RelationalStringTable Pass, Name, Function, File;
   std::vector<int64_t> PassCol, NameCol, TypeCol, FunctionCol, FileCol, LineCol,
       ColumnCol, HotnessCol;
 };
