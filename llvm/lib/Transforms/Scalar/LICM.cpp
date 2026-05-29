@@ -204,6 +204,13 @@ static bool hoistArithmetics(Instruction &I, Loop &L,
                              ICFLoopSafetyInfo &SafetyInfo,
                              MemorySSAUpdater &MSSAU, AssumptionCache *AC,
                              DominatorTree *DT);
+static bool hoistInsertPastInsert(
+    InsertElementInst *Ins, Loop *CurLoop, AAResults *AA, DominatorTree *DT,
+    const TargetLibraryInfo *TLI, BasicBlock *Preheader, BasicBlock *HoistDest,
+    ICFLoopSafetyInfo *SafetyInfo, MemorySSAUpdater &MSSAU, AssumptionCache *AC,
+    ScalarEvolution *SE, SinkAndHoistLICMFlags &Flags,
+    OptimizationRemarkEmitter *ORE,
+    SmallVectorImpl<Instruction *> &HoistedInstructions, bool AllowSpeculation);
 static Instruction *cloneInstructionInExitBlock(
     Instruction &I, BasicBlock &ExitBlock, PHINode &PN, const LoopInfo *LI,
     const LoopSafetyInfo *SafetyInfo, MemorySSAUpdater &MSSAU);
@@ -936,6 +943,15 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
         continue;
       }
 
+      if (auto *Ins = dyn_cast<InsertElementInst>(&I))
+        if (hoistInsertPastInsert(Ins, CurLoop, AA, DT, TLI, Preheader,
+                                  CFH.getOrCreateHoistedBlock(BB), SafetyInfo,
+                                  MSSAU, AC, SE, Flags, ORE,
+                                  HoistedInstructions, AllowSpeculation)) {
+          Changed = true;
+          continue;
+        }
+
       // Attempt to remove floating point division out of the loop by
       // converting it to a reciprocal multiplication.
       if (I.getOpcode() == Instruction::FDiv && I.hasAllowReciprocal() &&
@@ -1056,6 +1072,87 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
 #endif
 
   return Changed;
+}
+
+static bool hoistInsertPastInsert(
+    InsertElementInst *Ins, Loop *CurLoop, AAResults *AA, DominatorTree *DT,
+    const TargetLibraryInfo *TLI, BasicBlock *Preheader, BasicBlock *HoistDest,
+    ICFLoopSafetyInfo *SafetyInfo, MemorySSAUpdater &MSSAU, AssumptionCache *AC,
+    ScalarEvolution *SE, SinkAndHoistLICMFlags &Flags,
+    OptimizationRemarkEmitter *ORE,
+    SmallVectorImpl<Instruction *> &HoistedInstructions,
+    bool AllowSpeculation) {
+  SmallSet<uint64_t, 4> SeenIndexes;
+  InsertElementInst *Inner;
+  auto CanBypass = [&](auto &CanBypass, InsertElementInst *CurrIns,
+                       bool IsHoistedInstruction) -> bool {
+    // Instruction being hoisted past must only have one use
+    if (!IsHoistedInstruction && !CurrIns->hasOneUse())
+      return false;
+
+    // Must have constant insertion lane
+    auto *InsertedIdxCI = dyn_cast<ConstantInt>(CurrIns->getOperand(2));
+    if (!InsertedIdxCI)
+      return false;
+    auto *VecTy = cast<VectorType>(CurrIns->getType());
+
+    // Avoid hoisting past out of bounds inserts
+    if (InsertedIdxCI->isNegative() ||
+        InsertedIdxCI->getValue().uge(
+            VecTy->getElementCount().getKnownMinValue()))
+      return false;
+
+    // Make sure not hoisting past insertions into the same lane
+    if (!SeenIndexes.insert(InsertedIdxCI->getValue().getLimitedValue()).second)
+      return false;
+
+    // The instruction we are hoisting must have invariant insertion data
+    Value *InsertedElt = CurrIns->getOperand(1);
+    if (IsHoistedInstruction && !CurLoop->isLoopInvariant(InsertedElt))
+      return false;
+
+    // Only hoist past other insertions
+    Value *InnerVal = CurrIns->getOperand(0);
+    auto *InnerIns = dyn_cast<InsertElementInst>(InnerVal);
+    if (IsHoistedInstruction && !InnerIns)
+      return false;
+
+    // If the value we are inserting into is not invariant/poison, recurse
+    // if it is another insert
+    if (!CurLoop->isLoopInvariant(InnerVal) && !isa<PoisonValue>(InnerVal)) {
+      return InnerIns && InnerIns->getParent() == CurrIns->getParent() &&
+             CanBypass(CanBypass, InnerIns, /*IsHoistedInstruction*/ false);
+    }
+    Inner = CurrIns;
+    // Hoists of Insertions with fully invariant operands are handled in base
+    // logic
+    return !IsHoistedInstruction;
+  };
+
+  // Canonicalize:
+  //   %inner = insertelement %base, %variant, C1
+  //   %outer = insertelement %inner, %invariant, C2
+  // into:
+  //   %inner' = insertelement %base, %invariant, C2
+  //   %outer' = insertelement %inner', %variant, C1
+  // so we can push the variant insertelement through the shuffle.
+  if (!CanBypass(CanBypass, Ins, /*IsHoistedInstruction*/ true))
+    return false;
+  if (!isSafeToExecuteUnconditionally(*Ins, DT, TLI, CurLoop, SafetyInfo, ORE,
+                                      Preheader->getTerminator(), AC,
+                                      AllowSpeculation))
+    return false;
+
+  Value *IOp1 = Ins->getOperand(1);
+  Value *IOp2 = Ins->getOperand(2);
+  Ins->setOperand(1, Inner->getOperand(1));
+  Ins->setOperand(2, Inner->getOperand(2));
+  Inner->setOperand(1, IOp1);
+  Inner->setOperand(2, IOp2);
+
+  hoist(*Inner, DT, CurLoop, HoistDest, SafetyInfo, MSSAU, SE, ORE);
+  HoistedInstructions.push_back(Inner);
+  return true;
 }
 
 // Return true if LI is invariant within scope of the loop. LI is invariant if

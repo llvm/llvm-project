@@ -11,12 +11,12 @@ define <16 x i1> @iss195497(ptr %1, <16 x ptr> %2, ptr %store, ptr %scevgep90, <
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x ptr> [[TMP2]], <2 x ptr> poison, <16 x i32> <i32 poison, i32 poison, i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x ptr> [[TMP4]], <8 x ptr> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x ptr> [[TMP3]], <4 x ptr> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x ptr> poison, ptr [[SCEVGEP90]], i64 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[CNT:%.*]] = phi i64 [ [[CNT_NEW:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[SCEVGEP89:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[CNT]]
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x ptr> poison, ptr [[SCEVGEP89]], i64 0
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x ptr> [[TMP14]], ptr [[SCEVGEP90]], i64 1
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x ptr> [[TMP14]], ptr [[SCEVGEP89]], i64 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <16 x ptr> [[TMP15]], <16 x ptr> [[TMP8]], <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
 ; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <16 x ptr> [[TMP16]], <16 x ptr> [[TMP9]], <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 16, i32 17, i32 18, i32 19, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <16 x ptr> [[TMP17]], <16 x ptr> [[TMP10]], <16 x i32> <i32 0, i32 1, i32 16, i32 17, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -63,13 +63,13 @@ define <4 x i32> @hoist_simple_swap(ptr %base, i32 %inv, i32 %n) {
 ; CHECK-LABEL: define <4 x i32> @hoist_simple_swap(
 ; CHECK-SAME: ptr [[BASE:%.*]], i32 [[INV:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[INNER:%.*]] = insertelement <4 x i32> poison, i32 [[INV]], i32 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IDX_LE:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i32 [[IV_LCSSA]]
 ; CHECK-NEXT:    [[VARIANT_LE:%.*]] = load i32, ptr [[IDX_LE]], align 4
-; CHECK-NEXT:    [[INNER_LE:%.*]] = insertelement <4 x i32> poison, i32 [[VARIANT_LE]], i32 0
-; CHECK-NEXT:    [[OUTER_LE:%.*]] = insertelement <4 x i32> [[INNER_LE]], i32 [[INV]], i32 1
+; CHECK-NEXT:    [[OUTER_LE:%.*]] = insertelement <4 x i32> [[INNER]], i32 [[VARIANT_LE]], i32 0
 ; CHECK-NEXT:    store <4 x i32> [[OUTER_LE]], ptr [[IDX_LE]], align 16
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV_LCSSA]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[IV_LCSSA]], [[N]]
@@ -99,13 +99,13 @@ define <4 x i32> @hoist_simple_swap_wide_index_ty(ptr %base, i32 %inv, i32 %n) {
 ; CHECK-LABEL: define <4 x i32> @hoist_simple_swap_wide_index_ty(
 ; CHECK-SAME: ptr [[BASE:%.*]], i32 [[INV:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[INNER:%.*]] = insertelement <4 x i32> poison, i32 [[INV]], i128 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i32 [[IV]]
 ; CHECK-NEXT:    [[VARIANT:%.*]] = load i32, ptr [[IDX]], align 4
-; CHECK-NEXT:    [[INNER:%.*]] = insertelement <4 x i32> poison, i32 [[VARIANT]], i128 0
-; CHECK-NEXT:    [[OUTER:%.*]] = insertelement <4 x i32> [[INNER]], i32 [[INV]], i128 1
+; CHECK-NEXT:    [[OUTER:%.*]] = insertelement <4 x i32> [[INNER]], i32 [[VARIANT]], i128 0
 ; CHECK-NEXT:    store <4 x i32> [[OUTER]], ptr [[IDX]], align 16
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[IV]], [[N]]
@@ -135,13 +135,13 @@ define <4 x i32> @hoist_simple_swap_basevec(ptr %base, i32 %inv, i32 %n, <4 x i3
 ; CHECK-LABEL: define <4 x i32> @hoist_simple_swap_basevec(
 ; CHECK-SAME: ptr [[BASE:%.*]], i32 [[INV:%.*]], i32 [[N:%.*]], <4 x i32> [[BASEVEC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[INNER:%.*]] = insertelement <4 x i32> [[BASEVEC]], i32 [[INV]], i32 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IDX_LE:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i32 [[IV_LCSSA]]
 ; CHECK-NEXT:    [[VARIANT_LE:%.*]] = load i32, ptr [[IDX_LE]], align 4
-; CHECK-NEXT:    [[INNER_LE:%.*]] = insertelement <4 x i32> [[BASEVEC]], i32 [[VARIANT_LE]], i32 0
-; CHECK-NEXT:    [[OUTER_LE:%.*]] = insertelement <4 x i32> [[INNER_LE]], i32 [[INV]], i32 1
+; CHECK-NEXT:    [[OUTER_LE:%.*]] = insertelement <4 x i32> [[INNER]], i32 [[VARIANT_LE]], i32 0
 ; CHECK-NEXT:    store <4 x i32> [[OUTER_LE]], ptr [[IDX_LE]], align 16
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV_LCSSA]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[IV_LCSSA]], [[N]]
@@ -171,14 +171,14 @@ define <4 x i32> @hoist_multiple_variants(ptr %base, i32 %inv, i32 %n) {
 ; CHECK-LABEL: define <4 x i32> @hoist_multiple_variants(
 ; CHECK-SAME: ptr [[BASE:%.*]], i32 [[INV:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[INNER_LE:%.*]] = insertelement <4 x i32> poison, i32 [[INV]], i32 2
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IDX_LE:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i32 [[IV_LCSSA]]
 ; CHECK-NEXT:    [[VARIANT_LE:%.*]] = load i32, ptr [[IDX_LE]], align 4
-; CHECK-NEXT:    [[INNER_LE:%.*]] = insertelement <4 x i32> poison, i32 [[VARIANT_LE]], i32 0
 ; CHECK-NEXT:    [[INNER2_LE:%.*]] = insertelement <4 x i32> [[INNER_LE]], i32 [[VARIANT_LE]], i32 1
-; CHECK-NEXT:    [[OUTER_LE:%.*]] = insertelement <4 x i32> [[INNER2_LE]], i32 [[INV]], i32 2
+; CHECK-NEXT:    [[OUTER_LE:%.*]] = insertelement <4 x i32> [[INNER2_LE]], i32 [[VARIANT_LE]], i32 0
 ; CHECK-NEXT:    store <4 x i32> [[OUTER_LE]], ptr [[IDX_LE]], align 16
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV_LCSSA]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[IV_LCSSA]], [[N]]
@@ -209,14 +209,14 @@ define <4 x i32> @hoist_multiple_invariants(ptr %base, i32 %inv, i32 %n) {
 ; CHECK-LABEL: define <4 x i32> @hoist_multiple_invariants(
 ; CHECK-SAME: ptr [[BASE:%.*]], i32 [[INV:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[INNER:%.*]] = insertelement <4 x i32> poison, i32 [[INV]], i32 1
+; CHECK-NEXT:    [[OUTER:%.*]] = insertelement <4 x i32> [[INNER]], i32 [[INV]], i32 2
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IDX_LE:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i32 [[IV_LCSSA]]
 ; CHECK-NEXT:    [[VARIANT_LE:%.*]] = load i32, ptr [[IDX_LE]], align 4
-; CHECK-NEXT:    [[INNER_LE:%.*]] = insertelement <4 x i32> poison, i32 [[VARIANT_LE]], i32 0
-; CHECK-NEXT:    [[OUTER_LE:%.*]] = insertelement <4 x i32> [[INNER_LE]], i32 [[INV]], i32 1
-; CHECK-NEXT:    [[OUTER2_LE:%.*]] = insertelement <4 x i32> [[OUTER_LE]], i32 [[INV]], i32 2
+; CHECK-NEXT:    [[OUTER2_LE:%.*]] = insertelement <4 x i32> [[OUTER]], i32 [[VARIANT_LE]], i32 0
 ; CHECK-NEXT:    store <4 x i32> [[OUTER2_LE]], ptr [[IDX_LE]], align 16
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV_LCSSA]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[IV_LCSSA]], [[N]]
