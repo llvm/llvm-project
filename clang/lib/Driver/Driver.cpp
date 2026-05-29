@@ -3147,11 +3147,20 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
           if (IsSYCL) {
             types::ID OldTy = Ty;
             switch (Ty) {
-            case types::TY_C:          Ty = types::TY_CXX;        break;
-            case types::TY_CHeader:    Ty = types::TY_CXXHeader;  break;
-            case types::TY_PP_C:       Ty = types::TY_PP_CXX;     break;
-            case types::TY_PP_CHeader: Ty = types::TY_PP_CXXHeader; break;
-            default: break;
+            case types::TY_C:
+              Ty = types::TY_CXX;
+              break;
+            case types::TY_CHeader:
+              Ty = types::TY_CXXHeader;
+              break;
+            case types::TY_PP_C:
+              Ty = types::TY_PP_CXX;
+              break;
+            case types::TY_PP_CHeader:
+              Ty = types::TY_PP_CXXHeader;
+              break;
+            default:
+              break;
             }
             if (OldTy != Ty)
               Diag(clang::diag::warn_drv_fsycl_with_c_type)
