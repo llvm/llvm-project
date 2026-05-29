@@ -433,6 +433,9 @@ ENUM_CODEGENOPT(ExtendVariableLiveness, ExtendVariableLivenessKind, 2, ExtendVar
 /// The default stack protector guard offset to use.
 VALUE_CODEGENOPT(StackProtectorGuardOffset, 32, INT_MAX, Benign)
 
+/// The width to use for the stack protector guard value.
+VALUE_CODEGENOPT(StackProtectorGuardValueWidth, 32, UINT_MAX, Benign)
+
 /// Number of path components to strip when emitting checks. (0 == full
 /// filename)
 VALUE_CODEGENOPT(EmitCheckPathComponentsToStrip, 32, 0, Benign)

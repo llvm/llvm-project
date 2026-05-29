@@ -2650,12 +2650,19 @@ static ExprResult BuiltinMaskedStore(Sema &S, CallExpr *TheCall) {
         S.Diag(ValArg->getExprLoc(), diag::err_vec_masked_load_store_ptr)
         << 2 << "vector");
 
-  QualType PointeeTy = PtrTy->getPointeeType();
   const VectorType *MaskVecTy = MaskTy->getAs<VectorType>();
-  QualType MemoryTy = S.Context.getExtVectorType(PointeeTy.getUnqualifiedType(),
-                                                 MaskVecTy->getNumElements());
-  if (!S.Context.hasSameType(ValTy.getUnqualifiedType(),
-                             MemoryTy.getUnqualifiedType()))
+  const VectorType *ValVecTy = ValTy->getAs<VectorType>();
+
+  if (MaskVecTy->getNumElements() != ValVecTy->getNumElements()) {
+    return ExprError(
+        S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
+        << S.getASTContext().BuiltinInfo.getQuotedName(
+               TheCall->getBuiltinCallee())
+        << MaskTy << ValTy);
+  }
+
+  if (!S.Context.hasSameType(ValVecTy->getElementType().getUnqualifiedType(),
+                             PtrTy->getPointeeType().getUnqualifiedType()))
     return ExprError(S.Diag(TheCall->getBeginLoc(),
                             diag::err_vec_builtin_incompatible_vector)
                      << TheCall->getDirectCallee() << /*isMorethantwoArgs*/ 2
@@ -2685,7 +2692,7 @@ static ExprResult BuiltinMaskedGather(Sema &S, CallExpr *TheCall) {
 
   QualType IdxTy = IdxArg->getType();
   const VectorType *IdxVecTy = IdxTy->getAs<VectorType>();
-  if (!IdxTy->isExtVectorType() || !IdxVecTy->getElementType()->isIntegerType())
+  if (!IdxTy->isVectorType() || !IdxVecTy->getElementType()->isIntegerType())
     return S.Diag(MaskArg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
            << 1 << /* vector of */ 4 << /* integer */ 1 << /* no fp */ 0
            << IdxTy;
@@ -2736,7 +2743,7 @@ static ExprResult BuiltinMaskedScatter(Sema &S, CallExpr *TheCall) {
 
   QualType IdxTy = IdxArg->getType();
   const VectorType *IdxVecTy = IdxTy->getAs<VectorType>();
-  if (!IdxTy->isExtVectorType() || !IdxVecTy->getElementType()->isIntegerType())
+  if (!IdxTy->isVectorType() || !IdxVecTy->getElementType()->isIntegerType())
     return S.Diag(MaskArg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
            << 2 << /* vector of */ 4 << /* integer */ 1 << /* no fp */ 0
            << IdxTy;
@@ -2744,7 +2751,6 @@ static ExprResult BuiltinMaskedScatter(Sema &S, CallExpr *TheCall) {
   QualType ValTy = ValArg->getType();
   QualType MaskTy = MaskArg->getType();
   QualType PtrTy = PtrArg->getType();
-  QualType PointeeTy = PtrTy->getPointeeType();
 
   const VectorType *MaskVecTy = MaskTy->castAs<VectorType>();
   const VectorType *ValVecTy = ValTy->castAs<VectorType>();
@@ -2761,9 +2767,8 @@ static ExprResult BuiltinMaskedScatter(Sema &S, CallExpr *TheCall) {
                TheCall->getBuiltinCallee())
         << MaskTy << ValTy);
 
-  QualType ArgTy = S.Context.getExtVectorType(PointeeTy.getUnqualifiedType(),
-                                              MaskVecTy->getNumElements());
-  if (!S.Context.hasSameType(ValTy.getUnqualifiedType(), ArgTy))
+  if (!S.Context.hasSameType(ValVecTy->getElementType().getUnqualifiedType(),
+                             PtrTy->getPointeeType().getUnqualifiedType()))
     return ExprError(S.Diag(TheCall->getBeginLoc(),
                             diag::err_vec_builtin_incompatible_vector)
                      << TheCall->getDirectCallee() << /*isMoreThanTwoArgs*/ 2
@@ -3125,7 +3130,71 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     return BuiltinIsWithinLifetime(*this, TheCall);
   case Builtin::BI__builtin_trivially_relocate:
     return BuiltinTriviallyRelocate(*this, TheCall);
+  case Builtin::BI__builtin_clear_padding: {
+    if (checkArgCount(TheCall, 1))
+      return ExprError();
 
+    const Expr *PtrArg = TheCall->getArg(0);
+    const QualType PtrArgType = PtrArg->getType();
+    if (!PtrArgType->isPointerType()) {
+      Diag(PtrArg->getBeginLoc(), diag::err_typecheck_convert_incompatible)
+          << PtrArgType << "pointer" << 1 << 0 << 3 << 1 << PtrArgType
+          << "pointer";
+      return ExprError();
+    }
+    QualType PointeeType = PtrArgType->getPointeeType();
+    if (PointeeType.isConstQualified()) {
+      Diag(PtrArg->getBeginLoc(), diag::err_typecheck_assign_const)
+          << TheCall->getSourceRange() << 4 /*ConstUnknown*/;
+      return ExprError();
+    }
+    if (RequireCompleteType(PtrArg->getBeginLoc(), PointeeType,
+                            diag::err_typecheck_decl_incomplete_type))
+      return ExprError();
+
+    // For non trivially copyable types, we try to match gcc's behaviour.
+    // i.e. __builtin_clear_padding(&var) is OK as long as var is a complete
+    // object, either a local variable or a function parameter passed by value
+    auto IsAddrOfDeclExpr = [&]() {
+      const Expr *Inner = PtrArg->IgnoreParenNoopCasts(Context);
+      const auto *UnaryOp = dyn_cast<UnaryOperator>(Inner);
+      if (!UnaryOp || UnaryOp->getOpcode() != UO_AddrOf)
+        return false;
+
+      const Expr *Operand =
+          UnaryOp->getSubExpr()->IgnoreParenNoopCasts(Context);
+      const auto *DeclRef = dyn_cast<DeclRefExpr>(Operand);
+      if (!DeclRef)
+        return false;
+
+      const auto *VarDecl = dyn_cast<::clang::VarDecl>(DeclRef->getDecl());
+      if (!VarDecl || VarDecl->getType()->isReferenceType())
+        return false;
+
+      // matching GCC behaviour
+      // __builtin_clear_padding((X*)&var) is fine as long X is the type of var
+      QualType VarQType = VarDecl->getType();
+      return PointeeType.getTypePtr() == VarQType.getTypePtr() ||
+             Context.hasSameUnqualifiedType(PointeeType, VarQType);
+    };
+
+    if (!PointeeType.isTriviallyCopyableType(Context) &&
+        !PointeeType->isAtomicType() // _Atomic is not copyable
+        && !IsAddrOfDeclExpr()) {
+      Diag(PtrArg->getBeginLoc(), diag::err_clear_padding_needs_trivial_copy)
+          << PtrArg->getType() << PtrArg->getSourceRange();
+      return ExprError();
+    }
+
+    if (auto *Record = PointeeType->getAsRecordDecl();
+        Record && Record->hasFlexibleArrayMember()) {
+      Diag(PtrArg->getBeginLoc(), diag::err_clear_padding_no_flexible_array)
+          << PointeeType << PtrArg->getSourceRange();
+      return ExprError();
+    }
+
+    break;
+  }
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_add_1:
   case Builtin::BI__sync_fetch_and_add_2:
@@ -3615,6 +3684,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   // types only.
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat:
+  case Builtin::BI__builtin_elementwise_clmul:
     if (BuiltinElementwiseMath(TheCall,
                                EltwiseBuiltinArgTyRestriction::IntegerTy))
       return ExprError();
@@ -3865,13 +3935,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   case Builtin::BI__builtin_stdc_bit_floor:
   case Builtin::BI__builtin_stdc_bit_ceil:
-  case Builtin::BIstdc_bit_floor:
-  case Builtin::BIstdc_bit_ceil:
     if (BuiltinStdCBuiltin(*this, TheCall, QualType()))
       return ExprError();
     break;
   case Builtin::BI__builtin_stdc_has_single_bit:
-  case Builtin::BIstdc_has_single_bit:
     if (BuiltinStdCBuiltin(*this, TheCall, Context.BoolTy))
       return ExprError();
     break;
@@ -3886,17 +3953,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_stdc_count_zeros:
   case Builtin::BI__builtin_stdc_count_ones:
   case Builtin::BI__builtin_stdc_bit_width:
-  case Builtin::BIstdc_leading_zeros:
-  case Builtin::BIstdc_leading_ones:
-  case Builtin::BIstdc_trailing_zeros:
-  case Builtin::BIstdc_trailing_ones:
-  case Builtin::BIstdc_first_leading_zero:
-  case Builtin::BIstdc_first_leading_one:
-  case Builtin::BIstdc_first_trailing_zero:
-  case Builtin::BIstdc_first_trailing_one:
-  case Builtin::BIstdc_count_zeros:
-  case Builtin::BIstdc_count_ones:
-  case Builtin::BIstdc_bit_width:
     if (BuiltinStdCBuiltin(*this, TheCall, Context.UnsignedIntTy))
       return ExprError();
     break;
@@ -4230,6 +4286,8 @@ void Sema::checkLifetimeCaptureBy(FunctionDecl *FD, bool IsMemberFunction,
 
     Expr *Captured = const_cast<Expr *>(GetArgAt(ArgIdx));
     for (int CapturingParamIdx : Attr->params()) {
+      if (CapturingParamIdx == LifetimeCaptureByAttr::Invalid)
+        continue;
       // lifetime_capture_by(this) case is handled in the lifetimebound expr
       // initialization codepath.
       if (CapturingParamIdx == LifetimeCaptureByAttr::This &&

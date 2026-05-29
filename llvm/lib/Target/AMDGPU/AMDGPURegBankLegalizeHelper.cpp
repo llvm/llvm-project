@@ -76,6 +76,11 @@ bool RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
   if (!lower(MI, *Mapping, WFI))
     return false;
 
+  if (!WFI.SgprWaterfallOperandRegs.empty()) {
+    if (!executeInWaterfallLoop(B, WFI))
+      return false;
+  }
+
   return true;
 }
 
@@ -107,6 +112,7 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   Register InitSaveExecReg = MRI.createVirtualRegister(WaveRC);
 
   // Don't bother using generic instructions/registers for the exec mask.
+  B.setInstr(*WFI.Start);
   B.buildInstr(TargetOpcode::IMPLICIT_DEF).addDef(InitSaveExecReg);
 
   Register SavedExec = MRI.createVirtualRegister(WaveRC);
@@ -828,12 +834,12 @@ bool RegBankLegalizeHelper::lowerSplitBitCount64To32(MachineInstr &MI) {
   // Split 64-bit find-first-bit operations into 32-bit halves:
   //   (ffbh hi:lo)            -> umin(ffbh(hi), uaddsat(ffbh(lo), 32))
   //   (ffbl hi:lo)            -> umin(ffbl(lo), uaddsat(ffbl(hi), 32))
-  //   (ctlz_zero_undef hi:lo) -> umin(ffbh(hi), add(ffbh(lo), 32))
-  //   (cttz_zero_undef hi:lo) -> umin(ffbl(lo), add(ffbl(hi), 32))
+  //   (ctlz_zero_poison hi:lo) -> umin(ffbh(hi), add(ffbh(lo), 32))
+  //   (cttz_zero_poison hi:lo) -> umin(ffbl(lo), add(ffbl(hi), 32))
   unsigned Opc = MI.getOpcode();
 
   // FFBH/FFBL return 0xFFFFFFFF on zero input, using uaddsat to avoid
-  // wrapping. CTLZ/CTTZ guarantee non-zero input (zero_undef), so plain add
+  // wrapping. CTLZ/CTTZ guarantee non-zero input (zero_poison), so plain add
   // is fine.
   unsigned FFBOpc;
   unsigned AddOpc;
@@ -849,12 +855,12 @@ bool RegBankLegalizeHelper::lowerSplitBitCount64To32(MachineInstr &MI) {
     AddOpc = AMDGPU::G_UADDSAT;
     SearchFromMSB = false;
     break;
-  case AMDGPU::G_CTLZ_ZERO_UNDEF:
+  case AMDGPU::G_CTLZ_ZERO_POISON:
     FFBOpc = AMDGPU::G_AMDGPU_FFBH_U32;
     AddOpc = AMDGPU::G_ADD;
     SearchFromMSB = true;
     break;
-  case AMDGPU::G_CTTZ_ZERO_UNDEF:
+  case AMDGPU::G_CTTZ_ZERO_POISON:
     FFBOpc = AMDGPU::G_AMDGPU_FFBL_B32;
     AddOpc = AMDGPU::G_ADD;
     SearchFromMSB = false;
@@ -1249,6 +1255,17 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerSplitTo32Select(MI);
   case SplitTo32SExtInReg:
     return lowerSplitTo32SExtInReg(MI);
+  case CtPop64To32: {
+    auto Unmerge = B.buildUnmerge({VgprRB, S32}, MI.getOperand(1).getReg());
+    auto LoPopCnt = B.buildCTPOP({VgprRB, S32}, Unmerge.getReg(0));
+    auto HiPopCnt = B.buildCTPOP({VgprRB, S32}, Unmerge.getReg(1));
+    // Max popcount of two 32-bit values is 64, so this add cannot overflow.
+    B.buildAdd(MI.getOperand(0).getReg(), LoPopCnt, HiPopCnt,
+               MachineInstr::NoSWrap | MachineInstr::NoUWrap);
+
+    MI.eraseFromParent();
+    break;
+  }
   case SplitLoad: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     unsigned Size = DstTy.getSizeInBits();
@@ -1434,10 +1451,6 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerAbsToS32(MI);
   }
 
-  if (!WFI.SgprWaterfallOperandRegs.empty()) {
-    if (!executeInWaterfallLoop(B, WFI))
-      return false;
-  }
   return true;
 }
 
@@ -2035,7 +2048,6 @@ bool RegBankLegalizeHelper::applyMappingSrc(
           ++End;
         ++End;
 
-        B.setInsertPt(*MI.getParent(), Start);
         WFI.Start = Start;
         WFI.End = End;
       }

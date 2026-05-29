@@ -80,4 +80,4 @@ vbroadcastss (%rax), %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     3     1.3    1.3    2.3       leaq	8(%rsp,%rdi,2), %rax
 # CHECK-NEXT: 1.     3     1.7    1.0    0.0       vbroadcastss	(%rax), %ymm0
-# CHECK-NEXT:        3     1.5    1.2    1.2       <total>
+# CHECK-NEXT:        6     1.5    1.2    1.2       <total>

@@ -485,6 +485,10 @@ let Command = "breakpoint add scripted" in {
     "repeat this option multiple times to specify multiple shared libraries.">;
 }
 
+let Command = "breakpoint override add" in {
+  def breakpoint_override_add_description : Option<"description", "d">,
+    Desc<"Description string for this override resolver">, Arg<"HelpText">;
+}
 
 let Command = "breakpoint clear" in {
   def breakpoint_clear_file : Option<"file", "f">,

@@ -24,7 +24,7 @@ public:
 private:
   UDPSocket(NativeSocket socket);
 
-  size_t Send(const void *buf, const size_t num_bytes) override;
+  ssize_t Send(const void *buf, const size_t num_bytes) override;
   Status Connect(llvm::StringRef name) override;
   Status Listen(llvm::StringRef name, int backlog) override;
 

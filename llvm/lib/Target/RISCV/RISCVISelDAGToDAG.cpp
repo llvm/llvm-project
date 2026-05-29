@@ -1237,11 +1237,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case RISCVISD::BuildGPRPair:
-  case RISCVISD::BuildPairF64: {
+  case RISCVISD::BuildPairF64:
+  case RISCVISD::BuildPairGPRVec: {
     if (Opcode == RISCVISD::BuildPairF64 && !Subtarget->hasStdExtZdinx())
       break;
 
-    assert((!Subtarget->is64Bit() || Opcode == RISCVISD::BuildGPRPair) &&
+    assert((!Subtarget->is64Bit() || Opcode != RISCVISD::BuildPairF64) &&
            "BuildPairF64 only handled here on rv32i_zdinx");
 
     SDValue N =
@@ -1250,9 +1251,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case RISCVISD::SplitGPRPair:
-  case RISCVISD::SplitF64: {
+  case RISCVISD::SplitF64:
+  case RISCVISD::SplitGPRVec: {
     if (Subtarget->hasStdExtZdinx() || Opcode != RISCVISD::SplitF64) {
-      assert((!Subtarget->is64Bit() || Opcode == RISCVISD::SplitGPRPair) &&
+      assert((!Subtarget->is64Bit() || Opcode != RISCVISD::SplitF64) &&
              "SplitF64 only handled here on rv32i_zdinx");
 
       if (!SDValue(Node, 0).use_empty()) {
@@ -1271,9 +1273,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       CurDAG->RemoveDeadNode(Node);
       return;
     }
-
-    assert(Opcode != RISCVISD::SplitGPRPair &&
-           "SplitGPRPair should already be handled");
 
     if (!Subtarget->hasStdExtZfa())
       break;
@@ -2955,56 +2954,59 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case ISD::SPLAT_VECTOR: {
     if (!Subtarget->hasStdExtP())
       break;
-    auto *ConstNode = dyn_cast<ConstantSDNode>(Node->getOperand(0));
-    if (!ConstNode)
-      break;
+    if (auto *ConstNode = dyn_cast<ConstantSDNode>(Node->getOperand(0))) {
+      bool IsDoubleWide = Subtarget->isPExtPackedDoubleType(VT);
 
-    if (ConstNode->isZero()) {
-      SDValue New =
-          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, RISCV::X0, VT);
-      ReplaceNode(Node, New.getNode());
-      return;
-    }
+      if (ConstNode->isZero()) {
+        MCPhysReg X0Reg = IsDoubleWide ? RISCV::X0_Pair : RISCV::X0;
+        SDValue New =
+            CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, X0Reg, VT);
+        ReplaceNode(Node, New.getNode());
+        return;
+      }
 
-    unsigned EltSize = VT.getVectorElementType().getSizeInBits();
-    APInt Val = ConstNode->getAPIntValue().trunc(EltSize);
+      unsigned EltSize = VT.getVectorElementType().getSizeInBits();
+      APInt Val = ConstNode->getAPIntValue().trunc(EltSize);
 
-    // Use LI for all ones since it can be compressed to c.li.
-    if (Val.isAllOnes()) {
-      SDNode *NewNode = CurDAG->getMachineNode(
-          RISCV::ADDI, DL, VT, CurDAG->getRegister(RISCV::X0, VT),
-          CurDAG->getAllOnesConstant(DL, XLenVT, /*IsTarget=*/true));
-      ReplaceNode(Node, NewNode);
-      return;
-    }
+      // Use LI for all ones since it can be compressed to c.li.
+      if (Val.isAllOnes() && !IsDoubleWide) {
+        SDNode *NewNode = CurDAG->getMachineNode(
+            RISCV::ADDI, DL, VT, CurDAG->getRegister(RISCV::X0, VT),
+            CurDAG->getAllOnesConstant(DL, XLenVT, /*IsTarget=*/true));
+        ReplaceNode(Node, NewNode);
+        return;
+      }
 
-    // Find the smallest splat.
-    if (Val.getBitWidth() > 16 && Val.isSplat(16))
-      Val = Val.trunc(16);
-    if (Val.getBitWidth() > 8 && Val.isSplat(8))
-      Val = Val.trunc(8);
+      // Find the smallest splat.
+      if (Val.getBitWidth() > 16 && Val.isSplat(16))
+        Val = Val.trunc(16);
+      if (Val.getBitWidth() > 8 && Val.isSplat(8))
+        Val = Val.trunc(8);
 
-    EltSize = Val.getBitWidth();
-    int64_t Imm = Val.getSExtValue();
+      EltSize = Val.getBitWidth();
+      int64_t Imm = Val.getSExtValue();
 
-    unsigned Opc = 0;
-    if (EltSize == 8) {
-      Opc = RISCV::PLI_B;
-    } else if (isInt<10>(Imm)) {
-      Opc = EltSize == 32 ? RISCV::PLI_W : RISCV::PLI_H;
-    } else if (EltSize == 16 && isShiftedInt<10, 6>(Imm)) {
-      Opc = RISCV::PLUI_H;
-      Imm = Imm >> 6;
-    } else if (EltSize == 32 && isShiftedInt<10, 22>(Imm)) {
-      Opc = RISCV::PLUI_W;
-      Imm = Imm >> 22;
-    }
+      unsigned Opc = 0;
+      if (EltSize == 8) {
+        Opc = IsDoubleWide ? RISCV::PLI_DB : RISCV::PLI_B;
+      } else if (EltSize == 16 && isInt<10>(Imm)) {
+        Opc = IsDoubleWide ? RISCV::PLI_DH : RISCV::PLI_H;
+      } else if (!IsDoubleWide && EltSize == 32 && isInt<10>(Imm)) {
+        Opc = RISCV::PLI_W;
+      } else if (EltSize == 16 && isShiftedInt<10, 6>(Imm)) {
+        Opc = IsDoubleWide ? RISCV::PLUI_DH : RISCV::PLUI_H;
+        Imm = Imm >> 6;
+      } else if (!IsDoubleWide && EltSize == 32 && isShiftedInt<10, 22>(Imm)) {
+        Opc = RISCV::PLUI_W;
+        Imm = Imm >> 22;
+      }
 
-    if (Opc) {
-      SDNode *NewNode = CurDAG->getMachineNode(
-          Opc, DL, VT, CurDAG->getSignedTargetConstant(Imm, DL, XLenVT));
-      ReplaceNode(Node, NewNode);
-      return;
+      if (Opc) {
+        SDNode *NewNode = CurDAG->getMachineNode(
+            Opc, DL, VT, CurDAG->getSignedTargetConstant(Imm, DL, XLenVT));
+        ReplaceNode(Node, NewNode);
+        return;
+      }
     }
 
     break;
@@ -3092,6 +3094,22 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     SDValue V = Node->getOperand(0);
     auto Idx = Node->getConstantOperandVal(1);
     MVT InVT = V.getSimpleValueType();
+
+    // Handle P-extension extract_subvector for v2i16 from v4i16 and v4i8 from
+    // v8i8
+    if (Subtarget->hasStdExtP() && !Subtarget->is64Bit() &&
+        ((InVT == MVT::v4i16 && VT == MVT::v2i16) ||
+         (InVT == MVT::v8i8 && VT == MVT::v4i8))) {
+      unsigned NumElts = VT.getVectorNumElements();
+      if (Idx != 0 && Idx != NumElts)
+        break;
+
+      unsigned SubRegIdx = Idx == 0 ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
+      SDValue Extract = CurDAG->getTargetExtractSubreg(SubRegIdx, DL, VT, V);
+      ReplaceNode(Node, Extract.getNode());
+      return;
+    }
+
     SDLoc DL(V);
 
     const RISCVTargetLowering &TLI = *Subtarget->getTargetLowering();

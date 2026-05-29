@@ -12,8 +12,7 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP5]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP2]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP4]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -22,7 +21,7 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[WIDE_LOAD]], ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -60,8 +59,7 @@ define void @test_2xi64_unary_op_load_interleave_group(ptr noalias %data, ptr no
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1111, [[TMP5]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1111, [[TMP2]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1111, [[TMP4]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1111, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -71,7 +69,7 @@ define void @test_2xi64_unary_op_load_interleave_group(ptr noalias %data, ptr no
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <vscale x 2 x double>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = fneg <vscale x 2 x double> [[TMP7]]
 ; CHECK-NEXT:    store <vscale x 2 x double> [[TMP9]], ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -226,7 +224,6 @@ define void @test_masked_interleave_group(i32 %N, ptr %mask, ptr %src, ptr %dst)
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[UMAX:%.*]] = shl nuw i64 [[TMP2]], 3
-; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], [[UMAX]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP29:%.*]] = shl nuw i64 [[TMP20]], 3
@@ -248,11 +245,11 @@ define void @test_masked_interleave_group(i32 %N, ptr %mask, ptr %src, ptr %dst)
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK6:%.*]] = icmp ult i64 [[TMP1]], [[TMP8]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK6]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP21]], 4
+; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], [[TMP9]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[N_VEC]] to i32

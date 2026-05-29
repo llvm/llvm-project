@@ -813,8 +813,7 @@ EmitPhysRegCopy(SUnit *SU, SmallDenseMap<SUnit *, Register, 16> &VRBaseMap,
       continue; // ignore chain preds
     if (Pred.getSUnit()->CopyDstRC) {
       // Copy to physical register.
-      DenseMap<SUnit *, Register>::iterator VRI =
-          VRBaseMap.find(Pred.getSUnit());
+      auto VRI = VRBaseMap.find(Pred.getSUnit());
       assert(VRI != VRBaseMap.end() && "Node emitted out of order - late");
       // Find the destination physical register.
       Register Reg;

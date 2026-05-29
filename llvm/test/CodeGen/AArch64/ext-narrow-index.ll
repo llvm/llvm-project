@@ -30,8 +30,7 @@ entry:
 define <8 x i8> @i8_off8(<16 x i8> %arg1, <16 x i8> %arg2) {
 ; CHECK-LABEL: i8_off8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    mov d0, v0.d[1]
 ; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <16 x i8> %arg1, <16 x i8> %arg2, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -166,16 +165,10 @@ entry:
 }
 
 define <1 x i64> @i64_off1(<2 x i64> %arg1, <2 x i64> %arg2) {
-; CHECK-SD-LABEL: i64_off1:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: i64_off1:
-; CHECK-GISEL:       // %bb.0: // %entry
-; CHECK-GISEL-NEXT:    mov d0, v0.d[1]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: i64_off1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov d0, v0.d[1]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <2 x i64> %arg1, <2 x i64> %arg2, <1 x i32> <i32 1>
   ret <1 x i64> %shuffle
@@ -217,8 +210,7 @@ entry:
 define <8 x i8> @i8_zero_off8(<16 x i8> %arg1) {
 ; CHECK-LABEL: i8_zero_off8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    mov d0, v0.d[1]
 ; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <16 x i8> %arg1, <16 x i8> zeroinitializer, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -354,16 +346,10 @@ entry:
 }
 
 define <1 x i64> @i64_zero_off1(<2 x i64> %arg1) {
-; CHECK-SD-LABEL: i64_zero_off1:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: i64_zero_off1:
-; CHECK-GISEL:       // %bb.0: // %entry
-; CHECK-GISEL-NEXT:    mov d0, v0.d[1]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: i64_zero_off1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov d0, v0.d[1]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <2 x i64> %arg1, <2 x i64> zeroinitializer, <1 x i32> <i32 1>
   ret <1 x i64> %shuffle

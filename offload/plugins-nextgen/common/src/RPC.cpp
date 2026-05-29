@@ -17,10 +17,6 @@
 #include "shared/rpc_opcodes.h"
 #include "shared/rpc_server.h"
 
-#ifdef OFFLOAD_HAS_FLANG_RT
-#include "flang/Runtime/io-api.h"
-#endif
-
 using namespace llvm;
 using namespace omp;
 using namespace target;
@@ -114,12 +110,6 @@ runServer(plugin::GenericDeviceTy &Device, void *Buffer,
 
   if (Status == rpc::RPC_UNHANDLED_OPCODE)
     Status = rpc::handle_libc_opcodes(*Port, NumLanes);
-
-#ifdef OFFLOAD_HAS_FLANG_RT
-  if (Status == rpc::RPC_UNHANDLED_OPCODE)
-    Status = static_cast<rpc::RPCStatus>(
-        Fortran::runtime::io::IONAME(HandleRPCOpcodes)(&*Port, NumLanes));
-#endif
 
   return Status;
 }

@@ -977,7 +977,7 @@ define void @pointer_iv_non_uniform_0(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x i32> [[TMP25]], i64 1
 ; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i32> [[TMP25]], i64 2
 ; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <4 x i32> [[TMP25]], i64 3
-; CHECK-NEXT:    [[TMP39:%.*]] = sub <4 x i32> [[TMP40]], [[TMP40]]
+; CHECK-NEXT:    [[TMP39:%.*]] = sub <4 x i32> [[TMP12]], [[TMP40]]
 ; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <4 x i32> [[TMP39]], i64 0
 ; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <4 x i32> [[TMP39]], i64 1
 ; CHECK-NEXT:    [[TMP54:%.*]] = extractelement <4 x i32> [[TMP39]], i64 2
@@ -1019,7 +1019,7 @@ define void @pointer_iv_non_uniform_0(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[UNNAMEDTMP05:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 5
 ; CHECK-NEXT:    [[UNNAMEDTMP06:%.*]] = load i32, ptr [[UNNAMEDTMP05]], align 8
 ; CHECK-NEXT:    [[UNNAMEDTMP07:%.*]] = sub i32 [[UNNAMEDTMP4]], [[UNNAMEDTMP00]]
-; CHECK-NEXT:    [[UNNAMEDTMP08:%.*]] = sub i32 [[UNNAMEDTMP04]], [[UNNAMEDTMP04]]
+; CHECK-NEXT:    [[UNNAMEDTMP08:%.*]] = sub i32 [[UNNAMEDTMP00]], [[UNNAMEDTMP04]]
 ; CHECK-NEXT:    [[UNNAMEDTMP09:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 2
 ; CHECK-NEXT:    store i32 [[UNNAMEDTMP07]], ptr [[UNNAMEDTMP09]], align 8
 ; CHECK-NEXT:    [[UNNAMEDTMP10:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 3
@@ -1071,7 +1071,7 @@ define void @pointer_iv_non_uniform_0(ptr %a, i64 %n) {
 ; INTER-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP17]], i64 1
 ; INTER-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP17]], i64 2
 ; INTER-NEXT:    [[TMP16:%.*]] = extractelement <4 x i32> [[TMP17]], i64 3
-; INTER-NEXT:    [[TMP18:%.*]] = sub <4 x i32> [[STRIDED_VEC4]], [[STRIDED_VEC4]]
+; INTER-NEXT:    [[TMP18:%.*]] = sub <4 x i32> [[STRIDED_VEC]], [[STRIDED_VEC4]]
 ; INTER-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[TMP18]], i64 0
 ; INTER-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP18]], i64 1
 ; INTER-NEXT:    [[TMP25:%.*]] = extractelement <4 x i32> [[TMP18]], i64 2
@@ -1112,7 +1112,7 @@ define void @pointer_iv_non_uniform_0(ptr %a, i64 %n) {
 ; INTER-NEXT:    [[UNNAMEDTMP05:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 5
 ; INTER-NEXT:    [[UNNAMEDTMP06:%.*]] = load i32, ptr [[UNNAMEDTMP05]], align 8
 ; INTER-NEXT:    [[UNNAMEDTMP07:%.*]] = sub i32 [[UNNAMEDTMP4]], [[UNNAMEDTMP00]]
-; INTER-NEXT:    [[UNNAMEDTMP08:%.*]] = sub i32 [[UNNAMEDTMP04]], [[UNNAMEDTMP04]]
+; INTER-NEXT:    [[UNNAMEDTMP08:%.*]] = sub i32 [[UNNAMEDTMP00]], [[UNNAMEDTMP04]]
 ; INTER-NEXT:    [[UNNAMEDTMP09:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 2
 ; INTER-NEXT:    store i32 [[UNNAMEDTMP07]], ptr [[UNNAMEDTMP09]], align 8
 ; INTER-NEXT:    [[UNNAMEDTMP10:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 3
@@ -1137,7 +1137,7 @@ for.body:
   %tmp05 = getelementptr inbounds i32, ptr %p, i32 5
   %tmp06 = load i32, ptr %tmp05, align 8
   %tmp07 = sub i32 %tmp04, %tmp00
-  %tmp08 = sub i32 %tmp02, %tmp02
+  %tmp08 = sub i32 %tmp00, %tmp02
   %tmp09 = getelementptr inbounds i32, ptr %p, i32 2
   store i32 %tmp07, ptr %tmp09, align 8
   %tmp10 = getelementptr inbounds i32, ptr %p, i32 3

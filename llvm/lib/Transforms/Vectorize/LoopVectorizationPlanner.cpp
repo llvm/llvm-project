@@ -61,16 +61,17 @@ static cl::opt<bool> ForceTargetSupportsMaskedMemoryOps(
     cl::desc("Assume the target supports masked memory operations (used for "
              "testing)."));
 
+static cl::opt<bool> ForceTargetSupportsGatherScatterOps(
+    "force-target-supports-gather-scatter-ops", cl::init(false), cl::Hidden,
+    cl::desc("Assume the target supports gather/scatter operations (used for "
+             "testing)."));
+
 bool VFSelectionContext::isLegalMaskedLoadOrStore(Instruction *I,
                                                   ElementCount VF) const {
   assert(isa<LoadInst>(I) || isa<StoreInst>(I));
-  auto *Ptr = getLoadStorePointerOperand(I);
   auto *Ty = getLoadStoreType(I);
   const unsigned AS = getLoadStoreAddressSpace(I);
   const Align Alignment = getLoadStoreAlignment(I);
-
-  if (!Legal->isConsecutivePtr(Ty, Ptr))
-    return false;
 
   return ForceTargetSupportsMaskedMemoryOps ||
          (isa<LoadInst>(I) ? TTI.isLegalMaskedLoad(Ty, Alignment, AS)
@@ -87,7 +88,8 @@ bool VFSelectionContext::isLegalGatherOrScatter(Value *V,
   Align Align = getLoadStoreAlignment(V);
   if (VF.isVector())
     Ty = VectorType::get(Ty, VF);
-  return (LI && TTI.isLegalMaskedGather(Ty, Align)) ||
+  return ForceTargetSupportsGatherScatterOps ||
+         (LI && TTI.isLegalMaskedGather(Ty, Align)) ||
          (SI && TTI.isLegalMaskedScatter(Ty, Align));
 }
 
@@ -619,6 +621,96 @@ void VFSelectionContext::collectInLoopReductions() {
     LLVM_DEBUG(dbgs() << "LV: Using " << (InLoop ? "inloop" : "out of loop")
                       << " reduction for phi: " << *Phi << "\n");
   }
+}
+
+bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
+                                                const VectorizationFactor &B,
+                                                const unsigned MaxTripCount,
+                                                bool HasTail,
+                                                bool IsEpilogue) const {
+  InstructionCost CostA = A.Cost;
+  InstructionCost CostB = B.Cost;
+
+  // When there is a hint to always prefer scalable vectors, honour that hint.
+  if (Hints.isScalableVectorizationAlwaysPreferred())
+    if (A.Width.isScalable() && CostA.isValid() && !B.Width.isScalable() &&
+        !B.Width.isScalar())
+      return true;
+
+  // Improve estimate for the vector width if it is scalable.
+  unsigned EstimatedWidthA = A.Width.getKnownMinValue();
+  unsigned EstimatedWidthB = B.Width.getKnownMinValue();
+  if (std::optional<unsigned> VScale = Config.getVScaleForTuning()) {
+    if (A.Width.isScalable())
+      EstimatedWidthA *= *VScale;
+    if (B.Width.isScalable())
+      EstimatedWidthB *= *VScale;
+  }
+
+  // When optimizing for size choose whichever is smallest, which will be the
+  // one with the smallest cost for the whole loop. On a tie pick the larger
+  // vector width, on the assumption that throughput will be greater.
+  if (Config.CostKind == TTI::TCK_CodeSize)
+    return CostA < CostB ||
+           (CostA == CostB && EstimatedWidthA > EstimatedWidthB);
+
+  // Assume vscale may be larger than 1 (or the value being tuned for),
+  // so that scalable vectorization is slightly favorable over fixed-width
+  // vectorization.
+  bool PreferScalable = !TTI.preferFixedOverScalableIfEqualCost(IsEpilogue) &&
+                        A.Width.isScalable() && !B.Width.isScalable();
+
+  auto CmpFn = [PreferScalable](const InstructionCost &LHS,
+                                const InstructionCost &RHS) {
+    return PreferScalable ? LHS <= RHS : LHS < RHS;
+  };
+
+  // To avoid the need for FP division:
+  //      (CostA / EstimatedWidthA) < (CostB / EstimatedWidthB)
+  // <=>  (CostA * EstimatedWidthB) < (CostB * EstimatedWidthA)
+  bool LowerCostWithoutTC =
+      CmpFn(CostA * EstimatedWidthB, CostB * EstimatedWidthA);
+  if (!MaxTripCount)
+    return LowerCostWithoutTC;
+
+  auto GetCostForTC = [MaxTripCount, HasTail](unsigned VF,
+                                              InstructionCost VectorCost,
+                                              InstructionCost ScalarCost) {
+    // If the trip count is a known (possibly small) constant, the trip count
+    // will be rounded up to an integer number of iterations under
+    // FoldTailByMasking. The total cost in that case will be
+    // VecCost*ceil(TripCount/VF). When not folding the tail, the total
+    // cost will be VecCost*floor(TC/VF) + ScalarCost*(TC%VF). There will be
+    // some extra overheads, but for the purpose of comparing the costs of
+    // different VFs we can use this to compare the total loop-body cost
+    // expected after vectorization.
+    if (HasTail)
+      return VectorCost * (MaxTripCount / VF) +
+             ScalarCost * (MaxTripCount % VF);
+    return VectorCost * divideCeil(MaxTripCount, VF);
+  };
+
+  auto RTCostA = GetCostForTC(EstimatedWidthA, CostA, A.ScalarCost);
+  auto RTCostB = GetCostForTC(EstimatedWidthB, CostB, B.ScalarCost);
+  bool LowerCostWithTC = CmpFn(RTCostA, RTCostB);
+  LLVM_DEBUG(if (LowerCostWithTC != LowerCostWithoutTC) {
+    dbgs() << "LV: VF " << (LowerCostWithTC ? A.Width : B.Width)
+           << " has lower cost than VF "
+           << (LowerCostWithTC ? B.Width : A.Width)
+           << " when taking the cost of the remaining scalar loop iterations "
+              "into consideration for a maximum trip count of "
+           << MaxTripCount << ".\n";
+  });
+  return LowerCostWithTC;
+}
+
+bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
+                                                const VectorizationFactor &B,
+                                                bool HasTail,
+                                                bool IsEpilogue) const {
+  const unsigned MaxTripCount = PSE.getSmallConstantMaxTripCount();
+  return LoopVectorizationPlanner::isMoreProfitable(A, B, MaxTripCount, HasTail,
+                                                    IsEpilogue);
 }
 
 // TODO: we could return a pair of values that specify the max VF and

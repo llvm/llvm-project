@@ -3005,7 +3005,9 @@ ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
         Sema::InstantiatingTemplate Inst(S, Template->getLocation(), Template,
                                          TTP, CTAI.SugaredConverted,
                                          Template->getSourceRange());
-        if (Inst.isInvalid() || !S.SubstDecl(TTP, S.CurContext, Args))
+        if (Inst.isInvalid() ||
+            !S.SubstTemplateParams(TTP->getTemplateParameters(), S.CurContext,
+                                   Args))
           return true;
       }
       // For type parameters, no substitution is ever required.

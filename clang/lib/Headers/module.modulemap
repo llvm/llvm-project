@@ -50,6 +50,12 @@ module _Builtin_intrinsics [system] [extern_c] {
 
     header "arm64intr.h"
     export *
+
+    explicit module neon {
+      requires neon
+      header "arm64_neon.h"
+      export *
+    }
   }
 
   explicit module intel {

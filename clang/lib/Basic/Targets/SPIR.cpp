@@ -14,7 +14,7 @@
 #include "AMDGPU.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace clang;
 using namespace clang::targets;

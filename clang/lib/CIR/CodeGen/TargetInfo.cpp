@@ -6,6 +6,7 @@
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -132,6 +133,46 @@ class NVPTXTargetCIRGenInfo : public TargetCIRGenInfo {
 public:
   NVPTXTargetCIRGenInfo(CIRGenTypes &cgt)
       : TargetCIRGenInfo(std::make_unique<NVPTXABIInfo>(cgt)) {}
+
+  void setTargetAttributes(const clang::Decl *decl, mlir::Operation *global,
+                           CIRGenModule &cgm) const override {
+    auto globalValue = mlir::dyn_cast<cir::CIRGlobalValueInterface>(global);
+    if (globalValue && globalValue.isDeclaration())
+      return;
+
+    const auto *vd = dyn_cast_or_null<VarDecl>(decl);
+    if (vd) {
+      if (cgm.getLangOpts().CUDA) {
+        if (vd->getType()->isCUDADeviceBuiltinSurfaceType() ||
+            vd->getType()->isCUDADeviceBuiltinTextureType())
+          assert(!cir::MissingFeatures::emitNVVMMetadata());
+        return;
+      }
+    }
+
+    const auto *fd = dyn_cast_or_null<FunctionDecl>(decl);
+    if (!fd)
+      return;
+
+    auto func = mlir::cast<cir::FuncOp>(global);
+
+    // Perform special handling in OpenCL/CUDA mode.
+    if (cgm.getLangOpts().OpenCL || cgm.getLangOpts().CUDA) {
+      // Use function attributes to check for kernel functions. By default, all
+      // functions are device functions.
+      if (fd->hasAttr<DeviceKernelAttr>() || fd->hasAttr<CUDAGlobalAttr>()) {
+        // OpenCL/CUDA kernel functions get kernel metadata. Kernel functions
+        // are also not subject to inlining.
+        func.setInlineKind(cir::InlineKind::NoInline);
+        if (fd->hasAttr<CUDAGlobalAttr>()) {
+          func.setCallingConv(cir::CallingConv::PTXKernel);
+          assert(!cir::MissingFeatures::opFuncParameterAttributes());
+        }
+        if (fd->hasAttr<CUDALaunchBoundsAttr>())
+          assert(!cir::MissingFeatures::handleCUDALaunchBoundsAttr());
+      }
+    }
+  }
 };
 } // namespace
 

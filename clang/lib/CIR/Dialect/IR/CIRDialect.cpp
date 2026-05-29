@@ -373,25 +373,93 @@ LogicalResult cir::DeleteArrayOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// BreakOp
+// AssumeOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult cir::BreakOp::verify() {
-  if (!getOperation()->getParentOfType<LoopOpInterface>() &&
-      !getOperation()->getParentOfType<SwitchOp>())
-    return emitOpError("must be within a loop");
+static void printAssumeBundle(OpAsmPrinter &p, cir::AssumeOp op,
+                              cir::AssumeBundleKindAttr kindAttr,
+                              OperandRange bundleArgs,
+                              TypeRange bundleArgTypes) {
+  cir::AssumeBundleKind kind = kindAttr.getValue();
+  if (kind == cir::AssumeBundleKind::None)
+    return;
+
+  p << " " << cir::stringifyAssumeBundleKind(kind);
+  if (bundleArgs.empty())
+    return;
+
+  p << "(";
+  p.printOperands(bundleArgs);
+  p << " : ";
+  llvm::interleaveComma(bundleArgTypes, p);
+  p << ")";
+}
+
+static ParseResult parseAssumeBundle(
+    OpAsmParser &p, cir::AssumeBundleKindAttr &bundleKindAttr,
+    llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> &bundleArgs,
+    llvm::SmallVector<mlir::Type, 1> &bundleArgTypes) {
+  StringRef keyword;
+  auto loc = p.getCurrentLocation();
+  if (failed(p.parseOptionalKeyword(&keyword))) {
+    bundleKindAttr = cir::AssumeBundleKindAttr::get(
+        p.getContext(), cir::AssumeBundleKind::None);
+    return success();
+  }
+
+  std::optional<cir::AssumeBundleKind> parsedKind =
+      cir::symbolizeAssumeBundleKind(keyword);
+  if (!parsedKind)
+    return p.emitError(loc, "unknown assume bundle kind '") << keyword << "'";
+
+  bundleKindAttr = cir::AssumeBundleKindAttr::get(p.getContext(), *parsedKind);
+
+  if (p.parseOptionalLParen())
+    return success();
+
+  if (p.parseOperandList(bundleArgs) || p.parseColon() ||
+      p.parseTypeList(bundleArgTypes) || p.parseRParen())
+    return failure();
+
+  return success();
+}
+
+LogicalResult cir::AssumeOp::verify() {
+  cir::AssumeBundleKind kind = getBundleKind();
+  size_t numArgs = getBundleArgs().size();
+
+  if (kind == cir::AssumeBundleKind::None) {
+    if (numArgs != 0)
+      return emitOpError("unexpected bundle operands for kind 'none'");
+    return success();
+  }
+
+  if (numArgs == 0)
+    return emitOpError("expected bundle operands for kind '")
+           << cir::stringifyAssumeBundleKind(kind) << "'";
+
+  switch (kind) {
+  case cir::AssumeBundleKind::Align:
+    if (numArgs != 2 && numArgs != 3)
+      return emitOpError("align bundle expects 2 or 3 operands");
+    break;
+  case cir::AssumeBundleKind::SeparateStorage:
+    if (numArgs != 2)
+      return emitOpError("separate_storage bundle expects 2 operands");
+    break;
+  case cir::AssumeBundleKind::Dereferenceable:
+    if (numArgs != 2)
+      return emitOpError("dereferenceable bundle expects 2 operands");
+    break;
+  default:
+    break;
+  }
   return success();
 }
 
 //===----------------------------------------------------------------------===//
 // LocalInitOp
 //===----------------------------------------------------------------------===//
-
-LogicalResult cir::LocalInitOp::verify() {
-  if (!getOperation()->getParentOfType<FuncOp>())
-    return emitOpError("must be inside of a 'cir.func'");
-  return success();
-}
 
 LogicalResult
 cir::LocalInitOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
@@ -523,16 +591,6 @@ LogicalResult cir::ConstantOp::verify() {
 
 OpFoldResult cir::ConstantOp::fold(FoldAdaptor /*adaptor*/) {
   return getValue();
-}
-
-//===----------------------------------------------------------------------===//
-// ContinueOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult cir::ContinueOp::verify() {
-  if (!getOperation()->getParentOfType<LoopOpInterface>())
-    return emitOpError("must be within a loop");
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1903,12 +1961,19 @@ mlir::LogicalResult cir::GlobalOp::verify() {
       return failure();
   }
 
-  if ((getStaticLocalGuard().has_value() || getTlsModel()) &&
+  if ((getStaticLocalGuard().has_value()) &&
       (!getCtorRegion().empty() || !getDtorRegion().empty()))
     return emitOpError(
-        "Cannot have a thread-local or static-local global-op "
-        "with a constructor or destructor, they require in-function "
-        "initialization via LocalInitOp");
+        "Cannot have a static-local global-op with a constructor or "
+        "destructor, they require in-function initialization via LocalInitOp");
+
+  if (getDynTlsRefs()) {
+    if (getStaticLocalGuard().has_value())
+      return emitOpError(
+          "cannot have both static local and dynamic tls references");
+    if (!getTlsModel() || getTlsModel() != TLS_Model::GeneralDynamic)
+      return emitOpError("'dyn_tls_refs' only valid for dynamic tls");
+  }
 
   if (getAliasee().has_value()) {
     if (getInitialValue().has_value() || !getCtorRegion().empty() ||
@@ -3095,12 +3160,6 @@ LogicalResult cir::AwaitOp::verify() {
   return success();
 }
 
-LogicalResult cir::CoReturnOp::verify() {
-  if (!getOperation()->getParentOfType<CoroBodyOp>())
-    return emitOpError("must be inside a cir.coro.body");
-  return success();
-}
-
 //===----------------------------------------------------------------------===//
 // CoroBody
 //===----------------------------------------------------------------------===//
@@ -3209,7 +3268,11 @@ LogicalResult cir::GetMethodOp::verify() {
            << "the first parameter of callee must be a void pointer";
   }
 
-  if (calleeArgsTy.slice(1) != methodFuncArgsTy)
+  if (calleeArgsTy.size() != methodFuncArgsTy.size())
+    return emitError() << "callee and method parameter counts do not match";
+
+  if (calleeArgsTy.size() > 1 &&
+      calleeArgsTy.slice(1) != methodFuncArgsTy.slice(1))
     return emitError()
            << "callee parameters and method parameters do not match";
 
@@ -4057,21 +4120,27 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
 }
 
 //===----------------------------------------------------------------------===//
-// ThrowOp
+// ThrowOp / TryThrowOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult cir::ThrowOp::verify() {
-  // For the no-rethrow version, it must have at least the exception pointer.
-  if (rethrows())
-    return success();
+template <typename ThrowOpTy>
+static mlir::LogicalResult verifyThrowOpImpl(ThrowOpTy op) {
+  if (op.rethrows())
+    return mlir::success();
 
-  if (getNumOperands() != 0) {
-    if (getTypeInfo())
-      return success();
-    return emitOpError() << "'type_info' symbol attribute missing";
+  if (op.getNumOperands() != 0) {
+    if (op.getTypeInfo())
+      return mlir::success();
+    return op.emitOpError() << "'type_info' symbol attribute missing";
   }
 
-  return failure();
+  return mlir::failure();
+}
+
+mlir::LogicalResult cir::ThrowOp::verify() { return verifyThrowOpImpl(*this); }
+
+mlir::LogicalResult cir::TryThrowOp::verify() {
+  return verifyThrowOpImpl(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4320,11 +4389,14 @@ cir::EhTypeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
 LogicalResult cir::ConstructCatchParamOp::verifySymbolUses(
     SymbolTableCollection &symbolTable) {
+  auto copyFnAttr = getCopyFnAttr();
+  if (!copyFnAttr)
+    return success();
   auto fn =
       symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(*this, getCopyFnAttr());
   if (!fn)
     return emitOpError("'")
-           << getCopyFn() << "' does not reference a valid cir.func";
+           << *getCopyFn() << "' does not reference a valid cir.func";
 
   if (!fn->hasAttr(cir::CIRDialect::getCatchCopyThunkAttrName()))
     return emitOpError("catch-init copy_fn must be tagged with the ")
