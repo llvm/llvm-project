@@ -189,14 +189,15 @@ void SPIRVAuxDataHandler::emitAuxData(SPIRV::ModuleAnalysisInfo &MAI) {
   if (LinkagePreservedFns.empty())
     return;
 
-  MCRegister I32TypeReg = findOrEmitOpTypeInt32(MAI);
+  MCRegister UInt32TypeReg = findOrEmitOpTypeUInt32(MAI);
   MCRegister AEConstReg;
   for (const Function *F : LinkagePreservedFns) {
     MCRegister FnReg = MAI.getGlobalObjReg(F);
     if (!FnReg.isValid())
       continue;
     if (!AEConstReg.isValid())
-      AEConstReg = emitOpConstantI32(AvailableExternally, I32TypeReg, MAI);
+      AEConstReg =
+          emitOpConstantUInt32(AvailableExternally, UInt32TypeReg, MAI);
     emitAuxDataExtInst(LinkageOpcode, VoidTypeReg, ExtSetReg,
                        {FnReg, AEConstReg}, MAI);
   }
@@ -236,7 +237,7 @@ SPIRVAuxDataHandler::findOrEmitOpTypeVoid(SPIRV::ModuleAnalysisInfo &MAI) {
 }
 
 MCRegister
-SPIRVAuxDataHandler::findOrEmitOpTypeInt32(SPIRV::ModuleAnalysisInfo &MAI) {
+SPIRVAuxDataHandler::findOrEmitOpTypeUInt32(SPIRV::ModuleAnalysisInfo &MAI) {
   // SPIR-V OpTypeInt: <width>, <signedness>. Signedness 0 = unsigned, 1 =
   // signed (we want unsigned i32).
   constexpr int64_t Int32BitWidth = 32;
@@ -256,14 +257,13 @@ SPIRVAuxDataHandler::findOrEmitOpTypeInt32(SPIRV::ModuleAnalysisInfo &MAI) {
   return Reg;
 }
 
-MCRegister
-SPIRVAuxDataHandler::emitOpConstantI32(uint32_t Value, MCRegister I32TypeReg,
-                                       SPIRV::ModuleAnalysisInfo &MAI) {
+MCRegister SPIRVAuxDataHandler::emitOpConstantUInt32(
+    uint32_t Value, MCRegister UInt32TypeReg, SPIRV::ModuleAnalysisInfo &MAI) {
   MCRegister Reg = MAI.getNextIDRegister();
   MCInst Inst;
   Inst.setOpcode(SPIRV::OpConstantI);
   Inst.addOperand(MCOperand::createReg(Reg));
-  Inst.addOperand(MCOperand::createReg(I32TypeReg));
+  Inst.addOperand(MCOperand::createReg(UInt32TypeReg));
   Inst.addOperand(MCOperand::createImm(static_cast<int64_t>(Value)));
   emitMCInst(Inst);
   return Reg;

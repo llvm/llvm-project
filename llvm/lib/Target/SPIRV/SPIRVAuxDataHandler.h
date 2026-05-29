@@ -89,9 +89,9 @@ private:
 
   void emitMCInst(MCInst &Inst);
   MCRegister findOrEmitOpTypeVoid(SPIRV::ModuleAnalysisInfo &MAI);
-  MCRegister findOrEmitOpTypeInt32(SPIRV::ModuleAnalysisInfo &MAI);
-  MCRegister emitOpConstantI32(uint32_t Value, MCRegister I32TypeReg,
-                               SPIRV::ModuleAnalysisInfo &MAI);
+  MCRegister findOrEmitOpTypeUInt32(SPIRV::ModuleAnalysisInfo &MAI);
+  MCRegister emitOpConstantUInt32(uint32_t Value, MCRegister UInt32TypeReg,
+                                  SPIRV::ModuleAnalysisInfo &MAI);
   void emitAuxDataExtInst(AuxDataOpcode Opcode, MCRegister VoidTypeReg,
                           MCRegister ExtSetReg, ArrayRef<MCRegister> Operands,
                           SPIRV::ModuleAnalysisInfo &MAI);
