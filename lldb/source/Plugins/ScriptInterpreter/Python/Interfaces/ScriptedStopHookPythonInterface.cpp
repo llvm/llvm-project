@@ -28,8 +28,8 @@ ScriptedStopHookPythonInterface::ScriptedStopHookPythonInterface(
 
 llvm::Expected<StructuredData::GenericSP>
 ScriptedStopHookPythonInterface::CreatePluginObject(
-    const ScriptedMetadata &scripted_metadata, lldb::TargetSP target_sp,
-    const StructuredDataImpl &args_sp) {
+    const ScriptedMetadata &scripted_metadata, lldb::TargetSP target_sp) {
+  StructuredDataImpl args_sp(scripted_metadata.GetArgsSP());
   return ScriptedPythonInterface::CreatePluginObject(scripted_metadata, nullptr,
                                                      target_sp, args_sp);
 }
