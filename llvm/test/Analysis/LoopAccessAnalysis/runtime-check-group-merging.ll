@@ -507,41 +507,38 @@ exit:
 }
 
 
-;; Test 5: Invariant + strided accesses to same base -> different steps.
-;; A strided store {%a,+,8} and an invariant store to %a have different
-;; recurrence steps (8 vs 0), so merging must NOT combine them.
+;; Test 5: Invariant + strided reads from same base -> different access ranges.
+;; A strided read {%a,+,8} and an invariant read from %a have different
+;; access ranges (8*n vs 8), so merging must NOT combine them.
+;; Both reads are in the same DepSet (same underlying object, both reads),
+;; so they pass the write-access guard and reach the access-range check.
 ;; Same result with and without flag: 2 checks, 3 separate groups.
 define void @different_steps_no_merge(ptr %a, ptr %out, i64 %n) {
 ; MERGE-LABEL: 'different_steps_no_merge'
 ; MERGE-NEXT:    loop:
-; MERGE-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; MERGE-NEXT:  Unknown data dependence.
+; MERGE-NEXT:      Memory dependences are safe with run-time checks
 ; MERGE-NEXT:      Dependences:
-; MERGE-NEXT:        Unknown:
-; MERGE-NEXT:            store double 1.000000e+00, ptr %gep.a, align 8 ->
-; MERGE-NEXT:            store double 2.000000e+00, ptr %a, align 8
-; MERGE-EMPTY:
 ; MERGE-NEXT:      Run-time memory checks:
 ; MERGE-NEXT:      Check 0:
 ; MERGE-NEXT:        Comparing group GRP0:
-; MERGE-NEXT:        ptr %a
-; MERGE-NEXT:        Against group GRP2:
 ; MERGE-NEXT:          %gep.out = getelementptr inbounds double, ptr %out, i64 %iv
-; MERGE-NEXT:      Check 1:
-; MERGE-NEXT:        Comparing group GRP1:
+; MERGE-NEXT:        Against group GRP1:
 ; MERGE-NEXT:          %gep.a = getelementptr inbounds double, ptr %a, i64 %iv
-; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:      Check 1:
+; MERGE-NEXT:        Comparing group GRP0:
 ; MERGE-NEXT:          %gep.out = getelementptr inbounds double, ptr %out, i64 %iv
+; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:        ptr %a
 ; MERGE-NEXT:      Grouped accesses:
 ; MERGE-NEXT:        Group GRP0:
-; MERGE-NEXT:          (Low: %a High: (8 + %a))
-; MERGE-NEXT:            Member: %a
+; MERGE-NEXT:          (Low: %out High: ((8 * %n) + %out))
+; MERGE-NEXT:            Member: {%out,+,8}<nuw><%loop>
 ; MERGE-NEXT:        Group GRP1:
 ; MERGE-NEXT:          (Low: %a High: ((8 * %n) + %a))
 ; MERGE-NEXT:            Member: {%a,+,8}<nuw><%loop>
 ; MERGE-NEXT:        Group GRP2:
-; MERGE-NEXT:          (Low: %out High: ((8 * %n) + %out))
-; MERGE-NEXT:            Member: {%out,+,8}<nuw><%loop>
+; MERGE-NEXT:          (Low: %a High: (8 + %a))
+; MERGE-NEXT:            Member: %a
 ; MERGE-EMPTY:
 ; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; MERGE-NEXT:      SCEV assumptions:
@@ -550,43 +547,38 @@ define void @different_steps_no_merge(ptr %a, ptr %out, i64 %n) {
 ;
 ; NOMERGE-LABEL: 'different_steps_no_merge'
 ; NOMERGE-NEXT:    loop:
-; NOMERGE-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; NOMERGE-NEXT:  Unknown data dependence.
+; NOMERGE-NEXT:      Memory dependences are safe with run-time checks
 ; NOMERGE-NEXT:      Dependences:
-; NOMERGE-NEXT:        Unknown:
-; NOMERGE-NEXT:            store double 1.000000e+00, ptr %gep.a, align 8 ->
-; NOMERGE-NEXT:            store double 2.000000e+00, ptr %a, align 8
-; NOMERGE-EMPTY:
 ; NOMERGE-NEXT:      Run-time memory checks:
 ; NOMERGE-NEXT:      Check 0:
 ; NOMERGE-NEXT:        Comparing group GRP0:
-; NOMERGE-NEXT:        ptr %a
-; NOMERGE-NEXT:        Against group GRP2:
 ; NOMERGE-NEXT:          %gep.out = getelementptr inbounds double, ptr %out, i64 %iv
-; NOMERGE-NEXT:      Check 1:
-; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:        Against group GRP1:
 ; NOMERGE-NEXT:          %gep.a = getelementptr inbounds double, ptr %a, i64 %iv
-; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:      Check 1:
+; NOMERGE-NEXT:        Comparing group GRP0:
 ; NOMERGE-NEXT:          %gep.out = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:        ptr %a
 ; NOMERGE-NEXT:      Grouped accesses:
 ; NOMERGE-NEXT:        Group GRP0:
-; NOMERGE-NEXT:          (Low: %a High: (8 + %a))
-; NOMERGE-NEXT:            Member: %a
+; NOMERGE-NEXT:          (Low: %out High: ((8 * %n) + %out))
+; NOMERGE-NEXT:            Member: {%out,+,8}<nuw><%loop>
 ; NOMERGE-NEXT:        Group GRP1:
 ; NOMERGE-NEXT:          (Low: %a High: ((8 * %n) + %a))
 ; NOMERGE-NEXT:            Member: {%a,+,8}<nuw><%loop>
 ; NOMERGE-NEXT:        Group GRP2:
-; NOMERGE-NEXT:          (Low: %out High: ((8 * %n) + %out))
-; NOMERGE-NEXT:            Member: {%out,+,8}<nuw><%loop>
+; NOMERGE-NEXT:          (Low: %a High: (8 + %a))
+; NOMERGE-NEXT:            Member: %a
 ; NOMERGE-EMPTY:
 ; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; NOMERGE-NEXT:      SCEV assumptions:
 ; NOMERGE-EMPTY:
 ; NOMERGE-NEXT:      Expressions re-written:
 ;
-;   GRP0: invariant store to %a (single address, step=0):
-;   GRP1: strided store to %a (step=8, different range from GRP0):
-;   GRP2: load from %out:
+;   GRP0: store to %out (write, different DepSet):
+;   GRP1: strided read from %a (step=8):
+;   GRP2: invariant read from %a (step=0, different from GRP1):
 entry:
   %cmp = icmp sgt i64 %n, 2
   br i1 %cmp, label %loop, label %exit
@@ -594,16 +586,17 @@ entry:
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 
-  ; Strided store: {%a,+,8}
+  ; Invariant read from %a (step = 0, different from strided)
+  %v.inv = load double, ptr %a, align 8
+
+  ; Strided read: {%a,+,8}
   %gep.a = getelementptr inbounds double, ptr %a, i64 %iv
-  store double 1.0, ptr %gep.a, align 8
+  %v.strided = load double, ptr %gep.a, align 8
 
-  ; Invariant store to %a (step = 0, different range)
-  store double 2.0, ptr %a, align 8
-
-  ; Read from %out
+  ; Store to %out (different DepSet, triggers runtime checks)
+  %sum = fadd double %v.strided, %v.inv
   %gep.out = getelementptr inbounds double, ptr %out, i64 %iv
-  %v = load double, ptr %gep.out, align 8
+  store double %sum, ptr %gep.out, align 8
 
   %iv.next = add nuw nsw i64 %iv, 1
   %cond = icmp slt i64 %iv.next, %n
