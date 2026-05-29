@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ACOSH_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_ACOSH_H
 
-#include "log.h"
 #include "log1p.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
@@ -24,12 +24,12 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-// Correctly-rounded log1p(u_hi + u_lo) via log1p's step-1 range reduction
-// followed by log1p_accurate (Float128 path).
+// Compute log1p(u_hi + u_lo) using log1p's step-1 range reduction and
+// polynomial, with the Float128 accurate path for correct rounding.
 LIBC_INLINE double acosh_log1p_dd(double u_hi, double u_lo) {
   using FPBits_t = fputil::FPBits<double>;
   using namespace log1p_internal;
+  using namespace common_constants_internal;
 
   constexpr int EXP_BIAS = FPBits_t::EXP_BIAS;
   constexpr int FRACTION_LEN = FPBits_t::FRACTION_LEN;
@@ -38,6 +38,7 @@ LIBC_INLINE double acosh_log1p_dd(double u_hi, double u_lo) {
   fputil::DoubleDouble x_dd = fputil::exact_add<false>(u_hi, 1.0);
   x_dd.lo += u_lo;
 
+  // Step-1 range reduction (identical to log1p's fast path).
   FPBits_t xhi_bits(x_dd.hi);
   uint64_t xhi_frac = xhi_bits.get_mantissa();
   uint64_t xdd_u = xhi_bits.uintval();
@@ -45,6 +46,7 @@ LIBC_INLINE double acosh_log1p_dd(double u_hi, double u_lo) {
   int idx = static_cast<int>((xhi_frac + (1ULL << (FRACTION_LEN - 8))) >>
                              (FRACTION_LEN - 7));
   int x_e = xhi_bits.get_exponent() + (idx >> 7);
+  double e_x = static_cast<double>(x_e);
 
   int64_t s_u = static_cast<int64_t>(xdd_u & FPBits_t::EXP_MASK) -
                 (static_cast<int64_t>(EXP_BIAS) << FRACTION_LEN);
@@ -73,9 +75,28 @@ LIBC_INLINE double acosh_log1p_dd(double u_hi, double u_lo) {
   fputil::DoubleDouble v_dd_red = fputil::exact_add(v_hi_p, v_lo_p.hi);
   v_dd_red.lo += v_lo_p.lo;
 
+  // Fast polynomial evaluation (same as log1p's fast path).
+  double hi = fputil::multiply_add(e_x, LOG_2_HI, LOG_R1_DD[idx].hi);
+  double lo = fputil::multiply_add(e_x, LOG_2_LO, LOG_R1_DD[idx].lo);
+  fputil::DoubleDouble r1 = fputil::exact_add(hi, v_dd_red.hi);
+  double v_sq = v_dd_red.hi * v_dd_red.hi;
+  double p0 = fputil::multiply_add(v_dd_red.hi, P_COEFFS[1], P_COEFFS[0]);
+  double p1 = fputil::multiply_add(v_dd_red.hi, P_COEFFS[3], P_COEFFS[2]);
+  double p2 = fputil::multiply_add(v_dd_red.hi, P_COEFFS[5], P_COEFFS[4]);
+  double p = fputil::polyeval(v_sq, (v_dd_red.lo + r1.lo) + lo, p0, p1, p2);
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  return r1.hi + p;
+#else
+  constexpr double ERR_HI[2] = {0x1.0p-85, 0.0};
+  double err = fputil::multiply_add(v_sq, P_ERR, ERR_HI[hi == 0.0]);
+  double left = r1.hi + (p - err);
+  double right = r1.hi + (p + err);
+  if (LIBC_LIKELY(left == right))
+    return left;
   return log1p_accurate(x_e, idx, v_dd_red);
+#endif
 }
-#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LIBC_INLINE double acosh(double x) {
   using FPBits = fputil::FPBits<double>;
@@ -101,18 +122,15 @@ LIBC_INLINE double acosh(double x) {
       }
       return x;
     }
-    // acosh(x) = log(x) + log(2) + O(1/x^2); correction < 0.5 ULP for x >=
-    // 2^28.
-    constexpr double LOG_2 = 0x1.62e42fefa39efp-1;
-    return math::log(x) + LOG_2;
+    // acosh(x) = log(2x) + O(1/x^2); use log1p(2x-1) directly.
+    // correction < 0.5 ULP for x >= 2^28.
+    return acosh_log1p_dd(fputil::multiply_add(2.0, x, -1.0), 0.0);
   }
 
   // acosh(x) = log1p(u),  u = (x-1) + sqrt(x^2-1).
-  // Compute u as a double-double to get a correctly-rounded result via
-  // log1p_accurate.
+  // Compute u as a double-double for a correctly-rounded result.
 
-  // x^2 - 1 as double-double; exact_mult and exact_add<false> are correct
-  // for all rounding modes (Veltkamp/FMA and Knuth's 2Sum respectively).
+  // x^2 - 1 as double-double.
   DoubleDouble x_sq = fputil::exact_mult(x, x);
   DoubleDouble v_dd = fputil::exact_add<false>(x_sq.hi, -1.0);
   v_dd.lo += x_sq.lo;
@@ -122,22 +140,12 @@ LIBC_INLINE double acosh(double x) {
   double r_v = fputil::multiply_add(s_hi, -s_hi, v_dd.hi);
   double s_lo = (r_v + v_dd.lo) / (2.0 * s_hi);
 
-  // x-1 as double-double (Knuth's 2Sum).
+  // t = x-1 and u = t+s, both as double-doubles (Knuth's 2Sum).
   DoubleDouble t_dd = fputil::exact_add<false>(x, -1.0);
+  DoubleDouble u_dd = fputil::exact_add<false>(t_dd.hi, s_hi);
+  double u_lo = u_dd.lo + t_dd.lo + s_lo;
 
-  // u = t + s as double-double via Knuth's 2Sum on the hi parts.
-  double u_hi = t_dd.hi + s_hi;
-  double u_t1 = u_hi - t_dd.hi;
-  double u_t2 = u_hi - u_t1;
-  double u_t3 = s_hi - u_t1;
-  double u_t4 = t_dd.hi - u_t2;
-  double u_lo = (u_t3 + u_t4) + (t_dd.lo + s_lo);
-
-#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-  return math::log1p(u_hi);
-#else
-  return acosh_log1p_dd(u_hi, u_lo);
-#endif
+  return acosh_log1p_dd(u_dd.hi, u_lo);
 }
 
 } // namespace math
