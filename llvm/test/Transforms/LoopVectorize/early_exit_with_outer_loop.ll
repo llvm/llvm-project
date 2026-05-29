@@ -415,3 +415,118 @@ early.exit.2:
 early.exit.3:
   ret i32 2
 }
+
+; Tests that dispatch blocks are correctly placed in the outermost loop when
+; the innermost loop has two uncountable early exits at different loop depths:
+; one to the outer loop and one outside all loops.
+define i64 @multi_early_exit_to_outer_and_outside(ptr dereferenceable(1024) %p1, ptr dereferenceable(1024) %p2, i1 %c) {
+; CHECK-LABEL: Loop info for function 'multi_early_exit_to_outer_and_outside':
+; CHECK-NEXT: Loop at depth 1 containing: %loop.outer<header>,%loop.middle,%loop.inner.end,%loop.middle.end,%loop.inner.found,%loop.outer.latch<latch><exiting>,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit.0,%vector.early.exit.check<exiting>
+; CHECK-NEXT:    Loop at depth 2 containing: %loop.middle<header>,%loop.inner.end<latch><exiting>,%vector.ph,%vector.body<exiting>,%vector.body.interim,%middle.block
+; CHECK-NEXT:        Loop at depth 3 containing: %vector.body<header><exiting>,%vector.body.interim<latch><exiting>
+entry:
+  br label %loop.outer
+
+loop.outer:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %loop.outer.latch ]
+  br label %loop.middle
+
+loop.middle:
+  br label %loop.inner
+
+loop.inner:
+  %iv = phi i64 [ 0, %loop.middle ], [ %iv.next, %loop.inner.inc ]
+  %gep1 = getelementptr inbounds i8, ptr %p1, i64 %iv
+  %ld1 = load i8, ptr %gep1, align 1
+  %cmp.early1 = icmp eq i8 %ld1, 0
+  br i1 %cmp.early1, label %loop.inner.found, label %loop.inner.body
+
+loop.inner.body:
+  %gep2 = getelementptr inbounds i8, ptr %p2, i64 %iv
+  %ld2 = load i8, ptr %gep2, align 1
+  %cmp.early2 = icmp eq i8 %ld2, 0
+  br i1 %cmp.early2, label %exit, label %loop.inner.inc
+
+loop.inner.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond, label %loop.inner.end, label %loop.inner
+
+loop.inner.found:
+  br label %loop.outer.latch
+
+loop.inner.end:
+  br i1 %c, label %loop.middle, label %loop.middle.end
+
+loop.middle.end:
+  br label %loop.outer.latch
+
+loop.outer.latch:
+  %res = phi i64 [ 0, %loop.middle.end ], [ 42, %loop.inner.found ]
+  %outer.iv.next = add i64 %outer.iv, 1
+  %outer.cond = icmp eq i64 %outer.iv.next, 100
+  br i1 %outer.cond, label %loop.outer.end, label %loop.outer
+
+loop.outer.end:
+  ret i64 %res
+
+exit:
+  ret i64 1
+}
+
+; Same as above but with early exits reversed: the first early exit goes outside
+; all loops and the second goes to the outer loop.
+define i64 @multi_early_exit_to_outside_and_outer(ptr dereferenceable(1024) %p1, ptr dereferenceable(1024) %p2, i1 %c) {
+; CHECK-LABEL: Loop info for function 'multi_early_exit_to_outside_and_outer':
+; CHECK-NEXT: Loop at depth 1 containing: %loop.outer<header>,%loop.middle,%loop.inner.end,%loop.middle.end,%loop.inner.found,%loop.outer.latch<latch><exiting>,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit.1,%vector.early.exit.check<exiting>
+; CHECK-NEXT:    Loop at depth 2 containing: %loop.middle<header>,%loop.inner.end<latch><exiting>,%vector.ph,%vector.body<exiting>,%vector.body.interim,%middle.block
+; CHECK-NEXT:        Loop at depth 3 containing: %vector.body<header><exiting>,%vector.body.interim<latch><exiting>
+entry:
+  br label %loop.outer
+
+loop.outer:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %loop.outer.latch ]
+  br label %loop.middle
+
+loop.middle:
+  br label %loop.inner
+
+loop.inner:
+  %iv = phi i64 [ 0, %loop.middle ], [ %iv.next, %loop.inner.inc ]
+  %gep1 = getelementptr inbounds i8, ptr %p1, i64 %iv
+  %ld1 = load i8, ptr %gep1, align 1
+  %cmp.early1 = icmp eq i8 %ld1, 0
+  br i1 %cmp.early1, label %exit, label %loop.inner.body
+
+loop.inner.body:
+  %gep2 = getelementptr inbounds i8, ptr %p2, i64 %iv
+  %ld2 = load i8, ptr %gep2, align 1
+  %cmp.early2 = icmp eq i8 %ld2, 0
+  br i1 %cmp.early2, label %loop.inner.found, label %loop.inner.inc
+
+loop.inner.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond, label %loop.inner.end, label %loop.inner
+
+loop.inner.found:
+  br label %loop.outer.latch
+
+loop.inner.end:
+  br i1 %c, label %loop.middle, label %loop.middle.end
+
+loop.middle.end:
+  br label %loop.outer.latch
+
+loop.outer.latch:
+  %res = phi i64 [ 0, %loop.middle.end ], [ 42, %loop.inner.found ]
+  %outer.iv.next = add i64 %outer.iv, 1
+  %outer.cond = icmp eq i64 %outer.iv.next, 100
+  br i1 %outer.cond, label %loop.outer.end, label %loop.outer
+
+loop.outer.end:
+  ret i64 %res
+
+exit:
+  ret i64 1
+}

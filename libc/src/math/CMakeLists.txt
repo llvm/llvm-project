@@ -52,6 +52,7 @@ add_math_entrypoint_object(acospif)
 add_math_entrypoint_object(acospif16)
  
 add_math_entrypoint_object(asin)
+add_math_entrypoint_object(asinbf16)
 add_math_entrypoint_object(asinf)
 add_math_entrypoint_object(asinf16)
 
@@ -366,6 +367,7 @@ add_math_entrypoint_object(ilogbbf16)
 
 add_math_entrypoint_object(isnan)
 add_math_entrypoint_object(isnanf)
+add_math_entrypoint_object(isnanf16)
 add_math_entrypoint_object(isnanl)
 
 add_math_entrypoint_object(issignaling)

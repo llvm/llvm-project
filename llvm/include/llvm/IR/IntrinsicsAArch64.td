@@ -65,12 +65,6 @@ def int_aarch64_sys  : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_i32_ty,
 // HINT
 
 def int_aarch64_hint : DefaultAttrsIntrinsic<[], [llvm_i32_ty]>;
-def int_aarch64_stshh_atomic_store
-    : Intrinsic<[],
-                [llvm_anyptr_ty, llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
-                 llvm_i32_ty],
-                [IntrHasSideEffects, ImmArg<ArgIndex<2>>,
-                 ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
 
 def int_aarch64_break : Intrinsic<[], [llvm_i32_ty],
     [IntrNoMem, IntrHasSideEffects, IntrNoReturn, IntrCold, ImmArg<ArgIndex<0>>]>;
@@ -1066,53 +1060,53 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
 
   class AdvSIMD_1Vec_PredLoad_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_ptr_ty],
+                [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyptr_ty],
                 [IntrReadMem, IntrArgMemOnly]>;
 
   class AdvSIMD_2Vec_PredLoad_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
-                [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_ptr_ty],
+                [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyptr_ty],
                 [IntrReadMem, IntrArgMemOnly]>;
 
   class AdvSIMD_3Vec_PredLoad_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>],
-                [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_ptr_ty],
+                [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyptr_ty],
                 [IntrReadMem, IntrArgMemOnly]>;
 
   class AdvSIMD_4Vec_PredLoad_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>,
                  LLVMMatchType<0>],
-                [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_ptr_ty],
+                [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyptr_ty],
                 [IntrReadMem, IntrArgMemOnly]>;
 
   class AdvSIMD_1Vec_PredLoad_WriteFFR_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_ptr_ty],
+                [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyptr_ty],
                 [IntrInaccessibleMemOrArgMemOnly]>;
 
   class AdvSIMD_1Vec_PredStore_Intrinsic
     : DefaultAttrsIntrinsic<[],
                 [llvm_anyvector_ty,
-                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_ptr_ty],
+                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyptr_ty],
                 [IntrArgMemOnly, NoCapture<ArgIndex<2>>]>;
 
   class AdvSIMD_2Vec_PredStore_Intrinsic
       : DefaultAttrsIntrinsic<[],
                   [llvm_anyvector_ty, LLVMMatchType<0>,
-                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_ptr_ty],
+                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyptr_ty],
                   [IntrArgMemOnly, NoCapture<ArgIndex<3>>]>;
 
   class AdvSIMD_3Vec_PredStore_Intrinsic
       : DefaultAttrsIntrinsic<[],
                   [llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>,
-                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_ptr_ty],
+                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyptr_ty],
                   [IntrArgMemOnly, NoCapture<ArgIndex<4>>]>;
 
   class AdvSIMD_4Vec_PredStore_Intrinsic
       : DefaultAttrsIntrinsic<[],
                   [llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>,
                    LLVMMatchType<0>,
-                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_ptr_ty],
+                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyptr_ty],
                   [IntrArgMemOnly, NoCapture<ArgIndex<5>>]>;
 
   class AdvSIMD_SVE_Index_Intrinsic<list<IntrinsicProperty> Attrs = []>
@@ -1568,7 +1562,7 @@ class AdvSIMD_GatherLoad_SV_64b_Offsets_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                 [
                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                  llvm_ptr_ty,
+                  llvm_anyptr_ty,
                   LLVMScalarOrSameVectorWidth<0, llvm_i64_ty>
                 ],
                 [IntrReadMem, IntrArgMemOnly]>;
@@ -1577,7 +1571,7 @@ class AdvSIMD_GatherLoad_SV_64b_Offsets_WriteFFR_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                 [
                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                  llvm_ptr_ty,
+                  llvm_anyptr_ty,
                   LLVMScalarOrSameVectorWidth<0, llvm_i64_ty>
                 ],
                 [IntrInaccessibleMemOrArgMemOnly]>;
@@ -1586,7 +1580,7 @@ class AdvSIMD_GatherLoad_SV_32b_Offsets_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                 [
                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                  llvm_ptr_ty,
+                  llvm_anyptr_ty,
                   LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>
                 ],
                 [IntrReadMem, IntrArgMemOnly]>;
@@ -1595,7 +1589,7 @@ class AdvSIMD_GatherLoad_SV_32b_Offsets_WriteFFR_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                 [
                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                  llvm_ptr_ty,
+                  llvm_anyptr_ty,
                   LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>
                 ],
                 [IntrInaccessibleMemOrArgMemOnly]>;
@@ -1622,7 +1616,7 @@ class AdvSIMD_GatherLoadQ_SV_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                 [
                   llvm_nxv1i1_ty,
-                  llvm_ptr_ty,
+                  llvm_anyptr_ty,
                   llvm_nxv2i64_ty
                 ],
                 [IntrReadMem, IntrArgMemOnly]>;
@@ -1641,7 +1635,7 @@ class AdvSIMD_ScatterStore_SV_64b_Offsets_Intrinsic
                [
                  llvm_anyvector_ty,
                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                 llvm_ptr_ty,
+                 llvm_anyptr_ty,
                  LLVMScalarOrSameVectorWidth<0, llvm_i64_ty>
                ],
                [IntrWriteMem, IntrArgMemOnly]>;
@@ -1651,7 +1645,7 @@ class AdvSIMD_ScatterStore_SV_32b_Offsets_Intrinsic
                [
                  llvm_anyvector_ty,
                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                 llvm_ptr_ty,
+                 llvm_anyptr_ty,
                  LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>
                ],
                [IntrWriteMem, IntrArgMemOnly]>;
@@ -1680,7 +1674,7 @@ class AdvSIMD_ScatterStoreQ_SV_Intrinsic
                [
                  llvm_anyvector_ty,
                  llvm_nxv1i1_ty,
-                 llvm_ptr_ty,
+                 llvm_anyptr_ty,
                  llvm_nxv2i64_ty
                ],
                [IntrWriteMem, IntrArgMemOnly]>;
@@ -1688,8 +1682,8 @@ class AdvSIMD_ScatterStoreQ_SV_Intrinsic
 class SVE_gather_prf_SV
     : DefaultAttrsIntrinsic<[],
                 [
-                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, // Predicate
-                  llvm_ptr_ty, // Base address
+                  LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>, // Predicate
+                  llvm_anyptr_ty, // Base address
                   llvm_anyvector_ty, // Offsets
                   llvm_i32_ty // Prfop
                 ],
@@ -1753,7 +1747,7 @@ def int_aarch64_sve_stnt1 : AdvSIMD_1Vec_PredStore_Intrinsic;
 //
 
 def int_aarch64_sve_prf
-  : DefaultAttrsIntrinsic<[], [llvm_anyvector_ty, llvm_ptr_ty, llvm_i32_ty],
+  : DefaultAttrsIntrinsic<[], [llvm_anyvector_ty, llvm_anyptr_ty, llvm_i32_ty],
                   [IntrArgMemOnly, ImmArg<ArgIndex<2>>]>;
 
 // Scalar + 32-bit scaled offset vector, zero extend, packed and
@@ -2465,6 +2459,8 @@ def int_aarch64_sve_stnt1_scatter_scalar_offset  : AdvSIMD_ScatterStore_VS_Intri
 //
 
 def int_aarch64_sve_saba          : AdvSIMD_3VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_sabal         : SVE2_3VectorArg_Long_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_uabal         : SVE2_3VectorArg_Long_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_shadd         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_shsub         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_shsub_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
@@ -2567,6 +2563,10 @@ def int_aarch64_sve_smaxp   : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable
 def int_aarch64_sve_sminp   : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_umaxp   : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uminp   : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
+
+def int_aarch64_sve_addqp   : AdvSIMD_2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_addsubp : AdvSIMD_2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_subp    : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 
 //
 // SVE2 - Widening pairwise arithmetic
@@ -2850,8 +2850,6 @@ def int_aarch64_sve_bfdot   : SVE_4Vec_BF16;
 def int_aarch64_sve_bfmlalb : SVE_4Vec_BF16;
 def int_aarch64_sve_bfmlalt : SVE_4Vec_BF16;
 
-def int_aarch64_sve_bfmmla  : SVE_4Vec_BF16;
-
 def int_aarch64_sve_bfdot_lane_v2   : SVE_4Vec_BF16_Indexed;
 def int_aarch64_sve_bfmlalb_lane_v2 : SVE_4Vec_BF16_Indexed;
 def int_aarch64_sve_bfmlalt_lane_v2 : SVE_4Vec_BF16_Indexed;
@@ -2862,13 +2860,13 @@ def int_aarch64_sve_bfmlalt_lane_v2 : SVE_4Vec_BF16_Indexed;
 
   class SVE2p1_Load_PN_X2_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
-                [llvm_aarch64_svcount_ty, llvm_ptr_ty],
+                [llvm_aarch64_svcount_ty, llvm_anyptr_ty],
                 [IntrReadMem, IntrArgMemOnly]>;
 
   class SVE2p1_Load_PN_X4_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
                              LLVMMatchType<0>, LLVMMatchType<0>],
-                [llvm_aarch64_svcount_ty, llvm_ptr_ty],
+                [llvm_aarch64_svcount_ty, llvm_anyptr_ty],
                 [IntrReadMem, IntrArgMemOnly]>;
 
 def int_aarch64_sve_ld1_pn_x2 : SVE2p1_Load_PN_X2_Intrinsic;
@@ -2882,7 +2880,7 @@ def int_aarch64_sve_ldnt1_pn_x4 : SVE2p1_Load_PN_X4_Intrinsic;
 
 class SVE2p1_Single_Load_Quadword
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                            [llvm_nxv1i1_ty, llvm_ptr_ty],
+                            [llvm_nxv1i1_ty, llvm_anyptr_ty],
                             [IntrReadMem, IntrArgMemOnly]>;
 def int_aarch64_sve_ld1uwq : SVE2p1_Single_Load_Quadword;
 def int_aarch64_sve_ld1udq : SVE2p1_Single_Load_Quadword;
@@ -2893,7 +2891,7 @@ def int_aarch64_sve_ld1udq : SVE2p1_Single_Load_Quadword;
 
 class SVE2p1_Single_Store_Quadword
     : DefaultAttrsIntrinsic<[],
-                            [llvm_anyvector_ty, llvm_nxv1i1_ty, llvm_ptr_ty],
+                            [llvm_anyvector_ty, llvm_nxv1i1_ty, llvm_anyptr_ty],
                             [IntrWriteMem, IntrArgMemOnly]>;
 def int_aarch64_sve_st1wq : SVE2p1_Single_Store_Quadword;
 def int_aarch64_sve_st1dq : SVE2p1_Single_Store_Quadword;
@@ -2913,13 +2911,13 @@ def int_aarch64_sve_st4q : AdvSIMD_4Vec_PredStore_Intrinsic;
 
   class SVE2p1_Store_PN_X2_Intrinsic
     : DefaultAttrsIntrinsic<[], [ llvm_anyvector_ty, LLVMMatchType<0>,
-                                  llvm_aarch64_svcount_ty, llvm_ptr_ty ],
+                                  llvm_aarch64_svcount_ty, llvm_anyptr_ty ],
                 [IntrWriteMem, IntrArgMemOnly]>;
 
   class SVE2p1_Store_PN_X4_Intrinsic
     : DefaultAttrsIntrinsic<[], [ llvm_anyvector_ty, LLVMMatchType<0>,
                                   LLVMMatchType<0>, LLVMMatchType<0>,
-                                  llvm_aarch64_svcount_ty, llvm_ptr_ty],
+                                  llvm_aarch64_svcount_ty, llvm_anyptr_ty],
                 [IntrWriteMem, IntrArgMemOnly]>;
 
 def int_aarch64_sve_st1_pn_x2 : SVE2p1_Store_PN_X2_Intrinsic;
@@ -2945,7 +2943,7 @@ def int_aarch64_sve_whilewr_d : SVE2_CONFLICT_DETECT_Intrinsic<[IntrSpeculatable
 let TargetPrefix = "aarch64" in {
   class SME_Load_Store_Intrinsic<LLVMType pred_ty>
     : DefaultAttrsIntrinsic<[],
-        [pred_ty, llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty], [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<2>>]>;
+        [pred_ty, llvm_anyptr_ty, llvm_i32_ty, llvm_i32_ty], [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<2>>]>;
 
   // Loads
   def int_aarch64_sme_ld1b_horiz : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
@@ -2973,7 +2971,7 @@ let TargetPrefix = "aarch64" in {
 
   // Spill + fill
   class SME_LDR_STR_ZA_Intrinsic
-    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_ptr_ty, llvm_i32_ty], [IntrInaccessibleMemOrArgMemOnly]>;
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyptr_ty, llvm_i32_ty], [IntrInaccessibleMemOrArgMemOnly]>;
   def int_aarch64_sme_ldr : SME_LDR_STR_ZA_Intrinsic;
   def int_aarch64_sme_str : SME_LDR_STR_ZA_Intrinsic;
 
@@ -3783,6 +3781,13 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_sqcvtun_x4 : SVE2_CVT_VG4_SINGLE_Intrinsic;
 
   //
+  // Multi-vector saturating shift right narrow and interleave
+  //
+  def int_aarch64_sve_sqshrn_x2 : SVE2_VG2_Multi_Imm_Intrinsic;
+  def int_aarch64_sve_uqshrn_x2 : SVE2_VG2_Multi_Imm_Intrinsic;
+  def int_aarch64_sve_sqshrun_x2 : SVE2_VG2_Multi_Imm_Intrinsic;
+
+  //
   // Multi-Single add/sub
   //
 
@@ -3943,7 +3948,7 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_sel_x4  : SVE2_VG4_Sel_Intrinsic;
 
   class SME_LDR_STR_ZT_Intrinsic
-    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_ptr_ty], [IntrInaccessibleMemOrArgMemOnly]>;
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyptr_ty], [IntrInaccessibleMemOrArgMemOnly]>;
   def int_aarch64_sme_ldr_zt : SME_LDR_STR_ZT_Intrinsic;
   def int_aarch64_sme_str_zt : SME_LDR_STR_ZT_Intrinsic;
 

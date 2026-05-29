@@ -37,7 +37,8 @@ static bool isMemRefTypeLegalForEmitC(MemRefType memRefType) {
 namespace {
 /// Implement the interface to convert MemRef to EmitC.
 struct MemRefToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
-  using ConvertToEmitCPatternInterface::ConvertToEmitCPatternInterface;
+  MemRefToEmitCDialectInterface(Dialect *dialect)
+      : ConvertToEmitCPatternInterface(dialect) {}
 
   /// Hook for derived dialect interface to provide conversion patterns
   /// and mark dialect legal for the conversion target.

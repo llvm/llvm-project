@@ -19,6 +19,7 @@
 #include "lldb/Host/Host.h"
 #ifdef _WIN32
 #include "lldb/Host/windows/PseudoConsole.h"
+#include "lldb/Host/windows/WindowsFileAction.h"
 #else
 #include "lldb/Host/PseudoTerminal.h"
 #endif
@@ -29,8 +30,10 @@ namespace lldb_private {
 
 #if defined(_WIN32)
 using PTY = PseudoConsole;
+using FileActionImpl = WindowsFileAction;
 #else
 using PTY = PseudoTerminal;
+using FileActionImpl = FileAction;
 #endif
 
 // ProcessLaunchInfo
@@ -46,13 +49,17 @@ public:
                     const FileSpec &stderr_file_spec,
                     const FileSpec &working_dir, uint32_t launch_flags);
 
-  void AppendFileAction(const FileAction &info) {
+  void AppendFileAction(const FileActionImpl &info) {
     m_file_actions.push_back(info);
   }
 
   bool AppendCloseFileAction(int fd);
 
   bool AppendDuplicateFileAction(int fd, int dup_fd);
+
+#ifdef _WIN32
+  bool AppendDuplicateFileAction(HANDLE fh, HANDLE dup_fh);
+#endif
 
   bool AppendOpenFileAction(int fd, const FileSpec &file_spec, bool read,
                             bool write);
@@ -64,11 +71,23 @@ public:
   // but stderr doesn't, then only stderr will be redirected to a pty.)
   llvm::Error SetUpPtyRedirection();
 
+#ifdef _WIN32
+  // Redirect stdin/stdout/stderr to anonymous pipes instead of a ConPTY.
+  // Used when terminal emulation is not needed (e.g. lldb-dap internalConsole).
+  llvm::Error SetUpPipeRedirection();
+#endif
+
+  bool HasPTY() const { return m_pty != nullptr; }
+
   size_t GetNumFileActions() const { return m_file_actions.size(); }
 
   const FileAction *GetFileActionAtIndex(size_t idx) const;
 
   const FileAction *GetFileActionForFD(int fd) const;
+
+  /// Returns true if fd has an explicit file action, or is the destination of a
+  /// duplicate action.
+  bool IsFDRedirected(int fd) const;
 
   Flags &GetFlags() { return m_flags; }
 
@@ -138,7 +157,7 @@ public:
 #ifdef _WIN32
     if (!m_pty)
       return false;
-    return GetPTY().GetPseudoTerminalHandle() != ((HANDLE)(long long)-1) &&
+    return GetPTY().GetMode() != PseudoConsole::Mode::None &&
            GetNumFileActions() == 0;
 #else
     return true;
@@ -160,7 +179,8 @@ protected:
   std::string m_plugin_name;
   FileSpec m_shell;
   Flags m_flags; // Bitwise OR of bits from lldb::LaunchFlags
-  std::vector<FileAction> m_file_actions; // File actions for any other files
+  std::vector<FileActionImpl>
+      m_file_actions; // File actions for any other files
   std::shared_ptr<PTY> m_pty;
   uint32_t m_resume_count = 0; // How many times do we resume after launching
   Host::MonitorChildProcessCallback m_monitor_callback;

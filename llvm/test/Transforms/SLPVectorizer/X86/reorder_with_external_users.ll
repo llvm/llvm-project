@@ -12,16 +12,17 @@ define void @rotate_with_external_users(ptr %A, ptr %ptr) {
 ; CHECK-LABEL: @rotate_with_external_users(
 ; CHECK-NEXT:  bb1:
 ; CHECK-NEXT:    [[LD:%.*]] = load double, ptr undef, align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[LD]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> [[SHUFFLE]], <double 2.200000e+00, double 1.100000e+00>
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], <double 2.200000e+00, double 1.100000e+00>
-; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[ADD1:%.*]] = fadd double [[LD]], 1.100000e+00
+; CHECK-NEXT:    [[ADD2:%.*]] = fadd double [[LD]], 2.200000e+00
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul double [[ADD1]], 1.100000e+00
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul double [[ADD2]], 2.200000e+00
+; CHECK-NEXT:    [[PTRA2:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 1
+; CHECK-NEXT:    store double [[TMP7]], ptr [[A]], align 8
+; CHECK-NEXT:    store double [[TMP4]], ptr [[PTRA2]], align 8
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP2]], <double 4.400000e+00, double 3.300000e+00>
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd double [[TMP4]], 3.300000e+00
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd double [[TMP7]], 4.400000e+00
 ; CHECK-NEXT:    [[SEED:%.*]] = fcmp ogt double [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    ret void
 ;

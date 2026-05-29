@@ -52,6 +52,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/ExpandVariadics.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/IRBuilder.h"
@@ -128,6 +129,9 @@ public:
   // Targets implemented so far all have the same trivial lowering for these
   bool vaEndIsNop() { return true; }
   bool vaCopyIsMemcpy() { return true; }
+
+  // Per-target overrides of special symbols.
+  virtual bool ignoreFunction(const Function *F) { return false; }
 
   // Any additional address spaces used in va intrinsics that should be
   // expanded.
@@ -229,17 +233,24 @@ public:
   bool expandVAIntrinsicCall(IRBuilder<> &Builder, const DataLayout &DL,
                              VACopyInst *Inst);
 
-  FunctionType *inlinableVariadicFunctionType(Module &M, FunctionType *FTy) {
+  FunctionType *inlinableVariadicFunctionType(Module &M, FunctionType *FTy,
+                                              Type *ReturnType) {
     // The type of "FTy" with the ... removed and a va_list appended
     SmallVector<Type *> ArgTypes(FTy->params());
     ArgTypes.push_back(ABI->vaListParameterType(M));
-    return FunctionType::get(FTy->getReturnType(), ArgTypes,
-                             /*IsVarArgs=*/false);
+    return FunctionType::get(ReturnType, ArgTypes, /*IsVarArgs=*/false);
+  }
+
+  FunctionType *inlinableVariadicFunctionType(Module &M, FunctionType *FTy) {
+    return inlinableVariadicFunctionType(M, FTy, FTy->getReturnType());
   }
 
   bool expansionApplicableToFunction(Module &M, Function *F) {
     if (F->isIntrinsic() || !F->isVarArg() ||
         F->hasFnAttribute(Attribute::Naked))
+      return false;
+
+    if (ABI->ignoreFunction(F))
       return false;
 
     if (!isValidCallingConv(F))
@@ -627,6 +638,9 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   bool Changed = false;
   const DataLayout &DL = M.getDataLayout();
 
+  if (ABI->ignoreFunction(CB->getCalledFunction()))
+    return Changed;
+
   if (!expansionApplicableToFunctionCall(CB)) {
     if (rewriteABI())
       report_fatal_error("Cannot lower callbase instruction");
@@ -636,12 +650,9 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   // This is tricky. The call instruction's function type might not match
   // the type of the caller. When optimising, can leave it unchanged.
   // Webassembly detects that inconsistency and repairs it.
-  FunctionType *FuncType = CB->getFunctionType();
-  if (FuncType != VarargFunctionType) {
+  if (CB->getFunctionType() != VarargFunctionType)
     if (!rewriteABI())
       return Changed;
-    FuncType = VarargFunctionType;
-  }
 
   auto &Ctx = CB->getContext();
 
@@ -659,7 +670,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
 
   uint64_t CurrentOffset = 0;
 
-  for (unsigned I = FuncType->getNumParams(), E = CB->arg_size(); I < E; ++I) {
+  for (unsigned I : seq(VarargFunctionType->getNumParams(), CB->arg_size())) {
     Value *ArgVal = CB->getArgOperand(I);
     const bool IsByVal = CB->paramHasAttr(I, Attribute::ByVal);
     const bool IsByRef = CB->paramHasAttr(I, Attribute::ByRef);
@@ -764,7 +775,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   Builder.CreateLifetimeStart(Alloced);
   Frame.initializeStructAlloca(DL, Builder, Alloced, VarargsTy);
 
-  const unsigned NumArgs = FuncType->getNumParams();
+  const unsigned NumArgs = VarargFunctionType->getNumParams();
   SmallVector<Value *> Args(CB->arg_begin(), CB->arg_begin() + NumArgs);
 
   // Initialize a va_list pointing to that struct and pass it as the last
@@ -800,7 +811,10 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
 
   if (CallInst *CI = dyn_cast<CallInst>(CB)) {
     Value *Dst = NF ? NF : CI->getCalledOperand();
-    FunctionType *NFTy = inlinableVariadicFunctionType(M, VarargFunctionType);
+    // Use the type of the call site rather than the function type to ensure
+    // RAUW succeeds in the case of a mismatching return type.
+    FunctionType *NFTy =
+        inlinableVariadicFunctionType(M, VarargFunctionType, CB->getType());
 
     NewCB = CallInst::Create(NFTy, Dst, Args, OpBundles, "", CI->getIterator());
 
@@ -982,6 +996,22 @@ struct SPIRV final : public VariadicABIInfo {
     // promoting types to their appropriate size and alignment.
     Align A = DL.getABITypeAlign(Parameter);
     return {A, false};
+  }
+
+  // The SPIR-V backend has special handling for builtins.
+  bool ignoreFunction(const Function *F) override {
+    if (!F->isDeclaration())
+      return false;
+
+    std::string Demangled = llvm::demangle(F->getName());
+    StringRef DemangledName(Demangled);
+
+    // Skip any SPIR-V builtins.
+    if (DemangledName.starts_with("__spirv_") ||
+        DemangledName.starts_with("printf("))
+      return true;
+
+    return false;
   }
 
   // We will likely see va intrinsics in the generic addrspace (4).

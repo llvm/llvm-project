@@ -15,6 +15,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertType.h"
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/DirectivesCommon.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
@@ -39,6 +40,7 @@
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/MLIRContext.h"
@@ -65,7 +67,15 @@ static llvm::cl::opt<bool> strideIncludeLowerExtent(
 
 static llvm::cl::opt<bool> lowerDoLoopToAccLoop(
     "openacc-do-loop-to-acc-loop",
-    llvm::cl::desc("Whether to lower do loops as `acc.loop` operations."),
+    llvm::cl::desc(
+        "Whether to lower do loops inside OpenACC compute constructs "
+        "as `acc.loop` operations."),
+    llvm::cl::init(true));
+
+static llvm::cl::opt<bool> lowerDoLoopToAccLoopInAccRoutine(
+    "openacc-do-loop-to-acc-loop-in-acc-routine",
+    llvm::cl::desc("Whether to lower do loops inside explicit `!$acc routine` "
+                   "procedures as `acc.loop` operations."),
     llvm::cl::init(true));
 
 static llvm::cl::opt<bool> enableSymbolRemapping(
@@ -789,11 +799,11 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
     // For private/firstprivate, attach (and optionally record) the recipe.
     if constexpr (std::is_same_v<Op, mlir::acc::PrivateOp>) {
       mlir::SymbolRefAttr recipeAttr = fir::acc::createOrGetPrivateRecipe(
-          builder, operandLocation, baseAddr.getType(), bounds);
+          builder, operandLocation, baseAddr, bounds);
       op.setRecipeAttr(recipeAttr);
     } else if constexpr (std::is_same_v<Op, mlir::acc::FirstprivateOp>) {
       mlir::SymbolRefAttr recipeAttr = fir::acc::createOrGetFirstprivateRecipe(
-          builder, operandLocation, baseAddr.getType(), bounds);
+          builder, operandLocation, baseAddr, bounds);
       op.setRecipeAttr(recipeAttr);
     }
   }
@@ -970,14 +980,6 @@ static void genDeclareDataOperandOperations(
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
 
-    if (designator) {
-      Fortran::semantics::SomeExpr someExpr = *designator;
-      if (Fortran::lower::detail::getRef<Fortran::evaluate::Component>(
-              someExpr)) {
-        TODO(operandLocation,
-             "OpenACC declare with component reference not yet supported");
-      }
-    }
     fir::factory::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
             mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
@@ -1176,13 +1178,12 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
         /*structured=*/true, /*implicit=*/false,
         mlir::acc::DataClause::acc_reduction, info.addr.getType(), async,
         asyncDeviceTypes, asyncOnlyDeviceTypes, /*unwrapBoxAddr=*/true);
-    mlir::Type ty = op.getAccVar().getType();
     mlir::Attribute fastMathAttr;
     if (builder.getFastMathFlags() != mlir::arith::FastMathFlags::none)
       fastMathAttr = mlir::arith::FastMathFlagsAttr::get(
           builder.getContext(), builder.getFastMathFlags());
     mlir::SymbolRefAttr recipe = fir::acc::createOrGetReductionRecipe(
-        builder, operandLocation, ty, mlirOp, bounds, fastMathAttr);
+        builder, operandLocation, info.addr, mlirOp, bounds, fastMathAttr);
     op.setRecipeAttr(recipe);
     reductionOperands.push_back(op.getAccVar());
     // Track the symbol and its corresponding mlir::Value if requested so that
@@ -1216,7 +1217,8 @@ createRegionOp(fir::FirOpBuilder &builder, mlir::Location loc,
 
   // If it is an unstructured region and is not the outer region of a combined
   // construct, create empty blocks for all evaluations.
-  if (eval.lowerAsUnstructured() && !outerCombined)
+  if (eval.lowerAsUnstructured() && !outerCombined &&
+      eval.hasNestedEvaluations())
     Fortran::lower::createEmptyRegionBlocks<mlir::acc::TerminatorOp,
                                             mlir::acc::YieldOp>(
         builder, eval.getNestedEvaluations());
@@ -1427,8 +1429,8 @@ static void privatizeIv(
 
   if (privateOp == nullptr) {
     llvm::SmallVector<mlir::Value> noBounds;
-    mlir::SymbolRefAttr recipe = fir::acc::createOrGetPrivateRecipe(
-        builder, loc, ivValue.getType(), noBounds);
+    mlir::SymbolRefAttr recipe =
+        fir::acc::createOrGetPrivateRecipe(builder, loc, ivValue, noBounds);
 
     std::stringstream asFortran;
     asFortran << Fortran::lower::mangle::demangleName(toStringRef(sym.name()));
@@ -1447,6 +1449,8 @@ static void privatizeIv(
                          Fortran::semantics::SymbolRef(sym));
 }
 
+static bool isInsideSeqOpenACCRoutine(fir::FirOpBuilder &builder);
+
 static void determineDefaultLoopParMode(
     Fortran::lower::AbstractConverter &converter, mlir::acc::LoopOp &loopOp,
     llvm::SmallVector<mlir::Attribute> &seqDeviceTypes,
@@ -1463,22 +1467,23 @@ static void determineDefaultLoopParMode(
   if (hasDefaultSeq || hasDefaultIndependent || hasDefaultAuto)
     return; // Default loop par mode is already specified.
 
-  mlir::Region *currentRegion =
-      converter.getFirOpBuilder().getBlock()->getParent();
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Region *currentRegion = builder.getBlock()->getParent();
   mlir::Operation *parentOp = mlir::acc::getEnclosingComputeOp(*currentRegion);
   const bool isOrphanedLoop = !parentOp;
-  if (isOrphanedLoop ||
+  if ((isOrphanedLoop && !isInsideSeqOpenACCRoutine(builder)) ||
       mlir::isa_and_present<mlir::acc::ParallelOp>(parentOp)) {
     // As per OpenACC 3.3 standard section 2.9.6 independent clause:
     // A loop construct with no auto or seq clause is treated as if it has the
     // independent clause when it is an orphaned loop construct or its parent
     // compute construct is a parallel construct.
     independentDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-        converter.getFirOpBuilder().getContext(), mlir::acc::DeviceType::None));
-  } else if (mlir::isa_and_present<mlir::acc::SerialOp>(parentOp)) {
-    // Serial construct implies `seq` clause on loop. However, this
-    // conflicts with parallelism assignment if already set. Therefore check
-    // that first.
+        builder.getContext(), mlir::acc::DeviceType::None));
+  } else if (mlir::isa_and_present<mlir::acc::SerialOp>(parentOp) ||
+             isInsideSeqOpenACCRoutine(builder)) {
+    // Serial construct or seq accelerator routine implies `seq` clause on loop.
+    // However, this conflicts with parallelism assignment if already set.
+    // Therefore check that first.
     bool hasDefaultGangWorkerOrVector =
         loopOp.hasVector() || loopOp.getVectorValue() || loopOp.hasWorker() ||
         loopOp.getWorkerValue() || loopOp.hasGang() ||
@@ -1487,8 +1492,7 @@ static void determineDefaultLoopParMode(
         loopOp.getGangValue(mlir::acc::GangArgType::Static);
     if (!hasDefaultGangWorkerOrVector)
       seqDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-          converter.getFirOpBuilder().getContext(),
-          mlir::acc::DeviceType::None));
+          builder.getContext(), mlir::acc::DeviceType::None));
     // Since the loop has some parallelism assigned - we cannot assign `seq`.
     // However, the `acc.loop` verifier will check that one of seq, independent,
     // or auto is marked. Seems reasonable to mark as auto since the OpenACC
@@ -1497,8 +1501,7 @@ static void determineDefaultLoopParMode(
     // ignore any gang, worker, or vector clauses on the loop construct"
     else
       autoDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-          converter.getFirOpBuilder().getContext(),
-          mlir::acc::DeviceType::None));
+          builder.getContext(), mlir::acc::DeviceType::None));
   } else {
     // As per OpenACC 3.3 standard section 2.9.7 auto clause:
     // When the parent compute construct is a kernels construct, a loop
@@ -1507,18 +1510,27 @@ static void determineDefaultLoopParMode(
     assert(mlir::isa_and_present<mlir::acc::KernelsOp>(parentOp) &&
            "Expected kernels construct");
     autoDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-        converter.getFirOpBuilder().getContext(), mlir::acc::DeviceType::None));
+        builder.getContext(), mlir::acc::DeviceType::None));
   }
 }
 
 // Helper to visit Bounds of DO LOOP nest.
+//
+// When `markInnerCollapsed` is true (the default), inner DOs that are absorbed
+// into the parent acc.loop's collapse semantics are tagged via
+// markDoConstructAsCollapsed so that genFIR(DoConstruct) skips re-emitting
+// their loop machinery (the parent acc.loop iterates and supplies the IV via
+// a block argument). Pass `false` when the parent acc.loop is unstructured:
+// it has no IV block arguments and the inner DO's iteration mechanics must
+// be emitted as ordinary control flow inside the acc.loop body.
 static void visitLoopControl(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::DoConstruct &outerDoConstruct,
     uint64_t loopsToProcess, Fortran::lower::pft::Evaluation &eval,
     std::function<void(const Fortran::parser::LoopControl::Bounds &,
                        mlir::Location)>
-        callback) {
+        callback,
+    bool markInnerCollapsed = true) {
   Fortran::lower::pft::Evaluation *crtEval = &eval.getFirstNestedEvaluation();
   for (uint64_t i = 0; i < loopsToProcess; ++i) {
     const Fortran::parser::LoopControl *loopControl;
@@ -1545,11 +1557,134 @@ static void visitLoopControl(
       if (!innerDo)
         break; // No deeper loop; stop collecting collapsed bounds.
 
-      loopControl = &*innerDo->GetLoopControl();
+      if (markInnerCollapsed)
+        Fortran::lower::markDoConstructAsCollapsed(*innerDo);
       mlir::Location loc =
           converter.genLocation(Fortran::parser::FindSourceLocation(*innerDo));
+      if (innerDo->IsDoConcurrent())
+        TODO(loc, "OpenACC LOOP with nested DO CONCURRENT");
+      loopControl = &*innerDo->GetLoopControl();
       callback(std::get<Fortran::parser::LoopControl::Bounds>(loopControl->u),
                loc);
+    }
+  }
+}
+
+// Process DO CONCURRENT locality specs (REDUCE, LOCAL, LOCAL_INIT, SHARED)
+// that appear inside an ACC construct, converting them to the corresponding
+// ACC clauses. localSymPairs tracks (HostAssoc, ultimate) symbol pairs for
+// LOCAL/LOCAL_INIT so that the HostAssoc symbol can be bound after region
+// creation.
+static void processDoConcurrentLocalitySpecs(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    fir::FirOpBuilder &builder,
+    const std::list<Fortran::parser::LocalitySpec> &localityList,
+    llvm::SmallVector<mlir::Value> &privateOperands,
+    llvm::SmallVector<mlir::Value> &firstprivateOperands,
+    llvm::SmallVector<mlir::Value> &reductionOperands, AccDataMap &dataMap,
+    llvm::SmallVector<
+        std::pair<Fortran::semantics::SymbolRef, Fortran::semantics::SymbolRef>>
+        &localSymPairs) {
+  for (const Fortran::parser::LocalitySpec &locSpec : localityList) {
+    if (const auto *reduceSpec =
+            std::get_if<Fortran::parser::LocalitySpec::Reduce>(&locSpec.u)) {
+      const auto &reduceOp =
+          std::get<Fortran::parser::ReductionOperator>(reduceSpec->t);
+      const auto &names =
+          std::get<std::list<Fortran::parser::Name>>(reduceSpec->t);
+      for (const Fortran::parser::Name &name : names) {
+        const Fortran::semantics::Symbol &sym = name.symbol->GetUltimate();
+        mlir::Value symAddr = converter.getSymbolAddress(sym);
+        assert(symAddr && "expected symbol to have an address");
+
+        mlir::Type reductionTy = fir::unwrapRefType(symAddr.getType());
+        if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(reductionTy))
+          reductionTy = seqTy.getEleTy();
+
+        if (!isSupportedReductionType(reductionTy))
+          TODO(loc, "DO CONCURRENT reduction with unsupported type");
+
+        mlir::acc::ReductionOperator mlirOp =
+            getReductionOperator(reduceOp, reductionTy, converter);
+
+        llvm::SmallVector<mlir::Value> bounds;
+        std::stringstream asFortran;
+        asFortran << Fortran::lower::mangle::demangleName(
+            toStringRef(sym.name()));
+        auto op = createDataEntryOp<mlir::acc::ReductionOp>(
+            builder, loc, symAddr, asFortran, bounds, /*structured=*/true,
+            /*implicit=*/false, mlir::acc::DataClause::acc_reduction,
+            symAddr.getType(),
+            /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+        mlir::Attribute fastMathAttr;
+        if (builder.getFastMathFlags() != mlir::arith::FastMathFlags::none)
+          fastMathAttr = mlir::arith::FastMathFlagsAttr::get(
+              builder.getContext(), builder.getFastMathFlags());
+        mlir::SymbolRefAttr recipe = fir::acc::createOrGetReductionRecipe(
+            builder, loc, symAddr, mlirOp, bounds, fastMathAttr);
+        op.setRecipeAttr(recipe);
+        reductionOperands.push_back(op.getAccVar());
+        dataMap.emplaceSymbol(op.getAccVar(),
+                              Fortran::semantics::SymbolRef(sym));
+      }
+    } else if (const auto *localSpec =
+                   std::get_if<Fortran::parser::LocalitySpec::Local>(
+                       &locSpec.u)) {
+      for (const Fortran::parser::Name &name : localSpec->v) {
+        const Fortran::semantics::Symbol &ultimateSym =
+            name.symbol->GetUltimate();
+        mlir::Value symAddr = converter.getSymbolAddress(ultimateSym);
+        assert(symAddr && "expected symbol to have an address");
+
+        llvm::SmallVector<mlir::Value> bounds;
+        std::stringstream asFortran;
+        asFortran << Fortran::lower::mangle::demangleName(
+            toStringRef(ultimateSym.name()));
+        auto op = createDataEntryOp<mlir::acc::PrivateOp>(
+            builder, loc, symAddr, asFortran, bounds, /*structured=*/true,
+            /*implicit=*/false, mlir::acc::DataClause::acc_private,
+            symAddr.getType(),
+            /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+        mlir::SymbolRefAttr recipe =
+            fir::acc::createOrGetPrivateRecipe(builder, loc, symAddr, bounds);
+        op.setRecipeAttr(recipe);
+        privateOperands.push_back(op.getAccVar());
+        dataMap.emplaceSymbol(op.getAccVar(),
+                              Fortran::semantics::SymbolRef(ultimateSym));
+        if (name.symbol->HasLocalLocality())
+          localSymPairs.emplace_back(
+              Fortran::semantics::SymbolRef(*name.symbol),
+              Fortran::semantics::SymbolRef(ultimateSym));
+      }
+    } else if (const auto *localInitSpec =
+                   std::get_if<Fortran::parser::LocalitySpec::LocalInit>(
+                       &locSpec.u)) {
+      for (const Fortran::parser::Name &name : localInitSpec->v) {
+        const Fortran::semantics::Symbol &ultimateSym =
+            name.symbol->GetUltimate();
+        mlir::Value symAddr = converter.getSymbolAddress(ultimateSym);
+        assert(symAddr && "expected symbol to have an address");
+
+        llvm::SmallVector<mlir::Value> bounds;
+        std::stringstream asFortran;
+        asFortran << Fortran::lower::mangle::demangleName(
+            toStringRef(ultimateSym.name()));
+        auto op = createDataEntryOp<mlir::acc::FirstprivateOp>(
+            builder, loc, symAddr, asFortran, bounds, /*structured=*/true,
+            /*implicit=*/false, mlir::acc::DataClause::acc_firstprivate,
+            symAddr.getType(),
+            /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+        mlir::SymbolRefAttr recipe = fir::acc::createOrGetFirstprivateRecipe(
+            builder, loc, symAddr, bounds);
+        op.setRecipeAttr(recipe);
+        firstprivateOperands.push_back(op.getAccVar());
+        dataMap.emplaceSymbol(op.getAccVar(),
+                              Fortran::semantics::SymbolRef(ultimateSym));
+        if (name.symbol->HasLocalLocality())
+          localSymPairs.emplace_back(
+              Fortran::semantics::SymbolRef(*name.symbol),
+              Fortran::semantics::SymbolRef(ultimateSym));
+      }
     }
   }
 }
@@ -1571,7 +1706,12 @@ static void processDoLoopBounds(
     llvm::SmallVector<mlir::Type> &ivTypes,
     llvm::SmallVector<mlir::Location> &ivLocs,
     llvm::SmallVector<bool> &inclusiveBounds,
-    llvm::SmallVector<mlir::Location> &locs, uint64_t loopsToProcess) {
+    llvm::SmallVector<mlir::Location> &locs, uint64_t loopsToProcess,
+    llvm::SmallVector<mlir::Value> &reductionOperands,
+    llvm::SmallVector<mlir::Value> &firstprivateOperands, AccDataMap &dataMap,
+    llvm::SmallVector<
+        std::pair<Fortran::semantics::SymbolRef, Fortran::semantics::SymbolRef>>
+        &localSymPairs) {
   assert(loopsToProcess > 0 && "expect at least one loop");
   locs.push_back(currentLocation); // Location of the directive
   bool isDoConcurrent = outerDoConstruct.IsDoConcurrent();
@@ -1583,9 +1723,13 @@ static void processDoLoopBounds(
         &*outerDoConstruct.GetLoopControl();
     const auto &concurrent =
         std::get<Fortran::parser::LoopControl::Concurrent>(loopControl->u);
-    if (!std::get<std::list<Fortran::parser::LocalitySpec>>(concurrent.t)
-             .empty())
-      TODO(currentLocation, "DO CONCURRENT with locality spec inside ACC");
+
+    const auto &localityList =
+        std::get<std::list<Fortran::parser::LocalitySpec>>(concurrent.t);
+    if (!localityList.empty())
+      processDoConcurrentLocalitySpecs(
+          converter, currentLocation, builder, localityList, privateOperands,
+          firstprivateOperands, reductionOperands, dataMap, localSymPairs);
 
     const auto &concurrentHeader =
         std::get<Fortran::parser::ConcurrentHeader>(concurrent.t);
@@ -1708,8 +1852,21 @@ void AccDataMap::remapDataOperandSymbols(
     }
     std::optional<fir::FortranVariableOpInterface> hostDef =
         symbolMap.lookupVariableDefinition(symbol);
-    assert(hostDef.has_value() && llvm::isa<hlfir::DeclareOp>(*hostDef) &&
-           "expected symbol to be mapped to hlfir.declare");
+    if (!hostDef.has_value() || !llvm::isa<hlfir::DeclareOp>(*hostDef)) {
+      // Privatized loop induction variables in explicit acc routine functions
+      // may not have a host hlfir.declare to clone. Bind the symbol directly
+      // to a declare of the acc.private result.
+      std::string uniqName = converter.mangleName(symbol.get());
+      fir::FortranVariableFlagsAttr attributes =
+          Fortran::lower::translateSymbolAttributes(builder.getContext(),
+                                                    symbol->GetUltimate());
+      auto declare = hlfir::DeclareOp::create(
+          builder, loc, value, uniqName, /*shape=*/nullptr,
+          /*typeparams=*/{}, /*dummyScope=*/nullptr, /*storage=*/nullptr,
+          /*storage_offset=*/0, attributes);
+      symbolMap.addVariableDefinition(symbol, declare, /*force=*/true);
+      continue;
+    }
     auto hostDeclare = llvm::cast<hlfir::DeclareOp>(*hostDef);
     // Replace base input and DummyScope inputs.
     mlir::Value hostInput = hostDeclare.getMemref();
@@ -1759,7 +1916,8 @@ void AccDataMap::remapDataOperandSymbols(
       llvm::cast<hlfir::DeclareOp>(*computeDef).setSkipRebox(true);
 
     symbolMap.addVariableDefinition(
-        symbol, llvm::cast<fir::FortranVariableOpInterface>(computeDef));
+        symbol, llvm::cast<fir::FortranVariableOpInterface>(computeDef),
+        /*force=*/true);
   }
 
   for (const auto &comp : components) {
@@ -1795,16 +1953,25 @@ static void privatizeInductionVariables(
   llvm::SmallVector<mlir::Type> ivTypes;
   llvm::SmallVector<mlir::Location> ivLocs;
   assert(!outerDoConstruct.IsDoConcurrent() &&
-         "do concurrent loops are not expected to contained earlty exits");
-  visitLoopControl(converter, outerDoConstruct, loopsToProcess, eval,
-                   [&](const Fortran::parser::LoopControl::Bounds &bounds,
-                       mlir::Location loc) {
-                     locs.push_back(loc);
-                     Fortran::semantics::Symbol &ivSym =
-                         bounds.Name().thing.symbol->GetUltimate();
-                     privatizeIv(converter, ivSym, currentLocation, ivTypes,
-                                 ivLocs, privateOperands, ivPrivate);
-                   });
+         "do concurrent loops are not expected to contained early exits");
+  // Do not mark inner DOs as "collapsed": the parent acc.loop is unstructured
+  // and has no IV block arguments, so each inner DO must emit its own
+  // iteration mechanics as cf inside the acc.loop body. Marking them collapsed
+  // would cause genFIR(DoConstruct) to lower only the body and leave the
+  // pre-allocated PFT scaffold blocks (preheader, header, exit) without
+  // terminators -- which then trips runRegionDCE's mightHaveTerminator
+  // assertion.
+  visitLoopControl(
+      converter, outerDoConstruct, loopsToProcess, eval,
+      [&](const Fortran::parser::LoopControl::Bounds &bounds,
+          mlir::Location loc) {
+        locs.push_back(loc);
+        Fortran::semantics::Symbol &ivSym =
+            bounds.Name().thing.symbol->GetUltimate();
+        privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
+                    privateOperands, ivPrivate);
+      },
+      /*markInnerCollapsed=*/false);
 }
 
 static mlir::acc::LoopOp
@@ -1833,15 +2000,20 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<bool> inclusiveBounds;
   llvm::SmallVector<mlir::Location> locs;
   llvm::SmallVector<mlir::Value> lowerbounds, upperbounds, steps;
+  llvm::SmallVector<mlir::Value> firstprivateOperands;
+  llvm::SmallVector<
+      std::pair<Fortran::semantics::SymbolRef, Fortran::semantics::SymbolRef>>
+      localSymPairs;
 
   // Look at the do/do concurrent loops to extract bounds information unless
   // this loop is lowered in an unstructured fashion, in which case bounds are
   // not represented on acc.loop and explicit control flow is used inside body.
   if (!eval.lowerAsUnstructured()) {
-    processDoLoopBounds(converter, currentLocation, stmtCtx, builder,
-                        outerDoConstruct, eval, lowerbounds, upperbounds, steps,
-                        privateOperands, ivPrivate, ivTypes, ivLocs,
-                        inclusiveBounds, locs, loopsToProcess);
+    processDoLoopBounds(
+        converter, currentLocation, stmtCtx, builder, outerDoConstruct, eval,
+        lowerbounds, upperbounds, steps, privateOperands, ivPrivate, ivTypes,
+        ivLocs, inclusiveBounds, locs, loopsToProcess, reductionOperands,
+        firstprivateOperands, dataMap, localSymPairs);
   } else {
     // When the loop contains early exits, privatize induction variables, but do
     // not create acc.loop bounds. The control flow of the loop will be
@@ -1861,9 +2033,7 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
   addOperands(operands, operandSegments, tileOperands);
   addOperands(operands, operandSegments, cacheOperands);
   addOperands(operands, operandSegments, privateOperands);
-  // fill empty firstprivate operands since they are not permitted
-  // from OpenACC language perspective.
-  addOperands(operands, operandSegments, {});
+  addOperands(operands, operandSegments, firstprivateOperands);
   addOperands(operands, operandSegments, reductionOperands);
 
   auto loopOp = createRegionOp<mlir::acc::LoopOp, mlir::acc::YieldOp>(
@@ -1877,6 +2047,13 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
   dataMap.symbols.append(ivPrivate.begin(), ivPrivate.end());
   // Remap symbols from data clauses to use data operation results
   dataMap.remapDataOperandSymbols(converter, builder, loopOp.getRegion());
+
+  // For DO CONCURRENT LOCAL/LOCAL_INIT variables, the body references the
+  // HostAssoc symbol (with LocalityLocal flag), not the ultimate symbol.
+  // Copy the binding from the ultimate to the HostAssoc symbol so lookups
+  // inside the region find the privatized variable.
+  for (auto &[hostAssocSym, ultimateSym] : localSymPairs)
+    converter.copySymbolBinding(ultimateSym, hostAssocSym);
 
   if (!eval.lowerAsUnstructured()) {
     for (auto [arg, iv] :
@@ -1896,6 +2073,8 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
 }
 
 static bool hasEarlyReturn(Fortran::lower::pft::Evaluation &eval) {
+  if (!eval.hasNestedEvaluations())
+    return false;
   bool hasReturnStmt = false;
   for (auto &e : eval.getNestedEvaluations()) {
     e.visit(Fortran::common::visitors{
@@ -2103,6 +2282,11 @@ static mlir::acc::LoopOp createLoopOp(
 
   uint64_t loopsToProcess =
       Fortran::lower::getLoopCountForCollapseAndTile(accClauseList);
+
+  if (outerDoConstruct.IsDoConcurrent() &&
+      Fortran::lower::getCollapseSizeAndForce(accClauseList).first > 1)
+    TODO(currentLocation, "OpenACC LOOP COLLAPSE with DO CONCURRENT");
+
   auto loopOp = buildACCLoopOp(
       converter, currentLocation, semanticsContext, stmtCtx, outerDoConstruct,
       eval, privateOperands, dataMap, gangOperands, workerNumOperands,
@@ -2833,38 +3017,17 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
-  // When CUDA Fortran is enabled, extra symbols are created in the host_data
-  // scope for use_device objects. Bind them to the outer scope's symbols before
-  // processing any clauses, since the if clause may reference these symbols.
-  if (semanticsContext.IsEnabled(Fortran::common::LanguageFeature::CUDA)) {
+  // Extra symbols are created in the host_data scope for use_device objects.
+  // Bind them to the outer scope's symbols before processing any clauses,
+  // since the if clause may reference these symbols.
+  {
     for (const Fortran::parser::AccClause &clause : accClauseList.v) {
       if (const auto *useDevice =
               std::get_if<Fortran::parser::AccClause::UseDevice>(&clause.u)) {
         const Fortran::parser::AccObjectList &objectList{useDevice->v};
         for (const auto &accObject : objectList.v) {
-          const Fortran::semantics::Symbol *newSym = nullptr;
-          if (const auto *designator =
-                  std::get_if<Fortran::parser::Designator>(&accObject.u)) {
-            if (const auto *name =
-                    Fortran::parser::GetDesignatorNameIfDataRef(*designator)) {
-              newSym = name->symbol;
-            } else if (const auto *arrayElement = Fortran::parser::Unwrap<
-                           Fortran::parser::ArrayElement>(*designator)) {
-              const Fortran::parser::Name &name =
-                  Fortran::parser::GetLastName(arrayElement->Base());
-              newSym = name.symbol;
-            } else if (const auto *component = Fortran::parser::Unwrap<
-                           Fortran::parser::StructureComponent>(*designator)) {
-              const Fortran::parser::DataRef &base{component->Base()};
-              if (const auto *name =
-                      std::get_if<Fortran::parser::Name>(&base.u)) {
-                newSym = name->symbol;
-              }
-            }
-          } else if (const auto *name =
-                         std::get_if<Fortran::parser::Name>(&accObject.u)) {
-            newSym = name->symbol;
-          }
+          const Fortran::semantics::Symbol *newSym =
+              Fortran::parser::GetFirstName(accObject).symbol;
           if (newSym) {
             const Fortran::semantics::Symbol *origSym =
                 localSymbols.lookupSymbolByName(newSym->name().ToString());
@@ -3611,11 +3774,39 @@ static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
   modBuilder.setInsertionPointAfter(postDeallocOp);
 }
 
+static std::optional<Fortran::semantics::Symbol::Flag>
+getSingleAccDeclareMappingFlag(const Fortran::semantics::Symbol &ultimate,
+                               mlir::Location loc) {
+  std::optional<Fortran::semantics::Symbol::Flag> found;
+  for (Fortran::semantics::Symbol::Flag f : {
+           Fortran::semantics::Symbol::Flag::AccCreate,
+           Fortran::semantics::Symbol::Flag::AccCopyIn,
+           Fortran::semantics::Symbol::Flag::AccCopyInReadOnly,
+           Fortran::semantics::Symbol::Flag::AccCopy,
+           Fortran::semantics::Symbol::Flag::AccCopyOut,
+           Fortran::semantics::Symbol::Flag::AccDevicePtr,
+           Fortran::semantics::Symbol::Flag::AccDeviceResident,
+           Fortran::semantics::Symbol::Flag::AccLink,
+           Fortran::semantics::Symbol::Flag::AccPresent,
+       }) {
+    if (ultimate.test(f)) {
+      if (found.has_value()) {
+        fir::emitFatalError(
+            loc, "more than one ACC DECLARE data-mapping flag on a symbol");
+      }
+      found = f;
+    }
+  }
+  return found;
+}
+
 template <typename EntryOp, typename ExitOp>
-static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
-                           mlir::OpBuilder &modBuilder,
-                           const Fortran::parser::AccObjectList &accObjectList,
-                           mlir::acc::DataClause clause) {
+static void
+genGlobalCtors(Fortran::lower::AbstractConverter &converter,
+               mlir::OpBuilder &modBuilder,
+               const Fortran::parser::AccObjectList &accObjectList,
+               mlir::acc::DataClause clause,
+               Fortran::semantics::Symbol::Flag declareMappingFlag) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   auto genCtors = [&](const mlir::Location operandLocation,
                       const Fortran::semantics::Symbol &symbol) {
@@ -3685,6 +3876,76 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
               if (const auto *name =
                       Fortran::parser::GetDesignatorNameIfDataRef(designator)) {
                 genCtors(operandLocation, *name->symbol);
+              } else if (const auto *structureComponent =
+                             Fortran::parser::Unwrap<
+                                 Fortran::parser::StructureComponent>(
+                                 designator)) {
+                const Fortran::semantics::Scope &scope =
+                    converter.getCurrentScope();
+                if (!scope.IsModule() && !scope.IsSubmodule()) {
+                  TODO(operandLocation,
+                       "OpenACC declare does not support a component reference "
+                       "in this declaration context; ACC DECLARE the whole "
+                       "variable instead");
+                }
+                const Fortran::parser::DataRef &baseRef =
+                    structureComponent->Base();
+                const auto *parentName{
+                    std::get_if<Fortran::parser::Name>(&baseRef.u)};
+                if (parentName && parentName->symbol &&
+                    structureComponent->Component().symbol) {
+                  const Fortran::semantics::Symbol &parentSym{
+                      *parentName->symbol};
+                  const Fortran::semantics::Symbol &compSym{
+                      *structureComponent->Component().symbol};
+                  if (parentSym.owner().kind() ==
+                          Fortran::semantics::Scope::Kind::Module &&
+                      parentSym.GetType()) {
+                    if (const Fortran::semantics::DerivedTypeSpec *derived{
+                            parentSym.GetType()->AsDerived()}) {
+                      if (Fortran::semantics::FindImmediateComponent(
+                              *derived,
+                              [&](const Fortran::semantics::Symbol &sym) {
+                                return sym == compSym ||
+                                       &sym.GetUltimate() ==
+                                           &compSym.GetUltimate();
+                              })) {
+                        const Fortran::semantics::Symbol &parentUlt{
+                            parentSym.GetUltimate()};
+                        if (!parentUlt.test(
+                                Fortran::semantics::Symbol::Flag::AccDeclare)) {
+                          TODO(operandLocation,
+                               "OpenACC declare: whole variable must appear in "
+                               "ACC DECLARE before a component reference; "
+                               "list the whole variable in this or an earlier "
+                               "clause");
+                        }
+                        std::optional<Fortran::semantics::Symbol::Flag>
+                            parentMapping{getSingleAccDeclareMappingFlag(
+                                parentUlt, operandLocation)};
+                        if (!parentMapping) {
+                          fir::emitFatalError(
+                              operandLocation,
+                              "parent of component reference has unexpected "
+                              "ACC DECLARE clause");
+                        }
+                        if (*parentMapping != declareMappingFlag) {
+                          TODO(operandLocation,
+                               "OpenACC declare: module structure component "
+                               "clause must match the whole variable's ACC "
+                               "DECLARE clause");
+                        }
+                        // Parent already has matching declare lowering; skip
+                        // duplicate ctor/dtor for %comp.
+                        return;
+                      }
+                    }
+                  }
+                }
+                TODO(
+                    operandLocation,
+                    "OpenACC declare does not support this component reference "
+                    "in a module; ACC DECLARE the whole variable instead");
               }
             },
             [&](const Fortran::parser::Name &name) {
@@ -3717,8 +3978,12 @@ genGlobalCtorsWithModifier(Fortran::lower::AbstractConverter &converter,
           listWithModifier.t);
   mlir::acc::DataClause dataClause =
       (modifier && (*modifier).v == mod) ? clauseWithModifier : clause;
+  Fortran::semantics::Symbol::Flag mappingFlag =
+      (modifier && (*modifier).v == mod)
+          ? Fortran::semantics::Symbol::Flag::AccCopyInReadOnly
+          : Fortran::semantics::Symbol::Flag::AccCopyIn;
   genGlobalCtors<EntryOp, ExitOp>(converter, modBuilder, accObjectList,
-                                  dataClause);
+                                  dataClause, mappingFlag);
 }
 
 template <typename EmitterFn>
@@ -3932,7 +4197,8 @@ genDeclareInModule(Fortran::lower::AbstractConverter &converter,
           std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
       genGlobalCtors<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
           converter, modBuilder, accObjectList,
-          mlir::acc::DataClause::acc_create);
+          mlir::acc::DataClause::acc_create,
+          Fortran::semantics::Symbol::Flag::AccCreate);
     } else if (const auto *copyinClause =
                    std::get_if<Fortran::parser::AccClause::Copyin>(&clause.u)) {
       genGlobalCtorsWithModifier<Fortran::parser::AccClause::Copyin,
@@ -3946,12 +4212,14 @@ genDeclareInModule(Fortran::lower::AbstractConverter &converter,
                        &clause.u)) {
       genGlobalCtors<mlir::acc::DeclareDeviceResidentOp, mlir::acc::DeleteOp>(
           converter, modBuilder, deviceResidentClause->v,
-          mlir::acc::DataClause::acc_declare_device_resident);
+          mlir::acc::DataClause::acc_declare_device_resident,
+          Fortran::semantics::Symbol::Flag::AccDeviceResident);
     } else if (const auto *linkClause =
                    std::get_if<Fortran::parser::AccClause::Link>(&clause.u)) {
       genGlobalCtors<mlir::acc::DeclareLinkOp, mlir::acc::DeclareLinkOp>(
           converter, modBuilder, linkClause->v,
-          mlir::acc::DataClause::acc_declare_link);
+          mlir::acc::DataClause::acc_declare_link,
+          Fortran::semantics::Symbol::Flag::AccLink);
     } else {
       llvm::report_fatal_error("unsupported clause on DECLARE directive");
     }
@@ -4547,10 +4815,55 @@ bool Fortran::lower::isInOpenACCLoop(fir::FirOpBuilder &builder) {
   return false;
 }
 
+static llvm::SmallPtrSet<const Fortran::parser::DoConstruct *, 8>
+    collapsedDoConstructs;
+
+void Fortran::lower::markDoConstructAsCollapsed(
+    const Fortran::parser::DoConstruct &dc) {
+  collapsedDoConstructs.insert(&dc);
+}
+
+bool Fortran::lower::isCollapsedDoConstruct(
+    const Fortran::parser::DoConstruct &dc) {
+  return collapsedDoConstructs.contains(&dc);
+}
+
+void Fortran::lower::clearCollapsedDoConstructs() {
+  collapsedDoConstructs.clear();
+}
+
 bool Fortran::lower::isInsideOpenACCComputeConstruct(
     fir::FirOpBuilder &builder) {
   return mlir::isa_and_nonnull<ACC_COMPUTE_CONSTRUCT_OPS>(
       mlir::acc::getEnclosingComputeOp(builder.getRegion()));
+}
+
+bool Fortran::lower::isInsideOpenACCRoutine(fir::FirOpBuilder &builder) {
+  return mlir::acc::isAccRoutine(builder.getFunction().getOperation());
+}
+
+static bool isInsideSeqOpenACCRoutine(fir::FirOpBuilder &builder) {
+  mlir::func::FuncOp funcOp = builder.getFunction();
+  if (!mlir::acc::isAccRoutine(funcOp.getOperation()))
+    return false;
+  auto routineInfo = funcOp->getAttrOfType<mlir::acc::RoutineInfoAttr>(
+      mlir::acc::getRoutineInfoAttrName());
+  if (!routineInfo)
+    return false;
+  for (mlir::SymbolRefAttr routineRef : routineInfo.getAccRoutines()) {
+    auto routineOp =
+        mlir::SymbolTable::lookupNearestSymbolFrom<mlir::acc::RoutineOp>(
+            funcOp, routineRef.getLeafReference());
+    if (routineOp && routineOp.hasSeq())
+      return true;
+  }
+  return false;
+}
+
+bool Fortran::lower::shouldLowerDoConstructAsAccLoop(
+    fir::FirOpBuilder &builder) {
+  return (lowerDoLoopToAccLoop && isInsideOpenACCComputeConstruct(builder)) ||
+         (lowerDoLoopToAccLoopInAccRoutine && isInsideOpenACCRoutine(builder));
 }
 
 void Fortran::lower::setInsertionPointAfterOpenACCLoopIfInside(
@@ -4636,7 +4949,8 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
     Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::SymMap &localSymbols,
     const Fortran::parser::DoConstruct &doConstruct, pft::Evaluation &eval) {
-  if (!lowerDoLoopToAccLoop)
+  if (!Fortran::lower::shouldLowerDoConstructAsAccLoop(
+          converter.getFirOpBuilder()))
     return nullptr;
 
   // Only convert loops which have induction variables that need privatized.
@@ -4695,13 +5009,17 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Operation *accRegionOp =
       mlir::acc::getEnclosingComputeOp(builder.getRegion());
-  mlir::acc::LoopParMode parMode =
-      mlir::isa_and_present<mlir::acc::ParallelOp>(accRegionOp) &&
-              doConstruct.IsDoConcurrent()
-          ? mlir::acc::LoopParMode::loop_independent
-      : mlir::isa_and_present<mlir::acc::SerialOp>(accRegionOp)
-          ? mlir::acc::LoopParMode::loop_seq
-          : mlir::acc::LoopParMode::loop_auto;
+  mlir::acc::LoopParMode parMode;
+  if (mlir::isa_and_present<mlir::acc::SerialOp>(accRegionOp) ||
+      isInsideSeqOpenACCRoutine(builder)) {
+    parMode = mlir::acc::LoopParMode::loop_seq;
+  } else if (doConstruct.IsDoConcurrent() &&
+             (mlir::isa_and_present<mlir::acc::ParallelOp>(accRegionOp) ||
+              isInsideOpenACCRoutine(builder))) {
+    parMode = mlir::acc::LoopParMode::loop_independent;
+  } else {
+    parMode = mlir::acc::LoopParMode::loop_auto;
+  }
 
   // Set the parallel mode based on the computed parMode
   auto deviceNoneAttr = mlir::acc::DeviceTypeAttr::get(

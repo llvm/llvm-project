@@ -604,3 +604,27 @@ namespace LValueConstant {
   consteval D& c() { return d; }
   long long f() { return c().y; }
 }
+
+#if __cplusplus >= 202302L
+namespace PointerIntInc {
+  constexpr const char *foo(const char *p, bool b) {
+    auto q = reinterpret_cast<__UINTPTR_TYPE__>(p);
+    if (b)
+      q++;
+    else
+      q--;
+    return p;
+  }
+  constexpr char p = 10;
+  auto bar = foo(&p, true);
+  auto bar2 = foo(&p, false);
+}
+#endif
+
+namespace VariadicOperator {
+  struct S {
+    constexpr int operator()(this S, ...) { return 42; } // all20-error {{explicit object parameters are incompatible with C++ standards before C++2b}}
+  };
+  constexpr S s;
+  static_assert(s() == 42);
+}

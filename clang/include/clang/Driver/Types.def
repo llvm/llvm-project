@@ -73,6 +73,10 @@ TYPE("objective-c++-header-cpp-output", PP_ObjCXXHeader, INVALID,"mii",   phases
 TYPE("objective-c++-header",     ObjCXXHeader, PP_ObjCXXHeader, "h",      phases::Preprocess, phases::Precompile)
 TYPE("c++-module",               CXXModule,    PP_CXXModule,    "cppm",   phases::Preprocess, phases::Precompile, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("c++-module-cpp-output",    PP_CXXModule, INVALID,         "iim",    phases::Precompile, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+// Used only in -fmodules-driver for the implicitly generated Standard library
+// module inputs.
+TYPE("c++-std-module",           CXXStdModule, PP_CXXStdModule, "cppm",   phases::Preprocess, phases::Precompile)
+TYPE("c++-std-module-output",    PP_CXXStdModule, INVALID,      "iim",    phases::Precompile)
 
 // Other languages.
 TYPE("ada",                      Ada,          INVALID,         nullptr,  phases::Compile, phases::Backend, phases::Assemble, phases::Link)

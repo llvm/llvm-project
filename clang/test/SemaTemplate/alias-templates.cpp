@@ -320,3 +320,10 @@ namespace OuterSubstFailure {
   };
   template struct A<void>; // expected-note {{requested here}}
 } // namespace OuterSubstFailure
+
+namespace ExtraneousTemplateParameterLists1 {
+  template <> template <class T> using A = T;
+  // expected-error@-1 {{extraneous template parameter list}}
+  template <class T> template <> using B = T;
+  // expected-error@-1 {{extraneous template parameter list}}
+} // namespace ExtraneousTemplateParameterLists1

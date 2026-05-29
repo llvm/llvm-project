@@ -205,8 +205,13 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   for (auto Reg : Hexagon_MC::GetVectRegRev())
     Reserved.set(Reg);
 
-  if (MF.getSubtarget<HexagonSubtarget>().hasReservedR19())
-    Reserved.set(Hexagon::R19);
+  static const MCPhysReg RRegs[] = {
+      Hexagon::R16, Hexagon::R17, Hexagon::R18, Hexagon::R19, Hexagon::R20,
+      Hexagon::R21, Hexagon::R22, Hexagon::R23, Hexagon::R24, Hexagon::R25,
+      Hexagon::R26, Hexagon::R27, Hexagon::R28};
+  for (MCPhysReg Reg : RRegs)
+    if (MF.getSubtarget().isRegisterReservedByUser(Reg))
+      Reserved.set(Reg);
 
   Register AP =
       MF.getInfo<HexagonMachineFunctionInfo>()->getStackAlignBaseReg();
@@ -241,16 +246,6 @@ bool HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int Offset = HFI.getFrameIndexReference(MF, FI, BP).getFixed();
   // Add the offset from the instruction.
   int RealOffset = Offset + MI.getOperand(FIOp+1).getImm();
-
-  // If AP is used as the base register, add it to this block's liveins.
-  // AP is defined in the entry block and may be used in other blocks for
-  // stack access. Liveness must be accurate for the verifier.
-  auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
-  Register AP = HMFI.getStackAlignBaseReg();
-  if (AP.isValid() && BP == AP) {
-    if (!MB.isLiveIn(AP))
-      MB.addLiveIn(AP);
-  }
 
   unsigned Opc = MI.getOpcode();
   switch (Opc) {

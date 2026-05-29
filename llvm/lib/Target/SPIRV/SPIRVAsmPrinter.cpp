@@ -16,6 +16,7 @@
 #include "SPIRVInstrInfo.h"
 #include "SPIRVMCInstLower.h"
 #include "SPIRVModuleAnalysis.h"
+#include "SPIRVNonSemanticDebugHandler.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
@@ -105,6 +106,11 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   SPIRV::ModuleAnalysisInfo *MAI;
 
+  // Non-owning pointer to the NSDI handler registered via addAsmPrinterHandler.
+  // The handler's lifetime is managed by AsmPrinter (the base class of this
+  // object), so this pointer cannot dangle.
+  SPIRVNonSemanticDebugHandler *NSDebugHandler = nullptr;
+
 protected:
   void cleanUp(Module &M);
 };
@@ -118,12 +124,18 @@ void SPIRVAsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
 
 // If the module has no functions, we need output global info anyway.
 void SPIRVAsmPrinter::emitEndOfAsmFile(Module &M) {
-  if (ModuleSectionsEmitted == false) {
+  if (!ModuleSectionsEmitted) {
     outputModuleSections();
     ModuleSectionsEmitted = true;
   }
 
   ST = static_cast<const SPIRVTargetMachine &>(TM).getSubtargetImpl();
+  // SPIRVModuleAnalysis sets GR->Bound = MAI->MaxID before printing. Any IDs
+  // allocated by AsmPrinter handlers (e.g. SPIRVNonSemanticDebugHandler) during
+  // outputModuleSections() are not counted. Refresh the bound here so the
+  // formula below sees the final allocation count.
+  if (MAI)
+    ST->getSPIRVGlobalRegistry()->setBound(MAI->MaxID);
   VersionTuple SPIRVVersion = ST->getSPIRVVersion();
   uint32_t Major = SPIRVVersion.getMajor();
   uint32_t Minor = SPIRVVersion.getMinor().value_or(0);
@@ -149,7 +161,7 @@ void SPIRVAsmPrinter::cleanUp(Module &M) {
 }
 
 void SPIRVAsmPrinter::emitFunctionHeader() {
-  if (ModuleSectionsEmitted == false) {
+  if (!ModuleSectionsEmitted) {
     outputModuleSections();
     ModuleSectionsEmitted = true;
   }
@@ -166,6 +178,15 @@ void SPIRVAsmPrinter::emitFunctionHeader() {
 
   auto Section = getObjFileLowering().SectionForGlobal(&F, TM);
   MF->setSection(Section);
+
+  // SPIRVAsmPrinter::emitFunctionHeader() does not call the base class,
+  // so handlers never receive beginFunction() from the normal path. Drive the
+  // per-function lifecycle here, matching what AsmPrinter::emitFunctionHeader()
+  // does for other targets.
+  for (auto &Handler : Handlers) {
+    Handler->beginFunction(MF);
+    Handler->beginBasicBlockSection(MF->front());
+  }
 }
 
 void SPIRVAsmPrinter::outputOpFunctionEnd() {
@@ -316,6 +337,13 @@ void SPIRVAsmPrinter::outputDebugSourceAndStrings(const Module &M) {
   Inst.addOperand(
       MCOperand::createImm(static_cast<unsigned>(MAI->SrcLangVersion)));
   outputMCInst(Inst);
+  // Emit OpString instructions for NSDI file paths and type names here, in
+  // section 7. OpString must precede type/constant declarations per the SPIR-V
+  // module layout (section 2.4). The OpExtInst instructions that reference
+  // these strings are emitted later at section 10 by
+  // emitNonSemanticGlobalDebugInfo().
+  if (NSDebugHandler)
+    NSDebugHandler->emitNonSemanticDebugStrings(*MAI);
 }
 
 void SPIRVAsmPrinter::outputOpExtInstImports(const Module &M) {
@@ -515,15 +543,18 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
   NamedMDNode *Node = M.getNamedMetadata("spirv.ExecutionMode");
   if (Node) {
     for (unsigned i = 0; i < Node->getNumOperands(); i++) {
+      const auto EM =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>((Node->getOperand(i))->getOperand(1))
+                  ->getValue())
+              ->getZExtValue();
+      // Skip ArithmeticPoisonKHR to avoid a duplicate.
+      if (EM == SPIRV::ExecutionMode::ArithmeticPoisonKHR)
+        continue;
       // If SPV_KHR_float_controls2 is enabled and we find any of
       // FPFastMathDefault, ContractionOff or SignedZeroInfNanPreserve execution
       // modes, skip it, it'll be done somewhere else.
       if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
-        const auto EM =
-            cast<ConstantInt>(
-                cast<ConstantAsMetadata>((Node->getOperand(i))->getOperand(1))
-                    ->getValue())
-                ->getZExtValue();
         if (EM == SPIRV::ExecutionMode::FPFastMathDefault ||
             EM == SPIRV::ExecutionMode::ContractionOff ||
             EM == SPIRV::ExecutionMode::SignedZeroInfNanPreserve)
@@ -574,6 +605,9 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
     if (MDNode *Node = F.getMetadata("work_group_size_hint"))
       outputExecutionModeFromMDNode(FReg, Node,
                                     SPIRV::ExecutionMode::LocalSizeHint, 3, 1);
+    if (MDNode *Node = F.getMetadata("reqd_sub_group_size"))
+      outputExecutionModeFromMDNode(FReg, Node,
+                                    SPIRV::ExecutionMode::SubgroupSize, 0, 0);
     if (MDNode *Node = F.getMetadata("intel_reqd_sub_group_size"))
       outputExecutionModeFromMDNode(FReg, Node,
                                     SPIRV::ExecutionMode::SubgroupSize, 0, 0);
@@ -590,6 +624,18 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       Inst.addOperand(MCOperand::createImm(EM));
       unsigned TypeCode = encodeVecTypeHint(getMDOperandAsType(Node, 0));
       Inst.addOperand(MCOperand::createImm(TypeCode));
+      outputMCInst(Inst);
+    }
+    // Per SPV_KHR_poison_freeze description of PoisonFreezeKHR "If declared,
+    // all entry points must use the ArithmeticPoisonKHR execution mode".
+    if (llvm::is_contained(MAI->Reqs.getMinimalCapabilities(),
+                           SPIRV::Capability::PoisonFreezeKHR)) {
+      MCInst Inst;
+      Inst.setOpcode(SPIRV::OpExecutionMode);
+      Inst.addOperand(MCOperand::createReg(FReg));
+      unsigned EM =
+          static_cast<unsigned>(SPIRV::ExecutionMode::ArithmeticPoisonKHR);
+      Inst.addOperand(MCOperand::createImm(EM));
       outputMCInst(Inst);
     }
     if (ST->isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&
@@ -821,6 +867,12 @@ void SPIRVAsmPrinter::outputModuleSections() {
   TII = ST->getInstrInfo();
   MAI = &getAnalysis<SPIRVModuleAnalysis>().MAI;
   assert(ST && TII && MAI && M && "Module analysis is required");
+
+  // Let the NSDI handler add its extension and ext inst import entry to MAI
+  // before the module header sections are emitted.
+  if (NSDebugHandler)
+    NSDebugHandler->prepareModuleOutput(*ST, *MAI);
+
   // Output instructions according to the Logical Layout of a Module:
   // 1,2. All OpCapability instructions, then optional OpExtension
   // instructions.
@@ -851,8 +903,11 @@ void SPIRVAsmPrinter::outputModuleSections() {
   // the first section to allow use of: OpLine and OpNoLine debug information;
   // non-semantic instructions with OpExtInst.
   outputModuleSection(SPIRV::MB_TypeConstVars);
-  // 10. All global NonSemantic.Shader.DebugInfo.100 instructions.
-  outputModuleSection(SPIRV::MB_NonSemanticGlobalDI);
+  // 10. All global NonSemantic.Shader.DebugInfo.100 instructions. The
+  // SPIRVNonSemanticDebugHandler emits these directly as MCInsts; the
+  // MB_NonSemanticGlobalDI section in MAI is intentionally left empty.
+  if (NSDebugHandler)
+    NSDebugHandler->emitNonSemanticGlobalDebugInfo(*MAI);
   // 11. All function declarations (functions without a body).
   outputExtFuncDecls();
   // 12. All function definitions (functions with a body).
@@ -861,6 +916,13 @@ void SPIRVAsmPrinter::outputModuleSections() {
 
 bool SPIRVAsmPrinter::doInitialization(Module &M) {
   ModuleSectionsEmitted = false;
+  // Register the NSDI handler before calling the base class so that
+  // AsmPrinter::doInitialization() calls Handler->beginModule(M) for it.
+  if (M.getNamedMetadata("llvm.dbg.cu")) {
+    auto Handler = std::make_unique<SPIRVNonSemanticDebugHandler>(*this);
+    NSDebugHandler = Handler.get();
+    addAsmPrinterHandler(std::move(Handler));
+  }
   // We need to call the parent's one explicitly.
   return AsmPrinter::doInitialization(M);
 }

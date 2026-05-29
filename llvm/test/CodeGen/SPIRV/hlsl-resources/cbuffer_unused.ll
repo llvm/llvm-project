@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv1.6-vulkan1.3-library %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-vulkan1.3-library %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 ; Test that unused and partially unused cbuffers are handled correctly.
 
 ; CHECK-DAG: OpDecorate %[[PartiallyUsedCBuffer:[0-9]+]] DescriptorSet 0

@@ -6,7 +6,7 @@ import sys
 dotest_path = '@LLDB_SOURCE_DIR_CONFIGURED@/test/API/dotest.py'
 dotest_common_args_str = '@LLDB_TEST_COMMON_ARGS_CONFIGURED@'
 dotest_user_args_str = '@LLDB_TEST_USER_ARGS_CONFIGURED@'
-arch = '@LLDB_TEST_ARCH@'
+triple = '@LLDB_TEST_TRIPLE@'
 executable = '@LLDB_TEST_EXECUTABLE_CONFIGURED@'
 compiler = '@LLDB_TEST_COMPILER_CONFIGURED@'
 dsymutil = '@LLDB_TEST_DSYMUTIL_CONFIGURED@'
@@ -36,7 +36,7 @@ if __name__ == '__main__':
         dotest_args.extend(dotest_user_args_str.split(';'))
     # Build dotest.py command.
     cmd = [sys.executable, dotest_path]
-    cmd.extend(['--arch', arch])
+    cmd.extend(['--triple', triple])
     cmd.extend(dotest_args)
     cmd.extend(['--build-dir', lldb_build_dir])
     cmd.extend(['--executable', executable])

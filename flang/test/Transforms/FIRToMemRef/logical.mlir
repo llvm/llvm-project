@@ -28,3 +28,31 @@ func.func @store_scalar(%arg0: !fir.ref<!fir.logical<4>>) {
   fir.store %2 to %1 : !fir.ref<!fir.logical<4>>
   return
 }
+
+// CHECK-LABEL: func.func @logical_and_logical
+// CHECK:       fir.logical_and {{.*}} : i32
+func.func @logical_and_logical(%arg0: !fir.logical<4>, %arg1: !fir.logical<4>) -> !fir.logical<4> {
+  %0 = fir.logical_and %arg0, %arg1 : !fir.logical<4>
+  return %0 : !fir.logical<4>
+}
+
+// CHECK-LABEL: func.func @logical_or_logical
+// CHECK:       fir.logical_or {{.*}} : i32
+func.func @logical_or_logical(%arg0: !fir.logical<4>, %arg1: !fir.logical<4>) -> !fir.logical<4> {
+  %0 = fir.logical_or %arg0, %arg1 : !fir.logical<4>
+  return %0 : !fir.logical<4>
+}
+
+// CHECK-LABEL: func.func @eqv_logical
+// CHECK:       fir.eqv {{.*}} : i32
+func.func @eqv_logical(%arg0: !fir.logical<4>, %arg1: !fir.logical<4>) -> !fir.logical<4> {
+  %0 = fir.eqv %arg0, %arg1 : !fir.logical<4>
+  return %0 : !fir.logical<4>
+}
+
+// CHECK-LABEL: func.func @neqv_logical
+// CHECK:       fir.neqv {{.*}} : i32
+func.func @neqv_logical(%arg0: !fir.logical<4>, %arg1: !fir.logical<4>) -> !fir.logical<4> {
+  %0 = fir.neqv %arg0, %arg1 : !fir.logical<4>
+  return %0 : !fir.logical<4>
+}

@@ -159,11 +159,6 @@ end
   to be constant will generate a compilation error. `ieee_support_standard`
   depends in part on `ieee_support_halting`, so this also applies to
   `ieee_support_standard` calls.
-* F'2023 constraint C7108 prohibits the use of a structure constructor
-  that could also be interpreted as a generic function reference.
-  No other Fortran compiler enforces C7108 (to our knowledge);
-  they all resolve the ambiguity by interpreting the call as a function
-  reference.  We do the same, with a portability warning.
 * An override for an inaccessible procedure binding works only within
   the same module; other apparent overrides of inaccessible bindings
   are actually new bindings of the same name.
@@ -532,6 +527,14 @@ end program
 * Default exponent of zero, e.g. `3.14159E`, on a READ from a
   fixed-width input field.  Includes the case with only an
   exponent letter for compatibility with other compilers.
+* Allow a data object or function pointer as the `C_LOC()`
+  argument (not just pointers/targets). The compiler will not
+  reason about aliases created through non-target non-pointer
+  arguments and code generated using such aliases may exhibit
+  unexpected behavior. This is for compatibility with
+  legacy code; legacy code should be updated to be correct.
+  This could be removed at any time.
+  [-frelaxed-c-loc-checks]
 
 ### Extensions and legacy features deliberately not supported
 

@@ -137,57 +137,49 @@ __gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x,
                       uint32_t __width) {
   // Mask out inactive lanes to match AMDGPU behavior.
   uint32_t __mask = (uint32_t)__lane_mask;
-  bool __bitmask = (1ull << __idx) & __lane_mask;
+  bool __bitmask = (UINT64_C(1) << __idx) & __lane_mask;
   return -__bitmask &
          __nvvm_shfl_sync_idx_i32(__mask, __x, __idx,
                                   ((__gpu_num_lanes() - __width) << 8u) | 0x1f);
 }
 
 // Returns a bitmask marking all lanes that have the same value of __x.
+#if __CUDA_ARCH__ >= 700
+#define __gpu_match_any_u32_impl
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_any_u32(uint64_t __lane_mask, uint32_t __x) {
-  // Newer targets can use the dedicated CUDA support.
-#if __CUDA_ARCH__ >= 700
   return __nvvm_match_any_sync_i32(__lane_mask, __x);
-#else
-  return __gpu_match_any_u32_impl(__lane_mask, __x);
-#endif
 }
+#endif
 
 // Returns a bitmask marking all lanes that have the same value of __x.
+#if __CUDA_ARCH__ >= 700
+#define __gpu_match_any_u64_impl
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_any_u64(uint64_t __lane_mask, uint64_t __x) {
-  // Newer targets can use the dedicated CUDA support.
-#if __CUDA_ARCH__ >= 700
   return __nvvm_match_any_sync_i64(__lane_mask, __x);
-#else
-  return __gpu_match_any_u64_impl(__lane_mask, __x);
-#endif
 }
+#endif
 
 // Returns the current lane mask if every lane contains __x.
+#if __CUDA_ARCH__ >= 700
+#define __gpu_match_all_u32_impl
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_all_u32(uint64_t __lane_mask, uint32_t __x) {
-  // Newer targets can use the dedicated CUDA support.
-#if __CUDA_ARCH__ >= 700
   int predicate;
   return __nvvm_match_all_sync_i32p(__lane_mask, __x, &predicate);
-#else
-  return __gpu_match_all_u32_impl(__lane_mask, __x);
-#endif
 }
+#endif
 
 // Returns the current lane mask if every lane contains __x.
+#if __CUDA_ARCH__ >= 700
+#define __gpu_match_all_u64_impl
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_all_u64(uint64_t __lane_mask, uint64_t __x) {
-  // Newer targets can use the dedicated CUDA support.
-#if __CUDA_ARCH__ >= 700
   int predicate;
   return __nvvm_match_all_sync_i64p(__lane_mask, __x, &predicate);
-#else
-  return __gpu_match_all_u64_impl(__lane_mask, __x);
-#endif
 }
+#endif
 
 // Returns true if the flat pointer points to CUDA 'shared' memory.
 _DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_local(void *ptr) {

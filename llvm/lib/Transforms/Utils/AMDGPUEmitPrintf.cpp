@@ -100,7 +100,7 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
   //  Strictly speaking, the zero does not matter since
   // __ockl_printf_append_string_n ignores the length if the pointer is null.
   BasicBlock *Join = nullptr;
-  if (Prev->getTerminator()) {
+  if (Prev->hasTerminator()) {
     Join = Prev->splitBasicBlock(Builder.GetInsertPoint(),
                                  "strlen.join");
     Prev->getTerminator()->eraseFromParent();
@@ -310,7 +310,7 @@ static void processConstantStringArg(StringData *SD, IRBuilder<> &Builder,
                                      SmallVectorImpl<Value *> &WhatToStore) {
   std::string Str(SD->Str.str() + '\0');
 
-  DataExtractor Extractor(Str, /*IsLittleEndian=*/true, 8);
+  DataExtractor Extractor(Str, /*IsLittleEndian=*/true);
   DataExtractor::Cursor Offset(0);
   while (Offset && Offset.tell() < Str.size()) {
     const uint64_t ReadSize = 4;

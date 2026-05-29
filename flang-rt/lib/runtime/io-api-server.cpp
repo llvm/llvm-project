@@ -156,7 +156,7 @@ bool EnqueueDeferred(FnTy &&fn, Cookie cookie, Args &&...args) {
 }
 
 template <std::uint32_t NumLanes>
-rpc::Status HandleOpcodesImpl(rpc::Server::Port &port) {
+rpc::RPCStatus HandleOpcodesImpl(rpc::Server::Port &port) {
   switch (port.get_opcode()) {
   case BeginExternalListOutput_Opcode:
     rpc::invoke<NumLanes>(port,
@@ -292,10 +292,23 @@ rpc::Status HandleOpcodesImpl(rpc::Server::Port &port) {
 
   return rpc::RPC_SUCCESS;
 }
-} // namespace
 
-RT_EXT_API_GROUP_BEGIN
-std::uint32_t IODEF(HandleRPCOpcodes)(void *raw, std::uint32_t numLanes) {
+} // anonymous namespace
+
+using RPCCallbackTy = std::uint32_t (*)(void *, std::uint32_t);
+
+// COFF workaround for the lack of weak symbols, copied from the sanitizers.
+#if defined(_MSC_VER)
+extern "C" void register_rpc_callback_stub(RPCCallbackTy) {
+  // Stub function to be replaced with __tgt_register_rpc_callback if present.
+}
+#pragma comment(linker, \
+    "/alternatename:__tgt_register_rpc_callback=" \
+    "register_rpc_callback_stub")
+#endif
+
+// Used for I/O from the offloading device runtime.
+static std::uint32_t HandleRPCOpcodes(void *raw, std::uint32_t numLanes) {
   rpc::Server::Port &port = *reinterpret_cast<rpc::Server::Port *>(raw);
   switch (numLanes) {
   case 1:
@@ -308,5 +321,23 @@ std::uint32_t IODEF(HandleRPCOpcodes)(void *raw, std::uint32_t numLanes) {
     return rpc::RPC_ERROR;
   }
 }
-RT_EXT_API_GROUP_END
+
+#if defined(__ELF__)
+extern "C" void __tgt_register_rpc_callback(RPCCallbackTy)
+    __attribute__((weak));
+#elif defined(__APPLE__)
+extern "C" void __tgt_register_rpc_callback(RPCCallbackTy)
+    __attribute__((weak_import));
+#else
+extern "C" void __tgt_register_rpc_callback(RPCCallbackTy);
+#endif
+
+void RegisterRPCHandlers() {
+#if defined(__ELF__) || defined(__APPLE__)
+  if (__tgt_register_rpc_callback)
+    __tgt_register_rpc_callback(HandleRPCOpcodes);
+#elif defined(_MSC_VER)
+  __tgt_register_rpc_callback(HandleRPCOpcodes);
+#endif
+}
 } // namespace Fortran::runtime::io
