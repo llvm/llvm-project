@@ -17,9 +17,12 @@ on:
         required: true
         type: string
     secrets:
-      RELEASE_TASKS_USER_TOKEN:
-        description: "Secret used to check user permissions."
-        required: false
+      LLVM_TOKEN_GENERATOR_CLIENT_ID:
+        description: "Client ID for our GitHub App we use for generating access tokens."
+        required: true
+      LLVM_TOKEN_GENERATOR_PRIVATE_KEY:
+        description: "Private key for our GitHub App we use for generating access tokens."
+        required: true
   # Run on pull_requests for testing purposes.
   pull_request:
     paths:
@@ -110,6 +113,9 @@ jobs:
   attest-release-sources:
     name: Attest Release Sources
     runs-on: ubuntu-24.04
+    environment:
+      deployment: false
+      name: release
     if: github.event_name != 'pull_request'
     needs:
       - inputs
@@ -135,3 +141,5 @@ jobs:
           attestation-name: ${{ needs.inputs.outputs.ref }}-sources-attestation
           digest: ${{ needs.release-sources.outputs.digest }}
           upload: false
+          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
