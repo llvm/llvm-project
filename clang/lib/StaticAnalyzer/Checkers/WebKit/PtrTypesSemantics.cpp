@@ -566,11 +566,13 @@ class TrivialFunctionAnalysisVisitor
     if (Ty->isPointerOrReferenceType())
       return true;
 
-    // T* is safe even in Objective-C with ARC since [[retain x] autorelease]
-    // will not dealloc.
     // FIXME: Handle a case when there is a local autorelease pool.
-    if (Ty->isObjCObjectPointerType())
-      return true;
+    if (Ty->isObjCObjectPointerType()) {
+      auto Type = Ty.isDestructedType();
+      if (Type == QualType::DK_objc_weak_lifetime || Type == QualType::DK_none)
+        return true;
+      // strong lifetime in ARC could dealloc an object.
+    }
 
     // Fundamental types (integral, nullptr_t, etc...) don't have destructors.
     if (Ty->isFundamentalType() || Ty->isIntegralOrEnumerationType())
