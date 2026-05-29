@@ -2186,16 +2186,18 @@ class NVVM_ConvertToFP16x2Op_Base <string srcType, Type srcArgType, string dstTy
 
     The result `dst` is represented as a vector of }] # !tolower(dstType) # [{ elements.
 
-    The `relu` attribute, when set, lowers to the '.relu' variant of 
+    The `relu` attribute, when set, lowers to the '.relu' variant of
     the cvt instruction.}] #
 
     !if(!eq(dstType, "BF16"),
-    [{The `sat` attribute specifies the saturation mode.
-    
-    The optional scaling-factors for each of the inputs are provided through 
-    the operand `scaleFactor` as a packed i16 type. Only `ue8m0` is supported 
+    [{
+
+    The `sat` attribute specifies the saturation mode.
+
+    The optional scaling-factors for each of the inputs are provided through
+    the operand `scaleFactor` as a packed i16 type. Only `ue8m0` is supported
     as the type of the scale-factor currently.}], "") # [{
-    
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
   let results = (outs VectorOfLengthAndType<[2], [!cast<Type>(dstType)]>:$dst);
