@@ -307,7 +307,6 @@ public:
   ///
   /// \param Size - The size of the symbol.
   /// \param Alignment - The alignment of the symbol.
-  /// \param Target - Is the symbol a target-specific common-like symbol.
   void setCommon(uint64_t Size, Align Alignment) {
     assert(getOffset() == 0);
     CommonSize = Size;
@@ -357,6 +356,7 @@ public:
 
   /// print - Print the value to the stream \p OS.
   LLVM_ABI void print(raw_ostream &OS, const MCAsmInfo *MAI) const;
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const { print(OS, &MAI); }
 
   /// dump - Print the value to stderr.
   LLVM_ABI void dump() const;

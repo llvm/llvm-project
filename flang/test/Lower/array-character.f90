@@ -109,7 +109,7 @@ end
 ! CHECK:           return
 ! CHECK:         }
 
-! CHECK: fir.global internal @_QQro.4x3xc1.0 constant : !fir.array<4x!fir.char<1,3>>
+! CHECK: fir.global internal @_QQro.4x3xc1.0 {alignment = 64 : i64} constant : !fir.array<4x!fir.char<1,3>>
 ! CHECK: AA
 ! CHECK: MM
 ! CHECK: ZZ

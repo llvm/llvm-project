@@ -700,7 +700,8 @@ TYPE_PARSER(
 //        CODIMENSION lbracket coarray-spec rbracket | CONTIGUOUS |
 //        DIMENSION ( array-spec ) | EXTERNAL | INTENT ( intent-spec ) |
 //        INTRINSIC | language-binding-spec | OPTIONAL | PARAMETER | POINTER |
-//        PROTECTED | SAVE | TARGET | VALUE | VOLATILE |
+//        PROTECTED | RANK ( scalar-int-constant-expr ) | SAVE | TARGET |
+//        VALUE | VOLATILE |
 //        CUDA-data-attr
 TYPE_PARSER(construct<AttrSpec>(accessSpec) ||
     construct<AttrSpec>(allocatable) ||
@@ -714,6 +715,8 @@ TYPE_PARSER(construct<AttrSpec>(accessSpec) ||
     construct<AttrSpec>(languageBindingSpec) || construct<AttrSpec>(optional) ||
     construct<AttrSpec>(construct<Parameter>("PARAMETER"_tok)) ||
     construct<AttrSpec>(pointer) || construct<AttrSpec>(protectedAttr) ||
+    construct<AttrSpec>("RANK" >>
+        construct<RankClause>(parenthesized(scalarIntConstantExpr))) ||
     construct<AttrSpec>(save) ||
     construct<AttrSpec>(construct<Target>("TARGET"_tok)) ||
     construct<AttrSpec>(construct<Value>("VALUE"_tok)) ||
@@ -729,7 +732,8 @@ TYPE_PARSER("CONSTANT" >> pure(common::CUDADataAttr::Constant) ||
     "PINNED" >> pure(common::CUDADataAttr::Pinned) ||
     "SHARED" >> pure(common::CUDADataAttr::Shared) ||
     "TEXTURE" >> pure(common::CUDADataAttr::Texture) ||
-    "UNIFIED" >> pure(common::CUDADataAttr::Unified))
+    "UNIFIED" >> pure(common::CUDADataAttr::Unified) ||
+    "VALUE" >> pure(common::CUDADataAttr::Value))
 
 // R804 object-name -> name
 constexpr auto objectName{name};
@@ -1335,9 +1339,12 @@ constexpr auto forceinlineDir{
     "FORCEINLINE" >> construct<CompilerDirective::ForceInline>()};
 constexpr auto noinlineDir{
     "NOINLINE" >> construct<CompilerDirective::NoInline>()};
+constexpr auto inlinealwaysDir{
+    "INLINEALWAYS" >> construct<CompilerDirective::InlineAlways>(maybe(name))};
 constexpr auto inlineDir{"INLINE" >> construct<CompilerDirective::Inline>()};
 constexpr auto ivdep{"IVDEP" >> construct<CompilerDirective::IVDep>()};
-TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
+constexpr auto simd{"SIMD" >> construct<CompilerDirective::Simd>()};
+TYPE_PARSER(beginDirective >> some(letter) >> "$ "_tok >>
     sourced((construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
                 construct<CompilerDirective>(assumeAligned) ||
@@ -1351,7 +1358,9 @@ TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
                 construct<CompilerDirective>(nounroll) ||
                 construct<CompilerDirective>(noinlineDir) ||
                 construct<CompilerDirective>(forceinlineDir) ||
+                construct<CompilerDirective>(inlinealwaysDir) ||
                 construct<CompilerDirective>(inlineDir) ||
+                construct<CompilerDirective>(simd) ||
                 construct<CompilerDirective>(ivdep) ||
                 construct<CompilerDirective>(
                     many(construct<CompilerDirective::NameValue>(

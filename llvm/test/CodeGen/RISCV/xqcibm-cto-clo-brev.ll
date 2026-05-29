@@ -225,8 +225,8 @@ define i64 @test_cttz_i64(i64 %a) nounwind {
   ret i64 %tmp
 }
 
-define i8 @test_cttz_i8_zero_undef(i8 %a) nounwind {
-; RV32I-LABEL: test_cttz_i8_zero_undef:
+define i8 @test_cttz_i8_zero_poison(i8 %a) nounwind {
+; RV32I-LABEL: test_cttz_i8_zero_poison:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    not a1, a0
 ; RV32I-NEXT:    addi a1, a1, -1
@@ -243,13 +243,13 @@ define i8 @test_cttz_i8_zero_undef(i8 %a) nounwind {
 ; RV32I-NEXT:    andi a0, a0, 15
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBB-LABEL: test_cttz_i8_zero_undef:
+; RV32ZBB-LABEL: test_cttz_i8_zero_poison:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    not a0, a0
 ; RV32ZBB-NEXT:    ctz a0, a0
 ; RV32ZBB-NEXT:    ret
 ;
-; RV32ZBBXQCIBM-LABEL: test_cttz_i8_zero_undef:
+; RV32ZBBXQCIBM-LABEL: test_cttz_i8_zero_poison:
 ; RV32ZBBXQCIBM:       # %bb.0:
 ; RV32ZBBXQCIBM-NEXT:    qc.cto a0, a0
 ; RV32ZBBXQCIBM-NEXT:    ret
@@ -258,8 +258,8 @@ define i8 @test_cttz_i8_zero_undef(i8 %a) nounwind {
   ret i8 %tmp
 }
 
-define i16 @test_cttz_i16_zero_undef(i16 %a) nounwind {
-; RV32I-LABEL: test_cttz_i16_zero_undef:
+define i16 @test_cttz_i16_zero_poison(i16 %a) nounwind {
+; RV32I-LABEL: test_cttz_i16_zero_poison:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    not a1, a0
 ; RV32I-NEXT:    lui a2, 5
@@ -283,13 +283,13 @@ define i16 @test_cttz_i16_zero_undef(i16 %a) nounwind {
 ; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBB-LABEL: test_cttz_i16_zero_undef:
+; RV32ZBB-LABEL: test_cttz_i16_zero_poison:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    not a0, a0
 ; RV32ZBB-NEXT:    ctz a0, a0
 ; RV32ZBB-NEXT:    ret
 ;
-; RV32ZBBXQCIBM-LABEL: test_cttz_i16_zero_undef:
+; RV32ZBBXQCIBM-LABEL: test_cttz_i16_zero_poison:
 ; RV32ZBBXQCIBM:       # %bb.0:
 ; RV32ZBBXQCIBM-NEXT:    qc.cto a0, a0
 ; RV32ZBBXQCIBM-NEXT:    ret
@@ -298,8 +298,8 @@ define i16 @test_cttz_i16_zero_undef(i16 %a) nounwind {
   ret i16 %tmp
 }
 
-define i32 @test_cttz_i32_zero_undef(i32 %a) nounwind {
-; RV32I-LABEL: test_cttz_i32_zero_undef:
+define i32 @test_cttz_i32_zero_poison(i32 %a) nounwind {
+; RV32I-LABEL: test_cttz_i32_zero_poison:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -318,13 +318,13 @@ define i32 @test_cttz_i32_zero_undef(i32 %a) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBB-LABEL: test_cttz_i32_zero_undef:
+; RV32ZBB-LABEL: test_cttz_i32_zero_poison:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    not a0, a0
 ; RV32ZBB-NEXT:    ctz a0, a0
 ; RV32ZBB-NEXT:    ret
 ;
-; RV32ZBBXQCIBM-LABEL: test_cttz_i32_zero_undef:
+; RV32ZBBXQCIBM-LABEL: test_cttz_i32_zero_poison:
 ; RV32ZBBXQCIBM:       # %bb.0:
 ; RV32ZBBXQCIBM-NEXT:    qc.cto a0, a0
 ; RV32ZBBXQCIBM-NEXT:    ret
@@ -333,8 +333,8 @@ define i32 @test_cttz_i32_zero_undef(i32 %a) nounwind {
   ret i32 %tmp
 }
 
-define i64 @test_cttz_i64_zero_undef(i64 %a) nounwind {
-; RV32I-LABEL: test_cttz_i64_zero_undef:
+define i64 @test_cttz_i64_zero_poison(i64 %a) nounwind {
+; RV32I-LABEL: test_cttz_i64_zero_poison:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
@@ -380,7 +380,7 @@ define i64 @test_cttz_i64_zero_undef(i64 %a) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBB-LABEL: test_cttz_i64_zero_undef:
+; RV32ZBB-LABEL: test_cttz_i64_zero_poison:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    not a0, a0
 ; RV32ZBB-NEXT:    bnez a0, .LBB7_2
@@ -395,7 +395,7 @@ define i64 @test_cttz_i64_zero_undef(i64 %a) nounwind {
 ; RV32ZBB-NEXT:    li a1, 0
 ; RV32ZBB-NEXT:    ret
 ;
-; RV32ZBBXQCIBM-LABEL: test_cttz_i64_zero_undef:
+; RV32ZBBXQCIBM-LABEL: test_cttz_i64_zero_poison:
 ; RV32ZBBXQCIBM:       # %bb.0:
 ; RV32ZBBXQCIBM-NEXT:    not a2, a0
 ; RV32ZBBXQCIBM-NEXT:    bnez a2, .LBB7_2
@@ -690,8 +690,8 @@ define i64 @test_ctlz_i64(i64 %a) nounwind {
   ret i64 %tmp
 }
 
-define i8 @test_ctlz_i8_zero_undef(i8 %a) nounwind {
-; RV32I-LABEL: test_ctlz_i8_zero_undef:
+define i8 @test_ctlz_i8_zero_poison(i8 %a) nounwind {
+; RV32I-LABEL: test_ctlz_i8_zero_poison:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    not a0, a0
 ; RV32I-NEXT:    slli a1, a0, 24
@@ -716,14 +716,14 @@ define i8 @test_ctlz_i8_zero_undef(i8 %a) nounwind {
 ; RV32I-NEXT:    andi a0, a0, 15
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBB-LABEL: test_ctlz_i8_zero_undef:
+; RV32ZBB-LABEL: test_ctlz_i8_zero_poison:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    not a0, a0
 ; RV32ZBB-NEXT:    slli a0, a0, 24
 ; RV32ZBB-NEXT:    clz a0, a0
 ; RV32ZBB-NEXT:    ret
 ;
-; RV32ZBBXQCIBM-LABEL: test_ctlz_i8_zero_undef:
+; RV32ZBBXQCIBM-LABEL: test_ctlz_i8_zero_poison:
 ; RV32ZBBXQCIBM:       # %bb.0:
 ; RV32ZBBXQCIBM-NEXT:    not a0, a0
 ; RV32ZBBXQCIBM-NEXT:    slli a0, a0, 24
@@ -734,8 +734,8 @@ define i8 @test_ctlz_i8_zero_undef(i8 %a) nounwind {
   ret i8 %tmp
 }
 
-define i16 @test_ctlz_i16_zero_undef(i16 %a) nounwind {
-; RV32I-LABEL: test_ctlz_i16_zero_undef:
+define i16 @test_ctlz_i16_zero_poison(i16 %a) nounwind {
+; RV32I-LABEL: test_ctlz_i16_zero_poison:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    not a0, a0
 ; RV32I-NEXT:    lui a1, 5
@@ -770,14 +770,14 @@ define i16 @test_ctlz_i16_zero_undef(i16 %a) nounwind {
 ; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBB-LABEL: test_ctlz_i16_zero_undef:
+; RV32ZBB-LABEL: test_ctlz_i16_zero_poison:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    not a0, a0
 ; RV32ZBB-NEXT:    slli a0, a0, 16
 ; RV32ZBB-NEXT:    clz a0, a0
 ; RV32ZBB-NEXT:    ret
 ;
-; RV32ZBBXQCIBM-LABEL: test_ctlz_i16_zero_undef:
+; RV32ZBBXQCIBM-LABEL: test_ctlz_i16_zero_poison:
 ; RV32ZBBXQCIBM:       # %bb.0:
 ; RV32ZBBXQCIBM-NEXT:    not a0, a0
 ; RV32ZBBXQCIBM-NEXT:    slli a0, a0, 16
@@ -788,8 +788,8 @@ define i16 @test_ctlz_i16_zero_undef(i16 %a) nounwind {
   ret i16 %tmp
 }
 
-define i32 @test_ctlz_i32_zero_undef(i32 %a) nounwind {
-; RV32I-LABEL: test_ctlz_i32_zero_undef:
+define i32 @test_ctlz_i32_zero_poison(i32 %a) nounwind {
+; RV32I-LABEL: test_ctlz_i32_zero_poison:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    not a0, a0
 ; RV32I-NEXT:    lui a1, 349525
@@ -826,13 +826,13 @@ define i32 @test_ctlz_i32_zero_undef(i32 %a) nounwind {
 ; RV32I-NEXT:    srli a0, a0, 24
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBB-LABEL: test_ctlz_i32_zero_undef:
+; RV32ZBB-LABEL: test_ctlz_i32_zero_poison:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    not a0, a0
 ; RV32ZBB-NEXT:    clz a0, a0
 ; RV32ZBB-NEXT:    ret
 ;
-; RV32ZBBXQCIBM-LABEL: test_ctlz_i32_zero_undef:
+; RV32ZBBXQCIBM-LABEL: test_ctlz_i32_zero_poison:
 ; RV32ZBBXQCIBM:       # %bb.0:
 ; RV32ZBBXQCIBM-NEXT:    qc.clo a0, a0
 ; RV32ZBBXQCIBM-NEXT:    ret
@@ -841,8 +841,8 @@ define i32 @test_ctlz_i32_zero_undef(i32 %a) nounwind {
   ret i32 %tmp
 }
 
-define i64 @test_ctlz_i64_zero_undef(i64 %a) nounwind {
-; RV32I-LABEL: test_ctlz_i64_zero_undef:
+define i64 @test_ctlz_i64_zero_poison(i64 %a) nounwind {
+; RV32I-LABEL: test_ctlz_i64_zero_poison:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    not a4, a1
 ; RV32I-NEXT:    lui a1, 349525
@@ -913,7 +913,7 @@ define i64 @test_ctlz_i64_zero_undef(i64 %a) nounwind {
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBB-LABEL: test_ctlz_i64_zero_undef:
+; RV32ZBB-LABEL: test_ctlz_i64_zero_poison:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    not a1, a1
 ; RV32ZBB-NEXT:    bnez a1, .LBB15_2
@@ -928,7 +928,7 @@ define i64 @test_ctlz_i64_zero_undef(i64 %a) nounwind {
 ; RV32ZBB-NEXT:    li a1, 0
 ; RV32ZBB-NEXT:    ret
 ;
-; RV32ZBBXQCIBM-LABEL: test_ctlz_i64_zero_undef:
+; RV32ZBBXQCIBM-LABEL: test_ctlz_i64_zero_poison:
 ; RV32ZBBXQCIBM:       # %bb.0:
 ; RV32ZBBXQCIBM-NEXT:    not a2, a1
 ; RV32ZBBXQCIBM-NEXT:    bnez a2, .LBB15_2

@@ -114,7 +114,7 @@ ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS, Constant *RHS,
 /// floating point instructions can have their mode set separately, so the
 /// direction is also needed.
 ///
-/// If the calling function's "denormal-fp-math" input mode is "dynamic" for the
+/// If the calling function's denormal_fpenv input mode is dynamic for the
 /// floating-point type, returns nullptr for denormal inputs.
 LLVM_ABI Constant *FlushFPConstant(Constant *Operand, const Instruction *I,
                                    bool IsOutput);
@@ -170,8 +170,7 @@ LLVM_ABI Constant *ConstantFoldCall(const CallBase *Call, Function *F,
                                     bool AllowNonDeterministic = true);
 
 LLVM_ABI Constant *ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
-                                               Constant *RHS, Type *Ty,
-                                               Instruction *FMFSource);
+                                               Constant *RHS, Type *Ty);
 
 /// ConstantFoldLoadThroughBitcast - try to cast constant to destination type
 /// returning null if unsuccessful. Can cast pointer to pointer or pointer to

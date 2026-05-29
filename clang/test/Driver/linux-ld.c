@@ -1,7 +1,11 @@
 // UNSUPPORTED: system-windows
-// General tests that ld invocations on Linux targets sane. Note that we use
-// sysroot to make these tests independent of the host system.
-//
+/// Tests for Linux toolchain discovery and start/end-file selection in
+/// gnutools::Linker::ConstructJob: crt*.o selection, -L search paths, multilib,
+/// -m elf_* per triple, --hash-style per target, -lgcc chains, and per-triple
+/// --dynamic-linker. Every RUN uses a sysroot tree so results are host-
+/// independent. Pure driver->linker argument forwarding without sysroot
+/// dependencies lives in linux-ld-args.c.
+
 // RUN: %clang -### -Werror %s -no-pie 2>&1 \
 // RUN:     --target=i386-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -954,21 +958,53 @@
 // CHECK-ANDROID-ROSEGMENT-29: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ANDROID-ROSEGMENT-29-NOT: "--no-rosegment"
 
-// Check that we pass --pack-dyn-relocs=relr for API 28+ and not before.
+// Check that we pass --pack-dyn-relocs=android for API 23-27 and not before.
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-linux-android22 \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-RELR-22 %s
+// CHECK-ANDROID-RELR-22: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-RELR-22-NOT: "--pack-dyn-relocs=android"
+// CHECK-ANDROID-RELR-22-NOT: "--pack-dyn-relocs=relr"
+// CHECK-ANDROID-RELR-22-NOT: "--pack-dyn-relocs=android+relr"
+// CHECK-ANDROID-RELR-22-NOT: "--use-android-relr-tags"
+//
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-linux-android23 \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-RELR-23 %s
+// CHECK-ANDROID-RELR-23: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-RELR-23: "--pack-dyn-relocs=android"
+// CHECK-ANDROID-RELR-23-NOT: "--pack-dyn-relocs=relr"
+// CHECK-ANDROID-RELR-23-NOT: "--pack-dyn-relocs=android+relr"
+// CHECK-ANDROID-RELR-23-NOT: "--use-android-relr-tags"
+//
+// Check that we pass --pack-dyn-relocs=relr --use-android-relr-tags for API 28-30 and not before.
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=armv7-linux-android27 \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-RELR-27 %s
 // CHECK-ANDROID-RELR-27: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-RELR-27: "--pack-dyn-relocs=android"
 // CHECK-ANDROID-RELR-27-NOT: "--pack-dyn-relocs=relr"
 // CHECK-ANDROID-RELR-27-NOT: "--pack-dyn-relocs=android+relr"
+// CHECK-ANDROID-RELR-27-NOT: "--use-android-relr-tags"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=armv7-linux-android28 \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-RELR-28 %s
 // CHECK-ANDROID-RELR-28: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-RELR-28: "--pack-dyn-relocs=android+relr"
 // CHECK-ANDROID-RELR-28: "--use-android-relr-tags"
-// CHECK-ANDROID-RELR-28: "--pack-dyn-relocs=relr"
-// CHECK-ANDROID-RELR-28-NOT: "--pack-dyn-relocs=android+relr"
+// CHECK-ANDROID-RELR-28-NOT: "--pack-dyn-relocs=android"
+// CHECK-ANDROID-RELR-28-NOT: "--pack-dyn-relocs=relr"
+//
+// Check that we stop passing --use-android-relr-tags for ABI 30+.
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-linux-android30 \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-RELR-30 %s
+// CHECK-ANDROID-RELR-30: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-RELR-30: "--pack-dyn-relocs=android+relr"
+// CHECK-ANDROID-RELR-30-NOT: "--use-android-relr-tags"
+// CHECK-ANDROID-RELR-30-NOT: "--pack-dyn-relocs=android"
+// CHECK-ANDROID-RELR-30-NOT: "--pack-dyn-relocs=relr"
 
 // RUN: %clang -### %s -no-pie 2>&1 --target=mips64-linux-gnuabin32 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-GNUABIN32 %s
@@ -1788,7 +1824,3 @@
 // CHECK-OE-AARCH64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0{{/|\\\\}}crtend.o"
 // CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0/../../../lib64{{/|\\\\}}crtn.o"
-
-/// -nopie is OpenBSD-specific.
-// RUN: not %clang -### --target=x86_64-unknown-linux-gnu %s -nopie 2>&1 | FileCheck %s --check-prefix=CHECK-NOPIE
-// CHECK-NOPIE: error: unsupported option '-nopie' for target 'x86_64-unknown-linux-gnu'

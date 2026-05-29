@@ -39,6 +39,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -162,9 +163,7 @@ class PHIElimination : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  PHIElimination() : MachineFunctionPass(ID) {
-    initializePHIEliminationPass(*PassRegistry::getPassRegistry());
-  }
+  PHIElimination() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     PHIEliminationImpl Impl(this);
@@ -685,6 +684,14 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
       // This vreg no longer lives all of the way through opBlock.
       unsigned opBlockNum = opBlock.getNumber();
       LV->getVarInfo(SrcReg).AliveBlocks.reset(opBlockNum);
+    } else if (LV && SrcUndef &&
+               !VRegPHIUseCount[BBVRegPair(opBlock.getNumber(), SrcReg)] &&
+               !LV->isLiveOut(SrcReg, opBlock)) {
+      // For undef sources we don't need a kill marker, but the register may
+      // no longer be live through intermediate blocks after the PHI use is
+      // removed. Recompute its LiveVariables info to clear stale AliveBlocks.
+      if (MRI->getVRegDef(SrcReg))
+        LV->recomputeForSingleDefVirtReg(SrcReg);
     }
 
     if (LIS) {

@@ -89,6 +89,7 @@ namespace std {
 #  include <__type_traits/add_cv_quals.h>
 #  include <__type_traits/add_pointer.h>
 #  include <__type_traits/conditional.h>
+#  include <__type_traits/conjunction.h>
 #  include <__type_traits/decay.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/is_constructible.h>
@@ -97,6 +98,7 @@ namespace std {
 #  include <__type_traits/is_reference.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_void.h>
+#  include <__type_traits/negation.h>
 #  include <__type_traits/remove_cv.h>
 #  include <__type_traits/remove_cvref.h>
 #  include <__type_traits/remove_reference.h>
@@ -118,10 +120,14 @@ _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
 _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
 class _LIBCPP_EXPORTED_FROM_ABI bad_any_cast : public bad_cast {
 public:
   const char* what() const _NOEXCEPT override;
 };
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -201,10 +207,11 @@ public:
       __other.__call(_Action::_Move, this);
   }
 
-  template <class _ValueType,
-            class _Tp        = decay_t<_ValueType>,
-            enable_if_t<!is_same_v<_Tp, any> && !__is_inplace_type<_ValueType>::value && is_copy_constructible_v<_Tp>,
-                        int> = 0>
+  template <
+      class _ValueType,
+      class _Tp        = decay_t<_ValueType>,
+      enable_if_t<_And<_Not<is_same<_Tp, any>>, _Not<__is_inplace_type<_ValueType>>, is_copy_constructible<_Tp>>::value,
+                  int> = 0>
   _LIBCPP_HIDE_FROM_ABI any(_ValueType&& __value) : __h_(nullptr) {
     __any_imp::_Handler<_Tp>::__create(*this, std::forward<_ValueType>(__value));
   }
@@ -519,8 +526,6 @@ template <class _ValueType>
 
 template <class _ValueType>
 [[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI add_pointer_t<add_const_t<_ValueType>> any_cast(any const* __any) noexcept {
-  static_assert(!is_void_v<_ValueType>, "_ValueType may not be void.");
-  static_assert(!is_reference_v<_ValueType>, "_ValueType may not be a reference.");
   return std::any_cast<_ValueType>(const_cast<any*>(__any));
 }
 

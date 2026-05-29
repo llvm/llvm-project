@@ -92,7 +92,7 @@ body:             |
     %1:gpr64common = COPY $x0
     %3:gpr32common = ADDWri %2, 1, 0
     %4:gpr32 = ORRWrs $wzr, killed %3, 0
-    %0:gpr64 = SUBREG_TO_REG 0, killed %4, %subreg.sub_32
+    %0:gpr64 = SUBREG_TO_REG killed %4, %subreg.sub_32
 
   bb.1.A:
     successors: %bb.2(0x30000000), %bb.1(0x50000000)

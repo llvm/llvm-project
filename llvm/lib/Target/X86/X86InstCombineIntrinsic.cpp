@@ -40,8 +40,8 @@ static Constant *getNegativeIsTrueBoolVec(Constant *V, const DataLayout &DL) {
 /// each element's most significant bit (the sign bit).
 static Value *getBoolVecFromMask(Value *Mask, const DataLayout &DL) {
   // Fold Constant Mask.
-  if (auto *ConstantMask = dyn_cast<ConstantDataVector>(Mask))
-    return getNegativeIsTrueBoolVec(ConstantMask, DL);
+  if (isa<ConstantInt, ConstantFP, ConstantDataVector>(Mask))
+    return getNegativeIsTrueBoolVec(cast<Constant>(Mask), DL);
 
   // Mask was extended from a boolean vector.
   Value *ExtMask;
@@ -1392,7 +1392,7 @@ static Value *simplifyTernarylogic(const IntrinsicInst &II,
       Res = Xor(Nor(A, B), C);
     break;
   case 0xaa:
-    Res = C;
+    Res = std::move(C);
     break;
   case 0xab:
     if (ABCIsConst)
@@ -1526,7 +1526,7 @@ static Value *simplifyTernarylogic(const IntrinsicInst &II,
       Res = Or(Xnor(A, B), And(B, C));
     break;
   case 0xcc:
-    Res = B;
+    Res = std::move(B);
     break;
   case 0xcd:
     if (ABCIsConst)
@@ -1668,7 +1668,7 @@ static Value *simplifyTernarylogic(const IntrinsicInst &II,
       Res = Nand(A, Nor(B, C));
     break;
   case 0xf0:
-    Res = A;
+    Res = std::move(A);
     break;
   case 0xf1:
     if (ABCIsConst)
@@ -1745,15 +1745,23 @@ static Value *simplifyX86FPMaxMin(const IntrinsicInst &II, InstCombiner &IC,
   APInt DemandedElts =
       IsScalar ? APInt::getOneBitSet(VWidth, 0) : APInt::getAllOnes(VWidth);
 
-  // Verify that the inputs are not one of (NaN, Inf, Subnormal, NegZero),
-  // otherwise we cannot safely generalize to MAXNUM/MINNUM.
-  FPClassTest Forbidden = fcNan | fcInf | fcSubnormal | fcNegZero;
+  FPClassTest Forbidden0 = fcNan | fcInf | fcSubnormal;
+  FPClassTest Forbidden1 = fcNan | fcInf | fcSubnormal;
+  if (NewIID == Intrinsic::maxnum) {
+    // For maxnum, only forbid NegZero in the second operand.
+    Forbidden1 |= fcNegZero;
+  } else {
+    assert(NewIID == Intrinsic::minnum && "Unknown intrinsic");
+    // For minnum, only forbid NegZero in the first operand.
+    Forbidden0 |= fcNegZero;
+  }
   KnownFPClass KnownArg0 =
-      computeKnownFPClass(Arg0, DemandedElts, Forbidden, SQ);
+      computeKnownFPClass(Arg0, DemandedElts, Forbidden0, SQ);
   KnownFPClass KnownArg1 =
-      computeKnownFPClass(Arg1, DemandedElts, Forbidden, SQ);
+      computeKnownFPClass(Arg1, DemandedElts, Forbidden1, SQ);
 
-  if (KnownArg0.isKnownNever(Forbidden) && KnownArg1.isKnownNever(Forbidden)) {
+  if (KnownArg0.isKnownNever(Forbidden0) &&
+      KnownArg1.isKnownNever(Forbidden1)) {
     if (IsScalar) {
       // It performs the operation on the first element and puts it back into
       // the vector.
@@ -2965,9 +2973,9 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
 
     // Constant Mask - select 1st/2nd argument lane based on top bit of mask.
-    if (auto *ConstantMask = dyn_cast<ConstantDataVector>(Mask)) {
+    if (isa<ConstantInt, ConstantFP, ConstantDataVector>(Mask)) {
       Constant *NewSelector =
-          getNegativeIsTrueBoolVec(ConstantMask, IC.getDataLayout());
+          getNegativeIsTrueBoolVec(cast<Constant>(Mask), IC.getDataLayout());
       return SelectInst::Create(NewSelector, Op1, Op0, "blendv");
     }
     unsigned BitWidth = Mask->getType()->getScalarSizeInBits();

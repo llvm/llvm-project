@@ -46,10 +46,7 @@ class UnreachableBlockElimLegacyPass : public FunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  UnreachableBlockElimLegacyPass() : FunctionPass(ID) {
-    initializeUnreachableBlockElimLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
+  UnreachableBlockElimLegacyPass() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addPreserved<DominatorTreeWrapperPass>();
@@ -236,11 +233,6 @@ bool UnreachableMachineBlockElim::run(MachineFunction &F) {
   }
 
   F.RenumberBlocks();
-  if (MDT)
-    MDT->updateBlockNumbers();
-
-  if (MPDT)
-    MPDT->updateBlockNumbers();
 
   return (!DeadBlocks.empty() || ModifiedPHI);
 }

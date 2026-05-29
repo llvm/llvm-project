@@ -22,6 +22,7 @@
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
@@ -53,13 +54,15 @@ public:
   void run(raw_ostream &OS, bool Enums);
 
   void EmitEnumInfo(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
-  void EmitArgKind(raw_ostream &OS);
+  void EmitAnyKind(raw_ostream &OS);
   void EmitIITInfo(raw_ostream &OS);
   void EmitTargetInfo(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
   void EmitIntrinsicToNameTable(const CodeGenIntrinsicTable &Ints,
                                 raw_ostream &OS);
   void EmitIntrinsicToOverloadTable(const CodeGenIntrinsicTable &Ints,
                                     raw_ostream &OS);
+  void EmitIntrinsicToScalarizableTable(const CodeGenIntrinsicTable &Ints,
+                                        raw_ostream &OS);
   void EmitIntrinsicToPrettyPrintTable(const CodeGenIntrinsicTable &Ints,
                                        raw_ostream &OS);
   void EmitIntrinsicBitTable(
@@ -96,8 +99,8 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
     // Emit the enum information.
     EmitEnumInfo(Ints, OS);
 
-    // Emit ArgKind for Intrinsics.h.
-    EmitArgKind(OS);
+    // Emit AnyKind for Intrinsics.h.
+    EmitAnyKind(OS);
   } else {
     // Emit IIT_Info constants.
     EmitIITInfo(OS);
@@ -110,6 +113,9 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
 
     // Emit the intrinsic ID -> overload table.
     EmitIntrinsicToOverloadTable(Ints, OS);
+
+    // Emit the intrinsic ID -> trivially scalarizable table.
+    EmitIntrinsicToScalarizableTable(Ints, OS);
 
     // Emit the intrinsic declaration generator.
     EmitGenerator(Ints, OS);
@@ -157,13 +163,17 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
   }
 
   // Generate a complete header for target specific intrinsics.
+  std::optional<IfDefEmitter> IfDef;
+  std::optional<IncludeGuardEmitter> IncGuard;
+  std::optional<NamespaceEmitter> NS;
+
   if (IntrinsicPrefix.empty()) {
-    OS << "#ifdef GET_INTRINSIC_ENUM_VALUES\n";
+    IfDef.emplace(OS, "GET_INTRINSIC_ENUM_VALUES");
   } else {
     std::string UpperPrefix = StringRef(IntrinsicPrefix).upper();
-    OS << formatv("#ifndef LLVM_IR_INTRINSIC_{}_ENUMS_H\n", UpperPrefix);
-    OS << formatv("#define LLVM_IR_INTRINSIC_{}_ENUMS_H\n", UpperPrefix);
-    OS << "namespace llvm::Intrinsic {\n";
+    IncGuard.emplace(
+        OS, formatv("LLVM_IR_INTRINSIC_{}_ENUMS_H", UpperPrefix).str());
+    NS.emplace(OS, "llvm::Intrinsic");
     OS << formatv("enum {}Intrinsics : unsigned {{\n", UpperPrefix);
   }
 
@@ -188,34 +198,27 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
   }
 
   // Emit num_intrinsics into the target neutral enum.
-  if (IntrinsicPrefix.empty()) {
+  if (IntrinsicPrefix.empty())
     OS << formatv("    num_intrinsics = {}\n", Ints.size() + 1);
-    OS << "#endif\n\n";
-  } else {
-    OS << R"(}; // enum
-} // namespace llvm::Intrinsic
-#endif
-
-)";
-  }
+  else
+    OS << "}; // enum\n";
 }
 
-void IntrinsicEmitter::EmitArgKind(raw_ostream &OS) {
+void IntrinsicEmitter::EmitAnyKind(raw_ostream &OS) {
   if (!IntrinsicPrefix.empty())
     return;
-  OS << "// llvm::Intrinsic::IITDescriptor::ArgKind.\n";
-  OS << "#ifdef GET_INTRINSIC_ARGKIND\n";
-  if (const auto RecArgKind = Records.getDef("ArgKind")) {
-    for (const auto &RV : RecArgKind->getValues())
+  IfDefEmitter IfDef(OS, "GET_INTRINSIC_ANYKIND");
+  OS << "// llvm::Intrinsic::IITDescriptor::AnyKind.\n";
+  if (const auto RecAnyKind = Records.getDef("AnyKind")) {
+    for (const auto &RV : RecAnyKind->getValues())
       OS << "    AK_" << RV.getName() << " = " << *RV.getValue() << ",\n";
   } else {
-    OS << "#error \"ArgKind is not defined\"\n";
+    OS << "#error \"AnyKind is not defined\"\n";
   }
-  OS << "#endif\n\n";
 }
 
 void IntrinsicEmitter::EmitIITInfo(raw_ostream &OS) {
-  OS << "#ifdef GET_INTRINSIC_IITINFO\n";
+  IfDefEmitter IfDef(OS, "GET_INTRINSIC_IITINFO");
   std::array<StringRef, 256> RecsByNumber;
   auto IIT_Base = Records.getAllDerivedDefinitionsIfDefined("IIT_Base");
   for (const Record *Rec : IIT_Base) {
@@ -226,19 +229,20 @@ void IntrinsicEmitter::EmitIITInfo(raw_ostream &OS) {
     RecsByNumber[Number] = Rec->getName();
   }
   if (IIT_Base.size() > 0) {
+    if (RecsByNumber[0] != "IIT_Done")
+      PrintFatalError("IIT_Done expected to have value 0");
     for (unsigned I = 0, E = RecsByNumber.size(); I < E; ++I)
       if (!RecsByNumber[I].empty())
         OS << "  " << RecsByNumber[I] << " = " << I << ",\n";
   } else {
     OS << "#error \"class IIT_Base is not defined\"\n";
   }
-  OS << "#endif\n\n";
 }
 
 void IntrinsicEmitter::EmitTargetInfo(const CodeGenIntrinsicTable &Ints,
                                       raw_ostream &OS) {
+  IfDefEmitter IfDef(OS, "GET_INTRINSIC_TARGET_DATA");
   OS << R"(// Target mapping.
-#ifdef GET_INTRINSIC_TARGET_DATA
 struct IntrinsicTargetInfo {
   StringLiteral Name;
   size_t Offset;
@@ -248,10 +252,7 @@ static constexpr IntrinsicTargetInfo TargetInfos[] = {
 )";
   for (const auto [Name, Offset, Count] : Ints.getTargets())
     OS << formatv("  {{\"{}\", {}, {}},\n", Name, Offset, Count);
-  OS << R"(};
-#endif
-
-)";
+  OS << "};\n";
 }
 
 /// Helper function to emit a bit table for intrinsic properties.
@@ -260,8 +261,8 @@ void IntrinsicEmitter::EmitIntrinsicBitTable(
     const CodeGenIntrinsicTable &Ints, raw_ostream &OS, StringRef Guard,
     StringRef TableName, StringRef Comment,
     function_ref<bool(const CodeGenIntrinsic &Int)> GetProperty) {
+  IfDefEmitter IfDef(OS, Guard);
   OS << formatv("// {}\n", Comment);
-  OS << formatv("#ifdef {}\n", Guard);
   OS << formatv("static constexpr uint8_t {}[] = {{\n", TableName);
   OS << "  0\n  ";
   for (auto [I, Int] : enumerate(Ints)) {
@@ -274,7 +275,6 @@ void IntrinsicEmitter::EmitIntrinsicBitTable(
   }
   OS << "\n};\n\n";
   OS << formatv("return ({}[id/8] & (1 << (id%8))) != 0;\n", TableName);
-  OS << formatv("#endif // {}\n\n", Guard);
 }
 
 void IntrinsicEmitter::EmitIntrinsicToNameTable(
@@ -286,8 +286,8 @@ void IntrinsicEmitter::EmitIntrinsicToNameTable(
   for (const auto &Int : Ints)
     Table.GetOrAddStringOffset(Int.Name);
 
+  IfDefEmitter IfDef(OS, "GET_INTRINSIC_NAME_TABLE");
   OS << R"(// Intrinsic ID to name table.
-#ifdef GET_INTRINSIC_NAME_TABLE
 // Note that entry #0 is the invalid intrinsic!
 
 )";
@@ -303,12 +303,7 @@ static constexpr unsigned IntrinsicNameOffsetTable[] = {
   for (const auto &Int : Ints)
     OS << formatv("  {}, // {}\n", Table.GetStringOffset(Int.Name), Int.Name);
 
-  OS << R"(
-}; // IntrinsicNameOffsetTable
-
-#endif
-
-)";
+  OS << "\n}; // IntrinsicNameOffsetTable\n";
 }
 
 void IntrinsicEmitter::EmitIntrinsicToOverloadTable(
@@ -317,6 +312,14 @@ void IntrinsicEmitter::EmitIntrinsicToOverloadTable(
       Ints, OS, "GET_INTRINSIC_OVERLOAD_TABLE", "OTable",
       "Intrinsic ID to overload bitset.",
       [](const CodeGenIntrinsic &Int) { return Int.isOverloaded; });
+}
+
+void IntrinsicEmitter::EmitIntrinsicToScalarizableTable(
+    const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
+  EmitIntrinsicBitTable(
+      Ints, OS, "GET_INTRINSIC_SCALARIZABLE_TABLE", "STable",
+      "Intrinsic ID to trivially scalarizable bitset.",
+      [](const CodeGenIntrinsic &Int) { return Int.isTriviallyScalarizable; });
 }
 
 using TypeSigTy = SmallVector<unsigned char>;
@@ -354,16 +357,20 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
   using FixedEncodingTy =
       std::conditional_t<Use16BitFixedEncoding, uint16_t, uint32_t>;
   constexpr unsigned FixedEncodingBits = sizeof(FixedEncodingTy) * CHAR_BIT;
+  constexpr unsigned MSBPosition = FixedEncodingBits - 1;
   // Mask with all bits 1 except the most significant bit.
-  const unsigned Mask = (1U << (FixedEncodingBits - 1)) - 1;
-  const unsigned MSBPostion = FixedEncodingBits - 1;
+  constexpr unsigned Mask = (1U << MSBPosition) - 1;
   StringRef FixedEncodingTypeName =
       Use16BitFixedEncoding ? "uint16_t" : "uint32_t";
 
   // If we can compute a 16/32-bit fixed encoding for this intrinsic, do so and
   // capture it in this vector, otherwise store a ~0U.
   std::vector<FixedEncodingTy> FixedEncodings;
-  SequenceToOffsetTable<TypeSigTy> LongEncodingTable;
+
+  // Each IIT encoding sequence in the long encoding table is terminated by
+  // IIT_Done(=0) token.
+  constexpr unsigned char IIT_Done = 0;
+  SequenceToOffsetTable<TypeSigTy> LongEncodingTable(IIT_Done);
 
   FixedEncodings.reserve(Ints.size());
 
@@ -374,7 +381,7 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
 
     // Check to see if we can encode it into a 16/32 bit word.
     std::optional<uint32_t> Result = encodePacked(TypeSig);
-    if (Result && (*Result & Mask) == Result) {
+    if (Result && (*Result & Mask) == *Result) {
       FixedEncodings.push_back(static_cast<FixedEncodingTy>(*Result));
       continue;
     }
@@ -387,9 +394,10 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
 
   LongEncodingTable.layout();
 
+  IfDefEmitter IfDef(OS, "GET_INTRINSIC_GENERATOR_GLOBAL");
   OS << formatv(R"(// Global intrinsic function declaration type table.
-#ifdef GET_INTRINSIC_GENERATOR_GLOBAL
-static constexpr {} IIT_Table[] = {{
+using FixedEncodingTy = {};
+static constexpr FixedEncodingTy IIT_Table[] = {{
   )",
                 FixedEncodingTypeName);
 
@@ -410,7 +418,7 @@ static constexpr {} IIT_Table[] = {{
 
     // Otherwise, emit the offset into the long encoding table.  We emit it this
     // way so that it is easier to read the offset in the .def file.
-    OS << formatv("(1U<<{}) | {}, ", MSBPostion, Offset);
+    OS << formatv("(1U<<{}) | {}, ", MSBPosition, Offset);
   }
 
   OS << "0\n};\n\n";
@@ -425,7 +433,6 @@ static constexpr {} IIT_Table[] = {{
     LongEncodingTable.emit(
         OS, [](raw_ostream &OS, unsigned char C) { OS << (unsigned)C; });
   OS << "  255\n};\n";
-  OS << "#endif\n\n"; // End of GET_INTRINSIC_GENERATOR_GLOBAL
 }
 
 /// Returns the effective MemoryEffects for intrinsic \p Int.
@@ -524,8 +531,8 @@ static StringRef getArgAttrEnumName(CodeGenIntrinsic::ArgAttrKind Kind) {
 /// EmitAttributes - This emits the Intrinsic::getAttributes method.
 void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
                                       raw_ostream &OS) {
+  IfDefEmitter IfDef(OS, "GET_INTRINSIC_ATTRIBUTES");
   OS << R"(// Add parameter attributes that are not common to all intrinsics.
-#ifdef GET_INTRINSIC_ATTRIBUTES
 static AttributeSet getIntrinsicArgAttributeSet(LLVMContext &C, unsigned ID,
                                                 Type *ArgType) {
   unsigned BitWidth = ArgType->getScalarSizeInBits();
@@ -666,10 +673,6 @@ static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
     AttributesMapDataBitSize = 8;
   else if (AttributesMapDataBitSize > 64)
     PrintFatalError("Packed ID of IntrinsicsToAttributesMap exceeds 64b!");
-  else if (AttributesMapDataBitSize > 16)
-    PrintWarning("Packed ID of IntrinsicsToAttributesMap exceeds 16b, "
-                 "this may cause performance drop (pr106809), "
-                 "please consider redesigning intrinsic sets!");
 
   // Assign a packed ID for each intrinsic. The lower bits will be its
   // "argument attribute ID" (index in UniqAttributes) and upper bits will be
@@ -825,8 +828,6 @@ AttributeSet Intrinsic::getFnAttributes(LLVMContext &C, ID id) {{
     return AttributeSet();
   return getIntrinsicFnAttributeSet(C, FnAttrID);
 }
-#endif // GET_INTRINSIC_ATTRIBUTES
-
 )",
                 UniqAttributesBitSize, MaxNumAttrs, NoFunctionAttrsID,
                 NoFunctionAttrsID);
@@ -843,8 +844,8 @@ void IntrinsicEmitter::EmitIntrinsicToPrettyPrintTable(
 
 void IntrinsicEmitter::EmitPrettyPrintArguments(
     const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
+  IfDefEmitter IfDef(OS, "GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS");
   OS << R"(
-#ifdef GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
 void Intrinsic::printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS, const Constant *ImmArgVal) {
   using namespace Intrinsic;
   switch (IID) {
@@ -873,9 +874,7 @@ void Intrinsic::printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS, const Cons
   OS << R"(  default:
     break;
   }
-}
-#endif // GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
-)";
+})";
 }
 
 void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
@@ -930,25 +929,22 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
     }
   }
 
+  IfDefEmitter IfDef(
+      OS,
+      formatv("GET_LLVM_INTRINSIC_FOR_{}_BUILTIN", UpperCompilerName).str());
   OS << formatv(R"(
 // Get the LLVM intrinsic that corresponds to a builtin. This is used by the
 // C front-end. The builtin name is passed in as BuiltinName, and a target
 // prefix (e.g. 'ppc') is passed in as TargetPrefix.
-#ifdef GET_LLVM_INTRINSIC_FOR_{}_BUILTIN
 Intrinsic::ID
 Intrinsic::getIntrinsicFor{}Builtin(StringRef TargetPrefix, 
                                       StringRef BuiltinName) {{
   using namespace Intrinsic;
 )",
-                UpperCompilerName, CompilerName);
+                CompilerName);
 
   if (BuiltinMap.empty()) {
-    OS << formatv(R"(
-  return not_intrinsic;
-  }
-#endif  // GET_LLVM_INTRINSIC_FOR_{}_BUILTIN
-)",
-                  UpperCompilerName);
+    OS << "return not_intrinsic;\n";
     return;
   }
 
@@ -1035,7 +1031,7 @@ Intrinsic::getIntrinsicFor{}Builtin(StringRef TargetPrefix,
   }
 
   // If a target independent builtin was not found, lookup the target specific.
-  OS << formatv(R"(
+  OS << R"(
   auto TI = lower_bound(TargetTable, TargetPrefix);
   if (TI == std::end(TargetTable) || TI->TargetPrefix != TargetPrefix)
     return not_intrinsic;
@@ -1048,10 +1044,7 @@ Intrinsic::getIntrinsicFor{}Builtin(StringRef TargetPrefix,
     return not_intrinsic;
   return II->IntrinsicID;
 }
-#endif // GET_LLVM_INTRINSIC_FOR_{}_BUILTIN
-
-)",
-                UpperCompilerName);
+)";
 }
 
 static TableGen::Emitter::OptClass<IntrinsicEmitterOpt</*Enums=*/true>>

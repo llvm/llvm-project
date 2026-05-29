@@ -182,10 +182,10 @@ define void @reductions(<vscale x 4 x i32> %v0, <vscale x 4 x i64> %v1, <vscale 
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:5 SizeLat:3 for: %fadd_nxv4f64 = call fast double @llvm.vector.reduce.fadd.nxv4f64(double 0.000000e+00, <vscale x 4 x double> %v3)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of Invalid for: %fmin_nxv1f32 = call fast float @llvm.vector.reduce.fmin.nxv1f32(<vscale x 1 x float> poison)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 2 for: %fmin_nxv4f32 = call fast float @llvm.vector.reduce.fmin.nxv4f32(<vscale x 4 x float> %v2)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 4 for: %fmin_nxv4f64 = call fast double @llvm.vector.reduce.fmin.nxv4f64(<vscale x 4 x double> %v3)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 3 for: %fmin_nxv4f64 = call fast double @llvm.vector.reduce.fmin.nxv4f64(<vscale x 4 x double> %v3)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of Invalid for: %fmax_nxv1f32 = call fast float @llvm.vector.reduce.fmax.nxv1f32(<vscale x 1 x float> poison)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 2 for: %fmax_nxv4f32 = call fast float @llvm.vector.reduce.fmax.nxv4f32(<vscale x 4 x float> %v2)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 4 for: %fmax_nxv4f64 = call fast double @llvm.vector.reduce.fmax.nxv4f64(<vscale x 4 x double> %v3)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 3 for: %fmax_nxv4f64 = call fast double @llvm.vector.reduce.fmax.nxv4f64(<vscale x 4 x double> %v3)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'reductions'
@@ -221,10 +221,10 @@ define void @reductions(<vscale x 4 x i32> %v0, <vscale x 4 x i64> %v1, <vscale 
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:5 SizeLat:3 for: %fadd_nxv4f64 = call fast double @llvm.vector.reduce.fadd.nxv4f64(double 0.000000e+00, <vscale x 4 x double> %v3)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of Invalid for: %fmin_nxv1f32 = call fast float @llvm.vector.reduce.fmin.nxv1f32(<vscale x 1 x float> poison)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 2 for: %fmin_nxv4f32 = call fast float @llvm.vector.reduce.fmin.nxv4f32(<vscale x 4 x float> %v2)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 4 for: %fmin_nxv4f64 = call fast double @llvm.vector.reduce.fmin.nxv4f64(<vscale x 4 x double> %v3)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 3 for: %fmin_nxv4f64 = call fast double @llvm.vector.reduce.fmin.nxv4f64(<vscale x 4 x double> %v3)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of Invalid for: %fmax_nxv1f32 = call fast float @llvm.vector.reduce.fmax.nxv1f32(<vscale x 1 x float> poison)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 2 for: %fmax_nxv4f32 = call fast float @llvm.vector.reduce.fmax.nxv4f32(<vscale x 4 x float> %v2)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 4 for: %fmax_nxv4f64 = call fast double @llvm.vector.reduce.fmax.nxv4f64(<vscale x 4 x double> %v3)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 3 for: %fmax_nxv4f64 = call fast double @llvm.vector.reduce.fmax.nxv4f64(<vscale x 4 x double> %v3)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'reductions'
@@ -260,10 +260,10 @@ define void @reductions(<vscale x 4 x i32> %v0, <vscale x 4 x i64> %v1, <vscale 
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:5 SizeLat:3 for: %fadd_nxv4f64 = call fast double @llvm.vector.reduce.fadd.nxv4f64(double 0.000000e+00, <vscale x 4 x double> %v3)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %fmin_nxv1f32 = call fast float @llvm.vector.reduce.fmin.nxv1f32(<vscale x 1 x float> poison)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %fmin_nxv4f32 = call fast float @llvm.vector.reduce.fmin.nxv4f32(<vscale x 4 x float> %v2)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 4 for: %fmin_nxv4f64 = call fast double @llvm.vector.reduce.fmin.nxv4f64(<vscale x 4 x double> %v3)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 3 for: %fmin_nxv4f64 = call fast double @llvm.vector.reduce.fmin.nxv4f64(<vscale x 4 x double> %v3)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %fmax_nxv1f32 = call fast float @llvm.vector.reduce.fmax.nxv1f32(<vscale x 1 x float> poison)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %fmax_nxv4f32 = call fast float @llvm.vector.reduce.fmax.nxv4f32(<vscale x 4 x float> %v2)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 4 for: %fmax_nxv4f64 = call fast double @llvm.vector.reduce.fmax.nxv4f64(<vscale x 4 x double> %v3)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 3 for: %fmax_nxv4f64 = call fast double @llvm.vector.reduce.fmax.nxv4f64(<vscale x 4 x double> %v3)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %add_nxv1i32 = call i32 @llvm.vector.reduce.add.nxv1i32(<vscale x 1 x i32> poison)
@@ -615,7 +615,7 @@ declare <vscale x 4 x float> @llvm.log.nxv4f32(<vscale x 4 x float>)
 declare <vscale x 4 x float> @llvm.log2.nxv4f32(<vscale x 4 x float>)
 declare <vscale x 4 x float> @llvm.log10.nxv4f32(<vscale x 4 x float>)
 
-define void @vector_splice() #0 {
+define void @vector_splice(i32 %offset) #0 {
 ; CHECK-VSCALE-1-LABEL: 'vector_splice'
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %1 = call <vscale x 16 x i8> @llvm.vector.splice.left.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> zeroinitializer, i32 1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 2 for: %2 = call <vscale x 32 x i8> @llvm.vector.splice.left.nxv32i8(<vscale x 32 x i8> zeroinitializer, <vscale x 32 x i8> zeroinitializer, i32 1)
@@ -678,6 +678,8 @@ define void @vector_splice() #0 {
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 6 for: %59 = call <vscale x 4 x i1> @llvm.vector.splice.right.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 6 for: %60 = call <vscale x 2 x i1> @llvm.vector.splice.right.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of Invalid for: %61 = call <vscale x 1 x i1> @llvm.vector.splice.right.nxv1i1(<vscale x 1 x i1> zeroinitializer, <vscale x 1 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of Invalid for: %left.variable = call <vscale x 4 x i32> @llvm.vector.splice.left.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of Invalid for: %right.variable = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'vector_splice'
@@ -742,6 +744,8 @@ define void @vector_splice() #0 {
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 6 for: %59 = call <vscale x 4 x i1> @llvm.vector.splice.right.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 6 for: %60 = call <vscale x 2 x i1> @llvm.vector.splice.right.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of Invalid for: %61 = call <vscale x 1 x i1> @llvm.vector.splice.right.nxv1i1(<vscale x 1 x i1> zeroinitializer, <vscale x 1 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of Invalid for: %left.variable = call <vscale x 4 x i32> @llvm.vector.splice.left.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of Invalid for: %right.variable = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'vector_splice'
@@ -806,6 +810,8 @@ define void @vector_splice() #0 {
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %59 = call <vscale x 4 x i1> @llvm.vector.splice.right.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %60 = call <vscale x 2 x i1> @llvm.vector.splice.right.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %61 = call <vscale x 1 x i1> @llvm.vector.splice.right.nxv1i1(<vscale x 1 x i1> zeroinitializer, <vscale x 1 x i1> zeroinitializer, i32 1)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %left.variable = call <vscale x 4 x i32> @llvm.vector.splice.left.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %right.variable = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 
@@ -871,6 +877,9 @@ define void @vector_splice() #0 {
   %splice_nxv4i1_neg = call <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 -1)
   %splice_nxv2i1_neg = call <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 -1)
   %splice_nxv1i1_neg = call <vscale x 1 x i1> @llvm.vector.splice.nxv1i1(<vscale x 1 x i1> zeroinitializer, <vscale x 1 x i1> zeroinitializer, i32 -1)
+
+  %left.variable = call <vscale x 4 x i32> @llvm.vector.splice.left(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
+  %right.variable = call <vscale x 4 x i32> @llvm.vector.splice.right(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
   ret void
 }
 
@@ -1099,11 +1108,11 @@ define void @fshl() #0 {
 
 define <vscale x 4 x i32> @masked_gather_nxv4i32(<vscale x 4 x ptr> %ld, <vscale x 4 x i1> %masks, <vscale x 4 x i32> %passthru) {
 ; CHECK-VSCALE-1-LABEL: 'masked_gather_nxv4i32'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 40 for: %res = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 %ld, <vscale x 4 x i1> %masks, <vscale x 4 x i32> %passthru)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:40 Lat:160 SizeLat:40 for: %res = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 %ld, <vscale x 4 x i1> %masks, <vscale x 4 x i32> %passthru)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <vscale x 4 x i32> %res
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_gather_nxv4i32'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 80 for: %res = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 %ld, <vscale x 4 x i1> %masks, <vscale x 4 x i32> %passthru)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:80 Lat:320 SizeLat:80 for: %res = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 %ld, <vscale x 4 x i1> %masks, <vscale x 4 x i32> %passthru)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <vscale x 4 x i32> %res
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_gather_nxv4i32'
@@ -1116,11 +1125,11 @@ define <vscale x 4 x i32> @masked_gather_nxv4i32(<vscale x 4 x ptr> %ld, <vscale
 
 define <vscale x 8 x i32> @masked_gather_nxv8i32(<vscale x 8 x ptr> %ld, <vscale x 8 x i1> %masks, <vscale x 8 x i32> %passthru) {
 ; CHECK-VSCALE-1-LABEL: 'masked_gather_nxv8i32'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 80 for: %res = call <vscale x 8 x i32> @llvm.masked.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr> align 4 %ld, <vscale x 8 x i1> %masks, <vscale x 8 x i32> %passthru)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:80 Lat:320 SizeLat:80 for: %res = call <vscale x 8 x i32> @llvm.masked.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr> align 4 %ld, <vscale x 8 x i1> %masks, <vscale x 8 x i32> %passthru)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <vscale x 8 x i32> %res
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_gather_nxv8i32'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 160 for: %res = call <vscale x 8 x i32> @llvm.masked.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr> align 4 %ld, <vscale x 8 x i1> %masks, <vscale x 8 x i32> %passthru)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:160 Lat:640 SizeLat:160 for: %res = call <vscale x 8 x i32> @llvm.masked.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr> align 4 %ld, <vscale x 8 x i1> %masks, <vscale x 8 x i32> %passthru)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <vscale x 8 x i32> %res
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_gather_nxv8i32'
@@ -1133,11 +1142,11 @@ define <vscale x 8 x i32> @masked_gather_nxv8i32(<vscale x 8 x ptr> %ld, <vscale
 
 define <4 x i32> @masked_gather_v4i32(<4 x ptr> %ld, <4 x i1> %masks, <4 x i32> %passthru) {
 ; CHECK-VSCALE-1-LABEL: 'masked_gather_v4i32'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:20 Lat:32 SizeLat:32 for: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %ld, <4 x i1> %masks, <4 x i32> %passthru)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:20 Lat:44 SizeLat:32 for: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %ld, <4 x i1> %masks, <4 x i32> %passthru)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i32> %res
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_gather_v4i32'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:20 Lat:32 SizeLat:32 for: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %ld, <4 x i1> %masks, <4 x i32> %passthru)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:20 Lat:44 SizeLat:32 for: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %ld, <4 x i1> %masks, <4 x i32> %passthru)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i32> %res
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_gather_v4i32'
@@ -1150,11 +1159,11 @@ define <4 x i32> @masked_gather_v4i32(<4 x ptr> %ld, <4 x i1> %masks, <4 x i32> 
 
 define <1 x i128> @masked_gather_v1i128(<1 x ptr> %ld, <1 x i1> %masks, <1 x i128> %passthru) {
 ; CHECK-VSCALE-1-LABEL: 'masked_gather_v1i128'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:8 SizeLat:9 for: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> align 16 %ld, <1 x i1> %masks, <1 x i128> %passthru)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:11 SizeLat:9 for: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> align 16 %ld, <1 x i1> %masks, <1 x i128> %passthru)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <1 x i128> %res
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_gather_v1i128'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:8 SizeLat:9 for: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> align 16 %ld, <1 x i1> %masks, <1 x i128> %passthru)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:11 SizeLat:9 for: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> align 16 %ld, <1 x i1> %masks, <1 x i128> %passthru)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <1 x i128> %res
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_gather_v1i128'
@@ -1307,15 +1316,15 @@ define void @histogram_nxv16i8(<vscale x 16 x ptr> %buckets, <vscale x 16 x i1> 
 
 define void @histogram_v2i64(<2 x ptr> %buckets, <2 x i1> %mask) {
 ; CHECK-VSCALE-1-LABEL: 'histogram_v2i64'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:8 Lat:10 SizeLat:10 for: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:8 Lat:16 SizeLat:10 for: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'histogram_v2i64'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:8 Lat:10 SizeLat:10 for: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:8 Lat:16 SizeLat:10 for: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'histogram_v2i64'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:8 Lat:10 SizeLat:10 for: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:8 Lat:16 SizeLat:10 for: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
@@ -1324,15 +1333,15 @@ define void @histogram_v2i64(<2 x ptr> %buckets, <2 x i1> %mask) {
 
 define void @histogram_v4i32(<4 x ptr> %buckets, <4 x i1> %mask) {
 ; CHECK-VSCALE-1-LABEL: 'histogram_v4i32'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:16 Lat:20 SizeLat:20 for: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:16 Lat:32 SizeLat:20 for: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'histogram_v4i32'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:16 Lat:20 SizeLat:20 for: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:16 Lat:32 SizeLat:20 for: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'histogram_v4i32'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:16 Lat:20 SizeLat:20 for: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:16 Lat:32 SizeLat:20 for: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
@@ -1341,15 +1350,15 @@ define void @histogram_v4i32(<4 x ptr> %buckets, <4 x i1> %mask) {
 
 define void @histogram_v8i16(<8 x ptr> %buckets, <8 x i1> %mask) {
 ; CHECK-VSCALE-1-LABEL: 'histogram_v8i16'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:32 Lat:40 SizeLat:40 for: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:32 Lat:64 SizeLat:40 for: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'histogram_v8i16'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:32 Lat:40 SizeLat:40 for: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:32 Lat:64 SizeLat:40 for: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'histogram_v8i16'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:32 Lat:40 SizeLat:40 for: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:32 Lat:64 SizeLat:40 for: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
@@ -1358,15 +1367,15 @@ define void @histogram_v8i16(<8 x ptr> %buckets, <8 x i1> %mask) {
 
 define void @histogram_v16i8(<16 x ptr> %buckets, <16 x i1> %mask) {
 ; CHECK-VSCALE-1-LABEL: 'histogram_v16i8'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:64 Lat:80 SizeLat:80 for: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:64 Lat:128 SizeLat:80 for: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'histogram_v16i8'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:64 Lat:80 SizeLat:80 for: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:64 Lat:128 SizeLat:80 for: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'histogram_v16i8'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:64 Lat:80 SizeLat:80 for: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:64 Lat:128 SizeLat:80 for: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   call void @llvm.experimental.vector.histogram.add.v16p0.i64(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
@@ -1437,6 +1446,311 @@ define void @match() #3 {
 
   ret void
 }
+
+define void @sqrt() #1 {
+; CHECK-VSCALE-1-LABEL: 'sqrt'
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %sqrt.nxv8f16 = call <vscale x 8 x half> @llvm.sqrt.nxv8f16(<vscale x 8 x half> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %sqrt.nxv4f32 = call <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %sqrt.nxv2f64 = call <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 2 for: %sqrt.nxv4f64 = call <vscale x 4 x double> @llvm.sqrt.nxv4f64(<vscale x 4 x double> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-VSCALE-2-LABEL: 'sqrt'
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %sqrt.nxv8f16 = call <vscale x 8 x half> @llvm.sqrt.nxv8f16(<vscale x 8 x half> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %sqrt.nxv4f32 = call <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %sqrt.nxv2f64 = call <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 2 for: %sqrt.nxv4f64 = call <vscale x 4 x double> @llvm.sqrt.nxv4f64(<vscale x 4 x double> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'sqrt'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %sqrt.nxv8f16 = call <vscale x 8 x half> @llvm.sqrt.nxv8f16(<vscale x 8 x half> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %sqrt.nxv4f32 = call <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %sqrt.nxv2f64 = call <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %sqrt.nxv4f64 = call <vscale x 4 x double> @llvm.sqrt.nxv4f64(<vscale x 4 x double> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %sqrt.nxv8f16 = call <vscale x 8 x half> @llvm.sqrt.nxv8f16(<vscale x 8 x half> poison)
+  %sqrt.nxv4f32 = call <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> poison)
+  %sqrt.nxv2f64 = call <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> poison)
+  %sqrt.nxv4f64 = call <vscale x 4 x double> @llvm.sqrt.nxv4f64(<vscale x 4 x double> poison)
+
+  ret void
+}
+
+define void @fabs() #1 {
+; CHECK-VSCALE-1-LABEL: 'fabs'
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %fabs.nxv8f16 = call <vscale x 8 x half> @llvm.fabs.nxv8f16(<vscale x 8 x half> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %fabs.nxv4f32 = call <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %fabs.nxv2f64 = call <vscale x 2 x double> @llvm.fabs.nxv2f64(<vscale x 2 x double> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 2 for: %fabs.nxv4f64 = call <vscale x 4 x double> @llvm.fabs.nxv4f64(<vscale x 4 x double> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-VSCALE-2-LABEL: 'fabs'
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %fabs.nxv8f16 = call <vscale x 8 x half> @llvm.fabs.nxv8f16(<vscale x 8 x half> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %fabs.nxv4f32 = call <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %fabs.nxv2f64 = call <vscale x 2 x double> @llvm.fabs.nxv2f64(<vscale x 2 x double> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 2 for: %fabs.nxv4f64 = call <vscale x 4 x double> @llvm.fabs.nxv4f64(<vscale x 4 x double> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'fabs'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %fabs.nxv8f16 = call <vscale x 8 x half> @llvm.fabs.nxv8f16(<vscale x 8 x half> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %fabs.nxv4f32 = call <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %fabs.nxv2f64 = call <vscale x 2 x double> @llvm.fabs.nxv2f64(<vscale x 2 x double> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %fabs.nxv4f64 = call <vscale x 4 x double> @llvm.fabs.nxv4f64(<vscale x 4 x double> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %fabs.nxv8f16 = call <vscale x 8 x half> @llvm.fabs.nxv8f16(<vscale x 8 x half> poison)
+  %fabs.nxv4f32 = call <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float> poison)
+  %fabs.nxv2f64 = call <vscale x 2 x double> @llvm.fabs.nxv2f64(<vscale x 2 x double> poison)
+  %fabs.nxv4f64 = call <vscale x 4 x double> @llvm.fabs.nxv4f64(<vscale x 4 x double> poison)
+
+  ret void
+}
+
+define void @ceil() #1 {
+; CHECK-VSCALE-1-LABEL: 'ceil'
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %ceil.nxv8f16 = call <vscale x 8 x half> @llvm.ceil.nxv8f16(<vscale x 8 x half> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %ceil.nxv4f32 = call <vscale x 4 x float> @llvm.ceil.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %ceil.nxv2f64 = call <vscale x 2 x double> @llvm.ceil.nxv2f64(<vscale x 2 x double> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 2 for: %ceil.nxv4f64 = call <vscale x 4 x double> @llvm.ceil.nxv4f64(<vscale x 4 x double> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-VSCALE-2-LABEL: 'ceil'
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %ceil.nxv8f16 = call <vscale x 8 x half> @llvm.ceil.nxv8f16(<vscale x 8 x half> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %ceil.nxv4f32 = call <vscale x 4 x float> @llvm.ceil.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %ceil.nxv2f64 = call <vscale x 2 x double> @llvm.ceil.nxv2f64(<vscale x 2 x double> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 2 for: %ceil.nxv4f64 = call <vscale x 4 x double> @llvm.ceil.nxv4f64(<vscale x 4 x double> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'ceil'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %ceil.nxv8f16 = call <vscale x 8 x half> @llvm.ceil.nxv8f16(<vscale x 8 x half> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %ceil.nxv4f32 = call <vscale x 4 x float> @llvm.ceil.nxv4f32(<vscale x 4 x float> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %ceil.nxv2f64 = call <vscale x 2 x double> @llvm.ceil.nxv2f64(<vscale x 2 x double> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %ceil.nxv4f64 = call <vscale x 4 x double> @llvm.ceil.nxv4f64(<vscale x 4 x double> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %ceil.nxv8f16 = call <vscale x 8 x half> @llvm.ceil.nxv8f16(<vscale x 8 x half> poison)
+  %ceil.nxv4f32 = call <vscale x 4 x float> @llvm.ceil.nxv4f32(<vscale x 4 x float> poison)
+  %ceil.nxv2f64 = call <vscale x 2 x double> @llvm.ceil.nxv2f64(<vscale x 2 x double> poison)
+  %ceil.nxv4f64 = call <vscale x 4 x double> @llvm.ceil.nxv4f64(<vscale x 4 x double> poison)
+
+  ret void
+}
+
+define void @floor() #1 {
+; CHECK-VSCALE-1-LABEL: 'floor'
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %floor.nxv8f16 = call <vscale x 8 x half> @llvm.floor.nxv8f16(<vscale x 8 x half> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %floor.nxv4f32 = call <vscale x 4 x float> @llvm.floor.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %floor.nxv2f64 = call <vscale x 2 x double> @llvm.floor.nxv2f64(<vscale x 2 x double> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 2 for: %floor.nxv4f64 = call <vscale x 4 x double> @llvm.floor.nxv4f64(<vscale x 4 x double> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-VSCALE-2-LABEL: 'floor'
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %floor.nxv8f16 = call <vscale x 8 x half> @llvm.floor.nxv8f16(<vscale x 8 x half> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %floor.nxv4f32 = call <vscale x 4 x float> @llvm.floor.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %floor.nxv2f64 = call <vscale x 2 x double> @llvm.floor.nxv2f64(<vscale x 2 x double> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 2 for: %floor.nxv4f64 = call <vscale x 4 x double> @llvm.floor.nxv4f64(<vscale x 4 x double> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'floor'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %floor.nxv8f16 = call <vscale x 8 x half> @llvm.floor.nxv8f16(<vscale x 8 x half> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %floor.nxv4f32 = call <vscale x 4 x float> @llvm.floor.nxv4f32(<vscale x 4 x float> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %floor.nxv2f64 = call <vscale x 2 x double> @llvm.floor.nxv2f64(<vscale x 2 x double> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %floor.nxv4f64 = call <vscale x 4 x double> @llvm.floor.nxv4f64(<vscale x 4 x double> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %floor.nxv8f16 = call <vscale x 8 x half> @llvm.floor.nxv8f16(<vscale x 8 x half> poison)
+  %floor.nxv4f32 = call <vscale x 4 x float> @llvm.floor.nxv4f32(<vscale x 4 x float> poison)
+  %floor.nxv2f64 = call <vscale x 2 x double> @llvm.floor.nxv2f64(<vscale x 2 x double> poison)
+  %floor.nxv4f64 = call <vscale x 4 x double> @llvm.floor.nxv4f64(<vscale x 4 x double> poison)
+
+  ret void
+}
+
+define void @nearbyint() #1 {
+; CHECK-VSCALE-1-LABEL: 'nearbyint'
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %nearbyint.nxv8f16 = call <vscale x 8 x half> @llvm.nearbyint.nxv8f16(<vscale x 8 x half> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %nearbyint.nxv4f32 = call <vscale x 4 x float> @llvm.nearbyint.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %nearbyint.nxv2f64 = call <vscale x 2 x double> @llvm.nearbyint.nxv2f64(<vscale x 2 x double> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 2 for: %nearbyint.nxv4f64 = call <vscale x 4 x double> @llvm.nearbyint.nxv4f64(<vscale x 4 x double> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-VSCALE-2-LABEL: 'nearbyint'
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %nearbyint.nxv8f16 = call <vscale x 8 x half> @llvm.nearbyint.nxv8f16(<vscale x 8 x half> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %nearbyint.nxv4f32 = call <vscale x 4 x float> @llvm.nearbyint.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %nearbyint.nxv2f64 = call <vscale x 2 x double> @llvm.nearbyint.nxv2f64(<vscale x 2 x double> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 2 for: %nearbyint.nxv4f64 = call <vscale x 4 x double> @llvm.nearbyint.nxv4f64(<vscale x 4 x double> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'nearbyint'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %nearbyint.nxv8f16 = call <vscale x 8 x half> @llvm.nearbyint.nxv8f16(<vscale x 8 x half> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %nearbyint.nxv4f32 = call <vscale x 4 x float> @llvm.nearbyint.nxv4f32(<vscale x 4 x float> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %nearbyint.nxv2f64 = call <vscale x 2 x double> @llvm.nearbyint.nxv2f64(<vscale x 2 x double> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %nearbyint.nxv4f64 = call <vscale x 4 x double> @llvm.nearbyint.nxv4f64(<vscale x 4 x double> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %nearbyint.nxv8f16 = call <vscale x 8 x half> @llvm.nearbyint.nxv8f16(<vscale x 8 x half> poison)
+  %nearbyint.nxv4f32 = call <vscale x 4 x float> @llvm.nearbyint.nxv4f32(<vscale x 4 x float> poison)
+  %nearbyint.nxv2f64 = call <vscale x 2 x double> @llvm.nearbyint.nxv2f64(<vscale x 2 x double> poison)
+  %nearbyint.nxv4f64 = call <vscale x 4 x double> @llvm.nearbyint.nxv4f64(<vscale x 4 x double> poison)
+
+  ret void
+}
+
+define void @round() #1 {
+; CHECK-VSCALE-1-LABEL: 'round'
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %round.nxv8f16 = call <vscale x 8 x half> @llvm.round.nxv8f16(<vscale x 8 x half> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %round.nxv4f32 = call <vscale x 4 x float> @llvm.round.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %round.nxv2f64 = call <vscale x 2 x double> @llvm.round.nxv2f64(<vscale x 2 x double> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 2 for: %round.nxv4f64 = call <vscale x 4 x double> @llvm.round.nxv4f64(<vscale x 4 x double> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-VSCALE-2-LABEL: 'round'
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %round.nxv8f16 = call <vscale x 8 x half> @llvm.round.nxv8f16(<vscale x 8 x half> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %round.nxv4f32 = call <vscale x 4 x float> @llvm.round.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %round.nxv2f64 = call <vscale x 2 x double> @llvm.round.nxv2f64(<vscale x 2 x double> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 2 for: %round.nxv4f64 = call <vscale x 4 x double> @llvm.round.nxv4f64(<vscale x 4 x double> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'round'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %round.nxv8f16 = call <vscale x 8 x half> @llvm.round.nxv8f16(<vscale x 8 x half> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %round.nxv4f32 = call <vscale x 4 x float> @llvm.round.nxv4f32(<vscale x 4 x float> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %round.nxv2f64 = call <vscale x 2 x double> @llvm.round.nxv2f64(<vscale x 2 x double> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %round.nxv4f64 = call <vscale x 4 x double> @llvm.round.nxv4f64(<vscale x 4 x double> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %round.nxv8f16 = call <vscale x 8 x half> @llvm.round.nxv8f16(<vscale x 8 x half> poison)
+  %round.nxv4f32 = call <vscale x 4 x float> @llvm.round.nxv4f32(<vscale x 4 x float> poison)
+  %round.nxv2f64 = call <vscale x 2 x double> @llvm.round.nxv2f64(<vscale x 2 x double> poison)
+  %round.nxv4f64 = call <vscale x 4 x double> @llvm.round.nxv4f64(<vscale x 4 x double> poison)
+
+  ret void
+}
+
+define void @rint() #1 {
+; CHECK-VSCALE-1-LABEL: 'rint'
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %rint.nxv8f16 = call <vscale x 8 x half> @llvm.rint.nxv8f16(<vscale x 8 x half> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %rint.nxv4f32 = call <vscale x 4 x float> @llvm.rint.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %rint.nxv2f64 = call <vscale x 2 x double> @llvm.rint.nxv2f64(<vscale x 2 x double> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 2 for: %rint.nxv4f64 = call <vscale x 4 x double> @llvm.rint.nxv4f64(<vscale x 4 x double> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-VSCALE-2-LABEL: 'rint'
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %rint.nxv8f16 = call <vscale x 8 x half> @llvm.rint.nxv8f16(<vscale x 8 x half> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %rint.nxv4f32 = call <vscale x 4 x float> @llvm.rint.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %rint.nxv2f64 = call <vscale x 2 x double> @llvm.rint.nxv2f64(<vscale x 2 x double> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 2 for: %rint.nxv4f64 = call <vscale x 4 x double> @llvm.rint.nxv4f64(<vscale x 4 x double> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'rint'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %rint.nxv8f16 = call <vscale x 8 x half> @llvm.rint.nxv8f16(<vscale x 8 x half> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %rint.nxv4f32 = call <vscale x 4 x float> @llvm.rint.nxv4f32(<vscale x 4 x float> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %rint.nxv2f64 = call <vscale x 2 x double> @llvm.rint.nxv2f64(<vscale x 2 x double> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %rint.nxv4f64 = call <vscale x 4 x double> @llvm.rint.nxv4f64(<vscale x 4 x double> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %rint.nxv8f16 = call <vscale x 8 x half> @llvm.rint.nxv8f16(<vscale x 8 x half> poison)
+  %rint.nxv4f32 = call <vscale x 4 x float> @llvm.rint.nxv4f32(<vscale x 4 x float> poison)
+  %rint.nxv2f64 = call <vscale x 2 x double> @llvm.rint.nxv2f64(<vscale x 2 x double> poison)
+  %rint.nxv4f64 = call <vscale x 4 x double> @llvm.rint.nxv4f64(<vscale x 4 x double> poison)
+
+  ret void
+}
+
+define void @roundeven() #1 {
+; CHECK-VSCALE-1-LABEL: 'roundeven'
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %roundeven.nxv8f16 = call <vscale x 8 x half> @llvm.roundeven.nxv8f16(<vscale x 8 x half> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %roundeven.nxv4f32 = call <vscale x 4 x float> @llvm.roundeven.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %roundeven.nxv2f64 = call <vscale x 2 x double> @llvm.roundeven.nxv2f64(<vscale x 2 x double> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 2 for: %roundeven.nxv4f64 = call <vscale x 4 x double> @llvm.roundeven.nxv4f64(<vscale x 4 x double> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-VSCALE-2-LABEL: 'roundeven'
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %roundeven.nxv8f16 = call <vscale x 8 x half> @llvm.roundeven.nxv8f16(<vscale x 8 x half> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %roundeven.nxv4f32 = call <vscale x 4 x float> @llvm.roundeven.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %roundeven.nxv2f64 = call <vscale x 2 x double> @llvm.roundeven.nxv2f64(<vscale x 2 x double> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 2 for: %roundeven.nxv4f64 = call <vscale x 4 x double> @llvm.roundeven.nxv4f64(<vscale x 4 x double> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'roundeven'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %roundeven.nxv8f16 = call <vscale x 8 x half> @llvm.roundeven.nxv8f16(<vscale x 8 x half> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %roundeven.nxv4f32 = call <vscale x 4 x float> @llvm.roundeven.nxv4f32(<vscale x 4 x float> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %roundeven.nxv2f64 = call <vscale x 2 x double> @llvm.roundeven.nxv2f64(<vscale x 2 x double> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %roundeven.nxv4f64 = call <vscale x 4 x double> @llvm.roundeven.nxv4f64(<vscale x 4 x double> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %roundeven.nxv8f16 = call <vscale x 8 x half> @llvm.roundeven.nxv8f16(<vscale x 8 x half> poison)
+  %roundeven.nxv4f32 = call <vscale x 4 x float> @llvm.roundeven.nxv4f32(<vscale x 4 x float> poison)
+  %roundeven.nxv2f64 = call <vscale x 2 x double> @llvm.roundeven.nxv2f64(<vscale x 2 x double> poison)
+  %roundeven.nxv4f64 = call <vscale x 4 x double> @llvm.roundeven.nxv4f64(<vscale x 4 x double> poison)
+
+  ret void
+}
+
+define void @trunc() #1 {
+; CHECK-VSCALE-1-LABEL: 'trunc'
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %trunc.nxv8f16 = call <vscale x 8 x half> @llvm.trunc.nxv8f16(<vscale x 8 x half> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %trunc.nxv4f32 = call <vscale x 4 x float> @llvm.trunc.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %trunc.nxv2f64 = call <vscale x 2 x double> @llvm.trunc.nxv2f64(<vscale x 2 x double> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 2 for: %trunc.nxv4f64 = call <vscale x 4 x double> @llvm.trunc.nxv4f64(<vscale x 4 x double> poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-VSCALE-2-LABEL: 'trunc'
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %trunc.nxv8f16 = call <vscale x 8 x half> @llvm.trunc.nxv8f16(<vscale x 8 x half> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %trunc.nxv4f32 = call <vscale x 4 x float> @llvm.trunc.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %trunc.nxv2f64 = call <vscale x 2 x double> @llvm.trunc.nxv2f64(<vscale x 2 x double> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 2 for: %trunc.nxv4f64 = call <vscale x 4 x double> @llvm.trunc.nxv4f64(<vscale x 4 x double> poison)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'trunc'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %trunc.nxv8f16 = call <vscale x 8 x half> @llvm.trunc.nxv8f16(<vscale x 8 x half> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %trunc.nxv4f32 = call <vscale x 4 x float> @llvm.trunc.nxv4f32(<vscale x 4 x float> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %trunc.nxv2f64 = call <vscale x 2 x double> @llvm.trunc.nxv2f64(<vscale x 2 x double> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %trunc.nxv4f64 = call <vscale x 4 x double> @llvm.trunc.nxv4f64(<vscale x 4 x double> poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %trunc.nxv8f16 = call <vscale x 8 x half> @llvm.trunc.nxv8f16(<vscale x 8 x half> poison)
+  %trunc.nxv4f32 = call <vscale x 4 x float> @llvm.trunc.nxv4f32(<vscale x 4 x float> poison)
+  %trunc.nxv2f64 = call <vscale x 2 x double> @llvm.trunc.nxv2f64(<vscale x 2 x double> poison)
+  %trunc.nxv4f64 = call <vscale x 4 x double> @llvm.trunc.nxv4f64(<vscale x 4 x double> poison)
+
+  ret void
+}
+
+define void @abs() #1 {
+; CHECK-VSCALE-1-LABEL: 'abs'
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %abs.nxv16i8 = call <vscale x 16 x i8> @llvm.abs.nxv16i8(<vscale x 16 x i8> poison, i1 true)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %abs.nxv8i16 = call <vscale x 8 x i16> @llvm.abs.nxv8i16(<vscale x 8 x i16> poison, i1 true)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %abs.nxv4i32 = call <vscale x 4 x i32> @llvm.abs.nxv4i32(<vscale x 4 x i32> poison, i1 true)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %abs.nxv2i64 = call <vscale x 2 x i64> @llvm.abs.nxv2i64(<vscale x 2 x i64> poison, i1 true)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 2 for: %abs.nxv4i64 = call <vscale x 4 x i64> @llvm.abs.nxv4i64(<vscale x 4 x i64> poison, i1 true)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-VSCALE-2-LABEL: 'abs'
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %abs.nxv16i8 = call <vscale x 16 x i8> @llvm.abs.nxv16i8(<vscale x 16 x i8> poison, i1 true)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %abs.nxv8i16 = call <vscale x 8 x i16> @llvm.abs.nxv8i16(<vscale x 8 x i16> poison, i1 true)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %abs.nxv4i32 = call <vscale x 4 x i32> @llvm.abs.nxv4i32(<vscale x 4 x i32> poison, i1 true)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %abs.nxv2i64 = call <vscale x 2 x i64> @llvm.abs.nxv2i64(<vscale x 2 x i64> poison, i1 true)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 2 for: %abs.nxv4i64 = call <vscale x 4 x i64> @llvm.abs.nxv4i64(<vscale x 4 x i64> poison, i1 true)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'abs'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %abs.nxv16i8 = call <vscale x 16 x i8> @llvm.abs.nxv16i8(<vscale x 16 x i8> poison, i1 true)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %abs.nxv8i16 = call <vscale x 8 x i16> @llvm.abs.nxv8i16(<vscale x 8 x i16> poison, i1 true)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %abs.nxv4i32 = call <vscale x 4 x i32> @llvm.abs.nxv4i32(<vscale x 4 x i32> poison, i1 true)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 1 for: %abs.nxv2i64 = call <vscale x 2 x i64> @llvm.abs.nxv2i64(<vscale x 2 x i64> poison, i1 true)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 2 for: %abs.nxv4i64 = call <vscale x 4 x i64> @llvm.abs.nxv4i64(<vscale x 4 x i64> poison, i1 true)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %abs.nxv16i8 = call <vscale x 16 x i8> @llvm.abs.nxv16i8(<vscale x 16 x i8> poison, i1 true)
+  %abs.nxv8i16 = call <vscale x 8 x i16> @llvm.abs.nxv8i16(<vscale x 8 x i16> poison, i1 true)
+  %abs.nxv4i32 = call <vscale x 4 x i32> @llvm.abs.nxv4i32(<vscale x 4 x i32> poison, i1 true)
+  %abs.nxv2i64 = call <vscale x 2 x i64> @llvm.abs.nxv2i64(<vscale x 2 x i64> poison, i1 true)
+  %abs.nxv4i64 = call <vscale x 4 x i64> @llvm.abs.nxv4i64(<vscale x 4 x i64> poison, i1 true)
+
+  ret void
+}
+
 
 declare <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64, i64)
 declare <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64, i64)

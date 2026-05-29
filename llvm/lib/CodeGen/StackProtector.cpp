@@ -167,9 +167,7 @@ PreservedAnalyses StackProtectorPass::run(Function &F,
 
 char StackProtector::ID = 0;
 
-StackProtector::StackProtector() : FunctionPass(ID) {
-  initializeStackProtectorPass(*PassRegistry::getPassRegistry());
-}
+StackProtector::StackProtector() : FunctionPass(ID) {}
 
 INITIALIZE_PASS_BEGIN(StackProtector, DEBUG_TYPE,
                       "Insert stack protectors", false, true)
@@ -735,7 +733,7 @@ bool InsertStackProtectors(const TargetLowering &TLI,
                                 /*Unreachable=*/false, Weights, DTU,
                                 /*LI=*/nullptr, /*ThenBlock=*/FailBB);
 
-      auto *BI = cast<BranchInst>(Cmp->getParent()->getTerminator());
+      auto *BI = cast<CondBrInst>(Cmp->getParent()->getTerminator());
       BasicBlock *NewBB = BI->getSuccessor(1);
       NewBB->setName("SP_return");
       NewBB->moveAfter(&BB);

@@ -1108,4 +1108,60 @@ TEST(DenseMapCustomTest, ValueDtor) {
   EXPECT_EQ(0u, CtorTester::getNumConstructed());
 }
 
+TEST(DenseMapCustomTest, RemoveIf) {
+  // Use enough entries to exercise the large representation and force the
+  // same-size rehash inside remove_if to restore the probe invariant.
+  DenseMap<int, int> Map;
+  for (int I = 0; I < 100; ++I)
+    Map[I] = I * 10;
+
+  // Remove all even keys.
+  EXPECT_TRUE(Map.remove_if([](const auto &E) { return E.first % 2 == 0; }));
+  EXPECT_EQ(Map.size(), 50u);
+  for (int I = 0; I < 100; ++I) {
+    auto It = Map.find(I);
+    if (I % 2 == 0) {
+      EXPECT_EQ(It, Map.end());
+    } else {
+      ASSERT_NE(It, Map.end());
+      EXPECT_EQ(It->second, I * 10);
+    }
+  }
+
+  // A predicate that matches nothing returns false and leaves the map alone.
+  EXPECT_FALSE(Map.remove_if([](const auto &) { return false; }));
+  EXPECT_EQ(Map.size(), 50u);
+
+  // Remove everything.
+  EXPECT_TRUE(Map.remove_if([](const auto &) { return true; }));
+  EXPECT_TRUE(Map.empty());
+}
+
+TEST(DenseMapCustomTest, RemoveIfValueDtor) {
+  // remove_if must destroy the values of removed entries exactly once, and the
+  // rehash must not leak or double-destroy surviving values.
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
+  {
+    DenseMap<int, CtorTester> Map;
+    for (int I = 0; I < 16; ++I)
+      Map.try_emplace(I, CtorTester(I));
+    EXPECT_EQ(16u, CtorTester::getNumConstructed());
+    EXPECT_TRUE(Map.remove_if([](const auto &E) { return E.first < 10; }));
+    EXPECT_EQ(6u, CtorTester::getNumConstructed());
+    EXPECT_EQ(Map.size(), 6u);
+  }
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
+}
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+TEST(DenseMapCustomTest, EraseInvalidatesIterators) {
+  DenseMap<int, int> M;
+  M.try_emplace(1, 10);
+  M.try_emplace(2, 20);
+  auto It = M.find(1);
+  M.erase(M.find(2));
+  EXPECT_DEATH((void)It->second, "invalid iterator access");
+}
+#endif
+
 } // namespace

@@ -908,7 +908,7 @@ bool FormatEntity::Formatter::DumpValue(Stream &s,
   if (target->IsBitfield() && was_var_indexed) {
     // TODO: check for a (T:n)-specific summary - we should still obey that
     StreamString bitfield_name;
-    bitfield_name.Printf("%s:%d", target->GetTypeName().AsCString(),
+    bitfield_name.Format("{0}:{1}", target->GetTypeName(),
                          target->GetBitfieldBitSize());
     auto type_sp = std::make_shared<TypeNameSpecifierImpl>(
         bitfield_name.GetString(), lldb::eFormatterMatchExact);
@@ -1219,7 +1219,7 @@ static bool PrintFunctionNameWithArgs(Stream &s,
 
   const char *cstr = sc.GetPossiblyInlinedFunctionName()
                          .GetName(Mangled::ePreferDemangled)
-                         .AsCString();
+                         .AsCString(nullptr);
   if (!cstr)
     return false;
 
@@ -1823,7 +1823,7 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
 
       const char *name = m_sc->GetPossiblyInlinedFunctionName()
                              .GetName(Mangled::NamePreference::ePreferDemangled)
-                             .AsCString();
+                             .AsCString(nullptr);
       if (name) {
         s.PutCString(name);
         return true;
@@ -1868,7 +1868,7 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
           m_sc->GetPossiblyInlinedFunctionName()
               .GetName(
                   Mangled::NamePreference::ePreferDemangledWithoutArguments)
-              .AsCString();
+              .AsCString(nullptr);
       if (name) {
         s.PutCString(name);
         return true;
@@ -1940,7 +1940,7 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
 
     const char *name = m_sc->GetPossiblyInlinedFunctionName()
                            .GetName(Mangled::NamePreference::ePreferMangled)
-                           .AsCString();
+                           .AsCString(nullptr);
     if (!name)
       return false;
 

@@ -9,8 +9,7 @@
 #ifndef __CLC_RELATIONAL_CLC_ISEQUAL_H__
 #define __CLC_RELATIONAL_CLC_ISEQUAL_H__
 
-#include <clc/clcfunc.h>
-#include <clc/clctypes.h>
+#include "clc/clcfunc.h"
 
 #define _CLC_ISEQUAL_DECL(TYPE, RETTYPE)                                       \
   _CLC_OVERLOAD _CLC_CONST _CLC_DECL RETTYPE __clc_isequal(TYPE x, TYPE y);

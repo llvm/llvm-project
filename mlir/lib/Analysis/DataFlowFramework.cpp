@@ -20,7 +20,7 @@
 
 #define DEBUG_TYPE "dataflow"
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-#define DATAFLOW_DEBUG(X) LLVM_DEBUG(X)
+#define DATAFLOW_DEBUG(X) X
 #else
 #define DATAFLOW_DEBUG(X)
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -109,7 +109,9 @@ Location LatticeAnchor::getLoc() const {
 // DataFlowSolver
 //===----------------------------------------------------------------------===//
 
-LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
+LogicalResult DataFlowSolver::initializeAndRun(
+    Operation *top,
+    llvm::function_ref<bool(DataFlowAnalysis &)> analysisFilter) {
   // Enable enqueue to the worklist.
   isRunning = true;
   llvm::scope_exit guard([&]() { isRunning = false; });
@@ -120,13 +122,21 @@ LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
   if (isInterprocedural && !top->hasTrait<OpTrait::SymbolTable>())
     config.setInterprocedural(false);
 
+  auto shouldInitialize = [&](DataFlowAnalysis &analysis) {
+    return !analysisFilter || analysisFilter(analysis);
+  };
+
   // Initialize equivalent lattice anchors.
   for (DataFlowAnalysis &analysis : llvm::make_pointee_range(childAnalyses)) {
+    if (!shouldInitialize(analysis))
+      continue;
     analysis.initializeEquivalentLatticeAnchor(top);
   }
 
   // Initialize the analyses.
   for (DataFlowAnalysis &analysis : llvm::make_pointee_range(childAnalyses)) {
+    if (!shouldInitialize(analysis))
+      continue;
     DATAFLOW_DEBUG(LDBG() << "Priming analysis: " << analysis.debugName);
     if (failed(analysis.initialize(top)))
       return failure();

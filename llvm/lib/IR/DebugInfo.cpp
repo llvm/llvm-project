@@ -176,6 +176,7 @@ void DebugInfoFinder::reset() {
   GVs.clear();
   TYs.clear();
   Scopes.clear();
+  Macros.clear();
   NodesSeen.clear();
 }
 
@@ -212,6 +213,8 @@ void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
       processSubprogram(cast<DISubprogram>(RT));
   for (auto *Import : CU->getImportedEntities())
     processImportedEntity(Import);
+  for (auto *Macro : CU->getMacros())
+    processMacroNode(Macro, nullptr);
 }
 
 void DebugInfoFinder::processInstruction(const Module &M,
@@ -239,6 +242,11 @@ void DebugInfoFinder::processDbgRecord(const Module &M, const DbgRecord &DR) {
   processLocation(M, DR.getDebugLoc().get());
 }
 
+void DebugInfoFinder::processVariable(DIVariable *DV) {
+  if (auto *DLV = dyn_cast_or_null<DILocalVariable>(DV))
+    processVariable(DLV);
+}
+
 void DebugInfoFinder::processType(DIType *DT) {
   if (!addType(DT))
     return;
@@ -250,12 +258,55 @@ void DebugInfoFinder::processType(DIType *DT) {
   }
   if (auto *DCT = dyn_cast<DICompositeType>(DT)) {
     processType(DCT->getBaseType());
+    processType(DCT->getVTableHolder());
+    processType(DCT->getDiscriminator());
+    processType(DCT->getSpecification());
+    processVariable(DCT->getDataLocation());
+    processVariable(DCT->getAssociated());
+    processVariable(DCT->getAllocated());
     for (Metadata *D : DCT->getElements()) {
       if (auto *T = dyn_cast<DIType>(D))
         processType(T);
       else if (auto *SP = dyn_cast<DISubprogram>(D))
         processSubprogram(SP);
+      else if (auto *SR = dyn_cast_or_null<DISubrange>(D)) {
+        auto VisitBound = [&](DISubrange::BoundType Bound) {
+          if (auto *BV = dyn_cast_if_present<DIVariable *>(Bound))
+            processVariable(BV);
+        };
+        VisitBound(SR->getLowerBound());
+        VisitBound(SR->getCount());
+        VisitBound(SR->getUpperBound());
+        VisitBound(SR->getStride());
+      } else if (auto *GSR = dyn_cast_or_null<DIGenericSubrange>(D)) {
+        auto VisitBound = [&](DIGenericSubrange::BoundType Bound) {
+          if (auto *BV = dyn_cast_if_present<DIVariable *>(Bound))
+            processVariable(BV);
+        };
+        VisitBound(GSR->getLowerBound());
+        VisitBound(GSR->getCount());
+        VisitBound(GSR->getUpperBound());
+        VisitBound(GSR->getStride());
+      }
     }
+    return;
+  }
+  if (auto *ST = dyn_cast<DIStringType>(DT)) {
+    processVariable(ST->getStringLength());
+    return;
+  }
+  if (auto *SRT = dyn_cast<DISubrangeType>(DT)) {
+    processType(SRT->getBaseType());
+    auto VisitBound = [&](DISubrangeType::BoundType Bound) {
+      if (auto *V = dyn_cast_if_present<DIVariable *>(Bound))
+        processVariable(V);
+      else if (auto *T = dyn_cast_if_present<DIDerivedType *>(Bound))
+        processType(T);
+    };
+    VisitBound(SRT->getLowerBound());
+    VisitBound(SRT->getUpperBound());
+    VisitBound(SRT->getStride());
+    VisitBound(SRT->getBias());
     return;
   }
   if (auto *DDT = dyn_cast<DIDerivedType>(DT)) {
@@ -273,6 +324,36 @@ void DebugInfoFinder::processImportedEntity(const DIImportedEntity *Import) {
     processScope(NS->getScope());
   else if (auto *M = dyn_cast<DIModule>(Entity))
     processScope(M->getScope());
+}
+
+/// Process a macro debug info node (DIMacroNode).
+///
+/// A DIMacroNode is one of two types:
+///   - DIMacro: A single macro definition. Add it to the Macros list along with
+///     its containing DIMacroFile.
+///   - DIMacroFile: A file containing macros. Recursively process all nested
+///     macro nodes within it (avoiding duplicates by tracking visited nodes).
+void DebugInfoFinder::processMacroNode(DIMacroNode *Macro,
+                                       DIMacroFile *CurrentMacroFile) {
+  if (!Macro)
+    return;
+
+  if (auto *M = dyn_cast<DIMacro>(Macro)) {
+    addMacro(M, CurrentMacroFile);
+    return;
+  }
+
+  auto *MF = dyn_cast<DIMacroFile>(Macro);
+  assert(MF &&
+         "Expected a DIMacroFile (it can't be any other type at this point)");
+
+  // Check if we've already seen this macro file to avoid infinite recursion
+  if (!NodesSeen.insert(MF).second)
+    return;
+
+  // Recursively process nested macros in the macro file
+  for (auto *Element : MF->getElements())
+    processMacroNode(Element, MF);
 }
 
 void DebugInfoFinder::processScope(DIScope *Scope) {
@@ -324,9 +405,9 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
   }
 
   SP->forEachRetainedNode(
-      [this](const DILocalVariable *LV) { processVariable(LV); },
-      [](const DILabel *L) {},
-      [this](const DIImportedEntity *IE) { processImportedEntity(IE); });
+      [this](DILocalVariable *LV) { processVariable(LV); }, [](DILabel *L) {},
+      [this](DIImportedEntity *IE) { processImportedEntity(IE); },
+      [this](DIType *T) { processType(T); });
 }
 
 void DebugInfoFinder::processVariable(const DILocalVariable *DV) {
@@ -386,6 +467,17 @@ bool DebugInfoFinder::addScope(DIScope *Scope) {
   if (!NodesSeen.insert(Scope).second)
     return false;
   Scopes.push_back(Scope);
+  return true;
+}
+
+bool DebugInfoFinder::addMacro(DIMacro *Macro, DIMacroFile *MacroFile) {
+  if (!Macro)
+    return false;
+
+  if (!NodesSeen.insert(Macro).second)
+    return false;
+
+  Macros.push_back(std::make_pair(Macro, MacroFile));
   return true;
 }
 
@@ -2077,7 +2169,8 @@ getAssignmentInfoImpl(const DataLayout &DL, const Value *StoreDest,
   if (OffsetInBytes == UINT64_MAX)
     return std::nullopt;
   if (const auto *Alloca = dyn_cast<AllocaInst>(Base))
-    return AssignmentInfo(DL, Alloca, OffsetInBytes * 8, SizeInBits);
+    if (!DL.getTypeSizeInBits(Alloca->getAllocatedType()).isScalable())
+      return AssignmentInfo(DL, Alloca, OffsetInBytes * 8, SizeInBits);
   return std::nullopt;
 }
 
@@ -2330,7 +2423,7 @@ static void setAssignmentTrackingModuleFlag(Module &M) {
 
 static bool getAssignmentTrackingModuleFlag(const Module &M) {
   Metadata *Value = M.getModuleFlag(AssignmentTrackingModuleFlag);
-  return Value && !cast<ConstantAsMetadata>(Value)->getValue()->isZeroValue();
+  return Value && !cast<ConstantAsMetadata>(Value)->getValue()->isNullValue();
 }
 
 bool llvm::isAssignmentTrackingEnabled(const Module &M) {

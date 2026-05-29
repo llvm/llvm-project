@@ -16,11 +16,13 @@
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
+#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <numeric>
@@ -53,18 +55,6 @@ mlir::xegpu::getDistributedVectorType(xegpu::TensorDescType tdescTy) {
   // e.g. for 1D layout, sgSize = laneLayout[0]
   int64_t sgSize = llvm::product_of(laneLayout);
 
-  // Case 1: regular loads/stores
-  auto scatterAttr = tdescTy.getEncodingOfType<ScatterTensorDescAttr>();
-  if (scatterAttr) {
-    auto chunkSize = scatterAttr.getChunkSize().getInt();
-    // Verify if the first dimension of the tensor descriptor shape is
-    // distributable.
-    assert(tdescShape[0] == laneLayout[0] &&
-           "tensor descriptor shape is not distributable");
-    return VectorType::get({chunkSize}, elementType);
-  }
-
-  // Case 2: block loads/stores
   // Check if the tensor descriptor shape is distributable.
   int64_t tensorSize = 1;
   for (auto [tdescDim, laneDim, laneDataDim] :
@@ -101,6 +91,36 @@ mlir::xegpu::getDistributedVectorType(VectorType originalType,
   return xegpu::getDistributedVectorType(helperTdescTy);
 }
 
+FailureOr<VectorType>
+xegpu::getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
+                                       VectorType originalType) {
+  if (!layout)
+    return failure();
+  assert((isa<xegpu::LayoutAttr>(layout) || isa<xegpu::SliceAttr>(layout)) &&
+         "Expecting a valid layout.");
+
+  int64_t vectorRank = originalType.getRank();
+  int64_t layoutRank = layout.getRank();
+  assert(vectorRank >= layoutRank && "Vector rank must be >= layout rank.");
+
+  // When the vector has more dimensions than the layout, only the trailing
+  // dimensions are distributed. Leading dimensions are preserved as-is.
+  int64_t offset = vectorRank - layoutRank;
+  ArrayRef<int64_t> fullShape = originalType.getShape();
+  SmallVector<int64_t> trailingShape(fullShape.begin() + offset,
+                                     fullShape.end());
+  auto distributedShapeOrFailure =
+      layout.computeDistributedShape(trailingShape);
+  if (failed(distributedShapeOrFailure))
+    return failure();
+
+  SmallVector<int64_t> resultShape(fullShape.begin(),
+                                   fullShape.begin() + offset);
+  resultShape.append(distributedShapeOrFailure->begin(),
+                     distributedShapeOrFailure->end());
+  return VectorType::get(resultShape, originalType.getElementType());
+}
+
 std::string xegpu::getTemporaryLayoutName(const OpOperand &operand) {
   const StringRef prefix("layout_operand_");
   unsigned idx = const_cast<OpOperand &>(operand).getOperandNumber();
@@ -115,10 +135,6 @@ std::string xegpu::getTemporaryLayoutName(const OpResult result) {
 xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
   if (!value)
     return nullptr;
-
-  if (auto tdescTy =
-          dyn_cast_if_present<xegpu::TensorDescType>(value.getType()))
-    return tdescTy.getLayoutAttr();
 
   if (auto result = dyn_cast<OpResult>(value)) {
     Operation *defOp = result.getDefiningOp();
@@ -139,12 +155,16 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
 
   if (auto arg = dyn_cast<BlockArgument>(value)) {
     auto *parentOp = arg.getOwner()->getParentOp();
-    if (auto loop = dyn_cast<LoopLikeOpInterface>(parentOp)) {
+    if (auto loop = dyn_cast_if_present<LoopLikeOpInterface>(parentOp)) {
       OpOperand *tiedInit = loop.getTiedLoopInit(arg);
       if (tiedInit)
-        return getDistributeLayoutAttr(tiedInit->get());
+        return getTemporaryLayout(*tiedInit);
     }
   }
+
+  if (auto tdescTy =
+          dyn_cast_if_present<xegpu::TensorDescType>(value.getType()))
+    return tdescTy.getLayoutAttr();
 
   return nullptr;
 }
@@ -163,6 +183,31 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
         return dpasOp.getLayoutCdAttr();
       }
     }
+    if (auto dpasMxOp = dyn_cast<xegpu::DpasMxOp>(op)) {
+      // DpasMxOp has operands: a, b, optional acc, optional scale_a, optional
+      // scale_b
+      unsigned currentIdx = 0;
+
+      if (idx == currentIdx++)
+        return dpasMxOp.getLayoutAAttr();
+
+      if (idx == currentIdx++)
+        return dpasMxOp.getLayoutBAttr();
+
+      if (dpasMxOp.getAcc())
+        if (idx == currentIdx++)
+          return dpasMxOp.getLayoutCdAttr();
+
+      if (dpasMxOp.getScaleA())
+        if (idx == currentIdx++)
+          return dpasMxOp.getLayoutAScaleAttr();
+
+      if (dpasMxOp.getScaleB())
+        if (idx == currentIdx++)
+          return dpasMxOp.getLayoutBScaleAttr();
+
+      return nullptr;
+    }
     if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
       return convertOp.getInputLayoutAttr();
     }
@@ -171,13 +216,27 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
     if (idx == 0)
       return layout;
 
-    // For store operations (StoreScatterOp, StoreNdOp, StoreMatrixOp),
+    // For StoreNdOp and StoreMatrixOp,
     // the layout is valid for the first two operands: value and memref/tdesc.
-    // For other operations, the layout applies to the first operand only.
-    if (isa<xegpu::StoreScatterOp, xegpu::StoreNdOp, xegpu::StoreMatrixOp>(
-            op) &&
-        (idx < 2))
+    if (isa<xegpu::StoreNdOp, xegpu::StoreMatrixOp>(op) && (idx < 2))
       return layout;
+
+    if (isa<xegpu::StoreScatterOp>(op)) {
+      xegpu::StoreScatterOp store(op);
+      int chunkSize = store.getChunkSize().value_or(1);
+      if (layout && idx >= 2 && chunkSize > 1)
+        return layout.dropDims(llvm::to_vector(
+            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
+      return layout;
+    }
+    if (isa<xegpu::LoadGatherOp>(op)) {
+      xegpu::LoadGatherOp load(op);
+      int chunkSize = load.getChunkSize().value_or(1);
+      if (layout && idx >= 1 && chunkSize > 1)
+        return layout.dropDims(llvm::to_vector(
+            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
+      return layout;
+    }
   }
 
   std::string layoutName = xegpu::getTemporaryLayoutName(opr);
@@ -186,8 +245,7 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
     return layout;
   }
 
-  auto layout = getDistributeLayoutAttr(opr.get());
-  return layout;
+  return nullptr;
 }
 
 // Returns the permanent layout attribute for the given result if it's
@@ -335,111 +393,6 @@ template void xegpu::setTemporaryLayout<mlir::OpResult>(
 template void xegpu::setTemporaryLayout<mlir::OpOperand>(
     const mlir::OpOperand &operand,
     const mlir::xegpu::DistributeLayoutAttr layout);
-
-void xegpu::recoverTemporaryLayoutsDeprecated(Operation *op) {
-  op->walk([&](Operation *nestOp) {
-    for (OpOperand &opr : nestOp->getOpOperands()) {
-      auto layout = getDistributeLayoutAttr(opr.get());
-      setDistributeLayoutAttr(opr, layout);
-    }
-
-    for (OpResult result : nestOp->getOpResults()) {
-      auto layout = getDistributeLayoutAttr(result);
-      setDistributeLayoutAttr(result, layout);
-    }
-  });
-}
-
-/// Attach layout attributes to all vector-type operands of operations within
-/// the given operation's region. Reports an error if any vector operand lacks
-/// a layout attribute.
-bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
-  auto result = rootOp->walk([&](Operation *op) {
-    for (OpOperand &operand : op->getOpOperands()) {
-      // Layouts are needed for vector type only.
-      if (!isa<VectorType>(operand.get().getType()))
-        continue;
-      auto layout = xegpu::getDistributeLayoutAttr(operand.get());
-      if (!layout) {
-        op->emitError("Could not find layout attribute for operand ")
-            << operand.getOperandNumber() << " of operation " << op->getName();
-        return WalkResult::interrupt();
-      }
-      xegpu::setDistributeLayoutAttr(operand, layout);
-    }
-    return WalkResult::advance();
-  });
-  return !result.wasInterrupted();
-}
-
-template <typename T, typename>
-void xegpu::removeLayoutAttr(const T &operandOrResult) {
-  Operation *owner = operandOrResult.getOwner();
-  std::string name = xegpu::getTemporaryLayoutName(operandOrResult);
-  if (owner->hasAttrOfType<DistributeLayoutAttr>(name))
-    owner->removeAttr(name);
-}
-
-SmallVector<NamedAttribute>
-xegpu::dropSgLayoutAndDataOnAttrs(ArrayRef<NamedAttribute> attrs) {
-  SmallVector<NamedAttribute> out;
-  out.reserve(attrs.size());
-
-  for (auto attr : attrs) {
-    if (auto dist = dyn_cast<xegpu::DistributeLayoutAttr>(attr.getValue())) {
-      auto newLayout = dist.dropSgLayoutAndData();
-      if (newLayout)
-        out.emplace_back(attr.getName(), newLayout);
-    } else {
-      out.push_back(attr);
-    }
-  }
-
-  return out;
-}
-
-SmallVector<NamedAttribute>
-xegpu::dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs) {
-  SmallVector<NamedAttribute> out;
-  out.reserve(attrs.size());
-
-  for (auto attr : attrs) {
-    if (auto dist = dyn_cast<xegpu::DistributeLayoutAttr>(attr.getValue())) {
-      auto newLayout = dist.dropInstData();
-      if (newLayout)
-        out.emplace_back(attr.getName(), newLayout);
-    } else {
-      out.push_back(attr);
-    }
-  }
-
-  return out;
-}
-
-// Explicit instantiation for OpResult
-template void
-xegpu::removeLayoutAttr<mlir::OpResult>(const mlir::OpResult &result);
-
-// Explicit instantiation for OpOperand
-template void
-xegpu::removeLayoutAttr<mlir::OpOperand>(const mlir::OpOperand &operand);
-
-void xegpu::removeLayoutAttrs(Operation *op) {
-  op->walk([&](Operation *nestOp) {
-    for (OpOperand &opr : nestOp->getOpOperands())
-      removeLayoutAttr(opr);
-    for (OpResult result : nestOp->getOpResults())
-      removeLayoutAttr(result);
-    if (op->hasAttrOfType<DistributeLayoutAttr>("layout"))
-      op->removeAttr("layout");
-    if (op->hasAttrOfType<DistributeLayoutAttr>("layout_a"))
-      op->removeAttr("layout_a");
-    if (op->hasAttrOfType<DistributeLayoutAttr>("layout_b"))
-      op->removeAttr("layout_b");
-    if (op->hasAttrOfType<DistributeLayoutAttr>("layout_cd"))
-      op->removeAttr("layout_cd");
-  });
-}
 
 SmallVector<Value>
 xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
@@ -726,9 +679,315 @@ int xegpu::getLargestDivisor(T dim, ArrayRef<T> candidates,
   return largest;
 }
 
+Value xegpu::subgroupReduction(Location loc, OpBuilder &builder, Value input,
+                               vector::CombiningKind kind, uint32_t size) {
+  // First reduce on a single thread to get per lane reduction value.
+  Value laneVal = vector::ReductionOp::create(builder, loc, kind, input);
+  // Parallel reduction using butterfly shuffles.
+  for (uint64_t i = 1; i < size; i <<= 1) {
+    Value shuffled =
+        gpu::ShuffleOp::create(builder, loc, laneVal, i, /**  width = **/ size,
+                               /**  mode = **/ gpu::ShuffleMode::XOR)
+            .getShuffleResult();
+    laneVal = makeArithReduction(builder, loc, kind, laneVal, shuffled);
+  }
+  return laneVal;
+}
+
+Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
+                                     TypedValue<VectorType> acc,
+                                     vector::CombiningKind kind,
+                                     int64_t reductionDim, Location loc,
+                                     PatternRewriter &rewriter) {
+  VectorType sourceType = src.getType();
+  int64_t sourceRank = sourceType.getRank();
+  // Expecting at least a 2D source vector. Leading dimensions (all except the
+  // last two) must be unit.
+  assert(sourceRank >= 2 && "expected at least a 2D source vector");
+  for (int64_t i = 0; i < sourceRank - 2; ++i)
+    assert(sourceType.getShape()[i] == 1 &&
+           "expected leading dimensions to be unit");
+  int64_t rowIdx = sourceRank - 2;
+  int64_t columnIdx = sourceRank - 1;
+  int64_t sourceH = sourceType.getShape()[rowIdx];
+  int64_t sourceW = sourceType.getShape()[columnIdx];
+  int nSlices = (reductionDim == rowIdx) ? sourceW : sourceH;
+  // Create a constant vector to hold the result of the reduction.
+  TypedAttr zeroAttr = rewriter.getZeroAttr(sourceType.getElementType());
+  Value reductionResult = arith::ConstantOp::create(
+      rewriter, loc, acc.getType(),
+      DenseElementsAttr::get(acc.getType(), zeroAttr));
+  auto srcLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(src));
+  auto accLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc));
+  // Reduction result should have the same layout as the accumulator.
+  xegpu::setTemporaryLayout(cast<OpResult>(reductionResult), accLayout);
+  // For each slice of the source, extract the slice vector, do a reduction
+  // and, insert the reduced value back to the result vector.
+  int64_t accRank = acc.getType().getRank();
+  for (int i = 0; i < nSlices; ++i) {
+    // Build nD offsets, sizes, and strides. Leading unit dims get
+    // offset=0, size=1. The last two dims are set based on reductionDim.
+    SmallVector<int64_t> sliceOffsets(sourceRank, 0);
+    SmallVector<int64_t> sliceSizes(sourceRank, 1);
+    SmallVector<int64_t> strides(sourceRank, 1);
+    if (reductionDim == columnIdx) {
+      sliceOffsets[rowIdx] = i;
+      sliceSizes[columnIdx] = sourceW;
+    } else {
+      sliceOffsets[columnIdx] = i;
+      sliceSizes[rowIdx] = sourceH;
+    }
+
+    vector::ExtractStridedSliceOp extractOp =
+        vector::ExtractStridedSliceOp::create(rewriter, loc, src, sliceOffsets,
+                                              sliceSizes, strides);
+    // Extract strided slice has the same layout as src.
+    xegpu::setTemporaryLayout(extractOp->getOpResult(0), srcLayout);
+
+    int64_t nSliceElements = extractOp.getResult().getType().getNumElements();
+
+    vector::ShapeCastOp slice = vector::ShapeCastOp::create(
+        rewriter, loc,
+        VectorType::get({nSliceElements}, sourceType.getElementType()),
+        extractOp.getResult());
+
+    // Shape cast output has the same layout as the accumulator. Shape cast
+    // source has the same layout as the original reduction source.
+    xegpu::setTemporaryLayout(slice->getOpOperand(0), srcLayout);
+    xegpu::setTemporaryLayout(slice->getOpResult(0), accLayout);
+    // Extract and reduction results in scalars, so no result layout is needed.
+    // Build multi-dim index into acc (sourceRank-1 dims, i.e. source shape with
+    // the reduction dim removed). Leading unit dims get index 0.
+    SmallVector<int64_t> accIdx(accRank, 0);
+    accIdx[accRank - 1] = i;
+    Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, accIdx);
+    Value reduction = vector::ReductionOp::create(
+        rewriter, loc, kind, slice.getResult(), accExtract);
+    reductionResult = vector::InsertOp::create(rewriter, loc, reduction,
+                                               reductionResult, accIdx);
+    // Insert op should have the same layout as the accumulator.
+    xegpu::setTemporaryLayout(cast<OpResult>(reductionResult), accLayout);
+  }
+  return reductionResult;
+}
+
+Value xegpu::lowerCrossLaneReductionToShuffles(
+    TypedValue<VectorType> src, TypedValue<VectorType> acc,
+    vector::CombiningKind kind, int64_t reductionDim, int64_t reductionSize,
+    Location loc, PatternRewriter &rewriter) {
+  VectorType sourceType = src.getType();
+  int64_t sourceRank = sourceType.getRank();
+  // Expecting at least a 2D source vector. Leading dimensions (all except the
+  // last two) must be unit.
+  assert(sourceRank >= 2 && "expected at least a 2D source vector");
+  for (int64_t i = 0; i < sourceRank - 2; ++i)
+    assert(sourceType.getShape()[i] == 1 &&
+           "expected leading dimensions to be unit");
+  int64_t rowIdx = sourceRank - 2;
+  int64_t columnIdx = sourceRank - 1;
+  int64_t sourceH = sourceType.getShape()[rowIdx];
+  int64_t sourceW = sourceType.getShape()[columnIdx];
+
+  // Create a constant vector to hold the result of the reduction.
+  TypedAttr zeroAttr = rewriter.getZeroAttr(sourceType.getElementType());
+  Value reductionResult = arith::ConstantOp::create(
+      rewriter, loc, acc.getType(),
+      DenseElementsAttr::get(acc.getType(), zeroAttr));
+
+  // nSlices is the number of reduction operations needed to reduce the entire
+  // source vector. For example, if reductionDim is the row dim, we are
+  // reducing across rows, and each slice is a column. So the number of slices
+  // is the number of columns, which is sourceW.
+  int nSlices = (reductionDim == rowIdx) ? sourceW : sourceH;
+
+  // For each slice of the source, extract the slice vector, do a reduction
+  // and, insert the reduced value back to the result vector.
+  int64_t accRank = acc.getType().getRank();
+  for (int i = 0; i < nSlices; ++i) {
+    // Build nD offsets, sizes, and strides. Leading unit dims get
+    // offset=0, size=1. The last two dims are set based on reductionDim.
+    SmallVector<int64_t> sliceOffsets(sourceRank, 0);
+    SmallVector<int64_t> sliceSizes(sourceRank, 1);
+    SmallVector<int64_t> strides(sourceRank, 1);
+    if (reductionDim == columnIdx) {
+      sliceOffsets[rowIdx] = i;
+      sliceSizes[columnIdx] = sourceW;
+    } else {
+      sliceOffsets[columnIdx] = i;
+      sliceSizes[rowIdx] = sourceH;
+    }
+
+    vector::ExtractStridedSliceOp extractOp =
+        vector::ExtractStridedSliceOp::create(rewriter, loc, src, sliceOffsets,
+                                              sliceSizes, strides);
+    int64_t nSliceElements = extractOp.getResult().getType().getNumElements();
+    vector::ShapeCastOp slice = vector::ShapeCastOp::create(
+        rewriter, loc,
+        VectorType::get({nSliceElements}, sourceType.getElementType()),
+        extractOp.getResult());
+
+    SmallVector<int64_t> accIdx(accRank, 0);
+    accIdx[accRank - 1] = i;
+    Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, accIdx);
+    Value fullReduce =
+        xegpu::subgroupReduction(loc, rewriter, slice, kind, reductionSize);
+    fullReduce =
+        vector::makeArithReduction(rewriter, loc, kind, fullReduce, accExtract);
+    reductionResult = vector::InsertOp::create(rewriter, loc, fullReduce,
+                                               reductionResult, accIdx);
+  }
+  return reductionResult;
+}
+
+Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
+                                         Type type,
+                                         vector::CombiningKind kind) {
+  auto vecTy = dyn_cast<VectorType>(type);
+  Type elemTy = vecTy ? vecTy.getElementType() : type;
+
+  // Helper to create either a splat vector or scalar constant from an attr.
+  auto makeConst = [&](Attribute scalarAttr) -> Value {
+    if (vecTy)
+      return arith::ConstantOp::create(
+          builder, loc, vecTy, DenseElementsAttr::get(vecTy, scalarAttr));
+    return arith::ConstantOp::create(builder, loc, cast<TypedAttr>(scalarAttr));
+  };
+
+  switch (kind) {
+  case vector::CombiningKind::ADD:
+  case vector::CombiningKind::XOR:
+  case vector::CombiningKind::OR:
+  case vector::CombiningKind::MAXUI:
+    return makeConst(builder.getZeroAttr(elemTy));
+
+  case vector::CombiningKind::MUL:
+  case vector::CombiningKind::AND:
+    return makeConst(builder.getOneAttr(elemTy));
+
+  case vector::CombiningKind::MINSI:
+    if (auto intTy = dyn_cast<IntegerType>(elemTy))
+      return makeConst(builder.getIntegerAttr(
+          elemTy, APInt::getSignedMaxValue(intTy.getWidth())));
+    return nullptr;
+
+  case vector::CombiningKind::MINUI:
+    if (auto intTy = dyn_cast<IntegerType>(elemTy))
+      return makeConst(
+          builder.getIntegerAttr(elemTy, APInt::getMaxValue(intTy.getWidth())));
+    return nullptr;
+
+  case vector::CombiningKind::MAXSI:
+    if (auto intTy = dyn_cast<IntegerType>(elemTy))
+      return makeConst(builder.getIntegerAttr(
+          elemTy, APInt::getSignedMinValue(intTy.getWidth())));
+    return nullptr;
+
+  case vector::CombiningKind::MINNUMF:
+  case vector::CombiningKind::MINIMUMF:
+    if (auto floatTy = dyn_cast<FloatType>(elemTy))
+      return makeConst(builder.getFloatAttr(
+          elemTy, APFloat::getInf(floatTy.getFloatSemantics())));
+    return nullptr;
+
+  case vector::CombiningKind::MAXNUMF:
+  case vector::CombiningKind::MAXIMUMF:
+    if (auto floatTy = dyn_cast<FloatType>(elemTy))
+      return makeConst(builder.getFloatAttr(
+          elemTy, APFloat::getInf(floatTy.getFloatSemantics(), true)));
+    return nullptr;
+  }
+  return nullptr;
+}
+
 /// Explicit instantiations
 template int xegpu::getLargestDivisor<int>(int dim, ArrayRef<int> candidates,
                                            ArrayRef<int> candidateMultiples);
 template int
 xegpu::getLargestDivisor<unsigned>(unsigned dim, ArrayRef<unsigned> candidates,
                                    ArrayRef<unsigned> candidateMultiples);
+
+bool xegpu::requirePacked(const xegpu::DistributeLayoutAttr layout) {
+  if (!layout)
+    return false;
+  auto laneData = layout.getEffectiveLaneDataAsInt();
+  if (laneData.size() != 2)
+    return false;
+  return laneData[0] != 1;
+}
+
+bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
+                             const xegpu::uArch::uArch *uArch) {
+  // Return false for unsupported targets.
+  // TODO: Add more support or move to target info.
+  if (uArch->getName().equals_insensitive("pvc") &&
+      uArch->getName().equals_insensitive("bmg") &&
+      uArch->getName().equals_insensitive("cri"))
+    return false;
+  if (!layout)
+    return false;
+  auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
+  if (laneLayout.size() != 2)
+    return false;
+  return laneLayout[0] == uArch->getSubgroupSize() && laneLayout[1] == 1;
+}
+
+// Check if dst shape is an expansion of src shape by inserting unit dimensions.
+// Returns true if all dimensions in src match corresponding dimensions in dst
+// (after skipping unit dimensions), and populates expandedUnitDims with the
+// indices of the unit dimensions in dst that were added (not present in src).
+// Example: src=[2,3], dst=[1,2,3,1] -> true, expandedUnitDims=[0,3]
+bool xegpu::matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+                                  SmallVector<int64_t> &expandedUnitDims) {
+  // All unit dimensions in dst that don't appear in src are the expanded
+  // unit dimensions
+  size_t srcIdx = 0;
+  for (size_t dstIdx = 0; dstIdx < dst.size(); ++dstIdx)
+    if (srcIdx < src.size() && src[srcIdx] == dst[dstIdx])
+      srcIdx++;
+    else if (dst[dstIdx] == 1)
+      expandedUnitDims.push_back(dstIdx);
+    else
+      return false;
+  return srcIdx == src.size();
+}
+
+// Checks if dst shape is an expansion of src shape where each dimension in src
+// is split into one or more consecutive dimensions in dst whose product equals
+// the original dimension. Populates splitDimGroups with groups of dst indices
+// that correspond to each src dimension. Example: src=[6,4], dst=[2,3,2,2] ->
+// true
+bool xegpu::matchSplitDimExpansion(
+    ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+    SmallVector<SmallVector<int64_t>> &splitDimGroups) {
+  // each dim in src can be mapped to one or more dims in dst whose product
+  // equals to the src dim
+  size_t srcIdx = 0;
+  int64_t accumulatedSize = 1;
+  SmallVector<int64_t> currentDstDims;
+
+  splitDimGroups.clear();
+  for (size_t dstIdx = 0; dstIdx < dst.size(); ++dstIdx) {
+    if (srcIdx >= src.size())
+      return false;
+    accumulatedSize *= dst[dstIdx];
+    currentDstDims.push_back(dstIdx);
+
+    if (accumulatedSize == src[srcIdx]) {
+      // Also collect trailing unit dims in destination, if any.
+      // Leading unit dims were implicitly collected.
+      if (srcIdx == src.size() - 1) {
+        while (++dstIdx < dst.size() && dst[dstIdx] == 1)
+          currentDstDims.push_back(dstIdx);
+      }
+      // Record the mapping: srcIdx -> currentDstDims
+      splitDimGroups.push_back(currentDstDims);
+      // move to next src dim
+      srcIdx++;
+      accumulatedSize = 1;
+      currentDstDims.clear();
+    } else if (accumulatedSize > src[srcIdx]) {
+      return false;
+    }
+  }
+  return srcIdx == src.size();
+}

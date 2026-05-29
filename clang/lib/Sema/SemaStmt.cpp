@@ -1761,30 +1761,30 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
     return;
   }
 
-  typedef SmallVector<std::pair<llvm::APSInt, EnumConstantDecl *>, 64>
-      EnumValsTy;
-  EnumValsTy EnumVals;
+  const EnumDecl *Key = ED->getCanonicalDecl();
+  auto [It, Inserted] = AssignEnumCache.try_emplace(Key);
+  auto &Values = It->second;
 
-  // Gather all enum values, set their type and sort them,
-  // allowing easier comparison with rhs constant.
-  for (auto *EDI : ED->enumerators()) {
-    llvm::APSInt Val = EDI->getInitVal();
-    AdjustAPSInt(Val, DstWidth, DstIsSigned);
-    EnumVals.emplace_back(Val, EDI);
+  if (Inserted) {
+    Values.reserve(std::distance(ED->enumerator_begin(), ED->enumerator_end()));
+
+    for (auto *EC : ED->enumerators()) {
+      Values.push_back(EC->getInitVal());
+      AdjustAPSInt(Values.back(), DstWidth, DstIsSigned);
+    }
+
+    if (Values.empty())
+      return;
+
+    llvm::sort(Values);
+    Values.erase(llvm::unique(Values), Values.end());
   }
-  if (EnumVals.empty())
+
+  if (llvm::binary_search(Values, *RHSVal))
     return;
-  llvm::stable_sort(EnumVals, CmpEnumVals);
-  EnumValsTy::iterator EIend = llvm::unique(EnumVals, EqEnumVals);
 
-  // See which values aren't in the enum.
-  EnumValsTy::const_iterator EI = EnumVals.begin();
-  while (EI != EIend && EI->first < *RHSVal)
-    EI++;
-  if (EI == EIend || EI->first != *RHSVal) {
-    Diag(SrcExpr->getExprLoc(), diag::warn_not_in_enum_assignment)
-        << DstType.getUnqualifiedType();
-  }
+  Diag(SrcExpr->getExprLoc(), diag::warn_not_in_enum_assignment)
+      << DstType.getUnqualifiedType();
 }
 
 StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
@@ -1794,7 +1794,6 @@ StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
     return StmtError();
 
   auto CondVal = Cond.get();
-  CheckBreakContinueBinding(CondVal.second);
 
   if (CondVal.second &&
       !Diags.isIgnored(diag::warn_comma_operator, CondVal.second->getExprLoc()))
@@ -1822,7 +1821,6 @@ Sema::ActOnDoStmt(SourceLocation DoLoc, Stmt *Body,
                   Expr *Cond, SourceLocation CondRParen) {
   assert(Cond && "ActOnDoStmt(): missing expression");
 
-  CheckBreakContinueBinding(Cond);
   ExprResult CondResult = CheckBooleanCondition(DoLoc, Cond);
   if (CondResult.isInvalid())
     return StmtError();
@@ -1832,11 +1830,6 @@ Sema::ActOnDoStmt(SourceLocation DoLoc, Stmt *Body,
   if (CondResult.isInvalid())
     return StmtError();
   Cond = CondResult.get();
-
-  // Only call the CommaVisitor for C89 due to differences in scope flags.
-  if (Cond && !getLangOpts().C99 && !getLangOpts().CPlusPlus &&
-      !Diags.isIgnored(diag::warn_comma_operator, Cond->getExprLoc()))
-    CommaVisitor(*this).Visit(Cond);
 
   // OpenACC3.3 2.14.4:
   // The update directive is executable.  It must not appear in place of the
@@ -1996,9 +1989,33 @@ namespace {
     }
 
     void VisitDeclRefExpr(DeclRefExpr *E) {
-      if (VarDecl *VD = dyn_cast<VarDecl>(E->getDecl()))
+      if (const auto *VD = dyn_cast<VarDecl>(E->getDecl())) {
         if (Decls.count(VD))
           FoundDecl = true;
+      } else if (const auto *MD = dyn_cast<CXXMethodDecl>(E->getDecl());
+                 MD && isLambdaCallOperator(MD)) {
+        // FIXME: This has limitations handling updates to the loop control
+        // variable that occur indirectly inside a lambda called from the loop
+        // body. For example:
+        //
+        //   int a = 0;
+        //   int *c = &a;
+        //   auto incr_c = [c]() { ++*c; };
+        //   for (a = 10; a <= 20; incr_c())
+        //     foo(a);
+        for (const auto &Capture : MD->getParent()->captures()) {
+          if (!Capture.capturesVariable())
+            continue;
+
+          LambdaCaptureKind CK = Capture.getCaptureKind();
+          if (CK != LCK_ByRef)
+            continue;
+
+          const auto *VD = dyn_cast<VarDecl>(Capture.getCapturedVar());
+          if (VD && Decls.count(VD))
+            FoundDecl = true;
+        }
+      }
     }
 
     void VisitPseudoObjectExpr(PseudoObjectExpr *POE) {
@@ -2231,25 +2248,6 @@ namespace {
 
 } // end namespace
 
-
-void Sema::CheckBreakContinueBinding(Expr *E) {
-  if (!E || getLangOpts().CPlusPlus)
-    return;
-  BreakContinueFinder BCFinder(*this, E);
-  Scope *BreakParent = CurScope->getBreakParent();
-  if (BCFinder.BreakFound() && BreakParent) {
-    if (BreakParent->getFlags() & Scope::SwitchScope) {
-      Diag(BCFinder.GetBreakLoc(), diag::warn_break_binds_to_switch);
-    } else {
-      Diag(BCFinder.GetBreakLoc(), diag::warn_loop_ctrl_binds_to_inner)
-          << "break";
-    }
-  } else if (BCFinder.ContinueFound() && CurScope->getContinueParent()) {
-    Diag(BCFinder.GetContinueLoc(), diag::warn_loop_ctrl_binds_to_inner)
-        << "continue";
-  }
-}
-
 StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
                               Stmt *First, ConditionResult Second,
                               FullExprArg third, SourceLocation RParenLoc,
@@ -2292,9 +2290,6 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
                                : diag::ext_c23_non_variable_decl_in_for);
     }
   }
-
-  CheckBreakContinueBinding(Second.get().second);
-  CheckBreakContinueBinding(third.get());
 
   if (!Second.get().first)
     CheckForLoopConditionalStatement(*this, Second.get().second, third.get(),
@@ -2753,14 +2748,6 @@ StmtResult Sema::BuildCXXForRangeStmt(
                             diag::err_for_range_incomplete_type))
       return StmtError();
 
-    // P2718R0 - Lifetime extension in range-based for loops.
-    if (getLangOpts().CPlusPlus23 && !LifetimeExtendTemps.empty()) {
-      InitializedEntity Entity =
-          InitializedEntity::InitializeVariable(RangeVar);
-      for (auto *MTE : LifetimeExtendTemps)
-        MTE->setExtendingDecl(RangeVar, Entity.allocateManglingNumber());
-    }
-
     // Build auto __begin = begin-expr, __end = end-expr.
     // Divide by 2, since the variables are in the inner scope (loop body).
     const auto DepthStr = std::to_string(S->getDepth() / 2);
@@ -3016,6 +3003,13 @@ StmtResult Sema::BuildCXXForRangeStmt(
   // analysis of first part (if any).
   if (getLangOpts().OpenMP >= 50 && BeginDeclStmt.isUsable())
     OpenMP().ActOnOpenMPLoopInitialization(ForLoc, BeginDeclStmt.get());
+
+  // P2718R0 - Lifetime extension in range-based for loops.
+  if (getLangOpts().CPlusPlus23 && !LifetimeExtendTemps.empty()) {
+    InitializedEntity Entity = InitializedEntity::InitializeVariable(RangeVar);
+    for (auto *MTE : LifetimeExtendTemps)
+      MTE->setExtendingDecl(RangeVar, Entity.allocateManglingNumber());
+  }
 
   return new (Context) CXXForRangeStmt(
       InitStmt, RangeDS, cast_or_null<DeclStmt>(BeginDeclStmt.get()),
@@ -3342,12 +3336,6 @@ StmtResult Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope,
     // C99 6.8.6.2p1: A break shall appear only in or as a loop body.
     return StmtError(Diag(ContinueLoc, diag::err_continue_not_in_loop));
   }
-  if (S->isConditionVarScope()) {
-    // We cannot 'continue;' from within a statement expression in the
-    // initializer of a condition variable because we would jump past the
-    // initialization of that variable.
-    return StmtError(Diag(ContinueLoc, diag::err_continue_from_cond_var_init));
-  }
 
   // A 'continue' that would normally have execution continue on a block outside
   // of a compute construct counts as 'branching out of' the compute construct,
@@ -3652,7 +3640,8 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
         // initializer list, because it is not an expression (even
         // though we represent it as one). We still deduce 'void'.
         Diag(ReturnLoc, diag::err_lambda_return_init_list)
-          << RetValExp->getSourceRange();
+            << RetValExp->getSourceRange();
+        RetValExp = nullptr;
       }
 
       FnRetType = Context.VoidTy;
@@ -3692,15 +3681,18 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
     // Delay processing for now.  TODO: there are lots of dependent
     // types we can conclusively prove aren't void.
   } else if (FnRetType->isVoidType()) {
-    if (RetValExp && !isa<InitListExpr>(RetValExp) &&
-        !(getLangOpts().CPlusPlus &&
-          (RetValExp->isTypeDependent() ||
-           RetValExp->getType()->isVoidType()))) {
-      if (!getLangOpts().CPlusPlus &&
-          RetValExp->getType()->isVoidType())
+    if (isa_and_nonnull<InitListExpr>(RetValExp)) {
+      Diag(ReturnLoc, diag::err_return_block_has_expr)
+          << (CurLambda != nullptr);
+      RetValExp = nullptr;
+    } else if (RetValExp && !(getLangOpts().CPlusPlus &&
+                              (RetValExp->isTypeDependent() ||
+                               RetValExp->getType()->isVoidType()))) {
+      if (!getLangOpts().CPlusPlus && RetValExp->getType()->isVoidType())
         Diag(ReturnLoc, diag::ext_return_has_void_expr) << "literal" << 2;
       else {
-        Diag(ReturnLoc, diag::err_return_block_has_expr);
+        Diag(ReturnLoc, diag::err_return_block_has_expr)
+            << (CurLambda != nullptr);
         RetValExp = nullptr;
       }
     }

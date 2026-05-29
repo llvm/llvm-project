@@ -407,3 +407,92 @@ func.func @_QMtest_global_shaped_targetPtest() {
 }
 fir.global @_QMtest_global_shaped_targetEa1 target : !fir.array<100xf32>
 fir.global @_QMtest_global_shaped_targetEb1 target : !fir.array<100xf32>
+
+// Test disjoint array sections: a(n+1, :) = a(n, :) for a 2D array
+// The first index differs by 1 (n vs n+1), so ArraySectionAnalyzer detects them as disjoint.
+func.func @_QPtest_disjoint(%arg0: !fir.ref<!fir.array<10x10xf32>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %0 = fir.shape %c10, %c10 : (index, index) -> !fir.shape<2>
+  %1:2 = hlfir.declare %arg0(%0) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEa"} : (!fir.ref<!fir.array<10x10xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>)
+  %2 = fir.alloca index
+  %n = fir.load %2 : !fir.ref<index>
+  %n_plus_1 = arith.addi %n, %c1 : index
+  %3 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %4 = hlfir.designate %1#0 (%n, %c1:%c10:%c1) shape %3 : (!fir.ref<!fir.array<10x10xf32>>, index, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  %5 = hlfir.designate %1#0 (%n_plus_1, %c1:%c10:%c1) shape %3 : (!fir.ref<!fir.array<10x10xf32>>, index, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  hlfir.assign %4 to %5 : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>
+  return
+}
+// CHECK-LABEL:   func.func @_QPtest_disjoint(
+// CHECK-SAME:                                %[[VAL_0:.*]]: !fir.ref<!fir.array<10x10xf32>>) {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 10 : index
+// CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
+// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEa"} : (!fir.ref<!fir.array<10x10xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>)
+// CHECK:           %[[VAL_5:.*]] = fir.alloca index
+// CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]] : !fir.ref<index>
+// CHECK:           %[[VAL_7:.*]] = arith.addi %[[VAL_6]], %[[VAL_1]] : index
+// CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_9:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_6]], %[[VAL_1]]:%[[VAL_2]]:%[[VAL_1]]) shape %[[VAL_8]] : (!fir.ref<!fir.array<10x10xf32>>, index, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+// CHECK:           %[[VAL_10:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_7]], %[[VAL_1]]:%[[VAL_2]]:%[[VAL_1]]) shape %[[VAL_8]] : (!fir.ref<!fir.array<10x10xf32>>, index, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+// CHECK:           fir.do_loop %[[VAL_11:.*]] = %[[VAL_1]] to %[[VAL_2]] step %[[VAL_1]] unordered {
+// CHECK:             %[[VAL_12:.*]] = hlfir.designate %[[VAL_9]] (%[[VAL_11]])  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+// CHECK:             %[[VAL_13:.*]] = fir.load %[[VAL_12]] : !fir.ref<f32>
+// CHECK:             %[[VAL_14:.*]] = hlfir.designate %[[VAL_10]] (%[[VAL_11]])  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+// CHECK:             hlfir.assign %[[VAL_13]] to %[[VAL_14]] : f32, !fir.ref<f32>
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }
+
+// Test scalar-to-array broadcast: c = scalar_val
+// This should be inlined into a loop that stores the scalar to each element.
+func.func @_QPtest_scalar_to_array(%arg0: !fir.ref<f32>, %arg1: !fir.ref<!fir.array<10xf32>>) {
+  %c10 = arith.constant 10 : index
+  %0 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %1:2 = hlfir.declare %arg1(%0) {uniq_name = "_QFtestEc"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+  %2 = fir.load %arg0 : !fir.ref<f32>
+  hlfir.assign %2 to %1#0 : f32, !fir.ref<!fir.array<10xf32>>
+  return
+}
+// CHECK-LABEL:   func.func @_QPtest_scalar_to_array(
+// CHECK-SAME:                                       %[[VAL_0:.*]]: !fir.ref<f32>,
+// CHECK-SAME:                                       %[[VAL_1:.*]]: !fir.ref<!fir.array<10xf32>>) {
+// CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_3:.*]] = arith.constant 10 : index
+// CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_4]]) {uniq_name = "_QFtestEc"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+// CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_0]] : !fir.ref<f32>
+// CHECK:           fir.do_loop %[[VAL_7:.*]] = %[[VAL_2]] to %[[VAL_3]] step %[[VAL_2]] unordered {
+// CHECK:             %[[VAL_8:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_7]])  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+// CHECK:             hlfir.assign %[[VAL_6]] to %[[VAL_8]] : f32, !fir.ref<f32>
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }
+
+// Test scalar RHS that is a reference into the LHS array: a = a(1)
+// The scalar must be loaded BEFORE the loop to satisfy Fortran 10.2.1.3
+// (expression evaluation precedes variable definition).
+func.func @_QPtest_scalar_ref_from_lhs(%arg0: !fir.ref<!fir.array<10xf32>>) {
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %0 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %1:2 = hlfir.declare %arg0(%0) {uniq_name = "_QFtestEa"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+  %2 = hlfir.designate %1#0 (%c1) : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+  hlfir.assign %2 to %1#0 : !fir.ref<f32>, !fir.ref<!fir.array<10xf32>>
+  return
+}
+// CHECK-LABEL:   func.func @_QPtest_scalar_ref_from_lhs(
+// CHECK-SAME:                                           %[[VAL_0:.*]]: !fir.ref<!fir.array<10xf32>>) {
+// CHECK:           %[[C10:.*]] = arith.constant 10 : index
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[SHAPE:.*]] = fir.shape %[[C10]] : (index) -> !fir.shape<1>
+// CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]](%[[SHAPE]]) {uniq_name = "_QFtestEa"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+// CHECK:           %[[A1_REF:.*]] = hlfir.designate %[[DECL]]#0 (%[[C1]]) : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+// CHECK:           %[[A1_VAL:.*]] = fir.load %[[A1_REF]] : !fir.ref<f32>
+// CHECK:           fir.do_loop %[[IV:.*]] = %[[C1]] to %[[C10]] step %[[C1]] unordered {
+// CHECK:             %[[ELEM:.*]] = hlfir.designate %[[DECL]]#0 (%[[IV]]) : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+// CHECK:             hlfir.assign %[[A1_VAL]] to %[[ELEM]] : f32, !fir.ref<f32>
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }

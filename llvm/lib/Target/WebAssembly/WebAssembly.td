@@ -73,6 +73,10 @@ def FeatureReferenceTypes :
       SubtargetFeature<"reference-types", "HasReferenceTypes", "true",
                        "Enable reference types">;
 
+def FeatureRelaxedAtomics :
+      SubtargetFeature<"relaxed-atomics", "HasRelaxedAtomics", "true",
+                       "Enable relaxed-atomics proposal">;
+
 def FeatureRelaxedSIMD :
       SubtargetFeature<"relaxed-simd", "SIMDLevel", "RelaxedSIMD",
                        "Enable relaxed-simd instructions">;
@@ -101,6 +105,7 @@ def FeatureWideArithmetic :
 //===----------------------------------------------------------------------===//
 
 include "WebAssemblyRegisterInfo.td"
+include "WebAssemblyRegisterBanks.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Descriptions
@@ -165,7 +170,7 @@ def WebAssemblyAsmParser : AsmParser {
 
 def WebAssemblyAsmWriter : AsmWriter {
   string AsmWriterClassName  = "InstPrinter";
-  int PassSubtarget = 0;
+  int PassSubtarget = 1;
   int Variant = 0;
   bit isMCAsmWriter = 1;
 }

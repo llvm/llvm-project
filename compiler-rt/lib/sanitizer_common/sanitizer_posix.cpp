@@ -27,12 +27,13 @@
 #include <signal.h>
 #include <sys/mman.h>
 
-#if SANITIZER_FREEBSD
+#  if SANITIZER_FREEBSD || SANITIZER_AIX
 // The MAP_NORESERVE define has been removed in FreeBSD 11.x, and even before
 // that, it was never implemented.  So just define it to zero.
-#undef  MAP_NORESERVE
-#define MAP_NORESERVE 0
-#endif
+// Similarly, AIX does not define MAP_NORESERVE.
+#    undef MAP_NORESERVE
+#    define MAP_NORESERVE 0
+#  endif
 
 namespace __sanitizer {
 
@@ -357,9 +358,10 @@ int GetNamedMappingFd(const char *name, uptr size, int *flags) {
   if (!common_flags()->decorate_proc_maps || !name)
     return -1;
   char shmname[200];
-  CHECK(internal_strlen(name) < sizeof(shmname) - 10);
-  internal_snprintf(shmname, sizeof(shmname), "/dev/shm/%zu [%s]",
-                    internal_getpid(), name);
+  int len =
+      internal_snprintf(shmname, sizeof(shmname), "/dev/shm/%zu.%llu [%s]",
+                        internal_getpid(), GetTid(), name);
+  CHECK_LT(len, sizeof(shmname));
   int o_cloexec = 0;
 #if defined(O_CLOEXEC)
   o_cloexec = O_CLOEXEC;

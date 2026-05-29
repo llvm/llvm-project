@@ -93,6 +93,11 @@ def err_drv_hipspv_no_hip_path : Error<
   "'--hip-path' must be specified when offloading to SPIR-V unless '-nogpuinc' "
   "is given">;
 
+// SYCL Windows-specific diagnostics
+def err_drv_sycl_requires_dynamic_crt : Error<
+  "SYCL requires dynamic C++ runtime (/MD or /MDd); "
+  "static C++ runtime (/MT or /MTd) is not supported">;
+
 def err_drv_no_spv_tools : Error<"cannot find SPIR-V Tools binary '%0', which "
                                  "is required for SPIR-V compilation. "
                                  "It can be obtained from your system package "
@@ -167,10 +172,13 @@ def warn_drv_unsupported_option_for_runtime : Warning<
 def warn_drv_unsupported_openmp_library : Warning<
   "the library '%0=%1' is not supported, OpenMP will not be enabled">,
   InGroup<OptionIgnored>;
-def warn_openmp_incomplete : Warning<
+def warn_openmp_impl_incomplete : Warning<
   "OpenMP support for version %0 in flang is still incomplete">,
   InGroup<ExperimentalOption>;
-
+def warn_openmp_spec_incomplete : Warning<
+  "the specification for OpenMP version %0 is still under development; "
+  "the syntax and semantics of new features may be subject to change">,
+  InGroup<ExperimentalOption>;
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
 def err_drv_invalid_linker_name : Error<
@@ -187,6 +195,8 @@ def err_drv_incompatible_unwindlib : Error<
   "--rtlib=libgcc requires --unwindlib=libgcc">;
 def err_drv_incompatible_options : Error<
   "the combination of '%0' and '%1' is incompatible">;
+def err_drv_invalid_cstdlib_name : Error<
+  "invalid C library name in argument '%0'">;
 def err_drv_invalid_stdlib_name : Error<
   "invalid library name in argument '%0'">;
 def err_drv_invalid_output_with_multiple_archs : Error<
@@ -229,6 +239,8 @@ def err_drv_argument_not_allowed_with : Error<
 def warn_drv_argument_not_allowed_with : Warning<
   "invalid argument '%0' not allowed with '%1'">,
   InGroup<OptionIgnored>;
+def err_drv_sycl_requires_cxx17 : Error<
+  "SYCL requires C++17 or later; '%0' is not supported">;
 def err_drv_cannot_open_randomize_layout_seed_file : Error<
   "cannot read randomize layout seed file '%0'">;
 def err_drv_invalid_version_number : Error<
@@ -446,6 +458,9 @@ def warn_ignored_clang_option : Warning<"the flag '%0' has been deprecated and w
 def warn_drv_unsupported_opt_for_target : Warning<
   "optimization flag '%0' is not supported for target '%1'">,
   InGroup<IgnoredOptimizationArgument>;
+def warn_drv_riscv_be_experimental : Warning<
+  "big-endian RISC-V target support is experimental">,
+  InGroup<RISCVBEExperimental>;
 def warn_drv_unsupported_debug_info_opt_for_target : Warning<
   "debug information option '%0' is not supported for target '%1'">,
   InGroup<UnsupportedTargetOpt>;
@@ -487,11 +502,11 @@ def warn_drv_clang_unsupported : Warning<
 def warn_drv_deprecated_arg : Warning<
   "argument '%0' is deprecated%select{|, use '%2' instead}1">, InGroup<Deprecated>;
 def warn_drv_deprecated_arg_ofast : Warning<
-  "argument '-Ofast' is deprecated; use '-O3 -ffast-math' for the same behavior,"
-  " or '-O3' to enable only conforming optimizations">,
+  "argument '-Ofast' is deprecated; use '-O3' to enable only conforming optimizations, "
+  "or consult the documentation for the same behavior">,
   InGroup<DeprecatedOFast>;
 def warn_drv_deprecated_arg_ofast_for_flang : Warning<
-  "argument '-Ofast' is deprecated; use '-O3 -ffast-math -fstack-arrays' for the same behavior,"
+  "argument '-Ofast' is deprecated; use '-O3 -ffast-math -fstack-arrays -fno-protect-parens' for the same behavior,"
   " or '-O3 -fstack-arrays' to enable only conforming optimizations">,
   InGroup<DeprecatedOFast>;
 def warn_drv_deprecated_custom : Warning<
@@ -607,6 +622,34 @@ def err_drv_reduced_module_output_overrided : Warning<
   "the implicit output of reduced BMI may be overrided by the output file specified by '--precompile'. "
   "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
   InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
+
+def err_drv_modules_driver_requires_reduced_bmi : Error<
+  "'-fmodules-driver' is currently incompatible with '-fno-modules-reduced-bmi'">;
+def remark_performing_driver_managed_module_build : Remark<
+  "performing driver managed module build">, InGroup<ModulesDriver>;
+def remark_modules_manifest_not_found : Remark<
+  "standard modules manifest file not found; import of standard library "
+  "modules not supported">,
+  InGroup<ModulesDriver>;
+def remark_using_modules_manifest : Remark<
+  "using standard modules manifest file '%0'">,
+  InGroup<ModulesDriver>;
+def err_modules_manifest_failed_parse : Error<
+  "failure while parsing standard modules manifest: '%0'">;
+def err_default_modules_cache_not_available : Error<
+  "unable to determine the default -fmodules-cache-path. Please specify it "
+  "explicitly using -fmodules-cache-path or the CLANG_MODULE_CACHE_PATH "
+  "environment variable">;
+def err_dependency_scan_failed : Error<
+  "failed to perform dependency scan">;
+def err_modules_driver_named_module_redefinition : Error<
+  "duplicate definitions of C++20 named module '%0' in '%1' and '%2'">;
+def remark_printing_module_graph : Remark<
+  "printing module dependency graph">,
+  InGroup<ModulesDriver>;
+def err_module_defined_outside_of_module_source : Error<
+  "module '%0' is defined in file '%1', but module declarations are only "
+  "allowed in C++ module inputs; use the '.cppm' extension or '-x c++module'">;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
@@ -832,6 +875,8 @@ def err_drv_dxc_invalid_matrix_layout : Error<
   "cannot specify /Zpr and /Zpc together">;
 def err_drv_dxc_missing_target_profile : Error<
   "target profile option (-T) is missing">;
+def err_drv_dxc_Fre_requires_Fo_metal
+    : Error<"-Fre option requires -Fo option when targeting Metal">;
 def err_drv_hlsl_unsupported_target : Error<
   "HLSL code generation is unsupported for target '%0'">;
 def err_drv_hlsl_bad_shader_required_in_target : Error<
@@ -843,6 +888,9 @@ def err_drv_hlsl_bad_shader_unsupported : Error<
 def warn_drv_dxc_missing_dxv : Warning<
   "dxv not found; resulting DXIL will not be validated or signed for use in "
   "release environment">, InGroup<DXILValidation>;
+def warn_drv_dxc_missing_spirv_val : Warning<
+  "spirv-val not found; resulting SPIR-V will not be validated">,
+  InGroup<SPIRVValidation>;
 
 def err_drv_invalid_range_dxil_validator_version : Error<
   "invalid validator version : %0; validator version must be less than or "
@@ -916,4 +964,7 @@ def warn_drv_gcc_install_dir_libstdcxx : Warning<
     "future releases of the clang compiler will prefer GCC installations "
     "containing libstdc++ include directories; '%0' would be chosen over '%1'">,
     InGroup<DiagGroup<"gcc-install-dir-libstdcxx">>;
+
+def err_drv_reflection_requires_cxx26 : Error<
+  "option '%0' is only supported when compiling in C++26 mode">;
 }

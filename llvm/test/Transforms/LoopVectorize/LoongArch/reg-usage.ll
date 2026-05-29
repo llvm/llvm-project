@@ -13,28 +13,28 @@ define void @bar(ptr %A, i32 signext %n) {
 ; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: LoongArch::FPRRC, 1 registers
 ; CHECK-SCALAR-NEXT: LV(REG): Found invariant usage: 1 item
 ; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: LoongArch::GPRRC, 1 registers
-; CHECK-SCALAR-NEXT: LV: The target has 30 registers of LoongArch::GPRRC register class
+; CHECK-SCALAR:      LV: The target has 30 registers of LoongArch::GPRRC register class
 ; CHECK-SCALAR-NEXT: LV: The target has 32 registers of LoongArch::FPRRC register class
 ; CHECK-VECTOR:      LV(REG): Found max usage: 2 item
 ; CHECK-VECTOR-NEXT: LV(REG): RegisterClass: LoongArch::GPRRC, 2 registers
 ; CHECK-VECTOR-NEXT: LV(REG): RegisterClass: LoongArch::VRRC, 2 registers
 ; CHECK-VECTOR-NEXT: LV(REG): Found invariant usage: 1 item
 ; CHECK-VECTOR-NEXT: LV(REG): RegisterClass: LoongArch::GPRRC, 1 registers
-; CHECK-VECTOR-NEXT: LV: The target has 30 registers of LoongArch::GPRRC register class
+; CHECK-VECTOR:      LV: The target has 30 registers of LoongArch::GPRRC register class
 ; CHECK-VECTOR-NEXT: LV: The target has 32 registers of LoongArch::VRRC register class
 
 entry:
   %cmp4 = icmp sgt i32 %n, 0
   br i1 %cmp4, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext nneg i32 %n to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %0 = trunc i64 %indvars.iv to i32
   %conv = sitofp i32 %0 to float

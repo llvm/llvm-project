@@ -12,13 +12,15 @@
 
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Nanobind.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Support/DataTypes.h"
-#include "llvm/Support/raw_ostream.h"
 
+#include <array>
+#include <atomic>
+#include <fstream>
+#include <memory>
+#include <sstream>
 #include <string>
+#include <string_view>
+#include <type_traits>
 #include <typeinfo>
 #include <variant>
 
@@ -33,6 +35,53 @@ struct std::iterator_traits<nanobind::detail::fast_iterator> {
 
 namespace mlir {
 namespace python {
+
+/// Safely calls Python initialization code on first use, avoiding deadlocks.
+template <typename T>
+class SafeInit {
+public:
+  typedef std::unique_ptr<T> (*F)();
+
+  explicit SafeInit(F init_fn) : initFn(init_fn) {}
+
+  T &get() {
+    if (T *result = output.load()) {
+      return *result;
+    }
+
+    // Note: init_fn() may be called multiple times if, for example, the GIL is
+    // released during its execution. The intended use case is for module
+    // imports which are safe to perform multiple times. We are careful not to
+    // hold a lock across init_fn() to avoid lock ordering problems.
+    std::unique_ptr<T> m = initFn();
+    {
+      nanobind::ft_lock_guard lock(mu);
+      if (T *result = output.load()) {
+        return *result;
+      }
+      T *p = m.release();
+      output.store(p);
+      return *p;
+    }
+  }
+
+private:
+  nanobind::ft_mutex mu;
+  std::atomic<T *> output{nullptr};
+  F initFn;
+};
+
+struct MlirTypeIDHash {
+  size_t operator()(MlirTypeID typeID) const {
+    return mlirTypeIDHashValue(typeID);
+  }
+};
+
+struct MlirTypeIDEqual {
+  bool operator()(MlirTypeID lhs, MlirTypeID rhs) const {
+    return mlirTypeIDEqual(lhs, rhs);
+  }
+};
 
 /// CRTP template for special wrapper types that are allowed to be passed in as
 /// 'None' function arguments and can be resolved by some global mechanic if
@@ -70,6 +119,14 @@ private:
 
 namespace nanobind {
 namespace detail {
+
+/// Helper function to concatenate arguments into a `std::string`.
+template <typename... Ts>
+inline std::string join(const Ts &...args) {
+  std::ostringstream oss;
+  (oss << ... << args);
+  return oss.str();
+}
 
 template <typename DefaultingTy>
 struct MlirDefaultingCaster {
@@ -134,6 +191,17 @@ struct PyPrintAccumulator {
   }
 };
 
+/// RAII wrapper for MlirLlvmRawFdOStream that ensures destruction on scope
+/// exit.
+struct RAIIMlirLlvmRawFdOStream : MlirLlvmRawFdOStream {
+  RAIIMlirLlvmRawFdOStream(MlirLlvmRawFdOStream stream)
+      : MlirLlvmRawFdOStream(stream) {}
+  RAIIMlirLlvmRawFdOStream(const RAIIMlirLlvmRawFdOStream &) = delete;
+  RAIIMlirLlvmRawFdOStream &
+  operator=(const RAIIMlirLlvmRawFdOStream &) = delete;
+  ~RAIIMlirLlvmRawFdOStream() { mlirLlvmRawFdOStreamDestroy(*this); }
+};
+
 /// Accumulates into a file, either writing text (default)
 /// or binary. The file may be a Python file-like object or a path to a file.
 class PyFileAccumulator {
@@ -142,13 +210,19 @@ public:
       : binary(binary) {
     std::string filePath;
     if (nanobind::try_cast<std::string>(fileOrStringObject, filePath)) {
-      std::error_code ec;
-      writeTarget.emplace<llvm::raw_fd_ostream>(filePath, ec);
-      if (ec) {
+      std::string errorMessage;
+      auto errorCallback = +[](MlirStringRef message, void *userData) {
+        auto *storage = static_cast<std::string *>(userData);
+        storage->assign(message.data, message.length);
+      };
+      MlirLlvmRawFdOStream stream = mlirLlvmRawFdOStreamCreate(
+          filePath.c_str(), binary, errorCallback, &errorMessage);
+      if (mlirLlvmRawFdOStreamIsNull(stream)) {
         throw nanobind::value_error(
-            (std::string("Unable to open file for writing: ") + ec.message())
+            (std::string("Unable to open file for writing: ") + errorMessage)
                 .c_str());
       }
+      writeTarget.emplace<RAIIMlirLlvmRawFdOStream>(stream);
     } else {
       writeTarget.emplace<nanobind::object>(fileOrStringObject.attr("write"));
     }
@@ -156,7 +230,7 @@ public:
 
   MlirStringCallback getCallback() {
     return writeTarget.index() == 0 ? getPyWriteCallback()
-                                    : getOstreamCallback();
+                                    : getOStreamCallback();
   }
 
   void *getUserData() { return this; }
@@ -178,15 +252,15 @@ private:
     };
   }
 
-  MlirStringCallback getOstreamCallback() {
+  MlirStringCallback getOStreamCallback() {
     return [](MlirStringRef part, void *userData) {
       PyFileAccumulator *accum = static_cast<PyFileAccumulator *>(userData);
-      std::get<llvm::raw_fd_ostream>(accum->writeTarget)
-          .write(part.data, part.length);
+      mlirLlvmRawFdOStreamWrite(
+          std::get<RAIIMlirLlvmRawFdOStream>(accum->writeTarget), part);
     };
   }
 
-  std::variant<nanobind::object, llvm::raw_fd_ostream> writeTarget;
+  std::variant<nanobind::object, RAIIMlirLlvmRawFdOStream> writeTarget;
   bool binary;
 };
 
@@ -245,10 +319,16 @@ private:
 /// A derived class may additionally define:
 ///   - a `static void bindDerived(ClassTy &)` method to bind additional methods
 ///     the python class.
+///   - a `static constexpr std::array<const char *, N> typeParams` to make the
+///     Python class generic, parameterizable with the given type parameters.
 template <typename Derived, typename ElementTy>
 class Sliceable {
 protected:
   using ClassTy = nanobind::class_<Derived>;
+
+  /// Type parameter names for generic classes. When non-empty, the Python
+  /// class will be made generic with `typing.Generic[...]`.
+  static constexpr std::array<const char *, 0> typeParams = {};
 
   /// Transforms `index` into a legal value to access the underlying sequence.
   /// Returns <0 on failure.
@@ -271,8 +351,12 @@ protected:
 
   /// Trait to check if T provides a `maybeDownCast` method.
   /// Note, you need the & to detect inherited members.
-  template <typename T, typename... Args>
-  using has_maybe_downcast = decltype(&T::maybeDownCast);
+  template <typename T, typename = void>
+  struct has_maybe_downcast : std::false_type {};
+
+  template <typename T>
+  struct has_maybe_downcast<T, std::void_t<decltype(&T::maybeDownCast)>>
+      : std::true_type {};
 
   /// Returns the element at the given slice index. Supports negative indices
   /// by taking elements in inverse order. Returns a nullptr object if out
@@ -285,7 +369,7 @@ protected:
       return {};
     }
 
-    if constexpr (llvm::is_detected<has_maybe_downcast, ElementTy>::value)
+    if constexpr (has_maybe_downcast<ElementTy>::value)
       return static_cast<Derived *>(this)
           ->getRawElement(linearizeIndex(index))
           .maybeDownCast();
@@ -297,7 +381,7 @@ protected:
   /// Returns a new instance of the pseudo-container restricted to the given
   /// slice. Returns a nullptr object on failure.
   nanobind::object getItemSlice(PyObject *slice) {
-    ssize_t start, stop, extraStep, sliceLength;
+    Py_ssize_t start, stop, extraStep, sliceLength;
     if (PySlice_GetIndicesEx(slice, length, &start, &stop, &extraStep,
                              &sliceLength) != 0) {
       PyErr_SetString(PyExc_IndexError, "index out of range");
@@ -343,8 +427,54 @@ public:
     return elements;
   }
 
+  // Manually implement the sequence protocol via the C API. We do this
+  // because it is approx 4x faster than via nanobind, largely because that
+  // formulation requires a C++ exception to be thrown to detect end of
+  // sequence.
+  // Since we are in a C-context, any C++ exception that happens here
+  // will terminate the program. There is nothing in this implementation
+  // that should throw in a non-terminal way, so we forgo further
+  // exception marshalling.
+  // See: https://github.com/pybind/pybind11/issues/2842
+  //
   /// Binds the indexing and length methods in the Python class.
   static void bind(nanobind::module_ &m) {
+    // These slots are passed via nanobind::type_slots() at class creation
+    // time, which is compatible with both the full and limited (stable ABI)
+    // Python APIs.
+    static PyType_Slot sequenceSlots[] = {
+        {Py_sq_length, (void *)(+[](PyObject *rawSelf) -> Py_ssize_t {
+           auto self = nanobind::cast<Derived *>(nanobind::handle(rawSelf));
+           return self->length;
+         })},
+        // sq_item is called as part of the sequence protocol for iteration,
+        // list construction, etc.
+        {Py_sq_item,
+         (void *)(+[](PyObject *rawSelf, Py_ssize_t index) -> PyObject * {
+           auto self = nanobind::cast<Derived *>(nanobind::handle(rawSelf));
+           return self->getItem(index).release().ptr();
+         })},
+        // mp_subscript is used for both slices and integer lookups.
+        {Py_mp_subscript,
+         (void *)(+[](PyObject *rawSelf, PyObject *rawSubscript) -> PyObject * {
+           auto self = nanobind::cast<Derived *>(nanobind::handle(rawSelf));
+           Py_ssize_t index =
+               PyNumber_AsSsize_t(rawSubscript, PyExc_IndexError);
+           if (!PyErr_Occurred()) {
+             // Integer indexing.
+             return self->getItem(index).release().ptr();
+           }
+           PyErr_Clear();
+
+           // Assume slice-based indexing.
+           if (PySlice_Check(rawSubscript)) {
+             return self->getItemSlice(rawSubscript).release().ptr();
+           }
+
+           PyErr_SetString(PyExc_ValueError, "expected integer or slice");
+           return nullptr;
+         })},
+        {0, nullptr}};
     const std::type_info &elemTy = typeid(ElementTy);
     PyObject *elemTyInfo = nanobind::detail::nb_type_lookup(&elemTy);
     assert(elemTyInfo &&
@@ -352,54 +482,32 @@ public:
     nanobind::handle elemTyName = nanobind::detail::nb_type_name(elemTyInfo);
     std::string sig = std::string("class ") + Derived::pyClassName +
                       "(collections.abc.Sequence[" +
-                      nanobind::cast<std::string>(elemTyName) + "])";
-    auto clazz = nanobind::class_<Derived>(m, Derived::pyClassName,
-                                           nanobind::sig(sig.c_str()))
-                     .def("__add__", &Sliceable::dunderAdd);
+                      nanobind::cast<std::string>(elemTyName) + "]";
+    if constexpr (!Derived::typeParams.empty()) {
+      sig += ", typing.Generic[";
+      for (size_t i = 0; i < Derived::typeParams.size(); ++i) {
+        if (i > 0)
+          sig += ", ";
+        const char *tp = Derived::typeParams[i];
+        sig += tp;
+        if (!nanobind::hasattr(m, tp))
+          m.attr(tp) = nanobind::type_var(tp);
+      }
+      sig += "]";
+    }
+    sig += ")";
+    ClassTy clazz;
+    if constexpr (!Derived::typeParams.empty()) {
+      clazz =
+          ClassTy(m, Derived::pyClassName, nanobind::type_slots(sequenceSlots),
+                  nanobind::is_generic(), nanobind::sig(sig.c_str()));
+    } else {
+      clazz =
+          ClassTy(m, Derived::pyClassName, nanobind::type_slots(sequenceSlots),
+                  nanobind::sig(sig.c_str()));
+    }
+    clazz.def("__add__", &Sliceable::dunderAdd);
     Derived::bindDerived(clazz);
-
-    // Manually implement the sequence protocol via the C API. We do this
-    // because it is approx 4x faster than via nanobind, largely because that
-    // formulation requires a C++ exception to be thrown to detect end of
-    // sequence.
-    // Since we are in a C-context, any C++ exception that happens here
-    // will terminate the program. There is nothing in this implementation
-    // that should throw in a non-terminal way, so we forgo further
-    // exception marshalling.
-    // See: https://github.com/pybind/nanobind/issues/2842
-    auto heap_type = reinterpret_cast<PyHeapTypeObject *>(clazz.ptr());
-    assert(heap_type->ht_type.tp_flags & Py_TPFLAGS_HEAPTYPE &&
-           "must be heap type");
-    heap_type->as_sequence.sq_length = +[](PyObject *rawSelf) -> Py_ssize_t {
-      auto self = nanobind::cast<Derived *>(nanobind::handle(rawSelf));
-      return self->length;
-    };
-    // sq_item is called as part of the sequence protocol for iteration,
-    // list construction, etc.
-    heap_type->as_sequence.sq_item =
-        +[](PyObject *rawSelf, Py_ssize_t index) -> PyObject * {
-      auto self = nanobind::cast<Derived *>(nanobind::handle(rawSelf));
-      return self->getItem(index).release().ptr();
-    };
-    // mp_subscript is used for both slices and integer lookups.
-    heap_type->as_mapping.mp_subscript =
-        +[](PyObject *rawSelf, PyObject *rawSubscript) -> PyObject * {
-      auto self = nanobind::cast<Derived *>(nanobind::handle(rawSelf));
-      Py_ssize_t index = PyNumber_AsSsize_t(rawSubscript, PyExc_IndexError);
-      if (!PyErr_Occurred()) {
-        // Integer indexing.
-        return self->getItem(index).release().ptr();
-      }
-      PyErr_Clear();
-
-      // Assume slice-based indexing.
-      if (PySlice_Check(rawSubscript)) {
-        return self->getItemSlice(rawSubscript).release().ptr();
-      }
-
-      PyErr_SetString(PyExc_ValueError, "expected integer or slice");
-      return nullptr;
-    };
   }
 
   /// Hook for derived classes willing to bind more methods.
@@ -411,26 +519,5 @@ public:
 };
 
 } // namespace mlir
-
-namespace llvm {
-
-template <>
-struct DenseMapInfo<MlirTypeID> {
-  static inline MlirTypeID getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlirTypeIDCreate(pointer);
-  }
-  static inline MlirTypeID getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlirTypeIDCreate(pointer);
-  }
-  static inline unsigned getHashValue(const MlirTypeID &val) {
-    return mlirTypeIDHashValue(val);
-  }
-  static inline bool isEqual(const MlirTypeID &lhs, const MlirTypeID &rhs) {
-    return mlirTypeIDEqual(lhs, rhs);
-  }
-};
-} // namespace llvm
 
 #endif // MLIR_BINDINGS_PYTHON_PYBINDUTILS_H

@@ -219,6 +219,7 @@ public:
   void VisitSectionAttr(const SectionAttr *SA);
   void VisitVisibilityAttr(const VisibilityAttr *VA);
   void VisitTLSModelAttr(const TLSModelAttr *TA);
+  void VisitAvailabilityAttr(const AvailabilityAttr *AA);
 
   void VisitTypedefType(const TypedefType *TT);
   void VisitUsingType(const UsingType *TT);
@@ -267,6 +268,7 @@ public:
   void VisitLinkageSpecDecl(const LinkageSpecDecl *LSD);
   void VisitAccessSpecDecl(const AccessSpecDecl *ASD);
   void VisitFriendDecl(const FriendDecl *FD);
+  void VisitExplicitInstantiationDecl(const ExplicitInstantiationDecl *D);
 
   void VisitObjCIvarDecl(const ObjCIvarDecl *D);
   void VisitObjCMethodDecl(const ObjCMethodDecl *D);

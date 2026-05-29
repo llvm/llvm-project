@@ -10,7 +10,7 @@ func.func @f() {
 
 // CHECK: IR Dump Before
 // CHECK-SAME: TestDynamicPipelinePass
-// CHECK-NEXT: module @inner_mod1
+// CHECK: module @inner_mod1
 module @inner_mod1 {
 // We use the mlir-print-ir-after-all dumps to check the granularity of the
 // scheduling: if we are nesting we expect to see to individual "Dump Before
@@ -18,11 +18,11 @@ module @inner_mod1 {
 // the CSE pass to run on the `inner_mod1` module directly.
 
 // CHECK: Dump Before CSE
-// NOTNESTED-NEXT: @inner_mod1
-// NESTED-NEXT: @foo
+// NOTNESTED: @inner_mod1
+// NESTED: @foo
   module @foo {}
 // Only in the nested case we have a second run of the pass here.
 // NESTED: Dump Before CSE
-// NESTED-NEXT: @baz
+// NESTED: @baz
   module @baz {}
 }

@@ -36,11 +36,12 @@ public:
   void VisitDeclStmt(const DeclStmt *DS);
   void VisitDeclRefExpr(const DeclRefExpr *DRE);
   void VisitCXXConstructExpr(const CXXConstructExpr *CCE);
+  void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE);
   void VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE);
   void VisitMemberExpr(const MemberExpr *ME);
   void VisitCallExpr(const CallExpr *CE);
   void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *N);
-  void VisitImplicitCastExpr(const ImplicitCastExpr *ICE);
+  void VisitCastExpr(const CastExpr *CE);
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitReturnStmt(const ReturnStmt *RS);
   void VisitBinaryOperator(const BinaryOperator *BO);
@@ -48,21 +49,56 @@ public:
   void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE);
   void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *FCE);
   void VisitInitListExpr(const InitListExpr *ILE);
+  void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE);
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
+  void VisitLambdaExpr(const LambdaExpr *LE);
+  void VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE);
+  void VisitCXXNewExpr(const CXXNewExpr *NE);
+  void VisitCXXDeleteExpr(const CXXDeleteExpr *DE);
 
 private:
   OriginList *getOriginsList(const ValueDecl &D);
   OriginList *getOriginsList(const Expr &E);
 
+  bool hasOrigins(QualType QT) const;
+  bool hasOrigins(const Expr *E) const;
+
   void flow(OriginList *Dst, OriginList *Src, bool Kill);
 
-  void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
+  /// Handles assignment for both BinaryOperator and CXXOperatorCallExpr.
+  ///
+  /// LHSExpr is the destination whose stored loans are replaced by RHSExpr's
+  /// loans. TargetExpr is the assignment expression itself; it receives
+  /// LHSExpr's origins so chained assignments like `a = b = c` can propagate
+  /// through the result of `b = c`.
+  void handleAssignment(const Expr *TargetExpr, const Expr *LHSExpr,
+                        const Expr *RHSExpr);
+
+  void handlePointerArithmetic(const BinaryOperator *BO);
+
+  void handlePlacementNew(const CXXNewExpr *NE, OriginList *NewList);
+
+  void handleCXXCtorInitializer(const CXXCtorInitializer *CII);
 
   void handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds);
 
-  void handleTemporaryDtor(const CFGTemporaryDtor &TemporaryDtor);
+  void handleFullExprCleanup(const CFGFullExprCleanup &FullExprCleanup);
+
+  void handleExitBlock();
+
+  /// Mark all fields of the implicit object as used for an instance method
+  /// call, since the callee may access any part of the object.
+  void handleImplicitObjectFieldUses(const Expr *Call, const FunctionDecl *FD);
 
   void handleGSLPointerConstruction(const CXXConstructExpr *CCE);
+
+  /// Detects arguments passed to rvalue reference parameters and creates
+  /// MovedOriginFact for them. The MovedLoansAnalysis then uses these facts
+  /// to track in a flow-sensitive manner which loans have been moved at each
+  /// program point, allowing warnings to distinguish potentially moved storage
+  /// from other use-after-free errors.
+  void handleMovedArgsInCall(const FunctionDecl *FD,
+                             ArrayRef<const Expr *> Args);
 
   /// Checks if a call-like expression creates a borrow by passing a value to a
   /// reference parameter, creating an IssueFact if it does.
@@ -71,6 +107,15 @@ private:
   void handleFunctionCall(const Expr *Call, const FunctionDecl *FD,
                           ArrayRef<const Expr *> Args,
                           bool IsGslConstruction = false);
+
+  // Detect methods that invalidate iterators/references/pointees.
+  // For instance methods, Args[0] is the implicit 'this' pointer.
+  void handleInvalidatingCall(const Expr *Call, const FunctionDecl *FD,
+                              ArrayRef<const Expr *> Args);
+
+  // Detect explicit destructor calls/`std::destroy_at`
+  void handleDestructiveCall(const Expr *Call, const FunctionDecl *FD,
+                             ArrayRef<const Expr *> Args);
 
   template <typename Destination, typename Source>
   void flowOrigin(const Destination &D, const Source &S) {
@@ -86,12 +131,14 @@ private:
   /// If so, creates a `TestPointFact` and returns true.
   bool handleTestPoint(const CXXFunctionalCastExpr *FCE);
 
-  // A DeclRefExpr will be treated as a use of the referenced decl. It will be
+  // Treats an expression as a use of the referenced object. It will be
   // checked for use-after-free unless it is later marked as being written to
-  // (e.g. on the left-hand side of an assignment).
-  void handleUse(const DeclRefExpr *DRE);
+  // (e.g. on the left-hand side of an assignment in the case of a DeclRefExpr).
+  void handleUse(const Expr *E);
 
   void markUseAsWrite(const DeclRefExpr *DRE);
+
+  bool escapesViaReturn(OriginID OID) const;
 
   llvm::SmallVector<Fact *> issuePlaceholderLoans();
   FactManager &FactMgr;
@@ -106,16 +153,8 @@ private:
   // `DeclRefExpr`s as "read" uses. When an assignment is processed, the use
   // corresponding to the left-hand side is updated to be a "write", thereby
   // exempting it from the check.
-  llvm::DenseMap<const DeclRefExpr *, UseFact *> UseFacts;
-
-  // This is a flow-insensitive approximation: once a declaration is moved
-  // anywhere in the function, it's treated as moved everywhere. This can lead
-  // to false negatives on control flow paths where the value is not actually
-  // moved, but these are considered lower priority than the false positives
-  // this tracking prevents.
-  // TODO: The ideal solution would be flow-sensitive ownership tracking that
-  // records where values are moved from and to, but this is more complex.
-  llvm::DenseSet<const ValueDecl *> MovedDecls;
+  llvm::DenseMap<const Expr *, UseFact *> UseFacts;
+  const CFGBlock *CurrentBlock;
 };
 
 } // namespace clang::lifetimes::internal

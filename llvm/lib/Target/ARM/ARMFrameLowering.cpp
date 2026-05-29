@@ -420,7 +420,7 @@ static int getArgumentStackToRestore(MachineFunction &MF,
 
 static bool needsWinCFI(const MachineFunction &MF) {
   const Function &F = MF.getFunction();
-  return MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+  return MF.getTarget().getMCAsmInfo().usesWindowsCFI() &&
          F.needsUnwindTableEntry();
 }
 
@@ -623,6 +623,9 @@ static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
     break;
 
   case ARM::tBX_RET:
+  case ARM::t2BXAUT_RET:
+  case ARM::CLEANUPRET:
+  case ARM::CATCHRET:
   case ARM::TCRETURNri:
   case ARM::TCRETURNrinotr12:
     MIB = BuildMI(MF, DL, TII.get(ARM::SEH_Nop_Ret))
@@ -1109,6 +1112,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
     DefCFAOffsetCandidates.addInst(LastPush, GPRCS3Size, BeforeFPPush);
     if (FramePtrSpillArea == SpillArea::GPRCS3)
       BeforeFPPush = false;
+    NumBytes -= GPRCS3Size;
   }
 
   bool NeedsWinCFIStackAlloc = NeedsWinCFI;
@@ -1377,7 +1381,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // will be allocated after this, so we can still use the base pointer
   // to reference locals.
   // FIXME: Clarify FrameSetup flags here.
-  if (RegInfo->hasBasePointer(MF)) {
+  if (RegInfo->hasBasePointer(MF) && !MBB.isEHFuncletEntry()) {
     if (isARM)
       BuildMI(MBB, MBBI, dl, TII.get(ARM::MOVr), RegInfo->getBaseRegister())
           .addReg(ARM::SP)
@@ -1551,8 +1555,17 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
     // function, the validation instruction is emitted during expansion of the
     // tBXNS_RET, since the validation must use the value of SP at function
     // entry, before saving, resp. after restoring, FPCXTNS.
-    if (AFI->shouldSignReturnAddress() && !AFI->isCmseNSEntryFunction())
-      BuildMI(MBB, MBBI, DebugLoc(), STI.getInstrInfo()->get(ARM::t2AUT));
+    if (AFI->shouldSignReturnAddress() && !AFI->isCmseNSEntryFunction()) {
+      bool CanUseBXAut =
+          STI.isThumb() && STI.hasV8_1MMainlineOps() && STI.hasPACBTI();
+      auto TMBBI = MBB.getFirstTerminator();
+      bool IsBXReturn =
+          TMBBI != MBB.end() && TMBBI->getOpcode() == ARM::tBX_RET;
+      if (IsBXReturn && CanUseBXAut)
+        TMBBI->setDesc(STI.getInstrInfo()->get(ARM::t2BXAUT_RET));
+      else
+        BuildMI(MBB, MBBI, DebugLoc(), STI.getInstrInfo()->get(ARM::t2AUT));
+    }
   }
 
   if (MF.hasWinCFI()) {
@@ -1570,6 +1583,14 @@ StackOffset ARMFrameLowering::getFrameIndexReference(const MachineFunction &MF,
                                                      int FI,
                                                      Register &FrameReg) const {
   return StackOffset::getFixed(ResolveFrameIndexReference(MF, FI, FrameReg, 0));
+}
+
+StackOffset
+ARMFrameLowering::getNonLocalFrameIndexReference(const MachineFunction &MF,
+                                                 int FI) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  int Offset = MFI.getObjectOffset(FI) + MFI.getStackSize();
+  return StackOffset::getFixed(Offset);
 }
 
 int ARMFrameLowering::ResolveFrameIndexReference(const MachineFunction &MF,
@@ -2335,6 +2356,8 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
     for (auto &Table: MF.getJumpTableInfo()->getJumpTables())
       FnSize += Table.MBBs.size() * 4;
   FnSize += MF.getConstantPool()->getConstants().size() * 4;
+  LLVM_DEBUG(dbgs() << "Estimated function size for " << MF.getName() << " = "
+                    << FnSize << " bytes\n");
   return FnSize;
 }
 
@@ -2352,6 +2375,8 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
       if (MI.isDebugInstr())
+        continue;
+      if (MI.getOpcode() == TargetOpcode::LOCAL_ESCAPE)
         continue;
       for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
         if (!MI.getOperand(i).isFI())
@@ -2471,7 +2496,7 @@ checkNumAlignedDPRCS2Regs(MachineFunction &MF, BitVector &SavedRegs) {
 
 bool ARMFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   // For CMSE entry functions, we want to save the FPCXT_NS immediately
-  // upon function entry (resp. restore it immmediately before return)
+  // upon function entry (resp. restore it immediately before return)
   if (STI.hasV8_1MMainlineOps() &&
       MF.getInfo<ARMFunctionInfo>()->isCmseNSEntryFunction())
     return false;
@@ -3388,7 +3413,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
 
   // Emit the relevant DWARF information about the change in stack pointer as
   // well as where to find both r4 and r5 (the callee-save registers)
-  if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI()) {
+  if (!MF.getTarget().getMCAsmInfo().usesWindowsCFI()) {
     CFIInstBuilder CFIBuilder(PrevStackMBB, MachineInstr::NoFlags);
     CFIBuilder.buildDefCFAOffset(8);
     CFIBuilder.buildOffset(ScratchReg1, -4);
@@ -3600,7 +3625,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
 
   // Emit the DWARF info about the change in stack as well as where to find the
   // previous link register
-  if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI()) {
+  if (!MF.getTarget().getMCAsmInfo().usesWindowsCFI()) {
     CFIInstBuilder CFIBuilder(AllocMBB, MachineInstr::NoFlags);
     CFIBuilder.buildDefCFAOffset(12);
     CFIBuilder.buildOffset(ARM::LR, -12);
@@ -3660,7 +3685,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   }
 
   // Update the CFA offset now that we've popped
-  if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI())
+  if (!MF.getTarget().getMCAsmInfo().usesWindowsCFI())
     CFIInstBuilder(AllocMBB, MachineInstr::NoFlags).buildDefCFAOffset(0);
 
   // Return from this function.
@@ -3683,7 +3708,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   }
 
   // Update the CFA offset now that we've popped
-  if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI()) {
+  if (!MF.getTarget().getMCAsmInfo().usesWindowsCFI()) {
     CFIInstBuilder CFIBuilder(PostStackMBB, MachineInstr::NoFlags);
     CFIBuilder.buildDefCFAOffset(0);
 
