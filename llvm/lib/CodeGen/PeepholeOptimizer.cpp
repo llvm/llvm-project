@@ -965,10 +965,10 @@ bool PeepholeOptimizer::optimizeCmpInstr(
 
   // The eliminated compare may have been the extra use preventing a
   // load from being folded into the flag-setting instruction.
-  // No store between LoadMI and FlagProducer that could change the value.
   if (SrcReg.isVirtual() && MRI->hasOneNonDBGUser(SrcReg)) {
     MachineInstr *FlagProducer = MRI->use_nodbg_begin(SrcReg)->getParent();
     MachineInstr *LoadMI = MRI->getVRegDef(SrcReg);
+    // No store between LoadMI and FlagProducer that could change the value.
     if (LocalMIs.count(FlagProducer) && LoadMI && LoadMI->canFoldAsLoad() &&
         LoadMI->mayLoad() && LocalMIs.count(LoadMI) &&
         llvm::none_of(
