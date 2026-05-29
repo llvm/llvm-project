@@ -23,12 +23,10 @@ target triple = "spirv64"
 ; RUN: clang-sycl-linker %t.bc --spirv-dump-device-code=%t.dir/nested -o out.spv
 ; RUN: test -f %t.dir/nested/out_0.spv
 
-; Test --spirv-dump-device-code with an empty value: falls back to the current
-; working directory, so we cd into a scratch dir first to keep artifacts
-; isolated and avoid polluting %t.dir's parent.
-; RUN: mkdir -p %t.dir/fallback
-; RUN: cd %t.dir/fallback && clang-sycl-linker %t.bc --spirv-dump-device-code= -o out.spv
-; RUN: test -f %t.dir/fallback/out_0.spv
+; Test --spirv-dump-device-code with an empty value: expect an error.
+; RUN: not clang-sycl-linker %t.bc --spirv-dump-device-code= -o %t.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=DUMP-EMPTY-ERR
+; DUMP-EMPTY-ERR: --spirv-dump-device-code= requires a non-empty path
 
 ; Test --spirv-dump-device-code where the path cannot be created (a regular
 ; file blocks it). Expect a clear diagnostic rather than a deeper failure.

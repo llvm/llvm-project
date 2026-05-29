@@ -829,7 +829,11 @@ int main(int argc, char **argv) {
 
   if (auto *A = Args.getLastArg(OPT_spirv_dump_device_code_EQ)) {
     StringRef V = A->getValue();
-    SPIRVDumpDir = V.empty() ? "." : V;
+    if (V.empty())
+      reportError(createStringError(
+          std::make_error_code(std::errc::invalid_argument),
+          "--spirv-dump-device-code= requires a non-empty path"));
+    SPIRVDumpDir = V;
     // The directory is shared across all split modules, which use the
     // "<output-stem>_<index>.spv" naming scheme. Concurrent invocations
     // sharing a dump dir may overwrite each other's files.
