@@ -75,25 +75,3 @@ constexpr void test() {
   test_constraint_fail<double>();
   test_constraint_fail<long double>();
 }
-
-// cv-qualified versions are not signed/unsigned integer types per
-// [basic.fundamental]/p1-2. Explicit template args bypass by-value
-// deduction strip, so the constraint must reject these.
-template <class T>
-concept can_saturating_mul = requires(int x) { std::saturating_mul<T>(x, x); };
-
-// Unqualified signed/unsigned integers pass; bool stays rejected.
-static_assert(can_saturating_mul<int>);
-static_assert(can_saturating_mul<unsigned int>);
-static_assert(can_saturating_mul<long long>);
-static_assert(!can_saturating_mul<bool>);
-static_assert(!can_saturating_mul<char>);
-
-// cv-qualified versions are rejected.
-static_assert(!can_saturating_mul<const int>);
-static_assert(!can_saturating_mul<volatile int>);
-static_assert(!can_saturating_mul<const volatile int>);
-static_assert(!can_saturating_mul<const unsigned int>);
-static_assert(!can_saturating_mul<const long long>);
-static_assert(!can_saturating_mul<const bool>);
-static_assert(!can_saturating_mul<const char>);

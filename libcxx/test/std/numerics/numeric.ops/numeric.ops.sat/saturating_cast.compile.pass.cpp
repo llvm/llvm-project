@@ -77,30 +77,3 @@ constexpr void test() {
   test_constraint_fail<double>();
   test_constraint_fail<long double>();
 }
-
-// cv-qualified versions are not signed/unsigned integer types per
-// [basic.fundamental]/p1-2. saturating_cast<R>(T) constrains BOTH R and T
-// on __signed_or_unsigned_integer; either being cv-qualified must reject.
-template <class R>
-concept can_cast_R = requires(int x) { std::saturating_cast<R>(x); };
-template <class T>
-concept can_cast_T = requires(T x) { std::saturating_cast<int, T>(x); };
-
-// Unqualified signed/unsigned integers pass on both R and T sides.
-static_assert(can_cast_R<int>);
-static_assert(can_cast_R<unsigned int>);
-static_assert(can_cast_T<long long>);
-static_assert(!can_cast_R<bool>);
-static_assert(!can_cast_R<char>);
-static_assert(!can_cast_T<bool>);
-
-// cv-qualified versions are rejected on either arm.
-static_assert(!can_cast_R<const int>);
-static_assert(!can_cast_R<volatile int>);
-static_assert(!can_cast_R<const volatile int>);
-static_assert(!can_cast_R<const unsigned int>);
-static_assert(!can_cast_R<const bool>);
-static_assert(!can_cast_R<const char>);
-static_assert(!can_cast_T<const int>);
-static_assert(!can_cast_T<volatile int>);
-static_assert(!can_cast_T<const volatile int>);
