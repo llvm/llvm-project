@@ -55,12 +55,12 @@ protected:
     }
   }
 
+  void setValPtr(Value *V) { Val = V; }
+
 private:
   PointerIntPair<ValueHandleBase**, 2, HandleBaseKind> PrevPair;
   ValueHandleBase *Next = nullptr;
   Value *Val = nullptr;
-
-  void setValPtr(Value *V) { Val = V; }
 
 public:
   explicit ValueHandleBase(HandleBaseKind Kind)
@@ -540,8 +540,15 @@ public:
   PoisoningVH() = default;
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   PoisoningVH(ValueTy *P) : CallbackVH(GetAsValue(P)) {}
-  PoisoningVH(const PoisoningVH &RHS)
-      : CallbackVH(RHS), Poisoned(RHS.Poisoned) {}
+  // A poisoned handle is detached from its use list but keeps its raw value
+  // pointer, so its use-list pointers are stale; a copy must not relink through
+  // them.
+  PoisoningVH(const PoisoningVH &RHS) : CallbackVH(), Poisoned(RHS.Poisoned) {
+    if (Poisoned)
+      ValueHandleBase::setValPtr(RHS.getRawValPtr());
+    else
+      setRawValPtr(RHS.getRawValPtr());
+  }
 
   ~PoisoningVH() {
     if (Poisoned)
@@ -551,7 +558,14 @@ public:
   PoisoningVH &operator=(const PoisoningVH &RHS) {
     if (Poisoned)
       clearValPtr();
-    CallbackVH::operator=(RHS);
+    if (RHS.Poisoned) {
+      // Detach *this and copy only the raw pointer; see the copy constructor.
+      if (isValid(getRawValPtr()))
+        RemoveFromUseList();
+      ValueHandleBase::setValPtr(RHS.getRawValPtr());
+    } else {
+      CallbackVH::operator=(RHS);
+    }
     Poisoned = RHS.Poisoned;
     return *this;
   }
