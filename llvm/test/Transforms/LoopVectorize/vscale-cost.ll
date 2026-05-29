@@ -16,29 +16,17 @@ loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %dst = phi ptr [ %dst.start, %entry ], [ %dst.next, %loop ]
   %dst.next = getelementptr inbounds nuw i8, ptr %dst, i64 4
-  %load.dst = load i8, ptr %dst, align 1
-  %mul.dst.0 = mul nuw i8 %load.dst, %b
-  %udiv.0 = udiv i8 %mul.dst.0, 255
-  %val.0 = add i8 %a, %udiv.0
-  store i8 %val.0, ptr %dst, align 1
+  %load.dst.0 = load i8, ptr %dst, align 1
+  store i8 %load.dst.0, ptr %dst, align 1
   %gep.dst.1 = getelementptr inbounds nuw i8, ptr %dst, i64 1
   %load.dst.1 = load i8, ptr %gep.dst.1, align 1
-  %mul.dst.1 = mul nuw i8 %load.dst.1, %b
-  %udiv.1 = udiv i8 %mul.dst.1, 255
-  %val.1 = add i8 %a, %udiv.1
-  store i8 %val.1, ptr %gep.dst.1, align 1
+  store i8 %load.dst.1, ptr %gep.dst.1, align 1
   %gep.dst.2 = getelementptr inbounds nuw i8, ptr %dst, i64 2
   %load.dst.2 = load i8, ptr %gep.dst.2, align 1
-  %mul.dst.2 = mul nuw i8 %load.dst.2, %b
-  %udiv.2 = udiv i8 %mul.dst.2, 255
-  %val.2 = add i8 %a, %udiv.2
-  store i8 %val.2, ptr %gep.dst.2, align 1
+  store i8 %load.dst.2, ptr %gep.dst.2, align 1
   %gep.dst.3 = getelementptr inbounds nuw i8, ptr %dst, i64 3
   %load.dst.3 = load i8, ptr %gep.dst.3, align 1
-  %mul.dst.3 = mul nuw i8 %load.dst.3, %b
-  %udiv.3 = udiv i8 %mul.dst.3, 255
-  %val.3 = add i8 %a, %udiv.3
-  store i8 %val.3, ptr %gep.dst.3, align 1
+  store i8 %load.dst.3, ptr %gep.dst.3, align 1
   %iv.next = add i64 %iv, 4
   %exit.cond = icmp eq i64 %iv.next, 256
   br i1 %exit.cond, label %exit, label %loop
