@@ -961,8 +961,7 @@ SYCL Support
 
 - The SYCL runtime shared library has been renamed from ``libsycl.so`` to
   ``libLLVMSYCL.so`` (``LLVMSYCL.lib`` / ``LLVMSYCLd.lib`` on Windows) to
-  align with LLVM naming conventions. The driver now passes the runtime library
-  path to ``clang-linker-wrapper`` and adds SYCL header include paths
+  align with LLVM naming conventions. SYCL header include paths are now added
   automatically for both host and device compilations. (#GH188770, #GH174877)
 
 - SYCL runtime library linking is now supported on Windows. When ``-fsycl`` is
@@ -974,9 +973,7 @@ SYCL Support
 
 - Fixed ``-nolibsycl`` being silently ignored on Linux: the SYCL runtime
   library was unconditionally added to the link line even when the flag was
-  passed. Fixed ``--allow-partial-linkage`` and ``--create-library`` flags
-  being incorrectly forwarded to ``clang-sycl-linker`` for SYCL offload
-  targets, causing link failures. (#GH200252)
+  passed. (#GH200252)
 
 Improvements
 ^^^^^^^^^^^^
