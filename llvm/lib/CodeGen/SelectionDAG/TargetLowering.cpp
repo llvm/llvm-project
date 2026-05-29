@@ -13091,10 +13091,10 @@ SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
   auto [Mask, StepVec] =
       getLegalMaskAndStepVector(Node->getOperand(0), ZeroIsPoison, DL, DAG);
 
-  // No legal step vector: split mask in halves and recombine results.
-  // Lo uses the non-poison CTTZ_ELTS so its result is well-defined (== |Lo|
-  // when no active lane), allowing the SETNE comparison.
-  // Result: (ResLo != |Lo|) ? ResLo : (|Lo| + ResHi)
+  // No legal step vector: split mask in half and recombine results.
+  // LoNumElts uses the non-poison CTTZ_ELTS so its result is well-defined
+  // (== |LoNumElts| when no active lane), allowing the SETNE comparison.
+  // Result: (ResLo != LoNumElts) ? ResLo : (LoNumElts + ResHi)
   if (!StepVec) {
     EVT ResVT = Node->getValueType(0);
     auto [MaskLo, MaskHi] = DAG.SplitVector(Node->getOperand(0), DL);
