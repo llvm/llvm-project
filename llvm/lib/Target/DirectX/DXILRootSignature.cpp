@@ -17,6 +17,7 @@
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
+#include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -126,6 +127,11 @@ analyzeModule(Module &M) {
     std::optional<uint32_t> V = extractMdIntValue(RSDefNode, 2);
     if (!V.has_value()) {
       reportError(Ctx, "Invalid RSDefNode value, expected constant int");
+      continue;
+    }
+
+    if (!hlsl::rootsig::verifyVersion(*V)) {
+      reportError(Ctx, "Invalid Root Signature Version: " + Twine(*V));
       continue;
     }
 

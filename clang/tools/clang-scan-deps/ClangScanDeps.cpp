@@ -1159,16 +1159,14 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       }
     }
 
-    WorkerTool.getWorkerVFS().visit([&](llvm::vfs::FileSystem &VFS) {
-      if (auto *T = dyn_cast_or_null<llvm::vfs::TracingFileSystem>(&VFS)) {
-        NumStatusCalls += T->NumStatusCalls;
-        NumOpenFileForReadCalls += T->NumOpenFileForReadCalls;
-        NumDirBeginCalls += T->NumDirBeginCalls;
-        NumGetRealPathCalls += T->NumGetRealPathCalls;
-        NumExistsCalls += T->NumExistsCalls;
-        NumIsLocalCalls += T->NumIsLocalCalls;
-      }
-    });
+    if (auto *T = WorkerTool.getWorkerTracingVFS()) {
+      NumStatusCalls += T->NumStatusCalls;
+      NumOpenFileForReadCalls += T->NumOpenFileForReadCalls;
+      NumDirBeginCalls += T->NumDirBeginCalls;
+      NumGetRealPathCalls += T->NumGetRealPathCalls;
+      NumExistsCalls += T->NumExistsCalls;
+      NumIsLocalCalls += T->NumIsLocalCalls;
+    }
   };
 
   DependencyScanningServiceOptions Opts;

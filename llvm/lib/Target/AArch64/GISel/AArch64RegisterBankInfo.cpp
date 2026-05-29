@@ -635,6 +635,7 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   case Intrinsic::aarch64_neon_sqadd:
   case Intrinsic::aarch64_neon_uqsub:
   case Intrinsic::aarch64_neon_sqsub:
+  case Intrinsic::aarch64_neon_sqdmulh:
   case Intrinsic::aarch64_neon_sqdmulls_scalar:
   case Intrinsic::aarch64_neon_srshl:
   case Intrinsic::aarch64_neon_urshl:
@@ -650,6 +651,7 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   case Intrinsic::aarch64_neon_sqrshrun:
   case Intrinsic::aarch64_neon_uqshrn:
   case Intrinsic::aarch64_neon_uqrshrn:
+  case Intrinsic::aarch64_neon_sqneg:
   case Intrinsic::aarch64_crypto_sha1h:
   case Intrinsic::aarch64_crypto_sha1c:
   case Intrinsic::aarch64_crypto_sha1p:
@@ -738,6 +740,7 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
   case TargetOpcode::G_FCMP:
   case TargetOpcode::G_LROUND:
   case TargetOpcode::G_LLROUND:
+  case TargetOpcode::G_CLMUL:
   case AArch64::G_PMULL:
   case AArch64::G_SLI:
   case AArch64::G_SRI:
@@ -968,6 +971,26 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         getCopyMapping(DstRB.getID(), SrcRB.getID(), Size),
         // We only care about the mapping of the destination for COPY.
         /*NumOperands*/ Opc == TargetOpcode::G_BITCAST ? 2 : 1);
+  }
+  case TargetOpcode::G_CONSTANT: {
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    TypeSize Size = DstTy.getSizeInBits();
+    if (!DstTy.isPointer() && (!DstTy.isScalar() || Size < 32 || Size > 64))
+      break;
+    // Scalar constants materialize in GPRs.
+    [[fallthrough]];
+  }
+  case TargetOpcode::G_BRCOND:
+  case TargetOpcode::G_FRAME_INDEX: {
+    // Operand 0 is the only banked operand and is mapped to GPR.
+    return getInstructionMapping(
+        DefaultMappingID, /*Cost=*/1,
+        getOperandsMapping(
+            {getValueMapping(
+                 PMI_FirstGPR,
+                 MRI.getType(MI.getOperand(0).getReg()).getSizeInBits()),
+             nullptr}),
+        /*NumOperands=*/2);
   }
   default:
     break;

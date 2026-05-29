@@ -97,8 +97,8 @@
 //   * llvm.nvvm.clz.ll              --> trunc i64 llvm.ctlz.i64(x) to i32
 //   * llvm.nvvm.popc.i              --> llvm.ctpop.i32
 //   * llvm.nvvm.popc.ll             --> trunc i64 llvm.ctpop.i64 to i32
-//   * llvm.nvvm.abs.i               --> select(x >= -x, x, -x)
-//   * llvm.nvvm.abs.ll              --> ibid.
+//   * llvm.nvvm.abs.i               --> llvm.abs.i32(x, true)
+//   * llvm.nvvm.abs.ll              --> llvm.abs.i64(x, true)
 //   * llvm.nvvm.max.i               --> select(x sge y, x, y)
 //   * llvm.nvvm.max.ll              --> ibid.
 //   * llvm.nvvm.max.ui              --> select(x uge y, x, y)

@@ -63,7 +63,7 @@ static bool IsPageExecutable(uint32_t protect) {
 
 namespace lldb_private {
 
-ProcessDebugger::~ProcessDebugger() {}
+ProcessDebugger::~ProcessDebugger() = default;
 
 lldb::pid_t ProcessDebugger::GetDebuggedProcessId() const {
   if (m_session_data)
@@ -248,6 +248,12 @@ Status ProcessDebugger::HaltProcess(bool &caused_stop) {
   Log *log = GetLog(WindowsLog::Process);
   Status error;
   llvm::sys::ScopedLock lock(m_mutex);
+  if (!m_session_data) {
+    caused_stop = false;
+    LLDB_LOG(log, "HaltProcess called with no active session.");
+    return Status::FromErrorString(
+        "HaltProcess called with no active debugger session.");
+  }
   caused_stop = ::DebugBreakProcess(m_session_data->m_debugger->GetProcess()
                                         .GetNativeProcess()
                                         .GetSystemHandle());
@@ -548,6 +554,13 @@ void ProcessDebugger::OnDebugString(const std::string &string) {}
 void ProcessDebugger::OnDebuggerError(const Status &error, uint32_t type) {
   llvm::sys::ScopedLock lock(m_mutex);
   Log *log = GetLog(WindowsLog::Process);
+
+  if (!m_session_data) {
+    LLDB_LOG(log,
+             "OnDebuggerError called with no active session: error {0}: {1}",
+             error.GetError(), error);
+    return;
+  }
 
   if (m_session_data->m_initial_stop_received) {
     // This happened while debugging.  Do we shutdown the debugging session,

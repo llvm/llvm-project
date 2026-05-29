@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/MC/DXContainerInfo.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
@@ -173,6 +174,21 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
       }
       break;
     }
+    case dxbc::PartType::ILDN: {
+      if (!P.DebugName)
+        continue;
+
+      mcdxbc::DebugName DebugName;
+      DebugName.setFilename(P.DebugName->Filename);
+      // Override default flags with value from YAML.
+      if (P.DebugName->Flags)
+        DebugName.Parameters.Flags = *P.DebugName->Flags;
+      // Override computed filename length with value from YAML.
+      if (P.DebugName->NameLength)
+        DebugName.Parameters.NameLength = *P.DebugName->NameLength;
+      DebugName.write(OS);
+      break;
+    }
     case dxbc::PartType::SFI0: {
       // If we don't have any flags we can continue here and the data will be
       // zeroed out.
@@ -264,7 +280,7 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
     }
     case dxbc::PartType::Unknown:
       break; // Skip any handling for unrecognized parts.
-    case dxbc::PartType::RTS0:
+    case dxbc::PartType::RTS0: {
       if (!P.RootSignature.has_value())
         continue;
 
@@ -374,6 +390,42 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
 
       RS.write(OS);
       break;
+    }
+    case dxbc::PartType::VERS: {
+      if (!P.CompilerVersion)
+        continue;
+
+      mcdxbc::CompilerVersion CompilerVersion;
+      CompilerVersion.Parameters.Major =
+          P.CompilerVersion->Major.value_or(CompilerVersion.Parameters.Major);
+      CompilerVersion.Parameters.Minor =
+          P.CompilerVersion->Minor.value_or(CompilerVersion.Parameters.Minor);
+
+      if (P.CompilerVersion->IsDebugBuild || P.CompilerVersion->IsValidated)
+        CompilerVersion.Parameters.Flags = dxbc::CompilerVersionFlags::Default;
+      if (P.CompilerVersion->IsDebugBuild.value_or(false))
+        CompilerVersion.Parameters.Flags |= dxbc::CompilerVersionFlags::Debug;
+      if (P.CompilerVersion->IsValidated.value_or(false))
+        CompilerVersion.Parameters.Flags |=
+            dxbc::CompilerVersionFlags::Internal;
+
+      CompilerVersion.Parameters.CommitCount =
+          P.CompilerVersion->CommitCount.value_or(
+              CompilerVersion.Parameters.CommitCount);
+
+      if (P.CompilerVersion->CommitSha)
+        CompilerVersion.setCommitSha(*P.CompilerVersion->CommitSha);
+      if (P.CompilerVersion->CustomVersionString)
+        CompilerVersion.setVersionString(
+            *P.CompilerVersion->CustomVersionString);
+
+      CompilerVersion.Parameters.ContentSizeInBytes =
+          P.CompilerVersion->ContentSizeInBytes.value_or(
+              CompilerVersion.Parameters.ContentSizeInBytes);
+
+      CompilerVersion.write(OS);
+      break;
+    }
     }
     uint64_t BytesWritten = OS.tell() - DataStart;
     RollingOffset += BytesWritten;

@@ -256,6 +256,8 @@ private:
 
   bool mustBreakForReturnType(const AnnotatedLine &Line) const;
 
+  bool mustBreakBeforeReturnType(const AnnotatedLine &Line) const;
+
   void printDebugInfo(const AnnotatedLine &Line) const;
 
   void calculateUnbreakableTailLengths(AnnotatedLine &Line) const;

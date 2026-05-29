@@ -455,6 +455,12 @@ mlir::Value createParentSymAndGenIntermediateMaps(
         interimMapType &= ~mlir::omp::ClauseMapFlags::to;
         interimMapType &= ~mlir::omp::ClauseMapFlags::from;
         interimMapType &= ~mlir::omp::ClauseMapFlags::return_param;
+        // We do not want to carry over the separation of descriptor and pointer
+        // mapping of any intermediate components we emit maps for as this can
+        // result in very odd differing behaviour when either ref_ptr/ptee is
+        // specified.
+        interimMapType &= ~mlir::omp::ClauseMapFlags::ref_ptr;
+        interimMapType &= ~mlir::omp::ClauseMapFlags::ref_ptee;
 
         // Create a map for the intermediate member and insert it and it's
         // indices into the parentMemberIndices list to track it.
@@ -562,16 +568,16 @@ void insertChildMapInfoIntoParent(
     lower::StatementContext &stmtCtx,
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) {
+    llvm::SmallVectorImpl<Object> &mapObjects) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   for (auto indices : parentMemberIndices) {
     auto *parentIter =
-        llvm::find_if(mapSyms, [&indices](const semantics::Symbol *v) {
-          return v == indices.first.sym();
+        llvm::find_if(mapObjects, [&indices](const Object &object) {
+          return object.sym() == indices.first.sym();
         });
-    if (parentIter != mapSyms.end()) {
+    if (parentIter != mapObjects.end()) {
       auto mapOp = llvm::cast<mlir::omp::MapInfoOp>(
-          mapOperands[std::distance(mapSyms.begin(), parentIter)]
+          mapOperands[std::distance(mapObjects.begin(), parentIter)]
               .getDefiningOp());
 
       // Once explicit members are attached to a parent map, do not also invoke
@@ -597,13 +603,16 @@ void insertChildMapInfoIntoParent(
       mapOp.setMembersIndexAttr(firOpBuilder.create2DI64ArrayAttr(
           indices.second.memberPlacementIndices));
     } else {
-      // NOTE: We take the map type of the first child, this may not
-      // be the correct thing to do, however, we shall see. For the moment
-      // it allows this to work with enter and exit without causing MLIR
-      // verification issues. The more appropriate thing may be to take
-      // the "main" map type clause from the directive being used.
-      mlir::omp::ClauseMapFlags mapType =
-          indices.second.memberMap[0].getMapType();
+      // NOTE: We do not assign default mapped parents a map type, as
+      // selecting a child can result in the incorrect map type being
+      // applied to the parent and data being incorrectly moved to or
+      // from device. We make an exception currently for present.
+      mlir::omp::ClauseMapFlags mapType = mlir::omp::ClauseMapFlags::storage;
+
+      for (mlir::omp::MapInfoOp memberMap : indices.second.memberMap)
+        if ((memberMap.getMapType() & mlir::omp::ClauseMapFlags::present) ==
+            mlir::omp::ClauseMapFlags::present)
+          mapType |= mlir::omp::ClauseMapFlags::present;
 
       llvm::SmallVector<mlir::Value> members;
       members.reserve(indices.second.memberMap.size());
@@ -631,7 +640,7 @@ void insertChildMapInfoIntoParent(
           /*partialMap=*/true);
 
       mapOperands.push_back(mapOp);
-      mapSyms.push_back(indices.first.sym());
+      mapObjects.push_back(indices.first);
     }
   }
 }

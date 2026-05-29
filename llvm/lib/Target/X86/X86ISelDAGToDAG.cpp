@@ -1365,7 +1365,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
         // Only do this when the target can fold the load into the call or
         // jmp.
         !Subtarget->useIndirectThunkCalls() &&
-        ((N->getOpcode() == X86ISD::CALL && !Subtarget->slowTwoMemOps()) ||
+        ((N->getOpcode() == X86ISD::CALL && !Subtarget->slowTwoMemOps() &&
+          !Subtarget->slowIndirectCall()) ||
          (N->getOpcode() == X86ISD::TC_RETURN &&
           (Subtarget->is64Bit() ||
            !getTargetMachine().isPositionIndependent())))) {

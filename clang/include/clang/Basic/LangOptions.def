@@ -518,7 +518,7 @@ LANGOPT(CheckConstexprFunctionBodies, 1, 1, Benign,
 
 LANGOPT(BoundsSafety, 1, 0, NotCompatible, "Bounds safety extension for C")
 
-LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Lifetime safety analysis for C++")
+LANGOPT(DebugRunLifetimeSafety, 1, 0, NotCompatible, "Run lifetime safety analysis for C++. Does not enable warnings.")
 
 LANGOPT(LifetimeSafetyMaxCFGBlocks, 32, 0, NotCompatible, "Skip LifetimeSafety analysis for functions with CFG block count exceeding this threshold. Specify 0 for no limit")
 

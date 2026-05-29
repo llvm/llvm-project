@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -186,11 +187,10 @@ public:
 
   /// Create_PragmaLexer: Lexer constructor - Create a new lexer object for
   /// _Pragma expansion.  This has a variety of magic semantics that this method
-  /// sets up.  It returns a new'd Lexer that must be delete'd when done.
-  static Lexer *Create_PragmaLexer(SourceLocation SpellingLoc,
-                                   SourceLocation ExpansionLocStart,
-                                   SourceLocation ExpansionLocEnd,
-                                   unsigned TokLen, Preprocessor &PP);
+  /// sets up.
+  static std::unique_ptr<Lexer> Create_PragmaLexer(
+      SourceLocation SpellingLoc, SourceLocation ExpansionLocStart,
+      SourceLocation ExpansionLocEnd, unsigned TokLen, Preprocessor &PP);
 
   /// getFileLoc - Return the File Location for the file we are lexing out of.
   /// The physical location encodes the location where the characters come from,
