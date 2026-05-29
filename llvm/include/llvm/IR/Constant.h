@@ -114,7 +114,7 @@ public:
 
   /// Return true if this is a vector constant where at least one element
   /// satisfies the given predicate. For scalable vectors, the predicate is
-  /// tested on the value as a whole.
+  /// only tested on the splat value.
   LLVM_ABI bool anyVectorElement(function_ref<bool(Constant *)> PredFn) const;
 
   /// Return true if the value can vary between threads.
