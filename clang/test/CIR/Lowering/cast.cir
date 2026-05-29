@@ -64,6 +64,8 @@ module {
     // CHECK: %{{.+}} = llvm.sitofp %{{.+}} : i32 to f32
     %251 = cir.cast int_to_float %arg4 : !cir.vector<2 x !s32i> -> !cir.vector<2 x !cir.float>
     // CHECK: %{{.+}} = llvm.sitofp %{{.+}} : vector<2xi32> to vector<2xf32>
+    %252 = cir.cast bitcast %arg4 : !cir.vector<2 x !s32i> -> !cir.vector<1 x !cir.double>
+    // CHECK: %{{.+}} = llvm.bitcast %{{.+}} : vector<2xi32> to vector<1xf64>
     %26 = cir.cast int_to_float %arg0 : !u32i -> !cir.float
     // CHECK: %{{.+}} = llvm.uitofp %{{.+}} : i32 to f32
     %27 = cir.cast float_to_int %arg2 : !cir.float -> !s32i
