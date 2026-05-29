@@ -24,7 +24,6 @@
 def XiangShanKunMingHuModel : SchedMachineModel {
   let IssueWidth = 6;   // 6-way decode and dispatch
   let MicroOpBufferSize = 160; // ROB size
-  let LoopMicroOpBufferSize = 48;  // Instruction queue size
   let LoadLatency = 4;
   let MispredictPenalty = 13; // Based on estimate of pipeline depth.
   let CompleteModel = 0;
