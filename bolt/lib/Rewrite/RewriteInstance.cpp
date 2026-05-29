@@ -2093,12 +2093,10 @@ bool hasDataMarkerAt(DenseMap<uint64_t, MarkerSymType> &MarkerSyms,
 /// Disassemble a prefix of [TailStart, TailStart + TrailingExtent) and return
 /// its length. Any remaining bytes in the range must be zero padding.
 /// Returns 0 if the region is not valid unmarked code.
-static uint64_t measureAArch64UnmarkedTail(BinaryContext &BC,
-                                             const BinaryFunction &Pred,
-                                             DenseMap<uint64_t, MarkerSymType>
-                                                 &MarkerSyms,
-                                             uint64_t TailStart,
-                                             uint64_t TrailingExtent) {
+static uint64_t
+measureAArch64UnmarkedTail(BinaryContext &BC, const BinaryFunction &Pred,
+                           DenseMap<uint64_t, MarkerSymType> &MarkerSyms,
+                           uint64_t TailStart, uint64_t TrailingExtent) {
   // Pred was registered from an executable section during symbol/FDE discovery.
   BinarySection &Section = *Pred.getOriginSection();
 
@@ -2122,8 +2120,8 @@ static uint64_t measureAArch64UnmarkedTail(BinaryContext &BC,
     MCInst Inst;
     uint64_t Size = 0;
     ArrayRef<uint8_t> Slice(Bytes + CodeLen, TrailingExtent - CodeLen);
-    if (!BC.SymbolicDisAsm->getInstruction(Inst, Size, Slice, TailStart + CodeLen,
-                                           nulls()) ||
+    if (!BC.SymbolicDisAsm->getInstruction(Inst, Size, Slice,
+                                           TailStart + CodeLen, nulls()) ||
         !Size)
       break;
     CodeLen += Size;
