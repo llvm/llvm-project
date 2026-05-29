@@ -71,8 +71,19 @@ static AffineMap adjustMap(AffineMap map, int64_t index,
   return AffineMap::get(map.getNumDims() - 1, 0, results, ctx);
 }
 
-// Helper method to possibly drop a dimension in a load.
-// TODO
+/// Returns `val` with the dimension at position `index` dropped by indexing
+/// that dimension with `pos`.
+///
+/// If `index == -1`, returns `val` unchanged. If `index == 0`, the result is
+/// a single `vector.extract %val[pos]`.
+///
+/// Example (`index == 0`): extract the sub-vector at `pos` along the leading
+/// dimension.
+///   // val : vector<4x8xf32>, pos = 2
+///   %res = vector.extract %val[2] : vector<8xf32> from vector<4x8xf32>
+///
+/// For `index > 0`, recursively applies the same drop to each sub-vector of
+/// the leading dimension and reassembles the result.
 static Value reshapeLoad(Location loc, Value val, VectorType type,
                          int64_t index, int64_t pos,
                          PatternRewriter &rewriter) {
@@ -96,8 +107,17 @@ static Value reshapeLoad(Location loc, Value val, VectorType type,
   return result;
 }
 
-// Helper method to possibly drop a dimension in a store.
-// TODO
+/// Inserts `val` into `result` at position `pos` along dimension `index`.
+///
+/// This is the inverse of `reshapeLoad`. If `index == -1`, returns `val`. If
+/// `index == 0`, the result is a single `vector.insert %val, %result [pos]`.
+///
+/// Example (`index == 0`): insert `val` at `pos` along the leading dimension.
+///   // val : vector<4xf32>, acc : vector<2x4xf32>, pos = 1
+///   %res = vector.insert %val, %acc [1] : vector<4xf32> into vector<2x4xf32>
+///
+/// For `index > 0`, recursively applies the same insertion to each sub-vector
+/// of the leading dimension and reassembles the result.
 static Value reshapeStore(Location loc, Value val, Value result,
                           VectorType type, int64_t index, int64_t pos,
                           PatternRewriter &rewriter) {

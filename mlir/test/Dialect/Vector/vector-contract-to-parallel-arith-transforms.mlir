@@ -51,6 +51,37 @@ func.func @parallel_contract_lowering_scalar(%arg0: vector<1x1xf32>, %arg1: vect
   return %0 : f32
 }
 
+// The parallel iterator (d0, size 2) maps to the *non-leading* dim of LHS/RHS,
+// exercising the recursive `reshapeLoad` path: it unrolls the leading dim of
+// size 3 to extract a per-lane `vector<3xf32>` slab for each parallel position,
+// then reduces it back to a scalar that is stored into the result via
+// `reshapeStore`.
+//
+// CHECK-LABEL: func @parallel_contract_lowering_non_unit_parallel(
+//  CHECK-SAME:     %[[LHS:.+]]: vector<3x2xf32>, %[[RHS:.+]]: vector<3x2xf32>, %[[ACC:.+]]: vector<2xf32>
+//       CHECK:   %[[LSLAB0:.+]] = vector.insert %{{.*}}, %{{.*}} [2] : f32 into vector<3xf32>
+//       CHECK:   %[[RSLAB0:.+]] = vector.insert %{{.*}}, %{{.*}} [2] : f32 into vector<3xf32>
+//       CHECK:   %[[ACC0:.+]] = vector.extract %[[ACC]][0] : f32 from vector<2xf32>
+//       CHECK:   %[[MUL0:.+]] = arith.mulf %[[LSLAB0]], %[[RSLAB0]] : vector<3xf32>
+//       CHECK:   %[[RED0:.+]] = vector.reduction <add>, %[[MUL0]], %[[ACC0]] : vector<3xf32> into f32
+//       CHECK:   %[[OUT0:.+]] = vector.insert %[[RED0]], %{{.*}} [0] : f32 into vector<2xf32>
+//       CHECK:   %[[LSLAB1:.+]] = vector.insert %{{.*}}, %{{.*}} [2] : f32 into vector<3xf32>
+//       CHECK:   %[[RSLAB1:.+]] = vector.insert %{{.*}}, %{{.*}} [2] : f32 into vector<3xf32>
+//       CHECK:   %[[ACC1:.+]] = vector.extract %[[ACC]][1] : f32 from vector<2xf32>
+//       CHECK:   %[[MUL1:.+]] = arith.mulf %[[LSLAB1]], %[[RSLAB1]] : vector<3xf32>
+//       CHECK:   %[[RED1:.+]] = vector.reduction <add>, %[[MUL1]], %[[ACC1]] : vector<3xf32> into f32
+//       CHECK:   %[[OUT1:.+]] = vector.insert %[[RED1]], %[[OUT0]] [1] : f32 into vector<2xf32>
+//       CHECK:   return %[[OUT1]] : vector<2xf32>
+func.func @parallel_contract_lowering_non_unit_parallel(%arg0: vector<3x2xf32>, %arg1: vector<3x2xf32>, %arg2: vector<2xf32>) -> vector<2xf32> {
+  %0 = vector.contract {
+    indexing_maps = [affine_map<(d0, d1) -> (d1, d0)>,
+                     affine_map<(d0, d1) -> (d1, d0)>,
+                     affine_map<(d0, d1) -> (d0)>],
+    iterator_types = ["parallel", "reduction"], kind = #vector.kind<add>
+  } %arg0, %arg1, %arg2 : vector<3x2xf32>, vector<3x2xf32> into vector<2xf32>
+  return %0 : vector<2xf32>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %f = transform.structured.match ops{["func.func"]} in %module_op
