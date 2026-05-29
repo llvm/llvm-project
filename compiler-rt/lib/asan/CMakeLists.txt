@@ -392,7 +392,15 @@ else()
   endif()
 endif()
 
-add_compiler_rt_resource_file(asan_ignorelist asan_ignorelist.txt asan)
+# Build the sanitizer ignorelists alongside asan when they are enabled.
+if(TARGET sanitizer-ignorelists)
+  add_dependencies(asan sanitizer-ignorelists)
+  # Installing/distributing asan also installs the sanitizer ignorelists.
+  if(TARGET install-asan)
+    add_dependencies(install-asan install-sanitizer-ignorelists)
+    add_dependencies(install-asan-stripped install-sanitizer-ignorelists-stripped)
+  endif()
+endif()
 
 # On AIX, static sanitizer libraries are not added to the DSO, so we need to put 
 # asan.link_with_main_exec.txt and asan_cxx.link_with_main_exec.txt to the build

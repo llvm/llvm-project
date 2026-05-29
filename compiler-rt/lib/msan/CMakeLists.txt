@@ -83,8 +83,16 @@ foreach(arch ${MSAN_SUPPORTED_ARCH})
   endif()
 endforeach()
 
-add_compiler_rt_resource_file(msan_ignorelist msan_ignorelist.txt msan)
-list(APPEND MSAN_RUNTIME_LIBRARIES msan_ignorelist)
+# Build the sanitizer ignorelists alongside msan when they are enabled.
+if(TARGET sanitizer-ignorelists)
+  add_dependencies(msan sanitizer-ignorelists)
+  list(APPEND MSAN_RUNTIME_LIBRARIES sanitizer-ignorelists)
+  # Installing/distributing msan also installs the sanitizer ignorelists.
+  if(TARGET install-msan)
+    add_dependencies(install-msan install-sanitizer-ignorelists)
+    add_dependencies(install-msan-stripped install-sanitizer-ignorelists-stripped)
+  endif()
+endif()
 
 if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(tests)

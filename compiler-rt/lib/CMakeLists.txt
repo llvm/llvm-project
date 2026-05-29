@@ -35,6 +35,15 @@ if(COMPILER_RT_BUILD_SANITIZERS OR COMPILER_RT_BUILD_MEMPROF)
   compiler_rt_build_runtime(interception)
 endif()
 
+# The sanitizer ignorelists are consumed by the compiler driver, not linked
+# into the runtimes. Build them as their own target so they can be built
+# independently of the runtime libraries. Gated by its own option (defaulting
+# to COMPILER_RT_BUILD_SANITIZERS) and added before the runtimes so the target
+# exists when they declare a dependency on it.
+if(COMPILER_RT_BUILD_SANITIZER_IGNORELISTS)
+  add_subdirectory(sanitizer_ignorelists)
+endif()
+
 if(COMPILER_RT_BUILD_SANITIZERS)
   if(COMPILER_RT_HAS_SANITIZER_COMMON)
     add_subdirectory(stats)

@@ -259,7 +259,15 @@ add_compiler_rt_runtime(clang_rt.hwasan-preinit
   CFLAGS ${HWASAN_RTL_CFLAGS}
   PARENT_TARGET hwasan)
 
-add_compiler_rt_resource_file(hwasan_ignorelist hwasan_ignorelist.txt hwasan)
+# Build the sanitizer ignorelists alongside hwasan when they are enabled.
+if(TARGET sanitizer-ignorelists)
+  add_dependencies(hwasan sanitizer-ignorelists)
+  # Installing/distributing hwasan also installs the sanitizer ignorelists.
+  if(TARGET install-hwasan)
+    add_dependencies(install-hwasan install-sanitizer-ignorelists)
+    add_dependencies(install-hwasan-stripped install-sanitizer-ignorelists-stripped)
+  endif()
+endif()
 
 add_subdirectory("scripts")
 
