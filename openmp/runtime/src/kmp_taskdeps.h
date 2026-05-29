@@ -40,6 +40,7 @@ static inline void __kmp_node_deref(kmp_info_t *thread, kmp_depnode_t *node) {
   }
 }
 
+template <bool refcounting>
 static inline void __kmp_depnode_list_free(kmp_info_t *thread,
                                            kmp_depnode_list *list) {
   kmp_depnode_list *next;
@@ -47,7 +48,8 @@ static inline void __kmp_depnode_list_free(kmp_info_t *thread,
   for (; list; list = next) {
     next = list->next;
 
-    __kmp_node_deref(thread, list->node);
+    if (refcounting)
+      __kmp_node_deref(thread, list->node);
 #if USE_FAST_MEMORY
     __kmp_fast_free(thread, list);
 #else
@@ -56,6 +58,7 @@ static inline void __kmp_depnode_list_free(kmp_info_t *thread,
   }
 }
 
+template <bool refcounting>
 static inline void __kmp_dephash_free_entries(kmp_info_t *thread,
                                               kmp_dephash_t *h) {
   for (size_t i = 0; i < h->size; i++) {
@@ -63,12 +66,14 @@ static inline void __kmp_dephash_free_entries(kmp_info_t *thread,
       kmp_dephash_entry_t *next;
       for (kmp_dephash_entry_t *entry = h->buckets[i]; entry; entry = next) {
         next = entry->next_in_bucket;
-        __kmp_depnode_list_free(thread, entry->last_set);
-        __kmp_depnode_list_free(thread, entry->prev_set);
-        __kmp_node_deref(thread, entry->last_out);
-        if (entry->mtx_lock) {
-          __kmp_destroy_lock(entry->mtx_lock);
-          __kmp_free(entry->mtx_lock);
+        __kmp_depnode_list_free<refcounting>(thread, entry->last_set);
+        __kmp_depnode_list_free<refcounting>(thread, entry->prev_set);
+        if (refcounting) {
+          __kmp_node_deref(thread, entry->last_out);
+          if (entry->mtx_lock) {
+            __kmp_destroy_lock(entry->mtx_lock);
+            __kmp_free(entry->mtx_lock);
+          }
         }
 #if USE_FAST_MEMORY
         __kmp_fast_free(thread, entry);
@@ -79,12 +84,14 @@ static inline void __kmp_dephash_free_entries(kmp_info_t *thread,
       h->buckets[i] = 0;
     }
   }
-  __kmp_node_deref(thread, h->last_all);
+  if (refcounting)
+    __kmp_node_deref(thread, h->last_all);
   h->last_all = NULL;
 }
 
+template <bool refcounting>
 static inline void __kmp_dephash_free(kmp_info_t *thread, kmp_dephash_t *h) {
-  __kmp_dephash_free_entries(thread, h);
+  __kmp_dephash_free_entries<refcounting>(thread, h);
 #if USE_FAST_MEMORY
   __kmp_fast_free(thread, h);
 #else
@@ -112,7 +119,7 @@ static inline void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
     KA_TRACE(
         40, ("__kmp_release_deps: T#%d freeing dependencies hash of task %p.\n",
              gtid, task));
-    __kmp_dephash_free(thread, task->td_dephash);
+    __kmp_dephash_free<true>(thread, task->td_dephash);
     task->td_dephash = NULL;
   }
 
