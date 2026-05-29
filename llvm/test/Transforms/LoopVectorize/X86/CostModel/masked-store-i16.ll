@@ -16,14 +16,12 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @test(ptr %C) {
 ; SSE-LABEL: 'test'
-; SSE:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %valB, ptr %out, align 2
 ; SSE:  Cost of 2 for VF 2: profitable to scalarize store i16 %valB, ptr %out, align 2
 ; SSE:  Cost of 4 for VF 4: profitable to scalarize store i16 %valB, ptr %out, align 2
 ; SSE:  Cost of 8 for VF 8: profitable to scalarize store i16 %valB, ptr %out, align 2
 ; SSE:  Cost of 16 for VF 16: profitable to scalarize store i16 %valB, ptr %out, align 2
 ;
 ; AVX1-LABEL: 'test'
-; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %valB, ptr %out, align 2
 ; AVX1:  Cost of 2 for VF 2: profitable to scalarize store i16 %valB, ptr %out, align 2
 ; AVX1:  Cost of 4 for VF 4: profitable to scalarize store i16 %valB, ptr %out, align 2
 ; AVX1:  Cost of 8 for VF 8: profitable to scalarize store i16 %valB, ptr %out, align 2
@@ -31,7 +29,6 @@ define void @test(ptr %C) {
 ; AVX1:  Cost of 33 for VF 32: profitable to scalarize store i16 %valB, ptr %out, align 2
 ;
 ; AVX2-LABEL: 'test'
-; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %valB, ptr %out, align 2
 ; AVX2:  Cost of 2 for VF 2: profitable to scalarize store i16 %valB, ptr %out, align 2
 ; AVX2:  Cost of 4 for VF 4: profitable to scalarize store i16 %valB, ptr %out, align 2
 ; AVX2:  Cost of 8 for VF 8: profitable to scalarize store i16 %valB, ptr %out, align 2
@@ -39,7 +36,6 @@ define void @test(ptr %C) {
 ; AVX2:  Cost of 33 for VF 32: profitable to scalarize store i16 %valB, ptr %out, align 2
 ;
 ; AVX512-LABEL: 'test'
-; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %valB, ptr %out, align 2
 ; AVX512:  Cost of 2 for VF 2: WIDEN store vp<[[VP7:%[0-9]+]]>, ir<%valB>, ir<%canStore>
 ; AVX512:  Cost of 2 for VF 4: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
 ; AVX512:  Cost of 1 for VF 8: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>

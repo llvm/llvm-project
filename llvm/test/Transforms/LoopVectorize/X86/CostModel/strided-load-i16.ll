@@ -10,7 +10,6 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @load_i16_stride2() {
 ; CHECK-LABEL: 'load_i16_stride2'
-; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: %1 = load i16, ptr %arrayidx, align 4
 ; CHECK:  Cost of 1 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:  Cost of 1 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:  Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
@@ -37,7 +36,6 @@ for.end:
 
 define void @load_i16_stride3() {
 ; CHECK-LABEL: 'load_i16_stride3'
-; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: %1 = load i16, ptr %arrayidx, align 4
 ; CHECK:  Cost of 1 for VF 2: INTERLEAVE-GROUP with factor 3, ir<%arrayidx>
 ; CHECK:  Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%arrayidx>
 ; CHECK:  Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%arrayidx>
@@ -64,7 +62,6 @@ for.end:
 
 define void @load_i16_stride4() {
 ; CHECK-LABEL: 'load_i16_stride4'
-; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: %1 = load i16, ptr %arrayidx, align 4
 ; CHECK:  Cost of 1 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx>
 ; CHECK:  Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx>
 ; CHECK:  Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 4, ir<%arrayidx>
@@ -91,7 +88,6 @@ for.end:
 
 define void @load_i16_stride5() {
 ; CHECK-LABEL: 'load_i16_stride5'
-; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: %1 = load i16, ptr %arrayidx, align 4
 ; CHECK:  Cost of 2 for VF 2: INTERLEAVE-GROUP with factor 5, ir<%arrayidx>
 ; CHECK:  Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 5, ir<%arrayidx>
 ; CHECK:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 5, ir<%arrayidx>

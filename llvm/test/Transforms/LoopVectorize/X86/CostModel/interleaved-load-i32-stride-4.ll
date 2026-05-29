@@ -13,14 +13,12 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @test() {
 ; SSE2-LABEL: 'test'
-; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i32, ptr %in0, align 4
 ; SSE2:  Cost of 5 for VF 2: REPLICATE ir<%v0> = load ir<%in0>
 ; SSE2:  Cost of 11 for VF 4: REPLICATE ir<%v0> = load ir<%in0>
 ; SSE2:  Cost of 22 for VF 8: REPLICATE ir<%v0> = load ir<%in0>
 ; SSE2:  Cost of 44 for VF 16: REPLICATE ir<%v0> = load ir<%in0>
 ;
 ; AVX1-LABEL: 'test'
-; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i32, ptr %in0, align 4
 ; AVX1:  Cost of 4 for VF 2: REPLICATE ir<%v0> = load ir<%in0>
 ; AVX1:  Cost of 8 for VF 4: REPLICATE ir<%v0> = load ir<%in0>
 ; AVX1:  Cost of 17 for VF 8: REPLICATE ir<%v0> = load ir<%in0>
@@ -28,7 +26,6 @@ define void @test() {
 ; AVX1:  Cost of 68 for VF 32: REPLICATE ir<%v0> = load ir<%in0>
 ;
 ; AVX2-LABEL: 'test'
-; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i32, ptr %in0, align 4
 ; AVX2:  Cost of 5 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%in0>
 ; AVX2:    ir<%v0> = load from index 0
 ; AVX2:    ir<%v1> = load from index 1
@@ -56,7 +53,6 @@ define void @test() {
 ; AVX2:    ir<%v3> = load from index 3
 ;
 ; AVX512-LABEL: 'test'
-; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i32, ptr %in0, align 4
 ; AVX512:  Cost of 5 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%in0>
 ; AVX512:    ir<%v0> = load from index 0
 ; AVX512:    ir<%v1> = load from index 1

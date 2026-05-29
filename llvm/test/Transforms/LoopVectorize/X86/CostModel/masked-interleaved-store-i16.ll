@@ -20,8 +20,6 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @test1(ptr noalias nocapture %points, ptr noalias nocapture readonly %x, ptr noalias nocapture readonly %y) {
 ; DISABLED_MASKED_STRIDED-LABEL: 'test1'
-; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx2, align 2
-; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %2, ptr %arrayidx7, align 2
 ; DISABLED_MASKED_STRIDED:  Cost of 6 for VF 2: REPLICATE store ir<%0>, ir<%arrayidx2>
 ; DISABLED_MASKED_STRIDED:  Cost of 6 for VF 2: REPLICATE store ir<%2>, ir<%arrayidx7>
 ; DISABLED_MASKED_STRIDED:  Cost of 13 for VF 4: REPLICATE store ir<%0>, ir<%arrayidx2>
@@ -32,8 +30,6 @@ define void @test1(ptr noalias nocapture %points, ptr noalias nocapture readonly
 ; DISABLED_MASKED_STRIDED:  Cost of 55 for VF 16: REPLICATE store ir<%2>, ir<%arrayidx7>
 ;
 ; ENABLED_MASKED_STRIDED-LABEL: 'test1'
-; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx2, align 2
-; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %2, ptr %arrayidx7, align 2
 ; ENABLED_MASKED_STRIDED:  Cost of 6 for VF 2: REPLICATE store ir<%0>, ir<%arrayidx2>
 ; ENABLED_MASKED_STRIDED:  Cost of 6 for VF 2: REPLICATE store ir<%2>, ir<%arrayidx7>
 ; ENABLED_MASKED_STRIDED:  Cost of 14 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx2>
@@ -74,8 +70,6 @@ for.end:
 
 define void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr noalias nocapture readonly %x, ptr noalias nocapture readonly %y) {
 ; DISABLED_MASKED_STRIDED-LABEL: 'test2'
-; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx2, align 2
-; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %2, ptr %arrayidx7, align 2
 ; DISABLED_MASKED_STRIDED:  Cost of 3000000 for VF 2: REPLICATE store ir<%0>, ir<%arrayidx2>
 ; DISABLED_MASKED_STRIDED:  Cost of 3000000 for VF 2: REPLICATE store ir<%2>, ir<%arrayidx7>
 ; DISABLED_MASKED_STRIDED:  Cost of 3000000 for VF 4: REPLICATE store ir<%0>, ir<%arrayidx2>
@@ -86,8 +80,6 @@ define void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr noalias no
 ; DISABLED_MASKED_STRIDED:  Cost of 3000000 for VF 16: REPLICATE store ir<%2>, ir<%arrayidx7>
 ;
 ; ENABLED_MASKED_STRIDED-LABEL: 'test2'
-; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx2, align 2
-; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %2, ptr %arrayidx7, align 2
 ; ENABLED_MASKED_STRIDED:  Cost of 13 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx2>, vp<[[VP8:%[0-9]+]]>
 ; ENABLED_MASKED_STRIDED:  Cost of 14 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx2>, vp<[[VP8]]>
 ; ENABLED_MASKED_STRIDED:  Cost of 14 for VF 8: INTERLEAVE-GROUP with factor 4, ir<%arrayidx2>, vp<[[VP8]]>
@@ -137,14 +129,12 @@ for.end:
 
 define void @test(ptr noalias nocapture %points, ptr noalias nocapture readonly %x, ptr noalias nocapture readnone %y) {
 ; DISABLED_MASKED_STRIDED-LABEL: 'test'
-; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx6, align 2
 ; DISABLED_MASKED_STRIDED:  Cost of 2 for VF 2: profitable to scalarize store i16 %0, ptr %arrayidx6, align 2
 ; DISABLED_MASKED_STRIDED:  Cost of 4 for VF 4: profitable to scalarize store i16 %0, ptr %arrayidx6, align 2
 ; DISABLED_MASKED_STRIDED:  Cost of 8 for VF 8: profitable to scalarize store i16 %0, ptr %arrayidx6, align 2
 ; DISABLED_MASKED_STRIDED:  Cost of 16.5 for VF 16: profitable to scalarize store i16 %0, ptr %arrayidx6, align 2
 ;
 ; ENABLED_MASKED_STRIDED-LABEL: 'test'
-; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx6, align 2
 ; ENABLED_MASKED_STRIDED:  Cost of 2 for VF 2: profitable to scalarize store i16 %0, ptr %arrayidx6, align 2
 ; ENABLED_MASKED_STRIDED:  Cost of 4 for VF 4: profitable to scalarize store i16 %0, ptr %arrayidx6, align 2
 ; ENABLED_MASKED_STRIDED:  Cost of 12 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%arrayidx6>, ir<%cmp1>
