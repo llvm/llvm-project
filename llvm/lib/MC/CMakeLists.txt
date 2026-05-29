@@ -42,45 +42,56 @@ set(MCSOURCES
   TargetRegistry.cpp
   )
 
-# OS/format-specific sources not needed for bare-metal EJIT
-set(MCSOURCES_OPT
+# MachO/COFF — needed by x86 (macOS/Windows), not needed by AArch64 bare-metal
+set(MCSOURCES_MACHO_COFF
+  MCAsmInfoCOFF.cpp
+  MCAsmInfoDarwin.cpp
+  MCMachOStreamer.cpp
+  MCMachObjectTargetWriter.cpp
+  MCSectionCOFF.cpp
+  MCSectionMachO.cpp
+  MCWin64EH.cpp
+  MCWinCOFFStreamer.cpp
+  MCWinEH.cpp
+  MachObjectWriter.cpp
+  WinCOFFObjectWriter.cpp
+  )
+
+# GOFF/SPIRV/DXContainer/Wasm/XCOFF — not needed by any EJIT bare-metal arch
+set(MCSOURCES_BLOAT
   DXContainerPSVInfo.cpp
   DXContainerRootSignature.cpp
   GOFFObjectWriter.cpp
-  MCAsmInfoCOFF.cpp
-  MCAsmInfoDarwin.cpp
   MCAsmInfoGOFF.cpp
   MCAsmInfoWasm.cpp
   MCAsmInfoXCOFF.cpp
   MCDXContainerStreamer.cpp
   MCDXContainerWriter.cpp
   MCGOFFStreamer.cpp
-  MCMachOStreamer.cpp
-  MCMachObjectTargetWriter.cpp
-  MCSectionCOFF.cpp
   MCSectionDXContainer.cpp
   MCSectionGOFF.cpp
-  MCSectionMachO.cpp
   MCSectionWasm.cpp
   MCSectionXCOFF.cpp
   MCSPIRVStreamer.cpp
   MCSymbolXCOFF.cpp
   MCWasmObjectTargetWriter.cpp
   MCWasmStreamer.cpp
-  MCWin64EH.cpp
-  MCWinCOFFStreamer.cpp
-  MCWinEH.cpp
   MCXCOFFObjectTargetWriter.cpp
   MCXCOFFStreamer.cpp
-  MachObjectWriter.cpp
   SPIRVObjectWriter.cpp
   WasmObjectWriter.cpp
-  WinCOFFObjectWriter.cpp
   XCOFFObjectWriter.cpp
   )
 
 if(NOT EJIT_BARE_METAL)
-  list(APPEND MCSOURCES ${MCSOURCES_OPT})
+  # Normal build: include everything
+  list(APPEND MCSOURCES ${MCSOURCES_MACHO_COFF})
+  list(APPEND MCSOURCES ${MCSOURCES_BLOAT})
+elseif(LLVM_TARGETS_TO_BUILD STREQUAL "AArch64")
+  # AArch64 bare-metal: only need ELF
+else()
+  # x86 bare-metal: need ELF + MachO + COFF
+  list(APPEND MCSOURCES ${MCSOURCES_MACHO_COFF})
 endif()
 
 add_llvm_component_library(LLVMMC

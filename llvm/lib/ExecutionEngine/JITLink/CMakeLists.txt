@@ -11,59 +11,52 @@ set(JITLINK_SOURCES
   JITLinkGeneric.cpp
   JITLinkMemoryManager.cpp
 
-  # ELF (AArch64 only for bare-metal)
+  # ELF (always needed)
   ELF.cpp
   ELFLinkGraphBuilder.cpp
   ELF_aarch64.cpp
-
-  # Architectures (AArch64 only)
-  aarch64.cpp
   )
 
-set(JITLINK_OPT_SOURCES
+# Format-specific backends needed by x86 (macOS/Windows)
+set(JITLINK_MACHO_COFF
   CompactUnwindSupport.cpp
-
-  # MachO
-  MachO.cpp
-  MachO_arm64.cpp
-  MachO_x86_64.cpp
-  MachOLinkGraphBuilder.cpp
-
-  # ELF (other arches)
-  ELF_aarch32.cpp
-  ELF_loongarch.cpp
-  ELF_ppc64.cpp
-  ELF_riscv.cpp
-  ELF_x86.cpp
-  ELF_x86_64.cpp
-
-  # COFF
-  COFF.cpp
-  COFFDirectiveParser.cpp
-  COFFLinkGraphBuilder.cpp
-  COFF_x86_64.cpp
-
-  # XCOFF
-  XCOFF.cpp
-  XCOFF_ppc64.cpp
-  XCOFFLinkGraphBuilder.cpp
-
-  # Architectures (other)
-  aarch32.cpp
-  loongarch.cpp
-  ppc64.cpp
-  riscv.cpp
-  x86.cpp
-  x86_64.cpp
+  MachO.cpp  MachO_arm64.cpp  MachO_x86_64.cpp  MachOLinkGraphBuilder.cpp
+  COFF.cpp  COFFDirectiveParser.cpp  COFFLinkGraphBuilder.cpp  COFF_x86_64.cpp
   )
 
-if(NOT EJIT_BARE_METAL)
-  list(APPEND JITLINK_SOURCES ${JITLINK_OPT_SOURCES})
-endif()
+# ELF arches not needed by EJIT (keep only current target's arch)
+set(JITLINK_ELF_OTHER
+  ELF_aarch32.cpp  ELF_loongarch.cpp  ELF_ppc64.cpp
+  ELF_riscv.cpp
+  )
+
+# Bloat — not needed by any EJIT arch
+set(JITLINK_BLOAT
+  XCOFF.cpp  XCOFF_ppc64.cpp  XCOFFLinkGraphBuilder.cpp
+  # Arch support (non-AArch64, non-x86)
+  aarch32.cpp  loongarch.cpp  ppc64.cpp  riscv.cpp
+  )
+
+set(JITLINK_ARCH_X86
+  ELF_x86.cpp  ELF_x86_64.cpp
+  x86.cpp  x86_64.cpp
+  )
 
 set(JITLINK_DEPENDS intrinsics_gen)
+
 if(NOT EJIT_BARE_METAL)
+  # Normal build: include everything
+  list(APPEND JITLINK_SOURCES ${JITLINK_MACHO_COFF})
+  list(APPEND JITLINK_SOURCES ${JITLINK_ELF_OTHER})
+  list(APPEND JITLINK_SOURCES ${JITLINK_BLOAT})
+  list(APPEND JITLINK_SOURCES ${JITLINK_ARCH_X86})
   list(APPEND JITLINK_DEPENDS JITLinkTableGen)
+elseif(LLVM_TARGETS_TO_BUILD STREQUAL "AArch64")
+  # AArch64 bare-metal: ELF only, AArch64 only
+else()
+  # x86 bare-metal: ELF + MachO + COFF, x86 arch support
+  list(APPEND JITLINK_SOURCES ${JITLINK_MACHO_COFF})
+  list(APPEND JITLINK_SOURCES ${JITLINK_ARCH_X86})
 endif()
 
 add_llvm_component_library(LLVMJITLink

@@ -7,18 +7,29 @@ set(MCPARSER_SOURCES
   MCTargetAsmParser.cpp
   )
 
-set(MCPARSER_OPT_SOURCES
+# MachO/COFF parsers — needed by x86
+set(MCPARSER_MACHO_COFF
   COFFAsmParser.cpp
   COFFMasmParser.cpp
-  GOFFAsmParser.cpp
   DarwinAsmParser.cpp
   MasmParser.cpp
+  )
+
+# Bloat — not needed by any EJIT arch
+set(MCPARSER_BLOAT
+  GOFFAsmParser.cpp
   WasmAsmParser.cpp
   XCOFFAsmParser.cpp
   )
 
 if(NOT EJIT_BARE_METAL)
-  list(APPEND MCPARSER_SOURCES ${MCPARSER_OPT_SOURCES})
+  list(APPEND MCPARSER_SOURCES ${MCPARSER_MACHO_COFF})
+  list(APPEND MCPARSER_SOURCES ${MCPARSER_BLOAT})
+elseif(LLVM_TARGETS_TO_BUILD STREQUAL "AArch64")
+  # AArch64 bare-metal: only need ELF
+else()
+  # x86 bare-metal: need ELF + MachO + COFF
+  list(APPEND MCPARSER_SOURCES ${MCPARSER_MACHO_COFF})
 endif()
 
 add_llvm_component_library(LLVMMCParser
