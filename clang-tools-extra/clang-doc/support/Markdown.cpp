@@ -1,4 +1,4 @@
-//===-- Markdown.cpp - Markdown Parser --------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,16 +15,15 @@ namespace clang {
 namespace doc {
 namespace markdown {
 
-static MDNode makeText(llvm::StringRef S) { return {NodeKind::Text, S, {}}; }
+static MDNode makeText(llvm::StringRef S) {
+  return {NodeKind::NK_Text, S, {}};
+}
 
 // A line is a table separator if it only contains |, -, :, and spaces,
 // and has at least one -.
 static bool isSepRow(llvm::StringRef Line) {
-  return llvm::all_of(Line,
-                      [](char C) {
-                        return C == '|' || C == '-' || C == ':' || C == ' ';
-                      }) &&
-         Line.contains('-');
+  return Line.contains('-') &&
+         Line.find_first_not_of("|-: ") == llvm::StringRef::npos;
 }
 
 static llvm::ArrayRef<MDNode>
@@ -73,7 +72,7 @@ llvm::ArrayRef<MDNode> parseMarkdown(llvm::StringRef ParagraphText,
       }
       ++I; // skip closing fence
       MDNode Code;
-      Code.Kind = NodeKind::FencedCode;
+      Code.Kind = NodeKind::NK_FencedCode;
       Code.Content = Lang;
       Code.Children = allocateNodes(CodeLines, Arena);
       Nodes.push_back(Code);
@@ -89,7 +88,7 @@ llvm::ArrayRef<MDNode> parseMarkdown(llvm::StringRef ParagraphText,
         ++I;
       }
       MDNode Table;
-      Table.Kind = NodeKind::Table;
+      Table.Kind = NodeKind::NK_Table;
       Table.Content = {};
       Table.Children = allocateNodes(Rows, Arena);
       Nodes.push_back(Table);
@@ -106,14 +105,14 @@ llvm::ArrayRef<MDNode> parseMarkdown(llvm::StringRef ParagraphText,
             !L.starts_with("+ "))
           break;
         MDNode Item;
-        Item.Kind = NodeKind::ListItem;
+        Item.Kind = NodeKind::NK_ListItem;
         Item.Content = L.drop_front(2).trim();
         Item.Children = {};
         Items.push_back(Item);
         ++I;
       }
       MDNode List;
-      List.Kind = NodeKind::UnorderedList;
+      List.Kind = NodeKind::NK_UnorderedList;
       List.Content = {};
       List.Children = allocateNodes(Items, Arena);
       Nodes.push_back(List);
