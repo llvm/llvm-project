@@ -8,7 +8,6 @@
 
 #include "SystemZMachineScheduler.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include <cmath>
 
 using namespace llvm;
 
@@ -61,10 +60,7 @@ bool SystemZPreRASchedStrategy::closesLiveRange(const SUnit *SU,
 
   // Return true for a (vreg) def when register pressure is reduced. Prioritize
   // FP/vector regs over GPRs.
-  if (isRegDef(SU->getInstr()->getOperand(0)))
-    return VR16PChange < 0 || (!VR16PChange && GRX32PChange < 0);
-
-  return false;
+  return VR16PChange < 0 || (!VR16PChange && GRX32PChange < 0);
 }
 
 bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
