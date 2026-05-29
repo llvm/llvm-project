@@ -2141,10 +2141,10 @@ symbol:
 read packet: qSymbol:6578616D706C65
 ```
 
-This should be looked up by LLDB then sent back to the server. Include the name
-again, with the vaue as a hex number:
+This should be looked up by LLDB then sent back to the server. Include the value
+as a hex number, then the name of the symbol:
 ```
-read packet: qSymbol:6578616D706C65:CAFEF00D
+read packet: qSymbol:CAFEF00D:6578616D706C65
 ```
 
 If LLDB cannot find the value, it should respond with only the name. Note that
