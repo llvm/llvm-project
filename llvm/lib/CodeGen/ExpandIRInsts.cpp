@@ -696,13 +696,10 @@ static void expandFPToI(Instruction *FPToI, bool IsSaturating, bool IsSigned) {
   }
   Value *CondBr = Builder.CreateCondBr(
       ZeroResultCond, End, IsSaturating ? CheckSaturateBB : CheckExpSizeBB);
-  // We assume that floating point numbers between -1.0 and 1.0 are more likely,
-  // so the branch to 'End' (when ZeroResultCond is true) is marked as likely.
-  applyProfMetadataIfEnabled(CondBr, [&](Instruction *Inst) {
-    Inst->setMetadata(
-        LLVMContext::MD_prof,
-        MDBuilder(Inst->getContext()).createLikelyBranchWeights());
-  });
+  // We do not have any information on the value of the exponent, so mark the
+  // branch weights as unkown.
+  if (auto *CondBrInstruction = dyn_cast<Instruction>(CondBr))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*CondBrInstruction, DEBUG_TYPE, F);
 
   Value *Saturated;
   if (IsSaturating) {
@@ -940,9 +937,10 @@ static void expandIToFP(Instruction *IToFP) {
   Value *Cmp = Builder.CreateICmpEQ(IntVal, ConstantInt::getSigned(IntTy, 0));
   Value *CondBrEntry = Builder.CreateCondBr(Cmp, End, IfEnd);
   applyProfMetadataIfEnabled(CondBrEntry, [&](Instruction *Inst) {
-    Inst->setMetadata(
-        LLVMContext::MD_prof,
-        MDBuilder(Inst->getContext()).createUnlikelyBranchWeights());
+    if (!ProfcheckDisableMetadataFixes)
+      Inst->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(Inst->getContext()).createUnlikelyBranchWeights());
   });
 
   // if.end:
@@ -965,9 +963,10 @@ static void expandIToFP(Instruction *IToFP) {
   // exponent. This is rare case, so the True path is mared as likely.
   Value *CondBrIfEnd = Builder.CreateCondBr(Cmp3, IfThen4, IfElse);
   applyProfMetadataIfEnabled(CondBrIfEnd, [&](Instruction *Inst) {
-    Inst->setMetadata(
-        LLVMContext::MD_prof,
-        MDBuilder(Inst->getContext()).createLikelyBranchWeights());
+    if (!ProfcheckDisableMetadataFixes)
+      Inst->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(Inst->getContext()).createLikelyBranchWeights());
   });
 
   // if.then4:
@@ -980,12 +979,13 @@ static void expandIToFP(Instruction *IToFP) {
   // order they were added (SwBB, then SwEpilog). Because the following cases
   // are rare, the defalut case is given a likely weight.
   if (!ProfcheckDisableMetadataFixes) {
-    SI->setMetadata(
-        LLVMContext::MD_prof,
-        MDBuilder(SI->getContext())
-            .createBranchWeights({llvm::MDBuilder::kLikelyBranchWeight,
-                                  llvm::MDBuilder::kUnlikelyBranchWeight,
-                                  llvm::MDBuilder::kUnlikelyBranchWeight}));
+    if (!ProfcheckDisableMetadataFixes)
+      SI->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(SI->getContext())
+              .createBranchWeights({llvm::MDBuilder::kLikelyBranchWeight,
+                                    llvm::MDBuilder::kUnlikelyBranchWeight,
+                                    llvm::MDBuilder::kUnlikelyBranchWeight}));
   }
 
   // sw.bb:
@@ -1044,9 +1044,10 @@ static void expandIToFP(Instruction *IToFP) {
   // overflow is rare. The False path is unlikely to be taken.
   Value *CondBrSwEpilog = Builder.CreateCondBr(PosOrNeg, IfEnd26, IfThen20);
   applyProfMetadataIfEnabled(CondBrSwEpilog, [&](Instruction *Inst) {
-    Inst->setMetadata(
-        LLVMContext::MD_prof,
-        MDBuilder(Inst->getContext()).createLikelyBranchWeights());
+    if (!ProfcheckDisableMetadataFixes)
+      Inst->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(Inst->getContext()).createLikelyBranchWeights());
   });
 
   // if.then20

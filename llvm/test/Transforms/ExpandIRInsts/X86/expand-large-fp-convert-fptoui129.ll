@@ -25,7 +25,7 @@ define i129 @floattoui129(float %a)  !prof !0 {
 ; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       fp-to-i-if-check.exp.size:
 ; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i32 [[BIASED_EXP]], 150
-; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label [[FP_TO_I_IF_EXP_SMALL:%.*]], label [[FP_TO_I_IF_EXP_LARGE:%.*]], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label [[FP_TO_I_IF_EXP_SMALL:%.*]], label [[FP_TO_I_IF_EXP_LARGE:%.*]], !prof [[PROF1]]
 ; CHECK:       fp-to-i-if-exp.small:
 ; CHECK-NEXT:    [[TMP14:%.*]] = sub i32 150, [[BIASED_EXP]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[SIGNIFICAND1]], [[TMP14]]
@@ -55,7 +55,7 @@ define i129 @doubletoui129(double %a) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 4503599627370495
 ; CHECK-NEXT:    [[SIGNIFICAND1:%.*]] = or i64 [[TMP3]], 4503599627370496
 ; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i64 [[BIASED_EXP]], 1023
-; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE:%.*]]
 ; CHECK:       fp-to-i-if-check.exp.size:
 ; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i64 [[BIASED_EXP]], 1075
 ; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label [[FP_TO_I_IF_EXP_SMALL:%.*]], label [[FP_TO_I_IF_EXP_LARGE:%.*]]
@@ -89,7 +89,7 @@ define i129 @x86_fp80toui129(x86_fp80 %a) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i128 [[TMP1]], 5192296858534827628530496329220095
 ; CHECK-NEXT:    [[SIGNIFICAND1:%.*]] = or i128 [[TMP4]], 5192296858534827628530496329220096
 ; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i128 [[BIASED_EXP]], 16383
-; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE:%.*]]
 ; CHECK:       fp-to-i-if-check.exp.size:
 ; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i128 [[BIASED_EXP]], 16495
 ; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label [[FP_TO_I_IF_EXP_SMALL:%.*]], label [[FP_TO_I_IF_EXP_LARGE:%.*]]
@@ -122,7 +122,7 @@ define i129 @fp128toui129(fp128 %a) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i128 [[TMP0]], 5192296858534827628530496329220095
 ; CHECK-NEXT:    [[SIGNIFICAND1:%.*]] = or i128 [[TMP3]], 5192296858534827628530496329220096
 ; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i128 [[BIASED_EXP]], 16383
-; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE:%.*]]
 ; CHECK:       fp-to-i-if-check.exp.size:
 ; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i128 [[BIASED_EXP]], 16495
 ; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label [[FP_TO_I_IF_EXP_SMALL:%.*]], label [[FP_TO_I_IF_EXP_LARGE:%.*]]
@@ -156,7 +156,7 @@ define <2 x i129> @floattoui129v2(<2 x float> %a) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP1]], 8388607
 ; CHECK-NEXT:    [[SIGNIFICAND10:%.*]] = or i32 [[TMP4]], 8388608
 ; CHECK-NEXT:    [[EXP_IS_NEGATIVE10:%.*]] = icmp ult i32 [[BIASED_EXP8]], 127
-; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE10]], label [[FP_TO_I_CLEANUP1:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE2:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE10]], label [[FP_TO_I_CLEANUP1:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE2:%.*]]
 ; CHECK:       fp-to-i-if-check.exp.size2:
 ; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH12:%.*]] = icmp ult i32 [[BIASED_EXP8]], 150
 ; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH12]], label [[FP_TO_I_IF_EXP_SMALL5:%.*]], label [[FP_TO_I_IF_EXP_LARGE6:%.*]]
@@ -182,7 +182,7 @@ define <2 x i129> @floattoui129v2(<2 x float> %a) {
 ; CHECK-NEXT:    [[TMP22:%.*]] = and i32 [[TMP17]], 8388607
 ; CHECK-NEXT:    [[SIGNIFICAND1:%.*]] = or i32 [[TMP22]], 8388608
 ; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i32 [[BIASED_EXP]], 127
-; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE:%.*]]
 ; CHECK:       fp-to-i-if-check.exp.size:
 ; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i32 [[BIASED_EXP]], 150
 ; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label [[FP_TO_I_IF_EXP_SMALL:%.*]], label [[FP_TO_I_IF_EXP_LARGE:%.*]]
@@ -209,6 +209,5 @@ define <2 x i129> @floattoui129v2(<2 x float> %a) {
 !0 = !{!"function_entry_count", i64 1000}
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 1048575, i32 1}
-; CHECK: [[PROF2]] = !{!"unknown", !"expand-ir-insts"}
+; CHECK: [[PROF1]] = !{!"unknown", !"expand-ir-insts"}
 ;.
