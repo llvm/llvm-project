@@ -112,23 +112,8 @@ public:
   /// lane, the constants still match.
   LLVM_ABI bool isElementWiseEqual(Value *Y) const;
 
-  /// Return true if this is a vector constant that includes any undef or
-  /// poison elements. Since it is impossible to inspect a scalable vector
-  /// element- wise at compile time, this function returns true only if the
-  /// entire vector is undef or poison.
-  LLVM_ABI bool containsUndefOrPoisonElement() const;
-
-  /// Return true if this is a vector constant that includes any poison
-  /// elements.
-  LLVM_ABI bool containsPoisonElement() const;
-
-  /// Return true if this is a vector constant that includes any strictly undef
-  /// (not poison) elements.
-  LLVM_ABI bool containsUndefElement() const;
-
-  /// Return true if this is a fixed width vector constant that includes
-  /// any constant expressions.
-  LLVM_ABI bool containsConstantExpression() const;
+  /// Return true if this is a vector constant where at least one element satisfies the given predicate. For scalable vectors, the predicate is tested on the value as a whole.
+  LLVM_ABI bool anyVectorElement(function_ref<bool(Constant *)> PredFn) const;
 
   /// Return true if the value can vary between threads.
   LLVM_ABI bool isThreadDependent() const;

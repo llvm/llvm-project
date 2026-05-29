@@ -7813,11 +7813,11 @@ static bool isGuaranteedNotToBeUndefOrPoison(
           if (isa<ConstantInt>(SplatC) || isa<ConstantFP>(SplatC))
             return true;
       } else {
-        if (includesUndef(Kind) && C->containsUndefElement())
+        if (includesUndef(Kind) && match(C, m_AnyVectorElement(m_CombineAnd(m_UndefValue(), m_Unless(m_Poison())))))
           return false;
-        if (includesPoison(Kind) && C->containsPoisonElement())
+        if (includesPoison(Kind) && match(C, m_AnyVectorElement(m_Poison())))
           return false;
-        return !C->containsConstantExpression();
+        return !match(C, m_ConstantExpr());
       }
     }
   }
@@ -8849,7 +8849,7 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpPredicate Pred, Constant *C) {
   // undefined elements, so replace those elements with the first safe constant
   // that we found.
   // TODO: in case of poison, it is safe; let's replace undefs only.
-  if (C->containsUndefOrPoisonElement()) {
+  if (match(C, m_AnyVectorElement(m_UndefValue()))) {
     assert(SafeReplacementConstant && "Replacement constant not set");
     C = Constant::replaceUndefsWith(C, SafeReplacementConstant);
   }
@@ -8876,11 +8876,9 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
     // purpose of identifying min/max. Disregard vector constants with undefined
     // elements because those can not be back-propagated for analysis.
     Value *OutputZeroVal = nullptr;
-    if (match(TrueVal, m_AnyZeroFP()) && !match(FalseVal, m_AnyZeroFP()) &&
-        !cast<Constant>(TrueVal)->containsUndefOrPoisonElement())
+    if (match(TrueVal, m_CombineAnd(m_AnyZeroFP(), m_Unless(m_AnyVectorElement(m_UndefValue())))) && !match(FalseVal, m_AnyZeroFP()))
       OutputZeroVal = TrueVal;
-    else if (match(FalseVal, m_AnyZeroFP()) && !match(TrueVal, m_AnyZeroFP()) &&
-             !cast<Constant>(FalseVal)->containsUndefOrPoisonElement())
+    else if (match(FalseVal, m_CombineAnd(m_AnyZeroFP(), m_Unless(m_AnyVectorElement(m_UndefValue())))) && !match(TrueVal, m_AnyZeroFP()))
       OutputZeroVal = FalseVal;
 
     if (OutputZeroVal) {

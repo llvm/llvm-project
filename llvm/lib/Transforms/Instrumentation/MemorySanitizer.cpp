@@ -185,6 +185,7 @@
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueMap.h"
@@ -212,6 +213,7 @@
 #include <tuple>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "msan"
 
@@ -2173,8 +2175,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // Check for partially-undefined constant vectors
     // TODO: scalable vectors (this is hard because we do not have IRBuilder)
-    if (isa<FixedVectorType>(V->getType()) && isa<Constant>(V) &&
-        cast<Constant>(V)->containsUndefOrPoisonElement() && PropagateShadow &&
+    if (match(V, m_AnyVectorElement(m_UndefValue())) && PropagateShadow &&
         PoisonUndefVectors) {
       unsigned NumElems = cast<FixedVectorType>(V->getType())->getNumElements();
       SmallVector<Constant *, 32> ShadowVector(NumElems);
