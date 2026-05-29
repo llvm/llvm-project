@@ -302,7 +302,7 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
           ArgType(Ctx.getPointerDiffType(), "ptrdiff_t")));
     case LengthModifier::AsIntN:
     case LengthModifier::AsFastIntN:
-      return ArgType::PtrTo(ArgType::makeIntNT(Ctx, LM, /*Signed=*/true));
+      return ArgType::PtrTo(ArgType::makeIntNType(Ctx, LM, /*Signed=*/true));
     case LengthModifier::AsLongDouble:
       // GNU extension.
       return ArgType::PtrTo(Ctx.LongLongTy);
@@ -349,7 +349,7 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
           ArgType(Ctx.getUnsignedPointerDiffType(), "unsigned ptrdiff_t")));
     case LengthModifier::AsIntN:
     case LengthModifier::AsFastIntN:
-      return ArgType::PtrTo(ArgType::makeIntNT(Ctx, LM, /*Signed=*/false));
+      return ArgType::PtrTo(ArgType::makeIntNType(Ctx, LM, /*Signed=*/false));
     case LengthModifier::AsLongDouble:
       // GNU extension.
       return ArgType::PtrTo(Ctx.UnsignedLongLongTy);
@@ -451,7 +451,7 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
           ArgType(Ctx.getPointerDiffType(), "ptrdiff_t")));
     case LengthModifier::AsIntN:
     case LengthModifier::AsFastIntN:
-      return ArgType::PtrTo(ArgType::makeIntNT(Ctx, LM, /*Signed=*/true));
+      return ArgType::PtrTo(ArgType::makeIntNType(Ctx, LM, /*Signed=*/true));
     case LengthModifier::AsLongDouble:
       return ArgType(); // FIXME: Is this a known extension?
     case LengthModifier::AsAllocate:

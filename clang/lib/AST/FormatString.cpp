@@ -810,8 +810,8 @@ ArgType ArgType::makeVectorType(ASTContext &C, unsigned NumElts) const {
   return ArgType(Vec, Name);
 }
 
-ArgType ArgType::makeIntNT(ASTContext &Ctx, const LengthModifier &LengthMod,
-                           bool Signed) {
+ArgType ArgType::makeIntNType(ASTContext &Ctx, const LengthModifier &LengthMod,
+                              bool Signed) {
   bool IsFast = LengthMod.getKind() == LengthModifier::AsFastIntN;
   QualType Ty =
       IsFast ? Ctx.getLeastIntTypeForBitwidth(LengthMod.getBitWidth(), Signed)

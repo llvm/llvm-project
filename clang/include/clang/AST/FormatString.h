@@ -363,8 +363,8 @@ public:
     return Res;
   }
 
-  static ArgType makeIntNT(ASTContext &Ctx, const LengthModifier &LengthMod,
-                           bool Signed);
+  static ArgType makeIntNType(ASTContext &Ctx, const LengthModifier &LengthMod,
+                              bool Signed);
 
   MatchKind matchesType(ASTContext &C, QualType argTy) const;
   MatchKind matchesArgType(ASTContext &C, const ArgType &other) const;
