@@ -699,7 +699,8 @@ static void expandFPToI(Instruction *FPToI, bool IsSaturating, bool IsSigned) {
   // We do not have any information on the value of the exponent, so mark the
   // branch weights as unkown.
   if (auto *CondBrInstruction = dyn_cast<Instruction>(CondBr))
-    setExplicitlyUnknownBranchWeightsIfProfiled(*CondBrInstruction, DEBUG_TYPE, F);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*CondBrInstruction, DEBUG_TYPE,
+                                                F);
 
   Value *Saturated;
   if (IsSaturating) {
