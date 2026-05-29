@@ -60,19 +60,39 @@ source_filename = "test/DebugInfo/X86/fission-cu.ll"
 ; DWO-NEXT: AUX scnlen 0x33 nreloc 0 nlnno 0 checksum 0x8056e5e4 assoc 4 comdat 0
 ; DWO-EMPTY:
 
-; SINGLE:      Name: .debug_str.dwo
-; SINGLE:      Characteristics [
-; SINGLE:        IMAGE_SCN_LNK_REMOVE
-; SINGLE:      ]
-; SINGLE:      Name: .debug_str_offsets.dwo
-; SINGLE:      Characteristics [
-; SINGLE:        IMAGE_SCN_LNK_REMOVE
-; SINGLE:      ]
-; SINGLE:      Name: .debug_info.dwo
-; SINGLE:      Characteristics [
-; SINGLE:        IMAGE_SCN_LNK_REMOVE
-; SINGLE:      ]
-; SINGLE:      Name: .debug_abbrev.dwo
-; SINGLE:      Characteristics [
-; SINGLE:        IMAGE_SCN_LNK_REMOVE
-; SINGLE:      ]
+; SINGLE:        Name: .debug_str.dwo
+; SINGLE-NOT:    Name:
+; SINGLE:        Characteristics [
+; SINGLE-NEXT:     IMAGE_SCN_ALIGN_1BYTES
+; SINGLE-NEXT:     IMAGE_SCN_CNT_INITIALIZED_DATA
+; SINGLE-NEXT:     IMAGE_SCN_LNK_REMOVE
+; SINGLE-NEXT:     IMAGE_SCN_MEM_DISCARDABLE
+; SINGLE-NEXT:     IMAGE_SCN_MEM_READ
+; SINGLE-NEXT:   ]
+; SINGLE:        Name: .debug_str_offsets.dwo
+; SINGLE-NOT:    Name:
+; SINGLE:        Characteristics [
+; SINGLE-NEXT:     IMAGE_SCN_ALIGN_1BYTES
+; SINGLE-NEXT:     IMAGE_SCN_CNT_INITIALIZED_DATA
+; SINGLE-NEXT:     IMAGE_SCN_LNK_REMOVE
+; SINGLE-NEXT:     IMAGE_SCN_MEM_DISCARDABLE
+; SINGLE-NEXT:     IMAGE_SCN_MEM_READ
+; SINGLE-NEXT:   ]
+; SINGLE:        Name: .debug_info.dwo
+; SINGLE-NOT:    Name:
+; SINGLE:        Characteristics [
+; SINGLE-NEXT:     IMAGE_SCN_ALIGN_1BYTES
+; SINGLE-NEXT:     IMAGE_SCN_CNT_INITIALIZED_DATA
+; SINGLE-NEXT:     IMAGE_SCN_LNK_REMOVE
+; SINGLE-NEXT:     IMAGE_SCN_MEM_DISCARDABLE
+; SINGLE-NEXT:     IMAGE_SCN_MEM_READ
+; SINGLE-NEXT:   ]
+; SINGLE:        Name: .debug_abbrev.dwo
+; SINGLE-NOT:    Name:
+; SINGLE:        Characteristics [
+; SINGLE-NEXT:     IMAGE_SCN_ALIGN_1BYTES
+; SINGLE-NEXT:     IMAGE_SCN_CNT_INITIALIZED_DATA
+; SINGLE-NEXT:     IMAGE_SCN_LNK_REMOVE
+; SINGLE-NEXT:     IMAGE_SCN_MEM_DISCARDABLE
+; SINGLE-NEXT:     IMAGE_SCN_MEM_READ
+; SINGLE-NEXT:   ]
