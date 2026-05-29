@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Emits NonSemantic.AuxData ExtInst annotations preserving LLVM-level info
-// with no native SPIR-V representation (currently: available_externally
-// linkage). Matches SPIRV-LLVM-Translator's --spirv-preserve-auxdata.
+// Emits NonSemantic.AuxData ExtInst annotations (mirrors SPIRV-LLVM-Translator
+// --spirv-preserve-auxdata). Linkage records emit unconditionally for AE-tagged
+// functions; attribute/metadata records are gated by -spirv-preserve-auxdata.
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,13 +16,20 @@
 #define LLVM_LIB_TARGET_SPIRV_SPIRVAUXDATAHANDLER_H
 
 #include "SPIRVModuleAnalysis.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/StringSaver.h"
 
 namespace llvm {
 
 class AsmPrinter;
 class Function;
+class GlobalObject;
 class Module;
 class SPIRVSubtarget;
 
@@ -30,25 +37,54 @@ class SPIRVAuxDataHandler {
 public:
   SPIRVAuxDataHandler(AsmPrinter &AP, const Module &M);
 
-  bool hasWork() const { return !LinkagePreservedFns.empty(); }
+  bool hasWork() const;
 
-  /// Register the extension and ext-inst-set in MAI. Must run before
-  /// outputGlobalRequirements() / outputOpExtInstImports().
+  /// Register extension + ext-inst-set; call before output of section 1.
   void prepareModuleOutput(const SPIRVSubtarget &ST,
                            SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Emit AuxData annotations in module section 10.
+  /// Emit OpStrings and stage ExtInst records; call in module section 7.
+  void emitAuxDataStrings(SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit the staged ExtInst records; call in module section 10.
   void emitAuxData(SPIRV::ModuleAnalysisInfo &MAI);
 
 private:
+  struct ExtInstRecord {
+    uint32_t Opcode;
+    SmallVector<MCRegister, 4> Operands;
+  };
+
   AsmPrinter &Asm;
+  const Module &Mod;
+
   SmallVector<const Function *> LinkagePreservedFns;
+
+  // Backing storage for non-string-attribute strings; StringRegs keys are
+  // StringRefs into it.
+  BumpPtrAllocator StringAlloc;
+  UniqueStringSaver StringPool{StringAlloc};
+
+  DenseMap<StringRef, MCRegister> StringRegs;
+  SmallVector<ExtInstRecord> PendingRecords;
+
+  MCRegister getOrEmitString(StringRef S, SPIRV::ModuleAnalysisInfo &MAI);
+  void collectAttributesFor(const GlobalObject *GO,
+                            function_ref<MCRegister()> GetNameReg,
+                            SPIRV::ModuleAnalysisInfo &MAI);
+  void collectMetadataFor(const GlobalObject *GO,
+                          function_ref<MCRegister()> GetNameReg,
+                          ArrayRef<StringRef> MDNames,
+                          SPIRV::ModuleAnalysisInfo &MAI);
 
   void emitMCInst(MCInst &Inst);
   MCRegister findOrEmitOpTypeVoid(SPIRV::ModuleAnalysisInfo &MAI);
   MCRegister findOrEmitOpTypeInt32(SPIRV::ModuleAnalysisInfo &MAI);
   MCRegister emitOpConstantI32(uint32_t Value, MCRegister I32TypeReg,
                                SPIRV::ModuleAnalysisInfo &MAI);
+  void emitAuxDataExtInst(uint32_t Opcode, MCRegister VoidTypeReg,
+                          MCRegister ExtSetReg, ArrayRef<MCRegister> Operands,
+                          SPIRV::ModuleAnalysisInfo &MAI);
 };
 
 } // namespace llvm

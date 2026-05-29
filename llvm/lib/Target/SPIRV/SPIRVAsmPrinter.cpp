@@ -347,6 +347,8 @@ void SPIRVAsmPrinter::outputDebugSourceAndStrings(const Module &M) {
   // emitNonSemanticGlobalDebugInfo().
   if (NSDebugHandler)
     NSDebugHandler->emitNonSemanticDebugStrings(*MAI);
+  if (AuxDataHandler)
+    AuxDataHandler->emitAuxDataStrings(*MAI);
 }
 
 void SPIRVAsmPrinter::outputOpExtInstImports(const Module &M) {
