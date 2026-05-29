@@ -1063,6 +1063,58 @@ bool Instruction::isUsedOutsideOfBlock(const BasicBlock *BB) const {
   return false;
 }
 
+MemoryEffects Instruction::getMemoryEffects() const {
+  auto GetEffects = [](ModRefInfo BaseMR, AtomicOrdering Ordering,
+                       bool IsVolatile) {
+    if (isStrongerThanMonotonic(Ordering))
+      return MemoryEffects::unknown();
+
+    if (IsVolatile)
+      return MemoryEffects::inaccessibleOrArgMemOnly();
+
+    if (isStrongerThanUnordered(Ordering))
+      return MemoryEffects::argMemOnly();
+
+    return MemoryEffects::argMemOnly(BaseMR);
+  };
+  switch (getOpcode()) {
+  default:
+    return MemoryEffects::none();
+  case Instruction::VAArg:
+    return MemoryEffects::argMemOnly();
+  case Instruction::CatchPad:
+  case Instruction::CatchRet:
+  case Instruction::Fence:
+    return MemoryEffects::unknown();
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr:
+    return cast<CallBase>(this)->getMemoryEffects();
+  case Instruction::Load: {
+    auto *LI = cast<LoadInst>(this);
+    return GetEffects(ModRefInfo::Ref, LI->getOrdering(), LI->isVolatile());
+  }
+  case Instruction::Store: {
+    auto *SI = cast<StoreInst>(this);
+    return GetEffects(ModRefInfo::Mod, SI->getOrdering(), SI->isVolatile());
+  }
+  case Instruction::AtomicRMW: {
+    auto *RMW = cast<AtomicRMWInst>(this);
+    return GetEffects(ModRefInfo::ModRef, RMW->getOrdering(),
+                      RMW->isVolatile());
+  }
+  case Instruction::AtomicCmpXchg: {
+    auto *CX = cast<AtomicCmpXchgInst>(this);
+    return GetEffects(ModRefInfo::ModRef, CX->getSuccessOrdering(),
+                      CX->isVolatile());
+  }
+  }
+}
+
+// This is duplicating the logic from getMemoryEffects() for performance
+// reasons. Computing the full MemoryEffects just to perform a Mod/Ref check
+// is expensive.
+
 bool Instruction::mayReadFromMemory() const {
   switch (getOpcode()) {
   default: return false;
