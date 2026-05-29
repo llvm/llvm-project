@@ -922,12 +922,13 @@ void FunctionIO::init(InstrumentationConfig &IConf,
                "Number of function arguments (without varargs).", IRTArg::NONE,
                std::bind(&FunctionIO::getNumArguments, this, _1, _2, _3, _4)));
   if (Config.has(PassArguments))
-    IRTArgs.push_back(
-        IRTArg(IIRB.PtrTy, "arguments", "Description of the arguments.",
-               IsPRE && Config.has(ReplaceArguments) ? IRTArg::REPLACABLE_CUSTOM
-                                                     : IRTArg::NONE,
-               std::bind(&FunctionIO::getArguments, this, _1, _2, _3, _4),
-               std::bind(&FunctionIO::setArguments, this, _1, _2, _3, _4)));
+    IRTArgs.push_back(IRTArg(
+        IIRB.PtrTy, "arguments", "Description of the arguments.",
+        (IsPRE && Config.has(ReplaceArguments) ? IRTArg::REPLACABLE_CUSTOM
+                                               : IRTArg::NONE) |
+            IRTArg::VALUE_PACK,
+        std::bind(&FunctionIO::getArguments, this, _1, _2, _3, _4),
+        std::bind(&FunctionIO::setArguments, this, _1, _2, _3, _4)));
   if (Config.has(PassIsMain))
     IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "is_main",
                              "Flag to indicate it is the main function.",
