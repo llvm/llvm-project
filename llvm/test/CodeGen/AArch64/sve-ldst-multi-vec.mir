@@ -99,37 +99,37 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: early-clobber $sp = frame-setup STRXpre killed $fp, $sp, -16 :: (store (s64) into %stack.1)
     ; CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -32, implicit $vg
-    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, -4, implicit $vg
+    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, -2, implicit $vg
     ; CHECK-NEXT: $z16_z24 = LD1B_2Z_IMM_PSEUDO renamable $pn8, killed $x8, -8
-    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, 4, implicit $vg
+    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, 2, implicit $vg
     ; CHECK-NEXT: $z16_z24 = LD1B_2Z_IMM_PSEUDO renamable $pn8, killed $x8, 7
-    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, -4, implicit $vg
+    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, -2, implicit $vg
     ; CHECK-NEXT: $z16_z24 = LD1H_2Z_IMM_PSEUDO renamable $pn8, killed $x8, -8
-    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, 4, implicit $vg
+    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, 2, implicit $vg
     ; CHECK-NEXT: $z16_z24 = LD1H_2Z_IMM_PSEUDO renamable $pn8, killed $x8, 7
-    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, -4, implicit $vg
+    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, -2, implicit $vg
     ; CHECK-NEXT: $z16_z24 = LD1W_2Z_IMM_PSEUDO renamable $pn8, killed $x8, -8
-    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, 4, implicit $vg
+    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, 2, implicit $vg
     ; CHECK-NEXT: $z16_z24 = LD1W_2Z_IMM_PSEUDO renamable $pn8, killed $x8, 7
-    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, -4, implicit $vg
+    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, -2, implicit $vg
     ; CHECK-NEXT: $z16_z24 = LD1D_2Z_IMM_PSEUDO renamable $pn8, killed $x8, -8
-    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, 4, implicit $vg
+    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, 2, implicit $vg
     ; CHECK-NEXT: $z16_z24 = LD1D_2Z_IMM_PSEUDO renamable $pn8, killed $x8, 7
-    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, -16, implicit $vg
+    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, -4, implicit $vg
     ; CHECK-NEXT: $z16_z20_z24_z28 = LD1B_4Z_IMM_PSEUDO renamable $pn8, killed $x8, -8
-    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, 16, implicit $vg
+    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, 4, implicit $vg
     ; CHECK-NEXT: $z16_z20_z24_z28 = LD1B_4Z_IMM_PSEUDO renamable $pn8, killed $x8, 7
-    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, -16, implicit $vg
+    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, -4, implicit $vg
     ; CHECK-NEXT: $z16_z20_z24_z28 = LD1H_4Z_IMM_PSEUDO renamable $pn8, killed $x8, -8
-    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, 16, implicit $vg
+    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, 4, implicit $vg
     ; CHECK-NEXT: $z16_z20_z24_z28 = LD1H_4Z_IMM_PSEUDO renamable $pn8, killed $x8, 7
-    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, -16, implicit $vg
+    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, -4, implicit $vg
     ; CHECK-NEXT: $z16_z20_z24_z28 = LD1W_4Z_IMM_PSEUDO renamable $pn8, killed $x8, -8
-    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, 16, implicit $vg
+    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, 4, implicit $vg
     ; CHECK-NEXT: $z16_z20_z24_z28 = LD1W_4Z_IMM_PSEUDO renamable $pn8, killed $x8, 7
-    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, -16, implicit $vg
+    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, -4, implicit $vg
     ; CHECK-NEXT: $z16_z20_z24_z28 = LD1D_4Z_IMM_PSEUDO renamable $pn8, killed $x8, -8
-    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, 16, implicit $vg
+    ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, 4, implicit $vg
     ; CHECK-NEXT: $z16_z20_z24_z28 = LD1D_4Z_IMM_PSEUDO renamable $pn8, killed $x8, 7
     ; CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 31, implicit $vg
     ; CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 1, implicit $vg
@@ -139,37 +139,37 @@ body:             |
     ; CHECK-OFFSET-LABEL: testcase_offset_out_of_range:
     ; CHECK-OFFSET: str	x29, [sp, #-16]!
     ; CHECK-OFFSET-NEXT: addvl	sp, sp, #-32
-    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #-4
+    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #-2
     ; CHECK-OFFSET-NEXT: ld1b	{ z16.b, z24.b }, pn8/z, [x8, #-16, mul vl]
-    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #4
+    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #2
     ; CHECK-OFFSET-NEXT: ld1b	{ z16.b, z24.b }, pn8/z, [x8, #14, mul vl]
-    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #-4
+    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #-2
     ; CHECK-OFFSET-NEXT: ld1h	{ z16.h, z24.h }, pn8/z, [x8, #-16, mul vl]
-    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #4
+    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #2
     ; CHECK-OFFSET-NEXT: ld1h	{ z16.h, z24.h }, pn8/z, [x8, #14, mul vl]
-    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #-4
+    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #-2
     ; CHECK-OFFSET-NEXT: ld1w	{ z16.s, z24.s }, pn8/z, [x8, #-16, mul vl]
-    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #4
+    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #2
     ; CHECK-OFFSET-NEXT: ld1w	{ z16.s, z24.s }, pn8/z, [x8, #14, mul vl]
-    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #-4
+    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #-2
     ; CHECK-OFFSET-NEXT: ld1d	{ z16.d, z24.d }, pn8/z, [x8, #-16, mul vl]
-    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #4
+    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #2
     ; CHECK-OFFSET-NEXT: ld1d	{ z16.d, z24.d }, pn8/z, [x8, #14, mul vl]
-    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #-16
+    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #-4
     ; CHECK-OFFSET-NEXT: ld1b	{ z16.b, z20.b, z24.b, z28.b }, pn8/z, [x8, #-32, mul vl]
-    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #16
+    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #4
     ; CHECK-OFFSET-NEXT: ld1b	{ z16.b, z20.b, z24.b, z28.b }, pn8/z, [x8, #28, mul vl]
-    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #-16
+    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #-4
     ; CHECK-OFFSET-NEXT: ld1h	{ z16.h, z20.h, z24.h, z28.h }, pn8/z, [x8, #-32, mul vl]
-    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #16
+    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #4
     ; CHECK-OFFSET-NEXT: ld1h	{ z16.h, z20.h, z24.h, z28.h }, pn8/z, [x8, #28, mul vl]
-    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #-16
+    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #-4
     ; CHECK-OFFSET-NEXT: ld1w	{ z16.s, z20.s, z24.s, z28.s }, pn8/z, [x8, #-32, mul vl]
-    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #16
+    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #4
     ; CHECK-OFFSET-NEXT: ld1w	{ z16.s, z20.s, z24.s, z28.s }, pn8/z, [x8, #28, mul vl]
-    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #-16
+    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #-4
     ; CHECK-OFFSET-NEXT: ld1d	{ z16.d, z20.d, z24.d, z28.d }, pn8/z, [x8, #-32, mul vl]
-    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #16
+    ; CHECK-OFFSET-NEXT: addvl	x8, sp, #4
     ; CHECK-OFFSET-NEXT: ld1d	{ z16.d, z20.d, z24.d, z28.d }, pn8/z, [x8, #28, mul vl]
     ; CHECK-OFFSET-NEXT: addvl	sp, sp, #31
     ; CHECK-OFFSET-NEXT: addvl	sp, sp, #1

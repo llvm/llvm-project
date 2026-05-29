@@ -5029,7 +5029,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LD1H_2Z_IMM_PSEUDO:
   case AArch64::LD1W_2Z_IMM_PSEUDO:
   case AArch64::LD1D_2Z_IMM_PSEUDO:
-    Scale = TypeSize::getScalable(/*Width*/ 16 * /*NVecs*/ 2 * /*ImmScale*/ 2);
+    Scale = TypeSize::getScalable(/*Width*/ 16 * /*NVecs*/ 2);
     Width = TypeSize::getScalable(/*Width*/ 16 * /*NVecs*/ 2);
     MinOffset = -8;
     MaxOffset = 7;
@@ -5046,7 +5046,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LD1H_4Z_IMM_PSEUDO:
   case AArch64::LD1W_4Z_IMM_PSEUDO:
   case AArch64::LD1D_4Z_IMM_PSEUDO:
-    Scale = TypeSize::getScalable(/*Width*/ 16 * /*NVecs*/ 4 * /*ImmScale*/ 4);
+    Scale = TypeSize::getScalable(/*Width*/ 16 * /*NVecs*/ 4);
     Width = TypeSize::getScalable(/*Width*/ 16 * /*NVecs*/ 4);
     MinOffset = -8;
     MaxOffset = 7;
