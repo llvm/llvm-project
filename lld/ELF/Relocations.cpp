@@ -1788,6 +1788,19 @@ ThunkSection *ThunkCreator::addThunkSection(OutputSection *os,
   return ts;
 }
 
+static bool isThunkSectionCompatible(InputSection *source,
+                                     SectionBase *target) {
+  OutputSection *sourceOS = source->getOutputSection();
+  OutputSection *targetOS = target->getOutputSection();
+  assert(sourceOS && targetOS);
+  // Thunks in a different Overlay Output Section can't be reused
+  // as we can't guarantee that the Overlay will be in memory.
+  if (sourceOS != targetOS && targetOS->inOverlay)
+    return false;
+
+  return true;
+}
+
 std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
                                                 Relocation &rel, uint64_t src) {
   SmallVector<std::unique_ptr<Thunk>, 0> *thunkVec = nullptr;
@@ -1812,7 +1825,8 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
 
   // Check existing Thunks for Sym to see if they can be reused
   for (auto &t : *thunkVec)
-    if (t->isCompatibleWith(*isec, rel) &&
+    if (isThunkSectionCompatible(isec, t->getThunkTargetSym()->section) &&
+        t->isCompatibleWith(*isec, rel) &&
         ctx.target->inBranchRange(rel.type, src,
                                   t->getThunkTargetSym()->getVA(ctx, -pcBias)))
       return std::make_pair(t.get(), false);
