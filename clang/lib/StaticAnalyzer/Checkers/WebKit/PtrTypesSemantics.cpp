@@ -566,7 +566,8 @@ class TrivialFunctionAnalysisVisitor
     if (Ty->isPointerOrReferenceType())
       return true;
 
-    // T* is safe even in ARC-enabled Objective-C since [[retain x] autorelease] will not dealloc.
+    // T* is safe even in Objective-C with ARC since [[retain x] autorelease]
+    // will not dealloc.
     // FIXME: Handle a case when there is a local autorelease pool.
     if (Ty->isObjCObjectPointerType())
       return true;
