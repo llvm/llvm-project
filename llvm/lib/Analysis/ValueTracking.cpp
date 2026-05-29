@@ -7813,7 +7813,9 @@ static bool isGuaranteedNotToBeUndefOrPoison(
           if (isa<ConstantInt>(SplatC) || isa<ConstantFP>(SplatC))
             return true;
       } else {
-        if (includesUndef(Kind) && match(C, m_AnyVectorElement(m_CombineAnd(m_UndefValue(), m_Unless(m_Poison())))))
+        if (includesUndef(Kind) &&
+            match(C, m_AnyVectorElement(
+                         m_CombineAnd(m_UndefValue(), m_Unless(m_Poison())))))
           return false;
         if (includesPoison(Kind) && match(C, m_AnyVectorElement(m_Poison())))
           return false;
@@ -8876,9 +8878,14 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
     // purpose of identifying min/max. Disregard vector constants with undefined
     // elements because those can not be back-propagated for analysis.
     Value *OutputZeroVal = nullptr;
-    if (match(TrueVal, m_CombineAnd(m_AnyZeroFP(), m_Unless(m_AnyVectorElement(m_UndefValue())))) && !match(FalseVal, m_AnyZeroFP()))
+    if (match(TrueVal, m_CombineAnd(m_AnyZeroFP(), m_Unless(m_AnyVectorElement(
+                                                       m_UndefValue())))) &&
+        !match(FalseVal, m_AnyZeroFP()))
       OutputZeroVal = TrueVal;
-    else if (match(FalseVal, m_CombineAnd(m_AnyZeroFP(), m_Unless(m_AnyVectorElement(m_UndefValue())))) && !match(TrueVal, m_AnyZeroFP()))
+    else if (match(FalseVal,
+                   m_CombineAnd(m_AnyZeroFP(), m_Unless(m_AnyVectorElement(
+                                                   m_UndefValue())))) &&
+             !match(TrueVal, m_AnyZeroFP()))
       OutputZeroVal = FalseVal;
 
     if (OutputZeroVal) {

@@ -184,7 +184,8 @@ bool Constant::isNotMinSignedValue() const {
 
   // Check that vectors don't contain INT_MIN
   if (isa<FixedVectorType>(getType())) {
-    return !anyVectorElement([&](const auto *E) { return !E->isNotMinSignedValue(); });
+    return !anyVectorElement(
+        [&](const auto *E) { return !E->isNotMinSignedValue(); });
   }
 
   // Check for splats that aren't INT_MIN
@@ -307,7 +308,7 @@ bool Constant::isElementWiseEqual(Value *Y) const {
 bool Constant::anyVectorElement(function_ref<bool(Constant *)> PredFn) const {
   if (!getType()->isVectorTy())
     return false;
-  
+
   if (Constant *SplatVal = getSplatValue())
     if (PredFn(SplatVal))
       return true;

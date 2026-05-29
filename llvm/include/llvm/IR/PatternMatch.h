@@ -187,11 +187,13 @@ template <typename SPTy> struct anyvectorelement_match {
 
   template <typename ITy> bool match(ITy *V) const {
     auto *C = dyn_cast<Constant>(V);
-    return C && C->anyVectorElement([&](Constant *E) { return SubPattern.match(E); });
+    return C && C->anyVectorElement(
+                    [&](Constant *E) { return SubPattern.match(E); });
   }
 };
 
-/// Match a vector constant where at least one of its elements matches the subpattern. Any bindings in the subpattern will be bound to the first match.
+/// Match a vector constant where at least one of its elements matches the
+/// subpattern. Any bindings in the subpattern will be bound to the first match.
 template <typename SPTy>
 inline anyvectorelement_match<SPTy> m_AnyVectorElement(const SPTy &SubPattern) {
   return SubPattern;
@@ -200,7 +202,8 @@ inline anyvectorelement_match<SPTy> m_AnyVectorElement(const SPTy &SubPattern) {
 /// Match a constant expression or a constant that contains a constant
 /// expression.
 inline auto m_ConstantExpr() {
-  return m_CombineOr(m_Isa<ConstantExpr>(), m_AnyVectorElement(m_Isa<ConstantExpr>()));
+  return m_CombineOr(m_Isa<ConstantExpr>(),
+                     m_AnyVectorElement(m_Isa<ConstantExpr>()));
 }
 
 template <typename SubPattern_t> struct Splat_match {

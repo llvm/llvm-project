@@ -112,7 +112,9 @@ public:
   /// lane, the constants still match.
   LLVM_ABI bool isElementWiseEqual(Value *Y) const;
 
-  /// Return true if this is a vector constant where at least one element satisfies the given predicate. For scalable vectors, the predicate is tested on the value as a whole.
+  /// Return true if this is a vector constant where at least one element
+  /// satisfies the given predicate. For scalable vectors, the predicate is
+  /// tested on the value as a whole.
   LLVM_ABI bool anyVectorElement(function_ref<bool(Constant *)> PredFn) const;
 
   /// Return true if the value can vary between threads.
