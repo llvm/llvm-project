@@ -4242,14 +4242,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BI__builtin_stdc_memreverse8: {
     Value *N = EmitScalarExpr(E->getArg(0));
-    Value *Ptr = EmitScalarExpr(E->getArg(1));
+    Address PtrAddr = EmitPointerWithAlignment(E->getArg(1));
 
     if (auto *CI = dyn_cast<ConstantInt>(N)) {
       uint64_t Size = CI->getZExtValue();
       if (Size == 2 || Size == 4 || Size == 8) {
         llvm::Type *IntTy = Builder.getIntNTy(Size * 8);
-        CharUnits Align = CharUnits::One();
-        Address Addr(Ptr, IntTy, Align);
+        Address Addr = PtrAddr.withElementType(IntTy);
         Value *Val = Builder.CreateLoad(Addr);
         Function *F = CGM.getIntrinsic(Intrinsic::bswap, IntTy);
         Value *Swapped = Builder.CreateCall(F, Val);
@@ -4259,6 +4258,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     }
 
     // General case: emit a loop swapping ptr[i] and ptr[n-i-1].
+    Value *Ptr = PtrAddr.emitRawPointer(*this);
     BasicBlock *EntryBB = Builder.GetInsertBlock();
     BasicBlock *LoopBB = createBasicBlock("memreverse8.loop", CurFn);
     BasicBlock *AfterBB = createBasicBlock("memreverse8.after", CurFn);
