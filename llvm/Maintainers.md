@@ -518,7 +518,7 @@ Some subprojects maintain their own list of per-component maintainers.
 
 [libc++ maintainers](https://github.com/llvm/llvm-project/blob/main/libcxx/Maintainers.md)
 
-[Libc maintainers](https://github.com/llvm/llvm-project/blob/main/libc/Maintainers.rst)
+[Libc maintainers](https://github.com/llvm/llvm-project/blob/main/libc/Maintainers.md)
 
 [libclc maintainers](https://github.com/llvm/llvm-project/blob/main/libclc/Maintainers.md)
 
