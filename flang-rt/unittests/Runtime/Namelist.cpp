@@ -382,8 +382,8 @@ TEST(NamelistTests, BangAsValueSeparator) {
           std::vector<int>{}, std::vector<std::complex<float>>{{0.f, 0.f}})};
   OwningPtr<Descriptor> cDesc{MakeArray<TypeCategory::Character, 1>(
       std::vector<int>{}, std::vector<std::string>{"        "}, 8)};
-  const NamelistGroup::Item items[]{{"i", *iDesc}, {"r", *rDesc},
-      {"l", *lDesc}, {"z", *zDesc}, {"c", *cDesc}};
+  const NamelistGroup::Item items[]{{"i", *iDesc}, {"r", *rDesc}, {"l", *lDesc},
+      {"z", *zDesc}, {"c", *cDesc}};
   const NamelistGroup group{"nml", 5, items};
   // No space before any '!' — the '!' must still terminate each value
   // and start a comment that runs to end of record.  Inside the character
