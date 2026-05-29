@@ -251,6 +251,13 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
   return true;
 }
 
+/// Get the value type of the replicate load or store. \p IsLoad indicates
+/// whether it is a load.
+static Type *getLoadStoreValueType(VPReplicateRecipe *R, bool IsLoad) {
+  VPTypeAnalysis TypeInfo(*R->getParent()->getPlan());
+  return TypeInfo.inferScalarType(IsLoad ? R : R->getOperand(0));
+}
+
 /// Collect either replicated Loads or Stores grouped by their address SCEV and
 /// their load-store type, in a deep-traversal of the vector loop region in \p
 /// Plan.
@@ -265,10 +272,6 @@ collectGroupedReplicateMemOps(
   SmallDenseMap<std::pair<const SCEV *, const Type *>,
                 SmallVector<VPReplicateRecipe *, 4>>
       RecipesByAddressAndType;
-  VPTypeAnalysis TypeInfo(Plan);
-  auto GetLoadStoreValueType = [&](VPReplicateRecipe *R) {
-    return TypeInfo.inferScalarType(IsLoad ? R : R->getOperand(0));
-  };
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : *VPBB) {
@@ -278,7 +281,7 @@ collectGroupedReplicateMemOps(
 
       // For loads, operand 0 is address; for stores, operand 1 is address.
       VPValue *Addr = RepR->getOperand(IsLoad ? 0 : 1);
-      const Type *LoadStoreTy = GetLoadStoreValueType(RepR);
+      const Type *LoadStoreTy = getLoadStoreValueType(RepR, IsLoad);
       const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
       if (!isa<SCEVCouldNotCompute>(AddrSCEV))
         RecipesByAddressAndType[{AddrSCEV, LoadStoreTy}].push_back(RepR);
@@ -4748,11 +4751,8 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
     if (Recipes.size() < 2)
       continue;
 
-    assert(all_equal(map_range(Recipes,
-                               [&](VPReplicateRecipe *R) {
-                                 return VPTypeAnalysis(Plan).inferScalarType(
-                                     IsLoad ? R : R->getOperand(0));
-                               })) &&
+    assert(all_equal(
+               map_range(Recipes, bind_back<getLoadStoreValueType>(IsLoad))) &&
            "Expected all recipes in group to have the same load-store type");
 
     // Collect groups with the same or complementary masks.
