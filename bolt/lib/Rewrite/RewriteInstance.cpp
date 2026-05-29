@@ -2090,6 +2090,33 @@ bool hasDataMarkerAt(DenseMap<uint64_t, MarkerSymType> &MarkerSyms,
   return It != MarkerSyms.end() && It->second == MarkerSymType::DATA;
 }
 
+/// AArch64 padding / filler instructions that may appear in slack but are not
+/// standalone callable functions.
+static bool isAArch64TailPaddingInst(const BinaryContext &BC,
+                                     const MCInst &Inst) {
+  if (BC.MIB->isNoop(Inst) || BC.MIB->isTrap(Inst))
+    return true;
+  return false;
+}
+
+/// True if the decoded tail looks like real callable code, not padding.
+static bool isValidAArch64UnmarkedTail(const BinaryContext &BC,
+                                       ArrayRef<MCInst> Insts) {
+  if (Insts.empty())
+    return false;
+
+  bool HasExecutable = false;
+  for (const MCInst &Inst : Insts) {
+    if (!isAArch64TailPaddingInst(BC, Inst))
+      HasExecutable = true;
+  }
+  if (!HasExecutable)
+    return false;
+
+  // Expect a callable snippet; inlined tails end with ret.
+  return BC.MIB->isReturn(Insts.back());
+}
+
 /// Disassemble a prefix of [TailStart, TailStart + TrailingExtent) and return
 /// its length. Any remaining bytes in the range must be zero padding.
 /// Returns 0 if the region is not valid unmarked code.
@@ -2110,6 +2137,7 @@ measureAArch64UnmarkedTail(BinaryContext &BC, const BinaryFunction &Pred,
   const uint8_t *Bytes =
       reinterpret_cast<const uint8_t *>(Contents.data()) + SectionOffset;
 
+  SmallVector<MCInst, 4> Insts;
   uint64_t CodeLen = 0;
   while (CodeLen < TrailingExtent) {
     if (hasDataMarkerAt(MarkerSyms, TailStart + CodeLen))
@@ -2124,10 +2152,11 @@ measureAArch64UnmarkedTail(BinaryContext &BC, const BinaryFunction &Pred,
                                            TailStart + CodeLen, nulls()) ||
         !Size)
       break;
+    Insts.push_back(Inst);
     CodeLen += Size;
   }
 
-  if (!CodeLen)
+  if (!CodeLen || !isValidAArch64UnmarkedTail(BC, Insts))
     return 0;
 
   for (uint64_t I = CodeLen; I < TrailingExtent; ++I) {
