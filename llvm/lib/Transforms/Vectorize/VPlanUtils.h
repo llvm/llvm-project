@@ -77,17 +77,15 @@ unsigned getVFScaleFactor(VPRecipeBase *R);
 bool cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking = false);
 
 /// Return the intrinsic ID underlying a call.
-template <typename Ty>
-std::optional<Intrinsic::ID> getIntrinsicID(const Ty *R) {
+template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
   if (const auto *Intr = dyn_cast<VPWidenIntrinsicRecipe>(R))
     return Intr->getVectorIntrinsicID();
   if (const auto *Call = dyn_cast<VPWidenCallRecipe>(R))
     return Call->getCalledScalarFunction()->getIntrinsicID();
 
-  auto GetCalleeIntrinsic =
-      [&](VPValue *CalleeOp) -> std::optional<Intrinsic::ID> {
+  auto GetCalleeIntrinsic = [&](VPValue *CalleeOp) -> Intrinsic::ID {
     if (!isa<VPIRValue>(CalleeOp))
-      return {};
+      return Intrinsic::not_intrinsic;
     auto *F = cast<Function>(CalleeOp->getLiveInIRValue());
     return F->getIntrinsicID();
   };
@@ -99,7 +97,7 @@ std::optional<Intrinsic::ID> getIntrinsicID(const Ty *R) {
   if (const auto *VPI = dyn_cast<VPInstruction>(R))
     if (VPI->getOpcode() == Instruction::Call)
       return GetCalleeIntrinsic(VPI->getOperand(VPI->getNumOperands() - 1));
-  return {};
+  return Intrinsic::not_intrinsic;
 }
 
 /// Returns the VPValue representing the uncountable exit comparison used by
