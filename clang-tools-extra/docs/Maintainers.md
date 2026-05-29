@@ -1,1 +1,2 @@
-.. include:: ../Maintainers.rst
+```{include} ../Maintainers.md
+```
