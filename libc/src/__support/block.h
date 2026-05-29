@@ -191,8 +191,7 @@ public:
   /// field of the next block counts as part of the inner size of the block.
   /// `usable_space_alignment` must be a multiple of MIN_ALIGN.
   optional<Block *> split(size_t new_inner_size,
-                          size_t usable_space_alignment = MIN_ALIGN,
-                          size_t min_split_size = sizeof(Block));
+                          size_t usable_space_alignment = MIN_ALIGN);
 
   /// Merges this block with the one that comes after it.
   bool merge_next();
@@ -308,8 +307,7 @@ public:
 
   // Divide a block into up to 3 blocks according to `BlockInfo`. Behavior is
   // undefined if allocation is not possible for the given size and alignment.
-  static BlockInfo allocate(Block *block, size_t alignment, size_t size,
-                            size_t min_split_size = sizeof(Block));
+  static BlockInfo allocate(Block *block, size_t alignment, size_t size);
 
   // These two functions may wrap around.
   LIBC_INLINE static uintptr_t
@@ -395,8 +393,7 @@ optional<Block *> Block::init(ByteSpan region) {
 }
 
 LIBC_INLINE
-Block::BlockInfo Block::allocate(Block *block, size_t alignment, size_t size,
-                                 size_t min_split_size) {
+Block::BlockInfo Block::allocate(Block *block, size_t alignment, size_t size) {
   LIBC_ASSERT(alignment % MIN_ALIGN == 0 &&
               "alignment must be a multiple of MIN_ALIGN");
 
@@ -425,7 +422,7 @@ Block::BlockInfo Block::allocate(Block *block, size_t alignment, size_t size,
 
   // Now get a block for the requested size.
   if (optional<Block *> next =
-          info.block->split(size, MIN_ALIGN, min_split_size))
+          info.block->split(size, MIN_ALIGN))
     info.next = *next;
 
   return info;
@@ -433,12 +430,9 @@ Block::BlockInfo Block::allocate(Block *block, size_t alignment, size_t size,
 
 LIBC_INLINE
 optional<Block *> Block::split(size_t new_inner_size,
-                               size_t usable_space_alignment,
-                               size_t min_split_size) {
+                               size_t usable_space_alignment) {
   LIBC_ASSERT(usable_space_alignment % MIN_ALIGN == 0 &&
               "alignment must be a multiple of MIN_ALIGN");
-  if (used())
-    return {};
 
   // Compute the minimum outer size that produces a block of at least
   // `new_inner_size`.
@@ -454,16 +448,19 @@ optional<Block *> Block::split(size_t new_inner_size,
               "new size must be aligned to MIN_ALIGN");
 
   if (outer_size() < new_outer_size ||
-      outer_size() - new_outer_size < min_split_size)
+      outer_size() - new_outer_size < sizeof(Block))
     return {};
+
+  bool was_free = !used();
 
   ByteSpan new_region = region().subspan(new_outer_size);
   next_ &= ~SIZE_MASK;
   next_ |= new_outer_size;
 
   Block *new_block = as_block(new_region);
-  mark_free(); // Free status for this block is now stored in new_block.
-  new_block->next()->prev_ = new_region.size();
+  new_block->mark_free();
+  if (was_free)
+    mark_free();
 
   LIBC_ASSERT(new_block->is_usable_space_aligned(usable_space_alignment) &&
               "usable space must have requested alignment");

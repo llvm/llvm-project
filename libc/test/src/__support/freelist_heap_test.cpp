@@ -186,10 +186,12 @@ TEST_FOR_EACH_ALLOCATOR(ReallocSmallerSize, 2048) {
   EXPECT_EQ(ptr1, ptr2);
 }
 
-TEST_FOR_EACH_ALLOCATOR(ReallocShrinkAndAllocateTrailing, 512) {
-  constexpr size_t ALLOC_SIZE = 300;
-  constexpr size_t NEW_ALLOC_SIZE = 64;
-  constexpr size_t TRAILING_ALLOC_SIZE = 256;
+constexpr size_t SMALL_HEAP_SIZE = 512;
+
+TEST_FOR_EACH_ALLOCATOR(ReallocShrinkAndAllocateTrailing, SMALL_HEAP_SIZE) {
+  constexpr size_t ALLOC_SIZE = (SMALL_HEAP_SIZE * 3) / 4;
+  constexpr size_t NEW_ALLOC_SIZE = SMALL_HEAP_SIZE / 4;
+  constexpr size_t TRAILING_ALLOC_SIZE = SMALL_HEAP_SIZE / 2;
 
   void *ptr1 = allocator.allocate(ALLOC_SIZE);
   ASSERT_NE(ptr1, static_cast<void *>(nullptr));
@@ -199,7 +201,6 @@ TEST_FOR_EACH_ALLOCATOR(ReallocShrinkAndAllocateTrailing, 512) {
 
   // Shrink the block in-place.
   void *ptr2 = allocator.realloc(ptr1, NEW_ALLOC_SIZE);
-  ASSERT_NE(ptr2, static_cast<void *>(nullptr));
   EXPECT_EQ(ptr1, ptr2);
 
   // Verify that the data in the shrunk block is preserved.
