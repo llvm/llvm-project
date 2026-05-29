@@ -207,7 +207,7 @@ body:             |
     ; NO-PREFER-W-INST-NEXT: {{  $}}
     ; NO-PREFER-W-INST-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; NO-PREFER-W-INST-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; NO-PREFER-W-INST-NEXT: [[LD:%[0-9]+]]:gpr = LD [[COPY]], 0
+    ; NO-PREFER-W-INST-NEXT: [[LD:%[0-9]+]]:gpr = LD [[COPY]], 0 :: (load (s64))
     ; NO-PREFER-W-INST-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[LD]], 1
     ; NO-PREFER-W-INST-NEXT: $x10 = COPY [[ADDIW]]
     ; NO-PREFER-W-INST-NEXT: PseudoRET
@@ -217,17 +217,50 @@ body:             |
     ; PREFER-W-INST-NEXT: {{  $}}
     ; PREFER-W-INST-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; PREFER-W-INST-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; PREFER-W-INST-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0
+    ; PREFER-W-INST-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s64))
     ; PREFER-W-INST-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[LW]], 1
     ; PREFER-W-INST-NEXT: $x10 = COPY [[ADDIW]]
     ; PREFER-W-INST-NEXT: PseudoRET
     %1:gpr = COPY $x10
     %2:gpr = COPY $x11
-    %3:gpr = LD %1, 0
+    %3:gpr = LD %1, 0 :: (load (s64))
     %4:gpr = ADDIW %3, 1
     $x10 = COPY %4
     PseudoRET
 ...
+
+---
+name: ld_volatile
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    ; NO-PREFER-W-INST-LABEL: name: ld_volatile
+    ; NO-PREFER-W-INST: liveins: $x10, $x11
+    ; NO-PREFER-W-INST-NEXT: {{  $}}
+    ; NO-PREFER-W-INST-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; NO-PREFER-W-INST-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; NO-PREFER-W-INST-NEXT: [[LD:%[0-9]+]]:gpr = LD [[COPY]], 0 :: (volatile load (s64))
+    ; NO-PREFER-W-INST-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[LD]], 1
+    ; NO-PREFER-W-INST-NEXT: $x10 = COPY [[ADDIW]]
+    ; NO-PREFER-W-INST-NEXT: PseudoRET
+    ;
+    ; PREFER-W-INST-LABEL: name: ld_volatile
+    ; PREFER-W-INST: liveins: $x10, $x11
+    ; PREFER-W-INST-NEXT: {{  $}}
+    ; PREFER-W-INST-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; PREFER-W-INST-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; PREFER-W-INST-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (volatile load (s64))
+    ; PREFER-W-INST-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[LW]], 1
+    ; PREFER-W-INST-NEXT: $x10 = COPY [[ADDIW]]
+    ; PREFER-W-INST-NEXT: PseudoRET
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = LD %1, 0 :: (volatile load (s64))
+    %4:gpr = ADDIW %3, 1
+    $x10 = COPY %4
+    PseudoRET
+...
+
 
 ---
 name: lwu
@@ -239,7 +272,7 @@ body:             |
     ; NO-PREFER-W-INST-NEXT: {{  $}}
     ; NO-PREFER-W-INST-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; NO-PREFER-W-INST-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; NO-PREFER-W-INST-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0
+    ; NO-PREFER-W-INST-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
     ; NO-PREFER-W-INST-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[LW]], 1
     ; NO-PREFER-W-INST-NEXT: $x10 = COPY [[ADDIW]]
     ; NO-PREFER-W-INST-NEXT: PseudoRET
@@ -249,13 +282,13 @@ body:             |
     ; PREFER-W-INST-NEXT: {{  $}}
     ; PREFER-W-INST-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; PREFER-W-INST-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; PREFER-W-INST-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0
+    ; PREFER-W-INST-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
     ; PREFER-W-INST-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[LW]], 1
     ; PREFER-W-INST-NEXT: $x10 = COPY [[ADDIW]]
     ; PREFER-W-INST-NEXT: PseudoRET
     %1:gpr = COPY $x10
     %2:gpr = COPY $x11
-    %3:gpr = LWU %1, 0
+    %3:gpr = LWU %1, 0 :: (load (s32))
     %4:gpr = ADDIW %3, 1
     $x10 = COPY %4
     PseudoRET
