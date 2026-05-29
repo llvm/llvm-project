@@ -72,12 +72,11 @@ void UseIfConstevalCheck::registerMatchers(MatchFinder *Finder) {
                                    isInStdNamespace())))
           .bind("call");
   const auto IsNegatedConstantEvaluatedExpr =
-      unaryOperator(hasOperatorName("!"), hasUnaryOperand(ignoringParenImpCasts(
-                                              IsConstantEvaluatedCall)))
+      unaryOperator(hasOperatorName("!"),
+                    hasUnaryOperand(ignoringParens(IsConstantEvaluatedCall)))
           .bind("negation");
-  const auto IsConstantEvaluatedExpr =
-      expr(anyOf(ignoringParenImpCasts(IsConstantEvaluatedCall),
-                 ignoringParenImpCasts(IsNegatedConstantEvaluatedExpr)));
+  const auto IsConstantEvaluatedExpr = ignoringParenImpCasts(
+      anyOf(IsConstantEvaluatedCall, IsNegatedConstantEvaluatedExpr));
 
   Finder->addMatcher(
       ifStmt(unless(isConstexpr()),
@@ -117,6 +116,15 @@ void UseIfConstevalCheck::check(const MatchFinder::MatchResult &Result) {
   if (!ThenBraceFix)
     return;
 
+  std::optional<BraceFix> ElseBraceFix = BraceFix();
+  const Stmt *Else = If->getElse();
+  if (Else)
+    Else = Else->stripLabelLikeStatements();
+  if (Else && !isa<IfStmt>(Else)) {
+    ElseBraceFix = getBraceFix(If->getElse(), getLangOpts(),
+                               *Result.SourceManager, If->getElseLoc());
+  }
+
   const bool NeedsLeadingSpace = needsLeadingSpaceBeforeConsteval(
       If->getLParenLoc(), *Result.SourceManager);
   const std::string HeaderReplacement = [&] {
@@ -131,6 +139,10 @@ void UseIfConstevalCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (ThenBraceFix->NeedsBraces)
     Diag << ThenBraceFix->Hints.closingBraceFixIt();
+
+  if (ElseBraceFix && ElseBraceFix->NeedsBraces)
+    Diag << ElseBraceFix->Hints.openingBraceFixIt()
+         << ElseBraceFix->Hints.closingBraceFixIt();
 }
 
 } // namespace clang::tidy::modernize

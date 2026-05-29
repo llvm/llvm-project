@@ -8,11 +8,10 @@ with C++23's ``if consteval`` syntax.
 
 .. code-block:: c++
 
-  if (std::is_constant_evaluated()) {
+  if (std::is_constant_evaluated())
     return slow_but_constexpr_path();
-  } else {
+  else
     return fast_runtime_path();
-  }
 
 is rewritten as:
 
