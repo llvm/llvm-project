@@ -238,22 +238,6 @@ static unsigned int getCUNum(DWARFContext *DwarfContext, bool IsDWO) {
 
 void DIEBuilder::buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter,
                                 const bool Init) {
-  if (DwarfContext->isDWP()) {
-    buildTypeUnitsThreadSafe(StrOffsetWriter, Init);
-    return;
-  }
-
-  buildTypeUnitsImpl(StrOffsetWriter, Init);
-}
-
-void DIEBuilder::buildTypeUnitsThreadSafe(
-    DebugStrOffsetsWriter *StrOffsetWriter, const bool Init) {
-  std::unique_lock<std::recursive_mutex> LockGuard(BC.getUnitsMutex());
-  buildTypeUnitsImpl(StrOffsetWriter, Init);
-}
-
-void DIEBuilder::buildTypeUnitsImpl(DebugStrOffsetsWriter *StrOffsetWriter,
-                                    const bool Init) {
   if (Init)
     BuilderState.reset(new State());
 
@@ -297,6 +281,73 @@ void DIEBuilder::buildTypeUnitsImpl(DebugStrOffsetsWriter *StrOffsetWriter,
     if (StrOffsetWriter)
       StrOffsetWriter->finalizeSection(*DU, *this);
   }
+}
+
+static void collectReferencedTypeSignatures(DWARFDie Die,
+                                            DenseSet<uint64_t> &ProcessedTU,
+                                            SmallVectorImpl<uint64_t> &TUlist) {
+  SmallVector<DWARFDie, 8> DIElist;
+  DIElist.push_back(Die);
+
+  while (!DIElist.empty()) {
+    DWARFDie Current = DIElist.pop_back_val();
+    if (!Current)
+      continue;
+
+    for (const DWARFAttribute &Attr : Current.attributes()) {
+      if (Attr.Value.getForm() != dwarf::DW_FORM_ref_sig8)
+        continue;
+      if (const std::optional<uint64_t> Signature =
+              Attr.Value.getAsSignatureReference())
+        if (ProcessedTU.insert(*Signature).second)
+          TUlist.push_back(*Signature);
+    }
+
+    for (DWARFDie Child : Current.children())
+      DIElist.push_back(Child);
+  }
+}
+
+void DIEBuilder::buildDWPTypeUnitsForUnit(DWARFUnit &U) {
+  // Avoid processing the same type unit multiple times.
+  DenseSet<uint64_t> ProcessedTU;
+  SmallVector<uint64_t, 8> TUlist;
+  // Collecting signatures of type units referenced by this unit.
+  collectReferencedTypeSignatures(U.getUnitDIE(), ProcessedTU, TUlist);
+
+  // addressing type units referenced.
+  for (unsigned I = 0; I != TUlist.size(); ++I) {
+    const uint64_t Signature = TUlist[I];
+    DWARFTypeUnit *TU = DwarfContext->getTypeUnitForHash(Signature, true);
+    if (!TU)
+      continue;
+
+    getState().Type = TU->getVersion() < 5 ? ProcessingType::DWARF4TUs
+                                           : ProcessingType::DWARF5TUs;
+    if (!registerUnit(*TU, false))
+      continue;
+
+    const std::optional<uint32_t> UnitId = getUnitId(*TU);
+    if (!UnitId || getState().CloneUnitCtxMap[*UnitId].IsConstructed)
+      continue;
+
+    collectReferencedTypeSignatures(TU->getUnitDIE(), ProcessedTU, TUlist);
+  }
+
+  // Ensure deterministic order of processing type units
+  auto SortByOffset = [](const DWARFUnit *A, const DWARFUnit *B) {
+    return A->getOffset() < B->getOffset();
+  };
+  llvm::sort(getState().DWARF4TUVector, SortByOffset);
+  llvm::sort(getState().DWARF5TUVector, SortByOffset);
+
+  getState().Type = ProcessingType::DWARF4TUs;
+  for (DWARFUnit *TU : getState().DWARF4TUVector)
+    constructFromUnit(*TU);
+
+  getState().Type = ProcessingType::DWARF5TUs;
+  for (DWARFUnit *TU : getState().DWARF5TUVector)
+    constructFromUnit(*TU);
 }
 
 void DIEBuilder::buildCompileUnits(const bool Init) {
@@ -344,7 +395,12 @@ void DIEBuilder::buildCompileUnits(const std::vector<DWARFUnit *> &CUs) {
 void DIEBuilder::buildDWOUnit(DWARFUnit &U) {
   BuilderState.release();
   BuilderState = std::make_unique<State>();
-  buildTypeUnits(nullptr, false);
+  if (DwarfContext->isDWP()) {
+    std::unique_lock<std::recursive_mutex> LockGuard(BC.getUnitsMutex());
+    buildDWPTypeUnitsForUnit(U);
+  } else {
+    buildTypeUnits(nullptr, false);
+  }
   getState().Type = ProcessingType::CUs;
   registerUnit(U, false);
   constructFromUnit(U);

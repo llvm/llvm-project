@@ -217,13 +217,8 @@ private:
   /// Returns true if DWARFUnit is registered successfully.
   bool registerUnit(DWARFUnit &DU, bool NeedSort);
 
-  /// Builds type units without extra synchronization.
-  void buildTypeUnitsImpl(DebugStrOffsetsWriter *StrOffsetWriter,
-                          const bool Init);
-
-  /// Serializes type-unit construction for DWP-backed split DWARF contexts.
-  void buildTypeUnitsThreadSafe(DebugStrOffsetsWriter *StrOffsetWriter,
-                                const bool Init);
+  /// Builds type units needed in the DWO.
+  void buildDWPTypeUnitsForUnit(DWARFUnit &U);
 
   /// \return the unique ID of \p U if it exists.
   std::optional<uint32_t> getUnitId(const DWARFUnit &DU);
