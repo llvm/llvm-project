@@ -8124,7 +8124,10 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_wave_reduce_max:
   case Intrinsic::amdgcn_wave_reduce_umax:
   case Intrinsic::amdgcn_wave_reduce_add:
-  case Intrinsic::amdgcn_wave_reduce_sub: {
+  case Intrinsic::amdgcn_wave_reduce_sub:
+  case Intrinsic::amdgcn_wave_reduce_and:
+  case Intrinsic::amdgcn_wave_reduce_or:
+  case Intrinsic::amdgcn_wave_reduce_xor: {
     Register SrcReg = MI.getOperand(2).getReg();
     if (MRI.getType(SrcReg) != LLT::scalar(16))
       return true;
