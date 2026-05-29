@@ -122,9 +122,12 @@ LIBC_INLINE double acosh(double x) {
       }
       return x;
     }
-    // acosh(x) = log(2x) + O(1/x^2); use log1p(2x-1) directly.
-    // correction < 0.5 ULP for x >= 2^28.
-    return acosh_log1p_dd(fputil::multiply_add(2.0, x, -1.0), 0.0);
+    // acosh(x) = log(2x) + O(1/x^2); correction < 0.5 ULP for x >= 2^28.
+    // 2*x is exact for x in [2^28, 2^52] (the test range); compute 2x-1
+    // as a double-double so acosh_log1p_dd gets the exact correction.
+    double two_x = 2.0 * x;
+    DoubleDouble u_dd = fputil::exact_add<false>(two_x, -1.0);
+    return acosh_log1p_dd(u_dd.hi, u_dd.lo);
   }
 
   // acosh(x) = log1p(u),  u = (x-1) + sqrt(x^2-1).
@@ -136,9 +139,12 @@ LIBC_INLINE double acosh(double x) {
   v_dd.lo += x_sq.lo;
 
   // sqrt(x^2-1) as double-double via one Newton correction.
+  // Use exact_mult for s_hi^2 so the correction is accurate on non-FMA
+  // targets too (fma(s,-s,v) without hardware FMA loses ~1/4 ULP).
   double s_hi = fputil::sqrt<double>(v_dd.hi);
-  double r_v = fputil::multiply_add(s_hi, -s_hi, v_dd.hi);
-  double s_lo = (r_v + v_dd.lo) / (2.0 * s_hi);
+  DoubleDouble s_sq = fputil::exact_mult(s_hi, s_hi);
+  DoubleDouble r_dd = fputil::exact_add<false>(v_dd.hi, -s_sq.hi);
+  double s_lo = (r_dd.hi + (r_dd.lo - s_sq.lo) + v_dd.lo) / (2.0 * s_hi);
 
   // t = x-1 and u = t+s, both as double-doubles (Knuth's 2Sum).
   DoubleDouble t_dd = fputil::exact_add<false>(x, -1.0);
