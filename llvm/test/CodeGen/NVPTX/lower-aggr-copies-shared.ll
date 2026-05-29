@@ -17,6 +17,8 @@ define void @two_stage_copy() {
 ; CHECK-NEXT:    [[SHARED_BUF:%.*]] = alloca [256 x i8], align 1, addrspace(3)
 ; CHECK-NEXT:    [[LOCAL_PTR:%.*]] = getelementptr inbounds [256 x i8], ptr [[LOCAL_BUF]], i64 0, i64 0
 ; CHECK-NEXT:    store i8 42, ptr [[LOCAL_PTR]], align 1
+; CHECK-NEXT:    call void @llvm.memmove.p3.p0.i64(ptr addrspace(3) [[SHARED_BUF]], ptr [[LOCAL_BUF]], i64 256, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p3.i64(ptr @global_data, ptr addrspace(3) [[SHARED_BUF]], i64 256, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
