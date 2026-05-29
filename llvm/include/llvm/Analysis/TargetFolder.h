@@ -200,6 +200,13 @@ public:
     return nullptr;
   }
 
+  Value *FoldUnaryIntrinsic(Intrinsic::ID ID, Value *Op, Type *Ty,
+                            FastMathFlags FMF) const override {
+    if (auto *OpC = dyn_cast<Constant>(Op))
+      return ConstantFoldUnaryIntrinsic(ID, OpC, Ty);
+    return nullptr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//

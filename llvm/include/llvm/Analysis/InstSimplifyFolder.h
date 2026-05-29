@@ -126,6 +126,12 @@ public:
     return simplifyBinaryIntrinsic(ID, Ty, LHS, RHS, FMF, SQ);
   }
 
+  Value *
+  FoldUnaryIntrinsic(Intrinsic::ID ID, Value *Op, Type *Ty,
+                     FastMathFlags FMF = FastMathFlags()) const override {
+    return simplifyUnaryIntrinsic(ID, Op, FMF, SQ);
+  }
+
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
