@@ -6716,7 +6716,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                            ST.getGeneration() >= AMDGPUSubtarget::GFX12
                                ? AMDGPU::V_MAX_NUM_F64_e64
                                : AMDGPU::V_MAX_F64_e64);
-  case AMDGPU::WAVE_REDUCE_ADD_PSEUDO_I16:
   case AMDGPU::WAVE_REDUCE_ADD_PSEUDO_I32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_ADD_I32);
   case AMDGPU::WAVE_REDUCE_ADD_PSEUDO_U64:
@@ -6728,7 +6727,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                            ST.getGeneration() >= AMDGPUSubtarget::GFX12
                                ? AMDGPU::V_ADD_F64_pseudo_e64
                                : AMDGPU::V_ADD_F64_e64);
-  case AMDGPU::WAVE_REDUCE_SUB_PSEUDO_I16:
   case AMDGPU::WAVE_REDUCE_SUB_PSEUDO_I32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_SUB_I32);
   case AMDGPU::WAVE_REDUCE_SUB_PSEUDO_U64:
@@ -10600,11 +10598,15 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_wave_reduce_min:
   case Intrinsic::amdgcn_wave_reduce_umin:
   case Intrinsic::amdgcn_wave_reduce_max:
-  case Intrinsic::amdgcn_wave_reduce_umax: {
+  case Intrinsic::amdgcn_wave_reduce_umax:
+  case Intrinsic::amdgcn_wave_reduce_add:
+  case Intrinsic::amdgcn_wave_reduce_sub: {
     EVT SrcVT = Op.getOperand(1).getValueType();
     if (SrcVT == MVT::i16) {
       bool NeedsSignExt = IntrinsicID == Intrinsic::amdgcn_wave_reduce_min ||
-                          IntrinsicID == Intrinsic::amdgcn_wave_reduce_max;
+                          IntrinsicID == Intrinsic::amdgcn_wave_reduce_max ||
+                          IntrinsicID == Intrinsic::amdgcn_wave_reduce_add ||
+                          IntrinsicID == Intrinsic::amdgcn_wave_reduce_sub;
       unsigned ExtOpc = NeedsSignExt ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
       SDValue ExtendedSrc = DAG.getNode(ExtOpc, DL, MVT::i32, Op.getOperand(1));
       SDValue Strategy = Op.getOperand(2);

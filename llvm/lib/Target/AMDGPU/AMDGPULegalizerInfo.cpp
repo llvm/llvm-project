@@ -8122,13 +8122,17 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_wave_reduce_min:
   case Intrinsic::amdgcn_wave_reduce_umin:
   case Intrinsic::amdgcn_wave_reduce_max:
-  case Intrinsic::amdgcn_wave_reduce_umax: {
+  case Intrinsic::amdgcn_wave_reduce_umax:
+  case Intrinsic::amdgcn_wave_reduce_add:
+  case Intrinsic::amdgcn_wave_reduce_sub: {
     Register SrcReg = MI.getOperand(2).getReg();
     if (MRI.getType(SrcReg) != LLT::scalar(16))
       return true;
     Register DstReg = MI.getOperand(0).getReg();
     bool NeedsSignExt = IntrID == Intrinsic::amdgcn_wave_reduce_min ||
-                        IntrID == Intrinsic::amdgcn_wave_reduce_max;
+                        IntrID == Intrinsic::amdgcn_wave_reduce_max ||
+                        IntrID == Intrinsic::amdgcn_wave_reduce_add ||
+                        IntrID == Intrinsic::amdgcn_wave_reduce_sub;
     auto Ext = NeedsSignExt ? B.buildSExt(LLT::scalar(32), SrcReg)
                             : B.buildZExt(LLT::scalar(32), SrcReg);
     auto NewDst = MRI.createGenericVirtualRegister(LLT::scalar(32));
