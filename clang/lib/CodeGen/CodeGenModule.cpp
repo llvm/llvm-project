@@ -416,7 +416,10 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
   if (Target.hasIbm128Type())
     Check("__ibm128", llvm::Type::getPPC_FP128Ty(Context), Target.Ibm128Align);
 
-  Check("void*", llvm::PointerType::getUnqual(Context), Target.PointerAlign);
+  Check("void*",
+        llvm::PointerType::get(Context,
+                               Target.getTargetAddressSpace(LangAS::Default)),
+                               Target.PointerAlign);
 
   if (Target.vectorsAreElementAligned() != DL.vectorsAreElementAligned()) {
     llvm::errs() << "Datalayout for target " << Triple.str()

@@ -2566,9 +2566,9 @@ SPIRVInstructionSelector::buildConstGenericPtr(MachineInstr &I, Register SrcPtr,
   SPIRVTypeInst GenericPtrTy =
       GR.changePointerStorageClass(SrcPtrTy, SPIRV::StorageClass::Generic, I);
   Register Tmp = MRI->createVirtualRegister(&SPIRV::pIDRegClass);
-  MRI->setType(Tmp, LLT::pointer(storageClassToAddressSpace(
-                                     SPIRV::StorageClass::Generic),
-                                 GR.getPointerSize()));
+  unsigned AS = storageClassToAddressSpace(SPIRV::StorageClass::Generic,
+                                           STI.getTargetTriple());
+  MRI->setType(Tmp, LLT::pointer(AS, GR.getPointerSize(AS)));
   MachineFunction *MF = I.getParent()->getParent();
   GR.assignSPIRVTypeToVReg(GenericPtrTy, Tmp, *MF);
   MachineInstrBuilder MIB = buildSpecConstantOp(
@@ -2626,6 +2626,25 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
       buildSpecConstantOp(
           I, ResVReg, MIB->getOperand(0).getReg(), getUcharPtrTypeReg(I, DstSC),
           static_cast<uint32_t>(SPIRV::Opcode::GenericCastToPtr))
+          .constrainAllUses(TII, TRI, RBI);
+    } else if (STI.getTargetTriple().getVendor() == Triple::VendorType::AMD &&
+               isUSMStorageClass(SrcSC) && isUSMStorageClass(DstSC)) {
+      // For AMDGCN flavoured SPIR-V we repurpose DeviceOnlyINTEL and
+      // HostOnlyINTEL (which we do not use) to represent Buffer specific
+      // storage. Pointers to Buffer are essentially opaque handles, and have
+      // non trivial lowering, so we only care about retaining information about
+      // in their nature in SPIR-V, as they can only be handled properly during
+      // finalisation. Since they are inter-castable, and there is no valid
+      // SPIR-V cast between DeviceOnlyINTEL and HostOnlyIntel, we use a PtrToU
+      // followed by an UToPtr pattern to encode the cast, pattern that we match
+      // and retrieve at finalisation.
+      auto I64Ty = GR.getOrCreateSPIRVIntegerType(64, I, TII);
+      Register Tmp = createVirtualRegister(I64Ty, &GR, MRI, MRI->getMF());
+      auto MIB = buildSpecConstantOp(I, Tmp, SrcPtr, GR.getSPIRVTypeID(I64Ty),
+                                     SPIRV::Opcode::ConvertPtrToU);
+      MIB.constrainAllUses(TII, TRI, RBI);
+      buildSpecConstantOp(I, ResVReg, Tmp, getUcharPtrTypeReg(I, DstSC),
+                          SPIRV::Opcode::ConvertUToPtr)
           .constrainAllUses(TII, TRI, RBI);
     }
     return true;
@@ -6836,10 +6855,10 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
     // Create new register for the pointer type of alloca variable.
     Register PtrTyReg =
         MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
-    MIRBuilder.getMRI()->setType(
-        PtrTyReg,
-        LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::Function),
-                     GR.getPointerSize()));
+    unsigned AS = storageClassToAddressSpace(SPIRV::StorageClass::Function,
+                                             STI.getTargetTriple());
+    MIRBuilder.getMRI()->setType(PtrTyReg,
+                                 LLT::pointer(AS, GR.getPointerSize(AS)));
 
     // Assign SPIR-V type of the pointer type of the alloca variable to the
     // new register.
@@ -6953,10 +6972,10 @@ bool SPIRVInstructionSelector::loadBuiltinInputID(
   // Create new register for the input ID builtin variable.
   Register NewRegister =
       MIRBuilder.getMRI()->createVirtualRegister(GR.getRegClass(PtrType));
-  MIRBuilder.getMRI()->setType(
-      NewRegister,
-      LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::Input),
-                   GR.getPointerSize()));
+  unsigned AS = storageClassToAddressSpace(SPIRV::StorageClass::Input,
+                                           STI.getTargetTriple());
+  MIRBuilder.getMRI()->setType(NewRegister,
+                               LLT::pointer(AS, GR.getPointerSize(AS)));
   GR.assignSPIRVTypeToVReg(PtrType, NewRegister, MIRBuilder.getMF());
 
   // Build global variable with the necessary decorations for the input ID

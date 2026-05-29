@@ -33,7 +33,8 @@ static bool replacePushConstantAccesses(Module &M, SPIRVGlobalRegistry *GR) {
   bool Changed = false;
   for (GlobalVariable &GV : make_early_inc_range(M.globals())) {
     if (GV.getAddressSpace() !=
-        storageClassToAddressSpace(SPIRV::StorageClass::PushConstant))
+        storageClassToAddressSpace(SPIRV::StorageClass::PushConstant,
+                                   M.getTargetTriple()))
       continue;
 
     convertUsersOfConstantsToInstructions(

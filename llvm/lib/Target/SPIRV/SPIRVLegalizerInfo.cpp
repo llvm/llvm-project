@@ -14,6 +14,7 @@
 #include "SPIRV.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVSubtarget.h"
+#include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
@@ -38,7 +39,8 @@ LegalityPredicate typeOfExtendedScalars(unsigned TypeIdx, bool IsExtendedInts) {
   };
 }
 
-SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
+SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST,
+                                       const TargetMachine &TM) {
   using namespace TargetOpcode;
 
   this->ST = &ST;
@@ -81,23 +83,59 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   const LLT v2s8 = LLT::fixed_vector(2, 8);
   const LLT v2s1 = LLT::fixed_vector(2, 1);
 
-  const unsigned PSize = ST.getPointerSize();
-  const LLT p0 = LLT::pointer(0, PSize); // Function
-  const LLT p1 = LLT::pointer(1, PSize); // CrossWorkgroup
-  const LLT p2 = LLT::pointer(2, PSize); // UniformConstant
-  const LLT p3 = LLT::pointer(3, PSize); // Workgroup
-  const LLT p4 = LLT::pointer(4, PSize); // Generic
-  const LLT p5 =
-      LLT::pointer(5, PSize); // Input, SPV_INTEL_usm_storage_classes (Device)
-  const LLT p6 = LLT::pointer(6, PSize); // SPV_INTEL_usm_storage_classes (Host)
-  const LLT p7 = LLT::pointer(7, PSize); // Input
-  const LLT p8 = LLT::pointer(8, PSize); // Output
-  const LLT p9 =
-      LLT::pointer(9, PSize); // CodeSectionINTEL, SPV_INTEL_function_pointers
-  const LLT p10 = LLT::pointer(10, PSize); // Private
-  const LLT p11 = LLT::pointer(11, PSize); // StorageBuffer
-  const LLT p12 = LLT::pointer(12, PSize); // Uniform
-  const LLT p13 = LLT::pointer(13, PSize); // PushConstant
+  const Triple &TT = TM.getTargetTriple();
+
+  unsigned FunctionAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::Function, TT);
+  unsigned CrossWorkgroupAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::CrossWorkgroup, TT);
+  unsigned UniformConstantAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::UniformConstant, TT);
+  unsigned WorkgroupAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::Workgroup, TT);
+  unsigned GenericAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::Generic, TT);
+  unsigned DeviceOnlyINTELAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::DeviceOnlyINTEL, TT);
+  unsigned HostOnlyINTELAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::HostOnlyINTEL, TT);
+  unsigned InputAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::Input, TT);
+  unsigned OutputAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::Output, TT);
+  unsigned CodeSectionINTELAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::CodeSectionINTEL, TT);
+  unsigned PrivateAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::Private, TT);
+  unsigned StorageBufferAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::StorageBuffer, TT);
+  unsigned UniformAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::Uniform, TT);
+  unsigned PushConstantAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::PushConstant, TT);
+
+  const LLT p0 = LLT::pointer(FunctionAS, TM.getPointerSizeInBits(FunctionAS));
+  const LLT p1 = LLT::pointer(CrossWorkgroupAS,
+                              TM.getPointerSizeInBits(CrossWorkgroupAS));
+  const LLT p2 = LLT::pointer(UniformConstantAS,
+                              TM.getPointerSizeInBits(UniformConstantAS));
+  const LLT p3 = LLT::pointer(WorkgroupAS,
+                              TM.getPointerSizeInBits(WorkgroupAS));
+  const LLT p4 = LLT::pointer(GenericAS, TM.getPointerSizeInBits(GenericAS));
+    const LLT p5 = LLT::pointer(DeviceOnlyINTELAS,
+                                TM.getPointerSizeInBits(DeviceOnlyINTELAS));
+  const LLT p6 = LLT::pointer(HostOnlyINTELAS,
+                              TM.getPointerSizeInBits(HostOnlyINTELAS));
+  const LLT p7 = LLT::pointer(InputAS, TM.getPointerSizeInBits(InputAS));
+  const LLT p8 = LLT::pointer(OutputAS, TM.getPointerSizeInBits(OutputAS));
+  const LLT p9 = LLT::pointer(CodeSectionINTELAS,
+                              TM.getPointerSizeInBits(CodeSectionINTELAS));
+  const LLT p10 = LLT::pointer(PrivateAS, TM.getPointerSizeInBits(PrivateAS));
+  const LLT p11 = LLT::pointer(StorageBufferAS,
+                               TM.getPointerSizeInBits(StorageBufferAS));
+  const LLT p12 = LLT::pointer(UniformAS, TM.getPointerSizeInBits(UniformAS));
+  const LLT p13 = LLT::pointer(PushConstantAS,
+                               TM.getPointerSizeInBits(PushConstantAS));
 
   // TODO: remove copy-pasting here by using concatenation in some way.
   auto allPtrsScalarsAndVectors = {
@@ -385,6 +423,15 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
         return DstTy.isPointerVector() && SrcTy.isVector() &&
                !SrcTy.isPointer() &&
                DstTy.getNumElements() == SrcTy.getNumElements();
+      })
+      .legalIf(sameSize(0, 1))
+      .widenScalarIf(smallerThan(1, 0),
+                     [](const LegalityQuery &Query) {
+                       return std::pair(
+                           1, LLT::scalar(Query.Types[0].getSizeInBits()));
+                     })
+      .narrowScalarIf(largerThan(1, 0), [](const LegalityQuery &Query) {
+        return std::pair(1, LLT::scalar(Query.Types[0].getSizeInBits()));
       });
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalForCartesianProduct(allIntScalars, allPtrs)
@@ -396,6 +443,15 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
         return SrcTy.isPointerVector() && DstTy.isVector() &&
                !DstTy.isPointer() &&
                DstTy.getNumElements() == SrcTy.getNumElements();
+      })
+      .legalIf(sameSize(0, 1))
+      .widenScalarIf(smallerThan(0, 1),
+                     [](const LegalityQuery &Query) {
+                       return std::pair(
+                           0, LLT::scalar(Query.Types[1].getSizeInBits()));
+                     })
+      .narrowScalarIf(largerThan(0, 1), [](const LegalityQuery &Query) {
+        return std::pair(0, LLT::scalar(Query.Types[1].getSizeInBits()));
       });
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalForCartesianProduct(allPtrs, allIntScalars)

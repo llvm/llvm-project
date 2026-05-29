@@ -487,9 +487,14 @@ static std::string computeSPIRVDataLayout(const Triple &TT) {
   if (Arch == Triple::spirv)
     return "e-ve-i64:64-n8:16:32:64-G10";
   if (TT.getVendor() == Triple::VendorType::AMD &&
-      TT.getOS() == Triple::OSType::AMDHSA)
-    return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
-           "v512:512-v1024:1024-n32:64-S32-G1-P4-A0";
+      TT.getOS() == Triple::OSType::AMDHSA) {
+    auto DL = computeAMDDataLayout(TT);
+    DL.replace(DL.find("p:64:64"), 7, "p:32:32"); // AS0 is Function
+    DL.replace(DL.find("p2:32:32"), 8, "p2:64:64"); // AS2 is UniformConstant
+    DL.replace(DL.find("A5"), 2, "A0"); // AllocaAS is Function
+    DL.insert(DL.find_last_of('-') + 1, "P4-"); // ProgramAS is Generic
+    return DL;
+  }
   if (TT.getVendor() == Triple::VendorType::Intel)
     return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
            "v512:512-v1024:1024-n8:16:32:64-G1-P9-A0";

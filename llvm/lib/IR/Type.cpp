@@ -1088,6 +1088,10 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     return TargetTypeInfo(
         ArrayType::get(Type::getInt8Ty(C), Ty->getIntParameter(0)),
         TargetExtType::CanBeGlobal);
+  if (Name == "spirv.$TypedPointerType")
+    return TargetTypeInfo(PointerType::get(C, 4), TargetExtType::HasZeroInit,
+                          TargetExtType::CanBeGlobal, TargetExtType::CanBeLocal,
+                          TargetExtType::CanBeVectorElement);
   if (Name.starts_with("spirv."))
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
                           TargetExtType::CanBeGlobal,

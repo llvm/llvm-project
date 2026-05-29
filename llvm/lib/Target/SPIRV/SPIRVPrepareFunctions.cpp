@@ -38,6 +38,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
 #include <regex>
+#include <utility>
 
 using namespace llvm;
 
@@ -115,7 +116,8 @@ static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic,
   // cases we wrap the intrinsic in @spirv.llvm_memset_* function and expand the
   // intrinsic to a loop via expandMemSetAsLoop().
   if (auto *MSI = dyn_cast<MemSetInst>(Intrinsic))
-    if (isa<Constant>(MSI->getValue()) && isa<ConstantInt>(MSI->getLength()))
+    if (!MSI->isForceInlined() && isa<Constant>(MSI->getValue()) &&
+        isa<ConstantInt>(MSI->getLength()))
       return false; // It is handled later using OpCopyMemorySized.
 
   Module *M = Intrinsic->getModule();
@@ -450,10 +452,14 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
       if (!CF || !CF->isIntrinsic())
         continue;
       auto *II = cast<IntrinsicInst>(Call);
-      if (Intrinsic::isTargetIntrinsic(II->getIntrinsicID()) &&
-          II->getCalledOperand()->getName().starts_with("llvm.spv"))
+      unsigned IID = II->getIntrinsicID();
+      if (Intrinsic::isTargetIntrinsic(IID) &&
+          II->getCalledOperand()->getName().starts_with("llvm.spv")) {
+        if (IID == Intrinsic::spv_opaque_ptr_cast)
+          Changed |= lowerIntrinsicToFunction(II, TTI);
         continue;
-      switch (II->getIntrinsicID()) {
+      }
+      switch (IID) {
       case Intrinsic::memset:
       case Intrinsic::bswap:
         Changed |= lowerIntrinsicToFunction(II, TTI);
@@ -805,6 +811,64 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
   return true;
 }
 
+static inline bool isTargetSpecificASCast(unsigned SrcAS, unsigned DstAS,
+                                          const Triple &TT) {
+  static const unsigned GenericAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::Generic, TT);
+  static const unsigned BufferFatPointerAS = AMDGPUAS::BUFFER_FAT_POINTER;
+  static const unsigned BufferResourceAS = AMDGPUAS::BUFFER_RESOURCE;
+  static const unsigned UniformConstAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::UniformConstant, TT);
+
+  static const std::pair<unsigned, unsigned> Casts[] = {
+    {GenericAS, BufferFatPointerAS}, {GenericAS, BufferResourceAS},
+    {BufferFatPointerAS, GenericAS}, {BufferFatPointerAS, BufferResourceAS},
+    {BufferResourceAS, GenericAS}, {BufferResourceAS, BufferFatPointerAS},
+    {GenericAS, UniformConstAS}, {UniformConstAS, GenericAS}
+  };
+
+  return find(Casts, std::make_pair(SrcAS, DstAS));
+}
+
+static bool substituteInvalidAddrSpaceCasts(Function *F) {
+  // AMDGPU supports a superset of the AS casts allowed by SPIR-V, specifically
+  //   - casts to/from UniformConstant from/to Generic
+  //   - casts to/from Input from/to Output (these are actually buffer specific
+  //     ASes that we preserve)
+  //   - casts to/from Input or Output from/to Generic (see previous)
+  // We handle these by replacing the cast instruction with a stub function,
+  // which is subsequently handled during run time finalisation.
+  SmallVector<std::reference_wrapper<Instruction>> ToSubstitute;
+  copy_if(instructions(F), std::back_inserter(ToSubstitute), [F](auto &&I) {
+    if (!isa<AddrSpaceCastInst>(I))
+      return false;
+
+    auto &ASC = cast<AddrSpaceCastInst>(I);
+
+    return isTargetSpecificASCast(ASC.getSrcAddressSpace(),
+                                  ASC.getDestAddressSpace(),
+                                  F->getParent()->getTargetTriple());
+  });
+
+  if (ToSubstitute.empty())
+    return false;
+
+  IRBuilder<> B(F->getContext());
+  for_each(ToSubstitute, [&B](auto &&I) {
+    auto &ASC = I.get();
+
+    B.SetInsertPoint(&ASC);
+    CallInst *TASC = B.CreateIntrinsic(ASC.getType(),
+                                       Intrinsic::spv_opaque_ptr_cast,
+                                       {ASC.getOperand(0)});
+
+    ASC.replaceAllUsesWith(TASC);
+    ASC.eraseFromParent();
+  });
+
+  return true;
+}
+
 bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
   // Resolve the SPIR-V environment from module content before any
   // function-level processing. This must happen before legalization so that
@@ -814,8 +878,9 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
       ->resolveEnvFromModule(M);
 
   bool Changed = false;
-  if (M.functions().empty()) {
-    // If there are no functions, insert a service
+  if (M.functions().empty() ||
+      all_of(M, [](auto &&F) { return F.isDeclaration(); })) {
+    // If there are no defined functions, insert a service
     // function so that the global/constant tracking intrinsics
     // will be created. Without these intrinsics the generated SPIR-V
     // will be empty. The service function itself is not emitted.
@@ -830,6 +895,8 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
   Changed |= terminateBlocksAfterTrap(M, Intrinsic::ubsantrap);
 
   for (Function &F : M) {
+    if (M.getTargetTriple().getVendor() == llvm::Triple::AMD)
+      Changed |= substituteInvalidAddrSpaceCasts(&F);
     Changed |= substituteAbortKHRCalls(&F);
     Changed |= substituteIntrinsicCalls(&F);
     Changed |= sortBlocks(F);

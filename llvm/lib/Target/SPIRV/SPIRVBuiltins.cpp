@@ -510,10 +510,10 @@ static Register buildBuiltinVariableLoad(
         SPIRV::LinkageType::Import}) {
   Register NewRegister =
       MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::pIDRegClass);
-  MIRBuilder.getMRI()->setType(
-      NewRegister,
-      LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::Function),
-                   GR->getPointerSize()));
+  unsigned AS = storageClassToAddressSpace(
+      SPIRV::StorageClass::Function, GR->CurMF->getTarget().getTargetTriple());
+  MIRBuilder.getMRI()->setType(NewRegister,
+                               LLT::pointer(AS, GR->getPointerSize(AS)));
   SPIRVTypeInst PtrType = GR->getOrCreateSPIRVPointerType(
       VariableType, MIRBuilder, SPIRV::StorageClass::Input);
   GR->assignSPIRVTypeToVReg(PtrType, NewRegister, MIRBuilder.getMF());
@@ -1690,7 +1690,8 @@ static bool genWorkgroupQuery(const SPIRV::IncomingCall *Call,
                               uint64_t DefaultValue) {
   Register IndexRegister = Call->Arguments[0];
   const unsigned ResultWidth = Call->ReturnType->getOperand(1).getImm();
-  const unsigned PointerSize = GR->getPointerSize();
+  const unsigned PointerSize = GR->getPointerSize(storageClassToAddressSpace(
+      SPIRV::StorageClass::Generic, GR->CurMF->getTarget().getTargetTriple()));
   const SPIRVTypeInst PointerSizeType =
       GR->getOrCreateSPIRVIntegerType(PointerSize, MIRBuilder);
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
@@ -2828,7 +2829,9 @@ static bool buildNDRange(const SPIRV::IncomingCall *Call,
 
   // Each nd_range field is an array of <Dimension> integers matching the
   // address model width (32 or 64 bits).
-  const unsigned AddressModelBits = GR->getPointerSize();
+  const unsigned AddressModelBits = GR->getPointerSize(
+      storageClassToAddressSpace(SPIRV::StorageClass::Generic,
+                                 GR->CurMF->getTarget().getTargetTriple()));
   assert(AddressModelBits == 64 || AddressModelBits == 32);
 
   // The dimension is encoded in the function name as "ndrange_XD" where X is
@@ -2929,7 +2932,8 @@ static SPIRVTypeInst
 getOrCreateSPIRVDeviceEventPointer(MachineIRBuilder &MIRBuilder,
                                    SPIRVGlobalRegistry *GR) {
   LLVMContext &Context = MIRBuilder.getMF().getFunction().getContext();
-  unsigned SC1 = storageClassToAddressSpace(SPIRV::StorageClass::Generic);
+  unsigned SC1 = storageClassToAddressSpace(
+      SPIRV::StorageClass::Generic, GR->CurMF->getTarget().getTargetTriple());
   Type *PtrType = PointerType::get(Context, SC1);
   return GR->getOrCreateSPIRVType(PtrType, MIRBuilder,
                                   SPIRV::AccessQualifier::ReadWrite, true);
@@ -2960,8 +2964,9 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
     assert(LocalSizeTy && "Local size type is expected");
     const uint64_t LocalSizeNum =
         cast<ArrayType>(LocalSizeTy)->getNumElements();
-    unsigned SC = storageClassToAddressSpace(SPIRV::StorageClass::Generic);
-    const LLT LLType = LLT::pointer(SC, GR->getPointerSize());
+    unsigned SC = storageClassToAddressSpace(
+        SPIRV::StorageClass::Generic, GR->CurMF->getTarget().getTargetTriple());
+    const LLT LLType = LLT::pointer(SC, GR->getPointerSize(SC));
     const SPIRVTypeInst PointerSizeTy = GR->getOrCreateSPIRVPointerType(
         Int32Ty, MIRBuilder, SPIRV::StorageClass::Function);
     for (unsigned I = 0; I < LocalSizeNum; ++I) {

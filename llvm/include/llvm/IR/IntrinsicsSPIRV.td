@@ -356,6 +356,11 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
   def int_spv_generic_cast_to_ptr_explicit
     : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [generic_ptr_ty],
        [IntrNoMem, NoUndef<RetIndex>]>;
+  // Encode SPIR-V invalid but potentially target valid casts via intrinsic that
+  // always gets lowered to a function.
+  def int_spv_opaque_ptr_cast
+    : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty],
+                            [IntrNoMem, NoUndef<RetIndex>]>;
 
   def int_spv_unpackhalf2x16 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_i32_ty], [IntrNoMem]>;
   def int_spv_packhalf2x16 : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty], [IntrNoMem]>;

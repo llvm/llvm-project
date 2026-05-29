@@ -20,6 +20,7 @@ namespace llvm {
 
 class LLVMContext;
 class SPIRVSubtarget;
+class SPIRVTargetMachine;
 
 // This class provides the information for legalizing SPIR-V instructions.
 class SPIRVLegalizerInfo : public LegalizerInfo {
@@ -32,7 +33,7 @@ public:
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;
 
-  SPIRVLegalizerInfo(const SPIRVSubtarget &ST);
+  SPIRVLegalizerInfo(const SPIRVSubtarget &ST, const TargetMachine &TM);
 
 private:
   bool legalizeIsFPClass(LegalizerHelper &Helper, MachineInstr &MI,

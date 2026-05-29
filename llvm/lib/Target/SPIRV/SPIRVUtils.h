@@ -247,7 +247,8 @@ constexpr bool isGenericCastablePtr(SPIRV::StorageClass::StorageClass SC) {
 // TODO: maybe the following two functions should be handled in the subtarget
 // to allow for different OpenCL vs Vulkan handling.
 constexpr unsigned
-storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
+storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC,
+                           const Triple& TT) {
   switch (SC) {
   case SPIRV::StorageClass::Function:
     return 0;
@@ -260,8 +261,12 @@ storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
   case SPIRV::StorageClass::Generic:
     return 4;
   case SPIRV::StorageClass::DeviceOnlyINTEL:
+    if (TT.getVendor() == Triple::VendorType::AMD)
+      return AMDGPUAS::BUFFER_FAT_POINTER;
     return 5;
   case SPIRV::StorageClass::HostOnlyINTEL:
+    if (TT.getVendor() == Triple::VendorType::AMD)
+      return AMDGPUAS::BUFFER_RESOURCE;
     return 6;
   case SPIRV::StorageClass::Input:
     return 7;

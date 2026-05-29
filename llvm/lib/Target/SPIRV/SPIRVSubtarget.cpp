@@ -54,7 +54,9 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const SPIRVTargetMachine &TM)
     : SPIRVGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS),
-      PointerSize(TM.getPointerSizeInBits(/* AS= */ 0)),
+      PointerSize(TM.getPointerSizeInBits(
+          /* AS= */ storageClassToAddressSpace(SPIRV::StorageClass::Generic,
+                                               TM.getTargetTriple()))),
       InstrInfo(initSubtargetDependencies(CPU, FS)), FrameLowering(*this),
       TLInfo(TM, *this), TargetTriple(TT) {
   switch (TT.getSubArch()) {
@@ -112,7 +114,7 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   GR = std::make_unique<SPIRVGlobalRegistry>(TM.createDataLayout());
   CallLoweringInfo = std::make_unique<SPIRVCallLowering>(TLInfo, GR.get());
   InlineAsmInfo = std::make_unique<SPIRVInlineAsmLowering>(TLInfo);
-  Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
+  Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this, TM);
   RegBankInfo = std::make_unique<SPIRVRegisterBankInfo>();
   InstSelector.reset(createSPIRVInstructionSelector(TM, *this, *RegBankInfo));
 }
@@ -189,7 +191,8 @@ void SPIRVSubtarget::setEnv(SPIRVEnvType E) {
 
   // Reinitialize Env-dependent state aka ExtInstSet and legalizer info.
   initAvailableExtInstSets();
-  Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
+  Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this,
+                                                   TLInfo.getTargetMachine());
 }
 
 void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {

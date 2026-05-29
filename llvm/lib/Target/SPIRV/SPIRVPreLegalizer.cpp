@@ -366,10 +366,11 @@ static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
       if (SpvType) {
         // check if the address space needs correction
         LLT RegType = MRI.getType(Reg);
+        const Triple &TT = MI->getMF()->getTarget().getTargetTriple();
         if (SpvType->getOpcode() == SPIRV::OpTypePointer &&
             RegType.isPointer() &&
-            storageClassToAddressSpace(GR->getPointerStorageClass(SpvType)) !=
-                RegType.getAddressSpace()) {
+            storageClassToAddressSpace(GR->getPointerStorageClass(SpvType),
+                                       TT) != RegType.getAddressSpace()) {
           const SPIRVSubtarget &ST =
               MI->getParent()->getParent()->getSubtarget<SPIRVSubtarget>();
           auto TSC = addressSpaceToStorageClass(RegType.getAddressSpace(), ST);
