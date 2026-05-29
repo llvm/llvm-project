@@ -12341,6 +12341,8 @@ def err_omp_single_copyprivate_with_nowait : Error<
   "the 'copyprivate' clause must not be used with the 'nowait' clause">;
 def err_omp_nowait_clause_without_depend: Error<
   "directive '#pragma omp taskwait' cannot use 'nowait' clause without 'depend' clause">;
+def err_omp_taskgraph_taskwait_without_depend: Error<
+  "directive '#pragma omp taskwait' within '#pragma omp taskgraph' must use 'depend' clause to be task-generating">;
 def note_omp_nowait_clause_here : Note<
   "'nowait' clause is here">;
 def err_omp_single_decl_in_declare_simd_variant : Error<
@@ -12644,6 +12646,9 @@ def err_omp_one_defaultmap_each_category: Error<
 def err_omp_lastprivate_conditional_non_scalar : Error<
   "expected list item of scalar type in 'lastprivate' clause with 'conditional' modifier"
   >;
+def err_omp_firstprivate_saved_wrong_directive : Error<
+  "'saved' modifier on 'firstprivate' clause is only allowed on a 'task', "
+  "'taskloop', or 'target' construct">;
 def err_omp_flush_order_clause_and_list : Error<
   "'flush' directive with memory order clause '%0' cannot have the list">;
 def note_omp_flush_order_clause_here : Note<
