@@ -119,22 +119,31 @@ std::string TryVersion(unsigned version) {
   return "try -fopenmp-version=" + std::to_string(version);
 }
 
-const Symbol *GetObjectSymbol(const parser::OmpObject &object) {
+const Symbol *GetObjectSymbol(const parser::OmpObject &object, bool ultimate) {
   // Some symbols may be missing if the resolution failed, e.g. when an
   // undeclared name is used with implicit none.
   if (auto *name{std::get_if<parser::Name>(&object.u)}) {
-    return name->symbol ? &name->symbol->GetUltimate() : nullptr;
+    if (ultimate) {
+      return name->symbol ? &name->symbol->GetUltimate() : nullptr;
+    } else {
+      return name->symbol;
+    }
   } else if (auto *desg{std::get_if<parser::Designator>(&object.u)}) {
-    auto &last{GetLastName(*desg)};
-    return last.symbol ? &GetLastName(*desg).symbol->GetUltimate() : nullptr;
+    const parser::Name &last{GetLastName(*desg)};
+    if (ultimate) {
+      return last.symbol ? &last.symbol->GetUltimate() : nullptr;
+    } else {
+      return last.symbol;
+    }
   }
   return nullptr;
 }
 
-const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument) {
+const Symbol *GetArgumentSymbol(
+    const parser::OmpArgument &argument, bool ultimate) {
   if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
     if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
-      return GetObjectSymbol(*object);
+      return GetObjectSymbol(*object, ultimate);
     }
   }
   return nullptr;
@@ -201,7 +210,8 @@ bool IsVarOrFunctionRef(const MaybeExpr &expr) {
 }
 
 bool IsWholeAssumedSizeArray(const parser::OmpObject &object) {
-  if (auto *sym{GetObjectSymbol(object)}; sym && IsAssumedSizeArray(*sym)) {
+  if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)};
+      sym && IsAssumedSizeArray(*sym)) {
     return !GetArrayElementFromObj(object);
   }
   return false;
