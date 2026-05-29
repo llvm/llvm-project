@@ -3241,6 +3241,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_partial:
   case OMPC_align:
   case OMPC_message:
+  case OMPC_graph_id:
   case OMPC_ompx_dyn_cgroup_mem:
   case OMPC_dyn_groupprivate:
   case OMPC_transparent:
@@ -3390,6 +3391,21 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
       Clause = ParseOpenMPSingleExprClause(CKind, WrongDirective);
     else
       Clause = ParseOpenMPClause(CKind, WrongDirective);
+    break;
+  case OMPC_graph_reset:
+  case OMPC_replayable:
+    if (!FirstClause) {
+      Diag(Tok, diag::err_omp_more_one_clause)
+          << getOpenMPDirectiveName(DKind, OMPVersion)
+          << getOpenMPClauseName(CKind) << 0;
+      ErrorFound = true;
+    }
+
+    if (PP.LookAhead(/*N=*/0).is(tok::l_paren)) {
+      Clause = ParseOpenMPSingleExprClause(CKind, WrongDirective);
+    } else {
+      Clause = ParseOpenMPClause(CKind, WrongDirective);
+    }
     break;
   case OMPC_self_maps:
     // OpenMP [6.0, self_maps clause]
@@ -4922,6 +4938,19 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         Diag(Data.ExtraModifierLoc, diag::err_omp_deprecate_old_syntax)
             << "linear-modifier(list)" << getOpenMPClauseName(Kind)
             << "linear(list: [linear-modifier,] step(step-size))";
+    }
+  } else if (Kind == OMPC_firstprivate) {
+    // Try to parse modifier if any.
+    Data.ExtraModifier = OMPC_FIRSTPRIVATE_unknown;
+    // The 'saved' modifier is OpenMP 6.0+ only.
+    if (getLangOpts().OpenMP >= 60 && Tok.is(tok::identifier) &&
+        PP.LookAhead(0).is(tok::colon)) {
+      Data.ExtraModifier =
+          getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok), getLangOpts());
+      Data.ExtraModifierLoc = Tok.getLocation();
+      ConsumeToken();
+      assert(Tok.is(tok::colon) && "Expected colon.");
+      Data.ColonLoc = ConsumeToken();
     }
   } else if (Kind == OMPC_lastprivate) {
     // Try to parse modifier if any.

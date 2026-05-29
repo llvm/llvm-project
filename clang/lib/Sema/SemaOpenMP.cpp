@@ -4527,6 +4527,14 @@ getUnknownRegionParams(Sema &SemaRef) {
 }
 
 static SmallVector<SemaOpenMP::CapturedParamNameType>
+getTaskgraphRegionParams(Sema &SemaRef) {
+  SmallVector<SemaOpenMP::CapturedParamNameType> Params{
+      std::make_pair(StringRef(), QualType()) // __context with shared vars
+  };
+  return Params;
+}
+
+static SmallVector<SemaOpenMP::CapturedParamNameType>
 getTaskloopRegionParams(Sema &SemaRef) {
   ASTContext &Context = SemaRef.getASTContext();
   QualType KmpInt32Ty =
@@ -4598,6 +4606,10 @@ static void processCapturedRegions(Sema &SemaRef, OpenMPDirectiveKind DKind,
       // Mark this captured region as inlined, because we don't use outlined
       // function directly.
       MarkAsInlined(SemaRef.getCurCapturedRegion());
+      break;
+    case OMPD_taskgraph:
+      SemaRef.ActOnCapturedRegionStart(
+          Loc, CurScope, CR_OpenMP, getTaskgraphRegionParams(SemaRef), Level);
       break;
     case OMPD_target:
       SemaRef.ActOnCapturedRegionStart(Loc, CurScope, CR_OpenMP,
@@ -6366,8 +6378,10 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     }
     if (!ImpInfo.Firstprivates.empty()) {
       if (OMPClause *Implicit = ActOnOpenMPFirstprivateClause(
-              ImpInfo.Firstprivates.getArrayRef(), SourceLocation(),
-              SourceLocation(), SourceLocation())) {
+              ImpInfo.Firstprivates.getArrayRef(), OMPC_FIRSTPRIVATE_unknown,
+              /*FPKindLoc=*/SourceLocation(), /*ColonLoc=*/SourceLocation(),
+              /*StartLoc=*/SourceLocation(), /*LParenLoc=*/SourceLocation(),
+              /*EndLoc=*/SourceLocation())) {
         ClausesWithImplicit.push_back(Implicit);
         ErrorFound = cast<OMPFirstprivateClause>(Implicit)->varlist_size() !=
                      ImpInfo.Firstprivates.size();
@@ -6564,6 +6578,12 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     assert(AStmt == nullptr &&
            "No associated statement allowed for 'omp taskwait' directive");
     Res = ActOnOpenMPTaskwaitDirective(ClausesWithImplicit, StartLoc, EndLoc);
+    break;
+  case OMPD_taskgraph:
+    assert(AStmt &&
+           "Associated statement required for 'omp taskgraph' directive");
+    Res = ActOnOpenMPTaskgraphDirective(ClausesWithImplicit, AStmt, StartLoc,
+                                        EndLoc);
     break;
   case OMPD_taskgroup:
     Res = ActOnOpenMPTaskgroupDirective(ClausesWithImplicit, AStmt, StartLoc,
@@ -6816,6 +6836,8 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
       case OMPC_final:
       case OMPC_priority:
       case OMPC_novariants:
+      case OMPC_graph_id:
+      case OMPC_graph_reset:
       case OMPC_nocontext:
         // Do not analyze if no parent parallel directive.
         if (isOpenMPParallelDirective(Kind))
@@ -11448,9 +11470,31 @@ SemaOpenMP::ActOnOpenMPTaskwaitDirective(ArrayRef<OMPClause *> Clauses,
     Diag(StartLoc, diag::err_omp_nowait_clause_without_depend);
     return StmtError();
   }
+  if (DSAStack->getParentDirective() == OMPD_taskgraph && !HasDependC) {
+    Diag(StartLoc, diag::err_omp_taskgraph_taskwait_without_depend);
+    return StmtError();
+  }
 
   return OMPTaskwaitDirective::Create(getASTContext(), StartLoc, EndLoc,
                                       Clauses);
+}
+
+StmtResult
+SemaOpenMP::ActOnOpenMPTaskgraphDirective(ArrayRef<OMPClause *> Clauses,
+                                          Stmt *AStmt, SourceLocation StartLoc,
+                                          SourceLocation EndLoc) {
+  if (!getLangOpts().OpenMP || getLangOpts().OpenMP < 60) {
+    Diag(StartLoc, diag::err_omp_unexpected_directive)
+        << 1 << getOpenMPDirectiveName(OMPD_taskgraph, getLangOpts().OpenMP);
+    return StmtError();
+  }
+  if (!AStmt)
+    return StmtError();
+
+  assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
+
+  return OMPTaskgraphDirective::Create(getASTContext(), StartLoc, EndLoc,
+                                       Clauses, AStmt);
 }
 
 StmtResult
@@ -16858,6 +16902,15 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
   case OMPC_detach:
     Res = ActOnOpenMPDetachClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
+  case OMPC_graph_id:
+    Res = ActOnOpenMPGraphIdClause(Expr, StartLoc, LParenLoc, EndLoc);
+    break;
+  case OMPC_graph_reset:
+    Res = ActOnOpenMPGraphResetClause(Expr, StartLoc, LParenLoc, EndLoc);
+    break;
+  case OMPC_replayable:
+    Res = ActOnOpenMPReplayableClause(StartLoc, EndLoc, LParenLoc, Expr);
+    break;
   case OMPC_novariants:
     Res = ActOnOpenMPNovariantsClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
@@ -17646,6 +17699,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPSimpleClause(
   case OMPC_match:
   case OMPC_nontemporal:
   case OMPC_destroy:
+  case OMPC_graph_id:
+  case OMPC_graph_reset:
   case OMPC_novariants:
   case OMPC_nocontext:
   case OMPC_detach:
@@ -18389,6 +18444,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_severity:
   case OMPC_message:
   case OMPC_destroy:
+  case OMPC_graph_id:
+  case OMPC_graph_reset:
   case OMPC_novariants:
   case OMPC_nocontext:
   case OMPC_detach:
@@ -18594,6 +18651,11 @@ OMPClause *SemaOpenMP::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_self_maps:
     Res = ActOnOpenMPSelfMapsClause(StartLoc, EndLoc);
     break;
+  case OMPC_replayable:
+    Res = ActOnOpenMPReplayableClause(StartLoc, EndLoc,
+                                      /*LParenLoc=*/SourceLocation(),
+                                      /*Condition=*/nullptr);
+    break;
   case OMPC_destroy:
     Res = ActOnOpenMPDestroyClause(/*InteropVar=*/nullptr, StartLoc,
                                    /*LParenLoc=*/SourceLocation(),
@@ -18607,6 +18669,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPClause(OpenMPClauseKind Kind,
     break;
   case OMPC_ompx_bare:
     Res = ActOnOpenMPXBareClause(StartLoc, EndLoc);
+    break;
+  case OMPC_graph_reset:
+    Res = ActOnOpenMPGraphResetClause(/*Condition=*/nullptr, StartLoc,
+                                      SourceLocation(), EndLoc);
     break;
   case OMPC_if:
   case OMPC_final:
@@ -18662,6 +18728,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_at:
   case OMPC_severity:
   case OMPC_message:
+  case OMPC_graph_id:
   case OMPC_novariants:
   case OMPC_nocontext:
   case OMPC_detach:
@@ -18824,6 +18891,26 @@ SemaOpenMP::ActOnOpenMPDynamicAllocatorsClause(SourceLocation StartLoc,
 OMPClause *SemaOpenMP::ActOnOpenMPSelfMapsClause(SourceLocation StartLoc,
                                                  SourceLocation EndLoc) {
   return new (getASTContext()) OMPSelfMapsClause(StartLoc, EndLoc);
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPReplayableClause(SourceLocation StartLoc,
+                                                   SourceLocation EndLoc,
+                                                   SourceLocation LParenLoc,
+                                                   Expr *Condition) {
+  Expr *ValExpr = Condition;
+  if (Condition && LParenLoc.isValid()) {
+    if (!Condition->isValueDependent() && !Condition->isTypeDependent() &&
+        !Condition->isInstantiationDependent() &&
+        !Condition->containsUnexpandedParameterPack()) {
+      ExprResult Val = SemaRef.CheckBooleanCondition(StartLoc, Condition);
+      if (Val.isInvalid())
+        return nullptr;
+
+      ValExpr = Val.get();
+    }
+  }
+  return new (getASTContext())
+      OMPReplayableClause(ValExpr, StartLoc, LParenLoc, EndLoc);
 }
 
 StmtResult
@@ -19019,6 +19106,47 @@ OMPClause *SemaOpenMP::ActOnOpenMPDestroyClause(Expr *InteropVar,
       OMPDestroyClause(InteropVar, StartLoc, LParenLoc, VarLoc, EndLoc);
 }
 
+OMPClause *SemaOpenMP::ActOnOpenMPGraphIdClause(Expr *Id,
+                                                SourceLocation StartLoc,
+                                                SourceLocation LParenLoc,
+                                                SourceLocation EndLoc) {
+  Expr *ValExpr = Id;
+
+  if (!Id->isValueDependent() && !Id->isTypeDependent() &&
+      !Id->isInstantiationDependent() &&
+      !Id->containsUnexpandedParameterPack()) {
+    ExprResult Val = PerformOpenMPImplicitIntegerConversion(LParenLoc, Id);
+    if (Val.isInvalid())
+      return nullptr;
+
+    ValExpr = Val.get();
+  }
+
+  return new (getASTContext())
+      OMPGraphIdClause(ValExpr, StartLoc, LParenLoc, EndLoc);
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPGraphResetClause(Expr *Condition,
+                                                   SourceLocation StartLoc,
+                                                   SourceLocation LParenLoc,
+                                                   SourceLocation EndLoc) {
+  Expr *ValExpr = Condition;
+  if (Condition && LParenLoc.isValid()) {
+    if (!Condition->isValueDependent() && !Condition->isTypeDependent() &&
+        !Condition->isInstantiationDependent() &&
+        !Condition->containsUnexpandedParameterPack()) {
+      ExprResult Val = SemaRef.CheckBooleanCondition(StartLoc, Condition);
+      if (Val.isInvalid())
+        return nullptr;
+
+      ValExpr = Val.get();
+    }
+  }
+
+  return new (getASTContext())
+      OMPGraphResetClause(ValExpr, StartLoc, LParenLoc, EndLoc);
+}
+
 OMPClause *SemaOpenMP::ActOnOpenMPNovariantsClause(Expr *Condition,
                                                    SourceLocation StartLoc,
                                                    SourceLocation LParenLoc,
@@ -19122,7 +19250,11 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
     Res = ActOnOpenMPPrivateClause(VarList, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_firstprivate:
-    Res = ActOnOpenMPFirstprivateClause(VarList, StartLoc, LParenLoc, EndLoc);
+    assert(0 <= ExtraModifier && ExtraModifier <= OMPC_FIRSTPRIVATE_unknown &&
+           "Unexpected firstprivate modifier.");
+    Res = ActOnOpenMPFirstprivateClause(
+        VarList, static_cast<OpenMPFirstprivateModifier>(ExtraModifier),
+        ExtraModifierLoc, ColonLoc, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_lastprivate:
     assert(0 <= ExtraModifier && ExtraModifier <= OMPC_LASTPRIVATE_unknown &&
@@ -19319,6 +19451,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
   case OMPC_severity:
   case OMPC_message:
   case OMPC_destroy:
+  case OMPC_graph_id:
+  case OMPC_graph_reset:
   case OMPC_novariants:
   case OMPC_nocontext:
   case OMPC_detach:
@@ -19501,10 +19635,33 @@ OMPClause *SemaOpenMP::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
                                   Vars, PrivateCopies);
 }
 
-OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
-                                                     SourceLocation StartLoc,
-                                                     SourceLocation LParenLoc,
-                                                     SourceLocation EndLoc) {
+OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(
+    ArrayRef<Expr *> VarList, OpenMPFirstprivateModifier FPKind,
+    SourceLocation FPKindLoc, SourceLocation ColonLoc, SourceLocation StartLoc,
+    SourceLocation LParenLoc, SourceLocation EndLoc) {
+  if (FPKind == OMPC_FIRSTPRIVATE_unknown && FPKindLoc.isValid()) {
+    assert(ColonLoc.isValid() && "Colon location must be valid.");
+    Diag(FPKindLoc, diag::err_omp_unexpected_clause_value)
+        << getListOfPossibleValues(OMPC_firstprivate, /*First=*/0,
+                                   /*Last=*/OMPC_FIRSTPRIVATE_unknown)
+        << getOpenMPClauseNameForDiag(OMPC_firstprivate);
+    return nullptr;
+  }
+
+  // OpenMP 6.0 [7.2]: the 'saved' modifier has effect only on a clause
+  // that appears on a replayable construct.  Per [14.6] the directives
+  // that admit a 'replayable' clause and that also admit 'firstprivate'
+  // are 'task', 'taskloop', and 'target' (the other replayable-eligible
+  // directives -- 'target_enter_data' etc. -- do not admit
+  // 'firstprivate' at all).  Reject 'saved' on any other directive, as
+  // it can never become a replayable construct.
+  OpenMPDirectiveKind CurDir = DSAStack->getCurrentDirective();
+  if (FPKind == OMPC_FIRSTPRIVATE_saved && !isOpenMPTaskingDirective(CurDir) &&
+      !isOpenMPTargetExecutionDirective(CurDir)) {
+    Diag(FPKindLoc, diag::err_omp_firstprivate_saved_wrong_directive);
+    return nullptr;
+  }
+
   SmallVector<Expr *, 8> Vars;
   SmallVector<Expr *, 8> PrivateCopies;
   SmallVector<Expr *, 8> Inits;
@@ -19790,6 +19947,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
 
   return OMPFirstprivateClause::Create(
       getASTContext(), StartLoc, LParenLoc, EndLoc, Vars, PrivateCopies, Inits,
+      FPKind, FPKindLoc, ColonLoc,
       buildPreInits(getASTContext(), ExprCaptures));
 }
 

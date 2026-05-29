@@ -161,6 +161,13 @@ enum OpenMPDeviceType {
   OMPC_DEVICE_TYPE_unknown
 };
 
+/// OpenMP 'firstprivate' clause modifier.
+enum OpenMPFirstprivateModifier {
+#define OPENMP_FIRSTPRIVATE_KIND(Name) OMPC_FIRSTPRIVATE_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_FIRSTPRIVATE_unknown,
+};
+
 /// OpenMP 'lastprivate' clause modifier.
 enum OpenMPLastprivateModifier {
 #define OPENMP_LASTPRIVATE_KIND(Name) OMPC_LASTPRIVATE_##Name,

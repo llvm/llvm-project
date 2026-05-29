@@ -3287,6 +3287,9 @@ DEF_TRAVERSE_STMT(OMPBarrierDirective,
 DEF_TRAVERSE_STMT(OMPTaskwaitDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPTaskgraphDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 DEF_TRAVERSE_STMT(OMPTaskgroupDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
@@ -3666,6 +3669,13 @@ bool RecursiveASTVisitor<Derived>::VisitOMPOrderedClause(OMPOrderedClause *C) {
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPNowaitClause(OMPNowaitClause *C) {
+  TRY_TO(TraverseStmt(C->getCondition()));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPReplayableClause(
+    OMPReplayableClause *C) {
   TRY_TO(TraverseStmt(C->getCondition()));
   return true;
 }
@@ -4159,6 +4169,19 @@ template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPIsDevicePtrClause(
     OMPIsDevicePtrClause *C) {
   TRY_TO(VisitOMPClauseList(C));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPGraphIdClause(OMPGraphIdClause *C) {
+  TRY_TO(TraverseStmt(C->getId()));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPGraphResetClause(
+    OMPGraphResetClause *C) {
+  TRY_TO(TraverseStmt(C->getCondition()));
   return true;
 }
 
