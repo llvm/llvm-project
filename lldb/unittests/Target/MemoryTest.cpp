@@ -10,8 +10,10 @@
 #include "Plugins/Platform/MacOSX/PlatformMacOSX.h"
 #include "Plugins/Platform/MacOSX/PlatformRemoteMacOSX.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -23,17 +25,56 @@ using namespace lldb_private;
 using namespace lldb;
 
 namespace {
+class MockABI : public ABI {
+public:
+  // The only relevant method of this ABI:
+  lldb::addr_t FixAnyAddress(lldb::addr_t pc) override {
+    return pc & 0xf0ffffffffffffffULL;
+  }
+
+  explicit MockABI(ProcessSP process_sp)
+      : ABI(std::move(process_sp), std::make_unique<llvm::MCRegisterInfo>()) {}
+  static ABISP CreateInstance(ProcessSP process_sp, const ArchSpec &) {
+    return std::make_shared<MockABI>(std::move(process_sp));
+  }
+  llvm::StringRef GetPluginName() override { return "mock"; }
+  size_t GetRedZoneSize() const override { return 0; }
+  bool PrepareTrivialCall(Thread &, addr_t, addr_t, addr_t,
+                          llvm::ArrayRef<addr_t>) const override {
+    return false;
+  }
+  bool GetArgumentValues(Thread &, ValueList &) const override { return false; }
+  Status SetReturnValueObject(StackFrameSP &, ValueObjectSP &) override {
+    return {};
+  }
+  UnwindPlanSP CreateFunctionEntryUnwindPlan() override { return nullptr; }
+  UnwindPlanSP CreateDefaultUnwindPlan() override { return nullptr; }
+  bool RegisterIsVolatile(const RegisterInfo *) override { return false; }
+  bool CallFrameAddressIsValid(addr_t) override { return false; }
+  bool CodeAddressIsValid(addr_t) override { return false; }
+  void
+  AugmentRegisterInfo(std::vector<DynamicRegisterInfo::Register> &) override {}
+
+protected:
+  ValueObjectSP GetReturnValueObjectImpl(Thread &,
+                                         CompilerType &) const override {
+    return nullptr;
+  }
+};
+
 class MemoryTest : public ::testing::Test {
 public:
   void SetUp() override {
     FileSystem::Initialize();
     HostInfo::Initialize();
     PlatformMacOSX::Initialize();
+    PluginManager::RegisterPlugin("mock", "mock ABI", MockABI::CreateInstance);
   }
   void TearDown() override {
     PlatformMacOSX::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();
+    PluginManager::UnregisterPlugin(MockABI::CreateInstance);
   }
 };
 
@@ -295,7 +336,7 @@ TEST_F(MemoryTest, TestReadInteger) {
 }
 
 /// A process class that, when asked to read memory from some address X, returns
-/// the least significant byte of X.
+/// the most or least significant byte of X, depending on how it is configured.
 class DummyReaderProcess : public Process {
 public:
   // If true, `DoReadMemory` will not return all requested bytes.
@@ -615,4 +656,49 @@ TEST_F(MemoryTest, TestReadUnsignedIntegersFromMemory) {
       EXPECT_EQ(*maybe_int, expected_result);
     }
   }
+}
+
+// A process that, when asked to read memory from address X, returns the top
+// byte of X.
+class DummyMSBReaderProcess : public Process {
+public:
+  // Only call this method with exactly one range.
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+  DoReadMemoryRanges(llvm::ArrayRef<Range<addr_t, size_t>> ranges,
+                     llvm::MutableArrayRef<uint8_t> buffer) override {
+    buffer[0] = static_cast<uint8_t>(ranges[0].GetRangeBase() >> 56);
+    return {{buffer.take_front(1)}};
+  }
+  // Boilerplate, nothing interesting below.
+  DummyMSBReaderProcess(TargetSP target_sp, ListenerSP listener_sp)
+      : Process(target_sp, listener_sp) {}
+  bool CanDebug(TargetSP, bool) override { return true; }
+  Status DoDestroy() override { return {}; }
+  void RefreshStateAfterStop() override {}
+  bool DoUpdateThreadList(ThreadList &, ThreadList &) override { return false; }
+  llvm::StringRef GetPluginName() override { return "Dummy"; }
+  size_t DoReadMemory(addr_t, void *, size_t, Status &) override {
+    llvm_unreachable("don't call this");
+  }
+};
+
+TEST_F(MemoryTest, TestReadMemoryRangesClearMetadata) {
+  ArchSpec arch("x86_64-apple-macosx-");
+
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process_sp =
+      std::make_shared<DummyMSBReaderProcess>(target_sp, listener_sp);
+
+  llvm::SmallVector<uint8_t, 0> buffer(1024, 0);
+  llvm::SmallVector<Range<addr_t, size_t>> ranges = {{0xff0123456789abcd, 1}};
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results =
+      process_sp->ReadMemoryRanges(ranges, buffer);
+  ASSERT_EQ(read_results.size(), 1ull);
+  ASSERT_EQ(read_results[0].size(), 1ull);
+  ASSERT_EQ(read_results[0][0], 0xf0); // The ABI masks with 0xf0.
 }
