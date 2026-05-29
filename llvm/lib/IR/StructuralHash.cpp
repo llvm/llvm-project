@@ -26,6 +26,7 @@ class StructuralHashImpl {
   stable_hash Hash = 4;
 
   bool DetailedHash;
+  bool CollectDetails;
 
   // This random value acts as a block header, as otherwise the partition of
   // opcodes into BBs wouldn't affect the hash, only the order of the opcodes.
@@ -42,6 +43,7 @@ class StructuralHashImpl {
   /// A mapping from pairs of instruction indices and operand indices
   /// to the hashes of the operands.
   std::unique_ptr<IndexOperandHashMapType> IndexOperandHashMap = nullptr;
+  FunctionStructuralHashInfo Details;
 
   /// Assign a unique ID to each Value in the order they are first seen.
   DenseMap<const Value *, int> ValueToId;
@@ -57,8 +59,10 @@ class StructuralHashImpl {
 public:
   StructuralHashImpl() = delete;
   explicit StructuralHashImpl(bool DetailedHash,
-                              IgnoreOperandFunc IgnoreOp = nullptr)
-      : DetailedHash(DetailedHash), IgnoreOp(IgnoreOp) {
+                              IgnoreOperandFunc IgnoreOp = nullptr,
+                              bool CollectDetails = false)
+      : DetailedHash(DetailedHash), CollectDetails(CollectDetails),
+        IgnoreOp(IgnoreOp) {
     if (IgnoreOp) {
       IndexInstruction = std::make_unique<IndexInstrMap>();
       IndexOperandHashMap = std::make_unique<IndexOperandHashMapType>();
@@ -257,8 +261,11 @@ public:
   // selectively.
   void update(const Function &F) {
     // Declarations don't affect analyses.
-    if (F.isDeclaration())
+    if (F.isDeclaration()) {
+      if (CollectDetails)
+        Details.FunctionHash = Hash;
       return;
+    }
 
     SmallVector<stable_hash> Hashes;
     Hashes.emplace_back(Hash);
@@ -279,8 +286,25 @@ public:
       const BasicBlock *BB = BBs.pop_back_val();
 
       Hashes.emplace_back(BlockHeaderHash);
-      for (auto &Inst : *BB)
-        Hashes.emplace_back(hashInstruction(Inst));
+      SmallVector<stable_hash> BlockHashes;
+      BasicBlockStructuralHashInfo *BlockDetails = nullptr;
+      if (CollectDetails) {
+        BlockHashes.emplace_back(BlockHeaderHash);
+        Details.Blocks.emplace_back();
+        BlockDetails = &Details.Blocks.back();
+        BlockDetails->BB = BB;
+      }
+
+      for (auto &Inst : *BB) {
+        stable_hash InstHash = hashInstruction(Inst);
+        Hashes.emplace_back(InstHash);
+        if (CollectDetails) {
+          BlockHashes.emplace_back(InstHash);
+          BlockDetails->Instructions.push_back({&Inst, InstHash});
+        }
+      }
+      if (CollectDetails)
+        BlockDetails->BlockHash = stable_hash_combine(BlockHashes);
 
       for (const BasicBlock *Succ : successors(BB))
         if (VisitedBBs.insert(Succ).second)
@@ -289,6 +313,8 @@ public:
 
     // Update the combined hash in place.
     Hash = stable_hash_combine(Hashes);
+    if (CollectDetails)
+      Details.FunctionHash = Hash;
   }
 
   void update(const GlobalVariable &GV) {
@@ -315,6 +341,8 @@ public:
 
   uint64_t getHash() const { return Hash; }
 
+  FunctionStructuralHashInfo getDetails() { return std::move(Details); }
+
   std::unique_ptr<IndexInstrMap> getIndexInstrMap() {
     return std::move(IndexInstruction);
   }
@@ -330,6 +358,14 @@ stable_hash llvm::StructuralHash(const Function &F, bool DetailedHash) {
   StructuralHashImpl H(DetailedHash);
   H.update(F);
   return H.getHash();
+}
+
+FunctionStructuralHashInfo llvm::StructuralHashWithDetails(const Function &F,
+                                                           bool DetailedHash) {
+  StructuralHashImpl H(DetailedHash, /*IgnoreOp=*/nullptr,
+                       /*CollectDetails=*/true);
+  H.update(F);
+  return H.getDetails();
 }
 
 stable_hash llvm::StructuralHash(const GlobalVariable &GVar) {
