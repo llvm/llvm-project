@@ -11883,7 +11883,7 @@ Syntax:
 
 ::
 
-      <result> = load [volatile] <ty>, ptr <pointer>[, align <alignment>][, !nontemporal !<nontemp_node>][, !invariant.load !<empty_node>][, !invariant.group !<empty_node>][, !nonnull !<empty_node>][, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !align !<align_node>][, !noundef !<empty_node>]
+      <result> = load [volatile] <ty>, ptr <pointer>[, align <alignment>][, !nontemporal !<nontemp_node>][, !invariant.load !<empty_node>][, !invariant.group !<empty_node>][, !nonnull !<empty_node>][, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !align !<align_node>][, !noundef !<empty_node>][, !nsz !<empty_node>]
       <result> = load atomic [volatile] <ty>, ptr <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<empty_node>]
       !<nontemp_node> = !{ i32 1 }
       !<empty_node> = !{}
@@ -11987,6 +11987,12 @@ loaded is known to be :ref:`well defined <welldefinedvalues>`.
 If the value isn't well defined, the behavior is undefined. If the ``!noundef``
 metadata is combined with poison-generating metadata like ``!nonnull``,
 violation of that metadata constraint will also result in undefined behavior.
+
+The optional ``!nsz`` metadata must reference a single metadata name
+``<empty_node>`` corresponding to a node with no entries, and the type of
+loaded value must be floating-point type. The existence of ``!nsz`` metadata
+on the instruction tells the optimizer when the value can be replaced by
+data transfer instructions like ``phi``, it can add ``nsz`` flag to it.
 
 Semantics:
 """"""""""
