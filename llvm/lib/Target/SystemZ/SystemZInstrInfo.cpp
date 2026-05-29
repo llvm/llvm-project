@@ -1805,10 +1805,9 @@ void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
   unsigned int Offset = 0;
 
   Register AddrReg = MI.getOperand(0).getReg();
-  Register OpReg = MI.getOperand(1).getReg();
 
   assert(
-      AddrReg != OpReg &&
+      AddrReg != MI.getOperand(1).getReg() &&
       "Scratch register for stack guard address blocked by operand register.");
 
   // Emit an appropriate pseudo for the guard type, which loads the address of
