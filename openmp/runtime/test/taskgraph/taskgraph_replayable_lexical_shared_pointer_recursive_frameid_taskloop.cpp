@@ -34,7 +34,8 @@ __attribute__((noinline)) static int run_recursive_frameid(int depth, int seed,
   // I probably wouldn't recommend use of this technique in production code.
 #pragma omp taskgraph graph_id(frame_gid)
   {
-#pragma omp taskloop replayable num_tasks(8) shared(ptr_ref, depth, run_tag) reduction(+ : sum_delta)
+#pragma omp taskloop replayable num_tasks(8) shared(ptr_ref, depth, run_tag)   \
+    reduction(+ : sum_delta)
     for (int i = 0; i < 16; ++i) {
       int delta = (depth + 1) * 3 + run_tag + i;
       __atomic_fetch_add(ptr_ref, delta, __ATOMIC_RELAXED);
@@ -69,13 +70,15 @@ int main() {
   const int expected_replayed = 2 * recorded_sum;
   if (replayed_sum == expected_replayed) {
     std::fprintf(stderr,
-                 "UNEXPECTED SUCCESS recursive pointer taskloop replay recorded=%d replayed_total=%d expected_total=%d\n",
+                 "UNEXPECTED SUCCESS recursive pointer taskloop replay "
+                 "recorded=%d replayed_total=%d expected_total=%d\n",
                  recorded_sum, replayed_sum, expected_replayed);
     return 0;
   }
 
   std::fprintf(stderr,
-               "EXPECTED FAILURE recursive pointer taskloop replay recorded=%d replayed_total=%d expected_total=%d\n",
+               "EXPECTED FAILURE recursive pointer taskloop replay recorded=%d "
+               "replayed_total=%d expected_total=%d\n",
                recorded_sum, replayed_sum, expected_replayed);
   return 1;
 }

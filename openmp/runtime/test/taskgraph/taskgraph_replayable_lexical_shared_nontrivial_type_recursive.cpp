@@ -29,8 +29,8 @@ __attribute__((noinline)) static int expected_recursive(int depth, int seed,
   return local + expected_recursive(depth - 1, seed + 9, run_tag);
 }
 
-__attribute__((noinline)) static int run_recursive_nontrivial(int depth, int seed,
-                                                              int run_tag) {
+__attribute__((noinline)) static int
+run_recursive_nontrivial(int depth, int seed, int run_tag) {
   Tracker Obj(seed);
   int out = -1;
 
@@ -72,14 +72,16 @@ int main() {
 
   if (Tracker::Ctors != Tracker::Dtors || Tracker::Ctors < 12) {
     std::fprintf(stderr,
-                 "FAIL recursive nontrivial lifetime ctors=%d dtors=%d total=%d expected=%d\n",
+                 "FAIL recursive nontrivial lifetime ctors=%d dtors=%d "
+                 "total=%d expected=%d\n",
                  Tracker::Ctors, Tracker::Dtors, total_actual, total_expected);
     return 1;
   }
 
-  std::fprintf(stderr,
-               "PASS recursive nontrivial total=%d expected=%d ctors=%d dtors=%d\n",
-               total_actual, total_expected, Tracker::Ctors, Tracker::Dtors);
+  std::fprintf(
+      stderr,
+      "PASS recursive nontrivial total=%d expected=%d ctors=%d dtors=%d\n",
+      total_actual, total_expected, Tracker::Ctors, Tracker::Dtors);
   return 0;
 }
 
