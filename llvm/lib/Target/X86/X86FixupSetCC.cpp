@@ -118,10 +118,12 @@ static bool fixupSetCC(MachineFunction &MF) {
       // register.
       Register ZeroReg = MRI->createVirtualRegister(RC);
       if (ST->hasZU()) {
-        if (!ST->preferLegacySetCC())
-          assert((MI.getOpcode() == X86::SETZUCCr) &&
-                 "Expect setzucc instruction!");
-        else
+        // Normalize to the zero-upper form. SelectionDAG already selects
+        // SETZUCCr when ZU is preferred, but other selectors (e.g.
+        // GlobalISel) emit a plain SETCCr unconditionally, so a SETCCr can
+        // reach here on a ZU-capable subtarget. Convert it instead of
+        // asserting that it is already SETZUCCr.
+        if (MI.getOpcode() != X86::SETZUCCr)
           MI.setDesc(TII->get(X86::SETZUCCr));
         BuildMI(*ZExt->getParent(), ZExt, ZExt->getDebugLoc(),
                 TII->get(TargetOpcode::IMPLICIT_DEF), ZeroReg);
