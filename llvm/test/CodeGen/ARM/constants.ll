@@ -62,10 +62,7 @@ define i32 @f8() nounwind {
                                     float 2.000000e+00,
                                     float 3.000000e+00> }, align 16
 ; CHECK: const1
-; CHECK: .long 0x00000000 @ float 0
-; CHECK: .long 0x00000000 @ float 0
-; CHECK: .long 0x00000000 @ float 0
-; CHECK: .zero 4
+; CHECK: .zero 16
 ; CHECK: float 1
 ; CHECK: float 2
 ; CHECK: float 3
