@@ -162,7 +162,7 @@ void SIPreEmitPeephole::updateMLIBeforeRemovingEdge(
 void SIPreEmitPeephole::eliminateDeadMeta(MachineFunction &MF,
                                           MachineBasicBlock *MBB) const {
   LiveRegUnits LivePhysRegs;
-  const TargetSubtargetInfo &ST = MF.getSubtarget();
+  const TargetSubtargetInfo &ST = MF.getSubtarget<GCNSubtarget>();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   LivePhysRegs.init(*ST.getRegisterInfo());
   LivePhysRegs.addLiveOuts(*MBB);
