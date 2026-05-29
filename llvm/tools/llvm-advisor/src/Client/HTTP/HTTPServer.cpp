@@ -512,6 +512,13 @@ public:
     return Out;
   }
 
+  void writeJSON(json::OStream &JOS) const {
+    JOS.arrayBegin();
+    for (const std::string &S : Strings)
+      JOS.value(S);
+    JOS.arrayEnd();
+  }
+
 private:
   std::vector<std::string> Strings;
   StringMap<unsigned> Index;
@@ -566,30 +573,37 @@ public:
     }
   }
 
-  json::Object render(StringRef SnapshotID) {
-    return json::Object{
-        {"snapshot_id", SnapshotID.str()},
-        {"schema_version", 1},
-        {"count", static_cast<int64_t>(UnitColG.size())},
-        {"strings", json::Object{
-                        {"unit", Unit.toJSON()},
-                        {"pass", Pass.toJSON()},
-                        {"name", Name.toJSON()},
-                        {"function", Function.toJSON()},
-                        {"file", File.toJSON()},
-                    }},
-        {"columns", json::Object{
-                        {"unit", toArray(UnitColG)},
-                        {"pass", toArray(PassColG)},
-                        {"name", toArray(NameColG)},
-                        {"type", toArray(TypeColG)},
-                        {"function", toArray(FuncColG)},
-                        {"file", toArray(FileColG)},
-                        {"line", toArray(LineColG)},
-                        {"column", toArray(ColumnColG)},
-                        {"hotness", toArray(HotnessColG)},
-                    }},
-    };
+  void write(json::OStream &JOS, StringRef SnapshotID) const {
+    JOS.objectBegin();
+    JOS.attribute("snapshot_id", SnapshotID);
+    JOS.attribute("schema_version", 1);
+    JOS.attribute("count", static_cast<int64_t>(UnitColG.size()));
+
+    JOS.attributeBegin("strings");
+    JOS.objectBegin();
+    JOS.attributeBegin("unit");     Unit.writeJSON(JOS);     JOS.attributeEnd();
+    JOS.attributeBegin("pass");     Pass.writeJSON(JOS);     JOS.attributeEnd();
+    JOS.attributeBegin("name");     Name.writeJSON(JOS);     JOS.attributeEnd();
+    JOS.attributeBegin("function"); Function.writeJSON(JOS); JOS.attributeEnd();
+    JOS.attributeBegin("file");     File.writeJSON(JOS);     JOS.attributeEnd();
+    JOS.objectEnd();
+    JOS.attributeEnd();
+
+    JOS.attributeBegin("columns");
+    JOS.objectBegin();
+    writeIntColumn(JOS, "unit",     UnitColG);
+    writeIntColumn(JOS, "pass",     PassColG);
+    writeIntColumn(JOS, "name",     NameColG);
+    writeIntColumn(JOS, "type",     TypeColG);
+    writeIntColumn(JOS, "function", FuncColG);
+    writeIntColumn(JOS, "file",     FileColG);
+    writeIntColumn(JOS, "line",     LineColG);
+    writeIntColumn(JOS, "column",   ColumnColG);
+    writeIntColumn(JOS, "hotness",  HotnessColG);
+    JOS.objectEnd();
+    JOS.attributeEnd();
+
+    JOS.objectEnd();
   }
 
 private:
@@ -627,6 +641,16 @@ private:
     return Out;
   }
 
+  static void writeIntColumn(json::OStream &JOS, StringRef Name,
+                             ArrayRef<int64_t> Vs) {
+    JOS.attributeBegin(Name);
+    JOS.arrayBegin();
+    for (int64_t V : Vs)
+      JOS.value(V);
+    JOS.arrayEnd();
+    JOS.attributeEnd();
+  }
+
   StringTable Unit, Pass, Name, Function, File;
   std::vector<int64_t> UnitColG, PassColG, NameColG, TypeColG, FuncColG,
       FileColG, LineColG, ColumnColG, HotnessColG;
@@ -661,7 +685,12 @@ static HTTPResult handleGetRemarksRelational(CoreClient &Client,
     }
   }
 
-  return makeJSONSuccess(200, Merger.render(SnapID));
+  std::string Body;
+  raw_string_ostream OS(Body);
+  writeSuccessEnvelope(OS,
+                       [&](json::OStream &JOS) { Merger.write(JOS, SnapID); });
+  OS.flush();
+  return HTTPResult{200, "application/json", std::move(Body)};
 }
 
 static HTTPResult handleGetQueryUnit(CoreClient &Client, StringRef UnitID,

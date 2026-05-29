@@ -42,4 +42,7 @@ json::Value successEnvelope(json::Value Data);
 /// Wrap an error in a standard error envelope with request metadata.
 json::Value errorEnvelope(StringRef Code, StringRef Message);
 
+void writeSuccessEnvelope(raw_ostream &OS,
+                          function_ref<void(json::OStream &)> WriteData);
+
 } // namespace llvm::advisor
