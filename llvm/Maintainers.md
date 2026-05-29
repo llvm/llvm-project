@@ -96,10 +96,17 @@ david.sherwood@arm.com (email), [david-arm](https://github.com/david-arm) (GitHu
 Alina Sbirlea \
 asbirlea@google.com (email), [alinas](https://github.com/alinas) (GitHub)
 
+### Delinearization, DependenceAnalysis, ScalarEvolutionDivision
+
+Ryotaro Kasuga \
+kasuga.ryotaro@fujitsu.com, krkr9893@gmail.com (email), [kasuga-fj](https://github.com/kasuga-fj) (GitHub)
+
 #### LoopInterchange
 
 Madhur Amilkanthwar \
-madhura@nvidia.com (email), [madhur13490](https://github.com/madhur13490) (GitHub)
+madhura@nvidia.com (email), [madhur13490](https://github.com/madhur13490) (GitHub) \
+Ryotaro Kasuga \
+kasuga.ryotaro@fujitsu.com, krkr9893@gmail.com (email), [kasuga-fj](https://github.com/kasuga-fj) (GitHub)
 
 #### SandboxVectorizer
 
