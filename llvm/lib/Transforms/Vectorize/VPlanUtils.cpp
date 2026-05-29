@@ -49,7 +49,10 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
     return Plan.getOrAddLiveIn(U->getValue());
   auto *Expanded = new VPExpandSCEVRecipe(Expr);
   VPBasicBlock *EntryVPBB = Plan.getEntry();
-  EntryVPBB->insert(Expanded, EntryVPBB->getFirstNonPhi());
+  auto Iter = EntryVPBB->getFirstNonPhi();
+  while (Iter != EntryVPBB->end() && isa<VPIRInstruction>(*Iter))
+    ++Iter;
+  EntryVPBB->insert(Expanded, Iter);
   return Expanded;
 }
 
