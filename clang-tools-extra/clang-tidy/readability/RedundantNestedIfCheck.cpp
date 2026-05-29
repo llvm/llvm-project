@@ -30,15 +30,15 @@ namespace clang::tidy::readability {
 static constexpr llvm::StringLiteral AllowUserDefinedBoolConversionStr =
     "AllowUserDefinedBoolConversion";
 static constexpr llvm::StringLiteral MergeableIfDiag =
-    "nested if statements can be merged";
+    "nested 'if' statements can be merged together";
 static constexpr llvm::StringLiteral NestedIfNote =
-    "nested if statement to merge is here";
+    "nested 'if' statement to merge declared here";
 
 namespace {
 
 using IfChain = llvm::SmallVector<const IfStmt *>;
 
-enum class ChainHandling {
+enum class WarningType {
   None,
   WarnOnly,
   WarnAndFix,
@@ -67,7 +67,7 @@ static bool containsUserDefinedBoolConversion(const Expr *Expression) {
     return true;
 
   return llvm::any_of(Expression->children(), [](const Stmt *Child) {
-    const auto *ChildExpr = dyn_cast_or_null<Expr>(Child);
+    const Expr *ChildExpr = dyn_cast_or_null<Expr>(Child);
     return ChildExpr && containsUserDefinedBoolConversion(ChildExpr);
   });
 }
@@ -80,9 +80,6 @@ static bool conditionNeedsBoolCast(const Expr *Condition) {
 
   const Expr *const Unwrapped =
       Condition->IgnoreImplicitAsWritten()->IgnoreParens();
-  if (!Unwrapped)
-    return true;
-
   const QualType ConditionType = Unwrapped->getType();
   return ConditionType.isNull() || !ConditionType->isScalarType();
 }
@@ -99,9 +96,6 @@ isConditionExpressionMergeable(const Expr *Condition,
     return AllowUserDefinedBoolConversion;
 
   const Expr *const Unwrapped = Condition->IgnoreParenImpCasts();
-  if (!Unwrapped)
-    return false;
-
   const QualType ConditionType = Unwrapped->getType();
   return !ConditionType.isNull() && ConditionType->isScalarType();
 }
@@ -116,10 +110,9 @@ getIfConditionRange(const IfStmt *If, const SourceManager &SM,
   if (ConditionBegin.isInvalid() || If->getRParenLoc().isInvalid())
     return std::nullopt;
 
-  const CharSourceRange ConditionRange =
-      CharSourceRange::getCharRange(ConditionBegin, If->getRParenLoc());
-  const CharSourceRange FileRange =
-      Lexer::makeFileCharRange(ConditionRange, SM, LangOpts);
+  const CharSourceRange FileRange = Lexer::makeFileCharRange(
+      CharSourceRange::getCharRange(ConditionBegin, If->getRParenLoc()), SM,
+      LangOpts);
   if (FileRange.isInvalid())
     return std::nullopt;
 
@@ -157,10 +150,10 @@ static bool hasOnlyPayloadCommentsInNestedHeader(const IfStmt *Nested,
                                                  const LangOptions &LangOpts) {
   assert(Nested);
 
-  const CharSourceRange HeaderRange = CharSourceRange::getCharRange(
-      Nested->getBeginLoc(), Nested->getThen()->getBeginLoc());
-  const CharSourceRange HeaderFileRange =
-      Lexer::makeFileCharRange(HeaderRange, SM, LangOpts);
+  const CharSourceRange HeaderFileRange = Lexer::makeFileCharRange(
+      CharSourceRange::getCharRange(Nested->getBeginLoc(),
+                                    Nested->getThen()->getBeginLoc()),
+      SM, LangOpts);
   if (HeaderFileRange.isInvalid())
     return false;
 
@@ -191,8 +184,8 @@ canRewriteOuterConditionVariable(const IfStmt *If,
   if (If->hasInitStorage())
     return false;
 
-  const auto *const ConditionVariable = If->getConditionVariable();
-  const auto *const ConditionVariableDeclStmt =
+  const VarDecl *const ConditionVariable = If->getConditionVariable();
+  const DeclStmt *const ConditionVariableDeclStmt =
       If->getConditionVariableDeclStmt();
   if (!ConditionVariable || !ConditionVariableDeclStmt ||
       !ConditionVariableDeclStmt->isSingleDecl() ||
@@ -346,28 +339,30 @@ isConstexprChainSemanticallySafe(llvm::ArrayRef<const IfStmt *> Chain,
 
 // A range is unsafe for text edits if it crosses macro expansions or
 // preprocessor directives.
-template <typename RangeT>
-static bool isUnsafeRange(RangeT Range, CharSourceRange FileRange,
-                          bool ContainsExpansionsOrDirectives) {
+template <typename RangeT> static bool isUnsafeRangeSpelling(RangeT Range) {
   return Range.isInvalid() || Range.getBegin().isMacroID() ||
-         Range.getEnd().isMacroID() || FileRange.isInvalid() ||
-         ContainsExpansionsOrDirectives;
+         Range.getEnd().isMacroID();
 }
 
 static bool isUnsafeTokenRange(SourceRange Range, const SourceManager &SM,
                                const LangOptions &LangOpts) {
-  return isUnsafeRange(
-      Range,
-      Lexer::makeFileCharRange(CharSourceRange::getTokenRange(Range), SM,
-                               LangOpts),
-      utils::lexer::rangeContainsExpansionsOrDirectives(Range, SM, LangOpts));
+  if (isUnsafeRangeSpelling(Range))
+    return true;
+
+  return Lexer::makeFileCharRange(CharSourceRange::getTokenRange(Range), SM,
+                                  LangOpts)
+             .isInvalid() ||
+         utils::lexer::rangeContainsExpansionsOrDirectives(Range, SM, LangOpts);
 }
 
 static bool isUnsafeCharRange(CharSourceRange Range, const SourceManager &SM,
                               const LangOptions &LangOpts) {
-  return isUnsafeRange(Range, Lexer::makeFileCharRange(Range, SM, LangOpts),
-                       utils::lexer::rangeContainsExpansionsOrDirectives(
-                           Range.getAsRange(), SM, LangOpts));
+  if (isUnsafeRangeSpelling(Range))
+    return true;
+
+  return Lexer::makeFileCharRange(Range, SM, LangOpts).isInvalid() ||
+         utils::lexer::rangeContainsExpansionsOrDirectives(Range.getAsRange(),
+                                                           SM, LangOpts);
 }
 
 // Validate every range that contributes to the final edit set before offering
@@ -392,7 +387,7 @@ static bool isFixitSafeForChain(llvm::ArrayRef<const IfStmt *> Chain,
     return false;
 
   if (Root->hasVarStorage()) {
-    const auto *const ConditionVariableDeclStmt =
+    const DeclStmt *const ConditionVariableDeclStmt =
         Root->getConditionVariableDeclStmt();
     if (!ConditionVariableDeclStmt ||
         isUnsafeTokenRange(ConditionVariableDeclStmt->getSourceRange(), SM,
@@ -433,7 +428,7 @@ static std::string wrapConditionText(StringRef ConditionText,
 
   std::string Result("static_cast<bool>(");
   Result += ConditionText;
-  Result += ")";
+  Result += ')';
   return Result;
 }
 
@@ -478,7 +473,7 @@ buildCombinedCondition(llvm::ArrayRef<const IfStmt *> Chain,
       return {CombinedConditionBuildStatus::UnsupportedCommentPlacement, {}};
 
     if (IsRoot && If->hasVarStorage()) {
-      const auto *const ConditionVariable = If->getConditionVariable();
+      const VarDecl *const ConditionVariable = If->getConditionVariable();
       if (!ConditionVariable)
         return {};
 
@@ -522,28 +517,27 @@ getConditionReplacementRange(const IfStmt *If, const SourceManager &SM,
              : getIfConditionRange(If, SM, LangOpts);
 }
 
-static ChainHandling
-getChainHandling(llvm::ArrayRef<const IfStmt *> Chain,
-                 const ASTContext &Context, const SourceManager &SM,
-                 const LangOptions &LangOpts,
-                 std::optional<std::string> *CombinedCondition) {
+static WarningType
+getWarningType(llvm::ArrayRef<const IfStmt *> Chain, const ASTContext &Context,
+               const SourceManager &SM, const LangOptions &LangOpts,
+               std::optional<std::string> *CombinedCondition) {
   if (Chain.size() < 2 || !isFixitSafeForChain(Chain, SM, LangOpts))
-    return ChainHandling::None;
+    return WarningType::None;
 
   if (!isConstexprChainSemanticallySafe(Chain, Context))
-    return ChainHandling::None;
+    return WarningType::None;
 
   const CombinedConditionBuildResult Combined =
       buildCombinedCondition(Chain, Context);
   if (Combined.Status ==
       CombinedConditionBuildStatus::UnsupportedCommentPlacement)
-    return ChainHandling::WarnOnly;
+    return WarningType::WarnOnly;
   if (Combined.Status != CombinedConditionBuildStatus::Success)
-    return ChainHandling::None;
+    return WarningType::None;
 
   if (CombinedCondition)
     *CombinedCondition = Combined.Text;
-  return ChainHandling::WarnAndFix;
+  return WarningType::WarnAndFix;
 }
 
 static void emitNestedIfNotes(RedundantNestedIfCheck &Check,
@@ -575,9 +569,9 @@ static void diagnoseChain(RedundantNestedIfCheck &Check, const IfStmt *If,
       getMergeChain(If, Context, AllowUserDefinedBoolConversion);
 
   std::optional<std::string> CombinedCondition;
-  const ChainHandling Handling =
-      getChainHandling(Chain, Context, SM, LangOpts, &CombinedCondition);
-  if (Handling == ChainHandling::None) {
+  const WarningType Handling =
+      getWarningType(Chain, Context, SM, LangOpts, &CombinedCondition);
+  if (Handling == WarningType::None) {
     diagnoseChildChain(Check, If->getThen(), Context,
                        AllowUserDefinedBoolConversion);
     diagnoseChildChain(Check, If->getElse(), Context,
@@ -587,7 +581,7 @@ static void diagnoseChain(RedundantNestedIfCheck &Check, const IfStmt *If,
 
   {
     const DiagnosticBuilder Diag = Check.diag(If->getIfLoc(), MergeableIfDiag);
-    if (Handling == ChainHandling::WarnAndFix) {
+    if (Handling == WarningType::WarnAndFix) {
       const std::optional<CharSourceRange> ConditionRange =
           getConditionReplacementRange(If, SM, LangOpts);
       if (!ConditionRange || !CombinedCondition)
@@ -639,8 +633,7 @@ void RedundantNestedIfCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *const If = Result.Nodes.getNodeAs<IfStmt>("if");
   assert(If);
 
-  ASTContext &Context = *Result.Context;
-  diagnoseChain(*this, If, Context, AllowUserDefinedBoolConversion);
+  diagnoseChain(*this, If, *Result.Context, AllowUserDefinedBoolConversion);
 }
 
 } // namespace clang::tidy::readability
