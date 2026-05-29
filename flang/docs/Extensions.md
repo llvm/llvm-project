@@ -353,10 +353,9 @@ end
   containing only the selected elements, and that fresh array is trivially
   contiguous.  When `-pedantic` is enabled, Flang emits the
   `-Wconstant-is-contiguous` warning at each such call.  For example:
-```fortran
-integer, parameter :: a(5) = [1,2,3,4,5]
-print *, is_contiguous(a(::2))                   ! prints T in Flang
-```
+  ```fortran
+  integer, parameter :: a(5) = [1,2,3,4,5]
+  print *, is_contiguous(a(::2))                   ! prints T in Flang
   Other compilers may report `a(::2)` as non-contiguous.
 * We support some combinations of specific procedures in generic
   interfaces that a strict reading of the standard would preclude
