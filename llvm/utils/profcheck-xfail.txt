@@ -55,12 +55,6 @@ Transforms/Coroutines/no-suspend.ll
 Transforms/CrossDSOCFI/basic.ll
 Transforms/CrossDSOCFI/cfi_functions.ll
 Transforms/CrossDSOCFI/thumb.ll
-Transforms/ExpandIRInsts/X86/expand-fp-convert-small.ll
-Transforms/ExpandIRInsts/X86/expand-int-convert-small.ll
-Transforms/ExpandIRInsts/X86/expand-large-fp-convert-fptosi129.ll
-Transforms/ExpandIRInsts/X86/expand-large-fp-convert-fptoui129.ll
-Transforms/ExpandIRInsts/X86/expand-large-fp-convert-si129tofp.ll
-Transforms/ExpandIRInsts/X86/expand-large-fp-convert-ui129tofp.ll
 Transforms/FixIrreducible/basic.ll
 Transforms/FixIrreducible/bug45623.ll
 Transforms/FixIrreducible/callbr.ll
