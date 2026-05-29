@@ -1060,9 +1060,8 @@ public:
     else
       result.fullType = e->getType();
     result.compType = result.fullType;
-    if (const auto *vecType = dyn_cast_or_null<VectorType>(result.fullType)) {
+    if (const auto *vecType = result.fullType->getAs<VectorType>())
       result.compType = vecType->getElementType();
-    }
     result.opcode = e->getOpcode();
     result.loc = e->getSourceRange();
     // TODO(cir): Result.FPFeatures
@@ -1557,7 +1556,7 @@ LValue ScalarExprEmitter::emitCompoundAssignLValue(
 
   opInfo.fullType = promotionTypeCR;
   opInfo.compType = opInfo.fullType;
-  if (const auto *vecType = dyn_cast_or_null<VectorType>(opInfo.fullType))
+  if (const auto *vecType = opInfo.fullType->getAs<VectorType>())
     opInfo.compType = vecType->getElementType();
   opInfo.opcode = e->getOpcode();
   opInfo.fpFeatures = e->getFPFeaturesInEffect(cgf.getLangOpts());
@@ -1933,9 +1932,15 @@ static mlir::Value emitPointerArithmetic(CIRGenFunction &cgf,
                                   pointer.getType(), pointer, index);
 }
 
+static bool isIntegerVectorBinOp(mlir::Type ty) {
+  auto vecTy = mlir::dyn_cast<cir::VectorType>(ty);
+  return vecTy && mlir::isa<cir::IntType>(vecTy.getElementType());
+}
+
 mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
   const mlir::Location loc = cgf.getLoc(ops.loc);
-  if (ops.compType->isSignedIntegerOrEnumerationType()) {
+  if (!isIntegerVectorBinOp(ops.lhs.getType()) &&
+      ops.compType->isSignedIntegerOrEnumerationType()) {
     switch (cgf.getLangOpts().getSignedOverflowBehavior()) {
     case LangOptions::SOB_Defined:
       if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
@@ -1990,7 +1995,8 @@ mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
     return emitPointerArithmetic(cgf, ops, /*isSubtraction=*/false);
 
   const mlir::Location loc = cgf.getLoc(ops.loc);
-  if (ops.compType->isSignedIntegerOrEnumerationType()) {
+  if (!isIntegerVectorBinOp(ops.lhs.getType()) &&
+      ops.compType->isSignedIntegerOrEnumerationType()) {
     switch (cgf.getLangOpts().getSignedOverflowBehavior()) {
     case LangOptions::SOB_Defined:
       if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
@@ -2035,7 +2041,8 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
   const mlir::Location loc = cgf.getLoc(ops.loc);
   // The LHS is always a pointer if either side is.
   if (!mlir::isa<cir::PointerType>(ops.lhs.getType())) {
-    if (ops.compType->isSignedIntegerOrEnumerationType()) {
+    if (!isIntegerVectorBinOp(ops.lhs.getType()) &&
+        ops.compType->isSignedIntegerOrEnumerationType()) {
       switch (cgf.getLangOpts().getSignedOverflowBehavior()) {
       case LangOptions::SOB_Defined: {
         if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
@@ -2821,19 +2828,25 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
     auto testMSB = cir::VecCmpOp::create(
         builder, loc, vecTy, cir::CmpOpKind::lt, condValue, zeroVec);
     mlir::Value tmp = builder.createIntCast(testMSB, vecTy);
-    mlir::Value tmp2 = builder.createNot(testMSB);
+    mlir::Value tmp2 = builder.createNot(tmp);
 
-    auto rhsVecTy = cast<cir::VectorType>(rhsValue.getType());
     // Cast float to int to perform ANDs if necessary.
-    if (rhsVecTy.getElementType().isFloat()) {
-      cgf.cgm.errorNYI(loc, "VisitAbstractConditionalOperator: OpenCL "
-                            "TernaryOp Vec of type float");
-      return {};
+    mlir::Value rhsTmp = rhsValue;
+    mlir::Value lhsTmp = lhsValue;
+    bool wasCast = false;
+    auto rhsVecTy = cast<cir::VectorType>(rhsValue.getType());
+    if (cir::isAnyFloatingPointType(rhsVecTy.getElementType())) {
+      rhsTmp = builder.createBitcast(rhsValue, tmp2.getType());
+      lhsTmp = builder.createBitcast(lhsValue, tmp.getType());
+      wasCast = true;
     }
 
-    mlir::Value tmp3 = builder.createAnd(loc, rhsValue, tmp2);
-    mlir::Value tmp4 = builder.createAnd(loc, lhsValue, tmp);
-    return builder.createOr(loc, tmp3, tmp4);
+    mlir::Value tmp3 = builder.createAnd(loc, rhsTmp, tmp2);
+    mlir::Value tmp4 = builder.createAnd(loc, lhsTmp, tmp);
+    mlir::Value tmp5 = builder.createOr(loc, tmp3, tmp4);
+    if (wasCast)
+      tmp5 = builder.createBitcast(tmp5, rhsValue.getType());
+    return tmp5;
   }
 
   if (condType->isVectorType() || condType->isSveVLSBuiltinType()) {

@@ -144,7 +144,7 @@ LIBC_INLINE int set_env(const fenv_t *) { return 0; }
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
-LIBC_INLINE static constexpr int
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT int
 clear_except_if_required([[maybe_unused]] int excepts) {
   if (cpp::is_constant_evaluated()) {
     return 0;
@@ -158,7 +158,7 @@ clear_except_if_required([[maybe_unused]] int excepts) {
   }
 }
 
-LIBC_INLINE static constexpr int
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT int
 set_except_if_required([[maybe_unused]] int excepts) {
   if (cpp::is_constant_evaluated()) {
     return 0;
@@ -172,7 +172,7 @@ set_except_if_required([[maybe_unused]] int excepts) {
   }
 }
 
-LIBC_INLINE static constexpr int
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT int
 raise_except_if_required([[maybe_unused]] int excepts) {
   if (cpp::is_constant_evaluated()) {
     return 0;
@@ -186,7 +186,7 @@ raise_except_if_required([[maybe_unused]] int excepts) {
   }
 }
 
-LIBC_INLINE static constexpr void
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT void
 set_errno_if_required([[maybe_unused]] int err) {
   if (!cpp::is_constant_evaluated()) {
 #ifndef LIBC_MATH_HAS_NO_ERRNO
