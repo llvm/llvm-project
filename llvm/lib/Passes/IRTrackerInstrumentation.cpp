@@ -139,89 +139,6 @@ static std::string getIRTrackerFilePath(const DILocation *Loc) {
   return std::string(Path);
 }
 
-static stable_hash hashTrackerIdentity(const DILocation *Loc);
-
-static stable_hash hashValueIdentity(const Value &V) {
-  if (const auto *Arg = dyn_cast<Argument>(&V))
-    return stable_hash_combine(static_cast<stable_hash>(1), Arg->getArgNo());
-  if (const auto *GV = dyn_cast<GlobalValue>(&V))
-    return stable_hash_combine(
-        static_cast<stable_hash>(2),
-        static_cast<stable_hash>(hash_value(GV->getName())));
-  if (const auto *BB = dyn_cast<BasicBlock>(&V)) {
-    if (BB->hasName())
-      return stable_hash_combine(
-          static_cast<stable_hash>(3),
-          static_cast<stable_hash>(hash_value(BB->getName())));
-    return 0;
-  }
-  if (const auto *I = dyn_cast<Instruction>(&V)) {
-    if (const DILocation *Loc =
-            I->getDebugLoc() ? I->getDebugLoc().get() : nullptr)
-      return stable_hash_combine(static_cast<stable_hash>(4),
-                                 hashTrackerIdentity(Loc));
-    if (I->hasName())
-      return stable_hash_combine(
-          static_cast<stable_hash>(5),
-          static_cast<stable_hash>(hash_value(I->getName())));
-    return 0;
-  }
-  if (V.hasName())
-    return stable_hash_combine(
-        static_cast<stable_hash>(6),
-        static_cast<stable_hash>(hash_value(V.getName())));
-  return 0;
-}
-
-/// Compute a stable structural fingerprint of an instruction.
-///
-/// Used by the per-instruction change-detection step: at each pass, the
-/// recorder rehashes every changed-block instruction and compares against
-/// the previous pass's hash for the same tracker ID. Equal hash → "did
-/// not change" → skip emission.
-///
-/// Captures: opcode, result type, raw optional flag bits, operand count,
-/// per-operand type, the per-operand kind bits (is-Constant, is-Argument), a
-/// stable identity for non-constant operands when one is available (argument
-/// number, global name, basic-block name, instruction source-point identity),
-/// the CmpInst predicate, and the value of any ConstantInt operand.
-///
-/// The important property is that operand rewrites which change the rendered
-/// instruction text should usually perturb the hash as well:
-///
-///   %a = add i32 %x, %y         hash X
-///   %b = add i32 %x, %z         hash Y      (different source-point identity)
-///   %c = add i32 %x, 1          hash M      (second operand kind changed)
-///   %d = add i32 %x, 2          hash Z      (ConstantInt value changed)
-///   %e = sub i32 %x, %y         hash W      (opcode changed)
-///   %f = icmp eq i32 %x, %y     hash V
-///   %g = icmp ne i32 %x, %y     hash U      (predicate changed)
-///
-/// Still missed: zero-loc unnamed instruction operands that have no stable
-/// identity source, ConstantFP value changes, ConstantExpr changes, and
-/// attached metadata changes. Metadata tracking is opt-in via separate flags
-/// (deferred to a follow-up PR).
-static stable_hash hashInstruction(const Instruction &I) {
-  stable_hash H =
-      stable_hash_combine(I.getOpcode(), I.getType()->getTypeID(),
-                          I.getRawSubclassOptionalData(), I.getNumOperands());
-  for (const Use &U : I.operands()) {
-    Value *V = U.get();
-    H = stable_hash_combine(
-        H,
-        stable_hash_combine(static_cast<stable_hash>(V->getType()->getTypeID()),
-                            static_cast<stable_hash>(isa<Constant>(V) ? 1 : 0),
-                            static_cast<stable_hash>(isa<Argument>(V) ? 1 : 0),
-                            hashValueIdentity(*V)));
-    if (auto *C = dyn_cast<ConstantInt>(V))
-      H = stable_hash_combine(
-          H, static_cast<stable_hash>(hash_value(C->getValue())));
-  }
-  if (auto *CI = dyn_cast<CmpInst>(&I))
-    H = stable_hash_combine(H, CI->getPredicate());
-  return H;
-}
-
 static void writeOptimizationInfo(raw_ostream &OS, const User *U) {
   if (const auto *FPO = dyn_cast<const FPMathOperator>(U))
     OS << FPO->getFastMathFlags();
@@ -492,9 +409,8 @@ class IRTrackerRecorder {
   /// The implementation is staged so that cheap equality checks can skip
   /// the more expensive detailed emission work:
   ///
-  ///   1. Recompute one structural hash per block from the current IR.
-  ///      This is the conservative step that guarantees no false
-  ///      negatives at block granularity.
+  ///   1. Ask StructuralHashWithDetails for the current function, block,
+  ///      and instruction hashes.
   ///   2. Function-level hash skip. If the combined function hash
   ///      matches the previous pass's, return without emitting anything.
   ///   3. Per-block changed-or-not list (ChangedBlocks). Only blocks whose
@@ -522,26 +438,26 @@ class IRTrackerRecorder {
     auto &PrevBlkHasZeroIDs = BlockHasZeroIDs[&F];
     auto &PrevInstH = BlockInstHashes[&F];
     auto &PrevTempIDs = BlockTempIDs[&F];
+    FunctionStructuralHashInfo HashDetails =
+        StructuralHashWithDetails(F, /*DetailedHash=*/true);
     SmallVector<stable_hash> NewBlkH;
     SmallVector<bool> NewBlkHasZeroIDs;
     SmallVector<unsigned> ChangedBlocks;
-    stable_hash FuncH = 0;
+    stable_hash FuncH = HashDetails.FunctionHash;
 
     unsigned BlkIdx = 0;
-    for (const BasicBlock &BB : F) {
-      stable_hash BlkH = 0;
+    for (const BasicBlockStructuralHashInfo &BlockInfo : HashDetails.Blocks) {
       bool HasZeroID = false;
-      for (const Instruction &I : BB) {
-        stable_hash H = hashInstruction(I);
-        BlkH = stable_hash_combine(BlkH, H);
-        if (!I.getDebugLoc())
+      for (const InstructionStructuralHashInfo &InstInfo :
+           BlockInfo.Instructions) {
+        assert(InstInfo.Inst && "expected instruction hash detail");
+        if (!InstInfo.Inst->getDebugLoc())
           HasZeroID = true;
       }
       NewBlkHasZeroIDs.push_back(HasZeroID);
-      NewBlkH.push_back(BlkH);
-      FuncH = stable_hash_combine(FuncH, BlkH);
+      NewBlkH.push_back(BlockInfo.BlockHash);
       if (!SkipUnchanged || BlkIdx >= PrevBlkH.size() ||
-          PrevBlkH[BlkIdx] != BlkH)
+          PrevBlkH[BlkIdx] != BlockInfo.BlockHash)
         ChangedBlocks.push_back(BlkIdx);
       ++BlkIdx;
     }
@@ -773,7 +689,9 @@ class IRTrackerRecorder {
     BlkIdx = 0;
     unsigned ChangedBlockPos = 0;
 
-    for (const BasicBlock &BB : F) {
+    for (const BasicBlockStructuralHashInfo &BlockInfo : HashDetails.Blocks) {
+      assert(BlockInfo.BB && "expected block hash detail");
+      const BasicBlock &BB = *BlockInfo.BB;
       bool BlockChanged = ChangedBlockPos < ChangedBlocks.size() &&
                           ChangedBlocks[ChangedBlockPos] == BlkIdx;
 
@@ -817,8 +735,11 @@ class IRTrackerRecorder {
           UsedOldTempIDs.assign(OldTempIDs->size(), false);
         unsigned InstSeq = 0;
         unsigned InstIdx = 0;
-        for (Instruction &I : const_cast<BasicBlock &>(BB)) {
-          stable_hash CurH = hashInstruction(I);
+        for (const InstructionStructuralHashInfo &InstInfo :
+             BlockInfo.Instructions) {
+          assert(InstInfo.Inst && "expected instruction hash detail");
+          const Instruction &I = *InstInfo.Inst;
+          stable_hash CurH = InstInfo.InstructionHash;
           if (NeedFallback)
             CurInstH.push_back(CurH);
           const DILocation *Loc =
