@@ -2040,6 +2040,75 @@ public:
   }
 };
 
+/// This represents a 'replayable' clause in the '#pragma omp target',
+// '#pragma omp target enter data', '#pragma omp target exit data',
+// '#pragma omp target update', '#pragma omp task', '#pragma omp taskloop' or
+// '#pragma omp taskwait' directive.
+///
+/// \code
+/// #pragma omp task replayable(1)
+/// \endcode
+/// In this example directive '#pragma omp task' has the 'replayable' clause.
+class OMPReplayableClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Condition of the 'replayable' clause.
+  Stmt *Condition = nullptr;
+
+public:
+  /// Build 'replayable' clause.
+  ///
+  /// \param Cond Condition of the clause.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPReplayableClause(Expr *Cond, SourceLocation StartLoc,
+                      SourceLocation LParenLoc, SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_replayable, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Condition(Cond) {}
+
+  /// Build an empty clause.
+  OMPReplayableClause()
+      : OMPClause(llvm::omp::OMPC_replayable, SourceLocation(),
+                  SourceLocation()) {}
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Set condition.
+  void setCondition(Expr *Cond) { Condition = Cond; }
+
+  /// Returns condition.
+  Expr *getCondition() const { return cast_or_null<Expr>(Condition); }
+
+  child_range children() {
+    if (Condition)
+      return child_range(&Condition, &Condition + 1);
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    if (Condition)
+      return const_child_range(&Condition, &Condition + 1);
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children();
+  const_child_range used_children() const {
+    return const_cast<OMPReplayableClause *>(this)->used_children();
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_replayable;
+  }
+};
+
 /// This represents 'at' clause in the '#pragma omp error' directive
 ///
 /// \code
@@ -3621,17 +3690,31 @@ class OMPFirstprivateClause final
   friend OMPVarListClause;
   friend TrailingObjects;
 
+  /// Optional firstprivate modifier (e.g. 'saved'), if specified by the user.
+  OpenMPFirstprivateModifier FPKind = OMPC_FIRSTPRIVATE_unknown;
+  /// Optional location of the firstprivate modifier, if specified.
+  SourceLocation FPKindLoc;
+  /// Optional location of the ':' separating the modifier from the list.
+  SourceLocation ColonLoc;
+
   /// Build clause with number of variables \a N.
   ///
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
+  /// \param FPKind Firstprivate modifier (e.g. 'saved').
+  /// \param FPKindLoc Location of the firstprivate modifier, if any.
+  /// \param ColonLoc Location of the ':' symbol, if a modifier is used.
   /// \param N Number of the variables in the clause.
   OMPFirstprivateClause(SourceLocation StartLoc, SourceLocation LParenLoc,
-                        SourceLocation EndLoc, unsigned N)
+                        SourceLocation EndLoc,
+                        OpenMPFirstprivateModifier FPKind,
+                        SourceLocation FPKindLoc, SourceLocation ColonLoc,
+                        unsigned N)
       : OMPVarListClause<OMPFirstprivateClause>(llvm::omp::OMPC_firstprivate,
                                                 StartLoc, LParenLoc, EndLoc, N),
-        OMPClauseWithPreInit(this) {}
+        OMPClauseWithPreInit(this), FPKind(FPKind), FPKindLoc(FPKindLoc),
+        ColonLoc(ColonLoc) {}
 
   /// Build an empty clause.
   ///
@@ -3641,6 +3724,13 @@ class OMPFirstprivateClause final
             llvm::omp::OMPC_firstprivate, SourceLocation(), SourceLocation(),
             SourceLocation(), N),
         OMPClauseWithPreInit(this) {}
+
+  /// Sets the firstprivate modifier kind.
+  void setKind(OpenMPFirstprivateModifier Kind) { FPKind = Kind; }
+  /// Sets the location of the firstprivate modifier.
+  void setKindLoc(SourceLocation Loc) { FPKindLoc = Loc; }
+  /// Sets the location of the ':' separator.
+  void setColonLoc(SourceLocation Loc) { ColonLoc = Loc; }
 
   /// Sets the list of references to private copies with initializers for
   /// new private variables.
@@ -3682,18 +3772,29 @@ public:
   /// \param InitVL List of references to auto generated variables used for
   /// initialization of a single array element. Used if firstprivate variable is
   /// of array type.
+  /// \param FPKind Firstprivate modifier, e.g. 'saved'.
+  /// \param FPKindLoc Location of the firstprivate modifier, if any.
+  /// \param ColonLoc Location of the ':' symbol, if a modifier is used.
   /// \param PreInit Statement that must be executed before entering the OpenMP
   /// region with this clause.
   static OMPFirstprivateClause *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
          SourceLocation EndLoc, ArrayRef<Expr *> VL, ArrayRef<Expr *> PrivateVL,
-         ArrayRef<Expr *> InitVL, Stmt *PreInit);
+         ArrayRef<Expr *> InitVL, OpenMPFirstprivateModifier FPKind,
+         SourceLocation FPKindLoc, SourceLocation ColonLoc, Stmt *PreInit);
 
   /// Creates an empty clause with the place for \a N variables.
   ///
   /// \param C AST context.
   /// \param N The number of variables.
   static OMPFirstprivateClause *CreateEmpty(const ASTContext &C, unsigned N);
+
+  /// Firstprivate modifier (e.g. 'saved' if specified, otherwise 'unknown').
+  OpenMPFirstprivateModifier getKind() const { return FPKind; }
+  /// Returns the location of the firstprivate modifier, if any.
+  SourceLocation getKindLoc() const { return FPKindLoc; }
+  /// Returns the location of the ':' symbol, if any.
+  SourceLocation getColonLoc() const { return ColonLoc; }
 
   using private_copies_iterator = MutableArrayRef<Expr *>::iterator;
   using private_copies_const_iterator = ArrayRef<const Expr *>::iterator;
@@ -8538,6 +8639,101 @@ public:
 
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == llvm::omp::OMPC_is_device_ptr;
+  }
+};
+
+/// This represents clause 'graph_id' in the '#pragma omp taskgraph"
+/// directives.
+///
+/// \code
+/// #pragma omp taskgraph graph_id(a)
+class OMPGraphIdClause final
+    : public OMPOneStmtClause<llvm::omp::OMPC_graph_id, OMPClause> {
+  friend class OMPClauseReader;
+
+  /// Set condition.
+  void setId(Expr *Id) { setStmt(Id); }
+
+public:
+  /// Build 'graph_id' clause with identifier value \a Id.
+  ///
+  /// \param Id Id value for the clause.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPGraphIdClause(Expr *Id, SourceLocation StartLoc, SourceLocation LParenLoc,
+                   SourceLocation EndLoc)
+      : OMPOneStmtClause(Id, StartLoc, LParenLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPGraphIdClause() : OMPOneStmtClause() {}
+
+  /// Returns condition.
+  Expr *getId() const { return getStmtAs<Expr>(); }
+};
+
+// This represents clause 'graph_reset' in the '#pragma omp taskgraph"
+/// directives.
+///
+/// \code
+/// #pragma omp taskgraph graph_reset(true)
+class OMPGraphResetClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Condition of the 'graph_reset' clause.
+  Stmt *Condition = nullptr;
+
+public:
+  /// Build 'graph_reset' clause with condition \a Cond.
+  ///
+  /// \param Cond Condition of the clause.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPGraphResetClause(Expr *Cond, SourceLocation StartLoc,
+                      SourceLocation LParenLoc, SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_graph_reset, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Condition(Cond) {}
+
+  /// Build an empty clause.
+  OMPGraphResetClause()
+      : OMPClause(llvm::omp::OMPC_graph_reset, SourceLocation(),
+                  SourceLocation()) {}
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Set condition.
+  void setCondition(Expr *Cond) { Condition = Cond; }
+
+  /// Returns condition.
+  Expr *getCondition() const { return cast_or_null<Expr>(Condition); }
+
+  child_range children() {
+    if (Condition)
+      return child_range(&Condition, &Condition + 1);
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    if (Condition)
+      return const_child_range(&Condition, &Condition + 1);
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children();
+  const_child_range used_children() const {
+    return const_cast<OMPGraphResetClause *>(this)->used_children();
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_graph_reset;
   }
 };
 

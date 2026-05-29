@@ -149,6 +149,11 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
 #define OPENMP_SEVERITY_KIND(Name) .Case(#Name, OMPC_SEVERITY_##Name)
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_SEVERITY_unknown);
+  case OMPC_firstprivate:
+    return llvm::StringSwitch<OpenMPFirstprivateModifier>(Str)
+#define OPENMP_FIRSTPRIVATE_KIND(Name) .Case(#Name, OMPC_FIRSTPRIVATE_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+        .Default(OMPC_FIRSTPRIVATE_unknown);
   case OMPC_lastprivate:
     return llvm::StringSwitch<OpenMPLastprivateModifier>(Str)
 #define OPENMP_LASTPRIVATE_KIND(Name) .Case(#Name, OMPC_LASTPRIVATE_##Name)
@@ -261,7 +266,6 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   case OMPC_allocator:
   case OMPC_collapse:
   case OMPC_private:
-  case OMPC_firstprivate:
   case OMPC_shared:
   case OMPC_task_reduction:
   case OMPC_in_reduction:
@@ -312,6 +316,8 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   case OMPC_when:
   case OMPC_append_args:
   case OMPC_looprange:
+  case OMPC_graph_id:
+  case OMPC_graph_reset:
     break;
   default:
     break;
@@ -475,6 +481,16 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'severity' clause type");
+  case OMPC_firstprivate:
+    switch (Type) {
+    case OMPC_FIRSTPRIVATE_unknown:
+      return "unknown";
+#define OPENMP_FIRSTPRIVATE_KIND(Name)                                         \
+    case OMPC_FIRSTPRIVATE_##Name:                                             \
+      return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'firstprivate' clause type");
   case OMPC_lastprivate:
     switch (Type) {
     case OMPC_LASTPRIVATE_unknown:
@@ -641,7 +657,6 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_allocator:
   case OMPC_collapse:
   case OMPC_private:
-  case OMPC_firstprivate:
   case OMPC_shared:
   case OMPC_task_reduction:
   case OMPC_in_reduction:
@@ -692,6 +707,8 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_when:
   case OMPC_append_args:
   case OMPC_looprange:
+  case OMPC_graph_id:
+  case OMPC_graph_reset:
     break;
   default:
     break;
@@ -941,6 +958,9 @@ void clang::getOpenMPCaptureRegions(
       break;
     case OMPD_teams:
       CaptureRegions.push_back(OMPD_teams);
+      break;
+    case OMPD_taskgraph:
+      CaptureRegions.push_back(OMPD_taskgraph);
       break;
     case OMPD_taskloop:
       CaptureRegions.push_back(OMPD_taskloop);
