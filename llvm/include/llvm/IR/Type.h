@@ -257,7 +257,7 @@ public:
   bool isIntegerTy() const { return getTypeID() == IntegerTyID; }
 
   /// Return true if this is an IntegerType of the given width.
-  LLVM_ABI bool isIntegerTy(unsigned Bitwidth) const;
+  inline bool isIntegerTy(unsigned Bitwidth) const;
 
   /// Return true if this is an integer type or a vector of integer types.
   bool isIntOrIntVectorTy() const { return getScalarType()->isIntegerTy(); }
