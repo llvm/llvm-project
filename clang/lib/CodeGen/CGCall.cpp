@@ -2615,17 +2615,11 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       AddAttributesFromFunctionProtoType(
           getContext(), FuncAttrs, Fn->getType()->getAs<FunctionProtoType>());
       if (AttrOnCallSite && Fn->isReplaceableGlobalAllocationFunction()) {
-        // A sane operator new returns a non-aliasing pointer and does not
-        // read or write accessible memory.
+        // A sane operator new returns a non-aliasing pointer.
+        auto Kind = Fn->getDeclName().getCXXOverloadedOperator();
         if (getCodeGenOpts().AssumeSaneOperatorNew &&
-            Fn->getDeclName().isAnyOperatorNew()) {
+            (Kind == OO_New || Kind == OO_Array_New))
           RetAttrs.addAttribute(llvm::Attribute::NoAlias);
-          // FIXME: inaccessiblemem could cause issues if LTO makes the
-          // previously inaccessible memory accessible after linking.
-          FuncAttrs.addMemoryAttr(
-              llvm::MemoryEffects::inaccessibleOrErrnoMemOnly(
-                  llvm::ModRefInfo::ModRef, llvm::ModRefInfo::Mod));
-        }
       }
       const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Fn);
       const bool IsVirtualCall = MD && MD->isVirtual();

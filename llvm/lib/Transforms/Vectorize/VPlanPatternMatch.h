@@ -630,6 +630,12 @@ m_UDiv(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::UDiv, Op0_t, Op1_t>(Op0, Op1);
 }
 
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::URem, Op0_t, Op1_t>
+m_URem(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::URem, Op0_t, Op1_t>(Op0, Op1);
+}
+
 /// Match a binary AND operation.
 template <typename Op0_t, typename Op1_t>
 inline AllRecipe_commutative_match<Instruction::And, Op0_t, Op1_t>
