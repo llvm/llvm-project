@@ -487,71 +487,73 @@ static std::optional<std::string>
 ConvertNtDevicePathToDosPath(llvm::ArrayRef<wchar_t> nt_path) {
   Log *log = GetLog(WindowsLog::Event);
 
-  std::array<wchar_t, MAX_PATH> volume_name;
-  HANDLE hVolFind = ::FindFirstVolumeW(volume_name.data(), volume_name.size());
-  if (hVolFind == INVALID_HANDLE_VALUE) {
+  llvm::SmallVector<wchar_t, MAX_PATH> vol_name(MAX_PATH);
+  HANDLE vol_iter = ::FindFirstVolumeW(vol_name.data(), vol_name.size());
+  if (vol_iter == INVALID_HANDLE_VALUE) {
     LLDB_LOG(log,
-             "ConvertNtDevicePathToDosPath: FindFirstVolumeW failed, error={0}",
+             "ConvertNtDevicePathToDosPath: FindFirstVolumeW failed, "
+             "error={0}",
              ::GetLastError());
     return std::nullopt;
   }
+  auto close_iter = llvm::make_scope_exit([&] { ::FindVolumeClose(vol_iter); });
 
-  std::optional<std::string> result;
   do {
-    // FindFirstVolumeW yields names of the form "\\?\Volume{GUID}\".
+    // FindFirstVolumeW yields "\\?\Volume{GUID}\".
     // QueryDosDeviceW expects "Volume{GUID}".
-    size_t vlen = ::wcsnlen(volume_name.data(), volume_name.size());
-    if (vlen < 5 || volume_name[vlen - 1] != L'\\')
+    size_t vol_len = ::wcsnlen(vol_name.data(), vol_name.size());
+    if (vol_len < 5 || vol_name[vol_len - 1] != L'\\')
       continue;
 
-    volume_name[vlen - 1] = L'\0';
-    std::array<wchar_t, MAX_PATH> device_name;
-    BOOL ok = ::QueryDosDeviceW(volume_name.data() + 4, device_name.data(),
-                                device_name.size());
-    volume_name[vlen - 1] = L'\\';
+    vol_name[vol_len - 1] = L'\0'; // strip trailing '\' for QueryDosDeviceW
+    llvm::SmallVector<wchar_t, MAX_PATH> dev_name(MAX_PATH);
+    bool ok = ::QueryDosDeviceW(vol_name.data() + 4, // skip "\\?\"
+                                dev_name.data(), dev_name.size());
+    vol_name[vol_len - 1] = L'\\'; // restore
     if (!ok)
       continue;
 
-    size_t device_name_len = ::wcsnlen(device_name.data(), device_name.size());
-    if (device_name_len == 0 || device_name_len >= nt_path.size())
+    // Check that nt_path begins with this device name followed by '\'.
+    size_t dev_len = ::wcsnlen(dev_name.data(), dev_name.size());
+    if (dev_len == 0 || dev_len >= nt_path.size())
       continue;
-    if (_wcsnicmp(nt_path.data(), device_name.data(), device_name_len) != 0)
+    if (_wcsnicmp(nt_path.data(), dev_name.data(), dev_len) != 0)
       continue;
-    if (nt_path[device_name_len] != L'\\')
+    if (nt_path[dev_len] != L'\\')
       continue;
 
-    std::wstring rebuilt;
+    // Prefer a drive-letter/mount-point over the raw volume GUID path.
+    llvm::ArrayRef<wchar_t> mount(vol_name.data(), vol_len);
+    llvm::SmallVector<wchar_t> mount_names;
     DWORD names_size = 0;
-    ::GetVolumePathNamesForVolumeNameW(volume_name.data(), nullptr, 0,
+    ::GetVolumePathNamesForVolumeNameW(vol_name.data(), nullptr, 0,
                                        &names_size);
     if (names_size > 1) {
-      std::vector<wchar_t> names(names_size);
-      DWORD got_size = 0;
-      if (::GetVolumePathNamesForVolumeNameW(volume_name.data(), names.data(),
-                                             names_size, &got_size) &&
-          names[0] != L'\0') {
-        rebuilt = std::wstring(names.data());
+      mount_names.resize(names_size);
+      DWORD written = 0;
+      if (::GetVolumePathNamesForVolumeNameW(
+              vol_name.data(), mount_names.data(), names_size, &written) &&
+          mount_names[0] != L'\0') {
+        mount = llvm::ArrayRef<wchar_t>(
+            mount_names.data(),
+            ::wcsnlen(mount_names.data(), mount_names.size()));
       }
     }
-    if (rebuilt.empty())
-      rebuilt = std::wstring(volume_name.data(), vlen);
 
-    // The mount point / volume name ends with a backslash, and so does the
-    // separator at nt_path[device_name_len]. Drop one to avoid doubling.
-    if (!rebuilt.empty() && rebuilt.back() == L'\\')
-      rebuilt.pop_back();
-    rebuilt.append(&nt_path[device_name_len]);
+    // Build the final path: mount point + rest of nt_path.
+    llvm::SmallVector<wchar_t> dos_wide(mount.begin(), mount.end());
+    if (!dos_wide.empty() && dos_wide.back() == L'\\')
+      dos_wide.pop_back();
+    dos_wide.append(nt_path.begin() + dev_len, nt_path.end());
 
-    std::string path_utf8;
-    llvm::convertWideToUTF8(rebuilt, path_utf8);
-    result = path_utf8;
-    break;
-  } while (::FindNextVolumeW(hVolFind, volume_name.data(), volume_name.size()));
+    std::string result;
+    llvm::convertWideToUTF8(std::wstring(dos_wide.begin(), dos_wide.end()),
+                            result);
+    return result;
+  } while (::FindNextVolumeW(vol_iter, vol_name.data(), vol_name.size()));
 
-  ::FindVolumeClose(hVolFind);
-  if (!result)
-    LLDB_LOG(log, "ConvertNtDevicePathToDosPath: no matching volume found");
-  return result;
+  LLDB_LOG(log, "ConvertNtDevicePathToDosPath: no matching volume found");
+  return std::nullopt;
 }
 
 static std::optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
