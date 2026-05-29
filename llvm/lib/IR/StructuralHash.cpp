@@ -13,6 +13,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 
 using namespace llvm;
 
@@ -219,6 +220,9 @@ public:
       return stable_hash_combine(Hashes);
 
     Hashes.emplace_back(hashType(Inst.getType()));
+    Hashes.emplace_back(Inst.getRawSubclassOptionalData());
+    if (const auto *FPO = dyn_cast<FPMathOperator>(&Inst))
+      Hashes.emplace_back(FPO->getFastMathFlags().getRawFlags());
 
     // Handle additional properties of specific instructions that cause
     // semantic differences in the IR.
