@@ -89,6 +89,10 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // duplicate OpConstant instructions for the same integer value.
   DenseMap<uint32_t, MCRegister> I32ConstantCache;
 
+  // Cache of already-emitted DebugTypeFunction instructions, keyed by operand
+  // ids (flags, return type, parameters).
+  DenseMap<SmallVector<MCRegister, 8>, MCRegister> DebugTypeFunctionCache;
+
   // True once emitNonSemanticGlobalDebugInfo() has run. Both
   // SPIRVAsmPrinter::emitFunctionHeader() and emitEndOfAsmFile() may call
   // outputModuleSections(), each guarded by ModuleSectionsEmitted, so only
@@ -167,6 +171,13 @@ private:
                          MCRegister VoidTypeReg, MCRegister ExtInstSetReg,
                          ArrayRef<MCRegister> Operands,
                          SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Return a cached DebugTypeFunction id when \p Ops matches a prior emission,
+  /// otherwise emit and cache a new instruction.
+  MCRegister getOrEmitDebugTypeFunction(ArrayRef<MCRegister> Ops,
+                                        MCRegister VoidTypeReg,
+                                        MCRegister ExtInstSetReg,
+                                        SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Return OpTypeVoid id for this module (lazy lookup / emit, then cache).
   MCRegister getOrEmitOpTypeVoidReg(SPIRV::ModuleAnalysisInfo &MAI);

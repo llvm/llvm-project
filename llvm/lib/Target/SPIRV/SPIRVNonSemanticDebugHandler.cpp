@@ -175,6 +175,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   DebugTypeRegs.clear();
   OpStringContentCache.clear();
   I32ConstantCache.clear();
+  DebugTypeFunctionCache.clear();
   GlobalDIEmitted = false;
   NonSemanticOpStringsSectionEmitted = false;
   CachedDebugInfoNoneReg = MCRegister();
@@ -310,6 +311,21 @@ MCRegister SPIRVNonSemanticDebugHandler::emitExtInst(
   return Reg;
 }
 
+MCRegister SPIRVNonSemanticDebugHandler::getOrEmitDebugTypeFunction(
+    ArrayRef<MCRegister> Ops, MCRegister VoidTypeReg, MCRegister ExtInstSetReg,
+    SPIRV::ModuleAnalysisInfo &MAI) {
+  auto [It, Inserted] = DebugTypeFunctionCache.try_emplace(
+      SmallVector<MCRegister, 8>(Ops));
+  if (!Inserted)
+    return It->second;
+
+  MCRegister Reg = emitExtInst(
+      SPIRV::NonSemanticExtInst::DebugTypeFunction, VoidTypeReg, ExtInstSetReg,
+      Ops, MAI);
+  It->second = Reg;
+  return Reg;
+}
+
 MCRegister SPIRVNonSemanticDebugHandler::getOrEmitOpTypeVoidReg(
     SPIRV::ModuleAnalysisInfo &MAI) {
   if (!CachedOpTypeVoidReg.isValid())
@@ -421,8 +437,7 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
       Ops.push_back(*OptReg);
     }
   }
-  return emitExtInst(SPIRV::NonSemanticExtInst::DebugTypeFunction, VoidTypeReg,
-                     ExtInstSetReg, Ops, MAI);
+  return getOrEmitDebugTypeFunction(Ops, VoidTypeReg, ExtInstSetReg, MAI);
 }
 
 std::optional<MCRegister> SPIRVNonSemanticDebugHandler::mapDISignatureTypeToReg(

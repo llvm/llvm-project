@@ -8,7 +8,7 @@
 ; CHECK-DAG: [[type_void:%[0-9]+]] = OpTypeVoid
 ; CHECK-DAG: [[type_int32:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG: [[flag_zero:%[0-9]+]] = OpConstant [[type_int32]] 0{{$}}
-; CHECK-DAG: OpExtInst [[type_void]] [[ext]] DebugTypeFunction [[flag_zero]] [[type_void]]
+; CHECK-COUNT-1: OpExtInst [[type_void]] [[ext]] DebugTypeFunction [[flag_zero]] [[type_void]]
 
 target triple = "spirv64-unknown-unknown"
 
