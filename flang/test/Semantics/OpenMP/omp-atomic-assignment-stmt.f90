@@ -85,7 +85,6 @@ program sample
         x = x + 1
     !$omp end atomic
 
-    !WARNING: An ATOMIC CAPTURE with RELEASE ordering will use MONOTONIC ordering for the read operation
     !$omp atomic release capture
         v = x
     ! This ends up being "x = b + x".

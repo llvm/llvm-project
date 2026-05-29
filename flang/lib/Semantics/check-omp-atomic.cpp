@@ -1588,10 +1588,14 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
   checkExclusive(memoryOrder, "memory-order", dirSpec.Clauses());
 
   // Check for incompatible memory orderings on specific atomic operations.
-  // Per OpenMP 5.0+:
+  // Per OpenMP 5.0:
   //   - atomic read: release and acq_rel are not allowed
   //   - atomic write: acquire and acq_rel are not allowed
   //   - atomic update (without capture): acquire and acq_rel are not allowed
+  // Per OpenMP 5.1+:
+  //   - atomic read: release is not allowed
+  //   - atomic write: acquire is not allowed
+  //   (no restrictions on update)
   unsigned version{context_.langOptions().OpenMPVersion};
   if (version >= 50) {
     const parser::OmpClause *memOrderClause{nullptr};
@@ -1608,7 +1612,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
         if (memOrd == llvm::omp::Clause::OMPC_release) {
           context_.Say(memOrderClause->source,
               "An ATOMIC READ operation must not have RELEASE as the memory order, using RELAXED"_warn_en_US);
-        } else if (memOrd == llvm::omp::Clause::OMPC_acq_rel) {
+        } else if (version < 51 && memOrd == llvm::omp::Clause::OMPC_acq_rel) {
           context_.Say(memOrderClause->source,
               "An ATOMIC READ operation must not have ACQ_REL as the memory order, using ACQUIRE"_warn_en_US);
         }
@@ -1616,25 +1620,18 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
         if (memOrd == llvm::omp::Clause::OMPC_acquire) {
           context_.Say(memOrderClause->source,
               "An ATOMIC WRITE operation must not have ACQUIRE as the memory order, using RELAXED"_warn_en_US);
-        } else if (memOrd == llvm::omp::Clause::OMPC_acq_rel) {
+        } else if (version < 51 && memOrd == llvm::omp::Clause::OMPC_acq_rel) {
           context_.Say(memOrderClause->source,
               "An ATOMIC WRITE operation must not have ACQ_REL as the memory order, using RELEASE"_warn_en_US);
         }
-      } else if (kind == llvm::omp::Clause::OMPC_update && !isCapture) {
+      } else if (version == 50 && kind == llvm::omp::Clause::OMPC_update &&
+          !isCapture) {
         if (memOrd == llvm::omp::Clause::OMPC_acquire) {
           context_.Say(memOrderClause->source,
               "An ATOMIC UPDATE operation must not have ACQUIRE as the memory order, using RELAXED"_warn_en_US);
         } else if (memOrd == llvm::omp::Clause::OMPC_acq_rel) {
           context_.Say(memOrderClause->source,
               "An ATOMIC UPDATE operation must not have ACQ_REL as the memory order, using RELEASE"_warn_en_US);
-        }
-      } else if (isCapture) {
-        if (memOrd == llvm::omp::Clause::OMPC_release) {
-          context_.Say(memOrderClause->source,
-              "An ATOMIC CAPTURE with RELEASE ordering will use MONOTONIC ordering for the read operation"_warn_en_US);
-        } else if (memOrd == llvm::omp::Clause::OMPC_acq_rel) {
-          context_.Say(memOrderClause->source,
-              "An ATOMIC CAPTURE with ACQ_REL ordering will use ACQUIRE ordering for the read operation"_warn_en_US);
         }
       }
     }

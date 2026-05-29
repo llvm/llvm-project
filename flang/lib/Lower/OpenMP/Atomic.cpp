@@ -252,18 +252,26 @@ makeValidForAction(std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
   // The individual sub-operations (read/write/update) inside the capture
   // will have their orderings handled separately.
   if (isCapture)
-    return memOrder;
+     return memOrder;
 
   // Avaliable orderings: acquire, acq_rel, relaxed, release, seq_cst
 
-  if (action == Analysis::Read) {
-    // "acq_rel" decays to "acquire"
-    if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel)
-      return mlir::omp::ClauseMemoryOrderKind::Acquire;
-  } else if (action == Analysis::Write) {
-    // "acq_rel" decays to "release"
-    if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel)
-      return mlir::omp::ClauseMemoryOrderKind::Release;
+  if (version == 50) {
+    if (action == Analysis::Read) {
+      // "acq_rel" decays to "acquire" for read
+      if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel)
+        return mlir::omp::ClauseMemoryOrderKind::Acquire;
+    } else if (action == Analysis::Write) {
+      // "acq_rel" decays to "release" for write
+      if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel)
+        return mlir::omp::ClauseMemoryOrderKind::Release;
+    } else if (action == Analysis::Update) {
+      // "acquire" decays to "relaxed", "acq_rel" decays to "release"
+      if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acquire)
+        return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+      if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel)
+        return mlir::omp::ClauseMemoryOrderKind::Release;
+    }
   }
 
   if (version >= 50) {
@@ -276,13 +284,6 @@ makeValidForAction(std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
       // "acquire" prohibited
       if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acquire)
         return mlir::omp::ClauseMemoryOrderKind::Relaxed;
-    }
-    if (action == Analysis::Update) {
-      // "acquire" prohibited, "acq_rel" decays to "release"
-      if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acquire)
-        return mlir::omp::ClauseMemoryOrderKind::Relaxed;
-      if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel)
-        return mlir::omp::ClauseMemoryOrderKind::Release;
     }
   } else {
     if (action == Analysis::Read) {
@@ -335,8 +336,10 @@ genAtomicRead(lower::AbstractConverter &converter,
     if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Release) {
       // Reset it back to the default.
       memOrder = getDefaultAtomicMemOrder(semaCtx);
-    } else if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel) {
-      // The MLIR verifier doesn't like acq_rel either.
+    } else if (semaCtx.langOptions().OpenMPVersion <= 50 &&
+               *memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel) {
+      // In OpenMP 5.0, acq_rel is not allowed on read; decay to acquire.
+      // In OpenMP 5.1+, acq_rel is permitted on read.
       memOrder = mlir::omp::ClauseMemoryOrderKind::Acquire;
     }
   }
@@ -394,8 +397,10 @@ genAtomicWrite(lower::AbstractConverter &converter,
     if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acquire) {
       // Reset it back to the default.
       memOrder = getDefaultAtomicMemOrder(semaCtx);
-    } else if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel) {
-      // The MLIR verifier doesn't like acq_rel either.
+    } else if (semaCtx.langOptions().OpenMPVersion <= 50 &&
+               *memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel) {
+      // In OpenMP 5.0, acq_rel is not allowed on write; decay to release.
+      // In OpenMP 5.1+, acq_rel is permitted on write.
       memOrder = mlir::omp::ClauseMemoryOrderKind::Release;
     }
   }

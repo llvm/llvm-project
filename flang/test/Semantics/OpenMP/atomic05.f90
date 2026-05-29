@@ -22,7 +22,6 @@ program OmpAtomic
     !ERROR: This is not a valid ATOMIC UPDATE operation
         x = 10
     !ERROR: At most one clause from the 'memory-order' group is allowed on ATOMIC construct
-    !WARNING: An ATOMIC CAPTURE with RELEASE ordering will use MONOTONIC ordering for the read operation
     !$omp atomic capture release, seq_cst
         x = g
         g = x * 10

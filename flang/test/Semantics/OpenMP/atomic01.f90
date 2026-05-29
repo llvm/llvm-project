@@ -103,21 +103,18 @@ use omp_lib
   !$omp end atomic
 
   !ERROR: At most one RELEASE clause can appear on the ATOMIC directive
-  !WARNING: An ATOMIC CAPTURE with RELEASE ordering will use MONOTONIC ordering for the read operation
   !$omp atomic release release capture
     i = j
     j = k
   !$omp end atomic
 
   !ERROR: At most one RELEASE clause can appear on the ATOMIC directive
-  !WARNING: An ATOMIC CAPTURE with RELEASE ordering will use MONOTONIC ordering for the read operation
   !$omp atomic capture release release
     i = j
     j = k
   !$omp end atomic
 
   !ERROR: At most one RELEASE clause can appear on the ATOMIC directive
-  !WARNING: An ATOMIC CAPTURE with RELEASE ordering will use MONOTONIC ordering for the read operation
   !$omp atomic release capture release
     i = j
     j = k
@@ -142,21 +139,18 @@ use omp_lib
   !$omp end atomic
 
   !ERROR: At most one ACQ_REL clause can appear on the ATOMIC directive
-  !WARNING: An ATOMIC CAPTURE with ACQ_REL ordering will use ACQUIRE ordering for the read operation
   !$omp atomic acq_rel acq_rel capture
     i = j
     j = k
   !$omp end atomic
 
   !ERROR: At most one ACQ_REL clause can appear on the ATOMIC directive
-  !WARNING: An ATOMIC CAPTURE with ACQ_REL ordering will use ACQUIRE ordering for the read operation
   !$omp atomic capture acq_rel acq_rel
     i = j
     j = k
   !$omp end atomic
 
   !ERROR: At most one ACQ_REL clause can appear on the ATOMIC directive
-  !WARNING: An ATOMIC CAPTURE with ACQ_REL ordering will use ACQUIRE ordering for the read operation
   !$omp atomic acq_rel capture acq_rel
     i = j
     j = k

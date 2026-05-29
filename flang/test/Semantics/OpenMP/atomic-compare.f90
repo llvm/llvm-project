@@ -23,7 +23,6 @@
   if (a .eq. b) a = c
   !$omp end atomic
 
-  !WARNING: An ATOMIC UPDATE operation must not have ACQUIRE as the memory order, using RELAXED
   !$omp atomic compare acquire hint(OMP_LOCK_HINT_CONTENDED)
   if (b .eq. a) b = c
 
@@ -33,12 +32,10 @@
   !$omp atomic compare seq_cst
   if (b .eq. c) b = a
 
-  !WARNING: An ATOMIC UPDATE operation must not have ACQ_REL as the memory order, using RELEASE
   !$omp atomic hint(1) acq_rel compare
   if (b .eq. a) b = c
   !$omp end atomic
 
-  !WARNING: An ATOMIC UPDATE operation must not have ACQ_REL as the memory order, using RELEASE
   !$omp atomic hint(1) acq_rel compare fail(release)
   if (c .eq. a) a = b
   !$omp end atomic
@@ -73,15 +70,12 @@
   if (b .eq. c) b = a
 
   !ERROR: At most one ACQUIRE clause can appear on the ATOMIC directive
-  !WARNING: An ATOMIC UPDATE operation must not have ACQUIRE as the memory order, using RELAXED
   !$omp atomic acquire acquire compare
   if (b .eq. c) b = a
   !ERROR: At most one ACQUIRE clause can appear on the ATOMIC directive
-  !WARNING: An ATOMIC UPDATE operation must not have ACQUIRE as the memory order, using RELAXED
   !$omp atomic compare acquire acquire
   if (b .eq. c) b = a
   !ERROR: At most one ACQUIRE clause can appear on the ATOMIC directive
-  !WARNING: An ATOMIC UPDATE operation must not have ACQUIRE as the memory order, using RELAXED
   !$omp atomic acquire compare acquire
   if (b .eq. c) b = a
 
