@@ -99,8 +99,7 @@ LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
   if (!block)
     return nullptr;
 
-  auto block_info =
-      Block::allocate(block, alignment, size);
+  auto block_info = Block::allocate(block, alignment, size);
   if (block_info.next)
     free_store.insert(block_info.next);
   if (block_info.prev)
@@ -180,8 +179,7 @@ LIBC_INLINE bool FreeListHeap::shrink_in_place(Block *block, size_t size) {
         reinterpret_cast<cpp::byte *>(block) + new_outer_size;
     size_t backup;
     LIBC_NAMESPACE::inline_memcpy(&backup, overlap_ptr, sizeof(size_t));
-    optional<Block *> next =
-        block->split(size, Block::MIN_ALIGN);
+    optional<Block *> next = block->split(size, Block::MIN_ALIGN);
 
     LIBC_NAMESPACE::inline_memcpy(overlap_ptr, &backup, sizeof(size_t));
 
