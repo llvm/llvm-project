@@ -1903,6 +1903,18 @@ public:
                                                       LParenLoc, Condition);
   }
 
+  /// Build a new OpenMP 'replayable' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPReplayableClause(Expr *Condition,
+                                        SourceLocation StartLoc,
+                                        SourceLocation LParenLoc,
+                                        SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPReplayableClause(StartLoc, EndLoc,
+                                                          LParenLoc, Condition);
+  }
+
   /// Build a new OpenMP 'private' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
@@ -1920,11 +1932,14 @@ public:
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
   OMPClause *RebuildOMPFirstprivateClause(ArrayRef<Expr *> VarList,
+                                          OpenMPFirstprivateModifier FPKind,
+                                          SourceLocation FPKindLoc,
+                                          SourceLocation ColonLoc,
                                           SourceLocation StartLoc,
                                           SourceLocation LParenLoc,
                                           SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPFirstprivateClause(VarList, StartLoc,
-                                                            LParenLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPFirstprivateClause(
+        VarList, FPKind, FPKindLoc, ColonLoc, StartLoc, LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'lastprivate' clause.
@@ -2172,6 +2187,29 @@ public:
                                       SourceLocation EndLoc) {
     return getSema().OpenMP().ActOnOpenMPPriorityClause(Priority, StartLoc,
                                                         LParenLoc, EndLoc);
+  }
+
+  /// Build a new OpenMP 'graph_id' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPGraphIdClause(Expr *Condition, SourceLocation StartLoc,
+                                     SourceLocation LParenLoc,
+                                     SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPGraphIdClause(Condition, StartLoc,
+                                                       LParenLoc, EndLoc);
+  }
+
+  /// Build a new OpenMP 'graph_reset' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPGraphResetClause(Expr *Condition,
+                                        SourceLocation StartLoc,
+                                        SourceLocation LParenLoc,
+                                        SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPGraphResetClause(Condition, StartLoc,
+                                                          LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'grainsize' clause.
@@ -9990,6 +10028,17 @@ TreeTransform<Derived>::TransformOMPAssumeDirective(OMPAssumeDirective *D) {
 }
 
 template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPTaskgraphDirective(
+    OMPTaskgraphDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_taskgraph, DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPErrorDirective(OMPErrorDirective *D) {
   DeclarationNameInfo DirName;
@@ -10834,6 +10883,19 @@ TreeTransform<Derived>::TransformOMPNowaitClause(OMPNowaitClause *C) {
 
 template <typename Derived>
 OMPClause *
+TreeTransform<Derived>::TransformOMPReplayableClause(OMPReplayableClause *C) {
+  ExprResult Cond;
+  if (auto *Condition = C->getCondition()) {
+    Cond = getDerived().TransformExpr(Condition);
+    if (Cond.isInvalid())
+      return nullptr;
+  }
+  return getDerived().RebuildOMPReplayableClause(
+      Cond.get(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
 TreeTransform<Derived>::TransformOMPUntiedClause(OMPUntiedClause *C) {
   // No need to rebuild this clause, no template-dependent parameters.
   return C;
@@ -11161,7 +11223,8 @@ OMPClause *TreeTransform<Derived>::TransformOMPFirstprivateClause(
     Vars.push_back(EVar.get());
   }
   return getDerived().RebuildOMPFirstprivateClause(
-      Vars, C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+      Vars, C->getKind(), C->getKindLoc(), C->getColonLoc(), C->getBeginLoc(),
+      C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
@@ -11608,6 +11671,26 @@ TreeTransform<Derived>::TransformOMPPriorityClause(OMPPriorityClause *C) {
     return nullptr;
   return getDerived().RebuildOMPPriorityClause(
       E.get(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPGraphIdClause(OMPGraphIdClause *C) {
+  ExprResult Cond = getDerived().TransformExpr(C->getId());
+  if (Cond.isInvalid())
+    return nullptr;
+  return getDerived().RebuildOMPGraphIdClause(
+      Cond.get(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPGraphResetClause(OMPGraphResetClause *C) {
+  ExprResult Cond = getDerived().TransformExpr(C->getCondition());
+  if (Cond.isInvalid())
+    return nullptr;
+  return getDerived().RebuildOMPGraphResetClause(
+      Cond.get(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
