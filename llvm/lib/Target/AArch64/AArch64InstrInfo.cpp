@@ -4880,6 +4880,18 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::ST2H_IMM:
   case AArch64::ST2W_IMM:
   case AArch64::ST2D_IMM:
+  case AArch64::LD1B_2Z_IMM:
+  case AArch64::LD1B_2Z_STRIDED_IMM:
+  case AArch64::LD1H_2Z_IMM:
+  case AArch64::LD1H_2Z_STRIDED_IMM:
+  case AArch64::LD1W_2Z_IMM:
+  case AArch64::LD1W_2Z_STRIDED_IMM:
+  case AArch64::LD1D_2Z_IMM:
+  case AArch64::LD1D_2Z_STRIDED_IMM:
+  case AArch64::LD1B_2Z_IMM_PSEUDO:
+  case AArch64::LD1H_2Z_IMM_PSEUDO:
+  case AArch64::LD1W_2Z_IMM_PSEUDO:
+  case AArch64::LD1D_2Z_IMM_PSEUDO:
     Scale = TypeSize::getScalable(32);
     Width = TypeSize::getScalable(16 * 2);
     MinOffset = -8;
@@ -4906,6 +4918,18 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::ST4H_IMM:
   case AArch64::ST4W_IMM:
   case AArch64::ST4D_IMM:
+  case AArch64::LD1B_4Z_IMM:
+  case AArch64::LD1B_4Z_STRIDED_IMM:
+  case AArch64::LD1H_4Z_IMM:
+  case AArch64::LD1H_4Z_STRIDED_IMM:
+  case AArch64::LD1W_4Z_IMM:
+  case AArch64::LD1W_4Z_STRIDED_IMM:
+  case AArch64::LD1D_4Z_IMM:
+  case AArch64::LD1D_4Z_STRIDED_IMM:
+  case AArch64::LD1B_4Z_IMM_PSEUDO:
+  case AArch64::LD1H_4Z_IMM_PSEUDO:
+  case AArch64::LD1W_4Z_IMM_PSEUDO:
+  case AArch64::LD1D_4Z_IMM_PSEUDO:
     Scale = TypeSize::getScalable(64);
     Width = TypeSize::getScalable(16 * 4);
     MinOffset = -8;
@@ -5016,40 +5040,6 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     Width = TypeSize::getFixed(8);
     MinOffset = 0;
     MaxOffset = 63;
-    break;
-  case AArch64::LD1B_2Z_IMM:
-  case AArch64::LD1B_2Z_STRIDED_IMM:
-  case AArch64::LD1H_2Z_IMM:
-  case AArch64::LD1H_2Z_STRIDED_IMM:
-  case AArch64::LD1W_2Z_IMM:
-  case AArch64::LD1W_2Z_STRIDED_IMM:
-  case AArch64::LD1D_2Z_IMM:
-  case AArch64::LD1D_2Z_STRIDED_IMM:
-  case AArch64::LD1B_2Z_IMM_PSEUDO:
-  case AArch64::LD1H_2Z_IMM_PSEUDO:
-  case AArch64::LD1W_2Z_IMM_PSEUDO:
-  case AArch64::LD1D_2Z_IMM_PSEUDO:
-    Scale = TypeSize::getScalable(/*Width*/ 16 * /*NVecs*/ 2);
-    Width = TypeSize::getScalable(/*Width*/ 16 * /*NVecs*/ 2);
-    MinOffset = -8;
-    MaxOffset = 7;
-    break;
-  case AArch64::LD1B_4Z_IMM:
-  case AArch64::LD1B_4Z_STRIDED_IMM:
-  case AArch64::LD1H_4Z_IMM:
-  case AArch64::LD1H_4Z_STRIDED_IMM:
-  case AArch64::LD1W_4Z_IMM:
-  case AArch64::LD1W_4Z_STRIDED_IMM:
-  case AArch64::LD1D_4Z_IMM:
-  case AArch64::LD1D_4Z_STRIDED_IMM:
-  case AArch64::LD1B_4Z_IMM_PSEUDO:
-  case AArch64::LD1H_4Z_IMM_PSEUDO:
-  case AArch64::LD1W_4Z_IMM_PSEUDO:
-  case AArch64::LD1D_4Z_IMM_PSEUDO:
-    Scale = TypeSize::getScalable(/*Width*/ 16 * /*NVecs*/ 4);
-    Width = TypeSize::getScalable(/*Width*/ 16 * /*NVecs*/ 4);
-    MinOffset = -8;
-    MaxOffset = 7;
     break;
   }
 
