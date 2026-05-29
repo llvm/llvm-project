@@ -29,13 +29,15 @@ int main() {
 
   if (first != 4 || second != 103) {
     std::fprintf(stderr,
-                 "FAIL lexical pointer shared replay first=%d second=%d expected=4/103\n",
+                 "FAIL lexical pointer shared replay first=%d second=%d "
+                 "expected=4/103\n",
                  first, second);
     return 1;
   }
 
-  std::fprintf(stderr, "PASS lexical pointer shared replay first=%d second=%d\n",
-               first, second);
+  std::fprintf(stderr,
+               "PASS lexical pointer shared replay first=%d second=%d\n", first,
+               second);
   return 0;
 }
 
