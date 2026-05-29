@@ -804,17 +804,6 @@ define i32 @freeze_select_scalar_demanded(i1 %c, <2 x i32> %a, <2 x i32> %b, <2 
 ;
 ; X64-LABEL: freeze_select_scalar_demanded:
 ; X64:       # %bb.0:
-; X64-NEXT:    testb $1, %dil
-; X64-NEXT:    jne .LBB27_1
-; X64-NEXT:  # %bb.2:
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
-; X64-NEXT:    vpsubd %xmm1, %xmm2, %xmm1
-; X64-NEXT:    jmp .LBB27_3
-; X64-NEXT:  .LBB27_1:
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483647,2147483647,2147483647,2147483647]
-; X64-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
-; X64-NEXT:  .LBB27_3:
-; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-NEXT:    vmovd %xmm0, %eax
 ; X64-NEXT:    retq
   %poisonable.b = add nsw <2 x i32> %b, <i32 2147483647, i32 2147483647>
