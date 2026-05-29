@@ -18,6 +18,6 @@ Target &llvm::getTheSuperHTarget() {
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY
 void LLVMInitializeSuperHTargetInfo() {
-  RegisterTarget<Triple::superh, /*HasJIT=*/false> X(getTheSuperHTarget(),
+  RegisterTarget<Triple::sh, /*HasJIT=*/false> X(getTheSuperHTarget(),
                                                     "sh", "SuperH", "SuperH");
 }
