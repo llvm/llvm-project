@@ -15,7 +15,7 @@
 
 constexpr std::size_t MAX_STRING_LEN = 8 << 14;
 
-// No match found — worst case for find_first_of (must scan entire haystack).
+// No match found -- worst case for find_first_of (must scan entire haystack).
 // Varies haystack size with a fixed needle size.
 static void BM_StringFindFirstOfNoMatch(benchmark::State& state) {
   std::string haystack(state.range(0), 'a');
@@ -28,7 +28,7 @@ static void BM_StringFindFirstOfNoMatch(benchmark::State& state) {
 }
 BENCHMARK(BM_StringFindFirstOfNoMatch)->Range(32, MAX_STRING_LEN);
 
-// No match found — varies needle size with a fixed haystack.
+// No match found -- varies needle size with a fixed haystack.
 // Demonstrates O(n*m) vs O(n+m) scaling with needle size.
 static void BM_StringFindFirstOfNoMatchVaryNeedle(benchmark::State& state) {
   std::string haystack(8192, 'a');
@@ -41,7 +41,7 @@ static void BM_StringFindFirstOfNoMatchVaryNeedle(benchmark::State& state) {
 }
 BENCHMARK(BM_StringFindFirstOfNoMatchVaryNeedle)->Arg(2)->Arg(4)->Arg(8)->Arg(16)->Arg(32)->Arg(64)->Arg(128);
 
-// Match at the end — must scan nearly the entire haystack before finding it.
+// Match at the end -- must scan nearly the entire haystack before finding it.
 static void BM_StringFindFirstOfMatchAtEnd(benchmark::State& state) {
   std::string haystack(state.range(0), 'a');
   haystack.back() = 'z';
@@ -54,7 +54,7 @@ static void BM_StringFindFirstOfMatchAtEnd(benchmark::State& state) {
 }
 BENCHMARK(BM_StringFindFirstOfMatchAtEnd)->Range(32, MAX_STRING_LEN);
 
-// find_last_of — no match, must scan entire haystack backward.
+// find_last_of -- no match, must scan entire haystack backward.
 static void BM_StringFindLastOfNoMatch(benchmark::State& state) {
   std::string haystack(state.range(0), 'a');
   std::string needle("xyz!@#$%");
@@ -66,7 +66,7 @@ static void BM_StringFindLastOfNoMatch(benchmark::State& state) {
 }
 BENCHMARK(BM_StringFindLastOfNoMatch)->Range(32, MAX_STRING_LEN);
 
-// find_first_not_of — all characters are in the needle, no "not of" found.
+// find_first_not_of -- all characters are in the needle, no "not of" found.
 static void BM_StringFindFirstNotOfNoMatch(benchmark::State& state) {
   std::string haystack(state.range(0), 'a');
   std::string needle("abcdefgh");
@@ -78,7 +78,7 @@ static void BM_StringFindFirstNotOfNoMatch(benchmark::State& state) {
 }
 BENCHMARK(BM_StringFindFirstNotOfNoMatch)->Range(32, MAX_STRING_LEN);
 
-// find_last_not_of — all characters are in the needle, no "not of" found.
+// find_last_not_of -- all characters are in the needle, no "not of" found.
 static void BM_StringFindLastNotOfNoMatch(benchmark::State& state) {
   std::string haystack(state.range(0), 'a');
   std::string needle("abcdefgh");
