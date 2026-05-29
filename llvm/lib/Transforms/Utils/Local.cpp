@@ -3018,7 +3018,12 @@ static void combineMetadata(Instruction *K, const Instruction *J,
           K->setMetadata(Kind, JMD);
         break;
       case LLVMContext::MD_invariant_group:
-        // Preserve !invariant.group in K.
+        // If K moves, only keep !invariant.group if it is present on both
+        // instructions; otherwise the invariant would be asserted on a path
+        // (J's) that never promised it. If K does not move, K stays on its
+        // original path, so its metadata remains valid.
+        if (DoesKMove)
+          K->setMetadata(Kind, JMD);
         break;
       // Keep empty cases for prof, mmra, memprof, and callsite to prevent them
       // from being removed as unknown metadata. The actual merging is handled
