@@ -1465,14 +1465,6 @@ if( LLVM_INCLUDE_TESTS )
   endif()
   set_target_properties(test-depends PROPERTIES FOLDER "LLVM/Tests")
   add_dependencies(check-all test-depends)
-
-  # Projects that need runtimes for their tests (e.g. flang needs flang-rt).
-  get_property(runtimes_test_consumers GLOBAL PROPERTY LLVM_TEST_DEPENDS_ON_RUNTIMES)
-  foreach(target ${runtimes_test_consumers})
-    if (TARGET ${target})
-      add_dependencies(${target} test-depends)
-    endif()
-  endforeach()
 endif()
 
 if (LLVM_INCLUDE_DOCS)

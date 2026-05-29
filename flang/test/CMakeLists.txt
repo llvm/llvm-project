@@ -122,7 +122,8 @@ endif ()
 
 if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT FLANG_STANDALONE_BUILD)
   # Flang tests need runtimes module files (flang-rt-mod, libomp-mod, etc.).
-  set_property(GLOBAL APPEND PROPERTY LLVM_TEST_DEPENDS_ON_RUNTIMES check-flang)
+  add_custom_target(flang-rt-test-deps)
+  list(APPEND FLANG_TEST_DEPENDS flang-rt-test-deps)
 endif ()
 
 add_custom_target(flang-test-depends DEPENDS ${FLANG_TEST_DEPENDS})

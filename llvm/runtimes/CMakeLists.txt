@@ -801,6 +801,16 @@ ${_flag_values}\
 
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_ADDITIONAL_TEST_TARGETS runtimes ${extra_deps})
   endif()
+
+  # Flang tests depend on module files built by the runtimes.
+  if (TARGET flang-rt-test-deps)
+    if (TARGET flang-rt-mod)
+      add_dependencies(flang-rt-test-deps flang-rt-mod)
+    endif ()
+    if (TARGET libomp-mod)
+      add_dependencies(flang-rt-test-deps libomp-mod)
+    endif ()
+  endif ()
 endif()
 
 if(LIBOMP_ENABLE_ARM64X)
