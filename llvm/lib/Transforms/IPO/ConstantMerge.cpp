@@ -98,9 +98,9 @@ enum class CanMerge { No, Yes };
 static CanMerge makeMergeable(GlobalVariable *Old, GlobalVariable *New) {
   if (!Old->hasGlobalUnnamedAddr() && !New->hasGlobalUnnamedAddr())
     return CanMerge::No;
-  if (Old->hasMetadataOtherThanDebugLoc())
+  if (Old->hasMetadataOtherThanDebugLocAndGuid())
     return CanMerge::No;
-  assert(!New->hasMetadataOtherThanDebugLoc());
+  assert(!New->hasMetadataOtherThanDebugLocAndGuid());
 
   // Merging constants with different comdats means one group cannot in general
   // be dropped independently without the other group now having an invalid
@@ -176,7 +176,7 @@ static bool mergeConstants(Module &M) {
         continue;
 
       // Don't touch globals with metadata other then !dbg.
-      if (GV.hasMetadataOtherThanDebugLoc())
+      if (GV.hasMetadataOtherThanDebugLocAndGuid())
         continue;
 
       Constant *Init = GV.getInitializer();

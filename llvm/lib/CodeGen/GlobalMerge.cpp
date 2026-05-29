@@ -80,6 +80,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -94,6 +95,7 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -605,6 +607,7 @@ bool GlobalMergeImpl::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
 
       NumMerged++;
     }
+    AssignGUIDPass::assignGUIDForMergedGV(*MergedGV);
     Changed = true;
     i = j;
   }
@@ -733,7 +736,7 @@ bool GlobalMergeImpl::run(Module &M) {
     // component globals to the combined global, which only knows how to do this
     // correctly for !dbg (and !type, but by this point LowerTypeTests will have
     // already run).
-    if (GV.hasMetadataOtherThanDebugLoc())
+    if (GV.hasMetadataOtherThanDebugLocAndGuid())
       continue;
 
     Type *Ty = GV.getValueType();
