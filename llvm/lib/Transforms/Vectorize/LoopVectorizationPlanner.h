@@ -837,6 +837,9 @@ class LoopVectorizationPlanner {
 
   SmallVector<VPlanPtr, 4> VPlans;
 
+  /// Copy of scalar VPlan0; used for scalar cost computation.
+  VPlanPtr InitialVPlan0;
+
   /// Profitable vector factors.
   SmallVector<VectorizationFactor, 8> ProfitableVFs;
 
@@ -852,6 +855,9 @@ class LoopVectorizationPlanner {
   /// TODO: Move to VPlan::cost once the use of LoopVectorizationLegality has
   /// been retired.
   InstructionCost cost(VPlan &Plan, ElementCount VF, VPRegisterUsage *RU) const;
+
+  /// Compute the scalar loop cost of InitialVPlan0.
+  InstructionCost computeScalarCost() const;
 
   /// Precompute costs for certain instructions using the legacy cost model. The
   /// function is used to bring up the VPlan-based cost model to initially avoid

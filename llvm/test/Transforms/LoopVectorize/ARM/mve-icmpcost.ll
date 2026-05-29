@@ -5,19 +5,18 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8.1m.main-arm-none-eabi"
 
 ; CHECK-LABEL: LV: Checking a loop in 'expensive_icmp'
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %i.016 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %arrayidx = getelementptr inbounds i16, ptr %s, i32 %i.016
-; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load i16, ptr %arrayidx, align 2
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv = sext i16 %1 to i32
-; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %cmp2 = icmp sgt i32 %conv, %conv1
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   br i1 %cmp2, label %if.then, label %for.inc
-; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %conv6 = add i16 %1, %0
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %arrayidx7 = getelementptr inbounds i16, ptr %d, i32 %i.016
-; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %conv6, ptr %arrayidx7, align 2
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   br label %for.inc
-; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %inc = add nuw nsw i32 %i.016, 1
-; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %exitcond.not = icmp eq i32 %inc, %n
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
+; CHECK: Cost of 0 for VF 1: EMIT-SCALAR ir<%i.016> = phi [ ir<0>, vector.ph ], [ ir<%inc>, for.inc ]
+; CHECK: Cost of 0 for VF 1: EMIT ir<%arrayidx> = getelementptr inbounds ir<%s>, ir<%i.016>
+; CHECK: Cost of 1 for VF 1: EMIT-SCALAR ir<%1> = load ir<%arrayidx>
+; CHECK: Cost of 0 for VF 1: EMIT-SCALAR ir<%conv> = sext ir<%1> to i32
+; CHECK: Cost of 1 for VF 1: EMIT ir<%cmp2> = icmp sgt ir<%conv>, ir<%conv1>
+; CHECK: Cost of 0 for VF 1: EMIT branch-on-cond ir<%cmp2>
+; CHECK: Cost of 1 for VF 1: EMIT ir<%conv6> = add ir<%1>, ir<%0>
+; CHECK: Cost of 0 for VF 1: EMIT ir<%arrayidx7> = getelementptr inbounds ir<%d>, ir<%i.016>
+; CHECK: Cost of 1 for VF 1: EMIT store ir<%conv6>, ir<%arrayidx7>
+; CHECK: Cost of 1 for VF 1: EMIT ir<%inc> = add nuw nsw ir<%i.016>, ir<1>
+; CHECK: Cost of 1 for VF 1: EMIT ir<%exitcond.not> = icmp eq ir<%inc>, ir<%n>
+; CHECK: Cost of 0 for VF 1: EMIT branch-on-cond ir<%exitcond.not>
 ; CHECK: LV: Scalar loop costs: 5.
 ; CHECK: Cost of 1 for VF 2: induction instruction   %inc = add nuw nsw i32 %i.016, 1
 ; CHECK: Cost of 0 for VF 2: induction instruction   %i.016 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
@@ -99,26 +98,26 @@ for.inc:
 }
 
 ; CHECK-LABEL: LV: Checking a loop in 'cheap_icmp'
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %blkCnt.012 = phi i32 [ %dec, %while.body ], [ %blockSize, %while.body.preheader ]
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %pSrcA.addr.011 = phi ptr [ %incdec.ptr, %while.body ], [ %pSrcA, %while.body.preheader ]
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %pDst.addr.010 = phi ptr [ %incdec.ptr5, %while.body ], [ %pDst, %while.body.preheader ]
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %pSrcB.addr.09 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrcB, %while.body.preheader ]
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %incdec.ptr = getelementptr inbounds i8, ptr %pSrcA.addr.011, i32 1
-; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %0 = load i8, ptr %pSrcA.addr.011, align 1
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv1 = sext i8 %0 to i32
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %incdec.ptr2 = getelementptr inbounds i8, ptr %pSrcB.addr.09, i32 1
-; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load i8, ptr %pSrcB.addr.09, align 1
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv3 = sext i8 %1 to i32
-; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %mul = mul nsw i32 %conv3, %conv1
-; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %shr = ashr i32 %mul, 7
-; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %2 = icmp slt i32 %shr, 127
-; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %spec.select.i = select i1 %2, i32 %shr, i32 127
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv4 = trunc i32 %spec.select.i to i8
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %incdec.ptr5 = getelementptr inbounds i8, ptr %pDst.addr.010, i32 1
-; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i8 %conv4, ptr %pDst.addr.010, align 1
-; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %dec = add i32 %blkCnt.012, -1
-; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %cmp.not = icmp eq i32 %dec, 0
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   br i1 %cmp.not, label %while.end.loopexit, label %while.body
+; CHECK: Cost of 0 for VF 1: EMIT-SCALAR ir<%blkCnt.012> = phi [ ir<%blockSize>, vector.ph ], [ ir<%dec>, while.body ]
+; CHECK: Cost of 0 for VF 1: EMIT-SCALAR ir<%pSrcA.addr.011> = phi [ ir<%pSrcA>, vector.ph ], [ ir<%incdec.ptr>, while.body ]
+; CHECK: Cost of 0 for VF 1: EMIT-SCALAR ir<%pDst.addr.010> = phi [ ir<%pDst>, vector.ph ], [ ir<%incdec.ptr5>, while.body ]
+; CHECK: Cost of 0 for VF 1: EMIT-SCALAR ir<%pSrcB.addr.09> = phi [ ir<%pSrcB>, vector.ph ], [ ir<%incdec.ptr2>, while.body ]
+; CHECK: Cost of 0 for VF 1: EMIT ir<%incdec.ptr> = getelementptr inbounds ir<%pSrcA.addr.011>, ir<1>
+; CHECK: Cost of 1 for VF 1: EMIT-SCALAR ir<%0> = load ir<%pSrcA.addr.011>
+; CHECK: Cost of 0 for VF 1: EMIT-SCALAR ir<%conv1> = sext ir<%0> to i32
+; CHECK: Cost of 0 for VF 1: EMIT ir<%incdec.ptr2> = getelementptr inbounds ir<%pSrcB.addr.09>, ir<1>
+; CHECK: Cost of 1 for VF 1: EMIT-SCALAR ir<%1> = load ir<%pSrcB.addr.09>
+; CHECK: Cost of 0 for VF 1: EMIT-SCALAR ir<%conv3> = sext ir<%1> to i32
+; CHECK: Cost of 1 for VF 1: EMIT ir<%mul> = mul nsw ir<%conv3>, ir<%conv1>
+; CHECK: Cost of 1 for VF 1: EMIT ir<%shr> = ashr ir<%mul>, ir<7>
+; CHECK: Cost of 1 for VF 1: EMIT ir<%2> = icmp slt ir<%shr>, ir<127>
+; CHECK: Cost of 1 for VF 1: EMIT ir<%spec.select.i> = select ir<%2>, ir<%shr>, ir<127>
+; CHECK: Cost of 0 for VF 1: EMIT-SCALAR ir<%conv4> = trunc ir<%spec.select.i> to i8
+; CHECK: Cost of 0 for VF 1: EMIT ir<%incdec.ptr5> = getelementptr inbounds ir<%pDst.addr.010>, ir<1>
+; CHECK: Cost of 1 for VF 1: EMIT store ir<%conv4>, ir<%pDst.addr.010>
+; CHECK: Cost of 1 for VF 1: EMIT ir<%dec> = add ir<%blkCnt.012>, ir<-1>
+; CHECK: Cost of 1 for VF 1: EMIT ir<%cmp.not> = icmp eq ir<%dec>, ir<0>
+; CHECK: Cost of 0 for VF 1: EMIT branch-on-cond ir<%cmp.not>
 ; CHECK: LV: Scalar loop costs: 9.
 ; CHECK: Cost of 1 for VF 2: induction instruction   %dec = add i32 %blkCnt.012, -1
 ; CHECK: Cost of 0 for VF 2: induction instruction   %blkCnt.012 = phi i32 [ %dec, %while.body ], [ %blockSize, %while.body.preheader ]
@@ -278,7 +277,7 @@ while.end:
   ret void
 }
 
-; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %cmp1 = fcmp
+; CHECK: Cost of 1 for VF 1: EMIT ir<%cmp1> = fcmp olt nnan ninf nsz ir<%0>, ir<0.000000e+00>
 ; CHECK: Cost of 12 for VF 2: WIDEN ir<%cmp1> = fcmp olt nnan ninf nsz ir<%0>, ir<0.000000e+00>
 ; CHECK: Cost of 24 for VF 4: WIDEN ir<%cmp1> = fcmp olt nnan ninf nsz ir<%0>, ir<0.000000e+00>
 define void @floatcmp(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %blockSize) #0 {

@@ -7,7 +7,7 @@ target triple = "arm64-apple-macosx"
 
 define void @udiv_rhs_opt_cost(ptr %dst) #0 {
 ; CHECK-LABEL: 'udiv_rhs_opt_cost'
-; CHECK:  LV: Found an estimated cost of 5 for VF 1 For instruction: %div = udiv i8 %iv.trunc, 3
+; CHECK:  Cost of 5 for VF 1: EMIT ir<%div> = udiv ir<%iv.trunc>, ir<3>
 ; CHECK:  Cost of 5 for VF 2: CLONE ir<%div> = udiv ir<%iv.trunc>, ir<3>
 ; CHECK:  Cost of 0 for VF 2: IR %div = udiv i8 %iv.trunc, 3
 ; CHECK:  Cost of 5 for VF 4: CLONE ir<%div> = udiv ir<%iv.trunc>, ir<3>
@@ -38,8 +38,8 @@ exit:
 
 define void @fneg_used_by_fmul_scalar_cost_is_zero(ptr %dst) #0 {
 ; CHECK-LABEL: 'fneg_used_by_fmul_scalar_cost_is_zero'
-; CHECK:  LV: Found an estimated cost of 0 for VF 1 For instruction: %neg = fneg double %conv
-; CHECK:  LV: Found an estimated cost of 2 for VF 1 For instruction: %mul = fmul double %neg, 2.500000e-04
+; CHECK:  Cost of 0 for VF 1: EMIT ir<%neg> = fneg ir<%conv>
+; CHECK:  Cost of 2 for VF 1: EMIT ir<%mul> = fmul ir<%neg>, ir<2.500000e-04>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%neg> = fneg ir<%conv>
 ; CHECK:  Cost of 2 for VF 2: WIDEN ir<%mul> = fmul ir<%neg>, ir<2.500000e-04>
 ; CHECK:  Cost of 0 for VF 2: IR %neg = fneg double %conv

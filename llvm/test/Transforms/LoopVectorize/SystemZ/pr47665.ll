@@ -5,43 +5,21 @@ define void @test(ptr %p, i40 %a) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[P:%.*]], i40 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE6:%.*]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE6]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i8> [[VEC_IND]], splat (i8 9)
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
-; CHECK:       pred.store.if:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
-; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP0]], i64 1
-; CHECK-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
-; CHECK:       pred.store.if1:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
-; CHECK:       pred.store.continue2:
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP0]], i64 2
-; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
-; CHECK:       pred.store.if3:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
-; CHECK:       pred.store.continue4:
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP0]], i64 3
-; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
-; CHECK:       pred.store.if5:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
-; CHECK:       pred.store.continue6:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i8> [[VEC_IND]], splat (i8 4)
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
-; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i40 [[A]], 24
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i40 [[SHL]], 28
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i40 [[ASHR]] to i32
+; CHECK-NEXT:    [[ICMP_EQ:%.*]] = icmp eq i32 [[TRUNC]], 0
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[ICMP_EQ]] to i32
+; CHECK-NEXT:    [[ICMP_ULT:%.*]] = icmp ult i32 0, [[ZEXT]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[ICMP_ULT]], true
+; CHECK-NEXT:    [[ICMP_SGT:%.*]] = icmp sgt i1 [[OR]], false
+; CHECK-NEXT:    store i1 [[ICMP_SGT]], ptr [[P]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[IV_NEXT]], 10
+; CHECK-NEXT:    br i1 [[COND]], label [[VECTOR_BODY]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
