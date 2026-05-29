@@ -1713,16 +1713,16 @@ public:
   /// Returns if \p Offset is legal for the subtarget as the offset to a FLAT
   /// encoded instruction with the given \p FlatVariant.
   bool isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
-                         AMDGPU::FlatVariant FlatVariant) const;
+                         AMDGPU::FlatAddrSpace FlatVariant) const;
 
   /// Split \p COffsetVal into {immediate offset field, remainder offset}
   /// values.
   std::pair<int64_t, int64_t>
   splitFlatOffset(int64_t COffsetVal, unsigned AddrSpace,
-                  AMDGPU::FlatVariant FlatVariant) const;
+                  AMDGPU::FlatAddrSpace FlatVariant) const;
 
   /// Returns true if negative offsets are allowed for the given \p FlatVariant.
-  bool allowNegativeFlatOffset(AMDGPU::FlatVariant FlatVariant) const;
+  bool allowNegativeFlatOffset(AMDGPU::FlatAddrSpace FlatVariant) const;
 
   /// \brief Return a target-specific opcode if Opcode is a pseudo instruction.
   /// Return -1 if the target-specific opcode for the pseudo instruction does

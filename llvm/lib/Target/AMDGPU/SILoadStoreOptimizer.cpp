@@ -2410,9 +2410,9 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
   unsigned AS = SIInstrInfo::isFLATGlobal(MI) ? AMDGPUAS::GLOBAL_ADDRESS
                                               : AMDGPUAS::FLAT_ADDRESS;
 
-  AMDGPU::FlatVariant FlatVariant = AS == AMDGPUAS::GLOBAL_ADDRESS
-                                        ? AMDGPU::FlatVariant::FlatGlobal
-                                        : AMDGPU::FlatVariant::FLAT;
+  AMDGPU::FlatAddrSpace FlatVariant = AS == AMDGPUAS::GLOBAL_ADDRESS
+                                          ? AMDGPU::FlatAddrSpace::FlatGlobal
+                                          : AMDGPU::FlatAddrSpace::FLAT;
   bool AllowNegativeOffset =
       TII->allowNegativeFlatOffset(FlatVariant) && !TII->usesASYNC_CNT(MI);
   // The async global instructions use i24 offset for global address but u16

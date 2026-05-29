@@ -249,7 +249,7 @@ private:
 
   std::pair<Register, int>
   selectFlatOffsetImpl(MachineOperand &Root,
-                       AMDGPU::FlatVariant FlatVariant) const;
+                       AMDGPU::FlatAddrSpace FlatVariant) const;
 
   InstructionSelector::ComplexRendererFns
   selectFlatOffset(MachineOperand &Root) const;

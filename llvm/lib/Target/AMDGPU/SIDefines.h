@@ -201,7 +201,7 @@ namespace AMDGPU {
 
 // Identifies which FLAT address-space segment an instruction operates on.
 // Passed to helpers like isLegalFLATOffset / splitFlatOffset.
-enum class FlatVariant : unsigned { FLAT, FlatGlobal, FlatScratch };
+enum class FlatAddrSpace : unsigned { FLAT, FlatGlobal, FlatScratch };
 
 enum OperandType : unsigned {
   /// Operands with register, 32-bit, or 64-bit immediate
