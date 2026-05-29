@@ -2024,9 +2024,11 @@ public:
   void cvtSdwaVOP2b(MCInst &Inst, const OperandVector &Operands);
   void cvtSdwaVOP2e(MCInst &Inst, const OperandVector &Operands);
   void cvtSdwaVOPC(MCInst &Inst, const OperandVector &Operands);
+
+  enum class SDWAInstType : unsigned { VOP1 = 0, VOP2 = 1, VOPC = 2 };
+
   void cvtSDWA(MCInst &Inst, const OperandVector &Operands,
-               uint64_t BasicInstType,
-               bool SkipDstVcc = false,
+               SDWAInstType BasicInstType, bool SkipDstVcc = false,
                bool SkipSrcVcc = false);
 
   ParseStatus parseEndpgm(OperandVector &Operands);
@@ -10524,28 +10526,27 @@ ParseStatus AMDGPUAsmParser::parseSDWADstUnused(OperandVector &Operands) {
 }
 
 void AMDGPUAsmParser::cvtSdwaVOP1(MCInst &Inst, const OperandVector &Operands) {
-  cvtSDWA(Inst, Operands, SIInstrFlags::VOP1);
+  cvtSDWA(Inst, Operands, SDWAInstType::VOP1);
 }
 
 void AMDGPUAsmParser::cvtSdwaVOP2(MCInst &Inst, const OperandVector &Operands) {
-  cvtSDWA(Inst, Operands, SIInstrFlags::VOP2);
+  cvtSDWA(Inst, Operands, SDWAInstType::VOP2);
 }
 
 void AMDGPUAsmParser::cvtSdwaVOP2b(MCInst &Inst, const OperandVector &Operands) {
-  cvtSDWA(Inst, Operands, SIInstrFlags::VOP2, true, true);
+  cvtSDWA(Inst, Operands, SDWAInstType::VOP2, true, true);
 }
 
 void AMDGPUAsmParser::cvtSdwaVOP2e(MCInst &Inst, const OperandVector &Operands) {
-  cvtSDWA(Inst, Operands, SIInstrFlags::VOP2, false, true);
+  cvtSDWA(Inst, Operands, SDWAInstType::VOP2, false, true);
 }
 
 void AMDGPUAsmParser::cvtSdwaVOPC(MCInst &Inst, const OperandVector &Operands) {
-  cvtSDWA(Inst, Operands, SIInstrFlags::VOPC, isVI());
+  cvtSDWA(Inst, Operands, SDWAInstType::VOPC, isVI());
 }
 
 void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
-                              uint64_t BasicInstType,
-                              bool SkipDstVcc,
+                              SDWAInstType BasicInstType, bool SkipDstVcc,
                               bool SkipSrcVcc) {
   using namespace llvm::AMDGPU::SDWA;
 
@@ -10568,13 +10569,13 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
       // or 4th (v_addc_u32_sdwa v1, vcc, v2, v3, vcc) operand.
       // Skip VCC only if we didn't skip it on previous iteration.
       // Note that src0 and src1 occupy 2 slots each because of modifiers.
-      if (BasicInstType == SIInstrFlags::VOP2 &&
+      if (BasicInstType == SDWAInstType::VOP2 &&
           ((SkipDstVcc && Inst.getNumOperands() == 1) ||
            (SkipSrcVcc && Inst.getNumOperands() == 5))) {
         SkippedVcc = true;
         continue;
       }
-      if (BasicInstType == SIInstrFlags::VOPC && Inst.getNumOperands() == 0) {
+      if (BasicInstType == SDWAInstType::VOPC && Inst.getNumOperands() == 0) {
         SkippedVcc = true;
         continue;
       }
@@ -10595,7 +10596,7 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
       Opc != AMDGPU::V_NOP_sdwa_vi) {
     // v_nop_sdwa_sdwa_vi/gfx9 has no optional sdwa arguments
     switch (BasicInstType) {
-    case SIInstrFlags::VOP1:
+    case SDWAInstType::VOP1:
       if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::clamp))
         addOptionalImmOperand(Inst, Operands, OptionalIdx,
                               AMDGPUOperand::ImmTyClamp, 0);
@@ -10616,7 +10617,7 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
       addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySDWASrc0Sel, SdwaSel::DWORD);
       break;
 
-    case SIInstrFlags::VOP2:
+    case SDWAInstType::VOP2:
       addOptionalImmOperand(Inst, Operands, OptionalIdx,
                             AMDGPUOperand::ImmTyClamp, 0);
 
@@ -10629,7 +10630,7 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
       addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySDWASrc1Sel, SdwaSel::DWORD);
       break;
 
-    case SIInstrFlags::VOPC:
+    case SDWAInstType::VOPC:
       if (AMDGPU::hasNamedOperand(Inst.getOpcode(), AMDGPU::OpName::clamp))
         addOptionalImmOperand(Inst, Operands, OptionalIdx,
                               AMDGPUOperand::ImmTyClamp, 0);
