@@ -15,6 +15,7 @@
 ; CHECK-SIMPLE: define {{.*}}foo_func2{{.*}}
 ; CHECK-SIMPLE: define {{.*}}bar_func1{{.*}}
 ; CHECK-SIMPLE-NOT: define {{.*}}addFive{{.*}}
+; CHECK-SIMPLE-NOT: define {{.*}}unusedFunc{{.*}}
 ;
 ; Test that multiply defined symbols are reported as errors.
 ; RUN: not clang-sycl-linker %t/bar.bc %t/baz.bc --dry-run -o a.spv 2>&1 \

@@ -24,10 +24,10 @@ def library_path_S : Separate<["--", "-"], "library-path">, Flags<[HelpHidden]>,
 def library_path_EQ : Joined<["--", "-"], "library-path=">, Flags<[HelpHidden]>,
   Alias<library_path>;
 
-def bc_library_S : Separate<["--", "-"], "bc-library">, MetaVarName<"<name>">,
+def bc_library : Separate<["--", "-"], "bc-library">, MetaVarName<"<name>">,
   HelpText<"Search for LLVM bitcode library <name>. Library name is provided with extension, e.g. --bc-library foo.bc">;
 def bc_library_EQ : Joined<["--", "-"], "bc-library=">, Flags<[HelpHidden]>,
-  Alias<bc_library_S>;
+  Alias<bc_library>;
 
 def arch_EQ : Joined<["--", "-"], "arch=">,
               Flags<[LinkerOnlyOption]>,

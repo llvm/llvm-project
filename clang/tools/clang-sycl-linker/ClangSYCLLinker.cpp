@@ -221,7 +221,7 @@ std::optional<std::string> findFile(StringRef Dir, const Twine &Name) {
   SmallString<128> Path(Dir);
   llvm::sys::path::append(Path, Name);
   if (sys::fs::exists(Path) && !sys::fs::is_directory(Path))
-    return static_cast<std::string>(Path);
+    return std::string(Path);
   return std::nullopt;
 }
 
@@ -241,7 +241,7 @@ Expected<SmallVector<std::string>> getBCLibraryNames(const ArgList &Args) {
     LibraryPaths.push_back(Arg->getValue());
 
   SmallVector<std::string> LibraryFiles;
-  for (const opt::Arg *Arg : Args.filtered(OPT_bc_library_S)) {
+  for (const opt::Arg *Arg : Args.filtered(OPT_bc_library)) {
     std::optional<std::string> LibName =
         searchLibrary(Arg->getValue(), LibraryPaths);
     if (!LibName)
