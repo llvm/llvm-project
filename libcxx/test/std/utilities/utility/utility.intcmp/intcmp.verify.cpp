@@ -121,6 +121,26 @@ constexpr void test_uchars() {
   std::in_range<int>(T()); // expected-error 2 {{no matching function for call to 'in_range'}}
 }
 
+// cv-qualified types are not signed/unsigned integer types per
+// [basic.fundamental]/p1-2. Explicit template args bypass the by-value
+// deduction strip, so the constraint must reject these.
+void test_cv() {
+  std::cmp_equal<const int, const int>(0, 0);   // expected-error {{no matching function for call to 'cmp_equal'}}
+  std::cmp_not_equal<const int, int>(0, 0);     // expected-error {{no matching function for call to 'cmp_not_equal'}}
+  std::cmp_less<const int, int>(0, 0);          // expected-error {{no matching function for call to 'cmp_less'}}
+  std::cmp_less<int, volatile int>(0, 0);       // expected-error {{no matching function for call to 'cmp_less'}}
+  std::cmp_less_equal<volatile int, int>(0, 0); // expected-error {{no matching function for call to 'cmp_less_equal'}}
+  std::cmp_greater<const volatile int, const int>(
+      0, 0); // expected-error {{no matching function for call to 'cmp_greater'}}
+  std::cmp_greater_equal<const int, const int>(
+      0, 0);                             // expected-error {{no matching function for call to 'cmp_greater_equal'}}
+  std::in_range<const int>(0);           // expected-error {{no matching function for call to 'in_range'}}
+  std::in_range<volatile int>(0);        // expected-error {{no matching function for call to 'in_range'}}
+  std::in_range<const bool>(0);          // expected-error {{no matching function for call to 'in_range'}}
+  std::in_range<const char>(0);          // expected-error {{no matching function for call to 'in_range'}}
+  std::in_range<const unsigned long>(0); // expected-error {{no matching function for call to 'in_range'}}
+}
+
 int main(int, char**) {
   test<bool>();
   test<char>();

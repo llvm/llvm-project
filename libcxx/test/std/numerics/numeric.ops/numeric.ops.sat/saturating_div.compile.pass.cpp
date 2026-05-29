@@ -106,3 +106,16 @@ static_assert(!CanDivByZero<0ULL>);
 #ifndef TEST_HAS_NO_INT128
 static_assert(!CanDivByZero<static_cast<__uint128_t>(0)>);
 #endif
+
+// cv-qualified versions are not signed/unsigned integer types per
+// [basic.fundamental]/p1-2. Explicit template args bypass by-value
+// deduction strip, so the constraint must reject these.
+template <class T>
+concept _can_saturating_div = requires(int x) { std::saturating_div<T>(x, x); };
+static_assert(!_can_saturating_div<const int>);
+static_assert(!_can_saturating_div<volatile int>);
+static_assert(!_can_saturating_div<const volatile int>);
+static_assert(!_can_saturating_div<const unsigned int>);
+static_assert(!_can_saturating_div<const long long>);
+static_assert(!_can_saturating_div<const bool>);
+static_assert(!_can_saturating_div<const char>);

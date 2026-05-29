@@ -13,8 +13,8 @@
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_signed.h>
+#include <__type_traits/is_unqualified.h>
 #include <__type_traits/is_unsigned.h>
-#include <__type_traits/remove_cv.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -45,12 +45,12 @@ inline const bool __is_character_v<char32_t> = true;
 template <class _Tp>
 inline const bool __is_signed_integer_v =
     is_integral<_Tp>::value && is_signed<_Tp>::value && !__is_character_v<_Tp> && !is_same<_Tp, bool>::value &&
-    is_same<__remove_cv_t<_Tp>, _Tp>::value;
+    __is_unqualified_v<_Tp>;
 
 template <class _Tp>
 inline const bool __is_unsigned_integer_v =
     is_integral<_Tp>::value && is_unsigned<_Tp>::value && !__is_character_v<_Tp> && !is_same<_Tp, bool>::value &&
-    is_same<__remove_cv_t<_Tp>, _Tp>::value;
+    __is_unqualified_v<_Tp>;
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>

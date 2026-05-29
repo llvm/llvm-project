@@ -47,5 +47,12 @@ int main(int, char**)
     static_assert(toobig<std::uintmax_t>(), ""); // expected-error {{static assertion expression is not an integral constant expression}}
     static_assert(toobig<std::uintptr_t>(), ""); // expected-error {{static assertion expression is not an integral constant expression}}
 
+    // cv-qualified versions are not unsigned integer types per
+    // [basic.fundamental]/p2. Explicit template args bypass by-value
+    // deduction strip, so the constraint must reject these.
+    std::bit_ceil<const unsigned int>(0u);            // expected-error {{no matching function for call to 'bit_ceil'}}
+    std::bit_ceil<volatile unsigned int>(0u);         // expected-error {{no matching function for call to 'bit_ceil'}}
+    std::bit_ceil<const volatile unsigned long>(0ul); // expected-error {{no matching function for call to 'bit_ceil'}}
+
     return 0;
 }
