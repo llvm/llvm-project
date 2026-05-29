@@ -111,11 +111,20 @@ static_assert(!CanDivByZero<static_cast<__uint128_t>(0)>);
 // [basic.fundamental]/p1-2. Explicit template args bypass by-value
 // deduction strip, so the constraint must reject these.
 template <class T>
-concept _can_saturating_div = requires(int x) { std::saturating_div<T>(x, x); };
-static_assert(!_can_saturating_div<const int>);
-static_assert(!_can_saturating_div<volatile int>);
-static_assert(!_can_saturating_div<const volatile int>);
-static_assert(!_can_saturating_div<const unsigned int>);
-static_assert(!_can_saturating_div<const long long>);
-static_assert(!_can_saturating_div<const bool>);
-static_assert(!_can_saturating_div<const char>);
+concept can_saturating_div = requires(int x) { std::saturating_div<T>(x, x); };
+
+// Unqualified signed/unsigned integers pass; bool stays rejected.
+static_assert(can_saturating_div<int>);
+static_assert(can_saturating_div<unsigned int>);
+static_assert(can_saturating_div<long long>);
+static_assert(!can_saturating_div<bool>);
+static_assert(!can_saturating_div<char>);
+
+// cv-qualified versions are rejected.
+static_assert(!can_saturating_div<const int>);
+static_assert(!can_saturating_div<volatile int>);
+static_assert(!can_saturating_div<const volatile int>);
+static_assert(!can_saturating_div<const unsigned int>);
+static_assert(!can_saturating_div<const long long>);
+static_assert(!can_saturating_div<const bool>);
+static_assert(!can_saturating_div<const char>);

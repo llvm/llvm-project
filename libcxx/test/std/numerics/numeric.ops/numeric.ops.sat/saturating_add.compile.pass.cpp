@@ -80,11 +80,20 @@ constexpr void test() {
 // [basic.fundamental]/p1-2. Explicit template args bypass by-value
 // deduction strip, so the constraint must reject these.
 template <class T>
-concept _can_saturating_add = requires(int x) { std::saturating_add<T>(x, x); };
-static_assert(!_can_saturating_add<const int>);
-static_assert(!_can_saturating_add<volatile int>);
-static_assert(!_can_saturating_add<const volatile int>);
-static_assert(!_can_saturating_add<const unsigned int>);
-static_assert(!_can_saturating_add<const long long>);
-static_assert(!_can_saturating_add<const bool>);
-static_assert(!_can_saturating_add<const char>);
+concept can_saturating_add = requires(int x) { std::saturating_add<T>(x, x); };
+
+// Unqualified signed/unsigned integers pass; bool stays rejected.
+static_assert(can_saturating_add<int>);
+static_assert(can_saturating_add<unsigned int>);
+static_assert(can_saturating_add<long long>);
+static_assert(!can_saturating_add<bool>);
+static_assert(!can_saturating_add<char>);
+
+// cv-qualified versions are rejected.
+static_assert(!can_saturating_add<const int>);
+static_assert(!can_saturating_add<volatile int>);
+static_assert(!can_saturating_add<const volatile int>);
+static_assert(!can_saturating_add<const unsigned int>);
+static_assert(!can_saturating_add<const long long>);
+static_assert(!can_saturating_add<const bool>);
+static_assert(!can_saturating_add<const char>);

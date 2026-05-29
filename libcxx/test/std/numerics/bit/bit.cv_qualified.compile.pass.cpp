@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++20
 
 // <bit>
 
@@ -22,56 +22,56 @@
 #include <bit>
 
 template <class T>
-concept _has_bit_ceil = requires { std::bit_ceil<T>(T{}); };
+concept has_bit_ceil = requires { std::bit_ceil<T>(T{}); };
 template <class T>
-concept _has_bit_floor = requires { std::bit_floor<T>(T{}); };
+concept has_bit_floor = requires { std::bit_floor<T>(T{}); };
 template <class T>
-concept _has_bit_width = requires { std::bit_width<T>(T{}); };
+concept has_bit_width = requires { std::bit_width<T>(T{}); };
 template <class T>
-concept _has_has_single_bit = requires { std::has_single_bit<T>(T{}); };
+concept has_has_single_bit = requires { std::has_single_bit<T>(T{}); };
 template <class T>
-concept _has_rotl = requires { std::rotl<T>(T{}, 0); };
+concept has_rotl = requires { std::rotl<T>(T{}, 0); };
 template <class T>
-concept _has_rotr = requires { std::rotr<T>(T{}, 0); };
+concept has_rotr = requires { std::rotr<T>(T{}, 0); };
 template <class T>
-concept _has_countl_zero = requires { std::countl_zero<T>(T{}); };
+concept has_countl_zero = requires { std::countl_zero<T>(T{}); };
 template <class T>
-concept _has_countl_one = requires { std::countl_one<T>(T{}); };
+concept has_countl_one = requires { std::countl_one<T>(T{}); };
 template <class T>
-concept _has_countr_zero = requires { std::countr_zero<T>(T{}); };
+concept has_countr_zero = requires { std::countr_zero<T>(T{}); };
 template <class T>
-concept _has_countr_one = requires { std::countr_one<T>(T{}); };
+concept has_countr_one = requires { std::countr_one<T>(T{}); };
 template <class T>
-concept _has_popcount = requires { std::popcount<T>(T{}); };
+concept has_popcount = requires { std::popcount<T>(T{}); };
 
 template <class T>
 constexpr void check_admitted() {
-  static_assert(_has_bit_ceil<T>);
-  static_assert(_has_bit_floor<T>);
-  static_assert(_has_bit_width<T>);
-  static_assert(_has_has_single_bit<T>);
-  static_assert(_has_rotl<T>);
-  static_assert(_has_rotr<T>);
-  static_assert(_has_countl_zero<T>);
-  static_assert(_has_countl_one<T>);
-  static_assert(_has_countr_zero<T>);
-  static_assert(_has_countr_one<T>);
-  static_assert(_has_popcount<T>);
+  static_assert(has_bit_ceil<T>);
+  static_assert(has_bit_floor<T>);
+  static_assert(has_bit_width<T>);
+  static_assert(has_has_single_bit<T>);
+  static_assert(has_rotl<T>);
+  static_assert(has_rotr<T>);
+  static_assert(has_countl_zero<T>);
+  static_assert(has_countl_one<T>);
+  static_assert(has_countr_zero<T>);
+  static_assert(has_countr_one<T>);
+  static_assert(has_popcount<T>);
 }
 
 template <class T>
 constexpr void check_rejected() {
-  static_assert(!_has_bit_ceil<T>);
-  static_assert(!_has_bit_floor<T>);
-  static_assert(!_has_bit_width<T>);
-  static_assert(!_has_has_single_bit<T>);
-  static_assert(!_has_rotl<T>);
-  static_assert(!_has_rotr<T>);
-  static_assert(!_has_countl_zero<T>);
-  static_assert(!_has_countl_one<T>);
-  static_assert(!_has_countr_zero<T>);
-  static_assert(!_has_countr_one<T>);
-  static_assert(!_has_popcount<T>);
+  static_assert(!has_bit_ceil<T>);
+  static_assert(!has_bit_floor<T>);
+  static_assert(!has_bit_width<T>);
+  static_assert(!has_has_single_bit<T>);
+  static_assert(!has_rotl<T>);
+  static_assert(!has_rotr<T>);
+  static_assert(!has_countl_zero<T>);
+  static_assert(!has_countl_one<T>);
+  static_assert(!has_countr_zero<T>);
+  static_assert(!has_countr_one<T>);
+  static_assert(!has_popcount<T>);
 }
 
 // Unqualified unsigned integer types pass.
