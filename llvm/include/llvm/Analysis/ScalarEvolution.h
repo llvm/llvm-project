@@ -336,7 +336,7 @@ public:
   LLVM_ABI void computeAndSetCanonical(ScalarEvolution &SE);
 
   /// Return the canonical SCEV.
-  LLVM_ABI const SCEV *getCanonical() const {
+  const SCEV *getCanonical() const {
     assert(CanonicalSCEV && "canonical SCEV not yet computed");
     return CanonicalSCEV;
   }
