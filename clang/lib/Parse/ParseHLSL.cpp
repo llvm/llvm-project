@@ -118,7 +118,7 @@ static void fixSeparateAttrArgAndNumber(StringRef ArgStr, SourceLocation ArgLoc,
   Slot = new (Ctx) IdentifierLoc(ArgLoc, PP.getIdentifierInfo(FixedArg));
 }
 
-Parser::ParsedSemantic Parser::ParseHLSLSemantic() {
+Parser::ParsedSemantic Parser::ParseHLSLSemantic() const {
   assert(Tok.is(tok::identifier) && "Not a HLSL Annotation");
 
   // Semantic pattern: [A-Za-z_]([A-Za-z_0-9]*[A-Za-z_])?[0-9]*
@@ -133,10 +133,10 @@ Parser::ParsedSemantic Parser::ParseHLSLSemantic() {
   // Determine the start of the semantic index.
   unsigned IndexIndex = Identifier.find_last_not_of("0123456789") + 1;
 
-  // ParseHLSLSemantic being called on an indentifier, the first
+  // ParseHLSLSemantic being called on an identifier, the first
   // character cannot be a digit. This error should be handled by
   // the caller. We can assert here.
-  StringRef SemanticName = Identifier.take_front(IndexIndex);
+  std::string SemanticName = Identifier.take_front(IndexIndex).str();
   assert(SemanticName.size() > 0);
 
   unsigned Index = 0;

@@ -27,6 +27,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include <optional>
 #include <stack>
+#include <string>
 
 namespace clang {
 class PragmaHandler;
@@ -5271,12 +5272,12 @@ private:
   }
 
   struct ParsedSemantic {
-    StringRef Name = "";
+    std::string Name = "";
     unsigned Index = 0;
     bool Explicit = false;
   };
 
-  ParsedSemantic ParseHLSLSemantic();
+  ParsedSemantic ParseHLSLSemantic() const;
 
   void ParseHLSLAnnotations(ParsedAttributes &Attrs,
                             SourceLocation *EndLoc = nullptr,
