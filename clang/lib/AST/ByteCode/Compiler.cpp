@@ -5387,6 +5387,31 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::visitDtorCall(const VarDecl *VD, const APValue &Value) {
+  assert(!canClassify(VD->getType()));
+
+  DeclScope<Emitter> LocalScope(this, VD);
+  // Create a local variable to use as the instance.
+  QualType Ty = VD->getType();
+  Descriptor *D = P.createDescriptor(
+      VD, Ty.getTypePtr(), Descriptor::InlineDescMD, /*IsConst=*/false,
+      /*IsTemporary=*/false, /*IsMutable=*/false,
+      /*IsVolatile=*/Ty.isVolatileQualified(), nullptr);
+  if (!D)
+    return false;
+
+  Scope::Local Local = this->createLocal(D);
+  Locals.insert({VD, Local});
+  VarScope->addForScopeKind(Local, ScopeKind::Block);
+
+  if (!this->emitGetPtrLocal(Local.Offset, VD))
+    return false;
+  if (!this->visitAPValueInitializer(Value, nullptr, Ty))
+    return false;
+  return this->emitDestructionPop(D, VD);
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
                                      const Expr *E) {
   assert(!DiscardResult);
@@ -5541,11 +5566,17 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
     return this->emitPopPtr(E);
   }
   if (Val.isArray()) {
+    unsigned InitializedElems = Val.getArrayInitializedElts();
     const auto *ArrType = T->getAsArrayTypeUnsafe();
     QualType ElemType = ArrType->getElementType();
+    OptPrimType ElemT = classify(ElemType);
+
     for (unsigned A = 0, AN = Val.getArraySize(); A != AN; ++A) {
-      const APValue &Elem = Val.getArrayInitializedElt(A);
-      if (OptPrimType ElemT = classify(ElemType)) {
+      const APValue &Elem = A >= InitializedElems
+                                ? Val.getArrayFiller()
+                                : Val.getArrayInitializedElt(A);
+
+      if (ElemT) {
         if (!this->visitAPValue(Elem, *ElemT, E))
           return false;
         if (!this->emitInitElem(*ElemT, A, E))
