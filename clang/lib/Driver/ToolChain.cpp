@@ -841,6 +841,10 @@ StringRef ToolChain::getOSLibName() const {
     return "aix";
   case llvm::Triple::Serenity:
     return "serenity";
+  case llvm::Triple::WASIp1:
+  case llvm::Triple::WASIp2:
+  case llvm::Triple::WASIp3:
+    return "wasi";
   default:
     return getOS();
   }
