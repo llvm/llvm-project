@@ -3143,30 +3143,6 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
           if (const char *Ext = strrchr(Value, '.'))
             Ty = TC.LookupTypeForExtension(Ext + 1);
 
-          // For SYCL, convert C-type sources to C++-type sources.
-          if (IsSYCL) {
-            types::ID OldTy = Ty;
-            switch (Ty) {
-            case types::TY_C:
-              Ty = types::TY_CXX;
-              break;
-            case types::TY_CHeader:
-              Ty = types::TY_CXXHeader;
-              break;
-            case types::TY_PP_C:
-              Ty = types::TY_PP_CXX;
-              break;
-            case types::TY_PP_CHeader:
-              Ty = types::TY_PP_CXXHeader;
-              break;
-            default:
-              break;
-            }
-            if (OldTy != Ty)
-              Diag(clang::diag::warn_drv_fsycl_with_c_type)
-                  << getTypeName(OldTy) << getTypeName(Ty);
-          }
-
           if (Ty == types::TY_INVALID) {
             if (IsCLMode() && (Args.hasArgNoClaim(options::OPT_E) || CCGenDiagnostics))
               Ty = types::TY_CXX;
@@ -3180,7 +3156,8 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
 
           // If the driver is invoked as C++ compiler (like clang++ or c++) it
           // should autodetect some input files as C++ for g++ compatibility.
-          if (CCCIsCXX()) {
+          // -fsycl also requires C++ sources, so apply the same promotion.
+          if (CCCIsCXX() || IsSYCL) {
             types::ID OldTy = Ty;
             Ty = types::lookupCXXTypeForCType(Ty);
 
@@ -3277,7 +3254,8 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
       // Emit an error if C compilation is forced in -fsycl mode.
       if (IsSYCL && (InputType == types::TY_C || InputType == types::TY_PP_C ||
                      InputType == types::TY_CHeader))
-        Diag(clang::diag::err_drv_fsycl_with_c_type) << A->getAsString(Args);
+        Diag(clang::diag::err_drv_argument_not_allowed_with)
+            << A->getAsString(Args) << "-fsycl";
 
       // If the user has put -fmodule-header{,=} then we treat C++ headers as
       // header unit inputs.  So we 'promote' -xc++-header appropriately.
