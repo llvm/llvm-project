@@ -2520,6 +2520,37 @@ static void emitRegisterMatchErrorFunc(AsmMatcherInfo &Info, raw_ostream &OS) {
   OS << "}\n\n";
 }
 
+// Returns true if ClassName corresponds to a RegisterClass defined in the
+// target description (and thus has a generated RegClassID), rather than a
+// singleton register or an anonymous derived register class.
+static bool isDefinedRegisterClass(const AsmMatcherInfo &Info,
+                                   StringRef ClassName) {
+  for (const auto &RC : Info.Target.getRegBank().getRegClasses()) {
+    if (RC.getName() == ClassName)
+      return true;
+  }
+  return false;
+}
+
+static void emitGetRegClassFromMatchKindFunc(AsmMatcherInfo &Info,
+                                             raw_ostream &OS) {
+  OS << "[[maybe_unused]] static const MCRegisterClass "
+        "*getRegClassFromMatchKind(MatchClassKind Kind) {\n";
+  OS << "  switch (Kind) {\n";
+  for (const auto &CI : Info.Classes) {
+    if (CI.isRegisterClass() && !CI.ValueName.empty() &&
+        isDefinedRegisterClass(Info, CI.ClassName)) {
+      OS << "  case " << CI.Name << ":\n";
+      OS << "    return &" << Info.Target.getName() << "MCRegisterClasses["
+         << Info.Target.getName() << "::" << CI.ClassName << "RegClassID];\n";
+    }
+  }
+  OS << "  default:\n";
+  OS << "    return nullptr;\n";
+  OS << "  }\n";
+  OS << "}\n\n";
+}
+
 /// emitValidateOperandClass - Emit the function to validate an operand class.
 static void emitValidateOperandClass(const CodeGenTarget &Target,
                                      AsmMatcherInfo &Info, raw_ostream &OS) {
@@ -3507,6 +3538,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
 
   OS << "\n#ifdef GET_MATCHER_IMPLEMENTATION\n";
   OS << "#undef GET_MATCHER_IMPLEMENTATION\n\n";
+  OS << "#include \"llvm/MC/MCRegisterInfo.h\"\n\n";
 
   // Generate the function that remaps for mnemonic aliases.
   bool HasMnemonicAliases = emitMnemonicAliases(OS, Info, Target);
@@ -3527,6 +3559,9 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
 
   // Emit a function to map register classes to operand match failure codes.
   emitRegisterMatchErrorFunc(Info, OS);
+
+  // Emit a function to map MatchClassKind to MCRegisterClass.
+  emitGetRegClassFromMatchKindFunc(Info, OS);
 
   // Emit the routine to match token strings to their match class.
   emitMatchTokenString(Target, Info.Classes, OS);

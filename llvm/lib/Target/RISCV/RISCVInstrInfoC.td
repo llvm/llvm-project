@@ -224,7 +224,7 @@ class CLoad_ri<bits<3> funct3, string OpcodeStr,
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class CStore_rri<bits<3> funct3, string OpcodeStr,
                  DAGOperand cls, DAGOperand opnd>
-    : RVInst16CS<funct3, OPC_C0, (outs), (ins cls:$rs2,GPRCMem:$rs1, opnd:$imm),
+    : RVInst16CS<funct3, OPC_C0, (outs), (ins cls:$rs2, GPRCMem:$rs1, opnd:$imm),
                  OpcodeStr, "$rs2, ${imm}(${rs1})">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -268,7 +268,7 @@ let Predicates = [HasStdExtZca] in {
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_ADDI4SPN : RVInst16CIW<0b000, OPC_C0, (outs GPRC:$rd),
-                             (ins SP:$rs1, uimm10_lsb00nonzero:$imm),
+                             (ins GPRSP:$rs1, uimm10_lsb00nonzero:$imm),
                              "c.addi4spn", "$rd, $rs1, $imm">,
                              Sched<[WriteIALU, ReadIALU]> {
   bits<0> rs1;
@@ -371,8 +371,8 @@ def C_LI : RVInst16CI<0b010, OPC_C1, (outs GPR:$rd), (ins simm6:$imm),
            Sched<[WriteIALU]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def C_ADDI16SP : RVInst16CI<0b011, OPC_C1, (outs SP:$rd_wb),
-                            (ins SP:$rd, simm10_lsb0000nonzero:$imm),
+def C_ADDI16SP : RVInst16CI<0b011, OPC_C1, (outs GPRSP:$rd_wb),
+                            (ins GPRSP:$rd, simm10_lsb0000nonzero:$imm),
                             "c.addi16sp", "$rd, $imm">,
                  Sched<[WriteIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
@@ -745,8 +745,8 @@ def : InstAlias<".insn_cj $opcode, $funct3, $imm11",
 
 // Quadrant 0
 let Predicates = [HasStdExtZca] in {
-def : CompressPat<(ADDI GPRC:$rd, SP:$rs1, uimm10_lsb00nonzero:$imm),
-                  (C_ADDI4SPN GPRC:$rd, SP:$rs1, uimm10_lsb00nonzero:$imm)>;
+def : CompressPat<(ADDI GPRC:$rd, GPRSP:$rs1, uimm10_lsb00nonzero:$imm),
+                  (C_ADDI4SPN GPRC:$rd, GPRSP:$rs1, uimm10_lsb00nonzero:$imm)>;
 
 def : CompressPat<(LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm),
                   (C_LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm)>;

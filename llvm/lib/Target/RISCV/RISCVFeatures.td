@@ -1188,7 +1188,7 @@ def HasStdExtZbkbOrP
 
 // "Y" extension (CHERI support)
 
-def FeatureStdExtY : RISCVExperimentalExtension<0, 96, "'Base Y' (CHERI)">;
+def FeatureStdExtY : RISCVExperimentalExtension<0, 98, "'Base Y' (CHERI)">;
 def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
                  AssemblerPredicate<(all_of FeatureStdExtY), "'Base Y' (CHERI)">;
 
@@ -1846,15 +1846,32 @@ def Feature32Bit
     : SubtargetFeature<"32bit", "IsRV32", "true", "Implements RV32">;
 def Feature64Bit
     : SubtargetFeature<"64bit", "IsRV64", "true", "Implements RV64">;
+// By default enabling RVY uses capability pointers, to use RVI/RVE compatible
+// integral addresses the internal +rvy-int-mode flag can be used.
+// NOTE: the final user-visible flag is still TBD, this flag only exists for
+// testing of the internals.
+def FeatureRVYIntMode
+    : SubtargetFeature<"rvy-int-mode", "IsRVYIntMode", "true",
+                       "Using RVY Base ISA in Compatibility Mode",
+                       [FeatureStdExtY]>;
 def IsRV64 : Predicate<"Subtarget->is64Bit()">,
              AssemblerPredicate<(all_of Feature64Bit),
                                 "RV64I Base Instruction Set">;
 def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
              AssemblerPredicate<(all_of (not Feature64Bit)),
                                 "RV32I Base Instruction Set">;
-
-defvar RV32 = DefaultMode;
-def RV64 : HwMode<[IsRV64]>;
+def IsStdExtYCapMode
+    : Predicate<"Subtarget->hasStdExtY() && !Subtarget->isRVYIntMode()">,
+      AssemblerPredicate<(all_of FeatureStdExtY, (not FeatureRVYIntMode)),
+                         "Using RVY Capability pointer mode">;
+def NotStdExtYCapMode
+    : Predicate<"!Subtarget->hasStdExtY() || Subtarget->isRVYIntMode()">,
+      AssemblerPredicate<(any_of (not FeatureStdExtY), FeatureRVYIntMode),
+                         "Not using RVY Capability Pointer Mode">;
+defvar RV32I = DefaultMode;
+def RV64I : HwMode<[IsRV64, NotStdExtYCapMode]>;
+def RV32Y : HwMode<[IsRV32, IsStdExtYCapMode]>;
+def RV64Y : HwMode<[IsRV64, IsStdExtYCapMode]>;
 
 def FeatureRelax
     : SubtargetFeature<"relax", "EnableLinkerRelax", "true",
@@ -2131,4 +2148,3 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
 
 def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
                                          "Ventana Veyron-Series processors">;
-
