@@ -16,6 +16,7 @@
 #include "AMDGPULegalizerInfo.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
@@ -66,12 +67,21 @@ public:
     Register Origin;
   };
 
+  struct MinMaxToMinMax3MatchInfo {
+    unsigned Opc;
+    Register Val0, Val1, Val2;
+  };
+
   bool matchClampI64ToI16(MachineInstr &MI, const MachineRegisterInfo &MRI,
                           const MachineFunction &MF,
                           ClampI64ToI16MatchInfo &MatchInfo) const;
 
   void applyClampI64ToI16(MachineInstr &MI,
                           const ClampI64ToI16MatchInfo &MatchInfo) const;
+
+  bool matchMinMaxToMinMax3(MachineInstr &MI, MinMaxToMinMax3MatchInfo &MatchInfo) const;
+
+  void applyMinMaxToMinMax3(MachineInstr &MI, MinMaxToMinMax3MatchInfo &MatchInfo) const;
 
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
@@ -104,6 +114,55 @@ bool AMDGPUPreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
   if (tryCombineAllImpl(MI))
     return true;
   return false;
+}
+
+void AMDGPUPreLegalizerCombinerImpl::applyMinMaxToMinMax3(
+    MachineInstr &MI, MinMaxToMinMax3MatchInfo &MatchInfo) const {
+  B.buildInstr(MatchInfo.Opc, {MI.getOperand(0)},
+               {MatchInfo.Val0, MatchInfo.Val1, MatchInfo.Val2}, MI.getFlags());
+  MI.eraseFromParent();
+  return;
+}
+
+bool AMDGPUPreLegalizerCombinerImpl::matchMinMaxToMinMax3(
+    MachineInstr &MI, MinMaxToMinMax3MatchInfo &MatchInfo) const {
+  Register dst = MI.getOperand(0).getReg();
+  LLT t = MRI.getType(dst);
+  if (t == LLT::scalar(16)) {
+    if (!STI.hasMin3Max3_16()) {
+      return false;
+    }
+  } else if (t != LLT::scalar(32)) {
+    if (!(t.isVector() && t.getScalarSizeInBits() == 32))
+      return false;
+  }
+
+  Register R0, R1, R2;
+  unsigned opc = MI.getOpcode();
+  auto matchVOP3 = [&](MachineInstr &MI, MachineRegisterInfo &MRI, unsigned op,
+                       Register &r0, Register &r1, Register &r2) {
+    auto p1 = m_BinOp(op, m_OneNonDBGUse(m_BinOp(op, m_Reg(r0), m_Reg(r1))),
+                      m_Reg(r2));
+    auto p2 = m_BinOp(op, m_Reg(r0),
+                      m_OneNonDBGUse(m_BinOp(op, m_Reg(r1), m_Reg(r2))));
+
+    return mi_match(MI, MRI, m_any_of(p1, p2));
+  };
+  if (!matchVOP3(MI, MRI, opc, R0, R1, R2)) {
+    return false;
+  }
+
+  llvm::SmallDenseMap<uint16_t, uint16_t, 8> mp = {
+      {AMDGPU::G_SMAX, AMDGPU::G_AMDGPU_SMAX3},
+      {AMDGPU::G_SMIN, AMDGPU::G_AMDGPU_SMIN3},
+      {AMDGPU::G_UMAX, AMDGPU::G_AMDGPU_UMAX3},
+      {AMDGPU::G_UMIN, AMDGPU::G_AMDGPU_UMIN3},
+      {AMDGPU::G_FMAXNUM, AMDGPU::G_AMDGPU_FMAX3},
+      {AMDGPU::G_FMAXNUM_IEEE, AMDGPU::G_AMDGPU_FMAX3},
+      {AMDGPU::G_FMINNUM, AMDGPU::G_AMDGPU_FMIN3},
+      {AMDGPU::G_FMINNUM_IEEE, AMDGPU::G_AMDGPU_FMIN3}};
+  MatchInfo = {mp.at(opc), R0, R1, R2};
+  return true;
 }
 
 bool AMDGPUPreLegalizerCombinerImpl::matchClampI64ToI16(
