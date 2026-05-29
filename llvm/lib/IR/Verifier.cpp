@@ -6224,6 +6224,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 #undef BEGIN_REGISTER_VP_INTRINSIC
     visitVPIntrinsic(cast<VPIntrinsic>(Call));
     break;
+  case Intrinsic::fcmp:
+  case Intrinsic::fcmps: {
+    auto Pred = cast<FPCmpIntrinsic>(&Call)->getPredicate();
+    Check(CmpInst::isFPPredicate(Pred),
+          "invalid predicate for FP comparison intrinsic", &Call);
+    break;
+  }
 #define INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC)                        \
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"

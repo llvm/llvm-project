@@ -1746,6 +1746,20 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
                                })))
     return false;
 
+  // FP instruction intrinsics without operand bundles use the default rounding
+  // and exception behavior, so they can be folded.  If operand bundles are
+  // present the FP environment may differ from the default.
+  switch (F->getIntrinsicID()) {
+  case Intrinsic::fadd:
+  case Intrinsic::fsub:
+  case Intrinsic::fmul:
+  case Intrinsic::fdiv:
+  case Intrinsic::frem:
+    return !Call->hasOperandBundles();
+  default:
+    break;
+  }
+
   switch (F->getIntrinsicID()) {
   // Operations that do not operate floating-point numbers and do not depend on
   // FP environment can be folded even in strictfp functions.
@@ -3518,6 +3532,38 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
                                St))
           return ConstantFP::get(Ty, Res);
         return nullptr;
+      }
+
+      // FP instruction intrinsics: without bundles, always use default
+      // rounding/exception behavior (NearestTiesToEven / ebIgnore).
+      switch (IntrinsicID) {
+      default:
+        break;
+      case Intrinsic::fadd: {
+        APFloat Res = Op1V;
+        Res.add(Op2V, RoundingMode::NearestTiesToEven);
+        return ConstantFP::get(Ty, Res);
+      }
+      case Intrinsic::fsub: {
+        APFloat Res = Op1V;
+        Res.subtract(Op2V, RoundingMode::NearestTiesToEven);
+        return ConstantFP::get(Ty, Res);
+      }
+      case Intrinsic::fmul: {
+        APFloat Res = Op1V;
+        Res.multiply(Op2V, RoundingMode::NearestTiesToEven);
+        return ConstantFP::get(Ty, Res);
+      }
+      case Intrinsic::fdiv: {
+        APFloat Res = Op1V;
+        Res.divide(Op2V, RoundingMode::NearestTiesToEven);
+        return ConstantFP::get(Ty, Res);
+      }
+      case Intrinsic::frem: {
+        APFloat Res = Op1V;
+        Res.mod(Op2V);
+        return ConstantFP::get(Ty, Res);
+      }
       }
 
       switch (IntrinsicID) {

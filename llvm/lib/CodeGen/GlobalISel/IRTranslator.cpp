@@ -14,6 +14,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -2723,6 +2724,79 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     StringRef SymbolName = cast<MDString>(MD)->getString();
     MIRBuilder.buildInstr(TargetOpcode::RELOC_NONE)
         .addExternalSymbol(SymbolName.data());
+    return true;
+  }
+
+  // FP instruction intrinsics: call-form equivalents of FP instructions.
+  // Without operand bundles these lower to plain G_* nodes.
+  case Intrinsic::fadd:
+    return translateBinaryOp(TargetOpcode::G_FADD, CI, MIRBuilder);
+  case Intrinsic::fsub:
+    return translateBinaryOp(TargetOpcode::G_FSUB, CI, MIRBuilder);
+  case Intrinsic::fmul:
+    return translateBinaryOp(TargetOpcode::G_FMUL, CI, MIRBuilder);
+  case Intrinsic::fdiv:
+    return translateBinaryOp(TargetOpcode::G_FDIV, CI, MIRBuilder);
+  case Intrinsic::frem:
+    return translateBinaryOp(TargetOpcode::G_FREM, CI, MIRBuilder);
+  case Intrinsic::fptrunc: {
+    Register Src = getOrCreateVReg(*CI.getArgOperand(0));
+    Register Res = getOrCreateVReg(CI);
+    MIRBuilder.buildFPTrunc(Res, Src,
+                            MachineInstr::copyFlagsFromInstruction(CI));
+    return true;
+  }
+  case Intrinsic::fpext: {
+    Register Src = getOrCreateVReg(*CI.getArgOperand(0));
+    Register Res = getOrCreateVReg(CI);
+    MIRBuilder.buildFPExt(Res, Src, MachineInstr::copyFlagsFromInstruction(CI));
+    return true;
+  }
+  case Intrinsic::sitofp: {
+    Register Src = getOrCreateVReg(*CI.getArgOperand(0));
+    Register Res = getOrCreateVReg(CI);
+    MIRBuilder.buildSITOFP(Res, Src);
+    return true;
+  }
+  case Intrinsic::uitofp: {
+    Register Src = getOrCreateVReg(*CI.getArgOperand(0));
+    Register Res = getOrCreateVReg(CI);
+    MIRBuilder.buildUITOFP(Res, Src);
+    return true;
+  }
+  case Intrinsic::fptosi: {
+    Register Src = getOrCreateVReg(*CI.getArgOperand(0));
+    Register Res = getOrCreateVReg(CI);
+    MIRBuilder.buildFPTOSI(Res, Src);
+    return true;
+  }
+  case Intrinsic::fptoui: {
+    Register Src = getOrCreateVReg(*CI.getArgOperand(0));
+    Register Res = getOrCreateVReg(CI);
+    MIRBuilder.buildFPTOUI(Res, Src);
+    return true;
+  }
+  case Intrinsic::fcmp: {
+    // Quiet comparison -- no exception raised on NaN operands.
+    FCmpInst::Predicate Pred = cast<FPCmpIntrinsic>(&CI)->getPredicate();
+    uint32_t Flags = MachineInstr::copyFlagsFromInstruction(CI);
+    Register Op0 = getOrCreateVReg(*CI.getArgOperand(0));
+    Register Op1 = getOrCreateVReg(*CI.getArgOperand(1));
+    Register Res = getOrCreateVReg(CI);
+    MIRBuilder.buildFCmp(Pred, Res, Op0, Op1, Flags);
+    return true;
+  }
+  case Intrinsic::fcmps: {
+    // Signaling comparison -- always raises on any NaN, so always strict.
+    FCmpInst::Predicate Pred = cast<FPCmpIntrinsic>(&CI)->getPredicate();
+    uint32_t Flags = MachineInstr::copyFlagsFromInstruction(CI);
+    Register Op0 = getOrCreateVReg(*CI.getArgOperand(0));
+    Register Op1 = getOrCreateVReg(*CI.getArgOperand(1));
+    Register Res = getOrCreateVReg(CI);
+    MIRBuilder.buildInstr(TargetOpcode::G_STRICT_FCMPS, {Res}, {}, Flags)
+        .addPredicate(Pred)
+        .addUse(Op0)
+        .addUse(Op1);
     return true;
   }
   }

@@ -328,10 +328,16 @@ static FCmpInst::Predicate getFPPredicateFromMD(const Value *Op) {
       .Case("ult", FCmpInst::FCMP_ULT)
       .Case("ule", FCmpInst::FCMP_ULE)
       .Case("une", FCmpInst::FCMP_UNE)
+      .Case("true", FCmpInst::FCMP_TRUE)
+      .Case("false", FCmpInst::FCMP_FALSE)
       .Default(FCmpInst::BAD_FCMP_PREDICATE);
 }
 
 FCmpInst::Predicate ConstrainedFPCmpIntrinsic::getPredicate() const {
+  return getFPPredicateFromMD(getArgOperand(2));
+}
+
+FCmpInst::Predicate FPCmpIntrinsic::getPredicate() const {
   return getFPPredicateFromMD(getArgOperand(2));
 }
 

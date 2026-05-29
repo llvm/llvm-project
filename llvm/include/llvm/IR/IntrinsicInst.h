@@ -766,6 +766,21 @@ public:
   }
 };
 
+/// Represents the llvm.fcmp and llvm.fcmps intrinsics.
+class FPCmpIntrinsic : public IntrinsicInst {
+public:
+  LLVM_ABI FCmpInst::Predicate getPredicate() const;
+  bool isSignaling() const { return getIntrinsicID() == Intrinsic::fcmps; }
+
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::fcmp ||
+           I->getIntrinsicID() == Intrinsic::fcmps;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
 /// This class represents min/max intrinsics.
 class MinMaxIntrinsic : public IntrinsicInst {
 public:

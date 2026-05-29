@@ -7214,6 +7214,41 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   case Intrinsic::aarch64_sve_umaxv:
   case Intrinsic::aarch64_sve_uminv:
     return simplifySVEIntReduction(IID, ReturnType, Op0, Op1);
+  case Intrinsic::fadd: {
+    if (Call && Call->hasOperandBundles())
+      return nullptr;
+    FastMathFlags FMF =
+        Call ? cast<FPMathOperator>(Call)->getFastMathFlags() : FastMathFlags();
+    return llvm::simplifyFAddInst(Op0, Op1, FMF, Q);
+  }
+  case Intrinsic::fsub: {
+    if (Call && Call->hasOperandBundles())
+      return nullptr;
+    FastMathFlags FMF =
+        Call ? cast<FPMathOperator>(Call)->getFastMathFlags() : FastMathFlags();
+    return llvm::simplifyFSubInst(Op0, Op1, FMF, Q);
+  }
+  case Intrinsic::fmul: {
+    if (Call && Call->hasOperandBundles())
+      return nullptr;
+    FastMathFlags FMF =
+        Call ? cast<FPMathOperator>(Call)->getFastMathFlags() : FastMathFlags();
+    return llvm::simplifyFMulInst(Op0, Op1, FMF, Q);
+  }
+  case Intrinsic::fdiv: {
+    if (Call && Call->hasOperandBundles())
+      return nullptr;
+    FastMathFlags FMF =
+        Call ? cast<FPMathOperator>(Call)->getFastMathFlags() : FastMathFlags();
+    return llvm::simplifyFDivInst(Op0, Op1, FMF, Q);
+  }
+  case Intrinsic::frem: {
+    if (Call && Call->hasOperandBundles())
+      return nullptr;
+    FastMathFlags FMF =
+        Call ? cast<FPMathOperator>(Call)->getFastMathFlags() : FastMathFlags();
+    return llvm::simplifyFRemInst(Op0, Op1, FMF, Q);
+  }
   default:
     break;
   }
@@ -7309,6 +7344,18 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
     if (match(Op0, m_AllOnes()) && match(Op1, m_AllOnes()))
       return ConstantInt::getAllOnesValue(F->getReturnType());
 
+    return nullptr;
+  }
+  case Intrinsic::fcmp: {
+    // If operand bundles are present they may enable FP exceptions, in which
+    // case even FCMP_TRUE/FCMP_FALSE could signal on sNaN inputs.
+    if (Call->hasOperandBundles())
+      return nullptr;
+    FCmpInst::Predicate Pred = cast<FPCmpIntrinsic>(Call)->getPredicate();
+    if (Pred == FCmpInst::FCMP_TRUE)
+      return ConstantInt::getTrue(F->getReturnType());
+    if (Pred == FCmpInst::FCMP_FALSE)
+      return ConstantInt::getFalse(F->getReturnType());
     return nullptr;
   }
   case Intrinsic::experimental_constrained_fma: {

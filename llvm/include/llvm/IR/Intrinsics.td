@@ -1116,10 +1116,39 @@ def int_experimental_memset_pattern
        NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
        ImmArg<ArgIndex<3>>]>;
 
-// FIXME: Add version of these floating point intrinsics which allow non-default
-// rounding modes and FP exception handling.
+// Intrinsic call-form equivalents of FP instructions, allowing operand bundles
+// (e.g. "fp.control") to carry per-call FP environment flags such as
+// flush-to-zero denormal mode that cannot be attached to plain IR instructions
+// (fadd/fsub/fmul/...).  Without any operand bundles these lower identically
+// to the corresponding FP instructions.
 
 let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in {
+  def int_fadd : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+                           [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_fsub : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+                           [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_fmul : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+                           [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_fdiv : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+                           [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_frem : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+                           [LLVMMatchType<0>, LLVMMatchType<0>]>;
+
+  // fptrunc/fpext: unary; result type differs from operand type
+  def int_fptrunc : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyfloat_ty]>;
+  def int_fpext   : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyfloat_ty]>;
+
+  // Integer/FP conversions.  fptosi/fptoui yield poison when the value doesn't
+  // fit in the integer type, so they are defined separately below without
+  // IntrNoCreateUndefOrPoison.
+  def int_sitofp : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyint_ty]>;
+  def int_uitofp : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyint_ty]>;
+
+  // fcmp: quiet FP compare; predicate passed as metadata string (e.g. !"oeq")
+  def int_fcmp : DefaultAttrsIntrinsic<
+      [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+      [llvm_anyfloat_ty, LLVMMatchType<0>, llvm_metadata_ty]>;
+
   def int_fma  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
                            [LLVMMatchType<0>, LLVMMatchType<0>,
                             LLVMMatchType<0>]>;
@@ -1193,6 +1222,22 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in
   // TODO: Should constrain all element counts to match
   def int_frexp : DefaultAttrsIntrinsic<[llvm_anyfloat_ty, llvm_anyint_ty], [LLVMMatchType<0>]>;
 }
+
+// fptosi/fptoui: yield poison when the FP value doesn't fit in the integer
+// type, so they cannot have IntrNoCreateUndefOrPoison.
+def int_fptosi : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty],
+                                       [IntrNoMem, IntrSpeculatable]>;
+def int_fptoui : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty],
+                                       [IntrNoMem, IntrSpeculatable]>;
+
+// fcmps: signaling FP compare.  Unlike the quiet llvm.fcmp, this raises an
+// Invalid Operation exception for *any* NaN operand (not just sNaN).
+// Exception observability is always strict -- this intrinsic has
+// IntrInaccessibleMemOnly so it cannot be reordered or eliminated.
+def int_fcmps : Intrinsic<
+    [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+    [llvm_anyfloat_ty, LLVMMatchType<0>, llvm_metadata_ty],
+    [IntrInaccessibleMemOnly, IntrWillReturn, IntrNoCreateUndefOrPoison]>;
 
 // TODO: Move all of these into the IntrNoCreateUndefOrPoison case above.
 let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
