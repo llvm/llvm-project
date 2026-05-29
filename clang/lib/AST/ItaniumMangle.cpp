@@ -5141,9 +5141,9 @@ recurse:
     auto *SNTTPE = cast<SubstNonTypeTemplateParmExpr>(E);
     if (auto *CE = dyn_cast<ConstantExpr>(SNTTPE->getReplacement())) {
       // Pull out the constant value and mangle it as a template argument.
-      QualType ParamType = SNTTPE->getParameterType(Context.getASTContext());
       assert(CE->hasAPValueResult() && "expected the NTTP to have an APValue");
-      mangleValueInTemplateArg(ParamType, CE->getAPValueResult(), false,
+      mangleValueInTemplateArg(SNTTPE->getParameterType(),
+                               CE->getAPValueResult(), false,
                                /*NeedExactType=*/true);
       break;
     }
