@@ -245,7 +245,8 @@ Expected<SmallVector<std::string>> getBCLibraryNames(const ArgList &Args) {
     std::optional<std::string> LibName =
         searchLibrary(Arg->getValue(), LibraryPaths);
     if (!LibName)
-      return createStringError("'%s' library file not found.", Arg->getValue());
+      return createStringError("'" + Twine(Arg->getValue()) +
+                               "' library file not found");
     LibraryFiles.push_back(std::move(*LibName));
   }
 
