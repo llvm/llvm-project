@@ -1405,7 +1405,7 @@ Key value pairs are one of:
 * `arch`: a string for the architecture, not needed if "triple" is specified
 * `cputype`: is a number that is the mach-o CPU type that is being debugged (base 10)
 * `cpusubtype`: is a number that is the mach-o CPU subtype type that is being debugged (base 10)
-* `triple`: a hex encoded string for the target triple (for example, hex encoding of `x86_64-apple-macosx`) that can be used to specify arch + vendor + os in one entry
+* `triple`: an ASCII hex encoded string for the target triple (for example, hex encoding of `x86_64-apple-macosx`) that can be used to specify arch + vendor + os in one entry
 * `vendor`: a string for the vendor (apple), not needed if "triple" is specified
 * `ostype`: a string for the OS being debugged (macosx, linux, freebsd, ios, watchos), not needed if "triple" is specified
 * `endian`: is one of "little", "big", or "pdp"
