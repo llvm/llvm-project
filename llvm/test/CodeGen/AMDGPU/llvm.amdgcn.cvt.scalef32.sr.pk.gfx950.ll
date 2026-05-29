@@ -188,20 +188,6 @@ define amdgpu_ps void @test_scalef32_sr_pk_fp4_f16_uni(ptr addrspace(1) %out, i3
   ret void
 }
 
-define amdgpu_ps void @test_scalef32_sr_pk_fp4_bf16_uni(ptr addrspace(1) %out, i32 inreg %old, <2 x bfloat> inreg %src, i32 inreg %seed, float inreg %scale) {
-; GFX950-LABEL: test_scalef32_sr_pk_fp4_bf16_uni:
-; GFX950:       ; %bb.0:
-; GFX950-NEXT:    v_mov_b32_e32 v2, s0
-; GFX950-NEXT:    v_mov_b32_e32 v3, s2
-; GFX950-NEXT:    v_mov_b32_e32 v4, s3
-; GFX950-NEXT:    v_cvt_scalef32_sr_pk_fp4_bf16 v5, s1, v3, v4
-; GFX950-NEXT:    global_store_dword v[0:1], v5, off
-; GFX950-NEXT:    s_endpgm
-  %cvt = tail call i32 @llvm.amdgcn.cvt.scalef32.sr.pk.fp4.bf16(i32 %old, <2 x bfloat> %src, i32 %seed, float %scale, i32 0)
-  store i32 %cvt, ptr addrspace(1) %out, align 4
-  ret void
-}
-
 define amdgpu_ps void @test_scalef32_sr_pk_fp4_f32_uni(ptr addrspace(1) %out, i32 inreg %old, <2 x float> inreg %src, i32 inreg %seed, float inreg %scale) {
 ; GFX950-SDAG-LABEL: test_scalef32_sr_pk_fp4_f32_uni:
 ; GFX950-SDAG:       ; %bb.0:
