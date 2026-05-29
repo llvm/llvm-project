@@ -43,15 +43,17 @@ int main() {
 
   if (first != 12 || second != 111 || Tracker::Ctors < 2 ||
       Tracker::Dtors < 2 || Tracker::Ctors != Tracker::Dtors) {
-    std::fprintf(stderr,
-                 "FAIL lexical nontrivial replay first=%d second=%d ctors=%d dtors=%d\n",
-                 first, second, Tracker::Ctors, Tracker::Dtors);
+    std::fprintf(
+        stderr,
+        "FAIL lexical nontrivial replay first=%d second=%d ctors=%d dtors=%d\n",
+        first, second, Tracker::Ctors, Tracker::Dtors);
     return 1;
   }
 
-  std::fprintf(stderr,
-               "PASS lexical nontrivial replay first=%d second=%d ctors=%d dtors=%d\n",
-               first, second, Tracker::Ctors, Tracker::Dtors);
+  std::fprintf(
+      stderr,
+      "PASS lexical nontrivial replay first=%d second=%d ctors=%d dtors=%d\n",
+      first, second, Tracker::Ctors, Tracker::Dtors);
   return 0;
 }
 

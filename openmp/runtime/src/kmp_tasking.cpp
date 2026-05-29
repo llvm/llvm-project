@@ -2380,10 +2380,10 @@ static void __kmp_omp_tg_task(kmp_int32 gtid, kmp_taskgraph_node_t *node,
     KMP_ATOMIC_INC(&parent_taskdata->td_allocated_child_tasks);
 
   if (node->relocate) {
-    // Call the task's relocation function with the incoming args from the owning
-    // taskgraph.  This rewrites capture-by-reference variables to point to the
-    // correct location on the replayed taskgraph's stack (which may not be the
-    // same as the location from the initial recorded taskgraph).
+    // Call the task's relocation function with the incoming args from the
+    // owning taskgraph.  This rewrites capture-by-reference variables to point
+    // to the correct location on the replayed taskgraph's stack (which may not
+    // be the same as the location from the initial recorded taskgraph).
     node->relocate(task, taskdata->owning_taskgraph->taskgraph_args);
   } else if (task->shareds != NULL) {
     // A missing relocation callback is only fatal when there is a non-empty
@@ -5881,7 +5881,7 @@ static kmp_task_t *__kmp_taskgraph_clone_task(kmp_info_t *thread,
   kmp_task_t *copy_task = KMP_TASKDATA_TO_TASK(copy_td);
   if (orig->shareds) {
     // New task's shared data has now moved.  Update the pointer.
-    copy_task->shareds = (void*) ((char*) copy_td + shareds_offset);
+    copy_task->shareds = (void *)((char *)copy_td + shareds_offset);
   }
   KMP_ATOMIC_ST_RLX(&copy_td->td_incomplete_child_tasks, 0);
   return KMP_TASKDATA_TO_TASK(copy_td);
@@ -6122,14 +6122,11 @@ void __kmpc_taskgraph_taskwait(ident_t *loc_ref, kmp_int32 gtid,
                               has_no_wait);
 }
 
-kmp_uint32 __kmpc_taskgraph_taskloop(ident_t *loc_ref, kmp_int32 gtid,
-                                     kmp_task_t *new_task, kmp_int32 flags,
-                                     kmp_int32 if_val, kmp_uint64 *lb,
-                                     kmp_uint64 *ub, kmp_int64 st,
-                                     kmp_int32 nogroup, kmp_int32 sched,
-                                     kmp_uint64 grainsize, kmp_int32 modifier,
-                                     void *task_dup,
-                                     kmp_task_relocate_t relocate) {
+kmp_uint32 __kmpc_taskgraph_taskloop(
+    ident_t *loc_ref, kmp_int32 gtid, kmp_task_t *new_task, kmp_int32 flags,
+    kmp_int32 if_val, kmp_uint64 *lb, kmp_uint64 *ub, kmp_int64 st,
+    kmp_int32 nogroup, kmp_int32 sched, kmp_uint64 grainsize,
+    kmp_int32 modifier, void *task_dup, kmp_task_relocate_t relocate) {
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskgroup_t *taskgroup = thread->th.th_current_task->td_taskgroup;
   kmp_taskgraph_record_t *rec = __kmp_taskgraph_or_parent_recording(taskgroup);
