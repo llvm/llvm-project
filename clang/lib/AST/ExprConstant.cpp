@@ -11789,6 +11789,31 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return false;
     return Success(ResultEls, E);
   }
+  case CK_IntegralToFloating:
+  case CK_FloatingToIntegral:
+  case CK_IntegralCast:
+  case CK_FloatingCast:
+  case CK_FloatingToBoolean:
+  case CK_IntegralToBoolean: {
+    // These casts apply element-wise when the source is a vector type.
+    assert(SETy->isVectorType() && "expected vector source type");
+    APValue SrcVal;
+    if (!EvaluateVector(SE, SrcVal, Info))
+      return Error(E);
+
+    assert(SrcVal.getVectorLength() == NElts);
+    QualType SrcEltTy = SETy->castAs<VectorType>()->getElementType();
+    QualType DstEltTy = VTy->getElementType();
+    const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+
+    SmallVector<APValue, 4> ResultEls(NElts);
+    for (unsigned I = 0; I < NElts; ++I) {
+      if (!handleScalarCast(Info, FPO, E, SrcEltTy, DstEltTy,
+                            SrcVal.getVectorElt(I), ResultEls[I]))
+        return Error(E);
+    }
+    return Success(ResultEls, E);
+  }
   default:
     return ExprEvaluatorBaseTy::VisitCastExpr(E);
   }
