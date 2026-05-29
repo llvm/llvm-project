@@ -62,10 +62,6 @@ module {
     // Floating point casts.
     %25 = cir.cast int_to_float %arg1 : !s32i -> !cir.float
     // CHECK: %{{.+}} = llvm.sitofp %{{.+}} : i32 to f32
-    %251 = cir.cast int_to_float %arg4 : !cir.vector<2 x !s32i> -> !cir.vector<2 x !cir.float>
-    // CHECK: %{{.+}} = llvm.sitofp %{{.+}} : vector<2xi32> to vector<2xf32>
-    %252 = cir.cast bitcast %arg4 : !cir.vector<2 x !s32i> -> !cir.vector<1 x !cir.double>
-    // CHECK: %{{.+}} = llvm.bitcast %{{.+}} : vector<2xi32> to vector<1xf64>
     %26 = cir.cast int_to_float %arg0 : !u32i -> !cir.float
     // CHECK: %{{.+}} = llvm.uitofp %{{.+}} : i32 to f32
     %27 = cir.cast float_to_int %arg2 : !cir.float -> !s32i
@@ -94,6 +90,15 @@ module {
     // CHECK: %[[EXT:.*]] = llvm.zext %[[TRUNC]] : i1 to i8
 
     cir.store %3, %1 : !u8i, !cir.ptr<!u8i>
+    cir.return
+  }
+
+  cir.func @vectorCasts(%arg0:!cir.vector<2 x !s32i>) {
+    %i_2_f = cir.cast int_to_float %arg0 : !cir.vector<2 x !s32i> -> !cir.vector<2 x !cir.float>
+    // CHECK: %{{.+}} = llvm.sitofp %{{.+}} : vector<2xi32> to vector<2xf32>
+    %bitcast = cir.cast bitcast %arg0 : !cir.vector<2 x !s32i> -> !cir.vector<1 x !cir.double>
+    // CHECK: %{{.+}} = llvm.bitcast %{{.+}} : vector<2xi32> to vector<1xf64>
+
     cir.return
   }
 }
