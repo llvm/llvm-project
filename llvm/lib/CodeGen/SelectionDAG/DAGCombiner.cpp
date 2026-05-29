@@ -17713,8 +17713,7 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   if (LegalTypes && N0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       N0.getConstantOperandVal(1) == 0 && VT.isInteger() && !VT.isVector()) {
     EVT SrcVT = N0.getOperand(0).getValueType();
-    if (SrcVT.isVector() &&
-        SrcVT.getVectorElementType() == MVT::i1 &&
+    if (SrcVT.isVector() && SrcVT.getVectorElementType() == MVT::i1 &&
         VT.getSizeInBits() <= SrcVT.getSizeInBits()) {
       SDLoc DL(N);
       EVT WideIntVT =
