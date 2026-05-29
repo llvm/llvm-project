@@ -12,5 +12,6 @@
 
 module SwiftBridging {
     header "bridging"
+    header "bridging.h"
     export *
 }

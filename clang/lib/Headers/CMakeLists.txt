@@ -109,6 +109,7 @@ set(hlsl_files
 
 set(swift_bridging_files
   swift/bridging
+  swift/bridging.h
   swift/bridging.modulemap  # Note: the modulemap isn't named module.modulemap
                             # because that would allow #include <bridging>;
                             # we only want #include <swift/bridging>.
