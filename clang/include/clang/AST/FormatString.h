@@ -105,6 +105,8 @@ public:
       return 2;
     case AsIntN:
     case AsFastIntN:
+      assert(ModifierLength != 0 &&
+             "C23 wN/wfN length modifiers must have a nonzero length");
       return ModifierLength;
     case AsInt32:
     case AsInt64:
