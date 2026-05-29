@@ -249,6 +249,17 @@ RISCVMoveMerge::findMatchingInstPair(MachineBasicBlock::iterator &MBBI,
   MachineBasicBlock::iterator E = MBBI->getParent()->end();
   ModifiedRegUnits.clear();
   UsedRegUnits.clear();
+  unsigned RegPairIdx = EvenRegPair ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
+  unsigned SecondPairIdx =
+      !EvenRegPair ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
+
+  // Get the expected source/destination registers of the matching lane.
+  Register SrcGPRPair = TRI->getMatchingSuperReg(
+      RegPair.Source->getReg(), RegPairIdx, &RISCV::GPRPairRegClass);
+  Register DestGPRPair = TRI->getMatchingSuperReg(
+      RegPair.Destination->getReg(), RegPairIdx, &RISCV::GPRPairRegClass);
+  Register ExpectedSourceReg = TRI->getSubReg(SrcGPRPair, SecondPairIdx);
+  Register ExpectedDestReg = TRI->getSubReg(DestGPRPair, SecondPairIdx);
 
   for (MachineBasicBlock::iterator I = next_nodbg(MBBI, E); I != E;
        I = next_nodbg(I, E)) {
@@ -263,33 +274,19 @@ RISCVMoveMerge::findMatchingInstPair(MachineBasicBlock::iterator &MBBI,
           RegPair.Source->getReg() == SourceReg)
         return E;
 
-      unsigned RegPairIdx =
-          EvenRegPair ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
-      unsigned SecondPairIdx =
-          !EvenRegPair ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
-
-      // Get the register GPRPair.
-      Register SrcGPRPair = TRI->getMatchingSuperReg(
-          RegPair.Source->getReg(), RegPairIdx, &RISCV::GPRPairRegClass);
-
-      Register DestGPRPair = TRI->getMatchingSuperReg(
-          RegPair.Destination->getReg(), RegPairIdx, &RISCV::GPRPairRegClass);
-
       // Check if the second pair's registers match the other lane of the
       // GPRPairs.
-      if (SourceReg != TRI->getSubReg(SrcGPRPair, SecondPairIdx) ||
-          DestReg != TRI->getSubReg(DestGPRPair, SecondPairIdx))
-        return E;
-
-      if (!ModifiedRegUnits.available(DestReg) ||
-          !UsedRegUnits.available(DestReg) ||
-          !ModifiedRegUnits.available(SourceReg))
-        return E;
-
-      return I;
+      if (SourceReg == ExpectedSourceReg && DestReg == ExpectedDestReg)
+        return I;
     }
     // Update modified / used register units.
     LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits, TRI);
+    // Once expected lane registers are clobbered/read in-between, we can stop
+    // scanning since the pair cannot be legally merged anymore.
+    if (!ModifiedRegUnits.available(ExpectedDestReg) ||
+        !UsedRegUnits.available(ExpectedDestReg) ||
+        !ModifiedRegUnits.available(ExpectedSourceReg))
+      return E;
   }
   return E;
 }
