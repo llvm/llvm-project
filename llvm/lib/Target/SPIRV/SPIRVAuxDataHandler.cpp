@@ -129,7 +129,8 @@ void SPIRVAuxDataHandler::collectMetadataFor(
       isa<Function>(GO) ? FunctionMetadata : GlobalVariableMetadata;
   // Skip non-MDString operands: emitting them would require a full value
   // translation we can't safely drive from here.
-  auto CollectStrings = [&](MDNode *MD) -> std::optional<SmallVector<MCRegister, 4>> {
+  auto CollectStrings =
+      [&](MDNode *MD) -> std::optional<SmallVector<MCRegister, 4>> {
     SmallVector<MCRegister, 4> Out;
     for (const MDOperand &MdOp : MD->operands()) {
       auto *MDStr = dyn_cast_or_null<MDString>(MdOp.get());
@@ -143,8 +144,7 @@ void SPIRVAuxDataHandler::collectMetadataFor(
     if (MD.first == LLVMContext::MD_dbg)
       continue;
     StringRef MDName = MDNames[MD.first];
-    if (MDName == "spirv.Decorations" ||
-        MDName == "spirv.ParameterDecorations")
+    if (MDName == "spirv.Decorations" || MDName == "spirv.ParameterDecorations")
       continue;
     auto Operands = CollectStrings(MD.second);
     if (!Operands)
@@ -200,16 +200,17 @@ void SPIRVAuxDataHandler::emitAuxData(SPIRV::ModuleAnalysisInfo &MAI) {
     if (!FnReg.isValid())
       continue;
     if (!AEConstReg.isValid())
-      AEConstReg =
-          emitOpConstantI32(AvailableExternally, I32TypeReg, MAI);
+      AEConstReg = emitOpConstantI32(AvailableExternally, I32TypeReg, MAI);
     emitAuxDataExtInst(Linkage, VoidTypeReg, ExtSetReg, {FnReg, AEConstReg},
                        MAI);
   }
 }
 
-void SPIRVAuxDataHandler::emitAuxDataExtInst(
-    uint32_t Opcode, MCRegister VoidTypeReg, MCRegister ExtSetReg,
-    ArrayRef<MCRegister> Operands, SPIRV::ModuleAnalysisInfo &MAI) {
+void SPIRVAuxDataHandler::emitAuxDataExtInst(uint32_t Opcode,
+                                             MCRegister VoidTypeReg,
+                                             MCRegister ExtSetReg,
+                                             ArrayRef<MCRegister> Operands,
+                                             SPIRV::ModuleAnalysisInfo &MAI) {
   MCInst Inst;
   Inst.setOpcode(SPIRV::OpExtInst);
   Inst.addOperand(MCOperand::createReg(MAI.getNextIDRegister()));
