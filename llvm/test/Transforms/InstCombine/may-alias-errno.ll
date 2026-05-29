@@ -3,8 +3,8 @@
 
 ; sinf clobbering errno, but %p cannot alias errno per C/C++ strict aliasing rules via TBAA.
 ; Can do constant store-to-load forwarding.
-define float @does_not_alias_errno(ptr %p, float %f) {
-; CHECK-LABEL: define float @does_not_alias_errno(
+define float @does_not_alias_errno_float_tbaa(ptr %p, float %f) {
+; CHECK-LABEL: define float @does_not_alias_errno_float_tbaa(
 ; CHECK-SAME: ptr [[P:%.*]], float [[F:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[P]], align 4, !tbaa [[TBAA4:![0-9]+]]
@@ -16,6 +16,21 @@ entry:
   %call = call float @sinf(float %f)
   %0 = load float, ptr %p, align 4, !tbaa !4
   ret float %0
+}
+
+define i32 @does_not_alias_errno_struct_tbaa(ptr %p, float %f) {
+; CHECK-LABEL: define i32 @does_not_alias_errno_struct_tbaa(
+; CHECK-SAME: ptr [[P:%.*]], float [[F:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4, !tbaa [[TBAA6:![0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @sinf(float [[F]])
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  store i32 0, ptr %p, align 4, !tbaa !6
+  %call = call float @sinf(float %f)
+  %val = load i32, ptr %p, align 4, !tbaa !6
+  ret i32 %val
 }
 
 ; sinf clobbering errno, but %p is alloca memory, wich can never aliases errno.
@@ -161,6 +176,8 @@ declare void @escape(ptr %p)
 !3 = !{!"Simple C/C++ TBAA"}
 !4 = !{!5, !5, i64 0}
 !5 = !{!"float", !2, i64 0}
+!6 = !{!7, !1, i64 0}
+!7 = !{!"my_struct", !1, i64 0}
 ;.
 ; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; CHECK: [[META1]] = !{!"int", [[META2:![0-9]+]], i64 0}
@@ -168,4 +185,6 @@ declare void @escape(ptr %p)
 ; CHECK: [[META3]] = !{!"Simple C/C++ TBAA"}
 ; CHECK: [[TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
 ; CHECK: [[META5]] = !{!"float", [[META2]], i64 0}
+; CHECK: [[TBAA6]] = !{[[META7:![0-9]+]], [[META1]], i64 0}
+; CHECK: [[META7]] = !{!"my_struct", [[META1]], i64 0}
 ;.

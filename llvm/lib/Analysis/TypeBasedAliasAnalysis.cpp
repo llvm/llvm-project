@@ -395,6 +395,11 @@ AliasResult TypeBasedAAResult::aliasErrno(const MemoryLocation &Loc,
   if (!N)
     return AliasResult::MayAlias;
 
+  // Assume that struct member accesses never alias errno, even if the member
+  // is an integer.
+  if (N->getOperand(0) != N->getOperand(1))
+    return AliasResult::NoAlias;
+
   // There cannot be any alias with errno if TBAA proves the given memory
   // location does not alias errno.
   const auto *ErrnoTBAAMD = M->getNamedMetadata("llvm.errno.tbaa");
