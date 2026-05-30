@@ -176,7 +176,7 @@ jobs:
               -C /__w/llvm-project/llvm-project/libc/cmake/caches/${{ matrix.target }}.cmake
             ;;
           *)
-            cmake -DLLVM_RUNTIME_TARGETS=${{ matrix.target }} \
+            cmake -DLIBC_TARGET_TRIPLE=${{ matrix.target }} \
               -DLLVM_ENABLE_RUNTIMES="$RUNTIMES" \
               -DLLVM_LIBC_FULL_BUILD=ON \
               $CMAKE_FLAGS
