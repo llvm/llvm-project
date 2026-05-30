@@ -3512,6 +3512,17 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
   SDValue EVL = N->getOperand(2);
   SDLoc DL(N);
 
+  // The stack round-trip uses a byte stride, so a sub-byte element (e.g. i1)
+  // would get stride 0 and alias every lane. Widen to a byte integer, reverse,
+  // then truncate back.
+  EVT OrigVT = VT;
+  if (!VT.getVectorElementType().isByteSized()) {
+    EVT WideEltVT = VT.getVectorElementType().changeTypeToInteger();
+    WideEltVT = WideEltVT.getRoundIntegerType(*DAG.getContext());
+    VT = VT.changeVectorElementType(*DAG.getContext(), WideEltVT);
+    Val = DAG.getNode(ISD::ANY_EXTEND, DL, VT, Val);
+  }
+
   // Fallback to VP_STRIDED_STORE to stack followed by VP_LOAD.
   Align Alignment = DAG.getReducedAlign(VT, /*UseABI=*/false);
 
@@ -3545,6 +3556,10 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
                                         EVL, MemVT, StoreMMO, ISD::UNINDEXED);
 
   SDValue Load = DAG.getLoadVP(VT, DL, Store, StackPtr, Mask, EVL, LoadMMO);
+
+  // Truncate back if we widened above.
+  if (OrigVT != VT)
+    Load = DAG.getNode(ISD::TRUNCATE, DL, OrigVT, Load);
 
   std::tie(Lo, Hi) = DAG.SplitVector(Load, DL);
 }
