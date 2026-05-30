@@ -29,6 +29,7 @@ namespace llvm {
 /// below for details.
 class ValueHandleBase {
   friend class Value;
+  template <typename ValueTy> friend class PoisoningVH;
 
 protected:
   /// This indicates what sub class the handle actually is.
@@ -55,12 +56,12 @@ protected:
     }
   }
 
-  void setValPtr(Value *V) { Val = V; }
-
 private:
   PointerIntPair<ValueHandleBase**, 2, HandleBaseKind> PrevPair;
   ValueHandleBase *Next = nullptr;
   Value *Val = nullptr;
+
+  void setValPtr(Value *V) { Val = V; }
 
 public:
   explicit ValueHandleBase(HandleBaseKind Kind)
