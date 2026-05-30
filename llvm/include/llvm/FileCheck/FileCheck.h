@@ -13,6 +13,7 @@
 #ifndef LLVM_FILECHECK_FILECHECK_H
 #define LLVM_FILECHECK_FILECHECK_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -501,6 +502,10 @@ public:
   /// UNIX-style '\n'.
   LLVM_ABI StringRef CanonicalizeFile(MemoryBuffer &MB,
                                       SmallVectorImpl<char> &OutputBuffer);
+
+  /// Drops CHECKs whose CHECK-LABEL section's literal text doesn't match any
+  /// of \p Names. CHECKs before the first label are dropped. Nop if empty.
+  LLVM_ABI void filterByLabel(ArrayRef<StringRef> Names);
 
   /// Checks the input to FileCheck provided in the \p Buffer against the
   /// expected strings read from the check file and record diagnostics emitted

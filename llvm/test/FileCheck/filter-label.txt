@@ -1,0 +1,51 @@
+; Verify --filter-label drops CHECKs whose CHECK-LABEL section's literal text
+; doesn't match any of the given names.
+
+; RUN: FileCheck --filter-label=foo -input-file %s %s -check-prefix=ALL
+; RUN: FileCheck --filter-label=bar -input-file %s %s -check-prefix=ALL
+; RUN: FileCheck --filter-label=foo,bar -input-file %s %s -check-prefix=ALL
+; RUN: FileCheck --filter-label=bar,foo -input-file %s %s -check-prefix=ALL
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck --filter-label=foobar -input-file %s %s -check-prefix=ALL 2>&1 \
+; RUN: | FileCheck %s -check-prefix=FAIL-ERR
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -input-file %s %s -check-prefix=ALL 2>&1 \
+; RUN: | FileCheck %s -check-prefix=FAIL-ERR
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck --filter-label=baz -input-file %s %s -check-prefix=BAZ 2>&1 \
+; RUN: | FileCheck %s -check-prefix=FAIL-ERR
+
+
+@foo:
+a
+b
+
+@bar:
+c
+d
+
+@foobar:
+e
+f
+
+@baz:
+g
+h
+
+; ALL-LABEL: @foo:
+; ALL: {{^}}a
+; ALL: {{^}}b
+; ALL-LABEL: @bar:
+; ALL: {{^}}c
+; ALL: {{^}}d
+; ALL-LABEL: @foobar:
+; ALL: {{^}}e
+; ALL: {{^}}MISMATCH
+; BAZ-LABEL: @baz:
+; BAZ: {{^}}g
+; BAZ: {{^}}i
+
+; FAIL-ERR: expected string not found in input
