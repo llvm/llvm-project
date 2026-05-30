@@ -255,3 +255,36 @@ define <4 x float> @test_shuffle_poison(ptr align 16 dereferenceable(16) %p) {
   %res = shufflevector <2 x float> %L0, <2 x float> %L1, <4 x i32> <i32 0, i32 poison, i32 2, i32 3>
   ret <4 x float> %res
 }
+
+define <2 x float> @negative_store_between_load_and_shuffle(ptr %p, float %x) {
+; CHECK-LABEL: define <2 x float> @negative_store_between_load_and_shuffle(
+; CHECK-SAME: ptr [[P:%.*]], float [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[V:%.*]] = load <4 x float>, ptr [[P]], align 4
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr float, ptr [[P]], i64 2
+; CHECK-NEXT:    store float [[X]], ptr [[Q]], align 4
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[V]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %v = load <4 x float>, ptr %p, align 4
+  %q = getelementptr float, ptr %p, i64 2
+  store float %x, ptr %q, align 4
+  %r = shufflevector <4 x float> %v, <4 x float> poison,
+  <2 x i32> <i32 2, i32 3>
+  ret <2 x float> %r
+}
+
+declare void @clobber()
+define <2 x float> @negative_call_between_load_and_shuffle(ptr %p) {
+; CHECK-LABEL: define <2 x float> @negative_call_between_load_and_shuffle(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[V:%.*]] = load <4 x float>, ptr [[P]], align 4
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[V]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %v = load <4 x float>, ptr %p, align 4
+  call void @clobber()
+  %r = shufflevector <4 x float> %v, <4 x float> poison,
+  <2 x i32> <i32 2, i32 3>
+  ret <2 x float> %r
+}
