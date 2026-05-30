@@ -1207,18 +1207,24 @@ uptr asan_malloc_usable_size(const void* ptr, uptr pc, uptr bp) {
 namespace {
 
 void* asan_new(uptr size, BufferedStackTrace* stack, bool array) {
-  return SetErrnoOnNull(instance.Allocate(size, /*alignment=*/0, stack,
-                                          array ? FROM_NEW_BR : FROM_NEW,
-                                          /*can_fill=*/true));
+  // Return nullptr, not abort, when storage cannot be obtained so the operator
+  // new framework can run the std::get_new_handler() loop and then apply the
+  // allocator_may_return_null flag.
+  return SetErrnoOnNull(instance.AllocateImpl(
+      size, /*alignment=*/0, stack, array ? FROM_NEW_BR : FROM_NEW,
+      /*can_fill=*/true, /*may_return_null=*/true));
 }
 
 void* asan_new_aligned(uptr size, uptr alignment, BufferedStackTrace* stack,
                        bool array) {
   if (UNLIKELY(!CheckAlignedNewAlignment(alignment)))
     ReportInvalidAllocationAlignment(alignment, stack);
-  return SetErrnoOnNull(instance.Allocate(size, alignment, stack,
-                                          array ? FROM_NEW_BR : FROM_NEW,
-                                          /*can_fill=*/true));
+  // Return nullptr, not abort, when storage cannot be obtained so the operator
+  // new framework can run the std::get_new_handler() loop and then apply the
+  // allocator_may_return_null flag.
+  return SetErrnoOnNull(instance.AllocateImpl(
+      size, alignment, stack, array ? FROM_NEW_BR : FROM_NEW,
+      /*can_fill=*/true, /*may_return_null=*/true));
 }
 
 void asan_delete(void* ptr, BufferedStackTrace* stack, bool array) {
