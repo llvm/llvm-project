@@ -58,7 +58,7 @@ LIBC_INLINE double acosh_log1p_dd(double u_hi, double u_lo) {
           : 0;
 
   DoubleDouble m_dd{FPBits_t(m_lo_bits).get_val(),
-                   FPBits_t(m_hi_bits).get_val()};
+                    FPBits_t(m_hi_bits).get_val()};
 
   double r = R1[idx];
   DoubleDouble v_lo_p = fputil::exact_mult(m_dd.lo, r);
