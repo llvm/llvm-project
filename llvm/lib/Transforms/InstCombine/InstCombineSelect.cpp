@@ -2978,12 +2978,10 @@ static Instruction *foldSelectFunnelShift(SelectInst &Sel,
          "Illegal or(shift,shift) pair");
 
   // Check the shift amounts to see if they are an opposite pair.
-  Value *ShAmt;
-  if (match(SA1, m_OneUse(m_Sub(m_SpecificInt(Width), m_Specific(SA0)))))
-    ShAmt = SA0;
-  else if (match(SA0, m_OneUse(m_Sub(m_SpecificInt(Width), m_Specific(SA1)))))
-    ShAmt = SA1;
-  else
+  Value *ShAmt = matchComplementaryShiftAmount(SA0, SA1, Width);
+  if (!ShAmt)
+    ShAmt = matchComplementaryShiftAmount(SA1, SA0, Width);
+  if (!ShAmt)
     return nullptr;
 
   // We should now have this pattern:

@@ -2928,8 +2928,6 @@ Instruction *InstCombinerImpl::matchBSwapOrBitReverse(Instruction &I,
 
 std::optional<std::pair<Intrinsic::ID, SmallVector<Value *, 3>>>
 InstCombinerImpl::convertOrOfShiftsToFunnelShift(Instruction &Or) {
-  // TODO: Can we reduce the code duplication between this and the related
-  // rotate matching code under visitSelect and visitTrunc?
   assert(Or.getOpcode() == BinaryOperator::Or && "Expecting or instruction");
 
   unsigned Width = Or.getType()->getScalarSizeInBits();
@@ -2986,9 +2984,11 @@ InstCombinerImpl::convertOrOfShiftsToFunnelShift(Instruction &Or) {
       // intrinsic, and has to reintroduce a shift modulo operation (InstCombine
       // might remove it after this fold). This still doesn't guarantee that the
       // final codegen will match this original pattern.
-      if (match(R, m_OneUse(m_Sub(m_SpecificInt(Width), m_Specific(L))))) {
+      if (Value *Amt = matchComplementaryShiftAmount(L, R, Width)) {
         KnownBits KnownL = computeKnownBits(L, &Or);
-        return KnownL.getMaxValue().ult(Width) ? L : nullptr;
+        if (KnownL.getMaxValue().ult(Width))
+          return Amt;
+        return nullptr;
       }
 
       // For non-constant cases, the following patterns currently only work for
@@ -2997,34 +2997,10 @@ InstCombinerImpl::convertOrOfShiftsToFunnelShift(Instruction &Or) {
       if (ShVal0 != ShVal1)
         return nullptr;
 
-      // For non-constant cases we don't support non-pow2 shift masks.
-      // TODO: Is it worth matching urem as well?
-      if (!isPowerOf2_32(Width))
-        return nullptr;
-
-      // The shift amount may be masked with negation:
-      // (shl ShVal, (X & (Width - 1))) | (lshr ShVal, ((-X) & (Width - 1)))
-      Value *X;
-      unsigned Mask = Width - 1;
-      if (match(L, m_And(m_Value(X), m_SpecificInt(Mask))) &&
-          match(R, m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask))))
-        return X;
-
-      // (shl ShVal, X) | (lshr ShVal, ((-X) & (Width - 1)))
-      if (match(R, m_And(m_Neg(m_Specific(L)), m_SpecificInt(Mask))))
-        return L;
-
-      // Similar to above, but the shift amount may be extended after masking,
-      // so return the extended value as the parameter for the intrinsic.
-      if (match(L, m_ZExt(m_And(m_Value(X), m_SpecificInt(Mask)))) &&
-          match(R,
-                m_And(m_Neg(m_ZExt(m_And(m_Specific(X), m_SpecificInt(Mask)))),
-                      m_SpecificInt(Mask))))
-        return L;
-
-      if (match(L, m_ZExt(m_And(m_Value(X), m_SpecificInt(Mask)))) &&
-          match(R, m_ZExt(m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask)))))
-        return L;
+      if (Value *Amt = matchRotateShiftAmount(L, R, Width,
+                                              /*AllowUnmaskedZExt=*/true,
+                                              /*PreferInnerShiftAmount=*/false))
+        return Amt;
 
       return nullptr;
     };
@@ -3036,6 +3012,9 @@ InstCombinerImpl::convertOrOfShiftsToFunnelShift(Instruction &Or) {
     }
     if (!ShAmt)
       return std::nullopt;
+
+    if (ShAmt->getType() != Or.getType())
+      ShAmt = Builder.CreateZExtOrTrunc(ShAmt, Or.getType());
 
     FShiftArgs = {ShVal0, ShVal1, ShAmt};
   } else if (isa<ZExtInst>(Or0) || isa<ZExtInst>(Or1)) {

@@ -830,28 +830,16 @@ Instruction *InstCombinerImpl::narrowFunnelShift(TruncInst &Trunc) {
     unsigned MaxShiftAmountWidth = Log2_32(NarrowWidth);
     APInt HiBitMask = ~APInt::getLowBitsSet(WideWidth, MaxShiftAmountWidth);
     if (ShVal0 == ShVal1 || MaskedValueIsZero(L, HiBitMask))
-      if (match(R, m_OneUse(m_Sub(m_SpecificInt(Width), m_Specific(L)))))
-        return L;
+      if (Value *Amt = matchComplementaryShiftAmount(L, R, Width))
+        return Amt;
 
     // The following patterns currently only work for rotation patterns.
     // TODO: Add more general funnel-shift compatible patterns.
     if (ShVal0 != ShVal1)
       return nullptr;
 
-    // The shift amount may be masked with negation:
-    // (shl ShVal0, (X & (Width - 1))) | (lshr ShVal1, ((-X) & (Width - 1)))
-    Value *X;
-    unsigned Mask = Width - 1;
-    if (match(L, m_And(m_Value(X), m_SpecificInt(Mask))) &&
-        match(R, m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask))))
-      return X;
-
-    // Same as above, but the shift amount may be extended after masking:
-    if (match(L, m_ZExt(m_And(m_Value(X), m_SpecificInt(Mask)))) &&
-        match(R, m_ZExt(m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask)))))
-      return X;
-
-    return nullptr;
+    return matchRotateShiftAmount(L, R, Width, /*AllowUnmaskedZExt=*/false,
+                                  /*PreferInnerShiftAmount=*/true);
   };
 
   Value *ShAmt = matchShiftAmount(ShAmt0, ShAmt1, NarrowWidth);

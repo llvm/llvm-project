@@ -934,6 +934,62 @@ struct CommonPointerBase {
   bool isExpensive() const;
 };
 
+/// If \p R is (Width - \p L), return \p L.
+inline Value *matchComplementaryShiftAmount(Value *L, Value *R,
+                                            unsigned Width) {
+  using namespace PatternMatch;
+  if (match(R, m_OneUse(m_Sub(m_SpecificInt(Width), m_Specific(L)))))
+    return L;
+  return nullptr;
+}
+
+/// Match opposite shift amounts for a rotate: (shl, \p L) | (lshr, \p R).
+/// \p AllowUnmaskedZExt matches bare zext shift amounts at the result width.
+/// \p PreferInnerShiftAmount returns \p X rather than zext(\p X) when set.
+inline Value *matchRotateShiftAmount(Value *L, Value *R, unsigned Width,
+                                     bool AllowUnmaskedZExt,
+                                     bool PreferInnerShiftAmount) {
+  using namespace PatternMatch;
+  if (!isPowerOf2_32(Width))
+    return nullptr;
+
+  Value *X;
+  const unsigned Mask = Width - 1;
+
+  if (match(L, m_And(m_Value(X), m_SpecificInt(Mask))) &&
+      match(R, m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask))))
+    return X;
+
+  if (match(R, m_And(m_Neg(m_Specific(L)), m_SpecificInt(Mask))))
+    return L;
+
+  if (match(L, m_ZExt(m_And(m_Value(X), m_SpecificInt(Mask)))) &&
+      match(R, m_And(m_Neg(m_ZExt(m_And(m_Specific(X), m_SpecificInt(Mask)))),
+                     m_SpecificInt(Mask))))
+    return PreferInnerShiftAmount ? X : L;
+
+  if (match(L, m_ZExt(m_And(m_Value(X), m_SpecificInt(Mask)))) &&
+      match(R, m_ZExt(m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask)))))
+    return PreferInnerShiftAmount ? X : L;
+
+  if (!AllowUnmaskedZExt)
+    return nullptr;
+
+  if (match(L, m_ZExt(m_Value(X))) &&
+      match(R, m_ZExt(m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask)))))
+    return PreferInnerShiftAmount ? X : L;
+
+  if (match(L, m_ZExt(m_OneUse(m_Sub(m_SpecificInt(Width), m_Specific(X))))) &&
+      match(R, m_ZExt(m_And(m_Specific(X), m_SpecificInt(Mask)))))
+    return PreferInnerShiftAmount ? X : L;
+
+  if (match(L, m_ZExt(m_And(m_Value(X), m_SpecificInt(Mask)))) &&
+      match(R, m_ZExt(m_OneUse(m_Sub(m_SpecificInt(Width), m_Specific(X))))))
+    return PreferInnerShiftAmount ? X : L;
+
+  return nullptr;
+}
+
 } // end namespace llvm
 
 #undef DEBUG_TYPE
