@@ -53,6 +53,7 @@ static_library("misc") {
     "PredictableRandCheck.cpp",
     "RedundantExpressionCheck.cpp",
     "StaticAssertCheck.cpp",
+    "StaticInitializationCycleCheck.cpp",
     "ThrowByValueCatchByReferenceCheck.cpp",
     "UnconventionalAssignOperatorCheck.cpp",
     "UniqueptrResetReleaseCheck.cpp",

@@ -2,6 +2,13 @@
 // RUN:   -fexperimental-lifetime-safety-tu-analysis \
 // RUN:   -Wlifetime-safety-suggestions -Wno-dangling \
 // RUN:   -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: cp %s %t.cpp
+// RUN: %clang_cc1 -std=c++17 -flifetime-safety-inference \
+// RUN:   -fexperimental-lifetime-safety-tu-analysis \
+// RUN:   -Wlifetime-safety-suggestions -Wno-dangling -fixit %t.cpp
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -flifetime-safety-inference \
+// RUN:   -fexperimental-lifetime-safety-tu-analysis \
+// RUN:   -Werror=lifetime-safety-suggestions -Wno-dangling %t.cpp
 
 struct View;
 
@@ -52,16 +59,21 @@ View param_with_attr(View a [[maybe_unused]]) {
 
 View param_default(View a = View()) {
   // CHECK: :[[@LINE-1]]:20: warning: parameter in intra-TU function should be marked
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:35-[[@LINE-2]]:35}:" {{\[\[}}clang::lifetimebound]]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:26-[[@LINE-2]]:26}:" {{\[\[}}clang::lifetimebound]]"
   return a;
 }
 
-// FIXME: Iterate over redecls and add [[clang::lifetimebound]]
+int *arr_default(int a[2] = nullptr) {
+  // CHECK: :[[@LINE-1]]:18: warning: parameter in intra-TU function should be marked
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:23-[[@LINE-2]]:23}:" {{\[\[}}clang::lifetimebound]]"
+  return a;
+}
+
 View multi_decl(View a);
+// CHECK: :[[@LINE-1]]:17: warning: parameter in intra-TU function should be marked
+// CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:23-[[@LINE-2]]:23}:" {{\[\[}}clang::lifetimebound]]"
 View multi_decl(View a);
 View multi_decl(View a) {
-  // CHECK: :[[@LINE-1]]:17: warning: parameter in intra-TU function should be marked
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:23-[[@LINE-2]]:23}:" {{\[\[}}clang::lifetimebound]]"
   return a;
 }
 
@@ -132,10 +144,10 @@ struct OutOfLine {
   OutOfLine() {}
   ~OutOfLine() {}
   const OutOfLine &get() const;
+  // CHECK: :[[@LINE-1]]:31: warning: implicit this in intra-TU function should be marked
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:31-[[@LINE-2]]:31}:" {{\[\[}}clang::lifetimebound]]"
 };
 const OutOfLine &OutOfLine::get() const {
-  // CHECK: :[[@LINE-1]]:40: warning: implicit this in intra-TU function should be marked
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:40-[[@LINE-2]]:40}:" {{\[\[}}clang::lifetimebound]]"
   return *this;
 }
 

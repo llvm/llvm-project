@@ -91,6 +91,30 @@ macro(set_enable_per_target_runtime_dir)
   endif()
 endmacro()
 
+macro(append_passthrough_options out type names)
+  get_cmake_property(variable_names VARIABLES)
+
+  # Support multiple names for layering (e.g. multilibs).
+  foreach(name IN ITEMS ${names})
+    foreach(variable_name ${variable_names})
+      string(FIND "${variable_name}" "${type}_${name}_" found)
+
+      if(found EQUAL 0)
+        string(REPLACE "${type}_${name}_" "" new_name ${variable_name})
+
+        if(new_name STREQUAL CACHE_FILES)
+          foreach(cache IN LISTS ${variable_name})
+            list(APPEND ${out} -C ${cache})
+          endforeach()
+        else()
+          string(REPLACE ";" "|" new_value "${${variable_name}}")
+          list(APPEND ${out} "-D${new_name}=${new_value}")
+        endif()
+      endif()
+    endforeach()
+  endforeach()
+endmacro()
+
 function(builtin_default_target compiler_rt_path)
   cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
 
@@ -122,21 +146,7 @@ function(builtin_register_target compiler_rt_path name)
   cmake_parse_arguments(ARG "" "" "DEPENDS;CMAKE_ARGS;EXTRA_ARGS" ${ARGN})
 
   set(${name}_extra_args ${ARG_CMAKE_ARGS})
-  get_cmake_property(variable_names VARIABLES)
-  foreach(variable_name ${variable_names})
-    string(FIND "${variable_name}" "BUILTINS_${name}" out)
-    if("${out}" EQUAL 0)
-      string(REPLACE "BUILTINS_${name}_" "" new_name ${variable_name})
-      if(new_name STREQUAL CACHE_FILES)
-        foreach(cache IN LISTS ${variable_name})
-          list(APPEND ${name}_extra_args -C ${cache})
-        endforeach()
-      else()
-        string(REPLACE ";" "|" new_value "${${variable_name}}")
-        list(APPEND ${name}_extra_args "-D${new_name}=${new_value}")
-      endif()
-    endif()
-  endforeach()
+  append_passthrough_options(${name}_extra_args BUILTINS ${name})
 
   llvm_ExternalProject_Add(builtins-${name}
                            ${compiler_rt_path}/lib/builtins
@@ -277,6 +287,10 @@ function(runtime_default_target)
       endif ()
     endif ()
   endif ()
+  if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+    # The target flang-rt-mod is a dependee of check-flang.
+    list(APPEND extra_targets "flang-rt-mod")
+  endif ()
 
   if(LLVM_INCLUDE_TESTS)
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_TESTSUITES "@${LLVM_BINARY_DIR}/runtimes/runtimes-bins/lit.tests")
@@ -404,32 +418,7 @@ function(runtime_register_target name)
   string(REPLACE ";" "|" LLVM_ENABLE_RUNTIMES_PASSTHROUGH "${LLVM_ENABLE_RUNTIMES}")
   list(APPEND ${name}_extra_args -DLLVM_ENABLE_RUNTIMES=${LLVM_ENABLE_RUNTIMES_PASSTHROUGH})
   list(APPEND ${name}_extra_args -DLLVM_USE_LINKER=${LLVM_USE_LINKER})
-
-  get_cmake_property(variable_names VARIABLES)
-  foreach(extra_name IN ITEMS ${ARG_BASE_NAME} ${name})
-    foreach(variable_name ${variable_names})
-      string(FIND "${variable_name}" "RUNTIMES_${extra_name}_" out)
-      if("${out}" EQUAL 0)
-        string(REPLACE "RUNTIMES_${extra_name}_" "" new_name ${variable_name})
-        if(new_name STREQUAL CACHE_FILES)
-          foreach(cache IN LISTS ${variable_name})
-            list(APPEND ${name}_extra_args -C ${cache})
-          endforeach()
-        else()
-          string(REPLACE ";" "|" new_value "${${variable_name}}")
-          list(APPEND ${name}_extra_args "-D${new_name}=${new_value}")
-        endif()
-      endif()
-    endforeach()
-    foreach(variable_name ${${name}_extra_args})
-      string(FIND "${variable_name}" "-DRUNTIMES_${extra_name}_" out)
-      if("${out}" EQUAL 0)
-        string(REPLACE "-DRUNTIMES_${extra_name}_" "" new_name ${variable_name})
-        string(REPLACE ";" "|" new_value "${new_name}")
-        list(APPEND ${name}_extra_args "-D${new_value}")
-      endif()
-    endforeach()
-  endforeach()
+  append_passthrough_options(${name}_extra_args RUNTIMES "${ARG_BASE_NAME};${name}")
 
   set_enable_per_target_runtime_dir()
 
@@ -596,22 +585,7 @@ if(build_runtimes)
       endif()
     endforeach()
   endif()
-  # Allow openmp to see the Fortran compiler
-  if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND "flang" IN_LIST LLVM_ENABLE_PROJECTS)
-    list(APPEND extra_args ENABLE_FORTRAN)
-  endif()
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
-    if (${LLVM_TOOL_FLANG_BUILD})
-      message(STATUS "Configuring build of omp_lib.mod and omp_lib_kinds.mod via flang")
-      set(LIBOMP_FORTRAN_MODULES_COMPILER "${CMAKE_BINARY_DIR}/bin/flang")
-      set(LIBOMP_MODULES_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}/flang")
-      # TODO: This is a workaround until flang becomes a first-class project
-      # in llvm/CMakeList.txt.  Until then, this line ensures that flang is
-      # built before "openmp" is built as a runtime project.  Besides "flang"
-      # to build the compiler, we also need to add "module_files" to make sure
-      # that all .mod files are also properly build.
-      list(APPEND extra_deps "flang" "module_files")
-    endif()
     foreach(dep opt llvm-link llvm-extract clang llvm-offload-binary clang-nvlink-wrapper)
       if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
@@ -636,9 +610,18 @@ if(build_runtimes)
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_FULL_BUILD=ON")
   endif()
-  if("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-    list(APPEND extra_args ENABLE_FORTRAN)
-  endif ()
+  if("flang" IN_LIST LLVM_ENABLE_PROJECTS)
+    # Allow runtimes that can use it to access the Flang compiler
+    if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+      list(APPEND extra_args ENABLE_FORTRAN)
+    endif()
+    # Ensure REAL(16) support in runtimes to be consistent with compiler
+    if(FLANG_RUNTIME_F128_MATH_LIB OR HAVE_LDBL_MANT_DIG_113)
+      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=1")
+    else()
+      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=0")
+    endif()
+  endif()
 
   if(NOT LLVM_RUNTIME_TARGETS)
     runtime_default_target(
@@ -719,7 +702,6 @@ if(build_runtimes)
         runtime_register_target(${name}+${multilib}
           DEPENDS runtimes-${name}
           CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name}
-                     -DLLVM_RUNTIMES_PREFIX=${name}/
                      -DLLVM_RUNTIMES_LIBDIR_SUBDIR=${multilib}
                      ${extra_cmake_args}
           BASE_NAME ${name}
@@ -819,10 +801,20 @@ ${_flag_values}\
 
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_ADDITIONAL_TEST_TARGETS runtimes ${extra_deps})
   endif()
+
+  # Flang tests depend on module files built by the runtimes.
+  if (TARGET flang-rt-test-deps)
+    if (TARGET flang-rt-mod)
+      add_dependencies(flang-rt-test-deps flang-rt-mod)
+    endif ()
+    if (TARGET libomp-mod)
+      add_dependencies(flang-rt-test-deps libomp-mod)
+    endif ()
+  endif ()
 endif()
 
 if(LIBOMP_ENABLE_ARM64X)
-  # TODO: This only needs to depend on openmp-arm64ec-pc-windows-msvc, but the 
+  # TODO: This only needs to depend on openmp-arm64ec-pc-windows-msvc, but the
   # openmp targets set up for cross build runtimes don't currently work correctly.
   add_dependencies(runtimes-configure runtimes-arm64ec-pc-windows-msvc-build)
 endif()

@@ -37,6 +37,9 @@ ForwardIt1 search( ForwardIt1 first, ForwardIt1 last,
 template<typename T>
 typename remove_reference<T>::type &&move(T &&t) noexcept;
 
+template<typename T>
+T &&forward(typename remove_reference<T>::type &t) noexcept;
+
 template <typename C>
 auto data(const C &c) -> decltype(c.data());
 
@@ -191,6 +194,9 @@ struct basic_string_view {
   int size() const;
 };
 using string_view = basic_string_view<char>;
+
+template <typename T>
+basic_string_view<T>::basic_string_view(const T *) {}
 
 template<typename T>
 struct span {

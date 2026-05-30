@@ -72,6 +72,8 @@ struct RISCVTuneInfo {
 
   // The direction of PostRA scheduling.
   MISched::Direction PostRASchedDirection;
+
+  bool IsJumpExpensive;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
@@ -337,6 +339,7 @@ public:
   }
 
   bool isPExtPackedType(MVT VT) const;
+  bool isPExtPackedDoubleType(MVT VT) const;
 
   // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
   // vector hardware implementation which may be less than VLEN.
@@ -442,6 +445,8 @@ public:
   MISched::Direction getPostRASchedDirection() const {
     return TuneInfo->PostRASchedDirection;
   }
+
+  bool isJumpExpensive() const { return TuneInfo->IsJumpExpensive; }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            const SchedRegion &Region) const override;

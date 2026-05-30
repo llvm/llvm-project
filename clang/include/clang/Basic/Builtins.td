@@ -974,6 +974,17 @@ def StdcBitCeilTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
   let Prototype = "T(T)";
 }
 
+def StdcRotateLeftTyped : LibBuiltin<"stdbit.h", "C2Y_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_rotate_left"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "T(T, unsigned int)";
+}
+
+def StdcRotateRightTyped : LibBuiltin<"stdbit.h", "C2Y_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_rotate_right"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "T(T, unsigned int)";
+}
 
 
 // Random GCC builtins
@@ -1177,6 +1188,12 @@ def IsWithinLifetime : LangBuiltin<"CXX_LANG"> {
   let Spellings = ["__builtin_is_within_lifetime"];
   let Attributes = [NoThrow, CustomTypeChecking, Consteval];
   let Prototype = "bool(void*)";
+}
+
+def ClearPadding : Builtin {
+  let Spellings = ["__builtin_clear_padding"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(void*)";
 }
 
 def GetVtablePointer : LangBuiltin<"CXX_LANG"> {
@@ -1791,6 +1808,12 @@ def ElementwiseCtlz : Builtin {
 
 def ElementwiseCttz : Builtin {
   let Spellings = ["__builtin_elementwise_ctzg"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseClmul : Builtin {
+  let Spellings = ["__builtin_elementwise_clmul"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }

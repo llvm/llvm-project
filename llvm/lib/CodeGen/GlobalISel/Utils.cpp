@@ -1069,7 +1069,7 @@ llvm::ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
 }
 
 bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
-                                  GISelValueTracking *VT) {
+                                  GISelValueTracking *VT, bool OrNegative) {
   std::optional<DefinitionAndSourceRegister> DefSrcReg =
       getDefSrcRegIgnoringCopies(Reg, MRI);
   if (!DefSrcReg)
@@ -1078,11 +1078,15 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
   const MachineInstr &MI = *DefSrcReg->MI;
   const LLT Ty = MRI.getType(Reg);
 
+  auto IsPow2 = [OrNegative](const APInt &V) {
+    return V.isPowerOf2() || (OrNegative && V.isNegatedPowerOf2());
+  };
+
   switch (MI.getOpcode()) {
   case TargetOpcode::G_CONSTANT: {
     unsigned BitWidth = Ty.getScalarSizeInBits();
     const ConstantInt *CI = MI.getOperand(1).getCImm();
-    return CI->getValue().zextOrTrunc(BitWidth).isPowerOf2();
+    return IsPow2(CI->getValue().zextOrTrunc(BitWidth));
   }
   case TargetOpcode::G_SHL: {
     // A left-shift of a constant one will have exactly one bit set because
@@ -1108,7 +1112,7 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     // TODO: Probably should have a recursion depth guard since you could have
     // bitcasted vector elements.
     for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
-      if (!isKnownToBeAPowerOfTwo(MO.getReg(), MRI, VT))
+      if (!isKnownToBeAPowerOfTwo(MO.getReg(), MRI, VT, OrNegative))
         return false;
 
     return true;
@@ -1119,7 +1123,7 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     const unsigned BitWidth = Ty.getScalarSizeInBits();
     for (const MachineOperand &MO : llvm::drop_begin(MI.operands())) {
       auto Const = getIConstantVRegVal(MO.getReg(), MRI);
-      if (!Const || !Const->zextOrTrunc(BitWidth).isPowerOf2())
+      if (!Const || !IsPow2(Const->zextOrTrunc(BitWidth)))
         return false;
     }
 

@@ -4,7 +4,7 @@
 ; RUN: FileCheck --check-prefix=32BIT %s
 
 ; RUN: llc -verify-machineinstrs -stop-before=ppc-vsx-copy -vec-extabi \
-; RUN:     -mcpu=pwr7  -mtriple powerpc64-ibm-aix-xcoff < %s | \
+; RUN:     -mcpu=pwr7  -mtriple powerpc64-ibm-aix-xcoff --code-model=small < %s | \
 ; RUN: FileCheck --check-prefix=64BIT %s
 
 define <4 x i32> @caller() {

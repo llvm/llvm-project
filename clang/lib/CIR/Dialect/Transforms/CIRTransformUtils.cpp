@@ -6,9 +6,44 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CIRTransformUtils.h"
+#include "clang/CIR/Dialect/Transforms/CIRTransformUtils.h"
 
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+
+#include "llvm/ADT/DepthFirstIterator.h"
+
+void cir::collectUnreachable(mlir::Operation *parent,
+                             llvm::SmallVectorImpl<mlir::Operation *> &ops) {
+  // For every region under `parent`, find the blocks unreachable from the
+  // entry via a forward CFG traversal and collect their ops.
+  llvm::df_iterator_default_set<mlir::Block *, 16> reachable;
+  parent->walk([&](mlir::Region *region) {
+    // Empty regions have no blocks; single-block regions have only the
+    // entry, which is trivially reachable. Either way, nothing to collect.
+    if (region->empty() || region->hasOneBlock())
+      return;
+
+    // We clear this for each region as we walk the parent because each block
+    // is only in one region, so the reachable blocks from previously visited
+    // regions aren't needed.
+    reachable.clear();
+
+    // The depth_first_ext range iterator internally adds each block to the
+    // reachable set as it visits it, so while this loop looks like it doesn't
+    // do anything, it's actually populating the set of reachable blocks in
+    // this region.
+    for (mlir::Block *blk : llvm::depth_first_ext(&region->front(), reachable))
+      (void)blk;
+
+    // Collect the unreachable blocks.
+    for (mlir::Block &blk : *region) {
+      if (reachable.contains(&blk))
+        continue;
+      for (mlir::Operation &op : blk)
+        ops.push_back(&op);
+    }
+  });
+}
 
 mlir::Block *cir::replaceCallWithTryCall(cir::CallOp callOp,
                                          mlir::Block *unwindDest,
@@ -68,5 +103,53 @@ mlir::Block *cir::replaceCallWithTryCall(cir::CallOp callOp,
     rewriter.replaceAllUsesWith(callOp->getResult(0), tryCallOp.getResult());
 
   rewriter.eraseOp(callOp);
+  return normalDest;
+}
+
+mlir::Block *cir::replaceThrowWithTryThrow(cir::ThrowOp throwOp,
+                                           mlir::Block *unwindDest,
+                                           mlir::Location loc,
+                                           mlir::RewriterBase &rewriter) {
+  // The throw never returns, so the try_throw's normal destination is
+  // literally unreachable. Place it at the end of the parent function
+  // rather than splitting it out of the throw's block in the middle of
+  // the normal control flow.
+  auto funcOp = throwOp->getParentOfType<cir::FuncOp>();
+  assert(funcOp && "throw must be inside a function");
+  mlir::Region &body = funcOp.getBody();
+
+  mlir::Block *normalDest;
+  {
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    normalDest = rewriter.createBlock(&body, body.end());
+    cir::UnreachableOp::create(rewriter, loc);
+  }
+
+  // Build the try_throw to replace the original throw.
+  rewriter.setInsertionPoint(throwOp);
+  auto tryThrowOp = cir::TryThrowOp::create(
+      rewriter, loc, throwOp.getExceptionPtr(), throwOp.getTypeInfoAttr(),
+      throwOp.getDtorAttr(), normalDest, unwindDest);
+
+  // Copy any extra attributes from the original throw. The type_info and
+  // dtor attributes are already set by TryThrowOp::create above.
+  llvm::StringRef excludedAttrs[] = {
+      "type_info",
+      "dtor",
+  };
+  for (mlir::NamedAttribute attr : throwOp->getAttrs()) {
+    if (llvm::is_contained(excludedAttrs, attr.getName()))
+      continue;
+    tryThrowOp->setAttr(attr.getName(), attr.getValue());
+  }
+
+  // Erase the throw along with any operations that followed it in its
+  // parent block (typically a cir.unreachable left over from CIR codegen).
+  // They must be removed because try_throw is a terminator and a block
+  // can have only one terminator.
+  mlir::Block *throwBlock = throwOp->getBlock();
+  while (&throwBlock->back() != tryThrowOp)
+    rewriter.eraseOp(&throwBlock->back());
+
   return normalDest;
 }

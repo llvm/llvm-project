@@ -49,6 +49,10 @@ Major New Features
 Potentially Breaking Changes
 ----------------------------
 
+- The :doc:`modernize-use-using <clang-tidy/checks/modernize/use-using>` check
+  now sets the `IgnoreExternC` option to `true` by default. The check will
+  no longer transform ``typedef``\ s within ``extern "C"`` blocks.
+
 - Deprecated the :program:`clang-tidy` check :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>`. It has been renamed to
   :doc:`performance-prefer-single-char-overloads
@@ -103,12 +107,26 @@ Potentially Breaking Changes
                                      <clang-tidy/checks/cppcoreguidelines/special-member-functions>`
   ``hicpp-static-assert``            :doc:`misc-static-assert
                                      <clang-tidy/checks/misc/static-assert>`
+  ``hicpp-uppercase-literal-suffix`` :doc:`readability-uppercase-literal-suffix
+                                     <clang-tidy/checks/readability/uppercase-literal-suffix>`
   ``hicpp-undelegated-constructor``  :doc:`bugprone-undelegated-constructor
                                      <clang-tidy/checks/bugprone/undelegated-constructor>`
   ``hicpp-use-auto``                 :doc:`modernize-use-auto
                                      <clang-tidy/checks/modernize/use-auto>`
   ``hicpp-use-emplace``              :doc:`modernize-use-emplace
                                      <clang-tidy/checks/modernize/use-emplace>`
+  ``hicpp-use-equals-default``       :doc:`modernize-use-equals-default
+                                     <clang-tidy/checks/modernize/use-equals-default>`
+  ``hicpp-use-equals-delete``        :doc:`modernize-use-equals-delete
+                                     <clang-tidy/checks/modernize/use-equals-delete>`
+  ``hicpp-use-noexcept``             :doc:`modernize-use-noexcept
+                                     <clang-tidy/checks/modernize/use-noexcept>`
+  ``hicpp-use-nullptr``              :doc:`modernize-use-nullptr
+                                     <clang-tidy/checks/modernize/use-nullptr>`
+  ``hicpp-use-override``             :doc:`modernize-use-override
+                                     <clang-tidy/checks/modernize/use-override>`
+  ``hicpp-vararg``                   :doc:`cppcoreguidelines-pro-type-vararg
+                                     <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>`
   ================================== ========================================================================
 
 Improvements to clangd
@@ -150,6 +168,9 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- A new tweak "Create function body out-of-line" was added that creates
+  an implementation for a function declaration.
+
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -186,6 +207,10 @@ Improvements to clang-tidy
   compiler. (E.g. tidy suppressed many ``clang-diagnostic-invalid-offsetof``
   reports because they usually occur in expansion of the macro ``offsetof``.)
 
+- :program:`clang-tidy` will no longer exit immediately if the only enabled
+  checks are `clang-diagnostic-*` ones. This allows using
+  :program:`clang-tidy` purely as a frontend to Clang's builtin warnings.
+
 New checks
 ^^^^^^^^^^
 
@@ -200,12 +225,19 @@ New checks
   Finds functions where throwing exceptions is unsafe but the function is still
   marked as potentially throwing.
 
+- New :doc:`llvm-formatv-string
+  <clang-tidy/checks/llvm/formatv-string>` check.
+
+  Validates ``llvm::formatv`` format strings against the provided arguments,
+  diagnosing mismatched argument counts, unused arguments, and mixed index styles.
+
 - New :doc:`llvm-redundant-casting
   <clang-tidy/checks/llvm/redundant-casting>` check.
 
   Points out uses of ``cast<>``, ``dyn_cast<>`` and their ``or_null`` variants
   that are unnecessary because the argument already is of the target type, or a
-  derived type thereof.
+  derived type thereof. Also does similar analysis for calls to ``isa<>`` that
+  always return ``true``.
 
 - New :doc:`llvm-type-switch-case-types
   <clang-tidy/checks/llvm/type-switch-case-types>` check.
@@ -219,6 +251,11 @@ New checks
   Finds calls to ``llvm::to_vector(llvm::map_range(...))`` and
   ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
+
+- New :doc:`misc-static-initialization-cycle
+  <clang-tidy/checks/misc/static-initialization-cycle>` check.
+
+  Finds cyclical initialization of static variables.
 
 - New :doc:`modernize-use-std-bit
   <clang-tidy/checks/modernize/use-std-bit>` check.
@@ -355,6 +392,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` check
   by fixing a false positive when ``operator[]`` is used in a dependent context.
 
+- Improved :doc:`bugprone-random-generator-seed
+  <clang-tidy/checks/bugprone/random-generator-seed>` check by adding
+  a new note at the location of the field if the generator is implicitly
+  initialized with a default seed value.
+
 - Improved :doc:`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` check by fixing
   false positives when extending the standard library with a specialization of
@@ -396,11 +438,19 @@ Changes in existing checks
   - Avoid false positives when moving object to a base type then accessing
     non-base members.
 
+  - Avoid false positives when moving object is reinitialized via the base
+    class's ``operator=``.
+
 - Improved :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>`
   check by adding the `AllowExplicitObjectParameters` option. When enabled,
   lambda coroutines using C++23 deducing ``this`` (explicit object parameter)
   are not flagged.
+
+- Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
+  <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>`
+  check by adding the `IgnoreMacros` option. When enabled, non-const global
+  variables defined in macros are ignored.
 
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
@@ -434,6 +484,11 @@ Changes in existing checks
   by fixing a false positive on implicitly generated functions such as
   inherited constructors.
 
+- Improved :doc:`cppcoreguidelines-use-enum-class
+  <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by adding the
+  `IgnoreMacros` option. When enabled, unscoped ``enum`` declarations within
+  macros are ignored.
+
 - Improved :doc:`llvm-use-ranges
   <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following
   algorithms: ``std::accumulate``, ``std::replace_copy``, and
@@ -450,6 +505,10 @@ Changes in existing checks
 
   - Fixed false positive where a pointer used with placement new was
     incorrectly diagnosed as allowing the pointee to be made ``const``.
+
+  - Fixed false positive where calling a non-const member function on a
+    pointer was incorrectly treated as mutating the pointer, when it only
+    mutates the pointee.
 
   - Fixed false positives when pointers were later passed or bound through
     ``const``-qualified pointer references.
@@ -533,6 +592,8 @@ Changes in existing checks
     parentheses.
 
   - Preserve inline comment blocks that appear between the ``typedef``'s parts.
+
+  - The `IgnoreExternC` option is now set to `true` by default.
 
 - Improved :doc:`performance-enum-size
   <clang-tidy/checks/performance/enum-size>` check:
@@ -653,7 +714,7 @@ Changes in existing checks
   <clang-tidy/checks/readability/non-const-parameter>` check:
 
   - Avoid false positives on parameters used in dependent expressions
-    (e.g. inside generic lambdas).
+    (e.g. inside generic lambdas), including constructor-style dependent initializers.
 
   - Fixed a false positive in array subscript expressions where the types are
     not yet resolved.
@@ -670,6 +731,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-member-init>` check by adding an
   `IgnoreMacros` option to suppress warnings when the initializer involves
   macros that may expand differently in other configurations.
+
+- Improved :doc:`readability-redundant-parentheses
+  <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a
+  false positive for parentheses present around an overloaded operator in the
+  context of a binary operation.
 
 - Improved :doc:`readability-redundant-preprocessor
   <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a

@@ -255,10 +255,12 @@ if (LLDB_ENABLE_ARM64E_DEBUGSERVER OR LLDB_USE_SYSTEM_DEBUGSERVER)
 endif()
 
 set(LLDB_TEST_SHELL_DISABLE_REMOTE OFF CACHE BOOL "Disable remote Shell tests execution")
+set(LLDB_TEST_USE_LLDB_SERVER OFF CACHE BOOL "If ON, run the test suites against the lldb-server backend on Windows")
 
 # These values are not canonicalized within LLVM.
 llvm_canonicalize_cmake_booleans(
   LLDB_BUILD_INTEL_PT
+  LLDB_ENABLE_MOCK_ACCELERATOR_PLUGIN
   LLDB_ENABLE_MTE
   LLDB_ENABLE_PYTHON
   LLDB_ENABLE_LUA
@@ -268,6 +270,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_DIA_SDK
   LLDB_HAS_LIBCXX
   LLDB_TEST_SHELL_DISABLE_REMOTE
+  LLDB_TEST_USE_LLDB_SERVER
   LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
   LLDB_IS_64_BITS
