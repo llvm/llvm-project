@@ -44,6 +44,7 @@ add_llvm_component_library(LLVMDebugInfoLogicalView
   LINK_COMPONENTS
   AsmPrinter
   BinaryFormat
+  Core
   Demangle
   Object
   MC

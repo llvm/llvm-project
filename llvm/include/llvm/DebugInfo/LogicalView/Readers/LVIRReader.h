@@ -16,6 +16,7 @@
 
 #include "llvm/DebugInfo/LogicalView/Core/LVReader.h"
 #include "llvm/Transforms/Utils/DebugSSAUpdater.h"
+#include <unordered_map>
 
 namespace llvm {
 class DIFile;
