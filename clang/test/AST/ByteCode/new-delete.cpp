@@ -1217,6 +1217,21 @@ namespace ArrayDestSize {
   static_assert(dynarray<char>(3, 2) == 'x'); // both-error {{constant expression}} both-note {{in call}}
 }
 
+namespace OpertorArrayDelete {
+  struct S {};
+  using State = S[2];
+  constexpr unsigned run(const State *s) {
+    void *p;
+    p = operator new[](128); // both-note {{cannot allocate untyped memory}}
+    operator delete[](p);
+    return 42;
+  }
+
+  constexpr State s[] = {};
+  static_assert(run(s) == 42, ""); // both-error {{not an integral constant expression}} \
+                                   // both-note {{in call to}}
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}
