@@ -262,7 +262,7 @@ struct CountTrailingZerosPattern final
     unsigned bitwidth = 0;
     if (isa<IntegerType>(type))
       bitwidth = type.getIntOrFloatBitWidth();
-    if (auto vectorType = dyn_cast<VectorType>(type))
+    else if (auto vectorType = dyn_cast<VectorType>(type))
       bitwidth = vectorType.getElementTypeBitWidth();
     if (bitwidth != 32)
       return failure();
