@@ -779,6 +779,10 @@ enum NodeType {
   CLMULR,
   CLMULH,
 
+  /// Bit extract (compress) and bit deposit (expand).
+  BEXT,
+  BDEP,
+
   /// Byte Swap and Counting operators.
   BSWAP,
   CTTZ,

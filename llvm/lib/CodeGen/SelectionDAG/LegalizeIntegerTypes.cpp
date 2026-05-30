@@ -370,6 +370,14 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     Res = PromoteIntRes_CLMUL(N);
     break;
 
+  case ISD::BEXT:
+    Res = PromoteIntRes_BEXT(N);
+    break;
+
+  case ISD::BDEP:
+    Res = PromoteIntRes_BDEP(N);
+    break;
+
   case ISD::IS_FPCLASS:
     Res = PromoteIntRes_IS_FPCLASS(N);
     break;
@@ -1761,6 +1769,30 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CLMUL(SDNode *N) {
   unsigned ShAmt = Opcode == ISD::CLMULH ? OldBits : OldBits - 1;
   return DAG.getNode(ISD::SRL, DL, VT, Clmul,
                      DAG.getShiftAmountConstant(ShAmt, VT, DL));
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_BEXT(SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  if (!TLI.isOperationLegalOrCustomOrPromote(ISD::BEXT, VT)) {
+    if (SDValue Res = TLI.expandBEXT(N, DAG))
+      return DAG.getNode(ISD::ANY_EXTEND, DL, VT, Res);
+  }
+  SDValue X = ZExtPromotedInteger(N->getOperand(0));
+  SDValue Y = ZExtPromotedInteger(N->getOperand(1));
+  return DAG.getNode(ISD::BEXT, DL, VT, X, Y);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_BDEP(SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  if (!TLI.isOperationLegalOrCustomOrPromote(ISD::BDEP, VT)) {
+    if (SDValue Res = TLI.expandBDEP(N, DAG))
+      return DAG.getNode(ISD::ANY_EXTEND, DL, VT, Res);
+  }
+  SDValue X = ZExtPromotedInteger(N->getOperand(0));
+  SDValue Y = ZExtPromotedInteger(N->getOperand(1));
+  return DAG.getNode(ISD::BDEP, DL, VT, X, Y);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_TRUNCATE(SDNode *N) {
@@ -3310,6 +3342,14 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::CLMULR:
   case ISD::CLMULH:
     ExpandIntRes_CLMUL(N, Lo, Hi);
+    break;
+
+  case ISD::BEXT:
+    ExpandIntRes_BEXT(N, Lo, Hi);
+    break;
+
+  case ISD::BDEP:
+    ExpandIntRes_BDEP(N, Lo, Hi);
     break;
 
   case ISD::VSCALE:
@@ -5619,6 +5659,16 @@ void DAGTypeLegalizer::ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo, SDValue &Hi) {
   SDValue HiLoCross2 = DAG.getNode(ISD::CLMUL, DL, HalfVT, LH, RL);
   SDValue HiLoCross = DAG.getNode(ISD::XOR, DL, HalfVT, HiLoCross1, HiLoCross2);
   Hi = DAG.getNode(ISD::XOR, DL, HalfVT, LoH, HiLoCross);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_BEXT(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDValue Res = TLI.expandBEXT(N, DAG);
+  SplitInteger(Res, Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_BDEP(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDValue Res = TLI.expandBDEP(N, DAG);
+  SplitInteger(Res, Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_VSCALE(SDNode *N, SDValue &Lo,

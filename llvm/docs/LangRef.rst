@@ -19311,6 +19311,102 @@ Example:
       %r = call i4 @llvm.clmul.i4(i4 -4, i4 2)   ; %r = -8
       %r = call i4 @llvm.clmul.i4(i4 -4, i4 -5)  ; %r = 4
 
+.. _int_bext:
+
+'``llvm.bext.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.bext`` on any integer
+or integer vector type.
+
+::
+
+      declare i32 @llvm.bext.i32(i32 %val, i32 %mask)
+      declare i64 @llvm.bext.i64(i64 %val, i64 %mask)
+      declare <4 x i32> @llvm.bext.v4i32(<4 x i32> %val, <4 x i32> %mask)
+
+Overview:
+"""""""""
+
+The '``llvm.bext``' family of intrinsic functions extracts the bits from ``val``
+where the ``mask`` has bits set and packs them contiguously in the low bits
+of the result, same as the x86 ``PEXT`` instruction.
+
+Arguments:
+""""""""""
+
+The arguments may be any integer type or vector of integer type. Both
+arguments and result must have the same type.
+
+Semantics:
+""""""""""
+
+The '``llvm.bext``' intrinsic extracts bits from the first argument
+``val`` at the positions indicated by set bits in ``mask``, and packs
+them contiguously into the low bits of the result. The remaining high
+bits of the result are zero.
+
+Equivalently, if the set bit positions in ``mask`` (from LSB to MSB)
+are ``p0, p1, ..., pk``, then the result bit ``i`` equals bit ``pi``
+of ``val``.
+
+.. code-block:: text
+
+      %r = call i8 @llvm.bext.i8(i8 0b10101010, i8 0b11001100) ; %r = 0b00001010
+      %r = call i8 @llvm.bext.i8(i8 0b11111111, i8 0b10101010) ; %r = 0b00001111
+
+.. _int_bdep:
+
+'``llvm.bdep.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.bdep`` on any integer or
+integer vector type.
+
+::
+
+      declare i32 @llvm.bdep.i32(i32 %val, i32 %mask)
+      declare i64 @llvm.bdep.i64(i64 %val, i64 %mask)
+      declare <4 x i32> @llvm.bdep.v4i32(<4 x i32> %val, <4 x i32> %mask)
+
+Overview:
+"""""""""
+
+The '``llvm.bdep``' family of intrinsic functions deposits the low bits of
+``val`` into the result at the positions where ``mask`` has bits set, same as
+the x86 ``PDEP`` instruction.
+
+Arguments:
+""""""""""
+
+The arguments may be any integer type or vector of integer type. Both
+arguments and result must have the same type.
+
+Semantics:
+""""""""""
+
+The '``llvm.bdep``' intrinsic takes the low bits of the first argument
+``val`` and scatters them to the bit positions in the result indicated by
+set bits in ``mask``. Bits in the result at positions where ``mask`` is
+zero are zero.
+
+Equivalently, if the set bit positions in ``mask`` (from LSB to MSB) are
+``p0, p1, ..., pk``, then result bit ``pi`` equals bit ``i`` of ``val``.
+
+The operations satisfy the round-trip identity:
+``bdep(bext(val, mask), mask) == val & mask``.
+
+.. code-block:: text
+
+      %r = call i8 @llvm.bdep.i8(i8 0b00001010, i8 0b11001100) ; %r = 0b10001000
+      %r = call i8 @llvm.bdep.i8(i8 0b00001111, i8 0b10101010) ; %r = 0b10101010
+
 .. _int_overflow:
 
 Arithmetic with Overflow Intrinsics

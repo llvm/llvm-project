@@ -1200,6 +1200,12 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::BEXT:
+    Results.push_back(TLI.expandBEXT(Node, DAG));
+    return;
+  case ISD::BDEP:
+    Results.push_back(TLI.expandBDEP(Node, DAG));
+    return;
   case ISD::ROTL:
   case ISD::ROTR:
     if (SDValue Expanded = TLI.expandROT(Node, false /*AllowVectorOps*/, DAG)) {

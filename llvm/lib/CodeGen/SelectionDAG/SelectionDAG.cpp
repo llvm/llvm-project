@@ -3958,6 +3958,18 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = KnownBits::clmul(Known, Known2);
     break;
   }
+  case ISD::BEXT: {
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = KnownBits::bext(Known, Known2);
+    break;
+  }
+  case ISD::BDEP: {
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = KnownBits::bdep(Known, Known2);
+    break;
+  }
   case ISD::MGATHER:
   case ISD::MLOAD: {
     ISD::LoadExtType ETy =
@@ -7449,6 +7461,10 @@ static std::optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
     return APIntOps::clmulr(C1, C2);
   case ISD::CLMULH:
     return APIntOps::clmulh(C1, C2);
+  case ISD::BEXT:
+    return APIntOps::compressBits(C1, C2);
+  case ISD::BDEP:
+    return APIntOps::expandBits(C1, C2);
   }
   return std::nullopt;
 }

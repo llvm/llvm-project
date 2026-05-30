@@ -642,6 +642,71 @@ KnownBits KnownBits::clmul(const KnownBits &LHS, const KnownBits &RHS) {
   return Res;
 }
 
+KnownBits KnownBits::bext(const KnownBits &LHS, const KnownBits &RHS) {
+  // For each source position I where mask[I] could be set, the output index j
+  // lies in [M0, M1] where these track the range of possible set-bit counts
+  // seen so far in mask.
+  //
+  // The output bit j
+  // - can be 0 if any candidate LHS[I] could be zero or popcount(mask) could
+  //   be <= j, and
+  // - can be 1 only if some candidate LHS[I] could be one and popcount(mask)
+  //   is known > j.
+  unsigned BitWidth = LHS.getBitWidth();
+  KnownBits Res(BitWidth);
+  Res.setAllConflict();
+
+  unsigned M0 = 0, M1 = 0;
+  for (unsigned I = 0; I < BitWidth; ++I) {
+    if (!RHS.Zero[I]) {
+      APInt Range = APInt::getBitsSet(BitWidth, M0, M1 + 1);
+      if (!LHS.Zero[I])
+        Res.Zero &= ~Range; // some position in Range could be 1
+      if (!LHS.One[I])
+        Res.One &= ~Range; // some position in Range could be 0
+    }
+    if (RHS.One[I])
+      ++M0, ++M1;
+    else if (!RHS.Zero[I])
+      ++M1;
+  }
+
+  // Output positions j >= M0 may have no source (popcount(mask) <= j), in
+  // which case they default to zero.
+  Res.One &= APInt::getLowBitsSet(BitWidth, M0);
+  return Res;
+}
+
+KnownBits KnownBits::bdep(const KnownBits &LHS, const KnownBits &RHS) {
+  // For each output position I where mask[I] could be set, the source index j
+  // lies in [M0, M1] where these track possible counts of set mask bits < I.
+  //
+  // The output bit
+  // - can be 0 if mask[I] or any candidate LHS[j] could be zero, and
+  // - can be 1 only if both mask[I] and some candidate LHS[j] could be one.
+  unsigned BitWidth = LHS.getBitWidth();
+  KnownBits Res(BitWidth);
+  Res.setAllConflict();
+
+  unsigned M0 = 0, M1 = 0;
+  for (unsigned I = 0; I < BitWidth; ++I) {
+    if (!RHS.One[I])
+      Res.One.clearBit(I); // mask[I] could be 0 -> output[I] could be 0
+    if (!RHS.Zero[I]) {
+      APInt Range = APInt::getBitsSet(BitWidth, M0, M1 + 1);
+      if (!Range.isSubsetOf(LHS.One))
+        Res.One.clearBit(I); // some candidate could be 0
+      if (!Range.isSubsetOf(LHS.Zero))
+        Res.Zero.clearBit(I); // some candidate could be 1
+    }
+    if (RHS.One[I])
+      ++M0, ++M1;
+    else if (!RHS.Zero[I])
+      ++M1;
+  }
+  return Res;
+}
+
 std::optional<bool> KnownBits::eq(const KnownBits &LHS, const KnownBits &RHS) {
   if (LHS.isConstant() && RHS.isConstant())
     return LHS.getConstant() == RHS.getConstant();

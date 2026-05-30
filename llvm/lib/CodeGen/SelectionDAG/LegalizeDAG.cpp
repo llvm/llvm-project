@@ -4196,6 +4196,12 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (SDValue Expanded = TLI.expandCLMUL(Node, DAG))
       Results.push_back(Expanded);
     break;
+  case ISD::BEXT:
+    Results.push_back(TLI.expandBEXT(Node, DAG));
+    break;
+  case ISD::BDEP:
+    Results.push_back(TLI.expandBDEP(Node, DAG));
+    break;
   case ISD::SADDSAT:
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
@@ -5564,6 +5570,14 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     // Perform the larger operation
     auto CTLZResult = DAG.getNode(Node->getOpcode(), dl, NVT, LeftShiftResult);
     Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, CTLZResult));
+    break;
+  }
+  case ISD::BEXT:
+  case ISD::BDEP: {
+    Tmp1 = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, Node->getOperand(0));
+    Tmp2 = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, Node->getOperand(1));
+    Tmp1 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Tmp2);
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
     break;
   }
   case ISD::BITREVERSE:

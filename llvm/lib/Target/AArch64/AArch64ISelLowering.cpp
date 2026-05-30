@@ -2107,6 +2107,19 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
+    // Map generic BEXT/BDEP to SVE2 bitperm BEXT/BDEP instructions.
+    if (Subtarget->hasSVEBitPerm() &&
+        (Subtarget->isSVEAvailable() ||
+         (Subtarget->isSVEorStreamingSVEAvailable() &&
+          Subtarget->hasSSVE_BitPerm()))) {
+      for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64}) {
+        setOperationAction(ISD::BEXT, VT, Custom);
+        setOperationAction(ISD::BDEP, VT, Custom);
+      }
+      setOperationAction({ISD::BEXT, ISD::BDEP}, MVT::i32, Custom);
+      setOperationAction({ISD::BEXT, ISD::BDEP}, MVT::i64, Custom);
+    }
+
     if (Subtarget->hasBF16())
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::nxv4f32,
                                 MVT::nxv8bf16, Legal);
@@ -8642,6 +8655,38 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerPARTIAL_REDUCE_MLA(Op, DAG);
   case ISD::CLMUL:
     return LowerCLMUL(Op, DAG);
+  case ISD::BEXT:
+  case ISD::BDEP: {
+    // Lower generic BEXT/BDEP to SVE2 intrinsics.
+    SDLoc DL(Op);
+    EVT VT = Op.getValueType();
+    unsigned IntrID = Op.getOpcode() == ISD::BEXT
+                          ? Intrinsic::aarch64_sve_bext_x
+                          : Intrinsic::aarch64_sve_bdep_x;
+
+    if (VT.isScalarInteger()) {
+      assert((VT == MVT::i32 || VT == MVT::i64) && "Unexpected scalar type");
+      EVT NeonVT = VT == MVT::i64 ? MVT::v2i64 : MVT::v4i32;
+      EVT SveVT = VT == MVT::i64 ? MVT::nxv2i64 : MVT::nxv4i32;
+      SDValue Zero = DAG.getVectorIdxConstant(0, DL);
+      auto ToScalable = [&](SDValue X) {
+        SDValue V = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, NeonVT, X);
+        return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, SveVT,
+                           DAG.getUNDEF(SveVT), V, Zero);
+      };
+      SDValue Z0 = ToScalable(Op.getOperand(0));
+      SDValue Z1 = ToScalable(Op.getOperand(1));
+      SDValue R =
+          DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, SveVT,
+                      DAG.getTargetConstant(IntrID, DL, MVT::i32), Z0, Z1);
+      SDValue Fixed = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NeonVT, R, Zero);
+      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Fixed, Zero);
+    }
+
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT,
+                       DAG.getTargetConstant(IntrID, DL, MVT::i32),
+                       Op.getOperand(0), Op.getOperand(1));
+  }
   case ISD::FCANONICALIZE:
     return LowerFCANONICALIZE(Op, DAG);
   case ISD::CTTZ_ELTS:

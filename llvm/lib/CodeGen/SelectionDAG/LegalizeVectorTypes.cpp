@@ -207,6 +207,8 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::CLMUL:
   case ISD::CLMULR:
   case ISD::CLMULH:
+  case ISD::BEXT:
+  case ISD::BDEP:
     R = ScalarizeVecRes_BinOp(N);
     break;
 
@@ -1518,6 +1520,8 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::CLMUL:
   case ISD::CLMULR:
   case ISD::CLMULH:
+  case ISD::BEXT:
+  case ISD::BDEP:
   case ISD::MULHS:
   case ISD::MULHU:
   case ISD::ABDS:
@@ -5256,6 +5260,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::CLMUL:
   case ISD::CLMULR:
   case ISD::CLMULH:
+  case ISD::BEXT:
+  case ISD::BDEP:
   case ISD::FMINNUM:
   case ISD::FMINNUM_IEEE:
   case ISD::VP_FMINNUM:
