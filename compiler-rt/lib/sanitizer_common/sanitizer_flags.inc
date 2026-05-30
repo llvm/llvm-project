@@ -83,8 +83,14 @@ COMMON_FLAG(
     "detect_leaks=false, or if __lsan_do_leak_check() is called before the "
     "handler has a chance to run.")
 COMMON_FLAG(bool, allocator_may_return_null, false,
-            "If false, the allocator will crash instead of returning 0 on "
-            "out-of-memory.")
+            "Controls allocator behavior on out-of-memory. "
+            "If 'false' (default), out-of-memory events force an abort. "
+            "If 'true', allocators conform to the C/C++ standard and either "
+            "return 'null' or throw the C++ std::bad_alloc exception as "
+            "expected. "
+            "NOTE: On Windows sanitizer runtimes are built without exceptions "
+            "so throwing allocator forms always abort, regardless of the "
+            "value of this flag.")
 COMMON_FLAG(bool, print_summary, true,
             "If false, disable printing error summaries in addition to error "
             "reports.")
