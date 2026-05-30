@@ -27640,20 +27640,40 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
         return DAG.getSplatVector(NVT, DL, V.getOperand(0));
 
   // extract_subvector(insert_subvector(x,y,c1),c2)
+  //  --> extract_subvector(x,c2)
+  // iff we're extracting wholly outside the inserted subvector.
+  //
   //  --> extract_subvector(y,c2-c1)
-  // iff we're just extracting from the inserted subvector.
+  // iff we're extracting wholly from the inserted subvector.
+  //
+  //  --> insert_subvector(extract_subvector(x,c2), y, c1-c2)
+  // iff the inserted subvector is wholly contained by the extraction.
   if (V.getOpcode() == ISD::INSERT_SUBVECTOR) {
+    SDValue Src = V.getOperand(0);
     SDValue InsSub = V.getOperand(1);
     EVT InsSubVT = InsSub.getValueType();
     unsigned NumInsElts = InsSubVT.getVectorMinNumElements();
     unsigned InsIdx = V.getConstantOperandVal(2);
     unsigned NumSubElts = NVT.getVectorMinNumElements();
-    if (InsIdx <= ExtIdx && (ExtIdx + NumSubElts) <= (InsIdx + NumInsElts) &&
-        TLI.isExtractSubvectorCheap(NVT, InsSubVT, ExtIdx - InsIdx) &&
-        InsSubVT.isFixedLengthVector() && NVT.isFixedLengthVector() &&
-        V.getValueType().isFixedLengthVector())
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NVT, InsSub,
-                         DAG.getVectorIdxConstant(ExtIdx - InsIdx, DL));
+    if (InsSubVT.isFixedLengthVector() && NVT.isFixedLengthVector() &&
+        V.getValueType().isFixedLengthVector()) {
+      uint64_t ExtEnd = ExtIdx + NumSubElts;
+      uint64_t InsEnd = InsIdx + NumInsElts;
+      if (ExtEnd <= InsIdx || InsEnd <= ExtIdx)
+        return DAG.getExtractSubvector(DL, NVT, Src, ExtIdx);
+
+      if (InsIdx <= ExtIdx && ExtEnd <= InsEnd &&
+          TLI.isExtractSubvectorCheap(NVT, InsSubVT, ExtIdx - InsIdx))
+        return DAG.getExtractSubvector(DL, NVT, InsSub, ExtIdx - InsIdx);
+
+      if (ExtIdx <= InsIdx && InsEnd <= ExtEnd &&
+          InsSubVT.getVectorElementType() == NVT.getVectorElementType() &&
+          (InsIdx - ExtIdx) % NumInsElts == 0 &&
+          hasOperation(ISD::INSERT_SUBVECTOR, NVT)) {
+        SDValue NewExtract = DAG.getExtractSubvector(DL, NVT, Src, ExtIdx);
+        return DAG.getInsertSubvector(DL, NewExtract, InsSub, InsIdx - ExtIdx);
+      }
+    }
   }
 
   // Try to move vector bitcast after extract_subv by scaling extraction index:

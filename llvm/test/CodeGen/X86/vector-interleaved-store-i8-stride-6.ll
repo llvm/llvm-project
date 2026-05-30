@@ -945,9 +945,8 @@ define void @store_i8_stride6_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512BW-NEXT:    movw $18724, %cx # imm = 0x4924
 ; AVX512BW-NEXT:    kmovd %ecx, %k1
 ; AVX512BW-NEXT:    vmovdqu16 %ymm2, %ymm0 {%k1}
-; AVX512BW-NEXT:    vinserti32x4 $2, %xmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    vmovdqa %xmm1, 32(%rax)
 ; AVX512BW-NEXT:    vmovdqa %ymm0, (%rax)
+; AVX512BW-NEXT:    vmovdqa %xmm1, 32(%rax)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -982,9 +981,8 @@ define void @store_i8_stride6_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512BW-FCP-NEXT:    movw $18724, %cx # imm = 0x4924
 ; AVX512BW-FCP-NEXT:    kmovd %ecx, %k1
 ; AVX512BW-FCP-NEXT:    vmovdqu16 %ymm2, %ymm0 {%k1}
-; AVX512BW-FCP-NEXT:    vinserti32x4 $2, %xmm1, %zmm0, %zmm0
-; AVX512BW-FCP-NEXT:    vmovdqa %xmm1, 32(%rax)
 ; AVX512BW-FCP-NEXT:    vmovdqa %ymm0, (%rax)
+; AVX512BW-FCP-NEXT:    vmovdqa %xmm1, 32(%rax)
 ; AVX512BW-FCP-NEXT:    vzeroupper
 ; AVX512BW-FCP-NEXT:    retq
 ;
@@ -1019,9 +1017,8 @@ define void @store_i8_stride6_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512DQ-BW-NEXT:    movw $18724, %cx # imm = 0x4924
 ; AVX512DQ-BW-NEXT:    kmovd %ecx, %k1
 ; AVX512DQ-BW-NEXT:    vmovdqu16 %ymm2, %ymm0 {%k1}
-; AVX512DQ-BW-NEXT:    vinserti32x4 $2, %xmm1, %zmm0, %zmm0
-; AVX512DQ-BW-NEXT:    vmovdqa %xmm1, 32(%rax)
 ; AVX512DQ-BW-NEXT:    vmovdqa %ymm0, (%rax)
+; AVX512DQ-BW-NEXT:    vmovdqa %xmm1, 32(%rax)
 ; AVX512DQ-BW-NEXT:    vzeroupper
 ; AVX512DQ-BW-NEXT:    retq
 ;
@@ -1056,9 +1053,8 @@ define void @store_i8_stride6_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512DQ-BW-FCP-NEXT:    movw $18724, %cx # imm = 0x4924
 ; AVX512DQ-BW-FCP-NEXT:    kmovd %ecx, %k1
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu16 %ymm2, %ymm0 {%k1}
-; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $2, %xmm1, %zmm0, %zmm0
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa %xmm1, 32(%rax)
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa %ymm0, (%rax)
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa %xmm1, 32(%rax)
 ; AVX512DQ-BW-FCP-NEXT:    vzeroupper
 ; AVX512DQ-BW-FCP-NEXT:    retq
   %in.vec0 = load <8 x i8>, ptr %in.vecptr0, align 64
