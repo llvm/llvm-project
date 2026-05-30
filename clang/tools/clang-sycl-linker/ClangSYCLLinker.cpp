@@ -133,9 +133,8 @@ static std::string getMainExecutable(const char *Name) {
   return sys::path::parent_path(COWPath).str();
 }
 
-static Expected<StringRef> createTempFile(const ArgList &Args,
-                                          const Twine &Prefix,
-                                          StringRef Extension) {
+static Expected<StringRef>
+createTempFile(const ArgList &Args, const Twine &Prefix, StringRef Extension) {
   SmallString<128> Path;
   if (Args.hasArg(OPT_save_temps)) {
     // Generate a unique path name without creating a file
@@ -230,8 +229,8 @@ static std::optional<std::string> findFile(StringRef Dir, const Twine &Name) {
   return std::nullopt;
 }
 
-static std::optional<std::string> searchLibrary(StringRef Name,
-                                                ArrayRef<StringRef> SearchPaths) {
+static std::optional<std::string>
+searchLibrary(StringRef Name, ArrayRef<StringRef> SearchPaths) {
   // An absolute path is taken as-is; -L paths are only consulted for relative
   // names.
   if (sys::path::is_absolute(Name)) {
