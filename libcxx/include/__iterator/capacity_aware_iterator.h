@@ -119,7 +119,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](difference_type __n) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](difference_type __n) const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         static_cast<size_t>(__n >= 0 ? __n : -__n) < _RangeMaxElements,
         "__capacity_aware_iterator::operator[]: Attempting to index iterator past its container's possible range");
