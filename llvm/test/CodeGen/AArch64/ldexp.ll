@@ -56,6 +56,65 @@ entry:
   ret double %call
 }
 
+; A sub-int exponent must be sign-extended to int on the libcall path;
+; PromoteIntOp_ExpOp must not crash on it.
+define double @testExpIntrinsic_i16(double %val, i16 %a) {
+; SVELINUX-LABEL: testExpIntrinsic_i16:
+; SVELINUX:       // %bb.0: // %entry
+; SVELINUX-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; SVELINUX-NEXT:    .cfi_def_cfa_offset 16
+; SVELINUX-NEXT:    .cfi_offset w30, -16
+; SVELINUX-NEXT:    sxth w0, w0
+; SVELINUX-NEXT:    bl ldexp
+; SVELINUX-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; SVELINUX-NEXT:    ret
+;
+; GISEL-LABEL: testExpIntrinsic_i16:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; GISEL-NEXT:    .cfi_def_cfa_offset 16
+; GISEL-NEXT:    .cfi_offset w30, -16
+; GISEL-NEXT:    sxth w0, w0
+; GISEL-NEXT:    bl ldexp
+; GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; GISEL-NEXT:    ret
+;
+; SVEWINDOWS-LABEL: testExpIntrinsic_i16:
+; SVEWINDOWS:       .seh_proc testExpIntrinsic_i16
+; SVEWINDOWS-NEXT:  // %bb.0: // %entry
+; SVEWINDOWS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; SVEWINDOWS-NEXT:    .seh_save_reg_x x30, 16
+; SVEWINDOWS-NEXT:    .seh_endprologue
+; SVEWINDOWS-NEXT:    sxth w0, w0
+; SVEWINDOWS-NEXT:    bl ldexp
+; SVEWINDOWS-NEXT:    .seh_startepilogue
+; SVEWINDOWS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; SVEWINDOWS-NEXT:    .seh_save_reg_x x30, 16
+; SVEWINDOWS-NEXT:    .seh_endepilogue
+; SVEWINDOWS-NEXT:    ret
+; SVEWINDOWS-NEXT:    .seh_endfunclet
+; SVEWINDOWS-NEXT:    .seh_endproc
+;
+; WINDOWS-LABEL: testExpIntrinsic_i16:
+; WINDOWS:       .seh_proc testExpIntrinsic_i16
+; WINDOWS-NEXT:  // %bb.0: // %entry
+; WINDOWS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; WINDOWS-NEXT:    .seh_save_reg_x x30, 16
+; WINDOWS-NEXT:    .seh_endprologue
+; WINDOWS-NEXT:    sxth w0, w0
+; WINDOWS-NEXT:    bl ldexp
+; WINDOWS-NEXT:    .seh_startepilogue
+; WINDOWS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; WINDOWS-NEXT:    .seh_save_reg_x x30, 16
+; WINDOWS-NEXT:    .seh_endepilogue
+; WINDOWS-NEXT:    ret
+; WINDOWS-NEXT:    .seh_endfunclet
+; WINDOWS-NEXT:    .seh_endproc
+entry:
+  %call = tail call fast double @llvm.ldexp.f64.i16(double %val, i16 %a)
+  ret double %call
+}
+
 define float @testExpf(float %val, i32 %a) {
 ; SVELINUX-LABEL: testExpf:
 ; SVELINUX:       // %bb.0: // %entry
