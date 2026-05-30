@@ -3054,6 +3054,87 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::LD4D_IMM:
   case AArch64::LD4H_IMM:
   case AArch64::LD4W_IMM:
+  // SME2/SVE2p1 multi-vector contiguous/non-temporal/strided loads and stores.
+  case AArch64::LD1B_2Z_IMM:
+  case AArch64::LD1H_2Z_IMM:
+  case AArch64::LD1W_2Z_IMM:
+  case AArch64::LD1D_2Z_IMM:
+  case AArch64::LD1B_2Z_IMM_PSEUDO:
+  case AArch64::LD1H_2Z_IMM_PSEUDO:
+  case AArch64::LD1W_2Z_IMM_PSEUDO:
+  case AArch64::LD1D_2Z_IMM_PSEUDO:
+  case AArch64::LD1B_2Z_STRIDED_IMM:
+  case AArch64::LD1H_2Z_STRIDED_IMM:
+  case AArch64::LD1W_2Z_STRIDED_IMM:
+  case AArch64::LD1D_2Z_STRIDED_IMM:
+  case AArch64::LD1B_4Z_IMM:
+  case AArch64::LD1H_4Z_IMM:
+  case AArch64::LD1W_4Z_IMM:
+  case AArch64::LD1D_4Z_IMM:
+  case AArch64::LD1B_4Z_IMM_PSEUDO:
+  case AArch64::LD1H_4Z_IMM_PSEUDO:
+  case AArch64::LD1W_4Z_IMM_PSEUDO:
+  case AArch64::LD1D_4Z_IMM_PSEUDO:
+  case AArch64::LD1B_4Z_STRIDED_IMM:
+  case AArch64::LD1H_4Z_STRIDED_IMM:
+  case AArch64::LD1W_4Z_STRIDED_IMM:
+  case AArch64::LD1D_4Z_STRIDED_IMM:
+  case AArch64::LDNT1B_2Z_IMM:
+  case AArch64::LDNT1H_2Z_IMM:
+  case AArch64::LDNT1W_2Z_IMM:
+  case AArch64::LDNT1D_2Z_IMM:
+  case AArch64::LDNT1B_2Z_IMM_PSEUDO:
+  case AArch64::LDNT1H_2Z_IMM_PSEUDO:
+  case AArch64::LDNT1W_2Z_IMM_PSEUDO:
+  case AArch64::LDNT1D_2Z_IMM_PSEUDO:
+  case AArch64::LDNT1B_2Z_STRIDED_IMM:
+  case AArch64::LDNT1H_2Z_STRIDED_IMM:
+  case AArch64::LDNT1W_2Z_STRIDED_IMM:
+  case AArch64::LDNT1D_2Z_STRIDED_IMM:
+  case AArch64::LDNT1B_4Z_IMM:
+  case AArch64::LDNT1H_4Z_IMM:
+  case AArch64::LDNT1W_4Z_IMM:
+  case AArch64::LDNT1D_4Z_IMM:
+  case AArch64::LDNT1B_4Z_IMM_PSEUDO:
+  case AArch64::LDNT1H_4Z_IMM_PSEUDO:
+  case AArch64::LDNT1W_4Z_IMM_PSEUDO:
+  case AArch64::LDNT1D_4Z_IMM_PSEUDO:
+  case AArch64::LDNT1B_4Z_STRIDED_IMM:
+  case AArch64::LDNT1H_4Z_STRIDED_IMM:
+  case AArch64::LDNT1W_4Z_STRIDED_IMM:
+  case AArch64::LDNT1D_4Z_STRIDED_IMM:
+  case AArch64::ST1B_2Z_IMM:
+  case AArch64::ST1H_2Z_IMM:
+  case AArch64::ST1W_2Z_IMM:
+  case AArch64::ST1D_2Z_IMM:
+  case AArch64::ST1B_2Z_STRIDED_IMM:
+  case AArch64::ST1H_2Z_STRIDED_IMM:
+  case AArch64::ST1W_2Z_STRIDED_IMM:
+  case AArch64::ST1D_2Z_STRIDED_IMM:
+  case AArch64::ST1B_4Z_IMM:
+  case AArch64::ST1H_4Z_IMM:
+  case AArch64::ST1W_4Z_IMM:
+  case AArch64::ST1D_4Z_IMM:
+  case AArch64::ST1B_4Z_STRIDED_IMM:
+  case AArch64::ST1H_4Z_STRIDED_IMM:
+  case AArch64::ST1W_4Z_STRIDED_IMM:
+  case AArch64::ST1D_4Z_STRIDED_IMM:
+  case AArch64::STNT1B_2Z_IMM:
+  case AArch64::STNT1H_2Z_IMM:
+  case AArch64::STNT1W_2Z_IMM:
+  case AArch64::STNT1D_2Z_IMM:
+  case AArch64::STNT1B_2Z_STRIDED_IMM:
+  case AArch64::STNT1H_2Z_STRIDED_IMM:
+  case AArch64::STNT1W_2Z_STRIDED_IMM:
+  case AArch64::STNT1D_2Z_STRIDED_IMM:
+  case AArch64::STNT1B_4Z_IMM:
+  case AArch64::STNT1H_4Z_IMM:
+  case AArch64::STNT1W_4Z_IMM:
+  case AArch64::STNT1D_4Z_IMM:
+  case AArch64::STNT1B_4Z_STRIDED_IMM:
+  case AArch64::STNT1H_4Z_STRIDED_IMM:
+  case AArch64::STNT1W_4Z_STRIDED_IMM:
+  case AArch64::STNT1D_4Z_STRIDED_IMM:
   case AArch64::LDG:
   case AArch64::LDNF1B_D_IMM:
   case AArch64::LDNF1B_H_IMM:
@@ -4882,6 +4963,99 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::ST4H_IMM:
   case AArch64::ST4W_IMM:
   case AArch64::ST4D_IMM:
+    Scale = TypeSize::getScalable(64);
+    Width = TypeSize::getScalable(16 * 4);
+    MinOffset = -8;
+    MaxOffset = 7;
+    break;
+  // SME2/SVE2p1 multi-vector contiguous, non-temporal and strided loads/stores
+  // operating on 2 consecutive vectors (2Z).
+  case AArch64::LD1B_2Z_IMM:
+  case AArch64::LD1H_2Z_IMM:
+  case AArch64::LD1W_2Z_IMM:
+  case AArch64::LD1D_2Z_IMM:
+  case AArch64::LD1B_2Z_IMM_PSEUDO:
+  case AArch64::LD1H_2Z_IMM_PSEUDO:
+  case AArch64::LD1W_2Z_IMM_PSEUDO:
+  case AArch64::LD1D_2Z_IMM_PSEUDO:
+  case AArch64::LD1B_2Z_STRIDED_IMM:
+  case AArch64::LD1H_2Z_STRIDED_IMM:
+  case AArch64::LD1W_2Z_STRIDED_IMM:
+  case AArch64::LD1D_2Z_STRIDED_IMM:
+  case AArch64::LDNT1B_2Z_IMM:
+  case AArch64::LDNT1H_2Z_IMM:
+  case AArch64::LDNT1W_2Z_IMM:
+  case AArch64::LDNT1D_2Z_IMM:
+  case AArch64::LDNT1B_2Z_IMM_PSEUDO:
+  case AArch64::LDNT1H_2Z_IMM_PSEUDO:
+  case AArch64::LDNT1W_2Z_IMM_PSEUDO:
+  case AArch64::LDNT1D_2Z_IMM_PSEUDO:
+  case AArch64::LDNT1B_2Z_STRIDED_IMM:
+  case AArch64::LDNT1H_2Z_STRIDED_IMM:
+  case AArch64::LDNT1W_2Z_STRIDED_IMM:
+  case AArch64::LDNT1D_2Z_STRIDED_IMM:
+  case AArch64::ST1B_2Z_IMM:
+  case AArch64::ST1H_2Z_IMM:
+  case AArch64::ST1W_2Z_IMM:
+  case AArch64::ST1D_2Z_IMM:
+  case AArch64::ST1B_2Z_STRIDED_IMM:
+  case AArch64::ST1H_2Z_STRIDED_IMM:
+  case AArch64::ST1W_2Z_STRIDED_IMM:
+  case AArch64::ST1D_2Z_STRIDED_IMM:
+  case AArch64::STNT1B_2Z_IMM:
+  case AArch64::STNT1H_2Z_IMM:
+  case AArch64::STNT1W_2Z_IMM:
+  case AArch64::STNT1D_2Z_IMM:
+  case AArch64::STNT1B_2Z_STRIDED_IMM:
+  case AArch64::STNT1H_2Z_STRIDED_IMM:
+  case AArch64::STNT1W_2Z_STRIDED_IMM:
+  case AArch64::STNT1D_2Z_STRIDED_IMM:
+    Scale = TypeSize::getScalable(32);
+    Width = TypeSize::getScalable(16 * 2);
+    MinOffset = -8;
+    MaxOffset = 7;
+    break;
+  // As above, but operating on 4 consecutive vectors (4Z).
+  case AArch64::LD1B_4Z_IMM:
+  case AArch64::LD1H_4Z_IMM:
+  case AArch64::LD1W_4Z_IMM:
+  case AArch64::LD1D_4Z_IMM:
+  case AArch64::LD1B_4Z_IMM_PSEUDO:
+  case AArch64::LD1H_4Z_IMM_PSEUDO:
+  case AArch64::LD1W_4Z_IMM_PSEUDO:
+  case AArch64::LD1D_4Z_IMM_PSEUDO:
+  case AArch64::LD1B_4Z_STRIDED_IMM:
+  case AArch64::LD1H_4Z_STRIDED_IMM:
+  case AArch64::LD1W_4Z_STRIDED_IMM:
+  case AArch64::LD1D_4Z_STRIDED_IMM:
+  case AArch64::LDNT1B_4Z_IMM:
+  case AArch64::LDNT1H_4Z_IMM:
+  case AArch64::LDNT1W_4Z_IMM:
+  case AArch64::LDNT1D_4Z_IMM:
+  case AArch64::LDNT1B_4Z_IMM_PSEUDO:
+  case AArch64::LDNT1H_4Z_IMM_PSEUDO:
+  case AArch64::LDNT1W_4Z_IMM_PSEUDO:
+  case AArch64::LDNT1D_4Z_IMM_PSEUDO:
+  case AArch64::LDNT1B_4Z_STRIDED_IMM:
+  case AArch64::LDNT1H_4Z_STRIDED_IMM:
+  case AArch64::LDNT1W_4Z_STRIDED_IMM:
+  case AArch64::LDNT1D_4Z_STRIDED_IMM:
+  case AArch64::ST1B_4Z_IMM:
+  case AArch64::ST1H_4Z_IMM:
+  case AArch64::ST1W_4Z_IMM:
+  case AArch64::ST1D_4Z_IMM:
+  case AArch64::ST1B_4Z_STRIDED_IMM:
+  case AArch64::ST1H_4Z_STRIDED_IMM:
+  case AArch64::ST1W_4Z_STRIDED_IMM:
+  case AArch64::ST1D_4Z_STRIDED_IMM:
+  case AArch64::STNT1B_4Z_IMM:
+  case AArch64::STNT1H_4Z_IMM:
+  case AArch64::STNT1W_4Z_IMM:
+  case AArch64::STNT1D_4Z_IMM:
+  case AArch64::STNT1B_4Z_STRIDED_IMM:
+  case AArch64::STNT1H_4Z_STRIDED_IMM:
+  case AArch64::STNT1W_4Z_STRIDED_IMM:
+  case AArch64::STNT1D_4Z_STRIDED_IMM:
     Scale = TypeSize::getScalable(64);
     Width = TypeSize::getScalable(16 * 4);
     MinOffset = -8;
