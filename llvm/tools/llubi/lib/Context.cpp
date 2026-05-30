@@ -21,6 +21,37 @@ Context::Context(Module &M, const AsmParserContext *ParserContext)
 
 Context::~Context() = default;
 
+bool Context::isSupportedGlobalInitializer(Constant *C) const {
+  if (isa<PoisonValue, ConstantAggregateZero, ConstantPointerNull, ConstantInt,
+          ConstantFP>(C))
+    return true;
+
+  if (auto const *CDS = dyn_cast<ConstantDataSequential>(C)) {
+    for (uint32_t I = 0, E = CDS->getNumElements(); I != E; ++I)
+      if (!isSupportedGlobalInitializer(CDS->getElementAsConstant(I)))
+        return false;
+    return true;
+  }
+
+  if (auto *CA = dyn_cast<ConstantAggregate>(C)) {
+    for (Value *Op : CA->operands())
+      if (!isSupportedGlobalInitializer(cast<Constant>(Op)))
+        return false;
+    return true;
+  }
+
+  if (auto const *BA = dyn_cast<BlockAddress>(C))
+    return BlockAddrMap.contains(BA->getBasicBlock());
+
+  if (auto const *GV = dyn_cast<GlobalVariable>(C))
+    return GlobalAddrMap.contains(GV);
+
+  if (auto const *F = dyn_cast<Function>(C))
+    return FuncAddrMap.contains(F);
+
+  return false;
+}
+
 bool Context::initGlobalValues() {
   // Register all function and block targets that may be used by indirect calls
   // and branches.
@@ -49,7 +80,41 @@ bool Context::initGlobalValues() {
       BlockAddrMap.try_emplace(&BB, deriveFromMemoryObject(BlockObj));
     }
   }
-  // TODO: initialize global variables.
+
+  for (GlobalVariable &GV : M.globals()) {
+    if (!GV.hasInitializer())
+      continue;
+
+    Type *ValueTy = GV.getValueType();
+    uint64_t const Size = getEffectiveTypeAllocSize(ValueTy);
+    Align Alignment = GV.getPointerAlignment(DL);
+    auto const Obj =
+        allocate(Size, Alignment.value(), GV.getName(), GV.getAddressSpace(),
+                 MemInitKind::Zeroed, MemAllocKind::Global);
+
+    if (!Obj)
+      return false;
+
+    Obj->setIsConstant(GV.isConstant());
+    GlobalAddrMap.try_emplace(&GV, deriveFromMemoryObject(Obj));
+  }
+
+  for (GlobalVariable &GV : M.globals()) {
+    if (!GV.hasInitializer())
+      continue;
+
+    MemoryObject *Obj = GlobalAddrMap.at(&GV).getMemoryObject();
+    assert(Obj && "global pointer should have memory object provenance");
+
+    Constant *Init = GV.getInitializer();
+
+    // TODO: Constant expression support
+    if (!isSupportedGlobalInitializer(Init))
+      return false;
+
+    AnyValue InitVal = getConstantValue(Init);
+    store(*Obj, 0, InitVal, GV.getValueType());
+  }
   return true;
 }
 
@@ -95,6 +160,9 @@ AnyValue Context::getConstantValueImpl(Constant *C) {
 
   if (auto *BA = dyn_cast<BlockAddress>(C))
     return BlockAddrMap.at(BA->getBasicBlock());
+
+  if (auto *GV = dyn_cast<GlobalVariable>(C))
+    return GlobalAddrMap.at(GV);
 
   if (auto *F = dyn_cast<Function>(C))
     return FuncAddrMap.at(F);

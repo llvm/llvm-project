@@ -145,6 +145,12 @@ void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
         << "Invalid memory access via a pointer with nullary provenance.";
     return;
   }
+  if (MO->isConstant()) {
+    reportImmediateUB()
+        << "Try to write to a constant memory object at address 0x"
+        << Twine::utohexstr(PtrVal.address().getZExtValue()) << ".";
+    return;
+  }
   // TODO: pointer capability check
   if (auto Offset =
           verifyMemAccess(*MO, PtrVal.address(),

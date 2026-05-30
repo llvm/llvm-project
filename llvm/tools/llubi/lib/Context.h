@@ -251,6 +251,8 @@ class Context {
       ValidFuncTargets;
   DenseMap<uint64_t, std::pair<BasicBlock *, IntrusiveRefCntPtr<MemoryObject>>>
       ValidBlockTargets;
+  DenseMap<GlobalVariable *, Pointer> GlobalAddrMap;
+  bool isSupportedGlobalInitializer(Constant *C) const;
   AnyValue getConstantValueImpl(Constant *C);
 
   // Floating-point environment
