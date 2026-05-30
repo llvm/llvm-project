@@ -97,7 +97,7 @@ static bool fixupSetCC(MachineFunction &MF) {
       // it, itself, by definition, clobbers eflags. But it may happen that
       // FlagsDefMI also *uses* eflags, in which case the transformation is
       // invalid.
-      if (!ST->hasZU() &&
+      if ((!ST->hasZU() || ST->preferLegacySetCC()) &&
           FlagsDefMI->readsRegister(X86::EFLAGS, /*TRI=*/nullptr))
         continue;
 
@@ -117,11 +117,8 @@ static bool fixupSetCC(MachineFunction &MF) {
       // inserting the setcc/setzucc result into the low byte of the zeroed
       // register.
       Register ZeroReg = MRI->createVirtualRegister(RC);
-      if (ST->hasZU()) {
-        if (!ST->preferLegacySetCC())
-          assert((MI.getOpcode() == X86::SETZUCCr) &&
-                 "Expect setzucc instruction!");
-        else
+      if (ST->hasZU() && !ST->preferLegacySetCC()) {
+        if (MI.getOpcode() != X86::SETZUCCr)
           MI.setDesc(TII->get(X86::SETZUCCr));
         BuildMI(*ZExt->getParent(), ZExt, ZExt->getDebugLoc(),
                 TII->get(TargetOpcode::IMPLICIT_DEF), ZeroReg);
