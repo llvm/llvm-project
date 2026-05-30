@@ -155,7 +155,11 @@ TEST(AnnotationsTest, Named) {
 }
 
 TEST(AnnotationsTest, CustomMarkers) {
-  llvm::Annotations::Markers Custom{"~", "@", "{{", "}}"};
+  auto Custom = llvm::Annotations::Markers()
+                    .setPoint("~")
+                    .setName("@")
+                    .setRangeBegin("{{")
+                    .setRangeEnd("}}");
 
   // Cleaned code.
   EXPECT_EQ(llvm::Annotations("foo~bar@nnn{{baz@~{{qux}}}}", Custom).code(),
@@ -184,7 +188,11 @@ TEST(AnnotationsTest, CustomMarkers) {
               Pair(range(1, 2), "foo"));
 
   // Custom markers with longer tokens.
-  llvm::Annotations::Markers Multi{"-->", "###", "<<<", ">>>"};
+  auto Multi = llvm::Annotations::Markers()
+                   .setPoint("-->")
+                   .setName("###")
+                   .setRangeBegin("<<<")
+                   .setRangeEnd(">>>");
 
   // Cleaned code.
   EXPECT_EQ(llvm::Annotations("foo-->bar###nnn<<<baz###--><<<qux>>>>>>", Multi)

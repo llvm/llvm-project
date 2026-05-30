@@ -44,14 +44,21 @@ class raw_ostream;
 /// Ranges may be nested (and points can be inside ranges), but there's no way
 /// to define general overlapping ranges.
 ///
-/// The markers for points, names and ranges can be customized. For example, to
-/// use "~" as the point marker, "@@" as the name/payload marker, and "{{" /
-/// "}}" as range delimiters:
+/// The markers for points, names and ranges can be customized. This is useful
+/// when the default markers would otherwise conflict with the underlying syntax
+/// (e.g. C++ attributes or the reflection operator). For example, to use "~" as
+/// the point marker, "@@" as the name/payload marker, and "{{" / "}}" as range
+/// delimiters:
 ///
 ///    Annotations Example("~point @@name{{range}}", {"~", "@@", "{{", "}}"});
 ///
-/// This is useful when the default markers would otherwise conflict with the
-/// underlying syntax (e.g. C++ attributes or the reflection operator).
+/// Alternatively, use setters to customize markers individually:
+///
+///    Annotations Example("~point @@name{{range}}", Annotations::Markers()
+///      .setPoint("~")
+///      .setName("@@")
+///      .setRangeBegin("{{")
+///      .setRangeEnd("}}"));
 class Annotations {
 public:
   /// Two offsets pointing to a continuous substring. End is not included, i.e.
@@ -73,6 +80,23 @@ public:
     llvm::StringRef Name = "$";
     llvm::StringRef RangeBegin = "[[";
     llvm::StringRef RangeEnd = "]]";
+
+    Markers &setPoint(llvm::StringRef P) {
+      Point = P;
+      return *this;
+    }
+    Markers &setName(llvm::StringRef N) {
+      Name = N;
+      return *this;
+    }
+    Markers &setRangeBegin(llvm::StringRef B) {
+      RangeBegin = B;
+      return *this;
+    }
+    Markers &setRangeEnd(llvm::StringRef E) {
+      RangeEnd = E;
+      return *this;
+    }
   };
 
   /// Parses the annotations from Text. Crashes if it's malformed.
