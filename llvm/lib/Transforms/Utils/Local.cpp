@@ -3009,10 +3009,10 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         break;
       case LLVMContext::MD_invariant_load:
       case LLVMContext::MD_invariant_group:
-	// If K moves, only keep the invariant metadata if it is present on
-	// both instructions; otherwise the invariant would be asserted on a
-	// path (J's) that never promised it. If K does not move, K stays on
-	// its original path, so its existing metadata remains valid.
+        // If K moves, only keep the invariant metadata if it is present on
+        // both instructions; otherwise the invariant would be asserted on a
+        // path (J's) that never promised it. If K does not move, K stays on
+        // its original path, so its existing metadata remains valid.
         if (DoesKMove)
           K->setMetadata(Kind, JMD);
         break;
