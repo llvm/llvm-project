@@ -89,7 +89,7 @@ define float @test_rootn_afn_f32__2(float %x) #0 {
 ; CHECK-LABEL: define float @test_rootn_afn_f32__2(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CALL:%.*]] = call afn float @llvm.sqrt.f32(float [[X]]), !fpmath [[META0:![0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call afn float @_Z12__rootn_fastfi(float [[X]], i32 2)
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
@@ -125,8 +125,7 @@ define float @test_rootn_afn_f32__neg2(float %x) #0 {
 ; CHECK-LABEL: define float @test_rootn_afn_f32__neg2(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call contract afn float @llvm.sqrt.f32(float [[X]])
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv contract afn float 1.000000e+00, [[TMP0]], !fpmath [[META0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call afn float @_Z12__rootn_fastfi(float [[X]], i32 -2)
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
 entry:
@@ -138,7 +137,7 @@ define <2 x float> @test_rootn_afn_v2f32__2(<2 x float> %x) #0 {
 ; CHECK-LABEL: define <2 x float> @test_rootn_afn_v2f32__2(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CALL:%.*]] = call afn <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath [[META0]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call afn <2 x float> @_Z12__rootn_fastDv2_fDv2_i(<2 x float> [[X]], <2 x i32> splat (i32 2))
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
 entry:
@@ -174,8 +173,7 @@ define <2 x float> @test_rootn_afn_v2f32__neg2(<2 x float> %x) #0 {
 ; CHECK-LABEL: define <2 x float> @test_rootn_afn_v2f32__neg2(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call contract afn <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]])
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv contract afn <2 x float> splat (float 1.000000e+00), [[TMP0]], !fpmath [[META0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call afn <2 x float> @_Z12__rootn_fastDv2_fDv2_i(<2 x float> [[X]], <2 x i32> splat (i32 -2))
 ; CHECK-NEXT:    ret <2 x float> [[TMP1]]
 ;
 entry:
@@ -293,7 +291,7 @@ define float @test__rootn_fast_f32__2(float %x) #0 {
 ; CHECK-LABEL: define float @test__rootn_fast_f32__2(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath [[META0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
