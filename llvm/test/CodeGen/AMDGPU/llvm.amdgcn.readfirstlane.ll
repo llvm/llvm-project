@@ -511,16 +511,18 @@ define amdgpu_kernel void @test_readfirstlane_m0(ptr addrspace(1) %out) {
 ; CHECK-SDAG-LABEL: test_readfirstlane_m0:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; CHECK-SDAG-NEXT:    s_add_i32 s12, s12, s17
-; CHECK-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; CHECK-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CHECK-SDAG-NEXT:    ;;#ASMSTART
 ; CHECK-SDAG-NEXT:    s_mov_b32 m0, -1
 ; CHECK-SDAG-NEXT:    ;;#ASMEND
+; CHECK-SDAG-NEXT:    v_mov_b32_e32 v0, m0
+; CHECK-SDAG-NEXT:    s_add_i32 s12, s12, s17
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
 ; CHECK-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-SDAG-NEXT:    v_mov_b32_e32 v2, m0
+; CHECK-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; CHECK-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; CHECK-SDAG-NEXT:    v_mov_b32_e32 v2, s2
 ; CHECK-SDAG-NEXT:    flat_store_dword v[0:1], v2
 ; CHECK-SDAG-NEXT:    s_endpgm
 ;

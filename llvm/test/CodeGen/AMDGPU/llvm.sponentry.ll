@@ -335,14 +335,14 @@ define amdgpu_gfx ptr addrspace(5) @sponentry_gfx_dyn_alloc(i32 %val) #0 {
 ; DAGISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; DAGISEL-NEXT:    s_cbranch_scc1 .LBB9_1
 ; DAGISEL-NEXT:  ; %bb.2:
-; DAGISEL-NEXT:    s_mov_b32 s1, s32
-; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; DAGISEL-NEXT:    v_lshl_add_u32 v1, s0, 5, s1
+; DAGISEL-NEXT:    v_mov_b32_e32 v1, s32
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
-; DAGISEL-NEXT:    scratch_store_b32 off, v0, s1 scope:SCOPE_SYS
+; DAGISEL-NEXT:    scratch_store_b32 v1, v0, off scope:SCOPE_SYS
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
 ; DAGISEL-NEXT:    v_mov_b32_e32 v0, s33
-; DAGISEL-NEXT:    v_readfirstlane_b32 s32, v1
+; DAGISEL-NEXT:    v_lshl_add_u32 v2, s0, 5, v1
+; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; DAGISEL-NEXT:    v_readfirstlane_b32 s32, v2
 ; DAGISEL-NEXT:    s_mov_b32 s32, s33
 ; DAGISEL-NEXT:    s_mov_b32 s33, s34
 ; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -517,16 +517,16 @@ define amdgpu_cs_chain void @sponentry_cs_chain_dyn_alloc(i32 %val) #0 {
 ; DAGISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; DAGISEL-NEXT:    s_cbranch_scc1 .LBB12_1
 ; DAGISEL-NEXT:  ; %bb.2:
-; DAGISEL-NEXT:    s_mov_b32 s1, s32
-; DAGISEL-NEXT:    v_mov_b32_e32 v1, s33
-; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; DAGISEL-NEXT:    v_lshl_add_u32 v0, s0, 5, s1
+; DAGISEL-NEXT:    v_mov_b32_e32 v0, s32
+; DAGISEL-NEXT:    v_mov_b32_e32 v2, s33
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
-; DAGISEL-NEXT:    scratch_store_b32 off, v8, s1 scope:SCOPE_SYS
+; DAGISEL-NEXT:    scratch_store_b32 v0, v8, off scope:SCOPE_SYS
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
-; DAGISEL-NEXT:    scratch_store_b32 off, v1, s1 scope:SCOPE_SYS
+; DAGISEL-NEXT:    scratch_store_b32 v0, v2, off scope:SCOPE_SYS
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
-; DAGISEL-NEXT:    v_readfirstlane_b32 s32, v0
+; DAGISEL-NEXT:    v_lshl_add_u32 v1, s0, 5, v0
+; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; DAGISEL-NEXT:    v_readfirstlane_b32 s32, v1
 ; DAGISEL-NEXT:    s_alloc_vgpr 0
 ; DAGISEL-NEXT:    s_endpgm
 ;

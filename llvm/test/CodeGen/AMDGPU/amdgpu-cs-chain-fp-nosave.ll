@@ -170,11 +170,11 @@ define amdgpu_cs_chain void @test_alloca_var(i32 %count) {
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB3_1
 ; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 s0, s32
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_lshl_add_u32 v1, s2, 6, s0
-; GFX12-NEXT:    scratch_store_b32 off, v0, s0
-; GFX12-NEXT:    v_readfirstlane_b32 s32, v1
+; GFX12-NEXT:    v_mov_b32_e32 v1, s32
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_lshl_add_u32 v2, s2, 6, v1
+; GFX12-NEXT:    scratch_store_b32 v1, v0, off
+; GFX12-NEXT:    v_readfirstlane_b32 s32, v2
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: test_alloca_var:
@@ -195,11 +195,10 @@ define amdgpu_cs_chain void @test_alloca_var(i32 %count) {
 ; GFX942-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX942-NEXT:    s_cbranch_scc1 .LBB3_1
 ; GFX942-NEXT:  ; %bb.2:
-; GFX942-NEXT:    s_mov_b32 s0, s32
-; GFX942-NEXT:    v_mov_b32_e32 v1, s0
-; GFX942-NEXT:    v_lshl_add_u32 v1, s2, 6, v1
-; GFX942-NEXT:    scratch_store_dword off, v0, s0
-; GFX942-NEXT:    v_readfirstlane_b32 s32, v1
+; GFX942-NEXT:    v_mov_b32_e32 v1, s32
+; GFX942-NEXT:    v_lshl_add_u32 v2, s2, 6, v1
+; GFX942-NEXT:    scratch_store_dword v1, v0, off
+; GFX942-NEXT:    v_readfirstlane_b32 s32, v2
 ; GFX942-NEXT:    s_endpgm
   %v = alloca i32, i32 %count, align 4, addrspace(5)
   store i32 0, ptr addrspace(5) %v, align 4
@@ -347,11 +346,12 @@ define amdgpu_cs_chain void @test_alloca_and_call_var(i32 %count) {
 ; GFX12-NEXT:    s_add_co_u32 s0, s0, foo@gotpcrel32@lo+12
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, foo@gotpcrel32@hi+24
-; GFX12-NEXT:    s_mov_b32 s3, s32
+; GFX12-NEXT:    v_mov_b32_e32 v1, s32
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX12-NEXT:    v_lshl_add_u32 v1, s2, 6, s3
-; GFX12-NEXT:    scratch_store_b32 off, v0, s3
-; GFX12-NEXT:    v_readfirstlane_b32 s32, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_lshl_add_u32 v2, s2, 6, v1
+; GFX12-NEXT:    scratch_store_b32 v1, v0, off
+; GFX12-NEXT:    v_readfirstlane_b32 s32, v2
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_swappc_b64 s[30:31], s[0:1]
@@ -379,11 +379,10 @@ define amdgpu_cs_chain void @test_alloca_and_call_var(i32 %count) {
 ; GFX942-NEXT:    s_add_u32 s0, s0, foo@gotpcrel32@lo+4
 ; GFX942-NEXT:    s_addc_u32 s1, s1, foo@gotpcrel32@hi+12
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX942-NEXT:    s_mov_b32 s3, s32
-; GFX942-NEXT:    v_mov_b32_e32 v1, s3
-; GFX942-NEXT:    v_lshl_add_u32 v1, s2, 6, v1
-; GFX942-NEXT:    scratch_store_dword off, v0, s3
-; GFX942-NEXT:    v_readfirstlane_b32 s32, v1
+; GFX942-NEXT:    v_mov_b32_e32 v1, s32
+; GFX942-NEXT:    v_lshl_add_u32 v2, s2, 6, v1
+; GFX942-NEXT:    scratch_store_dword v1, v0, off
+; GFX942-NEXT:    v_readfirstlane_b32 s32, v2
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX942-NEXT:    s_endpgm
@@ -533,15 +532,15 @@ define amdgpu_cs_chain void @test_call_and_alloca_var(i32 %count) {
 ; GFX12-NEXT:    s_add_co_u32 s0, s0, foo@gotpcrel32@lo+12
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, foo@gotpcrel32@hi+24
-; GFX12-NEXT:    s_mov_b32 s4, s32
+; GFX12-NEXT:    v_mov_b32_e32 v41, s32
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX12-NEXT:    v_lshl_add_u32 v0, s2, 6, s4
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_lshl_add_u32 v0, s2, 6, v41
 ; GFX12-NEXT:    v_readfirstlane_b32 s32, v0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX12-NEXT:    scratch_store_b32 off, v40, s4
+; GFX12-NEXT:    scratch_store_b32 v41, v40, off
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: test_call_and_alloca_var:
@@ -566,14 +565,13 @@ define amdgpu_cs_chain void @test_call_and_alloca_var(i32 %count) {
 ; GFX942-NEXT:    s_add_u32 s0, s0, foo@gotpcrel32@lo+4
 ; GFX942-NEXT:    s_addc_u32 s1, s1, foo@gotpcrel32@hi+12
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX942-NEXT:    s_mov_b32 s4, s32
-; GFX942-NEXT:    v_mov_b32_e32 v0, s4
-; GFX942-NEXT:    v_lshl_add_u32 v0, s2, 6, v0
+; GFX942-NEXT:    v_mov_b32_e32 v41, s32
+; GFX942-NEXT:    v_lshl_add_u32 v0, s2, 6, v41
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_readfirstlane_b32 s32, v0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX942-NEXT:    scratch_store_dword off, v40, s4
+; GFX942-NEXT:    scratch_store_dword v41, v40, off
 ; GFX942-NEXT:    s_endpgm
   %v = alloca i32, i32 %count, align 4, addrspace(5)
   call amdgpu_gfx void @foo()
