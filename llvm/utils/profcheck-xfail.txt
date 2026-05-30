@@ -20,6 +20,7 @@ Transforms/Coroutines/coro-debug-dbg.values-not_used_in_frame.ll
 Transforms/Coroutines/coro-debug-dbg.values.ll
 Transforms/Coroutines/coro-debug-frame-variable.ll
 Transforms/Coroutines/coro-debug-spill-dbg.declare.ll
+Transforms/Coroutines/coro-frame-inramp.ll
 Transforms/Coroutines/coro-materialize-intrinsics.ll
 Transforms/Coroutines/coro-materialize.ll
 Transforms/Coroutines/coro-noop-pacbti.ll
@@ -55,11 +56,6 @@ Transforms/Coroutines/no-suspend.ll
 Transforms/CrossDSOCFI/basic.ll
 Transforms/CrossDSOCFI/cfi_functions.ll
 Transforms/CrossDSOCFI/thumb.ll
-Transforms/ExpandIRInsts/X86/expand-fp-convert-small.ll
-Transforms/ExpandIRInsts/X86/expand-int-convert-small.ll
-Transforms/ExpandIRInsts/X86/expand-large-fp-convert-fpto-sat-vector.ll
-Transforms/ExpandIRInsts/X86/expand-large-fp-convert-fptosi129.ll
-Transforms/ExpandIRInsts/X86/expand-large-fp-convert-fptoui129.ll
 Transforms/ExpandIRInsts/X86/expand-large-fp-convert-si129tofp.ll
 Transforms/ExpandIRInsts/X86/expand-large-fp-convert-ui129tofp.ll
 Transforms/FixIrreducible/basic.ll
