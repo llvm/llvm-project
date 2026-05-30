@@ -3624,7 +3624,13 @@ public:
 
   /// Determine whether the base of this explicit is implicit.
   bool isImplicitAccess() const {
-    return getBase() && getBase()->isImplicitCXXThis();
+    if (!getBase()) return false;
+    
+    // Preserve the original C++ behavior
+    if (getBase()->isImplicitCXXThis()) return true;
+    
+    // Check for our new CThisExpr safely using the StmtClass enum
+    return getBase()->IgnoreImplicit()->getStmtClass() == Stmt::CThisExprClass;
   }
 
   /// Returns true if this member expression refers to a method that
