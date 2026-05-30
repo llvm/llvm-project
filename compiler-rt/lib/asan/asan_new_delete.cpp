@@ -18,6 +18,7 @@
 #include "asan_report.h"
 #include "asan_stack.h"
 #include "interception/interception.h"
+#include "sanitizer_common/sanitizer_new_handler.h"
 
 // C++ operators can't have dllexport attributes on Windows. We export them
 // anyway by passing extra -export flags to the linker, which is exactly that
@@ -51,51 +52,17 @@ using namespace __asan;
 // This code has issues on OSX.
 // See https://github.com/google/sanitizers/issues/131.
 
-// Fake std::nothrow_t and std::align_val_t to avoid including <new>.
-namespace std {
-struct nothrow_t {};
-enum class align_val_t : size_t {};
-}  // namespace std
-
-// TODO(alekseyshl): throw std::bad_alloc instead of dying on OOM.
-// For local pool allocation, align to SHADOW_GRANULARITY to match asan
-// allocator behavior.
-#define OPERATOR_NEW_BODY             \
-  GET_STACK_TRACE_MALLOC;             \
-  void* res = asan_new(size, &stack); \
-  if (UNLIKELY(!res))                 \
-    ReportOutOfMemory(size, &stack);  \
-  return res
-#define OPERATOR_NEW_BODY_NOTHROW \
-  GET_STACK_TRACE_MALLOC;         \
-  return asan_new(size, &stack)
-#define OPERATOR_NEW_BODY_ARRAY             \
-  GET_STACK_TRACE_MALLOC;                   \
-  void* res = asan_new_array(size, &stack); \
-  if (UNLIKELY(!res))                       \
-    ReportOutOfMemory(size, &stack);        \
-  return res
-#define OPERATOR_NEW_BODY_ARRAY_NOTHROW \
-  GET_STACK_TRACE_MALLOC;               \
-  return asan_new_array(size, &stack)
-#define OPERATOR_NEW_BODY_ALIGN                                         \
-  GET_STACK_TRACE_MALLOC;                                               \
-  void* res = asan_new_aligned(size, static_cast<uptr>(align), &stack); \
-  if (UNLIKELY(!res))                                                   \
-    ReportOutOfMemory(size, &stack);                                    \
-  return res
-#define OPERATOR_NEW_BODY_ALIGN_NOTHROW \
-  GET_STACK_TRACE_MALLOC;               \
-  return asan_new_aligned(size, static_cast<uptr>(align), &stack)
-#define OPERATOR_NEW_BODY_ALIGN_ARRAY                                         \
-  GET_STACK_TRACE_MALLOC;                                                     \
-  void* res = asan_new_array_aligned(size, static_cast<uptr>(align), &stack); \
-  if (UNLIKELY(!res))                                                         \
-    ReportOutOfMemory(size, &stack);                                          \
-  return res
-#define OPERATOR_NEW_BODY_ALIGN_ARRAY_NOTHROW \
-  GET_STACK_TRACE_MALLOC;                     \
-  return asan_new_array_aligned(size, static_cast<uptr>(align), &stack)
+// SANITIZER_NEW_* macros below are inputs to the operator-new framework;
+// OPERATOR_NEW_BODY* macros are provided in return.
+#define SANITIZER_NEW_STACK_TRACE GET_STACK_TRACE_MALLOC
+#define SANITIZER_NEW_REPORT_OOM(size) ReportOutOfMemory(size, &stack)
+#define SANITIZER_NEW(size) asan_new(size, &stack)
+#define SANITIZER_NEW_ARRAY(size) asan_new_array(size, &stack)
+#define SANITIZER_NEW_ALIGNED(size, align) \
+  asan_new_aligned(size, static_cast<uptr>(align), &stack)
+#define SANITIZER_NEW_ARRAY_ALIGNED(size, align) \
+  asan_new_array_aligned(size, static_cast<uptr>(align), &stack)
+#include "sanitizer_common/sanitizer_new_operators.inc"
 
 // On OS X it's not enough to just provide our own 'operator new' and
 // 'operator delete' implementations, because they're going to be in the
@@ -110,11 +77,11 @@ void* operator new(size_t size) { OPERATOR_NEW_BODY; }
 CXX_OPERATOR_ATTRIBUTE
 void* operator new[](size_t size) { OPERATOR_NEW_BODY_ARRAY; }
 CXX_OPERATOR_ATTRIBUTE
-void* operator new(size_t size, std::nothrow_t const&) {
+void* operator new(size_t size, std::nothrow_t const&) NOEXCEPT {
   OPERATOR_NEW_BODY_NOTHROW;
 }
 CXX_OPERATOR_ATTRIBUTE
-void* operator new[](size_t size, std::nothrow_t const&) {
+void* operator new[](size_t size, std::nothrow_t const&) NOEXCEPT {
   OPERATOR_NEW_BODY_ARRAY_NOTHROW;
 }
 CXX_OPERATOR_ATTRIBUTE
@@ -126,12 +93,13 @@ void* operator new[](size_t size, std::align_val_t align) {
   OPERATOR_NEW_BODY_ALIGN_ARRAY;
 }
 CXX_OPERATOR_ATTRIBUTE
-void* operator new(size_t size, std::align_val_t align, std::nothrow_t const&) {
+void* operator new(size_t size, std::align_val_t align,
+                   std::nothrow_t const&) NOEXCEPT {
   OPERATOR_NEW_BODY_ALIGN_NOTHROW;
 }
 CXX_OPERATOR_ATTRIBUTE
 void* operator new[](size_t size, std::align_val_t align,
-                     std::nothrow_t const&) {
+                     std::nothrow_t const&) NOEXCEPT {
   OPERATOR_NEW_BODY_ALIGN_ARRAY_NOTHROW;
 }
 
@@ -177,9 +145,11 @@ void operator delete(void* ptr) NOEXCEPT { OPERATOR_DELETE_BODY; }
 CXX_OPERATOR_ATTRIBUTE
 void operator delete[](void* ptr) NOEXCEPT { OPERATOR_DELETE_BODY_ARRAY; }
 CXX_OPERATOR_ATTRIBUTE
-void operator delete(void* ptr, std::nothrow_t const&) { OPERATOR_DELETE_BODY; }
+void operator delete(void* ptr, std::nothrow_t const&) NOEXCEPT {
+  OPERATOR_DELETE_BODY;
+}
 CXX_OPERATOR_ATTRIBUTE
-void operator delete[](void* ptr, std::nothrow_t const&) {
+void operator delete[](void* ptr, std::nothrow_t const&) NOEXCEPT {
   OPERATOR_DELETE_BODY_ARRAY;
 }
 CXX_OPERATOR_ATTRIBUTE
@@ -199,12 +169,13 @@ void operator delete[](void* ptr, std::align_val_t align) NOEXCEPT {
   OPERATOR_DELETE_BODY_ALIGN_ARRAY;
 }
 CXX_OPERATOR_ATTRIBUTE
-void operator delete(void* ptr, std::align_val_t align, std::nothrow_t const&) {
+void operator delete(void* ptr, std::align_val_t align,
+                     std::nothrow_t const&) NOEXCEPT {
   OPERATOR_DELETE_BODY_ALIGN;
 }
 CXX_OPERATOR_ATTRIBUTE
 void operator delete[](void* ptr, std::align_val_t align,
-                       std::nothrow_t const&) {
+                       std::nothrow_t const&) NOEXCEPT {
   OPERATOR_DELETE_BODY_ALIGN_ARRAY;
 }
 CXX_OPERATOR_ATTRIBUTE
