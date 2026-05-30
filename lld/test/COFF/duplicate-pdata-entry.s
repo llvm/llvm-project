@@ -15,9 +15,9 @@
 #
 # When ICF is enabled, helper_b folds into helper_a, making the two .pdata
 # entries duplicates. Only one survives = 12 bytes = 0xC.
-# RUN: lld-link %t.obj -dll -noentry -out:%t.dll -verbose 2>&1 | FileCheck --check-prefix=ICF-VERBOSE %s
+# RUN: lld-link %t.obj -dll -noentry -out:%t.dll 2>&1 | FileCheck --check-prefix=WARN %s
 # RUN: llvm-readobj --sections %t.dll | FileCheck --check-prefix=ICF %s
-# ICF-VERBOSE: Removed duplicate .pdata entry in .pdata$parent_b
+# WARN: warning: duplicate .pdata entry in .pdata$parent_b
 # ICF:      Name: .pdata
 # ICF-NEXT: VirtualSize: 0xC
 #
@@ -27,12 +27,6 @@
 # RUN: llvm-readobj --sections %t_noicf.dll | FileCheck --check-prefix=NOICF %s
 # NOICF:      Name: .pdata
 # NOICF-NEXT: VirtualSize: 0x18
-#
-# With /opt:nodeduppdata: deduplication is disabled, duplicates remain = 0x18.
-# RUN: lld-link %t.obj -dll -noentry -out:%t_nodedup.dll -opt:nodeduppdata
-# RUN: llvm-readobj --sections %t_nodedup.dll | FileCheck --check-prefix=NODEDUP %s
-# NODEDUP:      Name: .pdata
-# NODEDUP-NEXT: VirtualSize: 0x18
 
 --- !COFF
 header:

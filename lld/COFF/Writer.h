@@ -21,6 +21,7 @@ static const int pageSize = 4096;
 class COFFLinkerContext;
 
 void writeResult(COFFLinkerContext &ctx);
+void removeDuplicatePdataChunks(COFFLinkerContext &ctx);
 
 class PartialSection {
 public:

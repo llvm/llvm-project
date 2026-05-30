@@ -211,7 +211,6 @@ public:
 private:
   void calculateStubDependentSizes();
   void createSections();
-  void removeDuplicatePdataChunks();
   void createMiscChunks();
   void createImportTables();
   void appendImportThunks();
@@ -1068,7 +1067,7 @@ void Writer::calculateStubDependentSizes() {
 // entries covering the same address range. We detect this by comparing the
 // BeginAddress and EndAddress relocation targets (the first two relocations),
 // and set live = false on duplicates so they are excluded from the output.
-void Writer::removeDuplicatePdataChunks() {
+void lld::coff::removeDuplicatePdataChunks(COFFLinkerContext &ctx) {
   // Key: (beginChunk, beginValue, endChunk, endValue) identifying the range.
   struct PdataKey {
     Chunk *beginChunk;
@@ -1091,6 +1090,7 @@ void Writer::removeDuplicatePdataChunks() {
   };
 
   llvm::DenseSet<PdataKey, PdataKeyInfo> seen;
+  llvm::DenseSet<SectionChunk *> orphanXdata;
 
   for (Chunk *c : ctx.driver.getChunks()) {
     auto *sc = dyn_cast<SectionChunk>(c);
@@ -1119,31 +1119,54 @@ void Writer::removeDuplicatePdataChunks() {
       return {nullptr, 0};
     };
 
+    if (relocs[0].VirtualAddress != 0 || relocs[1].VirtualAddress != 4)
+      continue;
+
     auto [beginChunk, beginVal] = resolve(relocs[0]);
     auto [endChunk, endVal] = resolve(relocs[1]);
-    if (!beginChunk)
+    if (!beginChunk || !endChunk)
       continue;
 
     // Account for addends baked into the section data.
-    beginVal += *reinterpret_cast<const ulittle32_t *>(contents.data());
-    endVal += *reinterpret_cast<const ulittle32_t *>(contents.data() + 4);
+    beginVal += support::endian::read32le(contents.data());
+    endVal += support::endian::read32le(contents.data() + 4);
 
     PdataKey key{beginChunk, beginVal, endChunk, endVal};
     if (!seen.insert(key).second) {
-      Log(ctx) << "Removed duplicate .pdata entry in " << sc->getSectionName();
+      Warn(ctx) << "duplicate .pdata entry in " << sc->getSectionName();
       sc->live = false;
+
+      // Track the .xdata chunk referenced by the dead .pdata's
+      // UnwindInfoAddress (reloc 2) as a candidate for removal.
+      auto [xdataChunk, xdataVal] = resolve(relocs[2]);
+      if (auto *xdataSC = dyn_cast_or_null<SectionChunk>(xdataChunk))
+        orphanXdata.insert(xdataSC);
     }
+  }
+
+  // Remove orphan .xdata chunks that are no longer referenced by any live
+  // .pdata entry.
+  if (!orphanXdata.empty()) {
+    for (Chunk *c : ctx.driver.getChunks()) {
+      auto *sc = dyn_cast<SectionChunk>(c);
+      if (!sc || !sc->live)
+        continue;
+      StringRef name = sc->getSectionName().split('$').first;
+      if (name != ".pdata")
+        continue;
+      ArrayRef<coff_relocation> relocs = sc->getRelocs();
+      Symbol *sym = sc->file->getSymbol(relocs[2].SymbolTableIndex);
+      if (auto *d = dyn_cast<DefinedRegular>(sym))
+        orphanXdata.erase(dyn_cast<SectionChunk>(d->getChunk()));
+    }
+    for (SectionChunk *xdata : orphanXdata)
+      xdata->live = false;
   }
 }
 
 // Create output section objects and add them to OutputSections.
 void Writer::createSections() {
   llvm::TimeTraceScope timeScope("Output sections");
-
-  // Deduplicate .pdata COMDAT chunks whose relocation targets resolve to the
-  // same function after ICF.
-  if (ctx.config.dedupPdata)
-    removeDuplicatePdataChunks();
 
   // First, create the builtin sections.
   const uint32_t data = IMAGE_SCN_CNT_INITIALIZED_DATA;

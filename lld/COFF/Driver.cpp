@@ -2027,10 +2027,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         icfLevel = ICFLevel::Safe;
       } else if (s == "noicf") {
         icfLevel = ICFLevel::None;
-      } else if (s == "deduppdata") {
-        config->dedupPdata = true;
-      } else if (s == "nodeduppdata") {
-        config->dedupPdata = false;
       } else if (s == "lldtailmerge") {
         tailMerge = 2;
       } else if (s == "nolldtailmerge") {
@@ -2943,6 +2939,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     findKeepUniqueSections(ctx);
     doICF(ctx);
   }
+
+  // Remove duplicate .pdata entries that arise after ICF folds functions.
+  if (config->machine == AMD64)
+    removeDuplicatePdataChunks(ctx);
 
   // Write the result.
   writeResult(ctx);
