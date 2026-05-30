@@ -62463,12 +62463,16 @@ static SDValue combineNestedGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
     SupM.insertBits(YSupEltBits[I], I * EltWidth);
   }
 
-  // Immediate is shared and needs to be permuted in the same manner
-  if (!SupM.isSplat(64) && ImmSub != 0)
-    return SDValue();
-
   // Immediate permute
-  APInt FoldedImm = getGFNIByteAffine(ImmSub, SupM.trunc(64), ImmSup);
+  APInt FoldedImm;
+  if (SupM.isSplat(64)) {
+    FoldedImm = getGFNIByteAffine(ImmSub, SupM.trunc(64), ImmSup);
+  } else {
+    // Immediate is shared and needs to be permuted in the same manner
+    if (ImmSub != 0)
+      return SDValue();
+    FoldedImm = ImmSup;
+  }
 
   // Matrix permute
   APInt FoldedMatrix = APInt(VecWidth, 0);
