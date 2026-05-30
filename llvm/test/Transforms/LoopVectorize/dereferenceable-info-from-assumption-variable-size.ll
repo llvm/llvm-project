@@ -924,8 +924,8 @@ exit:
   ret i64 %mer
 }
 
-define i64 @volatileVectorizingTest(ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) %v, i32 noundef %n) {
-; CHECK-LABEL: define i64 @volatileVectorizingTest(
+define i64 @volatileNotVectorizingTest(ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) %v, i32 noundef %n) {
+; CHECK-LABEL: define i64 @volatileNotVectorizingTest(
 ; CHECK-SAME: ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[V:%.*]], i32 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[L_V:%.*]] = load ptr, ptr [[V]], align 8
@@ -956,8 +956,8 @@ define i64 @volatileVectorizingTest(ptr noundef nonnull readonly align 8 capture
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[L_V]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[N]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[L_V]], i64 [[TMP6]]
@@ -969,7 +969,7 @@ define i64 @volatileVectorizingTest(ptr noundef nonnull readonly align 8 capture
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
 ; CHECK:       [[VECTOR_BODY_INTERIM]]:
-; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[LOOP_COMP:.*]], label %[[SCALAR_PH]]
@@ -981,20 +981,20 @@ define i64 @volatileVectorizingTest(ptr noundef nonnull readonly align 8 capture
 ; CHECK-NEXT:    br label %[[LOOP_EARLY_EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[L_V]], %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
-; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER1:.*]]
+; CHECK:       [[LOOP_HEADER1]]:
 ; CHECK-NEXT:    [[MERGE:%.*]] = phi ptr [ [[GEP_MERGE:%.*]], %[[LOOP_LATCH:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[MERGE]], align 4
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp slt i32 [[VAL]], [[N]]
 ; CHECK-NEXT:    br i1 [[C_2]], label %[[LOOP_EARLY_EXIT]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_EARLY_EXIT]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[MERGE]], %[[LOOP_HEADER]] ], [ [[TMP14]], %[[VECTOR_EARLY_EXIT]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[MERGE]], %[[LOOP_HEADER1]] ], [ [[TMP14]], %[[VECTOR_EARLY_EXIT]] ]
 ; CHECK-NEXT:    [[PI_IV:%.*]] = ptrtoint ptr [[IV]] to i64
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[GEP_MERGE]] = getelementptr inbounds nuw i8, ptr [[MERGE]], i64 4
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp eq ptr [[GEP_MERGE]], [[L_GEP_V]]
-; CHECK-NEXT:    br i1 [[C_3]], label %[[LOOP_COMP]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP21:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C_3]], label %[[LOOP_COMP]], label %[[LOOP_HEADER1]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       [[LOOP_COMP]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
