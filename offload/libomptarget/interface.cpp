@@ -646,6 +646,9 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
 
 EXTERN void __tgt_register_rpc_callback(unsigned (*Callback)(void *,
                                                              unsigned)) {
+  if (!PM)
+    return;
+
   for (auto &Plugin : PM->plugins())
     if (Plugin.is_initialized())
       Plugin.getRPCServer().registerCallback(Callback);

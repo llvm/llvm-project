@@ -2089,7 +2089,22 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__sync_lock_release_4:
   case Builtin::BI__sync_lock_release_8:
   case Builtin::BI__sync_lock_release_16:
-  case Builtin::BI__sync_synchronize:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__sync_synchronize: {
+    // We assume this is supposed to correspond to a C++0x-style
+    // sequentially-consistent fence (i.e. this is only usable for
+    // synchronization, not device I/O or anything like that). This intrinsic
+    // is really badly designed in the sense that in theory, there isn't
+    // any way to safely use it... but in practice, it mostly works
+    // to use it with non-atomic loads and stores to get acquire/release
+    // semantics.
+    cir::AtomicFenceOp::create(
+        builder, getLoc(e->getSourceRange()),
+        cir::MemOrder::SequentiallyConsistent,
+        cir::SyncScopeKindAttr::get(&getMLIRContext(),
+                                    cir::SyncScopeKind::System));
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_nontemporal_load:
   case Builtin::BI__builtin_nontemporal_store:
   case Builtin::BI__c11_atomic_is_lock_free:

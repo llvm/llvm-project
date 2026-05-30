@@ -3359,7 +3359,7 @@ static SDValue performBitcastCombine(SDNode *N,
   EVT SrcVT = Src.getValueType();
 
   if (!(DCI.isBeforeLegalize() && VT.isScalarInteger() &&
-        SrcVT.isFixedLengthVector() && SrcVT.getScalarType() == MVT::i1))
+        SrcVT.isFixedLengthVectorOf(MVT::i1)))
     return SDValue();
 
   unsigned NumElts = SrcVT.getVectorNumElements();
@@ -3608,7 +3608,7 @@ static SDValue performSETCCCombine(SDNode *N,
     return SDValue();
 
   EVT FromVT = LHS->getOperand(0).getValueType();
-  if (!FromVT.isFixedLengthVector() || FromVT.getVectorElementType() != MVT::i1)
+  if (!FromVT.isFixedLengthVectorOf(MVT::i1))
     return SDValue();
 
   unsigned NumElts = FromVT.getVectorNumElements();

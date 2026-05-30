@@ -173,14 +173,11 @@ public:
   // If the key is already in the map, it returns false and doesn't update the
   // value.
   std::pair<iterator, bool> insert(const std::pair<KeyT, ValueT> &KV) {
-    auto MapResult = Map.insert(std::make_pair(Wrap(KV.first), KV.second));
-    return std::make_pair(iterator(MapResult.first), MapResult.second);
+    return Map.insert(std::make_pair(Wrap(KV.first), KV.second));
   }
 
   std::pair<iterator, bool> insert(std::pair<KeyT, ValueT> &&KV) {
-    auto MapResult =
-        Map.insert(std::make_pair(Wrap(KV.first), std::move(KV.second)));
-    return std::make_pair(iterator(MapResult.first), MapResult.second);
+    return Map.insert(std::make_pair(Wrap(KV.first), std::move(KV.second)));
   }
 
   /// insert - Range insertion of pairs.

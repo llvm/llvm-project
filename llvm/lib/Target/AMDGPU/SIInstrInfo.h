@@ -1118,12 +1118,10 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::IntClamp;
   }
 
-  uint64_t getClampMask(const MachineInstr &MI) const {
-    const uint64_t ClampFlags = SIInstrFlags::FPClamp |
-                                SIInstrFlags::IntClamp |
-                                SIInstrFlags::ClampLo |
-                                SIInstrFlags::ClampHi;
-      return MI.getDesc().TSFlags & ClampFlags;
+  static bool hasSameClamp(const MachineInstr &A, const MachineInstr &B) {
+    const uint64_t Mask = SIInstrFlags::FPClamp | SIInstrFlags::IntClamp |
+                          SIInstrFlags::ClampLo | SIInstrFlags::ClampHi;
+    return (A.getDesc().TSFlags & Mask) == (B.getDesc().TSFlags & Mask);
   }
 
   static bool usesFPDPRounding(const MachineInstr &MI) {

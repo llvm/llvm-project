@@ -4364,7 +4364,7 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // anyone.
   else if (X86::VK16RegClass.contains(DestReg, SrcReg))
     Opc = Subtarget.hasBWI() ? (HasEGPR ? X86::KMOVQkk_EVEX : X86::KMOVQkk)
-                             : (HasEGPR ? X86::KMOVQkk_EVEX : X86::KMOVWkk);
+                             : (HasEGPR ? X86::KMOVWkk_EVEX : X86::KMOVWkk);
 
   if (!Opc)
     Opc = CopyToFromAsymmetricReg(DestReg, SrcReg, Subtarget);

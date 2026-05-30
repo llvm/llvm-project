@@ -707,6 +707,10 @@ public:
   /// these flags.
   LLVM_ABI FastMathFlags getFastMathFlags() const LLVM_READONLY;
 
+  /// Convenience function for getting fast-math flags, or default-constructed
+  /// FastMathFlags when not a FPMathOperator.
+  LLVM_ABI FastMathFlags getFastMathFlagsOrNone() const LLVM_READONLY;
+
   /// Copy I's fast-math flags
   LLVM_ABI void copyFastMathFlags(const Instruction *I);
 

@@ -454,6 +454,9 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_PCREL20_S2:
   case R_LARCH_PCADD_HI20:
     return R_PC;
+  case R_LARCH_TLS_DTPREL32:
+  case R_LARCH_TLS_DTPREL64:
+    return R_DTPREL;
   default:
     Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;

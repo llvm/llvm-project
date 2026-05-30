@@ -1,5 +1,4 @@
 ! Ensure argument -fintrinsic-modules-path works as expected.
-! REQUIRES: x86-registered-target
 
 !-----------------------------------------
 ! FLANG DRIVER
@@ -8,15 +7,15 @@
 !       or lower priority than -fintrinsic-modules-path added here. Using
 !       basictestmoduleone.mod from Inputs/module-dir/ will trigger an error.
 
-! RUN:     %flang -fsyntax-only --target=x86_64-unknown-linux-gnu -resource-dir %S/Inputs/resource_dir_with_per_target_subdir %s -### 2>&1 | FileCheck %s --check-prefix=DEFAULTPATH
+! RUN:     %flang -fsyntax-only %s -### 2>&1 | FileCheck %s --check-prefix=DEFAULTPATH
 
-! RUN:     %flang -fsyntax-only --target=x86_64-unknown-linux-gnu -resource-dir %S/Inputs/resource_dir_with_per_target_subdir %s -cpp -DINTRINSICS_DEFAULT
-! RUN: not %flang -fsyntax-only --target=x86_64-unknown-linux-gnu -resource-dir %S/Inputs/resource_dir_with_per_target_subdir %s -cpp -DINTRINSICS_INPUTONE 2>&1 | FileCheck %s --check-prefix=NOINPUTONE
-! RUN: not %flang -fsyntax-only --target=x86_64-unknown-linux-gnu -resource-dir %S/Inputs/resource_dir_with_per_target_subdir %s -cpp -DINTRINSICS_INPUTTWO 2>&1 | FileCheck %s --check-prefix=NOINPUTTWO
-! RUN:     %flang -fsyntax-only --target=x86_64-unknown-linux-gnu -resource-dir %S/Inputs/resource_dir_with_per_target_subdir %s -cpp -DINTRINSICS_DEFAULT -DINTRINSICS_INPUTTWO -fintrinsic-modules-path=%S/Inputs/module-dir/
-! RUN:     %flang -fsyntax-only --target=x86_64-unknown-linux-gnu -resource-dir %S/Inputs/resource_dir_with_per_target_subdir %s -cpp -DINTRINSICS_INPUTONE -fintrinsic-modules-path=%S/Inputs/module-dir-one/
-! RUN:     %flang -fsyntax-only --target=x86_64-unknown-linux-gnu -resource-dir %S/Inputs/resource_dir_with_per_target_subdir %s -cpp -DINTRINSICS_INPUTONE -DINTRINSICS_INPUTTWO -fintrinsic-modules-path=%S/Inputs/module-dir-one/ -fintrinsic-modules-path=%S/Inputs/module-dir/
-! RUN: not %flang -fsyntax-only --target=x86_64-unknown-linux-gnu -resource-dir %S/Inputs/resource_dir_with_per_target_subdir %s -cpp -DINTRINSICS_INPUTONE -DINTRINSICS_INPUTTWO -fintrinsic-modules-path=%S/Inputs/module-dir/ -fintrinsic-modules-path=%S/Inputs/module-dir-one/ 2>&1 | FileCheck %s --check-prefix=WRONGINPUTONE
+! RUN:     %flang -fsyntax-only %s -cpp -DINTRINSICS_DEFAULT
+! RUN: not %flang -fsyntax-only %s -cpp -DINTRINSICS_INPUTONE 2>&1 | FileCheck %s --check-prefix=NOINPUTONE
+! RUN: not %flang -fsyntax-only %s -cpp -DINTRINSICS_INPUTTWO 2>&1 | FileCheck %s --check-prefix=NOINPUTTWO
+! RUN:     %flang -fsyntax-only %s -cpp -DINTRINSICS_DEFAULT -DINTRINSICS_INPUTTWO -fintrinsic-modules-path=%S/Inputs/module-dir/
+! RUN:     %flang -fsyntax-only %s -cpp -DINTRINSICS_INPUTONE -fintrinsic-modules-path=%S/Inputs/module-dir-one/
+! RUN:     %flang -fsyntax-only %s -cpp -DINTRINSICS_INPUTONE -DINTRINSICS_INPUTTWO -fintrinsic-modules-path=%S/Inputs/module-dir-one/ -fintrinsic-modules-path=%S/Inputs/module-dir/
+! RUN: not %flang -fsyntax-only %s -cpp -DINTRINSICS_INPUTONE -DINTRINSICS_INPUTTWO -fintrinsic-modules-path=%S/Inputs/module-dir/ -fintrinsic-modules-path=%S/Inputs/module-dir-one/ 2>&1 | FileCheck %s --check-prefix=WRONGINPUTONE
 
 
 !-----------------------------------------
@@ -42,8 +41,8 @@
 
 !-----------------------------------------
 
-! DEFAULTPATH:      -fc1
-! DEFAULTPATH-SAME: -fintrinsic-modules-path" "{{.*(\\\\|/)}}resource_dir_with_per_target_subdir{{(\\\\|/)}}finclude{{(\\\\|/)}}flang{{(\\\\|/)}}x86_64-unknown-linux-gnu"
+! DEFAULTPATH:      "-fc1"
+! DEFAULTPATH-SAME: "-fintrinsic-modules-path" "{{.*(\\\\|/)}}finclude{{(\\\\|/)}}flang{{(\\\\|/)}}{{[^/\]+}}"
 
 ! NOINPUTONE: Source file 'basictestmoduleone.mod' was not found
 ! NOINPUTTWO: Source file 'basictestmoduletwo.mod' was not found

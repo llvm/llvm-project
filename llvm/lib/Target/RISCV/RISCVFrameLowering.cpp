@@ -1704,10 +1704,15 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
     // Append GPRPair registers for pairs where both sub-registers are in CSR
     // list. Iterate through all GPRPairs and check if both sub-regs are CSRs.
     for (MCPhysReg Pair : RISCV::GPRPairRegClass) {
+      // Do not append a pair that's already in the CSR list.
+      if (CSRSet.contains(Pair))
+        continue;
       MCPhysReg EvenReg = TRI.getSubReg(Pair, RISCV::sub_gpr_even);
       MCPhysReg OddReg = TRI.getSubReg(Pair, RISCV::sub_gpr_odd);
-      if (CSRSet.contains(EvenReg) && CSRSet.contains(OddReg))
+      if (CSRSet.contains(EvenReg) && CSRSet.contains(OddReg)) {
         NewCSRs.push_back(Pair);
+        CSRSet.insert(Pair);
+      }
     }
 
     MRI.setCalleeSavedRegs(NewCSRs);

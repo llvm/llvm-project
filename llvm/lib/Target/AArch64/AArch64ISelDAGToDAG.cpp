@@ -7659,7 +7659,7 @@ FunctionPass *llvm::createAArch64ISelDag(AArch64TargetMachine &TM,
 static EVT getPackedVectorTypeFromPredicateType(LLVMContext &Ctx, EVT PredVT,
                                                 unsigned NumVec) {
   assert(NumVec > 0 && NumVec < 5 && "Invalid number of vectors.");
-  if (!PredVT.isScalableVector() || PredVT.getVectorElementType() != MVT::i1)
+  if (!PredVT.isScalableVectorOf(MVT::i1))
     return EVT();
 
   if (PredVT != MVT::nxv16i1 && PredVT != MVT::nxv8i1 &&
@@ -7887,8 +7887,7 @@ bool AArch64DAGToDAGISel::SelectAllActivePredicate(SDValue N) {
 }
 
 bool AArch64DAGToDAGISel::SelectAnyPredicate(SDValue N) {
-  EVT VT = N.getValueType();
-  return VT.isScalableVector() && VT.getVectorElementType() == MVT::i1;
+  return N.getValueType().isScalableVectorOf(MVT::i1);
 }
 
 bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned MaxSize,

@@ -63,6 +63,7 @@ class SCEVUnknown;
 class StructType;
 class TargetLibraryInfo;
 class Type;
+class VPSCEVExpander;
 enum SCEVTypes : unsigned short;
 
 LLVM_ABI extern bool VerifySCEV;
@@ -1660,6 +1661,7 @@ private:
   friend class SCEVCallbackVH;
   friend class SCEVExpander;
   friend class SCEVUnknown;
+  friend class VPSCEVExpander;
 
   /// The function we are analyzing.
   Function &F;

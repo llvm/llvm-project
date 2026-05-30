@@ -396,6 +396,19 @@ entry:
   ret <1 x float> %c
 }
 
+define i32 @test_load_cast_combine_mem_cache_hint(ptr %ptr) {
+; CHECK-LABEL: define i32 @test_load_cast_combine_mem_cache_hint(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[PTR]], align 4, !mem.cache_hint [[META17:![0-9]+]]
+; CHECK-NEXT:    ret i32 [[L1]]
+;
+entry:
+  %l = load float, ptr %ptr, !mem.cache_hint !17
+  %c = bitcast float %l to i32
+  ret i32 %c
+}
+
 !0 = !{!1, !1, i64 0}
 !1 = !{!"scalar type", !2}
 !2 = !{!"root"}
@@ -413,6 +426,8 @@ entry:
 !14 = !{!15}
 !15 = distinct !{!15, !16}
 !16 = distinct !{!16}
+!17 = !{ i32 0, !18 }
+!18 = !{ !"nvvm.l1_eviction", !"first" }
 
 ;.
 ; CHECK: [[SCALAR_TYPE_TBAA0]] = !{[[LOOP1]], [[LOOP1]], i64 0}
@@ -432,4 +447,6 @@ entry:
 ; CHECK: [[META14]] = distinct !{[[META14]]}
 ; CHECK: [[ACC_GRP15]] = distinct !{}
 ; CHECK: [[META16]] = !{i32 3}
+; CHECK: [[META17]] = !{i32 0, [[META18:![0-9]+]]}
+; CHECK: [[META18]] = !{!"nvvm.l1_eviction", !"first"}
 ;.

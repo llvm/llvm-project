@@ -169,25 +169,12 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return result;
   }
   case AMDGPU::BI__builtin_amdgcn_div_fmas:
-  case AMDGPU::BI__builtin_amdgcn_div_fmasf: {
-    mlir::Value src0 = emitScalarExpr(expr->getArg(0));
-    mlir::Value src1 = emitScalarExpr(expr->getArg(1));
-    mlir::Value src2 = emitScalarExpr(expr->getArg(2));
-    mlir::Value src3 = emitScalarExpr(expr->getArg(3));
-    mlir::Value result = cir::LLVMIntrinsicCallOp::create(
-                             builder, getLoc(expr->getExprLoc()),
-                             builder.getStringAttr("amdgcn.div.fmas"),
-                             src0.getType(), {src0, src1, src2, src3})
-                             .getResult();
-    return result;
-  }
-  case AMDGPU::BI__builtin_amdgcn_ds_swizzle: {
-    mlir::Value src0 = emitScalarExpr(expr->getArg(0));
-    mlir::Value src1 = emitScalarExpr(expr->getArg(1));
-    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
-                                       "amdgcn.ds.swizzle", src0.getType(),
-                                       mlir::ValueRange{src0, src1});
-  }
+  case AMDGPU::BI__builtin_amdgcn_div_fmasf:
+    return emitBuiltinWithOneOverloadedType<4>(expr, "amdgcn.div.fmas")
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_ds_swizzle:
+    return emitBuiltinWithOneOverloadedType<2>(expr, "amdgcn.ds.swizzle")
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:
   case AMDGPU::BI__builtin_amdgcn_update_dpp: {
@@ -204,19 +191,12 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   }
-  case AMDGPU::BI__builtin_amdgcn_readlane: {
-    mlir::Value src0 = emitScalarExpr(expr->getArg(0));
-    mlir::Value src1 = emitScalarExpr(expr->getArg(1));
-    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
-                                       "amdgcn.readlane", src0.getType(),
-                                       mlir::ValueRange{src0, src1});
-  }
-  case AMDGPU::BI__builtin_amdgcn_readfirstlane: {
-    mlir::Value src0 = emitScalarExpr(expr->getArg(0));
-    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
-                                       "amdgcn.readfirstlane", src0.getType(),
-                                       mlir::ValueRange{src0});
-  }
+  case AMDGPU::BI__builtin_amdgcn_readlane:
+    return emitBuiltinWithOneOverloadedType<2>(expr, "amdgcn.readlane")
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_readfirstlane:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.readfirstlane")
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_wave_shuffle: {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AMDGPU builtin call: ") +

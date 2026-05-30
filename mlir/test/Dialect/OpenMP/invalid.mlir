@@ -962,7 +962,7 @@ func.func @omp_atomic_read2(%x: memref<i32>, %v: memref<i32>) {
 // -----
 
 func.func @omp_atomic_read3(%x: memref<i32>, %v: memref<i32>) {
-  // expected-error @below {{memory-order must not be acq_rel or release for atomic reads}}
+  // expected-error @below {{memory-order must not be acq_rel for atomic reads}}
   omp.atomic.read %v = %x memory_order(acq_rel) : memref<i32>, memref<i32>, i32
   return
 }
@@ -970,7 +970,7 @@ func.func @omp_atomic_read3(%x: memref<i32>, %v: memref<i32>) {
 // -----
 
 func.func @omp_atomic_read4(%x: memref<i32>, %v: memref<i32>) {
-  // expected-error @below {{memory-order must not be acq_rel or release for atomic reads}}
+  // expected-error @below {{memory-order must not be release for atomic reads}}
   omp.atomic.read %v = %x memory_order(release) : memref<i32>, memref<i32>, i32
   return
 }
@@ -1010,7 +1010,7 @@ func.func @omp_atomic_write1(%addr : memref<i32>, %val : i32) {
 // -----
 
 func.func @omp_atomic_write2(%addr : memref<i32>, %val : i32) {
-  // expected-error @below {{memory-order must not be acq_rel or acquire for atomic writes}}
+  // expected-error @below {{memory-order must not be acq_rel for atomic writes}}
   omp.atomic.write  %addr = %val memory_order(acq_rel) : memref<i32>, i32
   return
 }
@@ -1018,7 +1018,7 @@ func.func @omp_atomic_write2(%addr : memref<i32>, %val : i32) {
 // -----
 
 func.func @omp_atomic_write3(%addr : memref<i32>, %val : i32) {
-  // expected-error @below {{memory-order must not be acq_rel or acquire for atomic writes}}
+  // expected-error @below {{memory-order must not be acquire for atomic writes}}
   omp.atomic.write  %addr = %val memory_order(acquire) : memref<i32>, i32
   return
 }

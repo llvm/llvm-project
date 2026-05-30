@@ -3058,6 +3058,12 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         if (!AAOnly)
           K->setMetadata(Kind, JMD);
         break;
+      case LLVMContext::MD_mem_cache_hint:
+        // Preserve !mem.cache_hint only if it is present and equivalent on both
+        // instructions.
+        if (!AAOnly && KMD != JMD)
+          K->setMetadata(Kind, nullptr);
+        break;
       case LLVMContext::MD_noalias_addrspace:
         if (DoesKMove)
           K->setMetadata(Kind,
@@ -3075,9 +3081,7 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         break;
       case LLVMContext::MD_alloc_token:
         // Preserve !alloc_token if both K and J have it, and they are equal.
-        if (KMD == JMD)
-          K->setMetadata(Kind, JMD);
-        else
+        if (KMD != JMD)
           K->setMetadata(Kind, nullptr);
         break;
       }
@@ -3168,6 +3172,7 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
     case LLVMContext::MD_alias_scope:
     case LLVMContext::MD_noalias:
     case LLVMContext::MD_nontemporal:
+    case LLVMContext::MD_mem_cache_hint:
     case LLVMContext::MD_mem_parallel_loop_access:
     case LLVMContext::MD_access_group:
     case LLVMContext::MD_noundef:
@@ -4087,7 +4092,7 @@ void OverflowTracking::mergeFlags(Instruction &I) {
 }
 
 void OverflowTracking::applyFlags(Instruction &I) {
-  I.clearSubclassOptionalData();
+  I.dropPoisonGeneratingFlags();
   if (I.getOpcode() == Instruction::Add ||
       (I.getOpcode() == Instruction::Mul && AllKnownNonZero)) {
     if (HasNUW)

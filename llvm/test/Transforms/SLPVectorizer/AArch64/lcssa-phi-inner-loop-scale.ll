@@ -12,21 +12,25 @@ define void @test_correctness(ptr noalias %p, ptr noalias %q, i32 %n) {
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[J_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
 ; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
 ; CHECK:       [[INNER_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[OUTER_HEADER]] ], [ [[I_NEXT:%.*]], %[[INNER_BODY:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ <i32 10, i32 20>, %[[OUTER_HEADER]] ], [ [[TMP1:%.*]], %[[INNER_BODY]] ]
+; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 10, %[[OUTER_HEADER]] ], [ [[A_NEXT:%.*]], %[[INNER_BODY:.*]] ]
+; CHECK-NEXT:    [[B:%.*]] = phi i32 [ 20, %[[OUTER_HEADER]] ], [ [[B_NEXT:%.*]], %[[INNER_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[OUTER_HEADER]] ], [ [[I_NEXT:%.*]], %[[INNER_BODY]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[I]], 100
 ; CHECK-NEXT:    br i1 [[COND]], label %[[INNER_BODY]], label %[[OUTER_LATCH]]
 ; CHECK:       [[INNER_BODY]]:
-; CHECK-NEXT:    [[TMP1]] = add nsw <2 x i32> [[TMP0]], splat (i32 -1)
+; CHECK-NEXT:    [[A_NEXT]] = add nsw i32 [[A]], -1
+; CHECK-NEXT:    [[B_NEXT]] = add nsw i32 [[B]], -1
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[I64:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[I64N:%.*]] = zext i32 [[I_NEXT]] to i64
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[I64]]
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[GEP0]], align 4
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[I64N]]
+; CHECK-NEXT:    store i32 [[A_NEXT]], ptr [[GEP0]], align 4
+; CHECK-NEXT:    store i32 [[B_NEXT]], ptr [[GEP1]], align 4
 ; CHECK-NEXT:    br label %[[INNER_HEADER]]
 ; CHECK:       [[OUTER_LATCH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x i32> [ [[TMP0]], %[[INNER_HEADER]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[A]], %[[INNER_HEADER]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[B]], %[[INNER_HEADER]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    store i32 [[SUM]], ptr [[Q]], align 4
 ; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i32 [[J]], 1
@@ -63,8 +67,8 @@ inner.body:
   br label %inner.header
 
 ; outer.latch is AFTER inner.body: LCSSA-phi users are the only external
-; users of %a/%b. The fix changes their scale from outer_TC=2 to
-; inner_TC*outer_TC=200, raising the extract cost from 8 to 800.
+; users of %a/%b. The fix changes their scale from outer_TC (2) to
+; inner_TC*outer_TC (101*2=202), raising the extract cost from 8 to 808.
 outer.latch:
   %v0.lc = phi i32 [ %a, %inner.header ]
   %v1.lc = phi i32 [ %b, %inner.header ]
@@ -87,25 +91,27 @@ define void @test_ordering_lcssa_first(ptr noalias %p, ptr noalias %q, i32 %n) {
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[J_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
 ; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
 ; CHECK:       [[INNER_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[OUTER_HEADER]] ], [ [[I_NEXT:%.*]], %[[INNER_BODY:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ <i32 10, i32 20>, %[[OUTER_HEADER]] ], [ [[TMP3:%.*]], %[[INNER_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ 10, %[[OUTER_HEADER]] ], [ [[A_NEXT:%.*]], %[[INNER_BODY:.*]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ 20, %[[OUTER_HEADER]] ], [ [[B_NEXT:%.*]], %[[INNER_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[OUTER_HEADER]] ], [ [[I_NEXT:%.*]], %[[INNER_BODY]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[I]], 100
 ; CHECK-NEXT:    br i1 [[COND]], label %[[INNER_BODY]], label %[[OUTER_LATCH]]
 ; CHECK:       [[INNER_BODY]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
 ; CHECK-NEXT:    call void @use(i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
 ; CHECK-NEXT:    call void @use(i32 [[TMP2]])
-; CHECK-NEXT:    [[TMP3]] = add nsw <2 x i32> [[TMP0]], splat (i32 -1)
+; CHECK-NEXT:    [[A_NEXT]] = add nsw i32 [[TMP1]], -1
+; CHECK-NEXT:    [[B_NEXT]] = add nsw i32 [[TMP2]], -1
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[I64:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[I64N:%.*]] = zext i32 [[I_NEXT]] to i64
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[I64]]
-; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[GEP0]], align 4
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[I64N]]
+; CHECK-NEXT:    store i32 [[A_NEXT]], ptr [[GEP0]], align 4
+; CHECK-NEXT:    store i32 [[B_NEXT]], ptr [[GEP1]], align 4
 ; CHECK-NEXT:    br label %[[INNER_HEADER]]
 ; CHECK:       [[OUTER_LATCH]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x i32> [ [[TMP0]], %[[INNER_HEADER]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP1]], %[[INNER_HEADER]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP2]], %[[INNER_HEADER]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    store i32 [[SUM]], ptr [[Q]], align 4
 ; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i32 [[J]], 1

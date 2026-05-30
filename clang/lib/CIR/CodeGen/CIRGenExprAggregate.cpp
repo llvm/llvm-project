@@ -1128,11 +1128,10 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
           AggValueSlot::IsNotAliased,
           cgf.getOverlapForBaseInit(cxxrd, baseRD, false));
       cgf.emitAggExpr(args[curInitIndex++], aggSlot);
-      if (base.getType().isDestructedType()) {
-        cgf.cgm.errorNYI(e->getSourceRange(),
-                         "push deferred deactivation cleanup");
-        return;
-      }
+
+      if (QualType::DestructionKind dtorKind =
+              base.getType().isDestructedType())
+        cgf.pushDestroyAndDeferDeactivation(dtorKind, address, base.getType());
     }
   }
 

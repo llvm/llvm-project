@@ -371,9 +371,11 @@ TYPE_PARSER(construct<InterfaceBlock>(statement(Parser<InterfaceStmt>{}),
     many(Parser<InterfaceSpecification>{}),
     statement(Parser<EndInterfaceStmt>{})))
 
-// R1502 interface-specification -> interface-body | procedure-stmt
+// R1502 interface-specification ->
+//         interface-body | procedure-stmt | compiler-directive
 TYPE_PARSER(construct<InterfaceSpecification>(Parser<InterfaceBody>{}) ||
-    construct<InterfaceSpecification>(statement(Parser<ProcedureStmt>{})))
+    construct<InterfaceSpecification>(statement(Parser<ProcedureStmt>{})) ||
+    construct<InterfaceSpecification>(indirect(compilerDirective)))
 
 // R1503 interface-stmt -> INTERFACE [generic-spec] | ABSTRACT INTERFACE
 TYPE_PARSER(construct<InterfaceStmt>("INTERFACE" >> maybe(genericSpec)) ||

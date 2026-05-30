@@ -13,6 +13,7 @@
 #include "LoongArchTargetMachine.h"
 #include "LoongArch.h"
 #include "LoongArchMachineFunctionInfo.h"
+#include "LoongArchTargetObjectFile.h"
 #include "LoongArchTargetTransformInfo.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
@@ -98,7 +99,7 @@ LoongArchTargetMachine::LoongArchTargetMachine(
     : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveLoongArchCodeModel(TT, CM), OL),
-      TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
+      TLOF(std::make_unique<LoongArchELFTargetObjectFile>()) {
   initAsmInfo();
 }
 

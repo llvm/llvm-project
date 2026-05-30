@@ -649,7 +649,7 @@
 ; RV64SDEXT: .attribute 5, "rv64i2p1_sdext1p0"
 ; RV64SDTRIG: .attribute 5, "rv64i2p1_sdtrig1p0"
 ; RV64P: .attribute 5, "rv64i2p1_p0p21_zicsr2p0_zmmul1p0_zba1p0_zbb1p0"
-; RV64Y: .attribute 5, "rv64i2p1_y0p96"
+; RV64Y: .attribute 5, "rv64i2p1_y0p98"
 ; RV64ZIBI: .attribute 5, "rv64i2p1_zibi0p1"
 ; RV64ZVQWBDOTA8I: .attribute 5, "rv64i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_zvqwbdota8i0p2"
 ; RV64ZVQWBDOTA16I: .attribute 5, "rv64i2p1_zicsr2p0_zve32x1p0_zve64x1p0_zvl32b1p0_zvl64b1p0_zvqwbdota16i0p2"

@@ -64,6 +64,8 @@ MCFixupKindInfo LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_loongarch_abs_lo12", 10, 12, 0},
       {"fixup_loongarch_abs64_lo20", 5, 20, 0},
       {"fixup_loongarch_abs64_hi12", 10, 12, 0},
+      {"fixup_loongarch_dtprel32", 0, 32, 0},
+      {"fixup_loongarch_dtprel64", 0, 64, 0},
   };
 
   static_assert((std::size(Infos)) == LoongArch::NumTargetFixupKinds,
@@ -98,6 +100,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case FK_Data_4:
   case FK_Data_8:
   case FK_Data_leb128:
+  case LoongArch::fixup_loongarch_dtprel32:
+  case LoongArch::fixup_loongarch_dtprel64:
     return Value;
   case LoongArch::fixup_loongarch_b16: {
     if (!isInt<18>(Value))

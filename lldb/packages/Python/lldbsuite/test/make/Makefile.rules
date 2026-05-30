@@ -209,6 +209,10 @@ ifeq "$(OS)" "Darwin"
 	DSFLAGS := $(DSFLAGS_EXTRAS)
 	DSYM = $(EXE).dSYM
 	ARFLAGS := -static -o
+	# The default UUID is a hash based on filename and __text section content.
+	# Use a random UUID so that LLDB and Spotlight never confuse two test
+	# binaries, where repeated test code can result in identical binaries.
+	LDFLAGS += -Wl,-random_uuid
 else
 	ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
 		DSYM = $(EXE).debug

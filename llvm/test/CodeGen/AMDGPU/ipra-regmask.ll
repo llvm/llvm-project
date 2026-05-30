@@ -37,7 +37,7 @@ define void @special_regs() #0 {
   ret void
 }
 
-; CHECK-DAG: vcc Clobbered Registers: $vcc $vcc_hi $vcc_lo $vcc_hi_hi16 $vcc_hi_lo16 $vcc_lo_hi16 $vcc_lo_lo16 {{$}}
+; CHECK-DAG: vcc Clobbered Registers: $vcc $vcc_hi $vcc_lo $vcc_hi_hi16 $vcc_hi_lo16 $vcc_lo_hi16 $vcc_lo_lo16 $sgpr76_1024 $sgpr92_512 $sgpr96_352 $sgpr96_384 $sgpr100_224 $sgpr100_256 $sgpr104_96 $sgpr104_128 {{$}}
 define void @vcc() #0 {
   call void asm sideeffect "", "~{vcc}"() #0
   ret void

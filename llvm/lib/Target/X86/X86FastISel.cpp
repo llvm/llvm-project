@@ -3329,8 +3329,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
       ResultReg = fastEmit_ri(VT, VT, ISD::AND, ResultReg, 1);
     } else {
-      if (!isTypeLegal(Val->getType(), VT) ||
-          (VT.isVector() && VT.getVectorElementType() == MVT::i1))
+      if (!isTypeLegal(Val->getType(), VT) || VT.isVectorOf(MVT::i1))
         return false;
       ResultReg = getRegForValue(Val);
     }

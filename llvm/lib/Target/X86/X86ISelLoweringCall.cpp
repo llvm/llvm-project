@@ -126,7 +126,7 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
     return MVT::i32;
 
   if (isTypeLegal(MVT::f16)) {
-    if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+    if (VT.isVectorOf(MVT::bf16))
       return getRegisterTypeForCallingConv(
           Context, CC, VT.changeVectorElementType(Context, MVT::f16));
 
@@ -165,8 +165,7 @@ unsigned X86TargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
       return 3;
   }
 
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
-      isTypeLegal(MVT::f16))
+  if (VT.isVectorOf(MVT::bf16) && isTypeLegal(MVT::f16))
     return getNumRegistersForCallingConv(
         Context, CC, VT.changeVectorElementType(Context, MVT::f16));
 
@@ -177,8 +176,7 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
     LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
     unsigned &NumIntermediates, MVT &RegisterVT) const {
   // Break wide or odd vXi1 vectors into scalars to match avx2 behavior.
-  if (VT.isVector() && VT.getVectorElementType() == MVT::i1 &&
-      Subtarget.hasAVX512() &&
+  if (VT.isVectorOf(MVT::i1) && Subtarget.hasAVX512() &&
       (!isPowerOf2_32(VT.getVectorNumElements()) ||
        (VT.getVectorNumElements() == 64 && !Subtarget.hasBWI()) ||
        VT.getVectorNumElements() > 64)) {
@@ -198,8 +196,7 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
   }
 
   // Split vNbf16 vectors according to vNf16.
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
-      isTypeLegal(MVT::f16))
+  if (VT.isVectorOf(MVT::bf16) && isTypeLegal(MVT::f16))
     VT = VT.changeVectorElementType(Context, MVT::f16);
 
   return TargetLowering::getVectorTypeBreakdownForCallingConv(Context, CC, VT, IntermediateVT,
@@ -785,7 +782,7 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     else if (VA.getLocInfo() == CCValAssign::ZExt)
       ValToCopy = DAG.getNode(ISD::ZERO_EXTEND, dl, VA.getLocVT(), ValToCopy);
     else if (VA.getLocInfo() == CCValAssign::AExt) {
-      if (ValVT.isVector() && ValVT.getVectorElementType() == MVT::i1)
+      if (ValVT.isVectorOf(MVT::i1))
         ValToCopy = lowerMasksToReg(ValToCopy, VA.getLocVT(), dl, DAG);
       else
         ValToCopy = DAG.getNode(ISD::ANY_EXTEND, dl, VA.getLocVT(), ValToCopy);

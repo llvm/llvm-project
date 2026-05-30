@@ -2006,7 +2006,10 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return mlir::Value{};
   }
 
-  if (builtinID == clang::AArch64::BI__getReg) {
+  if (builtinID == clang::AArch64::BI__getReg ||
+      builtinID == clang::AArch64::BI__setReg ||
+      builtinID == clang::AArch64::BI__getRegFp ||
+      builtinID == clang::AArch64::BI__setRegFp) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
@@ -2216,14 +2219,17 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   }
 
   if (builtinID == AArch64::BI_CountOneBits ||
-      builtinID == AArch64::BI_CountOneBits64) {
+      builtinID == AArch64::BI_CountOneBits64 ||
+      builtinID == AArch64::BI_CountTrailingZeros ||
+      builtinID == AArch64::BI_CountTrailingZeros64) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   }
 
-  if (builtinID == AArch64::BI__prefetch) {
+  if (builtinID == AArch64::BI__prefetch ||
+      builtinID == AArch64::BI__prefetch2) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));

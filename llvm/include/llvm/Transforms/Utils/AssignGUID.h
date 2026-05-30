@@ -17,6 +17,8 @@
 #ifndef LLVM_TRANSFORMS_UTILS_ASSIGNGUID_H
 #define LLVM_TRANSFORMS_UTILS_ASSIGNGUID_H
 
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Debug.h"
@@ -35,6 +37,11 @@ public:
   }
 
   static bool isRequired() { return true; }
+
+  // Let GlobalMerge assign a GUID for merged GVs, instead of needing to
+  // traverse all the module; or instead of making GlobalValue::assignGUID
+  // public.
+  static void assignGUIDForMergedGV(GlobalVariable &GV);
 };
 
 } // end namespace llvm

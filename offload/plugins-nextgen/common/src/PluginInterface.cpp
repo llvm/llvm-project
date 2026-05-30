@@ -249,15 +249,27 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   uint32_t EffectiveNumBlocks[3] = {KernelArgs.UserNumBlocks[0],
                                     KernelArgs.UserNumBlocks[1],
                                     KernelArgs.UserNumBlocks[2]};
-  if (!isBareMode()) {
-    assert(
-        EffectiveNumThreads[1] == 1 && EffectiveNumThreads[2] == 1 &&
-        EffectiveNumBlocks[1] == 1 && EffectiveNumBlocks[2] == 1 &&
-        "Non-bare mode should only use the first thread and block dimensions");
+
+  // Multidimensional is only supported with bare mode for now.
+  assert(isBareMode() ||
+         EffectiveNumThreads[1] == 1 && EffectiveNumThreads[2] == 1 &&
+             EffectiveNumBlocks[1] == 1 && EffectiveNumBlocks[2] == 1 &&
+             "Non-bare mode should only use the first thread and block "
+             "dimensions");
+
+  assert(!KernelArgs.Flags.StrictBlocksAndThreads ||
+         EffectiveNumThreads[0] > 0 && EffectiveNumThreads[1] > 0 &&
+             EffectiveNumThreads[2] > 0 && EffectiveNumBlocks[0] > 0 &&
+             EffectiveNumBlocks[1] > 0 && EffectiveNumBlocks[2] > 0 &&
+             "Strict requires number of blocks and threads greater than zero");
+
+  // Calculate or adjust the effective number of threads and blocks if needed.
+  if (!KernelArgs.Flags.StrictBlocksAndThreads) {
     EffectiveNumThreads[0] =
-        getEffectiveNumThreads(GenericDevice, EffectiveNumThreads);
+        getEffectiveNumThreads(GenericDevice, EffectiveNumThreads[0]);
+
     EffectiveNumBlocks[0] = getEffectiveNumBlocks(
-        GenericDevice, EffectiveNumBlocks, KernelArgs.Tripcount,
+        GenericDevice, EffectiveNumBlocks[0], KernelArgs.Tripcount,
         EffectiveNumThreads[0], KernelArgs.UserThreadLimit[0] > 0);
   }
 
@@ -279,11 +291,13 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
 
   KernelLaunchParamsTy LaunchParams;
 
-  // Kernel languages don't use indirection.
+  // Kernel languages (.IsCUDA) don't use indirection, whereas dispatching with
+  // an array of kernel argument pointers (.IsPtrArgs) uses KernelArgs.ArgPtrs
+  // and KernelArgs.ArgSizes directly.
   if (KernelArgs.Flags.IsCUDA) {
     LaunchParams =
         *reinterpret_cast<KernelLaunchParamsTy *>(KernelArgs.ArgPtrs);
-  } else {
+  } else if (!KernelArgs.Flags.IsPtrArgs) {
     LaunchParams =
         prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs,
                     Args, Ptrs, *KernelLaunchEnvOrErr, KernelArgs.Version);
@@ -362,34 +376,27 @@ GenericKernelTy::prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
 
 uint32_t
 GenericKernelTy::getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
-                                        uint32_t UserThreadLimit[3]) const {
+                                        uint32_t UserThreadLimit) const {
   assert(!isBareMode() && "bare kernel should not call this function");
 
-  assert(UserThreadLimit[1] == 1 && UserThreadLimit[2] == 1 &&
-         "Multi dimensional launch not supported yet.");
+  if (UserThreadLimit > 0 && isGenericMode())
+    UserThreadLimit += GenericDevice.getWarpSize();
 
-  if (UserThreadLimit[0] > 0 && isGenericMode())
-    UserThreadLimit[0] += GenericDevice.getWarpSize();
-
-  return std::min(MaxNumThreads, (UserThreadLimit[0] > 0)
-                                     ? UserThreadLimit[0]
-                                     : PreferredNumThreads);
+  return std::min(MaxNumThreads, (UserThreadLimit > 0) ? UserThreadLimit
+                                                       : PreferredNumThreads);
 }
 
 uint32_t GenericKernelTy::getEffectiveNumBlocks(
-    GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks[3],
+    GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks,
     uint64_t LoopTripCount, uint32_t &EffectiveNumThreads,
     bool IsNumThreadsFromUser) const {
   assert(!isBareMode() && "bare kernel should not call this function");
 
-  assert(UserNumBlocks[1] == 1 && UserNumBlocks[2] == 1 &&
-         "Multi dimensional launch not supported yet.");
-
-  if (UserNumBlocks[0] > 0) {
+  if (UserNumBlocks > 0) {
     // TODO: We need to honor any value and consequently allow more than the
     // block limit. For this we might need to start multiple kernels or let the
     // blocks start again until the requested number has been started.
-    return std::min(UserNumBlocks[0], GenericDevice.getBlockLimit());
+    return std::min(UserNumBlocks, GenericDevice.getBlockLimit());
   }
 
   // Return the number of blocks required to cover the loop iterations.

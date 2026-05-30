@@ -18,7 +18,7 @@ public:
   virtual void BaseA(int a) { }
 };
 
-// CHECK: @_ZTV7Derived = linkonce_odr unnamed_addr constant { [6 x ptr] }
+// CHECK: @_ZTV7Derived = linkonce_odr constant { [6 x ptr] }
 class Derived : public Base {
 public:
 

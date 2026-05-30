@@ -211,9 +211,16 @@ static bool CheckBitcastType(InterpState &S, CodePtr OpPC, QualType T,
         << E->getSourceRange();
     return false;
   };
-  auto note = [&](int Construct, QualType NoteType, SourceRange NoteRange) {
+  auto note = [&](int Construct, QualType NoteType,
+                  SourceRange NoteRange) -> bool {
     S.Note(NoteRange.getBegin(), diag::note_constexpr_bit_cast_invalid_subtype)
         << NoteType << Construct << T.getUnqualifiedType() << NoteRange;
+    return false;
+  };
+  auto unsupported = [&](QualType T) -> bool {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_bit_cast_unsupported_type)
+        << T;
     return false;
   };
 
@@ -271,11 +278,12 @@ static bool CheckBitcastType(InterpState &S, CodePtr OpPC, QualType T,
       // The layout for x86_fp80 vectors seems to be handled very inconsistently
       // by both clang and LLVM, so for now we won't allow bit_casts involving
       // it in a constexpr context.
-      const Expr *E = S.Current->getExpr(OpPC);
-      S.FFDiag(E, diag::note_constexpr_bit_cast_unsupported_type) << EltTy;
-      return false;
+      return unsupported(EltTy);
     }
   }
+
+  if (T->isBlockPointerType())
+    return unsupported(T);
 
   return true;
 }

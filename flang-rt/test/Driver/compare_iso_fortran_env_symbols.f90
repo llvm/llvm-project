@@ -1,6 +1,7 @@
 ! UNSUPPORTED: offload-cuda, system-windows
+! REQUIRES: fortran-modules
 
-! RUN: %flang -c -funsigned %include/../module/iso_fortran_env_impl.f90 -o %t.f90.o
+! RUN: %flang -c -funsigned %S/../../lib/runtime/iso_fortran_env_impl.f90 -o %t.f90.o
 
 ! Extract defined symbol names and sizes from the Fortran object and the
 ! already-built runtime library (which was compiled with the correct CMake flags).

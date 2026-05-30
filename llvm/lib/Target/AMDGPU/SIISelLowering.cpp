@@ -8594,7 +8594,7 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Op.getValueType();
 
-  if (DstVT.isVector() && DstVT.getScalarType() == MVT::f16) {
+  if (DstVT.isVectorOf(MVT::f16)) {
     assert(Subtarget->hasCvtPkF16F32Inst() && "support v_cvt_pk_f16_f32");
     if (SrcVT.getScalarType() != MVT::f32)
       return SDValue();

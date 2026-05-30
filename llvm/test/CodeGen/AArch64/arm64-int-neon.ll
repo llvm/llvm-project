@@ -4,8 +4,6 @@
 
 ; CHECK-GI:    warning: Instruction selection used fallback path for test_sqabs_s32
 ; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for test_sqabs_s64
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for test_sqneg_s32
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for test_sqneg_s64
 
 define void @test_sqrshl_s32(float noundef %a, ptr %dst){
 ; CHECK-LABEL: test_sqrshl_s32:

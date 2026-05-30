@@ -359,9 +359,13 @@ void Pointer::print(llvm::raw_ostream &OS) const {
 /// with the same base. To get accurate results, we basically _have to_ compute
 /// the lvalue offset using the ASTRecordLayout.
 ///
-/// FIXME: We're still mixing values from the record layout with our internal
-/// offsets, which will inevitably lead to cryptic errors.
-size_t Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
+/// This function will fail if we're trying to get the type size of a forward
+/// declaration.
+///
+// FIXME: We're still mixing values from the record layout with our internal
+// offsets, which will inevitably lead to cryptic errors.
+std::optional<size_t>
+Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
   switch (StorageKind) {
   case Storage::Int:
     return Int.Value + Offset;
@@ -373,6 +377,15 @@ size_t Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
   case Storage::Typeid:
     return reinterpret_cast<uintptr_t>(asTypeidPointer().TypePtr) + Offset;
   }
+
+  auto getTypeSize = [&](QualType T) -> std::optional<size_t> {
+    if (const RecordType *RT = T->getAs<RecordType>()) {
+      // We cannot get the type size of a forward declaration.
+      if (!RT->getDecl()->getDefinition())
+        return std::nullopt;
+    }
+    return ASTCtx.getTypeSizeInChars(T).getQuantity();
+  };
 
   size_t Result = 0;
   Pointer P = *this;
@@ -397,9 +410,12 @@ size_t Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
     }
 
     if (P.isRoot()) {
-      if (P.isOnePastEnd())
-        Result +=
-            ASTCtx.getTypeSizeInChars(P.getDeclDesc()->getType()).getQuantity();
+      if (P.isOnePastEnd()) {
+        if (auto Size = getTypeSize(P.getDeclDesc()->getType()))
+          Result += *Size;
+        else
+          return std::nullopt;
+      }
       break;
     }
 
@@ -413,9 +429,12 @@ size_t Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
                       Layout.getFieldOffset(P.getField()->getFieldIndex()))
                   .getQuantity();
 
-    if (P.isOnePastEnd())
-      Result +=
-          ASTCtx.getTypeSizeInChars(P.getField()->getType()).getQuantity();
+    if (P.isOnePastEnd()) {
+      if (auto Size = getTypeSize(P.getField()->getType()))
+        Result += *Size;
+      else
+        return std::nullopt;
+    }
 
     P = P.getBase();
     if (P.isRoot())

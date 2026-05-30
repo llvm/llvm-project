@@ -104,27 +104,64 @@ enum class StorageKind {
 /// Tri-state boolean value.
 enum class BooleanKind { False, True, Poison };
 
-class Pointer {
+/// Components of a pointer excluding address. They are shared between pointer
+/// values, as most of operations don't change the provenance.
+/// Each node will be assigned a unique, pointer-sized tag, which is used to
+/// represent the pointer in the memory.
+class Provenance : public RefCountedBase<Provenance> {
+  // TODO: store reference to the provenance of the pointer it is derived from
+
   // The underlying memory object. It can be null for invalid or dangling
   // pointers.
   IntrusiveRefCntPtr<MemoryObject> Obj;
+
+  // A tag is a randomly generated unique identifier to recover the provenance
+  // of a pointer. The length of tag is equal to the store size of the pointer
+  // type, in bits. It may produce false negatives in some corner cases. But in
+  // real practice the false negative rate should be negligible.
+  // A zero tag is invalid.
+  // TODO: we need a special tag for wildcard provenance, which is introduced by
+  // inttoptr.
+  APInt Tag;
+
+  // TODO: modeling nofree
+  // TODO: modeling captures
+  // TODO: modeling inrange(Start, End) attribute
+
+  const APInt &getTag() const { return Tag; }
+  void setTag(const APInt &T) { Tag = T; }
+
+  friend class Context;
+
+public:
+  Provenance(IntrusiveRefCntPtr<MemoryObject> Obj) : Obj(std::move(Obj)) {}
+  static IntrusiveRefCntPtr<Provenance> nullary();
+  MemoryObject *getMemoryObject() const { return Obj.get(); }
+};
+
+class Pointer {
+  // The provenance of the pointer.
+  IntrusiveRefCntPtr<Provenance> Prov;
   // The address of the pointer. The bit width is determined by
   // DataLayout::getPointerSizeInBits.
   APInt Address;
-  // TODO: modeling inrange(Start, End) attribute
 
 public:
-  explicit Pointer(const APInt &Address) : Obj(nullptr), Address(Address) {}
-  explicit Pointer(IntrusiveRefCntPtr<MemoryObject> Obj, const APInt &Address)
-      : Obj(std::move(Obj)), Address(Address) {}
+  explicit Pointer(const APInt &Address)
+      : Prov(Provenance::nullary()), Address(Address) {}
+  explicit Pointer(IntrusiveRefCntPtr<Provenance> Prov, const APInt &Address)
+      : Prov(std::move(Prov)), Address(Address) {
+    assert(this->Prov && "Invalid provenance.");
+  }
   Pointer getWithNewAddr(const APInt &NewAddr) const {
-    return Pointer(Obj, NewAddr);
+    return Pointer(Prov, NewAddr);
   }
   static AnyValue null(unsigned AS, const DataLayout &DL);
   bool isNullPtr(unsigned AS, const DataLayout &DL) const;
   void print(raw_ostream &OS) const;
   const APInt &address() const { return Address; }
-  MemoryObject *getMemoryObject() const { return Obj.get(); }
+  Provenance &provenance() const { return *Prov; }
+  MemoryObject *getMemoryObject() const { return Prov->getMemoryObject(); }
 };
 
 // Value representation for actual values of LLVM values.

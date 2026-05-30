@@ -17386,7 +17386,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   if (N0.getOpcode() == ISD::BITCAST && !VT.isVector()) {
     SDValue VecSrc = N0.getOperand(0);
     EVT VecSrcVT = VecSrc.getValueType();
-    if (VecSrcVT.isVector() && VecSrcVT.getScalarType() == VT &&
+    if (VecSrcVT.isVectorOf(VT) &&
         (!LegalOperations ||
          TLI.isOperationLegal(ISD::EXTRACT_VECTOR_ELT, VecSrcVT))) {
       unsigned Idx = isLE ? 0 : VecSrcVT.getVectorNumElements() - 1;

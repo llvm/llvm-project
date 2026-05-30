@@ -244,7 +244,7 @@ public:
 
       bool VisitVarDecl(VarDecl *V) override {
         auto *Init = V->getInit();
-        if (Init && V->isLocalVarDecl())
+        if (V->isLocalVarDecl())
           Checker->visitVarDecl(V, Init, DeclWithIssue);
         return true;
       }
@@ -329,7 +329,7 @@ public:
 
     std::optional<bool> IsUncountedPtr = isUnsafePtr(V->getType());
     if (IsUncountedPtr && *IsUncountedPtr) {
-      if (isPtrOriginSafe(V, Value, DeclWithIssue))
+      if (Value && isPtrOriginSafe(V, Value, DeclWithIssue))
         return;
       reportBug(V, Value, nullptr, DeclWithIssue);
     }
