@@ -290,8 +290,7 @@ public:
 
   template <typename DeclType, typename PointeeType, typename ParentDeclType>
   void reportBug(const DeclType *Member, const Type *MemberType,
-                 const PointeeType *Pointee,
-                 const ParentDeclType *ClassCXXRD,
+                 const PointeeType *Pointee, const ParentDeclType *ClassCXXRD,
                  bool IsPtrToSafe = false) const {
     assert(Member);
     assert(MemberType);
@@ -359,9 +358,7 @@ public:
     return isUncountedPtr(QT.getCanonicalType());
   }
 
-  bool isSafePtr(QualType QT) const final {
-    return isRefPtrType(QT);
-  }
+  bool isSafePtr(QualType QT) const final { return isRefPtrType(QT); }
 
   const char *typeName() const final { return "ref-countable type"; }
 
@@ -380,9 +377,7 @@ public:
     return isUncheckedPtr(QT.getCanonicalType());
   }
 
-  bool isSafePtr(QualType QT) const final {
-    return isCheckedPtrType(QT);
-  }
+  bool isSafePtr(QualType QT) const final { return isCheckedPtrType(QT); }
 
   const char *typeName() const final { return "CheckedPtr capable type"; }
 
@@ -406,9 +401,7 @@ public:
     return RTC->isUnretained(QT, ignoreARC);
   }
 
-  bool isSafePtr(QualType QT) const final {
-    return isRetainPtrOrOSPtrType(QT);
-  }
+  bool isSafePtr(QualType QT) const final { return isRetainPtrOrOSPtrType(QT); }
 
   const char *typeName() const final { return "retainable type"; }
 
@@ -416,8 +409,8 @@ public:
     return "member variables must be a RetainPtr or OSObjectPtr";
   }
 
-  PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,
-                             const Type *T, bool IsPtrToSafe) const final {
+  PrintDeclKind printPointer(llvm::raw_svector_ostream &Os, const Type *T,
+                             bool IsPtrToSafe) const final {
     // FIXME: Support IsPtrToSafe.
     if (!isa<ObjCObjectPointerType>(T) && T->getAs<TypedefType>()) {
       Os << typeName() << " ";
