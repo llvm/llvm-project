@@ -221,13 +221,11 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
       return SE.getMulExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
     });
   // Handle shl by constant: x << c is equivalent to x * (1 << c).
-  const APInt *ShiftAmt;
-  if (match(V, m_Shl(m_VPValue(LHSVal), m_APInt(ShiftAmt))) &&
-      ShiftAmt->ult(ShiftAmt->getBitWidth()))
-    return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
-      return SE.getMulExpr(
-          Ops[0], SE.getPowerOfTwo(Ops[0]->getType(), ShiftAmt->getZExtValue()),
-          SCEV::FlagAnyWrap, 0);
+  uint64_t ShiftAmt;
+  if (match(V, m_Shl(m_VPValue(LHSVal), m_ConstantInt(ShiftAmt))))
+    return CreateSCEV(LHSVal, [&](ArrayRef<SCEVUse> Ops) {
+      return SE.getMulExpr(Ops[0],
+                           SE.getPowerOfTwo(Ops[0]->getType(), ShiftAmt));
     });
   if (match(V, m_UDiv(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
