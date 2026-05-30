@@ -28,6 +28,7 @@ namespace math {
 // polynomial, with the Float128 accurate path for correct rounding.
 LIBC_INLINE double acosh_log1p_dd(double u_hi, double u_lo) {
   using FPBits_t = fputil::FPBits<double>;
+  using DoubleDouble = fputil::DoubleDouble;
   using namespace log1p_internal;
   using namespace common_constants_internal;
 
@@ -35,7 +36,7 @@ LIBC_INLINE double acosh_log1p_dd(double u_hi, double u_lo) {
   constexpr int FRACTION_LEN = FPBits_t::FRACTION_LEN;
 
   // Knuth's 2Sum (exact_add<false>) is correct for all rounding modes.
-  fputil::DoubleDouble x_dd = fputil::exact_add<false>(u_hi, 1.0);
+  DoubleDouble x_dd = fputil::exact_add<false>(u_hi, 1.0);
   x_dd.lo += u_lo;
 
   // Step-1 range reduction (identical to log1p's fast path).
@@ -56,11 +57,11 @@ LIBC_INLINE double acosh_log1p_dd(double u_hi, double u_lo) {
           ? static_cast<uint64_t>(cpp::bit_cast<int64_t>(x_dd.lo) - s_u)
           : 0;
 
-  fputil::DoubleDouble m_dd{FPBits_t(m_lo_bits).get_val(),
-                            FPBits_t(m_hi_bits).get_val()};
+  DoubleDouble m_dd{FPBits_t(m_lo_bits).get_val(),
+                   FPBits_t(m_hi_bits).get_val()};
 
   double r = R1[idx];
-  fputil::DoubleDouble v_lo_p = fputil::exact_mult(m_dd.lo, r);
+  DoubleDouble v_lo_p = fputil::exact_mult(m_dd.lo, r);
   double v_hi_p;
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
   v_hi_p = fputil::multiply_add(r, m_dd.hi, -1.0);
@@ -71,7 +72,7 @@ LIBC_INLINE double acosh_log1p_dd(double u_hi, double u_lo) {
   v_hi_p = fputil::multiply_add(r, m_dd.hi - c, RCM1[idx]);
 #endif
 
-  fputil::DoubleDouble v_dd_red = fputil::exact_add(v_hi_p, v_lo_p.hi);
+  DoubleDouble v_dd_red = fputil::exact_add(v_hi_p, v_lo_p.hi);
   v_dd_red.lo += v_lo_p.lo;
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
@@ -79,7 +80,7 @@ LIBC_INLINE double acosh_log1p_dd(double u_hi, double u_lo) {
   double e_x = static_cast<double>(x_e);
   double hi = fputil::multiply_add(e_x, LOG_2_HI, LOG_R1_DD[idx].hi);
   double lo = fputil::multiply_add(e_x, LOG_2_LO, LOG_R1_DD[idx].lo);
-  fputil::DoubleDouble r1 = fputil::exact_add(hi, v_dd_red.hi);
+  DoubleDouble r1 = fputil::exact_add(hi, v_dd_red.hi);
   double v_sq = v_dd_red.hi * v_dd_red.hi;
   double p0 = fputil::multiply_add(v_dd_red.hi, P_COEFFS[1], P_COEFFS[0]);
   double p1 = fputil::multiply_add(v_dd_red.hi, P_COEFFS[3], P_COEFFS[2]);
@@ -96,10 +97,10 @@ LIBC_INLINE double acosh_log1p_dd(double u_hi, double u_lo) {
 }
 
 LIBC_INLINE double acosh(double x) {
-  using FPBits = fputil::FPBits<double>;
+  using FPBits_t = fputil::FPBits<double>;
   using DoubleDouble = fputil::DoubleDouble;
 
-  FPBits xbits(x);
+  FPBits_t xbits(x);
 
   // x <= 1.0 is false for NaN, so NaN falls through to the inf/NaN check.
   if (LIBC_UNLIKELY(x <= 1.0)) {
@@ -107,13 +108,13 @@ LIBC_INLINE double acosh(double x) {
       return 0.0;
     fputil::set_errno_if_required(EDOM);
     fputil::raise_except_if_required(FE_INVALID);
-    return FPBits::quiet_nan().get_val();
+    return FPBits_t::quiet_nan().get_val();
   }
 
   if (LIBC_UNLIKELY(xbits.is_inf_or_nan())) {
     if (xbits.is_signaling_nan()) {
       fputil::raise_except_if_required(FE_INVALID);
-      return FPBits::quiet_nan().get_val();
+      return FPBits_t::quiet_nan().get_val();
     }
     return x;
   }

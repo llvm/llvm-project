@@ -20,9 +20,7 @@ using LIBC_NAMESPACE::testing::tlog;
 
 TEST_F(LlvmLibcAcoshTest, InDoubleRange) {
   // acosh is defined on [1, +inf).
-  // We test two sub-ranges:
-  //   [1.0, 2.0) — near the branch point
-  //   [2.0, large) — general range
+  // Sweep uniformly in bit-space over [1.0, 2^52].
   constexpr uint64_t COUNT = 123'451;
   uint64_t START = FPBits(1.0).uintval();
   uint64_t STOP = FPBits(0x1.0p52).uintval(); // 2^52
