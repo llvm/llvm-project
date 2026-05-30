@@ -48,25 +48,29 @@ EJitOrcEngine::Create(const Config &config,
   engine->P->runtimeState = &runtimeState;
   engine->P->dumpJITDir = config.dumpJITDir;
 
-  // Use compile-time target triple when set (e.g. for ARM embedded),
-  // otherwise detect the host architecture.
-#ifdef EJIT_DEFAULT_TRIPLE
-  auto JTMB = orc::JITTargetMachineBuilder(Triple(EJIT_DEFAULT_TRIPLE));
+  // Bare-metal / cross-compiled: use compile-time target triple.
+  // Native host: auto-detect via detectHost().
+#if defined(EJIT_DEFAULT_TRIPLE) || defined(EJIT_BARE_METAL)
+  #ifdef EJIT_DEFAULT_TRIPLE
+    Expected<orc::JITTargetMachineBuilder> JTMBOrErr(
+        orc::JITTargetMachineBuilder(Triple(EJIT_DEFAULT_TRIPLE)));
+  #else
+    #error EJIT_BARE_METAL requires EJIT_DEFAULT_TRIPLE to be set
+  #endif
 #else
-  auto JTMB = orc::JITTargetMachineBuilder::detectHost();
-  if (!JTMB)
-    return JTMB.takeError();
+  auto JTMBOrErr = orc::JITTargetMachineBuilder::detectHost();
+#endif
+  if (!JTMBOrErr)
+    return JTMBOrErr.takeError();
 
   // Use Large code model so JITLink can generate 64-bit absolute relocations.
-  // With the default Small model, Delta32 fixups fail when JIT code (mmap'd
-  // at a random high address) references host globals (in the data segment
-  // at a distant address), because the offset exceeds ±2 GB.
-  JTMB->setCodeModel(CodeModel::Large);
-#endif
+  JTMBOrErr->setCodeModel(CodeModel::Large);
 
   orc::LLJITBuilder Builder;
-  Builder.setJITTargetMachineBuilder(*JTMB);
+  Builder.setJITTargetMachineBuilder(*JTMBOrErr);
   Builder.setNumCompileThreads(0);
+  // Bare-metal: no host process to search for symbols (avoids dlopen/dlsym).
+  Builder.setLinkProcessSymbolsByDefault(false);
 
   auto J = Builder.create();
   if (!J)

@@ -13,6 +13,10 @@ endif()
 # EJIT_BARE_METAL option is defined in top-level llvm/CMakeLists.txt.
 if(EJIT_BARE_METAL)
   message(STATUS "EmbeddedJIT: bare-metal mode enabled")
+  if(NOT EJIT_DEFAULT_TARGET_TRIPLE)
+    message(FATAL_ERROR "EJIT_BARE_METAL requires EJIT_DEFAULT_TARGET_TRIPLE "
+            "(e.g. -DEJIT_DEFAULT_TARGET_TRIPLE=aarch64-none-elf)")
+  endif()
 endif()
 
 option(EJIT_BARE_METAL_MUTEX
