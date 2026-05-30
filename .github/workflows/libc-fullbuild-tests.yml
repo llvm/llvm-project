@@ -10,7 +10,7 @@ on:
 
 jobs:
   libc-fullbuild:
-    # if: github.repository_owner == 'llvm'
+    if: github.repository_owner == 'llvm'
     timeout-minutes: 60
     name: libc-fullbuild on ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
