@@ -914,6 +914,9 @@ struct CounterCoverageMappingBuilder
   /// The map of statements to count values.
   llvm::DenseMap<const Stmt *, CounterPair> &CounterMap;
 
+  /// The map of calls to counters reached only when the call returns.
+  llvm::DenseMap<const Stmt *, unsigned> *CallContinuationCounterMap;
+
   /// Used to expand an allocatd SkipCnt to Expression with known counters.
   /// Key: SkipCnt
   /// Val: Subtract Expression
@@ -942,10 +945,11 @@ struct CounterCoverageMappingBuilder
   /// expressions cross file or macro boundaries.
   SourceLocation MostRecentLocation;
 
-  /// Whether the visitor at a terminate statement.
-  bool HasTerminateStmt = false;
+  /// Whether the visitor changed the active region and needs a gap region
+  /// before the next statement.
+  bool HasGapRegion = false;
 
-  /// Gap region counter after terminate statement.
+  /// Counter to use for the pending gap region.
   Counter GapRegionCounter;
 
   /// Return a counter for the subtraction of \c RHS from \c LHS
@@ -970,6 +974,15 @@ struct CounterCoverageMappingBuilder
   /// This should only be called on statements that have a dedicated counter.
   Counter getRegionCounter(const Stmt *S) {
     return Counter::getCounter(CounterMap[S].Executed);
+  }
+
+  std::optional<Counter> getCallContinuationCounter(const Stmt *S) {
+    if (!CallContinuationCounterMap)
+      return std::nullopt;
+    auto I = CallContinuationCounterMap->find(S);
+    if (I == CallContinuationCounterMap->end())
+      return std::nullopt;
+    return Counter::getCounter(I->second);
   }
 
   struct BranchCounterPair {
@@ -1397,7 +1410,22 @@ struct CounterCoverageMappingBuilder
     if (!Region.hasEndLoc())
       Region.setEndLoc(EndLoc);
     pushRegion(Counter::getZero());
-    HasTerminateStmt = true;
+    HasGapRegion = true;
+  }
+
+  void startCallContinuationRegion(const Stmt *S, Counter ContinuationCount) {
+    SourceMappingRegion &Region = getRegion();
+    SourceLocation EndLoc = getEnd(S);
+    if (EndLoc.isInvalid())
+      return;
+
+    std::optional<SourceLocation> OriginalEndLoc =
+        Region.hasEndLoc() ? std::optional<SourceLocation>(Region.getEndLoc())
+                           : std::nullopt;
+    Region.setEndLoc(EndLoc);
+    pushRegion(ContinuationCount, std::nullopt, OriginalEndLoc);
+    GapRegionCounter = ContinuationCount;
+    HasGapRegion = true;
   }
 
   /// Find a valid gap range between \p AfterLoc and \p BeforeLoc.
@@ -1539,9 +1567,12 @@ struct CounterCoverageMappingBuilder
   CounterCoverageMappingBuilder(
       CoverageMappingModuleGen &CVM,
       llvm::DenseMap<const Stmt *, CounterPair> &CounterMap,
-      MCDC::State &MCDCState, SourceManager &SM, const LangOptions &LangOpts)
+      llvm::DenseMap<const Stmt *, unsigned> *CallContinuationCounterMap,
+      MCDC::State &MCDCState, SourceManager &SM, const LangOptions &LangOpts,
+      unsigned NextCounter)
       : CoverageMappingBuilder(CVM, SM, LangOpts), CounterMap(CounterMap),
-        NextCounterNum(CounterMap.size()), MCDCState(MCDCState),
+        CallContinuationCounterMap(CallContinuationCounterMap),
+        NextCounterNum(NextCounter), MCDCState(MCDCState),
         MCDCBuilder(CVM.getCodeGenModule(), MCDCState) {}
 
   /// Write the mapping data to the output stream
@@ -1564,35 +1595,34 @@ struct CounterCoverageMappingBuilder
     if (S->getBeginLoc().isValid())
       extendRegion(S);
     const Stmt *LastStmt = nullptr;
-    bool SaveTerminateStmt = HasTerminateStmt;
-    HasTerminateStmt = false;
+    bool SaveGapRegion = HasGapRegion;
+    HasGapRegion = false;
     GapRegionCounter = Counter::getZero();
     for (const Stmt *Child : S->children())
       if (Child) {
-        // If last statement contains terminate statements, add a gap area
-        // between the two statements.
-        if (LastStmt && HasTerminateStmt) {
+        // If the last statement changed the active region, add a gap area
+        // between the two statements with the new counter.
+        if (LastStmt && HasGapRegion) {
           auto Gap = findGapAreaBetween(getEnd(LastStmt), getStart(Child));
           if (Gap)
             fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(),
                                  GapRegionCounter);
-          SaveTerminateStmt = true;
-          HasTerminateStmt = false;
+          SaveGapRegion = true;
+          HasGapRegion = false;
         }
         this->Visit(Child);
         LastStmt = Child;
       }
-    if (SaveTerminateStmt)
-      HasTerminateStmt = true;
+    if (SaveGapRegion)
+      HasGapRegion = true;
     handleFileExit(getEnd(S));
   }
 
   void VisitStmtExpr(const StmtExpr *E) {
     Visit(E->getSubStmt());
-    // Any region termination (such as a noreturn CallExpr) within the statement
-    // expression has been handled by visiting the sub-statement. The visitor
-    // cannot be at a terminate statement leaving the statement expression.
-    HasTerminateStmt = false;
+    // Any region transition within the statement expression has been handled by
+    // visiting the sub-statement. It cannot need a gap outside the expression.
+    HasGapRegion = false;
   }
 
   void VisitDecl(const Decl *D) {
@@ -1692,6 +1722,9 @@ struct CounterCoverageMappingBuilder
     QualType CalleeType = E->getCallee()->getType();
     if (getFunctionExtInfo(*CalleeType).getNoReturn())
       terminateRegion(E);
+    else if (std::optional<Counter> ContinuationCounter =
+                 getCallContinuationCounter(E))
+      startCallContinuationRegion(E, *ContinuationCounter);
   }
 
   void VisitWhileStmt(const WhileStmt *S) {
@@ -1706,8 +1739,8 @@ struct CounterCoverageMappingBuilder
     Counter BackedgeCount = propagateCounts(BodyCount, S->getBody());
     BreakContinue BC = BreakContinueStack.pop_back_val();
 
-    bool BodyHasTerminateStmt = HasTerminateStmt;
-    HasTerminateStmt = false;
+    bool BodyHasGapRegion = HasGapRegion;
+    HasGapRegion = false;
 
     // Go back to handle the condition.
     Counter CondCount =
@@ -1727,8 +1760,8 @@ struct CounterCoverageMappingBuilder
     if (!IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
       GapRegionCounter = OutCount;
-      if (BodyHasTerminateStmt)
-        HasTerminateStmt = true;
+      if (BodyHasGapRegion)
+        HasGapRegion = true;
     }
 
     // Create Branch Region around condition.
@@ -1749,8 +1782,8 @@ struct CounterCoverageMappingBuilder
 
     BreakContinue BC = BreakContinueStack.pop_back_val();
 
-    bool BodyHasTerminateStmt = HasTerminateStmt;
-    HasTerminateStmt = false;
+    bool BodyHasGapRegion = HasGapRegion;
+    HasGapRegion = false;
 
     Counter CondCount = addCounters(BackedgeCount, BC.ContinueCount);
     auto BranchCount = getBranchCounterPair(S, CondCount);
@@ -1762,8 +1795,8 @@ struct CounterCoverageMappingBuilder
     if (!IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
       GapRegionCounter = OutCount;
-      if (BodyHasTerminateStmt)
-        HasTerminateStmt = true;
+      if (BodyHasGapRegion)
+        HasGapRegion = true;
     }
 
     // Create Branch Region around condition.
@@ -1788,8 +1821,8 @@ struct CounterCoverageMappingBuilder
     Counter BackedgeCount = propagateCounts(BodyCount, S->getBody());
     BreakContinue BodyBC = BreakContinueStack.pop_back_val();
 
-    bool BodyHasTerminateStmt = HasTerminateStmt;
-    HasTerminateStmt = false;
+    bool BodyHasGapRegion = HasGapRegion;
+    HasGapRegion = false;
 
     // The increment is essentially part of the body but it needs to include
     // the count for all the continue statements.
@@ -1821,8 +1854,8 @@ struct CounterCoverageMappingBuilder
     if (!IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
       GapRegionCounter = OutCount;
-      if (BodyHasTerminateStmt)
-        HasTerminateStmt = true;
+      if (BodyHasGapRegion)
+        HasGapRegion = true;
     }
 
     // Create Branch Region around condition.
@@ -1844,8 +1877,8 @@ struct CounterCoverageMappingBuilder
     Counter BackedgeCount = propagateCounts(BodyCount, S->getBody());
     BreakContinue BC = BreakContinueStack.pop_back_val();
 
-    bool BodyHasTerminateStmt = HasTerminateStmt;
-    HasTerminateStmt = false;
+    bool BodyHasGapRegion = HasGapRegion;
+    HasGapRegion = false;
 
     // The body count applies to the area immediately after the range.
     auto Gap = findGapAreaBetween(S->getRParenLoc(), getStart(S->getBody()));
@@ -1861,8 +1894,8 @@ struct CounterCoverageMappingBuilder
     if (!IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
       GapRegionCounter = OutCount;
-      if (BodyHasTerminateStmt)
-        HasTerminateStmt = true;
+      if (BodyHasGapRegion)
+        HasGapRegion = true;
     }
 
     // Create Branch Region around condition.
@@ -2085,12 +2118,13 @@ struct CounterCoverageMappingBuilder
     // needed to handle macros that generate the "if" but not the condition.
     extendRegion(S->getCond());
 
-    Counter ParentCount = getRegion().getCounter();
-    auto [ThenCount, ElseCount] = getBranchCounterPair(S, ParentCount);
-
     // Emitting a counter for the condition makes it easier to interpret the
     // counter for the body when looking at the coverage.
-    propagateCounts(ParentCount, S->getCond());
+    Counter ParentCount = getRegion().getCounter();
+    Counter CondExitCount = propagateCounts(ParentCount, S->getCond());
+    Counter BranchParentCount =
+        CallContinuationCounterMap ? CondExitCount : ParentCount;
+    auto [ThenCount, ElseCount] = getBranchCounterPair(S, BranchParentCount);
 
     // The 'then' count applies to the area immediately after the condition.
     std::optional<SourceRange> Gap =
@@ -2102,8 +2136,8 @@ struct CounterCoverageMappingBuilder
     Counter OutCount = propagateCounts(ThenCount, S->getThen());
 
     if (const Stmt *Else = S->getElse()) {
-      bool ThenHasTerminateStmt = HasTerminateStmt;
-      HasTerminateStmt = false;
+      bool ThenHasGapRegion = HasGapRegion;
+      HasGapRegion = false;
       // The 'else' count applies to the area immediately after the 'then'.
       std::optional<SourceRange> Gap =
           findGapAreaBetween(getEnd(S->getThen()), getStart(Else));
@@ -2113,12 +2147,12 @@ struct CounterCoverageMappingBuilder
 
       OutCount = addCounters(OutCount, propagateCounts(ElseCount, Else));
 
-      if (ThenHasTerminateStmt)
-        HasTerminateStmt = true;
+      if (ThenHasGapRegion)
+        HasGapRegion = true;
     } else
       OutCount = addCounters(OutCount, ElseCount);
 
-    if (!IsCounterEqual(OutCount, ParentCount)) {
+    if (!IsCounterEqual(OutCount, BranchParentCount)) {
       pushRegion(OutCount);
       GapRegionCounter = OutCount;
     }
@@ -2682,8 +2716,9 @@ unsigned CoverageMappingModuleGen::getFileID(FileEntryRef File) {
 void CoverageMappingGen::emitCounterMapping(const Decl *D,
                                             llvm::raw_ostream &OS) {
   assert(CounterMap && MCDCState);
-  CounterCoverageMappingBuilder Walker(CVM, *CounterMap, *MCDCState, SM,
-                                       LangOpts);
+  CounterCoverageMappingBuilder Walker(CVM, *CounterMap,
+                                       CallContinuationCounterMap, *MCDCState,
+                                       SM, LangOpts, NextCounter);
   Walker.VisitDecl(D);
   Walker.write(OS);
 }

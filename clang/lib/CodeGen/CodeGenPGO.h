@@ -36,6 +36,8 @@ private:
   unsigned NumRegionCounters;
   uint64_t FunctionHash;
   std::unique_ptr<llvm::DenseMap<const Stmt *, CounterPair>> RegionCounterMap;
+  std::unique_ptr<llvm::DenseMap<const Stmt *, unsigned>>
+      CallContinuationCounterMap;
   std::unique_ptr<llvm::DenseMap<const Stmt *, uint64_t>> StmtCountMap;
   std::unique_ptr<llvm::InstrProfRecord> ProfRecord;
   std::unique_ptr<MCDC::State> RegionMCDCState;
@@ -128,6 +130,7 @@ public:
   void emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
                                  bool UseFalsePath, bool UseBoth,
                                  llvm::Value *StepV);
+  void emitCallContinuationCounter(CGBuilderTy &Builder, const Stmt *S);
   void emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
                                       CodeGenFunction &CGF);
   void emitMCDCParameters(CGBuilderTy &Builder);

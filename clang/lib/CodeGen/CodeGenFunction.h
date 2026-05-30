@@ -1700,6 +1700,7 @@ public:
   void incrementProfileCounter(CounterForIncrement ExecSkip, const Stmt *S,
                                bool UseBoth = false,
                                llvm::Value *StepV = nullptr);
+  void incrementCallContinuationProfileCounter(const Stmt *S);
 
   bool isMCDCCoverageEnabled() const {
     return (CGM.getCodeGenOpts().hasProfileClangInstr() &&
