@@ -190,7 +190,7 @@ jobs:
           --target $TARGETS
 
     - name: Build Test
-      if: ${{ matrix.testing != "SKIP" }}
+      if: ${{ matrix.testing != 'SKIP' }}
       run: >
         cmake 
         --build build 
@@ -198,7 +198,7 @@ jobs:
         --target check-libc-build
 
     - name: Run Test
-      if: ${{ matrix.testing != "SKIP" && matrix.testing != "BUILD" }}
+      if: ${{ matrix.testing != 'SKIP' && matrix.testing != 'BUILD' }}
       run: >
         cmake 
         --build build 
