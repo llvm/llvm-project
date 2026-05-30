@@ -214,6 +214,12 @@ TEST(StringExtrasTest, ConvertToSnakeFromCamelCase) {
   testConvertToSnakeCase("_op_name", "_op_name");
   testConvertToSnakeCase("__op_name", "__op_name");
   testConvertToSnakeCase("op__name", "op__name");
+
+  // Bytes >= 0x80 are handled deterministically: the llvm:: ctype helpers are
+  // ASCII-only and locale-independent, so such bytes are neither classified as
+  // letters nor case-folded (the C <cctype> functions are locale-dependent and
+  // have undefined behavior on a negative char).
+  testConvertToSnakeCase("a\x80zB", "a\x80z_b");
 }
 
 TEST(StringExtrasTest, ConvertToCamelFromSnakeCase) {
@@ -247,6 +253,11 @@ TEST(StringExtrasTest, ConvertToCamelFromSnakeCase) {
   testConvertToCamelCase(true, "_OpName", "_OpName");
   testConvertToCamelCase(true, "Op_Name", "Op_Name");
   testConvertToCamelCase(true, "opName", "OpName");
+
+  // Bytes >= 0x80 are passed through unchanged: a '_' is only consumed when the
+  // following byte is an ASCII lowercase letter, independent of locale.
+  testConvertToCamelCase(false, "op_\x80me", "op_\x80me");
+  testConvertToCamelCase(true, "\x80name", "\x80name");
 }
 
 constexpr uint64_t MaxUint64 = std::numeric_limits<uint64_t>::max();
