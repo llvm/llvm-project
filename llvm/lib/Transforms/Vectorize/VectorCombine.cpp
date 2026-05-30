@@ -6090,6 +6090,13 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
     if (!LIVTy || LIVTy->getElementType() != EltTy)
       return false;
 
+    if (LI->getParent() != I.getParent())
+      return false;
+
+    if (isMemModifiedBetween(std::next(LI->getIterator()), I.getIterator(),
+                             MemoryLocation::get(LI), AA))
+      return false;
+
     int64_t ConstantOffset = 0;
     Value *Base = GetPointerBaseWithConstantOffset(LI->getPointerOperand(),
                                                    ConstantOffset, *DL);
