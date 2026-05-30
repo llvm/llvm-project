@@ -83,7 +83,11 @@ struct text_encoding
 _LIBCPP_BEGIN_NAMESPACE_STD
 struct text_encoding;
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
 _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_EXPORTED_FROM_ABI text_encoding __get_locale_encoding(const char* __name);
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 struct text_encoding {
   enum class id : int_least32_t {
@@ -374,12 +378,12 @@ private:
     unsigned short __mib_rep_;
     unsigned char __num_aliases_;
 
-    _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(const __te_data& __enc, id __i) noexcept {
+    friend constexpr bool operator<(const __te_data& __enc, id __i) noexcept {
       return __enc.__mib_rep_ < static_cast<unsigned short>(__i);
     }
   };
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool __comp_name(string_view __a, string_view __b) noexcept {
+  static constexpr bool __comp_name(string_view __a, string_view __b) noexcept {
     if (__a.empty() || __b.empty()) {
       return false;
     }
@@ -421,7 +425,7 @@ private:
     return true;
   }
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr unsigned short __find_data_idx(string_view __a) noexcept {
+  static constexpr unsigned short __find_data_idx(string_view __a) noexcept {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__a.size() <= max_name_length, "input string_view must have size <= 63");
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(!__a.contains('\0'), "input string_view must not contain '\\0'");
 
@@ -441,7 +445,7 @@ private:
     return __found - __entries;
   }
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr unsigned short __find_data_idx_by_id(id __i) noexcept {
+  static constexpr unsigned short __find_data_idx_by_id(id __i) noexcept {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__i >= id::other, "invalid text_encoding::id passed");
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__i <= id::CP50220, "invalid text_encoding::id passed");
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(int_least32_t(__i) != __NATS_DANO_, "Mib for NATS-DANO used");
@@ -470,121 +474,115 @@ public:
 
       constexpr __iterator() noexcept = default;
 
-      _LIBCPP_HIDE_FROM_ABI constexpr reference operator*() const noexcept {
-        return __get_alias_from_offset_table(__current_idx_);
-      }
+      constexpr reference operator*() const noexcept { return __get_alias_from_offset_table(__current_idx_); }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](difference_type __n) const noexcept {
+      constexpr reference operator[](difference_type __n) const noexcept {
         auto __it = *this;
         return *(__it + __n);
       }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator->() = delete;
+      constexpr decltype(auto) operator->() = delete;
 
-      _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(__iterator __it, difference_type __n) noexcept {
+      friend constexpr __iterator operator+(__iterator __it, difference_type __n) noexcept {
         __it += __n;
         return __it;
       }
 
-      _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(difference_type __n, __iterator __it) noexcept {
+      friend constexpr __iterator operator+(difference_type __n, __iterator __it) noexcept {
         __it += __n;
         return __it;
       }
 
-      _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(__iterator __it, difference_type __n) noexcept {
+      friend constexpr __iterator operator-(__iterator __it, difference_type __n) noexcept {
         __it -= __n;
         return __it;
       }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr difference_type operator-(const __iterator& __other) const noexcept {
+      constexpr difference_type operator-(const __iterator& __other) const noexcept {
         return __current_idx_ - __other.__current_idx_;
       }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() noexcept {
+      constexpr __iterator& operator++() noexcept {
         __current_idx_++;
         return *this;
       }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int) noexcept {
+      constexpr __iterator operator++(int) noexcept {
         auto __old = *this;
         __current_idx_++;
         return __old;
       }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator--() noexcept {
+      constexpr __iterator& operator--() noexcept {
         __current_idx_--;
         return *this;
       }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator--(int) noexcept {
+      constexpr __iterator operator--(int) noexcept {
         auto __old = *this;
         __current_idx_--;
         return __old;
       }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator+=(difference_type __n) noexcept {
+      constexpr __iterator& operator+=(difference_type __n) noexcept {
         __current_idx_ += __n;
         return *this;
       }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator-=(difference_type __n) noexcept { return (*this += -__n); }
+      constexpr __iterator& operator-=(difference_type __n) noexcept { return (*this += -__n); }
 
-      _LIBCPP_HIDE_FROM_ABI friend constexpr auto
-      operator<=>(const __iterator& __it, const __iterator& __it2) noexcept = default;
+      friend constexpr auto operator<=>(const __iterator& __it, const __iterator& __it2) noexcept = default;
 
     private:
       friend struct aliases_view;
 
-      _LIBCPP_HIDE_FROM_ABI constexpr __iterator(unsigned short __enc_d) noexcept : __current_idx_(__enc_d) {}
+      constexpr __iterator(unsigned short __enc_d) noexcept : __current_idx_(__enc_d) {}
 
       unsigned short __current_idx_;
     }; // __iterator
 
-    _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() const noexcept { return __iterator(__first_idx_); }
+    constexpr __iterator begin() const noexcept { return __iterator(__first_idx_); }
 
-    _LIBCPP_HIDE_FROM_ABI constexpr __iterator end() const noexcept { return __iterator(__last_idx_); }
+    constexpr __iterator end() const noexcept { return __iterator(__last_idx_); }
 
   private:
     friend struct text_encoding;
 
-    _LIBCPP_HIDE_FROM_ABI constexpr aliases_view(const __te_data& __d)
+    constexpr aliases_view(const __te_data& __d)
         : __first_idx_(__d.__first_alias_index_), __last_idx_(__d.__first_alias_index_ + __d.__num_aliases_) {}
 
     unsigned short __first_idx_;
     unsigned short __last_idx_;
   }; // aliases_view
 
-  _LIBCPP_HIDE_FROM_ABI constexpr text_encoding() = default;
+  constexpr text_encoding() = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit text_encoding(string_view __enc) noexcept
-      : __encoding_idx_(__find_data_idx(__enc)) {
+  constexpr explicit text_encoding(string_view __enc) noexcept : __encoding_idx_(__find_data_idx(__enc)) {
     __enc.copy(__name_, max_name_length, 0);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr text_encoding(id __i) noexcept : __encoding_idx_(__find_data_idx_by_id(__i)) {
+  constexpr text_encoding(id __i) noexcept : __encoding_idx_(__find_data_idx_by_id(__i)) {
     const char* __alias = __get_alias_from_offset_table(__get().__first_alias_index_);
     if (__alias[0] != '\0') {
       string_view(__alias).copy(__name_, max_name_length);
     }
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr id mib() const noexcept { return id(__get().__mib_rep_); }
+  [[nodiscard]] constexpr id mib() const noexcept { return id(__get().__mib_rep_); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const char* name() const noexcept { return __name_; }
+  [[nodiscard]] constexpr const char* name() const noexcept { return __name_; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr aliases_view aliases() const noexcept { return aliases_view(__get()); }
+  [[nodiscard]] constexpr aliases_view aliases() const noexcept { return aliases_view(__get()); }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const text_encoding& __a, const text_encoding& __b) noexcept {
+  friend constexpr bool operator==(const text_encoding& __a, const text_encoding& __b) noexcept {
     return __a.mib() == id::other && __b.mib() == id::other
              ? __comp_name(__a.__name_, __b.__name_)
              : __a.mib() == __b.mib();
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const text_encoding& __encoding, id __i) noexcept {
-    return __encoding.mib() == __i;
-  }
+  friend constexpr bool operator==(const text_encoding& __encoding, id __i) noexcept { return __encoding.mib() == __i; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static consteval text_encoding literal() noexcept {
+  [[nodiscard]] static consteval text_encoding literal() noexcept {
     // TODO: Remove this branch once we have __GNUC_EXECUTION_CHARSET_NAME or __clang_literal_encoding__ unconditionally
 #    ifdef __GNUC_EXECUTION_CHARSET_NAME
     return text_encoding(__GNUC_EXECUTION_CHARSET_NAME);
@@ -596,7 +594,7 @@ public:
   }
 
 #    if _LIBCPP_HAS_LOCALIZATION
-  [[nodiscard]] _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_HIDE_FROM_ABI static text_encoding environment() {
+  [[nodiscard]] _LIBCPP_AVAILABILITY_TE_ENVIRONMENT static text_encoding environment() {
 #      if defined(_LIBCPP_WIN32API)
     return __get_locale_encoding(nullptr);
 #      else
@@ -605,7 +603,7 @@ public:
   }
 
   template <id _Id>
-  [[nodiscard]] _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_HIDE_FROM_ABI static bool environment_is() {
+  [[nodiscard]] _LIBCPP_AVAILABILITY_TE_ENVIRONMENT static bool environment_is() {
     // TODO: It may be worthwhile to implement an optimization for popular encodings, e.g. UTF-8,
     // to allow checking the environment text encoding without needing to use the data tables.
 
@@ -623,9 +621,9 @@ public:
 #    endif
 
 private:
-  _LIBCPP_HIDE_FROM_ABI constexpr const __te_data& __get() const { return __entries[__encoding_idx_]; }
+  constexpr const __te_data& __get() const { return __entries[__encoding_idx_]; }
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr char const* __get_alias_from_offset_table(unsigned short __idx) {
+  static constexpr char const* __get_alias_from_offset_table(unsigned short __idx) {
     return __aliases_string + __alias_offsets.__table[__idx];
   }
 
