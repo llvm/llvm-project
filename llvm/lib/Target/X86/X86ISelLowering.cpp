@@ -56455,11 +56455,11 @@ static SDValue combineXorWithGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
   SmallVector<APInt> YEltBits;
   if (X == XorOp && getTargetConstantBitsFromNode(Y, 8, ConstUndef, YEltBits,
                                                   /*AllowWholeUndefs=*/false)) {
-    static const uint8_t IdentityMatrtix[] = {128, 64, 32, 16, 8, 4, 2, 1};
+    const uint8_t IdentityMatrix[] = {128, 64, 32, 16, 8, 4, 2, 1};
 
     SmallVector<SDValue> BuildMatrix;
     for (unsigned I = 0; I != NumElts; ++I) {
-      APInt MatrixRow = YEltBits[I] ^ IdentityMatrtix[I % 8];
+      APInt MatrixRow = YEltBits[I] ^ IdentityMatrix[I % 8];
       BuildMatrix.push_back(DAG.getConstant(MatrixRow, DL, MVT::i8));
     }
 
