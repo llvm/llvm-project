@@ -1829,6 +1829,12 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
   const unsigned Opc = IInfo.getMatchingIROpode();
   assert(Instruction::isBinaryOp(Opc) && "Expected a binary operation!");
 
+  // Don't fold FP ops to an unconstrained IR binop or constant under strictfp:
+  // that would drop the dynamic rounding mode and FP exception behavior the
+  // intrinsic must honor.  Mirrors the guard in instCombineSVEVectorBinOp.
+  if (II.isStrictFP() && isa<FPMathOperator>(&II))
+    return std::nullopt;
+
   Value *Pg = II.getOperand(0);
   Value *Op1 = II.getOperand(1);
   Value *Op2 = II.getOperand(2);

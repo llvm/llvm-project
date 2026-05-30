@@ -78,7 +78,34 @@ define <vscale x 2 x double> @call_replace_fsub_intrinsic_double_strictfp(<vscal
   ret <vscale x 2 x double> %1
 }
 
+; The SVE binop simplifier constant-folds the operation in the default FP
+; environment, which under strictfp drops the dynamic rounding mode and FP
+; exception behavior.  The intrinsic must be preserved.
+define <vscale x 2 x double> @constant_fold_fdiv_strictfp() #0 {
+; CHECK: Function Attrs: strictfp
+; CHECK-LABEL: @constant_fold_fdiv_strictfp(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.fdiv.u.nxv2f64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x double> splat (double 1.000000e+01), <vscale x 2 x double> splat (double 3.000000e+00)) #[[ATTR2]]
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
+;
+  %1 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31) #1
+  %2 = tail call <vscale x 2 x double> @llvm.aarch64.sve.fdiv.nxv2f64(<vscale x 2 x i1> %1, <vscale x 2 x double> splat (double 1.000000e+01), <vscale x 2 x double> splat (double 3.000000e+00)) #1
+  ret <vscale x 2 x double> %2
+}
+
+; Likewise for an identity simplification (x * 1.0 -> x).
+define <vscale x 2 x double> @identity_fmul_strictfp(<vscale x 2 x double> %a) #0 {
+; CHECK: Function Attrs: strictfp
+; CHECK-LABEL: @identity_fmul_strictfp(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.fmul.u.nxv2f64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x double> [[A:%.*]], <vscale x 2 x double> splat (double 1.000000e+00)) #[[ATTR2]]
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
+;
+  %1 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31) #1
+  %2 = tail call <vscale x 2 x double> @llvm.aarch64.sve.fmul.nxv2f64(<vscale x 2 x i1> %1, <vscale x 2 x double> %a, <vscale x 2 x double> splat (double 1.000000e+00)) #1
+  ret <vscale x 2 x double> %2
+}
+
 declare <vscale x 2 x double> @llvm.aarch64.sve.fadd.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>, <vscale x 2 x double>)
+declare <vscale x 2 x double> @llvm.aarch64.sve.fdiv.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>, <vscale x 2 x double>)
 declare <vscale x 2 x double> @llvm.aarch64.sve.fmul.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>, <vscale x 2 x double>)
 declare <vscale x 2 x double> @llvm.aarch64.sve.fsub.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>, <vscale x 2 x double>)
 
