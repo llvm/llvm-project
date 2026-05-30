@@ -99,6 +99,37 @@ void atomic_to_non_atomic(_Atomic int *ptr, _Atomic volatile int *vptr) {
   // OGCG: %{{.+}} = load atomic volatile i32, ptr %{{.+}} seq_cst, align 4
 }
 
+void atomic_to_non_atomic_complex(_Atomic _Complex float *fptr) {
+  // CIR-LABEL: @atomic_to_non_atomic_complex
+  // LLVM-LABEL: @atomic_to_non_atomic_complex
+  // OGCG-LABEL: @atomic_to_non_atomic_complex
+
+  _Complex float a = *fptr;
+  // CIR:      %[[PTR:.+]] = cir.load deref align(8) %{{.+}} : !cir.ptr<!cir.ptr<!cir.complex<!cir.float>>>, !cir.ptr<!cir.complex<!cir.float>>
+  // CIR-NEXT: %[[INT_PTR:.+]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!cir.complex<!cir.float>> -> !cir.ptr<!u64i>
+  // CIR-NEXT: %[[INT:.+]] = cir.load align(8) atomic(seq_cst) %[[INT_PTR]] : !cir.ptr<!u64i>, !u64i
+  // CIR-NEXT: %[[OUT_INT_PTR:.+]] = cir.cast bitcast %[[OUT_PTR:.+]] : !cir.ptr<!cir.complex<!cir.float>> -> !cir.ptr<!u64i>
+  // CIR-NEXT: cir.store align(8) %[[INT]], %[[OUT_INT_PTR]] : !u64i, !cir.ptr<!u64i>
+  // CIR-NEXT: %{{.+}} = cir.load align(8) %[[OUT_PTR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+
+  // LLVM:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM-NEXT: %[[VALUE:.+]] = load atomic i64, ptr %[[PTR]] seq_cst, align 8
+  // LLVM-NEXT: store i64 %[[VALUE]], ptr %[[OUT_PTR:.+]], align 8
+  // LLVM-NEXT: %{{.+}} = load { float, float }, ptr %[[OUT_PTR]], align 8
+
+  // OGCG:      %[[PTR:.+]] = load ptr, ptr %fptr.addr, align 8
+  // OGCG-NEXT: %[[VALUE:.+]] = load atomic i64, ptr %[[PTR]] seq_cst, align 8
+  // OGCG-NEXT: store i64 %[[VALUE]], ptr %atomic-temp, align 8
+  // OGCG-NEXT: %[[REAL_PTR:.+]] = getelementptr inbounds nuw { float, float }, ptr %atomic-temp, i32 0, i32 0
+  // OGCG-NEXT: %[[REAL:.+]] = load float, ptr %[[REAL_PTR]], align 8
+  // OGCG-NEXT: %[[IMAG_PTR:.+]] = getelementptr inbounds nuw { float, float }, ptr %atomic-temp, i32 0, i32 1
+  // OGCG-NEXT: %[[IMAG:.+]] = load float, ptr %[[IMAG_PTR]], align 4
+  // OGCG-NEXT: %[[OUT_REAL_PTR:.+]] = getelementptr inbounds nuw { float, float }, ptr %a, i32 0, i32 0
+  // OGCG-NEXT: %[[OUT_IMAG_PTR:.+]] = getelementptr inbounds nuw { float, float }, ptr %a, i32 0, i32 1
+  // OGCG-NEXT: store float %[[REAL]], ptr %[[OUT_REAL_PTR]], align 4
+  // OGCG-NEXT: store float %[[IMAG]], ptr %[[OUT_IMAG_PTR]], align 4
+}
+
 void load(int *ptr) {
   int x;
   __atomic_load(ptr, &x, __ATOMIC_RELAXED);

@@ -333,7 +333,7 @@ mlir::Value ComplexExprEmitter::emitLoadOfLValue(LValue lv,
                                                  SourceLocation loc) {
   assert(lv.isSimple() && "non-simple complex l-value?");
   if (lv.getType()->isAtomicType())
-    cgf.cgm.errorNYI(loc, "emitLoadOfLValue with Atomic LV");
+    return cgf.emitAtomicLoad(lv, loc).getComplexValue();
 
   const Address srcAddr = lv.getAddress();
   return builder.createLoad(cgf.getLoc(loc), srcAddr, lv.isVolatileQualified());
@@ -456,16 +456,12 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
 
   // Atomic to non-atomic casts may be more than a no-op for some platforms
   // and for some types.
+  case CK_AtomicToNonAtomic:
   case CK_NonAtomicToAtomic:
   case CK_NoOp:
   case CK_LValueToRValue:
   case CK_UserDefinedConversion:
     return Visit(op);
-
-  case CK_AtomicToNonAtomic: {
-    cgf.cgm.errorNYI("ComplexExprEmitter::emitCast AtomicToNonAtomic");
-    return {};
-  }
 
   case CK_LValueBitCast: {
     LValue origLV = cgf.emitLValue(op);
