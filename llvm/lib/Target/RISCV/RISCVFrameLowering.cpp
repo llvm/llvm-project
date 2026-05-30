@@ -2274,8 +2274,12 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
     unsigned PushedRegNum = RVFI->getRVPushRegs();
     if (PushedRegNum > 0) {
       // Use encoded number to represent registers to spill.
-      unsigned Opcode = getPushOpcode(
-          RVFI->getPushPopKind(*MF), hasFP(*MF) && !RVFI->useQCIInterrupt(*MF));
+      // `QC.CM.PUSHFP` requires the rlist to include at least `{ra, s0}`.
+      // If only that is not the case, fall back to `QC.CM.PUSH` and let
+      // generic FP setup logic materialize FP explicitly.
+      bool CanUsePushFP =
+          hasFP(*MF) && !RVFI->useQCIInterrupt(*MF) && PushedRegNum >= 2;
+      unsigned Opcode = getPushOpcode(RVFI->getPushPopKind(*MF), CanUsePushFP);
       unsigned RegEnc = RISCVZC::encodeRegListNumRegs(PushedRegNum);
       MachineInstrBuilder PushBuilder =
           BuildMI(MBB, MI, DL, TII.get(Opcode))

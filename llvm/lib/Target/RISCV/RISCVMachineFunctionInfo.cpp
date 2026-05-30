@@ -125,9 +125,9 @@ bool RISCVMachineFunctionInfo::hasImplicitFPUpdates(
 
   switch (getPushPopKind(MF)) {
   case PushPopKind::VendorXqccmp:
-    // When using Xqccmp, we will use `QC.CM.PUSHFP` when Frame Pointers are
-    // enabled, which will update FP.
-    return true;
+    // `QC.CM.PUSHFP` updates FP implicitly, but it is only encodable when the
+    // push rlist includes `{ra, s0}`.
+    return RVPushRegs >= 2;
   default:
     break;
   }

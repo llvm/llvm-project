@@ -40,7 +40,7 @@ hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false
 debugInstrRef:   false
-failsVerification: true
+failsVerification: false
 tracksDebugUserValues: true
 registers:       []
 liveins:
@@ -125,7 +125,7 @@ body:             |
     ; XQCCMP-ZILSD-LABEL: name: zilsd_dup_csr
     ; XQCCMP-ZILSD: liveins: $x10, $x11, $x1, $x18_x19
     ; XQCCMP-ZILSD-NEXT: {{  $}}
-    ; XQCCMP-ZILSD-NEXT: frame-setup QC_CM_PUSHFP 4, 16, implicit-def $x2, implicit-def $x8, implicit $x2, implicit $x1
+    ; XQCCMP-ZILSD-NEXT: frame-setup QC_CM_PUSH 4, 16, implicit-def $x2, implicit $x2, implicit $x1
     ; XQCCMP-ZILSD-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 32
     ; XQCCMP-ZILSD-NEXT: frame-setup CFI_INSTRUCTION offset $x1, -4
     ; XQCCMP-ZILSD-NEXT: frame-setup SD_RV32 killed $x8_x9, $x2, 8 :: (store (s64) into %stack.1)
@@ -134,6 +134,7 @@ body:             |
     ; XQCCMP-ZILSD-NEXT: frame-setup CFI_INSTRUCTION offset $x9, -20
     ; XQCCMP-ZILSD-NEXT: frame-setup CFI_INSTRUCTION offset $x18, -32
     ; XQCCMP-ZILSD-NEXT: frame-setup CFI_INSTRUCTION offset $x19, -28
+    ; XQCCMP-ZILSD-NEXT: $x8 = frame-setup ADDI $x2, 32
     ; XQCCMP-ZILSD-NEXT: frame-setup CFI_INSTRUCTION def_cfa $x8, 0
     ; XQCCMP-ZILSD-NEXT: renamable $x9 = COPY $x11
     ; XQCCMP-ZILSD-NEXT: renamable $x18 = COPY $x10
