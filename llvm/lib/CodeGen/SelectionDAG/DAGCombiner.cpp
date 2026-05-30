@@ -29503,16 +29503,40 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
     }
   }
 
-  // If the input vector is a concatenation, and the insert replaces
-  // one of the pieces, we can optimize into a single concat_vectors.
-  if (N0.getOpcode() == ISD::CONCAT_VECTORS && N0.hasOneUse() &&
-      N0.getOperand(0).getValueType() == N1.getValueType() &&
-      N0.getOperand(0).getValueType().isScalableVector() ==
-          N1.getValueType().isScalableVector()) {
-    unsigned Factor = N1.getValueType().getVectorMinNumElements();
-    SmallVector<SDValue, 8> Ops(N0->ops());
-    Ops[InsIdx / Factor] = N1;
-    return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT, Ops);
+  // If the input vector is a concatenation and the insert is wholly contained
+  // in one of its operands, push the insertion into that operand.
+  if (N0.getOpcode() == ISD::CONCAT_VECTORS && N0.hasOneUse()) {
+    EVT ConcatOpVT = N0.getOperand(0).getValueType();
+    EVT InsVT = N1.getValueType();
+    unsigned Factor = ConcatOpVT.getVectorMinNumElements();
+    unsigned ConcatOpIdx = InsIdx / Factor;
+    unsigned RelativeIdx = InsIdx - ConcatOpIdx * Factor;
+    if (ConcatOpIdx < N0.getNumOperands()) {
+      // If the insert replaces a whole concat operand, optimize into a single
+      // concat_vectors.
+      if (ConcatOpVT == InsVT &&
+          ConcatOpVT.isScalableVector() == InsVT.isScalableVector() &&
+          RelativeIdx == 0) {
+        SmallVector<SDValue, 8> Ops(N0->ops());
+        Ops[ConcatOpIdx] = N1;
+        return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT, Ops);
+      }
+
+      if (VT.isFixedLengthVector() && ConcatOpVT.isFixedLengthVector() &&
+          InsVT.isFixedLengthVector() &&
+          ConcatOpVT.getVectorElementType() == InsVT.getVectorElementType() &&
+          hasOperation(ISD::INSERT_SUBVECTOR, ConcatOpVT)) {
+        unsigned NumConcatOpElts = ConcatOpVT.getVectorNumElements();
+        unsigned NumInsElts = InsVT.getVectorNumElements();
+        if (RelativeIdx % NumInsElts == 0 &&
+            RelativeIdx + NumInsElts <= NumConcatOpElts) {
+          SmallVector<SDValue, 8> Ops(N0->ops());
+          Ops[ConcatOpIdx] = DAG.getInsertSubvector(SDLoc(N), Ops[ConcatOpIdx],
+                                                    N1, RelativeIdx);
+          return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT, Ops);
+        }
+      }
+    }
   }
 
   // Simplify source operands based on insertion.

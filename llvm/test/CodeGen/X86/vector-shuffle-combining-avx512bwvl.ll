@@ -319,26 +319,12 @@ define <32 x i16> @insert_concat_select(i1 %cond, <16 x i16> %a, <16 x i16> %b, 
 ; X86-NEXT:    testb $1, 8(%ebp)
 ; X86-NEXT:    jne .LBB16_1
 ; X86-NEXT:  # %bb.2:
-; X86-NEXT:    vmovdqa64 72(%ebp), %zmm0
+; X86-NEXT:    vmovaps 72(%ebp), %zmm0
 ; X86-NEXT:    jmp .LBB16_3
 ; X86-NEXT:  .LBB16_1:
-; X86-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X86-NEXT:    vmovd %xmm2, %eax
-; X86-NEXT:    movl $65536, %ecx # imm = 0x10000
-; X86-NEXT:    kmovd %ecx, %k1
-; X86-NEXT:    vpbroadcastw %eax, %zmm0 {%k1}
-; X86-NEXT:    vpextrw $1, %xmm2, %eax
-; X86-NEXT:    movl $131072, %ecx # imm = 0x20000
-; X86-NEXT:    kmovd %ecx, %k1
-; X86-NEXT:    vpbroadcastw %eax, %zmm0 {%k1}
-; X86-NEXT:    vpextrw $2, %xmm2, %eax
-; X86-NEXT:    movl $262144, %ecx # imm = 0x40000
-; X86-NEXT:    kmovd %ecx, %k1
-; X86-NEXT:    vpbroadcastw %eax, %zmm0 {%k1}
-; X86-NEXT:    vpextrw $3, %xmm2, %eax
-; X86-NEXT:    movl $524288, %ecx # imm = 0x80000
-; X86-NEXT:    kmovd %ecx, %k1
-; X86-NEXT:    vpbroadcastw %eax, %zmm0 {%k1}
+; X86-NEXT:    vblendps {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3]
+; X86-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; X86-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; X86-NEXT:  .LBB16_3:
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -351,25 +337,11 @@ define <32 x i16> @insert_concat_select(i1 %cond, <16 x i16> %a, <16 x i16> %b, 
 ; X64-NEXT:    testb $1, %dil
 ; X64-NEXT:    je .LBB16_2
 ; X64-NEXT:  # %bb.1:
-; X64-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm3
-; X64-NEXT:    vmovd %xmm2, %eax
-; X64-NEXT:    movl $65536, %ecx # imm = 0x10000
-; X64-NEXT:    kmovd %ecx, %k1
-; X64-NEXT:    vpbroadcastw %eax, %zmm3 {%k1}
-; X64-NEXT:    vpextrw $1, %xmm2, %eax
-; X64-NEXT:    movl $131072, %ecx # imm = 0x20000
-; X64-NEXT:    kmovd %ecx, %k1
-; X64-NEXT:    vpbroadcastw %eax, %zmm3 {%k1}
-; X64-NEXT:    vpextrw $2, %xmm2, %eax
-; X64-NEXT:    movl $262144, %ecx # imm = 0x40000
-; X64-NEXT:    kmovd %ecx, %k1
-; X64-NEXT:    vpbroadcastw %eax, %zmm3 {%k1}
-; X64-NEXT:    vpextrw $3, %xmm2, %eax
-; X64-NEXT:    movl $524288, %ecx # imm = 0x80000
-; X64-NEXT:    kmovd %ecx, %k1
-; X64-NEXT:    vpbroadcastw %eax, %zmm3 {%k1}
+; X64-NEXT:    vblendps {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3]
+; X64-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; X64-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm3
 ; X64-NEXT:  .LBB16_2:
-; X64-NEXT:    vmovdqa64 %zmm3, %zmm0
+; X64-NEXT:    vmovaps %zmm3, %zmm0
 ; X64-NEXT:    retq
   %wide = shufflevector <16 x i16> %a, <16 x i16> %b, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %ins = call <32 x i16> @llvm.vector.insert.v32i16.v4i16(<32 x i16> %wide, <4 x i16> %sub, i64 16)
