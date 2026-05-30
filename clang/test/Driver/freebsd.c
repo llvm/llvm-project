@@ -99,23 +99,41 @@
 // CHECK-LDFLAGS_HASH: --hash-style=both
 // CHECK-LDFLAGS_HASH: --enable-new-dtags
 //
-// Verify that we tell the assembler to target the right ISA and ABI.
+// Check that we do not pass --hash-style=gnu and --hash-style=both to linker
+// and provide correct path to the dynamic linker for MIPS platforms.
+// Also verify that we tell the assembler to target the right ISA and ABI.
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-unknown-freebsd10.0 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS %s
+// RUN: %clang -### %s 2>&1 \
+// RUN:     --target=mips-unknown-freebsd10.0 \
+// RUN:   | FileCheck --check-prefix=CHECK-MIPS_HASHSTYLE %s
 // CHECK-MIPS: ld{{.*}}" {{.*}} "-dynamic-linker" "{{.*}}/libexec/ld-elf.so.1"
+// CHECK-MIPS_HASHSTYLE-NOT: "--hash-style={{gnu|both}}"
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-unknown-freebsd10.0 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPSEL %s
+// RUN: %clang -### %s 2>&1 \
+// RUN:     --target=mipsel-unknown-freebsd10.0 \
+// RUN:   | FileCheck --check-prefix=CHECK-MIPSEL_HASHSTYLE %s
 // CHECK-MIPSEL: ld{{.*}}" {{.*}} "-dynamic-linker" "{{.*}}/libexec/ld-elf.so.1"
+// CHECK-MIPSEL_HASHSTYLE-NOT: "--hash-style={{gnu|both}}"
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-unknown-freebsd10.0 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64 %s
+// RUN: %clang -### %s 2>&1 \
+// RUN:     --target=mips64-unknown-freebsd10.0 \
+// RUN:   | FileCheck --check-prefix=CHECK-MIPS64_HASHSTYLE %s
 // CHECK-MIPS64:ld{{.*}}" {{.*}} "-dynamic-linker" "{{.*}}/libexec/ld-elf.so.1"
+// CHECK-MIPS64_HASHSTYLE-NOT: "--hash-style={{gnu|both}}"
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-unknown-freebsd10.0 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL %s
+// RUN: %clang -### %s 2>&1 \
+// RUN:     --target=mips64el-unknown-freebsd10.0 \
+// RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL_HASHSTYLE %s
 // CHECK-MIPS64EL: ld{{.*}}" {{.*}} "-dynamic-linker" "{{.*}}/libexec/ld-elf.so.1"
+// CHECK-MIPS64EL_HASHSTYLE-NOT: "--hash-style={{gnu|both}}"
 
 // RUN: %clang --target=x86_64-pc-freebsd -static %s \
 // RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -### 2>&1 \
