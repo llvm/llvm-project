@@ -184,26 +184,34 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     return true;
   }
 
-  auto *DRE = dyn_cast<DeclRefExpr>(E);
-  if (!DRE) {
+  ValueDecl *VD = nullptr;
+  Expr *StrippedExpr = E->IgnoreParenImpCasts();
+
+  if (auto *ME = dyn_cast<MemberExpr>(StrippedExpr)) {
+    VD = ME->getMemberDecl();
+  } else if (auto *DRE = dyn_cast<DeclRefExpr>(StrippedExpr)) {
+    VD = DRE->getDecl();
+  }
+
+  // If we couldn't find a valid declaration in either node type, throw the error
+  if (!VD) {
     Diag(E->getBeginLoc(),
          diag::err_count_attr_only_support_simple_decl_reference)
         << Kind << E->getSourceRange();
     return true;
   }
-
-  auto *CountDecl = DRE->getDecl();
-  FieldDecl *CountFD = dyn_cast<FieldDecl>(CountDecl);
-  if (auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl)) {
+  
+  FieldDecl *CountFD = dyn_cast<FieldDecl>(VD);
+  if (auto *IFD = dyn_cast<IndirectFieldDecl>(VD)) {
     CountFD = IFD->getAnonField();
   }
   if (!CountFD) {
     Diag(E->getBeginLoc(), diag::err_count_attr_must_be_in_structure)
-        << CountDecl << Kind << E->getSourceRange();
+        << VD << Kind << E->getSourceRange();
 
-    Diag(CountDecl->getBeginLoc(),
+    Diag(VD->getBeginLoc(),
          diag::note_flexible_array_counted_by_attr_field)
-        << CountDecl << CountDecl->getSourceRange();
+        << VD << VD->getSourceRange();
     return true;
   }
 

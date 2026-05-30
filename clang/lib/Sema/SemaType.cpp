@@ -9968,13 +9968,22 @@ static void
 BuildTypeCoupledDecls(Expr *E,
                       llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls) {
   ValueDecl *CountDecl = nullptr;
-  
+
   if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
     CountDecl = DRE->getDecl();
   } else if (auto *ME = dyn_cast<MemberExpr>(E)) {
+    Expr *Base = ME->getBase()->IgnoreParenImpCasts();
+    
+    // Drill down through any nested anonymous structs
+    while (auto *InnerME = dyn_cast<MemberExpr>(Base)) {
+      Base = InnerME->getBase()->IgnoreParenImpCasts();
+    }
+    
+    assert(isa<CThisExpr>(Base) && 
+           "Expected CThisExpr base for MemberExpr count");
     CountDecl = ME->getMemberDecl();
   } else {
-    llvm_unreachable("CountExpr must be a DeclRefExpr or a MemberExpr");
+    llvm_unreachable("CountExpr must be a DeclRefExpr or a CThis-based MemberExpr");
   }
 
   Decls.push_back(TypeCoupledDeclRefInfo(CountDecl, /*IsDref=*/false));

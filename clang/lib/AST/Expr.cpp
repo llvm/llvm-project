@@ -3747,6 +3747,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case NoInitExprClass:
   case CXXBoolLiteralExprClass:
   case CXXNullPtrLiteralExprClass:
+  case CThisExprClass:
   case CXXThisExprClass:
   case CXXScalarValueInitExprClass:
   case TypeTraitExprClass:
@@ -4342,6 +4343,7 @@ bool Expr::isSameComparisonOperand(const Expr* E1, const Expr* E2) {
   switch (E1->getStmtClass()) {
     default:
       return false;
+    case CThisExprClass:
     case CXXThisExprClass:
       return true;
     case DeclRefExprClass: {

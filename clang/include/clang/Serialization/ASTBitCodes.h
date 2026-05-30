@@ -1911,6 +1911,7 @@ enum StmtCode {
   EXPR_CXX_TYPEID_EXPR,      // CXXTypeidExpr (of expr).
   EXPR_CXX_TYPEID_TYPE,      // CXXTypeidExpr (of type).
   EXPR_CXX_THIS,             // CXXThisExpr
+  EXPR_C_THIS,               // CThisExpr
   EXPR_CXX_THROW,            // CXXThrowExpr
   EXPR_CXX_DEFAULT_ARG,      // CXXDefaultArgExpr
   EXPR_CXX_DEFAULT_INIT,     // CXXDefaultInitExpr

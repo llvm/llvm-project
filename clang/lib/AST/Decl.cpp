@@ -4852,12 +4852,20 @@ const FieldDecl *FieldDecl::findCountedByField() const {
   if (!CAT)
     return nullptr;
 
-  const auto *CountDRE = cast<DeclRefExpr>(CAT->getCountExpr());
-  const auto *CountDecl = CountDRE->getDecl();
-  if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl))
-    CountDecl = IFD->getAnonField();
+  const Expr *CountExpr = CAT->getCountExpr()->IgnoreParenImpCasts();
+  const ValueDecl *CountDecl = nullptr;
 
-  return dyn_cast<FieldDecl>(CountDecl);
+  if (const auto *ME = dyn_cast<MemberExpr>(CountExpr)) {
+    CountDecl = ME->getMemberDecl();
+  } else if (const auto *DRE = dyn_cast<DeclRefExpr>(CountExpr)) {
+    CountDecl = DRE->getDecl();
+  }
+
+  if (const auto *IFD = dyn_cast_or_null<IndirectFieldDecl>(CountDecl)) {
+    CountDecl = IFD->getAnonField();
+  }
+
+  return dyn_cast_or_null<FieldDecl>(CountDecl);
 }
 
 //===----------------------------------------------------------------------===//

@@ -428,6 +428,7 @@ private:
   til::SExpr *translateDeclRefExpr(const DeclRefExpr *DRE,
                                    CallingContext *Ctx) ;
   til::SExpr *translateCXXThisExpr(const CXXThisExpr *TE, CallingContext *Ctx);
+  til::SExpr *translateCThisExpr(const CThisExpr *CE, CallingContext *Ctx);
   til::SExpr *translateMemberExpr(const MemberExpr *ME, CallingContext *Ctx);
   til::SExpr *translateObjCIVarRefExpr(const ObjCIvarRefExpr *IVRE,
                                        CallingContext *Ctx);

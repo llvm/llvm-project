@@ -1953,6 +1953,7 @@ void ASTStmtWriter::VisitCXXThisExpr(CXXThisExpr *E) {
 
 void ASTStmtWriter::VisitCThisExpr(CThisExpr *E) {
   VisitExpr(E);
+  Code = serialization::EXPR_C_THIS;
 }
 
 void ASTStmtWriter::VisitCXXThrowExpr(CXXThrowExpr *E) {

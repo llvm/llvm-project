@@ -28,9 +28,9 @@ struct on_pointer_anon_count {
 // CHECK-LABEL: struct on_pointer_anon_count definition
 // CHECK-NEXT:  |-FieldDecl {{.*}} buf 'struct size_known * __sized_by_or_null(count)':'struct size_known *'
 // CHECK-NEXT:  |-RecordDecl {{.*}} struct definition
-// CHECK-NEXT:  | `-FieldDecl {{.*}} count 'int'
-// CHECK-NEXT:  |-FieldDecl {{.*}} implicit 'struct on_pointer_anon_count::(anonymous at {{.*}})'
-// CHECK-NEXT:  `-IndirectFieldDecl {{.*}} implicit referenced count 'int'
+// CHECK-NEXT:  | `-FieldDecl {{.*}} referenced count 'int'
+// CHECK-NEXT:  |-FieldDecl {{.*}} implicit referenced 'struct on_pointer_anon_count::(anonymous at {{.*}})'
+// CHECK-NEXT:  `-IndirectFieldDecl {{.*}} implicit count 'int'
 // CHECK-NEXT:    |-Field {{.*}} field_index 1 'struct on_pointer_anon_count::(anonymous at {{.*}})'
 // CHECK-NEXT:    `-Field {{.*}} 'count' 'int'
 

@@ -535,6 +535,10 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     K = CXCursor_CXXThisExpr;
     break;
 
+  case Stmt::CThisExprClass:
+    K = CXCursor_UnexposedExpr;
+    break;
+
   case Stmt::CXXThrowExprClass:
     K = CXCursor_CXXThrowExpr;
     break;

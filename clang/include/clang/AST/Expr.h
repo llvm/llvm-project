@@ -1510,8 +1510,34 @@ public:
   }
 };
 
+/// \brief Represents an implicit reference to the enclosing object inside an
+/// attribute argument that names a sibling field.
+///
+/// In C, an attribute on a struct member can name another member of the
+/// same record (e.g., \c __counted_by(size) or \c GUARDED_BY(mu_)). C has
+/// no \c this keyword, so unqualified field references in this context
+/// are modelled as a \c MemberExpr whose base is a \c CThisExpr of pointer
+/// type to the enclosing record. This serves as the C-side equivalent of
+/// \c CXXThisExpr for the purposes of attribute argument resolution and
+/// Thread Safety Analysis.
+///
+/// Example:
+/// \code
+/// struct Buffer {
+///   size_t size;
+///   int *data __attribute__((counted_by(size)));
+/// };
+/// \endcode
+///
+/// Here, the identifier \c size inside the attribute resolves to a
+/// \c MemberExpr with a \c CThisExpr of type \c "struct Buffer *" as
+/// its implicit base.
+
 class CThisExpr : public Expr {
   SourceLocation Loc;
+
+  friend class ASTStmtReader;
+  friend class ASTReader;
 
   CThisExpr(SourceLocation L, QualType Ty)
       : Expr(CThisExprClass, Ty, VK_PRValue, OK_Ordinary), Loc(L) {

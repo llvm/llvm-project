@@ -4986,6 +4986,7 @@ recurse:
   case Expr::ArrayInitLoopExprClass:
   case Expr::ArrayInitIndexExprClass:
   case Expr::NoInitExprClass:
+  case Expr::CThisExprClass:
   case Expr::ParenListExprClass:
   case Expr::MSPropertyRefExprClass:
   case Expr::MSPropertySubscriptExprClass:

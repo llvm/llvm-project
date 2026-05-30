@@ -2851,9 +2851,32 @@ ExprResult Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // LookupName handles a name lookup from within anonymous struct.
     if (LookupName(R, S)) {
       if (auto *VD = dyn_cast<ValueDecl>(R.getFoundDecl())) {
+        // In C, fields inside bounds safety attributes (like __counted_by)
+        // are resolved as standalone identifiers. However, representing them
+        // as freestanding DeclRefExprs breaks downstream analyses (like Thread Safety).
+        // Instead, we synthesize a phantom CThisExpr and immediately build a 
+        // legally valid MemberExpr to represent the field access.
+        if (isa<FieldDecl>(VD) || isa<IndirectFieldDecl>(VD)) {
+          RecordDecl *RD = nullptr;
+          if (auto *FD = dyn_cast<FieldDecl>(VD))
+            RD = FD->getParent();
+          else if (auto *IFD = dyn_cast<IndirectFieldDecl>(VD))
+            RD = cast<FieldDecl>(IFD->chain().front())->getParent();
+
+          if (RD) {
+            QualType RecordTy = Context.getTypeDeclType(cast<TypeDecl>(RD));
+            QualType ThisPtrTy = Context.getPointerType(RecordTy);
+            Expr *Base = CThisExpr::Create(Context, NameLoc, ThisPtrTy);
+            
+            return BuildMemberReferenceExpr(Base, ThisPtrTy, NameLoc,
+                                            /*IsArrow=*/true, SS,
+                                            SourceLocation(), nullptr, R,
+                                            nullptr, nullptr);
+          }
+        }
+        
+        // Fallback for non-fields.
         QualType type = VD->getType().getNonReferenceType();
-        // This will eventually be translated into MemberExpr upon
-        // the use of instantiated struct fields.
         return BuildDeclRefExpr(VD, type, VK_LValue, NameLoc);
       }
     }

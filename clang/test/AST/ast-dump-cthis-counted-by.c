@@ -8,4 +8,4 @@ struct Packet {
 
 // CHECK: RecordDecl {{.*}} struct Packet definition
 // CHECK: FieldDecl {{.*}} size 'int'
-// CHECK: FieldDecl {{.*}} data 'int * __counted_by(this->size)':'int *'
+// CHECK: FieldDecl {{.*}} data 'int * __counted_by(size)':'int *'
