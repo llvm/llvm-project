@@ -21,6 +21,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/VASPrintf.h"
 #include "llvm/ADT/StringExtras.h"
@@ -264,32 +265,38 @@ IOObject::WaitableHandle NativeFileBase::GetWaitableHandle() {
 
 FILE *NativeFileBase::GetStream() {
   ValueGuard stream_guard = StreamIsValid();
-  if (!stream_guard) {
-    if (ValueGuard descriptor_guard = DescriptorIsValid()) {
-      auto mode = GetStreamOpenModeFromOptions(m_options);
-      if (!mode)
-        llvm::consumeError(mode.takeError());
-      else {
-        if (!m_own_descriptor) {
-          // We must duplicate the file descriptor if we don't own it because
-          // when you call fdopen, the stream will own the fd.
-          m_descriptor = Dup(m_descriptor);
-          m_own_descriptor = true;
-        }
+  if (stream_guard)
+    return m_stream;
 
-        m_stream = llvm::sys::RetryAfterSignal(nullptr, ::fdopen, m_descriptor,
-                                               mode.get());
+  ValueGuard descriptor_guard = DescriptorIsValid();
+  if (!descriptor_guard)
+    return m_stream;
 
-        // If we got a stream, then we own the stream and should no longer own
-        // the descriptor because fclose() will close it for us
-
-        if (m_stream) {
-          m_own_stream = true;
-          m_own_descriptor = false;
-        }
-      }
-    }
+  auto mode_or_err = GetStreamOpenModeFromOptions(m_options);
+  if (!mode_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Object), mode_or_err.takeError(),
+                   "Failed to get stream options: {0}");
+    return m_stream;
   }
+  const char *mode = *mode_or_err;
+
+  if (!m_own_descriptor) {
+    // We must duplicate the file descriptor if we don't own it because
+    // when you call fdopen, the stream will own the fd.
+    m_descriptor = Dup(m_descriptor);
+    m_own_descriptor = true;
+  }
+
+  m_stream = llvm::sys::RetryAfterSignal(nullptr, ::fdopen, m_descriptor, mode);
+
+  // If we got a stream, then we own the stream and should no longer own
+  // the descriptor because fclose() will close it for us.
+  if (m_stream) {
+    m_own_stream = true;
+    m_own_descriptor = false;
+    OnStreamOpened();
+  }
+
   return m_stream;
 }
 

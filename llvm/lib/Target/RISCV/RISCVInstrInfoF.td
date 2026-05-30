@@ -199,7 +199,7 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class FPLoad_r<bits<3> funct3, string opcodestr, DAGOperand rty,
                SchedWrite sw>
     : RVInstI<funct3, OPC_LOAD_FP, (outs rty:$rd),
-              (ins GPRMem:$rs1, simm12_lo:$imm12),
+              (ins BasePtr:$rs1, simm12_lo:$imm12),
               opcodestr, "$rd, ${imm12}(${rs1})">,
       Sched<[sw, ReadFMemBase]>;
 
@@ -207,7 +207,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class FPStore_r<bits<3> funct3, string opcodestr, DAGOperand rty,
                 SchedWrite sw>
     : RVInstS<funct3, OPC_STORE_FP, (outs),
-              (ins rty:$rs2, GPRMem:$rs1, simm12_lo:$imm12),
+              (ins rty:$rs2, BasePtr:$rs1, simm12_lo:$imm12),
               opcodestr, "$rs2, ${imm12}(${rs1})">,
       Sched<[sw, ReadFStoreData, ReadFMemBase]>;
 
@@ -475,8 +475,8 @@ def : InstAlias<"fsflagsi $imm",      (CSRRWI      X0, SysRegFFLAGS.Encoding, ui
 } // Predicates = [HasStdExtFOrZfinx]
 
 let Predicates = [HasStdExtF] in {
-def : InstAlias<"flw $rd, (${rs1})",  (FLW FPR32:$rd,  GPR:$rs1, 0), 0>;
-def : InstAlias<"fsw $rs2, (${rs1})", (FSW FPR32:$rs2, GPR:$rs1, 0), 0>;
+def : InstAlias<"flw $rd, (${rs1})",  (FLW FPR32:$rd,  BasePtr:$rs1, 0), 0>;
+def : InstAlias<"fsw $rs2, (${rs1})", (FSW FPR32:$rs2, BasePtr:$rs1, 0), 0>;
 
 def : InstAlias<"fmv.s $rd, $rs",  (FSGNJ_S  FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
 def : InstAlias<"fabs.s $rd, $rs", (FSGNJX_S FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
