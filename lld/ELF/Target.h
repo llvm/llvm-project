@@ -42,7 +42,6 @@ public:
   virtual void writeGotPlt(uint8_t *buf, const Symbol &s) const {}
   virtual void writeIgotPlt(uint8_t *buf, const Symbol &s) const {}
   virtual int64_t getImplicitAddend(const uint8_t *buf, RelType type) const;
-  virtual int getTlsGdRelaxSkip(RelType type) const { return 1; }
 
   // If lazy binding is supported, the first entry of the PLT has code
   // to call the dynamic linker to resolve PLT entries the first time
@@ -98,6 +97,12 @@ public:
   template <class ELFT> void scanSection1(InputSectionBase &);
   template <class ELFT, class RelTy>
   void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
+
+  // Called after parallel relocation scanning is complete but before
+  // postScanRelocations processes symbol flags. Targets may override this to
+  // perform single-threaded fixups that cannot run during parallel scanning
+  // (e.g. symbol table modifications).
+  virtual void finalizeRelocScan() {}
 
   virtual void relocate(uint8_t *loc, const Relocation &rel,
                         uint64_t val) const = 0;

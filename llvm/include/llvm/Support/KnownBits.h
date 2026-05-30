@@ -38,7 +38,7 @@ public:
   KnownBits() = default;
 
   /// Create a known bits object of BitWidth bits initialized to unknown.
-  KnownBits(unsigned BitWidth) : Zero(BitWidth, 0), One(BitWidth, 0) {}
+  explicit KnownBits(unsigned BitWidth) : Zero(BitWidth, 0), One(BitWidth, 0) {}
 
   /// Get the bit width of this value.
   unsigned getBitWidth() const {
@@ -51,9 +51,7 @@ public:
   bool hasConflict() const { return Zero.intersects(One); }
 
   /// Returns true if we know the value of all bits.
-  bool isConstant() const {
-    return Zero.popcount() + One.popcount() == getBitWidth();
-  }
+  bool isConstant() const { return Zero.isInverseOf(One); }
 
   /// Returns the value when all bits have a known value. This just returns One
   /// with a protective assertion.
@@ -469,6 +467,14 @@ public:
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
   LLVM_ABI static KnownBits ashr(const KnownBits &LHS, const KnownBits &RHS,
                                  bool ShAmtNonZero = false, bool Exact = false);
+
+  /// Compute known bits for fshl(LHS, RHS, Amt).
+  LLVM_ABI static KnownBits fshl(const KnownBits &LHS, const KnownBits &RHS,
+                                 const APInt &Amt);
+
+  /// Compute known bits for fshr(LHS, RHS, Amt).
+  LLVM_ABI static KnownBits fshr(const KnownBits &LHS, const KnownBits &RHS,
+                                 const APInt &Amt);
 
   /// Compute known bits for clmul(LHS, RHS).
   LLVM_ABI static KnownBits clmul(const KnownBits &LHS, const KnownBits &RHS);

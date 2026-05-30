@@ -815,21 +815,7 @@ private:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_layouts(_SplitBuffer& __sb) {
-    auto __vector_begin    = __begin_;
-    auto __vector_sentinel = __end_;
-    auto __vector_cap      = __cap_;
-
-    auto __sb_begin    = __sb.begin();
-    auto __sb_sentinel = __sb.__raw_sentinel();
-    auto __sb_cap      = __sb.__raw_capacity();
-
-    // TODO: replace with __set_valid_range and __set_capacity when vector supports it.
-    __begin_ = __sb_begin;
-    __end_   = __sb_sentinel;
-    __cap_   = __sb_cap;
-
-    __sb.__set_valid_range(__vector_begin, __vector_sentinel);
-    __sb.__set_capacity(__vector_cap);
+    __sb.__swap_layouts(__begin_, __end_, __cap_);
   }
 };
 
@@ -1044,10 +1030,10 @@ vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, _Sentinel __last,
   if (__new_size <= capacity()) {
     auto const __size = size();
     if (__new_size > __size) {
-      auto __mid = std::__copy_n<_AlgPolicy>(std::move(__first), __size, this->__begin_).first;
+      auto __mid = std::__copy_n<_AlgPolicy>(std::move(__first), __size, this->__begin_).__in_;
       __construct_at_end(std::move(__mid), std::move(__last), __new_size - __size);
     } else {
-      pointer __m = std::__copy(std::move(__first), __last, this->__begin_).second;
+      pointer __m = std::__copy(std::move(__first), __last, this->__begin_).__out_;
       this->__destruct_at_end(__m);
     }
   } else {

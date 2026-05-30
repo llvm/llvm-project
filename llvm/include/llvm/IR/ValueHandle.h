@@ -29,6 +29,7 @@ namespace llvm {
 /// below for details.
 class ValueHandleBase {
   friend class Value;
+  template <typename ValueTy> friend class PoisoningVH;
 
 protected:
   /// This indicates what sub class the handle actually is.
@@ -44,6 +45,15 @@ protected:
       : PrevPair(nullptr, Kind), Val(RHS.getValPtr()) {
     if (isValid(getValPtr()))
       AddToExistingUseList(RHS.getPrevPtr());
+  }
+
+  ValueHandleBase(HandleBaseKind Kind, ValueHandleBase &&RHS)
+      : PrevPair(nullptr, Kind), Val(RHS.getValPtr()) {
+    if (isValid(getValPtr())) {
+      AddToExistingUseList(RHS.getPrevPtr());
+      RHS.RemoveFromUseList();
+      RHS.clearValPtr();
+    }
   }
 
 private:
@@ -86,6 +96,26 @@ public:
     setValPtr(RHS.getValPtr());
     if (isValid(getValPtr()))
       AddToExistingUseList(RHS.getPrevPtr());
+    return getValPtr();
+  }
+
+  Value *operator=(ValueHandleBase &&RHS) {
+    if (getValPtr() == RHS.getValPtr()) {
+      if (this != &RHS) {
+        if (isValid(RHS.getValPtr()))
+          RHS.RemoveFromUseList();
+        RHS.clearValPtr();
+      }
+      return getValPtr();
+    }
+    if (isValid(getValPtr()))
+      RemoveFromUseList();
+    setValPtr(RHS.getValPtr());
+    if (isValid(getValPtr())) {
+      AddToExistingUseList(RHS.getPrevPtr());
+      RHS.RemoveFromUseList();
+      RHS.clearValPtr();
+    }
     return getValPtr();
   }
 
@@ -285,10 +315,12 @@ public:
   AssertingVH() : ValueHandleBase(Assert) {}
   AssertingVH(ValueTy *P) : ValueHandleBase(Assert, GetAsValue(P)) {}
   AssertingVH(const AssertingVH &RHS) : ValueHandleBase(Assert, RHS) {}
+  AssertingVH(AssertingVH &&RHS) : ValueHandleBase(Assert, std::move(RHS)) {}
 #else
   AssertingVH() : ThePtr(nullptr) {}
   AssertingVH(ValueTy *P) : ThePtr(GetAsValue(P)) {}
   AssertingVH(const AssertingVH &) = default;
+  AssertingVH(AssertingVH &&RHS) : ThePtr(std::exchange(RHS.ThePtr, nullptr)) {}
 #endif
 
   operator ValueTy*() const {
@@ -303,6 +335,17 @@ public:
     setValPtr(RHS.getValPtr());
     return getValPtr();
   }
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  ValueTy *operator=(AssertingVH<ValueTy> &&RHS) {
+    ValueHandleBase::operator=(std::move(RHS));
+    return getValPtr();
+  }
+#else
+  ValueTy *operator=(AssertingVH<ValueTy> &&RHS) {
+    ThePtr = std::exchange(RHS.ThePtr, nullptr);
+    return getValPtr();
+  }
+#endif
 
   ValueTy *operator->() const { return getValPtr(); }
   ValueTy &operator*() const { return *getValPtr(); }
@@ -498,8 +541,15 @@ public:
   PoisoningVH() = default;
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   PoisoningVH(ValueTy *P) : CallbackVH(GetAsValue(P)) {}
-  PoisoningVH(const PoisoningVH &RHS)
-      : CallbackVH(RHS), Poisoned(RHS.Poisoned) {}
+  // A poisoned handle is detached from its use list but keeps its raw value
+  // pointer, so its use-list pointers are stale; a copy must not relink through
+  // them.
+  PoisoningVH(const PoisoningVH &RHS) : CallbackVH(), Poisoned(RHS.Poisoned) {
+    if (Poisoned)
+      ValueHandleBase::setValPtr(RHS.getRawValPtr());
+    else
+      setRawValPtr(RHS.getRawValPtr());
+  }
 
   ~PoisoningVH() {
     if (Poisoned)
@@ -509,7 +559,14 @@ public:
   PoisoningVH &operator=(const PoisoningVH &RHS) {
     if (Poisoned)
       clearValPtr();
-    CallbackVH::operator=(RHS);
+    if (RHS.Poisoned) {
+      // Detach *this and copy only the raw pointer; see the copy constructor.
+      if (isValid(getRawValPtr()))
+        RemoveFromUseList();
+      ValueHandleBase::setValPtr(RHS.getRawValPtr());
+    } else {
+      CallbackVH::operator=(RHS);
+    }
     Poisoned = RHS.Poisoned;
     return *this;
   }

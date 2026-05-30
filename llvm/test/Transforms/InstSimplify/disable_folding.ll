@@ -20,7 +20,7 @@ define float @test_fmax_ftz_nan_xorsign_abs_f() {
 ; Check that -disable-fp-call-folding triggers for LLVM instrincis, not just NVPTX target-specific ones.
 define float @test_llvm_sin() {
 ; FOLDING_ENABLED-LABEL: define float @test_llvm_sin() {
-; FOLDING_ENABLED-NEXT:    ret float 0x3FDEAEE880000000
+; FOLDING_ENABLED-NEXT:    ret float f0x3EF57744
 ;
 ; FOLDING_DISABLED-LABEL: define float @test_llvm_sin() {
 ; FOLDING_DISABLED-NEXT:    [[RES:%.*]] = call float @llvm.sin.f32(float 5.000000e-01)

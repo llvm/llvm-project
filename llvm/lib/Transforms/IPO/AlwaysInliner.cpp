@@ -53,8 +53,9 @@ bool AlwaysInlineImpl(
     BasicBlock *Block = CB.getParent();
 
     InlineFunctionInfo IFI(GetAssumptionCache, &PSI);
-    InlineResult Res = InlineFunction(CB, IFI, /*MergeAttributes=*/true,
-                                      &GetAAR(Callee), InsertLifetime);
+    InlineResult Res = InlineFunction(
+        CB, IFI, /*MergeAttributes=*/true, &GetAAR(Callee), InsertLifetime,
+        /*TrackInlineHistory=*/NewCallSites != nullptr);
     if (!Res.isSuccess()) {
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc, Block)
@@ -140,8 +141,7 @@ bool AlwaysInlineImpl(
         continue;
 
       // Detect recursion.
-      if (Callee == F ||
-          inlineHistoryIncludes(Callee, InlineHistoryID, InlineHistory)) {
+      if (Callee == F) {
         ORE.emit([&]() {
           return OptimizationRemarkMissed("inline", "NotInlined",
                                           CB->getDebugLoc(), CB->getParent())

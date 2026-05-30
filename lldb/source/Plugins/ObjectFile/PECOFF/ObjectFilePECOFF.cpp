@@ -165,7 +165,7 @@ static UUID GetCoffUUID(llvm::object::COFFObjectFile &coff_obj) {
     auto raw_data = coff_obj.getData();
     LLDB_SCOPED_TIMERF(
         "Calculating module crc32 %s with size %" PRIu64 " KiB",
-        FileSpec(coff_obj.getFileName()).GetFilename().AsCString(),
+        FileSpec(coff_obj.getFileName()).GetFilename().AsCString(""),
         static_cast<lldb::offset_t>(raw_data.size()) / 1024);
     gnu_debuglink_crc = llvm::crc32(0, llvm::arrayRefFromStringRef(raw_data));
   }
@@ -256,8 +256,7 @@ ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(
 
 ModuleSpecList ObjectFilePECOFF::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t length) {
+    lldb::offset_t file_offset, lldb::offset_t length) {
   if (!extractor_sp || !extractor_sp->HasData() ||
       !ObjectFilePECOFF::MagicBytesMatch(extractor_sp))
     return {};
@@ -996,14 +995,17 @@ SectionType ObjectFilePECOFF::GetSectionType(llvm::StringRef sect_name,
 
   SectionType section_type =
       llvm::StringSwitch<SectionType>(sect_name)
+          // PE/COFF image-file section names are limited to 8 characters,
+          // so the linker truncates the longer source names. Match both.
+          .Cases({".eh_frame", ".eh_fram"}, eSectionTypeEHFrame)
+          .Cases({".gosymtab", ".gosymta"}, eSectionTypeGoSymtab)
+          .Cases({".lldbsummaries", ".lldbsum"},
+                 lldb::eSectionTypeLLDBTypeSummaries)
+          .Cases({".lldbformatters", ".lldbfor"},
+                 lldb::eSectionTypeLLDBFormatters)
           .Case(".debug", eSectionTypeDebug)
           .Case(".stabstr", eSectionTypeDataCString)
           .Case(".reloc", eSectionTypeOther)
-          // .eh_frame can be truncated to 8 chars.
-          .Cases({".eh_frame", ".eh_fram"}, eSectionTypeEHFrame)
-          .Case(".gosymtab", eSectionTypeGoSymtab)
-          .Case(".lldbsummaries", lldb::eSectionTypeLLDBTypeSummaries)
-          .Case(".lldbformatters", lldb::eSectionTypeLLDBFormatters)
           .Case("swiftast", eSectionTypeSwiftModules)
           .Default(eSectionTypeInvalid);
   if (section_type != eSectionTypeInvalid)

@@ -118,6 +118,10 @@ bool checkDebugInfoOption(const llvm::opt::Arg *A,
                           const llvm::opt::ArgList &Args, const Driver &D,
                           const ToolChain &TC);
 
+void addDebugInfoForProfilingArgs(const Driver &D, const ToolChain &TC,
+                                  const llvm::opt::ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs);
+
 void AddAssemblerKPIC(const ToolChain &ToolChain,
                       const llvm::opt::ArgList &Args,
                       llvm::opt::ArgStringList &CmdArgs);
@@ -279,7 +283,8 @@ void renderGlobalISelOptions(const Driver &D, const llvm::opt::ArgList &Args,
                              const llvm::Triple &Triple);
 
 void renderCommonIntegerOverflowOptions(const llvm::opt::ArgList &Args,
-                                        llvm::opt::ArgStringList &CmdArgs);
+                                        llvm::opt::ArgStringList &CmdArgs,
+                                        bool IsMSVCCompat);
 
 bool shouldEnableVectorizerAtOLevel(const llvm::opt::ArgList &Args,
                                     bool isSlpVec);

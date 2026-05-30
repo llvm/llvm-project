@@ -17,28 +17,6 @@
 
 namespace llvm::omp::target::plugin {
 
-bool KernelPropertiesTy::reuseGroupParams(const int32_t NumTeamsIn,
-                                          const int32_t ThreadLimitIn,
-                                          uint32_t *GroupSizesOut,
-                                          L0LaunchEnvTy &KEnv) const {
-  if (NumTeamsIn != NumTeams || ThreadLimitIn != ThreadLimit)
-    return false;
-  // Found matching input parameters.
-  std::copy_n(GroupSizes, 3, GroupSizesOut);
-  KEnv.GroupCounts = GroupCounts;
-  return true;
-}
-
-void KernelPropertiesTy::cacheGroupParams(const int32_t NumTeamsIn,
-                                          const int32_t ThreadLimitIn,
-                                          const uint32_t *GroupSizesIn,
-                                          L0LaunchEnvTy &KEnv) {
-  NumTeams = NumTeamsIn;
-  ThreadLimit = ThreadLimitIn;
-  std::copy_n(GroupSizesIn, 3, GroupSizes);
-  GroupCounts = KEnv.GroupCounts;
-}
-
 Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
   const auto &l0Device = L0DeviceTy::makeL0Device(Program.getDevice());
   auto &KernelPR = getProperties();
@@ -54,6 +32,7 @@ Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
   CALL_ZE_RET_ERROR(zeKernelGetProperties, zeKernel, &KP);
   KernelPR.SIMDWidth = KP.maxSubgroupSize;
   KernelPR.Width = KP.maxSubgroupSize;
+  KernelPR.NumKernelArgs = KP.numKernelArgs;
 
   if (KP.pNext)
     KernelPR.Width = KPrefGRPSize.preferredMultiple;
@@ -62,6 +41,17 @@ Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
     KernelPR.Width = (std::max)(KernelPR.Width, 2 * KernelPR.SIMDWidth);
   }
   KernelPR.MaxThreadGroupSize = KP.maxSubgroupSize * KP.maxNumSubgroups;
+
+  // Query and cache argument sizes if extension is available.
+  auto &Context = l0Device.getL0Context();
+  if (KernelPR.NumKernelArgs > 0 && Context.zexKernelGetArgumentSize) {
+    KernelPR.ArgSizes = std::make_unique<uint32_t[]>(KernelPR.NumKernelArgs);
+    for (uint32_t I = 0; I < KernelPR.NumKernelArgs; I++) {
+      CALL_ZE_RET_ERROR(Context.zexKernelGetArgumentSize, zeKernel, I,
+                        &KernelPR.ArgSizes[I]);
+    }
+  }
+
   return Plugin::success();
 }
 
@@ -69,6 +59,10 @@ Error L0KernelTy::buildKernel(L0ProgramTy &Program) {
   const auto *KernelName = getName();
 
   auto Module = Program.findModuleFromKernelName(KernelName);
+  if (!Module)
+    return Plugin::error(ErrorCode::NOT_FOUND,
+                         "kernel '%s' not found in the program", KernelName);
+
   ze_kernel_desc_t KernelDesc = {ZE_STRUCTURE_TYPE_KERNEL_DESC, nullptr, 0,
                                  KernelName};
   CALL_ZE_RET_ERROR(zeKernelCreate, Module, &KernelDesc, &zeKernel);
@@ -89,178 +83,21 @@ Error L0KernelTy::initImpl(GenericDeviceTy &GenericDevice,
   return Plugin::success();
 }
 
-void L0KernelTy::decideKernelGroupArguments(L0DeviceTy &Device,
-                                            uint32_t NumTeams,
-                                            uint32_t ThreadLimit,
-                                            uint32_t *GroupSizes,
-                                            L0LaunchEnvTy &KEnv) const {
-
-  const KernelPropertiesTy &KernelPR = getProperties();
-
-  const auto DeviceId = Device.getDeviceId();
-  bool MaxGroupSizeForced = false;
-  bool MaxGroupCountForced = false;
-  uint32_t MaxGroupSize = Device.getMaxGroupSize();
-  const auto &Option = Device.getPlugin().getOptions();
-  const auto OptSubscRate = Option.SubscriptionRate;
-  auto &GroupCounts = KEnv.GroupCounts;
-
-  uint32_t SIMDWidth = KernelPR.SIMDWidth;
-  uint32_t KernelWidth = KernelPR.Width;
-  uint32_t KernelMaxThreadGroupSize = KernelPR.MaxThreadGroupSize;
-
-  if (KernelMaxThreadGroupSize < MaxGroupSize) {
-    MaxGroupSize = KernelMaxThreadGroupSize;
-    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-         "Capping maximum team size to %" PRIu32
-         " due to kernel constraints.\n",
-         MaxGroupSize);
-  }
-
-  if (ThreadLimit > 0) {
-    MaxGroupSizeForced = true;
-    MaxGroupSize = ThreadLimit;
-  }
-
-  uint32_t MaxGroupCount = 0;
-  if (NumTeams > 0) {
-    MaxGroupCount = NumTeams;
-    MaxGroupCountForced = true;
-  }
-
-  if (MaxGroupCountForced) {
-    // If number of teams is specified by the user, then use KernelWidth.
-    // WIs per WG by default, so that it matches
-    // decideLoopKernelGroupArguments() behavior.
-    if (!MaxGroupSizeForced) {
-      MaxGroupSize = KernelWidth;
-    }
-  } else {
-    const uint32_t NumSubslices = Device.getNumSubslices();
-    uint32_t NumThreadsPerSubslice = Device.getNumThreadsPerSubslice();
-    if (KEnv.HalfNumThreads)
-      NumThreadsPerSubslice /= 2;
-
-    MaxGroupCount = NumSubslices * NumThreadsPerSubslice;
-    if (MaxGroupSizeForced) {
-      // Set group size for the HW capacity.
-      uint32_t NumThreadsPerGroup = (MaxGroupSize + SIMDWidth - 1) / SIMDWidth;
-      uint32_t NumGroupsPerSubslice =
-          (NumThreadsPerSubslice + NumThreadsPerGroup - 1) / NumThreadsPerGroup;
-      MaxGroupCount = NumGroupsPerSubslice * NumSubslices;
-    } else {
-      assert(!MaxGroupSizeForced && !MaxGroupCountForced);
-      assert((MaxGroupSize <= KernelWidth || MaxGroupSize % KernelWidth == 0) &&
-             "Invalid maxGroupSize");
-      // Maximize group size.
-      while (MaxGroupSize >= KernelWidth) {
-        uint32_t NumThreadsPerGroup =
-            (MaxGroupSize + SIMDWidth - 1) / SIMDWidth;
-
-        if (NumThreadsPerSubslice % NumThreadsPerGroup == 0) {
-          uint32_t NumGroupsPerSubslice =
-              NumThreadsPerSubslice / NumThreadsPerGroup;
-          MaxGroupCount = NumGroupsPerSubslice * NumSubslices;
-          break;
-        }
-        MaxGroupSize -= KernelWidth;
-      }
-    }
-  }
-
-  uint32_t GRPCounts[3] = {MaxGroupCount, 1, 1};
-  uint32_t GRPSizes[3] = {MaxGroupSize, 1, 1};
-  if (!MaxGroupCountForced) {
-    GRPCounts[0] *= OptSubscRate;
-  }
-  GroupCounts.groupCountX = GRPCounts[0];
-  GroupCounts.groupCountY = GRPCounts[1];
-  GroupCounts.groupCountZ = GRPCounts[2];
-  std::copy(GRPSizes, GRPSizes + 3, GroupSizes);
-}
-
-Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
-                                 int32_t ThreadLimit, uint32_t *GroupSizes,
-                                 L0LaunchEnvTy &KEnv) const {
-
-  const auto DeviceId = Device.getDeviceId();
-  const auto &KernelPR = getProperties();
-
-  // Read the most recent global thread limit and max teams.
-  const int32_t NumTeamsICV = 0;
-  const int32_t ThreadLimitICV = 0;
-
-  bool IsXeHPG = Device.isDeviceArch(DeviceArchTy::DeviceArch_XeHPG);
-  KEnv.HalfNumThreads =
-      Device.getPlugin().getOptions().ZeDebugEnabled && IsXeHPG;
-  uint32_t KernelWidth = KernelPR.Width;
-  uint32_t SIMDWidth = KernelPR.SIMDWidth;
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Assumed kernel SIMD width is %" PRIu32 "\n", SIMDWidth);
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Preferred team size is multiple of %" PRIu32 "\n", KernelWidth);
-  assert(SIMDWidth <= KernelWidth && "Invalid SIMD width.");
-
-  if (ThreadLimit > 0) {
-    // use thread_limit clause value default.
-    ODBG(OLDT_Kernel) << "Max team size is set to " << ThreadLimit
-                      << " (thread_limit clause)";
-  } else if (ThreadLimitICV > 0) {
-    // else use thread-limit-var ICV.
-    ThreadLimit = ThreadLimitICV;
-    ODBG(OLDT_Kernel) << "Max team size is set to " << ThreadLimit
-                      << " (thread-limit-icv)";
-  }
-
-  size_t MaxThreadLimit = Device.getMaxGroupSize();
-  // Set correct max group size if the kernel was compiled with explicit SIMD.
-  if (SIMDWidth == 1)
-    MaxThreadLimit = Device.getNumThreadsPerSubslice();
-
-  if (KernelPR.MaxThreadGroupSize < MaxThreadLimit) {
-    MaxThreadLimit = KernelPR.MaxThreadGroupSize;
-    ODBG(OLDT_Kernel) << "Capping maximum team size to " << MaxThreadLimit
-                      << " due to kernel constraints.";
-  }
-
-  if (ThreadLimit > static_cast<int32_t>(MaxThreadLimit)) {
-    ThreadLimit = MaxThreadLimit;
-    ODBG(OLDT_Kernel) << "Max team size exceeds current maximum "
-                      << MaxThreadLimit << ". Adjusted";
-  }
-  // scope code to ease integration with downstream custom code.
-  {
-    if (NumTeams > 0) {
-      ODBG(OLDT_Kernel) << "Number of teams is set to " << NumTeams
-                        << " (num_teams clause or no teams construct)";
-    } else if (NumTeamsICV > 0) {
-      // OMP_NUM_TEAMS only matters, if num_teams() clause is absent.
-      INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-           "OMP_NUM_TEAMS(%" PRId32 ") is ignored\n", NumTeamsICV);
-
-      NumTeams = NumTeamsICV;
-      ODBG(OLDT_Kernel) << "Max number of teams is set to " << NumTeams
-                        << " (OMP_NUM_TEAMS)";
-    }
-
-    decideKernelGroupArguments(Device, (uint32_t)NumTeams,
-                               (uint32_t)ThreadLimit, GroupSizes, KEnv);
-  }
-
-  return Plugin::success();
-}
+using AppendLaunchFnTy = llvm::function_ref<Error(
+    ze_command_list_handle_t CmdList, ze_event_handle_t Event,
+    uint32_t NumWaitEvents, ze_event_handle_t *WaitEvents)>;
 
 static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
                                         ze_kernel_handle_t zeKernel,
                                         L0LaunchEnvTy &KEnv,
-                                        CommandModeTy CommandMode) {
+                                        CommandModeTy CommandMode,
+                                        AppendLaunchFnTy AppendLaunch) {
   const auto DeviceId = l0Device.getDeviceId();
   auto *IdStr = l0Device.getZeIdCStr();
   auto CmdListOrErr = l0Device.getImmCmdList();
   if (!CmdListOrErr)
     return CmdListOrErr.takeError();
   const ze_command_list_handle_t CmdList = *CmdListOrErr;
-  // Command queue is not used with immediate command list.
 
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Using immediate command list for kernel submission.\n");
@@ -282,11 +119,12 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
   }
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Kernel depends on %zu data copying events.\n", NumWaitEvents);
+
   Error AllErrors = Error::success();
 
-  CALL_ZE_ACCUM_ERROR(AllErrors, zeCommandListAppendLaunchKernel, CmdList,
-                      zeKernel, &KEnv.GroupCounts, Event, NumWaitEvents,
-                      WaitEvents);
+  if (auto Err = AppendLaunch(CmdList, Event, NumWaitEvents, WaitEvents))
+    AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
+
   KEnv.Lock.unlock();
   if (AllErrors) {
     if (auto Err = l0Device.releaseEvent(Event))
@@ -314,93 +152,33 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
   return Plugin::success();
 }
 
-static Error launchKernelWithCmdQueue(L0DeviceTy &l0Device,
-                                      ze_kernel_handle_t zeKernel,
-                                      L0LaunchEnvTy &KEnv) {
-  const auto DeviceId = l0Device.getDeviceId();
-  const auto *IdStr = l0Device.getZeIdCStr();
+ze_group_size_t L0KernelTy::createKernelGroups(L0DeviceTy &l0Device,
+                                               L0LaunchEnvTy &KEnv,
+                                               uint32_t NumThreads[3],
+                                               uint32_t NumBlocks[3]) const {
+  ze_group_size_t GroupSizes;
+  assert(NumThreads[0] > 0 && NumThreads[1] > 0 && NumThreads[2] > 0 &&
+         "Pre-computed ThreadLimit values must be non-zero");
+  assert(NumBlocks[0] > 0 && NumBlocks[1] > 0 && NumBlocks[2] > 0 &&
+         "Pre-computed NumTeams values must be non-zero");
 
-  auto CmdListOrErr = l0Device.getCmdList();
-  if (!CmdListOrErr)
-    return CmdListOrErr.takeError();
-  ze_command_list_handle_t CmdList = *CmdListOrErr;
-  auto CmdQueueOrErr = l0Device.getCmdQueue();
-  if (!CmdQueueOrErr)
-    return CmdQueueOrErr.takeError();
-  const ze_command_queue_handle_t CmdQueue = *CmdQueueOrErr;
+  KEnv.GroupCounts = {NumBlocks[0], NumBlocks[1], NumBlocks[2]};
+  // Respect max group size attribute in the kernel.
+  uint32_t MaxGroupSize = KEnv.KernelPR.MaxThreadGroupSize;
+  GroupSizes.groupSizeX = std::min<uint32_t>(MaxGroupSize, NumThreads[0]);
+  GroupSizes.groupSizeY = std::min<uint32_t>(MaxGroupSize, NumThreads[1]);
+  GroupSizes.groupSizeZ = std::min<uint32_t>(MaxGroupSize, NumThreads[2]);
 
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Using regular command list for kernel submission.\n");
-
-  ze_event_handle_t Event = nullptr;
-  CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
-                    &KEnv.GroupCounts, Event, 0, nullptr);
-  KEnv.Lock.unlock();
-  CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
-  CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, l0Device.getMutex(),
-                        CmdQueue, 1, &CmdList, nullptr);
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Submitted kernel " DPxMOD " to device %s\n", DPxPTR(zeKernel), IdStr);
-  CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
-  CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
-  if (Event) {
-    if (auto Err = l0Device.releaseEvent(Event))
-      return Err;
-  }
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Executed kernel entry " DPxMOD " on device %s\n", DPxPTR(zeKernel),
-       IdStr);
-
-  return Plugin::success();
-}
-
-Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
-                                  uint32_t NumThreads[3],
-                                  uint32_t NumBlocks[3]) const {
-
-  if (KernelEnvironment.Configuration.ExecMode != OMP_TGT_EXEC_MODE_BARE) {
-    // For non-bare mode, the groups are already set in the launch.
-    KEnv.GroupCounts = {NumBlocks[0], NumBlocks[1], NumBlocks[2]};
-    CALL_ZE_RET_ERROR(zeKernelSetGroupSize, getZeKernel(), NumThreads[0],
-                      NumThreads[1], NumThreads[2]);
-    return Plugin::success();
-  }
-
-  int32_t NumTeams = NumBlocks[0];
-  int32_t ThreadLimit = NumThreads[0];
-  if (NumTeams < 0)
-    NumTeams = 0;
-  if (ThreadLimit < 0)
-    ThreadLimit = 0;
-
-  uint32_t GroupSizes[3];
   auto DeviceId = l0Device.getDeviceId();
-  auto &KernelPR = KEnv.KernelPR;
-  // Check if we can reuse previous group parameters.
-  bool GroupParamsReused =
-      KernelPR.reuseGroupParams(NumTeams, ThreadLimit, GroupSizes, KEnv);
-
-  if (!GroupParamsReused) {
-    if (auto Err =
-            getGroupsShape(l0Device, NumTeams, ThreadLimit, GroupSizes, KEnv))
-      return Err;
-    KernelPR.cacheGroupParams(NumTeams, ThreadLimit, GroupSizes, KEnv);
-  }
-
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Team sizes = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n", GroupSizes[0],
-       GroupSizes[1], GroupSizes[2]);
+       "Team sizes = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n",
+       GroupSizes.groupSizeX, GroupSizes.groupSizeY, GroupSizes.groupSizeZ);
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Number of teams = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n",
        KEnv.GroupCounts.groupCountX, KEnv.GroupCounts.groupCountY,
        KEnv.GroupCounts.groupCountZ);
 
-  if (!GroupParamsReused) {
-    CALL_ZE_RET_ERROR(zeKernelSetGroupSize, getZeKernel(), GroupSizes[0],
-                      GroupSizes[1], GroupSizes[2]);
-  }
-
-  return Plugin::success();
+  return GroupSizes;
 }
 
 Error L0KernelTy::setIndirectFlags(L0DeviceTy &l0Device,
@@ -436,7 +214,6 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   auto zeKernel = getZeKernel();
   auto DeviceId = l0Device.getDeviceId();
-  int32_t NumArgs = KernelArgs.NumArgs;
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId, "Launching kernel " DPxMOD "...\n",
        DPxPTR(zeKernel));
 
@@ -444,6 +221,13 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   auto *IdStr = l0Device.getZeIdCStr();
   auto &Options = Plugin.getOptions();
   bool IsAsync = AsyncInfo && l0Device.asyncEnabled();
+  bool IsCooperative = KernelArgs.Flags.Cooperative;
+
+  if (IsCooperative && !l0Device.supportsCooperativeKernels()) {
+    return Plugin::error(
+        ErrorCode::UNSUPPORTED,
+        "cooperative kernel launch is not supported by the device");
+  }
   if (IsAsync && !AsyncInfo->Queue) {
     AsyncInfo->Queue = reinterpret_cast<void *>(Plugin.getAsyncQueue());
     if (!AsyncInfo->Queue)
@@ -453,38 +237,127 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
       IsAsync ? static_cast<AsyncQueueTy *>(AsyncInfo->Queue) : nullptr;
   auto &KernelPR = getProperties();
 
-  L0LaunchEnvTy KEnv(IsAsync, AsyncQueue, KernelPR);
+  L0LaunchEnvTy KEnv(IsAsync, IsCooperative, AsyncQueue, KernelPR);
 
   // Protect from kernel preparation to submission as kernels are shared.
   KEnv.Lock.lock();
 
-  if (auto Err = setKernelGroups(l0Device, KEnv, NumThreads, NumBlocks))
-    return Err;
+  ze_group_size_t GroupSizes =
+      createKernelGroups(l0Device, KEnv, NumThreads, NumBlocks);
 
-  // Set kernel arguments.
-  for (int32_t I = 0; I < NumArgs; I++) {
-    // Scope code to ease integration with downstream custom code.
-    {
-      void *Arg = (static_cast<void **>(LaunchParams.Data))[I];
-      CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, zeKernel, I, sizeof(Arg),
-                        Arg == nullptr ? nullptr : &Arg);
-      INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-           "Kernel Pointer argument %" PRId32 " (value: " DPxMOD
-           ") was set successfully for device %s.\n",
-           I, DPxPTR(Arg), IdStr);
+  // Validate cooperative kernel launch constraints
+  if (IsCooperative) {
+    uint32_t MaxCooperativeGroupCount = 0;
+    CALL_ZE_RET_ERROR(zeKernelSuggestMaxCooperativeGroupCount, zeKernel,
+                      &MaxCooperativeGroupCount);
+
+    uint32_t TotalGroupCount = KEnv.GroupCounts.groupCountX *
+                               KEnv.GroupCounts.groupCountY *
+                               KEnv.GroupCounts.groupCountZ;
+
+    if (TotalGroupCount > MaxCooperativeGroupCount) {
+      KernelPR.Mtx.unlock();
+      return Plugin::error(
+          ErrorCode::INVALID_ARGUMENT,
+          "cooperative kernel launch failed: requested %u groups exceeds "
+          "maximum %u cooperative groups supported by device",
+          TotalGroupCount, MaxCooperativeGroupCount);
+    }
+
+    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+         "Cooperative kernel validated: using %u groups (max: %u)\n",
+         TotalGroupCount, MaxCooperativeGroupCount);
+  }
+
+  // With pointer-array arguments, zeCommandListAppendLaunchKernelWithArguments
+  // folds group-size, per-argument set, and launch into a single call.
+  const bool IsPtrArgs = KernelArgs.Flags.IsPtrArgs;
+  if (IsPtrArgs) {
+    if (KernelArgs.NumArgs != KernelPR.NumKernelArgs)
+      return Plugin::error(
+          ErrorCode::INVALID_ARGUMENT,
+          "Number of arguments (%u) does not match the number of arguments "
+          "expected by the kernel (%u)",
+          KernelArgs.NumArgs, KernelPR.NumKernelArgs);
+  } else {
+    CALL_ZE_RET_ERROR(zeKernelSetGroupSize, zeKernel, GroupSizes.groupSizeX,
+                      GroupSizes.groupSizeY, GroupSizes.groupSizeZ);
+
+    // Set kernel arguments.
+    uint32_t NumKernelArgs = KernelPR.NumKernelArgs;
+    if (NumKernelArgs > 0) {
+      if (!KernelPR.ArgSizes)
+        return Plugin::error(
+            ErrorCode::INVALID_ARGUMENT,
+            "level zero plugin requires kernel argument sizes.");
+      // Use sizes from kernel properties.
+      // TODO: This is temporary workaround it will not work if there is
+      // padding/alignment between arguments.
+      char *Arg = static_cast<char *>(LaunchParams.Data);
+      for (uint32_t I = 0; I < NumKernelArgs; I++) {
+        uint32_t ArgSize = KernelPR.ArgSizes[I];
+        CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, zeKernel, I, ArgSize, Arg);
+
+        INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+             "Kernel Pointer argument %" PRIu32 " (value: " DPxMOD
+             ") was set successfully for device %s.\n",
+             I, DPxPTR(Arg), IdStr);
+        Arg += ArgSize;
+      }
     }
   }
 
   if (auto Err = setIndirectFlags(l0Device, KEnv))
     return Err;
 
-  // The next calls should unlock the KernelLock internally.
-  const bool UseImmCmdList = l0Device.useImmForCompute();
-  if (UseImmCmdList)
-    return launchKernelWithImmCmdList(l0Device, zeKernel, KEnv,
-                                      Options.CommandMode);
+  auto AppendLaunch = [&](ze_command_list_handle_t CmdList,
+                          ze_event_handle_t Event, uint32_t NumWaitEvents,
+                          ze_event_handle_t *WaitEvents) -> Error {
+    if (IsPtrArgs) {
+      ze_command_list_append_launch_kernel_param_cooperative_desc_t CoopDesc = {
+          ZE_STRUCTURE_TYPE_COMMAND_LIST_APPEND_PARAM_COOPERATIVE_DESC, nullptr,
+          static_cast<ze_bool_t>(IsCooperative)};
+      CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernelWithArguments, CmdList,
+                        zeKernel, KEnv.GroupCounts, GroupSizes,
+                        KernelArgs.ArgPtrs, IsCooperative ? &CoopDesc : nullptr,
+                        Event, NumWaitEvents, WaitEvents);
+    } else if (IsCooperative) {
+      INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+           "Launching cooperative kernel " DPxMOD "\n", DPxPTR(zeKernel));
+      CALL_ZE_RET_ERROR(zeCommandListAppendLaunchCooperativeKernel, CmdList,
+                        zeKernel, &KEnv.GroupCounts, Event, NumWaitEvents,
+                        WaitEvents);
+    } else {
+      CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
+                        &KEnv.GroupCounts, Event, NumWaitEvents, WaitEvents);
+    }
+    return Plugin::success();
+  };
 
-  return launchKernelWithCmdQueue(l0Device, zeKernel, KEnv);
+  // The next call should unlock the KernelLock internally.
+  return launchKernelWithImmCmdList(l0Device, zeKernel, KEnv,
+                                    Options.CommandMode, AppendLaunch);
+}
+
+Expected<uint32_t>
+L0KernelTy::getMaxCooperativeGroupCount(GenericDeviceTy &GenericDevice,
+                                        const uint32_t NumThreads[3],
+                                        uint32_t DynBlockMemSize) const {
+  ze_result_t Res = zeKernelSetGroupSize(zeKernel, NumThreads[0], NumThreads[1],
+                                         NumThreads[2]);
+  if (Res != ZE_RESULT_SUCCESS)
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "failed to set group size for cooperative launch");
+
+  uint32_t MaxCooperativeGroupCount = 0;
+  Res = zeKernelSuggestMaxCooperativeGroupCount(zeKernel,
+                                                &MaxCooperativeGroupCount);
+
+  if (Res != ZE_RESULT_SUCCESS)
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "failed to query max cooperative group count");
+
+  return MaxCooperativeGroupCount;
 }
 
 } // namespace llvm::omp::target::plugin

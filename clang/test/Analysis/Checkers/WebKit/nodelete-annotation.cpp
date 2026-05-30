@@ -45,7 +45,7 @@ namespace WTF {
       if (!m_buffer)
         return;
       for (unsigned i = 0; i < m_size; ++i)
-        m_buffer[i]->~T();
+        m_buffer[i].~T();
       free(m_buffer);
       m_buffer = nullptr;
     }
@@ -474,4 +474,91 @@ struct ObjectWithContainers {
     otherContainerList.shrink(0);
     // expected-warning@-1{{A function 'shrinkVector3' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
   }
+};
+
+struct SomeObject {
+  void ref() const;
+  void deref() const;
+  
+  void doTrivialWork() { }
+
+  void [[clang::annotate_type("webkit.nodelete")]] deleteItems() {
+    delete[] m_items;
+    // expected-warning@-1{{A function 'deleteItems' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+private:
+  SomeObject* m_items;
+};
+
+void [[clang::annotate_type("webkit.nodelete")]] deleteArray(SomeObject* obj) {
+  delete[] obj;
+  // expected-warning@-1{{A function 'deleteArray' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+template <typename Callback>
+void callLambda(Callback callback) {
+  callback();
+}
+
+template <typename Callback>
+void noopWithLambda(Callback) {
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] deleteInLambda(SomeObject* someObj) {
+  callLambda([&]() {
+    // expected-warning@-1{{A function 'deleteInLambda' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+    delete someObj;
+  });
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] deleteInLambda2(SomeObject* someObj) {
+  noopWithLambda([&]() {
+    // expected-warning@-1{{A function 'deleteInLambda2' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+    delete someObj;
+  });
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] deleteIfNeeded(SomeObject* someObj) {
+  if (someObj)
+    delete someObj;
+    // expected-warning@-1{{A function 'deleteIfNeeded' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+struct MemberAssignment {
+public:
+  void [[clang::annotate_type("webkit.nodelete")]] clearMember() {
+    m_someObject = nullptr;
+    // expected-warning@-1{{A function 'clearMember' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+  void [[clang::annotate_type("webkit.nodelete")]] assignMember(SomeObject* ptr) {
+    m_someObject = ptr;
+    // expected-warning@-1{{A function 'assignMember' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+  
+  RefPtr<SomeObject> [[clang::annotate_type("webkit.nodelete")]] takeMember() {
+    return std::exchange(m_someObject, nullptr);
+    // expected-warning@-1{{A function 'takeMember' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+  void [[clang::annotate_type("webkit.nodelete")]] takeAsTemp() {
+    takeMember();
+    // expected-warning@-1{{A function 'takeAsTemp' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+  void [[clang::annotate_type("webkit.nodelete")]] takeToLocalVar() {
+    if (RefPtr ptr = std::exchange(m_someObject, nullptr))
+      // expected-warning@-1{{A function 'takeToLocalVar' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+      ptr->doTrivialWork();
+  }
+
+  void [[clang::annotate_type("webkit.nodelete")]] takeObjectsAsTemp() {
+    std::exchange(m_objects, { });
+    // expected-warning@-1{{A function 'takeObjectsAsTemp' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+private:
+  RefPtr<SomeObject> m_someObject;
+  Vector<Ref<SomeObject>> m_objects;
 };

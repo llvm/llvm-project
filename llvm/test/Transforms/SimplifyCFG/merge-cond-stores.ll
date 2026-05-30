@@ -407,6 +407,42 @@ end:
   ret void
 }
 
+; Unordered atomic stores can be merged, but the merged store must remain
+; atomic with the same ordering/syncscope (it must not be downgraded to a
+; plain store).
+define void @test_atomic_store_merged(i1 %c1, i1 %c2, ptr %p) {
+; CHECK-LABEL: @test_atomic_store_merged(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[TMP1:%.*]], label [[TMP2:%.*]]
+; CHECK:       1:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C2]], i32 2, i32 1
+; CHECK-NEXT:    store atomic i32 [[SPEC_SELECT]], ptr [[P:%.*]] unordered, align 4
+; CHECK-NEXT:    br label [[TMP2]]
+; CHECK:       2:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c1, label %if.then, label %if.else
+
+if.then:
+  store atomic i32 1, ptr %p unordered, align 4
+  br label %merge
+
+if.else:
+  br label %merge
+
+merge:
+  br i1 %c2, label %if.then2, label %if.end
+
+if.then2:
+  store atomic i32 2, ptr %p unordered, align 4
+  br label %if.end
+
+if.end:
+  ret void
+}
+
 !0 = !{!"branch_weights", i32 7, i32 13}
 !1 = !{!"branch_weights", i32 3, i32 11}
 ;.

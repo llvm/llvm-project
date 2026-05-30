@@ -26,6 +26,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/CodeGen/CodeGenABITypes.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
@@ -929,15 +930,15 @@ protected:
 
   llvm::StringMap<llvm::GlobalVariable *> NSConstantStringMap;
 
-  /// Uniqued CF boolean singletons
+  /// Uniqued CF boolean singletons.
   llvm::GlobalVariable *DefinedCFBooleanTrue = nullptr;
   llvm::GlobalVariable *DefinedCFBooleanFalse = nullptr;
 
-  /// Uniqued `NSNumber`s
+  /// Uniqued `NSNumber`s.
   llvm::DenseMap<NSConstantNumberMapInfo, llvm::GlobalVariable *>
       NSConstantNumberMap;
 
-  /// Cached empty collection singletons
+  /// Cached empty collection singletons.
   llvm::GlobalVariable *DefinedEmptyNSDictionary = nullptr;
   llvm::GlobalVariable *DefinedEmptyNSArray = nullptr;
 
@@ -1216,6 +1217,15 @@ public:
 
   DirectMethodInfo &GenerateDirectMethod(const ObjCMethodDecl *OMD,
                                          const ObjCContainerDecl *CD);
+
+  llvm::Function *GenerateObjCDirectThunk(const ObjCMethodDecl *OMD,
+                                          const ObjCContainerDecl *CD,
+                                          llvm::Function *Implementation);
+
+  llvm::Function *GetDirectMethodCallee(const ObjCMethodDecl *OMD,
+                                        const ObjCContainerDecl *CD,
+                                        bool ReceiverCanBeNull,
+                                        bool ClassObjectCanBeUnrealized);
 
   /// Generate class realization code: [self self]
   /// This is used for class methods to ensure the class is initialized.
@@ -2243,7 +2253,7 @@ CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
   if (!NSConstantStringType) {
     // NOTE: The existing implementation used a pointer to a Int32Ty not a
     // struct pointer as the ISA type when emitting constant strings so this is
-    // maintained for now
+    // maintained for now.
     NSConstantStringType =
         llvm::StructType::create({CGM.DefaultPtrTy, CGM.Int8PtrTy, CGM.IntTy},
                                  "struct.__builtin_NSString");
@@ -2292,7 +2302,7 @@ CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
   return ConstantAddress(GV, GV->getValueType(), Alignment);
 }
 
-/// Emit the boolean singletons for BOOL literals @YES @NO
+/// Emit the boolean singletons for BOOL literals @YES and @NO.
 ConstantAddress CGObjCCommonMac::GenerateConstantNSNumber(const bool Value,
                                                           const QualType &Ty) {
   llvm::GlobalVariable *Val =
@@ -2300,7 +2310,8 @@ ConstantAddress CGObjCCommonMac::GenerateConstantNSNumber(const bool Value,
   return ConstantAddress(Val, Val->getValueType(), CGM.getPointerAlign());
 }
 
-/// Generate a constant NSConstantIntegerNumber from an ObjC integer literal
+/// Generate a constant NSConstantIntegerNumber from an ObjC integer literal,
+/// e.g., @2.
 /*
   struct __builtin_NSConstantIntegerNumber {
     struct._class_t *isa; // point to _NSConstantIntegerNumberClassReference
@@ -2313,14 +2324,14 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APSInt &Value,
                                           const QualType &Ty) {
   CharUnits Alignment = CGM.getPointerAlign();
 
-  // check if we've already emitted, if so emit a reference to it
+  // Check if we've already emitted, if so emit a reference to it.
   llvm::GlobalVariable *&Entry =
       NSConstantNumberMap[{CGM.getContext().getCanonicalType(Ty), Value}];
   if (Entry) {
     return ConstantAddress(Entry, Entry->getValueType(), Alignment);
   }
 
-  // The encoding type
+  // The encoding type.
   std::string ObjCEncodingType;
   CodeGenFunction(CGM).getContext().getObjCEncodingForType(Ty,
                                                            ObjCEncodingType);
@@ -2341,9 +2352,11 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APSInt &Value,
   auto Fields = Builder.beginStruct(NSConstantIntegerNumberType);
 
   // Class pointer.
-  Fields.add(Class);
+  Fields.addSignedPointer(Class,
+                          CGM.getCodeGenOpts().PointerAuth.ObjCIsaPointers,
+                          GlobalDecl(), QualType());
 
-  // add the @encode
+  // add the @encode.
   Fields.add(CGM.GetAddrOfConstantCString(ObjCEncodingType).getPointer());
 
   // add the value stored.
@@ -2352,7 +2365,7 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APSInt &Value,
 
   Fields.add(IntegerValue);
 
-  // The struct
+  // The struct.
   llvm::GlobalVariable *const GV = Fields.finishAndCreateGlobal(
       "_unnamed_nsconstantintegernumber_", Alignment,
       /* constant */ true, llvm::GlobalVariable::PrivateLinkage);
@@ -2366,14 +2379,16 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APSInt &Value,
 }
 
 /// Generate either a constant NSConstantFloatNumber or NSConstantDoubleNumber
+/// from an ObjC literal based on it's encoding. @(2.2f) would be
+/// NSConstantFloatNumber. @(2.222) would be NSConstantDoubleNumber.
 /*
   struct __builtin_NSConstantFloatNumber {
-    struct._class_t *isa;
+    struct._class_t *isa; // point to _NSConstantFloatNumberClassReference
     float const _value;
   };
 
   struct __builtin_NSConstantDoubleNumber {
-    struct._class_t *isa;
+    struct._class_t *isa; // point to _NSConstantDoubleNumberClassReference
     double const _value;
   };
 */
@@ -2382,14 +2397,14 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APFloat &Value,
                                           const QualType &Ty) {
   CharUnits Alignment = CGM.getPointerAlign();
 
-  // check if we've already emitted, if so emit a reference to it
+  // Check if we've already emitted, if so emit a reference to it.
   llvm::GlobalVariable *&Entry =
       NSConstantNumberMap[{CGM.getContext().getCanonicalType(Ty), Value}];
   if (Entry) {
     return ConstantAddress(Entry, Entry->getValueType(), Alignment);
   }
 
-  // @encode type used to pick which class type to use
+  // @encode type used to pick which class type to use.
   std::string ObjCEncodingType;
   CodeGenFunction(CGM).getContext().getObjCEncodingForType(Ty,
                                                            ObjCEncodingType);
@@ -2400,7 +2415,7 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APFloat &Value,
   llvm::GlobalValue::LinkageTypes Linkage =
       llvm::GlobalVariable::PrivateLinkage;
 
-  // Handle floats
+  // Handle floats.
   if (ObjCEncodingType == "f") {
     llvm::Constant *const Class = getNSConstantFloatNumberClassRef();
 
@@ -2417,13 +2432,15 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APFloat &Value,
     auto Fields = Builder.beginStruct(NSConstantFloatNumberType);
 
     // Class pointer.
-    Fields.add(Class);
+    Fields.addSignedPointer(Class,
+                            CGM.getCodeGenOpts().PointerAuth.ObjCIsaPointers,
+                            GlobalDecl(), QualType());
 
     // add the value stored.
     llvm::Constant *FV = llvm::ConstantFP::get(CGM.FloatTy, Value);
     Fields.add(FV);
 
-    // The struct
+    // The struct.
     llvm::GlobalVariable *const GV = Fields.finishAndCreateGlobal(
         "_unnamed_nsconstantfloatnumber_", Alignment,
         /*constant*/ true, Linkage);
@@ -2438,7 +2455,7 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APFloat &Value,
 
   llvm::Constant *const Class = getNSConstantDoubleNumberClassRef();
   if (!NSConstantDoubleNumberType) {
-    // NOTE: this will be padded on some 32-bit targets and is expected
+    // NOTE: this will be padded on some 32-bit targets and is expected.
     NSConstantDoubleNumberType = llvm::StructType::create(
         {
             CGM.DefaultPtrTy, // isa
@@ -2451,13 +2468,15 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APFloat &Value,
   auto Fields = Builder.beginStruct(NSConstantDoubleNumberType);
 
   // Class pointer.
-  Fields.add(Class);
+  Fields.addSignedPointer(Class,
+                          CGM.getCodeGenOpts().PointerAuth.ObjCIsaPointers,
+                          GlobalDecl(), QualType());
 
   // add the value stored.
   llvm::Constant *DV = llvm::ConstantFP::get(CGM.DoubleTy, Value);
   Fields.add(DV);
 
-  // The struct
+  // The struct.
   llvm::GlobalVariable *const GV = Fields.finishAndCreateGlobal(
       "_unnamed_nsconstantdoublenumber_", Alignment,
       /*constant*/ true, Linkage);
@@ -2471,7 +2490,7 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APFloat &Value,
 }
 
 /// Shared private method to emit the id array storage for constant NSArray and
-/// NSDictionary literals
+/// NSDictionary literals as they share the same sections and behavior.
 llvm::GlobalVariable *
 CGObjCCommonMac::EmitNSConstantCollectionLiteralArrayStorage(
     const ArrayRef<llvm::Constant *> &Elements) {
@@ -2490,10 +2509,11 @@ CGObjCCommonMac::EmitNSConstantCollectionLiteralArrayStorage(
   return ObjectsGV;
 }
 
-/// Generate a constant NSConstantArray from an ObjC array literal
+/// Generate a constant NSConstantArray from an ObjC array literal,
+/// e.g., @[ @2 ] or the singleton for an empty `__NSArray0__struct`.
 /*
   struct __builtin_NSArray {
-    struct._class_t *isa;
+    struct._class_t *isa; // points to _NSConstantArrayClassReference
     NSUInteger const _count;
     id const *const _objects;
   };
@@ -2527,19 +2547,21 @@ ConstantAddress CGObjCCommonMac::GenerateConstantNSArray(
   auto Fields = Builder.beginStruct(NSConstantArrayType);
 
   // Class pointer.
-  Fields.add(Class);
+  Fields.addSignedPointer(Class,
+                          CGM.getCodeGenOpts().PointerAuth.ObjCIsaPointers,
+                          GlobalDecl(), QualType());
 
-  // count
+  // count.
   uint64_t ObjectCount = Objects.size();
   llvm::Constant *Count = llvm::ConstantInt::get(NSUIntegerTy, ObjectCount);
   Fields.add(Count);
 
-  // objects
+  // objects.
   llvm::GlobalVariable *ObjectsGV =
       EmitNSConstantCollectionLiteralArrayStorage(Objects);
   Fields.add(ObjectsGV);
 
-  // The struct
+  // The struct.
   llvm::GlobalVariable *GV = Fields.finishAndCreateGlobal(
       "_unnamed_nsarray_", Alignment,
       /* constant */ true, llvm::GlobalValue::PrivateLinkage);
@@ -2551,9 +2573,11 @@ ConstantAddress CGObjCCommonMac::GenerateConstantNSArray(
 }
 
 /// Generate a constant NSConstantDictionary from an ObjC dictionary literal
+/// with string keys, e.g., @{ @"someNum" : @2 } or the singleton for an empty
+/// `__NSDictionary0__struct`.
 /*
   struct __builtin_NSDictionary {
-    struct._class_t *isa;
+    struct._class_t *isa; // point to _NSConstantDictionaryClassReference
     NSUInteger const _hashOptions;
     NSUInteger const _count;
     id const *const _keys;
@@ -2593,20 +2617,22 @@ ConstantAddress CGObjCCommonMac::GenerateConstantNSDictionary(
   auto Fields = Builder.beginStruct(NSConstantDictionaryType);
 
   // Class pointer.
-  Fields.add(Class);
+  Fields.addSignedPointer(Class,
+                          CGM.getCodeGenOpts().PointerAuth.ObjCIsaPointers,
+                          GlobalDecl(), QualType());
 
-  // Use the hashing helper to manage the keys and sorting
+  // Use the hashing helper to manage the keys and sorting.
   auto HashOpts(NSDictionaryBuilder::Options::Sorted);
   NSDictionaryBuilder DictBuilder(E, KeysAndObjects, HashOpts);
 
-  // Ask `HashBuilder` for the fully sorted keys / values and the count
+  // Ask `HashBuilder` for the fully sorted keys / values and the count.
   uint64_t const NumElements = DictBuilder.getNumElements();
 
   llvm::Constant *OptionsConstant = llvm::ConstantInt::get(
       NSUIntegerTy, static_cast<uint64_t>(DictBuilder.getOptions()));
   Fields.add(OptionsConstant);
 
-  // count
+  // count.
   llvm::Constant *Count = llvm::ConstantInt::get(NSUIntegerTy, NumElements);
   Fields.add(Count);
 
@@ -2619,17 +2645,17 @@ ConstantAddress CGObjCCommonMac::GenerateConstantNSDictionary(
     SortedObjects.push_back(Obj);
   }
 
-  // keys
+  // keys.
   llvm::GlobalVariable *KeysGV =
       EmitNSConstantCollectionLiteralArrayStorage(SortedKeys);
   Fields.add(KeysGV);
 
-  // objects
+  // objects.
   llvm::GlobalVariable *ObjectsGV =
       EmitNSConstantCollectionLiteralArrayStorage(SortedObjects);
   Fields.add(ObjectsGV);
 
-  // The struct
+  // The struct.
   llvm::GlobalVariable *GV = Fields.finishAndCreateGlobal(
       "_unnamed_nsdictionary_", Alignment,
       /* constant */ true, llvm::GlobalValue::PrivateLinkage);
@@ -2741,6 +2767,9 @@ CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
 
   bool ReceiverCanBeNull =
       canMessageReceiverBeNull(CGF, Method, IsSuper, ClassReceiver, Arg0);
+  bool ClassObjectCanBeUnrealized =
+      Method && Method->isClassMethod() &&
+      canClassObjectBeUnrealized(ClassReceiver, CGF);
 
   bool RequiresNullCheck = false;
   bool RequiresReceiverValue = true;
@@ -2749,8 +2778,8 @@ CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
   llvm::FunctionCallee Fn = nullptr;
   if (Method && Method->isDirectMethod()) {
     assert(!IsSuper);
-    auto Info = GenerateDirectMethod(Method, Method->getClassInterface());
-    Fn = Info.Implementation;
+    Fn = GetDirectMethodCallee(Method, Method->getClassInterface(),
+                               ReceiverCanBeNull, ClassObjectCanBeUnrealized);
     // Direct methods will synthesize the proper `_cmd` internally,
     // so just don't bother with setting the `_cmd` argument.
     RequiresSelValue = false;
@@ -2810,6 +2839,23 @@ CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
   // Emit a null-check if there's a consumed argument other than the receiver.
   if (!RequiresNullCheck && Method && Method->hasParamDestroyedInCallee())
     RequiresNullCheck = true;
+
+  if (CGM.shouldHavePreconditionInline(Method)) {
+    // For variadic class methods, we need to inline precondition checks. That
+    // include two things:
+    // 1. We have to inline the class realization if we are not sure if it must
+    // have been realized.
+    if (ClassReceiver && ClassObjectCanBeUnrealized) {
+      // Perform class realization using the helper function
+      Arg0 = GenerateClassRealization(CGF, Arg0, ClassReceiver);
+      ActualArgs[0] = CallArg(RValue::get(Arg0), ActualArgs[0].Ty);
+    }
+    // 2. We have to inline the precondition thunk if we are not sure if the
+    // receiver can be null. Luckly, `NullReturnState` already does that for
+    // corner cases like ns_consume, so we only need to override the flag,
+    // regardless if the return value is unused.
+    RequiresNullCheck |= ReceiverCanBeNull;
+  }
 
   NullReturnState nullReturn;
   if (RequiresNullCheck) {
@@ -4563,55 +4609,262 @@ llvm::Function *CGObjCCommonMac::GenerateMethod(const ObjCMethodDecl *OMD,
   return Method;
 }
 
+/// Generate or retrieve a direct method info.
 CGObjCCommonMac::DirectMethodInfo &
 CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
                                       const ObjCContainerDecl *CD) {
   auto *COMD = OMD->getCanonicalDecl();
-  auto I = DirectMethodDefinitions.find(COMD);
-  llvm::Function *OldFn = nullptr, *Fn = nullptr;
 
-  if (I != DirectMethodDefinitions.end()) {
-    // Objective-C allows for the declaration and implementation types
-    // to differ slightly.
-    //
-    // If we're being asked for the Function associated for a method
-    // implementation, a previous value might have been cached
-    // based on the type of the canonical declaration.
-    //
-    // If these do not match, then we'll replace this function with
-    // a new one that has the proper type below.
+  // Fast path: return cached entry if this is not an implementation (no body)
+  // or if the return types match between declaration and implementation.
+  auto Cached = DirectMethodDefinitions.find(COMD);
+  if (Cached != DirectMethodDefinitions.end()) {
     if (!OMD->getBody() || COMD->getReturnType() == OMD->getReturnType())
-      return I->second;
-    OldFn = I->second.Implementation;
+      return Cached->second;
   }
 
   CodeGenTypes &Types = CGM.getTypes();
   llvm::FunctionType *MethodTy =
       Types.GetFunctionType(Types.arrangeObjCMethodDeclaration(OMD));
+  std::string Name =
+      getSymbolNameForMethod(OMD, /*includeCategoryName*/ false,
+                             CGM.isObjCDirectPreconditionThunkEnabled());
+  std::string ThunkName = Name + "_thunk";
 
-  if (OldFn) {
-    Fn = llvm::Function::Create(MethodTy, llvm::GlobalValue::ExternalLinkage,
-                                "", &CGM.getModule());
-    Fn->takeName(OldFn);
-    OldFn->replaceAllUsesWith(Fn);
+  // Replace OldFn with NewFn: transfer name, replace all uses, and erase.
+  auto ReplaceFunction = [](llvm::Function *OldFn, llvm::Function *NewFn) {
+    NewFn->takeName(OldFn);
+    OldFn->replaceAllUsesWith(NewFn);
     OldFn->eraseFromParent();
+  };
 
-    // Replace the cached implementation in the map.
-    I->second.Implementation = Fn;
+  // Check if the function already exists in the module (created by Clang or
+  // Swift).
+  llvm::Function *Fn = CGM.getModule().getFunction(Name);
 
-  } else {
-    auto Name = getSymbolNameForMethod(OMD, /*include category*/ false);
-
+  // Function doesn't exist yet.
+  if (!Fn) {
     Fn = llvm::Function::Create(MethodTy, llvm::GlobalValue::ExternalLinkage,
                                 Name, &CGM.getModule());
-    auto [It, inserted] = DirectMethodDefinitions.insert(
-        std::make_pair(COMD, DirectMethodInfo(Fn)));
-    I = It;
+    return DirectMethodDefinitions.insert({COMD, DirectMethodInfo(Fn)})
+        .first->second;
   }
 
-  // Return reference to DirectMethodInfo (contains both Implementation and
-  // Thunk)
-  return I->second;
+  // Function exists with matching type.
+  // Other frontends operating on the same module may have created the function.
+  if (Fn->getFunctionType() == MethodTy) {
+    // Reinforce linkage in case Swift created it with different linkage.
+    Fn->setLinkage(llvm::GlobalValue::ExternalLinkage);
+
+    // Check if Swift also created a thunk for this method.
+    DirectMethodInfo Info(Fn);
+    if (llvm::Function *Thunk = CGM.getModule().getFunction(ThunkName))
+      Info.Thunk = Thunk;
+
+    return DirectMethodDefinitions.insert({COMD, Info}).first->second;
+  }
+
+  // Function exists but with mismatched type - replace it.
+  // This happens when Swift's optional handling differs from ObjC, or when
+  // ObjC declaration and implementation have slightly different return types.
+  llvm::Function *NewFn = llvm::Function::Create(
+      MethodTy, llvm::GlobalValue::ExternalLinkage, "", &CGM.getModule());
+  ReplaceFunction(Fn, NewFn);
+
+  // Check if the thunk also needs replacement.
+  DirectMethodInfo Info(NewFn);
+  if (llvm::Function *OldThunk = CGM.getModule().getFunction(ThunkName)) {
+    llvm::Function *NewThunk = GenerateObjCDirectThunk(OMD, CD, NewFn);
+    ReplaceFunction(OldThunk, NewThunk);
+    Info.Thunk = NewThunk;
+  }
+
+  if (Cached != DirectMethodDefinitions.end()) {
+    Cached->second = Info;
+    return Cached->second;
+  }
+  return DirectMethodDefinitions.insert({COMD, Info}).first->second;
+}
+
+/// Start an Objective-C direct method precondition thunk.
+void CodeGenFunction::StartObjCDirectPreconditionThunk(
+    const ObjCMethodDecl *OMD, llvm::Function *Fn, const CGFunctionInfo &FI) {
+  // Mark this as a thunk function to disable ARC parameter processing
+  // and other thunk-inappropriate behavior. We don't need to retain
+  // parameters because we're going to immediately forward them.
+  //
+  // Skipping ARC parameter processing is correct as long as (1) we don't
+  // run any code that could invalidate the parameters between the start of
+  // the thunk and the call and (2) we don't use the parameters after the
+  // call. Both hold whether we tail-call or not. Class realization could in
+  // theory invalidate parameters, but we assume that doesn't happen in
+  // practice.
+  CurFuncIsThunk = true;
+
+  // Build argument list for StartFunction.
+  // We must include all parameters to match the thunk's LLVM function type.
+  FunctionArgList FunctionArgs;
+  FunctionArgs.push_back(OMD->getSelfDecl());
+  FunctionArgs.append(OMD->param_begin(), OMD->param_end());
+
+  // The Start/Finish thunk pattern is borrowed from CGVTables.cpp
+  // for C++ virtual method thunks, but adapted for ObjC direct methods.
+  //
+  // Like C++ thunks, we don't have an actual AST body for the thunk - we only
+  // have the method's parameter declarations. Therefore, we pass empty
+  // `GlobalDecl` to `StartFunction` ...
+  StartFunction(GlobalDecl(), OMD->getReturnType(), Fn, FI, FunctionArgs,
+                OMD->getLocation(), OMD->getLocation());
+
+  // and manually set the decl afterwards so other utilities / helpers in CGF
+  // can still access the AST (e.g. arrange function arguments)
+  CurCodeDecl = OMD;
+  CurFuncDecl = OMD;
+}
+
+/// Finish an Objective-C direct method precondition thunk.
+void CodeGenFunction::FinishObjCDirectPreconditionThunk() {
+  // Create a dummy block to return the value of the thunk.
+  //
+  // The non-nil branch alredy returned because of musttail.
+  // Only nil branch will jump to this return block.
+  // If the nil check is not emitted (for class methods), this will be a dead
+  // block.
+  //
+  // Either way, the LLVM optimizer will simplify it later. This is just to make
+  // CFG happy.
+  EmitBlock(createBasicBlock("dummy_ret_block"));
+
+  // Disable the final ARC autorelease.
+  // Thunk functions are tailcall to actual implementation, so it doesn't need
+  // to worry about ARC.
+  AutoreleaseResult = false;
+
+  // Clear these to restore the invariants expected by
+  // StartFunction/FinishFunction.
+  CurCodeDecl = nullptr;
+  CurFuncDecl = nullptr;
+
+  FinishFunction();
+}
+
+llvm::Function *
+CGObjCCommonMac::GenerateObjCDirectThunk(const ObjCMethodDecl *OMD,
+                                         const ObjCContainerDecl *CD,
+                                         llvm::Function *Implementation) {
+
+  assert(CGM.shouldHavePreconditionThunk(OMD) &&
+         "Should only generate thunk when optimization enabled");
+  assert(Implementation && "Implementation must exist");
+
+  llvm::FunctionType *ThunkTy = Implementation->getFunctionType();
+  std::string ThunkName = Implementation->getName().str() + "_thunk";
+
+  // Create thunk with linkonce_odr linkage (allows deduplication)
+  llvm::Function *Thunk =
+      llvm::Function::Create(ThunkTy, llvm::GlobalValue::LinkOnceODRLinkage,
+                             ThunkName, &CGM.getModule());
+
+  // Thunks should always have hidden visibility, other link units will have
+  // their own version of the (identical) thunk. If they make cross link-unit
+  // call, they are either calling through their thunk or directly dispatching
+  // to the true implementation, so making thunk visibile is meaningless.
+  Thunk->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  Thunk->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+
+  // Start the ObjC direct thunk (sets up state and calls StartFunction)
+  const CGFunctionInfo &FI = CGM.getTypes().arrangeObjCMethodDeclaration(OMD);
+
+  // Create a CodeGenFunction to generate the thunk body
+  CodeGenFunction CGF(CGM);
+  CGF.StartObjCDirectPreconditionThunk(OMD, Thunk, FI);
+
+  // Set function attributes from CGFunctionInfo to ensure the thunk has
+  // matching parameter attributes (especially sret) for musttail correctness.
+  // We use SetLLVMFunctionAttributes rather than copying from Implementation
+  // because Implementation may not have its attributes set yet at this point.
+  CGM.SetLLVMFunctionAttributes(GlobalDecl(OMD), FI, Thunk, /*IsThunk=*/false);
+  CGM.SetLLVMFunctionAttributesForDefinition(OMD, Thunk);
+
+  // - [self self] for class methods (class realization)
+  // - if (self == nil) branch to nil block with zero return
+  // - continuation block for non-nil case
+  GenerateDirectMethodsPreconditionCheck(CGF, Thunk, OMD, CD);
+
+  // Now emit the musttail call to the true implementation
+  // Collect all arguments for forwarding
+  SmallVector<llvm::Value *, 8> Args;
+  for (auto &Arg : Thunk->args())
+    Args.push_back(&Arg);
+
+  // Create musttail call to the implementation
+  llvm::CallInst *Call = CGF.Builder.CreateCall(Implementation, Args);
+  Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
+
+  // Apply call-site attributes using ConstructAttributeList
+  // When sret is used, the call must have matching sret attributes on the first
+  // parameter for musttail to work correctly. This mirrors what C++ thunks do
+  // in EmitMustTailThunk.
+  unsigned CallingConv;
+  llvm::AttributeList Attrs;
+  CGM.ConstructAttributeList(Implementation->getName(), FI, GlobalDecl(OMD),
+                             Attrs, CallingConv, /*AttrOnCallSite=*/true,
+                             /*IsThunk=*/false);
+  Call->setAttributes(Attrs);
+  Call->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
+
+  // Immediately return the call result (musttail requirement).
+  // For sret returns, the Apple ABI produces void-returning LLVM functions,
+  // so checking the LLVM return type is suffice.
+  if (ThunkTy->getReturnType()->isVoidTy())
+    CGF.Builder.CreateRetVoid();
+  else
+    CGF.Builder.CreateRet(Call);
+
+  // Finish the ObjC direct thunk (creates dummy block and calls FinishFunction)
+  CGF.FinishObjCDirectPreconditionThunk();
+  return Thunk;
+}
+
+llvm::Function *CGObjCCommonMac::GetDirectMethodCallee(
+    const ObjCMethodDecl *OMD, const ObjCContainerDecl *CD,
+    bool ReceiverCanBeNull, bool ClassObjectCanBeUnrealized) {
+
+  // Get from cache or populate the function declaration.
+  // Copy by value to avoid holding a reference into DirectMethodDefinitions
+  // DenseMap, which could be invalidated by future insertions.
+  DirectMethodInfo Info = GenerateDirectMethod(OMD, CD);
+
+  // If thunk optimization not enabled (or variadic method which can't use
+  // thunks), use implementation directly. Variadic methods and methods without
+  // the optimization enabled include precondition checks in the implementation.
+  if (!CGM.shouldHavePreconditionThunk(OMD)) {
+    return Info.Implementation;
+  }
+
+  // Thunk is lazily generated.
+  auto getOrCreateThunk = [&]() {
+    if (!Info.Thunk) {
+      Info.Thunk = GenerateObjCDirectThunk(OMD, CD, Info.Implementation);
+      // Write back the lazily created thunk to the map.
+      DirectMethodDefinitions.insert_or_assign(OMD->getCanonicalDecl(), Info);
+    }
+    return Info.Thunk;
+  };
+
+  if (OMD->isInstanceMethod()) {
+    // If we can prove instance methods receiver is not null, return the true
+    // implementation
+    return ReceiverCanBeNull ? getOrCreateThunk() : Info.Implementation;
+  }
+  assert(OMD->isClassMethod() &&
+         "OMD should either be a class method or instance method");
+
+  // For class methods, it need to be non-null and realized before we dispatch
+  // to true implementation
+  return (ReceiverCanBeNull || ClassObjectCanBeUnrealized)
+             ? getOrCreateThunk()
+             : Info.Implementation;
 }
 
 llvm::Value *
@@ -4708,7 +4961,8 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
     CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
     const ObjCContainerDecl *CD) {
   // Generate precondition checks (class realization + nil check) if needed
-  GenerateDirectMethodsPreconditionCheck(CGF, Fn, OMD, CD);
+  if (!CGM.isObjCDirectPreconditionThunkEnabled())
+    GenerateDirectMethodsPreconditionCheck(CGF, Fn, OMD, CD);
 
   auto &Builder = CGF.Builder;
   // Only synthesize _cmd if it's referenced
@@ -8532,4 +8786,19 @@ CodeGen::CreateMacObjCRuntime(CodeGen::CodeGenModule &CGM) {
     llvm_unreachable("these runtimes are not Mac runtimes");
   }
   llvm_unreachable("bad runtime");
+}
+
+// Public wrapper function for external compilers (e.g., Swift) to access
+// the Mac runtime's GetDirectMethodCallee functionality.
+llvm::Function *clang::CodeGen::getObjCDirectMethodCallee(
+    CodeGenModule &CGM, const ObjCMethodDecl *OMD, const ObjCContainerDecl *CD,
+    bool ReceiverCanBeNull, bool ClassObjectCanBeUnrealized) {
+  // This function should only be called when targeting Darwin platforms,
+  // which always use the Mac runtime.
+  assert(CGM.getLangOpts().ObjCRuntime.isNeXTFamily() &&
+         "getObjCDirectMethodCallee requires Mac ObjC runtime");
+  CGObjCCommonMac *MacRuntime =
+      static_cast<CGObjCCommonMac *>(&CGM.getObjCRuntime());
+  return MacRuntime->GetDirectMethodCallee(OMD, CD, ReceiverCanBeNull,
+                                           ClassObjectCanBeUnrealized);
 }

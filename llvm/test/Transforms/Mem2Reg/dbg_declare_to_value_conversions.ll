@@ -39,6 +39,8 @@ define i32 @foo2(ptr %arg) {
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
+!41 = !{null}
+!42 = !DISubroutineType(types: !41)
 !llvm.module.flags = !{!1, !2}
 !llvm.dbg.cu = !{!7}
 
@@ -48,7 +50,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !4 = !DIBasicType(name: "ptr sized type", size: 64)
 !7 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !8, producer: "clang", emissionKind: FullDebug)
 !8 = !DIFile(filename: "test.ll", directory: "")
-!10 = distinct !DISubprogram(name: "blah", linkageName: "blah", scope: !8, file: !8, line: 7, unit: !7)
+!10 = distinct !DISubprogram(name: "blah", linkageName: "blah", scope: !8, file: !8, line: 7, type: !42, unit: !7)
 !25 = !DILocalVariable(name: "blah", arg: 1, scope: !10, file: !8, line: 7, type:!3)
 !26 = !DILocalVariable(name: "ptr sized var", arg: 1, scope: !10, file: !8, line: 7, type:!4)
 !40 = !DILocation(line: 7, column: 35, scope: !10)

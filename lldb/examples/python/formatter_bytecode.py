@@ -128,6 +128,7 @@ define_selector(0x11, "get_child_at_index")
 define_selector(0x12, "get_child_with_name")
 define_selector(0x13, "get_child_index")
 define_selector(0x15, "get_type")
+define_selector(0x14, "get_parent")
 define_selector(0x16, "get_template_argument_type")
 define_selector(0x17, "cast")
 define_selector(0x18, "get_synthetic_value")
@@ -136,6 +137,7 @@ define_selector(0x20, "get_value")
 define_selector(0x21, "get_value_as_unsigned")
 define_selector(0x22, "get_value_as_signed")
 define_selector(0x23, "get_value_as_address")
+define_selector(0x24, "clone")
 
 define_selector(0x40, "read_memory_byte")
 define_selector(0x41, "read_memory_uint32")
@@ -295,11 +297,6 @@ class BytecodeSection:
             builder.emit_uleb(len(bc), "program size")
             builder.emit_bytes(bc, "program")
 
-    @property
-    def _var_name(self):
-        var_name = re.sub(r"\W", "_", self.type_name)
-        return f"_{var_name}_formatter"
-
     def write_c(self, output: TextIO) -> None:
         self.validate()
 
@@ -322,7 +319,8 @@ class BytecodeSection:
             "__attribute__((used, section(FORMATTER_SECTION)))",
             file=output,
         )
-        print(f"unsigned char {self._var_name}[] =", file=output)
+        var_name = re.sub(r"\W", "_", self.type_name)
+        print(f"unsigned char _{var_name}_formatter[] =", file=output)
         indent = "    "
         for string, comment in builder.entries:
             print(f"{indent}// {comment}", file=output)
@@ -338,8 +336,8 @@ class BytecodeSection:
         print(
             textwrap.dedent(
                 """\
-                #if swift(>=6.3)
-                #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
+                #if swift(>=6.3) && !objectFormat(Wasm)
+                #if objectFormat(MachO)
                 @section("__DATA_CONST,__lldbformatters")
                 #else
                 @section(".lldbformatters")
@@ -349,7 +347,7 @@ class BytecodeSection:
             file=output,
         )
         print(
-            f"let {self._var_name}: {builder.type_decl} = (",
+            f"let `{self.type_name} formatter`: {builder.type_decl} = (",
             file=output,
         )
         indent = "    "
@@ -698,6 +696,9 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
                 data.append(valobj.GetIndexOfChildWithName(name))
             elif sel == sel_get_type:
                 data.append(data.pop().GetType())
+            elif sel == sel_get_parent:
+                valobj = data.pop()
+                data.append(valobj.GetParent())
             elif sel == sel_get_template_argument_type:
                 n = data.pop()
                 valobj = data.pop()
@@ -718,6 +719,10 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
                 sbtype = data.pop()
                 valobj = data.pop()
                 data.append(valobj.Cast(sbtype))
+            elif sel == sel_clone:
+                new_name = data.pop()
+                valobj = data.pop()
+                data.append(valobj.Clone(new_name))
             elif sel == sel_strlen:
                 s = data.pop()
                 data.append(len(s) if s else 0)
@@ -740,12 +745,20 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
 
 _BUILTINS = {
     "Cast": "@cast",
+    "Clone": "@clone",
     "GetChildAtIndex": "@get_child_at_index",
     "GetChildMemberWithName": "@get_child_with_name",
+    "GetIndexOfChildWithName": "@get_child_index",
+    "GetNonSyntheticValue": "@get_non_synthetic_value",
+    "GetNumChildren": "@get_num_children",
+    "GetParent": "@get_parent",
     "GetSummary": "@summary",
     "GetSyntheticValue": "@get_synthetic_value",
     "GetTemplateArgumentType": "@get_template_argument_type",
     "GetType": "@get_type",
+    "GetValue": "@get_value",
+    "GetValueAsAddress": "@get_value_as_address",
+    "GetValueAsSigned": "@get_value_as_signed",
     "GetValueAsUnsigned": "@get_value_as_unsigned",
 }
 
@@ -891,6 +904,13 @@ class Compiler(ast.NodeVisitor):
 
     def _compile_method(self, node: ast.FunctionDef) -> None:
         self.current_sig = _METHOD_SIGS[node.name]
+
+        return_type = node.returns.id if isinstance(node.returns, ast.Name) else None
+        if node.name == "update" and return_type != "bool":
+            raise CompilerError(
+                "update must be declared to return bool: def update(self) -> bool:",
+                node,
+            )
 
         # Strip 'self' (and 'internal_dict' for __init__) from the arg list;
         # the remaining args become the initial locals.
@@ -1150,14 +1170,12 @@ def _main():
     )
     parser.add_argument("-n", "--type-name", help="source type of formatter")
     parser.add_argument(
-        "--skip-invocation-comment",
-        action="store_true",
-        help="do not print invocation comment in compiled output",
-    )
-    parser.add_argument(
         "-o",
         "--output",
         help="output file (required for --assemble)",
+    )
+    parser.add_argument(
+        "--append", action="store_true", help="append to existing output file"
     )
     parser.add_argument(
         "-f",
@@ -1169,6 +1187,10 @@ def _main():
     parser.add_argument("-t", "--test", action="store_true", help="run unit tests")
 
     args = parser.parse_args()
+
+    if args.append and not args.compile:
+        parser.error("--append is valid only with --compile")
+
     if args.compile:
         if not args.type_name:
             parser.error("--type-name is required with --compile")
@@ -1186,10 +1208,8 @@ def _main():
             with open(args.output, "wb") as output:
                 section.write_binary(output)
         else:
-            with open(args.output, "w") as output:
-                if not args.skip_invocation_comment:
-                    print("// Generated with:", file=output)
-                    print("//  ", shlex.join(sys.argv), file=output)
+            mode = "a" if args.append else "w"
+            with open(args.output, mode) as output:
                 section.write_source(output, language=args.format)
     elif args.assemble:
         if not args.type_name:

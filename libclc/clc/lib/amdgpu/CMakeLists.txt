@@ -1,5 +1,4 @@
-libclc_configure_source_list(CLC_AMDGPU_SOURCES
-  ${CMAKE_CURRENT_SOURCE_DIR}
+libclc_add_sources(${LIBCLC_CLC_TARGET} FILES
   address_space/clc_qualifier.cl
   math/clc_cbrt.cl
   math/clc_exp.cl
@@ -29,7 +28,9 @@ libclc_configure_source_list(CLC_AMDGPU_SOURCES
   mem_fence/clc_mem_fence.cl
   subgroup/clc_subgroup.cl
   subgroup/clc_sub_group_broadcast.cl
+  subgroup/clc_sub_group_non_uniform_reduce.cl
   subgroup/clc_sub_group_reduce.cl
+  subgroup/clc_sub_group_scan.cl
   synchronization/clc_sub_group_barrier.cl
   synchronization/clc_work_group_barrier.cl
   workitem/clc_get_enqueued_local_size.cl
@@ -43,9 +44,10 @@ libclc_configure_source_list(CLC_AMDGPU_SOURCES
   workitem/clc_get_num_sub_groups.cl
   workitem/clc_get_sub_group_id.cl
   workitem/clc_get_sub_group_size.cl
-  workitem/clc_get_work_dim.cl)
+  workitem/clc_get_work_dim.cl
+)
 
-libclc_configure_source_options(${CMAKE_CURRENT_SOURCE_DIR} -fapprox-func
+libclc_set_source_options(-fapprox-func
   math/clc_native_exp.cl
   math/clc_native_exp2.cl
   math/clc_native_log10.cl

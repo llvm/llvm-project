@@ -95,6 +95,13 @@ module m
     end block
   end subroutine
 
+  attributes(global) subroutine dev2(a)
+    integer, intent(in) :: a
+    attributes(value) :: a
+    ! this is equivalent to:
+    ! integer, intent(in), value :: a
+  end subroutine
+
 
 end module
 

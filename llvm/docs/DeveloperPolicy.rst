@@ -141,7 +141,8 @@ products.
 Maintainers are those volunteers; they are regular contributors who volunteer
 to take on additional community responsibilities beyond code contributions.
 Community members can find active and inactive maintainers for a project in the
-``Maintainers.rst`` file at the root directory of the individual project.
+``Maintainers.md`` or ``Maintainers.rst`` file at the root directory of the
+individual project.
 
 Maintainers are volunteering to take on the following shared responsibilities
 within an area of a project:
@@ -191,25 +192,26 @@ the same project vouches for their ability to perform the responsibilities and
 there are no explicit objections raised by the community.
 
 *To step down as a maintainer*, you can move your name to the "inactive
-maintainers" section of the ``Maintainers.rst`` file for the project, or remove
-your name entirely; no PR review is necessary. Additionally, any maintainer who
-has not been actively performing their responsibilities over an extended period
-of time can be moved to the "inactive maintainers" section by another active
-maintainer within that project with agreement from one other active maintainer
-within that project. If there is only one active maintainer for a project,
-please post on Discourse to solicit wider community feedback about the removal
-and future direction for the project. However, please discuss the situation
-with the inactive maintainer before such removal to avoid accidental
-miscommunications. If the inactive maintainer is unreachable, no discussion
-with them is required. Stepping down or being removed as a maintainer is normal
-and does not prevent someone from resuming their activities as a maintainer in
-the future.
+maintainers" section of the ``Maintainers.md`` or ``Maintainers.rst`` file for
+the project, or remove your name entirely; no PR review is necessary.
+Additionally, any maintainer who has not been actively performing their
+responsibilities over an extended period of time can be moved to the "inactive
+maintainers" section by another active maintainer within that project with
+agreement from one other active maintainer within that project. If there is
+only one active maintainer for a project, please post on Discourse to solicit
+wider community feedback about the removal and future direction for the project.
+However, please discuss the situation with the inactive maintainer before such
+removal to avoid accidental miscommunications. If the inactive maintainer is
+unreachable, no discussion with them is required. Stepping down or being removed
+as a maintainer is normal and does not prevent someone from resuming their
+activities as a maintainer in the future.
 
 *To resume activities as a maintainer*, you can post a PR moving your name from
-the "inactive maintainers" section of the ``Maintainers.rst`` file to the
-active maintainers list. Because the volunteer was already previously accepted,
-they will be re-accepted so long as at least one maintainer in the same project
-approves the PR and there are no explicit objections raised by the community.
+the "inactive maintainers" section of the ``Maintainers.md`` or
+``Maintainers.rst`` file to the active maintainers list. Because the volunteer
+was already previously accepted, they will be re-accepted so long as at least
+one maintainer in the same project approves the PR and there are no explicit
+objections raised by the community.
 
 .. _include a testcase:
 
@@ -365,17 +367,13 @@ Below are some guidelines about the format of the message itself:
 
 * Separate the commit message into title and body separated by a blank line.
 
-* If you're not the original author, ensure the 'Author' property of the commit is
-  set to the original author and the 'Committer' property is set to yourself.
-  You can use a command similar to
-  ``git commit --amend --author="John Doe <jdoe@llvm.org>"`` to correct the
-  author property if it is incorrect. See `Attribution of Changes`_ for more
-  information including the method we used for attribution before the project
-  migrated to git.
-
-  In the rare situation where there are multiple authors, please use the `git
+* In the situation where there are multiple authors, or in the rare situation
+  you are submitting a change for someone else (e.g., after putting an old
+  patch from someone else through review yourself),  please use the `git
   tag 'Co-authored-by:' to list the additional authors
   <https://github.blog/2018-01-29-commit-together-with-co-authors/>`_.
+  See `Attribution of Changes`_ for more information including the method we
+  used for attribution before the project migrated to git.
 
 * The title should be concise. Because all commits are emailed to the list with
   the first line as the subject, long titles are frowned upon.  Short titles
@@ -718,23 +716,23 @@ Attribution of Changes
 ----------------------
 
 When contributors submit a patch to an LLVM project, other developers with
-commit access may commit it for the author once appropriate (based on the
-progression of code review, etc.). When doing so, it is important to retain
-correct attribution of contributions to their contributors. However, we do not
-want the source code to be littered with random attributions "this code written
-by J. Random Hacker" (this is noisy and distracting). In practice, the revision
-control system keeps a perfect history of who changed what, and the CREDITS.txt
-file describes higher-level contributions. If you commit a patch for someone
-else, please follow the attribution of changes in the simple manner as outlined
-by the `commit messages`_ section. Overall, please do not add contributor names
-to the source code.
+commit access may merge the PR for the author (based on the
+progression of code review, etc.). GitHub will automatically ensure that
+authorship is preserved, and one does not need to take any further action. We
+do not want the source code to be littered with random attributions "this code
+written by J. Random Hacker" (this is noisy and distracting). In practice, the
+revision control system keeps a perfect history of who changed what, and the
+CREDITS.txt file describes higher-level contributions. If you need to adjust
+authorship for any reason, please follow the attribution of changes in the
+simple manner as outlined by the `commit messages`_ section. Overall, please do
+not add contributor names to the source code.
 
 Also, don't commit patches authored by others unless they have submitted the
 patch to the project or you have been authorized to submit them on their behalf
 (you work together and your company authorized you to contribute the patches,
-etc.). The author should first submit them to the relevant project's commit
-list, development list, or LLVM bug tracker component. If someone sends you
-a patch privately, encourage them to submit it to the appropriate list first.
+etc.). The author should first submit them as a GitHub issue, to the relevant
+category on Discourse, or ideally as a GitHub Pull Request. If someone sends you
+a patch privately, encourage them to submit it as a GitHub PR first.
 
 Our previous version control system (subversion) did not distinguish between the
 author and the committer like git does. As such, older commits used a different
@@ -960,7 +958,7 @@ The differences between both classes are:
 The basic rules for a back-end to be upstreamed in **experimental** mode are:
 
 * Every target must have at least one :ref:`maintainer<maintainers>`. The
-  `Maintainers.rst` file has to be updated as part of the first merge. These
+  `Maintainers.md` file has to be updated as part of the first merge. These
   maintainers make sure that changes to the target get reviewed and steers the
   overall effort.
 

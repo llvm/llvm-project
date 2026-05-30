@@ -6,10 +6,6 @@ Implementing a New Function
 
 This guide provides a step-by-step walkthrough for adding a new function to LLVM-libc.
 
-.. contents:: Table of Contents
-   :depth: 2
-   :local:
-
 Overview
 ========
 

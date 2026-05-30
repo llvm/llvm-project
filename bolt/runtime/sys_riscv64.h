@@ -3,104 +3,72 @@
 
 // Save all registers while keeping 16B stack alignment
 #define SAVE_ALL                                                               \
-  "addi sp, sp, -16\n"                                                         \
-  "sd x0, 0(sp)\n"                                                             \
-  "sd x1, 8(sp)\n"                                                             \
-  "addi sp, sp, -16\n"                                                         \
-  "sd x2, 0(sp)\n"                                                             \
-  "sd x3, 8(sp)\n"                                                             \
-  "addi sp, sp, -16\n"                                                         \
-  "sd x4, 0(sp)\n"                                                             \
-  "sd x5, 8(sp)\n"                                                             \
-  "addi sp, sp, -16\n"                                                         \
-  "sd x6, 0(sp)\n"                                                             \
-  "sd x7, 8(sp)\n"                                                             \
-  "addi sp, sp, -16\n"                                                         \
-  "sd x8, 0(sp)\n"                                                             \
-  "sd x9, 8(sp)\n"                                                             \
-  "addi sp, sp, -16\n"                                                         \
-  "sd x10, 0(sp)\n"                                                            \
-  "sd x11, 8(sp)\n"                                                            \
-  "addi sp, sp, -16\n"                                                         \
-  "sd x12, 0(sp)\n"                                                            \
-  "sd x13, 8(sp)\n"                                                            \
-  "addi sp, sp, -16\n"                                                         \
-  "sd x14, 0(sp)\n"                                                            \
-  "sd x15, 8(sp)\n"                                                            \
-  "addi sp, sp, -16\n"                                                         \
-  "sd x16, 0(sp)\n"                                                            \
-  "sd x17, 8(sp)\n"                                                            \
-  "addi sp, sp, -16\n"                                                         \
-  "sd x18, 0(sp)\n"                                                            \
-  "sd x19, 8(sp)\n"                                                            \
-  "addi sp, sp, -16\n"                                                         \
-  "sd x20, 0(sp)\n"                                                            \
-  "sd x21, 8(sp)\n"                                                            \
-  "addi sp, sp, -16\n"                                                         \
-  "sd x22, 0(sp)\n"                                                            \
-  "sd x23, 8(sp)\n"                                                            \
-  "addi sp, sp, -16\n"                                                         \
-  "sd x24, 0(sp)\n"                                                            \
-  "sd x25, 8(sp)\n"                                                            \
-  "addi sp, sp, -16\n"                                                         \
-  "sd x26, 0(sp)\n"                                                            \
-  "sd x27, 8(sp)\n"                                                            \
-  "addi sp, sp, -16\n"                                                         \
-  "sd x28, 0(sp)\n"                                                            \
-  "sd x29, 8(sp)\n"                                                            \
-  "addi sp, sp, -16\n"                                                         \
-  "sd x30, 0(sp)\n"                                                            \
-  "sd x31, 8(sp)\n"
+  "addi sp, sp, -256\n"                                                        \
+  "sd x1, 0(sp)\n"                                                             \
+  "sd x2, 8(sp)\n"                                                             \
+  "sd x3, 16(sp)\n"                                                            \
+  "sd x4, 24(sp)\n"                                                            \
+  "sd x5, 32(sp)\n"                                                            \
+  "sd x6, 40(sp)\n"                                                            \
+  "sd x7, 48(sp)\n"                                                            \
+  "sd x8, 56(sp)\n"                                                            \
+  "sd x9, 64(sp)\n"                                                            \
+  "sd x10, 72(sp)\n"                                                           \
+  "sd x11, 80(sp)\n"                                                           \
+  "sd x12, 88(sp)\n"                                                           \
+  "sd x13, 96(sp)\n"                                                           \
+  "sd x14, 104(sp)\n"                                                          \
+  "sd x15, 112(sp)\n"                                                          \
+  "sd x16, 120(sp)\n"                                                          \
+  "sd x17, 128(sp)\n"                                                          \
+  "sd x18, 136(sp)\n"                                                          \
+  "sd x19, 144(sp)\n"                                                          \
+  "sd x20, 152(sp)\n"                                                          \
+  "sd x21, 160(sp)\n"                                                          \
+  "sd x22, 168(sp)\n"                                                          \
+  "sd x23, 176(sp)\n"                                                          \
+  "sd x24, 184(sp)\n"                                                          \
+  "sd x25, 192(sp)\n"                                                          \
+  "sd x26, 200(sp)\n"                                                          \
+  "sd x27, 208(sp)\n"                                                          \
+  "sd x28, 216(sp)\n"                                                          \
+  "sd x29, 224(sp)\n"                                                          \
+  "sd x30, 232(sp)\n"                                                          \
+  "sd x31, 240(sp)\n"
 // Mirrors SAVE_ALL
 #define RESTORE_ALL                                                            \
-  "ld  x30, 0(sp)\n"                                                           \
-  "ld  x31, 8(sp)\n"                                                           \
-  "addi sp, sp,  16\n"                                                         \
-  "ld  x28, 0(sp)\n"                                                           \
-  "ld  x29, 8(sp)\n"                                                           \
-  "addi sp, sp,  16\n"                                                         \
-  "ld  x26, 0(sp)\n"                                                           \
-  "ld  x27, 8(sp)\n"                                                           \
-  "addi sp, sp,  16\n"                                                         \
-  "ld  x24, 0(sp)\n"                                                           \
-  "ld  x25, 8(sp)\n"                                                           \
-  "addi sp, sp,  16\n"                                                         \
-  "ld  x22, 0(sp)\n"                                                           \
-  "ld  x23, 8(sp)\n"                                                           \
-  "addi sp, sp,  16\n"                                                         \
-  "ld  x20, 0(sp)\n"                                                           \
-  "ld  x21, 8(sp)\n"                                                           \
-  "addi sp, sp,  16\n"                                                         \
-  "ld  x18, 0(sp)\n"                                                           \
-  "ld  x19, 8(sp)\n"                                                           \
-  "addi sp, sp,  16\n"                                                         \
-  "ld  x16, 0(sp)\n"                                                           \
-  "ld  x17, 8(sp)\n"                                                           \
-  "addi sp, sp,  16\n"                                                         \
-  "ld  x14, 0(sp)\n"                                                           \
-  "ld  x15, 8(sp)\n"                                                           \
-  "addi sp, sp,  16\n"                                                         \
-  "ld  x12, 0(sp)\n"                                                           \
-  "ld  x13, 8(sp)\n"                                                           \
-  "addi sp, sp,  16\n"                                                         \
-  "ld  x10, 0(sp)\n"                                                           \
-  "ld  x11, 8(sp)\n"                                                           \
-  "addi sp, sp,  16\n"                                                         \
-  "ld  x8, 0(sp)\n"                                                            \
-  "ld  x9, 8(sp)\n"                                                            \
-  "addi sp, sp,  16\n"                                                         \
-  "ld  x6, 0(sp)\n"                                                            \
-  "ld  x7, 8(sp)\n"                                                            \
-  "addi sp, sp,  16\n"                                                         \
-  "ld  x4, 0(sp)\n"                                                            \
-  "ld  x5, 8(sp)\n"                                                            \
-  "addi sp, sp,  16\n"                                                         \
-  "ld  x2, 0(sp)\n"                                                            \
-  "ld  x3, 8(sp)\n"                                                            \
-  "addi sp, sp,  16\n"                                                         \
-  "ld  x0, 0(sp)\n"                                                            \
-  "ld  x1, 8(sp)\n"                                                            \
-  "addi sp, sp,  16\n"
+  "ld x1, 0(sp)\n"                                                             \
+  "ld x2, 8(sp)\n"                                                             \
+  "ld x3, 16(sp)\n"                                                            \
+  "ld x4, 24(sp)\n"                                                            \
+  "ld x5, 32(sp)\n"                                                            \
+  "ld x6, 40(sp)\n"                                                            \
+  "ld x7, 48(sp)\n"                                                            \
+  "ld x8, 56(sp)\n"                                                            \
+  "ld x9, 64(sp)\n"                                                            \
+  "ld x10, 72(sp)\n"                                                           \
+  "ld x11, 80(sp)\n"                                                           \
+  "ld x12, 88(sp)\n"                                                           \
+  "ld x13, 96(sp)\n"                                                           \
+  "ld x14, 104(sp)\n"                                                          \
+  "ld x15, 112(sp)\n"                                                          \
+  "ld x16, 120(sp)\n"                                                          \
+  "ld x17, 128(sp)\n"                                                          \
+  "ld x18, 136(sp)\n"                                                          \
+  "ld x19, 144(sp)\n"                                                          \
+  "ld x20, 152(sp)\n"                                                          \
+  "ld x21, 160(sp)\n"                                                          \
+  "ld x22, 168(sp)\n"                                                          \
+  "ld x23, 176(sp)\n"                                                          \
+  "ld x24, 184(sp)\n"                                                          \
+  "ld x25, 192(sp)\n"                                                          \
+  "ld x26, 200(sp)\n"                                                          \
+  "ld x27, 208(sp)\n"                                                          \
+  "ld x28, 216(sp)\n"                                                          \
+  "ld x29, 224(sp)\n"                                                          \
+  "ld x30, 232(sp)\n"                                                          \
+  "ld x31, 240(sp)\n"                                                          \
+  "addi sp, sp,  256\n"
 
 // Anonymous namespace covering everything but our library entry point
 namespace {

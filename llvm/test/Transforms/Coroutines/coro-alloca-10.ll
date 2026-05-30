@@ -6,7 +6,7 @@ define void @fn() presplitcoroutine personality i32 0 {
 ; CHECK-LABEL: define void @fn() personality i32 0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[EXCEPTION_OBJ_RELOAD_ADDR:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 16, ptr null, ptr null, ptr @fn.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 16, ptr null, ptr @fn, ptr @fn.resumers)
 ; CHECK-NEXT:    [[MEM:%.*]] = call noalias nonnull ptr @malloc(i64 24)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[MEM]])
 ; CHECK-NEXT:    store ptr @fn.resume, ptr [[HDL]], align 8
@@ -19,7 +19,7 @@ define void @fn() presplitcoroutine personality i32 0 {
 ;
 entry:
   %exception.obj = alloca ptr, align 8
-  %id = call token @llvm.coro.id(i32 16, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 16, ptr null, ptr @fn, ptr null)
   %size = call i64 @llvm.coro.size.i64()
   %mem = call noalias nonnull ptr @malloc(i64 %size)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr %mem)

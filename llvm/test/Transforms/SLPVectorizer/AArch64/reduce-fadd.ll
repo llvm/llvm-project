@@ -14,7 +14,7 @@ define half @reduce_fast_half2(<2 x half> %vec2) {
 ; FULLFP16-LABEL: define half @reduce_fast_half2(
 ; FULLFP16-SAME: <2 x half> [[VEC2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FULLFP16-NEXT:  [[ENTRY:.*:]]
-; FULLFP16-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> [[VEC2]])
+; FULLFP16-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v2f16(half 0.000000e+00, <2 x half> [[VEC2]])
 ; FULLFP16-NEXT:    ret half [[TMP0]]
 ;
 entry:
@@ -44,7 +44,7 @@ define half @reduce_fast_half4(<4 x half> %vec4) {
 ; CHECK-LABEL: define half @reduce_fast_half4(
 ; CHECK-SAME: <4 x half> [[VEC4:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[VEC4]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0.000000e+00, <4 x half> [[VEC4]])
 ; CHECK-NEXT:    ret half [[TMP0]]
 ;
 entry:
@@ -89,13 +89,13 @@ define half @reduce_fast_half8(<8 x half> %vec8) {
 ; NOFP16-NEXT:    [[TMP0:%.*]] = shufflevector <8 x half> [[VEC8]], <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; NOFP16-NEXT:    [[TMP2:%.*]] = shufflevector <8 x half> [[VEC8]], <8 x half> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; NOFP16-NEXT:    [[RDX_OP:%.*]] = fadd fast <4 x half> [[TMP0]], [[TMP2]]
-; NOFP16-NEXT:    [[OP_RDX3:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[RDX_OP]])
+; NOFP16-NEXT:    [[OP_RDX3:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0.000000e+00, <4 x half> [[RDX_OP]])
 ; NOFP16-NEXT:    ret half [[OP_RDX3]]
 ;
 ; FULLFP16-LABEL: define half @reduce_fast_half8(
 ; FULLFP16-SAME: <8 x half> [[VEC8:%.*]]) #[[ATTR0]] {
 ; FULLFP16-NEXT:  [[ENTRY:.*:]]
-; FULLFP16-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> [[VEC8]])
+; FULLFP16-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0.000000e+00, <8 x half> [[VEC8]])
 ; FULLFP16-NEXT:    ret half [[TMP0]]
 ;
 entry:
@@ -161,7 +161,7 @@ define half @reduce_fast_half16(<16 x half> %vec16) {
 ; CHECK-LABEL: define half @reduce_fast_half16(
 ; CHECK-SAME: <16 x half> [[VEC16:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> [[VEC16]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v16f16(half 0.000000e+00, <16 x half> [[VEC16]])
 ; CHECK-NEXT:    ret half [[TMP0]]
 ;
 entry:
@@ -781,7 +781,7 @@ define half @reduce_unordered_fast_half4(<4 x half> %vec4) {
 ; CHECK-LABEL: define half @reduce_unordered_fast_half4(
 ; CHECK-SAME: <4 x half> [[VEC4:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[VEC4]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0.000000e+00, <4 x half> [[VEC4]])
 ; CHECK-NEXT:    ret half [[TMP0]]
 ;
 entry:

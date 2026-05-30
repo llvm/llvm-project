@@ -1,3 +1,9 @@
+if(NOT TARGET libc.src.__support.OSUtil.osutil)
+  message(STATUS "libc.src.__support.OSUtil.osutil is not avaiable. "
+                 "Skip unistd targets.")
+  return()
+endif()
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
@@ -11,6 +17,13 @@ add_entrypoint_object(
   DEPENDS
     libc.include.unistd
     libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
+  alarm
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.alarm
 )
 
 add_entrypoint_object(

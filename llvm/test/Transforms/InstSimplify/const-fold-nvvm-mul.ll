@@ -148,7 +148,7 @@ define double @test_1_times_subnorm_rz_d() {
 
 define float @test_1_times_subnorm_rm_f() {
 ; CHECK-LABEL: define float @test_1_times_subnorm_rm_f() {
-; CHECK-NEXT:    ret float 0x36A0000000000000
+; CHECK-NEXT:    ret float 1.401300e-45
 ;
   %res = call float @llvm.nvvm.mul.rm.f(float 1.0, float 0x36A0000000000000)
   ret float %res
@@ -156,7 +156,7 @@ define float @test_1_times_subnorm_rm_f() {
 
 define float @test_1_times_subnorm_rn_f() {
 ; CHECK-LABEL: define float @test_1_times_subnorm_rn_f() {
-; CHECK-NEXT:    ret float 0x36A0000000000000
+; CHECK-NEXT:    ret float 1.401300e-45
 ;
   %res = call float @llvm.nvvm.mul.rn.f(float 1.0, float 0x36A0000000000000)
   ret float %res
@@ -164,7 +164,7 @@ define float @test_1_times_subnorm_rn_f() {
 
 define float @test_1_times_subnorm_rp_f() {
 ; CHECK-LABEL: define float @test_1_times_subnorm_rp_f() {
-; CHECK-NEXT:    ret float 0x36A0000000000000
+; CHECK-NEXT:    ret float 1.401300e-45
 ;
   %res = call float @llvm.nvvm.mul.rp.f(float 1.0, float 0x36A0000000000000)
   ret float %res
@@ -172,7 +172,7 @@ define float @test_1_times_subnorm_rp_f() {
 
 define float @test_1_times_subnorm_rz_f() {
 ; CHECK-LABEL: define float @test_1_times_subnorm_rz_f() {
-; CHECK-NEXT:    ret float 0x36A0000000000000
+; CHECK-NEXT:    ret float 1.401300e-45
 ;
   %res = call float @llvm.nvvm.mul.rz.f(float 1.0, float 0x36A0000000000000)
   ret float %res
@@ -253,7 +253,7 @@ define double @test_1_times_neg_subnorm_rz_d() {
 
 define float @test_1_times_neg_subnorm_rm_f() {
 ; CHECK-LABEL: define float @test_1_times_neg_subnorm_rm_f() {
-; CHECK-NEXT:    ret float 0xB6A0000000000000
+; CHECK-NEXT:    ret float -1.401300e-45
 ;
   %res = call float @llvm.nvvm.mul.rm.f(float 1.0, float 0xB6A0000000000000)
   ret float %res
@@ -261,7 +261,7 @@ define float @test_1_times_neg_subnorm_rm_f() {
 
 define float @test_1_times_neg_subnorm_rn_f() {
 ; CHECK-LABEL: define float @test_1_times_neg_subnorm_rn_f() {
-; CHECK-NEXT:    ret float 0xB6A0000000000000
+; CHECK-NEXT:    ret float -1.401300e-45
 ;
   %res = call float @llvm.nvvm.mul.rn.f(float 1.0, float 0xB6A0000000000000)
   ret float %res
@@ -269,7 +269,7 @@ define float @test_1_times_neg_subnorm_rn_f() {
 
 define float @test_1_times_neg_subnorm_rp_f() {
 ; CHECK-LABEL: define float @test_1_times_neg_subnorm_rp_f() {
-; CHECK-NEXT:    ret float 0xB6A0000000000000
+; CHECK-NEXT:    ret float -1.401300e-45
 ;
   %res = call float @llvm.nvvm.mul.rp.f(float 1.0, float 0xB6A0000000000000)
   ret float %res
@@ -277,7 +277,7 @@ define float @test_1_times_neg_subnorm_rp_f() {
 
 define float @test_1_times_neg_subnorm_rz_f() {
 ; CHECK-LABEL: define float @test_1_times_neg_subnorm_rz_f() {
-; CHECK-NEXT:    ret float 0xB6A0000000000000
+; CHECK-NEXT:    ret float -1.401300e-45
 ;
   %res = call float @llvm.nvvm.mul.rz.f(float 1.0, float 0xB6A0000000000000)
   ret float %res
@@ -325,7 +325,7 @@ define float @test_1_times_neg_subnorm_rz_ftz_f() {
 
 define double @test_normal_times_normal_to_subnorm_rm_d() {
 ; CHECK-LABEL: define double @test_normal_times_normal_to_subnorm_rm_d() {
-; CHECK-NEXT:    ret double 0x3800000000000000
+; CHECK-NEXT:    ret double f0x3800000000000000
 ;
   %res = call double @llvm.nvvm.mul.rm.d(double 0x3810000000000000, double 0.5)
   ret double %res
@@ -333,7 +333,7 @@ define double @test_normal_times_normal_to_subnorm_rm_d() {
 
 define double @test_normal_times_normal_to_subnorm_rn_d() {
 ; CHECK-LABEL: define double @test_normal_times_normal_to_subnorm_rn_d() {
-; CHECK-NEXT:    ret double 0x3800000000000000
+; CHECK-NEXT:    ret double f0x3800000000000000
 ;
   %res = call double @llvm.nvvm.mul.rn.d(double 0x3810000000000000, double 0.5)
   ret double %res
@@ -341,7 +341,7 @@ define double @test_normal_times_normal_to_subnorm_rn_d() {
 
 define double @test_normal_times_normal_to_subnorm_rp_d() {
 ; CHECK-LABEL: define double @test_normal_times_normal_to_subnorm_rp_d() {
-; CHECK-NEXT:    ret double 0x3800000000000000
+; CHECK-NEXT:    ret double f0x3800000000000000
 ;
   %res = call double @llvm.nvvm.mul.rp.d(double 0x3810000000000000, double 0.5)
   ret double %res
@@ -349,7 +349,7 @@ define double @test_normal_times_normal_to_subnorm_rp_d() {
 
 define double @test_normal_times_normal_to_subnorm_rz_d() {
 ; CHECK-LABEL: define double @test_normal_times_normal_to_subnorm_rz_d() {
-; CHECK-NEXT:    ret double 0x3800000000000000
+; CHECK-NEXT:    ret double f0x3800000000000000
 ;
   %res = call double @llvm.nvvm.mul.rz.d(double 0x3810000000000000, double 0.5)
   ret double %res
@@ -357,7 +357,7 @@ define double @test_normal_times_normal_to_subnorm_rz_d() {
 
 define float @test_normal_times_normal_to_subnorm_rm_f() {
 ; CHECK-LABEL: define float @test_normal_times_normal_to_subnorm_rm_f() {
-; CHECK-NEXT:    ret float 0x3800000000000000
+; CHECK-NEXT:    ret float f0x00400000
 ;
   %res = call float @llvm.nvvm.mul.rm.f(float 0x3810000000000000, float 0.5)
   ret float %res
@@ -365,7 +365,7 @@ define float @test_normal_times_normal_to_subnorm_rm_f() {
 
 define float @test_normal_times_normal_to_subnorm_rn_f() {
 ; CHECK-LABEL: define float @test_normal_times_normal_to_subnorm_rn_f() {
-; CHECK-NEXT:    ret float 0x3800000000000000
+; CHECK-NEXT:    ret float f0x00400000
 ;
   %res = call float @llvm.nvvm.mul.rn.f(float 0x3810000000000000, float 0.5)
   ret float %res
@@ -373,7 +373,7 @@ define float @test_normal_times_normal_to_subnorm_rn_f() {
 
 define float @test_normal_times_normal_to_subnorm_rp_f() {
 ; CHECK-LABEL: define float @test_normal_times_normal_to_subnorm_rp_f() {
-; CHECK-NEXT:    ret float 0x3800000000000000
+; CHECK-NEXT:    ret float f0x00400000
 ;
   %res = call float @llvm.nvvm.mul.rp.f(float 0x3810000000000000, float 0.5)
   ret float %res
@@ -381,7 +381,7 @@ define float @test_normal_times_normal_to_subnorm_rp_f() {
 
 define float @test_normal_times_normal_to_subnorm_rz_f() {
 ; CHECK-LABEL: define float @test_normal_times_normal_to_subnorm_rz_f() {
-; CHECK-NEXT:    ret float 0x3800000000000000
+; CHECK-NEXT:    ret float f0x00400000
 ;
   %res = call float @llvm.nvvm.mul.rz.f(float 0x3810000000000000, float 0.5)
   ret float %res
@@ -427,7 +427,7 @@ define float @test_normal_times_normal_to_subnorm_rz_ftz_f() {
 
 define double @test_2_times_nan_rm_d() {
 ; CHECK-LABEL: define double @test_2_times_nan_rm_d() {
-; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.mul.rm.d(double 2.000000e+00, double 0x7FF4444400000000)
+; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.mul.rm.d(double 2.000000e+00, double +snan(0x4444400000000))
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = call double @llvm.nvvm.mul.rm.d(double 2.0, double 0x7FF4444400000000)
@@ -436,7 +436,7 @@ define double @test_2_times_nan_rm_d() {
 
 define double @test_2_times_nan_rn_d() {
 ; CHECK-LABEL: define double @test_2_times_nan_rn_d() {
-; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.mul.rn.d(double 2.000000e+00, double 0x7FF4444400000000)
+; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.mul.rn.d(double 2.000000e+00, double +snan(0x4444400000000))
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = call double @llvm.nvvm.mul.rn.d(double 2.0, double 0x7FF4444400000000)
@@ -445,7 +445,7 @@ define double @test_2_times_nan_rn_d() {
 
 define double @test_2_times_nan_rp_d() {
 ; CHECK-LABEL: define double @test_2_times_nan_rp_d() {
-; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.mul.rp.d(double 2.000000e+00, double 0x7FF4444400000000)
+; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.mul.rp.d(double 2.000000e+00, double +snan(0x4444400000000))
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = call double @llvm.nvvm.mul.rp.d(double 2.0, double 0x7FF4444400000000)
@@ -454,7 +454,7 @@ define double @test_2_times_nan_rp_d() {
 
 define double @test_2_times_nan_rz_d() {
 ; CHECK-LABEL: define double @test_2_times_nan_rz_d() {
-; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.mul.rz.d(double 2.000000e+00, double 0x7FF4444400000000)
+; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.mul.rz.d(double 2.000000e+00, double +snan(0x4444400000000))
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = call double @llvm.nvvm.mul.rz.d(double 2.0, double 0x7FF4444400000000)
@@ -463,7 +463,7 @@ define double @test_2_times_nan_rz_d() {
 
 define float @test_2_times_nan_rm_f() {
 ; CHECK-LABEL: define float @test_2_times_nan_rm_f() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.mul.rm.f(float 2.000000e+00, float 0x7FFF444400000000)
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.mul.rm.f(float 2.000000e+00, float +nan(0x3A2220))
 ; CHECK-NEXT:    ret float [[RES]]
 ;
   %res = call float @llvm.nvvm.mul.rm.f(float 2.0, float 0x7FFF444400000000)
@@ -472,7 +472,7 @@ define float @test_2_times_nan_rm_f() {
 
 define float @test_2_times_nan_rn_f() {
 ; CHECK-LABEL: define float @test_2_times_nan_rn_f() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.mul.rn.f(float 2.000000e+00, float 0x7FFF444400000000)
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.mul.rn.f(float 2.000000e+00, float +nan(0x3A2220))
 ; CHECK-NEXT:    ret float [[RES]]
 ;
   %res = call float @llvm.nvvm.mul.rn.f(float 2.0, float 0x7FFF444400000000)
@@ -481,7 +481,7 @@ define float @test_2_times_nan_rn_f() {
 
 define float @test_2_times_nan_rp_f() {
 ; CHECK-LABEL: define float @test_2_times_nan_rp_f() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.mul.rp.f(float 2.000000e+00, float 0x7FFF444400000000)
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.mul.rp.f(float 2.000000e+00, float +nan(0x3A2220))
 ; CHECK-NEXT:    ret float [[RES]]
 ;
   %res = call float @llvm.nvvm.mul.rp.f(float 2.0, float 0x7FFF444400000000)
@@ -490,7 +490,7 @@ define float @test_2_times_nan_rp_f() {
 
 define float @test_2_times_nan_rz_f() {
 ; CHECK-LABEL: define float @test_2_times_nan_rz_f() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.mul.rz.f(float 2.000000e+00, float 0x7FFF444400000000)
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.mul.rz.f(float 2.000000e+00, float +nan(0x3A2220))
 ; CHECK-NEXT:    ret float [[RES]]
 ;
   %res = call float @llvm.nvvm.mul.rz.f(float 2.0, float 0x7FFF444400000000)
@@ -499,7 +499,7 @@ define float @test_2_times_nan_rz_f() {
 
 define float @test_2_times_nan_rm_ftz_f() {
 ; CHECK-LABEL: define float @test_2_times_nan_rm_ftz_f() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.mul.rm.ftz.f(float 2.000000e+00, float 0x7FFF444400000000)
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.mul.rm.ftz.f(float 2.000000e+00, float +nan(0x3A2220))
 ; CHECK-NEXT:    ret float [[RES]]
 ;
   %res = call float @llvm.nvvm.mul.rm.ftz.f(float 2.0, float 0x7FFF444400000000)
@@ -508,7 +508,7 @@ define float @test_2_times_nan_rm_ftz_f() {
 
 define float @test_2_times_nan_rn_ftz_f() {
 ; CHECK-LABEL: define float @test_2_times_nan_rn_ftz_f() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.mul.rn.ftz.f(float 2.000000e+00, float 0x7FFF444400000000)
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.mul.rn.ftz.f(float 2.000000e+00, float +nan(0x3A2220))
 ; CHECK-NEXT:    ret float [[RES]]
 ;
   %res = call float @llvm.nvvm.mul.rn.ftz.f(float 2.0, float 0x7FFF444400000000)
@@ -517,7 +517,7 @@ define float @test_2_times_nan_rn_ftz_f() {
 
 define float @test_2_times_nan_rp_ftz_f() {
 ; CHECK-LABEL: define float @test_2_times_nan_rp_ftz_f() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.mul.rp.ftz.f(float 2.000000e+00, float 0x7FFF444400000000)
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.mul.rp.ftz.f(float 2.000000e+00, float +nan(0x3A2220))
 ; CHECK-NEXT:    ret float [[RES]]
 ;
   %res = call float @llvm.nvvm.mul.rp.ftz.f(float 2.0, float 0x7FFF444400000000)
@@ -526,7 +526,7 @@ define float @test_2_times_nan_rp_ftz_f() {
 
 define float @test_2_times_nan_rz_ftz_f() {
 ; CHECK-LABEL: define float @test_2_times_nan_rz_ftz_f() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.mul.rz.ftz.f(float 2.000000e+00, float 0x7FFF444400000000)
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.mul.rz.ftz.f(float 2.000000e+00, float +nan(0x3A2220))
 ; CHECK-NEXT:    ret float [[RES]]
 ;
   %res = call float @llvm.nvvm.mul.rz.ftz.f(float 2.0, float 0x7FFF444400000000)
@@ -561,7 +561,7 @@ define float @test_mul_just_above_1_rn_f() {
 
 define float @test_mul_just_above_1_rp_f() {
 ; CHECK-LABEL: define float @test_mul_just_above_1_rp_f() {
-; CHECK-NEXT:    ret float 0x3FF0000020000000
+; CHECK-NEXT:    ret float f0x3F800001
 ;
   %res = call float @llvm.nvvm.mul.rp.f(float 0.75, float 0x3FF5555560000000)
   ret float %res
@@ -593,7 +593,7 @@ define float @test_mul_just_above_1_rn_ftz_f() {
 
 define float @test_mul_just_above_1_rp_ftz_f() {
 ; CHECK-LABEL: define float @test_mul_just_above_1_rp_ftz_f() {
-; CHECK-NEXT:    ret float 0x3FF0000020000000
+; CHECK-NEXT:    ret float f0x3F800001
 ;
   %res = call float @llvm.nvvm.mul.rp.ftz.f(float 0.75, float 0x3FF5555560000000)
   ret float %res
@@ -635,7 +635,7 @@ define double @test_mul_just_above_1_rn_d() {
 
 define double @test_mul_just_above_1_rp_d() {
 ; CHECK-LABEL: define double @test_mul_just_above_1_rp_d() {
-; CHECK-NEXT:    ret double 0x3FF0000000000001
+; CHECK-NEXT:    ret double f0x3FF0000000000001
 ;
   %res = call double @llvm.nvvm.mul.rp.d(double 0.75, double 0x3FF5555555555556)
   ret double %res
@@ -661,7 +661,7 @@ define double @test_mul_just_above_1_rz_d() {
 
 define float @test_mul_just_below_negative_1_rm_f() {
 ; CHECK-LABEL: define float @test_mul_just_below_negative_1_rm_f() {
-; CHECK-NEXT:    ret float 0xBFF0000020000000
+; CHECK-NEXT:    ret float f0xBF800001
 ;
   %res = call float @llvm.nvvm.mul.rm.f(float -0.75, float 0x3FF5555560000000)
   ret float %res
@@ -693,7 +693,7 @@ define float @test_mul_just_below_negative_1_rz_f() {
 
 define float @test_mul_just_below_negative_1_rm_ftz_f() {
 ; CHECK-LABEL: define float @test_mul_just_below_negative_1_rm_ftz_f() {
-; CHECK-NEXT:    ret float 0xBFF0000020000000
+; CHECK-NEXT:    ret float f0xBF800001
 ;
   %res = call float @llvm.nvvm.mul.rm.ftz.f(float -0.75, float 0x3FF5555560000000)
   ret float %res
@@ -735,7 +735,7 @@ define float @test_mul_just_below_negative_1_rz_ftz_f() {
 
 define double @test_mul_just_below_negative_1_rm_d() {
 ; CHECK-LABEL: define double @test_mul_just_below_negative_1_rm_d() {
-; CHECK-NEXT:    ret double 0xBFF0000000000001
+; CHECK-NEXT:    ret double f0xBFF0000000000001
 ;
   %res = call double @llvm.nvvm.mul.rm.d(double -0.75, double 0x3FF5555555555556)
   ret double %res
@@ -784,7 +784,7 @@ define float @test_mul_slightly_more_above_1_rm_f() {
 
 define float @test_mul_slightly_more_above_1_rn_f() {
 ; CHECK-LABEL: define float @test_mul_slightly_more_above_1_rn_f() {
-; CHECK-NEXT:    ret float 0x3FF0000020000000
+; CHECK-NEXT:    ret float f0x3F800001
 ;
   %res = call float @llvm.nvvm.mul.rn.f(float 0x3FE4000000000000, float 0x3FF99999C0000000)
   ret float %res
@@ -792,7 +792,7 @@ define float @test_mul_slightly_more_above_1_rn_f() {
 
 define float @test_mul_slightly_more_above_1_rp_f() {
 ; CHECK-LABEL: define float @test_mul_slightly_more_above_1_rp_f() {
-; CHECK-NEXT:    ret float 0x3FF0000020000000
+; CHECK-NEXT:    ret float f0x3F800001
 ;
   %res = call float @llvm.nvvm.mul.rp.f(float 0x3FE4000000000000, float 0x3FF99999C0000000 )
   ret float %res
@@ -816,7 +816,7 @@ define float @test_mul_slightly_more_above_1_rm_ftz_f() {
 
 define float @test_mul_slightly_more_above_1_rn_ftz_f() {
 ; CHECK-LABEL: define float @test_mul_slightly_more_above_1_rn_ftz_f() {
-; CHECK-NEXT:    ret float 0x3FF0000020000000
+; CHECK-NEXT:    ret float f0x3F800001
 ;
   %res = call float @llvm.nvvm.mul.rn.ftz.f(float 0x3FE4000000000000, float 0x3FF99999C0000000 )
   ret float %res
@@ -824,7 +824,7 @@ define float @test_mul_slightly_more_above_1_rn_ftz_f() {
 
 define float @test_mul_slightly_more_above_1_rp_ftz_f() {
 ; CHECK-LABEL: define float @test_mul_slightly_more_above_1_rp_ftz_f() {
-; CHECK-NEXT:    ret float 0x3FF0000020000000
+; CHECK-NEXT:    ret float f0x3F800001
 ;
   %res = call float @llvm.nvvm.mul.rp.ftz.f(float 0x3FE4000000000000, float 0x3FF99999C0000000 )
   ret float %res
@@ -857,7 +857,7 @@ define double @test_mul_slightly_more_above_1_rm_d() {
 
 define double @test_mul_slightly_more_above_1_rn_d() {
 ; CHECK-LABEL: define double @test_mul_slightly_more_above_1_rn_d() {
-; CHECK-NEXT:    ret double 0x3FF0000000000001
+; CHECK-NEXT:    ret double f0x3FF0000000000001
 ;
   %res = call double @llvm.nvvm.mul.rn.d(double 0x3FE4000000000000, double 0x3FF999999999999B)
   ret double %res
@@ -865,7 +865,7 @@ define double @test_mul_slightly_more_above_1_rn_d() {
 
 define double @test_mul_slightly_more_above_1_rp_d() {
 ; CHECK-LABEL: define double @test_mul_slightly_more_above_1_rp_d() {
-; CHECK-NEXT:    ret double 0x3FF0000000000001
+; CHECK-NEXT:    ret double f0x3FF0000000000001
 ;
   %res = call double @llvm.nvvm.mul.rp.d(double 0x3FE4000000000000, double 0x3FF999999999999B)
   ret double %res
@@ -890,7 +890,7 @@ define double @test_mul_slightly_more_above_1_rz_d() {
 
 define float @test_mul_slightly_more_below_negative_1_rm_f() {
 ; CHECK-LABEL: define float @test_mul_slightly_more_below_negative_1_rm_f() {
-; CHECK-NEXT:    ret float 0xBFF0000020000000
+; CHECK-NEXT:    ret float f0xBF800001
 ;
   %res = call float @llvm.nvvm.mul.rm.f(float 0x3FE4000000000000, float 0xBFF99999C0000000)
   ret float %res
@@ -898,7 +898,7 @@ define float @test_mul_slightly_more_below_negative_1_rm_f() {
 
 define float @test_mul_slightly_more_below_negative_1_rn_f() {
 ; CHECK-LABEL: define float @test_mul_slightly_more_below_negative_1_rn_f() {
-; CHECK-NEXT:    ret float 0xBFF0000020000000
+; CHECK-NEXT:    ret float f0xBF800001
 ;
   %res = call float @llvm.nvvm.mul.rn.f(float 0x3FE4000000000000, float 0xBFF99999C0000000)
   ret float %res
@@ -922,7 +922,7 @@ define float @test_mul_slightly_more_below_negative_1_rz_f() {
 
 define float @test_mul_slightly_more_below_negative_1_rm_ftz_f() {
 ; CHECK-LABEL: define float @test_mul_slightly_more_below_negative_1_rm_ftz_f() {
-; CHECK-NEXT:    ret float 0xBFF0000020000000
+; CHECK-NEXT:    ret float f0xBF800001
 ;
   %res = call float @llvm.nvvm.mul.rm.ftz.f(float 0x3FE4000000000000, float 0xBFF99999C0000000)
   ret float %res
@@ -930,7 +930,7 @@ define float @test_mul_slightly_more_below_negative_1_rm_ftz_f() {
 
 define float @test_mul_slightly_more_below_negative_1_rn_ftz_f() {
 ; CHECK-LABEL: define float @test_mul_slightly_more_below_negative_1_rn_ftz_f() {
-; CHECK-NEXT:    ret float 0xBFF0000020000000
+; CHECK-NEXT:    ret float f0xBF800001
 ;
   %res = call float @llvm.nvvm.mul.rn.ftz.f(float 0x3FE4000000000000, float 0xBFF99999C0000000)
   ret float %res
@@ -963,7 +963,7 @@ define float @test_mul_slightly_more_below_negative_1_rz_ftz_f() {
 
 define double @test_mul_slightly_more_below_negative_1_rm_d() {
 ; CHECK-LABEL: define double @test_mul_slightly_more_below_negative_1_rm_d() {
-; CHECK-NEXT:    ret double 0xBFF0000000000001
+; CHECK-NEXT:    ret double f0xBFF0000000000001
 ;
   %res = call double @llvm.nvvm.mul.rm.d(double 0x3FE4000000000000, double 0xBFF999999999999B)
   ret double %res
@@ -971,7 +971,7 @@ define double @test_mul_slightly_more_below_negative_1_rm_d() {
 
 define double @test_mul_slightly_more_below_negative_1_rn_d() {
 ; CHECK-LABEL: define double @test_mul_slightly_more_below_negative_1_rn_d() {
-; CHECK-NEXT:    ret double 0xBFF0000000000001
+; CHECK-NEXT:    ret double f0xBFF0000000000001
 ;
   %res = call double @llvm.nvvm.mul.rn.d(double 0x3FE4000000000000, double 0xBFF999999999999B)
   ret double %res
