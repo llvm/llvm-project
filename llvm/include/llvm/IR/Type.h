@@ -257,7 +257,9 @@ public:
   bool isIntegerTy() const { return getTypeID() == IntegerTyID; }
 
   /// Return true if this is an IntegerType of the given width.
-  inline bool isIntegerTy(unsigned Bitwidth) const;
+  bool isIntegerTy(unsigned Bitwidth) const {
+    return isIntegerTy() && getIntegerBitwidth() == Bitwidth;
+  }
 
   /// Return true if this is an integer type or a vector of integer types.
   bool isIntOrIntVectorTy() const { return getScalarType()->isIntegerTy(); }

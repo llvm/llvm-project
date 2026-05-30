@@ -108,10 +108,6 @@ unsigned Type::getIntegerBitWidth() const {
   return cast<IntegerType>(this)->getBitWidth();
 }
 
-bool Type::isIntegerTy(unsigned Bitwidth) const {
-  return isIntegerTy() && cast<IntegerType>(this)->getBitWidth() == Bitwidth;
-}
-
 /// Class to represent byte types.
 class ByteType : public Type {
   friend class LLVMContextImpl;
