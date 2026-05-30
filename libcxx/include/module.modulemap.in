@@ -1692,6 +1692,8 @@ module std [system] {
     }
     module atomic_shared_ptr                  {
       header "__memory/atomic_shared_ptr.h"
+      textual header "__memory/atomic_shared_ptr_lock_based.h"
+      textual header "__memory/atomic_shared_ptr_lock_free.h"
       export std.memory.shared_ptr
     }
     module swap_allocator                     { header "__memory/swap_allocator.h" }

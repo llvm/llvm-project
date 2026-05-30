@@ -599,6 +599,8 @@ set(files
   __memory/array_cookie.h
   __memory/assume_aligned.h
   __memory/atomic_shared_ptr.h
+  __memory/atomic_shared_ptr_lock_based.h
+  __memory/atomic_shared_ptr_lock_free.h
   __memory/auto_ptr.h
   __memory/compressed_pair.h
   __memory/concepts.h
