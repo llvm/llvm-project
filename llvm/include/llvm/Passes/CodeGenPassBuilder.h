@@ -251,11 +251,26 @@ protected:
     static_assert(is_detected<is_machine_function_pass_t, PassT>::value &&
                   "Only machine function passes are supported.");
 
-    if (!Force && !runBeforeAdding(Name))
+    if (Force || runBeforeAdding(Name)) {
+      addHostAndInsertedPasses(std::forward<PassT>(Pass), Name, PMW.MFPM);
       return;
-    PMW.MFPM.addPass(std::forward<PassT>(Pass));
-    for (auto &C : AfterCallbacks)
-      C(Name, PMW.MFPM);
+    }
+
+    // Start recovery only applies before the start boundary is reached.
+    if (SSState.Started)
+      return;
+
+    unsigned InsertedTargetNum = probeInsertedTargetPasses(Name, PMW.MFPM);
+    unsigned Total = InsertedTargetNum + SSState.StartTargetCount;
+    // Do not add pass if we have not reached the start point yet, or if we are
+    // exactly at a start-after boundary.
+    if (Total < SSState.getInfo().StartInstanceNum ||
+        (Total == SSState.getInfo().StartInstanceNum &&
+         SSState.StartAfterFlag)) {
+      consumeInsertedPasses(Name, PMW.MFPM);
+      return;
+    }
+    addHostAndInsertedPasses(std::forward<PassT>(Pass), Name, PMW.MFPM);
   }
 
   void flushFPMsToMPM(PassManagerWrapper &PMW,
@@ -526,15 +541,39 @@ protected:
         [](StringRef Name) { return ((Name != PassTs::name()) && ...); });
   }
 
-  /// Insert InsertedPass pass after TargetPass pass.
-  /// Only machine function passes are supported.
+  /// Register a callback that handles insertion of InsertedPass after
+  /// TargetPass. Only machine function passes are supported.
+  ///
+  /// The callback behavior depends on the current AfterCallback mode:
+  /// - Probe: count the number of inserted passes matching the current target
+  /// pass.
+  /// - ConsumeOnly: advance start/stop state via runBeforeAdding without adding
+  /// them.
+  /// - Normal: insert the pass if runBeforeAdding allows it.
   template <typename TargetPassT, typename InsertedPassT>
   void insertPass(InsertedPassT &&Pass) const {
     AfterCallbacks.emplace_back(
         [&](StringRef Name, MachineFunctionPassManager &MFPM) mutable {
-          if (Name == TargetPassT::name() &&
-              runBeforeAdding(InsertedPassT::name())) {
-            MFPM.addPass(std::forward<InsertedPassT>(Pass));
+          if (Name != TargetPassT::name())
+            return;
+
+          switch (AfterCtrl.ModeValue) {
+          // Check how many insertedPasses that match TargetPass.
+          case AfterCallbackControl::Mode::Probe:
+            if (SSState.getInfo().StartPass ==
+                PIC->getPassNameForClassName(InsertedPassT::name())) {
+              ++AfterCtrl.InsertedTargetPassCount;
+            }
+            break;
+          // Update count of TargetPass managed by runBeforeAdding.
+          case AfterCallbackControl::Mode::ConsumeOnly:
+            runBeforeAdding(InsertedPassT::name());
+            break;
+          case AfterCallbackControl::Mode::Normal:
+            if (runBeforeAdding(InsertedPassT::name())) {
+              MFPM.addPass(std::forward<InsertedPassT>(Pass));
+            }
+            break;
           }
         });
   }
@@ -562,10 +601,67 @@ private:
       llvm::unique_function<void(StringRef, MachineFunctionPassManager &)>, 4>
       AfterCallbacks;
 
+  /// State class for `-start-before/-start-after/-stop-before/-stop-after`
+  struct StartStopState {
+    StartStopState(const TargetPassConfig::StartStopInfo &SSI)
+        : Info(SSI), StartTargetCount(0), StopTargetCount(0),
+          Started(SSI.StartPass.empty()), Stopped(SSI.StopPass.empty()),
+          StartAfterFlag(SSI.StartAfter), StopAfterFlag(SSI.StopAfter) {}
+
+    StartStopState() = default;
+    const TargetPassConfig::StartStopInfo &getInfo() const { return Info; }
+
+  private:
+    TargetPassConfig::StartStopInfo Info;
+
+  public:
+    unsigned StartTargetCount = 0u;
+    unsigned StopTargetCount = 0u;
+    bool Started = true;
+    bool Stopped = true;
+    bool StartAfterFlag = false;
+    bool StopAfterFlag = false;
+  };
+
+  struct AfterCallbackControl {
+    enum class Mode { Normal, Probe, ConsumeOnly };
+    Mode ModeValue = Mode::Normal;
+    unsigned InsertedTargetPassCount = 0;
+  };
+
   /// Helper variable for `-start-before/-start-after/-stop-before/-stop-after`
-  mutable bool Started = true;
-  mutable bool Stopped = true;
   mutable bool AddInCGSCCOrder = false;
+  mutable StartStopState SSState{};
+  mutable AfterCallbackControl AfterCtrl;
+
+  void runAfterCallbacks(StringRef Name,
+                         MachineFunctionPassManager &MFPM) const {
+    for (auto &C : AfterCallbacks) {
+      C(Name, MFPM);
+    }
+  }
+
+  unsigned probeInsertedTargetPasses(StringRef Name,
+                                     MachineFunctionPassManager &MFPM) const {
+    AfterCtrl.ModeValue = AfterCallbackControl::Mode::Probe;
+    AfterCtrl.InsertedTargetPassCount = 0;
+    runAfterCallbacks(Name, MFPM);
+    return AfterCtrl.InsertedTargetPassCount;
+  }
+
+  void consumeInsertedPasses(StringRef Name,
+                             MachineFunctionPassManager &MFPM) const {
+    AfterCtrl.ModeValue = AfterCallbackControl::Mode::ConsumeOnly;
+    runAfterCallbacks(Name, MFPM);
+  }
+
+  template <typename PassT>
+  void addHostAndInsertedPasses(PassT &&Pass, StringRef Name,
+                                MachineFunctionPassManager &MFPM) const {
+    AfterCtrl.ModeValue = AfterCallbackControl::Mode::Normal;
+    MFPM.addPass(std::forward<PassT>(Pass));
+    runAfterCallbacks(Name, MFPM);
+  }
 };
 
 template <typename Derived, typename TargetMachineT>
@@ -637,42 +733,42 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
 template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::setStartStopPasses(
     const TargetPassConfig::StartStopInfo &Info) const {
+
+  // Prepare state for `-start-before/-start-after/-stop-before/-stop-after`
+  SSState = StartStopState(Info);
   if (!Info.StartPass.empty()) {
-    Started = false;
-    BeforeCallbacks.emplace_back([this, &Info, AfterFlag = Info.StartAfter,
-                                  Count = 0u](StringRef ClassName) mutable {
-      if (Count == Info.StartInstanceNum) {
-        if (AfterFlag) {
-          AfterFlag = false;
-          Started = true;
+    BeforeCallbacks.emplace_back([this](StringRef ClassName) mutable {
+      if (SSState.StartTargetCount == SSState.getInfo().StartInstanceNum) {
+        if (SSState.StartAfterFlag) {
+          SSState.StartAfterFlag = false;
+          SSState.Started = true;
         }
-        return Started;
+        return SSState.Started;
       }
 
       auto PassName = PIC->getPassNameForClassName(ClassName);
-      if (Info.StartPass == PassName && ++Count == Info.StartInstanceNum)
-        Started = !Info.StartAfter;
-
-      return Started;
+      if (SSState.getInfo().StartPass == PassName &&
+          ++SSState.StartTargetCount == SSState.getInfo().StartInstanceNum)
+        SSState.Started = !SSState.getInfo().StartAfter;
+      return SSState.Started;
     });
   }
 
   if (!Info.StopPass.empty()) {
-    Stopped = false;
-    BeforeCallbacks.emplace_back([this, &Info, AfterFlag = Info.StopAfter,
-                                  Count = 0u](StringRef ClassName) mutable {
-      if (Count == Info.StopInstanceNum) {
-        if (AfterFlag) {
-          AfterFlag = false;
-          Stopped = true;
+    BeforeCallbacks.emplace_back([this](StringRef ClassName) mutable {
+      if (SSState.StopTargetCount == SSState.getInfo().StopInstanceNum) {
+        if (SSState.StopAfterFlag) {
+          SSState.StopAfterFlag = false;
+          SSState.Stopped = true;
         }
-        return !Stopped;
+        return !SSState.Stopped;
       }
 
       auto PassName = PIC->getPassNameForClassName(ClassName);
-      if (Info.StopPass == PassName && ++Count == Info.StopInstanceNum)
-        Stopped = !Info.StopAfter;
-      return !Stopped;
+      if (SSState.getInfo().StopPass == PassName &&
+          ++SSState.StopTargetCount == SSState.getInfo().StopInstanceNum)
+        SSState.Stopped = !SSState.getInfo().StopAfter;
+      return !SSState.Stopped;
     });
   }
 }
@@ -680,14 +776,14 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::setStartStopPasses(
 template <typename Derived, typename TargetMachineT>
 Error CodeGenPassBuilder<Derived, TargetMachineT>::verifyStartStop(
     const TargetPassConfig::StartStopInfo &Info) const {
-  if (Started && Stopped)
+  if (SSState.Started && SSState.Stopped)
     return Error::success();
 
-  if (!Started)
+  if (!SSState.Started)
     return make_error<StringError>(
         "Can't find start pass \"" + Info.StartPass + "\".",
         std::make_error_code(std::errc::invalid_argument));
-  if (!Stopped)
+  if (!SSState.Stopped)
     return make_error<StringError>(
         "Can't find stop pass \"" + Info.StopPass + "\".",
         std::make_error_code(std::errc::invalid_argument));
