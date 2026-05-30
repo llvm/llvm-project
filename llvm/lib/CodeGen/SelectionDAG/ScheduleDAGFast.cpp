@@ -448,6 +448,8 @@ bool ScheduleDAGFast::DelayForLiveRegsBottomUp(SUnit *SU,
   // If this node would clobber any "live" register, then it's not ready.
   for (SDep &Pred : SU->Preds) {
     if (Pred.isAssignedRegDep()) {
+      if (LiveRegDefs[Pred.getReg()] == SU)
+        continue;
       CheckForLiveRegDef(Pred.getSUnit(), Pred.getReg(), LiveRegDefs,
                          RegAdded, LRegs, TRI);
     }
