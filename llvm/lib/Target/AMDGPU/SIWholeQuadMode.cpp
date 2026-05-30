@@ -1468,7 +1468,7 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, BlockInfo &BI,
             assert(!SavedWQMReg);
             SavedWQMReg = MRI->createVirtualRegister(BoolRC);
           }
-
+          Before = skipDebugInstructionsForward(Before, MBB.end());
           toExact(MBB, Before, SavedWQMReg);
           State = StateExact;
         } else if (ExactToWQM) {
