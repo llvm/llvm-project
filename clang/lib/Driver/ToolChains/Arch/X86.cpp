@@ -45,7 +45,7 @@ std::string x86::getX86TargetCPU(const Driver &D, const ArgList &Args,
         {"AVX512F", "knl"},
         {"AVX512", "skylake-avx512"},
         {"AVX10.1", "sapphirerapids"},
-        {"AVX10.2", "diamondrapids"},
+        {"AVX10.2", "sapphirerapids"},
     });
     if (Triple.getArch() == llvm::Triple::x86) {
       // 32-bit-only /arch: flags.
@@ -349,6 +349,13 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   }
 
   // Handle features corresponding to "-ffixed-X" options
+  if (Args.hasArg(options::OPT_ffixed_edi)) {
+    if (ArchType != llvm::Triple::x86)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << "-ffixed-edi" << Triple.getTriple();
+    else
+      Features.push_back("+reserve-edi");
+  }
 #define RESERVE_REG(REG)                                                       \
   if (Args.hasArg(options::OPT_ffixed_##REG))                                  \
     Features.push_back("+reserve-" #REG);

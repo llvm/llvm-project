@@ -15,7 +15,7 @@
 #include "AMDGPUMCInstLower.h"
 #include "AMDGPU.h"
 #include "AMDGPUAsmPrinter.h"
-#include "AMDGPUMachineFunction.h"
+#include "AMDGPUMachineFunctionInfo.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -247,6 +247,7 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     LLVMContext &C = MI->getMF()->getFunction().getContext();
     C.emitError("AMDGPUMCInstLower::lower - Pseudo instruction doesn't have "
                 "a target-specific version: " + Twine(MI->getOpcode()));
+    return;
   }
 
   OutMI.setOpcode(MCOpcode);
@@ -276,14 +277,14 @@ const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV,
   // Intercept LDS variables with known addresses
   if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(CV)) {
     if (std::optional<uint32_t> Address =
-            AMDGPUMachineFunction::getLDSAbsoluteAddress(*GV)) {
+            AMDGPUMachineFunctionInfo::getLDSAbsoluteAddress(*GV)) {
       auto *IntTy = Type::getInt32Ty(CV->getContext());
       return AsmPrinter::lowerConstant(ConstantInt::get(IntTy, *Address),
                                        BaseCV, Offset);
     }
   }
 
-  if (const MCExpr *E = lowerAddrSpaceCast(TM, CV, OutContext))
+  if (const MCExpr *E = lowerAddrSpaceCast(CV, OutContext))
     return E;
   return AsmPrinter::lowerConstant(CV, BaseCV, Offset);
 }
@@ -319,6 +320,9 @@ static void emitVGPRBlockComment(const MachineInstr *MI, const SIInstrInfo *TII,
 }
 
 void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  if (MI->isCall())
+    collectCallEdge(*MI);
+
   // FIXME: Enable feature predicate checks once all the test pass.
   // AMDGPU_MC::verifyInstructionPredicates(MI->getOpcode(),
   //                                        getSubtargetInfo().getFeatureBits());
@@ -455,35 +459,13 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     MCInstLowering.lower(MI, TmpInst);
     EmitToStreamer(*OutStreamer, TmpInst);
 
-#ifdef EXPENSIVE_CHECKS
-    // Check getInstSizeInBytes on explicitly specified CPUs (it cannot
-    // work correctly for the generic CPU).
-    //
-    // The isPseudo check really shouldn't be here, but unfortunately there are
-    // some negative lit tests that depend on being able to continue through
-    // here even when pseudo instructions haven't been lowered.
-    //
-    // We also overestimate branch sizes with the offset bug.
-    if (!MI->isPseudo() && STI.isCPUStringValid(STI.getCPU()) &&
-        (!STI.hasOffset3fBug() || !MI->isBranch())) {
-      SmallVector<MCFixup, 4> Fixups;
-      SmallVector<char, 16> CodeBytes;
-
-      std::unique_ptr<MCCodeEmitter> InstEmitter(createAMDGPUMCCodeEmitter(
-          *STI.getInstrInfo(), OutContext));
-      InstEmitter->encodeInstruction(TmpInst, CodeBytes, Fixups, STI);
-
-      assert(CodeBytes.size() == STI.getInstrInfo()->getInstSizeInBytes(*MI));
-    }
-#endif
-
     if (DumpCodeInstEmitter) {
       // Disassemble instruction/operands to text
       DisasmLines.resize(DisasmLines.size() + 1);
       std::string &DisasmLine = DisasmLines.back();
       raw_string_ostream DisasmStream(DisasmLine);
 
-      AMDGPUInstPrinter InstPrinter(*TM.getMCAsmInfo(), *STI.getInstrInfo(),
+      AMDGPUInstPrinter InstPrinter(TM.getMCAsmInfo(), *STI.getInstrInfo(),
                                     *STI.getRegisterInfo());
       InstPrinter.printInst(&TmpInst, 0, StringRef(), STI, DisasmStream);
 

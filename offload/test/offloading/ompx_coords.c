@@ -1,8 +1,6 @@
 // RUN: %libomptarget-compileopt-run-and-check-generic
 //
 // REQUIRES: gpu
-// https://github.com/llvm/llvm-project/issues/182119
-// UNSUPPORTED: intelgpu
 
 #include <omp.h>
 #include <ompx.h>

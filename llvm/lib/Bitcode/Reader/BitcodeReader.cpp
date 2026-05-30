@@ -73,6 +73,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -696,6 +697,9 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
 
   std::optional<ValueTypeCallbackTy> ValueTypeCallback;
 
+  /// A list of GUIDs defined by this module. Indexed by ValueID.
+  std::vector<GlobalValue::GUID> GUIDList;
+
 public:
   BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
                 StringRef ProducerIdentification, LLVMContext &Context);
@@ -974,9 +978,12 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
 
   /// Callback to ask whether a symbol is the prevailing copy when invoked
   /// during combined index building.
-  std::function<bool(GlobalValue::GUID)> IsPrevailing;
+  std::function<bool(StringRef)> IsPrevailing = nullptr;
 
-  /// Saves the stack ids from the STACK_IDS record to consult when adding stack
+  /// Callback invoked whenever a new ValueInfo is generated.
+  std::function<void(ValueInfo)> OnValueInfo = nullptr;
+
+  /// Saves the stack ids from the STACK_IDS record to consult when adding
   /// ids from the lists in the callsite and alloc entries to the index.
   std::vector<uint64_t> StackIds;
 
@@ -989,11 +996,15 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   /// list and used to avoid repeated hash lookups.
   std::vector<unsigned> StackIdToIndex;
 
+  /// A list of GUIDs defined by this module. Indexed by ValueID.
+  std::vector<uint64_t> DefinedGUIDs;
+
 public:
   ModuleSummaryIndexBitcodeReader(
       BitstreamCursor Stream, StringRef Strtab, ModuleSummaryIndex &TheIndex,
       StringRef ModulePath,
-      std::function<bool(GlobalValue::GUID)> IsPrevailing = nullptr);
+      std::function<bool(StringRef)> IsPrevailing = nullptr,
+      std::function<void(ValueInfo)> OnValueInfo = nullptr);
 
   Error parseModule();
 
@@ -1364,8 +1375,10 @@ static int getDecodedBinaryOpcode(unsigned Val, Type *Ty) {
   }
 }
 
-static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val) {
-  switch (Val) {
+static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val,
+                                                   bool &IsElementwise) {
+  IsElementwise = Val & bitc::RMW_ELEMENTWISE_FLAG;
+  switch (Val & ~bitc::RMW_ELEMENTWISE_FLAG) {
   default: return AtomicRMWInst::BAD_BINOP;
   case bitc::RMW_XCHG: return AtomicRMWInst::Xchg;
   case bitc::RMW_ADD: return AtomicRMWInst::Add;
@@ -1386,6 +1399,10 @@ static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val) {
     return AtomicRMWInst::FMaximum;
   case bitc::RMW_FMINIMUM:
     return AtomicRMWInst::FMinimum;
+  case bitc::RMW_FMAXIMUMNUM:
+    return AtomicRMWInst::FMaximumNum;
+  case bitc::RMW_FMINIMUMNUM:
+    return AtomicRMWInst::FMinimumNum;
   case bitc::RMW_UINC_WRAP:
     return AtomicRMWInst::UIncWrap;
   case bitc::RMW_UDEC_WRAP:
@@ -2109,6 +2126,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::ElementType;
   case bitc::ATTR_KIND_FNRETTHUNK_EXTERN:
     return Attribute::FnRetThunkExtern;
+  case bitc::ATTR_KIND_FLATTEN:
+    return Attribute::Flatten;
   case bitc::ATTR_KIND_INLINE_HINT:
     return Attribute::InlineHint;
   case bitc::ATTR_KIND_IN_REG:
@@ -2649,6 +2668,17 @@ Error BitcodeReader::parseTypeTableBody() {
     case bitc::TYPE_CODE_TOKEN:     // TOKEN
       ResultTy = Type::getTokenTy(Context);
       break;
+    case bitc::TYPE_CODE_BYTE: { // BYTE: [width]
+      if (Record.empty())
+        return error("Invalid record");
+
+      uint64_t NumBits = Record[0];
+      if (NumBits < ByteType::MIN_BYTE_BITS ||
+          NumBits > ByteType::MAX_BYTE_BITS)
+        return error("Bitwidth for byte type out of range");
+      ResultTy = ByteType::get(Context, NumBits);
+      break;
+    }
     case bitc::TYPE_CODE_INTEGER: { // INTEGER: [width]
       if (Record.empty())
         return error("Invalid integer record");
@@ -3347,6 +3377,20 @@ Error BitcodeReader::parseConstants() {
       V = ConstantInt::get(CurTy, VInt);
       break;
     }
+    case bitc::CST_CODE_BYTE: // BYTE: [byteval]
+      if (!CurTy->isByteOrByteVectorTy() || Record.empty())
+        return error("Invalid byte const record");
+      V = ConstantByte::get(CurTy, decodeSignRotatedValue(Record[0]));
+      break;
+    case bitc::CST_CODE_WIDE_BYTE: { // WIDE_BYTE: [n x byteval]
+      if (!CurTy->isByteOrByteVectorTy() || Record.empty())
+        return error("Invalid wide byte const record");
+
+      auto *ScalarTy = cast<ByteType>(CurTy->getScalarType());
+      APInt VByte = readWideAPInt(Record, ScalarTy->getBitWidth());
+      V = ConstantByte::get(CurTy, VByte);
+      break;
+    }
     case bitc::CST_CODE_FLOAT: {    // FLOAT: [fpval]
       if (Record.empty())
         return error("Invalid float const record");
@@ -3409,70 +3453,32 @@ Error BitcodeReader::parseConstants() {
         return error("Invalid string record");
 
       SmallString<16> Elts(Record.begin(), Record.end());
-      V = ConstantDataArray::getString(Context, Elts,
-                                       BitCode == bitc::CST_CODE_CSTRING);
+      V = ConstantDataArray::getString(
+          Context, Elts, BitCode == bitc::CST_CODE_CSTRING,
+          cast<ArrayType>(CurTy)->getElementType()->isByteTy());
       break;
     }
     case bitc::CST_CODE_DATA: {// DATA: [n x value]
       if (Record.empty())
         return error("Invalid data record");
 
-      Type *EltTy;
-      if (auto *Array = dyn_cast<ArrayType>(CurTy))
-        EltTy = Array->getElementType();
-      else
-        EltTy = cast<VectorType>(CurTy)->getElementType();
-      if (EltTy->isIntegerTy(8)) {
-        SmallVector<uint8_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::get(Context, Elts);
-        else
-          V = ConstantDataArray::get(Context, Elts);
-      } else if (EltTy->isIntegerTy(16)) {
-        SmallVector<uint16_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::get(Context, Elts);
-        else
-          V = ConstantDataArray::get(Context, Elts);
-      } else if (EltTy->isIntegerTy(32)) {
-        SmallVector<uint32_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::get(Context, Elts);
-        else
-          V = ConstantDataArray::get(Context, Elts);
-      } else if (EltTy->isIntegerTy(64)) {
-        SmallVector<uint64_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::get(Context, Elts);
-        else
-          V = ConstantDataArray::get(Context, Elts);
-      } else if (EltTy->isHalfTy()) {
-        SmallVector<uint16_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getFP(EltTy, Elts);
-        else
-          V = ConstantDataArray::getFP(EltTy, Elts);
-      } else if (EltTy->isBFloatTy()) {
-        SmallVector<uint16_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getFP(EltTy, Elts);
-        else
-          V = ConstantDataArray::getFP(EltTy, Elts);
-      } else if (EltTy->isFloatTy()) {
-        SmallVector<uint32_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getFP(EltTy, Elts);
-        else
-          V = ConstantDataArray::getFP(EltTy, Elts);
-      } else if (EltTy->isDoubleTy()) {
-        SmallVector<uint64_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getFP(EltTy, Elts);
-        else
-          V = ConstantDataArray::getFP(EltTy, Elts);
-      } else {
+      Type *EltTy = CurTy->getContainedType(0);
+      if (!ConstantDataSequential::isElementTypeCompatible(EltTy))
         return error("Invalid type for value");
+
+      const unsigned EltBytes = EltTy->getScalarSizeInBits() / 8;
+      SmallString<128> RawData;
+      RawData.reserve(Record.size() * EltBytes);
+      for (uint64_t Val : Record) {
+        const char *Src = reinterpret_cast<const char *>(&Val);
+        if constexpr (sys::IsBigEndianHost)
+          Src += sizeof(uint64_t) - EltBytes;
+        RawData.append(Src, Src + EltBytes);
       }
+
+      V = isa<VectorType>(CurTy)
+              ? ConstantDataVector::getRaw(RawData.str(), Record.size(), EltTy)
+              : ConstantDataArray::getRaw(RawData.str(), Record.size(), EltTy);
       break;
     }
     case bitc::CST_CODE_CE_UNOP: {  // CE_UNOP: [opcode, opval]
@@ -4038,6 +4044,15 @@ Error BitcodeReader::globalCleanup() {
   for (auto &Pair : UpgradedVariables) {
     Pair.first->eraseFromParent();
     TheModule->insertGlobalVariable(Pair.second);
+  }
+
+  for (size_t ValueID = 0; ValueID < GUIDList.size(); ValueID++) {
+    const auto GUID = GUIDList[ValueID];
+    if (GUID == 0)
+      continue;
+
+    const auto *Value = ValueList[ValueID];
+    TheModule->insertGUID(Value, GUID);
   }
 
   // Force deallocation of memory for these vectors to favor the client that
@@ -4843,6 +4858,13 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       // historically always the start of the regular bitcode header.
       VSTOffset = Record[0] - 1;
       break;
+    // MODULE_CODE_GUIDLIST: [i64 x N]
+    case bitc::MODULE_CODE_GUIDLIST:
+      assert(Record.size() % 2 == 0);
+      GUIDList.reserve(GUIDList.size() + Record.size() / 2);
+      for (size_t i = 0; i < Record.size(); i += 2)
+        GUIDList.push_back(Record[i] << 32 | Record[i + 1]);
+      break;
     /// MODULE_CODE_SOURCE_FILENAME: [namechar x N]
     case bitc::MODULE_CODE_SOURCE_FILENAME:
       SmallString<128> ValueName;
@@ -4853,6 +4875,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
     }
     Record.clear();
   }
+
   this->ValueTypeCallback = std::nullopt;
   return Error::success();
 }
@@ -6653,8 +6676,9 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (!(NumRecords == (OpNum + 4) || NumRecords == (OpNum + 5)))
         return error("Invalid atomicrmw record");
 
+      bool IsElementwise = false;
       const AtomicRMWInst::BinOp Operation =
-          getDecodedRMWOperation(Record[OpNum]);
+          getDecodedRMWOperation(Record[OpNum], IsElementwise);
       if (Operation < AtomicRMWInst::FIRST_BINOP ||
           Operation > AtomicRMWInst::LAST_BINOP)
         return error("Invalid atomicrmw record");
@@ -6679,7 +6703,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         Alignment =
             Align(TheModule->getDataLayout().getTypeStoreSize(Val->getType()));
 
-      I = new AtomicRMWInst(Operation, Ptr, Val, *Alignment, Ordering, SSID);
+      I = new AtomicRMWInst(Operation, Ptr, Val, *Alignment, Ordering, SSID,
+                            IsElementwise);
       ResTypeID = ValTypeID;
       cast<AtomicRMWInst>(I)->setVolatile(IsVol);
 
@@ -7060,7 +7085,7 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   if (!F || !F->isMaterializable())
     return Error::success();
 
-  DenseMap<Function*, uint64_t>::iterator DFII = DeferredFunctionInfo.find(F);
+  auto DFII = DeferredFunctionInfo.find(F);
   assert(DFII != DeferredFunctionInfo.end() && "Deferred function not found!");
   // If its position is recorded as 0, its body is somewhere in the stream
   // but we haven't seen it yet.
@@ -7224,9 +7249,11 @@ std::vector<StructType *> BitcodeReader::getIdentifiedStructTypes() const {
 
 ModuleSummaryIndexBitcodeReader::ModuleSummaryIndexBitcodeReader(
     BitstreamCursor Cursor, StringRef Strtab, ModuleSummaryIndex &TheIndex,
-    StringRef ModulePath, std::function<bool(GlobalValue::GUID)> IsPrevailing)
+    StringRef ModulePath, std::function<bool(StringRef)> IsPrevailing,
+    std::function<void(ValueInfo)> OnValueInfo)
     : BitcodeReaderBase(std::move(Cursor), Strtab), TheIndex(TheIndex),
-      ModulePath(ModulePath), IsPrevailing(IsPrevailing) {}
+      ModulePath(ModulePath), IsPrevailing(IsPrevailing),
+      OnValueInfo(OnValueInfo) {}
 
 void ModuleSummaryIndexBitcodeReader::addThisModule() {
   TheIndex.addModule(ModulePath);
@@ -7254,9 +7281,15 @@ ModuleSummaryIndexBitcodeReader::getValueInfoFromValueId(unsigned ValueId) {
 void ModuleSummaryIndexBitcodeReader::setValueGUID(
     uint64_t ValueID, StringRef ValueName, GlobalValue::LinkageTypes Linkage,
     StringRef SourceFileName) {
-  std::string GlobalId =
-      GlobalValue::getGlobalIdentifier(ValueName, Linkage, SourceFileName);
-  auto ValueGUID = GlobalValue::getGUIDAssumingExternalLinkage(GlobalId);
+  GlobalValue::GUID ValueGUID = 0;
+  if (ValueID < DefinedGUIDs.size())
+    ValueGUID = DefinedGUIDs[ValueID];
+  if (ValueGUID == 0)
+    // DefinedGUIDs is a sparse array and can contain zero entries, so this
+    // can't just be an `else`.
+    ValueGUID = GlobalValue::getGUIDAssumingExternalLinkage(
+        GlobalValue::getGlobalIdentifier(ValueName, Linkage, SourceFileName));
+
   auto OriginalNameID = ValueGUID;
   if (GlobalValue::isLocalLinkage(Linkage))
     OriginalNameID = GlobalValue::getGUIDAssumingExternalLinkage(ValueName);
@@ -7267,10 +7300,11 @@ void ModuleSummaryIndexBitcodeReader::setValueGUID(
   // UseStrtab is false for legacy summary formats and value names are
   // created on stack. In that case we save the name in a string saver in
   // the index so that the value name can be recorded.
-  ValueIdToValueInfoMap[ValueID] = std::make_pair(
-      TheIndex.getOrInsertValueInfo(
-          ValueGUID, UseStrtab ? ValueName : TheIndex.saveString(ValueName)),
-      OriginalNameID);
+  auto VI = TheIndex.getOrInsertValueInfo(
+      ValueGUID, UseStrtab ? ValueName : TheIndex.saveString(ValueName));
+  ValueIdToValueInfoMap[ValueID] = std::make_pair(VI, OriginalNameID);
+  if (OnValueInfo)
+    OnValueInfo(VI);
 }
 
 // Specialized value symbol table parser used when reading module index
@@ -7478,6 +7512,13 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
           // word before the start of the identification or module block, which
           // was historically always the start of the regular bitcode header.
           VSTOffset = Record[0] - 1;
+          break;
+        // MODULE_CODE_GUIDLIST: [i64 x N]
+        case bitc::MODULE_CODE_GUIDLIST:
+          assert(Record.size() % 2 == 0);
+          DefinedGUIDs.reserve(DefinedGUIDs.size() + Record.size() / 2);
+          for (size_t i = 0; i < Record.size(); i += 2)
+            DefinedGUIDs.push_back(Record[i] << 32 | Record[i + 1]);
           break;
         // v1 GLOBALVAR: [pointer type, isconst,     initid,       linkage, ...]
         // v1 FUNCTION:  [type,         callingconv, isproto,      linkage, ...]
@@ -7875,7 +7916,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       // and kept).
       auto LT = (GlobalValue::LinkageTypes)Flags.Linkage;
       bool IsPrevailingSym = !IsPrevailing || GlobalValue::isLocalLinkage(LT) ||
-                             IsPrevailing(VI.getGUID());
+                             IsPrevailing(VI.name());
 
       // If this is not the prevailing copy, and the records are in the "old"
       // order (preceding), clear them now. They should already be empty in
@@ -8689,15 +8730,16 @@ BitcodeModule::getLazyModule(LLVMContext &Context, bool ShouldLazyLoadMetadata,
 // We don't use ModuleIdentifier here because the client may need to control the
 // module path used in the combined summary (e.g. when reading summaries for
 // regular LTO modules).
-Error BitcodeModule::readSummary(
-    ModuleSummaryIndex &CombinedIndex, StringRef ModulePath,
-    std::function<bool(GlobalValue::GUID)> IsPrevailing) {
+Error BitcodeModule::readSummary(ModuleSummaryIndex &CombinedIndex,
+                                 StringRef ModulePath,
+                                 std::function<bool(StringRef)> IsPrevailing,
+                                 std::function<void(ValueInfo)> OnValueInfo) {
   BitstreamCursor Stream(Buffer);
   if (Error JumpFailed = Stream.JumpToBit(ModuleBit))
     return JumpFailed;
 
   ModuleSummaryIndexBitcodeReader R(std::move(Stream), Strtab, CombinedIndex,
-                                    ModulePath, IsPrevailing);
+                                    ModulePath, IsPrevailing, OnValueInfo);
   return R.parseModule();
 }
 

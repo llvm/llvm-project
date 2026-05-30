@@ -29,7 +29,6 @@ namespace clang {
 class AnalyzerOptions;
 class CallExpr;
 class Decl;
-class LocationContext;
 class Stmt;
 class TranslationUnitDecl;
 
@@ -308,13 +307,15 @@ public:
                                  const ObjCMethodCall &msg, ExprEngine &Eng,
                                  bool wasInlined = false);
 
-  /// Run checkers for pre-visiting obj-c messages.
+  /// Run checkers for pre-visiting function calls (including methods,
+  /// constructors, destructors etc. but excluding obj-c messages).
   void runCheckersForPreCall(ExplodedNodeSet &Dst, const ExplodedNodeSet &Src,
                              const CallEvent &Call, ExprEngine &Eng) {
     runCheckersForCallEvent(/*isPreVisit=*/true, Dst, Src, Call, Eng);
   }
 
-  /// Run checkers for post-visiting obj-c messages.
+  /// Run checkers for post-visiting function calls (including methods,
+  /// constructors, destructors etc. but excluding obj-c messages).
   void runCheckersForPostCall(ExplodedNodeSet &Dst, const ExplodedNodeSet &Src,
                               const CallEvent &Call, ExprEngine &Eng,
                               bool wasInlined = false) {
@@ -322,7 +323,8 @@ public:
                             wasInlined);
   }
 
-  /// Run checkers for visiting obj-c messages.
+  /// Run checkers for visiting function calls (including methods,
+  /// constructors, destructors etc. but excluding obj-c messages).
   void runCheckersForCallEvent(bool isPreVisit, ExplodedNodeSet &Dst,
                                const ExplodedNodeSet &Src,
                                const CallEvent &Call, ExprEngine &Eng,
@@ -408,8 +410,7 @@ public:
                               const InvalidatedSymbols *invalidated,
                               ArrayRef<const MemRegion *> ExplicitRegions,
                               ArrayRef<const MemRegion *> Regions,
-                              const LocationContext *LCtx,
-                              const CallEvent *Call);
+                              const StackFrame *SF, const CallEvent *Call);
 
   /// Run checkers when pointers escape.
   ///
@@ -520,13 +521,11 @@ public:
 
   using CheckLiveSymbolsFunc = CheckerFn<void (ProgramStateRef,SymbolReaper &)>;
 
-  using CheckRegionChangesFunc =
-      CheckerFn<ProgramStateRef (ProgramStateRef,
-                                 const InvalidatedSymbols *symbols,
-                                 ArrayRef<const MemRegion *> ExplicitRegions,
-                                 ArrayRef<const MemRegion *> Regions,
-                                 const LocationContext *LCtx,
-                                 const CallEvent *Call)>;
+  using CheckRegionChangesFunc = CheckerFn<ProgramStateRef(
+      ProgramStateRef, const InvalidatedSymbols *symbols,
+      ArrayRef<const MemRegion *> ExplicitRegions,
+      ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
+      const CallEvent *Call)>;
 
   using CheckPointerEscapeFunc =
       CheckerFn<ProgramStateRef (ProgramStateRef,

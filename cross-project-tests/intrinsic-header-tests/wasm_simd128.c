@@ -1033,6 +1033,18 @@ v128_t test_f64x2_promote_low_f32x4(v128_t a) {
   return wasm_f64x2_promote_low_f32x4(a);
 }
 
+// CHECK-LABEL: test_f32x4_promote_low_f16x8:
+// CHECK: f32x4.promote_low_f16x8{{$}}
+v128_t test_f32x4_promote_low_f16x8(v128_t a) {
+  return wasm_f32x4_promote_low_f16x8(a);
+}
+
+// CHECK-LABEL: test_f16x8_demote_f32x4_zero:
+// CHECK: f16x8.demote_f32x4_zero{{$}}
+v128_t test_f16x8_demote_f32x4_zero(v128_t a) {
+  return wasm_f16x8_demote_f32x4_zero(a);
+}
+
 // CHECK-LABEL: test_i8x16_shuffle:
 // CHECK: i8x16.shuffle 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
 // 0{{$}}

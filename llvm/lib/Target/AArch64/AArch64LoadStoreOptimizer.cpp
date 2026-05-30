@@ -21,6 +21,7 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -1663,7 +1664,7 @@ bool AArch64LoadStoreOpt::findMatchingStore(
 }
 
 static bool needsWinCFI(const MachineFunction *MF) {
-  return MF->getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+  return MF->getTarget().getMCAsmInfo().usesWindowsCFI() &&
          MF->getFunction().needsUnwindTableEntry();
 }
 
@@ -2921,6 +2922,16 @@ bool AArch64LoadStoreOpt::tryToMergeLdStUpdate
   MachineInstr &MI = *MBBI;
   MachineBasicBlock::iterator E = MI.getParent()->end();
   MachineBasicBlock::iterator Update;
+
+  // Do not form post-inc addressing mode for volatile accesses. Instructions
+  // performing register writeback do not set a valid instruction syndrome,
+  // making it impossible to handle MMIO in protected hypervisors.
+  // Exclude accesses based on the stack pointer, as these can't be MMIO.
+  // Also exclude MTE tag store instructions.
+  if (MBBI->hasOrderedMemoryRef() &&
+      AArch64InstrInfo::getLdStBaseOp(MI).getReg() != AArch64::SP &&
+      !isTagStore(MI) && MI.getOpcode() != AArch64::STGPi)
+    return false;
 
   // Look forward to try to form a post-index instruction. For example,
   // ldr x0, [x20]

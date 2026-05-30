@@ -210,8 +210,6 @@ void polly::recordAssumption(polly::RecordedAssumptionsTy *RecordedAssumptions,
                              polly::AssumptionKind Kind, isl::set Set,
                              DebugLoc Loc, polly::AssumptionSign Sign,
                              BasicBlock *BB, bool RTC) {
-  assert((Set.is_params() || BB) &&
-         "Assumptions without a basic block must be parameter sets");
   if (RecordedAssumptions)
     RecordedAssumptions->push_back({Kind, Sign, Set, Loc, BB, RTC});
 }
@@ -461,20 +459,6 @@ Value *polly::expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
   ScopExpander Expander(S.getRegion(), SE, GenFn, GenSE, Name, VMap, LoopMap,
                         RTCBB);
   return Expander.expandCodeFor(E, Ty, IP);
-}
-
-Value *polly::getConditionFromTerminator(Instruction *TI) {
-  if (BranchInst *BR = dyn_cast<BranchInst>(TI)) {
-    if (BR->isUnconditional())
-      return ConstantInt::getTrue(Type::getInt1Ty(TI->getContext()));
-
-    return BR->getCondition();
-  }
-
-  if (SwitchInst *SI = dyn_cast<SwitchInst>(TI))
-    return SI->getCondition();
-
-  return nullptr;
 }
 
 Loop *polly::getLoopSurroundingScop(Scop &S, LoopInfo &LI) {

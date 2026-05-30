@@ -40,37 +40,44 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
-#include <llvm/Support/Casting.h>
 #include <optional>
 
 #define DEBUG_TYPE "expand-ir-insts"
 
 using namespace llvm;
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 static cl::opt<unsigned>
     ExpandFpConvertBits("expand-fp-convert-bits", cl::Hidden,
-                        cl::init(llvm::IntegerType::MAX_INT_BITS),
+                        cl::init(IntegerType::MAX_INT_BITS),
                         cl::desc("fp convert instructions on integers with "
                                  "more than <N> bits are expanded."));
 
 static cl::opt<unsigned>
     ExpandDivRemBits("expand-div-rem-bits", cl::Hidden,
-                     cl::init(llvm::IntegerType::MAX_INT_BITS),
+                     cl::init(IntegerType::MAX_INT_BITS),
                      cl::desc("div and rem instructions on integers with "
                               "more than <N> bits are expanded."));
 
-namespace {
-bool isConstantPowerOfTwo(llvm::Value *V, bool SignedOp) {
+static bool isConstantPowerOfTwo(Value *V, bool SignedOp) {
   auto *C = dyn_cast<ConstantInt>(V);
   if (!C)
     return false;
@@ -81,7 +88,7 @@ bool isConstantPowerOfTwo(llvm::Value *V, bool SignedOp) {
   return Val.isPowerOf2();
 }
 
-bool isSigned(unsigned int Opcode) {
+static bool isSigned(unsigned Opcode) {
   return Opcode == Instruction::SDiv || Opcode == Instruction::SRem;
 }
 
@@ -185,6 +192,7 @@ static void expandPow2DivRem(BinaryOperator *BO) {
 /// This class implements a precise expansion of the frem instruction.
 /// The generated code is based on the fmod implementation in the AMD device
 /// libs.
+namespace {
 class FRemExpander {
   /// The IRBuilder to use for the expansion.
   IRBuilder<> &B;
@@ -258,8 +266,7 @@ public:
       MaxIter = 1;
     }
 
-    unsigned Precision =
-        llvm::APFloat::semanticsPrecision(Ty->getFltSemantics());
+    unsigned Precision = APFloat::semanticsPrecision(Ty->getFltSemantics());
     return FRemExpander{B, Ty, Precision / MaxIter, ComputeTy};
   }
 
@@ -277,7 +284,7 @@ public:
 private:
   FRemExpander(IRBuilder<> &B, Type *FremTy, unsigned Bits, Type *ComputeFpTy)
       : B(B), FremTy(FremTy), ComputeFpTy(ComputeFpTy), ExTy(B.getInt32Ty()),
-        Bits(ConstantInt::get(ExTy, Bits)), One(ConstantInt::get(ExTy, 1)) {};
+        Bits(ConstantInt::get(ExTy, Bits)), One(ConstantInt::get(ExTy, 1)) {}
 
   Value *createRcp(Value *V, const Twine &Name) const {
     // Leave it to later optimizations to turn this into an rcp
@@ -429,13 +436,13 @@ private:
     Value *XFinite =
         NoInfs || (SQ && isKnownNeverInfinity(X, *SQ))
             ? B.getTrue()
-            : B.CreateFCmpULT(B.CreateUnaryIntrinsic(Intrinsic::fabs, X),
-                              ConstantFP::getInfinity(FremTy));
+            : B.CreateFCmpULT(B.CreateFAbs(X), ConstantFP::getInfinity(FremTy));
     Ret = B.CreateSelect(XFinite, Ret, Nan);
 
     return Ret;
   }
 };
+} // namespace
 
 Value *FRemExpander::buildApproxFRem(Value *X, Value *Y) const {
   IRBuilder<>::FastMathFlagGuard Guard(B);
@@ -465,8 +472,8 @@ Value *FRemExpander::buildFRem(Value *X, Value *Y,
   //   { ret = x or 0 with sign of x }
   //   Adjust ret to NaN/inf in input
   //   return ret
-  Value *Ax = B.CreateUnaryIntrinsic(Intrinsic::fabs, X, {}, "ax");
-  Value *Ay = B.CreateUnaryIntrinsic(Intrinsic::fabs, Y, {}, "ay");
+  Value *Ax = B.CreateFAbs(X, {}, "ax");
+  Value *Ay = B.CreateFAbs(Y, {}, "ay");
   if (ComputeFpTy != X->getType()) {
     Ax = B.CreateFPExt(Ax, ComputeFpTy, "ax");
     Ay = B.CreateFPExt(Ay, ComputeFpTy, "ay");
@@ -511,7 +518,6 @@ Value *FRemExpander::buildFRem(Value *X, Value *Y,
 
   return Ret;
 }
-} // namespace
 
 static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
   LLVM_DEBUG(dbgs() << "Expanding instruction: " << I << '\n');
@@ -668,8 +674,9 @@ static void expandFPToI(Instruction *FPToI, bool IsSaturating, bool IsSigned) {
   if (IsSigned) {
     PosOrNeg =
         Builder.CreateICmpSGT(ARep, ConstantInt::getSigned(FloatIntTy, -1));
-    Sign = Builder.CreateSelect(PosOrNeg, ConstantInt::getSigned(IntTy, 1),
-                                ConstantInt::getSigned(IntTy, -1), "sign");
+    Sign = Builder.CreateSelectWithUnknownProfile(
+        PosOrNeg, ConstantInt::getSigned(IntTy, 1),
+        ConstantInt::getSigned(IntTy, -1), "sign");
   }
   Value *And =
       Builder.CreateLShr(ARep, Builder.getIntN(FloatWidth, FPMantissaWidth));
@@ -687,18 +694,33 @@ static void expandFPToI(Instruction *FPToI, bool IsSaturating, bool IsSigned) {
       ZeroResultCond = Builder.CreateOr(ZeroResultCond, IsNeg);
     }
   }
-  Builder.CreateCondBr(ZeroResultCond, End,
-                       IsSaturating ? CheckSaturateBB : CheckExpSizeBB);
+  Instruction *CondBr = Builder.CreateCondBr(
+      ZeroResultCond, End, IsSaturating ? CheckSaturateBB : CheckExpSizeBB);
+  // We do not have any information on the value of the exponent, so mark the
+  // branch weights as unkown.
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE, F);
 
   Value *Saturated;
   if (IsSaturating) {
     // check.saturate:
     Builder.SetInsertPoint(CheckSaturateBB);
+    uint64_t SaturatingBiasedExp =
+        static_cast<uint64_t>(ExponentBias) + BitWidth - IsSigned;
+    // Clamp to the all-ones (inf/NaN) exponent. Without this, when the integer
+    // is wide enough to hold every finite float the threshold exceeds any
+    // possible biased exponent, so +/-inf would never saturate.
+    uint64_t MaxBiasedExp = (1ULL << ExponentWidth) - 1;
+    if (SaturatingBiasedExp > MaxBiasedExp)
+      SaturatingBiasedExp = MaxBiasedExp;
     Value *Cmp3 = Builder.CreateICmpUGE(
-        BiasedExp, ConstantInt::getSigned(
-                       FloatIntTy, static_cast<int64_t>(ExponentBias +
-                                                        BitWidth - IsSigned)));
-    Builder.CreateCondBr(Cmp3, SaturateBB, CheckExpSizeBB);
+        BiasedExp, ConstantInt::get(FloatIntTy, SaturatingBiasedExp));
+    Value *CondBrSat = Builder.CreateCondBr(Cmp3, SaturateBB, CheckExpSizeBB);
+    // Saturation is considered an unlikely event.
+    applyProfMetadataIfEnabled(CondBrSat, [&](Instruction *Inst) {
+      Inst->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(Inst->getContext()).createUnlikelyBranchWeights());
+    });
 
     // saturate:
     Builder.SetInsertPoint(SaturateBB);
@@ -707,8 +729,9 @@ static void expandFPToI(Instruction *FPToI, bool IsSaturating, bool IsSigned) {
           ConstantInt::get(IntTy, APInt::getSignedMaxValue(BitWidth));
       Value *SignedMin =
           ConstantInt::get(IntTy, APInt::getSignedMinValue(BitWidth));
-      Saturated =
-          Builder.CreateSelect(PosOrNeg, SignedMax, SignedMin, "saturated");
+      // Select between the signed max and min values for saturation.
+      Saturated = Builder.CreateSelectWithUnknownProfile(
+          PosOrNeg, SignedMax, SignedMin, "saturated");
     } else {
       Saturated = ConstantInt::getAllOnesValue(IntTy);
     }
@@ -720,7 +743,13 @@ static void expandFPToI(Instruction *FPToI, bool IsSaturating, bool IsSigned) {
   Value *ExpSmallerMantissaWidth = Builder.CreateICmpULT(
       BiasedExp, Builder.getIntN(FloatWidth, ExponentBias + FPMantissaWidth),
       "exp.smaller.mantissa.width");
-  Builder.CreateCondBr(ExpSmallerMantissaWidth, ExpSmallBB, ExpLargeBB);
+  // We cannot determine whether this is a left shift or a right shift,
+  // so we mark the branch weights as unknown.
+  Value *CondBr2 =
+      Builder.CreateCondBr(ExpSmallerMantissaWidth, ExpSmallBB, ExpLargeBB);
+  applyProfMetadataIfEnabled(CondBr2, [&](Instruction *Inst) {
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE, F);
+  });
 
   // exp.small:
   Builder.SetInsertPoint(ExpSmallBB);
@@ -908,8 +937,16 @@ static void expandIToFP(Instruction *IToFP) {
 
   // entry:
   Builder.SetInsertPoint(Entry);
+  // We assume that the zero is an unlikely input case, so the branch to 'End'
+  // is the unlikely path.
   Value *Cmp = Builder.CreateICmpEQ(IntVal, ConstantInt::getSigned(IntTy, 0));
-  Builder.CreateCondBr(Cmp, End, IfEnd);
+  Value *CondBrEntry = Builder.CreateCondBr(Cmp, End, IfEnd);
+  applyProfMetadataIfEnabled(CondBrEntry, [&](Instruction *Inst) {
+    if (!ProfcheckDisableMetadataFixes)
+      Inst->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(Inst->getContext()).createUnlikelyBranchWeights());
+  });
 
   // if.end:
   Builder.SetInsertPoint(IfEnd);
@@ -926,13 +963,35 @@ static void expandIToFP(Instruction *IToFP) {
                                   FloatWidth == 128 ? Call : Cast);
   Value *Cmp3 = Builder.CreateICmpSGT(
       Sub1, Builder.getIntN(BitWidthNew, FPMantissaWidth + 1));
-  Builder.CreateCondBr(Cmp3, IfThen4, IfElse);
+  // This branch handles the rare case where rounding the mantissa causes a
+  // carry-out at the most significant bit, necessitating an increment of the
+  // exponent. This is rare case, so the True path is mared as likely.
+  Value *CondBrIfEnd = Builder.CreateCondBr(Cmp3, IfThen4, IfElse);
+  applyProfMetadataIfEnabled(CondBrIfEnd, [&](Instruction *Inst) {
+    if (!ProfcheckDisableMetadataFixes)
+      Inst->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(Inst->getContext()).createLikelyBranchWeights());
+  });
 
   // if.then4:
   Builder.SetInsertPoint(IfThen4);
-  llvm::SwitchInst *SI = Builder.CreateSwitch(Sub1, SwDefault);
+  SwitchInst *SI = Builder.CreateSwitch(Sub1, SwDefault);
   SI->addCase(Builder.getIntN(BitWidthNew, FPMantissaWidth + 2), SwBB);
   SI->addCase(Builder.getIntN(BitWidthNew, FPMantissaWidth + 3), SwEpilog);
+  // Add branch weights to the SwitchInst. The weights are provided for the
+  // default case first (SwDefault), followed by each explicit case in the
+  // order they were added (SwBB, then SwEpilog). Because the following cases
+  // are rare, the defalut case is given a likely weight.
+  if (!ProfcheckDisableMetadataFixes) {
+    if (!ProfcheckDisableMetadataFixes)
+      SI->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(SI->getContext())
+              .createBranchWeights({llvm::MDBuilder::kLikelyBranchWeight,
+                                    llvm::MDBuilder::kUnlikelyBranchWeight,
+                                    llvm::MDBuilder::kUnlikelyBranchWeight}));
+  }
 
   // sw.bb:
   Builder.SetInsertPoint(SwBB);
@@ -986,7 +1045,15 @@ static void expandIToFP(Instruction *IToFP) {
     ExtractT64 = Builder.CreateTrunc(Sub2, Builder.getInt64Ty());
   else
     ExtractT64 = Builder.CreateTrunc(Extract63, Builder.getInt32Ty());
-  Builder.CreateCondBr(PosOrNeg, IfEnd26, IfThen20);
+  // Rounding usually keeps the exponent within its current magnitude and
+  // overflow is rare. The False path is unlikely to be taken.
+  Value *CondBrSwEpilog = Builder.CreateCondBr(PosOrNeg, IfEnd26, IfThen20);
+  applyProfMetadataIfEnabled(CondBrSwEpilog, [&](Instruction *Inst) {
+    if (!ProfcheckDisableMetadataFixes)
+      Inst->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(Inst->getContext()).createLikelyBranchWeights());
+  });
 
   // if.then20
   Builder.SetInsertPoint(IfThen20);
@@ -1103,6 +1170,30 @@ static void expandIToFP(Instruction *IToFP) {
     A4 = Builder.CreateFPTrunc(A40, IToFP->getType());
   } else // float type
     A4 = Builder.CreateBitCast(Or35, IToFP->getType());
+
+  // Sub2 is the unbiased exponent (the index of the top set bit in the input).
+  // The exponent arithmetic above wraps to garbage instead of inf once it
+  // overflows the exponent field, so saturate to a correctly-signed infinity
+  // when Sub2 reaches 1 << (ExponentWidth - 1). Sub2 is at most BitWidth - 1,
+  // so skip the check entirely when even that can't reach the threshold.
+  // (Values that round *up* into inf, e.g. 2^n - 1, keep Sub2 = BitWidth - 1;
+  // these are handled by the conversion's own rounding, not by this
+  // saturation.)
+  unsigned ExponentWidth = FloatWidth - FPMantissaWidth - 1;
+  uint64_t MinInfExp = 1ULL << (ExponentWidth - 1);
+  if (BitWidth - 1 >= MinInfExp) {
+    Value *MinInfExpVal = Builder.getIntN(BitWidthNew, MinInfExp);
+    Value *Overflow = Builder.CreateICmpUGE(Sub2, MinInfExpVal);
+    Value *Inf = ConstantFP::getInfinity(IToFP->getType(), /*Negative=*/false);
+    if (IsSigned) {
+      Value *NegInf =
+          ConstantFP::getInfinity(IToFP->getType(), /*Negative=*/true);
+      Value *IsNeg =
+          Builder.CreateICmpSLT(IntVal, ConstantInt::getNullValue(IntTy));
+      Inf = Builder.CreateSelect(IsNeg, NegInf, Inf);
+    }
+    A4 = Builder.CreateSelect(Overflow, Inf, A4);
+  }
   Builder.CreateBr(End);
 
   // return:
@@ -1135,7 +1226,12 @@ static void scalarize(Instruction *I,
     else if (auto *CastI = dyn_cast<CastInst>(I))
       NewOp = Builder.CreateCast(CastI->getOpcode(), Ext,
                                  I->getType()->getScalarType());
-    else
+    else if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      assert(II->getIntrinsicID() == Intrinsic::fptoui_sat ||
+             II->getIntrinsicID() == Intrinsic::fptosi_sat);
+      NewOp = Builder.CreateIntrinsic(I->getType()->getScalarType(),
+                                      II->getIntrinsicID(), {Ext});
+    } else
       llvm_unreachable("Unsupported instruction type");
 
     Result = Builder.CreateInsertElement(Result, NewOp, Idx);
@@ -1164,17 +1260,17 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
 
   unsigned MaxLegalFpConvertBitWidth =
       TLI.getMaxLargeFPConvertBitWidthSupported();
-  if (ExpandFpConvertBits != llvm::IntegerType::MAX_INT_BITS)
+  if (ExpandFpConvertBits != IntegerType::MAX_INT_BITS)
     MaxLegalFpConvertBitWidth = ExpandFpConvertBits;
 
   unsigned MaxLegalDivRemBitWidth = TLI.getMaxDivRemBitWidthSupported();
-  if (ExpandDivRemBits != llvm::IntegerType::MAX_INT_BITS)
+  if (ExpandDivRemBits != IntegerType::MAX_INT_BITS)
     MaxLegalDivRemBitWidth = ExpandDivRemBits;
 
   bool DisableExpandLargeFp =
-      MaxLegalFpConvertBitWidth >= llvm::IntegerType::MAX_INT_BITS;
+      MaxLegalFpConvertBitWidth >= IntegerType::MAX_INT_BITS;
   bool DisableExpandLargeDivRem =
-      MaxLegalDivRemBitWidth >= llvm::IntegerType::MAX_INT_BITS;
+      MaxLegalDivRemBitWidth >= IntegerType::MAX_INT_BITS;
   bool DisableFrem = !FRemExpander::shouldExpandAnyFremType(TLI);
 
   if (DisableExpandLargeFp && DisableFrem && DisableExpandLargeDivRem)
@@ -1308,7 +1404,7 @@ public:
   ExpandIRInstsLegacyPass(CodeGenOptLevel OptLevel)
       : FunctionPass(ID), OptLevel(OptLevel) {}
 
-  ExpandIRInstsLegacyPass() : ExpandIRInstsLegacyPass(CodeGenOptLevel::None) {};
+  ExpandIRInstsLegacyPass() : ExpandIRInstsLegacyPass(CodeGenOptLevel::None) {}
 
   bool runOnFunction(Function &F) override {
     auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();

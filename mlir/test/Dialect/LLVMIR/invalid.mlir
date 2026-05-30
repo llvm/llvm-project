@@ -1850,7 +1850,7 @@ llvm.mlir.alias external @y5 : i32 {
 module {
   llvm.func @foo()
 
-  // expected-error@below {{only integer and string values are currently supported}}
+  // expected-error@below {{only integer, string, and string-array values are currently supported for unknown key '"yolo"'}}
   llvm.module_flags [#llvm.mlir.module_flag<error, "yolo", @foo>]
 }
 
@@ -1957,6 +1957,16 @@ llvm.mlir.global internal constant @bad_array_attr_simple_type() : !llvm.array<2
 
 // -----
 
+llvm.mlir.global internal constant @bad_ptr_array_attr_leaf() : !llvm.array<2 x ptr> {
+  // expected-error@below {{pointer array element at index 0 must be a flat symbol reference, zero, undef, or poison}}
+  %0 = llvm.mlir.constant([1 : i32, @s0]) : !llvm.array<2 x ptr>
+  llvm.return %0 : !llvm.array<2 x ptr>
+}
+
+llvm.mlir.global private constant @s0("a\00") {addr_space = 0 : i32} : !llvm.array<2 x i8>
+
+// -----
+
 llvm.func @inlineAsmMustTail(%arg0: i32, %arg1 : !llvm.ptr) {
   // expected-error@+1 {{op tail call kind 'musttail' is not supported}}
   %8 = llvm.inline_asm tail_call_kind = <musttail> "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
@@ -2015,6 +2025,23 @@ llvm.func @invalid_xevm_matrix_3(%a: !llvm.ptr<1>, %base_width_a: i32, %base_hei
   // expected-error@+1 {{op result size of 128 bits does not match the expected size of 208 bits}}
   %loaded_a = xevm.blockload2d %a, %base_width_a, %base_height_a, %base_pitch_a, %x, %y <{elem_size_in_bits=16 : i32, tile_width=26 : i32, tile_height=8 : i32, v_blocks=1 : i32, transpose=false, pack_register=false, cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32) -> vector<8xi16>
   llvm.return %loaded_a : vector<8xi16>
+}
+
+// -----
+
+llvm.func @invalid_xevm_truncf_1(%arg0: vector<8xf16>) {
+  // expected-error@+1 {{op both src and dst should be vector types or both}}
+  %0 = xevm.truncf %arg0 { src_etype = f16, dst_etype = bf8 } : (vector<8xf16>) -> i8
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_mma_mx(%loaded_c_casted: vector<4xf32>, %loaded_a: vector<8xi16>, %loaded_b_casted: vector<8xi32>, %scale_a: vector<2xi8>, %scale_b: vector<2xi8>) -> vector<8xf32> {
+  // expected-error@+1 {{op type of C operand must match result type}}
+  %c_result = xevm.mma_mx %loaded_a, %loaded_b_casted, %scale_a, %scale_b, %loaded_c_casted { shape=<m=8, n=16, k=64>,
+    types=<d=f32, a=e2m1, b=e2m1, c=f32> } : (vector<8xi16>, vector<8xi32>, vector<2xi8>, vector<2xi8>, vector<4xf32>) -> vector<8xf32>
+  llvm.return %c_result : vector<8xf32>
 }
 
 // -----
@@ -2089,4 +2116,20 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
     // expected-error@+1 {{'llvm.ptrtoaddr' op bit-width of integer result type 'i64' must match the pointer bitwidth (32) specified in the datalayout}}
     %0 = llvm.ptrtoaddr %arg0 : !llvm.ptr to i64
   }
+}
+
+// -----
+
+func.func @nvvm_read_sreg_tid_x_wrong_type() {
+  // expected-error@+1 {{'nvvm.read.ptx.sreg.tid.x' op result #0 must be 32-bit signless integer, but got 'i64'}}
+  %0 = nvvm.read.ptx.sreg.tid.x : i64
+  return
+}
+
+// -----
+
+func.func @nvvm_read_sreg_clock64_wrong_type() {
+  // expected-error@+1 {{'nvvm.read.ptx.sreg.clock64' op result #0 must be 64-bit signless integer, but got 'i32'}}
+  %0 = nvvm.read.ptx.sreg.clock64 : i32
+  return
 }

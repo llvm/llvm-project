@@ -105,25 +105,25 @@
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-unknown-freebsd10.0 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS %s
-// CHECK-MIPS: "{{[^" ]*}}ld{{[^" ]*}}"
+// CHECK-MIPS: {{[/\\]}}ld{{[^" ]*}}"
 // CHECK-MIPS: "-dynamic-linker" "{{.*}}/libexec/ld-elf.so.1"
 // CHECK-MIPS-NOT: "--hash-style={{gnu|both}}"
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-unknown-freebsd10.0 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPSEL %s
-// CHECK-MIPSEL: "{{[^" ]*}}ld{{[^" ]*}}"
+// CHECK-MIPSEL: {{[/\\]}}ld{{[^" ]*}}"
 // CHECK-MIPSEL: "-dynamic-linker" "{{.*}}/libexec/ld-elf.so.1"
 // CHECK-MIPSEL-NOT: "--hash-style={{gnu|both}}"
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-unknown-freebsd10.0 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64 %s
-// CHECK-MIPS64: "{{[^" ]*}}ld{{[^" ]*}}"
+// CHECK-MIPS64: {{[/\\]}}ld{{[^" ]*}}"
 // CHECK-MIPS64: "-dynamic-linker" "{{.*}}/libexec/ld-elf.so.1"
 // CHECK-MIPS64-NOT: "--hash-style={{gnu|both}}"
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-unknown-freebsd10.0 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL %s
-// CHECK-MIPS64EL: "{{[^" ]*}}ld{{[^" ]*}}"
+// CHECK-MIPS64EL: {{[/\\]}}ld{{[^" ]*}}"
 // CHECK-MIPS64EL: "-dynamic-linker" "{{.*}}/libexec/ld-elf.so.1"
 // CHECK-MIPS64EL-NOT: "--hash-style={{gnu|both}}"
 
@@ -219,3 +219,13 @@
 // RUN: %clang --target=riscv64-unknown-freebsd -mno-relax -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=RISCV64-FLAGS %s
 // RISCV64-FLAGS: "-X" "--no-relax"
+
+/// -rdynamic becomes -export-dynamic; -s, -t, and -T are forwarded.
+// RUN: %clang --target=x86_64-unknown-freebsd -rdynamic -s -t -T a.lds -### %s \
+// RUN:   2>&1 | FileCheck --check-prefix=PASS %s
+// PASS:      "--eh-frame-hdr"
+// PASS-SAME: "-export-dynamic"
+// PASS-SAME: "-s" "-t" "-T" "a.lds"
+
+// RUN: %clang -target riscv32be-unknown-freebsd -### -c %s 2>&1 | FileCheck %s --check-prefix=RV32BE
+// RV32BE-NOT: elf32briscv

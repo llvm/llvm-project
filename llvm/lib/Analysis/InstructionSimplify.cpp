@@ -79,7 +79,7 @@ static Value *simplifyCastInst(unsigned, Value *, Type *, const SimplifyQuery &,
                                unsigned);
 static Value *simplifyGEPInst(Type *, Value *, ArrayRef<Value *>,
                               GEPNoWrapFlags, const SimplifyQuery &, unsigned);
-static Value *simplifySelectInst(Value *, Value *, Value *,
+static Value *simplifySelectInst(Value *, Value *, Value *, FastMathFlags,
                                  const SimplifyQuery &, unsigned);
 static Value *simplifyInstructionWithOperands(Instruction *I,
                                               ArrayRef<Value *> NewOps,
@@ -1708,8 +1708,7 @@ static Value *simplifyAndOrOfICmpsWithCtpop(ICmpInst *Cmp0, ICmpInst *Cmp1,
   CmpPredicate Pred0, Pred1;
   Value *X;
   const APInt *C;
-  if (!match(Cmp0, m_ICmp(Pred0, m_Intrinsic<Intrinsic::ctpop>(m_Value(X)),
-                          m_APInt(C))) ||
+  if (!match(Cmp0, m_ICmp(Pred0, m_Ctpop(m_Value(X)), m_APInt(C))) ||
       !match(Cmp1, m_ICmp(Pred1, m_Specific(X), m_ZeroInt())) || C->isZero())
     return nullptr;
 
@@ -1950,12 +1949,8 @@ static Value *simplifyAndOrWithICmpEq(unsigned Opcode, Value *Op0, Value *Op1,
          "Must be and/or");
   CmpPredicate Pred;
   Value *A, *B;
-  if (Op0->getType()->isIntOrIntVectorTy(1) &&
-      match(Op0, m_NUWTrunc(m_Value(A)))) {
-    B = ConstantInt::getNullValue(A->getType());
-    Pred = ICmpInst::ICMP_NE;
-  } else if (!match(Op0, m_ICmp(Pred, m_Value(A), m_Value(B))) ||
-             !ICmpInst::isEquality(Pred))
+  if (!match(Op0, m_ICmpLike(Pred, m_Value(A), m_Value(B))) ||
+      !ICmpInst::isEquality(Pred))
     return nullptr;
 
   auto Simplify = [&](Value *Res) -> Value * {
@@ -3113,8 +3108,7 @@ static Value *simplifyICmpWithConstant(CmpPredicate Pred, Value *LHS,
   if (RHS_CR.isFullSet())
     return ConstantInt::getTrue(ITy);
 
-  ConstantRange LHS_CR =
-      computeConstantRange(LHS, CmpInst::isSigned(Pred), Q.IIQ.UseInstrInfo);
+  ConstantRange LHS_CR = computeConstantRange(LHS, CmpInst::isSigned(Pred), Q);
   if (!LHS_CR.isFullSet()) {
     if (RHS_CR.contains(LHS_CR))
       return ConstantInt::getTrue(ITy);
@@ -3790,7 +3784,7 @@ static Value *simplifyICmpWithDominatingAssume(CmpPredicate Predicate,
       CallInst *Assume = cast<CallInst>(AssumeVH);
       if (std::optional<bool> Imp = isImpliedCondition(
               Assume->getArgOperand(0), Predicate, LHS, RHS, Q.DL))
-        if (isValidAssumeForContext(Assume, Q.CxtI, Q.DT))
+        if (isValidAssumeForContext(Assume, Q))
           return ConstantInt::get(getCompareTy(LHS), *Imp);
     }
   }
@@ -4908,7 +4902,7 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
 /// Try to simplify a select instruction when its condition operand is a
 /// floating-point comparison.
 static Value *simplifySelectWithFCmp(Value *Cond, Value *T, Value *F,
-                                     const SimplifyQuery &Q,
+                                     FastMathFlags FMF, const SimplifyQuery &Q,
                                      unsigned MaxRecurse) {
   CmpPredicate Pred;
   Value *CmpLHS, *CmpRHS;
@@ -4942,7 +4936,7 @@ static Value *simplifySelectWithFCmp(Value *Cond, Value *T, Value *F,
     return nullptr;
 
   // This transform is also safe if we do not have (do not care about) -0.0.
-  if (Q.CxtI && isa<FPMathOperator>(Q.CxtI) && Q.CxtI->hasNoSignedZeros()) {
+  if (FMF.noSignedZeros()) {
     // (T == F) ? T : F --> F
     if (Pred == FCmpInst::FCMP_OEQ)
       return F;
@@ -5041,7 +5035,8 @@ bool isSelectWithIdenticalPHI(PHINode &PN, PHINode &IdenticalPN) {
 /// Given operands for a SelectInst, see if we can fold the result.
 /// If not, this returns null.
 static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
-                                 const SimplifyQuery &Q, unsigned MaxRecurse) {
+                                 FastMathFlags FMF, const SimplifyQuery &Q,
+                                 unsigned MaxRecurse) {
   if (auto *CondC = dyn_cast<Constant>(Cond)) {
     if (auto *TrueC = dyn_cast<Constant>(TrueVal))
       if (auto *FalseC = dyn_cast<Constant>(FalseVal))
@@ -5207,7 +5202,8 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
   if (Value *V = simplifySelectWithBitTest(Cond, TrueVal, FalseVal))
     return V;
 
-  if (Value *V = simplifySelectWithFCmp(Cond, TrueVal, FalseVal, Q, MaxRecurse))
+  if (Value *V =
+          simplifySelectWithFCmp(Cond, TrueVal, FalseVal, FMF, Q, MaxRecurse))
     return V;
 
   std::optional<bool> Imp = isImpliedByDomCondition(Cond, Q.CxtI, Q.DL);
@@ -5225,8 +5221,8 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
 }
 
 Value *llvm::simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
-                                const SimplifyQuery &Q) {
-  return ::simplifySelectInst(Cond, TrueVal, FalseVal, Q, RecursionLimit);
+                                FastMathFlags FMF, const SimplifyQuery &Q) {
+  return ::simplifySelectInst(Cond, TrueVal, FalseVal, FMF, Q, RecursionLimit);
 }
 
 /// Given operands for an GetElementPtrInst, see if we can fold the result.
@@ -5455,8 +5451,13 @@ static Value *simplifyExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
 
   // extractvalue x, (insertvalue y, elt, n), n -> elt
   unsigned NumIdxs = Idxs.size();
+  SmallPtrSet<InsertValueInst *, 8> VisitedSet;
   for (auto *IVI = dyn_cast<InsertValueInst>(Agg); IVI != nullptr;
        IVI = dyn_cast<InsertValueInst>(IVI->getAggregateOperand())) {
+    // Protect against insertvalue cycles in unreachable code.
+    if (!VisitedSet.insert(IVI).second)
+      break;
+
     ArrayRef<unsigned> InsertValueIdxs = IVI->getIndices();
     unsigned NumInsertValueIdxs = InsertValueIdxs.size();
     unsigned NumCommonIdxs = std::min(NumInsertValueIdxs, NumIdxs);
@@ -6512,11 +6513,9 @@ static Value *simplifyLdexp(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   return nullptr;
 }
 
-static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
-                                     const SimplifyQuery &Q,
-                                     const CallBase *Call) {
+Value *llvm::simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
+                                    FastMathFlags FMF, const SimplifyQuery &Q) {
   // Idempotent functions return the same result when called repeatedly.
-  Intrinsic::ID IID = F->getIntrinsicID();
   if (isIdempotent(IID))
     if (auto *II = dyn_cast<IntrinsicInst>(Op0))
       if (II->getIntrinsicID() == IID)
@@ -6530,7 +6529,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     // round (ceil x) -> ceil x
     auto *II = dyn_cast<IntrinsicInst>(Op0);
     if ((II && removesFPFraction(II->getIntrinsicID())) ||
-        match(Op0, m_SIToFP(m_Value())) || match(Op0, m_UIToFP(m_Value())))
+        match(Op0, m_IToFP(m_Value())))
       return Op0;
   }
 
@@ -6542,7 +6541,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
       return Op0;
 
     if (KnownClass.cannotBeOrderedLessThanZero() &&
-        KnownClass.isKnownNeverNaN() && Call->hasNoSignedZeros())
+        KnownClass.isKnownNeverNaN() && FMF.noSignedZeros())
       return Op0;
 
     break;
@@ -6571,31 +6570,31 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   }
   case Intrinsic::exp:
     // exp(log(x)) -> x
-    if (Call->hasAllowReassoc() &&
+    if (FMF.allowReassoc() &&
         match(Op0, m_Intrinsic<Intrinsic::log>(m_Value(X))))
       return X;
     break;
   case Intrinsic::exp2:
     // exp2(log2(x)) -> x
-    if (Call->hasAllowReassoc() &&
+    if (FMF.allowReassoc() &&
         match(Op0, m_Intrinsic<Intrinsic::log2>(m_Value(X))))
       return X;
     break;
   case Intrinsic::exp10:
     // exp10(log10(x)) -> x
-    if (Call->hasAllowReassoc() &&
+    if (FMF.allowReassoc() &&
         match(Op0, m_Intrinsic<Intrinsic::log10>(m_Value(X))))
       return X;
     break;
   case Intrinsic::log:
     // log(exp(x)) -> x
-    if (Call->hasAllowReassoc() &&
+    if (FMF.allowReassoc() &&
         match(Op0, m_Intrinsic<Intrinsic::exp>(m_Value(X))))
       return X;
     break;
   case Intrinsic::log2:
     // log2(exp2(x)) -> x
-    if (Call->hasAllowReassoc() &&
+    if (FMF.allowReassoc() &&
         (match(Op0, m_Intrinsic<Intrinsic::exp2>(m_Value(X))) ||
          match(Op0,
                m_Intrinsic<Intrinsic::pow>(m_SpecificFP(2.0), m_Value(X)))))
@@ -6604,7 +6603,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   case Intrinsic::log10:
     // log10(pow(10.0, x)) -> x
     // log10(exp10(x)) -> x
-    if (Call->hasAllowReassoc() &&
+    if (FMF.allowReassoc() &&
         (match(Op0, m_Intrinsic<Intrinsic::exp10>(m_Value(X))) ||
          match(Op0,
                m_Intrinsic<Intrinsic::pow>(m_SpecificFP(10.0), m_Value(X)))))
@@ -6619,7 +6618,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
       return Op0;
     break;
   case Intrinsic::structured_gep:
-    return cast<StructuredGEPInst>(Call)->getPointerOperand();
+    return Op0;
   default:
     break;
   }
@@ -6723,7 +6722,7 @@ enum class MinMaxOptResult {
 // quieted), or to choose either option in the case of undef/poison.
 static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
                                            const Intrinsic::ID IID,
-                                           const CallBase *Call,
+                                           FastMathFlags FMF,
                                            Constant **OutNewConstVal) {
   assert(OutNewConstVal != nullptr);
 
@@ -6759,15 +6758,14 @@ static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
     return MinMaxOptResult::UseOtherVal;
   }
 
-  if (CAPF.isInfinity() || (Call && Call->hasNoInfs() && CAPF.isLargest())) {
+  if (CAPF.isInfinity() || (FMF.noInfs() && CAPF.isLargest())) {
     // minnum(X, -inf) -> -inf (ignoring sNaN -> qNaN propagation)
     // maxnum(X, +inf) -> +inf (ignoring sNaN -> qNaN propagation)
     // minimum(X, -inf) -> -inf if nnan
     // maximum(X, +inf) -> +inf if nnan
     // minimumnum(X, -inf) -> -inf
     // maximumnum(X, +inf) -> +inf
-    if (CAPF.isNegative() == IsMin &&
-        (!PropagateNaN || (Call && Call->hasNoNaNs()))) {
+    if (CAPF.isNegative() == IsMin && (!PropagateNaN || FMF.noNaNs())) {
       *OutNewConstVal = const_cast<Constant *>(RHSConst);
       return MinMaxOptResult::UseNewConstVal;
     }
@@ -6778,8 +6776,7 @@ static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
     // maximum(X, -inf) -> X (ignoring quieting of sNaNs)
     // minimumnum(X, +inf) -> X if nnan
     // maximumnum(X, -inf) -> X if nnan
-    if (CAPF.isNegative() != IsMin &&
-        (PropagateNaN || (Call && Call->hasNoNaNs())))
+    if (CAPF.isNegative() != IsMin && (PropagateNaN || FMF.noNaNs()))
       return MinMaxOptResult::UseOtherVal;
   }
   return MinMaxOptResult::CannotOptimize;
@@ -6842,16 +6839,18 @@ static Value *simplifySVEIntReduction(Intrinsic::ID IID, Type *ReturnType,
 }
 
 Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
-                                     Value *Op0, Value *Op1,
-                                     const SimplifyQuery &Q,
-                                     const CallBase *Call) {
+                                     Value *Op0, Value *Op1, FastMathFlags FMF,
+                                     const SimplifyQuery &Q) {
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
   case Intrinsic::get_active_lane_mask: {
     if (match(Op1, m_Zero()))
       return ConstantInt::getFalse(ReturnType);
 
-    const Function *F = Call->getFunction();
+    if (!Q.CxtI)
+      break;
+
+    const Function *F = Q.CxtI->getFunction();
     auto *ScalableTy = dyn_cast<ScalableVectorType>(ReturnType);
     Attribute Attr = F->getFnAttribute(Attribute::VScaleRange);
     if (ScalableTy && Attr.isValid()) {
@@ -7136,7 +7135,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
         if (Constant *SplatVal = C->getSplatValue()) {
           // Handle splat vectors (including scalable vectors)
-          OptResult = OptimizeConstMinMax(SplatVal, IID, Call, &NewConst);
+          OptResult = OptimizeConstMinMax(SplatVal, IID, FMF, &NewConst);
           if (OptResult == MinMaxOptResult::UseNewConstVal)
             NewConst = ConstantVector::getSplat(ElemCount, NewConst);
 
@@ -7155,7 +7154,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
               OptResult = MinMaxOptResult::CannotOptimize;
               break;
             }
-            auto ElemResult = OptimizeConstMinMax(Elt, IID, Call, &NewConst);
+            auto ElemResult = OptimizeConstMinMax(Elt, IID, FMF, &NewConst);
             if (ElemResult == MinMaxOptResult::CannotOptimize ||
                 (ElemResult != OptResult &&
                  OptResult != MinMaxOptResult::UseEither &&
@@ -7172,7 +7171,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
         }
       } else {
         // Handle scalar inputs
-        OptResult = OptimizeConstMinMax(C, IID, Call, &NewConst);
+        OptResult = OptimizeConstMinMax(C, IID, FMF, &NewConst);
       }
 
       if (OptResult == MinMaxOptResult::UseOtherVal ||
@@ -7249,11 +7248,12 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   }
 
   if (NumOperands == 1)
-    return simplifyUnaryIntrinsic(F, Args[0], Q, Call);
+    return simplifyUnaryIntrinsic(IID, Args[0], Call->getFastMathFlagsOrNone(),
+                                  Q);
 
   if (NumOperands == 2)
-    return simplifyBinaryIntrinsic(IID, F->getReturnType(), Args[0], Args[1], Q,
-                                   Call);
+    return simplifyBinaryIntrinsic(IID, F->getReturnType(), Args[0], Args[1],
+                                   Call->getFastMathFlagsOrNone(), Q);
 
   // Handle intrinsics with 3 or more arguments.
   switch (IID) {
@@ -7282,8 +7282,18 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
     if (match(ShAmtArg, m_APInt(ShAmtC))) {
       // If there's effectively no shift, return the 1st arg or 2nd arg.
       APInt BitWidth = APInt(ShAmtC->getBitWidth(), ShAmtC->getBitWidth());
-      if (ShAmtC->urem(BitWidth).isZero())
+      const APInt ShAmt = ShAmtC->urem(BitWidth);
+      if (ShAmt.isZero())
         return Args[IID == Intrinsic::fshl ? 0 : 1];
+
+      // fshl (lshr X, C1), (shl X, C2), C1 -> X when C1 + C2 == BW
+      // fshr (lshr X, C1), (shl X, C2), C2 -> X when C1 + C2 == BW
+      const APInt *C1, *C2;
+      Value *X;
+      if (match(Op0, m_LShr(m_Value(X), m_APInt(C1))) &&
+          match(Op1, m_Shl(m_Specific(X), m_APInt(C2))) &&
+          *C1 + *C2 == BitWidth && ShAmt == *(IID == Intrinsic::fshl ? C1 : C2))
+        return X;
     }
 
     // Rotating zero by anything is zero.
@@ -7649,8 +7659,13 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
   case Instruction::FCmp:
     return simplifyFCmpInst(cast<FCmpInst>(I)->getPredicate(), NewOps[0],
                             NewOps[1], I->getFastMathFlags(), Q, MaxRecurse);
-  case Instruction::Select:
-    return simplifySelectInst(NewOps[0], NewOps[1], NewOps[2], Q, MaxRecurse);
+  case Instruction::Select: {
+    FastMathFlags FMF;
+    if (auto *FPMO = dyn_cast<FPMathOperator>(I))
+      FMF = FPMO->getFastMathFlags();
+    return simplifySelectInst(NewOps[0], NewOps[1], NewOps[2], FMF, Q,
+                              MaxRecurse);
+  }
   case Instruction::GetElementPtr: {
     auto *GEPI = cast<GetElementPtrInst>(I);
     return simplifyGEPInst(GEPI->getSourceElementType(), NewOps[0],

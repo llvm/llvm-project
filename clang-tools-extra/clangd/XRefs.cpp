@@ -1870,7 +1870,8 @@ static std::optional<HierarchyItem> symbolToHierarchyItem(const Symbol &S,
   }
   HierarchyItem HI;
   HI.name = std::string(S.Name);
-  HI.detail = (S.Scope + S.Name).str();
+  HI.detail = S.Scope.empty() ? std::string()
+                              : S.Scope.drop_back(2).str(); // Trailing "::"
   HI.kind = indexSymbolKindToSymbolKind(S.SymInfo);
   HI.selectionRange = Loc->range;
   // FIXME: Populate 'range' correctly
@@ -2058,7 +2059,10 @@ static QualType typeForNode(const ASTContext &Ctx, const HeuristicResolver *H,
       }
       // Look inside templates.
       QualType VisitTemplateDecl(const TemplateDecl *D) {
-        return Visit(D->getTemplatedDecl());
+        if (const auto *TD = D->getTemplatedDecl())
+          return Visit(TD);
+        // ConceptDecl doesn't have any associated templates nor types.
+        return QualType();
       }
     } V(Ctx);
     return V.Visit(D);

@@ -10,6 +10,9 @@
 // RUN: }}' \
 // RUN: -- -fno-delayed-template-parsing
 
+#include <memory>
+#include <vector>
+
 void pointee_to_const() {
   int a[] = {1, 2};
   int *p_local0 = &a[0];
@@ -114,4 +117,60 @@ void multi_level_pointer() {
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: pointee of variable 'foo' of type 'const char **[1]' can be declared 'const'
   // CHECK-FIXES: const char * const* foo[] = {&s};
   const char * p = *foo[0];
+}
+
+void* operator new(decltype(sizeof(void*)), void*) noexcept;
+
+void pointer_in_emplacement_new() {
+  int* ptr = nullptr;
+  // CHECK-NOT: warning
+  new(ptr) int {123};
+}
+
+void takesConstPointerRef(int *const &);
+void takesConstPointerRRef(int *const &&);
+using IntPtrAlias = int *;
+typedef int *IntPtrTypedef;
+void takesAliasConstPointerRef(IntPtrAlias const &);
+void takesTypedefConstPointerRef(IntPtrTypedef const &);
+
+void ignore_const_pointer_reference_sinks() {
+  int value = 0;
+
+  int *p_local0 = &value;
+  takesConstPointerRef(p_local0);
+
+  int *p_local1 = &value;
+  int *const &ref = p_local1;
+  (void)ref;
+
+  IntPtrAlias p_local2 = &value;
+  takesAliasConstPointerRef(p_local2);
+
+  int *p_local3 = &value;
+  takesConstPointerRRef(static_cast<int *const &&>(p_local3));
+
+  IntPtrTypedef p_local4 = &value;
+  takesTypedefConstPointerRef(p_local4);
+
+  int *p_local5 = &value;
+  int *volatile &volatile_ref = p_local5;
+  (void)volatile_ref;
+}
+
+void ignore_range_for_pointer_reference_sink() {
+  int value = 0;
+  std::vector<int *> const source = {&value};
+  std::vector<int *> sink;
+  for (int *element : source)
+    sink.push_back(element);
+}
+
+struct UniquePtrData {};
+
+void ignore_unique_ptr_emplace_sink() {
+  /*const*/ UniquePtrData *const newdata = new UniquePtrData;
+
+  std::vector<std::unique_ptr<UniquePtrData>> data;
+  data.emplace_back(newdata);
 }

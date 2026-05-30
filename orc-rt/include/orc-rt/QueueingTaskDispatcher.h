@@ -15,6 +15,7 @@
 
 #include "orc-rt/TaskDispatcher.h"
 
+#include <condition_variable>
 #include <deque>
 #include <memory>
 #include <mutex>
@@ -29,27 +30,42 @@ namespace orc_rt {
 /// discouraged, and alternatives like ThreadPoolTaskDispatcher are preferred.
 class QueueingTaskDispatcher : public TaskDispatcher {
 public:
+  class TaskQueue {
+  public:
+    /// Append a task to the queue.
+    void addTask(std::unique_ptr<Task> T);
+
+    /// Shut down the queue. Further calls to addTask will be ignored (the task
+    /// arguments will be discarded).
+    void shutdown();
+
+    /// Take the task most recently added to the queue. Blocks until a task is
+    /// available or the dispatcher shuts down.
+    std::unique_ptr<Task> takeLastIn();
+
+    /// Take the earliest task from the queue. Blocks until a task is available
+    /// or the dispatcher shuts down.
+    std::unique_ptr<Task> takeFirstIn();
+
+    /// Run tasks in last-in-first-out order until the queue is empty.
+    void runLIFOUntilEmpty();
+
+    /// Run tasks in first-in-first-out order until the queue is empty.
+    void runFIFOUntilEmpty();
+
+  private:
+    std::mutex M;
+    std::condition_variable CV;
+    enum { Running, Shutdown } State = Running;
+    std::deque<std::unique_ptr<Task>> Tasks;
+  };
+
+  QueueingTaskDispatcher(TaskQueue &Q) : Q(Q) {}
   void dispatch(std::unique_ptr<Task> T) override;
   void shutdown() override;
 
-  /// Take a task from the back of the queue. If there are no tasks, returns
-  /// nullptr.
-  std::unique_ptr<Task> pop_back();
-
-  /// Take a task from the front of the queue. If there are no tasks, returns
-  /// nullptr.
-  std::unique_ptr<Task> pop_front();
-
-  /// Run tasks in last-in-first-out order until the queue is empty.
-  void runLIFOUntilEmpty();
-
-  /// Run tasks in first-in-first-out order until the queue is empty.
-  void runFIFOUntilEmpty();
-
 private:
-  std::mutex M;
-  enum { Running, Shutdown } State = Running;
-  std::deque<std::unique_ptr<Task>> Tasks;
+  TaskQueue &Q;
 };
 
 } // namespace orc_rt

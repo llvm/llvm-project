@@ -588,6 +588,26 @@ class LLVM_CastOpWithOverflowFlag<string mnemonic, string instName, Type type,
   }];
 }
 
+class LLVM_CastOpWithFastMathFlag<string mnemonic, string instName, Type type,
+                  Type resultType, list<Trait> traits = []> :
+    LLVM_Op<mnemonic, !listconcat([Pure], [DeclareOpInterfaceMethods<FastmathFlagsInterface>], traits)>,
+    LLVM_Builder<"$res = builder.Create" # instName # "($arg, $_resultType);"> {
+  let arguments = (
+    ins type:$arg,
+    DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+  let results = (outs resultType:$res);
+  let builders = [LLVM_OneResultOpBuilder];
+  let assemblyFormat = "$arg (`fastmath` `` $fastmathFlags^)? "
+                       "attr-dict `:` type($arg) `to` type($res)";
+  string llvmInstName = instName;
+  string mlirBuilder = [{
+    auto op = $_qualCppClassName::create($_builder,
+      $_location, $_resultType, $arg);
+    moduleImport.setFastmathFlagsAttr(inst, op);
+    $res = op;
+  }];
+}
+
 class LLVM_DereferenceableCastOp<string mnemonic, string instName, Type type,
                   Type resultType, list<Trait> traits = []> :
     LLVM_Op<mnemonic, !listconcat([Pure], [DeclareOpInterfaceMethods<DereferenceableOpInterface>], traits)> {
@@ -699,10 +719,10 @@ def LLVM_FPToSIOp : LLVM_CastOp<"fptosi", "FPToSI",
 def LLVM_FPToUIOp : LLVM_CastOp<"fptoui", "FPToUI",
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
                                 LLVM_ScalarOrVectorOf<AnySignlessInteger>>;
-def LLVM_FPExtOp : LLVM_CastOp<"fpext", "FPExt",
+def LLVM_FPExtOp : LLVM_CastOpWithFastMathFlag<"fpext", "FPExt",
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
-def LLVM_FPTruncOp : LLVM_CastOp<"fptrunc", "FPTrunc",
+def LLVM_FPTruncOp : LLVM_CastOpWithFastMathFlag<"fptrunc", "FPTrunc",
                                  LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
                                  LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
 
@@ -2051,7 +2071,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<DenseI32ArrayAttr>:$work_group_size_hint,
     OptionalAttr<DenseI32ArrayAttr>:$reqd_work_group_size,
     OptionalAttr<I32Attr>:$intel_reqd_sub_group_size,
-    OptionalAttr<UWTableKindAttr>:$uwtable_kind
+    OptionalAttr<UWTableKindAttr>:$uwtable_kind,
+    OptionalAttr<BoolAttr>:$use_sample_profile
   );
 
   let regions = (region AnyRegion:$body);
@@ -2066,7 +2087,12 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
       CArg<"SymbolRefAttr", "{}">:$comdat,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
       CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs,
-      CArg<"std::optional<uint64_t>", "{}">:$functionEntryCount)>
+      CArg<"std::optional<uint64_t>", "{}">:$functionEntryCount)>,
+    OpBuilder<(ins "const Properties &":$properties,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$discardableAttributes), [{
+      $_state.addRegion();
+      $_state.getOrAddProperties<Properties>() = properties;
+      $_state.addAttributes(discardableAttributes);}]>
   ];
 
   let extraClassDeclaration = [{
@@ -2574,6 +2600,55 @@ def LLVM_ModuleFlagsOp
   }];
 
   let hasVerifier = 1;
+}
+
+//===--------------------------------------------------------------------===//
+// NamedMetadataOp
+//===--------------------------------------------------------------------===//
+
+def LLVM_NamedMetadataOp
+    : LLVM_Op<"named_metadata"> {
+  let summary = "Module-level named metadata";
+  let description = [{
+    Represents an LLVM named metadata node (`llvm::NamedMDNode`). Named
+    metadata nodes are module-level metadata that associate a name string
+    with a list of metadata nodes. Each operand must be an `#llvm.md_node`.
+
+    Note: cyclic metadata graphs are not supported. Because metadata attributes
+    are represented as MLIR attributes (which form a tree), there is no way to
+    express a metadata node that directly or transitively references itself.
+    LLVM IR permits such cycles (e.g. `!0 = !{!0}`), but they cannot be
+    represented here and will not round-trip through this op.
+
+    Example:
+    ```mlir
+    llvm.named_metadata "foo.version" [
+      #llvm.md_node<#llvm.md_const<2 : i32>,
+                    #llvm.md_const<9 : i32>,
+                    #llvm.md_const<0 : i32>
+      >
+    ]
+    llvm.named_metadata "foo.kernel" [
+      #llvm.md_node<
+        #llvm.md_func<@my_kernel>,
+        #llvm.md_node<>,
+        #llvm.md_node<
+          #llvm.md_node<#llvm.md_const<0 : i32>,
+                        #llvm.md_string<"foo.buffer">
+          >
+        >
+      >
+    ]
+    ```
+  }];
+  let arguments = (ins StrAttr:$metadata_name, ArrayAttr:$nodes);
+  let assemblyFormat = [{
+    $metadata_name $nodes attr-dict
+  }];
+
+  let llvmBuilder = [{
+    convertNamedMetadataOp($metadata_name, $nodes, builder, moduleTranslation);
+  }];
 }
 
 #endif // LLVMIR_OPS

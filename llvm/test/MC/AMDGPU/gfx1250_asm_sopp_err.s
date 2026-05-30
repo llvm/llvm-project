@@ -2,4 +2,4 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -filetype=null %s 2>&1 | FileCheck --check-prefixes=GFX1250-ERR --implicit-check-not=error: -strict-whitespace %s
 
 s_setkill 0
-// GFX1250-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1250-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250): s_setkill

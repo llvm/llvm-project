@@ -235,6 +235,14 @@ def parse_args():
         help="Do not use curses based progress bar (default)",
         action="store_false",
     )
+    format_group.add_argument(
+        "--min-output-interval",
+        dest="minOutputInterval",
+        help="Limit updates to progressbar to at most once per INTERVAL, in seconds. Set to 0 to disable ratelimit (default - no ratelimit).",
+        default=0.0,
+        metavar="INTERVAL",
+        type=_non_negative_float,
+    )
 
     # Note: this does not generate flags for user-defined result codes.
     success_codes = [c for c in lit.Test.ResultCode.all_codes() if not c.isFailure]
@@ -457,6 +465,20 @@ def parse_args():
         action="store_true",
     )
     selection_group.add_argument(
+        "--unsupported",
+        metavar="LIST",
+        type=_semicolon_list,
+        help="Mark tests with paths in the semicolon separated list as UNSUPPORTED",
+        default=os.environ.get("LIT_UNSUPPORTED", ""),
+    )
+    selection_group.add_argument(
+        "--unsupported-not",
+        metavar="LIST",
+        type=_semicolon_list,
+        help="Do not mark tests with paths in the semicolon separated list as UNSUPPORTED",
+        default=os.environ.get("LIT_UNSUPPORTED_NOT", ""),
+    )
+    selection_group.add_argument(
         "--num-shards",
         dest="numShards",
         metavar="M",
@@ -546,6 +568,24 @@ def _int(arg, kind, pred):
     if not pred(i):
         raise _error(desc, kind, arg)
     return i
+
+
+def _non_negative_float(arg):
+    return _float(arg, "non-negative", lambda f: f >= 0.0)
+
+
+def _float(arg, kind, pred):
+    try:
+        f = float(arg)
+        if not pred(f):
+            raise argparse.ArgumentTypeError(
+                f"requires {kind} float, but found '{arg}'"
+            )
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"conversion error - requires {kind} float, but found '{arg}'"
+        )
+    return f
 
 
 def _case_insensitive_regex(arg):

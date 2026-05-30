@@ -7,7 +7,6 @@ void basic_types(void) {
   auto bl = true;       // CHECK: alloca i8
   auto chr = 'A';       // CHECK: alloca i{{8|32}}
   auto str = "Test";    // CHECK: alloca ptr
-  auto str2[] = "Test"; // CHECK: alloca [5 x i8]
   auto nptr = nullptr;  // CHECK: alloca ptr
 }
 

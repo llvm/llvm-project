@@ -31,6 +31,7 @@ protected:
   static constexpr StringLiteral kLocalName = "local";
   static constexpr StringLiteral kLocalValue = "lvalue";
   static constexpr StringLiteral kLocalValue2 = "lvalue2";
+  static constexpr StringLiteral KLocalValue3 = "lvalue3";
 };
 
 TEST_F(ScopedHashTableTest, AccessWithNoActiveScope) {
@@ -150,4 +151,33 @@ TEST_F(ScopedHashTableTest, DISABLED_PopScopeOnStack) {
   // `SymbolTableScopeTy.this` is still a pointer to `funScope2`.
   // There is no way to write an assert on an assert in googletest so that we
   // mark the test case as DISABLED.
+}
+
+TEST_F(ScopedHashTableTest, EraseKeyInHashTable) {
+  using SymbolTableScopeTy = ScopedHashTable<StringRef, StringRef>::ScopeTy;
+  StringRef curTestVarA = "a";
+  StringRef curTestVarB = "b";
+  SymbolTableScopeTy funScope(symbolTable);
+  symbolTable.insert(kLocalName, kLocalValue);
+  symbolTable.insert(curTestVarA, curTestVarA);
+  symbolTable.insert(curTestVarB, curTestVarB);
+
+  SymbolTableScopeTy funScope2(symbolTable);
+  symbolTable.insert(curTestVarA, curTestVarA);
+  symbolTable.insert(kLocalName, kLocalValue2);
+  symbolTable.insert(curTestVarB, curTestVarB);
+
+  SymbolTableScopeTy funScope3(symbolTable);
+  symbolTable.insert(curTestVarA, curTestVarA);
+  symbolTable.insert(curTestVarB, curTestVarB);
+  symbolTable.insert(kLocalName, KLocalValue3);
+  SymbolTableScopeTy funScope4(symbolTable);
+
+  EXPECT_EQ(symbolTable.lookup(kLocalName), KLocalValue3);
+  symbolTable.erase(kLocalName);
+  EXPECT_EQ(symbolTable.lookup(kLocalName), kLocalValue2);
+  symbolTable.erase(kLocalName);
+  EXPECT_EQ(symbolTable.lookup(kLocalName), kLocalValue);
+  symbolTable.erase(kLocalName);
+  EXPECT_EQ(symbolTable.lookup(kLocalName), StringRef());
 }

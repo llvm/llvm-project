@@ -3,10 +3,12 @@ add_offload_test_device_code(bar.cpp bar)
 # Compile with optimizations to eliminate AMDGPU implicit arguments.
 add_offload_test_device_code(noargs.cpp noargs -O3)
 add_offload_test_device_code(multiargs.cpp multiargs -O3)
+add_offload_test_device_code(composite.cpp composite -O3)
 add_offload_test_device_code(byte.cpp byte)
 add_offload_test_device_code(localmem.cpp localmem)
 add_offload_test_device_code(localmem_reduction.cpp localmem_reduction)
 add_offload_test_device_code(localmem_static.cpp localmem_static)
+add_offload_test_device_code(single_counter.cpp single_counter)
 add_offload_test_device_code(global.cpp global)
 add_offload_test_device_code(global_ctor.cpp global_ctor)
 add_offload_test_device_code(global_dtor.cpp global_dtor)
@@ -17,10 +19,12 @@ add_custom_target(offload_device_binaries DEPENDS
     bar.bin
     noargs.bin
     multiargs.bin
+    composite.bin
     byte.bin
     localmem.bin
     localmem_reduction.bin
     localmem_static.bin
+    single_counter.bin
     global.bin
     global_ctor.bin
     global_dtor.bin

@@ -7,7 +7,7 @@
 // RUN: clang-doc --doxygen --executor=standalone %s -output=%t/docs --format=md
 // RUN: cat %t/docs/GlobalNamespace/index.md | FileCheck %s --check-prefix=MD
 
-// RUN: clang-doc --doxygen --executor=standalone %s -output=%t/docs --format=html
+// RUN: clang-doc --pretty-json --doxygen --executor=standalone %s -output=%t/docs --format=html
 // RUN: cat %t/docs/json/GlobalNamespace/index.json | FileCheck %s --check-prefix=JSON
 // RUN: cat %t/docs/html/GlobalNamespace/_ZTV5tuple.html | FileCheck %s --check-prefix=HTML-STRUCT
 // RUN: cat %t/docs/html/GlobalNamespace/index.html | FileCheck %s --check-prefix=HTML
@@ -357,8 +357,8 @@ void function<bool, 0>(bool x) {}
 // JSON-NEXT:              "Param": "bool"
 // JSON-NEXT:            },
 // JSON-NEXT:            {
-// JSON-NEXT:              "End": true, 
-// JSON-NEXT:              "Param": "0"
+// JSON-NEXT:              "Param": "0",
+// JSON-NEXT:              "SpecParamEnd": true
 // JSON-NEXT:            }
 // JSON-NEXT:          ],
 // JSON-NEXT:          "SpecializationOf": "{{([0-9A-F]{40})}}",

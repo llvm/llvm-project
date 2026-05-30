@@ -14,28 +14,24 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/EntityLinker.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/TUSummaryEncoding.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/BuildNamespace.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
 #include "clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h" // IWYU pragma: keep
+#include "clang/ScalableStaticAnalysisFramework/Tool/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <string>
-#include <system_error>
 
 using namespace llvm;
 using namespace clang::ssaf;
 
-namespace fs = llvm::sys::fs;
 namespace path = llvm::sys::path;
 
 namespace {
@@ -49,7 +45,7 @@ cl::OptionCategory SsafLinkerCategory("clang-ssaf-linker options");
 cl::list<std::string> InputPaths(cl::Positional, cl::desc("<input files>"),
                                  cl::OneOrMore, cl::cat(SsafLinkerCategory));
 
-cl::opt<std::string> OutputPath("o", cl::desc("Output summary path"),
+cl::opt<std::string> OutputPath("o", cl::desc("Output file path"),
                                 cl::value_desc("path"), cl::Required,
                                 cl::cat(SsafLinkerCategory));
 
@@ -63,48 +59,17 @@ cl::opt<bool> Time("time", cl::desc("Enable timing"), cl::init(false),
 // Error Messages
 //===----------------------------------------------------------------------===//
 
-namespace ErrorMessages {
-
-constexpr const char *CannotValidateSummary =
-    "failed to validate summary '{0}': {1}";
-
-constexpr const char *OutputDirectoryMissing =
-    "Parent directory does not exist";
-
-constexpr const char *OutputDirectoryNotWritable =
-    "Parent directory is not writable";
-
-constexpr const char *ExtensionNotSupplied = "Extension not supplied";
-
-constexpr const char *NoFormatForExtension =
-    "Format not registered for extension '{0}'";
+namespace LocalErrorMessages {
 
 constexpr const char *LinkingSummary = "Linking summary '{0}'";
 
-} // namespace ErrorMessages
+} // namespace LocalErrorMessages
 
 //===----------------------------------------------------------------------===//
 // Diagnostic Utilities
 //===----------------------------------------------------------------------===//
 
 constexpr unsigned IndentationWidth = 2;
-
-llvm::StringRef ToolName;
-
-template <typename... Ts> [[noreturn]] void fail(const char *Msg) {
-  llvm::WithColor::error(llvm::errs(), ToolName) << Msg << "\n";
-  llvm::sys::Process::Exit(1);
-}
-
-template <typename... Ts>
-[[noreturn]] void fail(const char *Fmt, Ts &&...Args) {
-  std::string Message = llvm::formatv(Fmt, std::forward<Ts>(Args)...);
-  fail(Message.data());
-}
-
-template <typename... Ts> [[noreturn]] void fail(llvm::Error Err) {
-  fail(toString(std::move(Err)).data());
-}
 
 template <typename... Ts>
 void info(unsigned IndentationLevel, const char *Fmt, Ts &&...Args) {
@@ -116,68 +81,14 @@ void info(unsigned IndentationLevel, const char *Fmt, Ts &&...Args) {
 }
 
 //===----------------------------------------------------------------------===//
-// Format Registry
-//===----------------------------------------------------------------------===//
-
-SerializationFormat *getFormatForExtension(llvm::StringRef Extension) {
-  static llvm::SmallVector<
-      std::pair<std::string, std::unique_ptr<SerializationFormat>>, 4>
-      ExtensionFormatList;
-
-  // Most recently used format is most likely to be reused again.
-  auto ReversedList = llvm::reverse(ExtensionFormatList);
-  auto It = llvm::find_if(ReversedList, [&](const auto &Entry) {
-    return Entry.first == Extension;
-  });
-  if (It != ReversedList.end()) {
-    return It->second.get();
-  }
-
-  if (!isFormatRegistered(Extension)) {
-    return nullptr;
-  }
-
-  auto Format = makeFormat(Extension);
-  SerializationFormat *Result = Format.get();
-  assert(Result);
-
-  ExtensionFormatList.emplace_back(Extension, std::move(Format));
-
-  return Result;
-}
-
-//===----------------------------------------------------------------------===//
 // Data Structures
 //===----------------------------------------------------------------------===//
 
-struct SummaryFile {
-  std::string Path;
-  SerializationFormat *Format = nullptr;
-
-  static SummaryFile fromPath(llvm::StringRef Path) {
-    llvm::StringRef Extension = path::extension(Path);
-    if (Extension.empty()) {
-      fail(ErrorMessages::CannotValidateSummary, Path,
-           ErrorMessages::ExtensionNotSupplied);
-    }
-    Extension = Extension.drop_front();
-    SerializationFormat *Format = getFormatForExtension(Extension);
-    if (!Format) {
-      std::string BadExtension =
-          llvm::formatv(ErrorMessages::NoFormatForExtension, Extension);
-      fail(ErrorMessages::CannotValidateSummary, Path, BadExtension);
-    }
-    return {Path.str(), Format};
-  }
-};
-
 struct LinkerInput {
-  std::vector<SummaryFile> InputFiles;
-  SummaryFile OutputFile;
+  std::vector<FormatFile> InputFiles;
+  FormatFile OutputFile;
   std::string LinkUnitName;
 };
-
-static void printVersion(llvm::raw_ostream &OS) { OS << ToolName << " 0.1\n"; }
 
 //===----------------------------------------------------------------------===//
 // Pipeline
@@ -189,20 +100,8 @@ LinkerInput validate(llvm::TimerGroup &TG) {
 
   {
     llvm::TimeRegion _(Time ? &TValidate : nullptr);
-    llvm::StringRef ParentDir = path::parent_path(OutputPath);
-    llvm::StringRef DirToCheck = ParentDir.empty() ? "." : ParentDir;
 
-    if (!fs::exists(DirToCheck)) {
-      fail(ErrorMessages::CannotValidateSummary, OutputPath,
-           ErrorMessages::OutputDirectoryMissing);
-    }
-
-    if (fs::access(DirToCheck, fs::AccessMode::Write)) {
-      fail(ErrorMessages::CannotValidateSummary, OutputPath,
-           ErrorMessages::OutputDirectoryNotWritable);
-    }
-
-    LI.OutputFile = SummaryFile::fromPath(OutputPath);
+    LI.OutputFile = FormatFile::fromOutputPath(OutputPath);
     LI.LinkUnitName = path::stem(LI.OutputFile.Path).str();
   }
 
@@ -211,12 +110,7 @@ LinkerInput validate(llvm::TimerGroup &TG) {
   {
     llvm::TimeRegion _(Time ? &TValidate : nullptr);
     for (const auto &InputPath : InputPaths) {
-      llvm::SmallString<256> RealPath;
-      std::error_code EC = fs::real_path(InputPath, RealPath, true);
-      if (EC) {
-        fail(ErrorMessages::CannotValidateSummary, InputPath, EC.message());
-      }
-      LI.InputFiles.push_back(SummaryFile::fromPath(RealPath));
+      LI.InputFiles.push_back(FormatFile::fromInputPath(InputPath));
     }
   }
 
@@ -264,7 +158,7 @@ void link(const LinkerInput &LI, llvm::TimerGroup &TG) {
 
       if (auto Err = EL.link(std::move(Summary))) {
         fail(ErrorBuilder::wrap(std::move(Err))
-                 .context(ErrorMessages::LinkingSummary, InputFile.Path)
+                 .context(LocalErrorMessages::LinkingSummary, InputFile.Path)
                  .build());
       }
     }
@@ -275,7 +169,7 @@ void link(const LinkerInput &LI, llvm::TimerGroup &TG) {
 
     llvm::TimeRegion _(Time ? &TWrite : nullptr);
 
-    auto Output = std::move(EL).getOutput();
+    auto Output = std::move(EL).takeOutput();
     if (auto Err = LI.OutputFile.Format->writeLUSummaryEncoding(
             Output, LI.OutputFile.Path)) {
       fail(std::move(Err));
@@ -290,18 +184,12 @@ void link(const LinkerInput &LI, llvm::TimerGroup &TG) {
 //===----------------------------------------------------------------------===//
 
 int main(int argc, const char **argv) {
+  llvm::StringRef ToolHeading = "SSAF Linker";
+
   InitLLVM X(argc, argv);
-  // path::stem strips the .exe extension on Windows so ToolName is consistent.
-  ToolName = llvm::sys::path::stem(argv[0]);
+  initTool(argc, argv, "0.1", SsafLinkerCategory, ToolHeading);
 
-  // Hide options unrelated to clang-ssaf-linker from --help output.
-  cl::HideUnrelatedOptions(SsafLinkerCategory);
-  // Register a custom version printer for the --version flag.
-  cl::SetVersionPrinter(printVersion);
-  // Parse command-line arguments and exit with an error if they are invalid.
-  cl::ParseCommandLineOptions(argc, argv, "SSAF Linker\n");
-
-  llvm::TimerGroup LinkerTimers(ToolName, "SSAF Linker");
+  llvm::TimerGroup LinkerTimers(getToolName(), ToolHeading);
   LinkerInput LI;
 
   {

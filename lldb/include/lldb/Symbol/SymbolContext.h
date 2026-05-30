@@ -269,13 +269,13 @@ public:
   ///     represented by this symbol context object, nullptr otherwise.
   Block *GetFunctionBlock();
 
-  /// Determines the name of the instance variable for the this decl context.
+  /// Determines the name of the instance for this decl context.
   ///
   /// For C++ the name is "this", for Objective-C the name is "self".
   ///
   /// \return
-  ///     Returns a StringRef for the name of the instance variable.
-  llvm::StringRef GetInstanceVariableName();
+  ///     Returns a StringRef for the name of the instance.
+  llvm::StringRef GetInstanceName();
 
   /// Sorts the types in TypeMap according to SymbolContext to TypeList
   ///

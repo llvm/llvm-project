@@ -1104,7 +1104,7 @@ func.func @box_isarray(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
 // CHECK-SAME:                         %[[ARG0:.*]]: !llvm.ptr) -> i1
 // CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[ARG0]][0, 3] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
 // CHECK:         %[[RANK:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> i8
-// CHECK:         %[[C0_ISARRAY:.*]] = llvm.mlir.constant(0 : i64) : i8
+// CHECK:         %[[C0_ISARRAY:.*]] = llvm.mlir.constant(0 : i8) : i8
 // CHECK:         %[[IS_ARRAY:.*]] = llvm.icmp "ne" %[[RANK]], %[[C0_ISARRAY]] : i8
 // CHECK:         llvm.return %[[IS_ARRAY]] : i1
 
@@ -1482,7 +1482,7 @@ func.func @select_case_logical(%arg0: !fir.ref<!fir.logical<4>>) {
 // CHECK-LABEL: llvm.func @select_case_logical(
 // CHECK-SAME:                                 %[[ARG0:.*]]: !llvm.ptr
 // CHECK:         %[[LOAD_ARG0:.*]] = llvm.load %[[ARG0]] : !llvm.ptr -> i32
-// CHECK:         %[[CST_ZERO:.*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK:         %[[CST_ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:         %[[SELECT_VALUE:.*]] = llvm.icmp "ne" %[[LOAD_ARG0]], %[[CST_ZERO]] : i32
 // CHECK:         %[[CST_FALSE:.*]] = llvm.mlir.constant(false) : i1
 // CHECK:         %[[CST_TRUE:.*]] = llvm.mlir.constant(true) : i1
@@ -2286,11 +2286,11 @@ func.func @ext_array_coor3(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C1]] overflow<nsw, nuw> : i64
 // CHECK:         %[[GEPSTRIDE:.*]] = llvm.getelementptr %[[ARG0]][0, 7, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         %[[LOADEDSTRIDE:.*]] = llvm.load %[[GEPSTRIDE]] : !llvm.ptr -> i64
-// CHECK:         %[[SC:.*]] = llvm.mul %[[DIFF0]], %[[LOADEDSTRIDE]] overflow<nsw, nuw> : i64
-// CHECK:         %[[OFFSET:.*]] = llvm.add %[[SC]], %[[C0_1]] overflow<nsw, nuw> : i64
+// CHECK:         %[[SC:.*]] = llvm.mul %[[DIFF0]], %[[LOADEDSTRIDE]] overflow<nsw> : i64
+// CHECK:         %[[OFFSET:.*]] = llvm.add %[[SC]], %[[C0_1]] overflow<nsw> : i64
 // CHECK:         %[[GEPADDR:.*]] = llvm.getelementptr %[[ARG0]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         %[[LOADEDADDR:.*]] = llvm.load %[[GEPADDR]] : !llvm.ptr -> !llvm.ptr
-// CHECK:         %[[GEPADDROFFSET:.*]] = llvm.getelementptr nusw|nuw %[[LOADEDADDR]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+// CHECK:         %[[GEPADDROFFSET:.*]] = llvm.getelementptr nusw %[[LOADEDADDR]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
 
 // Conversion with non zero shift and slice.
 
@@ -2986,3 +2986,126 @@ func.func @test_load_box_alignment(%addr : !fir.ref<!fir.box<!fir.array<10xf32>>
 }
 // CHECK-LABEL:   llvm.func @test_load_box_alignment(
 // CHECK:           "llvm.intr.memcpy"(%{{.*}}, %[[arg0]], %{{.*}}) <{arg_attrs = [{llvm.align = 8 : i64}, {llvm.align = 8 : i64}, {}], isVolatile = false}>
+
+// -----
+
+// Test `fir.bitcast` operation conversion.
+
+func.func @bitcast_i32_to_f32(%arg0 : i32) -> f32 {
+  %0 = fir.bitcast %arg0 : (i32) -> f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: llvm.func @bitcast_i32_to_f32(
+// CHECK-SAME:    %[[ARG0:.*]]: i32) -> f32
+// CHECK:         %[[RES:.*]] = llvm.bitcast %[[ARG0]] : i32 to f32
+// CHECK:         llvm.return %[[RES]] : f32
+
+// -----
+
+func.func @bitcast_f32_to_i32(%arg0 : f32) -> i32 {
+  %0 = fir.bitcast %arg0 : (f32) -> i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: llvm.func @bitcast_f32_to_i32(
+// CHECK-SAME:    %[[ARG0:.*]]: f32) -> i32
+// CHECK:         %[[RES:.*]] = llvm.bitcast %[[ARG0]] : f32 to i32
+// CHECK:         llvm.return %[[RES]] : i32
+
+// -----
+
+func.func @bitcast_i32_to_logical(%arg0 : i32) -> !fir.logical<4> {
+  %0 = fir.bitcast %arg0 : (i32) -> !fir.logical<4>
+  return %0 : !fir.logical<4>
+}
+
+// CHECK-LABEL: llvm.func @bitcast_i32_to_logical(
+// CHECK-SAME:    %[[ARG0:.*]]: i32) -> i32
+// CHECK:         llvm.return %[[ARG0]] : i32
+
+// -----
+
+func.func @bitcast_logical_to_i32(%arg0 : !fir.logical<4>) -> i32 {
+  %0 = fir.bitcast %arg0 : (!fir.logical<4>) -> i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: llvm.func @bitcast_logical_to_i32(
+// CHECK-SAME:    %[[ARG0:.*]]: i32) -> i32
+// CHECK:         llvm.return %[[ARG0]] : i32
+
+// -----
+
+func.func @bitcast_logical_to_f32(%arg0 : !fir.logical<4>) -> f32 {
+  %0 = fir.bitcast %arg0 : (!fir.logical<4>) -> f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: llvm.func @bitcast_logical_to_f32(
+// CHECK-SAME:    %[[ARG0:.*]]: i32) -> f32
+// CHECK:         %[[RES:.*]] = llvm.bitcast %[[ARG0]] : i32 to f32
+// CHECK:         llvm.return %[[RES]] : f32
+
+// -----
+
+func.func @bitcast_f32_to_logical(%arg0 : f32) -> !fir.logical<4> {
+  %0 = fir.bitcast %arg0 : (f32) -> !fir.logical<4>
+  return %0 : !fir.logical<4>
+}
+
+// CHECK-LABEL: llvm.func @bitcast_f32_to_logical(
+// CHECK-SAME:    %[[ARG0:.*]]: f32) -> i32
+// CHECK:         %[[RES:.*]] = llvm.bitcast %[[ARG0]] : f32 to i32
+// CHECK:         llvm.return %[[RES]] : i32
+
+// -----
+
+func.func @bitcast_char1_to_i8(%arg0 : !fir.char<1>) -> i8 {
+  %0 = fir.bitcast %arg0 : (!fir.char<1>) -> i8
+  return %0 : i8
+}
+
+// CHECK-LABEL: llvm.func @bitcast_char1_to_i8(
+// CHECK-SAME:    %[[ARG0:.*]]: !llvm.array<1 x i8>) -> i8
+// CHECK:         %[[EXT:.*]] = llvm.extractvalue %[[ARG0]][0] : !llvm.array<1 x i8>
+// CHECK:         llvm.return %[[EXT]] : i8
+
+// -----
+
+func.func @bitcast_i8_to_char1(%arg0 : i8) -> !fir.char<1> {
+  %0 = fir.bitcast %arg0 : (i8) -> !fir.char<1>
+  return %0 : !fir.char<1>
+}
+
+// CHECK-LABEL: llvm.func @bitcast_i8_to_char1(
+// CHECK-SAME:    %[[ARG0:.*]]: i8) -> !llvm.array<1 x i8>
+// CHECK:         %[[UNDEF:.*]] = llvm.mlir.undef : !llvm.array<1 x i8>
+// CHECK:         %[[INS:.*]] = llvm.insertvalue %[[ARG0]], %[[UNDEF]][0] : !llvm.array<1 x i8>
+// CHECK:         llvm.return %[[INS]] : !llvm.array<1 x i8>
+
+// -----
+
+func.func @bitcast_f32_to_char4(%arg0 : f32) -> !fir.char<4> {
+  %0 = fir.bitcast %arg0 : (f32) -> !fir.char<4>
+  return %0 : !fir.char<4>
+}
+
+// CHECK-LABEL: llvm.func @bitcast_f32_to_char4(
+// CHECK-SAME:    %[[ARG0:.*]]: f32) -> !llvm.array<1 x i32>
+// CHECK:         %[[BC:.*]] = llvm.bitcast %[[ARG0]] : f32 to i32
+// CHECK:         %[[UNDEF:.*]] = llvm.mlir.undef : !llvm.array<1 x i32>
+// CHECK:         %[[INS:.*]] = llvm.insertvalue %[[BC]], %[[UNDEF]][0] : !llvm.array<1 x i32>
+// CHECK:         llvm.return %[[INS]] : !llvm.array<1 x i32>
+
+// -----
+
+func.func @bitcast_f64_to_i64(%arg0 : f64) -> i64 {
+  %0 = fir.bitcast %arg0 : (f64) -> i64
+  return %0 : i64
+}
+
+// CHECK-LABEL: llvm.func @bitcast_f64_to_i64(
+// CHECK-SAME:    %[[ARG0:.*]]: f64) -> i64
+// CHECK:         %[[RES:.*]] = llvm.bitcast %[[ARG0]] : f64 to i64
+// CHECK:         llvm.return %[[RES]] : i64

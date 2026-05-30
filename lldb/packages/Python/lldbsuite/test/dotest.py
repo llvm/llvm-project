@@ -338,12 +338,9 @@ def parseOptionsAndInitTestdirs():
     if args.triple:
         configuration.triple = args.triple
 
-    if args.arch:
-        configuration.arch = args.arch
-    elif args.triple:
-        configuration.arch = args.triple.split("-")[0]
-    else:
-        configuration.arch = platform_machine
+    configuration.arch = (
+        configuration.triple.split("-")[0] if configuration.triple else platform_machine
+    )
 
     if args.categories_list:
         configuration.categories_list = set(
@@ -471,6 +468,9 @@ def parseOptionsAndInitTestdirs():
 
     if args.enable_mte:
         configuration.mte_enabled = True
+
+    if args.arm64e_debugserver:
+        configuration.arm64e_debugserver = True
 
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
@@ -1089,8 +1089,8 @@ def run_suite():
             % (configuration.lldb_platform_working_dir)
         )
         error = lldb.remote_platform.MakeDirectory(
-            configuration.lldb_platform_working_dir, 448
-        )  # 448 = 0o700
+            configuration.lldb_platform_working_dir, 0o700
+        )
         if error.Fail():
             raise Exception(
                 "making remote directory '%s': %s"

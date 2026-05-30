@@ -223,8 +223,9 @@ public:
   }
 
   /// This is called for each AST file loaded.
-  virtual void visitModuleFile(StringRef Filename,
-                               serialization::ModuleKind Kind) {}
+  virtual void visitModuleFile(ModuleFileName Filename,
+                               serialization::ModuleKind Kind,
+                               bool DirectlyImported) {}
 
   /// Returns true if this \c ASTReaderListener wants to receive the
   /// input files of the AST file via \c visitInputFile, false otherwise.
@@ -313,8 +314,8 @@ public:
   void ReadCounter(const serialization::ModuleFile &M, uint32_t Value) override;
   bool needsInputFileVisitation() override;
   bool needsSystemInputFileVisitation() override;
-  void visitModuleFile(StringRef Filename,
-                       serialization::ModuleKind Kind) override;
+  void visitModuleFile(ModuleFileName Filename, serialization::ModuleKind Kind,
+                       bool DirectlyImported) override;
   bool visitInputFile(StringRef Filename, bool isSystem,
                       bool isOverridden, bool isExplicitModule) override;
   void readModuleFileExtension(
@@ -417,14 +418,13 @@ struct LookupBlockOffsets : VisibleLookupBlockOffsets {
 /// The AST reader provides lazy de-serialization of declarations, as
 /// required when traversing the AST. Only those AST nodes that are
 /// actually required will be de-serialized.
-class ASTReader
-  : public ExternalPreprocessorSource,
-    public ExternalPreprocessingRecordSource,
-    public ExternalHeaderFileInfoSource,
-    public ExternalSemaSource,
-    public IdentifierInfoLookup,
-    public ExternalSLocEntrySource
-{
+class ASTReader : public ExternalPreprocessorSource,
+                  public ExternalPreprocessingRecordSource,
+                  public ExternalHeaderFileInfoSource,
+                  public ExternalSemaSource,
+                  public IdentifierInfoLookup,
+                  public ExternalSLocEntrySource,
+                  public ExternalSubmoduleSource {
 public:
   /// Types of AST files.
   friend class ASTDeclMerger;
@@ -819,32 +819,6 @@ private:
   /// declarations in that submodule that could be made visible.
   HiddenNamesMapType HiddenNamesMap;
 
-  /// A module import, export, or conflict that hasn't yet been resolved.
-  struct UnresolvedModuleRef {
-    /// The file in which this module resides.
-    ModuleFile *File;
-
-    /// The module that is importing or exporting.
-    Module *Mod;
-
-    /// The kind of module reference.
-    enum { Import, Export, Conflict, Affecting } Kind;
-
-    /// The local ID of the module that is being exported.
-    unsigned ID;
-
-    /// Whether this is a wildcard export.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned IsWildcard : 1;
-
-    /// String data.
-    StringRef String;
-  };
-
-  /// The set of module imports and exports that still need to be
-  /// resolved.
-  SmallVector<UnresolvedModuleRef, 2> UnresolvedModuleRefs;
-
   /// A vector containing selectors that have already been loaded.
   ///
   /// This vector is indexed by the Selector ID (-1). NULL selector
@@ -965,8 +939,14 @@ private:
   SmallVector<serialization::SelectorID, 64> ReferencedSelectorsData;
 
   /// A snapshot of Sema's weak undeclared identifier tracking, for
-  /// generating warnings.
+  /// generating warnings. Note that this vector has 3n entries, being triplets
+  /// of the form C name, alias if any, and source location.
   SmallVector<serialization::IdentifierID, 64> WeakUndeclaredIdentifiers;
+
+  /// A snapshot of Sema's #redefine_extname'd undeclared identifier tracking,
+  /// for generating warnings. Note that this vector has 3n entries, being
+  /// triplets in the order of C name, asm name, and source location.
+  SmallVector<serialization::IdentifierID, 64> ExtnameUndeclaredIdentifiers;
 
   /// The IDs of type aliases for ext_vectors that exist in the chain.
   ///
@@ -1549,7 +1529,7 @@ public:
         : Mod(Mod), ImportedBy(ImportedBy), ImportLoc(ImportLoc) {}
   };
 
-  ASTReadResult ReadASTCore(StringRef FileName, ModuleKind Type,
+  ASTReadResult ReadASTCore(ModuleFileName FileName, ModuleKind Type,
                             SourceLocation ImportLoc, ModuleFile *ImportedBy,
                             SmallVectorImpl<ImportedModule> &Loaded,
                             off_t ExpectedSize, time_t ExpectedModTime,
@@ -1605,8 +1585,6 @@ private:
   ASTReadResult ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
                                        const ModuleFile *ImportedBy,
                                        unsigned ClientLoadCapabilities);
-  llvm::Error ReadSubmoduleBlock(ModuleFile &F,
-                                 unsigned ClientLoadCapabilities);
   static bool ParseLanguageOptions(const RecordData &Record,
                                    StringRef ModuleFilename, bool Complain,
                                    ASTReaderListener &Listener,
@@ -1885,7 +1863,7 @@ public:
   /// NewLoadedModuleFile would refer to the address of the new loaded top level
   /// module. The state of NewLoadedModuleFile is unspecified if the AST file
   /// isn't loaded successfully.
-  ASTReadResult ReadAST(StringRef FileName, ModuleKind Type,
+  ASTReadResult ReadAST(ModuleFileName FileName, ModuleKind Type,
                         SourceLocation ImportLoc,
                         unsigned ClientLoadCapabilities,
                         ModuleFile **NewLoadedModuleFile = nullptr);
@@ -1987,12 +1965,6 @@ public:
 
   /// Update the state of Sema after loading some additional modules.
   void UpdateSema();
-
-  /// Add in-memory (virtual file) buffer.
-  void addInMemoryBuffer(StringRef &FileName,
-                         std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-    ModuleMgr.addInMemoryBuffer(FileName, std::move(Buffer));
-  }
 
   /// Finalizes the AST reader's state before writing an AST file to
   /// disk.
@@ -2356,6 +2328,10 @@ public:
   void ReadWeakUndeclaredIdentifiers(
       SmallVectorImpl<std::pair<IdentifierInfo *, WeakInfo>> &WeakIDs) override;
 
+  void ReadExtnameUndeclaredIdentifiers(
+      SmallVectorImpl<std::pair<IdentifierInfo *, AsmLabelAttr *>> &ExtnameIDs)
+      override;
+
   void ReadUsedVTables(SmallVectorImpl<ExternalVTableUse> &VTables) override;
 
   void ReadPendingInstantiations(
@@ -2433,8 +2409,7 @@ public:
                                                   unsigned LocalID) const;
 
   /// Retrieve the submodule that corresponds to a global submodule ID.
-  ///
-  Module *getSubmodule(serialization::SubmoduleID GlobalID);
+  Module *getSubmodule(uint32_t GlobalID) override;
 
   /// Retrieve the module that corresponds to the given module ID.
   ///

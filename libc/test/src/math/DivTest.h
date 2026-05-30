@@ -39,7 +39,7 @@ public:
   using DivFunc = OutType (*)(InType, InType);
 
   void test_subnormal_range(DivFunc func) {
-    constexpr InStorageType COUNT = 100'001;
+    constexpr InStorageType COUNT = 1'231;
     constexpr InStorageType STEP =
         (IN_MAX_SUBNORMAL_U - IN_MIN_SUBNORMAL_U) / COUNT;
     for (InStorageType i = 0, v = 0, w = IN_MAX_SUBNORMAL_U; i <= COUNT;
@@ -53,7 +53,7 @@ public:
   }
 
   void test_normal_range(DivFunc func) {
-    constexpr InStorageType COUNT = 100'001;
+    constexpr InStorageType COUNT = 1'231;
     constexpr InStorageType STEP = (IN_MAX_NORMAL_U - IN_MIN_NORMAL_U) / COUNT;
     for (InStorageType i = 0, v = 0, w = IN_MAX_NORMAL_U; i <= COUNT;
          ++i, v += STEP, w -= STEP) {

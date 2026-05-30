@@ -144,6 +144,11 @@ static cl::opt<unsigned>
 MaxArraySize("instcombine-maxarray-size", cl::init(1024),
              cl::desc("Maximum array size considered when doing a combine"));
 
+static cl::opt<unsigned> MaxAllocSiteRemovableUsers(
+    "instcombine-max-allocsite-removable-users", cl::Hidden, cl::init(2048),
+    cl::desc("Maximum number of users to visit in alloc-site "
+             "removability analysis"));
+
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 } // end namespace llvm
@@ -262,8 +267,9 @@ Value *InstCombinerImpl::EmitGEPOffsets(ArrayRef<GEPOperator *> GEPs,
         Offset = Add(OneUseSum, Offset);
 
       // Rewrite the GEP to reuse the computed offset. This also includes
-      // offsets from preceding one-use GEPs.
+      // offsets from preceding one-use GEPs of matched type.
       if (RewriteGEPs && Inst &&
+          Offset->getType()->isVectorTy() == GEP->getType()->isVectorTy() &&
           !(GEP->getSourceElementType()->isIntegerTy(8) &&
             GEP->getOperand(1) == Offset)) {
         replaceInstUsesWith(
@@ -876,8 +882,7 @@ Instruction *InstCombinerImpl::tryFoldInstWithCtpopWithNot(Instruction *I) {
 
   Value *Op;
   // Find ctpop.
-  if (!match(I->getOperand(1 - ConstIdx),
-             m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(Op)))))
+  if (!match(I->getOperand(1 - ConstIdx), m_OneUse(m_Ctpop(m_Value(Op)))))
     return nullptr;
 
   Constant *C;
@@ -1014,11 +1019,12 @@ Instruction *InstCombinerImpl::foldBinOpShiftWithShift(BinaryOperator &I) {
     if (!match(I.getOperand(ShOpnum),
                m_OneUse(m_Shift(m_Value(Y), m_Value(Shift)))))
       return nullptr;
-    if (!match(I.getOperand(1 - ShOpnum),
-               m_c_BinOp(m_CombineAnd(
-                             m_OneUse(m_Shift(m_Value(X), m_Specific(Shift))),
+    if (!match(
+            I.getOperand(1 - ShOpnum),
+            m_OneUse(m_c_BinOp(
+                m_CombineAnd(m_OneUse(m_Shift(m_Value(X), m_Specific(Shift))),
                              m_Value(ShiftedX)),
-                         m_Value(Mask))))
+                m_Value(Mask)))))
       return nullptr;
     // Make sure we are matching instruction shifts and not ConstantExpr
     auto *IY = dyn_cast<Instruction>(I.getOperand(ShOpnum));
@@ -1694,13 +1700,11 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCasts(BinaryOperator &BO) {
   // Check for:
   //    1) (binop ({s|u}itofp x), ({s|u}itofp y))
   //    2) (binop ({s|u}itofp x), FpC)
-  if (!match(BO.getOperand(0), m_SIToFP(m_Value(IntOps[0]))) &&
-      !match(BO.getOperand(0), m_UIToFP(m_Value(IntOps[0]))))
+  if (!match(BO.getOperand(0), m_IToFP(m_Value(IntOps[0]))))
     return nullptr;
 
   if (!match(BO.getOperand(1), m_Constant(Op1FpC)) &&
-      !match(BO.getOperand(1), m_SIToFP(m_Value(IntOps[1]))) &&
-      !match(BO.getOperand(1), m_UIToFP(m_Value(IntOps[1]))))
+      !match(BO.getOperand(1), m_IToFP(m_Value(IntOps[1]))))
     return nullptr;
 
   // Cache KnownBits a bit to potentially save some analysis.
@@ -3733,7 +3737,7 @@ static bool isRemovableWrite(CallBase &CB, Value *UsedV,
 }
 
 static std::optional<ModRefInfo>
-isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<WeakTrackingVH> &Users,
+isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
                      const TargetLibraryInfo &TLI, bool KnowInit) {
   SmallVector<Instruction*, 4> Worklist;
   const std::optional<StringRef> Family = getAllocationFamily(AI, &TLI);
@@ -3744,6 +3748,8 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<WeakTrackingVH> &Users,
     Instruction *PI = Worklist.pop_back_val();
     for (User *U : PI->users()) {
       Instruction *I = cast<Instruction>(U);
+      if (Users.size() >= MaxAllocSiteRemovableUsers)
+        return std::nullopt;
       switch (I->getOpcode()) {
       default:
         // Give up the moment we see something we can't handle.
@@ -3893,7 +3899,11 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
   // outputs of a program (when we convert a malloc to an alloca, the fact that
   // the allocation is now on the stack is potentially visible, for example),
   // but we believe in a permissible manner.
-  SmallVector<WeakTrackingVH, 64> Users;
+  //
+  // Collect into Instruction* first to avoid expensive WeakTrackingVH
+  // register/unregister overhead; convert to WeakTrackingVH only when the
+  // site is actually removable.
+  SmallVector<Instruction *, 64> RawUsers;
 
   // If we are removing an alloca with a dbg.declare, insert dbg.value calls
   // before each store.
@@ -3924,8 +3934,9 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
     KnowInitUndef = false;
 
   auto Removable =
-      isAllocSiteRemovable(&MI, Users, TLI, KnowInitZero | KnowInitUndef);
+      isAllocSiteRemovable(&MI, RawUsers, TLI, KnowInitZero | KnowInitUndef);
   if (Removable) {
+    SmallVector<WeakTrackingVH, 64> Users(RawUsers.begin(), RawUsers.end());
     for (WeakTrackingVH &User : Users) {
       // Lowering all @llvm.objectsize and MTI calls first because they may use
       // a bitcast/GEP of the alloca we are removing.
@@ -3966,9 +3977,8 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
       Instruction *I = cast<Instruction>(&*User);
 
       if (ICmpInst *C = dyn_cast<ICmpInst>(I)) {
-        replaceInstUsesWith(*C,
-                            ConstantInt::get(Type::getInt1Ty(C->getContext()),
-                                             C->isFalseWhenEqual()));
+        replaceInstUsesWith(
+            *C, ConstantInt::get(C->getType(), C->isFalseWhenEqual()));
       } else if (auto *SI = dyn_cast<StoreInst>(I)) {
         for (auto *DVR : DVRs)
           if (DVR->isAddressOfVariable())
@@ -4071,8 +4081,9 @@ static Instruction *tryToMoveFreeBeforeNullTest(CallInst &FI,
   // If there are more than 2 instructions, check that they are noops
   // i.e., they won't hurt the performance of the generated code.
   if (FreeInstrBB->size() != 2) {
-    for (const Instruction &Inst : FreeInstrBB->instructionsWithoutDebug()) {
-      if (&Inst == &FI || &Inst == FreeInstrBBTerminator)
+    for (const Instruction &Inst : *FreeInstrBB) {
+      if (&Inst == &FI || &Inst == FreeInstrBBTerminator ||
+          isa<PseudoProbeInst>(Inst))
         continue;
       auto *Cast = dyn_cast<CastInst>(&Inst);
       if (!Cast || !Cast->isNoopCast(DL))
@@ -4878,7 +4889,7 @@ static bool isCatchAll(EHPersonality Personality, Constant *TypeInfo) {
   case EHPersonality::Wasm_CXX:
   case EHPersonality::XL_CXX:
   case EHPersonality::ZOS_CXX:
-    return TypeInfo->isNullValue();
+    return isa<ConstantPointerNull>(TypeInfo);
   }
   llvm_unreachable("invalid enum");
 }
@@ -5135,7 +5146,7 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
         // LFilter iff LFilter contains a zero.
         assert(FElts > 0 && "Should have eliminated the empty filter earlier!");
         for (unsigned l = 0; l != LElts; ++l)
-          if (LArray->getOperand(l)->isNullValue()) {
+          if (isa<ConstantPointerNull>(LArray->getOperand(l))) {
             // LFilter contains a zero - discard it.
             NewClauses.erase(J);
             MakeNewInstruction = true;
@@ -5360,8 +5371,22 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
     Changed = true;
   }
 
-  Changed |= Op->replaceUsesWithIf(
-      &FI, [&](Use &U) -> bool { return DT.dominates(&FI, U); });
+  SmallVector<User *> Users;
+  Changed |= Op->replaceUsesWithIf(&FI, [&](Use &U) -> bool {
+    if (!DT.dominates(&FI, U))
+      return false;
+
+    Users.push_back(U.getUser());
+    return true;
+  });
+
+  for (auto *U : Users) {
+    for (auto &AssumeVH : AC.assumptionsFor(U)) {
+      if (!AssumeVH)
+        continue;
+      AC.updateAffectedValues(cast<AssumeInst>(AssumeVH));
+    }
+  }
 
   return Changed;
 }

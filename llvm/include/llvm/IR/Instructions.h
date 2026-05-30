@@ -765,6 +765,14 @@ public:
     /// \p minimum matches the behavior of \p llvm.minimum.*.
     FMinimum,
 
+    /// *p = maximumnum(old, v)
+    /// \p maximumnum matches the behavior of \p llvm.maximumnum.*.
+    FMaximumNum,
+
+    /// *p = minimumnum(old, v)
+    /// \p minimumnum matches the behavior of \p llvm.minimumnum.*.
+    FMinimumNum,
+
     /// Increment one up to a maximum value.
     /// *p = (old u>= v) ? 0 : (old + 1)
     UIncWrap,
@@ -801,7 +809,7 @@ private:
 public:
   LLVM_ABI AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
                          Align Alignment, AtomicOrdering Ordering,
-                         SyncScope::ID SSID,
+                         SyncScope::ID SSID, bool Elementwise = false,
                          InsertPosition InsertBefore = nullptr);
 
   // allocate space for exactly two operands
@@ -813,8 +821,10 @@ public:
       AtomicOrderingBitfieldElementT<VolatileField::NextBit>;
   using OperationField = BinOpBitfieldElement<AtomicOrderingField::NextBit>;
   using AlignmentField = AlignmentBitfieldElementT<OperationField::NextBit>;
+  using ElementwiseField = BoolBitfieldElementT<AlignmentField::NextBit>;
   static_assert(Bitfield::areContiguous<VolatileField, AtomicOrderingField,
-                                        OperationField, AlignmentField>(),
+                                        OperationField, AlignmentField,
+                                        ElementwiseField>(),
                 "Bitfields must be contiguous");
 
   BinOp getOperation() const { return getSubclassData<OperationField>(); }
@@ -829,6 +839,8 @@ public:
     case AtomicRMWInst::FMin:
     case AtomicRMWInst::FMaximum:
     case AtomicRMWInst::FMinimum:
+    case AtomicRMWInst::FMaximumNum:
+    case AtomicRMWInst::FMinimumNum:
       return true;
     default:
       return false;
@@ -856,6 +868,12 @@ public:
   /// Specify whether this is a volatile RMW or not.
   ///
   void setVolatile(bool V) { setSubclassData<VolatileField>(V); }
+
+  /// Return true if this RMW has elementwise vector semantics.
+  bool isElementwise() const { return getSubclassData<ElementwiseField>(); }
+
+  /// Specify whether this RMW has elementwise vector semantics.
+  void setElementwise(bool V) { setSubclassData<ElementwiseField>(V); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -910,7 +928,7 @@ public:
 
 private:
   void Init(BinOp Operation, Value *Ptr, Value *Val, Align Align,
-            AtomicOrdering Ordering, SyncScope::ID SSID);
+            AtomicOrdering Ordering, SyncScope::ID SSID, bool Elementwise);
 
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
@@ -1408,7 +1426,7 @@ public:
 /// to the constructor. It only operates on floating point values or packed
 /// vectors of floating point values. The operands must be identical types.
 /// Represents a floating point comparison operator.
-class FCmpInst: public CmpInst {
+class FCmpInst : public CmpInst, public FastMathFlagsStorage {
   void AssertOK() {
     assert(isFPPredicate() && "Invalid FCmp predicate value");
     assert(getOperand(0)->getType() == getOperand(1)->getType() &&
@@ -1445,7 +1463,9 @@ public:
            const Twine &NameStr = "", ///< Name of the instruction
            Instruction *FlagsSource = nullptr)
       : CmpInst(makeCmpResultType(LHS->getType()), Instruction::FCmp, Pred, LHS,
-                RHS, NameStr, nullptr, FlagsSource) {
+                RHS, NameStr) {
+    if (FlagsSource)
+      copyIRFlags(FlagsSource);
     AssertOK();
   }
 
@@ -1508,7 +1528,7 @@ public:
 /// field to indicate whether or not this is a tail call.  The rest of the bits
 /// hold the calling convention of the call.
 ///
-class CallInst : public CallBase {
+class CallInst : public CallBase, public FastMathFlagsStorage {
   CallInst(const CallInst &CI, AllocInfo AllocInfo);
 
   /// Construct a CallInst from a range of arguments
@@ -1687,7 +1707,7 @@ CallInst::CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
 
 /// This class represents the LLVM 'select' instruction.
 ///
-class SelectInst : public Instruction {
+class SelectInst : public Instruction, public FastMathFlagsStorage {
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{3};
 
   SelectInst(Value *C, Value *S1, Value *S2, const Twine &NameStr,
@@ -2638,7 +2658,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(InsertValueInst, Value)
 // node, that can not exist in nature, but can be synthesized in a computer
 // scientist's overactive imagination.
 //
-class PHINode : public Instruction {
+class PHINode : public Instruction, public FastMathFlagsStorage {
   constexpr static HungOffOperandsAllocMarker AllocMarker{};
 
   /// The number of operands actually allocated.  NumOperands is
@@ -3062,16 +3082,19 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ReturnInst, Value)
 //===---------------------------------------------------------------------------
 /// Conditional or Unconditional Branch instruction.
 ///
-class BranchInst : public Instruction {
+class LLVM_DEPRECATED("Use UncondBrInst/CondBrInst/Instruction instead", "")
+    BranchInst : public Instruction {
 protected:
   BranchInst(Type *Ty, unsigned Opcode, AllocInfo AllocInfo,
              InsertPosition InsertBefore = nullptr)
       : Instruction(Ty, Opcode, AllocInfo, InsertBefore) {}
 
 public:
+  LLVM_DEPRECATED("Use UncondBrInst::Create instead", "UncondBrInst::Create")
   static BranchInst *Create(BasicBlock *IfTrue,
                             InsertPosition InsertBefore = nullptr);
 
+  LLVM_DEPRECATED("Use CondBrInst::Create instead", "CondBrInst::Create")
   static BranchInst *Create(BasicBlock *IfTrue, BasicBlock *IfFalse,
                             Value *Cond, InsertPosition InsertBefore = nullptr);
 
@@ -3079,10 +3102,14 @@ public:
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
   // Defined out-of-line below to access CondBrInst.
+  LLVM_DEPRECATED("Use isa<UncondBrInst> instead", "isa<UncondBrInst>")
   bool isUnconditional() const;
+  LLVM_DEPRECATED("Use isa<CondBrInst> instead", "isa<CondBrInst>")
   bool isConditional() const;
 
+  LLVM_DEPRECATED("Cast to CondBrInst", "")
   Value *getCondition() const;
+  LLVM_DEPRECATED("Cast to CondBrInst", "")
   void setCondition(Value *V);
 
   /// Swap the successors of this branch instruction.
@@ -3090,6 +3117,7 @@ public:
   /// Swaps the successors of the branch instruction. This also swaps any
   /// branch weight metadata associated with the instruction so that it
   /// continues to map correctly to each operand.
+  LLVM_DEPRECATED("Cast to CondBrInst", "")
   void swapSuccessors();
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -3101,6 +3129,9 @@ public:
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 };
+
+// Suppress deprecation warnings from BranchInst.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 
 template <>
 struct OperandTraits<BranchInst> : public VariadicOperandTraits<BranchInst> {};
@@ -3118,7 +3149,7 @@ class UncondBrInst : public BranchInst {
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
 
   UncondBrInst(const UncondBrInst &BI);
-  LLVM_ABI explicit UncondBrInst(BasicBlock *IfTrue,
+  LLVM_ABI explicit UncondBrInst(BasicBlock *Target,
                                  InsertPosition InsertBefore);
 
 protected:
@@ -3128,9 +3159,9 @@ protected:
   LLVM_ABI UncondBrInst *cloneImpl() const;
 
 public:
-  static UncondBrInst *Create(BasicBlock *IfTrue,
+  static UncondBrInst *Create(BasicBlock *Target,
                               InsertPosition InsertBefore = nullptr) {
-    return new (AllocMarker) UncondBrInst(IfTrue, InsertBefore);
+    return new (AllocMarker) UncondBrInst(Target, InsertBefore);
   }
 
   /// Transparently provide more efficient getOperand methods.
@@ -3296,6 +3327,9 @@ inline void BranchInst::setCondition(Value *V) {
 inline void BranchInst::swapSuccessors() {
   cast<CondBrInst>(this)->swapSuccessors();
 }
+
+// Suppress deprecation warnings from BranchInst.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 //===----------------------------------------------------------------------===//
 //                               SwitchInst Class
@@ -3675,8 +3709,17 @@ public:
   SwitchInstProfUpdateWrapper(SwitchInst &SI) : SI(SI) { init(); }
 
   ~SwitchInstProfUpdateWrapper() {
-    if (Changed && Weights.has_value() && Weights->size() >= 2)
-      setBranchWeights(SI, Weights.value(), /*IsExpected=*/false);
+    if (Changed && Weights.has_value()) {
+      if (Weights->size() >= 2) {
+        setBranchWeights(SI, Weights.value(), /*IsExpected=*/false);
+        return;
+      }
+      // In some cases while simplifying switch instructions, we end up with
+      // degenerate switch instructions (e.g., only contains the default case).
+      // We drop profile metadata in such cases rather than updating given it
+      // does not convey anything.
+      SI.setMetadata(LLVMContext::MD_prof, nullptr);
+    }
   }
 
   /// Delegate the call to the underlying SwitchInst::removeCase() and remove
@@ -4845,7 +4888,7 @@ public:
 //===----------------------------------------------------------------------===//
 
 /// This class represents a truncation of floating point types.
-class FPTruncInst : public CastInst {
+class FPTruncInst : public CastInst, public FastMathFlagsStorage {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
@@ -4876,7 +4919,7 @@ public:                 /// Constructor with insert-before-instruction semantics
 //===----------------------------------------------------------------------===//
 
 /// This class represents an extension of floating point types.
-class FPExtInst : public CastInst {
+class FPExtInst : public CastInst, public FastMathFlagsStorage {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;

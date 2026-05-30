@@ -112,7 +112,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeMVELaneInterleavingPass(Registry);
   initializeARMFixCortexA57AES1742098Pass(Registry);
   initializeARMDAGToDAGISelLegacyPass(Registry);
-  initializeKCFIPass(Registry);
+  initializeMachineKCFILegacyPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -390,7 +390,7 @@ void ARMPassConfig::addIRPasses() {
 
   // Add Control Flow Guard checks.
   if (TM->getTargetTriple().isOSWindows())
-    addPass(createCFGuardCheckPass());
+    addPass(createCFGuardPass());
 
   if (TM->Options.JMCInstrument)
     addPass(createJMCInstrumenterPass());
@@ -530,7 +530,7 @@ void ARMPassConfig::addPreEmitPass() {
   // Unpack bundles for:
   // - Thumb2: Constant island pass requires unbundled instructions
   // - KCFI: KCFI_CHECK pseudo instructions need to be unbundled for AsmPrinter
-  addPass(createUnpackMachineBundles([](const MachineFunction &MF) {
+  addPass(createUnpackMachineBundlesLegacy([](const MachineFunction &MF) {
     return MF.getSubtarget<ARMSubtarget>().isThumb2() ||
            MF.getFunction().getParent()->getModuleFlag("kcfi");
   }));

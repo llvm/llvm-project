@@ -15,10 +15,18 @@
 // RUN: sed -e "s|DIR|%/t|g" %t/compile-pch.json.in > %t/compile-pch.json
 // RUN: clang-scan-deps -compilation-database %t/compile-pch.json \
 // RUN:   -j 1 -format experimental-full > %t/deps_pch.db
-// RUN: %clang -x c-header -c %t/prebuild.h -isysroot %t/MacOSX.sdk \
-// RUN:   -I%t/BuildDir -ivfsoverlay %t/overlay.json \
-// RUN:   -I %t/MacOSX.sdk/usr/include -fmodules -fmodules-cache-path=%t/module-cache \
-// RUN:   -fimplicit-module-maps -o %t/prebuild.pch
+
+// RUN: %deps-to-rsp %t/deps_pch.db --module-name=A > %t/A.rsp
+// RUN: %deps-to-rsp %t/deps_pch.db --module-name=B > %t/B.rsp
+// RUN: %deps-to-rsp %t/deps_pch.db --module-name=B_transitive > %t/B_transitive.rsp
+// RUN: %deps-to-rsp %t/deps_pch.db --module-name=C > %t/C.rsp
+// RUN: %deps-to-rsp %t/deps_pch.db --tu-index=0 > %t/pch.rsp
+// RUN: %clang @%t/A.rsp
+// RUN: %clang @%t/B.rsp
+// RUN: %clang @%t/B_transitive.rsp
+// RUN: %clang @%t/C.rsp
+// RUN: %clang @%t/pch.rsp
+
 // RUN: sed -e "s|DIR|%/t|g" %t/compile-commands.json.in > %t/compile-commands.json
 // RUN: clang-scan-deps -compilation-database %t/compile-commands.json \
 // RUN:   -j 1 -format experimental-full > %t/deps.db

@@ -56,6 +56,11 @@ def DestructiveTernaryCommWithRev : DestructiveInstTypeEnum<8>;
 def Destructive2xRegImmUnpred     : DestructiveInstTypeEnum<9>;
 
 def DestructiveUnaryPassthru      : DestructiveInstTypeEnum<10>;
+// Preferable to select a destination register that is distinct
+// from the governing predicate.
+def DestructivePredicate          : DestructiveInstTypeEnum<11>;
+
+def DestructiveBinaryImmUnpred    : DestructiveInstTypeEnum<12>;
 
 class FalseLanesEnum<bits<2> val> {
   bits<2> Value = val;
@@ -174,6 +179,9 @@ def extract_high_v2f64 :
 def gi_extract_high_v8f16 :
   GIComplexOperandMatcher<v4s16, "selectExtractHigh">,
   GIComplexPatternEquiv<extract_high_v8f16>;
+def gi_extract_high_v8bf16 :
+  GIComplexOperandMatcher<v4s16, "selectExtractHigh">,
+  GIComplexPatternEquiv<extract_high_v8bf16>;
 def gi_extract_high_v4f32 :
   GIComplexOperandMatcher<v2s32, "selectExtractHigh">,
   GIComplexPatternEquiv<extract_high_v4f32>;
@@ -1548,11 +1556,11 @@ def fpimm8 : Operand<i32> {
 }
 
 def fpimm0 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(+0.0);
+  return Imm.isPosZero();
 }]>;
 
 def fpimm_minus0 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(-0.0);
+  return Imm.isNegZero();
 }]>;
 
 def fpimm_half : FPImmLeaf<fAny, [{
@@ -1875,10 +1883,11 @@ def phint_op : Operand<i32> {
 class STSHHI
     : SimpleSystemI<0, (ins phint_op:$policy), "stshh", "\t$policy", []>,
       Sched<[WriteHint]> {
-  bits<3> policy;
-  let Inst{20-12} = 0b000011001;
+  bits<1> policy;
+  let Inst{20-12} = 0b000110010;
   let Inst{11-8} = 0b0110;
-  let Inst{7-5} = policy;
+  let Inst{7-6} = 0b00;
+  let Inst{5} = policy;
 }
 
 // System instructions taking a single literal operand which encodes into
@@ -2015,8 +2024,9 @@ def TIndexhint_op : Operand<i32> {
 
 class MRSI : RtSystemI<1, (outs GPR64:$Rt), (ins mrs_sysreg_op:$systemreg),
                        "mrs", "\t$Rt, $systemreg"> {
-  bits<16> systemreg;
-  let Inst{20-5} = systemreg;
+  bits<15> systemreg;
+  let Inst{20}= 0b1;
+  let Inst{19-5} = systemreg;
   let DecoderNamespace = "Fallback";
   // The MRS is set as a NZCV setting instruction. Not all MRS instructions
   // require doing this. The alternative was to explicitly model each one, but
@@ -2030,8 +2040,9 @@ class MRSI : RtSystemI<1, (outs GPR64:$Rt), (ins mrs_sysreg_op:$systemreg),
 // would do it, but feels like overkill at this point.
 class MSRI : RtSystemI<0, (outs), (ins msr_sysreg_op:$systemreg, GPR64:$Rt),
                        "msr", "\t$systemreg, $Rt"> {
-  bits<16> systemreg;
-  let Inst{20-5} = systemreg;
+  bits<15> systemreg;
+  let Inst{20} = 0b1;
+  let Inst{19-5} = systemreg;
   let DecoderNamespace = "Fallback";
 }
 
@@ -2116,16 +2127,21 @@ def SysCRAsmOperand : AsmOperandClass {
   let ParserMethod = "tryParseSysCROperand";
 }
 
-def sys_cr_op : Operand<i32> {
+def sys_cr_op : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) < 16;
+}]> {
   let PrintMethod = "printSysCROperand";
   let ParserMatchClass = SysCRAsmOperand;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-class SystemXtI<bit L, string asm>
-  : RtSystemI<L, (outs),
-       (ins imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, GPR64:$Rt),
-       asm, "\t$op1, $Cn, $Cm, $op2, $Rt"> {
+class SystemXtI<string asm>
+  : RtSystemI<0, (outs),
+       (ins imm32_0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm32_0_7:$op2,
+            GPR64:$Rt),
+       asm, "\t$op1, $Cn, $Cm, $op2, $Rt",
+       [(int_aarch64_sys timm32_0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm,
+                          timm32_0_7:$op2, GPR64:$Rt)]> {
   bits<3> op1;
   bits<4> Cn;
   bits<4> Cm;
@@ -2135,6 +2151,10 @@ class SystemXtI<bit L, string asm>
   let Inst{15-12} = Cn;
   let Inst{11-8}  = Cm;
   let Inst{7-5}   = op2;
+
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 1;
 }
 
 class SystemLXtI<bit L, string asm>
@@ -2206,6 +2226,7 @@ class RCPCLoad<bits<2> sz, string asm, RegisterClass RC>
   bits<5> Rt;
   let Inst{31-30} = sz;
   let Inst{29-10} = 0b11100010111111110000;
+  let Unpredictable{20-16} = 0b11111;
   let Inst{9-5} = Rn;
   let Inst{4-0} = Rt;
 }
@@ -5206,6 +5227,8 @@ class StoreExclusive<bits<2> sz, bit o2, bit L, bit o1, bit o0,
   bits<5> Rt;
   bits<5> Rn;
   let Inst{20-16} = Ws;
+  let Inst{14-10} = 0b11111;
+  let Unpredictable{14-10} = 0b11111;
   let Inst{9-5} = Rn;
   let Inst{4-0} = Rt;
 
@@ -6672,14 +6695,14 @@ multiclass SIMDThreeSameVectorMLAL<bit Q, bits<2> sz, string asm, SDPatternOpera
                                          V128, v4f32, v16i8, op>;
 }
 
-multiclass SIMDThreeSameVectorFMLA<string asm> {
+multiclass SIMDThreeSameVectorFMLA<string asm, SDPatternOperator OpNode = null_frag> {
   def v8f16_v8f16 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b11, 0b1101, asm, ".8h", ".8h",
-                                          V128, v8f16, v8f16, null_frag>;
+                                          V128, v8f16, v8f16, OpNode>;
 }
 
-multiclass SIMDThreeSameVectorFMLAWiden<string asm> {
+multiclass SIMDThreeSameVectorFMLAWiden<string asm, SDPatternOperator OpNode = null_frag> {
   def v8f16_v4f32 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b01, 0b1101, asm, ".4s", ".8h",
-                                          V128, v4f32, v8f16, null_frag>;
+                                          V128, v4f32, v8f16, OpNode>;
 }
 
 multiclass SIMDThreeSameVectorFDot<string asm, SDPatternOperator OpNode = null_frag> {
@@ -12764,6 +12787,16 @@ class LoadStore64B<bits<3> opc, string asm_inst, dag iops, dag oops,
   let Inst{20-16} = 0b11111;
 }
 
+multiclass LoadStore64B<bits<3> opc, string asm_inst,
+                        bit may_load, bit may_store,
+                        dag iops, dag oops,
+                        list<dag> pat = []> {
+  let mayLoad = may_load, mayStore = may_store in
+  def "" : LoadStore64B<opc, asm_inst, iops, oops, pat>;
+  def : InstAlias<asm_inst # "\t$Rt, [$Rn, #0]",
+                  (!cast<Instruction>(NAME) GPR64x8:$Rt, GPR64sp:$Rn)>;
+}
+
 class Store64BV<bits<3> opc, string asm_inst, list<dag> pat = []>
     : LoadStore64B_base<opc, asm_inst, "\t$Rs, $Rt, [$Rn]",
                        (ins GPR64x8:$Rt, GPR64sp:$Rn), (outs GPR64:$Rs), pat> {
@@ -12846,6 +12879,7 @@ class MOPSGoMemorySetTagging<bits<2> opcode, bit op1, bit op2, bit op3, string a
                        "\t[$Rd]!, $Rn!", 1, opcode, op1, op2, op3, asm> {
   // No `Rm` operand, as all bits must be set to 1
   let Inst{20-16} = 0b11111;
+  let Unpredictable{20-16} = 0b11111;
   let DecoderMethod = "DecodeSETMemGoOpInstruction";
 }
 
@@ -13629,6 +13663,7 @@ class TCHANGEImmInst<string asm, bit isB> : I<
   let Inst{18}    = isB;
   let Inst{17}    = nb;
   let Inst{16-12} = 0b00000;
+  let Unpredictable{16-12} = 0b11111;
   let Inst{11-5}  = imm;
   let Inst{4-0}   = Xd;
 }
@@ -13642,6 +13677,7 @@ class TENTERInst<string asm> : I<
   let Inst{31-18} = 0b11010100111000;
   let Inst{17}    = nb;
   let Inst{16-12} = 0b00000;
+  let Unpredictable{16-12} = 0b11111;
   let Inst{11-5}  = imm;
   let Inst{4-0}   = 0b00000;
 }

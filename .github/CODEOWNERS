@@ -11,6 +11,7 @@
 # See https://llvm.org/docs/DeveloperPolicy.html#maintainers as well as the
 # Maintainers.* files in the the respective subproject directories.
 
+/libc/ @llvm/reviewers-libc
 /libcxx/ @llvm/reviewers-libcxx
 /libcxxabi/ @llvm/reviewers-libcxxabi
 /libunwind/ @llvm/reviewers-libunwind
@@ -37,6 +38,7 @@
 
 /clang/include/clang/CIR @lanza @bcardosolopes @xlauko @andykaylor
 /clang/lib/CIR @lanza @bcardosolopes @xlauko @andykaylor
+/clang/lib/CIR/CodeGen/CIRGenBuiltinAArch64.cpp @lanza @bcardosolopes @xlauko @andykaylor @banach-space
 /clang/tools/cir-* @lanza @bcardosolopes @xlauko @andykaylor
 
 /lldb/ @JDevlieghere
@@ -78,9 +80,9 @@
 /mlir/lib/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li
 /mlir/include/mlir/Dialect/XeGPU/TransformOps @charithaintc @Jianhui-Li @tkarna
 /mlir/lib/Dialect/XeGPU/TransformOps @charithaintc @Jianhui-Li @tkarna
-/mlir/include/mlir/Dialect/LLVMIR/XeVM* @silee2
-/mlir/lib/Dialect/LLVMIR/IR/XeVM @silee2
-/mlir/lib/Conversion/*XeVM* @silee2
+/mlir/include/mlir/Dialect/LLVMIR/XeVM* @silee2 @akroviakov
+/mlir/lib/Dialect/LLVMIR/IR/XeVM @silee2 @akroviakov
+/mlir/lib/Conversion/*XeVM* @silee2 @akroviakov
 
 # Bufferization Dialect in MLIR.
 /mlir/include/mlir/Dialect/Bufferization @matthias-springer
@@ -106,14 +108,13 @@
 /mlir/lib/Dialect/MemRef/Transforms/EmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
 
 # Vector Dialect in MLIR.
-/mlir/**/*AMX* @aartbik @dcaballe
 /mlir/**/*Neon* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*SME* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*SVE* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*VectorInterfaces* @dcaballe @nicolasvasilache
 /mlir/**/*VectorToSCF* @banach-space @dcaballe @matthias-springer @nicolasvasilache
 /mlir/**/*VectorToLLVM* @banach-space @dcaballe @nicolasvasilache
-/mlir/**/*X86Vector* @aartbik @dcaballe @nicolasvasilache
+/mlir/**/*X86* @aartbik @dcaballe @nicolasvasilache @adam-smnk
 /mlir/include/mlir/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
 /mlir/include/mlir/Dialect/Vector/IR @kuhar
 /mlir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
@@ -134,10 +135,10 @@
 /mlir/**/*TransformOps* @ftynse @nicolasvasilache @rolfmorel
 
 # SPIR-V Dialect in MLIR.
-/mlir/**/SPIRV/ @antiagainst @kuhar
-/mlir/**/SPIRVTo*/ @antiagainst @kuhar
-/mlir/**/*ToSPIRV/ @antiagainst @kuhar
-/mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp @antiagainst @kuhar
+/mlir/**/SPIRV/ @antiagainst @kuhar @IgWod
+/mlir/**/SPIRVTo*/ @antiagainst @kuhar @IgWod
+/mlir/**/*ToSPIRV/ @antiagainst @kuhar @IgWod
+/mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp @antiagainst @kuhar @IgWod
 
 # MLIR Sparsifier.
 /mlir/**/*SparseTensor*/ @aartbik @PeimingLiu @yinying-lisa-li @matthias-springer
@@ -155,6 +156,10 @@
 
 # MLIR Index Dialect
 /mlir/**/Index* @mogball
+
+# MLIR Shard Dialect
+/mlir/**/*shard* @fschlimb
+/mlir/**/*Shard* @fschlimb
 
 # MLIR Python Bindings
 /mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel
@@ -192,12 +197,16 @@
 /clang/bindings/python @DeinAlptraum
 
 # AMDGPU assembler and disassembler
-/llvm-project/llvm/lib/Target/AMDGPU/AsmParser/AMDGPUAsmParser.cpp @jwanggit86 
-/llvm-project/llvm/lib/Target/AMDGPU/Disassembler/AMDGPUDisassembler.cpp @jwanggit86 
- 
+/llvm-project/llvm/lib/Target/AMDGPU/AsmParser/AMDGPUAsmParser.cpp @jwanggit86
+/llvm-project/llvm/lib/Target/AMDGPU/Disassembler/AMDGPUDisassembler.cpp @jwanggit86
+
 # Clang Driver
 /clang/lib/Driver/ToolChains/AMDGPU.cpp @lamb-j
 /clang/lib/Driver/OffloadBundler.cpp @lamb-j @david-salinas
 
 # GlobalIsel
 /llvm/lib/Target/AMDGPU/AMDGPURegBankLegalize* @vangthao95
+
+# AMDGPU Memory Model
+/llvm/lib/Target/AMDGPU/SIMemoryLegalizer* @Pierre-vh @ritter-x2a
+/llvm/lib/Target/AMDGPU/SIInsertWaitcnts* @Pierre-vh @ritter-x2a

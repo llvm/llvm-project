@@ -25,7 +25,7 @@ PlatformImpl &PlatformImpl::getPlatformImpl(ol_platform_handle_t Platform) {
   auto &PlatformCache = getPlatformCache();
   for (auto &PlatImpl : PlatformCache) {
     assert(PlatImpl && "Platform impl can not be nullptr");
-    if (PlatImpl->getHandleRef() == Platform)
+    if (PlatImpl->getOLHandleRef() == Platform)
       return *PlatImpl;
   }
 

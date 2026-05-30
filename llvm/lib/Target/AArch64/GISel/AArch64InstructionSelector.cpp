@@ -484,9 +484,14 @@ private:
 
   ComplexRendererFns selectCVTFixedPointVec(MachineOperand &Root) const;
   ComplexRendererFns
-  selectCVTFixedPointVecBase(const MachineOperand &Root) const;
+  selectCVTFixedPosRecipOperandVec(MachineOperand &Root) const;
+  ComplexRendererFns
+  selectCVTFixedPointVecBase(const MachineOperand &Root,
+                             bool isReciprocal = false) const;
   void renderFixedPointXForm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                              int OpIdx = -1) const;
+  void renderFixedPointRecipXForm(MachineInstrBuilder &MIB,
+                                  const MachineInstr &MI, int OpIdx = -1) const;
 
   void renderTruncImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                       int OpIdx = -1) const;
@@ -1048,7 +1053,11 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
 
     const TypeSize SrcSize = TRI.getRegSizeInBits(*SrcRC);
     const TypeSize DstSize = TRI.getRegSizeInBits(*DstRC);
+    unsigned SrcSubReg = I.getOperand(1).getSubReg();
     unsigned SubReg;
+
+    if (SrcSubReg)
+      return RBI.constrainGenericRegister(DstReg, *DstRC, MRI);
 
     // If the source bank doesn't support a subregister copy small enough,
     // then we first need to copy to the destination bank.
@@ -2140,7 +2149,7 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     if (PtrSize != 32 && PtrSize != 64)
       return false;
     // Convert pointer typed constants to integers so TableGen can select.
-    MRI.setType(DefReg, LLT::scalar(PtrSize));
+    MRI.setType(DefReg, LLT::integer(PtrSize));
     return true;
   }
   case TargetOpcode::G_STORE: {
@@ -2218,6 +2227,15 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
       return false;
 
     if (RBI.getRegBank(SrcReg, MRI, TRI)->getID() == AArch64::FPRRegBankID) {
+      // Need to add a copy to change the type so that the existing patterns can
+      // match when there is an integer on an FPR bank.
+      if (SrcTy.getScalarType().isInteger()) {
+        auto Copy = MIB.buildCopy(DstTy, SrcReg);
+        I.getOperand(1).setReg(Copy.getReg(0));
+        MRI.setRegClass(Copy.getReg(0),
+                        getRegClassForTypeOnBank(
+                            SrcTy, RBI.getRegBank(AArch64::FPRRegBankID)));
+      }
       if (I.getOpcode() == TargetOpcode::G_SITOFP)
         I.setDesc(TII.get(AArch64::G_SITOF));
       else
@@ -2248,8 +2266,9 @@ bool AArch64InstructionSelector::convertPtrAddToAdd(
   if (PtrTy.getAddressSpace() != 0)
     return false;
 
-  const LLT CastPtrTy =
-      PtrTy.isVector() ? LLT::fixed_vector(2, 64) : LLT::scalar(64);
+  const LLT CastPtrTy = PtrTy.isVector()
+                            ? LLT::fixed_vector(2, LLT::integer(64))
+                            : LLT::integer(64);
   auto PtrToInt = MIB.buildPtrToInt(CastPtrTy, AddOp1Reg);
   // Set regbanks on the registers.
   if (PtrTy.isVector())
@@ -7831,19 +7850,28 @@ AArch64InstructionSelector::selectExtractHigh(MachineOperand &Root) const {
   if (!Extract)
     return std::nullopt;
 
-  if (Extract->MI->getOpcode() == TargetOpcode::G_UNMERGE_VALUES) {
-    if (Extract->Reg == Extract->MI->getOperand(1).getReg()) {
-      Register ExtReg = Extract->MI->getOperand(2).getReg();
+  if (auto *Unmerge = dyn_cast<GUnmerge>(Extract->MI)) {
+    if (Unmerge->getNumDefs() == 2 &&
+        Extract->Reg == Unmerge->getOperand(1).getReg()) {
+      Register ExtReg = Unmerge->getSourceReg();
       return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(ExtReg); }}};
     }
   }
-  if (Extract->MI->getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT) {
-    LLT SrcTy = MRI.getType(Extract->MI->getOperand(1).getReg());
-    auto LaneIdx = getIConstantVRegValWithLookThrough(
-        Extract->MI->getOperand(2).getReg(), MRI);
+  if (auto *ExtElt = dyn_cast<GExtractVectorElement>(Extract->MI)) {
+    LLT SrcTy = MRI.getType(ExtElt->getVectorReg());
+    auto LaneIdx =
+        getIConstantVRegValWithLookThrough(ExtElt->getIndexReg(), MRI);
     if (LaneIdx && SrcTy == LLT::fixed_vector(2, 64) &&
         LaneIdx->Value.getSExtValue() == 1) {
-      Register ExtReg = Extract->MI->getOperand(1).getReg();
+      Register ExtReg = ExtElt->getVectorReg();
+      return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(ExtReg); }}};
+    }
+  }
+  if (auto *Subvec = dyn_cast<GExtractSubvector>(Extract->MI)) {
+    LLT SrcTy = MRI.getType(Subvec->getSrcVec());
+    auto LaneIdx = Subvec->getIndexImm();
+    if (LaneIdx == SrcTy.getNumElements() / 2) {
+      Register ExtReg = Subvec->getSrcVec();
       return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(ExtReg); }}};
     }
   }
@@ -7853,7 +7881,7 @@ AArch64InstructionSelector::selectExtractHigh(MachineOperand &Root) const {
 
 InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectCVTFixedPointVecBase(
-    const MachineOperand &Root) const {
+    const MachineOperand &Root, bool isReciprocal) const {
   if (!Root.isReg())
     return std::nullopt;
   const MachineRegisterInfo &MRI =
@@ -7882,8 +7910,8 @@ AArch64InstructionSelector::selectCVTFixedPointVecBase(
   default:
     return std::nullopt;
   };
-  if (unsigned FBits = CheckFixedPointOperandConstant(FVal, RegWidth,
-                                                      /*isReciprocal*/ false))
+  if (unsigned FBits =
+          CheckFixedPointOperandConstant(FVal, RegWidth, isReciprocal))
     return {{[=](MachineInstrBuilder &MIB) { MIB.addImm(FBits); }}};
 
   return std::nullopt;
@@ -7891,7 +7919,13 @@ AArch64InstructionSelector::selectCVTFixedPointVecBase(
 
 InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectCVTFixedPointVec(MachineOperand &Root) const {
-  return selectCVTFixedPointVecBase(Root);
+  return selectCVTFixedPointVecBase(Root, /*isReciprocal*/ false);
+}
+
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectCVTFixedPosRecipOperandVec(
+    MachineOperand &Root) const {
+  return selectCVTFixedPointVecBase(Root, /*isReciprocal*/ true);
 }
 
 void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,
@@ -7901,9 +7935,18 @@ void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,
   // should be able to reuse the Renderers already calculated by
   // selectCVTFixedPointVecBase.
   InstructionSelector::ComplexRendererFns Renderer =
-      selectCVTFixedPointVecBase(MI.getOperand(2));
+      selectCVTFixedPointVecBase(MI.getOperand(2), /*isReciprocal*/ false);
   assert((Renderer && Renderer->size() == 1) &&
          "Expected selectCVTFixedPointVec to provide a function\n");
+  (Renderer->front())(MIB);
+}
+
+void AArch64InstructionSelector::renderFixedPointRecipXForm(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  InstructionSelector::ComplexRendererFns Renderer =
+      selectCVTFixedPointVecBase(MI.getOperand(2), /*isReciprocal*/ true);
+  assert((Renderer && Renderer->size() == 1) &&
+         "Expected selectCVTFixedPosRecipOperandVec to provide a function\n");
   (Renderer->front())(MIB);
 }
 

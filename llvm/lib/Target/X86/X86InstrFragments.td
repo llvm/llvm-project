@@ -494,8 +494,10 @@ def X86cmpccxadd : SDNode<"X86ISD::CMPCCXADD", SDTX86Cmpccxadd,
                            SDNPMemOperand]>;
 
 // Define X86-specific addressing mode.
-let WantsParent = true in
-def addr      : ComplexPattern<iPTR, 5, "selectAddr">;
+let WantsParent = true in {
+  def addr      : ComplexPattern<iPTR, 5, "selectAddr">;
+  def ndd_addr  : ComplexPattern<iPTR, 5, "selectNDDAddr">;
+}
 def gi_addr   : GIComplexOperandMatcher<s32, "selectAddr">,
                 GIComplexPatternEquiv<addr>;
 def lea32addr : ComplexPattern<i32, 5, "selectLEAAddr",
@@ -848,16 +850,6 @@ def def32 : PatLeaf<(i32 GR32:$src), [{
            (!N->getOperand(0).isUndef() && !isa<ConstantSDNode>(N->getOperand(0))));
 }]>;
 
-// Treat an 'or' node is as an 'add' if the or'ed bits are known to be zero.
-def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
-  if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N->getOperand(1)))
-    return CurDAG->MaskedValueIsZero(N->getOperand(0), CN->getAPIntValue());
-
-  KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
-  KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
-  return (~Known0.Zero & ~Known1.Zero) == 0;
-}]>;
-
 def shiftMask8 : PatFrag<(ops node:$lhs), (and node:$lhs, imm), [{
   return isUnneededShiftMask(N, 3);
 }]>;
@@ -1048,11 +1040,11 @@ def X86fp_to_i64mem
 //===----------------------------------------------------------------------===//
 
 def fpimm0 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(+0.0);
+  return Imm.isPosZero();
 }]>;
 
 def fpimmneg0 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(-0.0);
+  return Imm.isNegZero();
 }]>;
 
 def fpimm1 : FPImmLeaf<fAny, [{

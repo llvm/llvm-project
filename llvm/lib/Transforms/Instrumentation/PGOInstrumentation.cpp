@@ -380,7 +380,8 @@ class FunctionInstrumenter final {
   // another counter range within the context.
   bool isValueProfilingDisabled() const {
     return DisableValueProfiling ||
-           InstrumentationType == PGOInstrumentationType::CTXPROF;
+           InstrumentationType == PGOInstrumentationType::CTXPROF ||
+           M.getTargetTriple().isGPU();
   }
 
   bool shouldInstrumentEntryBB() const {
@@ -469,9 +470,6 @@ createIRLevelProfileFlagVar(Module &M,
       M, IntTy64, true, GlobalValue::WeakAnyLinkage,
       Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)), VarName);
   IRLevelVersionVariable->setVisibility(GlobalValue::HiddenVisibility);
-  if (isGPUProfTarget(M))
-    IRLevelVersionVariable->setVisibility(
-        llvm::GlobalValue::ProtectedVisibility);
 
   Triple TT(M.getTargetTriple());
   if (TT.supportsCOMDAT()) {

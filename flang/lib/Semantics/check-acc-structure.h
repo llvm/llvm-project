@@ -78,6 +78,7 @@ public:
   void Enter(const parser::SeparateModuleSubprogram &);
   void Enter(const parser::DoConstruct &);
   void Leave(const parser::DoConstruct &);
+  void Enter(const parser::CallStmt &);
 
 #define GEN_FLANG_CLAUSE_CHECK_ENTER
 #include "llvm/Frontend/OpenACC/ACC.inc"

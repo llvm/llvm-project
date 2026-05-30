@@ -58,6 +58,9 @@ enum UniformityLLTOpPredicateID {
   DivS64,
   DivS128,
 
+  // any LLT, divergent-check only predicate
+  DivAnyTy,
+
   // pointers
   P0,
   P1,
@@ -107,6 +110,7 @@ enum UniformityLLTOpPredicateID {
   DivV2S64,
   DivV3S32,
   DivV4S16,
+  DivV6S32,
 
   // B types
   B32,
@@ -116,6 +120,7 @@ enum UniformityLLTOpPredicateID {
   B160,
   B256,
   B512,
+  BRC,
 
   UniB32,
   UniB64,
@@ -146,6 +151,10 @@ enum RegBankLLTMappingApplyID {
   IntrId,
   Imm,
   Vcc,
+
+  // any LLT, bank-only apply IDs
+  VgprAnyTy,
+  AgprAnyTy,
 
   // sgpr scalars, pointers, vectors and B-types
   Sgpr16,
@@ -222,6 +231,12 @@ enum RegBankLLTMappingApplyID {
 
   Sgpr32Trunc,
 
+  // Dst only modifiers: dst was assigned VGPR by RegBankSelect but the
+  // instruction result must be in SGPR. Replace dst with SGPR, then copy the
+  // result back to the original VGPR.
+  Sgpr32ToVgprDst,
+  Sgpr64ToVgprDst,
+
   // Src only modifiers: execute in waterfall loop if divergent
   Sgpr32_WF,
   SgprV4S32_WF,
@@ -234,6 +249,12 @@ enum RegBankLLTMappingApplyID {
   // readfirstlane to SGPR. The result can then be copied to M0 in ISel.
   SgprB32_M0,
 
+  // Src only modifiers: operand must be SGPR, if in VGPR, insert readfirstlane
+  // to move to SGPR.
+  SgprB32_ReadFirstLane,
+  SgprB64_ReadFirstLane,
+  SgprV4S32_ReadFirstLane,
+
   // Src only modifiers: extends
   Sgpr32AExt,
   Sgpr32AExtBoolInReg,
@@ -242,6 +263,10 @@ enum RegBankLLTMappingApplyID {
   Vgpr32AExt,
   Vgpr32SExt,
   Vgpr32ZExt,
+
+  VgprV6S32,
+  VgprV32S16,
+  VgprV32S32,
 };
 
 // Instruction needs to be replaced with sequence of instructions. Lowering was
@@ -268,6 +293,7 @@ enum LoweringMethodID {
   SplitTo32SExtInReg,
   Ext32To64,
   UniCstExt,
+  CtPop64To32,
   SplitLoad,
   WidenLoad,
   WidenMMOToS32,
@@ -279,7 +305,14 @@ enum LoweringMethodID {
   VerifyAllSgprGPHI,
   VerifyAllSgprOrVgprGPHI,
   ApplyINTRIN_IMAGE,
-  SplitBitCount64To32
+  ApplyBVH_INTERSECT_RAY,
+  SplitBitCount64To32,
+  ExtrVecEltToSel,
+  ExtrVecEltTo32,
+  InsVecEltToSel,
+  InsVecEltTo32,
+  AbsToNegMax,
+  AbsToS32
 };
 
 enum FastRulesTypes {

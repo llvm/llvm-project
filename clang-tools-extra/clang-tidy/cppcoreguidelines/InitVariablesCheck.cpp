@@ -10,6 +10,7 @@
 
 #include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/StmtObjC.h"
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Preprocessor.h"
@@ -21,6 +22,9 @@ namespace clang::tidy::cppcoreguidelines {
 
 namespace {
 AST_MATCHER(VarDecl, isLocalVarDecl) { return Node.isLocalVarDecl(); }
+AST_MATCHER(Stmt, isObjCForCollectionStmt) {
+  return isa<ObjCForCollectionStmt>(&Node);
+}
 } // namespace
 
 InitVariablesCheck::InitVariablesCheck(StringRef Name,
@@ -42,6 +46,7 @@ void InitVariablesCheck::registerMatchers(MatchFinder *Finder) {
       varDecl(unless(hasInitializer(anything())), unless(isInstantiated()),
               isLocalVarDecl(), unless(isStaticLocal()), isDefinition(),
               unless(hasParent(cxxCatchStmt())),
+              unless(hasParent(declStmt(hasParent(isObjCForCollectionStmt())))),
               optionally(hasParent(declStmt(hasParent(
                   cxxForRangeStmt(hasLoopVariable(varDecl().bind(BadDecl))))))),
               unless(equalsBoundNode(BadDecl)))

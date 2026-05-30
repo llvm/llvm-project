@@ -1881,9 +1881,9 @@ __tree<_Tp, _Compare, _Allocator>::__find_equal(const _Key& __v) {
   }
 
   __node_base_pointer* __node_ptr = __root_ptr();
-  auto&& __transparent            = std::__as_transparent<_Key>(value_comp());
+  auto&& __transparent            = std::__as_transparent<key_type>(value_comp());
   auto __comp =
-      __lazy_synth_three_way_comparator<__make_transparent_t<_Key, _Compare>, _Key, value_type>(__transparent);
+      __lazy_synth_three_way_comparator<__make_transparent_t<key_type, _Compare>, _Key, value_type>(__transparent);
 
   while (true) {
     auto __comp_res = __comp(__v, __nd->__get_value());
@@ -2049,8 +2049,8 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_unique(const_iterator __
 template <class _Tp, class _Compare, class _Allocator>
 template <class _NodeHandle>
 _LIBCPP_HIDE_FROM_ABI _NodeHandle __tree<_Tp, _Compare, _Allocator>::__node_handle_extract(key_type const& __key) {
-  iterator __it = find(__key);
-  if (__it == end())
+  iterator __it = __lower_bound_multi(__key);
+  if (__it == end() || __value_comp_(__key, *__it))
     return _NodeHandle();
   return __node_handle_extract<_NodeHandle>(__it);
 }

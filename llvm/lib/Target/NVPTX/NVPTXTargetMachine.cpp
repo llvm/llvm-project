@@ -111,6 +111,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXAssignValidGlobalNamesPass(PR);
   initializeNVPTXAtomicLowerPass(PR);
   initializeNVPTXLowerArgsLegacyPassPass(PR);
+  initializeNVPTXSetByValParamAlignLegacyPassPass(PR);
   initializeNVPTXMarkKernelPtrsGlobalLegacyPassPass(PR);
   initializeNVPTXLowerAllocaPass(PR);
   initializeNVPTXLowerUnreachablePass(PR);
@@ -290,7 +291,8 @@ NVPTXTargetMachine::getPredicatedAddrSpace(const Value *V) const {
 
 void NVPTXPassConfig::addEarlyCSEOrGVNPass() {
   if (getOptLevel() == CodeGenOptLevel::Aggressive)
-    addPass(createGVNPass());
+    // Disable scalar PRE due to Register Pressure increase
+    addPass(createGVNPass(/*ScalarPRE=*/false));
   else
     addPass(createEarlyCSEPass());
 }
@@ -360,6 +362,7 @@ void NVPTXPassConfig::addIRPasses() {
   // before the address space inference passes.
   if (getNVPTXTargetMachine().getDrvInterface() == NVPTX::CUDA)
     addPass(createNVPTXMarkKernelPtrsGlobalPass());
+  addPass(createNVPTXSetByValParamAlignPass());
   addPass(createNVPTXLowerArgsPass());
   if (getOptLevel() != CodeGenOptLevel::None) {
     addAddressSpaceInferencePasses();

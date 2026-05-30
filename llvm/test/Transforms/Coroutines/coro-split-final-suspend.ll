@@ -3,7 +3,7 @@
 
 define ptr @unwind_coro_end() presplitcoroutine personality i32 3 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @unwind_coro_end, ptr null)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   call void @print(i32 0)
   br label %init
@@ -73,7 +73,7 @@ eh.resume:
 
 define ptr @nounwind_coro_end(i1 %val) presplitcoroutine personality i32 3 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @nounwind_coro_end, ptr null)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   call void @print(i32 0)
   br label %init

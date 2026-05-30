@@ -91,6 +91,7 @@ add_llvm_component_library(LLVMCore
   ${LLVM_PTHREAD_LIB}
 
   DEPENDS
+  analysis_gen
   intrinsics_gen
 
   LINK_COMPONENTS
