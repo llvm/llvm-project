@@ -21,7 +21,7 @@ void test() {
   using Container = std::optional<int>;
 
   Container c;
-  Container::iterator it = c.begin();
+  Container::iterator it        = c.begin();
   Container::const_iterator cit = std::as_const(c).begin();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
