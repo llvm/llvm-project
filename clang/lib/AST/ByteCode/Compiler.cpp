@@ -4058,7 +4058,7 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
         if (const auto *ILE = dyn_cast<InitListExpr>(Init)) {
           if (ILE->hasArrayFiller())
             DynamicInit = ILE->getArrayFiller();
-          else if (isa<StringLiteral>(ILE->getInit(0)))
+          else if (StaticInitElems > 0 && isa<StringLiteral>(ILE->getInit(0)))
             ElemT = classifyPrim(CAT->getElementType());
         }
       }
