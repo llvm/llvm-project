@@ -901,18 +901,18 @@ loop.preheader:
   br label %loop.header
 
 loop.header:
-  %iv = phi ptr [ %gep.merge, %loop.latch ], [ %l.v, %loop.preheader ]
-  %val = load i32, ptr %iv, align 4
+  %merge = phi ptr [ %gep.merge, %loop.latch ], [ %l.v, %loop.preheader ]
+  %val = load i32, ptr %merge, align 4
   %c.2 = icmp slt i32 %val, %n
   br i1 %c.2, label %loop.early.exit, label %loop.latch
 
 loop.early.exit:
-  %iv.1 = phi ptr [ %iv, %loop.header ]
-  %pi.iv = ptrtoint ptr %iv.1 to i64
+  %iv = phi ptr [ %merge, %loop.header ]
+  %pi.iv = ptrtoint ptr %iv to i64
   br label %exit
 
 loop.latch:
-  %gep.merge = getelementptr inbounds nuw i8, ptr %iv, i64 4
+  %gep.merge = getelementptr inbounds nuw i8, ptr %merge, i64 4
   %c.3 = icmp eq ptr %gep.merge, %l.gep.v
   br i1 %c.3, label %loop.comp, label %loop.header
 
@@ -1021,18 +1021,18 @@ loop.preheader:
   br label %loop.header
 
 loop.header:
-  %iv = phi ptr [ %gep.merge, %loop.latch ], [ %l.v, %loop.preheader ]
-  %val = load i32, ptr %iv, align 4
+  %merge = phi ptr [ %gep.merge, %loop.latch ], [ %l.v, %loop.preheader ]
+  %val = load i32, ptr %merge, align 4
   %c.2 = icmp slt i32 %val, %n
   br i1 %c.2, label %loop.early.exit, label %loop.latch
 
 loop.early.exit:
-  %iv.1 = phi ptr [ %iv, %loop.header ]
-  %pi.iv = ptrtoint ptr %iv.1 to i64
+  %iv = phi ptr [ %merge, %loop.header ]
+  %pi.iv = ptrtoint ptr %iv to i64
   br label %exit
 
 loop.latch:
-  %gep.merge = getelementptr inbounds nuw i8, ptr %iv, i64 4
+  %gep.merge = getelementptr inbounds nuw i8, ptr %merge, i64 4
   %c.3 = icmp eq ptr %gep.merge, %l.gep.v
   br i1 %c.3, label %loop.comp, label %loop.header
 
@@ -1103,18 +1103,18 @@ loop.preheader:
   br label %loop.header
 
 loop.header:
-  %iv = phi ptr [ %gep.merge, %loop.latch ], [ %l.v, %loop.preheader ]
-  %val = load i32, ptr %iv, align 4
+  %merge = phi ptr [ %gep.merge, %loop.latch ], [ %l.v, %loop.preheader ]
+  %val = load i32, ptr %merge, align 4
   %c.2 = icmp slt i32 %val, %n
   br i1 %c.2, label %loop.early.exit, label %loop.latch
 
 loop.early.exit:
-  %iv.1 = phi ptr [ %iv, %loop.header ]
-  %pi.iv = ptrtoint ptr %iv.1 to i64
+  %iv = phi ptr [ %merge, %loop.header ]
+  %pi.iv = ptrtoint ptr %iv to i64
   br label %exit
 
 loop.latch:
-  %gep.merge = getelementptr inbounds nuw i8, ptr %iv, i64 4
+  %gep.merge = getelementptr inbounds nuw i8, ptr %merge, i64 4
   %c.3 = icmp eq ptr %gep.merge, %l.gep.v
   br i1 %c.3, label %loop.comp, label %loop.header
 
@@ -1185,18 +1185,18 @@ loop.preheader:
   br label %loop.header
 
 loop.header:
-  %iv = phi ptr [ %gep.merge, %loop.latch ], [ %l.v, %loop.preheader ]
-  %val = load i32, ptr %iv, align 4
+  %merge = phi ptr [ %gep.merge, %loop.latch ], [ %l.v, %loop.preheader ]
+  %val = load i32, ptr %merge, align 4
   %c.2 = icmp slt i32 %val, %n
   br i1 %c.2, label %loop.early.exit, label %loop.latch
 
 loop.early.exit:
-  %iv.1 = phi ptr [ %iv, %loop.header ]
-  %pi.iv = ptrtoint ptr %iv.1 to i64
+  %iv = phi ptr [ %merge, %loop.header ]
+  %pi.iv = ptrtoint ptr %iv to i64
   br label %exit
 
 loop.latch:
-  %gep.merge = getelementptr inbounds nuw i8, ptr %iv, i64 4
+  %gep.merge = getelementptr inbounds nuw i8, ptr %merge, i64 4
   %c.3 = icmp eq ptr %gep.merge, %l.gep.v
   br i1 %c.3, label %loop.comp, label %loop.header
 
