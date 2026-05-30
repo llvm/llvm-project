@@ -53,11 +53,18 @@ void ExecutorBase::reportErrorString(StringRef Msg) {
   Handler.onError(Msg);
 }
 
-std::optional<uint64_t> ExecutorBase::verifyMemAccess(const MemoryObject &MO,
-                                                      const APInt &Address,
+std::optional<uint64_t> ExecutorBase::verifyMemAccess(const Pointer &Ptr,
                                                       uint64_t AccessSize,
                                                       Align Alignment,
                                                       bool IsStore) {
+  auto &Prov = Ptr.provenance();
+  if (!Prov.getMemoryObject()) {
+    reportImmediateUB()
+        << "Invalid memory access via a pointer with nullary provenance.";
+    return std::nullopt;
+  }
+  auto &MO = *Prov.getMemoryObject();
+  const APInt &Address = Ptr.address();
   // Loading from a stack object outside its lifetime is not undefined
   // behavior and returns a poison value instead. Storing to it is still
   // undefined behavior.
@@ -107,17 +114,11 @@ AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
     return AnyValue::getPoisonValue(Ctx, ValTy);
   }
   auto &PtrVal = Ptr.asPointer();
-  auto *MO = PtrVal.getMemoryObject();
-  if (!MO) {
-    reportImmediateUB()
-        << "Invalid memory access via a pointer with nullary provenance.";
-    return AnyValue::getPoisonValue(Ctx, ValTy);
-  }
   // TODO: pointer capability check
-  if (auto Offset =
-          verifyMemAccess(*MO, PtrVal.address(),
-                          Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
-                          /*IsStore=*/false)) {
+  if (auto Offset = verifyMemAccess(
+          PtrVal, Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
+          /*IsStore=*/false)) {
+    auto *MO = PtrVal.getMemoryObject();
     // Load from a dead stack object yields poison value.
     if (MO->getState() == MemoryObjectState::Dead)
       return AnyValue::getPoisonValue(Ctx, ValTy);
@@ -139,23 +140,10 @@ void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
     return;
   }
   auto &PtrVal = Ptr.asPointer();
-  auto *MO = PtrVal.getMemoryObject();
-  if (!MO) {
-    reportImmediateUB()
-        << "Invalid memory access via a pointer with nullary provenance.";
-    return;
-  }
-  if (MO->isConstant()) {
-    reportImmediateUB() << "Try to write to a constant memory object: "
-                        << PtrVal << ".";
-    return;
-  }
-  // TODO: pointer capability check
-  if (auto Offset =
-          verifyMemAccess(*MO, PtrVal.address(),
-                          Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
-                          /*IsStore=*/true))
-    Ctx.store(*MO, *Offset, Val, ValTy);
+  if (auto Offset = verifyMemAccess(
+          PtrVal, Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
+          /*IsStore=*/true))
+    Ctx.store(*PtrVal.getMemoryObject(), *Offset, Val, ValTy);
 }
 
 void ExecutorBase::requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,

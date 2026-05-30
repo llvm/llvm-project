@@ -30,19 +30,13 @@ Library::Library(Context &Ctx, EventHandler &Handler, const DataLayout &DL,
 
 std::optional<std::string> Library::readStringFromMemory(const Pointer &Ptr) {
   auto *MO = Ptr.getMemoryObject();
-  if (!MO) {
-    Executor.reportImmediateUB()
-        << "Invalid memory access via a pointer with nullary provenance.";
-    return std::nullopt;
-  }
-
   std::string Result;
   const APInt &Address = Ptr.address();
   uint64_t Offset = 0;
 
   while (true) {
-    auto ValidOffset =
-        Executor.verifyMemAccess(*MO, Address + Offset, 1, Align(1), false);
+    auto ValidOffset = Executor.verifyMemAccess(
+        Ptr.getWithNewAddr(Address + Offset), 1, Align(1), false);
     if (!ValidOffset)
       return std::nullopt;
 

@@ -101,8 +101,7 @@ public:
 
   /// Check if the upcoming memory access is valid. Returns the offset relative
   /// to the underlying object if it is valid.
-  std::optional<uint64_t> verifyMemAccess(const MemoryObject &MO,
-                                          const APInt &Address,
+  std::optional<uint64_t> verifyMemAccess(const Pointer &Ptr,
                                           uint64_t AccessSize, Align Alignment,
                                           bool IsStore);
 

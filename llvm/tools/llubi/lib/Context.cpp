@@ -602,6 +602,7 @@ bool Context::free(const MemoryObject &Obj) {
   for (const APInt &Tag : MutableObj.AssociatedTags)
     TaggedProvenances.erase(Tag);
   MutableObj.AssociatedTags.clear();
+  ExposedProvenances.erase(Address);
 
   MemoryObjects.erase(It);
   return true;
@@ -612,6 +613,63 @@ Pointer Context::deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj) {
   return Pointer(makeIntrusiveRefCnt<Provenance>(Obj),
                  APInt(DL.getPointerSizeInBits(Obj->getAddressSpace()),
                        Obj->getAddress()));
+}
+
+void Context::exposeProvenance(Provenance &Prov) {
+  if (Prov.Wildcard)
+    return;
+  MemoryObject *Obj = Prov.getMemoryObject();
+  if (!Obj)
+    return;
+  uint64_t Address = Obj->getAddress();
+  ExposedProvenanceSet &Set = ExposedProvenances[Address];
+  if (Set.Set.insert(&Prov).second)
+    Set.List.emplace_back(&Prov);
+}
+
+bool Context::checkProvenance(Provenance &Prov,
+                              function_ref<bool(Provenance &)> Check) {
+  if (!Check(Prov))
+    return false;
+  // Early return for concrete provenances.
+  if (!Prov.Wildcard)
+    return true;
+  auto Iter = ExposedProvenances.find(Prov.Wildcard->BaseAddress);
+  // The memory object has been freed.
+  if (Iter == ExposedProvenances.end())
+    return false;
+  auto &List = Iter->second.List;
+  APInt &Mask = Prov.Wildcard->ActiveMask;
+  uint32_t Generation = Mask.getBitWidth();
+  bool Valid = false;
+  for (uint32_t I = 0; I != Generation; ++I) {
+    if (!Mask[I])
+      continue;
+    if (Check(*List[I]))
+      Valid = true;
+    else
+      Mask.clearBit(I);
+  }
+
+  return Valid;
+}
+
+IntrusiveRefCntPtr<Provenance>
+Context::getWildcardProvenance(const APInt &Address, unsigned AS) {
+  uint64_t Addr = Address.getLimitedValue();
+  auto Iter = ExposedProvenances.upper_bound(Addr);
+  if (Iter == ExposedProvenances.begin())
+    return Provenance::nullary();
+  auto &[BaseAddress, Set] = *std::prev(Iter);
+  auto &Obj = MemoryObjects.at(BaseAddress);
+  if (!Obj->inBounds(Address) || Obj->getAddressSpace() != AS)
+    return Provenance::nullary();
+
+  auto Prov = makeIntrusiveRefCnt<Provenance>(Obj);
+  uint32_t Generation = static_cast<uint32_t>(Set.List.size());
+  Prov->Wildcard =
+      makeIntrusiveRefCnt<WildcardProvenance>(BaseAddress, Generation);
+  return Prov;
 }
 
 Function *Context::getTargetFunction(const Pointer &Ptr) {

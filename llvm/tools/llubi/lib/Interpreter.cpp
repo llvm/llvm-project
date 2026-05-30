@@ -2417,14 +2417,28 @@ public:
     setResult(GEP, std::move(Res));
   }
 
-  void visitIntToPtr(IntToPtrInst &I) {
+  void visitPtrToInt(PtrToIntInst &I) {
     return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
       if (V.isPoison())
         return AnyValue::poison();
-      // TODO: expose provenance
+      Ctx.exposeProvenance(V.asPointer().provenance());
+      return V.asPointer().address();
+    });
+  }
+
+  // TODO: Add support for ptrtoaddr, which only exposes the captured address
+  // capability.
+
+  void visitIntToPtr(IntToPtrInst &I) {
+    unsigned AS = I.getType()->getPointerAddressSpace();
+    return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
+      if (V.isPoison())
+        return AnyValue::poison();
+      auto Prov = Ctx.getWildcardProvenance(V.asInteger(), AS);
       // TODO: check metadata
-      return Pointer(V.asInteger().zextOrTrunc(
-          DL.getPointerSizeInBits(I.getType()->getPointerAddressSpace())));
+      return Pointer(std::move(Prov),
+                     V.asInteger().zextOrTrunc(DL.getPointerSizeInBits(
+                         I.getType()->getPointerAddressSpace())));
     });
   }
 

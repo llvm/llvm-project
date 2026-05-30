@@ -104,6 +104,25 @@ enum class StorageKind {
 /// Tri-state boolean value.
 enum class BooleanKind { False, True, Poison };
 
+/// A set of previously exposed provenance. It is originally yielded by
+/// inttoptr, and shared by pointers derived from the result.
+class WildcardProvenance : public RefCountedBase<WildcardProvenance> {
+  // Each capability check may invalidate some provenances. If we cannot
+  // pick one, it is UB. That is, from the angelic non-determinism view,
+  // we cannot pick a provenance to make the program reach this point.
+  // The bitwidth represents the generation of the set. We only consider
+  // the exposed provenances in the snapshot, which is captured at the
+  // point where inttoptr executes.
+  APInt ActiveMask;
+  uint64_t BaseAddress;
+
+  friend class Context;
+
+public:
+  WildcardProvenance(uint64_t BaseAddress, uint32_t Generation)
+      : ActiveMask(APInt::getAllOnes(Generation)), BaseAddress(BaseAddress) {}
+};
+
 /// Components of a pointer excluding address. They are shared between pointer
 /// values, as most of operations don't change the provenance.
 /// Each node will be assigned a unique, pointer-sized tag, which is used to
@@ -120,9 +139,10 @@ class Provenance : public RefCountedBase<Provenance> {
   // type, in bits. It may produce false negatives in some corner cases. But in
   // real practice the false negative rate should be negligible.
   // A zero tag is invalid.
-  // TODO: we need a special tag for wildcard provenance, which is introduced by
-  // inttoptr.
   APInt Tag;
+
+  // Null if it is concrete.
+  IntrusiveRefCntPtr<WildcardProvenance> Wildcard;
 
   // TODO: modeling nofree
   // TODO: modeling captures
