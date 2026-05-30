@@ -581,7 +581,9 @@ Context::allocate(uint64_t Size, uint64_t Align, StringRef Name, unsigned AS,
   auto MemObj = makeIntrusiveRefCnt<MemoryObject>(
       AlignedAddr, Size, Name, AS, InitKind, AllocKind, IsIRGlobalValue);
   MemoryObjects[AlignedAddr] = MemObj;
-  AllocationBase = AlignedAddr + AllocateSize;
+  // Extra padding to make sure getWildcardProvenance resolves to at most one
+  // memory object.
+  AllocationBase = AlignedAddr + AllocateSize + 1;
   UsedMem += AllocateSize;
   return MemObj;
 }
