@@ -66,13 +66,15 @@ static FunctionType *extractFunctionTypeFromMetadata(NamedMDNode *NMD,
     if (auto *Const = getConstInt(MD, 0)) {
       auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(1));
       assert(CMeta && "ConstantAsMetadata operand is expected");
-      assert(Const->getSExtValue() >= -1);
+      int64_t Idx = Const->getSExtValue();
       // Currently -1 indicates return value, greater values mean
       // argument numbers.
-      if (Const->getSExtValue() == -1)
+      if (Idx < -1 || static_cast<uint64_t>(Idx) >= PTys.size())
+        report_fatal_error("invalid argument index in function type metadata");
+      if (Idx == -1)
         RetTy = CMeta->getType();
       else
-        PTys[Const->getSExtValue()] = CMeta->getType();
+        PTys[Idx] = CMeta->getType();
     }
   }
 
