@@ -820,6 +820,7 @@ define i64 @VectorizingWithoutNoSyncAttributeTest(ptr noundef nonnull readonly a
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[PI_L_GEP_V]], [[PI_L_V]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[L_V]], i64 [[SUB]]) ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[L_V]], i64 4) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[L_GEP_V]], i64 4) ]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[L_V]], [[L_GEP_V]]
 ; CHECK-NEXT:    br i1 [[C_1]], label %[[EXIT:.*]], label %[[LOOP_PREHEADER:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
@@ -892,6 +893,7 @@ entry:
   %sub = sub i64 %pi.l.gep.v, %pi.l.v
   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %l.v, i64 %sub) ]
   call void @llvm.assume(i1 true) [ "align"(ptr %l.v, i64 4) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %l.gep.v, i64 4) ]
   %c.1 = icmp eq ptr %l.v, %l.gep.v
   br i1 %c.1, label %exit, label %loop.preheader
 
@@ -937,6 +939,7 @@ define i64 @volatileVectorizingTest(ptr noundef nonnull readonly align 8 capture
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[L_V]], i64 [[SUB]]) ]
 ; CHECK-NEXT:    [[VOLATILE:%.*]] = load volatile ptr, ptr [[V]], align 8
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[L_V]], i64 4) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[L_GEP_V]], i64 4) ]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[L_V]], [[L_GEP_V]]
 ; CHECK-NEXT:    br i1 [[C_1]], label %[[EXIT:.*]], label %[[LOOP_PREHEADER:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
@@ -1010,6 +1013,7 @@ entry:
   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %l.v, i64 %sub) ]
   %volatile = load volatile ptr, ptr %v, align 8                          ; Volatile Instruction
   call void @llvm.assume(i1 true) [ "align"(ptr %l.v, i64 4) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %l.gep.v, i64 4) ]
   %c.1 = icmp eq ptr %l.v, %l.gep.v
   br i1 %c.1, label %exit, label %loop.preheader
 
@@ -1055,6 +1059,7 @@ define i64 @fenceNotVectorizingTest(ptr noundef nonnull readonly align 8 capture
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[L_V]], i64 [[SUB]]) ]
 ; CHECK-NEXT:    fence seq_cst
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[L_V]], i64 4) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[L_GEP_V]], i64 4) ]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[L_V]], [[L_GEP_V]]
 ; CHECK-NEXT:    br i1 [[C_1]], label %[[EXIT:.*]], label %[[LOOP_PREHEADER:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
@@ -1090,6 +1095,7 @@ entry:
   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %l.v, i64 %sub) ]
   fence seq_cst                                                           ; Fence Instruction
   call void @llvm.assume(i1 true) [ "align"(ptr %l.v, i64 4) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %l.gep.v, i64 4) ]
   %c.1 = icmp eq ptr %l.v, %l.gep.v
   br i1 %c.1, label %exit, label %loop.preheader
 
@@ -1135,6 +1141,7 @@ define i64 @atomicNotVectorizingTest(ptr noundef nonnull readonly align 8 captur
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[L_V]], i64 [[SUB]]) ]
 ; CHECK-NEXT:    [[ATOMIC:%.*]] = load atomic ptr, ptr [[V]] seq_cst, align 8
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[L_V]], i64 4) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[L_GEP_V]], i64 4) ]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[L_V]], [[L_GEP_V]]
 ; CHECK-NEXT:    br i1 [[C_1]], label %[[EXIT:.*]], label %[[LOOP_PREHEADER:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
@@ -1170,6 +1177,7 @@ entry:
   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %l.v, i64 %sub) ]
   %atomic = load atomic ptr, ptr %v seq_cst, align 8                      ; Atomic Instruction
   call void @llvm.assume(i1 true) [ "align"(ptr %l.v, i64 4) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %l.gep.v, i64 4) ]
   %c.1 = icmp eq ptr %l.v, %l.gep.v
   br i1 %c.1, label %exit, label %loop.preheader
 
